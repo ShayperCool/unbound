@@ -48,8 +48,13 @@ namespace UnityEngine.Tests
         const float Dt = 0.02f;
         readonly List<GameObject> m_Made = new List<GameObject>();
 
+        readonly bool m_ReuseCollisionCallbacks;
+
         public PhysicsTests()
         {
+            // These tests retain Collision objects after their callbacks.
+            m_ReuseCollisionCallbacks = Physics.reuseCollisionCallbacks;
+            Physics.reuseCollisionCallbacks = false;
             Physics.gravity = new Vector3(0f, -9.81f, 0f);
             Physics.queriesHitTriggers = true;
             Physics.autoSyncTransforms = true;
@@ -64,6 +69,7 @@ namespace UnityEngine.Tests
             foreach (var go in m_Made)
                 if (go != null) Object.DestroyImmediate(go);
             Physics.Simulate(Dt);
+            Physics.reuseCollisionCallbacks = m_ReuseCollisionCallbacks;
         }
 
         GameObject Make(string name, Vector3 position)

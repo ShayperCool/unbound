@@ -401,4 +401,12 @@
 {"key":"control/controller/True/ids","value":["box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none;box|box.body:controller|none"]}
 {"key":"control/controller/True/dynamic","value":[30,"box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1;box|controller|1"]}
 {"key":"control/controller/True/unset","value":[0]}
+{"key":"control/callbackRoute/False","value":["ground;transitionRoot"]}
+{"key":"control/reuseTransition/False","value":[1,1,1,1]}
+{"key":"control/callbackRoute/True","value":["ground;transitionRoot"]}
+{"key":"control/reuseTransition/True","value":[1,1,1,1]}
+{"key":"control/compoundRequest/False/False","value":[0,0,0,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0]}
+{"key":"control/compoundRequest/False/True","value":[1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"key":"control/compoundRequest/True/False","value":[0,1,4,0,1,4,0,1,4,0,1,4,0,1,4,0,1,4]}
+{"key":"control/compoundRequest/True/True","value":[1,1,4,1,1,4,1,1,4,1,1,4,1,1,4,1,1,4]}
 {"key":"complete","value":[1]}

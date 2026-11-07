@@ -257,14 +257,20 @@ namespace UnityEngine
 
         public Collision() { }
 
-        internal void CopyFrom(Collision source)
+        internal void CopyFrom(Collision source, bool copyContacts = false)
         {
             m_Collider = source.m_Collider;
             m_Rigidbody = source.m_Rigidbody;
             m_Self = source.m_Self;
             m_RelativeVelocity = source.m_RelativeVelocity;
             m_Impulse = source.m_Impulse;
-            m_Contacts = source.m_Contacts;
+            if (copyContacts)
+            {
+                if (m_Contacts.Length < source.m_ContactCount)
+                    m_Contacts = new ContactPoint[Math.Max(4, source.m_ContactCount * 2)];
+                Array.Copy(source.m_Contacts, m_Contacts, source.m_ContactCount);
+            }
+            else m_Contacts = source.m_Contacts;
             m_ContactCount = source.m_ContactCount;
         }
 

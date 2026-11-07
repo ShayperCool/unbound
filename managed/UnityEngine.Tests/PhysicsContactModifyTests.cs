@@ -188,6 +188,22 @@ namespace UnityEngine.Tests
             void OnCollisionStay(Collision collision) { }
         }
 
+        Scene ContactScene(bool measured = true)
+        {
+            string release = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = measured ? "6000.0.71f1" : "2022.3.0f1";
+            try
+            {
+                var scene = SceneManager.CreateScene("LiveContacts" + s_Lane, new CreateSceneParameters(LocalPhysicsMode.Physics3D));
+                m_Scenes.Add(scene);
+                SceneManager.SetActiveScene(scene);
+                var anchor = new GameObject("Anchor"); m_Made.Add(anchor);
+                anchor.AddComponent<BoxCollider>();
+                return scene;
+            }
+            finally { ProjectInfo.UnityVersion = release; }
+        }
+
         [Theory]
         [InlineData(false, false, false)]
         [InlineData(true, false, false)]
@@ -197,20 +213,8 @@ namespace UnityEngine.Tests
         [InlineData(true, false, true)]
         public void LiveFlagChangesFollowThePairsContactPointRequest(bool initial, bool receiver, bool provides)
         {
-            string release = ProjectInfo.UnityVersion;
             var active = SceneManager.GetActiveScene();
-            Scene scene;
-            ProjectInfo.UnityVersion = "6000.0.71f1";
-            try
-            {
-                scene = SceneManager.CreateScene("LiveContacts" + s_Lane, new CreateSceneParameters(LocalPhysicsMode.Physics3D));
-                m_Scenes.Add(scene);
-                SceneManager.SetActiveScene(scene);
-                // Create the scene's native world while its measured profile is selected.
-                var anchor = new GameObject("Anchor"); m_Made.Add(anchor);
-                anchor.AddComponent<BoxCollider>();
-            }
-            finally { ProjectInfo.UnityVersion = release; }
+            var scene = ContactScene();
             var physics = scene.GetPhysicsScene();
             void Steps(int count) { for (int i = 0; i < count; i++) physics.Simulate(Dt); }
             var lane = Lane();
@@ -237,6 +241,51 @@ namespace UnityEngine.Tests
             m_Pairs.Clear();
             Steps(2);
             Assert.Equal(!initial, m_Pairs.Count != 0);
+        }
+
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(true, true)]
+        public void CompoundReportRequestsBelongToTheBodyReceiver(bool initial, bool onRoot)
+        {
+            var active = SceneManager.GetActiveScene();
+            var scene = ContactScene();
+            var physics = scene.GetPhysicsScene();
+            void Steps(int count) { for (int i = 0; i < count; i++) physics.Simulate(Dt); }
+            var lane = Lane();
+            Box(lane, new Vector3(10, 1, 10), false);
+            var root = new GameObject("Compound"); m_Made.Add(root);
+            root.transform.position = lane + Vector3.up;
+            root.AddComponent<Rigidbody>().sleepThreshold = 0;
+            var child = Box(Vector3.zero, Vector3.one, false);
+            child.transform.SetParent(root.transform, false);
+            (onRoot ? root : child).AddComponent<Receiver>();
+            var collider = child.GetComponent<Collider>();
+            collider.hasModifiableContacts = initial;
+            SceneManager.SetActiveScene(active);
+            int points = 0;
+            Physics.ContactEventDelegate handler = (_, headers) =>
+            {
+                for (int h = 0; h < headers.Length; h++)
+                    for (int p = 0; p < headers[h].pairCount; p++)
+                    {
+                        var pair = headers[h].GetContactPair(p);
+                        if (pair.colliderInstanceID == collider.GetInstanceID() || pair.otherColliderInstanceID == collider.GetInstanceID())
+                            points += pair.contactCount;
+                    }
+            };
+            Physics.ContactEvent += handler;
+            try
+            {
+                Steps(2); m_Pairs.Clear(); points = 0;
+                collider.hasModifiableContacts = !initial;
+                Steps(2);
+                Assert.Equal(onRoot ? initial : !initial, m_Pairs.Count != 0);
+                Assert.Equal(onRoot, points != 0);
+            }
+            finally { Physics.ContactEvent -= handler; }
         }
 
         public sealed class ReuseReceiver : MonoBehaviour
@@ -280,6 +329,80 @@ namespace UnityEngine.Tests
                 if (reports) Physics.ContactEvent -= handler;
                 Physics.reuseCollisionCallbacks = previous;
                 ReuseReceiver.Seen.Clear(); ReuseReceiver.Counts.Clear();
+            }
+        }
+
+        public sealed class TransitionReceiver : MonoBehaviour
+        {
+            internal static Collision Retained;
+            internal static ContactPoint First;
+            internal static int Count;
+            internal static readonly List<GameObject> Routes = new List<GameObject>();
+            internal bool Retain, DisableReuse;
+            void OnCollisionEnter(Collision collision)
+            {
+                Routes.Add(gameObject);
+                if (DisableReuse) Physics.reuseCollisionCallbacks = false;
+                if (!Retain) return;
+                Retained = collision; First = collision.GetContact(0); Count = collision.contactCount;
+                Physics.reuseCollisionCallbacks = true;
+            }
+        }
+
+        [Theory]
+        [InlineData(false, false, false)]
+        [InlineData(true, false, false)]
+        [InlineData(false, true, false)]
+        [InlineData(true, true, false)]
+        [InlineData(false, false, true)]
+        [InlineData(true, false, true)]
+        public void ChangingReuseDuringDeliveryPreservesRetainedCollisions(bool reports, bool measured, bool startReused)
+        {
+            var active = SceneManager.GetActiveScene();
+            var scene = ContactScene(measured);
+            var physics = scene.GetPhysicsScene();
+            void Steps(int count) { for (int i = 0; i < count; i++) physics.Simulate(Dt); }
+            bool previous = Physics.reuseCollisionCallbacks;
+            Physics.ContactEventDelegate handler = (_, __) => { };
+            var lane = Lane();
+            Box(lane, new Vector3(10, 1, 10), false).AddComponent<TransitionReceiver>();
+            var root = new GameObject("Compound"); m_Made.Add(root);
+            root.transform.position = lane + Vector3.up;
+            root.AddComponent<Rigidbody>().sleepThreshold = 0;
+            root.AddComponent<TransitionReceiver>().Retain = measured || startReused;
+            var child = new GameObject("Child");
+            child.transform.SetParent(root.transform, false);
+            Add<BoxCollider>(child);
+            var receiver = child.AddComponent<TransitionReceiver>();
+            receiver.Retain = !measured && !startReused;
+            receiver.DisableReuse = startReused;
+            TransitionReceiver.Retained = null;
+            TransitionReceiver.Routes.Clear();
+            SceneManager.SetActiveScene(active);
+            Physics.reuseCollisionCallbacks = startReused;
+            if (reports) Physics.ContactEvent += handler;
+            try
+            {
+                Steps(3);
+                var retained = TransitionReceiver.Retained;
+                Assert.NotNull(retained);
+                if (measured)
+                {
+                    Assert.DoesNotContain(child, TransitionReceiver.Routes);
+                    Assert.Contains(root, TransitionReceiver.Routes);
+                }
+                Assert.Equal(TransitionReceiver.Count, retained.contactCount);
+                var current = retained.GetContact(0);
+                Assert.Equal(TransitionReceiver.First.thisCollider, current.thisCollider);
+                Assert.Equal(TransitionReceiver.First.otherCollider, current.otherCollider);
+                Assert.Equal(TransitionReceiver.First.normal, current.normal);
+            }
+            finally
+            {
+                if (reports) Physics.ContactEvent -= handler;
+                Physics.reuseCollisionCallbacks = previous;
+                TransitionReceiver.Retained = null;
+                TransitionReceiver.Routes.Clear();
             }
         }
 

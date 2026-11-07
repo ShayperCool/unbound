@@ -606,6 +606,63 @@ public static class ContactModifyProbe
             Record("control/firstCallback/" + initial, counts.ToArray());
             Clean();
         }
+        foreach (bool reports in new[] { false, true })
+        {
+            Physics.reuseCollisionCallbacks = false;
+            var ground = Ground(); ground.AddComponent<ModifyReuseTransition>();
+            var root = new GameObject("transitionRoot"); made.Add(root);
+            root.transform.position = Vector3.up;
+            Body(root).sleepThreshold = 0;
+            root.AddComponent<ModifyReuseTransition>();
+            var child = Make("transitionChild", PrimitiveType.Cube, Vector3.zero, Vector3.one);
+            child.transform.SetParent(root.transform, false);
+            child.AddComponent<ModifyReuseTransition>();
+            ModifyReuseTransition.retained = null;
+            ModifyReuseTransition.routes.Clear();
+            if (reports) Physics.ContactEvent += OnReports;
+            Physics.SyncTransforms();
+            for (int step = 0; step < 3; step++) Physics.Simulate(Dt);
+            ModifyReuseTransition.routes.Sort(StringComparer.Ordinal);
+            Record("control/callbackRoute/" + reports, string.Join(";", ModifyReuseTransition.routes));
+            var retained = ModifyReuseTransition.retained;
+            var current = retained.GetContact(0);
+            var first = ModifyReuseTransition.first;
+            Record("control/reuseTransition/" + reports, retained.contactCount == ModifyReuseTransition.count,
+                current.thisCollider == first.thisCollider, current.otherCollider == first.otherCollider,
+                current.normal == first.normal);
+            if (reports) Physics.ContactEvent -= OnReports;
+            ModifyReuseTransition.retained = null;
+            Clean();
+        }
+        Physics.reuseCollisionCallbacks = reuse;
+        foreach (bool receiverOnRoot in new[] { false, true })
+        foreach (bool initial in new[] { false, true })
+        {
+            var ground = Ground();
+            var root = new GameObject("requestRoot"); made.Add(root);
+            root.transform.position = Vector3.up;
+            Body(root).sleepThreshold = 0;
+            var child = Make("requestChild", PrimitiveType.Cube, Vector3.zero, Vector3.one);
+            child.transform.SetParent(root.transform, false);
+            (receiverOnRoot ? root : child).AddComponent<ModifyOrderLog>();
+            var collider = child.GetComponent<Collider>();
+            collider.hasModifiableContacts = initial;
+            reportColliders.Clear(); reportColliders.Add(collider.GetInstanceID());
+            reportColliders.Add(ground.GetComponent<Collider>().GetInstanceID());
+            Physics.ContactEvent += OnReports;
+            Physics.SyncTransforms();
+            var counts = new List<object>();
+            for (int step = 0; step < 6; step++)
+            {
+                if (step == 2) collider.hasModifiableContacts = !initial;
+                ResetCounts(); reportPairs = reportPoints = 0;
+                Physics.Simulate(Dt);
+                counts.Add(pairs); counts.Add(reportPairs); counts.Add(reportPoints);
+            }
+            Record("control/compoundRequest/" + receiverOnRoot + "/" + initial, counts.ToArray());
+            Physics.ContactEvent -= OnReports;
+            Clean();
+        }
         // Changes before a first contact, and changes on the static side.
         foreach (bool onStatic in new[] { false, true })
         foreach (int toggleStep in new[] { 0, 1, 3 })

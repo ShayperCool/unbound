@@ -177,8 +177,9 @@ namespace Unbound.Runtime
         /// their selectable SAT path is documented, but not yet measured by this fixture.</summary>
         internal static bool PhysicsPcmEnabled(bool projectValue) => Major >= 6000 || projectValue;
 
-        /// <summary>Contact point requests from receiver methods and providesContacts, measured by
-        /// contactmodify3d in 6000.0.71f1. Other releases retain unconditional point reporting until
+        /// <summary>Contact point requests and compound collision-message routing, measured by
+        /// contactmodify3d in 6000.0.71f1. Other releases retain unconditional point reporting and
+        /// collider-plus-body delivery until
         /// measured (docs/COMPATIBILITY_GAPS.md).</summary>
         internal static bool SelectiveContactReportsMeasured => Release == (6000, 0, 71, 'f', 1);
 

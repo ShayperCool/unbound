@@ -190,7 +190,7 @@ enum : int
 // collider decides to contact), word2 flags, word3 the collider's layerOverridePriority.
 // word2 bits 3-4 carry the body's collision detection mode, so the filter shader can decide
 // which pairs get sweep CCD; bit 5 marks a collider of an actor that has no mode (a character
-// controller's); bits 6-8 carry the ShapeInfo layer flags.
+// controller's); bits 6-9 carry the ShapeInfo layer flags.
 enum : PxU32
 {
 	FlagContactEvents = 1,

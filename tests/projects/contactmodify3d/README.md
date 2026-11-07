@@ -25,11 +25,12 @@ Measures `Physics.ContactModifyEvent`, `Physics.ContactModifyEventCCD`, `Modifia
   methods, on either collider), `providesContacts`, event subscriptions and both callback reuse
   settings; adding/removing a receiver or request alongside a live flag change; changes before
   first contact and from its collision callback; separation and recontact; CCD; repeated compound
-  actor replacement; controller flag reads, moves, simulation contacts and identities.
+  actor replacement; controller flag reads, moves, simulation contacts and identities;
+  reuse enabled from a compound callback and the compound receiver destinations.
   New identity controls keep the collider and its body together and canonicalize the two sides,
   since which collider is first is unspecified.
 
-The canonical Native oracle is `Reference/unity-6000.0.71f1.jsonl` (404 records, Unity 6000.0.71f1
+The canonical Native oracle is `Reference/unity-6000.0.71f1.jsonl` (412 records, Unity 6000.0.71f1
 on Linux, GPU Editor). Two independent captures were byte-identical. Only one copy is kept here.
 
 Measured (6000.0.71f1):
@@ -43,8 +44,8 @@ Measured (6000.0.71f1):
 - The event runs within `Physics.Simulate`, before the step's `OnCollisionEnter`/`Stay`.
 - An `Instantiate` clone starts with `hasModifiableContacts` false.
 - A live pair refreshes its modification state when the need to retain contact points changes,
-  or when the overlap is re-created. Modification itself, any collision receiver, or
-  `providesContacts` requests retention. A flag change with neither other request therefore
+  or when the overlap is re-created. Modification itself, a collision receiver on the owning Rigidbody or static Collider
+  GameObject, or `providesContacts` requests retention. A flag change with neither other request therefore
   applies on the next simulation; with another request keeping retention enabled, it waits for
   pair recreation. Adding/removing a request and changing the flag together follows the same rule.
   This is measured behaviour, not a documented timing guarantee.
@@ -52,7 +53,10 @@ Measured (6000.0.71f1):
   Exit-only receivers request enter/exit reports, without stay reports; parameterless and disabled
   receivers still request points. A `ContactModifyEvent` subscriber alone receives no unflagged
   pairs. Callback reuse true shares one `Collision` object across both sides and later steps;
-  false gives distinct callback objects, with the same contact data.
+  false gives distinct callback objects, with the same contact data. Enabling reuse during a
+  callback preserves collision data retained while reuse was false. Compound collision messages
+  go to the Rigidbody GameObject; collider-only children do not request contact reports or
+  receive duplicate messages. Controls test a child-only receiver independently of a body receiver.
 - `CharacterController.hasModifiableContacts` defaults to false and reads back either setter
   value. Its simulated contacts with a dynamic body reach modification; its `Move` sweeps do not.
   Its body ID is zero. Static colliders also have zero body ID; each compound child retains its own
@@ -64,7 +68,7 @@ Not compared: the calling thread and the order of pairs in a buffer (Unity leave
 pairs are recorded sorted), and which collider is first in a pair (unspecified; the mass cases use
 frictionless spheres, whose motion does not depend on it).
 
-All 404 rows are required. The original 343 oracle rows and numeric tolerances are unchanged;
+All 412 rows are required. The original 343 oracle rows and numeric tolerances are unchanged;
 there are no known differences. `publish --extend-reference` admits only new keys and requires
 both complete GPU captures to agree byte for byte, including every existing reference row.
 
@@ -74,7 +78,8 @@ Type for method discovery. Actor and shape IDs use lifecycle-maintained dictiona
 identity reads do not scan bodies or allocate.
 
 The measured request rule is selected through Compat for exactly 6000.0.71f1. Other releases
-retain unconditional point requests until measured; see `docs/COMPATIBILITY_GAPS.md`.
+retain unconditional point requests and the previous collider-plus-body message delivery until
+measured; see `docs/COMPATIBILITY_GAPS.md`.
 
 Unity 6000.0 contracts checked for this work:
 
@@ -84,6 +89,7 @@ Unity 6000.0 contracts checked for this work:
 | [Physics.ContactModifyEvent](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics.ContactModifyEvent.html) | Only flagged pairs; arbitrary calling thread and multiple batches; CCD contacts use the separate event. |
 | [Physics.ContactModifyEventCCD](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics.ContactModifyEventCCD.html) | CCD contacts, with inverted normals. |
 | [Collider.providesContacts](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Collider-providesContacts.html) and [Physics.ContactEvent](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics.ContactEvent.html) | Report requests depend on providesContacts and collision method phases; no trigger reports. |
+| [MonoBehaviour.OnCollisionEnter](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnCollisionEnter.html) and [compound colliders](https://docs.unity3d.com/6000.0/Documentation/Manual/compound-colliders-introduction.html) | Collision data is supplied to receiver methods; disabled methods still receive messages. Compound shapes belong to one Rigidbody. The measured destination is its GameObject; the pages do not prescribe this routing in detail. |
 | [Physics.reuseCollisionCallbacks](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics-reuseCollisionCallbacks.html) | True reuses one Collision object; false permits retaining callback objects. |
 | [ModifiableContactPair](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ModifiableContactPair.html) and [CharacterController](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/CharacterController.html) | Pair proxy exposes collider/body identities; the controller inherits the collider flag. Neither page promises live flag-change timing or controller sweep delivery. |
 

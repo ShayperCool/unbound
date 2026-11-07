@@ -1272,12 +1272,19 @@ namespace Unbound.Runtime
             foreach (var collider in s_Colliders)
             {
                 int request = collider.m_ProvidesContacts ? ContactEnterExit | ContactStay :
-                    ReceiverRequest(collider.m_GameObject) | ReceiverRequest(collider.m_AttachedBody?.m_GameObject);
+                    (ReceivesColliderMessages(collider) ? ReceiverRequest(collider.m_GameObject) : 0) |
+                    ReceiverRequest(collider.m_AttachedBody?.m_GameObject);
                 if (request == collider.m_ContactReportFlags) continue;
                 collider.m_ContactReportFlags = request;
                 Refilter(collider);
             }
         }
+
+        // A compound shape reports through its owning Rigidbody, just as a body on the
+        // collider's own GameObject does. Static shapes report through the Collider.
+        static bool ReceivesColliderMessages(Collider collider) => collider.m_AttachedBody == null ||
+            ReferenceEquals(collider.m_AttachedBody.m_GameObject, collider.m_GameObject) ||
+            !(collider.m_Space ?? s_Space).SelectiveContactReports;
 
         static int ReceiverRequest(GameObject go)
         {
@@ -1329,10 +1336,13 @@ namespace Unbound.Runtime
         {
             if (Physics.s_ReuseCollisionCallbacks && !ReferenceEquals(collision, s_ReusedCollision))
             {
-                s_ReusedCollision.CopyFrom(collision);
+                // The shared object owns its contact buffer. A preceding callback may have
+                // retained the source while reuse was disabled, then enabled reuse here.
+                s_ReusedCollision.CopyFrom(collision, copyContacts: true);
                 collision = s_ReusedCollision;
             }
-            else if (!Physics.s_ReuseCollisionCallbacks && bufferedReusable)
+            else if (!Physics.s_ReuseCollisionCallbacks &&
+                (bufferedReusable || ReferenceEquals(collision, s_ReusedCollision)))
             {
                 // A ContactEvent listener can change reuse before these buffered messages run.
                 var retained = new Collision();
@@ -1373,7 +1383,7 @@ namespace Unbound.Runtime
                     var go=self.m_GameObject;
                     if (go==null || go.m_Destroyed || !go.activeInHierarchy) return;
                     var rbGo = self.m_AttachedBody?.m_GameObject;
-                    bool ownReceiver = ReceiverRequest(go) != 0;
+                    bool ownReceiver = ReceivesColliderMessages(self) && ReceiverRequest(go) != 0;
                     bool bodyReceiver = rbGo != null && rbGo != go && rbGo.activeInHierarchy && ReceiverRequest(rbGo) != 0;
                     if (!ownReceiver && !bodyReceiver) return;
                     var collision=MakeCollision(pair,self,other,phase,flip, snapshot: true);
@@ -1720,7 +1730,7 @@ namespace Unbound.Runtime
             else
             {
                 var name = s_CollisionMessages[(int)phase];
-                bool ownReceiver = ReceiverRequest(go) != 0;
+                bool ownReceiver = ReceivesColliderMessages(self) && ReceiverRequest(go) != 0;
                 bool bodyReceiver = rbGo != null && rbGo != go && rbGo.activeInHierarchy && ReceiverRequest(rbGo) != 0;
                 if (!ownReceiver && !bodyReceiver) return;
                 var collision = MakeCollision(pair, self, other, phase, flip);
