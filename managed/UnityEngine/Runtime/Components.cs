@@ -72,7 +72,15 @@ namespace Unbound.Runtime
             }
             var c = Create(type, go);
             go.m_Components.Add(c);
+            var companionType = c.AddedCompanion;
+            Component companion = null;
+            if (companionType != null && go.FindComponent(companionType) == null)
+            {
+                companion = Create(companionType, go);
+                go.m_Components.Add(companion);
+            }
             Lifecycle.OnComponentAdded(c);
+            if (companion != null) Lifecycle.OnComponentAdded(companion);
             ScriptMessages.Validate(c);
             return c;
         }

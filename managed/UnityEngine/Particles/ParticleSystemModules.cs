@@ -177,6 +177,7 @@ namespace UnityEngine
             public ParticleSystemMeshShapeType meshShapeType { get => D.meshShapeType; set => D.meshShapeType = value; }
             public Mesh mesh { get => D.mesh; set => D.mesh = value; }
             public MeshRenderer meshRenderer { get => D.meshRenderer; set => D.meshRenderer = value; }
+            public SkinnedMeshRenderer skinnedMeshRenderer { get => D.skinnedMeshRenderer as SkinnedMeshRenderer; set => D.skinnedMeshRenderer = value; }
             public Sprite sprite { get => D.sprite; set => D.sprite = value; }
             public SpriteRenderer spriteRenderer { get => D.spriteRenderer; set => D.spriteRenderer = value; }
             public bool useMeshMaterialIndex { get => D.useMeshMaterialIndex; set => D.useMeshMaterialIndex = value; }

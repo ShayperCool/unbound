@@ -1,0 +1,61 @@
+{
+  "colour-blend": {
+    "reason": "Use Mesh Colors blends the vertex colours with weights in 1/255 steps (red, green and blue of every random draw match exactly); alpha, and any channel whose weights come from a loop-mode edge position, can differ by 1/255. Positions, directions and the other channels match.",
+    "keys": [
+      "align/edge",
+      "align/triangle",
+      "loop/edge/tris/-1",
+      "loop/edge/tris/1",
+      "loop/triangle/tris/-1",
+      "loop/triangle/tris/1",
+      "material/edge/0",
+      "material/edge/1",
+      "material/edge/5",
+      "material/triangle/0",
+      "material/triangle/1",
+      "material/triangle/5",
+      "modifiers/edge",
+      "modifiers/triangle",
+      "normaloffset/edge",
+      "normaloffset/triangle",
+      "random/edge/burst",
+      "random/edge/rate/1",
+      "random/triangle/burst",
+      "random/triangle/emit",
+      "random/triangle/rate/0",
+      "random/triangle/rate/1",
+      "random/triangle/seed",
+      "skinned/blend/edge",
+      "skinned/blend/triangle",
+      "skinned/bone/edge",
+      "skinned/bone/triangle",
+      "skinned/rest/edge",
+      "skinned/rest/triangle",
+      "transform/edge",
+      "transform/triangle"
+    ]
+  },
+  "lines-topology": {
+    "reason": "A mesh of lines: Unity reads its index buffer as triangles and emits from the result (a degenerate first triangle and one past the index data), warning that the mesh is not valid; Unbound gives the same warning and emits at the shape's origin, as Unity does for point and empty meshes.",
+    "keys": [
+      "lines/edge",
+      "lines/triangle",
+      "lines/vertex",
+      "messages/lines/edge",
+      "messages/lines/triangle"
+    ]
+  },
+  "spread-boundary": {
+    "reason": "Edge Loop and Ping-Pong with spread 0.25: the rate particles born at exactly 0.25 s and 1.25 s snap to the next spread step in Unity and to the one before in Unbound (their birth time is just under the boundary there); every other particle matches.",
+    "keys": [
+      "loop/edge/1/0.25/0",
+      "loop/edge/1/0.25/1",
+      "loop/edge/1/0.25/2",
+      "loop/edge/1/0.25/3",
+      "pingpong/edge/1/0.25/0",
+      "pingpong/edge/1/0.25/1",
+      "pingpong/edge/1/0.25/2",
+      "pingpong/edge/1/0.25/3"
+    ]
+  }
+}

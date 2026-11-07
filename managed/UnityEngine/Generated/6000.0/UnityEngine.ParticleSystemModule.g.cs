@@ -28,10 +28,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static bool CheckVertexStreamsMatchShader(bool hasTangent, bool hasColor, int texCoordChannelCount, global::UnityEngine.Material material, ref bool tangentError, ref bool colorError, ref bool uvError) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystem.CheckVertexStreamsMatchShader"); return default; }
         [global::Unbound.Stub] internal static int GetMaxTexCoordStreams() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystem.GetMaxTexCoordStreams"); return default; }
         internal global::UnityEngine.Matrix4x4 localToWorldMatrix { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystem.localToWorldMatrix"); return default; } }
-        unsafe partial struct ShapeModule
-        {
-            public global::UnityEngine.SkinnedMeshRenderer skinnedMeshRenderer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystem.ShapeModule.skinnedMeshRenderer"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystem.ShapeModule.skinnedMeshRenderer"); } }
-        }
         [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Size = 1)]
         [global::System.Obsolete("ParticleSystem.CollisionEvent has been deprecated. Use ParticleCollisionEvent instead (UnityUpgradable)")]
         [global::Unbound.Stub]

@@ -13,6 +13,7 @@ namespace UnityEngine
         {
             internal Random.State m_ShapeRandom0, m_ShapeRandom1, m_ShapeRandom2, m_ShapeRandom3;
             internal bool m_ShapeRandomReady;
+            internal int m_MeshVertexCursor;
         }
 
         void ResetShapeRandom(uint seed)
@@ -20,6 +21,7 @@ namespace UnityEngine
             for (int lane = 0; lane < 4; lane++)
                 m_ShapeRandom[lane] = Random.State.FromSeed(unchecked((int)(seed + 367u * (uint)lane)));
             m_ShapeRandomReady = true;
+            m_MeshVertexCursor = 0;
         }
 
         void BeginShapeSample(int index)
@@ -32,11 +34,19 @@ namespace UnityEngine
         // Shape samplers advance packed groups independently of initialization and
         // emission. The first lane advances all four, including temporary lanes;
         // retained later lanes read from their copy of the group's starting state.
-        float ShapeValue()
+        float ShapeValue() => InitialValue(ShapeWord());
+
+        /// <summary>The next draw of the shape stream as its whole 32-bit word (the mesh shape's
+        /// Vertex mode takes it modulo a count, Unity 6000.0.71f1, tests/projects/particlemeshshape).</summary>
+        uint ShapeWord()
         {
-            if (m_ShapeLane != 0) return m_ShapeCursors[m_ShapeLane].NextValue();
+            if (m_ShapeLane != 0)
+            {
+                m_ShapeCursors[m_ShapeLane].NextValue();
+                return m_ShapeCursors[m_ShapeLane].S3;
+            }
             for (int lane = 0; lane < 4; lane++) m_ShapeRandom[lane].NextValue();
-            return InitialValue(m_ShapeRandom[0].S3);
+            return m_ShapeRandom[0].S3;
         }
 
         // A fixed-length offset; azimuth precedes height in the shared shape stream.

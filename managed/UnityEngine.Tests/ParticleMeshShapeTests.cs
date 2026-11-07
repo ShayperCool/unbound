@@ -138,95 +138,133 @@ namespace UnityEngine.Tests
             return index;
         }
 
-        /// <summary>The vertices one particle each is emitted from at the given emission times
-        /// (the time the spawn modes move with).</summary>
-        static int[] VerticesAt(ParticleSystem ps, float[] times)
-        {
-            var result = new int[times.Length];
-            for (int i = 0; i < times.Length; i++)
-            {
-                ps.Clear();
-                ps.m_TotalTime = times[i];
-                ps.Emit(1);
-                var particles = Read(ps);
-                Assert.Single(particles);
-                result[i] = VertexAt(particles[0].position);
-            }
-            return result;
-        }
-
-        /// <summary>Emission times over two seconds, away from the vertex boundaries.</summary>
-        static float[] TwoSeconds()
-        {
-            var times = new float[20];
-            for (int i = 0; i < times.Length; i++) times[i] = 0.05f + 0.1f * i;
-            return times;
-        }
-
-        // meshSpawnSpeed: in the animated modes it sets how quickly the emission position moves
-        // across the mesh (Unity 6000.0 ShapeModule.meshSpawnSpeed). Which vertex a position maps to
-        // and the travel rate are unmeasured and not asserted.
+        // Measured (6000.0.71f1, tests/projects/particlemeshshape loop/vertex/*, pingpong/vertex/*):
+        // the Vertex type's Loop and Ping-Pong walk the vertex buffer one vertex per emitted
+        // particle, whatever the spawn speed and spread; Ping-Pong turns back at each end and emits
+        // from that end twice. Unused vertices are walked too.
         [Theory]
-        [InlineData(ParticleSystemShapeMultiModeValue.Loop)]
-        [InlineData(ParticleSystemShapeMultiModeValue.PingPong)]
-        public void VertexModeLoopWithoutSpeedKeepsOneVertex(ParticleSystemShapeMultiModeValue mode)
+        [InlineData(ParticleSystemShapeMultiModeValue.Loop, 0f, 0f, new[] { 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0 })]
+        [InlineData(ParticleSystemShapeMultiModeValue.Loop, 1f, 0.5f, new[] { 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0 })]
+        [InlineData(ParticleSystemShapeMultiModeValue.PingPong, 0.7f, 0f, new[] { 0, 1, 2, 3, 4, 5, 5, 4, 3, 2, 1, 0, 0 })]
+        public void VertexModeLoopWalksTheVerticesOnePerParticle(ParticleSystemShapeMultiModeValue mode, float speed, float spread, int[] expected)
         {
             var ps = Make(TwoTriangles(), ParticleSystemMeshShapeType.Vertex);
             try
             {
                 var shape = ps.shape;
                 shape.meshSpawnMode = mode;
-                shape.meshSpawnSpeed = 0f;
-                var vertices = VerticesAt(ps, TwoSeconds());
-                foreach (int v in vertices) Assert.Equal(vertices[0], v);
-            }
-            finally { Object.DestroyImmediate(ps.gameObject); }
-        }
-
-        // meshSpawnSpread: the gap between emission points across the mesh (Unity 6000.0
-        // ShapeModule.meshSpawnSpread; Manual: Spread). A spread of 0.5 leaves at most two points.
-        [Fact]
-        public void VertexModeLoopSnapsToTheSpread()
-        {
-            var ps = Make(TwoTriangles(), ParticleSystemMeshShapeType.Vertex);
-            try
-            {
-                var shape = ps.shape;
-                shape.meshSpawnMode = ParticleSystemShapeMultiModeValue.Loop;
-                shape.meshSpawnSpeed = 1f;
-                // Without a spread the moving position reaches more than two vertices.
-                Assert.True(new System.Collections.Generic.HashSet<int>(VerticesAt(ps, TwoSeconds())).Count > 2);
-                shape.meshSpawnSpread = 0.5f;
-                Assert.Equal(2, new System.Collections.Generic.HashSet<int>(VerticesAt(ps, TwoSeconds())).Count);
-            }
-            finally { Object.DestroyImmediate(ps.gameObject); }
-        }
-
-        // Manual (Shape module, Mode): Ping-Pong is like Loop, except that each consecutive loop
-        // runs in the opposite direction to the previous one.
-        [Fact]
-        public void VertexModePingPongReversesEachLoop()
-        {
-            var ps = Make(TwoTriangles(), ParticleSystemMeshShapeType.Vertex);
-            try
-            {
-                var shape = ps.shape;
-                shape.meshSpawnSpeed = 1f;
-                shape.meshSpawnMode = ParticleSystemShapeMultiModeValue.Loop;
-                var loop = VerticesAt(ps, TwoSeconds());
-                shape.meshSpawnMode = ParticleSystemShapeMultiModeValue.PingPong;
-                var pingPong = VerticesAt(ps, TwoSeconds());
-                int half = loop.Length / 2;
-                Assert.True(new System.Collections.Generic.HashSet<int>(pingPong).Count > 1, "the position does not move");
-                for (int i = 0; i < half; i++)
+                shape.meshSpawnSpeed = speed;
+                shape.meshSpawnSpread = spread;
+                var vertices = new int[expected.Length];
+                for (int i = 0; i < vertices.Length; i++)
                 {
-                    // Loop repeats the first loop; PingPong runs it backwards.
-                    Assert.Equal(loop[i], loop[half + i]);
-                    Assert.Equal(pingPong[i], pingPong[loop.Length - 1 - i]);
+                    ps.Clear();
+                    ps.Emit(1);
+                    vertices[i] = VertexAt(Read(ps)[0].position);
                 }
-                Assert.NotEqual(pingPong[0], pingPong[half]);
+                Assert.Equal(expected, vertices);
+                // A restart starts the walk again.
+                ps.Simulate(0f, true, true);
+                ps.Emit(1);
+                Assert.Equal(0, VertexAt(Read(ps)[0].position));
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        // Measured (random/vertex/*, grid with a zero-area triangle): Vertex picks a triangle by
+        // count, so a degenerate triangle's corners are emitted from too; Triangle and Edge weigh by
+        // area and never pick it.
+        [Theory]
+        [InlineData(ParticleSystemMeshShapeType.Vertex, true)]
+        [InlineData(ParticleSystemMeshShapeType.Triangle, false)]
+        [InlineData(ParticleSystemMeshShapeType.Edge, false)]
+        public void OnlyVertexEmitsFromADegenerateTriangle(ParticleSystemMeshShapeType type, bool reached)
+        {
+            var far = new Vector3(9f, 9f, 9f);
+            var mesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.right, Vector3.up, far } };
+            // Triangle 1 is degenerate: one point used three times.
+            mesh.SetTriangles(new[] { 0, 1, 2, 3, 3, 3 }, 0);
+            var ps = Make(mesh, type);
+            try
+            {
+                ps.Emit(200);
+                bool any = false;
+                foreach (var p in Read(ps)) any |= p.position == far;
+                Assert.Equal(reached, any);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        // Measured (lines/*, points/*, empty/*): a mesh without triangles logs that it is not valid,
+        // a surface without area logs so for Edge and Triangle, and the particles start at the
+        // shape's origin facing +Z. No mesh at all warns only for Edge and Triangle.
+        [Theory]
+        [InlineData(ParticleSystemMeshShapeType.Vertex, false, true, false)]
+        [InlineData(ParticleSystemMeshShapeType.Triangle, false, true, true)]
+        [InlineData(ParticleSystemMeshShapeType.Vertex, true, false, false)]
+        [InlineData(ParticleSystemMeshShapeType.Edge, true, false, true)]
+        public void MeshesWithoutTrianglesWarnAndEmitAtTheOrigin(ParticleSystemMeshShapeType type, bool noMesh, bool notValid, bool zeroSurface)
+        {
+            Mesh mesh = null;
+            if (!noMesh)
+            {
+                mesh = new Mesh { vertices = new[] { Vector3.one, Vector3.right, Vector3.up } };
+                mesh.SetIndices(new[] { 0, 1, 2 }, MeshTopology.Points, 0);
+            }
+            var ps = Make(mesh, type);
+            var messages = new System.Collections.Generic.List<string>();
+            void Capture(string message, string stack, LogType logType) { if (logType == LogType.Warning) lock (messages) messages.Add(message); }
+            Application.logMessageReceived += Capture;
+            try
+            {
+                var main = ps.main; main.startSpeed = 1f;
+                ps.Emit(5);
+                foreach (var p in Read(ps))
+                {
+                    Assert.Equal(Vector3.zero, p.position);
+                    Assert.Equal(Vector3.forward, p.velocity);
+                }
+                Assert.Equal(notValid, messages.Exists(m => m.Contains("Mesh used in Particle System Shape Module is not valid")));
+                Assert.Equal(zeroSurface, messages.Exists(m => m.Contains("is trying to spawn on a mesh with zero surface area")));
+            }
+            finally
+            {
+                Application.logMessageReceived -= Capture;
+                Object.DestroyImmediate(ps.gameObject);
+            }
+        }
+
+        // Measured (meshrenderer/*): without vertex colours a renderer's particle takes the colour of
+        // the material of the submesh it came from.
+        [Fact]
+        public void RendererMaterialColourFollowsTheParticlesSubmesh()
+        {
+            var target = new GameObject("renderer");
+            target.AddComponent<MeshFilter>().sharedMesh = TwoTriangles();
+            var renderer = target.AddComponent<MeshRenderer>();
+            var shader = Shader.Create("Tests/Mesh Shape Colour", 2000);
+            renderer.sharedMaterials = new[] { new Material(shader) { color = Color.red }, new Material(shader) { color = Color.blue } };
+            var ps = Make(null, ParticleSystemMeshShapeType.Triangle);
+            try
+            {
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.MeshRenderer;
+                shape.meshRenderer = renderer;
+                ps.Emit(50);
+                int red = 0, blue = 0;
+                foreach (var p in Read(ps))
+                {
+                    bool second = p.position.z > 2.5f;
+                    Assert.Equal(second ? (Color32)Color.blue : (Color32)Color.red, p.startColor);
+                    if (second) blue++; else red++;
+                }
+                Assert.True(red > 0 && blue > 0);
+            }
+            finally
+            {
+                Object.DestroyImmediate(ps.gameObject);
+                Object.DestroyImmediate(target);
+            }
         }
 
         [Fact]
@@ -307,15 +345,20 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
 
-        [Fact]
-        public void TriangleNormalOffsetAndAlignmentFollowTheFaceNormal()
+        // Measured (normaloffset/*, align/*, nonormals/*): the direction is the interpolated vertex
+        // normal and the offset follows it; without normals both are +Z. Align to Direction adds the
+        // pitch and yaw that turn -Z to the direction.
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void NormalOffsetAndAlignmentFollowTheVertexNormals(bool normals)
         {
-            // A triangle facing +x (no vertex normals: its face normal).
             var mesh = new Mesh
             {
                 vertices = new[] { new Vector3(0f, 0f, 0f), new Vector3(0f, 2f, 0f), new Vector3(0f, 0f, 2f) },
                 triangles = new[] { 0, 1, 2 },
             };
+            if (normals) mesh.normals = new[] { Vector3.right, Vector3.right, Vector3.right };
             var ps = Make(mesh, ParticleSystemMeshShapeType.Triangle);
             try
             {
@@ -325,9 +368,19 @@ namespace UnityEngine.Tests
                 ps.Emit(50);
                 foreach (var p in Read(ps))
                 {
-                    Assert.InRange(Mathf.Abs(p.position.x - 0.5f), 0f, 1e-5f);
-                    // The forward axis turned to +x.
-                    Assert.InRange(Mathf.Abs(p.rotation3D.y - 90f), 0f, 1e-2f);
+                    if (normals)
+                    {
+                        Assert.InRange(Mathf.Abs(p.position.x - 0.5f), 0f, 1e-5f);
+                        Assert.InRange(Mathf.Abs(p.rotation3D.y - 90f), 0f, 1e-2f);
+                    }
+                    else
+                    {
+                        Assert.InRange(Mathf.Abs(p.position.x), 0f, 1e-5f);
+                        Assert.InRange(p.position.z, 0.5f - 1e-5f, 2.5f + 1e-5f);
+                        // +Z: -Z turned half a turn about Y.
+                        Assert.InRange(Mathf.Abs(Mathf.Abs(p.rotation3D.y) - 180f), 0f, 1e-2f);
+                    }
+                    Assert.InRange(Mathf.Abs(p.rotation3D.x), 0f, 1e-2f);
                 }
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
@@ -363,8 +416,8 @@ namespace UnityEngine.Tests
             {
                 var shape = ps.shape;
                 shape.shapeType = ParticleSystemShapeType.SkinnedMeshRenderer;
-                // The public setter is still a generated stub: set what a scene would load.
-                ps.m_Shape.skinnedMeshRenderer = renderer;
+                shape.skinnedMeshRenderer = renderer;
+                Assert.Same(renderer, shape.skinnedMeshRenderer);
 
                 // Bone b moves 2 to the right: its vertex follows, the shared one half as much.
                 boneB.localPosition += new Vector3(2f, 0f, 0f);

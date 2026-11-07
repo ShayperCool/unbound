@@ -148,6 +148,10 @@ namespace UnityEngine
         /// <summary>The component was added to its GameObject (before Awake).</summary>
         internal virtual void OnAttached() { }
 
+        /// <summary>A built-in component AddComponent adds right after this one when the object
+        /// has none (not a RequireComponent: scenes and prefabs serialize it separately).</summary>
+        internal virtual Type AddedCompanion => null;
+
         /// <summary>The component became active and enabled (engine components register here).</summary>
         internal virtual void OnEngineEnable() { }
 

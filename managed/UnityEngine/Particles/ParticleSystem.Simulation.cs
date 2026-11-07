@@ -638,9 +638,11 @@ namespace UnityEngine
                 m_ShapeTime = m_TotalTime - age;
                 int spread = request.spreadIndex >= 0 ? request.spreadIndex : local;
                 int spreadCount = request.spreadIndex >= 0 ? request.spreadCount : request.count;
-                if (!InitParticle(ref m_Particles[index], emitter, Mathf.Clamp01(birthTime / duration),
-                    false, ref overrides, spread, spreadCount, null, j, requested))
-                { marks[index] |= SlotMark.Dead; continue; }
+                m_ShapeSampleDiscarded = j >= count;
+                bool initialized = InitParticle(ref m_Particles[index], emitter, Mathf.Clamp01(birthTime / duration),
+                    false, ref overrides, spread, spreadCount, null, j, requested);
+                m_ShapeSampleDiscarded = false;
+                if (!initialized) { marks[index] |= SlotMark.Dead; continue; }
                 m_SlotPoints[index] = m_Particles[index].m_Position;
                 BeginModuleSample(j, m_Particles[index].m_RandomSeed);
                 var context = m_Context;
@@ -936,9 +938,10 @@ namespace UnityEngine
             var velocity = dir * speed;
             if (m_Shape.enabled && m_Shape.alignToDirection && dir.sqrMagnitude > 1e-12f)
             {
-                // The particle's 3D rotation turns its forward axis to its start direction.
-                var e = Quaternion.LookRotation(dir).eulerAngles;
-                rotation += new Vector3(Signed(e.x), Signed(e.y), Signed(e.z)) * Mathf.Deg2Rad;
+                // The 3D rotation gains the pitch and yaw that turn -Z to the start direction, no
+                // roll (6000.0.71f1, tests/projects/particlemeshshape align/*: mesh, sphere, cone).
+                var d = dir.normalized;
+                rotation += new Vector3(-Mathf.Asin(Mathf.Clamp(d.y, -1f, 1f)), Mathf.Atan2(d.x, -d.z), 0f);
             }
 
             // Emitter space to simulation space.
@@ -955,9 +958,19 @@ namespace UnityEngine
             }
             else if (simSpace != ParticleSystemSimulationSpace.Local)
             {
-                // The emitter's scale places particles but does not change their speed (measured).
-                var worldVelocity = m_GameObject.m_Transform.rotation * velocity;
-                FromWorld(simSpace, emitter, emitter.MultiplyPoint3x4(pos), worldVelocity, out pos, out velocity);
+                if (m_ShapeFrameSet)
+                {
+                    // A renderer shape's sample is in the renderer's frame (measured), which local
+                    // space keeps as it is.
+                    var frame = Matrix4x4.TRS(m_ShapeFramePosition, m_ShapeFrameRotation, Vector3.one);
+                    FromWorld(simSpace, emitter, frame.MultiplyPoint3x4(pos), m_ShapeFrameRotation * velocity, out pos, out velocity);
+                }
+                else
+                {
+                    // The emitter's scale places particles but does not change their speed (measured).
+                    var worldVelocity = m_GameObject.m_Transform.rotation * velocity;
+                    FromWorld(simSpace, emitter, emitter.MultiplyPoint3x4(pos), worldVelocity, out pos, out velocity);
+                }
             }
 
             if (m_InheritVelocity.enabled && m_InheritVelocity.mode == ParticleSystemInheritVelocityMode.Initial && simSpace != ParticleSystemSimulationSpace.Local)
@@ -1037,16 +1050,24 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ the shape module
 
+        bool m_ShapeTextureReported;
+
         /// <summary>A start position and direction in emitter space.</summary>
         void SampleShape(int spreadIndex, int spreadCount, out Vector3 pos, out Vector3 dir)
         {
             var S = m_Shape;
             m_ShapeColorSet = false;
+            m_ShapeFrameSet = false;
             if (!S.enabled)
             {
                 pos = Vector3.zero;
                 dir = Vector3.forward;
                 return;
+            }
+            if (S.texture != null && !m_ShapeTextureReported)
+            {
+                m_ShapeTextureReported = true;
+                ReportUnsupported("shape texture (clip channel and threshold, colour and alpha from the texture)");
             }
             bool measuredModifiers = (S.randomDirectionAmount > 0f || S.sphericalDirectionAmount > 0f || S.randomPositionAmount > 0f)
                 && Compat.ParticleShapeModifiersMeasured;
@@ -1166,8 +1187,13 @@ namespace UnityEngine
                     pos = new Vector3(ShapeValue() - 0.5f, ShapeValue() - 0.5f, 0f);
                     dir = Vector3.forward;
                     break;
-                default:
+                case ParticleSystemShapeType.Mesh:
+                case ParticleSystemShapeType.MeshRenderer:
+                case ParticleSystemShapeType.SkinnedMeshRenderer:
                     SampleMeshShape(out pos, out dir);
+                    break;
+                default:
+                    SampleSpriteShape(out pos, out dir);
                     break;
             }
 
@@ -1238,35 +1264,13 @@ namespace UnityEngine
 
         static float Frac(float x) => x - Mathf.Floor(x);
 
-        static float Signed(float degrees) => degrees > 180f ? degrees - 360f : degrees;
-
-        /// <summary>Mesh, renderer and sprite shapes: a point of the mesh (a vertex, a point on an
-        /// edge or a point in a triangle, with its normal), or a point of the sprite's rectangle; a
-        /// unit box when there is nothing to sample.</summary>
-        void SampleMeshShape(out Vector3 pos, out Vector3 dir)
+        /// <summary>Sprite and SpriteRenderer shapes: a point of the sprite's rectangle; a unit box
+        /// without a sprite.</summary>
+        void SampleSpriteShape(out Vector3 pos, out Vector3 dir)
         {
             var S = m_Shape;
-            if (S.shapeType == ParticleSystemShapeType.Mesh || S.shapeType == ParticleSystemShapeType.MeshRenderer || S.shapeType == ParticleSystemShapeType.SkinnedMeshRenderer)
-            {
-                var mesh = MeshShapeSource(out var toShape, out bool identity, out var material);
-                var table = mesh != null && mesh.m_Vertices.Length > 0 ? MeshShapeTableFor(mesh, toShape, identity) : null;
-                if (table != null && SampleMeshTable(table, out pos, out dir, out var meshColor, out bool hasColor))
-                {
-                    pos += dir * S.normalOffset;
-                    if (S.useMeshColors)
-                    {
-                        if (hasColor)
-                        {
-                            m_ShapeColor = meshColor;
-                            m_ShapeColorSet = true;
-                        }
-                        else m_ShapeColorSet = MaterialShapeColor(material, out m_ShapeColor);
-                    }
-                    return;
-                }
-            }
             Sprite sprite = S.shapeType == ParticleSystemShapeType.SpriteRenderer && S.spriteRenderer != null ? S.spriteRenderer.sprite : S.sprite;
-            if ((S.shapeType == ParticleSystemShapeType.Sprite || S.shapeType == ParticleSystemShapeType.SpriteRenderer) && sprite != null)
+            if (sprite != null)
             {
                 var b = sprite.bounds;
                 pos = new Vector3(Mathf.Lerp(b.min.x, b.max.x, ShapeValue()), Mathf.Lerp(b.min.y, b.max.y, ShapeValue()), 0f);
@@ -1275,379 +1279,6 @@ namespace UnityEngine
             }
             pos = new Vector3(ShapeValue() - 0.5f, ShapeValue() - 0.5f, ShapeValue() - 0.5f);
             dir = Vector3.forward;
-        }
-
-        // Mesh shapes (Unity 6000.0 ShapeModule: meshShapeType, meshSpawnMode/Spread/Speed,
-        // useMeshMaterialIndex/meshMaterialIndex, useMeshColors, normalOffset). Documented:
-        // Vertex emits from the vertices, Edge from the edges, Triangle from the surface. Not
-        // documented (an unmeasured hypothesis): triangles are picked by area and edges by length,
-        // uniformly over the surface or the wire. In the Loop and PingPong modes the emission
-        // position moves across the edges (Edge) or the vertices (Vertex) with the spawn speed and
-        // snaps to the spread; triangles are always random (Loop and PingPong warn once). Random
-        // draws use the shape's random stream; Unity's own sequence is not reproduced.
-
-        /// <summary>The colour the start colour is multiplied by (Use Mesh Colors), when
-        /// <see cref="m_ShapeColorSet"/>; set by the last shape sample.</summary>
-        Color m_ShapeColor;
-        bool m_ShapeColorSet;
-        MeshShapeTable m_MeshShapeTable;
-        System.Collections.Generic.HashSet<(int, string)> m_MeshShapeWarnings;
-        static readonly int s_ColorId = Shader.PropertyToID("_Color");
-        static readonly int s_TintColorId = Shader.PropertyToID("_TintColor");
-
-        /// <summary>A mesh prepared for sampling, and what it was prepared from: a table is used
-        /// again only while all of that is unchanged.</summary>
-        sealed class MeshShapeTable
-        {
-            internal Mesh Mesh;
-            internal Vector3[] SourceVertices, SourceNormals;
-            internal Color32[] SourceColors;
-            internal (int[] Indices, int BaseVertex, MeshTopology Topology)[] SourceSubMeshes;
-            internal int SyncVersion;
-            internal Matrix4x4 ToShape;
-            internal int SubMesh;
-            /// <summary>Built while the mesh had unsent changes: valid for the frame it was built
-            /// in only (in-place vertex buffer writes keep the arrays), so a mesh that is never
-            /// drawn is prepared at most once a frame, not once a particle.</summary>
-            internal bool BuiltDirty;
-            internal int BuiltFrame;
-
-            internal Vector3[] Vertices, Normals;
-            internal Color[] Colors;
-            /// <summary>The vertices the submesh uses, ascending; null: every vertex.</summary>
-            internal int[] VertexList;
-            /// <summary>Triangle corners; edge e runs from corner e to the next corner of its triangle.</summary>
-            internal int[] Triangles;
-            /// <summary>Running sums of the triangle areas and of the edge lengths.</summary>
-            internal float[] TriangleEnds, EdgeEnds;
-            internal bool SkippedTopology;
-
-            internal bool Matches(Mesh mesh, Matrix4x4 toShape, int subMesh, int frame)
-            {
-                if (!ReferenceEquals(Mesh, mesh) || !ReferenceEquals(SourceVertices, mesh.m_Vertices) || !ReferenceEquals(SourceNormals, mesh.m_Normals)
-                    || !ReferenceEquals(SourceColors, mesh.m_Colors) || SyncVersion != mesh.m_SyncVersion || SubMesh != subMesh || !ToShape.Equals(toShape)
-                    || SourceSubMeshes.Length != mesh.m_SubMeshes.Count)
-                    return false;
-                if (mesh.m_Dirty && !(BuiltDirty && BuiltFrame == frame)) return false;
-                for (int s = 0; s < SourceSubMeshes.Length; s++)
-                {
-                    var sm = mesh.m_SubMeshes[s];
-                    var built = SourceSubMeshes[s];
-                    if (!ReferenceEquals(built.Indices, sm.Indices) || built.BaseVertex != sm.BaseVertex || built.Topology != sm.Topology) return false;
-                }
-                return true;
-            }
-        }
-
-        /// <summary>The mesh the shape emits from; the matrix from its vertices to the shape's
-        /// space (the renderer's own space: identity unless the renderer's current pose is a
-        /// deformed copy); the material Use Mesh Colors falls back to.</summary>
-        Mesh MeshShapeSource(out Matrix4x4 toShape, out bool identity, out Material material)
-        {
-            var S = m_Shape;
-            toShape = Matrix4x4.identity;
-            identity = true;
-            material = null;
-            Renderer renderer = null;
-            Mesh mesh = null;
-            switch (S.shapeType)
-            {
-                case ParticleSystemShapeType.Mesh:
-                    mesh = S.mesh;
-                    break;
-                case ParticleSystemShapeType.MeshRenderer:
-                    if (S.meshRenderer != null)
-                    {
-                        renderer = S.meshRenderer;
-                        var filter = S.meshRenderer.GetComponent<MeshFilter>();
-                        mesh = filter != null ? filter.m_Mesh : null;
-                    }
-                    break;
-                case ParticleSystemShapeType.SkinnedMeshRenderer:
-                    if (S.skinnedMeshRenderer is SkinnedMeshRenderer skinned && skinned != null)
-                    {
-                        renderer = skinned;
-                        // The current pose: the (skinned, blend-shaped or cloth) mesh the renderer
-                        // draws this frame, brought back into the renderer's space.
-                        mesh = skinned.DrawGeometry(out var model);
-                        var localToWorld = skinned.transform.localToWorldMatrix;
-                        if (mesh != null && !ReferenceEquals(mesh, skinned.sharedMesh) && !model.Equals(localToWorld))
-                        {
-                            toShape = skinned.transform.worldToLocalMatrix * model;
-                            identity = false;
-                        }
-                    }
-                    break;
-            }
-            if (renderer != null)
-            {
-                var materials = renderer.m_Materials;
-                int slot = S.useMeshMaterialIndex ? S.meshMaterialIndex : 0;
-                material = slot >= 0 && slot < materials.Length ? materials[slot] : null;
-            }
-            return mesh;
-        }
-
-        /// <summary>Use Mesh Colors without vertex colours: the material's "_Color", else its
-        /// "_TintColor" (the documented fallback); nothing without either.</summary>
-        static bool MaterialShapeColor(Material material, out Color color)
-        {
-            color = Color.white;
-            if (material == null) return false;
-            if (material.HasProperty(s_ColorId)) { color = material.GetColor(s_ColorId); return true; }
-            if (material.HasProperty(s_TintColorId)) { color = material.GetColor(s_TintColorId); return true; }
-            return false;
-        }
-
-        MeshShapeTable MeshShapeTableFor(Mesh mesh, Matrix4x4 toShape, bool identity)
-        {
-            var S = m_Shape;
-            int subMesh = -1;
-            if (S.useMeshMaterialIndex)
-            {
-                if (S.meshMaterialIndex >= 0 && S.meshMaterialIndex < mesh.m_SubMeshes.Count) subMesh = S.meshMaterialIndex;
-                else WarnMeshShape(mesh, $"has no submesh {S.meshMaterialIndex} for Single Material ({mesh.m_SubMeshes.Count} submeshes); emitting from the whole mesh");
-            }
-            int frame = Time.frameCount;
-            var table = m_MeshShapeTable;
-            if (table != null && table.Matches(mesh, toShape, subMesh, frame)) return table;
-            table = BuildMeshShapeTable(mesh, toShape, identity, subMesh);
-            table.BuiltDirty = mesh.m_Dirty;
-            table.BuiltFrame = frame;
-            m_MeshShapeTable = table;
-            return table;
-        }
-
-        static MeshShapeTable BuildMeshShapeTable(Mesh mesh, Matrix4x4 toShape, bool identity, int subMesh)
-        {
-            var source = mesh.m_Vertices;
-            int n = source.Length;
-            var t = new MeshShapeTable
-            {
-                Mesh = mesh, SourceVertices = source, SourceNormals = mesh.m_Normals, SourceColors = mesh.m_Colors,
-                SyncVersion = mesh.m_SyncVersion, ToShape = toShape, SubMesh = subMesh,
-                SourceSubMeshes = new (int[], int, MeshTopology)[mesh.m_SubMeshes.Count],
-            };
-            if (identity) t.Vertices = source;
-            else
-            {
-                t.Vertices = new Vector3[n];
-                for (int i = 0; i < n; i++) t.Vertices[i] = toShape.MultiplyPoint3x4(source[i]);
-            }
-            var normals = mesh.m_Normals;
-            if (normals != null && normals.Length == n)
-            {
-                if (identity) t.Normals = normals;
-                else
-                {
-                    t.Normals = new Vector3[n];
-                    for (int i = 0; i < n; i++) t.Normals[i] = toShape.MultiplyVector(normals[i]);
-                }
-            }
-            var colors = mesh.m_Colors;
-            if (colors != null && colors.Length == n)
-            {
-                t.Colors = new Color[n];
-                for (int i = 0; i < n; i++) t.Colors[i] = colors[i];
-            }
-
-            var triangles = new System.Collections.Generic.List<int>();
-            var used = subMesh >= 0 ? new bool[n] : null;
-            for (int s = 0; s < mesh.m_SubMeshes.Count; s++)
-            {
-                var sm = mesh.m_SubMeshes[s];
-                t.SourceSubMeshes[s] = (sm.Indices, sm.BaseVertex, sm.Topology);
-                if (subMesh >= 0 && s != subMesh) continue;
-                var indices = sm.Indices;
-                if (used != null)
-                    foreach (int index in indices)
-                    {
-                        int v = index + sm.BaseVertex;
-                        if ((uint)v < (uint)n) used[v] = true;
-                    }
-                if (sm.Topology != MeshTopology.Triangles)
-                {
-                    if (indices.Length > 0) t.SkippedTopology = true;
-                    continue;
-                }
-                for (int i = 0; i + 2 < indices.Length; i += 3)
-                {
-                    int a = indices[i] + sm.BaseVertex, b = indices[i + 1] + sm.BaseVertex, c = indices[i + 2] + sm.BaseVertex;
-                    if ((uint)a >= (uint)n || (uint)b >= (uint)n || (uint)c >= (uint)n) continue;
-                    triangles.Add(a);
-                    triangles.Add(b);
-                    triangles.Add(c);
-                }
-            }
-            if (used != null)
-            {
-                var list = new System.Collections.Generic.List<int>();
-                for (int v = 0; v < n; v++) if (used[v]) list.Add(v);
-                t.VertexList = list.ToArray();
-            }
-            t.Triangles = triangles.ToArray();
-            var V = t.Vertices;
-            int count = t.Triangles.Length / 3;
-            t.TriangleEnds = new float[count];
-            t.EdgeEnds = new float[count * 3];
-            float area = 0f, length = 0f;
-            for (int k = 0; k < count; k++)
-            {
-                var a = V[t.Triangles[k * 3]];
-                var b = V[t.Triangles[k * 3 + 1]];
-                var c = V[t.Triangles[k * 3 + 2]];
-                area += 0.5f * Vector3.Cross(b - a, c - a).magnitude;
-                t.TriangleEnds[k] = area;
-                length += (b - a).magnitude;
-                t.EdgeEnds[k * 3] = length;
-                length += (c - b).magnitude;
-                t.EdgeEnds[k * 3 + 1] = length;
-                length += (a - c).magnitude;
-                t.EdgeEnds[k * 3 + 2] = length;
-            }
-            return t;
-        }
-
-        /// <summary>A point of the mesh by the shape's mesh type and spawn mode, in the mesh's
-        /// (shape) space, with its normal and (when the mesh has vertex colours) colour; false when
-        /// the mesh has nothing of that kind to emit from.</summary>
-        bool SampleMeshTable(MeshShapeTable t, out Vector3 pos, out Vector3 dir, out Color color, out bool hasColor)
-        {
-            var S = m_Shape;
-            var V = t.Vertices;
-            pos = Vector3.zero;
-            dir = Vector3.forward;
-            color = Color.white;
-            hasColor = false;
-            switch (S.meshShapeType)
-            {
-                case ParticleSystemMeshShapeType.Triangle:
-                {
-                    int count = t.TriangleEnds.Length;
-                    float total = count > 0 ? t.TriangleEnds[count - 1] : 0f;
-                    if (!(total > 0f))
-                    {
-                        WarnMeshShape(t.Mesh, "has no triangles with an area to emit from; emitting from a unit box");
-                        return false;
-                    }
-                    // No ordered triangle sampling: say so instead of silently emitting at random.
-                    if (S.meshSpawnMode == ParticleSystemShapeMultiModeValue.Loop || S.meshSpawnMode == ParticleSystemShapeMultiModeValue.PingPong)
-                        WarnMeshShape(t.Mesh, "uses the Triangle mesh type with the Loop or Ping-Pong mode, which is not supported; emitting from random points of the triangles");
-                    int k = MeshShapeFind(t.TriangleEnds, ShapeValue() * total);
-                    // Uniform in the triangle (unmeasured hypothesis, as the area weighting).
-                    float s = Mathf.Sqrt(ShapeValue()), r = ShapeValue();
-                    float wa = 1f - s, wb = s * (1f - r), wc = s * r;
-                    int a = t.Triangles[k * 3], b = t.Triangles[k * 3 + 1], c = t.Triangles[k * 3 + 2];
-                    pos = V[a] * wa + V[b] * wb + V[c] * wc;
-                    dir = MeshShapeNormal(t.Normals, a, b, c, wa, wb, wc, Vector3.Cross(V[b] - V[a], V[c] - V[a]));
-                    if (t.Colors != null)
-                    {
-                        color = t.Colors[a] * wa + t.Colors[b] * wb + t.Colors[c] * wc;
-                        hasColor = true;
-                    }
-                    break;
-                }
-                case ParticleSystemMeshShapeType.Edge:
-                {
-                    int count = t.EdgeEnds.Length;
-                    float total = count > 0 ? t.EdgeEnds[count - 1] : 0f;
-                    if (!(total > 0f))
-                    {
-                        WarnMeshShape(t.Mesh, "has no triangle edges with a length to emit from; emitting from a unit box");
-                        return false;
-                    }
-                    // A position along all the edges: moving with the spawn speed in the loop modes.
-                    float travel = S.meshSpawnSpeed.Evaluate(0f, 1f) * m_ShapeTime;
-                    float u;
-                    switch (S.meshSpawnMode)
-                    {
-                        case ParticleSystemShapeMultiModeValue.Loop: u = Frac(travel); break;
-                        case ParticleSystemShapeMultiModeValue.PingPong: u = Mathf.PingPong(travel, 1f); break;
-                        default: u = ShapeValue(); break;
-                    }
-                    if (S.meshSpawnSpread > 0f) u = Mathf.Floor(u / S.meshSpawnSpread) * S.meshSpawnSpread;
-                    float d = Mathf.Clamp01(u) * total;
-                    int e = MeshShapeFind(t.EdgeEnds, d);
-                    float start = e > 0 ? t.EdgeEnds[e - 1] : 0f;
-                    float edge = t.EdgeEnds[e] - start;
-                    float f = edge > 0f ? Mathf.Clamp01((d - start) / edge) : 0f;
-                    int a = t.Triangles[e], b = t.Triangles[e - e % 3 + (e % 3 + 1) % 3];
-                    pos = Vector3.LerpUnclamped(V[a], V[b], f);
-                    dir = MeshShapeNormal(t.Normals, a, b, b, 1f - f, f, 0f, Vector3.zero);
-                    if (t.Colors != null)
-                    {
-                        color = Color.LerpUnclamped(t.Colors[a], t.Colors[b], f);
-                        hasColor = true;
-                    }
-                    break;
-                }
-                default:
-                {
-                    int count = t.VertexList?.Length ?? V.Length;
-                    if (count == 0)
-                    {
-                        WarnMeshShape(t.Mesh, $"has no vertices in submesh {t.SubMesh} to emit from; emitting from a unit box");
-                        return false;
-                    }
-                    int k;
-                    if (S.meshSpawnMode == ParticleSystemShapeMultiModeValue.Loop || S.meshSpawnMode == ParticleSystemShapeMultiModeValue.PingPong)
-                    {
-                        // The emission position moves across the vertices with the spawn speed, as
-                        // along the edges: fixed at speed 0, snapped to the spread. The travel rate
-                        // and the vertex order it maps to are unmeasured.
-                        float travel = S.meshSpawnSpeed.Evaluate(0f, 1f) * m_ShapeTime;
-                        float u = S.meshSpawnMode == ParticleSystemShapeMultiModeValue.Loop ? Frac(travel) : Mathf.PingPong(travel, 1f);
-                        if (S.meshSpawnSpread > 0f) u = Mathf.Floor(u / S.meshSpawnSpread) * S.meshSpawnSpread;
-                        k = Math.Min((int)(Mathf.Clamp01(u) * count), count - 1);
-                    }
-                    else k = Math.Min((int)(ShapeValue() * count), count - 1);
-                    int v = t.VertexList != null ? t.VertexList[k] : k;
-                    pos = V[v];
-                    dir = t.Normals != null && t.Normals[v].sqrMagnitude > 0f ? t.Normals[v].normalized : Vector3.forward;
-                    if (t.Colors != null)
-                    {
-                        color = t.Colors[v];
-                        hasColor = true;
-                    }
-                    break;
-                }
-            }
-            if (t.SkippedTopology && S.meshShapeType != ParticleSystemMeshShapeType.Vertex)
-                WarnMeshShape(t.Mesh, "has submeshes that are not triangles; emitting from its triangle submeshes only");
-            return true;
-        }
-
-        /// <summary>The first running sum above <paramref name="x"/>; past the end, the last
-        /// element with a size.</summary>
-        static int MeshShapeFind(float[] ends, float x)
-        {
-            int lo = 0, hi = ends.Length - 1;
-            while (lo < hi)
-            {
-                int mid = (lo + hi) >> 1;
-                if (ends[mid] > x) hi = mid;
-                else lo = mid + 1;
-            }
-            while (lo > 0 && ends[lo] == ends[lo - 1]) lo--;
-            return lo;
-        }
-
-        /// <summary>The interpolated vertex normal; without normals, the face normal; else forward.</summary>
-        static Vector3 MeshShapeNormal(Vector3[] normals, int a, int b, int c, float wa, float wb, float wc, Vector3 face)
-        {
-            if (normals != null)
-            {
-                var n = normals[a] * wa + normals[b] * wb + normals[c] * wc;
-                if (n.sqrMagnitude > 1e-12f) return n.normalized;
-            }
-            return face.sqrMagnitude > 1e-12f ? face.normalized : Vector3.forward;
-        }
-
-        void WarnMeshShape(Mesh mesh, string problem)
-        {
-            m_MeshShapeWarnings ??= new System.Collections.Generic.HashSet<(int, string)>();
-            if (m_MeshShapeWarnings.Add((mesh.GetInstanceID(), problem)))
-                Debug.LogWarning($"Unbound: the shape of particle system '{name}': mesh '{mesh.name}' {problem}.");
         }
 
         // Height precedes azimuth in the shared shape stream (ShapeModifierDirection draws

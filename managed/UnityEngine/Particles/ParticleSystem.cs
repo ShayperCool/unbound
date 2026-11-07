@@ -812,6 +812,7 @@ namespace UnityEngine
             m_ShapeRandom2 = m_ShapeRandom[2],
             m_ShapeRandom3 = m_ShapeRandom[3],
             m_ShapeRandomReady = m_ShapeRandomReady,
+            m_MeshVertexCursor = m_MeshVertexCursor,
         };
 
         public void SetPlaybackState(PlaybackState playbackState)
@@ -840,6 +841,7 @@ namespace UnityEngine
             m_ShapeRandom[2] = playbackState.m_ShapeRandom2;
             m_ShapeRandom[3] = playbackState.m_ShapeRandom3;
             m_ShapeRandomReady = playbackState.m_ShapeRandomReady;
+            m_MeshVertexCursor = playbackState.m_MeshVertexCursor;
         }
 
         public Trails GetTrails()
@@ -1083,6 +1085,10 @@ namespace UnityEngine
                 if (e.system != null && e.system != this)
                     e.system.m_SubEmitterParent = this;
         }
+
+        /// <summary>AddComponent&lt;ParticleSystem&gt;() adds the renderer at once, also on an
+        /// inactive object (6000.0.71f1, tests/projects/particlemeshshape component/*).</summary>
+        internal override Type AddedCompanion => typeof(ParticleSystemRenderer);
 
         internal override void OnEngineEnable()
         {

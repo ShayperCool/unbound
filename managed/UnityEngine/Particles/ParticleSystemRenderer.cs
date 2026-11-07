@@ -57,7 +57,13 @@ namespace UnityEngine
         Mesh m_FallbackMesh;
         readonly Geometry m_Geometry = new Geometry();
 
-        public ParticleSystemRenderer() { }
+        /// <summary>A renderer added by script neither casts nor receives shadows (6000.0.71f1,
+        /// tests/projects/particlemeshshape component/*); serialized ones read their own.</summary>
+        public ParticleSystemRenderer()
+        {
+            shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            receiveShadows = false;
+        }
 
         public ParticleSystemRenderSpace alignment { get => m_RenderAlignment; set => m_RenderAlignment = value; }
         public ParticleSystemRenderMode renderMode { get => m_RenderMode; set => m_RenderMode = value; }
