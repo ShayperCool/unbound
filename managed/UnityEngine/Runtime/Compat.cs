@@ -84,6 +84,12 @@ namespace Unbound.Runtime
         /// Other releases retain sample-based duration until measured.</summary>
         internal static bool ScriptAudioClipDurationMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Decoded resampling uses a single-precision rate ratio and holds the final
+        /// frame until non-looping playback ends,
+        /// measured on exactly 6000.0.71f1 (tests/projects/mixersuspend). Other releases retain
+        /// a double rate ratio and zero padding until measured; looping still wraps.</summary>
+        internal static bool DecodedAudioResamplingMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Send/Receive routing, startup and Duck Volume detector state, measured on
         /// exactly 6000.0.71f1 (tests/projects/mixerduck). Other releases fail until measured.</summary>
         internal static bool MixerSidechainMeasured => Release == (6000, 0, 71, 'f', 1);

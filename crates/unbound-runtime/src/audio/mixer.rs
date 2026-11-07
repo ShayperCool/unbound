@@ -2080,7 +2080,7 @@ fn render_source_voices(
     audible: bool,
     callback: Option<Callback>,
 ) {
-    let hold_endpoint = source.params.has(source_flags::HOLD_CLIP_ENDPOINT);
+    let measured_resampling = source.params.has(source_flags::DECODED_RESAMPLING);
     if let Some(main) = &mut source.main
         && main.clip != 0
     {
@@ -2094,7 +2094,7 @@ fn render_source_voices(
             target,
             mono_pan,
             looping,
-            hold_endpoint,
+            measured_resampling,
             audible.then_some(&mut *out),
             callback,
         ) {
@@ -2120,7 +2120,7 @@ fn render_source_voices(
             target,
             mono_pan,
             false,
-            hold_endpoint,
+            measured_resampling,
             audible.then_some(&mut *out),
             callback,
         );
@@ -2144,7 +2144,7 @@ fn render_voice(
     mut target: [f32; 4],
     mono_pan: Option<f32>,
     looping: bool,
-    hold_endpoint: bool,
+    measured_resampling: bool,
     mut out: Option<&mut [f32]>,
     callback: Option<Callback>,
 ) -> bool {
@@ -2182,7 +2182,11 @@ fn render_voice(
     let from = voice.matrix;
     voice.matrix = target;
     let frames = clip.frames as f64;
-    let step = pitch * clip.rate as f64 / out_rate as f64;
+    let step = if measured_resampling && voice.stream.is_none() {
+        pitch * (clip.rate as f32 / out_rate as f32) as f64
+    } else {
+        pitch * clip.rate as f64 / out_rate as f64
+    };
     let inv_n = 1.0 / n as f32;
     for f in 0..n {
         let dsp = t0 + f as u64;
@@ -2217,7 +2221,7 @@ fn render_voice(
                     clip.frame(i as usize)
                 } else if looping {
                     clip.frame(i.rem_euclid(clip.frames as i64) as usize)
-                } else if hold_endpoint {
+                } else if measured_resampling {
                     clip.frame(i.clamp(0, clip.frames as i64 - 1) as usize)
                 } else {
                     (0.0, 0.0)
@@ -2350,6 +2354,39 @@ mod tests {
     }
 
     #[test]
+    fn decoded_rate_ratio_precision_is_selected_before_voice_advance() {
+        for (clip_rate, output_rate) in [(48000, 44100), (22050, 32000), (44100, 48000)] {
+            for measured in [false, true] {
+                let mut m = Mixer::new(MixerConfig {
+                    sample_rate: output_rate,
+                    ..MixerConfig::default()
+                });
+                m.add_clip(1, Clip::new(2, clip_rate, vec![0.25; 8192]));
+                source_with(&mut m, 7, 1, |p| {
+                    p.pitch = 0.7;
+                    if measured {
+                        p.flags |= source_flags::DECODED_RESAMPLING;
+                    }
+                });
+                play(&mut m, 7, command::PLAY, 0.0);
+                m.render(&mut vec![0.0; 1024], 2);
+                let ratio = if measured {
+                    (clip_rate as f32 / output_rate as f32) as f64
+                } else {
+                    clip_rate as f64 / output_rate as f64
+                };
+                let step = if measured {
+                    0.7_f32 as f64 * ratio
+                } else {
+                    0.7_f32 as f64 * clip_rate as f64 / output_rate as f64
+                };
+                let expected = (0..512).fold(0.0, |position, _| position + step);
+                assert_eq!(m.source_state(7).position, expected);
+            }
+        }
+    }
+
+    #[test]
     fn decoded_endpoint_holds_until_end_while_loops_interpolate_across_wrap() {
         for channels in [1, 2] {
             for looping in [false, true] {
@@ -2365,7 +2402,7 @@ mod tests {
                             p.flags |= source_flags::LOOP;
                         }
                         if measured {
-                            p.flags |= source_flags::HOLD_CLIP_ENDPOINT;
+                            p.flags |= source_flags::DECODED_RESAMPLING;
                         }
                     });
                     play(&mut m, 7, command::PLAY, 0.0);

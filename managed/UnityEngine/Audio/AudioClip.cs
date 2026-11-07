@@ -373,6 +373,7 @@ namespace UnityEngine
         internal override void OnEngineDestroy()
         {
             if (m_Handle == 0) return;
+            s_WithCallbacks.TryRemove(m_Handle, out _);
             if (m_SharedData != null)
             {
                 if (IsPersistentAsset) m_SharedData.NeedsReload = true;

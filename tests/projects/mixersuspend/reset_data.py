@@ -26,12 +26,12 @@ def verify(root, release, rate):
     prefixes = [stage+'.'+str(i) for stage in ('before', 'after') for i in range(8)] + ['playedClone', 'rewritten']
     expected |= {prefix+'.'+field for prefix in prefixes for field in fields}
     expected |= {'length.'+str(rate)+'.'+str(frames) for rate in (44100,48000) for frames in (1,43,44,45,47,48,49,4096,48000)}
-    expected |= {'phase'+str(i) for i in range(11)} | {'play.'+str(i) for i in range(11)}
+    expected |= {'phase'+str(i) for i in range(12)} | {'play.'+str(i) for i in range(12)}
     assert meta.keys() == expected, meta.keys() ^ expected
     assert meta['release'] == release and meta['rate'] == rate and meta['complete'] is True
-    for key in expected - {'release', 'complete'} - {'phase'+str(i) for i in range(11)}:
+    for key in expected - {'release', 'complete'} - {'phase'+str(i) for i in range(12)}:
         assert isinstance(meta[key], int), key
-    for phase in range(11):
+    for phase in range(12):
         key = 'phase'+str(phase); values = array.array('f'); values.frombytes(raw(root, meta[key]))
         assert meta[key] == dict(file=key+'.f32', frames=8192, channels=2)
         assert len(values) == 16384 and all(map(math.isfinite,values))

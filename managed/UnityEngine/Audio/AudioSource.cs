@@ -617,7 +617,7 @@ namespace UnityEngine
             if (m_BypassReverbZones) flags |= AudioSourceFlags.BypassReverbZones;
             if (m_Spatialize) flags |= AudioSourceFlags.Spatialize;
             if (m_KeepOutput) flags |= AudioSourceFlags.KeepOutput;
-            if (Compat.AudioClipEndpointMeasured) flags |= AudioSourceFlags.HoldClipEndpoint;
+            if (Compat.DecodedAudioResamplingMeasured) flags |= AudioSourceFlags.DecodedResampling;
             if (m_HasFilter && isActiveAndEnabled) flags |= AudioSourceFlags.Filter;
             var packet = new AudioSourcePacket
             {

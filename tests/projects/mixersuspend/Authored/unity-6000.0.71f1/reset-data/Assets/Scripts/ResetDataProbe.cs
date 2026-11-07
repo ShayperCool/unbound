@@ -76,9 +76,10 @@ public class ResetDataProbe : MonoBehaviour
         Value("reset", AudioSettings.Reset(config) ? 1 : 0);
         Value("restart", AudioRenderer.Start() ? 1 : 0);
         for (int i = 0; i < clips.Length; i++) State("after." + i, clips[i]); Save();
-        for (int phase = 0; phase < clips.Length + 3; phase++) {
+        for (int phase = 0; phase < clips.Length + 4; phase++) {
             source.clip = phase < clips.Length ? clips[phase] : Generated("recreated", phase == clips.Length ? config.sampleRate : 48000);
-            source.loop = phase == clips.Length + 2;
+            source.loop = phase >= clips.Length + 2;
+            source.pitch = phase == clips.Length + 3 ? 0.7f : 1f;
             if (source.loop) {
                 source.clip.SetData(new[] { 0.125f, -0.125f }, 0);
                 source.clip.SetData(new[] { 0.5f, -0.5f }, 4095);

@@ -2,7 +2,7 @@
 
 Measured against the Linux Unity 6000.0.71f1 Editor, stereo 1024-frame offline
 rendering at 48000 and 44100 Hz. `reset_data.py` records two independent projects
-per rate; both agree bit-for-bit on all 180543 values per rate. The reference is
+per rate; both agree bit-for-bit on all 196929 values per rate. The reference is
 `Reference/unity-6000.0.71f1/reset-data-rate-<rate>/`. The authored `reset-data`
 project is assembled without an Editor for the engine gate. All existing original
 suspension references and comparator tolerances are unchanged.
@@ -46,13 +46,16 @@ last frame. The observations below cover those details in this release/context.
 - Non-looping decoded resampling holds the final frame until playback reaches the
   sample count. Imported and newly created 48000-Hz constant clips at 44100-Hz
   output distinguish this from zero padding. A looping control with different
-  first/last frames interpolates across the wrap instead. Mono/stereo unit tests
+  first/last frames interpolates across the wrap instead. The rate ratio uses
+  single precision before multiplication by voice pitch and accumulation of the
+  playback position. A second loop with pitch 0.7 controls that composition;
+  the two Editor repeats preserve every earlier waveform bit. Mono/stereo unit tests
   cover the endpoint, wrap and the prior behavior of unmeasured releases.
 
 Each measured mechanism is selected through Compat. Other releases retain their
-prior clip ownership, clone, duration and interpolation paths until measured.
-These changes do not alter importer/cache output. The new audio packet flag bumps
-NativeApi to 29; the audio thread only reads a prepared bit and performs bounded
+prior clip ownership, clone, duration, double rate ratio and zero-padded interpolation paths until measured.
+These changes do not alter importer/cache output. The new decoded-resampling audio packet flag bumps
+NativeApi to 30; the audio thread only reads a prepared bit and performs bounded
 sample fetches. Clip enumeration, reload and reference ownership run on the control
 thread.
 

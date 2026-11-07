@@ -32,8 +32,8 @@ pub mod source_flags {
     pub const SPATIALIZE: u32 = 1 << 8;
     /// Keep the last output for `GetOutputData`/`GetSpectrumData`.
     pub const KEEP_OUTPUT: u32 = 1 << 9;
-    /// Hold the last decoded frame during non-looping interpolation.
-    pub const HOLD_CLIP_ENDPOINT: u32 = 1 << 10;
+    /// Measured decoded resampling precision and non-looping endpoint handling.
+    pub const DECODED_RESAMPLING: u32 = 1 << 10;
 }
 
 /// An AudioSource's parameters, sent when they change and once per frame (its transform).
@@ -309,7 +309,7 @@ mod tests {
     }
 
     /// The source packet's filter descriptors were added at NativeApi 16; 20 adds the reverb
-    /// kind and parameters, 21 the frame packet's reverb zone, 23 Distortion kind 5, 24 Chorus kind 6. Versions 25, 26 and 27 add mixer Flange, Normalize and Pitch Shifter, 28 render protocol 12 and 29 an endpoint flag, without changing these layouts.
+    /// kind and parameters, 21 the frame packet's reverb zone, 23 Distortion kind 5, 24 Chorus kind 6. Versions 25, 26 and 27 add mixer Flange, Normalize and Pitch Shifter, 28 render protocol 12 and 29 an decoded-resampling flag, without changing these layouts.
     /// The managed side pins the same value and refuses 14 to 27 and 29 (NativeApiVersionTests).
     #[test]
     fn the_filter_descriptor_layout_is_native_api_30() {

@@ -9,7 +9,7 @@ namespace UnityEngine.Tests
     /// AudioReverbFilter's since 20, the reverb zone of AudioFramePacket since 21, Distortion
     /// kind 5 since 23, Chorus kind 6 since 24, mixer Flange since 25, Normalize since 26, Pitch Shifter since 27; render protocol 8: external 16-bit indices, protocol 9: depth copies,
     /// protocol 10: 32-bit indices, protocol 11: logical instance IDs, and protocol 12: shared
-    /// property arrays and mesh-instance elements; 29 adds the decoded audio endpoint flag. The managed side
+    /// property arrays and mesh-instance elements; 29 adds the decoded audio decoded-resampling flag. The managed side
     /// refuses a native side of any other version at startup, older or newer, before anything is
     /// installed.</summary>
     public unsafe class NativeApiVersionTests
