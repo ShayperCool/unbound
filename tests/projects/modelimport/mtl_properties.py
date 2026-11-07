@@ -59,7 +59,10 @@ def compare(reference, candidate):
             images[name] = pixels
         maximum = max((max(abs(a-b) for a,b in zip(row['expected'], row['actual'])) for row in pixels), default=0)
         image_failures += int(maximum > 8)
-        print('image', name, 'differentPixels', len(pixels), 'maxChannel', maximum)
+        errors = [max(abs(a-b) for a,b in zip(row['expected'], row['actual'])) for row in pixels]
+        mean = sum(errors) / (x.width * x.height)
+        over = sum(error > 8 for error in errors)
+        print(f'{name}: mean {mean:.2f}, worst {maximum}, over 8: {over}')
         if all(pixel == (0, 0, 0) for pixel in rgb_pixels(x)):
             images[name] = {'invalidReference': 'expected visible assigned faces', 'differences': pixels}
     report = candidate/'mtl-comparison.json'
