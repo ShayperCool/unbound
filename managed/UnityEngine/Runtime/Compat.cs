@@ -43,6 +43,10 @@ namespace Unbound.Runtime
         internal static UnityEngine.Vector4 MeshInstanceBatchLimits => Release == (6000, 0, 71, 'f', 1)
             ? new UnityEngine.Vector4(511, 1023, 65536, 0) : UnityEngine.Vector4.zero;
 
+        /// <summary>One two-input humanoid mixer with constant unit-sum weights, measured by
+        /// animculling on exactly 6000.0.71f1. Other releases keep the unsupported diagnostic.</summary>
+        internal static bool HumanPlayableMixerMotionMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Animator automatic Play-entry timing and startup controls measured by
         /// tests/projects/animstartup in exactly 6000.0.71f1's Linux Editor. Other releases
         /// retain the existing behavior until measured.</summary>

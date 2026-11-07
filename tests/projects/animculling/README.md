@@ -294,3 +294,36 @@ Unity contract checked for **6000.0**, measured release **6000.0.71f1**:
 Layers, controller playables, HumanStream, mirrors/additive graphs, attached
 controllers, shared or fractional outputs, non-unit input weight sums and live
 weight changes remain outside this certification.
+
+The two independent Native captures in `q104-native` agree byte-for-byte on
+19,611 records. Publication appended 2,072 keys and preserved all 17,539 prior
+records. Before implementation, 1,972 new records differed, plus the four prior
+rotation-predicate residuals. Endpoint controls matched after using the existing
+humanoid motion pass. The interior pose exposed scalar blending of unnormalized
+RootQ curves, which produced an extra body rotation after the normalized humanoid
+sample was applied. The supported mixer now writes its blended humanoid RootX
+back to those body bindings before retargeting. Generic and controller blending
+retain their existing paths.
+
+The interior blend also distinguishes the retained clip step from its feet-pivot
+correction. After CullCompletely, visibility replay matches the retained blended
+clip step projected in the current root frame, before that correction. Reusing
+the corrected step introduced a persistent root offset, up to 0.0114 in a component
+in the Manual control. Sampling and feet-pivot memory do not advance on replay.
+This is a measured composition detail; direct clip replay remains unchanged.
+[pivotPosition](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-pivotPosition.html)
+and [pivotWeight](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-pivotWeight.html)
+describe the stable point between the feet and its left/right weight. They do not
+specify an offscreen replay algorithm. In this mixer capture the public pivot stays
+zero when motion is not requested, including on return; internal feet memory is
+still maintained for pose/motion sampling.
+
+Final strict comparison: Q104 2,072/2,072; Q91 1,924/1,924; Q90 9,322/9,322.
+The full reference has 19,607/19,611 strict matches, no missing/extra keys, and only
+the same four documented rotation-predicate residuals accepted by `verify_gate.py`.
+Regressions: startup 2,223/2,223 and skinned bounds 2,063/2,063. The humanoid probe
+retains its prior 203 differences, 428,164/428,367 values matching, with every raw
+difference retained outside Git. The focused managed motion tests pass 35/35.
+The existing `gate.json` command remains engine-only with an explicit release:
+
+    python3 tests/projects/animculling/run.py gate --release "$UNBOUND_PROBE_UNITY_VERSION"

@@ -100,6 +100,115 @@ namespace UnityEngine.Tests
             }
         }
 
+        [Theory]
+        [InlineData(0f)]
+        [InlineData(0.25f)]
+        [InlineData(1f)]
+        public void FixedTwoInputMixerDeliversTranslationAndRotation(float weight)
+        {
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            var root = Rig(out var animator, out var avatar);
+            var clip = Clip();
+            var graph = PlayableGraph.Create("human-mixer");
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            try
+            {
+                var first = AnimationClipPlayable.Create(graph, clip);
+                var second = AnimationClipPlayable.Create(graph, clip);
+                first.SetApplyFootIK(false);
+                second.SetApplyFootIK(false);
+                var mixer = AnimationMixerPlayable.Create(graph, 2);
+                mixer.ConnectInput(0, first, 0, weight);
+                mixer.ConnectInput(1, second, 0, 1f - weight);
+                AnimationPlayableOutput.Create(graph, "animation", animator).SetSourcePlayable(mixer);
+                graph.Evaluate(0f);
+                graph.Evaluate(0.25f);
+                Assert.True(animator.deltaPosition.magnitude > 0.1f);
+                Assert.True(Quaternion.Angle(Quaternion.identity, animator.deltaRotation) > 1f);
+                Near.Equal(animator.deltaPosition, root.transform.position, 1e-5f);
+                Near.SameRotation(animator.deltaRotation, root.transform.rotation, 1e-3f);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(avatar);
+                Object.DestroyImmediate(clip);
+                ProjectInfo.UnityVersion = version;
+            }
+        }
+
+        [Theory]
+        [InlineData("sum")]
+        [InlineData("live")]
+        [InlineData("release")]
+        [InlineData("footIK")]
+        [InlineData("shared")]
+        [InlineData("fractional")]
+        public void UnmeasuredHumanMixerContextsStayDiagnostic(string context)
+        {
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = context == "release" ? "6000.0.72f1" : "6000.0.71f1";
+            var root = Rig(out var animator, out var avatar);
+            var clip = Clip();
+            var graph = PlayableGraph.Create("unsupported-human-mixer");
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            var logger = Debug.unityLogger;
+            var previous = logger.logHandler;
+            bool enabled = logger.logEnabled;
+            var filter = logger.filterLogType;
+            var logs = new Logs();
+            logger.logHandler = logs;
+            logger.logEnabled = true;
+            logger.filterLogType = LogType.Log;
+            try
+            {
+                var first = AnimationClipPlayable.Create(graph, clip);
+                var second = AnimationClipPlayable.Create(graph, clip);
+                first.SetApplyFootIK(context == "footIK");
+                second.SetApplyFootIK(false);
+                var mixer = AnimationMixerPlayable.Create(graph, 2);
+                mixer.ConnectInput(0, first, 0, 0.25f);
+                mixer.ConnectInput(1, second, 0, context == "sum" ? 0.25f : 0.75f);
+                var output = AnimationPlayableOutput.Create(graph, "animation", animator);
+                output.SetSourcePlayable(mixer);
+                if (context == "fractional") output.SetWeight(0.5f);
+                if (context == "shared")
+                {
+                    var other = AnimationMixerPlayable.Create(graph, 1);
+                    other.ConnectInput(0, first, 0, 1f);
+                }
+                const string diagnostic = "Animator root motion of unsupported humanoid mixer output";
+                int hits = 0;
+                foreach (var hit in Stubs.HitReport()) if (hit.Key == diagnostic) hits = hit.Value;
+                graph.Evaluate(0f);
+                if (context == "live")
+                {
+                    mixer.SetInputWeight(0, 0.5f);
+                    mixer.SetInputWeight(1, 0.5f);
+                }
+                graph.Evaluate(0.25f);
+                int after = 0;
+                foreach (var hit in Stubs.HitReport()) if (hit.Key == diagnostic) after = hit.Value;
+                Assert.True(after > hits);
+                if (hits == 0) Assert.Contains(logs.Messages, message => message.Contains("motion remain unsupported"));
+                Near.Equal(Vector3.zero, root.transform.position, 1e-5f);
+                Near.Equal(Vector3.zero, animator.deltaPosition, 1e-5f);
+            }
+            finally
+            {
+                logger.logHandler = previous;
+                logger.logEnabled = enabled;
+                logger.filterLogType = filter;
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(avatar);
+                Object.DestroyImmediate(clip);
+                ProjectInfo.UnityVersion = version;
+            }
+        }
+
         sealed class Logs : ILogHandler
         {
             internal readonly List<string> Messages = new List<string>();

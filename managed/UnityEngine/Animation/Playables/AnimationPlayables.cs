@@ -71,7 +71,7 @@ namespace Unbound.Runtime.Playables
             double t = e.ReferencePose ? 0.0 : node.Time;
             m_Pose.Reset(e.Bindings.FloatCount, e.Bindings.ObjectCount);
             ClipSampling.Sample(bound, (float)ClipTime(t), 1f, m_Pose,
-                loopPose: e.MotionMode == RootMotionMode.DirectHuman);
+                loopPose: e.MotionMode is RootMotionMode.DirectHuman or RootMotionMode.MixedHuman);
             int n = Math.Min(into.FloatCount, e.Bindings.FloatCount);
             for (int c = 0; c < n; c++)
             {
@@ -252,6 +252,38 @@ namespace Unbound.Runtime.Playables
     /// taken by the default values (channel by channel, over the inputs animating the channel).</summary>
     internal sealed class MixerKind : AnimationKind
     {
+        InputPort[] m_HumanMotionInputs;
+        bool m_HumanMotionInputsChanged;
+
+        // The Native controls certify constant weights only. Retain the first inputs so a live
+        // change remains diagnostic, even if the weights later return to their original values.
+        internal bool FixedHumanMotionInputs(PlayableNode node)
+        {
+            if (m_HumanMotionInputs == null) m_HumanMotionInputs = node.Inputs.ToArray();
+            if (m_HumanMotionInputs.Length != node.Inputs.Count) m_HumanMotionInputsChanged = true;
+            else
+                for (int i = 0; i < node.Inputs.Count; i++)
+                    if (node.Inputs[i].Node != m_HumanMotionInputs[i].Node
+                        || node.Inputs[i].Weight != m_HumanMotionInputs[i].Weight
+                        || node.Inputs[i].SourcePort != m_HumanMotionInputs[i].SourcePort)
+                        m_HumanMotionInputsChanged = true;
+            if (m_HumanMotionInputsChanged || node.Inputs.Count != 2) return false;
+            float total = 0f;
+            var first = node.Inputs[0].Node;
+            if (first == node.Inputs[1].Node) return false;
+            foreach (var input in node.Inputs)
+            {
+                if (!(input.Weight >= 0f) || !AnimationEvaluation.HumanMotionClip(input.Node)
+                    || ((ClipKind)input.Node.Kind).ApplyFootIK || input.SourcePort != 0) return false;
+                int consumers = 0;
+                foreach (var output in input.Node.Outputs)
+                    if (output.Node != null) consumers++;
+                if (consumers != 1) return false;
+                total += input.Weight;
+            }
+            return total == 1f;
+        }
+
         internal override void Evaluate(AnimationEvaluation e, PlayableNode node, int viaPort, float weight, AnimStream into) =>
             Mix(e, node, weight, into, 0);
 
@@ -267,6 +299,21 @@ namespace Unbound.Runtime.Playables
                 inputs.Add((s, i.Weight));
             }
             AnimationEvaluation.MixInto(into, inputs);
+            if (e.MotionMode == RootMotionMode.MixedHuman && into.BodyMotion.HasMotion)
+            {
+                // Human clip rotations are normalized before blending. The scalar curve
+                // bindings otherwise blend their unnormalized quaternion components, which
+                // ApplyToPose would mistake for an additional layer rotation.
+                var root = into.BodyMotion.Root;
+                foreach (var group in e.Bindings.Groups)
+                {
+                    int human = group.HumanCurve - Unbound.Runtime.Humanoid.HumanClipImport.RootFirst;
+                    if (human < 0 || human >= 7) continue;
+                    var value = human < 3 ? root.t : root.q;
+                    int component = human < 3 ? human : human - 3;
+                    into.Values[group.First] = component == 0 ? value.x : component == 1 ? value.y : component == 2 ? value.z : value.w;
+                }
+            }
             if (e.MotionMode != RootMotionMode.Unsupported)
             {
                 var motion = RootMotionStep.Mix(inputs);

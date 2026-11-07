@@ -31,7 +31,7 @@ namespace Unbound.Runtime.Playables
         /// controller playables or jobs set it).</summary>
         internal RootMotionStep Motion = RootMotionStep.Unknown;
         /// <summary>The humanoid body relative to its clip's motion, including bake/loop settings.
-        /// Direct humanoid clip outputs also use this sample for root movement.</summary>
+        /// Supported humanoid clip and mixer outputs use this sample for root movement.</summary>
         internal HumanRootMotionSample BodyMotion;
 
         static readonly Stack<AnimStream> s_Free = new Stack<AnimStream>();
@@ -91,9 +91,11 @@ namespace Unbound.Runtime.Playables
         /// <summary>Not computed for unsupported humanoid graph shapes: streams
         /// carry no motion and the graph's root curves pose the root as before.</summary>
         Unsupported,
-        /// <summary>A direct humanoid clip output uses the Animator humanoid sampler, including
-        /// its feet-pivot memory. Graph composition remains unsupported.</summary>
+        /// <summary>A direct humanoid clip uses the Animator humanoid sampler and feet pivot.</summary>
         DirectHuman,
+        /// <summary>The measured fixed two-clip mixer uses the same sampler, retaining the
+        /// blended clip step before feet-pivot correction for visibility replay.</summary>
+        MixedHuman,
         /// <summary>The Animator requests no root motion (applyRootMotion off, no OnAnimatorMove):
         /// streams carry zero motion, as the Animator's own root motion is then zero.</summary>
         Zero,
@@ -604,13 +606,22 @@ namespace Unbound.Runtime.Playables
                 AnimStream.Return(s);
             }
             AnimatorRootMotion? humanMotion = null;
-            if (e.MotionMode == RootMotionMode.DirectHuman)
+            if (e.MotionMode is RootMotionMode.DirectHuman or RootMotionMode.MixedHuman)
             {
                 // The same sample and feet-pivot memory as controller-driven humanoid motion.
                 // Advance it once even when motion is not requested, as the controller does.
                 animator.Human.ApplyMotion(result.BodyMotion.HasMotion ? result.BodyMotion : HumanRootMotion.NoMotion, motionDeltaTime, out var step);
                 humanMotion = step;
-                ApplyHumanRootMotion(animator, step, dispatch: !suppressMovement);
+                if (e.MotionMode == RootMotionMode.MixedHuman)
+                {
+                    // Native visibility return projects the retained blended clip step, before
+                    // this evaluation's feet-pivot correction, in the root's current frame.
+                    var retained = step;
+                    retained.Delta = result.BodyMotion.Delta;
+                    humanMotion = retained;
+                }
+                ApplyHumanRootMotion(animator, step, dispatch: !suppressMovement,
+                    requireMotionForPivot: e.MotionMode == RootMotionMode.MixedHuman);
             }
             else if (e.MotionMode == RootMotionMode.Compute) ApplyRootMotion(animator, result, motion, motionDeltaTime, dispatch: !suppressMovement);
             else if (!suppressMovement && withController && animator.m_Player.DeferOutput) animator.m_Player.ProcessRootMotion();
@@ -650,8 +661,8 @@ namespace Unbound.Runtime.Playables
             return false;
         }
 
-        /// <summary>Direct, full-weight humanoid clip outputs without an attached controller use
-        /// the measured humanoid sampler. Other humanoid graph shapes retain their warning.
+        /// <summary>Direct clips and the measured fixed two-input mixer without an attached controller
+        /// use the humanoid sampler. Other humanoid graph shapes retain their warning.
         /// Generic output motion and the attached-controller combination are unchanged.</summary>
         static RootMotionMode MotionModeOf(Animator animator, List<(PlayableOutputData Output, double Dt, bool Seek)> outputs)
         {
@@ -661,27 +672,39 @@ namespace Unbound.Runtime.Playables
                 if (animator.m_Player == null && outputs.Count == 1 && AnimationOutputs.Of(animator)?.Count == 1)
                 {
                     var o = outputs[0].Output;
-                    if (!o.Destroyed && o.Weight == 1f && o.Source?.Kind is ClipKind clip
-                        && clip.Clip != null && clip.Clip.HasHumanCurves && clip.Clip.length > 0f
-                        && !clip.Clip.HumanClipMotion.Settings.Mirror && !clip.OverrideLoopTime
+                    if (!o.Destroyed && o.Weight == 1f
                         && (o.Engine as AnimationOutputState)?.StreamSource == AnimationStreamSource.DefaultValues)
-                        return RootMotionMode.DirectHuman;
+                    {
+                        if (HumanMotionClip(o.Source)) return RootMotionMode.DirectHuman;
+                        if (Compat.HumanPlayableMixerMotionMeasured && o.Source?.Kind is MixerKind mixer
+                            && o.Source.Traversal == PlayableTraversalMode.Mix
+                            && o.Graph.Outputs.Count == 1 && !o.Source.HasConnectedOutput()
+                            && mixer.FixedHumanMotionInputs(o.Source))
+                            return RootMotionMode.MixedHuman;
+                    }
                 }
                 if (requested)
-                    Stubs.Ignored("Animator root motion of composed playable graph outputs on humanoid avatars",
-                        "is not applied: only one direct, full-weight nonmirrored humanoid clip output without a playing controller or loop override is measured; mixer, layer, controller-playable and animation-job motion remain unsupported");
+                    Stubs.Ignored(outputs.Count == 1 && outputs[0].Output.Source?.Kind is MixerKind
+                        ? "Animator root motion of unsupported humanoid mixer output"
+                        : "Animator root motion of composed playable graph outputs on humanoid avatars",
+                        "is not applied: only one direct, full-weight nonmirrored humanoid clip output or, on measured 6000.0.71f1, one two-input mixer with fixed nonnegative unit-sum weights is supported, without a playing controller, shared nodes, foot IK on the mixer inputs or loop overrides; other mixer shapes, live weights, layers, controller-playables and animation-job motion remain unsupported");
                 return RootMotionMode.Unsupported;
             }
             return requested ? RootMotionMode.Compute : RootMotionMode.Zero;
         }
 
+        internal static bool HumanMotionClip(PlayableNode node) => node != null && !node.Destroyed
+            && node.Kind is ClipKind clip && clip.Clip != null && clip.Clip.HasHumanCurves
+            && clip.Clip.length > 0f && !clip.Clip.HumanClipMotion.Settings.Mirror && !clip.OverrideLoopTime;
+
         /// <summary>Apply the already sampled humanoid motion. Visibility replay keeps the last
         /// local step without stepping the feet-pivot memory again.</summary>
-        internal static void ApplyHumanRootMotion(Animator animator, in AnimatorRootMotion motion, bool dispatch = true)
+        internal static void ApplyHumanRootMotion(Animator animator, in AnimatorRootMotion motion, bool dispatch = true, bool requireMotionForPivot = false)
         {
             animator.CaptureRootMotionPose();
             animator.m_RootMotionApplied = false;
             bool requested = animator.m_ApplyRootMotion || HasMoveCallback(animator);
+            if (requireMotionForPivot && !requested) animator.Human.PivotPosition = default;
             animator.m_DeltaPosition = requested ? new Vector3(motion.DeltaPosition.x, motion.DeltaPosition.y, motion.DeltaPosition.z) : Vector3.zero;
             animator.m_DeltaRotation = requested ? new Quaternion(motion.DeltaRotation.x, motion.DeltaRotation.y, motion.DeltaRotation.z, motion.DeltaRotation.w) : Quaternion.identity;
             animator.m_RootVelocity = requested ? new Vector3(motion.Velocity.x, motion.Velocity.y, motion.Velocity.z) : Vector3.zero;
@@ -908,7 +931,8 @@ namespace Unbound.Runtime.Playables
                     if (move)
                     {
                         animator.Human.ReplayMotion(humanMotion, frame.DeltaTime, out var replay);
-                        AnimationEvaluation.ApplyHumanRootMotion(animator, replay);
+                        AnimationEvaluation.ApplyHumanRootMotion(animator, replay,
+                            requireMotionForPivot: frame.Mode == RootMotionMode.MixedHuman);
                     }
                     else animator.CaptureRootMotionPose();
                 }
