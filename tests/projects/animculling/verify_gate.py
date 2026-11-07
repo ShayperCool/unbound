@@ -6,8 +6,9 @@ compare.py remains strict and prints every raw difference. This verifier admits 
   while both raw arm rotations agree tightly and their dots straddle Quaternion's equality
   boundary;
 - the source time ("gt") of explicit/eventShape/*/plain records, where a plain Playable
-  above the clip keeps its own clock under CullCompletely (a playable-clock gap listed in
-  COMPATIBILITY_GAPS.md); every other field of those records must match.
+  above the clip keeps its own clock under CullCompletely while Unbound freezes it with the
+  clip (a playable-clock gap listed in COMPATIBILITY_GAPS.md): the candidate's source time
+  must equal its clip time ("ct"), and every other field must match.
 """
 import re
 import sys
@@ -25,7 +26,7 @@ def plain_clock_only(key, expected, actual):
     """Only the plain source playable's own time differs."""
     if not PLAIN_CLOCK.match(key) or not isinstance(expected, dict) or not isinstance(actual, dict):
         return False
-    if not isinstance(expected.get('gt'), (int, float)) or not isinstance(actual.get('gt'), (int, float)):
+    if not isinstance(expected.get('gt'), (int, float)) or actual.get('gt') != actual.get('ct'):
         return False
     return same({k: v for k, v in expected.items() if k != 'gt'}, {k: v for k, v in actual.items() if k != 'gt'})
 
