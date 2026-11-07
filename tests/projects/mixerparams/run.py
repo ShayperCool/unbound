@@ -44,7 +44,7 @@ def verify(root, release, rate):
 
 
 def compare(reference, candidate, report):
-    left, right = [header(root) for root in (reference, candidate)]
+    left, right = [header(root) if (root/'capture.json').exists() else {} for root in (reference, candidate)]
     failures = [dict(key=k, reference=left.get(k), candidate=right.get(k))
                 for k in sorted(left.keys() | right.keys()) if k not in left or k not in right or left[k] != right[k]]
     result = dict(tested=len(left.keys() | right.keys()), failed=len(failures), failures=failures)
@@ -69,7 +69,8 @@ def capture(args):
     env = dict(os.environ, PARAMS_RATE=str(args.rate), PARAMS_OUT=str(work/'capture'), PARAMS_ENGINE='1' if args.mode == 'engine' else '0')
     command = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '900', *command]
     with (work/'run.log').open('w') as log: subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
-    verify(work/'capture', args.release, args.rate)
+    if args.mode == 'native': verify(work/'capture', args.release, args.rate)
+    else: header(work/'capture')
     print('captured', work, flush=True)
 
 

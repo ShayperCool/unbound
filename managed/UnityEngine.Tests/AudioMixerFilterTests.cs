@@ -105,6 +105,54 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ClearOfAnAppliedOverrideRetainsItsValueUntilTheAudioUpdate()
+        {
+            var (mixer, _, _) = Fixture();
+            mixer.SetFloat("Cutoff", 4000);
+            mixer.Tick(0, 0);
+            Assert.True(mixer.ClearFloat("Cutoff"));
+            for (int i = 0; i < 3; i++)
+            {
+                Assert.True(mixer.GetFloat("Cutoff", out var value));
+                Assert.Equal(4000, value);
+            }
+            Assert.True(mixer.ClearFloat("Cutoff"));
+            Assert.True(mixer.SetFloat("Cutoff", 6000));
+            Assert.True(mixer.GetFloat("Cutoff", out var set));
+            Assert.Equal(6000, set);
+            Assert.True(mixer.ClearFloat("Cutoff"));
+            Assert.True(mixer.GetFloat("Cutoff", out var cleared));
+            Assert.Equal(4000, cleared);
+            mixer.Tick(0, 0);
+            Assert.True(mixer.GetFloat("Cutoff", out var applied));
+            Assert.Equal(5000, applied);
+        }
+
+        [Fact]
+        public void ClearingAnAppliedOverrideResumesTheCurrentSnapshot()
+        {
+            var (mixer, _, _) = Fixture();
+            mixer.SetFloat("Cutoff", 4000);
+            mixer.Tick(0, 0);
+            var snapshot = new AudioMixerSnapshot { m_Mixer = mixer };
+            snapshot.m_Values["cutoff"] = 2000;
+            snapshot.TransitionTo(0);
+            mixer.Tick(0, 0);
+            Assert.True(mixer.GetFloat("Cutoff", out var overridden));
+            Assert.Equal(4000, overridden);
+            Assert.True(mixer.ClearFloat("Cutoff"));
+            Assert.True(mixer.GetFloat("Cutoff", out var clearing));
+            Assert.Equal(4000, clearing);
+            mixer.Tick(0, 0);
+            Assert.True(mixer.GetFloat("Cutoff", out var restored));
+            Assert.Equal(2000, restored);
+            mixer.SetFloat("Cutoff", 6000);
+            mixer.ClearFloat("Cutoff");
+            mixer.GetFloat("Cutoff", out var unapplied);
+            Assert.Equal(2000, unapplied);
+        }
+
+        [Fact]
         public unsafe void GroupObservationDoesNotModifyTheProductionBuffer()
         {
             var (_, group, _) = Fixture();
