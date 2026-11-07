@@ -41,6 +41,21 @@ impl Default for Channel {
         }
     }
 }
+impl Channel {
+    /// The state [`Channel::default`] makes, keeping the allocations.
+    fn clear(&mut self) {
+        for buffer in [
+            &mut self.input,
+            &mut self.output,
+            &mut self.overlap,
+            &mut self.last,
+            &mut self.phase,
+        ] {
+            buffer.fill(0.0);
+        }
+        self.position = LATENCY;
+    }
+}
 pub struct PitchShifter {
     channels: [Channel; 2],
     window: Vec<f32>,
@@ -82,7 +97,7 @@ impl PitchShifter {
         }
     }
     pub fn clear(&mut self) {
-        self.channels = Default::default();
+        self.channels.iter_mut().for_each(Channel::clear);
     }
     pub fn process(&mut self, samples: &mut [f32], spec: &PitchSpec, rate: u32) {
         let bin = rate as f32 / N as f32;

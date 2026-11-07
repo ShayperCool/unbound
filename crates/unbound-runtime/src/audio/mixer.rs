@@ -726,8 +726,8 @@ impl Mixer {
             listener_rejected: false,
             zone: None,
             zone_rejected: None,
-            zone_input: Vec::new(),
-            listener_bypass: Vec::new(),
+            zone_input: vec![0.0; BLOCK * 2],
+            listener_bypass: vec![0.0; BLOCK * 2],
             listener_output: Ring::new(),
             callback: None,
             capture_listener_batch: false,
@@ -1479,13 +1479,11 @@ impl Mixer {
 
         let listener_components = !self.listener_chain.filters.is_empty();
         if listener_components {
-            self.listener_bypass.resize(n * 2, 0.0);
-            self.listener_bypass.fill(0.0);
+            self.listener_bypass[..n * 2].fill(0.0);
         }
         let zone_on = self.zone.is_some() && need_mix;
         if zone_on {
-            self.zone_input.resize(n * 2, 0.0);
-            self.zone_input.fill(0.0);
+            self.zone_input[..n * 2].fill(0.0);
         }
         let Self {
             sources,
@@ -1756,7 +1754,7 @@ impl Mixer {
             if has_listener {
                 self.listener_chain.process(&mut self.mix[..n * 2], None, false);
             }
-            for (m, b) in self.mix.iter_mut().zip(&self.listener_bypass) {
+            for (m, b) in self.mix[..n * 2].iter_mut().zip(&self.listener_bypass[..n * 2]) {
                 *m += *b;
             }
         }
