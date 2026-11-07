@@ -26,7 +26,8 @@ def plain_clock_only(key, expected, actual):
     """Only the plain source playable's own time differs."""
     if not PLAIN_CLOCK.match(key) or not isinstance(expected, dict) or not isinstance(actual, dict):
         return False
-    if not isinstance(expected.get('gt'), (int, float)) or actual.get('gt') != actual.get('ct'):
+    if not all(isinstance(v, (int, float)) for v in (expected.get('gt'), actual.get('gt'), actual.get('ct'))) \
+            or actual['gt'] != actual['ct']:
         return False
     return same({k: v for k, v in expected.items() if k != 'gt'}, {k: v for k, v in actual.items() if k != 'gt'})
 
