@@ -43,7 +43,13 @@ namespace UnityEngine
         Vector3 ShapeModifierDirection()
         {
             float angle = ShapeValue() * (Mathf.PI * 2f);
-            float z = ShapeValue() * 2f - 1f;
+            return UnitVector(ShapeValue() * 2f - 1f, angle);
+        }
+
+        /// <summary>The unit vector at height <paramref name="z"/> in [-1, 1] and azimuth
+        /// <paramref name="angle"/> (radians) about +Z.</summary>
+        static Vector3 UnitVector(float z, float angle)
+        {
             float ring = Mathf.Sqrt(Mathf.Max(0f, 1f - z * z));
             return new Vector3(ring * Mathf.Cos(angle), ring * Mathf.Sin(angle), z);
         }

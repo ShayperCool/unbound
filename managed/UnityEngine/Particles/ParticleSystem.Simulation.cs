@@ -1555,12 +1555,12 @@ namespace UnityEngine
                 Debug.LogWarning($"Unbound: the shape of particle system '{name}': mesh '{mesh.name}' {problem}.");
         }
 
+        // Height precedes azimuth in the shared shape stream (ShapeModifierDirection draws
+        // them the other way round).
         Vector3 RandomUnitVector()
         {
             float z = ShapeValue() * 2f - 1f;
-            float a = ShapeValue() * Mathf.PI * 2f;
-            float r = Mathf.Sqrt(Mathf.Max(0f, 1f - z * z));
-            return new Vector3(r * Mathf.Cos(a), r * Mathf.Sin(a), z);
+            return UnitVector(z, ShapeValue() * Mathf.PI * 2f);
         }
 
         // ------------------------------------------------------------------ updating particles
