@@ -5406,6 +5406,11 @@ jobs/overlapCapsule/read	InvalidOperationException
 jobs/overlapCapsule/hit	near
 jobs/closest/read	InvalidOperationException
 jobs/closest/point	0,0,3.5
+jobs/transform/manual	transformTarget,3.5,600,0,3.5,0,0,-1,-1
+jobs/transform/closestMoved	600,0,5.5
+jobs/transform/pending	transformTarget,3.5,600,0,3.5,0,0,-1,-1
+jobs/transform/single	transformTarget,5.5,600,0,5.5,0,0,-1,-1
+jobs/transform/synced	transformTarget,5.5,600,0,5.5,0,0,-1,-1
 terrain/height/1/cast0/schedule	ok
 terrain/height/1/cast0/slot0	batchTerrain,8,205,0,5,0,1,0,-1
 terrain/height/1/cast0/slot1	none,0,0,0,0,0,0,0,0

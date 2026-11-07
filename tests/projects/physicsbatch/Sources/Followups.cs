@@ -1,6 +1,7 @@
 using System;
 using Unity.Collections;
 using Unity.Jobs;
+using UnityEngine.Jobs;
 using UnityEngine;
 
 public static partial class ProbeEntry
@@ -14,6 +15,7 @@ public static partial class ProbeEntry
     static void Followups(Collider box)
     {
         Scheduling(box);
+        TransformPreparation();
         TerrainQueriesAndMaterials();
         ControllerFilters();
     }
@@ -73,6 +75,38 @@ public static partial class ProbeEntry
             using(var c=new NativeArray<ClosestPointCommand>(1,Allocator.TempJob))
             {Set(c,0,new ClosestPointCommand(Vector3.zero,box,box.transform.position,box.transform.rotation,Vector3.one));var h=ClosestPointCommand.ScheduleBatch(c,points,1);Attempt("jobs/closest/read",()=>{var v=points[0];});h.Complete();Row("jobs/closest/point",V(points[0]));}
         }
+    }
+    struct TransformWriter : IJobParallelForTransform
+    {
+        public Vector3 Position;
+        public void Execute(int index,TransformAccess transform) { transform.position=Position; }
+    }
+    static void TransformPreparation()
+    {
+        bool previous=Physics.autoSyncTransforms;Physics.autoSyncTransforms=true;
+        var at=new Vector3(600,0,0);var target=Box("transformTarget",at+Vector3.forward*4);
+        Physics.SyncTransforms();
+        using(var transforms=new TransformAccessArray(new[]{target.transform}))
+        using(var commands=new NativeArray<RaycastCommand>(1,Allocator.TempJob))
+        using(var results=new NativeArray<RaycastHit>(1,Allocator.TempJob))
+        {
+            Set(commands,0,new RaycastCommand(at,Vector3.forward,QueryParameters.Default,20));
+            target.transform.position=at+Vector3.forward*5;
+            RaycastCommand.ScheduleBatch(commands,results,1).Complete();Hit("jobs/transform/manual",results[0]);
+            using(var points=new NativeArray<Vector3>(1,Allocator.TempJob))
+            using(var closest=new NativeArray<ClosestPointCommand>(1,Allocator.TempJob))
+            {
+                Set(closest,0,new ClosestPointCommand(at+Vector3.forward*9,target,at+Vector3.forward*5,Quaternion.identity,Vector3.one));
+                ClosestPointCommand.ScheduleBatch(closest,points,1).Complete();Row("jobs/transform/closestMoved",V(points[0]));
+            }
+            target.transform.position=at+Vector3.forward*4;Physics.SyncTransforms();
+            var writer=new TransformWriter{Position=at+Vector3.forward*6}.Schedule(transforms);
+            RaycastCommand.ScheduleBatch(commands,results,1).Complete();Hit("jobs/transform/pending",results[0]);
+            writer.Complete();
+            Physics.Raycast(at,Vector3.forward,out var single,20);Hit("jobs/transform/single",single);
+            Physics.SyncTransforms();RaycastCommand.ScheduleBatch(commands,results,1).Complete();Hit("jobs/transform/synced",results[0]);
+        }
+        Physics.autoSyncTransforms=previous;UnityEngine.Object.DestroyImmediate(target.gameObject);
     }
     static TerrainCollider NewTerrain(string name,Vector3 origin,PhysicsMaterial initial)
     {
