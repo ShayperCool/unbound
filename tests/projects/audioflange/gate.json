@@ -1,0 +1,4 @@
+{
+ "commands": ["python3 tests/projects/audioflange/run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\""],
+ "summary": "\"tested\": \\d+, \"failed\": \\d+(?=.*\"pcm_steps\": 1\\b)"
+}
