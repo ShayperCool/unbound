@@ -26,9 +26,15 @@ pub fn split_threshold() -> f32 {
     cos_threshold(1.0)
 }
 
-/// Largest squared distance between UVs (and tangent handedness difference) that still welds.
+/// Largest squared distance between UVs that still welds: one ulp above the float nearest 1e-6
+/// (matches the Unity 6000.0.71f1 Editor, tests/projects/lightmapuvs).
 pub const UV_WELD: f32 = f32::from_bits(0x3586_37be);
+/// Largest tangent handedness difference that still welds: the float nearest 1e-6.
 pub const W_WELD: f32 = f32::from_bits(0x3586_37bd);
+
+/// The first Newton step of the reciprocal uses 2 plus two ulps instead of 2 (matches the
+/// Editor's face normals, tests/projects/lightmapuvs).
+const RECIPROCAL_FIRST_STEP: f32 = f32::from_bits(0x4000_0002);
 
 pub fn dot(a: V3, b: V3) -> f32 {
     (a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]
@@ -100,7 +106,7 @@ fn reciprocal(m: f32) -> f32 {
     };
     #[cfg(not(target_arch = "x86_64"))]
     let r0 = 1.0 / m;
-    let r1 = (f32::from_bits(0x4000_0002) - m * r0) * r0;
+    let r1 = (RECIPROCAL_FIRST_STEP - m * r0) * r0;
     let r2 = (2.0 - m * r1) * r1;
     if r2.is_nan() { r0 } else { r2 }
 }
