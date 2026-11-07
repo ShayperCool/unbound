@@ -709,7 +709,8 @@ namespace Unbound.Runtime.Playables
             if (animator.m_Player == null && outputs.Count == 1 && AnimationOutputs.Of(animator)?.Count == 1)
             {
                 var o = outputs[0].Output;
-                if (!o.Destroyed && o.Weight == 1f && o.Graph.Outputs.Count == 1
+                // Outputs of the same graph for other Animators do not take part.
+                if (!o.Destroyed && o.Weight == 1f
                     && (o.Engine as AnimationOutputState)?.StreamSource == AnimationStreamSource.DefaultValues)
                 {
                     if (HumanMotionClip(o.Source)) return RootMotionMode.Human;

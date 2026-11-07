@@ -175,9 +175,10 @@ namespace UnityEngine.Tests
             return top;
         }
 
-        static (Vector3 Position, Quaternion Rotation) Motion(string shape, AnimationClip clip)
+        static (Vector3 Position, Quaternion Rotation) Motion(string shape, AnimationClip clip, bool otherAnimatorOutput = false)
         {
             var root = Rig(out var animator, out var avatar);
+            var otherRoot = otherAnimatorOutput ? Rig(out _, out _) : null;
             var graph = PlayableGraph.Create("human-shape-" + shape);
             graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
             try
@@ -192,6 +193,13 @@ namespace UnityEngine.Tests
                 }
                 else source = HumanShape(graph, clip, shape, out top);
                 AnimationPlayableOutput.Create(graph, "animation", animator).SetSourcePlayable(source);
+                if (otherAnimatorOutput)
+                {
+                    // A second character driven by the same graph.
+                    var p = AnimationClipPlayable.Create(graph, clip);
+                    p.SetApplyFootIK(false);
+                    AnimationPlayableOutput.Create(graph, "other", otherRoot.GetComponent<Animator>()).SetSourcePlayable(p);
+                }
                 graph.Evaluate(0f);
                 if (shape == "live")
                 {
@@ -208,6 +216,35 @@ namespace UnityEngine.Tests
                 graph.Destroy();
                 Object.DestroyImmediate(root);
                 Object.DestroyImmediate(avatar);
+                if (otherRoot != null)
+                {
+                    Object.DestroyImmediate(otherRoot.GetComponent<Animator>().avatar);
+                    Object.DestroyImmediate(otherRoot);
+                }
+            }
+        }
+
+        // Each Animator has one output; the graph's other outputs drive other Animators.
+        [Theory]
+        [InlineData("direct")]
+        [InlineData("three")]
+        public void OutputsForOtherAnimatorsInTheGraphKeepRootMotion(string shape)
+        {
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            var clip = Clip();
+            try
+            {
+                var alone = Motion(shape, clip);
+                var shared = Motion(shape, clip, otherAnimatorOutput: true);
+                Assert.True(alone.Position.magnitude > 0.1f);
+                Near.Equal(alone.Position, shared.Position, 1e-5f);
+                Near.SameRotation(alone.Rotation, shared.Rotation, 1e-3f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(clip);
+                ProjectInfo.UnityVersion = version;
             }
         }
 
