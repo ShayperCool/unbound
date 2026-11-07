@@ -268,7 +268,7 @@ sealed partial class StubBuilder
             Report.NewTypes += moduleReport.NewTypes;
             Report.ExtendedTypes += moduleReport.ExtendedTypes;
             Report.Members += moduleReport.Members;
-            files.Add((moduleReport.File, Header($"the API of {module}") + body));
+            files.Add((moduleReport.File, Header("module API") + body));
         }
         files.Add(("Unbound.Assembly.g.cs", Header("assembly-level attributes of the modules") + AssemblyAttributes()));
         foreach (var (id, entry) in _returns.OrderBy(r => r.Key, StringComparer.Ordinal))
