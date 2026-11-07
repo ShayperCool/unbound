@@ -72,15 +72,18 @@ namespace UnityEngine.Tests
                 Assert.Equal(AudioDataLoadState.Unloaded, clip.loadState);
                 var data = new float[4]; Assert.True(clip.GetData(data, 0));
                 Assert.Equal(new[] { 0.125f, 0.25f, 0.375f, 0.5f }, data);
-                Assert.Equal(AudioDataLoadState.Unloaded, clip.loadState);
+                Assert.Equal(AudioDataLoadState.Loaded, clip.loadState);
             }
+            Assert.True(AudioSettings.Reset(AudioSettings.GetConfiguration()));
             Assert.True(clone.SetData(new[] { 0.75f }, 0));
             Assert.Equal(AudioDataLoadState.Loaded, clone.loadState);
             Assert.Equal(AudioDataLoadState.Unloaded, asset.loadState);
             var shared = new float[1]; Assert.True(asset.GetData(shared, 0)); Assert.Equal(0.75f, shared[0]);
             ulong handle = clone.m_Handle;
             Object.DestroyImmediate(asset, true); Assert.False(asset);
-            Assert.True(clone.GetData(shared, 0)); Assert.Equal(0.75f, shared[0]);
+            Assert.Equal(AudioDataLoadState.Unloaded, clone.loadState);
+            Assert.True(m_Backend.ClipData(handle, 0, shared, write: false)); Assert.Equal(0.75f, shared[0]);
+            Assert.True(clone.GetData(shared, 0)); Assert.Equal(0.125f, shared[0]);
             Object.DestroyImmediate(clone); Assert.False(clone);
             Assert.False(m_Backend.ClipData(handle, 0, shared, write: false));
         }

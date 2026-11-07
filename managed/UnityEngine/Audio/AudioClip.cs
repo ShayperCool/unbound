@@ -185,10 +185,7 @@ namespace UnityEngine
                 return false;
             }
             var copy = data.ToArray();
-            bool written = AudioBackend.Current.ClipData(m_Handle, offsetSamples, copy, write: true);
-            if (written && m_IsAsset && Compat.AudioClipDataOwnershipMeasured)
-                m_LoadState = AudioDataLoadState.Loaded;
-            return written;
+            return AudioBackend.Current.ClipData(m_Handle, offsetSamples, copy, write: true);
         }
 
         [Obsolete("The _3D argument of AudioClip is deprecated. Use the spatialBlend property of AudioSource instead to morph between 2D and 3D playback.")]

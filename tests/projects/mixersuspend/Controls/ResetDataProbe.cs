@@ -17,6 +17,7 @@ public class ResetDataProbe : MonoBehaviour
         Value(key + ".load", (int)clip.loadState);
         var data = new float[8]; Array.Fill(data, 0.375f);
         Value(key + ".read", clip.GetData(data, 0) ? 1 : 0);
+        Value(key + ".loadAfterRead", (int)clip.loadState);
         for (int i = 0; i < data.Length; i++) Value(key + ".data" + i, BitConverter.ToInt32(BitConverter.GetBytes(data[i]), 0));
     }
     void Save() => File.WriteAllText(Path.Combine(output, "capture.json"), "{" + string.Join(",", rows) + "}\n");

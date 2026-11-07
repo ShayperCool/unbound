@@ -22,7 +22,7 @@ def verify(root, release, rate):
     meta = header(root)
     expected = {'release', 'rate', 'complete', 'asset.write', 'clone.asset.write', 'clone.script.write',
                 'reset', 'restart', 'rewrite.old'}
-    fields = ['valid', 'frames', 'channels', 'frequency', 'lengthBits', 'load', 'read'] + ['data'+str(i) for i in range(8)]
+    fields = ['valid', 'frames', 'channels', 'frequency', 'lengthBits', 'load', 'read', 'loadAfterRead'] + ['data'+str(i) for i in range(8)]
     prefixes = [stage+'.'+str(i) for stage in ('before', 'after') for i in range(8)] + ['playedClone', 'rewritten']
     expected |= {prefix+'.'+field for prefix in prefixes for field in fields}
     expected |= {'length.'+str(rate)+'.'+str(frames) for rate in (44100,48000) for frames in (1,43,44,45,47,48,49,4096,48000)}

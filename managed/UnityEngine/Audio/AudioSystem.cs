@@ -118,7 +118,7 @@ namespace Unbound.Runtime
         /// <summary>AudioSettings.Reset stopped every voice.</summary>
         internal static void OnReset()
         {
-            if (Compat.AudioClipDataOwnershipMeasured)
+            if (Compat.AudioClipResetDataMeasured)
             {
                 ulong epoch = ++s_ClipResetEpoch;
                 foreach (AudioClip clip in ObjectRegistry.All(typeof(AudioClip))) clip.OnAudioReset(epoch);

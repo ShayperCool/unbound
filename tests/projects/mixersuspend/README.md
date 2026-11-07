@@ -181,6 +181,6 @@ reports the original 2049 raw device-reset failures per rate.
 
 [RESET_DATA_MEASUREMENT.md](RESET_DATA_MEASUREMENT.md) defines the clip-data reset
 controls, cloned storage, duration boundaries and resampling endpoints. Both Native
-repeats match all 196929 values per rate; the engine compares them strictly.
+repeats match all 196947 values per rate; the engine compares them strictly.
 Generated-data loss resolves the six original replay impulse failures. The 2049
 remaining original records concern only the extra listener callback around reset.

@@ -309,8 +309,8 @@ mod tests {
     }
 
     /// The source packet's filter descriptors were added at NativeApi 16; 20 adds the reverb
-    /// kind and parameters, 21 the frame packet's reverb zone, 23 Distortion kind 5, 24 Chorus kind 6. Versions 25, 26 and 27 add mixer Flange, Normalize and Pitch Shifter, 28 render protocol 12 and 29 an decoded-resampling flag, without changing these layouts.
-    /// The managed side pins the same value and refuses 14 to 27 and 29 (NativeApiVersionTests).
+    /// kind and parameters, 21 the frame packet's reverb zone, 23 Distortion kind 5, 24 Chorus kind 6. Versions 25, 26 and 27 add mixer Flange, Normalize and Pitch Shifter, 28 render protocol 12, 29 input frame versions and 30 a decoded-resampling flag, without changing these layouts.
+    /// The managed side pins the same value and refuses earlier versions and 31 (NativeApiVersionTests).
     #[test]
     fn the_filter_descriptor_layout_is_native_api_30() {
         assert_eq!(crate::native_api::NATIVE_API_VERSION, 30);

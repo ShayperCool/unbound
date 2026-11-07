@@ -2,7 +2,7 @@
 
 Measured against the Linux Unity 6000.0.71f1 Editor, stereo 1024-frame offline
 rendering at 48000 and 44100 Hz. `reset_data.py` records two independent projects
-per rate; both agree bit-for-bit on all 196929 values per rate. The reference is
+per rate; both agree bit-for-bit on all 196947 values per rate. The reference is
 `Reference/unity-6000.0.71f1/reset-data-rate-<rate>/`. The authored `reset-data`
 project is assembled without an Editor for the engine gate. All existing original
 suspension references and comparator tolerances are unchanged.
@@ -29,8 +29,8 @@ last frame. The observations below cover those details in this release/context.
   created clip plays after reset.
 - The two imported DecompressOnLoad PCM clips retain their sample count, channels,
   rate and import settings. Reset restores saved PCM after SetData, including
-  edits through a clone. Their load state becomes Unloaded; GetData succeeds
-  without changing that state. SetData changes the writing object's state to Loaded.
+  edits through a clone. Their load state becomes Unloaded; GetData changes the reading object to Loaded, as the post-read observation
+  explicitly checks. SetData changes the writing object to Loaded.
 - Imported clones share PCM storage. Writing the clone changes the original's
   samples while their load-state metadata stays independent. The engine retains
   shared storage until the last owner is destroyed; a managed test also destroys
@@ -38,7 +38,8 @@ last frame. The observations below cover those details in this release/context.
 - A nonstream script-created clone has zero samples but retains channels and
   frequency, both before and after the source played. GetData returns false;
   SetData at offset zero throws ArgumentException because no offset is valid.
-  Streamed cloning is not measured and remains explicitly unsupported.
+  The broader tests/projects/assetinstantiate reference also measures streamed
+  script clones as empty and reload after destroying the imported original.
 - Script-created duration is the complete number of milliseconds, divided by
   1000. The matrix includes 1,43,44,45,47,48,49,4096,48000 frames at both rates;
   imported duration remains sample-based. This explains the measured boundary
@@ -53,7 +54,9 @@ last frame. The observations below cover those details in this release/context.
   cover the endpoint, wrap and the prior behavior of unmeasured releases.
 
 Each measured mechanism is selected through Compat. Other releases retain their
-prior clip ownership, clone, duration, double rate ratio and zero-padded interpolation paths until measured.
+prior reset, duration, double rate ratio and zero-padded interpolation paths until
+measured. Cloning reuses the AssetCloneResourcesMeasured gate and rejects unmeasured
+releases, as tests/projects/assetinstantiate records.
 These changes do not alter importer/cache output. The new decoded-resampling audio packet flag bumps
 NativeApi to 30; the audio thread only reads a prepared bit and performs bounded
 sample fetches. Clip enumeration, reload and reference ownership run on the control
