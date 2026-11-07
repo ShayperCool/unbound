@@ -37,7 +37,14 @@ def prepare():
     if project.exists(): raise SystemExit('Project exists: '+str(project))
     for folder in ('Assets', 'Packages', 'ProjectSettings'):
         shutil.copytree(REPO/'tests/projects/physics'/folder, project/folder)
-    shutil.copy2(ROOT/'Sources/ProbeEntry.cs', project/'Assets/Scripts/ProbeEntry.cs')
+    for source in (ROOT/'Sources').glob('*.cs'):
+        shutil.copy2(source, project/'Assets/Scripts'/source.name)
+    shutil.copytree(REPO/'tests/projects/terrain/Assets/Trees', project/'Assets/Resources/Trees')
+    manifest = project/'Packages/manifest.json'
+    packages = json.loads(manifest.read_text())
+    for module in ('terrain', 'terrainphysics'):
+        packages['dependencies']['com.unity.modules.'+module] = '1.0.0'
+    manifest.write_text(json.dumps(packages, indent=2)+'\n')
     (project/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+a.release+'\n')
 
 def engine():

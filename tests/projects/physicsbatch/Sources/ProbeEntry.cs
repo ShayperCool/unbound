@@ -6,7 +6,7 @@ using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
 
-public static class ProbeEntry
+public static partial class ProbeEntry
 {
     static readonly List<string> Lines = new List<string>();
     static readonly Vector3 Half = Vector3.one * .3f;
@@ -102,6 +102,7 @@ public static class ProbeEntry
             }
             Limits(near,meshGo.GetComponent<MeshCollider>());
             Stress();
+            Followups(near);
             Row("complete","yes");
         }
         catch(Exception e) { Row("fatal",e.ToString().Replace('\n',' ').Replace('\r',' ')); }
