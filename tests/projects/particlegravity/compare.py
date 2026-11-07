@@ -15,7 +15,6 @@ KNOWN = [
     (r'^custom/rotated_scaled/\d+$', 1,
      'start velocity in a scaled custom space: Unity keeps the start speed along the '
      'inverse-transformed direction, Unbound scales it'),
-    (r'/(23|24)$', 7, 'the loop-wrap burst particle: Unity ages it by the whole Simulate step'),
 ]
 
 

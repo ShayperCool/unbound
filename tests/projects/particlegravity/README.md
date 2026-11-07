@@ -50,7 +50,5 @@ Known differences outside gravity (the comparator lists each one and keeps them 
 - `custom/rotated_scaled`: a start velocity in a scaled custom space. Unity keeps the start speed
   along the inverse-transformed direction; Unbound also scales it. Gravity matches (the
   `custom/rotated_scaled_still` scenario and the velocity deltas).
-- Steps 23 and 24 of every scenario: the particle the loop-wrap burst emits. Unity ages it by the
-  whole `Simulate` step (0.043), Unbound by the part after the wrap (0.032). The first particle matches.
 
 Unmeasured: other releases; zero or negative scales; random modes' exact values.
