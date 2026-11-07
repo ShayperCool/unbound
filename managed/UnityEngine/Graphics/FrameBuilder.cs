@@ -739,7 +739,8 @@ namespace Unbound.Runtime
                     var item = s_Items[i];
                     if (item.Renderer == null) continue;
                     if (!lights.TryGetValue(item.Renderer, out var perObject))
-                        lights[item.Renderer] = perObject = PerObjectLights(data, item.Renderer);
+                        lights[item.Renderer] = perObject = PerObjectLights(data, item.Renderer, drawing.mainLightIndex,
+                            (drawing.perObjectData & PerObjectData.Lightmaps) != 0);
                     var properties = item.Properties != null ? new Dictionary<int, object>(item.Properties) : new Dictionary<int, object>();
                     foreach (var p in perObject) properties[p.Key] = p.Value;
                     item.Properties = properties;
@@ -870,17 +871,23 @@ namespace Unbound.Runtime
 
         /// <summary>A renderer's per-object lights (unity_LightData, unity_LightIndices): the
         /// visible lights other than those the index map drops whose range reaches its bounds,
-        /// brightest at the bounds' center first, at most 8.</summary>
-        static Dictionary<int, object> PerObjectLights(CullingData data, Renderer renderer)
+        /// brightest at the bounds' center first, at most 8; whether the main light lights it
+        /// (unity_LightData.z). A lightmapped renderer (<paramref name="lightmaps"/>: the list
+        /// binds lightmaps) leaves out the lights <see cref="InLightmap"/>.</summary>
+        static Dictionary<int, object> PerObjectLights(CullingData data, Renderer renderer, int mainLight, bool lightmaps)
         {
             var bounds = renderer.bounds;
             var candidates = new List<(int Index, float Importance)>();
             var map = data.LightIndexMap;
+            // A lightmapped renderer is not lit at run time by the lights baked into its lightmap.
+            bool lightmapped = lightmaps && renderer.lightmapIndex >= 0 && renderer.lightmapIndex < 0xFFFE;
+            float mainLit = lightmapped && mainLight >= 0 && mainLight < data.Lights.Length && InLightmap(data.Lights[mainLight].light) ? 0f : 1f;
             for (int i = 0; i < data.Lights.Length; i++)
             {
                 int index = map != null ? (i < map.Length ? map[i] : -1) : i;
                 if (index < 0) continue;
                 var light = data.Lights[i];
+                if (lightmapped && InLightmap(light.light)) continue;
                 float importance;
                 if (light.lightType == LightType.Directional) importance = float.MaxValue;
                 else
@@ -900,9 +907,25 @@ namespace Unbound.Runtime
             for (int k = 0; k < count; k++) indices[k] = candidates[k].Index;
             return new Dictionary<int, object>
             {
-                [s_LightDataId] = new Vector4(0f, count, 1f, 0f),
+                [s_LightDataId] = new Vector4(0f, count, mainLit, 0f),
                 [s_LightIndicesId] = new[] { new Vector4(indices[0], indices[1], indices[2], indices[3]), new Vector4(indices[4], indices[5], indices[6], indices[7]) },
             };
+        }
+
+        /// <summary>
+        /// Whether a light's direct light is in the lightmaps, so lightmapped renderers get none
+        /// of it at run time (unity_LightData.z 0 for the main light, left out of the per-object
+        /// lights): a baked or mixed light of a Subtractive bake. Measured: tests/projects/urp
+        /// per-object-constants.jsonl (Subtractive: the lightmapped renderers get neither the
+        /// mixed sun nor the baked point light, the dynamic ones both; Shadowmask: every renderer
+        /// gets both).
+        /// </summary>
+        internal static bool InLightmap(Light light)
+        {
+            if (light == null) return false;
+            var baking = light.bakingOutput;
+            return baking.isBaked && baking.lightmapBakeType != LightmapBakeType.Realtime
+                && baking.mixedLightingMode == MixedLightingMode.Subtractive;
         }
 
         /// <summary>A renderer list's order: by sorting layer and order, by queue, then back to

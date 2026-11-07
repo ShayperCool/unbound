@@ -279,11 +279,16 @@ namespace UnityEngine
                 if (map?.m_ShadowMask != null)
                 {
                     properties[s_ShadowMask] = map.m_ShadowMask;
-                    // Mixed lighting's shadow masks are bound, its keywords not set.
-                    Unbound.Runtime.Stubs.Ignored("QualitySettings.shadowmaskMode",
+                    // Mixed lighting's shadow masks are bound. A render pipeline mixes them with
+                    // its realtime shadows itself (URP sets their keywords: tests/projects/urp
+                    // lightmap_shadowmask, lightmap_distance_shadowmask); the built-in one does not yet.
+                    if (GraphicsSettings.currentRenderPipeline == null)
+                        Unbound.Runtime.Stubs.Ignored("QualitySettings.shadowmaskMode",
                         "baked shadow masks are not mixed with realtime shadows yet (shadowmaskMode and Light.lightShadowCasterMode have no effect)");
                 }
-                return properties;
+                // Its light is in the lightmap: no probe (zero SH; measured: tests/projects/urp
+                // per-object-constants.jsonl, the lightmapped renderers).
+                return WithProbe(default, properties, copy: false);
             }
             if (probes && renderer.lightProbeUsage == LightProbeUsage.CustomProvided) return ProvidedProbes(properties, renderer.m_PropertyBlock);
             var lightProbes = LightmapSettings.lightProbes;
@@ -335,10 +340,13 @@ namespace UnityEngine
             return result ?? properties;
         }
 
-        static Dictionary<int, object> WithProbe(SphericalHarmonicsL2 sh, Dictionary<int, object> properties)
+        /// <summary>The probe's ShadeSH9 constants on a copy of <paramref name="properties"/> (on
+        /// them, without <paramref name="copy"/>: a dictionary this draw already owns).</summary>
+        static Dictionary<int, object> WithProbe(SphericalHarmonicsL2 sh, Dictionary<int, object> properties, bool copy = true)
         {
             sh.ShaderConstants(out var ar, out var ag, out var ab, out var br, out var bg, out var bb, out var c);
-            properties = properties != null ? new Dictionary<int, object>(properties) : new Dictionary<int, object>();
+            if (copy || properties == null)
+                properties = properties != null ? new Dictionary<int, object>(properties) : new Dictionary<int, object>();
             properties[s_ShIds[0]] = ar;
             properties[s_ShIds[1]] = ag;
             properties[s_ShIds[2]] = ab;
