@@ -1,0 +1,6 @@
+{
+  "commands": [
+    "python3 tests/projects/particlecurves/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match.*"
+}
