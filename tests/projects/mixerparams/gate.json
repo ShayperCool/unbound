@@ -1,0 +1,4 @@
+{
+  "commands": ["python3 tests/projects/mixerparams/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\""],
+  "summary": "147 values, \\d+ failures"
+}
