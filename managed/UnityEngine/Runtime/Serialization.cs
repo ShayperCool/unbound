@@ -202,6 +202,19 @@ namespace Unbound.Runtime
             return true;
         }
 
+        /// <summary>The empty value Unity gives a null built-in serialized class (AnimationCurve,
+        /// Gradient, RectOffset) when it loads or copies one; null for other shapes.</summary>
+        internal static object EmptyBuiltin(Shape shape)
+        {
+            switch (shape)
+            {
+                case Shape.AnimationCurve: return new AnimationCurve();
+                case Shape.Gradient: return new Gradient();
+                case Shape.RectOffset: return new RectOffset();
+                default: return null;
+            }
+        }
+
         /// <summary>A new instance for a serialized class or struct: its constructor runs, as in Unity.</summary>
         internal static object Create(Type type)
         {
@@ -316,11 +329,9 @@ namespace Unbound.Runtime
                 case Shape.String:
                     return value ?? "";
                 case Shape.AnimationCurve:
-                    return value ?? new AnimationCurve();
                 case Shape.Gradient:
-                    return value ?? new Gradient();
                 case Shape.RectOffset:
-                    return value ?? new RectOffset();
+                    return value ?? SerializationRules.EmptyBuiltin(shape);
                 case Shape.Composite:
                     if (depth >= 10) return value;
                     value ??= SerializationRules.Create(type);
@@ -542,7 +553,7 @@ namespace Unbound.Runtime
                 if (shape == Shape.Array) return Array.CreateInstance(elementType, 0);
                 if (shape == Shape.List) return Activator.CreateInstance(type);
                 if (shape == Shape.String) return "";
-                return null;
+                return SerializationRules.EmptyBuiltin(shape);
             }
             switch (shape)
             {
