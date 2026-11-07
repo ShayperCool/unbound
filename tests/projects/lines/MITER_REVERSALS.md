@@ -61,7 +61,7 @@ python3 tests/projects/lines/compare.py tests/projects/lines/Reference/unity-600
   CAPTURE --mode miter --before BEFORE --report ~/.cache/unbound/r8/comparison.json
 ```
 
-The `miter` comparison mode includes every old record, both control files and every
+The `miter` comparison mode includes every old record, all control files and every
 capture key. The numerical and image tolerances are unchanged. Negative widths,
 view-axis degeneracy, perceptual gradients, trail frame count and autodestruct
 remain separate questions. Reversing loops' corner inner sides are also separate;
@@ -90,6 +90,14 @@ meshes, with no visible or gameplay effect. The gate admits only those two
 components per key within 5e-5, and the strict comparator retains every failure
 at its original 1e-5 absolute plus 1e-5 relative tolerance. No further Native
 capture was spent on this residual.
+
+Final strict comparison: 2099/2150 keys match, with 51 failing keys retained,
+including the four rotated TransformZ meshes and the two float-copy keys above.
+The original 1885-key set has 47 retained failures versus 81 before the change.
+No previously passing original key or component becomes failing, and no failing
+original component increases its error. All 261 new control records outside the
+four TransformZ meshes pass. The unchanged command-buffer gate also passes with
+exactly its two task-required invalid Append differences, 274/276 strict matches.
 
 Land gate:
 
