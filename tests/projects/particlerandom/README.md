@@ -313,7 +313,28 @@ lifetimes use the existing full-particle recorder and unchanged comparator.
 | [InheritLifetime](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystemSubEmitterProperties.InheritLifetime.html) | Children born closer to parent death have shorter lifespans. No numeric formula is documented. |
 | [Main module](https://docs.unity3d.com/6000.0/Documentation/Manual/PartSysMainModule.html), [startLifetime](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.MainModule-startLifetime.html) | Start lifetime is assigned when a particle is created. Infinite lifetime prevents lifetime expiry. |
 | [Simulate](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.Simulate.html) | Advances and pauses, optionally restarting and including children; fixedTimeStep uses configured fixed intervals. No equivalence of split and single newborn scheduling is promised. |
+| [OnParticleSystemStopped](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnParticleSystemStopped.html) | With stopAction set to Callback, notifies after all particles die and no more will be born. No ordering among different systems is specified. |
 
 The documented inheritance description does not establish that Birth uses the
 measured Death/Manual formula. Lifetime curves, other inheritance channels,
 nested chains and other releases remain outside this constant-lifetime slice.
+
+
+Two expanded independent captures, `p8-native3` and `p8-native4`, are byte-identical
+and append 1204 keys without changing any of the 3308 prior keys. The initial pair,
+`p8-native1` and `p8-native2`, is also byte-identical. All four captures and the
+baseline's complete failures remain in the validation cache. The baseline matches
+4009/4512 records, with 175 prior known differences and 328 unexpected differences
+in the new Birth lifetime controls.
+
+| Cause | Measured 6000.0.71f1 behavior | Implementation scope |
+| --- | --- | --- |
+| Parent lifetime fraction gives the wrong child lifespan | Child start lifetime multiplies by the parent's remaining seconds after the parent integration step. A 0.413 s parent and 0.813 s child give 0.813 × 0.388 = 0.315444 s for the first birth. A 1.613 s parent and 0.413 s child instead give 0.655844 s. | Constant parent and child lifetime modes without lifetime-by-emitter-speed, finite parent lifetime, Simulate Birth path, selected by the compatibility profile. |
+| Later emissions must use a later parent state | Rate and burst children emitted in one parent step share its remaining-seconds multiplier even when their initial ages differ. Later steps use shorter remaining lifetimes. | No interpolation of the multiplier to each child's birth time; initialization seeds, origins and catch-up ages keep the P6/P7 paths. |
+| Lifetime changes affect expiry and callbacks | The isolated age-zero inherited child disappears in the sixth 0.05 s call. After resuming only the child, its stop callback first appears at captured frame 12 with inheritance and frame 37 without it. | Full histories include live counts and callback counters; no callback-order rule is added. |
+
+These are observations in the captured contexts, not a documented numeric formula
+or evidence about Unity's internal mechanism. The measurement leaves continuous
+parent playback, lifetime curves, nested chains, infinite parent lifetimes,
+lifetime-by-emitter-speed and other inheritance channels separate. Death/Manual,
+Collision/Trigger and other releases retain their existing behavior.
