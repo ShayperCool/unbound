@@ -257,3 +257,11 @@ feet-pivot memory. A pose-only visibility return also refreshes the humanoid API
 root pose when the parent has moved. Before the first evaluation, the humanoid API root pose retains
 the root captured when the Animator was enabled, even if game code has since
 turned the Transform; the initial records preserve this distinction.
+
+Managed regressions also guard two cases outside this Native capture: a paused
+clip samples a stationary motion interval, following the 6000.0
+[Pause API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableExtensions.Pause.html)
+guarantee that evaluation does not advance its local time; and two separately
+evaluated Manual graphs targeting one Animator retain the unsupported multiple-output
+diagnostic. The first is an implementation inference from frozen time, not an
+additional Native observation; the second guards the declared support boundary.

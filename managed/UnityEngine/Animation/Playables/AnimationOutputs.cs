@@ -658,7 +658,7 @@ namespace Unbound.Runtime.Playables
             bool requested = animator.m_ApplyRootMotion || HasMoveCallback(animator);
             if (animator.isHuman)
             {
-                if (animator.m_Player == null && outputs.Count == 1)
+                if (animator.m_Player == null && outputs.Count == 1 && AnimationOutputs.Of(animator)?.Count == 1)
                 {
                     var o = outputs[0].Output;
                     if (!o.Destroyed && o.Weight == 1f && o.Source?.Kind is ClipKind clip

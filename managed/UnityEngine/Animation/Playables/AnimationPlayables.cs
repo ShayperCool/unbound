@@ -65,7 +65,8 @@ namespace Unbound.Runtime.Playables
             if (!e.ReferencePose && e.Animator.Human is { } human && Clip.HasHumanCurves && Clip.length > 0f)
                 human.SampleMotion(Clip, Clip.HumanClipMotion, new Unbound.Runtime.Humanoid.HumanClipMotionInput
                 {
-                    Time = (float)(node.Time / Clip.length), PreviousTime = (float)(node.PreviousTime / Clip.length), Speed = 1f,
+                    Time = (float)(node.Time / Clip.length),
+                    PreviousTime = (float)((node.LastPlaying ? node.PreviousTime : node.Time) / Clip.length), Speed = 1f,
                 }, out into.BodyMotion);
             double t = e.ReferencePose ? 0.0 : node.Time;
             m_Pose.Reset(e.Bindings.FloatCount, e.Bindings.ObjectCount);
