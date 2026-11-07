@@ -587,6 +587,9 @@ namespace UnityEngine
         // particle's event position, a newborn's origin), reused by every step (grown, never shrunk).
         SlotMark[] m_SlotMarks = Array.Empty<SlotMark>();
         Vector3[] m_SlotPoints = Array.Empty<Vector3>();
+        /// <summary>The slots the current marks describe; a particle appended after them (by
+        /// a sub-emitter cycle while the dead leave) is unmarked.</summary>
+        int m_MarkedSlots;
 
         /// <summary>The cleared marks for slots [0, <paramref name="count"/>).</summary>
         SlotMark[] SlotMarks(int count)
@@ -597,8 +600,11 @@ namespace UnityEngine
                 m_SlotPoints = new Vector3[m_SlotMarks.Length];
             }
             else Array.Clear(m_SlotMarks, 0, count);
+            m_MarkedSlots = count;
             return m_SlotMarks;
         }
+
+        SlotMark MarkOf(int index) => index < m_MarkedSlots ? m_SlotMarks[index] : 0;
 
         /// <summary>Removes the slots marked dead from <paramref name="from"/> (a multiple of four)
         /// on. Unity 6000.0.71f1 compacts in four-slot groups aligned to the buffer: it collects
@@ -615,7 +621,7 @@ namespace UnityEngine
             {
                 int mask = 0;
                 for (int i = block; i < Math.Min(block + 4, m_Count); i++)
-                    if ((marks[i] & SlotMark.Dead) != 0) mask |= 1 << (i - block);
+                    if ((MarkOf(i) & SlotMark.Dead) != 0) mask |= 1 << (i - block);
                 if (mask == 0) { block += 4; continue; }
                 for (int lane = 3; lane >= 0; lane--)
                 {
@@ -644,10 +650,14 @@ namespace UnityEngine
         {
             int last = m_Count - 1;
             RemoveAt(index);
+            if (index < m_MarkedSlots) m_SlotMarks[index] = 0;
             if (index >= last) return;
-            m_SlotMarks[index] = m_SlotMarks[last];
-            m_SlotPoints[index] = m_SlotPoints[last];
-            m_SlotMarks[last] = 0;
+            if (index < m_MarkedSlots)
+            {
+                m_SlotMarks[index] = MarkOf(last);
+                if (last < m_MarkedSlots) m_SlotPoints[index] = m_SlotPoints[last];
+            }
+            if (last < m_MarkedSlots) m_SlotMarks[last] = 0;
         }
 
         /// <summary>SetParticles' write of one slot: the public particle replaces it.</summary>

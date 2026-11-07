@@ -651,8 +651,9 @@ namespace UnityEngine
             // lanes into the places of dead births.
             for (int i = aligned; i < m_Count;)
             {
-                if ((marks[i] & SlotMark.Dead) == 0) { i++; continue; }
-                if ((marks[i] & SlotMark.Admitted) != 0) count--;
+                var mark = MarkOf(i);
+                if ((mark & SlotMark.Dead) == 0) { i++; continue; }
+                if ((mark & SlotMark.Admitted) != 0) count--;
                 RemoveSlot(i);
             }
             int prefix = Math.Min(count, aligned - start);
@@ -1653,8 +1654,8 @@ namespace UnityEngine
                     m_SlotPoints[i] = end.m_Position;
                 }
             }
-            // A sub-emitter can only add particles to other systems, so the flags still
-            // describe this buffer while the dead leave.
+            // Death sub-emitters fire while the dead leave; a cycle back to this system can
+            // append particles, which RemoveDeadSlots treats as alive.
             if (anyDead) RemoveDeadSlots(0, deathSubs ? DeadSlotRemoval.DeathWithSubEmitters : DeadSlotRemoval.Death);
         }
 
