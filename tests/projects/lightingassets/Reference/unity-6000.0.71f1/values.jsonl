@@ -1,0 +1,286 @@
+{"case":"plain-api","try":false,"tried":null,"get":{"exception":"System.Exception","message":"Lightmapping.lightingSettings is null. Please assign it to an existing asset or a new instance. "},"forScene":null,"same":{"exception":"System.Exception","message":"Lightmapping.lightingSettings is null. Please assign it to an existing asset or a new instance. "},"bakedGI":true,"realtimeGI":false,"settings":null}
+{"case":"defaults","same":true,"settings":{"name":"","bakedGI":true,"realtimeGI":false,"realtimeEnvironmentLighting":false,"autoGenerate":false,"mixedBakeMode":2,"albedoBoost":1,"indirectScale":1,"lightmapper":1,"lightmapMaxSize":1024,"lightmapResolution":40,"lightmapPadding":2,"lightmapCompression":3,"compressLightmaps":true,"ao":false,"aoMaxDistance":1,"aoExponentIndirect":1,"aoExponentDirect":0,"extractAO":false,"directionalityMode":1,"exportTrainingData":false,"trainingDataDestination":"TrainingData","indirectResolution":2,"sampling":1,"directSampleCount":32,"indirectSampleCount":512,"bounces":2,"maxBounces":2,"russianRouletteStartBounce":2,"minBounces":2,"prioritizeView":true,"filteringMode":1,"denoiserTypeDirect":1,"denoiserTypeIndirect":1,"denoiserTypeAO":1,"filterTypeDirect":0,"filterTypeIndirect":0,"filterTypeAO":0,"filteringGaussianRadiusDirect":1,"filteringGaussianRadiusIndirect":1,"filteringGaussianRadiusAO":1,"filteringGaussRadiusDirect":1,"filteringGaussRadiusIndirect":1,"filteringGaussRadiusAO":1,"filteringAtrousPositionSigmaDirect":0.5,"filteringAtrousPositionSigmaIndirect":2,"filteringAtrousPositionSigmaAO":1,"environmentImportanceSampling":true,"environmentSampleCount":256,"lightProbeSampleCountMultiplier":4,"respectSceneVisibilityWhenBakingGI":false}}
+{"case":"new","settings":{"name":"","bakedGI":true,"realtimeGI":false,"realtimeEnvironmentLighting":false,"autoGenerate":false,"mixedBakeMode":2,"albedoBoost":1,"indirectScale":1,"lightmapper":1,"lightmapMaxSize":1024,"lightmapResolution":40,"lightmapPadding":2,"lightmapCompression":3,"compressLightmaps":true,"ao":false,"aoMaxDistance":1,"aoExponentIndirect":1,"aoExponentDirect":0,"extractAO":false,"directionalityMode":1,"exportTrainingData":false,"trainingDataDestination":"TrainingData","indirectResolution":2,"sampling":1,"directSampleCount":32,"indirectSampleCount":512,"bounces":2,"maxBounces":2,"russianRouletteStartBounce":2,"minBounces":2,"prioritizeView":true,"filteringMode":1,"denoiserTypeDirect":1,"denoiserTypeIndirect":1,"denoiserTypeAO":1,"filterTypeDirect":0,"filterTypeIndirect":0,"filterTypeAO":0,"filteringGaussianRadiusDirect":1,"filteringGaussianRadiusIndirect":1,"filteringGaussianRadiusAO":1,"filteringGaussRadiusDirect":1,"filteringGaussRadiusIndirect":1,"filteringGaussRadiusAO":1,"filteringAtrousPositionSigmaDirect":0.5,"filteringAtrousPositionSigmaIndirect":2,"filteringAtrousPositionSigmaAO":1,"environmentImportanceSampling":true,"environmentSampleCount":256,"lightProbeSampleCountMultiplier":4,"respectSceneVisibilityWhenBakingGI":false}}
+{"case":"custom","settings":{"name":"Custom","bakedGI":false,"realtimeGI":true,"realtimeEnvironmentLighting":true,"autoGenerate":false,"mixedBakeMode":1,"albedoBoost":2.5,"indirectScale":1.75,"lightmapper":2,"lightmapMaxSize":256,"lightmapResolution":12.5,"lightmapPadding":5,"lightmapCompression":1,"compressLightmaps":true,"ao":true,"aoMaxDistance":2.25,"aoExponentIndirect":0.75,"aoExponentDirect":0.5,"extractAO":true,"directionalityMode":0,"exportTrainingData":false,"trainingDataDestination":"TrainingData","indirectResolution":0.5,"sampling":1,"directSampleCount":64,"indirectSampleCount":256,"bounces":4,"maxBounces":4,"russianRouletteStartBounce":1,"minBounces":1,"prioritizeView":false,"filteringMode":2,"denoiserTypeDirect":0,"denoiserTypeIndirect":1,"denoiserTypeAO":0,"filterTypeDirect":1,"filterTypeIndirect":2,"filterTypeAO":1,"filteringGaussianRadiusDirect":2.5,"filteringGaussianRadiusIndirect":3.5,"filteringGaussianRadiusAO":1.5,"filteringGaussRadiusDirect":2,"filteringGaussRadiusIndirect":3,"filteringGaussRadiusAO":1,"filteringAtrousPositionSigmaDirect":0.25,"filteringAtrousPositionSigmaIndirect":1.5,"filteringAtrousPositionSigmaAO":0.75,"environmentImportanceSampling":false,"environmentSampleCount":256,"lightProbeSampleCountMultiplier":2,"respectSceneVisibilityWhenBakingGI":true}}
+{"case":"custom-clone","settings":{"name":"Custom(Clone)","bakedGI":false,"realtimeGI":true,"realtimeEnvironmentLighting":true,"autoGenerate":false,"mixedBakeMode":1,"albedoBoost":2.5,"indirectScale":1.75,"lightmapper":2,"lightmapMaxSize":256,"lightmapResolution":12.5,"lightmapPadding":5,"lightmapCompression":1,"compressLightmaps":true,"ao":true,"aoMaxDistance":2.25,"aoExponentIndirect":0.75,"aoExponentDirect":0.5,"extractAO":true,"directionalityMode":0,"exportTrainingData":false,"trainingDataDestination":"TrainingData","indirectResolution":0.5,"sampling":1,"directSampleCount":64,"indirectSampleCount":256,"bounces":4,"maxBounces":4,"russianRouletteStartBounce":1,"minBounces":1,"prioritizeView":false,"filteringMode":2,"denoiserTypeDirect":0,"denoiserTypeIndirect":1,"denoiserTypeAO":0,"filterTypeDirect":1,"filterTypeIndirect":2,"filterTypeAO":1,"filteringGaussianRadiusDirect":2.5,"filteringGaussianRadiusIndirect":3.5,"filteringGaussianRadiusAO":1.5,"filteringGaussRadiusDirect":2,"filteringGaussRadiusIndirect":3,"filteringGaussRadiusAO":1,"filteringAtrousPositionSigmaDirect":0.25,"filteringAtrousPositionSigmaIndirect":1.5,"filteringAtrousPositionSigmaAO":0.75,"environmentImportanceSampling":false,"environmentSampleCount":256,"lightProbeSampleCountMultiplier":2,"respectSceneVisibilityWhenBakingGI":true}}
+{"case":"set","name":"lightmapMaxSize 100","result":"128"}
+{"case":"set","name":"lightmapMaxSize 8192","result":"4096"}
+{"case":"set","name":"lightmapMaxSize 0","result":"32"}
+{"case":"set","name":"lightmapMaxSize 80","result":"64"}
+{"case":"set","name":"lightmapMaxSize 96","result":"128"}
+{"case":"set","name":"lightmapMaxSize 3000","result":"2048"}
+{"case":"set","name":"lightmapMaxSize -5","result":"32"}
+{"case":"set","name":"lightmapPadding 1","result":"2"}
+{"case":"set","name":"lightmapPadding 0","result":"2"}
+{"case":"set","name":"lightmapPadding 300","result":"100"}
+{"case":"set","name":"lightmapResolution 50000","result":"50000"}
+{"case":"set","name":"indirectResolution -1","result":"0.0001"}
+{"case":"set","name":"indirectScale 100","result":"5"}
+{"case":"set","name":"minBounces 9 under max 20","result":"9 20"}
+{"case":"set","name":"maxBounces 1 under min 2","result":"1 1"}
+{"case":"set","name":"minBounces -4","result":"0"}
+{"case":"set","name":"directSampleCount 48","result":"64"}
+{"case":"set","name":"directSampleCount 47","result":"32"}
+{"case":"set","name":"directSampleCount 100000","result":"131072"}
+{"case":"set","name":"indirectSampleCount 0","result":"1"}
+{"case":"set","name":"indirectSampleCount 300","result":"256"}
+{"case":"set","name":"indirectSampleCount 100000","result":"131072"}
+{"case":"set","name":"environmentSampleCount 0","result":"1"}
+{"case":"set","name":"environmentSampleCount 200","result":"256"}
+{"case":"set","name":"environmentSampleCount 100000","result":"131072"}
+{"case":"set","name":"aoExponentIndirect 20","result":"10"}
+{"case":"set","name":"aoExponentIndirect -1","result":"0"}
+{"case":"set","name":"aoExponentDirect -1","result":"0"}
+{"case":"set","name":"lightProbeSampleCountMultiplier 100","result":"100"}
+{"case":"set","name":"mixedBakeMode -1","result":"2"}
+{"case":"set","name":"mixedBakeMode 3","result":"2"}
+{"case":"set","name":"mixedBakeMode Subtractive","result":"1"}
+{"case":"set","name":"directionalityMode 2","result":"0"}
+{"case":"set","name":"directionalityMode -1","result":"0"}
+{"case":"set","name":"lightmapCompression 9","result":"3"}
+{"case":"set","name":"sampling 4","result":"1"}
+{"case":"set","name":"filteringMode 7","result":"7"}
+{"case":"set","name":"denoiserTypeDirect 9","result":"9"}
+{"case":"set","name":"filterTypeDirect 9","result":"9"}
+{"case":"set","name":"filteringGaussianRadiusDirect 9","result":"5"}
+{"case":"set","name":"filteringGaussianRadiusAO -1","result":"0"}
+{"case":"set","name":"filteringAtrousPositionSigmaDirect 9","result":"2"}
+{"case":"set","name":"filteringAtrousPositionSigmaAO -1","result":"0"}
+{"case":"set","name":"aoMaxDistance 5000","result":"5000"}
+{"case":"set","name":"albedoBoost NaN","result":"NaN"}
+{"case":"set","name":"lightmapResolution NaN","result":"NaN"}
+{"case":"set","name":"environment baked False realtime False set False","result":"true"}
+{"case":"set","name":"environment baked False realtime False set True","result":"true"}
+{"case":"set","name":"environment baked False realtime True set False","result":"true"}
+{"case":"set","name":"environment baked False realtime True set True","result":"true"}
+{"case":"set","name":"environment baked True realtime False set False","result":"false"}
+{"case":"set","name":"environment baked True realtime False set True","result":"false"}
+{"case":"set","name":"environment baked True realtime True set False","result":"false"}
+{"case":"set","name":"environment baked True realtime True set True","result":"true"}
+{"case":"set","name":"environment set then realtime off","result":"false"}
+{"case":"set","name":"environment set then realtime on again","result":"true"}
+{"case":"set","name":"lightmapResolution -1","result":"0.0001"}
+{"case":"set","name":"lightmapPadding -3","result":"2"}
+{"case":"set","name":"indirectScale -2","result":"0"}
+{"case":"set","name":"albedoBoost 0.25","result":"1"}
+{"case":"set","name":"albedoBoost 50","result":"10"}
+{"case":"set","name":"maxBounces -1","result":"0"}
+{"case":"set","name":"maxBounces 1000","result":"100"}
+{"case":"set","name":"minBounces 9 over max 2","result":"2 2"}
+{"case":"set","name":"directSampleCount 0","result":"1"}
+{"case":"set","name":"aoMaxDistance -1","result":"0"}
+{"case":"set","name":"aoExponentDirect 20","result":"10"}
+{"case":"set","name":"lightProbeSampleCountMultiplier 0","result":"0.015625"}
+{"case":"set","name":"mixedBakeMode 7","result":"2"}
+{"case":"set","name":"lightmapper Enlighten","result":"1"}
+{"case":"set","name":"lightmapper 5","result":"5"}
+{"case":"set","name":"directionalityMode 5","result":"0"}
+{"case":"set","name":"compressLightmaps false","result":"0"}
+{"case":"set","name":"compressLightmaps true","result":"3"}
+{"case":"set","name":"bounces 3","result":"3"}
+{"case":"set","name":"autoGenerate true","result":"false"}
+{"case":"set","name":"filteringGaussRadiusDirect 3","result":"3"}
+{"case":"set","name":"filteringGaussianRadiusDirect 2.7","result":"2.7 2"}
+{"case":"set","name":"trainingDataDestination null","result":"\"TrainingData\""}
+{"case":"plain-lightmaps","lightmaps":0,"mode":1,"dir":false,"renderers":[],"lights":[]}
+{"case":"plain-set-baked","result":false}
+{"case":"plain-after-set-baked-api","try":true,"tried":"","get":"","forScene":"","same":true,"bakedGI":false,"realtimeGI":false,"settings":{"name":"","bakedGI":false,"realtimeGI":false,"realtimeEnvironmentLighting":true,"autoGenerate":false,"mixedBakeMode":2,"albedoBoost":1,"indirectScale":1,"lightmapper":1,"lightmapMaxSize":1024,"lightmapResolution":40,"lightmapPadding":2,"lightmapCompression":3,"compressLightmaps":true,"ao":false,"aoMaxDistance":1,"aoExponentIndirect":1,"aoExponentDirect":0,"extractAO":false,"directionalityMode":1,"exportTrainingData":false,"trainingDataDestination":"TrainingData","indirectResolution":2,"sampling":1,"directSampleCount":32,"indirectSampleCount":512,"bounces":2,"maxBounces":2,"russianRouletteStartBounce":2,"minBounces":2,"prioritizeView":true,"filteringMode":1,"denoiserTypeDirect":1,"denoiserTypeIndirect":1,"denoiserTypeAO":1,"filterTypeDirect":0,"filterTypeIndirect":0,"filterTypeAO":0,"filteringGaussianRadiusDirect":1,"filteringGaussianRadiusIndirect":1,"filteringGaussianRadiusAO":1,"filteringGaussRadiusDirect":1,"filteringGaussRadiusIndirect":1,"filteringGaussRadiusAO":1,"filteringAtrousPositionSigmaDirect":0.5,"filteringAtrousPositionSigmaIndirect":2,"filteringAtrousPositionSigmaAO":1,"environmentImportanceSampling":true,"environmentSampleCount":256,"lightProbeSampleCountMultiplier":4,"respectSceneVisibilityWhenBakingGI":false}}
+{"case":"plain-set-for-scene","result":"ok"}
+{"case":"plain-after-set-for-scene-api","try":true,"tried":"Custom","get":"Custom","forScene":"Custom","same":true,"bakedGI":false,"realtimeGI":true,"settings":{"name":"Custom","bakedGI":false,"realtimeGI":true,"realtimeEnvironmentLighting":true,"autoGenerate":false,"mixedBakeMode":1,"albedoBoost":2.5,"indirectScale":1.75,"lightmapper":2,"lightmapMaxSize":256,"lightmapResolution":12.5,"lightmapPadding":5,"lightmapCompression":1,"compressLightmaps":true,"ao":true,"aoMaxDistance":2.25,"aoExponentIndirect":0.75,"aoExponentDirect":0.5,"extractAO":true,"directionalityMode":0,"exportTrainingData":false,"trainingDataDestination":"TrainingData","indirectResolution":0.5,"sampling":1,"directSampleCount":64,"indirectSampleCount":256,"bounces":4,"maxBounces":4,"russianRouletteStartBounce":1,"minBounces":1,"prioritizeView":false,"filteringMode":2,"denoiserTypeDirect":0,"denoiserTypeIndirect":1,"denoiserTypeAO":0,"filterTypeDirect":1,"filterTypeIndirect":2,"filterTypeAO":1,"filteringGaussianRadiusDirect":2.5,"filteringGaussianRadiusIndirect":3.5,"filteringGaussianRadiusAO":1.5,"filteringGaussRadiusDirect":2,"filteringGaussRadiusIndirect":3,"filteringGaussRadiusAO":1,"filteringAtrousPositionSigmaDirect":0.25,"filteringAtrousPositionSigmaIndirect":1.5,"filteringAtrousPositionSigmaAO":0.75,"environmentImportanceSampling":false,"environmentSampleCount":256,"lightProbeSampleCountMultiplier":2,"respectSceneVisibilityWhenBakingGI":true}}
+{"case":"plain-set-for-scene-null","result":"ok"}
+{"case":"plain-after-set-for-scene-null-api","try":false,"tried":null,"get":{"exception":"System.Exception","message":"Lightmapping.lightingSettings is null. Please assign it to an existing asset or a new instance. "},"forScene":null,"same":{"exception":"System.Exception","message":"Lightmapping.lightingSettings is null. Please assign it to an existing asset or a new instance. "},"bakedGI":true,"realtimeGI":false,"settings":null}
+{"case":"variant","name":"plain none","result":{"shader":"Probe/Variants","pass":0,"keywords":[]}}
+{"case":"variant","name":"plain PLAIN_ON RED_ON","result":{"shader":"Probe/Variants","pass":0,"keywords":["PLAIN_ON","RED_ON"]}}
+{"case":"variant","name":"plain RED_ON PLAIN_ON","result":{"shader":"Probe/Variants","pass":0,"keywords":["RED_ON","PLAIN_ON"]}}
+{"case":"variant","name":"plain one string","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/Variants pass type 0"}}
+{"case":"variant","name":"plain duplicate","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/Variants pass type 0"}}
+{"case":"variant","name":"plain undeclared","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/Variants pass type 0"}}
+{"case":"variant","name":"plain other pass keyword","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/Variants pass type 0"}}
+{"case":"variant","name":"plain empty keyword","result":{"shader":"Probe/Variants","pass":0,"keywords":[""]}}
+{"case":"variant","name":"plain null keywords","result":{"shader":"Probe/Variants","pass":0,"keywords":null}}
+{"case":"variant","name":"forward none","result":{"shader":"Probe/Variants","pass":4,"keywords":[]}}
+{"case":"variant","name":"forward DIRECTIONAL","result":{"shader":"Probe/Variants","pass":4,"keywords":["DIRECTIONAL"]}}
+{"case":"variant","name":"forward RED_ON","result":{"shader":"Probe/Variants","pass":4,"keywords":["RED_ON"]}}
+{"case":"variant","name":"forward DIRECTIONAL BLUE_ON","result":{"shader":"Probe/Variants","pass":4,"keywords":["DIRECTIONAL","BLUE_ON"]}}
+{"case":"variant","name":"forward DIRECTIONAL LIGHTMAP_ON","result":{"shader":"Probe/Variants","pass":4,"keywords":["DIRECTIONAL","LIGHTMAP_ON"]}}
+{"case":"variant","name":"forward PLAIN_ON","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/Variants pass type 4"}}
+{"case":"variant","name":"caster SHADOWS_DEPTH","result":{"shader":"Probe/Variants","pass":8,"keywords":["SHADOWS_DEPTH"]}}
+{"case":"variant","name":"caster none","result":{"shader":"Probe/Variants","pass":8,"keywords":[]}}
+{"case":"variant","name":"deferred","result":{"exception":"System.ArgumentException","message":"shader Probe/Variants does not have pass type 10"}}
+{"case":"variant","name":"forwardadd","result":{"exception":"System.ArgumentException","message":"shader Probe/Variants does not have pass type 5"}}
+{"case":"variant","name":"meta","result":{"exception":"System.ArgumentException","message":"shader Probe/Variants does not have pass type 11"}}
+{"case":"variant","name":"null shader","result":{"exception":"System.ArgumentException","message":"null shader"}}
+{"case":"variant","name":"standard forward DIRECTIONAL","result":{"shader":"Standard","pass":4,"keywords":["DIRECTIONAL"]}}
+{"case":"variant","name":"standard forward none","result":{"shader":"Standard","pass":4,"keywords":[]}}
+{"case":"variant","name":"standard deferred","result":{"shader":"Standard","pass":10,"keywords":[]}}
+{"case":"variant","name":"standard meta","result":{"shader":"Standard","pass":11,"keywords":[]}}
+{"case":"variant","name":"standard forward _NORMALMAP","result":{"shader":"Standard","pass":4,"keywords":["DIRECTIONAL","_NORMALMAP"]}}
+{"case":"variant","name":"plain ONE_A ONE_B","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/Variants pass type 0"}}
+{"case":"variant","name":"plain ONE_A RED_ON","result":{"shader":"Probe/Variants","pass":0,"keywords":["ONE_A","RED_ON"]}}
+{"case":"variant","name":"plain ONE_B ONE_B","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/Variants pass type 0"}}
+{"case":"variant","name":"forward DIRECTIONAL RED_ON BLUE_ON","result":{"shader":"Probe/Variants","pass":4,"keywords":["DIRECTIONAL","RED_ON","BLUE_ON"]}}
+{"case":"variant","name":"forward DIRECTIONAL SHADOWS_SCREEN LIGHTPROBE_SH","result":{"shader":"Probe/Variants","pass":4,"keywords":["DIRECTIONAL","SHADOWS_SCREEN","LIGHTPROBE_SH"]}}
+{"case":"variant","name":"forward LIGHTMAP_ON LIGHTPROBE_SH","result":{"shader":"Probe/Variants","pass":4,"keywords":["LIGHTMAP_ON","LIGHTPROBE_SH"]}}
+{"case":"variant","name":"forward POINT","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/Variants pass type 4"}}
+{"case":"variant","name":"caster SHADOWS_DEPTH SHADOWS_CUBE","result":{"shader":"Probe/Variants","pass":8,"keywords":["SHADOWS_DEPTH","SHADOWS_CUBE"]}}
+{"case":"variant","name":"diffuse caster","result":{"shader":"Legacy Shaders/Diffuse","pass":8,"keywords":["SHADOWS_DEPTH"]}}
+{"case":"variant","name":"diffuse vertex","result":{"shader":"Legacy Shaders/Diffuse","pass":1,"keywords":[]}}
+{"case":"variant","name":"diffuse forward","result":{"shader":"Legacy Shaders/Diffuse","pass":4,"keywords":["DIRECTIONAL"]}}
+{"case":"variant","name":"unlit normal","result":{"shader":"Unlit/Color","pass":0,"keywords":[]}}
+{"case":"variant","name":"unlit forward","result":{"exception":"System.ArgumentException","message":"shader Unlit/Color does not have pass type 4"}}
+{"case":"variant","name":"unlit srp","result":{"exception":"System.ArgumentException","message":"shader Unlit/Color does not have pass type 13"}}
+{"case":"variant","name":"unlit srp default","result":{"exception":"System.ArgumentException","message":"shader Unlit/Color does not have pass type 14"}}
+{"case":"asset","collection":{"name":"Warmup","shaders":3,"variants":7,"warmed":0,"isWarmedUp":false}}
+{"case":"contains","collection":"Warmup","name":"plain none","result":true}
+{"case":"contains","collection":"Warmup","name":"plain null keywords","result":true}
+{"case":"contains","collection":"Warmup","name":"plain PLAIN_ON","result":true}
+{"case":"contains","collection":"Warmup","name":"plain RED_ON PLAIN_ON","result":true}
+{"case":"contains","collection":"Warmup","name":"plain PLAIN_ON RED_ON","result":true}
+{"case":"contains","collection":"Warmup","name":"plain one string","result":true}
+{"case":"contains","collection":"Warmup","name":"plain RED_ON","result":false}
+{"case":"contains","collection":"Warmup","name":"forward DIRECTIONAL RED_ON","result":true}
+{"case":"contains","collection":"Warmup","name":"forward DIRECTIONAL BLUE_ON","result":false}
+{"case":"contains","collection":"Warmup","name":"caster SHADOWS_DEPTH","result":true}
+{"case":"contains","collection":"Warmup","name":"standard DIRECTIONAL","result":true}
+{"case":"contains","collection":"Warmup","name":"standard none","result":false}
+{"case":"contains","collection":"Warmup","name":"unlit","result":true}
+{"case":"contains","collection":"Warmup","name":"null shader","result":false}
+{"case":"contains","collection":"Warmup","name":"undeclared","result":true}
+{"case":"contains","collection":"Warmup","name":"plain other pass keyword","result":false}
+{"case":"contains","collection":"Warmup","name":"plain PLAIN_ON NOPE","result":true}
+{"case":"contains","collection":"Warmup","name":"plain PLAIN_ON PLAIN_ON","result":true}
+{"case":"contains","collection":"Warmup","name":"plain ONE_A","result":false}
+{"case":"contains","collection":"Warmup","name":"forward PLAIN_ON","result":false}
+{"case":"contains","collection":"Warmup","name":"forward BLUE_ON DIRECTIONAL","result":false}
+{"case":"contains","collection":"Warmup","name":"forward RED_ON DIRECTIONAL","result":true}
+{"case":"contains","collection":"Warmup","name":"deferred none","result":false}
+{"case":"contains","collection":"Warmup","name":"unlit none","result":true}
+{"case":"asset","collection":{"name":"Authored","shaders":3,"variants":4,"warmed":0,"isWarmedUp":false}}
+{"case":"contains","collection":"Authored","name":"plain none","result":true}
+{"case":"contains","collection":"Authored","name":"plain null keywords","result":true}
+{"case":"contains","collection":"Authored","name":"plain PLAIN_ON","result":false}
+{"case":"contains","collection":"Authored","name":"plain RED_ON PLAIN_ON","result":false}
+{"case":"contains","collection":"Authored","name":"plain PLAIN_ON RED_ON","result":false}
+{"case":"contains","collection":"Authored","name":"plain one string","result":true}
+{"case":"contains","collection":"Authored","name":"plain RED_ON","result":false}
+{"case":"contains","collection":"Authored","name":"forward DIRECTIONAL RED_ON","result":false}
+{"case":"contains","collection":"Authored","name":"forward DIRECTIONAL BLUE_ON","result":false}
+{"case":"contains","collection":"Authored","name":"caster SHADOWS_DEPTH","result":false}
+{"case":"contains","collection":"Authored","name":"standard DIRECTIONAL","result":false}
+{"case":"contains","collection":"Authored","name":"standard none","result":false}
+{"case":"contains","collection":"Authored","name":"unlit","result":false}
+{"case":"contains","collection":"Authored","name":"null shader","result":false}
+{"case":"contains","collection":"Authored","name":"undeclared","result":true}
+{"case":"contains","collection":"Authored","name":"plain other pass keyword","result":false}
+{"case":"contains","collection":"Authored","name":"plain PLAIN_ON NOPE","result":false}
+{"case":"contains","collection":"Authored","name":"plain PLAIN_ON PLAIN_ON","result":false}
+{"case":"contains","collection":"Authored","name":"plain ONE_A","result":false}
+{"case":"contains","collection":"Authored","name":"forward PLAIN_ON","result":false}
+{"case":"contains","collection":"Authored","name":"forward BLUE_ON DIRECTIONAL","result":false}
+{"case":"contains","collection":"Authored","name":"forward RED_ON DIRECTIONAL","result":false}
+{"case":"contains","collection":"Authored","name":"deferred none","result":false}
+{"case":"contains","collection":"Authored","name":"unlit none","result":false}
+{"case":"asset","collection":{"name":"Dupes","shaders":1,"variants":3,"warmed":0,"isWarmedUp":false}}
+{"case":"contains","collection":"Dupes","name":"plain none","result":false}
+{"case":"contains","collection":"Dupes","name":"plain null keywords","result":false}
+{"case":"contains","collection":"Dupes","name":"plain PLAIN_ON","result":true}
+{"case":"contains","collection":"Dupes","name":"plain RED_ON PLAIN_ON","result":true}
+{"case":"contains","collection":"Dupes","name":"plain PLAIN_ON RED_ON","result":true}
+{"case":"contains","collection":"Dupes","name":"plain one string","result":false}
+{"case":"contains","collection":"Dupes","name":"plain RED_ON","result":false}
+{"case":"contains","collection":"Dupes","name":"forward DIRECTIONAL RED_ON","result":false}
+{"case":"contains","collection":"Dupes","name":"forward DIRECTIONAL BLUE_ON","result":false}
+{"case":"contains","collection":"Dupes","name":"caster SHADOWS_DEPTH","result":false}
+{"case":"contains","collection":"Dupes","name":"standard DIRECTIONAL","result":false}
+{"case":"contains","collection":"Dupes","name":"standard none","result":false}
+{"case":"contains","collection":"Dupes","name":"unlit","result":false}
+{"case":"contains","collection":"Dupes","name":"null shader","result":false}
+{"case":"contains","collection":"Dupes","name":"undeclared","result":false}
+{"case":"contains","collection":"Dupes","name":"plain other pass keyword","result":false}
+{"case":"contains","collection":"Dupes","name":"plain PLAIN_ON NOPE","result":true}
+{"case":"contains","collection":"Dupes","name":"plain PLAIN_ON PLAIN_ON","result":true}
+{"case":"contains","collection":"Dupes","name":"plain ONE_A","result":false}
+{"case":"contains","collection":"Dupes","name":"forward PLAIN_ON","result":false}
+{"case":"contains","collection":"Dupes","name":"forward BLUE_ON DIRECTIONAL","result":false}
+{"case":"contains","collection":"Dupes","name":"forward RED_ON DIRECTIONAL","result":false}
+{"case":"contains","collection":"Dupes","name":"deferred none","result":false}
+{"case":"contains","collection":"Dupes","name":"unlit none","result":false}
+{"case":"asset","collection":{"name":"Missing","shaders":2,"variants":3,"warmed":0,"isWarmedUp":false}}
+{"case":"contains","collection":"Missing","name":"plain none","result":false}
+{"case":"contains","collection":"Missing","name":"plain null keywords","result":false}
+{"case":"contains","collection":"Missing","name":"plain PLAIN_ON","result":false}
+{"case":"contains","collection":"Missing","name":"plain RED_ON PLAIN_ON","result":false}
+{"case":"contains","collection":"Missing","name":"plain PLAIN_ON RED_ON","result":false}
+{"case":"contains","collection":"Missing","name":"plain one string","result":false}
+{"case":"contains","collection":"Missing","name":"plain RED_ON","result":false}
+{"case":"contains","collection":"Missing","name":"forward DIRECTIONAL RED_ON","result":false}
+{"case":"contains","collection":"Missing","name":"forward DIRECTIONAL BLUE_ON","result":false}
+{"case":"contains","collection":"Missing","name":"caster SHADOWS_DEPTH","result":false}
+{"case":"contains","collection":"Missing","name":"standard DIRECTIONAL","result":false}
+{"case":"contains","collection":"Missing","name":"standard none","result":false}
+{"case":"contains","collection":"Missing","name":"unlit","result":true}
+{"case":"contains","collection":"Missing","name":"null shader","result":false}
+{"case":"contains","collection":"Missing","name":"undeclared","result":false}
+{"case":"contains","collection":"Missing","name":"plain other pass keyword","result":false}
+{"case":"contains","collection":"Missing","name":"plain PLAIN_ON NOPE","result":false}
+{"case":"contains","collection":"Missing","name":"plain PLAIN_ON PLAIN_ON","result":false}
+{"case":"contains","collection":"Missing","name":"plain ONE_A","result":false}
+{"case":"contains","collection":"Missing","name":"forward PLAIN_ON","result":false}
+{"case":"contains","collection":"Missing","name":"forward BLUE_ON DIRECTIONAL","result":false}
+{"case":"contains","collection":"Missing","name":"forward RED_ON DIRECTIONAL","result":false}
+{"case":"contains","collection":"Missing","name":"deferred none","result":false}
+{"case":"contains","collection":"Missing","name":"unlit none","result":true}
+{"case":"progressive","count":2,"result":false,"collection":{"name":"Warmup","shaders":3,"variants":7,"warmed":2,"isWarmedUp":false}}
+{"case":"progressive","count":0,"result":false,"collection":{"name":"Warmup","shaders":3,"variants":7,"warmed":2,"isWarmedUp":false}}
+{"case":"progressive","count":-1,"result":false,"collection":{"name":"Warmup","shaders":3,"variants":7,"warmed":2,"isWarmedUp":false}}
+{"case":"progressive","count":3,"result":false,"collection":{"name":"Warmup","shaders":3,"variants":7,"warmed":5,"isWarmedUp":false}}
+{"case":"progressive","count":100,"result":true,"collection":{"name":"Warmup","shaders":3,"variants":7,"warmed":7,"isWarmedUp":true}}
+{"case":"progressive","count":1,"result":true,"collection":{"name":"Warmup","shaders":3,"variants":7,"warmed":7,"isWarmedUp":true}}
+{"case":"warmup","result":"ok","collection":{"name":"Authored","shaders":3,"variants":4,"warmed":4,"isWarmedUp":true}}
+{"case":"warmup","result":"ok","collection":{"name":"Missing","shaders":2,"variants":3,"warmed":3,"isWarmedUp":true}}
+{"case":"dupes-remove","result":true,"collection":{"name":"Dupes","shaders":1,"variants":2,"warmed":0,"isWarmedUp":false}}
+{"case":"dupes-remove","result":false,"collection":{"name":"Dupes","shaders":1,"variants":2,"warmed":0,"isWarmedUp":false}}
+{"case":"dupes-add","result":false,"collection":{"name":"Dupes","shaders":1,"variants":2,"warmed":0,"isWarmedUp":false}}
+{"case":"dupes-contains","result":true,"collection":{"name":"Dupes","shaders":1,"variants":2,"warmed":0,"isWarmedUp":false}}
+{"case":"missing-add","result":false,"collection":{"name":"Missing","shaders":2,"variants":3,"warmed":3,"isWarmedUp":true}}
+{"case":"runtime","step":"new","collection":{"name":"","shaders":0,"variants":0,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"add plain PLAIN_ON RED_ON","result":true,"collection":{"name":"","shaders":1,"variants":1,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"add again","result":false,"collection":{"name":"","shaders":1,"variants":1,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"add reordered","result":false,"collection":{"name":"","shaders":1,"variants":1,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"add duplicate keyword","result":true,"collection":{"name":"","shaders":1,"variants":2,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"contains RED_ON","result":true,"collection":{"name":"","shaders":1,"variants":2,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"add forward","result":true,"collection":{"name":"","shaders":1,"variants":3,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"add undeclared","result":true,"collection":{"name":"","shaders":1,"variants":4,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"add missing pass","result":true,"collection":{"name":"","shaders":1,"variants":5,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"add null keywords","result":true,"collection":{"name":"","shaders":2,"variants":6,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"add null shader","result":false,"collection":{"name":"","shaders":2,"variants":6,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"add default","result":false,"collection":{"name":"","shaders":2,"variants":6,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"add standard","result":true,"collection":{"name":"","shaders":3,"variants":7,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"remove absent","result":false,"collection":{"name":"","shaders":3,"variants":7,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"remove reordered","result":true,"collection":{"name":"","shaders":3,"variants":6,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"remove null shader","result":false,"collection":{"name":"","shaders":3,"variants":6,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"warmup","result":"ok","collection":{"name":"","shaders":3,"variants":6,"warmed":6,"isWarmedUp":true}}
+{"case":"runtime","step":"add ONE_A ONE_B","result":true,"collection":{"name":"","shaders":3,"variants":7,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"contains ONE_B ONE_A","result":true,"collection":{"name":"","shaders":3,"variants":7,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"add caster keyword on plain","result":true,"collection":{"name":"","shaders":3,"variants":8,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"add after warmup","result":true,"collection":{"name":"","shaders":3,"variants":9,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"progressive 1","result":false,"collection":{"name":"","shaders":3,"variants":9,"warmed":1,"isWarmedUp":false}}
+{"case":"runtime","step":"remove standard","result":true,"collection":{"name":"","shaders":3,"variants":8,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"remove last of shader","result":true,"collection":{"name":"","shaders":3,"variants":7,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"clear","result":"ok","collection":{"name":"","shaders":0,"variants":0,"warmed":0,"isWarmedUp":false}}
+{"case":"runtime","step":"progressive empty","result":true,"collection":{"name":"","shaders":0,"variants":0,"warmed":0,"isWarmedUp":false}}
+{"case":"clone","collection":{"name":"Warmup(Clone)","shaders":3,"variants":7,"warmed":0,"isWarmedUp":false}}
+{"case":"clone","collection":{"name":"Authored(Clone)","shaders":3,"variants":4,"warmed":0,"isWarmedUp":false}}
+{"case":"lit-api","try":true,"tried":"Lit","get":"Lit","forScene":"Lit","same":true,"bakedGI":false,"realtimeGI":true,"settings":{"name":"Lit","bakedGI":false,"realtimeGI":true,"realtimeEnvironmentLighting":true,"autoGenerate":false,"mixedBakeMode":1,"albedoBoost":3,"indirectScale":4,"lightmapper":1,"lightmapMaxSize":512,"lightmapResolution":8,"lightmapPadding":2,"lightmapCompression":3,"compressLightmaps":true,"ao":false,"aoMaxDistance":1,"aoExponentIndirect":1,"aoExponentDirect":0,"extractAO":false,"directionalityMode":1,"exportTrainingData":false,"trainingDataDestination":"TrainingData","indirectResolution":2,"sampling":1,"directSampleCount":32,"indirectSampleCount":128,"bounces":2,"maxBounces":2,"russianRouletteStartBounce":2,"minBounces":2,"prioritizeView":true,"filteringMode":0,"denoiserTypeDirect":0,"denoiserTypeIndirect":0,"denoiserTypeAO":0,"filterTypeDirect":0,"filterTypeIndirect":0,"filterTypeAO":0,"filteringGaussianRadiusDirect":1,"filteringGaussianRadiusIndirect":1,"filteringGaussianRadiusAO":1,"filteringGaussRadiusDirect":1,"filteringGaussRadiusIndirect":1,"filteringGaussRadiusAO":1,"filteringAtrousPositionSigmaDirect":0.5,"filteringAtrousPositionSigmaIndirect":2,"filteringAtrousPositionSigmaAO":1,"environmentImportanceSampling":true,"environmentSampleCount":64,"lightProbeSampleCountMultiplier":4,"respectSceneVisibilityWhenBakingGI":false}}
+{"case":"lit-lightmaps","lightmaps":1,"mode":0,"dir":false,"renderers":[["Cube",0,-1],["Cube",0,-1],["Plane",0,-1]],"lights":[["Directional Light",1,0,true],["Point Light",2,0,true]]}
+{"case":"lit-edited-lightmaps","lightmaps":1,"mode":0,"dir":false,"renderers":[["Cube",0,-1],["Cube",0,-1],["Plane",0,-1]],"lights":[["Directional Light",1,0,true],["Point Light",2,0,true]]}
+{"case":"lit-assigned-api","try":true,"tried":"Custom","get":"Custom","forScene":"Custom","same":true,"bakedGI":false,"realtimeGI":true,"settings":{"name":"Custom","bakedGI":false,"realtimeGI":true,"realtimeEnvironmentLighting":true,"autoGenerate":false,"mixedBakeMode":1,"albedoBoost":2.5,"indirectScale":1.75,"lightmapper":2,"lightmapMaxSize":256,"lightmapResolution":12.5,"lightmapPadding":5,"lightmapCompression":1,"compressLightmaps":true,"ao":true,"aoMaxDistance":2.25,"aoExponentIndirect":0.75,"aoExponentDirect":0.5,"extractAO":true,"directionalityMode":0,"exportTrainingData":false,"trainingDataDestination":"TrainingData","indirectResolution":0.5,"sampling":1,"directSampleCount":64,"indirectSampleCount":256,"bounces":4,"maxBounces":4,"russianRouletteStartBounce":1,"minBounces":1,"prioritizeView":false,"filteringMode":2,"denoiserTypeDirect":0,"denoiserTypeIndirect":1,"denoiserTypeAO":0,"filterTypeDirect":1,"filterTypeIndirect":2,"filterTypeAO":1,"filteringGaussianRadiusDirect":2.5,"filteringGaussianRadiusIndirect":3.5,"filteringGaussianRadiusAO":1.5,"filteringGaussRadiusDirect":2,"filteringGaussRadiusIndirect":3,"filteringGaussRadiusAO":1,"filteringAtrousPositionSigmaDirect":0.25,"filteringAtrousPositionSigmaIndirect":1.5,"filteringAtrousPositionSigmaAO":0.75,"environmentImportanceSampling":false,"environmentSampleCount":256,"lightProbeSampleCountMultiplier":2,"respectSceneVisibilityWhenBakingGI":true}}
+{"case":"lit-assigned-lightmaps","lightmaps":1,"mode":0,"dir":false,"renderers":[["Cube",0,-1],["Cube",0,-1],["Plane",0,-1]],"lights":[["Directional Light",1,0,true],["Point Light",2,0,true]]}
+{"case":"lit-assign-null","result":"ok"}
+{"case":"lit-after-null-api","try":false,"tried":null,"get":{"exception":"System.Exception","message":"Lightmapping.lightingSettings is null. Please assign it to an existing asset or a new instance. "},"forScene":null,"same":{"exception":"System.Exception","message":"Lightmapping.lightingSettings is null. Please assign it to an existing asset or a new instance. "},"bakedGI":true,"realtimeGI":false,"settings":null}
+{"case":"realtime-api","try":true,"tried":"Realtime","get":"Realtime","forScene":"Realtime","same":true,"bakedGI":false,"realtimeGI":true,"settings":{"name":"Realtime","bakedGI":false,"realtimeGI":true,"realtimeEnvironmentLighting":true,"autoGenerate":false,"mixedBakeMode":2,"albedoBoost":1,"indirectScale":1,"lightmapper":1,"lightmapMaxSize":512,"lightmapResolution":8,"lightmapPadding":2,"lightmapCompression":0,"compressLightmaps":false,"ao":false,"aoMaxDistance":1,"aoExponentIndirect":1,"aoExponentDirect":0,"extractAO":false,"directionalityMode":0,"exportTrainingData":false,"trainingDataDestination":"TrainingData","indirectResolution":2,"sampling":1,"directSampleCount":32,"indirectSampleCount":128,"bounces":2,"maxBounces":2,"russianRouletteStartBounce":2,"minBounces":2,"prioritizeView":true,"filteringMode":0,"denoiserTypeDirect":0,"denoiserTypeIndirect":0,"denoiserTypeAO":0,"filterTypeDirect":0,"filterTypeIndirect":0,"filterTypeAO":0,"filteringGaussianRadiusDirect":1,"filteringGaussianRadiusIndirect":1,"filteringGaussianRadiusAO":1,"filteringGaussRadiusDirect":1,"filteringGaussRadiusIndirect":1,"filteringGaussRadiusAO":1,"filteringAtrousPositionSigmaDirect":0.5,"filteringAtrousPositionSigmaIndirect":2,"filteringAtrousPositionSigmaAO":1,"environmentImportanceSampling":true,"environmentSampleCount":64,"lightProbeSampleCountMultiplier":4,"respectSceneVisibilityWhenBakingGI":false}}
+{"case":"realtime-lightmaps","lightmaps":0,"mode":0,"dir":false,"renderers":[["Cube",-1,0],["Cube",-1,0],["Cube",-1,0],["Plane",-1,0]],"lights":[["Point Light",4,2,false]]}
+{"case":"realtime-gi","converged":true}
+{"case":"realtimeoff-api","try":true,"tried":"RealtimeOff","get":"RealtimeOff","forScene":"RealtimeOff","same":true,"bakedGI":false,"realtimeGI":false,"settings":{"name":"RealtimeOff","bakedGI":false,"realtimeGI":false,"realtimeEnvironmentLighting":true,"autoGenerate":false,"mixedBakeMode":2,"albedoBoost":1,"indirectScale":1,"lightmapper":1,"lightmapMaxSize":512,"lightmapResolution":8,"lightmapPadding":2,"lightmapCompression":0,"compressLightmaps":false,"ao":false,"aoMaxDistance":1,"aoExponentIndirect":1,"aoExponentDirect":0,"extractAO":false,"directionalityMode":0,"exportTrainingData":false,"trainingDataDestination":"TrainingData","indirectResolution":2,"sampling":1,"directSampleCount":32,"indirectSampleCount":128,"bounces":2,"maxBounces":2,"russianRouletteStartBounce":2,"minBounces":2,"prioritizeView":true,"filteringMode":0,"denoiserTypeDirect":0,"denoiserTypeIndirect":0,"denoiserTypeAO":0,"filterTypeDirect":0,"filterTypeIndirect":0,"filterTypeAO":0,"filteringGaussianRadiusDirect":1,"filteringGaussianRadiusIndirect":1,"filteringGaussianRadiusAO":1,"filteringGaussRadiusDirect":1,"filteringGaussRadiusIndirect":1,"filteringGaussRadiusAO":1,"filteringAtrousPositionSigmaDirect":0.5,"filteringAtrousPositionSigmaIndirect":2,"filteringAtrousPositionSigmaAO":1,"environmentImportanceSampling":true,"environmentSampleCount":64,"lightProbeSampleCountMultiplier":4,"respectSceneVisibilityWhenBakingGI":false}}
+{"case":"realtimeoff-lightmaps","lightmaps":0,"mode":1,"dir":false,"renderers":[["Cube",-1,-1],["Cube",-1,-1],["Cube",-1,-1],["Plane",-1,-1]],"lights":[["Point Light",4,2,false]]}
+{"case":"end"}
