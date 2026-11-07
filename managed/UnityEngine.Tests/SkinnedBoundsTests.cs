@@ -169,6 +169,40 @@ namespace UnityEngine.Tests
             }
         }
 
+        // Control outside the measured runtime case: a loaded multi-bone renderer without an
+        // authored bound has only mesh-space bounds, which stay in the renderer's space.
+        [Fact]
+        public void LoadedMultiBoneRendererWithoutAuthoredBoundsKeepsRendererSpaceBounds()
+        {
+            var second = new GameObject("second");
+            second.transform.SetParent(rig.transform, false);
+            rig.transform.position = new Vector3(5, 6, 7);
+            body.transform.position = new Vector3(-3, 0, 1);
+            var skin = body.AddComponent<SkinnedMeshRenderer>();
+            skin.ReadSerialized(YNode.MakeMap(), null);
+            skin.enabled = false;
+            var mesh = new Mesh
+            {
+                vertices = new[] { new Vector3(-.5f, 0, 0), new Vector3(.5f, 0, 0), new Vector3(0, 1, 0) },
+                triangles = new[] { 0, 1, 2 },
+                boneWeights = new[] { new BoneWeight { weight0 = 1 }, new BoneWeight { weight0 = 1 }, new BoneWeight { boneIndex0 = 1, weight0 = 1 } },
+                bindposes = new[] { Matrix4x4.identity, Matrix4x4.identity },
+            };
+            mesh.RecalculateBounds();
+            try
+            {
+                skin.bones = new[] { rig.transform, second.transform };
+                skin.rootBone = rig.transform;
+                skin.sharedMesh = mesh;
+                Near.Equal(body.transform.TransformPoint(mesh.bounds.center), skin.bounds.center, 1e-4f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(second);
+                Object.DestroyImmediate(mesh);
+            }
+        }
+
         [Fact]
         public void AutomaticBoundsDoNotRetainTrustAfterChangingMeshOrBones()
         {

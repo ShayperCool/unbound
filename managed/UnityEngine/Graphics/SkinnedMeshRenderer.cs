@@ -32,6 +32,8 @@ namespace UnityEngine
 
         Bounds m_LocalBounds;
         bool m_HasLocalBounds, m_ExactLocalBounds, m_AuthoredLocalBounds;
+        /// <summary>Read from a scene, prefab or model (or cloned from one), not created at runtime.</summary>
+        bool m_Deserialized;
         Bounds? m_CullingBounds;
         Mesh m_RigidSource;
         Vector3[] m_RigidVertices;
@@ -322,10 +324,11 @@ namespace UnityEngine
             if (!Compat.SkinnedBoundsMeasured) return base.GetWorldBounds();
             if (!HasMeasuredCullingBounds)
             {
-                // The public box is the retained local bound in root space even when that bound
-                // is only the mesh's (multi-bone defaults) or outlived its mesh (skinnedbounds
-                // static/swap); culling keeps its own fallback (PrepareCullingBounds).
-                return m_HasLocalBounds ? TransformBounds(localBounds, RootMatrix) : base.GetWorldBounds();
+                // A renderer created at runtime keeps its first-queried local bound in root space
+                // even when that bound is only the mesh's (multi-bone) or outlived its mesh
+                // (skinnedbounds static/swap). A loaded renderer without an authored bound has
+                // only its mesh-space bounds, so it keeps the renderer-space fallback.
+                return m_HasLocalBounds && !m_Deserialized ? TransformBounds(localBounds, RootMatrix) : base.GetWorldBounds();
             }
             if (!m_UpdateWhenOffscreen && m_Enabled && gameObject.activeInHierarchy)
             {
@@ -442,6 +445,7 @@ namespace UnityEngine
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             ReadRendererData(body, resolver);
+            m_Deserialized = true;
             var mesh = body.Ref("m_Mesh");
             m_Mesh = mesh.IsNull ? null : resolver.Resolve(mesh, typeof(Mesh)) as Mesh;
             var bones = new List<Transform>();
@@ -475,6 +479,7 @@ namespace UnityEngine
             m_HasLocalBounds = s.m_HasLocalBounds;
             m_ExactLocalBounds = s.m_ExactLocalBounds;
             m_AuthoredLocalBounds = s.m_AuthoredLocalBounds;
+            m_Deserialized = s.m_Deserialized;
             m_CullingBounds = null;
             m_Bones = new Transform[s.m_Bones.Length];
             for (int i = 0; i < m_Bones.Length; i++) m_Bones[i] = remap(s.m_Bones[i]) as Transform;
