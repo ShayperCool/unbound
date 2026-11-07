@@ -38,6 +38,26 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void StopAndClearPreservesThePlaybackTransitionOfDetachedLinkedSystems()
+        {
+            var parent = Make("parent");
+            var sub = Make("sub");
+            Link(parent, sub);
+            try
+            {
+                sub.Emit(1);
+                Assert.True(sub.isPlaying);
+                parent.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+                Assert.Equal(0, sub.particleCount);
+                Assert.False(sub.isPlaying);
+                Assert.True(sub.isStopped);
+                sub.randomSeed = 12345;
+                Assert.Equal(12345u, sub.randomSeed);
+            }
+            finally { Done(parent, sub); }
+        }
+
+        [Fact]
         public void ClearWithoutChildrenRemovesDetachedLinkedSubEmitterParticles()
         {
             var parent = Make("parent");
