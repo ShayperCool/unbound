@@ -36,3 +36,10 @@ slack. RESIDUALS is empty. Artifacts and reports remain in the cache.
 Certification: both independent Native repeats agree exactly at each rate across
 85721421 values. The engine strict comparison passes 85721421/85721421 at each
 rate, with zero raw float/PCM failures and no added residuals.
+
+Regression follow-up: the existing mixerfilters probe retains one metadata failure
+at each rate, `set_lp.cutoff.8` after ClearFloat, returning `True:1000` instead
+of Native `True:4000`. The untouched NativeApi 24 predecessor reproduces it.
+Complete Native/before/after unions report zero introduced, one retained and zero
+resolved failures per rate; all PCM and other filter profiles pass. The separate
+compatibility gap remains open. No oracle, tolerance or sample was changed.
