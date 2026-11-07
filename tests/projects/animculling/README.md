@@ -236,9 +236,24 @@ GetBoneTransform initializes the Animator's bindings.
 | Retargeting | [Retargeting manual](https://docs.unity3d.com/6000.0/Documentation/Manual/Retargeting.html) limits retargeting to humanoid models with configured Avatars. | Both authored avatars are valid; HumanB also checks the existing avatar/root transform conversion. |
 | Application and callback | [applyRootMotion](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-applyRootMotion.html) has no effect when OnAnimatorMove is implemented; changing it at runtime reinitializes the Animator. [OnAnimatorMove](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnAnimatorMove.html) runs after animation evaluation and before OnAnimatorIK. | Flags are set before graph playback and never toggled here. Both callback cases apply the sampled builtin motion. No order between different Animators is asserted. |
 | Motion fields | [deltaPosition](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-deltaPosition.html), [deltaRotation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-deltaRotation.html), [velocity](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-velocity.html) and [angularVelocity](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-angularVelocity.html) describe the last evaluated frame and say applyRootMotion must be enabled for calculation. | The OnAnimatorMove case with the flag off measures the callback exception separately from that stated API prerequisite. Zero and successive evaluations retain every numeric field. |
-| Culling and explicit time | [AnimatorCullingMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AnimatorCullingMode.html) disables retargeting, IK and transform writes for CullUpdateTransforms, and animation for CullCompletely. [PlayableGraph.Evaluate](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableGraph.Evaluate.html) advances by the supplied interval. Neither documents visibility replay or humanoid feet-pivot state under replay. | The existing Q90 timing/culling machinery is retained. Root motion and its memory are sampled once per evaluation; visibility replay retains the last movement fields without sampling the feet pivot again. |
+| Culling and explicit time | [AnimatorCullingMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AnimatorCullingMode.html) disables retargeting, IK and transform writes for CullUpdateTransforms, and animation for CullCompletely. [PlayableGraph.Evaluate](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableGraph.Evaluate.html) advances by the supplied interval. Neither documents visibility replay or humanoid feet-pivot state under replay. | The existing Q90 timing/culling machinery is retained. Root motion and its memory are sampled once per evaluation; visibility replay projects the retained local step into the current root frame without sampling the feet pivot again. |
 
 Mixer/layer/controller-playable composition, an attached controller, fractional or
 multiple outputs, loop overrides, mirrored clips, animation jobs/HumanStream and
 other releases remain outside this measurement. Unsupported requested humanoid
 root-motion contexts retain a diagnostic instead of using generic transform curves.
+
+The Q91 Native repeats in `q91-native-final` are complete and byte-identical on
+17,539 records. Publishing appended 1,924 keys and retained every prior record.
+Earlier experimental captures initialized the Animator before the visibility mesh
+existed and did not exercise the intended culling phases; they are retained outside
+Git and are not this reference.
+
+The first engine comparison exposed missing loop-pose correction on playable
+muscle curves and replay of old world motion after the root had turned. Direct
+humanoid output sampling now uses the existing loop-pose correction. Replay uses
+the retained local step in the current root frame without advancing the clip or
+feet-pivot memory. A pose-only visibility return also refreshes the humanoid API
+root pose when the parent has moved. Before the first evaluation, the humanoid API root pose retains
+the root captured when the Animator was enabled, even if game code has since
+turned the Transform; the initial records preserve this distinction.
