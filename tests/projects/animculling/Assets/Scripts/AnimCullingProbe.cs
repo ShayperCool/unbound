@@ -129,6 +129,7 @@ public class AnimCullingProbe : MonoBehaviour
         PlayableCases(modes);
         ExplicitCases("later", entry: false);
         ExplicitHumanCases();
+        ExplicitCases("replay", entry: false);
         foreach (var (name, mode) in modes)
         foreach (bool controller in new[] { false, true })
         foreach (bool mixer in new[] { false, true })
@@ -211,10 +212,12 @@ public class AnimCullingProbe : MonoBehaviour
         foreach (string motion in new[] { "pose", "builtin", "move" })
         {
             if (entry && mixer) continue;
+            if (context == "replay" && (clock != DirectorUpdateMode.Manual || mixer || motion != "move")) continue;
             var c = Animated("explicit/" + context + "/" + mode + "/" + clock + "/"
                 + (controller ? "controller" : "bare") + "/" + (mixer ? "mixer" : "clip") + "/" + motion,
                 controller ? Resources.Load<RuntimeAnimatorController>("Culling") : null, mode, ScheduleA);
             c.explicitEvaluation = true;
+            if (context == "replay") c.visible = f => f < 12 || (f >= 25 && f < 35) || f >= 45;
             c.animator.applyRootMotion = motion != "pose";
             if (motion == "move") c.move = c.rig.gameObject.AddComponent<CullMoveReceiver>();
             c.graph = PlayableGraph.Create(c.name);
@@ -438,8 +441,7 @@ public class AnimCullingProbe : MonoBehaviour
         if (c.ik != null)
         {
             var info = c.animator.GetCurrentAnimatorStateInfo(0);
-            json.Append(",\"nt\":").Append(F(info.normalizedTime)).Append(",\"ik\":").Append(c.ik.calls)
-                ;
+            json.Append(",\"nt\":").Append(F(info.normalizedTime)).Append(",\"ik\":").Append(c.ik.calls);
             if (!c.explicitEvaluation)
                 json.Append(",\"hips\":").Append(B(c.hips.localRotation != c.lastHips))
                     .Append(",\"arm\":").Append(B(c.arm.localRotation != c.lastArm));

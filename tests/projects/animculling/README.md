@@ -163,12 +163,13 @@ with and without their own controller, and pose-only, builtin movement and
 OnAnimatorMove movement cases. Every call is recorded before and after, separately
 from LateUpdate's following automatic evaluation. Calls in frames 0 (entry only),
 6 (visible), 16 (invisible) and 33 (visible again) supply 0.07, 0 and 0.04 seconds.
-`explicit/human/` covers requested IK on a humanoid clip without a controller or
+`explicit/replay/` adds two visibility returns without a new evaluation between
+them, for Manual clip outputs with and without a controller. `explicit/human/` covers requested IK on a humanoid clip without a controller or
 root motion. Raw bone rotations and dot products are retained; the new human
 cases do not introduce quaternion equality predicates.
 
-Two independent windowed GPU Native captures agree byte for byte on 15,119 records.
-Publishing adds 8,826 keys and preserves all 6,293 prior records byte for byte:
+Two independent windowed GPU Native captures agree byte for byte on 15,551 records.
+Publishing adds 9,258 keys and preserves all 6,293 prior records byte for byte:
 
     python3 tests/projects/animculling/run.py editor --release 6000.0.71f1 --label explicit
     python3 tests/projects/animculling/run.py publish --append --release 6000.0.71f1 --label explicit
