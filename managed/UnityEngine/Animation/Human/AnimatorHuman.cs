@@ -135,6 +135,13 @@ namespace Unbound.Runtime.Humanoid
             HumanRootMotion.EndUpdate(m_Memory, deltaTime);
         }
 
+        internal void ReplayMotion(in AnimatorRootMotion motion, float deltaTime, out AnimatorRootMotion result)
+        {
+            HumanRootMotion.ProjectMotion(motion.Delta, AvatarX(), deltaTime, m_Constant.Human.Scale,
+                m_Memory.Pivot, out result);
+            PivotPosition = result.PivotPosition;
+        }
+
         /// <summary>Set while OnAnimatorIK runs (the IK API is meant for it).</summary>
         internal bool InIKPass;
 

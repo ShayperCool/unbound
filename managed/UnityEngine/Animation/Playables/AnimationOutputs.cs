@@ -676,7 +676,7 @@ namespace Unbound.Runtime.Playables
         }
 
         /// <summary>Apply the already sampled humanoid motion. Visibility replay keeps the last
-        /// world deltas, as the controller does, without stepping the feet-pivot memory again.</summary>
+        /// local step without stepping the feet-pivot memory again.</summary>
         internal static void ApplyHumanRootMotion(Animator animator, in AnimatorRootMotion motion, bool dispatch = true)
         {
             animator.CaptureRootMotionPose();
@@ -904,7 +904,10 @@ namespace Unbound.Runtime.Playables
             {
                 if (move) animator.m_RootMotionApplied = false;
                 if (move && frame.HumanMotion is { } humanMotion)
-                    AnimationEvaluation.ApplyHumanRootMotion(animator, humanMotion);
+                {
+                    animator.Human.ReplayMotion(humanMotion, frame.DeltaTime, out var replay);
+                    AnimationEvaluation.ApplyHumanRootMotion(animator, replay);
+                }
                 else if (move && frame.Mode == RootMotionMode.Compute)
                     AnimationEvaluation.ApplyRootMotion(animator, frame.Pose, frame.Motion,
                         animator.m_Player?.RootMotionDeltaTime ?? frame.DeltaTime);

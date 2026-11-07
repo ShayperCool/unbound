@@ -234,6 +234,9 @@ namespace UnityEngine
 
         internal override void OnEngineEnable()
         {
+            // A humanoid's initial API root pose predates game Transform edits, and stays
+            // there until evaluation (6000.0.71f1, animculling humanMotion/initial).
+            if (isHuman) EnsureRootPose();
             if (!m_Registered)
             {
                 m_Registered = true;

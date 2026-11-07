@@ -208,6 +208,8 @@ namespace Unbound.Runtime.Humanoid
     /// <summary>What a root motion pass gives the Animator.</summary>
     internal struct AnimatorRootMotion
     {
+        /// <summary>The sampled local step after the feet-pivot correction, retained for replay.</summary>
+        public Trs Delta;
         /// <summary>Animator.deltaPosition (world).</summary>
         public F4 DeltaPosition;
         /// <summary>Animator.deltaRotation (the motion's local rotation step, normalized).</summary>
@@ -680,6 +682,17 @@ namespace Unbound.Runtime.Humanoid
             float pw = memory.PivotWeight;
             memory.Pivot = new F4((b.x - a.x) * pw + a.x, (b.y - a.y) * pw + a.y, (b.z - a.z) * pw + a.z, (b.w - a.w) * pw + a.w);
 
+            ProjectMotion(new Trs(dt, dq, F4.One3), root, deltaTime, humanScale, memory.Pivot, out result);
+        }
+
+        /// <summary>Convert a retained local step in the current root frame without updating
+        /// feet-pivot memory. Visibility return replays motion in that frame (animculling).</summary>
+        internal static void ProjectMotion(in Trs delta, in Trs root, float deltaTime, float humanScale,
+            F4 pivot, out AnimatorRootMotion result)
+        {
+            var dt = delta.t;
+            var dq = delta.q;
+            result.Delta = delta;
             var s = root.s;
             float hs = humanScale;
             result.DeltaPosition = M.QRotate(root.q, new F4(dt.x * s.x * hs, dt.y * s.y * hs, dt.z * s.z * hs, 0f));
@@ -699,7 +712,7 @@ namespace Unbound.Runtime.Humanoid
             var step = new F4(hs * dt.x * s.x, hs * dt.y * s.y, hs * dt.z * s.z, 0f);
             var moved = new Trs(M.QRotate(root.q, step) + root.t, M.QMul(root.q, dq), new F4(s.x, s.y, s.z, s.w * 0f));
             result.Root = moved;
-            var p2 = memory.Pivot;
+            var p2 = pivot;
             var ms = moved.s;
             result.PivotPosition = M.QRotate(moved.q, new F4(hs * p2.x * ms.x, hs * p2.y * ms.y, hs * p2.z * ms.z, 0f)) + moved.t;
         }

@@ -69,7 +69,8 @@ namespace Unbound.Runtime.Playables
                 }, out into.BodyMotion);
             double t = e.ReferencePose ? 0.0 : node.Time;
             m_Pose.Reset(e.Bindings.FloatCount, e.Bindings.ObjectCount);
-            ClipSampling.Sample(bound, (float)ClipTime(t), 1f, m_Pose);
+            ClipSampling.Sample(bound, (float)ClipTime(t), 1f, m_Pose,
+                loopPose: e.MotionMode == RootMotionMode.DirectHuman);
             int n = Math.Min(into.FloatCount, e.Bindings.FloatCount);
             for (int c = 0; c < n; c++)
             {
