@@ -107,10 +107,50 @@ public partial class CmdBuffersProbe
                 cmd.DispatchCompute(fill, 0, 1, 1, 1);
             });
         });
+        // startInstance on every indirect path, read as raw SV_InstanceID (IndexedGrid and
+        // ProceduralGrid place instance i at row 4i resp. i and colour it 40 * (i + 1)).
+        var gridMesh = Keep(new Mesh());
+        gridMesh.vertices = new Vector3[81];
+        gridMesh.SetIndices(words.Take(6).Select(x => (int)x).ToArray(), MeshTopology.Triangles, 0);
+        gridMesh.bounds = new Bounds(Vector3.zero, Vector3.one * 100);
+        var procMat = Keep(new Material(Resources.Load<Shader>("ProceduralGrid")));
+        procMat.SetFloat("_Tag", 30);
+        var bounds = rp.worldBounds;
+        var meshArgs = Buffer(GraphicsBuffer.Target.IndirectArguments, GraphicsBuffer.IndirectDrawIndexedArgs.size,
+            new[] { Args(6, 2, 0, 0, 3) });
+        var procArgs = Buffer(GraphicsBuffer.Target.IndirectArguments, GraphicsBuffer.IndirectDrawArgs.size,
+            new[] { new GraphicsBuffer.IndirectDrawArgs { vertexCountPerInstance = 6, instanceCount = 2, startVertex = 0, startInstance = 3 } });
+        var attached = new List<CommandBuffer>();
+        void OnCamera(Action<CommandBuffer> record)
+        {
+            var cmd = new CommandBuffer { name = "probe.indirect" };
+            record(cmd);
+            cam.AddCommandBuffer(CameraEvent.AfterEverything, cmd);
+            attached.Add(cmd);
+        }
+        Case("startinstance.mesh", () => Graphics.DrawMeshInstancedIndirect(gridMesh, 0, mat, bounds, meshArgs, 0, null,
+            ShadowCastingMode.Off, false, 0, cam, LightProbeUsage.Off));
+        Case("startinstance.mesh.cmd", () => OnCamera(cmd => cmd.DrawMeshInstancedIndirect(gridMesh, 0, mat, 0, meshArgs)));
+        Case("startinstance.rendermesh", () => Graphics.RenderMeshIndirect(rp, gridMesh, meshArgs));
+        Case("startinstance.procedural", () => Graphics.DrawProceduralIndirect(procMat, bounds, MeshTopology.Triangles, procArgs, 0, cam,
+            null, ShadowCastingMode.Off, false, 0));
+        Case("startinstance.procedural.cmd", () => OnCamera(cmd => cmd.DrawProceduralIndirect(Matrix4x4.identity, procMat, 0, MeshTopology.Triangles, procArgs)));
+        Case("startinstance.renderprimitives", () => Graphics.RenderPrimitivesIndirect(new RenderParams(procMat) { camera = cam, worldBounds = bounds },
+            MeshTopology.Triangles, procArgs));
+        Case("startinstance.procedural.indexed", () => Graphics.DrawProceduralIndirect(mat, bounds, MeshTopology.Triangles, idx16, args,
+            GraphicsBuffer.IndirectDrawIndexedArgs.size, cam, null, ShadowCastingMode.Off, false, 0));
+        Case("startinstance.procedural.indexed.cmd", () => OnCamera(cmd => cmd.DrawProceduralIndirect(idx16, Matrix4x4.identity, mat, 0,
+            MeshTopology.Triangles, args, GraphicsBuffer.IndirectDrawIndexedArgs.size)));
         foreach (var c in cases)
         {
             Try(c.key, c.draw);
             cam.Render();
+            foreach (var cmd in attached)
+            {
+                cam.RemoveCommandBuffer(CameraEvent.AfterEverything, cmd);
+                cmd.Release();
+            }
+            attached.Clear();
             Value(c.key, Read(grid));
             yield return null; // A separate camera frame per queued draw, including in batchmode.
         }
