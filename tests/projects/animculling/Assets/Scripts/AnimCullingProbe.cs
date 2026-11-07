@@ -46,6 +46,8 @@ public class AnimCullingProbe : MonoBehaviour
         public bool humanMotion;
         public AnimationClipPlayable secondHumanClip;
         public AnimationMixerPlayable humanMixer;
+        public List<AnimationClipPlayable> humanInputs;
+        public List<(AnimationMixerPlayable Mixer, int Port)> humanWeights;
     }
 
     readonly List<Case> cases = new List<Case>();
@@ -135,6 +137,8 @@ public class AnimCullingProbe : MonoBehaviour
         ExplicitCases("replay", entry: false);
         HumanMotionCases();
         HumanMixerMotionCases();
+        HumanMixerShapeCases();
+        EventShapeCases();
         foreach (var (name, mode) in modes)
         foreach (bool controller in new[] { false, true })
         foreach (bool mixer in new[] { false, true })
@@ -288,9 +292,150 @@ public class AnimCullingProbe : MonoBehaviour
         }
     }
 
-    void HumanMotionCase(AnimatorCullingMode mode, DirectorUpdateMode clock, string movement, string avatar, float scale, float? mixerWeight = null)
+    static readonly string[] HumanShapeClips = { "LoopMuscles", "OrigTurned", "LoopMusclesBake" };
+
+    // Mixer graphs beyond Q104's fixed pair: three inputs, input weights changed between
+    // evaluations (visible, and culled while still evaluated), a nested mixer, a one-input
+    // mixer, foot IK, and the direct clip with the same pivot records. Every mixer's weights
+    // sum to one: other sums, and weights changed after the last evaluation before a
+    // visibility return, are outside the supported humanoid mixer context.
+    void HumanMixerShapeCases()
     {
-        var name = (mixerWeight.HasValue ? "humanMixerMotion/" + F(mixerWeight.Value) : "humanMotion")
+        var all = new[] { AnimatorCullingMode.AlwaysAnimate, AnimatorCullingMode.CullCompletely };
+        var clocks = new[] { DirectorUpdateMode.GameTime, DirectorUpdateMode.Manual };
+        foreach (var mode in all)
+        foreach (var clock in clocks)
+        foreach (string movement in new[] { "builtin", "off" })
+            HumanShape("three", mode, clock, movement);
+        HumanShape("three", AnimatorCullingMode.CullUpdateTransforms, DirectorUpdateMode.GameTime, "builtin");
+        foreach (var clock in clocks)
+        {
+            HumanShape("nested", AnimatorCullingMode.AlwaysAnimate, clock, "builtin");
+            HumanShape("live", AnimatorCullingMode.AlwaysAnimate, clock, "builtin");
+        }
+        // Culled but still evaluated every frame (a Manual graph would not be evaluated
+        // between the weight change and the visibility return).
+        HumanShape("live", AnimatorCullingMode.CullUpdateTransforms, DirectorUpdateMode.GameTime, "builtin");
+        foreach (string movement in new[] { "builtin", "off" })
+        {
+            HumanShape("one", AnimatorCullingMode.AlwaysAnimate, DirectorUpdateMode.GameTime, movement);
+            HumanShape("direct", AnimatorCullingMode.AlwaysAnimate, DirectorUpdateMode.GameTime, movement);
+        }
+        HumanShape("direct", AnimatorCullingMode.CullCompletely, DirectorUpdateMode.Manual, "builtin");
+        // Foot IK on every input (the AnimationClipPlayable default).
+        foreach (var clock in clocks) HumanShape("footIK", AnimatorCullingMode.AlwaysAnimate, clock, "builtin");
+        HumanShape("footIK", AnimatorCullingMode.CullCompletely, DirectorUpdateMode.Manual, "builtin");
+        HumanShape("directFootIK", AnimatorCullingMode.AlwaysAnimate, DirectorUpdateMode.GameTime, "builtin");
+        HumanShape("one", AnimatorCullingMode.CullCompletely, DirectorUpdateMode.Manual, "builtin");
+    }
+
+    void HumanShape(string shape, AnimatorCullingMode mode, DirectorUpdateMode clock, string movement) =>
+        HumanMotionCase(mode, clock, movement, "HumanA", 0.01f, null, shape);
+
+    AnimationClipPlayable HumanInput(Case c, int clip)
+    {
+        var p = AnimationClipPlayable.Create(c.graph, Resources.Load<AnimationClip>(HumanShapeClips[clip]));
+        p.SetApplyFootIK(false);
+        p.SetApplyPlayableIK(true);
+        c.humanInputs.Add(p);
+        return p;
+    }
+
+    AnimationMixerPlayable HumanMixer(Case c, Playable[] inputs, float[] weights)
+    {
+        var mixer = AnimationMixerPlayable.Create(c.graph, inputs.Length);
+        for (int i = 0; i < inputs.Length; i++)
+        {
+            mixer.ConnectInput(i, inputs[i], 0, weights[i]);
+            c.humanWeights.Add((mixer, i));
+        }
+        return mixer;
+    }
+
+    Playable HumanShapeSource(Case c, string shape)
+    {
+        c.humanInputs = new List<AnimationClipPlayable> { c.clip };
+        c.humanWeights = new List<(AnimationMixerPlayable, int)>();
+        if (shape == "footIK" || shape == "directFootIK")
+        {
+            var source = HumanShapeSource(c, shape == "footIK" ? "three" : "direct");
+            foreach (var input in c.humanInputs) input.SetApplyFootIK(true);
+            return source;
+        }
+        switch (shape)
+        {
+            case "direct": return c.clip;
+            case "one": return HumanMixer(c, new Playable[] { c.clip }, new[] { 1f });
+            case "nested":
+                var inner = HumanMixer(c, new Playable[] { HumanInput(c, 1), HumanInput(c, 2) }, new[] { 0.5f, 0.5f });
+                return HumanMixer(c, new Playable[] { c.clip, inner }, new[] { 0.4f, 0.6f });
+        }
+        var mixer = HumanMixer(c, new Playable[] { c.clip, HumanInput(c, 1), HumanInput(c, 2) }, new[] { 0.2f, 0.3f, 0.5f });
+        if (shape == "live")
+            // Frame 10 is visible, frame 20 is culled by ScheduleA, frame 40 visible again.
+            c.step = f =>
+            {
+                float[] w = f == 10 ? new[] { 0.6f, 0.4f, 0f } : f == 20 ? new[] { 0.1f, 0.1f, 0.8f } : f == 40 ? new[] { 0.3f, 0.2f, 0.5f } : null;
+                if (w != null) for (int i = 0; i < w.Length; i++) mixer.SetInputWeight(i, w[i]);
+            };
+        return mixer;
+    }
+
+    // Visibility replay of clip events for different source shapes above one clip.
+    void EventShapeCases()
+    {
+        foreach (var clock in new[] { DirectorUpdateMode.Manual, DirectorUpdateMode.GameTime })
+        foreach (string shape in new[] { "clip", "mixer1", "mixer2", "layer1", "plain", "nested" })
+        {
+            var c = Animated("explicit/eventShape/" + clock + "/" + shape, null, AnimatorCullingMode.CullCompletely, ScheduleA);
+            c.explicitEvaluation = true;
+            c.animator.applyRootMotion = true;
+            c.move = c.rig.gameObject.AddComponent<CullMoveReceiver>();
+            c.graph = PlayableGraph.Create(c.name);
+            c.graph.SetTimeUpdateMode(clock);
+            var output = AnimationPlayableOutput.Create(c.graph, "Animation", c.animator);
+            c.clip = AnimationClipPlayable.Create(c.graph, Resources.Load<AnimationClip>("PlayablePose"));
+            Playable source = c.clip;
+            if (shape == "mixer1" || shape == "nested")
+            {
+                var mix = AnimationMixerPlayable.Create(c.graph, 1);
+                mix.ConnectInput(0, c.clip, 0, 1f);
+                source = mix;
+                if (shape == "nested")
+                {
+                    var outer = AnimationMixerPlayable.Create(c.graph, 1);
+                    outer.ConnectInput(0, mix, 0, 1f);
+                    source = outer;
+                }
+            }
+            else if (shape == "mixer2")
+            {
+                var mix = AnimationMixerPlayable.Create(c.graph, 2);
+                mix.ConnectInput(0, c.clip, 0, 0.25f);
+                mix.ConnectInput(1, AnimationClipPlayable.Create(c.graph, Resources.Load<AnimationClip>("PlayableSecond")), 0, 0.75f);
+                source = mix;
+            }
+            else if (shape == "layer1")
+            {
+                var layer = AnimationLayerMixerPlayable.Create(c.graph, 1);
+                layer.ConnectInput(0, c.clip, 0, 1f);
+                source = layer;
+            }
+            else if (shape == "plain")
+            {
+                var plain = Playable.Create(c.graph, 1);
+                plain.ConnectInput(0, c.clip, 0, 1f);
+                source = plain;
+            }
+            c.source = source;
+            output.SetSourcePlayable(c.source);
+            c.graph.Play();
+        }
+    }
+
+    void HumanMotionCase(AnimatorCullingMode mode, DirectorUpdateMode clock, string movement, string avatar, float scale, float? mixerWeight = null, string shape = null)
+    {
+        var name = (shape != null ? "humanMixerShape/" + shape : mixerWeight.HasValue ? "humanMixerMotion/" + F(mixerWeight.Value) : "humanMotion")
             + "/" + avatar + "/" + mode + "/" + clock + "/" + movement;
         var c = new Case { name = name, visible = ScheduleA, humanMotion = true, explicitEvaluation = true };
         c.holder = new GameObject(name).transform;
@@ -320,6 +465,7 @@ public class AnimCullingProbe : MonoBehaviour
         c.clip.SetApplyFootIK(false);
         c.clip.SetApplyPlayableIK(true);
         c.source = c.clip;
+        if (shape != null) c.source = HumanShapeSource(c, shape);
         if (mixerWeight.HasValue)
         {
             c.secondHumanClip = AnimationClipPlayable.Create(c.graph, Resources.Load<AnimationClip>("OrigTurned"));
@@ -345,6 +491,16 @@ public class AnimCullingProbe : MonoBehaviour
         string mixer = c.humanMixer.IsValid() ? ",\"secondTime\":" + c.secondHumanClip.GetTime().ToString("R", CultureInfo.InvariantCulture)
             + ",\"weights\":[" + F(c.humanMixer.GetInputWeight(0)) + "," + F(c.humanMixer.GetInputWeight(1)) + "]"
             + ",\"pivot\":" + V(a.pivotPosition) + ",\"pivotWeight\":" + F(a.pivotWeight) : "";
+        if (c.humanInputs != null)
+        {
+            var shape = new StringBuilder(",\"times\":[");
+            for (int i = 0; i < c.humanInputs.Count; i++)
+                shape.Append(i > 0 ? "," : "").Append(c.humanInputs[i].GetTime().ToString("R", CultureInfo.InvariantCulture));
+            shape.Append("],\"weights\":[");
+            for (int i = 0; i < c.humanWeights.Count; i++)
+                shape.Append(i > 0 ? "," : "").Append(F(c.humanWeights[i].Mixer.GetInputWeight(c.humanWeights[i].Port)));
+            mixer = shape.Append("],\"pivot\":").Append(V(a.pivotPosition)).Append(",\"pivotWeight\":").Append(F(a.pivotWeight)).ToString();
+        }
         Put(c.name + (phase == null ? "" : "/" + phase) + "/" + frame,
             "{\"visible\":" + B(c.renderers[0].isVisible) + ",\"time\":" + c.clip.GetTime().ToString("R", CultureInfo.InvariantCulture)
             + ",\"root\":" + V(c.rig.localPosition) + ",\"rotation\":" + Q(c.rig.localRotation)

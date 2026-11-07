@@ -332,3 +332,46 @@ Independent review found that the stream rewrite cannot fill an absent RootQ.w
 binding: it would leave the identity default alongside a normalized y component.
 The certified mixer path therefore diagnoses clips without all four RootQ curves.
 Managed endpoint regressions retain this boundary at input weights 0/1 and 1/0.
+
+## Humanoid mixer trees and event-replay shapes
+
+`humanMixerShape/` generalises Q104 with the same HumanA rig, clocks and visibility
+schedule: three inputs (`LoopMuscles`, `OrigTurned`, `LoopMusclesBake`) at 0.2/0.3/0.5
+over all culling modes, both clocks and root motion on/off; a nested mixer; a
+one-input mixer; input weights changed at frames 10, 20 and 40 (`live`, AlwaysAnimate
+with both clocks and GameTime CullUpdateTransforms, so every change is evaluated); foot IK on every input; and
+the direct clip with the same pivot records. Every mixer's weights sum to one. New
+records add every input clock and weight to Q104's observations.
+
+`explicit/eventShape/` places one clip with an event under different sources (the
+clip itself, one- and two-input mixers, a one-input layer mixer, a plain Playable,
+nested one-input mixers) on a CullCompletely Animator with explicit evaluation, to
+find which clip event intervals a visibility return after skipped updates replays.
+
+Contract (6000.0): the [AnimationMixerPlayable](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationMixerPlayable.html)
+and [AnimationPlayableOutput](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationPlayableOutput.html)
+pages specify no humanoid weight normalization, and the
+[culling mode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AnimatorCullingMode.html)
+page no event replay; both are observations of 6000.0.71f1 in this context.
+
+Observed in 6000.0.71f1:
+- Unit-sum mixer trees of any shape move as the humanoid blend of their clips, with
+  the same retained-step replay as Q104, foot IK on the inputs included. Weights
+  changed between evaluations take effect at the next one.
+- Weight sums other than one are not normalized: an exploratory capture (outside Git)
+  with sums 0.5 and 1.5 scaled the body position by about the sum, and at 0.5 also
+  turned the body toward a default pose. A weight change after the last evaluation
+  (CullCompletely skipping updates, or a culled Manual graph) re-blends the retained
+  clip poses and steps with the new weights at the visibility return. Both stay
+  unsupported (warn) and are not part of this probe.
+- A visibility return replays the last event intervals of clips combined by a mixer
+  or layer mixer at any depth, one-input mixers included, and not of the output's
+  source clip or of a clip reached only through a plain Playable.
+- The plain Playable's own time is not frozen by CullCompletely (the clip below it
+  is). Unbound freezes the whole source tree; `verify_gate.py` accepts that source
+  time (`gt`) of `explicit/eventShape/*/plain` only, with every other field checked.
+
+The two independent Native captures agree byte for byte on 22,251 records.
+Publication appended 2,640 keys and preserved all 19,611 prior records. The gate
+matches 22,123 records strictly and accepts 128 documented residuals (the four arm
+predicates and the 124 plain-source clock records).
