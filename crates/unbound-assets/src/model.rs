@@ -707,20 +707,6 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
     };
     let scene = ufbx::load_memory(bytes, opts).map_err(|e| anyhow!("{}", e.description))?;
 
-    if is_obj {
-        let mut diffuse_paths = std::collections::HashSet::new();
-        for material in scene.materials.iter() {
-            if let Some(texture) = material.fbx.diffuse_color.texture.as_ref() {
-                diffuse_paths.insert(texture.relative_filename.as_ref());
-            }
-        }
-        anyhow::ensure!(
-            diffuse_paths.len() <= 1,
-            "{}: OBJ libraries with multiple diffuse texture maps are not yet supported",
-            source.display()
-        );
-    }
-
     let file_unit = if is_obj || scene.settings.unit_meters <= 0.0 {
         1.0
     } else {
@@ -800,6 +786,31 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
     builder.add_node(root, None, &mut ids);
     builder.add_renderers(&mut ids)?;
     builder.assign_material_ids(imp, &mut ids);
+
+    // Source descriptions are consumed only after None/remap handling. A deferred MTL
+    // feature must not reject geometry whose materials use authored replacements.
+    if is_obj
+        && settings.material_import != MaterialImportMode::None
+        && builder.model.materials.iter().any(|material| {
+            material.description.texture("DiffuseColor").is_some()
+                && material
+                    .remap
+                    .as_ref()
+                    .is_none_or(|reference| reference.is_null())
+        })
+    {
+        let mut diffuse_paths = std::collections::HashSet::new();
+        for material in scene.materials.iter() {
+            if let Some(texture) = material.fbx.diffuse_color.texture.as_ref() {
+                diffuse_paths.insert(texture.relative_filename.as_ref());
+            }
+        }
+        anyhow::ensure!(
+            diffuse_paths.len() <= 1,
+            "{}: OBJ libraries with multiple diffuse texture maps are not yet supported",
+            source.display()
+        );
+    }
 
     let (clips, clip_warnings) = if settings.import_animation && settings.animation_type != 0 {
         builder.clips(&scene, imp, &mut ids)

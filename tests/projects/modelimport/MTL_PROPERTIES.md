@@ -53,7 +53,9 @@ These are observations in this release and built-in render pipeline, not univers
 The implementation converts OBJ properties into the existing FBX-style material description,
 then uses the existing managed conversion and remap paths. MTL file bytes are cache dependencies;
 model cache format 22 invalidates old descriptions. No mesh indices, slot ordering, mesh naming,
-axis/pivot behavior or FBX geometry conversion changes are intended. Multiple competing diffuse maps fail explicitly pending a measured conversion. Other releases,
+axis/pivot behavior or FBX geometry conversion changes are intended. Multiple competing diffuse maps fail explicitly when an imported texture would be consumed;
+None mode and complete explicit remaps keep importing geometry. Their conversion remains
+unmeasured. Other releases,
 broad PBR, normal maps and `illum` remain unmeasured follow-ups.
 
 ## Validation

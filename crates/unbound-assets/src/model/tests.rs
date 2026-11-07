@@ -619,6 +619,23 @@ fn obj_material_cache_tracks_library_content_and_missing_inputs() {
     std::fs::write(&source, obj).unwrap();
     std::fs::write(&library, "newmtl Paint\nmap_Kd A.png\nnewmtl Other\nmap_Kd B.png\n").unwrap();
     assert!(load().unwrap_err().to_string().contains("multiple diffuse texture maps"));
+    let bytes = std::fs::read(&source).unwrap();
+    let disabled = ModelImporter.import(&source, &bytes,
+        &meta("ModelImporter:\n  materials:\n    materialImportMode: 0\n")).unwrap();
+    assert_eq!(disabled.meshes[0].submeshes.len(), 2);
+    let remap_meta = |names: &[&str]| {
+        let mut text = "ModelImporter:\n  materials:\n    materialImportMode: 2\n  externalObjects:\n".to_string();
+        for name in names {
+            text.push_str(&format!("  - first:\n      type: UnityEngine:Material\n      name: {name}\n    second: {{fileID: 2100000, guid: 286abb58d380806380ef7374c960f5c6, type: 2}}\n"));
+        }
+        meta(&text)
+    };
+    let remapped = ModelImporter.import(&source, &bytes, &remap_meta(&["Paint", "Other"])).unwrap();
+    assert_eq!(remapped.meshes[0].submeshes, disabled.meshes[0].submeshes);
+    assert!(remapped.materials.iter().all(|material|
+        material.remap.as_ref().is_some_and(|reference| !reference.is_null())));
+    assert!(ModelImporter.import(&source, &bytes, &remap_meta(&["Paint"])).unwrap_err()
+        .to_string().contains("multiple diffuse texture maps"));
     drop(cache);
     std::fs::remove_dir_all(root).unwrap();
 }
