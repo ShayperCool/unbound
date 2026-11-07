@@ -1,0 +1,12 @@
+#pragma kernel Read
+ByteAddressBuffer Vertices;
+ByteAddressBuffer Indices;
+RWStructuredBuffer<uint> Output;
+[numthreads(1,1,1)]
+void Read(uint3 id : SV_DispatchThreadID)
+{
+    Output[0] = Vertices.Load(0);
+    Output[1] = Vertices.Load(12);
+    Output[2] = Indices.Load(0);
+    Output[3] = Indices.Load(4);
+}

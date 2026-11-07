@@ -71,6 +71,9 @@ namespace Unbound.Runtime
         /// docs/COMPATIBILITY_GAPS.md ("Rendering rules measured on one release").</summary>
         internal static bool RenderingMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Light-probe gizmo scale observed outside repaint callbacks in renderapi.</summary>
+        internal static float GizmoProbeSize => RenderingMeasured ? 0.299999982f : 0.3f;
+
         /// <summary>Standalone mesh-instancing batch limits measured on 6000.0.71f1 GLCore.
         /// x/y: transform capacities without/with uniform scaling; z: property-buffer bytes.
         /// Other releases keep sequential IDs until measured.</summary>

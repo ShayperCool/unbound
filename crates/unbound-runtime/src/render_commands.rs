@@ -56,6 +56,9 @@ pub struct Draw {
 
 /// Buffer usage flags (GraphicsBuffer.Target's).
 pub mod buffer {
+    /// Internal flag: mesh-owned snapshots can be shader inputs, but GPU mesh editing is not
+    /// implemented. Reject writable bindings rather than letting drawing use stale geometry.
+    pub const MESH_READ_ONLY: u32 = 1 << 31;
     pub const VERTEX: u32 = 1;
     pub const INDEX: u32 = 2;
     pub const STRUCTURED: u32 = 16;

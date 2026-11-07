@@ -21,10 +21,6 @@ public static class StubDefaults
     // Unity 6000.0 (measured on 6000.0.71f1, Linux Editor, Play mode).
     static readonly Dictionary<string, string> Unity6000_0 = new(StringComparer.Ordinal)
     {
-        // Outside OnDrawGizmos the color is white; the matrix is the zero matrix (the default).
-        ["UnityEngine.Gizmos.color"] = "global::UnityEngine.Color.white",
-        // 0.29999998f, one ulp under 0.3f.
-        ["UnityEngine.Gizmos.probeSize"] = "0.29999998f",
         // Measured in a scene without realtime GI (nothing to converge); indirectScale is the
         // scene's Indirect Intensity, not a constant.
         ["UnityEngine.DynamicGI.updateThreshold"] = "1f",

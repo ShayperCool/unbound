@@ -1110,6 +1110,16 @@ impl UnityRenderer {
         let mut missing = Vec::new();
         let mut bound: Vec<wgpu::Buffer> = Vec::with_capacity(program.buffers.len());
         for b in &program.buffers {
+            if !b.read_only
+                && handle_of(b)
+                    .and_then(|h| self.buffers.get(&h))
+                    .is_some_and(|g| g.mesh_read_only)
+            {
+                self.warn_once(format!("meshdraw{shader}{}", b.name), || {
+                    format!("shader `{shader}` writes mesh buffer `{}`: GPU mesh editing is not supported; the draw is skipped. Update the mesh CPU data instead", b.name)
+                });
+                return Err(());
+            }
             // glslang's hidden counter of an Append or Counter buffer (`<name>@count`) binds
             // that buffer's counter.
             let owner = b.name.strip_suffix(compute::COUNTER_SUFFIX);

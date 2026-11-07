@@ -11,6 +11,11 @@ use std::{
 };
 use unbound_project::Project;
 
+const RENDERING_LIMITATIONS: &[&str] = &[
+    "Mesh GraphicsBuffers support GetData and read-only shader/compute inputs. GPU mesh editing and SetData/CopyBuffer into mesh buffers are not supported; update the mesh CPU data instead.",
+    "Game-view gizmo drawing and OnDrawGizmos/OnDrawGizmosSelected repaint callbacks are not supported. Gizmos state and calls outside those callbacks match the measured Play-mode API.",
+];
+
 /// The keys whose referenced object turns an ignored scene settings class into an unread one
 /// (`ClassCoverage.s_IgnoredWithoutData` on the managed side).
 const DATA_KEYS: &[&str] = &["m_OcclusionCullingData", "m_NavMeshData"];
@@ -199,6 +204,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             "hasTable": coverage.has_table,
             "classes": classes,
             "unreadInRelease": coverage.unread_in_release,
+            "renderingLimitations": RENDERING_LIMITATIONS,
         });
         println!("{}", serde_json::to_string_pretty(&report)?);
         return Ok(());
@@ -253,6 +259,10 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
                 );
             }
         }
+    }
+    println!("\nRendering limitations:");
+    for limitation in RENDERING_LIMITATIONS {
+        println!("  {limitation}");
     }
     let read =
         by_reading.get("Read").map_or(0, Vec::len) + by_reading.get("Loader").map_or(0, Vec::len);

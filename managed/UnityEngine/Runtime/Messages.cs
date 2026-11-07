@@ -104,9 +104,9 @@ namespace Unbound.Runtime
         /// <summary>Unity 6000.0 script messages Unbound does not send yet, each with the engine
         /// class that documents it: a script that implements one would silently never get it, so
         /// the script class declaring it says so once. Remove an entry once it is sent.
-        /// Not listed, because the Editor's Play mode does not send them to the game either:
-        /// MonoBehaviour/ScriptableObject.Reset ("only called in Edit mode") and OnDrawGizmos*
-        /// (Unbound draws no Scene view and no Game view gizmos). Interface callbacks
+        /// Reset is not listed because it is only called in Edit mode. Gizmo callbacks require
+        /// a Scene or Game view repaint with gizmos enabled (renderapi). Unbound keeps Game-view
+        /// gizmos disabled; doctor lists enabling that view as unsupported. Interface callbacks
         /// (ISerializationCallbackReceiver, ...) are not messages and are never listed.</summary>
         static readonly (Type Host, string Name)[] s_NotSent =
         {

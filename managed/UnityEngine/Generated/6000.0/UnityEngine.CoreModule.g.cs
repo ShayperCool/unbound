@@ -1346,49 +1346,9 @@ namespace UnityEngine
         [global::System.Obsolete("Property hingeJoint has been deprecated. Use GetComponent<HingeJoint>() instead. (UnityUpgradable)")] public global::UnityEngine.Component hingeJoint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GameObject.hingeJoint"); return default; } }
         [global::System.Obsolete("Property particleSystem has been deprecated. Use GetComponent<ParticleSystem>() instead. (UnityUpgradable)")] public global::UnityEngine.Component particleSystem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GameObject.particleSystem"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class Gizmos
+    unsafe partial class Gizmos
     {
-        [global::Unbound.Stub] public static void DrawLine(global::UnityEngine.Vector3 from, global::UnityEngine.Vector3 to) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawLine"); }
-        [global::Unbound.Stub] public static void DrawLineStrip(global::System.ReadOnlySpan<global::UnityEngine.Vector3> points, bool looped) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawLineStrip"); }
         [global::Unbound.Stub] internal static void DrawLineListInternal(global::System.ReadOnlySpan<global::UnityEngine.Vector3> points) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawLineListInternal"); }
-        [global::Unbound.Stub] public static void DrawLineList(global::System.ReadOnlySpan<global::UnityEngine.Vector3> points) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawLineList"); }
-        [global::Unbound.Stub] public static void DrawWireSphere(global::UnityEngine.Vector3 center, float radius) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawWireSphere"); }
-        [global::Unbound.Stub] public static void DrawSphere(global::UnityEngine.Vector3 center, float radius) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawSphere"); }
-        [global::Unbound.Stub] public static void DrawWireCube(global::UnityEngine.Vector3 center, global::UnityEngine.Vector3 size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawWireCube"); }
-        [global::Unbound.Stub] public static void DrawCube(global::UnityEngine.Vector3 center, global::UnityEngine.Vector3 size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawCube"); }
-        [global::Unbound.Stub] public static void DrawMesh(global::UnityEngine.Mesh mesh, int submeshIndex, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation, global::UnityEngine.Vector3 scale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawMesh"); }
-        [global::Unbound.Stub] public static void DrawWireMesh(global::UnityEngine.Mesh mesh, int submeshIndex, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation, global::UnityEngine.Vector3 scale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawWireMesh"); }
-        [global::Unbound.Stub] public static void DrawIcon(global::UnityEngine.Vector3 center, string name, bool allowScaling) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawIcon"); }
-        [global::Unbound.Stub] public static void DrawIcon(global::UnityEngine.Vector3 center, string name, bool allowScaling, global::UnityEngine.Color tint) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawIcon"); }
-        [global::Unbound.Stub] public static void DrawGUITexture(global::UnityEngine.Rect screenRect, global::UnityEngine.Texture texture, int leftBorder, int rightBorder, int topBorder, int bottomBorder, global::UnityEngine.Material mat) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawGUITexture"); }
-        [global::Unbound.Stub] public static void DrawFrustum(global::UnityEngine.Vector3 center, float fov, float maxRange, float minRange, float aspect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawFrustum"); }
-        [global::Unbound.Stub] public static float CalculateLOD(global::UnityEngine.Vector3 position, float radius) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.CalculateLOD"); return default; }
-        [global::Unbound.Stub] public static void DrawRay(global::UnityEngine.Ray r) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawRay"); }
-        [global::Unbound.Stub] public static void DrawRay(global::UnityEngine.Vector3 from, global::UnityEngine.Vector3 direction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawRay"); }
-        [global::Unbound.Stub] public static void DrawMesh(global::UnityEngine.Mesh mesh, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawMesh"); }
-        [global::Unbound.Stub] public static void DrawMesh(global::UnityEngine.Mesh mesh, global::UnityEngine.Vector3 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawMesh"); }
-        [global::Unbound.Stub] public static void DrawMesh(global::UnityEngine.Mesh mesh) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawMesh"); }
-        [global::Unbound.Stub] public static void DrawMesh(global::UnityEngine.Mesh mesh, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation, global::UnityEngine.Vector3 scale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawMesh"); }
-        [global::Unbound.Stub] public static void DrawMesh(global::UnityEngine.Mesh mesh, int submeshIndex, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawMesh"); }
-        [global::Unbound.Stub] public static void DrawMesh(global::UnityEngine.Mesh mesh, int submeshIndex, global::UnityEngine.Vector3 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawMesh"); }
-        [global::Unbound.Stub] public static void DrawMesh(global::UnityEngine.Mesh mesh, int submeshIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawMesh"); }
-        [global::Unbound.Stub] public static void DrawWireMesh(global::UnityEngine.Mesh mesh, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawWireMesh"); }
-        [global::Unbound.Stub] public static void DrawWireMesh(global::UnityEngine.Mesh mesh, global::UnityEngine.Vector3 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawWireMesh"); }
-        [global::Unbound.Stub] public static void DrawWireMesh(global::UnityEngine.Mesh mesh) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawWireMesh"); }
-        [global::Unbound.Stub] public static void DrawWireMesh(global::UnityEngine.Mesh mesh, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation, global::UnityEngine.Vector3 scale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawWireMesh"); }
-        [global::Unbound.Stub] public static void DrawWireMesh(global::UnityEngine.Mesh mesh, int submeshIndex, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawWireMesh"); }
-        [global::Unbound.Stub] public static void DrawWireMesh(global::UnityEngine.Mesh mesh, int submeshIndex, global::UnityEngine.Vector3 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawWireMesh"); }
-        [global::Unbound.Stub] public static void DrawWireMesh(global::UnityEngine.Mesh mesh, int submeshIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawWireMesh"); }
-        [global::Unbound.Stub] public static void DrawIcon(global::UnityEngine.Vector3 center, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawIcon"); }
-        [global::Unbound.Stub] public static void DrawGUITexture(global::UnityEngine.Rect screenRect, global::UnityEngine.Texture texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawGUITexture"); }
-        [global::Unbound.Stub] public static void DrawGUITexture(global::UnityEngine.Rect screenRect, global::UnityEngine.Texture texture, global::UnityEngine.Material mat) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawGUITexture"); }
-        [global::Unbound.Stub] public static void DrawGUITexture(global::UnityEngine.Rect screenRect, global::UnityEngine.Texture texture, int leftBorder, int rightBorder, int topBorder, int bottomBorder) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.DrawGUITexture"); }
-        [global::Unbound.Stub] public Gizmos() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.ctor"); }
-        public static global::UnityEngine.Color color { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.color"); return global::UnityEngine.Color.white; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.color"); } }
-        public static global::UnityEngine.Matrix4x4 matrix { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.matrix"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.matrix"); } }
-        public static global::UnityEngine.Texture exposure { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.exposure"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.exposure"); } }
-        public static float probeSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.probeSize"); return 0.29999998f; } }
     }
     unsafe partial class Gradient
     {
@@ -1771,8 +1731,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public void SetBindposes(global::Unity.Collections.NativeArray<global::UnityEngine.Matrix4x4> poses) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.SetBindposes"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Rendering.VertexAttribute GetUVChannel(int uvIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.GetUVChannel"); return default; }
         [global::Unbound.Stub] internal static int DefaultDimensionForChannel(global::UnityEngine.Rendering.VertexAttribute channel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.DefaultDimensionForChannel"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.GraphicsBuffer GetVertexBuffer(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.GetVertexBuffer"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.GraphicsBuffer GetIndexBuffer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.GetIndexBuffer"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.GraphicsBuffer GetBoneWeightBuffer(global::UnityEngine.SkinWeights layout) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.GetBoneWeightBuffer"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.GraphicsBuffer GetBlendShapeBuffer(global::UnityEngine.Rendering.BlendShapeBufferLayout layout) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.GetBlendShapeBuffer"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.GraphicsBuffer GetBlendShapeBuffer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.GetBlendShapeBuffer"); return default; }
@@ -1783,8 +1741,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public void SetTriangles(global::System.Collections.Generic.List<ushort> triangles, int trianglesStart, int trianglesLength, int submesh, bool calculateBounds = true, int baseVertex = 0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.SetTriangles"); }
         [global::Unbound.Stub] public void RecalculateUVDistributionMetric(int uvSetIndex, float uvAreaThreshold = 1E-09f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.RecalculateUVDistributionMetric"); }
         [global::System.Obsolete("Property Mesh.uv1 has been deprecated. Use Mesh.uv2 instead (UnityUpgradable) -> uv2")] public global::UnityEngine.Vector2[] uv1 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.uv1"); return global::System.Array.Empty<global::UnityEngine.Vector2>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.uv1"); } }
-        public global::UnityEngine.GraphicsBuffer.Target vertexBufferTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.vertexBufferTarget"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.vertexBufferTarget"); } }
-        public global::UnityEngine.GraphicsBuffer.Target indexBufferTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.indexBufferTarget"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.indexBufferTarget"); } }
         public int bindposeCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.bindposeCount"); return default; } }
         internal bool canAccess { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.canAccess"); return default; } }
         public global::UnityEngine.SkinWeights skinWeightBufferLayout { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.skinWeightBufferLayout"); return default; } }
@@ -2432,10 +2388,7 @@ namespace UnityEngine
     }
     unsafe partial struct SortingLayer
     {
-        [global::Unbound.Stub] public static global::UnityEngine.SortingLayer.LayerCallback onLayerAdded;
-        [global::Unbound.Stub] public static global::UnityEngine.SortingLayer.LayerCallback onLayerRemoved;
         [global::Unbound.Stub] internal static global::UnityEngine.SortingLayer.LayerChangedCallback onLayerChanged;
-        public unsafe delegate void LayerCallback(global::UnityEngine.SortingLayer layer);
         internal unsafe delegate void LayerChangedCallback();
     }
     [global::Unbound.Stub]
@@ -6395,11 +6348,6 @@ namespace UnityEngine.U2D
         Sprite = 2,
         Point = 3,
         Global = 4,
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class PixelPerfectRendering
-    {
-        public static float pixelSnapSpacing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.PixelPerfectRendering.pixelSnapSpacing"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.PixelPerfectRendering.pixelSnapSpacing"); } }
     }
     [global::Unbound.Stub]
     public unsafe partial class SpriteAtlasManager

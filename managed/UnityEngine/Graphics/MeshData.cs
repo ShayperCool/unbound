@@ -110,25 +110,45 @@ namespace UnityEngine
             internal static MeshDataStore Of(Mesh mesh, bool readOnly)
             {
                 var store = new MeshDataStore(readOnly);
-                var layout = mesh.Layout();
-                store.SetVertexBufferParams(mesh.vertexCount, layout);
-                for (int v = 0; v < mesh.vertexCount; v++)
-                    foreach (var d in layout)
+                store.Update(mesh);
+                return store;
+            }
+
+            /// <summary>Reuses the packed layout and native allocations when a mesh's shape is
+            /// unchanged. Both mesh-data snapshots and GPU buffer uploads use this packer.</summary>
+            internal void Update(Mesh mesh)
+            {
+                Span<VertexAttributeDescriptor> attributes = stackalloc VertexAttributeDescriptor[MaxVertexAttributes];
+                int count = mesh.FillLayout(attributes);
+                if (!attributes.Slice(0, count).SequenceEqual(Layout)) Layout = attributes.Slice(0, count).ToArray();
+                VertexCount = mesh.vertexCount;
+                for (int stream = 0; stream < 4; stream++)
+                {
+                    int bytes = Stride(stream) * VertexCount;
+                    if (bytes == StreamBytes[stream]) continue;
+                    FreeStream(stream);
+                    if (bytes == 0) continue;
+                    Streams[stream] = (byte*)UnsafeUtility.Malloc(bytes, 16, Allocator.Persistent);
+                    StreamBytes[stream] = bytes;
+                }
+                for (int v = 0; v < VertexCount; v++)
+                    foreach (var d in Layout)
                     {
-                        byte* at = store.Streams[d.stream] + v * store.Stride(d.stream) + store.Offset(d.attribute);
-                        mesh.ReadChannelArrays(d.attribute, v, out float[] f, out int[] n);
+                        byte* at = Streams[d.stream] + v * Stride(d.stream) + Offset(d.attribute);
+                        mesh.ReadChannel(d.attribute, v, out var f, out var n);
                         for (int c = 0; c < d.dimension; c++)
-                            Write(at + c * FormatSize(d.format), d.format, f[c], n[c]);
+                            Write(at + c * FormatSize(d.format), d.format, f[c], c switch { 0 => n.Item1, 1 => n.Item2, 2 => n.Item3, _ => n.Item4 });
                     }
                 var buffer = mesh.IndexBuffer();
-                store.SetIndexBufferParams(buffer.Length, mesh.indexFormat);
+                if (Indices == null || IndexCount != buffer.Length || IndexFormat != mesh.indexFormat)
+                    SetIndexBufferParams(buffer.Length, mesh.indexFormat);
                 for (int i = 0; i < buffer.Length; i++)
                 {
-                    if (store.IndexFormat == IndexFormat.UInt32) ((int*)store.Indices)[i] = buffer[i];
-                    else ((ushort*)store.Indices)[i] = (ushort)buffer[i];
+                    if (IndexFormat == IndexFormat.UInt32) ((int*)Indices)[i] = buffer[i];
+                    else ((ushort*)Indices)[i] = (ushort)buffer[i];
                 }
-                for (int s = 0; s < mesh.subMeshCount; s++) store.SubMeshes.Add(mesh.GetSubMesh(s));
-                return store;
+                SubMeshes.Clear();
+                for (int submesh = 0; submesh < mesh.subMeshCount; submesh++) SubMeshes.Add(mesh.GetSubMesh(submesh));
             }
 
             /// <summary>Writes the data into a mesh.</summary>
@@ -180,13 +200,6 @@ namespace UnityEngine
                 default: f = m_UVs[(int)attr - (int)VertexAttribute.TexCoord0][v]; break;
             }
             n4 = ((int)f.x, (int)f.y, (int)f.z, (int)f.w);
-        }
-
-        void ReadChannelArrays(VertexAttribute attr, int v, out float[] f, out int[] n)
-        {
-            ReadChannel(attr, v, out Vector4 v4, out var i4);
-            f = new[] { v4.x, v4.y, v4.z, v4.w };
-            n = new[] { i4.Item1, i4.Item2, i4.Item3, i4.Item4 };
         }
 
         public unsafe partial struct MeshData

@@ -16,6 +16,35 @@ namespace Unbound.Runtime
         /// <summary>GraphicsBuffer.Target flags.</summary>
         internal readonly uint Usage;
         internal bool Released;
+        internal readonly bool MeshOwned;
+        int m_Views;
+        bool m_OwnerReleased;
+        bool m_DestroyedOwner;
+        bool m_GpuReleased;
+
+        internal void AddView() => m_Views++;
+
+        internal void ReleaseView()
+        {
+            if (--m_Views == 0 && m_OwnerReleased) Release();
+        }
+
+        internal void ReleaseMeshOwner()
+        {
+            m_OwnerReleased = true;
+            m_DestroyedOwner = true;
+            ReleaseGpu();
+            if (m_Views == 0) Release();
+        }
+        internal void InvalidateMeshBuffer()
+        {
+            Released = true;
+            m_OwnerReleased = true;
+            if (m_Views == 0) ReleaseGpu();
+        }
+
+        // Internal protocol flag, separate from GraphicsBuffer.Target.
+        internal const uint MeshReadOnly = 1u << 31;
 
         const uint AppendOrCounter = (uint)(UnityEngine.GraphicsBuffer.Target.Append | UnityEngine.GraphicsBuffer.Target.Counter);
 
@@ -27,21 +56,28 @@ namespace Unbound.Runtime
 
         internal bool Has(UnityEngine.GraphicsBuffer.Target target) => (Usage & (uint)target) != 0;
 
-        internal GpuBufferStorage(int count, int stride, uint usage)
+        internal GpuBufferStorage(int count, int stride, uint usage, bool meshOwned = false)
         {
             if (count <= 0) throw new ArgumentException("Attempting to create a zero length compute buffer", nameof(count));
             if (stride <= 0) throw new ArgumentException("Attempting to create a compute buffer with a negative or null stride", nameof(stride));
             Count = count;
             Stride = stride;
             Usage = usage;
+            MeshOwned = meshOwned;
             Handle = RenderHandles.Next();
-            GfxStream.CreateBuffer(Handle, (long)count * stride, usage);
+            GfxStream.CreateBuffer(Handle, (long)count * stride, usage | (meshOwned ? MeshReadOnly : 0));
         }
 
         internal void Release()
         {
-            if (Released) return;
             Released = true;
+            ReleaseGpu();
+        }
+
+        void ReleaseGpu()
+        {
+            if (m_GpuReleased) return;
+            m_GpuReleased = true;
             GfxStream.ReleaseBuffer(Handle);
         }
 
@@ -80,6 +116,7 @@ namespace Unbound.Runtime
 
         internal unsafe (long Offset, byte[] Bytes) Prepare(void* data, int length, int elementSize, int start, int bufferStart, int count, Names names)
         {
+            if (MeshOwned) throw new NotSupportedException("Unbound: writing mesh GraphicsBuffers is not supported; update the mesh CPU data instead.");
             if (start < 0 || bufferStart < 0 || count < 0 || start + count > length)
                 throw new ArgumentOutOfRangeException($"Bad indices/count arguments (managedBufferStartIndex:{start} {names.Index}:{bufferStart} count:{count})");
             long offset = (long)bufferStart * elementSize, size = (long)count * elementSize;
@@ -112,7 +149,7 @@ namespace Unbound.Runtime
 
         internal void GetData(Array data, int start, int bufferStart, int count)
         {
-            if (Released) throw new NullReferenceException("Object reference not set to an instance of an object.");
+            if (Released && !MeshOwned) throw new NullReferenceException("Object reference not set to an instance of an object.");
             if (data == null) throw new ArgumentNullException(nameof(data));
             var element = data.GetType().GetElementType();
             int size = ElementSize(element);
@@ -123,6 +160,9 @@ namespace Unbound.Runtime
                 throw new ArgumentException($"GetData(): Buffer offset ({offset} bytes) is not integer multiple of Buffer stride ({Stride} bytes).");
             if (offset + length > Size)
                 throw new ArgumentException($"GetData(): Accessing {length} bytes at offset {offset} for Buffer of size {Size} bytes is not possible.");
+            // A destroyed mesh leaves its view metadata valid, but there is no GPU buffer to
+            // read. The measured GetData leaves the destination untouched (renderapi).
+            if (m_DestroyedOwner) return;
             var bytes = Native.ReadBuffer(Handle, offset, length);
             if (bytes == null)
             {
@@ -174,6 +214,14 @@ namespace UnityEngine
         readonly Target m_Target;
         readonly UsageFlags m_UsageFlags;
 
+        internal GraphicsBuffer(GpuBufferStorage storage)
+        {
+            m_Storage = storage;
+            storage.AddView();
+            m_Target = (Target)storage.Usage;
+            m_Ptr = (IntPtr)(long)storage.Handle;
+        }
+
         public GraphicsBuffer(Target target, int count, int stride) : this(target, UsageFlags.None, count, stride) { }
 
         public GraphicsBuffer(Target target, UsageFlags usageFlags, int count, int stride)
@@ -184,44 +232,50 @@ namespace UnityEngine
             m_Ptr = (IntPtr)(long)m_Storage.Handle;
         }
 
-        ~GraphicsBuffer() { }
+        ~GraphicsBuffer()
+        {
+            if (m_Storage?.MeshOwned == true && m_Ptr != IntPtr.Zero)
+                MainThreadContext.Instance.Post(static state => ((GpuBufferStorage)state).ReleaseView(), m_Storage);
+        }
 
         internal ulong Handle => m_Storage.Handle;
-        internal GpuBufferStorage Storage => m_Storage;
+        internal GpuBufferStorage Storage => m_Ptr != IntPtr.Zero ? m_Storage : throw new NullReferenceException("Object reference not set to an instance of an object.");
 
         public void Dispose()
         {
-            m_Storage.Release();
+            if (m_Ptr == IntPtr.Zero) return;
+            if (m_Storage.MeshOwned) m_Storage.ReleaseView();
+            else m_Storage.Release();
             m_Ptr = IntPtr.Zero;
             GC.SuppressFinalize(this);
         }
 
         public void Release() => Dispose();
 
-        public bool IsValid() => m_Ptr != IntPtr.Zero;
+        public bool IsValid() => m_Ptr != IntPtr.Zero && !m_Storage.Released;
 
-        public int count => m_Storage.Count;
-        public int stride => m_Storage.Stride;
-        public Target target => m_Target;
-        public UsageFlags usageFlags => m_UsageFlags;
+        public int count => Storage.Count;
+        public int stride => Storage.Stride;
+        public Target target { get { _ = Storage; return m_Target; } }
+        public UsageFlags usageFlags { get { _ = Storage; return m_UsageFlags; } }
         [Unbound.EditorFaithful("write-only label for GPU debuggers: nothing a game can observe")]
         public string name { set { } }
 
-        public IntPtr GetNativeBufferPtr() => m_Ptr;
+        public IntPtr GetNativeBufferPtr() { _ = Storage; return m_Ptr; }
 
-        public void SetData(Array data) => m_Storage.SetData(data, 0, 0, data?.Length ?? 0, GpuBufferStorage.Graphics);
+        public void SetData(Array data) => Storage.SetData(data, 0, 0, data?.Length ?? 0, GpuBufferStorage.Graphics);
         public void SetData(Array data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count) =>
-            m_Storage.SetData(data, managedBufferStartIndex, graphicsBufferStartIndex, count, GpuBufferStorage.Graphics);
-        public void SetData<T>(List<T> data) where T : struct => m_Storage.SetData(data.ToArray(), 0, 0, data.Count, GpuBufferStorage.Graphics);
+            Storage.SetData(data, managedBufferStartIndex, graphicsBufferStartIndex, count, GpuBufferStorage.Graphics);
+        public void SetData<T>(List<T> data) where T : struct => Storage.SetData(data.ToArray(), 0, 0, data.Count, GpuBufferStorage.Graphics);
         public void SetData<T>(List<T> data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count) where T : struct =>
-            m_Storage.SetData(data.ToArray(), managedBufferStartIndex, graphicsBufferStartIndex, count, GpuBufferStorage.Graphics);
-        public void SetData<T>(NativeArray<T> data) where T : struct => m_Storage.SetData(data, 0, 0, data.Length, GpuBufferStorage.Graphics);
+            Storage.SetData(data.ToArray(), managedBufferStartIndex, graphicsBufferStartIndex, count, GpuBufferStorage.Graphics);
+        public void SetData<T>(NativeArray<T> data) where T : struct => Storage.SetData(data, 0, 0, data.Length, GpuBufferStorage.Graphics);
         public void SetData<T>(NativeArray<T> data, int nativeBufferStartIndex, int graphicsBufferStartIndex, int count) where T : struct =>
-            m_Storage.SetData(data, nativeBufferStartIndex, graphicsBufferStartIndex, count, GpuBufferStorage.Graphics);
+            Storage.SetData(data, nativeBufferStartIndex, graphicsBufferStartIndex, count, GpuBufferStorage.Graphics);
 
-        public void GetData(Array data) => m_Storage.GetData(data, 0, 0, data?.Length ?? 0);
+        public void GetData(Array data) => Storage.GetData(data, 0, 0, data?.Length ?? 0);
         public void GetData(Array data, int managedBufferStartIndex, int computeBufferStartIndex, int count) =>
-            m_Storage.GetData(data, managedBufferStartIndex, computeBufferStartIndex, count);
+            Storage.GetData(data, managedBufferStartIndex, computeBufferStartIndex, count);
 
         /// <summary>Sets the hidden counter of an Append or Counter buffer.</summary>
         public void SetCounterValue(uint counterValue) => GpuBufferOps.SetCounter(m_Storage, counterValue);
@@ -330,6 +384,7 @@ namespace Unbound.Runtime
         {
             if (source == null) throw new ArgumentNullException("src");
             if (destination == null) throw new ArgumentNullException("dst");
+            if (destination.MeshOwned) throw new NotSupportedException("Unbound: copying counters into mesh GraphicsBuffers is not supported; update the mesh CPU data instead.");
             if (offset % 4 != 0) UnityEngine.Debug.LogWarning("dstOffsetBytes must be a multiple of 4");
             if (offset < 0 || offset + 4 > destination.Size)
             {
@@ -349,6 +404,7 @@ namespace Unbound.Runtime
             var s = source.Storage;
             var d = dest.Storage;
             if (s.Released || d.Released) throw new NullReferenceException("Object reference not set to an instance of an object.");
+            if (d.MeshOwned) throw new NotSupportedException("Unbound: copying into mesh GraphicsBuffers is not supported; update the mesh CPU data instead.");
             if (s.Size != d.Size)
                 throw new ArgumentException($"CopyBuffer source and destination buffers must be the same size, source was {s.Size} bytes, dest was {d.Size} bytes");
             if (!s.Has(UnityEngine.GraphicsBuffer.Target.CopySource))

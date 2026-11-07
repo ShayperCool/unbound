@@ -79,12 +79,21 @@ namespace UnityEngine
             return false;
         }
 
+        internal const int MaxVertexAttributes = (int)VertexAttribute.BlendIndices + 1;
+
         /// <summary>The current layout: the attributes the mesh has, in VertexAttribute order, as
         /// SetVertexBufferParams described them or, set through the channel setters, in Unity's
         /// default formats (Float32 positions, normals, tangents and uvs, UNorm8 colors).</summary>
         internal VertexAttributeDescriptor[] Layout()
         {
-            var list = new List<VertexAttributeDescriptor>(14);
+            Span<VertexAttributeDescriptor> attributes = stackalloc VertexAttributeDescriptor[MaxVertexAttributes];
+            int count = FillLayout(attributes);
+            return attributes.Slice(0, count).ToArray();
+        }
+
+        internal int FillLayout(Span<VertexAttributeDescriptor> attributes)
+        {
+            int count = 0;
             for (var attr = VertexAttribute.Position; attr <= VertexAttribute.BlendIndices; attr++)
             {
                 if (!ChannelPresent(attr)) continue;
@@ -94,10 +103,10 @@ namespace UnityEngine
                         if (d.attribute == attr) custom = d;
                 if (custom.HasValue)
                 {
-                    list.Add(custom.Value);
+                    attributes[count++] = custom.Value;
                     continue;
                 }
-                list.Add(attr switch
+                attributes[count++] = attr switch
                 {
                     VertexAttribute.Position or VertexAttribute.Normal => new VertexAttributeDescriptor(attr, VertexAttributeFormat.Float32, 3),
                     VertexAttribute.Tangent => new VertexAttributeDescriptor(attr, VertexAttributeFormat.Float32, 4),
@@ -105,9 +114,9 @@ namespace UnityEngine
                     VertexAttribute.BlendWeight => new VertexAttributeDescriptor(attr, VertexAttributeFormat.Float32, 4),
                     VertexAttribute.BlendIndices => new VertexAttributeDescriptor(attr, VertexAttributeFormat.UInt32, 4),
                     _ => new VertexAttributeDescriptor(attr, VertexAttributeFormat.Float32, Math.Max(1, m_UVDimensions[(int)attr - (int)VertexAttribute.TexCoord0])),
-                });
+                };
             }
-            return list.ToArray();
+            return count;
         }
 
         public int vertexAttributeCount => Layout().Length;

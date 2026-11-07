@@ -109,7 +109,7 @@ namespace UnityEngine
             m_Bounds = source.m_Bounds;
             m_IndexFormat = source.m_IndexFormat;
             CopyBlendShapesFrom(source);
-            m_Dirty = true;
+            Changed();
         }
 
         /// <summary>Resources.UnloadAsset of a mesh asset (UnloadUnusedAssets keeps meshes: it
@@ -123,7 +123,7 @@ namespace UnityEngine
             m_IsReadable = saved.m_IsReadable;
         }
 
-        void Changed() => m_Dirty = true;
+        void Changed() { m_Dirty = true; m_GraphicsBuffersDirty = true; }
 
         public bool isReadable => m_IsReadable;
         public int vertexCount => m_Vertices.Length;
@@ -806,6 +806,7 @@ namespace UnityEngine
                     CheckVertexChannelLength(m_UVs[channel], count, "uv", channel);
             }
             if (m_Handle == 0) m_Handle = RenderHandles.Next();
+            SyncGraphicsBuffers();
             if (!m_Dirty) return m_Handle;
             m_Dirty = false;
             m_SyncVersion++;
@@ -868,6 +869,7 @@ namespace UnityEngine
 
         internal override void OnEngineDestroy()
         {
+            ReleaseGraphicsBufferOwner();
             Native.ReleaseMesh(m_Handle);
             m_Handle = 0;
         }

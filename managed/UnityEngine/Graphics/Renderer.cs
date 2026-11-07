@@ -712,7 +712,7 @@ namespace UnityEngine
             texture = null;
             if (m_Sprite == null || m_Sprite.texture == null) return false;
             mesh = m_DrawMode == SpriteDrawMode.Simple ? DeformedMesh() ?? m_Sprite.RenderMesh() : SlicedMesh();
-            model = transform.localToWorldMatrix;
+            model = UnityEngine.U2D.PixelPerfectRendering.Snap(transform.localToWorldMatrix);
             if (m_FlipX || m_FlipY) mesh = FlippedMesh(mesh);
             texture = m_Sprite.texture;
             return true;
@@ -1110,6 +1110,10 @@ namespace UnityEngine
     public partial struct SortingLayer
     {
         int m_Id;
+
+        public delegate void LayerCallback(SortingLayer layer);
+        public static LayerCallback onLayerAdded;
+        public static LayerCallback onLayerRemoved;
 
         internal static readonly List<(string Name, int Id)> s_Layers = new List<(string, int)> { ("Default", 0) };
 

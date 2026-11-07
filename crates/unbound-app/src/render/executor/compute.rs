@@ -16,6 +16,7 @@ use wgpu::util::DeviceExt;
 pub struct GpuBuffer {
     pub buffer: wgpu::Buffer,
     pub size: u64,
+    pub mesh_read_only: bool,
     /// A constant buffer's bytes as written (draws copy them into their uniform blocks; what
     /// compute kernels write into it is not seen).
     pub shadow: Option<Vec<u8>>,
@@ -240,6 +241,7 @@ impl UnityRenderer {
         self.buffers.insert(
             handle,
             GpuBuffer {
+                mesh_read_only: usage & buffer::MESH_READ_ONLY != 0,
                 buffer,
                 size,
                 shadow,
@@ -835,7 +837,7 @@ fn main() {
                     };
                     bound.push((r.binding, Bound::Buffer(counter)));
                 }
-                ResourceKind::Buffer { .. } => {
+                ResourceKind::Buffer { read_only } => {
                     let Some(b) = (match value {
                         Some(PropertyValue::Buffer(h)) => self.buffers.get(h),
                         _ => None,
@@ -848,6 +850,12 @@ fn main() {
                         });
                         return None;
                     };
+                    if b.mesh_read_only && !read_only {
+                        self.warn_once(format!("meshwrite{}{}", d.kernel, r.name), || {
+                            format!("kernel `{}` writes mesh buffer `{}`: GPU mesh editing is not supported; the dispatch is skipped. Update the mesh CPU data instead", d.kernel, r.name)
+                        });
+                        return None;
+                    }
                     bound.push((r.binding, Bound::Buffer(b.buffer.clone())));
                 }
                 ResourceKind::Texture { dim, sample } => {

@@ -1,0 +1,276 @@
+{"k":"mesh.default.targets","v":[1,2]}
+{"k":"mesh.empty.stream-1","v":"ArgumentException: Invalid buffer index -1 for Mesh 'empty'"}
+{"k":"mesh.empty.stream0","v":"ArgumentException: Mesh 'empty' vertex buffer #0 is null"}
+{"k":"mesh.empty.stream1","v":"ArgumentException: Mesh 'empty' vertex buffer #1 is null"}
+{"k":"mesh.empty.stream4","v":"ArgumentException: Invalid buffer index 4 for Mesh 'empty'"}
+{"k":"mesh.empty.index","v":"ArgumentException: Mesh 'empty' index buffer is null"}
+{"k":"mesh.flags0.set","v":"ok"}
+{"k":"mesh.flags0.targets","v":[1,2]}
+{"k":"mesh.flags0.v.null","v":false}
+{"k":"mesh.flags0.v.valid","v":true}
+{"k":"mesh.flags0.v.info","v":[3,12,1,0]}
+{"k":"mesh.flags0.v.properties","v":"ok"}
+{"k":"mesh.flags0.v.bytes","v":"zcxMv5qZGb8AAAAAzcxMP5qZGb8AAAAAAAAAAM3MTD8AAAAA"}
+{"k":"mesh.flags0.v.read","v":"ok"}
+{"k":"mesh.flags0.vertex","v":"ok"}
+{"k":"mesh.flags0.i.null","v":false}
+{"k":"mesh.flags0.i.valid","v":true}
+{"k":"mesh.flags0.i.info","v":[3,2,2,0]}
+{"k":"mesh.flags0.i.properties","v":"ok"}
+{"k":"mesh.flags0.i.bytes","v":"AAABAAIA"}
+{"k":"mesh.flags0.i.read","v":"ok"}
+{"k":"mesh.flags0.index","v":"ok"}
+{"k":"mesh.flags32.set","v":"ok"}
+{"k":"mesh.flags32.targets","v":[33,34]}
+{"k":"mesh.flags32.v.null","v":false}
+{"k":"mesh.flags32.v.valid","v":true}
+{"k":"mesh.flags32.v.info","v":[3,12,33,0]}
+{"k":"mesh.flags32.v.properties","v":"ok"}
+{"k":"mesh.flags32.v.bytes","v":"zcxMv5qZGb8AAAAAzcxMP5qZGb8AAAAAAAAAAM3MTD8AAAAA"}
+{"k":"mesh.flags32.v.read","v":"ok"}
+{"k":"mesh.flags32.vertex","v":"ok"}
+{"k":"mesh.flags32.i.null","v":false}
+{"k":"mesh.flags32.i.valid","v":true}
+{"k":"mesh.flags32.i.info","v":[4,2,34,0]}
+{"k":"mesh.flags32.i.properties","v":"ok"}
+{"k":"mesh.flags32.i.bytes","v":"AAABAAIAAAA="}
+{"k":"mesh.flags32.i.read","v":"ok"}
+{"k":"mesh.flags32.index","v":"ok"}
+{"k":"mesh.flags16.set","v":"ok"}
+{"k":"mesh.flags16.targets","v":[17,18]}
+{"k":"mesh.flags16.v.null","v":false}
+{"k":"mesh.flags16.v.valid","v":true}
+{"k":"mesh.flags16.v.info","v":[3,12,17,0]}
+{"k":"mesh.flags16.v.properties","v":"ok"}
+{"k":"mesh.flags16.v.bytes","v":"zcxMv5qZGb8AAAAAzcxMP5qZGb8AAAAAAAAAAM3MTD8AAAAA"}
+{"k":"mesh.flags16.v.read","v":"ok"}
+{"k":"mesh.flags16.vertex","v":"ok"}
+{"k":"mesh.flags16.i.null","v":false}
+{"k":"mesh.flags16.i.valid","v":true}
+{"k":"mesh.flags16.i.info","v":[4,2,18,0]}
+{"k":"mesh.flags16.i.properties","v":"ok"}
+{"k":"mesh.flags16.i.bytes","v":"AAABAAIAAAA="}
+{"k":"mesh.flags16.i.read","v":"ok"}
+{"k":"mesh.flags16.index","v":"ok"}
+{"k":"mesh.flags48.set","v":"ok"}
+{"k":"mesh.flags48.targets","v":[49,50]}
+{"k":"mesh.flags48.v.null","v":false}
+{"k":"mesh.flags48.v.valid","v":true}
+{"k":"mesh.flags48.v.info","v":[3,12,49,0]}
+{"k":"mesh.flags48.v.properties","v":"ok"}
+{"k":"mesh.flags48.v.bytes","v":"zcxMv5qZGb8AAAAAzcxMP5qZGb8AAAAAAAAAAM3MTD8AAAAA"}
+{"k":"mesh.flags48.v.read","v":"ok"}
+{"k":"mesh.flags48.vertex","v":"ok"}
+{"k":"mesh.flags48.i.null","v":false}
+{"k":"mesh.flags48.i.valid","v":true}
+{"k":"mesh.flags48.i.info","v":[4,2,50,0]}
+{"k":"mesh.flags48.i.properties","v":"ok"}
+{"k":"mesh.flags48.i.bytes","v":"AAABAAIAAAA="}
+{"k":"mesh.flags48.i.read","v":"ok"}
+{"k":"mesh.flags48.index","v":"ok"}
+{"k":"mesh.alias.sameObject","v":false}
+{"k":"mesh.alias.samePtr","v":true}
+{"k":"mesh.dispose.valid","v":false}
+{"k":"mesh.dispose.alias.null","v":false}
+{"k":"mesh.dispose.alias.valid","v":true}
+{"k":"mesh.dispose.alias.info","v":[3,12,33,0]}
+{"k":"mesh.dispose.alias.properties","v":"ok"}
+{"k":"mesh.dispose.alias.bytes","v":"zcxMv5qZGb8AAAAAzcxMP5qZGb8AAAAAAAAAAM3MTD8AAAAA"}
+{"k":"mesh.dispose.alias.read","v":"ok"}
+{"k":"mesh.dispose.twice","v":"ok"}
+{"k":"mesh.dispose.read","v":"NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"mesh.dispose.count","v":"NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"mesh.dispose.stride","v":"NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"mesh.dispose.target","v":"NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"mesh.dispose.ptr","v":"NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"mesh.dispose.reacquired.null","v":false}
+{"k":"mesh.dispose.reacquired.valid","v":true}
+{"k":"mesh.dispose.reacquired.info","v":[3,12,33,0]}
+{"k":"mesh.dispose.reacquired.properties","v":"ok"}
+{"k":"mesh.dispose.reacquired.bytes","v":"zcxMv5qZGb8AAAAAzcxMP5qZGb8AAAAAAAAAAM3MTD8AAAAA"}
+{"k":"mesh.dispose.reacquired.read","v":"ok"}
+{"k":"mesh.invalid.stream-1","v":"ArgumentException: Invalid buffer index -1 for Mesh 'probe mesh'"}
+{"k":"mesh.invalid.stream1","v":"ArgumentException: Mesh 'probe mesh' vertex buffer #1 is null"}
+{"k":"mesh.invalid.stream2","v":"ArgumentException: Mesh 'probe mesh' vertex buffer #2 is null"}
+{"k":"mesh.invalid.stream4","v":"ArgumentException: Invalid buffer index 4 for Mesh 'probe mesh'"}
+{"k":"mesh.edit.beforeUpload.valid","v":true}
+{"k":"mesh.edit.afterUpload.valid","v":true}
+{"k":"mesh.edit.samePtr","v":true}
+{"k":"mesh.edit.current.null","v":false}
+{"k":"mesh.edit.current.valid","v":true}
+{"k":"mesh.edit.current.info","v":[3,12,33,0]}
+{"k":"mesh.edit.current.properties","v":"ok"}
+{"k":"mesh.edit.current.bytes","v":"zcxMvpqZGb8AAAAAzcxMP5qZGb8AAAAAAAAAAM3MTD8AAAAA"}
+{"k":"mesh.edit.current.read","v":"ok"}
+{"k":"mesh.layout.old.valid","v":false}
+{"k":"mesh.layout.old.countValue","v":3}
+{"k":"mesh.layout.old.count","v":"ok"}
+{"k":"mesh.layout.old.ptrZero","v":false}
+{"k":"mesh.layout.old.ptr","v":"ok"}
+{"k":"mesh.layout.invalidated.null","v":false}
+{"k":"mesh.layout.invalidated.valid","v":false}
+{"k":"mesh.layout.invalidated.info","v":[3,12,33,0]}
+{"k":"mesh.layout.invalidated.properties","v":"ok"}
+{"k":"mesh.layout.invalidated.bytes","v":"zcxMvpqZGb8AAAAAzcxMP5qZGb8AAAAAAAAAAM3MTD8AAAAA"}
+{"k":"mesh.layout.invalidated.read","v":"ok"}
+{"k":"mesh.layout.samePtr","v":false}
+{"k":"mesh.layout.current.null","v":false}
+{"k":"mesh.layout.current.valid","v":true}
+{"k":"mesh.layout.current.info","v":[3,24,33,0]}
+{"k":"mesh.layout.current.properties","v":"ok"}
+{"k":"mesh.layout.current.bytes","v":"zcxMvpqZGb8AAAAAAAAAAAAAAAAAAIA/zcxMP5qZGb8AAAAAAAAAAAAAAAAAAIA/AAAAAM3MTD8AAAAAAAAAAAAAAAAAAIA/"}
+{"k":"mesh.layout.current.read","v":"ok"}
+{"k":"mesh.resize.old.valid","v":false}
+{"k":"mesh.index.edit.old.valid","v":true}
+{"k":"mesh.index.edit.samePtr","v":true}
+{"k":"mesh.unreadable","v":false}
+{"k":"mesh.unreadable.v.null","v":false}
+{"k":"mesh.unreadable.v.valid","v":true}
+{"k":"mesh.unreadable.v.info","v":[4,24,33,0]}
+{"k":"mesh.unreadable.v.properties","v":"ok"}
+{"k":"mesh.unreadable.v.bytes","v":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA/AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AACAPwAAgD8AAIA/AAAAAAAAAAAAAAAA"}
+{"k":"mesh.unreadable.v.read","v":"ok"}
+{"k":"mesh.unreadable.vertex","v":"ok"}
+{"k":"mesh.unreadable.i.null","v":false}
+{"k":"mesh.unreadable.i.valid","v":true}
+{"k":"mesh.unreadable.i.info","v":[4,2,34,0]}
+{"k":"mesh.unreadable.i.properties","v":"ok"}
+{"k":"mesh.unreadable.i.bytes","v":"AgABAAAAAAA="}
+{"k":"mesh.unreadable.i.read","v":"ok"}
+{"k":"mesh.unreadable.index","v":"ok"}
+{"k":"mesh.destroy.vertex.valid","v":true}
+{"k":"mesh.destroy.index.valid","v":true}
+{"k":"mesh.destroy.retained.vertex.null","v":false}
+{"k":"mesh.destroy.retained.vertex.valid","v":true}
+{"k":"mesh.destroy.retained.vertex.info","v":[4,24,33,0]}
+{"k":"mesh.destroy.retained.vertex.properties","v":"ok"}
+{"k":"mesh.destroy.retained.vertex.bytes","v":"WlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpa"}
+{"k":"mesh.destroy.retained.vertex.read","v":"ok"}
+{"k":"mesh.destroy.retained.index.null","v":false}
+{"k":"mesh.destroy.retained.index.valid","v":true}
+{"k":"mesh.destroy.retained.index.info","v":[4,2,34,0]}
+{"k":"mesh.destroy.retained.index.properties","v":"ok"}
+{"k":"mesh.destroy.retained.index.bytes","v":"WlpaWlpaWlo="}
+{"k":"mesh.destroy.retained.index.read","v":"ok"}
+{"k":"mesh.multi.v0.null","v":false}
+{"k":"mesh.multi.v0.valid","v":true}
+{"k":"mesh.multi.v0.info","v":[3,12,1,0]}
+{"k":"mesh.multi.v0.properties","v":"ok"}
+{"k":"mesh.multi.v0.bytes","v":"zcxMv5qZGb8AAAAAzcxMP5qZGb8AAAAAAAAAAM3MTD8AAAAA"}
+{"k":"mesh.multi.v0.read","v":"ok"}
+{"k":"mesh.multi.v1.null","v":false}
+{"k":"mesh.multi.v1.valid","v":true}
+{"k":"mesh.multi.v1.info","v":[3,4,1,0]}
+{"k":"mesh.multi.v1.properties","v":"ok"}
+{"k":"mesh.multi.v1.bytes","v":"AQIDBAUGBwgJCgsM"}
+{"k":"mesh.multi.v1.read","v":"ok"}
+{"k":"mesh.multi.i.null","v":false}
+{"k":"mesh.multi.i.valid","v":true}
+{"k":"mesh.multi.i.info","v":[3,4,2,0]}
+{"k":"mesh.multi.i.properties","v":"ok"}
+{"k":"mesh.multi.i.bytes","v":"AgAAAAEAAAAAAAAA"}
+{"k":"mesh.multi.i.read","v":"ok"}
+{"k":"mesh.compute.words","v":[3209481421,1061997773,65536,2]}
+{"k":"sorting.count","v":3}
+{"k":"sorting.layer0.name","v":"Back"}
+{"k":"sorting.layer0.id","v":101}
+{"k":"sorting.layer0.value","v":-1}
+{"k":"sorting.layer0.valid","v":true}
+{"k":"sorting.layer0.byName","v":101}
+{"k":"sorting.layer0.valueByName","v":-1}
+{"k":"sorting.layer1.name","v":"Default"}
+{"k":"sorting.layer1.id","v":0}
+{"k":"sorting.layer1.value","v":0}
+{"k":"sorting.layer1.valid","v":true}
+{"k":"sorting.layer1.byName","v":0}
+{"k":"sorting.layer1.valueByName","v":0}
+{"k":"sorting.layer2.name","v":"Fore"}
+{"k":"sorting.layer2.id","v":202}
+{"k":"sorting.layer2.value","v":1}
+{"k":"sorting.layer2.valid","v":true}
+{"k":"sorting.layer2.byName","v":202}
+{"k":"sorting.layer2.valueByName","v":1}
+{"k":"sorting.id0.valid","v":true}
+{"k":"sorting.id0.name","v":"Default"}
+{"k":"sorting.id0.value","v":0}
+{"k":"sorting.id-1.valid","v":false}
+{"k":"sorting.id-1.name","v":"<unknown layer>"}
+{"k":"sorting.id-1.value","v":0}
+{"k":"sorting.id123456.valid","v":false}
+{"k":"sorting.id123456.name","v":"<unknown layer>"}
+{"k":"sorting.id123456.value","v":0}
+{"k":"sorting.name.Default.id","v":0}
+{"k":"sorting.name.Default","v":"ok"}
+{"k":"sorting.name.missing.id","v":0}
+{"k":"sorting.name.missing","v":"ok"}
+{"k":"sorting.name..id","v":0}
+{"k":"sorting.name.","v":"ok"}
+{"k":"sorting.name.null.id","v":0}
+{"k":"sorting.name.null","v":"ok"}
+{"k":"gizmos.default.color","v":[1,1,1,1]}
+{"k":"gizmos.default.matrix","v":"0\t0\t0\t0\n0\t0\t0\t0\n0\t0\t0\t0\n0\t0\t0\t0\n"}
+{"k":"gizmos.default.exposure","v":true}
+{"k":"gizmos.probeSize","v":0.299999982}
+{"k":"gizmos.construct","v":"ok"}
+{"k":"gizmos.color.set","v":"ok"}
+{"k":"gizmos.color","v":[0.2,0.3019608,0.4,0.5019608]}
+{"k":"gizmos.color.0.1","v":[0.101960786,0.101960786,0.101960786,0.101960786]}
+{"k":"gizmos.color.0.3","v":[0.3019608,0.3019608,0.3019608,0.3019608]}
+{"k":"gizmos.color.0.5","v":[0.5019608,0.5019608,0.5019608,0.5019608]}
+{"k":"gizmos.color.0.7","v":[0.7019608,0.7019608,0.7019608,0.7019608]}
+{"k":"gizmos.color.0.9","v":[0.9019608,0.9019608,0.9019608,0.9019608]}
+{"k":"gizmos.color.-1","v":[0,0,0,0]}
+{"k":"gizmos.color.2","v":[1,1,1,1]}
+{"k":"gizmos.matrix.set","v":"ok"}
+{"k":"gizmos.matrix.kept","v":true}
+{"k":"gizmos.exposure.set","v":"ok"}
+{"k":"gizmos.exposure.kept","v":true}
+{"k":"gizmos.lod.value","v":"NaN"}
+{"k":"gizmos.lod","v":"ok"}
+{"k":"gizmos.line","v":"ArgumentException: Gizmo drawing functions can only be used in OnDrawGizmos and OnDrawGizmosSelected."}
+{"k":"gizmos.ray","v":"ArgumentException: Gizmo drawing functions can only be used in OnDrawGizmos and OnDrawGizmosSelected."}
+{"k":"gizmos.cube","v":"ArgumentException: Gizmo drawing functions can only be used in OnDrawGizmos and OnDrawGizmosSelected."}
+{"k":"gizmos.wireCube","v":"ArgumentException: Gizmo drawing functions can only be used in OnDrawGizmos and OnDrawGizmosSelected."}
+{"k":"gizmos.sphere","v":"ArgumentException: Gizmo drawing functions can only be used in OnDrawGizmos and OnDrawGizmosSelected."}
+{"k":"gizmos.wireSphere","v":"ArgumentException: Gizmo drawing functions can only be used in OnDrawGizmos and OnDrawGizmosSelected."}
+{"k":"gizmos.mesh.null","v":"ArgumentException: Gizmo drawing functions can only be used in OnDrawGizmos and OnDrawGizmosSelected."}
+{"k":"gizmos.wireMesh.null","v":"ArgumentException: Gizmo drawing functions can only be used in OnDrawGizmos and OnDrawGizmosSelected."}
+{"k":"gizmos.icon.null","v":"ArgumentException: Gizmo drawing functions can only be used in OnDrawGizmos and OnDrawGizmosSelected."}
+{"k":"gizmos.icon.missing","v":"ArgumentException: Gizmo drawing functions can only be used in OnDrawGizmos and OnDrawGizmosSelected."}
+{"k":"gizmos.texture.null","v":"ArgumentException: Gizmo drawing functions can only be used in OnDrawGizmos and OnDrawGizmosSelected."}
+{"k":"gizmos.frustum","v":"ok"}
+{"k":"gizmos.list.empty","v":"ArgumentException: Gizmo drawing functions can only be used in OnDrawGizmos and OnDrawGizmosSelected."}
+{"k":"gizmos.list.odd","v":"UnityException: You cannot draw a line list from an odd number of points, with two points per line the number of points must be even"}
+{"k":"gizmos.list.even","v":"ArgumentException: Gizmo drawing functions can only be used in OnDrawGizmos and OnDrawGizmosSelected."}
+{"k":"gizmos.strip.empty","v":"ArgumentException: Gizmo drawing functions can only be used in OnDrawGizmos and OnDrawGizmosSelected."}
+{"k":"gizmos.strip.single","v":"ArgumentException: Gizmo drawing functions can only be used in OnDrawGizmos and OnDrawGizmosSelected."}
+{"k":"pixel.default","v":0}
+{"k":"pixel.0.set","v":"ok"}
+{"k":"pixel.0.get","v":0}
+{"k":"pixel.0.pixels","v":6144}
+{"k":"pixel.0.position","v":[0.17,-0.19,0]}
+{"k":"pixel.0.25.set","v":"ok"}
+{"k":"pixel.0.25.get","v":0.25}
+{"k":"pixel.0.25.pixels","v":6144}
+{"k":"pixel.0.25.position","v":[0.17,-0.19,0]}
+{"k":"pixel.0.5.set","v":"ok"}
+{"k":"pixel.0.5.get","v":0.5}
+{"k":"pixel.0.5.pixels","v":6144}
+{"k":"pixel.0.5.position","v":[0.17,-0.19,0]}
+{"k":"pixel.-0.25.set","v":"ok"}
+{"k":"pixel.-0.25.get","v":-0.25}
+{"k":"pixel.-0.25.pixels","v":6144}
+{"k":"pixel.-0.25.position","v":[0.17,-0.19,0]}
+{"k":"pixel.NaN.set","v":"ok"}
+{"k":"pixel.NaN.get","v":"NaN"}
+{"k":"pixel.Infinity.set","v":"ok"}
+{"k":"pixel.Infinity.get","v":"Infinity"}
+{"k":"mesh.shader.pixels","v":6144}
+{"k":"gizmos.cameraRender.pixels","v":6144}
+{"k":"gizmos.game.False.pixels","v":6144}
+{"k":"gizmos.game.False.callback","v":false}
+{"k":"gizmos.game.True.pixels","v":6144}
+{"k":"gizmos.game.True.callback","v":true}
+{"k":"sorting.added","v":0}
+{"k":"sorting.removed","v":0}
+{"k":"complete","v":true}
