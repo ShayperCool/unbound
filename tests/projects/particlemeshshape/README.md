@@ -4,8 +4,9 @@ Where the Shape module's Mesh, MeshRenderer and SkinnedMeshRenderer shapes emit 
 6000.0.71f1, and what a system built with `AddComponent<ParticleSystem>()` has before it is
 activated. `Assets/Scripts/MeshShapeProbe.cs` builds every system in code (local space, constant
 start values, start speed 1 so the velocity is the emission direction, seed 1234 unless stated)
-and records, per particle, position, velocity, start colour (bytes), `rotation3D` and the seed's
-halves after `Simulate` calls with fixed steps. Meshes: three triangles of different areas in two
+and records, per particle, position, velocity, `rotation3D` and the seed's halves after
+`Simulate` calls with fixed steps, and the start colours (bytes) in a `/color` record of their own.
+Meshes: three triangles of different areas in two
 submeshes with tilted normals, vertex colours and an unused vertex (`tris`); a 3x3 grid with a
 zero-area triangle and a coincident vertex (`grid`); lines, points, an empty mesh, no mesh, and a
 mesh made non-readable with `UploadMeshData(true)`.
@@ -24,7 +25,7 @@ renderer right after `AddComponent<ParticleSystem>()` on an active and an inacti
     python3 tests/projects/particlemeshshape/run.py publish native1 native2  # two identical captures
     python3 tests/projects/particlemeshshape/run.py check                    # Unbound run + compare (the gate)
 
-The reference is `Reference/unity-6000.0.71f1.jsonl` (299 records; two independent GPU Editor
+The reference is `Reference/unity-6000.0.71f1.jsonl` (484 records; two independent GPU Editor
 captures were byte-identical). The comparator is `particletrails/compare.py` at the particle
 probes' bound, with the differences in `known.json`.
 
@@ -56,8 +57,9 @@ Everything below is measured in this release, not documented.
 
 ## Known differences (`known.json`)
 
-- `colour-blend` (31 records): alpha, and where the weights come from a loop-mode edge position any
-  channel, can differ by 1/255. Recorded as an insignificant residual.
+- `colour-blend` (31 `/color` records): alpha, and where the weights come from a loop-mode edge
+  position any channel, can differ by 1/255. Recorded as an insignificant residual; positions,
+  directions and rotations stay in the strictly compared records.
 - `lines-topology` (5): Unity reads a lines mesh's index buffer as triangles; Unbound warns the
   same and emits at the origin, as Unity does for points.
 - `spread-boundary` (8): two rate particles born exactly on a spread step snap to the step before

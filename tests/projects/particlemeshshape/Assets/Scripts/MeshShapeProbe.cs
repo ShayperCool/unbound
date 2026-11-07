@@ -168,24 +168,26 @@ public class MeshShapeProbe : MonoBehaviour
         return ps;
     }
 
-    /// <summary>time, count, then per particle: position, velocity,
-    /// colour (bytes), 3D rotation and the seed's halves.</summary>
+    /// <summary>time, count, then per particle: position, velocity, 3D rotation and the seed's
+    /// halves; the start colours (bytes) go to a record of their own, key + "/color".</summary>
     static void RecordParticles(string key, ParticleSystem ps)
     {
         Array.Clear(s_Buffer, 0, s_Buffer.Length);
         int n = ps.GetParticles(s_Buffer);
         var v = new List<float> { ps.time, n };
+        var colors = new List<float> { n };
         for (int i = 0; i < n; i++)
         {
             var p = s_Buffer[i];
             v.Add(p.position.x); v.Add(p.position.y); v.Add(p.position.z);
             v.Add(p.velocity.x); v.Add(p.velocity.y); v.Add(p.velocity.z);
-            var c = p.startColor;
-            v.Add(c.r); v.Add(c.g); v.Add(c.b); v.Add(c.a);
             v.Add(p.rotation3D.x); v.Add(p.rotation3D.y); v.Add(p.rotation3D.z);
             v.Add(p.randomSeed & 0xffff); v.Add(p.randomSeed >> 16);
+            var c = p.startColor;
+            colors.Add(c.r); colors.Add(c.g); colors.Add(c.b); colors.Add(c.a);
         }
         Record(key, v);
+        Record(key + "/color", colors);
     }
 
     /// <summary>Simulates the system from its start with each call (seconds, fixed steps),

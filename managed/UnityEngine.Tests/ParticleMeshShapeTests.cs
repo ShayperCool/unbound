@@ -433,6 +433,20 @@ namespace UnityEngine.Tests
                 // Every posed vertex, none of the bind pose's (random vertices: one missing in 60
                 // draws has a probability below 1e-10).
                 Assert.Equal(3, seen.Count);
+
+                // A new pose takes the new positions and keeps the triangles and their areas
+                // (those of the rest mesh) in the arrays they had.
+                var table = ps.m_MeshShapeTable;
+                var triangles = table.Triangles;
+                var areas = table.AreaEnds;
+                float total = table.TotalArea;
+                boneB.localPosition += new Vector3(1f, 0f, 0f);
+                Time.s_FrameCount++;
+                ps.Emit(1);
+                Assert.Same(triangles, table.Triangles);
+                Assert.Same(areas, table.AreaEnds);
+                Assert.Equal(total, table.TotalArea);
+                Assert.Contains(new Vector3(3f, 1f, 0f), table.Vertices);
             }
             finally
             {

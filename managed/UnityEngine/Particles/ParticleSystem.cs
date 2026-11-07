@@ -1095,6 +1095,8 @@ namespace UnityEngine
             if (m_GameObject == null || m_GameObject.m_IsPrefabAsset || m_Registered) return;
             m_Registered = true;
             ParticleSystemManager.Add(this);
+            // A serialized system saved without its renderer gets one here (Unbound's choice,
+            // unmeasured; AddComponent adds it with the system).
             if (m_GameObject.GetComponent<ParticleSystemRenderer>() == null)
                 m_GameObject.AddComponent<ParticleSystemRenderer>();
             SubEmittersChanged();
@@ -1455,7 +1457,14 @@ namespace Unbound.Runtime
                 for (int i = 0; i < n; i++)
                 {
                     var ps = s_Snapshot[i];
-                    if (ps == null || !ps.m_Registered || DestroyRequested(ps)) continue;
+                    if (ps == null || !ps.m_Registered) continue;
+                    if (DestroyRequested(ps))
+                    {
+                        // No update, so none of last frame's events goes out again either.
+                        ps.m_CollisionEvents.Clear();
+                        ps.ClearTriggerEvents();
+                        continue;
+                    }
                     try { ps.CullingFrameUpdate(); }
                     catch (Exception e) { Debug.LogException(e, ps); }
                 }

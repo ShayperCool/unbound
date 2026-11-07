@@ -44,56 +44,84 @@ namespace UnityEngine
         int m_MeshVertexCursor;
         /// <summary>The particle being sampled fills a batch lane that is discarded.</summary>
         bool m_ShapeSampleDiscarded;
-        MeshShapeTable m_MeshShapeTable;
+        internal MeshShapeTable m_MeshShapeTable;
         HashSet<(int, MeshShapeProblem)> m_MeshShapeWarnings;
         static readonly int s_ColorId = Shader.PropertyToID("_Color");
         static readonly int s_TintColorId = Shader.PropertyToID("_TintColor");
 
         enum MeshShapeProblem { NotValid, ZeroSurface, NotTriangles }
 
-        /// <summary>A mesh prepared for sampling, and what it was prepared from: a table is used
-        /// again only while all of that is unchanged.</summary>
-        sealed class MeshShapeTable
+        /// <summary>A mesh prepared for sampling, and what it was prepared from. Its two parts are
+        /// kept apart: the triangles with their area weights change only with the topology (a
+        /// skinned renderer's rest mesh), the positions, normals and colours with every pose; a
+        /// part is rebuilt only when what it was built from changed, into the arrays it already has
+        /// when the sizes allow.</summary>
+        internal sealed class MeshShapeTable
         {
+            // What the vertex part was built from.
             internal Mesh Mesh;
             internal Vector3[] SourceVertices, SourceNormals;
             internal Color32[] SourceColors;
-            internal (int[] Indices, int BaseVertex, MeshTopology Topology)[] SourceSubMeshes;
             internal int SyncVersion;
             internal Matrix4x4 ToLocal;
             internal Vector3 Scale;
-            /// <summary>A skinned renderer's rest-pose vertices, whose areas weigh the triangles.</summary>
-            internal Vector3[] RestVertices;
-            internal int SubMesh;
             /// <summary>Built while the mesh had unsent changes: valid for the frame it was built
             /// in only (in-place vertex buffer writes keep the arrays), so a mesh that is never
             /// drawn is prepared at most once a frame, not once a particle.</summary>
             internal bool BuiltDirty;
             internal int BuiltFrame;
 
-            internal Vector3[] Vertices, Normals;
+            // What the topology part was built from.
+            internal Mesh TopologyMesh;
+            internal Vector3[] AreaVertices;
+            internal (int[] Indices, int BaseVertex, MeshTopology Topology)[] SourceSubMeshes = Array.Empty<(int[], int, MeshTopology)>();
+            internal int TopologySyncVersion;
+            internal int SubMesh;
+            internal bool TopologyBuiltDirty;
+            internal int TopologyBuiltFrame;
+            internal bool HasTopology;
+
+            internal Vector3[] Vertices = Array.Empty<Vector3>(), Normals;
             internal Color32[] Colors;
+            Vector3[] m_LocalScratch = Array.Empty<Vector3>(), m_NormalScratch = Array.Empty<Vector3>();
             /// <summary>Triangle corners of the triangle submeshes (the selected one with Single
             /// Material), degenerate triangles included.</summary>
-            internal int[] Triangles;
+            internal int[] Triangles = Array.Empty<int>();
+            internal int TriangleCount;
             /// <summary>Per submesh in <see cref="SubMeshes"/>, the end of its triangles.</summary>
-            internal int[] SubMeshTriangleEnds;
-            internal int[] SubMeshes;
+            internal int[] SubMeshTriangleEnds = Array.Empty<int>();
+            internal int[] SubMeshes = Array.Empty<int>();
+            internal int SubMeshCount;
             /// <summary>Running sums of the triangle areas.</summary>
-            internal float[] AreaEnds;
+            internal float[] AreaEnds = Array.Empty<float>();
             /// <summary>Some (selected) submesh is not made of triangles.</summary>
             internal bool SkippedTopology;
 
-            internal int TriangleCount => Triangles.Length / 3;
-            internal float TotalArea => AreaEnds.Length > 0 ? AreaEnds[AreaEnds.Length - 1] : 0f;
+            internal float TotalArea => TriangleCount > 0 ? AreaEnds[TriangleCount - 1] : 0f;
 
-            internal bool Matches(Mesh mesh, Matrix4x4 toLocal, Vector3 scale, int subMesh, int frame)
+            static bool Fresh(Mesh mesh, bool builtDirty, int builtFrame, int frame) => !mesh.m_Dirty || builtDirty && builtFrame == frame;
+
+            internal void Update(Mesh mesh, Matrix4x4 toLocal, Vector3 scale, Mesh topologyMesh, int subMesh, int frame)
             {
-                if (!ReferenceEquals(Mesh, mesh) || !ReferenceEquals(SourceVertices, mesh.m_Vertices) || !ReferenceEquals(SourceNormals, mesh.m_Normals)
-                    || !ReferenceEquals(SourceColors, mesh.m_Colors) || SyncVersion != mesh.m_SyncVersion || SubMesh != subMesh || !ToLocal.Equals(toLocal) || Scale != scale
-                    || SourceSubMeshes.Length != mesh.m_SubMeshes.Count)
+                bool vertices = ReferenceEquals(Mesh, mesh) && ReferenceEquals(SourceVertices, mesh.m_Vertices) && ReferenceEquals(SourceNormals, mesh.m_Normals)
+                    && ReferenceEquals(SourceColors, mesh.m_Colors) && SyncVersion == mesh.m_SyncVersion && ToLocal.Equals(toLocal) && Scale == scale
+                    && Fresh(mesh, BuiltDirty, BuiltFrame, frame);
+                if (!vertices) BuildVertices(mesh, toLocal, scale, frame);
+                // The areas weigh the unscaled mesh: the rest mesh's vertices for a deformed pose,
+                // the mesh's own when it is drawn as it is, else the pose brought back unscaled.
+                var areaVertices = !ReferenceEquals(topologyMesh, mesh) ? topologyMesh.m_Vertices : toLocal.isIdentity ? mesh.m_Vertices : null;
+                if (HasTopology && TopologyMatches(topologyMesh, areaVertices, subMesh, frame)) return;
+                BuildTopology(topologyMesh, areaVertices ?? m_LocalScratch, subMesh, frame);
+                AreaVertices = areaVertices;
+            }
+
+            bool TopologyMatches(Mesh mesh, Vector3[] areaVertices, int subMesh, int frame)
+            {
+                // Without its own area vertices the topology follows every pose.
+                if (areaVertices == null || !ReferenceEquals(AreaVertices, areaVertices)) return false;
+                if (!ReferenceEquals(TopologyMesh, mesh) || TopologySyncVersion != mesh.m_SyncVersion || SubMesh != subMesh
+                    || SourceSubMeshes.Length != mesh.m_SubMeshes.Count || !Fresh(mesh, TopologyBuiltDirty, TopologyBuiltFrame, frame))
                     return false;
-                if (mesh.m_Dirty && !(BuiltDirty && BuiltFrame == frame)) return false;
                 for (int s = 0; s < SourceSubMeshes.Length; s++)
                 {
                     var sm = mesh.m_SubMeshes[s];
@@ -101,6 +129,96 @@ namespace UnityEngine
                     if (!ReferenceEquals(built.Indices, sm.Indices) || built.BaseVertex != sm.BaseVertex || built.Topology != sm.Topology) return false;
                 }
                 return true;
+            }
+
+            void BuildVertices(Mesh mesh, Matrix4x4 toLocal, Vector3 scale, int frame)
+            {
+                var source = mesh.m_Vertices;
+                int n = source.Length;
+                Mesh = mesh; SourceVertices = source; SourceNormals = mesh.m_Normals; SourceColors = mesh.m_Colors;
+                SyncVersion = mesh.m_SyncVersion; ToLocal = toLocal; Scale = scale;
+                BuiltDirty = mesh.m_Dirty; BuiltFrame = frame;
+                // Positions and normals take the scale (the areas do not).
+                var local = source;
+                if (!toLocal.isIdentity)
+                {
+                    if (m_LocalScratch.Length != n) m_LocalScratch = new Vector3[n];
+                    for (int i = 0; i < n; i++) m_LocalScratch[i] = toLocal.MultiplyPoint3x4(source[i]);
+                    local = m_LocalScratch;
+                }
+                if (scale == Vector3.one) Vertices = local;
+                else
+                {
+                    if (ReferenceEquals(Vertices, source) || ReferenceEquals(Vertices, m_LocalScratch) || Vertices.Length != n) Vertices = new Vector3[n];
+                    for (int i = 0; i < n; i++) Vertices[i] = Vector3.Scale(local[i], scale);
+                }
+                var toFrame = Matrix4x4.Scale(scale) * toLocal;
+                var normals = mesh.m_Normals;
+                if (normals == null || normals.Length != n) Normals = null;
+                else if (toFrame.isIdentity) Normals = normals;
+                else
+                {
+                    if (m_NormalScratch.Length != n) m_NormalScratch = new Vector3[n];
+                    for (int i = 0; i < n; i++) m_NormalScratch[i] = toFrame.MultiplyVector(normals[i]);
+                    Normals = m_NormalScratch;
+                }
+                var colors = mesh.m_Colors;
+                Colors = colors != null && colors.Length == n ? colors : null;
+            }
+
+            void BuildTopology(Mesh mesh, Vector3[] areaVertices, int subMesh, int frame)
+            {
+                int n = areaVertices.Length;
+                TopologyMesh = mesh; TopologySyncVersion = mesh.m_SyncVersion; SubMesh = subMesh;
+                TopologyBuiltDirty = mesh.m_Dirty; TopologyBuiltFrame = frame; HasTopology = true;
+                if (SourceSubMeshes.Length != mesh.m_SubMeshes.Count) SourceSubMeshes = new (int[], int, MeshTopology)[mesh.m_SubMeshes.Count];
+                int count = 0, parts = 0;
+                SkippedTopology = false;
+                for (int s = 0; s < mesh.m_SubMeshes.Count; s++)
+                {
+                    var sm = mesh.m_SubMeshes[s];
+                    SourceSubMeshes[s] = (sm.Indices, sm.BaseVertex, sm.Topology);
+                    if (subMesh >= 0 && s != subMesh) continue;
+                    if (sm.Topology == MeshTopology.Triangles)
+                    {
+                        count += sm.Indices.Length / 3;
+                        parts++;
+                    }
+                    else if (sm.Indices.Length > 0) SkippedTopology = true;
+                }
+                if (Triangles.Length < count * 3) Triangles = new int[count * 3];
+                if (AreaEnds.Length < count) AreaEnds = new float[count];
+                if (SubMeshes.Length < parts)
+                {
+                    SubMeshes = new int[parts];
+                    SubMeshTriangleEnds = new int[parts];
+                }
+                int k = 0, part = 0;
+                for (int s = 0; s < mesh.m_SubMeshes.Count; s++)
+                {
+                    var sm = mesh.m_SubMeshes[s];
+                    if (subMesh >= 0 && s != subMesh || sm.Topology != MeshTopology.Triangles) continue;
+                    var indices = sm.Indices;
+                    for (int i = 0; i + 2 < indices.Length; i += 3)
+                    {
+                        int a = indices[i] + sm.BaseVertex, b = indices[i + 1] + sm.BaseVertex, c = indices[i + 2] + sm.BaseVertex;
+                        if ((uint)a >= (uint)n || (uint)b >= (uint)n || (uint)c >= (uint)n) continue;
+                        Triangles[k++] = a;
+                        Triangles[k++] = b;
+                        Triangles[k++] = c;
+                    }
+                    SubMeshes[part] = s;
+                    SubMeshTriangleEnds[part++] = k / 3;
+                }
+                TriangleCount = k / 3;
+                SubMeshCount = part;
+                float area = 0f;
+                for (int i = 0; i < TriangleCount; i++)
+                {
+                    var a = areaVertices[Triangles[i * 3]];
+                    area += 0.5f * Vector3.Cross(areaVertices[Triangles[i * 3 + 1]] - a, areaVertices[Triangles[i * 3 + 2]] - a).magnitude;
+                    AreaEnds[i] = area;
+                }
             }
         }
 
@@ -114,13 +232,13 @@ namespace UnityEngine
             var S = m_Shape;
             pos = Vector3.zero;
             dir = Vector3.forward;
-            var mesh = MeshShapeSource(out var toLocal, out var scale, out var renderer, out var restVertices);
+            var mesh = MeshShapeSource(out var toLocal, out var scale, out var renderer, out var topologyMesh);
             if (mesh == null)
             {
                 if (S.meshShapeType != ParticleSystemMeshShapeType.Vertex) WarnMeshShape(null, MeshShapeProblem.ZeroSurface);
                 return;
             }
-            var t = MeshShapeTableFor(mesh, toLocal, scale, restVertices);
+            var t = MeshShapeTableFor(mesh, toLocal, scale, topologyMesh);
             if (t.TriangleCount == 0)
             {
                 WarnMeshShape(mesh, MeshShapeProblem.NotValid);
@@ -144,8 +262,8 @@ namespace UnityEngine
                 }
                 else if (renderer != null)
                 {
-                    // The material of the particle's submesh (Single Material: its slot).
-                    int slot = S.useMeshMaterialIndex ? S.meshMaterialIndex : triangle >= 0 ? MeshShapeSubMesh(t, triangle) : 0;
+                    // The material of the particle's submesh (Single Material: its submesh's slot).
+                    int slot = S.useMeshMaterialIndex ? t.SubMesh : triangle >= 0 ? MeshShapeSubMesh(t, triangle) : 0;
                     var materials = renderer.m_Materials;
                     m_ShapeColorSet = slot >= 0 && slot < materials.Length && MaterialShapeColor(materials[slot], out m_ShapeColor);
                 }
@@ -155,9 +273,8 @@ namespace UnityEngine
         /// <summary>The submesh a triangle of the table belongs to.</summary>
         static int MeshShapeSubMesh(MeshShapeTable t, int triangle)
         {
-            var ends = t.SubMeshTriangleEnds;
-            for (int i = 0; i < ends.Length; i++)
-                if (triangle < ends[i]) return t.SubMeshes[i];
+            for (int i = 0; i < t.SubMeshCount; i++)
+                if (triangle < t.SubMeshTriangleEnds[i]) return t.SubMeshes[i];
             return 0;
         }
 
@@ -165,10 +282,10 @@ namespace UnityEngine
         /// unscaled space (identity unless the renderer's current pose is a deformed copy) and
         /// the renderer's scale (sets <see cref="m_ShapeFrameSet"/> for renderers); the renderer,
         /// whose materials Use Mesh Colors falls back to.</summary>
-        Mesh MeshShapeSource(out Matrix4x4 toLocal, out Vector3 scale, out Renderer renderer, out Vector3[] restVertices)
+        Mesh MeshShapeSource(out Matrix4x4 toLocal, out Vector3 scale, out Renderer renderer, out Mesh topologyMesh)
         {
             var S = m_Shape;
-            restVertices = null;
+            topologyMesh = null;
             toLocal = Matrix4x4.identity;
             scale = Vector3.one;
             renderer = null;
@@ -176,6 +293,7 @@ namespace UnityEngine
             switch (S.shapeType)
             {
                 case ParticleSystemShapeType.Mesh:
+                    topologyMesh = S.mesh;
                     return S.mesh;
                 case ParticleSystemShapeType.MeshRenderer:
                     if (S.meshRenderer != null)
@@ -197,12 +315,14 @@ namespace UnityEngine
                         {
                             var localToWorld = skinned.transform.localToWorldMatrix;
                             if (!model.Equals(localToWorld)) toLocal = skinned.transform.worldToLocalMatrix * model;
-                            if (shared.m_Vertices.Length == mesh.m_Vertices.Length) restVertices = shared.m_Vertices;
+                            // Its rest mesh holds the triangles and weighs them (same vertices and indices).
+                            if (shared.m_Vertices.Length == mesh.m_Vertices.Length) topologyMesh = shared;
                         }
                     }
                     break;
             }
             if (renderer == null) return null;
+            topologyMesh ??= mesh;
             var rt = renderer.transform;
             scale = rt.lossyScale;
             m_ShapeFrameSet = true;
@@ -222,105 +342,17 @@ namespace UnityEngine
             return false;
         }
 
-        MeshShapeTable MeshShapeTableFor(Mesh mesh, Matrix4x4 toLocal, Vector3 scale, Vector3[] restVertices)
+        MeshShapeTable MeshShapeTableFor(Mesh mesh, Matrix4x4 toLocal, Vector3 scale, Mesh topologyMesh)
         {
             var S = m_Shape;
             // Single Material past the last submesh uses the last one (measured).
-            int subMesh = S.useMeshMaterialIndex ? Mathf.Clamp(S.meshMaterialIndex, 0, Math.Max(mesh.m_SubMeshes.Count - 1, 0)) : -1;
-            int frame = Time.frameCount;
-            var table = m_MeshShapeTable;
-            if (table != null && table.Matches(mesh, toLocal, scale, subMesh, frame) && ReferenceEquals(table.RestVertices, restVertices)) return table;
-            table = BuildMeshShapeTable(mesh, toLocal, scale, subMesh, restVertices);
-            table.BuiltDirty = mesh.m_Dirty;
-            table.BuiltFrame = frame;
-            m_MeshShapeTable = table;
-            return table;
+            int subMesh = S.useMeshMaterialIndex ? MeshShapeSubMeshIndex(topologyMesh) : -1;
+            m_MeshShapeTable ??= new MeshShapeTable();
+            m_MeshShapeTable.Update(mesh, toLocal, scale, topologyMesh, subMesh, Time.frameCount);
+            return m_MeshShapeTable;
         }
 
-        static MeshShapeTable BuildMeshShapeTable(Mesh mesh, Matrix4x4 toLocal, Vector3 scale, int subMesh, Vector3[] restVertices)
-        {
-            var source = mesh.m_Vertices;
-            int n = source.Length;
-            var t = new MeshShapeTable
-            {
-                Mesh = mesh, SourceVertices = source, SourceNormals = mesh.m_Normals, SourceColors = mesh.m_Colors,
-                SyncVersion = mesh.m_SyncVersion, ToLocal = toLocal, Scale = scale, SubMesh = subMesh, RestVertices = restVertices,
-                SourceSubMeshes = new (int[], int, MeshTopology)[mesh.m_SubMeshes.Count],
-            };
-            // Areas weigh the unscaled (local) mesh; positions and normals take the scale.
-            var local = source;
-            if (!toLocal.isIdentity)
-            {
-                local = new Vector3[n];
-                for (int i = 0; i < n; i++) local[i] = toLocal.MultiplyPoint3x4(source[i]);
-            }
-            var toFrame = Matrix4x4.Scale(scale) * toLocal;
-            bool identity = toFrame.isIdentity;
-            if (scale == Vector3.one) t.Vertices = local;
-            else
-            {
-                t.Vertices = new Vector3[n];
-                for (int i = 0; i < n; i++) t.Vertices[i] = Vector3.Scale(local[i], scale);
-            }
-            var normals = mesh.m_Normals;
-            if (normals != null && normals.Length == n)
-            {
-                if (identity) t.Normals = normals;
-                else
-                {
-                    t.Normals = new Vector3[n];
-                    for (int i = 0; i < n; i++) t.Normals[i] = toFrame.MultiplyVector(normals[i]);
-                }
-            }
-            var colors = mesh.m_Colors;
-            if (colors != null && colors.Length == n) t.Colors = colors;
-
-            int count = 0, parts = 0;
-            for (int s = 0; s < mesh.m_SubMeshes.Count; s++)
-            {
-                var sm = mesh.m_SubMeshes[s];
-                t.SourceSubMeshes[s] = (sm.Indices, sm.BaseVertex, sm.Topology);
-                if (subMesh >= 0 && s != subMesh) continue;
-                if (sm.Topology == MeshTopology.Triangles)
-                {
-                    count += sm.Indices.Length / 3;
-                    parts++;
-                }
-                else if (sm.Indices.Length > 0) t.SkippedTopology = true;
-            }
-            var triangles = new int[count * 3];
-            t.SubMeshTriangleEnds = new int[parts];
-            t.SubMeshes = new int[parts];
-            int k = 0, part = 0;
-            for (int s = 0; s < mesh.m_SubMeshes.Count; s++)
-            {
-                var sm = mesh.m_SubMeshes[s];
-                if (subMesh >= 0 && s != subMesh || sm.Topology != MeshTopology.Triangles) continue;
-                var indices = sm.Indices;
-                for (int i = 0; i + 2 < indices.Length; i += 3)
-                {
-                    int a = indices[i] + sm.BaseVertex, b = indices[i + 1] + sm.BaseVertex, c = indices[i + 2] + sm.BaseVertex;
-                    if ((uint)a >= (uint)n || (uint)b >= (uint)n || (uint)c >= (uint)n) continue;
-                    triangles[k++] = a;
-                    triangles[k++] = b;
-                    triangles[k++] = c;
-                }
-                t.SubMeshes[part] = s;
-                t.SubMeshTriangleEnds[part++] = k / 3;
-            }
-            if (k != triangles.Length) Array.Resize(ref triangles, k);
-            t.Triangles = triangles;
-            t.AreaEnds = new float[k / 3];
-            var weighed = restVertices ?? local;
-            float area = 0f;
-            for (int i = 0; i < t.AreaEnds.Length; i++)
-            {
-                var a = weighed[triangles[i * 3]];
-                area += 0.5f * Vector3.Cross(weighed[triangles[i * 3 + 1]] - a, weighed[triangles[i * 3 + 2]] - a).magnitude;
-                t.AreaEnds[i] = area;
-            }
-            return t;
-        }
+        int MeshShapeSubMeshIndex(Mesh mesh) => Mathf.Clamp(m_Shape.meshMaterialIndex, 0, Math.Max(mesh.m_SubMeshes.Count - 1, 0));
 
         /// <summary>A point of the mesh by the shape's mesh type and spawn mode, in the mesh's
         /// frame, with its interpolated normal (not normalized), its colour (when the mesh has
@@ -436,7 +468,7 @@ namespace UnityEngine
             within = 0f;
             if (!(total > 0f)) return false;
             float x = u * total;
-            int lo = 0, hi = ends.Length - 1;
+            int lo = 0, hi = t.TriangleCount - 1;
             while (lo < hi)
             {
                 int mid = (lo + hi) >> 1;

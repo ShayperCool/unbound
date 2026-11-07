@@ -146,10 +146,15 @@ namespace UnityEngine.Tests
                 }
                 var doomed = Playing(go);
                 var kept = Playing(control);
+                // Last frame's events must not go out again.
+                doomed.m_CollisionEvents.Add((control, default));
+                doomed.m_TriggerParticles[0].Add(default);
                 Object.Destroy(destroyParent ? root : go);
                 ParticleSystemManager.UpdateAll();
                 Assert.Equal(0f, doomed.time);
                 Assert.Equal(0, doomed.particleCount);
+                Assert.Equal(0, doomed.GetSafeCollisionEventSize());
+                Assert.Equal(0, doomed.GetSafeTriggerParticlesSize(ParticleSystemTriggerEventType.Inside));
                 Assert.True(kept.time > 0f);
                 Assert.True(kept.particleCount > 0);
             }

@@ -222,10 +222,12 @@ namespace UnityEngine
             // is still inside in the step it crosses the face).
             var start = toWorld.MultiplyPoint3x4(p.m_Position - (p.m_Velocity + p.m_AnimatedVelocity) * m_LastStepDt);
             float sphereRadius = (T.radiusScale * 0.5f) * Mathf.Max(size.x, Mathf.Max(size.y, size.z));
-            bool otherKinds = false;
+            // Only the layers of the module's other colliders, so unrelated colliders do not fill
+            // the result buffer.
+            int layers = 0;
             foreach (var c in T.colliders)
-                if (c != null && !(c is SphereCollider)) { otherKinds = true; break; }
-            int n = otherKinds ? Physics.OverlapCapsuleNonAlloc(start, world, sphereRadius, s_Overlaps, Physics.AllLayers, QueryTriggerInteraction.Collide) : 0;
+                if (c != null && !(c is SphereCollider)) layers |= 1 << c.gameObject.layer;
+            int n = layers != 0 ? Physics.OverlapCapsuleNonAlloc(start, world, sphereRadius, s_Overlaps, layers, QueryTriggerInteraction.Collide) : 0;
             // Which colliders hold it, in the module's order: the first decides inside, the query
             // mode how many more ColliderData lists (6000.0.71f1, tests/projects/particletriggerapi:
             // Disabled none, One the first in the list, All every one).
@@ -476,16 +478,21 @@ namespace UnityEngine
         /// (<paramref name="whole"/> false) the Editor throws unless offset + count is smaller
         /// than the list's size (measured: offset 1 and count 2 throw for 3 particles and write
         /// for 4, the first two of the list into the second and third particles). Entries whose
-        /// particle is gone or that a trigger Kill ended write nothing (Unbound's choices).</summary>
+        /// particle a trigger Kill ended write nothing (Unbound's choice).</summary>
         internal void WriteBackTriggerParticles(ParticleSystemTriggerEventType type, List<Particle> particles, int offset, int count, bool whole)
         {
             if (particles == null) throw new System.ArgumentNullException(nameof(particles));
             if (!whole && (offset < 0 || count < 0 || offset + count >= particles.Count))
                 throw new System.ArgumentOutOfRangeException(nameof(count), "offset+count should be smaller than the size of the particles list.");
-            var entries = m_TriggerParticles[(int)type];
-            count = System.Math.Min(count, entries.Count - offset);
-            if (count <= 0) return;
             ResolveTriggerSlots(type);
+            // Positions count in the list GetTriggerParticles returns now, which leaves out the
+            // entries whose particle is gone (Unbound's choice: the Editor's mapping for a list
+            // with gone entries is unmeasured).
+            int live = 0;
+            for (int k = 0; k < m_TriggerSlots.Count; k++)
+                if (m_TriggerSlots[k] >= 0) m_TriggerSlots[live++] = m_TriggerSlots[k];
+            count = System.Math.Min(count, live - offset);
+            if (count <= 0) return;
             if (m_TriggerWriteSlots.Length < count)
             {
                 m_TriggerWriteSlots = new int[count];
@@ -497,7 +504,7 @@ namespace UnityEngine
                 int slot = m_TriggerSlots[offset + k];
                 // A particle a trigger Kill ended in this update stays dead (Unbound's choice,
                 // unmeasured).
-                if (slot < 0 || (m_Particles[slot].m_Flags & Particle.FlagKilled) != 0) continue;
+                if ((m_Particles[slot].m_Flags & Particle.FlagKilled) != 0) continue;
                 // The slot keeps its own listing: the written particle takes its trigger serial.
                 var value = particles[k];
                 value.m_Flags = (value.m_Flags & ~TriggerSerialMask) | (m_Particles[slot].m_Flags & TriggerSerialMask);

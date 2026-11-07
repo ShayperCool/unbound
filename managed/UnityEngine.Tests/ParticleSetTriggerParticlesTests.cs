@@ -423,6 +423,34 @@ namespace UnityEngine.Tests
             Assert.Equal(0, f.ps.particleCount);
         }
 
+        // Unbound's choice (unmeasured): after a write-back removed a listed particle, positions in
+        // a list read again count among the particles it returns, so nothing lands on another one.
+        [Fact]
+        public void AWriteBackAfterAListedParticleLeftMapsOntoTheReturnedParticles()
+        {
+            using var f = new Fixture(inside: Overlap.Callback);
+            f.ps.SetParticles(new[] { At(1, Center), At(2, Center), At(3, Center) });
+            f.writer.handler = ps =>
+            {
+                var list = Entries(ps, TriggerEvent.Inside);
+                int first = list.FindIndex(p => p.randomSeed == 1);
+                var gone = list[first];
+                gone.remainingLifetime = 0f;
+                list[first] = gone;
+                ps.SetTriggerParticles(TriggerEvent.Inside, list);
+                Assert.Equal(3, ps.GetSafeTriggerParticlesSize(TriggerEvent.Inside));
+                var rest = Entries(ps, TriggerEvent.Inside);
+                Assert.Equal(new uint[] { 2, 3 }, Seeds(rest));
+                Recolor(rest);
+                ps.SetTriggerParticles(TriggerEvent.Inside, rest);
+            };
+            TriggerFrame(f);
+            var all = new ParticleSystem.Particle[3];
+            Assert.Equal(2, f.ps.GetParticles(all));
+            Assert.Equal(new uint[] { 2, 3 }, Seeds(all.Take(2)));
+            Assert.All(all.Take(2), p => Assert.Equal(Red, p.startColor));
+        }
+
         // Measured (read/*): ColliderData lists the colliders each particle is inside as the query
         // mode asks: Disabled none (with a warning per call), One the first in the module's list,
         // All every one; Outside and Exit throw.
