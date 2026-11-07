@@ -20,7 +20,10 @@ UNBOUND_CLI=/path/to/unbound python3 tests/projects/modelaxis/run.py unbound --r
 ```
 
 Two independent GPU Editor project copies agree byte-for-byte on all 720 keys before publication
-under `Reference/unity-6000.0.71f1`. Repeats, Editor projects, original failures and all engine
+under `Reference/unity-6000.0.71f1`. Eight further controls reverse the source front-axis
+sign, with independent agreeing Native repeats and 180 new keys in the `signed/` reference.
+Pass `--set Signed` to each driver mode to record or gate these controls. The original
+720-key reference is unchanged. Repeats, Editor projects, original failures and all engine
 captures remain under the validation cache. Labels are immutable; use a fresh label for each run.
 
 ## Contract and cause table
@@ -38,3 +41,8 @@ Baked and unbaked captures retain their observed signed mappings independently. 
 not specify Euler decomposition, floating point rounding, or this ASCII file's exact signed
 mapping. Pivots, geometric transforms, pre/post rotation, additional handedness/up-axis systems,
 negative scales, animated/skinned models and other releases remain separate measurements.
+
+The baseline engine matches 376/720 original keys. It ignores Bake Axis Conversion, and its
+unbaked improper-axis decomposition creates negative scales and wrong world geometry. The
+file-unit scaling matches in these controls. Raw before captures and full comparisons remain
+in the validation cache under `as3-before` and `as3-signed-before`.

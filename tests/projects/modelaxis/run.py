@@ -78,12 +78,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode',choices=('editor','publish','unbound','check'))
     parser.add_argument('--release',required=True)
+    parser.add_argument('--set',choices=('Axis','Signed'),default='Axis')
     parser.add_argument('--label',default='gate-'+str(time.time_ns()))
     args = parser.parse_args()
+    global COUNT
+    COUNT = 8 if args.set == 'Signed' else 32
+    os.environ['AXIS_SET'] = args.set
     if Path(args.label).name != args.label or args.label in ('.','..'): parser.error('invalid label')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE,args.label)
     reference = reference_root(PROBE)
+    if args.set == 'Signed': reference = reference/'signed'
     work.mkdir(parents=True,exist_ok=True)
     if args.mode == 'editor':
         jobs = []

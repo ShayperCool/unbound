@@ -14,7 +14,7 @@ spec.loader.exec_module(uv)
 def guid(name):
     return hashlib.md5(('modelaxis/'+name).encode()).hexdigest()
 
-def fbx(up, unit):
+def fbx(up, unit, front_sign=-1):
     header = '''; FBX 7.4.0 project file
 FBXHeaderExtension: {
  FBXHeaderVersion: 1003
@@ -25,7 +25,7 @@ GlobalSettings: {
  Properties70: {
 '''
     axes = dict(UpAxis=up, UpAxisSign=1, FrontAxis=2 if up == 1 else 1,
-                FrontAxisSign=-1, CoordAxis=0, CoordAxisSign=1)
+                FrontAxisSign=front_sign, CoordAxis=0, CoordAxisSign=1)
     header += ''.join(f'  P: "{k}", "int", "Integer", "",{v}\n' for k,v in axes.items())
     header += f'  P: "UnitScaleFactor", "double", "Number", "",{unit}\n }}\n}}\n'
     geometry = '''Geometry: 100, "Geometry::Wedge", "Mesh" {
@@ -73,6 +73,20 @@ def main():
                 import re
                 meta = re.sub(r'(?m)^(    '+key+r': ).*',lambda m:m[1]+str(value),meta)
             Path(str(path)+'.meta').write_text(meta)
+    signed = ROOT/'Assets/Resources/Signed'
+    signed.mkdir(parents=True,exist_ok=True)
+    for up in (1,2):
+     for bake in (0,1):
+      for preserve in (0,1):
+        name = f'U{up}S1B{bake}H{preserve}'
+        path = signed/(name+'.fbx')
+        path.write_text(fbx(up,100,front_sign=1))
+        settings = dict(uv.DEFAULTS, **uv.RAW, normalImportMode=2)
+        meta = uv.META.format(guid=guid(name),**settings)
+        for key,value in dict(bakeAxisConversion=bake,preserveHierarchy=preserve,globalScale=2.5).items():
+            import re
+            meta = re.sub(r'(?m)^(    '+key+r': ).*',lambda m:m[1]+str(value),meta)
+        Path(str(path)+'.meta').write_text(meta)
     for path in sorted((ROOT/'Assets').rglob('*')):
         if path.suffix == '.meta': continue
         meta = Path(str(path)+'.meta')

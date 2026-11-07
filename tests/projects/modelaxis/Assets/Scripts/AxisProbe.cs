@@ -19,7 +19,7 @@ public class AxisProbe : MonoBehaviour
 
     void Start()
     {
-        foreach (var model in Resources.LoadAll<GameObject>("Axis").OrderBy(m => m.name, StringComparer.Ordinal))
+        foreach (var model in Resources.LoadAll<GameObject>(Environment.GetEnvironmentVariable("AXIS_SET") ?? "Axis").OrderBy(m => m.name, StringComparer.Ordinal))
         {
             var instance = Instantiate(model);
             Add(model.name + "/nodes", L(instance.GetComponentsInChildren<Transform>(true).Select(t => PathOf(t,instance.transform)), Q));
