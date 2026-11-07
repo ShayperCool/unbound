@@ -47,6 +47,8 @@ def compare(reference, candidate, report):
     left, right = [header(root) if (root/'capture.json').exists() else {} for root in (reference, candidate)]
     failures = [dict(key=k, reference=left.get(k), candidate=right.get(k))
                 for k in sorted(left.keys() | right.keys()) if k not in left or k not in right or left[k] != right[k]]
+    for side, root in (('reference', reference), ('candidate', candidate)):
+        if not (root/'capture.json').exists(): failures.append(dict(side=side, missing_capture=str(root/'capture.json')))
     result = dict(tested=len(left.keys() | right.keys()), failed=len(failures), failures=failures)
     report.write_text(json.dumps(result, indent=2)+'\n')
     print(f'{result["tested"]} values, {result["failed"]} failures; {report}', flush=True)
