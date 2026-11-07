@@ -85,6 +85,18 @@ class PublicationTests(unittest.TestCase):
         self.capture()
         self.refused('old records moved')
 
+    def test_chain_extension_keeps_all_previous_records_and_images(self):
+        ref.publish('test', 'test', self.receipt)
+        self.receipt.unlink()
+        before = ref.layout.tree(self.target)
+        chain = [record(k, 5) for k in ref.CHAIN_KEYS]
+        self.rows = self.rows[:-1] + chain + self.rows[-1:]
+        self.capture()
+        ref.publish('test', 'test', self.receipt, chains=True)
+        self.assertEqual((self.target/ref.CHAIN_FILE).read_bytes(), b''.join(chain))
+        self.assertEqual({k: ref.layout.tree(self.target)[k] for k in before}, before)
+        self.assertEqual(len(ref.load(self.target)), len(self.rows))
+
 
 if __name__ == '__main__':
     unittest.main()
