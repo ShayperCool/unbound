@@ -779,6 +779,7 @@ sealed partial class StubBuilder
         var backing = "__unboundStub_" + property.Name;
         if (stored)
         {
+            _usedSetters.Add(id);
             if (getter == null || setter == null || !hasBody || property.IsIndexer || property.ReturnsByRef || property.ReturnsByRefReadonly
                 || (!property.IsStatic && ctx.Unity.TypeKind == TypeKind.Struct))
                 _generationErrors.Add($"stub default {id}: measured setter requires a concrete, non-indexed get/set property on a class or a static property");

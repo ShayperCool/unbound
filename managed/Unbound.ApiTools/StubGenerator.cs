@@ -126,6 +126,7 @@ sealed partial class StubBuilder
     /// <summary>Return expressions that replace the type's default, by member id.</summary>
     readonly IReadOnlyDictionary<string, StubDefault> _returns;
     readonly HashSet<string> _usedReturns = new(StringComparer.Ordinal);
+    readonly HashSet<string> _usedSetters = new(StringComparer.Ordinal);
     readonly HashSet<(string Id, string Type)> _validatedReturns = new();
     List<string> _generationErrors => Report.Errors;
 
@@ -270,9 +271,13 @@ sealed partial class StubBuilder
             files.Add((moduleReport.File, Header($"the API of {module}") + body));
         }
         files.Add(("Unbound.Assembly.g.cs", Header("assembly-level attributes of the modules") + AssemblyAttributes()));
-        foreach (var id in _returns.Keys.OrderBy(id => id, StringComparer.Ordinal))
+        foreach (var (id, entry) in _returns.OrderBy(r => r.Key, StringComparer.Ordinal))
+        {
             if (!_usedReturns.Contains(id))
                 _generationErrors.Add($"stub default {id}: no generated stub returns it (implemented by hand or absent from the reference assemblies)");
+            if (entry.SetExpression != null && !_usedSetters.Contains(id))
+                _generationErrors.Add($"stub default {id}: no generated property uses its measured setter");
+        }
         return files;
     }
 

@@ -297,6 +297,11 @@ public class StubGeneratorTests
             Assert.Contains(error.Errors, e => e.Contains("invalid expression for float"));
             Assert.False(Directory.Exists(output));
             returns["UnityEngine.Scale.factor"] = "1f";
+            returns["UnityEngine.Scale.Count"] = new("1", "value");
+            error = StubGenerator.Generate(unity, impl, output, sourceDir, returns: returns);
+            Assert.Contains(error.Errors, e => e.Contains("no generated property uses its measured setter"));
+            Assert.False(Directory.Exists(output));
+            returns["UnityEngine.Scale.Count"] = "1";
             var report = StubGenerator.Generate(unity, impl, output, sourceDir, returns: returns);
             var text = File.ReadAllText(Path.Combine(output, "UnityEngine.CoreModule.g.cs"));
             // Still a stub that warns, now returning the table's value.
