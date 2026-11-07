@@ -5,12 +5,12 @@ using Xunit;
 namespace UnityEngine.Tests
 {
     /// <summary>ParticleSystem.GetTrails/SetTrails (Scripting API 6000.0): SetTrails restores the
-    /// state stored by an earlier GetTrails, together with SetParticles and SetPlaybackState;
-    /// Trails.capacity only reserves memory. Refusing a Trails that does not belong to the
-    /// system's current particles is Unbound's choice (unmeasured). GetTrails' return value is
-    /// not asserted: documented as the number of trails, a 6000.0.71f1 capture returned the
-    /// storage size. These tests read only members that exist without the write-back, so each
-    /// one that fails without it fails on its own assertion.</summary>
+    /// state stored by an earlier GetTrails, together with SetParticles and SetPlaybackState.
+    /// Measured in 6000.0.71f1 (tests/projects/particletrails api/*): trails are restored by
+    /// particle index, also into another system; GetTrails returns the trail storage size
+    /// (particle slots, at least 32, times points per trail, at least 4, both powers of two,
+    /// never shrinking), which also becomes the Trails' capacity when that is smaller. Refusing a
+    /// Trails that GetTrails never filled is Unbound's choice (unmeasured).</summary>
     public class ParticleSetTrailsTests
     {
         static ParticleSystem Make(string name, bool dieWithParticles)
@@ -77,8 +77,9 @@ namespace UnityEngine.Tests
             Assert.Equal(expected.Indices, actual.Indices);
         }
 
-        /// <summary>Each trail slot's points (null for a free slot).</summary>
-        static List<Vector3[]> TrailPoints(ParticleSystem ps) => ps.m_TrailList.Select(t => t?.Points.ToArray()).ToList();
+        /// <summary>Each particle's trail points, in particle order (null for a particle without one).</summary>
+        static List<Vector3[]> TrailPoints(ParticleSystem ps) => Enumerable.Range(0, ps.m_Count)
+            .Select(i => ps.m_Particles[i].m_TrailId > 0 ? ps.m_TrailList[ps.m_Particles[i].m_TrailId - 1]?.Points.ToArray() : null).ToList();
 
         static ParticleSystem.Particle[] Particles(ParticleSystem ps)
         {
@@ -191,7 +192,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ARestoreWhileATrailFadesKeepsTheOtherTrailsButNotTheDroppedCarriers()
+        public void ARestoreAfterSetParticlesDroppedCarriersGivesEachIndexTheTrailCapturedThere()
         {
             using var scene = new Scene();
             var ps = scene.NewSystem("set-trails-fading", dieWithParticles: false);
@@ -199,15 +200,11 @@ namespace UnityEngine.Tests
             var pointsThen = TrailPoints(ps);
             var particles = Particles(ps);
             // The dead particle that carries the fading trail is exported at zero lifetime, and
-            // SetParticles drops it, with its trail (measured), and reorders the others.
-            var dropped = particles.Where(p => p.remainingLifetime <= 0f && p.m_TrailId != 0).Select(p => p.m_TrailId).ToList();
+            // SetParticles drops it (measured): the particles after it move down an index.
             Assert.Contains(particles, p => p.IsTrailCarrier);
-            Assert.NotEmpty(dropped);
             var trails = ps.GetTrails();
 
             Step(ps, 10);
-            Assert.NotEqual(pointsThen, TrailPoints(ps));
-
             var errors = SetTrailsErrors(() =>
             {
                 ps.SetParticles(particles);
@@ -215,9 +212,8 @@ namespace UnityEngine.Tests
             });
 
             Assert.Empty(errors);
-            var expected = new List<Vector3[]>(pointsThen);
-            foreach (int link in dropped) expected[link - 1] = null;
-            Assert.Equal(expected, TrailPoints(ps));
+            Assert.True(ps.particleCount < particles.Length);
+            Assert.Equal(pointsThen.Take(ps.particleCount), TrailPoints(ps));
         }
 
         [Fact]
@@ -239,40 +235,93 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void TrailsOfAnotherSystemAreRefusedWithAnErrorAndChangeNothing()
+        public void TrailsOfAnotherSystemAreRestoredByParticleIndex()
         {
             using var scene = new Scene();
             var ps = scene.NewSystem("set-trails-target");
             var other = scene.NewSystem("set-trails-other");
             Step(other, 10);
             var foreign = other.GetTrails();
-            // Same particle count and trail links, so only the system they came from differs.
-            Step(ps, 10);
-            var points = TrailPoints(ps);
+            var foreignPoints = TrailPoints(other);
+            Step(ps, 4);
+            Assert.NotEqual(foreignPoints.Take(ps.particleCount), TrailPoints(ps));
 
             var errors = SetTrailsErrors(() => ps.SetTrails(foreign));
 
-            Assert.Single(errors);
-            Assert.Contains("another particle system", errors[0]);
-            Assert.Equal(points, TrailPoints(ps));
+            Assert.Empty(errors);
+            int n = System.Math.Min(ps.particleCount, foreignPoints.Count);
+            Assert.True(n > 0);
+            Assert.Equal(foreignPoints.Take(n), TrailPoints(ps).Take(n));
         }
 
         [Fact]
-        public void TrailsCapturedWithOtherParticlesAreRefusedWithAnErrorAndChangeNothing()
+        public void StaleTrailsGoToTheCurrentParticlesByIndex()
         {
             using var scene = new Scene();
             var ps = scene.NewSystem("set-trails-stale");
-            int countThen = ps.particleCount;
+            var pointsThen = TrailPoints(ps);
             var stale = ps.GetTrails();
             Step(ps, 15);
-            Assert.NotEqual(countThen, ps.particleCount);
-            var points = TrailPoints(ps);
+            var after = TrailPoints(ps);
 
             var errors = SetTrailsErrors(() => ps.SetTrails(stale));
 
-            Assert.Single(errors);
-            Assert.Contains("SetParticles", errors[0]);
+            Assert.Empty(errors);
+            var restored = TrailPoints(ps);
+            for (int i = 0; i < restored.Count; i++)
+                Assert.Equal(i < pointsThen.Count ? pointsThen[i] : after[i], restored[i]);
+        }
+
+        [Fact]
+        public void SetParticlesLeavesEachTrailWithItsIndex()
+        {
+            using var scene = new Scene();
+            var ps = scene.NewSystem("set-particles-trail-slots");
+            var points = TrailPoints(ps);
+            var particles = Particles(ps);
+            Assert.True(particles.Length >= 3);
+            // The same particles written in reverse: the trails stay where they were.
+            System.Array.Reverse(particles);
+            ps.SetParticles(particles);
             Assert.Equal(points, TrailPoints(ps));
+            // A particle written past the live ones is new and starts an empty trail.
+            var more = Particles(ps).Concat(new[] { particles[0] }).ToArray();
+            ps.SetParticles(more);
+            var now = TrailPoints(ps);
+            Assert.Equal(points, now.Take(points.Count));
+            Assert.Empty(now[points.Count]);
+        }
+
+        [Fact]
+        public void GetTrailsReturnsTheStorageSizeThatOnlyGrows()
+        {
+            using var scene = new Scene();
+            var ps = scene.NewSystem("get-trails-storage");
+            var trails = new ParticleSystem.Trails();
+            int size = ps.GetTrails(ref trails);
+            // The longest trail so far, not only now, sizes the storage.
+            int longest = ps.m_TrailList.Where(t => t != null).Max(t => t.Points.Count);
+            Assert.True(ps.m_TrailStoragePoints >= longest);
+            int slots = System.Math.Max(32, NextPowerOfTwo(ps.particleCount));
+            Assert.Equal(slots * System.Math.Max(4, NextPowerOfTwo(ps.m_TrailStoragePoints)), size);
+            Assert.Equal(size, trails.capacity);
+            // A larger presized capacity stays.
+            var presized = new ParticleSystem.Trails { capacity = size * 2 + 1 };
+            Assert.Equal(size, ps.GetTrails(ref presized));
+            Assert.Equal(size * 2 + 1, presized.capacity);
+            // Clearing the particles keeps the storage.
+            ps.Clear();
+            Assert.Equal(size, ps.GetTrails(ref trails));
+            // Ribbon trails keep none.
+            var t = ps.trails; t.mode = ParticleSystemTrailMode.Ribbon;
+            Assert.Equal(0, ps.GetTrails(ref trails));
+        }
+
+        static int NextPowerOfTwo(int n)
+        {
+            int p = 1;
+            while (p < n) p <<= 1;
+            return p;
         }
 
         [Fact]

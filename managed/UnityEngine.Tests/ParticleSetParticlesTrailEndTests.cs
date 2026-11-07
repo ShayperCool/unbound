@@ -177,30 +177,6 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
 
-        [Fact]
-        public void RemovingAParticleWithoutATrailChangesNoTrail()
-        {
-            var ps = Make("setparticles-no-trail", dieWithParticles: true);
-            try
-            {
-                var particles = Particles(ps);
-                var points = TrailPoints(ps);
-                var orphans = TrailOrphans(ps);
-                // A new particle carries no trail; first in the buffer, its removal swaps the last
-                // particle into its place.
-                var written = new[] { new ParticleSystem.Particle { startLifetime = 1f, remainingLifetime = 0f, position = Vector3.one } }
-                    .Concat(particles).ToArray();
-                Assert.Equal(0, written[0].m_TrailId);
-
-                ps.SetParticles(written);
-
-                Assert.Equal(particles.Length, ps.particleCount);
-                Assert.Equal(points, TrailPoints(ps));
-                Assert.Equal(orphans, TrailOrphans(ps));
-            }
-            finally { Object.DestroyImmediate(ps.gameObject); }
-        }
-
         // A trail still held by a particle that survives the call is not ended.
 
         [Fact]
@@ -220,35 +196,6 @@ namespace UnityEngine.Tests
                 copy.remainingLifetime = -1f;
 
                 ps.SetParticles(new[] { copy }, 1, particles.Length);
-
-                Assert.Equal(particles.Length, ps.particleCount);
-                Assert.NotNull(ps.m_TrailList[link - 1]);
-                Assert.False(ps.m_TrailList[link - 1].Orphan);
-                Assert.Equal(points, TrailPoints(ps));
-                Assert.Equal(orphans, TrailOrphans(ps));
-                Assert.Contains(Particles(ps), p => p.m_TrailId == link);
-            }
-            finally { Object.DestroyImmediate(ps.gameObject); }
-        }
-
-        [Fact]
-        public void RemovingACopyOfAKeptParticleKeepsItsTrailLive()
-        {
-            var ps = Make("setparticles-trail-kept", dieWithParticles: true);
-            try
-            {
-                var particles = Particles(ps);
-                int k = WithTrail(ps, particles);
-                int link = particles[k].m_TrailId;
-                var points = TrailPoints(ps);
-                var orphans = TrailOrphans(ps);
-                // Written first, a removed copy of a written and kept particle carries its link;
-                // its removal swaps the last particle into its place.
-                var copy = particles[k];
-                copy.remainingLifetime = -1f;
-                var written = new[] { copy }.Concat(particles).ToArray();
-
-                ps.SetParticles(written);
 
                 Assert.Equal(particles.Length, ps.particleCount);
                 Assert.NotNull(ps.m_TrailList[link - 1]);
@@ -289,7 +236,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void RemovingManyTrailedParticlesInOneCallEndsEachUnheldTrailOnce()
+        public void RemovingManyTrailedParticlesInOneCallEndsEachTrailOnce()
         {
             var ps = Make("setparticles-trail-many", dieWithParticles: true);
             try
@@ -299,30 +246,15 @@ namespace UnityEngine.Tests
                 const int offset = 8, removed = 64;
                 Assert.True(particles.Length > offset + removed);
                 Assert.All(ps.m_TrailList, t => Assert.NotNull(t));
-                Assert.All(particles, p => Assert.NotEqual(0, p.m_TrailId));
                 Assert.Equal(particles.Length, particles.Select(p => p.m_TrailId).Distinct().Count());
                 int slots = ps.m_TrailList.Count;
                 var points = TrailPoints(ps);
-
-                static ParticleSystem.Particle RemovedCopy(ParticleSystem.Particle p) { p.remainingLifetime = -1f; return p; }
-                // After the retained prefix [0, offset), the first 64 written originals are removed.
-                // Removed copies are mixed in: of a removed original (written first, so its trail
-                // ends first; written last, it ends nothing more), of prefix particles and of a kept
-                // original (those trails are held and stay live).
+                // After the retained prefix [0, offset), the first 64 written are removed.
                 var tail = particles.Skip(offset).ToArray();
                 for (int j = 0; j < removed; j++) tail[j].remainingLifetime = -1f;
-                var written = new List<ParticleSystem.Particle> { RemovedCopy(tail[5]), RemovedCopy(particles[0]), RemovedCopy(tail[removed]) };
-                for (int j = 0; j < tail.Length; j++)
-                {
-                    written.Add(tail[j]);
-                    if (j % 16 == 15 && j < removed) written.Add(RemovedCopy(particles[1 + j / 16]));
-                }
-                written.Add(RemovedCopy(tail[10]));
-                written.Add(RemovedCopy(particles[offset - 1]));
-                var ended = new List<int> { tail[5].m_TrailId };
-                ended.AddRange(tail.Take(removed).Select(p => p.m_TrailId).Where(link => link != tail[5].m_TrailId));
+                var ended = tail.Take(removed).Select(p => p.m_TrailId).ToList();
 
-                ps.SetParticles(written.ToArray(), written.Count, offset);
+                ps.SetParticles(tail, tail.Length, offset);
 
                 Assert.Equal(particles.Length - removed, ps.particleCount);
                 Assert.Equal(particles.Take(offset).Concat(tail.Skip(removed)).Select(p => p.m_TrailId).OrderBy(link => link).ToArray(),
@@ -342,24 +274,22 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void SetTrailsAfterASetParticlesThatDropsAParticleRestoresTheCapture()
+        public void SetTrailsAfterASetParticlesThatDropsParticlesRestoresTheCaptureByIndex()
         {
             // Particles paused at the end of their life are exported at zero lifetime, so
-            // SetParticles drops them, and SetTrails ends their trails (they die with them).
+            // SetParticles drops them and the others move down; SetTrails then gives the particle
+            // at each index the trail captured at that index (6000.0.71f1, particletrails api/rt).
             var ps = Make("setparticles-trail-restore", dieWithParticles: true, startLifetime: .5f,
                 ring: ParticleSystemRingBufferMode.PauseUntilReplaced);
             try
             {
                 var particles = Particles(ps);
-                var pointsThen = TrailPoints(ps);
+                var pointsThen = particles.Select(p => ps.m_TrailList[p.m_TrailId - 1].Points.ToArray()).ToList();
                 var trails = ps.GetTrails();
-                var ending = particles.Where(p => p.remainingLifetime <= 0f && p.m_TrailId != 0).Select(p => p.m_TrailId).ToList();
-                Assert.NotEmpty(ending);
+                Assert.Contains(particles, p => p.remainingLifetime <= 0f);
                 int kept = particles.Count(p => p.remainingLifetime > 0f);
 
                 Step(ps, 10);
-                Assert.NotEqual(pointsThen, TrailPoints(ps));
-
                 var errors = SetTrailsErrors(() =>
                 {
                     ps.SetParticles(particles);
@@ -368,9 +298,8 @@ namespace UnityEngine.Tests
 
                 Assert.Empty(errors);
                 Assert.Equal(kept, ps.particleCount);
-                var expected = new List<Vector3[]>(pointsThen);
-                foreach (int link in ending) expected[link - 1] = null;
-                Assert.Equal(expected, TrailPoints(ps));
+                var now = Particles(ps).Select(p => ps.m_TrailList[p.m_TrailId - 1].Points.ToArray()).ToList();
+                Assert.Equal(pointsThen.Take(kept), now);
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
         }

@@ -11,7 +11,14 @@ ratio and a larger vertex distance, trail lifetime by size, a Death sub-emitter,
 (lifetime loss with and without trails, and by speed with a Death sub-emitter), `Stop`, `Clear`,
 `SetParticles` (written back as read, and a living particle written at zero lifetime), a
 four-particle cap (with `dieWithParticles` off and on), a looping system, a restart, the trail ratio over 600 particles,
-two systems played over frames with a stop callback, and images of fading trails.
+two systems played over frames with a stop callback, and images of fading trails. `api/*` records what `GetTrails`
+returns and the `Trails.capacity` it leaves (fresh, presized, refilled; growing particle counts and trail lengths;
+after `Clear` and a restart; Ribbon mode), and `GetTrails`/`SetParticles`/`SetPlaybackState`/`SetTrails` round trips
+(per-particle, a fading carrier, Ribbon, world space, a trail ratio): the state after the restore and the steps after
+it, the capture applied with its first particle left out, applied without `SetParticles`, before `SetParticles`, and
+to another system. `cap/*` records births the cap blocks: a 20/s and a 30/s rate, cycling bursts and both, with
+trails that fade, trails that die with their particles, no trails and fading trails off the step grid, stepped by
+`Simulate` calls of 0.02, 0.05 and 0.1 s and played over frames.
 
     python3 tests/projects/particletrails/run.py native --label native1   # Editor capture (GPU, job pool)
     python3 tests/projects/particletrails/run.py publish native1 native2  # two identical captures
@@ -47,6 +54,9 @@ Everything below is measured in this release, not documented.
 | `pp/deathsub` | Death sub-emitters fire when the particle dies, not when its trail ends (same with `dieWithParticles` true). |
 | `ribbon/*` | Ribbons keep no dead particles; `dieWithParticles` changes nothing. |
 | `played/*` | Played over frames the same holds; the stop callback comes when the last carrier leaves. |
+| `api/*` | `GetTrails` returns the size of the system's trail storage, not the number of trails (the documented return): particle slots (at least 32, a power of two) times points per trail (at least 4, a power of two), from the most particles and the longest trail so far; it never shrinks (also after `Clear` and a restart) and is 0 in Ribbon mode. The `Trails`' capacity becomes that size when it is smaller; a larger presized capacity stays. |
+| `api/rt/*` | `SetTrails` puts trails back by particle index: the particle at index i takes the trail captured at index i (or none, if the particle there had none), whatever particle held it, also in another system of the same setup. A round trip with `SetParticles` and `SetPlaybackState` restores the trails exactly and the later steps repeat. `SetParticles` leaves each trail at its index: a particle written into a live slot keeps that slot's trail; one written past the live slots starts its own. |
+| `cap/*` | A birth the cap blocks is dropped, not retried later (single and multi-step calls, Play, rate and bursts); with fading trails the waiting birth takes the slot in the step its carrier leaves. |
 
 ## Known differences (`known.json`)
 
@@ -61,13 +71,20 @@ any other difference. Two concern dead particles, `world-trail-death-head` and t
   reproduce.
 - `rate-at-capacity`: short trails of rate births sample other points (`die0` and `die1`); with
   `dieWithParticles` off a rate birth into the slot a leaving carrier frees comes one step later in
-  Unbound (the `die1` control matches every particle).
+  Unbound (the `die1` control matches every particle): the `carrier-expiry-tie` below.
+- `carrier-expiry-tie`: with trail lifetimes that are whole numbers of steps, a carrier's newest
+  point reaches the trail lifetime exactly at a step's end; Unity and Unbound resolve some of these
+  float ties differently, so the carrier leaves (and frees its slot) a step apart. The same systems
+  with the trail lifetime off the step grid (`cap/*/die0nt`) match every particle.
+- `restored-trail-other-index`: right after `SetTrails` gives a particle a trail another particle
+  left, Unity draws it ending at its oldest kept point, Unbound cut at the lifetime; with the trail
+  ratio such a carrier's trail samples other points afterwards.
 - `collision-bounce-trail`: trail points around a bounce.
 - `world-trail-death-head`: with world-space trails behind a moving emitter in local simulation
   space, a dead particle's trail ends at its newest point in Unity, at its last head in Unbound
   (image `world_13`); with world simulation space both end at the last head
   (tests/projects/particlestreams `trail.22`).
 
-Unmeasured: other releases, trigger kills of trailed particles, a speed kill that also loses lifetime, `SetTrails` after carriers were
-dropped, trail texture modes on fading trails, `BakeMesh` of carriers (Unbound bakes what it
+Unmeasured: other releases, trigger kills of trailed particles, a speed kill that also loses lifetime, `SetTrails` with a
+`Trails` that `GetTrails` never filled (Unbound refuses it with an error), the storage of a system with trails disabled, trail texture modes on fading trails, `BakeMesh` of carriers (Unbound bakes what it
 draws).

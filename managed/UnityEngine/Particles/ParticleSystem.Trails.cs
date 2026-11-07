@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using R = Unbound.Runtime.ParticleRandom;
 
@@ -51,31 +52,16 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>What <c>GetTrails</c> captures: the system's own per-particle
-        /// trail state, so <c>SetTrails</c> can put it back exactly. Unity's
-        /// <c>Trails</c> layout is undocumented (only <c>capacity</c> is public), so this is
-        /// Unbound's representation, not Unity's.</summary>
+        /// <summary>What <c>GetTrails</c> captures: each particle's trail points by particle index,
+        /// for <c>SetTrails</c>. Unity's <c>Trails</c> fields are internal (only <c>capacity</c> is
+        /// public), so this is Unbound's representation beside them.</summary>
         internal sealed class TrailCapture
         {
-            /// <summary>The system the trails were captured from.</summary>
-            internal ParticleSystem Owner;
-            /// <summary>Copies of the trail slots by id; null slots are free.</summary>
+            /// <summary>Copies of the particles' trails by particle index; null where a particle
+            /// had none.</summary>
             internal readonly List<Trail> Slots = new List<Trail>();
-            /// <summary>The free slot ids in the order the next trails take them.</summary>
-            internal int[] FreeOrder = global::System.Array.Empty<int>();
+            /// <summary>The trail clock at the capture (point times are taken relative to it).</summary>
             internal float TrailTime;
-            /// <summary>How many particles SetParticles keeps when it is given the particles
-            /// captured with these trails (those with a positive remaining lifetime).</summary>
-            internal int KeptParticleCount;
-            /// <summary>The trail links of those particles, sorted: SetParticles drops the others
-            /// and reorders the survivors, so the links are matched without their order.</summary>
-            internal int[] KeptTrailIds = global::System.Array.Empty<int>();
-            /// <summary>The sorted links of the particles that only carry a fading trail (their
-            /// particle died; GetParticles exports them at zero lifetime, SetParticles drops them).</summary>
-            internal int[] FadingTrailIds = global::System.Array.Empty<int>();
-            /// <summary>The sorted links of living particles at zero lifetime: they die at the next
-            /// step, and SetParticles drops them at once.</summary>
-            internal int[] EndingTrailIds = global::System.Array.Empty<int>();
         }
 
         /// <summary>The capture each Trails value holds, keyed by the storage list GetTrails gives it
@@ -110,12 +96,36 @@ namespace UnityEngine
             if (!m_Trails.enabled) return;
             if (m_Trails.mode != ParticleSystemTrailMode.PerParticle) return;
             if (!GetsTrail(p.m_RandomSeed, m_Trails.ratio)) return;
-            var trail = new Trail();
-            int id = m_FreeTrails.Count > 0 ? m_FreeTrails.Pop() : m_TrailList.Count;
-            if (id == m_TrailList.Count) m_TrailList.Add(trail);
-            else m_TrailList[id] = trail;
-            float lifetime = m_Trails.lifetime.Evaluate(0f, TrailRandom(p.m_RandomSeed, 0x34bbab1bu)) * p.m_StartLifetime;
-            trail.Lifetime = lifetime;
+            var trail = NewTrail(ref p);
+            p.m_TrailId = AddTrail(trail) + 1;
+            trail.BirthPosition = birthPosition.HasValue ? TrailSpacePoint(birthPosition.Value) : null;
+        }
+
+        /// <summary>A particle written into a live slot keeps the slot's trail, or its lack of one
+        /// (what the trail ratio gave the slot's particle at birth); one written past the live
+        /// slots is new and gets a trail by the ratio.</summary>
+        void StartWrittenTrail(ref Particle p, bool newSlot)
+        {
+            if (newSlot) StartTrail(ref p);
+        }
+
+        /// <summary>Freed trails kept for reuse, so a birth does not allocate one.</summary>
+        readonly Stack<Trail> m_TrailPool = new Stack<Trail>();
+
+        /// <summary>An empty trail for the particle: its lifetime and draws come from its seed, its
+        /// head from where it is.</summary>
+        Trail NewTrail(ref Particle p)
+        {
+            var trail = m_TrailPool.Count > 0 ? m_TrailPool.Pop() : new Trail();
+            SetTrailDraws(ref p, trail);
+            UpdateTrailHead(ref p, trail);
+            return trail;
+        }
+
+        /// <summary>The trail's lifetime and its width and color draws, from the particle's seed.</summary>
+        void SetTrailDraws(ref Particle p, Trail trail)
+        {
+            trail.Lifetime = m_Trails.lifetime.Evaluate(0f, TrailRandom(p.m_RandomSeed, 0x34bbab1bu)) * p.m_StartLifetime;
             trail.WidthRandom = TrailRandom(p.m_RandomSeed, 0xfedc345bu);
             trail.ColorRandom = TrailRandom(p.m_RandomSeed, 0x6cf2ac20u);
             if (m_Trails.sizeAffectsLifetime)
@@ -123,9 +133,15 @@ namespace UnityEngine
                 var size = CurrentSize3D(ref p);
                 trail.Lifetime *= Mathf.Max(size.x, Mathf.Max(size.y, size.z));
             }
-            p.m_TrailId = id + 1;
-            UpdateTrailHead(ref p, trail);
-            trail.BirthPosition = birthPosition.HasValue ? TrailSpacePoint(birthPosition.Value) : null;
+        }
+
+        /// <summary>Puts a trail into a free slot; returns its id.</summary>
+        int AddTrail(Trail trail)
+        {
+            int id = m_FreeTrails.Count > 0 ? m_FreeTrails.Pop() : m_TrailList.Count;
+            if (id == m_TrailList.Count) m_TrailList.Add(trail);
+            else m_TrailList[id] = trail;
+            return id;
         }
 
         Vector3 TrailSpacePoint(Vector3 simulationPoint) =>
@@ -170,6 +186,7 @@ namespace UnityEngine
         void UpdateTrails()
         {
             if (m_TrailList.Count == 0) return;
+            m_TrailStorageParticles = Math.Max(m_TrailStorageParticles, m_Count);
             float minDistance = Mathf.Max(m_Trails.minVertexDistance, 0f);
             for (int i = 0; i < m_Count; i++)
             {
@@ -209,6 +226,7 @@ namespace UnityEngine
                     trail.Points.RemoveRange(0, expired);
                     trail.Times.RemoveRange(0, expired);
                 }
+                m_TrailStoragePoints = Math.Max(m_TrailStoragePoints, trail.Points.Count);
             }
         }
 
@@ -267,107 +285,118 @@ namespace UnityEngine
 
         void FreeTrail(int id)
         {
+            RecycleTrail(m_TrailList[id]);
             m_TrailList[id] = null;
             m_FreeTrails.Push(id);
         }
 
+        void RecycleTrail(Trail trail)
+        {
+            if (trail == null || trail.Ribbon) return;
+            trail.Points.Clear();
+            trail.Times.Clear();
+            trail.Orphan = trail.Spent = false;
+            trail.RenderPass = 0;
+            trail.BirthPosition = null;
+            m_TrailPool.Push(trail);
+        }
+
         internal void ClearTrails()
         {
+            foreach (var trail in m_TrailList) RecycleTrail(trail);
             m_TrailList.Clear();
             m_FreeTrails.Clear();
             m_TrailTime = 0f;
         }
 
-        /// <summary>Copies the trail state into the capture <paramref name="trailData"/> holds
-        /// (live and fading trails; Ribbon mode keeps none, its ribbons are drawn from the
+        /// <summary>The largest particle count and trail point count of this system's per-particle
+        /// trails so far: the trail storage Unity grows and never shrinks, which GetTrails reports.</summary>
+        internal int m_TrailStorageParticles, m_TrailStoragePoints;
+
+        /// <summary>The trail storage size GetTrails returns and sets as the Trails' capacity:
+        /// slots for the particles (at least 32, a power of two) times points per trail (at least 4,
+        /// a power of two), the largest so far; 0 in Ribbon mode (6000.0.71f1,
+        /// tests/projects/particletrails api/*).</summary>
+        int TrailStorageSize()
+        {
+            if (!m_Trails.enabled || m_Trails.mode != ParticleSystemTrailMode.PerParticle) return 0;
+            return Math.Max(MinTrailStorageParticles, NextPowerOfTwo(m_TrailStorageParticles))
+                * Math.Max(MinTrailStoragePoints, NextPowerOfTwo(m_TrailStoragePoints));
+        }
+
+        const int MinTrailStorageParticles = 32, MinTrailStoragePoints = 4;
+
+        static int NextPowerOfTwo(int n)
+        {
+            int p = 1;
+            while (p < n && p < (1 << 30)) p <<= 1;
+            return p;
+        }
+
+        /// <summary>Copies each particle's trail, by its index in the buffer, into the capture
+        /// <paramref name="trailData"/> holds (Ribbon mode keeps none: ribbons are drawn from the
         /// particles). Its storage list must be set.</summary>
         internal void CaptureTrails(in Trails trailData)
         {
             var capture = s_TrailCaptures.GetValue(trailData.positions, _ => new TrailCapture());
-            capture.Owner = this;
             capture.Slots.Clear();
-            foreach (var trail in m_TrailList) capture.Slots.Add(trail?.Copy());
-            capture.FreeOrder = m_FreeTrails.ToArray();
             capture.TrailTime = m_TrailTime;
-            capture.KeptParticleCount = SortedTrailLinks(out capture.KeptTrailIds, out capture.FadingTrailIds, out capture.EndingTrailIds);
-        }
-
-        /// <summary>The trail links of the current particles, sorted, split as SetParticles treats
-        /// the particles: those it keeps (a positive remaining lifetime; their count is returned),
-        /// the carriers of fading trails, and living particles at zero lifetime. Links of 0 (no
-        /// trail) are left out; kept particles without a trail still count.</summary>
-        int SortedTrailLinks(out int[] kept, out int[] fading, out int[] ending)
-        {
-            var keptLinks = new List<int>(); var fadingLinks = new List<int>(); var endingLinks = new List<int>();
-            int keptCount = 0;
+            if (m_Trails.mode != ParticleSystemTrailMode.PerParticle) return;
             for (int i = 0; i < m_Count; i++)
             {
-                ref var p = ref m_Particles[i];
-                // SetParticles' own test: a nonpositive remaining lifetime dies when written.
-                bool dropped = p.m_Lifetime <= 0f;
-                if (!dropped) keptCount++;
-                if (p.m_TrailId == 0) continue;
-                if (!dropped) keptLinks.Add(p.m_TrailId);
-                else if ((p.m_Flags & Particle.FlagOrphanTrail) != 0) fadingLinks.Add(p.m_TrailId);
-                else endingLinks.Add(p.m_TrailId);
+                int link = m_Particles[i].m_TrailId;
+                var trail = link > 0 && link <= m_TrailList.Count ? m_TrailList[link - 1] : null;
+                capture.Slots.Add(trail?.Copy());
             }
-            keptLinks.Sort(); fadingLinks.Sort(); endingLinks.Sort();
-            kept = keptLinks.ToArray(); fading = fadingLinks.ToArray(); ending = endingLinks.ToArray();
-            return keptCount;
         }
 
-        /// <summary>Whether every id of the sorted <paramref name="part"/> is matched by its own id
-        /// of the sorted <paramref name="whole"/>.</summary>
-        static bool IsSubMultiset(int[] part, int[] whole)
-        {
-            int j = 0;
-            foreach (int id in part)
-            {
-                while (j < whole.Length && whole[j] < id) j++;
-                if (j == whole.Length || whole[j] != id) return false;
-                j++;
-            }
-            return true;
-        }
-
-        /// <summary>Why the capture <paramref name="trailData"/> holds cannot be put back into this
-        /// system as it is now, or null when it can. Unity documents only restoring an earlier
-        /// GetTrails, together with SetParticles and SetPlaybackState; anything else is refused
-        /// whole rather than half-applied (Unbound's choice, unmeasured). The particles SetParticles
-        /// keeps must be the captured ones, matched by their trail links in any order (SetParticles
-        /// reorders them). Carriers of fading trails and particles at zero lifetime may be gone,
-        /// as SetParticles drops them; any still present must hold links the capture gave the same
-        /// kind of particle, so a plain GetTrails then SetTrails is accepted while trails fade.</summary>
-        internal string TrailCaptureMismatch(in Trails trailData)
-        {
-            var capture = CaptureOf(trailData);
-            if (capture == null)
-                return "was given a Trails value that ParticleSystem.GetTrails never filled";
-            if (!ReferenceEquals(capture.Owner, this))
-                return "was given trails captured from another particle system";
-            int keptCount = SortedTrailLinks(out var kept, out var fading, out var ending);
-            if (keptCount != capture.KeptParticleCount)
-                return "was given trails captured with " + capture.KeptParticleCount + " living particles, but the system has "
-                    + keptCount + " now (restore the particles captured with them first, with SetParticles)";
-            if (!global::System.Linq.Enumerable.SequenceEqual(kept, capture.KeptTrailIds)
-                || !IsSubMultiset(fading, capture.FadingTrailIds) || !IsSubMultiset(ending, capture.EndingTrailIds))
-                return "was given trails that do not belong to the current particles (restore the particles captured"
-                    + " with them first, with SetParticles)";
-            return null;
-        }
-
-        /// <summary>Puts a capture back: the trail slots, their free order and the trail clock, as
-        /// copies, so the capture can be applied again later. The trail of a captured particle that
-        /// SetParticles has dropped (at zero lifetime, or carrying a fading trail) goes with it, as
-        /// SetParticles measures.</summary>
+        /// <summary>Puts a capture back by particle index (6000.0.71f1, tests/projects/particletrails
+        /// api/rt): the particle at index i takes the trail captured at index i, or none if the
+        /// particle there had none, whatever particle held it then, so a capture also restores into
+        /// another system, and after SetParticles moved or dropped particles the trails stay with
+        /// the indices. Indices past either count are left as they are. Lifetime, width and color
+        /// draws stay the particle's own; point times keep their age.</summary>
         internal void RestoreTrails(in Trails trailData)
         {
             var capture = CaptureOf(trailData);
-            m_TrailList.Clear();
-            foreach (var trail in capture.Slots) m_TrailList.Add(trail?.Copy());
-            m_FreeTrails.Clear();
-            for (int i = capture.FreeOrder.Length - 1; i >= 0; i--) m_FreeTrails.Push(capture.FreeOrder[i]);
+            if (capture == null || !m_Trails.enabled || m_Trails.mode != ParticleSystemTrailMode.PerParticle) return;
+            // The trail clock goes back to the capture's, so restored points keep their exact
+            // times; trails not restored keep their ages.
+            float shift = capture.TrailTime - m_TrailTime;
             m_TrailTime = capture.TrailTime;
+            int n = Math.Min(m_Count, capture.Slots.Count);
+            for (int i = n; i < m_Count; i++)
+            {
+                int kept = m_Particles[i].m_TrailId;
+                var other = kept > 0 && kept <= m_TrailList.Count ? m_TrailList[kept - 1] : null;
+                if (other == null) continue;
+                for (int t = 0; t < other.Times.Count; t++) other.Times[t] += shift;
+                other.HeadTime += shift;
+            }
+            for (int i = 0; i < n; i++)
+            {
+                ref var p = ref m_Particles[i];
+                var source = capture.Slots[i];
+                if (source == null)
+                {
+                    p.m_TrailId = 0;
+                    continue;
+                }
+                var trail = NewTrail(ref p);
+                trail.Points.AddRange(source.Points);
+                trail.Times.AddRange(source.Times);
+                trail.HeadTime = source.HeadTime;
+                // A particle that only carries a fading trail keeps fading the restored one.
+                trail.Orphan = p.IsTrailCarrier;
+                trail.Spent = trail.Orphan && trail.Points.Count == 0;
+                int link = p.m_TrailId;
+                if (link > 0 && link <= m_TrailList.Count && m_TrailList[link - 1] != null)
+                {
+                    RecycleTrail(m_TrailList[link - 1]);
+                    m_TrailList[link - 1] = trail;
+                }
+                else p.m_TrailId = AddTrail(trail) + 1;
+            }
             FreeUnheldTrails();
         }
 

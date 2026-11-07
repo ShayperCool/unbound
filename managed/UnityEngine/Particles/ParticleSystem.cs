@@ -533,9 +533,10 @@ namespace UnityEngine
             if (size < 0 || size > particles.Length) size = particles.Length;
             if (offset < 0) throw new ArgumentOutOfRangeException(nameof(offset));
             int count = offset + size;
+            int before = m_Count;
             Reserve(count);
             if (count > 0) MaterializeAxisOfRotation();
-            for (int i = 0; i < size && offset + i < count; i++) WriteParticle(offset + i, particles[i]);
+            for (int i = 0; i < size && offset + i < count; i++) WriteParticle(offset + i, particles[i], offset + i < before);
             for (int s = 0; s < 2; s++)
                 if (m_Custom[s] != null && m_Custom[s].Length < count) Array.Resize(ref m_Custom[s], m_Particles.Length);
             m_Count = count;
@@ -544,7 +545,10 @@ namespace UnityEngine
             // The retained prefix is untouched, even when its exported lifetime is zero.
             var marks = SlotMarks(m_Count);
             for (int i = offset; i < m_Count; i++)
+            {
                 if (DiesWhenWritten(i)) marks[i] = SlotMark.Dead;
+                else StartWrittenTrail(ref m_Particles[i], i >= before);
+            }
             RemoveDeadSlots(offset & ~3, DeadSlotRemoval.Drop);
             for (int i = offset; i < m_Count; i++) SettleWrittenParticle(i);
             // A particle written at a nonpositive lifetime, or cut off by the size, leaves with its
@@ -645,14 +649,30 @@ namespace UnityEngine
         }
 
         /// <summary>SetParticles' write of one slot: the public particle replaces it.</summary>
-        void WriteParticle(int index, in Particle particle)
+        /// <summary>Writes a particle into a slot. Like the noise arrays, the trail belongs to the
+        /// slot, not to the written struct: a live slot keeps its trail, whatever particle is
+        /// written there (6000.0.71f1, tests/projects/particletrails api/rt trailsfirst: trails
+        /// stay with the indices across SetParticles); a slot past the live ones has none yet.</summary>
+        void WriteParticle(int index, in Particle particle, bool live = true)
         {
             // Native optional noise arrays are separate from the public particle struct.
             var noiseSum = m_Particles[index].m_NoiseSum;
             var noiseImpulse = m_Particles[index].m_NoiseImpulse;
+            int trail = live ? m_Particles[index].m_TrailId : 0;
             m_Particles[index] = particle;
             m_Particles[index].m_NoiseSum = noiseSum;
             m_Particles[index].m_NoiseImpulse = noiseImpulse;
+            m_Particles[index].m_TrailId = trail;
+            // What was written is a particle, not a carrier: one written dead leaves at once (with
+            // its slot's trail), one written alive makes the slot's fading trail live again.
+            m_Particles[index].m_Flags &= ~Particle.FlagOrphanTrail;
+            var held = trail > 0 && trail <= m_TrailList.Count ? m_TrailList[trail - 1] : null;
+            if (held != null)
+            {
+                held.Orphan = held.Spent = false;
+                // The draws a trail takes from its particle follow the written one.
+                SetTrailDraws(ref m_Particles[index], held);
+            }
         }
 
         /// <summary>Whether a written slot dies at once (SetParticles' nonpositive remaining lifetime).</summary>
@@ -851,6 +871,10 @@ namespace UnityEngine
             return t;
         }
 
+        /// <summary>Scripting API 6000.0: fills <paramref name="trailData"/> for a later SetTrails.
+        /// Documented as returning the number of trails; Unity 6000.0.71f1 returns the size of the
+        /// system's trail storage, which also becomes the Trails' capacity when that is smaller
+        /// (tests/projects/particletrails api/*, see <see cref="TrailStorageSize"/>).</summary>
         public int GetTrails(ref Trails trailData)
         {
             trailData.positions ??= new List<Vector4>();
@@ -858,34 +882,24 @@ namespace UnityEngine
             trailData.backPositions ??= new List<int>();
             trailData.positionCounts ??= new List<int>();
             trailData.textureOffsets ??= new List<float>();
-            trailData.positions.Clear();
-            trailData.frontPositions.Clear();
-            trailData.backPositions.Clear();
-            trailData.positionCounts.Clear();
-            trailData.textureOffsets.Clear();
-            trailData.maxTrailCount = 0;
-            trailData.maxPositionsPerTrailCount = 0;
             // The trail state is captured in Unbound's own form beside these fields, which stay
-            // empty: their layout is undocumented. A Trails passed again is refilled in place
-            // (Scripting API: GetTrails(ref) avoids garbage with presized data).
+            // empty. A Trails passed again is refilled in place (Scripting API: GetTrails(ref)
+            // avoids garbage with presized data).
             CaptureTrails(trailData);
-            // Documented as the number of trails, but a 6000.0.71f1 capture returned the storage
-            // size (maxTrailCount x maxPositionsPerTrailCount); the return is left as it was.
-            return 0;
+            int size = TrailStorageSize();
+            if (trailData.positions.Capacity < size) trailData.positions.Capacity = size;
+            return size;
         }
 
-        /// <summary>Scripting API 6000.0: restores the state stored by an earlier GetTrails, used
-        /// together with SetParticles and SetPlaybackState. A Trails that GetTrails never filled,
-        /// one from another system, or one whose particles are not the current ones is refused
-        /// with an error and changes nothing (Unbound's choice, unmeasured). When the particles
-        /// changed since GetTrails, SetParticles must restore them before SetTrails: the docs
-        /// give no order, so the other order is refused (Unbound's choice, unmeasured).</summary>
+        /// <summary>Scripting API 6000.0: restores trails stored by an earlier GetTrails, used with
+        /// SetParticles and SetPlaybackState. Trails go to particles by index, also in another
+        /// system (6000.0.71f1, see <see cref="RestoreTrails"/>). A Trails that GetTrails never
+        /// filled is refused with an error and changes nothing (unmeasured).</summary>
         public void SetTrails(Trails trailData)
         {
-            var mismatch = TrailCaptureMismatch(trailData);
-            if (mismatch != null)
+            if (trailData.positions == null || CaptureOf(trailData) == null)
             {
-                Debug.LogError("Unbound: ParticleSystem.SetTrails " + mismatch + "; the trails were left unchanged", this);
+                Debug.LogError("Unbound: ParticleSystem.SetTrails was given a Trails value that ParticleSystem.GetTrails never filled; the trails were left unchanged", this);
                 return;
             }
             RestoreTrails(trailData);
