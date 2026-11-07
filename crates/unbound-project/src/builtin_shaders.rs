@@ -5,13 +5,19 @@
 use crate::install::UnityInstall;
 use anyhow::{Context, Result, bail};
 use std::{
+    collections::HashMap,
+    fs::{self, File},
     io::Read,
     path::{Path, PathBuf},
+    sync::{
+        Arc, Mutex, OnceLock,
+        atomic::{AtomicU64, Ordering},
+    },
 };
 use unbound_compat::UnityVersion;
 
-/// Bumped when the unpacked layout changes.
-const FORMAT_VERSION: u32 = 1;
+/// Immutable archive-content entries, selected by an atomically published release marker.
+const FORMAT_VERSION: u32 = 2;
 
 /// The unpacked sources: `CGIncludes`, `DefaultResources`, `DefaultResourcesExtra`, ...
 #[derive(Debug, Clone)]
@@ -36,46 +42,170 @@ impl BuiltinShaders {
     /// `UNBOUND_BUILTIN_SHADERS` (an unpacked archive), else the cached copy for the install's
     /// release, downloaded when missing (its URL needs the release's build revision: from the
     /// installation, the project, else Unity's release index). `UNBOUND_OFFLINE` forbids
-    /// downloading: a missing copy is then an error, raised before any request.
+    /// downloading: a missing copy is then an error, raised before any request. The first
+    /// resolution is shared for this process, including failures; restart to retry a failure.
     pub fn find(install: &UnityInstall, project_version_txt: Option<&str>) -> Result<Self> {
         if let Some(dir) = std::env::var_os("UNBOUND_BUILTIN_SHADERS") {
             let root = PathBuf::from(dir);
-            if !root.join("DefaultResourcesExtra").is_dir() {
-                bail!(
-                    "UNBOUND_BUILTIN_SHADERS={} has no DefaultResourcesExtra",
-                    root.display()
-                );
-            }
-            return Ok(Self { root });
+            return session_sources(&root, || {
+                validate_sources(&root)
+                    .with_context(|| format!("UNBOUND_BUILTIN_SHADERS={}", root.display()))?;
+                Ok(Self { root: root.clone() })
+            });
         }
         let version = install.version;
         let root = crate::cache_root()
             .join("builtin-shaders")
             .join(format!("v{FORMAT_VERSION}"))
             .join(version.to_string());
-        if root.join(".complete").is_file() {
-            return Ok(Self { root });
-        }
-        // Both the release index and the archive are on the network.
-        check_download_allowed(
-            std::env::var_os("UNBOUND_OFFLINE").is_some(),
-            version,
-            &root,
-        )?;
-        let revision = match revision(install, project_version_txt) {
-            Some(revision) => revision,
-            None => crate::releases::lookup(version)
-                .with_context(|| format!("the build revision of Unity {version} is unknown"))?
-                .revision,
-        };
-        let url = format!(
-            "https://download.unity3d.com/download_unity/{revision}/builtin_shaders-{version}.zip"
-        );
-        tracing::info!("downloading Unity {version}'s built-in shader sources from {url}");
-        let archive = download(&url).with_context(|| format!("downloading {url}"))?;
-        unpack(&archive, &root).with_context(|| format!("unpacking {url}"))?;
-        Ok(Self { root })
+        session_sources(&root, || {
+            acquire(
+                &root,
+                version,
+                std::env::var_os("UNBOUND_OFFLINE").is_some(),
+                || {
+                    let revision = match revision(install, project_version_txt) {
+                        Some(revision) => revision,
+                        None => {
+                            crate::releases::lookup(version)
+                                .with_context(|| {
+                                    format!("the build revision of Unity {version} is unknown")
+                                })?
+                                .revision
+                        }
+                    };
+                    let url = format!(
+                        "https://download.unity3d.com/download_unity/{revision}/builtin_shaders-{version}.zip"
+                    );
+                    tracing::info!(
+                        "downloading Unity {version}'s built-in shader sources from {url}"
+                    );
+                    download(&url).with_context(|| format!("downloading {url}"))
+                },
+            )
+        })
     }
+}
+
+type SourceResult = std::result::Result<BuiltinShaders, String>;
+
+/// Managed defaults, declaration queries and the renderer share one resolution, even when the
+/// game reopens its Project. A failed dependency is diagnosed consistently for this process;
+/// another process can retry it, without changing already initialized materials underneath us.
+fn session_sources(
+    root: &Path,
+    load: impl FnOnce() -> Result<BuiltinShaders>,
+) -> Result<BuiltinShaders> {
+    static SOURCES: OnceLock<Mutex<HashMap<PathBuf, Arc<OnceLock<SourceResult>>>>> =
+        OnceLock::new();
+    let entry = SOURCES
+        .get_or_init(Default::default)
+        .lock()
+        .unwrap()
+        .entry(root.to_owned())
+        .or_default()
+        .clone();
+    entry
+        .get_or_init(|| {
+            load().map_err(|e| {
+                format!("shader source resolution failed for this process; restart to retry: {e:#}")
+            })
+        })
+        .clone()
+        .map_err(anyhow::Error::msg)
+}
+
+fn validate_sources(root: &Path) -> Result<()> {
+    if !root.join("DefaultResourcesExtra").is_dir()
+        || !root.join("CGIncludes/UnityCG.cginc").is_file()
+    {
+        bail!(
+            "{} lacks DefaultResourcesExtra or CGIncludes/UnityCG.cginc",
+            root.display()
+        );
+    }
+    Ok(())
+}
+
+fn cached(root: &Path) -> Result<Option<BuiltinShaders>> {
+    let hash = match fs::read_to_string(root.join(".complete")) {
+        Ok(hash) => hash,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(e.into()),
+    };
+    if hash.len() != 64 || !hash.bytes().all(|b| b.is_ascii_hexdigit()) {
+        bail!("invalid shader source cache marker at {}", root.display());
+    }
+    let sources = root.join(hash);
+    validate_sources(&sources)?;
+    if !sources.join(".complete").is_file() {
+        bail!(
+            "incomplete shader source cache entry at {}",
+            sources.display()
+        );
+    }
+    Ok(Some(BuiltinShaders { root: sources }))
+}
+
+/// The lock covers the cache recheck, acquisition and publication. It is never unlinked, so
+/// waiters cannot acquire different lock inodes; process termination releases it automatically.
+fn acquire(
+    root: &Path,
+    version: UnityVersion,
+    offline: bool,
+    load: impl FnOnce() -> Result<Vec<u8>>,
+) -> Result<BuiltinShaders> {
+    if let Some(found) = cached(root)? {
+        return Ok(found);
+    }
+    fs::create_dir_all(root)?;
+    let lock = File::options()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(root.join(".lock"))?;
+    lock.lock()
+        .with_context(|| format!("locking shader source cache {}", root.display()))?;
+    if let Some(found) = cached(root)? {
+        return Ok(found);
+    }
+    check_download_allowed(offline, version, root)?;
+    let archive = load()?;
+    let hash = blake3::hash(&archive).to_hex().to_string();
+    let sources = root.join(&hash);
+    if !sources.join(".complete").is_file() {
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        let temp = loop {
+            let path = root.join(format!(
+                ".unpacking-{}-{}",
+                std::process::id(),
+                NEXT.fetch_add(1, Ordering::Relaxed)
+            ));
+            match fs::create_dir(&path) {
+                Ok(()) => break path,
+                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(e) => return Err(e.into()),
+            }
+        };
+        let extracted = unpack(&archive, &temp).and_then(|()| validate_sources(&temp));
+        if let Err(e) = extracted {
+            let _ = fs::write(temp.join(".failure.txt"), format!("{e:#}"));
+            return Err(e).with_context(|| {
+                format!(
+                    "unpacking Unity {version} shader sources; diagnostics retained at {}",
+                    temp.display()
+                )
+            });
+        }
+        fs::write(temp.join(".complete"), b"")?;
+        fs::rename(&temp, &sources)
+            .with_context(|| format!("publishing shader sources at {}", sources.display()))?;
+    }
+    validate_sources(&sources)?;
+    fs::write(root.join(".complete.pending"), hash)?;
+    fs::rename(root.join(".complete.pending"), root.join(".complete"))?;
+    Ok(BuiltinShaders { root: sources })
 }
 
 /// Fails when `offline` (`UNBOUND_OFFLINE`) forbids downloading the release's missing sources
@@ -86,7 +216,7 @@ fn check_download_allowed(offline: bool, version: UnityVersion, root: &Path) -> 
             "Unity {version}'s built-in shader sources are not cached ({} has no .complete marker) \
              and UNBOUND_OFFLINE forbids downloading builtin_shaders-{version}.zip; set \
              UNBOUND_BUILTIN_SHADERS to a directory of the unpacked sources (with \
-             DefaultResourcesExtra), or unset UNBOUND_OFFLINE \
+             DefaultResourcesExtra and CGIncludes/UnityCG.cginc), or unset UNBOUND_OFFLINE \
              to download it once (an installed Unity Editor or UNBOUND_UNITY does not provide \
              these sources)",
             root.display()
@@ -127,12 +257,16 @@ fn is_revision(s: &str) -> bool {
 
 fn download(url: &str) -> Result<Vec<u8>> {
     crate::net::get(url, |mut response| {
-        Ok(response.body_mut().with_config().limit(256 << 20).read_to_vec()?)
+        Ok(response
+            .body_mut()
+            .with_config()
+            .limit(256 << 20)
+            .read_to_vec()?)
     })
 }
 
 /// Unpacks the archive (which holds `build/BuiltinShaders/builtin_shaders.zip` in recent
-/// releases, the sources themselves in older ones) into `root`, atomically.
+/// releases, the sources themselves in older ones) into a private staging directory.
 fn unpack(archive: &[u8], root: &Path) -> Result<()> {
     let mut zip = zip::ZipArchive::new(std::io::Cursor::new(archive))?;
     let inner = (0..zip.len()).find(|&i| {
@@ -144,22 +278,7 @@ fn unpack(archive: &[u8], root: &Path) -> Result<()> {
         zip.by_index(i)?.read_to_end(&mut bytes)?;
         return unpack(&bytes, root);
     }
-    let parent = root.parent().context("cache path")?;
-    std::fs::create_dir_all(parent)?;
-    let temp = parent.join(format!(".unpacking-{}", std::process::id()));
-    if temp.exists() {
-        std::fs::remove_dir_all(&temp)?;
-    }
-    zip.extract(&temp)?;
-    if !temp.join("DefaultResourcesExtra").is_dir() {
-        let _ = std::fs::remove_dir_all(&temp);
-        bail!("the archive has no DefaultResourcesExtra");
-    }
-    std::fs::write(temp.join(".complete"), b"")?;
-    if root.exists() {
-        std::fs::remove_dir_all(root)?;
-    }
-    std::fs::rename(&temp, root)?;
+    zip.extract(root)?;
     Ok(())
 }
 
