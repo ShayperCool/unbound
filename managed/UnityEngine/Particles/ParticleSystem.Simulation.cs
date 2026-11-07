@@ -597,8 +597,8 @@ namespace UnityEngine
             Reserve(checked(aligned + lanes));
             m_Count = aligned + lanes;
             for (int i = aligned; i < m_Count; i++) ClearCustom(i);
-            var dead = new bool[lanes];
-            var origins = new Vector3[lanes];
+            var marks = SlotMarks(m_Count);
+            for (int j = 0; j < count; j++) marks[aligned + j] = SlotMark.Admitted;
             var overrides = default(EmitParams);
             var t = m_GameObject.m_Transform;
             float duration = Mathf.Max(m_Main.duration, 0.0001f);
@@ -631,8 +631,8 @@ namespace UnityEngine
                 int spreadCount = request.spreadIndex >= 0 ? request.spreadCount : request.count;
                 if (!InitParticle(ref m_Particles[index], emitter, Mathf.Clamp01(birthTime / duration),
                     false, ref overrides, spread, spreadCount, null, j, requested))
-                { dead[j] = true; continue; }
-                origins[j] = m_Particles[index].m_Position;
+                { marks[index] |= SlotMark.Dead; continue; }
+                m_SlotPoints[index] = m_Particles[index].m_Position;
                 BeginModuleSample(j, m_Particles[index].m_RandomSeed);
                 var context = m_Context;
                 if (j >= count)
@@ -640,19 +640,20 @@ namespace UnityEngine
                     context.BirthSubs = false;
                     context.TemporaryLane = true;
                 }
-                dead[j] = !Integrate(ref m_Particles[index], age, ref context);
+                if (!Integrate(ref m_Particles[index], age, ref context)) marks[index] |= SlotMark.Dead;
             }
-            // Initialize complete groups before removing expired births. The unused
-            // final lanes take the minimum age and participate in local compaction.
-            // Only the admitted count is retained, including any promoted lanes.
+            // Initialize complete groups before removing expired births, in ascending
+            // slot order (the existing particles' four-slot order regresses
+            // particlerandom ratebatch/edge). The unused final lanes take the minimum age
+            // and take part in the compaction. Each admitted birth that dies gives up its
+            // place; an unused lane that dies was never admitted, so it leaves the
+            // admitted count unchanged. The retained count can promote surviving unused
+            // lanes into the places of dead births.
             for (int i = aligned; i < m_Count;)
             {
-                int local = i - aligned;
-                if (!dead[local]) { i++; continue; }
-                RemoveAt(i);
-                if (count > 0) count--;
-                int last = m_Count - aligned;
-                if (local < last) { dead[local] = dead[last]; origins[local] = origins[last]; }
+                if ((marks[i] & SlotMark.Dead) == 0) { i++; continue; }
+                if ((marks[i] & SlotMark.Admitted) != 0) count--;
+                RemoveSlot(i);
             }
             int prefix = Math.Min(count, aligned - start);
             for (int i = 0; i < prefix; i++)
@@ -666,7 +667,7 @@ namespace UnityEngine
             for (int i = start; i < m_Count; i++)
             {
                 int origin = i < aligned ? count - prefix + i - start : i - aligned;
-                StartTrail(ref m_Particles[i], origins[origin]);
+                StartTrail(ref m_Particles[i], m_SlotPoints[aligned + origin]);
             }
             m_Newborn = false;
             m_SpeedNt = -1f;
