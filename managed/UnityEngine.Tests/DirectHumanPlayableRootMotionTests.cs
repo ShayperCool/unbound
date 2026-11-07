@@ -41,7 +41,9 @@ namespace UnityEngine.Tests
             });
             Add("RootT.x", 0f, 2f);
             Add("RootT.y", 1f, 1f);
+            Add("RootQ.x", 0f, 0f);
             Add("RootQ.y", 0f, 0.5f);
+            Add("RootQ.z", 0f, 0f);
             Add("RootQ.w", 1f, 0.8660254f);
             clip.m_Version++;
             return clip;
@@ -146,12 +148,19 @@ namespace UnityEngine.Tests
         [InlineData("footIK")]
         [InlineData("shared")]
         [InlineData("fractional")]
+        [InlineData("sparse0")]
+        [InlineData("sparse1")]
         public void UnmeasuredHumanMixerContextsStayDiagnostic(string context)
         {
             string version = ProjectInfo.UnityVersion;
             ProjectInfo.UnityVersion = context == "release" ? "6000.0.72f1" : "6000.0.71f1";
             var root = Rig(out var animator, out var avatar);
             var clip = Clip();
+            if (context.StartsWith("sparse", StringComparison.Ordinal))
+            {
+                clip.m_Curves.RemoveAll(curve => curve.Binding.Attribute == "RootQ.w");
+                clip.m_Version++;
+            }
             var graph = PlayableGraph.Create("unsupported-human-mixer");
             graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
             var logger = Debug.unityLogger;
@@ -169,8 +178,9 @@ namespace UnityEngine.Tests
                 first.SetApplyFootIK(context == "footIK");
                 second.SetApplyFootIK(false);
                 var mixer = AnimationMixerPlayable.Create(graph, 2);
-                mixer.ConnectInput(0, first, 0, 0.25f);
-                mixer.ConnectInput(1, second, 0, context == "sum" ? 0.25f : 0.75f);
+                float firstWeight = context == "sparse0" ? 0f : context == "sparse1" ? 1f : 0.25f;
+                mixer.ConnectInput(0, first, 0, firstWeight);
+                mixer.ConnectInput(1, second, 0, context == "sum" ? 0.25f : 1f - firstWeight);
                 var output = AnimationPlayableOutput.Create(graph, "animation", animator);
                 output.SetSourcePlayable(mixer);
                 if (context == "fractional") output.SetWeight(0.5f);

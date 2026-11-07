@@ -272,7 +272,7 @@ additional Native observation; the second guards the declared support boundary.
 `humanMixerMotion/` extends the direct-clip controls with one AnimationMixerPlayable,
 one full-weight default-values AnimationPlayableOutput and one HumanA Animator without
 a controller. It reuses `LoopMuscles` and the humanoid probe's authored `OrigTurned`
-clip, both nonmirrored, with translation and yaw. Constant input weights are 0/1,
+clip, both nonmirrored, with translation, yaw and complete RootQ curves. Constant input weights are 0/1,
 1/0 and 0.25/0.75. The endpoint controls use AlwaysAnimate with both clocks. The
 interior blend also covers all three culling modes and root motion off, builtin
 application, and OnAnimatorMove calling ApplyBuiltinRootMotion with either flag.
@@ -293,7 +293,7 @@ Unity contract checked for **6000.0**, measured release **6000.0.71f1**:
 
 Layers, controller playables, HumanStream, mirrors/additive graphs, attached
 controllers, shared or fractional outputs, non-unit input weight sums and live
-weight changes remain outside this certification.
+weight changes and sparse root quaternions remain outside this certification.
 
 The two independent Native captures in `q104-native` agree byte-for-byte on
 19,611 records. Publication appended 2,072 keys and preserved all 17,539 prior
@@ -323,7 +323,12 @@ The full reference has 19,607/19,611 strict matches, no missing/extra keys, and 
 the same four documented rotation-predicate residuals accepted by `verify_gate.py`.
 Regressions: startup 2,223/2,223 and skinned bounds 2,063/2,063. The humanoid probe
 retains its prior 203 differences, 428,164/428,367 values matching, with every raw
-difference retained outside Git. The focused managed motion tests pass 35/35.
+difference retained outside Git. The focused managed motion tests pass 37/37.
 The existing `gate.json` command remains engine-only with an explicit release:
 
     python3 tests/projects/animculling/run.py gate --release "$UNBOUND_PROBE_UNITY_VERSION"
+
+Independent review found that the stream rewrite cannot fill an absent RootQ.w
+binding: it would leave the identity default alongside a normalized y component.
+The certified mixer path therefore diagnoses clips without all four RootQ curves.
+Managed endpoint regressions retain this boundary at input weights 0/1 and 1/0.

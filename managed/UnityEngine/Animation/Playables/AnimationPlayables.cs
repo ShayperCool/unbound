@@ -275,6 +275,11 @@ namespace Unbound.Runtime.Playables
             {
                 if (!(input.Weight >= 0f) || !AnimationEvaluation.HumanMotionClip(input.Node)
                     || ((ClipKind)input.Node.Kind).ApplyFootIK || input.SourcePort != 0) return false;
+                // The stream rewrite below requires each quaternion component to have a
+                // binding. Sparse body quaternions remain outside this measured graph slice.
+                var present = ((ClipKind)input.Node.Kind).Clip.HumanPresent;
+                for (int q = 0; q < 4; q++)
+                    if (!present[Unbound.Runtime.Humanoid.HumanClipImport.RootFirst + 3 + q]) return false;
                 int consumers = 0;
                 foreach (var output in input.Node.Outputs)
                     if (output.Node != null) consumers++;

@@ -687,7 +687,7 @@ namespace Unbound.Runtime.Playables
                     Stubs.Ignored(outputs.Count == 1 && outputs[0].Output.Source?.Kind is MixerKind
                         ? "Animator root motion of unsupported humanoid mixer output"
                         : "Animator root motion of composed playable graph outputs on humanoid avatars",
-                        "is not applied: only one direct, full-weight nonmirrored humanoid clip output or, on measured 6000.0.71f1, one two-input mixer with fixed nonnegative unit-sum weights is supported, without a playing controller, shared nodes, foot IK on the mixer inputs or loop overrides; other mixer shapes, live weights, layers, controller-playables and animation-job motion remain unsupported");
+                        "is not applied: only one direct, full-weight nonmirrored humanoid clip output or, on measured 6000.0.71f1, one two-input mixer with complete RootQ curves and fixed nonnegative unit-sum weights is supported, without a playing controller, shared nodes, foot IK on the mixer inputs or loop overrides; other mixer shapes, live weights, layers, controller-playables and animation-job motion remain unsupported");
                 return RootMotionMode.Unsupported;
             }
             return requested ? RootMotionMode.Compute : RootMotionMode.Zero;
