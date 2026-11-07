@@ -18,7 +18,7 @@ namespace UnityEngine.Tests
         }
         public void Dispose()
         {
-            foreach (var obj in m_Objects) Object.DestroyImmediate(obj);
+            foreach (var obj in m_Objects) Object.DestroyImmediate(obj, true);
             AudioSystem.ResetForTests(); ProjectInfo.UnityVersion = m_Release;
         }
         AudioClip Clip(int frames, int channels, int frequency, bool stream = false)
@@ -78,8 +78,11 @@ namespace UnityEngine.Tests
             Assert.Equal(AudioDataLoadState.Loaded, clone.loadState);
             Assert.Equal(AudioDataLoadState.Unloaded, asset.loadState);
             var shared = new float[1]; Assert.True(asset.GetData(shared, 0)); Assert.Equal(0.75f, shared[0]);
-            Object.DestroyImmediate(asset);
+            ulong handle = clone.m_Handle;
+            Object.DestroyImmediate(asset, true); Assert.False(asset);
             Assert.True(clone.GetData(shared, 0)); Assert.Equal(0.75f, shared[0]);
+            Object.DestroyImmediate(clone); Assert.False(clone);
+            Assert.False(m_Backend.ClipData(handle, 0, shared, write: false));
         }
         [Fact]
         public void ResetReloadsImportedDataEvenWithoutAnEarlierSetData()
