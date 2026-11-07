@@ -201,7 +201,7 @@ namespace UnityEngine.Playables
             if (scriptInstance is IPlayableBehaviour b)
             {
                 var p = new Playable(this);
-                PlayableGraphData.Invoke(() => b.OnPlayableCreate(p));
+                PlayableGraphData.Call(b, PlayableGraphData.Callback.Create, p, default);
             }
         }
 

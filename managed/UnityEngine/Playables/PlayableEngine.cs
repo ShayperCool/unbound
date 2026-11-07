@@ -393,9 +393,9 @@ namespace Unbound.Runtime.Playables
                 if (n.Started)
                 {
                     n.Started = false;
-                    Invoke(() => b.OnGraphStop(p));
+                    Call(b, Callback.GraphStop, p, default);
                 }
-                Invoke(() => b.OnPlayableDestroy(p));
+                Call(b, Callback.Destroy, p, default);
             }
             try { n.Kind?.Destroyed(n); }
             catch (Exception e) { Debug.LogException(e); }
@@ -429,24 +429,44 @@ namespace Unbound.Runtime.Playables
         {
             // Playables that a traversal would find playing are paused first (unless a stop already
             // did it), then every playable in creation order stops and is destroyed.
-            var seen = new HashSet<PlayableNode>();
             if (PlayingAtDestroy) FrameId++;
-            foreach (var o in Outputs.ToArray())
+            var outputs = Scratch<PlayableOutputData>.Rent(Outputs);
+            var seen = Scratch<PlayableNode>.RentSet();
+            try
             {
-                if (o.Source == null || Stopped) continue;
-                Walk(o.Source, o.SourcePort, 1f, 1f, 1.0, true, (n, w, ew, ps, s, playing) =>
+                foreach (var o in outputs)
                 {
-                    if (!playing || !seen.Add(n)) return;
-                    var b = n.Behaviour;
-                    if (b == null) return;
-                    var info = MakeInfo(n, 0, w, ew, ps, s, n.FrameFlags & ControlFlags, true, o, false);
-                    n.LastPlaying = false;
-                    var p = n.ToPlayable();
-                    Invoke(() => b.OnBehaviourPause(p, info));
-                });
+                    if (o.Source == null || Stopped) continue;
+                    var pause = new TeardownPause { Graph = this, Output = o, Seen = seen };
+                    Walk(o, ref pause);
+                }
+                var nodes = Scratch<PlayableNode>.Rent(Nodes);
+                foreach (var n in nodes) FinishNode(n);
+                Scratch<PlayableNode>.Return(nodes);
+                foreach (var o in outputs) DestroyOutput(o);
             }
-            foreach (var n in Nodes.ToArray()) FinishNode(n);
-            foreach (var o in Outputs.ToArray()) DestroyOutput(o);
+            finally
+            {
+                Scratch<PlayableOutputData>.Return(outputs);
+                Scratch<PlayableNode>.Return(seen);
+            }
+        }
+
+        struct TeardownPause : INodeVisitor
+        {
+            internal PlayableGraphData Graph;
+            internal PlayableOutputData Output;
+            internal HashSet<PlayableNode> Seen;
+
+            public void Visit(PlayableNode n, in NodeVisit v)
+            {
+                if (!v.Playing || !Seen.Add(n)) return;
+                var b = n.Behaviour;
+                if (b == null) return;
+                var info = Graph.MakeInfo(n, 0, v, n.FrameFlags & ControlFlags, true, Output, false);
+                n.LastPlaying = false;
+                Call(b, Callback.Pause, n.ToPlayable(), info);
+            }
         }
 
         /// <summary>A domain reload: the graphs' behaviours belong to the old game code, so every
@@ -476,9 +496,13 @@ namespace Unbound.Runtime.Playables
         internal static void FlushDestroyed()
         {
             if (s_PendingDestroy.Count == 0) return;
-            var list = s_PendingDestroy.ToArray();
+            var list = Scratch<PlayableGraphData>.Rent(s_PendingDestroy);
             s_PendingDestroy.Clear();
-            foreach (var g in list) g.FinishDestroy();
+            try
+            {
+                foreach (var g in list) g.FinishDestroy();
+            }
+            finally { Scratch<PlayableGraphData>.Return(list); }
         }
 
         // ------------------------------------------------------------------ play state
@@ -516,21 +540,49 @@ namespace Unbound.Runtime.Playables
 
         // ------------------------------------------------------------------ traversal
 
-        internal delegate void Visitor(PlayableNode node, float weight, float effectiveWeight, double parentSpeed, double speed, bool playing);
-
-        /// <summary>Depth first, parent first, along the inputs an output reaches through a port.</summary>
-        internal static void Walk(PlayableNode n, int viaPort, float w, float ew, double parentSpeed, bool parentPlaying, Visitor visit, int depth = 0)
+        /// <summary>What a traversal knows about a playable it reaches: its input weight, effective
+        /// weight, the effective speeds above it and of it, and its effective play state.</summary>
+        internal readonly struct NodeVisit
         {
-            if (n == null || depth > 256) return;
-            bool playing = parentPlaying && n.State == PlayState.Playing;
-            double speed = parentSpeed * n.Speed;
-            visit(n, w, ew, parentSpeed, speed, playing);
+            internal readonly float Weight, EffectiveWeight;
+            internal readonly double ParentSpeed, Speed;
+            internal readonly bool Playing;
+
+            internal NodeVisit(float weight, float effectiveWeight, double parentSpeed, double speed, bool playing)
+            {
+                Weight = weight;
+                EffectiveWeight = effectiveWeight;
+                ParentSpeed = parentSpeed;
+                Speed = speed;
+                Playing = playing;
+            }
+        }
+
+        /// <summary>A traversal's per-playable step. Visitors are structs passed by reference, so a
+        /// traversal allocates nothing.</summary>
+        internal interface INodeVisitor
+        {
+            void Visit(PlayableNode node, in NodeVisit visit);
+        }
+
+        const int MaxDepth = 256;
+
+        /// <summary>Depth first, parent first, along the inputs an output reaches through its source port.</summary>
+        internal static void Walk<T>(PlayableOutputData output, ref T visitor) where T : struct, INodeVisitor =>
+            Walk(output.Source, output.SourcePort, 1f, 1f, 1.0, true, ref visitor, 0);
+
+        static void Walk<T>(PlayableNode n, int viaPort, float w, float ew, double parentSpeed, bool parentPlaying, ref T visitor, int depth)
+            where T : struct, INodeVisitor
+        {
+            if (n == null || depth > MaxDepth) return;
+            var visit = new NodeVisit(w, ew, parentSpeed, parentSpeed * n.Speed, parentPlaying && n.State == PlayState.Playing);
+            visitor.Visit(n, visit);
             if (n.Traversal == PlayableTraversalMode.Passthrough)
             {
                 if (viaPort >= 0 && viaPort < n.Inputs.Count)
                 {
                     var i = n.Inputs[viaPort];
-                    Walk(i.Node, i.SourcePort, i.Weight, ew * i.Weight, speed, playing, visit, depth + 1);
+                    Walk(i.Node, i.SourcePort, i.Weight, ew * i.Weight, visit.Speed, visit.Playing, ref visitor, depth + 1);
                 }
                 return;
             }
@@ -538,11 +590,14 @@ namespace Unbound.Runtime.Playables
             {
                 var i = n.Inputs[k];
                 if (i.Node == null) continue;
-                Walk(i.Node, i.SourcePort, i.Weight, ew * i.Weight, speed, playing, visit, depth + 1);
+                Walk(i.Node, i.SourcePort, i.Weight, ew * i.Weight, visit.Speed, visit.Playing, ref visitor, depth + 1);
             }
         }
 
         const FrameData.Flags ControlFlags = FrameData.Flags.SeekOccured | FrameData.Flags.Loop | FrameData.Flags.Hold;
+
+        internal FrameData MakeInfo(PlayableNode n, double dt, in NodeVisit v, FrameData.Flags flags, bool playing, PlayableOutputData output, bool evaluate) =>
+            MakeInfo(n, dt, v.Weight, v.EffectiveWeight, v.ParentSpeed, v.Speed, flags, playing, output, evaluate);
 
         internal FrameData MakeInfo(PlayableNode n, double dt, float w, float ew, double parentSpeed, double speed, FrameData.Flags flags, bool playing, PlayableOutputData output, bool evaluate)
         {
@@ -603,80 +658,117 @@ namespace Unbound.Runtime.Playables
             n.Time = t;
         }
 
-        /// <summary>The prepare pass over the given outputs (all when null).</summary>
-        internal void PreparePass(double dt, bool evaluate, Func<PlayableOutputData, bool> which = null)
+        /// <summary>The prepare pass over every output.</summary>
+        internal void PreparePass(double dt, bool evaluate)
         {
             ulong frame = FrameId;
-            var steps = new Dictionary<PlayableOutputData, double>();
-            var advancing = new HashSet<PlayableNode>();
-            foreach (var o in Outputs.ToArray())
+            var outputs = Scratch<PlayableOutputData>.Rent(Outputs);
+            var steps = Scratch<(PlayableOutputData Output, double Step)>.Rent();
+            var advancing = Scratch<PlayableNode>.RentSet();
+            try
             {
-                if (o.Destroyed || o.Source == null || (which != null && !which(o))) continue;
-                double step = dt;
-                if (o.Engine is AnimationOutputState animation)
+                foreach (var o in outputs)
                 {
-                    animation.Automatic = !evaluate;
-                    if (!evaluate && UpdateMode == DirectorUpdateMode.GameTime) step = AnimationSystem.AutomaticFrameDelta(step);
-                    bool culled = animation.Target != null && animation.Target.isActiveAndEnabled
-                        && animation.Target.cullingMode == AnimatorCullingMode.CullCompletely
-                        && !Animator.AnyRendererVisible(animation.Target.gameObject);
-                    animation.SkipEvaluation = culled && animation.Ticked;
-                    if (animation.SkipEvaluation) continue;
-                    if (culled) step = 0;
-                    animation.Ticked = true;
+                    if (o.Destroyed || o.Source == null) continue;
+                    double step = dt;
+                    if (o.Engine is AnimationOutputState animation)
+                    {
+                        animation.Automatic = !evaluate;
+                        if (!evaluate && UpdateMode == DirectorUpdateMode.GameTime) step = AnimationSystem.AutomaticFrameDelta(step);
+                        bool culled = animation.Target != null && animation.Target.isActiveAndEnabled
+                            && animation.Target.cullingMode == AnimatorCullingMode.CullCompletely
+                            && !Animator.AnyRendererVisible(animation.Target.gameObject);
+                        animation.SkipEvaluation = culled && animation.Ticked;
+                        if (animation.SkipEvaluation) continue;
+                        if (culled) step = 0;
+                        animation.Ticked = true;
+                    }
+                    steps.Add((o, step));
+                    if (step != 0)
+                    {
+                        var mark = new Collect { Into = advancing };
+                        Walk(o, ref mark);
+                    }
                 }
-                steps[o] = step;
-                if (step != 0)
-                    Walk(o.Source, o.SourcePort, 1f, 1f, 1.0, true, (n, w, ew, ps, s, playing) => advancing.Add(n));
-            }
-            foreach (var entry in steps)
-            {
-                var o = entry.Key;
-                double step = entry.Value;
-                Walk(o.Source, o.SourcePort, 1f, 1f, 1.0, true, (n, w, ew, ps, s, playing) =>
+                foreach (var (o, step) in steps)
                 {
-                    if (n.Destroyed || n.PreparedFrame == frame) return;
-                    n.PreparedFrame = frame;
-                    double nodeStep = step == 0 && advancing.Contains(n) ? dt : step;
-                    var flags = (FrameData.Flags)0;
-                    var b = n.Behaviour;
-
-                    if (b == null) n.Started = true;
-                    if (playing)
-                    {
-                        if (n.TimeSet)
-                        {
-                            flags |= FrameData.Flags.SeekOccured;
-                            n.TimeSet = false;
-                        }
-                        else Advance(n, nodeStep * s, ref flags);
-                    }
-                    n.FrameFlags = flags;
-                    var info = MakeInfo(n, nodeStep, w, ew, ps, s, flags, playing, o, evaluate);
-                    var p = n.ToPlayable();
-                    if (b != null)
-                    {
-                        if (!n.Started)
-                        {
-                            n.Started = true;
-                            Invoke(() => b.OnGraphStart(p));
-                        }
-                        if (playing != n.LastPlaying)
-                        {
-                            n.LastPlaying = playing;
-                            if (playing) Invoke(() => b.OnBehaviourPlay(p, info));
-                            else Invoke(() => b.OnBehaviourPause(p, info));
-                        }
-                        if (playing) Invoke(() => b.PrepareFrame(p, info));
-                    }
-                    else if (playing != n.LastPlaying)
-                    {
-                        n.LastPlaying = playing;
-                        if (n.Kind != null) Invoke(() => n.Kind.PlayStateChanged(n, playing, info));
-                    }
-                    if (playing && n.Kind != null) Invoke(() => n.Kind.Prepare(n, info));
-                });
+                    var prepare = new Prepare { Graph = this, Output = o, Step = step, Dt = dt, Frame = frame, Evaluate = evaluate, Advancing = advancing };
+                    Walk(o, ref prepare);
+                }
             }
+            finally
+            {
+                Scratch<PlayableOutputData>.Return(outputs);
+                Scratch<(PlayableOutputData, double)>.Return(steps);
+                Scratch<PlayableNode>.Return(advancing);
+            }
+        }
+
+        struct Collect : INodeVisitor
+        {
+            internal HashSet<PlayableNode> Into;
+
+            public void Visit(PlayableNode n, in NodeVisit v) => Into.Add(n);
+        }
+
+        struct Prepare : INodeVisitor
+        {
+            internal PlayableGraphData Graph;
+            internal PlayableOutputData Output;
+            internal double Step, Dt;
+            internal ulong Frame;
+            internal bool Evaluate;
+            internal HashSet<PlayableNode> Advancing;
+
+            public void Visit(PlayableNode n, in NodeVisit v)
+            {
+                if (n.Destroyed || n.PreparedFrame == Frame) return;
+                n.PreparedFrame = Frame;
+                double step = Step == 0 && Advancing.Contains(n) ? Dt : Step;
+                Graph.PrepareNode(n, v, step, Output, Evaluate);
+            }
+        }
+
+        /// <summary>One playable's share of the prepare pass: its time, start and play-state
+        /// notifications, then PrepareFrame (script) or the engine playable's own preparation.</summary>
+        void PrepareNode(PlayableNode n, in NodeVisit v, double step, PlayableOutputData o, bool evaluate)
+        {
+            var flags = (FrameData.Flags)0;
+            var b = n.Behaviour;
+            bool playing = v.Playing;
+            if (b == null) n.Started = true;
+            if (playing)
+            {
+                if (n.TimeSet)
+                {
+                    flags |= FrameData.Flags.SeekOccured;
+                    n.TimeSet = false;
+                }
+                else Advance(n, step * v.Speed, ref flags);
+            }
+            n.FrameFlags = flags;
+            var info = MakeInfo(n, step, v, flags, playing, o, evaluate);
+            var p = n.ToPlayable();
+            if (b != null)
+            {
+                if (!n.Started)
+                {
+                    n.Started = true;
+                    Call(b, Callback.GraphStart, p, info);
+                }
+                if (playing != n.LastPlaying)
+                {
+                    n.LastPlaying = playing;
+                    Call(b, playing ? Callback.Play : Callback.Pause, p, info);
+                }
+                if (playing) Call(b, Callback.Prepare, p, info);
+            }
+            else if (playing != n.LastPlaying)
+            {
+                n.LastPlaying = playing;
+                if (n.Kind != null) CallKind(n.Kind, n, playing ? KindCall.Play : KindCall.Pause, info);
+            }
+            if (playing && n.Kind != null) CallKind(n.Kind, n, KindCall.Prepare, info);
         }
 
         /// <summary>The process pass of one script output, then its notifications.</summary>
@@ -689,7 +781,7 @@ namespace Unbound.Runtime.Playables
 
         void Process(PlayableOutputData o, PlayableNode n, int viaPort, float w, float ew, double parentSpeed, bool parentPlaying, double dt, int depth)
         {
-            if (n == null || n.Destroyed || depth > 256) return;
+            if (n == null || n.Destroyed || depth > MaxDepth) return;
             bool playing = parentPlaying && n.State == PlayState.Playing;
             if (!playing) return;
             double speed = parentSpeed * n.Speed;
@@ -713,24 +805,31 @@ namespace Unbound.Runtime.Playables
             var b = n.Behaviour;
             if (b == null || n.Destroyed) return;
             var info = MakeInfo(n, dt, w, ew, parentSpeed, speed, n.FrameFlags, true, o, false);
-            var p = n.ToPlayable();
-            object data = o.UserData;
-            Invoke(() => b.ProcessFrame(p, info, data));
+            Call(b, Callback.Process, n.ToPlayable(), info, o.UserData);
         }
 
         internal void DeliverNotifications(PlayableOutputData o)
         {
             if (o.Pending.Count == 0) return;
-            var pending = o.Pending.ToArray();
+            var pending = Scratch<(PlayableHandle Origin, INotification Notification, object Context)>.Rent(o.Pending);
+            var receivers = Scratch<INotificationReceiver>.Rent(o.Receivers);
             o.Pending.Clear();
-            foreach (var r in o.Receivers.ToArray())
+            try
             {
-                if (r == null || (r is Object uo && uo == null)) continue;
-                foreach (var (origin, notification, context) in pending)
+                foreach (var r in receivers)
                 {
-                    var originPlayable = new Playable(origin);
-                    Invoke(() => r.OnNotify(originPlayable, notification, context));
+                    if (r == null || (r is Object uo && uo == null)) continue;
+                    foreach (var (origin, notification, context) in pending)
+                    {
+                        try { r.OnNotify(new Playable(origin), notification, context); }
+                        catch (Exception e) { Debug.LogException(e); }
+                    }
                 }
+            }
+            finally
+            {
+                Scratch<(PlayableHandle, INotification, object)>.Return(pending);
+                Scratch<INotificationReceiver>.Return(receivers);
             }
         }
 
@@ -748,78 +847,114 @@ namespace Unbound.Runtime.Playables
         /// kinds through their systems (animation, audio).</summary>
         internal void EvaluateOutputs(double dt, bool seek)
         {
-            foreach (var o in Outputs.ToArray())
+            var outputs = Scratch<PlayableOutputData>.Rent(Outputs);
+            try
             {
-                if (o.Destroyed) continue;
-                if (o.OutputType == typeof(ScriptPlayableOutput)) ProcessOutput(o, dt);
-                else OutputSystems.Process(o, dt, seek);
+                foreach (var o in outputs)
+                {
+                    if (o.Destroyed) continue;
+                    if (o.OutputType == typeof(ScriptPlayableOutput)) ProcessOutput(o, dt);
+                    else OutputSystems.Process(o, dt, seek);
+                }
             }
+            finally { Scratch<PlayableOutputData>.Return(outputs); }
         }
 
         /// <summary>A Play in the player loop: started playables learn they play.</summary>
         void StartPass()
         {
-            ulong frame = FrameId;
-            foreach (var o in Outputs.ToArray())
+            var outputs = Scratch<PlayableOutputData>.Rent(Outputs);
+            try
             {
-                if (o.Destroyed || o.Source == null) continue;
-                Walk(o.Source, o.SourcePort, 1f, 1f, 1.0, true, (n, w, ew, ps, s, playing) =>
+                foreach (var o in outputs)
                 {
-                    if (n.Destroyed || !playing) return;
-                    var b = n.Behaviour;
-                    var flags = n.FrameFlags & ControlFlags;
-                    var info = MakeInfo(n, 0, w, ew, ps, s, flags, true, o, false);
-                    var p = n.ToPlayable();
-                    if (b == null)
-                    {
-                        n.Started = true;
-                        return;
-                    }
-                    if (!n.Started)
-                    {
-                        n.Started = true;
-                        Invoke(() => b.OnGraphStart(p));
-                    }
-                    if (!n.LastPlaying)
-                    {
-                        n.LastPlaying = true;
-                        Invoke(() => b.OnBehaviourPlay(p, info));
-                    }
-                });
+                    if (o.Destroyed || o.Source == null) continue;
+                    var start = new Start { Graph = this, Output = o };
+                    Walk(o, ref start);
+                }
             }
+            finally { Scratch<PlayableOutputData>.Return(outputs); }
             FrameId++;
+        }
+
+        struct Start : INodeVisitor
+        {
+            internal PlayableGraphData Graph;
+            internal PlayableOutputData Output;
+
+            public void Visit(PlayableNode n, in NodeVisit v)
+            {
+                if (n.Destroyed || !v.Playing) return;
+                var b = n.Behaviour;
+                if (b == null)
+                {
+                    n.Started = true;
+                    return;
+                }
+                var info = Graph.MakeInfo(n, 0, v, n.FrameFlags & ControlFlags, true, Output, false);
+                var p = n.ToPlayable();
+                if (!n.Started)
+                {
+                    n.Started = true;
+                    Call(b, Callback.GraphStart, p, info);
+                }
+                if (!n.LastPlaying)
+                {
+                    n.LastPlaying = true;
+                    Call(b, Callback.Play, p, info);
+                }
+            }
         }
 
         /// <summary>A Stop in the player loop: playing playables pause and every one stops.</summary>
         void StopPass()
         {
             FrameId++;
-            var seen = new HashSet<PlayableNode>();
-            foreach (var o in Outputs.ToArray())
+            var outputs = Scratch<PlayableOutputData>.Rent(Outputs);
+            var seen = Scratch<PlayableNode>.RentSet();
+            try
             {
-                if (o.Destroyed || o.Source == null) continue;
-                Walk(o.Source, o.SourcePort, 1f, 1f, 1.0, true, (n, w, ew, ps, s, playing) =>
+                foreach (var o in outputs)
                 {
-                    if (n.Destroyed || !seen.Add(n)) return;
-                    var b = n.Behaviour;
-                    var p = n.ToPlayable();
-                    if (playing && n.LastPlaying)
-                    {
-                        n.LastPlaying = false;
-                        var info = MakeInfo(n, 0, w, ew, ps, s, n.FrameFlags & ControlFlags, true, o, false);
-                        if (b != null) Invoke(() => b.OnBehaviourPause(p, info));
-                        else n.Kind?.PlayStateChanged(n, false, info);
-                    }
-                    if (n.Started)
-                    {
-                        n.Started = false;
-                        if (b != null) Invoke(() => b.OnGraphStop(p));
-                    }
-                });
+                    if (o.Destroyed || o.Source == null) continue;
+                    var stop = new StopVisit { Graph = this, Output = o, Seen = seen };
+                    Walk(o, ref stop);
+                }
+            }
+            finally
+            {
+                Scratch<PlayableOutputData>.Return(outputs);
+                Scratch<PlayableNode>.Return(seen);
             }
             FrameId++;
             Stopped = true;
             OutputSystems.Stopped(this);
+        }
+
+        struct StopVisit : INodeVisitor
+        {
+            internal PlayableGraphData Graph;
+            internal PlayableOutputData Output;
+            internal HashSet<PlayableNode> Seen;
+
+            public void Visit(PlayableNode n, in NodeVisit v)
+            {
+                if (n.Destroyed || !Seen.Add(n)) return;
+                var b = n.Behaviour;
+                var p = n.ToPlayable();
+                if (v.Playing && n.LastPlaying)
+                {
+                    n.LastPlaying = false;
+                    var info = Graph.MakeInfo(n, 0, v, n.FrameFlags & ControlFlags, true, Output, false);
+                    if (b != null) Call(b, Callback.Pause, p, info);
+                    else if (n.Kind != null) CallKind(n.Kind, n, KindCall.Pause, info);
+                }
+                if (n.Started)
+                {
+                    n.Started = false;
+                    if (b != null) Call(b, Callback.GraphStop, p, default);
+                }
+            }
         }
 
         double DeltaTime()
@@ -838,52 +973,63 @@ namespace Unbound.Runtime.Playables
         internal static void UpdateAll()
         {
             FlushDestroyed();
-            foreach (var g in s_Graphs.ToArray())
+            var graphs = Scratch<PlayableGraphData>.Rent(s_Graphs);
+            var frame = Scratch<(PlayableGraphData Graph, double Delta)>.Rent();
+            try
             {
-                if (g.PendingStop && !g.Destroyed)
+                foreach (var g in graphs)
                 {
-                    g.PendingStop = false;
-                    g.StopPass();
+                    if (g.PendingStop && !g.Destroyed)
+                    {
+                        g.PendingStop = false;
+                        g.StopPass();
+                    }
+                }
+                graphs.Clear();
+                graphs.AddRange(s_Playing);
+                foreach (var g in graphs)
+                {
+                    if (g.Destroyed || !g.Playing || g.UpdateMode == DirectorUpdateMode.Manual) continue;
+                    frame.Add((g, 0));
+                }
+                foreach (var (g, _) in frame)
+                {
+                    if (!g.PendingStart) continue;
+                    g.PendingStart = false;
+                    g.EverStarted = true;
+                    g.StartPass();
+                }
+                for (int i = 0; i < frame.Count; i++)
+                {
+                    var g = frame[i].Graph;
+                    double delta = g.DeltaTime();
+                    frame[i] = (g, delta);
+                    if (g.Destroyed) continue;
+                    g.Director?.BeforeUpdate(delta);
+                    g.PreparePass(delta, evaluate: false);
+                }
+                foreach (var (g, delta) in frame)
+                {
+                    if (g.Destroyed) continue;
+                    var outputs = Scratch<PlayableOutputData>.Rent(g.Outputs);
+                    foreach (var o in outputs)
+                        if (o.OutputType == typeof(ScriptPlayableOutput)) g.ProcessOutput(o, delta, deliver: false);
+                    Scratch<PlayableOutputData>.Return(outputs);
+                    g.FrameId++;
+                }
+                s_Updated.Clear();
+                foreach (var (g, delta) in frame)
+                {
+                    if (g.Destroyed) continue;
+                    g.FlushFinished();
+                    s_Updated.Add((g, delta));
+                    g.Director?.AfterUpdate();
                 }
             }
-            var playing = new List<PlayableGraphData>();
-            foreach (var g in s_Playing.ToArray())
+            finally
             {
-                if (g.Destroyed || !g.Playing || g.UpdateMode == DirectorUpdateMode.Manual) continue;
-                playing.Add(g);
-            }
-            foreach (var g in playing)
-            {
-                if (!g.PendingStart) continue;
-                g.PendingStart = false;
-                g.EverStarted = true;
-                g.StartPass();
-            }
-            var deltas = new double[playing.Count];
-            for (int i = 0; i < playing.Count; i++)
-            {
-                var g = playing[i];
-                deltas[i] = g.DeltaTime();
-                if (g.Destroyed) continue;
-                g.Director?.BeforeUpdate(deltas[i]);
-                g.PreparePass(deltas[i], evaluate: false);
-            }
-            for (int i = 0; i < playing.Count; i++)
-            {
-                var g = playing[i];
-                if (g.Destroyed) continue;
-                foreach (var o in g.Outputs.ToArray())
-                    if (o.OutputType == typeof(ScriptPlayableOutput)) g.ProcessOutput(o, deltas[i], deliver: false);
-                g.FrameId++;
-            }
-            s_Updated.Clear();
-            for (int i = 0; i < playing.Count; i++)
-            {
-                var g = playing[i];
-                if (g.Destroyed) continue;
-                g.FlushFinished();
-                s_Updated.Add((g, deltas[i]));
-                g.Director?.AfterUpdate();
+                Scratch<PlayableGraphData>.Return(graphs);
+                Scratch<(PlayableGraphData, double)>.Return(frame);
             }
         }
 
@@ -895,31 +1041,108 @@ namespace Unbound.Runtime.Playables
         /// the graphs DirectorUpdate advanced.</summary>
         internal static void ProcessOtherOutputs()
         {
-            foreach (var (g, dt) in s_Updated.ToArray())
-            {
-                if (g.Destroyed) continue;
-                foreach (var o in g.Outputs.ToArray())
-                    if (o.OutputType != typeof(ScriptPlayableOutput))
-                        OutputSystems.Process(o, o.Engine is AnimationOutputState && g.UpdateMode == DirectorUpdateMode.GameTime ? AnimationSystem.AutomaticFrameDelta(dt) : dt, false);
-            }
+            if (s_Updated.Count == 0) return;
+            var updated = Scratch<(PlayableGraphData Graph, double Delta)>.Rent(s_Updated);
             s_Updated.Clear();
+            try
+            {
+                foreach (var (g, dt) in updated)
+                {
+                    if (g.Destroyed) continue;
+                    var outputs = Scratch<PlayableOutputData>.Rent(g.Outputs);
+                    foreach (var o in outputs)
+                        if (o.OutputType != typeof(ScriptPlayableOutput))
+                            OutputSystems.Process(o, o.Engine is AnimationOutputState && g.UpdateMode == DirectorUpdateMode.GameTime ? AnimationSystem.AutomaticFrameDelta(dt) : dt, false);
+                    Scratch<PlayableOutputData>.Return(outputs);
+                }
+            }
+            finally { Scratch<(PlayableGraphData, double)>.Return(updated); }
         }
 
         /// <summary>PreLateUpdate.DirectorDeferredEvaluate: notifications the frame's updates pushed.</summary>
         internal static void DeliverAllNotifications()
         {
-            foreach (var g in s_Graphs.ToArray())
+            var graphs = Scratch<PlayableGraphData>.Rent(s_Graphs);
+            try
             {
-                if (g.Destroyed) continue;
-                foreach (var o in g.Outputs.ToArray())
-                    if (!o.Destroyed) g.DeliverNotifications(o);
+                foreach (var g in graphs)
+                {
+                    if (g.Destroyed) continue;
+                    var outputs = Scratch<PlayableOutputData>.Rent(g.Outputs);
+                    foreach (var o in outputs)
+                        if (!o.Destroyed) g.DeliverNotifications(o);
+                    Scratch<PlayableOutputData>.Return(outputs);
+                }
             }
+            finally { Scratch<PlayableGraphData>.Return(graphs); }
         }
 
-        internal static void Invoke(Action a)
+        // ------------------------------------------------------------------ callbacks
+
+        internal enum Callback { Create, GraphStart, GraphStop, Play, Pause, Prepare, Process, Destroy }
+
+        /// <summary>One behaviour callback; an exception is logged and the pass goes on, as in Unity.</summary>
+        internal static void Call(IPlayableBehaviour b, Callback callback, Playable p, in FrameData info, object playerData = null)
         {
-            try { a(); }
+            try
+            {
+                switch (callback)
+                {
+                    case Callback.Create: b.OnPlayableCreate(p); break;
+                    case Callback.GraphStart: b.OnGraphStart(p); break;
+                    case Callback.GraphStop: b.OnGraphStop(p); break;
+                    case Callback.Play: b.OnBehaviourPlay(p, info); break;
+                    case Callback.Pause: b.OnBehaviourPause(p, info); break;
+                    case Callback.Prepare: b.PrepareFrame(p, info); break;
+                    case Callback.Process: b.ProcessFrame(p, info, playerData); break;
+                    case Callback.Destroy: b.OnPlayableDestroy(p); break;
+                }
+            }
             catch (Exception e) { Debug.LogException(e); }
+        }
+
+        enum KindCall { Play, Pause, Prepare }
+
+        static void CallKind(PlayableKind kind, PlayableNode n, KindCall call, in FrameData info)
+        {
+            try
+            {
+                if (call == KindCall.Prepare) kind.Prepare(n, info);
+                else kind.PlayStateChanged(n, call == KindCall.Play, info);
+            }
+            catch (Exception e) { Debug.LogException(e); }
+        }
+    }
+
+    /// <summary>Reusable lists and sets for the graph passes. A pass rents its own (passes nest
+    /// when a callback evaluates a graph) and returns it cleared, so warm passes allocate nothing.</summary>
+    internal static class Scratch<T>
+    {
+        static readonly Stack<List<T>> s_Lists = new Stack<List<T>>();
+        static readonly Stack<HashSet<T>> s_Sets = new Stack<HashSet<T>>();
+
+        internal static List<T> Rent() => s_Lists.Count > 0 ? s_Lists.Pop() : new List<T>();
+
+        /// <summary>A snapshot of <paramref name="items"/>, safe against callbacks that change it.</summary>
+        internal static List<T> Rent(List<T> items)
+        {
+            var list = Rent();
+            list.AddRange(items);
+            return list;
+        }
+
+        internal static void Return(List<T> list)
+        {
+            list.Clear();
+            s_Lists.Push(list);
+        }
+
+        internal static HashSet<T> RentSet() => s_Sets.Count > 0 ? s_Sets.Pop() : new HashSet<T>();
+
+        internal static void Return(HashSet<T> set)
+        {
+            set.Clear();
+            s_Sets.Push(set);
         }
     }
 
