@@ -1,8 +1,8 @@
 //! Chorus matching the Unity 6000.0.71f1 Editor, tests/projects/audiochorus, on AudioMixer
 //! groups and `AudioChorusFilter`. It is the shared [`ModulatedDelay`] with a 100 ms history and
 //! one tap per output channel, the right channel's sweep a quarter period after the left's.
-//! Taps cycle over the three wet levels by channel, so Wet mix tap 3 only reaches a third
-//! output channel, which the stereo mix does not have. Feedback is obsolete and has no measured
+//! The left channel takes Wet mix tap 1 and the right tap 2; tap 3 has no measured effect on
+//! stereo output, and wider layouts are unmeasured. Feedback is obsolete and has no measured
 //! effect. These are measurements of one release, not a documented Unity algorithm.
 use super::modulated_delay::{ModulatedDelay, Taps};
 use serde::Deserialize;

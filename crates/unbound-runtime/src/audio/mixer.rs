@@ -247,7 +247,7 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         normalize: None,
         pitch_shifter: None,
         chorus: (d.kind == filter_kind::CHORUS).then(|| super::chorus::ChorusSpec {
-            // r[3], Wet mix tap 3, reaches only a third output channel.
+            // r[3], Wet mix tap 3, has no measured effect on stereo output.
             dry: r[0].clamp(0.0, 1.0),
             wet1: r[1].clamp(0.0, 1.0),
             wet2: r[2].clamp(0.0, 1.0),
