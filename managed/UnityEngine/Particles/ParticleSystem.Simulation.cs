@@ -39,6 +39,7 @@ namespace UnityEngine
         // Birth newborns finish their own remaining Simulate call time when emitted,
         // after the child's existing particles have advanced.
         bool m_SimulatingBirths;
+        bool m_BirthDelayClock;
         float m_BirthCallRemaining;
 
         /// <summary>The frame's update; whether it advanced the system. <paramref name="catchUp"/>
@@ -128,7 +129,7 @@ namespace UnityEngine
         /// <summary>Advances by <paramref name="dt"/> (simulation speed applied) in equal steps no
         /// longer than Time.maximumParticleDeltaTime: Unity splits 0.05 s into two 0.025 s steps at the
         /// default 0.03 (measured: the system's time accumulates exactly those steps).</summary>
-        internal void Advance(float dt, float distance, bool stopWhenPaused, float from = 0f, float to = 1f)
+        internal void Advance(float dt, float distance, bool stopWhenPaused, float from = 0f, float to = 1f, bool clockOnly = false)
         {
             float max = Time.maximumParticleDeltaTime;
             int steps = max > 0f ? (int)Math.Ceiling(dt / max) : 1;
@@ -147,6 +148,9 @@ namespace UnityEngine
                     float used = Mathf.Min(step, remaining);
                     m_StepDt = used;
                     Step(used, i < steps ? share : 0f);
+                    // Stopped systems still simulate particles supplied by SetParticles,
+                    // and advance their clock without restarting automatic emission.
+                    if (clockOnly) AdvanceEmission(used, i < steps ? share : 0f);
                     if (m_SimulatingBirths) m_BirthCallRemaining -= used;
                     remaining -= used;
                     if (stopWhenPaused && (m_IsPaused || !m_Registered)) break;
@@ -192,7 +196,7 @@ namespace UnityEngine
             try
             {
                 UpdateParticles(dt);
-                if (m_IsPlaying)
+                if (m_IsPlaying && !m_BirthDelayClock)
                     AdvanceEmission(dt, distance);
                 if (m_TrailList.Count > 0) UpdateTrails();
             }
@@ -1993,22 +1997,36 @@ namespace UnityEngine
                 {
                     var emissionRandom = ModuleRandom(parent.m_RandomSeed, m_Main.randomSeed);
                     float rate = child.m_Emission.rateOverTime.Evaluate(age01, emissionRandom.NextValue());
+                    // Measured Birth rate intervals follow the parent's exported age.
+                    // The first interval cannot precede the newborn's integration span;
+                    // later intervals preserve the rounded parent clock boundaries.
+                    float delay = m_SimulatingBirths ? Mathf.Max(0f,
+                        child.m_Main.startDelay.Evaluate(0f, ModuleValue(child.m_Main.randomSeed, 0u))) : 0f;
+                    float from = Mathf.Max(0f, ageBefore - delay);
+                    float to = Mathf.Max(0f, ageAfter - delay);
+                    if (!child.m_Main.loop)
+                    {
+                        from = Mathf.Min(from, child.m_Main.duration);
+                        to = Mathf.Min(to, child.m_Main.duration);
+                    }
+                    float emissionDt = m_SimulatingBirths ? to - from : dt;
+                    if (m_SimulatingBirths && firstBirth) emissionDt = Mathf.Min(emissionDt, dt);
                     if (slot == 0)
                     {
-                        parent.m_EmitAccumulator0 += rate * dt;
+                        parent.m_EmitAccumulator0 += rate * emissionDt;
                         n = (int)parent.m_EmitAccumulator0;
                         parent.m_EmitAccumulator0 -= n;
                     }
                     else
                     {
-                        parent.m_EmitAccumulator1 += rate * dt;
+                        parent.m_EmitAccumulator1 += rate * emissionDt;
                         n = (int)parent.m_EmitAccumulator1;
                         parent.m_EmitAccumulator1 -= n;
                     }
                     if (n > 0 && rate > 0f)
                     {
                         float remainder = slot == 0 ? parent.m_EmitAccumulator0 : parent.m_EmitAccumulator1;
-                        birthAge = remainder / rate;
+                        birthAge = remainder / rate + (m_SimulatingBirths ? Mathf.Max(0f, ageAfter - delay - to) : 0f);
                         spacing = -1f / rate;
                         firstEmission = new BirthEmission { count = n, age = birthAge, spacing = spacing, velocity = travel,
                             position = Vector3.LerpUnclamped(positionBefore, parent.m_Position, dt > 0f ? 1f - birthAge / dt : 0f) };

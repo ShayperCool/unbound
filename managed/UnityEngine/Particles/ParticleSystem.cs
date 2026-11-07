@@ -235,6 +235,7 @@ namespace UnityEngine
         public void Stop([Internal.DefaultValue("true")] bool withChildren, [Internal.DefaultValue("ParticleSystemStopBehavior.StopEmitting")] ParticleSystemStopBehavior stopBehavior)
         {
             foreach (var ps in Systems(withChildren, includeSubEmitters: true)) ps.StopSelf(stopBehavior);
+            if (stopBehavior == ParticleSystemStopBehavior.StopEmittingAndClear) Clear(withChildren);
         }
 
         public void Clear() => Clear(true);
@@ -323,7 +324,18 @@ namespace UnityEngine
                     startedSystems[index] = true;
                 }
             }
-            foreach (var ps in systems) ps.m_SimulatingBirths = Compat.ParticleBirthStepsMeasured;
+            foreach (var ps in systems)
+            {
+                ps.m_SimulatingBirths = Compat.ParticleBirthStepsMeasured;
+                // Measured Birth Simulate calls age child particles while a delayed
+                // child's shared playback clock stays at zero. Emission's per-parent
+                // delay is evaluated separately in BirthSubEmitters.
+                ps.m_BirthDelayClock = false;
+                if (ps != this && ps.m_SimulatingBirths && ps.m_DelayRemaining > 0f && ps.m_SubEmitterParent != null)
+                    foreach (var sub in ps.m_SubEmitterParent.m_SubEmitters.emitters)
+                        if (sub.system == ps && sub.type == ParticleSystemSubEmitterType.Birth)
+                            ps.m_BirthDelayClock = true;
+            }
             try
             {
                 foreach (int index in BirthSimulationOrder(systems))
@@ -372,7 +384,10 @@ namespace UnityEngine
             finally
             {
                 foreach (var ps in systems)
+                {
                     ps.m_SimulatingBirths = false;
+                    ps.m_BirthDelayClock = false;
+                }
             }
         }
 
@@ -404,7 +419,7 @@ namespace UnityEngine
         void AdvanceStoppedClock(float dt, float distance)
         {
             // Native keeps a stopped system inside an unfinished start delay at time zero.
-            if (m_DelayRemaining <= 0f) AdvanceEmission(dt, distance);
+            if (m_DelayRemaining <= 0f) Advance(dt, distance, false, clockOnly: true);
         }
 
         /// <summary>Emits now; a system not playing starts playing (measured).</summary>
@@ -932,11 +947,14 @@ namespace UnityEngine
             if (behavior == ParticleSystemStopBehavior.StopEmittingAndClear)
             {
                 bool wasPlaying = m_IsPlaying;
+                bool hadPlayback = wasPlaying || m_IsPaused || m_StopEmitting;
                 m_Count = 0;
                 ClearTrails();
                 m_IsPlaying = false;
                 m_IsPaused = false;
-                m_StopEmitting = false;
+                // A later non-restarting Simulate must advance the stopped clock,
+                // rather than restart emission after StopEmittingAndClear.
+                m_StopEmitting = hadPlayback;
                 m_DelayRemaining = 0f;
                 m_CullingMissed = 0f;
                 if (wasPlaying) OnStopped();
