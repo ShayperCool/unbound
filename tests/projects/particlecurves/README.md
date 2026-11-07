@@ -16,12 +16,9 @@ them when it writes), to record what loading does with such data. Run output sta
 `$XDG_CACHE_HOME/unbound/validation/runs/particlecurves/`. The comparator checks every key and value
 at the particle probes' bound (0.0002 absolute plus 0.0002 relative).
 
-One known difference, outside this probe's subject, stays visible: in `sim/{0..3}/c` the step
-from 0.75 s to 1.25 s of a 1 s loop crosses a burst set at 1.0 s (the duration). Unity emits its
-two particles (remaining lifetime 3.76015, an age of 0.23985 s rather than the 0.25 s since the
-loop end); Unbound does not emit a burst whose time equals the duration. The comparator reports
-these four records as known only when exactly those last two particles are missing and every
-other value matches (`test_compare.py`). The burst timing at the loop end is a follow-up.
+Every record is compared strictly. The four `sim/{0..3}/c` records include the burst set at the
+1 s duration, which fires when the step from 0.75 s to 1.25 s crosses the loop end (the loop-end
+burst rule is measured in tests/projects/particleburstloop).
 
 ## Documented contract
 
