@@ -76,9 +76,27 @@ def compare(reference, candidate):
     return int(bool(differences or image_failures or any(not isinstance(v, list) for v in images.values())))
 
 
+def conversion_gate(candidate):
+    """Gate API values, unlit colors and direct-light materials; retain sky comparisons as reports."""
+    report = json.loads((candidate/'mtl-comparison.json').read_text())
+    failures = list(report['values'])
+    environment = []
+    for name, differences in report['images'].items():
+        if not isinstance(differences, list):
+            failures.append(name)  # Missing/extra/invalid images fail in every lighting mode.
+        elif name.endswith('-assigned.png'):
+            environment.append(name)
+        elif any(max(abs(a-b) for a,b in zip(pixel['expected'], pixel['actual'])) > 8
+                 for pixel in differences):
+            failures.append(name)
+    print(f'OBJ conversion gate: {len(failures)} failures; '
+          f'{len(environment)} environment-lit image residuals retained in mtl-comparison.json')
+    return int(bool(failures))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('editor', 'publish', 'unbound', 'check'))
+    parser.add_argument('mode', choices=('editor', 'publish', 'unbound', 'gate', 'check'))
     parser.add_argument('--release', required=True)
     parser.add_argument('--label', required=True)
     args = parser.parse_args()
@@ -127,12 +145,13 @@ def main():
             for name in files(staged):
                 target = reference/space/name
                 if not target.exists():
+                    target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copyfile(staged/name, target)
         return 0
     result = 0
     for space in ('Gamma', 'Linear'):
         out = work/'unbound'/space
-        if args.mode == 'unbound':
+        if args.mode in ('unbound', 'gate'):
             project = driver.copy_project(work/'projects'/('unbound-'+space), space, material_slots=True, mtl=True)
             if out.exists():
                 shutil.rmtree(out)
@@ -145,7 +164,8 @@ def main():
             if code or not (out/'mtl.jsonl').exists():
                 print('engine capture failed', code, out/'unbound.log')
                 return code or 1
-        result |= compare(reference/space, out)
+        comparison = compare(reference/space, out)
+        result |= conversion_gate(out) if args.mode == 'gate' else comparison
     return result
 
 

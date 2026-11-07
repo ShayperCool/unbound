@@ -8,8 +8,14 @@ material-slot or model-import references. Run with an explicit release:
 ```sh
 python3 tests/projects/modelimport/mtl_properties.py editor --release 6000.0.71f1 --label capture
 python3 tests/projects/modelimport/mtl_properties.py publish --release 6000.0.71f1 --label capture
-UNBOUND=/path/to/unbound python3 tests/projects/modelimport/mtl_properties.py unbound --release 6000.0.71f1 --label candidate
+UNBOUND=/path/to/unbound python3 tests/projects/modelimport/mtl_properties.py gate --release 6000.0.71f1 --label candidate
 ```
+
+`unbound` remains the strict full comparison, including the original environment-lit images.
+`gate` runs the same comparison and retains every raw failure, then gates all API values, unlit
+colors and direct-light images. Missing or extra images fail in every mode. Environment-lit
+images are reported separately because the default sky's lighting differs independently of
+material properties; no comparator bound or existing assertion is changed.
 
 The API comparator uses the existing model probe's absolute/relative 1e-5 tolerance. The new
 render gate uses a maximum channel error of 8/255. Every differing value and pixel remains in
