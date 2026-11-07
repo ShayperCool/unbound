@@ -36,9 +36,10 @@ public class LightmapUvProbe : MonoBehaviour
             yield break;
         }
         // Asset identity keeps separate OBJ files distinct even when their meshes share a name.
-        var assets = new[] { "Authored", "Bare", "Cube", "Cylinder", "Edges", "Faces", "Grid", "Groups", "Ico",
-            "Kite", "Multi", "Organic", "Pieces", "Polys", "Prism", "Sphere", "Star", "StarObj", "Tent",
-            "Torus", "Triangle", "TwoUV" };
+        var assets = new[] { "Authored", "Bare", "Bridge", "BridgeObj", "Cross", "Cube", "Cylinder", "Edges",
+            "Faces", "FlatPoly", "FlatQuad", "FlatTri", "Grid", "Groups", "Ico", "Kite", "Multi", "Organic",
+            "Pieces", "Pinch", "Polys", "Prism", "Seam", "Slit", "SlitGroups", "Sphere", "Star", "StarObj",
+            "Tent", "Torus", "Triangle", "TwoUV", "WeldDiag", "WeldQuad", "WeldTri" };
         foreach (var asset in assets)
         {
             var meshes = Resources.LoadAll<Mesh>(variant + "/" + asset);
