@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 public partial class ParticleRandomProbe
@@ -21,6 +22,7 @@ public partial class ParticleRandomProbe
             BirthLifetimeControl("early_expiry", inherit, 0.213f, 0.113f);
             BirthLifetimeControl("zero", inherit, 0.413f, 0.813f, zeroOnly: true);
             BirthLifetimeControl("later", inherit, 0.413f, 0.813f, laterOnly: true);
+            BirthLifetimeControl("batch", inherit, 0.613f, 0.813f, rate: 120f);
         }
         Time.maximumParticleDeltaTime = maximum;
         Time.fixedDeltaTime = fixedDelta;
@@ -28,7 +30,7 @@ public partial class ParticleRandomProbe
 
     static void BirthLifetimeControl(string name, bool inherit, float parentLife, float childLife,
         bool single = false, bool cohorts = false, bool restart = false, bool stop = false,
-        bool clear = false, bool zeroOnly = false, bool laterOnly = false)
+        bool clear = false, bool zeroOnly = false, bool laterOnly = false, float rate = 10f)
     {
         string key = "birthlife/" + name + "/" + (inherit ? "lifetime" : "nothing");
         var parent = Make(key, 12345, ps =>
@@ -53,7 +55,7 @@ public partial class ParticleRandomProbe
         cm.startSpeed = 0.5f; cm.maxParticles = 256; cm.loop = false; cm.duration = 5f;
         var shape = child.shape; shape.enabled = false;
         var cr = child.rotationOverLifetime; cr.enabled = true; cr.z = 0f;
-        var ce = child.emission; ce.rateOverTime = zeroOnly || laterOnly ? 0f : 10f;
+        var ce = child.emission; ce.rateOverTime = zeroOnly || laterOnly ? 0f : rate;
         ce.SetBursts(zeroOnly ? new[] { new ParticleSystem.Burst(0f, (short)1) }
             : laterOnly ? new[] { new ParticleSystem.Burst(0.17f, (short)1) }
             : new[] { new ParticleSystem.Burst(0f, (short)1), new ParticleSystem.Burst(0.17f, (short)1) });
@@ -79,5 +81,49 @@ public partial class ParticleRandomProbe
             calls++;
         }
         DestroyImmediate(parent.gameObject);
+    }
+
+    static IEnumerator BirthLifetimeCallbacks()
+    {
+        float capture = Time.captureDeltaTime;
+        Time.captureDeltaTime = 0.02f;
+        foreach (bool inherit in new[] { false, true })
+        {
+            string key = "birthlife/callback/" + (inherit ? "lifetime" : "nothing");
+            var parent = Make(key, 12345, ps =>
+            {
+                var m = ps.main; m.startLifetime = 0.413f;
+                var r = ps.rotationOverLifetime; r.enabled = true; r.z = 0f;
+            }, 1);
+            parent.gameObject.SetActive(false);
+            var childObject = new GameObject("child");
+            childObject.transform.SetParent(parent.transform, false);
+            var child = childObject.AddComponent<ParticleSystem>();
+            child.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var observer = childObject.AddComponent<ParticleBirthLifetimeObserver>();
+            child.randomSeed = 12346;
+            var cm = child.main; cm.playOnAwake = false; cm.startLifetime = 0.813f;
+            cm.startSpeed = 0f; cm.duration = 0.05f; cm.loop = false;
+            cm.stopAction = ParticleSystemStopAction.Callback;
+            var shape = child.shape; shape.enabled = false;
+            var r = child.rotationOverLifetime; r.enabled = true; r.z = 0f;
+            var ce = child.emission; ce.rateOverTime = 0f;
+            ce.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+            var sub = parent.subEmitters; sub.enabled = true;
+            sub.AddSubEmitter(child, ParticleSystemSubEmitterType.Birth, inherit
+                ? ParticleSystemSubEmitterProperties.InheritLifetime : ParticleSystemSubEmitterProperties.InheritNothing);
+            parent.gameObject.SetActive(true);
+            parent.Simulate(0.05f, true, true, false);
+            // Resume only the existing child. Its parent stays paused, so no new births occur.
+            child.Play(false);
+            for (int frame = 0; frame < 45; frame++)
+            {
+                yield return null;
+                RecordParticles(key + "/child/" + frame, child);
+                Record(key + "/callbacks/" + frame, new float[] { observer.calls });
+            }
+            DestroyImmediate(parent.gameObject);
+        }
+        Time.captureDeltaTime = capture;
     }
 }
