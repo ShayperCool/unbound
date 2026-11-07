@@ -83,6 +83,12 @@ public class InputPlatformProbe : MonoBehaviour
         directory = Environment.GetEnvironmentVariable("INPUTPLATFORM_OUT");
         yield return null;
         yield return null;
+        if (Environment.GetEnvironmentVariable("INPUTPLATFORM_ENGINE") == "1")
+        {
+            Clipboard("focus", Process.GetCurrentProcess().Id.ToString());
+            for (int i = 0; i < 5; i++) yield return null;
+            UnityEngine.Debug.Log("inputplatform focus=" + Application.isFocused + " mouseEnabled=" + Mouse.current.enabled);
+        }
         File.WriteAllText(Path.Combine(directory, "host-display.txt"), Clipboard("display"));
         Add("currentResolution", R(Screen.currentResolution));
         var modes = new List<string>();
@@ -98,6 +104,12 @@ public class InputPlatformProbe : MonoBehaviour
         modes.Clear(); foreach (var d in Display.displays) modes.Add("[" + d.systemWidth + "," + d.systemHeight + "," + d.renderingWidth + "," + d.renderingHeight + "," + (d.active ? "true" : "false") + "]");
         Add("displays", "[" + string.Join(",", modes) + "]");
         Add("screen", "[" + Screen.width + "," + Screen.height + "]");
+        if (Environment.GetEnvironmentVariable("INPUTPLATFORM_DISPLAY_ONLY") == "1")
+        {
+            Add("complete", "true");
+            if (finished != null) finished(0); else EditorApplication.Exit(0);
+            yield break;
+        }
         string[] samples = { "", "ascii\nline\r\nend\t", "héllo 世界 😀", new string('x', 1048576), null };
         for (int i = 0; i < samples.Length; i++)
         {

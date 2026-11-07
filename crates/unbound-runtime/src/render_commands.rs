@@ -1442,7 +1442,7 @@ mod tests {
     /// Distortion filter kind and 28 render protocol 12's shared arrays.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 28);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 29);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

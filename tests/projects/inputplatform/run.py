@@ -27,13 +27,16 @@ def environment(out):
             'INPUTPLATFORM_CONTROL': str(P/'clipboard_control.py')}
 
 
-def editor(work, host, screen):
+def editor(work, host, screen, display_only=False):
     jobs = []
     for name in ['native1', 'native2']:
         out = work/name
         out.mkdir(parents=True)
         project = project_copy(work/'projects'/name)
-        jobs.append(EditorJob(project, out/'editor.log', out, env=environment(out),
+        env = environment(out)
+        if display_only:
+            env['INPUTPLATFORM_DISPLAY_ONLY'] = '1'
+        jobs.append(EditorJob(project, out/'editor.log', out, env=env,
             private_display=not host, screen=screen, timeout=900,
             progress_files=[out/'values.jsonl'], progress_timeout=480, label='inputplatform-'+name))
     results = [run(job) for job in jobs] if host else run_parallel(jobs)
@@ -42,11 +45,11 @@ def editor(work, host, screen):
     return int(any(result['exit_code'] != 0 or result.get('forced_exit') for result in results))
 
 
-def publish(work, host):
+def publish(work, host, context=None):
     def write(target, first):
         target.mkdir(parents=True)
         shutil.copyfile(first/'values.jsonl', target/'values.jsonl')
-    return publish_repeats([work/'native1', work/'native2'], reference_root(P)/('host' if host else 'xvfb'),
+    return publish_repeats([work/'native1', work/'native2'], reference_root(P)/(context or ('host' if host else 'xvfb')),
         lambda d: ['values.jsonl'], write, complete=[jsonl_complete('values.jsonl', {'k':'complete','v':True})], gpu=True)
 
 
@@ -57,8 +60,14 @@ def engine(work, cli):
     command = [str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '900', 'xvfb-run', '-a',
         '-s', '-screen 0 1280x720x24', 'vglrun', '-d', 'egl', str(Path(cli).resolve()),
         'run', '-p', str(project), '--no-watch', '--size', '640x360', '--frames', '1800']
+    env = environment(out)
+    env.pop('WAYLAND_DISPLAY', None)
+    env.pop('WAYLAND_SOCKET', None)
+    env['XDG_SESSION_TYPE'] = 'x11'
+    env['WINIT_UNIX_BACKEND'] = 'x11'
+    env['INPUTPLATFORM_ENGINE'] = '1'
     with (out/'unbound.log').open('w') as log:
-        result = subprocess.run(command, env=environment(out), stdout=log, stderr=subprocess.STDOUT, cwd=REPO)
+        result = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, cwd=REPO)
     if result.returncode:
         print(f'engine exit {result.returncode}, see {out / "unbound.log"}')
         return 1
@@ -82,6 +91,8 @@ def main():
     parser.add_argument('--label')
     parser.add_argument('--cli', default=os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI'))
     parser.add_argument('--host-display', action='store_true')
+    parser.add_argument('--display-only', action='store_true')
+    parser.add_argument('--context', choices=['host', 'xvfb', 'large', 'control'])
     parser.add_argument('--screen', default='1280x720x24')
     a = parser.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = a.release
@@ -89,9 +100,9 @@ def main():
         parser.error('check needs --cli or UNBOUND')
     work = run_root('inputplatform', a.label or ('check-'+str(time.time_ns())))
     if a.command == 'editor':
-        return editor(work, a.host_display, a.screen)
+        return editor(work, a.host_display, a.screen, a.display_only)
     if a.command == 'publish':
-        return publish(work, a.host_display)
+        return publish(work, a.host_display, a.context)
     return engine(work, a.cli)
 
 

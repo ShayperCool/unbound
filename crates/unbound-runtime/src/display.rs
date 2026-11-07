@@ -21,6 +21,10 @@ pub struct DisplayMode {
 pub struct DisplaySnapshot {
     /// The monitor's identity for the session (`DisplayInfo`'s handle).
     pub id: u64,
+    pub dpi: f32,
+    pub info_refresh_numerator: u32,
+    pub info_refresh_denominator: u32,
+    pub work_area: [i32; 4],
     pub name: Option<String>,
     /// The desktop's current resolution on this monitor, in physical pixels.
     pub width: u32,
@@ -57,6 +61,12 @@ pub fn publish(display: Display) {
     }
 }
 
+/// Version of the cached monitor description, passed with frame input. Reading it performs
+/// no display query and allocates nothing.
+pub fn version() -> u64 {
+    STATE.lock().unwrap().0
+}
+
 /// The `display-info` control call. The request is `{}` or `{"since":N}` with the version
 /// the caller already has; the answer is `{"version":N,"unchanged":true}` when it is still
 /// current, else the whole display (see [`encode`]).
@@ -90,6 +100,9 @@ pub fn encode(version: u64, display: Option<&Display>, since: Option<u64>) -> Js
             "version": version,
             "available": true,
             "id": d.id,
+            "dpi": d.dpi,
+            "infoRefreshRate": { "numerator": d.info_refresh_numerator, "denominator": d.info_refresh_denominator },
+            "workArea": d.work_area,
             "name": d.name,
             "width": d.width,
             "height": d.height,
@@ -128,6 +141,10 @@ mod tests {
     fn monitor() -> DisplaySnapshot {
         DisplaySnapshot {
             id: 7,
+            dpi: 0.0,
+            info_refresh_numerator: 59_951,
+            info_refresh_denominator: 1000,
+            work_area: [0, 32, 2560, 1408],
             name: Some("DP-1".into()),
             width: 2560,
             height: 1440,
@@ -157,6 +174,9 @@ mod tests {
                 "version": 3,
                 "available": true,
                 "id": 7,
+                "dpi": 0.0,
+                "infoRefreshRate": { "numerator": 59_951, "denominator": 1000 },
+                "workArea": [0, 32, 2560, 1408],
                 "name": "DP-1",
                 "width": 2560,
                 "height": 1440,

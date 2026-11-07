@@ -42,20 +42,31 @@ struct Arboard(arboard::Clipboard);
 
 impl Backend for Arboard {
     fn read_text(&mut self) -> Result<Read> {
-        match self.0.get_text() {
-            Ok(text) => Ok(Read::Text(text)),
-            Err(arboard::Error::ContentNotAvailable | arboard::Error::ConversionFailure) => {
-                Ok(Read::NoText)
-            }
-            // Never the contents: arboard's errors describe the clipboard, not what it holds.
-            Err(error) => Err(anyhow!("reading the system clipboard failed: {error}")),
-        }
+        classify_text(self.0.get_text())
     }
 
     fn write_text(&mut self, text: &str) -> Result<()> {
         self.0
             .set_text(text)
             .map_err(|error| anyhow!("writing the system clipboard failed: {error}"))
+    }
+}
+
+/// arboard 3.7.0 also reports a selection returning an incompatible target as Unknown.
+/// That reply contains no usable text, just like ContentNotAvailable. Other failures remain
+/// errors so an unavailable clipboard is still diagnosed.
+fn classify_text(result: std::result::Result<String, arboard::Error>) -> Result<Read> {
+    match result {
+        Ok(text) => Ok(Read::Text(text)),
+        Err(arboard::Error::ContentNotAvailable | arboard::Error::ConversionFailure) => {
+            Ok(Read::NoText)
+        }
+        Err(arboard::Error::Unknown { description })
+            if description == "incorrect type received from clipboard" =>
+        {
+            Ok(Read::NoText)
+        }
+        Err(error) => Err(anyhow!("reading the system clipboard failed: {error}")),
     }
 }
 
@@ -166,6 +177,31 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::{Arc, Mutex as StdMutex};
+
+    #[test]
+    fn incompatible_selection_targets_have_no_text_but_transport_errors_remain_errors() {
+        assert_eq!(
+            classify_text(Err(arboard::Error::Unknown {
+                description: "incorrect type received from clipboard".into()
+            }))
+            .unwrap(),
+            Read::NoText
+        );
+        assert_eq!(
+            classify_text(Err(arboard::Error::ContentNotAvailable)).unwrap(),
+            Read::NoText
+        );
+        assert!(
+            classify_text(Err(arboard::Error::Unknown {
+                description: "connection lost".into()
+            }))
+            .is_err()
+        );
+        assert_eq!(
+            classify_text(Ok("Unicode 世界".into())).unwrap(),
+            Read::Text("Unicode 世界".into())
+        );
+    }
 
     /// What a stand-in clipboard holds and how it was used. Each test owns its own, so the tests
     /// never open arboard or touch the host's clipboard.

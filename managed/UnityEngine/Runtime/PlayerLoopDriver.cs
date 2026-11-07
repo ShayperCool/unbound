@@ -38,6 +38,8 @@ namespace Unbound.Runtime
         internal float RawMotionX;
         internal float RawMotionY;
         internal int RawMotion;
+        internal ulong DisplayVersion;
+        internal ulong ImeVersion;
     }
 
     /// <summary>A key press or release; <see cref="TextStart"/> and <see cref="TextLength"/> are
@@ -512,6 +514,8 @@ namespace Unbound.Runtime
         {
             if (s_Input == null) return;
             Screen.Update(s_Input->ScreenWidth, s_Input->ScreenHeight);
+            Screen.UpdateDisplayVersion(s_Input->DisplayVersion);
+            Input.UpdateImeVersion(s_Input->ImeVersion);
             Gamepads.Poll();
             Input.BeginFrame(s_Input);
             NativeInput.BeginFrame(s_Input);

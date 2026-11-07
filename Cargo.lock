@@ -6433,6 +6433,7 @@ dependencies = [
  "unbound-runtime",
  "unbound-shaders",
  "wgpu",
+ "x11rb",
 ]
 
 [[package]]

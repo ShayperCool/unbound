@@ -38,6 +38,23 @@ namespace UnityEngine.Tests
         const string Tail = " can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function.";
 
         [Fact]
+        public void ClipboardPropertiesRejectWorkerThreadsBeforeCallingTheHost()
+        {
+            int calls = 0;
+            var previous = GUIUtility.s_ClipboardCallForTests;
+            GUIUtility.s_ClipboardCallForTests = (method, request) => { calls++; return "{}"; };
+            try
+            {
+                Assert.Equal("get_systemCopyBuffer" + Tail, OnOtherThread(() => _ = GUIUtility.systemCopyBuffer).Message);
+                Assert.Equal("set_systemCopyBuffer" + Tail, OnOtherThread(() => GUIUtility.systemCopyBuffer = null).Message);
+                Assert.Equal("get_systemCopyBuffer" + Tail, OnOtherThread(() => _ = UnityEditor.EditorGUIUtility.systemCopyBuffer).Message);
+                Assert.Equal("set_systemCopyBuffer" + Tail, OnOtherThread(() => UnityEditor.EditorGUIUtility.systemCopyBuffer = "text").Message);
+                Assert.Equal(0, calls);
+            }
+            finally { GUIUtility.s_ClipboardCallForTests = previous; }
+        }
+
+        [Fact]
         public void EngineApiThrowsOnAnotherThreadWithTheBindingName()
         {
             var go = new GameObject("main");

@@ -20,6 +20,30 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Linux Editor display answers measured by inputplatform on 6000.0.71f1.
+        /// Screen's resolution choices describe the Editor, while DisplayInfo comes from the OS.</summary>
+        internal static bool EditorDisplayMeasured => OperatingSystem.IsLinux() && Release == (6000, 0, 71, 'f', 1);
+
+        // Standard sizes measured on a desktop larger than every size in the list. The smaller
+        // captures establish that each dimension is filtered independently against the desktop.
+        internal static readonly (int Width, int Height)[] EditorDisplaySizes =
+        {
+            (640, 480), (720, 480), (768, 480), (800, 480), (854, 480),
+            (960, 540), (1024, 576), (800, 600), (1024, 600), (960, 640),
+            (1024, 640), (1136, 640), (960, 720), (1152, 720), (1280, 720),
+            (1024, 768), (1152, 768), (1280, 768), (1366, 768), (1280, 800),
+            (1152, 864), (1280, 864), (1440, 900), (1600, 900), (1280, 960),
+            (1440, 960), (1280, 1024), (1600, 1024), (1400, 1050), (1680, 1050),
+            (1920, 1080), (2560, 1080), (2048, 1152), (1600, 1200), (1920, 1200),
+            (1792, 1344), (1856, 1392), (1920, 1440), (2160, 1440), (2304, 1440),
+            (2560, 1440), (3440, 1440), (2048, 1536), (2560, 1600), (2880, 1800),
+            (3200, 1800), (2560, 1920), (2560, 2048), (3200, 2048), (3840, 2160),
+            (4096, 2160), (5120, 2160), (3200, 2400), (3840, 2400), (3200, 2560),
+            (4096, 2560), (5120, 2880), (4096, 3072), (5120, 3200), (5760, 3240),
+            (5120, 4096), (6400, 4096), (7680, 4320), (6400, 4800), (7680, 4800),
+            (8192, 5120),
+        };
+
         /// <summary>Group input startup fades follow the mixer graph's processing age, including
         /// groups first used later (tests/projects/mixerduck, exactly 6000.0.71f1).</summary>
         internal static bool MixerGraphStartupMeasured => Release == (6000, 0, 71, 'f', 1);

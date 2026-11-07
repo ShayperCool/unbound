@@ -31,6 +31,9 @@ bytemuck = { version = "1", features = ["derive"] }
 wgpu = { version = "30", default-features = false, features = ["std", "wgsl"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
 
+[target.'cfg(target_os = "linux")'.dependencies]
+x11rb = { version = "0.13", features = ["randr"] }
+
 [dev-dependencies]
 naga = { version = "30", features = ["wgsl-in"] }
 tracing-subscriber.workspace = true

@@ -3,7 +3,11 @@
 import subprocess
 import sys
 mode = sys.argv[1]
-if mode == 'display':
+if mode == 'focus':
+    pid = int(sys.stdin.read())
+    windows = subprocess.check_output(['xdotool', 'search', '--pid', str(pid)], text=True).split()
+    subprocess.run(['xdotool', 'windowfocus', '--sync', windows[-1]], check=True)
+elif mode == 'display':
     sys.stdout.write(subprocess.check_output(['xrandr', '--verbose'], text=True))
 elif mode == 'get':
     result = subprocess.run(['xclip', '-selection', 'clipboard', '-o'], capture_output=True, timeout=8)

@@ -311,7 +311,7 @@ mod tests {
     /// The managed side pins the same value and refuses 14 to 27 and 29 (NativeApiVersionTests).
     #[test]
     fn the_filter_descriptor_layout_is_native_api_28() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 28);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 29);
         assert_eq!(
             [
                 filter_kind::LOWPASS,

@@ -10,7 +10,10 @@
 use anyhow::{Result, bail};
 use serde::Deserialize;
 use serde_json::{Value, json};
-use std::sync::Mutex;
+use std::sync::{
+    Mutex,
+    atomic::{AtomicU64, Ordering},
+};
 
 /// An input method event, as the window system reports it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -127,17 +130,30 @@ impl ImeRequest {
 
 static STATE: Mutex<ImeSnapshot> = Mutex::new(ImeSnapshot::new());
 static REQUEST: Mutex<Option<ImeRequest>> = Mutex::new(None);
+static VERSION: AtomicU64 = AtomicU64::new(0);
+
+/// Cached IME changes travel with frame input; getters do not poll JSON every frame.
+pub fn version() -> u64 {
+    VERSION.load(Ordering::Acquire)
+}
 
 /// The window says whether it reads the input method (false for a remote session).
 pub fn attach(available: bool) {
-    STATE.lock().unwrap().set_available(available);
+    let mut state = STATE.lock().unwrap();
+    if state.available != available {
+        state.set_available(available);
+        VERSION.fetch_add(1, Ordering::Release);
+    }
 }
 
 /// An input method event from the window; committed text joins the frame's `text`. Answers the
 /// byte range of `text` the event added (empty unless it committed text), so the window can
 /// deliver it as a character event like typed text.
 pub fn event(event: ImeEvent<'_>, text: &mut String) -> std::ops::Range<usize> {
-    STATE.lock().unwrap().apply(event, text)
+    let mut state = STATE.lock().unwrap();
+    let range = state.apply(event, text);
+    VERSION.fetch_add(1, Ordering::Release);
+    range
 }
 
 /// The `ime-state` control call.

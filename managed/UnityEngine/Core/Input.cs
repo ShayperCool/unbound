@@ -29,20 +29,18 @@ namespace UnityEngine
 
         public static int width => s_Width;
         public static int height => s_Height;
-        /// <summary>The pixel density of the display the window is on: 96 DPI per unit of the
-        /// window system's scale factor (Unbound's choice (unmeasured): Unity documents the
-        /// screen's actual DPI, and the window system reports a scale, not a physical density).
-        /// Without a display, Unbound's constant 96.</summary>
+        /// <summary>Physical display density from the host, or zero when it cannot be determined.
+        /// Measured in the Linux 6000.0.71f1 Editor: inputplatform. Without a host, the existing
+        /// fallback remains 96 with a diagnostic when connected.</summary>
         public static float dpi { get { MainThreadCheck.Check("get_dpi"); return HostDisplay()?.Dpi ?? 96f; } }
         /// <summary>The desktop's current resolution and refresh rate on the display the window
         /// is on (documented: in windowed mode, the desktop's resolution, not the window's).
         /// Without a display, Unbound's constant: the window's size at 60 Hz.</summary>
         public static Resolution currentResolution => HostDisplay()?.Current
             ?? new Resolution { width = s_Width, height = s_Height, refreshRateRatio = new RefreshRate { numerator = 60, denominator = 1 } };
-        /// <summary>The modes the display the window is on supports, by ascending width, then
-        /// height (documented), then refresh rate (Unbound's choice (unmeasured)), each size and
-        /// rate once. Without a display, or when it reports no modes, the current resolution only
-        /// (Unbound's choice (unmeasured)).</summary>
+        /// <summary>The Editor's supported sizes, filtered to the host desktop. On the measured
+        /// Linux release these are standard sizes at 60 Hz ordered by height then width, rather
+        /// than the monitor's full-screen modes. Other releases retain host modes until measured.</summary>
         public static Resolution[] resolutions
         {
             get
@@ -74,10 +72,9 @@ namespace UnityEngine
         public static int msaaSamples => 1;
         [Unbound.EditorFaithful("a player-window API: the Editor answers zero")]
         public static Vector2Int mainWindowPosition => Vector2Int.zero;
-        /// <summary>The display the window is on (documented: the display the main application
-        /// window is on): its size, current refresh rate and name. The work area is the whole
-        /// display (Unbound's choice (unmeasured): the window system does not report it).
-        /// Without a display, Unbound's constant: the window's size, named "Unbound", at 60 Hz.</summary>
+        /// <summary>The host monitor's size, name, exact refresh ratio and desktop work area.
+        /// DisplayInfo preserves the OS ratio; Screen.currentResolution separately describes the
+        /// Editor's 60 Hz resolution choices on the measured Linux release.</summary>
         public static DisplayInfo mainWindowDisplayInfo => HostDisplay()?.Info
             ?? new DisplayInfo { width = s_Width, height = s_Height, name = "Unbound", refreshRate = new RefreshRate { numerator = 60, denominator = 1 } };
 
@@ -93,8 +90,10 @@ namespace UnityEngine
         static readonly object s_DisplayLock = new object();
         static DisplayAnswer s_Display;
         static ulong? s_DisplayVersion;
+        static ulong s_HostDisplayVersion;
+        internal static void UpdateDisplayVersion(ulong version) => s_HostDisplayVersion = version;
         /// <summary>Counts the frames whose input passes <see cref="Update"/> (play and Edit mode;
-        /// paused frames do not, so the answer is kept across them); the answer is kept for one.</summary>
+        /// paused frames do not, so the answer is kept across them); used only by the frame-based test seam.</summary>
         static int s_DisplayFrame;
         static int s_DisplayAskedFrame = int.MinValue;
         /// <summary>Set when the host does not answer `display-info` (an older host): it will
@@ -115,14 +114,14 @@ namespace UnityEngine
             {
                 s_Display = null;
                 s_DisplayVersion = null;
+                s_HostDisplayVersion = 0;
                 s_DisplayAskedFrame = int.MinValue;
                 s_DisplayUnanswered = false;
                 s_DisplayWarned.Clear();
             }
         }
 
-        /// <summary>The display the window is on, asked of the host at most once a frame (and
-        /// read again only when its version changes); null when there is none: before the
+        /// <summary>The display the window is on, read from the host when its cached version changes; null when there is none: before the
         /// window opens, a headless run, a remote session, no monitor, or a host that does not
         /// answer. Those keep Unbound's constants, with one warning for each reason. Without a
         /// native side at all (no host) the constants stay, quietly.</summary>
@@ -135,7 +134,9 @@ namespace UnityEngine
             DisplayAnswer answer;
             lock (s_DisplayLock)
             {
-                if (frame == s_DisplayAskedFrame || s_DisplayUnanswered) return s_Display;
+                if (s_DisplayUnanswered) return s_Display;
+                if (s_DisplayFrameForTests == null ? s_DisplayVersion == s_HostDisplayVersion : frame == s_DisplayAskedFrame)
+                    return s_Display;
                 s_DisplayAskedFrame = frame;
                 try
                 {
@@ -209,19 +210,34 @@ namespace UnityEngine
             modes.Sort((a, b) => a.width != b.width ? a.width.CompareTo(b.width)
                 : a.height != b.height ? a.height.CompareTo(b.height)
                 : a.refreshRateRatio.value.CompareTo(b.refreshRateRatio.value));
+            bool editor = Compat.EditorDisplayMeasured;
+            if (editor)
+            {
+                rate = new RefreshRate { numerator = 60, denominator = 1 };
+                modes.Clear();
+                foreach (var size in Compat.EditorDisplaySizes)
+                    if (size.Width <= width && size.Height <= height)
+                        modes.Add(new Resolution { width = size.Width, height = size.Height, refreshRateRatio = rate });
+                warning = null;
+            }
+            var infoRate = root.TryGetProperty("infoRefreshRate", out var ir) ? Rate(ir) : Rate(root.GetProperty("refreshRate"));
+            float density = root.TryGetProperty("dpi", out var dp) ? dp.GetSingle() : 0;
+            RectInt workArea = new RectInt(0, 0, width, height);
+            if (root.TryGetProperty("workArea", out var wa))
+                workArea = new RectInt(wa[0].GetInt32(), wa[1].GetInt32(), wa[2].GetInt32(), wa[3].GetInt32());
             var name = root.GetProperty("name");
             s_Display = new DisplayAnswer
             {
                 Current = new Resolution { width = width, height = height, refreshRateRatio = rate },
                 Modes = modes.ToArray(),
-                Dpi = (float)(96.0 * root.GetProperty("scaleFactor").GetDouble()),
+                Dpi = density,
                 Info = new DisplayInfo
                 {
                     handle = root.GetProperty("id").GetUInt64(),
                     width = width,
                     height = height,
-                    refreshRate = rate,
-                    workArea = new RectInt(0, 0, width, height),
+                    refreshRate = infoRate,
+                    workArea = workArea,
                     // Unbound's choice (unmeasured): an unnamed monitor is named "".
                     name = name.ValueKind == System.Text.Json.JsonValueKind.String ? name.GetString() : "",
                 },
@@ -258,6 +274,7 @@ namespace UnityEngine
 
         public static void GetDisplayLayout(List<DisplayInfo> displayLayout)
         {
+            if (displayLayout == null) throw new ArgumentNullException();
             displayLayout.Clear();
             displayLayout.Add(mainWindowDisplayInfo);
         }
@@ -777,7 +794,7 @@ namespace UnityEngine
         public static AccelerationEvent GetAccelerationEvent(int index) => throw new ArgumentException("Index out of bounds.");
         public static DeviceOrientation deviceOrientation => DeviceOrientation.Unknown;
         // IME (legacy Input Manager). The window's input method state is polled from the host once
-        // per frame, on first use (`ime-state`); the game's mode and candidate-window position go
+        // when its cached version changes (`ime-state`); the game's mode and candidate-window position go
         // to the window as a request (`ime-request`). Text the input method commits reaches
         // inputString through the frame's text. Without a window that reads the input method
         // (headless, a remote session) the answers stay "" and false, with one warning.
@@ -793,7 +810,11 @@ namespace UnityEngine
         static string s_ImeUnavailableReason;
 
         /// <summary>The IME's host calls (method, JSON request) → JSON answer; tests replace it.</summary>
-        internal static Func<string, string, string> ImeHost = Native.Call;
+        static readonly Func<string, string, string> s_NativeImeHost = Native.Call;
+        internal static Func<string, string, string> ImeHost = s_NativeImeHost;
+        static ulong s_ImeHostVersion;
+        static ulong? s_ImeReadVersion;
+        internal static void UpdateImeVersion(ulong version) => s_ImeHostVersion = version;
 
         /// <summary>Unity: Auto (the default) enables IME input only while a text field is
         /// selected, On enables it, Off disables it. Unbound sees no text field selection here, so
@@ -857,11 +878,12 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>Reads the host's IME state once per frame.</summary>
+        /// <summary>Reads the host's IME state when its cached version changes.</summary>
         static void PollIme()
         {
             int frame = Time.frameCount;
-            if (s_ImePolled && s_ImeFrame == frame) return;
+            if (ImeHost == s_NativeImeHost ? s_ImeReadVersion == s_ImeHostVersion : s_ImePolled && s_ImeFrame == frame) return;
+            s_ImeReadVersion = s_ImeHostVersion;
             s_ImePolled = true;
             s_ImeFrame = frame;
             s_ImeAvailable = false;
@@ -874,7 +896,7 @@ namespace UnityEngine
                 var root = document.RootElement;
                 if (!root.GetProperty("available").GetBoolean())
                 {
-                    s_ImeUnavailableReason = "no window reads the input method: a headless run or a remote session";
+                    s_ImeUnavailableReason = "composition is unsupported until an Editor reference with a configured input method is available";
                     return;
                 }
                 string composition = root.GetProperty("composition").GetString() ?? "";
@@ -941,7 +963,9 @@ namespace UnityEngine
             s_ImeSelected = false;
             s_ImeWarned = false;
             s_ImeUnavailableReason = null;
-            ImeHost = Native.Call;
+            ImeHost = s_NativeImeHost;
+            s_ImeReadVersion = null;
+            s_ImeHostVersion = 0;
         }
         public static bool backButtonLeavesApp { get; set; }
         public static bool compensateSensors { get; set; } = true;

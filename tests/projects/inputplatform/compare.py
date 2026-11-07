@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Strict API comparison, with explicit rules for host and Game view geometry."""
 import json
+import math
 from pathlib import Path
 
 MACHINE = {'currentResolution', 'resolutions', 'dpi', 'mainWindowDisplayInfo', 'displayLayout'}
@@ -24,7 +25,7 @@ def compare(reference, candidate):
             failures.append(f'{key}: missing from {"reference" if key not in reference else "candidate"}')
         elif key not in MACHINE | WARP and reference[key] != candidate[key]:
             failures.append(f'{key}: expected {reference[key]!r}, got {candidate[key]!r}')
-    if failures:
+    if any(key not in candidate for key in MACHINE | WARP):
         return failures
     # These runs deliberately use a private 1280x720 Xvfb with no physical dimensions, mode
     # clock or desktop panel. Compare the measured OS rule, not this machine's primary display.
@@ -51,6 +52,6 @@ def compare(reference, candidate):
         if source['warp.240.immediate'] != source['warp.120.legacy']:
             failures.append(f'{label}: warp changed legacy state synchronously')
         delta = [b - a for a, b in zip(source['warp.120.legacy'], source['warp.240.legacy'])]
-        if any(abs(actual - expected) > 0.001 for actual, expected in zip(delta, [120, 60])):
+        if len(delta) != 2 or any(not math.isfinite(actual) or abs(actual - expected) > 0.001 for actual, expected in zip(delta, [120, 60])):
             failures.append(f'{label}: warp displacement expected [120, 60], got {delta}')
     return failures

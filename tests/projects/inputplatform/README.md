@@ -3,7 +3,10 @@
 Unity 6000.0.71f1, Linux Editor, Play mode, Input System 1.19.0, both input backends.
 `Reference/unity-6000.0.71f1/` has one capture for each display context, published
 only after two independent GPU Editor processes exited successfully with identical records.
-Repeats and their supervisor receipts stay in the validation cache.
+Repeats and their supervisor receipts stay in the validation cache. The `large` and `control`
+contexts use `--display-only`; their references cover display facts only. A preliminary
+large full-API pair exposed variable Game view focus and is retained only as raw cache output;
+it is not a pointer oracle. Focused pointer behavior is checked by the normal private capture.
 
 ```
 python3 tests/projects/inputplatform/run.py editor --release 6000.0.71f1 --label capture
@@ -16,7 +19,8 @@ UNBOUND=/path/to/unbound python3 tests/projects/inputplatform/run.py check --rel
 
 The engine gate uses a private 1280x720 Xvfb with GPU rendering through VirtualGL.
 It changes only that private display's clipboard. Dependencies are Xvfb, VirtualGL,
-xclip and xrandr. Host recording temporarily changes the host clipboard.
+xclip, xrandr and xdotool. Host recording temporarily changes the host clipboard. The engine harness focuses its
+private window before sampling; it cannot use the host Wayland connection.
 `clipboard_control.py` is an independent X11 owner/reader. Reads run asynchronously
 while the Editor pumps its event loop; external writes get five frames for ownership
 notifications. Tests include empty, non-text, Unicode, line endings, 1 MiB text,
@@ -28,7 +32,7 @@ null, cross-property reads/writes and calls from another thread.
 | --- | --- | --- |
 | [systemCopyBuffer](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUIUtility-systemCopyBuffer.html) | System-wide clipboard access | Real clipboard; null becomes empty text; absent/non-text becomes empty; both properties enforce the main thread. |
 | [currentResolution](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Screen-currentResolution.html) | Windowed players report desktop size; VR has separate texture-size APIs | Desktop size, 60/1, even when the host mode is approximately 59.962 Hz. |
-| [resolutions](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Screen-resolutions.html) | Monitor modes for exclusive full-screen players; do not assume those player guarantees in the Editor | Standard Editor sizes at 60/1, filtered by desktop dimensions, ordered by height then width. This differs from both Xvfb's single mode and the host's advertised modes. Measured desktop sizes are 1280x720 and 1920x1080. |
+| [resolutions](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Screen-resolutions.html) | Monitor modes for exclusive full-screen players; do not assume those player guarantees in the Editor | Standard Editor sizes at 60/1, filtered by desktop dimensions, ordered by height then width. This differs from both Xvfb's single mode and the host's advertised modes. Display controls cover 1280x720, 1920x1080, 8192x8192 and a nonstandard 1234x777 desktop. The large control reveals all 66 standard sizes; every smaller list is its dimension-wise filter. |
 | [dpi](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Screen-dpi.html) | Physical density, zero if unknown; Android reports a logical density bucket | Zero on both displays, which report no physical dimensions. Scaled logical density is not substituted. |
 | [mainWindowDisplayInfo](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Screen-mainWindowDisplayInfo.html) / [GetDisplayLayout](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Screen.GetDisplayLayout.html) | Desktop standalone support; allocation guarantee excludes the Editor | Real host name, desktop size, work area and unreduced mode-clock/total ratio. Host: 173000000/2885120 and work area [0,32,1920,960]. Xvfb: 0/1 and [0,0,1280,720]. Null list throws ArgumentNullException. |
 | [Display.displays](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Display-displays.html) | Player display enumeration; initial display is primary | One active Game view display; system and rendering sizes both equal the Game view, 640x360, on either desktop. |
@@ -45,8 +49,7 @@ The displacement tolerance is 0.001 pixels for the captured fit-scale rounding.
 
 No configured input method was available, so composition is unsupported with a clear warning;
 committed text still travels through ordinary input events. There is no composition parity claim.
-Desktop sizes above 1920x1080 keep host modes with a warning until their Editor choices are
-measured. Other releases keep the prior host-mode interpretation. Multiple monitors,
+Other releases keep the prior host-mode interpretation. Multiple monitors,
 physical-size DPI, native Wayland and macOS display metadata need their own captures.
 Clipboard transport uses arboard's X11/Wayland and NSPasteboard backends; Wayland/macOS
 clipboard behavior has not been measured here. The clipboard's host-error fallback stays

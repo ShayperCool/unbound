@@ -6,11 +6,10 @@ using Xunit;
 namespace UnityEngine.Tests
 {
     /// <summary>Screen.currentResolution, resolutions, dpi and mainWindowDisplayInfo answer from
-    /// the host's `display-info` call (the display the window is on), asked at most once a frame;
+    /// the host's `display-info` call (the display the window is on), refreshed by cached version;
     /// without a display they keep Unbound's constants and warn once. The host is a stand-in.
     /// Docs (6000.0): currentResolution is the desktop's resolution in windowed mode; resolutions
-    /// are sorted first by width, then ascending. The dpi formula (96 per unit of scale) is
-    /// Unbound's choice (unmeasured).</summary>
+    /// differ from the Editor's standard-size choices. Density is supplied by the host.</summary>
     public class ScreenDisplayInfoTests : IDisposable
     {
         readonly List<string> m_Requests = new List<string>();
@@ -21,9 +20,11 @@ namespace UnityEngine.Tests
         readonly LogType m_PreviousFilter;
         Func<string, string> m_Answer;
         int m_Frame = 1;
+        readonly string m_Release = ProjectInfo.UnityVersion;
 
         public ScreenDisplayInfoTests()
         {
+            ProjectInfo.UnityVersion = "2022.3.62f1";
             Screen.ResetDisplayForTests();
             Screen.s_DisplayFrameForTests = m_Frame;
             Screen.s_DisplayCallForTests = Call;
@@ -64,6 +65,7 @@ namespace UnityEngine.Tests
             m_Logger.logHandler = m_PreviousHandler;
             m_Logger.logEnabled = m_PreviousLogEnabled;
             m_Logger.filterLogType = m_PreviousFilter;
+            ProjectInfo.UnityVersion = m_Release;
             Screen.s_DisplayCallForTests = null;
             Screen.s_DisplayFrameForTests = null;
             Screen.ResetDisplayForTests();
@@ -84,11 +86,71 @@ namespace UnityEngine.Tests
 
         static string Known(int version, int width = 2560, int height = 1440, string rate = null, double scale = 1.5, string name = "\"DP-1\"", params string[] modes) =>
             "{\"version\":" + version + ",\"available\":true,\"id\":7,\"name\":" + name + ",\"width\":" + width + ",\"height\":" + height
-            + ",\"refreshRate\":" + (rate ?? Rate(2997, 50)) + ",\"scaleFactor\":" + scale.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            + ",\"dpi\":" + (96 * scale).ToString(System.Globalization.CultureInfo.InvariantCulture) + ",\"refreshRate\":" + (rate ?? Rate(2997, 50)) + ",\"scaleFactor\":" + scale.ToString(System.Globalization.CultureInfo.InvariantCulture)
             + ",\"modes\":[" + string.Join(",", modes) + "]}";
 
         static string Unavailable(int version, string reason) =>
             "{\"version\":" + version + ",\"available\":false,\"reason\":\"" + reason + "\"}";
+
+        [Fact]
+        public void LinuxEditorChoicesAndHostDisplayInfoHaveDifferentRefreshRatios()
+        {
+            if (!OperatingSystem.IsLinux()) return;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            m_Answer = _ => Known(1, width: 1280, height: 720, scale: 0);
+            Assert.Equal(60u, Screen.currentResolution.refreshRateRatio.numerator);
+            Assert.Equal(2997u, Screen.mainWindowDisplayInfo.refreshRate.numerator);
+            Assert.Equal(50u, Screen.mainWindowDisplayInfo.refreshRate.denominator);
+            Assert.Equal(0, Screen.dpi);
+            Assert.Equal(15, Screen.resolutions.Length);
+            Assert.Equal(800, Screen.resolutions[7].width);
+            Assert.Equal(600, Screen.resolutions[7].height);
+        }
+
+        [Theory]
+        [InlineData("xvfb")]
+        [InlineData("host")]
+        [InlineData("large")]
+        [InlineData("control")]
+        public void EditorChoicesMatchDisplayControls(string context)
+        {
+            if (!OperatingSystem.IsLinux()) return;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            string source = ReferenceDirectory();
+            int width = 0, height = 0;
+            var expected = new List<string>();
+            foreach (string line in System.IO.File.ReadLines(System.IO.Path.Combine(source, context, "values.jsonl")))
+            {
+                using var document = System.Text.Json.JsonDocument.Parse(line);
+                var root = document.RootElement;
+                if (root.GetProperty("k").GetString() == "currentResolution")
+                { width = root.GetProperty("v")[0].GetInt32(); height = root.GetProperty("v")[1].GetInt32(); }
+                if (root.GetProperty("k").GetString() == "resolutions")
+                    foreach (var r in root.GetProperty("v").EnumerateArray())
+                        expected.Add($"{r[0]}x{r[1]}@{r[2]}/{r[3]}");
+            }
+            m_Answer = _ => Known(1, width: width, height: height);
+            Assert.Equal(expected, Screen.resolutions.Select(r => $"{r.width}x{r.height}@{r.refreshRateRatio.numerator}/{r.refreshRateRatio.denominator}"));
+        }
+
+        static string ReferenceDirectory([System.Runtime.CompilerServices.CallerFilePath] string source = "") =>
+            System.IO.Path.Combine(System.IO.Path.GetDirectoryName(source), "../../tests/projects/inputplatform/Reference/unity-6000.0.71f1");
+
+        [Fact]
+        public void CachedDisplayIsReadOnlyWhenTheHostVersionChanges()
+        {
+            Screen.s_DisplayFrameForTests = null;
+            Screen.UpdateDisplayVersion(1);
+            m_Answer = _ => Known(1);
+            _ = Screen.currentResolution;
+            Screen.UpdateDisplayVersion(1);
+            _ = Screen.dpi;
+            Assert.Single(m_Requests);
+            Screen.UpdateDisplayVersion(2);
+            m_Answer = _ => Known(2, width: 1920);
+            Assert.Equal(1920, Screen.currentResolution.width);
+            Assert.Equal(2, m_Requests.Count);
+        }
 
         /// <summary>Red: the 747e3f23 getter (the window's size at 60 Hz) gives 1080x1920 @ 60/1.</summary>
         [Fact]

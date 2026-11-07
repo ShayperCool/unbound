@@ -14,6 +14,8 @@ pub mod remote;
 pub mod render;
 pub mod shaderlab;
 
+mod host_display;
+
 use anyhow::Result;
 use backend::GpuBackend;
 use bevy::{
@@ -318,7 +320,10 @@ fn drive(
     driver.text.clear();
     driver.key_events.clear();
     // The input method is the window's own; a remote session's viewers type elsewhere.
-    unbound_runtime::ime::attach(settings.remote.is_none());
+    // inputplatform measures defaults only: no configured input method is available to
+    // establish composition parity. Keep legacy composition explicitly unsupported; committed
+    // text continues through the normal text events.
+    unbound_runtime::ime::attach(false);
     // Key and mouse button changes in the order they happened: several may fall between two
     // frames (a click within a frame is a press and a release).
     for event in window_events.read() {
@@ -451,6 +456,8 @@ fn drive(
         raw_motion_x: motion.delta.x,
         raw_motion_y: motion.delta.y,
         raw_motion: 1,
+        display_version: unbound_runtime::display::version(),
+        ime_version: unbound_runtime::ime::version(),
     };
     let keep_going = driver.inner.frame(&input);
     if let Ok((entity, mut options)) = cursors.single_mut() {
@@ -646,12 +653,24 @@ fn save_png(image: &Image, path: &std::path::Path) -> Result<()> {
     Ok(())
 }
 
+/// Makes host display answers available to Awake/OnEnable before the window is created.
+/// If no display can be queried, keep the explicit unavailable answer until window discovery.
+pub fn initialize_display() {
+    match host_display::primary() {
+        Ok(display) => {
+            unbound_runtime::display::publish(unbound_runtime::display::Display::Known(display))
+        }
+        Err(error) => unbound_runtime::display::publish(
+            unbound_runtime::display::Display::Unavailable(format!("{error:#}")),
+        ),
+    }
+}
+
 /// Publishes the display the window is on for `Screen.currentResolution` & co
 /// (`unbound_runtime::display`): the monitor the window system places the window on, else the
-/// primary monitor. A remote session's viewers watch on displays of their own, which are not
-/// known. Republished when the window changes monitor or the monitor's description changes.
+/// primary monitor. These APIs describe the host desktop, including in a remote session.
+/// Republished when the window changes monitor or the monitor's description changes.
 fn publish_display(
-    settings: Res<RunSettings>,
     windows: Query<Option<&bevy::window::OnMonitor>, With<PrimaryWindow>>,
     monitors: Query<(
         Entity,
@@ -661,15 +680,6 @@ fn publish_display(
     mut published: Local<Option<Option<Entity>>>,
 ) {
     use unbound_runtime::display::{self, Display, DisplayMode, DisplaySnapshot};
-    if settings.remote.is_some() {
-        if published.is_none() {
-            *published = Some(None);
-            display::publish(Display::Unavailable(
-                "a remote session's viewers watch on displays that are not known".into(),
-            ));
-        }
-        return;
-    }
     let on = windows.single().ok().flatten().map(|link| link.0);
     let found = on
         .and_then(|entity| monitors.get(entity).ok())
@@ -688,8 +698,34 @@ fn publish_display(
         ));
         return;
     };
+    let details = host_display::query(
+        monitor.name.as_deref(),
+        [monitor.physical_position.x, monitor.physical_position.y],
+        [monitor.physical_width, monitor.physical_height],
+    );
+    if let Err(error) = &details {
+        tracing::warn!("Screen display details unavailable: {error:#}");
+    }
+    let details = details.unwrap_or_else(|_| host_display::Details {
+        refresh_numerator: monitor.refresh_rate_millihertz.unwrap_or(0),
+        refresh_denominator: if monitor.refresh_rate_millihertz.is_some() {
+            1000
+        } else {
+            1
+        },
+        ..Default::default()
+    });
     display::publish(Display::Known(DisplaySnapshot {
-        id: entity.to_bits(),
+        dpi: details.dpi,
+        info_refresh_numerator: details.refresh_numerator,
+        info_refresh_denominator: details.refresh_denominator.max(1),
+        work_area: details.work_area.unwrap_or([
+            0,
+            0,
+            monitor.physical_width as i32,
+            monitor.physical_height as i32,
+        ]),
+        id: details.id.unwrap_or_else(|| entity.to_bits()),
         name: monitor.name.clone(),
         width: monitor.physical_width,
         height: monitor.physical_height,

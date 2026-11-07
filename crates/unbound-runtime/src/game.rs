@@ -66,6 +66,9 @@ pub struct FrameInput {
     pub raw_motion_x: f32,
     pub raw_motion_y: f32,
     pub raw_motion: i32,
+    /// Changes only when the host display description changes.
+    pub display_version: u64,
+    pub ime_version: u64,
 }
 
 /// A key press or release; the layout matches `KeyEvent` in the managed engine.
@@ -556,6 +559,8 @@ impl Game {
                 raw_motion_x: 0.0,
                 raw_motion_y: 0.0,
                 raw_motion: 0,
+                display_version: crate::display::version(),
+                ime_version: crate::ime::version(),
             };
             self.apply_changes();
             if restart_requested() || !self.frame(&input) {
@@ -578,5 +583,16 @@ impl Game {
 impl Drop for Game {
     fn drop(&mut self) {
         self.shutdown();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FrameInput;
+    #[test]
+    fn frame_layout_matches_managed_cached_input_versions() {
+        assert_eq!(std::mem::size_of::<FrameInput>(), 112);
+        assert_eq!(std::mem::offset_of!(FrameInput, display_version), 96);
+        assert_eq!(std::mem::offset_of!(FrameInput, ime_version), 104);
     }
 }

@@ -49,7 +49,8 @@ namespace UnityEngine
         /// The system-wide clipboard's text (6000.0 Scripting API: "Get access to the system-wide
         /// clipboard."), through the host's <c>clipboard-get</c>/<c>clipboard-set</c> calls.
         /// <c>EditorGUIUtility.systemCopyBuffer</c> is this same property. Text and line ends pass
-        /// unchanged. Unbound's choices (unmeasured): a clipboard holding no text (empty, another
+        /// unchanged. Measured in tests/projects/inputplatform: null becomes empty text; calls
+        /// require the main thread. A clipboard holding no text (empty, another
         /// format, or not UTF-8) reads as ""; when the clipboard cannot be read or written (no
         /// display, an older host, an error) the game's in-process copy (<see cref="s_CopyBuffer"/>,
         /// the last text set or read) answers instead, with one warning each time the clipboard
@@ -58,8 +59,8 @@ namespace UnityEngine
         /// </summary>
         public static string systemCopyBuffer
         {
-            get => ReadSystemCopyBuffer();
-            set => WriteSystemCopyBuffer(value ?? "");
+            get { MainThreadCheck.Check("get_systemCopyBuffer"); return ReadSystemCopyBuffer(); }
+            set { MainThreadCheck.Check("set_systemCopyBuffer"); WriteSystemCopyBuffer(value ?? ""); }
         }
 
         /// <summary>Stands in for the host's control call in tests: (method, request) → answer, or

@@ -29,7 +29,8 @@ use crate::{
 /// 26: measured mixer Normalize parameters in the group configuration JSON.
 /// 27: measured mixer Pitch Shifter parameters in the group configuration JSON.
 /// 28: render protocol 12 (shared property arrays, `MeshInstance` elements).
-pub const NATIVE_API_VERSION: u32 = 28;
+/// 29: cached display and IME versions at the end of `FrameInput`.
+pub const NATIVE_API_VERSION: u32 = 29;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]

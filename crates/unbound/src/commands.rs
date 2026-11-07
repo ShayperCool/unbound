@@ -1255,6 +1255,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         persistent_data_path: run.persistent_data_path.clone(),
     };
     install_shader_declarations(&project, &args.target);
+    unbound_app::initialize_display();
     if let Some(frames) = run.headless {
         if !run.snapshots.is_empty() {
             anyhow::bail!("--snapshot needs a window; it cannot be used with --headless");
