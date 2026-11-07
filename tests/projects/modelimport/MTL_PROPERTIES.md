@@ -55,3 +55,16 @@ then uses the existing managed conversion and remap paths. MTL file bytes are ca
 model cache format 22 invalidates old descriptions. No mesh indices, slot ordering, mesh naming,
 axis/pivot behavior or FBX geometry conversion changes are intended. Multiple competing diffuse maps fail explicitly pending a measured conversion. Other releases,
 broad PBR, normal maps and `illum` remain unmeasured follow-ups.
+
+## Validation
+
+Before the change, each color space matched 893/1351 values and 3/30 images exactly. After the
+change, each matches 1351/1351 values and 20/30 images exactly; all 30 images pass the unchanged
+8/255 bound. Textured Standard images retain maximum errors of 2/255 in Gamma and 1/255 in
+Linear. All untextured and unlit images are exact. The complete captures and reports stay under
+Library/Unbound or the validation cache, including the unsuccessful earlier candidates.
+
+The existing material-slot probe retains 306/306 exact API values and 20/20 exact images. The
+model import API/description residuals, lightmap UV and normal residuals, humanoid and baked
+images do not worsen. The runtime Light correction also changes blend-shape image worst mean
+from 1.70 to 0.00. Additional builtinrp, ambient and indirectspec comparisons do not worsen.
