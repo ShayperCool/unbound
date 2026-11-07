@@ -1,0 +1,4 @@
+{
+  "commands": ["python3 tests/projects/modelaxis/run.py unbound --release \"$UNBOUND_PROBE_UNITY_VERSION\""],
+  "summary": "static FBX axis/units: .*"
+}
