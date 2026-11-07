@@ -36,6 +36,10 @@ class BurstAtDuration(unittest.TestCase):
         _, known, failures = self.check('sim/0/c', record(P, Q, BURST, BURST), record(P, Q, BURST))
         self.assertEqual((len(known), len(failures)), (0, 1))
 
+    def test_rejects_dropped_particles_older_than_kept_ones(self):
+        _, known, failures = self.check('sim/0/c', record(P, Q, Q, Q), record(P, Q))
+        self.assertEqual((len(known), len(failures)), (0, 1))
+
     def test_rejects_other_keys(self):
         _, known, failures = self.check('sim/0/b', record(P, Q, BURST, BURST), record(P, Q))
         self.assertEqual((len(known), len(failures)), (0, 1))

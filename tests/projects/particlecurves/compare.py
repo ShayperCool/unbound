@@ -8,7 +8,8 @@ length or any differing value fails, and every failure is printed with both raw 
 One measured difference outside this probe's subject is reported as known, not failing: in
 `sim/<n>/c` Unity emits a burst whose time equals the duration while the step crosses the loop
 end, and Unbound does not. The classifier accepts exactly that: the reference's last
-`BURST_AT_DURATION` particles missing, with the count and every other particle matching.
+`BURST_AT_DURATION` particles missing, those being the record's youngest (largest remaining
+lifetime), with the count and every other particle matching.
 """
 import json
 import re
@@ -16,6 +17,7 @@ import sys
 
 TOLERANCE = 2e-4
 PARTICLE_FIELDS = 6
+REMAINING = 3  # remaining lifetime within a particle's fields
 BURST_AT_DURATION = 2
 KNOWN = re.compile(r'^sim/\d/c$')
 
@@ -41,8 +43,12 @@ def burst_at_duration_missing(key, r, c):
     if not KNOWN.match(key) or not r or not c or r[0] - c[0] != BURST_AT_DURATION:
         return False
     kept = r[1:1 + int(c[0]) * PARTICLE_FIELDS]
-    return len(c) == 1 + len(kept) and len(r) == 1 + int(r[0]) * PARTICLE_FIELDS \
-        and all(near(x, y) for x, y in zip(kept, c[1:]))
+    dropped = r[1 + len(kept):]
+    if len(c) != 1 + len(kept) or len(r) != 1 + int(r[0]) * PARTICLE_FIELDS:
+        return False
+    oldest_dropped = min(dropped[REMAINING::PARTICLE_FIELDS])
+    youngest_kept = max(kept[REMAINING::PARTICLE_FIELDS], default=float('-inf'))
+    return oldest_dropped > youngest_kept and all(near(x, y) for x, y in zip(kept, c[1:]))
 
 
 def compare(reference, candidate):
