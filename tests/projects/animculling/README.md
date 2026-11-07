@@ -114,10 +114,10 @@ clock suspension, the root/script write distinction or visibility replay. Those 
 observations of this release and these cases. No callback ordering between different
 Animators is asserted.
 
-Unmeasured playable contexts include explicit Graph.Evaluate/Animator.Update,
-controller playables, multiple outputs sharing nodes, humanoid output root motion,
-output weights other than one, and other releases. The engine keeps explicit
-Graph.Evaluate unculled as before, an implementation choice. Culled consumers do not
+Unmeasured playable contexts include Animator.Update with graph outputs, controller
+playables, multiple outputs sharing nodes, humanoid output root motion, output
+weights other than one, and other releases. Explicit Graph.Evaluate is measured
+separately below. Culled consumers do not
 stop a shared node another unculled output needs, an implementation invariant rather
 than a measured Unity guarantee.
 
@@ -153,3 +153,41 @@ sample. This is an implementation invariant, not a new guarantee about callback
 binding timing. The 6000.0
 [BindStreamTransform API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimatorJobExtensions.BindStreamTransform.html)
 describes creating a handle for a Transform already bound to the Animator.
+
+## Explicit evaluation (Q90)
+
+`explicit/entry/` creates clip outputs in Start, before Play's first automatic
+animation interval. `explicit/later/` creates clip and two-clip mixer outputs in
+frame 1. Both use Manual and GameTime graphs, all three culling modes, Animators
+with and without their own controller, and pose-only, builtin movement and
+OnAnimatorMove movement cases. Every call is recorded before and after, separately
+from LateUpdate's following automatic evaluation. Calls in frames 0 (entry only),
+6 (visible), 16 (invisible) and 33 (visible again) supply 0.07, 0 and 0.04 seconds.
+`explicit/human/` covers requested IK on a humanoid clip without a controller or
+root motion. Raw bone rotations and dot products are retained; the new human
+cases do not introduce quaternion equality predicates.
+
+Two independent windowed GPU Native captures agree byte for byte on 15,119 records.
+Publishing adds 8,826 keys and preserves all 6,293 prior records byte for byte:
+
+    python3 tests/projects/animculling/run.py editor --release 6000.0.71f1 --label explicit
+    python3 tests/projects/animculling/run.py publish --append --release 6000.0.71f1 --label explicit
+
+The `--append` mode validates both captures, refuses missing or changed old keys,
+and appends only new keys before the existing completion row. The engine-only
+`gate` command and strict comparator cover the entire canonical reference.
+
+| Question | Unity 6000.0 contract | Observed in 6000.0.71f1 | Implementation consequence |
+| --- | --- | --- | --- |
+| Supplied delta | [PlayableGraph.Evaluate](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableGraph.Evaluate.html) advances connected playables by the supplied seconds; [Manual](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.DirectorUpdateMode.Manual.html) requires explicit calls with the caller's delta. | AlwaysAnimate advances by 0.07 on its first explicit entry call; repeated zero calls deliver movement with zero delta. GameTime explicit calls are additional to the automatic frame. | Retain supplied deltas, including on entry; do not apply automatic zero-entry timing to explicit calls. |
+| Offscreen evaluation | [AnimatorCullingMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AnimatorCullingMode.html) and the [Animator Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-Animator.html) describe disabled updates or transform/IK writes. They do not separately define explicit graph evaluation. | CullCompletely holds source/clip time, pose, events and movement, including the supplied explicit delta. Its first offscreen explicit call evaluates at zero and delivers movement once. CullUpdateTransforms advances clocks/events/movement but holds child pose, script fields and humanoid IK, while root position curves still write. | Apply output culling to explicit calls as well as automatic ones. First culled evaluation uses zero time; subsequent culled evaluations do not consume time. |
+| Own controller | [AnimationPlayableOutput](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationPlayableOutput.html) connects a graph to an Animator; the [Playables examples](https://docs.unity3d.com/6000.0/Documentation/Manual/Playables-Examples.html) show clip and mixer outputs. No separate controller phase is promised. | Explicit graph evaluation writes its pose and generic motion and invokes OnAnimatorMove even with a controller. The controller's state time remains unchanged by that call. Its next automatic evaluation writes its own pose and defaults for a Manual output. | Compute explicit output movement independently of the controller's previous automatic deltas. Preserve automatic combined output dispatch. |
+| Visibility return | The culling API does not specify replay. | Manual outputs also write their last pose on return, run requested humanoid IK, and after CullCompletely replay the last movement delta. Before any explicit call, first visibility samples the zero-time pose for culling modes. | Keep the last output sample available across manual frames; sample untouched Manual outputs at first visibility without advancing their clocks or firing events. |
+| Explicit Animator update | [Animator.Update](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator.Update.html) evaluates with a delta and warns that physics and other game-loop systems may not work well with it. | This extension calls graph.Evaluate, not Animator.Update. Existing animstartup controls cover explicit Animator entry deltas. | Do not infer that graph.Evaluate advances an attached controller, or change Animator.Update's separate behavior. |
+
+These are observations of this release, generic positional clips/mixers and the
+specified humanoid IK control, not new promises about other releases or arbitrary
+callback order. Controller-playable nodes, shared nodes, fractional output weights
+and humanoid output root motion remain separate gaps. The initial mismatch is
+explicit evaluation's unconditional advancement/write and its explicit attached
+controller root-motion exclusion in AnimationOutputs/PlayableEngine.

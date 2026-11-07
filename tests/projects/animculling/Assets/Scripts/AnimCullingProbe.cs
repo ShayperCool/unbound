@@ -42,6 +42,7 @@ public class AnimCullingProbe : MonoBehaviour
         public PlayableGraph graph;
         public AnimationClipPlayable clip;
         public Playable source;
+        public bool explicitEvaluation;
     }
 
     readonly List<Case> cases = new List<Case>();
@@ -84,6 +85,7 @@ public class AnimCullingProbe : MonoBehaviour
             camera.backgroundColor = Color.black;
             material = new Material(Shader.Find("Unlit/Color"));
             cube = CubeMesh();
+            ExplicitCases("entry", entry: true);
         }
         catch (Exception e) { Put("fatal", S(e.ToString())); failed = true; }
     }
@@ -125,6 +127,8 @@ public class AnimCullingProbe : MonoBehaviour
                 Animated("s/" + name + "/" + (offscreen ? "on" : "off"), culling, mode, ScheduleA, body: false, skinned: true, updateWhenOffscreen: offscreen);
         }
         PlayableCases(modes);
+        ExplicitCases("later", entry: false);
+        ExplicitHumanCases();
         foreach (var (name, mode) in modes)
         foreach (bool controller in new[] { false, true })
         foreach (bool mixer in new[] { false, true })
@@ -192,6 +196,77 @@ public class AnimCullingProbe : MonoBehaviour
             }
             output.SetSourcePlayable(c.source);
             c.graph.Play();
+        }
+    }
+
+    // Explicit calls are recorded immediately, separately from each following automatic frame.
+    // The entry controls run before the first automatic animation interval; later controls run
+    // with both positive and zero supplied deltas, including repeated calls within one Update.
+    void ExplicitCases(string context, bool entry)
+    {
+        foreach (var mode in new[] { AnimatorCullingMode.AlwaysAnimate, AnimatorCullingMode.CullUpdateTransforms, AnimatorCullingMode.CullCompletely })
+        foreach (var clock in new[] { DirectorUpdateMode.Manual, DirectorUpdateMode.GameTime })
+        foreach (bool controller in new[] { false, true })
+        foreach (bool mixer in new[] { false, true })
+        foreach (string motion in new[] { "pose", "builtin", "move" })
+        {
+            if (entry && mixer) continue;
+            var c = Animated("explicit/" + context + "/" + mode + "/" + clock + "/"
+                + (controller ? "controller" : "bare") + "/" + (mixer ? "mixer" : "clip") + "/" + motion,
+                controller ? Resources.Load<RuntimeAnimatorController>("Culling") : null, mode, ScheduleA);
+            c.explicitEvaluation = true;
+            c.animator.applyRootMotion = motion != "pose";
+            if (motion == "move") c.move = c.rig.gameObject.AddComponent<CullMoveReceiver>();
+            c.graph = PlayableGraph.Create(c.name);
+            c.graph.SetTimeUpdateMode(clock);
+            var output = AnimationPlayableOutput.Create(c.graph, "Animation", c.animator);
+            c.clip = AnimationClipPlayable.Create(c.graph, Resources.Load<AnimationClip>("PlayablePose"));
+            c.clip.SetApplyPlayableIK(true); // Generic rigs: no humanoid IK callback is expected.
+            c.source = c.clip;
+            if (mixer)
+            {
+                var mix = AnimationMixerPlayable.Create(c.graph, 2);
+                mix.ConnectInput(0, c.clip, 0, 0.25f);
+                mix.ConnectInput(1, AnimationClipPlayable.Create(c.graph, Resources.Load<AnimationClip>("PlayableSecond")), 0, 0.75f);
+                c.source = mix;
+            }
+            output.SetSourcePlayable(c.source);
+            c.graph.Play();
+        }
+    }
+
+    void ExplicitHumanCases()
+    {
+        foreach (var mode in new[] { AnimatorCullingMode.AlwaysAnimate, AnimatorCullingMode.CullUpdateTransforms, AnimatorCullingMode.CullCompletely })
+        foreach (var clock in new[] { DirectorUpdateMode.Manual, DirectorUpdateMode.GameTime })
+        {
+            var c = Humanoid("explicit/human/" + mode + "/" + clock, mode);
+            var clip = c.animator.runtimeAnimatorController.animationClips[0];
+            c.animator.runtimeAnimatorController = null;
+            c.animator.applyRootMotion = false; // Humanoid output root motion is a separate gap.
+            c.explicitEvaluation = true;
+            c.graph = PlayableGraph.Create(c.name);
+            c.graph.SetTimeUpdateMode(clock);
+            c.clip = AnimationClipPlayable.Create(c.graph, clip);
+            c.clip.SetApplyPlayableIK(true);
+            c.clip.SetApplyFootIK(false);
+            c.source = c.clip;
+            AnimationPlayableOutput.Create(c.graph, "Animation", c.animator).SetSourcePlayable(c.source);
+            c.graph.Play();
+        }
+    }
+
+    void ExplicitStep(Case c)
+    {
+        if (!c.explicitEvaluation) return;
+        if (frame != 0 && frame != 6 && frame != 16 && frame != 33) return;
+        // Capture before/after every call. 0.07 + 0 + 0.04 crosses the clip's 0.1 event.
+        Record(c, "before");
+        int call = 0;
+        foreach (float delta in new[] { 0.07f, 0f, 0.04f })
+        {
+            c.graph.Evaluate(delta);
+            Record(c, "evaluate" + call++);
         }
     }
 
@@ -331,6 +406,7 @@ public class AnimCullingProbe : MonoBehaviour
                 c.atUpdate = c.move != null ? "[" + F(c.marker.localPosition.x) + "," + F(c.rig.localPosition.y) + "," + c.move.calls + "]" : null;
                 c.holder.position = c.visible(frame) ? On : Off;
                 c.step?.Invoke(frame);
+                ExplicitStep(c);
             }
         }
         catch (Exception e) { Put("fatal", S(e.ToString())); failed = true; }
@@ -351,7 +427,7 @@ public class AnimCullingProbe : MonoBehaviour
         if (++frame == Frames || failed) Finish();
     }
 
-    void Record(Case c)
+    void Record(Case c, string phase = null)
     {
         var json = new StringBuilder("{\"vis\":[");
         for (int i = 0; i < c.renderers.Count; i++) json.Append(i > 0 ? "," : "").Append(B(c.renderers[i].isVisible));
@@ -363,10 +439,12 @@ public class AnimCullingProbe : MonoBehaviour
         {
             var info = c.animator.GetCurrentAnimatorStateInfo(0);
             json.Append(",\"nt\":").Append(F(info.normalizedTime)).Append(",\"ik\":").Append(c.ik.calls)
-                .Append(",\"hips\":").Append(B(c.hips.localRotation != c.lastHips))
-                .Append(",\"arm\":").Append(B(c.arm.localRotation != c.lastArm));
+                ;
+            if (!c.explicitEvaluation)
+                json.Append(",\"hips\":").Append(B(c.hips.localRotation != c.lastHips))
+                    .Append(",\"arm\":").Append(B(c.arm.localRotation != c.lastArm));
             if (c.graph.IsValid())
-                Put(c.name + "/pose/" + frame, "{\"hips\":" + Q(c.hips.localRotation) + ",\"arm\":" + Q(c.arm.localRotation)
+                Put(c.name + "/pose" + (phase == null ? "" : "/" + phase) + "/" + frame, "{\"hips\":" + Q(c.hips.localRotation) + ",\"arm\":" + Q(c.arm.localRotation)
                     + ",\"hipsDot\":" + F(Quaternion.Dot(c.lastHips, c.hips.localRotation))
                     + ",\"armDot\":" + F(Quaternion.Dot(c.lastArm, c.arm.localRotation)) + "}");
             c.lastHips = c.hips.localRotation;
@@ -393,7 +471,11 @@ public class AnimCullingProbe : MonoBehaviour
                     .Append(",\"pl\":").Append(B(c.animation.isPlaying));
             }
         }
-        Put(c.name + "/" + frame, json.Append("}").ToString());
+        if (c.explicitEvaluation)
+                json.Append(",\"velocity\":").Append(V(c.animator.velocity))
+                    .Append(",\"rotationDelta\":").Append(Q(c.animator.deltaRotation))
+                    .Append(",\"angularVelocity\":").Append(V(c.animator.angularVelocity));
+        Put(c.name + (phase == null ? "" : "/" + phase) + "/" + frame, json.Append("}").ToString());
     }
 
     void Finish()

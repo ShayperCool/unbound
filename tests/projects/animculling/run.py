@@ -125,7 +125,7 @@ def editor_problem(repeat):
     return reason
 
 
-def publish(work):
+def publish(work, append=False):
     repeats = [work/r for r in REPEATS]
     for repeat in repeats:
         if not repeat.is_dir():
@@ -138,8 +138,29 @@ def publish(work):
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(first/OUT, target)
         print('published', target)
-    return publish_repeats(repeats, reference_file(PROBE, 'jsonl'), lambda d: [OUT], write,
-                           complete=[capture_problem], gpu=True)
+    target = reference_file(PROBE, 'jsonl')
+    if not append:
+        return publish_repeats(repeats, target, lambda d: [OUT], write,
+                               complete=[capture_problem], gpu=True)
+    # A probe extension may only add keys. Validate repeats before touching the canonical
+    # reference, and preserve every old record byte-for-byte, including its completion row.
+    staged = work/'append-reference.jsonl'
+    publish_repeats(repeats, staged, lambda d: [OUT], write,
+                    complete=[capture_problem], gpu=True)
+    old_lines, new_lines = target.read_text().splitlines(), staged.read_text().splitlines()
+    old = {r['k']: r['v'] for r in map(json.loads, old_lines)}
+    new = {r['k']: r['v'] for r in map(json.loads, new_lines)}
+    changed = [key for key, value in old.items() if key not in new or new[key] != value]
+    if changed:
+        sys.exit('existing reference keys changed or missing: '+', '.join(changed))
+    added = [line for line in new_lines if json.loads(line)['k'] not in old]
+    if not added:
+        sys.exit('no new reference keys')
+    complete = [line for line in old_lines if json.loads(line)['k'] == 'complete']
+    target.write_text('\n'.join([line for line in old_lines if json.loads(line)['k'] != 'complete']
+                               + added + complete)+'\n')
+    print('appended', len(added), 'new keys; retained', len(old), 'existing keys')
+    return 0
 
 
 def check(work, allow_residuals=False):
@@ -170,6 +191,7 @@ def main():
     parser.add_argument('mode', choices=('create', 'editor', 'publish', 'check', 'gate'))
     parser.add_argument('--label')
     parser.add_argument('--release')
+    parser.add_argument('--append', action='store_true', help='publish new keys only; refuse any old value change')
     args = parser.parse_args()
     if args.release:
         os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
@@ -177,7 +199,7 @@ def main():
     if not label or Path(label).name != label or label in ('.', '..'):
         parser.error('--label must be a single directory name')
     work = run_root(PROBE, label)
-    return {'create': create, 'editor': editor, 'publish': publish, 'check': check, 'gate': lambda work: check(work, allow_residuals=True)}[args.mode](work)
+    return {'create': create, 'editor': editor, 'publish': lambda work: publish(work, args.append), 'check': check, 'gate': lambda work: check(work, allow_residuals=True)}[args.mode](work)
 
 
 if __name__ == '__main__':
