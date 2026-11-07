@@ -29,6 +29,7 @@ namespace UnityEngine.Tests
                 Assert.False(first.IsValid());
                 Assert.Throws<NullReferenceException>(() => first.GetData(new byte[36]));
                 Assert.Throws<NullReferenceException>(() => first.count);
+                Assert.Throws<ArgumentNullException>(() => AsyncGPUReadback.RequestAsync(first));
                 Assert.True(second.IsValid());
                 using var third = mesh.GetVertexBuffer(0);
                 Assert.Equal(second.GetNativeBufferPtr(), third.GetNativeBufferPtr());

@@ -239,7 +239,8 @@ namespace UnityEngine
         }
 
         internal ulong Handle => m_Storage.Handle;
-        internal GpuBufferStorage Storage => m_Ptr != IntPtr.Zero ? m_Storage : throw new NullReferenceException("Object reference not set to an instance of an object.");
+        internal GpuBufferStorage Storage => m_Ptr != IntPtr.Zero ? m_Storage : null;
+        GpuBufferStorage CheckedStorage => Storage ?? throw new NullReferenceException("Object reference not set to an instance of an object.");
 
         public void Dispose()
         {
@@ -254,28 +255,28 @@ namespace UnityEngine
 
         public bool IsValid() => m_Ptr != IntPtr.Zero && !m_Storage.Released;
 
-        public int count => Storage.Count;
-        public int stride => Storage.Stride;
-        public Target target { get { _ = Storage; return m_Target; } }
-        public UsageFlags usageFlags { get { _ = Storage; return m_UsageFlags; } }
+        public int count => CheckedStorage.Count;
+        public int stride => CheckedStorage.Stride;
+        public Target target { get { _ = CheckedStorage; return m_Target; } }
+        public UsageFlags usageFlags { get { _ = CheckedStorage; return m_UsageFlags; } }
         [Unbound.EditorFaithful("write-only label for GPU debuggers: nothing a game can observe")]
         public string name { set { } }
 
-        public IntPtr GetNativeBufferPtr() { _ = Storage; return m_Ptr; }
+        public IntPtr GetNativeBufferPtr() { _ = CheckedStorage; return m_Ptr; }
 
-        public void SetData(Array data) => Storage.SetData(data, 0, 0, data?.Length ?? 0, GpuBufferStorage.Graphics);
+        public void SetData(Array data) => CheckedStorage.SetData(data, 0, 0, data?.Length ?? 0, GpuBufferStorage.Graphics);
         public void SetData(Array data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count) =>
-            Storage.SetData(data, managedBufferStartIndex, graphicsBufferStartIndex, count, GpuBufferStorage.Graphics);
-        public void SetData<T>(List<T> data) where T : struct => Storage.SetData(data.ToArray(), 0, 0, data.Count, GpuBufferStorage.Graphics);
+            CheckedStorage.SetData(data, managedBufferStartIndex, graphicsBufferStartIndex, count, GpuBufferStorage.Graphics);
+        public void SetData<T>(List<T> data) where T : struct => CheckedStorage.SetData(data.ToArray(), 0, 0, data.Count, GpuBufferStorage.Graphics);
         public void SetData<T>(List<T> data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count) where T : struct =>
-            Storage.SetData(data.ToArray(), managedBufferStartIndex, graphicsBufferStartIndex, count, GpuBufferStorage.Graphics);
-        public void SetData<T>(NativeArray<T> data) where T : struct => Storage.SetData(data, 0, 0, data.Length, GpuBufferStorage.Graphics);
+            CheckedStorage.SetData(data.ToArray(), managedBufferStartIndex, graphicsBufferStartIndex, count, GpuBufferStorage.Graphics);
+        public void SetData<T>(NativeArray<T> data) where T : struct => CheckedStorage.SetData(data, 0, 0, data.Length, GpuBufferStorage.Graphics);
         public void SetData<T>(NativeArray<T> data, int nativeBufferStartIndex, int graphicsBufferStartIndex, int count) where T : struct =>
-            Storage.SetData(data, nativeBufferStartIndex, graphicsBufferStartIndex, count, GpuBufferStorage.Graphics);
+            CheckedStorage.SetData(data, nativeBufferStartIndex, graphicsBufferStartIndex, count, GpuBufferStorage.Graphics);
 
-        public void GetData(Array data) => Storage.GetData(data, 0, 0, data?.Length ?? 0);
+        public void GetData(Array data) => CheckedStorage.GetData(data, 0, 0, data?.Length ?? 0);
         public void GetData(Array data, int managedBufferStartIndex, int computeBufferStartIndex, int count) =>
-            Storage.GetData(data, managedBufferStartIndex, computeBufferStartIndex, count);
+            CheckedStorage.GetData(data, managedBufferStartIndex, computeBufferStartIndex, count);
 
         /// <summary>Sets the hidden counter of an Append or Counter buffer.</summary>
         public void SetCounterValue(uint counterValue) => GpuBufferOps.SetCounter(m_Storage, counterValue);
