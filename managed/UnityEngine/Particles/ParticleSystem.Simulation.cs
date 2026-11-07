@@ -2098,7 +2098,13 @@ namespace UnityEngine
             // The measured constant-lifetime Birth controls skip an emission whose
             // remaining call time reaches its lifetime bound, without consuming start samples.
             var lifetime = m_Main.startLifetime;
-            if (birthCatchup >= 0f && !m_LifetimeByEmitterSpeed.enabled && (properties & ParticleSystemSubEmitterProperties.InheritLifetime) == 0
+            bool constantBirthLifetime = birthCatchup >= 0f && Unbound.Runtime.Compat.ParticleBirthLifetimeMeasured
+                && lifetime.mode == ParticleSystemCurveMode.Constant
+                && parentSystem.m_Main.startLifetime.mode == ParticleSystemCurveMode.Constant
+                && !m_LifetimeByEmitterSpeed.enabled && !parentSystem.m_LifetimeByEmitterSpeed.enabled
+                && float.IsFinite(parent.m_StartLifetime);
+            if (birthCatchup >= 0f && !m_LifetimeByEmitterSpeed.enabled
+                && ((properties & ParticleSystemSubEmitterProperties.InheritLifetime) == 0 || constantBirthLifetime)
                 && (lifetime.mode == ParticleSystemCurveMode.Constant || lifetime.mode == ParticleSystemCurveMode.TwoConstants)
                 && birthCatchup >= lifetime.MaxValue) return;
             var origin = parentSystem.SimulationToWorld().MultiplyPoint3x4(parent.m_Position);
@@ -2136,11 +2142,7 @@ namespace UnityEngine
             // Constant Birth lifetimes in 6000.0.71f1 use the parent's remaining
             // seconds after this integration step. Every child in the batch shares
             // that multiplier, including rate births with different initial ages.
-            if (birthCatchup >= 0f && Unbound.Runtime.Compat.ParticleBirthLifetimeMeasured
-                && lifetime.mode == ParticleSystemCurveMode.Constant
-                && parentSystem.m_Main.startLifetime.mode == ParticleSystemCurveMode.Constant
-                && !m_LifetimeByEmitterSpeed.enabled && !parentSystem.m_LifetimeByEmitterSpeed.enabled
-                && float.IsFinite(parent.m_StartLifetime))
+            if (constantBirthLifetime)
                 parentLife = Mathf.Max(parent.m_Lifetime, 0f);
             EmitParams none = default;
             var context = MakeContext();
