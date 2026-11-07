@@ -2312,6 +2312,7 @@ class QueryFilter : public PxQueryFilterCallback
 {
 public:
 	bool hitTriggers = false;
+	bool skipInitial = false;
 	PxQueryHitType::Enum preFilter( const PxFilterData&, const PxShape* shape, const PxRigidActor*, PxHitFlags& ) override
 	{
 		if ( !hitTriggers && ( shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE ) )
@@ -2320,16 +2321,27 @@ public:
 		}
 		return PxQueryHitType::eTOUCH;
 	}
-	PxQueryHitType::Enum postFilter( const PxFilterData&, const PxQueryHit& ) override
+	PxQueryHitType::Enum postFilter( const PxFilterData&, const PxQueryHit& hit ) override
 	{
+        // Only ray/sweep queries enable this test. Reject before touch storage, so ignored
+        // initial overlaps cannot reduce the room available for multiple mesh faces.
+        if (skipInitial && static_cast<const PxLocationHit&>(hit).distance <= 0.0f)
+            return PxQueryHitType::eNONE;
 		return PxQueryHitType::eTOUCH;
 	}
 };
 
-PxQueryFilterData query_filter( uint64_t maskBits )
+PxQueryFilterData query_filter( uint64_t maskBits, bool skipInitial = false )
 {
 	PxQueryFilterData data( PxFilterData( static_cast<PxU32>( maskBits ), 0, 0, 0 ),
 							PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER | PxQueryFlag::eNO_BLOCK );
+    // eNO_BLOCK converts every post-filter result into a touch, including eNONE.
+    // The pre/post filters already return touches for accepted hits.
+    if (skipInitial)
+    {
+        data.flags.clear(PxQueryFlag::eNO_BLOCK);
+        data.flags |= PxQueryFlag::ePOSTFILTER;
+    }
 	return data;
 }
 
@@ -2345,20 +2357,18 @@ struct CastCollector : PxHitCallback<Hit>
     int capacity;
     float length;
     bool closest;
-    bool skipInitial;
     int count = 0;
     float bestDistance = PX_MAX_F32;
 
-    CastCollector(ua3_hit* outputIn, int capacityIn, float lengthIn, bool closestIn, bool skipInitialIn, Hit* storage = nullptr, PxU32 storageSize = QueryChunkSize)
+    CastCollector(ua3_hit* outputIn, int capacityIn, float lengthIn, bool closestIn, Hit* storage = nullptr, PxU32 storageSize = QueryChunkSize)
         : PxHitCallback<Hit>(storage != nullptr ? storage : scratch, storageSize), output(outputIn), capacity(capacityIn),
-          length(lengthIn), closest(closestIn), skipInitial(skipInitialIn) {}
+          length(lengthIn), closest(closestIn) {}
 
     PxAgain processTouches(const Hit* hits, PxU32 size) override
     {
         for (PxU32 i = 0; i < size; ++i)
         {
             const Hit& hit = hits[i];
-            if (skipInitial && hit.distance <= 0.0f) continue;
             if (closest)
             {
                 if (hit.distance >= bestDistance) continue;
@@ -2467,15 +2477,16 @@ UA3_API int ua3_raycast( uint32_t id, ua3_vec3 originIn, ua3_vec3 translationIn,
 	}
 	const bool multiple = (hitTriggers & QueryMultipleFaces) != 0;
     if (multiple) ua3_query_reserve(capacity);
-    CastCollector<PxRaycastHit> buffer(hits, capacity, length, closest != 0, true,
-        multiple ? rayFaceScratch.data() : nullptr, multiple ? static_cast<PxU32>(rayFaceScratch.size()) : QueryChunkSize);
+    CastCollector<PxRaycastHit> buffer(hits, capacity, length, closest != 0,
+        multiple ? rayFaceScratch.data() : nullptr, multiple ? static_cast<PxU32>(PxMax(capacity, static_cast<int>(QueryChunkSize))) : QueryChunkSize);
 	QueryFilter filter;
 	filter.hitTriggers = ( hitTriggers & QueryHitTriggers ) != 0;
+    filter.skipInitial = true;
 	PxHitFlags flags = PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX | PxHitFlag::eUV;
 	if (hitTriggers & QueryMultipleFaces) flags |= PxHitFlag::eMESH_MULTIPLE;
 	world->scene->raycast( origin, translation / length, length, buffer,
 						   cast_flags( flags, hitTriggers ),
-						   query_filter( maskBits ), &filter );
+						   query_filter( maskBits, filter.skipInitial ), &filter );
 	return buffer.count;
 }
 
@@ -2494,11 +2505,12 @@ UA3_API int ua3_shapecast( uint32_t id, int kind, ua3_vec3 aIn, ua3_vec3 bIn, ua
 	}
 	PxTransform pose;
 	PxGeometryHolder geometry = query_geometry( kind, a, b, rotation, radius, pose );
-	CastCollector<PxSweepHit> buffer(hits, capacity, length, closest != 0, closest != 0 || (hitTriggers & QuerySkipInitial) != 0);
+	CastCollector<PxSweepHit> buffer(hits, capacity, length, closest != 0);
 	QueryFilter filter;
 	filter.hitTriggers = ( hitTriggers & QueryHitTriggers ) != 0;
+    filter.skipInitial = closest != 0 || (hitTriggers & QuerySkipInitial) != 0;
 	world->scene->sweep( geometry.any(), pose, translation / length, length, buffer,
-						 cast_flags( PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX, hitTriggers ), query_filter( maskBits ),
+						 cast_flags( PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX, hitTriggers ), query_filter( maskBits, filter.skipInitial ),
 						 &filter );
 	return buffer.count;
 }

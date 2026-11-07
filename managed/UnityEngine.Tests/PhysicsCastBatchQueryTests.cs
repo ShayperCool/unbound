@@ -490,6 +490,42 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(mesh);
         }
 
+        [Fact]
+        public unsafe void IgnoredInitialRayHitsDoNotConsumeMultipleFaceCapacity()
+        {
+            var at=Origin+new Vector3(0f,0f,190f);
+            var go=new GameObject("MixedFaceTarget");m_Made.Add(go);go.transform.position=at;
+            var mesh=new Mesh();var vertices=new Vector3[240];var indices=new int[240];
+            for(int i=0;i<80;i++)
+            {
+                float z=1+i*.1f;
+                vertices[3*i]=new Vector3(-2,-2,z);vertices[3*i+1]=new Vector3(0,2,z);vertices[3*i+2]=new Vector3(2,-2,z);
+                for(int k=0;k<3;k++)indices[3*i+k]=3*i+k;
+            }
+            mesh.vertices=vertices;mesh.triangles=indices;
+            var target=go.AddComponent<MeshCollider>();target.sharedMesh=mesh;
+            for(int i=0;i<63;i++)
+            {
+                var containing=new GameObject("Containing"+i);m_Made.Add(containing);
+                containing.transform.position=at;containing.AddComponent<SphereCollider>();
+            }
+            Physics.SyncTransforms();
+            var commands=Native(new RaycastCommand(at,Vector3.forward,new QueryParameters(Physics.AllLayers,true,QueryTriggerInteraction.Ignore),20));
+            var results=Native<RaycastHit>(96);
+            RaycastCommand.ScheduleBatch(commands,results,1,96).Complete();
+            Assert.Equal(80,Hits(results,0,96).Count);
+            var faces=new HashSet<int>();
+            for(int i=0;i<80;i++) {Assert.Same(target,results[i].collider);Assert.True(faces.Add(results[i].triangleIndex));}
+            Assert.Null(results[80].collider);
+            // Check an explicit native capacity as well, independent of managed scratch warm-up.
+            const int multipleFaceFlag=1 << 2;
+            var raw=new Unbound.Box3D.B3.Hit[96];
+            fixed(Unbound.Box3D.B3.Hit* hits=raw)
+                Assert.Equal(80,Unbound.Box3D.B3.ua3_raycast(Unbound.Runtime.PhysicsWorld.DefaultSpace.World,
+                    at,Vector3.forward*20,unchecked((uint)Physics.AllLayers),multipleFaceFlag,0,hits,raw.Length));
+            Object.DestroyImmediate(mesh);
+        }
+
         [Theory]
         [InlineData(1)]
         [InlineData(4)]

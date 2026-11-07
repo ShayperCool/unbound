@@ -11,33 +11,37 @@ def verify(expected, actual, report):
     failures = report['failures']
     if not failures:
         return dict(unresolved=[], order_only=[])
-    prefix = 'stress/faces/'
-    raw = {item['key'] for item in failures}
-    candidates = {key for key in expected if key.startswith(prefix) and key[len(prefix):].isdigit()}
-    if not raw.issubset(candidates):
-        return dict(unresolved=failures, order_only=[])
+    accepted = set()
+    checked = 0
+    for prefix in ('stress/faces/', 'stress/mixed/'):
+        candidates = {key for key in expected if key.startswith(prefix) and key[len(prefix):].isdigit()}
+        changed = {item['key'] for item in failures if item['key'] in candidates}
+        if not changed:
+            continue
 
-    def identities(rows):
-        result = {}
-        ended = False
-        for key in sorted(candidates, key=lambda item:int(item[len(prefix):])):
-            value = rows.get(key)
-            if value is None:
-                return None
-            fields = value.split(',')
-            if fields[0] == 'none':
-                ended = True
-                continue
-            if ended:
-                return None
-            identity = (fields[0], fields[-1])
-            if identity in result:
-                return None
-            result[identity] = value
-        return result
+        def identities(rows):
+            result = {}
+            ended = False
+            for key in sorted(candidates, key=lambda item:int(item[len(prefix):])):
+                value = rows.get(key)
+                if value is None:
+                    return None
+                fields = value.split(',')
+                if fields[0] == 'none':
+                    ended = True
+                    continue
+                if ended:
+                    return None
+                identity = (fields[0], fields[-1])
+                if identity in result:
+                    return None
+                result[identity] = value
+            return result
 
-    left, right = identities(expected), identities(actual)
-    complete = left is not None and right is not None and left.keys() == right.keys()
-    if complete and all(equal(left[key], right[key]) for key in left):
-        return dict(unresolved=[], order_only=failures, checked_unique_faces=len(left))
-    return dict(unresolved=failures, order_only=[])
+        left, right = identities(expected), identities(actual)
+        complete = left is not None and right is not None and left.keys() == right.keys()
+        if complete and all(equal(left[key], right[key]) for key in left):
+            accepted.update(changed)
+            checked += len(left)
+    return dict(unresolved=[item for item in failures if item['key'] not in accepted],
+        order_only=[item for item in failures if item['key'] in accepted], checked_unique_faces=checked)

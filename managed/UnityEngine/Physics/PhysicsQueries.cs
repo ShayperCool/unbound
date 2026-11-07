@@ -158,7 +158,7 @@ namespace Unbound.Runtime
         // repeat after growing scratch storage so their result count has no fixed ceiling.
         static int ReadCast(bool ray, B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius,
             Vector3 direction, float maxDistance, int layerMask, QueryTriggerInteraction triggers,
-            bool closest, bool bounded, int extraFlags = 0)
+            bool closest, bool bounded, int extraFlags = 0, int boundedCapacity = 0)
         {
             uint world = ReadyWorld();
             if (world == 0 || layerMask == 0 || direction.sqrMagnitude < 1e-12f || maxDistance < 0f) return 0;
@@ -176,11 +176,12 @@ namespace Unbound.Runtime
             int count;
             while (true)
             {
+                int capacity = bounded ? boundedCapacity : s_Hits.Length;
                 fixed (B3.Hit* hits = s_Hits)
                     count = ray
-                        ? B3.ua3_raycast(world, a, translation, Mask(layerMask), flags, closest ? 1 : 0, hits, s_Hits.Length)
-                        : B3.ua3_shapecast(world, (int)kind, a, b, Quaternion.Normalize(rotation), Mathf.Max(0f, radius), translation, Mask(layerMask), flags, closest ? 1 : 0, hits, s_Hits.Length);
-                if (bounded || count <= s_Hits.Length) return Math.Min(count, s_Hits.Length);
+                        ? B3.ua3_raycast(world, a, translation, Mask(layerMask), flags, closest ? 1 : 0, hits, capacity)
+                        : B3.ua3_shapecast(world, (int)kind, a, b, Quaternion.Normalize(rotation), Mathf.Max(0f, radius), translation, Mask(layerMask), flags, closest ? 1 : 0, hits, capacity);
+                if (bounded || count <= capacity) return Math.Min(count, capacity);
                 Array.Resize(ref s_Hits, count);
             }
         }
@@ -200,7 +201,7 @@ namespace Unbound.Runtime
             // maxHits, as measured by tests/projects/physicsbatch in Unity 6000.0.71f1.
             int flags = ray ? (parameters.hitMultipleFaces && !closest ? MultipleRayFaces : 0) : SkipInitialOverlap;
             int count = ReadCast(ray, kind, a, b, rotation, radius, direction, distance,
-                parameters.layerMask, parameters.hitTriggers, closest, true, flags);
+                parameters.layerMask, parameters.hitTriggers, closest, true, flags, results.Length);
             int written = Math.Min(count, results.Length);
             for (int i = 0; i < written; i++) results[i] = ConvertedHit(i, Length(distance), direction.normalized);
             return written;

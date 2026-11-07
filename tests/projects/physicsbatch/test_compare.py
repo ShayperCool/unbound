@@ -23,6 +23,17 @@ class ComparisonTests(unittest.TestCase):
         self.assertFalse(verdict['unresolved'])
         self.assertEqual(2,verdict['checked_unique_faces'])
 
+    def test_mixed_group_does_not_hide_unrelated_failures(self):
+        self.expected.update({key.replace('stress/faces/','stress/mixed/'):value
+            for key,value in list(self.expected.items()) if key.startswith('stress/faces/')})
+        actual=dict(self.expected)
+        actual['stress/mixed/0'],actual['stress/mixed/1']=actual['stress/mixed/1'],actual['stress/mixed/0']
+        actual['extra']='unexpected'
+        report,verdict=self.verdict(actual)
+        self.assertEqual(3,len(report['failures']))
+        self.assertEqual(2,len(verdict['order_only']))
+        self.assertEqual('extra',verdict['unresolved'][0]['key'])
+
     def test_lost_and_duplicate_faces_fail(self):
         actual = dict(self.expected)
         actual['stress/faces/1'] = actual['stress/faces/0']

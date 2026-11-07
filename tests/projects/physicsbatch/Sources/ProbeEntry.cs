@@ -164,6 +164,15 @@ public static class ProbeEntry
             RaycastCommand.ScheduleBatch(commands,results,1,96).Complete();
             int count=0;for(int i=0;i<results.Length;i++) {Hit("stress/faces/"+i,results[i]);if(results[i].collider!=null)count++;}
             Row("stress/faces/count",count.ToString());
+            for(int i=0;i<63;i++)
+            {
+                var containing=new GameObject("containing"+i);containing.transform.position=go.transform.position;
+                containing.AddComponent<SphereCollider>().radius=.5f;
+            }
+            Physics.SyncTransforms();
+            RaycastCommand.ScheduleBatch(commands,results,1,96).Complete();
+            count=0;for(int i=0;i<results.Length;i++) {Hit("stress/mixed/"+i,results[i]);if(results[i].collider!=null)count++;}
+            Row("stress/mixed/count",count.ToString());
         }
     }
     static void Casts(string key,Vector3 origin,Vector3 direction,float distance,QueryParameters qp,int max)

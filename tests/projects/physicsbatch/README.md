@@ -1,10 +1,11 @@
 # 3D batch query commands
 
 Unity 6000.0.71f1, Linux GPU Editor. Two independent project copies produced
-byte-identical 5,151-record captures before the canonical reference was published.
+byte-identical 5,248-record captures before the canonical reference was published.
 The repeat captures and Editor supervision receipts remain in the validation cache.
-The extension preserves every original 4,791-record value and adds global backface
-controls, 80 faces on one mesh, and container/closest-point limitations.
+The extensions preserve every earlier reference value. They add global backface
+controls, 80 faces on one mesh, container/closest-point limitations and 63 colliders
+containing a multiple-face ray origin.
 
 ## Initial audit
 
@@ -54,11 +55,11 @@ requires `--release`; the gate never starts the Editor. Native runs use the supe
 GPU Editor launcher and publish checks its receipts, completion and identical bytes.
 
 ```sh
-python3 tests/projects/physicsbatch/run.py prepare --release 6000.0.71f1 --label nativeE
-python3 tests/projects/physicsbatch/run.py native --release 6000.0.71f1 --label nativeE
-python3 tests/projects/physicsbatch/run.py prepare --release 6000.0.71f1 --label nativeF
-python3 tests/projects/physicsbatch/run.py native --release 6000.0.71f1 --label nativeF
-python3 tests/projects/physicsbatch/run.py publish --release 6000.0.71f1 --label nativeE --repeat-label nativeF
+python3 tests/projects/physicsbatch/run.py prepare --release 6000.0.71f1 --label nativeG
+python3 tests/projects/physicsbatch/run.py native --release 6000.0.71f1 --label nativeG
+python3 tests/projects/physicsbatch/run.py prepare --release 6000.0.71f1 --label nativeH
+python3 tests/projects/physicsbatch/run.py native --release 6000.0.71f1 --label nativeH
+python3 tests/projects/physicsbatch/run.py publish --release 6000.0.71f1 --label nativeG --repeat-label nativeH
 python3 tests/projects/physicsbatch/run.py gate --release 6000.0.71f1 --cli "$UNBOUND"
 ```
 
@@ -69,14 +70,14 @@ in the comparison JSON, with 1e-4 absolute and 1e-5 relative float tolerances.
 ## Validation and remaining limits
 
 The engine resolves every measured result and invalid-input case. The strict
-comparison is 5,145/5,151. Six raw differences remain in `stress/faces/{0,2,5,7,40,42}`:
-three pairs of mesh faces exchange slots. All 80 unique collider/triangle identities,
+comparison is 5,236/5,248. Twelve raw differences remain in `stress/{faces,mixed}/{0,2,5,7,40,42}`:
+three pairs of mesh faces exchange slots in each stress scene. All 80 unique collider/triangle identities per scene,
 distances, points and normals agree at the unchanged tolerances; termination and
-counts agree. `compare` still fails on these six rows and saves both values.
+counts agree. `compare` still fails on these twelve rows and saves both values.
 The gate's separate `verify.py` keeps those failures and checks the complete identity
 set without sorting either capture or requiring an unspecified hit order. Missing,
 extra, duplicate faces, changed geometry and a hit after termination all fail.
-Five comparator controls exercise those failure cases.
+Six comparator controls exercise those failure cases.
 
 Scheduling still runs synchronously after completing dependencies. The returned
 handle is already complete, and minCommandsPerJob has no effect on work partitioning.
@@ -85,7 +86,7 @@ storage and appropriate container safety. Concurrent physics job execution is no
 claimed. Local-scene managed controls pass; additional release profiles, terrain
 and every invalid-container alias/safety combination are not Editor-measured here.
 
-Validation: release build; all 3,261 managed tests; Rust unbound-host test/doc-test
+Validation: release build; all 3,262 managed tests; Rust unbound-host test/doc-test
 commands; stub regeneration with no drift; the engine-only gate above. Managed
 controls include local scenes, nonuniform actual collider scale, a missing collider
 between valid commands, initial overlaps, no managed allocation growth between 1
@@ -95,3 +96,10 @@ storage. Batches reserve managed/native scratch before their command loops, allo
 result staging once per batch and prepare each physics scene once. They share the
 single-call query collectors and add no per-command list, closure or native vector.
 No importer or serialized cache output changes.
+
+The mixed stress case adds 63 spheres containing the ray origin before repeating
+an 80-face query into 96 slots. Both Editor captures return all 80 faces. Its managed
+regression fails against the previous native library with 33 faces, and passes with
+80 after rejecting initial hits in the native post-filter before touch storage.
+The query uses the requested logical capacity even when reusable storage is larger;
+results therefore do not depend on earlier queries warming that storage.
