@@ -16,7 +16,8 @@ public class SkinnedBoundsProbe : MonoBehaviour
         public Animator animator;
         public RenderTexture target;
         public Texture2D pixels;
-        public bool offscreen, explicitBounds;
+        public bool offscreen, explicitBounds, animatedRoot;
+        public Camera camera;
     }
     readonly List<Case> cases = new List<Case>();
     readonly StringBuilder records = new StringBuilder();
@@ -133,6 +134,7 @@ public class SkinnedBoundsProbe : MonoBehaviour
         Destroy(serialized);
         Destroy(clone);
         int layer = 1;
+        foreach (bool animatedRoot in new[] {false,true})
         foreach (var mode in new[] { AnimatorCullingMode.AlwaysAnimate, AnimatorCullingMode.CullUpdateTransforms, AnimatorCullingMode.CullCompletely })
         foreach (bool offscreen in new[] {false,true})
         foreach (bool explicitBounds in new[] {false,true})
@@ -149,7 +151,7 @@ public class SkinnedBoundsProbe : MonoBehaviour
             marker.SetParent(rig,false);
             var animator = rig.gameObject.AddComponent<Animator>();
             animator.cullingMode = mode;
-            animator.runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("Culling");
+            animator.runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>(animatedRoot ? "RootSweep" : "Culling");
             var target = new RenderTexture(64,36,24);
             target.Create();
             var camera = new GameObject("Camera").AddComponent<Camera>();
@@ -161,8 +163,8 @@ public class SkinnedBoundsProbe : MonoBehaviour
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = Color.black;
             camera.targetTexture = target;
-            cases.Add(new Case {key=mode+"/"+B(offscreen)+"/"+B(explicitBounds),skin=skin,root=root,marker=marker,animator=animator,
-                target=target,pixels=new Texture2D(64,36,TextureFormat.RGB24,false),offscreen=offscreen,explicitBounds=explicitBounds});
+            cases.Add(new Case {key=(animatedRoot ? "animated/" : "")+mode+"/"+B(offscreen)+"/"+B(explicitBounds),skin=skin,root=root,marker=marker,animator=animator,
+                animatedRoot=animatedRoot,camera=camera,target=target,pixels=new Texture2D(64,36,TextureFormat.RGB24,false),offscreen=offscreen,explicitBounds=explicitBounds});
         }
     }
     void Update()
@@ -175,9 +177,10 @@ public class SkinnedBoundsProbe : MonoBehaviour
             {
                 // Move the bone through the right camera edge independently of the renderer.
                 float x = frame < 6 ? 0 : frame < 10 ? 5 : frame < 16 ? 12 : 0;
-                c.root.localPosition = new Vector3(x,0,0);
-                if (frame == 20) c.skin.rootBone = null;
-                if (frame == 23) c.skin.rootBone = c.root;
+                if (!c.animatedRoot) c.root.localPosition = new Vector3(x,0,0);
+                else c.camera.transform.position = new Vector3(frame < 22 ? 0 : 12,0,-10);
+                if (!c.animatedRoot && frame == 20) c.skin.rootBone = null;
+                if (!c.animatedRoot && frame == 23) c.skin.rootBone = c.root;
                 if (frame == 26) c.skin.ResetLocalBounds();
                 if (frame == 27) c.skin.localBounds = new Bounds(new Vector3(1,0,0), new Vector3(3,3,3));
                 if (frame == 28) c.skin.updateWhenOffscreen = !c.offscreen;
@@ -203,7 +206,7 @@ public class SkinnedBoundsProbe : MonoBehaviour
                     bool present = false;
                     foreach(var p in c.pixels.GetPixels32()) if(p.r>128) {present=true;break;}
                     Put("render/"+c.key+"/"+frame,"{\"visible\":"+B(c.skin.isVisible)+",\"image\":"+B(present)
-                        +",\"marker\":"+V(c.marker.localPosition)+",\"time\":"+F(c.animator.GetCurrentAnimatorStateInfo(0).normalizedTime)+"}");
+                        +",\"marker\":"+V(c.animatedRoot ? c.root.localPosition : c.marker.localPosition)+",\"time\":"+F(c.animator.GetCurrentAnimatorStateInfo(0).normalizedTime)+"}");
                 }
             }
         }

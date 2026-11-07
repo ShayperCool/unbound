@@ -39,6 +39,13 @@ public static class ProbeRunner
         skin.enabled=false;
         PrefabUtility.SaveAsPrefabAsset(rig,"Assets/Resources/SerializedRig.prefab");
         UnityEngine.Object.DestroyImmediate(rig);
+        var sweep = new AnimationClip {name="RootSweep"};
+        AnimationUtility.SetEditorCurve(sweep,EditorCurveBinding.FloatCurve("Bone",typeof(Transform),"m_LocalPosition.x"),AnimationCurve.Linear(0,0,.6f,12));
+        AssetDatabase.CreateAsset(sweep,"Assets/Resources/RootSweep.anim");
+        var controller = AnimatorController.CreateAnimatorControllerAtPath("Assets/Resources/RootSweep.controller");
+        var state = controller.layers[0].stateMachine.AddState("Sweep");
+        state.motion=sweep;
+        controller.layers[0].stateMachine.defaultState=state;
         AssetDatabase.SaveAssets();
     }
 

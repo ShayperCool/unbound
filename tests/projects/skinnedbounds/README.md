@@ -38,3 +38,37 @@ python3 tests/projects/skinnedbounds/run.py check --release 6000.0.71f1
 
 `check` is the engine-only gate and uses the committed release reference. `create`
 is only for explicit Unity-compatible fixture authoring; it is never part of a gate.
+
+## Measured behavior and implementation limits
+
+* Explicit local bounds and serialized `m_AABB` follow the full root-bone matrix.
+  Changing the renderer transform does not change their world box while a separate
+  root remains assigned. A missing root uses the renderer transform. Reassignment
+  preserves the stored local box.
+* An enabled rendered skin with offscreen updates disabled retains its last world
+  box through Update and LateUpdate after root movement/reassignment. The camera's
+  existing culling refreshes it. A local-bounds write invalidates that cached box;
+  disabled static controls answer immediately. The first world query also captures
+  the box before animation, including after a local write. No new animation phase
+  is added.
+* Custom world bounds take precedence. ResetBounds restores tracking. In this
+  release the skinned ResetLocalBounds leaves explicit/serialized local bounds
+  unchanged, despite the general Renderer reset description.
+* A default rigid single-bone bound comes from its authored vertex envelope and
+  bind pose, not Mesh.bounds. It remains stored after Mesh.bounds changes or mesh
+  reassignment. Offscreen updates use the current bone-to-root relationship and
+  ignore the stored explicit local override while enabled. Disabling them restores
+  the stored bound. The bind-pose/nonuniform-scale controls retain their raw floats.
+* Automatic defaults for multi-bone runtime/imported meshes without serialized
+  animation bounds, and offscreen bounds updates for multi-bone meshes, blend
+  shapes and cloth remain unsupported and reported. They keep the previous
+  renderer-space fallback and draw policy. Authored local bounds with offscreen
+  updates disabled support separate roots regardless of the skinning algorithm.
+  Import-time animation envelope generation, other releases, SRP-specific timing,
+  and deformation bounds outside the measured rigid case are follow-ups.
+
+The baseline engine matched 64/1043 initial records. It drew the on-screen skin
+while reporting false visibility at the renderer's x=20 position, freezing its
+CullCompletely Animator. It also discarded the prefab's serialized `m_AABB`.
+The capture extension adds Animator-driven bone movement through the camera edge
+and a camera return, preserving all initial 1043 records exactly.
