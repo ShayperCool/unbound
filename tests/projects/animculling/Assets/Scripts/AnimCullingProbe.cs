@@ -478,6 +478,14 @@ public class AnimCullingProbe : MonoBehaviour
                     .Append(",\"rotationDelta\":").Append(Q(c.animator.deltaRotation))
                     .Append(",\"angularVelocity\":").Append(V(c.animator.angularVelocity));
         Put(c.name + (phase == null ? "" : "/" + phase) + "/" + frame, json.Append("}").ToString());
+        if ((c.name == "explicit/later/CullCompletely/Manual/bare/clip/pose"
+             || c.name == "explicit/later/CullCompletely/Manual/bare/mixer/pose"
+             || c.name == "explicit/later/CullUpdateTransforms/Manual/bare/clip/pose"
+             || c.name == "explicit/later/CullUpdateTransforms/Manual/bare/mixer/pose")
+            && (frame == 6 || frame == 16 || frame == 32 || frame == 33))
+            Put(c.name + "/previous" + (phase == null ? "" : "/" + phase) + "/" + frame,
+                "{\"source\":" + c.source.GetPreviousTime().ToString("R", CultureInfo.InvariantCulture)
+                + ",\"clip\":" + c.clip.GetPreviousTime().ToString("R", CultureInfo.InvariantCulture) + "}");
     }
 
     void Finish()

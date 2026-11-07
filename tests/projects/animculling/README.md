@@ -168,8 +168,8 @@ them, for Manual clip outputs with and without a controller. `explicit/human/` c
 root motion. Raw bone rotations and dot products are retained; the new human
 cases do not introduce quaternion equality predicates.
 
-Two independent windowed GPU Native captures agree byte for byte on 15,551 records.
-Publishing adds 9,258 keys and preserves all 6,293 prior records byte for byte:
+Two independent windowed GPU Native captures agree byte for byte on 15,615 records.
+Publishing adds 9,322 keys and preserves all 6,293 prior records byte for byte:
 
     python3 tests/projects/animculling/run.py editor --release 6000.0.71f1 --label explicit
     python3 tests/projects/animculling/run.py publish --append --release 6000.0.71f1 --label explicit
@@ -192,3 +192,23 @@ callback order. Controller-playable nodes, shared nodes, fractional output weigh
 and humanoid output root motion remain separate gaps. The initial mismatch is
 explicit evaluation's unconditional advancement/write and its explicit attached
 controller root-motion exclusion in AnimationOutputs/PlayableEngine.
+
+The `previous/` records on four Manual clip/mixer controls retain the public
+source and clip previous-time values before/after visible, skipped and returning
+calls. They stay at the last evaluated interval while CullCompletely skips calls.
+On visibility return after skipped updates, mixer-input events repeat that last
+interval, while a direct clip output does not. The public times are the same in
+both shapes, so a clock-advancement explanation is disproved; Unity's internal
+reason for the event-cache difference remains unresolved. The implementation
+retains event intervals for intermediate clips for this replay, without another
+clock advance or a controller-state update. CullUpdateTransforms does not replay
+events on return.
+
+An attached controller's next write-defaults sample restores output-bound fields
+and the Animator-root pose, including the root during CullUpdateTransforms. The
+Manual output's pose replay restores children and fields while leaving that
+controller root pose alone. Generic root movement still applies the last stored
+delta; with an attached controller, its reported replay velocity uses the
+controller sample interval (0.02 here), instead of the explicit interval (0.04
+here). These distinctions are measured, not a proposed controller phase rule.
+Other controller intervals and callback-relative visibility changes are unmeasured.
