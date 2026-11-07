@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.IO;
 using System.Linq;
 using UnityEngine;
@@ -12,6 +13,8 @@ public class UrpProbe : MonoBehaviour
     const int Width = 320, Height = 180;
     /// <summary>The target's MSAA samples (the msaa scenario's 4).</summary>
     static int s_Antialiasing = 1;
+    /// <summary>More keywords to record (the lighting scenarios').</summary>
+    static string[] s_ExtraKeywords = Array.Empty<string>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run() => new GameObject("UrpProbe").AddComponent<UrpProbe>();
@@ -287,11 +290,171 @@ public class UrpProbe : MonoBehaviour
             });
             Scenario(dir, "depth_opaque", () => { cameraData.requiresDepthTexture = true; cameraData.requiresColorTexture = true; },
                 () => { cameraData.requiresDepthTexture = false; cameraData.requiresColorTexture = false; });
-            Quit();
+            s_ExtraKeywords = new[] { "_LIGHT_COOKIES", "_REFLECTION_PROBE_BLENDING", "_REFLECTION_PROBE_BOX_PROJECTION", "SHADOWS_SHADOWMASK", "_MIXED_LIGHTING_SUBTRACTIVE" };
+            CookieScenarios(dir, light);
+            StartCoroutine(SceneScenarios(dir, asset, universalData));
             return;
         }
         Record(Environment.GetEnvironmentVariable("URP_PROBE_OUT"), Environment.GetEnvironmentVariable("URP_PROBE_JSON"));
         Quit();
+    }
+
+    /// <summary>Light cookies: the main light's (tiled by the URP light data's cookie size and
+    /// offset), a spot light's colored cookie and a point light's cube cookie.</summary>
+    void CookieScenarios(string dir, Light sun)
+    {
+        var textures = Resources.Load<LightingTextures>("LightingTextures");
+        var sunData = sun.GetComponent<UniversalAdditionalLightData>() ?? sun.gameObject.AddComponent<UniversalAdditionalLightData>();
+        Scenario(dir, "cookie_directional", () =>
+        {
+            sun.cookie = textures.cookieGray;
+            sunData.lightCookieSize = new Vector2(1.5f, 2f);
+            sunData.lightCookieOffset = new Vector2(0.4f, -0.3f);
+        }, () => { sun.cookie = null; sunData.lightCookieSize = Vector2.one; sunData.lightCookieOffset = Vector2.zero; });
+        // An opaque image imported as a Cookie, its alpha from the input: a white cookie.
+        Scenario(dir, "cookie_directional_opaque", () =>
+        {
+            sun.cookie = textures.cookieOpaque;
+            sunData.lightCookieSize = new Vector2(1.5f, 2f);
+        }, () => { sun.cookie = null; sunData.lightCookieSize = Vector2.one; });
+        GameObject local = null;
+        Scenario(dir, "cookie_spot", () =>
+        {
+            local = new GameObject("Spot Light");
+            local.transform.position = new Vector3(0.2f, 3f, -0.8f);
+            local.transform.rotation = Quaternion.Euler(80f, 20f, 0f);
+            var s = local.AddComponent<Light>();
+            s.type = LightType.Spot;
+            s.intensity = 3f;
+            s.range = 8f;
+            s.spotAngle = 70f;
+            s.cookie = textures.cookieColor;
+        }, () => DestroyImmediate(local));
+        Scenario(dir, "cookie_point", () =>
+        {
+            local = new GameObject("Point Light");
+            local.transform.position = new Vector3(0f, 1.3f, -0.6f);
+            local.transform.rotation = Quaternion.Euler(0f, 30f, 0f);
+            var p = local.AddComponent<Light>();
+            p.type = LightType.Point;
+            p.intensity = 3f;
+            p.range = 5f;
+            p.cookie = textures.cookieCube;
+        }, () => DestroyImmediate(local));
+    }
+
+    /// <summary>The baked scenes (Assets/Editor/LightingSetup): reflection probes with the URP
+    /// asset's blending and box projection off and on (and on Forward+), lightmaps and light
+    /// probes in Shadowmask (both shadowmask modes) and Subtractive mode.</summary>
+    IEnumerator SceneScenarios(string dir, UniversalRenderPipelineAsset asset, UniversalRendererData rendererData)
+    {
+        DontDestroyOnLoad(gameObject);
+        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        var blending = typeof(UniversalRenderPipelineAsset).GetField("m_ReflectionProbeBlending", flags);
+        var boxProjection = typeof(UniversalRenderPipelineAsset).GetField("m_ReflectionProbeBoxProjection", flags);
+        yield return Load("Reflections");
+        var constants = Path.Combine(dir, "per-object-constants.jsonl");
+        File.WriteAllText(constants, "");
+        var reflectionObjects = new[] { "Baked Only", "Overlap", "Custom Only", "Outside", "Off", "Simple", "Floor", "Back Wall" };
+        DumpPerObject(constants, "reflections simple", reflectionObjects);
+        Scenario(dir, "reflections_simple", () => { }, () => { });
+        blending.SetValue(asset, true);
+        boxProjection.SetValue(asset, true);
+        DumpPerObject(constants, "reflections blending", reflectionObjects);
+        blending.SetValue(asset, false);
+        boxProjection.SetValue(asset, false);
+        Scenario(dir, "reflections", () => { blending.SetValue(asset, true); boxProjection.SetValue(asset, true); },
+            () => { blending.SetValue(asset, false); boxProjection.SetValue(asset, false); });
+        Scenario(dir, "reflections_forward_plus", () =>
+        {
+            blending.SetValue(asset, true);
+            boxProjection.SetValue(asset, true);
+            rendererData.renderingMode = RenderingMode.ForwardPlus;
+        }, () =>
+        {
+            blending.SetValue(asset, false);
+            boxProjection.SetValue(asset, false);
+            rendererData.renderingMode = RenderingMode.Forward;
+        });
+        var bakedObjects = new[] { "Ground", "Wall", "Block", "Lit Sphere", "Simple Lit Sphere", "Baked Lit Sphere", "Dynamic Cube", "Proxy Sphere" };
+        yield return Load("Shadowmask");
+        DumpPerObject(constants, "shadowmask", bakedObjects);
+        var shadowmaskMode = QualitySettings.shadowmaskMode;
+        Scenario(dir, "lightmap_shadowmask", () => QualitySettings.shadowmaskMode = ShadowmaskMode.Shadowmask, () => QualitySettings.shadowmaskMode = shadowmaskMode);
+        Scenario(dir, "lightmap_distance_shadowmask", () => QualitySettings.shadowmaskMode = ShadowmaskMode.DistanceShadowmask, () => QualitySettings.shadowmaskMode = shadowmaskMode);
+        yield return Load("Subtractive");
+        DumpPerObject(constants, "subtractive", bakedObjects);
+        Scenario(dir, "lightmap_subtractive", () => { }, () => { });
+        Quit();
+    }
+
+    const int DumpLayer = 30;
+    static readonly string[] s_DumpConstants = { "unity_SpecCube0_BoxMin", "unity_SpecCube0_BoxMax", "unity_SpecCube0_ProbePosition",
+        "unity_SpecCube0_HDR", "unity_SpecCube1_BoxMin", "unity_SpecCube1_BoxMax", "unity_SpecCube1_ProbePosition", "unity_SpecCube1_HDR",
+        "unity_SpecCube0 sample", "unity_SpecCube1 sample", "unity_LightData", "unity_LightmapST", "unity_ProbesOcclusion",
+        "unity_SHAr", "unity_SHAg", "unity_SHAb", "unity_SHBr", "unity_SHBg", "unity_SHBb", "unity_SHC" };
+
+    /// <summary>The per-object constants the named renderers of the loaded scene draw with
+    /// (Probe/PerObjectDump): a copy of each (same mesh, transform, lightmap, light and
+    /// reflection probe usage, so the same bounds and baked lighting) rendered alone into a 20x1
+    /// float target.</summary>
+    static void DumpPerObject(string path, string setting, string[] names)
+    {
+        var main = Camera.main;
+        var target = new RenderTexture(s_DumpConstants.Length, 1, 0, RenderTextureFormat.ARGBFloat);
+        var cameraObject = new GameObject("Dump Camera");
+        cameraObject.transform.SetPositionAndRotation(main.transform.position, main.transform.rotation);
+        var camera = cameraObject.AddComponent<Camera>();
+        camera.enabled = false;
+        camera.fieldOfView = main.fieldOfView;
+        camera.cullingMask = 1 << DumpLayer;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = Color.clear;
+        camera.targetTexture = target;
+        var material = new Material(Shader.Find("Probe/PerObjectDump"));
+        var readback = new Texture2D(s_DumpConstants.Length, 1, TextureFormat.RGBAFloat, false);
+        var lines = new System.Text.StringBuilder();
+        foreach (var name in names)
+        {
+            var source = GameObject.Find(name).GetComponent<MeshRenderer>();
+            var copy = new GameObject("Dump " + name) { layer = DumpLayer };
+            copy.transform.SetPositionAndRotation(source.transform.position, source.transform.rotation);
+            copy.transform.localScale = source.transform.lossyScale;
+            copy.AddComponent<MeshFilter>().sharedMesh = source.GetComponent<MeshFilter>().sharedMesh;
+            var renderer = copy.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.reflectionProbeUsage = source.reflectionProbeUsage;
+            renderer.lightProbeUsage = source.lightProbeUsage;
+            renderer.lightProbeProxyVolumeOverride = source.gameObject;
+            renderer.lightmapIndex = source.lightmapIndex;
+            renderer.lightmapScaleOffset = source.lightmapScaleOffset;
+            camera.Render();
+            RenderTexture.active = target;
+            readback.ReadPixels(new Rect(0, 0, s_DumpConstants.Length, 1), 0, 0);
+            readback.Apply();
+            RenderTexture.active = null;
+            DestroyImmediate(copy);
+            for (int i = 0; i < s_DumpConstants.Length; i++)
+            {
+                var c = readback.GetPixel(i, 0);
+                lines.Append("{\"key\":\"").Append(setting).Append(' ').Append(name).Append(' ').Append(s_DumpConstants[i]).Append("\",\"value\":[")
+                    .Append(string.Join(",", new[] { c.r, c.g, c.b, c.a }.Select(f => f.ToString("R", System.Globalization.CultureInfo.InvariantCulture))))
+                    .Append("]}\n");
+            }
+        }
+        File.AppendAllText(path, lines.ToString());
+        camera.targetTexture = null;
+        target.Release();
+        DestroyImmediate(cameraObject);
+        DestroyImmediate(material);
+        DestroyImmediate(readback);
+    }
+
+    /// <summary>Loads a scene and waits until its lighting data and reflection probes are set up.</summary>
+    static IEnumerator Load(string scene)
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene(scene);
+        for (int i = 0; i < 3; i++) yield return null;
     }
 
     void Scenario(string dir, string name, Action setup, Action teardown)
@@ -346,7 +509,7 @@ public class UrpProbe : MonoBehaviour
             lines.Append("{\"key\":\"volumes\",\"value\":\"").Append(VolumeManager.instance.GetVolumes(1).Length)
                 .Append(" bloom ").Append(bloom != null && bloom.IsActive()).Append(" ").Append(bloom != null ? bloom.intensity.value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "-")
                 .Append(" post ").Append(cameraData != null && cameraData.renderPostProcessing).Append("\"}\n");
-            foreach (var name in new[] { "_MAIN_LIGHT_SHADOWS", "_MAIN_LIGHT_SHADOWS_CASCADE", "_MAIN_LIGHT_SHADOWS_SCREEN", "_ADDITIONAL_LIGHT_SHADOWS", "_ADDITIONAL_LIGHTS", "_ADDITIONAL_LIGHTS_VERTEX", "_SHADOWS_SOFT", "LIGHTMAP_SHADOW_MIXING", "_FORWARD_PLUS", "FOG_LINEAR" })
+            foreach (var name in new[] { "_MAIN_LIGHT_SHADOWS", "_MAIN_LIGHT_SHADOWS_CASCADE", "_MAIN_LIGHT_SHADOWS_SCREEN", "_ADDITIONAL_LIGHT_SHADOWS", "_ADDITIONAL_LIGHTS", "_ADDITIONAL_LIGHTS_VERTEX", "_SHADOWS_SOFT", "LIGHTMAP_SHADOW_MIXING", "_FORWARD_PLUS", "FOG_LINEAR" }.Concat(s_ExtraKeywords))
                 lines.Append("{\"key\":\"keyword ").Append(name).Append("\",\"value\":").Append(Shader.IsKeywordEnabled(name) ? "true" : "false").Append("}\n");
             File.WriteAllText(json, lines.ToString());
         }

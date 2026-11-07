@@ -8,5 +8,14 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Probe.unity
     guid: 375dc1be2b3fc1f09ba4fa4bb3b87d7d
+  - enabled: 1
+    path: Assets/Scenes/Reflections.unity
+    guid: a8846c91f9900b185ae1f5eac1dbc8ee
+  - enabled: 1
+    path: Assets/Scenes/Shadowmask.unity
+    guid: 18b695bef2cc905609f560a3c37aef08
+  - enabled: 1
+    path: Assets/Scenes/Subtractive.unity
+    guid: 3ab4a64587885e3798d4a748f480cb1e
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

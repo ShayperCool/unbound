@@ -43,3 +43,34 @@ sky mesh's vertices, read through a flat-shading probe shader). The Editor's are
     URP_PROBE_DIR=$PWD/tests/projects/urp/Reference/scenarios ... -executeMethod ProbeRunner.Record
     URP_PROBE_DIR=/tmp/urp unbound run -p tests/projects/urp --no-watch --frames 30 --size 320x180
     for f in base shadows lights skybox postfx; do python3 tests/projects/urp/compare.py tests/projects/urp/Reference/scenarios/$f.png /tmp/urp/$f.png; done
+
+## Lighting scenarios
+
+`Editor/LightingSetup.Create` (`-executeMethod LightingSetup.Create`) authored the textures in
+`Assets/Lighting` and three scenes the probe loads after the scenarios above, baked by the
+Editor's CPU lightmapper (no denoising, filtering or compression): `Reflections` (a room seen by
+a baked box-projected reflection probe and a custom-cubemap probe of intensity 2 and higher
+importance that overlap; mirror spheres in each, in the overlap, outside both, with
+reflectionProbeUsage Off and Simple), `Shadowmask` (directional lightmaps, a mixed sun, a baked
+point light, light probes; Lit, Simple Lit and Baked Lit static and dynamic objects, a dynamic
+cube casting a realtime shadow, a sphere using a Light Probe Proxy Volume, which URP does not
+support) and `Subtractive` (the same content, non-directional). Scenarios:
+
+- `cookie_directional` (a grayscale Cookie texture, alpha from the gray scale, tiled by the URP
+  light data's cookie size and offset), `cookie_directional_opaque` (an opaque Cookie texture
+  with alpha from the input: a white cookie), `cookie_spot` (a coloured Default texture),
+  `cookie_point` (a coloured cubemap, through URP's cookie atlas);
+- `reflections_simple` (the URP asset's probe blending and box projection off), `reflections`
+  (both on), `reflections_forward_plus` (both on, Forward+: URP's reflection probe atlas);
+- `lightmap_shadowmask`, `lightmap_distance_shadowmask` (QualitySettings.shadowmaskMode),
+  `lightmap_subtractive`;
+- `per-object-constants.jsonl`: what each renderer of those scenes draws with
+  (`Shaders/PerObjectDump.shader` on a copy of it, read back from a float target): the reflection
+  probe constants (unity_SpecCube0/1 boxes, positions, decode values, a cubemap sample), light data,
+  lightmap scale/offset, probe occlusion and SH. `compare_constants.py` compares it (exit 1 on any
+  difference; 2e-3 relative, Unbound's float targets are half floats).
+
+Two Editor recordings gave identical images and constants (the jsonl files' _TimeParameters
+differ). Unbound renders every new scenario within a mean of 0.65; the remaining differences are
+the glossy mips of the reflection cubemaps (sphere rims in `reflections*`) and a few lightmap
+texels in the lightmap scenarios (see docs/COMPATIBILITY_GAPS.md).

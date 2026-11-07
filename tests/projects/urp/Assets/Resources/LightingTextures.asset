@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4df9998b746f02512930bc9b0f5ca92d, type: 3}
+  m_Name: LightingTextures
+  m_EditorClassIdentifier: 
+  cookieGray: {fileID: 2800000, guid: c0bb3ec931789c90cbf7105207d9846f, type: 3}
+  cookieOpaque: {fileID: 2800000, guid: 7595bd01ce740a6de9bbedb76f6dceae, type: 3}
+  cookieColor: {fileID: 2800000, guid: 8148e81d2643b784f8110f2613e01aaf, type: 3}
+  cookieCube: {fileID: 8900000, guid: 0802e6f38e04213a6bf871e1dee7d493, type: 3}
