@@ -971,7 +971,10 @@ namespace UnityEngine
                 if (wasPlaying) OnStopped();
                 return;
             }
-            if (m_IsPlaying) m_StopEmitting = true;
+            // Stop also latches a completed, paused Simulate history. Otherwise
+            // stopping its now-empty buffer erases the pause and the next
+            // non-restarting Simulate starts automatic emission again.
+            if (m_IsPlaying || m_IsPaused) m_StopEmitting = true;
             if (m_Count == 0)
             {
                 m_IsPlaying = false;

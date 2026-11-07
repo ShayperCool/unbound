@@ -226,6 +226,26 @@ namespace UnityEngine.Tests
             });
         }
 
+        [Fact]
+        public void StopAfterTheLastParentDiesDoesNotRestartBirthEmission()
+        {
+            WithSystems((parent, child) =>
+            {
+                var main = parent.main; main.startLifetime = 0.413f; main.loop = false;
+                var emission = parent.emission;
+                emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+                parent.Simulate(1f, true, true, false);
+                Assert.Equal(0, parent.particleCount);
+                parent.Stop(false, ParticleSystemStopBehavior.StopEmitting);
+                foreach (float dt in new[] { 0.05f, 0.2f, 0.5f, 1f, 2f })
+                {
+                    parent.Simulate(dt, true, false, false);
+                    Assert.Equal(0, parent.particleCount);
+                    Assert.Equal(0, child.particleCount);
+                }
+            });
+        }
+
         static void Near(float expected, float actual) => Assert.InRange(Math.Abs(expected - actual), 0f, 0.000002f);
 
         static void WithSystems(Action<ParticleSystem, ParticleSystem> run)
