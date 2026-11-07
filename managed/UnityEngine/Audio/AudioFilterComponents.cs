@@ -435,6 +435,16 @@ namespace Unbound.Runtime
 
         static bool IsFilterComponent(Component c) => c is AudioLowPassFilter || c is AudioHighPassFilter || c is AudioEchoFilter || c is AudioReverbFilter || c is AudioDistortionFilter || c is AudioChorusFilter;
 
+        /// <summary>Why a component's DSP does not run on the project's release: the kernels it
+        /// shares with the mixer effects are measured on one release (Compat); null when it runs.</summary>
+        static string Unmeasured(Component c)
+        {
+            bool measured = c is AudioChorusFilter ? Compat.ModulatedDelayMeasured
+                : c is AudioDistortionFilter ? Compat.DistortionMeasured
+                : true;
+            return measured ? null : c.GetType().Name + " is measured only for Unity 6000.0.71f1";
+        }
+
         /// <summary>False (with one error per component) when a parameter is not a number.</summary>
         internal static bool Finite(Behaviour component, ref bool reported, float a, float b, float c = 0f, float d = 0f)
         {
@@ -497,6 +507,7 @@ namespace Unbound.Runtime
                 else if (c is AudioReverbFilter reverb) ok = reverb.Describe(out d);
                 else ok = ((AudioEchoFilter)c).Describe(out d);
                 if (!ok) continue;
+                if (Unmeasured(c) is string unmeasured) error ??= unmeasured;
                 d.Id = unchecked((ulong)(long)c.GetInstanceID());
                 d.Stage = scripts ? AudioFilterStage.AfterScripts : AudioFilterStage.BeforeScripts;
                 if (scripts) below = true;

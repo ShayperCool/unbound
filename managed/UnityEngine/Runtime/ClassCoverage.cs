@@ -92,7 +92,7 @@ namespace Unbound.Runtime
             var type = EngineTypes.ForClassId(classId, null, warn: false);
             if (type == null) return (ClassReading.Unknown, "no engine class: its objects are skipped");
             if (type == typeof(AudioMixerEffectController))
-                return (ClassReading.Read, type.FullName + " (Pitch Shifter supports only Unity 6000.0.71f1, FFT size 1024, Overlap 4, Max channels 0, 1024-frame stereo at 48000/44100 Hz; wet mixing and live changes are unsupported)");
+                return (ClassReading.Read, type.FullName + " (Chorus, Flange, Distortion, Normalize and Pitch Shifter support only Unity 6000.0.71f1; Normalize and Pitch Shifter only 1024-frame stereo at 48000/44100 Hz and no live changes, Pitch Shifter only FFT size 1024, Overlap 4, Max channels 0; wet mixing is unsupported except on SFX Reverb)");
             if (Reads(type)) return (ClassReading.Read, type.FullName);
             // Nothing beyond the common keys: the defaults are what the document says.
             if (hasData != null && !hasData(null)) return (ClassReading.Read, type.FullName + " (no data to read)");

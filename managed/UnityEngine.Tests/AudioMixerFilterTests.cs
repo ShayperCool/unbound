@@ -8,12 +8,29 @@ namespace UnityEngine.Tests
 {
     public class AudioMixerFilterTests : IDisposable
     {
+        // The effect DSP is measured on this release (Compat); tests of other releases set theirs.
+        readonly string m_Release = ProjectInfo.UnityVersion;
         public AudioMixerFilterTests()
         {
+            ProjectInfo.UnityVersion = "6000.0.71f1";
             AudioSystem.ResetForTests();
             AudioBackend.Use(new VirtualAudioBackend());
         }
-        public void Dispose() => AudioSystem.ResetForTests();
+        public void Dispose()
+        {
+            AudioSystem.ResetForTests();
+            ProjectInfo.UnityVersion = m_Release;
+        }
+
+        static AudioMixerEffectController UseEffect(AudioMixer mixer, AudioMixerEffectController effect, string name, string[] parameters)
+        {
+            effect.m_EffectName = name; effect.m_ParameterGuids.Clear();
+            foreach (string parameter in parameters)
+            {
+                effect.m_ParameterGuids[parameter] = parameter; mixer.m_Exposed[parameter] = parameter;
+            }
+            return effect;
+        }
 
         static (AudioMixer, AudioMixerGroup, AudioMixerEffectController) Fixture()
         {
@@ -489,6 +506,79 @@ namespace UnityEngine.Tests
                 effect.m_Bypass = true; group.DspConfiguration();
             }
             finally { ProjectInfo.UnityVersion = release; }
+        }
+
+        [Theory]
+        [InlineData("Chorus")]
+        [InlineData("Flange")]
+        [InlineData("Normalize")]
+        [InlineData("Distortion")]
+        [InlineData("Pitch Shifter")]
+        public void MeasuredEffectsFailOnOtherReleasesUnlessBypassed(string name)
+        {
+            var (mixer, group, effect) = Fixture();
+            var parameters = name == "Chorus" ? AudioMixerEffectController.ChorusParameters
+                : name == "Flange" ? AudioMixerEffectController.FlangeParameters
+                : name == "Normalize" ? AudioMixerEffectController.NormalizeParameters
+                : name == "Pitch Shifter" ? AudioMixerEffectController.PitchShifterParameters
+                : new[] { "Level" };
+            UseEffect(mixer, effect, name, parameters);
+            group.DspConfiguration();
+            ProjectInfo.UnityVersion = "6000.0.72f1";
+            var error = Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+            Assert.Contains("AudioMixer " + name + " is measured only for Unity 6000.0.71f1", error.Message);
+            effect.m_Bypass = true; group.DspConfiguration();
+            effect.m_Bypass = false; group.m_BypassEffects = true; group.DspConfiguration();
+        }
+
+        [Theory]
+        [InlineData("Normalize")]
+        [InlineData("Pitch Shifter")]
+        public void LayoutLimitedEffectsFailOnMonoAndOtherUnmeasuredOutputs(string name)
+        {
+            var (mixer, group, effect) = Fixture();
+            UseEffect(mixer, effect, name, name == "Normalize" ? AudioMixerEffectController.NormalizeParameters : AudioMixerEffectController.PitchShifterParameters);
+            var measured = AudioSettings.GetConfiguration();
+            Assert.Equal(AudioSpeakerMode.Stereo, measured.speakerMode);
+            group.DspConfiguration();
+            var mono = measured; mono.speakerMode = AudioSpeakerMode.Mono;
+            var quad = measured; quad.speakerMode = AudioSpeakerMode.Quad;
+            var rate = measured; rate.sampleRate = 22050;
+            var buffer = measured; buffer.dspBufferSize = 256;
+            foreach (var config in new[] { mono, quad, rate, buffer })
+            {
+                Assert.True(AudioSettings.Reset(config));
+                var error = Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+                Assert.Contains("measured only at 48000/44100 Hz with 1024-frame stereo output", error.Message);
+                effect.m_Bypass = true; group.DspConfiguration(); effect.m_Bypass = false;
+            }
+            var other = measured; other.sampleRate = 44100;
+            Assert.True(AudioSettings.Reset(other));
+            group.DspConfiguration();
+        }
+
+        [Theory]
+        [InlineData("6000.0.71f1", 4000f)]
+        [InlineData("6000.0.72f1", 5000f)]
+        [InlineData("not a release", 5000f)]
+        public void ClearFloatGetterReadsTheSnapshotExceptAMeasuredSubmittedOverride(string release, float submittedRead)
+        {
+            var (mixer, _, _) = Fixture();
+            ProjectInfo.UnityVersion = release;
+            // Cleared before the audio update submits it: the documented snapshot value everywhere.
+            mixer.SetFloat("Cutoff", 4000);
+            Assert.True(mixer.ClearFloat("Cutoff"));
+            Assert.True(mixer.GetFloat("Cutoff", out float value));
+            Assert.Equal(5000f, value);
+            // Cleared after submission: only the measured release keeps reading it until the update.
+            mixer.SetFloat("Cutoff", 4000);
+            mixer.Tick(0, 0);
+            Assert.True(mixer.ClearFloat("Cutoff"));
+            Assert.True(mixer.GetFloat("Cutoff", out value));
+            Assert.Equal(submittedRead, value);
+            mixer.Tick(0, 0);
+            Assert.True(mixer.GetFloat("Cutoff", out value));
+            Assert.Equal(5000f, value);
         }
 
         [Fact]

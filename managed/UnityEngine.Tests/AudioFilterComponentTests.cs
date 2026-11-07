@@ -26,9 +26,12 @@ namespace UnityEngine.Tests
         readonly ILogger m_Logger = Debug.unityLogger;
         readonly ILogHandler m_PreviousHandler;
         readonly VirtualAudioBackend m_Backend = new VirtualAudioBackend();
+        // Chorus and Distortion are measured on this release (Compat).
+        readonly string m_Release = ProjectInfo.UnityVersion;
 
         public AudioFilterComponentTests()
         {
+            ProjectInfo.UnityVersion = "6000.0.71f1";
             AudioSystem.ResetForTests();
             AudioBackend.Use(m_Backend);
             m_PreviousHandler = m_Logger.logHandler;
@@ -41,6 +44,7 @@ namespace UnityEngine.Tests
             foreach (var go in m_Objects)
                 if (go != null) Object.DestroyImmediate(go);
             AudioSystem.ResetForTests();
+            ProjectInfo.UnityVersion = m_Release;
         }
 
         sealed class CaptureHandler : ILogHandler
@@ -375,6 +379,25 @@ namespace UnityEngine.Tests
             Assert.True(AudioFilterKind.Supported(AudioFilterKind.Chorus));
             Assert.False(AudioFilterKind.Supported(AudioFilterKind.Last + 1));
             Assert.False(AudioFilterKind.Supported(0));
+        }
+
+        [Fact]
+        public void ChorusAndDistortionComponentsFailOnUnmeasuredReleases()
+        {
+            var chorus = Source("chorus-release");
+            chorus.gameObject.AddComponent<AudioLowPassFilter>();
+            chorus.gameObject.AddComponent<AudioChorusFilter>();
+            var distortion = Source("distortion-release");
+            distortion.gameObject.AddComponent<AudioDistortionFilter>();
+            Assert.Equal(2, Collected(chorus).Length);
+            Assert.Single(Collected(distortion));
+            ProjectInfo.UnityVersion = "6000.0.72f1";
+            Assert.Empty(Collected(chorus));
+            Assert.Empty(Collected(distortion));
+            Assert.Single(Errors("AudioChorusFilter is measured only for Unity 6000.0.71f1"));
+            Assert.Single(Errors("AudioDistortionFilter is measured only for Unity 6000.0.71f1"));
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            Assert.Equal(2, Collected(chorus).Length);
         }
 
         [Fact]

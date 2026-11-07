@@ -24,6 +24,26 @@ namespace Unbound.Runtime
         /// Other releases fail until their kernels and state have been measured.</summary>
         internal static bool MixerPitchShifterMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Mixer Normalize's linked peak envelope, measured on exactly 6000.0.71f1
+        /// (tests/projects/audionormalize). Other releases fail until measured.</summary>
+        internal static bool MixerNormalizeMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>The modulated Q14 delay line that mixer Chorus and Flange and AudioChorusFilter
+        /// share, measured on exactly 6000.0.71f1 (tests/projects/audiochorus,
+        /// tests/projects/audioflange). Other releases fail until measured.</summary>
+        internal static bool ModulatedDelayMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>The Distortion waveshaper of the mixer effect and AudioDistortionFilter, measured
+        /// on exactly 6000.0.71f1 (tests/projects/audiodistortion). Other releases fail until measured.</summary>
+        internal static bool DistortionMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>AudioMixer.GetFloat after ClearFloat, before the next audio update, measured on
+        /// exactly 6000.0.71f1 (tests/projects/mixerparams): an override already submitted to audio
+        /// still reads until that update. Every release reads the snapshot value for a clear of an
+        /// unsubmitted override, as GetFloat documents; other releases read it for a submitted one
+        /// too (the exception is unmeasured there; docs/COMPATIBILITY_GAPS.md).</summary>
+        internal static bool MixerClearFloatSubmissionMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Where Input's errors point to its settings: 6000.0's Editor says (measured)
         /// "Edit -> Project Settings... -> Input Manager"; earlier releases "Edit -> Settings -> Input".</summary>
         internal static string InputSettingsMenu => Major >= 6000 ? "Edit -> Project Settings... -> Input Manager" : "Edit -> Settings -> Input";

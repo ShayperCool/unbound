@@ -172,13 +172,18 @@ namespace UnityEngine.Audio
                 value = 0f;
                 return false;
             }
-            // The 6000.0.71f1 captures distinguish an override already submitted to audio
-            // (mixerfilters set_lp) from a set/clear before submission (audiodistortion mix_clear).
-            if (m_PendingClears.Contains(guid) && m_SubmittedOverrides.TryGetValue(guid, out value))
+            if (!m_PendingClears.Contains(guid))
+            {
+                value = Value(guid);
                 return true;
-            value = m_PendingClears.Contains(guid)
-                ? (m_Values.TryGetValue(guid, out var snapshot) ? snapshot : m_Defaults.TryGetValue(guid, out var fallback) ? fallback : 0f)
-                : Value(guid);
+            }
+            // Documented (6000.0 AudioMixer.GetFloat): after ClearFloat the snapshot value. The
+            // 6000.0.71f1 captures add one exception: an override already submitted to audio
+            // (mixerfilters set_lp) reads until the audio update consumes the clear, unlike a
+            // set/clear before submission (audiodistortion mix_clear).
+            if (Compat.MixerClearFloatSubmissionMeasured && m_SubmittedOverrides.TryGetValue(guid, out value))
+                return true;
+            value = m_Values.TryGetValue(guid, out var snapshot) ? snapshot : m_Defaults.TryGetValue(guid, out var fallback) ? fallback : 0f;
             return true;
         }
 
@@ -653,9 +658,25 @@ namespace Unbound.Runtime
             var v = Values(mixer);
             return new { threshold = v[0], attack = v[1], release = v[2], makeupGain = v[3] };
         }
+        /// <summary>Fails for a release whose DSP for this effect is not measured.</summary>
+        void RequireMeasured(bool measured)
+        {
+            if (!measured) throw new NotSupportedException("AudioMixer " + m_EffectName + " is measured only for Unity 6000.0.71f1");
+        }
+        /// <summary>The output the Normalize and Pitch Shifter captures cover (6000.0.71f1 Linux
+        /// Editor, tests/projects/audionormalize, tests/projects/audiopitch); other rates, DSP buffer
+        /// sizes and speaker modes are unmeasured and fail. The native mixer checks the same
+        /// layout (MEASURED_LAYOUT in crates/unbound-runtime/src/audio/effects.rs).</summary>
+        void RequireMeasuredOutput()
+        {
+            var config = AudioSettings.GetConfiguration();
+            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || config.dspBufferSize != 1024 || config.speakerMode != AudioSpeakerMode.Stereo)
+                throw new NotSupportedException("AudioMixer " + m_EffectName + " is measured only at 48000/44100 Hz with 1024-frame stereo output");
+        }
         // Native 6000.0.71f1 keeps exposed values verbatim but clamps the DSP amount.
         internal float DistortionConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {
+            RequireMeasured(Compat.DistortionMeasured);
             float value = Parameter("Level") is string guid ? mixer.Value(guid) : 0.5f;
             if (!float.IsFinite(value)) throw new NotSupportedException("AudioMixer Distortion Level must be finite");
             return Mathf.Clamp01(value);
@@ -663,8 +684,7 @@ namespace Unbound.Runtime
         // Unity 6000.0.71f1 captures retain exposed values and clamp only the DSP inputs.
         internal object PitchShifterConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {
-            if (!Compat.MixerPitchShifterMeasured)
-                throw new NotSupportedException("AudioMixer Pitch Shifter is measured only for Unity 6000.0.71f1");
+            RequireMeasured(Compat.MixerPitchShifterMeasured);
             var v = new float[4];
             for (int i = 0; i < v.Length; i++)
             {
@@ -673,13 +693,12 @@ namespace Unbound.Runtime
             }
             if (v[1] != 1024f || v[2] != 4f || v[3] != 0f)
                 throw new NotSupportedException("AudioMixer Pitch Shifter requires measured defaults FFT size=1024, Overlap=4, Max channels=0");
-            var config = AudioSettings.GetConfiguration();
-            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || config.dspBufferSize != 1024 || config.speakerMode != AudioSpeakerMode.Stereo)
-                throw new NotSupportedException("AudioMixer Pitch Shifter is measured only at 48000/44100 Hz with 1024-frame stereo output");
+            RequireMeasuredOutput();
             return new { pitch = Mathf.Clamp(v[0], 0.5f, 2f) };
         }
         internal object NormalizeConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {
+            RequireMeasured(Compat.MixerNormalizeMeasured);
             var v = new float[3];
             for (int i = 0; i < v.Length; i++)
             {
@@ -687,13 +706,12 @@ namespace Unbound.Runtime
                 if (!float.IsFinite(value)) throw new NotSupportedException("AudioMixer Normalize " + NormalizeParameters[i] + " must be finite");
                 v[i] = Mathf.Clamp(value, NormalizeMinimums[i], NormalizeMaximums[i]);
             }
-            var config = AudioSettings.GetConfiguration();
-            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || config.dspBufferSize != 1024 || config.speakerMode != AudioSpeakerMode.Stereo)
-                throw new NotSupportedException("AudioMixer Normalize is measured only at 48000/44100 Hz with 1024-frame stereo output");
+            RequireMeasuredOutput();
             return new { fade = v[0], lowest = v[1], maximum = v[2] };
         }
         internal object FlangeConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {
+            RequireMeasured(Compat.ModulatedDelayMeasured);
             var v = new float[4];
             for (int i = 0; i < v.Length; i++)
             {
@@ -705,6 +723,7 @@ namespace Unbound.Runtime
         }
         internal object ChorusConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {
+            RequireMeasured(Compat.ModulatedDelayMeasured);
             var v = new float[7];
             for (int i = 0; i < v.Length; i++)
             {

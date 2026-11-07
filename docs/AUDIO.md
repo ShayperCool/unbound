@@ -519,9 +519,28 @@ Flange is covered by `tests/projects/audioflange`; Normalize is described below.
 Pitch Shifter remains separate work.
 
 
+# Release gates of the measured effect kernels
+
+Each measured mechanism has one compatibility-profile flag, true on exactly 6000.0.71f1. On
+other releases an active effect or component that uses a DSP flag fails clearly (bypassed ones
+load); the GetFloat flag never fails (see below the table):
+
+| Flag | Mechanism | Users |
+|---|---|---|
+| `Compat.ModulatedDelayMeasured` | Q14 modulated delay line (`modulated_delay.rs`) | mixer Chorus and Flange, `AudioChorusFilter` |
+| `Compat.DistortionMeasured` | waveshaper | mixer Distortion, `AudioDistortionFilter` |
+| `Compat.MixerNormalizeMeasured` | linked peak envelope | mixer Normalize |
+| `Compat.MixerPitchShifterMeasured` | phase vocoder | mixer Pitch Shifter |
+| `Compat.MixerClearFloatSubmissionMeasured` | GetFloat of an override cleared after its submission to audio | `AudioMixer` |
+
+GetFloat reads the snapshot value after ClearFloat on every release, as documented. The last
+flag adds the measured exception: an override already submitted to audio still reads until the
+audio update. Other releases read the snapshot there too (unmeasured).
+
 # Mixer and source Chorus
 
-`chorus.rs` runs the same measured kernel on AudioMixer groups and AudioSource
+`chorus.rs` (on the delay line of `modulated_delay.rs`, which Flange shares with one tap for
+both channels) runs the same measured kernel on AudioMixer groups and AudioSource
 `AudioChorusFilter` components. NativeApi 24 adds kind 6 with seven parameters in the descriptor's
 existing fixed array. The probe is tests/projects/audiochorus, Unity 6000.0.71f1 Linux Editor,
 48000 and 44100 Hz, stereo output with 1024-frame DSP buffers. Two independent Native captures
@@ -603,6 +622,9 @@ residuals are retained unchanged.
 
 `Pitch Shifter` uses the Unity 6000.0.71f1 default FFT profile in
 `crates/unbound-runtime/src/audio/pitch.rs`, selected by `Compat.MixerPitchShifterMeasured`.
+It shares the quarter-wave cosine table (`wavetable.rs`) with Chorus and Flange, and the measured
+output layout check (`MEASURED_LAYOUT` in `effects.rs`, `RequireMeasuredOutput` on the managed
+side) with Normalize.
 NativeApi 27 adds its Pitch to the existing group JSON. It adds no source filter component.
 
 The documented contract, Editor parameter queries, measured state and kernel inferences are
