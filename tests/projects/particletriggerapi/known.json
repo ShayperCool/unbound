@@ -1,0 +1,10 @@
+{
+  "outside-order-after-exit-kill": {
+    "reason": "The Outside list after an Exit Kill compacted the buffer: the same particles with the same values, listed in another order (Unity documents no order for these lists).",
+    "keys": [
+      "exitkill/callback/70/outside",
+      "exitkill/callback/76/outside",
+      "exitkill/callback/77/outside"
+    ]
+  }
+}

@@ -480,28 +480,34 @@ namespace UnityEngine
 
         public static int GetSafeTriggerParticlesSize(this ParticleSystem ps, ParticleSystemTriggerEventType type) => ps.m_TriggerParticles[(int)type].Count;
 
-        public static int GetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles)
-        {
-            particles?.Clear();
-            var list = ps.m_TriggerParticles[(int)type];
-            particles?.AddRange(list);
-            return list.Count;
-        }
+        public static int GetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles) =>
+            ps.ReadTriggerParticles(type, particles);
 
+        /// <summary>The particles of a trigger event with the colliders each one is inside, as the
+        /// Trigger module's colliderQueryMode collects them (Disabled: none, One: the first in the
+        /// module's list, All: all of them, in that order). Outside and Exit throw, with the
+        /// Editor's message (6000.0.71f1, tests/projects/particletriggerapi).</summary>
         public static int GetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles, out ParticleSystem.ColliderData colliderData)
         {
-            colliderData = default;
-            return GetTriggerParticles(ps, type, particles);
+            if (type == ParticleSystemTriggerEventType.Outside)
+                throw new InvalidOperationException("Querying the collider data for the Outside event is not supported, because when a particle is outside the collision volume, it is always outside every collider.");
+            if (type == ParticleSystemTriggerEventType.Exit)
+                throw new InvalidOperationException("Querying the collider data for the Exit event is not currently supported.");
+            if (ps.trigger.colliderQueryMode == ParticleSystemColliderQueryMode.Disabled)
+                Debug.LogWarning("Trigger module must enable collider queries in order to retrieve which colliders caused each trigger event.");
+            int count = GetTriggerParticles(ps, type, particles);
+            colliderData = ps.TriggerColliderData(type);
+            return count;
         }
 
         /// <summary>Writes particles[offset, offset + count) back to the particles the trigger
         /// entries at the same positions came from, during OnParticleTrigger.</summary>
         public static void SetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles, int offset, int count) =>
-            ps.WriteBackTriggerParticles(type, particles, offset, count);
+            ps.WriteBackTriggerParticles(type, particles, offset, count, whole: false);
 
         /// <summary>Writes every particle of the list back, as SetParticles(particles) writes the
         /// whole array.</summary>
         public static void SetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles) =>
-            ps.WriteBackTriggerParticles(type, particles, 0, -1);
+            ps.WriteBackTriggerParticles(type, particles, 0, particles?.Count ?? 0, whole: true);
     }
 }

@@ -482,12 +482,12 @@ namespace UnityEngine
         public void TriggerSubEmitter(int subEmitterIndex)
         {
             if (!ScriptSubEmitter(subEmitterIndex, out var sub)) return;
-            for (int i = 0; i < m_Count; i++) TriggerSubEmitterAt(sub, ref m_Particles[i]);
+            for (int i = 0; i < m_Count; i++) TriggerSubEmitterAt(sub, ref m_Particles[i], fromScript: true);
         }
 
         public void TriggerSubEmitter(int subEmitterIndex, ref Particle particle)
         {
-            if (ScriptSubEmitter(subEmitterIndex, out var sub)) TriggerSubEmitterAt(sub, ref particle);
+            if (ScriptSubEmitter(subEmitterIndex, out var sub)) TriggerSubEmitterAt(sub, ref particle, fromScript: true);
         }
 
         public void TriggerSubEmitter(int subEmitterIndex, List<Particle> particles)
@@ -496,7 +496,7 @@ namespace UnityEngine
             for (int i = 0; i < particles.Count; i++)
             {
                 var p = particles[i];
-                TriggerSubEmitterAt(sub, ref p);
+                TriggerSubEmitterAt(sub, ref p, fromScript: true);
             }
         }
 
@@ -1200,7 +1200,7 @@ namespace UnityEngine
             float raw = m_Main.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
             TrackEmitter(raw);
             m_CollisionEvents.Clear();
-            foreach (var list in m_TriggerParticles) list.Clear();
+            ClearTriggerEvents();
             if (mode != ParticleSystemCullingMode.PauseAndCatchup)
             {
                 m_CullingMissed = 0f;
@@ -1425,6 +1425,18 @@ namespace Unbound.Runtime
 
         internal static IReadOnlyList<ParticleSystem> Systems => s_Systems;
 
+        /// <summary>A Destroy of the system or an object above it is pending: Unity destroys it
+        /// after the Update loop ("Actual object destruction is always delayed until after the
+        /// current Update loop"), so it no longer updates or sends its messages this frame
+        /// (measured: tests/projects/particletriggerapi */gone).</summary>
+        static bool DestroyRequested(ParticleSystem ps)
+        {
+            if (ps.m_PendingDestroy) return true;
+            for (var t = ps.m_GameObject.m_Transform; t != null; t = t.m_Parent)
+                if (t.m_GameObject.m_PendingDestroy) return true;
+            return false;
+        }
+
         internal static void Add(ParticleSystem ps) => s_Systems.Add(ps);
 
         internal static void Remove(ParticleSystem ps) => s_Systems.Remove(ps);
@@ -1443,7 +1455,7 @@ namespace Unbound.Runtime
                 for (int i = 0; i < n; i++)
                 {
                     var ps = s_Snapshot[i];
-                    if (ps == null || !ps.m_Registered) continue;
+                    if (ps == null || !ps.m_Registered || DestroyRequested(ps)) continue;
                     try { ps.CullingFrameUpdate(); }
                     catch (Exception e) { Debug.LogException(e, ps); }
                 }

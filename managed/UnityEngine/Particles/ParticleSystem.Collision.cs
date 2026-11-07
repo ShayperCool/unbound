@@ -187,8 +187,25 @@ namespace UnityEngine
         /// <summary>The particles of the frame's trigger events by type, for OnParticleTrigger and
         /// GetTriggerParticles (filled in the player loop only, measured).</summary>
         internal readonly List<Particle>[] m_TriggerParticles = { new List<Particle>(), new List<Particle>(), new List<Particle>(), new List<Particle>() };
+        /// <summary>Per event type and entry, where the entry's colliders start in
+        /// <see cref="m_TriggerColliders"/> (GetTriggerParticles' ColliderData).</summary>
+        internal readonly List<int>[] m_TriggerColliderStarts = { new List<int>(), new List<int>(), new List<int>(), new List<int>() };
+        internal readonly List<Component>[] m_TriggerColliders = { new List<Component>(), new List<Component>(), new List<Component>(), new List<Component>() };
         internal bool m_CollectTriggers;
         static readonly Collider[] s_Overlaps = new Collider[64];
+        /// <summary>The colliders the particle being classified is inside, in the Trigger module's
+        /// order, as its collider query mode asks (none, the first, all).</summary>
+        readonly List<Component> m_TriggerHits = new List<Component>();
+
+        internal void ClearTriggerEvents()
+        {
+            for (int type = 0; type < m_TriggerParticles.Length; type++)
+            {
+                m_TriggerParticles[type].Clear();
+                m_TriggerColliderStarts[type].Clear();
+                m_TriggerColliders[type].Clear();
+            }
+        }
 
         /// <summary>Classifies the particle against cached collider geometry, then applies the
         /// trigger actions. False when an action kills it.</summary>
@@ -198,25 +215,47 @@ namespace UnityEngine
             var toWorld = SimulationToWorld();
             var world = toWorld.MultiplyPoint3x4(p.m_Position);
             var size = CurrentSize3D(ref p);
-            float radius = Mathf.Max(size.x, Mathf.Max(size.y, size.z)) * 0.5f * T.radiusScale;
-            // Preserve the existing query path for other collider kinds. Sphere triggers use
-            // the particle-only bounds/sweep path documented in SPHERE_MECHANISM.md.
+            // The particle sweeps the step's movement: a collider counts when the sphere moving
+            // from where the step started to where it ended touches it (6000.0.71f1: sphere
+            // colliders through the measured path of SPHERE_MECHANISM.md; other colliders as a
+            // capsule overlap, tests/projects/particletriggerapi, where a particle leaving a box
+            // is still inside in the step it crosses the face).
+            var start = toWorld.MultiplyPoint3x4(p.m_Position - (p.m_Velocity + p.m_AnimatedVelocity) * m_LastStepDt);
+            float sphereRadius = (T.radiusScale * 0.5f) * Mathf.Max(size.x, Mathf.Max(size.y, size.z));
             bool otherKinds = false;
             foreach (var c in T.colliders)
                 if (c != null && !(c is SphereCollider)) { otherKinds = true; break; }
-            int n = otherKinds ? Physics.OverlapSphereNonAlloc(world, radius, s_Overlaps, Physics.AllLayers, QueryTriggerInteraction.Collide) : 0;
-            bool inside = false;
-            for (int i = 0; i < n && !inside; i++)
-                foreach (var c in T.colliders)
-                    if (c != null && !(c is SphereCollider) && ReferenceEquals(c, s_Overlaps[i])) { inside = true; break; }
-            if (!inside)
+            int n = otherKinds ? Physics.OverlapCapsuleNonAlloc(start, world, sphereRadius, s_Overlaps, Physics.AllLayers, QueryTriggerInteraction.Collide) : 0;
+            // Which colliders hold it, in the module's order: the first decides inside, the query
+            // mode how many more ColliderData lists (6000.0.71f1, tests/projects/particletriggerapi:
+            // Disabled none, One the first in the list, All every one).
+            var mode = T.colliderQueryMode;
+            m_TriggerHits.Clear();
+            bool inside = false, spheresPrepared = false;
+            var colliders = T.colliders;
+            for (int ci = 0; ci < colliders.Count; ci++)
             {
-                var start = toWorld.MultiplyPoint3x4(p.m_Position - (p.m_Velocity + p.m_AnimatedVelocity) * m_LastStepDt);
-                float sphereRadius = (T.radiusScale * 0.5f) * Mathf.Max(size.x, Mathf.Max(size.y, size.z));
-                Unbound.Runtime.PhysicsWorld.PrepareQuery();
-                foreach (var c in T.colliders)
-                    if (c is SphereCollider sphere && sphere.m_Registered && sphere.m_Shape != 0 &&
-                        SphereTriggerOverlap(start, world, sphereRadius, sphere)) { inside = true; break; }
+                var c = colliders[ci];
+                if (c == null) continue;
+                bool hit = false;
+                if (c is SphereCollider sphere)
+                {
+                    if (!sphere.m_Registered || sphere.m_Shape == 0) continue;
+                    if (!spheresPrepared)
+                    {
+                        Unbound.Runtime.PhysicsWorld.PrepareQuery();
+                        spheresPrepared = true;
+                    }
+                    hit = SphereTriggerOverlap(start, world, sphereRadius, sphere);
+                }
+                else
+                    for (int i = 0; i < n; i++)
+                        if (ReferenceEquals(c, s_Overlaps[i])) { hit = true; break; }
+                if (!hit) continue;
+                inside = true;
+                if (mode == ParticleSystemColliderQueryMode.Disabled) break;
+                m_TriggerHits.Add(c);
+                if (mode == ParticleSystemColliderQueryMode.One) break;
             }
             bool was = (p.m_Flags & Particle.FlagInsideTrigger) != 0;
             if (inside) p.m_Flags |= Particle.FlagInsideTrigger;
@@ -294,6 +333,11 @@ namespace UnityEngine
             {
                 StampTriggerSerial(ref p);
                 m_TriggerParticles[(int)type].Add(p);
+                // Outside and Exit have no colliders (their ColliderData query throws).
+                var colliders = m_TriggerColliders[(int)type];
+                m_TriggerColliderStarts[(int)type].Add(colliders.Count);
+                if (type == ParticleSystemTriggerEventType.Inside || type == ParticleSystemTriggerEventType.Enter)
+                    colliders.AddRange(m_TriggerHits);
             }
             return true;
         }
@@ -314,8 +358,6 @@ namespace UnityEngine
         uint m_TriggerSerialNext = 1;
         /// <summary>The first serial of the entries now in <see cref="m_TriggerParticles"/>.</summary>
         uint m_TriggerSerialStart = 1;
-        /// <summary>This system's OnParticleTrigger is being sent: SetTriggerParticles is valid.</summary>
-        bool m_SendingTriggerMessage;
 
         static uint TriggerSerialOf(in Particle p) => (p.m_Flags & TriggerSerialMask) >> TriggerSerialShift;
 
@@ -349,142 +391,140 @@ namespace UnityEngine
             m_TriggerSerialNext = m_TriggerSerialNext == TriggerSerialCount ? 1 : m_TriggerSerialNext + 1;
         }
 
-        /// <summary>SetTriggerParticles: writes particles[offset, offset + count) back to the
-        /// live particles the <paramref name="type"/> entries at the same positions came from,
-        /// through SetParticles' write path (6000.0 Scripting API: "Write modified particles
-        /// back to the Particle System, during a call to OnParticleTrigger"; offset and count
-        /// select "a subset of the returned particles"). A null list, a negative offset and an
-        /// out-of-range count behave as in SetParticles (the count then covers every particle
-        /// the list and the entries both have). Only the public fields the script changed are
-        /// written: see <see cref="MergeChangedFields"/>.</summary>
-        internal void WriteBackTriggerParticles(ParticleSystemTriggerEventType type, List<Particle> particles, int offset, int count)
-        {
-            if (particles == null) throw new System.ArgumentNullException(nameof(particles));
-            if (offset < 0) throw new System.ArgumentOutOfRangeException(nameof(offset));
-            var entries = m_TriggerParticles[(int)type];
-            // The docs give no result outside the callback (Unbound's choice, unmeasured): an
-            // error, and nothing is written.
-            if (!m_SendingTriggerMessage)
-            {
-                Debug.LogError("ParticlePhysicsExtensions.SetTriggerParticles is only valid during a call to OnParticleTrigger of the particle system; nothing was written back");
-                return;
-            }
-            // GetSafeTriggerParticlesSize bounds the entries (Unbound's choice, unmeasured: an
-            // offset past them is an error, as a negative one is).
-            int available = System.Math.Min(particles.Count, entries.Count) - offset;
-            if (available < 0) throw new System.ArgumentOutOfRangeException(nameof(offset));
-            if (count < 0 || count > available) count = available;
-            if (count == 0) return;
+        /// <summary>Per event type, the live slot of each entry (-1: its particle is gone), as
+        /// <see cref="ResolveTriggerSlots"/> last found them.</summary>
+        readonly List<int> m_TriggerSlots = new List<int>();
+        readonly Dictionary<uint, int> m_TriggerSlotOf = new Dictionary<uint, int>();
 
-            var slotOf = new Dictionary<uint, int>();
+        /// <summary>Finds the live slot of each <paramref name="type"/> entry by its serial (slots
+        /// move as particles are removed or written, also inside the callback).</summary>
+        void ResolveTriggerSlots(ParticleSystemTriggerEventType type)
+        {
+            m_TriggerSlotOf.Clear();
             for (int i = 0; i < m_Count; i++)
             {
                 // An orphaned trail is no longer a particle.
                 if (m_Particles[i].IsTrailCarrier) continue;
                 uint serial = TriggerSerialOf(m_Particles[i]);
-                if (IsCurrentTriggerSerial(serial)) slotOf.TryAdd(serial, i);
+                if (IsCurrentTriggerSerial(serial)) m_TriggerSlotOf.TryAdd(serial, i);
             }
-            var slots = new int[count];
-            var values = new Particle[count];
-            var valueOf = new Dictionary<int, int>();
+            m_TriggerSlots.Clear();
+            // A slot whose particle a write-back replaced with another particle (another seed)
+            // no longer holds the listed one (measured: write/subset, the entry is not returned).
+            foreach (var entry in m_TriggerParticles[(int)type])
+                m_TriggerSlots.Add(m_TriggerSlotOf.TryGetValue(TriggerSerialOf(entry), out int slot)
+                    && m_Particles[slot].m_RandomSeed == entry.m_RandomSeed ? slot : -1);
+        }
+
+        /// <summary>GetTriggerParticles: the particles of a trigger event as they are now (a write
+        /// back to one event's list shows in another's read after it), without those no longer
+        /// there (6000.0.71f1, tests/projects/particletriggerapi write/*). Leaves
+        /// <see cref="m_TriggerSlots"/> resolved for the collider data.</summary>
+        internal int ReadTriggerParticles(ParticleSystemTriggerEventType type, List<Particle> particles)
+        {
+            var entries = m_TriggerParticles[(int)type];
+            particles?.Clear();
+            ResolveTriggerSlots(type);
+            int n = 0;
+            if (entries.Count > 0) MaterializeAxisOfRotation();
+            for (int k = 0; k < entries.Count; k++)
+            {
+                int slot = m_TriggerSlots[k];
+                if (slot < 0) continue;
+                particles?.Add(m_Particles[slot]);
+                n++;
+            }
+            return n;
+        }
+
+        /// <summary>The collider data of the entries <see cref="ReadTriggerParticles"/> just
+        /// returned, in the same order.</summary>
+        internal ColliderData TriggerColliderData(ParticleSystemTriggerEventType type)
+        {
+            var starts = m_TriggerColliderStarts[(int)type];
+            var colliders = m_TriggerColliders[(int)type];
+            int n = 0, total = 0;
+            for (int k = 0; k < m_TriggerSlots.Count; k++)
+            {
+                if (m_TriggerSlots[k] < 0) continue;
+                n++;
+                total += (k + 1 < starts.Count ? starts[k + 1] : colliders.Count) - starts[k];
+            }
+            var data = new ColliderData { colliders = new Component[total], colliderIndices = new int[total], particleStartIndices = new int[n] };
+            int i = 0, c = 0;
+            for (int k = 0; k < m_TriggerSlots.Count; k++)
+            {
+                if (m_TriggerSlots[k] < 0) continue;
+                data.particleStartIndices[i++] = c;
+                int end = k + 1 < starts.Count ? starts[k + 1] : colliders.Count;
+                for (int j = starts[k]; j < end; j++)
+                {
+                    data.colliders[c] = colliders[j];
+                    data.colliderIndices[c] = c;
+                    c++;
+                }
+            }
+            return data;
+        }
+
+        /// <summary>SetTriggerParticles: writes particles[0, count) whole to the live particles of
+        /// the <paramref name="type"/> entries [offset, offset + count), through SetParticles'
+        /// write path (6000.0 Scripting API: "Write modified particles back to the Particle
+        /// System, during a call to OnParticleTrigger"; offset is "the offset into the
+        /// destination particle array"). The lists exist only during the callback, so elsewhere
+        /// nothing is written and nothing is logged (measured). With an offset and count
+        /// (<paramref name="whole"/> false) the Editor throws unless offset + count is smaller
+        /// than the list's size (measured: offset 1 and count 2 throw for 3 particles and write
+        /// for 4, the first two of the list into the second and third particles). Entries whose
+        /// particle is gone or that a trigger Kill ended write nothing (Unbound's choices).</summary>
+        internal void WriteBackTriggerParticles(ParticleSystemTriggerEventType type, List<Particle> particles, int offset, int count, bool whole)
+        {
+            if (particles == null) throw new System.ArgumentNullException(nameof(particles));
+            if (!whole && (offset < 0 || count < 0 || offset + count >= particles.Count))
+                throw new System.ArgumentOutOfRangeException(nameof(count), "offset+count should be smaller than the size of the particles list.");
+            var entries = m_TriggerParticles[(int)type];
+            count = System.Math.Min(count, entries.Count - offset);
+            if (count <= 0) return;
+            ResolveTriggerSlots(type);
+            if (m_TriggerWriteSlots.Length < count)
+            {
+                m_TriggerWriteSlots = new int[count];
+                m_TriggerWriteValues = new Particle[count];
+            }
             int n = 0;
             for (int k = 0; k < count; k++)
             {
-                var entry = entries[offset + k];
-                uint serial = TriggerSerialOf(entry);
-                // Unbound's choices (unmeasured): an entry whose particle is gone (killed as a
-                // newborn, replaced, removed by a script) writes nothing, and a write-back does
-                // not undo a trigger Kill of the same update (the particle still dies).
-                if (!slotOf.TryGetValue(serial, out int slot)) continue;
-                if ((m_Particles[slot].m_Flags & Particle.FlagKilled) != 0) continue;
-                // A particle listed twice (by two internal steps) gets both entries' changes,
-                // the later entry's winning a field both changed (Unbound's choice, unmeasured).
-                var value = particles[offset + k];
-                if (valueOf.TryGetValue(slot, out int index))
-                {
-                    MergeChangedFields(ref values[index], value, entry);
-                    continue;
-                }
-                var probe = default(Particle);
-                if (!MergeChangedFields(ref probe, value, entry)) continue;
-                // WriteParticlesAt allocates the axis attribute first: read the live particle
-                // after it, so an unchanged axis stays the allocated one.
-                if (n == 0) MaterializeAxisOfRotation();
-                var merged = m_Particles[slot];
-                MergeChangedFields(ref merged, value, entry);
-                valueOf.Add(slot, n);
-                slots[n] = slot;
-                values[n++] = merged;
+                int slot = m_TriggerSlots[offset + k];
+                // A particle a trigger Kill ended in this update stays dead (Unbound's choice,
+                // unmeasured).
+                if (slot < 0 || (m_Particles[slot].m_Flags & Particle.FlagKilled) != 0) continue;
+                // The slot keeps its own listing: the written particle takes its trigger serial.
+                var value = particles[k];
+                value.m_Flags = (value.m_Flags & ~TriggerSerialMask) | (m_Particles[slot].m_Flags & TriggerSerialMask);
+                m_TriggerWriteSlots[n] = slot;
+                m_TriggerWriteValues[n++] = value;
             }
-            WriteParticlesAt(slots, values, n);
+            WriteParticlesAt(m_TriggerWriteSlots, m_TriggerWriteValues, n);
         }
 
-        // Unbound's choice (unmeasured; the 6000.0 docs say "Write modified particles back"
-        // and show only a whole-list write-back after a colour change): an entry is a copy of
-        // the particle taken part-way through an internal step (after it moved, before its
-        // rotation and birth sub-emitters advanced) and possibly an earlier step of the update,
-        // so writing a whole entry back would roll those back. Only the public Particle fields
-        // whose value differs bit for bit from the entry the script was given are written onto
-        // the live particle; the rest of it, its internal state (encoded age, sub-emitter
-        // counters, noise, flags, trigger serial) included, stays as it is now. A
-        // changed remaining or start lifetime clears the encoded age, as the Particle setters
-        // do, so WriteParticlesAt kills or re-encodes it as SetParticles does; an unchanged
-        // entry writes nothing.
+        int[] m_TriggerWriteSlots = System.Array.Empty<int>();
+        Particle[] m_TriggerWriteValues = System.Array.Empty<Particle>();
 
-        /// <summary>Copies onto <paramref name="target"/> the public fields of
-        /// <paramref name="value"/> that differ from <paramref name="entry"/>; false when none
-        /// does.</summary>
-        static bool MergeChangedFields(ref Particle target, in Particle value, in Particle entry)
-        {
-            bool changed = false;
-            if (!Same(value.m_Position, entry.m_Position)) { target.m_Position = value.m_Position; changed = true; }
-            if (!Same(value.m_Velocity, entry.m_Velocity)) { target.m_Velocity = value.m_Velocity; changed = true; }
-            if (!Same(value.m_AxisOfRotation, entry.m_AxisOfRotation)) { target.m_AxisOfRotation = value.m_AxisOfRotation; changed = true; }
-            if (!Same(value.m_Rotation, entry.m_Rotation)) { target.m_Rotation = value.m_Rotation; changed = true; }
-            if (!Same(value.m_AngularVelocity, entry.m_AngularVelocity)) { target.m_AngularVelocity = value.m_AngularVelocity; changed = true; }
-            if (!Same(value.m_StartSize, entry.m_StartSize)) { target.m_StartSize = value.m_StartSize; changed = true; }
-            var c = value.m_StartColor;
-            var e = entry.m_StartColor;
-            if (c.r != e.r || c.g != e.g || c.b != e.b || c.a != e.a) { target.m_StartColor = c; changed = true; }
-            if (value.m_RandomSeed != entry.m_RandomSeed) { target.m_RandomSeed = value.m_RandomSeed; changed = true; }
-            const uint meshSet = Particle.FlagMeshIndexSet;
-            if (value.m_MeshIndex != entry.m_MeshIndex || ((value.m_Flags ^ entry.m_Flags) & meshSet) != 0)
-            {
-                target.m_MeshIndex = value.m_MeshIndex;
-                target.m_Flags = (target.m_Flags & ~meshSet) | (value.m_Flags & meshSet);
-                changed = true;
-            }
-            if (!Same(value.m_StartLifetime, entry.m_StartLifetime))
-            {
-                target.m_StartLifetime = value.m_StartLifetime;
-                target.m_Flags &= ~Particle.FlagAgeInitialized;
-                changed = true;
-            }
-            if (!Same(value.m_Lifetime, entry.m_Lifetime))
-            {
-                target.m_Lifetime = value.m_Lifetime;
-                target.m_Flags &= ~(Particle.FlagAgeInitialized | Particle.FlagKilled);
-                changed = true;
-            }
-            return changed;
-        }
-
-        static bool Same(float a, float b) => System.BitConverter.SingleToInt32Bits(a) == System.BitConverter.SingleToInt32Bits(b);
-
-        static bool Same(Vector3 a, Vector3 b) => Same(a.x, b.x) && Same(a.y, b.y) && Same(a.z, b.z);
-
+        /// <summary>Sends OnParticleTrigger when the update listed particles; the lists are
+        /// empty again once it returns (GetTriggerParticles elsewhere finds none: measured).</summary>
         internal void SendTriggerMessage()
         {
             if (m_GameObject == null) return;
-            foreach (var list in m_TriggerParticles)
-                if (list.Count > 0)
-                {
-                    bool sending = m_SendingTriggerMessage;
-                    m_SendingTriggerMessage = true;
-                    try { Messaging.SendFast(m_GameObject, "OnParticleTrigger"); }
-                    finally { m_SendingTriggerMessage = sending; }
-                    return;
-                }
+            try
+            {
+                foreach (var list in m_TriggerParticles)
+                    if (list.Count > 0)
+                    {
+                        Messaging.SendFast(m_GameObject, "OnParticleTrigger");
+                        return;
+                    }
+            }
+            finally { ClearTriggerEvents(); }
         }
 
         /// <summary>Sends the frame's OnParticleCollision messages: to this system's scripts and to

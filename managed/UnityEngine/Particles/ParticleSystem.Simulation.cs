@@ -55,7 +55,7 @@ namespace UnityEngine
             float dt = raw * m_Main.simulationSpeed;
             if (dt <= 0f) return false;
             m_CollisionEvents.Clear();
-            foreach (var list in m_TriggerParticles) list.Clear();
+            ClearTriggerEvents();
             m_CollectTriggers = true;
             try
             {
@@ -1654,8 +1654,10 @@ namespace UnityEngine
         }
 
         /// <summary>A Death sub-emitter, or one triggered from script (Manual): the child emits its
-        /// first burst at the particle, along the particle's direction of travel.</summary>
-        void TriggerSubEmitterAt(SubEmitter sub, ref Particle parent)
+        /// first burst at the particle, along the particle's direction of travel.
+        /// <paramref name="fromScript"/>: TriggerSubEmitter called by a script, outside the
+        /// particle update.</summary>
+        void TriggerSubEmitterAt(SubEmitter sub, ref Particle parent, bool fromScript = false)
         {
             var child = sub.system;
             if (child == null || child == this || child.m_GameObject == null) return;
@@ -1667,7 +1669,7 @@ namespace UnityEngine
                 {
                     child = child, parentSystem = this, parent = parent, properties = sub.properties, count = count,
                 });
-            else child.EmitFromParent(this, ref parent, sub.properties, count, 0f, eventEmission: true);
+            else child.EmitFromParent(this, ref parent, sub.properties, count, 0f, eventEmission: true, keepSpent: fromScript);
         }
 
         /// <summary>A Death emission the frame's update held (see ParticleSystemManager): emitted now,
@@ -1837,7 +1839,12 @@ namespace UnityEngine
         /// multiplies the start lifetime by the parent's remaining lifetime in seconds, not its
         /// fraction (2.013 × 3.863 s left gives 7.776; a dying parent leaves none, so the children
         /// are not emitted).</para></summary>
-        void EmitFromParent(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count, float preAge, bool eventEmission = false, float birthCatchup = -1f, float birthSpacing = 0f, Vector3 birthVelocity = default, System.Collections.Generic.List<BirthEmission> birthRequests = null)
+        /// <param name="keepSpent">Children whose inherited lifetime is zero stay, at zero life,
+        /// until the child's next update removes them (TriggerSubEmitter from script on a dead
+        /// particle carrying its trail: 6000.0.71f1, tests/projects/particletriggerapi
+        /// carrier/inherit). Emissions inside an update or a Simulate meet that removal at once,
+        /// so their spent children never show (subemitters probe).</param>
+        void EmitFromParent(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count, float preAge, bool eventEmission = false, float birthCatchup = -1f, float birthSpacing = 0f, Vector3 birthVelocity = default, System.Collections.Generic.List<BirthEmission> birthRequests = null, bool keepSpent = false)
         {
             // A Simulate Birth emission whose remaining call time reaches the child's own
             // start-lifetime bound is skipped before it consumes start samples (measured
@@ -1926,7 +1933,12 @@ namespace UnityEngine
                     p.m_AgePercent = 0f;
                     if (p.m_Lifetime <= 0f)
                     {
-                        RemoveAt(index);
+                        if (keepSpent)
+                        {
+                            p.m_Lifetime = 0f;
+                            StartTrail(ref p);
+                        }
+                        else RemoveAt(index);
                         continue;
                     }
                 }

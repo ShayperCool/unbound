@@ -25,10 +25,11 @@ namespace UnityEngine.Tests
         }
     }
 
-    /// <summary>ParticlePhysicsExtensions.SetTriggerParticles (6000.0 Scripting API: "Write
-    /// modified particles back to the Particle System, during a call to OnParticleTrigger";
-    /// offset and count select "a subset of the returned particles"). Nothing here assumes an
-    /// order of the trigger entries: Unity does not document one.</summary>
+    /// <summary>ParticlePhysicsExtensions.Get/SetTriggerParticles (6000.0 Scripting API: "Write
+    /// modified particles back to the Particle System, during a call to OnParticleTrigger"; offset
+    /// is "the offset into the destination particle array"), with what the 6000.0.71f1 Editor
+    /// shows in tests/projects/particletriggerapi. Nothing here assumes an order of the trigger
+    /// entries: Unity does not document one.</summary>
     public class ParticleSetTriggerParticlesTests
     {
         static readonly Color32 White = new Color32(255, 255, 255, 255), Red = new Color32(255, 0, 0, 255);
@@ -78,7 +79,7 @@ namespace UnityEngine.Tests
         /// step, then UpdateAll's OnParticleTrigger.</summary>
         static void TriggerFrame(Fixture f, float dt = .025f)
         {
-            foreach (var list in f.ps.m_TriggerParticles) list.Clear();
+            f.ps.ClearTriggerEvents();
             f.ps.m_CollectTriggers = true;
             try { f.ps.Simulate(dt, false, false, false); }
             finally { f.ps.m_CollectTriggers = false; }
@@ -165,24 +166,72 @@ namespace UnityEngine.Tests
             Assert.Equal(new uint[] { 1, 3 }, Live(f.ps).Keys.OrderBy(s => s).ToArray());
         }
 
+        // Measured (write/subset): the list's first count particles go to the entries from offset
+        // on, whole (seed included); offset + count must stay below the list's size.
         [Fact]
-        public void OffsetAndCountWriteBackOnlyThatSubset()
+        public void OffsetAndCountWriteTheListsFirstParticlesFromTheOffset()
         {
             using var f = new Fixture(inside: Overlap.Callback);
             f.ps.SetParticles(new[] { At(1, Center), At(2, Center), At(3, Center), At(4, Center) });
             uint[] listed = null;
+            Exception reachingTheEnd = null;
             f.writer.handler = ps =>
             {
                 var list = Entries(ps, TriggerEvent.Inside);
                 listed = list.Select(p => p.randomSeed).ToArray();
                 Recolor(list);
+                reachingTheEnd = Record.Exception(() => ps.SetTriggerParticles(TriggerEvent.Inside, list, 2, 2));
                 ps.SetTriggerParticles(TriggerEvent.Inside, list, 1, 2);
             };
             TriggerFrame(f);
-            Assert.Equal(new uint[] { 1, 2, 3, 4 }, listed.OrderBy(s => s).ToArray());
-            var live = Live(f.ps);
-            for (int k = 0; k < listed.Length; k++)
-                Assert.Equal(k == 1 || k == 2 ? Red : White, live[listed[k]].startColor);
+            Assert.IsType<ArgumentOutOfRangeException>(reachingTheEnd);
+            var all = new ParticleSystem.Particle[4];
+            Assert.Equal(4, f.ps.GetParticles(all));
+            // Entry 0 and 3 unchanged; entries 1 and 2 now hold the list's particles 0 and 1, red.
+            var expected = new[] { (listed[0], White), (listed[0], Red), (listed[1], Red), (listed[3], White) }.OrderBy(e => e.Item1).ThenBy(e => e.Item2.r).ThenBy(e => e.Item2.g).ToArray();
+            var actual = all.Select(p => (p.randomSeed, p.startColor)).OrderBy(e => e.Item1).ThenBy(e => e.Item2.r).ThenBy(e => e.Item2.g).ToArray();
+            Assert.Equal(expected, actual);
+        }
+
+        // Measured (write/all): GetTriggerParticles reads the particles as they are now, so a
+        // write-back to one event's list shows in another event's list read after it.
+        [Fact]
+        public void AReadAfterAWriteBackShowsTheWrittenParticles()
+        {
+            using var f = new Fixture(inside: Overlap.Callback, enter: Overlap.Callback);
+            f.ps.SetParticles(new[] { At(1, Center) });
+            Color32 entered = default;
+            f.writer.handler = ps =>
+            {
+                var inside = Entries(ps, TriggerEvent.Inside);
+                Recolor(inside);
+                ps.SetTriggerParticles(TriggerEvent.Inside, inside);
+                entered = Entries(ps, TriggerEvent.Enter).Single().startColor;
+            };
+            TriggerFrame(f);
+            Assert.Equal(Red, entered);
+        }
+
+        // Measured (write/subset frame 63): an entry whose particle a write-back replaced with
+        // another particle (another seed) is no longer returned; the safe size still counts it.
+        [Fact]
+        public void AnEntryOverwrittenWithAnotherParticleIsNotReturned()
+        {
+            using var f = new Fixture(inside: Overlap.Callback, enter: Overlap.Callback);
+            f.ps.SetParticles(new[] { At(1, Center), At(2, Center) });
+            int safe = -1, read = -1;
+            f.writer.handler = ps =>
+            {
+                var inside = Entries(ps, TriggerEvent.Inside);
+                var other = inside.First(p => p.randomSeed == 1);
+                // Write particle 1 over both entries.
+                ps.SetTriggerParticles(TriggerEvent.Inside, new List<ParticleSystem.Particle> { other, other });
+                safe = ps.GetSafeTriggerParticlesSize(TriggerEvent.Enter);
+                read = ps.GetTriggerParticles(TriggerEvent.Enter, new List<ParticleSystem.Particle>());
+            };
+            TriggerFrame(f);
+            Assert.Equal(2, safe);
+            Assert.Equal(1, read);
         }
 
         [Fact]
@@ -235,30 +284,27 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ArgumentsFailAsInSetParticles()
+        public void ArgumentsFailAsTheEditorDoes()
         {
             using var f = new Fixture(inside: Overlap.Callback);
             f.ps.SetParticles(new[] { At(1, Center), At(2, Center) });
-            Exception setNull = null, triggerNull = null, setNegative = null, triggerNegative = null;
+            Exception triggerNull = null, triggerNegative = null, pastTheList = null;
             f.writer.handler = ps =>
             {
                 var list = Entries(ps, TriggerEvent.Inside);
                 Assert.Equal(2, list.Count);
                 Recolor(list);
-                var array = new ParticleSystem.Particle[2];
-                Assert.Equal(2, ps.GetParticles(array));
-                setNull = Record.Exception(() => ps.SetParticles((ParticleSystem.Particle[])null, 1, 0));
                 triggerNull = Record.Exception(() => ps.SetTriggerParticles(TriggerEvent.Inside, null, 0, 1));
-                setNegative = Record.Exception(() => ps.SetParticles(array, 1, -1));
                 triggerNegative = Record.Exception(() => ps.SetTriggerParticles(TriggerEvent.Inside, list, -1, 1));
-                // SetParticles(array, size) with size past the array writes the whole array.
-                ps.SetTriggerParticles(TriggerEvent.Inside, list, 0, list.Count + 5);
+                pastTheList = Record.Exception(() => ps.SetTriggerParticles(TriggerEvent.Inside, list, 0, list.Count + 5));
+                // The whole-list overload writes a list longer than the entries up to the entries.
+                list.Add(list[0]);
+                ps.SetTriggerParticles(TriggerEvent.Inside, list);
             };
             TriggerFrame(f);
-            Assert.IsType<ArgumentNullException>(setNull);
             Assert.IsType<ArgumentNullException>(triggerNull);
-            Assert.IsType<ArgumentOutOfRangeException>(setNegative);
             Assert.IsType<ArgumentOutOfRangeException>(triggerNegative);
+            Assert.IsType<ArgumentOutOfRangeException>(pastTheList);
             var live = Live(f.ps);
             Assert.Equal(2, live.Count);
             Assert.All(live.Values, p => Assert.Equal(Red, p.startColor));
@@ -301,9 +347,8 @@ namespace UnityEngine.Tests
             Assert.Equal(expected, Seeds(Live(f.ps).Values.Where(p => p.startColor.Equals(Red))));
         }
 
-        /// <summary>Guard: the read side keeps its behaviour (green before and after).</summary>
         [Fact]
-        public void GetTriggerParticlesIsUnchanged()
+        public void GetTriggerParticlesReadsTheLiveParticlesDuringTheCallbackOnly()
         {
             using var f = new Fixture(inside: Overlap.Callback);
             f.ps.SetParticles(new[] { At(1, Center), At(2, Center + new Vector3(.1f, 0f, 0f)), At(3, Away) });
@@ -328,12 +373,14 @@ namespace UnityEngine.Tests
             };
             TriggerFrame(f);
             Assert.Equal(1, f.writer.calls);
-            // The frame's entries stay readable after the callback, until the next update.
-            Assert.Equal(new uint[] { 1, 2 }, Seeds(Entries(f.ps, TriggerEvent.Inside)));
+            // Measured (update/*): after the callback the lists are empty.
+            Assert.Empty(Entries(f.ps, TriggerEvent.Inside));
+            Assert.Equal(0, f.ps.GetSafeTriggerParticlesSize(TriggerEvent.Inside));
         }
 
+        // Measured (update/*): outside OnParticleTrigger a write-back writes nothing and logs nothing.
         [Fact]
-        public void AWriteBackOutsideOnParticleTriggerIsAnErrorAndWritesNothing()
+        public void AWriteBackOutsideOnParticleTriggerWritesNothing()
         {
             using var f = new Fixture(inside: Overlap.Callback);
             f.ps.SetParticles(new[] { At(1, Center) });
@@ -345,12 +392,12 @@ namespace UnityEngine.Tests
             var errors = new List<string>();
             void Capture(string message, string stackTrace, LogType type)
             {
-                if (type == LogType.Error && message.Contains("SetTriggerParticles")) lock (errors) errors.Add(message);
+                if (type == LogType.Error || type == LogType.Exception) lock (errors) errors.Add(message);
             }
             Application.logMessageReceived += Capture;
             try { f.ps.SetTriggerParticles(TriggerEvent.Inside, kept); }
             finally { Application.logMessageReceived -= Capture; }
-            Assert.Single(errors);
+            Assert.Empty(errors);
             Assert.Equal(White, Live(f.ps)[1].startColor);
         }
 
@@ -374,6 +421,82 @@ namespace UnityEngine.Tests
             Assert.Equal(White, killed.startColor);
             Frame(f);
             Assert.Equal(0, f.ps.particleCount);
+        }
+
+        // Measured (read/*): ColliderData lists the colliders each particle is inside as the query
+        // mode asks: Disabled none (with a warning per call), One the first in the module's list,
+        // All every one; Outside and Exit throw.
+        [Theory]
+        [InlineData(ParticleSystemColliderQueryMode.Disabled, 0)]
+        [InlineData(ParticleSystemColliderQueryMode.One, 1)]
+        [InlineData(ParticleSystemColliderQueryMode.All, 2)]
+        public void ColliderDataFollowsTheQueryMode(ParticleSystemColliderQueryMode mode, int expected)
+        {
+            using var f = new Fixture(inside: Overlap.Callback, outside: Overlap.Callback, enter: Overlap.Callback, exit: Overlap.Callback);
+            var box = new GameObject("trigger box");
+            box.transform.position = Center;
+            box.AddComponent<BoxCollider>().isTrigger = true;
+            Physics.SyncTransforms();
+            try
+            {
+                var trigger = f.ps.trigger;
+                trigger.AddCollider(box.GetComponent<Collider>());
+                trigger.colliderQueryMode = mode;
+                f.ps.SetParticles(new[] { At(1, Center), At(2, Away) });
+                Component[] colliders = null;
+                Exception outside = null, exit = null;
+                var warnings = new List<string>();
+                void Capture(string message, string stackTrace, LogType type) { if (type == LogType.Warning) lock (warnings) warnings.Add(message); }
+                f.writer.handler = ps =>
+                {
+                    var list = new List<ParticleSystem.Particle>();
+                    Assert.Equal(1, ps.GetTriggerParticles(TriggerEvent.Inside, list, out var data));
+                    colliders = Enumerable.Range(0, data.GetColliderCount(0)).Select(i => data.GetCollider(0, i)).ToArray();
+                    Assert.Throws<IndexOutOfRangeException>(() => data.GetCollider(0, colliders.Length));
+                    outside = Record.Exception(() => ps.GetTriggerParticles(TriggerEvent.Outside, list, out _));
+                    exit = Record.Exception(() => ps.GetTriggerParticles(TriggerEvent.Exit, list, out _));
+                };
+                Application.logMessageReceived += Capture;
+                try { TriggerFrame(f); }
+                finally { Application.logMessageReceived -= Capture; }
+                Assert.Equal(expected, colliders.Length);
+                // The module's order: the sphere was added first.
+                if (expected > 0) Assert.Same(f.sphere.GetComponent<Collider>(), colliders[0]);
+                if (expected > 1) Assert.Same(box.GetComponent<Collider>(), colliders[1]);
+                Assert.Equal("Querying the collider data for the Outside event is not supported, because when a particle is outside the collision volume, it is always outside every collider.",
+                    Assert.IsType<InvalidOperationException>(outside).Message);
+                Assert.Equal("Querying the collider data for the Exit event is not currently supported.", Assert.IsType<InvalidOperationException>(exit).Message);
+                Assert.Equal(mode == ParticleSystemColliderQueryMode.Disabled, warnings.Exists(w => w.StartsWith("Trigger module must enable collider queries")));
+            }
+            finally { Object.DestroyImmediate(box); }
+        }
+
+        // Measured (read/all frames 68-69): a particle that leaves a box during the step is still
+        // inside in that step (the step's movement is swept), and exits in the next.
+        [Fact]
+        public void AParticleLeavingABoxDuringTheStepIsStillInside()
+        {
+            using var f = new Fixture(inside: Overlap.Callback, exit: Overlap.Callback);
+            var box = new GameObject("trigger box");
+            box.transform.position = Away;
+            box.AddComponent<BoxCollider>().isTrigger = true;
+            Physics.SyncTransforms();
+            try
+            {
+                var trigger = f.ps.trigger;
+                trigger.RemoveCollider(0);
+                trigger.AddCollider(box.GetComponent<Collider>());
+                // Radius .1; the box's face at x .5: starts at x .55 (inside by .05), moves .1 a step.
+                var start = At(1, Away + new Vector3(.55f, 0f, 0f));
+                start.velocity = new Vector3(4f, 0f, 0f);
+                f.ps.SetParticles(new[] { start });
+                var seen = new List<(int, int)>();
+                f.writer.handler = ps => seen.Add((ps.GetSafeTriggerParticlesSize(TriggerEvent.Inside), ps.GetSafeTriggerParticlesSize(TriggerEvent.Exit)));
+                TriggerFrame(f);
+                TriggerFrame(f);
+                Assert.Equal(new[] { (1, 0), (0, 1) }, seen);
+            }
+            finally { Object.DestroyImmediate(box); }
         }
 
         static readonly FieldInfo SerialNext = typeof(ParticleSystem).GetField("m_TriggerSerialNext", BindingFlags.NonPublic | BindingFlags.Instance);
