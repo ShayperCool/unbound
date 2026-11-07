@@ -259,9 +259,9 @@ state isolated. `below` and `above` select 9.999/s and 10.001/s, with separate
 rate, split/single calls, expiry, stop/clear, and child delay/duration controls.
 
 The measured implementation uses per-parent active intervals after the child's
-start delay and before a nonlooping child's duration. Exported parent ages select
-rate boundaries, with the initial interval limited to the newborn's integration
-span. Fractional count carry stays on each parent and the P6 initialization batch,
+start delay and before a nonlooping child's duration. Finite parent clock endpoints
+select rate boundaries, with the initial interval limited to the newborn's integration
+span. P8 below resolves the arithmetic across additional constant parent lifetimes. Fractional count carry stays on each parent and the P6 initialization batch,
 origin, age and random-draw paths remain separate. This arithmetic is a measured
 6000.0.71f1 scheduling rule, not a guarantee in the Unity documentation.
 
@@ -274,7 +274,7 @@ non-restarting Simulate calls continue the stopped parent clock. Random start
 delays, rate curves, child loop boundaries, inherited lifetime and nested Birth
 chains remain outside this extension's measurements. Infinite parent lifetimes and
 ring age rewinds retain their existing integration-delta rate path; the finite
-exported-age interval measurement does not cover them. A managed regression
+finite-interval measurement does not cover them. A managed regression
 control checks that an infinite parent still emits children with finite histories.
 
 The extended expiry captures also retain 26 raw buffer permutations. For
@@ -338,3 +338,70 @@ or evidence about Unity's internal mechanism. The measurement leaves continuous
 parent playback, lifetime curves, nested chains, infinite parent lifetimes,
 lifetime-by-emitter-speed and other inheritance channels separate. Death/Manual,
 Collision/Trigger and other releases retain their existing behavior.
+
+
+### Constant-lifetime clock cause and validation
+
+The independent `p8-clock-native1` and `p8-clock-native2` captures are identical.
+Their 192 new `birthclock/` keys extend the reference without changing any of its
+4512 prior keys. They record the parent's exported lifetimes, raw fractional
+emission accumulator and child count after twelve separate 0.025 s calls, at
+rates 10 and 120, with and without an age-zero child burst.
+
+Measured at rate 10: parent lifetimes 0.413 and 0.613 give accumulators
+0.25, 0.5, 0.75, 0 and a birth on step four. Lifetimes 1.013 and 1.613 remain below
+one on step four. Native exports the 0.613 parent lifetime as 0.613000035.
+The equivalent arithmetic reconstructs the previous age in the stored percent
+clock by subtracting `inverseLifetime * (dt * 100)`, then divides each endpoint's
+normalized age by inverse lifetime. Exported-seconds subtraction discards bits;
+multiplying normalized age by exported lifetime changes rounding too. The
+high-rate controls distinguish these expressions even where low-rate counts agree.
+All 192 clock records pass, including every count and the retained accumulator values.
+
+The measured 6000.0.71f1 inverse-lifetime behaviour
+supports a reciprocal estimate followed by two separately rounded Newton
+corrections, first using 2.000000476837158 and then 2. This explains the one-ulp
+inverse-lifetime difference that changes emission counts. This is implementation
+evidence for this release, not a documented API contract. Constant-lifetime Birth
+parents use this initialization through the compatibility profile. The 4096-entry
+seed table reproduces the reference host's twelve-bit reciprocal estimate on
+all CPUs; `tools/validation/particle_reciprocal_seeds.cpp` regenerates it independently
+of particle fixtures. Other initialization paths retain their existing arithmetic.
+Infinite lifetime and ring age rewinds keep their previous clock fallback.
+
+The stop histories also resolve a functional defect: explicitly stopping a paused
+Simulate history after its last parent particle dies must not restart automatic
+emission on a later non-restarting call. The previous implementation dropped its
+stop state when clearing the pause of the empty buffer. All twelve affected P8
+records now match. [Stop](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.Stop.html)
+documents stopping emission or clearing particles; the precise subsequent Simulate
+history here is measured. Existing playback, stop callback and clear controls remain gates.
+
+P8 has **1171/1204 strict positional matches**, **33 verified permutation residuals**
+and **zero functional failures**. The 33 residual keys in Unity 6000.0.71f1 are:
+
+- `birthlife/batch/nothing/child/1` through `/19`, plus `/end/20` and `/end/21`;
+- `birthlife/batch/lifetime/child/1` through `/10`;
+- `birthlife/cohorts/lifetime/child/15` and `birthlife/stop/lifetime/child/15`.
+
+Each differs only in buffer slots. Counts, complete seed identity multiplicity and
+all 33 per-particle fields agree at the unchanged tolerances. Classification refuses
+missing, extra, duplicate or lost identities and any field mismatch. Strict positional
+failures, every failing index and both full raw records remain printed separately.
+No ordering rule or engine sort is added. The measured per-seed trajectories, inherited
+start lifetime, expiry call and callback effects agree; the existing P6/P7 clock and
+history controls retain their results. This does not promise an order to scripts that
+index particles by buffer slot. Four classifier regression tests reject changed fields,
+counts, duplicate/lost/extra particles and contexts outside these exact keys.
+
+The combined result is **4496/4704 strict record matches**, **208 classified residuals**
+and **zero unexpected differences**. The old 3308-key window remains 3133 strict
+matches and 175 retained residuals; all 342 P6 and 817 P7 controls keep their prior
+classification. The original broader Birth gate remains 30/30. All 3127 managed
+tests pass and gen-stubs produces no tracked drift. Affected engine probes retain
+S7's results: particles 1530/1560, emission 18 failing records/54 values, gravity
+568/639, sub-emitters 975/1321 with all 58 random-count controls exact, seed/axis
+48 failing fields and lifetime 30080/30080. All 17 particle images are byte-identical
+to S7; its worst reference mean is 0.38. Earlier captures and every raw failure remain
+in the validation cache. Continuous parent playback, curves, nested chains and other
+inheritance channels remain separate from this measured constant-lifetime slice.
