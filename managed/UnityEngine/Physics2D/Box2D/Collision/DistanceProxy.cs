@@ -19,7 +19,7 @@ namespace Unbound.Box2D.Collision
             {
             case CircleShape circle:
             {
-                Vertices = new[] {circle.Position};
+                Vertices = new VertexStorage(circle.Position, default);
                 Count = 1;
                 Radius = circle.Radius;
             }
@@ -27,7 +27,7 @@ namespace Unbound.Box2D.Collision
 
             case PolygonShape polygon:
             {
-                Vertices = polygon.Vertices;
+                Vertices = new VertexStorage(polygon.Vertices);
                 Count = polygon.Count;
                 Radius = polygon.Radius;
             }
@@ -37,16 +37,8 @@ namespace Unbound.Box2D.Collision
             {
                 Debug.Assert(0 <= index && index < chain.Count);
                 Count = 2;
-                Vertices = new Vector2[Count];
-                Vertices[0] = chain.Vertices[index];
-                if (index + 1 < chain.Count)
-                {
-                    Vertices[1] = chain.Vertices[index + 1];
-                }
-                else
-                {
-                    Vertices[1] = chain.Vertices[0];
-                }
+                Vertices = new VertexStorage(chain.Vertices[index],
+                    chain.Vertices[index + 1 < chain.Count ? index + 1 : 0]);
 
                 Radius = chain.Radius;
             }
@@ -54,11 +46,7 @@ namespace Unbound.Box2D.Collision
 
             case EdgeShape edge:
             {
-                Vertices = new[]
-                {
-                    edge.Vertex1,
-                    edge.Vertex2
-                };
+                Vertices = new VertexStorage(edge.Vertex1, edge.Vertex2);
                 Count = 2;
                 Radius = edge.Radius;
             }
@@ -73,8 +61,9 @@ namespace Unbound.Box2D.Collision
         /// must remain in scope while the proxy is in use.
         public void Set(Vector2[] vertices, int count, float radius)
         {
-            Vertices = new Vector2[vertices.Length];
-            Array.Copy(vertices, Vertices, vertices.Length);
+            var copy = new Vector2[vertices.Length];
+            Array.Copy(vertices, copy, vertices.Length);
+            Vertices = new VertexStorage(copy);
             Count = count;
             Radius = radius;
         }
@@ -100,7 +89,7 @@ namespace Unbound.Box2D.Collision
         }
 
         /// Get the supporting vertex in the given direction.
-        public ref readonly Vector2 GetSupportVertex(in Vector2 d)
+        public Vector2 GetSupportVertex(in Vector2 d)
         {
             var bestIndex = 0;
             var bestValue = Vector2.Dot(Vertices[0], d);
@@ -114,7 +103,7 @@ namespace Unbound.Box2D.Collision
                 }
             }
 
-            return ref Vertices[bestIndex];
+            return Vertices[bestIndex];
         }
 
         /// Get the vertex count.
@@ -126,13 +115,24 @@ namespace Unbound.Box2D.Collision
         /// Get a vertex by index. Used by b2Distance.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [Pure]
-        public ref readonly Vector2 GetVertex(int index)
+        public Vector2 GetVertex(int index)
         {
             Debug.Assert(0 <= index && index < Count);
-            return ref Vertices[index];
+            return Vertices[index];
         }
 
-        public Vector2[] Vertices;
+        // Small shapes keep their support points in the proxy value. Polygon storage stays
+        // borrowed for the lifetime of the query, avoiding per-cast circle and edge arrays.
+        internal readonly struct VertexStorage
+        {
+            readonly Vector2[] array;
+            readonly Vector2 first, second;
+            internal VertexStorage(Vector2[] array) { this.array = array; first = second = default; }
+            internal VertexStorage(Vector2 first, Vector2 second) { array = null; this.first = first; this.second = second; }
+            public Vector2 this[int index] => array != null ? array[index] : index == 0 ? first : second;
+        }
+
+        public VertexStorage Vertices;
 
         public int Count;
 

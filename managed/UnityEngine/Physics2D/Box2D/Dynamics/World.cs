@@ -454,7 +454,7 @@ namespace Unbound.Box2D.Dynamics
         /// <param name="timeStep">the amount of time to simulate, this should not vary.</param>
         /// <param name="velocityIterations">for the velocity constraint solver.</param>
         /// <param name="positionIterations">for the position constraint solver.</param>
-        public void Step(float timeStep, int velocityIterations, int positionIterations)
+        public void Step(float timeStep, int velocityIterations, int positionIterations, bool updateContacts = true)
         {
             // profile 计时
             _stepTimer.Restart();
@@ -498,7 +498,7 @@ namespace Unbound.Box2D.Dynamics
             // Update contacts. This is where some contacts are destroyed.
             // 更新接触点
             {
-                ContactManager.Collide();
+                if (updateContacts) ContactManager.Collide();
                 _timer.Stop();
                 Profile.Collide = _timer.ElapsedMilliseconds;
             }
@@ -528,7 +528,7 @@ namespace Unbound.Box2D.Dynamics
             // here without refreshing solid manifolds or their solver impulses. Keep the
             // initial contact pass: a sensor starting overlapped can enter and leave in one
             // step. See tests/projects/trigger2dtiming for independent 6000.0 recordings.
-            ContactManager.Collide(sensorsOnly: true);
+            if (updateContacts) ContactManager.Collide(sensorsOnly: true);
 
             if (step.Dt > 0.0f)
             {
@@ -859,7 +859,7 @@ namespace Unbound.Box2D.Dynamics
                     {
                         var je = jointEdgeNode.Value;
                         jointEdgeNode = jointEdgeNode.Next;
-                        if (je.Joint.IslandFlag)
+                        if (je.Joint.IslandFlag || !je.Joint.SimulationEnabled)
                         {
                             continue;
                         }

@@ -795,6 +795,10 @@ namespace UnityEngine
 
         public bool IsEmpty() => W.Rigidbodies.Count == 0 && W.Colliders.Count == 0;
 
+        public int subStepCount => W.SubStepCount;
+
+        public float subStepLostTime => W.SubStepLostTime;
+
         public bool Simulate(float deltaTime) => Physics2D.Simulate(deltaTime);
 
         public bool Simulate(float deltaTime, int simulationLayers = -1) => Physics2D.Simulate(deltaTime, simulationLayers);

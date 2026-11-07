@@ -9,6 +9,18 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Compat
     {
+        /// <summary>Explicit simulation mode checks and contact refresh across sub-steps,
+        /// measured by physics2dadvanced on Unity 6000.0.71f1.</summary>
+        internal static bool Physics2DSimulationMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>Slide contact spacing, iteration accounting and argument validation,
+        /// measured by physics2dadvanced on Unity 6000.0.71f1.</summary>
+        internal static bool Physics2DSlideMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>The fixed scheduler uses the same whole-tick time domain as the frame clock,
+        /// measured by physics2dadvanced automatic modes on Unity 6000.0.71f1.</summary>
+        internal static bool FixedClockTicksMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>The project's release's major version (2022, 6000, ...).</summary>
         internal static int Major
         {

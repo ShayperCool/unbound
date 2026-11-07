@@ -48,6 +48,11 @@ namespace Unbound.Runtime
         static bool s_Removing;
         static bool s_SilentRemoval;
         static bool s_Dispatching;
+        static bool s_MeasuredSimulation;
+        internal static bool MeasuredSlide { get; private set; }
+        internal static int SubStepCount { get; private set; }
+        internal static float SubStepLostTime { get; private set; }
+        internal static bool MeasuredSimulation => s_MeasuredSimulation;
         static readonly List<Rigidbody2D> s_Rigidbodies = new List<Rigidbody2D>();
         static readonly List<Collider2D> s_Colliders = new List<Collider2D>();
         static readonly List<B2Shape> s_ShapeBuffer = new List<B2Shape>();
@@ -76,6 +81,8 @@ namespace Unbound.Runtime
         {
             if (s_World != null) return;
             Physics2D.EnsureSettings();
+            s_MeasuredSimulation = Compat.Physics2DSimulationMeasured;
+            MeasuredSlide = Compat.Physics2DSlideMeasured;
             s_World = new World(ToB2(Physics2D.s_Gravity));
             s_World.SetContactFilter(s_Filter);
             s_World.SetContactListener(s_Listener);
@@ -115,6 +122,9 @@ namespace Unbound.Runtime
             s_Removing = s_SilentRemoval = s_Dispatching = s_Stepping = false;
             s_ContactLayers = Physics2D.AllLayers;
             s_Held.Clear();
+            s_MeasuredSimulation = MeasuredSlide = false;
+            SubStepCount = 0;
+            SubStepLostTime = 0f;
         }
 
         // ------------------------------------------------------------------ conversions
@@ -615,7 +625,7 @@ namespace Unbound.Runtime
             }
             if (!fromLoop && Physics2D.s_SimulationMode != SimulationMode2D.Script)
             {
-                // Unity allows it in any mode since 2021; the step simply runs.
+                if (s_MeasuredSimulation) return false;
             }
             if (s_World == null) return false;
             if (deltaTime < 0f) return false;
@@ -625,6 +635,7 @@ namespace Unbound.Runtime
             Physics2D.ApplyTuning();
             SyncTransforms();
             Physics2DJoints.Sync();
+            Physics2DJoints.SetSimulationLayers(s_MeasuredSimulation ? layers : Physics2D.AllLayers);
             s_World.Gravity = ToB2(Physics2D.s_Gravity);
             if (layers != s_ContactLayers)
             {
@@ -640,7 +651,9 @@ namespace Unbound.Runtime
             float subStepTime = deltaTime, simulatedTime = deltaTime;
             bool subStepping = Physics2D.s_UseSubStepping && Physics2D.s_SimulationMode != SimulationMode2D.FixedUpdate
                 && SubSteps(deltaTime, out subStepCount, out subStepTime, out simulatedTime);
-            if (subStepping && !Physics2D.s_UseSubStepContacts)
+            SubStepCount = subStepCount;
+            SubStepLostTime = deltaTime - simulatedTime;
+            if (subStepping && !Physics2D.s_UseSubStepContacts && !s_MeasuredSimulation)
             {
                 Unbound.Runtime.Stubs.Ignored("Physics2D.useSubStepContacts",
                     "= false is not honoured: Unbound calculates contacts on every simulation sub-step, as useSubStepContacts = true does");
@@ -695,9 +708,8 @@ namespace Unbound.Runtime
         /// The sub-steps of a step whose frame rate (1 / deltaTime) is below Physics2D.minSubStepFPS:
         /// sub-steps at or above that rate, at most Physics2D.maxSubStepCount of them. When more are
         /// needed, the maximum count runs at the minimum rate and the rest of deltaTime is "lost"
-        /// (Physics2D.maxSubStepCount, Scripting API 6000.0). Unbound's choices, not measured
-        /// against Unity: equal sub-steps of deltaTime / count, and the relative tolerance that
-        /// keeps a rate exactly at the minimum (1/15 s at 30 FPS) from asking for an extra sub-step.
+        /// (Physics2D.maxSubStepCount, Scripting API 6000.0). Equal sub-steps and the
+        /// capped duration are measured by physics2dadvanced on Unity 6000.0.71f1.
         /// Returns false when no sub-stepping is needed.
         /// </summary>
         internal static bool SubSteps(float deltaTime, out int count, out float stepTime, out float simulatedTime)
@@ -706,8 +718,9 @@ namespace Unbound.Runtime
             stepTime = simulatedTime = deltaTime;
             float minFps = Physics2D.s_MinSubStepFPS;
             if (!(deltaTime > 0f) || float.IsInfinity(deltaTime) || !(minFps > 0f)) return false;
-            double required = (double)deltaTime * minFps;
-            int needed = (int)Math.Min(int.MaxValue, Math.Ceiling(required * (1.0 - 1e-5)));
+            double required = s_MeasuredSimulation ? deltaTime * minFps
+                : (double)deltaTime * minFps * (1.0 - 1e-5);
+            int needed = (int)Math.Min(int.MaxValue, Math.Ceiling(required));
             if (needed <= 1) return false;
             int max = Math.Max(1, Physics2D.s_MaxSubStepCount);
             if (needed > max)
@@ -726,14 +739,16 @@ namespace Unbound.Runtime
 
         /// <summary>Runs the sub-steps of one simulation step. Forces (AddForce, effectors) act for
         /// the whole step, as without sub-stepping: Box2D clears them after the last sub-step
-        /// only (Unbound's choice; Unity's force accounting across sub-steps is not measured).</summary>
+        /// only (physics2dadvanced, Unity 6000.0.71f1 force and damping controls).</summary>
         static void StepSubSteps(int count, float stepTime, int velocityIterations, int positionIterations)
         {
             bool autoClear = s_World.IsAutoClearForces;
             s_World.IsAutoClearForces = false;
             try
             {
-                for (int i = 0; i < count; i++) s_World.Step(stepTime, velocityIterations, positionIterations);
+                for (int i = 0; i < count; i++)
+                    s_World.Step(stepTime, velocityIterations, positionIterations,
+                        updateContacts: i == 0 || Physics2D.s_UseSubStepContacts || !s_MeasuredSimulation);
             }
             finally
             {
@@ -763,9 +778,9 @@ namespace Unbound.Runtime
         /// Scripting API 6000.0). The others sleep through the step, so they neither integrate nor
         /// move; their contacts are already filtered when their colliders are on such layers too.
         /// Afterwards <see cref="ReleaseHeldBodies"/> gives them back their exact pose, motion,
-        /// forces and sleep state. Unbound's choices, not measured against Unity: a held body keeps
-        /// its pending MovePosition and accumulated forces for a later simulated step, and a body
-        /// a joint or a collider on a simulated layer still reaches during the step is put back.
+        /// forces and sleep state. A held body keeps pending moves and accumulated forces for a
+        /// later simulated step. Its child colliders and connected joints are also excluded until
+        /// both bodies' layers participate (physics2dadvanced, Unity 6000.0.71f1).
         /// </summary>
         static void HoldBodiesOutside(int layers)
         {
@@ -974,7 +989,10 @@ namespace Unbound.Runtime
                 return Physics2DWorld.ShouldCollide(a, b);
             }
 
-            static bool OnContactLayers(Collider2D c) => c != null && (s_ContactLayers & (1 << c.m_GameObject.m_Layer)) != 0;
+            static bool OnContactLayers(Collider2D c) => c != null
+                && (s_ContactLayers & (1 << c.m_GameObject.m_Layer)) != 0
+                && (!s_MeasuredSimulation || c.m_AttachedBody == null
+                    || (s_ContactLayers & (1 << c.m_AttachedBody.m_GameObject.m_Layer)) != 0);
         }
 
         // ------------------------------------------------------------------ contacts and callbacks

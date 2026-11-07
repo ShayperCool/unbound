@@ -107,8 +107,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static int OverlapCollider(global::UnityEngine.Collider2D collider, global::UnityEngine.ContactFilter2D contactFilter, global::System.Collections.Generic.List<global::UnityEngine.Collider2D> results) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene2D.OverlapCollider"); return default; }
         [global::Unbound.Stub] public static int OverlapCollider(global::UnityEngine.Vector2 position, float angle, global::UnityEngine.Collider2D collider, global::System.Collections.Generic.List<global::UnityEngine.Collider2D> results) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene2D.OverlapCollider"); return default; }
         [global::Unbound.Stub] public static int OverlapCollider(global::UnityEngine.Vector2 position, float angle, global::UnityEngine.Collider2D collider, global::UnityEngine.ContactFilter2D contactFilter, global::System.Collections.Generic.List<global::UnityEngine.Collider2D> results) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene2D.OverlapCollider"); return default; }
-        public int subStepCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene2D.subStepCount"); return default; } }
-        public float subStepLostTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene2D.subStepLostTime"); return default; } }
     }
     [global::Unbound.Stub]
     public unsafe static partial class PhysicsSceneExtensions2D

@@ -117,6 +117,9 @@ namespace Unbound.Box2D.Dynamics.Joints
         /// </summary>
         public bool IslandFlag;
 
+        // Unbound: a simulation layer mask can omit this constraint for the current step.
+        public bool SimulationEnabled = true;
+
         /// <summary>
         /// 关节链表节点
         /// </summary>

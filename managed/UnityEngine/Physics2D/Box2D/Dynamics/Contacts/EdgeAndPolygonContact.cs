@@ -17,10 +17,9 @@ namespace Unbound.Box2D.Dynamics.Contacts
         {
             var edge = (EdgeShape)FixtureA.Shape;
 
-            // Unbound: a two-sided EdgeCollider2D segment connected to its neighbours or to the
-            // adjacent start/end points uses Box2D v2.3's adjacency (no ghost collisions). A segment
-            // whose ghost segments are all exactly zero-length collides like an isolated one.
-            if (!edge.OneSided && (edge.UsesVertex0 || edge.UsesVertex3))
+            // Unbound: every two-sided edge uses the same endpoint and adjacency rules,
+            // including an isolated segment with no adjacent points.
+            if (!edge.OneSided)
             {
                 CollisionUtils.CollideEdgeAndPolygonAdjacent(
                     ref manifold,

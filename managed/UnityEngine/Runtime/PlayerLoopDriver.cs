@@ -460,11 +460,11 @@ namespace Unbound.Runtime
         {
             bool first = !Time.s_FixedStarted;
             Time.s_FixedStarted = true;
-            while (first || Time.s_FixedTime + Time.s_FixedDeltaTime <= Time.s_Time + 1e-7)
+            while (first || Time.s_FixedTime + Time.FixedClockDuration <= Time.s_Time + 1e-7)
             {
                 if (!first)
                 {
-                    Time.s_FixedTime += Time.s_FixedDeltaTime;
+                    Time.s_FixedTime += Time.FixedClockDuration;
                     // The unscaled fixed clock is the unscaled clock less the step's lag behind
                     // the game clock (measured at timeScale 1, tests/projects/inputframes: under a
                     // capture rate too, where the unscaled clock keeps real time).

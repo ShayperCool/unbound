@@ -21,7 +21,7 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Physics2DQueries
     {
-        sealed class AabbQuery : IQueryCallback
+        internal sealed class AabbQuery : IQueryCallback
         {
             internal readonly List<Fixture> Found = new List<Fixture>();
 
@@ -29,6 +29,21 @@ namespace Unbound.Runtime
             {
                 Found.Add(fixture);
                 return true;
+            }
+        }
+
+        internal sealed class CastScratch
+        {
+            internal readonly Dictionary<Collider2D, RaycastHit2D> Best = new Dictionary<Collider2D, RaycastHit2D>(ReferenceComparer.Instance);
+            internal readonly HashSet<Collider2D> Exclude = new HashSet<Collider2D>(ReferenceComparer.Instance);
+            internal readonly HashSet<Collider2D> Skipped = new HashSet<Collider2D>(ReferenceComparer.Instance);
+            internal readonly AabbQuery Query = new AabbQuery();
+            internal readonly List<RaycastHit2D> Hits = new List<RaycastHit2D>();
+            internal readonly List<(float Distance, int Index, RaycastHit2D Hit)> Ordered = new List<(float, int, RaycastHit2D)>();
+
+            internal void Clear()
+            {
+                Best.Clear(); Exclude.Clear(); Skipped.Clear(); Query.Found.Clear(); Hits.Clear(); Ordered.Clear();
             }
         }
 
@@ -179,27 +194,31 @@ namespace Unbound.Runtime
 
         /// <summary>Casts the shapes of colliders (at their bodies, or at <paramref name="pose"/>):
         /// the colliders themselves and those of <paramref name="ignoreBody"/> are not hit.</summary>
-        internal static List<RaycastHit2D> CastColliders(IEnumerable<Collider2D> colliders, B2Transform? pose, Vector2 direction, float distance, ContactFilter2D filter, Rigidbody2D ignoreBody)
+        internal static List<RaycastHit2D> CastColliders(IReadOnlyList<Collider2D> colliders, B2Transform? pose, Vector2 direction, float distance, ContactFilter2D filter, Rigidbody2D ignoreBody, CastScratch scratch = null)
         {
             W.PrepareQuery();
-            var best = new Dictionary<Collider2D, RaycastHit2D>(ReferenceComparer.Instance);
-            var exclude = new HashSet<Collider2D>(ReferenceComparer.Instance);
-            foreach (var c in colliders) exclude.Add(c);
-            var skipped = new HashSet<Collider2D>(ReferenceComparer.Instance);
-            foreach (var c in colliders)
+            scratch ??= new CastScratch();
+            scratch.Clear();
+            for (int i = 0; i < colliders.Count; i++) scratch.Exclude.Add(colliders[i]);
+            for (int i = 0; i < colliders.Count; i++)
             {
+                var c = colliders[i];
                 foreach (var f in c.m_Fixtures)
                 {
                     var xf = pose ?? f.Body.GetTransform();
                     for (int child = 0; child < f.Shape.GetChildCount(); child++)
-                        CastShape(f.Shape, xf, direction, distance, filter, best, exclude, ignoreBody, skipped, child);
+                        CastShape(f.Shape, xf, direction, distance, filter, scratch.Best, scratch.Exclude, ignoreBody, scratch.Skipped, child, scratch.Query);
                 }
             }
-            return Sorted(best);
+            int index = 0;
+            foreach (var hit in scratch.Best.Values) scratch.Ordered.Add((hit.distance, index++, hit));
+            scratch.Ordered.Sort((a, b) => a.Distance != b.Distance ? a.Distance.CompareTo(b.Distance) : a.Index.CompareTo(b.Index));
+            foreach (var entry in scratch.Ordered) scratch.Hits.Add(entry.Hit);
+            return scratch.Hits;
         }
 
         static void CastShape(B2Shape shape, B2Transform pose, Vector2 direction, float distance, ContactFilter2D filter,
-            Dictionary<Collider2D, RaycastHit2D> best, HashSet<Collider2D> exclude, Rigidbody2D ignoreBody, HashSet<Collider2D> skipped, int childIndex = 0)
+            Dictionary<Collider2D, RaycastHit2D> best, HashSet<Collider2D> exclude, Rigidbody2D ignoreBody, HashSet<Collider2D> skipped, int childIndex = 0, AabbQuery query = null)
         {
             if (float.IsNaN(distance) || distance < 0f) distance = 0f;
             var dir = direction.normalized;
@@ -216,7 +235,10 @@ namespace Unbound.Runtime
 
             var proxyB = new DistanceProxy();
             proxyB.Set(shape, childIndex);
-            foreach (var f in FixturesIn(swept))
+            query ??= new AabbQuery();
+            query.Found.Clear();
+            W.World.QueryAABB(query, swept);
+            foreach (var f in query.Found)
             {
                 var c = f.UserData as Collider2D;
                 if (c == null || !Passes(c, filter)) continue;

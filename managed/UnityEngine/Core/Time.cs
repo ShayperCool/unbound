@@ -17,6 +17,16 @@ namespace UnityEngine
         internal static float s_UnscaledDeltaTime;
         internal static float s_SmoothDeltaTime;
         internal static float s_FixedDeltaTime = 0.02f;
+        static double s_FixedClockDuration = 0.02f;
+        static float s_FixedClockSource = 0.02f;
+        internal static double FixedClockDuration
+        {
+            get
+            {
+                if (s_FixedClockSource != s_FixedDeltaTime) SetFixedDeltaTime(s_FixedDeltaTime);
+                return s_FixedClockDuration;
+            }
+        }
         internal static float s_MaximumDeltaTime = 0.3333333f;
         internal static float s_MaximumParticleDeltaTime = 0.03f;
         internal static float s_TimeScale = 1f;
@@ -77,8 +87,19 @@ namespace UnityEngine
             set
             {
                 MainThreadCheck.Check("set_fixedDeltaTime");
-                s_FixedDeltaTime = Math.Max(value, 0.0001f);
+                SetFixedDeltaTime(value);
             }
+        }
+
+        internal static void SetFixedDeltaTime(float value)
+        {
+            s_FixedDeltaTime = Math.Max(value, 0.0001f);
+            s_FixedClockSource = s_FixedDeltaTime;
+            var rate = RationalTime.TicksPerSecond.DefaultTicksPerSecond;
+            double ticks = s_FixedDeltaTime * (double)rate.Numerator / rate.Denominator;
+            s_FixedClockDuration = Compat.FixedClockTicksMeasured && ticks >= 0 && ticks < long.MaxValue
+                ? RationalTime.FromDouble(s_FixedDeltaTime, rate).ToDouble()
+                : s_FixedDeltaTime;
         }
 
         public static float maximumDeltaTime
@@ -199,6 +220,7 @@ namespace UnityEngine
 
         internal static void ResetForPlayMode()
         {
+            SetFixedDeltaTime(s_FixedDeltaTime);
             s_FixedStarted = false;
             s_Time = s_UnscaledTime = s_FixedTime = s_FixedUnscaledTime = 0;
             s_CaptureClockTicks = 0;

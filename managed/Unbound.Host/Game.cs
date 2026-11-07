@@ -313,7 +313,7 @@ public static unsafe class Game
         foreach (var s in c.BuildScenes) ProjectInfo.BuildScenes.Add((s.Path, s.Guid));
         TagManager.SetProjectTags(c.Tags);
         for (int i = 0; i < c.Layers.Count && i < 32; i++) TagManager.Layers[i] = c.Layers[i];
-        Time.s_FixedDeltaTime = c.FixedDeltaTime;
+        Time.SetFixedDeltaTime(c.FixedDeltaTime);
         Time.s_MaximumDeltaTime = c.MaximumDeltaTime;
         Time.s_MaximumParticleDeltaTime = c.MaximumParticleDeltaTime;
         Time.s_TimeScale = c.TimeScale;

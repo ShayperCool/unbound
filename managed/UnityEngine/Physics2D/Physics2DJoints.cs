@@ -44,6 +44,15 @@ namespace Unbound.Runtime
         {
             foreach (var joint in s_Joints) Sync(joint);
         }
+        internal static void SetSimulationLayers(int layers)
+        {
+            foreach (var joint in s_Joints)
+            {
+                if (joint.m_Joint == null) continue;
+                joint.m_Joint.SimulationEnabled = (layers & (1 << joint.m_GameObject.m_Layer)) != 0
+                    && (joint.m_ConnectedBody == null || (layers & (1 << joint.m_ConnectedBody.m_GameObject.m_Layer)) != 0);
+            }
+        }
         internal static void Sync(Joint2D joint)
         {
             if (joint == null || !joint.isActiveAndEnabled) return;
@@ -70,7 +79,7 @@ namespace Unbound.Runtime
             if (deltaTime <= 0f) return;
             foreach (var joint in s_Joints.ToArray())
             {
-                if (joint == null || joint.m_Joint == null || joint.m_BreakAction == JointBreakAction2D.Ignore) continue;
+                if (joint == null || joint.m_Joint == null || !joint.m_Joint.SimulationEnabled || joint.m_BreakAction == JointBreakAction2D.Ignore) continue;
                 var force = joint.GetReactionForce(deltaTime);
                 var torque = joint.GetReactionTorque(deltaTime);
                 if (force.sqrMagnitude <= joint.m_BreakForce * joint.m_BreakForce && Mathf.Abs(torque) <= joint.m_BreakTorque) continue;

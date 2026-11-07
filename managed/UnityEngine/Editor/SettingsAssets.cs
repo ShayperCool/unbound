@@ -263,9 +263,9 @@ namespace Unbound.Runtime
                 // A rational: m_Count ticks at m_Rate (numerator / denominator) ticks a second.
                 var rate = step.Get("m_Rate");
                 double ticks = rate == null ? 0 : rate.Long("m_Numerator") / (double)Math.Max(1, rate.Long("m_Denominator"));
-                if (ticks > 0) Time.s_FixedDeltaTime = (float)(step.Long("m_Count") / ticks);
+                if (ticks > 0) Time.SetFixedDeltaTime((float)(step.Long("m_Count") / ticks));
             }
-            else if (step != null) Time.s_FixedDeltaTime = step.AsFloat(Time.s_FixedDeltaTime);
+            else if (step != null) Time.SetFixedDeltaTime(step.AsFloat(Time.s_FixedDeltaTime));
             Time.s_MaximumDeltaTime = body.Float("Maximum Allowed Timestep", Time.s_MaximumDeltaTime);
             Time.s_MaximumParticleDeltaTime = body.Float("Maximum Particle Timestep", Time.s_MaximumParticleDeltaTime);
             Time.s_TimeScale = body.Float("m_TimeScale", Time.s_TimeScale);

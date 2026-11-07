@@ -94,6 +94,7 @@ namespace Unbound.Box2D.Collision.Shapes
                 Vertex1 = Vertex1,
                 Vertex2 = Vertex2,
                 Vertex3 = Vertex3,
+                Radius = Radius,
                 OneSided = OneSided,
                 HasVertex0 = HasVertex0,
                 HasVertex3 = HasVertex3
