@@ -386,7 +386,7 @@ namespace UnityEngine
         public Matrix4x4 GetStereoProjectionMatrix(StereoscopicEye eye) => projectionMatrix;
 
         /// <summary>A gate fit's parameters: the mode and the aspect of the image to fit.</summary>
-        public struct GateFitParameters
+        public partial struct GateFitParameters
         {
             public GateFitParameters(GateFitMode mode, float aspect)
             {

@@ -116,7 +116,7 @@ public class StubGeneratorTests
         """;
 
     /// <summary>No release table: the synthetic modules have none of its members.</summary>
-    static readonly Dictionary<string, string> NoReturns = new();
+    static readonly Dictionary<string, StubDefault> NoReturns = new();
 
     static readonly MetadataReference[] Framework =
         ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
@@ -168,6 +168,7 @@ public class StubGeneratorTests
 
             var output = Path.Combine(sourceDir, "Generated", "6000.0");
             var report = StubGenerator.Generate(unity, impl, output, sourceDir, returns: NoReturns);
+            Assert.Empty(report.Errors);
             Assert.Empty(report.Conflicts);
             Assert.Contains(report.Modules, m => m.Name == "UnityEngine.PhysicsModule" && m.NewTypes == 3);
             Assert.Equal(3, report.ExtendedTypes); // Object, Component and Vector3 got members
@@ -229,7 +230,7 @@ public class StubGeneratorTests
     }
 
     [Fact]
-    public void NonPartialHandWrittenTypesAreReportedNotExtended()
+    public void NonPartialHandWrittenTypesFailBeforeWritingOutput()
     {
         var root = TestAssemblies.TempDir();
         try
@@ -244,9 +245,10 @@ public class StubGeneratorTests
             var (implImage, _) = Compile("UnityEngine.CoreModule", new[] { handWritten });
             var impl = Write(Path.Combine(root, "nostubs"), "UnityEngine.CoreModule", implImage);
 
-            var report = StubGenerator.Generate(unity, impl, Path.Combine(sourceDir, "Generated", "6000.0"), sourceDir);
-            Assert.Contains(report.Conflicts, c => c.Contains("not partial"));
-            Assert.Equal(0, report.Members);
+            var output = Path.Combine(sourceDir, "Generated", "6000.0");
+            var error = StubGenerator.Generate(unity, impl, output, sourceDir);
+            Assert.Contains(error.Errors, e => e.Contains("not partial"));
+            Assert.False(Directory.Exists(output));
         }
         finally
         {
@@ -254,7 +256,7 @@ public class StubGeneratorTests
         }
     }
     [Fact]
-    public void TableEntriesReplaceTheDefaultAndStaleEntriesAreReported()
+    public void TableEntriesAreValidatedBeforeWritingOutput()
     {
         var root = TestAssemblies.TempDir();
         try
@@ -280,19 +282,29 @@ public class StubGeneratorTests
             var impl = Write(Path.Combine(root, "nostubs"), "UnityEngine.CoreModule", implImage);
 
             var output = Path.Combine(sourceDir, "Generated", "6000.0");
-            var returns = new Dictionary<string, string>
+            var returns = new Dictionary<string, StubDefault>
             {
                 ["UnityEngine.Scale.factor"] = "1f",
                 ["UnityEngine.Scale.Count"] = "1",
                 ["UnityEngine.Gone.value"] = "2",
             };
+            var error = StubGenerator.Generate(unity, impl, output, sourceDir, returns: returns);
+            Assert.Contains(error.Errors, e => e.Contains("UnityEngine.Gone.value"));
+            Assert.False(Directory.Exists(output));
+            returns.Remove("UnityEngine.Gone.value");
+            returns["UnityEngine.Scale.factor"] = "1"; // Implicit numeric conversion must not hide a changed reference type.
+            error = StubGenerator.Generate(unity, impl, output, sourceDir, returns: returns);
+            Assert.Contains(error.Errors, e => e.Contains("invalid expression for float"));
+            Assert.False(Directory.Exists(output));
+            returns["UnityEngine.Scale.factor"] = "1f";
             var report = StubGenerator.Generate(unity, impl, output, sourceDir, returns: returns);
             var text = File.ReadAllText(Path.Combine(output, "UnityEngine.CoreModule.g.cs"));
             // Still a stub that warns, now returning the table's value.
             Assert.Contains("NotImplemented(\"UnityEngine.Scale.factor\"); return 1f; }", text);
             Assert.Contains("NotImplemented(\"UnityEngine.Scale.Count\"); return 1; }", text);
             Assert.Contains("NotImplemented(\"UnityEngine.Scale.other\"); return default; }", text);
-            Assert.Equal(new[] { "UnityEngine.Gone.value" }, report.Conflicts.Where(c => c.StartsWith("stub default ")).Select(c => c.Split(' ')[2].TrimEnd(':')));
+            Assert.Empty(report.Errors);
+            Assert.Empty(report.Conflicts);
             var (_, errors) = Compile("UnityEngine.CoreModule", Directory.GetFiles(output, "*.g.cs").Select(File.ReadAllText).Append(StubSupport));
             Assert.True(errors.Count == 0, string.Join("\n", errors));
         }
@@ -303,12 +315,107 @@ public class StubGeneratorTests
     }
 
     [Fact]
+    public void CheckedBootstrapStubSignaturesCannotDrift()
+    {
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var unity = Path.Combine(root, "UnityEngine");
+            Write(unity, "UnityEngine.CoreModule", Compile("UnityEngine.CoreModule", new[] {
+                "namespace UnityEngine { public class Controller { public virtual long Count(int id) => 0; } }"
+            }).Image);
+            var sourceDir = Path.Combine(root, "impl");
+            Directory.CreateDirectory(sourceDir);
+            const string hand = "namespace UnityEngine { public partial class Controller { [Unbound.Stub] public virtual int Count(int id) => 0; } }";
+            File.WriteAllText(Path.Combine(sourceDir, "Controller.cs"), hand);
+            var impl = Write(Path.Combine(root, "nostubs"), "UnityEngine.CoreModule", Compile("UnityEngine.CoreModule", new[] { hand, StubSupport }).Image);
+            var output = Path.Combine(root, "output");
+            var report = StubGenerator.Generate(unity, impl, output, sourceDir);
+            Assert.Contains(report.Errors, e => e.Contains("checked stub UnityEngine.Controller.Count"));
+            Assert.False(Directory.Exists(output));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public void MutableDefaultsKeepWritesClampAndRemainPerInstance()
+    {
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var unity = Path.Combine(root, "UnityEngine");
+            Write(unity, "UnityEngine.CoreModule", Compile("UnityEngine.CoreModule", new[] { """
+                namespace UnityEngine { public class Settings {
+                    public float amount { get; set; }
+                    public static int budget { get; set; }
+                    public static bool ignored { get; set; }
+                } }
+                """ }).Image);
+            var impl = Write(Path.Combine(root, "nostubs"), "UnityEngine.CoreModule", Compile("UnityEngine.CoreModule", new[] { StubSupport }).Image);
+            var output = Path.Combine(root, "arbitrary-output");
+            var report = StubGenerator.Generate(unity, impl, output, returns: new Dictionary<string, StubDefault> {
+                ["UnityEngine.Settings.amount"] = new("1f", "value"),
+                ["UnityEngine.Settings.budget"] = new("8", "global::System.Math.Max(0, value)"),
+                ["UnityEngine.Settings.ignored"] = "true",
+            });
+            Assert.Empty(report.Errors);
+            var (image, errors) = Compile("UnityEngine.CoreModule", Directory.GetFiles(output, "*.g.cs").Select(File.ReadAllText).Append(StubSupport));
+            Assert.Empty(errors);
+            var context = new AssemblyLoadContext("mutable-defaults", isCollectible: true);
+            try
+            {
+                var type = context.LoadFromStream(new MemoryStream(image)).GetType("UnityEngine.Settings")!;
+                var first = Activator.CreateInstance(type);
+                var second = Activator.CreateInstance(type);
+                var amount = type.GetProperty("amount")!;
+                Assert.Equal(1f, amount.GetValue(first));
+                amount.SetValue(first, -2.5f);
+                Assert.Equal(-2.5f, amount.GetValue(first));
+                Assert.Equal(1f, amount.GetValue(second));
+                var budget = type.GetProperty("budget")!;
+                budget.SetValue(null, -4);
+                Assert.Equal(0, budget.GetValue(null));
+                budget.SetValue(null, 17);
+                Assert.Equal(17, budget.GetValue(null));
+                var ignored = type.GetProperty("ignored")!;
+                ignored.SetValue(null, false);
+                Assert.Equal(true, ignored.GetValue(null));
+            }
+            finally { context.Unload(); }
+            var validFile = File.ReadAllText(Path.Combine(output, "UnityEngine.CoreModule.g.cs"));
+            report = StubGenerator.Generate(unity, impl, output, returns: new Dictionary<string, StubDefault> {
+                ["UnityEngine.Settings.amount"] = new("1f", "false"),
+            });
+            Assert.Contains(report.Errors, e => e.Contains("invalid setter"));
+            Assert.Equal(validFile, File.ReadAllText(Path.Combine(output, "UnityEngine.CoreModule.g.cs")));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public void ReleaseFamilyIsIndependentOfOutputDirectory()
+    {
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var unity = Path.Combine(root, "UnityEngine");
+            Write(unity, "UnityEngine.CoreModule", Compile("UnityEngine.CoreModule", new[] { "namespace UnityEngine { public class Empty {} }" }).Image);
+            var impl = Write(Path.Combine(root, "nostubs"), "UnityEngine.CoreModule", Compile("UnityEngine.CoreModule", new[] { StubSupport }).Image);
+            Assert.Empty(StubGenerator.Generate(unity, impl, Path.Combine(root, "6000.0"), releaseFamily: "unknown").Errors);
+            var report = StubGenerator.Generate(unity, impl, Path.Combine(root, "elsewhere"), releaseFamily: "6000.0");
+            Assert.Contains(report.Errors, e => e.Contains("UnityEngine.Scripting.GarbageCollector.GCMode"));
+            Assert.False(Directory.Exists(Path.Combine(root, "elsewhere")));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
     public void EveryReleaseTableEntryIsAnExpression()
     {
         foreach (var (id, value) in StubDefaults.For("6000.0"))
         {
             Assert.StartsWith("UnityEngine.", id);
-            Assert.Empty(SyntaxFactory.ParseExpression(value).GetDiagnostics());
+            Assert.Empty(SyntaxFactory.ParseExpression(value.Value).GetDiagnostics());
         }
         Assert.Empty(StubDefaults.For("no-such-family"));
     }

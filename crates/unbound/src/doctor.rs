@@ -65,6 +65,57 @@ struct Coverage {
     unread_in_release: Vec<Entry>,
 }
 
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UnsupportedMessage {
+    file: String,
+    line: usize,
+    #[serde(rename = "type")]
+    type_name: String,
+    message: String,
+}
+
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct MessageCoverage {
+    messages: Vec<UnsupportedMessage>,
+    failed_assemblies: Vec<String>,
+}
+
+fn message_coverage(
+    project: &Project,
+    args: &ProjectArgs,
+    runtime: &unbound_host::ManagedRuntime,
+) -> Result<MessageCoverage> {
+    let mode = crate::commands::mode(args);
+    let graph = project.script_graph(mode, &args.target)?;
+    for warning in &graph.warnings {
+        tracing::warn!("{warning}");
+    }
+    let request = project.compile_request(
+        &graph,
+        mode,
+        false,
+        unbound_project::CodeOptimization::at_startup(&[]),
+    );
+    let mut coverage: MessageCoverage = runtime
+        .call("message-coverage", &request)
+        .context("checking the project's unsupported script messages")?;
+    for message in &mut coverage.messages {
+        if let Ok(relative) = std::path::Path::new(&message.file).strip_prefix(&project.root) {
+            message.file = relative.to_string_lossy().into_owned();
+        }
+    }
+    Ok(coverage)
+}
+
+fn message_line(message: &UnsupportedMessage) -> String {
+    format!(
+        "{}:{}: {}.{}",
+        message.file, message.line, message.type_name, message.message
+    )
+}
+
 /// Adds the non-stripped documents of one Unity YAML file to `found`: class id, the type name
 /// (the document's single top-level key), its keys, and which of [`DATA_KEYS`] reference an
 /// object. Not a full parse: document headers and the first indentation level only.
@@ -191,6 +242,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             &json!({ "release": release, "classes": request }),
         )
         .context("classifying the project's classes")?;
+    let messages = message_coverage(&project, args, &runtime)?;
     if as_json {
         let classes: Vec<_> = coverage
             .classes
@@ -206,6 +258,8 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             "classes": classes,
             "unreadInRelease": coverage.unread_in_release,
             "renderingLimitations": RENDERING_LIMITATIONS,
+            "unsupportedMessages": messages.messages,
+            "messageAnalysisFailedAssemblies": messages.failed_assemblies,
         });
         println!("{}", serde_json::to_string_pretty(&report)?);
         return Ok(());
@@ -261,6 +315,19 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             }
         }
     }
+    println!(
+        "\n{} script messages Unbound does not deliver:",
+        messages.messages.len()
+    );
+    for message in &messages.messages {
+        println!("  {}", message_line(message));
+    }
+    if !messages.failed_assemblies.is_empty() {
+        println!(
+            "  incomplete analysis: assemblies failed to compile: {}",
+            messages.failed_assemblies.join(", ")
+        );
+    }
     println!("\nRendering limitations:");
     for limitation in RENDERING_LIMITATIONS {
         println!("  {limitation}");
@@ -290,6 +357,22 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn message_report_preserves_file_type_and_message() {
+        let coverage: MessageCoverage = serde_json::from_value(json!({
+            "messages": [{"file": "Assets/IK.cs", "line": 17, "type": "Game.IK", "message": "OnStateIK"}],
+            "failedAssemblies": ["Broken"]
+        })).unwrap();
+        assert_eq!(
+            message_line(&coverage.messages[0]),
+            "Assets/IK.cs:17: Game.IK.OnStateIK"
+        );
+        assert_eq!(coverage.failed_assemblies, ["Broken"]);
+        let value = serde_json::to_value(&coverage.messages[0]).unwrap();
+        assert_eq!(value["type"], "Game.IK");
+        assert_eq!(value["message"], "OnStateIK");
+    }
 
     #[test]
     fn scans_classes_keys_and_baked_data() {

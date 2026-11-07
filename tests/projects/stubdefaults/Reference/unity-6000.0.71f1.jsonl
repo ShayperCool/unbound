@@ -30,4 +30,29 @@
 {"key":"ScalableBufferManager.heightScaleFactor","value":"1"}
 {"key":"Microphone.devices","value":"array"}
 {"key":"Camera.CalculateObliqueMatrix","value":"0.974278569,0,0,0,0,1.73205078,0.43617177,0,0,0,-0.74468708,-1,0,0,3.48937416,0"}
+{"key":"DynamicGI.updateThreshold.set0","value":"0.25"}
+{"key":"DynamicGI.updateThreshold.set1","value":"-2"}
+{"key":"DynamicGI.updateThreshold.set2","value":"5"}
+{"key":"DynamicGI.materialUpdateTimeSlice.set0","value":"3"}
+{"key":"DynamicGI.materialUpdateTimeSlice.set1","value":"0"}
+{"key":"DynamicGI.materialUpdateTimeSlice.set2","value":"25"}
+{"key":"GarbageCollector.GCMode.set0","value":"throws InvalidOperationException"}
+{"key":"GarbageCollector.GCMode.set1","value":"throws InvalidOperationException"}
+{"key":"GarbageCollector.GCMode.set2","value":"Enabled"}
+{"key":"GarbageCollector.GCMode.set3","value":"throws InvalidOperationException"}
+{"key":"GarbageCollector.incrementalTimeSliceNanoseconds.set0","value":"1234567"}
+{"key":"GarbageCollector.incrementalTimeSliceNanoseconds.set1","value":"0"}
+{"key":"GarbageCollector.incrementalTimeSliceNanoseconds.set2","value":"9000000"}
+{"key":"Caching.compressionEnabled.set0","value":"False"}
+{"key":"Caching.compressionEnabled.set1","value":"True"}
+{"key":"Caching.compressionEnabled.set2","value":"False"}
+{"key":"QualitySettings.maxQueuedFrames.set0","value":"1"}
+{"key":"QualitySettings.maxQueuedFrames.set1","value":"4"}
+{"key":"QualitySettings.maxQueuedFrames.set2","value":"-1"}
+{"key":"Graphics.activeTier.set0","value":"Tier1"}
+{"key":"Graphics.activeTier.set1","value":"Tier2"}
+{"key":"Graphics.activeTier.set2","value":"Tier3"}
+{"key":"RenderTexture.enabled.set0","value":"True"}
+{"key":"RenderTexture.enabled.set1","value":"True"}
+{"key":"RenderTexture.enabled.set2","value":"True"}
 {"key":"complete","value":"1"}

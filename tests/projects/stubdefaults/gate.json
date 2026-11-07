@@ -1,4 +1,7 @@
 {
- "commands": ["python3 tests/projects/stubdefaults/run.py check"],
- "summary": "\\d+/\\d+ records match.*"
+  "commands": [
+    "python3 tests/projects/stubdefaults/run.py check",
+    "python3 tests/projects/stubdefaults/check_tooling.py"
+  ],
+  "summary": "\\d+/\\d+ records match.*"
 }

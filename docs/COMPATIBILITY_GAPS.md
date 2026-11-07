@@ -78,7 +78,7 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       implemented). `unbound api-check` fails (category `silent`) on any that carries neither.
 - [x] Stub generator: events warn on `add`; value-returning stubs take the Editor's answer from a
       small table where 0/null is wrong (`managed/Unbound.ApiTools/StubDefaults.cs`, measured by
-      `stubdefaults`; gen-stubs reports entries no stub returns any more). Still returning the
+      `stubdefaults`; gen-stubs fails on stale entries or expression type mismatches). Still returning the
       default because the answer needs a real implementation: `UnityEngine.Device.Screen`/
       `Application`/`SystemInfo` (forward to the non-Device classes in the Editor),
       `GarbageCollector.isIncremental` (player setting), `Caching` (`cacheCount` 1 and
@@ -89,16 +89,23 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       stubbed `SystemInfo` caps (`maxGraphicsBufferSize`, `maxComputeBufferInputs*`, a rendering
       decision), and obsolete members that should forward to their replacement
       (`Physics.solverIterationCount`, `Application.levelCount`, `RenderSettings.ambientSkyboxAmount`,
-      `Light.pixelLightCount`, `SystemInfo.supportsGPUFence`, ...). Settable table members keep
-      answering their constant after a set.
-- [ ] Message coverage: Unity's full MonoBehaviour/UIBehaviour message list against the messages
-      the engine sends; `unbound doctor` lists the project's scripts that define one never sent.
-      Source ready, unvalidated (`runtime/message-coverage`): the 6000.0 MonoBehaviour,
-      UIBehaviour, ScriptableObject and StateMachineBehaviour messages are classified
-      (`MessageCoverageTests`), and `Messages.cs` `s_NotSent` warns once per declaring script
-      class for `OnParticleUpdateJobScheduled` and `OnChildRectTransformDimensionsChange`, and
-      lists `OnStateIK` (its warning call is pending). Remaining: the `OnStateIK` warning call at
-      the state machine behaviour instantiation site, and the `unbound doctor` listing.
+      `Light.pixelLightCount`, `SystemInfo.supportsGPUFence`, ...). Q57 done (`stubdefaults`, Unity
+      6000.0.71f1): measured setter storage and clamps are generated from the release-family table;
+      `GCMode` rejects changes in the Editor, and obsolete `RenderTexture.enabled` stays true.
+      The CLI passes the profile's family explicitly; output directory names never select behavior.
+- [x] Q41 stub coverage: all eleven remaining non-partial API types are partial: `JointSpring`,
+      `WheelFrictionCurve`, `WheelHit`, `ClothSkinningCoefficient`, `ClothSphereColliderPair`,
+      `jvalue`, `JNINativeMethod`, `CustomRenderTextureUpdateZone`, `Camera.GateFitParameters`,
+      `RenderPipeline.StandardRequest`, and internal `SpriteMaskUtility`. gen-stubs fails before
+      writing output if a hand-written API type cannot be extended. TreeView's bootstrap stub
+      declarations are checked against the selected reference assemblies on every generation,
+      including accessibility, virtual dispatch and parameter defaults; other members are generated.
+- [x] Q28 message coverage: `Messages.cs` is the shared unsupported-message table for runtime
+      warnings and `unbound doctor`. `OnStateIK` warns when a state behaviour is instantiated.
+      Doctor reports source file, line, declaring script type and message, using the project's
+      compiler references, defines and inheritance, including cached compilations. Compilation
+      failures are reported as incomplete analysis. `MessageCoverageTests` classifies the Unity
+      6000.0 MonoBehaviour, UIBehaviour, ScriptableObject and StateMachineBehaviour messages.
 - [ ] Unread serialized data: diff each class's native type tree (already dumped for settings
       assets) against the keys its reader consumes; `unbound doctor` lists non-default values of
       unread keys in the project's scenes, prefabs, assets and `.meta` import settings.

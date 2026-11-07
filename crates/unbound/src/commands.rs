@@ -14,7 +14,7 @@ fn open(args: &ProjectArgs) -> Result<Project> {
     Project::open(&args.project)
 }
 
-fn mode(args: &ProjectArgs) -> CompileMode {
+pub(crate) fn mode(args: &ProjectArgs) -> CompileMode {
     if args.player {
         CompileMode::Player
     } else {
@@ -614,8 +614,21 @@ struct StubReport {
     members: u64,
     skipped: Vec<String>,
     conflicts: Vec<String>,
+    errors: Vec<String>,
     changed_files: u64,
     milliseconds: u64,
+}
+
+impl StubReport {
+    fn ensure_complete(&self) -> Result<()> {
+        if !self.errors.is_empty() {
+            anyhow::bail!(
+                "cannot generate complete compatibility stubs:\n{}",
+                self.errors.join("\n")
+            );
+        }
+        Ok(())
+    }
 }
 
 #[derive(Deserialize)]
@@ -699,9 +712,11 @@ pub fn gen_stubs(args: &ProjectArgs) -> Result<()> {
             "platformModules": project.install.platform_modules(),
             "implAssembly": dll,
             "outputDir": source.join("Generated").join(&family),
+            "releaseFamily": family,
             "implSourceDir": source,
         }),
     )?;
+    report.ensure_complete()?;
     println!(
         "{:<48} {:>6} {:>8} {:>8}",
         "module", "types", "extended", "members"
@@ -1346,4 +1361,45 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
             remote,
         },
     )
+}
+
+#[cfg(test)]
+mod stub_generation_tests {
+    use super::*;
+
+    fn report(errors: &[&str]) -> StubReport {
+        serde_json::from_value(json!({
+            "outputDir": "arbitrary-output", "modules": [], "newTypes": 0, "extendedTypes": 0,
+            "members": 0, "skipped": [], "conflicts": [], "errors": errors,
+            "changedFiles": 0, "milliseconds": 0
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn uncovered_types_fail_the_generator_command() {
+        let error = report(&["UnityEngine.JointSpring: the hand-written type is not partial"])
+            .ensure_complete()
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("JointSpring") && error.contains("not partial"));
+    }
+
+    #[test]
+    fn stale_and_mistyped_table_entries_fail_the_generator_command() {
+        for reason in [
+            "absent from the reference assemblies",
+            "invalid expression for float",
+        ] {
+            let diagnostic = format!("stub default UnityEngine.Missing.value: {reason}");
+            assert!(
+                report(&[&diagnostic])
+                    .ensure_complete()
+                    .unwrap_err()
+                    .to_string()
+                    .contains(&diagnostic)
+            );
+        }
+        assert!(report(&[]).ensure_complete().is_ok());
+    }
 }

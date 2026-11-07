@@ -28,26 +28,31 @@ namespace Unbound.ApiTools;
 public static class StubGenerator
 {
     /// <summary>Bump when the output for the same inputs would differ.</summary>
-    public const string FormatVersion = "unbound-stubs-1";
+    public const string FormatVersion = "unbound-stubs-2";
 
     /// <param name="implSourceDir">The implementation's sources (<c>managed/UnityEngine</c>): the
     /// generator reads which hand-written types are partial and declare constructors.</param>
     /// <param name="platformModules">The install's platform modules (see <see cref="UnityModules"/>),
     /// stubbed like the others.</param>
     /// <param name="returns">What value-returning stubs return instead of the type's default, by
-    /// member id (see <see cref="StubDefaults"/>); by default the table of the release family that
-    /// <paramref name="outputDir"/> is named after (<c>Generated/&lt;family&gt;</c>).</param>
+    /// member id (see <see cref="StubDefaults"/>).</param>
+    /// <param name="releaseFamily">The compatibility profile selected by the CLI, independent of the output path.</param>
     public static StubReport Generate(string unityManagedEngineDir, string implAssembly, string outputDir, string? implSourceDir = null,
-        IEnumerable<string>? platformModules = null, IReadOnlyDictionary<string, string>? returns = null)
+        IEnumerable<string>? platformModules = null, IReadOnlyDictionary<string, StubDefault>? returns = null, string releaseFamily = "")
     {
         var watch = Stopwatch.StartNew();
-        returns ??= StubDefaults.For(Path.GetFileName(Path.GetFullPath(outputDir).TrimEnd(Path.DirectorySeparatorChar)));
+        returns ??= StubDefaults.For(releaseFamily);
         var builder = new StubBuilder(unityManagedEngineDir, platformModules, implAssembly, new HandWrittenSources(implSourceDir), returns);
         var files = builder.Build();
 
-        Directory.CreateDirectory(outputDir);
         var report = builder.Report;
         report.OutputDir = outputDir;
+        if (report.Errors.Count != 0)
+        {
+            report.Milliseconds = watch.ElapsedMilliseconds;
+            return report;
+        }
+        Directory.CreateDirectory(outputDir);
         var written = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (name, content) in files)
         {
@@ -86,6 +91,8 @@ public sealed class StubReport
     /// <summary>Differences between a hand-written type and Unity's that generation cannot fix:
     /// a different kind or base type, an enum missing values, a member that is less accessible.</summary>
     public List<string> Conflicts { get; set; } = new();
+    /// <summary>Fatal coverage errors. No output files are written if this is nonempty.</summary>
+    public List<string> Errors { get; set; } = new();
     public int ChangedFiles { get; set; }
     public long Milliseconds { get; set; }
 }
@@ -117,13 +124,16 @@ sealed partial class StubBuilder
 
     readonly HandWrittenSources _sources;
     /// <summary>Return expressions that replace the type's default, by member id.</summary>
-    readonly IReadOnlyDictionary<string, string> _returns;
+    readonly IReadOnlyDictionary<string, StubDefault> _returns;
+    readonly HashSet<string> _usedReturns = new(StringComparer.Ordinal);
+    readonly HashSet<(string Id, string Type)> _validatedReturns = new();
+    List<string> _generationErrors => Report.Errors;
 
     public StubBuilder(string unityManagedEngineDir, IEnumerable<string>? platformModules, string implAssembly, HandWrittenSources sources,
-        IReadOnlyDictionary<string, string>? returns = null)
+        IReadOnlyDictionary<string, StubDefault>? returns = null)
     {
         _sources = sources;
-        _returns = returns ?? new Dictionary<string, string>();
+        _returns = returns ?? new Dictionary<string, StubDefault>();
         var moduleFiles = UnityModules.Files(unityManagedEngineDir, platformModules)
             .OrderBy(f => Path.GetFileNameWithoutExtension(f) is "UnityEngine" or "UnityEditor" ? 1 : 0)
             .ThenBy(f => Path.GetFileName(f), StringComparer.Ordinal)
@@ -219,6 +229,7 @@ sealed partial class StubBuilder
     public List<(string Name, string Content)> Build()
     {
         IndexOwners();
+        ValidateHandWrittenStubs();
         var files = new List<(string, string)>();
         foreach (var (module, assembly, _) in _modules)
         {
@@ -259,13 +270,9 @@ sealed partial class StubBuilder
             files.Add((moduleReport.File, Header($"the API of {module}") + body));
         }
         files.Add(("Unbound.Assembly.g.cs", Header("assembly-level attributes of the modules") + AssemblyAttributes()));
-        // An entry no stub returns (the member is hand-written now, or renamed) is stale.
-        foreach (var (id, value) in _returns.OrderBy(r => r.Key, StringComparer.Ordinal))
-        {
-            var emitted = $"{NotImplemented}({Quote(id)}); return {value};";
-            if (!files.Any(f => f.Item2.Contains(emitted, StringComparison.Ordinal)))
-                Report.Conflicts.Add($"stub default {id}: no generated stub returns it (implemented by hand or renamed: remove it from StubDefaults)");
-        }
+        foreach (var id in _returns.Keys.OrderBy(id => id, StringComparer.Ordinal))
+            if (!_usedReturns.Contains(id))
+                _generationErrors.Add($"stub default {id}: no generated stub returns it (implemented by hand or absent from the reference assemblies)");
         return files;
     }
 

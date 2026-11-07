@@ -538,7 +538,7 @@ namespace UnityEngine
     /// volumes) in the zone space, rotation in degrees, the pass (-1: the texture's) and whether
     /// the buffers swap before it.</summary>
     [Serializable]
-    public struct CustomRenderTextureUpdateZone
+    public partial struct CustomRenderTextureUpdateZone
     {
         public Vector3 updateZoneCenter;
         public Vector3 updateZoneSize;

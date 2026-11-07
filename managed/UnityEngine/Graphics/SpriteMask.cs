@@ -160,7 +160,7 @@ namespace UnityEngine
 namespace UnityEngine
 {
     /// <summary>What the 2D renderer asks about the masks (whether a layer batch needs the stencil).</summary>
-    internal static class SpriteMaskUtility
+    internal static partial class SpriteMaskUtility
     {
         /// <summary>Whether an enabled mask lies in (or, with a custom range, reaches into) a
         /// sorting layer range.</summary>

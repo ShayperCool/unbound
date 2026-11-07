@@ -10,32 +10,39 @@ namespace Unbound.ApiTools;
 /// method's id covers its overloads). Each value is a C# expression of the member's type, written
 /// with <c>global::</c> names.
 ///
-/// Only constants belong here: what the Editor answers for every project and machine, measured in
+/// Only fixed initial answers and measured setter rules belong here, measured in
 /// Play mode by <c>tests/projects/stubdefaults</c>. A member whose answer depends on the project,
 /// the scene or other API state needs a real implementation instead. gen-stubs reports an entry no
-/// stub returns any more (implemented by hand, renamed) as a conflict. A settable member keeps
-/// answering its constant after a set (the setter is a stub too, and shares the getter's warning).
+/// stub returns any more (implemented by hand, renamed) as an error. Set expressions describe
+/// measured setter storage, clamps or rejection; a missing expression leaves the value unchanged.
 /// </summary>
+public sealed record StubDefault(string Value, string? SetExpression = null)
+{
+    public static implicit operator StubDefault(string value) => new(value);
+}
+
 public static class StubDefaults
 {
     // Unity 6000.0 (measured on 6000.0.71f1, Linux Editor, Play mode).
-    static readonly Dictionary<string, string> Unity6000_0 = new(StringComparer.Ordinal)
+    static readonly Dictionary<string, StubDefault> Unity6000_0 = new(StringComparer.Ordinal)
     {
         // Measured in a scene without realtime GI (nothing to converge); indirectScale is the
         // scene's Indirect Intensity, not a constant.
-        ["UnityEngine.DynamicGI.updateThreshold"] = "1f",
-        ["UnityEngine.DynamicGI.materialUpdateTimeSlice"] = "8",
+        ["UnityEngine.DynamicGI.updateThreshold"] = new("1f", "value"),
+        ["UnityEngine.DynamicGI.materialUpdateTimeSlice"] = new("8", "global::System.Math.Max(0, value)"),
         ["UnityEngine.DynamicGI.isConverged"] = "true",
-        ["UnityEngine.Scripting.GarbageCollector.GCMode"] = "global::UnityEngine.Scripting.GarbageCollector.Mode.Enabled",
-        ["UnityEngine.Scripting.GarbageCollector.incrementalTimeSliceNanoseconds"] = "3000000UL",
+        // The Editor rejects modes other than Enabled, including undefined enum values.
+        ["UnityEngine.Scripting.GarbageCollector.GCMode"] = new("global::UnityEngine.Scripting.GarbageCollector.Mode.Enabled",
+            "value == global::UnityEngine.Scripting.GarbageCollector.Mode.Enabled ? value : throw new global::System.InvalidOperationException(\"Garbage collector mode cannot be changed in the Editor\")"),
+        ["UnityEngine.Scripting.GarbageCollector.incrementalTimeSliceNanoseconds"] = new("3000000UL", "value"),
         ["UnityEngine.ReflectionProbe.minBakedCubemapResolution"] = "16",
         ["UnityEngine.ReflectionProbe.maxBakedCubemapResolution"] = "2048",
         // The Editor shows no splash screen.
         ["UnityEngine.Rendering.SplashScreen.isFinished"] = "true",
         ["UnityEngine.Animations.MuscleHandle.muscleHandleCount"] = "95",
-        ["UnityEngine.Caching.compressionEnabled"] = "true",
-        ["UnityEngine.QualitySettings.maxQueuedFrames"] = "2",
-        ["UnityEngine.Graphics.activeTier"] = "global::UnityEngine.Rendering.GraphicsTier.Tier3",
+        ["UnityEngine.Caching.compressionEnabled"] = new("true", "value"),
+        ["UnityEngine.QualitySettings.maxQueuedFrames"] = new("2", "value"),
+        ["UnityEngine.Graphics.activeTier"] = new("global::UnityEngine.Rendering.GraphicsTier.Tier3", "value"),
         ["UnityEngine.Accessibility.AccessibilitySettings.fontScale"] = "1f",
         ["UnityEngine.AvatarMask.humanoidBodyPartCount"] = "13",
         // Obsolete members whose message states the answer.
@@ -46,10 +53,10 @@ public static class StubDefaults
         ["UnityEngine.RenderTexture.enabled"] = "true",
     };
 
-    static readonly Dictionary<string, string> None = new(StringComparer.Ordinal);
+    static readonly Dictionary<string, StubDefault> None = new(StringComparer.Ordinal);
 
     /// <summary>The table of a release family (<c>6000.0</c>); empty for a family without one.</summary>
-    public static IReadOnlyDictionary<string, string> For(string family) => family switch
+    public static IReadOnlyDictionary<string, StubDefault> For(string family) => family switch
     {
         "6000.0" => Unity6000_0,
         _ => None,

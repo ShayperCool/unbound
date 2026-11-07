@@ -9,7 +9,7 @@ G9 (identical on Mono and CoreCLR), colors and matrices as comma-separated float
 already answers (`ScalableBufferManager` scale factors, `Microphone.devices` being an array,
 `Camera.CalculateObliqueMatrix`).
 
-The canonical Native oracle is `Reference/unity-6000.0.71f1.jsonl` (33 records, Unity 6000.0.71f1
+The canonical Native oracle is `Reference/unity-6000.0.71f1.jsonl` (58 records, Unity 6000.0.71f1
 on Linux, GPU Editor in batchmode with graphics). Two independent captures were byte-identical.
 
 ## Running
@@ -23,7 +23,9 @@ python3 tests/projects/stubdefaults/run.py check                    # the land g
 ```
 
 `check` runs the engine (`UNBOUND_CLI`, else `$UNBOUND`, else `target/release/unbound`) and
-compares the run with the reference. Run output goes to
+compares the run with the reference. `check_tooling.py` also runs the generator unit tests and
+checks doctor twice against uninstantiated message-control scripts, including warm-cache analysis.
+Both commands are declared in `gate.json`. Run output goes to
 `$XDG_CACHE_HOME/unbound/validation/runs/stubdefaults/runs/<label>/`.
 
 ## Comparison
@@ -54,3 +56,30 @@ Not recorded, because the answer is not a constant: `DynamicGI.indirectScale` is
 Indirect Intensity; `GarbageCollector.isIncremental` follows the
 project's `gcIncremental` player setting, and `Caching.cacheCount` (1 in the Editor) would claim a
 cache that the stubbed `Caching` API cannot hand out.
+
+## Setter controls (6000.0.71f1)
+
+The same Play-mode script writes each settable table member, reads it immediately, and restores
+its original value. Two independent captures agree. Existing default-value records are unchanged.
+
+| Member | Measured writes |
+| --- | --- |
+| DynamicGI.updateThreshold | 0.25, -2 and 5 are retained |
+| DynamicGI.materialUpdateTimeSlice | 3 and 25 are retained; -1 reads back as 0 |
+| GarbageCollector.GCMode | Disabled, Manual and undefined 99 throw InvalidOperationException; Enabled succeeds |
+| GarbageCollector.incrementalTimeSliceNanoseconds | 1234567, 0 and 9000000 are retained |
+| Caching.compressionEnabled | false/true/false are retained |
+| QualitySettings.maxQueuedFrames | 1, 4 and -1 are retained |
+| Graphics.activeTier | Tier1/Tier2/Tier3 are retained |
+| RenderTexture.enabled | false/true/false all read back as true |
+
+The Unity 6000.0 Scripting API documents the get/set contract for
+[GCMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Scripting.GarbageCollector.GCMode.html),
+[incrementalTimeSliceNanoseconds](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Scripting.GarbageCollector-incrementalTimeSliceNanoseconds.html),
+[materialUpdateTimeSlice](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/DynamicGI-materialUpdateTimeSlice.html),
+[activeTier](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics-activeTier.html), and
+[compressionEnabled](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Caching-compressionEnabled.html).
+[maxQueuedFrames](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/QualitySettings-maxQueuedFrames.html)
+is documented as applying only to Direct3D 11/12 and Vulkan. These captures establish getter and
+setter answers in this Editor context; generated members still warn that their engine effects
+are unsupported. They do not claim to control CoreCLR collection, cache compression or GPU queues.

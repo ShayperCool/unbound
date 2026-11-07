@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Unbound.ApiTools;
@@ -83,7 +84,12 @@ public static unsafe class Entry
             case "gen-stubs":
                 var stubs = JsonSerializer.Deserialize<StubsRequest>(body, Json)
                     ?? throw new ArgumentException("empty gen-stubs request");
-                return JsonSerializer.Serialize(StubGenerator.Generate(stubs.UnityManagedEngineDir, stubs.ImplAssembly, stubs.OutputDir, stubs.ImplSourceDir, stubs.PlatformModules), Json);
+                return JsonSerializer.Serialize(StubGenerator.Generate(stubs.UnityManagedEngineDir, stubs.ImplAssembly, stubs.OutputDir, stubs.ImplSourceDir, stubs.PlatformModules, releaseFamily: stubs.ReleaseFamily), Json);
+            case "message-coverage":
+                var scripts = JsonSerializer.Deserialize<CompileRequest>(body, Json)
+                    ?? throw new ArgumentException("empty message-coverage request");
+                return JsonSerializer.Serialize(Compiler.FindUnsupportedMessages(scripts,
+                    Unbound.Runtime.ScriptMessages.NotSent.Select(m => (m.Host.FullName!, m.Name))), Json);
             case "class-coverage":
                 var coverage = JsonSerializer.Deserialize<ClassCoverageRequest>(body, Json)
                     ?? throw new ArgumentException("empty class-coverage request");

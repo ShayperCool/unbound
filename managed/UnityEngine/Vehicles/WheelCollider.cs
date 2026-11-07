@@ -4,7 +4,7 @@ using W = Unbound.Runtime.PhysicsWorld;
 
 namespace UnityEngine
 {
-    public struct JointSpring
+    public partial struct JointSpring
     {
         public float spring;
         public float damper;
@@ -14,7 +14,7 @@ namespace UnityEngine
     /// <summary>A wheel's friction curve: from no slip up to the extremum (its value reached with a
     /// zero tangent), then down or up to the asymptote, flat after it; values are fractions of the
     /// tire load, times the stiffness.</summary>
-    public struct WheelFrictionCurve
+    public partial struct WheelFrictionCurve
     {
         float m_ExtremumSlip, m_ExtremumValue, m_AsymptoteSlip, m_AsymptoteValue, m_Stiffness;
 
@@ -60,7 +60,7 @@ namespace UnityEngine
         }
     }
 
-    public struct WheelHit
+    public partial struct WheelHit
     {
         Collider m_Collider;
         Vector3 m_Point, m_Normal, m_ForwardDir, m_SidewaysDir;

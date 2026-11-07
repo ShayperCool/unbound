@@ -24,7 +24,7 @@ namespace Unbound.Compiler;
 /// references' public surface (their reference assemblies), so a method body edit recompiles one
 /// assembly. Outputs are content-addressed on disk, so a new process reuses them without compiling.
 /// </summary>
-public sealed class CompilerService
+public sealed partial class CompilerService
 {
     /// <summary>Bump when the outputs of the same inputs would differ.</summary>
     const string FormatVersion = "unbound-compiler-5";

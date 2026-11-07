@@ -135,7 +135,7 @@ namespace UnityEngine.Rendering
     /// <summary>A scriptable render pipeline: renders the cameras each frame.</summary>
     public abstract partial class RenderPipeline
     {
-        public class StandardRequest
+        public partial class StandardRequest
         {
             public RenderTexture destination;
             public int mipLevel;

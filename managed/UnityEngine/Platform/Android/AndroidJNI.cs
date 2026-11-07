@@ -246,7 +246,7 @@ namespace UnityEngine
 namespace UnityEngine
 {
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
-    public struct jvalue
+    public partial struct jvalue
     {
         [System.Runtime.InteropServices.FieldOffset(0)] public bool z;
         [System.Runtime.InteropServices.FieldOffset(0)] public sbyte b;
@@ -259,7 +259,7 @@ namespace UnityEngine
         [System.Runtime.InteropServices.FieldOffset(0)] public IntPtr l;
     }
 
-    public struct JNINativeMethod
+    public partial struct JNINativeMethod
     {
         public string name;
         public string signature;

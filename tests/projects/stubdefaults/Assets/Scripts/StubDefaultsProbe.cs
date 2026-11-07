@@ -39,7 +39,7 @@ public class StubDefaultsProbe : MonoBehaviour
     static void Try(string key, Action read)
     {
         try { read(); }
-        catch (Exception e) { Record(key, "throws " + e.GetType().Name); }
+        catch (Exception e) { Record(key, "throws " + (e is System.Reflection.TargetInvocationException ? e.InnerException.GetType().Name : e.GetType().Name)); }
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -57,6 +57,41 @@ public class StubDefaultsProbe : MonoBehaviour
     }
 
     void Awake() => StartCoroutine(Run());
+
+    // Reflection also covers obsolete setters that newer C# compilers reject at call sites.
+    static void CheckSetter(Type type, string name, params object[] values)
+    {
+        var property = type.GetProperty(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        if (property == null || !property.CanWrite) return;
+        var original = property.GetValue(null);
+        try
+        {
+            for (int i = 0; i < values.Length; i++)
+            {
+                var key = type.Name + "." + name + ".set" + i;
+                Try(key, () =>
+                {
+                    property.SetValue(null, values[i]);
+                    Record(key, Convert.ToString(property.GetValue(null), CultureInfo.InvariantCulture));
+                });
+            }
+        }
+        finally { property.SetValue(null, original); }
+    }
+
+    static void ReadSetters()
+    {
+        CheckSetter(typeof(DynamicGI), "updateThreshold", 0.25f, -2f, 5f);
+        CheckSetter(typeof(DynamicGI), "materialUpdateTimeSlice", 3, -1, 25);
+        CheckSetter(typeof(UnityEngine.Scripting.GarbageCollector), "GCMode",
+            UnityEngine.Scripting.GarbageCollector.Mode.Disabled, UnityEngine.Scripting.GarbageCollector.Mode.Manual,
+            UnityEngine.Scripting.GarbageCollector.Mode.Enabled, (UnityEngine.Scripting.GarbageCollector.Mode)99);
+        CheckSetter(typeof(UnityEngine.Scripting.GarbageCollector), "incrementalTimeSliceNanoseconds", 1234567UL, 0UL, 9000000UL);
+        CheckSetter(typeof(Caching), "compressionEnabled", false, true, false);
+        CheckSetter(typeof(QualitySettings), "maxQueuedFrames", 1, 4, -1);
+        CheckSetter(typeof(Graphics), "activeTier", GraphicsTier.Tier1, GraphicsTier.Tier2, GraphicsTier.Tier3);
+        CheckSetter(typeof(RenderTexture), "enabled", false, true, false);
+    }
 
     static void Read()
     {
@@ -124,6 +159,7 @@ public class StubDefaultsProbe : MonoBehaviour
             UnityEngine.Object.Destroy(go);
         });
 
+        ReadSetters();
         Record("complete", "1");
         File.WriteAllText(output, records.ToString());
         Debug.Log("stub defaults complete: " + output);

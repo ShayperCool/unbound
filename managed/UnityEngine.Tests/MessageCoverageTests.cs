@@ -169,9 +169,8 @@ namespace UnityEngine.Tests
                 KeysFor("ParticleJobGenericBase", "ParticleJobIntScript", "ParticleJobTextScript"));
         }
 
-        /// <summary>Checks the list only: the warning call at the state machine behaviour
-        /// instantiation site is still pending, so a running Animator does not warn yet.
-        /// RED at 747e3f23 for the IK keys: OnStateIK is not listed. The plain behaviour
+        /// <summary>Checks the unsupported-message list independently of instantiation.
+        /// The plain behaviour
         /// and StateMachineBehaviour's own virtual stay silent (GREEN at 747e3f23; red recipe:
         /// let the walk pass StateMachineBehaviour, or drop the host check).</summary>
         [Fact]
@@ -184,6 +183,64 @@ namespace UnityEngine.Tests
                 KeysFor("IKStateBehaviour", "IKStateDerived"));
             Assert.Empty(KeysFor("PlainStateBehaviour"));
             Assert.DoesNotContain(Stubs.HitReport(), h => h.Key.StartsWith("UnityEngine.StateMachineBehaviour.", StringComparison.Ordinal));
+        }
+
+        [SharedBetweenAnimators]
+        public class RuntimeIKStateBehaviour : StateMachineBehaviour
+        {
+            public override void OnStateIK(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) { }
+        }
+
+        [SharedBetweenAnimators]
+        public class RuntimePlainStateBehaviour : StateMachineBehaviour { }
+
+        sealed class Warnings : ILogHandler
+        {
+            internal readonly List<string> Messages = new List<string>();
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Warning) Messages.Add(string.Format(format, args));
+            }
+            public void LogException(Exception exception, Object context) => throw exception;
+        }
+
+        [Fact]
+        public void InstantiatingStateBehavioursWarnsForUnsupportedIKOnce()
+        {
+            var logger = Debug.unityLogger;
+            var previous = logger.logHandler;
+            var previousEnabled = logger.logEnabled;
+            var previousFilter = logger.filterLogType;
+            var warnings = new Warnings();
+            var go = new GameObject("MessageCoverage");
+            var ik = ScriptableObject.CreateInstance<RuntimeIKStateBehaviour>();
+            var plain = ScriptableObject.CreateInstance<RuntimePlainStateBehaviour>();
+            var controller = new UnityEditor.Animations.AnimatorController();
+            try
+            {
+                logger.logHandler = warnings;
+                logger.logEnabled = true;
+                logger.filterLogType = LogType.Log;
+                var animator = go.AddComponent<Animator>();
+                var layer = new LayerDef { Index = 0 };
+                layer.States.Add(new StateDef { Behaviours = new StateMachineBehaviour[] { ik, plain } });
+                var graph = new ControllerGraph { Layers = new[] { layer } };
+                for (int i = 0; i < 2; i++)
+                    new AnimatorPlayer(animator, controller, graph).InstantiateBehaviours();
+                var message = Assert.Single(warnings.Messages, m => m.Contains("RuntimeIKStateBehaviour.OnStateIK"));
+                Assert.Contains("does not send yet", message);
+                Assert.DoesNotContain(warnings.Messages, m => m.Contains("RuntimePlainStateBehaviour"));
+            }
+            finally
+            {
+                logger.logHandler = previous;
+                logger.logEnabled = previousEnabled;
+                logger.filterLogType = previousFilter;
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(ik);
+                Object.DestroyImmediate(plain);
+                Object.DestroyImmediate(controller);
+            }
         }
 
         // --- classification ---

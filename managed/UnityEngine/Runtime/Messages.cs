@@ -118,6 +118,8 @@ namespace Unbound.Runtime
             (typeof(StateMachineBehaviour), "OnStateIK"),
         };
 
+        internal static System.Collections.Generic.IReadOnlyList<(Type Host, string Name)> NotSent => s_NotSent;
+
         /// <summary>Warns once per declaring script class and message (Stubs semantics) for each
         /// not-sent message <paramref name="type"/> declares or inherits from a script base class.
         /// Called once per type when its messages are first looked up, never per frame.</summary>

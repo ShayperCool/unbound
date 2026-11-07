@@ -162,6 +162,48 @@ sealed partial class StubBuilder
     void Error(string category, INamedTypeSymbol type, string message) =>
         _errors.Add(new ApiCheckError { Category = category, Type = MetadataName(type), Message = message });
 
+    // Bootstrap declarations let hand-written overrides build without generated sources. Check
+    // them against every release so copied signatures cannot silently suppress fresh stubs.
+    void ValidateHandWrittenStubs()
+    {
+        static bool Marked(ISymbol candidate) => candidate.GetAttributes().Any(a => a.AttributeClass?.ToDisplayString() == "Unbound.StubAttribute");
+        foreach (var impl in SelfAndNested(TopLevelTypes(_implAssembly.GlobalNamespace)))
+        {
+            var members = impl.GetMembers().Where(m => !m.IsImplicitlyDeclared && !IsAccessor(m)
+                && m is not INamedTypeSymbol && Marked(m)).ToList();
+            if (!Marked(impl) && members.Count == 0) continue;
+            var unity = FindUnity(impl);
+            if (unity == null)
+            {
+                _generationErrors.Add($"checked stub {MetadataName(impl)}: type absent from reference assemblies");
+                continue;
+            }
+            foreach (var member in members)
+            {
+                var match = unity.GetMembers().FirstOrDefault(u => FullKey(u) == FullKey(member));
+                if (match == null || !SameBootstrapSignature(member, match))
+                    _generationErrors.Add($"checked stub {MetadataName(impl)}.{member.Name}: signature differs from reference assemblies");
+            }
+        }
+    }
+
+    static bool SameBootstrapSignature(ISymbol member, ISymbol reference)
+    {
+        if (member.DeclaredAccessibility != reference.DeclaredAccessibility || member.IsVirtual != reference.IsVirtual
+            || member.IsOverride != reference.IsOverride || member.IsAbstract != reference.IsAbstract || member.IsSealed != reference.IsSealed)
+            return false;
+        if (member is IMethodSymbol method && reference is IMethodSymbol unityMethod)
+            return method.Parameters.Zip(unityMethod.Parameters).All(p => p.First.IsOptional == p.Second.IsOptional
+                && p.First.IsParams == p.Second.IsParams && p.First.HasExplicitDefaultValue == p.Second.HasExplicitDefaultValue
+                && (!p.First.HasExplicitDefaultValue || Equals(p.First.ExplicitDefaultValue, p.Second.ExplicitDefaultValue)));
+        if (member is IPropertySymbol property && reference is IPropertySymbol unityProperty)
+            return SameAccessor(property.GetMethod, unityProperty.GetMethod) && SameAccessor(property.SetMethod, unityProperty.SetMethod);
+        return true;
+    }
+
+    static bool SameAccessor(IMethodSymbol? accessor, IMethodSymbol? reference) =>
+        accessor == null ? reference == null : reference != null && SameBootstrapSignature(accessor, reference);
+
     void CheckType(INamedTypeSymbol unity, INamedTypeSymbol impl)
     {
         if (unity.TypeKind != impl.TypeKind)

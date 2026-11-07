@@ -27,6 +27,7 @@ public sealed class ApiGapsRequest
 /// <summary>The <c>gen-stubs</c> host method.</summary>
 public sealed class StubsRequest
 {
+    public string ReleaseFamily { get; set; } = "";
     public string UnityManagedEngineDir { get; set; } = "";
     /// <summary>The implementation built without stubs (<c>-p:UnboundNoStubs=true</c>).</summary>
     public string ImplAssembly { get; set; } = "";

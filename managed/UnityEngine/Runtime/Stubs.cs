@@ -10,7 +10,7 @@ namespace Unbound
     /// exists so game code binds, but has no implementation yet. The API gap report counts stubs as
     /// missing. A few stubs are declared in hand-written sources, written as the generator writes
     /// them, only because hand-written code names or overrides them and must build without the
-    /// generated files; gen-stubs does not refresh those.
+    /// generated files; gen-stubs checks those signatures against the release's reference assemblies.
     /// </summary>
     [AttributeUsage(AttributeTargets.All, Inherited = false)]
     internal sealed class StubAttribute : Attribute

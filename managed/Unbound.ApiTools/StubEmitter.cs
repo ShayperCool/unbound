@@ -8,6 +8,7 @@ using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Unbound.ApiTools;
 
@@ -143,7 +144,7 @@ sealed partial class StubBuilder
     {
         if (impl != null && KindOf(impl) != KindOf(u))
         {
-            Report.Conflicts.Add($"{Display(u)}: Unity's is {KindOf(u)}, the hand-written one is {KindOf(impl)}; not extended");
+            _generationErrors.Add($"{Display(u)}: Unity's is {KindOf(u)}, the hand-written one is {KindOf(impl)}; cannot extend this type");
             return;
         }
         if (impl != null && impl.DeclaredAccessibility < u.DeclaredAccessibility)
@@ -159,13 +160,16 @@ sealed partial class StubBuilder
             case TypeKind.Delegate:
                 if (impl == null)
                     EmitDelegate(w, u, module);
+                else if (FullKey(u.DelegateInvokeMethod!) != FullKey(impl.DelegateInvokeMethod!))
+                    _generationErrors.Add($"{Display(u)}: delegate signature differs from the reference assemblies; cannot extend this type");
                 return;
         }
 
+        if (impl != null) CheckBase(u, impl);
         var source = impl != null ? _sources.Find(MetadataName(impl)) : null;
-        if (source is { Partial: false })
+        if (impl != null && source is not { Partial: true })
         {
-            Report.Conflicts.Add($"{Display(u)}: the hand-written type is not partial; its missing members are not generated");
+            _generationErrors.Add($"{Display(u)}: the hand-written type is not partial or its sources are unavailable; supply its sources and make all declarations partial so its API can be covered");
             return;
         }
         var ctx = new TypeContext { Unity = u, Impl = impl, Id = Display(u), Module = module };
@@ -220,7 +224,6 @@ sealed partial class StubBuilder
             if (body.IsEmpty)
                 return;
             header = $"unsafe {PartialModifiers(impl)}partial {Keyword(u)} {Escape(impl.Name)}{TypeParameterList(impl.TypeParameters, variance: false)}{AddedInterfaces(u, impl)}";
-            CheckBase(u, impl);
             module.ExtendedTypes++;
         }
         w.Line(header);
@@ -331,7 +334,7 @@ sealed partial class StubBuilder
         var unityBase = u.BaseType is { SpecialType: not SpecialType.System_Object } b ? TypeKey(b) : null;
         var implBase = impl.BaseType is { SpecialType: not SpecialType.System_Object } c ? TypeKey(c) : null;
         if (unityBase != implBase)
-            Report.Conflicts.Add($"{Display(u)}: Unity's base type is {unityBase ?? "object"}, the hand-written one's is {implBase ?? "object"}");
+            _generationErrors.Add($"{Display(u)}: Unity's base type is {unityBase ?? "object"}, the hand-written one's is {implBase ?? "object"}");
     }
 
     void EmitEnum(CodeWriter w, INamedTypeSymbol u, StubModuleReport module)
@@ -361,9 +364,9 @@ sealed partial class StubBuilder
         foreach (var field in u.GetMembers().OfType<IFieldSymbol>().Where(f => f.HasConstantValue))
         {
             if (!have.TryGetValue(field.Name, out var value))
-                Report.Conflicts.Add($"{Display(u)}: the hand-written enum lacks {field.Name} = {Literal(field.ConstantValue)}");
+                _generationErrors.Add($"{Display(u)}: the hand-written enum lacks {field.Name} = {Literal(field.ConstantValue)}");
             else if (!Equals(value, field.ConstantValue))
-                Report.Conflicts.Add($"{Display(u)}.{field.Name}: hand-written as {Literal(value)}, Unity's is {Literal(field.ConstantValue)}");
+                _generationErrors.Add($"{Display(u)}.{field.Name}: hand-written as {Literal(value)}, Unity's is {Literal(field.ConstantValue)}");
         }
     }
 
@@ -510,7 +513,7 @@ sealed partial class StubBuilder
         if (ctx.Impl is { IsStatic: true } && !member.IsStatic)
         {
             if (!ctx.ReportedStatic)
-                Report.Conflicts.Add($"{ctx.Id}: hand-written as a static class, Unity's has instance members; those are not generated");
+                _generationErrors.Add($"{ctx.Id}: hand-written as a static class, Unity's has instance members; cannot extend this type");
             ctx.ReportedStatic = true;
             return;
         }
@@ -772,6 +775,22 @@ sealed partial class StubBuilder
 
         var accessors = new List<string>();
         var id = $"{ctx.Id}.{property.Name}";
+        var stored = _returns.TryGetValue(id, out var configured) && configured.SetExpression != null;
+        var backing = "__unboundStub_" + property.Name;
+        if (stored)
+        {
+            if (getter == null || setter == null || !hasBody || property.IsIndexer || property.ReturnsByRef || property.ReturnsByRefReadonly
+                || (!property.IsStatic && ctx.Unity.TypeKind == TypeKind.Struct))
+                _generationErrors.Add($"stub default {id}: measured setter requires a concrete, non-indexed get/set property on a class or a static property");
+            // Validate the initial value and setter with the reference type before writing any output.
+            ReturnDefault(property.Type, id);
+            var validation = $"#pragma warning disable\nunsafe class __UnboundStubSetter {{ {Render(property.Type)} Set({Render(property.Type)} value) => {configured!.SetExpression}; }}";
+            var errors = _unity.WithOptions(Options.WithAllowUnsafe(true)).AddSyntaxTrees(CSharpSyntaxTree.ParseText(validation)).GetDiagnostics()
+                .Where(d => d.Severity == DiagnosticSeverity.Error).ToArray();
+            if (errors.Length != 0)
+                _generationErrors.Add($"stub default {id}: invalid setter: {string.Join("; ", errors.Select(d => d.GetMessage()))}");
+            w.Line($"private {(property.IsStatic ? "static " : "")}{Render(property.Type)} {backing} = {configured!.Value};");
+        }
         foreach (var (accessor, keyword) in new[] { (getter, "get"), (setter, setter?.IsInitOnly == true ? "init" : "set") })
         {
             if (accessor == null)
@@ -789,12 +808,12 @@ sealed partial class StubBuilder
             {
                 var ret = property.ReturnsByRef || property.ReturnsByRefReadonly
                     ? $"return ref global::Unbound.Runtime.Stubs.Ref<{Render(property.Type)}>();"
-                    : ReturnDefault(property.Type, id);
+                    : stored ? $"return {backing};" : ReturnDefault(property.Type, id);
                 body = $"{{ {NotImplemented}({Quote(id)}); {ret} }}";
             }
             else
             {
-                body = $"{{ {NotImplemented}({Quote(id)}); }}";
+                body = $"{{ {NotImplemented}({Quote(id)});{(stored ? $" {backing} = {configured!.SetExpression};" : "")} }}";
             }
             accessors.Add($"{Stub} {accessorAccess}{keyword} {body}");
         }
@@ -885,7 +904,21 @@ sealed partial class StubBuilder
     string ReturnDefault(ITypeSymbol type, string id)
     {
         if (_returns.TryGetValue(id, out var value))
-            return $"return {value};";
+        {
+            _usedReturns.Add(id);
+            if (_validatedReturns.Add((id, TypeKey(type))))
+            {
+                var source = $"#pragma warning disable\nunsafe class __UnboundStubDefault {{ {Render(type)} Value() => {value.Value}; }}";
+                var tree = CSharpSyntaxTree.ParseText(source);
+                var validation = _unity.WithOptions(Options.WithAllowUnsafe(true)).AddSyntaxTrees(tree);
+                var errors = validation.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToArray();
+                var expression = tree.GetRoot().DescendantNodes().OfType<ArrowExpressionClauseSyntax>().Single().Expression;
+                var expressionType = validation.GetSemanticModel(tree).GetTypeInfo(expression).Type;
+                if (errors.Length != 0 || expressionType == null || TypeKey(expressionType) != TypeKey(type))
+                    _generationErrors.Add($"stub default {id}: invalid expression for {Render(type)}: expression type {expressionType}; {string.Join("; ", errors.Select(d => d.GetMessage()))}");
+            }
+            return $"return {value.Value};";
+        }
         if (type is IArrayTypeSymbol array && array.Rank == 1 && array.ElementType is not IPointerTypeSymbol && array.ElementType is not IFunctionPointerTypeSymbol)
             return $"return global::System.Array.Empty<{Render(array.ElementType)}>();";
         if (type is INamedTypeSymbol named && named.IsGenericType && named.ContainingNamespace?.ToDisplayString() == "System.Collections.Generic")

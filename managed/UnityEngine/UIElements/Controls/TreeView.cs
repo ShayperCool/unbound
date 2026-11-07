@@ -487,10 +487,9 @@ namespace UnityEngine.UIElements
         public bool isAppliedToAllChildren { get; set; }
     }
 
-    // The tree view controllers are still generated stubs. They are declared here with the stub
-    // members UaTreeController overrides, written as the generator writes them (they warn when
-    // called), so that the hand-written code builds alone for `unbound gen-stubs`; the generator adds
-    // the rest of each controller.
+    // Checked bootstrap stubs: UaTreeController needs these base declarations when building without
+    // generated sources. gen-stubs verifies every [Unbound.Stub] signature against the selected
+    // release's reference assemblies before writing output, and generates the remaining members.
     [global::Unbound.Stub]
     public abstract partial class BaseTreeViewController : CollectionViewController
     {

@@ -4,13 +4,13 @@ using Unbound.Runtime;
 
 namespace UnityEngine
 {
-    public struct ClothSkinningCoefficient
+    public partial struct ClothSkinningCoefficient
     {
         public float maxDistance;
         public float collisionSphereDistance;
     }
 
-    public struct ClothSphereColliderPair
+    public partial struct ClothSphereColliderPair
     {
         public ClothSphereColliderPair(SphereCollider a)
         {
