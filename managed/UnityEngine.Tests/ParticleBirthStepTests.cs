@@ -191,6 +191,41 @@ namespace UnityEngine.Tests
             });
         }
 
+        // Raw accumulator and count observations from the two birthclock captures.
+        // High rate controls distinguish reconstructing percent age from seconds age.
+        [Theory]
+        [InlineData(0.413f, 10f, 0.25f, 0.5f, 0.75f, 0f, 1)]
+        [InlineData(0.613f, 10f, 0.25f, 0.5f, 0.75f, 0f, 1)]
+        [InlineData(1.013f, 10f, 0.249999985f, 0.49999997f, 0.74999994f, 0.99999994f, 0)]
+        [InlineData(1.613f, 10f, 0.249999985f, 0.49999997f, 0.75f, 0.9999999f, 0)]
+        [InlineData(0.413f, 120f, 0f, 0f, 0.999999762f, 0.9999995f, 11)]
+        [InlineData(0.613f, 120f, 0f, 0f, 0.000000238418579f, 0f, 12)]
+        [InlineData(1.013f, 120f, 0.999999762f, 0.9999995f, 0.9999993f, 0.999999046f, 11)]
+        [InlineData(1.613f, 120f, 0.999999762f, 0.9999995f, 0.999999762f, 0.9999988f, 11)]
+        public void BirthClockRetainsMeasuredAccumulatorsAndBoundaryCounts(float lifetime, float rate,
+            float first, float second, float third, float fourth, int count)
+        {
+            WithSystems((parent, child) =>
+            {
+                var main = parent.main; main.startLifetime = lifetime;
+                main = child.main; main.startLifetime = 10f;
+                var emission = parent.emission;
+                emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+                emission = child.emission; emission.rateOverTime = rate;
+                emission.SetBursts(Array.Empty<ParticleSystem.Burst>());
+                var accumulator = typeof(ParticleSystem.Particle).GetField("m_EmitAccumulator0",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                int step = 0;
+                foreach (float expected in new[] { first, second, third, fourth })
+                {
+                    parent.Simulate(0.025f, true, step++ == 0, false);
+                    Assert.Equal(expected, (float)accumulator.GetValue(Read(parent)));
+                }
+                Assert.Equal(count, child.particleCount);
+                if (lifetime == 0.613f) Assert.Equal(0.613000035f, Read(parent).startLifetime);
+            });
+        }
+
         static void Near(float expected, float actual) => Assert.InRange(Math.Abs(expected - actual), 0f, 0.000002f);
 
         static void WithSystems(Action<ParticleSystem, ParticleSystem> run)

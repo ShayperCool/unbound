@@ -908,7 +908,10 @@ namespace UnityEngine
             p.m_StartColor = color;
             p.m_StartLifetime = lifetime;
             p.m_Lifetime = lifetime;
-            p.m_InvStartLifetime = 1f / lifetime;
+            p.m_InvStartLifetime = Unbound.Runtime.Compat.ParticleBirthLifetimeMeasured
+                && M.startLifetime.mode == ParticleSystemCurveMode.Constant
+                && m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Birth)
+                    ? BirthLifetimeReciprocal(lifetime) : 1f / lifetime;
             p.m_AgePercent = 0f;
             p.m_Flags |= Particle.FlagAgeInitialized;
             return lifetime > 0f;
@@ -1980,6 +1983,16 @@ namespace UnityEngine
         void BirthSubEmitters(ref Particle parent, float ageBefore, float ageAfter, float dt, Vector3 positionBefore)
         {
             bool firstBirth = ageBefore <= 0f && (!m_SimulatingBirths || (parent.m_Flags & Particle.FlagBirthBurstsDone) == 0);
+            // Reconstruct the previous endpoint in the stored percent clock, then
+            // divide both normalized endpoints by inverse lifetime. Subtracting
+            // exported remaining seconds loses boundary bits before rate scaling.
+            if (m_SimulatingBirths && float.IsFinite(ageBefore) && float.IsFinite(ageAfter)
+                && ageAfter >= ageBefore && parent.m_InvStartLifetime > 0f)
+            {
+                ageAfter = (parent.m_AgePercent * .01f) / parent.m_InvStartLifetime;
+                ageBefore = ((parent.m_AgePercent - parent.m_InvStartLifetime * (dt * 100f)) * .01f)
+                    / parent.m_InvStartLifetime;
+            }
             int slot = 0;
             foreach (var e in m_SubEmitters.emitters)
             {
@@ -1997,9 +2010,8 @@ namespace UnityEngine
                 {
                     var emissionRandom = ModuleRandom(parent.m_RandomSeed, m_Main.randomSeed);
                     float rate = child.m_Emission.rateOverTime.Evaluate(age01, emissionRandom.NextValue());
-                    // Measured Birth rate intervals follow the parent's exported age.
-                    // The first interval cannot precede the newborn's integration span;
-                    // later intervals preserve the rounded parent clock boundaries.
+                    // The measured percent-clock endpoints retain rate boundary bits.
+                    // The first interval cannot precede the newborn's integration span.
                     // Infinite lifetimes and a ring's age rewind have no such interval;
                     // retain their existing integration-delta path until measured.
                     bool useInterval = m_SimulatingBirths && float.IsFinite(ageBefore)
