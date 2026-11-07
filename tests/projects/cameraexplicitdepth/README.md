@@ -51,6 +51,22 @@ Nothing path. They do not support copying the target depth into that intermediat
 intermediate depth back into the target. Whether Native internally clears or replaces a depth
 attachment is unresolved; only the resulting occlusion and target history are observed.
 
+## Engine validation
+
+The baseline at `b7083dd341` matched all 254 values but only 194/210 images in each
+space. All 16 image failures were Nothing tested/witness captures after unrelated
+near-depth HDR history, across the four HDR-to-byte sample modes. Direct owned
+targets, far-history cases and clearing controls matched. Capture labels explicitly
+spell SolidColor because Mono and CoreCLR can stringify its Color alias differently;
+the canonical Native keys and images are unchanged.
+
+The forward full-rect explicit HDR-to-byte path without effects now clears its
+intermediate depth before rendering Nothing. It retains target color seeding and
+the color-only resolve, leaving the owned target's depth alone. Both Linear and
+Gamma match 254/254 values and 210/210 images with the original 3/255 tolerance.
+This closes only the initialized, retained-target contexts above. The exclusions
+in the contract table remain unmeasured.
+
 ## Recording and validation
 
 The shared `camerastack/run.py` driver creates clean project copies in the global Unbound

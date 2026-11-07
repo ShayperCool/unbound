@@ -1146,9 +1146,14 @@ namespace Unbound.Runtime
                     viewport = new Rect(0, 0, w, h);
                     // Don't Clear: a full-screen intermediate starts with the depth of the screen
                     // or of the stack before it; a partial one's starts cleared (measured).
+                    // Explicit full-rect HDR-to-byte renders without effects also start with
+                    // fresh intermediate depth, independent of pooled history (6000.0.71f1,
+                    // cameraexplicitdepth). Their resolve preserves the owned target's depth.
                     if (camera.clearFlags == CameraClearFlags.Nothing && onScreen && fullScreen)
                         GfxStream.CopyDepth(depthSource, TextureHandles.Of(msaaTarget));
-                    else if (camera.clearFlags == CameraClearFlags.Nothing && onScreen)
+                    else if (camera.clearFlags == CameraClearFlags.Nothing
+                        && (onScreen || (camera.targetTexture != null && fullScreen && hdrIntermediate
+                            && effects.Count == 0 && opaqueEffects.Count == 0)))
                     {
                         GfxStream.SetTarget(TextureHandles.Of(msaaTarget));
                         GfxStream.Viewport(viewport);
