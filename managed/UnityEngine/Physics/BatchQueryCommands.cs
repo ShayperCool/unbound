@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Threading;
+using System.Runtime.CompilerServices;
 using Unity.Collections.LowLevel.Unsafe;
 using Unbound.Runtime.Jobs;
 using Unbound.Runtime;
@@ -78,7 +78,7 @@ namespace UnityEngine
 
         public static JobHandle ScheduleBatch(NativeArray<OverlapSphereCommand> commands, NativeArray<ColliderHit> results, int minCommandsPerJob, int maxHits, JobHandle dependsOn = default) =>
             PhysicsBatchQueries.Overlaps("OverlapSphereCommand.ScheduleBatch", commands, results, minCommandsPerJob, maxHits, dependsOn,
-                (in OverlapSphereCommand c, Collider[] found) => PhysicsQueries.BatchOverlap(c.physicsScene, B3.Proxy.Sphere, c.point, default, Quaternion.identity, c.radius, c.queryParameters, found));
+                (in OverlapSphereCommand c, Collider[] found, int capacity) => PhysicsQueries.BatchOverlap(c.physicsScene, B3.Proxy.Sphere, c.point, default, Quaternion.identity, c.radius, c.queryParameters, found, capacity));
     }
 
     public partial struct OverlapBoxCommand
@@ -109,7 +109,7 @@ namespace UnityEngine
 
         public static JobHandle ScheduleBatch(NativeArray<OverlapBoxCommand> commands, NativeArray<ColliderHit> results, int minCommandsPerJob, int maxHits, JobHandle dependsOn = default) =>
             PhysicsBatchQueries.Overlaps("OverlapBoxCommand.ScheduleBatch", commands, results, minCommandsPerJob, maxHits, dependsOn,
-                (in OverlapBoxCommand c, Collider[] found) => PhysicsQueries.BatchOverlap(c.physicsScene, B3.Proxy.Box, c.center, c.halfExtents, c.orientation, 0f, c.queryParameters, found));
+                (in OverlapBoxCommand c, Collider[] found, int capacity) => PhysicsQueries.BatchOverlap(c.physicsScene, B3.Proxy.Box, c.center, c.halfExtents, c.orientation, 0f, c.queryParameters, found, capacity));
     }
 
     public partial struct OverlapCapsuleCommand
@@ -140,7 +140,7 @@ namespace UnityEngine
 
         public static JobHandle ScheduleBatch(NativeArray<OverlapCapsuleCommand> commands, NativeArray<ColliderHit> results, int minCommandsPerJob, int maxHits, JobHandle dependsOn = default) =>
             PhysicsBatchQueries.Overlaps("OverlapCapsuleCommand.ScheduleBatch", commands, results, minCommandsPerJob, maxHits, dependsOn,
-                (in OverlapCapsuleCommand c, Collider[] found) => PhysicsQueries.BatchOverlap(c.physicsScene, B3.Proxy.Capsule, c.point0, c.point1, Quaternion.identity, c.radius, c.queryParameters, found));
+                (in OverlapCapsuleCommand c, Collider[] found, int capacity) => PhysicsQueries.BatchOverlap(c.physicsScene, B3.Proxy.Capsule, c.point0, c.point1, Quaternion.identity, c.radius, c.queryParameters, found, capacity));
     }
 
     public partial struct ClosestPointCommand
@@ -240,7 +240,7 @@ namespace UnityEngine
 
         public static JobHandle ScheduleBatch(NativeArray<RaycastCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, int maxHits, JobHandle dependsOn = default) =>
             PhysicsBatchQueries.Casts("RaycastCommand.ScheduleBatch", commands, results, minCommandsPerJob, maxHits, dependsOn,
-                (in RaycastCommand c, RaycastHit[] found, bool closest) => PhysicsQueries.BatchCast(c.physicsScene, true, default, c.from, default, Quaternion.identity, 0f, c.direction, c.distance, c.queryParameters, found, closest));
+                (in RaycastCommand c, RaycastHit[] found, bool closest, int capacity) => PhysicsQueries.BatchCast(c.physicsScene, true, default, c.from, default, Quaternion.identity, 0f, c.direction, c.distance, c.queryParameters, found, closest, capacity));
 
         /// <summary>Documented: maxHits is 1 in this variant.</summary>
         public static JobHandle ScheduleBatch(NativeArray<RaycastCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, JobHandle dependsOn = default) =>
@@ -297,7 +297,7 @@ namespace UnityEngine
 
         public static JobHandle ScheduleBatch(NativeArray<SpherecastCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, int maxHits, JobHandle dependsOn = default) =>
             PhysicsBatchQueries.Casts("SpherecastCommand.ScheduleBatch", commands, results, minCommandsPerJob, maxHits, dependsOn,
-                (in SpherecastCommand c, RaycastHit[] found, bool closest) => PhysicsQueries.BatchCast(c.physicsScene, false, B3.Proxy.Sphere, c.origin, default, Quaternion.identity, c.radius, c.direction, c.distance, c.queryParameters, found, closest));
+                (in SpherecastCommand c, RaycastHit[] found, bool closest, int capacity) => PhysicsQueries.BatchCast(c.physicsScene, false, B3.Proxy.Sphere, c.origin, default, Quaternion.identity, c.radius, c.direction, c.distance, c.queryParameters, found, closest, capacity));
 
         /// <summary>Documented: maxHits is 1 in this variant.</summary>
         public static JobHandle ScheduleBatch(NativeArray<SpherecastCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, JobHandle dependsOn = default) =>
@@ -357,7 +357,7 @@ namespace UnityEngine
 
         public static JobHandle ScheduleBatch(NativeArray<BoxcastCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, int maxHits, JobHandle dependsOn = default) =>
             PhysicsBatchQueries.Casts("BoxcastCommand.ScheduleBatch", commands, results, minCommandsPerJob, maxHits, dependsOn,
-                (in BoxcastCommand c, RaycastHit[] found, bool closest) => PhysicsQueries.BatchCast(c.physicsScene, false, B3.Proxy.Box, c.center, c.halfExtents, c.orientation, 0f, c.direction, c.distance, c.queryParameters, found, closest));
+                (in BoxcastCommand c, RaycastHit[] found, bool closest, int capacity) => PhysicsQueries.BatchCast(c.physicsScene, false, B3.Proxy.Box, c.center, c.halfExtents, c.orientation, 0f, c.direction, c.distance, c.queryParameters, found, closest, capacity));
 
         /// <summary>Documented: maxHits is 1 in this variant.</summary>
         public static JobHandle ScheduleBatch(NativeArray<BoxcastCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, JobHandle dependsOn = default) =>
@@ -417,7 +417,7 @@ namespace UnityEngine
 
         public static JobHandle ScheduleBatch(NativeArray<CapsulecastCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, int maxHits, JobHandle dependsOn = default) =>
             PhysicsBatchQueries.Casts("CapsulecastCommand.ScheduleBatch", commands, results, minCommandsPerJob, maxHits, dependsOn,
-                (in CapsulecastCommand c, RaycastHit[] found, bool closest) => PhysicsQueries.BatchCast(c.physicsScene, false, B3.Proxy.Capsule, c.point1, c.point2, Quaternion.identity, c.radius, c.direction, c.distance, c.queryParameters, found, closest));
+                (in CapsulecastCommand c, RaycastHit[] found, bool closest, int capacity) => PhysicsQueries.BatchCast(c.physicsScene, false, B3.Proxy.Capsule, c.point1, c.point2, Quaternion.identity, c.radius, c.direction, c.distance, c.queryParameters, found, closest, capacity));
 
         /// <summary>Documented: maxHits is 1 in this variant.</summary>
         public static JobHandle ScheduleBatch(NativeArray<CapsulecastCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, JobHandle dependsOn = default) =>
@@ -433,7 +433,7 @@ namespace Unbound.Runtime
     /// commands into maxHits result slots each with their PhysicsScene query.</summary>
     internal static class PhysicsBatchQueries
     {
-        internal delegate int OverlapQuery<TCommand>(in TCommand command, Collider[] found);
+        internal delegate int OverlapQuery<TCommand>(in TCommand command, Collider[] found, int capacity);
 
         /// <summary>A container the batch reads or writes is assigned and not deallocated (the job
         /// scheduler's checks and messages).</summary>
@@ -457,7 +457,7 @@ namespace Unbound.Runtime
         {
             if (!CheckCapacity(commands.Length, results.Length, maxHits)) return default;
             return Schedule(api, commands, results, minCommandsPerJob, maxHits, dependsOn,
-                (in TCommand c, Collider[] found, bool _) => query(in c, found),
+                (in TCommand c, Collider[] found, bool _, int capacity) => query(in c, found, capacity),
                 c => new ColliderHit(c.m_InstanceID));
         }
 
@@ -476,7 +476,7 @@ namespace Unbound.Runtime
             return true;
         }
 
-        internal delegate int CastQuery<TCommand>(in TCommand command, RaycastHit[] found, bool closest);
+        internal delegate int CastQuery<TCommand>(in TCommand command, RaycastHit[] found, bool closest, int capacity);
 
         internal static JobHandle Casts<TCommand>(string api, NativeArray<TCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, int maxHits, JobHandle dependsOn,
             CastQuery<TCommand> query) where TCommand : struct
@@ -485,7 +485,19 @@ namespace Unbound.Runtime
             return Schedule<TCommand, RaycastHit, RaycastHit>(api, commands, results, minCommandsPerJob, maxHits, dependsOn, query.Invoke, hit => hit);
         }
 
-        delegate int Query<TCommand, TFound>(in TCommand command, TFound[] found, bool closest);
+        delegate int Query<TCommand, TFound>(in TCommand command, TFound[] found, bool closest, int capacity);
+
+        static class WorkerScratch<T>
+        {
+            [ThreadStatic] static T[] s_Buffer;
+            internal static T[] Reserve(int capacity)
+            {
+                if (s_Buffer == null) s_Buffer = new T[Math.Max(64, capacity)];
+                else if (s_Buffer.Length < capacity)
+                    s_Buffer = new T[Math.Max(capacity, (int)Math.Min(int.MaxValue, (long)s_Buffer.Length * 2))];
+                return s_Buffer;
+            }
+        }
 
         sealed class BatchState<TCommand, TResult, TFound>
             where TCommand : struct where TResult : struct
@@ -494,27 +506,30 @@ namespace Unbound.Runtime
             internal Query<TCommand, TFound> Query;
             internal Func<TFound, TResult> Convert;
             internal readonly int MaxHits;
-            internal readonly ThreadLocal<TFound[]> Scratch;
             internal GCHandle Handle;
             internal bool Cancelled;
 
-            internal BatchState(int maxHits)
-            {
-                MaxHits = maxHits;
-                Scratch = new ThreadLocal<TFound[]>(() => new TFound[maxHits]);
-            }
-            internal void Dispose() { Scratch.Dispose(); Handle.Free(); }
+            internal BatchState(int maxHits) => MaxHits = maxHits;
+            internal void Dispose() => Handle.Free();
 
             internal void Execute(NativeArray<TCommand> commands, NativeArray<TResult> results, int index)
             {
                 if (Cancelled) return;
-                var found = Scratch.Value;
+                var found = WorkerScratch<TFound>.Reserve(MaxHits);
                 using var prepared = PhysicsQueries.Prepared(Worlds);
                 PhysicsQueries.Reserve(MaxHits);
                 var command = commands[index];
-                int count = Query(in command, found, MaxHits == 1);
-                int start = index * MaxHits;
-                for (int k = 0; k < MaxHits; k++) results[start + k] = k < count ? Convert(found[k]) : default;
+                try
+                {
+                    int count = Query(in command, found, MaxHits == 1, MaxHits);
+                    int start = index * MaxHits;
+                    for (int k = 0; k < MaxHits; k++) results[start + k] = k < count ? Convert(found[k]) : default;
+                }
+                finally
+                {
+                    // Retained overlap scratch must not keep colliders alive between batches.
+                    if (RuntimeHelpers.IsReferenceOrContainsReferences<TFound>()) Array.Clear(found, 0, MaxHits);
+                }
             }
         }
 
@@ -529,8 +544,7 @@ namespace Unbound.Runtime
         }
 
         static JobHandle Schedule<TCommand, TResult, TFound>(string api, NativeArray<TCommand> commands, NativeArray<TResult> results,
-            int minCommandsPerJob, int maxHits, JobHandle dependsOn, Query<TCommand, TFound> query, Func<TFound, TResult> convert,
-            Action<BatchState<TCommand, TResult, TFound>> prepare = null)
+            int minCommandsPerJob, int maxHits, JobHandle dependsOn, Query<TCommand, TFound> query, Func<TFound, TResult> convert)
             where TCommand : struct where TResult : struct
         {
             if (commands.Length == 0) return dependsOn;
@@ -553,7 +567,6 @@ namespace Unbound.Runtime
             try
             {
                 state.Worlds = PhysicsWorld.PrepareBatchWorlds();
-                prepare?.Invoke(state);
             }
             catch
             {
@@ -594,12 +607,16 @@ namespace Unbound.Runtime
                 Debug.LogWarning("The supplied results buffer is too small, there should be at least one result per command in the batch.");
                 return default;
             }
-            Dictionary<int, ClosestCollider> colliders = null;
             return Schedule("ClosestPointCommand.ScheduleBatch", commands, results, minCommandsPerJob, 1, dependsOn,
-                (in ClosestPointCommand c, Vector3[] found, bool _) =>
+                (in ClosestPointCommand c, Vector3[] found, bool _, int capacity) =>
                 {
                     found[0] = c.point;
-                    if (!colliders.TryGetValue(c.colliderInstanceID, out var collider))
+                    // The registry lookup is synchronized; scene geometry and collider frames
+                    // remain stable until this job finishes. Resolve only this command's ID,
+                    // after its dependencies have written the command buffer.
+                    var target = Physics.GetColliderByInstanceID(c.colliderInstanceID);
+                    var collider = target != null ? new ClosestCollider(target) : default;
+                    if (target == null)
                         Debug.LogError($"Failed to resolve instance id: {c.colliderInstanceID}");
                     else if (!collider.Supported)
                         Debug.LogError("ClosestPointCommand can only be used with a BoxCollider, SphereCollider, CapsuleCollider and a convex MeshCollider.");
@@ -610,12 +627,7 @@ namespace Unbound.Runtime
                         found[0] = c.position + c.rotation * (Quaternion.Inverse(collider.Rotation) * (closest - collider.Position));
                     }
                     return 1;
-                }, point => point, state =>
-                {
-                    colliders = new Dictionary<int, ClosestCollider>();
-                    // Disabled colliders still resolve their ID and return the input point.
-                    foreach (Collider c in ObjectRegistry.All(typeof(Collider))) colliders[c.GetInstanceID()] = new ClosestCollider(c);
-                });
+                }, point => point);
         }
     }
 }

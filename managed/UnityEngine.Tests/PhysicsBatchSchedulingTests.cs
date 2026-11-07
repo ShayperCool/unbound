@@ -86,6 +86,45 @@ namespace UnityEngine.Tests
             Assert.Same(target,results[0].collider);
         }
 
+        [Fact]
+        public void RepeatedWarmBatchesRetainTheirLargeScratchBuffers()
+        {
+            var at=Origin+new Vector3(0,0,275);
+            var target=Box("ScratchRetention",at+Vector3.forward*4);
+            var commands=Native(new RaycastCommand(at,Vector3.forward,All,20));
+            var results=Native<RaycastHit>(4096);
+            RaycastCommand.ScheduleBatch(commands,results,1,results.Length).Complete();
+            long before=GC.GetAllocatedBytesForCurrentThread();
+            for(int i=0;i<8;i++) RaycastCommand.ScheduleBatch(commands,results,1,results.Length).Complete();
+            long allocated=GC.GetAllocatedBytesForCurrentThread()-before;
+            Assert.True(allocated<128*1024,$"Eight warm batches allocated {allocated} bytes");
+            Assert.Same(target,results[0].collider);
+            Assert.Null(results[1].collider);
+        }
+
+        [Fact]
+        public void ClosestPointBatchAllocationDoesNotGrowWithUnrelatedColliderCount()
+        {
+            var at=Origin+new Vector3(0,0,280);
+            var target=Box("ClosestAllocationTarget",at);
+            var commands=Native(new ClosestPointCommand(at+Vector3.right*3,target,at,Quaternion.identity,Vector3.one));
+            var results=Native<Vector3>(1);
+            ClosestPointCommand.ScheduleBatch(commands,results,1).Complete();
+            long Measure()
+            {
+                long before=GC.GetAllocatedBytesForCurrentThread();
+                for(int i=0;i<8;i++) ClosestPointCommand.ScheduleBatch(commands,results,1).Complete();
+                return GC.GetAllocatedBytesForCurrentThread()-before;
+            }
+            long small=Measure();
+            for(int i=0;i<1024;i++) Box("Unrelated",at+new Vector3(i*2,20,0));
+            Physics.SyncTransforms();
+            ClosestPointCommand.ScheduleBatch(commands,results,1).Complete();
+            long large=Measure();
+            Assert.True(large<=small+4096,$"One collider={small}, unrelated colliders={large}");
+            Assert.Equal(at+Vector3.right*.5f,results[0]);
+        }
+
         struct QueryTransformWriter : IJobParallelForTransform
         {
             public Vector3 Position;

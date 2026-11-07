@@ -193,7 +193,7 @@ namespace Unbound.Runtime
             Collect(ReadCast(false, kind, a, b, rotation, radius, direction, maxDistance, layerMask, triggers, closest, false), Length(maxDistance), direction.normalized);
 
         internal static int BatchCast(PhysicsScene scene, bool ray, B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius,
-            Vector3 direction, float distance, QueryParameters parameters, RaycastHit[] results, bool closest)
+            Vector3 direction, float distance, QueryParameters parameters, RaycastHit[] results, bool closest, int capacity)
         {
             using var target = scene.Searching();
             using var backfaces = Backfaces(parameters.hitBackfaces);
@@ -201,8 +201,8 @@ namespace Unbound.Runtime
             // maxHits, as measured by tests/projects/physicsbatch in Unity 6000.0.71f1.
             int flags = ray ? (parameters.hitMultipleFaces && !closest ? MultipleRayFaces : 0) : SkipInitialOverlap;
             int count = ReadCast(ray, kind, a, b, rotation, radius, direction, distance,
-                parameters.layerMask, parameters.hitTriggers, closest, true, flags, results.Length);
-            int written = Math.Min(count, results.Length);
+                parameters.layerMask, parameters.hitTriggers, closest, true, flags, capacity);
+            int written = Math.Min(count, capacity);
             for (int i = 0; i < written; i++) results[i] = ConvertedHit(i, Length(distance), direction.normalized);
             return written;
         }
@@ -234,12 +234,12 @@ namespace Unbound.Runtime
             return result;
         }
 
-        internal static int BatchOverlap(PhysicsScene scene, B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius, QueryParameters parameters, Collider[] results)
+        internal static int BatchOverlap(PhysicsScene scene, B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius, QueryParameters parameters, Collider[] results, int capacity)
         {
             using var target = scene.Searching();
             int count = ReadOverlap(kind, a, b, rotation, radius, parameters.layerMask, parameters.hitTriggers, true);
             int written = 0;
-            for (int i = 0; i < count && written < results.Length; i++)
+            for (int i = 0; i < count && written < capacity; i++)
             {
                 var collider = W.ColliderOf(s_Shapes[i]);
                 if (collider != null) results[written++] = collider;

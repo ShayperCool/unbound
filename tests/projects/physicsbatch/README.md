@@ -90,7 +90,7 @@ array safety remains owned by the job until completion. Terrain heightmap/tree
 queries and tree material lifetimes are Editor-measured by the added controls.
 Additional releases and every unsafe-container alias combination remain unmeasured.
 
-Validation: release build; all 3,377 managed tests; Rust unbound-host test/doc-test
+Validation: release build; all 3,387 managed tests; Rust unbound-host test/doc-test
 commands; stub regeneration with no drift; the engine-only gate above. Managed
 controls include local scenes, nonuniform actual collider scale, a missing collider
 between valid commands, initial overlaps, no managed allocation growth between 1
