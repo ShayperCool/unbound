@@ -10,16 +10,29 @@ TOLERANCE = 0.0025
 PROBE = Path(__file__).resolve().parent
 
 
-def records(path):
+def records(path, failures=None):
+    failures = failures if failures is not None else []
     result = {}
-    for i, line in enumerate(path.read_text().splitlines()):
-        value = json.loads(line)
-        key = value.get('name', value.get('case'))
+    try:
+        lines = path.read_text().splitlines()
+    except OSError as error:
+        failures.append({'file': str(path), 'error': str(error)})
+        return result
+    for i, line in enumerate(lines):
+        try:
+            value = json.loads(line)
+        except ValueError as error:
+            failures.append({'file': str(path), 'line': i + 1, 'raw': line, 'error': str(error)})
+            continue
+        key = value.get('name', value.get('case')) if isinstance(value, dict) else None
+        if not isinstance(key, str):
+            failures.append({'file': str(path), 'line': i + 1, 'raw': value, 'error': 'record has no string name/case'})
+            continue
         if key in result:
+            failures.append({'file': str(path), 'line': i + 1, 'key': key, 'raw': value, 'error': 'duplicate record'})
             key = f'{key} duplicate at {i}'
         result[key] = value
     return result
-
 
 def compare(reference, actual):
     failures, deltas = [], {}
@@ -58,7 +71,9 @@ def main():
         ('ambient', PROBE/'Reference/ambient.jsonl', args.actual/'ambient/ambient.jsonl'),
         ('sun', PROBE/f'Reference/unity-{args.release}/sun.jsonl', args.actual/'sun/sun.jsonl'),
     ]:
-        bad, worst = compare(records(reference), records(actual))
+        parse_failures = []
+        bad, worst = compare(records(reference, parse_failures), records(actual, parse_failures))
+        bad = parse_failures + bad
         failures += [dict(group=group, **entry) for entry in bad]
         deltas[group] = worst
     expected_images = {p.name for p in (PROBE/'Reference').glob('*.png')}
@@ -68,11 +83,12 @@ def main():
                          'expected': name in expected_images, 'actual': name in actual_images})
     report = {'release': args.release, 'coefficient_tolerance': TOLERANCE,
               'deltas': deltas, 'failures': failures}
+    args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, indent=2)+'\n')
     for failure in failures:
         print(json.dumps(failure))
     for group, values in deltas.items():
-        print(f'{group}: {len(values)} coefficient sets, worst {max(values.values()):.9g}')
+        print(f'{group}: {len(values)} coefficient sets, worst {max(values.values(), default=0.0):.9g}')
     print(f'ambient strict gate: {len(failures)} failing values')
     return bool(failures)
 

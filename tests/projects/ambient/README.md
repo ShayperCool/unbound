@@ -38,7 +38,8 @@ Run the engine-only gate with an explicit release:
 `gate.json` declares this command using `$UNBOUND_PROBE_UNITY_VERSION`. The gate prints the
 original comparator and raw image comparison, then verifies every record, field and coefficient,
 including missing/extra values, with the original 0.0025 coefficient tolerance. Its JSON report
-and both engine logs stay in the validation cache. Each label must be new.
+and both engine logs stay in the validation cache. Each label must be new. The declared gate also
+runs five negative-path tests for failed Editor runs, incomplete captures and durable failure reports.
 
 The six sun controls compare the default/tinted sky with None, High Quality, and High Quality
 with zero sun size. They record both `ambientProbe` and an independent 64-texel camera projection

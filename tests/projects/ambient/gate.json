@@ -1,6 +1,6 @@
 {
   "commands": [
-    "python3 tests/projects/ambient/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\" --label gate-$(date +%s%N)"
+    "python3 -m unittest discover -s tests -p test_ambient_probe_gate.py && python3 tests/projects/ambient/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\" --label gate-$(date +%s%N)"
   ],
   "summary": "ambient strict gate: [0-9]+ failing values"
 }

@@ -11,7 +11,7 @@ import sys
 PROBE = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROBE.parents[1]))
 from probe_paths import cache_artifact_path, reference_root, run_root
-from editor_runner import EditorJob, run, publish
+from editor_runner import EditorJob, run, publish, result_problem
 
 
 def copy_project(destination, release):
@@ -27,11 +27,16 @@ def complete(directory):
     path = directory/'sun.jsonl'
     if not path.is_file():
         return 'missing sun.jsonl'
-    records = [json.loads(line) for line in path.read_text().splitlines()]
+    try:
+        records = [json.loads(line) for line in path.read_text().splitlines()]
+    except (OSError, ValueError):
+        return 'malformed sun.jsonl'
+    if any(not isinstance(r, dict) or not isinstance(r.get('name'), str) for r in records):
+        return 'malformed sun control'
     expected = {f'{sky} {disk}' for sky in ('default', 'tinted') for disk in ('none', 'hq', 'zero')}
     if len(records) != 6 or {r['name'] for r in records} != expected:
         return 'missing/extra/duplicate sun control'
-    if any(len(r.get(k, [])) != 27 for r in records for k in ('ambient', 'rendered')):
+    if any(not isinstance(r.get(k), list) or len(r[k]) != 27 for r in records for k in ('ambient', 'rendered')):
         return 'incomplete coefficients'
 
 
@@ -53,9 +58,13 @@ def main():
         for index in (1, 2):
             out = work/f'editor{index}'
             project = copy_project(out/'project', args.release)
-            run(EditorJob(project, out/'editor.log', out, batch=True,
+            result = run(EditorJob(project, out/'editor.log', out, batch=True,
                           args=['-executeMethod', 'ProbeRunner.Record'],
                           env={'AMBIENT_SUN_CONTROLS': str(out)}, timeout=360))
+            reason = result_problem(out, gpu=True) or complete(out)
+            if reason or result.get('exit_code') != 0:
+                print(f'Editor capture {index} failed: {reason or result}', file=sys.stderr)
+                return 1
         return 0
     if args.command == 'publish':
         def write(target, first):
@@ -68,6 +77,7 @@ def main():
         parser.error('set UNBOUND or UNBOUND_CLI')
     project = copy_project(work/'project', args.release)
     launcher = Path.home()/'.cache/compat/with-heavy-job'
+    failed = False
     for name, variable in [('ambient', 'AMBIENT_PROBE_OUT'), ('sun', 'AMBIENT_SUN_CONTROLS')]:
         env = dict(os.environ)
         env.pop('AMBIENT_PROBE_OUT', None)
@@ -76,13 +86,18 @@ def main():
         command = [str(launcher), cli, 'run', '-p', str(project), '--frames', '1400',
                    '--size', '320x180', '--no-watch']
         with (work/(name+'-engine.log')).open('w') as log:
-            subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=360)
-    # Preserve the original coefficient and raw image reports as well as the strict detailed gate.
+            try:
+                failed |= subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=360).returncode != 0
+            except (OSError, subprocess.TimeoutExpired) as error:
+                print(f'{name} engine failed: {error}', file=sys.stderr)
+                failed = True
+    # Always write the strict report, even if engine capture or a legacy comparator fails.
+    strict = subprocess.run([sys.executable, str(PROBE/'verify.py'), '--release', args.release,
+                             '--actual', str(work), '--report', str(work/'report.json')])
     for script, ref in [(PROBE/'compare.py', PROBE/'Reference'),
                         (PROBE.parent/'particles/compare_images.py', PROBE/'Reference')]:
-        subprocess.run([sys.executable, str(script), str(ref), str(work/'ambient')], check=True)
-    return subprocess.run([sys.executable, str(PROBE/'verify.py'), '--release', args.release,
-                           '--actual', str(work), '--report', str(work/'report.json')]).returncode
+        failed |= subprocess.run([sys.executable, str(script), str(ref), str(work/'ambient')]).returncode != 0
+    return int(failed or strict.returncode != 0)
 
 
 if __name__ == '__main__':
