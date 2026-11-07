@@ -265,3 +265,32 @@ guarantee that evaluation does not advance its local time; and two separately
 evaluated Manual graphs targeting one Animator retain the unsupported multiple-output
 diagnostic. The first is an implementation inference from frozen time, not an
 additional Native observation; the second guards the declared support boundary.
+
+
+## Two-input humanoid mixer root motion (Q104)
+
+`humanMixerMotion/` extends the direct-clip controls with one AnimationMixerPlayable,
+one full-weight default-values AnimationPlayableOutput and one HumanA Animator without
+a controller. It reuses `LoopMuscles` and the humanoid probe's authored `OrigTurned`
+clip, both nonmirrored, with translation and yaw. Constant input weights are 0/1,
+1/0 and 0.25/0.75. The endpoint controls use AlwaysAnimate with both clocks. The
+interior blend also covers all three culling modes and root motion off, builtin
+application, and OnAnimatorMove calling ApplyBuiltinRootMotion with either flag.
+It preserves Q91's renderer-before-bone initialization and visibility schedule.
+New records add both input clocks, weights and feet pivot to Q91's root, body,
+bone, motion and callback observations. Explicit calls retain the 0, 0.37, 0.74
+intervals, including loop crossings. No old reference key or tolerance is changed.
+
+Unity contract checked for **6000.0**, measured release **6000.0.71f1**:
+
+| Question | Documented guarantee or limitation | Measurement boundary |
+| --- | --- | --- |
+| Composition | [AnimationMixerPlayable](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationMixerPlayable.html) controls an animation mixer; [Create](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationMixerPlayable.Create.html) specifies its input count. [AnimationPlayableOutput](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationPlayableOutput.html) connects a graph to an Animator. These pages do not specify a numeric humanoid blending formula or evaluation order between Animators. | Two clip inputs, fixed nonnegative weights summing to one, one output at weight one. No weight normalization is inferred for other graph settings. |
+| Root and pose | [Root Motion](https://docs.unity3d.com/6000.0/Documentation/Manual/RootMotion.html) describes projection of the Body Transform and applying its frame delta to the GameObject. Bake settings retain components in the pose; body-orientation projection can fail for strafing and requires an offset. Loop pose is relative to the root. [Retargeting](https://docs.unity3d.com/6000.0/Documentation/Manual/Retargeting.html) requires humanoid models with configured Avatars. | Reuse the existing humanoid sampling, blending, feet pivot and retargeting. Numerical composition is an observation of this release/context, not a universal guarantee. |
+| Motion API | [deltaPosition](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-deltaPosition.html), [deltaRotation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-deltaRotation.html), [velocity](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-velocity.html), [angularVelocity](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-angularVelocity.html) describe the last evaluated frame, with applyRootMotion enabled as a prerequisite. | Both flag values with a callback are observed separately; every successive and zero-delta call is retained. |
+| Movement delivery | [applyRootMotion](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-applyRootMotion.html) has no effect when OnAnimatorMove exists; runtime flag changes reinitialize the Animator. [OnAnimatorMove](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnAnimatorMove.html) follows animation evaluation and precedes OnAnimatorIK. | Flags stay constant. Counts and callback delta are captured, with no cross-Animator order assertion. |
+| Clocks and visibility | [Evaluate](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableGraph.Evaluate.html) advances by the supplied interval. [AnimatorCullingMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AnimatorCullingMode.html) and [Animator component](https://docs.unity3d.com/6000.0/Documentation/Manual/class-Animator.html) describe disabling retargeting, IK and transform writes, or animation completely, offscreen. | First sample scheduling, retained motion and pose replay on visibility return are measured details, not documented global phase rules. |
+
+Layers, controller playables, HumanStream, mirrors/additive graphs, attached
+controllers, shared or fractional outputs, non-unit input weight sums and live
+weight changes remain outside this certification.

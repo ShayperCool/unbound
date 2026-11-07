@@ -44,6 +44,8 @@ public class AnimCullingProbe : MonoBehaviour
         public Playable source;
         public bool explicitEvaluation;
         public bool humanMotion;
+        public AnimationClipPlayable secondHumanClip;
+        public AnimationMixerPlayable humanMixer;
     }
 
     readonly List<Case> cases = new List<Case>();
@@ -132,6 +134,7 @@ public class AnimCullingProbe : MonoBehaviour
         ExplicitHumanCases();
         ExplicitCases("replay", entry: false);
         HumanMotionCases();
+        HumanMixerMotionCases();
         foreach (var (name, mode) in modes)
         foreach (bool controller in new[] { false, true })
         foreach (bool mixer in new[] { false, true })
@@ -272,9 +275,23 @@ public class AnimCullingProbe : MonoBehaviour
             HumanMotionCase(AnimatorCullingMode.AlwaysAnimate, clock, "builtin", "HumanB", 0.015f);
     }
 
-    void HumanMotionCase(AnimatorCullingMode mode, DirectorUpdateMode clock, string movement, string avatar, float scale)
+    void HumanMixerMotionCases()
     {
-        var name = "humanMotion/" + avatar + "/" + mode + "/" + clock + "/" + movement;
+        foreach (var clock in new[] { DirectorUpdateMode.GameTime, DirectorUpdateMode.Manual })
+        {
+            // Endpoints independently sample each authored clip through the same two-input node.
+            foreach (float weight in new[] { 0f, 1f })
+                HumanMotionCase(AnimatorCullingMode.AlwaysAnimate, clock, "builtin", "HumanA", 0.01f, weight);
+            foreach (var mode in new[] { AnimatorCullingMode.AlwaysAnimate, AnimatorCullingMode.CullUpdateTransforms, AnimatorCullingMode.CullCompletely })
+            foreach (string movement in new[] { "off", "builtin", "callbackOff", "callbackOn" })
+                HumanMotionCase(mode, clock, movement, "HumanA", 0.01f, 0.25f);
+        }
+    }
+
+    void HumanMotionCase(AnimatorCullingMode mode, DirectorUpdateMode clock, string movement, string avatar, float scale, float? mixerWeight = null)
+    {
+        var name = (mixerWeight.HasValue ? "humanMixerMotion/" + F(mixerWeight.Value) : "humanMotion")
+            + "/" + avatar + "/" + mode + "/" + clock + "/" + movement;
         var c = new Case { name = name, visible = ScheduleA, humanMotion = true, explicitEvaluation = true };
         c.holder = new GameObject(name).transform;
         if (avatar == "HumanB")
@@ -303,6 +320,16 @@ public class AnimCullingProbe : MonoBehaviour
         c.clip.SetApplyFootIK(false);
         c.clip.SetApplyPlayableIK(true);
         c.source = c.clip;
+        if (mixerWeight.HasValue)
+        {
+            c.secondHumanClip = AnimationClipPlayable.Create(c.graph, Resources.Load<AnimationClip>("OrigTurned"));
+            c.secondHumanClip.SetApplyFootIK(false);
+            c.secondHumanClip.SetApplyPlayableIK(true);
+            c.humanMixer = AnimationMixerPlayable.Create(c.graph, 2);
+            c.humanMixer.ConnectInput(0, c.clip, 0, mixerWeight.Value);
+            c.humanMixer.ConnectInput(1, c.secondHumanClip, 0, 1f - mixerWeight.Value);
+            c.source = c.humanMixer;
+        }
         AnimationPlayableOutput.Create(c.graph, "Animation", c.animator).SetSourcePlayable(c.source);
         c.graph.Play();
         Put(name + "/info", "{\"human\":" + B(c.animator.isHuman) + ",\"valid\":" + B(c.animator.avatar.isValid)
@@ -315,6 +342,9 @@ public class AnimCullingProbe : MonoBehaviour
     void RecordHumanMotion(Case c, string phase)
     {
         var a = c.animator;
+        string mixer = c.humanMixer.IsValid() ? ",\"secondTime\":" + c.secondHumanClip.GetTime().ToString("R", CultureInfo.InvariantCulture)
+            + ",\"weights\":[" + F(c.humanMixer.GetInputWeight(0)) + "," + F(c.humanMixer.GetInputWeight(1)) + "]"
+            + ",\"pivot\":" + V(a.pivotPosition) + ",\"pivotWeight\":" + F(a.pivotWeight) : "";
         Put(c.name + (phase == null ? "" : "/" + phase) + "/" + frame,
             "{\"visible\":" + B(c.renderers[0].isVisible) + ",\"time\":" + c.clip.GetTime().ToString("R", CultureInfo.InvariantCulture)
             + ",\"root\":" + V(c.rig.localPosition) + ",\"rotation\":" + Q(c.rig.localRotation)
@@ -325,7 +355,7 @@ public class AnimCullingProbe : MonoBehaviour
             + ",\"hips\":" + V(c.hips.localPosition) + ",\"hipsRotation\":" + Q(c.hips.localRotation)
             + ",\"arm\":" + Q(c.arm.localRotation) + ",\"ik\":" + c.ik.calls
             + ",\"move\":" + (c.move == null ? 0 : c.move.calls)
-            + ",\"callbackDelta\":" + V(c.move == null ? Vector3.zero : c.move.lastDelta) + "}");
+            + ",\"callbackDelta\":" + V(c.move == null ? Vector3.zero : c.move.lastDelta) + mixer + "}");
     }
 
     void ExplicitStep(Case c)
