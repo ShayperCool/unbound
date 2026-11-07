@@ -33,6 +33,24 @@ Intermediate selection, initialization and resolve depth history are measured im
 details, not additional universal Unity guarantees. New/discarded target contents, deferred
 rendering, partial viewports, image effects and other RT lifetime transitions are outside scope.
 
+## Native observations
+
+Two independent Linux Editor 6000.0.71f1 OpenGL Core/NVIDIA captures agree byte for byte in
+each of Linear and Gamma. Each has 254 values and 210 images across 42 cases.
+
+| Context | Observed history |
+| --- | --- |
+| Direct byte/half-float target, Nothing | The distance-4 red quad occludes distance-8 green. The nearer blue quad draws and occludes the distance-6 witness. The next frame retains that depth. |
+| Direct target, Depth/SolidColor | Green draws over red after the depth clear. SolidColor also replaces untouched background color. |
+| HDR-to-byte intermediate, Nothing | Green draws over red, independently of the unrelated camera's near/far depth. The intermediate starts with clear depth in this measured context. |
+| Direct witness after HDR-to-byte resolve | Red's original depth still blocks yellow where green overwrote red's color. Yellow overwrites the nearer blue from the HDR render elsewhere. Thus the resolve updates target color while retaining the target's old depth, not the intermediate's depth. |
+| Quality samples 1/4, target samples 1/4 | The same occlusion/history relationships hold, with the recorded multisample edge coverage. |
+
+These measurements support clearing a reused intermediate's depth for this explicit-target
+Nothing path. They do not support copying the target depth into that intermediate or copying
+intermediate depth back into the target. Whether Native internally clears or replaces a depth
+attachment is unresolved; only the resulting occlusion and target history are observed.
+
 ## Recording and validation
 
 The shared `camerastack/run.py` driver creates clean project copies in the global Unbound
