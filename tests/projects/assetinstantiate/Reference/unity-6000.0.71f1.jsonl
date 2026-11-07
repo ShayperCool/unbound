@@ -1740,6 +1740,8 @@
 {"k":"compute.position_parent.result","v":"ok"}
 {"k":"compute.position_parent.logs","v":"0"}
 {"k":"compute.destroy.immediate_live","v":"True"}
+{"k":"compute.keyword","v":"False"}
+{"k":"compute.source_keyword","v":"True"}
 {"k":"compute.kernel","v":"0"}
 {"k":"compute.initial","v":"0"}
 {"k":"compute.clone","v":"9"}

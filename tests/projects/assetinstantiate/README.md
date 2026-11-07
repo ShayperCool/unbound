@@ -43,6 +43,6 @@ Cubemap CPU faces/mips are independent; unreadable clones keep unreadability and
 error at instantiation. The retained CPU representation is an implementation choice. GPU-only
 Cubemaps without retained storage still fail explicitly. Texture2D/RenderTexture/TextAsset
 have more extensive controls in `tests/projects/assetclones`, which remains a regression probe.
-ComputeShader clones retain the source and kernels but reset runtime parameter values/bindings.
+ComputeShader clones retain the source and kernels but reset runtime parameter values, keywords and bindings.
 Full controller graph mutation, imported bitmap fonts, additional audio import configurations,
 GPU-only Cubemaps and other Unity releases remain outside this capture.
