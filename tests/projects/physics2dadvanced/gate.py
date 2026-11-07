@@ -15,9 +15,10 @@ runtime = Path(os.environ['UNBOUND']).resolve().parent
 work = run_root(ROOT, 'gate-' + uuid.uuid4().hex)
 base = [sys.executable, str(ROOT/'run.py')]
 args = ['--release', release, '--work', str(work)]
-for mode, extra in [
-    ('prepare', ['--label', 'engine']),
-    ('engine', ['--label', 'engine', '--runtime', str(runtime)]),
-    ('compare', ['--label', 'engine', '--candidate', str(work/'engine.json'), '--output', str(work/'comparison.json')]),
-]:
-    subprocess.run([*base, mode, *args, *extra], check=True)
+for label, variant in [('engine', []), ('controls', ['--controls'])]:
+    for mode, extra in [
+        ('prepare', ['--label', label]),
+        ('engine', ['--label', label, '--runtime', str(runtime)]),
+        ('compare', ['--label', label, '--candidate', str(work/(label+'.json')), '--output', str(work/(label+'-comparison.json'))]),
+    ]:
+        subprocess.run([*base, mode, *args, *variant, *extra], check=True)
