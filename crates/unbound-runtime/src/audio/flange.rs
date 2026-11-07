@@ -2,7 +2,7 @@
 //! Q14 input history and cosine interpolation match Chorus, but both channels use one
 //! phase, the history covers 40 ms, and the delay span is 20 ms times depth squared.
 //! These are release-specific measurements, not a documented Unity DSP contract.
-use super::chorus::Chorus;
+use super::wavetable;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -118,7 +118,7 @@ impl Flange {
                 } else {
                     target
                 };
-                let wave = (Chorus::cosine(self.phase) + 1.0) * 0.5;
+                let wave = (wavetable::cosine(self.phase) + 1.0) * 0.5;
                 let shift = wave * self.span - self.span;
                 let read = self.wrap((base + shift) + (self.offset + f) as f32);
                 let next = self.wrap(read + 1.0);

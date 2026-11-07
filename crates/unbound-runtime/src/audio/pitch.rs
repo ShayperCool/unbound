@@ -1,4 +1,5 @@
 //! Unity 6000.0.71f1 default Pitch Shifter profile. See tests/projects/audiopitch.
+use super::wavetable;
 use serde::Deserialize;
 use std::f32::consts::{PI, TAU};
 
@@ -41,7 +42,6 @@ impl Default for Channel {
 pub struct PitchShifter {
     channels: [Channel; 2],
     window: Vec<f32>,
-    cosine: Vec<f32>,
     twiddle: Vec<f32>,
     work: Vec<f32>,
     magnitudes: Vec<f32>,
@@ -56,17 +56,16 @@ impl PitchShifter {
         Ok(())
     }
     pub fn new() -> Self {
-        let cosine: Vec<_> = (0..8192)
-            .map(|i| (i as f32 * std::f32::consts::FRAC_PI_2 * (1.0 / 8192.0)).cos())
-            .collect();
+        // cos(pi / 4), the table's middle entry.
+        let diagonal = wavetable::table()[wavetable::QUARTER / 2];
         let mut twiddle = vec![0.0; N / 2];
         twiddle[0] = 1.0;
-        twiddle[N / 4] = cosine[4096];
-        twiddle[N / 4 + 1] = cosine[4096];
+        twiddle[N / 4] = diagonal;
+        twiddle[N / 4 + 1] = diagonal;
         for j in (2..N / 4).step_by(2) {
             let turns = j as f32 / (2 * N) as f32;
-            let c = lookup(&cosine, turns);
-            let s = lookup(&cosine, turns - 0.25);
+            let c = wavetable::cosine(turns);
+            let s = wavetable::cosine(turns - 0.25);
             twiddle[j] = c;
             twiddle[j + 1] = s;
             twiddle[N / 2 - j] = s;
@@ -81,7 +80,6 @@ impl PitchShifter {
                         / 32.0
                 })
                 .collect(),
-            cosine,
             twiddle,
             work: vec![0.0; 2 * N],
             magnitudes: vec![0.0; N / 2 + 1],
@@ -143,8 +141,8 @@ impl PitchShifter {
                         state.phase[k] += (state.phase[k] * (1.0 / TAU)) as i32 as f32 * -TAU;
                     }
                     let turns = state.phase[k] * (1.0 / TAU);
-                    self.work[2 * k] = self.magnitudes[k] * lookup(&self.cosine, turns);
-                    self.work[2 * k + 1] = self.magnitudes[k] * lookup(&self.cosine, turns - 0.25);
+                    self.work[2 * k] = self.magnitudes[k] * wavetable::cosine(turns);
+                    self.work[2 * k + 1] = self.magnitudes[k] * wavetable::cosine(turns - 0.25);
                 }
                 transform(&mut self.work, &self.twiddle, false);
                 for i in 0..N {
@@ -156,16 +154,6 @@ impl PitchShifter {
                 state.input.copy_within(HOP..N, 0);
             }
         }
-    }
-}
-// The measured quarter-wave lookup uses reflected endpoint indices, without interpolation.
-fn lookup(table: &[f32], turns: f32) -> f32 {
-    let index = ((turns * 32768.0) as i32).unsigned_abs() as usize & 32767;
-    match index / 8192 {
-        0 => table[index],
-        1 => -table[16383 - index],
-        2 => -table[index - 16384],
-        _ => table[32767 - index],
     }
 }
 fn reverse(a: &mut [f32]) {

@@ -2,8 +2,8 @@
 //! uses Q14 history, a quarter-wave cosine table, and one tap per channel (cycling over three
 //! taps). The equations and state below are an implementation of those measurements, not a
 //! documented Unity algorithm. Feedback is obsolete and has no measured effect.
+use super::wavetable;
 use serde::Deserialize;
-use std::sync::OnceLock;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -146,21 +146,6 @@ impl Chorus {
         self.phase = 0.0;
         self.span = 0.0;
     }
-    pub(crate) fn cosine(phase: f32) -> f32 {
-        static TABLE: OnceLock<Box<[f32]>> = OnceLock::new();
-        let table = TABLE.get_or_init(|| {
-            (0..8192)
-                .map(|i| ((i as f32 / 8192.0) * std::f32::consts::FRAC_PI_2).cos())
-                .collect()
-        });
-        let index = ((phase * 32768.0) as i32).unsigned_abs() as usize & 32767;
-        match index >> 13 {
-            0 => table[index],
-            1 => -table[16383 - index],
-            2 => -table[index - 16384],
-            _ => table[32767 - index],
-        }
-    }
     fn wrap(&self, value: f32) -> f32 {
         let frames = self.history.len() as f32;
         if value < 0.0 {
@@ -214,7 +199,7 @@ impl Chorus {
                     target
                 };
                 for c in 0..2 {
-                    let wave = (Self::cosine(self.phase + c as f32 * 0.25) + 1.0) * 0.5;
+                    let wave = (wavetable::cosine(self.phase + c as f32 * 0.25) + 1.0) * 0.5;
                     let shift = wave * self.span - self.span;
                     let read = self.wrap((base + shift) + (self.offset + f) as f32);
                     // Round the next floating coordinate before converting either to an index.

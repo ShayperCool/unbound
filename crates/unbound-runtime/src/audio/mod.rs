@@ -20,6 +20,7 @@ pub mod mixer;
 pub mod protocol;
 pub mod reverb;
 pub mod spatial;
+pub(crate) mod wavetable;
 
 use anyhow::Result;
 pub use mixer::{Clip, Mixer, MixerConfig, SourceParams};
