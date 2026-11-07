@@ -542,11 +542,99 @@ fn weld_vertices_can_preserve_coincident_authored_points() {
     assert_eq!(separate.meshes[0].positions.len(), 6);
 }
 
+fn import_obj(name: &str, obj: &str, meta_text: &str) -> ImportedModel {
+    ModelImporter
+        .import(Path::new(name), obj.as_bytes(), &meta(meta_text))
+        .unwrap()
+}
+
+const NO_OPTIMIZATION: &str = "ModelImporter:\n  meshes:\n    meshOptimizationFlags: 0\n";
+
 #[test]
-fn a_collapsed_quad_is_reported_instead_of_losing_its_valid_triangle() {
-    let obj = b"o Collapsed\nv 0 0 0\nv 1 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3 4\n";
-    let error = ModelImporter.import(Path::new("Collapsed.obj"), obj, &Value::Null).unwrap_err();
-    assert!(error.to_string().contains("degenerate imported quads"), "{error}");
+fn a_quad_collapsing_after_welding_keeps_its_valid_triangle() {
+    // Corners 2 and 3 share a position: the quad becomes the triangle of its first three.
+    let obj = "o Collapsed\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 1 1 0\nf 1 2 3 4\n";
+    let model = import_obj("Collapsed.obj", obj, NO_OPTIMIZATION);
+    assert_eq!(model.meshes[0].submeshes, vec![vec![0, 2, 1]]);
+    // The same with the corner itself repeated, as some exporters write it.
+    let obj = "o Repeated\nv 0 0 0\nv 1 0 0\nv 1 1 0\nf 1 2 3 3\n";
+    let model = import_obj("Repeated.obj", obj, NO_OPTIMIZATION);
+    assert_eq!(model.meshes[0].submeshes, vec![vec![0, 2, 1]]);
+}
+
+#[test]
+fn faces_folded_by_welding_are_dropped_and_zero_area_faces_kept() {
+    // A quad whose second and fourth corners weld, a triangle with two welded corners, and a
+    // triangle and quad of collinear but distinct corners (measured: lightmapuvs WeldDiag,
+    // WeldTri, FlatTri, FlatQuad).
+    let obj = "o Faces\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nv 1 2 0\nv 1 1 0\nv 2 0 0\n\
+               v 3 0 0\nv 4 0 0\nv 5 0 0\n\
+               f 1 2 3 4\nf 4 3 5 6\nf 3 5 6\nf 7 8 9\nf 7 8 9 10\n";
+    let model = import_obj("Faces.obj", obj, NO_OPTIMIZATION);
+    let mesh = &model.meshes[0];
+    let triangles: Vec<_> = mesh.submeshes[0].chunks(3).collect();
+    // The base quad, then the collinear triangle and quad; nothing of the folded faces.
+    assert_eq!(triangles.len(), 2 + 1 + 2, "{triangles:?}");
+    // Ten control points, one welded; the folded quad's own point (1, 2) keeps an unused
+    // vertex with mesh optimization off.
+    assert_eq!(mesh.positions.len(), 9);
+    let unused: Vec<_> = (0..9)
+        .filter(|&v| mesh.normals[v] == UNUSED_VERTEX_NORMAL)
+        .collect();
+    assert_eq!(unused.len(), 1);
+    assert_eq!(mesh.positions[unused[0]], [-1.0, 2.0, 0.0]);
+}
+
+#[test]
+fn unused_points_keep_vertices_only_without_vertex_optimization() {
+    // A pentagon of collinear corners has no triangles (lightmapuvs FlatPoly).
+    let obj = "o Flat\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nv 0.25 1 0\nv 0.5 1 0\nv 0.75 1 0\n\
+               f 1 2 3 4\nf 4 5 6 7 3\n";
+    let raw = import_obj("Flat.obj", obj, NO_OPTIMIZATION);
+    let mesh = &raw.meshes[0];
+    assert_eq!(mesh.submeshes[0].len(), 6);
+    assert_eq!(mesh.positions.len(), 7);
+    assert_eq!(mesh.normals[4..], [UNUSED_VERTEX_NORMAL; 3]);
+    assert_eq!(
+        mesh.uvs.iter().map(|uv| uv.len()).collect::<Vec<_>>(),
+        vec![7; mesh.uvs.len()]
+    );
+    let optimized = import_obj("Flat.obj", obj, "");
+    assert_eq!(optimized.meshes[0].positions.len(), 4);
+}
+
+#[test]
+fn polygons_with_coincident_corners_import() {
+    // A square with a square hole bridged into one polygon, reusing its bridge corners: the
+    // sweep merges them (lightmapuvs BridgeObj: eight triangles over eight vertices).
+    let obj = "o Bridge\nv 0 0 0\nv 2 0 0\nv 2 2 0\nv 0 2 0\n\
+               v 0.5 0.5 0\nv 0.5 1.5 0\nv 1.5 1.5 0\nv 1.5 0.5 0\nf 1 2 3 4 1 5 6 7 8 5\n";
+    let model = import_obj("Bridge.obj", obj, NO_OPTIMIZATION);
+    let mesh = &model.meshes[0];
+    assert_eq!(mesh.positions.len(), 8);
+    assert_eq!(mesh.submeshes[0].len(), 3 * 8);
+    assert!(model.warnings.is_empty(), "{:?}", model.warnings);
+}
+
+#[test]
+fn crossing_polygons_are_discarded_with_a_warning() {
+    // A pentagram beside a valid quad: only the quad stays (lightmapuvs Cross).
+    let mut obj = String::from("o Cross\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\n");
+    for k in 0..5 {
+        let a = 4.0 * std::f32::consts::PI * k as f32 / 5.0;
+        obj += &format!("v {} {} 0\n", 3.0 + a.sin(), a.cos());
+    }
+    obj += "f 1 2 3 4\nf 5 6 7 8 9\n";
+    let model = import_obj("Cross.obj", &obj, NO_OPTIMIZATION);
+    assert_eq!(model.meshes[0].submeshes[0].len(), 6);
+    assert!(
+        model
+            .warnings
+            .iter()
+            .any(|w| w.contains("self-intersecting")),
+        "{:?}",
+        model.warnings
+    );
 }
 
 fn assert_group_normals_match_reference(imported: &ImportedModel) {

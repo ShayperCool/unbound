@@ -155,6 +155,11 @@ pub struct ModelSettings {
     /// `meshes.weldVertices`: control points at equal positions are merged (Unity's unwrap input).
     #[serde(default)]
     pub weld_vertices: bool,
+    /// `meshes.meshOptimizationFlags` without `VertexOrder`: control points no face uses keep
+    /// their vertices (measured, tests/projects/lightmapuvs: the Editor keeps them with flags 0
+    /// and removes them with `Everything`, the default).
+    #[serde(default)]
+    pub keep_unused_vertices: bool,
     /// `meshes.generateSecondaryUV` with its unwrap settings; `None` when off.
     #[serde(default)]
     pub secondary_uv: Option<SecondaryUvSettings>,
@@ -267,6 +272,8 @@ impl ModelSettings {
                 .unwrap_or(false),
             file_ids_generation: int(imp, "meshes.fileIdsGeneration").unwrap_or(2),
             weld_vertices: boolean(imp, "meshes.weldVertices").unwrap_or(true),
+            keep_unused_vertices: int(imp, "meshes.meshOptimizationFlags")
+                .is_some_and(|flags| flags & MESH_OPTIMIZATION_VERTEX_ORDER == 0),
             secondary_uv: SecondaryUvSettings::read(imp),
         }
     }
@@ -634,6 +641,12 @@ impl ImportedModel {
     }
 }
 
+/// The normal of a vertex no face uses (measured: tests/projects/lightmapuvs).
+const UNUSED_VERTEX_NORMAL: [f32; 3] = [1.0, 1.0, 1.0];
+
+/// `MeshOptimizationFlags.VertexOrder`.
+const MESH_OPTIMIZATION_VERTEX_ORDER: i64 = 2;
+
 /// The model importer.
 #[derive(Debug, Clone, Default)]
 pub struct ModelImporter;
@@ -641,7 +654,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 23;
+    const VERSION: u32 = 24;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1904,23 +1917,6 @@ impl<'a> Builder<'a> {
             bounds_max: [0.0; 3],
             blend_shapes: Vec::new(),
         };
-        // Lightmap UVs replace UV2 (measured: tests/projects/lightmapuvs).
-        let mut warning = None;
-        let lightmap = settings.secondary_uv.as_ref().and_then(|unwrap| {
-            match self.lightmap_uvs(mesh, uv_sets.first().copied(), unwrap) {
-                Ok(lightmap) => Some(lightmap),
-                Err(error) => {
-                    warning = Some(format!(
-                        "lightmap UVs are not generated: {error}; the mesh keeps the file's UV2, \
-                         so baked lightmaps do not land on it (not supported)"
-                    ));
-                    None
-                }
-            }
-        });
-        if lightmap.is_some() && out.uvs.len() < 2 {
-            out.uvs.resize(2, Vec::new());
-        }
         let channels = self.blend_channels(mesh);
         // Control points as the importer welds them: in file order (an OBJ's in first-use order),
         // equal positions with equal skin weights made one (with blend shapes, only the same point).
@@ -1952,6 +1948,23 @@ impl<'a> Builder<'a> {
             }
         }
 
+        // Lightmap UVs replace UV2 (measured: tests/projects/lightmapuvs).
+        let mut warning = None;
+        let lightmap = settings.secondary_uv.as_ref().and_then(|unwrap| {
+            match self.lightmap_uvs(mesh, uv_sets.first().copied(), unwrap, &welded) {
+                Ok(lightmap) => Some(lightmap),
+                Err(error) => {
+                    warning = Some(format!(
+                        "lightmap UVs are not generated: {error}; the mesh keeps the file's UV2, \
+                         so baked lightmaps do not land on it (not supported)"
+                    ));
+                    None
+                }
+            }
+        });
+        if lightmap.is_some() && out.uvs.len() < 2 {
+            out.uvs.resize(2, Vec::new());
+        }
         // One submesh per used material, in first face-use order (measured on Unity
         // 6000.0.71f1: modelimport/material_slots.py, including per-instance bindings).
         // Keep this permutation shared by the face assignments and renderer slots;
@@ -1982,12 +1995,13 @@ impl<'a> Builder<'a> {
         out.submeshes = vec![Vec::new(); materials.len()];
 
         // The faces' corners ("wedges") in face order: triangles and quads as they are (in Unity's
-        // winding), larger polygons as triangles; faces repeating a point are left out.
+        // winding), larger polygons as triangles; degenerate faces are dropped (`face_pieces`).
         let mut polygons: Vec<(Vec<u32>, Vec<usize>)> = Vec::new();
         let mut wedges: Vec<Wedge> = Vec::new();
         let mut face_start: Vec<u32> = vec![0];
         let mut triangles: Vec<TriangleCorners> = Vec::new();
-        let mut triangle = vec![0u32; mesh.max_face_triangles.max(1) * 3];
+        let mut discarded = 0usize;
+        let point = |c: u32| welded[mesh.vertex_indices[c as usize] as usize];
         for (face_index, face) in mesh.faces.iter().enumerate() {
             let Some(part) = part_of[face_index] else {
                 continue;
@@ -1997,27 +2011,14 @@ impl<'a> Builder<'a> {
                 range.clone().map(|c| mesh.vertex_indices[c]).collect(),
                 range.clone().collect(),
             ));
-            let count = unity_triangles(mesh, *face, &mut triangle)?;
-            let pieces: Vec<Vec<u32>> = if face.num_indices == 4 {
-                vec![vec![triangle[0], triangle[1], triangle[2], triangle[5]]]
-            } else {
-                triangle[..3 * count]
-                    .chunks(3)
-                    .map(<[u32]>::to_vec)
-                    .collect()
+            let face_pieces = face_pieces(mesh, *face, point)?;
+            discarded += face_pieces.discarded as usize;
+            let pieces: Vec<&[u32]> = match &face_pieces.quad {
+                Some(quad) => vec![&quad[..]],
+                None => face_pieces.triangles.iter().map(|t| &t[..]).collect(),
             };
-            for (t, piece) in pieces.iter().enumerate() {
-                let p: Vec<u32> = piece
-                    .iter()
-                    .map(|&c| welded[mesh.vertex_indices[c as usize] as usize])
-                    .collect();
-                if (0..p.len()).any(|i| p[i + 1..].contains(&p[i])) {
-                    anyhow::ensure!(
-                        piece.len() == 3,
-                        "degenerate imported quads after position welding are not supported"
-                    );
-                    continue;
-                }
+            for (t, piece) in pieces.into_iter().enumerate() {
+                let p: Vec<u32> = piece.iter().map(|&c| point(c)).collect();
                 let first = wedges.len();
                 for (&c, &point) in piece.iter().zip(&p) {
                     wedges.push(Wedge {
@@ -2042,6 +2043,17 @@ impl<'a> Builder<'a> {
                     });
                 }
             }
+        }
+        if discarded > 0 {
+            let note = format!(
+                "{discarded} self-intersecting polygon(s) of mesh '{}' are discarded, as the Unity \
+                 importer does",
+                mesh.element.name
+            );
+            warning = Some(match warning {
+                Some(w) => format!("{w}; {note}"),
+                None => note,
+            });
         }
         let corners: Vec<u32> = wedges.iter().map(|w| w.point).collect();
 
@@ -2141,7 +2153,15 @@ impl<'a> Builder<'a> {
 
         // Vertices: each control point's first wedge makes its vertex; a later wedge reuses the
         // newest vertex of its control point with the same attributes, or makes one after them.
-        let mut used = vec![u32::MAX; points.len()];
+        // Points no face uses are left out, unless vertex optimization is off.
+        let mut used = vec![
+            if settings.keep_unused_vertices {
+                0
+            } else {
+                u32::MAX
+            };
+            points.len()
+        ];
         let mut used_points = Vec::new();
         for &p in &corners {
             if used[p as usize] == u32::MAX {
@@ -2257,6 +2277,15 @@ impl<'a> Builder<'a> {
                 out.submeshes[triangle.part].push(vertex);
             }
         }
+        // A kept point without a face has default attributes: zero UVs and colours, and this
+        // normal (measured, tests/projects/lightmapuvs; tangents are not measured).
+        if with_normals {
+            for p in 0..count as u32 {
+                if splitter.is_new(p) {
+                    out.normals[p as usize] = UNUSED_VERTEX_NORMAL;
+                }
+            }
+        }
         if !channels.is_empty() {
             self.add_blend_shapes(
                 mesh,
@@ -2316,6 +2345,7 @@ impl<'a> Builder<'a> {
         mesh: &ufbx::Mesh,
         uv0: Option<&ufbx::VertexVec2>,
         settings: &SecondaryUvSettings,
+        welded: &[u32],
     ) -> Result<LightmapUvs, String> {
         if !self.settings.weld_vertices {
             return Err("meshes without weldVertices are not measured".into());
@@ -2337,11 +2367,15 @@ impl<'a> Builder<'a> {
         let mut triangles = Vec::new();
         let mut uvs = Vec::new();
         let mut first = Vec::with_capacity(mesh.faces.len());
-        let mut triangle = vec![0u32; mesh.max_face_triangles.max(1) * 3];
         for &face in mesh.faces.iter() {
             first.push(triangles.len());
-            let count = unity_triangles(mesh, face, &mut triangle).map_err(|e| e.to_string())?;
-            for t in triangle[..3 * count].chunks(3) {
+            // The mesh's own triangles (over its welded points), numbered as `build_mesh` does.
+            let pieces = face_pieces(mesh, face, |c| {
+                welded[mesh.vertex_indices[c as usize] as usize]
+            })
+            .map_err(|e| e.to_string())?;
+            let quad = pieces.quad.map(|[a, b, c, d]| [[a, b, c], [a, c, d]]);
+            for t in quad.iter().flatten().chain(&pieces.triangles) {
                 triangles
                     .push([0, 1, 2].map(|k| index[mesh.vertex_indices[t[k] as usize] as usize]));
                 if let Some(uv) = uv0 {
@@ -2888,35 +2922,73 @@ struct LightmapUvs {
     uvs: Vec<[[f32; 2]; 3]>,
 }
 
-/// Triangle corners in Unity's winding, measured in tests/projects/lightmapuvs. Quads keep
-/// their reversed 0-2 diagonal; larger polygons use a sweep over mirrored float32 positions.
-fn unity_triangles(mesh: &ufbx::Mesh, face: ufbx::Face, out: &mut [u32]) -> Result<usize> {
-    if face.num_indices < 3 {
-        return Ok(0);
+/// A face as the importer keeps it: file corners in Unity's winding (mirroring X reverses the
+/// corners after the first), as one quad split (0, 1, 2) and (0, 2, 3) after the normals, or as
+/// triangles; nothing when the face is dropped.
+#[derive(Debug, Default, PartialEq)]
+struct FacePieces {
+    quad: Option<[u32; 4]>,
+    triangles: Vec<[u32; 3]>,
+    /// The polygon's edges cross, so the importer discards it.
+    discarded: bool,
+}
+
+/// The pieces of `face` over welded control points (`point` of a file corner), as the Unity
+/// 6000.0.71f1 Editor makes them (tests/projects/lightmapuvs):
+/// - triangles and quads first lose corners that repeat the previous corner's point (the
+///   first of a run stays); three corners left make a triangle, four a quad, and a face left
+///   with fewer, or still repeating a point (a quad folded onto its diagonal), is dropped.
+///   Zero-area faces with distinct points stay.
+/// - larger polygons are swept over their mirrored float32 positions (`triangulation`):
+///   coincident corners merge, zero-area polygons give no triangles, crossing ones are
+///   discarded. A triangle repeating a welded point is dropped.
+fn face_pieces(
+    mesh: &ufbx::Mesh,
+    face: ufbx::Face,
+    point: impl Fn(u32) -> u32,
+) -> Result<FacePieces> {
+    let (b, n) = (face.index_begin, face.num_indices);
+    let mut pieces = FacePieces::default();
+    if n < 3 {
+        return Ok(pieces);
     }
-    if face.num_indices == 3 || face.num_indices == 4 {
-        let b = face.index_begin;
-        let n = face.num_indices;
-        out[..3].copy_from_slice(&[b, b + n - 1, b + n - 2]);
-        if n == 4 {
-            out[3..6].copy_from_slice(&[b, b + 2, b + 1]);
+    if n <= 4 {
+        let mut kept: Vec<u32> = Vec::with_capacity(4);
+        for c in b..b + n {
+            if kept.last().is_none_or(|&k| point(k) != point(c)) {
+                kept.push(c);
+            }
         }
-        Ok(n as usize - 2)
-    } else {
-        let positions: Vec<[f32; 3]> = (face.index_begin..face.index_begin + face.num_indices)
-            .map(|c| mesh.vertices[mesh.vertex_indices[c as usize] as usize])
-            .map(|p| [-p.x as f32, p.y as f32, p.z as f32])
-            .collect();
-        let indices = triangulation::polygon(&positions)?;
-        anyhow::ensure!(
-            indices.len() <= out.len(),
-            "model tessellation exceeds its index buffer"
-        );
-        for (dst, corner) in out.iter_mut().zip(&indices) {
-            *dst = face.index_begin + corner;
+        if kept.len() > 1 && point(kept[0]) == point(kept[kept.len() - 1]) {
+            kept.pop();
         }
-        Ok(indices.len() / 3)
+        let points: Vec<u32> = kept.iter().map(|&c| point(c)).collect();
+        if (0..points.len()).any(|i| points[i + 1..].contains(&points[i])) {
+            return Ok(pieces);
+        }
+        match kept[..] {
+            [c0, c1, c2] => pieces.triangles.push([c0, c2, c1]),
+            [c0, c1, c2, c3] => pieces.quad = Some([c0, c3, c2, c1]),
+            _ => {}
+        }
+        return Ok(pieces);
     }
+    let positions: Vec<[f32; 3]> = (b..b + n)
+        .map(|c| mesh.vertices[mesh.vertex_indices[c as usize] as usize])
+        .map(|p| [-p.x as f32, p.y as f32, p.z as f32])
+        .collect();
+    let Some(indices) = triangulation::polygon(&positions)? else {
+        pieces.discarded = true;
+        return Ok(pieces);
+    };
+    for t in indices.chunks_exact(3) {
+        let t = [b + t[0], b + t[1], b + t[2]];
+        let p = t.map(&point);
+        if p[0] != p[1] && p[1] != p[2] && p[0] != p[2] {
+            pieces.triangles.push(t);
+        }
+    }
+    Ok(pieces)
 }
 
 /// A face corner: its file corner, face and welded control point.

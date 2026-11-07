@@ -25,14 +25,20 @@ static void error(GLenum code, void *data) {
 }
 static void combine(GLdouble coords[3], void *vertices[4], GLfloat weights[4],
                     void **result, void *data) {
-    (void)coords; (void)vertices; (void)weights;
-    /* Intersections would need new authored attributes. Refuse them explicitly. */
+    (void)coords; (void)weights;
+    /* Corners at one position are merged with only two source vertices; the first keeps its
+     * corner, as the sweep does without a callback. A crossing has four source vertices and
+     * would need a new vertex with interpolated attributes: refuse it explicitly. */
+    if (!vertices[2] && !vertices[3]) {
+        *result = vertices[0];
+        return;
+    }
     struct output *out = data;
-    if (!out->failed) out->failed = -1;
+    if (!out->failed) out->failed = -3;
     *result = NULL;
 }
 
-/* Returns index count, or -1 for an unsupported polygon, -2 for allocation failure. */
+/* Returns index count, or -3 when edges cross, -2 for allocation failure, -1 otherwise. */
 int unbound_model_tess(const float *positions, uint32_t count, uint32_t *indices, size_t capacity) {
     if (count < 3 || capacity > INT_MAX) return -1;
     GLUtesselator *tess = gluNewTess();
