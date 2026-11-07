@@ -33,7 +33,8 @@ def read(path):
 
 
 def stride(key):
-    return 3 if key.startswith('mesh/') else 4 if '/custom' in key else PARTICLE_FIELDS
+    # Lifetime rows hold two exact seed halves and one start lifetime per particle.
+    return 3 if key.startswith('mesh/') or key.endswith('/lifetimes') else 4 if '/custom' in key else PARTICLE_FIELDS
 
 
 def near(key, index, x, y):
@@ -54,17 +55,6 @@ def residual(key, index, reference, candidate):
     return next((reason for pattern, fields, reason in RESIDUALS if field in fields and re.search(pattern, key)), None)
 
 
-def retained_existing_pair(key, reference, candidate):
-    # These expiry controls retain two older particles in opposite buffer slots.
-    # Require the entire pair to agree by identity, including exact seed halves.
-    # No tolerance or particle order is changed; every raw failing index is printed.
-    if key not in {'ratebatch/edge/expiry/987654321/2', 'ratebatch/edge/expiry/4242/2'}:
-        return False
-    return all(near(key, 1 + field, reference[1 + field], candidate[34 + field])
-               and near(key, 34 + field, reference[34 + field], candidate[1 + field])
-               for field in range(PARTICLE_FIELDS))
-
-
 def retained_emit_prefix(key, reference, candidate):
     # A separate scripted-Emit control: nine existing particles, then five new ones.
     # Every field agrees by seed, including with all modifiers disabled. Preserve
@@ -79,26 +69,6 @@ def retained_emit_prefix(key, reference, candidate):
                     candidate[1 + source * PARTICLE_FIELDS + field])
                for particle, source in enumerate(slots) for field in range(PARTICLE_FIELDS))
 
-
-
-def retained_birth_expiry(key, reference, candidate):
-    # Only these measured histories retain older particles in different buffer slots.
-    # Every value must agree by unique seed, with the same counts and tolerances.
-    # The report below still prints every raw differing index and both full records.
-    keys = {f'birthrate/{name}/child/{step}'
-            for name in ('original', 'below', 'above', 'lifetime04', 'stop')
-            for step in ('17', 'end/0.05/18', 'end/0.2/19')}
-    keys.update(f'birthrate/three/child/{step}'
-                for step in [*map(str, range(9, 18)), 'end/0.05/18', 'end/0.2/19'])
-    if key not in keys or reference[0] != candidate[0]:
-        return False
-    def particles(values):
-        return {tuple(values[i:i + 2]): values[i:i + PARTICLE_FIELDS]
-                for i in range(1, len(values), PARTICLE_FIELDS)}
-    expected, actual = particles(reference), particles(candidate)
-    return (len(expected) == len(actual) == reference[0] and expected.keys() == actual.keys()
-            and all(near(key, 1 + field, x, y)
-                    for seed in expected for field, (x, y) in enumerate(zip(expected[seed], actual[seed]))))
 
 
 def retained_birth_lifetime_permutation(key, reference, candidate):
@@ -145,13 +115,9 @@ def main():
         failures = [i for i, (x, y) in enumerate(zip(ra, rb)) if not near(key, i, x, y)]
         if not failures:
             continue
-        retained_pair = retained_existing_pair(key, ra, rb)
         emit_prefix = retained_emit_prefix(key, ra, rb)
-        birth_expiry = retained_birth_expiry(key, ra, rb)
         birth_lifetime = retained_birth_lifetime_permutation(key, ra, rb)
-        reasons = {i: ('existing-particle death compaction order; values agree by seed'
-                       if (retained_pair and 1 <= i <= 66) or (birth_expiry and i >= 1) else
-                       'scripted Emit newborn prefix permutation; all fields agree by seed'
+        reasons = {i: ('scripted Emit newborn prefix permutation; all fields agree by seed'
                        if emit_prefix and i >= 1 + 9 * PARTICLE_FIELDS else
                        'Birth lifetime buffer permutation; multiplicity and all fields agree by seed'
                        if birth_lifetime and i >= 1 else residual(key, i, ra[i], rb[i]))

@@ -213,11 +213,6 @@ registry names only the following fields; it does not change numeric tolerances.
   classified as known, after checking every field of the entire record. The nine old particles
   must remain in place. Every raw failure stays printed; no particle sorting or stronger order
   guarantee is imposed. These 72 newly exposed control records are outside modifier sampling.
-- `ratebatch/edge/expiry/987654321/2` and `ratebatch/edge/expiry/4242/2`: two particles
-  surviving from the preceding step occupy opposite buffer slots after other old particles die.
-  All 33 fields agree by particle seed. The registry accepts only that exact pair permutation;
-  every other slot and field keeps its usual comparison. This existing-particle compaction
-  difference is outside rate birth assignment. No global removal or callback order is imposed.
 - `start/gradients`, `color/gradients`, `color/randomcolor`: packed color interpolation differs by
   byte values after the random draw. Public MinMaxGradient evaluation and particle packed colors
   need separate measurement before changing their arithmetic.
@@ -405,3 +400,39 @@ S7's results: particles 1530/1560, emission 18 failing records/54 values, gravit
 to S7; its worst reference mean is 0.38. Earlier captures and every raw failure remain
 in the validation cache. Continuous parent playback, curves, nested chains and other
 inheritance channels remain separate from this measured constant-lifetime slice.
+
+
+## Simulation model controls
+
+The `model/` controls check that one rule explains each mechanism across contexts the
+earlier controls held fixed. Two independent captures, `pm-ref3` and `pm-ref4`, are
+byte-identical and extend the reference by 1320 keys without changing any of the 4704
+prior keys. Earlier exploratory captures (`pm-explore1/2`, `pm-ref1/2`, `pm-setter`) and
+the baseline comparisons stay in the validation cache.
+
+| Official Unity 6000.0 source | Documented contract and limits |
+| --- | --- |
+| [InheritLifetime](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/particlesystemsubemitterproperties/inheritlifetime) | "New particles will have a shorter lifespan, the closer their parent particles are to death." No formula. |
+| [randomSeed](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/particlesystem/randomseed), [useAutoRandomSeed](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem-useAutoRandomSeed.html) | Setting the seed turns automatic seeding off. What the getter reports during an automatically seeded playback is not documented. |
+| [MainModule.startLifetime](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.MainModule-startLifetime.html) | No lower bound is documented. |
+| [Particle.randomSeed](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.Particle-randomSeed.html) | Per-particle randomness stays stable during simulation. No buffer order is documented. |
+
+| Records | Measured 6000.0.71f1 behavior | Implementation |
+| --- | --- | --- |
+| `model/inherit/simulate/const/*`, `model/inherit/play/*/lifetimes`, `model/catchup/const/*` | Birth children multiply their start lifetime by the parent's remaining seconds after the parent's internal step, in Simulate and in Play, for constant, two-constant and curve parent lifetimes and constant or two-constant children. The catch-up skip bound is the child's own start lifetime, before inheritance. | One rule for every event type and context; the fraction path is gone. Played children are compared by seed and start lifetime only (`/lifetimes` rows: exact seed halves, toleranced lifetime). |
+| `model/clock/*` | 0.613 exports as 0.613000035 and 2.9 as 2.89999986 without sub-emitters, with an unrelated Death sub-emitter and with a Birth one, for constant, two-constant and curve lifetimes, in Simulate and Play. | Every start lifetime takes the reciprocal estimate (compatibility flag `ParticleLifetimeReciprocalEstimate`). |
+| `model/death/{simulate,play}/{force,speed}/*` | With randomized force or a random speed modifier, every particle keeps the module samples of its own slot in the step it or others die. The dead then leave in four-slot groups aligned to the buffer, high to low within a group, the group revisited after each swap; newborns are added after. | Two passes: update every slot, then the SetParticles compaction rule. This also makes the formerly classified `birthrate/*` and `ratebatch/edge` expiry permutations and two Birth lifetime permutations match strictly. |
+| `model/autoseed/*` | A Death burst count after one emitting step salts with seed × 1812433253 + 1, the emission generator's first word after one draw. With automatic seeding the getter reports the drawn seed, and a twin seeded with it reproduces the counts. | Event counts salt with the emission generator's current first word; sub-emitter and noise draws use the playback seed; the getter reports it. |
+| `model/lanes/*`, `model/lifetimesetter/*` | The startLifetime setter raises the constant, each end of a range (without reordering) and a curve multiplier to 0.0001 s. | The setter clamps; lifetimes read from a scene are kept as written (unmeasured). |
+
+Not part of the published records, observed in the exploratory captures and left open:
+in Simulate, a Birth parent with a two-constant or curve start lifetime emits some
+children one internal step later, or from the other parent, than Unbound (seed 2010 in
+`model/inherit/simulate/two/*` of `pm-explore2`); played Birth children start one parent
+step (0.04 along z) away from Unbound's origin; a two-constant child in a long catch-up
+call loses one more child in Unity; Unity keeps a dead particle whose trail still fades in
+the buffer at zero lifetime, and a newborn moved into its freed slot moves differently;
+and the MinMaxCurve getter keeps a constant and a curve multiplier apart where Unbound
+shares one scalar. The rate batch's own expiry compaction stays ascending: the four-slot
+order regresses `ratebatch/edge`. The 31 remaining `birthlife/batch` permutations are not
+explained by either order.

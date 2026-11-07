@@ -630,6 +630,7 @@ public partial class ParticleRandomProbe : MonoBehaviour
         BirthRateControls();
         BirthLifetimeControls();
         yield return BirthLifetimeCallbacks();
+        yield return ModelControls();
         var done = new List<float> { 1f };
         Record("complete", done);
         File.WriteAllText(s_Path, s_Out.ToString());
