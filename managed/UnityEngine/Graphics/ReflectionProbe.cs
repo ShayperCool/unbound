@@ -124,7 +124,8 @@ namespace UnityEngine
         {
             into.Clear();
             if (usage == ReflectionProbeUsage.Off || s_Enabled.Count == 0) return;
-            var candidates = new List<(ReflectionProbe Probe, float Inside, float Volume)>();
+            var candidates = s_Candidates;
+            candidates.Clear();
             foreach (var probe in s_Enabled)
             {
                 // A realtime probe counts before it has rendered (it reflects black).
@@ -134,13 +135,7 @@ namespace UnityEngine
                 candidates.Add((probe, InsideShare(box, bounds), box.size.x * box.size.y * box.size.z));
             }
             if (candidates.Count == 0) return;
-            candidates.Sort((a, b) =>
-            {
-                int c = b.Probe.m_Importance.CompareTo(a.Probe.m_Importance);
-                if (c != 0) return c;
-                c = b.Inside.CompareTo(a.Inside);
-                return c != 0 ? c : a.Volume.CompareTo(b.Volume);
-            });
+            candidates.Sort(s_ByImportance);
             if (candidates.Count == 1)
             {
                 into.Add(new ReflectionProbeBlendInfo { probe = candidates[0].Probe, weight = 1f });
@@ -154,6 +149,15 @@ namespace UnityEngine
             into.Add(new ReflectionProbeBlendInfo { probe = first.Probe, weight = weight });
             into.Add(new ReflectionProbeBlendInfo { probe = second.Probe, weight = 1f - weight });
         }
+
+        static readonly List<(ReflectionProbe Probe, float Inside, float Volume)> s_Candidates = new List<(ReflectionProbe, float, float)>();
+        static readonly Comparison<(ReflectionProbe Probe, float Inside, float Volume)> s_ByImportance = (a, b) =>
+        {
+            int c = b.Probe.m_Importance.CompareTo(a.Probe.m_Importance);
+            if (c != 0) return c;
+            c = b.Inside.CompareTo(a.Inside);
+            return c != 0 ? c : a.Volume.CompareTo(b.Volume);
+        };
 
         static bool Touches(Bounds a, Bounds b) =>
             a.min.x <= b.max.x && a.max.x >= b.min.x && a.min.y <= b.max.y && a.max.y >= b.min.y && a.min.z <= b.max.z && a.max.z >= b.min.z;
@@ -188,17 +192,20 @@ namespace UnityEngine
 
         /// <summary>A renderer's reflection: its probes' cubemaps, decode values, boxes and the
         /// first's weight (unity_SpecCube0_BoxMin.w, what the built-in shaders blend by). Nothing
-        /// when it reflects the default reflection (the frame's globals).</summary>
-        internal static Dictionary<int, object> Apply(Renderer renderer, Dictionary<int, object> properties) =>
-            renderer == null ? properties : Apply(renderer.bounds, renderer.reflectionProbeUsage, properties);
+        /// when it reflects the default reflection (the frame's globals). <paramref name="srp"/>:
+        /// laid out as a render pipeline's draws get it (<see cref="ApplySrp"/>).</summary>
+        internal static Dictionary<int, object> Apply(Renderer renderer, Dictionary<int, object> properties, bool srp = false) =>
+            renderer == null ? properties : Apply(renderer.bounds, renderer.reflectionProbeUsage, properties, srp);
 
         /// <summary>The same for bounds and a probe usage (a Graphics.DrawMesh draw's).</summary>
-        internal static Dictionary<int, object> Apply(Bounds bounds, ReflectionProbeUsage usage, Dictionary<int, object> properties)
+        internal static Dictionary<int, object> Apply(Bounds bounds, ReflectionProbeUsage usage, Dictionary<int, object> properties, bool srp = false)
         {
             if (s_Enabled.Count == 0) return properties;
-            Closest(bounds, usage, s_Blend);
+            // A render pipeline blends by its own setting: Simple samples two probes as well.
+            Closest(bounds, srp && usage == ReflectionProbeUsage.Simple ? ReflectionProbeUsage.BlendProbes : usage, s_Blend);
             if (s_Blend.Count == 0) return properties;
             properties = properties != null ? new Dictionary<int, object>(properties) : new Dictionary<int, object>();
+            if (srp) return ApplySrp(properties);
             var first = s_Blend[0].probe;
             var second = s_Blend.Count > 1 ? s_Blend[1].probe : null;
             bool blend = usage != ReflectionProbeUsage.Simple && second != null;
@@ -208,14 +215,59 @@ namespace UnityEngine
             return properties;
         }
 
-        static void Set(Dictionary<int, object> properties, ReflectionProbe probe, int cube, int hdr, int min, int max, int position, float weight)
+        /// <summary>
+        /// A render pipeline draw's probes (measured: tests/projects/urp per-object-constants.jsonl,
+        /// URP's forward path): each box's w of BoxMax is the probe's blend distance (URP blends
+        /// per pixel by it); the first's BoxMin.w its weight as above; the second's BoxMin.w the
+        /// sign of the first's importance over it (what URP's shaders read to let the more
+        /// important probe dominate). Without a second probe the second slot is the default
+        /// reflection over an unbounded box (BoxMin.w 1, BoxMax.w 0).
+        /// </summary>
+        static Dictionary<int, object> ApplySrp(Dictionary<int, object> properties)
+        {
+            var first = s_Blend[0];
+            Set(properties, first.probe, s_Cube0, s_Hdr0, s_Min0, s_Max0, s_Pos0, first.weight, first.probe.m_BlendDistance);
+            if (s_Blend.Count > 1)
+            {
+                var second = s_Blend[1].probe;
+                float sign = Math.Sign(first.probe.m_Importance - second.m_Importance);
+                Set(properties, second, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1, sign, second.m_BlendDistance);
+            }
+            else SetUnbounded(properties, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1, 1f);
+            return properties;
+        }
+
+        /// <summary>A slot holding the default reflection over an unbounded box (what a render
+        /// pipeline's draws get without a probe; <paramref name="weight"/> is BoxMin.w).</summary>
+        static void SetUnbounded(Dictionary<int, object> properties, int cube, int hdr, int min, int max, int position, float weight)
+        {
+            properties[cube] = defaultTexture ?? Black;
+            properties[hdr] = DefaultDecode;
+            properties[min] = new Vector4(float.NegativeInfinity, float.NegativeInfinity, float.NegativeInfinity, weight);
+            properties[max] = new Vector4(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity, 0f);
+            properties[position] = Vector4.zero;
+        }
+
+        /// <summary>The default reflection's decode values with the lighting settings' reflection
+        /// intensity (the frame's unity_SpecCube0_HDR).</summary>
+        internal static Vector4 DefaultDecode
+        {
+            get
+            {
+                var decode = defaultTextureHDRDecodeValues;
+                decode.x *= RenderSettings.reflectionIntensity;
+                return decode;
+            }
+        }
+
+        static void Set(Dictionary<int, object> properties, ReflectionProbe probe, int cube, int hdr, int min, int max, int position, float weight, float maxW = 0f)
         {
             var box = probe.bounds;
             bool pending = probe.m_Mode == ReflectionProbeMode.Custom && probe.m_CustomFrame >= Time.frameCount;
             properties[cube] = pending ? Black : probe.texture ?? Black;
             properties[hdr] = probe.textureHDRDecodeValues;
             properties[min] = new Vector4(box.min.x, box.min.y, box.min.z, weight);
-            properties[max] = new Vector4(box.max.x, box.max.y, box.max.z, 0f);
+            properties[max] = new Vector4(box.max.x, box.max.y, box.max.z, maxW);
             var p = probe.transform.position;
             properties[position] = new Vector4(p.x, p.y, p.z, probe.m_BoxProjection ? 1f : 0f);
         }

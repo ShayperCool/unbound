@@ -437,9 +437,15 @@ namespace Unbound.Runtime
             else Shader.DisableKeyword("BILLBOARD_FACE_CAMERA_POS");
         }
 
+        static readonly Vector4 s_UnboundedMin = new Vector4(float.NegativeInfinity, float.NegativeInfinity, float.NegativeInfinity, 0f);
+        static readonly Vector4 s_UnboundedMax = new Vector4(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity, 0f);
+
         /// <summary>The lighting environment's built-in variables (ambient probe, fog, main
-        /// light) and fog keywords, for what renders next.</summary>
-        internal static void EmitLightingGlobals()
+        /// light) and fog keywords, for what renders next. <paramref name="srp"/>: for a render
+        /// pipeline's draws, whose renderers without a reflection probe get the default reflection
+        /// over an unbounded box in both slots (measured: tests/projects/urp
+        /// per-object-constants.jsonl).</summary>
+        internal static void EmitLightingGlobals(bool srp = false)
         {
             s_Lighting.Clear();
             s_FrameKeywords.Clear();
@@ -451,17 +457,29 @@ namespace Unbound.Runtime
             if (reflection != null)
             {
                 ulong handle = TextureHandles.Of(reflection);
-                var decode = ReflectionProbe.defaultTextureHDRDecodeValues;
                 // The lighting settings' reflection intensity scales what it gives.
-                decode.x *= RenderSettings.reflectionIntensity;
+                var decode = ReflectionProbe.DefaultDecode;
                 GfxStream.GlobalTexture("unity_SpecCube0", handle);
                 GfxStream.GlobalTexture("unity_SpecCube1", handle);
                 GfxStream.GlobalVector("unity_SpecCube0_HDR", decode);
                 GfxStream.GlobalVector("unity_SpecCube1_HDR", decode);
+                if (srp)
+                {
+                    GfxStream.GlobalVector("unity_SpecCube0_BoxMin", s_UnboundedMin);
+                    GfxStream.GlobalVector("unity_SpecCube0_BoxMax", s_UnboundedMax);
+                    GfxStream.GlobalVector("unity_SpecCube0_ProbePosition", Vector4.zero);
+                    GfxStream.GlobalVector("unity_SpecCube1_BoxMin", s_UnboundedMin);
+                    GfxStream.GlobalVector("unity_SpecCube1_BoxMax", s_UnboundedMax);
+                    GfxStream.GlobalVector("unity_SpecCube1_ProbePosition", Vector4.zero);
+                }
                 // Weight 1: the built-in shaders' probe blending keeps the first cubemap alone.
-                GfxStream.GlobalVector("unity_SpecCube0_BoxMin", new Vector4(0f, 0f, 0f, 1f));
+                else GfxStream.GlobalVector("unity_SpecCube0_BoxMin", new Vector4(0f, 0f, 0f, 1f));
             }
+            // A renderer without a lightmap keeps its lightmapScaleOffset's default.
+            GfxStream.GlobalVector("unity_LightmapST", s_IdentityScaleOffset);
         }
+
+        static readonly Vector4 s_IdentityScaleOffset = new Vector4(1f, 1f, 0f, 0f);
 
         /// <summary>Screen-space overlay canvases over the screen (with no camera at all, black:
         /// "No cameras rendering"). A pipeline draws them into its own target
@@ -741,10 +759,10 @@ namespace Unbound.Runtime
                 var item = s_Items[i];
                 if (overrideMaterial == null && overrideShader == null && item.Material.HasDisabledPasses && ShaderPassInfo.Of(item.Material.shader) is ShaderPassInfo info)
                 {
-                    foreach (var p in TaggedPasses(item.Material, info, s_PassTagScratch)) EmitDraw(item, s_MaterialHandles[i], p, lightmaps, probes);
+                    foreach (var p in TaggedPasses(item.Material, info, s_PassTagScratch)) EmitDraw(item, s_MaterialHandles[i], p, lightmaps, probes, srp: true);
                     continue;
                 }
-                EmitDraw(item, s_MaterialHandles[i], pass, lightmaps, probes);
+                EmitDraw(item, s_MaterialHandles[i], pass, lightmaps, probes, srp: true);
             }
         }
 
@@ -795,7 +813,7 @@ namespace Unbound.Runtime
         /// probes, <see cref="BakedLighting.Apply"/>): its keywords are on for the draw alone.</summary>
         static void EmitDraw(in DrawItem item, ulong material, int pass, bool lightmaps = true, bool probes = true,
             Dictionary<int, object> extra = null, string extraKeyword = null, string extraKeyword2 = null, string extraKeyword3 = null,
-            RenderDispatchContext dispatch = RenderDispatchContext.Unknown)
+            RenderDispatchContext dispatch = RenderDispatchContext.Unknown, bool srp = false)
         {
             Describe(item);
             s_DrawCount++;
@@ -804,14 +822,14 @@ namespace Unbound.Runtime
             if (IsMeshLike(item.Renderer))
             {
                 properties = BakedLighting.Apply(item.Renderer, properties, s_DrawKeywords, lightmaps, probes);
-                properties = ReflectionProbe.Apply(item.Renderer, properties);
+                properties = ReflectionProbe.Apply(item.Renderer, properties, srp);
             }
             else if (item.Lighting != null)
             {
                 var lighting = item.Lighting;
                 if (probes && lighting.Probes == LightProbeUsage.BlendProbes)
                     properties = BakedLighting.ApplyProbes(lighting.Anchor != null ? lighting.Anchor.position : lighting.ProbePosition ?? item.Bounds.center, properties);
-                properties = ReflectionProbe.Apply(item.Bounds, lighting.Reflections, properties);
+                properties = ReflectionProbe.Apply(item.Bounds, lighting.Reflections, properties, srp);
             }
             if (extra != null)
             {
