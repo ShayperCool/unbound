@@ -453,6 +453,7 @@ namespace UnityEngine.Audio
                     mixAudible = wetDb > -69f,
                     duck = effect.m_EffectName == AudioMixerEffectController.DuckVolume ? effect.DuckConfiguration(m_Mixer) : null,
                     compressor = effect.m_EffectName == AudioMixerEffectController.Compressor && !bypass ? effect.CompressorConfiguration(m_Mixer) : null,
+                    normalize = effect.m_EffectName == AudioMixerEffectController.Normalize && !bypass ? effect.NormalizeConfiguration(m_Mixer) : null,
                     flange = effect.m_EffectName == AudioMixerEffectController.Flange && !bypass ? effect.FlangeConfiguration(m_Mixer) : null,
                     chorus = effect.m_EffectName == AudioMixerEffectController.Chorus && !bypass ? effect.ChorusConfiguration(m_Mixer) : null,
                     distortion = effect.m_EffectName == AudioMixerEffectController.Distortion && !bypass ? effect.DistortionConfiguration(m_Mixer) : (float?)null,
@@ -586,6 +587,11 @@ namespace Unbound.Runtime
         static readonly float[] DuckMaximums = { 0f, 10f, 10f, 10f, 40f, 50f, 1f };
         internal const string Compressor = "Compressor";
         internal const string ParamEq = "ParamEQ";
+        internal const string Normalize = "Normalize";
+        internal static readonly string[] NormalizeParameters = { "Fade in time", "Lowest volume", "Maximum amp" };
+        static readonly float[] NormalizeDefaults = { 5000f, 0.1f, 20f };
+        static readonly float[] NormalizeMinimums = { 0f, 0f, 0f };
+        static readonly float[] NormalizeMaximums = { 20000f, 1f, 100000f };
         internal const string Flange = "Flange";
         internal static readonly string[] FlangeParameters = { "Drymix", "Wetmix", "Depth", "Rate" };
         static readonly float[] FlangeDefaults = { 0.45f, 0.55f, 1f, 0.1f };
@@ -611,11 +617,12 @@ namespace Unbound.Runtime
         static readonly float[] ParamEqMaximums = { 22000f, 5f, 3f };
         /// <summary>Kinds the DSP runs besides SFX Reverb and the routed units.</summary>
         internal static readonly string[] MeasuredEffects = {
-            "Attenuation", "Lowpass", "Highpass", "Echo", Compressor, ParamEq, Distortion, Chorus, Flange, "Lowpass Simple", "Highpass Simple" };
+            "Attenuation", "Lowpass", "Highpass", "Echo", Compressor, ParamEq, Distortion, Chorus, Flange, Normalize, "Lowpass Simple", "Highpass Simple" };
         internal static float CutoffDefault(string effect) => effect == "Highpass Simple" ? 1000f : 5000f;
         internal static (string[], float[], float[], float[]) Ranges(string effect) =>
             effect == Compressor ? (CompressorParameters, CompressorDefaults, CompressorMinimums, CompressorMaximums)
             : effect == ParamEq ? (ParamEqParameters, ParamEqDefaults, ParamEqMinimums, ParamEqMaximums)
+            : effect == Normalize ? (NormalizeParameters, NormalizeDefaults, NormalizeMinimums, NormalizeMaximums)
             : effect == Flange ? (FlangeParameters, FlangeDefaults, FlangeMinimums, FlangeMaximums)
             : effect == Chorus ? (ChorusParameters, ChorusDefaults, ChorusMinimums, ChorusMaximums)
             : effect == Distortion ? (DistortionParameters, DistortionDefaults, DistortionMinimums, DistortionMaximums)
@@ -645,6 +652,21 @@ namespace Unbound.Runtime
             float value = Parameter("Level") is string guid ? mixer.Value(guid) : 0.5f;
             if (!float.IsFinite(value)) throw new NotSupportedException("AudioMixer Distortion Level must be finite");
             return Mathf.Clamp01(value);
+        }
+        // Unity 6000.0.71f1 captures retain exposed values and clamp only the DSP inputs.
+        internal object NormalizeConfiguration(UnityEngine.Audio.AudioMixer mixer)
+        {
+            var v = new float[3];
+            for (int i = 0; i < v.Length; i++)
+            {
+                float value = Parameter(NormalizeParameters[i]) is string guid ? mixer.Value(guid) : NormalizeDefaults[i];
+                if (!float.IsFinite(value)) throw new NotSupportedException("AudioMixer Normalize " + NormalizeParameters[i] + " must be finite");
+                v[i] = Mathf.Clamp(value, NormalizeMinimums[i], NormalizeMaximums[i]);
+            }
+            var config = AudioSettings.GetConfiguration();
+            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || config.dspBufferSize != 1024)
+                throw new NotSupportedException("AudioMixer Normalize is measured only at 48000/44100 Hz with 1024-frame stereo output");
+            return new { fade = v[0], lowest = v[1], maximum = v[2] };
         }
         internal object FlangeConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {

@@ -1,6 +1,7 @@
 //! Persistent DSP on summed mixer groups. Native captures establish a fourth-order Butterworth
 //! response for Lowpass and a second-order response for Highpass. The independently measured
 //! startup kernels also constrain parameter-dependent delay-history normalization.
+use super::normalize::{Normalize, NormalizeSpec};
 use super::flange::{Flange, FlangeSpec};
 use super::chorus::{Chorus, ChorusSpec};
 use super::compressor::{Compressor, CompressorSpec};
@@ -64,6 +65,8 @@ pub struct EffectSpec {
     pub chorus: Option<ChorusSpec>,
     #[serde(default)]
     pub flange: Option<FlangeSpec>,
+    #[serde(default)]
+    pub normalize: Option<NormalizeSpec>,
 }
 
 /// ParamEQ parameters as the mixer stores them: Hz, octaves and a linear gain.
@@ -98,6 +101,7 @@ impl EffectSpec {
         }
         if let Some(chorus) = &self.chorus { chorus.validate()?; }
         if let Some(flange) = &self.flange { flange.validate()?; }
+        if let Some(normalize) = &self.normalize { normalize.validate()?; }
         if let Some(level) = self.distortion {
             anyhow::ensure!(level.is_finite() && (0.0..=1.0).contains(&level),
                 "AudioMixer Distortion has an invalid Level {level}");
@@ -369,6 +373,7 @@ pub struct Effect {
     compressor: Compressor,
     chorus: Option<Chorus>,
     flange: Option<Flange>,
+    normalize: Normalize,
     simple: SimpleFilter,
     eq: ParamEq,
     /// Frames since the effect started, for the slot's startup ramp.
@@ -391,6 +396,7 @@ impl Effect {
             compressor: Compressor::default(),
             chorus: None,
             flange: None,
+            normalize: Normalize::default(),
             simple: SimpleFilter::default(),
             eq: ParamEq::default(),
             frames: 0,
@@ -438,6 +444,7 @@ impl Effect {
         self.compressor = Compressor::default();
         if let Some(chorus) = &mut self.chorus { chorus.clear(); }
         if let Some(flange) = &mut self.flange { flange.clear(); }
+        self.normalize = Normalize::default();
         self.simple = SimpleFilter::default();
         self.eq.h = Default::default();
         self.frames = 0;
@@ -510,7 +517,7 @@ impl Effect {
             if !bypass && !self.spec.bypass {
                 self.echo.process(samples, &self.spec);
             }
-        } else if matches!(self.spec.kind.as_str(), "Compressor" | "ParamEQ" | "Distortion" | "Chorus" | "Flange" | "Lowpass Simple" | "Highpass Simple") {
+        } else if matches!(self.spec.kind.as_str(), "Compressor" | "ParamEQ" | "Distortion" | "Chorus" | "Flange" | "Normalize" | "Lowpass Simple" | "Highpass Simple") {
             // A bypassed unit keeps its state; resuming after bypass is unmeasured.
             if bypass || self.spec.bypass {
                 return;
@@ -523,6 +530,7 @@ impl Effect {
                 }
                 "ParamEQ" => self.eq.process(samples),
                 "Distortion" => distortion(samples, self.spec.distortion.unwrap()),
+                "Normalize" => self.normalize.process(samples, self.spec.normalize.as_ref().unwrap(), self.rate),
                 "Flange" => self.flange.as_mut().unwrap().process(samples, self.spec.flange.as_ref().unwrap()),
                 "Chorus" => self.chorus.as_mut().unwrap().process(samples, self.spec.chorus.as_ref().unwrap()),
                 kind => self.simple.process(samples, kind == "Highpass Simple", self.spec.cutoff, self.rate),

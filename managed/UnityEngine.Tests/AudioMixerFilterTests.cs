@@ -420,10 +420,40 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void NormalizeDefaultsRawSettersDspClampsAndUnsupportedWetMixing()
+        {
+            var (mixer, group, effect) = Fixture();
+            effect.m_EffectName = "Normalize"; effect.m_ParameterGuids.Clear();
+            foreach (string name in AudioMixerEffectController.NormalizeParameters)
+            {
+                effect.m_ParameterGuids[name] = name; mixer.m_Exposed[name] = name;
+            }
+            foreach (var pair in new[] { ("Fade in time", 5000f), ("Lowest volume", 0.1f), ("Maximum amp", 20f) })
+            {
+                Assert.True(mixer.GetFloat(pair.Item1, out float value)); Assert.Equal(pair.Item2, value);
+            }
+            Assert.False(mixer.SetFloat("Missing", 1f));
+            mixer.SetFloat("Fade in time", -1f); mixer.SetFloat("Lowest volume", 2f); mixer.SetFloat("Maximum amp", 200000f);
+            Assert.True(mixer.GetFloat("Maximum amp", out float raw)); Assert.Equal(200000f, raw);
+            using var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration()));
+            var normalize = payload.RootElement.GetProperty("effects")[0].GetProperty("normalize");
+            Assert.Equal(0f, normalize.GetProperty("fade").GetSingle());
+            Assert.Equal(1f, normalize.GetProperty("lowest").GetSingle());
+            Assert.Equal(100000f, normalize.GetProperty("maximum").GetSingle());
+            effect.m_EnableWetMix = true;
+            Assert.Contains("wet mixing", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+            effect.m_Bypass = true; group.DspConfiguration();
+            effect.m_Bypass = false; effect.m_EnableWetMix = false;
+            mixer.SetFloat("Fade in time", float.NaN);
+            Assert.Contains("finite", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+            group.m_BypassEffects = true; group.DspConfiguration();
+        }
+
+        [Fact]
         public void ActiveUnsupportedEffectsAndWetMixFailLoudly()
         {
             var (_, group, effect) = Fixture();
-            effect.m_EffectName = "Normalize";
+            effect.m_EffectName = "Pitch Shifter";
             Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
             effect.m_Bypass = true;
             group.DspConfiguration();

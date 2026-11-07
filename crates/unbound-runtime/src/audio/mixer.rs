@@ -229,6 +229,7 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         eq: None,
         distortion: (d.kind == filter_kind::DISTORTION).then(|| d.cutoff.clamp(0.0, 1.0)),
         flange: None,
+        normalize: None,
         chorus: (d.kind == filter_kind::CHORUS).then(|| super::chorus::ChorusSpec {
             dry: r[0].clamp(0.0, 1.0), wet1: r[1].clamp(0.0, 1.0), wet2: r[2].clamp(0.0, 1.0),
             wet3: r[3].clamp(0.0, 1.0), delay: (r[4] <= 100.0).then_some(r[4].max(0.0)),
@@ -757,6 +758,9 @@ impl Mixer {
         for node in self.group_nodes.values() {
             for effect in &node.spec.effects {
                 effect.validate(config.sample_rate)?;
+                if effect.kind == "Normalize" && !effect.bypass && !node.spec.bypass {
+                    super::normalize::Normalize::validate_configuration(config.sample_rate, config.buffer_size)?;
+                }
             }
         }
         for source in self.sources.values() {
@@ -956,15 +960,29 @@ impl Mixer {
 
     /// Updates routing and parameters without discarding the filters' delay lines.
     pub fn configure_group(&mut self, spec: GroupSpec) -> anyhow::Result<()> {
+        if let Some(node) = self.group_nodes.get(&spec.handle).filter(|n| n.rendered > 0) {
+            let signature = |group: &GroupSpec| -> Vec<_> {
+                group.effects.iter().enumerate().filter(|(_, e)| e.kind == "Normalize")
+                    .map(|(i, e)| (i, e.id.clone(), e.bypass, e.normalize.clone())).collect()
+            };
+            let previous = signature(&node.spec);
+            let next = signature(&spec);
+            anyhow::ensure!((previous.is_empty() && next.is_empty())
+                || (previous == next && node.spec.bypass == spec.bypass),
+                "AudioMixer Normalize live parameter, placement and bypass changes are unmeasured");
+        }
         anyhow::ensure!(spec.suspend_threshold.is_finite() && spec.suspend_threshold >= 0.0,
             "invalid AudioMixer suspension threshold");
         for effect in &spec.effects {
             effect.validate(self.config.sample_rate)?;
+            if effect.kind == "Normalize" && !effect.bypass && !spec.bypass {
+                super::normalize::Normalize::validate_configuration(self.config.sample_rate, self.config.buffer_size)?;
+            }
             anyhow::ensure!(
                 matches!(effect.kind.as_str(),
                     "Attenuation" | "Lowpass" | "Highpass" | "Echo" | "SFX Reverb"
                         | "Send" | "Receive" | "Duck Volume" | "Compressor" | "ParamEQ"
-                        | "Lowpass Simple" | "Highpass Simple" | "Distortion" | "Chorus" | "Flange")
+                        | "Lowpass Simple" | "Highpass Simple" | "Distortion" | "Chorus" | "Flange" | "Normalize")
                     || effect.bypass
                     || spec.bypass,
                 "unsupported AudioMixer effect '{}'",
@@ -977,7 +995,8 @@ impl Mixer {
                         && (effect.kind != "ParamEQ" || effect.eq.is_some())
                         && (effect.kind != "Distortion" || effect.distortion.is_some())
                         && (effect.kind != "Chorus" || effect.chorus.is_some())
-                        && (effect.kind != "Flange" || effect.flange.is_some()),
+                        && (effect.kind != "Flange" || effect.flange.is_some())
+                        && (effect.kind != "Normalize" || effect.normalize.is_some()),
                 "AudioMixer {} '{}' has no parameters",
                 effect.kind,
                 effect.id
@@ -1691,7 +1710,7 @@ impl Mixer {
             // (tests/projects/mixerduck, tests/projects/mixercompressor).
             let active = node.effects.iter()
                 .any(|e| matches!(e.spec.kind.as_str(), "Echo" | "SFX Reverb" | "Duck Volume"
-                    | "Compressor" | "ParamEQ" | "Lowpass Simple" | "Highpass Simple" | "Distortion" | "Chorus" | "Flange"))
+                    | "Compressor" | "ParamEQ" | "Lowpass Simple" | "Highpass Simple" | "Distortion" | "Chorus" | "Flange" | "Normalize"))
                 || (!node.spec.bypass
                     && node.effects.iter().any(|e| {
                         !e.spec.bypass && matches!(e.spec.kind.as_str(), "Lowpass" | "Highpass")
@@ -2937,6 +2956,34 @@ mod tests {
         assert!(mixer.reconfigure(MixerConfig { sample_rate: u32::MAX, ..before }).is_err());
         assert_eq!(mixer.config, before);
         assert_eq!(mixer.group_nodes[&3].effects.len(), 1);
+    }
+    #[test]
+    fn normalize_rejects_unmeasured_configuration_and_live_changes_without_mutating_state() {
+        let mut mixer = Mixer::new(MixerConfig::default());
+        let mut spec = filter_group(3, 0, "Normalize");
+        assert!(mixer.configure_group(spec.clone()).is_err());
+        spec.effects[0].normalize = Some(super::super::normalize::NormalizeSpec {
+            fade: 5000.0, lowest: 0.1, maximum: 20.0,
+        });
+        mixer.configure_group(spec.clone()).unwrap();
+        let before = mixer.config;
+        for config in [MixerConfig { buffer_size: 512, ..before }, MixerConfig { sample_rate: 22050, ..before }] {
+            assert!(mixer.reconfigure(config).unwrap_err().to_string().contains("measured only"));
+            assert_eq!(mixer.config, before);
+        }
+        spec.effects[0].mix_level = Some(0.5);
+        assert!(mixer.configure_group(spec.clone()).unwrap_err().to_string().contains("wet mixing"));
+        spec.effects[0].mix_level = None;
+        // A repeated managed submission retains the envelope; changing its settings must fail.
+        mixer.group_nodes.get_mut(&3).unwrap().rendered = 1024;
+        mixer.configure_group(spec.clone()).unwrap();
+        spec.effects[0].normalize.as_mut().unwrap().fade = 100.0;
+        assert!(mixer.configure_group(spec.clone()).unwrap_err().to_string().contains("live parameter"));
+        spec.effects[0].normalize.as_mut().unwrap().fade = 5000.0;
+        spec.bypass = true;
+        assert!(mixer.configure_group(spec).is_err());
+        assert!(!mixer.group_nodes[&3].spec.bypass);
+        assert_eq!(mixer.group_nodes[&3].spec.effects[0].normalize.as_ref().unwrap().fade, 5000.0);
     }
     #[test]
     fn malformed_echo_rates_fail_before_allocating_or_replacing_groups() {
