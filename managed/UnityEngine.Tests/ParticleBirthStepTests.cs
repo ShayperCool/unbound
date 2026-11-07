@@ -170,6 +170,27 @@ namespace UnityEngine.Tests
             });
         }
 
+        [Theory]
+        [InlineData(0.413f, 10f, 2)]
+        [InlineData(1.613f, 10f, 1)]
+        [InlineData(0.613f, 10f, 2)]
+        [InlineData(0.613f, 120f, 13)]
+        public void BirthRateBoundariesKeepTheMeasuredCountsWithDifferentParentLifetimes(
+            float parentLife, float rate, int expectedCount)
+        {
+            WithSystems((parent, child) =>
+            {
+                var m = parent.main; m.startLifetime = parentLife;
+                m = child.main; m.startLifetime = 0.813f;
+                var emission = parent.emission;
+                emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+                emission = child.emission; emission.rateOverTime = rate;
+                parent.Simulate(0.05f, true, true, false);
+                parent.Simulate(0.05f, true, false, false);
+                Assert.Equal(expectedCount, child.particleCount);
+            });
+        }
+
         static void Near(float expected, float actual) => Assert.InRange(Math.Abs(expected - actual), 0f, 0.000002f);
 
         static void WithSystems(Action<ParticleSystem, ParticleSystem> run)
