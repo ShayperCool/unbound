@@ -1,0 +1,47 @@
+newmtl Default
+
+
+newmtl Black
+Kd 0 0 0
+
+newmtl White
+Kd 1 1 1
+
+newmtl Mid
+Kd 0.18 0.5 0.75
+
+newmtl DZero
+Kd 0.2 0.4 0.8
+d 0
+
+newmtl DQuarter
+Kd 0.2 0.4 0.8
+d 0.25
+
+newmtl DOne
+Kd 0.2 0.4 0.8
+d 1
+
+newmtl TrQuarter
+Kd 0.2 0.4 0.8
+Tr 0.25
+
+newmtl DThenTr
+Kd 0.2 0.4 0.8
+d 0.3
+Tr 0.8
+
+newmtl TrThenD
+Kd 0.2 0.4 0.8
+Tr 0.8
+d 0.3
+
+newmtl Texture
+Kd 0.2 0.4 0.8
+
+
+newmtl Specular
+Kd 0.2 0.4 0.8
+Ks 0.8 0.3 0.1
+Ns 80
+
