@@ -26,6 +26,11 @@ pub struct BuiltinShaders {
 }
 
 impl BuiltinShaders {
+    /// The complete published entry for a release, without acquiring or downloading it.
+    pub fn cached(version: UnityVersion) -> Result<Option<Self>> {
+        cached(&cache_path(version))
+    }
+
     /// Directories holding built-in `.shader` files.
     pub fn shader_roots(&self) -> Vec<PathBuf> {
         ["DefaultResources", "DefaultResourcesExtra"]
@@ -54,10 +59,7 @@ impl BuiltinShaders {
             });
         }
         let version = install.version;
-        let root = crate::cache_root()
-            .join("builtin-shaders")
-            .join(format!("v{FORMAT_VERSION}"))
-            .join(version.to_string());
+        let root = cache_path(version);
         session_sources(&root, || {
             acquire(
                 &root,
@@ -85,6 +87,13 @@ impl BuiltinShaders {
             )
         })
     }
+}
+
+fn cache_path(version: UnityVersion) -> PathBuf {
+    crate::cache_root()
+        .join("builtin-shaders")
+        .join(format!("v{FORMAT_VERSION}"))
+        .join(version.to_string())
 }
 
 type SourceResult = std::result::Result<BuiltinShaders, String>;

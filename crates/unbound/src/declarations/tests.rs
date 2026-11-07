@@ -638,11 +638,13 @@ fn builtin_sources_declare_the_keywords_unity_lists() {
         eprintln!("skipped: no 6000.0.71f1 install");
         return;
     };
-    let sources = unbound_project::cache_root().join("builtin-shaders/v1/6000.0.71f1");
-    if !sources.join("CGIncludes/UnityCG.cginc").is_file() {
+    let Some(sources) = unbound_project::builtin_shaders::BuiltinShaders::cached(
+        "6000.0.71f1".parse().unwrap(),
+    ).unwrap() else {
         eprintln!("skipped: no 6000.0.71f1 built-in shader sources");
         return;
-    }
+    };
+    let sources = sources.root;
     let scratch = Scratch::new("decl-builtin-sources");
     let builtin = unbound_assets::builtin_shaders::declarations(&data, &scratch.0).unwrap();
     let mut i = inputs(
