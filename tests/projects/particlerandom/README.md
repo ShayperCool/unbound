@@ -291,3 +291,9 @@ differences. All 342 P6 origin/age controls remain exact and all 2491 prior cano
 keys are unchanged. The 817 new controls have 791 exact records and 26 complete
 per-seed matches with the reported expiry permutations. The original broad Birth
 gate improves from 22/30 to 30/30 without an allowance or reference edit.
+
+Stop clearing completes before stop actions run, so particles emitted by an
+OnParticleSystemStopped callback survive. The managed regression test preserves
+that behavior. [Unity 6000.0 OnParticleSystemStopped](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnParticleSystemStopped.html)
+describes the callback as notification that the system has stopped. This does
+not establish an order among callbacks of different systems.

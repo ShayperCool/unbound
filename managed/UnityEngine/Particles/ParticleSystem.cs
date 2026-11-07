@@ -234,8 +234,15 @@ namespace UnityEngine
 
         public void Stop([Internal.DefaultValue("true")] bool withChildren, [Internal.DefaultValue("ParticleSystemStopBehavior.StopEmitting")] ParticleSystemStopBehavior stopBehavior)
         {
+            // Finish clearing linked buffers before StopSelf dispatches stop actions.
+            // A stop callback may emit again; those new particles must survive.
+            if (stopBehavior == ParticleSystemStopBehavior.StopEmittingAndClear)
+                foreach (var ps in ClearedSystems(withChildren))
+                {
+                    ps.m_Count = 0;
+                    ps.ClearTrails();
+                }
             foreach (var ps in Systems(withChildren, includeSubEmitters: true)) ps.StopSelf(stopBehavior);
-            if (stopBehavior == ParticleSystemStopBehavior.StopEmittingAndClear) Clear(withChildren);
         }
 
         public void Clear() => Clear(true);

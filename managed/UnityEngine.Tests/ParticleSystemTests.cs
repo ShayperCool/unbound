@@ -11,6 +11,16 @@ namespace UnityEngine.Tests
         void OnParticleSystemStopped() => stops++;
     }
 
+    public class EmitOnStoppedRecorder : MonoBehaviour
+    {
+        public int stops;
+        void OnParticleSystemStopped()
+        {
+            stops++;
+            GetComponent<ParticleSystem>().Emit(1);
+        }
+    }
+
     public class CurveHolder : MonoBehaviour
     {
         public ParticleSystem.MinMaxCurve curve = 1f;
@@ -712,6 +722,22 @@ namespace UnityEngine.Tests
             Assert.True(ps.isStopped);
             Assert.False(ps.IsAlive());
             Done(ps);
+        }
+
+        [Fact]
+        public void StopAndClearKeepsParticlesEmittedByItsStopCallback()
+        {
+            var ps = Make(p => { var main = p.main; main.stopAction = ParticleSystemStopAction.Callback; });
+            try
+            {
+                var recorder = ps.gameObject.AddComponent<EmitOnStoppedRecorder>();
+                ps.Emit(2);
+                ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+                Assert.Equal(1, recorder.stops);
+                Assert.Equal(1, ps.particleCount);
+                Assert.True(ps.isPlaying);
+            }
+            finally { Done(ps); }
         }
 
         [Fact]
