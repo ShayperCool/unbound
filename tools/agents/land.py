@@ -260,9 +260,31 @@ class Gate:
             self.fail('managed tests')
 
     def touched_crates(self, changed):
+        """Crates whose tests the change can affect: crates with changed files, crates whose
+        build.rs compiles a changed native/ entry, and crates depending on a package whose
+        locked version changed in Cargo.lock (so importer output guards, such as the model
+        cache's VERSION guard, also run for native sources and dependency bumps)."""
+        crates = self.worktree/'crates'
+        directories = {path.split('/')[1] for path in changed if path.startswith('crates/')}
+        native = {path.split('/')[1] for path in changed if path.startswith('native/')}
+        if native:
+            for build in crates.glob('*/build.rs'):
+                text = build.read_text(errors='replace')
+                if any(re.search(r'\b' + re.escape(entry) + r'\b', text) for entry in native):
+                    directories.add(build.parent.name)
+        if 'Cargo.lock' in changed:
+            diff = git('diff', '-U12', f'{self.base}...HEAD', '--', 'Cargo.lock', cwd=self.worktree)
+            bumped = set()
+            for hunk in diff.split('\n@@')[1:]:
+                if re.search(r'^[-+]version = ', hunk, re.M):
+                    bumped.update(re.findall(r'^[ +-]name = "([^"]+)"', hunk, re.M))
+            for manifest in crates.glob('*/Cargo.toml'):
+                deps = set(re.findall(r'^([A-Za-z0-9_-]+)\s*[.=]', manifest.read_text(), re.M))
+                if deps & bumped:
+                    directories.add(manifest.parent.name)
         names = set()
-        for directory in {path.split('/')[1] for path in changed if path.startswith('crates/')}:
-            manifest = self.worktree/'crates'/directory/'Cargo.toml'
+        for directory in directories:
+            manifest = crates/directory/'Cargo.toml'
             if manifest.is_file():
                 match = re.search(r'^\[package\][^\[]*?^name\s*=\s*"([^"]+)"', manifest.read_text(), re.M | re.S)
                 if match:
