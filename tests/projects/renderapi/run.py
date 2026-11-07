@@ -14,7 +14,7 @@ PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 sys.path.insert(0, str(REPO/'tests'))
 from probe_paths import run_root, reference_root
-from editor_runner import EditorJob, run_parallel, publish, summary
+from editor_runner import EditorJob, run_parallel, publish, summary, differences, result_problem
 
 
 def copy_project(dest):
@@ -70,6 +70,7 @@ def main():
     p.add_argument('--release', required=True)
     p.add_argument('--label', required=True)
     p.add_argument('--cli', type=Path)
+    p.add_argument('--append', help='publish: add this new key prefix after verifying all existing records and images')
     a = p.parse_args()
     if Path(a.label).name != a.label or a.label in ('.', '..'):
         p.error('label must be a single directory name')
@@ -90,6 +91,29 @@ def main():
         results=run_parallel(jobs)
         for result in results: print(summary(result))
         return int(any(r['exit_code'] != 0 or r.get('forced_exit') for r in results))
+    if a.mode == 'publish' and a.append:
+        repeats=[work/r for r in ('native1','native2')]
+        for out in repeats:
+            reason=result_problem(out,gpu=True) or complete(out)
+            if reason: raise SystemExit(reason)
+        problems=differences(repeats,files)
+        if problems: raise SystemExit('repeats differ: '+str(problems))
+        captured=(repeats[0]/'values.jsonl').read_bytes().splitlines(keepends=True)
+        old=(reference/'values.jsonl').read_bytes().splitlines(keepends=True)
+        if any(json.loads(row)['k'].startswith(a.append) for row in old):
+            raise SystemExit('prefix already present')
+        kept=[row for row in captured if not json.loads(row)['k'].startswith(a.append)]
+        if kept!=old: raise SystemExit('existing reference records changed')
+        if len(kept)==len(captured): raise SystemExit('no new records')
+        present=sorted(p.name.removesuffix('.gz') for p in reference.glob('*.rgba.gz'))
+        if present!=sorted(p.name for p in repeats[0].glob('*.rgba')):
+            raise SystemExit('image set changed')
+        for name in present:
+            if gzip.decompress((reference/(name+'.gz')).read_bytes())!=(repeats[0]/name).read_bytes():
+                raise SystemExit('existing image changed: '+name)
+        (reference/'values.jsonl').write_bytes(b''.join(captured))
+        print('published new prefix',a.append,'with all existing records and images unchanged')
+        return 0
     if a.mode == 'publish':
         return publish([work/r for r in ('native1','native2')], reference, files, write_reference, complete=[complete], gpu=True)
     if a.mode == 'engine':

@@ -144,6 +144,49 @@ namespace UnityEngine.Tests
             finally { data.Free(); Object.DestroyImmediate(mesh); }
         }
 
+        sealed class Exceptions : ILogHandler
+        {
+            internal readonly List<Exception> Seen = new List<Exception>();
+            readonly ILogHandler m_Previous;
+            internal Exceptions(ILogHandler previous) => m_Previous = previous;
+            public void LogException(Exception exception, Object context) { Seen.Add(exception); m_Previous.LogException(exception, context); }
+            public void LogFormat(LogType type, Object context, string format, params object[] args) => m_Previous.LogFormat(type, context, format, args);
+        }
+
+        [Fact]
+        public void RecordedCommandsKeepMeshStorageAfterTheTemporaryViewIsDisposed()
+        {
+            var mesh = Triangle();
+            mesh.vertexBufferTarget |= GraphicsBuffer.Target.CopySource;
+            using var destination = new GraphicsBuffer(GraphicsBuffer.Target.Structured | GraphicsBuffer.Target.CopyDestination, 3, 12);
+            using var commands = new CommandBuffer();
+            var array = new NativeArray<byte>(36, Allocator.Persistent);
+            var sliceArray = new NativeArray<byte>(36, Allocator.Persistent);
+            var slice = new NativeSlice<byte>(sliceArray);
+            var previous = Debug.unityLogger.logHandler;
+            var errors = new Exceptions(previous);
+            try
+            {
+                var view = mesh.GetVertexBuffer(0);
+                commands.CopyBuffer(view, destination);
+                commands.RequestAsyncReadback(view, _ => {});
+                commands.RequestAsyncReadbackIntoNativeArray(ref array, view, _ => {});
+                commands.RequestAsyncReadbackIntoNativeSlice(ref slice, view, _ => {});
+                view.Dispose();
+                Debug.unityLogger.logHandler = errors;
+                Graphics.ExecuteCommandBuffer(commands);
+                AsyncGPUReadback.WaitAllRequests();
+                Assert.Empty(errors.Seen);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                array.Dispose();
+                sliceArray.Dispose();
+                Object.DestroyImmediate(mesh);
+            }
+        }
+
         static Mesh PreciseMesh(out float[] colors, out uint[] integers)
         {
             var mesh = new Mesh();

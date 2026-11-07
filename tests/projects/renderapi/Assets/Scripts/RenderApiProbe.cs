@@ -139,6 +139,37 @@ public sealed class RenderApiProbe : MonoBehaviour
             Value("mesh.compute.words","["+string.Join(",",words)+"]");
         }
         DestroyImmediate(m);
+        PrecisionCases();
+    }
+    void PrecisionCases()
+    {
+        var mesh=new Mesh {name="precise"};
+        mesh.vertexBufferTarget|=GraphicsBuffer.Target.CopySource;
+        mesh.SetVertexBufferParams(2,
+            new VertexAttributeDescriptor(VertexAttribute.Position,VertexAttributeFormat.Float32,3,0),
+            new VertexAttributeDescriptor(VertexAttribute.Color,VertexAttributeFormat.Float32,4,1),
+            new VertexAttributeDescriptor(VertexAttribute.TexCoord0,VertexAttributeFormat.UInt32,4,2));
+        mesh.SetVertexBufferData(new[]{Vector3.zero,Vector3.one},0,0,2,0);
+        mesh.SetVertexBufferData(new[]{new Vector4(-1,.5f,2,4),new Vector4(.3f,.7f,8,-2)},0,0,2,1);
+        mesh.SetVertexBufferData(new uint[]{0xffffffff,16777217,0x80000001,17,31,0x7fffffff,0xabcdef01,99},0,0,8,2);
+        using(var colors=mesh.GetVertexBuffer(1))Buffer("mesh.precise.colors",colors);
+        using(var integers=mesh.GetVertexBuffer(2))Buffer("mesh.precise.integers",integers);
+        mesh.SetIndices(new[]{0,1},MeshTopology.Points,0);
+        using(var colors=mesh.GetVertexBuffer(1))Buffer("mesh.precise.afterIndex",colors);
+        mesh.vertices=new[]{Vector3.right,Vector3.up};
+        using(var colors=mesh.GetVertexBuffer(1))Buffer("mesh.precise.afterPositions",colors);
+        Try("mesh.precise.partial.set",()=>mesh.SetVertexBufferData(new byte[]{0xab,0xcd},0,5,2,1));
+        using(var colors=mesh.GetVertexBuffer(1))Buffer("mesh.precise.partial",colors);
+        var view=mesh.GetVertexBuffer(1);
+        using(var destination=new GraphicsBuffer(GraphicsBuffer.Target.Structured|GraphicsBuffer.Target.CopyDestination,view.count,view.stride))
+        using(var commands=new CommandBuffer())
+        {
+            commands.CopyBuffer(view,destination);
+            view.Dispose();
+            Try("mesh.precise.command.execute",()=>Graphics.ExecuteCommandBuffer(commands));
+            Buffer("mesh.precise.command.copy",destination);
+        }
+        DestroyImmediate(mesh);
     }
     void Sorting()
     {
