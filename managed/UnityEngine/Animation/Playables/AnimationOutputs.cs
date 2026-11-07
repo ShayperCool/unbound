@@ -88,7 +88,7 @@ namespace Unbound.Runtime.Playables
     /// <summary>How the streams of one evaluation carry root motion.</summary>
     internal enum RootMotionMode
     {
-        /// <summary>Not computed (humanoid avatars): streams
+        /// <summary>Not computed for unsupported humanoid graph shapes: streams
         /// carry no motion and the graph's root curves pose the root as before.</summary>
         Unsupported,
         /// <summary>A direct humanoid clip output uses the Animator humanoid sampler, including
@@ -903,10 +903,14 @@ namespace Unbound.Runtime.Playables
             try
             {
                 if (move) animator.m_RootMotionApplied = false;
-                if (move && frame.HumanMotion is { } humanMotion)
+                if (frame.HumanMotion is { } humanMotion)
                 {
-                    animator.Human.ReplayMotion(humanMotion, frame.DeltaTime, out var replay);
-                    AnimationEvaluation.ApplyHumanRootMotion(animator, replay);
+                    if (move)
+                    {
+                        animator.Human.ReplayMotion(humanMotion, frame.DeltaTime, out var replay);
+                        AnimationEvaluation.ApplyHumanRootMotion(animator, replay);
+                    }
+                    else animator.CaptureRootMotionPose();
                 }
                 else if (move && frame.Mode == RootMotionMode.Compute)
                     AnimationEvaluation.ApplyRootMotion(animator, frame.Pose, frame.Motion,
