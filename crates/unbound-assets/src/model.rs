@@ -132,6 +132,8 @@ pub struct ModelSettings {
     pub material_name: i64,
     /// `materials.materialSearch`: 0 local `Materials` folder, 1 recursive up, 2 everywhere.
     pub material_search: i64,
+    /// Legacy OBJ albedo values are gamma encoded when this option is disabled.
+    pub use_srgb_material_color: bool,
     /// 0 None, 1 Legacy, 2 Generic, 3 Humanoid.
     pub animation_type: i32,
     /// `avatarSetup` (Generic/Humanoid): 0 no avatar and no Animator, 1 an Avatar created from
@@ -244,6 +246,7 @@ impl ModelSettings {
             },
             material_name: int(imp, "materials.materialName").unwrap_or(0),
             material_search: int(imp, "materials.materialSearch").unwrap_or(1),
+            use_srgb_material_color: boolean(imp, "meshes.useSRGBMaterialColor").unwrap_or(true),
             animation_type: int(imp, "animationType").unwrap_or(2) as i32,
             avatar_setup: int(imp, "avatarSetup").unwrap_or(if current { 0 } else { 1 }),
             source_avatar: imp
@@ -632,11 +635,44 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 21;
+    const VERSION: u32 = 22;
+
+    fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
+        if !source
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("obj"))
+        {
+            return Ok(Vec::new());
+        }
+        let bytes = std::fs::read(source)?;
+        Ok(obj_material_library(source, &bytes).into_iter().collect())
+    }
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
     }
+}
+
+/// Select the same authored library for dependency hashing and ufbx loading.
+fn obj_material_library(source: &Path, bytes: &[u8]) -> Option<std::path::PathBuf> {
+    let text = String::from_utf8_lossy(bytes);
+    text.lines()
+        .filter_map(|line| {
+            let line = line.trim().trim_start_matches('\u{feff}');
+            let (keyword, rest) = line.split_once(char::is_whitespace)?;
+            if keyword != "mtllib" {
+                return None;
+            }
+            let end = rest
+                .char_indices()
+                .find_map(|(i, c)| {
+                    (c == '#' && (i == 0 || rest[..i].ends_with(char::is_whitespace))).then_some(i)
+                })
+                .unwrap_or(rest.len());
+            let path = rest[..end].trim().replace('\\', "/");
+            Some(source.parent().unwrap_or(Path::new(".")).join(path))
+        })
+        .last()
 }
 
 pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
@@ -646,6 +682,10 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         .extension()
         .is_some_and(|e| e.eq_ignore_ascii_case("obj"));
     let filename = source.to_string_lossy();
+    let library = is_obj
+        .then(|| obj_material_library(source, bytes))
+        .flatten();
+    let library_name = library.as_ref().map(|p| p.to_string_lossy());
     let opts = ufbx::LoadOpts {
         target_axes: ufbx::CoordinateAxes::right_handed_y_up(),
         space_conversion: ufbx::SpaceConversion::AdjustTransforms,
@@ -661,9 +701,25 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
             && settings.normal_calculation != 0
             && settings.normal_smoothing_source < 2,
         filename: filename.as_ref().into(),
+        // Explicit selection keeps the loader's inputs identical to the cache dependencies.
+        obj_mtl_path: library_name.as_deref().unwrap_or("").into(),
         ..Default::default()
     };
     let scene = ufbx::load_memory(bytes, opts).map_err(|e| anyhow!("{}", e.description))?;
+
+    if is_obj {
+        let mut diffuse_paths = std::collections::HashSet::new();
+        for material in scene.materials.iter() {
+            if let Some(texture) = material.fbx.diffuse_color.texture.as_ref() {
+                diffuse_paths.insert(texture.relative_filename.as_ref());
+            }
+        }
+        anyhow::ensure!(
+            diffuse_paths.len() <= 1,
+            "{}: OBJ libraries with multiple diffuse texture maps are not yet supported",
+            source.display()
+        );
+    }
 
     let file_unit = if is_obj || scene.settings.unit_meters <= 0.0 {
         1.0
@@ -707,6 +763,14 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
             .flatten()
             .map(|stack| (stack.anim.as_ref(), stack.time_begin)),
         material_index: HashMap::new(),
+        obj_diffuse: is_obj
+            .then(|| {
+                scene
+                    .materials
+                    .iter()
+                    .find_map(|m| m.fbx.diffuse_color.texture.as_deref())
+            })
+            .flatten(),
         obj_smoothing: if is_obj {
             obj_smoothing_groups(bytes, &scene)
         } else {
@@ -811,6 +875,7 @@ struct Builder<'a> {
     sources: Vec<&'a ufbx::Node>,
     /// ufbx material element id → index in `model.materials`.
     material_index: HashMap<u32, u32>,
+    obj_diffuse: Option<&'a ufbx::Texture>,
     /// An OBJ's smoothing group per face of each mesh (ufbx keeps only smooth or not).
     obj_smoothing: Vec<Vec<u32>>,
     /// Preserved FBX smoothing masks per face, indexed by the mesh's typed ID.
@@ -1567,7 +1632,29 @@ impl<'a> Builder<'a> {
             .insert(material.element.element_id, index);
         self.model.materials.push(ModelMaterial {
             name: material.element.name.to_string(),
-            description: materials::describe(material),
+            description: if self.obj {
+                let mut description = materials::describe_obj(material, self.obj_diffuse);
+                if self.settings.material_import == MaterialImportMode::Legacy
+                    && !self.settings.use_srgb_material_color
+                {
+                    if let Some((_, color)) = description
+                        .vectors
+                        .iter_mut()
+                        .find(|(n, _)| n == "DiffuseColor")
+                    {
+                        for channel in &mut color[..3] {
+                            *channel = if *channel <= 0.0031308 {
+                                12.92 * *channel
+                            } else {
+                                1.055 * channel.powf(1.0 / 2.4) - 0.055
+                            };
+                        }
+                    }
+                }
+                description
+            } else {
+                materials::describe(material)
+            },
             file_id: FileId {
                 id: 0,
                 source: FileIdSource::Derived,

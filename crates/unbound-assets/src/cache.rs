@@ -2,7 +2,8 @@
 //!
 //! Key = blake3 of: [`IMPORTER_FORMAT_VERSION`], the importer's [`Importer::KIND`],
 //! [`Importer::VERSION`] and [`Importer::options_key`], the blake3 of the source file's bytes and
-//! the blake3 of its `.meta` bytes. An entry can therefore never be stale: any change to an input
+//! the blake3 of its `.meta` bytes, and the paths/content hashes of additional authored inputs
+//! declared by the importer, including absent files. Any change to an input
 //! is a different key. Old entries are simply left behind (`unbound cache gc` territory).
 //!
 //! Entries live at `<dir>/<kind>/<key[..2]>/<key>.bin` (for a project, `dir` is
@@ -119,7 +120,27 @@ impl AssetCache {
             Err(_) if !meta.exists() => (*blake3::hash(b"").as_bytes(), Some(Vec::new())),
             Err(e) => return Err(e.context(format!("reading {}", meta.display()))),
         };
-        let key = entry_key::<I>(importer, &source_hash, &meta_hash);
+        let mut inputs = blake3::Hasher::new();
+        inputs.update(&source_hash);
+        for dependency in importer.dependencies(source)? {
+            let name = dependency.to_string_lossy();
+            inputs.update(&(name.len() as u64).to_le_bytes());
+            inputs.update(name.as_bytes());
+            match self.content_hash(&dependency) {
+                Ok((hash, _)) => {
+                    inputs.update(&[1]);
+                    inputs.update(&hash);
+                }
+                Err(e)
+                    if e.downcast_ref::<std::io::Error>()
+                        .is_some_and(|e| e.kind() == std::io::ErrorKind::NotFound) =>
+                {
+                    inputs.update(&[0]);
+                }
+                Err(e) => return Err(e.context(format!("reading {}", dependency.display()))),
+            }
+        }
+        let key = entry_key::<I>(importer, inputs.finalize().as_bytes(), &meta_hash);
         let path = self.entry_path(I::KIND, &key);
 
         if let Ok(bytes) = fs::read(&path) {

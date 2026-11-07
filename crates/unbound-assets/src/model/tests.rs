@@ -189,6 +189,7 @@ fn bind_pose_conversion_mirrors_and_scales() {
         node_index: HashMap::new(),
         sources: Vec::new(),
         material_index: HashMap::new(),
+        obj_diffuse: None,
         obj_smoothing: Vec::new(),
         fbx_smoothing: Vec::new(),
         rest_pose: None,
@@ -583,4 +584,38 @@ fn unsupported_lightmap_settings_keep_the_supported_group_normals() {
     let imported = ModelImporter.import(&source, &std::fs::read(&source).unwrap(), &settings).unwrap();
     assert!(imported.warnings.iter().any(|w| w.contains("weldVertices")), "{:?}", imported.warnings);
     assert_group_normals_match_reference(&imported);
+}
+
+#[test]
+fn obj_material_cache_tracks_library_content_and_missing_inputs() {
+    use crate::cache::{AssetCache, Outcome};
+    let root = std::env::var_os("XDG_CACHE_HOME").map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::PathBuf::from(std::env::var_os("HOME").unwrap()).join(".cache"))
+        .join("unbound/validation").join(format!("obj-cache-{}", std::process::id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let source = root.join("Shape.obj");
+    let library = root.join("color library.mtl");
+    std::fs::write(&source, "mtllib color library.mtl # authored library\no Face\nv 0 0 0\nv 1 0 0\nv 0 1 0\nusemtl Paint\nf 1 2 3\n").unwrap();
+    let cache = AssetCache::new(root.join("cache"));
+    let load = || cache.get_or_import_traced(&ModelImporter, &source, &source.with_extension("obj.meta"));
+    std::fs::write(&library, "newmtl Paint\nKd 0.2 0.4 0.8\nd 0.25\nTr 0.8\n").unwrap();
+    let (model, outcome) = load().unwrap();
+    assert_eq!(outcome, Outcome::Imported);
+    assert_eq!(model.materials[0].description.vector("DiffuseColor"), Some([0.2, 0.4, 0.8, 1.0]));
+    assert_eq!(model.materials[0].description.float("TransparencyFactor"), Some(0.75));
+    assert_eq!(load().unwrap().1, Outcome::Hit);
+    std::fs::write(&library, "newmtl Paint\nKd 1 0 0\nTr 0.2\n").unwrap();
+    let (model, outcome) = load().unwrap();
+    assert_eq!(outcome, Outcome::Imported);
+    assert_eq!(model.materials[0].description.vector("DiffuseColor"), Some([1.0, 0.0, 0.0, 1.0]));
+    assert_eq!(model.materials[0].description.float("TransparencyFactor"), Some(0.2));
+    std::fs::remove_file(&library).unwrap();
+    assert!(load().is_err(), "missing authored MTL must not reuse the cached colors");
+    let mut obj = std::fs::read_to_string(&source).unwrap();
+    obj.push_str("usemtl Other\nf 1 3 2\n");
+    std::fs::write(&source, obj).unwrap();
+    std::fs::write(&library, "newmtl Paint\nmap_Kd A.png\nnewmtl Other\nmap_Kd B.png\n").unwrap();
+    assert!(load().unwrap_err().to_string().contains("multiple diffuse texture maps"));
+    drop(cache);
+    std::fs::remove_dir_all(root).unwrap();
 }

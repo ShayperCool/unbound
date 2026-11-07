@@ -57,6 +57,11 @@ pub trait Importer: Sync {
     /// parsed `.meta` file, or [`Value::Null`] when the asset has none (defaults apply).
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<Self::Output>;
 
+    /// Additional authored files read by the importer. Missing paths are part of the key too.
+    fn dependencies(&self, _source: &Path) -> Result<Vec<std::path::PathBuf>> {
+        Ok(Vec::new())
+    }
+
     /// Options of this importer instance that change its output (the build target, ...). They are
     /// part of the cache key.
     fn options_key(&self) -> String {

@@ -189,3 +189,56 @@ pub fn describe(material: &ufbx::Material) -> MaterialDescription {
     }
     out
 }
+
+/// OBJ's FBX-SDK description in Unity 6000.0.71f1. MTL keys are observations,
+/// not a Wavefront-wide contract; see modelimport/MTL_PROPERTIES.md.
+pub fn describe_obj(
+    material: &ufbx::Material,
+    diffuse_texture: Option<&ufbx::Texture>,
+) -> MaterialDescription {
+    let mut out = MaterialDescription::default();
+    for &(name, default) in LAMBERT.iter().chain(PHONG) {
+        match default {
+            ClassDefault::Float(v) => out.floats.push((name.into(), v)),
+            ClassDefault::Color(v) => out.vectors.push((name.into(), [v, v, v, 1.0])),
+        }
+    }
+    out.floats.push(("MultiLayer".into(), 0.0));
+    out.strings.push(("ShadingModel".into(), "Phong".into()));
+    if material.fbx.diffuse_color.has_value {
+        let v = material.fbx.diffuse_color.value_vec4;
+        out.vectors
+            .iter_mut()
+            .find(|(n, _)| n == "DiffuseColor")
+            .unwrap()
+            .1 = [v.x as f32, v.y as f32, v.z as f32, 1.0];
+    }
+    let props = &material.element.props;
+    // Unity gives d precedence even when Tr occurs later in the source.
+    let transparency = props
+        .find_prop("d")
+        .map(|p| 1.0 - p.value_vec4.x as f32)
+        .or_else(|| props.find_prop("Tr").map(|p| p.value_vec4.x as f32));
+    if let Some(v) = transparency {
+        out.floats
+            .iter_mut()
+            .find(|(n, _)| n == "TransparencyFactor")
+            .unwrap()
+            .1 = v;
+        out.vectors
+            .iter_mut()
+            .find(|(n, _)| n == "TransparentColor")
+            .unwrap()
+            .1 = [1.0; 4];
+    }
+    if let Some(texture) = diffuse_texture {
+        out.textures.push(TextureDescription {
+            property: "DiffuseColor".into(),
+            path: texture.absolute_filename.to_string(),
+            relative_path: texture.absolute_filename.to_string(),
+            offset: [0.0; 2],
+            scale: [1.0; 2],
+        });
+    }
+    out
+}
