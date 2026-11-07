@@ -2917,6 +2917,28 @@ mod tests {
         m.configure_group(spec(true, false, compressor)).unwrap();
     }
     #[test]
+    fn flange_needs_valid_parameters_and_rejects_unmeasured_slot_wet_mixing() {
+        let mut mixer = Mixer::new(MixerConfig::default());
+        let mut spec = filter_group(3, 0, "Flange");
+        assert!(mixer.configure_group(spec.clone()).is_err());
+        spec.effects[0].bypass = true;
+        mixer.configure_group(spec.clone()).unwrap();
+        spec.effects[0].bypass = false;
+        spec.effects[0].flange = Some(super::super::flange::FlangeSpec {
+            dry: 0.45, wet: 0.55, depth: 1.0, rate: 0.1,
+        });
+        mixer.configure_group(spec.clone()).unwrap();
+        spec.effects[0].mix_level = Some(0.5);
+        assert!(mixer.configure_group(spec.clone()).unwrap_err().to_string().contains("wet mixing"));
+        spec.effects[0].mix_level = None;
+        spec.effects[0].flange.as_mut().unwrap().rate = 40.0;
+        assert!(mixer.configure_group(spec).is_err());
+        let before = mixer.config;
+        assert!(mixer.reconfigure(MixerConfig { sample_rate: u32::MAX, ..before }).is_err());
+        assert_eq!(mixer.config, before);
+        assert_eq!(mixer.group_nodes[&3].effects.len(), 1);
+    }
+    #[test]
     fn malformed_echo_rates_fail_before_allocating_or_replacing_groups() {
         for delay in [500.0, 5000.0] {
             let mut mixer = Mixer::new(MixerConfig {
