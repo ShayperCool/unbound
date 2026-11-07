@@ -1,0 +1,43 @@
+{"k":"currentResolution","v":[1280,720,60,1]}
+{"k":"resolutions","v":[[640,480,60,1],[720,480,60,1],[768,480,60,1],[800,480,60,1],[854,480,60,1],[960,540,60,1],[1024,576,60,1],[800,600,60,1],[1024,600,60,1],[960,640,60,1],[1024,640,60,1],[1136,640,60,1],[960,720,60,1],[1152,720,60,1],[1280,720,60,1]]}
+{"k":"dpi","v":0}
+{"k":"mainWindowDisplayInfo","v":[1280,720,"screen",0,1,0,0,1280,720]}
+{"k":"displayLayout","v":[[1280,720,"screen",0,1,0,0,1280,720]]}
+{"k":"nullDisplayLayout","v":"ArgumentNullException: Value cannot be null."}
+{"k":"displays","v":[[640,360,640,360,true]]}
+{"k":"screen","v":[640,360]}
+{"k":"clipboard.set.0","v":true}
+{"k":"clipboard.0","v":[true,0,true]}
+{"k":"clipboard.externalRead.0","v":true}
+{"k":"clipboard.set.1","v":true}
+{"k":"clipboard.1","v":[true,16,true]}
+{"k":"clipboard.externalRead.1","v":true}
+{"k":"clipboard.set.2","v":true}
+{"k":"clipboard.2","v":[true,11,true]}
+{"k":"clipboard.externalRead.2","v":true}
+{"k":"clipboard.set.3","v":true}
+{"k":"clipboard.3","v":[true,1048576,true]}
+{"k":"clipboard.externalRead.3","v":true}
+{"k":"clipboard.set.4","v":true}
+{"k":"clipboard.4","v":[false,0,true]}
+{"k":"clipboard.externalRead.4","v":true}
+{"k":"clipboard.editorSetter","v":"editor setter"}
+{"k":"clipboard.external","v":"external \u4e16\u754c \ud83d\ude00"}
+{"k":"clipboard.nontext","v":""}
+{"k":"clipboard.empty","v":""}
+{"k":"thread.clipboard.get","v":"UnityException: get_systemCopyBuffer can only be called from the main thread.\u000aConstructors and field initializers will be executed from the loading thread when loading a scene.\u000aDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.clipboard.set","v":"UnityException: set_systemCopyBuffer can only be called from the main thread.\u000aConstructors and field initializers will be executed from the loading thread when loading a scene.\u000aDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.editorClipboard.get","v":"UnityException: get_systemCopyBuffer can only be called from the main thread.\u000aConstructors and field initializers will be executed from the loading thread when loading a scene.\u000aDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.editorClipboard.set","v":"UnityException: set_systemCopyBuffer can only be called from the main thread.\u000aConstructors and field initializers will be executed from the loading thread when loading a scene.\u000aDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"ime.defaults","v":[0,"",[0,0],false]}
+{"k":"ime.On","v":[1,"",[21,35],false]}
+{"k":"ime.Off","v":[2,"",[21,35],false]}
+{"k":"ime.Auto","v":[0,"",[21,35],false]}
+{"k":"cursor.legacyWarp","v":[false,false]}
+{"k":"warp.120.immediate","v":[0,0]}
+{"k":"warp.120.legacy","v":[119.310333,349.655151]}
+{"k":"warp.120.mouse","v":[119.310333,349.655151]}
+{"k":"warp.240.immediate","v":[119.310333,349.655151]}
+{"k":"warp.240.legacy","v":[239.310349,409.655151]}
+{"k":"warp.240.mouse","v":[239.310349,409.655151]}
+{"k":"complete","v":true}

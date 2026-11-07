@@ -62,6 +62,7 @@ class EditorJob:
     def __init__(self, project, log, out, args=(), *, batch=False, graphics=True, env=None,
                  timeout=1800, shutdown_grace=30, kill_grace=10, follow=30, label=None,
                  screen='1280x720x24', late_sweeps=LATE_SWEEPS, editor=None, cwd=None,
+                 private_display=True,
                  progress_files=(), progress_timeout=None, launch_inputs=None):
         self.project = Path(project)
         self.log = Path(log)
@@ -76,6 +77,7 @@ class EditorJob:
         self.follow = follow
         self.label = label or self.out.name
         self.screen = screen
+        self.private_display = private_display
         self.late_sweeps = tuple(late_sweeps)
         self.editor = Path(editor) if editor else editor_path()
         self.cwd = Path(cwd) if cwd else self.project
@@ -598,12 +600,13 @@ def run(job):
     queued = time.time()
     # A job env built from os.environ carries its own PWD: the project still wins.
     env = {**os.environ, **job.env, 'PWD': str(job.project)}
-    env.pop('XAUTHORITY', None)
+    if job.private_display:
+        env.pop('XAUTHORITY', None)
     owner = read_proc(os.getpid())
     spec = {'label': job.label, 'kind': job.kind, 'command': job.command(), 'project': str(job.project),
             'log': str(job.log), 'out': str(job.out), 'cwd': str(job.cwd), 'timeout': job.timeout,
             'shutdown_grace': job.shutdown_grace, 'kill_grace': job.kill_grace, 'follow': job.follow,
-            'require_gpu': job.graphics, 'private_display': job.graphics, 'screen': job.screen,
+            'require_gpu': job.graphics, 'private_display': job.graphics and job.private_display, 'screen': job.screen,
             'owner_pid': owner.pid, 'owner_start_ticks': owner.start_ticks,
             'progress_files': job.progress_files, 'progress_timeout': job.progress_timeout}
     if job.launch_inputs is not None:
