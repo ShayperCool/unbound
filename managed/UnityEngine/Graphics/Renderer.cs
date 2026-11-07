@@ -288,7 +288,8 @@ namespace UnityEngine
         public void GetClosestReflectionProbes(List<Rendering.ReflectionProbeBlendInfo> result) => ReflectionProbe.Closest(this, result);
 
         public void ResetBounds() => m_BoundsOverride = null;
-        public void ResetLocalBounds() => m_LocalBoundsOverride = null;
+        public void ResetLocalBounds() => ResetLocalBoundsCore();
+        internal virtual void ResetLocalBoundsCore() => m_LocalBoundsOverride = null;
 
         // Set through bounds / localBounds: used (for culling too) until reset, as in Unity.
         Bounds? m_BoundsOverride;
@@ -302,18 +303,7 @@ namespace UnityEngine
             {
                 if (m_BoundsOverride is { } overridden)
                     return overridden;
-                var local = localBounds;
-                var m = BoundsMatrix;
-                var c = m.MultiplyPoint3x4(local.center);
-                var e = local.extents;
-                var x = m.MultiplyVector(new Vector3(e.x, 0, 0));
-                var y = m.MultiplyVector(new Vector3(0, e.y, 0));
-                var z = m.MultiplyVector(new Vector3(0, 0, e.z));
-                var extents = new Vector3(
-                    Mathf.Abs(x.x) + Mathf.Abs(y.x) + Mathf.Abs(z.x),
-                    Mathf.Abs(x.y) + Mathf.Abs(y.y) + Mathf.Abs(z.y),
-                    Mathf.Abs(x.z) + Mathf.Abs(y.z) + Mathf.Abs(z.z));
-                return new Bounds(c, extents * 2f);
+                return GetWorldBounds();
             }
             set => m_BoundsOverride = value;
         }
@@ -321,8 +311,28 @@ namespace UnityEngine
         public Bounds localBounds
         {
             get => m_LocalBoundsOverride ?? GetLocalBounds();
-            set => m_LocalBoundsOverride = value;
+            set => SetLocalBounds(value);
         }
+
+        internal virtual void SetLocalBounds(Bounds value) => m_LocalBoundsOverride = value;
+
+        internal virtual Bounds GetWorldBounds() => TransformBounds(localBounds, BoundsMatrix);
+
+        internal static Bounds TransformBounds(Bounds local, Matrix4x4 matrix)
+        {
+            var c = matrix.MultiplyPoint3x4(local.center);
+            var e = local.extents;
+            var x = matrix.MultiplyVector(new Vector3(e.x, 0, 0));
+            var y = matrix.MultiplyVector(new Vector3(0, e.y, 0));
+            var z = matrix.MultiplyVector(new Vector3(0, 0, e.z));
+            var extents = new Vector3(
+                Mathf.Abs(x.x) + Mathf.Abs(y.x) + Mathf.Abs(z.x),
+                Mathf.Abs(x.y) + Mathf.Abs(y.y) + Mathf.Abs(z.y),
+                Mathf.Abs(x.z) + Mathf.Abs(y.z) + Mathf.Abs(z.z));
+            return new Bounds(c, extents * 2f);
+        }
+
+        internal virtual void PrepareCullingBounds() { }
 
         internal virtual Bounds GetLocalBounds() => new Bounds(Vector3.zero, Vector3.zero);
 

@@ -30,6 +30,16 @@ namespace UnityEngine
         internal bool m_SkinnedMotionVectors = true;
         internal readonly List<float> m_BlendShapeWeights = new List<float>();
 
+        Bounds m_LocalBounds;
+        bool m_HasLocalBounds, m_ExactLocalBounds;
+        Bounds? m_CullingBounds;
+        Mesh m_RigidSource;
+        Vector3[] m_RigidVertices;
+        BoneWeight[] m_RigidWeights;
+        Matrix4x4[] m_RigidBindposes;
+        Bounds m_RigidBoneBounds;
+        bool m_Rigid;
+
         Mesh m_Skinned;
         int m_SkinnedFrame = -1;
         Mesh m_SkinnedSource;
@@ -211,7 +221,123 @@ namespace UnityEngine
             }
         }
 
-        internal override Bounds GetLocalBounds() => m_Mesh != null ? m_Mesh.bounds : default;
+        // The authored local bound belongs to rootBone, falling back to the renderer transform.
+        // It is independent of the drawing matrix (bone-skinned geometry is already in world space).
+        Matrix4x4 RootMatrix => (m_RootBone != null ? m_RootBone : transform).localToWorldMatrix;
+
+        /// <summary>Only the rigid single-bone dynamic bound is measured here. This computes a
+        /// bone-space envelope once from the authored vertices/bind pose, never from a sampled
+        /// deformed mesh. Multi-bone deformation, blend shapes and cloth need separate measurements.</summary>
+        bool RigidBounds(out Bounds local)
+        {
+            local = default;
+            var mesh = m_Mesh;
+            if (mesh == null) return false;
+            if (m_RigidSource != mesh || m_RigidVertices != mesh.m_Vertices ||
+                m_RigidWeights != mesh.m_BoneWeights || m_RigidBindposes != mesh.m_Bindposes)
+            {
+                m_RigidSource = mesh;
+                m_RigidVertices = mesh.m_Vertices;
+                m_RigidWeights = mesh.m_BoneWeights;
+                m_RigidBindposes = mesh.m_Bindposes;
+                m_Rigid = mesh.vertexCount > 0 && m_RigidWeights?.Length == mesh.vertexCount &&
+                    m_RigidBindposes?.Length == 1 && mesh.blendShapeCount == 0;
+                if (m_Rigid)
+                {
+                    var bind = m_RigidBindposes[0];
+                    var lo = Vector3.positiveInfinity;
+                    var hi = Vector3.negativeInfinity;
+                    for (int i = 0; i < m_RigidVertices.Length; i++)
+                    {
+                        var w = m_RigidWeights[i];
+                        if (w.boneIndex0 != 0 || w.weight0 != 1f || w.weight1 != 0f || w.weight2 != 0f || w.weight3 != 0f)
+                        { m_Rigid = false; break; }
+                        var v = bind.MultiplyPoint3x4(m_RigidVertices[i]);
+                        lo = Vector3.Min(lo, v);
+                        hi = Vector3.Max(hi, v);
+                    }
+                    m_RigidBoneBounds.SetMinMax(lo, hi);
+                }
+            }
+            if (!m_Rigid || m_Bones.Length != 1 || m_Bones[0] == null || GetComponent<Cloth>() != null) return false;
+            local = TransformBounds(m_RigidBoneBounds, RootMatrix.inverse * m_Bones[0].localToWorldMatrix);
+            return true;
+        }
+
+        void EnsureLocalBounds()
+        {
+            if (m_HasLocalBounds || m_Mesh == null) return;
+            m_ExactLocalBounds = RigidBounds(out m_LocalBounds);
+            if (!m_ExactLocalBounds) m_LocalBounds = m_Mesh.bounds;
+            m_HasLocalBounds = true;
+        }
+
+        internal bool HasMeasuredCullingBounds
+        {
+            get
+            {
+                if (!Compat.SkinnedBoundsMeasured) return false;
+                EnsureLocalBounds();
+                return m_UpdateWhenOffscreen ? RigidBounds(out _) : m_ExactLocalBounds;
+            }
+        }
+
+        void ReportBoundsLimitation()
+        {
+            if (HasMeasuredCullingBounds || m_Mesh == null) return;
+            Stubs.Ignored("SkinnedMeshRenderer bounds outside measured support",
+                "root-space culling bounds are measured for Unity 6000.0.71f1 with authored local bounds, " +
+                "or a rigid single-bone mesh. Offscreen bounds updates for multi-bone, blend-shape and cloth meshes " +
+                "and automatic bounds for other runtime meshes remain unsupported; provide localBounds and disable updateWhenOffscreen");
+        }
+
+        internal override Bounds GetLocalBounds()
+        {
+            if (!Compat.SkinnedBoundsMeasured) return m_Mesh != null ? m_Mesh.bounds : default;
+            EnsureLocalBounds();
+            if (m_UpdateWhenOffscreen && RigidBounds(out var dynamicBounds)) return dynamicBounds;
+            ReportBoundsLimitation();
+            return m_LocalBounds;
+        }
+
+        internal override void SetLocalBounds(Bounds value)
+        {
+            if (!Compat.SkinnedBoundsMeasured) { base.SetLocalBounds(value); return; }
+            m_LocalBounds = value;
+            m_HasLocalBounds = m_ExactLocalBounds = true;
+            // Unlike transform/root changes, a local-bounds write invalidates cached world bounds.
+            m_CullingBounds = null;
+        }
+
+        internal override void ResetLocalBoundsCore()
+        {
+            // Measured: the skinned local bound survives Renderer.ResetLocalBounds.
+            if (!Compat.SkinnedBoundsMeasured) base.ResetLocalBoundsCore();
+        }
+
+        internal override Bounds GetWorldBounds()
+        {
+            if (!Compat.SkinnedBoundsMeasured) return base.GetWorldBounds();
+            if (!HasMeasuredCullingBounds) return base.GetWorldBounds();
+            if (!m_UpdateWhenOffscreen && m_Enabled && gameObject.activeInHierarchy)
+            {
+                // The first query (including after a local-bounds write) captures this box until
+                // culling refreshes it, even if animation changes the root later in the frame.
+                if (m_CullingBounds is { } cached) return cached;
+                var world = TransformBounds(localBounds, RootMatrix);
+                m_CullingBounds = world;
+                return world;
+            }
+            return TransformBounds(localBounds, RootMatrix);
+        }
+
+        internal override void PrepareCullingBounds()
+        {
+            if (!Compat.SkinnedBoundsMeasured) return;
+            ReportBoundsLimitation();
+            if (!HasMeasuredCullingBounds) { m_CullingBounds = null; return; }
+            m_CullingBounds = TransformBounds(localBounds, RootMatrix);
+        }
 
         /// <summary>The mesh has bones to skin it by.</summary>
         internal bool IsBoneSkinned => IsSkinned;
@@ -322,6 +448,12 @@ namespace UnityEngine
             m_Quality = (SkinQuality)body.Int("m_Quality");
             m_UpdateWhenOffscreen = body.Bool("m_UpdateWhenOffscreen");
             m_SkinnedMotionVectors = body.Bool("m_SkinnedMotionVectors", true);
+            var aabb = body.Get("m_AABB");
+            if (aabb != null && Compat.SkinnedBoundsMeasured)
+            {
+                m_LocalBounds = new Bounds(aabb.Vector3("m_Center"), aabb.Vector3("m_Extent") * 2f);
+                m_HasLocalBounds = m_ExactLocalBounds = true;
+            }
             m_BlendShapeWeights.Clear();
             foreach (var item in body.Get("m_BlendShapeWeights")?.Seq() ?? Array.Empty<YNode>()) m_BlendShapeWeights.Add(item.AsFloat());
         }
@@ -331,6 +463,10 @@ namespace UnityEngine
             var s = (SkinnedMeshRenderer)source;
             CopyRendererData(s);
             m_Mesh = s.m_Mesh;
+            m_LocalBounds = s.m_LocalBounds;
+            m_HasLocalBounds = s.m_HasLocalBounds;
+            m_ExactLocalBounds = s.m_ExactLocalBounds;
+            m_CullingBounds = null;
             m_Bones = new Transform[s.m_Bones.Length];
             for (int i = 0; i < m_Bones.Length; i++) m_Bones[i] = remap(s.m_Bones[i]) as Transform;
             m_RootBone = remap(s.m_RootBone) as Transform;

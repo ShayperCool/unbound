@@ -399,9 +399,8 @@ namespace UnityEngine
         /// skinned renderer's updateWhenOffscreen does not change that (measured,
         /// tests/projects/animculling: a disabled or inactive renderer and one off screen do not
         /// count, with updateWhenOffscreen on or off; one visible renderer of several is enough).
-        /// A skinned renderer's culling bounds are its mesh's bounds in the renderer's space, an
-        /// approximation of Unity's root-bone bounds: reported once when it has a root bone of its
-        /// own (stub report "Animation culling by a skinned renderer with a root bone").</item>
+        /// Root-space skinned bounds and their remaining limitations are handled by the renderer
+        /// (measured, tests/projects/skinnedbounds).</item>
         /// <item>Every other enabled renderer in an active hierarchy (particle, line, trail, ...)
         /// counts as visible: their bounds are approximate in Unbound and their effect on animation
         /// culling is unmeasured. Reported once (stub report "Animation culling with approximate
@@ -415,7 +414,7 @@ namespace UnityEngine
             for (int i = 0; i < components.Count; i++)
             {
                 if (!(components[i] is Renderer renderer)) continue;
-                if (renderer is SkinnedMeshRenderer skinned && skinned.rootBone != null && skinned.rootBone != skinned.transform)
+                if (!Unbound.Runtime.Compat.SkinnedBoundsMeasured && renderer is SkinnedMeshRenderer skinned && skinned.rootBone != null && skinned.rootBone != skinned.transform)
                     Unbound.Runtime.Stubs.Ignored("Animation culling by a skinned renderer with a root bone",
                         "judges its visibility by the mesh bounds around the renderer, not Unity's bounds around the root bone: a character whose bones move far from the renderer can be culled on screen");
                 if (renderer.isVisible) return true;

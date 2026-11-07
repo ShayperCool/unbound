@@ -269,10 +269,12 @@ namespace Unbound.Runtime
             /// <summary>Renderers whose bounds are those Unity culls with (mesh and sprite
             /// renderers); others are drawn whether culled or not.</summary>
             internal static bool TrustsBounds(Renderer renderer) =>
-                renderer.GetType() == typeof(MeshRenderer) || renderer is SpriteRenderer;
+                renderer.GetType() == typeof(MeshRenderer) || renderer is SpriteRenderer ||
+                renderer is SkinnedMeshRenderer skin && skin.HasMeasuredCullingBounds;
 
             internal bool Sees(Renderer renderer)
             {
+                renderer.PrepareCullingBounds();
                 var bounds = renderer.bounds;
                 return InFrustum(m_Matrix, bounds) && WithinLayerDistance(renderer, bounds);
             }
@@ -295,6 +297,7 @@ namespace Unbound.Runtime
             /// the light's range. The layer's cull distance applies too.</summary>
             internal bool SeesCaster(Renderer renderer, Light light)
             {
+                renderer.PrepareCullingBounds();
                 var bounds = renderer.bounds;
                 if (!WithinLayerDistance(renderer, bounds)) return false;
                 var e = bounds.extents;

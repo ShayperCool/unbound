@@ -44,6 +44,10 @@ namespace Unbound.Runtime
         /// retain the existing behavior until measured.</summary>
         internal static bool AnimatorStartupMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Root-space skinned bounds, single-bone defaults and cached public world
+        /// bounds measured by skinnedbounds in the Linux 6000.0.71f1 Editor.</summary>
+        internal static bool SkinnedBoundsMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Birth sub-emitter origins and Simulate ages measured by
         /// tests/projects/particlerandom. Other releases retain their previous path.</summary>
         internal static bool ParticleBirthStepsMeasured => Release == (6000, 0, 71, 'f', 1);
