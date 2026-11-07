@@ -72,7 +72,9 @@ namespace UnityEngine
 
         public uint randomSeed
         {
-            get => m_Main.randomSeed;
+            // With automatic seeding, the seed drawn for the current playback; before one
+            // has begun, the serialized seed (unmeasured).
+            get => m_Main.autoRandomSeed && m_InitialRandomReady ? m_PlaybackSeed : m_Main.randomSeed;
             set
             {
                 if (isPlaying || m_Count > 0)
@@ -808,6 +810,7 @@ namespace UnityEngine
             m_InitialRandom2 = m_InitialRandom[2],
             m_InitialRandom3 = m_InitialRandom[3],
             m_InitialRandomReady = m_InitialRandomReady,
+            m_PlaybackSeed = m_PlaybackSeed,
             m_ShapeRandom0 = m_ShapeRandom[0],
             m_ShapeRandom1 = m_ShapeRandom[1],
             m_ShapeRandom2 = m_ShapeRandom[2],
@@ -835,6 +838,7 @@ namespace UnityEngine
             m_InitialRandom[2] = playbackState.m_InitialRandom2;
             m_InitialRandom[3] = playbackState.m_InitialRandom3;
             m_InitialRandomReady = playbackState.m_InitialRandomReady;
+            m_PlaybackSeed = playbackState.m_PlaybackSeed;
             m_ShapeRandom[0] = playbackState.m_ShapeRandom0;
             m_ShapeRandom[1] = playbackState.m_ShapeRandom1;
             m_ShapeRandom[2] = playbackState.m_ShapeRandom2;
@@ -957,8 +961,8 @@ namespace UnityEngine
         /// <summary>Starts a new playback from time 0, keeping the particles that are alive.</summary>
         internal void Restart(bool prewarm)
         {
-            uint seed = m_Main.autoRandomSeed ? NextAutoSeed() : m_Main.randomSeed;
-            ResetInitialRandom(seed);
+            BeginPlaybackRandom();
+            uint seed = m_PlaybackSeed;
             m_RandomState = ((ulong)seed << 32) ^ 0x9e3779b97f4a7c15UL ^ seed;
             if (m_RandomState == 0) m_RandomState = 0x9e3779b97f4a7c15UL;
             m_NoiseSumEnabled = false;

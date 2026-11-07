@@ -68,7 +68,9 @@ namespace UnityEngine
         {
             var n = m_Noise;
             float frequency = Mathf.Max(n.frequency, .000001f);
-            var rng = Random.State.FromSeed(unchecked((int)m_Main.randomSeed));
+            // The playback's seed, like every other system draw (equal to the serialized seed
+            // unless the system seeds itself automatically).
+            var rng = Random.State.FromSeed(unchecked((int)PlaybackSeed));
             var offset = new Vector3(rng.NextValue() * 100f, rng.NextValue() * 100f, rng.NextValue() * 100f);
             var q = p.m_Position + offset;
             float u = q.x + 100f;

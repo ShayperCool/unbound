@@ -39,8 +39,7 @@ namespace UnityEngine
         Random.State m_EmissionRandom;
         void EnsureModuleRandom()
         {
-            if (!m_InitialRandomReady)
-                ResetInitialRandom(m_Main.autoRandomSeed ? NextAutoSeed() : m_Main.randomSeed);
+            if (!m_InitialRandomReady) BeginPlaybackRandom();
         }
 
         float NextEmissionValue()

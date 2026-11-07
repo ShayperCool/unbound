@@ -176,7 +176,7 @@ namespace UnityEngine
                     // Collision rule, and says so once.
                     if (type == ParticleSystemSubEmitterType.Trigger && child.m_Emission.bursts.Count > 1)
                         ReportUnsupported("trigger sub-emitter bursts after the first (Unbound emits only the first, the rule Unity documents for Collision)");
-                    int count = child.EventBurstCount(parent.m_RandomSeed, m_Main.randomSeed);
+                    int count = child.EventBurstCount(parent.m_RandomSeed, EventSeed);
                     if (count > 0) child.EmitFromParent(this, ref at, e.properties, count, 0f);
                 }
             }

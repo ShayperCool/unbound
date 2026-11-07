@@ -1927,7 +1927,7 @@ namespace UnityEngine
             var child = sub.system;
             if (child == null || child == this || child.m_GameObject == null) return;
             if (sub.emitProbability <= 0f || sub.emitProbability < 1f && ModuleValue(parent.m_RandomSeed, 1520730008u) > sub.emitProbability) return;
-            int count = child.EventBurstCount(parent.m_RandomSeed, m_Main.randomSeed);
+            int count = child.EventBurstCount(parent.m_RandomSeed, EventSeed);
             if (count <= 0) return;
             if (ParticleSystemManager.Updating)
                 ParticleSystemManager.HoldEventEmission(new ParticleSystemManager.EventEmission
@@ -1959,12 +1959,12 @@ namespace UnityEngine
         /// once (cycles, also infinite ones, and the interval are ignored); its probability applies;
         /// the child's Emission module may be disabled. Collision and Trigger follow the same rule
         /// (unmeasured).</summary>
-        int EventBurstCount(uint parentSeed, uint systemSeed)
+        int EventBurstCount(uint parentSeed, uint eventSeed)
         {
             var bursts = m_Emission.bursts;
             if (bursts.Count == 0) return 0;
             var burst = bursts[0];
-            var random = ModuleRandom(parentSeed, systemSeed);
+            var random = ModuleRandom(parentSeed, eventSeed);
             if (burst.probability <= 0f || burst.probability < 1f && random.NextValue() >= burst.probability) return 0;
             return BurstCount(burst.m_Count, 0f, ref random);
         }
@@ -2007,7 +2007,7 @@ namespace UnityEngine
                 var travel = dt > 0f ? (parent.m_Position - positionBefore) / dt : Vector3.zero;
                 if (child.m_Emission.enabled)
                 {
-                    var emissionRandom = ModuleRandom(parent.m_RandomSeed, m_Main.randomSeed);
+                    var emissionRandom = ModuleRandom(parent.m_RandomSeed, PlaybackSeed);
                     float rate = child.m_Emission.rateOverTime.Evaluate(age01, emissionRandom.NextValue());
                     // The measured percent-clock endpoints retain rate boundary bits.
                     // The first interval cannot precede the newborn's integration span.
@@ -2016,7 +2016,7 @@ namespace UnityEngine
                     bool useInterval = m_SimulatingBirths && float.IsFinite(ageBefore)
                         && float.IsFinite(ageAfter) && ageAfter >= ageBefore;
                     float delay = useInterval ? Mathf.Max(0f,
-                        child.m_Main.startDelay.Evaluate(0f, ModuleValue(child.m_Main.randomSeed, 0u))) : 0f;
+                        child.m_Main.startDelay.Evaluate(0f, ModuleValue(child.PlaybackSeed, 0u))) : 0f;
                     float from = Mathf.Max(0f, ageBefore - delay);
                     float to = Mathf.Max(0f, ageAfter - delay);
                     if (!child.m_Main.loop)

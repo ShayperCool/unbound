@@ -13,6 +13,7 @@ namespace UnityEngine
         {
             internal Random.State m_InitialRandom0, m_InitialRandom1, m_InitialRandom2, m_InitialRandom3;
             internal bool m_InitialRandomReady;
+            internal uint m_PlaybackSeed;
         }
         readonly InitialSamples[] m_InitialSamples = new InitialSamples[4];
         readonly Random.State[] m_InitialCursors = new Random.State[20];
@@ -23,8 +24,42 @@ namespace UnityEngine
             internal float lifetime, sizeX, sizeY, sizeZ, rotationX, rotationY, rotationZ, color;
         }
 
+        /// <summary>The seed of the current playback: the serialized seed, or with automatic
+        /// seeding the one drawn when the playback began. Sub-emitter draws use it too, and
+        /// the randomSeed getter reports it (6000.0.71f1, particlerandom model/autoseed/: with
+        /// automatic seeding, Death burst counts do not follow the serialized seed, and a twin
+        /// seeded with the getter's value reproduces them).</summary>
+        uint m_PlaybackSeed;
+
+        /// <summary>The parent system's salt for an event sub-emitter's burst count: the first
+        /// word of its emission generator as it stands, which is the playback seed until the
+        /// first emitting step draws from it (6000.0.71f1, particlerandom model/autoseed/: a
+        /// Death after one emitting step salts with seed × 1812433253 + 1, the generator's word
+        /// after one draw).</summary>
+        uint EventSeed
+        {
+            get
+            {
+                EnsureModuleRandom();
+                return m_EmissionRandom.S0;
+            }
+        }
+
+        /// <summary>Starts the module random of a new playback from its seed.</summary>
+        void BeginPlaybackRandom() => ResetInitialRandom(m_Main.autoRandomSeed ? NextAutoSeed() : m_Main.randomSeed);
+
+        uint PlaybackSeed
+        {
+            get
+            {
+                EnsureModuleRandom();
+                return m_PlaybackSeed;
+            }
+        }
+
         void ResetInitialRandom(uint seed)
         {
+            m_PlaybackSeed = seed;
             ResetShapeRandom(seed);
             m_EmissionRandom = Random.State.FromSeed(unchecked((int)seed));
             for (int lane = 0; lane < 4; lane++)
@@ -48,8 +83,7 @@ namespace UnityEngine
         {
             if (index == 0)
             {
-                if (!m_InitialRandomReady)
-                    ResetInitialRandom(m_Main.autoRandomSeed ? NextAutoSeed() : m_Main.randomSeed);
+                if (!m_InitialRandomReady) BeginPlaybackRandom();
                 // Widen before rounding: int.MaxValue still describes a valid request.
                 ulong groups = ((ulong)count + 3) / 4;
                 for (int lane = 0; lane < 4; lane++)
