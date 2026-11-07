@@ -175,7 +175,7 @@ namespace UnityEngine
             set
             {
                 m_Material = value;
-                ShapeChanged(geometryChanged: false);
+                W.MaterialChanged(this);
             }
         }
 
@@ -191,7 +191,7 @@ namespace UnityEngine
                     if (source != null) copy.CopyValues(source);
                     copy.m_IsInstance = true;
                     m_Material = copy;
-                    ShapeChanged(geometryChanged: false);
+                    W.MaterialChanged(this);
                 }
                 return m_Material;
             }

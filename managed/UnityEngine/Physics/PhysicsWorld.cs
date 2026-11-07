@@ -987,6 +987,8 @@ namespace Unbound.Runtime
                 foreach (var c in space.Colliders) Refilter(c);
         }
 
+        internal static void MaterialChanged(Collider c) => UpdateMaterial(c);
+
         static void UpdateMaterial(Collider c)
         {
             var material = Physics.MaterialOf(c);
@@ -995,6 +997,7 @@ namespace Unbound.Runtime
             if (c.m_Shape == 0) return;
             Physics.MaterialValues(material, out float friction, out float staticFriction, out float bounciness, out ulong modes);
             B3.ua3_shape_set_material(c.m_Shape, friction, bounciness, modes, staticFriction);
+            if (c is TerrainCollider terrain && !Compat.TerrainTreeMaterialRetainsCreationBinding) terrain.SetTreeMaterial(material);
         }
 
         // ------------------------------------------------------------------ transforms
@@ -1041,6 +1044,7 @@ namespace Unbound.Runtime
                 }
                 if (c.m_UsedMaterial != null && c.m_UsedMaterial.m_ChangeVersion != c.m_MaterialVersion)
                     UpdateMaterial(c);
+                if (c is TerrainCollider terrain) terrain.UpdateTreeMaterial();
                 var t = go.m_Transform;
                 if (t.m_Version == c.m_TransformVersion) continue;
                 c.m_TransformVersion = t.m_Version;

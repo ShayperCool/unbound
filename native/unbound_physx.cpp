@@ -497,6 +497,7 @@ struct World
 	std::vector<PxRaycastQueryResult> wheelResults;
 	std::vector<PxRaycastHit> wheelHits;
 	PxControllerManager* controllers = nullptr; // created with the first character controller
+	uint64_t controllerFilterRevision = 0;
 	bool sleeping = true;
     bool deferredContactReports = false;
 };
@@ -968,7 +969,7 @@ struct Character : public PxUserControllerHitReport, public PxQueryFilterCallbac
 	World* world = nullptr;
 	PxCapsuleController* controller = nullptr;
 	PxShape* shape = nullptr; // its kinematic actor's
-	PxU32 mask = 0;
+	uint64_t filterRevision = 0;
 	std::vector<ua3_cct_hit> hits;
 
 	void onShapeHit( const PxControllerShapeHit& hit ) override
@@ -1021,17 +1022,16 @@ struct Character : public PxUserControllerHitReport, public PxQueryFilterCallbac
 
 std::unordered_set<Character*> s_characters;
 
-// Controllers keep the shapes their last query found, filtered then: a filter change must reach
-// them before their next move.
-void invalidate_controllers( const World* world )
+bool filter_changed( const PxFilterData& before, const PxFilterData& after )
 {
-	for ( Character* c : s_characters )
-	{
-		if ( c->world == world )
-		{
-			c->controller->invalidateCache();
-		}
-	}
+    return before.word0 != after.word0 || before.word1 != after.word1 || before.word2 != after.word2 || before.word3 != after.word3;
+}
+
+// Filter changes are observed before each controller's next move. A revision coalesces
+// changes to many shapes without walking every controller for each shape.
+void invalidate_controllers( World* world )
+{
+    if ( world != nullptr ) ++world->controllerFilterRevision;
 }
 
 void Character::onControllerHit( const PxControllersHit& hit )
@@ -1368,6 +1368,7 @@ UA3_API void ua3_ignore_pair( uint32_t id, uint64_t a, uint64_t b, int ignore )
 	set_filter_flags( sb );
 	refilter( sa );
 	refilter( sb );
+	invalidate_controllers( world );
 }
 
 // ------------------------------------------------------------------------------------ bodies
@@ -2118,7 +2119,7 @@ UA3_API void ua3_shape_update_box( uint64_t id, const ua3_shape_def* def, ua3_ve
 	set_filter_flags( shape );
 	shape->setQueryFilterData( query_data( after.word0, shape->getActor(), def->isSensor != 0 ) );
 	after = shape->getSimulationFilterData();
-	if ( before.word0 != after.word0 || before.word1 != after.word1 || before.word2 != after.word2 || before.word3 != after.word3 )
+	if ( filter_changed( before, after ) )
 	{
 		refilter( shape );
 		invalidate_controllers( world_of_actor( shape->getActor() ) );
@@ -2182,6 +2183,7 @@ UA3_API void ua3_shape_set_filter( uint64_t id, uint64_t categoryBits, uint64_t 
 	{
 		return;
 	}
+	PxFilterData before = shape->getSimulationFilterData();
 	info( shape )->layers = layerFlags;
 	PxFilterData data = shape->getSimulationFilterData();
 	data.word0 = static_cast<PxU32>( categoryBits );
@@ -2191,7 +2193,7 @@ UA3_API void ua3_shape_set_filter( uint64_t id, uint64_t categoryBits, uint64_t 
 	set_filter_flags( shape );
 	shape->setQueryFilterData( query_data( static_cast<PxU32>( categoryBits ), shape->getActor(), ( shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE ) ) );
 	refilter( shape );
-	invalidate_controllers( world_of_actor( shape->getActor() ) );
+	if ( filter_changed( before, shape->getSimulationFilterData() ) ) invalidate_controllers( world_of_actor( shape->getActor() ) );
 }
 
 UA3_API void ua3_shape_set_density( uint64_t id, float density )
@@ -3118,7 +3120,6 @@ UA3_API uint64_t ua3_cct_create( uint32_t id, const ua3_cct_def* def )
 	}
 	Character* c = new Character();
 	c->world = world;
-	c->mask = static_cast<PxU32>( def->maskBits );
 	PxCapsuleControllerDesc desc;
 	PxVec3 position = def->position;
 	desc.position = PxExtendedVec3( position.x, position.y, position.z );
@@ -3147,7 +3148,7 @@ UA3_API uint64_t ua3_cct_create( uint32_t id, const ua3_cct_def* def )
 	actor->getShapes( &c->shape, 1 );
 	ShapeInfo* i = new ShapeInfo{ 1.0f, true, true, 0, ( def->layerFlags & ( LayerOverride | LayerModifiable | LayerContactReports ) ) | ( def->detectCollisions ? 0 : LayerNoContacts ) };
 	c->shape->userData = i;
-	c->shape->setSimulationFilterData( PxFilterData( static_cast<PxU32>( def->categoryBits ), c->mask, 0, static_cast<PxU32>( def->layerPriority ) ) );
+	c->shape->setSimulationFilterData( PxFilterData( static_cast<PxU32>( def->categoryBits ), static_cast<PxU32>( def->maskBits ), 0, static_cast<PxU32>( def->layerPriority ) ) );
 	set_filter_flags( c->shape );
 	c->shape->setQueryFilterData( query_data( static_cast<PxU32>( def->categoryBits ), actor, false ) );
 	refilter( c->shape );
@@ -3178,17 +3179,17 @@ UA3_API void ua3_cct_set_filter( uint64_t id, uint64_t categoryBits, uint64_t ma
 	{
 		return;
 	}
-	c->mask = static_cast<PxU32>( maskBits );
+	PxFilterData before = c->shape->getSimulationFilterData();
 	info( c->shape )->layers = ( layerFlags & ( LayerOverride | LayerModifiable | LayerContactReports ) ) | ( detectCollisions ? 0 : LayerNoContacts );
 	PxFilterData data = c->shape->getSimulationFilterData();
 	data.word0 = static_cast<PxU32>( categoryBits );
-	data.word1 = c->mask;
+	data.word1 = static_cast<PxU32>( maskBits );
 	data.word3 = static_cast<PxU32>( layerPriority );
 	c->shape->setSimulationFilterData( data );
 	set_filter_flags( c->shape );
 	c->shape->setQueryFilterData( query_data( static_cast<PxU32>( categoryBits ), c->controller->getActor(), false ) );
 	refilter( c->shape );
-	invalidate_controllers( c->world );
+	if ( filter_changed( before, c->shape->getSimulationFilterData() ) ) invalidate_controllers( c->world );
 }
 
 // The capsule's dimensions and walking settings (PhysX keeps the centre where it is).
@@ -3242,6 +3243,11 @@ UA3_API int ua3_cct_move( uint64_t id, ua3_vec3 displacementIn, float minDistanc
 	if ( c == nullptr )
 	{
 		return 0;
+	}
+	if ( c->filterRevision != c->world->controllerFilterRevision )
+	{
+		c->controller->invalidateCache();
+		c->filterRevision = c->world->controllerFilterRevision;
 	}
 	PxVec3 displacement = displacementIn;
 	c->hits.clear();

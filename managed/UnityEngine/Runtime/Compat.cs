@@ -93,6 +93,11 @@ namespace Unbound.Runtime
         /// Other releases retain their existing sampling until measured.</summary>
         internal static bool ParticleShapeModifiersMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Terrain tree material bindings retain their creation material, measured in
+        /// tests/projects/physicsbatch on 6000.0.71f1. Other releases keep assignment propagation
+        /// until their binding lifetime is measured.</summary>
+        internal static bool TerrainTreeMaterialRetainsCreationBinding => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>The release Unbound's rendering parity was measured on (tests/projects/*
         /// Reference/unity-6000.0.71f1). The rendering answers below give its measured behaviour
         /// to exactly that release; the other releases' answers are listed in

@@ -491,8 +491,31 @@ namespace UnityEngine
 
         /// <summary>A capsule per tree whose prototype's root has a CapsuleCollider: scaled by the
         /// prefab's scale and the tree's (its width across, its height along).</summary>
+        PhysicsMaterial m_TreeMaterial;
+        int m_TreeMaterialVersion;
+
+        // Unity 6000.0.71f1, physicsbatch: trees retain their creation material on assignment,
+        // while edits to that material's values still reach their shapes.
+        internal void UpdateTreeMaterial()
+        {
+            int version = m_TreeMaterial != null ? m_TreeMaterial.m_ChangeVersion : 0;
+            if (m_TreeMaterialVersion == version) return;
+            m_TreeMaterialVersion = version;
+            Physics.MaterialValues(m_TreeMaterial, out float friction, out float staticFriction, out float bounce, out ulong modes);
+            foreach (var shape in m_ExtraShapes) B3.ua3_shape_set_material(shape, friction, bounce, modes, staticFriction);
+        }
+
+        internal void SetTreeMaterial(PhysicsMaterial material)
+        {
+            m_TreeMaterial = material;
+            m_TreeMaterialVersion = -1;
+            UpdateTreeMaterial();
+        }
+
         void CreateTreeShapes(ulong body, in B3.ShapeDef def, TerrainData data)
         {
+            m_TreeMaterial = Physics.MaterialOf(this);
+            m_TreeMaterialVersion = m_TreeMaterial != null ? m_TreeMaterial.m_ChangeVersion : 0;
             var prototypes = data.treePrototypes;
             var origin = transform.position;
             var frame = Matrix4x4.TRS(origin, Quaternion.identity, Vector3.one).inverse;
