@@ -1,35 +1,16 @@
 #!/usr/bin/env python3
-"""Gate the strict comparison, retaining two documented residual families.
+"""Gate the strict comparison, retaining one documented residual family.
 
-compare.py remains strict and prints every raw difference. This verifier admits only:
-- the AlwaysAnimate frame-35 arm-change predicates listed in COMPATIBILITY_GAPS.md, and only
-  while both raw arm rotations agree tightly and their dots straddle Quaternion's equality
-  boundary;
-- the source time ("gt") of explicit/eventShape/*/plain records, where a plain Playable
-  above the clip keeps its own clock under CullCompletely while Unbound freezes it with the
-  clip (a playable-clock gap listed in COMPATIBILITY_GAPS.md): the candidate's source time
-  must equal its clip time ("ct"), and every other field must match.
+compare.py remains strict and prints every raw difference. This verifier admits only the
+AlwaysAnimate frame-35 arm-change predicates listed in COMPATIBILITY_GAPS.md, and only while
+both raw arm rotations agree tightly and their dots straddle Quaternion's equality boundary.
 """
-import re
 import sys
 from compare import read, same
 
 
 RESIDUALS = {f'ph/always/{controller}/{shape}/35'
              for controller in ('bare', 'controller') for shape in ('clip', 'mixer')}
-
-
-PLAIN_CLOCK = re.compile(r'^explicit/eventShape/(Manual|GameTime)/plain/(\w+/)?\d+$')
-
-
-def plain_clock_only(key, expected, actual):
-    """Only the plain source playable's own time differs."""
-    if not PLAIN_CLOCK.match(key) or not isinstance(expected, dict) or not isinstance(actual, dict):
-        return False
-    if not all(isinstance(v, (int, float)) for v in (expected.get('gt'), actual.get('gt'), actual.get('ct'))) \
-            or actual['gt'] != actual['ct']:
-        return False
-    return same({k: v for k, v in expected.items() if k != 'gt'}, {k: v for k, v in actual.items() if k != 'gt'})
 
 
 def verify(reference, candidate):
@@ -39,9 +20,6 @@ def verify(reference, candidate):
     for key, expected in reference.items():
         actual = candidate[key]
         if same(expected, actual):
-            continue
-        if plain_clock_only(key, expected, actual):
-            accepted.append(key)
             continue
         if key not in RESIDUALS or not isinstance(actual, dict):
             return False, accepted
@@ -77,10 +55,7 @@ def main():
     if passed:
         print(f'gate: {len(reference)} records checked; {len(accepted)} documented residuals')
         for key in accepted:
-            if PLAIN_CLOCK.match(key):
-                print('accepted residual', key, 'plain source time only; every other field checked')
-            else:
-                print('accepted residual', key, 'arm predicate only; raw rotations and dots checked')
+            print('accepted residual', key, 'arm predicate only; raw rotations and dots checked')
     else:
         print('gate: a difference is outside the documented residuals')
     return 0 if passed else 1

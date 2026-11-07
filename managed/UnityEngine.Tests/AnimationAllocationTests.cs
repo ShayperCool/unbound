@@ -49,7 +49,7 @@ namespace UnityEngine.Tests
             PlayableGraphData.ProcessOtherOutputs();
             AnimationSystem.TickAnimators(fixedStep: false);
             PlayableGraphData.DeliverAllNotifications();
-            PlayableGraphData.FlushDestroyed();
+            PlayableGraphData.LateUpdate();
             return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
@@ -258,8 +258,8 @@ namespace UnityEngine.Tests
                 double time = plain.GetTime();
                 for (int i = 0; i < Frames; i++) allocated += GraphFrame(manual);
                 Assert.True(allocated == 0, $"{shape}/{mode}: {allocated} bytes over {Frames} frames ({allocated / (double)Frames:F1} per frame)");
-                // The passes ran: the plain Playable above the clips advanced every frame.
-                if (mode != AnimatorCullingMode.CullCompletely) Assert.InRange(plain.GetTime() - (time + Frames * (double)0.02f), -1e-9, 1e-9);
+                // The passes ran: the plain Playable above the clips advanced every frame, culled or not.
+                Assert.InRange(plain.GetTime() - (time + Frames * (double)0.02f), -1e-9, 1e-9);
                 if (behaviour != null) Assert.Equal(prepares + Frames, behaviour.Prepares);
             }
             finally

@@ -681,8 +681,11 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A culled Animator's hold wins over another output reaching the clip: the clip
+        /// keeps its time (6000.0.71f1, animculling clock/sharedClip and an exploratory capture
+        /// with a script output on the same port).</summary>
         [Fact]
-        public void ASharedPlayableStillAdvancesForAnUnculledOutput()
+        public void ACulledOutputHoldsAClipAnotherOutputShares()
         {
             var (animator, _, _) = Rig(AnimatorCullingMode.CullCompletely);
             animator.runtimeAnimatorController = null;
@@ -693,7 +696,7 @@ namespace UnityEngine.Tests
                 script.SetSourcePlayable(playable);
                 PlayableStep(graph, animator, 0.1f);
                 PlayableStep(graph, animator, 0.1f);
-                Near.Equal(0.2f, (float)playable.GetTime());
+                Assert.Equal(0, playable.GetTime());
             }
             finally { graph.Destroy(); }
         }

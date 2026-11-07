@@ -9,7 +9,7 @@ namespace Unbound.Runtime.Playables
     /// update in Update.DirectorUpdate, after the scripts' Update; their animation outputs are
     /// written in PreLateUpdate.DirectorUpdateAnimationBegin and the notifications they pushed are
     /// delivered in DirectorDeferredEvaluate; destroyed graphs are torn down in DirectorUpdate and
-    /// PostLateUpdate.DirectorLateUpdate.
+    /// PostLateUpdate.DirectorLateUpdate, where playables the frame's updates finished report done.
     /// </summary>
     internal static class PlayableSystem
     {
@@ -28,7 +28,7 @@ namespace Unbound.Runtime.Playables
             // Animation outputs evaluate with the Animators (AnimationSystem, DirectorUpdateAnimationBegin).
             AnimationSystem.EnsureRegistered();
             PlayerLoopDriver.Register(typeof(PL.PreLateUpdate.DirectorDeferredEvaluate), PlayableGraphData.DeliverAllNotifications);
-            PlayerLoopDriver.Register(typeof(PL.PostLateUpdate.DirectorLateUpdate), PlayableGraphData.FlushDestroyed);
+            PlayerLoopDriver.Register(typeof(PL.PostLateUpdate.DirectorLateUpdate), PlayableGraphData.LateUpdate);
         }
 
         static void SampleTime()

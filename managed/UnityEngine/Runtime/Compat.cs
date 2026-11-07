@@ -115,6 +115,13 @@ namespace Unbound.Runtime
         /// visibility return, as the culling documentation describes.</summary>
         internal static bool PlayableEventsReplayOnVisibility => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>A CullCompletely-culled Animator holds only the animation playables of its
+        /// outputs' trees (and what is below them); plain and script playables above them keep the
+        /// graph's clock, and the hold wins over other outputs reaching a held playable. Measured
+        /// by tests/projects/animculling clock/ on exactly 6000.0.71f1. Other releases hold each
+        /// culled output's whole source tree, the previous Unbound rule (unmeasured).</summary>
+        internal static bool PlayableCullingHoldsAnimationPlayablesOnly => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Animator automatic Play-entry timing and startup controls measured by
         /// tests/projects/animstartup in exactly 6000.0.71f1's Linux Editor. Other releases
         /// retain the existing behavior until measured.</summary>

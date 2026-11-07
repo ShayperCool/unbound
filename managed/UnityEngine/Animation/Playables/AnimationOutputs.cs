@@ -238,6 +238,8 @@ namespace Unbound.Runtime.Playables
     /// <summary>What a playable contributes to an animation stream.</summary>
     internal abstract class AnimationKind : PlayableKind
     {
+        internal override bool AnimatorClock => true;
+
         /// <summary>Fills <paramref name="into"/> (reset to defaults) with the playable's pose.
         /// <paramref name="weight"/> is its effective weight in the output (clip events need one).</summary>
         internal abstract void Evaluate(AnimationEvaluation e, PlayableNode node, int viaPort, float weight, AnimStream into);

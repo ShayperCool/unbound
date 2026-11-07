@@ -32,13 +32,16 @@ namespace Unbound.Runtime.Playables
 
         internal override bool CanChangeInputs => false;
         internal override bool CanSetWeights => false;
-        internal override bool FinishesAtDuration => false;
 
+        /// <summary>The clip's local time at playable time <paramref name="t"/>. The clip samples
+        /// the single-precision playable time, so a time just below a loop's end in double
+        /// precision already wraps to its start (6000.0.71f1, animculling clock/*/Manual).</summary>
         double ClipTime(double t)
         {
             float length = Clip.length;
             if (length <= 0f) return Clip.StartTime;
-            double local = Loops ? t - Math.Floor(t / length) * length : Math.Clamp(t, 0.0, length);
+            double time = (float)t;
+            double local = Loops ? time - Math.Floor(time / length) * length : Math.Clamp(time, 0.0, length);
             return Clip.StartTime + local;
         }
 

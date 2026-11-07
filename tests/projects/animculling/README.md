@@ -115,11 +115,10 @@ observations of this release and these cases. No callback ordering between diffe
 Animators is asserted.
 
 Unmeasured playable contexts include Animator.Update with graph outputs, controller
-playables, multiple outputs sharing nodes, humanoid output root motion, output
+playables beyond the `clock/` clocks, humanoid output root motion, output
 weights other than one, and other releases. Explicit Graph.Evaluate is measured
-separately below. Culled consumers do not
-stop a shared node another unculled output needs, an implementation invariant rather
-than a measured Unity guarantee.
+separately below; which playables a culled output stops, including nodes other
+outputs share, is measured in "Playable clocks under culling" below.
 
 The four `ph/always/{bare,controller}/{clip,mixer}/35.arm` pose-change predicates are
 insignificant numeric residuals. The preceding and current arm rotations differ from
@@ -368,10 +367,78 @@ Observed in 6000.0.71f1:
   or layer mixer at any depth, one-input mixers included, and not of the output's
   source clip or of a clip reached only through a plain Playable.
 - The plain Playable's own time is not frozen by CullCompletely (the clip below it
-  is). Unbound freezes the whole source tree; `verify_gate.py` accepts that source
-  time (`gt`) of `explicit/eventShape/*/plain` only, with every other field checked.
+  is); see "Playable clocks under culling" below.
 
 The two independent Native captures agree byte for byte on 22,251 records.
-Publication appended 2,640 keys and preserved all 19,611 prior records. The gate
-matches 22,123 records strictly and accepts 128 documented residuals (the four arm
-predicates and the 124 plain-source clock records).
+Publication appended 2,640 keys and preserved all 19,611 prior records.
+
+## Playable clocks under culling (Q121)
+
+`clock/` asks which playables a culled Animator stops. Each case has one Animator
+(schedule A) with no controller and a graph whose AnimationPlayableOutput source is
+one of these shapes: a clip; a plain Playable (P) or ScriptPlayable (S) above it;
+P or S alone; a two-clip mixer (M); M with P or S above one clip; P above M; P above
+P; P above S; a one-input layer mixer; an AnimationScriptPlayable job; P at speed 2;
+P, S and the clip each with duration 0.3 (wrap None); an AnimatorControllerPlayable
+under P; `twoTrees`, with an output to a second, always visible AlwaysAnimate
+Animator from its own P and clip; and `sharedClip`, where that second output reaches
+the same clip through the clip's second output port (`sharedClipFirst` creates the
+culled Animator's output first). All shapes run CullCompletely with GameTime and
+Manual graphs (Manual: one 0.02 s Evaluate per frame, 0.07, 0 and 0.04 in frame
+16); P, S, M with P or S, duration, sharedClip and controller also run
+AlwaysAnimate and CullUpdateTransforms. Records hold every node's time, previous
+time, IsDone and duration, each behaviour's PrepareFrame/ProcessFrame counts and
+last deltas, OnBehaviourPlay/Pause counts, and the marker, root, event and curve
+values. The two Animators of `sharedClip` sample one clip node concurrently in the
+Editor (their poses differed between exploratory captures at a loop wrap), so
+those cases record clocks only.
+
+Contract (6000.0): [AnimatorCullingMode.CullCompletely](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AnimatorCullingMode.CullCompletely.html)
+says animation is completely disabled when renderers are not visible;
+[Animator.cullingMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-cullingMode.html),
+[PlayableGraph](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableGraph.html),
+[Playable](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.Playable.html)
+and [AnimationPlayableOutput](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationPlayableOutput.html)
+do not say which playables of a graph that disables, or when IsDone changes. Everything
+below is observed in 6000.0.71f1 for these shapes.
+
+Observed (two byte-identical captures, 3,660 records):
+- The animation playables (clip, mixer, layer mixer, job, controller playable) of a
+  CullCompletely-culled Animator's output tree, and every playable below them, are held
+  like paused playables: their time and previous time stay, a ScriptPlayable among them
+  gets no PrepareFrame and one OnBehaviourPause when the hold starts (also in the first
+  frame, before it ever played; a graph started then gives it no OnBehaviourPlay), and
+  OnBehaviourPlay when it ends. The first culled evaluation samples the held pose.
+- Plain and script playables above the first animation playable keep the graph's clock,
+  with PrepareFrame every frame, in GameTime and Manual graphs alike (explicit deltas
+  included, also zero ones). Their speed still scales the held clip's later advance.
+- A clip shared with a visible Animator's output through another port is held as well;
+  the visible Animator then samples the held time. The order of the outputs does not
+  matter. The other Animator's own tree is not affected (`twoTrees`).
+- CullUpdateTransforms and AlwaysAnimate hold nothing.
+- No ScriptPlayable of an animation output gets ProcessFrame.
+- A playable reaching its duration (wrap None) is clamped and, for clips as well, done.
+  In the player loop, LateUpdate of that frame still reads IsDone false and the next
+  frame true; after an explicit Evaluate a plain or script playable is done at once
+  (as tests/projects/playables measures) while a clip below the animation output is done
+  only in the next frame.
+- A clip samples its single-precision time: a Manual clip at 0.4999999888 s (25 x
+  0.02f in double) of a 0.5 s loop samples the loop's start.
+
+Implementation: `PlayableKind.AnimatorClock` marks the animation playables;
+`PlayableGraphData.PreparePass` holds the trees below them for culled outputs (the hold
+wins over other outputs), otherwise advances them on the Animator's clock (the zero
+Play-entry interval) and the rest on the graph's. `Compat.PlayableCullingHoldsAnimationPlayablesOnly`
+selects this for 6000.0.71f1; other releases hold each culled output's whole source
+tree as before. Done flags of the player loop's passes are set in
+PostLateUpdate.DirectorLateUpdate.
+
+Not part of this probe: two outputs with one source playable and port. Exploratory
+captures (outside Git) showed the output created later neither animating its Animator
+nor getting ProcessFrame; Unbound evaluates both (a gap row). Other releases, Fixed and
+UnscaledTime Animators, the Play-entry interval for playables above the clip, and
+pausing a held playable explicitly are unmeasured.
+
+Before the implementation, every new CullCompletely case and the 124
+`explicit/eventShape/*/plain` source-time records differed. Now the full reference has
+25,907/25,911 strict matches; the gate accepts only the four arm predicates above.

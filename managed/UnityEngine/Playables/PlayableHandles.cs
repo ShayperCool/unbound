@@ -237,7 +237,11 @@ namespace UnityEngine.Playables
 
         internal bool IsDone() => Node.Done;
 
-        internal void SetDone(bool value) => Node.Done = value;
+        internal void SetDone(bool value)
+        {
+            Node.Done = value;
+            Node.DonePending = false;
+        }
 
         internal double GetDuration() => Node.Duration;
 

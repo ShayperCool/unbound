@@ -258,7 +258,7 @@ namespace UnityEngine.Playables
         internal void AfterUpdate()
         {
             if (m_Root == null || m_State != PlayState.Playing) return;
-            if (m_WrapMode != DirectorWrapMode.None || !m_Root.Done) return;
+            if (m_WrapMode != DirectorWrapMode.None || !(m_Root.Done || m_Root.DonePending)) return;
             m_State = PlayState.Paused;
             m_StopAtEnd = true;
             s_StopAtEnd.Add(this);
