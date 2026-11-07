@@ -423,7 +423,7 @@ the baseline comparisons stay in the validation cache.
 | `model/clock/*` | 0.613 exports as 0.613000035 and 2.9 as 2.89999986 without sub-emitters, with an unrelated Death sub-emitter and with a Birth one, for constant, two-constant and curve lifetimes, in Simulate and Play. | Every start lifetime takes the reciprocal estimate (compatibility flag `ParticleLifetimeReciprocalEstimate`). |
 | `model/death/{simulate,play}/{force,speed}/*` | With randomized force or a random speed modifier, every particle keeps the module samples of its own slot in the step it or others die. The dead then leave in four-slot groups aligned to the buffer, high to low within a group, the group revisited after each swap; newborns are added after. | Two passes: update every slot, then the SetParticles compaction rule. This also makes the formerly classified `birthrate/*` and `ratebatch/edge` expiry permutations and two Birth lifetime permutations match strictly. |
 | `model/autoseed/*` | A Death burst count after one emitting step salts with seed × 1812433253 + 1, the emission generator's first word after one draw. With automatic seeding the getter reports the drawn seed, and a twin seeded with it reproduces the counts. | Event counts salt with the emission generator's current first word; sub-emitter and noise draws use the playback seed; the getter reports it. |
-| `model/lanes/*`, `model/lifetimesetter/*` | The startLifetime setter raises the constant, each end of a range (without reordering) and a curve multiplier to 0.0001 s. | The setter clamps; lifetimes read from a scene are kept as written (unmeasured). |
+| `model/lanes/*`, `model/lifetimesetter/*` | The startLifetime setter raises the constant, each end of a range (without reordering) and a curve multiplier to 0.0001 s. | The setter clamps; scene data is bounded the same way (measured in tests/projects/particlecurves). |
 
 Not part of the published records, observed in the exploratory captures and left open:
 in Simulate, a Birth parent with a two-constant or curve start lifetime emits some
@@ -431,8 +431,8 @@ children one internal step later, or from the other parent, than Unbound (seed 2
 `model/inherit/simulate/two/*` of `pm-explore2`); played Birth children start one parent
 step (0.04 along z) away from Unbound's origin; a two-constant child in a long catch-up
 call loses one more child in Unity; Unity keeps a dead particle whose trail still fades in
-the buffer at zero lifetime, and a newborn moved into its freed slot moves differently;
-and the MinMaxCurve getter keeps a constant and a curve multiplier apart where Unbound
-shares one scalar. The rate batch's own expiry compaction stays ascending: the four-slot
+the buffer at zero lifetime, and a newborn moved into its freed slot moves differently.
+How MinMaxCurve values are stored and returned is measured separately in
+tests/projects/particlecurves. The rate batch's own expiry compaction stays ascending: the four-slot
 order regresses `ratebatch/edge`. The 31 remaining `birthlife/batch` permutations are not
 explained by either order.
