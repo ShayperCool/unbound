@@ -56,59 +56,29 @@ namespace UnityEngine
     {
         internal static readonly int kMaxDrawMeshInstanceCount = 1023;
 
-        /// <summary>The block's values for one instance: each array's element, the rest as set.</summary>
-        internal static MaterialPropertyBlock Instance(MaterialPropertyBlock block, int index)
+        /// <summary>The block's values for every draw of one instanced or multi-command call: its
+        /// arrays copied once (<see cref="GfxStream.SharedArray"/>: the stream carries each once
+        /// and the renderer gives each instance its element, GfxStream.MeshInstance), the rest as
+        /// set; null for no values. Later changes to the block do not reach the queued draws.</summary>
+        internal static Dictionary<int, object> InstanceProperties(MaterialPropertyBlock block)
         {
             if (block == null || block.isEmpty) return null;
-            var one = new MaterialPropertyBlock();
-            foreach (var p in block.m_Values)
-            {
-                switch (p.Value)
-                {
-                    case float[] fs:
-                        one.m_Values[Shader.PropertyToID("<InstanceArray>" + Shader.IdToName(p.Key))] = (float[])fs.Clone();
-                        if (index < fs.Length)
-                        {
-                            one.m_Values[p.Key] = fs[index];
-                            one.m_Values[Shader.PropertyToID("<InstanceElement>" + Shader.IdToName(p.Key))] = fs[index];
-                        }
-                        break;
-                    case Vector4[] vs:
-                        one.m_Values[Shader.PropertyToID("<InstanceArray>" + Shader.IdToName(p.Key))] = (Vector4[])vs.Clone();
-                        if (index < vs.Length)
-                        {
-                            one.m_Values[p.Key] = vs[index];
-                            one.m_Values[Shader.PropertyToID("<InstanceElement>" + Shader.IdToName(p.Key))] = vs[index];
-                        }
-                        break;
-                    case Matrix4x4[] ms:
-                        one.m_Values[Shader.PropertyToID("<InstanceArray>" + Shader.IdToName(p.Key))] = (Matrix4x4[])ms.Clone();
-                        if (index < ms.Length)
-                        {
-                            one.m_Values[p.Key] = ms[index];
-                            one.m_Values[Shader.PropertyToID("<InstanceElement>" + Shader.IdToName(p.Key))] = ms[index];
-                        }
-                        break;
-                    default:
-                        one.m_Values[p.Key] = p.Value;
-                        // Only an instanced property's scalar is limited to instance zero. The
-                        // compiled variant identifies it; ordinary uniforms still reach all instances.
-                        if (index > 0) one.m_Values[Shader.PropertyToID("<InstanceScalar>" + Shader.IdToName(p.Key))] = 1;
-                        break;
-                }
-            }
-            return one;
+            var values = new Dictionary<int, object>(block.m_Values.Count + 1);
+            foreach (var p in block.m_Values) values[p.Key] = (object)GfxStream.SharedArray.Of(p.Value) ?? p.Value;
+            return values;
         }
+
+        static readonly int s_MeshInstanceBatchLimits = Shader.PropertyToID("<MeshInstanceBatchLimits>");
 
         // The property element remains submission-relative even when the shader ID restarts
         // at a native batch boundary. The compiled pass supplies its property-buffer layout.
-        static MaterialPropertyBlock MeshInstance(MaterialPropertyBlock block, int index)
+        static Dictionary<int, object> MeshInstanceProperties(MaterialPropertyBlock block)
         {
-            var one = Instance(block, index) ?? new MaterialPropertyBlock();
+            var values = InstanceProperties(block) ?? new Dictionary<int, object>(1);
             var limits = Compat.MeshInstanceBatchLimits;
             if (limits.x == 0) Stubs.Ignored("Graphics mesh-instancing batch ID limits", "are unmeasured for this Unity release; logical IDs remain sequential");
-            one.SetVector("<MeshInstanceBatchLimits>", limits);
-            return one;
+            values[s_MeshInstanceBatchLimits] = limits;
+            return values;
         }
 
         static Bounds Transformed(Bounds local, Matrix4x4 matrix)
@@ -164,8 +134,9 @@ namespace UnityEngine
                 lighting.ProbePosition = bounds.center;
             }
             int queued = Immediate.Queued.Count;
+            var values = MeshInstanceProperties(properties);
             for (int i = 0; i < count; i++)
-                Immediate.Queue(mesh, matrices[i], material, layer, camera, submeshIndex, MeshInstance(properties, i), new DrawSetup { Instances = 1, FirstInstance = (uint)i }, lighting);
+                Immediate.Queue(mesh, matrices[i], material, layer, camera, submeshIndex, values, new DrawSetup { Instances = 1, MeshInstance = (uint)i }, lighting);
             // The group's sort key is the box's centre, ties within the call kept in call order
             // (Unbound's choice, unmeasured).
             WithWorldBounds(queued, bounds);
@@ -225,11 +196,11 @@ namespace UnityEngine
         /// settings; <paramref name="setup"/> for instanced or indirect draws. Set world bounds go
         /// with the draw: cameras cull and sort it by them ("Used to cull and sort the rendered
         /// geometry", RenderParams.worldBounds), each draw of one call alike.</summary>
-        static void Render(in RenderParams rparams, Mesh mesh, int submeshIndex, Matrix4x4 objectToWorld, DrawSetup? setup, MaterialPropertyBlock properties = null)
+        static void Render(in RenderParams rparams, Mesh mesh, int submeshIndex, Matrix4x4 objectToWorld, DrawSetup? setup, Dictionary<int, object> properties = null)
         {
             if (rparams.material == null) throw new ArgumentNullException("rparams.material");
             int queued = Immediate.Queued.Count;
-            Immediate.Queue(mesh, objectToWorld, rparams.material, rparams.layer, rparams.camera, submeshIndex, properties ?? rparams.matProps, setup, Lighting(rparams));
+            Immediate.Queue(mesh, objectToWorld, rparams.material, rparams.layer, rparams.camera, submeshIndex, properties ?? Immediate.Values(rparams.matProps), setup, Lighting(rparams));
             // Bounds left at the constructor's zero value are not set: the draw keeps its mesh's
             // bounds (Unbound's choice; a RenderMesh with them is drawn, measured:
             // tests/projects/graphics renderMesh).
@@ -267,10 +238,11 @@ namespace UnityEngine
             bool automatic = rparams.worldBounds.Equals(default(Bounds));
             var bounds = default(Bounds);
             int queued = Immediate.Queued.Count;
+            var values = MeshInstanceProperties(rparams.matProps);
             for (int i = 0; i < instanceCount; i++)
             {
                 var matrix = System.Runtime.InteropServices.MemoryMarshal.Read<Matrix4x4>(data.Slice((startInstance + i) * stride, 64));
-                Immediate.Queue(mesh, matrix, rparams.material, rparams.layer, rparams.camera, submeshIndex, MeshInstance(rparams.matProps, i), new DrawSetup { Instances = 1, FirstInstance = (uint)i }, lighting);
+                Immediate.Queue(mesh, matrix, rparams.material, rparams.layer, rparams.camera, submeshIndex, values, new DrawSetup { Instances = 1, MeshInstance = (uint)i }, lighting);
                 if (!automatic) continue;
                 if (i == 0) bounds = Transformed(mesh.bounds, matrix);
                 else bounds.Encapsulate(Transformed(mesh.bounds, matrix));
@@ -368,24 +340,41 @@ namespace UnityEngine
             if (commandBuffer == null) throw new ArgumentNullException(nameof(commandBuffer));
             if ((commandBuffer.target & GraphicsBuffer.Target.IndirectArguments) == 0)
                 throw new ArgumentException($"Graphics.{method}: the command buffer must be created with GraphicsBuffer.Target.IndirectArguments.", nameof(commandBuffer));
+            CheckCommands(method, commandBuffer, commandCount, startCommand, indexed ? GraphicsBuffer.IndirectDrawIndexedArgs.size : GraphicsBuffer.IndirectDrawArgs.size);
+            WarnUnhonoured(rparams, method);
+            QueueCommands(rparams, mesh, commandBuffer, commandCount, startCommand,
+                new DrawSetup { Instances = 1, Args = commandBuffer.Handle, Indexed = indexed });
+        }
+
+        /// <summary>The argument checks of the indirect RenderParams draws: commands
+        /// <paramref name="startCommand"/> to startCommand + commandCount − 1 of
+        /// <paramref name="size"/> bytes each must lie in the command buffer.</summary>
+        static void CheckCommands(string method, GraphicsBuffer commandBuffer, int commandCount, int startCommand, int size)
+        {
             if (commandCount < 0) throw new ArgumentOutOfRangeException(nameof(commandCount), $"Graphics.{method}: commandCount must not be negative.");
             if (startCommand < 0) throw new ArgumentOutOfRangeException(nameof(startCommand), $"Graphics.{method}: startCommand must not be negative.");
-            int size = indexed ? GraphicsBuffer.IndirectDrawIndexedArgs.size : GraphicsBuffer.IndirectDrawArgs.size;
             long bytes = (long)commandBuffer.count * commandBuffer.stride;
             if (((long)startCommand + commandCount) * size > bytes)
                 throw new ArgumentOutOfRangeException(nameof(commandCount),
                     $"Graphics.{method}: commands {startCommand} to {(long)startCommand + commandCount - 1} of {size} bytes each do not fit the command buffer's {bytes} bytes.");
-            WarnUnhonoured(rparams, method);
-            int argsId = Shader.PropertyToID("unity_IndirectDrawArgs"), commandId = Shader.PropertyToID("unity_BaseCommandID");
+        }
+
+        static readonly int s_IndirectDrawArgs = Shader.PropertyToID("unity_IndirectDrawArgs");
+
+        /// <summary>One draw of <paramref name="setup"/> per command, each with its arguments'
+        /// offset and its command index; the property block is copied once for all of them.</summary>
+        static void QueueCommands(in RenderParams rparams, Mesh mesh, GraphicsBuffer commandBuffer, int commandCount, int startCommand, DrawSetup setup)
+        {
+            if (commandCount == 0) return;
+            int size = setup.Indexed ? GraphicsBuffer.IndirectDrawIndexedArgs.size : GraphicsBuffer.IndirectDrawArgs.size;
+            var values = InstanceProperties(rparams.matProps) ?? new Dictionary<int, object>(1);
+            values[s_IndirectDrawArgs] = commandBuffer;
             for (int i = 0; i < commandCount; i++)
             {
                 int command = startCommand + i;
-                var properties = new MaterialPropertyBlock();
-                if (rparams.matProps != null) properties.CopyFrom(rparams.matProps);
-                properties.m_Values[argsId] = commandBuffer;
-                properties.m_Values[commandId] = command;
-                Render(rparams, mesh, 0, Matrix4x4.identity,
-                    new DrawSetup { Instances = 1, Args = commandBuffer.Handle, Offset = (uint)((long)command * size), Indexed = indexed }, properties);
+                setup.Offset = checked((uint)((long)command * size));
+                setup.Command = command;
+                Render(rparams, mesh, 0, Matrix4x4.identity, setup, values);
             }
         }
 
@@ -418,7 +407,6 @@ namespace UnityEngine
         /// Each command reads both GPU buffers when the frame's camera executes the draw.</summary>
         public static void RenderPrimitivesIndexedIndirect(in RenderParams rparams, MeshTopology topology, GraphicsBuffer indexBuffer, GraphicsBuffer commandBuffer, int commandCount = 1, int startCommand = 0)
         {
-            const string method = "Graphics.RenderPrimitivesIndexedIndirect";
             if (indexBuffer == null) throw new ArgumentNullException(nameof(indexBuffer));
             if (commandBuffer == null) throw new ArgumentNullException(nameof(commandBuffer));
             if ((commandBuffer.target & GraphicsBuffer.Target.IndirectArguments) == 0)
@@ -427,27 +415,12 @@ namespace UnityEngine
                 return;
             }
             if (rparams.material == null) return;
-            if (commandCount < 0) throw new ArgumentOutOfRangeException(nameof(commandCount), $"{method}: commandCount must not be negative.");
-            if (startCommand < 0) throw new ArgumentOutOfRangeException(nameof(startCommand), $"{method}: startCommand must not be negative.");
-            int size = GraphicsBuffer.IndirectDrawIndexedArgs.size;
-            long bytes = (long)commandBuffer.count * commandBuffer.stride;
-            if (((long)startCommand + commandCount) * size > bytes)
-                throw new ArgumentOutOfRangeException(nameof(commandCount),
-                    $"{method}: commands {startCommand} to {(long)startCommand + commandCount - 1} of {size} bytes each do not fit the command buffer's {bytes} bytes.");
+            CheckCommands(nameof(RenderPrimitivesIndexedIndirect), commandBuffer, commandCount, startCommand, GraphicsBuffer.IndirectDrawIndexedArgs.size);
             WarnUnhonoured(rparams, nameof(RenderPrimitivesIndexedIndirect));
             if (commandCount == 0) return;
             if (!IndexedDraws.Supported(indexBuffer, topology, k_Indexed + "Indirect")) return;
-            int argsId = Shader.PropertyToID("unity_IndirectDrawArgs"), commandId = Shader.PropertyToID("unity_BaseCommandID");
-            for (int i = 0; i < commandCount; i++)
-            {
-                int command = startCommand + i;
-                var properties = new MaterialPropertyBlock();
-                if (rparams.matProps != null) properties.CopyFrom(rparams.matProps);
-                properties.m_Values[argsId] = commandBuffer;
-                properties.m_Values[commandId] = command;
-                Render(rparams, IndexedDraws.StandIn(topology), 0, Matrix4x4.identity,
-                    IndexedDraws.Indirect(indexBuffer, commandBuffer.Handle, checked(command * size)), properties);
-            }
+            QueueCommands(rparams, IndexedDraws.StandIn(topology), commandBuffer, commandCount, startCommand,
+                IndexedDraws.Indirect(indexBuffer, commandBuffer.Handle, 0));
         }
 
         // ------------------------------------------------------------------ procedural

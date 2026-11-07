@@ -415,10 +415,12 @@ pub mod owned {
         /// A graphics or compute buffer's handle.
         Buffer(u64),
         /// An array uniform: elements of `components` floats each (4 vectors, 16 matrices); 0:
-        /// consecutive values copied from the uniform's offset (ComputeShader.SetFloats).
+        /// consecutive values copied from the uniform's offset (ComputeShader.SetFloats). The
+        /// data is shared: the draws of one instanced call reference one array (render
+        /// protocol 12).
         Array {
             components: u32,
-            data: Vec<f32>,
+            data: std::sync::Arc<[f32]>,
         },
         /// A texture mip level bound for random writes (a compute kernel's RW texture).
         Image {
@@ -463,7 +465,7 @@ pub mod owned {
                 } else {
                     PropertyValue::Array {
                         components: prop.components.max(1) as u32,
-                        data: data.to_vec(),
+                        data: data.into(),
                     }
                 }
             }

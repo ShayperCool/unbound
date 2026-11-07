@@ -16,17 +16,32 @@ Meshes, textures and materials are identified by `u64` handles the managed side 
 is destroyed. Imported textures are uploaded by the native side itself (`import_texture`), which
 knows the asset pipeline and its cache.
 
+### Render protocol 12: shared arrays and mesh-instance elements (NativeApi 28)
+
+Opcode 30 is `MeshInstance` (`u32 index`, the bytes of protocol 11's `FirstInstance`): the next
+draw is instance `index` of a mesh-instancing call, emitted for every instance including 0. It
+sets the draw's first logical instance and is consumed even if that draw is skipped. The
+instances of one call carry the same properties, the block's arrays whole; the renderer selects
+the element. A scalar uniform whose draw property is an array takes element `index` (a float,
+vector or matrix for 1, 4 or 16 components), or the material's value past the array's end. A
+single value of a property the compiled variant declares instanced (shader cache format 19)
+reaches instance 0 only; the others keep the material's. Outside a mesh instance, an instanced
+property's array keeps the material's value. Uniform arrays keep every element. Protocol 11's
+`<InstanceArray>`, `<InstanceElement>` and `<InstanceScalar>` properties are gone.
+
+Property kinds 8 `SharedArray` (`u32 id`, then an array's `u32 components, u32 count, f32...`)
+and 9 `ArrayRef` (`u32 id`) let many draws share one array: ids count from 0 in each submitted
+stream, a definition out of order or a reference to an undefined id rejects the stream, and the
+renderer keeps one copy of the data for all its references. Indirect draws' `unity_BaseCommandID`
+is an ordinary `Int` draw property. A 27 side and a 28 side refuse each other at startup.
+
 ### Render protocol 11: logical instance IDs (NativeApi 22)
 
 `FirstInstance` (opcode 30, `u32 first`) sets the first logical instance of the next draw and is
 consumed even if that draw is skipped. Command-buffer mesh instancing emits each matrix through
 the ordinary draw path with its original instance ID. `DrawSetup` keeps its existing bytes.
-Property-block arrays retain their full value in an internal `<InstanceArray><name>` property,
-with `<InstanceElement><name>` carrying the selected value and the ordinary queued property still
-holding that selected value; shader cache format 19 identifies the declared instanced
-properties that use that element. Ordinary uniform arrays keep every element. A scalar marked
-`<InstanceScalar><name>` falls back to the material after instance zero only when the compiled
-variant declares that property as instanced. NativeApi 21 and 22 refuse each other at startup.
+Property-block arrays were sent whole with each instance's element beside them (superseded by
+protocol 12). NativeApi 21 and 22 refuse each other at startup.
 
 ### Render protocol 10: 32-bit indices (NativeApi 22)
 
@@ -243,9 +258,12 @@ before and after it, as on Unity's render thread) and a read back.
                                                 // nothing before a dispatch has bound the counter
 27 DispatchIndirect u64 args, u32 offset, then Dispatch's fields   // group counts: 3 u32s of args
 28 DrawIndices  u64 buffer, u8 index_size (2; 4 from protocol 10), u32 first, u32 count   // next Draw's indices, base vertex 0 or the indirect arguments' (protocol 8)
+29 CopyDepth    u64 source, u64 destination       // protocol 9
+30 MeshInstance u32 index                         // next Draw is this instance of a mesh-instancing call (protocols 11, 12)
 property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 (element bits in Draw and Global
             only, see render protocol 6) + f32x4 st, 3 int i32, 4 matrix,
-            5 buffer u64, 6 array u32 components (0: consecutive values) u32 n f32[n], 7 image u64 texture i32 mip)
+            5 buffer u64, 6 array u32 components (0: consecutive values) u32 n f32[n], 7 image u64 texture i32 mip,
+            8 shared array u32 id then as 6, 9 array reference u32 id (protocol 12))
 ```
 
 A buffer command hands over the work planned before it, so it lands between what came before and

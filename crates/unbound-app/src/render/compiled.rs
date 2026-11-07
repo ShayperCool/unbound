@@ -68,17 +68,45 @@ pub struct DrawValues<'a, 'buffers> {
     pub texture_size: &'a dyn Fn(&str) -> Option<(u32, u32)>,
     /// The bytes of the constant buffer bound to a cbuffer's name, when one is.
     pub constant_buffer: &'buffers dyn Fn(&str) -> Option<&'buffers [u8]>,
+    /// The draw is this instance of a mesh-instancing call (`MeshInstance`): its scalar
+    /// uniforms take this element of the draw's arrays of their name.
+    pub instance: Option<u32>,
+    /// One uniform's selected element, over the draw's other values (see [`write_uniform`]).
+    pub element: Option<(&'a str, &'a PropertyValue)>,
 }
 
 impl DrawValues<'_, '_> {
     /// A property of the draw, else of its material.
     pub fn get(&self, name: &str) -> Option<&PropertyValue> {
+        if let Some((n, value)) = self.element
+            && n == name
+        {
+            return Some(value);
+        }
+        self.override_of(name).or_else(|| self.material.get(name))
+    }
+
+    /// The draw's own property of a name (the last one).
+    fn override_of(&self, name: &str) -> Option<&PropertyValue> {
         self.overrides
             .iter()
             .rev()
             .find(|(n, _)| n == name)
             .map(|(_, v)| v)
-            .or_else(|| self.material.get(name))
+    }
+}
+
+/// Element `index` of an array property as the value of one element: a float, vector or matrix
+/// (1, 4 or 16 components); none past the array's end.
+fn array_element(components: u32, data: &[f32], index: u32) -> Option<PropertyValue> {
+    let n = components as usize;
+    let start = (index as usize).checked_mul(n)?;
+    let e = data.get(start..start.checked_add(n)?)?;
+    match n {
+        1 => Some(PropertyValue::Float(e[0])),
+        4 => Some(PropertyValue::Vector(e.try_into().ok()?)),
+        16 => Some(PropertyValue::Matrix(e.try_into().ok()?)),
+        _ => None,
     }
 }
 
@@ -942,34 +970,42 @@ fn static_value(
     }
 }
 
-/// Writes one uniform (not an array) for a draw.
+/// Writes one uniform (not an array) for a draw. In a mesh instance (`DrawValues::instance`),
+/// a scalar uniform whose draw property is an array takes the instance's element of it, or the
+/// material's value past the array's end; a declared instanced property's single value reaches
+/// instance zero only, the others keep the material's. Outside one, a declared instanced
+/// property's array keeps the material's value.
 fn write_uniform(program: &Compiled, plan: &[Source], i: usize, v: &DrawValues, out: &mut [u8]) {
     let u = &program.uniforms[i];
     if u.count != 1 || u.stride > 0 {
         return;
     }
-    let element = v
-        .overrides
-        .iter()
-        .find(|(name, _)| name.strip_prefix("<InstanceElement>") == Some(u.name.as_str()));
-    let element_override: Vec<_> = element
-        .map(|(_, value)| vec![(u.name.clone(), value.clone())])
-        .unwrap_or_default();
-    let instance_values = DrawValues {
-        overrides: &element_override,
+    let instanced = || program.instanced_properties.contains(&u.name);
+    let element;
+    let material_only = match (v.instance, v.override_of(&u.name)) {
+        (Some(index), Some(PropertyValue::Array { components, data })) => {
+            element = array_element(*components, data, index);
+            true
+        }
+        (Some(index), Some(_)) => {
+            element = None;
+            index > 0 && instanced()
+        }
+        (None, Some(PropertyValue::Array { .. })) => {
+            element = None;
+            instanced()
+        }
+        _ => {
+            element = None;
+            false
+        }
+    };
+    let selected = DrawValues {
+        overrides: &[],
+        element: element.as_ref().map(|e| (u.name.as_str(), e)),
         ..*v
     };
-    let v = if program.instanced_properties.contains(&u.name)
-        && (element.is_some()
-            || v.overrides.iter().any(|(name, value)| {
-                name.strip_prefix("<InstanceScalar>") == Some(u.name.as_str())
-                    || name.strip_prefix("<InstanceArray>") == Some(u.name.as_str())
-                    || (name == &u.name && matches!(value, PropertyValue::Array { .. }))
-            })) {
-        &instance_values
-    } else {
-        v
-    };
+    let v = if material_only { &selected } else { v };
     if let Some(value) = value(&u.name, plan[i], v, &program.textures) {
         write_value(u, &value, out);
     }
@@ -1003,12 +1039,7 @@ fn write_value(u: &unbound_shaders::Uniform, value: &Value, out: &mut [u8]) {
 fn fill(program: &Compiled, plan: &[Source], v: &DrawValues, out: &mut [u8], only: Option<&[u32]>) {
     // Arrays: the draw's or material's array property, else the global one.
     for u in program.uniforms.iter().filter(|u| u.stride > 0) {
-        let preserved = v
-            .overrides
-            .iter()
-            .find(|(name, _)| name.strip_prefix("<InstanceArray>") == Some(u.name.as_str()))
-            .map(|(_, value)| value);
-        let value = match preserved.or_else(|| v.get(&u.name)) {
+        let value = match v.get(&u.name) {
             Some(value @ PropertyValue::Array { .. }) => Some(value),
             _ => v
                 .globals_index
@@ -1200,6 +1231,8 @@ mod tests {
             main_alpha_only: false,
             texture_size: &size,
             constant_buffer: &|name| (name == "Bound").then_some(&BOUND[..]),
+            instance: None,
+            element: None,
         };
         let mut out = vec![0u8; 176];
         let plan: Vec<Source> = program
@@ -1223,12 +1256,11 @@ mod tests {
         instanced.instanced_properties.push("_Color".into());
         let overrides = [
             ("_Color".into(), PropertyValue::Vector([1.0; 4])),
-            ("<InstanceScalar>_Color".into(), PropertyValue::Int(1)),
             ("_Cut".into(), PropertyValue::Float(0.75)),
-            ("<InstanceScalar>_Cut".into(), PropertyValue::Int(1)),
         ];
         let later_instance = DrawValues {
             overrides: &overrides,
+            instance: Some(1),
             ..values
         };
         fill(&instanced, &plan, &later_instance, &mut out, None);
@@ -1241,45 +1273,76 @@ mod tests {
             0.75,
             "ordinary scalar uniforms apply to every instance"
         );
-        let array = PropertyValue::Array {
-            components: 4,
-            data: vec![0.25; 8],
+        let first_instance = DrawValues {
+            instance: Some(0),
+            ..later_instance
         };
+        fill(&instanced, &plan, &first_instance, &mut out, None);
+        assert_eq!(
+            f32::from_le_bytes(out[64..68].try_into().unwrap()),
+            1.0,
+            "instance zero takes the scalar"
+        );
         instanced.uniforms.push(Uniform {
             count: 2,
             stride: 16,
             ..uniform("_Palette", 176, 4, 1)
         });
         instanced.uniform_size = 208;
+        let shared: std::sync::Arc<[f32]> = [0.25, 0.25, 0.25, 0.25, 0.75, 0.75, 0.75, 0.75].into();
+        let array = PropertyValue::Array {
+            components: 4,
+            data: shared.clone(),
+        };
         let overrides = [
             ("_Palette".into(), array.clone()),
+            ("_Color".into(), array.clone()),
             (
-                "<InstanceElement>_Palette".into(),
-                PropertyValue::Vector([1.0; 4]),
-            ),
-            ("_Color".into(), array),
-            (
-                "<InstanceElement>_Color".into(),
-                PropertyValue::Vector([0.75; 4]),
+                "_Cut".into(),
+                PropertyValue::Array {
+                    components: 1,
+                    data: [0.125, 0.5].into(),
+                },
             ),
         ];
         let instance = DrawValues {
             overrides: &overrides,
+            instance: Some(1),
             ..values
         };
         let mut plan = plan.clone();
         plan.push(Source::Named);
         out.resize(208, 0);
         fill(&instanced, &plan, &instance, &mut out, None);
+        let f = |out: &[u8], at: usize| f32::from_le_bytes(out[at..at + 4].try_into().unwrap());
         assert_eq!(
-            f32::from_le_bytes(out[64..68].try_into().unwrap()),
+            f(&out, 64),
             0.75,
             "declared instanced arrays select their element"
         );
+        assert_eq!(f(&out, 80), 0.5, "so do ordinary scalar uniforms of an array");
         assert_eq!(
-            f32::from_le_bytes(out[192..196].try_into().unwrap()),
-            0.25,
+            [f(&out, 176), f(&out, 192)],
+            [0.25, 0.75],
             "ordinary uniform arrays retain every element"
+        );
+        let past = DrawValues {
+            instance: Some(2),
+            ..instance
+        };
+        fill(&instanced, &plan, &past, &mut out, None);
+        assert!(
+            (f(&out, 64) - 0.214).abs() < 0.001 && f(&out, 80) == 0.25,
+            "past an array's end the material's value applies"
+        );
+        let not_instance = DrawValues {
+            instance: None,
+            ..instance
+        };
+        fill(&instanced, &plan, &not_instance, &mut out, None);
+        assert!(
+            (f(&out, 64) - 0.214).abs() < 0.001,
+            "outside mesh instancing an instanced property's array keeps the material's value"
         );
         instanced.uniforms.push(Uniform {
             count: 1,
@@ -1288,28 +1351,22 @@ mod tests {
         });
         instanced.uniform_size = 224;
         plan.push(Source::Named);
-        let overrides = [
-            ("_Single".into(), PropertyValue::Vector([0.75; 4])),
-            (
-                "<InstanceArray>_Single".into(),
-                PropertyValue::Array {
-                    components: 4,
-                    data: vec![0.5; 4],
-                },
-            ),
-            (
-                "<InstanceElement>_Single".into(),
-                PropertyValue::Vector([0.75; 4]),
-            ),
-        ];
+        let overrides = [(
+            "_Single".into(),
+            PropertyValue::Array {
+                components: 4,
+                data: vec![0.5; 4].into(),
+            },
+        )];
         let instance = DrawValues {
             overrides: &overrides,
+            instance: Some(0),
             ..values
         };
         out.resize(224, 0);
         fill(&instanced, &plan, &instance, &mut out, None);
         assert_eq!(
-            f32::from_le_bytes(out[208..212].try_into().unwrap()),
+            f(&out, 208),
             0.5,
             "a one-element uniform array is still an array"
         );

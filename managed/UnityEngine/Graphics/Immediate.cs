@@ -329,7 +329,17 @@ namespace Unbound.Runtime
             Queue(mesh, matrix, material, layer, camera, submesh, properties, null, lighting);
 
         internal static void Queue(UnityEngine.Mesh mesh, UnityEngine.Matrix4x4 matrix, UnityEngine.Material material, int layer,
-            UnityEngine.Camera camera, int submesh, UnityEngine.MaterialPropertyBlock properties, DrawSetup? setup, ImmediateLighting lighting)
+            UnityEngine.Camera camera, int submesh, UnityEngine.MaterialPropertyBlock properties, DrawSetup? setup, ImmediateLighting lighting) =>
+            Queue(mesh, matrix, material, layer, camera, submesh, Values(properties), setup, lighting);
+
+        /// <summary>A block's values as a queued draw keeps them (null when it has none).</summary>
+        internal static Dictionary<int, object> Values(UnityEngine.MaterialPropertyBlock properties) =>
+            properties != null && !properties.isEmpty ? new Dictionary<int, object>(properties.m_Values) : null;
+
+        /// <summary>A draw with these values, which it shares with the other draws of its call
+        /// (the frame's draws copy before they add to them).</summary>
+        internal static void Queue(UnityEngine.Mesh mesh, UnityEngine.Matrix4x4 matrix, UnityEngine.Material material, int layer,
+            UnityEngine.Camera camera, int submesh, Dictionary<int, object> properties, DrawSetup? setup, ImmediateLighting lighting)
         {
             if (mesh == null) throw new ArgumentNullException(nameof(mesh));
             if (material == null) return;
@@ -341,7 +351,7 @@ namespace Unbound.Runtime
                 Layer = layer,
                 Camera = camera,
                 Submesh = submesh,
-                Properties = properties != null && !properties.isEmpty ? new Dictionary<int, object>(properties.m_Values) : null,
+                Properties = properties,
                 Setup = setup,
                 Lighting = lighting ?? ImmediateLighting.Default,
             });

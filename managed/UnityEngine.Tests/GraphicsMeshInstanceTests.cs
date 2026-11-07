@@ -32,10 +32,13 @@ namespace Unbound.Tests
                 for (int i = 0; i < 3; i++)
                 {
                     var draw = Immediate.Queued[i];
-                    Assert.Equal((uint)i, draw.Setup.Value.FirstInstance);
+                    // Instance i takes element i of the call's arrays (the renderer selects it).
+                    Assert.Equal((uint)i, draw.Setup.Value.MeshInstance);
                     Assert.Equal(Matrix4x4.Translate(Vector3.right * (i + (render ? 2 : 0))), draw.Matrix);
-                    Assert.Equal(new[] { 2f, 3f, 5f }[i], draw.Properties[Shader.PropertyToID("_Weights")]);
-                    Assert.Equal(new[] { 2f, 3f, 5f, 7f, 11f, 13f }, Assert.IsType<float[]>(draw.Properties[Shader.PropertyToID("<InstanceArray>_Weights")]));
+                    Assert.Same(Immediate.Queued[0].Properties, draw.Properties);
+                    var weights = Assert.IsType<GfxStream.SharedArray>(draw.Properties[Shader.PropertyToID("_Weights")]);
+                    Assert.Equal(1u, weights.Components);
+                    Assert.Equal(new[] { 2f, 3f, 5f, 7f, 11f, 13f }, weights.Data);
                 }
             }
             finally

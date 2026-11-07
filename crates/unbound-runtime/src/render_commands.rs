@@ -145,8 +145,10 @@ pub enum Command {
     /// `args` (a buffer handle; 0: none) at `offset` — indexed (index count, instance count, first
     /// index, base vertex, first instance: DrawMeshInstancedIndirect) or not (vertex count,
     /// instance count, first vertex, first instance: DrawProceduralIndirect).
-    /// First logical instance of the next draw (render protocol 11).
-    FirstInstance(u32),
+    /// The next draw is instance `index` of a mesh-instancing call (render protocols 11, 12):
+    /// its first logical instance, and the element its scalar uniforms take from the draw's
+    /// property arrays.
+    MeshInstance(u32),
     DrawSetup {
         instances: u32,
         args: u64,
@@ -301,7 +303,7 @@ mod op {
     pub const DRAW_INDICES: u8 = 28;
     // Render protocol 9 (NativeApi 19).
     pub const COPY_DEPTH: u8 = 29;
-    pub const FIRST_INSTANCE: u8 = 30;
+    pub const MESH_INSTANCE: u8 = 30;
 }
 
 /// The sizes of a `DrawIndices` index on the wire: 16-bit indices, and 32-bit ones from render
@@ -327,11 +329,18 @@ mod kind {
     pub const BUFFER: u8 = 5;
     pub const ARRAY: u8 = 6;
     pub const IMAGE: u8 = 7;
+    /// Render protocol 12: an array that later properties of the same stream reference by its
+    /// id (`u32 id`, then as [`ARRAY`]); ids count from 0 in each stream.
+    pub const SHARED_ARRAY: u8 = 8;
+    /// Render protocol 12: the array [`SHARED_ARRAY`] defined earlier in this stream (`u32 id`).
+    pub const ARRAY_REF: u8 = 9;
 }
 
 struct Reader<'a> {
     bytes: &'a [u8],
     at: usize,
+    /// The stream's shared arrays, by id ([`kind::SHARED_ARRAY`]).
+    arrays: Vec<(u32, std::sync::Arc<[f32]>)>,
 }
 
 impl<'a> Reader<'a> {
@@ -394,6 +403,18 @@ impl<'a> Reader<'a> {
         handle::plain(self.u64()?, what)
     }
 
+    /// An array's components per element and its floats.
+    fn array(&mut self) -> Result<(u32, std::sync::Arc<[f32]>), String> {
+        let components = self.u32()?;
+        let n = self.u32()? as usize;
+        let bytes = self.take(n.checked_mul(4).ok_or("an array's length overflows")?)?;
+        let data = bytes
+            .chunks_exact(4)
+            .map(|b| f32::from_le_bytes(b.try_into().unwrap()))
+            .collect();
+        Ok((components, data))
+    }
+
     /// A property; `sampled`: a draw's or a global property, whose textures may name an element.
     fn property(&mut self, sampled: bool) -> Result<(String, PropertyValue), String> {
         let name = self.string()?;
@@ -416,13 +437,30 @@ impl<'a> Reader<'a> {
             kind::MATRIX => PropertyValue::Matrix(self.floats()?),
             kind::BUFFER => PropertyValue::Buffer(self.u64()?),
             kind::ARRAY => {
-                let components = self.u32()?;
-                let n = self.u32()? as usize;
-                let mut data = Vec::with_capacity(n.min(1 << 16));
-                for _ in 0..n {
-                    data.push(self.f32()?);
-                }
+                let (components, data) = self.array()?;
                 PropertyValue::Array { components, data }
+            }
+            kind::SHARED_ARRAY => {
+                let id = self.u32()?;
+                if id as usize != self.arrays.len() {
+                    return Err(format!(
+                        "shared array {id} defined where {} was next",
+                        self.arrays.len()
+                    ));
+                }
+                let (components, data) = self.array()?;
+                self.arrays.push((components, data.clone()));
+                PropertyValue::Array { components, data }
+            }
+            kind::ARRAY_REF => {
+                let id = self.u32()?;
+                let Some((components, data)) = self.arrays.get(id as usize) else {
+                    return Err(format!("shared array {id} is not defined in this stream"));
+                };
+                PropertyValue::Array {
+                    components: *components,
+                    data: data.clone(),
+                }
             }
             kind::IMAGE => PropertyValue::Image {
                 handle: handle::plain(self.u64()?, "an image property")?,
@@ -436,7 +474,11 @@ impl<'a> Reader<'a> {
 
 /// Decodes a stream; an unknown opcode or a truncated command is an error.
 pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
-    let mut r = Reader { bytes, at: 0 };
+    let mut r = Reader {
+        bytes,
+        at: 0,
+        arrays: Vec::new(),
+    };
     let mut out = Vec::new();
     while r.at < bytes.len() {
         let opcode = r.u8()?;
@@ -475,7 +517,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                     extra: colors,
                 }
             }
-            op::FIRST_INSTANCE => Command::FirstInstance(r.u32()?),
+            op::MESH_INSTANCE => Command::MeshInstance(r.u32()?),
             op::DRAW_SETUP => Command::DrawSetup {
                 instances: r.u32()?,
                 args: r.u64()?,
@@ -785,8 +827,8 @@ impl Writer {
                 self.u32(*mip as u32);
                 self.u32(*slice as u32);
             }
-            Command::FirstInstance(first) => {
-                self.bytes.push(op::FIRST_INSTANCE);
+            Command::MeshInstance(first) => {
+                self.bytes.push(op::MESH_INSTANCE);
                 self.u32(*first);
             }
             Command::DrawSetup {
@@ -1064,7 +1106,7 @@ mod tests {
             },
             Command::Global("_Tint".into(), PropertyValue::Vector([1.0, 0.5, 0.25, 1.0])),
             Command::Keyword("FOG_LINEAR".into(), true),
-            Command::FirstInstance(7),
+            Command::MeshInstance(7),
             Command::RenderPipeline("UniversalPipeline".into()),
             Command::PassTags(vec!["UniversalForward".into(), "SRPDefaultUnlit".into()]),
             Command::DepthBias {
@@ -1150,7 +1192,7 @@ mod tests {
                         "_W".into(),
                         PropertyValue::Array {
                             components: 4,
-                            data: vec![1.0; 8],
+                            data: vec![1.0; 8].into(),
                         },
                     ),
                     ("_Out".into(), PropertyValue::Image { handle: 3, mip: 1 }),
@@ -1296,6 +1338,50 @@ mod tests {
         );
     }
 
+    fn global_array_bytes(name: &str, kind: u8, id: u32, data: Option<&[f32]>) -> Vec<u8> {
+        let mut b = vec![op::GLOBAL];
+        b.extend((name.len() as u32).to_le_bytes());
+        b.extend(name.as_bytes());
+        b.push(kind);
+        b.extend(id.to_le_bytes());
+        if let Some(data) = data {
+            b.extend(4u32.to_le_bytes());
+            b.extend((data.len() as u32).to_le_bytes());
+            for f in data {
+                b.extend(f.to_le_bytes());
+            }
+        }
+        b
+    }
+
+    /// A shared array is decoded once and every reference to it in the same stream shares its
+    /// data; ids are dense from 0, and a reference before its definition (or a definition out of
+    /// order) is malformed.
+    #[test]
+    fn shared_arrays_are_referenced_without_copies() {
+        let values = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let mut bytes = global_array_bytes("_A", kind::SHARED_ARRAY, 0, Some(&values));
+        bytes.extend(global_array_bytes("_B", kind::ARRAY_REF, 0, None));
+        let commands = parse(&bytes).unwrap();
+        let [Command::Global(a, PropertyValue::Array { components: 4, data: first }),
+            Command::Global(b, PropertyValue::Array { components: 4, data: second })] =
+            commands.as_slice()
+        else {
+            panic!("{commands:?}");
+        };
+        assert_eq!((a.as_str(), b.as_str()), ("_A", "_B"));
+        assert_eq!(&first[..], &values);
+        assert!(std::sync::Arc::ptr_eq(first, second));
+        assert!(parse(&global_array_bytes("_B", kind::ARRAY_REF, 0, None)).is_err());
+        assert!(parse(&global_array_bytes("_A", kind::SHARED_ARRAY, 1, Some(&values))).is_err());
+        // Each stream numbers its own arrays.
+        let mut twice = global_array_bytes("_A", kind::SHARED_ARRAY, 0, Some(&values));
+        twice.extend(global_array_bytes("_A", kind::SHARED_ARRAY, 1, Some(&values[..4])));
+        twice.extend(global_array_bytes("_B", kind::ARRAY_REF, 1, None));
+        let commands = parse(&twice).unwrap();
+        assert!(matches!(&commands[2], Command::Global(_, PropertyValue::Array { data, .. }) if data.len() == 4));
+    }
+
     /// A malformed or truncated `DrawIndices` is an error, never a draw: no buffer, indices of
     /// another size, no indices, a range past `u32`, or the stream ending inside the command.
     #[test]
@@ -1321,11 +1407,11 @@ mod tests {
     /// `DrawIndices` is decoded from NativeApi 18 on, the version render protocol 8 has with the
     /// audio filter descriptors (17 was render protocol 8 alone, 16 the audio descriptors alone);
     /// 19 adds render protocol 9's `CopyDepth`, 20 the AudioReverbFilter descriptors, 21 the reverb
-    /// zone, 22 render protocols 10/11's 32-bit indices and logical instance IDs, and 23 the
-    /// Distortion filter kind.
+    /// zone, 22 render protocols 10/11's 32-bit indices and logical instance IDs, 23 the
+    /// Distortion filter kind and 28 render protocol 12's shared arrays.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 27);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 28);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

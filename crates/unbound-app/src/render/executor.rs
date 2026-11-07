@@ -242,13 +242,83 @@ enum Op {
     DepthBlit(DepthBlit),
     Dispatch(compute::DispatchOp),
     BufferCopy(compute::BufferCopyOp),
-    /// GLCore raw instance IDs exclude startInstance. The original args remain shader-visible.
-    IndexedIndirectArgs {
-        source: wgpu::Buffer,
-        offset: u64,
-        arguments: wgpu::Buffer,
-    },
+    /// An indirect draw's arguments copied into the pooled arguments buffer before the draw,
+    /// where nothing earlier in the open pass could have written them.
+    IndirectArgs(ArgsCopy),
     Mips(wgpu::Texture, wgpu::TextureFormat, u32),
+}
+
+/// An indirect draw's arguments copied on the GPU, after the work before the draw, into its
+/// slot of [`IndirectArgsPool`] with the start instance zeroed: the Editor's OpenGLCore
+/// `SV_InstanceID` counts from 0 on every indirect path (GL's `gl_InstanceID` never includes the
+/// base instance; measured: tests/projects/cmdbuffers `render.indexed.startinstance.*` and
+/// `render.indexed.indirect.rawids`), while wgpu's instance index includes it. The caller's
+/// buffer keeps its arguments for the shader's `unity_IndirectDrawArgs` reads
+/// (UnityIndirect.cginc's `GetIndirectInstanceID_Base` adds the start instance itself).
+struct ArgsCopy {
+    source: wgpu::Buffer,
+    source_offset: u64,
+    destination: wgpu::Buffer,
+    destination_offset: u64,
+    indexed: bool,
+}
+
+impl ArgsCopy {
+    fn encode(&self, encoder: &mut wgpu::CommandEncoder) {
+        // Indexed: index count, instance count, first index, base vertex, start instance;
+        // not: vertex count, instance count, first vertex, start instance.
+        let counts = if self.indexed { 16 } else { 12 };
+        encoder.copy_buffer_to_buffer(
+            &self.source,
+            self.source_offset,
+            &self.destination,
+            self.destination_offset,
+            counts,
+        );
+        encoder.clear_buffer(
+            &self.destination,
+            self.destination_offset + counts,
+            Some(INDIRECT_START_INSTANCE_SIZE),
+        );
+    }
+}
+
+/// The bytes of an indirect draw's start instance argument.
+const INDIRECT_START_INSTANCE_SIZE: u64 = 4;
+/// One slot of [`IndirectArgsPool`]: the indexed arguments' 20 bytes (the others use 16).
+const INDIRECT_ARGS_SLOT: u64 = 20;
+
+/// The arguments buffer every indirect draw of a submission draws from, one slot each, grown by
+/// doubling; slots are reused by the next submission, which the queue runs after this one.
+#[derive(Default)]
+struct IndirectArgsPool {
+    buffer: Option<wgpu::Buffer>,
+    used: u64,
+}
+
+impl IndirectArgsPool {
+    /// The next slot: its buffer and byte offset.
+    fn slot(&mut self, device: &wgpu::Device) -> (wgpu::Buffer, u64) {
+        let offset = self.used * INDIRECT_ARGS_SLOT;
+        if self
+            .buffer
+            .as_ref()
+            .is_none_or(|b| b.size() < offset + INDIRECT_ARGS_SLOT)
+        {
+            // Draws planned before keep the smaller buffer they copied into.
+            let slots = (self.used + 1).next_power_of_two().max(64);
+            self.buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("unbound indirect args"),
+                size: slots * INDIRECT_ARGS_SLOT,
+                usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::INDIRECT,
+                mapped_at_creation: false,
+            }));
+            self.used = 0;
+        }
+        let offset = self.used * INDIRECT_ARGS_SLOT;
+        self.used += 1;
+        (self.buffer.clone().unwrap(), offset)
+    }
 }
 
 /// A depth buffer drawn into another of its size (`CopyDepth`): each destination sample takes the
@@ -271,6 +341,11 @@ struct Pass {
     /// Depth and stencil clear values; `None` loads them.
     depth_clear: Option<(f32, u32)>,
     items: Vec<PassItem>,
+    /// Indirect arguments copied before the pass begins (see [`ArgsCopy`]).
+    args: Vec<ArgsCopy>,
+    /// A draw in the pass binds a buffer it can write: later indirect arguments may depend on
+    /// it, so they are copied after the pass instead.
+    writes_buffers: bool,
 }
 
 /// The state commands set for those after them.
@@ -295,7 +370,8 @@ struct State {
     state_override: Option<commands::StateOverride>,
     /// How the next draw runs (`DrawSetup`): instances, arguments buffer, offset, indexed.
     draw_setup: Option<(u32, u64, u32, bool)>,
-    first_instance: u32,
+    /// The next draw is this instance of a mesh-instancing call (`MeshInstance`).
+    mesh_instance: Option<u32>,
     /// The next draw's indices from a buffer (`DrawIndices`): buffer, index size, first, count.
     draw_indices: Option<(u64, u8, u32, u32)>,
 }
@@ -358,6 +434,7 @@ pub struct UnityRenderer {
     unaligned_count: Option<(wgpu::ComputePipeline, wgpu::BindGroupLayout)>,
     generation: u64,
     draw_buffer: Option<wgpu::Buffer>,
+    indirect_args: IndirectArgsPool,
     draw_bind_group: Option<wgpu::BindGroup>,
     uniforms: Vec<DrawUniform>,
     /// The screen's ring of targets and the one this frame draws into.
@@ -439,6 +516,7 @@ impl UnityRenderer {
             unaligned_count: None,
             generation: 1,
             draw_buffer: None,
+            indirect_args: IndirectArgsPool::default(),
             draw_bind_group: None,
             uniforms: Vec::new(),
             screens: [None, None, None],
@@ -467,7 +545,7 @@ impl UnityRenderer {
                 depth_bias: [0.0; 2],
                 state_override: None,
                 draw_setup: None,
-                first_instance: 0,
+                mesh_instance: None,
                 draw_indices: None,
             },
             presented,
@@ -2031,6 +2109,8 @@ impl UnityRenderer {
             color_load: wgpu::LoadOp::Load,
             depth_clear: None,
             items: Vec::new(),
+            args: Vec::new(),
+            writes_buffers: false,
         };
         if pass.target.screen {
             if !self.screen_touched {
@@ -2174,7 +2254,7 @@ impl UnityRenderer {
                     open = false;
                 }
                 Command::Viewport(v) => self.state.viewport = v,
-                Command::FirstInstance(first) => self.state.first_instance = first,
+                Command::MeshInstance(index) => self.state.mesh_instance = Some(index),
                 Command::DrawSetup {
                     instances,
                     args,
@@ -2352,7 +2432,8 @@ impl UnityRenderer {
                     }
                 }
                 Command::Draw(draw) => {
-                    let first_instance = std::mem::take(&mut self.state.first_instance);
+                    let mesh_instance = self.state.mesh_instance.take();
+                    let first_instance = mesh_instance.unwrap_or(0);
                     // Taken first: a draw's indices never pass to a later draw.
                     let indices = self.state.draw_indices.take();
                     let Some(target) = self.state.target.clone() else {
@@ -2369,7 +2450,7 @@ impl UnityRenderer {
                     self.depth_reads.clear();
                     self.pre_draw.clear();
                     self.pre_copies.clear();
-                    let mut planned = self.plan_draw(&draw, &target, time);
+                    let mut planned = self.plan_draw(&draw, &target, time, mesh_instance);
                     // Depth elements the draw samples whose copies lag (made just now, or the
                     // current target's): copied here, between what was drawn and this draw.
                     let reads = std::mem::take(&mut self.depth_reads);
@@ -2395,28 +2476,35 @@ impl UnityRenderer {
                             continue;
                         }
                         let mut draw_offset = u64::from(offset);
-                        if indexed
-                            && indices.is_some()
-                            && let Some(source) = buffer.as_ref()
-                        {
-                            // Unity's measured GLCore SV_InstanceID starts at zero, and
-                            // UnityIndirect.cginc adds startInstance only in its _Base helper.
-                            // Copy counts/startIndex/baseVertex on the GPU after earlier work;
-                            // keep the caller's unmodified args bound for shader helper reads.
-                            let arguments = self.device.create_buffer(&wgpu::BufferDescriptor {
-                                label: Some("unbound indexed indirect GLCore args"),
-                                size: 20,
-                                usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::INDIRECT,
-                                mapped_at_creation: false,
-                            });
-                            open = false;
-                            passes.push(Op::IndexedIndirectArgs {
-                                source: source.clone(),
-                                offset: draw_offset,
-                                arguments: arguments.clone(),
-                            });
-                            buffer = Some(arguments);
-                            draw_offset = 0;
+                        if let Some(source) = buffer.take() {
+                            let size = if indexed { INDIRECT_ARGS_SLOT } else { 16 };
+                            if draw_offset % 4 != 0 || draw_offset + size > source.size() {
+                                self.warn_once(format!("args-range{args}-{offset}"), || {
+                                    format!("an indirect draw's arguments at byte {offset} of buffer {args} are not 4-byte aligned or lie past its end: skipped")
+                                });
+                                continue;
+                            }
+                            let (destination, at) = self.indirect_args.slot(&self.device);
+                            let copy = ArgsCopy {
+                                source,
+                                source_offset: draw_offset,
+                                destination: destination.clone(),
+                                destination_offset: at,
+                                indexed,
+                            };
+                            // Hoisted before the open pass unless a draw in it could have
+                            // written the arguments; then the pass ends here.
+                            match passes.last_mut() {
+                                Some(Op::Pass(pass)) if open && !pass.writes_buffers => {
+                                    pass.args.push(copy)
+                                }
+                                _ => {
+                                    open = false;
+                                    passes.push(Op::IndirectArgs(copy));
+                                }
+                            }
+                            buffer = Some(destination);
+                            draw_offset = at;
                         }
                         for p in &mut planned {
                             if let Planned::Draw(p) = p {
@@ -2483,7 +2571,15 @@ impl UnityRenderer {
                                     open = true;
                                 }
                                 draws += 1;
-                                last_pass(&mut passes).items.push(PassItem::Draw(d));
+                                let writes = self
+                                    .compiled
+                                    .program(d.program.0)
+                                    .buffers
+                                    .iter()
+                                    .any(|b| !b.read_only);
+                                let pass = last_pass(&mut passes);
+                                pass.writes_buffers |= writes;
+                                pass.items.push(PassItem::Draw(d));
                             }
                             // A grab ends the pass: the copy reads what is drawn so far, the
                             // passes after it draw in a pass of their own.
@@ -2660,7 +2756,13 @@ impl UnityRenderer {
     }
 
     /// The pipelines, bind groups and uniforms of a draw: one per pass it draws.
-    fn plan_draw(&mut self, draw: &commands::Draw, target: &Target, time: f32) -> Vec<Planned> {
+    fn plan_draw(
+        &mut self,
+        draw: &commands::Draw,
+        target: &Target,
+        time: f32,
+        mesh_instance: Option<u32>,
+    ) -> Vec<Planned> {
         let mut planned = Vec::new();
         let device = self.device.clone();
         let space = self.color_space;
@@ -3026,6 +3128,8 @@ impl UnityRenderer {
                 main_alpha_only: alpha_only,
                 texture_size: &size,
                 constant_buffer: &constant_buffer,
+                instance: mesh_instance,
+                element: None,
             };
             if let Some(filter) = trace_uniforms()
                 && resolved.shader.contains(filter)
@@ -3336,13 +3440,8 @@ impl UnityRenderer {
                     compute::encode(&mut encoder, d);
                     continue;
                 }
-                Op::IndexedIndirectArgs {
-                    source,
-                    offset,
-                    arguments,
-                } => {
-                    encoder.copy_buffer_to_buffer(source, *offset, arguments, 0, 16);
-                    encoder.clear_buffer(arguments, 16, Some(4));
+                Op::IndirectArgs(copy) => {
+                    copy.encode(&mut encoder);
                     continue;
                 }
                 Op::BufferCopy(c) => {
@@ -3436,6 +3535,9 @@ impl UnityRenderer {
                     continue;
                 }
             };
+            for copy in &pass.args {
+                copy.encode(&mut encoder);
+            }
             if let (Some(seed), wgpu::LoadOp::Load) = (&pass.seed, pass.color_load)
                 && let Some((texture, ..)) = &pass.target.texture
                 && seed.size() == texture.size()
@@ -3584,6 +3686,8 @@ impl UnityRenderer {
             }
         }
         self.queue.submit([encoder.finish()]);
+        // The next submission's argument copies run after this one's draws.
+        self.indirect_args.used = 0;
     }
 
     /// The pixels of a rectangle of a texture (0: this frame's screen) after everything queued:

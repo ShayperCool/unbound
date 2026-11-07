@@ -319,7 +319,9 @@ namespace Unbound.Tests
             Assert.All(collected, d => Assert.Equal(LightProbeUsage.BlendProbes, d.Lighting.Probes));
             Assert.Equal(new[] { -20f, 10f }, collected.Select(d => d.Bounds.center.z).ToArray());
             int color = Shader.PropertyToID("_Color");
-            Assert.Equal(colors, collected.Select(d => (Vector4)d.Properties[color]).ToArray());
+            Assert.Equal(new uint?[] { 0, 1 }, collected.Select(d => d.Setup.Value.MeshInstance).ToArray());
+            Assert.All(collected, d => Assert.Equal(new[] { 1f, 0f, 0f, 1f, 0f, 1f, 0f, 1f },
+                Assert.IsType<GfxStream.SharedArray>(d.Properties[color]).Data));
 
             // RenderMeshInstanced with unset world bounds: probes for each instance at its bounds.
             Immediate.Queued.Clear();

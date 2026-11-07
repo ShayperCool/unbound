@@ -133,7 +133,9 @@ namespace Unbound.Tests
                 Assert.False(setup.Indexed);
                 Assert.Equal(1u, setup.Instances);
                 Assert.Same(args, q.Properties[argsId]);
-                Assert.Equal(2 + i, q.Properties[commandId]);
+                Assert.Equal(2 + i, setup.Command);
+                Assert.False(q.Properties.ContainsKey(commandId));
+                Assert.Same(queued[0].Properties, q.Properties);
             }
         }
 

@@ -24,7 +24,9 @@ namespace Unbound.Runtime
             // Render protocol 8 (NativeApi 17).
             DrawIndicesOp = 28,
             // Render protocol 9 (NativeApi 19).
-            CopyDepthOp = 29;
+            CopyDepthOp = 29,
+            // Render protocol 11 (NativeApi 22); its element meaning from protocol 12 (NativeApi 28).
+            MeshInstanceOp = 30;
 
         /// <summary>The sizes of a DrawIndices index: 16-bit, and 32-bit from render protocol 10.</summary>
         internal const byte DrawIndexSize = 2, DrawIndex32Size = 4;
@@ -68,7 +70,29 @@ namespace Unbound.Runtime
 
         /// <summary>Property kinds.</summary>
         internal const byte FloatKind = 0, VectorKind = 1, TextureKind = 2, IntKind = 3, MatrixKind = 4,
-            BufferKind = 5, ArrayKind = 6, ImageKind = 7;
+            BufferKind = 5, ArrayKind = 6, ImageKind = 7,
+            // Render protocol 12: an array defined once per stream, then referenced by its id.
+            SharedArrayKind = 8, ArrayRefKind = 9;
+
+        /// <summary>A property array frozen for many draws (the draws of one instanced call): its
+        /// floats go into the stream once per hand-over and the other draws reference them.</summary>
+        internal sealed class SharedArray
+        {
+            internal readonly uint Components;
+            internal readonly float[] Data;
+
+            SharedArray(uint components, float[] data) { Components = components; Data = data; }
+
+            /// <summary>A copy of a float, vector or matrix array; null for another value.</summary>
+            internal static SharedArray Of(object value)
+            {
+                if (value is float[] fs) return new SharedArray(1, (float[])fs.Clone());
+                return ArrayData(value, out var components, out var data) ? new SharedArray(components, data) : null;
+            }
+        }
+
+        /// <summary>The shared arrays written since the last hand-over, by their stream id.</summary>
+        static readonly Dictionary<SharedArray, uint> s_SharedArrays = new Dictionary<SharedArray, uint>(ReferenceEqualityComparer.Instance);
 
         static byte[] s_Buffer = new byte[64 * 1024];
         static int s_Length;
@@ -113,6 +137,7 @@ namespace Unbound.Runtime
             if (s_Length == 0) return;
             fixed (byte* p = s_Buffer) Native.SubmitCommands(p, s_Length);
             s_Length = 0;
+            s_SharedArrays.Clear();
         }
 
         static void Reserve(int bytes)
@@ -281,15 +306,23 @@ namespace Unbound.Runtime
         /// buffer (indexed: DrawMeshInstancedIndirect's layout; not: DrawProceduralIndirect's);
         /// then, when it has them, the indices from a buffer it reads instead of its mesh's
         /// (DrawIndices: buffer, index size, first index, index count).</summary>
-        internal static void FirstInstance(uint first)
+        /// <summary>The next draw is instance <paramref name="index"/> of a mesh-instancing call:
+        /// its first logical instance, and the element its scalar uniforms take from the draw's
+        /// property arrays (render protocol 12).</summary>
+        internal static void MeshInstance(uint index)
         {
-            U8(30);
-            U32(first);
+            U8(MeshInstanceOp);
+            U32(index);
         }
+
+        /// <summary>The next draw's <c>unity_BaseCommandID</c> (<see cref="Unbound.Runtime.DrawSetup.Command"/>).</summary>
+        static int s_PendingCommand = -1;
+        static readonly int s_BaseCommandId = Shader.PropertyToID("unity_BaseCommandID");
 
         internal static void DrawSetup(in Unbound.Runtime.DrawSetup setup)
         {
-            if (setup.FirstInstance != 0) FirstInstance(setup.FirstInstance);
+            if (setup.MeshInstance is uint index) MeshInstance(index);
+            s_PendingCommand = setup.Command ?? -1;
             U8(DrawSetupOp);
             U32(setup.Instances);
             U64(setup.Args);
@@ -541,6 +574,9 @@ namespace Unbound.Runtime
             internal ulong Texture;
             internal uint Components;
             internal float[] Array;
+            /// <summary>A shared array (<see cref="SharedArrayKind"/>): defined in the stream, or
+            /// referenced when it is already (decided when written: resolving can hand over).</summary>
+            internal SharedArray Shared;
         }
 
         static readonly List<PropertyValue> s_Properties = new List<PropertyValue>();
@@ -548,9 +584,15 @@ namespace Unbound.Runtime
         static void Resolve(Dictionary<int, object> properties)
         {
             s_Properties.Clear();
+            // An indirect draw's command index wins over a block's value of the same name.
+            int command = s_PendingCommand;
+            s_PendingCommand = -1;
+            if (command >= 0)
+                s_Properties.Add(new PropertyValue { Name = "unity_BaseCommandID", Kind = IntKind, Vector = new Vector4(command, 0, 0, 0) });
             if (properties == null) return;
             foreach (var p in properties)
             {
+                if (command >= 0 && p.Key == s_BaseCommandId) continue;
                 var name = Shader.IdToName(p.Key);
                 if (name == null) continue;
                 var value = new PropertyValue { Name = name };
@@ -563,6 +605,7 @@ namespace Unbound.Runtime
                     case Matrix4x4 m: value.Kind = MatrixKind; value.Matrix = m; break;
                     case Texture t: value.Kind = TextureKind; value.Texture = TextureHandles.Of(t); break;
                     case ComputeBuffer or GraphicsBuffer: value.Kind = BufferKind; value.Texture = Material.BufferHandle(p.Value); break;
+                    case SharedArray shared: value.Kind = SharedArrayKind; value.Shared = shared; break;
                     default:
                         if (!ArrayData(p.Value, out value.Components, out value.Array)) continue;
                         value.Kind = ArrayKind;
@@ -596,6 +639,12 @@ namespace Unbound.Runtime
             foreach (var p in s_Properties)
             {
                 String(p.Name);
+                if (p.Kind == SharedArrayKind && s_SharedArrays.TryGetValue(p.Shared, out uint id))
+                {
+                    U8(ArrayRefKind);
+                    U32(id);
+                    continue;
+                }
                 U8(p.Kind);
                 switch (p.Kind)
                 {
@@ -606,12 +655,26 @@ namespace Unbound.Runtime
                     case TextureKind: U64(p.Texture); Vec4(new Vector4(1, 1, 0, 0)); break;
                     case BufferKind: U64(p.Texture); break;
                     case ArrayKind:
-                        U32(p.Components);
-                        U32((uint)p.Array.Length);
-                        foreach (var f in p.Array) F32(f);
+                        Floats(p.Components, p.Array);
+                        break;
+                    case SharedArrayKind:
+                        uint next = (uint)s_SharedArrays.Count;
+                        s_SharedArrays.Add(p.Shared, next);
+                        U32(next);
+                        Floats(p.Shared.Components, p.Shared.Data);
                         break;
                 }
             }
+        }
+
+        /// <summary>An array's components per element, its length and its floats.</summary>
+        static void Floats(uint components, float[] data)
+        {
+            U32(components);
+            U32((uint)data.Length);
+            Reserve(data.Length * 4);
+            System.Runtime.InteropServices.MemoryMarshal.AsBytes(data.AsSpan()).CopyTo(new Span<byte>(s_Buffer, s_Length, data.Length * 4));
+            s_Length += data.Length * 4;
         }
 
         /// <summary>A global array: <paramref name="components"/> floats per element.</summary>
@@ -620,9 +683,7 @@ namespace Unbound.Runtime
             U8(GlobalOp);
             String(name);
             U8(ArrayKind);
-            U32(components);
-            U32((uint)data.Length);
-            foreach (var f in data) F32(f);
+            Floats(components, data);
         }
 
         /// <summary>An array value as floats: its components per element and its data.</summary>
@@ -760,9 +821,7 @@ namespace Unbound.Runtime
                     case ImageKind: U64(p.Handle); I32(p.Int); break;
                     case BufferKind: U64(p.Handle); break;
                     case ArrayKind:
-                        U32(p.Components);
-                        U32((uint)p.Array.Length);
-                        foreach (var f in p.Array) F32(f);
+                        Floats(p.Components, p.Array);
                         break;
                 }
             }

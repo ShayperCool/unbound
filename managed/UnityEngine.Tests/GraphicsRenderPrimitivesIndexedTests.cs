@@ -275,7 +275,7 @@ namespace Unbound.Tests
                 Assert.Equal(SetupBytes(1, args.Handle, (uint)((i + 1) * 20), true).Concat(IndicesBytes(index.Handle, 0, 6, 4)), Encoded(queued[i].Setup.Value));
                 Assert.Equal(rp.worldBounds, queued[i].WorldBounds);
                 Assert.Same(args, queued[i].Properties[Shader.PropertyToID("unity_IndirectDrawArgs")]);
-                Assert.Equal(i + 1, queued[i].Properties[Shader.PropertyToID("unity_BaseCommandID")]);
+                Assert.Equal(i + 1, queued[i].Setup.Value.Command);
                 Assert.Equal(7f, queued[i].Properties[Shader.PropertyToID("_Tag")]);
             }
             Graphics.RenderPrimitivesIndexedIndirect(rp, MeshTopology.Triangles, index, args, 0);
@@ -303,10 +303,13 @@ namespace Unbound.Tests
         [Fact]
         public void MeshReplayDrawSetupCarriesItsLogicalFirstInstance()
         {
-            var expected = new List<byte> { 30 }; // FirstInstance, render protocol 11.
-            expected.AddRange(BitConverter.GetBytes(7u));
-            expected.AddRange(SetupBytes(1, 0, 0, false));
-            Assert.Equal(expected.ToArray(), Encoded(new DrawSetup { Instances = 1, FirstInstance = 7 }));
+            foreach (uint index in new[] { 7u, 0u })
+            {
+                var expected = new List<byte> { 30 }; // MeshInstance, render protocols 11 and 12.
+                expected.AddRange(BitConverter.GetBytes(index));
+                expected.AddRange(SetupBytes(1, 0, 0, false));
+                Assert.Equal(expected.ToArray(), Encoded(new DrawSetup { Instances = 1, MeshInstance = index }));
+            }
         }
 
         [Fact]

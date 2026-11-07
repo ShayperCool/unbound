@@ -18,8 +18,13 @@ namespace Unbound.Runtime
     internal struct DrawSetup
     {
         internal uint Instances;
-        /// <summary>Logical ID of a mesh instance replayed as one draw.</summary>
-        internal uint FirstInstance;
+        /// <summary>The draw is this instance of a mesh-instancing call replayed as one draw per
+        /// instance: its logical instance ID, and the element of the draw's property arrays its
+        /// scalar uniforms take (GfxStream.MeshInstance).</summary>
+        internal uint? MeshInstance;
+        /// <summary>The indirect command an indirect draw runs (its <c>unity_BaseCommandID</c>,
+        /// what UnityIndirect.cginc's GetCommandID reads); null: none.</summary>
+        internal int? Command;
         internal ulong Args;
         internal uint Offset;
         internal bool Indexed;
@@ -98,9 +103,6 @@ namespace Unbound.Runtime
         internal static ulong Of(GraphicsBuffer buffer) =>
             buffer != null ? buffer.Handle : throw new ArgumentNullException("bufferWithArgs");
 
-        internal static Dictionary<int, object> Values(MaterialPropertyBlock properties) =>
-            properties != null && !properties.isEmpty ? new Dictionary<int, object>(properties.m_Values) : null;
-
         internal static void Mesh(Mesh mesh, int submeshIndex, Material material, int shaderPass, DrawSetup setup, Dictionary<int, object> values)
         {
             int submesh = Math.Min(Math.Max(0, submeshIndex), Math.Max(0, mesh.subMeshCount - 1));
@@ -117,7 +119,7 @@ namespace UnityEngine.Rendering
         void ProceduralIndirect(Matrix4x4 matrix, Material material, int shaderPass, MeshTopology topology, ulong args, int argsOffset, MaterialPropertyBlock properties)
         {
             if (material == null) throw new ArgumentNullException(nameof(material));
-            var values = IndirectArgs.Values(properties);
+            var values = Immediate.Values(properties);
             Add(c => ProceduralMeshes.DrawIndirect(matrix, material, shaderPass, topology, args, argsOffset, values));
         }
 
@@ -138,7 +140,7 @@ namespace UnityEngine.Rendering
         {
             if (mesh == null) throw new ArgumentNullException(nameof(mesh));
             if (material == null) throw new ArgumentNullException(nameof(material));
-            var values = IndirectArgs.Values(properties);
+            var values = Immediate.Values(properties);
             var setup = new DrawSetup { Instances = 1, Args = args, Offset = (uint)argsOffset, Indexed = true };
             Add(c => IndirectArgs.Mesh(mesh, submeshIndex, material, shaderPass, setup, values));
         }
@@ -151,7 +153,7 @@ namespace UnityEngine.Rendering
             if (material == null) throw new ArgumentNullException(nameof(material));
             int count = IndexedDraws.Count(indexBuffer, indexCount);
             if (count <= 0 || instanceCount <= 0 || !IndexedDraws.Supported(indexBuffer, topology, "CommandBuffer.DrawProcedural")) return;
-            var values = IndirectArgs.Values(properties);
+            var values = Immediate.Values(properties);
             var setup = IndexedDraws.Direct(indexBuffer, 0, count, instanceCount);
             Add(c => IndexedDraws.Draw(matrix, material, shaderPass, topology, setup, values));
         }
@@ -167,7 +169,7 @@ namespace UnityEngine.Rendering
             if (material == null) throw new ArgumentNullException(nameof(material));
             ulong handle = args();
             if (!IndexedDraws.Supported(indexBuffer, topology, "CommandBuffer.DrawProceduralIndirect")) return;
-            var values = IndirectArgs.Values(properties);
+            var values = Immediate.Values(properties);
             var setup = IndexedDraws.Indirect(indexBuffer, handle, argsOffset);
             Add(c => IndexedDraws.Draw(matrix, material, shaderPass, topology, setup, values));
         }
@@ -218,8 +220,7 @@ namespace UnityEngine.Rendering
             if (count == 0) return;
             var copies = new Matrix4x4[count];
             Array.Copy(matrices, copies, count);
-            var values = new Dictionary<int, object>[count];
-            for (int i = 0; i < count; i++) values[i] = Graphics.Instance(properties, i)?.m_Values;
+            var values = Graphics.InstanceProperties(properties);
             Add(c =>
             {
                 if (shaderPass >= material.passCount)
@@ -231,8 +232,8 @@ namespace UnityEngine.Rendering
                 int pass = shaderPass < 0 ? GfxStream.AllPasses : shaderPass;
                 for (int i = 0; i < count; i++)
                 {
-                    GfxStream.FirstInstance((uint)i);
-                    GfxStream.Draw(meshHandle, submeshIndex, materialHandle, pass, copies[i], Color.white, properties: values[i]);
+                    GfxStream.MeshInstance((uint)i);
+                    GfxStream.Draw(meshHandle, submeshIndex, materialHandle, pass, copies[i], Color.white, properties: values);
                 }
             });
         }
@@ -248,7 +249,7 @@ namespace UnityEngine.Rendering
             if (mesh == null) throw new ArgumentNullException(nameof(mesh));
             if (material == null) throw new ArgumentNullException(nameof(material));
             if (count <= 0) return;
-            var values = IndirectArgs.Values(properties);
+            var values = Immediate.Values(properties);
             var setup = new DrawSetup { Instances = (uint)count };
             Add(c => IndirectArgs.Mesh(mesh, submeshIndex, material, shaderPass, setup, values));
         }
