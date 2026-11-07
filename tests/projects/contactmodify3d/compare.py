@@ -11,13 +11,8 @@ import sys
 ABS = 1e-4
 REL = 1e-4
 
-# Open gaps, still printed. hasModifiableContacts changed on a live contact of colliders without
-# collision message receivers: Unity applies it from the next step; Unbound keeps the state the
-# pair was created with (as Unity does when a receiver exists). docs/COMPATIBILITY_GAPS.md.
-KNOWN = {
-    'pair/unflaggedLaterQuiet/': 'flag change on a live contact without receivers',
-    'pair/flaggedLaterQuiet/': 'flag change on a live contact without receivers',
-}
+# All measured rows are required, including live flag changes.
+KNOWN = {}
 
 
 def read(path):

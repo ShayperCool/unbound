@@ -10,6 +10,7 @@
 Run output stays under $XDG_CACHE_HOME/unbound/validation/runs/contactmodify3d/.
 """
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -60,14 +61,32 @@ def engine(label):
     return 0 if code == 0 and (out/OUT).exists() else 1
 
 
-def publish(labels):
+def publish(labels, extend=False):
     target = reference_file(ROOT, 'jsonl')
 
     def write(path, first):
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(first/OUT, path)
-    return editor_runner.publish([WORK/label for label in labels], target, lambda d: [OUT], write,
-                                 complete=[editor_runner.jsonl_complete(OUT, {'key': 'complete', 'value': [1]})])
+    agreed = WORK/('publish-' + str(time.time_ns()))/'agreed.jsonl' if extend else target
+    result = editor_runner.publish([WORK/label for label in labels], agreed, lambda d: [OUT], write,
+                                   complete=[editor_runner.jsonl_complete(OUT, {'key': 'complete', 'value': [1]})])
+    if result or not extend:
+        return result
+    old_lines = target.read_bytes().splitlines(keepends=True)
+    new_lines = agreed.read_bytes().splitlines(keepends=True)
+    old = {json.loads(line)['key']: line for line in old_lines}
+    new = {json.loads(line)['key']: line for line in new_lines}
+    if len(old) != len(old_lines) or len(new) != len(new_lines):
+        raise SystemExit('duplicate keys in reference extension')
+    if any(new.get(key) != line for key, line in old.items()):
+        raise SystemExit('extension would change an existing reference record')
+    additions = [line for key, line in new.items() if key not in old]
+    if not additions:
+        raise SystemExit('extension has no new records')
+    target.write_bytes(b''.join(line for line in old_lines if json.loads(line)['key'] != 'complete') +
+                       b''.join(additions) + old['complete'])
+    print(f'Extended reference by {len(additions)} records; existing records unchanged')
+    return 0
 
 
 def verify(candidate):
@@ -80,6 +99,7 @@ def main():
     parser.add_argument('mode', choices=['native', 'engine', 'publish', 'verify', 'check'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
+    parser.add_argument('--extend-reference', action='store_true', help='publish only new keys; existing records must be byte-identical')
     parser.add_argument('--candidate', type=Path)
     args = parser.parse_args()
     if args.mode == 'native':
@@ -87,7 +107,7 @@ def main():
     if args.mode == 'engine':
         return engine(args.label)
     if args.mode == 'publish':
-        return publish(args.labels)
+        return publish(args.labels, args.extend_reference)
     if args.mode == 'check':
         label = time.strftime('check-%Y%m%d-%H%M%S-') + str(os.getpid())
         return engine(label) or verify(WORK/label/OUT)

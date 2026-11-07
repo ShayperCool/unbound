@@ -502,6 +502,211 @@ public static class ContactModifyProbe
         Physics.ContactModifyEvent += OnModify;
     }
 
+    static int reportCalls, reportPairs, reportPoints;
+    static readonly HashSet<int> reportColliders = new HashSet<int>();
+    static void OnReports(PhysicsScene scene, NativeArray<ContactPairHeader>.ReadOnly headers)
+    {
+        reportCalls++;
+        for (int h = 0; h < headers.Length; h++)
+            for (int p = 0; p < headers[h].pairCount; p++)
+            {
+                var pair = headers[h].GetContactPair(p);
+                if (!reportColliders.Contains(pair.colliderInstanceID) && !reportColliders.Contains(pair.otherColliderInstanceID)) continue;
+                reportPairs++;
+                reportPoints += pair.contactCount;
+            }
+    }
+
+    // Controls isolate the request for reports from the modification flag itself.
+    static void Controls()
+    {
+        Clean();
+        bool reuse = Physics.reuseCollisionCallbacks;
+        foreach (string request in new[] { "quiet", "receiver", "disabledReceiver", "emptyReceiver", "exitReceiver", "groundReceiver", "provides", "reports", "reportsProvides", "addReceiver", "removeReceiver", "reportsReceiver", "reportsExitReceiver", "reportsEmptyReceiver", "addProvides", "removeProvides" })
+        foreach (bool initial in new[] { false, true })
+        {
+            var ground = Ground();
+            var box = Make("box", PrimitiveType.Cube, Vector3.up, Vector3.one);
+            var rb = Body(box);
+            rb.sleepThreshold = 0;
+            var col = box.GetComponent<Collider>();
+            col.hasModifiableContacts = initial;
+            ModifyOrderLog receiver = null;
+            if (request == "receiver" || request == "disabledReceiver" || request == "removeReceiver" || request == "reportsReceiver") receiver = box.AddComponent<ModifyOrderLog>();
+            if (request == "disabledReceiver") receiver.enabled = false;
+            if (request == "emptyReceiver" || request == "reportsEmptyReceiver") box.AddComponent<ModifyEmptyLog>();
+            if (request == "exitReceiver" || request == "reportsExitReceiver") box.AddComponent<ModifyExitLog>();
+            if (request == "groundReceiver") ground.AddComponent<ModifyOrderLog>();
+            if (request == "provides" || request == "reportsProvides" || request == "removeProvides") col.providesContacts = true;
+            reportColliders.Clear();
+            reportColliders.Add(col.GetInstanceID());
+            reportColliders.Add(ground.GetComponent<Collider>().GetInstanceID());
+            bool reports = request.StartsWith("reports");
+            if (reports) Physics.ContactEvent += OnReports;
+            Physics.SyncTransforms();
+            var counts = new List<object>();
+            for (int step = 0; step < 9; step++)
+            {
+                if (step == 2)
+                {
+                    if (request == "addReceiver") box.AddComponent<ModifyOrderLog>();
+                    if (request == "addProvides") col.providesContacts = true;
+                    if (request == "removeProvides") col.providesContacts = false;
+                    if (request == "removeReceiver") UnityEngine.Object.DestroyImmediate(receiver);
+                    col.hasModifiableContacts = !initial;
+                }
+                if (step == 4) Physics.reuseCollisionCallbacks = !reuse;
+                if (step == 5) { rb.position = new Vector3(0, 5, 0); rb.linearVelocity = Vector3.zero; }
+                if (step == 6) { rb.position = Vector3.up; rb.linearVelocity = Vector3.zero; }
+                ResetCounts();
+                reportCalls = reportPairs = reportPoints = 0;
+                Physics.Simulate(Dt);
+                counts.Add(pairs); counts.Add(reportPairs); counts.Add(reportPoints);
+            }
+            Record("control/" + request + "/" + initial, counts.ToArray());
+            if (reports) Physics.ContactEvent -= OnReports;
+            Physics.reuseCollisionCallbacks = reuse;
+            Clean();
+        }
+        foreach (bool enabled in new[] { false, true })
+        {
+            Physics.reuseCollisionCallbacks = enabled;
+            var ground = Ground(); ground.AddComponent<ModifyReuseLog>();
+            var box = Make("box", PrimitiveType.Cube, Vector3.up, Vector3.one);
+            Body(box).sleepThreshold = 0;
+            box.AddComponent<ModifyReuseLog>();
+            ModifyReuseLog.collisions.Clear(); ModifyReuseLog.contacts.Clear();
+            Physics.SyncTransforms();
+            for (int step = 0; step < 3; step++) Physics.Simulate(Dt);
+            var identities = new List<object>();
+            for (int i = 0; i < ModifyReuseLog.collisions.Count; i++)
+            {
+                identities.Add(ReferenceEquals(ModifyReuseLog.collisions[0], ModifyReuseLog.collisions[i]));
+                identities.Add(ModifyReuseLog.contacts[i]);
+            }
+            Record("control/reuse/" + enabled, identities.ToArray());
+            Clean();
+        }
+        Physics.reuseCollisionCallbacks = reuse;
+        foreach (bool initial in new[] { false, true })
+        {
+            Ground();
+            var box = Make("box", PrimitiveType.Cube, Vector3.up, Vector3.one);
+            var rb = Body(box); rb.sleepThreshold = 0;
+            box.GetComponent<Collider>().hasModifiableContacts = initial;
+            box.AddComponent<ModifyToggleLog>();
+            Physics.SyncTransforms();
+            var counts = new List<object>();
+            for (int step = 0; step < 8; step++)
+            {
+                if (step == 4) { rb.position = Vector3.up * 5; rb.linearVelocity = Vector3.zero; }
+                if (step == 5) { rb.position = Vector3.up; rb.linearVelocity = Vector3.zero; }
+                ResetCounts(); Physics.Simulate(Dt); counts.Add(pairs);
+            }
+            Record("control/firstCallback/" + initial, counts.ToArray());
+            Clean();
+        }
+        // Changes before a first contact, and changes on the static side.
+        foreach (bool onStatic in new[] { false, true })
+        foreach (int toggleStep in new[] { 0, 1, 3 })
+        {
+            var ground = Ground();
+            var box = Make("box", PrimitiveType.Cube, new Vector3(0, 1.1f, 0), Vector3.one);
+            var rb = Body(box);
+            rb.sleepThreshold = 0;
+            var col = (onStatic ? ground : box).GetComponent<Collider>();
+            Physics.SyncTransforms();
+            var counts = new List<object>();
+            for (int step = 0; step < 8; step++)
+            {
+                if (step == toggleStep) col.hasModifiableContacts = true;
+                ResetCounts(); Physics.Simulate(Dt); counts.Add(pairs);
+            }
+            Record("control/first/" + onStatic + "/" + toggleStep, counts.ToArray());
+            Clean();
+        }
+        // Actor/shape identities remain distinct for multiple children and replacement actors.
+        for (int generation = 0; generation < 3; generation++)
+        {
+            Ground();
+            var root = new GameObject("root"); made.Add(root);
+            root.transform.position = Vector3.up;
+            var rb = Body(root); rb.sleepThreshold = 0;
+            for (int i = 0; i < 2; i++)
+            {
+                var child = Make("child" + i, PrimitiveType.Sphere, Vector3.zero, Vector3.one);
+                child.transform.SetParent(root.transform, false);
+                child.transform.localPosition = new Vector3(i * 2 - 1, 0, 0);
+                child.GetComponent<Collider>().hasModifiableContacts = true;
+            }
+            var ids = new List<string>();
+            editPair = p =>
+            {
+                string a = Name(p.colliderInstanceID), b = Name(p.otherColliderInstanceID);
+                string ba = Name(p.bodyInstanceID), bb = Name(p.otherBodyInstanceID);
+                ids.Add(string.CompareOrdinal(a, b) < 0 ? a + "|" + ba + ":" + b + "|" + bb : b + "|" + bb + ":" + a + "|" + ba);
+            };
+            Physics.SyncTransforms(); Physics.Simulate(Dt);
+            ids.Sort(StringComparer.Ordinal);
+            Record("control/ids/" + generation, string.Join(";", ids));
+            Clean();
+        }
+        var gravity = Physics.gravity;
+        Physics.gravity = Vector3.zero;
+        foreach (bool receiver in new[] { false, true })
+        foreach (bool initial in new[] { false, true })
+        {
+            var wall = Make("wall", PrimitiveType.Cube, new Vector3(5, 0, 0), new Vector3(.1f, 4, 4));
+            var ball = Make("ball", PrimitiveType.Sphere, Vector3.zero, Vector3.one * .4f);
+            var rb = Body(ball); rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+            if (receiver) ball.AddComponent<ModifyOrderLog>();
+            var col = ball.GetComponent<Collider>(); col.hasModifiableContacts = initial;
+            Physics.SyncTransforms();
+            ResetCounts(); Physics.Simulate(Dt);
+            col.hasModifiableContacts = !initial;
+            rb.linearVelocity = new Vector3(300, 0, 0);
+            ResetCounts(); Physics.Simulate(Dt);
+            Record("control/ccd/" + receiver + "/" + initial, pairs, ccdPairs);
+            Clean();
+        }
+        Physics.gravity = gravity;
+        foreach (bool flagGround in new[] { false, true })
+        {
+            var ground = Ground(); ground.GetComponent<Collider>().hasModifiableContacts = flagGround;
+            var go = new GameObject("controller"); made.Add(go); go.transform.position = new Vector3(0, 1.5f, 0);
+            var controller = go.AddComponent<CharacterController>();
+            names[controller.GetInstanceID()] = "controller";
+            Record("control/controller/" + flagGround + "/default", controller.hasModifiableContacts);
+            controller.hasModifiableContacts = true;
+            Record("control/controller/" + flagGround + "/set", controller.hasModifiableContacts);
+            Physics.SyncTransforms(); ResetCounts();
+            for (int step = 0; step < 3; step++) { controller.Move(Vector3.down * .5f); Physics.Simulate(Dt); }
+            Record("control/controller/" + flagGround + "/move", pairs, ccdPairs);
+            var box = Make("box", PrimitiveType.Cube, new Vector3(0, 2.5f, 0), Vector3.one);
+            var rb = Body(box); rb.sleepThreshold = 0;
+            var ids = new List<string>();
+            var contactNames = new List<string>();
+            editPair = p =>
+            {
+                // Which collider is first is unspecified; compare both identities together.
+                string a = Name(p.colliderInstanceID), b = Name(p.otherColliderInstanceID);
+                string ba = Name(p.bodyInstanceID), bb = Name(p.otherBodyInstanceID);
+                bool first = string.CompareOrdinal(a, b) < 0;
+                ids.Add(first ? a + "|" + ba + ":" + b + "|" + bb : b + "|" + bb + ":" + a + "|" + ba);
+                contactNames.Add((first ? a + "|" + b : b + "|" + a) + "|" + p.contactCount);
+            };
+            Physics.SyncTransforms(); ResetCounts();
+            for (int step = 0; step < 30; step++) Physics.Simulate(Dt);
+            ids.Sort(StringComparer.Ordinal);
+            Record("control/controller/" + flagGround + "/ids", string.Join(";", ids));
+            contactNames.Sort(StringComparer.Ordinal);
+            Record("control/controller/" + flagGround + "/dynamic", pairs, string.Join(";", contactNames));
+            controller.hasModifiableContacts = false;
+            Record("control/controller/" + flagGround + "/unset", controller.hasModifiableContacts);
+            Clean();
+        }
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run()
     {
@@ -526,6 +731,7 @@ public static class ContactModifyProbe
             var probe = new GameObject("probe");
             made.Add(probe);
             Record("default", probe.AddComponent<BoxCollider>().hasModifiableContacts);
+            Controls();
             Record("complete", 1);
         }
         finally

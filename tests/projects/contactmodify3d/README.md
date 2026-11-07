@@ -21,8 +21,15 @@ Measures `Physics.ContactModifyEvent`, `Physics.ContactModifyEventCCD`, `Modifia
 - `order/events`: the event against the same step's collision messages.
 - `clone`: an `Instantiate` copy of a flagged collider: its flag and its reported pairs.
 - `unsubscribed`, `default`: the flag without a subscriber, the default flag.
+- `control/...`: requests from collision receivers (including disabled, parameterless and exit-only
+  methods, on either collider), `providesContacts`, event subscriptions and both callback reuse
+  settings; adding/removing a receiver or request alongside a live flag change; changes before
+  first contact and from its collision callback; separation and recontact; CCD; repeated compound
+  actor replacement; controller flag reads, moves, simulation contacts and identities.
+  New identity controls keep the collider and its body together and canonicalize the two sides,
+  since which collider is first is unspecified.
 
-The canonical Native oracle is `Reference/unity-6000.0.71f1.jsonl` (343 records, Unity 6000.0.71f1
+The canonical Native oracle is `Reference/unity-6000.0.71f1.jsonl` (404 records, Unity 6000.0.71f1
 on Linux, GPU Editor). Two independent captures were byte-identical. Only one copy is kept here.
 
 Measured (6000.0.71f1):
@@ -35,15 +42,50 @@ Measured (6000.0.71f1):
   triangles for a MeshCollider and 4294967295 otherwise.
 - The event runs within `Physics.Simulate`, before the step's `OnCollisionEnter`/`Stay`.
 - An `Instantiate` clone starts with `hasModifiableContacts` false.
-- Changing the flag on a live contact applies from the next step only when no collision message
-  receiver is involved; with one, the pair keeps its state until it is re-created.
+- A live pair refreshes its modification state when the need to retain contact points changes,
+  or when the overlap is re-created. Modification itself, any collision receiver, or
+  `providesContacts` requests retention. A flag change with neither other request therefore
+  applies on the next simulation; with another request keeping retention enabled, it waits for
+  pair recreation. Adding/removing a request and changing the flag together follows the same rule.
+  This is measured behaviour, not a documented timing guarantee.
+- `ContactEvent` subscription and `reuseCollisionCallbacks` do not request point retention.
+  Exit-only receivers request enter/exit reports, without stay reports; parameterless and disabled
+  receivers still request points. A `ContactModifyEvent` subscriber alone receives no unflagged
+  pairs. Callback reuse true shares one `Collision` object across both sides and later steps;
+  false gives distinct callback objects, with the same contact data.
+- `CharacterController.hasModifiableContacts` defaults to false and reads back either setter
+  value. Its simulated contacts with a dynamic body reach modification; its `Move` sweeps do not.
+  Its body ID is zero. Static colliders also have zero body ID; each compound child retains its own
+  collider ID and resolves to the parent Rigidbody ID, including after repeated destruction and
+  recreation. ArticulationBody has no implemented simulation backend yet and is outside this
+  capture; this change does not represent its actors as rigidbodies.
 
 Not compared: the calling thread and the order of pairs in a buffer (Unity leaves both unspecified;
 pairs are recorded sorted), and which collider is first in a pair (unspecified; the mass cases use
 frictionless spheres, whose motion does not depend on it).
 
-`compare.py` lists `KNOWN` differences separately; they are open gaps in
-`docs/COMPATIBILITY_GAPS.md` and do not fail the comparison.
+All 404 rows are required. The original 343 oracle rows and numeric tolerances are unchanged;
+there are no known differences. `publish --extend-reference` admits only new keys and requires
+both complete GPU captures to agree byte for byte, including every existing reference row.
+
+The point-retention mechanism uses the PhysX 4.1.2 pair state already present in the backend;
+there are no vendored changes. Requests are cached per GameObject for each step and per script
+Type for method discovery. Actor and shape IDs use lifecycle-maintained dictionaries; callback
+identity reads do not scan bodies or allocate.
+
+The measured request rule is selected through Compat for exactly 6000.0.71f1. Other releases
+retain unconditional point requests until measured; see `docs/COMPATIBILITY_GAPS.md`.
+
+Unity 6000.0 contracts checked for this work:
+
+| API | Documented guarantee / limitation |
+| --- | --- |
+| [Collider.hasModifiableContacts](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Collider-hasModifiableContacts.html) | Flagged pairs are available for modification while bodies are awake; sleeping pairs stop reporting. |
+| [Physics.ContactModifyEvent](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics.ContactModifyEvent.html) | Only flagged pairs; arbitrary calling thread and multiple batches; CCD contacts use the separate event. |
+| [Physics.ContactModifyEventCCD](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics.ContactModifyEventCCD.html) | CCD contacts, with inverted normals. |
+| [Collider.providesContacts](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Collider-providesContacts.html) and [Physics.ContactEvent](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics.ContactEvent.html) | Report requests depend on providesContacts and collision method phases; no trigger reports. |
+| [Physics.reuseCollisionCallbacks](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics-reuseCollisionCallbacks.html) | True reuses one Collision object; false permits retaining callback objects. |
+| [ModifiableContactPair](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ModifiableContactPair.html) and [CharacterController](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/CharacterController.html) | Pair proxy exposes collider/body identities; the controller inherits the collider flag. Neither page promises live flag-change timing or controller sweep delivery. |
 
 ```bash
 python3 tests/projects/contactmodify3d/run.py native --label native1
