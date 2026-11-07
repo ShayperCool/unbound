@@ -53,8 +53,9 @@ pub trait Importer: Sync {
     /// Bumped whenever this importer's output for the same inputs changes.
     const VERSION: u32;
 
-    /// `source` is only used for its name and extension; the content is `bytes`. `meta` is the
-    /// parsed `.meta` file, or [`Value::Null`] when the asset has none (defaults apply).
+    /// `source` supplies the name, extension and location; its content is `bytes`. Additional
+    /// authored files read here must be declared by `dependencies`. `meta` is the parsed `.meta`
+    /// file, or [`Value::Null`] when the asset has none (defaults apply).
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<Self::Output>;
 
     /// Additional authored files read by the importer. Missing paths are part of the key too.
