@@ -15,27 +15,66 @@ namespace Unbound.Runtime
         bool m_HasMonoMove, m_HasStateMove;
         Quaternion[] m_RootTurns = Array.Empty<Quaternion>();
         float[] m_RootTurnWeights = Array.Empty<float>();
-        static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, MethodInfo> s_OnAnimatorMove =
-            new System.Collections.Concurrent.ConcurrentDictionary<Type, MethodInfo>();
         static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, bool> s_StateMove =
             new System.Collections.Concurrent.ConcurrentDictionary<Type, bool>();
 
-        static MethodInfo MoveMethod(MonoBehaviour behaviour) => s_OnAnimatorMove.GetOrAdd(behaviour.GetType(),
-            type => ScriptMessages.Find(type, "OnAnimatorMove", Type.EmptyTypes));
+        /// <summary>The layer whose current and next states a layer plays (its synced source).</summary>
+        LayerRun PlayedBy(LayerRun layer) =>
+            layer.Def.SyncedLayerIndex >= 0 && layer.Def.SyncedLayerIndex < Layers.Length ? Layers[layer.Def.SyncedLayerIndex] : layer;
 
-        IEnumerable<(StateMachineBehaviour Behaviour, AnimatorStateInfo Info, int Layer)> MovingStates()
+        /// <summary>A behaviour of a playing state handles OnStateMove.</summary>
+        bool AnyStateMove()
         {
             for (int i = 0; i < Layers.Length; i++)
             {
                 var layer = Layers[i];
-                var source = layer.Def.SyncedLayerIndex >= 0 && layer.Def.SyncedLayerIndex < Layers.Length ? Layers[layer.Def.SyncedLayerIndex] : layer;
-                foreach (var run in new[] { source.Current, source.Next })
-                {
-                    if (run == null) continue;
-                    foreach (var b in BehavioursOf(layer, run.Def))
-                        if (b != null) yield return (b, StateInfo(layer, run), i);
-                }
+                var source = PlayedBy(layer);
+                if (HandlesStateMove(layer, source.Current) || HandlesStateMove(layer, source.Next)) return true;
             }
+            return false;
+        }
+
+        bool HandlesStateMove(LayerRun layer, StateRun run)
+        {
+            if (run == null) return false;
+            foreach (var b in BehavioursOf(layer, run.Def))
+                if (b != null && HandlesStateMove(b)) return true;
+            return false;
+        }
+
+        /// <summary>OnStateMove of the playing states' behaviours, layer by layer.</summary>
+        void InvokeStateMoves(Animator animator)
+        {
+            for (int i = 0; i < Layers.Length; i++)
+            {
+                var layer = Layers[i];
+                var source = PlayedBy(layer);
+                StateRun current = source.Current, next = source.Next;
+                InvokeStateMove(animator, layer, current, i);
+                InvokeStateMove(animator, layer, next, i);
+            }
+        }
+
+        void InvokeStateMove(Animator animator, LayerRun layer, StateRun run, int layerIndex)
+        {
+            if (run == null) return;
+            foreach (var b in BehavioursOf(layer, run.Def))
+            {
+                if (b == null) continue;
+                try
+                {
+                    var info = StateInfo(layer, run);
+                    b.OnStateMove(animator, info, layerIndex);
+                    b.OnStateMove(animator, info, layerIndex, Playable);
+                }
+                catch (Exception e) { Debug.LogException(e, animator); }
+            }
+        }
+
+        static void ClearRootWeights(float[] w, int pos, int rot)
+        {
+            if (pos >= 0) for (int c = pos; c < pos + 3 && c < w.Length; c++) w[c] = 0f;
+            if (rot >= 0) for (int c = rot; c < rot + 4 && c < w.Length; c++) w[c] = 0f;
         }
 
         static bool HandlesStateMove(StateMachineBehaviour behaviour) => s_StateMove.GetOrAdd(behaviour.GetType(), type =>
@@ -61,10 +100,8 @@ namespace Unbound.Runtime
             animator.m_RootAngularVelocity = Vector3.zero;
             animator.m_RootMotionApplied = false;
             animator.m_RootMotionReady = false;
-            m_HasMonoMove = HasMoveCallback(animator);
-            m_HasStateMove = false;
-            foreach (var state in MovingStates())
-                if (HandlesStateMove(state.Behaviour)) { m_HasStateMove = true; break; }
+            m_HasMonoMove = MoveCallbacks.Any(animator);
+            m_HasStateMove = AnyStateMove();
             // Humanoid clips move the root through their body (muscle) curves.
             if (animator.Human is { } human && HumanRootMotion(animator, human)) return;
             if (!animator.m_ApplyRootMotion && !m_HasMonoMove && !m_HasStateMove) return;
@@ -73,11 +110,10 @@ namespace Unbound.Runtime
             for (int l = 0; l < count; l++)
             {
                 var p = m_LayerPoses[l].AnimationPose;
-                foreach (var w in new[] { p.Weight, p.Keep, p.Fill, p.Rest })
-                {
-                    if (pos >= 0) for (int c = pos; c < pos + 3 && c < w.Length; c++) w[c] = 0f;
-                    if (rot >= 0) for (int c = rot; c < rot + 4 && c < w.Length; c++) w[c] = 0f;
-                }
+                ClearRootWeights(p.Weight, pos, rot);
+                ClearRootWeights(p.Keep, pos, rot);
+                ClearRootWeights(p.Fill, pos, rot);
+                ClearRootWeights(p.Rest, pos, rot);
             }
             if (!animator.m_ApplyRootMotion && !m_HasMonoMove) return;
             var (delta, turn) = ContributionMotion(pos, rot);
@@ -89,13 +125,6 @@ namespace Unbound.Runtime
             MatchStep(animator, scale, pos, rot);
             RootVelocities(animator.m_DeltaPosition, animator.m_DeltaRotation, animator.m_MotionRootRotation, m_RootDeltaTime,
                 out animator.m_RootVelocity, out animator.m_RootAngularVelocity);
-        }
-
-        static bool HasMoveCallback(Animator animator)
-        {
-            foreach (var mb in animator.gameObject.GetComponents<MonoBehaviour>())
-                if (mb != null && MoveMethod(mb) != null) return true;
-            return false;
         }
 
         static Vector3 RootMotionScale(Transform t)
@@ -181,7 +210,7 @@ namespace Unbound.Runtime
             startRotation = parent == null ? t.localRotation : parent.rotation * t.localRotation;
             foreach (var (_, _, _, clip, _) in m_Contributions)
                 if (clip.HasHumanCurves) return false;
-            if (!animator.m_ApplyRootMotion && !HasMoveCallback(animator)) return true;
+            if (!animator.m_ApplyRootMotion && !MoveCallbacks.Any(animator)) return true;
             int pos = Bindings.ChannelOf(t, "position"), rot = Bindings.ChannelOf(t, "rotation");
             var (delta, turn) = ContributionMotion(pos, rot);
             RootVelocities(startRotation * Vector3.Scale(RootMotionScale(t), delta), turn, startRotation, deltaTime,
@@ -206,24 +235,8 @@ namespace Unbound.Runtime
             animator.m_RootMotionReady = true;
             try
             {
-                foreach (var mb in animator.gameObject.GetComponents<MonoBehaviour>())
-                {
-                    if (mb == null || !mb.isActiveAndEnabled) continue;
-                    var method = MoveMethod(mb);
-                    if (method == null) continue;
-                    try { method.Invoke(mb, null); }
-                    catch (TargetInvocationException e) { Debug.LogException(e.InnerException ?? e, mb); }
-                }
-                if (m_CallbacksStarted)
-                    foreach (var state in MovingStates())
-                    {
-                        try
-                        {
-                            state.Behaviour.OnStateMove(animator, state.Info, state.Layer);
-                            state.Behaviour.OnStateMove(animator, state.Info, state.Layer, Playable);
-                        }
-                        catch (Exception e) { Debug.LogException(e, animator); }
-                    }
+                MoveCallbacks.Invoke(animator);
+                if (m_CallbacksStarted) InvokeStateMoves(animator);
                 if (animator.m_ApplyRootMotion && !m_HasMonoMove && !m_HasStateMove) animator.ApplyBuiltinRootMotion();
                 // API setters inside movement callbacks do not write the generic root pose.
                 animator.CaptureRootMotionPose();

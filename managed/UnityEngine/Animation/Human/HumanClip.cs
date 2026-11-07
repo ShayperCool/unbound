@@ -229,6 +229,13 @@ namespace UnityEngine
         {
             if (m_HumanConverted || m_HumanAvatar == null) return;
             m_HumanConverted = true;
+            ConvertHumanCurvesOnce();
+        }
+
+        // Separate from the per-sample guard above: its lambdas capture locals, whose closure
+        // would otherwise be allocated on every call.
+        void ConvertHumanCurvesOnce()
+        {
             var constant = m_HumanAvatar.Constant;
             if (constant == null || !constant.IsHuman)
             {

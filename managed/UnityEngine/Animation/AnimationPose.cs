@@ -633,10 +633,13 @@ namespace Unbound.Runtime
 
         static void Write(AnimationBindings b, Scratch s, bool skipTransforms = false, Transform rootDuringCull = null)
         {
-            // The group list may grow while game code runs: iterate what exists now.
-            var groups = b.Groups.ToArray();
-            foreach (var g in groups)
+            // The group list may grow (it is only appended to) while game code runs: iterate
+            // what exists now.
+            var groups = b.Groups;
+            int count = groups.Count;
+            for (int k = 0; k < count; k++)
             {
+                var g = groups[k];
                 if (!g.Alive || skipTransforms && ((g.Target is Transform && !ReferenceEquals(g.Target, rootDuringCull)) || g.HumanCurve >= 0)) continue;
                 try
                 {
@@ -667,16 +670,29 @@ namespace Unbound.Runtime
 
         /// <summary>Scripts whose fields animation changed get OnDidApplyAnimationProperties, as in
         /// Unity (uGUI graphics mark themselves dirty there).</summary>
+        // A callback can write animation again reentrantly: each call copies into its own list.
+        static readonly Stack<List<MonoBehaviour>> s_NotifyLists = new Stack<List<MonoBehaviour>>();
+
         static void NotifyScripts(List<MonoBehaviour> scripts)
         {
             if (scripts.Count == 0) return;
-            foreach (var mb in scripts.ToArray())
+            var copy = s_NotifyLists.Count > 0 ? s_NotifyLists.Pop() : new List<MonoBehaviour>();
+            copy.AddRange(scripts);
+            try
             {
-                if (mb == null) continue;
-                var method = s_DidApply.GetOrAdd(mb.GetType(), t => ScriptMessages.Find(t, "OnDidApplyAnimationProperties", Type.EmptyTypes));
-                if (method == null) continue;
-                try { method.Invoke(mb, null); }
-                catch (TargetInvocationException e) { Debug.LogException(e.InnerException ?? e, mb); }
+                foreach (var mb in copy)
+                {
+                    if (mb == null) continue;
+                    var method = s_DidApply.GetOrAdd(mb.GetType(), static t => ScriptMessages.Find(t, "OnDidApplyAnimationProperties", Type.EmptyTypes));
+                    if (method == null) continue;
+                    try { method.Invoke(mb, null); }
+                    catch (TargetInvocationException e) { Debug.LogException(e.InnerException ?? e, mb); }
+                }
+            }
+            finally
+            {
+                copy.Clear();
+                s_NotifyLists.Push(copy);
             }
         }
     }

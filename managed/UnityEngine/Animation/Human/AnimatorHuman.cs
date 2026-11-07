@@ -148,8 +148,11 @@ namespace Unbound.Runtime.Humanoid
         /// <summary>After the layers are written: the pose of the muscle values onto the skeleton.
         /// The retargeted pose is written, then each layer with an IK pass sends OnAnimatorIK and the
         /// IK solve applies the goals set there, as the Editor's Animator does.</summary>
-        internal void Apply(Func<int, bool> ikPass, int layerCount)
+        /// <paramref name="playableIK"/>: playable outputs request an IK pass on the base layer;
+        /// the controller's layers request theirs by their IK pass setting.
+        internal void Apply(Unbound.Runtime.AnimatorPlayer player, bool playableIK)
         {
+            int layerCount = Math.Max(playableIK ? 1 : 0, player?.Layers.Length ?? 0);
             if (!m_Dirty) return;
             m_Dirty = false;
             var human = m_Constant.Human;
@@ -170,7 +173,8 @@ namespace Unbound.Runtime.Humanoid
             Write();
             for (int layer = 0; layer < layerCount; layer++)
             {
-                if (!ikPass(layer)) continue;
+                if (!(layer == 0 && playableIK || player != null && layer < player.Layers.Length && player.Layers[layer].Def.IKPass))
+                    continue;
                 InIKPass = true;
                 try
                 {
@@ -267,8 +271,7 @@ namespace UnityEngine
             var h = m_Human;
             var player = m_Player;
             if (h == null) return;
-            h.Apply(layer => player != null && layer < player.Layers.Length && player.Layers[layer].Def.IKPass,
-                player?.Layers.Length ?? 0);
+            h.Apply(player, playableIK: false);
         }
 
         /// <summary>Applies the combined playable pose and its requested IK pass. Measured in
@@ -279,8 +282,7 @@ namespace UnityEngine
             var h = m_Human;
             var player = m_Player;
             if (h == null) return;
-            h.Apply(layer => layer == 0 && playableIK || player != null && layer < player.Layers.Length && player.Layers[layer].Def.IKPass,
-                Math.Max(playableIK ? 1 : 0, player?.Layers.Length ?? 0));
+            h.Apply(player, playableIK);
         }
     }
 }

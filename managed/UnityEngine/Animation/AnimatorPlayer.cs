@@ -111,7 +111,7 @@ namespace Unbound.Runtime
 
         readonly Dictionary<StateMachineBehaviour, StateMachineBehaviour> m_Instances = new Dictionary<StateMachineBehaviour, StateMachineBehaviour>();
         internal readonly List<StateMachineBehaviour> AllBehaviours = new List<StateMachineBehaviour>();
-        readonly List<Action> m_Callbacks = new List<Action>();
+        List<StateCallback> m_Callbacks = new List<StateCallback>();
         readonly Dictionary<string, int> m_ParameterIndex = new Dictionary<string, int>();
         readonly Dictionary<(Motion, bool), (bool[] Floats, bool[] Objects, int FloatCount, int ObjectCount)> m_MotionMasks = new Dictionary<(Motion, bool), (bool[], bool[], int, int)>();
         readonly HashSet<AnimationClip> m_WarnedLegacy = new HashSet<AnimationClip>();
@@ -128,7 +128,11 @@ namespace Unbound.Runtime
         /// <summary>States left within this update through a transition that completed at once
         /// (no duration): the stretch they played before leaving, up to the exit point, still fires
         /// its events (measured: an event at a clip's end fires as an exit time of 1 leaves it).</summary>
-        readonly List<(LayerRun Layer, StateRun Run, double End)> m_Left = new List<(LayerRun, StateRun, double)>();
+        List<(LayerRun Layer, StateRun Run, double End)> m_Left = new List<(LayerRun, StateRun, double)>();
+        // Spare lists for FireEvents (taken while it runs, so a reentrant update allocates its own).
+        List<(LayerRun Layer, StateRun Run, double End)> m_LeftSpare = new List<(LayerRun, StateRun, double)>();
+        List<(LayerRun Layer, int LayerIndex, StateRun Run, AnimationClip Clip, float Weight)> m_ContributionsSpare =
+            new List<(LayerRun, int, StateRun, AnimationClip, float)>();
 
         /// <summary>Whether this is the Animator's own player (its speed applies, Animator API
         /// calls reach it) rather than an AnimatorControllerPlayable's.</summary>
@@ -1495,43 +1499,55 @@ namespace Unbound.Runtime
 
         void FireEvents()
         {
-            var left = m_Left.ToArray();
-            m_Left.Clear();
-            if (!m_Animator.m_FireEvents) return;
+            // Event handlers can update this Animator again: iterate taken lists, not the live ones.
+            var left = m_Left;
+            m_Left = m_LeftSpare ?? new List<(LayerRun, StateRun, double)>();
+            m_LeftSpare = null;
+            var contributions = m_ContributionsSpare ?? new List<(LayerRun, int, StateRun, AnimationClip, float)>();
+            m_ContributionsSpare = null;
+            try
+            {
+                if (!m_Animator.m_FireEvents) return;
+                foreach (var (layer, run, end) in left)
+                {
+                    if (!(MotionOf(layer.Def, run.Def) is AnimationClip leftClip) || leftClip.m_Events.Count == 0) continue;
+                    double leftOffset = leftClip.isLooping ? run.Def.CycleOffset + leftClip.m_CycleOffset : 0.0;
+                    FireClipEvents(leftClip, StateInfo(layer, run), 1f, Single(run.Previous + leftOffset), Single(end + leftOffset),
+                        run.Fresh && !run.EventsStarted);
+                }
+                contributions.AddRange(m_Contributions);
+                foreach (var (layer, layerIndex, run, played, weight) in contributions)
+                {
+                    var clip = played.Asset;
+                    if (clip.m_Events.Count == 0 || weight <= 0f) continue;
+                    double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
+                    FireClipEvents(clip, StateInfo(layer, run), weight, Single(run.Previous + offset), Single(run.Normalized + offset),
+                        run.Fresh && !run.EventsStarted);
+                }
+            }
+            finally
+            {
+                left.Clear();
+                m_LeftSpare = left;
+                contributions.Clear();
+                m_ContributionsSpare = contributions;
+            }
+        }
+
+        /// <summary>A clip's events crossed by a state step, sent with the state's information
+        /// (only called for clips with events: its closure is allocated per call).</summary>
+        void FireClipEvents(AnimationClip clip, AnimatorStateInfo info, float weight, double from, double to, bool includeStart)
+        {
             var go = m_Animator.m_GameObject;
-            foreach (var (layer, run, end) in left)
+            var clipInfo = new AnimatorClipInfo { m_Clip = clip, m_Weight = weight };
+            AnimationEvents.FireCrossed(clip, from, to, clip.isLooping, includeStart, e =>
             {
-                if (!(MotionOf(layer.Def, run.Def) is AnimationClip leftClip) || leftClip.m_Events.Count == 0) continue;
-                double leftOffset = leftClip.isLooping ? run.Def.CycleOffset + leftClip.m_CycleOffset : 0.0;
-                var leftInfo = StateInfo(layer, run);
-                var leftClipInfo = new AnimatorClipInfo { m_Clip = leftClip, m_Weight = 1f };
-                AnimationEvents.FireCrossed(leftClip, Single(run.Previous + leftOffset), Single(end + leftOffset), leftClip.isLooping,
-                    run.Fresh && !run.EventsStarted, e =>
-                {
-                    var fired = e.Copy();
-                    fired.m_Source = AnimationEventSource.Animator;
-                    fired.m_AnimatorStateInfo = leftInfo;
-                    fired.m_AnimatorClipInfo = leftClipInfo;
-                    AnimationEvents.Dispatch(go, fired, leftClip);
-                });
-            }
-            foreach (var (layer, layerIndex, run, played, weight) in m_Contributions.ToArray())
-            {
-                var clip = played.Asset;
-                if (clip.m_Events.Count == 0 || weight <= 0f) continue;
-                double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
-                var info = StateInfo(layer, run);
-                var clipInfo = new AnimatorClipInfo { m_Clip = clip, m_Weight = weight };
-                AnimationEvents.FireCrossed(clip, Single(run.Previous + offset), Single(run.Normalized + offset), clip.isLooping,
-                    run.Fresh && !run.EventsStarted, e =>
-                {
-                    var fired = e.Copy();
-                    fired.m_Source = AnimationEventSource.Animator;
-                    fired.m_AnimatorStateInfo = info;
-                    fired.m_AnimatorClipInfo = clipInfo;
-                    AnimationEvents.Dispatch(go, fired, clip);
-                });
-            }
+                var fired = e.Copy();
+                fired.m_Source = AnimationEventSource.Animator;
+                fired.m_AnimatorStateInfo = info;
+                fired.m_AnimatorClipInfo = clipInfo;
+                AnimationEvents.Dispatch(go, fired, clip);
+            });
         }
 
         /// <summary>A state time as the Editor compares event times with it: in single precision
@@ -1607,16 +1623,66 @@ namespace Unbound.Runtime
             foreach (var c in m.Children) InstantiateMachine(c);
         }
 
-        /// <summary>A state's behaviours, then those of the machines containing it.</summary>
-        IEnumerable<StateMachineBehaviour> BehavioursOf(LayerRun layer, StateDef state)
+        /// <summary>A state's behaviours, then those of the machines containing it (a synced
+        /// layer: its own behaviours of the state only).</summary>
+        StateBehaviours BehavioursOf(LayerRun layer, StateDef state)
         {
-            var own = layer.Def.SyncedLayerIndex >= 0
-                ? (layer.Def.SyncedBehaviours.TryGetValue(state, out var synced) ? synced : Array.Empty<StateMachineBehaviour>())
-                : state.Behaviours;
-            foreach (var b in own) yield return Instance(b);
-            if (layer.Def.SyncedLayerIndex >= 0) yield break;
-            for (var m = state.Machine; m != null; m = m.Parent)
-                foreach (var b in m.Behaviours) yield return Instance(b);
+            if (layer.Def.SyncedLayerIndex < 0) return new StateBehaviours(this, state.Behaviours, state.Machine);
+            return new StateBehaviours(this,
+                layer.Def.SyncedBehaviours.TryGetValue(state, out var synced) ? synced : Array.Empty<StateMachineBehaviour>(), null);
+        }
+
+        /// <summary>The behaviour instances of <see cref="BehavioursOf"/>, enumerated without
+        /// allocating (it runs every frame for state update and move callbacks).</summary>
+        readonly struct StateBehaviours
+        {
+            readonly AnimatorPlayer m_Player;
+            readonly StateMachineBehaviour[] m_Own;
+            readonly MachineDef m_Machine;
+
+            internal StateBehaviours(AnimatorPlayer player, StateMachineBehaviour[] own, MachineDef machine)
+            {
+                m_Player = player;
+                m_Own = own;
+                m_Machine = machine;
+            }
+
+            public Enumerator GetEnumerator() => new Enumerator(m_Player, m_Own, m_Machine);
+
+            internal struct Enumerator
+            {
+                readonly AnimatorPlayer m_Player;
+                StateMachineBehaviour[] m_Assets;
+                MachineDef m_Next;
+                int m_Index;
+
+                internal Enumerator(AnimatorPlayer player, StateMachineBehaviour[] own, MachineDef machine)
+                {
+                    m_Player = player;
+                    m_Assets = own;
+                    m_Next = machine;
+                    m_Index = -1;
+                    Current = null;
+                }
+
+                public StateMachineBehaviour Current { get; private set; }
+
+                public bool MoveNext()
+                {
+                    while (true)
+                    {
+                        if (m_Assets != null && ++m_Index < m_Assets.Length)
+                        {
+                            Current = m_Player.Instance(m_Assets[m_Index]);
+                            return true;
+                        }
+                        if (m_Next == null) return false;
+                        m_Assets = m_Next.Behaviours;
+                        m_Next = m_Next.Parent;
+                        m_Index = -1;
+                    }
+                }
+            }
         }
 
         internal StateMachineBehaviour[] Behaviours(int fullPathHash, int layerIndex)
@@ -1625,7 +1691,9 @@ namespace Unbound.Runtime
             var layer = Layers[layerIndex];
             var def = layer.Def.SyncedLayerIndex >= 0 && layer.Def.SyncedLayerIndex < Layers.Length ? Layers[layer.Def.SyncedLayerIndex].Def : layer.Def;
             if (!def.StateByHash.TryGetValue(fullPathHash, out var state)) return Array.Empty<StateMachineBehaviour>();
-            return new List<StateMachineBehaviour>(BehavioursOf(layer, state)).ToArray();
+            var result = new List<StateMachineBehaviour>();
+            foreach (var b in BehavioursOf(layer, state)) result.Add(b);
+            return result.ToArray();
         }
 
         void QueueEnter(LayerRun layer, StateRun run)
@@ -1636,13 +1704,7 @@ namespace Unbound.Runtime
                 foreach (var b in BehavioursOf(target.Layer, run.Def))
                 {
                     if (b == null) continue;
-                    var info = StateInfo(target.Layer, run);
-                    int li = target.Index;
-                    m_Callbacks.Add(() =>
-                    {
-                        b.OnStateEnter(m_Animator, info, li);
-                        b.OnStateEnter(m_Animator, info, li, Playable);
-                    });
+                    m_Callbacks.Add(new StateCallback(StateCallbackKind.Enter, b, StateInfo(target.Layer, run), target.Index));
                 }
             }
         }
@@ -1655,13 +1717,7 @@ namespace Unbound.Runtime
                 foreach (var b in BehavioursOf(target.Layer, run.Def))
                 {
                     if (b == null) continue;
-                    var info = StateInfo(target.Layer, run);
-                    int li = target.Index;
-                    m_Callbacks.Add(() =>
-                    {
-                        b.OnStateExit(m_Animator, info, li);
-                        b.OnStateExit(m_Animator, info, li, Playable);
-                    });
+                    m_Callbacks.Add(new StateCallback(StateCallbackKind.Exit, b, StateInfo(target.Layer, run), target.Index));
                 }
             }
         }
@@ -1672,20 +1728,8 @@ namespace Unbound.Runtime
             {
                 var b = Instance(asset);
                 if (b == null) continue;
-                int hash = machine.FullPathHash;
-                m_Callbacks.Add(() =>
-                {
-                    if (enter)
-                    {
-                        b.OnStateMachineEnter(m_Animator, hash);
-                        b.OnStateMachineEnter(m_Animator, hash, Playable);
-                    }
-                    else
-                    {
-                        b.OnStateMachineExit(m_Animator, hash);
-                        b.OnStateMachineExit(m_Animator, hash, Playable);
-                    }
-                });
+                m_Callbacks.Add(new StateCallback(enter ? StateCallbackKind.MachineEnter : StateCallbackKind.MachineExit,
+                    b, default, machine.FullPathHash));
             }
         }
 
@@ -1703,38 +1747,88 @@ namespace Unbound.Runtime
             for (int i = 0; i < Layers.Length; i++)
             {
                 var layer = Layers[i];
-                var source = layer.Def.SyncedLayerIndex >= 0 && layer.Def.SyncedLayerIndex < Layers.Length ? Layers[layer.Def.SyncedLayerIndex] : layer;
-                foreach (var run in new[] { source.Current, source.Next })
-                {
-                    if (run == null || run.EnteredThisUpdate) continue;
-                    var own = layer.Def.SyncedLayerIndex >= 0
-                        ? (layer.Def.SyncedBehaviours.TryGetValue(run.Def, out var synced) ? synced : Array.Empty<StateMachineBehaviour>())
-                        : null;
-                    var behaviours = own != null ? (IEnumerable<StateMachineBehaviour>)Array.ConvertAll(own, Instance) : BehavioursOf(layer, run.Def);
-                    foreach (var b in behaviours)
-                    {
-                        if (b == null) continue;
-                        var info = StateInfo(layer, run);
-                        int li = i;
-                        m_Callbacks.Add(() =>
-                        {
-                            b.OnStateUpdate(m_Animator, info, li);
-                            b.OnStateUpdate(m_Animator, info, li, Playable);
-                        });
-                    }
-                }
+                var source = PlayedBy(layer);
+                QueueUpdate(layer, source.Current, i);
+                QueueUpdate(layer, source.Next, i);
             }
         }
+
+        void QueueUpdate(LayerRun layer, StateRun run, int layerIndex)
+        {
+            if (run == null || run.EnteredThisUpdate) return;
+            foreach (var b in BehavioursOf(layer, run.Def))
+                if (b != null) m_Callbacks.Add(new StateCallback(StateCallbackKind.Update, b, StateInfo(layer, run), layerIndex));
+        }
+
+        enum StateCallbackKind : byte { Enter, Update, Exit, MachineEnter, MachineExit }
+
+        /// <summary>A queued state machine behaviour callback (a struct, so queueing allocates
+        /// nothing).</summary>
+        readonly struct StateCallback
+        {
+            internal readonly StateCallbackKind Kind;
+            internal readonly StateMachineBehaviour Behaviour;
+            internal readonly AnimatorStateInfo Info;
+            /// <summary>The layer index; for machine callbacks, the machine's full path hash.</summary>
+            internal readonly int Argument;
+
+            internal StateCallback(StateCallbackKind kind, StateMachineBehaviour behaviour, AnimatorStateInfo info, int argument)
+            {
+                Kind = kind;
+                Behaviour = behaviour;
+                Info = info;
+                Argument = argument;
+            }
+        }
+
+        // A callback can update this Animator again reentrantly: each run takes its own list.
+        static readonly Stack<List<StateCallback>> s_CallbackLists = new Stack<List<StateCallback>>();
 
         void RunCallbacks()
         {
             if (m_Callbacks.Count == 0) return;
-            var calls = m_Callbacks.ToArray();
-            m_Callbacks.Clear();
-            foreach (var call in calls)
+            var calls = m_Callbacks;
+            m_Callbacks = s_CallbackLists.Count > 0 ? s_CallbackLists.Pop() : new List<StateCallback>();
+            try
             {
-                try { call(); }
-                catch (Exception e) { Debug.LogException(e, m_Animator); }
+                for (int i = 0; i < calls.Count; i++)
+                {
+                    try { Invoke(calls[i]); }
+                    catch (Exception e) { Debug.LogException(e, m_Animator); }
+                }
+            }
+            finally
+            {
+                calls.Clear();
+                s_CallbackLists.Push(calls);
+            }
+        }
+
+        void Invoke(in StateCallback call)
+        {
+            var b = call.Behaviour;
+            switch (call.Kind)
+            {
+                case StateCallbackKind.Enter:
+                    b.OnStateEnter(m_Animator, call.Info, call.Argument);
+                    b.OnStateEnter(m_Animator, call.Info, call.Argument, Playable);
+                    break;
+                case StateCallbackKind.Update:
+                    b.OnStateUpdate(m_Animator, call.Info, call.Argument);
+                    b.OnStateUpdate(m_Animator, call.Info, call.Argument, Playable);
+                    break;
+                case StateCallbackKind.Exit:
+                    b.OnStateExit(m_Animator, call.Info, call.Argument);
+                    b.OnStateExit(m_Animator, call.Info, call.Argument, Playable);
+                    break;
+                case StateCallbackKind.MachineEnter:
+                    b.OnStateMachineEnter(m_Animator, call.Argument);
+                    b.OnStateMachineEnter(m_Animator, call.Argument, Playable);
+                    break;
+                case StateCallbackKind.MachineExit:
+                    b.OnStateMachineExit(m_Animator, call.Argument);
+                    b.OnStateMachineExit(m_Animator, call.Argument, Playable);
+                    break;
             }
         }
 

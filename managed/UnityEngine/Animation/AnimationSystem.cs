@@ -63,6 +63,12 @@ namespace Unbound.Runtime
         internal static void UpdateAnimators(bool fixedStep)
         {
             if (!fixedStep) Unbound.Runtime.Playables.PlayableGraphData.ProcessOtherOutputs();
+            TickAnimators(fixedStep);
+        }
+
+        /// <summary>The Animators' own update: controllers, then their pending playable outputs.</summary>
+        internal static void TickAnimators(bool fixedStep)
+        {
             int count = s_Animators.Count;
             if (count == 0) return;
             if (s_AnimatorBuffer.Length < count) s_AnimatorBuffer = new Animator[Math.Max(count, s_AnimatorBuffer.Length * 2)];
