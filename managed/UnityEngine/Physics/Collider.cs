@@ -310,14 +310,8 @@ namespace UnityEngine
             var direction = ray.direction;
             if (direction.sqrMagnitude < 1e-12f) return false;
             float length = PhysicsQueries.Length(maxDistance);
-            // Documented (6000.0 Physics.queriesHitBackfaces): the setting applies to "all physics
-            // queries such as a raycast or a shape sweep"; whether Collider.Raycast reads it is not
-            // documented or measured. Unbound's per-collider ray never hits back faces, so a
-            // triangle collider queried with the setting on is reported, not silently answered.
-            if (Physics.s_QueriesHitBackfaces && (this is MeshCollider { m_Convex: false } || this is TerrainCollider))
-                Stubs.Ignored("Collider.Raycast with Physics.queriesHitBackfaces",
-                    "is not honoured yet: Unbound's Collider.Raycast does not hit the back faces of a non-convex MeshCollider or a TerrainCollider");
-            if (B3.ua3_shape_raycast(m_Shape, ray.origin, direction.normalized * length, out var hit) == 0) return false;
+            if (B3.ua3_shape_raycast(m_Shape, ray.origin, direction.normalized * length,
+                PhysicsQueries.CastFlags(QueryTriggerInteraction.UseGlobal), out var hit) == 0) return false;
             hitInfo = PhysicsQueries.ToHit(hit, this, length);
             return true;
         }

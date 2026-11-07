@@ -286,8 +286,8 @@ namespace UnityEngine
         /// with bounceMinVelocity 0 bounces as one with 0.2).</summary>
         internal static float BounceThreshold(float value) => Mathf.Max(value, 0.2f);
 
-        /// <summary>A hinge limit's contact distance in radians: 0 is 0.01 rad on the native side.</summary>
-        internal static float AngularContact(float degrees) => degrees > 0f ? Rad(degrees) : 0f;
+        /// <summary>The legacy hinge contact distance, retained for unmeasured releases.</summary>
+        internal static float AngularContact(float degrees) => degrees > 0f ? Rad(degrees) : 0.01f;
 
         /// <summary>A character or configurable joint's angular limit contact distance: 0 is PhysX's
         /// default (-1 on the native side), measured.</summary>
@@ -409,10 +409,8 @@ namespace UnityEngine
                 if (m_Joint == 0) return 0f;
                 B3.ua3_d6_twist(m_Joint, out float a, out _);
                 float degrees = -a * Mathf.Rad2Deg;
-                // Documented (6000.0 HingeJoint.extendedLimits): "If enabled, the angle of the hinge
-                // is extended to [-360, 360] degrees": PhysX's twist angle as it is, in [-360, 360]
-                // (the frames make it 0 at rest). Otherwise in (-180, 180].
-                if (m_ExtendedLimits) return degrees;
+                // Unity 6000.0.71f1, physicsccdhinge: extended limits change the solver range;
+                // the public angle still wraps to the shortest signed rotation.
                 degrees %= 360f;
                 if (degrees > 180f) degrees -= 360f;
                 else if (degrees <= -180f) degrees += 360f;
@@ -430,31 +428,30 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>The twist drive's flags: bit 0 an acceleration drive, bit 1 extended limits. Every
-        /// configuration sets the twist drive, so the joint's extended limits follow
-        /// extendedLimits (PhysX's eENABLE_EXTENDED_LIMITS on the native side: the limits and the
-        /// drive see the twist angle in (-360, 360) instead of (-180, 180]; Unbound's choice,
-        /// unmeasured).</summary>
-        int DriveFlags(bool acceleration) => (acceleration ? 1 : 0) | (m_ExtendedLimits ? 2 : 0);
+        // Shared twist drive flags: acceleration, extended limits, and a one-sided motor.
+        int DriveFlags(bool acceleration, bool freeSpin = false) =>
+            (acceleration ? 1 : 0) | (m_ExtendedLimits ? 2 : 0) | (freeSpin ? 4 : 0);
 
         internal override void Configure()
         {
             B3.ua3_d6_set_motion(m_Joint, 3, m_UseLimits ? 1 : 2);
             if (m_UseLimits)
-                B3.ua3_d6_set_twist_limit(m_Joint, -Rad(m_Limits.max), -Rad(m_Limits.min), 0f, 0f, Mathf.Clamp01(m_Limits.bounciness),
-                    BounceThreshold(m_Limits.bounceMinVelocity), AngularContact(m_Limits.contactDistance));
+            {
+                // The solver keeps a three-degree margin at the edge of its angular range
+                // (Unity 6000.0.71f1, physicsccdhinge). Stored JointLimits values stay unchanged.
+                const float LimitMarginDegrees = 3f;
+                float extent = Compat.HingeLimitClampingMeasured
+                    ? (m_ExtendedLimits ? 360f : 180f) - LimitMarginDegrees : float.PositiveInfinity;
+                float contact = AngularContact(m_Limits.contactDistance);
+                if (Compat.HingeLimitClampingMeasured)
+                    contact = m_Limits.bounciness > 0f ? 0f : DefaultedContact(m_Limits.contactDistance);
+                B3.ua3_d6_set_twist_limit(m_Joint, -Rad(Mathf.Clamp(m_Limits.max, -extent, extent)),
+                    -Rad(Mathf.Clamp(m_Limits.min, -extent, extent)), 0f, 0f, Mathf.Clamp01(m_Limits.bounciness),
+                    BounceThreshold(m_Limits.bounceMinVelocity), contact);
+            }
             if (m_UseMotor)
             {
-                // Documented (6000.0 JointMotor.freeSpin): "If freeSpin is enabled the motor will only
-                // accelerate but never slow down." PhysX's D6 drive brakes as well as accelerates
-                // (its impulse is bounded by the force on both sides) and has no free-spin mode, so
-                // it is reported rather than approximated. Measured (tests/projects/joints Reference,
-                // "hinge motor free spin"): with freeSpin on, the hinge stopped once its target was
-                // set to 0, as this drive stops it; a hinge turning faster than a non-zero target is
-                // not measured.
-                if (m_Motor.freeSpin)
-                    Stubs.Ignored("JointMotor.freeSpin", "is not honoured yet: a HingeJoint motor also brakes a hinge turning faster than its targetVelocity");
-                B3.ua3_d6_set_drive(m_Joint, 4, 0f, MotorDamping, Mathf.Max(0f, m_Motor.force), DriveFlags(m_UseAcceleration));
+                B3.ua3_d6_set_drive(m_Joint, 4, 0f, MotorDamping, Mathf.Max(0f, m_Motor.force), DriveFlags(m_UseAcceleration, m_Motor.freeSpin));
                 B3.ua3_d6_set_drive_target(m_Joint, Vector3.zero, Quaternion.identity, Vector3.zero, new Vector3(Rad(m_Motor.targetVelocity), 0f, 0f));
             }
             else if (m_UseSpring)

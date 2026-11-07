@@ -1659,9 +1659,10 @@ namespace Unbound.Runtime
                 m_Rigidbody = other.m_AttachedBody,
                 m_Self = self,
             };
+            // Unity 6000.0.71f1, physicsccdhinge: stays also report the incoming velocity.
             if (phase == Phase.Enter) collision.m_RelativeVelocity = flip ? -pair.EnterRelativeVelocity : pair.EnterRelativeVelocity;
             else if (phase == Phase.Exit) collision.m_RelativeVelocity = PreStepVelocity(other) - PreStepVelocity(self);
-            else collision.m_RelativeVelocity = Velocity(other) - Velocity(self);
+            else collision.m_RelativeVelocity = PreStepVelocity(other) - PreStepVelocity(self);
             if (phase == Phase.Exit)
             {
                 collision.m_Contacts = Array.Empty<ContactPoint>();
@@ -1674,12 +1675,6 @@ namespace Unbound.Runtime
             foreach (var p in points) impulse += p.m_Impulse;
             collision.m_Impulse = impulse;
             return collision;
-        }
-
-        static Vector3 Velocity(Collider c)
-        {
-            var rb = c.m_AttachedBody;
-            return rb != null && rb.m_Body != 0 ? B3.ua3_body_get_linear_velocity(rb.m_Body) : Vector3.zero;
         }
 
         static B3.Contact[] s_ContactBuffer = new B3.Contact[32];

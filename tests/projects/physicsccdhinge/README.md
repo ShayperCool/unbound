@@ -53,3 +53,23 @@ limit, consistent with the documented possibility of speculative tunneling.
 No importer or serialized cache output changes. The shim version changes with
 its collider-ray signature and drive flag semantics. The motor patch adds no
 constraint storage, scan, allocation or per-step configuration.
+
+## Results and retained differences
+
+The strict comparator is shared with physicsbatch and keeps its absolute 1e-4 /
+relative 1e-5 tolerances. The engine matches 6708/6814 rows. All 106 raw failures
+remain in the comparison JSON. The separate gate verifier identifies 97 hinge
+angle readings with at most 0.005834882 degrees of quaternion roundoff, three
+resting speed readings with at most 0.000341510 degrees/s, and six opposite native
+pair impulse vectors in `ccd/thin/0/True/3/{0..5}/event/0`. The latter retain the
+same contact set, normal, separation, magnitude, relative velocity and motion;
+the native pair's impulse direction is not a self-facing contact normal. No
+pair order or sign guarantee is added. Counts, missing/extra rows, contact data,
+callback phases, body poses and all other numeric fields still gate at the
+unchanged strict tolerances. Four verifier tests reject mutations of those fields
+and out-of-bound numeric differences.
+
+Validation: release build; all 3268 managed tests; engine-only gate with zero
+unresolved checks. Existing physics, joints, physicsbatch and contactmodify3d
+probes retain their results. The latter two retain their previously recorded
+mesh slot permutations and ten contact-modification differences respectively.

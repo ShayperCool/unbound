@@ -15,7 +15,7 @@ namespace Unbound.Box3D
         const string Library = "unbound_physx";
 
         /// <summary>The shim version this binding was written for.</summary>
-        internal const int Version = 15;
+        internal const int Version = 16;
 
         // The per-body accessors called every step are constant time, never block and never call
         // back into managed code: they skip the GC transition ([SuppressGCTransition]).
@@ -308,7 +308,7 @@ namespace Unbound.Box3D
         [LibraryImport(Library)] internal static partial void ua3_shape_set_density(ulong shape, float density);
         [LibraryImport(Library)] internal static partial void ua3_shape_aabb(ulong shape, out Bounds3 bounds);
         [LibraryImport(Library)] internal static partial Vector3 ua3_shape_closest_point(ulong shape, Vector3 target);
-        [LibraryImport(Library)] internal static partial int ua3_shape_raycast(ulong shape, Vector3 origin, Vector3 translation, out Hit hit);
+        [LibraryImport(Library)] internal static partial int ua3_shape_raycast(ulong shape, Vector3 origin, Vector3 translation, int queryFlags, out Hit hit);
         [LibraryImport(Library)] internal static partial int ua3_shape_contacts(ulong shape, Contact* output, int capacity);
         [LibraryImport(Library)] internal static partial int ua3_shapes_penetration(ulong a, Vector3 positionA, Quaternion rotationA, ulong b, Vector3 positionB, Quaternion rotationB, out Vector3 direction, out float depth);
 

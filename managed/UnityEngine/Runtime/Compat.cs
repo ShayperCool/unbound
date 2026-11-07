@@ -153,6 +153,10 @@ namespace Unbound.Runtime
         /// their selectable SAT path is documented, but not yet measured by this fixture.</summary>
         internal static bool PhysicsPcmEnabled(bool projectValue) => Major >= 6000 || projectValue;
 
+        /// <summary>Hinge solver limit clamping and contact padding measured by physicsccdhinge in 6000.0.71f1.
+        /// Other releases keep the previous unclamped limits and 0.01-radian default pad.</summary>
+        internal static bool HingeLimitClampingMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>The project's release as numbers and stage letter (6000.0.71f1: 6000, 0, 71,
         /// 'f', 1); null when it cannot be read.</summary>
         internal static (int Major, int Minor, int Patch, char Stage, int Build)? Release

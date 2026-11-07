@@ -266,9 +266,11 @@ namespace Ext
 				addDrive(linear(axis, error, PxConstraintSolveHint::eNONE), velTarget, drive);
 			}
 
-			PX_FORCE_INLINE void angular(const PxVec3& axis, PxReal velTarget, PxReal error, const PxD6JointDrive& drive, PxConstraintSolveHint::Enum hint = PxConstraintSolveHint::eNONE)
+			PX_FORCE_INLINE Px1DConstraint* angular(const PxVec3& axis, PxReal velTarget, PxReal error, const PxD6JointDrive& drive, PxConstraintSolveHint::Enum hint = PxConstraintSolveHint::eNONE)
 			{
-				addDrive(angular(axis, error, hint), velTarget, drive);
+				Px1DConstraint* c = angular(axis, error, hint);
+				addDrive(c, velTarget, drive);
+				return c;
 			}
 
 			PX_FORCE_INLINE PxU32 getCount()	const	{ return PxU32(mCurrent - mConstraints); }

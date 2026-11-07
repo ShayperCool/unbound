@@ -22,7 +22,8 @@ namespace UnityEngine.Tests
     /// at either end of the step, so only CCD can stop it.
     /// Not asserted: what a kinematic body in Continuous or ContinuousDynamic does itself (not
     /// documented; Unbound gives it no sweep, unmeasured), positions, impulses and event order.
-    /// No Editor reference measures these scenes: the expectations are per documentation, unmeasured.
+    /// physicsccdhinge measures the static/kinematic target controls and per-step callbacks in
+    /// Unity 6000.0.71f1; the additional dynamic pair matrix remains a documentation control.
     ///
     /// Red base 4d0029d5: the file compiles there (it uses only existing public API). There every
     /// mode other than Discrete raised sweep CCD on the body and every pair with a moving body was
@@ -128,6 +129,42 @@ namespace UnityEngine.Tests
             Run(3);
             Assert.Equal(tunnels, Tunnelled(bullet, lane));
             Assert.Equal(!tunnels, Stopped(bullet, lane));
+        }
+
+        [Theory]
+        [InlineData(CollisionDetectionMode.Discrete, true)]
+        [InlineData(CollisionDetectionMode.Continuous, true)]
+        [InlineData(CollisionDetectionMode.ContinuousDynamic, false)]
+        [InlineData(CollisionDetectionMode.ContinuousSpeculative, false)]
+        public void FastSphereAgainstThinKinematicWall(CollisionDetectionMode mode, bool tunnels)
+        {
+            var lane = Lane();
+            Wall(lane).AddComponent<Rigidbody>().isKinematic = true;
+            var bullet = Bullet(lane, mode);
+            Run(3);
+            Assert.Equal(tunnels, Tunnelled(bullet, lane));
+        }
+
+        public class StayRecorder : MonoBehaviour
+        {
+            internal Vector3 Relative;
+            internal int Count;
+            void OnCollisionStay(Collision collision) { Relative = collision.relativeVelocity; Count++; }
+        }
+
+        [Fact]
+        public void SpeculativeStayReportsVelocityEnteringTheStep()
+        {
+            var lane = Lane();
+            Wall(lane);
+            var bullet = Bullet(lane, CollisionDetectionMode.ContinuousSpeculative);
+            var recorder = bullet.gameObject.AddComponent<StayRecorder>();
+            Run(1);
+            float entering = bullet.linearVelocity.x;
+            Run(1);
+            Assert.Equal(1, recorder.Count);
+            Assert.Equal(-entering, recorder.Relative.x, 4);
+            Assert.True(Mathf.Abs(recorder.Relative.x) > bullet.linearVelocity.x * 2);
         }
 
         // A Continuous body is swept against static colliders only: a fast Continuous sphere is not

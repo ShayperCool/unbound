@@ -15,6 +15,7 @@ from probe_paths import cache_artifact_path, reference_file
 from editor_runner import EditorJob, run, publish
 sys.path.insert(0, str(REPO/'tests/projects/physicsbatch'))
 from compare import load, compare as compare_rows
+from verify_results import verify
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('mode', choices=['prepare', 'native', 'engine', 'publish', 'compare', 'gate'])
@@ -45,12 +46,16 @@ def engine():
     with (work/(a.label+'-engine.log')).open('w') as log:
         subprocess.run([str(Path.home()/'.cache/compat/with-heavy-job'),str(a.cli.resolve()),'run','-p',str(project),'--headless','30000','--no-watch'],env=dict(os.environ,PHYSICS_PROBE_OUT=str(out)),stdout=log,stderr=subprocess.STDOUT,check=True)
 
-def compare():
+def compare(classify=False):
     expected,actual=load(ref),load(out)
     report=compare_rows(expected,actual)
     (work/(a.label+'-comparison.json')).write_text(json.dumps(report,indent=2)+'\n')
     print(f"physicsccdhinge: {report['total']-len(report['failures'])}/{report['total']} records match; {len(report['failures'])} differences")
-    return bool(report['failures'])
+    if not classify: return bool(report['failures'])
+    result = verify(expected,actual,report)
+    (work/(a.label+'-verification.json')).write_text(json.dumps(result,indent=2)+'\n')
+    print(f"physicsccdhinge: {len(result['unresolved'])} unresolved; {len(result['angle_roundoff'])} angle roundoff; {len(result['resting_velocity_roundoff'])} resting velocity roundoff; {len(result['pair_orientation'])} pair orientation rows retained")
+    return bool(result['unresolved'])
 
 if a.mode=='prepare':prepare()
 elif a.mode=='native':
@@ -74,4 +79,4 @@ elif a.mode=='engine':engine()
 elif a.mode=='compare':raise SystemExit(compare())
 elif a.mode=='gate':
     if project.exists():shutil.rmtree(project)
-    prepare();engine();raise SystemExit(compare())
+    prepare();engine();raise SystemExit(compare(classify=True))

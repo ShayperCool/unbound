@@ -3,7 +3,7 @@
 This is the complete source-patch inventory for the vendored PhysX 4.1.2 tree.
 [UNBOUND.md](UNBOUND.md) records its upstream revision,
 `a2c0428acab643e60618c681b501e86f7fd558cc`, and the directories retained at import.
-The local import is `9a4c8ad7`. Relative to that import, seven SDK source/header
+The local import is `9a4c8ad7`. Relative to that import, ten SDK source/header
 files have changes, listed below. The import's directory exclusions and the
 Unbound build/shim code outside this directory are separate from these patches.
 
@@ -17,6 +17,7 @@ identified separately where relevant.
 
 | Patch | File and function | Introduced in |
 | --- | --- | --- |
+| Free-spinning twist motor | [PxD6Joint.h](include/extensions/PxD6Joint.h), drive flags; [ExtConstraintHelper.h](source/physxextensions/src/ExtConstraintHelper.h), angular drive helper; [ExtD6Joint.cpp](source/physxextensions/src/ExtD6Joint.cpp), twist drive preparation | Q06 |
 | Retain breaking force and torque | [ScConstraintCore.h](source/simulationcontroller/include/ScConstraintCore.h), `Sc::ConstraintCore::setBreakingForce`; [ScConstraintCore.cpp](source/simulationcontroller/src/ScConstraintCore.cpp), `Sc::ConstraintCore::getForce`; [ScConstraintSim.cpp](source/simulationcontroller/src/ScConstraintSim.cpp), `Sc::ConstraintSim::checkMaxForceExceeded` | `1b53e844` |
 | Cancel the controller retry's artificial step | [CctCharacterController.cpp](source/physxcharacterkinematic/src/CctCharacterController.cpp), `physx::Cct::SweepTest::moveCharacter` | `0207b818` |
 | Keep NEON lane constants valid for Clang | [PsUnixNeonInlineAoS.h](source/foundation/include/unix/neon/PsUnixNeonInlineAoS.h), `BSplatElement`, `V4U32SplatElement`, `V4SplatElement` | `ee55f99c` |
@@ -27,6 +28,23 @@ identified separately where relevant.
 The comparison against `4724b839e749590151e862695e1e31ad94447151` contains only
 the last three patches, in `ScNPhaseCore.cpp` and `ScShapeSim.cpp`. The older
 patches remain part of the current SDK and are included here.
+
+## Free-spinning twist motor
+
+The twist drive accepts an optional `eFREE_SPIN` flag. Its constraint row permits
+impulse only in the direction of a nonzero velocity target. A zero target keeps
+both impulse directions. The angular drive helper returns its existing row so
+the twist drive can adjust those bounds without adding storage or allocations.
+Other drives and joints keep their existing bounds. The flag uses the existing
+drive flags field; no constraint data layout changes.
+
+Measured requirement: Unity 6000.0.71f1 lets a free-spinning hinge coast faster
+than a nonzero motor target in the same direction, accelerates it toward a target
+in the opposite direction, and brakes it toward a zero target. The confirming
+probe is `tests/projects/physicsccdhinge`, `hinge/motor` and `hinge/motor-toggle`,
+with positive and negative targets, initial velocities and a connected-body
+control. The one-sided impulse bounds are our implementation of those
+observations, not a claim about Unity's implementation.
 
 ## Retain the force and torque that broke a constraint
 

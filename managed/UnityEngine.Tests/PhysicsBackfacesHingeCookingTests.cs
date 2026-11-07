@@ -7,37 +7,16 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
-    /// <summary>
-    /// Four 3D physics settings that used to be stored but never read (6000.0 Scripting API:
-    /// Physics.queriesHitBackfaces, QueryParameters.hitBackfaces, JointMotor.freeSpin,
-    /// HingeJoint.extendedLimits, HingeJoint.angle, MeshCollider.cookingOptions,
-    /// MeshColliderCookingOptions; Manual: Hinge Joint and Mesh Collider component references).
-    ///
-    /// Documented and asserted: with queriesHitBackfaces on, a ray and a sphere cast from inside a
-    /// closed mesh hit its back faces, and with it off they do not; extendedLimits extends the hinge
-    /// angle to [-360, 360]; a motor without free spin brakes a hinge turning faster than its target
-    /// toward the target. Unbound's choices (unmeasured), asserted where a test names them: the
-    /// PhysX mechanisms (eMESH_BOTH_SIDES, eENABLE_EXTENDED_LIMITS, the cooking parameters), a
-    /// batch command hitting back faces as its own QueryParameters.hitBackfaces says rather than as
-    /// the global setting does, a cookingOptions change cooking the mesh again, and which option
-    /// combinations are reported. JointMotor.freeSpin and two weld/cleaning combinations are
-    /// reported through Stubs.Ignored (counted every use, at most one warning per member for the
-    /// process): their behaviour is not asserted, since Unbound does not honour it.
-    /// No Editor reference measures these cases; the expectations are per documentation.
-    ///
-    /// The cases need the native library rebuilt from this head. Red recipes at 4d0029d5 are given
-    /// per case; a native-only revert of the cooking change is not a valid configuration (the
-    /// managed side's option bits would be read as a triangle count).
-    /// </summary>
+    /// <summary>Backface queries, hinge motors and limits, and mesh cooking options.
+    /// Hinge and query behavior is measured by physicsccdhinge and physicsbatch in
+    /// Unity 6000.0.71f1. Cooking options retain their documented, unmeasured controls.</summary>
     public class PhysicsBackfacesHingeCookingTests : IDisposable
     {
         const float Dt = 0.02f;
         // Far from the origin, away from anything other tests leave in the default physics scene.
         static readonly Vector3 Origin = new Vector3(0f, 0f, -1300f);
-        const string FreeSpin = "JointMotor.freeSpin";
         const string WeldOff = "MeshColliderCookingOptions.WeldColocatedVertices (off)";
         const string WeldWithoutCleaning = "MeshColliderCookingOptions.WeldColocatedVertices (without EnableMeshCleaning)";
-        const string ColliderRaycastBackfaces = "Collider.Raycast with Physics.queriesHitBackfaces";
         const MeshColliderCookingOptions Default = (MeshColliderCookingOptions)30;
 
         readonly List<Object> m_Made = new List<Object>();
@@ -260,49 +239,29 @@ namespace UnityEngine.Tests
             Assert.Same(trigger, collided.collider);
         }
 
-        // Collider.Raycast with queriesHitBackfaces on (6000.0 Physics.queriesHitBackfaces: "all
-        // physics queries such as a raycast or a shape sweep"; whether Collider.Raycast reads the
-        // setting is not documented or measured). Unbound's per-collider ray does not hit back
-        // faces, so a call on a non-convex MeshCollider with the setting on is reported through
-        // Stubs.Ignored (every call counted, one warning for the process). The setting off, a
-        // convex MeshCollider and a primitive are not reported. The answers are kept: a ray from
-        // outside still hits the front face as before; the ray from inside is counted but its
-        // answer is not asserted (Unity's is unmeasured). The TerrainCollider branch is not covered.
-        // Red at 70405f48 (and 4d0029d5): nothing is reported, so ReportedOnce's count fails. Red
-        // deleting only the Stubs.Ignored statement in Collider.Raycast: same. Red dropping only its
-        // `{ m_Convex: false }` pattern: the convex collider is reported, so its Assert.Equal fails.
         [Fact]
-        public void ColliderRaycastReportsUnhonouredBackFaces()
+        public void ColliderRaycastUsesTheGlobalBackfaceSetting()
         {
-            int before = Hits(ColliderRaycastBackfaces);
             var center = Origin + new Vector3(0f, 0f, 30f);
             var mesh = MeshAt("ColliderRaycastCube", center, Cube(1f), Default);
             var convex = MeshAt("ColliderRaycastHull", center + new Vector3(0f, 0f, 4f), Cube(1f), Default);
             convex.convex = true;
-            var box = Make("ColliderRaycastBox", center + new Vector3(0f, 0f, 8f)).AddComponent<BoxCollider>();
             var outside = new Ray(center + new Vector3(0.3f, -0.2f, -3f), Vector3.forward);
             var inside = new Ray(center + new Vector3(0.3f, -0.2f, 0f), Vector3.forward);
-
-            var capture = Captured(() =>
+            foreach (bool backfaces in new[] { false, true })
             {
-                Physics.queriesHitBackfaces = false;
-                Assert.True(mesh.Raycast(outside, out var off, 5f));
-                Assert.Equal(2f, off.distance, 3);
-                mesh.Raycast(inside, out _, 5f);
-                Assert.Equal(before, Hits(ColliderRaycastBackfaces));
-
-                Physics.queriesHitBackfaces = true;
-                Assert.True(convex.Raycast(new Ray(outside.origin + new Vector3(0f, 0f, 4f), Vector3.forward), out _, 5f));
-                Assert.True(box.Raycast(new Ray(outside.origin + new Vector3(0f, 0f, 8f), Vector3.forward), out _, 5f));
-                Assert.Equal(before, Hits(ColliderRaycastBackfaces));
-
-                Assert.True(mesh.Raycast(outside, out var on, 5f));
-                Assert.Same(mesh, on.collider);
-                Assert.Equal(2f, on.distance, 3);
-                Assert.Equal(8, on.triangleIndex);
-                mesh.Raycast(inside, out _, 5f);
-            }, ColliderRaycastBackfaces);
-            ReportedOnce(capture, ColliderRaycastBackfaces, before, 2);
+                Physics.queriesHitBackfaces = backfaces;
+                Assert.True(mesh.Raycast(outside, out var front, 5f));
+                Assert.Same(mesh, front.collider);
+                Assert.Equal(2f, front.distance, 3);
+                Assert.Equal(backfaces, mesh.Raycast(inside, out var back, 5f));
+                if (backfaces)
+                {
+                    Assert.Same(mesh, back.collider);
+                    Assert.Equal(1f, back.distance, 3);
+                }
+                Assert.True(convex.Raycast(new Ray(outside.origin + Vector3.forward * 4, Vector3.forward), out _, 5f));
+            }
         }
 
         // QueryParameters.hitBackfaces (6000.0: "Whether physics queries should hit back-face
@@ -374,44 +333,28 @@ namespace UnityEngine.Tests
             Assert.InRange(hinge.velocity, 85f, 95f);
         }
 
-        // Documented (6000.0 JointMotor.freeSpin): "the motor will only accelerate but never slow
-        // down". PhysX's D6 drive has no free-spin mode, so a free-spinning motor is reported
-        // through Stubs.Ignored, every configuration counted, one warning for the process. Its
-        // behaviour (still braked) is Unbound's and is not asserted. A motor without free spin is
-        // not reported.
-        // Red at 4d0029d5: nothing is reported, so the count assertion fails.
-        [Fact]
-        public void FreeSpinIsReportedNotSilentlyIgnored()
+        // physicsccdhinge measures both signs, a zero target and connected-body changes.
+        [Theory]
+        [InlineData(90f, 6f)]
+        [InlineData(-90f, -6f)]
+        public void FreeSpinCoastsAboveItsTargetAndBrakesAtZero(float target, float speed)
         {
-            int before = Hits(FreeSpin);
-            var capture = Captured(() =>
-            {
-                var (_, plain) = Plate("PlainMotor", Origin + new Vector3(0f, 0f, 80f));
-                plain.useMotor = true;
-                plain.motor = new JointMotor { targetVelocity = 90f, force = 50f, freeSpin = false };
-                Run(2);
-                Assert.Equal(before, Hits(FreeSpin));
-
-                var (_, free) = Plate("FreeSpinMotor", Origin + new Vector3(0f, 0f, 84f));
-                free.useMotor = true;
-                free.motor = new JointMotor { targetVelocity = 360f, force = 50f, freeSpin = true };
-                Run(2);
-                // A second configuration of the same joint is counted again, without a new warning.
-                free.motor = new JointMotor { targetVelocity = 180f, force = 50f, freeSpin = true };
-                Run(2);
-            }, FreeSpin);
-            ReportedOnce(capture, FreeSpin, before, 2);
+            var (body, hinge) = Plate("FreeSpinMotor", Origin + new Vector3(0f, 0f, 84f));
+            hinge.motor = new JointMotor { targetVelocity = target, force = 50f, freeSpin = true };
+            hinge.useMotor = true;
+            Run(1);
+            body.angularDamping = 0;
+            body.angularVelocity = Vector3.up * speed;
+            Run(10);
+            Assert.InRange(hinge.velocity / (speed * Mathf.Rad2Deg), .999f, 1.001f);
+            hinge.motor = new JointMotor { targetVelocity = 0, force = 50f, freeSpin = true };
+            Run(10);
+            Assert.InRange(Mathf.Abs(hinge.velocity), 0, .01f);
         }
 
-        // Documented (6000.0 HingeJoint.extendedLimits): "If enabled, the angle of the hinge is
-        // extended to [-360, 360] degrees." Two hinges motor-driven at 360 deg/s for 0.8 s turn
-        // about 288 deg: the extended one reads it in (180, 360]; the other reads it wrapped into
-        // (-180, 180] (as measured: tests/projects/joints Reference "hinge motor" wraps from
-        // 174.97 to -176.03).
-        // Red at 4d0029d5: the angle always wraps, so the extended angle reads about -72 and its
-        // InRange fails. Red reverting only managed/UnityEngine/Physics/Joints.cs: same.
+        // The extended solver range does not extend the public angle's wrapped range.
         [Fact]
-        public void ExtendedLimitsExtendTheAngleBeyond180()
+        public void ExtendedLimitsKeepThePublicAngleWrapped()
         {
             var (_, extended) = Plate("ExtendedPlate", Origin + new Vector3(0f, 0f, 100f));
             var (_, plain) = Plate("PlainPlate", Origin + new Vector3(0f, 0f, 104f));
@@ -422,19 +365,13 @@ namespace UnityEngine.Tests
             }
             extended.extendedLimits = true;
             Run(40);
-            Assert.InRange(extended.angle, 200f, 360f);
+            Assert.InRange(extended.angle, -180f, 0f);
+            Assert.InRange(Mathf.Abs(extended.angle - plain.angle), 0f, .001f);
             Assert.InRange(plain.angle, -180f, 0f);
             Assert.InRange(extended.velocity, 350f, 370f);
         }
 
-        // Documented (6000.0 Manual, Hinge Joint: Extended Limits "extend the angle of the hinge to
-        // 360 degrees in either direction (that is, a limit of [-360, 360])"). A hinge limited to
-        // [-10, 270] with extended limits, driven at 360 deg/s for 1.6 s, stops at its 270 limit.
-        // The PhysX mechanism (eENABLE_EXTENDED_LIMITS through the twist drive's flags) is
-        // Unbound's choice, unmeasured; the tolerance covers the limit's contact distance.
-        // Red at 4d0029d5: the limit beyond 180 is never reached (the angle wraps), so the hinge
-        // keeps turning and the angle reads elsewhere. Red reverting only native/unbound_physx.cpp:
-        // same (the flag is not set; the old native reads the bit as an acceleration drive).
+        // The body reaches 270 degrees and the public angle reports its equivalent -90.
         [Fact]
         public void ExtendedLimitsHoldALimitBeyond180()
         {
@@ -445,7 +382,7 @@ namespace UnityEngine.Tests
             hinge.limits = new JointLimits { min = -10f, max = 270f, bounceMinVelocity = 0.2f };
             hinge.extendedLimits = true;
             Run(80);
-            Assert.InRange(hinge.angle, 262f, 278f);
+            Assert.InRange(hinge.angle, -98f, -82f);
             Assert.InRange(hinge.velocity, -10f, 10f);
         }
 

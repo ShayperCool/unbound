@@ -131,7 +131,8 @@ struct PxD6JointDriveFlag
 {
 	enum Enum
 	{
-		eACCELERATION	= 1	//!< drive spring is for the acceleration at the joint (rather than the force) 
+		eACCELERATION	= 1,	//!< drive spring is for the acceleration at the joint (rather than the force)
+		eFREE_SPIN		= 2		//!< a twist velocity drive applies impulse only toward its nonzero target
 	};
 };
 typedef PxFlags<PxD6JointDriveFlag::Enum, PxU32> PxD6JointDriveFlags;

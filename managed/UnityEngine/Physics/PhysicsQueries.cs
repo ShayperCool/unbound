@@ -34,7 +34,7 @@ namespace Unbound.Runtime
         /// triggers, bit 1 hits the back faces of mesh triangles. Documented (6000.0
         /// Physics.queriesHitBackfaces): "By default, all physics queries such as a raycast or a
         /// shape sweep (e.g. SphereCastAll) won't detect hits with back-face triangles."</summary>
-        static int CastFlags(QueryTriggerInteraction q) => HitTriggers(q) | (HitsBackfaces ? 2 : 0);
+        internal static int CastFlags(QueryTriggerInteraction q) => HitTriggers(q) | (HitsBackfaces ? 2 : 0);
 
         /// <summary>Whether the casts hit back faces now: Physics.queriesHitBackfaces, or the batch
         /// command's QueryParameters.hitBackfaces while it is answered.</summary>
@@ -54,8 +54,8 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Casts in the scope hit back faces as <paramref name="value"/> says, whatever
-        /// Physics.queriesHitBackfaces is: a batch command's own QueryParameters.hitBackfaces (Unbound's
-        /// reading, unmeasured: the field has no "use the global setting" value).</summary>
+        /// Physics.queriesHitBackfaces is: a batch command's own QueryParameters.hitBackfaces (Unity 6000.0.71f1, physicsbatch and
+        /// physicsccdhinge).</summary>
         internal static BackfacesScope Backfaces(bool value) => new BackfacesScope(value);
 
         static ulong Mask(int layerMask) => unchecked((uint)layerMask);

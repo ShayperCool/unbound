@@ -46,7 +46,7 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 15
+#define UA3_VERSION 16
 
 struct ua3_scene_def
 {
@@ -277,6 +277,23 @@ PxU32 ccd_bits( const PxRigidActor* actor )
 	return ( static_cast<PxU32>( reinterpret_cast<uintptr_t>( actor->userData ) ) & 3u ) << FlagCcdShift;
 }
 
+// The ray and shape casts' query flags (their hitTriggers argument): bit 0 hits triggers, bit 1
+// hits the back faces of mesh triangles (Physics.queriesHitBackfaces, QueryParameters.hitBackfaces).
+const int QueryHitTriggers = 1;
+const int QueryHitBackfaces = 2;
+const int QueryMultipleFaces = 4;
+const int QuerySkipInitial = 8;
+
+// Shared by scene, collider and batch casts (Unity 6000.0.71f1, physicsccdhinge).
+PxHitFlags cast_flags( PxHitFlags flags, int queryFlags )
+{
+	if ( queryFlags & QueryHitBackfaces )
+	{
+		flags |= PxHitFlag::eMESH_BOTH_SIDES;
+	}
+	return flags;
+}
+
 PxU32 ccd_mode_of( int value )
 {
 	return value >= 0 && value <= static_cast<int>( CcdContinuousSpeculative ) ? static_cast<PxU32>( value ) : CcdDiscrete;
@@ -316,15 +333,10 @@ PxD6Joint* d6_of( uint64_t id )
 	return joint != nullptr ? joint->is<PxD6Joint>() : nullptr;
 }
 
-// A joint limit's contact distance from the managed side: > 0 as it is, 0 the hinge's 0.01 rad,
-// < 0 PhysX's default (the lesser of 0.1 rad and 0.49 of the limit's span) (measured).
+// Angular limits accept an explicit nonnegative contact distance, or -1 for the SDK default.
 PxReal contact_distance( float value )
 {
-	if ( value > 0.0f )
-	{
-		return value;
-	}
-	return value == 0.0f ? 0.01f : -1.0f;
+    return value >= 0.0f ? value : -1.0f;
 }
 
 PxShape* shape_of( uint64_t id )
@@ -641,7 +653,10 @@ bool sweeps( bool moving, PxU32 flags, PxFilterObjectAttributes other, PxU32 oth
 	{
 		return mode == CcdContinuous || mode == CcdContinuousDynamic;
 	}
-	return mode == CcdContinuousDynamic && ( otherMode != CcdDiscrete || ( otherFlags & FlagCcdModeless ) );
+	// Kinematic colliders remain sweep targets even though their own mode can be Discrete.
+    // Unity 6000.0.71f1: physicsccdhinge, thin kinematic wall controls for all three shapes.
+    return mode == CcdContinuousDynamic &&
+        ( PxFilterObjectIsKinematic( other ) || otherMode != CcdDiscrete || ( otherFlags & FlagCcdModeless ) );
 }
 
 // Layers collide as layers_meet decides, unless either side contacts nothing. Trigger pairs include
@@ -2253,7 +2268,7 @@ ua3_hit query_hit( const PxSweepHit& hit, float length )
 		original_triangle( hit.shape, hit.faceIndex ), 0.0f, 0.0f };
 }
 
-UA3_API int ua3_shape_raycast( uint64_t id, ua3_vec3 originIn, ua3_vec3 translationIn, ua3_hit* hit )
+UA3_API int ua3_shape_raycast( uint64_t id, ua3_vec3 originIn, ua3_vec3 translationIn, int queryFlags, ua3_hit* hit )
 {
 	PxVec3 origin = originIn;
 	PxVec3 translation = translationIn;
@@ -2265,7 +2280,7 @@ UA3_API int ua3_shape_raycast( uint64_t id, ua3_vec3 originIn, ua3_vec3 translat
 	}
 	PxRaycastHit result;
 	PxU32 n = PxGeometryQuery::raycast( origin, translation / length, shape->getGeometry().any(), PxShapeExt::getGlobalPose( *shape, *shape->getActor() ),
-										length, PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX | PxHitFlag::eUV, 1, &result );
+										length, cast_flags( PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX | PxHitFlag::eUV, queryFlags ), 1, &result );
 	if ( n == 0 )
 	{
 		return 0;
@@ -2438,22 +2453,6 @@ PxGeometryHolder query_geometry( int kind, PxVec3 a, PxVec3 b, PxQuat rotation, 
 	return holder;
 }
 
-// The ray and shape casts' query flags (their hitTriggers argument): bit 0 hits triggers, bit 1
-// hits the back faces of mesh triangles (Physics.queriesHitBackfaces, QueryParameters.hitBackfaces).
-const int QueryHitTriggers = 1;
-const int QueryHitBackfaces = 2;
-const int QueryMultipleFaces = 4;
-const int QuerySkipInitial = 8;
-
-// The cast's hit flags: back faces through PhysX's eMESH_BOTH_SIDES (Unbound's choice, unmeasured).
-PxHitFlags cast_flags( PxHitFlags flags, int queryFlags )
-{
-	if ( queryFlags & QueryHitBackfaces )
-	{
-		flags |= PxHitFlag::eMESH_BOTH_SIDES;
-	}
-	return flags;
-}
 } // namespace
 
 // Reserve reusable multiple-face storage once before a batch, rather than per command.
@@ -2704,8 +2703,8 @@ UA3_API void ua3_d6_set_motion( uint64_t id, int axis, int motion )
 	}
 }
 
-// A limit's softness: stiffness > 0 makes it a spring. Linear limits take the contact distance as it
-// is; angular ones turn 0 into 0.01 (both measured).
+// A limit's softness: stiffness > 0 makes it a spring. Negative angular contact distances
+// request the SDK default; zero is an explicit zero pad.
 UA3_API void ua3_d6_set_linear_limit( uint64_t id, float extent, float stiffness, float damping, float restitution, float bounceThreshold,
 									  float contactDistance )
 {
@@ -2752,14 +2751,15 @@ UA3_API void ua3_d6_set_swing_limit( uint64_t id, float yAngle, float zAngle, fl
 }
 
 // Drives: 0 x, 1 y, 2 z, 3 swing, 4 twist, 5 slerp. acceleration: bit 0 an acceleration drive; on
-// the twist drive, bit 1 extends the joint's angular limits beyond (-pi, pi]
-// (HingeJoint.extendedLimits, which sets the twist drive on every configuration: PhysX's
-// eENABLE_EXTENDED_LIMITS, Unbound's choice, unmeasured).
+// the twist drive, bit 1 extends the solver limits beyond (-pi, pi], bit 2 enables free spin.
 UA3_API void ua3_d6_set_drive( uint64_t id, int index, float stiffness, float damping, float forceLimit, int acceleration )
 {
 	if ( PxD6Joint* d6 = d6_of( id ) )
 	{
-		d6->setDrive( static_cast<PxD6Drive::Enum>( index ), PxD6JointDrive( stiffness, damping, forceLimit, ( acceleration & 1 ) != 0 ) );
+		PxD6JointDrive drive( stiffness, damping, forceLimit, ( acceleration & 1 ) != 0 );
+		if ( index == PxD6Drive::eTWIST && ( acceleration & 4 ) != 0 )
+			drive.flags |= PxD6JointDriveFlag::eFREE_SPIN;
+		d6->setDrive( static_cast<PxD6Drive::Enum>( index ), drive );
 		if ( index == PxD6Drive::eTWIST )
 		{
 			d6->setConstraintFlag( PxConstraintFlag::eENABLE_EXTENDED_LIMITS, ( acceleration & 2 ) != 0 );
@@ -2801,7 +2801,7 @@ UA3_API void ua3_d6_twist( uint64_t id, float* angle, float* velocity )
 	}
 	PxTransform frame0 = d6->getLocalPose( PxJointActorIndex::eACTOR0 );
 	PxTransform pose0 = actors[0] != nullptr ? actors[0]->getGlobalPose() : PxTransform( PxIdentity );
-	PxVec3 axis = ( pose0.q * frame0.q ).getBasisVector0();
+	PxVec3 axis = ( pose0.q * frame0.q ).getBasisVector0().getNormalized();
 	*velocity = ( w1 - w0 ).dot( axis );
 }
 

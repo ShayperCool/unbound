@@ -950,7 +950,15 @@ static PxU32 D6JointSolverPrep(Px1DConstraint* constraints,
 		else 
 		{
 			if(driving & (1<<PxD6Drive::eTWIST))
-				ch.angular(bX, v.x, -2.0f * delta.x, drives[PxD6Drive::eTWIST]); 
+			{
+				const PxD6JointDrive& drive = drives[PxD6Drive::eTWIST];
+				Px1DConstraint* row = ch.angular(bX, v.x, -2.0f * delta.x, drive);
+				if(drive.flags & PxD6JointDriveFlag::eFREE_SPIN)
+				{
+					if(v.x > 0.0f) row->minImpulse = 0.0f;
+					if(v.x < 0.0f) row->maxImpulse = 0.0f;
+				}
+			}
 
 			if(driving & (1<<PxD6Drive::eSWING))
 			{
