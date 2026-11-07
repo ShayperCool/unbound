@@ -79,20 +79,41 @@ instead have separate flat face normals. The reference records the measured resu
 numbering, normal arithmetic, split thresholds, and n-gon triangle order are measured details of
 6000.0.71f1, not documented guarantees for other releases.
 
-`compare_normals.py <reference> <candidate> --expect Authored,Bare,Cube,Cylinder,Edges,Faces,Grid,Groups,Ico,Kite,Multi,Organic,Pieces,Polys,Prism,Sphere,Star,StarObj,Tent,Torus,Triangle,TwoUV`
-gates 264 cases. It writes every differing value, including ungated cases, to
+`compare_normals.py <reference> <candidate> --expect Authored,Bare,Bridge,BridgeObj,Cross,Cube,Cylinder,Edges,Faces,FlatPoly,FlatQuad,FlatTri,Grid,Groups,Ico,Kite,Multi,Organic,Pieces,Pinch,Polys,Prism,Seam,Slit,SlitGroups,Sphere,Star,StarObj,Tent,Torus,Triangle,TwoUV,WeldDiag,WeldQuad,WeldTri`
+gates 420 cases. It writes every differing value, including ungated cases, to
 `normal-comparison.json` beside the candidate. The original exact comparator retains tolerance 0.
-The result is 208 exact cases and 56 calculated-normal cases with residuals of at most 1.8e-7 per
-float32 component. The added non-planar polygon contributes nine of these, at most 1.2e-7. Residuals
-are marked separately from exact matches. Multi's 12 material-slot ordering cases now match after the imported binding fix.
+The result is 274 exact cases and 146 calculated-normal cases with residuals of at most 1.8e-7 per
+float32 component (topology, positions and UVs exact). The added non-planar polygon contributes nine
+of these, at most 1.2e-7; the imperfect-content fixtures below, whose base quad is non-planar or
+whose grid is waved, contribute 90, at most 1.5e-7. Residuals are marked separately from exact
+matches. Multi's 12 material-slot ordering cases now match after the imported binding fix.
 
 The SGI GLU sweep over mirrored float32 positions reproduces the convex, concave and non-planar
 n-gon triangle sequences in the reference. Mesh building and UV unwrapping share these triangles.
-Binary FBX 7.x polygon masks keep their original bits; edge smoothing is converted for face regions
-that do not need overlapping masks. Group masks in ASCII/legacy FBX, indexed smoothing layers,
-overlapping edge regions and intersecting polygons needing new attributes fail explicitly. These
+Binary FBX 7.x polygon masks keep their original bits. Edge smoothing becomes polygon masks:
+faces joined by smooth edges form regions coloured with the lowest bit no hard-adjacent region
+has; a hard edge inside a region (a sharp edge that encloses nothing) then separates its later
+face, whose smooth neighbours add its bits (Edges, Slit and Seam, exact in every variant). Group masks in ASCII/legacy FBX and indexed
+smoothing layers fail explicitly. These
 cases, mesh optimization order and OBJ naming remain follow-ups. Imported material-slot order and
 face bindings are also gated by `modelimport/material_slots.py`, including rendered slot overrides.
+
+## Imperfect content
+
+`Tools/make_imperfect_models.py` (Blender) writes ordinary but imperfect models into
+`Sources/Normals`: bridged holes whose corners repeat a position (Bridge, BridgeObj), coincident
+n-gon corners (Pinch), zero-area faces (FlatPoly, FlatTri, FlatQuad), faces folded by welding
+(WeldTri, WeldQuad, WeldDiag), a self-intersecting pentagram (Cross), and sharp edges that enclose
+no region (Slit as edge smoothing, SlitGroups as smoothing groups, Seam: a cylinder with sharp
+caps and one sharp side edge). The Editor (6000.0.71f1, every `Norm*` variant) imports all of them:
+- coincident corners of an n-gon merge into the first one; a zero-area n-gon gives no triangles;
+- a triangle or quad first loses corners repeating the previous corner's welded point; three
+  left make a triangle, four a quad; fewer, or a quad folded onto its diagonal, drop the face;
+  zero-area faces with distinct points stay;
+- a polygon whose edges cross is discarded with the rest of the mesh kept (Unbound warns);
+- with mesh optimization off, control points no face uses keep a vertex with normal (1, 1, 1)
+  and zero UVs (a separate capture with the default optimization showed them removed).
+Unbound matches all of them (topology exact, normals within the recorded residuals).
 
 The sheriff's `lightmapuvs` suite recipe checks both UV2 and this normal/topology matrix, without
 starting the Editor. Its UV2 expected set includes Grid, TwoUV and Cylinder.

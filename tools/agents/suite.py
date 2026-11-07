@@ -399,7 +399,7 @@ def recipes(release):
     R['lightmapuvs'] = guarded(lambda runs: [single_ref(), f'{runs}/lightmapuvs.jsonl', '--uv2', '--expect',
                                              'Cube,Multi,Pieces,Sphere,Ico,Barrel,Rock,Compound,Twins,Grid,TwoUV,Cylinder'])
     R['lightmapuvs'] += [py('compare_normals.py', single_ref(), '{runs}/unbound/lightmapuvs.jsonl', '--expect',
-                              'Authored,Bare,Cube,Cylinder,Edges,Faces,Grid,Groups,Ico,Kite,Multi,Organic,Pieces,Polys,Prism,Sphere,Star,StarObj,Tent,Torus,Triangle,TwoUV')]
+                              'Authored,Bare,Bridge,BridgeObj,Cross,Cube,Cylinder,Edges,Faces,FlatPoly,FlatQuad,FlatTri,Grid,Groups,Ico,Kite,Multi,Organic,Pieces,Pinch,Polys,Prism,Seam,Slit,SlitGroups,Sphere,Star,StarObj,Tent,Torus,Triangle,TwoUV,WeldDiag,WeldQuad,WeldTri')]
     for name in ('appfacts', 'customrt', 'flares', 'gpubuffers', 'lines', 'rtdepth'):
         R[name] = guarded(folder)
     # Keep the full strict verdict, including the disjoint cap/reversal controls.

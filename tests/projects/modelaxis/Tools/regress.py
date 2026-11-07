@@ -30,7 +30,7 @@ def main():
     run([PROBES/'lightmapuvs/compare.py',reference,candidate,'--uv2','--expect',
          'Cube,Multi,Pieces,Sphere,Ico,Barrel,Rock,Compound,Twins,Grid,TwoUV,Cylinder'])
     run([PROBES/'lightmapuvs/compare_normals.py',reference,candidate,'--expect',
-         'Authored,Bare,Cube,Cylinder,Edges,Faces,Grid,Groups,Ico,Kite,Multi,Organic,Pieces,Polys,Prism,Sphere,Star,StarObj,Tent,Torus,Triangle,TwoUV'])
+         'Authored,Bare,Bridge,BridgeObj,Cross,Cube,Cylinder,Edges,Faces,FlatPoly,FlatQuad,FlatTri,Grid,Groups,Ico,Kite,Multi,Organic,Pieces,Pinch,Polys,Prism,Seam,Slit,SlitGroups,Sphere,Star,StarObj,Tent,Torus,Triangle,TwoUV,WeldDiag,WeldQuad,WeldTri'])
     return 0
 
 if __name__ == '__main__': raise SystemExit(main())

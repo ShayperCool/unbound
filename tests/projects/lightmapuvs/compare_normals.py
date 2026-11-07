@@ -10,7 +10,10 @@ from pathlib import Path
 import struct
 
 FIELDS = ('vertexCount', 'subMeshes', 'vertices', 'normals', 'uv', 'uv2')
-RESIDUAL_ASSETS = {'Faces', 'Grid', 'Ico', 'Organic', 'Polys', 'Sphere', 'Torus'}
+RESIDUAL_ASSETS = {'Faces', 'Grid', 'Ico', 'Organic', 'Polys', 'Sphere', 'Torus',
+                   # Imperfect-content fixtures: a non-planar base quad, a waved grid.
+                   'Cross', 'FlatPoly', 'FlatQuad', 'FlatTri', 'Pinch', 'Slit', 'SlitGroups',
+                   'WeldDiag', 'WeldQuad', 'WeldTri'}
 RESIDUAL_VARIANTS = {'NormAngle', 'NormArea', 'NormCalc', 'NormCalc30', 'NormCalc180',
                      'NormFromAngle', 'NormGroups', 'NormNoSplit', 'NormUnweighted'}
 
