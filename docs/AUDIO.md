@@ -514,7 +514,8 @@ audio update.
 
 Wet mixing is unmeasured and fails clearly when enabled. Listener Distortion, 3D sources,
 surround output, live level/bypass transitions and other sample rates remain unmeasured.
-Flange, Normalize and Pitch Shifter remain separate work.
+Flange is covered by `tests/projects/audioflange`; Normalize is described below.
+Pitch Shifter remains separate work.
 
 
 # Mixer and source Chorus
@@ -555,3 +556,42 @@ setters and DSP clamps, serialized component fields, group/slot/source/component
 and stereo clips, parent/prefader routing and source filters on both sides of OnAudioFilterRead.
 Listener Chorus reports an error. Listener and 3D processing, other output layouts or buffer
 sizes, live parameter/bypass changes and rates beyond the two captured rates remain unmeasured.
+
+# Mixer Normalize
+
+`Normalize` is implemented for the captured Unity 6000.0.71f1 Linux profile in
+`tests/projects/audionormalize`: stereo output, 1024-frame DSP buffers, 48000 or
+44100 Hz, static mixer slots and parameters, mono or stereo clips. NativeApi 26
+adds its three parameters to the existing mixer configuration JSON. No component
+or additional control is invented.
+
+The [6000.0 Normalize Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioNormalizeEffect.html)
+describes gain towards a target amplitude and lists Fade in time, Lowest volume
+and Maximum amp. It specifies no envelope, channel-link or initialization rule.
+The [AudioGroup Inspector](https://docs.unity3d.com/6000.0/Documentation/Manual/AudioMixerInspectors.html)
+defines ordered slots, complete bypass and the optional dry path around a wet-mixed
+effect. [SetFloat](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Audio.AudioMixer.SetFloat.html)
+takes exposed parameters away from snapshot control and warns against calling it
+in Awake, OnEnable or AfterSceneLoad. This probe sets initial values in Start.
+
+Measured defaults and ranges agree with that Manual: Fade in time 5000 ms,
+0..20000; Lowest volume 0.1, 0..1; Maximum amp 20, 0..100000. Exposed values remain
+verbatim; only DSP values clamp. The captured output supports a linked absolute
+peak initialized to 1, decreasing by `1 / (fade_ms * sample_rate / 1000)` per frame
+or 1 when fade is zero, bounded below by Lowest volume and both channel magnitudes.
+Gain is `min(Maximum amp, 1 / peak)`. Single-precision arithmetic and its ordering
+matter across the long decay. These captures support this
+inference; it is not a documented guarantee for every Unity release or context.
+
+Two independent Native projects agree bit for bit across 36,831,499 values per
+rate before publishing one canonical `Reference/unity-6000.0.71f1` profile. Cases
+include silence, impulses, small/large/bipolar DC, noise, tones, ramps and amplitude
+steps in either channel, defaults and controls, serialized values, setter clamps,
+mono clips, bypass and Master routing. Every startup frame remains compared.
+The committed authored inputs assemble without the Editor; the declared gate runs
+the engine and preserves strict float/PCM failures under the existing tolerances.
+
+Other rates, buffers and layouts fail explicitly. Enabled slot wet mixing and live
+Normalize parameter, bypass or placement changes fail clearly. Other effect wet
+mixing, timed transitions and Pitch Shifter remain follow-ups. Existing audio
+residuals are retained unchanged.
