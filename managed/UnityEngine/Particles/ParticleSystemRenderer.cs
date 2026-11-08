@@ -1253,7 +1253,8 @@ namespace UnityEngine
                 {
                     // Freeform quads stretch along the velocity in the output space, its scale
                     // included (6000.0.71f1, tests/projects/particlerender
-                    // freenorm/transform/*/front/transform).
+                    // freenorm/transform/*/front/transform; the camera velocity part on a scaled
+                    // emitter is unmeasured).
                     AddFreeform(r, position, size, emitterScale, toWorld.MultiplyVector(v), speed, rotation, color, uv, view);
                     return;
                 }
@@ -1323,7 +1324,7 @@ namespace UnityEngine
             /// Measured with rotated and scaled emitters for each scaling mode and simulation space
             /// (freenorm/transform/*); there, with a y scale other than 1, the Editor turns a quad
             /// whose velocity points partly along the view by another stretch angle, unresolved
-            /// (known.json freeform-stretch-angle). Unmeasured: a pivot on a scaled emitter; a
+            /// (known.json freeform-stretching). Unmeasured: a pivot on a scaled emitter; a
             /// normalDirection other than 1 (not applied: every corner takes the flat normal). A particle at rest has no
             /// stretch direction: the Editor's bake gives it NaN corners (drawn as nothing) and +Z
             /// as normal, which Unbound keeps for bakes and collapses onto the particle for

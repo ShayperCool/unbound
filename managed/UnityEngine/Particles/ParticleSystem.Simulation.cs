@@ -83,15 +83,31 @@ namespace UnityEngine
         /// disabled does not start it; one that stopped playing does not either.</summary>
         internal void StartWithParent(ParticleSystem parent)
         {
-            if (m_IsPlaying || m_IsPaused || !Compat.ParticleSubEmitterStartMeasured) return;
-            if (!parent.m_Registered || !parent.m_IsPlaying || parent.m_IsPaused || !parent.m_SubEmitters.enabled) return;
-            float raw = parent.m_Main.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
-            if (!(raw * parent.m_Main.simulationSpeed > 0f) || !parent.Drives(this)) return;
+            if (m_IsPlaying || m_IsPaused || !Compat.ParticleSubEmitterStartMeasured || !parent.StartsSubEmitters(0)) return;
+            if (!parent.Drives(this)) return;
             m_IsPlaying = true;
             m_StopEmitting = true;
             m_StartedByParent = true;
             ParticleSystemManager.NoteStartedByParent(this);
         }
+
+        /// <summary>Whether this system's update this frame starts its sub-emitters: it plays (or,
+        /// as a sub-emitter itself, its own parent starts it this frame, so a chain starts
+        /// whatever the update order: Unbound's choice, unmeasured), is not paused, has an enabled
+        /// Sub Emitters module and its time moves.</summary>
+        bool StartsSubEmitters(int depth)
+        {
+            if (!m_Registered || m_IsPaused || !m_SubEmitters.enabled) return false;
+            float raw = m_Main.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
+            if (!(raw * m_Main.simulationSpeed > 0f)) return false;
+            if (m_IsPlaying) return true;
+            var parent = m_SubEmitterParent;
+            return depth < MaxSubEmitterChain && parent != null && !parent.m_Destroyed && parent != this
+                && parent.Drives(this) && parent.StartsSubEmitters(depth + 1);
+        }
+
+        /// <summary>How far up a chain of sub-emitters the start looks (a guard against cycles).</summary>
+        const int MaxSubEmitterChain = 8;
 
         bool Drives(ParticleSystem child)
         {
@@ -267,6 +283,15 @@ namespace UnityEngine
             var t = m_GameObject.m_Transform;
             if (m_Main.scalingMode == ParticleSystemScalingMode.Hierarchy) return t.localToWorldMatrix;
             return Matrix4x4.TRS(t.position, t.rotation, EmitterScale());
+        }
+
+        /// <summary><see cref="EmitterMatrix"/> moved to <paramref name="position"/> (where the
+        /// emitter was when a particle was born).</summary>
+        Matrix4x4 EmitterMatrixAt(Vector3 position)
+        {
+            var m = EmitterMatrix();
+            m.m03 = position.x; m.m13 = position.y; m.m23 = position.z;
+            return m;
         }
 
         /// <summary>Simulation space to world.</summary>
@@ -669,7 +694,7 @@ namespace UnityEngine
                     m_SpeedNt = Mathf.Clamp01((birthTime - age) / duration);
                 }
                 int index = aligned + j;
-                var emitter = Matrix4x4.TRS(EmitterPositionAt(age), t.rotation, EmitterScale());
+                var emitter = EmitterMatrixAt(EmitterPositionAt(age));
                 m_ShapeTime = m_TotalTime - age;
                 int spread = request.spreadIndex >= 0 ? request.spreadIndex : local;
                 int spreadCount = request.spreadIndex >= 0 ? request.spreadCount : request.count;
@@ -896,7 +921,7 @@ namespace UnityEngine
                 return;
             }
             var t = m_GameObject.m_Transform;
-            var emitter = Matrix4x4.TRS(EmitterPositionAt(preAge), t.rotation, EmitterScale());
+            var emitter = EmitterMatrixAt(EmitterPositionAt(preAge));
             float nt = Mathf.Clamp01(birthTime / Mathf.Max(m_Main.duration, 0.0001f));
             if (!m_HasContext) m_Context = MakeContext();
             m_Newborn = true;
@@ -1338,6 +1363,9 @@ namespace UnityEngine
             public float NoiseTime;
             public bool InheritCurrent;
             public bool BirthSubs;
+            /// <summary>Whether a parent still emits Birth children in the step its life ends
+            /// (releases other than the measured one keep the previous behaviour).</summary>
+            public bool BirthsInFinalStep;
             public bool TemporaryLane;
         }
 
@@ -1366,6 +1394,7 @@ namespace UnityEngine
             c.InheritCurrent = m_InheritVelocity.enabled && m_InheritVelocity.mode == ParticleSystemInheritVelocityMode.Current && simWorld;
             c.NoiseTime = m_NoiseScroll;
             c.BirthSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Birth);
+            c.BirthsInFinalStep = !Compat.ParticleBirthStepsMeasured;
             return c;
         }
 
@@ -1512,7 +1541,7 @@ namespace UnityEngine
             // A particle whose life ends exactly at the end of this step (kept at zero life until
             // the next) emits no Birth children in it, as one that dies inside it (6000.0.71f1,
             // tests/projects/particlerender birthstart/deathtie05 and deathin05, subcull/*).
-            if (c.BirthSubs && p.m_AgePercent < 100f) BirthSubEmitters(ref p, ageBefore, p.m_StartLifetime - p.m_Lifetime, dt, before);
+            if (c.BirthSubs && (p.m_AgePercent < 100f || c.BirthsInFinalStep)) BirthSubEmitters(ref p, ageBefore, p.m_StartLifetime - p.m_Lifetime, dt, before);
             return true;
         }
 

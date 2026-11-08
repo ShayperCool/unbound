@@ -508,7 +508,7 @@
    "api/rt/world/trailsonly/trailmesh"
   ]
  },
- "vertex-distance-tie": {
+ "vertex-distance-birth-slot": {
   "reason": "A minimum vertex distance that keeps a moving particle from taking a trail point every step (cap/*/die0ntmv3: 0.3 with particles moving 0.1 a step, and the controls off that tie, die0ntmv0.29 and die0ntmv0.31): a birth waiting for the slot of a particle leaving at zero life comes a step later in Unbound than in the Editor, and the trails, carriers and later births follow; particles, counts and seeds match up to there. Not a float tie (the 0.29 and 0.31 controls differ as the tie does): an unresolved rule tied to the minimum vertex distance. With no minimum distance (die0ntmv0) every particle, birth and removal matches.",
   "keys": [
    "cap/burst/die0ntmv3/0.05/10",

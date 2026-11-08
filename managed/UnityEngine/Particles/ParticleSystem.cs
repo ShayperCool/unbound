@@ -1054,6 +1054,7 @@ namespace UnityEngine
         /// <summary>Starts a new playback from time 0, keeping the particles that are alive.</summary>
         internal void Restart(bool prewarm)
         {
+            m_StartedByParent = false;
             BeginPlaybackRandom();
             uint seed = m_PlaybackSeed;
             m_RandomState = ((ulong)seed << 32) ^ 0x9e3779b97f4a7c15UL ^ seed;
@@ -1122,6 +1123,7 @@ namespace UnityEngine
 
         void StopSelf(ParticleSystemStopBehavior behavior)
         {
+            m_StartedByParent = false;
             if (behavior == ParticleSystemStopBehavior.StopEmittingAndClear)
             {
                 bool wasPlaying = m_IsPlaying;
@@ -1602,7 +1604,8 @@ namespace Unbound.Runtime
                 var ps = s_StartedByParent[i];
                 if (ps == null || !ps.m_StartedByParent) continue;
                 ps.m_StartedByParent = false;
-                if (ps.m_Count > 0 || ps.HasAliveTrails || !ps.m_IsPlaying) continue;
+                // A script that played, paused or stopped it since keeps what it set.
+                if (ps.m_Count > 0 || ps.HasAliveTrails || !ps.m_IsPlaying || ps.m_IsPaused || !ps.m_StopEmitting) continue;
                 ps.m_IsPlaying = false;
                 ps.m_StopEmitting = false;
             }

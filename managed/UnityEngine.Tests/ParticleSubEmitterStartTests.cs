@@ -161,6 +161,34 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AChildAScriptPlayedAfterTheUpdateKeepsPlaying()
+        {
+            var parent = Pair(ParticleSystemSubEmitterType.Death, out var child);
+            parent.Play();
+            Frame(() => child.Play());
+            Assert.True(child.isPlaying);
+            Assert.True(child.isEmitting);
+        }
+
+        [Fact]
+        public void AChainOfSubEmittersStartsWhateverTheUpdateOrder()
+        {
+            // C (made first, so updated first) is the sub-emitter of B, itself A's sub-emitter.
+            var c = Make("c", s => { var e = s.emission; e.SetBursts(new[] { new ParticleSystem.Burst(0f, 1) }); });
+            var b = Make("b", s => { var e = s.emission; e.SetBursts(new[] { new ParticleSystem.Burst(0f, 1) }); });
+            var a = Make("a", s => { var e = s.emission; e.SetBursts(new[] { new ParticleSystem.Burst(0f, 2) }); });
+            var bs = b.subEmitters; bs.enabled = true; bs.AddSubEmitter(c, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            var aSubs = a.subEmitters; aSubs.enabled = true; aSubs.AddSubEmitter(b, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            a.Play();
+            bool bPlaying = false, cPlaying = false;
+            float cTime = 0f;
+            Frame(() => { bPlaying = b.isPlaying; cPlaying = c.isPlaying; cTime = c.time; });
+            Assert.True(bPlaying);
+            Assert.True(cPlaying);
+            Assert.Equal(Dt, cTime, 4);
+        }
+
+        [Fact]
         public void AnUnmeasuredReleaseKeepsTheChildStoppedUntilItHasParticles()
         {
             ProjectInfo.UnityVersion = "2022.3.10f1";

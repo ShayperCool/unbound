@@ -80,7 +80,7 @@ any other difference. Two concern dead particles, `world-trail-death-head` and t
   the trail lifetime off the step grid (`cap/*/die0nt`) match every particle, also with no minimum
   vertex distance (`cap/*/die0ntmv0`), so the last trail point a carrier keeps is the one its own
   steps added (no point at its death).
-- `vertex-distance-tie`: with a minimum vertex distance that keeps a particle from taking a point
+- `vertex-distance-birth-slot`: with a minimum vertex distance that keeps a particle from taking a point
   every step (0.3 with particles moving 0.1 a step, `cap/*/die0ntmv3`), a birth waiting for the slot
   of a particle leaving at zero life comes a step later in Unbound. The controls off that tie
   (`cap/*/die0ntmv0.29`, `die0ntmv0.31`, recorded last) differ the same way, so it is not a float

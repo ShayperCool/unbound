@@ -117,7 +117,9 @@ namespace UnityEngine
                 {
                     // The Editor fills the texels from the bake's 16-bit index buffer read as
                     // 32-bit words: each texel holds two indices, the first in the low half; the
-                    // texels past them hold whatever its buffer held (left 0 here).
+                    // texels past them hold whatever its buffer held (left 0 here). Each word
+                    // becomes the nearest float, as an unsigned value (measured only below 96 for
+                    // the second index).
                     int n = geometry.IndexCount;
                     for (int i = 0; 2 * i < n; i++)
                     {
