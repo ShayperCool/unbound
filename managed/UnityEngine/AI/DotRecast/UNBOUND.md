@@ -31,12 +31,29 @@ Altered (marked `Unbound:` in the sources):
   reach an off-mesh link from where the update's step took them and begin to cross it in that
   update (`tests/projects/navlinks`); `DtCrowdAgent.NextVelocity` gives the next step's velocity
   without taking it (the agents turn towards it);
-- crowd avoidance as Unity's: Detour's adaptive patterns around 0.7 of the desired velocity offset
-  right by 0.04 of it, candidates weighed 1 (desired), 0.5 (current) and 2.5 (time to impact)
-  within the prediction time, against the neighbours' own velocities (not RVO's halves), no side
-  penalty, grazing paths and overlapping neighbours moved away from free; a desired velocity meeting
-  nothing in time is kept whole; NavMesh edges count up to the next corner (32 edges, 64 polygons
-  of local boundary); neighbours count by avoidance priority (as or more important than the agent);
+- crowd avoidance as Unity's (`tests/projects/avoidance`, navcost `loop.redirect*`, navlinks):
+  the agents' velocities step towards the last plan before anything else; an agent that avoids
+  gathers its neighbours from a proximity grid of the agents' positions whose cells, along x and
+  z, are the mean over every agent (all agent types) of its diameter plus how far it goes within
+  the prediction time along that axis, at least 1 m; it queries the cells around the square of its
+  radius plus how far it goes at full speed within the prediction time (64 candidates) and keeps,
+  of the agents as or more important than it whose heights meet it and that are not behind it by
+  more than both radii along the way it last meant to go, those it could reach within the
+  prediction time with both at full speed, the soonest 8; its NavMesh edges are the nearest 8 of
+  16 polygons within its radius plus half the way it goes within the prediction time, none while
+  the corner it last steered by is the end of its path or a link within that reach (a path given
+  between updates keeps that corner until the agent steers again; steeringTarget reports it);
+  sampling: with nothing to avoid the desired velocity is kept as it is; else, in the horizontal
+  plane relative to the agent, the desired velocity is the first candidate, then Detour's adaptive
+  rings (the presets 5/2/1, 5/2/2, 7/2/3, 7/3/3, every other ring turned half a step, in order of
+  angle) around 0.7 of the desired velocity offset right by 0.04 of it; candidates are weighed 0.2
+  by their distance from the desired velocity, 0.1 from the current one (over the planning
+  speed: braked at the end of a path) and 2 / (0.1 + time to impact / prediction time); a
+  neighbour is met at the candidate's velocity against its own velocity shared by responsibility
+  (the neighbour's alone when it is more important or does not avoid the agent in turn, half each
+  between equals that avoid each other), an overlapping one at -2·tmin/tmax; an edge the agent is
+  behind does not count, one nearer than 5 cm counts 2.5 cm in front of it, and an edge's time
+  to impact counts double; an agent about to take a link keeps its desired velocity;
 - crowd separation and collisions as Unity's: a push of 1.4·(1 − (d/2.5r)²) from more important
   neighbours (half from equals), overlaps resolved by the less important agent alone (half each
   between equals);

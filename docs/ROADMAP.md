@@ -194,13 +194,13 @@ In dependency order; each item ends with an Editor-reference probe.
       nodes at the portal point nearest their parent, ranked by cost). Runtime builds give the
       Editor's polygons (unmerged monotone regions, Recast's 1.3-voxel contour error, ledges past
       the climb) but at one obstacle corner (13 of 211 values). Agents: Unity's avoidance, measured
-      in `tests/projects/avoidance` (12 sets, 95% of 12618 records; braking and walls 100%):
-      Detour's adaptive sampling with Unity's bias, offset and weights, the prediction time, the
-      kept desired velocity, priorities, separation, overlap resolution, NavMesh edges up to the
-      next corner, braking (v²/2d once the end is within two radii at speed), the update order.
-      Left: near-ties between sides once agents move, grazing paths at exactly the radii,
-      separation from a neighbour behind in a path's first frames, the height Unity keeps or drops
-      in a desired velocity on slopes; the probe's six agents interact, so these carry on.
+      in `tests/projects/avoidance` (12 sets, 94% of 12618 records; braking and walls 100%):
+      the neighbours (a proximity grid sized from all agents, the soonest reachable 8, not behind,
+      by priority) and NavMesh edges (the nearest 8, none near the path's end) Unity's agents
+      avoid, Detour's adaptive sampling with the desired velocity first and Unity's bias, offset,
+      weights and responsibility shares, separation, overlap resolution, braking (v²/2d once the
+      end is within two radii at speed), the update order. Left: grid cell boundaries in crowded
+      scenes and the long runs, where any difference carries on.
 - [x] Particle System against an Editor probe (`tests/projects/particles`: 93 scenarios of
       particles per step, real frames and 18 images; 1491 of 1559 records and every image but one
       match): stepping (Unity's equal sub-steps, emission timing and phase across loops, prewarm,
