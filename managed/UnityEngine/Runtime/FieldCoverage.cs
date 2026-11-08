@@ -45,7 +45,7 @@ namespace Unbound.Runtime
                 foreach (var input in documents.Where(input => input.Context == null && input.ClassId == 1))
                     owners[(input.FileGuid ?? "", input.FileId)] = !Property(input.Body, "m_CorrespondingSourceObject").AsRef().IsNull;
                 foreach (var input in documents.Where(input => input.Context == null && input.ClassId == 20))
-                    cameras[(input.FileGuid ?? "", Property(input.Body, "m_GameObject").AsRef().FileId)] = Property(input.Body, "m_Enabled").AsInt(1) != 0;
+                    cameras[(input.FileGuid ?? "", Property(input.Body, "m_GameObject").AsRef().FileId)] = Property(input.Body, "m_Enabled").AsBool(true);
             }
             foreach (var group in documents.Where(doc => doc.ClassId == 115 && doc.FileGuid?.StartsWith("bundle:", StringComparison.Ordinal) == true).GroupBy(doc => doc.FileGuid))
                 BundleFiles.RegisterScripts(group.Key.Substring("bundle:".Length), group.Select(input => new YDocument

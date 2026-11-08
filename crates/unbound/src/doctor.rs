@@ -469,7 +469,7 @@ mod tests {
         let dependencies: serde_json::Value = runtime.call("field-coverage", &json!([
             {"classId": 124, "fileId": 1, "typeName": "FlareLayer", "body": {"m_GameObject": {"fileID": "10"}, "m_Enabled": "1"}},
             {"classId": 124, "fileId": 2, "typeName": "FlareLayer", "body": {"m_GameObject": {"fileID": "20"}, "m_Enabled": "1"}},
-            {"classId": 20, "fileId": 3, "typeName": "Camera", "body": {"m_GameObject": {"fileID": "20"}, "m_Enabled": "0"}},
+            {"classId": 20, "fileId": 3, "typeName": "Camera", "body": {"m_GameObject": {"fileID": "20"}, "m_Enabled": "false"}},
             {"context": "projectSettings", "classId": 55, "fileId": 4, "typeName": "PhysicsManager", "body": {"m_Gravity": {"x": "0", "y": "-9.81", "z": "0", "ignored": "0"}, "ignored": "0"}},
             {"classId": 1, "fileId": 10, "typeName": "GameObject", "body": {}},
             {"classId": 1, "fileId": 20, "typeName": "GameObject", "body": {}}
