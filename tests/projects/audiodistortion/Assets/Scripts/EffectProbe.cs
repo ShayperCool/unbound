@@ -335,6 +335,10 @@ public class EffectProbe : MonoBehaviour
         new[] { "spatial_dry_supersonic_away", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=10000", "head=1", "move=1", "speed=-400", "warm=1" },
         new[] { "spatial_dry_supersonic_towards", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,2000", "max=10000", "head=1", "move=1", "speed=10000", "warm=1" },
         new[] { "spatial_dry_boundary_unrouted_pitch", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "blend=0", "pitch=1.5", "frames=4096", "cliprate=44100", "route=none", "warm=1" },
+        new[] { "spatial_dry_wrap_customrolloff", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=40,0,0", "max=20", "rolloff=custom", "curve=flat", "pan=0.3", "wrap=CustomRolloff", "warm=1" },
+        new[] { "spatial_dry_wrap_spatialblend", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=40,0,0", "max=20", "rolloff=custom", "curve=flat", "pan=0.3", "wrap=SpatialBlend", "warm=1" },
+        new[] { "spatial_dry_wrap_spread", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=40,0,0", "max=20", "rolloff=custom", "curve=flat", "pan=0.3", "wrap=Spread", "warm=1" },
+        new[] { "spatial_dry_wrap_reverbzonemix", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=40,0,0", "max=20", "rolloff=custom", "curve=flat", "pan=0.3", "wrap=ReverbZoneMix", "warm=1", "zone=1", "frames=65536" },
     };
     public const int BlockCount = 32;
     public const int ClipFrames = BlockCount * 1024;
@@ -548,6 +552,12 @@ public class EffectProbe : MonoBehaviour
                 var type = (AudioSourceCurveType)Enum.Parse(typeof(AudioSourceCurveType), multi);
                 source.SetCustomCurve(type, curve);
                 if (type == AudioSourceCurveType.CustomRolloff) source.rolloffMode = AudioRolloffMode.Custom;
+            }
+            string wrapCurve = Option(key, "wrap=", "");
+            if (wrapCurve != "") {
+                var curve = AnimationCurve.Linear(0, 0.8f, 1, 0.2f);
+                curve.postWrapMode = WrapMode.Loop;
+                source.SetCustomCurve((AudioSourceCurveType)Enum.Parse(typeof(AudioSourceCurveType), wrapCurve), curve);
             }
             Rigidbody body = null;
             string bodyTarget = Option(key, "body=", "");

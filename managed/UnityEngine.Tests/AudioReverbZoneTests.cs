@@ -183,6 +183,37 @@ namespace UnityEngine.Tests
             finally { ProjectInfo.UnityVersion = release; }
         }
 
+        [Theory]
+        [InlineData(WrapMode.Default, 0.2f)]
+        [InlineData(WrapMode.Loop, 0.8f)]
+        [InlineData(WrapMode.PingPong, 0.8f)]
+        public void DistanceCurvesHonorTheirWrapModeBeyondMaximumDistance(WrapMode mode, float expected)
+        {
+            string release = ProjectInfo.UnityVersion;
+            try
+            {
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                var go = new GameObject("wrapping-source");
+                m_Objects.Add(go);
+                go.transform.position = new Vector3(0, 0, 40);
+                var source = go.AddComponent<AudioSource>();
+                source.maxDistance = 20;
+                var curve = AnimationCurve.Linear(0, 0.8f, 1, 0.2f);
+                curve.postWrapMode = mode;
+                source.SetCustomCurve(AudioSourceCurveType.SpatialBlend, curve);
+                source.SetCustomCurve(AudioSourceCurveType.Spread, curve);
+                source.SetCustomCurve(AudioSourceCurveType.ReverbZoneMix, curve);
+                AudioSystem.s_HearingPosition = Vector3.zero;
+                source.SendPacket(19, null, 1, false);
+                Assert.Equal(expected, m_Backend.ParamsOf(19).SpatialBlend);
+                Assert.Equal(expected * 360f, m_Backend.ParamsOf(19).Spread);
+                float send = source.ReverbZoneSend();
+                source.reverbZoneMix = expected;
+                Assert.Equal(source.ReverbZoneSend(), send);
+            }
+            finally { ProjectInfo.UnityVersion = release; }
+        }
+
         [Fact]
         public void TheSendGainIsTheMixInWholeMillibels()
         {

@@ -43,7 +43,7 @@ exactly on 13369637 static values per rate; the earlier
 8782034 values per rate are unchanged. `publish.py --extend` checks every earlier
 metadata value and sample before it adds controls.
 
-The separate `--profile spatial` records 222 mono/stereo placement controls, each
+The separate `--profile spatial` records 226 mono/stereo placement controls, each
 with 32768 frames, under `Reference/unity-6000.0.71f1/spatial-rate-RATE`.
 Record two independent runs with `native.py --profile spatial`; verify their
 metadata and every raw sample are identical, then publish one with
@@ -69,3 +69,9 @@ profile, retaining all raw failures while separately requiring the measured dry
 controls to pass. Only the two original zone cases are outside that dry gate.
 First-ever zone activation after rendering starts and the last source-buffer
 send remain unresolved. These retain the 3D component rejection.
+
+Four additional Loop-wrap controls evaluate CustomRolloff, SpatialBlend, Spread
+and ReverbZoneMix at twice maxDistance. On 6000.0.71f1 they return the first
+curve value (0.8), rather than holding the final value (0.2). The reverb case
+uses a long clip to isolate curve evaluation from source completion. All prior
+oracle samples remain unchanged.
