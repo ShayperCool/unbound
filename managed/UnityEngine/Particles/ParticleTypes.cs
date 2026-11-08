@@ -447,12 +447,21 @@ namespace UnityEngine
         public Component colliderComponent => m_ColliderInstanceID != 0 ? Unbound.Runtime.ObjectRegistry.FindById(m_ColliderInstanceID) as Component : null;
     }
 
-    /// <summary>Collision and trigger queries.</summary>
+    /// <summary>Collision and trigger queries. Each first completes the frame's particle update
+    /// (see <see cref="Unbound.Runtime.ParticleSystemManager.Sync"/>).</summary>
     public static partial class ParticlePhysicsExtensions
     {
+        static void WriteBackTriggerParticlesSynced(this ParticleSystem ps, ParticleSystemTriggerEventType type,
+            List<ParticleSystem.Particle> particles, int offset, int count, bool whole)
+        {
+            Unbound.Runtime.ParticleSystemManager.Sync();
+            ps.WriteBackTriggerParticles(type, particles, offset, count, whole);
+        }
+
         [Obsolete("GetCollisionEvents function using ParticleCollisionEvent[] is deprecated. Use List<ParticleCollisionEvent> instead.", false)]
         public static int GetCollisionEvents(this ParticleSystem ps, GameObject go, ParticleCollisionEvent[] collisionEvents)
         {
+            Unbound.Runtime.ParticleSystemManager.Sync();
             int n = 0;
             foreach (var (other, e) in ps.m_CollisionEvents)
             {
@@ -463,10 +472,15 @@ namespace UnityEngine
             return n;
         }
 
-        public static int GetSafeCollisionEventSize(this ParticleSystem ps) => ps.m_CollisionEvents.Count;
+        public static int GetSafeCollisionEventSize(this ParticleSystem ps)
+        {
+            Unbound.Runtime.ParticleSystemManager.Sync();
+            return ps.m_CollisionEvents.Count;
+        }
 
         public static int GetCollisionEvents(this ParticleSystem ps, GameObject go, List<ParticleCollisionEvent> collisionEvents)
         {
+            Unbound.Runtime.ParticleSystemManager.Sync();
             collisionEvents?.Clear();
             int n = 0;
             foreach (var (other, e) in ps.m_CollisionEvents)
@@ -478,10 +492,17 @@ namespace UnityEngine
             return n;
         }
 
-        public static int GetSafeTriggerParticlesSize(this ParticleSystem ps, ParticleSystemTriggerEventType type) => ps.m_TriggerParticles[(int)type].Count;
+        public static int GetSafeTriggerParticlesSize(this ParticleSystem ps, ParticleSystemTriggerEventType type)
+        {
+            Unbound.Runtime.ParticleSystemManager.Sync();
+            return ps.m_TriggerParticles[(int)type].Count;
+        }
 
-        public static int GetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles) =>
-            ps.ReadTriggerParticles(type, particles);
+        public static int GetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles)
+        {
+            Unbound.Runtime.ParticleSystemManager.Sync();
+            return ps.ReadTriggerParticles(type, particles);
+        }
 
         /// <summary>The particles of a trigger event with the colliders each one is inside, as the
         /// Trigger module's colliderQueryMode collects them (Disabled: none, One: the first in the
@@ -503,11 +524,11 @@ namespace UnityEngine
         /// <summary>Writes particles[offset, offset + count) back to the particles the trigger
         /// entries at the same positions came from, during OnParticleTrigger.</summary>
         public static void SetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles, int offset, int count) =>
-            ps.WriteBackTriggerParticles(type, particles, offset, count, whole: false);
+            ps.WriteBackTriggerParticlesSynced(type, particles, offset, count, whole: false);
 
         /// <summary>Writes every particle of the list back, as SetParticles(particles) writes the
         /// whole array.</summary>
         public static void SetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles) =>
-            ps.WriteBackTriggerParticles(type, particles, 0, particles?.Count ?? 0, whole: true);
+            ps.WriteBackTriggerParticlesSynced(type, particles, 0, particles?.Count ?? 0, whole: true);
     }
 }

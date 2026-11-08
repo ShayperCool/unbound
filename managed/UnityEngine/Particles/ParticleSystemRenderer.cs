@@ -333,6 +333,8 @@ namespace UnityEngine
 
         internal override Bounds CullingBounds => m_CullingBounds;
 
+        internal override bool NothingToDraw => System is ParticleSystem ps && ps.m_DrawPending;
+
         /// <summary>Whether <see cref="CullingBounds"/> cover everything the renderer draws, so
         /// cameras may cull it by them (see <see cref="ParticleSystem.CullingFrameUpdate"/>).</summary>
         internal bool CullingBoundsCoverDraw
@@ -395,8 +397,14 @@ namespace UnityEngine
                 min = Vector3.Min(min, w - new Vector3(r, r, r));
                 max = Vector3.Max(max, w + new Vector3(r, r, r));
             }
-            m_CullingBounds = new Bounds((min + max) * 0.5f, max - min);
+            // Cameras treat bounds without extent as unknown (always seen); an empty system's
+            // point at its emitter is seen only in view (6000.0.71f1, tests/projects/particlerender
+            // firstvis/*_empty_*), so the point keeps a minimal extent.
+            m_CullingBounds = new Bounds((min + max) * 0.5f, Vector3.Max(max - min, new Vector3(MinCullingExtent, MinCullingExtent, MinCullingExtent)));
         }
+
+        /// <summary>The smallest size of particle culling bounds (see PrepareCullingBounds).</summary>
+        const float MinCullingExtent = 1e-4f;
 
         /// <summary>How far from a particle's centre its mesh reaches, in particle sizes: the
         /// farthest corner of any of the renderer's meshes.</summary>
@@ -435,7 +443,7 @@ namespace UnityEngine
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
             var ps = System;
-            if (ps == null) return;
+            if (ps == null || ps.m_DrawPending) return;
             CollectTrails(ps, camera, into);
             if (ps.m_Count == 0 || m_RenderMode == ParticleSystemRenderMode.None) return;
             // Without a material the particles draw with the error material (measured: magenta).

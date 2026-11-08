@@ -17,21 +17,16 @@ class ResidualBounds(unittest.TestCase):
         actual = [row('parent.first.OnDestroy')]
         self.assertNotEqual(compare.project_case(expected)[0], compare.project_case(actual)[0])
 
-    def test_particle_allowance_is_one_pending_frame_only(self):
-        prefix = [row('after.particles', frame=0, phase=compare.PARTICLE_PHASE, detail='particleTicks=1 particles=1'),
-                  row('returned', detail='scriptEnabled=false')]
-        def view(tick):
-            return compare.project_case(prefix + [row('after.particles', phase=compare.PARTICLE_PHASE,
-                                                      detail=f'particleTicks={tick} particles=1')])[0]
-        self.assertEqual(view(1), view(2))
-        self.assertNotEqual(view(2), view(3))
-        self.assertNotEqual(compare.project_case([row('after.particles', phase=compare.PARTICLE_PHASE,
-                                                     detail='particleTicks=1 particles=1')])[0], view(2))
-
-    def test_unexpected_particle_callback_phase_is_not_filtered(self):
+    def test_particle_callbacks_and_ticks_are_strict(self):
         prefix = [row('returned', detail='scriptEnabled=false')]
         expected = compare.project_case(prefix)[0]
         self.assertNotEqual(expected, compare.project_case(prefix + [row('parent.first.OnParticleTrigger')])[0])
+        ticks = lambda tick: compare.project_case(prefix + [row('after.particles', detail=f'particleTicks={tick}')])[0]
+        self.assertNotEqual(ticks(1), ticks(2))
+
+    def test_first_frame_visibility_is_strict(self):
+        visible = [row('parent.first.OnBecameVisible', frame=0, phase=compare.RENDER_PHASE, case='delayFraction')]
+        self.assertNotEqual(compare.project_case(visible)[0], compare.project_case(visible * 2)[0])
 
     def test_unload_requires_callbacks_before_completion(self):
         rows = [row('unload.return', detail='targetNull=false', case='unload'),

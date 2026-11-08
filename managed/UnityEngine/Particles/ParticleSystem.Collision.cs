@@ -212,6 +212,13 @@ namespace UnityEngine
         bool Trigger(ref Particle p)
         {
             var T = m_Trigger;
+            // A module without a collider reports no event, Outside included (6000.0.71f1,
+            // tests/projects/destroyphases OnAnimatorMove/OnAnimatorIK: the only slot holds no
+            // collider, and no OnParticleTrigger comes).
+            bool anyCollider = false;
+            foreach (var c in T.colliders)
+                if (c != null) { anyCollider = true; break; }
+            if (!anyCollider) return true;
             var toWorld = SimulationToWorld();
             var world = toWorld.MultiplyPoint3x4(p.m_Position);
             var size = CurrentSize3D(ref p);

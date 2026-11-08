@@ -334,6 +334,10 @@ namespace UnityEngine
 
         internal virtual void PrepareCullingBounds() { }
 
+        /// <summary>The renderer has nothing to draw this frame: cameras neither draw it nor see
+        /// it (no visibility, no OnWillRenderObject).</summary>
+        internal virtual bool NothingToDraw => false;
+
         /// <summary>The world bounds cameras cull this renderer by (after
         /// <see cref="PrepareCullingBounds"/>): its bounds, unless the renderer keeps others.</summary>
         internal virtual Bounds CullingBounds => bounds;
@@ -370,7 +374,7 @@ namespace UnityEngine
             {
                 if (!renderer || renderer.forceRenderingOff || !renderer.m_Enabled) continue;
                 var go = renderer.m_GameObject;
-                if ((cullingMask & (1 << go.m_Layer)) == 0 || !go.activeInHierarchy) continue;
+                if ((cullingMask & (1 << go.m_Layer)) == 0 || !go.activeInHierarchy || renderer.NothingToDraw) continue;
                 renderer.PrepareCullingBounds();
                 if (!FrameBuilder.InFrustum(viewProjection, renderer.CullingBounds)) continue;
                 var components = go.m_Components;

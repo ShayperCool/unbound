@@ -99,6 +99,7 @@ namespace UnityEngine.Tests
             for (int i = 0; i < count; i++)
             {
                 ParticleSystemManager.UpdateAll();
+                ParticleSystemManager.CompleteUpdate();
                 Time.s_FrameCount++;
             }
         }
@@ -456,6 +457,15 @@ namespace UnityEngine.Tests
             float before = ParticlesOf(child)[0].remainingLifetime;
             Frames(1);
             Near(before - Dt, ParticlesOf(child)[0].remainingLifetime);
+            // The child's own culling mode does not apply: an unseen AlwaysSimulate child of a
+            // culled parent holds (6000.0.71f1, particlerender subcull/pause_always).
+            main.cullingMode = ParticleSystemCullingMode.Pause;
+            var childMain = child.main;
+            childMain.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+            Frames(1);
+            float culled = ParticlesOf(child)[0].remainingLifetime;
+            Frames(2);
+            Assert.Equal(culled, ParticlesOf(child)[0].remainingLifetime);
         }
 
         [Fact]

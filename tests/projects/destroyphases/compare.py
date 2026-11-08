@@ -7,7 +7,6 @@ from pathlib import Path
 import sys
 
 RENDER_PHASE = 'after:PostLateUpdate.ObjectDispatcherPostLateUpdate'
-PARTICLE_PHASE = 'PreLateUpdate.ParticleSystemBeginUpdateAll'
 
 
 def fields(detail):
@@ -16,48 +15,7 @@ def fields(detail):
 
 def project_case(rows):
     """A comparison view only: the raw records are always reported unchanged."""
-    out, problems, notes = [], [], []
-    pending = False
-    last_ticks = 0
-    visibility = [r for r in rows if r['case'] == 'delayFraction' and r['frame'] in (0, 1)
-                  and r['event'].endswith(('.OnBecameVisible', '.OnWillRenderObject'))]
-    counts = collections.Counter((r['frame'], r['event'].rsplit('.', 1)[-1]) for r in visibility)
-    native_counts = {(0, 'OnBecameVisible'): 1, (0, 'OnWillRenderObject'): 1,
-                     (1, 'OnBecameVisible'): 1, (1, 'OnWillRenderObject'): 2}
-    engine_counts = {(0, 'OnBecameVisible'): 2, (0, 'OnWillRenderObject'): 2,
-                     (1, 'OnWillRenderObject'): 2}
-    bounded_visibility = dict(counts) in (native_counts, engine_counts) and all(not r['detail'] for r in visibility)
-    for original in rows:
-        row = dict(original)
-        event, phase = row['event'], row['phase']
-        if bounded_visibility and original in visibility:
-            notes.append('particle renderer first-step visibility')
-            continue
-        if row['case'] == 'immediateAwake' and event == 'error':
-            expected = "MissingReferenceException: The object of type 'ParticleSystem' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."
-            if row['detail'] == expected:
-                row['detail'] = expected.replace("'ParticleSystem'", "'UnityEngine.ParticleSystem'")
-                notes.append('destroyed-object diagnostic type qualification')
-        if event == 'returned':
-            pending = fields(row['detail']).get('scriptEnabled') == 'false'
-        if event.endswith('.OnDestroy'):
-            pending = False
-        if pending and phase == PARTICLE_PHASE:
-            if event.endswith('.OnParticleTrigger'):
-                notes.append('pending particle callback')
-                continue
-            if event == 'after.particles':
-                values = fields(row['detail'])
-                tick = int(values.get('particleTicks', '-1'))
-                # The retained particle guard skips exactly this frame's update. No wider
-                # numerical allowance: an unexpected clock or any other state still fails.
-                if tick in (last_ticks, last_ticks + 1):
-                    row['detail'] = ' '.join('particleTicks=<pending-frame>' if part.startswith('particleTicks=') else part
-                                             for part in row['detail'].split())
-                    notes.append('pending particle simulation')
-        if event == 'after.particles' and not pending:
-            last_ticks = int(fields(row['detail']).get('particleTicks', '0'))
-        out.append(row)
+    out, problems, notes = [dict(row) for row in rows], [], []
     if rows and rows[0]['case'].startswith('unload'):
         out, unload_problems = unload_view(out)
         problems.extend(unload_problems)

@@ -168,5 +168,91 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(control);
             }
         }
+
+        sealed class CollisionCounter : MonoBehaviour
+        {
+            public int Count;
+            void OnParticleCollision(GameObject other) => Count++;
+        }
+
+        /// <summary>The frame's particle messages go out when its update completes, at
+        /// PostLateUpdate.ParticleSystemEndUpdateAll, or earlier when a script uses a particle
+        /// system first; a system whose Destroy is delivered before that sends none
+        /// (6000.0.71f1, tests/projects/destroyphases trigger controls and particletriggerapi).</summary>
+        [Theory]
+        [InlineData("complete")]
+        [InlineData("read")]
+        [InlineData("destroyed")]
+        public void ParticleMessagesGoOutWhenTheUpdateCompletes(string mode)
+        {
+            var go = new GameObject("messages");
+            var other = new GameObject("other");
+            try
+            {
+                var ps = go.AddComponent<ParticleSystem>();
+                var main = ps.main; main.startLifetime = 5f; main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+                var counter = go.AddComponent<CollisionCounter>();
+                ps.Play();
+                ParticleSystemManager.UpdateAll();
+                // This frame's collision, as the update would have found it.
+                ps.m_CollisionEvents.Add((other, default));
+                Assert.Equal(0, counter.Count);
+                if (mode == "read")
+                {
+                    _ = ps.particleCount;
+                    Assert.Equal(1, counter.Count);
+                }
+                if (mode == "destroyed")
+                {
+                    Object.Destroy(go);
+                    Destruction.BeginDelivery();
+                    Destruction.DeliverRequested();
+                }
+                ParticleSystemManager.CompleteUpdate();
+                Assert.Equal(mode == "destroyed" ? 0 : 1, counter.Count);
+                // Completing again sends nothing more.
+                ParticleSystemManager.CompleteUpdate();
+                Assert.Equal(mode == "destroyed" ? 0 : 1, counter.Count);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(other);
+            }
+        }
+
+        /// <summary>A Destroy requested after the Update delivery point (from a coroutine or
+        /// LateUpdate) is delivered at the next point, after the particle update: until then the
+        /// system simulates and sends its trigger messages like any other (6000.0.71f1,
+        /// tests/projects/destroyphases NullCoroutine and particle controls).</summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ASystemWhoseDestroyIsPendingUpdatesUntilDelivery(bool destroyParent)
+        {
+            var root = new GameObject("root");
+            var go = new GameObject("particles");
+            go.transform.SetParent(root.transform, false);
+            try
+            {
+                var ps = go.AddComponent<ParticleSystem>();
+                var main = ps.main; main.startLifetime = 5f; main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+                var emission = ps.emission; emission.rateOverTime = 100f;
+                ps.Play();
+                ParticleSystemManager.UpdateAll();
+                float before = ps.time;
+                Object.Destroy(destroyParent ? root : go);
+                ParticleSystemManager.UpdateAll();
+                Assert.True(ps.time > before);
+                Assert.True(ps.particleCount > 0);
+                Destruction.BeginDelivery();
+                Destruction.DeliverRequested();
+                Assert.True(ps == null);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
     }
 }

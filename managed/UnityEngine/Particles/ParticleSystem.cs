@@ -54,21 +54,32 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ state
 
-        public bool isPlaying => m_IsPlaying && !m_IsPaused;
+        /// <summary>This system, after the frame's particle update completed: what a script
+        /// reads or changes first waits for that (see <see cref="ParticleSystemManager.Sync"/>).</summary>
+        ParticleSystem Completed
+        {
+            get
+            {
+                ParticleSystemManager.Sync();
+                return this;
+            }
+        }
+
+        public bool isPlaying => Completed.m_IsPlaying && !m_IsPaused;
         // A zero rate, an empty system and the start delay still count as emitting. The
         // module switch gates this observation without changing the playback state.
-        public bool isEmitting => m_IsPlaying && !m_IsPaused && !m_StopEmitting && m_Emission.enabled;
-        public bool isStopped => !m_IsPlaying && !m_IsPaused;
-        public bool isPaused => m_IsPaused;
-        public int particleCount => m_Count;
+        public bool isEmitting => Completed.m_IsPlaying && !m_IsPaused && !m_StopEmitting && m_Emission.enabled;
+        public bool isStopped => !Completed.m_IsPlaying && !m_IsPaused;
+        public bool isPaused => Completed.m_IsPaused;
+        public int particleCount => Completed.m_Count;
 
         public float time
         {
-            get => m_Time;
-            set => m_Time = Mathf.Clamp(value, 0f, m_Main.duration);
+            get => Completed.m_Time;
+            set => Completed.m_Time = Mathf.Clamp(value, 0f, m_Main.duration);
         }
 
-        public float totalTime => m_TotalTime;
+        public float totalTime => Completed.m_TotalTime;
 
         public uint randomSeed
         {
@@ -255,13 +266,19 @@ namespace UnityEngine
         public void Play([Internal.DefaultValue("true")] bool withChildren)
         {
             ThrowIfDestroyed();
-            foreach (var ps in Systems(withChildren, includeSubEmitters: false)) ps.PlaySelf();
+            ParticleSystemManager.Sync();
+            foreach (var ps in Systems(withChildren, includeSubEmitters: false))
+            {
+                ps.PlaySelf();
+                ps.m_BoundsStale = true;
+            }
         }
 
         public void Pause() => Pause(true);
 
         public void Pause([Internal.DefaultValue("true")] bool withChildren)
         {
+            ParticleSystemManager.Sync();
             foreach (var ps in Systems(withChildren, includeSubEmitters: true)) ps.m_IsPaused = true;
         }
 
@@ -271,6 +288,7 @@ namespace UnityEngine
 
         public void Stop([Internal.DefaultValue("true")] bool withChildren, [Internal.DefaultValue("ParticleSystemStopBehavior.StopEmitting")] ParticleSystemStopBehavior stopBehavior)
         {
+            ParticleSystemManager.Sync();
             var systems = Systems(withChildren, includeSubEmitters: true);
             // Finish clearing linked buffers before StopSelf dispatches stop actions.
             // A stop callback may emit again; those new particles must survive.
@@ -293,6 +311,7 @@ namespace UnityEngine
         /// the child systems too (6000.0 Scripting API, ParticleSystem.Clear remarks).</summary>
         public void Clear([Internal.DefaultValue("true")] bool withChildren)
         {
+            ParticleSystemManager.Sync();
             foreach (var ps in ClearedSystems(withChildren))
             {
                 ps.m_Count = 0;
@@ -328,6 +347,7 @@ namespace UnityEngine
 
         public bool IsAlive([Internal.DefaultValue("true")] bool withChildren)
         {
+            ParticleSystemManager.Sync();
             // A paused system counts as alive even with nothing left (measured after Simulate).
             foreach (var ps in Systems(withChildren, includeSubEmitters: true))
                 if (ps.m_Count > 0 || (ps.m_IsPlaying && !ps.m_StopEmitting) || ps.m_IsPaused) return true;
@@ -345,6 +365,8 @@ namespace UnityEngine
         /// over to the next call (measured); otherwise in the frame's steps (see Advance).</summary>
         public void Simulate(float t, [Internal.DefaultValue("true")] bool withChildren, [Internal.DefaultValue("true")] bool restart, [Internal.DefaultValue("true")] bool fixedTimeStep)
         {
+            ParticleSystemManager.Sync();
+            m_BoundsStale = m_DrawPending = false;
             var systems = SimulatedSystems(withChildren, out int hierarchyCount);
             // Reset every selected system before a parent can emit into its children.
             // Otherwise the child's later reset erases that emission and its random cursors.
@@ -479,6 +501,8 @@ namespace UnityEngine
         /// emitting more (measured: isPlaying true, isEmitting false).</summary>
         void EmitNow(int count, EmitParams emitParams, bool hasOverrides)
         {
+            ParticleSystemManager.Sync();
+            m_BoundsStale = true;
             if (count == 0) return;
             if (!m_IsPlaying || m_IsPaused)
             {
@@ -506,6 +530,8 @@ namespace UnityEngine
         [Obsolete("Emit with a single particle structure is deprecated. Pass a ParticleSystem.EmitParams parameter instead, which allows you to override some/all of the emission properties", false)]
         public void Emit(Particle particle)
         {
+            ParticleSystemManager.Sync();
+            m_BoundsStale = true;
             int index = Allocate();
             if (index >= 0)
             {
@@ -516,17 +542,20 @@ namespace UnityEngine
 
         public void TriggerSubEmitter(int subEmitterIndex)
         {
+            ParticleSystemManager.Sync();
             if (!ScriptSubEmitter(subEmitterIndex, out var sub)) return;
             for (int i = 0; i < m_Count; i++) TriggerSubEmitterAt(sub, ref m_Particles[i], fromScript: true);
         }
 
         public void TriggerSubEmitter(int subEmitterIndex, ref Particle particle)
         {
+            ParticleSystemManager.Sync();
             if (ScriptSubEmitter(subEmitterIndex, out var sub)) TriggerSubEmitterAt(sub, ref particle, fromScript: true);
         }
 
         public void TriggerSubEmitter(int subEmitterIndex, List<Particle> particles)
         {
+            ParticleSystemManager.Sync();
             if (particles == null || !ScriptSubEmitter(subEmitterIndex, out var sub)) return;
             for (int i = 0; i < particles.Count; i++)
             {
@@ -564,6 +593,7 @@ namespace UnityEngine
 
         public void SetParticles(Particle[] particles, int size, int offset)
         {
+            ParticleSystemManager.Sync();
             if (particles == null) throw new ArgumentNullException(nameof(particles));
             if (size < 0 || size > particles.Length) size = particles.Length;
             if (offset < 0) throw new ArgumentOutOfRangeException(nameof(offset));
@@ -770,6 +800,7 @@ namespace UnityEngine
 
         public int GetParticles(Particle[] particles, int size, int offset)
         {
+            ParticleSystemManager.Sync();
             if (particles == null) throw new ArgumentNullException(nameof(particles));
             if (size < 0) size = particles.Length;
             offset = Math.Max(0, offset);
@@ -798,6 +829,7 @@ namespace UnityEngine
 
         public void SetCustomParticleData(List<Vector4> customData, ParticleSystemCustomData streamIndex)
         {
+            ParticleSystemManager.Sync();
             if (customData == null) throw new ArgumentNullException(nameof(customData));
             var data = EnsureCustom((int)streamIndex);
             int n = Math.Min(customData.Count, m_Count);
@@ -806,6 +838,7 @@ namespace UnityEngine
 
         public int GetCustomParticleData(List<Vector4> customData, ParticleSystemCustomData streamIndex)
         {
+            ParticleSystemManager.Sync();
             if (customData == null) throw new ArgumentNullException(nameof(customData));
             customData.Clear();
             int stream = (int)streamIndex;
@@ -849,7 +882,7 @@ namespace UnityEngine
 
         public PlaybackState GetPlaybackState() => new PlaybackState
         {
-            m_PlaybackTime = m_Time,
+            m_PlaybackTime = Completed.m_Time,
             m_StartDelay = m_DelayRemaining,
             m_AccumulatedDt = m_RateAccumulator,
             m_TotalTime = m_TotalTime,
@@ -875,6 +908,7 @@ namespace UnityEngine
 
         public void SetPlaybackState(PlaybackState playbackState)
         {
+            ParticleSystemManager.Sync();
             m_Time = playbackState.m_PlaybackTime;
             m_DelayRemaining = playbackState.m_StartDelay;
             m_RateAccumulator = playbackState.m_AccumulatedDt;
@@ -915,6 +949,7 @@ namespace UnityEngine
         /// (tests/projects/particletrails api/*, see <see cref="TrailStorageSize"/>).</summary>
         public int GetTrails(ref Trails trailData)
         {
+            ParticleSystemManager.Sync();
             trailData.positions ??= new List<Vector4>();
             trailData.frontPositions ??= new List<int>();
             trailData.backPositions ??= new List<int>();
@@ -935,6 +970,7 @@ namespace UnityEngine
         /// filled is refused with an error and changes nothing (unmeasured).</summary>
         public void SetTrails(Trails trailData)
         {
+            ParticleSystemManager.Sync();
             if (trailData.positions == null || CaptureOf(trailData) == null)
             {
                 Debug.LogError("Unbound: ParticleSystem.SetTrails was given a Trails value that ParticleSystem.GetTrails never filled; the trails were left unchanged", this);
@@ -1198,9 +1234,9 @@ namespace UnityEngine
         /// and plays, has particles or has trails left).</summary>
         bool CullingSimulates => !m_IsPaused && (m_IsPlaying || m_Count > 0 || HasAliveTrails);
 
-        /// <summary>The frame a playback started: a system simulates its first two updates whatever
-        /// its visibility (6000.0.71f1, tests/projects/particlerender hidden/* and the first frames
-        /// before any camera rendered).</summary>
+        /// <summary>The frame a playback started: a system simulates its first two updates that move
+        /// time whatever its visibility (6000.0.71f1, tests/projects/particlerender hidden/*, the
+        /// first frames before any camera rendered, firstvis/paused/play_auto).</summary>
         int m_CullingGraceFrame = int.MinValue;
 
         /// <summary>
@@ -1236,18 +1272,48 @@ namespace UnityEngine
         /// renderer counts as visible whenever a camera draws its layer, so the system keeps
         /// simulating, reported once.</para>
         /// </summary>
+        /// <summary>A script Play or Emit since the last frame update: the renderer's bounds are
+        /// stale.</summary>
+        bool m_BoundsStale;
+
+        /// <summary>A frame update with zero frame time met stale bounds: the renderer has nothing
+        /// to draw (not drawn, not visible) until an update with a positive frame time, whatever
+        /// the simulation speed, or a Simulate (6000.0.71f1, tests/projects/particlerender
+        /// firstvis/*: frames at timeScale 0; Play On Awake, a script Pause and Simulate keep
+        /// the renderer drawable; tests/projects/destroyphases delayFraction). A camera rendering
+        /// before any update draws what was emitted (tests/projects/resources
+        /// mask_particles).</summary>
+        internal bool m_DrawPending;
+
         internal void CullingFrameUpdate()
         {
             var mode = m_Main.cullingMode;
-            var culling = Culling(mode);
             var parent = m_SubEmitterParent;
-            if (parent != null && culling == CullingState.Culled)
+            // A sub-emitter updates while the system emitting into it updates or its own renderer
+            // is seen, whatever its own culling mode (6000.0.71f1, tests/projects/particlerender
+            // subcull/*: an unseen AlwaysSimulate child stops with its culled parent, a seen child
+            // of a culled parent runs on, a Pause child runs on with an AlwaysSimulate parent;
+            // particletriggerapi carrier/*: the never played, never seen child of an
+            // AlwaysSimulate parent updates).
+            var culling = parent != null && !parent.m_Destroyed && parent.m_GameObject != null
+                ? (parent.Culling(parent.m_Main.cullingMode) != CullingState.Culled || CullingRenderer is ParticleSystemRenderer own && own.enabled && own.isVisible
+                    ? CullingState.Simulated : CullingState.Culled)
+                : Culling(mode);
+            // A frame that moves time gives the renderer its bounds again, culled or not (a culled
+            // system keeps the bounds it had; unmeasured, so it cannot stay hidden for good); one
+            // that does not loses stale bounds.
+            if ((m_Main.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime) > 0f) m_BoundsStale = m_DrawPending = false;
+            else
             {
-                // A sub-emitter the parent keeps updating updates (6000.0.71f1, particletriggerapi
-                // carrier/*: the never played, never seen child of an AlwaysSimulate parent);
-                // one whose own renderer is seen updates too (unmeasured; it may be on screen while
-                // its parent's particles and emitter are not).
-                if (parent.Culling(parent.m_Main.cullingMode) != CullingState.Culled) culling = CullingState.Simulated;
+                if (m_BoundsStale)
+                {
+                    m_BoundsStale = false;
+                    m_DrawPending = true;
+                    // Nothing to draw: invisible at once, as a renderer turned off.
+                    CullingRenderer?.SetVisible(false);
+                }
+                // A playback's two grace updates are updates that move time (firstvis/paused/play_auto).
+                if (Time.frameCount <= m_CullingGraceFrame + 1) m_CullingGraceFrame++;
             }
             if (culling != CullingState.Culled)
             {
@@ -1406,45 +1472,50 @@ namespace Unbound.Runtime
 {
     using UnityEngine;
 
-    /// <summary>Steps every active particle system once per frame, where Unity does.</summary>
+    /// <summary>Steps every active particle system once per frame, where Unity does: the
+    /// simulation at PreLateUpdate.ParticleSystemBeginUpdateAll, its completion on the main thread
+    /// (collision and trigger messages, then stop callbacks and actions) at
+    /// PostLateUpdate.ParticleSystemEndUpdateAll, or earlier when a script uses a particle system
+    /// in between (6000.0.71f1, tests/projects/destroyphases trigger controls: a system whose
+    /// Destroy is delivered at PostLateUpdate's scripting point sends no message unless a script
+    /// read it after the update began; tests/projects/particletriggerapi */gone).</summary>
     internal static class ParticleSystemManager
     {
         static readonly List<ParticleSystem> s_Systems = new List<ParticleSystem>();
         static ParticleSystem[] s_Snapshot = new ParticleSystem[16];
+        /// <summary>The systems the last update stepped, until their update completes.</summary>
+        static readonly List<ParticleSystem> s_Updated = new List<ParticleSystem>();
+        static bool s_CompletionPending;
+        static ParticleSystem[] s_StoppedRun = new ParticleSystem[16];
 
         static ParticleSystemManager()
         {
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PreLateUpdate.ParticleSystemBeginUpdateAll), UpdateAll);
+            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.ParticleSystemEndUpdateAll), CompleteUpdate);
         }
 
         internal static void EnsureRegistered() { }
 
         internal static IReadOnlyList<ParticleSystem> Systems => s_Systems;
 
-        /// <summary>Preserves the particletriggerapi reference's pending-destroy windows.
-        /// destroyphases also records smaller coroutine controls that keep simulating until
-        /// delivery. This retained simulation guard is a functional gap in those contexts;
-        /// their particle callback difference remains unresolved.</summary>
-        static bool DestroyRequested(ParticleSystem ps)
-        {
-            if (ps.m_PendingDestroy) return true;
-            for (var t = ps.m_GameObject.m_Transform; t != null; t = t.m_Parent)
-                if (t.m_GameObject.m_PendingDestroy) return true;
-            return false;
-        }
-
         internal static void Add(ParticleSystem ps) => s_Systems.Add(ps);
 
         internal static void Remove(ParticleSystem ps) => s_Systems.Remove(ps);
 
+        /// <summary>A script uses a particle system: the frame's update completes first, as when
+        /// Unity waits for its particle jobs.</summary>
+        internal static void Sync()
+        {
+            if (s_CompletionPending) CompleteUpdate();
+        }
+
         internal static void UpdateAll()
         {
+            // A loop without the end-of-update system completes the previous frame here.
+            CompleteUpdate();
             int n = s_Systems.Count;
             if (s_Snapshot.Length < n) s_Snapshot = new ParticleSystem[Math.Max(n, s_Snapshot.Length * 2)];
             s_Systems.CopyTo(s_Snapshot);
-            // Every system updates, then the collision and trigger messages go out, then the stop
-            // actions run (measured: OnParticleTrigger before OnParticleSystemStopped of a system
-            // updated earlier).
             s_Deferring = true;
             try
             {
@@ -1452,13 +1523,6 @@ namespace Unbound.Runtime
                 {
                     var ps = s_Snapshot[i];
                     if (ps == null || !ps.m_Registered) continue;
-                    if (DestroyRequested(ps))
-                    {
-                        // No update, so none of last frame's events goes out again either.
-                        ps.m_CollisionEvents.Clear();
-                        ps.ClearTriggerEvents();
-                        continue;
-                    }
                     try { ps.CullingFrameUpdate(); }
                     catch (Exception e) { Debug.LogException(e, ps); }
                 }
@@ -1468,13 +1532,34 @@ namespace Unbound.Runtime
             for (int i = 0; i < n; i++)
             {
                 var ps = s_Snapshot[i];
+                if (ps == null) continue;
+                try { ps.UpdateModuleLights(); }
+                catch (Exception e) { Debug.LogException(e, ps); }
+                s_Updated.Add(ps);
+            }
+            Array.Clear(s_Snapshot, 0, n);
+            s_CompletionPending = true;
+        }
+
+        /// <summary>Completes the last update: every system's collision and trigger messages go
+        /// out, then the stop actions run (measured: OnParticleTrigger before
+        /// OnParticleSystemStopped of a system updated earlier). A system destroyed meanwhile
+        /// sends nothing.</summary>
+        internal static void CompleteUpdate()
+        {
+            if (!s_CompletionPending) return;
+            s_CompletionPending = false;
+            int n = s_Updated.Count;
+            for (int i = 0; i < n; i++)
+            {
+                var ps = s_Updated[i];
                 if (ps == null || !ps.m_StopPending || ps.SubEmittersHaveParticles()) continue;
                 ps.m_StopPending = false;
                 s_Stopped.Add(ps);
             }
             for (int i = 0; i < n; i++)
             {
-                var ps = s_Snapshot[i];
+                var ps = s_Updated[i];
                 if (ps == null || !ps.m_Registered) continue;
                 try
                 {
@@ -1483,18 +1568,15 @@ namespace Unbound.Runtime
                 }
                 catch (Exception e) { Debug.LogException(e, ps); }
             }
-            for (int i = 0; i < n; i++)
-            {
-                var ps = s_Snapshot[i];
-                if (ps == null) continue;
-                try { ps.UpdateModuleLights(); }
-                catch (Exception e) { Debug.LogException(e, ps); }
-            }
-            Array.Clear(s_Snapshot, 0, n);
-            var stopped = s_Stopped.ToArray();
+            s_Updated.Clear();
+            int stopped = s_Stopped.Count;
+            if (s_StoppedRun.Length < stopped) s_StoppedRun = new ParticleSystem[Math.Max(stopped, s_StoppedRun.Length * 2)];
+            s_Stopped.CopyTo(s_StoppedRun);
             s_Stopped.Clear();
-            foreach (var ps in stopped)
+            for (int i = 0; i < stopped; i++)
             {
+                var ps = s_StoppedRun[i];
+                s_StoppedRun[i] = null;
                 try { ps.RunStopAction(); }
                 catch (Exception e) { Debug.LogException(e, ps); }
             }

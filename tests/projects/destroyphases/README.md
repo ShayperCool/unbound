@@ -53,7 +53,7 @@ OS background pause and focus changes are outside those controls.
 
 - Zero-delay requests disable Behaviours on the target and its direct children
   before returning. Deeper descendants stay enabled until delivery. Audio playback
-  stops; particle simulation and script callbacks are distinct questions.
+  stops; a particle system keeps simulating until delivery.
 - Objects remain non-null during OnDisable and OnDestroy. The null observation
   changes after teardown. Component destruction keeps the GameObject alive.
 - Delivery consumes the requests present at entry to each delayed Fixed, Update,
@@ -67,33 +67,29 @@ OS background pause and focus changes are outside those controls.
 - Runtime assets can be destroyed; persistent assets and prefab assets refuse
   Destroy immediately and stay alive.
 
-The original `particletriggerapi` capture was independently repeated during this
-work and still matched all 5299 records. Its `*/gone` windows have no particle
-callback. Smaller coroutine controls here still receive OnParticleTrigger after
-the request, including disabled scripts. Their public loop, default-loop, batch,
-script-order, nested-coroutine and early-read controls do not explain that
-context difference. The previous particle guard remains while this difference is
-investigated; its suppression of simulation in those smaller windows is a
-functional residual, not an insignificant numerical difference.
+The trigger controls (`triggerApiShape`, `triggerManyParticles`, `triggerManyColliders`,
+`triggerWorld`, `triggerAfterFixedWait`) request Destroy from a coroutine like `NullCoroutine`,
+with a system set up as `particletriggerapi`'s, more particles, more colliders, world space, and
+after a WaitForFixedUpdate. All of them still receive OnParticleTrigger in the pending window,
+logged at `PreLateUpdate.ParticleSystemBeginUpdateAll`. The callback is sent where the frame's
+particle update completes on the main thread: at `PostLateUpdate.ParticleSystemEndUpdateAll`, or
+earlier when a script uses a particle system after the update began. This fixture's own
+`after.particles` sample reads the system right after `ParticleSystemBeginUpdateAll`, which
+completes the update there; without such a read (`particletriggerapi`'s `*/gone` windows) the
+completion comes after the PostLateUpdate scripting point has delivered the Destroy, and no
+message is sent. The
+Particle System API page states no update phase; this is the measured 6000.0.71f1 Editor order.
 
-The comparator prints the entire ordered raw delta. Its comparison view names
-only these residuals, with bounds checked by `test_compare.py`:
+The comparator prints the entire ordered raw delta. Its comparison view names only this
+residual, with bounds checked by `test_compare.py`:
 
-- In the delayed-fraction control, time resumes after a paused frame. The particle
-  renderer becomes visible on its first simulation step in the Editor and one
-  frame earlier in Unbound. Only the two captured first-frame visibility-count
-  patterns are admitted; later callbacks remain checked.
-- The retained particle guard suppresses one pending simulation step and its
-  trigger callback in the smaller coroutine windows. The comparison accepts only
-  that single tick and only callbacks inside that pending window.
-- Destroyed ParticleSystem.Play now fails immediately. The existing exception
-  diagnostic omits the type's namespace; that exact diagnostic difference remains.
 - Async unload callbacks, null state and completion must agree in order, state and
   preloading phase. Elapsed frames can vary. Only previously observed repeatable
   callbacks can occur while waiting; callbacks after completion fail.
 
-These are reported differences, including functional ones. They are not added to
-the table of insignificant numerical residuals.
+Particle callbacks, particle ticks, first-frame renderer visibility and the destroyed-object
+diagnostic are compared strictly. These are reported differences, including functional ones.
+They are not added to the table of insignificant numerical residuals.
 
 ## Rendering and operating-system focus controls
 

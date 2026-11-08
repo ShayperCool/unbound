@@ -282,10 +282,11 @@ namespace Unbound.Runtime
             internal static bool TrustsBounds(Renderer renderer) =>
                 renderer.GetType() == typeof(MeshRenderer) || renderer is SpriteRenderer ||
                 renderer is SkinnedMeshRenderer skin && skin.HasMeasuredCullingBounds ||
-                renderer is ParticleSystemRenderer particles && particles.CullingBoundsCoverDraw;
+                renderer is ParticleSystemRenderer particles && (particles.NothingToDraw || particles.CullingBoundsCoverDraw);
 
             internal bool Sees(Renderer renderer)
             {
+                if (renderer.NothingToDraw) return false;
                 renderer.PrepareCullingBounds();
                 var bounds = renderer.CullingBounds;
                 return InFrustum(m_Matrix, bounds) && WithinLayerDistance(renderer, bounds);
@@ -309,6 +310,7 @@ namespace Unbound.Runtime
             /// the light's range. The layer's cull distance applies too.</summary>
             internal bool SeesCaster(Renderer renderer, Light light)
             {
+                if (renderer.NothingToDraw) return false;
                 renderer.PrepareCullingBounds();
                 var bounds = renderer.CullingBounds;
                 if (!WithinLayerDistance(renderer, bounds)) return false;

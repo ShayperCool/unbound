@@ -220,7 +220,11 @@ namespace UnityEngine.Tests
 
         static void Frames(int count)
         {
-            for (int i = 0; i < count; i++) ParticleSystemManager.UpdateAll();
+            for (int i = 0; i < count; i++)
+            {
+                ParticleSystemManager.UpdateAll();
+                ParticleSystemManager.CompleteUpdate();
+            }
         }
 
         [Fact]
