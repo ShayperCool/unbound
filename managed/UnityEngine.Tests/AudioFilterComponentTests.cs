@@ -258,6 +258,23 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void NarrowSpatialCurveCannotAdmitAnUnsupportedFilter()
+        {
+            var source = Source("narrow-spatial-curve");
+            source.gameObject.AddComponent<AudioDistortionFilter>();
+            source.maxDistance = 20;
+            source.transform.position = new Vector3(0, 0, 5);
+            AudioSystem.s_HearingPosition = Vector3.zero;
+            source.SetCustomCurve(AudioSourceCurveType.SpatialBlend, new AnimationCurve(
+                new Keyframe(0, 0), new Keyframe(0.249f, 0, 0, 1000),
+                new Keyframe(0.251f, 0, -1000, 0), new Keyframe(1, 0)));
+            AudioFilterDescriptor[] table = null;
+            Assert.True(source.UsesSpatialBlend);
+            Assert.Equal(0, AudioFilterChain.Collect(source, false, ref table));
+            Assert.Single(Errors("on a 3D AudioSource is not supported"));
+        }
+
+        [Fact]
         public void CustomCutoffCurveFailsLoudly()
         {
             var lowPass = Source("curve").gameObject.AddComponent<AudioLowPassFilter>();

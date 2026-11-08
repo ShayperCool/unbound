@@ -28,6 +28,9 @@ pub const BLOCK: usize = 256;
 const RING_FRAMES: usize = 16384;
 /// Frames a streamed clip's PCM reader is asked for at a time.
 const STREAM_CHUNK: usize = 4096;
+/// Source gain changes accumulate for 64 samples, then reach the exact target.
+/// Measured by tests/projects/audiodistortion at both output rates.
+const VOICE_GAIN_RAMP_FRAMES: u32 = 64;
 
 /// Decoded (or user-made) audio data.
 #[derive(Debug, Clone, Default)]
@@ -462,9 +465,11 @@ struct Voice {
     /// The gain matrix of the last block (ramped from).
     matrix: [f32; 4],
     fresh: bool,
-    /// Unity starts a voice with a 64-sample linear fade (measured by the dry step probe).
+    /// Startup and measured parameter changes use the same 64-sample gain ramp.
     fade_frames: u32,
-    fade_initial: [f32; 4],
+    /// Target minus the gain at the start of the current ramp.
+    fade_delta: [f32; 4],
+    /// Accumulated gain for the next sample.
     fade_matrix: [f32; 4],
     stream: Option<StreamState>,
 }
@@ -482,9 +487,21 @@ impl Voice {
             matrix: [0.0; 4],
             fresh: true,
             fade_frames: 0,
-            fade_initial: [0.0; 4],
+            fade_delta: [0.0; 4],
             fade_matrix: [0.0; 4],
             stream: None,
+        }
+    }
+
+    fn advance_fade(&mut self, measured: bool) {
+        if self.fade_frames < VOICE_GAIN_RAMP_FRAMES {
+            for i in 0..4 {
+                self.fade_matrix[i] += self.fade_delta[i] / VOICE_GAIN_RAMP_FRAMES as f32;
+            }
+            self.fade_frames += 1;
+            if measured && self.fade_frames == VOICE_GAIN_RAMP_FRAMES {
+                self.fade_matrix = self.matrix;
+            }
         }
     }
 }
@@ -527,6 +544,8 @@ impl Ring {
 #[derive(Debug, Default)]
 pub struct Source {
     pub params: SourceParams,
+    /// Computed once per render chunk and reused while mixing this source's voices.
+    spatial: spatial::Spatialized,
     main: Option<Voice>,
     one_shots: Vec<Voice>,
     /// Where the next `Play` starts (`time` set while stopped).
@@ -653,6 +672,8 @@ pub struct Mixer {
     frames: u64,
     clips: HashMap<u64, Clip>,
     sources: HashMap<u64, Source>,
+    /// Capacity grows only when a source is registered on the control thread.
+    voice_priority: Vec<(u64, i32, f32)>,
     groups: HashMap<u64, Group>,
     group_nodes: HashMap<u64, GroupNode>,
     group_order: Vec<u64>,
@@ -752,6 +773,7 @@ impl Mixer {
             frames: 0,
             clips: HashMap::new(),
             sources: HashMap::new(),
+            voice_priority: Vec::new(),
             groups: HashMap::new(),
             group_nodes: HashMap::new(),
             group_order: Vec::new(),
@@ -895,7 +917,14 @@ impl Mixer {
 
     // ------------------------------------------------------------------ sources
 
+    fn prepare_source(&mut self, handle: u64) {
+        self.sources.entry(handle).or_default();
+        let additional = self.sources.len().saturating_sub(self.voice_priority.len());
+        self.voice_priority.reserve(additional);
+    }
+
     pub fn update_source(&mut self, handle: u64, mut params: SourceParams) {
+        self.prepare_source(handle);
         let rate = self.config.sample_rate;
         let source = self.sources.entry(handle).or_default();
         if params.has(source_flags::KEEP_OUTPUT) && source.output.is_none() {
@@ -1189,6 +1218,7 @@ impl Mixer {
 
     /// Reports admission before a later render can change the source's voice counts.
     pub fn command(&mut self, handle: u64, cmd: &AudioSourceCommand) -> bool {
+        self.prepare_source(handle);
         let now = self.frames;
         let rate = self.config.sample_rate;
         let callback = self.callback;
@@ -1598,11 +1628,16 @@ impl Mixer {
         }
 
         // Spatialize, then decide which voices are real: the most important `real_voices`.
-        let mut playing: Vec<(u64, i32, f32)> = Vec::new();
-        let mut spatial: HashMap<u64, spatial::Spatialized> = HashMap::new();
-        for (&handle, source) in &self.sources {
+        let playing = &mut self.voice_priority;
+        playing.clear();
+        for (&handle, source) in &mut self.sources {
             let p = &source.params;
-            let s = spatial::spatialize(
+            let spatialize = if p.has(source_flags::SPATIAL_STEREO) {
+                spatial::spatialize_measured
+            } else {
+                spatial::spatialize
+            };
+            let s = spatialize(
                 &SourceSpatial {
                     position: p.position,
                     velocity: p.velocity,
@@ -1625,16 +1660,18 @@ impl Mixer {
             if source.active() {
                 playing.push((handle, p.priority, s.audibility * p.volume));
             }
-            spatial.insert(handle, s);
+            source.spatial = s;
+            source.is_virtual = false;
         }
-        let mut real: std::collections::HashSet<u64> = playing.iter().map(|p| p.0).collect();
         if playing.len() > config.real_voices {
-            playing.sort_by(|a, b| a.1.cmp(&b.1).then(b.2.total_cmp(&a.2)).then(a.0.cmp(&b.0)));
-            real = playing
-                .iter()
-                .take(config.real_voices)
-                .map(|p| p.0)
-                .collect();
+            // Partition only: the total ordering selects the same real voices without a
+            // full sort or a render-thread allocation. Source summation order is unchanged.
+            playing.select_nth_unstable_by(config.real_voices, |a, b| {
+                a.1.cmp(&b.1).then(b.2.total_cmp(&a.2)).then(a.0.cmp(&b.0))
+            });
+            for (index, &(handle, _, _)) in playing.iter().enumerate() {
+                self.sources.get_mut(&handle).unwrap().is_virtual = index >= config.real_voices;
+            }
         }
 
         let listener_components = !self.listener_chain.filters.is_empty();
@@ -1657,7 +1694,6 @@ impl Mixer {
             ..
         } = self;
         for (&handle, source) in sources.iter_mut() {
-            source.is_virtual = source.active() && !real.contains(&handle);
             let flags = source.params.flags;
             let filter = flags & source_flags::FILTER != 0;
             let has_voices = source.main.is_some() || !source.one_shots.is_empty();
@@ -1684,7 +1720,7 @@ impl Mixer {
                     pitch: 1.0,
                 }),
             };
-            let s = spatial[&handle];
+            let s = source.spatial;
             let routed = group_nodes.contains_key(&source.params.group);
             let mut volume = source.params.volume.max(0.0) * if routed { 1.0 } else { group.gain };
             if flags & source_flags::MUTE != 0 || !has_listener {
@@ -1693,7 +1729,11 @@ impl Mixer {
             if flags & source_flags::IGNORE_LISTENER_VOLUME == 0 {
                 volume *= listener_volume;
             }
-            let pitch = source.params.pitch as f64 * group.pitch as f64 * s.pitch as f64;
+            let pitch = PlaybackPitch {
+                source: source.params.pitch,
+                group: group.pitch,
+                doppler: s.pitch,
+            };
             let wants_samples = need_mix
                 || filter
                 || source.output.is_some()
@@ -1702,6 +1742,7 @@ impl Mixer {
             let buffer = &mut source_buffer[..n * 2];
             buffer.fill(0.0);
             let target = s.matrix.map(|g| g * volume);
+            let mono_target = s.mono_matrix.map(|m| m.map(|g| g * volume));
             let looping = flags & source_flags::LOOP != 0;
             let mono_pan = (source.params.spatial_blend <= 0.0
                 && source
@@ -1737,8 +1778,19 @@ impl Mixer {
                     );
                 }
                 let _ = render_source_voices(
-                    source, clips, buffer, n, t0, pitch, out_rate, target, mono_pan, looping,
-                    audible, callback,
+                    source,
+                    clips,
+                    buffer,
+                    n,
+                    t0,
+                    pitch,
+                    out_rate,
+                    target,
+                    mono_target,
+                    mono_pan,
+                    looping,
+                    audible,
+                    callback,
                 );
                 // Components below the generating script (none may sit above it). Unbound's
                 // choice (unmeasured): they also process the source's one-shots.
@@ -1776,6 +1828,7 @@ impl Mixer {
                                     pitch,
                                     out_rate,
                                     target,
+                                    mono_target,
                                     mono_pan,
                                     looping,
                                     audible,
@@ -1818,8 +1871,19 @@ impl Mixer {
                 }
             } else {
                 let finished_at = render_source_voices(
-                    source, clips, buffer, n, t0, pitch, out_rate, target, mono_pan, looping,
-                    audible, callback,
+                    source,
+                    clips,
+                    buffer,
+                    n,
+                    t0,
+                    pitch,
+                    out_rate,
+                    target,
+                    mono_target,
+                    mono_pan,
+                    looping,
+                    audible,
+                    callback,
                 );
                 if voices_running
                     && source.main.is_none()
@@ -2087,6 +2151,33 @@ impl StreamState {
     }
 }
 
+#[derive(Clone, Copy)]
+struct PlaybackPitch {
+    source: f32,
+    group: f32,
+    doppler: f32,
+}
+
+impl PlaybackPitch {
+    fn step(self, clip_rate: u32, output_rate: u32, measured: bool, resampling: bool) -> f64 {
+        if measured {
+            // Decoded playback uses a single-precision frequency, limited to 1 MHz,
+            // before accumulating phase in f64 (audiodistortion rate/extreme controls).
+            const MAX_DECODED_FREQUENCY: f32 = 1_000_000.0;
+            let frequency = clip_rate as f32 * self.source * self.doppler * self.group;
+            (frequency.clamp(-MAX_DECODED_FREQUENCY, MAX_DECODED_FREQUENCY) / output_rate as f32)
+                as f64
+        } else {
+            let pitch = self.source as f64 * self.group as f64 * self.doppler as f64;
+            if resampling {
+                pitch * (clip_rate as f32 / output_rate as f32) as f64
+            } else {
+                pitch * clip_rate as f64 / output_rate as f64
+            }
+        }
+    }
+}
+
 /// Advance decoded voices and accumulate their PCM without invoking the source filter.
 #[allow(clippy::too_many_arguments)]
 fn render_source_voices(
@@ -2095,16 +2186,30 @@ fn render_source_voices(
     out: &mut [f32],
     n: usize,
     t0: u64,
-    pitch: f64,
+    pitch: PlaybackPitch,
     rate: u32,
     target: [f32; 4],
+    mono_target: Option<[f32; 4]>,
     mono_pan: Option<f32>,
     looping: bool,
     audible: bool,
     callback: Option<Callback>,
 ) -> Option<u64> {
     let mut finished_at: Option<u64> = None;
+    let target_for = |clip: Option<&Clip>| {
+        if clip.is_some_and(|c| c.channels == 1) {
+            mono_target.unwrap_or(target)
+        } else {
+            target
+        }
+    };
+    let mono_pan = if mono_target.is_some() {
+        None
+    } else {
+        mono_pan
+    };
     let measured_resampling = source.params.has(source_flags::DECODED_RESAMPLING);
+    let measured_matrix = source.params.has(source_flags::SPATIAL_STEREO);
     if let Some(main) = &mut source.main
         && main.clip != 0
     {
@@ -2115,10 +2220,11 @@ fn render_source_voices(
             t0,
             pitch,
             rate,
-            target,
+            target_for(clips.get(&main.clip)),
             mono_pan,
             looping,
             measured_resampling,
+            measured_matrix,
             audible.then_some(&mut *out),
             callback,
         ) {
@@ -2142,10 +2248,11 @@ fn render_source_voices(
             t0,
             pitch,
             rate,
-            target,
+            target_for(clips.get(&voice.clip)),
             mono_pan,
             false,
             measured_resampling,
+            measured_matrix,
             audible.then_some(&mut *out),
             callback,
         );
@@ -2168,12 +2275,13 @@ fn render_voice(
     clip: Option<&Clip>,
     n: usize,
     t0: u64,
-    pitch: f64,
+    pitch: PlaybackPitch,
     out_rate: u32,
     mut target: [f32; 4],
     mono_pan: Option<f32>,
     looping: bool,
     measured_resampling: bool,
+    measured_matrix: bool,
     mut out: Option<&mut [f32]>,
     callback: Option<Callback>,
 ) -> Option<u64> {
@@ -2205,29 +2313,31 @@ fn render_voice(
     }
     if voice.fresh {
         voice.matrix = target;
-        voice.fade_initial = target;
+        voice.fade_delta = target;
         voice.fresh = false;
+    }
+    if measured_matrix && voice.matrix != target {
+        for i in 0..4 {
+            voice.fade_delta[i] = target[i] - voice.fade_matrix[i];
+        }
+        voice.fade_frames = 0;
     }
     let from = voice.matrix;
     voice.matrix = target;
     let frames = clip.frames as f64;
-    let step = if measured_resampling && voice.stream.is_none() {
-        pitch * (clip.rate as f32 / out_rate as f32) as f64
-    } else {
-        pitch * clip.rate as f64 / out_rate as f64
-    };
+    let step = pitch.step(
+        clip.rate,
+        out_rate,
+        measured_matrix && voice.stream.is_none(),
+        measured_resampling && voice.stream.is_none(),
+    );
     let inv_n = 1.0 / n as f32;
     for f in 0..n {
         let dsp = t0 + f as u64;
         if dsp < voice.start_at {
             // The scheduled route has already started processing silence. Its
             // startup matrix ramp elapses before the decoded clip becomes audible.
-            if voice.fade_frames < 64 {
-                for i in 0..4 {
-                    voice.fade_matrix[i] += voice.fade_initial[i] / 64.0;
-                }
-                voice.fade_frames += 1;
-            }
+            voice.advance_fade(measured_matrix);
             continue;
         }
         if dsp >= voice.end_at {
@@ -2248,7 +2358,7 @@ fn render_voice(
             let fetch = |i: i64| -> (f32, f32) {
                 if i >= 0 && (i as usize) < clip.frames {
                     clip.frame(i as usize)
-                } else if looping {
+                } else if looping || measured_matrix {
                     clip.frame(i.rem_euclid(clip.frames as i64) as usize)
                 } else if measured_resampling {
                     clip.frame(i.clamp(0, clip.frames as i64 - 1) as usize)
@@ -2262,20 +2372,24 @@ fn render_voice(
         };
         if let Some(out) = out.as_deref_mut() {
             let t = (f + 1) as f32 * inv_n;
-            let mut m = [
-                from[0] + (target[0] - from[0]) * t,
-                from[1] + (target[1] - from[1]) * t,
-                from[2] + (target[2] - from[2]) * t,
-                from[3] + (target[3] - from[3]) * t,
-            ];
-            if voice.fade_frames < 64 {
+            let mut m = if measured_matrix {
+                voice.fade_matrix
+            } else {
+                [
+                    from[0] + (target[0] - from[0]) * t,
+                    from[1] + (target[1] - from[1]) * t,
+                    from[2] + (target[2] - from[2]) * t,
+                    from[3] + (target[3] - from[3]) * t,
+                ]
+            };
+            if !measured_matrix && voice.fade_frames < VOICE_GAIN_RAMP_FRAMES {
                 for (i, gain) in m.iter_mut().enumerate() {
-                    *gain = if *gain == voice.fade_initial[i] {
+                    *gain = if *gain == voice.fade_delta[i] {
                         voice.fade_matrix[i]
-                    } else if voice.fade_initial[i] != 0.0 {
-                        (*gain / voice.fade_initial[i]) * voice.fade_matrix[i]
+                    } else if voice.fade_delta[i] != 0.0 {
+                        (*gain / voice.fade_delta[i]) * voice.fade_matrix[i]
                     } else {
-                        *gain * voice.fade_frames as f32 / 64.0
+                        *gain * voice.fade_frames as f32 / VOICE_GAIN_RAMP_FRAMES as f32
                     };
                 }
             }
@@ -2283,14 +2397,7 @@ fn render_voice(
             out[f * 2] += (m[0] * l + m[1] * r) * v;
             out[f * 2 + 1] += (m[2] * l + m[3] * r) * v;
         }
-        if voice.fade_frames < 64 {
-            // Native accumulates the gain-matrix step, rather than multiplying by age / 64.
-            // Its float rounding affects the IIR state and the later integer capture boundary.
-            for i in 0..4 {
-                voice.fade_matrix[i] += voice.fade_initial[i] / 64.0;
-            }
-        }
-        voice.fade_frames = (voice.fade_frames + 1).min(64);
+        voice.advance_fade(measured_matrix);
         if let Some(stream) = &mut voice.stream {
             voice.position += step.abs();
             stream.trim(voice.position, clip.channels);
@@ -2473,6 +2580,124 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn measured_gain_changes_cross_device_periods_and_pick_each_voices_layout() {
+        fn setup() -> Mixer {
+            let mut m = Mixer::new(MixerConfig {
+                sample_rate: 48000,
+                ..MixerConfig::default()
+            });
+            m.add_clip(1, Clip::new(1, 48000, vec![0.5; 4096]));
+            m.add_clip(2, Clip::new(2, 48000, [0.25, -0.125].repeat(4096)));
+            source_with(&mut m, 7, 1, |p| {
+                p.flags |= source_flags::SPATIAL_STEREO | source_flags::DECODED_RESAMPLING;
+                p.spatial_blend = 1.0;
+                p.position.z = 5.0;
+                p.min_distance = 1.0;
+                p.max_distance = 20.0;
+                p.rolloff_mode = spatial::LINEAR;
+            });
+            play(&mut m, 7, command::PLAY, 0.0);
+            m.render(&mut vec![0.0; 256 * 2], 2);
+            m.sources.get_mut(&7).unwrap().params.position.z = 10.0;
+            m
+        }
+        let mut whole = setup();
+        let mut expected = vec![0.0; 105 * 2];
+        whole.render(&mut expected, 2);
+        // Native step-distance Master floats, independent of the render partition.
+        assert_eq!(expected[0], 0.2791211);
+        assert_eq!(expected[2], 0.27766734);
+        assert_eq!(expected[64 * 2], 0.18608074);
+        let mut split = setup();
+        let mut actual = Vec::new();
+        for frames in [17, 31, 5, 11, 41] {
+            let mut out = vec![0.0; frames * 2];
+            split.render(&mut out, 2);
+            actual.extend(out);
+        }
+        assert_eq!(actual, expected);
+        whole.command(
+            7,
+            &AudioSourceCommand {
+                kind: command::PLAY_ONE_SHOT,
+                clip: 2,
+                volume_scale: 0.5,
+                ..Default::default()
+            },
+        );
+        let mut mixed = vec![0.0; 256 * 2];
+        whole.render(&mut mixed, 2);
+        // The stereo one-shot sums two independent inputs; the main mono voice uses one.
+        let target = 0.18608074 + (0.25 - 0.125) * 0.37216148 * 0.5;
+        assert_eq!(mixed[200 * 2], target);
+        assert_eq!(mixed[200 * 2 + 1], target);
+    }
+
+    #[test]
+    fn measured_playback_composes_frequency_before_rate_conversion_and_caps_extremes() {
+        let pitch = PlaybackPitch {
+            source: 1.5,
+            group: 1.0,
+            doppler: 1.0,
+        };
+        assert_eq!(pitch.step(44100, 48000, true, true), 1.3781249523162842);
+        // An ordinary pitch and a Doppler shift share the same frequency limit.
+        for (source, doppler) in [(30.0, 1.0), (1.0, 30.0), (-30.0, 1.0)] {
+            let pitch = PlaybackPitch {
+                source,
+                doppler,
+                group: 1.0,
+            };
+            for rate in [44100, 48000] {
+                let mut m = Mixer::new(MixerConfig {
+                    sample_rate: rate,
+                    ..Default::default()
+                });
+                let mut data = vec![0.0; 32768];
+                data[1024..].fill(0.25);
+                m.add_clip(1, Clip::new(1, rate, data));
+                source_with(&mut m, 7, 1, |p| {
+                    p.flags |= source_flags::SPATIAL_STEREO;
+                    p.pitch = source;
+                    p.spatial_blend = 1.0;
+                    p.position.z = 2000.0;
+                    p.velocity.z = -340.0 * (doppler - 1.0);
+                    p.rolloff_mode = spatial::CUSTOM;
+                });
+                assert_eq!(
+                    pitch.step(rate, rate, true, false).abs(),
+                    (1_000_000.0f32 / rate as f32) as f64
+                );
+                if source < 0.0 {
+                    continue;
+                }
+                play(&mut m, 7, command::PLAY, 0.0);
+                let mut out = vec![0.0; 128 * 2];
+                m.render(&mut out, 2);
+                let first = out.chunks_exact(2).position(|x| x[0] != 0.0).unwrap();
+                assert_eq!(first, if rate == 48000 { 50 } else { 46 });
+            }
+        }
+    }
+
+    #[test]
+    fn measured_non_looping_lookahead_reads_the_first_frame_then_stops() {
+        let mut m = mixer();
+        m.add_clip(1, Clip::new(2, 1000, [0.25, -0.125].repeat(100)));
+        m.clips.get_mut(&1).unwrap().samples[0] = 0.75;
+        source_with(&mut m, 7, 1, |p| {
+            p.flags |= source_flags::SPATIAL_STEREO | source_flags::DECODED_RESAMPLING;
+            p.pitch = 0.5;
+        });
+        play(&mut m, 7, command::PLAY, 0.0);
+        let mut out = vec![0.0; 202 * 2];
+        m.render(&mut out, 2);
+        assert_eq!(out[199 * 2], 0.5);
+        assert_eq!(out[200 * 2], 0.0);
+        assert_eq!(m.source_state(7).main, voice_state::NONE);
     }
 
     #[test]
@@ -4469,7 +4694,7 @@ mod tests {
         assert!(out[2 * 2048..].iter().all(|v| *v == 0.0));
     }
 
-    /// Placement is measured independently of the engine's unfinished 3D gain matrix: feed
+    /// Placement is measured independently of the common source path: feed
     /// the captured dry spatial PCM into the shared cores and compare every output sample.
     #[test]
     fn source_filter_cores_follow_captured_spatialization_at_both_rates() {

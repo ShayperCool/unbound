@@ -144,13 +144,19 @@ pub fn doppler(
     if scale <= 0.0 {
         return 1.0;
     }
-    // Positive: the source moves away; the listener moves towards the source.
-    let away = dot(source_velocity, direction) * scale;
-    let towards = dot(listener_velocity, direction) * scale;
-    let c = SPEED_OF_SOUND;
-    let away = away.clamp(-0.95 * c, 10.0 * c);
-    let towards = towards.clamp(-0.95 * c, 10.0 * c);
-    ((c + towards) / (c + away)).clamp(0.05, 20.0)
+    let away = (dot(source_velocity, direction) * scale)
+        .clamp(-0.95 * SPEED_OF_SOUND, 10.0 * SPEED_OF_SOUND);
+    let towards = (dot(listener_velocity, direction) * scale)
+        .clamp(-0.95 * SPEED_OF_SOUND, 10.0 * SPEED_OF_SOUND);
+    ((SPEED_OF_SOUND + towards) / (SPEED_OF_SOUND + away)).clamp(0.05, 20.0)
+}
+
+/// Relative radial speed is projected before normalization. This evaluation order preserves
+/// the measured source phase over many buffers (tests/projects/audiodistortion).
+fn measured_doppler(offset: Vector3, velocity: Vector3, distance: f32, scale: f32) -> f32 {
+    const MINIMUM_PITCH: f32 = 1e-6;
+    let radial_speed = dot(offset, velocity) / distance;
+    ((SPEED_OF_SOUND - scale * radial_speed) / SPEED_OF_SOUND).max(MINIMUM_PITCH)
 }
 
 /// Inputs of [`spatialize`] (an AudioSource's 3D settings).
@@ -177,8 +183,21 @@ pub struct SourceSpatial<'a> {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Spatialized {
     pub matrix: [f32; 4],
+    /// A mono clip has one input channel, including when spread creates two directions.
+    pub mono_matrix: Option<[f32; 4]>,
     pub pitch: f32,
     pub audibility: f32,
+}
+
+impl Default for Spatialized {
+    fn default() -> Self {
+        Self {
+            matrix: [1.0, 0.0, 0.0, 1.0],
+            mono_matrix: None,
+            pitch: 1.0,
+            audibility: 1.0,
+        }
+    }
 }
 
 /// The 2D part (`panStereo`) and the 3D part (distance rolloff, direction, spread, doppler) mixed
@@ -188,6 +207,26 @@ pub fn spatialize(
     listener: &Listener,
     rolloff_scale: f32,
     doppler_factor: f32,
+) -> Spatialized {
+    spatialize_impl(s, listener, rolloff_scale, doppler_factor, false)
+}
+
+/// Stereo output matrix measured by tests/projects/audiodistortion on 6000.0.71f1.
+pub fn spatialize_measured(
+    s: &SourceSpatial,
+    listener: &Listener,
+    rolloff_scale: f32,
+    doppler_factor: f32,
+) -> Spatialized {
+    spatialize_impl(s, listener, rolloff_scale, doppler_factor, true)
+}
+
+fn spatialize_impl(
+    s: &SourceSpatial,
+    listener: &Listener,
+    rolloff_scale: f32,
+    doppler_factor: f32,
+    measured: bool,
 ) -> Spatialized {
     let offset = sub(s.position, listener.position);
     let distance = length(offset);
@@ -205,6 +244,15 @@ pub fn spatialize(
     if blend <= 0.0 {
         return Spatialized {
             matrix: [l2, 0.0, 0.0, r2],
+            mono_matrix: measured.then(|| {
+                let pan = s.pan_stereo.clamp(-1.0, 1.0);
+                [
+                    ((1.0 - pan) * 0.5).sqrt(),
+                    0.0,
+                    0.0,
+                    ((1.0 + pan) * 0.5).sqrt(),
+                ]
+            }),
             pitch: 1.0,
             audibility: 1.0,
         };
@@ -213,7 +261,11 @@ pub fn spatialize(
         s.rolloff_mode,
         distance,
         s.min_distance,
-        s.max_distance,
+        if measured && s.rolloff_mode == LOGARITHMIC {
+            f32::MAX
+        } else {
+            s.max_distance
+        },
         rolloff_scale,
         s.rolloff_curve,
     );
@@ -238,12 +290,17 @@ pub fn spatialize(
         Some(table) if !table.is_empty() => sample_table(table, normalized) * 360.0,
         _ => s.spread,
     };
-    // Spread widens the source: 180 degrees fills both sides evenly, 360 mirrors it.
-    let pan = pan * (spread.clamp(0.0, 360.0).to_radians() * 0.5).cos();
-    let [l3, r3] = pan_3d(pan);
-    let (l3, r3) = (l3 * gain * 0.5, r3 * gain * 0.5);
     let flat = 1.0 - blend;
     let pitch = match direction {
+        Some(_) if measured => {
+            let factor = measured_doppler(
+                offset,
+                sub(s.velocity, listener.velocity),
+                distance,
+                s.doppler_level * doppler_factor,
+            );
+            factor * blend + flat
+        }
         Some(direction) => {
             let factor = doppler(
                 direction,
@@ -255,16 +312,63 @@ pub fn spatialize(
         }
         None => 1.0,
     };
-    Spatialized {
-        matrix: [
+    let matrix;
+    let mono_matrix;
+    if measured {
+        // Two virtual input directions are rotated by half the spread in listener space.
+        let forward_length = length(listener.forward);
+        let forward = direction.map_or(0.0, |d| {
+            if forward_length > 1e-6 {
+                dot(d, listener.forward) / forward_length
+            } else {
+                0.0
+            }
+        });
+        let angle = spread.clamp(0.0, 360.0).to_radians() * 0.5;
+        let (sin, cos) = angle.sin_cos();
+        let left = pan_measured(pan * cos - forward * sin);
+        let right = pan_measured(pan * cos + forward * sin);
+        // Distance attenuation interpolates independently from channel mapping.
+        let volume = flat + blend * gain;
+        matrix = [
+            (flat * l2 + blend * left[0]) * volume,
+            blend * right[0] * volume,
+            blend * left[1] * volume,
+            (flat * r2 + blend * right[1]) * volume,
+        ];
+        let pan = s.pan_stereo.clamp(-1.0, 1.0);
+        let mono = [((1.0 - pan) * 0.5).sqrt(), ((1.0 + pan) * 0.5).sqrt()];
+        mono_matrix = Some([
+            (flat * mono[0] + blend * (left[0] + right[0]) * 0.5) * volume,
+            0.0,
+            0.0,
+            (flat * mono[1] + blend * (left[1] + right[1]) * 0.5) * volume,
+        ]);
+    } else {
+        let pan = pan * (spread.clamp(0.0, 360.0).to_radians() * 0.5).cos();
+        let [l3, r3] = pan_3d(pan);
+        let (l3, r3) = (l3 * gain * 0.5, r3 * gain * 0.5);
+        matrix = [
             flat * l2 + blend * l3,
             blend * l3,
             blend * r3,
             flat * r2 + blend * r3,
-        ],
+        ];
+        mono_matrix = None;
+    }
+    Spatialized {
+        matrix,
+        mono_matrix,
         pitch,
         audibility: flat + blend * gain,
     }
+}
+
+/// Constant-power stereo gains with the difference between gains equal to lateral direction.
+fn pan_measured(pan: f32) -> [f32; 2] {
+    let pan = pan.clamp(-1.0, 1.0);
+    let sum = (2.0 - pan * pan).sqrt();
+    [(sum - pan) * 0.5, (sum + pan) * 0.5]
 }
 
 #[cfg(test)]
@@ -420,6 +524,87 @@ mod tests {
             spatialize(&still, &listener, 1.0, 1.0).pitch,
             374.0 / 340.0
         ));
+    }
+
+    #[test]
+    fn measured_stereo_matrix_preserves_channel_energy_and_mono_level() {
+        let mut s = source(v(3.0, 0.0, 4.0), 1.0);
+        s.rolloff_mode = LINEAR;
+        s.max_distance = 20.0;
+        let listener = Listener::default();
+        let output = spatialize_measured(&s, &listener, 1.0, 1.0);
+        assert_eq!(
+            output.matrix,
+            [0.2686677, 0.2686677, 0.74235195, 0.74235195]
+        );
+        assert_eq!(
+            output.mono_matrix.unwrap(),
+            [0.2686677, 0.0, 0.0, 0.74235195]
+        );
+        s.spread = 180.0;
+        let output = spatialize_measured(&s, &listener, 1.0, 1.0);
+        assert_eq!(
+            output.matrix,
+            [0.7761278, 0.14454883, 0.14454883, 0.7761278]
+        );
+        assert_eq!(
+            output.mono_matrix.unwrap(),
+            [0.46033832, 0.0, 0.0, 0.46033832]
+        );
+        // The same relative pose with a translated and rotated listener.
+        let turned = Listener {
+            position: v(7.0, 8.0, 9.0),
+            forward: v(1.0, 0.0, 0.0),
+            ..listener
+        };
+        s.position = v(11.0, 8.0, 6.0);
+        assert_eq!(spatialize_measured(&s, &turned, 1.0, 1.0), output);
+    }
+
+    #[test]
+    fn measured_logarithmic_gain_continues_past_max_distance() {
+        let mut s = source(v(0.0, 0.0, 100.0), 1.0);
+        s.max_distance = 20.0;
+        let output = spatialize_measured(&s, &Listener::default(), 1.0, 1.0);
+        assert_eq!(output.mono_matrix.unwrap()[0], 0.0070710676);
+        assert!(output.audibility < spatialize(&s, &Listener::default(), 1.0, 1.0).audibility);
+        s.spatial_blend = 0.5;
+        s.position = v(3.0, 0.0, 4.0);
+        s.rolloff_mode = LINEAR;
+        let output = spatialize_measured(&s, &Listener::default(), 1.0, 1.0);
+        assert_eq!(
+            output.matrix,
+            [0.5996135, 0.15224504, 0.42066613, 0.86803454]
+        );
+        assert_eq!(
+            output.mono_matrix.unwrap(),
+            [0.4685823, 0.0, 0.0, 0.7370034]
+        );
+    }
+
+    #[test]
+    fn measured_doppler_uses_relative_radial_velocity_and_both_scale_factors() {
+        let mut s = source(v(0.0, 0.0, 20.0), 1.0);
+        s.velocity.z = -20.0;
+        let mut listener = Listener::default();
+        assert_eq!(
+            spatialize_measured(&s, &listener, 1.0, 1.0).pitch,
+            1.0 + 20.0 / 340.0
+        );
+        listener.velocity.z = 20.0;
+        assert_eq!(
+            spatialize_measured(&s, &listener, 1.0, 1.0).pitch,
+            1.0 + 40.0 / 340.0
+        );
+        s.doppler_level = 2.0;
+        assert_eq!(spatialize_measured(&s, &listener, 1.0, 0.0).pitch, 1.0);
+        assert_eq!(
+            spatialize_measured(&s, &listener, 1.0, 2.0).pitch,
+            1.0 + 160.0 / 340.0
+        );
+        s.velocity = v(20.0, 0.0, 0.0);
+        listener.velocity = Vector3::default();
+        assert_eq!(spatialize_measured(&s, &listener, 1.0, 1.0).pitch, 1.0);
     }
 
     #[test]

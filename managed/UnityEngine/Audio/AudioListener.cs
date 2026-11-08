@@ -77,10 +77,8 @@ namespace UnityEngine
         internal void UpdateMotion(float deltaTime)
         {
             var position = transform.position;
-            if (m_HasLastPosition && deltaTime > 0f)
-                m_Velocity = (position - m_LastPosition) / deltaTime;
-            m_LastPosition = position;
-            m_HasLastPosition = true;
+            AudioSystem.SampleMotion(m_GameObject, false, position, deltaTime,
+                ref m_LastPosition, ref m_HasLastPosition, ref m_Velocity);
         }
 
         /// <summary>Samples the velocity when <paramref name="fixedStep"/> is the loop
@@ -103,10 +101,8 @@ namespace UnityEngine
             }
             // The step's simulated pose, not an interpolated Transform's (Unbound's choice, unmeasured).
             var position = AudioSystem.FixedStepPosition(transform);
-            if (m_HasLastPosition && deltaTime > 0f)
-                m_Velocity = (position - m_LastPosition) / deltaTime;
-            m_LastPosition = position;
-            m_HasLastPosition = true;
+            AudioSystem.SampleMotion(m_GameObject, false, position, deltaTime,
+                ref m_LastPosition, ref m_HasLastPosition, ref m_Velocity);
         }
 
         internal override void OnEngineEnable()

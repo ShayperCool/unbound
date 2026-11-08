@@ -239,6 +239,22 @@ namespace Unbound.Runtime
             return simulated + turn * (t.position - at);
         }
 
+        /// <summary>Velocity sampled on the selected update loop. A source's own Rigidbody supplies
+        /// its velocity; listeners and other sources use a transform delta times reciprocal time.
+        /// Measured by tests/projects/audiodistortion on 6000.0.71f1.</summary>
+        internal static void SampleMotion(GameObject owner, bool useBodyVelocity, Vector3 position, float deltaTime,
+            ref Vector3 previous, ref bool hasPrevious, ref Vector3 velocity)
+        {
+            if (useBodyVelocity && Compat.AudioSpatialStereoMeasured && owner != null && owner.GetComponent<Rigidbody>() is Rigidbody body)
+                velocity = body.linearVelocity;
+            else if (hasPrevious && deltaTime > 0f)
+                velocity = Compat.AudioSpatialStereoMeasured
+                    ? (position - previous) * (1f / deltaTime)
+                    : (position - previous) / deltaTime;
+            previous = position;
+            hasPrevious = true;
+        }
+
         /// <summary>
         /// Each fixed step (FixedUpdate.AudioFixedUpdate): the velocity of the sources and the
         /// hearing listener that follow the fixed loop, from the motion since the previous fixed
@@ -281,6 +297,8 @@ namespace Unbound.Runtime
         {
             var backend = AudioBackend.Current;
             float realDelta = (float)Math.Max(0.0, Time.s_RealDeltaTime);
+            // AudioRenderer controls distinguish the game frame step from elapsed wall time.
+            float motionDelta = Compat.AudioSpatialStereoMeasured ? Time.deltaTime : realDelta;
 
             foreach (var mixer in s_Mixers) mixer.Tick(Time.deltaTime, realDelta);
             for (int i = s_Groups.Count - 1; i >= 0; i--)
@@ -314,7 +332,7 @@ namespace Unbound.Runtime
                 if (source == null || source.m_GameObject == null) continue;
                 try
                 {
-                    source.SampleMotion(fixedStep: false, realDelta);
+                    source.SampleMotion(fixedStep: false, motionDelta);
                     bool hasFilter = AudioFilters.Update(source.Handle, source.m_GameObject);
                     source.m_HasFilter = hasFilter;
                     source.Flush(always: true);
@@ -345,7 +363,7 @@ namespace Unbound.Runtime
                 // The most recently enabled listener hears.
                 var listener = s_Listeners[listeners - 1];
                 var t = listener.transform;
-                listener.SampleMotion(fixedStep: false, realDelta);
+                listener.SampleMotion(fixedStep: false, motionDelta);
                 frame.ListenerPosition = t.position;
                 frame.ListenerForward = t.forward;
                 frame.ListenerUp = t.up;

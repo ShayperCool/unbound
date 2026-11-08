@@ -423,7 +423,7 @@ namespace Unbound.Runtime
     /// <summary>Collects an AudioSource's filter components for its packet.</summary>
     internal static class AudioFilterChain
     {
-        const string SpatialFilterLimit = " on a 3D AudioSource is not supported: common spatial gain, spread, doppler and reverb-zone send need exact measurements (tests/projects/audiodistortion spatial controls)";
+        const string SpatialFilterLimit = " on a 3D AudioSource is not supported: reverb-zone first activation and source-completion sends still differ from the reference; physics-driven listener timing remains unmeasured (tests/projects/audiodistortion spatial controls)";
         const string SpatialDistortionError = "AudioDistortionFilter" + SpatialFilterLimit;
         const string SpatialChorusError = "AudioChorusFilter" + SpatialFilterLimit;
         static readonly HashSet<string> s_Bookkeeping = new HashSet<string>

@@ -179,30 +179,45 @@ The extension preserves every pre-existing reference value and tolerance.
 
 # 3D component placement and remaining spatial playback gap
 
-The separate `spatial` profile in tests/projects/audiodistortion records 42 cases
-per rate at 48000 and 44100 Hz: dry, Distortion and Chorus, each with mono/stereo
-clips, front/side positions, 180-degree spread, half spatial blend, 1.5 pitch,
-motion for doppler and a reverb zone. Each canonical profile has two exact Editor
-repeats. The Rust kernel test feeds the captured dry Master floats through the
-shared Distortion and Chorus cores and compares every resulting Master float.
-Both cores therefore follow spatial gain/attenuation, spread and doppler in these
-measured contexts. This does not establish a cross-release ordering contract or
-the reverb-zone send point.
+The `spatial` profile in tests/projects/audiodistortion has 222 cases at each of
+48000 and 44100 Hz, with 32768 stereo frames of device PCM and Master floats per
+case. Two independent Unity 6000.0.71f1 Linux Editor captures agree exactly.
+The additional `spatial-factor0` and `spatial-factor2` profiles repeat 18 moving
+source/listener controls with the project's Doppler Factor set to 0 and 2.
+Earlier oracle values and comparator tolerances are retained unchanged.
 
-The common dry spatial path still disagrees with the Editor. For example, with
-linear rolloff at distance 5, min/max distance 1/20, front mono gain is 0.5582422;
-the present path gives 0.7894737. Stereo front summation, side panning, spread,
-partial blend and moving-source controls also disagree. Fixing the common spatial
-matrix and doppler is a separate prerequisite, followed by zone-send placement.
-Active 3D Distortion/Chorus components are rejected with one explicit diagnostic
-per source; bypassed components and the ordinary dry path remain available.
-`unbound doctor` lists this limit and the remaining listener/script placements.
+The original 42-case profile had 5080122/5079854 raw failing values at the two
+rates. The common dry path is now measured independently: distance rolloff,
+channel mapping, gain transitions, custom curves, relative velocity and decoded
+sample-rate conversion. The complete raw comparison still includes unsupported
+3D filter output and zone-send differences. Its separate dry gate excludes only
+the two original zone controls and admits the existing one-step device PCM bound;
+Master floats retain the original absolute/relative tolerance.
 
-The gate preserves a raw comparison of all 5505110 spatial values per rate,
-including all 5080122/5079854 failures at 48000/44100 Hz. It separately verifies
-all 28 active filter placements are explicitly refused and leave their dry
-controls byte-identical. That rejection check is not a 3D parity certification;
-no existing oracle or comparator bound is changed to accept those samples.
+The shared Distortion and Chorus cores match every captured post-spatial Master
+float. Their source components still reject 3D placement, with one diagnostic per
+source and a matching `unbound doctor` entry, because first activation of a zone
+and the last source buffer's send remain different. The rejection gate checks
+all 28 placements and requires each output to be byte-identical to its dry
+control. It does not certify 3D filter parity.
+
+## Measured spatial playback
+
+These observations apply to Unity 6000.0.71f1, Linux stereo output and 1024-frame
+DSP buffers. They are not promises for other releases or output layouts.
+
+| Basis | Contract or observation |
+| --- | --- |
+| Documented, Unity 6000.0 | The [Audio Source component reference](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioSource.html) describes minimum distance, linear/custom maximum distance and logarithmic rolloff continuing beyond maximum distance. Spatial Blend controls how much the 3D settings apply. It does not specify gain arithmetic or DSP-buffer interpolation. |
+| Documented, Unity 6000.0 | [spatialBlend](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-spatialBlend.html) combines 2D and 3D processing with stereo panning. [spread](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-spread.html) locates channels together at zero and opposite the source direction at 360 degrees. [SetCustomCurve](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.SetCustomCurve.html) scales distance curves over maxDistance and may normalize returned keys. The controls here use normalized keys from 0 to 1. |
+| Documented, Unity 6000.0 | [velocityUpdateMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-velocityUpdateMode.html) chooses fixed updates for Auto with a Rigidbody and dynamic updates otherwise. [dopplerLevel](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-dopplerLevel.html) scales the effect. The [Audio Manager](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioManager.html) documents global Doppler Factor and logarithmic Rolloff Scale; it does not define the per-buffer calculation. |
+| Measured | For lateral unit direction `p`, stereo gains are `(sqrt(2-p*p)-p)/2` and `(sqrt(2-p*p)+p)/2`. Spread rotates two input directions by opposite half angles in listener space. Stereo retains both input channels; mono averages the two directions. Controls include vertical/coincident positions and listener rotation. |
+| Measured | Channel mapping blends 2D panning with the 3D matrix; attenuation blends separately as `1-blend+blend*rolloff`. Stereo pan affects the 2D contribution. Mono 2D panning uses `sqrt((1-pan)/2)` and `sqrt((1+pan)/2)`. Logarithmic rolloff continues beyond maxDistance; linear/custom rolloff clamp. |
+| Measured | Source updates evaluate the actual curve keys at distance/maxDistance. Multi-key CustomRolloff, SpatialBlend and Spread controls cover knots and intervals. Gain changes accumulate over 64 output samples, starting with the previous gain and reaching the exact target at sample 64. Distance, blend, direction, spread, volume and moving-listener controls use the same ramp. |
+| Measured | A source's own Rigidbody supplies its linearVelocity; a source without one and the listener use transform delta times reciprocal game-frame time (capture time differs from elapsed wall time). Doppler projects source-minus-listener velocity along their offset before normalizing. The factor is `max(1e-6, (340-scale*radialSpeed)/340)`, then blended with 1 by spatialBlend. Controls cover both moving endpoints, source levels 0/1/2, project factors 0/1/2, a dynamic/Auto source body and transform motion of kinematic source/listener bodies. |
+| Measured | Decoded playback computes a single-precision frequency, capped at 1 MHz, before converting to a source-frame step and accumulating phase in double precision. Non-looping interpolation reads the first frame for lookahead past the last frame, then stops. Non-integer pitch, differing clip/output rates, an unrouted control and extreme velocities distinguish these operations. |
+| Implementation | `Compat.AudioSpatialStereoMeasured` selects these mechanisms. Each voice chooses its clip's mono/stereo matrix, including one-shots. Curves use cached packet storage. Spatial state and voice-priority storage are reused on the audio thread; priority selection partitions rather than sorting every source. Other releases retain the previous approximate spatial path until measured. |
+| Unresolved | Physics-driven listener timing, parent-body attachment and curve-key normalization outside 0..1 remain unmeasured. First-ever zone activation after rendering starts differs from a zone configured before rendering. The original long zone-source control also differs in its final DSP buffer. Both raw failures remain visible; 3D Distortion/Chorus remain explicitly unsupported. |
 
 # AudioMixer: SFX Reverb
 
@@ -383,11 +398,18 @@ the Manual (*Audio Reverb Filter*, *Audio Reverb Zone*):
   changes while a tail runs are unmeasured too.
 - Residuals: one-step device PCM flips only (filter and zone cases; the gate admits one step on
   device PCM, never on floats).
-- Zones, unmeasured: a source routed into a mixer group (it sends like any other source),
-  listener components processing the zone reverb, a zone disabled and enabled again within one
-  frame (the reverb restarts), parameter changes while a tail runs, `reverbZoneMix` curves of
-  more than one key (evaluated at the listener's distance over maxDistance), 3D sources, other
-  sample rates and releases.
+- Added zone-send controls cover mono/stereo, 2D/3D, routed/unrouted sources, multi-key
+  `reverbZoneMix` curves, distances at and between normalized keys, and clip/setter order.
+  All 90 cases and their property tables pass at both rates (8847759 values per rate).
+  The [Reverb Zone manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioReverbZone.html)
+  describes the listener's zone influence; [reverbZoneMix](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-reverbZoneMix.html)
+  describes the source send and permits 1..1.1 for a near-field boost. Neither specifies its
+  whole-mB quantization or first-activation timing. These controls configure zones before
+  rendering and capture before long sources finish. First-ever zone activation after rendering
+  starts and the final buffer of a long source remain unresolved in audiodistortion.
+- Still unmeasured: listener components processing zone reverb, disable/re-enable within one
+  frame, parameter changes while a tail runs, curve normalization outside 0..1, other output
+  layouts, sample rates and releases.
 
 # AudioMixer: Send, Receive and Duck Volume
 

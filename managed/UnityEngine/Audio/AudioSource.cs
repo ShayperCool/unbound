@@ -227,7 +227,10 @@ namespace UnityEngine
             get
             {
                 if (m_SpatialBlendCurve.length <= 1) return spatialBlend > 0f;
-                // This is the same bounded sampling used by the native spatial curve table.
+                // Direct evaluation must also protect narrow intervals missed by the legacy table.
+                if (Compat.AudioSpatialStereoMeasured && m_SpatialBlendCurve.Evaluate(CurveTimeAtListener()) > 0f) return true;
+                for (int i = 0; i < m_SpatialBlendCurve.length; i++)
+                    if (m_SpatialBlendCurve[i].value > 0f) return true;
                 for (int i = 0; i < CurveSamples; i++)
                     if (m_SpatialBlendCurve.Evaluate(i / (float)(CurveSamples - 1)) > 0f) return true;
                 return false;
@@ -315,17 +318,24 @@ namespace UnityEngine
 
         static float ConstantOf(AnimationCurve curve) => curve.length > 0 ? curve[0].value : 0f;
 
+        float CurveTimeAtListener()
+        {
+            float distance = m_GameObject != null ? Vector3.Distance(transform.position, AudioSystem.s_HearingPosition) : 0f;
+            return m_MaxDistance > 0f ? distance / m_MaxDistance : 1f;
+        }
+
         /// <summary>The linear gain of this source's send into the reverb zones, as the Editor
         /// derives it: <c>reverbZoneMix</c> (a curve of more than one key at the listener's
-        /// distance over maxDistance; unmeasured) clamped to 0..1.1, then 2000 log10 of it in
-        /// whole mB up to 1 and (mix - 1) * 10000 mB above; 0 with <c>bypassReverbZones</c>.</summary>
+        /// distance over maxDistance, measured for normalized keys in tests/projects/audioreverb)
+        /// clamped to 0..1.1, then 2000 log10 of it in whole mB up to 1 and
+        /// (mix - 1) * 10000 mB above; 0 with <c>bypassReverbZones</c>.</summary>
         internal float ReverbZoneSend()
         {
             if (m_BypassReverbZones) return 0f;
             var curve = m_ReverbZoneMixCurve;
             float mix = curve.length == 1 || !(m_MaxDistance > 0f) || m_GameObject == null
                 ? ConstantOf(curve)
-                : curve.Evaluate(Vector3.Distance(transform.position, AudioSystem.s_HearingPosition) / m_MaxDistance);
+                : curve.Evaluate(CurveTimeAtListener());
             mix = Math.Min(1.1f, mix);
             if (mix < 0f) mix = 0f;
             int mB = mix > 1f ? (int)((mix - 1f) * 10000f) : mix > 0f ? (int)(MathF.Log10(mix) * 2000f) : -10000;
@@ -626,9 +636,29 @@ namespace UnityEngine
             if (m_CurvesDirty)
             {
                 m_CurvesDirty = false;
-                m_RolloffTable = m_RolloffMode == AudioRolloffMode.Custom ? Sample(m_RolloffCurve) : null;
-                m_SpatialBlendTable = m_SpatialBlendCurve.length > 1 ? Sample(m_SpatialBlendCurve) : null;
-                m_SpreadTable = m_SpreadCurve.length > 1 ? Sample(m_SpreadCurve) : null;
+                if (Compat.AudioSpatialStereoMeasured)
+                {
+                    // Evaluate the actual curves once per source update, before the audio thread.
+                    // A one-value rolloff table uses the existing packet layout and storage.
+                    m_RolloffTable = m_RolloffMode == AudioRolloffMode.Custom ? new float[1] : null;
+                    m_SpatialBlendTable = null;
+                    m_SpreadTable = null;
+                }
+                else
+                {
+                    m_RolloffTable = m_RolloffMode == AudioRolloffMode.Custom ? Sample(m_RolloffCurve) : null;
+                    m_SpatialBlendTable = m_SpatialBlendCurve.length > 1 ? Sample(m_SpatialBlendCurve) : null;
+                    m_SpreadTable = m_SpreadCurve.length > 1 ? Sample(m_SpreadCurve) : null;
+                }
+            }
+            float blendValue = ConstantOf(m_SpatialBlendCurve);
+            float spreadValue = ConstantOf(m_SpreadCurve);
+            if (Compat.AudioSpatialStereoMeasured)
+            {
+                float time = CurveTimeAtListener();
+                if (m_RolloffTable != null) m_RolloffTable[0] = m_RolloffCurve.Evaluate(time);
+                blendValue = m_SpatialBlendCurve.Evaluate(time);
+                spreadValue = m_SpreadCurve.Evaluate(time);
             }
             uint flags = 0;
             if (loop) flags |= AudioSourceFlags.Loop;
@@ -645,6 +675,7 @@ namespace UnityEngine
             if (m_KeepOutput) flags |= AudioSourceFlags.KeepOutput;
             if (Compat.DecodedAudioResamplingMeasured) flags |= AudioSourceFlags.DecodedResampling;
             if (Compat.AudioComponentTailMeasured) flags |= AudioSourceFlags.ComponentFilterTail;
+            if (Compat.AudioSpatialStereoMeasured) flags |= AudioSourceFlags.SpatialStereo;
             if (m_HasFilter && isActiveAndEnabled) flags |= AudioSourceFlags.Filter;
             var packet = new AudioSourcePacket
             {
@@ -655,8 +686,8 @@ namespace UnityEngine
                 Volume = volume,
                 Pitch = m_Pitch,
                 PanStereo = m_PanStereo,
-                SpatialBlend = ConstantOf(m_SpatialBlendCurve),
-                Spread = ConstantOf(m_SpreadCurve) * 360f,
+                SpatialBlend = blendValue,
+                Spread = spreadValue * 360f,
                 DopplerLevel = m_DopplerLevel,
                 MinDistance = m_MinDistance,
                 MaxDistance = m_MaxDistance,
@@ -664,7 +695,7 @@ namespace UnityEngine
                 RolloffMode = (int)m_RolloffMode,
                 Priority = m_Priority,
                 Flags = flags,
-                CurveLength = CurveSamples,
+                CurveLength = Compat.AudioSpatialStereoMeasured ? 1 : CurveSamples,
             };
             // A clipless source with OnAudioFilterRead plays its first script as the clip.
             bool generator = packet.Clip == 0 && (flags & AudioSourceFlags.Filter) != 0;
@@ -701,14 +732,12 @@ namespace UnityEngine
             return table;
         }
 
-        /// <summary>The velocity from the transform's motion since the last sample.</summary>
+        /// <summary>The source's Rigidbody velocity, or its transform's motion since the last sample.</summary>
         internal void UpdateMotion(float deltaTime)
         {
             var position = transform.position;
-            if (m_HasLastPosition && deltaTime > 0f)
-                m_Velocity = (position - m_LastPosition) / deltaTime;
-            m_LastPosition = position;
-            m_HasLastPosition = true;
+            AudioSystem.SampleMotion(m_GameObject, true, position, deltaTime,
+                ref m_LastPosition, ref m_HasLastPosition, ref m_Velocity);
         }
 
         /// <summary>Samples the velocity when <paramref name="fixedStep"/> is the loop
@@ -731,10 +760,8 @@ namespace UnityEngine
             }
             // The step's simulated pose, not an interpolated Transform's (Unbound's choice, unmeasured).
             var position = AudioSystem.FixedStepPosition(transform);
-            if (m_HasLastPosition && deltaTime > 0f)
-                m_Velocity = (position - m_LastPosition) / deltaTime;
-            m_LastPosition = position;
-            m_HasLastPosition = true;
+            AudioSystem.SampleMotion(m_GameObject, true, position, deltaTime,
+                ref m_LastPosition, ref m_HasLastPosition, ref m_Velocity);
         }
 
         // ------------------------------------------------------------------ engine hooks

@@ -32,6 +32,7 @@ namespace UnityEngine.Tests
         readonly List<GameObject> m_Objects = new List<GameObject>();
         readonly float m_FixedDeltaTime = Time.s_FixedDeltaTime;
         readonly double m_RealDeltaTime = Time.s_RealDeltaTime;
+        readonly float m_DeltaTime = Time.s_DeltaTime;
 
         public AudioVelocityUpdateModeTests()
         {
@@ -46,6 +47,7 @@ namespace UnityEngine.Tests
             AudioSystem.ResetForTests();
             Time.s_FixedDeltaTime = m_FixedDeltaTime;
             Time.s_RealDeltaTime = m_RealDeltaTime;
+            Time.s_DeltaTime = m_DeltaTime;
             Time.s_InFixedTimeStep = false;
         }
 
@@ -160,6 +162,58 @@ namespace UnityEngine.Tests
         }
 
         // Unbound's choice: every step samples, so the frame sends the last step's velocity.
+        [Fact]
+        public void MeasuredSourcesUseBodyVelocityAndListenersUseTransformMotion()
+        {
+            string previousRelease = ProjectInfo.UnityVersion;
+            try
+            {
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                Time.s_DeltaTime = 0.5f;
+                var source = Make(false, AudioVelocityUpdateMode.Dynamic);
+                var body = source.Owner.AddComponent<Rigidbody>();
+                body.useGravity = false;
+                body.linearVelocity = X(3f);
+                Frame(0.5);
+                source.MoveTo(10f);
+                Frame(0.5);
+                Assert.Equal(X(3f), source.Velocity);
+                var kinematic = Make(false, AudioVelocityUpdateMode.Dynamic);
+                kinematic.Owner.AddComponent<Rigidbody>().isKinematic = true;
+                Frame(0.5);
+                kinematic.MoveTo(20f);
+                Frame(0.5);
+                Assert.Equal(Vector3.zero, kinematic.Velocity);
+                var listener = Make(true, AudioVelocityUpdateMode.Dynamic);
+                listener.Owner.AddComponent<Rigidbody>().isKinematic = true;
+                Frame(0.5);
+                listener.MoveTo(2f);
+                Frame(0.5);
+                Assert.Equal(X(4f), listener.Velocity);
+            }
+            finally { ProjectInfo.UnityVersion = previousRelease; }
+        }
+
+        [Fact]
+        public void MeasuredMotionUsesTheGameFrameStepWhenWallTimeDiffers()
+        {
+            string previousRelease = ProjectInfo.UnityVersion;
+            try
+            {
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                Time.s_DeltaTime = 0.25f;
+                var source = Make(false, AudioVelocityUpdateMode.Dynamic);
+                var listener = Make(true, AudioVelocityUpdateMode.Dynamic);
+                Frame(0.5);
+                source.MoveTo(2f);
+                listener.MoveTo(1f);
+                Frame(0.5);
+                Assert.Equal(X(8f), source.Velocity);
+                Assert.Equal(X(4f), listener.Velocity);
+            }
+            finally { ProjectInfo.UnityVersion = previousRelease; }
+        }
+
         [Fact]
         public void SeveralStepsInOneFrameLeaveTheLastStepsVelocity()
         {

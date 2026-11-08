@@ -36,6 +36,8 @@ pub mod source_flags {
     pub const DECODED_RESAMPLING: u32 = 1 << 10;
     /// Component tail cutoff follows the last voice's sample across device periods.
     pub const COMPONENT_FILTER_TAIL: u32 = 1 << 11;
+    /// Measured mono/stereo spatial mapping, gain transitions and decoded playback.
+    pub const SPATIAL_STEREO: u32 = 1 << 12;
 }
 
 /// An AudioSource's parameters, sent when they change and once per frame (its transform).

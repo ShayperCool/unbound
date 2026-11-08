@@ -23,7 +23,7 @@ const RENDERING_LIMITATIONS: &[&str] = &[
 ];
 
 const AUDIO_LIMITATIONS: &[&str] = &[
-    "AudioDistortionFilter and AudioChorusFilter on 3D AudioSources are rejected pending exact common spatial gain, spread, doppler and reverb-zone send processing (audiodistortion spatial controls).",
+    "AudioDistortionFilter and AudioChorusFilter on 3D AudioSources are rejected pending exact reverb-zone first activation and source-completion sends; physics-driven listener timing remains unmeasured (audiodistortion spatial controls).",
     "AudioListener filter components interleaved with OnAudioFilterRead scripts, or sharing their GameObject with an AudioSource, are not supported.",
 ];
 

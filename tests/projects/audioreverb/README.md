@@ -86,3 +86,12 @@ every earlier oracle value is retained. Two independent repeats agree exactly.
 NativeApi 33 sends `Compat.AudioComponentTailMeasured`; partial device periods
 use the actual last voice's ending sample. Rust tests check complete output at
 100/255/257/441/1000/1300-frame periods, including one-shots outliving the main voice.
+
+Forty additional zone-send controls bring the gate to 90 cases and 8847759 values
+per rate. They cover mono/stereo, 2D/3D, routed/unrouted sources, normalized
+three-key reverbZoneMix curves at/between their keys, impulse/noise signals and
+clip/setter order. Two fresh Editor captures per rate agree bit for bit; all
+previous oracle samples and tolerances are retained. These captures configure
+zones before rendering and stop before long sources finish. The separate
+[audiodistortion spatial profile](../audiodistortion/README.md) retains unresolved
+first-activation and source-completion send differences.

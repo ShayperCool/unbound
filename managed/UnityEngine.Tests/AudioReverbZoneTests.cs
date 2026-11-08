@@ -149,6 +149,41 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void DistanceCurvesReachThePacketWithoutAUniformSamplingTable()
+        {
+            string release = ProjectInfo.UnityVersion;
+            try
+            {
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                var go = new GameObject("curved-source");
+                m_Objects.Add(go);
+                go.transform.position = new Vector3(0, 0, 5);
+                var source = go.AddComponent<AudioSource>();
+                source.maxDistance = 20;
+                var curve = new AnimationCurve(new Keyframe(0, 0.2f, 0, 0),
+                    new Keyframe(0.4f, 0.8f, 0, 0), new Keyframe(1, 0.3f, 0, 0));
+                source.SetCustomCurve(AudioSourceCurveType.SpatialBlend, curve);
+                source.SetCustomCurve(AudioSourceCurveType.Spread, curve);
+                AudioSystem.s_HearingPosition = Vector3.zero;
+                source.SendPacket(19, null, 1, false);
+                var packet = m_Backend.ParamsOf(19);
+                Assert.Equal(curve.Evaluate(0.25f), packet.SpatialBlend);
+                Assert.Equal(curve.Evaluate(0.25f) * 360f, packet.Spread);
+                Assert.Equal(1, packet.CurveLength);
+                Assert.NotEqual(0u, packet.Flags & AudioSourceFlags.SpatialStereo);
+                AudioSystem.s_HearingPosition = go.transform.position;
+                source.SendPacket(19, null, 1, false);
+                Assert.Equal(0.2f, m_Backend.ParamsOf(19).SpatialBlend);
+                ProjectInfo.UnityVersion = "6000.0.70f1";
+                source.spatialBlend = 0.5f;
+                source.SendPacket(19, null, 1, false);
+                Assert.Equal(64, m_Backend.ParamsOf(19).CurveLength);
+                Assert.Equal(0u, m_Backend.ParamsOf(19).Flags & AudioSourceFlags.SpatialStereo);
+            }
+            finally { ProjectInfo.UnityVersion = release; }
+        }
+
+        [Fact]
         public void TheSendGainIsTheMixInWholeMillibels()
         {
             var go = new GameObject("source");

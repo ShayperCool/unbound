@@ -164,6 +164,12 @@ namespace Unbound.Runtime
         /// listener support and their prior bypassEffects routing until measured.</summary>
         internal static bool AudioListenerChainMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Mono/stereo source mapping, gain ramps, distance curves, relative-velocity
+        /// Doppler and interpolation lookahead measured by tests/projects/audiodistortion on
+        /// 6000.0.71f1. Other releases retain the previous approximate matrix, sampled curves,
+        /// inverse-source-velocity Doppler and max-distance clamp until measured.</summary>
+        internal static bool AudioSpatialStereoMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>The Distortion waveshaper of the mixer effect and AudioDistortionFilter, measured
         /// on exactly 6000.0.71f1 (tests/projects/audiodistortion). Other releases fail until measured.</summary>
         internal static bool DistortionMeasured => Release == (6000, 0, 71, 'f', 1);

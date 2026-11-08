@@ -43,7 +43,7 @@ exactly on 13369637 static values per rate; the earlier
 8782034 values per rate are unchanged. `publish.py --extend` checks every earlier
 metadata value and sample before it adds controls.
 
-The separate `--profile spatial` records 42 mono/stereo placement controls, each
+The separate `--profile spatial` records 222 mono/stereo placement controls, each
 with 32768 frames, under `Reference/unity-6000.0.71f1/spatial-rate-RATE`.
 Record two independent runs with `native.py --profile spatial`; verify their
 metadata and every raw sample are identical, then publish one with
@@ -57,3 +57,15 @@ and checks one explicit diagnostic for each rejected placement, with its ordinar
 dry output unchanged. See the [measured rule, raw failure counts and follow-up](../../../docs/AUDIO.md#3d-component-placement-and-remaining-spatial-playback-gap).
 This rejection gate does not certify 3D parity. All prior static values and
 comparator tolerances remain unchanged.
+
+The additional dry controls measure logarithmic/linear/custom rolloff, min/max
+boundaries, partial blend, normalized multi-key CustomRolloff/SpatialBlend/Spread
+curves, listener rotation, spread, stereo pan, 64-sample gain transitions, source
+and listener motion, direct Rigidbody velocity, non-integer pitch and clip rates,
+and extreme Doppler. `spatial-factor0` and `spatial-factor2` repeat 18 moving
+controls per rate with the corresponding project Doppler Factor. Record/publish
+these profiles by the same independent-repeat procedure. The gate runs every
+profile, retaining all raw failures while separately requiring the measured dry
+controls to pass. Only the two original zone cases are outside that dry gate.
+First-ever zone activation after rendering starts and the last source-buffer
+send remain unresolved. These retain the 3D component rejection.
