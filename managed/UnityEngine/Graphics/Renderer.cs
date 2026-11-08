@@ -331,7 +331,25 @@ namespace UnityEngine
 
         internal virtual void SetLocalBounds(Bounds value) => m_LocalBoundsOverride = value;
 
-        internal virtual Bounds GetWorldBounds() => TransformBounds(localBounds, BoundsMatrix);
+        internal virtual Bounds GetWorldBounds()
+        {
+            var local = localBounds;
+            if (m_StaticBatched) return TransformBounds(local, BoundsMatrix);
+            // Cameras ask every frame: the box is made again only when the local bounds or the
+            // transform (or a parent) changed.
+            int version = m_GameObject.m_Transform.SyncedVersion;
+            if (m_WorldBoundsVersion != version || !(FloatBits.Same(m_WorldBoundsLocal.center, local.center) && FloatBits.Same(m_WorldBoundsLocal.extents, local.extents)))
+            {
+                m_WorldBounds = TransformBounds(local, BoundsMatrix);
+                m_WorldBoundsLocal = local;
+                m_WorldBoundsVersion = version;
+            }
+            return m_WorldBounds;
+        }
+
+        Bounds m_WorldBounds, m_WorldBoundsLocal;
+        /// <summary>The transform's version <see cref="m_WorldBounds"/> were made at; none yet.</summary>
+        int? m_WorldBoundsVersion;
 
         internal static Bounds TransformBounds(Bounds local, Matrix4x4 matrix)
         {

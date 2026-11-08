@@ -54,6 +54,17 @@ namespace UnityEngine
             if (Unbound.Runtime.Jobs.JobSystem.TransformJobsPending) Unbound.Runtime.Jobs.JobSystem.SyncTransformJobs();
         }
 
+        /// <summary><see cref="m_Version"/> once the jobs that write transforms are done: the same
+        /// value means the same world placement.</summary>
+        internal int SyncedVersion
+        {
+            get
+            {
+                SyncJobs();
+                return m_Version;
+            }
+        }
+
         internal virtual Vector3 GetLocalPosition() => m_LocalPosition;
 
         internal virtual void SetLocalPosition(Vector3 value)
