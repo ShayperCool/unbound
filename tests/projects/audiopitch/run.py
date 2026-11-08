@@ -30,8 +30,8 @@ cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound/
 work = a.work or cache/('audio-pitch-gate-'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
 work.mkdir(parents=True, exist_ok=False)
 runtime = work/'runtime'; runtime.mkdir()
-shutil.copy2(a.unbound, runtime/'unbound')
-shutil.copytree(Path(a.unbound).resolve().parents[1]/'managed', runtime/'managed')
+(runtime/'unbound').symlink_to(Path(a.unbound).resolve())
+(runtime/'managed').symlink_to(Path(a.unbound).resolve().parents[1]/'managed', target_is_directory=True)
 if not a.native and subprocess.run([sys.executable, str(fixture.parents[1]/'authored_project.py'), 'assemble',
                                    fixture.name, 'default', '--release', a.release,
                                    '--out', str(work/'authored')]).returncode:
