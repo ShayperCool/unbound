@@ -204,12 +204,24 @@ namespace UnityEngine
             // Bounds left at the constructor's zero value are not set: the draw keeps its mesh's
             // bounds (Unbound's choice; a RenderMesh with them is drawn, measured:
             // tests/projects/graphics renderMesh).
-            if (Immediate.Queued.Count == queued + 1)
+            if (Immediate.Queued.Count == queued + 1 && !rparams.worldBounds.Equals(default(Bounds)))
             {
                 var entry = Immediate.Queued[queued];
-                if (!rparams.worldBounds.Equals(default(Bounds))) entry.WorldBounds = rparams.worldBounds;
-                entry.RenderingLayerMask = rparams.renderingLayerMask;
+                entry.WorldBounds = rparams.worldBounds;
                 Immediate.Queued[queued] = entry;
+            }
+            WithRenderingLayerMask(queued, rparams.renderingLayerMask);
+        }
+
+        /// <summary>A RenderParams call's renderingLayerMask on every draw it queued (from
+        /// <paramref name="from"/> on): what scriptable pipeline renderer lists filter them by.</summary>
+        static void WithRenderingLayerMask(int from, uint mask)
+        {
+            for (int i = from; i < Immediate.Queued.Count; i++)
+            {
+                var entry = Immediate.Queued[i];
+                entry.RenderingLayerMask = mask;
+                Immediate.Queued[i] = entry;
             }
         }
 
@@ -251,6 +263,7 @@ namespace UnityEngine
             // The entity's sort key is the bounds' centre, ties within the call kept in call
             // order (Unbound's choice, unmeasured).
             WithWorldBounds(queued, automatic ? bounds : rparams.worldBounds);
+            WithRenderingLayerMask(queued, rparams.renderingLayerMask);
         }
 
         public static void RenderMeshInstanced<T>(in RenderParams rparams, Mesh mesh, int submeshIndex, T[] instanceData, int instanceCount = -1, int startInstance = 0) where T : unmanaged

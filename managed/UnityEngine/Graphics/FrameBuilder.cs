@@ -700,9 +700,7 @@ namespace Unbound.Runtime
                 try { renderer.CollectDraws(context, s_Items); }
                 catch (Exception e) { Debug.LogException(e, renderer); }
             }
-            // Graphics.DrawMesh draws (default sorting layer), filtered as renderers are. They get
-            // no per-object light data below (unmeasured; URP's decals set unity_LightData in
-            // their block themselves).
+            // Graphics.DrawMesh draws (default sorting layer), filtered as renderers are.
             bool defaultSortingLayer = allLayers || (layers.lowerBound <= 0 && layers.upperBound >= 0);
             foreach (var q in shadows.HasValue ? data.Queued : data.QueuedVisible)
             {
@@ -749,15 +747,27 @@ namespace Unbound.Runtime
             if ((drawing.perObjectData & (PerObjectData.LightData | PerObjectData.LightIndices)) != 0)
             {
                 var lights = new Dictionary<Renderer, Dictionary<int, object>>();
+                bool lightmapsData = (drawing.perObjectData & PerObjectData.Lightmaps) != 0;
                 for (int i = 0; i < s_Items.Count; i++)
                 {
                     var item = s_Items[i];
-                    if (item.Renderer == null) continue;
-                    if (!lights.TryGetValue(item.Renderer, out var perObject))
-                        lights[item.Renderer] = perObject = PerObjectLights(data, item.Renderer, drawing.mainLightIndex,
-                            (drawing.perObjectData & PerObjectData.Lightmaps) != 0);
+                    Dictionary<int, object> perObject;
+                    if (item.Renderer != null)
+                    {
+                        if (!lights.TryGetValue(item.Renderer, out perObject))
+                        {
+                            var r = item.Renderer;
+                            bool lightmapped = lightmapsData && r.lightmapIndex >= 0 && r.lightmapIndex < 0xFFFE;
+                            lights[r] = perObject = PerObjectLights(data, r.bounds, lightmapped, drawing.mainLightIndex);
+                        }
+                    }
+                    // A Graphics.DrawMesh draw: lit as a renderer at its bounds, never lightmapped.
+                    // Values its own block sets stay (URP's decals set unity_LightData).
+                    else if (item.Lighting != null) perObject = PerObjectLights(data, item.Bounds, false, drawing.mainLightIndex);
+                    else continue;
                     var properties = item.Properties != null ? new Dictionary<int, object>(item.Properties) : new Dictionary<int, object>();
-                    foreach (var p in perObject) properties[p.Key] = p.Value;
+                    foreach (var p in perObject)
+                        if (item.Renderer != null || !properties.ContainsKey(p.Key)) properties[p.Key] = p.Value;
                     item.Properties = properties;
                     s_Items[i] = item;
                 }
@@ -884,18 +894,17 @@ namespace Unbound.Runtime
         static readonly int s_LightIndicesId = Shader.PropertyToID("unity_LightIndices");
         const int MaxPerObjectLights = 8;
 
-        /// <summary>A renderer's per-object lights (unity_LightData, unity_LightIndices): the
-        /// visible lights other than those the index map drops whose range reaches its bounds,
-        /// brightest at the bounds' center first, at most 8; whether the main light lights it
-        /// (unity_LightData.z). A lightmapped renderer (<paramref name="lightmaps"/>: the list
-        /// binds lightmaps) leaves out the lights <see cref="InLightmap"/>.</summary>
-        static Dictionary<int, object> PerObjectLights(CullingData data, Renderer renderer, int mainLight, bool lightmaps)
+        /// <summary>The per-object lights (unity_LightData, unity_LightIndices) of a renderer or a
+        /// Graphics.DrawMesh draw with these world bounds: the visible lights other than those
+        /// the index map drops whose range reaches the bounds, brightest at the bounds' center
+        /// first, at most 8; whether the main light lights it (unity_LightData.z). A
+        /// <paramref name="lightmapped"/> renderer (the list binds lightmaps) leaves out the
+        /// lights <see cref="InLightmap"/>.</summary>
+        internal static Dictionary<int, object> PerObjectLights(CullingData data, Bounds bounds, bool lightmapped, int mainLight)
         {
-            var bounds = renderer.bounds;
             var candidates = new List<(int Index, float Importance)>();
             var map = data.LightIndexMap;
             // A lightmapped renderer is not lit at run time by the lights baked into its lightmap.
-            bool lightmapped = lightmaps && renderer.lightmapIndex >= 0 && renderer.lightmapIndex < 0xFFFE;
             float mainLit = lightmapped && mainLight >= 0 && mainLight < data.Lights.Length && InLightmap(data.Lights[mainLight].light) ? 0f : 1f;
             for (int i = 0; i < data.Lights.Length; i++)
             {

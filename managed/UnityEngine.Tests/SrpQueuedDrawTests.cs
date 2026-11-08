@@ -78,6 +78,34 @@ namespace UnityEngine.Tests
             Assert.Empty(Immediate.Queued);
         }
 
+        /// <summary>A queued draw is lit as a renderer at its bounds: the additional lights whose
+        /// range reaches them.</summary>
+        [Fact]
+        public void QueuedDrawsTakeThePerObjectLightsAtTheirBounds()
+        {
+            var lightObject = new GameObject("srp queued point light");
+            try
+            {
+                lightObject.transform.position = new Vector3(0f, 0f, 2f);
+                var light = lightObject.AddComponent<Light>();
+                light.type = LightType.Point;
+                light.range = 3f;
+                var data = new CullingData { Camera = m_Camera };
+                data.Lights = new Unity.Collections.NativeArray<VisibleLight>(1, Unity.Collections.Allocator.Persistent);
+                data.Lights[0] = new VisibleLight(light, new Rect(0, 0, 1, 1), false, true, false);
+                try
+                {
+                    var near = FrameBuilder.PerObjectLights(data, new Bounds(Vector3.zero, Vector3.one), false, -1);
+                    var far = FrameBuilder.PerObjectLights(data, new Bounds(new Vector3(0f, 0f, 20f), Vector3.one), false, -1);
+                    int id = Shader.PropertyToID("unity_LightData");
+                    Assert.Equal(1f, ((Vector4)near[id]).y);
+                    Assert.Equal(0f, ((Vector4)far[id]).y);
+                }
+                finally { data.Dispose(); }
+            }
+            finally { Object.DestroyImmediate(lightObject); }
+        }
+
         [Fact]
         public void ARenderParamsDrawKeepsItsRenderingLayerMask()
         {
@@ -88,6 +116,17 @@ namespace UnityEngine.Tests
             Assert.Equal(2, data.QueuedVisible.Count);
             Assert.Equal(4u, data.QueuedVisible[0].RenderingLayerMask);
             Assert.Equal(GraphicsSettings.defaultRenderingLayerMask, data.QueuedVisible[1].RenderingLayerMask);
+        }
+
+        /// <summary>Every draw of an instanced RenderParams call carries its mask.</summary>
+        [Fact]
+        public void InstancedRenderParamsDrawsKeepTheirRenderingLayerMask()
+        {
+            m_Material.enableInstancing = true;
+            var rp = new RenderParams(m_Material) { layer = 30, camera = m_Camera, renderingLayerMask = 8u };
+            Graphics.RenderMeshInstanced(rp, m_Mesh, 0, new[] { Matrix4x4.identity, Matrix4x4.Translate(Vector3.right) });
+            Assert.Equal(2, Immediate.Queued.Count);
+            Assert.All(Immediate.Queued, q => Assert.Equal(8u, q.RenderingLayerMask));
         }
     }
 }
