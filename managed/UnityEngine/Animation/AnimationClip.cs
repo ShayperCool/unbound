@@ -677,7 +677,23 @@ namespace Unbound.Runtime
         /// (blended with other clips' rotations), as Mecanim does.</summary>
         internal bool EulerStart;
 
-        internal float Evaluate(float time) => Sampled != null ? Sampled.Evaluate(time) : Curve.Evaluate(time);
+        AnimationCurve m_SegmentsOf;
+        KeySegments m_Segments;
+
+        /// <summary>The curve's value at a time on the clip, as the Animator samples it: a player
+        /// clip's compiled curve, else the keys' cubic segments (<see cref="KeySegments"/>).</summary>
+        internal float Evaluate(float time)
+        {
+            if (Sampled != null) return Sampled.Evaluate(time);
+            if (!ReferenceEquals(m_SegmentsOf, Curve))
+            {
+                // Clip curves are private copies, replaced rather than edited, so the reference
+                // identifies the keys.
+                m_SegmentsOf = Curve;
+                m_Segments = KeySegments.Of(Curve);
+            }
+            return m_Segments != null && m_Segments.TryEvaluate(time, out float value) ? value : Curve.Evaluate(time);
+        }
 
         internal float LastKeyTime
         {
@@ -759,8 +775,7 @@ namespace Unbound.Runtime
                 }
                 float start = Times[lo];
                 float dt = start > -float.MaxValue ? time - start : 0f;
-                int c = 4 * lo;
-                return ((Coefficients[c] * dt + Coefficients[c + 1]) * dt + Coefficients[c + 2]) * dt + Coefficients[c + 3];
+                return Cubic(Coefficients, 4 * lo, dt);
             }
             if (Samples != null)
             {
@@ -773,6 +788,100 @@ namespace Unbound.Runtime
                 return Samples[i] + (Samples[i + 1] - Samples[i]) * t;
             }
             return Constant;
+        }
+
+        /// <summary>A cubic segment ((a t + b) t + c) t + d at <paramref name="dt"/> from its start,
+        /// in single precision in this order, its coefficients from <paramref name="c"/>.</summary>
+        internal static float Cubic(float[] coefficients, int c, float dt) =>
+            ((coefficients[c] * dt + coefficients[c + 1]) * dt + coefficients[c + 2]) * dt + coefficients[c + 3];
+    }
+
+    /// <summary>
+    /// An authored clip curve's keys as the Animator samples them: each pair of keys becomes the
+    /// cubic ((a t + b) t + c) t + d in t = time − the first key's time (a = (d1 + d2 − 2 dy) / dx³,
+    /// b = (3 dy − 2 d1 − d2) / dx², c the first key's out slope, d its value, with dx the keys'
+    /// distance, at least 1e-4, dy their value difference and d1, d2 the out and in slopes times dx),
+    /// computed and evaluated in single precision; a +∞ slope holds the first key's value and a −∞
+    /// slope the second's. This is the Hermite curve AnimationCurve.Evaluate gives, rounded as the
+    /// Animator rounds it (Unity 6000.0.71f1: tests/projects/humanfirstpose, animculling, humanoid).
+    /// Weighted segments and times outside the keys are left to AnimationCurve.Evaluate.
+    /// </summary>
+    internal sealed class KeySegments
+    {
+        /// <summary>The smallest key distance of a segment (closer keys count as this far apart).</summary>
+        const float MinSegmentLength = 1e-4f;
+
+        readonly float[] m_Times;
+        readonly float[] m_Coefficients;
+        /// <summary>Per segment: a weighted tangent shapes it (left to AnimationCurve.Evaluate).</summary>
+        readonly bool[] m_Weighted;
+
+        KeySegments(float[] times, float[] coefficients, bool[] weighted)
+        {
+            m_Times = times;
+            m_Coefficients = coefficients;
+            m_Weighted = weighted;
+        }
+
+        /// <summary>The segments of a curve's keys, or null with fewer than two keys.</summary>
+        internal static KeySegments Of(AnimationCurve curve)
+        {
+            if (curve == null || curve.length < 2) return null;
+            var keys = curve.keys;
+            int n = keys.Length - 1;
+            var times = new float[keys.Length];
+            var coefficients = new float[4 * n];
+            var weighted = new bool[n];
+            for (int i = 0; i < keys.Length; i++) times[i] = keys[i].time;
+            for (int i = 0; i < n; i++)
+            {
+                Keyframe k0 = keys[i], k1 = keys[i + 1];
+                weighted[i] = (k0.weightedMode & WeightedMode.Out) != 0 || (k1.weightedMode & WeightedMode.In) != 0;
+                int c = 4 * i;
+                if (k0.outTangent >= float.PositiveInfinity || k1.inTangent >= float.PositiveInfinity)
+                {
+                    coefficients[c + 3] = k0.value;
+                    continue;
+                }
+                if (k0.outTangent <= float.NegativeInfinity || k1.inTangent <= float.NegativeInfinity)
+                {
+                    coefficients[c + 3] = k1.value;
+                    continue;
+                }
+                float dx = MathF.Max(k1.time - k0.time, MinSegmentLength);
+                float inverse = 1f / dx;
+                float inverse2 = inverse * inverse;
+                float dy = k1.value - k0.value;
+                float d1 = k0.outTangent * dx, d2 = k1.inTangent * dx;
+                coefficients[c] = (d1 + d2 - dy - dy) * inverse2 * inverse;
+                coefficients[c + 1] = (dy + dy + dy - d1 - d1 - d2) * inverse2;
+                coefficients[c + 2] = k0.outTangent;
+                coefficients[c + 3] = k0.value;
+            }
+            return new KeySegments(times, coefficients, weighted);
+        }
+
+        /// <summary>The value at <paramref name="time"/> when it lies within the keys on an
+        /// unweighted segment; false otherwise (wrap modes, clamping and weights stay with the
+        /// curve's own evaluation).</summary>
+        internal bool TryEvaluate(float time, out float value)
+        {
+            value = 0f;
+            var times = m_Times;
+            int last = times.Length - 1;
+            if (!(time >= times[0] && time <= times[last])) return false;
+            // The last segment starting at or before the time (a time on the last key reads its value).
+            int lo = 0, hi = last;
+            while (lo < hi)
+            {
+                int mid = (lo + hi + 1) >> 1;
+                if (times[mid] <= time) lo = mid;
+                else hi = mid - 1;
+            }
+            if (lo == last) return false;
+            if (m_Weighted[lo]) return false;
+            value = SampledCurve.Cubic(m_Coefficients, 4 * lo, time - times[lo]);
+            return true;
         }
     }
 
