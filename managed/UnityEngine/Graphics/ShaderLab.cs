@@ -80,6 +80,14 @@ namespace Unbound.Runtime
         /// limit skips. <see cref="UnityEngine.Shader.renderQueue"/> answers from the selected
         /// SubShader's declared tag whenever that is known.
         /// </summary>
+        /// <summary>The block kinds the Queue scan follows, in their canonical case; other words as
+        /// they are.</summary>
+        static string QueueBlockKind(string word) =>
+            word.Equals("SubShader", StringComparison.OrdinalIgnoreCase) ? "SubShader"
+            : word.Equals("Category", StringComparison.OrdinalIgnoreCase) ? "Category"
+            : word.Equals("Tags", StringComparison.OrdinalIgnoreCase) ? "Tags"
+            : word;
+
         internal static int Queue(string source)
         {
             // The kinds of the open blocks (the word before each `{`), and the queue of each
@@ -92,7 +100,7 @@ namespace Unbound.Runtime
             {
                 var token = m.Value;
                 string owner = blocks.Count >= 2 && blocks[^1] == "Tags" ? blocks[^2] : null;
-                bool tags = owner == "SubShader" || owner == "Category";
+                bool tags = owner is "SubShader" or "Category";
                 if (token[0] == '"')
                 {
                     if (tags && key && equals)
@@ -101,7 +109,7 @@ namespace Unbound.Runtime
                         if (owner == "SubShader") return QueueTag(value);
                         categories[^1] = value;
                     }
-                    key = tags && !equals && token == "\"Queue\"";
+                    key = tags && !equals && token.Equals("\"Queue\"", StringComparison.OrdinalIgnoreCase);
                     equals = false;
                     word = null;
                     continue;
@@ -114,19 +122,22 @@ namespace Unbound.Runtime
                 key = equals = false;
                 if (token == "{")
                 {
-                    blocks.Add(word ?? "");
-                    if (word == "Category") categories.Add(null);
+                    // ShaderLab commands are case-insensitive (built-in shaders write Subshader).
+                    var kind = word == null ? "" : QueueBlockKind(word);
+                    blocks.Add(kind);
+                    // A nested Category starts from the enclosing one's tags.
+                    if (kind == "Category") categories.Add(categories.Count > 0 ? categories[^1] : null);
                     word = null;
                 }
                 else if (token == "}")
                 {
+                    word = null;
                     if (blocks.Count == 0) continue;
                     var closed = blocks[^1];
                     blocks.RemoveAt(blocks.Count - 1);
                     // A SubShader without a Queue of its own takes its Category's.
                     if (closed == "SubShader" && categories.Count > 0 && categories[^1] is string inherited) return QueueTag(inherited);
                     if (closed == "Category") categories.RemoveAt(categories.Count - 1);
-                    word = null;
                 }
                 else if (token[0] != '/')
                     word = token;

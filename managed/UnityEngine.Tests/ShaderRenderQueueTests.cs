@@ -195,6 +195,9 @@ namespace UnityEngine.Tests
             Assert.Equal(2450, ShaderLab.Queue("Category { Tags { \"Queue\"=\"Transparent\" } SubShader { Tags { \"Queue\"=\"AlphaTest\" } Pass { } } }"));
             Assert.Equal(2000, ShaderLab.Queue("Category { Tags { \"Queue\"=\"Transparent\" } } SubShader { Pass { } }"));
             Assert.Equal(4000, ShaderLab.Queue("SubShader { Pass { } } SubShader { Tags { \"Queue\"=\"Overlay\" } }"));
+            // Nested Categories pass their tags down; commands match in any case.
+            Assert.Equal(3000, ShaderLab.Queue("Category { Tags { \"Queue\"=\"Transparent\" } Category { SubShader { } } }"));
+            Assert.Equal(1000, ShaderLab.Queue("Subshader { tags { \"Queue\"=\"Background\" } }"));
         }
 
         /// <summary>A value of no documented form keeps Geometry and says so; Unity's answer for
