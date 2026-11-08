@@ -124,7 +124,14 @@ probe renders it), post-processing on and a global Volume, one setting each:
 - the camera's anti-aliasing: `aa_fxaa`, `aa_smaa_low`, `aa_smaa_medium`, `aa_smaa_high`, `aa_taa`
   (eight frames, one render each, before the recorded one);
 - render scale upscaling: `upscale_point`, `upscale_linear` (0.5), `upscale_auto_fractional`
-  (0.7), `upscale_fsr`, `upscale_fsr_sharpness` (0.75), `upscale_stp` (0.5, eight frames).
+  (0.7), `upscale_fsr`, `upscale_fsr_sharpness` (0.75), `upscale_stp` (0.5, eight frames);
+- `inline_sampler`: a screen-filling quad (`Shaders/InlineSampler.shader`) sampling a 4x4
+  Point/Repeat texture through an inline linear clamp sampler and a Bilinear/Clamp one through an
+  inline point mirror sampler, outside their 0..1 range;
+- skinned motion (Camera and Objects motion blur, a two-bone ribbon in front of the camera, one
+  render, the change, a frame, the recorded render: Unity skins after the scripts' updates):
+  `motion_blur_skinned` (the upper bone bends, the renderer stays), `motion_blur_skinned_off`
+  (the same with skinnedMotionVectors off), `motion_blur_skinned_moved` (the ribbon moves whole).
 
 Their constants record `frameCount` (film grain, dithering and TAA jitter follow it).
 `texture-samples.jsonl` (compared by `compare_constants.py`) records what the Single Channel
@@ -132,6 +139,8 @@ textures sample as (blitted into a float target): uncompressed and compressed (A
 Alpha8, Red becomes BC4; the compressed controls hold only values every block format keeps),
 and a Red one marked sRGB (still R8_UNorm). Authored by `PostFxSetup.CreateSingleChannelControls`. Two Editor recordings gave identical images and
 constants for these scenarios. On the Editor's OpenGL Core device inline sampler states do not
-apply (Point upscaling equals Linear), and URP's C# runs in Mono's double precision (0.7 scales the
-target to 223x125); Unbound differs in both and does not run STP's compute kernels (see
-docs/COMPATIBILITY_GAPS.md).
+apply (each texture samples through its own state: Point upscaling equals Linear,
+`inline_sampler`), and a skinned mesh moves as its renderer does: bending adds no motion, with
+skinnedMotionVectors on or off (the project deforms meshes on the CPU; set to GPU (Batched) the
+Editor recorded the same bend, not committed). URP's C# runs in Mono's double precision (0.7
+scales the target to 223x125), which Unbound does not (see docs/COMPATIBILITY_GAPS.md).

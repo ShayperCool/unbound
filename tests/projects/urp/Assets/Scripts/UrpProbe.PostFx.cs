@@ -11,8 +11,8 @@ using UnityEngine.Rendering.Universal;
 /// <summary>The post-processing scenarios, each one Volume or camera setting on the Probe scene:
 /// color grading (a Color Lookup texture, the grading effects URP bakes into its internal LUT,
 /// the HDR grading mode), lens effects, motion blur, the camera's anti-aliasing modes and render
-/// scale upscaling filters; and texture-samples.jsonl, what the Single Channel textures sample
-/// as. The main camera is disabled throughout, so it renders only when the probe
+/// scale upscaling filters; inline sampler states; skinned meshes' motion vectors; and
+/// texture-samples.jsonl, what the Single Channel textures sample as. The main camera is disabled throughout, so it renders only when the probe
 /// renders it (one render per frame in the multi-frame scenarios).</summary>
 public partial class UrpProbe
 {
@@ -179,8 +179,100 @@ public partial class UrpProbe
         }, () => { restoreScale(); asset.fsrOverrideSharpness = false; });
         yield return Accumulated(dir, "upscale_stp", () => { asset.renderScale = 0.5f; asset.upscalingFilter = UpscalingFilterSelection.STP; }, restoreScale);
 
+        // Inline sampler states, and skinned meshes' motion vectors (with skinnedMotionVectors
+        // off: the control).
+        InlineSamplerScenario(dir, camera);
+        yield return SkinnedMotion(dir, "motion_blur_skinned", camera, true, false, p => blur(p, MotionBlurMode.CameraAndObjects, MotionBlurQuality.Medium));
+        yield return SkinnedMotion(dir, "motion_blur_skinned_off", camera, false, false, p => blur(p, MotionBlurMode.CameraAndObjects, MotionBlurQuality.Medium));
+        yield return SkinnedMotion(dir, "motion_blur_skinned_moved", camera, true, true, p => blur(p, MotionBlurMode.CameraAndObjects, MotionBlurQuality.Medium));
+
         camera.enabled = true;
         s_Camera = null;
+    }
+
+    /// <summary>A screen-filling quad (Probe/InlineSampler) sampling a 4x4 Point/Repeat texture
+    /// through an inline linear clamp sampler and a 4x4 Bilinear/Clamp one through an inline
+    /// point mirror sampler, outside their 0..1 range.</summary>
+    void InlineSamplerScenario(string dir, Camera camera)
+    {
+        Texture2D Checker(FilterMode filter, TextureWrapMode wrap, Color a, Color b)
+        {
+            var t = new Texture2D(4, 4, TextureFormat.RGBA32, false) { filterMode = filter, wrapMode = wrap };
+            var pixels = new Color[16];
+            for (int i = 0; i < 16; i++) pixels[i] = ((i & 3) + (i >> 2)) % 2 == 0 ? a : Color.Lerp(b, a, (i & 3) / 4f);
+            t.SetPixels(pixels);
+            t.Apply();
+            return t;
+        }
+        var pointRepeat = Checker(FilterMode.Point, TextureWrapMode.Repeat, new Color(0.9f, 0.2f, 0.1f), new Color(0.1f, 0.3f, 0.9f));
+        var linearClamp = Checker(FilterMode.Bilinear, TextureWrapMode.Clamp, new Color(0.95f, 0.9f, 0.2f), new Color(0.1f, 0.6f, 0.2f));
+        var material = new Material(Shader.Find("Probe/InlineSampler"));
+        material.SetTexture("_PointRepeatTex", pointRepeat);
+        material.SetTexture("_LinearClampTex", linearClamp);
+        var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        quad.GetComponent<MeshRenderer>().sharedMaterial = material;
+        float distance = 2f, height = 2f * distance * Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad);
+        quad.transform.SetParent(camera.transform, false);
+        quad.transform.localPosition = new Vector3(0f, 0f, distance);
+        quad.transform.localScale = new Vector3(height * Width / (float)Height, height, 1f);
+        Scenario(dir, "inline_sampler", () => { }, () =>
+        {
+            DestroyImmediate(quad);
+            DestroyImmediate(material);
+            DestroyImmediate(pointRepeat);
+            DestroyImmediate(linearClamp);
+        });
+    }
+
+    /// <summary>A two-bone ribbon (a SkinnedMeshRenderer with the cube's material) in front of
+    /// the camera whose upper bone bends between two frames of a motion blur scenario (the
+    /// renderer itself does not move), or that moves whole (<paramref name="moveRoot"/>: the
+    /// renderer and its bones, unbent). Unity skins once a frame after the scripts' updates, so
+    /// each render here follows a frame: one render, the change, a frame, the recorded
+    /// render.</summary>
+    IEnumerator SkinnedMotion(string dir, string name, Camera camera, bool skinnedMotionVectors, bool moveRoot, Action<VolumeProfile> configure)
+    {
+        var root = new GameObject("Ribbon");
+        root.transform.SetParent(camera.transform, false);
+        root.transform.localPosition = new Vector3(-0.6f, -0.9f, 4f);
+        var lower = new GameObject("Lower").transform;
+        lower.SetParent(root.transform, false);
+        var upper = new GameObject("Upper").transform;
+        upper.SetParent(lower, false);
+        upper.localPosition = new Vector3(0f, 0.8f, 0f);
+        // Three rows of two vertices (y 0, 0.8, 1.6): the lower two follow the lower bone, the
+        // top row the upper one, the middle row half each.
+        var mesh = new Mesh
+        {
+            vertices = new[] { new Vector3(-0.3f, 0f, 0f), new Vector3(0.3f, 0f, 0f), new Vector3(-0.3f, 0.8f, 0f), new Vector3(0.3f, 0.8f, 0f), new Vector3(-0.3f, 1.6f, 0f), new Vector3(0.3f, 1.6f, 0f) },
+            normals = Enumerable.Repeat(Vector3.back, 6).ToArray(),
+            triangles = new[] { 0, 2, 1, 1, 2, 3, 2, 4, 3, 3, 4, 5 },
+            boneWeights = new[]
+            {
+                new BoneWeight { boneIndex0 = 0, weight0 = 1f }, new BoneWeight { boneIndex0 = 0, weight0 = 1f },
+                new BoneWeight { boneIndex0 = 0, weight0 = 0.5f, boneIndex1 = 1, weight1 = 0.5f }, new BoneWeight { boneIndex0 = 0, weight0 = 0.5f, boneIndex1 = 1, weight1 = 0.5f },
+                new BoneWeight { boneIndex0 = 1, weight0 = 1f }, new BoneWeight { boneIndex0 = 1, weight0 = 1f },
+            },
+            bindposes = new[] { Matrix4x4.identity, Matrix4x4.Translate(new Vector3(0f, -0.8f, 0f)) },
+        };
+        var skin = root.AddComponent<SkinnedMeshRenderer>();
+        skin.sharedMesh = mesh;
+        skin.bones = new[] { lower, upper };
+        skin.rootBone = lower;
+        skin.sharedMaterial = GameObject.Find("Cube").GetComponent<MeshRenderer>().sharedMaterial;
+        skin.updateWhenOffscreen = true;
+        skin.skinnedMotionVectors = skinnedMotionVectors;
+        var (volume, profile) = AddVolume(configure);
+        yield return null;
+        RenderOnce();
+        if (moveRoot) root.transform.localPosition += new Vector3(0.3f, 0.1f, 0f);
+        else upper.localRotation = Quaternion.Euler(0f, 0f, 35f);
+        yield return null;
+        Record(Path.Combine(dir, name + ".png"), Path.Combine(dir, name + ".jsonl"));
+        RemoveVolume(volume, profile);
+        DestroyImmediate(root);
+        DestroyImmediate(mesh);
+        yield return null;
     }
 
     /// <summary>One single-frame scenario: post-processing on, a global Volume whose profile
