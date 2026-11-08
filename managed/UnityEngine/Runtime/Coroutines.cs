@@ -25,6 +25,7 @@ namespace Unbound.Runtime
         }
 
         static readonly List<Coroutine> s_Running = new List<Coroutine>();
+        static readonly List<Coroutine> s_Scan = new List<Coroutine>();
 
         internal static Coroutine Start(MonoBehaviour owner, IEnumerator routine, string methodName)
         {
@@ -131,8 +132,13 @@ namespace Unbound.Runtime
         internal static void Run(Phase phase)
         {
             var due = new List<Coroutine>();
-            foreach (var c in s_Running)
+            // A snapshot: a wait's check (keepWaiting) may complete an operation, whose waiting
+            // routine then resumes and moves in s_Running.
+            s_Scan.Clear();
+            s_Scan.AddRange(s_Running);
+            foreach (var c in s_Scan)
                 if (!c.Done && c.ReadyIn(phase)) due.Add(c);
+            s_Scan.Clear();
             foreach (var c in due)
             {
                 if (c.Done) continue;
@@ -255,7 +261,7 @@ namespace UnityEngine
                 case WaitForSeconds seconds:
                     m_WaitUntil = Time.timeAsDouble + seconds.m_Seconds;
                     break;
-                case AsyncOperation operation when !operation.isDone && operation.m_Waiter == null:
+                case AsyncOperation operation when !operation.isDone && (operation.m_Waiter == null || operation.m_Waiter.Done):
                     operation.m_Waiter = this;
                     break;
             }
