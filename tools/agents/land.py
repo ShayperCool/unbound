@@ -272,10 +272,23 @@ class Gate:
     def touched_crates(self, changed):
         """Crates whose tests the change can affect: crates with changed files, crates whose
         build.rs compiles a changed native/ entry, and consumers of changed locked packages.
-        Workspace manifest edits conservatively select every crate. This keeps importer
-        output guards active for native sources and dependency changes as well."""
+        Workspace manifest edits conservatively select every crate. Changed probe files select
+        the crates whose Rust sources name that probe. This keeps importer output guards active
+        for native sources, dependency changes and probe inputs as well."""
         crates = self.worktree/'crates'
         directories = {path.split('/')[1] for path in changed if path.startswith('crates/')}
+        probes = {path.split('/')[2] for path in changed
+                  if path.startswith('tests/projects/') and path.count('/') >= 3}
+        if probes:
+            # Rust tests that read a probe's committed files (importer output guards, Editor
+            # reference fixtures) name its directory, as a `projects/<probe>` path or a
+            # "<probe>" literal joined onto the probes' root. Over-selection only adds tests.
+            names = '|'.join(re.escape(probe) for probe in sorted(probes))
+            named = re.compile(rf'projects/(?:{names})(?![\w.-])|"(?:{names})"')
+            for manifest in crates.glob('*/Cargo.toml'):
+                if any(named.search(source.read_text(errors='replace'))
+                       for source in manifest.parent.rglob('*.rs')):
+                    directories.add(manifest.parent.name)
         if 'Cargo.toml' in changed:
             directories.update(path.parent.name for path in crates.glob('*/Cargo.toml'))
         native = {path.split('/')[1] for path in changed if path.startswith('native/')}

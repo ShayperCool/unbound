@@ -103,6 +103,24 @@ class TouchedCratesTests(unittest.TestCase):
     def test_managed_only_select_no_crates(self):
         self.assertEqual(self.gate.touched_crates(['managed/UnityEngine/Object.cs']), [])
 
+    def test_probe_inputs_select_crates_whose_tests_read_them(self):
+        # The real model output guard, so its probe list cannot silently stop selecting it.
+        source = Path(__file__).resolve().parents[2]
+        guard = 'crates/unbound-assets/src/model/version_guard.rs'
+        self.write(guard, (source/guard).read_text())
+        self.write('crates/core/src/lib.rs',
+                   'const R: &str = include_str!("../../../tests/projects/sample/Reference/a");\n')
+        for path, expected in [
+            ('tests/projects/humanoid/Assets/Resources/HumanA.fbx.meta', ['unbound-assets']),
+            ('tests/projects/modelimport/Assets/Models/Cube.fbx', ['unbound-assets']),
+            ('tests/projects/sample/README.md', ['unbound-core']),
+            ('tests/projects/sampled/README.md', []),
+            ('tests/projects/unreferenced/Assets/Probe.cs', []),
+            ('tests/projects/README.md', []),
+        ]:
+            with self.subTest(path=path):
+                self.assertEqual(self.gate.touched_crates([path]), expected)
+
     def test_deleted_crate_is_not_tested(self):
         self.assertEqual(self.gate.touched_crates(['crates/removed/src/lib.rs']), [])
 
