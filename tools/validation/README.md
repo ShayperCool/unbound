@@ -34,6 +34,10 @@ Only an exclusive `heavy` job keeps the entry lock while it waits, so newer jobs
 queue behind it and a writer cannot starve; a waiting pooled job (for example a
 second build behind a running one) never delays jobs that need other slots. Other (`heavy`) commands keep the
 exclusive lock, because they may start Editors without going through the pool.
+Waiting jobs log the blocking lock holders' PID, command and working directory
+immediately and every five seconds. These Linux `/proc` snapshots also identify
+jobs started by an older runner; an exited or inaccessible owner is reported
+as unavailable. Diagnostics do not release a waiting writer's entry lock.
 Direct engine runs on the same resolved project directory are serialized before
 admission; different spellings and symlinks share the same project lock.
 Known `time`, `timeout` and `env` wrappers are recognized. An executable passed as
@@ -139,7 +143,12 @@ does not establish the best Cargo parallelism or performance under Editor load.
 For new builds, run `python3 tools/build.py -- build --release --locked -p unbound`
 from the checkout being built. The wrapper uses the installed build lease once.
 Use `--direct` when a surrounding script already owns that lease. Do not wrap
-the default command in `with-heavy-job` again. Cargo arguments follow `--`.
+the default command in `with-heavy-job` again. The runner refuses `tools/build.py`
+with exit 125 before taking any pool lock, including explicit `--kind` calls,
+absolute paths, Python options such as `-I`, and known `time`, `timeout` and `env`
+wrappers. Run the build driver directly instead. Refusal keeps lease ownership
+explicit, including for `--direct` invocations that require an existing lease.
+Cargo arguments follow `--`.
 
 The default target is `$XDG_CACHE_HOME/unbound/builds/targets/<checkout-path-hash>`
 or `~/.cache/unbound/builds/targets/<checkout-path-hash>`. Intermediates go to

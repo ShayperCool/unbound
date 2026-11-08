@@ -17,6 +17,10 @@ class BenchmarkControlTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
+        self.state = self.root/'pool'
+        self.state.mkdir()
+        (self.state/'job-limits.json').write_bytes(
+            Path(__file__).with_name('job-limits.json').read_bytes())
 
     def job(self, name, code, **extra):
         return dict(name=name, cwd=str(self.root), resource_key=str(self.root/name),
@@ -29,7 +33,8 @@ class BenchmarkControlTests(unittest.TestCase):
         self.addCleanup(log.close)
         return subprocess.Popen([sys.executable, str(Path(bench.__file__).resolve()),
                                  '--plan', str(plan), '--out', str(self.root/'out')],
-                                stdout=log, stderr=subprocess.STDOUT)
+                                stdout=log, stderr=subprocess.STDOUT,
+                                env=dict(os.environ, UNBOUND_JOB_RUNNER_STATE=str(self.state)))
 
     def test_shared_outputs_are_rejected_before_launch(self):
         a = self.job('a', 'pass')

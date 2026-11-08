@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Integration checks for the installed machine-wide job runner."""
 import json
+import fcntl
 import importlib.util
 import os
 from pathlib import Path
@@ -80,6 +81,36 @@ for command,expected in [
 ]:
     assert runner.classify(command)==expected,(command,expected)
 
+# Refuse self-leasing drivers before consulting policy or taking any lock, even
+# with explicit kinds, wrappers, Python options and an occupied entry turnstile.
+driver = str(RUNNER.resolve().parents[1]/'build.py')
+build_commands = [
+    ['python3','tools/build.py'],
+    [sys.executable,'-I',driver],
+    [sys.executable,'-I','--check-hash-based-pycs','always',driver],
+    ['tools/build.py'],
+    ['/usr/bin/time','-o',str(out/'wrapped-time.log'),'timeout','-s','TERM','2',
+     'env','CHECK=1',sys.executable,'-I','-W','ignore',driver],
+    ['env','--chdir=/tmp','timeout','2',sys.executable,'-I',driver],
+]
+for command in build_commands:
+    assert runner.is_build_driver(command),command
+for command in [
+    ['python3','driver.py','tools/build.py'],
+    ['python3','-c','pass','tools/build.py'],
+    ['python3','-m','driver','tools/build.py'],
+    ['python3','other/build.py'],
+]:
+    assert not runner.is_build_driver(command),command
+with runner.lock('parity-heavy-entry.lock'), runner.lock('parity-heavy-job.lock'):
+    for command in build_commands:
+        for options in [[],['--kind','build'],['--kind','heavy'],['--pool-worker','build']]:
+            result = subprocess.run([sys.executable,str(RUNNER),*options,'--',*command,
+                                     '--','build','--release','--locked','-p','unbound'],
+                                    capture_output=True,text=True,timeout=3)
+            assert result.returncode==125,(command,result)
+            assert 'run tools/build.py directly' in result.stderr,result.stderr
+
 project=out/'project';project.mkdir()
 alias=out/'project-alias';alias.symlink_to(project.resolve(),target_is_directory=True)
 assert runner.engine_project(['/tmp/unbound','run','-p',str(project)])==runner.engine_project(
@@ -102,6 +133,39 @@ def join(jobs):
         assert process.wait(timeout=25)==0,handle.name
         handle.close()
 
+
+def wait_for_log(name, text):
+    deadline=time.monotonic()+10
+    while time.monotonic()<deadline:
+        contents=(out/(name+'.log')).read_text()
+        if text in contents:
+            return contents
+        time.sleep(.05)
+    raise AssertionError((name,text,contents))
+
+
+# A raw shared lock stands in for an older runner. The waiting writer must name
+# that holder, keep the turnstile, and be named by the reader queued behind it.
+with runner.lock('parity-heavy-job.lock',fcntl.LOCK_SH):
+    writer=spawn('heavy','diagnostic-writer',.2)
+    message=wait_for_log('diagnostic-writer',f'pid {os.getpid()}, cmd=')
+    assert str(Path(__file__).name) in message,message
+    assert 'cwd='+os.getcwd() in message,message
+    # The writer retains the entry lock while waiting, preserving writer priority.
+    try:
+        with runner.lock('parity-heavy-entry.lock',fcntl.LOCK_EX|fcntl.LOCK_NB):
+            raise AssertionError('waiting writer released the entry lock')
+    except BlockingIOError:
+        pass
+    reader=spawn('editor-cpu','diagnostic-reader',.1)
+    message=wait_for_log('diagnostic-reader','parity-heavy-entry.lock:')
+    assert 'diagnostic-writer' in message,message
+    assert 'cwd='+os.getcwd() in message,message
+join([writer,reader])
+diagnostics=[json.loads(line) for line in events.read_text().splitlines()]
+writer_end=next(row['time'] for row in diagnostics if row['name']=='diagnostic-writer' and row['phase']=='end')
+reader_start=next(row['time'] for row in diagnostics if row['name']=='diagnostic-reader' and row['phase']=='start')
+assert writer_end<=reader_start,'reader bypassed the waiting writer'
 
 config=runner.policy()
 EDITORS,ENGINES,GPUS=config['editor_slots'],config['engine_slots'],config['gpu_slots']

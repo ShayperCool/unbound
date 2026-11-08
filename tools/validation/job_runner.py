@@ -17,6 +17,7 @@ from pathlib import Path
 import random
 import re
 import signal
+import shlex
 import subprocess
 import sys
 import time
@@ -97,10 +98,19 @@ def group_path(slice_name):
 
 
 @contextlib.contextmanager
-def lock(name, mode=fcntl.LOCK_EX):
+def lock(name, mode=fcntl.LOCK_EX, on_wait=None):
     CACHE.mkdir(parents=True, exist_ok=True)
     with (CACHE/name).open('a') as handle:
-        fcntl.flock(handle, mode)
+        if on_wait is None:
+            fcntl.flock(handle, mode)
+        else:
+            while True:
+                try:
+                    fcntl.flock(handle, mode|fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    on_wait()
+                    time.sleep(.05)
         try:
             yield
         finally:
@@ -162,22 +172,70 @@ def attempt(kind, config):
         return stack.pop_all()
 
 
+def blocking_holders(names):
+    """Best-effort Linux lock owners, including jobs started by older runners."""
+    files = {}
+    for name in names:
+        try:
+            info = (CACHE/name).stat()
+            files[(os.major(info.st_dev), os.minor(info.st_dev), info.st_ino)] = name
+        except OSError:
+            continue
+    try:
+        rows = Path('/proc/locks').read_text().splitlines()
+    except OSError as error:
+        return ['holder details unavailable: '+str(error)]
+    result = []
+    for row in rows:
+        fields = row.split()
+        if len(fields)<6 or fields[1]!='FLOCK':
+            continue
+        try:
+            major, minor, inode = fields[5].split(':')
+            name = files.get((int(major,16), int(minor,16), int(inode)))
+            pid = int(fields[4])
+            if name is None or pid == os.getpid():
+                continue
+            proc = Path('/proc')/str(pid)
+            command = shlex.join(proc.joinpath('cmdline').read_text().rstrip('\0').split('\0'))
+            cwd = os.readlink(proc/'cwd')
+            result.append(f'{name}: pid {pid}, cmd={command}, cwd={cwd}')
+        except (OSError, ValueError):
+            # An owner can exit between the lock snapshot and reading /proc.
+            continue
+    return result or ['holder details unavailable (owners exited or are inaccessible)']
+
+
 def admit(kind, config):
     # Only an exclusive job keeps the entry lock while it waits, so new pooled
     # jobs cannot keep bypassing it. A pooled job takes the entry lock just for
     # one attempt: a pooled waiter never delays jobs that need other slots.
     # Pooled jobs each need one slot per pool, so retrying cannot starve them.
+    next_report = 0
+
+    def report_wait():
+        nonlocal next_report
+        if time.monotonic() < next_report:
+            return
+        next_report = time.monotonic()+5
+        names = ['parity-heavy-entry.lock', 'parity-heavy-job.lock']
+        if kind != 'heavy':
+            names += [name for group, _ in needs(kind, config) for name in group]
+        print(f'with-heavy-job: waiting for {kind}; '+ '; '.join(blocking_holders(names)),
+              file=sys.stderr, flush=True)
+
     while True:
         # Re-read the policy while waiting, so a raised limit admits queued jobs.
         try:
             config = policy()
         except (OSError, ValueError, AssertionError):
             pass
-        with lock('parity-heavy-entry.lock'):
+        with lock('parity-heavy-entry.lock', on_wait=report_wait):
             while True:
                 held = attempt(kind, config)
                 if held is not None:
                     return held
+                report_wait()
                 if kind != 'heavy':
                     break
                 time.sleep(.05)
@@ -311,6 +369,21 @@ def engine_project(command):
     return Path.cwd().resolve()
 
 
+def is_build_driver(command):
+    args = payload(command)
+    if args and re.fullmatch(r'python(?:3(?:\.\d+)?)?', Path(args[0]).name):
+        args = args[1:]
+        while args and args[0].startswith('-'):
+            option = args.pop(0)
+            if option == '--':
+                break
+            if option.startswith(('-c', '-m')):
+                return False
+            if option in ['-W', '-X', '--check-hash-based-pycs'] and args:
+                args.pop(0)
+    return bool(args and Path(os.path.normpath(args[0])).parts[-2:]==('tools', 'build.py'))
+
+
 def classify(command):
     args = payload(command)
     if len(args)>1 and Path(args[0]).name=='unbound' and args[1]=='run':
@@ -335,8 +408,8 @@ def classify(command):
 
 
 def main(args):
-    config = policy()
     if args==['--status']:
+        config = policy()
         result = dict(config)
         for label, path in [('editor', group_path(config['slice'])),
                             ('engine', group_path(config['engine_slice'])),
@@ -364,6 +437,12 @@ def main(args):
         args = args[1:]
     if not args:
         raise SystemExit('usage: with-heavy-job [--kind '+'|'.join(KINDS)+'|heavy] COMMAND...')
+    if is_build_driver(args):
+        print('with-heavy-job: run tools/build.py directly; it manages its own build lease. '
+              'Wrapping it can deadlock the job pool. Use --direct only inside an existing '
+              'build lease.', file=sys.stderr)
+        return 125
+    config = policy()
     if kind is None or (kind=='build' and not worker and classify(args)=='test'):
         # Callers that still pass `--kind build` for `dotnet test` get the test pool.
         kind = classify(args)
