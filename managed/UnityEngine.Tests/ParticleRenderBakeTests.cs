@@ -289,5 +289,23 @@ namespace UnityEngine.Tests
             var ps = MakeSystem();
             Assert.Equal(0f, ps.limitVelocityOverLifetime.dampen);
         }
+
+        /// <summary>Mesh particles turn a z rotation about their axis of rotation: forward for births,
+        /// up for particles a system held when it switched to Mesh mode; setting Mesh again, or
+        /// reading the particles, keeps the axes (6000.0.71f1, particlerender bake/mesh, meshrot/*).</summary>
+        [Fact]
+        public void MeshModeGivesHeldParticlesAnAxisOnceAndKeepsItAfterwards()
+        {
+            var ps = MakeSystem();
+            var renderer = ps.GetComponent<ParticleSystemRenderer>();
+            Emit(ps, Vector3.zero, Vector3.zero, 0.3f);
+            renderer.renderMode = ParticleSystemRenderMode.Mesh;
+            Emit(ps, Vector3.one, Vector3.zero, 0.3f);
+            renderer.renderMode = ParticleSystemRenderMode.Mesh;
+            var particles = new ParticleSystem.Particle[2];
+            Assert.Equal(2, ps.GetParticles(particles));
+            Assert.Equal(Vector3.up, particles[0].axisOfRotation);
+            Assert.Equal(Vector3.forward, particles[1].axisOfRotation);
+        }
     }
 }
