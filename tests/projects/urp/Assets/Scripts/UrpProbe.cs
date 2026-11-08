@@ -228,6 +228,19 @@ public partial class UrpProbe : MonoBehaviour
             rendererData.rendererFeatures.Remove(feature);
             rendererData.SetDirty();
             DestroyImmediate(feature);
+            // A raster pass with two colour attachments after the opaques (Probe/Mrt).
+            var mrt = ScriptableObject.CreateInstance<MrtProbeFeature>();
+            rendererData.rendererFeatures.Add(mrt);
+            rendererData.SetDirty();
+            foreach (bool bothCleared in new[] { false, true })
+                Scenario(dir, bothCleared ? "subpass_mrt_cleared" : "subpass_mrt", () =>
+                {
+                    MrtProbeFeature.Material = new Material(Shader.Find("Probe/Mrt"));
+                    MrtProbeFeature.BothCleared = bothCleared;
+                }, () => { DestroyImmediate(MrtProbeFeature.Material); MrtProbeFeature.Material = null; MrtProbeFeature.BothCleared = false; });
+            rendererData.rendererFeatures.Remove(mrt);
+            rendererData.SetDirty();
+            DestroyImmediate(mrt);
             // The lights scenario under the other rendering paths.
             var universalData = (UniversalRendererData)rendererData;
             foreach (var (name, mode) in new[] { ("forward_plus", RenderingMode.ForwardPlus), ("deferred", RenderingMode.Deferred) })

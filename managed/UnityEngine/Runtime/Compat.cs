@@ -233,6 +233,13 @@ namespace Unbound.Runtime
         /// docs/COMPATIBILITY_GAPS.md ("Rendering rules measured on one release").</summary>
         internal static bool RenderingMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>A render pass subpass with several color outputs of which exactly one clears
+        /// (its load action, first use in the pass) clears every output it binds to that color,
+        /// as the Editor's OpenGL Core device clears the whole framebuffer; two or more clear each
+        /// to its own color (tests/projects/urp subpass_mrt, subpass_mrt_cleared). Other releases:
+        /// each clearing output to its own color, the others kept.</summary>
+        internal static bool SingleSubpassClearFillsOutputs => RenderingMeasured;
+
         /// <summary>Light-probe gizmo scale observed outside repaint callbacks in renderapi.</summary>
         internal static float GizmoProbeSize => RenderingMeasured ? 0.299999982f : 0.3f;
 

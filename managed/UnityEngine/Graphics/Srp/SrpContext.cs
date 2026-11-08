@@ -814,10 +814,10 @@ namespace UnityEngine.Rendering
         public void BeginRenderPass(int width, int height, int samples, NativeArray<AttachmentDescriptor> attachments, [Internal.DefaultValue("-1")] int depthAttachmentIndex = -1) =>
             RenderPasses.Begin(attachments, depthAttachmentIndex, width, height);
 
-        public void BeginSubPass(NativeArray<int> colors, NativeArray<int> inputs, bool isDepthReadOnly, bool isStencilReadOnly) => RenderPasses.SubPass(colors.ToArray());
-        public void BeginSubPass(NativeArray<int> colors, NativeArray<int> inputs, [Internal.DefaultValue("false")] bool isDepthStencilReadOnly = false) => RenderPasses.SubPass(colors.ToArray());
-        public void BeginSubPass(NativeArray<int> colors, bool isDepthReadOnly, bool isStencilReadOnly) => RenderPasses.SubPass(colors.ToArray());
-        public void BeginSubPass(NativeArray<int> colors, [Internal.DefaultValue("false")] bool isDepthStencilReadOnly = false) => RenderPasses.SubPass(colors.ToArray());
+        public void BeginSubPass(NativeArray<int> colors, NativeArray<int> inputs, bool isDepthReadOnly, bool isStencilReadOnly) => RenderPasses.SubPass(colors.AsReadOnlySpan());
+        public void BeginSubPass(NativeArray<int> colors, NativeArray<int> inputs, [Internal.DefaultValue("false")] bool isDepthStencilReadOnly = false) => RenderPasses.SubPass(colors.AsReadOnlySpan());
+        public void BeginSubPass(NativeArray<int> colors, bool isDepthReadOnly, bool isStencilReadOnly) => RenderPasses.SubPass(colors.AsReadOnlySpan());
+        public void BeginSubPass(NativeArray<int> colors, [Internal.DefaultValue("false")] bool isDepthStencilReadOnly = false) => RenderPasses.SubPass(colors.AsReadOnlySpan());
         [Unbound.EditorFaithful("no-op is equivalent: the next BeginSubPass or EndRenderPass sets the targets")]
         public void EndSubPass() { }
         public void EndRenderPass() => RenderPasses.End();
@@ -1093,88 +1093,125 @@ namespace Unbound.Runtime
         }
     }
 
-    /// <summary>Render passes (BeginRenderPass/subpasses): each subpass draws into its first color
-    /// attachment and the depth attachment, cleared as their load actions say.</summary>
+    /// <summary>Render passes (BeginRenderPass/subpasses): each subpass draws into its color
+    /// outputs (several at once: the fragment program's outputs in order) and the depth
+    /// attachment, each attachment cleared as its load action says the first time a subpass
+    /// uses it.</summary>
     internal static class RenderPasses
     {
-        static AttachmentDescriptor[] s_Attachments = Array.Empty<AttachmentDescriptor>();
+        static AttachmentDescriptor[] s_Attachments = new AttachmentDescriptor[AttachmentIndexArray.MaxAttachments + 1];
+        static int s_AttachmentCount;
         static int s_Depth = -1;
-        static readonly HashSet<int> s_Cleared = new HashSet<int>();
-        static bool s_WarnedMrt;
+        /// <summary>The attachments cleared so far in this pass, one bit per index.</summary>
+        static ulong s_Cleared;
+        static readonly int[] s_Colors = new int[AttachmentIndexArray.MaxAttachments];
+        /// <summary>The attachment index of each bound output of the current subpass.</summary>
+        static readonly int[] s_Outputs = new int[AttachmentIndexArray.MaxAttachments];
+        /// <summary>Per output count, a handle array (SetTargets takes its own copy).</summary>
+        static readonly ulong[][] s_Handles = NewHandles();
+
+        static ulong[][] NewHandles()
+        {
+            var handles = new ulong[AttachmentIndexArray.MaxAttachments + 1][];
+            for (int i = 0; i < handles.Length; i++) handles[i] = new ulong[i];
+            return handles;
+        }
 
         internal static void Begin(NativeArray<AttachmentDescriptor> attachments, int depthAttachmentIndex, int width, int height)
         {
-            s_Attachments = attachments.ToArray();
+            if (s_Attachments.Length < attachments.Length) s_Attachments = new AttachmentDescriptor[attachments.Length];
+            for (int i = 0; i < attachments.Length; i++) s_Attachments[i] = attachments[i];
+            s_AttachmentCount = attachments.Length;
             s_Depth = depthAttachmentIndex;
-            s_Cleared.Clear();
+            s_Cleared = 0;
         }
 
         internal static void Begin(NativeArray<AttachmentDescriptor> attachments, int depthAttachmentIndex, NativeArray<SubPassDescriptor> subPasses, int width, int height)
         {
             Begin(attachments, depthAttachmentIndex, width, height);
-            if (subPasses.IsCreated && subPasses.Length > 0) SubPass(Indices(subPasses[0].colorOutputs));
-        }
-
-        static int[] Indices(AttachmentIndexArray a)
-        {
-            var result = new int[a.Length];
-            for (int i = 0; i < a.Length; i++) result[i] = a[i];
-            return result;
+            if (subPasses.IsCreated && subPasses.Length > 0) SubPass(subPasses[0].colorOutputs);
         }
 
         internal static void Next(NativeArray<SubPassDescriptor> subPasses, ref int index)
         {
             index++;
-            if (subPasses.IsCreated && index < subPasses.Length) SubPass(Indices(subPasses[index].colorOutputs));
+            if (subPasses.IsCreated && index < subPasses.Length) SubPass(subPasses[index].colorOutputs);
         }
 
-        internal static void SubPass(int[] colors)
+        static void SubPass(in AttachmentIndexArray colors)
         {
-            if (colors.Length > 1 && !s_WarnedMrt)
-            {
-                s_WarnedMrt = true;
-                Debug.LogWarning("Unbound: subpasses with several color outputs are not supported yet; the first is drawn into.");
-            }
-            ulong color = 0, depth = GfxStream.NoTexture;
-            Texture colorTexture = null;
+            int count = Math.Min(colors.Length, s_Colors.Length);
+            for (int i = 0; i < count; i++) s_Colors[i] = colors[i];
+            SubPass(new ReadOnlySpan<int>(s_Colors, 0, count));
+        }
+
+        static bool Valid(int index) => index >= 0 && index < s_AttachmentCount;
+
+        /// <summary>Whether the attachment clears now: its load action is Clear and no subpass of
+        /// this pass used it yet.</summary>
+        static bool ClearsNow(int index)
+        {
+            if (!Valid(index) || s_Attachments[index].loadAction != RenderBufferLoadAction.Clear) return false;
+            ulong bit = 1UL << Math.Min(index, 63);
+            if ((s_Cleared & bit) != 0) return false;
+            s_Cleared |= bit;
+            return true;
+        }
+
+        internal static void SubPass(ReadOnlySpan<int> colors)
+        {
             var context = new CommandBuffer.Context { Camera = ScriptableRenderContext.CurrentCamera, CameraTarget = ScriptableRenderContext.CurrentCamera != null ? ScriptableRenderContext.CurrentCamera.targetTexture : null };
-            int colorIndex = colors.Length > 0 ? colors[0] : -1;
-            if (colorIndex >= 0 && colorIndex < s_Attachments.Length)
+            ulong depth = Valid(s_Depth) ? TextureHandles.Of(CommandBuffer.Resolve(s_Attachments[s_Depth].loadStoreTarget, context)) : GfxStream.NoTexture;
+            int outputs = 0;
+            Texture first = null;
+            foreach (int index in colors)
+                if (Valid(index) && outputs < s_Colors.Length) outputs++;
+            var handles = s_Handles[outputs];
+            // The outputs that clear now, one bit per output.
+            int n = 0, clearing = 0, clears = 0, cleared = -1;
+            foreach (int index in colors)
             {
-                colorTexture = CommandBuffer.Resolve(s_Attachments[colorIndex].loadStoreTarget, context);
-                color = TextureHandles.Of(colorTexture);
+                if (!Valid(index) || n >= outputs) continue;
+                var texture = CommandBuffer.Resolve(s_Attachments[index].loadStoreTarget, context);
+                first ??= texture;
+                if (ClearsNow(index))
+                {
+                    clearing |= 1 << n;
+                    clears++;
+                    cleared = index;
+                }
+                s_Outputs[n] = index;
+                handles[n++] = TextureHandles.Of(texture);
             }
-            else if (s_Depth >= 0 && s_Depth < s_Attachments.Length)
+            // Each clearing output to its own color, before the outputs are bound together; a
+            // single clear of several outputs to its color on the measured device.
+            bool fill = clears == 1 && outputs > 1 && Compat.SingleSubpassClearFillsOutputs;
+            for (int i = 0; i < outputs && clears > 0; i++)
+            {
+                if (!fill && (clearing & (1 << i)) == 0) continue;
+                GfxStream.SetTarget(handles[i], 0);
+                GfxStream.Clear(GfxStream.ClearColor, s_Attachments[fill ? cleared : s_Outputs[i]].clearColor);
+            }
+            if (outputs == 0 && Valid(s_Depth))
             {
                 // A depth-only pass draws into the depth attachment's own texture.
-                colorTexture = CommandBuffer.Resolve(s_Attachments[s_Depth].loadStoreTarget, context);
-                color = TextureHandles.Of(colorTexture);
+                first = CommandBuffer.Resolve(s_Attachments[s_Depth].loadStoreTarget, context);
+                RenderTexture.SetActiveQuietly(first as RenderTexture);
+                GfxStream.SetTarget(depth, 0);
             }
-            if (s_Depth >= 0 && s_Depth < s_Attachments.Length)
-                depth = TextureHandles.Of(CommandBuffer.Resolve(s_Attachments[s_Depth].loadStoreTarget, context));
-            RenderTexture.SetActiveQuietly(colorTexture as RenderTexture);
-            GfxStream.SetTarget(color, depth == color ? 0 : depth);
-            byte flags = 0;
-            var clearColor = Color.black;
-            float clearDepth = 1f;
-            uint clearStencil = 0;
-            if (colorIndex >= 0 && colorIndex < s_Attachments.Length && s_Attachments[colorIndex].loadAction == RenderBufferLoadAction.Clear && s_Cleared.Add(colorIndex))
+            else
             {
-                flags |= GfxStream.ClearColor;
-                clearColor = s_Attachments[colorIndex].clearColor;
+                RenderTexture.SetActiveQuietly(first as RenderTexture);
+                if (outputs <= 1) GfxStream.SetTarget(outputs == 0 ? 0 : handles[0], depth);
+                else GfxStream.SetTargets(handles, depth);
             }
-            if (s_Depth >= 0 && s_Depth < s_Attachments.Length && s_Attachments[s_Depth].loadAction == RenderBufferLoadAction.Clear && s_Cleared.Add(s_Depth))
-            {
-                flags |= GfxStream.ClearDepth | GfxStream.ClearStencil;
-                clearDepth = s_Attachments[s_Depth].clearDepth;
-                clearStencil = s_Attachments[s_Depth].clearStencil;
-            }
-            if (flags != 0) GfxStream.Clear(flags, clearColor, clearDepth, clearStencil);
+            if (ClearsNow(s_Depth))
+                GfxStream.Clear((byte)(GfxStream.ClearDepth | GfxStream.ClearStencil), Color.black, s_Attachments[s_Depth].clearDepth, s_Attachments[s_Depth].clearStencil);
         }
 
         internal static void End()
         {
-            s_Attachments = Array.Empty<AttachmentDescriptor>();
+            s_AttachmentCount = 0;
             s_Depth = -1;
         }
     }

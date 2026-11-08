@@ -28,7 +28,10 @@ vignette, color adjustments) and `postfx_bloom`, `postfx_tonemap`, `postfx_vigne
 RenderStateBlock), `override_shader_0`, `override_shader_1`, `override_shader_default` and
 `override_shader_and_material` (the same renderer list with a shader override retaining the
 original materials' properties; -1 selects pass 0; a simultaneous material override takes
-precedence and logs an error), `forward_plus` and `deferred` (the lights scenario on those rendering paths;
+precedence and logs an error), `subpass_mrt` (`MrtProbeFeature`: a render graph raster pass after
+the opaques writes two color attachments, the camera color and a target the graph clears; the
+Editor's OpenGL Core device then clears the camera color too, to that target's color) and
+`subpass_mrt_cleared` (both attachments new targets that clear: each to its own color), `forward_plus` and `deferred` (the lights scenario on those rendering paths;
 the Editor's OpenGL device falls back from deferred to forward), `structured_buffer` (a shader
 reading structured and byte address buffers set on a material and a property block),
 `depth_opaque`, plus
