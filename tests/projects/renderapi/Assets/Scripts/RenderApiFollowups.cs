@@ -40,6 +40,208 @@ public sealed partial class RenderApiProbe
         }
     }
 
+    void PackedCases()
+    {
+        var mesh = new Mesh();
+        mesh.SetVertexBufferParams(4,
+            new VertexAttributeDescriptor(VertexAttribute.Position,VertexAttributeFormat.Float16,4,0),
+            new VertexAttributeDescriptor(VertexAttribute.Color,VertexAttributeFormat.UNorm8,4,1),
+            new VertexAttributeDescriptor(VertexAttribute.TexCoord0,VertexAttributeFormat.Float16,4,2),
+            new VertexAttributeDescriptor(VertexAttribute.TexCoord5,VertexAttributeFormat.SNorm16,4,3));
+        mesh.SetVertexBufferData(new ushort[] {0xb800,0xb800,0,0x3c00, 0x3800,0xb800,0,0x3c00, 0x3800,0x3800,0,0x3c00, 0xb800,0x3800,0,0x3c00},0,0,16,0);
+        mesh.SetVertexBufferData(new uint[] {0xffffffff,0xffffffff,0xffffffff,0xffffffff},0,0,4,1);
+        mesh.SetVertexBufferData(new ushort[] {0x3800,0x3800,0,0,0x3800,0x3800,0,0,0x3800,0x3800,0,0,0x3800,0x3800,0,0},0,0,16,2);
+        mesh.SetVertexBufferData(new short[] {16384,0,0,0,16384,0,0,0,16384,0,0,0,16384,0,0,0},0,0,16,3);
+        mesh.SetIndices(new[] {0,1,2,3},MeshTopology.Quads,0);
+        mesh.vertexBufferTarget |= GraphicsBuffer.Target.Raw; mesh.indexBufferTarget |= GraphicsBuffer.Target.Raw;
+        var material = new Material(Resources.Load<Shader>("PackedRead"));
+        var go = new GameObject("packed GPU mesh"); go.AddComponent<MeshFilter>().sharedMesh=mesh; go.AddComponent<MeshRenderer>().sharedMaterial=material;
+        Image("packed.mesh.before");
+        Try("packed.mesh.write",()=>
+        {
+            var compute=Resources.Load<ComputeShader>("MeshWrite"); int kernel=compute.FindKernel("Packed");
+            for(int stream=0;stream<4;stream++)
+            {
+                using(var b=mesh.GetVertexBuffer(stream)) compute.SetBuffer(kernel,new[] {"RawVertices","PackedColors","PackedUvs","PackedExtra"}[stream],b);
+            }
+            using(var b=mesh.GetIndexBuffer())compute.SetBuffer(kernel,"RawIndices",b);
+            compute.Dispatch(kernel,1,1,1);
+        });
+        Image("packed.mesh.after");
+        using(var b=mesh.GetIndexBuffer())Buffer("quadOrder.current",b);
+        mesh.SetVertexBufferData(new uint[] {0xffff0000,0xffff0000,0xffff0000,0xffff0000},0,0,4,1);
+        Image("packed.mesh.colorOnly");
+        DestroyImmediate(go); DestroyImmediate(mesh); DestroyImmediate(material);
+    }
+
+    void QuadLayoutCases()
+    {
+        foreach(bool raw in new[] {false,true})
+        foreach(bool wide in new[] {false,true})
+        {
+            var m=new Mesh();m.indexFormat=wide?IndexFormat.UInt32:IndexFormat.UInt16;
+            m.vertices=new[] {new Vector3(-.5f,-.5f,0),new Vector3(.5f,-.5f,0),new Vector3(.5f,.5f,0),new Vector3(-.5f,.5f,0)};
+            m.subMeshCount=2;m.SetIndices(new[] {0,1,2,3},MeshTopology.Quads,0);m.SetIndices(new[] {0,2,3},MeshTopology.Triangles,1);
+            if(raw)m.indexBufferTarget|=GraphicsBuffer.Target.Raw;
+            ClearIndexPadding(m);
+            string key="quadLayout.mixed."+raw+"."+wide;
+            using(var b=m.GetIndexBuffer())Buffer(key,b);
+            DestroyImmediate(m);
+        }
+        var mesh=new Mesh {vertices=new[] {new Vector3(-.5f,-.5f,0),new Vector3(.5f,-.5f,0),new Vector3(.5f,.5f,0),new Vector3(-.5f,.5f,0)}};
+        mesh.SetIndices(new[] {0,1,2,3},MeshTopology.Quads,0);mesh.indexBufferTarget|=GraphicsBuffer.Target.Raw;
+        var go=new GameObject("quad ranges");go.AddComponent<MeshFilter>().sharedMesh=mesh;
+        var material=new Material(Resources.Load<Shader>("PackedRead"));material.SetFloat("_UseUvs",0);go.AddComponent<MeshRenderer>().sharedMaterial=material;
+        using(var b=mesh.GetIndexBuffer())
+        {
+            var data=new ushort[b.count];b.GetData(data);
+            for(int n=0;n<4;n++)data[n]=0;b.SetData(data);Image("quadLayout.logical");
+            for(int n=4;n<data.Length;n++)data[n]=0;b.SetData(data);Image("quadLayout.physical");
+            mesh.UploadMeshData(false);Image("quadLayout.upload");
+            mesh.SetIndices(new[] {0,1,2,3},MeshTopology.Quads,0);Image("quadLayout.cpu");
+        }
+        DestroyImmediate(go);DestroyImmediate(mesh);DestroyImmediate(material);
+    }
+
+    IEnumerator SphereMoreCases()
+    {
+        var go=new GameObject("transformed gizmo sphere");var script=go.AddComponent<RenderApiSphereControl>();script.enabled=false;
+        foreach(bool hdr in new[] {false,true})
+        {
+            camera.allowHDR=hdr;setGameGizmos?.Invoke(true);script.drew=false;
+            yield return null;yield return new WaitForEndOfFrame();
+            string key="sphereMore."+hdr;
+            var image=ScreenCapture.CaptureScreenshotAsTexture();SaveImage(key,image);DestroyImmediate(image);Bool(key+".callback",script.drew);
+        }
+        camera.allowHDR=false;setGameGizmos?.Invoke(false);DestroyImmediate(go);
+    }
+
+    IEnumerator SkinSourceCases()
+    {
+        var go=new GameObject("skin source");var skin=go.AddComponent<SkinnedMeshRenderer>();
+        var mesh=Make();mesh.triangles=new[] {0,2,1};
+        mesh.boneWeights=new[] {new BoneWeight {weight0=1},new BoneWeight {weight0=1},new BoneWeight {weight0=1}};
+        mesh.bindposes=new[] {Matrix4x4.identity};mesh.vertexBufferTarget|=GraphicsBuffer.Target.Raw;
+        skin.sharedMesh=mesh;skin.bones=new[] {go.transform};skin.updateWhenOffscreen=true;skin.vertexBufferTarget|=GraphicsBuffer.Target.Raw;
+        var material=new Material(Shader.Find("Unlit/Color"));material.color=Color.green;skin.sharedMaterial=material;
+        yield return null;Image("skinSource.before");
+        Try("skinSource.input.write",()=>
+        {
+            using(var b=mesh.GetVertexBuffer(0))
+            {
+                Buffer("skinSource.input",b,false);
+                Value("skinSource.streams",mesh.vertexBufferCount.ToString());
+                var layout=mesh.GetVertexAttributes();var entries=new string[layout.Length];
+                for(int a=0;a<layout.Length;a++)entries[a]="["+(int)layout[a].attribute+","+(int)layout[a].format+","+layout[a].dimension+","+layout[a].stream+"]";
+                Value("skinSource.layout","["+string.Join(",",entries)+"]");
+                Bool("skinSource.weights.present",mesh.HasVertexAttribute(VertexAttribute.BlendWeight));
+                Value("skinSource.weights.stream",mesh.GetVertexAttributeStream(VertexAttribute.BlendWeight).ToString());
+                var compute=Resources.Load<ComputeShader>("MeshWrite");int kernel=compute.FindKernel("Skin");
+                compute.SetBuffer(kernel,"RawVertices",b);compute.SetInt("Stride",b.stride);compute.SetInt("Count",3);compute.Dispatch(kernel,1,1,1);
+            }
+        });
+        Image("skinSource.sameFrame");yield return null;Image("skinSource.nextFrame");
+        Try("skinSource.output",()=>
+        {
+            using(var b=skin.GetVertexBuffer())
+            {
+                Buffer("skinSource.current",b,false);
+                if(b==null)return;
+                var values=new float[b.stride/4];b.GetData(values);Value("skinSource.position",V(new Vector3(values[0],values[1],values[2])));
+            }
+        });
+        DestroyImmediate(go);DestroyImmediate(mesh);DestroyImmediate(material);
+    }
+
+    void HdrCases()
+    {
+        var mesh=new Mesh();
+        mesh.SetVertexBufferParams(3,new VertexAttributeDescriptor(VertexAttribute.Position),new VertexAttributeDescriptor(VertexAttribute.Color,VertexAttributeFormat.Float32,4,1));
+        mesh.SetVertexBufferData(Vertices,0,0,3,0);
+        mesh.SetVertexBufferData(new[] {new Vector4(2,.3f,.7f,1),new Vector4(2,.3f,.7f,1),new Vector4(2,.3f,.7f,1)},0,0,3,1);
+        mesh.SetIndices(new[] {0,1,2},MeshTopology.Triangles,0);mesh.vertexBufferTarget|=GraphicsBuffer.Target.Raw;
+        var material=new Material(Resources.Load<Shader>("PackedRead"));material.SetFloat("_UseUvs",0);
+        var go=new GameObject("HDR GPU mesh");go.AddComponent<MeshFilter>().sharedMesh=mesh;go.AddComponent<MeshRenderer>().sharedMaterial=material;
+        Image("hdr.mesh.before");
+        Try("hdr.mesh.write",()=>
+        {
+            var compute=Resources.Load<ComputeShader>("MeshWrite");int kernel=compute.FindKernel("PackedHdr");
+            using(var b=mesh.GetVertexBuffer(1))compute.SetBuffer(kernel,"PackedColors",b);
+            compute.Dispatch(kernel,1,1,1);
+        });
+        Image("hdr.mesh.after");
+        DestroyImmediate(go);DestroyImmediate(mesh);DestroyImmediate(material);
+    }
+
+    IEnumerator ExtendedCases()
+    {
+        var mesh = Make(); mesh.triangles = new[] { 0, 2, 1 };
+        mesh.vertexBufferTarget |= GraphicsBuffer.Target.Raw | GraphicsBuffer.Target.CopyDestination;
+        mesh.indexBufferTarget |= GraphicsBuffer.Target.Raw;
+        var go = new GameObject("copy mesh"); go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        var material = new Material(Shader.Find("Unlit/Color")); material.color = Color.green;
+        go.AddComponent<MeshRenderer>().sharedMaterial = material;
+        var shifted = new Vector3[3];
+        for (int n = 0; n < 3; n++) shifted[n] = Vertices[n] + Vector3.right * .5f;
+        using (var buffer = mesh.GetVertexBuffer(0))
+        using (var indices = mesh.GetIndexBuffer())
+        using (var source = new GraphicsBuffer(GraphicsBuffer.Target.Structured | GraphicsBuffer.Target.CopySource, 3, 12))
+        {
+            Try("extended.mesh.shortRead", () => buffer.GetData(new float[1]));
+            Try("extended.mesh.setData", () => buffer.SetData(shifted)); Image("extended.mesh.setData");
+            Value("extended.mesh.cpu", V(mesh.vertices[0]));
+            source.SetData(Vertices);
+            Try("extended.mesh.copy", () => Graphics.CopyBuffer(source, buffer)); Image("extended.mesh.copy");
+            using (var cb = new CommandBuffer())
+            {
+                cb.SetBufferData(buffer, shifted);
+                Try("extended.mesh.commandSet", () => Graphics.ExecuteCommandBuffer(cb));
+            }
+            Image("extended.mesh.commandSet");
+            Try("extended.mesh.indexSet", () => indices.SetData(new ushort[] { 0, 1, 2, 0 }));
+            Image("extended.mesh.indexSet");
+            mesh.SetVertices(Vertices); Image("extended.mesh.vertexOnly");
+            mesh.triangles = new[] { 0, 2, 1 }; Image("extended.mesh.indexOnly");
+            // Same command stream: no intervening readback may force the dispatch to complete.
+            var compute = Resources.Load<ComputeShader>("MeshWrite"); int kernel = compute.FindKernel("Skin");
+            var rt = new RenderTexture(96,64,24,RenderTextureFormat.ARGBFloat,RenderTextureReadWrite.Linear); rt.Create();
+            using (var cb = new CommandBuffer())
+            {
+                cb.SetComputeBufferParam(compute,kernel,"RawVertices",buffer);
+                cb.SetComputeIntParam(compute,"Stride",12); cb.SetComputeIntParam(compute,"Count",3);
+                cb.DispatchCompute(compute,kernel,1,1,1);
+                cb.SetRenderTarget(rt); cb.ClearRenderTarget(true,true,Color.black);
+                cb.SetViewProjectionMatrices(camera.worldToCameraMatrix,camera.projectionMatrix);
+                cb.DrawMesh(mesh,Matrix4x4.identity,material);
+                Graphics.ExecuteCommandBuffer(cb);
+            }
+            var previous = RenderTexture.active; RenderTexture.active = rt;
+            var image = new Texture2D(96,64,TextureFormat.RGBAFloat,false,true);
+            image.ReadPixels(new Rect(0,0,96,64),0,0); image.Apply(); RenderTexture.active = previous;
+            SaveImage("extended.mesh.dispatchDraw",image); DestroyImmediate(image); rt.Release(); DestroyImmediate(rt);
+        }
+        DestroyImmediate(go); DestroyImmediate(mesh); DestroyImmediate(material);
+        var skinObject = new GameObject("offset skin"); var skin = skinObject.AddComponent<SkinnedMeshRenderer>();
+        Try("extended.skin.empty",()=> { using(var b=skin.GetVertexBuffer()) Bool("extended.skin.empty.null",b==null); });
+        mesh = Make(); mesh.normals = new[] { Vector3.forward,Vector3.forward,Vector3.forward };
+        mesh.boneWeights = new[] { new BoneWeight { weight0=1 }, new BoneWeight { weight0=1 }, new BoneWeight { weight0=1 } };
+        mesh.bindposes = new[] { Matrix4x4.identity };
+        var bone = new GameObject("offset bone"); bone.transform.SetParent(skinObject.transform,false); bone.transform.localPosition = Vector3.right * .25f;
+        skinObject.transform.position = Vector3.right * .7f;
+        skin.sharedMesh=mesh; skin.bones=new[] {bone.transform}; skin.updateWhenOffscreen=true; skin.vertexBufferTarget|=GraphicsBuffer.Target.Raw;
+        material = new Material(Shader.Find("Unlit/Color")); material.color=Color.green; skin.sharedMaterial=material;
+        yield return null; Image("extended.skin.before");
+        Try("extended.skin.offset",()=>
+        {
+            using(var b=skin.GetVertexBuffer())
+            {
+                Buffer("extended.skin.buffer",b,false);
+                if(b!=null) { var values=new float[b.stride/4];b.GetData(values);Value("extended.skin.position",V(new Vector3(values[0],values[1],values[2]))); }
+            }
+        });
+        DestroyImmediate(bone); DestroyImmediate(skinObject); DestroyImmediate(mesh); DestroyImmediate(material);
+    }
+
     IEnumerator FollowupCases()
     {
         // Every new record and frame uses its own prefix; earlier controls remain unchanged.
@@ -166,5 +368,17 @@ public sealed class RenderApiGizmoControls : MonoBehaviour
     {
         drewSelected = true;
         Gizmos.color = Color.magenta; Gizmos.DrawCube(new Vector3(0,1,0), new Vector3(.5f,.5f,.5f));
+    }
+}
+
+public sealed class RenderApiSphereControl : MonoBehaviour
+{
+    public bool drew;
+    void OnDrawGizmos()
+    {
+        drew=true;Gizmos.color=Color.cyan;
+        Gizmos.matrix=Matrix4x4.TRS(new Vector3(-1.3f,-.2f,0),Quaternion.Euler(17,33,-15),new Vector3(1.2f,.8f,1.1f));
+        Gizmos.DrawSphere(Vector3.zero,.55f);
+        Gizmos.matrix=Matrix4x4.identity;
     }
 }

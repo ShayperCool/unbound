@@ -1,6 +1,8 @@
 #pragma kernel Raw
 #pragma kernel Structured
 #pragma kernel Skin
+#pragma kernel Packed
+#pragma kernel PackedHdr
 
 RWByteAddressBuffer RawVertices;
 RWByteAddressBuffer RawIndices;
@@ -32,4 +34,27 @@ void Structured(uint3 id : SV_DispatchThreadID)
 void Skin(uint3 id : SV_DispatchThreadID)
 {
     for (uint n=0; n<(uint)Count; n++) Shift(n);
+}
+
+RWByteAddressBuffer PackedColors;
+RWByteAddressBuffer PackedUvs;
+RWByteAddressBuffer PackedExtra;
+[numthreads(1,1,1)]
+void Packed(uint3 id : SV_DispatchThreadID)
+{
+    RawVertices.Store(0, 0xb8000000); RawVertices.Store(8, 0xb8003c00);
+    RawVertices.Store(16, 0x38003c00); RawVertices.Store(24, 0x38000000);
+    for (uint n=0; n<4; n++)
+    {
+        PackedColors.Store(n*4, 0xff00ff00);
+        PackedUvs.Store(n*8, 0x3c003c00);
+        PackedExtra.Store(n*8, 0x00007fff);
+    }
+    RawIndices.Store2(0, uint2(0x00020001,0x00000003));
+}
+
+[numthreads(1,1,1)]
+void PackedHdr(uint3 id : SV_DispatchThreadID)
+{
+    for(uint n=0;n<3;n++) PackedColors.Store4(n*16,asuint(float4(4,.8,-1,1)));
 }

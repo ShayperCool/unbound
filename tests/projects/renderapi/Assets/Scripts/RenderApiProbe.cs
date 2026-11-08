@@ -41,6 +41,22 @@ public sealed partial class RenderApiProbe : MonoBehaviour
         var mesh = new Mesh { name = "probe mesh", vertices = Vertices, triangles = new[] {0,1,2} };
         return mesh;
     }
+    void ClearIndexPadding(Mesh mesh)
+    {
+        // Raw 16-bit buffers can include an extra index for word alignment. Initialize that
+        // unused storage so captures never depend on its previous allocation contents.
+        if (mesh.indexFormat != IndexFormat.UInt16) return;
+        int used = 0;
+        for (int sub = 0; sub < mesh.subMeshCount; sub++) used = Math.Max(used, (int)(mesh.GetIndexStart(sub) + mesh.GetIndexCount(sub)));
+        for (int sub = 0; sub < mesh.subMeshCount; sub++)
+            if (mesh.GetTopology(sub) == MeshTopology.Quads) used += (int)mesh.GetIndexCount(sub) / 4 * 6;
+        using (var buffer = mesh.GetIndexBuffer())
+        {
+            if (buffer.count <= used) return;
+            var values = new ushort[buffer.count]; buffer.GetData(values);
+            Array.Clear(values, used, values.Length - used); buffer.SetData(values);
+        }
+    }
     void Buffer(string key, GraphicsBuffer b, bool data = true)
     {
         Bool(key+".null", b == null);
@@ -68,6 +84,7 @@ public sealed partial class RenderApiProbe : MonoBehaviour
             Try(k+".set", () => { mesh.vertexBufferTarget = flags; mesh.indexBufferTarget = flags; });
             Value(k+".targets", "["+(int)mesh.vertexBufferTarget+","+(int)mesh.indexBufferTarget+"]");
             mesh.UploadMeshData(false);
+            ClearIndexPadding(mesh);
             Try(k+".vertex", () => { using(var b = mesh.GetVertexBuffer(0)) Buffer(k+".v",b); });
             Try(k+".index", () => { using(var b = mesh.GetIndexBuffer()) Buffer(k+".i",b); });
             DestroyImmediate(mesh);
@@ -113,7 +130,7 @@ public sealed partial class RenderApiProbe : MonoBehaviour
         Bool("mesh.index.edit.old.valid", previous.IsValid());
         using(var b=m.GetIndexBuffer()) Bool("mesh.index.edit.samePtr",b.GetNativeBufferPtr()==oldPtr);
         previous.Dispose();
-        m.UploadMeshData(true); Bool("mesh.unreadable",m.isReadable);
+        m.UploadMeshData(true); ClearIndexPadding(m); Bool("mesh.unreadable",m.isReadable);
         Try("mesh.unreadable.vertex",()=>{ using(var b=m.GetVertexBuffer(0)) Buffer("mesh.unreadable.v",b); });
         Try("mesh.unreadable.index",()=>{ using(var b=m.GetIndexBuffer()) Buffer("mesh.unreadable.i",b); });
         previous=m.GetVertexBuffer(0); var previousIndex=m.GetIndexBuffer();
@@ -129,6 +146,7 @@ public sealed partial class RenderApiProbe : MonoBehaviour
         using(var b=m.GetIndexBuffer()) Buffer("mesh.multi.i",b);
         DestroyImmediate(m);
         m=Make(); m.vertexBufferTarget|=GraphicsBuffer.Target.Raw; m.indexBufferTarget|=GraphicsBuffer.Target.Raw;
+        ClearIndexPadding(m);
         var compute=Resources.Load<ComputeShader>("MeshRead");
         using(var output=new GraphicsBuffer(GraphicsBuffer.Target.Structured,4,4))
         {
@@ -292,6 +310,12 @@ public sealed partial class RenderApiProbe : MonoBehaviour
         }
         setGameGizmos?.Invoke(false);
         yield return FollowupCases();
+        yield return ExtendedCases();
+        PackedCases();
+        HdrCases();
+        yield return SkinSourceCases();
+        yield return SphereMoreCases();
+        QuadLayoutCases();
         // Runtime queries and scene changes must not synthesize layer edits.
         Value("sorting.added",added.ToString());Value("sorting.removed",removed.ToString());
         SortingLayer.onLayerAdded-=OnAdded;SortingLayer.onLayerRemoved-=OnRemoved;
