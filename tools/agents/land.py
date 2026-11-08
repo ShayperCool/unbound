@@ -8,11 +8,13 @@ Run from a worker worktree with everything committed:
 
 --check runs the gate on the current tree without the lock and without merging. A pass is
 remembered per tree and probe list. Landing right after a passing --check, with main
-unchanged, therefore does not rebuild. Landing holds one machine-wide lock while it:
-  1. rebases onto main;
-  2. re-runs the gate if the rebased tree has no pass;
-  3. fast-forwards main;
-  4. pushes main if main tracks a remote, like the post-commit hook does for commits.
+unchanged, therefore does not rebuild. Landing registers the branch and its probes in a queue.
+The machine-wide lock holder rebases queued branches in order and runs one combined gate in
+an integration worktree. On pass it fast-forwards main through every branch and pushes once.
+Conflicts reject only their branch. A failed train is bisected to land the passing prefix;
+each caller waits for its own result and receives its gate log. A single queued branch keeps
+its original worktree and warm build target.
+
 
 Gate:
   - the oracle guard (tools/agents/oracle_guard.py);
@@ -54,7 +56,7 @@ import time
 import tomllib
 import xml.etree.ElementTree as ET
 
-GATE_VERSION = '4'
+GATE_VERSION = '5'
 STATE = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound/agents'
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 DOCS_ONLY = re.compile(r'(\.md$)|(^docs/)')
@@ -67,6 +69,11 @@ HERE = Path(__file__).resolve().parent
 from probe_runtime import (RELEASE_VARIABLE, default_release, probe_release, NO_EDITOR,
                            EDITOR_WATCH, EDITOR_MARK, EDITOR_EXIT, require_process_watch, stop_tree)
 from runtime_snapshot import snapshot_runtime, pin_main, atomic_json
+from slot import hidden_index_paths, slot_root
+
+
+def integration_root():
+    return slot_root().parent/'land-trains'
 
 
 def die(code, message):
@@ -81,9 +88,9 @@ def git(*args, cwd=None, check=True):
     return result.stdout.strip()
 
 
-def main_worktree():
+def main_worktree(cwd=None):
     path = None
-    for line in git('worktree', 'list', '--porcelain').splitlines():
+    for line in git('worktree', 'list', '--porcelain', cwd=cwd).splitlines():
         if line.startswith('worktree '):
             path = Path(line[len('worktree '):])
         elif line == 'branch refs/heads/main':
@@ -92,12 +99,16 @@ def main_worktree():
 
 
 def require_clean(where, label, allow_untracked=False):
-    dirty = [line for line in git('status', '--porcelain', cwd=where).splitlines()
+    dirty = [line for line in git('--no-optional-locks', 'status', '--porcelain', '--untracked-files=all',
+                                 '--ignore-submodules=none', cwd=where).splitlines()
              if not (allow_untracked and line.startswith('??'))]
     if dirty:
         listing = '\n  '.join(dirty[:20])
         die(2, f'{label} has uncommitted or untracked files (commit them, delete them or add them '
                f'to .gitignore; untracked sources would pass here and break main):\n  {listing}')
+
+    if hidden_index_paths(where):
+        die(2, f'{label} has tracked paths hidden by index flags; preserve any work and clear the flags first')
 
 
 def tail(log, lines=30):
@@ -106,9 +117,11 @@ def tail(log, lines=30):
 
 
 class Gate:
-    def __init__(self, worktree, base, probes, full, log, priority=False):
+    def __init__(self, worktree, base, probes, full, log, priority=False, *,
+                 changed=None, crates=None, releases=None, environment=None):
         self.worktree, self.base, self.probes, self.full, self.log = worktree, base, probes, full, log
-        self.env = dict(os.environ)
+        self.env = dict(os.environ if environment is None else environment)
+        self.changed, self.crates, self.releases = changed, crates, releases
         self.env.pop('UNBOUND_LAND_GATE', None)
         if priority:
             self.env['UNBOUND_LAND_GATE'] = '1'
@@ -147,7 +160,8 @@ class Gate:
         die(5, f'gate failed at {name}; full log: {self.log}')
 
     def run(self):
-        changed = git('diff', '--name-only', '--no-renames', f'{self.base}...HEAD', cwd=self.worktree).splitlines()
+        changed = self.changed if self.changed is not None else git(
+            'diff', '--name-only', '--no-renames', f'{self.base}...HEAD', cwd=self.worktree).splitlines()
         guard = subprocess.run([sys.executable, str(HERE/'oracle_guard.py'), self.base, 'HEAD'],
                                cwd=self.worktree)
         if guard.returncode:
@@ -157,7 +171,7 @@ class Gate:
             return
         build_py = [sys.executable, 'tools/build.py']
         selected = json.loads(subprocess.run([*build_py, '--print-env'], cwd=self.worktree, check=True,
-                                             capture_output=True, text=True).stdout)
+                                             capture_output=True, text=True, env=self.env).stdout)
         self.env.update(selected)
         target = Path(selected['CARGO_TARGET_DIR'])
         self.env['UNBOUND'] = str(target/'release/unbound')
@@ -177,7 +191,8 @@ class Gate:
 
         self.managed_tests(target)
 
-        crates = self.touched_crates(changed)
+        crates = (self.touched_crates(changed) if self.crates is None else
+                  sorted(set(self.crates) & set(self.touched_crates(['Cargo.toml']))))
         if self.full or crates:
             args = ['--workspace'] if self.full else [arg for crate in crates for arg in ('-p', crate)]
             if self.step('rust tests', [*build_py, '--', 'test', '--release', '--locked', *args]):
@@ -200,7 +215,7 @@ class Gate:
         """Each --probe command, with the release it runs for in $UNBOUND_PROBE_UNITY_VERSION."""
         for index, probe in enumerate(self.probes, 1):
             try:
-                release = probe_release(probe, self.worktree)
+                release = self.releases[index-1] if self.releases is not None else probe_release(probe, self.worktree)
             except ValueError as error:
                 die(2, str(error))
             if self.step(f'probe {index} ({release}): {probe[:80]}', probe, shell=True,
@@ -345,29 +360,44 @@ class Gate:
         return sorted(names)
 
 
-def stamp_path(tree, probes, full, root):
-    releases = [probe_release(probe, root) for probe in probes]
-    key = hashlib.sha256('\n'.join([GATE_VERSION, tree, str(full), *probes, *releases]).encode()).hexdigest()
+def stamp_path(tree, probes, full, root, *, base=None, changed=(), crates=(), releases=None):
+    releases = releases if releases is not None else [probe_release(probe, root) for probe in probes]
+    values = [GATE_VERSION, tree, base, full, probes, releases, sorted(changed), sorted(crates)]
+    key = hashlib.sha256(json.dumps(values, sort_keys=True).encode()).hexdigest()
     return STATE/'gate-pass'/key
 
 
-def run_gate(worktree, base, probes, full, branch, priority=False):
+def run_gate(worktree, base, probes, full, branch, priority=False, *, log=None, changed=None,
+             crates=None, releases=None, environment=None):
     tree = git('rev-parse', 'HEAD^{tree}', cwd=worktree)
-    stamp = stamp_path(tree, probes, full, worktree)
+    base = git('rev-parse', base, cwd=worktree)
+    if changed is None:
+        changed = git('diff', '--name-only', '--no-renames', base, 'HEAD', cwd=worktree).splitlines()
+    selector = Gate(worktree, base, [], full, Path('/dev/null'))
+    if crates is None:
+        crates = selector.touched_crates(changed)
+    releases = releases if releases is not None else [probe_release(probe, worktree) for probe in probes]
+    stamp = stamp_path(tree, probes, full, worktree, base=base, changed=changed, crates=crates, releases=releases)
     runtime_record = stamp.with_suffix('.runtime.json')
     if stamp.is_file():
-        runtime = json.loads(runtime_record.read_text())['runtime'] if runtime_record.is_file() else None
+        record = json.loads(runtime_record.read_text()) if runtime_record.is_file() else {}
+        runtime = record.get('runtime')
         if runtime is None or Path(runtime).is_dir():
-            print(f'land: gate already passed for tree {tree[:12]} ({stamp.read_text().strip()})', flush=True)
+            message = f'land: gate already passed for tree {tree[:12]} ({stamp.read_text().strip()})'
+            print(message, flush=True)
+            if log is not None:
+                log.parent.mkdir(parents=True, exist_ok=True)
+                log.write_text(message+'\n'+str(record.get('log', ''))+'\n')
             return Path(runtime) if runtime else None
     logs = STATE/'logs'
     logs.mkdir(parents=True, exist_ok=True)
     safe = re.sub(r'[^A-Za-z0-9._-]+', '-', branch)
-    log = logs/f'{datetime.datetime.now():%Y%m%d-%H%M%S}-{safe}.log'
+    log = log or logs/f'{datetime.datetime.now():%Y%m%d-%H%M%S}-{safe}.log'
     print(f'land: gate for tree {tree[:12]}, log {log}', flush=True)
-    gate = Gate(worktree, base, probes, full, log, priority=priority)
+    gate = Gate(worktree, base, probes, full, log, priority=priority, changed=changed, crates=crates,
+                releases=releases, environment=environment)
     gate.run()
-    atomic_json(runtime_record, {'runtime': str(gate.probe_runtime) if gate.probe_runtime else None})
+    atomic_json(runtime_record, {'runtime': str(gate.probe_runtime) if gate.probe_runtime else None, 'log': str(log)})
     stamp.parent.mkdir(parents=True, exist_ok=True)
     stamp.write_text(f'{branch} {datetime.datetime.now():%F %T}\n')
     return gate.probe_runtime
@@ -393,7 +423,7 @@ def land_lock(branch):
 
 
 def push_main(main_checkout):
-    remote = git('config', '--get', 'branch.main.remote', check=False)
+    remote = git('config', '--get', 'branch.main.remote', cwd=main_checkout, check=False)
     if not remote or os.environ.get('UNBOUND_LAND_NO_PUSH'):
         return
     log = Path(git('rev-parse', '--git-common-dir', cwd=main_checkout))
@@ -434,46 +464,8 @@ def main():
         print('land: check passed', flush=True)
         return 0
 
-    with land_lock(branch):
-        if subprocess.run(['git', 'merge-base', '--is-ancestor', 'main', 'HEAD']).returncode:
-            print('land: rebasing onto main', flush=True)
-            rebase = subprocess.run(['git', 'rebase', '--quiet', 'main'], capture_output=True, text=True)
-            if rebase.returncode:
-                conflicts = git('diff', '--name-only', '--diff-filter=U', check=False)
-                subprocess.run(['git', 'rebase', '--abort'], capture_output=True)
-                die(3, 'conflicts with main in:\n  ' + '\n  '.join(conflicts.splitlines() or ['(see git output)'])
-                    + '\nRun `git rebase main` yourself and resolve: regenerate generated stubs instead of '
-                      'merging them; for an ABI version both sides bumped, take main\'s value + 1. '
-                      'Re-run the affected tests, then land again.')
-        old = git('rev-parse', 'main')
-        new = git('rev-parse', 'HEAD')
-        if old == new:
-            die(2, 'nothing to land: the branch has no commits beyond main')
-        runtime = run_gate(worktree, old, args.probe, args.full, branch, priority=True)
-        old_tree = git('rev-parse', 'main^{tree}')
-        if main_checkout:
-            require_clean(main_checkout, f'the main checkout {main_checkout}', allow_untracked=True)
-            merge = subprocess.run(['git', 'merge', '--ff-only', '--quiet', new], cwd=main_checkout,
-                                   capture_output=True, text=True)
-            if merge.returncode:
-                die(2, f'fast-forward of main failed in {main_checkout}:\n{merge.stderr.strip()}')
-        else:
-            git('update-ref', 'refs/heads/main', new, old)
-        try:
-            pin_main(runtime, worktree, git('rev-parse', 'HEAD^{tree}'), previous_tree=old_tree)
-        except (OSError, ValueError, subprocess.CalledProcessError) as error:
-            # Main has advanced. Its gate reference still retains the snapshot; record
-            # the successful landing even if the additional main pin could not be saved.
-            print(f'land: main advanced, but its runtime pin could not be saved: {error}', file=sys.stderr)
-        commits = git('rev-list', '--count', f'{old}..{new}')
-        STATE.mkdir(parents=True, exist_ok=True)
-        with open(STATE/'landed.jsonl', 'a') as out:
-            out.write(json.dumps({'time': f'{datetime.datetime.now():%F %T}', 'branch': branch, 'old': old,
-                                  'new': new, 'commits': int(commits), 'worktree': str(worktree)}) + '\n')
-        if main_checkout:
-            push_main(main_checkout)
-    print(f'land: landed {branch}: main {old[:10]} -> {new[:10]} ({commits} commits)', flush=True)
-    return 0
+    from land_train import LandTrain
+    return LandTrain(sys.modules[__name__]).run(worktree, branch, args.probe, args.full)
 
 
 if __name__ == '__main__':
