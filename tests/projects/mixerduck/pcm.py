@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check whether device PCM is exactly the saturating truncation of each master sample."""
+"""Check device PCM against exact saturating truncation of its pre-quantization float mix."""
 import argparse
 import gzip
 import json
@@ -15,16 +15,19 @@ def compare(root, release, rate, report):
     report.parent.mkdir(parents=True, exist_ok=True)
     with gzip.open(report, 'xt') as output:
         for case in cases():
-            master = samples(root, meta[case + '.master'])
+            # An earlier mixer's effect tail is audible on the device too. New placement
+            # controls record the complete listener mix alongside the unchanged group sink.
+            source = case + ('.listener' if case + '.listener' in meta else '.master')
+            mix = samples(root, meta[source])
             device = samples(root, meta[case])
-            assert len(master) == len(device) == 65536, case
-            for index, (value, actual) in enumerate(zip(master, device)):
+            assert len(mix) == len(device) == 65536, case
+            for index, (value, actual) in enumerate(zip(mix, device)):
                 assert math.isfinite(value) and math.isfinite(actual), (case, index)
                 expected = max(-32768, min(32767, math.trunc(value * 32768))) / 32768
                 tested += 1
                 if actual != expected:
                     failed += 1
-                    output.write(json.dumps(dict(case=case, sample=index, master=value,
+                    output.write(json.dumps(dict(case=case, sample=index, source=source, mix=value,
                                                  expected=expected, actual=actual)) + '\n')
         output.write(json.dumps(dict(summary=dict(tested=tested, failed=failed))) + '\n')
     print(f'PCM quantization: {tested} samples, {failed} differences; {report}', flush=True)

@@ -154,17 +154,17 @@ public class DuckProbe : MonoBehaviour
         new[] { "curve_weighted_blend", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=1", "basecurve=0", "weight=0.25", "returnweight=0.75" },
         new[] { "curve_weighted_same", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=1", "weight=0.75" },
         new[] { "curve_weighted_single", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=1", "single=1" },
-        new[] { "control_volume_linear", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1" },
-        new[] { "control_volume_nosend", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Voice:Att" },
-        new[] { "control_volume_receive", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Att,Receive" },
-        new[] { "control_volume_send", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Att,Send>Fx", "Voice:Att", "Fx:Receive,Att", "Music.Send.Level=0", "Fx.Volume=-80" },
-        new[] { "control_volume_lowpass", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Att,Lowpass", "Voice:Att" },
-        new[] { "control_volume_echo", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Att,Echo", "Voice:Att" },
-        new[] { "control_volume_postduck", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Duck,Att" },
-        new[] { "control_volume_parent_send", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Att", "Voice:Send>Fx,Att", "Fx:Receive,Att", "Fx.Volume=-80" },
-        new[] { "control_volume_echo_bypass", "voice=step0:0.5", "Music:Att,Echo", "Voice:Att", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music.Echo.bypass=1" },
-        new[] { "control_volume_group_bypass", "voice=step0:0.5", "Music:Att,Echo", "Voice:Att", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music.bypass=1" },
-        new[] { "control_volume_lowpass_bypass", "voice=step0:0.5", "Music:Att,Lowpass", "Voice:Att", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music.Lowpass.bypass=1" },
+        new[] { "control_volume_linear", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "finalmix=1" },
+        new[] { "control_volume_nosend", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Voice:Att", "finalmix=1" },
+        new[] { "control_volume_receive", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Att,Receive", "finalmix=1" },
+        new[] { "control_volume_send", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Att,Send>Fx", "Voice:Att", "Fx:Receive,Att", "Music.Send.Level=0", "Fx.Volume=-80", "finalmix=1" },
+        new[] { "control_volume_lowpass", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Att,Lowpass", "Voice:Att", "finalmix=1" },
+        new[] { "control_volume_echo", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Att,Echo", "Voice:Att", "finalmix=1" },
+        new[] { "control_volume_postduck", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Duck,Att", "finalmix=1" },
+        new[] { "control_volume_parent_send", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Att", "Voice:Send>Fx,Att", "Fx:Receive,Att", "Fx.Volume=-80", "finalmix=1" },
+        new[] { "control_volume_echo_bypass", "voice=step0:0.5", "Music:Att,Echo", "Voice:Att", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music.Echo.bypass=1", "finalmix=1" },
+        new[] { "control_volume_group_bypass", "voice=step0:0.5", "Music:Att,Echo", "Voice:Att", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music.bypass=1", "finalmix=1" },
+        new[] { "control_volume_lowpass_bypass", "voice=step0:0.5", "Music:Att,Lowpass", "Voice:Att", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music.Lowpass.bypass=1", "finalmix=1" },
     };
     // These connections are outside the Editor's Send destination menu. Record separately:
     // an invalid graph may prevent the Editor from entering Play mode.
@@ -279,13 +279,17 @@ public class DuckProbe : MonoBehaviour
         var records = new List<string> { "\"release\":\"" + Application.unityVersion + "\"", "\"rate\":" + rate };
         void Save() => File.WriteAllText(Path.Combine(output, "capture.json"), "{" + string.Join(",", records) + "}\n");
         Save();
+        DuckFinalMixTap finalMix = null;
         foreach (string key in Selected()) {
             Debug.Log("Duck case " + key);
+            if (Option(key, "finalmix=", "0") == "1" && finalMix == null)
+                finalMix = gameObject.AddComponent<DuckFinalMixTap>();
             var mixer = Resources.Load<AudioMixer>(key); if (!mixer) throw new Exception("Missing mixer " + key);
             var child = Option(key, "cross=", "") != "" ? Resources.Load<AudioMixer>(key + "_child") : null;
             bool timed = Option(key, "duration=", "") != "";
             Time.timeScale = float.Parse(Option(key, "scale=", "1"), System.Globalization.CultureInfo.InvariantCulture);
             mixer.updateMode = Option(key, "unscaled=", "0") == "1" ? AudioMixerUpdateMode.UnscaledTime : AudioMixerUpdateMode.Normal;
+            if (timed) records.Add("\"" + key + ".captureDeltaTimeBits\":" + BitConverter.SingleToInt32Bits(Time.captureDeltaTime));
             var go = new GameObject(key);
             var clips = new List<AudioClip>();
             AudioSource delayed = null; Action createDelayed = null;
@@ -312,7 +316,9 @@ public class DuckProbe : MonoBehaviour
             var master = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Master");
             var addSink = typeof(AudioRenderer).GetMethod("AddMixerGroupSink", Flags);
             using (var masterWriter = new BinaryWriter(File.Create(Path.Combine(output, key+".master.f32"))))
-            using (var writer = new BinaryWriter(File.Create(Path.Combine(output, key+".f32")))) {
+            using (var writer = new BinaryWriter(File.Create(Path.Combine(output, key+".f32"))))
+            using (var finalWriter = finalMix == null ? null : new BinaryWriter(File.Create(Path.Combine(output, key+".listener.f32")))) {
+                if (finalMix != null) finalMix.Writer = finalWriter;
                 if (Engine) FlushEngine();
                 for (int block = 0; block < BlockCount; block++) {
                     if (block == int.Parse(Option(key, "late=", "-1"))) { createDelayed?.Invoke(); delayed.Play(); if (Engine) FlushEngine(); }
@@ -331,7 +337,7 @@ public class DuckProbe : MonoBehaviour
                         if (Engine) FlushEngine();
                     }
                     if (!Engine) yield return null;
-                    else if (timed) FlushEngine(1024f / rate);
+                    else if (timed) FlushEngine(Time.captureDeltaTime);
                     if (timed && mixer.GetFloat("Change", out float parameter)) {
                         Debug.Log(key + " block=" + block + " parameter=" + parameter.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
                         if (key == "timed_ratio_min" && block == 15)
@@ -343,7 +349,8 @@ public class DuckProbe : MonoBehaviour
                     if (Engine) FlushEngine();
                 }
             }
-            foreach (string suffix in new[] { "", ".master" })
+            if (finalMix != null) finalMix.Writer = null;
+            foreach (string suffix in finalMix == null ? new[] { "", ".master" } : new[] { "", ".master", ".listener" })
                 records.Add("\""+key+suffix+"\":{\"file\":\""+key+suffix+".f32\",\"frames\":"+(BlockCount*1024)+",\"channels\":2}");
             Save(); buffer.Dispose();
             foreach (var source in go.GetComponents<AudioSource>()) source.Stop();
@@ -351,5 +358,15 @@ public class DuckProbe : MonoBehaviour
             Time.timeScale = 1;
         }
         AudioRenderer.Stop(); foreach (var sink in sinks) sink.Dispose(); Save(); Exit(0);
+    }
+}
+
+// The device contains every still-running mixer, including earlier effects' tails.
+public class DuckFinalMixTap : MonoBehaviour
+{
+    public BinaryWriter Writer;
+    void OnAudioFilterRead(float[] samples, int channels)
+    {
+        if (Writer != null) foreach (float value in samples) Writer.Write(value);
     }
 }

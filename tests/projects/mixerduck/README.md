@@ -9,7 +9,9 @@ Music, Voice and (when a case names it) Fx. By default Music carries a DC signal
 at 0 dB while its own fader is at -80 dB, so the sink of Master shows the duck gain directly. Each
 case records 32 complete 1024-frame stereo DSP blocks of the master group sink floats
 (`<case>.master.f32`) and the returned device PCM (`<case>.f32`). No samples are shifted, trimmed or
-discarded.
+discarded. The eleven attenuation-placement controls additionally record the complete listener
+mix (`<case>.listener.f32`) before PCM conversion. The device also hears tails from earlier mixers;
+the original current-mixer master and device streams are preserved exactly.
 
 The 146 cases (`Cases` in `Assets/Scripts/DuckProbe.cs`) cover:
 
@@ -37,10 +39,13 @@ volumes, dry volume controls, paused BrickwallStart, and weighted-array controls
 transitions apply overrides; TransitionToSnapshots uses linear interpolation even with a single
 element and matching overrides. Volume placement controls cover Attenuation before/after Duck,
 Receive, Send, Lowpass, Echo and their bypasses. A trailing Attenuation submits gain directly;
-an interior Attenuation ramps per frame and retains its accumulated gain between blocks. Unscaled timed sidechain snapshots and cross-mixer sends remain
+an interior Attenuation ramps per frame, retains its accumulated gain for another changing block,
+and holds an unchanged target exactly on the next buffer. Unscaled timed sidechain snapshots and cross-mixer sends remain
 explicit failures. The Editor
 has no wet-mixing control for Send or Duck Volume; see docs/AUDIO.md for the 6000.0 contracts,
 measured rules and follow-ups.
+Timed rows also record the exact bits returned by `Time.captureDeltaTime`; the engine receives
+that public interval instead of the unquantized `1024/rate` expression.
 The Ratio 10-to-0.2 boundary has timed and immediate controls. The timed case also records the
 public GetFloat bits at the endpoint, so range acceptance cannot be fixed by changing that value.
 
@@ -86,16 +91,16 @@ python3 tests/authored_project.py record mixerduck default --release 6000.0.71f1
 
 The tolerances are ATOL `2e-5` and RTOL `2e-4` on floats, as in the other mixer probes, and exact
 on metadata. Independent Native repeats compare float bits exactly and agree at both rates
-(19136807/19136807 values each). The canonical reference is one capture per rate in
+(19857774/19857774 values each). The canonical reference is one capture per rate in
 `Reference/unity-6000.0.71f1/rate-<rate>/`, with gzip sample files. Both raw repeats stay in the
 cache.
 
 ## Result
 
-Gate: 19136807/19136807 values at 48000 Hz and at 44100 Hz. Independent Editor repeats agree exactly;
+Gate: 19857774/19857774 values at 48000 Hz and at 44100 Hz. Independent Editor repeats agree exactly;
 every earlier reference value and sample is retained. The strict comparison keeps one-step
 device PCM flips whose master floats pass, listed in docs/COMPATIBILITY_GAPS.md. `pcm.py` checks
-every device sample against saturating truncation of its own master sample; both captures have
+every device sample against saturating truncation of the pre-quantization float mix, using the listener stream where recorded and the master otherwise; both captures have
 zero conversion differences. The measured model and its limits are in docs/AUDIO.md.
 The original 84 engine cases also compare bit for bit before and after the timed transition
 change: 11010218 values at each rate.

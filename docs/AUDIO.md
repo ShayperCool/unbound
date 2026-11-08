@@ -474,17 +474,25 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
   per-block Send ramp and Duck detector histories remain in use.
   The volume controls also distinguish attenuation placement: a trailing Attenuation applies
   the submitted gain directly. Before a following unit it starts from the prior actual gain,
-  adds `(target-current)/frames` after each stereo frame, and retains that accumulated float32
-  gain for the next block. Both channels use the same gain. Duck, Receive, Send, Lowpass and Echo
+  adds `(target-current)/DSP-buffer-frames` after each stereo frame, and retains that accumulated float32
+  gain when the next buffer has a different target. An unchanged target is held exactly at the
+  next buffer boundary. Both channels use the same gain. Duck, Receive, Send, Lowpass and Echo
   controls, with effect/group bypass and an unrelated Send in another group, distinguish chain
   position from effect kind or global sidechain presence. Attenuation after Duck stays direct.
-  This refines `Compat.MixerParameterGainMeasured`; it adds no audio-thread storage or allocation.
+  This refines `Compat.MixerParameterGainMeasured`. Slope and buffer position live on the existing
+  effect instance; the audio thread allocates no storage for the ramp.
   The same captures show that `TransitionToSnapshots` ignores overrides and uses linear
   interpolation, including a one-element array, matching and differing overrides, and weighted
   blends in both directions. `AudioMixerSnapshot.TransitionTo` applies the target override.
   Both paths share one scheduler. Other releases retain the previous, unmeasured weighted-array
   override selection; timed sidechain changes on those releases still fail clearly. The
   Attenuation override and unknown override values remain unsupported on changing sidechains.
+- The probe drives the engine with the public `Time.captureDeltaTime` getter, as the Editor
+  does, and compares its bits exactly on every timed row. At 48000 Hz the requested `1024/rate`
+  returns `0.0213333257`, not the original float expression. Using the unquantized expression
+  shifts timed gains enough to cross an Echo history quantization boundary. The getter was
+  already measured and implemented (`AudioCaptureTimeTests`); this corrects the probe input and
+  leaves all prior Editor samples unchanged.
 - Q167 repeats the opt-in unscaled Send and Threshold captures at both output rates. Realtime
   progression produces different parameters and master buffers under the same captureDeltaTime.
   These diagnostics are not oracles. A controllable unscaled reference clock remains a follow-up;
@@ -493,10 +501,16 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
   The published [6000.0 Inspector implementation](https://github.com/Unity-Technologies/UnityCsReference/blob/6000.0/Editor/Mono/Audio/Mixer/GUI/AudioMixerEffectView.cs)
   excludes both units. Assets enabling wet mixing on either still fail explicitly.
 - The Q141 PCM check verifies each device sample against saturating truncation of the master
-  float multiplied by 32768, at both rates, for both the Editor and engine captures. There are
+  float multiplied by 32768, at both rates, for both the Editor and engine captures. Q167's eleven
+  volume-placement controls also record the complete listener float stream: a prior mixer's
+  Lowpass or Echo tail can still reach the device alongside the current mixer's master sink.
+  Those rows check quantization from the complete pre-quantization mix. Both the original master
+  and device streams remain bit for bit unchanged; listener floats use the existing float
+  tolerances, without device PCM slack. There are
   no conversion differences. The original 891 one-step differences per rate originate in the
   mixer floats, with no evidence of dither or a different clamp order. The timed threshold cases
-  add six such samples at 48000 Hz and five at 44100 Hz; master floats still pass the unchanged tolerance.
+  add six such samples at 48000 Hz and five at 44100 Hz. Q167 totals 918 and 913 one-step device
+  differences respectively across 146 cases; every master/listener float passes the unchanged tolerance.
 - Surround output, sample rates other than 48000/44100 Hz, other DSP buffer sizes and live effect
   insertion/retargeting remain unmeasured.
 - Compressor, ParamEQ, the simple filters and Distortion are below; the other mixer effects

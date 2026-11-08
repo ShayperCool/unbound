@@ -42,7 +42,7 @@ def compare(reference, candidate, report, keys, exact=False, before=None, pcm_st
             nonlocal tested, failed
             tested += 1
             sample = index is not None
-            steps = 0 if key.endswith('.master') else pcm_steps
+            steps = 0 if key.endswith(('.master', '.listener')) else pcm_steps
             wrong = [bad(values[0], v, sample, exact, steps) for v in values[1:]]
             if not any(wrong): return
             failed += 1
