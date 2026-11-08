@@ -241,4 +241,3 @@ def stop_root(pid, grace=30):
 
 
 EDITOR_WATCH = EditorWatch()
-

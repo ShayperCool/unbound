@@ -320,7 +320,11 @@ class PerProbeReleaseTests(unittest.TestCase):
                          unittest.mock.patch.object(suite.signal, 'signal'), \
                          contextlib.redirect_stdout(io.StringIO()):
                         self.assertEqual(suite.main(), 0)
-                results = json.loads((root/'agents/suite'/label/'summary.json').read_text())['probes']
+                summary = json.loads((root/'agents/suite'/label/'summary.json').read_text())
+                results = summary['probes']
+                self.assertEqual(summary['release'], override[-1] if override else
+                                 os.environ.get(land.RELEASE_VARIABLE))
+                self.assertEqual(summary['releases'], {name: row['release'] for name, row in results.items()})
                 for name, version in versions.items():
                     expected = override[-1] if override else os.environ.get(land.RELEASE_VARIABLE, version)
                     self.assertEqual(results[name]['release'], expected)
