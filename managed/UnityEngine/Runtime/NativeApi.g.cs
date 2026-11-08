@@ -97,8 +97,9 @@ namespace Unbound.Runtime
         internal delegate* unmanaged<ulong, int, int, int, int, int, int, int, NativeBuffer*, int> ReadTexture;
         /// <summary>
         /// (clip handle, file bytes, length, Unity `AudioType`, header only, out info): 0 when the
-        /// file decodes as that type (`unbound_assets::audio_download`) into the clip, or, header
-        /// only, when a partial WAV announces its format and length (no clip is made); else 1.
+        /// file decodes as that type (`unbound_assets::audio_download`) into the clip, the info's
+        /// compression format being the file's coding, or, header only, when a partial WAV
+        /// announces its format and length (no clip is made); else 1.
         /// </summary>
         internal delegate* unmanaged<ulong, byte*, int, int, int, AudioClipInfo*, int> AudioDecodeClip;
     }
