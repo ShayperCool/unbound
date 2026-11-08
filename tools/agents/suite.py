@@ -1189,7 +1189,8 @@ def main():
 
     counts = {status: sum(r['status'] == status for r in results.values())
               for status in ('pass', 'fail', 'report', 'no recipe')}
-    summary = {'label': label, 'release': args.release or os.environ.get('UNBOUND_PROBE_UNITY_VERSION'), 'only': args.only, 'commit': commit, 'cli': str(cli), 'managed': str(managed),
+    summary = {'label': label, 'release': next(iter(set(releases.values()))) if len(set(releases.values())) == 1 else None,
+               'releases': releases, 'only': args.only, 'commit': commit, 'cli': str(cli), 'managed': str(managed),
                'work': str(work_root), 'started': datetime.datetime.fromtimestamp(started).isoformat(timespec='seconds'),
                'seconds': round(time.time() - started), 'counts': counts,
                'probes': {name: results[name] for name in sorted(results)}}
