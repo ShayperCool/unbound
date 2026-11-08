@@ -410,6 +410,13 @@ def recipes(release):
     for name in ('animatoradditive', 'coreapis', 'editorcallbacks', 'humanoid', 'instantiateasync', 'modelclips',
                  'modelroot', 'navlinks'):
         R[name] = guarded(jsonl('values.jsonl'))
+    # Scene-loop companions retain the original callback comparator and its raw failures.
+    for profile, flags in (('additive', []), ('single', ['--single-first']), ('forced', ['--force-only'])):
+        step = driver('scene_loop.py', 'check', '--release', '{release}',
+                      '--label', '{label}-scene-' + profile, *flags)
+        step.kind = 'compare'
+        step.summary = r'[0-9]+/[0-9]+ receiver/driver streams match.*'
+        R['editorcallbacks'].append(step)
     R['droppedparams'] = guarded(jsonl('capture.jsonl'))
     R['spriteimport'] = guarded(jsonl('sprites.jsonl'))
     R['lightmapuvs'] = guarded(lambda runs: [single_ref(), f'{runs}/lightmapuvs.jsonl', '--uv2', '--expect',
