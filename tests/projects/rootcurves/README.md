@@ -23,6 +23,7 @@ looping unless named) and one controller per clip:
 | `partial` | only `RootT.x` and `RootT.z` |
 | `withRootTransform` | Game's curves plus a curve on the root Transform's own position |
 | `avatar`, `scaled` | a generic Avatar without a root node (AvatarBuilder); the root scaled by 2 |
+| `graph.<case>` | an Animator without a controller played by a PlayableGraph (GameTime) through an AnimationPlayableOutput: an AnimationClipPlayable of `Game` (`clip`), `KeepOrientation`, `BakeXZ`, `Once`, `Motion` (`motionCurves`); root motion off (`off`); `OnAnimatorMove` with root motion on and off (`script`, `scriptOff`); a two-input mixer of Walk and Game at 0.5/0.5 (`mixer`) and 0.25/0.25 (`mixerPartial`); an AnimatorControllerPlayable of `C_Game` (`controller`) |
 
 ```
 python3 tests/projects/rootcurves/run.py create  --release 6000.0.71f1
@@ -43,7 +44,7 @@ body curves on an Animator without an Avatar. [Animator.hasRootMotion](https://d
 "Returns true if the current rig has root motion"; [Animator.deltaPosition](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-deltaPosition.html)
 and [OnAnimatorMove](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnAnimatorMove.html)
 give the last evaluated frame's motion and the callback that takes it. Everything below is observed
-in two byte-identical captures (2119 records), not a documented guarantee:
+in two byte-identical captures (3184 records), not a documented guarantee:
 
 - Body curves move the root of an Animator without an Avatar (or with a generic one without a root
   node) as a humanoid body moves its root: the step is in the frame of the body's yaw (in the clip's
@@ -56,7 +57,13 @@ in two byte-identical captures (2119 records), not a documented guarantee:
   motion applies. `MotionT`/`MotionQ` curves keep their pitch in `deltaRotation`.
 - Loop pose bends the child's generic curve so that it loops (its value stays 0).
 
-Not covered: playable graph outputs playing body curves (Unbound warns and reports no motion),
-clips with both body and `MotionT`/`MotionQ` curves, a body-curve clip blended with a clip moving
+- Through a PlayableGraph output the body curves move the root as through the controller: clip
+  playables, mixers (their inputs summed by weight, unnormalized) and controller playables, with
+  the same settings, callbacks and root-motion flag; a clip playable applies the clip's loop pose
+  to the child's generic curve, with root motion on or off.
+- The `stats.*` records: apparentSpeed, averageDuration and `humanMotion`/`isHumanMotion`, which
+  stay false for clips whose only human curves are body curves.
+
+Not covered: clips with both body and `MotionT`/`MotionQ` curves, a body-curve clip blended with a clip moving
 the root by other curves, humanoid clips on an Animator without an Avatar, a generic Avatar with a
 root node, additive layers, masks and other releases. Unbound applies the same rule to all of them.

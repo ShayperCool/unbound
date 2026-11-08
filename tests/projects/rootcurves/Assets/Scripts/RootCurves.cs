@@ -4,6 +4,8 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 using Object = UnityEngine.Object;
 
 /// <summary>
@@ -22,6 +24,7 @@ public class RootCurves : MonoBehaviour
     const int Frames = 80;
     int frame, step;
     readonly List<(string Name, Animator Animator)> cases = new List<(string, Animator)>();
+    readonly List<PlayableGraph> graphs = new List<PlayableGraph>();
 
     static string F(float f) => f.ToString("R", CultureInfo.InvariantCulture);
     public static string V(Vector3 v) => "[" + F(v.x) + "," + F(v.y) + "," + F(v.z) + "]";
@@ -68,7 +71,7 @@ public class RootCurves : MonoBehaviour
         }
         var animator = go.AddComponent<Animator>();
         if (avatar) animator.avatar = AvatarBuilder.BuildGenericAvatar(go, "");
-        animator.runtimeAnimatorController = Controller(controller);
+        if (controller != null) animator.runtimeAnimatorController = Controller(controller);
         animator.applyRootMotion = rootMotion;
         animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
         if (physics) animator.updateMode = AnimatorUpdateMode.Fixed;
@@ -80,6 +83,32 @@ public class RootCurves : MonoBehaviour
         go.SetActive(true);
         cases.Add((name, animator));
         return animator;
+    }
+
+    static AnimationClip Clip(string name) => Resources.Load<AnimationClip>(name);
+
+    /// <summary>An Animator without a controller played by a PlayableGraph (GameTime) whose
+    /// AnimationPlayableOutput takes the playable <paramref name="source"/> builds.</summary>
+    void MakeGraph(string name, Func<PlayableGraph, Playable> source, bool rootMotion = true, bool script = false)
+    {
+        var animator = Make(name, null, rootMotion, script);
+        var graph = PlayableGraph.Create(name);
+        graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+        AnimationPlayableOutput.Create(graph, "Animation", animator).SetSourcePlayable(source(graph));
+        graph.Play();
+        graphs.Add(graph);
+    }
+
+    static Playable ClipPlayable(PlayableGraph graph, string clip) => AnimationClipPlayable.Create(graph, Clip(clip));
+
+    static Playable Mixer(PlayableGraph graph, string first, float firstWeight, string second, float secondWeight)
+    {
+        var mixer = AnimationMixerPlayable.Create(graph, 2);
+        graph.Connect(ClipPlayable(graph, first), 0, mixer, 0);
+        graph.Connect(ClipPlayable(graph, second), 0, mixer, 1);
+        mixer.SetInputWeight(0, firstWeight);
+        mixer.SetInputWeight(1, secondWeight);
+        return mixer;
     }
 
     void Start()
@@ -103,6 +132,18 @@ public class RootCurves : MonoBehaviour
         Make("withRootTransform", "C_WithRoot");
         Make("avatar", "C_Game", avatar: true);
         Make("scaled", "C_Game", scale: 2f);
+        // Playable graph outputs on Animators without a controller: the same clips' body curves.
+        MakeGraph("graph.clip", g => ClipPlayable(g, "Game"));
+        MakeGraph("graph.keepOrientation", g => ClipPlayable(g, "KeepOrientation"));
+        MakeGraph("graph.bakeXZ", g => ClipPlayable(g, "BakeXZ"));
+        MakeGraph("graph.once", g => ClipPlayable(g, "Once"));
+        MakeGraph("graph.off", g => ClipPlayable(g, "Game"), rootMotion: false);
+        MakeGraph("graph.script", g => ClipPlayable(g, "Game"), script: true);
+        MakeGraph("graph.scriptOff", g => ClipPlayable(g, "Game"), rootMotion: false, script: true);
+        MakeGraph("graph.mixer", g => Mixer(g, "Walk", 0.5f, "Game", 0.5f));
+        MakeGraph("graph.mixerPartial", g => Mixer(g, "Walk", 0.25f, "Game", 0.25f));
+        MakeGraph("graph.motionCurves", g => ClipPlayable(g, "Motion"));
+        MakeGraph("graph.controller", g => AnimatorControllerPlayable.Create(g, Controller("C_Game")));
         foreach (var (name, a) in cases)
             Record("info." + name, "{\"hasRootMotion\":" + (a.hasRootMotion ? 1 : 0) + ",\"isHuman\":" + (a.isHuman ? 1 : 0)
                 + ",\"avatar\":" + (a.avatar != null ? 1 : 0) + ",\"updateMode\":" + S(a.updateMode.ToString()) + "}");
@@ -111,6 +152,11 @@ public class RootCurves : MonoBehaviour
                 + ",\"hasRootCurves\":" + (clip.hasRootCurves ? 1 : 0) + ",\"hasMotionCurves\":" + (clip.hasMotionCurves ? 1 : 0)
                 + ",\"hasGenericRootTransform\":" + (clip.hasGenericRootTransform ? 1 : 0)
                 + ",\"averageSpeed\":" + V(clip.averageSpeed) + ",\"averageAngularSpeed\":" + F(clip.averageAngularSpeed) + "}");
+        // Motion statistics beyond averageSpeed, as separate records.
+        foreach (var clip in Resources.LoadAll<AnimationClip>(""))
+            Record("stats." + clip.name, "{\"apparentSpeed\":" + F(clip.apparentSpeed) + ",\"averageDuration\":" + F(clip.averageDuration)
+                + ",\"isHumanMotion\":" + (clip.isHumanMotion ? 1 : 0) + ",\"humanMotion\":" + (clip.humanMotion ? 1 : 0)
+                + ",\"hasMotionFloatCurves\":" + (clip.hasMotionFloatCurves ? 1 : 0) + ",\"isLooping\":" + (clip.isLooping ? 1 : 0) + "}");
     }
 
     void FixedUpdate()
@@ -132,6 +178,7 @@ public class RootCurves : MonoBehaviour
         s_Output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Environment.GetEnvironmentVariable("ROOT_CURVES_OUT"), s_Output.ToString());
         Finished = true;
+        foreach (var graph in graphs) graph.Destroy();
         foreach (var (_, a) in cases) Object.Destroy(a.gameObject);
     }
 }
