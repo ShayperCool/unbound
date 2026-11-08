@@ -367,6 +367,10 @@ namespace Unbound.Runtime
             // A root node's motion (MotionT/MotionQ) moves the root as its own curves would; the
             // node keeps its curves (measured, tests/projects/modelroot).
             if (bound.Clip.MotionCurves() != null) return bound.Clip.MotionPose(time);
+            // Without a human, body curves (RootT/RootQ) move the root as a humanoid body's motion
+            // would, without human scale or feet pivot; the root's own curves take no part
+            // (Unity 6000.0.71f1, tests/projects/rootcurves).
+            if (m_Animator.Human == null && bound.Clip.HasBodyMotion) return bound.Clip.BodyMotionPose(time);
             var pose = m_RootScratch ??= new AnimationPose();
             pose.Reset(Bindings.FloatCount, Bindings.ObjectCount);
             ClipSampling.Sample(bound, time, 1f, pose);

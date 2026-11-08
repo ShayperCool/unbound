@@ -1082,7 +1082,8 @@ namespace Unbound.Runtime
             try
             {
                 ProcessRootMotion();
-                if (!m_PendingWrite) return;
+                // A movement callback may have evaluated again or disabled the Animator.
+                if (!m_PendingWrite || !m_Animator.isActiveAndEnabled) return;
                 m_PendingPose ??= new Unbound.Runtime.Playables.AnimStream();
                 m_PendingPose.Reset(Bindings);
                 WritePose(m_PendingCount, stream: m_PendingPose);

@@ -164,6 +164,9 @@ namespace Unbound.Runtime.Playables
             if ((node.FrameFlags & FrameData.Flags.Loop) != 0 && to < from && node.Duration > 0 && node.Duration < double.MaxValue)
                 to += node.Duration;
             if (from == to) return RootMotionStep.Zero;
+            // A generic clip's body curves (RootT/RootQ) move a controller's Animator
+            // (tests/projects/rootcurves); through an output they are not measured.
+            if (Clip.HasBodyMotion) return RootMotionStep.Unknown;
             var root = e.Animator.transform;
             int pos = e.Bindings.ChannelOf(root, "position"), rot = e.Bindings.ChannelOf(root, "rotation");
             if (pos < 0 && rot < 0 && Clip.MotionCurves() == null) return RootMotionStep.Zero;

@@ -90,6 +90,35 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>Whether the clip has body curves (RootT, RootQ) and no root node motion
+        /// (MotionT, MotionQ): the motion a generic Animator's root takes from it.</summary>
+        internal bool HasBodyMotion
+        {
+            get
+            {
+                var present = HumanPresent;
+                for (int c = 0; c < HumanClipImport.RootFirst; c++)
+                    if (present[c]) return false;
+                return HumanRootMotion.HasRoot(present);
+            }
+        }
+
+        float[] m_BodyValues;
+
+        /// <summary>The body's motion at a clip time (<see cref="HumanRootMotion.MotionX"/>: its
+        /// position and yaw with the clip's Bake Into Pose and Based Upon settings), in the clip's
+        /// units. Only for clips with <see cref="HasBodyMotion"/>.</summary>
+        internal (Vector3, Quaternion) BodyMotionPose(float time)
+        {
+            var values = m_BodyValues ??= new float[HumanClipImport.CurveCount];
+            SampleHuman(time, values);
+            var present = HumanPresent;
+            var motion = HumanClipMotion;
+            var body = HumanRootMotion.ReadRoot(values, present);
+            var x = HumanRootMotion.MotionX(motion, body.t, body.q, motion.HeightFromFeet ? HumanRootMotion.FeetY(values, present, body) : 0f);
+            return (new Vector3(x.t.x, x.t.y, x.t.z), new Quaternion(x.q.x, x.q.y, x.q.z, x.q.w));
+        }
+
         /// <summary>The clip's settings (AnimationClipSettings, from the model's meta or the
         /// `.anim` file) as the humanoid conversion and root motion read them.</summary>
         HumanClipSettings HumanSettings()
