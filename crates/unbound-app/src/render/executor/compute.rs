@@ -940,7 +940,10 @@ fn main() {
                     });
                     bound.push((r.binding, Bound::View(view)));
                 }
-                ResourceKind::Sampler { texture, .. } => {
+                ResourceKind::Sampler {
+                    texture,
+                    comparison,
+                } => {
                     let key = texture
                         .as_ref()
                         .and_then(|t| {
@@ -954,7 +957,17 @@ fn main() {
                             }
                         })
                         .map(|t| t.sampler_key)
-                        .unwrap_or_else(|| inline_sampler(&r.name));
+                        .unwrap_or_else(|| {
+                            // A sampler of no bound texture: the state its name spells (an
+                            // inline sampler the kernel could not pair with one texture), else
+                            // bilinear and clamped.
+                            let key = unbound_shaders::InlineSampler::from_name(&r.name)
+                                .map_or(super::SamplerKey::LINEAR_CLAMP, super::SamplerKey::inline);
+                            super::SamplerKey {
+                                compare: if *comparison { 4 } else { 0 },
+                                ..key
+                            }
+                        });
                     bound.push((r.binding, Bound::Sampler(self.sampler(key))));
                 }
             }
@@ -1013,37 +1026,6 @@ fn main() {
             groups: d.groups,
             indirect,
         }))
-    }
-}
-
-/// Unity's inline sampler states: the sampler's name spells its filter and wrap modes
-/// (`sampler_linear_clamp`, `my_point_repeat_sampler`).
-fn inline_sampler(name: &str) -> super::SamplerKey {
-    let n = name.to_ascii_lowercase();
-    let filter = if n.contains("trilinear") {
-        2
-    } else if n.contains("point") {
-        0
-    } else {
-        1
-    };
-    let wrap = if n.contains("mirroronce") {
-        3
-    } else if n.contains("mirror") {
-        2
-    } else if n.contains("repeat") {
-        0
-    } else {
-        1
-    };
-    super::SamplerKey {
-        filter,
-        wrap_u: wrap,
-        wrap_v: wrap,
-        wrap_w: 0,
-        aniso: 1,
-        compare: if n.contains("compare") { 4 } else { 0 },
-        lod_bias_bits: 0,
     }
 }
 

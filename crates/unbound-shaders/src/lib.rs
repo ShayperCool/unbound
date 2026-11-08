@@ -14,6 +14,7 @@ pub mod keywords;
 pub mod preprocess;
 
 mod fit;
+mod samplers;
 mod surface;
 
 use anyhow::{Context, Result, anyhow, bail};
@@ -26,7 +27,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 24;
+pub const FORMAT_VERSION: u32 = 25;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

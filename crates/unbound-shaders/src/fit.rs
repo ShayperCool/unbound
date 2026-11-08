@@ -27,6 +27,24 @@ pub(crate) enum Stage {
     Compute,
 }
 
+/// A module's instructions after the header: each one's word offset and word count.
+pub(crate) fn instructions(words: &[u32]) -> Result<Vec<(usize, usize)>> {
+    if words.len() < 5 {
+        bail!("empty SPIR-V");
+    }
+    let mut list = Vec::new();
+    let mut i = 5;
+    while i < words.len() {
+        let count = (words[i] >> 16) as usize;
+        if count == 0 || i + count > words.len() {
+            bail!("malformed SPIR-V");
+        }
+        list.push((i, count));
+        i += count;
+    }
+    Ok(list)
+}
+
 /// Reads the semantics (SPV_GOOGLE_hlsl_functionality1) and strips them for naga. The DX9
 /// position semantic (`POSITION` on a vertex output or fragment input, which Unity accepts for
 /// `SV_POSITION`) becomes the position built-in, as glslang only does for `SV_POSITION`.
@@ -38,19 +56,6 @@ pub(crate) fn scan(words: &[u32], stage: Stage) -> Result<Scanned> {
         let bytes: Vec<u8> = s.iter().flat_map(|w| w.to_le_bytes()).collect();
         let end = bytes.iter().position(|b| *b == 0).unwrap_or(bytes.len());
         String::from_utf8_lossy(&bytes[..end]).to_string()
-    };
-    let instructions = |words: &[u32]| -> Result<Vec<(usize, usize)>> {
-        let mut list = Vec::new();
-        let mut i = 5;
-        while i < words.len() {
-            let count = (words[i] >> 16) as usize;
-            if count == 0 || i + count > words.len() {
-                bail!("malformed SPIR-V");
-            }
-            list.push((i, count));
-            i += count;
-        }
-        Ok(list)
     };
     let list = instructions(words)?;
     // First the facts: semantics, locations, interface variables.
@@ -952,10 +957,12 @@ pub fn fit(
     uav_registers: &HashMap<String, u32>,
 ) -> Result<Compiled> {
     let vertex = unify_int_signedness(&pad_array_elements(&align_uniform_members(
-        &strip_relaxed_precision(vertex),
+        &strip_relaxed_precision(&crate::samplers::own_samplers(vertex)?),
     )?)?)?;
     let fragment = front_facing(&unify_int_signedness(&pad_array_elements(
-        &align_uniform_members(&strip_relaxed_precision(fragment))?,
+        &align_uniform_members(&strip_relaxed_precision(&crate::samplers::own_samplers(
+            fragment,
+        )?))?,
     )?)?)?;
     let vertex_scan = scan(&vertex, Stage::Vertex)?;
     let fragment_scan = scan(&fragment, Stage::Fragment)?;

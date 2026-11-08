@@ -239,6 +239,30 @@ pub struct SamplerKey {
     pub lod_bias_bits: u32,
 }
 
+impl SamplerKey {
+    /// The bilinear, clamped state of samplers that are no texture's (Unity's grab textures and
+    /// render targets' defaults).
+    pub const LINEAR_CLAMP: SamplerKey = SamplerKey {
+        filter: 1,
+        wrap_u: 1,
+        wrap_v: 1,
+        wrap_w: 0,
+        aniso: 1,
+        compare: 0,
+        lod_bias_bits: 0,
+    };
+
+    /// The state an inline sampler's name spells.
+    pub fn inline(state: unbound_shaders::InlineSampler) -> SamplerKey {
+        SamplerKey {
+            filter: state.filter,
+            wrap_u: state.wrap,
+            wrap_v: state.wrap,
+            ..SamplerKey::LINEAR_CLAMP
+        }
+    }
+}
+
 pub fn create_sampler(device: &wgpu::Device, key: SamplerKey) -> wgpu::Sampler {
     let wrap = |w: i32| match w {
         1 => wgpu::AddressMode::ClampToEdge,

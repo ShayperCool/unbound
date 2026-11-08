@@ -292,7 +292,7 @@ fn loaded_images(module: &Module) -> HashSet<naga::Handle<naga::GlobalVariable>>
 fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<CompiledKernel> {
     let words = scan(
         &unify_int_signedness(&pad_array_elements(&align_uniform_members(
-            &strip_relaxed_precision(spv),
+            &strip_relaxed_precision(&crate::samplers::own_samplers(spv)?),
         )?)?)?,
         Stage::Compute,
     )?

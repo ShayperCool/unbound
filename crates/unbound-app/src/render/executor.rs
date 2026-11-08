@@ -1400,31 +1400,17 @@ impl UnityRenderer {
         let mut samplers = Vec::new();
         for (k, (h, d, dim, slot)) in slots.iter().enumerate() {
             let depth_element = handle::split(raw[k]).1;
-            // A sampler is the texture's, or the state its name spells; comparison samplers
-            // compare less-or-equal (Unity's shadow maps, without reversed depth).
+            // A sampler is the texture's, or the state its name spells where the program could
+            // not pair it with one texture (samples through inline samplers use their texture's
+            // own sampler: `unbound_shaders`' samplers module); comparison samplers compare
+            // less-or-equal (Unity's shadow maps, without reversed depth).
             let mut key = match slot.inline {
-                Some(inline) => resources::SamplerKey {
-                    filter: inline.filter,
-                    wrap_u: inline.wrap,
-                    wrap_v: inline.wrap,
-                    wrap_w: 0,
-                    aniso: 1,
-                    compare: 0,
-                    lod_bias_bits: 0,
-                },
+                Some(inline) => resources::SamplerKey::inline(inline),
                 None if is_2d(*dim) => self.texture_or_default(*h, d).sampler_key,
-                None => self.textures.get(h).map_or(
-                    resources::SamplerKey {
-                        filter: 1,
-                        wrap_u: 1,
-                        wrap_v: 1,
-                        wrap_w: 0,
-                        aniso: 1,
-                        compare: 0,
-                        lod_bias_bits: 0,
-                    },
-                    |t| t.sampler_key,
-                ),
+                None => self
+                    .textures
+                    .get(h)
+                    .map_or(resources::SamplerKey::LINEAR_CLAMP, |t| t.sampler_key),
             };
             // The global setting is the 2D texture assets' (render targets, shadow maps and
             // cubemaps keep their own level: measured, tests/projects/urp's reflection under
