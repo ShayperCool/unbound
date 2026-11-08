@@ -515,6 +515,22 @@ public class MeshShapeProbe : MonoBehaviour
         emit.Emit(20);
         RecordParticles("texture/clip/emit", emit);
         Destroy(emit.gameObject);
+        // Emit counts that are not a multiple of four, from the start and after five live
+        // particles, clipped and unclipped (which particles stay, in which order).
+        foreach (var (label, first, threshold) in new[] { ("emit10", 0, 0.5f), ("emit5then10", 5, 0.5f), ("emit5then10", 5, 0f) })
+        {
+            var ps = Textured("tx", ParticleSystemShapeType.Rectangle, coords, null, ParticleSystemMeshShapeType.Triangle, 0);
+            var s = ps.shape;
+            string key = $"texture/clip/{label}/{F(threshold)}";
+            s_Flags.Add((key, 0));
+            ps.Simulate(0f, true, true, true);
+            s.textureClipThreshold = 0f;
+            if (first > 0) ps.Emit(first);
+            s.textureClipThreshold = threshold;
+            ps.Emit(10);
+            RecordParticles(key, ps);
+            Destroy(ps.gameObject);
+        }
 
         // Colour and alpha switches, a start colour, a gradient start colour.
         foreach (var (colour, alpha) in new[] { (false, true), (true, false), (false, false) })
