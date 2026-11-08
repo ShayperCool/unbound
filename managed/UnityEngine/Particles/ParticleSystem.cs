@@ -1045,8 +1045,10 @@ namespace UnityEngine
             // A system that is emitting plays on; a playing one that is not (its emission module
             // off) starts a new playback, keeping its particles (6000.0.71f1,
             // tests/projects/particlerender firstvis/*/shown_play against cull/catchup_replay).
-            if (m_IsPlaying && !m_StopEmitting && m_Emission.enabled && !m_PlaybackRestored) return;
-            Restart(prewarm: true);
+            bool playing = m_IsPlaying && !m_StopEmitting && !m_PlaybackRestored;
+            if (playing && m_Emission.enabled) return;
+            // A replay keeps its particles: no prewarm over them (unmeasured).
+            Restart(prewarm: !playing);
         }
 
         /// <summary>Starts a new playback from time 0, keeping the particles that are alive.</summary>
