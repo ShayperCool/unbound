@@ -268,41 +268,26 @@ namespace UnityEngine
                 m_TrailGeometry.WriteEmptyStreamLayout(mesh);
         }
 
-        public int BakeTexture(ref Texture2D verticesTexture, ParticleSystemBakeTextureOptions options)
-        {
-            Stubs.Ignored("ParticleSystemRenderer.BakeTexture", "is not done yet: nothing is baked");
-            return 0;
-        }
+        public int BakeTexture(ref Texture2D verticesTexture, ParticleSystemBakeTextureOptions options) =>
+            BakeTexture(ref verticesTexture, Camera.main, options);
 
         public int BakeTexture(ref Texture2D verticesTexture, Camera camera, ParticleSystemBakeTextureOptions options)
         {
-            Stubs.Ignored("ParticleSystemRenderer.BakeTexture", "is not done yet: nothing is baked");
-            return 0;
+            Texture2D none = null;
+            return BakeTextures(ref verticesTexture, ref none, false, camera, options, trails: false);
         }
 
-        public int BakeTexture(ref Texture2D verticesTexture, ref Texture2D indicesTexture, ParticleSystemBakeTextureOptions options)
-        {
-            Stubs.Ignored("ParticleSystemRenderer.BakeTexture", "is not done yet: nothing is baked");
-            return 0;
-        }
+        public int BakeTexture(ref Texture2D verticesTexture, ref Texture2D indicesTexture, ParticleSystemBakeTextureOptions options) =>
+            BakeTexture(ref verticesTexture, ref indicesTexture, Camera.main, options);
 
-        public int BakeTexture(ref Texture2D verticesTexture, ref Texture2D indicesTexture, Camera camera, ParticleSystemBakeTextureOptions options)
-        {
-            Stubs.Ignored("ParticleSystemRenderer.BakeTexture", "is not done yet: nothing is baked");
-            return 0;
-        }
+        public int BakeTexture(ref Texture2D verticesTexture, ref Texture2D indicesTexture, Camera camera, ParticleSystemBakeTextureOptions options) =>
+            BakeTextures(ref verticesTexture, ref indicesTexture, true, camera, options, trails: false);
 
-        public int BakeTrailsTexture(ref Texture2D verticesTexture, ref Texture2D indicesTexture, ParticleSystemBakeTextureOptions options)
-        {
-            Stubs.Ignored("ParticleSystemRenderer.BakeTrailsTexture", "is not done yet: nothing is baked");
-            return 0;
-        }
+        public int BakeTrailsTexture(ref Texture2D verticesTexture, ref Texture2D indicesTexture, ParticleSystemBakeTextureOptions options) =>
+            BakeTrailsTexture(ref verticesTexture, ref indicesTexture, Camera.main, options);
 
-        public int BakeTrailsTexture(ref Texture2D verticesTexture, ref Texture2D indicesTexture, Camera camera, ParticleSystemBakeTextureOptions options)
-        {
-            Stubs.Ignored("ParticleSystemRenderer.BakeTrailsTexture", "is not done yet: nothing is baked");
-            return 0;
-        }
+        public int BakeTrailsTexture(ref Texture2D verticesTexture, ref Texture2D indicesTexture, Camera camera, ParticleSystemBakeTextureOptions options) =>
+            BakeTextures(ref verticesTexture, ref indicesTexture, true, camera, options, trails: true);
 
         // ------------------------------------------------------------------ rendering
 
@@ -582,6 +567,10 @@ namespace UnityEngine
             internal bool Orthographic;
             internal float OrthographicSize;
             internal float TanHalfFov;
+            /// <summary>The camera's world-space velocity (stretched particles' camera velocity scale).</summary>
+            internal Vector3 Velocity;
+            /// <summary>The camera's width over height.</summary>
+            internal float Aspect;
 
             internal static View Of(FrameBuilder.CameraContext camera) => FromMatrix(camera.View, camera.Position, camera.Orthographic, camera.Camera);
 
@@ -602,6 +591,8 @@ namespace UnityEngine
                     Orthographic = orthographic,
                     OrthographicSize = camera != null ? camera.orthographicSize : 5f,
                     TanHalfFov = Mathf.Tan((camera != null ? camera.fieldOfView : 60f) * 0.5f * Mathf.Deg2Rad),
+                    Velocity = camera != null ? camera.velocity : Vector3.zero,
+                    Aspect = camera != null ? camera.aspect : 1f,
                 };
             }
         }
@@ -778,12 +769,16 @@ namespace UnityEngine
                         ps.m_NoiseSumEnabled = true;
                 VertexCount = 0;
                 IndexCount = 0;
+                ParticleCount = 0;
                 Texture = null;
                 int count = ps.m_Count;
                 if (count == 0) return false;
                 var toWorld = simulationPose ?? ps.SimulationToWorld();
                 var scale = ps.EmitterScale();
                 var systemRotation = ps.transform.rotation;
+                // The rotation from simulation space to the output (stretched quads scale their
+                // corners along the simulation's axes).
+                var outputRotation = r.m_RenderMode == ParticleSystemRenderMode.Stretch ? toWorld.rotation : Quaternion.identity;
                 var sheet = ps.m_TextureSheet;
                 if (sheet.enabled && sheet.mode == ParticleSystemAnimationMode.Sprites)
                     foreach (var s in sheet.sprites)
@@ -823,12 +818,14 @@ namespace UnityEngine
                     var rotation = Quaternion.Euler(euler);
 
                     int firstVertex = VertexCount;
+                    NoteParticle(firstVertex, position);
                     Mesh sourceMesh = null;
                     if (meshes != null)
                     {
                         var m = meshes[Math.Min(ps.MeshIndexOf(ref p), meshes.Length - 1) % meshes.Length];
                         sourceMesh = m;
-                        AddMesh(r, m, position, size, Quaternion.Euler(p.m_Rotation * Mathf.Rad2Deg), systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
+                        var orientation = AddMesh(r, m, position, size, Quaternion.Euler(p.m_Rotation * Mathf.Rad2Deg), systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
+                        NoteMeshParticle(Matrix4x4.Scale(scale) * Matrix4x4.Rotate(orientation) * Matrix4x4.Scale(streamSize));
                     }
                     else
                     {
@@ -839,7 +836,10 @@ namespace UnityEngine
                             float factor = size.x != 0f ? clamped.x / size.x : size.y != 0f ? clamped.y / size.y : 1f;
                             quadSize *= factor; size = clamped;
                         }
-                        AddQuad(r, position, quadSize, scale, rotation, systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
+                        if (r.m_RenderMode == ParticleSystemRenderMode.Stretch)
+                            AddStretched(r, position, quadSize, scale, outputRotation, p.m_Velocity + p.m_AnimatedVelocity, color, uvRect, view);
+                        else
+                            AddQuad(r, position, quadSize, scale, rotation, systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
                     }
                     var nextUv = FrameRect(ps, ref p, out _, 1);
                     if (flipU) nextUv = new Rect(nextUv.xMax, nextUv.y, -nextUv.width, nextUv.height);
@@ -894,11 +894,13 @@ namespace UnityEngine
                             break;
                         }
                         case ParticleSystemSortMode.OldestInFront:
-                            // Youngest first, oldest drawn last.
-                            key = p.m_StartLifetime - p.m_Lifetime;
+                            // Youngest first, oldest drawn last, by the fraction of their life
+                            // lived (6000.0.71f1, particlerender stretch/sort_*: equal ages,
+                            // different lifetimes).
+                            key = p.Age01;
                             break;
                         case ParticleSystemSortMode.YoungestInFront:
-                            key = p.m_Lifetime - p.m_StartLifetime;
+                            key = -p.Age01;
                             break;
                         default:
                             key = i;
@@ -1010,9 +1012,6 @@ namespace UnityEngine
                 var toCamera = view.Orthographic ? -view.Forward : (view.Position - position).normalized;
                 switch (r.m_RenderMode)
                 {
-                    case ParticleSystemRenderMode.Stretch:
-                        AddStretched(r, position, Vector3.Scale(size, emitterScale), color, uv, velocity, view, toCamera);
-                        return;
                     case ParticleSystemRenderMode.HorizontalBillboard:
                         right = Vector3.right;
                         up = Vector3.forward;
@@ -1106,41 +1105,120 @@ namespace UnityEngine
                 }
             }
 
-            /// <summary>A quad along the particle's screen velocity: width is the size, length is
-            /// size × length scale + speed × velocity scale, trailing behind the particle; u runs from
-            /// the particle back (measured).</summary>
-            void AddStretched(ParticleSystemRenderer r, Vector3 position, Vector3 size, Color32 color, Rect uv, Vector3 velocity, View view, Vector3 toCamera)
+            /// <summary>A stretched billboard (6000.0.71f1, tests/projects/particlerender stretch/*,
+            /// camvel/*). The stretch runs along the particle's world velocity less the camera's
+            /// velocity times cameraVelocityScale; its length is size.y × lengthScale + that speed ×
+            /// velocityScale (a negative length stretches forwards). The quad trails back from the
+            /// particle by the stretch, size.x wide across the stretch's direction on screen (in the
+            /// camera's plane); the pivot moves it by pivot.x sizes along the stretch and pivot.y
+            /// twice the size across. Corners: head and tail on one side, then tail and head on the other, u along
+            /// the length from 0 at the head; the normal faces back along the view. With no stretch
+            /// direction (at rest) the quad collapses onto the particle. Freeform stretching centres
+            /// the quad on the particle and turns it about the stretch axis towards the camera
+            /// (approximate: the Editor's freeform geometry is only partly measured).</summary>
+            void AddStretched(ParticleSystemRenderer r, Vector3 position, Vector3 size, Vector3 emitterScale, Quaternion toOutput,
+                Vector3 localVelocity, Color32 color, Rect uv, View view)
             {
-                float speed = velocity.magnitude;
-                Vector3 axis = speed > 1e-6f ? velocity / speed : view.Up;
-                var onScreen = axis - toCamera * Vector3.Dot(axis, toCamera);
-                if (onScreen.sqrMagnitude < 1e-10f) onScreen = view.Up;
-                axis = onScreen.normalized;
-                var side = Vector3.Cross(toCamera, axis).normalized;
-                float width = size.x;
-                float length = size.y * r.m_LengthScale + speed * r.m_VelocityScale;
-                var back = axis * length;
-                var halfWidth = side * (width * 0.5f);
+                // The quad is built along the simulation's axes and turned into the output space.
+                var fromOutput = Quaternion.Inverse(toOutput);
+                var v = localVelocity - fromOutput * view.Velocity * r.m_CameraVelocityScale;
+                float speed = v.magnitude;
                 Reserve(VertexCount + 4, IndexCount + 6);
                 int start = VertexCount;
-                var corners = new[] { position - back - halfWidth, position - back + halfWidth, position + halfWidth, position - halfWidth };
-                var uvs = new[] { new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(0f, 0f) };
-                for (int c = 0; c < 4; c++)
+                Vector3 c0, c1, c2, c3;
+                // A collapsed quad's normal is the view direction (measured).
+                var normal = view.Forward;
+                if (!(speed > 1e-6f))
+                    c0 = c1 = c2 = c3 = position;
+                else
                 {
-                    Positions[VertexCount] = corners[c];
-                    Normals[VertexCount] = toCamera;
-                    Colors[VertexCount] = color;
-                    Uvs[VertexCount] = new Vector4(uv.x + uvs[c].x * uv.width, uv.y + uvs[c].y * uv.height, 0f, 0f);
-                    VertexCount++;
+                    // The length takes the emitter's x scale; the width the scale along its axis
+                    // (measured with a rotated, non-uniformly scaled emitter, stretch/transform).
+                    var stretch = toOutput * (v / speed * (size.y * Mathf.Abs(emitterScale.x) * r.m_LengthScale + speed * r.m_VelocityScale));
+                    var axis = r.m_FreeformStretching ? FreeformSide(stretch, position, view) : ScreenSide(stretch, position, view);
+                    float width = StretchedWidth(r, view, position, size.x);
+                    var half = toOutput * Vector3.Scale(fromOutput * axis * (width * 0.5f), emitterScale);
+                    // The pivot in particle sizes: x along the stretch, y across it in two sizes
+                    // (measured, stretch/pivot and pivot_length1).
+                    var along = stretch.sqrMagnitude > 0f ? stretch.normalized : Vector3.zero;
+                    var pivot = along * (r.m_Pivot.x * width * Mathf.Abs(emitterScale.x)) + half * (4f * r.m_Pivot.y);
+                    var head = position + pivot;
+                    if (r.m_FreeformStretching) head += stretch * 0.5f;
+                    c0 = head + half;
+                    c1 = head - stretch + half;
+                    c2 = head - stretch - half;
+                    c3 = head - half;
+                    if (r.m_FreeformStretching) { var t = c0; c0 = c3; c3 = t; t = c1; c1 = c2; c2 = t; }
+                    // The quad's own normal, turned towards the camera.
+                    var face = Vector3.Cross(half, stretch);
+                    var toCamera = view.Orthographic ? -view.Forward : view.Position - position;
+                    if (face.sqrMagnitude > 1e-20f) normal = (Vector3.Dot(face, toCamera) < 0f ? -face : face).normalized;
+                }
+                Positions[VertexCount] = c0; Uvs[VertexCount++] = new Vector4(uv.x, uv.y + uv.height, 0f, 0f);
+                Positions[VertexCount] = c1; Uvs[VertexCount++] = new Vector4(uv.x + uv.width, uv.y + uv.height, 0f, 0f);
+                Positions[VertexCount] = c2; Uvs[VertexCount++] = new Vector4(uv.x + uv.width, uv.y, 0f, 0f);
+                Positions[VertexCount] = c3; Uvs[VertexCount++] = new Vector4(uv.x, uv.y, 0f, 0f);
+                for (int i = start; i < VertexCount; i++)
+                {
+                    Normals[i] = normal;
+                    Colors[i] = color;
                 }
                 AddQuadIndices(start);
             }
 
-            void AddMesh(ParticleSystemRenderer r, Mesh mesh, Vector3 position, Vector3 size, Quaternion rotation, Quaternion systemRotation, Color32 color, Rect uv, Vector3 velocity, View view)
+            /// <summary>The width min/maxParticleSize allow a stretched billboard: as a fraction of
+            /// the viewport's width at the particle's depth (6000.0.71f1, particlerender
+            /// stretch/minsize and maxsize; the length is not clamped).</summary>
+            static float StretchedWidth(ParticleSystemRenderer r, View view, Vector3 position, float width)
+            {
+                float extent = Mathf.Abs(width);
+                if (extent <= 0f || !(r.m_MinParticleSize > 0f || r.m_MaxParticleSize > 0f)) return width;
+                float height = view.Orthographic
+                    ? 2f * view.OrthographicSize
+                    : 2f * Mathf.Max(Vector3.Dot(position - view.Position, view.Forward), 1e-4f) * view.TanHalfFov;
+                float viewport = height * view.Aspect;
+                if (!(viewport > 0f)) return width;
+                float fraction = extent / viewport;
+                if (r.m_MaxParticleSize > 0f && fraction > r.m_MaxParticleSize) return width * (r.m_MaxParticleSize / fraction);
+                if (r.m_MinParticleSize > 0f && fraction < r.m_MinParticleSize) return width * (r.m_MinParticleSize / fraction);
+                return width;
+            }
+
+            /// <summary>The unit vector, in the camera's plane, across the stretch's direction on
+            /// screen at the particle (perspective-correct); zero when the stretch points along the
+            /// line of sight.</summary>
+            static Vector3 ScreenSide(Vector3 stretch, Vector3 position, View view)
+            {
+                float ux = Vector3.Dot(stretch, view.Right), uy = Vector3.Dot(stretch, view.Up);
+                float sx = ux, sy = uy;
+                if (!view.Orthographic)
+                {
+                    var rel = position - view.Position;
+                    float cx = Vector3.Dot(rel, view.Right), cy = Vector3.Dot(rel, view.Up), cz = Vector3.Dot(rel, view.Forward);
+                    float uz = Vector3.Dot(stretch, view.Forward);
+                    sx = ux * cz - cx * uz;
+                    sy = uy * cz - cy * uz;
+                }
+                var side = view.Right * sy - view.Up * sx;
+                float length = side.magnitude;
+                return length > 1e-12f ? side / length : Vector3.zero;
+            }
+
+            /// <summary>Freeform stretching: across the stretch axis, facing the camera.</summary>
+            static Vector3 FreeformSide(Vector3 stretch, Vector3 position, View view)
+            {
+                var toCamera = view.Orthographic ? -view.Forward : view.Position - position;
+                var side = Vector3.Cross(stretch, toCamera);
+                float length = side.magnitude;
+                return length > 1e-12f ? side / length : Vector3.zero;
+            }
+
+            /// <summary>Adds a mesh particle; returns its orientation.</summary>
+            Quaternion AddMesh(ParticleSystemRenderer r, Mesh mesh, Vector3 position, Vector3 size, Quaternion rotation, Quaternion systemRotation, Color32 color, Rect uv, Vector3 velocity, View view)
             {
                 var vertices = mesh.m_Vertices;
                 int n = vertices.Length;
-                if (n == 0) return;
+                if (n == 0) return rotation;
                 Quaternion orientation;
                 switch (r.m_RenderAlignment)
                 {
@@ -1186,6 +1264,7 @@ namespace UnityEngine
                     if (s.Topology != MeshTopology.Triangles) continue;
                     foreach (var index in s.Indices) Indices[IndexCount++] = start + s.BaseVertex + index;
                 }
+                return q;
             }
 
             /// <summary>Writes the built geometry into a mesh (vertices transformed by `transform`).</summary>
