@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.U2D;
 
-public sealed class RenderApiProbe : MonoBehaviour
+public sealed partial class RenderApiProbe : MonoBehaviour
 {
     public static Action<int> finished;
     readonly StringBuilder records = new StringBuilder();
@@ -291,6 +291,7 @@ public sealed class RenderApiProbe : MonoBehaviour
             Bool("gizmos.game."+enabled+".callback",drewGizmos);
         }
         setGameGizmos?.Invoke(false);
+        yield return FollowupCases();
         // Runtime queries and scene changes must not synthesize layer edits.
         Value("sorting.added",added.ToString());Value("sorting.removed",removed.ToString());
         SortingLayer.onLayerAdded-=OnAdded;SortingLayer.onLayerRemoved-=OnRemoved;

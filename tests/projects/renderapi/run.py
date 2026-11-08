@@ -106,11 +106,14 @@ def main():
         if kept!=old: raise SystemExit('existing reference records changed')
         if len(kept)==len(captured): raise SystemExit('no new records')
         present=sorted(p.name.removesuffix('.gz') for p in reference.glob('*.rgba.gz'))
-        if present!=sorted(p.name for p in repeats[0].glob('*.rgba')):
+        if present!=sorted(p.name for p in repeats[0].glob('*.rgba') if not p.stem.startswith(a.append)):
             raise SystemExit('image set changed')
         for name in present:
             if gzip.decompress((reference/(name+'.gz')).read_bytes())!=(repeats[0]/name).read_bytes():
                 raise SystemExit('existing image changed: '+name)
+        for path in repeats[0].glob('*.rgba'):
+            if path.stem.startswith(a.append):
+                (reference/(path.name+'.gz')).write_bytes(gzip.compress(path.read_bytes(),mtime=0))
         (reference/'values.jsonl').write_bytes(b''.join(captured))
         print('published new prefix',a.append,'with all existing records and images unchanged')
         return 0
@@ -126,7 +129,7 @@ def main():
         if managed is None: p.error('cannot locate the built managed runtime; set UNBOUND_MANAGED_DIR')
         env=dict(os.environ,RENDER_API_OUT=str(out),UNBOUND_MANAGED_DIR=str(managed),
             LD_LIBRARY_PATH=str(managed)+os.pathsep+os.environ.get('LD_LIBRARY_PATH',''))
-        command=[str(Path.home()/'.cache/compat/with-heavy-job'),'timeout','600',str(cli),'run','-p',str(project),'--no-watch','--frames','120','--size','96x64']
+        command=[str(Path.home()/'.cache/compat/with-heavy-job'),'--kind','engine-gpu','timeout','600',str(cli),'run','-p',str(project),'--no-watch','--frames','120','--size','96x64']
         with (out/'engine.log').open('w') as log:
             result=subprocess.run(command,env=env,stdout=log,stderr=subprocess.STDOUT)
         if result.returncode or complete(out):

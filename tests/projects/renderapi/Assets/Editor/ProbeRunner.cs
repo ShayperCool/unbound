@@ -11,7 +11,13 @@ public static class ProbeRunner
     static ProbeRunner()
     {
         var output=Environment.GetEnvironmentVariable("RENDER_API_OUT");
-        if(output==null || typeof(Camera).Assembly.GetType("Unbound.Runtime.FrameBuilder")!=null)return;
+        if(output==null)return;
+        if(typeof(Camera).Assembly.GetType("Unbound.Runtime.FrameBuilder")!=null)
+        {
+            RenderApiProbe.selectGizmoObject=go=>Selection.activeGameObject=go;
+            RenderApiProbe.setGameGizmos=enabled=>SetGizmos(EditorWindow.GetWindow(typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView")),enabled);
+            return;
+        }
         if(SessionState.GetBool("RenderApi.finished",false))
         {
             if(!EditorApplication.isPlayingOrWillChangePlaymode)
@@ -33,6 +39,7 @@ public static class ProbeRunner
             File.WriteAllText(Path.Combine(output,"watchdog.txt"),"Play mode did not finish\n");
             EditorApplication.Exit(4);
         };
+        RenderApiProbe.selectGizmoObject=go=>Selection.activeGameObject=go;
         RenderApiProbe.setGameGizmos=enabled=>
         {
             var type=typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView");

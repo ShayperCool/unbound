@@ -1,0 +1,35 @@
+#pragma kernel Raw
+#pragma kernel Structured
+#pragma kernel Skin
+
+RWByteAddressBuffer RawVertices;
+RWByteAddressBuffer RawIndices;
+RWStructuredBuffer<float3> StructuredVertices;
+int Stride;
+int Count;
+
+void Shift(uint n)
+{
+    uint offset = n * Stride;
+    RawVertices.Store(offset, asuint(asfloat(RawVertices.Load(offset)) + .5));
+}
+
+[numthreads(1,1,1)]
+void Raw(uint3 id : SV_DispatchThreadID)
+{
+    for (uint n=0; n<(uint)Count; n++) Shift(n);
+    RawIndices.Store3(0, uint3(2,1,0));
+}
+
+[numthreads(1,1,1)]
+void Structured(uint3 id : SV_DispatchThreadID)
+{
+    for (uint n=0; n<(uint)Count; n++) StructuredVertices[n] += float3(.5,0,0);
+    RawIndices.Store3(0, uint3(2,1,0));
+}
+
+[numthreads(1,1,1)]
+void Skin(uint3 id : SV_DispatchThreadID)
+{
+    for (uint n=0; n<(uint)Count; n++) Shift(n);
+}
