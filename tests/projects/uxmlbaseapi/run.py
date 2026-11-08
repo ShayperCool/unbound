@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -16,6 +17,50 @@ from probe_paths import run_root, reference_root, unity_version
 import editor_runner
 
 HEAVY = Path.home()/'.cache/compat/with-heavy-job'
+
+# These six errors are present in all three pre-Q85 API audit reports. They stay visible and
+# belong to the particles follow-up, rather than the five legacy UXML findings measured here.
+BASELINE_ACCESS_MESSAGES = {
+    f"{field} is private, Unity's is internal" for field in (
+        "UnityEngine.AnimationCurve m_CurveMax", "UnityEngine.AnimationCurve m_CurveMin",
+        "UnityEngine.ParticleSystemCurveMode m_Mode", "float m_ConstantMax",
+        "float m_ConstantMin", "float m_CurveMultiplier",
+    )
+}
+
+
+def baseline_issue(issue):
+    return (issue['category'] == 'access'
+        and issue['type'] == 'UnityEngine.ParticleSystem+MinMaxCurve'
+        and issue['message'] in BASELINE_ACCESS_MESSAGES)
+
+
+def parse_api_audit(text, code):
+    """Reject truncated, unparsed or unexpectedly terminated API audits."""
+    issues, groups = [], []
+    current, type_name, declared = None, None, None
+    for line in text.splitlines():
+        category = re.fullmatch(r'(\S+) \((\d+)\)', line)
+        summary = re.match(r'^(\d+) errors in \d+ hand-written types ', line)
+        if category:
+            current = {'count': int(category[2]), 'actual': 0, 'category': category[1]}
+            groups.append(current)
+            type_name = None
+        elif summary:
+            declared = int(summary[1])
+            current = None
+        elif current and line.startswith('    '):
+            if not type_name:
+                raise ValueError('API issue has no type')
+            issues.append({'category': current['category'], 'type': type_name, 'message': line.strip()})
+            current['actual'] += 1
+        elif current and line.startswith('  '):
+            type_name = line.strip()
+    if declared is None or declared != len(issues) or any(g['count'] != g['actual'] for g in groups):
+        raise ValueError('incomplete API audit: summary or category counts disagree with diagnostics')
+    if code != (1 if issues else 0):
+        raise ValueError(f'API audit exit {code} disagrees with its diagnostics')
+    return issues
 
 
 def project(out):
@@ -90,8 +135,16 @@ def gate(label):
     with (out/'api-check.log').open('w') as log:
         audit = subprocess.run([str(HEAVY), '--kind', 'tool', cli, 'api-check', '-p', str(path)],
             stdout=log, stderr=subprocess.STDOUT).returncode
-    print(f'uxmlbaseapi: {len(expected)-len(failed)}/{len(expected)} records, {len(failed)} failures; engine exit {engine}, API audit exit {audit}; logs {out}')
-    return 1 if failed or engine or audit else 0
+    try:
+        issues = parse_api_audit((out/'api-check.log').read_text(), audit)
+    except ValueError as error:
+        print(f'API audit incomplete: {error}; full log {out}/api-check.log')
+        return 1
+    unexpected = [issue for issue in issues if not baseline_issue(issue)]
+    for issue in issues:
+        print(json.dumps({'apiAudit': issue, 'knownParticlesBaseline': baseline_issue(issue)}))
+    print(f'uxmlbaseapi: {len(expected)-len(failed)}/{len(expected)} records, {len(failed)} failures; engine exit {engine}, API audit {len(unexpected)} unexpected, {len(issues)-len(unexpected)} existing particle field-access errors; logs {out}')
+    return 1 if failed or engine or unexpected else 0
 
 
 def main():

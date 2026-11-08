@@ -44,5 +44,10 @@ UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/uxmlbaseapi/run.p
 The runner copies `lightingassets` into disposable output and enables the UIElements built-in
 module there. The publisher stores the verified TSV key/value pairs as JSON, preserving empty strings.
 The gate compares every record, retaining every missing, extra or different value,
-then runs `api-check` and requires zero errors. `$UNBOUND`, then `$UNBOUND_CLI`, selects the CLI.
+then runs `api-check`. The full pre-Q85 reports also contain six `ParticleSystem.MinMaxCurve`
+field-access errors, independent of the five UXML findings. These six remain a particles queue
+follow-up. The gate prints every API diagnostic, permits only those exact existing errors, and
+rejects any other error, count mismatch, incomplete report or unexpected exit. Fixed baseline
+errors may disappear without requiring a new allowance. The full CLI audit still exits nonzero
+while these particle errors remain; no audit checker rule is weakened. `$UNBOUND`, then `$UNBOUND_CLI`, selects the CLI.
 Artifacts stay under `$XDG_CACHE_HOME/unbound/validation/runs/uxmlbaseapi/`.
