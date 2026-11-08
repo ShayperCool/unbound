@@ -3897,7 +3897,12 @@ impl UnityRenderer {
         float: bool,
     ) -> Option<Vec<u8>> {
         let source = if texture == 0 {
-            self.screens[self.screen_slot].as_ref()?.texture.clone()
+            // Before this frame's first screen pass the screen still shows the last frame: its
+            // own slot holds an older one until that pass carries the screen forward.
+            match self.previous_screen().filter(|_| !self.screen_touched) {
+                Some(previous) => previous,
+                None => self.screens[self.screen_slot].as_ref()?.texture.clone(),
+            }
         } else {
             self.textures.get(&texture)?.texture.clone()
         };
