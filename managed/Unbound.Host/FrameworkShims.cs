@@ -6,13 +6,16 @@ using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
 
 namespace Unbound.Host;
 
 /// <summary>
 /// Redirects calls to .NET Framework / Mono members that .NET lacks (Odin emits its formatters
 /// with <c>AppDomain.DefineDynamicAssembly</c> and <c>DefineDynamicModule(string, bool)</c>) to
-/// <see cref="Unbound.FrameworkCompat"/>, which takes the instance as its first parameter.
+/// <see cref="Unbound.FrameworkCompat"/>, which takes the instance as its first parameter, and
+/// members .NET has with other answers than the Editor's Mono (<see cref="Unbound.EditorProcess"/>,
+/// <see cref="Unbound.MonoStopwatch"/>).
 /// </summary>
 static class FrameworkShims
 {
@@ -25,14 +28,27 @@ static class FrameworkShims
         s_Shims = typeof(Unbound.FrameworkCompat).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
         s_Names = new HashSet<string>(s_Shims.Select(m => m.Name), StringComparer.Ordinal);
         foreach (var replaced in s_Replaced.Keys) s_Names.Add(replaced.Name);
+        foreach (var replaced in s_ReplacedFields.Keys) s_Names.Add(replaced.Name);
     }
 
     /// <summary>Members .NET has that must answer as in the Editor's process instead: the
-    /// command line is Unity's (the Test Framework reads -runTests from it).</summary>
+    /// command line is Unity's (the Test Framework reads -runTests from it), and Stopwatch counts
+    /// Mono's 100 ns ticks. Parameterless members only; an instance member's replacement takes
+    /// the instance.</summary>
     static readonly Dictionary<(string Type, string Name), System.Reflection.MethodInfo> s_Replaced = new()
     {
         [("System.Environment", "GetCommandLineArgs")] = typeof(Unbound.EditorProcess).GetMethod(nameof(Unbound.EditorProcess.GetCommandLineArgs))!,
         [("System.Environment", "get_CommandLine")] = typeof(Unbound.EditorProcess).GetMethod(nameof(Unbound.EditorProcess.get_CommandLine))!,
+        [("System.Diagnostics.Stopwatch", "GetTimestamp")] = typeof(Unbound.MonoStopwatch).GetMethod(nameof(Unbound.MonoStopwatch.GetTimestamp))!,
+        [("System.Diagnostics.Stopwatch", "get_ElapsedTicks")] = typeof(Unbound.MonoStopwatch).GetMethod(nameof(Unbound.MonoStopwatch.get_ElapsedTicks))!,
+    };
+
+    /// <summary>Static fields read as the Editor's Mono has them: a load becomes a call of the
+    /// getter; a load of the address (C# calls a method of a readonly primitive field in place)
+    /// becomes the address of a local holding the getter's value.</summary>
+    static readonly Dictionary<(string Type, string Name), System.Reflection.MethodInfo> s_ReplacedFields = new()
+    {
+        [("System.Diagnostics.Stopwatch", "Frequency")] = typeof(Unbound.MonoStopwatch).GetMethod(nameof(Unbound.MonoStopwatch.get_Frequency))!,
     };
 
     internal static byte[] Redirect(byte[] image)
@@ -42,13 +58,37 @@ static class FrameworkShims
         using var assembly = AccessChecks.Read(input);
         var module = assembly.MainModule;
         bool changed = false;
+        var simplified = new HashSet<Mono.Cecil.MethodDefinition>();
         foreach (var type in module.GetTypes())
         {
             foreach (var method in type.Methods)
             {
                 if (!method.HasBody) continue;
-                foreach (var instruction in method.Body.Instructions)
+                foreach (var instruction in method.Body.Instructions.ToArray())
                 {
+                    if ((instruction.OpCode == OpCodes.Ldsfld || instruction.OpCode == OpCodes.Ldsflda)
+                        && instruction.Operand is FieldReference field
+                        && s_ReplacedFields.TryGetValue((field.DeclaringType.FullName, field.Name), out var getter))
+                    {
+                        bool address = instruction.OpCode == OpCodes.Ldsflda;
+                        instruction.OpCode = OpCodes.Call;
+                        instruction.Operand = module.ImportReference(getter);
+                        if (address)
+                        {
+                            // The call keeps the instruction (branches to it stay valid); the value
+                            // goes to a fresh local whose address is what the code reads.
+                            method.Body.SimplifyMacros();
+                            var local = new VariableDefinition(module.ImportReference(getter.ReturnType));
+                            method.Body.Variables.Add(local);
+                            var il = method.Body.GetILProcessor();
+                            var store = il.Create(OpCodes.Stloc, local);
+                            il.InsertAfter(instruction, store);
+                            il.InsertAfter(store, il.Create(OpCodes.Ldloca, local));
+                            simplified.Add(method);
+                        }
+                        changed = true;
+                        continue;
+                    }
                     if (instruction.OpCode == OpCodes.Ldftn && instruction.Operand is MethodReference pointed
                         && pointed.Parameters.Count == 0 && s_Replaced.TryGetValue((pointed.DeclaringType.FullName, pointed.Name), out var pointedReplacement))
                     {
@@ -77,6 +117,7 @@ static class FrameworkShims
             }
         }
         if (!changed) return image;
+        foreach (var method in simplified) method.Body.OptimizeMacros();
         using var output = new MemoryStream();
         AccessChecks.Write(assembly, output);
         return output.ToArray();
