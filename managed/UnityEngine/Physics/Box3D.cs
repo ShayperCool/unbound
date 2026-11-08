@@ -15,7 +15,7 @@ namespace Unbound.Box3D
         const string Library = "unbound_physx";
 
         /// <summary>The shim version this binding was written for.</summary>
-        internal const int Version = 18;
+        internal const int Version = 19;
 
         // The per-body accessors called every step are constant time, never block and never call
         // back into managed code: they skip the GC transition ([SuppressGCTransition]).
@@ -88,7 +88,7 @@ namespace Unbound.Box3D
         {
             internal int SolverType, FrictionType, ContactPairsMode;
             internal int EnableEnhancedDeterminism, EnablePcm, ImprovedPatchFriction;
-            internal int CcdDiscreteDynamicTargets;
+            internal int CcdDiscreteDynamicTargets, DeferIdleScene;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -130,6 +130,7 @@ namespace Unbound.Box3D
             internal int LayerFlags;
             /// <summary>The collider's layerOverridePriority.</summary>
             internal int LayerPriority;
+            internal ulong ExistingShape;
         }
 
         /// <summary>Layer flags: the collider has include/exclude layers (its own or its body's).</summary>
@@ -261,6 +262,7 @@ namespace Unbound.Box3D
         [LibraryImport(Library)] internal static partial void ua3_bodies_state(ulong* bodies, int count, BodyState* output);
         [LibraryImport(Library), SuppressGCTransition] internal static partial void ua3_body_get_transform(ulong body, out Vector3 position, out Quaternion rotation);
         [LibraryImport(Library), SuppressGCTransition] internal static partial void ua3_body_set_transform(ulong body, Vector3 position, Quaternion rotation);
+        [LibraryImport(Library)] internal static partial void ua3_body_publish_constraints(ulong body, int angularAxes);
         [LibraryImport(Library), SuppressGCTransition] internal static partial void ua3_body_set_target_transform(ulong body, Vector3 position, Quaternion rotation, float timeStep);
         [LibraryImport(Library), SuppressGCTransition] internal static partial Vector3 ua3_body_get_linear_velocity(ulong body);
         [LibraryImport(Library), SuppressGCTransition] internal static partial void ua3_body_set_linear_velocity(ulong body, Vector3 v);
@@ -291,7 +293,7 @@ namespace Unbound.Box3D
         [LibraryImport(Library)] internal static partial ulong ua3_shape_capsule(ulong body, in ShapeDef def, Vector3 center1, Vector3 center2, float radius);
         [LibraryImport(Library)] internal static partial ulong ua3_shape_box(ulong body, in ShapeDef def, Vector3 center, Quaternion rotation, Vector3 halfExtents);
         [LibraryImport(Library)] internal static partial void ua3_shape_update_box(ulong shape, in ShapeDef def, Vector3 center, Quaternion rotation, Vector3 halfExtents);
-        [LibraryImport(Library)] internal static partial ulong ua3_shape_hull(ulong body, in ShapeDef def, Vector3* points, int count);
+        [LibraryImport(Library)] internal static partial ulong ua3_shape_hull(ulong body, in ShapeDef def, Vector3* points, int count, Vector3 position, Quaternion rotation, int localFrame);
         [LibraryImport(Library)] internal static partial IntPtr ua3_mesh_create(Vector3* vertices, int vertexCount, int* indices, int triangleCount);
         [LibraryImport(Library)] internal static partial void ua3_mesh_destroy(IntPtr mesh);
         [LibraryImport(Library)] internal static partial ulong ua3_shape_mesh(ulong body, in ShapeDef def, IntPtr mesh, Vector3 scale);

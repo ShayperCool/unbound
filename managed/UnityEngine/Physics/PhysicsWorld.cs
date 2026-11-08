@@ -315,6 +315,7 @@ namespace Unbound.Runtime
                 EnablePcm = Physics.s_EnablePcm ? 1 : 0,
                 ImprovedPatchFriction = Physics.s_ImprovedPatchFriction ? 1 : 0,
                 CcdDiscreteDynamicTargets = Compat.CcdDiscreteDynamicTargetsMeasured ? 1 : 0,
+                DeferIdleScene = Compat.ColliderLifetimeMeasured ? 1 : 0,
             };
             if (!s_ContactModifyRegistered)
             {
@@ -481,6 +482,7 @@ namespace Unbound.Runtime
                 ApplyPendingKinematic(rb);
                 if (rb.m_MassDirty) rb.ApplyMass();
             }
+            else if (Compat.ColliderLifetimeMeasured) CreateBody(rb);
         }
 
         internal static void Remove(Rigidbody rb)
@@ -534,7 +536,7 @@ namespace Unbound.Runtime
             for (var parent = t; parent != null; parent = parent.m_Parent)
                 foreach (var component in parent.m_GameObject.m_Components)
                     if (component is Rigidbody && !component.m_Destroyed) hasBodyComponent = true;
-            if (!hasBodyComponent && !(c is CharacterController)) Rebuild(c);
+            if ((!hasBodyComponent || Compat.ColliderLifetimeMeasured) && !(c is CharacterController)) Rebuild(c);
         }
 
         internal static void Remove(Collider c)
@@ -586,6 +588,7 @@ namespace Unbound.Runtime
             }
             c.m_ShapeDirty = true;
             s_StructureDirty = true;
+            if (Compat.ColliderLifetimeMeasured && !s_Stepping && !(c is CharacterController)) Rebuild(c);
         }
 
         internal static void MarkBodyDirty(Rigidbody rb)
@@ -786,7 +789,7 @@ namespace Unbound.Runtime
                 LinearDamping = Mathf.Max(0f, rb.m_LinearDamping),
                 AngularDamping = Mathf.Max(0f, rb.m_AngularDamping),
                 GravityScale = rb.m_UseGravity ? 1f : 0f,
-                Locks = rb.Locks,
+                Locks = rb.NativeLocks,
                 EnableSleep = 1,
                 IsAwake = 1,
                 IsBullet = rb.NativeCollisionDetection,
@@ -837,7 +840,7 @@ namespace Unbound.Runtime
             rb.ForgetMove();
         }
 
-        static void DestroyShape(Collider c)
+        static void DestroyShape(Collider c, bool keepShape = false)
         {
             if (c is CharacterController controller)
             {
@@ -851,7 +854,7 @@ namespace Unbound.Runtime
                 B3.ua3_shape_destroy(extra, 0);
             }
             c.m_ExtraShapes.Clear();
-            if (c.m_Shape != 0)
+            if (c.m_Shape != 0 && !keepShape)
             {
                 s_ByShape.Remove(c.m_Shape);
                 B3.ua3_shape_destroy(c.m_Shape, 0);
@@ -882,7 +885,18 @@ namespace Unbound.Runtime
                 && (rb != null ? rb.m_Body != 0 : c.m_StaticBody != 0);
             c.m_ShapeDirty = false;
             c.m_GeometryDirty = false;
-            DestroyShape(c);
+            if (c.m_StaticActorDirty && rb == null && c.m_StaticBody != 0)
+            {
+                DestroyShape(c);
+                B3.ua3_body_destroy(c.m_StaticBody);
+                c.m_StaticBody = 0;
+            }
+            c.m_StaticActorDirty = false;
+            var previousBody = c.m_AttachedBody;
+            DestroyShape(c, keepShape: Compat.ColliderLifetimeMeasured && !(c is CharacterController));
+            if (previousBody != null && !ReferenceEquals(previousBody, rb)) previousBody.m_MassDirty = true;
+            ulong previousShape = c.m_Shape;
+            ulong previousStaticBody = 0;
             var transform = c.m_GameObject.m_Transform;
             if (!keepPose) c.m_TransformVersion = transform.m_Version;
             c.m_Layer = c.m_GameObject.m_Layer;
@@ -908,7 +922,7 @@ namespace Unbound.Runtime
             {
                 if (c.m_StaticBody != 0)
                 {
-                    B3.ua3_body_destroy(c.m_StaticBody);
+                    previousStaticBody = c.m_StaticBody;
                     c.m_StaticBody = 0;
                 }
                 body = rb.m_Body;
@@ -953,6 +967,7 @@ namespace Unbound.Runtime
             if (!keepPose)
                 c.m_ShapeRotation = Quaternion.Inverse(frameRotation) * (rb == null && addedPose ? c.m_AddedRotation : transform.rotation);
             var shapeDef = ShapeDefOf(c, rb);
+            shapeDef.ExistingShape = Compat.ColliderLifetimeMeasured ? previousShape : 0;
             try
             {
                 c.m_Shape = c.CreateShape(body, shapeDef, matrix, rb);
@@ -962,6 +977,12 @@ namespace Unbound.Runtime
                 Debug.LogException(e, c);
                 c.m_Shape = 0;
             }
+            if (previousShape != 0 && previousShape != c.m_Shape)
+            {
+                s_ByShape.Remove(previousShape);
+                B3.ua3_shape_destroy(previousShape, 0);
+            }
+            if (previousStaticBody != 0) B3.ua3_body_destroy(previousStaticBody);
             if (c.m_Shape != 0)
             {
                 s_ByShape[c.m_Shape] = c;
@@ -1242,11 +1263,13 @@ namespace Unbound.Runtime
             BreakJoints();
 
             ReadBodyStates();
+            bool publishConstraints = Compat.ConstrainedBodyStateMeasured;
             for (int i = 0; i < s_Rigidbodies.Count; i++)
             {
                 var rb = s_Rigidbodies[i];
                 if (rb.m_Body == 0) continue;
                 rb.EndStep();
+                if (publishConstraints) rb.PublishConstrainedPose();
                 WriteBack(rb, s_States[i].Position, s_States[i].Rotation);
             }
 

@@ -69,6 +69,8 @@ namespace UnityEngine
         /// <summary>The body's mass properties as applied: center (body frame) and inertia about it.</summary>
         Vector3 m_AppliedCenter;
         B3.Matrix3 m_AppliedInertia;
+        Vector3 m_AppliedMoments = Vector3.one;
+        Quaternion m_AppliedAxes = Quaternion.identity;
         bool m_HasMove;
         Vector3 m_MovePosition;
         Quaternion m_MoveRotation;
@@ -117,6 +119,10 @@ namespace UnityEngine
 
         /// <summary>Box3D's motion locks: RigidbodyConstraints without its unused first bit.</summary>
         internal int Locks => ((int)m_Constraints >> 1) & 63;
+        // The SDK's motion locks use world axes. Rotation constraints instead use
+        // the mass tensor and the constrained publication path in the measured release.
+        internal int NativeLocks => Compat.ConstrainedBodyStateMeasured
+            ? ((int)m_Constraints & (int)RigidbodyConstraints.FreezePosition) >> 1 : Locks;
 
         /// <summary>The body, created now if the rigidbody is in the world but not yet built.</summary>
         internal ulong Body
@@ -143,7 +149,7 @@ namespace UnityEngine
             B3.ua3_body_set_type(body, (int)BodyType);
             B3.ua3_body_set_damping(body, Mathf.Max(0f, m_LinearDamping), Mathf.Max(0f, m_AngularDamping));
             B3.ua3_body_set_gravity_scale(body, m_UseGravity ? 1f : 0f);
-            B3.ua3_body_set_locks(body, Locks);
+            B3.ua3_body_set_locks(body, NativeLocks);
             B3.ua3_body_set_bullet(body, NativeCollisionDetection);
             ApplyTuning();
             // Changing the type drops the mass data.
@@ -178,6 +184,7 @@ namespace UnityEngine
             if (!m_ImplicitTensor) inertia = Diagonal(m_InertiaTensor, m_InertiaRotation);
             m_AppliedCenter = center;
             m_AppliedInertia = inertia;
+            Principal(inertia, out m_AppliedMoments, out m_AppliedAxes);
             B3.ua3_body_set_mass(body, mass, center, inertia);
             B3.ua3_body_freeze_inertia(body, Locks);
         }
@@ -288,6 +295,7 @@ namespace UnityEngine
             {
                 var body = Body;
                 if (m_IsKinematic) return;
+                if (Compat.ConstrainedBodyStateMeasured) value = MaskVelocityAxes(value, (int)m_Constraints >> 1);
                 if (body != 0) B3.ua3_body_set_linear_velocity(body, value);
                 else m_PendingVelocity = value;
             }
@@ -304,9 +312,26 @@ namespace UnityEngine
             {
                 var body = Body;
                 if (m_IsKinematic) return;
+                int angularAxes = ((int)m_Constraints >> 4) & 7;
+                if (Compat.ConstrainedBodyStateMeasured && angularAxes != 0)
+                {
+                    EnsureMass();
+                    var axes = m_ImplicitTensor ? m_AppliedAxes : m_InertiaRotation;
+                    value = axes * MaskVelocityAxes(Quaternion.Inverse(axes) * value, angularAxes);
+                }
                 if (body != 0) B3.ua3_body_set_angular_velocity(body, value);
                 else m_PendingAngularVelocity = value;
             }
+        }
+
+        // Axis masks use the low three bits for x, y and z, after removing the
+        // position/rotation field's shift in RigidbodyConstraints.
+        static Vector3 MaskVelocityAxes(Vector3 velocity, int axes)
+        {
+            if ((axes & 1) != 0) velocity.x = 0;
+            if ((axes & 2) != 0) velocity.y = 0;
+            if ((axes & 4) != 0) velocity.z = 0;
+            return velocity;
         }
 
         [Obsolete("Please use Rigidbody.linearVelocity instead. (UnityUpgradable) -> linearVelocity")]
@@ -454,8 +479,7 @@ namespace UnityEngine
             {
                 EnsureMass();
                 if (m_Body == 0 || m_IsKinematic) return m_InertiaTensor;
-                Principal(m_AppliedInertia, out var moments, out _);
-                return moments;
+                return m_AppliedMoments;
             }
             set
             {
@@ -471,8 +495,7 @@ namespace UnityEngine
             {
                 EnsureMass();
                 if (m_Body == 0 || m_IsKinematic) return m_InertiaRotation;
-                Principal(m_AppliedInertia, out _, out var axes);
-                return axes;
+                return m_AppliedAxes;
             }
             set
             {
@@ -599,8 +622,15 @@ namespace UnityEngine
         {
             var body = Body;
             if (body == 0) return;
+            if (Compat.ConstrainedBodyStateMeasured) PublishConstrainedPose();
             B3.ua3_body_get_transform(body, out var p, out var q);
             W.SetTransformPose(this, p, q);
+        }
+
+        internal void PublishConstrainedPose()
+        {
+            if ((m_Constraints & RigidbodyConstraints.FreezeRotation) != 0)
+                B3.ua3_body_publish_constraints(m_Body, ((int)m_Constraints >> 4) & 7);
         }
 
         /// <summary>The solver settings PhysX keeps per body.</summary>

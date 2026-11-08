@@ -46,15 +46,15 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 18
+#define UA3_VERSION 19
 
 struct ua3_scene_def
 {
 	int solverType, frictionType, contactPairsMode;
 	int enableEnhancedDeterminism, enablePcm, improvedPatchFriction;
-	int ccdDiscreteDynamicTargets;
+	int ccdDiscreteDynamicTargets, deferIdleScene;
 };
-static_assert( sizeof( ua3_scene_def ) == 28, "scene settings must match the managed binding" );
+static_assert( sizeof( ua3_scene_def ) == 32, "scene settings must match the managed binding" );
 
 // Vectors and quaternions cross the API as plain structs: PxVec3 and PxQuat have user-defined
 // copy constructors, which the C ABI passes by reference instead of in registers.
@@ -500,6 +500,7 @@ struct World
 	PxControllerManager* controllers = nullptr; // created with the first character controller
 	uint64_t controllerFilterRevision = 0;
 	bool sleeping = true;
+	bool deferIdleScene = false;
     bool deferredContactReports = false;
 };
 
@@ -1131,6 +1132,7 @@ UA3_API uint32_t ua3_world_create( ua3_vec3 gravityIn, float restitutionThreshol
 	world->events.world = world;
 	world->filter.world = world;
 	world->sleeping = enableSleep != 0;
+	world->deferIdleScene = settings->deferIdleScene != 0;
 	PxSceneDesc desc( s_physics->getTolerancesScale() );
 	desc.gravity = gravity;
 	desc.cpuDispatcher = s_dispatcher;
@@ -1261,6 +1263,8 @@ UA3_API void ua3_world_step( uint32_t id, float timeStep, int subStepCount )
     // Preserve the actual SDK reports and append the next fetched batch in order.
     world->deferredContactReports = world->scene->getNbActors( PxActorTypeFlag::eRIGID_DYNAMIC ) == 0;
 	world->broken.clear();
+	if ( world->deferIdleScene && world->scene->getNbActors(
+		PxActorTypeFlag::eRIGID_STATIC | PxActorTypeFlag::eRIGID_DYNAMIC ) == 0 ) return;
 	update_vehicles( world, timeStep );
 	world->scene->simulate( timeStep );
 	world->scene->fetchResults( true );
@@ -1510,6 +1514,20 @@ UA3_API void ua3_body_set_transform( uint64_t id, ua3_vec3 positionIn, ua3_quat 
 	{
 		actor->setGlobalPose( PxTransform( position, rotation.getNormalized() ) );
 	}
+}
+
+UA3_API void ua3_body_publish_constraints( uint64_t id, int angularAxes )
+{
+	PxRigidDynamic* body = dynamic_of( id );
+	if ( body == nullptr || body->getRigidBodyFlags().isSet( PxRigidBodyFlag::eKINEMATIC ) || body->isSleeping() ) return;
+	const PxTransform pose = body->getGlobalPose();
+	const PxQuat axes = pose.q * body->getCMassLocalPose().q;
+	PxVec3 angular = axes.rotateInv( body->getAngularVelocity() );
+	if ( angularAxes & 1 ) angular.x = 0.0f;
+	if ( angularAxes & 2 ) angular.y = 0.0f;
+	if ( angularAxes & 4 ) angular.z = 0.0f;
+	body->setAngularVelocity( axes.rotate( angular ), false );
+	body->setGlobalPose( pose, false );
 }
 
 // A body's pose and linear velocity, as ua3_bodies_state reads them.
@@ -1838,6 +1856,7 @@ struct ua3_shape_def
 	float contactOffset;
 	int layerFlags; // LayerOverride | LayerNoContacts
 	int layerPriority; // Collider.layerOverridePriority
+	uint64_t existingShape;
 };
 
 namespace
@@ -1860,22 +1879,50 @@ uint64_t attach( uint64_t bodyId, const ua3_shape_def* def, const PxGeometry& ge
 	PxShapeFlags flags = PxShapeFlag::eSCENE_QUERY_SHAPE | PxShapeFlag::eVISUALIZATION;
 	flags |= def->isSensor ? PxShapeFlag::eTRIGGER_SHAPE : PxShapeFlag::eSIMULATION_SHAPE;
 	PxMaterial* m = material( def->staticFriction, def->friction, def->restitution, def->material );
-	PxShape* shape = s_physics->createShape( geometry, *m, true, flags );
+	PxShape* shape = shape_of( def->existingShape );
+	bool retained = shape != nullptr && shape->getGeometryType() == geometry.getType();
+	if ( !retained ) shape = s_physics->createShape( geometry, *m, true, flags );
 	if ( shape == nullptr )
 	{
 		return 0;
 	}
+	PxRigidActor* previousActor = retained ? shape->getActor() : nullptr;
+	PxFilterData before = shape->getSimulationFilterData();
+	bool transfer = retained && previousActor != actor;
+	if ( transfer )
+	{
+		shape->acquireReference();
+		if ( previousActor ) previousActor->detachShape( *shape );
+	}
+	if ( retained )
+	{
+		shape->setGeometry( geometry );
+		shape->setMaterials( &m, 1 );
+		shape->setFlags( flags );
+	}
 	shape->setLocalPose( local );
 	shape->setContactOffset( def->contactOffset > 0.0f ? def->contactOffset : s_contactOffset );
 	shape->setRestOffset( 0.0f );
-	ShapeInfo* i = new ShapeInfo{ def->density, def->enableContactEvents != 0, def->enableSensorEvents != 0, 0, def->layerFlags };
+	ShapeInfo* i = retained ? info( shape ) : new ShapeInfo{};
+	i->density = def->density;
+	i->contactEvents = def->enableContactEvents != 0;
+	i->sensorEvents = def->enableSensorEvents != 0;
+	i->layers = def->layerFlags;
 	shape->userData = i;
 	PxFilterData simulation( static_cast<PxU32>( def->categoryBits ), static_cast<PxU32>( def->maskBits ), 0, static_cast<PxU32>( def->layerPriority ) );
 	shape->setSimulationFilterData( simulation );
 	set_filter_flags( shape, actor );
 	shape->setQueryFilterData( query_data( static_cast<PxU32>( def->categoryBits ), actor, def->isSensor != 0 ) );
-	actor->attachShape( *shape );
-	shape->release(); // the actor holds it
+	if ( !retained || transfer )
+	{
+		actor->attachShape( *shape );
+		shape->release(); // the actor holds it
+	}
+	else if ( filter_changed( before, shape->getSimulationFilterData() ) )
+	{
+		refilter( shape );
+		invalidate_controllers( world_of_actor( actor ) );
+	}
 	s_shapes.insert( shape );
 	return pack( shape );
 }
@@ -1941,26 +1988,30 @@ UA3_API uint64_t ua3_shape_box( uint64_t body, const ua3_shape_def* def, ua3_vec
 	return attach( body, def, PxBoxGeometry( h ), PxTransform( center, rotation.getNormalized() ) );
 }
 
-// A convex hull of points in the body frame (cooked as Unity cooks convex MeshColliders); 0 when
-// they make no hull.
-UA3_API uint64_t ua3_shape_hull( uint64_t body, const ua3_shape_def* def, const PxVec3* points, int count )
+// Convex points and their rigid local pose. The compatibility argument selects
+// collider-local cooking or the previous body-frame cooking; 0 when no hull is made.
+UA3_API uint64_t ua3_shape_hull( uint64_t body, const ua3_shape_def* def, const PxVec3* points, int count,
+	ua3_vec3 position, ua3_quat rotation, int localFrame )
 {
 	if ( s_cooking == nullptr || count < 4 )
 	{
 		return 0;
 	}
+	const PxTransform localPose{ PxVec3( position ), PxQuat( rotation ) };
+	if ( !localPose.isValid() ) return 0;
 	PxConvexMeshDesc desc;
 	desc.points.count = static_cast<PxU32>( count );
 	desc.points.stride = sizeof( PxVec3 );
 	desc.points.data = points;
-	desc.flags = PxConvexFlag::eCOMPUTE_CONVEX | PxConvexFlag::eSHIFT_VERTICES;
+	desc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
+	if ( !localFrame ) desc.flags |= PxConvexFlag::eSHIFT_VERTICES;
 	desc.vertexLimit = 255;
 	PxConvexMesh* mesh = s_cooking->createConvexMesh( desc, s_physics->getPhysicsInsertionCallback() );
 	if ( mesh == nullptr )
 	{
 		return 0;
 	}
-	uint64_t shape = attach( body, def, PxConvexMeshGeometry( mesh ), PxTransform( PxIdentity ) );
+	uint64_t shape = attach( body, def, PxConvexMeshGeometry( mesh ), localPose );
 	mesh->release(); // the shape holds it
 	return shape;
 }

@@ -11,6 +11,21 @@ namespace UnityEngine.Tests
         public void Dispose() => ProjectInfo.UnityVersion = m_Release;
 
         [Fact]
+        public void PhysicsStateReleaseGatesAreCachedWithoutAllocations()
+        {
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            _ = Compat.ConstrainedBodyStateMeasured;
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            bool measured = true;
+            for (int i=0; i<1000; i++)
+                measured &= Compat.ConstrainedBodyStateMeasured && Compat.ConvexColliderFrameMeasured && Compat.ColliderLifetimeMeasured;
+            Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread()-before);
+            Assert.True(measured);
+            ProjectInfo.UnityVersion = "6000.0.72f1";
+            Assert.False(Compat.ConstrainedBodyStateMeasured || Compat.ConvexColliderFrameMeasured || Compat.ColliderLifetimeMeasured);
+        }
+
+        [Fact]
         public void RepeatedAudioReleaseGatesDoNotAllocate()
         {
             // The audio filter chains and AudioMixer.GetFloat check these every frame.

@@ -39,6 +39,7 @@ namespace UnityEngine
         internal int m_SceneHandle;
         internal bool m_ShapeDirty;
         internal bool m_GeometryDirty;
+        internal bool m_StaticActorDirty;
         internal Rigidbody m_AttachedBody;
         internal ulong m_StaticBody;
         internal ulong m_Shape;
@@ -567,7 +568,12 @@ namespace UnityEngine
         public bool convex
         {
             get => m_Convex;
-            set { m_Convex = value; ShapeChanged(); }
+            set
+            {
+                if (m_Convex != value && Compat.ColliderLifetimeMeasured) m_StaticActorDirty = true;
+                m_Convex = value;
+                ShapeChanged();
+            }
         }
 
         /// <summary>A change cooks the mesh again (Unbound's choice, unmeasured: when Unity re-cooks
@@ -621,6 +627,9 @@ namespace UnityEngine
             if (mesh == null) return 0;
             var source = mesh.m_Vertices;
             if (source == null || source.Length == 0) return 0;
+            bool localFrame = m_Convex && Compat.ConvexColliderFrameMeasured;
+            Vector3 hullPosition = Vector3.zero;
+            Quaternion hullRotation = Quaternion.identity;
             if (m_Convex)
             {
                 // Convex colliders project scale onto the authored rotation, including
@@ -630,14 +639,20 @@ namespace UnityEngine
                     Vector3.Dot(rotation * Vector3.right, new Vector3(toBody.m00, toBody.m10, toBody.m20)),
                     Vector3.Dot(rotation * Vector3.up, new Vector3(toBody.m01, toBody.m11, toBody.m21)),
                     Vector3.Dot(rotation * Vector3.forward, new Vector3(toBody.m02, toBody.m12, toBody.m22)));
-                toBody = Matrix4x4.TRS(toBody.MultiplyPoint3x4(Vector3.zero), rotation, scale);
+                if (localFrame)
+                {
+                    hullPosition = toBody.MultiplyPoint3x4(Vector3.zero);
+                    hullRotation = rotation;
+                    toBody = Matrix4x4.Scale(scale);
+                }
+                else toBody = Matrix4x4.TRS(toBody.MultiplyPoint3x4(Vector3.zero), rotation, scale);
             }
             var vertices = new Vector3[source.Length];
             for (int i = 0; i < source.Length; i++) vertices[i] = toBody.MultiplyPoint3x4(source[i]);
             if (m_Convex)
             {
                 fixed (Vector3* points = vertices)
-                    return B3.ua3_shape_hull(body, def, points, vertices.Length);
+                    return B3.ua3_shape_hull(body, def, points, vertices.Length, hullPosition, hullRotation, localFrame ? 1 : 0);
             }
             if (rigidbody != null && !rigidbody.m_IsKinematic)
             {
