@@ -125,7 +125,7 @@ namespace UnityEngine
             internal bool enabled;
             internal ModuleCurve limitX = C(1f, CurveRange.NonNegative), limitY = C(1f, CurveRange.NonNegative), limitZ = C(1f, CurveRange.NonNegative);
             internal ModuleCurve limit = C(1f, CurveRange.NonNegative);
-            internal float dampen = 1f;
+            internal float dampen;
             internal bool separateAxes;
             internal ParticleSystemSimulationSpace space;
             internal ModuleCurve drag = C(0f, CurveRange.NonNegative);
