@@ -419,12 +419,29 @@ namespace Unbound.Runtime
             }
             // With pending playable outputs, their clip events fire first (6000.0.71f1,
             // tests/projects/animcallbacks): AnimationOutputs.RunPending runs these afterwards.
-            if (DeferOutput) return;
+            if (DeferOutput && m_AutomaticUpdate && AnimationPhases.Split) return;
             RunCallbacks();
         }
 
         /// <summary>The state callbacks an update with pending playable outputs held back.</summary>
-        internal void RunDeferredCallbacks() => RunCallbacks();
+        internal void RunDeferredCallbacks()
+        {
+            bool outer = EnterDeferred();
+            try { RunCallbacks(); }
+            finally { ExitDeferred(outer); }
+        }
+
+        /// <summary>The deferred parts of an automatic update (<see cref="AnimationPhases"/>) run
+        /// as part of it: an Animator.Update from their callbacks is ignored, as during the
+        /// update itself. Returns the previous state for <see cref="ExitDeferred"/>.</summary>
+        internal bool EnterDeferred()
+        {
+            bool outer = m_Ticking;
+            m_Ticking = true;
+            return outer;
+        }
+
+        internal void ExitDeferred(bool outer) => m_Ticking = outer;
 
         /// <summary>The controller's pose as an animation stream (a controller playable): layers
         /// over the stream's values (the default values), as <see cref="PoseWriter.WriteLayers"/>
@@ -1048,7 +1065,10 @@ namespace Unbound.Runtime
         /// <summary>The deferred update's movement (<see cref="AnimationPhases"/>).</summary>
         internal void DeliverDeferredMovement()
         {
-            if (m_PendingWrite) ProcessRootMotion();
+            if (!m_PendingWrite) return;
+            bool outer = EnterDeferred();
+            try { ProcessRootMotion(); }
+            finally { ExitDeferred(outer); }
         }
 
         /// <summary>The deferred update's write and IK (<see cref="AnimationPhases"/>).</summary>
@@ -1056,7 +1076,9 @@ namespace Unbound.Runtime
         {
             if (!m_PendingWrite) return;
             m_PendingWrite = false;
-            WritePose(m_PendingCount, m_PendingSkipWrites);
+            bool outer = EnterDeferred();
+            try { WritePose(m_PendingCount, m_PendingSkipWrites); }
+            finally { ExitDeferred(outer); }
         }
 
         void WritePose(int count, bool skipTransforms = false, Unbound.Runtime.Playables.AnimStream stream = null)

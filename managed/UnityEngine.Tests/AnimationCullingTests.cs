@@ -386,6 +386,63 @@ namespace UnityEngine.Tests
             finally { graph.Destroy(); }
         }
 
+        // Weights changed while culled: the visibility return blends the retained clip steps with
+        // the current weights (6000.0.71f1, animculling genericMixerSum/liveCulled); unmeasured
+        // releases keep replaying the last blend.
+        [Theory]
+        [InlineData("6000.0.71f1", 0.15f)]
+        [InlineData("6000.0.70f1", 0.25f)]
+        public void AVisibilityReturnReblendsWeightsChangedWhileCulled(string release, float replayed)
+        {
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = release;
+            var camera = MakeCamera();
+            var root = new GameObject("MixerActor");
+            m_Objects.Add(root);
+            var renderer = AddRenderer(root);
+            var animator = root.AddComponent<Animator>();
+            animator.cullingMode = AnimatorCullingMode.CullCompletely;
+            animator.applyRootMotion = true;
+            AnimationClip Rising(float speed)
+            {
+                var clip = new AnimationClip { legacy = true };
+                clip.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Constant(0f, 1f, 0f));
+                clip.SetCurve("", typeof(Transform), "localPosition.y", AnimationCurve.Linear(0f, 0f, 1f, speed));
+                clip.SetCurve("", typeof(Transform), "localPosition.z", AnimationCurve.Constant(0f, 1f, 0f));
+                clip.legacy = false;
+                return clip;
+            }
+            var graph = PlayableGraph.Create("reblend");
+            try
+            {
+                var output = AnimationPlayableOutput.Create(graph, "Animation", animator);
+                var mixer = AnimationMixerPlayable.Create(graph, 2);
+                mixer.ConnectInput(0, AnimationClipPlayable.Create(graph, Rising(1f)), 0, 0.25f);
+                mixer.ConnectInput(1, AnimationClipPlayable.Create(graph, Rising(3f)), 0, 0.75f);
+                output.SetSourcePlayable(mixer);
+                graph.Play();
+                PlayableStep(graph, animator, 0.1f);
+                MakeVisible(camera, renderer);
+                PlayableStep(graph, animator, 0.1f);
+                // 0.25 · 0.1 + 0.75 · 0.3 per 0.1 s.
+                float visible = animator.transform.localPosition.y;
+                Near.Equal(0.25f, visible);
+                renderer.SetVisible(false);
+                PlayableStep(graph, animator, 0.1f);
+                mixer.SetInputWeight(0, 0.75f);
+                mixer.SetInputWeight(1, 0.25f);
+                PlayableStep(graph, animator, 0.1f);
+                Near.Equal(visible, animator.transform.localPosition.y);
+                MakeVisible(camera, renderer);
+                Near.Equal(visible + replayed, animator.transform.localPosition.y);
+            }
+            finally
+            {
+                graph.Destroy();
+                ProjectInfo.UnityVersion = version;
+            }
+        }
+
         [Fact]
         public void AnUnrelatedOutputPreservesPartialControllerLayersAndTheirHeldValues()
         {

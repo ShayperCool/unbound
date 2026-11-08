@@ -25,6 +25,95 @@ namespace UnityEngine.Tests
             public override void OnStateMove(Animator animator, AnimatorStateInfo info, int layer) => s_Calls.Add("move " + Name(info));
         }
 
+        public class MoveLogger : MonoBehaviour
+        {
+            internal bool UpdateAgain;
+            void OnAnimatorMove()
+            {
+                s_Calls.Add("OnAnimatorMove");
+                // Ignored: the Animator is still in its update.
+                if (UpdateAgain) GetComponent<Animator>().Update(0.1f);
+            }
+        }
+
+        static RuntimeAnimatorController SlotController(out SlotRecorder recorder)
+        {
+            var file = ObjectGraphBuilder.Build(UnityYaml.Parse(AnimationFixtures.PanelController), "test.asset", null, ObjectGraphBuilder.Kind.Asset, null);
+            recorder = ScriptableObject.CreateInstance<SlotRecorder>();
+            foreach (var state in file.Objects.Values.OfType<ControllerStateAsset>()) state.Behaviours.Add(recorder);
+            return (RuntimeAnimatorController)file.Objects[9100000];
+        }
+
+        // With a playable output on the same Animator, the state callbacks still precede the
+        // movement: measured on 6000.0.71f1 (animcallbacks humanControllerGraph), and the earlier
+        // single pass of unmeasured releases keeps them before it too.
+        [Theory]
+        [InlineData("6000.0.71f1")]
+        [InlineData("6000.0.70f1")]
+        public void StateCallbacksPrecedeMovementWithAnOutput(string release)
+        {
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = release;
+            s_Calls.Clear();
+            var root = new GameObject("Panel", typeof(RectTransform));
+            var animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = SlotController(out var recorder);
+            root.AddComponent<MoveLogger>();
+            var clip = new AnimationClip();
+            clip.SetCurve("", typeof(Transform), "m_LocalPosition.x", AnimationCurve.Linear(0f, 0.5f, 1f, 1f));
+            var graph = PlayableGraph.Create("controller-output");
+            try
+            {
+                var output = AnimationPlayableOutput.Create(graph, "Animation", animator);
+                output.SetSourcePlayable(AnimationClipPlayable.Create(graph, clip));
+                graph.Play();
+                // States enter with an advancing update; the loop's own updates run at zero time here.
+                animator.Update(0.1f);
+                s_Calls.Clear();
+                for (int i = 0; i < 3; i++) AnimationTestLoop.Update(fixedStep: false);
+                int move = s_Calls.LastIndexOf("OnAnimatorMove");
+                int update = s_Calls.LastIndexOf("update A");
+                Assert.True(update >= 0 && move > update, string.Join(", ", s_Calls));
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(recorder);
+                ProjectInfo.UnityVersion = version;
+            }
+        }
+
+        // Movement callbacks of the split update are part of the Animator's update: an
+        // Animator.Update from them is ignored, as within an explicit update.
+        [Fact]
+        public void AnUpdateFromADeferredMovementCallbackIsIgnored()
+        {
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            s_Calls.Clear();
+            var root = new GameObject("Panel", typeof(RectTransform));
+            var animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = SlotController(out var recorder);
+            root.AddComponent<MoveLogger>().UpdateAgain = true;
+            try
+            {
+                animator.Update(0.1f);
+                s_Calls.Clear();
+                AnimationTestLoop.Update(fixedStep: false);
+                AnimationTestLoop.Update(fixedStep: false);
+                // One state update and one movement per automatic update: the nested ones are ignored.
+                Assert.Equal(2, s_Calls.Count(c => c == "OnAnimatorMove"));
+                Assert.Equal(2, s_Calls.Count(c => c == "update A"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(recorder);
+                ProjectInfo.UnityVersion = version;
+            }
+        }
+
         public class MoveObserver : MonoBehaviour
         {
             internal Transform Body;

@@ -215,14 +215,17 @@ namespace Unbound.Runtime.Humanoid
         {
             if (!HasIKPass(layer)) return;
             InIKPass = true;
+            var player = m_IKPlayer != null && m_IKPlayer.Attached ? m_IKPlayer : null;
+            bool outer = player?.EnterDeferred() ?? false;
             try
             {
                 SendOnAnimatorIK(layer);
-                if (m_IKPlayer != null && m_IKPlayer.Attached) m_IKPlayer.InvokeStateIK(m_Animator, layer);
+                player?.InvokeStateIK(m_Animator, layer);
             }
             finally
             {
                 InIKPass = false;
+                player?.ExitDeferred(outer);
             }
             HumanIK.EvaluateIK(m_Constant.Human, Output, m_W0, m_W1, m_W2, false, out _, out _);
             HumanIK.EvaluateEnd(m_Constant, AvatarX(), m_W0, m_W1, m_W2, m_AvatarPose);

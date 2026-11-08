@@ -61,7 +61,7 @@ namespace Unbound.Runtime
                 try
                 {
                     if (d.Output != null) d.Output.Move();
-                    else d.Player.DeliverDeferredMovement();
+                    else if (d.Player == d.Animator.m_Player) d.Player.DeliverDeferredMovement();
                 }
                 catch (Exception e) { Debug.LogException(e, d.Animator); }
             }
@@ -99,7 +99,8 @@ namespace Unbound.Runtime
                 try
                 {
                     if (d.Output != null) d.Output.Write(Live(d.Animator));
-                    else if (Live(d.Animator)) d.Player.WriteDeferred();
+                    // A controller swapped or rebound between the leaves has a new player.
+                    else if (Live(d.Animator) && d.Player == d.Animator.m_Player) d.Player.WriteDeferred();
                 }
                 catch (Exception e) { Debug.LogException(e, d.Animator); }
             }

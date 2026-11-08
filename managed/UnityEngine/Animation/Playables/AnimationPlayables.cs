@@ -326,6 +326,18 @@ namespace Unbound.Runtime.Playables
             return connected > 0;
         }
 
+        /// <summary>Whether a tree is only clips and mixers (the shapes the visibility re-blend
+        /// is measured for).</summary>
+        internal static bool ClipMixerTree(PlayableNode node, int depth = 0)
+        {
+            if (node == null || node.Destroyed || depth > MaxHumanTreeDepth) return false;
+            if (node.Kind is ClipKind) return true;
+            if (node.Kind is not MixerKind) return false;
+            foreach (var input in node.Inputs)
+                if (input.Node != null && !ClipMixerTree(input.Node, depth + 1)) return false;
+            return true;
+        }
+
         /// <summary>A hash of a mixer tree's input weights, to tell whether they changed
         /// between two evaluations.</summary>
         internal static int TreeWeights(PlayableNode node, int depth = 0)

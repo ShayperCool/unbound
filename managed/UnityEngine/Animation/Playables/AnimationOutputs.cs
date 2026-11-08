@@ -599,20 +599,40 @@ namespace Unbound.Runtime.Playables
             var bindings = animator.StreamBindings;
             if (bindings == null) return;
             var e = Rent(animator, bindings);
-            PendingOutput pending;
-            try { pending = Run(e, animator, bindings, outputs, suppressMovement); }
-            finally { Release(e); }
-            if (deferPhases && AnimationPhases.Split)
-            {
-                AnimationPhases.Defer(animator, pending);
-                return;
-            }
+            PendingOutput pending = null;
+            bool deferred = false;
+            // A later evaluation of the Animator's outputs replaces a deferred one.
+            animator.m_OutputEvaluations++;
             try
             {
-                pending.Move();
-                pending.Write(animator.isActiveAndEnabled);
+                pending = Run(e, animator, bindings, outputs, suppressMovement);
+                if (AnimationPhases.Split)
+                {
+                    // Clip events and the controller's state callbacks precede movement and the
+                    // write (6000.0.71f1, tests/projects/animcallbacks).
+                    e.AfterWrite();
+                    if (deferPhases)
+                    {
+                        AnimationPhases.Defer(animator, pending);
+                        deferred = true;
+                        return;
+                    }
+                    pending.Move();
+                    pending.Write(animator.isActiveAndEnabled);
+                }
+                else
+                {
+                    // Other releases (unmeasured) keep the events after the write.
+                    pending.Move();
+                    pending.Write(animator.isActiveAndEnabled);
+                    e.AfterWrite();
+                }
             }
-            finally { pending.Release(); }
+            finally
+            {
+                Release(e);
+                if (!deferred) pending?.Release();
+            }
         }
 
         static PendingOutput Run(AnimationEvaluation e, Animator animator, AnimationBindings bindings,
@@ -632,6 +652,7 @@ namespace Unbound.Runtime.Playables
             pending.PlayableIK = e.PlayableIK;
             pending.Manual = AnyManual(outputs);
             pending.Weights = AnimationOutputs.TreeWeights(animator);
+            pending.Evaluation = animator.m_OutputEvaluations;
             if (e.MotionMode == RootMotionMode.Human)
             {
                 // The same sample and feet-pivot memory as controller-driven humanoid motion.
@@ -647,9 +668,6 @@ namespace Unbound.Runtime.Playables
             }
             e.VisibilityEvents(pending.Events);
             if (withController) evaluatedPlayer.Ticked = true;
-            // Clip events and the controller's state callbacks precede movement and the write
-            // (6000.0.71f1, tests/projects/animcallbacks).
-            e.AfterWrite();
             return pending;
         }
 
@@ -766,7 +784,7 @@ namespace Unbound.Runtime.Playables
                     ? "Animator root motion of unsupported humanoid mixer output"
                     : "Animator root motion of composed playable graph outputs on humanoid avatars",
                     "is not applied: one full-weight output of a nonmirrored humanoid clip, or on measured 6000.0.71f1 of a mixer tree of such clips "
-                    + "with complete RootQ curves and finite input weights, is supported, without a playing controller, shared nodes or loop overrides; "
+                    + "with complete RootQ curves and input weights that are not infinite, is supported, without a playing controller, shared nodes or loop overrides; "
                     + "layer mixers, controller playables, animation jobs, fractional or multiple outputs remain unsupported");
             return RootMotionMode.Unsupported;
         }
@@ -906,6 +924,9 @@ namespace Unbound.Runtime.Playables
         internal float DeltaTime;
         internal bool SuppressMovement, ControllerMovement, PlayableIK, Manual;
         internal int Weights;
+        /// <summary>The Animator's output evaluation count when sampled: a later evaluation (an
+        /// explicit one between the two leaves) makes this write stale.</summary>
+        internal int Evaluation;
         internal readonly List<ClipEventInterval> Events = new List<ClipEventInterval>();
 
         static readonly Stack<PendingOutput> s_Free = new Stack<PendingOutput>();
@@ -915,7 +936,7 @@ namespace Unbound.Runtime.Playables
         /// <summary>Movement: OnAnimatorMove (or builtin root motion) with this evaluation's deltas.</summary>
         internal void Move()
         {
-            if (Result == null) return;
+            if (Result == null || Evaluation != Animator.m_OutputEvaluations) return;
             if (Mode == RootMotionMode.Human) AnimationEvaluation.ApplyHumanRootMotion(Animator, HumanStep, dispatch: !SuppressMovement);
             else if (Mode == RootMotionMode.Compute) AnimationEvaluation.ApplyRootMotion(Animator, Result, Motion, DeltaTime, dispatch: !SuppressMovement);
             else if (!SuppressMovement && ControllerMovement) Animator.m_Player?.ProcessRootMotion();
@@ -927,6 +948,7 @@ namespace Unbound.Runtime.Playables
         {
             var result = Result;
             if (result == null) return;
+            if (live && Evaluation != Animator.m_OutputEvaluations) return;
             Result = null;
             if (!live)
             {
@@ -1092,13 +1114,19 @@ namespace Unbound.Runtime.Playables
         /// with the current weights (6000.0.71f1, tests/projects/animculling humanMixerShape/live
         /// and genericMixerSum/liveCulled). The held tree is evaluated again in replay mode: clips
         /// sample their held time and reuse their last step; no time, event or feet-pivot memory
-        /// advances. An attached controller's pending pose is not retained (unmeasured): those
-        /// Animators keep replaying the last blend and say so.</summary>
+        /// advances. Measured for clip and mixer trees without a controller, through the held
+        /// tree of <see cref="Compat.PlayableCullingHoldsAnimationPlayablesOnly"/>; other trees
+        /// (layer mixers, jobs, plain playables), an attached controller's pose and other
+        /// releases keep replaying the last blend and say so.</summary>
         static void Reblend(Animator animator, CulledPose frame)
         {
-            if (animator.m_Player != null || Of(animator) is not { } outputs || animator.StreamBindings is not { } bindings)
+            if (Of(animator) is not { } outputs || animator.StreamBindings is not { } bindings) return;
+            bool measured = Compat.PlayableCullingHoldsAnimationPlayablesOnly && animator.m_Player == null;
+            foreach (var output in outputs)
+                if (!output.Destroyed && output.Source != null && !MixerKind.ClipMixerTree(output.Source)) measured = false;
+            if (!measured)
             {
-                Stubs.Ignored("Animator visibility return with an attached controller after mixer weights changed",
+                Stubs.Ignored("Animator visibility return after mixer weights changed (attached controller, other playables or unmeasured release)",
                     "replays the pose and root motion blended with the weights of the last evaluation");
                 return;
             }

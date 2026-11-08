@@ -338,6 +338,10 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>How many times this Animator's playable outputs were evaluated (deferred writes
+        /// of an older evaluation are dropped).</summary>
+        internal int m_OutputEvaluations;
+
         enum CulledUpdate : byte { None, NotWritten, Skipped }
 
         CulledUpdate m_Culled;
