@@ -572,7 +572,7 @@ namespace Unbound.Runtime
             s_Registered = true;
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.Update.ScriptRunDelayedDynamicFrameRate), RunUpdate);
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.FixedUpdate.ScriptRunDelayedFixedFrameRate), RunFixedUpdate);
-            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.TriggerEndOfFrameCallbacks), RunEndOfFrame);
+            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.TriggerEndOfFrameCallbacks), RunLegacyEndOfFrame);
         }
 
         internal static void NextFrame(Awaitable awaitable, int frame) { EnsureRegistered(); s_NextFrame.Add((awaitable, frame)); }
@@ -601,7 +601,18 @@ namespace Unbound.Runtime
 
         internal static void RunFixedUpdate() => Complete(new List<Awaitable>(s_FixedUpdate));
 
-        internal static void RunEndOfFrame() => Complete(new List<Awaitable>(s_EndOfFrame));
+        static void RunLegacyEndOfFrame()
+        {
+            if (!Compat.RenderingAfterPublicLoop) RunEndOfFrame();
+        }
+
+        internal static void RunEndOfFrame()
+        {
+            if (s_EndOfFrame.Count == 0) return;
+            var due = Playables.Scratch<Awaitable>.Rent(s_EndOfFrame);
+            try { Complete(due); }
+            finally { Playables.Scratch<Awaitable>.Return(due); }
+        }
 
         static void Complete(List<Awaitable> due)
         {

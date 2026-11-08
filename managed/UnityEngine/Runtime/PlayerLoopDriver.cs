@@ -212,7 +212,10 @@ namespace Unbound.Runtime
             // In the measured Editor, these coroutine resumes follow every public loop leaf.
             // They still see the previous rendered-frame count (destroyphases, coreapis).
             if (endOfFrame && UnityEngine.Rendering.OnDemandRendering.RendersThisFrame)
+            {
                 Coroutines.Run(Coroutines.Phase.EndOfFrame);
+                if (Compat.RenderingAfterPublicLoop) AwaitableScheduler.RunEndOfFrame();
+            }
             if (advance)
             {
                 Time.s_RenderedFrameCount++;

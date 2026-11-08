@@ -136,3 +136,12 @@ display. Wayland and mobile background pause behavior are not certified here.
 
 Use the normal record/publish/unbound commands above with `--render-loop` or
 `--focus-loop` and a fresh label. The engine-only gate runs all three captures.
+
+The `--completion-loop` companion adds 44 strict records for
+[Awaitable.EndOfFrameAsync](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Awaitable.EndOfFrameAsync.html).
+The 6000.0 API promises end-of-frame completion. In two identical windowed
+6000.0.71f1 captures, completion follows rendering and EOF coroutines. With
+OnDemandRendering interval two, both kinds of EOF wait span skipped screen
+frames. The scheduler uses the same release-specific frame completion mechanism
+as rendering and reuses its completion snapshot. The existing rendering/focus
+and destruction references are unchanged.

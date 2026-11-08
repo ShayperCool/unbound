@@ -11,7 +11,7 @@ public static class ProbeRunner
     static ProbeRunner()
     {
         if (typeof(Camera).Assembly.GetType("Unbound.Runtime.FrameBuilder") != null) return;
-        if (Environment.GetEnvironmentVariable("DESTROY_PHASES_OUT") == null && Environment.GetEnvironmentVariable("RENDER_LOOP_OUT") == null && Environment.GetEnvironmentVariable("FOCUS_LOOP_OUT") == null) return;
+        if (Environment.GetEnvironmentVariable("DESTROY_PHASES_OUT") == null && Environment.GetEnvironmentVariable("RENDER_LOOP_OUT") == null && Environment.GetEnvironmentVariable("FOCUS_LOOP_OUT") == null && Environment.GetEnvironmentVariable("COMPLETION_LOOP_OUT") == null) return;
         if (SessionState.GetBool("DestroyPhases.finished", false))
         {
             EditorApplication.delayCall += () => EditorApplication.Exit(0);
@@ -63,7 +63,7 @@ public static class ProbeRunner
             if (FocusLoopProbe.Finished && focusWindow != null && !focusWindow.HasExited) focusWindow.Kill();
         }
         if (EditorApplication.isPaused) EditorApplication.isPaused = false;
-        if (!EditorApplication.isPlaying || !(DestroyPhases.Finished || RenderLoopProbe.Finished || FocusLoopProbe.Finished)) return;
+        if (!EditorApplication.isPlaying || !(DestroyPhases.Finished || RenderLoopProbe.Finished || FocusLoopProbe.Finished || CompletionLoopProbe.Finished)) return;
         SessionState.SetBool("DestroyPhases.finished", true);
         EditorApplication.ExitPlaymode();
     }

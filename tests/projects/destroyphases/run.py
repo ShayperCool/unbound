@@ -86,14 +86,15 @@ def main():
     modes = p.add_mutually_exclusive_group()
     modes.add_argument('--render-loop', action='store_true')
     modes.add_argument('--focus-loop', action='store_true')
+    modes.add_argument('--completion-loop', action='store_true')
     p.add_argument('--repeat', choices=('native1', 'native2'), default='native1')
     args = p.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
     work.mkdir(parents=True, exist_ok=True)
-    companion = args.render_loop or args.focus_loop
-    output_env = 'FOCUS_LOOP_OUT' if args.focus_loop else ('RENDER_LOOP_OUT' if args.render_loop else 'DESTROY_PHASES_OUT')
-    reference = PROBE / 'Reference' / ('unity-' + args.release + ('.focusloop' if args.focus_loop else ('.renderloop' if args.render_loop else '')) + ('.txt' if companion else '.jsonl'))
+    companion = args.render_loop or args.focus_loop or args.completion_loop
+    output_env = 'COMPLETION_LOOP_OUT' if args.completion_loop else 'FOCUS_LOOP_OUT' if args.focus_loop else ('RENDER_LOOP_OUT' if args.render_loop else 'DESTROY_PHASES_OUT')
+    reference = PROBE / 'Reference' / ('unity-' + args.release + ('.completionloop' if args.completion_loop else '.focusloop' if args.focus_loop else ('.renderloop' if args.render_loop else '')) + ('.txt' if companion else '.jsonl'))
     if args.mode in ('editor', 'create'):
         out = work / args.repeat
         project = work / 'projects' / args.repeat
