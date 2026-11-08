@@ -37,7 +37,13 @@ Both raw runs and their full comparison remain in the run cache.
 ```sh
 python3 tests/projects/mixersuspend/Diagnostics/completion-clocks-v2/run.py --release 6000.0.71f1 --work "$work/native-a"
 python3 tests/projects/mixersuspend/Diagnostics/completion-clocks-v2/run.py --release 6000.0.71f1 --work "$work/native-b"
-python3 tests/projects/mixersuspend/compare.py --release 6000.0.71f1 --rate 48000 --exact --reference "$work/native-a/capture" --candidate "$work/native-b/capture" --report "$work/agreement.jsonl.gz"
+python3 - "$work/native-a/capture" "$work/native-b/capture" "$work/agreement.jsonl.gz" <<'PYTHON'
+from pathlib import Path
+import sys
+sys.path.insert(0, 'tests/projects/mixersuspend')
+from compare import compare
+raise SystemExit(bool(compare(*map(Path, sys.argv[1:]), exact=True, batch=True)))
+PYTHON
 ```
 
 The GPU Editor launcher supervises each process. Missing or failed captures remain
