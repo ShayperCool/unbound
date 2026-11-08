@@ -3,6 +3,8 @@
 //! (each also warns when it loads), with the files that hold them.
 #[path = "doctor_fields.rs"]
 mod fields;
+#[path = "doctor_lighting.rs"]
+mod lighting;
 
 use crate::ProjectArgs;
 use anyhow::{Context, Result};
@@ -25,8 +27,8 @@ const RENDERING_LIMITATIONS: &[&str] = &[
 const DATA_KEYS: &[&str] = &["m_OcclusionCullingData", "m_NavMeshData"];
 
 /// Classes whose documents the managed side checks value by value (`ClassCoverage.Report`):
-/// Sprite (213) layouts, LightingSettings (850595691) features Unbound does not draw.
-const CHECKED_CLASSES: &[i32] = &[213, 850595691];
+/// Sprite (213) layouts. Lighting Settings are checked together with scenes by the field audit.
+const CHECKED_CLASSES: &[i32] = &[213];
 
 /// The objects of one class in the project's files.
 #[derive(Default)]
@@ -322,6 +324,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             "analysisSeconds": {"project": project_seconds, "database": database_seconds, "inventory": inventory_seconds, "messages": message_seconds, "serializedFields": fields_seconds, "settings": settings_start.elapsed().as_secs_f64(), "total": start.elapsed().as_secs_f64()},
             "hasTable": coverage.has_table,
             "classes": classes,
+            "realtimeGI": field_coverage.realtime_gi,
             "serializedFields": field_coverage,
             "importerFields": settings_coverage.importer_fields,
             "projectSettingsFields": settings_coverage.project_settings_fields,
@@ -575,7 +578,8 @@ mod tests {
             "Assets/a.lighting",
             &mut found,
         );
-        assert_eq!(found[&850595691].documents["Assets/a.lighting"], lighting);
+        assert!(found[&850595691].documents.is_empty());
+        assert!(found[&850595691].keys.contains("m_EnableRealtimeLightmaps"));
         assert!(found[&28].documents.is_empty());
     }
 }

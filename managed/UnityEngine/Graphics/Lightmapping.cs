@@ -137,10 +137,9 @@ namespace UnityEngine
             }
             if (file != null && root.TryGetProperty("renderers", out var renderers))
             {
-                int realtime = 0;
+                int realtime = RealtimeContributors(root);
                 foreach (var r in renderers.EnumerateArray())
                 {
-                    if (IsLightmapIndex(r.GetProperty("indexDynamic").GetInt32())) realtime++;
                     var target = Find(file, r);
                     if (target is Terrain terrain)
                     {
@@ -195,6 +194,15 @@ namespace UnityEngine
         /// <summary>A lightmap index that names a lightmap (0xFFFE and 0xFFFF name none).</summary>
         static bool IsLightmapIndex(int index) => index >= 0 && index < 0xFFFE;
 
+        internal static int RealtimeContributors(JsonElement root)
+        {
+            int count = 0;
+            if (root.TryGetProperty("renderers", out var renderers))
+                foreach (var renderer in renderers.EnumerateArray())
+                    if (IsLightmapIndex(renderer.GetProperty("indexDynamic").GetInt32())) count++;
+            return count;
+        }
+
         static readonly HashSet<string> s_RealtimeWarned = new HashSet<string>(StringComparer.Ordinal);
 
         /// <summary>Enlighten Realtime Global Illumination precomputed into a scene's lighting
@@ -209,7 +217,7 @@ namespace UnityEngine
             }
             Debug.LogWarning($"Unbound: {scene} has Enlighten Realtime Global Illumination precomputed for {renderers} renderers " +
                 "(LightingSettings.realtimeGI): its realtime lightmaps are not drawn, so realtime lights add no bounced light and the " +
-                "environment no realtime indirect light. `unbound doctor` lists the Lighting Settings that enable it.");
+                "environment no realtime indirect light. `unbound doctor` lists affected scenes and their Lighting Settings.");
         }
 
         /// <summary>The scene object an entry is of: by its file id, or (in a prefab instance) by

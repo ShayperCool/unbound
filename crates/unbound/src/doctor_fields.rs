@@ -63,11 +63,14 @@ pub(super) struct Report {
     incomplete: Vec<Json>,
     objects: usize,
     dependencies: Vec<Json>,
+    #[serde(skip_serializing)]
+    pub realtime_gi: Vec<super::lighting::Entry>,
 }
 
 impl Report {
     pub(super) fn print(&self) {
         self.print_named("Serialized fields");
+        super::lighting::print(&self.realtime_gi);
     }
 
     fn print_named(&self, title: &str) {
@@ -103,6 +106,7 @@ struct ReaderResult {
     consumed: BTreeSet<String>,
     error: Option<String>,
     dependency: Option<String>,
+    lighting: Option<super::lighting::Input>,
 }
 
 fn paths(value: &Value, prefix: &str, out: &mut BTreeSet<String>) {
@@ -246,6 +250,7 @@ pub(super) fn report(
     supported: &BTreeSet<i32>,
 ) -> Result<Report> {
     let mut report = Report::default();
+    let mut lighting = super::lighting::Inventory::default();
     let mut fields = BTreeMap::new();
     let db = project.asset_db();
     let mut assets: Vec<_> = db.iter().filter(|a| !a.is_folder).collect();
@@ -290,12 +295,21 @@ pub(super) fn report(
             results.len() == documents.len(),
             "field reader omitted an object"
         );
-        for ((doc, mut result), (native, _)) in original.into_iter().zip(results).zip(native_reads)
+        for ((doc, mut result), (native, file_guid)) in
+            original.into_iter().zip(results).zip(native_reads)
         {
             anyhow::ensure!(
                 doc.file_id == result.file_id,
                 "field reader reordered objects"
             );
+            if let Some(input) = result.lighting {
+                let guid = if file_guid.is_empty() {
+                    asset.guid.to_string()
+                } else {
+                    format!("{}:{file_guid}", asset.guid)
+                };
+                lighting.add(&asset.path, &guid, doc.file_id, input);
+            }
             result.consumed.extend(native.paths());
             if let Some(detail) = result.dependency {
                 report.dependencies.push(json!({"asset": asset.path, "fileId": doc.file_id, "typeName": doc.type_name, "detail": detail}));
@@ -308,6 +322,7 @@ pub(super) fn report(
         }
     }
     finish(&mut report, fields);
+    report.realtime_gi = lighting.report(project, runtime)?;
     Ok(report)
 }
 

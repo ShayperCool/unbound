@@ -168,8 +168,8 @@ namespace Unbound.Runtime
             public List<string> Referenced { get; set; }
             /// <summary>The documents of the classes checked value by value, by file: Sprite
             /// (213) for the same layout checks used at load (the doctor does not resolve
-            /// textures or evaluate their imported dimensions), LightingSettings (850595691) for
-            /// <see cref="LightingProblems"/>.</summary>
+            /// textures or evaluate their imported dimensions). Lighting Settings are checked with
+            /// their scene references by the field audit.</summary>
             public Dictionary<string, string> Documents { get; set; }
         }
 
@@ -215,7 +215,7 @@ namespace Unbound.Runtime
                     return false;
                 }
                 var (reading, detail) = Classify(f.ClassId, HasData, release);
-                Func<YNode, string> check = f.ClassId == 213 ? SpriteProblem : f.ClassId == LightingSettingsId ? LightingProblems : null;
+                Func<YNode, string> check = f.ClassId == 213 ? SpriteProblem : null;
                 if (check != null && f.Documents != null)
                 {
                     // Each problem once, with the objects that have it.
@@ -268,22 +268,11 @@ namespace Unbound.Runtime
             return report;
         }
 
-        const int LightingSettingsId = 850595691;
-
         static string SpriteProblem(YNode body)
         {
             Sprite.ValidateSerialized(body);
             return null;
         }
-
-        /// <summary>What Unbound does not draw of a Lighting Settings asset: Enlighten Realtime
-        /// Global Illumination, once a scene that uses the settings is precomputed (each such
-        /// scene also warns when it loads, see BakedLighting). The other settings are bake inputs
-        /// that change nothing drawn in Play mode.</summary>
-        internal static string LightingProblems(YNode body) =>
-            body.Bool("m_EnableRealtimeLightmaps")
-                ? "Enlighten Realtime Global Illumination (realtimeGI) is enabled: Unbound does not draw realtime lightmaps (the bounced light of realtime lights, realtime environment lighting) of scenes precomputed with it"
-                : null;
 
         /// <summary>Whether objects of a class can be in scenes, prefabs or assets: not a
         /// serialization placeholder (no base: `int`, `Vector3f`), not a project settings manager

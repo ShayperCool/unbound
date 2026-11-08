@@ -284,10 +284,12 @@ namespace UnityEngine
 
         /// <summary>The asset's values as written (the Editor clamped them when it wrote them).
         /// Keys an older serializedVersion lacks keep the defaults.</summary>
+        internal static bool ReadRealtimeGI(YNode body, bool fallback = false) => body.Bool("m_EnableRealtimeLightmaps", fallback);
+
         void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_State.BakedGI = body.Bool("m_EnableBakedLightmaps", m_State.BakedGI);
-            m_State.RealtimeGI = body.Bool("m_EnableRealtimeLightmaps", m_State.RealtimeGI);
+            m_State.RealtimeGI = ReadRealtimeGI(body, m_State.RealtimeGI);
             m_State.RealtimeEnvironmentLighting = body.Bool("m_RealtimeEnvironmentLighting", m_State.RealtimeEnvironmentLighting);
             m_State.BounceScale = body.Float("m_BounceScale", m_State.BounceScale);
             m_State.AlbedoBoost = body.Float("m_AlbedoBoost", m_State.AlbedoBoost);

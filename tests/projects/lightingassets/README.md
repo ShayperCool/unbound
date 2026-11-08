@@ -61,7 +61,8 @@ keyword sets (a keyword of another pass, two keywords of one `multi_compile` set
 checks the shader's whole keyword space (`compare.py` RESIDUALS). Frames: the lit and
 `realtimeoff-red` frames within a mean difference of 0.25 (limit 0.5); `realtime-red` and
 `realtime-blue` differ (Unbound does not draw Enlighten Realtime GI and warns once per scene;
-`unbound doctor` lists Lighting Settings that enable it).
+`unbound doctor` lists scenes whose loaded LightingData has realtime lightmap contributors,
+with their referenced Lighting Settings. Settings enabled without such output are informational).
 
 ## Running
 
@@ -77,3 +78,16 @@ python3 tests/projects/lightingassets/run.py gate --label gate1       # the land
 `gate` runs `$UNBOUND_CLI` (else `$UNBOUND`, else `target/release/unbound`) on a copy of the
 project and compares with `Reference/unity-<release>/`. Run output goes to
 `$XDG_CACHE_HOME/unbound/validation/runs/lightingassets/<label>/`.
+
+## Doctor runtime-impact decision (Q136)
+
+Unity 6000.0's [Enlighten workflow](https://docs.unity3d.com/6000.0/Documentation/Manual/realtime-gi-using-enlighten.html)
+says runtime indirect lighting uses precomputed visibility information.
+[LightingSettings.realtimeGI](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LightingSettings-realtimeGI.html)
+enables the system for the scene, but does not itself supply that information. The capture above
+shows settings edits do not replace lighting output. Doctor therefore checks the scene's actual
+LightingData reference and its dynamic lightmap contributors, using the runtime readers. It keeps
+scenes with precomputed output unsupported even if their settings were changed after the bake.
+Unassigned settings and scenes with the switch on but no output are informational. Broken
+references remain incomplete checks. This is a static inventory of serialized scene references;
+lighting data assigned later by game code is outside its scope.

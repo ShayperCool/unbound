@@ -27,6 +27,16 @@ namespace Unbound.Runtime
             public List<string> Consumed { get; set; } = new List<string>();
             public string Error { get; set; }
             public string Dependency { get; set; }
+            public LightingInput Lighting { get; set; }
+        }
+
+        internal sealed class LightingInput
+        {
+            public bool? RealtimeGI { get; set; }
+            public string DataGuid { get; set; }
+            public long DataId { get; set; }
+            public string SettingsGuid { get; set; }
+            public long SettingsId { get; set; }
         }
 
         sealed class References : IReferenceResolver
@@ -62,6 +72,8 @@ namespace Unbound.Runtime
                     ReaderFieldSchema.Consume(body, ReaderFieldSchema.Fields(owner, method, parameters, nodeParameter));
                 try
                 {
+                    if (doc.Context == null && doc.ClassId == 850595691)
+                        result.Lighting = new LightingInput { RealtimeGI = LightingSettings.ReadRealtimeGI(body) };
                     if (doc.Context == "projectSettings")
                     {
                         if (doc.ClassId == 55) Schema(typeof(Physics), nameof(Physics.ReadSettings), 1);
@@ -103,6 +115,9 @@ namespace Unbound.Runtime
                             Schema(typeof(RenderSettings), nameof(RenderSettings.SceneLoaded), 3, 1);
                             break;
                         case 157:
+                            var lighting = SceneSettings.LightingReferences(body);
+                            result.Lighting = new LightingInput { DataGuid = lighting.Data.Guid, DataId = lighting.Data.FileId,
+                                SettingsGuid = lighting.Settings.Guid, SettingsId = lighting.Settings.FileId };
                             Schema(typeof(SceneSettings), nameof(SceneSettings.LightingReferences), 1);
                             break;
                         case 196:

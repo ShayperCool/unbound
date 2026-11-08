@@ -95,6 +95,9 @@ public static unsafe class Entry
                     ?? throw new ArgumentException("empty prepare-field-coverage request");
                 FieldCoverageHost.Prepare(setup);
                 return "{}";
+            case "realtime-gi-contributors":
+                using (var lighting = JsonDocument.Parse(body.ToArray()))
+                    return JsonSerializer.Serialize(UnityEngine.BakedLighting.RealtimeContributors(lighting.RootElement), Json);
             case "field-coverage":
                 var fields = JsonSerializer.Deserialize<List<Unbound.Runtime.FieldCoverage.Input>>(body, Json)
                     ?? throw new ArgumentException("empty field-coverage request");

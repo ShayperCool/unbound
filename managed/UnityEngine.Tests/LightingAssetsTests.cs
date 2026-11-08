@@ -403,25 +403,33 @@ LightingSettings:
         }
 
         [Fact]
-        public void TheDoctorListsSettingsThatEnableRealtimeGI()
+        public void TheDoctorChecksSettingsTogetherWithSceneLightingData()
         {
-            ClassCoverage.Entry Listed(string text, string other) => Assert.Single(ClassCoverage.Report("6000.0.71f1", new[]
+            var coverage = ClassCoverage.Report("6000.0.71f1", new[] {
+                new ClassCoverage.Found { ClassId = 850595691, TypeName = "LightingSettings" },
+                new ClassCoverage.Found { ClassId = 200, TypeName = "ShaderVariantCollection" },
+            });
+            Assert.All(coverage.Classes, entry => Assert.Equal("Read", entry.Reading));
+            JsonElement Body(string text)
             {
-                new ClassCoverage.Found { ClassId = 850595691, TypeName = "LightingSettings", Keys = new List<string> { "m_Name", "m_EnableRealtimeLightmaps" },
-                    Documents = new Dictionary<string, string> { ["Assets/Scenes/A.lighting"] = text, ["Assets/Scenes/B.lighting"] = other } },
-            }).Classes);
-            string off = k_Custom.Replace("m_EnableRealtimeLightmaps: 1", "m_EnableRealtimeLightmaps: 0");
-            var realtime = Listed(k_Custom, k_Custom);
-            Assert.Equal("Unsupported", realtime.Reading);
-            // The reason once, after the objects that have it.
-            Assert.StartsWith("Assets/Scenes/A.lighting fileID 4890085278179872738, Assets/Scenes/B.lighting fileID 4890085278179872738: Enlighten Realtime Global Illumination", realtime.Detail);
-            Assert.Single(System.Text.RegularExpressions.Regex.Matches(realtime.Detail, "Realtime Global Illumination"));
-            Assert.DoesNotContain("B.lighting", Listed(k_Custom, off).Detail);
-            Assert.Equal("Read", Listed(off, off).Reading);
-            Assert.Equal("Read", Assert.Single(ClassCoverage.Report("6000.0.71f1", new[]
-            {
-                new ClassCoverage.Found { ClassId = 200, TypeName = "ShaderVariantCollection", Keys = new List<string> { "m_Name", "m_Shaders" } },
-            }).Classes).Reading);
+                using var document = JsonDocument.Parse(text);
+                return document.RootElement.Clone();
+            }
+            var results = FieldCoverage.Report(new List<FieldCoverage.Input> {
+                new FieldCoverage.Input { ClassId = 850595691, FileId = 1, Body = Body("{\"m_EnableRealtimeLightmaps\":\"1\"}") },
+                new FieldCoverage.Input { ClassId = 850595691, FileId = 2, Body = Body("{}") },
+                new FieldCoverage.Input { ClassId = 157, FileId = 3, Body = Body("{\"m_LightingDataAsset\":{\"fileID\":\"42\",\"guid\":\"abc\"},\"m_LightingSettings\":{\"fileID\":\"1\"}}") },
+            });
+            Assert.All(results, result => Assert.Null(result.Error));
+            Assert.True(results[0].Lighting.RealtimeGI);
+            Assert.False(results[1].Lighting.RealtimeGI);
+            Assert.Contains("m_EnableRealtimeLightmaps", results[0].Consumed);
+            Assert.Equal("abc", results[2].Lighting.DataGuid);
+            Assert.Equal(42, results[2].Lighting.DataId);
+            Assert.Null(results[2].Lighting.SettingsGuid);
+            Assert.Equal(1, results[2].Lighting.SettingsId);
+            Assert.Equal(2, BakedLighting.RealtimeContributors(LightingData(
+                Renderer(1, -1) + "," + Renderer(2, 0) + "," + Renderer(3, 65533) + "," + Renderer(4, 65534) + "," + Renderer(5, 65535))));
         }
 
         // ---------------------------------------------------------------- ShaderVariantCollection
