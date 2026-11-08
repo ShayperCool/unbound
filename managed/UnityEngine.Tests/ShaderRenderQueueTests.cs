@@ -77,9 +77,9 @@ namespace UnityEngine.Tests
             return shader;
         }
 
-        /// <summary>Source whose first Queue text is Geometry+7 (2007), a queue no declaration
-        /// below gives: the answer while the selection is unknown.</summary>
-        const string Decoy = "// \"Queue\"=\"Geometry+7\"\nSubShader { Pass { } }";
+        /// <summary>Source whose first SubShader Queue tag is Geometry+7 (2007), a queue no
+        /// declaration below gives: the answer while the selection is unknown.</summary>
+        const string Decoy = "SubShader { Tags { \"Queue\"=\"Geometry+7\" } Pass { } }";
 
         static int Hits(string member) =>
             Stubs.HitReport().Where(h => h.Key == member).Select(h => h.Value).FirstOrDefault();
@@ -173,6 +173,22 @@ namespace UnityEngine.Tests
                 Assert.Equal(want, ShaderLab.QueueTag(value));
             }
             Assert.Equal(2001, ShaderLab.Queue("SubShader { Tags { \"Queue\" = \"2001\" } Pass { } }"));
+        }
+
+        /// <summary>The source fallback reads SubShader Tags only: a Pass's `Queue` (URP Simple
+        /// Lit's Universal2D pass) is no SubShader queue, nor is text in comments, strings or
+        /// programs; Stencil's `Pass Replace` opens no pass.</summary>
+        [Fact]
+        public void TheSourceQueueIsTheFirstSubShaderTag()
+        {
+            Assert.Equal(2000, ShaderLab.Queue("SubShader { Tags { \"RenderType\" = \"Opaque\" } Pass { Tags { \"LightMode\" = \"Universal2D\" \"Queue\" = \"Transparent\" } } }"));
+            Assert.Equal(2450, ShaderLab.Queue(
+                "Shader \"A\" { Properties { _Q(\"Queue\", Float) = 0 } // \"Queue\" = \"Overlay\"\n" +
+                "SubShader { HLSLINCLUDE struct S { int q; }; static const char* t = \"\\\"Queue\\\" = \\\"Overlay\\\"\"; ENDHLSL\n" +
+                "Pass { Stencil { Ref 1 Pass Replace } Tags { \"Queue\" = \"Transparent\" } }\n" +
+                "Tags { \"Queue\" = \"AlphaTest\" } } }"));
+            Assert.Equal(3000, ShaderLab.Queue("SubShader { Tags { \"Queue\"=\"Transparent\" \"RenderType\"=\"Transparent\" } }"));
+            Assert.Equal(2000, ShaderLab.Queue("Shader \"B\" { }"));
         }
 
         /// <summary>A value of no documented form keeps Geometry and says so; Unity's answer for

@@ -11,7 +11,10 @@ namespace Unbound.Runtime
     internal static class ShaderLab
     {
         static readonly Regex s_Name = new Regex("^\\s*Shader\\s+\"([^\"]+)\"", RegexOptions.Multiline);
-        static readonly Regex s_Queue = new Regex("\"Queue\"\\s*=\\s*\"([^\"]*)\"");
+        // What the SubShader Queue scan reads: strings, comments and program blocks (skipped
+        // whole), words, braces and `=`.
+        static readonly Regex s_QueueScan = new Regex(
+            @"""(?:\\.|[^""\\])*""|/\*[\s\S]*?\*/|//[^\r\n]*|\b(?:HLSL|CG|GLSL)(?:PROGRAM|INCLUDE)\b[\s\S]*?\bEND(?:HLSL|CG|GLSL)\b|[A-Za-z_]\w*|[{}=]");
         // A named queue with an optional signed offset, or a queue number.
         static readonly Regex s_QueueValue = new Regex(@"^(?:(?<name>[A-Za-z]+)(?:\s*(?<sign>[+-])\s*(?<offset>\d+))?|(?<number>\d+))$");
         static readonly Regex s_Property = new Regex(
@@ -68,15 +71,52 @@ namespace Unbound.Runtime
         }
 
         /// <summary>
-        /// The first `"Queue"="…"` text anywhere in a source (2000 without one), as a render
-        /// queue. A fallback only: the text may be in a comment, a string, a pass, another
-        /// pipeline's SubShader or one a LOD limit skips. <see cref="UnityEngine.Shader.renderQueue"/>
-        /// answers from the selected SubShader's declared tag whenever that is known.
+        /// The first SubShader `Queue` tag of a source (2000 without one), as a render queue:
+        /// a `Tags` block directly in a SubShader, not one of a Pass (Queue is a SubShader tag;
+        /// URP's Simple Lit tags its Universal2D pass "Transparent", and its materials are
+        /// Geometry in the Unity 6000.0.71f1 Editor, tests/projects/urp ssao_lightmap). A fallback
+        /// only: the SubShader may be another pipeline's or one a LOD limit skips.
+        /// <see cref="UnityEngine.Shader.renderQueue"/> answers from the selected SubShader's
+        /// declared tag whenever that is known.
         /// </summary>
         internal static int Queue(string source)
         {
-            var m = s_Queue.Match(source);
-            return m.Success ? QueueTag(m.Groups[1].Value) : 2000;
+            // The kinds of the open blocks (the word before each `{`).
+            var blocks = new List<string>();
+            string word = null;
+            bool key = false, equals = false;
+            for (var m = s_QueueScan.Match(source); m.Success; m = m.NextMatch())
+            {
+                var token = m.Value;
+                bool inSubShaderTags = blocks.Count >= 2 && blocks[^1] == "Tags" && blocks[^2] == "SubShader";
+                if (token[0] == '"')
+                {
+                    if (inSubShaderTags && key && equals) return QueueTag(token.Substring(1, token.Length - 2));
+                    key = inSubShaderTags && !equals && token == "\"Queue\"";
+                    equals = false;
+                    word = null;
+                    continue;
+                }
+                if (token == "=")
+                {
+                    equals = key;
+                    continue;
+                }
+                key = equals = false;
+                if (token == "{")
+                {
+                    blocks.Add(word ?? "");
+                    word = null;
+                }
+                else if (token == "}")
+                {
+                    if (blocks.Count > 0) blocks.RemoveAt(blocks.Count - 1);
+                    word = null;
+                }
+                else if (token[0] != '/')
+                    word = token;
+            }
+            return 2000;
         }
 
         static readonly Regex s_Attribute = new Regex("\\[\\s*([^\\]]*?)\\s*\\]");
