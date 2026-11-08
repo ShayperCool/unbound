@@ -21,6 +21,7 @@ REPO = PROBE.parents[2]
 sys.path.insert(0, str(PROBE.parents[1]))
 from probe_paths import cache_artifact_path, reference_root, run_root, unity_version  # noqa: E402
 import editor_runner  # noqa: E402
+import warmup  # noqa: E402
 
 HEAVY = Path.home()/'.cache/compat/with-heavy-job'
 IMAGES = ['lit-authored.png', 'lit-edited.png', 'lit-assigned.png', 'realtime-red.png', 'realtime-blue.png',
@@ -111,8 +112,11 @@ def gate(label, frames):
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     print(f'engine exit {code}; log {out}/engine.log')
-    return subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference_root(PROBE)), str(out/'engine'),
+    code = subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference_root(PROBE)), str(out/'engine'),
                            '--log', str(out/'engine.log')]).returncode
+    for mode in warmup.MODES:
+        code |= warmup.gate(sys.modules[__name__], label+'-cold-'+mode, mode)
+    return code
 
 
 def main():
@@ -121,7 +125,13 @@ def main():
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label', default='current')
     parser.add_argument('--frames', type=int, default=400)
+    parser.add_argument('--warmup-mode', choices=('state', *warmup.MODES))
     args = parser.parse_args()
+    if args.warmup_mode:
+        if args.mode == 'record': return warmup.record(sys.modules[__name__], args.label, args.warmup_mode)
+        if args.mode == 'publish': return warmup.publish(sys.modules[__name__], args.labels, args.warmup_mode)
+        if args.mode == 'gate' and args.warmup_mode != 'state': return warmup.gate(sys.modules[__name__], args.label, args.warmup_mode)
+        parser.error('use record/publish for state mode; setup does not take --warmup-mode')
     if args.mode == 'setup':
         return setup(args.label)
     if args.mode == 'record':

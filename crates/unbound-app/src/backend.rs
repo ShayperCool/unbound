@@ -7,11 +7,14 @@ use crate::render::executor::{UnityRenderer, Upload};
 use crate::shaderlab::ShaderIndex;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use unbound_runtime::render_protocol::{RenderBackend, commands::Command, owned};
+use unbound_runtime::render_protocol::{
+    RenderBackend, ShaderWarmupRequest, commands::Command, owned,
+};
 
 enum Pending {
     Upload(Upload),
     Commands(Vec<Command>),
+    Warmup(ShaderWarmupRequest),
 }
 
 #[derive(Default)]
@@ -78,6 +81,11 @@ impl GpuBackend {
             match pending {
                 Pending::Upload(u) => renderer.apply(u),
                 Pending::Commands(c) => renderer.execute(c),
+                Pending::Warmup(request) => {
+                    renderer
+                        .shader_warmup(request)
+                        .unwrap_or_else(|why| panic!("startup shader warm-up failed: {why}"));
+                }
             }
         }
         inner.renderer = Some(renderer);
@@ -170,7 +178,7 @@ impl RenderBackend for GpuBackend {
                     Command::RenderPipeline(tag) => Some(tag.as_str()),
                     _ => None,
                 }),
-                Pending::Upload(_) => None,
+                Pending::Upload(_) | Pending::Warmup(_) => None,
             })
             .next()
             .unwrap_or("")
@@ -178,6 +186,19 @@ impl RenderBackend for GpuBackend {
         let resolver = inner.resolver();
         resolver.set_pipeline(&tag);
         Ok(resolver.describe(shader))
+    }
+
+    fn shader_warmup(&self, request: ShaderWarmupRequest) -> Result<String, String> {
+        let mut inner = self.inner.lock().unwrap();
+        if let Some(renderer) = inner.renderer.as_mut() {
+            return renderer.shader_warmup(request);
+        }
+        if request.stats {
+            return Err("shader statistics require an active renderer".into());
+        }
+        // Like uploads and draws, preparation waits for the device and keeps submission order.
+        inner.pending.push(Pending::Warmup(request));
+        Ok("{}".into())
     }
 
     fn kernel_threads(
@@ -241,6 +262,37 @@ SubShader {
             .iter()
             .map(|p| p["name"].as_str().unwrap().to_string())
             .collect()
+    }
+
+    #[test]
+    fn startup_warmup_keeps_command_order_and_does_not_fake_statistics() {
+        let backend = GpuBackend::new();
+        backend.submit_commands(vec![Command::ColorSpace(1)]);
+        backend
+            .shader_warmup(ShaderWarmupRequest {
+                shader: "Test/Warm".into(),
+                passes: vec![0],
+                ..Default::default()
+            })
+            .unwrap();
+        assert!(
+            backend
+                .shader_warmup(ShaderWarmupRequest {
+                    stats: true,
+                    ..Default::default()
+                })
+                .is_err()
+        );
+        backend.submit_commands(vec![Command::ColorSpace(0)]);
+        let inner = backend.inner.lock().unwrap();
+        assert!(matches!(
+            &inner.pending[..],
+            [
+                Pending::Commands(_),
+                Pending::Warmup(_),
+                Pending::Commands(_)
+            ]
+        ));
     }
 
     #[test]

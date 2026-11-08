@@ -159,8 +159,13 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       validates explicit per-pass keyword choices, including global/local `multi_compile`,
       `shader_feature`, dynamic branches and placeholders (`lightingassets variant-sets`).
       Built-in shorthand combination restrictions, serialized built-in, surface and fixed-function
-      pass choices remain unmeasured and retain prior validation. Open: WarmUp only counts
-      (variants compile when first drawn).
+      pass choices remain unmeasured and retain prior validation. Collection WarmUp and progressive
+      warm-up prepare GPU programs and pipelines for the current attachments and render state
+      (`lightingassets` cold GPU checks), with no extra program/pipeline creation on the covered
+      first draws. Empty full warm-up and saturating progressive counts match the Editor.
+      Open: Shader.WarmupAllShaders explicitly rejects complete loaded-variant enumeration until
+      built-in and generated pass spaces are supported; later attachment/layout/state changes
+      can still require driver work, as documented for Vulkan/Metal/DX12.
 - [ ] `SystemInfo` answers follow what the renderer does.
 - [ ] `api-gaps` noise: trivial attributes (`JetBrains.Annotations.*`, `ResourcePathAttribute`,
       `CategoryInfoAttribute`, `ShaderKeywordFilter.*`) implemented, so the coverage line counts

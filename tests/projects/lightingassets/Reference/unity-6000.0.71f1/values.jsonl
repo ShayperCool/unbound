@@ -330,4 +330,20 @@
 {"case":"realtime-gi","converged":true}
 {"case":"realtimeoff-api","try":true,"tried":"RealtimeOff","get":"RealtimeOff","forScene":"RealtimeOff","same":true,"bakedGI":false,"realtimeGI":false,"settings":{"name":"RealtimeOff","bakedGI":false,"realtimeGI":false,"realtimeEnvironmentLighting":true,"autoGenerate":false,"mixedBakeMode":2,"albedoBoost":1,"indirectScale":1,"lightmapper":1,"lightmapMaxSize":512,"lightmapResolution":8,"lightmapPadding":2,"lightmapCompression":0,"compressLightmaps":false,"ao":false,"aoMaxDistance":1,"aoExponentIndirect":1,"aoExponentDirect":0,"extractAO":false,"directionalityMode":0,"exportTrainingData":false,"trainingDataDestination":"TrainingData","indirectResolution":2,"sampling":1,"directSampleCount":32,"indirectSampleCount":128,"bounces":2,"maxBounces":2,"russianRouletteStartBounce":2,"minBounces":2,"prioritizeView":true,"filteringMode":0,"denoiserTypeDirect":0,"denoiserTypeIndirect":0,"denoiserTypeAO":0,"filterTypeDirect":0,"filterTypeIndirect":0,"filterTypeAO":0,"filteringGaussianRadiusDirect":1,"filteringGaussianRadiusIndirect":1,"filteringGaussianRadiusAO":1,"filteringGaussRadiusDirect":1,"filteringGaussRadiusIndirect":1,"filteringGaussRadiusAO":1,"filteringAtrousPositionSigmaDirect":0.5,"filteringAtrousPositionSigmaIndirect":2,"filteringAtrousPositionSigmaAO":1,"environmentImportanceSampling":true,"environmentSampleCount":64,"lightProbeSampleCountMultiplier":4,"respectSceneVisibilityWhenBakingGI":false}}
 {"case":"realtimeoff-lightmaps","lightmaps":0,"mode":1,"dir":false,"renderers":[["Cube",-1,-1],["Cube",-1,-1],["Cube",-1,-1],["Plane",-1,-1]],"lights":[["Point Light",4,2,false]]}
+{"case":"shader-warmup","step":"empty","result":null,"state":{"name":"","shaders":0,"variants":0,"warmed":0,"isWarmedUp":false}}
+{"case":"shader-warmup","step":"empty zero","result":true,"state":{"name":"","shaders":0,"variants":0,"warmed":0,"isWarmedUp":false}}
+{"case":"shader-warmup","step":"empty full","result":null,"state":{"name":"","shaders":0,"variants":0,"warmed":0,"isWarmedUp":true}}
+{"case":"shader-warmup","step":"four cold","result":null,"state":{"name":"","shaders":1,"variants":4,"warmed":0,"isWarmedUp":false}}
+{"case":"shader-warmup","step":"negative","result":false,"state":{"name":"","shaders":1,"variants":4,"warmed":0,"isWarmedUp":false}}
+{"case":"shader-warmup","step":"one","result":false,"state":{"name":"","shaders":1,"variants":4,"warmed":1,"isWarmedUp":false}}
+{"case":"shader-warmup","step":"zero","result":false,"state":{"name":"","shaders":1,"variants":4,"warmed":1,"isWarmedUp":false}}
+{"case":"shader-warmup","step":"two","result":false,"state":{"name":"","shaders":1,"variants":4,"warmed":3,"isWarmedUp":false}}
+{"case":"shader-warmup","step":"remaining","result":true,"state":{"name":"","shaders":1,"variants":4,"warmed":4,"isWarmedUp":true}}
+{"case":"shader-warmup","step":"already warm","result":true,"state":{"name":"","shaders":1,"variants":4,"warmed":4,"isWarmedUp":true}}
+{"case":"shader-warmup","step":"remove resets","result":null,"state":{"name":"","shaders":1,"variants":3,"warmed":0,"isWarmedUp":false}}
+{"case":"shader-warmup","step":"full","result":null,"state":{"name":"","shaders":1,"variants":3,"warmed":3,"isWarmedUp":true}}
+{"case":"shader-warmup","step":"add resets","result":null,"state":{"name":"","shaders":1,"variants":4,"warmed":0,"isWarmedUp":false}}
+{"case":"shader-warmup","step":"one before max","result":false,"state":{"name":"","shaders":1,"variants":4,"warmed":1,"isWarmedUp":false}}
+{"case":"shader-warmup","step":"max","result":true,"state":{"name":"","shaders":1,"variants":4,"warmed":4,"isWarmedUp":true}}
+{"case":"shader-warmup","step":"clear","result":null,"state":{"name":"","shaders":0,"variants":0,"warmed":0,"isWarmedUp":false}}
 {"case":"end"}

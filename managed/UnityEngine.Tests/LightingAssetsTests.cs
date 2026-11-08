@@ -23,6 +23,7 @@ namespace Unbound.Tests
 
         public LightingAssetsTests()
         {
+            ShaderWarmup.s_PrepareForTests = (_, _, _) => { };
             ShaderDeclarations.ResetForTests();
             ShaderDeclarations.s_FrameForTests = 1;
             ShaderDeclarations.s_CallForTests = Call;
@@ -30,6 +31,7 @@ namespace Unbound.Tests
 
         public void Dispose()
         {
+            ShaderWarmup.s_PrepareForTests = null;
             ShaderDeclarations.s_CallForTests = null;
             ShaderDeclarations.s_FrameForTests = null;
             ShaderDeclarations.ResetForTests();
@@ -482,6 +484,46 @@ LightingSettings:
             // Not a keyword name either way.
             Assert.True(c.Contains(V(shader, PassType.Normal, "A", "B", "A B")));
             Assert.False(c.Contains(V(shader, PassType.Normal, "A")));
+        }
+
+        [Fact]
+        public void WarmupPreparesOnlyNewVariantsAndSaturatesWithoutOverflow()
+        {
+            var shader = Declared(new string[] { null }, new[] { "A", "B", "C" });
+            var c = new ShaderVariantCollection();
+            Assert.True(c.WarmUpProgressively(1));
+            Assert.False(c.isWarmedUp);
+            c.WarmUp();
+            Assert.True(c.isWarmedUp);
+            foreach (var k in new[] { "A", "B", "C" }) c.Add(V(shader, PassType.Normal, k));
+            var prepared = new List<string>();
+            ShaderWarmup.s_PrepareForTests = (s, p, k) => { Assert.Same(shader, s); Assert.Equal(PassType.Normal, p); prepared.Add(string.Join(" ", k)); };
+            Assert.False(c.WarmUpProgressively(1));
+            Assert.Single(prepared);
+            Assert.True(c.WarmUpProgressively(int.MaxValue));
+            Assert.Equal(3, prepared.Count);
+            Assert.Equal(3, c.warmedUpVariantCount);
+            c.WarmUp();
+            Assert.True(c.WarmUpProgressively(int.MaxValue));
+            Assert.Equal(3, prepared.Count);
+            Assert.True(c.Remove(V(shader, PassType.Normal, "B")));
+            c.WarmUp();
+            Assert.Equal(5, prepared.Count);
+        }
+
+        [Fact]
+        public void FailedPreparationDoesNotClaimACompletedVariant()
+        {
+            var shader = Declared(new string[] { null }, new[] { "A" });
+            var c = new ShaderVariantCollection();
+            c.Add(V(shader, PassType.Normal, "A"));
+            ShaderWarmup.s_PrepareForTests = (_, _, _) => throw new NotSupportedException("unsupported test program");
+            Assert.Throws<NotSupportedException>(() => c.WarmUp());
+            Assert.Equal(0, c.warmedUpVariantCount);
+            Assert.False(c.isWarmedUp);
+            ShaderWarmup.s_PrepareForTests = (_, _, _) => { };
+            c.WarmUp();
+            Assert.True(c.isWarmedUp);
         }
 
         [Fact]

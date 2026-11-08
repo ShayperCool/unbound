@@ -595,8 +595,9 @@ namespace UnityEngine
         public static Matrix4x4 GetGlobalMatrix(string name) => GetGlobalMatrix(PropertyToID(name));
         public static Matrix4x4 GetGlobalMatrix(int nameID) => s_Globals.TryGetValue(nameID, out var v) && v is Matrix4x4 m ? m : Matrix4x4.identity;
 
-        [Unbound.EditorFaithful("no-op is equivalent: warming up only avoids first-use hitches")]
-        public static void WarmupAllShaders() { }
+        [Unbound.Stub]
+        public static void WarmupAllShaders() => throw new NotSupportedException(
+            "Unbound: warming all loaded shader variants is not supported; use ShaderVariantCollection warm-up for explicit variants.");
     }
 
     internal sealed class ShaderPropertyInfo

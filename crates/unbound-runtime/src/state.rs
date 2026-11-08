@@ -398,6 +398,9 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
         "shader-passes" => backend()
             .shader_passes(request)
             .map_err(|e| anyhow::anyhow!("{e}")),
+        "shader-warmup" => backend()
+            .shader_warmup(serde_json::from_str(request)?)
+            .map_err(|e| anyhow::anyhow!("{e}")),
         "compute-kernel-threads" => {
             #[derive(serde::Deserialize)]
             struct Request {

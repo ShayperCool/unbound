@@ -28,6 +28,7 @@ public partial class LightingAssetsProbe : MonoBehaviour
     static void Run()
     {
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LIGHTING_ASSETS_OUT"))) return;
+        if (Environment.GetEnvironmentVariable("SHADER_WARMUP_MODE") == "startup") PrepareStartupWarmup();
         var go = new GameObject("LightingAssetsProbe");
         DontDestroyOnLoad(go);
         go.AddComponent<LightingAssetsProbe>();
@@ -121,6 +122,20 @@ public partial class LightingAssetsProbe : MonoBehaviour
         Directory.CreateDirectory(m_Dir);
         yield return null;
         yield return null;
+        var coldMode = Environment.GetEnvironmentVariable("SHADER_WARMUP_MODE");
+        if (coldMode == "state")
+        {
+            RecordShaderWarmup();
+            Finish();
+            yield break;
+        }
+        if (!string.IsNullOrEmpty(coldMode))
+        {
+            var cold = RecordColdShaderWarmup(coldMode);
+            while (cold.MoveNext()) yield return cold.Current;
+            Finish();
+            yield break;
+        }
         var holder = FindAnyObjectByType<LightingAssetsHolder>();
 
         RecordSceneApi("plain");
@@ -195,6 +210,12 @@ public partial class LightingAssetsProbe : MonoBehaviour
         for (int i = 0; i < 60; i++) yield return null;
         Capture("realtimeoff-red");
 
+        RecordShaderWarmup();
+        Finish();
+    }
+
+    void Finish()
+    {
         File.WriteAllText(Path.Combine(m_Dir, "values.jsonl"), m_Out.ToString() + "{\"case\":\"end\"}\n");
 #if UNITY_EDITOR
         EditorApplication.Exit(0);

@@ -18,14 +18,12 @@ namespace UnityEngine
     /// a null shader is never added, removed or contained.</item>
     /// <item>A shader stays counted after its last variant is removed, until Clear; an asset's
     /// shader that does not load (missing) is counted with its variants.</item>
-    /// <item>Warming up counts variants: WarmUp warms all, WarmUpProgressively(n) n more (none for
-    /// n ≤ 0) and returns whether all are warm (an empty collection: true). isWarmedUp needs at
-    /// least one variant. Any change (an Add or Remove that does something, Clear) makes every
+    /// <item>Warming up prepares and counts variants: WarmUp warms all, WarmUpProgressively(n) n more (none for
+    /// n ≤ 0) and returns whether all are warm (an empty collection: true). WarmUp also marks an empty collection warm. Progressive warm-up leaves an
+    /// empty collection cold. Any change (an Add or Remove that does something, Clear) makes every
     /// variant cold again; a copy (Instantiate) starts cold. Graphics settings' preloaded
     /// collections are not warmed when Play mode starts.</item>
     /// </list>
-    /// Warming up only counts: Unbound compiles a variant when it is first drawn (its compiled
-    /// programs are cached on disk across runs).
     /// </summary>
     [ClassId(200)]
     public sealed partial class ShaderVariantCollection : Object, ISerializedAsset, Instantiation.ICloneable
@@ -53,13 +51,22 @@ namespace UnityEngine
         readonly List<HashSet<Variant>> m_Missing = new List<HashSet<Variant>>();
         int m_VariantCount;
         int m_Warmed;
+        bool m_IsWarmed;
+        (Shader Shader, Variant Variant)[] m_WarmPlan;
+
+        void InvalidateWarmup()
+        {
+            m_Warmed = 0;
+            m_IsWarmed = false;
+            m_WarmPlan = null;
+        }
 
         public ShaderVariantCollection() { }
 
         public int shaderCount => m_Shaders.Count + m_Missing.Count;
         public int variantCount => m_VariantCount;
         public int warmedUpVariantCount => m_Warmed;
-        public bool isWarmedUp => m_VariantCount > 0 && m_Warmed >= m_VariantCount;
+        public bool isWarmedUp => m_IsWarmed;
 
         public bool Add(ShaderVariant variant)
         {
@@ -68,7 +75,7 @@ namespace UnityEngine
             if (!m_Shaders.TryGetValue(shader, out var variants)) m_Shaders[shader] = variants = new HashSet<Variant>();
             if (!variants.Add(Normalize(variant))) return false;
             m_VariantCount++;
-            m_Warmed = 0;
+            InvalidateWarmup();
             return true;
         }
 
@@ -77,7 +84,7 @@ namespace UnityEngine
             var shader = variant.shader;
             if (shader == null || !m_Shaders.TryGetValue(shader, out var variants) || !variants.Remove(Normalize(variant))) return false;
             m_VariantCount--;
-            m_Warmed = 0;
+            InvalidateWarmup();
             return true;
         }
 
@@ -92,15 +99,37 @@ namespace UnityEngine
             m_Shaders.Clear();
             m_Missing.Clear();
             m_VariantCount = 0;
-            m_Warmed = 0;
+            InvalidateWarmup();
         }
 
-        public void WarmUp() => m_Warmed = m_VariantCount;
+        public void WarmUp()
+        {
+            if (m_IsWarmed) return;
+            WarmUpProgressively(int.MaxValue);
+            m_IsWarmed = true;
+        }
 
         public bool WarmUpProgressively(int variantCount)
         {
-            if (variantCount > 0) m_Warmed = Math.Min(m_VariantCount, m_Warmed + variantCount);
-            return m_Warmed >= m_VariantCount;
+            if (m_IsWarmed || m_Warmed >= m_VariantCount) return true;
+            if (variantCount <= 0) return false;
+            if (m_WarmPlan == null)
+            {
+                m_WarmPlan = new (Shader, Variant)[m_VariantCount];
+                int i = 0;
+                foreach (var pair in m_Shaders)
+                    foreach (var variant in pair.Value) m_WarmPlan[i++] = (pair.Key, variant);
+                // Missing asset references occupy the remaining entries and are counted only.
+            }
+            int end = m_Warmed + Math.Min(variantCount, m_VariantCount - m_Warmed);
+            while (m_Warmed < end)
+            {
+                var next = m_WarmPlan[m_Warmed];
+                if (next.Shader != null) ShaderWarmup.Prepare(next.Shader, next.Variant.Pass, next.Variant.Keywords);
+                m_Warmed++;
+            }
+            m_IsWarmed = m_Warmed == m_VariantCount;
+            return m_IsWarmed;
         }
 
         /// <summary>A variant as a query names it: its shader's declared keywords (all non-blank

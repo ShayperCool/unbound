@@ -1,0 +1,10 @@
+{"case":"warmup-cold","step":"before","mode":"collection","result":null,"state":{"name":"","shaders":1,"variants":5,"warmed":0,"isWarmedUp":false}}
+{"case":"warmup-cold","step":"after","mode":"collection","result":null,"state":{"name":"","shaders":1,"variants":5,"warmed":5,"isWarmedUp":true}}
+{"case":"warmup-cold","step":"draw 0","pixels":"3366ccff3366ccff3366ccff3366ccff3366ccff3366ccff3366ccff3366ccff3366ccff3366ccff3366ccff3366ccff3366ccff3366ccff3366ccff3366ccff"}
+{"case":"warmup-cold","step":"draw 1","pixels":"ff66ccffff66ccffff66ccffff66ccffff66ccffff66ccffff66ccffff66ccffff66ccffff66ccffff66ccffff66ccffff66ccffff66ccffff66ccffff66ccff"}
+{"case":"warmup-cold","step":"draw 2","pixels":"3366ffff3366ffff3366ffff3366ffff3366ffff3366ffff3366ffff3366ffff3366ffff3366ffff3366ffff3366ffff3366ffff3366ffff3366ffff3366ffff"}
+{"case":"warmup-cold","step":"draw 3","pixels":"ff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffff"}
+{"case":"warmup-cold","step":"draw instanced","pixels":"9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff"}
+{"case":"warmup-cold","step":"draw standalone instanced","pixels":"9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff"}
+{"case":"warmup-cold","step":"repeat","mode":"collection","result":true,"state":{"name":"","shaders":1,"variants":5,"warmed":5,"isWarmedUp":true}}
+{"case":"end"}

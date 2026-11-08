@@ -630,6 +630,19 @@ pub mod owned {
     }
 }
 
+/// One explicit shader warm-up request, shared by immediate and queued startup execution.
+#[derive(Clone, Debug, Default, serde::Deserialize)]
+pub struct ShaderWarmupRequest {
+    #[serde(default)]
+    pub stats: bool,
+    #[serde(default)]
+    pub shader: String,
+    #[serde(default)]
+    pub passes: Vec<usize>,
+    #[serde(default)]
+    pub keywords: Vec<String>,
+}
+
 /// What executes the protocol. The windowed app installs a GPU renderer; headless runs keep the
 /// default, which only records what it was given.
 pub trait RenderBackend: Send + Sync {
@@ -672,6 +685,10 @@ pub trait RenderBackend: Send + Sync {
     /// A shader's SubShader for the active render pipeline (after its fallbacks) as JSON:
     /// `{ shader, tags, passes: [{ name, tags }] }`.
     fn shader_passes(&self, _shader: &str) -> Result<String, String> {
+        Err("no renderer".into())
+    }
+    /// Prepare shader programs and pipelines, or query their prepared counts (JSON).
+    fn shader_warmup(&self, _request: ShaderWarmupRequest) -> Result<String, String> {
         Err("no renderer".into())
     }
     /// A compute kernel's thread group size: (file, kernel, keywords).

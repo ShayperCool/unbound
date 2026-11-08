@@ -7,6 +7,7 @@ mod compute;
 mod mesh_buffers;
 #[path = "mipmaps.rs"]
 mod mipmaps;
+mod warmup;
 
 use super::{
     compiled,
@@ -2794,6 +2795,43 @@ impl UnityRenderer {
         }
     }
 
+    /// Compile exactly the program a draw would use, including its existing error fallback.
+    fn variant_or_error(
+        &mut self,
+        shader: &str,
+        source: &unbound_shaders::Program,
+        keywords: &[String],
+        linear: bool,
+        layout: &wgpu::BindGroupLayout,
+    ) -> (Option<u32>, bool) {
+        let device = self.device.clone();
+        let id = self.compiled.variant(
+            &device,
+            shader,
+            source,
+            keywords,
+            linear,
+            layout,
+            compiled::VariantUse::Draw,
+        );
+        if id.is_some() {
+            return (id, false);
+        }
+        let error = self.error_program();
+        (
+            self.compiled.variant(
+                &device,
+                crate::materials::ERROR_SHADER_NAME,
+                &error,
+                &[],
+                linear,
+                layout,
+                compiled::VariantUse::Draw,
+            ),
+            true,
+        )
+    }
+
     /// The pipelines, bind groups and uniforms of a draw: one per pass it draws.
     fn plan_draw(
         &mut self,
@@ -2954,9 +2992,10 @@ impl UnityRenderer {
             pad: [0.0; 4],
         });
         let linear = space == 1;
-        let mesh_replay = overrides
-            .iter()
-            .any(|(name, _)| name == "<MeshInstanceBatchLimits>");
+        let mesh_replay = mesh_instance.is_some()
+            || overrides
+                .iter()
+                .any(|(name, _)| name == "<MeshInstanceBatchLimits>");
         let mut globals = self.globals.clone();
         self.globals_index.refresh(&globals);
         for (pass_index, pass) in passes {
@@ -2985,28 +3024,13 @@ impl UnityRenderer {
                         keywords.push("INSTANCING_ON".into());
                         keywords.push(unbound_shaders::MESH_INSTANCE_REPLAY.into());
                     }
-                    let mut id = self.compiled.variant(
-                        &device,
+                    let (id, errored) = self.variant_or_error(
                         &resolved.shader,
                         &pass.program,
                         &keywords,
                         linear,
                         &layout,
                     );
-                    let mut errored = false;
-                    if id.is_none() {
-                        // Unity draws a pass that does not compile with its error shader.
-                        let error = self.error_program();
-                        id = self.compiled.variant(
-                            &device,
-                            crate::materials::ERROR_SHADER_NAME,
-                            &error,
-                            &[],
-                            linear,
-                            &layout,
-                        );
-                        errored = true;
-                    }
                     if let Some(m) = self.materials.get_mut(&draw.material) {
                         m.variants.insert(key, (id, errored));
                     }
@@ -3034,24 +3058,8 @@ impl UnityRenderer {
             } else {
                 (pass.state, pass.stencil_ref)
             };
-            if state.gui_ztest {
-                // Unity's unity_GUIZTestMode: Always over the screen, LessEqual elsewhere.
-                state.ztest = if self.state.overlay { 8 } else { 4 };
-            }
-            if let Some(o) = &self.state.state_override {
-                stencil_ref = apply_override(&mut state, stencil_ref, o);
-            }
-            // A mirrored object (negative scale: its matrix's determinant below zero) turns its
-            // triangles' winding around; Unity culls the other side for it, as for a camera
-            // that inverts culling (the two cancel out).
-            state.wireframe = self.state.wireframe;
-            if self.state.invert_culling != (determinant3(&draw.model) < 0.0) {
-                state.cull = match state.cull {
-                    1 => 2,
-                    2 => 1,
-                    c => c,
-                };
-            }
+            (state, stencil_ref) =
+                self.draw_state(state, stencil_ref, determinant3(&draw.model) < 0.0);
             let key = PipelineKey {
                 state,
                 topology: sub.topology,

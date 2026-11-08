@@ -8,7 +8,15 @@ use std::sync::Arc;
 use unbound_runtime::render_protocol::owned::{Material, PropertyValue};
 use unbound_shaders::{Compiled, Program, Scalar, Settings, ShaderCompiler, TextureDim};
 
+/// A logical instancing variant has an optional raw-buffer form and a mesh replay form.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum VariantUse {
+    Draw,
+    OptionalWarmup,
+}
+
 struct ProgramGpu {
+    shader: String,
     program: Arc<Compiled>,
     /// Where each of the program's uniforms comes from, decided once (see [`Source`]).
     plan: Vec<Source>,
@@ -159,6 +167,17 @@ impl CompiledPrograms {
         }
     }
 
+    /// Diagnostic counts, queried explicitly by the cold shader warm-up probe.
+    pub fn prepared_counts(&self, shader: &str) -> (usize, usize) {
+        let programs = self
+            .programs
+            .iter()
+            .filter(|p| shader.is_empty() || p.shader == shader);
+        programs.fold((0, 0), |(count, pipelines), p| {
+            (count + 1, pipelines + p.pipelines.len())
+        })
+    }
+
     /// The variant of a pass's program a material with `keywords` draws with (compiled on first
     /// use), or `None` when it does not compile (the reason is logged once).
     pub fn variant(
@@ -169,6 +188,7 @@ impl CompiledPrograms {
         keywords: &[String],
         linear: bool,
         main_texture_layout: &wgpu::BindGroupLayout,
+        purpose: VariantUse,
     ) -> Option<u32> {
         let compiler = self.compiler.as_mut()?;
         let failure = (source.clone(), keywords.to_vec(), linear);
@@ -178,6 +198,9 @@ impl CompiledPrograms {
         let program = match compiler.compile(source, keywords, linear) {
             Ok(p) => p,
             Err(e) => {
+                if purpose == VariantUse::OptionalWarmup {
+                    return None;
+                }
                 tracing::warn!(
                     "shader `{shader}` (keywords: {}): a pass does not compile for Unbound, so it draws with the error shader: {e:#}",
                     if keywords.is_empty() {
@@ -291,6 +314,7 @@ impl CompiledPrograms {
             immediate_size: 0,
         });
         let gpu = ProgramGpu {
+            shader: shader.into(),
             plan: program
                 .uniforms
                 .iter()
