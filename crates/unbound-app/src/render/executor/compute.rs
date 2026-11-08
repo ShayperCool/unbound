@@ -2,7 +2,10 @@
 //! their `.compute` files (unbound-shaders), and each dispatch's bindings found by name among its
 //! own properties, then the global ones.
 use super::{Op, UnityRenderer};
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::Arc,
+};
 use unbound_runtime::render_protocol::{
     commands::{self, buffer},
     owned::PropertyValue,
@@ -73,94 +76,180 @@ struct UniformSlot {
     data: Vec<u8>,
 }
 
-/// Dispatches in one submission use distinct uniform slots. Later submissions reuse them;
-/// queue writes stay ordered after the commands that used the preceding contents.
+// Keep recently used resource combinations and repeated-dispatch slots warm. Retirement bounds
+// retained GPU objects by recent work, including workloads whose resource order changes each frame.
+const BINDING_IDLE_FRAMES: u64 = 8;
+
+struct ReuseSlots<T> {
+    submission: u64,
+    next: usize,
+    slots: BTreeMap<usize, (u64, T)>,
+}
+
+impl<T> Default for ReuseSlots<T> {
+    fn default() -> Self {
+        Self {
+            submission: 0,
+            next: 0,
+            slots: BTreeMap::new(),
+        }
+    }
+}
+
+impl<T> ReuseSlots<T> {
+    fn claim(
+        &mut self,
+        submission: u64,
+        frame: u64,
+        distinct: bool,
+        make: impl FnOnce() -> T,
+    ) -> &mut T {
+        if self.submission != submission {
+            self.submission = submission;
+            self.next = 0;
+        }
+        let index = if distinct {
+            let index = self.next;
+            self.next += 1;
+            index
+        } else {
+            0
+        };
+        let slot = self.slots.entry(index).or_insert_with(|| (frame, make()));
+        slot.0 = frame;
+        &mut slot.1
+    }
+
+    fn retire(&mut self, cutoff: u64) -> bool {
+        self.slots.retain(|_, (frame, _)| *frame >= cutoff);
+        !self.slots.is_empty()
+    }
+}
+
+struct DispatchSlot {
+    uniforms: Vec<(usize, UniformSlot)>,
+    group: wgpu::BindGroup,
+}
+
+/// A resource combination owns its uniform slots, independent of dispatch ordering. Repeated
+/// dispatches within one submission need distinct contents; later submissions reuse those slots.
 #[derive(Default)]
 pub(super) struct BindingCache {
-    uniforms: Vec<UniformSlot>,
-    next_uniform: usize,
-    groups: HashMap<wgpu::BindGroupLayout, HashMap<Vec<(u32, Bound)>, wgpu::BindGroup>>,
+    submission: u64,
+    frame: u64,
+    groups: HashMap<wgpu::BindGroupLayout, HashMap<Vec<(u32, Bound)>, ReuseSlots<DispatchSlot>>>,
     scratch: Vec<(u32, Bound)>,
     formats: Vec<(usize, &'static str)>,
 }
 
 impl BindingCache {
     pub(super) fn begin(&mut self) {
-        self.next_uniform = 0;
+        self.submission += 1;
     }
 
-    fn uniform(&mut self, device: &wgpu::Device, size: usize) -> &mut UniformSlot {
-        let index = self.next_uniform;
-        self.next_uniform += 1;
-        let make = || UniformSlot {
-            buffer: device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("unbound kernel uniforms"),
-                size: (size as u64).next_power_of_two(),
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            }),
-            data: Vec::with_capacity(size),
-        };
-        if index == self.uniforms.len() {
-            self.uniforms.push(make());
-        } else if self.uniforms[index].buffer.size() < size as u64 {
-            let previous = self.uniforms[index].buffer.clone();
-            self.release_buffer(&previous);
-            self.uniforms[index] = make();
-        }
-        let slot = &mut self.uniforms[index];
-        slot.data.resize(size, 0);
-        slot.data.fill(0);
-        slot
+    pub(super) fn frame(&mut self, frame: u64) {
+        self.frame = frame;
+        let cutoff = frame.saturating_sub(BINDING_IDLE_FRAMES - 1);
+        self.groups.retain(|_, groups| {
+            groups.retain(|_, slots| slots.retire(cutoff));
+            !groups.is_empty()
+        });
     }
 
     fn group(
         &mut self,
         device: &wgpu::Device,
-        layout: &wgpu::BindGroupLayout,
+        queue: &wgpu::Queue,
+        gpu: &KernelGpu,
         bindings: &[(u32, Bound)],
+        properties: &[(String, PropertyValue)],
+        globals: &[(String, PropertyValue)],
     ) -> wgpu::BindGroup {
-        let groups = self.groups.entry(layout.clone()).or_default();
-        if let Some(group) = groups.get(bindings) {
-            return group.clone();
+        let groups = self.groups.entry(gpu.layout.clone()).or_default();
+        if !groups.contains_key(bindings) {
+            groups.insert(bindings.to_vec(), ReuseSlots::default());
         }
-        // Samplers are created only on a binding-cache miss, including biased states.
-        let samplers: Vec<_> = bindings
+        let slots = groups.get_mut(bindings).unwrap();
+        let generated = |binding| !bindings.iter().any(|(index, _)| *index == binding);
+        let distinct = gpu
+            .kernel
+            .blocks
             .iter()
-            .filter_map(|(_, binding)| match binding {
-                Bound::Sampler(_, key) => {
-                    Some(super::super::resources::create_sampler(device, *key))
-                }
-                _ => None,
-            })
-            .collect();
-        let mut samplers = samplers.iter();
-        let entries: Vec<_> = bindings
-            .iter()
-            .map(|(binding, resource)| wgpu::BindGroupEntry {
-                binding: *binding,
-                resource: match resource {
-                    Bound::Buffer(buffer, offset, size) => {
-                        wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                            buffer,
-                            offset: *offset,
-                            size: *size,
-                        })
+            .any(|block| generated(block.binding));
+        let slot = slots.claim(self.submission, self.frame, distinct, || {
+            let uniforms: Vec<_> = gpu
+                .kernel
+                .blocks
+                .iter()
+                .enumerate()
+                .filter(|(_, block)| generated(block.binding))
+                .map(|(index, block)| {
+                    let size = block.size.max(16) as usize;
+                    (
+                        index,
+                        UniformSlot {
+                            buffer: device.create_buffer(&wgpu::BufferDescriptor {
+                                label: Some("unbound kernel uniforms"),
+                                size: size as u64,
+                                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                                mapped_at_creation: false,
+                            }),
+                            data: vec![0; size],
+                        },
+                    )
+                })
+                .collect();
+            // Samplers and binding groups are created only when a reusable slot is first needed.
+            let samplers: Vec<_> = bindings
+                .iter()
+                .filter_map(|(_, binding)| match binding {
+                    Bound::Sampler(_, key) => {
+                        Some(super::super::resources::create_sampler(device, *key))
                     }
-                    Bound::View(_, view) => wgpu::BindingResource::TextureView(view),
-                    Bound::Sampler(_, _) => {
-                        wgpu::BindingResource::Sampler(samplers.next().unwrap())
-                    }
-                },
-            })
-            .collect();
-        let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("unbound kernel"),
-            layout,
-            entries: &entries,
+                    _ => None,
+                })
+                .collect();
+            let mut samplers = samplers.iter();
+            let mut entries: Vec<_> = bindings
+                .iter()
+                .map(|(binding, resource)| wgpu::BindGroupEntry {
+                    binding: *binding,
+                    resource: match resource {
+                        Bound::Buffer(buffer, offset, size) => {
+                            wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                                buffer,
+                                offset: *offset,
+                                size: *size,
+                            })
+                        }
+                        Bound::View(_, view) => wgpu::BindingResource::TextureView(view),
+                        Bound::Sampler(_, _) => {
+                            wgpu::BindingResource::Sampler(samplers.next().unwrap())
+                        }
+                    },
+                })
+                .collect();
+            entries.extend(uniforms.iter().map(|(index, slot)| wgpu::BindGroupEntry {
+                binding: gpu.kernel.blocks[*index].binding,
+                resource: slot.buffer.as_entire_binding(),
+            }));
+            let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("unbound kernel"),
+                layout: &gpu.layout,
+                entries: &entries,
+            });
+            DispatchSlot { uniforms, group }
         });
-        groups.insert(bindings.to_vec(), group.clone());
-        group
+        for (index, uniform) in &mut slot.uniforms {
+            uniform.data.fill(0);
+            for u in &gpu.kernel.blocks[*index].uniforms {
+                if let Some(v) = UnityRenderer::dispatch_value(properties, globals, &u.name) {
+                    write_uniform(u, v, &mut uniform.data);
+                }
+            }
+            queue.write_buffer(&uniform.buffer, 0, &uniform.data);
+        }
+        slot.group.clone()
     }
 
     pub(super) fn release_texture(&mut self, texture: &wgpu::Texture) {
@@ -1033,23 +1122,6 @@ fn main() {
                     ));
                     continue;
                 }
-                let slot = self
-                    .compute_bindings
-                    .uniform(&self.device, block.size.max(16) as usize);
-                for u in &block.uniforms {
-                    if let Some(v) = Self::dispatch_value(&d.properties, &self.globals, &u.name) {
-                        write_uniform(u, v, &mut slot.data);
-                    }
-                }
-                self.queue.write_buffer(&slot.buffer, 0, &slot.data);
-                bound.push((
-                    block.binding,
-                    Bound::Buffer(
-                        slot.buffer.clone(),
-                        0,
-                        wgpu::BufferSize::new(slot.data.len() as u64),
-                    ),
-                ));
             }
             for (resource_index, r) in gpu.kernel.resources.iter().enumerate() {
                 let value = Self::dispatch_value(&d.properties, &self.globals, &r.name);
@@ -1238,9 +1310,14 @@ fn main() {
                 }
             }
             bound.sort_by_key(|(binding, _)| *binding);
-            let bind_group = self
-                .compute_bindings
-                .group(&self.device, &gpu.layout, &bound);
+            let bind_group = self.compute_bindings.group(
+                &self.device,
+                &self.queue,
+                &gpu,
+                &bound,
+                &d.properties,
+                &self.globals,
+            );
             let indirect = match d.indirect {
                 None => None,
                 Some((args, offset)) => {
@@ -1318,6 +1395,63 @@ pub(super) fn encode_copy(encoder: &mut wgpu::CommandEncoder, c: &BufferCopyOp) 
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn dispatch_slots_reuse_resources_when_order_rotates() {
+        let mut pools: HashMap<usize, ReuseSlots<usize>> = HashMap::new();
+        let mut allocations = 0;
+        for frame in 1..=256 {
+            for position in 0..256 {
+                let resource = (position + frame as usize) % 256;
+                let slot = pools
+                    .entry(resource)
+                    .or_default()
+                    .claim(frame, frame, true, || {
+                        allocations += 1;
+                        resource
+                    });
+                assert_eq!(*slot, resource);
+            }
+        }
+        assert_eq!(allocations, 256);
+        assert_eq!(
+            pools.values().map(|pool| pool.slots.len()).sum::<usize>(),
+            256
+        );
+    }
+
+    #[test]
+    fn dispatch_slots_preserve_submission_contents_and_retire_idle_slots() {
+        let mut pool = ReuseSlots::default();
+        for index in 0..4 {
+            assert_eq!(*pool.claim(1, 1, true, || index), index);
+        }
+        assert_eq!(*pool.claim(2, 2, true, || 99), 0);
+        assert_eq!(*pool.claim(2, 2, false, || 99), 0);
+        assert!(pool.retire(2));
+        assert_eq!(pool.slots.len(), 1);
+        assert!(!pool.retire(3));
+    }
+
+    #[test]
+    fn dispatch_slots_bound_rotating_repetition_history() {
+        let mut pools: HashMap<usize, ReuseSlots<()>> = HashMap::new();
+        for frame in 1u64..=256 {
+            let resource = frame as usize % 64;
+            for _ in 0..64 {
+                pools
+                    .entry(resource)
+                    .or_default()
+                    .claim(frame, frame, true, || ());
+            }
+            let cutoff = frame.saturating_sub(BINDING_IDLE_FRAMES - 1);
+            pools.retain(|_, pool| pool.retire(cutoff));
+            assert!(
+                pools.values().map(|pool| pool.slots.len()).sum::<usize>()
+                    <= BINDING_IDLE_FRAMES as usize * 64
+            );
+        }
+    }
 
     #[test]
     fn kernel_lookup_uses_names_and_formats_independently_of_property_order() {

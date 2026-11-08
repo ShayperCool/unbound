@@ -2293,6 +2293,7 @@ impl UnityRenderer {
                     self.screen_slot = (self.screen_slot + 1) % self.screens.len();
                     self.screen_touched = false;
                     self.frame_number += 1;
+                    self.compute_bindings.frame(self.frame_number);
                     self.state.target = None;
                     self.target_handles = (0, 0);
                     self.depth_target = None;
