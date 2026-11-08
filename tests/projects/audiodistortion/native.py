@@ -9,7 +9,7 @@ import subprocess
 
 p = argparse.ArgumentParser()
 p.add_argument('--release', required=True)
-p.add_argument('--profile', choices=('static', 'spatial', 'spatial-factor0', 'spatial-factor2'), default='static')
+p.add_argument('--profile', choices=('static', 'spatial', 'spatial-factor0', 'spatial-factor2', 'live'), default='static')
 p.add_argument('--work', type=Path, required=True)
 p.add_argument('--editor', type=Path)
 p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
@@ -27,7 +27,7 @@ if a.profile.startswith('spatial-factor'):
 output = a.work/'capture'
 editor = a.editor or Path.home()/'Unity/Hub/Editor'/a.release/'Editor/Unity'
 command = [str(Path.home()/'.cache/compat/with-heavy-job'), '--kind', 'editor-gpu', 'timeout', '900', str(editor), '-batchmode',
-           '-projectPath', str(project), '-executeMethod', 'ProbeRunner.Record', '-logFile', str(a.work/'editor.log')]
+           '-projectPath', str(project), '-executeMethod', 'LiveProbeRunner.Record' if a.profile == 'live' else 'ProbeRunner.Record', '-logFile', str(a.work/'editor.log')]
 (a.work/'command.json').write_text(json.dumps(command, indent=2)+'\n')
 env = dict(os.environ, EFFECT_PROBE_PROFILE=a.profile, EFFECT_PROBE_OUT=str(output), EFFECT_PROBE_RATE=str(a.rate))
 if a.cases: env['EFFECT_PROBE_CASES'] = a.cases
@@ -36,7 +36,10 @@ with (a.work/'stdout.log').open('w') as log:
 if not a.cases:
     import sys
     sys.path.insert(0, str(fixture))
-    if a.profile.startswith('spatial'):
+    if a.profile == 'live':
+        from live import verify
+        verify(output, a.release, a.rate)
+    elif a.profile.startswith('spatial'):
         from spatial import verify
         verify(output, a.release, a.rate, a.profile)
     else:

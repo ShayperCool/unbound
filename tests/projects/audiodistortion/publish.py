@@ -10,16 +10,18 @@ from verify import verify
 
 p = argparse.ArgumentParser()
 p.add_argument('--release', required=True)
-p.add_argument('--profile', choices=('static', 'spatial', 'spatial-factor0', 'spatial-factor2'), default='static')
+p.add_argument('--profile', choices=('static', 'spatial', 'spatial-factor0', 'spatial-factor2', 'live'), default='static')
 p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--capture', type=Path, required=True)
 p.add_argument('--extend', action='store_true', help='Add cases only; every existing metadata value and sample must remain identical')
 a = p.parse_args()
-if a.profile.startswith('spatial'):
+if a.profile == 'live':
+    from live import verify
+elif a.profile.startswith('spatial'):
     from spatial import verify
 verify_args = (a.release, a.rate, a.profile) if a.profile.startswith('spatial') else (a.release, a.rate)
 verify(a.capture, *verify_args)
-target = FIXTURE/'Reference'/('unity-'+a.release)/((a.profile+'-rate-' if a.profile.startswith('spatial') else 'rate-')+str(a.rate))
+target = FIXTURE/'Reference'/('unity-'+a.release)/(('rate-' if a.profile == 'static' else a.profile+'-rate-')+str(a.rate))
 if target.exists():
     assert a.extend, 'reference already exists; --extend may only add identical controls'
     existing, incoming = header(target), header(a.capture)

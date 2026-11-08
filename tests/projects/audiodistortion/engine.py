@@ -10,7 +10,7 @@ import subprocess
 
 p = argparse.ArgumentParser()
 p.add_argument('--release', required=True)
-p.add_argument('--profile', choices=('static', 'spatial', 'spatial-factor0', 'spatial-factor2'), default='static')
+p.add_argument('--profile', choices=('static', 'spatial', 'spatial-factor0', 'spatial-factor2', 'live'), default='static')
 p.add_argument('--native-project', type=Path, required=True, help='Private mixer assets created by native.py')
 p.add_argument('--runtime', type=Path, required=True, help='Directory containing matching unbound and managed/')
 p.add_argument('--work', type=Path, required=True)
@@ -28,7 +28,7 @@ if a.profile.startswith('spatial-factor'):
     configure_spatial_profile(project, a.profile)
 output = a.work/'capture'; output.mkdir()
 command = [str(Path.home()/'.cache/compat/with-heavy-job'), '--kind', 'engine-cpu', 'timeout', '900', str(a.runtime/'unbound'), 'run', '-p', str(project),
-           '--scene', 'Assets/Scenes/Probe.unity', '--headless', '60', '--no-watch', '--fixed-fps', '60']
+           '--scene', 'Assets/Scenes/Live.unity' if a.profile == 'live' else 'Assets/Scenes/Probe.unity', '--headless', '60', '--no-watch', '--fixed-fps', '60']
 artifacts = [a.runtime/'unbound', *sorted((a.runtime/'managed').rglob('*'))]
 hashes = {str(f.relative_to(a.runtime)): hashlib.sha256(f.read_bytes()).hexdigest() for f in artifacts if f.is_file()}
 (a.work/'runtime-hashes.json').write_text(json.dumps(hashes, indent=2)+'\n')
@@ -39,7 +39,10 @@ with (a.work/'engine.log').open('w') as log:
     result = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT)
 (a.work/'exit.json').write_text(json.dumps({'returncode': result.returncode})+'\n')
 if result.returncode: raise SystemExit(result.returncode)
-if a.profile.startswith('spatial'):
+if a.profile == 'live':
+    from live import verify
+    verify(output, a.release, a.rate)
+elif a.profile.startswith('spatial'):
     from spatial import verify
     verify(output, a.release, a.rate, a.profile)
 else:

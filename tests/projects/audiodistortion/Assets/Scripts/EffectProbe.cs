@@ -365,7 +365,7 @@ public class EffectProbe : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Bootstrap()
     {
-        if (!Engine) return;
+        if (!Engine || Environment.GetEnvironmentVariable("EFFECT_PROBE_PROFILE") == "live") return;
         foreach (var existing in UnityEngine.Object.FindObjectsOfType<EffectProbe>()) DestroyImmediate(existing.gameObject);
         var probe = new GameObject("EffectProbe").AddComponent<EffectProbe>();
         try { var capture = probe.Capture(); while (capture.MoveNext()) throw new Exception("Engine capture yielded"); }
