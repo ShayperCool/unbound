@@ -14,7 +14,7 @@ it is.
 Exit 0 when every line matches and the guards pass; 1 otherwise. The last line is a JSON summary.
 """
 import argparse
-import difflib
+import importlib.util
 import json
 from pathlib import Path
 import sys
@@ -23,24 +23,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import analyze  # noqa: E402
 
 
-def lines(path):
-    out = [line for line in Path(path).read_text().splitlines() if line.strip()]
-    for line in out:
-        json.loads(line)
-    return out
-
-
-def sequence(reference, actual):
-    rows = []
-    matcher = difflib.SequenceMatcher(a=reference, b=actual, autojunk=False)
-    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-        if tag == 'equal':
-            rows += [{'status': 'pass', 'line': reference[i], 'reference_index': i, 'actual_index': j1 + k}
-                     for k, i in enumerate(range(i1, i2))]
-            continue
-        rows += [{'status': 'missing', 'line': reference[i], 'reference_index': i} for i in range(i1, i2)]
-        rows += [{'status': 'extra', 'line': actual[j], 'actual_index': j} for j in range(j1, j2)]
-    return rows
+spec = importlib.util.spec_from_file_location('core_api_compare', Path(__file__).resolve().parents[1]/'coreapis/compare.py')
+core_api_compare = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(core_api_compare)
+lines, sequence = core_api_compare.load, core_api_compare.compare
 
 
 def renders(path):

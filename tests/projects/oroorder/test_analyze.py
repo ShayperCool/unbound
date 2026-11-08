@@ -79,5 +79,29 @@ class CompletenessTests(unittest.TestCase):
         self.assertIsNone(self.problem())
 
 
+class LineComparisonTests(unittest.TestCase):
+    def test_shared_diff_keeps_every_missing_and_extra_line(self):
+        spec = importlib.util.spec_from_file_location('oro_compare', PROBE/'compare.py')
+        comparator = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(comparator)
+        reference = ['a', 'b', 'b', 'c']
+        actual = ['a', 'b', 'x', 'c', 'z']
+        rows = comparator.sequence(reference, actual)
+        self.assertEqual([r['line'] for r in rows if r['status'] == 'missing'], ['b'])
+        self.assertEqual([r['line'] for r in rows if r['status'] == 'extra'], ['x', 'z'])
+        self.assertEqual([r['line'] for r in rows if r['status'] == 'pass'], ['a', 'b', 'c'])
+        self.assertIs(comparator.sequence, comparator.core_api_compare.compare)
+
+    def test_empty_capture_is_rejected(self):
+        spec = importlib.util.spec_from_file_location('oro_compare', PROBE/'compare.py')
+        comparator = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(comparator)
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)/'empty.jsonl'
+            path.write_text('')
+            with self.assertRaisesRegex(ValueError, 'empty capture'):
+                comparator.lines(path)
+
+
 if __name__ == '__main__':
     unittest.main()

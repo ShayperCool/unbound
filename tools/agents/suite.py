@@ -27,9 +27,17 @@ default: the pool's engine slots + 2); the launcher's pools bound the machine.
 
 No step may start the Unity Editor: a suite run compares the engine with the committed Reference/
 and never records one. Every step gets UNBOUND_SUITE_NO_EDITOR=1, which tests/editor_runner.py
-honours by refusing, and on Linux a watcher (over /proc) stops any step whose processes start an
+honours by refusing, and a shared Linux watcher (over /proc) stops any step whose processes start an
 Editor or queue an Editor job at the launcher; that probe fails with "step N (kind) launched the
-Unity Editor: ...".
+Unity Editor: ...". Guarded execution fails explicitly on platforms without Linux /proc and
+pidfd support, before starting a probe.
+
+Engine/driver failures retain the legacy summary, checks, failures and failed_step fields through
+the first failed engine/driver step. Later steps still run and have explicit status, summary and
+failure counts in steps; continuation_summary lists their comparator output. Later results are
+compared only when the baseline recorded them too. An Editor launch stops the whole probe.
+Each probe uses its ProjectSettings/ProjectVersion.txt release, else the probe default; --release
+or $UNBOUND_PROBE_UNITY_VERSION overrides this. The selected release is stored in every result.
 
 Statuses:
   pass       every step exited 0 and the comparator accepted the capture
@@ -80,9 +88,8 @@ LIMITS = Path.home()/'.cache/compat/job-limits.json'
 ENGINE_TIMEOUT = 1200
 DRIVER_TIMEOUT = 5400
 TOOL_TIMEOUT = 1800
-NO_EDITOR = 'UNBOUND_SUITE_NO_EDITOR'
-EDITOR_EXIT = 126
-EDITOR_POLL = 1.0
+from probe_runtime import (NO_EDITOR, EDITOR_EXIT, EDITOR_MARK, EDITOR_WATCH, Tree,
+                           stop_tree, require_process_watch, default_release, probe_release)
 
 
 class Step:
@@ -796,6 +803,7 @@ def step_argv(step, values):
 
 def run_step(step, values, log, base_env):
     """Exit code and output text of one step; the output also goes to log."""
+    require_process_watch()
     argv = step_argv(step, values)
     env = dict(base_env, **substitute(step.env, values))
     log.parent.mkdir(parents=True, exist_ok=True)
@@ -856,195 +864,6 @@ RUNNING = set()
 RUNNING_LOCK = threading.Lock()
 
 
-def children():
-    """{parent pid: [child pids]} of every process."""
-    parents = {}
-    for stat in Path('/proc').glob('[0-9]*/stat'):
-        try:
-            fields = stat.read_text().rsplit(')', 1)[1].split()
-        except (OSError, IndexError):
-            continue
-        parents.setdefault(int(fields[1]), []).append(int(stat.parent.name))
-    return parents
-
-
-class Tree:
-    """A step's process group and every descendant, held by pidfd so that a process that leaves
-    the group (`timeout` makes its own) or is reparented when its parent dies is still reached."""
-
-    def __init__(self, root):
-        self.root, self.fds = root, {}
-
-    def collect(self, parents=None):
-        parents = children() if parents is None else parents
-        pending, seen = [self.root, *self.fds], set()
-        while pending:
-            pid = pending.pop()
-            if pid in seen:
-                continue
-            seen.add(pid)
-            if pid not in self.fds:
-                if licensing(pid):
-                    continue  # the shared Unity licensing client is never signalled
-                try:
-                    self.fds[pid] = os.pidfd_open(pid)
-                except OSError:
-                    continue
-            pending += parents.get(pid, [])
-
-    def prune(self):
-        """Forget the processes that have exited."""
-        for pid, fd in list(self.fds.items()):
-            if pid != self.root:
-                try:
-                    signal.pidfd_send_signal(fd, 0)
-                except OSError:
-                    os.close(fd)
-                    del self.fds[pid]
-
-    def signal(self, number):
-        self.collect()
-        try:
-            os.killpg(self.root, number)
-        except OSError:
-            pass
-        for fd in self.fds.values():
-            try:
-                signal.pidfd_send_signal(fd, number)
-            except OSError:
-                pass
-
-    def alive(self):
-        alive = False
-        for fd in self.fds.values():
-            try:
-                signal.pidfd_send_signal(fd, 0)
-                alive = True
-            except OSError:
-                pass
-        return alive
-
-    def close(self):
-        for fd in self.fds.values():
-            os.close(fd)
-        self.fds = {}
-
-
-def stop_tree(process, grace=30):
-    """SIGTERM to the step's whole tree; SIGKILL to whatever of it is left after the grace period."""
-    tree = Tree(process.pid)
-    try:
-        tree.signal(signal.SIGTERM)
-        deadline = time.time() + grace
-        while time.time() < deadline:
-            if process.poll() is not None and not tree.alive():
-                break
-            time.sleep(0.5)
-        tree.signal(signal.SIGKILL)
-        process.wait()
-    finally:
-        tree.close()
-
-
-def cmdline(pid):
-    try:
-        argv = (Path('/proc')/str(pid)/'cmdline').read_bytes().split(b'\0')
-    except OSError:
-        return []
-    return [arg.decode(errors='replace') for arg in argv if arg]
-
-
-def licensing(pid):
-    joined = ' '.join(cmdline(pid))
-    return 'Licensing' in joined or 'LicenseClient' in joined
-
-
-def is_editor_path(arg):
-    """The Unity Editor executable: <release>/Editor/Unity, or Unity.app/Contents/MacOS/Unity."""
-    path = Path(arg)
-    return path.name == 'Unity' and (path.parent.name == 'Editor' or path.parent.parent.parent.name == 'Unity.app')
-
-
-def editor_process(pid):
-    """What makes process pid an Editor launch: the Editor itself, or a heavy-job launcher holding
-    or queueing an Editor job (an editor kind, or the Editor as its command). None otherwise."""
-    argv = cmdline(pid)
-    try:
-        executable = os.readlink(f'/proc/{pid}/exe')
-    except OSError:
-        executable = ''
-    if (argv and is_editor_path(argv[0])) or is_editor_path(executable.removesuffix(' (deleted)')):
-        return shlex.join(argv)[:300] or executable
-    launcher = any(Path(arg).name in ('with-heavy-job', 'job_runner.py') for arg in argv)
-    kinds = [argv[i+1] for i, arg in enumerate(argv[:-1]) if arg in ('--kind', '--pool-worker')]
-    if launcher and (any(kind.startswith('editor-') for kind in kinds) or any(map(is_editor_path, argv))):
-        return shlex.join(argv)[:300]
-    return None
-
-
-EDITOR_MARK = 'step launched the Unity Editor'
-
-
-class EditorWatch:
-    """Polls the process tree of every running step and stops a step that starts the Unity Editor.
-
-    A suite (or gate) run compares the engine with the committed Reference/; Editor runs only record
-    references. The step's process is told by remove(), which returns what was found."""
-
-    def __init__(self):
-        self.lock, self.trees, self.found, self.thread = threading.Lock(), {}, {}, None
-
-    def add(self, pid):
-        if not Path('/proc/self').exists():
-            return
-        with self.lock:
-            self.trees[pid] = Tree(pid)
-            if self.thread is None:
-                self.thread = threading.Thread(target=self.loop, daemon=True)
-                self.thread.start()
-
-    def remove(self, pid):
-        with self.lock:
-            tree = self.trees.pop(pid, None)
-            found = self.found.pop(pid, None)
-        if tree is not None:
-            tree.close()
-        return found
-
-    def loop(self):
-        while True:
-            time.sleep(EDITOR_POLL)
-            self.scan()
-
-    def scan(self):
-        with self.lock:
-            trees = [(pid, tree) for pid, tree in self.trees.items() if pid not in self.found]
-            parents = children() if trees else {}
-            for pid, tree in trees:
-                tree.collect(parents)
-                tree.prune()
-                found = next(filter(None, map(editor_process, tree.fds)), None)
-                if found:
-                    self.found[pid] = found
-                    threading.Thread(target=stop_root, args=(pid,), daemon=True).start()
-
-
-def stop_root(pid, grace=30):
-    """SIGTERM to a step's tree, SIGKILL to what is left after the grace period."""
-    tree = Tree(pid)
-    try:
-        tree.signal(signal.SIGTERM)
-        deadline = time.time() + grace
-        while time.time() < deadline and tree.alive():
-            time.sleep(0.5)
-        tree.signal(signal.SIGKILL)
-    finally:
-        tree.close()
-
-
-EDITOR_WATCH = EditorWatch()
-
-
 def stop_children(*_):
     """Steps run in their own process groups; stop them all when the suite itself is stopped."""
     with RUNNING_LOCK:
@@ -1058,7 +877,7 @@ def stop_children(*_):
 
 def run_probe(name, recipe, context):
     started = time.time()
-    result = {'probe': name}
+    result = {'probe': name, 'release': context['values'].get('release')}
     if isinstance(recipe, NoRecipe):
         result.update(status='no recipe', reason=recipe.reason, summary=recipe.reason, seconds=0)
         return result
@@ -1069,40 +888,54 @@ def run_probe(name, recipe, context):
     values = dict(context['values'], probe=str(PROJECTS/name), work=str(work),
                   runs=str(CACHE/'validation/runs'/name/context['values']['label']))
     steps, summaries, verdicts, status, stopped = [], [], [], None, None
+    continued = []
     for index, step in enumerate(recipe, 1):
+        # Legacy aggregate fields cover the same prefix older suites reached. Every step also
+        # records its own status and counts, including profiles after that prefix.
+        after_stop = stopped is not None
+        step_summaries, step_verdicts = [], []
         log = work/f'step{index:02d}-{step.kind}.log'
         code, text = run_step(step, values, log, context['env'])
         record = {'kind': step.kind, 'exit': code, 'log': str(log),
                   'command': shlex.join(step_argv(step, values))[:400]}
         steps.append(record)
         if code == EDITOR_EXIT and EDITOR_MARK in text:
-            status, stopped = 'fail', index
+            status, stopped = 'fail', stopped or index
             record['editor'] = True
+            record['status'] = 'fail'
             summaries.append(f'step {index} ({step.kind}) launched the Unity Editor: '
                              + text.rsplit(EDITOR_MARK+': ', 1)[-1].strip()[:200])
             break
         if step.kind in ('compare', 'identical'):
             summary = (measurement(text) if step.verdict == 'none' else
                        matched_summary(text, step.summary) if step.summary else last_lines(text))
-            summaries.append(summary)
+            step_summaries.append(summary)
             measures = image_measures(text)
             if measures:
                 record['images'] = measures
             if code not in step.ok or missing_capture(text):
-                verdicts.append(False)
+                step_verdicts.append(False)
             elif step.verdict == 'summary':
-                verdicts.append(summary_verdict(text))
+                step_verdicts.append(summary_verdict(text))
             elif step.verdict == 'differences':
-                verdicts.append(differences_verdict(text))
+                step_verdicts.append(differences_verdict(text))
             elif step.verdict == 'none':
-                verdicts.append(None)
+                step_verdicts.append(None)
             else:
-                verdicts.append(True)
-            record['verdict'] = verdicts[-1]
+                step_verdicts.append(True)
+            record['verdict'] = step_verdicts[-1]
         elif code not in step.ok:
-            status, stopped = 'fail', index
-            summaries.append(f'step {index} ({step.kind}) exited {code}: {last_lines(text)}')
-            break
+            status, stopped = 'fail', stopped or index
+            step_summaries.append(f'step {index} ({step.kind}) exited {code}: {last_lines(text)}')
+        record['status'] = ('fail' if code not in step.ok or any(v is False for v in step_verdicts)
+                            else 'report' if any(v is None for v in step_verdicts) else 'pass')
+        record['summary'] = ' || '.join(step_summaries)
+        record['failures'] = count_failures(record['summary'])
+        if after_stop:
+            continued.extend(step_summaries)
+        else:
+            summaries.extend(step_summaries)
+            verdicts.extend(step_verdicts)
     if status is None:
         if any(v is False for v in verdicts):
             status = 'fail'
@@ -1117,14 +950,8 @@ def run_probe(name, recipe, context):
                   seconds=round(time.time() - started, 1), summary=' || '.join(summaries)[:1000],
                   checks={'passed': sum(v is True for v in verdicts), 'failed': sum(v is False for v in verdicts),
                           'report': sum(v is None for v in verdicts), 'total': len(verdicts)},
-                  images=collect_images(steps), steps=steps)
+                  images=collect_images(steps), steps=steps, continuation_summary=' || '.join(continued))
     return result
-
-
-def default_release():
-    """tests/probe_paths.py's DEFAULT_UNITY_VERSION."""
-    text = (REPO/'tests/probe_paths.py').read_text()
-    return re.search(r"^DEFAULT_UNITY_VERSION = '([^']+)'", text, re.M).group(1)
 
 
 def discover():
@@ -1204,6 +1031,13 @@ def failed_step(result):
 def worse(old, new):
     """Why a probe that failed before fails worse now (None if it does not): a step that ran before
     fails now, fewer checks pass or more fail, or its comparators count more failures."""
+    for index, (a, b) in enumerate(zip(old.get('steps', []), new.get('steps', [])), 1):
+        if 'status' not in a or 'status' not in b:
+            continue
+        if a['status'] != 'fail' and b['status'] == 'fail':
+            return f'step {index} now fails'
+        if b.get('failures', 0) > a.get('failures', 0):
+            return f'step {index} counts {b["failures"]} failures, was {a.get("failures", 0)}'
     old_step, new_step = failed_step(old), failed_step(new)
     if new_step is not None and (old_step is None or new_step < old_step):
         return f'now fails at step {new_step}'
@@ -1259,8 +1093,8 @@ def main():
     parser.add_argument('--cli', type=Path, help='the unbound executable (default: $UNBOUND, else this '
                         "checkout's release build)")
     parser.add_argument('--label', help='run name (default: date-time and short commit)')
-    parser.add_argument('--release', default=os.environ.get('UNBOUND_PROBE_UNITY_VERSION') or default_release(),
-                        help='the Unity release (default: $UNBOUND_PROBE_UNITY_VERSION, else tests/probe_paths.py\'s)')
+    parser.add_argument('--release', help='override every probe release (default: '
+                        '$UNBOUND_PROBE_UNITY_VERSION, else each project version, else tests/probe_paths.py)')
     parser.add_argument('--only', help='comma-separated probe names')
     parser.add_argument('--jobs', type=int, default=default_jobs())
     parser.add_argument('--against', type=Path, help='earlier summary.json or its directory '
@@ -1279,26 +1113,31 @@ def main():
         return 0
 
     probes = discover()
-    table = recipes(args.release)
     if args.only:
         wanted = args.only.split(',')
         unknown = sorted(set(wanted) - set(probes))
         if unknown:
             parser.error('not a probe with a Reference/: ' + ', '.join(unknown))
         probes = [name for name in probes if name in wanted]
-    table = {name: recipe_for(name, table, args.release) for name in probes}
+    releases = {name: args.release or probe_release(f'tests/projects/{name}', REPO) for name in probes}
+    tables = {release: recipes(release) for release in set(releases.values())}
+    table = {name: recipe_for(name, tables[releases[name]], releases[name]) for name in probes}
     if args.list:
         for name in probes:
             recipe = table[name]
             if isinstance(recipe, NoRecipe):
                 print(f'{name}: no recipe: {recipe.reason}')
             else:
-                print(f'{name}:' + (f' ({GATE_FILE})' if recipe and recipe[0].literal else ''))
+                print(f'{name} ({releases[name]}):' + (f' ({GATE_FILE})' if recipe and recipe[0].literal else ''))
                 for step in recipe:
                     print(f'    {step.kind:8} {shlex.join(step.argv)[:200]}')
         return 0
     if args.update_baseline and args.only:
         parser.error('--update-baseline needs a full run, not --only')
+    try:
+        require_process_watch()
+    except RuntimeError as error:
+        parser.error(str(error))
     cli = args.cli or default_cli()
     if not cli:
         parser.error('give --cli or set UNBOUND')
@@ -1318,12 +1157,12 @@ def main():
     work_root.mkdir(parents=True)
     summary_dir.mkdir(parents=True)
     runtime = make_runtime(work_root, cli, managed)
-    env = dict(os.environ, UNBOUND=str(cli), UNBOUND_PROBE_UNITY_VERSION=args.release, PYTHONDONTWRITEBYTECODE='1',
+    env = dict(os.environ, UNBOUND=str(cli), PYTHONDONTWRITEBYTECODE='1',
                **{NO_EDITOR: '1'})
     env.setdefault('DISPLAY', ':0')
     context = {'work_root': work_root, 'env': env,
                'values': {'cli': str(cli), 'managed': str(managed), 'runtime': str(runtime), 'repo': str(REPO),
-                          'projects': str(PROJECTS), 'release': args.release, 'label': 'suite-'+label,
+                          'projects': str(PROJECTS), 'label': 'suite-'+label,
                           'python': python_with_pil()}}
 
     for number in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
@@ -1333,7 +1172,9 @@ def main():
     results = {}
     lock = threading.Lock()
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
-        futures = {pool.submit(run_probe, name, table[name], context): name for name in probes}
+        futures = {pool.submit(run_probe, name, table[name], dict(context,
+                    env=dict(env, UNBOUND_PROBE_UNITY_VERSION=releases[name]),
+                    values=dict(context['values'], release=releases[name]))): name for name in probes}
         for future in concurrent.futures.as_completed(futures):
             name = futures[future]
             try:
@@ -1348,7 +1189,7 @@ def main():
 
     counts = {status: sum(r['status'] == status for r in results.values())
               for status in ('pass', 'fail', 'report', 'no recipe')}
-    summary = {'label': label, 'release': args.release, 'only': args.only, 'commit': commit, 'cli': str(cli), 'managed': str(managed),
+    summary = {'label': label, 'release': args.release or os.environ.get('UNBOUND_PROBE_UNITY_VERSION'), 'only': args.only, 'commit': commit, 'cli': str(cli), 'managed': str(managed),
                'work': str(work_root), 'started': datetime.datetime.fromtimestamp(started).isoformat(timespec='seconds'),
                'seconds': round(time.time() - started), 'counts': counts,
                'probes': {name: results[name] for name in sorted(results)}}

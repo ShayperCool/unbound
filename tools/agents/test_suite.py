@@ -6,6 +6,7 @@ import importlib.util
 import io
 import json
 import os
+import shlex
 from pathlib import Path
 import subprocess
 import sys
@@ -13,6 +14,9 @@ import tempfile
 import time
 import unittest
 import unittest.mock
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import probe_runtime
 
 spec = importlib.util.spec_from_file_location('suite', Path(__file__).resolve().parent/'suite.py')
 suite = importlib.util.module_from_spec(spec)
@@ -183,6 +187,157 @@ class ImageTests(unittest.TestCase):
         self.assertTrue(cut['summary'].endswith('worst mean 9.9'))
         self.assertEqual(suite.recorded_images(cut), {})
 
+class ContinuationTests(unittest.TestCase):
+    def probe(self, tail_code=0, tail_text='9 nodes compared, 0 differences'):
+        outputs = [(0, '2/2 records match'), (7, 'engine broke'), (1, 'MISSING capture'),
+                   (0, ''), (tail_code, tail_text)]
+        recipe = [suite.Step(kind, ['profile'+str(i)]) for i, kind in
+                  enumerate(['compare', 'engine', 'compare', 'engine', 'compare'])]
+        with tempfile.TemporaryDirectory() as temp:
+            with unittest.mock.patch.object(suite, 'run_step', side_effect=outputs) as run:
+                result = suite.run_probe('p', recipe, {'work_root': Path(temp), 'env': {},
+                                                      'values': {'label': 'test'}})
+                self.assertEqual(run.call_count, 5)
+        return result
+
+    def test_failed_engine_preserves_prefix_and_records_later_profiles(self):
+        result = self.probe()
+        self.assertEqual(result['status'], 'fail')
+        self.assertEqual(result['failed_step'], 2)
+        self.assertEqual(result['checks'], {'passed': 1, 'failed': 0, 'report': 0, 'total': 1})
+        self.assertEqual(result['summary'], '2/2 records match || step 2 (engine) exited 7: engine broke')
+        self.assertEqual([step['status'] for step in result['steps']], ['pass', 'fail', 'fail', 'pass', 'pass'])
+        self.assertIn('MISSING capture', result['continuation_summary'])
+        self.assertIn('0 differences', result['steps'][-1]['summary'])
+
+    def test_an_improved_early_step_does_not_hide_a_later_regression(self):
+        old = self.probe()
+        new = self.probe(1, '9 nodes compared, 8 differences')
+        new.update(failed_step=None, checks={'passed': 2, 'failed': 2})
+        self.assertIn('step 5', suite.worse(old, new))
+
+    def test_old_baseline_does_not_judge_newly_reached_profiles(self):
+        result = self.probe(1, '9 nodes compared, 8 differences')
+        old = dict(result, steps=result['steps'][:2])
+        for step in old['steps']:
+            step.pop('status')
+        self.assertIsNone(suite.worse(old, result))
+
+    def test_new_baseline_detects_later_profile_regressions(self):
+        old = self.probe()
+        self.assertIn('step 5', suite.worse(old, self.probe(1, '9 nodes compared, 8 differences')))
+        failing = self.probe(1, '9 nodes compared, 1 differences')
+        self.assertIn('step 5', suite.worse(failing, self.probe(1, '9 nodes compared, 8 differences')))
+        self.assertIsNone(suite.worse(failing, self.probe()))
+
+
+class SharedGuardTests(unittest.TestCase):
+    def test_unsupported_platform_fails_before_starting_a_probe(self):
+        with tempfile.TemporaryDirectory() as temp:
+            gate = land.Gate(Path(temp), 'HEAD', ['touch unsafe'], False, Path(temp)/'gate.log')
+            with unittest.mock.patch.object(probe_runtime.sys, 'platform', 'darwin'):
+                with self.assertRaisesRegex(RuntimeError, 'unsupported on darwin'):
+                    gate.run_probes()
+                with self.assertRaisesRegex(RuntimeError, 'unsupported on darwin'):
+                    suite.run_step(suite.Step('driver', ['touch', 'unsafe']), {}, Path(temp)/'log', {})
+            self.assertFalse((Path(temp)/'unsafe').exists())
+
+    def test_gate_stops_an_editor_launch_and_does_not_run_later_commands(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            editor = root/'6000.0.71f1/Editor/Unity'
+            probes = ['bash -c '+shlex.quote(f'(exec -a {editor} sleep 60); touch after'), 'touch later']
+            gate = land.Gate(root, 'HEAD', probes, False, root/'gate.log')
+            start = time.monotonic()
+            with unittest.mock.patch.object(probe_runtime, 'EDITOR_POLL', 0.05):
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaises(SystemExit) as stopped:
+                        gate.run_probes()
+            self.assertEqual(stopped.exception.code, 5)
+            self.assertLess(time.monotonic() - start, 20)
+            self.assertIn('launched the Unity Editor', gate.log.read_text())
+            self.assertFalse((root/'after').exists())
+            self.assertFalse((root/'later').exists())
+
+    def test_gate_refuses_editor_runner_and_queued_editor_job(self):
+        for probe in ['test "$UNBOUND_SUITE_NO_EDITOR" = 1',
+                      'bash -c "sleep 60; true" with-heavy-job --kind editor-cpu']:
+            with tempfile.TemporaryDirectory() as temp:
+                gate = land.Gate(Path(temp), 'HEAD', [probe], False, Path(temp)/'gate.log')
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    if 'sleep' in probe:
+                        with self.assertRaises(SystemExit) as stopped:
+                            gate.run_probes()
+                        self.assertEqual(stopped.exception.code, 5)
+                    else:
+                        gate.run_probes()
+
+    def test_managed_tests_use_the_test_pool(self):
+        with tempfile.TemporaryDirectory() as temp:
+            target = Path(temp)
+            gate = land.Gate(target, 'HEAD', [], False, target/'gate.log')
+            def step(name, command):
+                self.assertEqual(command[:3], [str(land.LAUNCHER), '--kind', 'test'])
+                results = target/'land-test-results'
+                results.mkdir()
+                (results/'land.trx').write_text('<TestRun/>')
+                return 0
+            with unittest.mock.patch.object(land.Path, 'is_file', return_value=True), \
+                 unittest.mock.patch.object(gate, 'step', side_effect=step), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                gate.managed_tests(target)
+
+
+class PerProbeReleaseTests(unittest.TestCase):
+    def test_suite_selects_and_exports_each_project_release_and_overrides(self):
+        with tempfile.TemporaryDirectory() as temp, unittest.mock.patch.dict(os.environ):
+            os.environ.pop(land.RELEASE_VARIABLE, None)
+            root = Path(temp)
+            versions = {'old': '2022.3.10f1', 'new': '6000.0.71f1', 'unset': land.default_release()}
+            for name, version in versions.items():
+                project = root/'tests/projects'/name
+                (project/'Reference').mkdir(parents=True)
+                if name != 'unset':
+                    (project/'ProjectSettings').mkdir()
+                    (project/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+version+'\n')
+            cli = root/'cli'
+            cli.symlink_to(sys.executable)
+            def recipes(release):
+                return {name: [suite.Step('compare', [sys.executable, '-c',
+                            'import os; print(os.environ["UNBOUND_PROBE_UNITY_VERSION"])'],
+                            summary=release)] for name in versions}
+            for label, override in [('per-project', []), ('override', ['--release', '2021.3.10f1']),
+                                    ('exported', [])]:
+                if label == 'exported':
+                    os.environ[land.RELEASE_VARIABLE] = '2020.3.10f1'
+                argv = ['suite.py', '--cli', str(cli), '--label', label, '--against', 'none', *override]
+                with unittest.mock.patch.multiple(suite, REPO=root, PROJECTS=root/'tests/projects',
+                                                  CACHE=root/'cache', AGENTS=root/'agents'):
+                    with unittest.mock.patch.object(sys, 'argv', argv), \
+                         unittest.mock.patch.object(suite, 'recipes', recipes), \
+                         unittest.mock.patch.object(suite, 'managed_for', return_value=root), \
+                         unittest.mock.patch.object(suite, 'make_runtime', return_value=root), \
+                         unittest.mock.patch.object(suite.signal, 'signal'), \
+                         contextlib.redirect_stdout(io.StringIO()):
+                        self.assertEqual(suite.main(), 0)
+                results = json.loads((root/'agents/suite'/label/'summary.json').read_text())['probes']
+                for name, version in versions.items():
+                    expected = override[-1] if override else os.environ.get(land.RELEASE_VARIABLE, version)
+                    self.assertEqual(results[name]['release'], expected)
+                    self.assertEqual(results[name]['summary'], expected)
+
+    def test_mixed_project_releases_require_an_explicit_override(self):
+        with tempfile.TemporaryDirectory() as temp, unittest.mock.patch.dict(os.environ):
+            os.environ.pop(land.RELEASE_VARIABLE, None)
+            root = Path(temp)
+            for name, version in [('a', '6000.0.71f1'), ('b', '2022.3.10f1')]:
+                directory = root/'tests/projects'/name/'ProjectSettings'
+                directory.mkdir(parents=True)
+                (directory/'ProjectVersion.txt').write_text('m_EditorVersion: '+version+'\n')
+            with self.assertRaisesRegex(ValueError, 'names probes of releases'):
+                land.probe_release('tests/projects/a/run.py tests/projects/b/run.py', root)
+
+
 class DeclaredGateTests(unittest.TestCase):
     """A probe without a recipe in suite.py runs the commands its gate.json declares."""
 
@@ -271,10 +426,10 @@ class EditorGuardTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
-        self.poll, suite.EDITOR_POLL = suite.EDITOR_POLL, 0.1
+        self.poll, probe_runtime.EDITOR_POLL = probe_runtime.EDITOR_POLL, 0.1
 
     def tearDown(self):
-        suite.EDITOR_POLL = self.poll
+        probe_runtime.EDITOR_POLL = self.poll
         self.temp.cleanup()
 
     def run_recipe(self, recipe):

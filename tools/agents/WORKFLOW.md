@@ -54,13 +54,14 @@ Its full instructions are in [ORCHESTRATOR.md](ORCHESTRATOR.md).
      the sheriff's suite runs it (format: `tools/agents/suite.py`'s docstring); `suite.py --list` shows it.
      `land.py` sets that variable for each `--probe` command (the exported value, else the release
      of the probe named in the command, else `tests/probe_paths.py`'s default, 6000.0.71f1);
-     `suite.py` sets it to the run's `--release` (the exported value, else that default).
+     `suite.py` uses the same project lookup per probe; `--release` overrides it for the run.
    - The gate command runs the engine only and compares it with `Reference/` as committed. The
      Editor is only for recording a reference. When the engine run needs files the Editor authors
      (mixer assets, scenes, GUIDs), commit them once with `tests/authored_project.py record` and
-     assemble them in the gate. `suite.py` fails a step that starts the Editor or queues an Editor
-     job (Linux), and `tests/editor_runner.py` refuses to start one under `UNBOUND_SUITE_NO_EDITOR`.
-     `land.py` does not check this itself: the sheriff's suite run does.
+     assemble them in the gate. `suite.py` and `land.py --probe` share a process guard that stops
+     a step starting the Editor or queueing an Editor job. Both export `UNBOUND_SUITE_NO_EDITOR`,
+     which also makes `tests/editor_runner.py` refuse a launch. Guarded runs require Linux with
+     `/proc` and pidfd support; other platforms fail explicitly before starting a probe.
 4. Implement:
    - Build with `python3 tools/build.py -- build --release --locked -p unbound`.
    - Run the managed tests and the probe against the reference. Iterate until it matches.
