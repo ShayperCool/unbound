@@ -10,9 +10,10 @@ using UnityEngine.Rendering.Universal;
 /// render pass compiler can make the first a subpass with two colour outputs.</summary>
 public class MrtProbeFeature : ScriptableRendererFeature
 {
+    public enum MrtMode { Loaded, BothCleared, Mixed }
+
     public static Material Material;
-    /// <summary>Both outputs are new targets that clear (the first is shown too).</summary>
-    public static bool BothCleared;
+    public static MrtMode Mode;
     Pass m_Pass;
 
     public override void Create() => m_Pass = new Pass { renderPassEvent = RenderPassEvent.AfterRenderingOpaques };
@@ -59,17 +60,21 @@ public class MrtProbeFeature : ScriptableRendererFeature
             var resources = frameData.Get<UniversalResourceData>();
             var camera = frameData.Get<UniversalCameraData>();
             var second = Target(renderGraph, camera, "MrtSecond", new Color(0.1f, 0.1f, 0.4f, 1f));
-            var first = BothCleared ? Target(renderGraph, camera, "MrtFirst", new Color(0.5f, 0.1f, 0.1f, 1f)) : resources.activeColorTexture;
+            bool firstCleared = Mode != MrtMode.Loaded;
+            var first = firstCleared ? Target(renderGraph, camera, "MrtFirst", new Color(0.5f, 0.1f, 0.1f, 1f)) : resources.activeColorTexture;
             using (var builder = renderGraph.AddRasterRenderPass<PassData>("MrtProbe Write", out var data))
             {
-                builder.SetRenderAttachment(first, 0);
-                builder.SetRenderAttachment(second, 1);
+                int index = 0;
+                if (Mode == MrtMode.Mixed) builder.SetRenderAttachment(resources.activeColorTexture, index++);
+                builder.SetRenderAttachment(first, index++);
+                builder.SetRenderAttachment(second, index);
                 builder.SetRenderAttachmentDepth(resources.activeDepthTexture, AccessFlags.Read);
+                int pass = Mode == MrtMode.Mixed ? 2 : 0;
                 builder.SetRenderFunc((PassData d, RasterGraphContext context) =>
-                    context.cmd.DrawProcedural(Matrix4x4.identity, Material, 0, MeshTopology.Triangles, 6));
+                    context.cmd.DrawProcedural(Matrix4x4.identity, Material, pass, MeshTopology.Triangles, 6));
             }
             Show(renderGraph, resources.activeColorTexture, second, s_Upper, new Vector4(0.4f, 0.2f, 0.9f, 0.8f));
-            if (BothCleared) Show(renderGraph, resources.activeColorTexture, first, s_Lower, new Vector4(0.4f, -0.8f, 0.9f, -0.2f));
+            if (firstCleared) Show(renderGraph, resources.activeColorTexture, first, s_Lower, new Vector4(0.4f, -0.8f, 0.9f, -0.2f));
         }
     }
 }

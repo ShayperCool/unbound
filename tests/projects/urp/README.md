@@ -31,7 +31,9 @@ original materials' properties; -1 selects pass 0; a simultaneous material overr
 precedence and logs an error), `subpass_mrt` (`MrtProbeFeature`: a render graph raster pass after
 the opaques writes two color attachments, the camera color and a target the graph clears; the
 Editor's OpenGL Core device then clears the camera color too, to that target's color) and
-`subpass_mrt_cleared` (both attachments new targets that clear: each to its own color), `forward_plus` and `deferred` (the lights scenario on those rendering paths;
+`subpass_mrt_cleared` (both attachments new targets that clear: each to its own color) and
+`subpass_mrt_mixed` (three attachments: the camera color, kept, and two new targets that clear),
+`forward_plus` and `deferred` (the lights scenario on those rendering paths;
 the Editor's OpenGL device falls back from deferred to forward), `structured_buffer` (a shader
 reading structured and byte address buffers set on a material and a property block),
 `depth_opaque`, plus

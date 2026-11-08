@@ -234,10 +234,10 @@ namespace Unbound.Runtime
         internal static bool RenderingMeasured => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>A render pass subpass with several color outputs of which exactly one clears
-        /// (its load action, first use in the pass) clears every output it binds to that color,
-        /// as the Editor's OpenGL Core device clears the whole framebuffer; two or more clear each
-        /// to its own color (tests/projects/urp subpass_mrt, subpass_mrt_cleared). Other releases:
-        /// each clearing output to its own color, the others kept.</summary>
+        /// (its load action, first use in the pass) clears every output it binds to that color on
+        /// the Editor's OpenGL Core device; two or more clear each to its own color and loading
+        /// ones are kept (tests/projects/urp subpass_mrt, subpass_mrt_cleared, subpass_mrt_mixed).
+        /// Other releases: each clearing output to its own color, the others kept.</summary>
         internal static bool SingleSubpassClearFillsOutputs => RenderingMeasured;
 
         /// <summary>Light-probe gizmo scale observed outside repaint callbacks in renderapi.</summary>

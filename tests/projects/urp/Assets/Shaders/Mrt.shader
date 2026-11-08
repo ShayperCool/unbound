@@ -1,6 +1,7 @@
 // The URP probe's subpass_mrt scenarios: pass 0 writes two colour outputs over one rectangle
 // (orange into the first, a uv gradient into the second); pass 1 shows a target, loaded texel by
-// texel, in the clip-space rectangle _MrtRect (min xy, max xy) of the camera colour.
+// texel, in the clip-space rectangle _MrtRect (min xy, max xy) of the camera colour; pass 2 writes
+// three outputs (orange, the gradient, yellow).
 Shader "Probe/Mrt"
 {
     SubShader
@@ -61,6 +62,28 @@ Shader "Probe/Mrt"
             half4 frag(Varyings i) : SV_Target
             {
                 return LOAD_TEXTURE2D(_MrtSecond, min(uint2(i.uv * _MrtSecond_TexelSize.zw), uint2(_MrtSecond_TexelSize.zw) - 1));
+            }
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "Write3"
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+
+            struct Outputs { half4 color : SV_Target0; half4 second : SV_Target1; half4 third : SV_Target2; };
+
+            Varyings vert(uint id : SV_VertexID) { return Rect(id, float2(-0.9, 0.2), float2(-0.4, 0.8)); }
+
+            Outputs frag(Varyings i)
+            {
+                Outputs o;
+                o.color = half4(1.0, 0.5, 0.0, 1.0);
+                o.second = half4(i.uv, 0.8, 1.0);
+                o.third = half4(1.0, 1.0, 0.2, 1.0);
+                return o;
             }
             ENDHLSL
         }

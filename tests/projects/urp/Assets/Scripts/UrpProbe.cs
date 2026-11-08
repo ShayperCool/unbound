@@ -232,12 +232,13 @@ public partial class UrpProbe : MonoBehaviour
             var mrt = ScriptableObject.CreateInstance<MrtProbeFeature>();
             rendererData.rendererFeatures.Add(mrt);
             rendererData.SetDirty();
-            foreach (bool bothCleared in new[] { false, true })
-                Scenario(dir, bothCleared ? "subpass_mrt_cleared" : "subpass_mrt", () =>
+            foreach (var (mode, name) in new[] { (MrtProbeFeature.MrtMode.Loaded, "subpass_mrt"), (MrtProbeFeature.MrtMode.BothCleared, "subpass_mrt_cleared"),
+                (MrtProbeFeature.MrtMode.Mixed, "subpass_mrt_mixed") })
+                Scenario(dir, name, () =>
                 {
                     MrtProbeFeature.Material = new Material(Shader.Find("Probe/Mrt"));
-                    MrtProbeFeature.BothCleared = bothCleared;
-                }, () => { DestroyImmediate(MrtProbeFeature.Material); MrtProbeFeature.Material = null; MrtProbeFeature.BothCleared = false; });
+                    MrtProbeFeature.Mode = mode;
+                }, () => { DestroyImmediate(MrtProbeFeature.Material); MrtProbeFeature.Material = null; MrtProbeFeature.Mode = MrtProbeFeature.MrtMode.Loaded; });
             rendererData.rendererFeatures.Remove(mrt);
             rendererData.SetDirty();
             DestroyImmediate(mrt);

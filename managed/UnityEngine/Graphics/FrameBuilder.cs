@@ -967,7 +967,8 @@ namespace Unbound.Runtime
         /// renderer's at its bounds, a Graphics.DrawMesh draw's at the bounds it is culled by,
         /// never lightmapped. A draw's own block wins over them where it sets the same constants
         /// (unity_LightData zero in a block leaves a renderer and a Graphics.RenderMesh draw
-        /// unlit: Unity 6000.0.71f1, tests/projects/urp light_data_block; URP's decals rely on it).
+        /// unlit: Unity 6000.0.71f1, tests/projects/urp light_data_block; URP's decals rely on it;
+        /// unity_LightIndices, set with it, is taken to follow the same rule, unmeasured).
         /// The draws of one renderer or one call that share their block (and, queued, their
         /// bounds) share one answer.
         /// </summary>

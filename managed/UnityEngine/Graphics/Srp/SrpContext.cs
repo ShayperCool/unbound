@@ -1105,6 +1105,8 @@ namespace Unbound.Runtime
         /// <summary>The attachments cleared so far in this pass, one bit per index.</summary>
         static ulong s_Cleared;
         static readonly int[] s_Colors = new int[AttachmentIndexArray.MaxAttachments];
+        /// <summary>The context attachments resolve in (reused by every subpass).</summary>
+        static readonly CommandBuffer.Context s_Context = new CommandBuffer.Context();
         /// <summary>The attachment index of each bound output of the current subpass.</summary>
         static readonly int[] s_Outputs = new int[AttachmentIndexArray.MaxAttachments];
         /// <summary>Per output count, a handle array (SetTargets takes its own copy).</summary>
@@ -1160,7 +1162,9 @@ namespace Unbound.Runtime
 
         internal static void SubPass(ReadOnlySpan<int> colors)
         {
-            var context = new CommandBuffer.Context { Camera = ScriptableRenderContext.CurrentCamera, CameraTarget = ScriptableRenderContext.CurrentCamera != null ? ScriptableRenderContext.CurrentCamera.targetTexture : null };
+            var context = s_Context;
+            context.Camera = ScriptableRenderContext.CurrentCamera;
+            context.CameraTarget = context.Camera != null ? context.Camera.targetTexture : null;
             ulong depth = Valid(s_Depth) ? TextureHandles.Of(CommandBuffer.Resolve(s_Attachments[s_Depth].loadStoreTarget, context)) : GfxStream.NoTexture;
             int outputs = 0;
             Texture first = null;
