@@ -113,7 +113,7 @@ fn message_coverage(
     let facade_dir = unbound_project::cache_root()
         .join("facades")
         .join(project.version.to_string());
-    let _: serde_json::Value = runtime.call(
+    let facades: serde_json::Value = runtime.call(
         "facades",
         &json!({
             "unityManagedEngineDir": project.install.managed_engine_dir(),
@@ -124,7 +124,7 @@ fn message_coverage(
     let _: serde_json::Value = runtime.call(
         "prepare-field-coverage",
         &json!({
-            "compilation": request, "release": project.version.to_string(), "facadeDir": facade_dir,
+            "compilation": request, "release": project.version.to_string(), "facadeDir": facades["outputDir"],
         }),
     )?;
     let mut coverage: MessageCoverage = runtime

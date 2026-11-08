@@ -5,6 +5,8 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Runtime.Loader;
+using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Unbound.ApiTools.Tests;
@@ -79,6 +81,7 @@ public class FacadeGeneratorTests
             var facades = Path.Combine(root, "facades");
             var report = FacadeGenerator.Generate(unity, facades);
 
+            facades = report.OutputDir;
             Assert.False(report.Reused);
             Assert.Equal(new[] { "UnityEngine", "UnityEngine.PhysicsModule" }, report.Facades.Select(f => f.Name).Order(StringComparer.Ordinal));
             Assert.False(File.Exists(Path.Combine(facades, "UnityEngine.CoreModule.dll")));
@@ -144,8 +147,8 @@ public class FacadeGeneratorTests
             var unity = FakeUnity(root);
             var first = Path.Combine(root, "a");
             var second = Path.Combine(root, "b");
-            FacadeGenerator.Generate(unity, first);
-            FacadeGenerator.Generate(unity, second);
+            first = FacadeGenerator.Generate(unity, first).OutputDir;
+            second = FacadeGenerator.Generate(unity, second).OutputDir;
             foreach (var file in Directory.GetFiles(first, "*.dll"))
                 Assert.Equal(File.ReadAllBytes(file), File.ReadAllBytes(Path.Combine(second, Path.GetFileName(file))));
 
@@ -181,16 +184,19 @@ public class FacadeGeneratorTests
             Assert.False(report.Reused);
             var facade = report.Facades.Single(f => f.Name == "Unity.Android.Types");
             Assert.Equal(1, facade.Types);
-            using (var pe = new PEReader(File.OpenRead(Path.Combine(facades, "Unity.Android.Types.dll"))))
+            using (var pe = new PEReader(File.OpenRead(Path.Combine(report.OutputDir, "Unity.Android.Types.dll"))))
             {
                 var md = pe.GetMetadataReader();
                 Assert.Equal(new Version(1, 0, 0, 0), md.GetAssemblyDefinition().Version);
             }
             Assert.True(FacadeGenerator.Generate(unity, facades, new[] { platform }).Reused);
 
-            // Dropping it again regenerates and removes its facade.
-            Assert.False(FacadeGenerator.Generate(unity, facades).Reused);
-            Assert.False(File.Exists(Path.Combine(facades, "Unity.Android.Types.dll")));
+            // Dropping it reuses the earlier set without changing the platform caller's set.
+            var withoutPlatform = FacadeGenerator.Generate(unity, facades);
+            Assert.True(withoutPlatform.Reused);
+            Assert.NotEqual(report.OutputDir, withoutPlatform.OutputDir);
+            Assert.False(File.Exists(Path.Combine(withoutPlatform.OutputDir, "Unity.Android.Types.dll")));
+            Assert.True(File.Exists(Path.Combine(report.OutputDir, "Unity.Android.Types.dll")));
         }
         finally
         {
@@ -211,18 +217,77 @@ public class FacadeGeneratorTests
             Assert.True(again.Reused);
             Assert.Equal(2, again.Assemblies);
 
-            // A changed input regenerates.
+            // Timestamps are not inputs. A deleted output is repaired under the same key.
             File.SetLastWriteTimeUtc(Path.Combine(unity, "UnityEngine.PhysicsModule.dll"), DateTime.UtcNow.AddMinutes(1));
+            Assert.True(FacadeGenerator.Generate(unity, facades).Reused);
+            File.Delete(Path.Combine(again.OutputDir, "UnityEngine.dll"));
             Assert.False(FacadeGenerator.Generate(unity, facades).Reused);
-            // So does a deleted output.
-            File.Delete(Path.Combine(facades, "UnityEngine.dll"));
-            Assert.False(FacadeGenerator.Generate(unity, facades).Reused);
-            Assert.True(File.Exists(Path.Combine(facades, "UnityEngine.dll")));
+            Assert.True(File.Exists(Path.Combine(again.OutputDir, "UnityEngine.dll")));
         }
         finally
         {
             Directory.Delete(root, recursive: true);
         }
+    }
+
+    [Fact]
+    public void ChangedContentsWithTheSameSizeAndTimestampGetADifferentSet()
+    {
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var unity = Path.Combine(root, "unity");
+            var module = TestAssemblies.Compile(unity, "UnityEngine.TestModule", "public class First {}");
+            var oldBytes = File.ReadAllBytes(module);
+            var timestamp = File.GetLastWriteTimeUtc(module);
+            var cache = Path.Combine(root, "facades");
+            var first = FacadeGenerator.Generate(unity, cache);
+            TestAssemblies.Compile(unity, "UnityEngine.TestModule", "public class Other {}");
+            Assert.Equal(oldBytes.Length, new FileInfo(module).Length);
+            File.SetLastWriteTimeUtc(module, timestamp);
+            var second = FacadeGenerator.Generate(unity, cache);
+            Assert.False(second.Reused);
+            Assert.NotEqual(first.OutputDir, second.OutputDir);
+            using var pe = new PEReader(File.OpenRead(Path.Combine(first.OutputDir, "UnityEngine.TestModule.dll")));
+            Assert.Equal("First", pe.GetMetadataReader().GetString(pe.GetMetadataReader().GetExportedType(pe.GetMetadataReader().ExportedTypes.Single()).Name));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public async Task ConcurrentGeneratorsPublishOneCompleteSetAndAtomicFiles()
+    {
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var unity = FakeUnity(root);
+            var cache = Path.Combine(root, "facades");
+            using var start = new ManualResetEventSlim();
+            var tasks = Enumerable.Range(0, 8).Select(_ => Task.Run(() =>
+            {
+                start.Wait();
+                var report = FacadeGenerator.Generate(unity, cache);
+                foreach (var facade in report.Facades)
+                {
+                    using var pe = new PEReader(File.OpenRead(Path.Combine(report.OutputDir, facade.Name + ".dll")));
+                    Assert.Equal(facade.Types, pe.GetMetadataReader().ExportedTypes.Count);
+                }
+                return report.OutputDir;
+            })).ToArray();
+            start.Set();
+            var paths = await Task.WhenAll(tasks);
+            Assert.Single(paths.Distinct());
+            Assert.Single(Directory.GetDirectories(cache));
+            Assert.Empty(Directory.GetFiles(cache, "*.tmp", SearchOption.AllDirectories));
+
+            // Direct callers may also write one destination concurrently in the same process.
+            var output = Path.Combine(root, "direct.dll");
+            await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => Task.Run(() =>
+                FacadeGenerator.WriteFacade(Path.Combine(unity, "UnityEngine.PhysicsModule.dll"), output))));
+            using var direct = new PEReader(File.OpenRead(output));
+            Assert.Equal(2, direct.GetMetadataReader().ExportedTypes.Count);
+        }
+        finally { Directory.Delete(root, recursive: true); }
     }
 
     /// <summary>The installed Unity release the integration tests use, if any.</summary>
@@ -250,7 +315,7 @@ public class FacadeGeneratorTests
 
             var implementation = TestAssemblies.Compile(Path.Combine(root, "impl"), "UnityEngine.CoreModule",
                 "namespace UnityEngine { public class Rigidbody {} }");
-            var context = new GameContext(implementation, facades);
+            var context = new GameContext(implementation, report.OutputDir);
             try
             {
                 using (context.EnterContextualReflection())

@@ -22,12 +22,12 @@ namespace Unbound.ApiTools;
 /// forwards, all forwarded to <c>UnityEngine.CoreModule</c>, so references bind to Unbound's types.
 ///
 /// The facade set depends only on the Unity release, so it lives in the global cache per release;
-/// a stamp of the generator version and the input files makes a second run free.
+/// each complete set is published under a hash of the generator version and input contents.
 /// </summary>
 public static class FacadeGenerator
 {
     /// <summary>Bump when the facades generated from the same inputs would differ.</summary>
-    public const string FormatVersion = "unbound-facades-1";
+    public const string FormatVersion = "unbound-facades-2";
 
     const string StampFile = "facades.stamp.json";
 
@@ -39,39 +39,66 @@ public static class FacadeGenerator
         var inputs = UnityModules.Files(unityManagedEngineDir, platformModules)
             .Where(f => Path.GetFileNameWithoutExtension(f) != UnityModules.ImplAssemblyName)
             .ToList();
+        // Read each input once: the cache key and generated image must describe the same bytes.
+        var sources = inputs.Select(path => (Path: path, Bytes: File.ReadAllBytes(path))).ToList();
         var stamp = new FacadeStamp
         {
             Version = FormatVersion,
-            Inputs = inputs.Select(f =>
-            {
-                var info = new FileInfo(f);
-                return $"{info.Name}\t{info.Length}\t{info.LastWriteTimeUtc.Ticks}";
-            }).ToList(),
+            Inputs = sources.Select(f => $"{Path.GetFileName(f.Path)}\t{Convert.ToHexString(SHA256.HashData(f.Bytes))}").ToList(),
         };
+        var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            JsonSerializer.Serialize(stamp, StampJson)))).ToLowerInvariant();
+        outputDir = Path.Combine(outputDir, key);
         var stampPath = Path.Combine(outputDir, StampFile);
-        if (ReadStamp(stampPath) is { } previous
+        bool Complete() => ReadStamp(stampPath) is { } previous
             && previous.Version == stamp.Version
             && previous.Inputs.SequenceEqual(stamp.Inputs)
-            && previous.Facades.All(f => File.Exists(Path.Combine(outputDir, f.Name + ".dll"))))
+            && previous.Facades.Count == sources.Count
+            && previous.Facades.All(f => File.Exists(Path.Combine(outputDir, f.Name + ".dll")));
+        if (Complete())
+            return Report(outputDir, ReadStamp(stampPath)!.Facades, reused: true, watch);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(outputDir)!);
+        var staging = outputDir + $".{Environment.ProcessId}.{Guid.NewGuid():N}.tmp";
+        Directory.CreateDirectory(staging);
+        try
         {
-            return Report(outputDir, previous.Facades, reused: true, watch);
+            foreach (var source in sources)
+                stamp.Facades.Add(WriteFacade(source.Bytes, source.Path, Path.Combine(staging, Path.GetFileName(source.Path))));
+            File.WriteAllText(Path.Combine(staging, StampFile), JsonSerializer.Serialize(stamp, StampJson));
+            try
+            {
+                // Readers learn this path only after all of its assemblies and stamp exist.
+                Directory.Move(staging, outputDir);
+            }
+            catch (IOException) when (Directory.Exists(outputDir))
+            {
+                if (!Complete())
+                {
+                    // Repair an externally damaged entry. Every replacement is still atomic;
+                    // another generator of this key can only publish the same contents.
+                    foreach (var file in Directory.GetFiles(staging))
+                        AtomicWrite(Path.Combine(outputDir, Path.GetFileName(file)), File.ReadAllBytes(file));
+                }
+            }
+            return Report(outputDir, stamp.Facades, reused: false, watch);
         }
+        finally
+        {
+            if (Directory.Exists(staging)) Directory.Delete(staging, recursive: true);
+        }
+    }
 
-        Directory.CreateDirectory(outputDir);
-        File.Delete(stampPath);
-        var facades = new List<FacadeInfo>();
-        foreach (var input in inputs)
-            facades.Add(WriteFacade(input, Path.Combine(outputDir, Path.GetFileName(input))));
-
-        // Facades of modules a previous generation saw but this release's install no longer has.
-        var produced = inputs.Select(f => Path.GetFileName(f)).ToHashSet(StringComparer.Ordinal);
-        foreach (var stale in Directory.GetFiles(outputDir, "*.dll"))
-            if (!produced.Contains(Path.GetFileName(stale)))
-                File.Delete(stale);
-
-        stamp.Facades = facades;
-        File.WriteAllText(stampPath, JsonSerializer.Serialize(stamp, StampJson));
-        return Report(outputDir, facades, reused: false, watch);
+    static void AtomicWrite(string output, byte[] bytes)
+    {
+        var temporary = output + $".{Environment.ProcessId}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                stream.Write(bytes);
+            File.Move(temporary, output, overwrite: true);
+        }
+        finally { File.Delete(temporary); }
     }
 
     static readonly JsonSerializerOptions StampJson = new() { WriteIndented = true };
@@ -104,8 +131,11 @@ public static class FacadeGenerator
 
     /// <summary>Writes the facade of one Unity module and returns what it forwards.</summary>
     public static FacadeInfo WriteFacade(string input, string output)
+        => WriteFacade(File.ReadAllBytes(input), input, output);
+
+    static FacadeInfo WriteFacade(byte[] bytes, string input, string output)
     {
-        using var pe = new PEReader(File.OpenRead(input));
+        using var pe = new PEReader(new MemoryStream(bytes, writable: false));
         var md = pe.GetMetadataReader();
         var assembly = md.GetAssemblyDefinition();
         var name = md.GetString(assembly.Name);
@@ -171,9 +201,7 @@ public static class FacadeGenerator
         }
 
         var image = BuildFacade(md, assembly, name, forwards);
-        var temporary = output + ".tmp";
-        File.WriteAllBytes(temporary, image);
-        File.Move(temporary, output, overwrite: true);
+        AtomicWrite(output, image);
         return new FacadeInfo { Name = name, Types = forwards.Count };
     }
 
@@ -254,7 +282,7 @@ public sealed class FacadeInfo
 sealed class FacadeStamp
 {
     public string Version { get; set; } = "";
-    /// <summary><c>file\tsize\tmtime</c> of every input module.</summary>
+    /// <summary><c>file\tsha256</c> of every input module.</summary>
     public List<string> Inputs { get; set; } = new();
     public List<FacadeInfo> Facades { get; set; } = new();
 }
