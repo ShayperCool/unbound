@@ -77,7 +77,9 @@ namespace UnityEngine.Rendering
         public void SetRayTracingMatrixArrayParam(global::UnityEngine.Rendering.RayTracingShader rayTracingShader, int nameID, params global::UnityEngine.Matrix4x4[] values) { RequireRayShader(rayTracingShader); }
         public void DispatchRays(global::UnityEngine.Rendering.RayTracingShader rayTracingShader, string rayGenName, uint width, uint height, uint depth, global::UnityEngine.Camera camera = null) { RequireRayShader(rayTracingShader); }
         public void DispatchRays(global::UnityEngine.Rendering.RayTracingShader rayTracingShader, string rayGenName, global::UnityEngine.GraphicsBuffer argsBuffer, uint argsOffset, global::UnityEngine.Camera camera = null) { RequireRayShader(rayTracingShader); if (argsBuffer == null) throw new ArgumentNullException(nameof(argsBuffer)); }
+        [Unbound.EditorFaithful("No ray tracing device: measured ignored for null and non-null structures by cmdbuffers device.ray.* on Unity 6000.0.71f1 OpenGL Core.")]
         public void SetGlobalRayTracingAccelerationStructure(string name, global::UnityEngine.Rendering.RayTracingAccelerationStructure accelerationStructure) {  }
+        [Unbound.EditorFaithful("No ray tracing device: measured ignored for null and non-null structures by cmdbuffers device.ray.* on Unity 6000.0.71f1 OpenGL Core.")]
         public void SetGlobalRayTracingAccelerationStructure(int nameID, global::UnityEngine.Rendering.RayTracingAccelerationStructure accelerationStructure) {  }
         static void RequirePluginInterop() => throw new NotSupportedException("Unbound: native rendering plugin callbacks require graphics-device interop, which is not supported.");
         [Unbound.Stub]
