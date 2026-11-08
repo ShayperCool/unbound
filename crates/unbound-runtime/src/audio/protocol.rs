@@ -330,11 +330,11 @@ mod tests {
 
     /// The source packet's filter descriptors were added at NativeApi 16; 20 adds the reverb
     /// kind and parameters, 21 the frame packet's reverb zone, 23 Distortion kind 5, 24 Chorus kind 6. Versions 25, 26 and 27 add mixer Flange, Normalize and Pitch Shifter, 28 render protocol 12, 29 input frame versions, 30 a decoded-resampling flag and 31 the imported texture's reported format, without changing these layouts.
-    /// Version 32 adds mesh colors, 33 component tail timing, 34 the instance multiplier, 35 deferred render-target mips, and 36 the source-loop listener poses.
+    /// Version 32 adds mesh colors, 33 component tail timing, 34 the instance multiplier, 35 deferred render-target mips, 36 the source-loop listener poses and 37 the downloaded audio decoder.
     /// The managed side pins the same version and refuses every other version.
     #[test]
-    fn the_filter_descriptor_layout_is_native_api_36() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 36);
+    fn the_filter_descriptor_layout_is_native_api_37() {
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 37);
         assert_eq!(
             [
                 filter_kind::LOWPASS,

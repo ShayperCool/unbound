@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 36;
+        internal const uint CurrentVersion = 37;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -95,5 +95,11 @@ namespace Unbound.Runtime
         /// them, 0 when the texture has no such level or layer.
         /// </summary>
         internal delegate* unmanaged<ulong, int, int, int, int, int, int, int, NativeBuffer*, int> ReadTexture;
+        /// <summary>
+        /// (clip handle, file bytes, length, Unity `AudioType`, header only, out info): 0 when the
+        /// file decodes as that type (`unbound_assets::audio_download`) into the clip, or, header
+        /// only, when a partial WAV announces its format and length (no clip is made); else 1.
+        /// </summary>
+        internal delegate* unmanaged<ulong, byte*, int, int, int, AudioClipInfo*, int> AudioDecodeClip;
     }
 }

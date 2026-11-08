@@ -37,7 +37,8 @@ use crate::{
 /// 34: render protocol 14 (persistent direct-draw instance multiplier).
 /// 35: texture packet flag for deferred automatic mip visibility.
 /// 36: source-loop listener pose snapshots for spatial audio.
-pub const NATIVE_API_VERSION: u32 = 36;
+/// 37: `audio_decode_clip` (downloaded audio files).
+pub const NATIVE_API_VERSION: u32 = 37;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]
@@ -165,6 +166,11 @@ pub struct NativeApi {
     /// them, 0 when the texture has no such level or layer.
     pub read_texture:
         extern "C" fn(u64, i32, i32, i32, i32, i32, i32, i32, *mut NativeBuffer) -> i32,
+    // Version 37: downloaded audio.
+    /// (clip handle, file bytes, length, Unity `AudioType`, header only, out info): 0 when the
+    /// file decodes as that type (`unbound_assets::audio_download`) into the clip, or, header
+    /// only, when a partial WAV announces its format and length (no clip is made); else 1.
+    pub audio_decode_clip: extern "C" fn(u64, *const u8, i32, i32, i32, *mut AudioClipInfo) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -205,6 +211,7 @@ pub fn api() -> NativeApi {
         gamepads_state,
         video_frame,
         read_texture,
+        audio_decode_clip,
     }
 }
 
@@ -636,6 +643,35 @@ extern "C" fn audio_import_clip(
         }
         Ok(Err(error)) => {
             tracing::error!("importing audio clip {guid}: {error:#}");
+            1
+        }
+        Err(_) => 1,
+    }
+}
+
+extern "C" fn audio_decode_clip(
+    handle: u64,
+    data: *const u8,
+    length: i32,
+    audio_type: i32,
+    header_only: i32,
+    info: *mut AudioClipInfo,
+) -> i32 {
+    let data = if data.is_null() || length <= 0 {
+        &[][..]
+    } else {
+        unsafe { std::slice::from_raw_parts(data, length as usize) }
+    };
+    match std::panic::catch_unwind(|| {
+        state::decode_download(handle, data, audio_type, header_only != 0)
+    }) {
+        Ok(Ok(Some(decoded))) => {
+            unsafe { *info = decoded };
+            0
+        }
+        Ok(Ok(None)) => 1,
+        Ok(Err(error)) => {
+            tracing::debug!("a downloaded audio file does not decode: {error:#}");
             1
         }
         Err(_) => 1,

@@ -382,6 +382,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
         "ime-state" => crate::ime::state(request),
         "ime-request" => crate::ime::request(request),
         "bundle-open" => open_bundle(request),
+        "bundle-cache-form" => bundle_cache_form(request),
         "bundle-close" => {
             #[derive(serde::Deserialize)]
             struct Request {
@@ -1054,6 +1055,40 @@ pub fn set_build_target(target: &str, normal_maps_xyz: bool) {
     textures.normal_maps_xyz = normal_maps_xyz;
 }
 
+/// A downloaded audio file of the Unity `AudioType` `audio_type` decoded into a mixer clip handle
+/// (`header_only`: the format and length a partial WAV announces, no clip made); None when the
+/// type is one Unbound does not decode or, header only, the header is not all there.
+pub fn decode_download(
+    handle: u64,
+    data: &[u8],
+    audio_type: i32,
+    header_only: bool,
+) -> Result<Option<crate::audio::protocol::AudioClipInfo>> {
+    use unbound_assets::audio_download::{Container, decode, header};
+    let Some(container) = Container::of_audio_type(audio_type) else {
+        return Ok(None);
+    };
+    let info = |channels: u16, rate: u32, frames: u64| crate::audio::protocol::AudioClipInfo {
+        frames: frames.min(i32::MAX as u64) as i32,
+        channels: channels as i32,
+        frequency: rate as i32,
+        ..Default::default()
+    };
+    if header_only {
+        return Ok(
+            header(data, container).map(|(channels, rate, frames)| info(channels, rate, frames))
+        );
+    }
+    let decoded = decode(data, container)?;
+    let frames = decoded.samples.len() / decoded.channels.max(1) as usize;
+    let result = info(decoded.channels, decoded.rate, frames as u64);
+    state().audio.mixer().add_clip(
+        handle,
+        crate::audio::Clip::new(decoded.channels as usize, decoded.rate, decoded.samples),
+    );
+    Ok(Some(result))
+}
+
 /// Imports an asset audio clip (through the import cache) into a mixer clip handle.
 pub fn import_audio(handle: u64, guid: &str) -> Result<crate::audio::protocol::AudioClipInfo> {
     use unbound_assets::audio::LoadType;
@@ -1242,8 +1277,10 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
 
 /// `bundle-open`: an AssetBundle from a file (at `offset`) or from base64 `data`; a nonzero `crc`
 /// is checked against its uncompressed content before it is registered (0, or none, skips it).
+/// With `reportCrc` a mismatch answers `{"crcMismatch": {"expected", "actual"}}` instead of failing.
 fn open_bundle(request: &str) -> Result<String> {
     #[derive(serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
     struct Request {
         #[serde(default)]
         path: Option<String>,
@@ -1253,16 +1290,52 @@ fn open_bundle(request: &str) -> Result<String> {
         data: Option<String>,
         #[serde(default)]
         crc: u32,
+        #[serde(default)]
+        report_crc: bool,
     }
     let r: Request = serde_json::from_str(request)?;
-    match (r.path, r.data) {
+    let opened = match (r.path, r.data) {
         (Some(path), _) => crate::bundles::open_file(&path, r.offset, r.crc),
         (None, Some(data)) => crate::bundles::open(
             &crate::fonts::decode_base64(&data).context("bundle data is not base64")?,
             r.crc,
         ),
         _ => anyhow::bail!("bundle-open needs a path or data"),
+    };
+    match opened {
+        Err(error) if r.report_crc => {
+            match error.downcast_ref::<unbound_assets::bundle::CrcMismatch>() {
+                Some(m) => Ok(serde_json::json!({
+                    "crcMismatch": { "expected": m.expected, "actual": m.actual }
+                })
+                .to_string()),
+                None => Err(error),
+            }
+        }
+        other => other,
     }
+}
+
+/// `bundle-cache-form`: writes the archive at `source` to `dest` in the form the AssetBundle cache
+/// keeps it (LZ4 when `compress`, else uncompressed;
+/// [`unbound_assets::bundle_cache::cache_form`]) and answers the room it needs (`required`) and
+/// whether it was rewritten.
+fn bundle_cache_form(request: &str) -> Result<String> {
+    #[derive(serde::Deserialize)]
+    struct Request {
+        source: String,
+        dest: String,
+        compress: bool,
+    }
+    let r: Request = serde_json::from_str(request)?;
+    let data =
+        std::fs::read(&r.source).with_context(|| format!("reading the download {}", r.source))?;
+    let form = unbound_assets::bundle_cache::cache_form(&data, r.compress)?;
+    std::fs::write(&r.dest, &form.data).with_context(|| format!("writing {}", r.dest))?;
+    Ok(
+        serde_json::json!({ "required": form.required_space, "rewritten": form.rewritten })
+            .to_string(),
+    )
 }
 
 #[cfg(test)]
