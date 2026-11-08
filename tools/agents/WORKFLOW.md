@@ -11,6 +11,7 @@ Machine-local state lives in `~/.cache/unbound/agents/` (not in Git):
 | `QUEUE.md` | the orchestrator's task queue |
 | `landed.jsonl` | one line per landed branch, including its train ID and gate log |
 | `land-queue.json` | queued callers, requested probes, and recoverable results |
+| `land-publications.json` | durable publication receipts, retained until the push is launched |
 | `logs/` | gate logs |
 | `suite/<label>/` | `summary.json` of each `tools/agents/suite.py` run |
 | `baseline/` | the sheriff's last full-suite results (a promoted `summary.json`) |
@@ -168,8 +169,9 @@ the declared probes of earlier queued commits it carries, even if their own requ
 
 Caller locks identify live requests without depending on reusable process IDs. A caller that
 changes its head or authored files while queued is rejected without discarding its work.
-Prepared results are saved before main advances; a later lock holder can recover the log and
-result after an interrupted leader. Temporary integration checkouts are locked while active.
+Prepared results and publication receipts are saved before main advances. Publication survives
+completed caller results, so a later lock holder can recover the log and launch a missed push.
+An interrupted push can be replayed safely. Temporary integration checkouts are locked while active.
 An interrupted or changed checkout is retained, with its location reported. Inspect it before
 unlocking or removing it; normal cleanup never forces removal. Old callers cannot join a new
 train until restarted with the updated tooling.
