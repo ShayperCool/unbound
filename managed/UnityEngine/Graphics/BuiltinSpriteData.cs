@@ -116,7 +116,7 @@ namespace Unbound.Runtime
         /// <summary>The `fields` of the install's object `fileId` as the host's `editor-resource`
         /// call answers it; an error when the host cannot answer or the object is not of class
         /// `classId`.</summary>
-        static JsonElement RecordFields(string guid, long fileId, int classId, string className)
+        internal static JsonElement RecordFields(string guid, long fileId, int classId, string className)
         {
             var answer = Native.Call("editor-resource", JsonSerializer.Serialize(new { guid, fileId }));
             using var document = JsonDocument.Parse(answer);

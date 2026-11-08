@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
 
 namespace Unbound.Runtime
 {
@@ -167,6 +168,26 @@ namespace Unbound.Runtime
         // ------------------------------------------------------------------ construction
 
         internal static YNode MakeScalar(string s) => new YNode { Kind = YKind.Scalar, Scalar = s };
+
+        /// <summary>A JSON tree as the native side writes serialized objects (scalars as text,
+        /// references as {fileID, guid}) as a node of the same shape.</summary>
+        internal static YNode FromJson(System.Text.Json.JsonElement value)
+        {
+            switch (value.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    var keys = new List<string>();
+                    var values = new List<YNode>();
+                    foreach (var p in value.EnumerateObject()) { keys.Add(p.Name); values.Add(FromJson(p.Value)); }
+                    return new YNode { Kind = YKind.Map, Keys = keys.ToArray(), Values = values.ToArray() };
+                case JsonValueKind.Array:
+                    var items = new List<YNode>();
+                    foreach (var item in value.EnumerateArray()) items.Add(FromJson(item));
+                    return new YNode { Kind = YKind.Seq, Items = items.ToArray() };
+                case JsonValueKind.Null: return new YNode { Kind = YKind.Null };
+                default: return MakeScalar(value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString());
+            }
+        }
 
         internal static YNode MakeMap(params (string, YNode)[] entries)
         {

@@ -1,0 +1,478 @@
+{"k":"onGUI","v":"called"}
+{"k":"skin/name","v":"GameSkin"}
+{"k":"skin/hideFlags","v":"HideAndDontSave"}
+{"k":"skin/font","v":"LegacyRuntime"}
+{"k":"skin/settings","v":[true,true,[1,1,1,1],2,[1,0.384039074,0,0.7]]}
+{"k":"style/box/name","v":"box"}
+{"k":"style/box/normal","v":["box",[0.799999952,0.799999952,0.799999952,1],0]}
+{"k":"style/box/hover","v":["null",[0,0,0,1],0]}
+{"k":"style/box/active","v":["null",[0,0,0,1],0]}
+{"k":"style/box/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/box/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"style/box/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/box/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/box/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/box/border","v":[6,6,6,6]}
+{"k":"style/box/margin","v":[4,4,4,4]}
+{"k":"style/box/padding","v":[4,4,4,4]}
+{"k":"style/box/overflow","v":[0,0,0,0]}
+{"k":"style/box/font","v":"null"}
+{"k":"style/box/text","v":[0,"Normal","UpperCenter",false,true,"Clip","ImageLeft"]}
+{"k":"style/box/layout","v":[0,0,0,0,true,false]}
+{"k":"style/box/lineHeight","v":14}
+{"k":"style/button/name","v":"button"}
+{"k":"style/button/normal","v":["button",[0.9,0.9,0.9,1],0]}
+{"k":"style/button/hover","v":["button hover",[1,1,1,1],0]}
+{"k":"style/button/active","v":["button active",[0.9,0.9,0.9,1],0]}
+{"k":"style/button/focused","v":["null",[1,1,1,1],0]}
+{"k":"style/button/onNormal","v":["button on",[0.9019608,0.9019608,0.9019608,1],0]}
+{"k":"style/button/onHover","v":["button on hover",[1,1,1,1],0]}
+{"k":"style/button/onActive","v":["button active",[0.9,0.9,0.9,1],0]}
+{"k":"style/button/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/button/border","v":[6,6,6,4]}
+{"k":"style/button/margin","v":[4,4,4,4]}
+{"k":"style/button/padding","v":[6,6,3,3]}
+{"k":"style/button/overflow","v":[0,0,0,0]}
+{"k":"style/button/font","v":"null"}
+{"k":"style/button/text","v":[0,"Normal","MiddleCenter",false,true,"Clip","ImageLeft"]}
+{"k":"style/button/layout","v":[0,0,0,0,true,false]}
+{"k":"style/button/lineHeight","v":14}
+{"k":"style/toggle/name","v":"toggle"}
+{"k":"style/toggle/normal","v":["toggle",[0.891128957,0.891128957,0.891128957,1],0]}
+{"k":"style/toggle/hover","v":["toggle hover",[1,1,1,1],0]}
+{"k":"style/toggle/active","v":["toggle active",[1,1,1,1],0]}
+{"k":"style/toggle/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/toggle/onNormal","v":["toggle on",[0.8901961,0.8901961,0.8901961,1],0]}
+{"k":"style/toggle/onHover","v":["toggle on hover",[1,1,1,1],0]}
+{"k":"style/toggle/onActive","v":["toggle on active",[1,1,1,1],0]}
+{"k":"style/toggle/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/toggle/border","v":[14,0,14,0]}
+{"k":"style/toggle/margin","v":[4,4,4,4]}
+{"k":"style/toggle/padding","v":[15,0,3,0]}
+{"k":"style/toggle/overflow","v":[-1,0,-4,0]}
+{"k":"style/toggle/font","v":"null"}
+{"k":"style/toggle/text","v":[0,"Normal","UpperLeft",false,true,"Clip","ImageLeft"]}
+{"k":"style/toggle/layout","v":[0,0,0,0,true,false]}
+{"k":"style/toggle/lineHeight","v":14}
+{"k":"style/label/name","v":"label"}
+{"k":"style/label/normal","v":["null",[0.9,0.9,0.9,1],0]}
+{"k":"style/label/hover","v":["null",[0.9,0.9,0.9,1],0]}
+{"k":"style/label/active","v":["null",[0.9,0.9,0.9,1],0]}
+{"k":"style/label/focused","v":["null",[0.9,0.9,0.9,1],0]}
+{"k":"style/label/onNormal","v":["null",[0.9,0.9,0.9,1],0]}
+{"k":"style/label/onHover","v":["null",[0.9,0.9,0.9,1],0]}
+{"k":"style/label/onActive","v":["null",[0.9,0.9,0.9,1],0]}
+{"k":"style/label/onFocused","v":["null",[0.9,0.9,0.9,1],0]}
+{"k":"style/label/border","v":[0,0,0,0]}
+{"k":"style/label/margin","v":[4,4,4,4]}
+{"k":"style/label/padding","v":[0,0,3,3]}
+{"k":"style/label/overflow","v":[0,0,0,0]}
+{"k":"style/label/font","v":"null"}
+{"k":"style/label/text","v":[0,"Normal","UpperLeft",true,true,"Clip","ImageLeft"]}
+{"k":"style/label/layout","v":[0,0,0,0,true,false]}
+{"k":"style/label/lineHeight","v":14}
+{"k":"style/textField/name","v":"textfield"}
+{"k":"style/textField/normal","v":["textfield",[0.799999952,0.799999952,0.799999952,1],0]}
+{"k":"style/textField/hover","v":["textfield hover",[0.9,0.9,0.9,1],0]}
+{"k":"style/textField/active","v":["null",[0,0,0,1],0]}
+{"k":"style/textField/focused","v":["textfield hover",[1,1,1,1],0]}
+{"k":"style/textField/onNormal","v":["textfield on",[1,1,1,1],0]}
+{"k":"style/textField/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/textField/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/textField/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/textField/border","v":[4,4,4,4]}
+{"k":"style/textField/margin","v":[4,4,4,4]}
+{"k":"style/textField/padding","v":[3,3,3,3]}
+{"k":"style/textField/overflow","v":[0,0,0,0]}
+{"k":"style/textField/font","v":"null"}
+{"k":"style/textField/text","v":[0,"Normal","UpperLeft",false,false,"Clip","TextOnly"]}
+{"k":"style/textField/layout","v":[0,0,0,0,true,false]}
+{"k":"style/textField/lineHeight","v":14}
+{"k":"style/textArea/name","v":"textarea"}
+{"k":"style/textArea/normal","v":["textfield",[0.9019608,0.9019608,0.9019608,1],0]}
+{"k":"style/textArea/hover","v":["textfield hover",[0.799999952,0.799999952,0.799999952,1],0]}
+{"k":"style/textArea/active","v":["null",[0,0,0,1],0]}
+{"k":"style/textArea/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/textArea/onNormal","v":["textfield on",[1,1,1,1],0]}
+{"k":"style/textArea/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/textArea/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/textArea/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/textArea/border","v":[4,4,4,4]}
+{"k":"style/textArea/margin","v":[4,4,4,4]}
+{"k":"style/textArea/padding","v":[3,3,3,3]}
+{"k":"style/textArea/overflow","v":[0,0,0,0]}
+{"k":"style/textArea/font","v":"null"}
+{"k":"style/textArea/text","v":[0,"Normal","UpperLeft",true,false,"Clip","ImageLeft"]}
+{"k":"style/textArea/layout","v":[0,0,0,0,true,false]}
+{"k":"style/textArea/lineHeight","v":14}
+{"k":"style/window/name","v":"window"}
+{"k":"style/window/normal","v":["window",[1,1,1,1],0]}
+{"k":"style/window/hover","v":["null",[0,0,0,1],0]}
+{"k":"style/window/active","v":["null",[0,0,0,1],0]}
+{"k":"style/window/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/window/onNormal","v":["window on",[1,1,1,1],0]}
+{"k":"style/window/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/window/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/window/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/window/border","v":[8,8,18,8]}
+{"k":"style/window/margin","v":[0,0,0,0]}
+{"k":"style/window/padding","v":[10,10,20,10]}
+{"k":"style/window/overflow","v":[0,0,0,0]}
+{"k":"style/window/font","v":"null"}
+{"k":"style/window/text","v":[0,"Normal","UpperCenter",false,true,"Clip","ImageLeft"]}
+{"k":"style/window/layout","v":[0,-18,0,0,true,false]}
+{"k":"style/window/lineHeight","v":14}
+{"k":"style/horizontalSlider/name","v":"horizontalslider"}
+{"k":"style/horizontalSlider/normal","v":["horizontalslider",[0,0,0,1],0]}
+{"k":"style/horizontalSlider/hover","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalSlider/active","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalSlider/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalSlider/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalSlider/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalSlider/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalSlider/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalSlider/border","v":[3,3,0,0]}
+{"k":"style/horizontalSlider/margin","v":[4,4,4,4]}
+{"k":"style/horizontalSlider/padding","v":[-1,-1,0,0]}
+{"k":"style/horizontalSlider/overflow","v":[0,0,-2,-3]}
+{"k":"style/horizontalSlider/font","v":"null"}
+{"k":"style/horizontalSlider/text","v":[0,"Normal","UpperLeft",false,true,"Clip","ImageOnly"]}
+{"k":"style/horizontalSlider/layout","v":[0,0,0,12,true,false]}
+{"k":"style/horizontalSlider/lineHeight","v":14}
+{"k":"style/horizontalSliderThumb/name","v":"horizontalsliderthumb"}
+{"k":"style/horizontalSliderThumb/normal","v":["slider thumb",[0,0,0,1],0]}
+{"k":"style/horizontalSliderThumb/hover","v":["slidert humb hover",[0,0,0,1],0]}
+{"k":"style/horizontalSliderThumb/active","v":["slider thumb active",[0,0,0,1],0]}
+{"k":"style/horizontalSliderThumb/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalSliderThumb/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalSliderThumb/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalSliderThumb/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalSliderThumb/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalSliderThumb/border","v":[4,4,0,0]}
+{"k":"style/horizontalSliderThumb/margin","v":[0,0,0,0]}
+{"k":"style/horizontalSliderThumb/padding","v":[7,7,0,0]}
+{"k":"style/horizontalSliderThumb/overflow","v":[-1,-1,0,0]}
+{"k":"style/horizontalSliderThumb/font","v":"null"}
+{"k":"style/horizontalSliderThumb/text","v":[0,"Normal","UpperLeft",false,true,"Clip","ImageOnly"]}
+{"k":"style/horizontalSliderThumb/layout","v":[0,0,0,12,true,false]}
+{"k":"style/horizontalSliderThumb/lineHeight","v":14}
+{"k":"style/verticalSlider/name","v":"verticalslider"}
+{"k":"style/verticalSlider/normal","v":["verticalslider",[0,0,0,1],0]}
+{"k":"style/verticalSlider/hover","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalSlider/active","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalSlider/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalSlider/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalSlider/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalSlider/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalSlider/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalSlider/border","v":[0,0,3,3]}
+{"k":"style/verticalSlider/margin","v":[4,4,4,4]}
+{"k":"style/verticalSlider/padding","v":[0,0,-1,-1]}
+{"k":"style/verticalSlider/overflow","v":[-2,-3,0,0]}
+{"k":"style/verticalSlider/font","v":"null"}
+{"k":"style/verticalSlider/text","v":[0,"Normal","UpperLeft",false,true,"Overflow","ImageLeft"]}
+{"k":"style/verticalSlider/layout","v":[0,0,12,0,false,true]}
+{"k":"style/verticalSlider/lineHeight","v":14}
+{"k":"style/verticalSliderThumb/name","v":"verticalsliderthumb"}
+{"k":"style/verticalSliderThumb/normal","v":["slider thumb",[0,0,0,1],0]}
+{"k":"style/verticalSliderThumb/hover","v":["slidert humb hover",[0,0,0,1],0]}
+{"k":"style/verticalSliderThumb/active","v":["slider thumb active",[0,0,0,1],0]}
+{"k":"style/verticalSliderThumb/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalSliderThumb/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalSliderThumb/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalSliderThumb/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalSliderThumb/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalSliderThumb/border","v":[0,0,0,0]}
+{"k":"style/verticalSliderThumb/margin","v":[0,0,0,0]}
+{"k":"style/verticalSliderThumb/padding","v":[0,0,7,7]}
+{"k":"style/verticalSliderThumb/overflow","v":[0,0,-1,-1]}
+{"k":"style/verticalSliderThumb/font","v":"null"}
+{"k":"style/verticalSliderThumb/text","v":[0,"Normal","UpperLeft",false,true,"Clip","ImageLeft"]}
+{"k":"style/verticalSliderThumb/layout","v":[0,0,12,0,false,true]}
+{"k":"style/verticalSliderThumb/lineHeight","v":14}
+{"k":"style/horizontalScrollbar/name","v":"horizontalscrollbar"}
+{"k":"style/horizontalScrollbar/normal","v":["horizontal scrollbar",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbar/hover","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbar/active","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbar/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbar/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbar/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbar/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbar/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbar/border","v":[9,9,0,0]}
+{"k":"style/horizontalScrollbar/margin","v":[4,4,1,4]}
+{"k":"style/horizontalScrollbar/padding","v":[0,0,0,0]}
+{"k":"style/horizontalScrollbar/overflow","v":[0,0,0,0]}
+{"k":"style/horizontalScrollbar/font","v":"null"}
+{"k":"style/horizontalScrollbar/text","v":[0,"Normal","UpperLeft",false,true,"Clip","ImageOnly"]}
+{"k":"style/horizontalScrollbar/layout","v":[0,0,0,15,true,false]}
+{"k":"style/horizontalScrollbar/lineHeight","v":14}
+{"k":"style/horizontalScrollbarThumb/name","v":"horizontalscrollbarthumb"}
+{"k":"style/horizontalScrollbarThumb/normal","v":["horizontal scrollbar thumb",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarThumb/hover","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarThumb/active","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarThumb/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarThumb/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarThumb/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarThumb/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarThumb/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarThumb/border","v":[6,6,6,6]}
+{"k":"style/horizontalScrollbarThumb/margin","v":[0,0,0,0]}
+{"k":"style/horizontalScrollbarThumb/padding","v":[6,6,0,0]}
+{"k":"style/horizontalScrollbarThumb/overflow","v":[0,0,-1,1]}
+{"k":"style/horizontalScrollbarThumb/font","v":"null"}
+{"k":"style/horizontalScrollbarThumb/text","v":[0,"Normal","UpperLeft",false,true,"Clip","ImageLeft"]}
+{"k":"style/horizontalScrollbarThumb/layout","v":[0,0,0,13,true,false]}
+{"k":"style/horizontalScrollbarThumb/lineHeight","v":14}
+{"k":"style/horizontalScrollbarLeftButton/name","v":"horizontalscrollbarleftbutton"}
+{"k":"style/horizontalScrollbarLeftButton/normal","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarLeftButton/hover","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarLeftButton/active","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarLeftButton/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarLeftButton/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarLeftButton/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarLeftButton/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarLeftButton/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarLeftButton/border","v":[0,0,0,0]}
+{"k":"style/horizontalScrollbarLeftButton/margin","v":[0,0,0,0]}
+{"k":"style/horizontalScrollbarLeftButton/padding","v":[0,0,0,0]}
+{"k":"style/horizontalScrollbarLeftButton/overflow","v":[0,0,0,0]}
+{"k":"style/horizontalScrollbarLeftButton/font","v":"null"}
+{"k":"style/horizontalScrollbarLeftButton/text","v":[0,"Normal","UpperLeft",false,true,"Clip","ImageLeft"]}
+{"k":"style/horizontalScrollbarLeftButton/layout","v":[0,0,0,0,true,false]}
+{"k":"style/horizontalScrollbarLeftButton/lineHeight","v":14}
+{"k":"style/horizontalScrollbarRightButton/name","v":"horizontalscrollbarrightbutton"}
+{"k":"style/horizontalScrollbarRightButton/normal","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarRightButton/hover","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarRightButton/active","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarRightButton/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarRightButton/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarRightButton/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarRightButton/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarRightButton/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/horizontalScrollbarRightButton/border","v":[0,0,0,0]}
+{"k":"style/horizontalScrollbarRightButton/margin","v":[0,0,0,0]}
+{"k":"style/horizontalScrollbarRightButton/padding","v":[0,0,0,0]}
+{"k":"style/horizontalScrollbarRightButton/overflow","v":[0,0,0,0]}
+{"k":"style/horizontalScrollbarRightButton/font","v":"null"}
+{"k":"style/horizontalScrollbarRightButton/text","v":[0,"Normal","UpperLeft",false,true,"Clip","ImageLeft"]}
+{"k":"style/horizontalScrollbarRightButton/layout","v":[0,0,0,0,true,false]}
+{"k":"style/horizontalScrollbarRightButton/lineHeight","v":14}
+{"k":"style/verticalScrollbar/name","v":"verticalscrollbar"}
+{"k":"style/verticalScrollbar/normal","v":["vertical scrollbar",[0,0,0,1],0]}
+{"k":"style/verticalScrollbar/hover","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbar/active","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbar/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbar/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbar/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbar/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbar/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbar/border","v":[0,0,9,9]}
+{"k":"style/verticalScrollbar/margin","v":[1,4,4,4]}
+{"k":"style/verticalScrollbar/padding","v":[0,0,1,1]}
+{"k":"style/verticalScrollbar/overflow","v":[0,0,0,0]}
+{"k":"style/verticalScrollbar/font","v":"null"}
+{"k":"style/verticalScrollbar/text","v":[0,"Normal","UpperLeft",false,true,"Clip","ImageLeft"]}
+{"k":"style/verticalScrollbar/layout","v":[0,0,15,0,true,false]}
+{"k":"style/verticalScrollbar/lineHeight","v":14}
+{"k":"style/verticalScrollbarThumb/name","v":"verticalscrollbarthumb"}
+{"k":"style/verticalScrollbarThumb/normal","v":["vertical scrollbar thumb",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarThumb/hover","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarThumb/active","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarThumb/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarThumb/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarThumb/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarThumb/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarThumb/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarThumb/border","v":[6,6,6,6]}
+{"k":"style/verticalScrollbarThumb/margin","v":[0,0,0,0]}
+{"k":"style/verticalScrollbarThumb/padding","v":[0,0,6,6]}
+{"k":"style/verticalScrollbarThumb/overflow","v":[-1,-1,0,0]}
+{"k":"style/verticalScrollbarThumb/font","v":"null"}
+{"k":"style/verticalScrollbarThumb/text","v":[0,"Normal","UpperLeft",false,true,"Clip","ImageOnly"]}
+{"k":"style/verticalScrollbarThumb/layout","v":[0,0,15,0,false,true]}
+{"k":"style/verticalScrollbarThumb/lineHeight","v":14}
+{"k":"style/verticalScrollbarUpButton/name","v":"verticalscrollbarupbutton"}
+{"k":"style/verticalScrollbarUpButton/normal","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarUpButton/hover","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarUpButton/active","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarUpButton/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarUpButton/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarUpButton/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarUpButton/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarUpButton/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarUpButton/border","v":[0,0,0,0]}
+{"k":"style/verticalScrollbarUpButton/margin","v":[0,0,0,0]}
+{"k":"style/verticalScrollbarUpButton/padding","v":[0,0,0,0]}
+{"k":"style/verticalScrollbarUpButton/overflow","v":[0,0,0,0]}
+{"k":"style/verticalScrollbarUpButton/font","v":"null"}
+{"k":"style/verticalScrollbarUpButton/text","v":[0,"Normal","UpperLeft",false,true,"Clip","ImageLeft"]}
+{"k":"style/verticalScrollbarUpButton/layout","v":[0,0,0,0,true,false]}
+{"k":"style/verticalScrollbarUpButton/lineHeight","v":14}
+{"k":"style/verticalScrollbarDownButton/name","v":"verticalscrollbardownbutton"}
+{"k":"style/verticalScrollbarDownButton/normal","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarDownButton/hover","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarDownButton/active","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarDownButton/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarDownButton/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarDownButton/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarDownButton/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarDownButton/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/verticalScrollbarDownButton/border","v":[0,0,0,0]}
+{"k":"style/verticalScrollbarDownButton/margin","v":[0,0,0,0]}
+{"k":"style/verticalScrollbarDownButton/padding","v":[0,0,0,0]}
+{"k":"style/verticalScrollbarDownButton/overflow","v":[0,0,0,0]}
+{"k":"style/verticalScrollbarDownButton/font","v":"null"}
+{"k":"style/verticalScrollbarDownButton/text","v":[0,"Normal","UpperLeft",false,true,"Clip","ImageLeft"]}
+{"k":"style/verticalScrollbarDownButton/layout","v":[0,0,0,0,true,false]}
+{"k":"style/verticalScrollbarDownButton/lineHeight","v":14}
+{"k":"style/scrollView/name","v":"scrollview"}
+{"k":"style/scrollView/normal","v":["null",[0,0,0,1],0]}
+{"k":"style/scrollView/hover","v":["null",[0,0,0,1],0]}
+{"k":"style/scrollView/active","v":["null",[0,0,0,1],0]}
+{"k":"style/scrollView/focused","v":["null",[0,0,0,1],0]}
+{"k":"style/scrollView/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"style/scrollView/onHover","v":["null",[0,0,0,1],0]}
+{"k":"style/scrollView/onActive","v":["null",[0,0,0,1],0]}
+{"k":"style/scrollView/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"style/scrollView/border","v":[0,0,0,0]}
+{"k":"style/scrollView/margin","v":[0,0,0,0]}
+{"k":"style/scrollView/padding","v":[0,0,0,0]}
+{"k":"style/scrollView/overflow","v":[0,0,0,0]}
+{"k":"style/scrollView/font","v":"null"}
+{"k":"style/scrollView/text","v":[0,"Normal","UpperLeft",false,true,"Clip","ImageLeft"]}
+{"k":"style/scrollView/layout","v":[0,0,0,0,true,false]}
+{"k":"style/scrollView/lineHeight","v":14}
+{"k":"skin/customStyles","v":["thumb","leftbutton","rightbutton"]}
+{"k":"custom/0/name","v":"thumb"}
+{"k":"custom/0/normal","v":["null",[0,0,0,1],0]}
+{"k":"custom/0/hover","v":["null",[0,0,0,1],0]}
+{"k":"custom/0/active","v":["null",[0,0,0,1],0]}
+{"k":"custom/0/focused","v":["null",[0,0,0,1],0]}
+{"k":"custom/0/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"custom/0/onHover","v":["null",[0,0,0,1],0]}
+{"k":"custom/0/onActive","v":["null",[0,0,0,1],0]}
+{"k":"custom/0/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"custom/0/border","v":[0,0,0,0]}
+{"k":"custom/0/margin","v":[0,0,0,0]}
+{"k":"custom/0/padding","v":[0,0,0,0]}
+{"k":"custom/0/overflow","v":[0,0,0,0]}
+{"k":"custom/0/font","v":"null"}
+{"k":"custom/0/text","v":[0,"Normal","UpperLeft",false,true,"Overflow","ImageLeft"]}
+{"k":"custom/0/layout","v":[0,0,0,0,true,false]}
+{"k":"custom/0/lineHeight","v":14}
+{"k":"custom/1/name","v":"leftbutton"}
+{"k":"custom/1/normal","v":["null",[0,0,0,1],0]}
+{"k":"custom/1/hover","v":["null",[0,0,0,1],0]}
+{"k":"custom/1/active","v":["null",[0,0,0,1],0]}
+{"k":"custom/1/focused","v":["null",[0,0,0,1],0]}
+{"k":"custom/1/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"custom/1/onHover","v":["null",[0,0,0,1],0]}
+{"k":"custom/1/onActive","v":["null",[0,0,0,1],0]}
+{"k":"custom/1/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"custom/1/border","v":[0,0,0,0]}
+{"k":"custom/1/margin","v":[0,0,0,0]}
+{"k":"custom/1/padding","v":[0,0,0,0]}
+{"k":"custom/1/overflow","v":[0,0,0,0]}
+{"k":"custom/1/font","v":"null"}
+{"k":"custom/1/text","v":[0,"Normal","UpperLeft",false,true,"Overflow","ImageLeft"]}
+{"k":"custom/1/layout","v":[0,0,0,0,true,false]}
+{"k":"custom/1/lineHeight","v":14}
+{"k":"custom/2/name","v":"rightbutton"}
+{"k":"custom/2/normal","v":["null",[0,0,0,1],0]}
+{"k":"custom/2/hover","v":["null",[0,0,0,1],0]}
+{"k":"custom/2/active","v":["null",[0,0,0,1],0]}
+{"k":"custom/2/focused","v":["null",[0,0,0,1],0]}
+{"k":"custom/2/onNormal","v":["null",[0,0,0,1],0]}
+{"k":"custom/2/onHover","v":["null",[0,0,0,1],0]}
+{"k":"custom/2/onActive","v":["null",[0,0,0,1],0]}
+{"k":"custom/2/onFocused","v":["null",[0,0,0,1],0]}
+{"k":"custom/2/border","v":[0,0,0,0]}
+{"k":"custom/2/margin","v":[0,0,0,0]}
+{"k":"custom/2/padding","v":[0,0,0,0]}
+{"k":"custom/2/overflow","v":[0,0,0,0]}
+{"k":"custom/2/font","v":"null"}
+{"k":"custom/2/text","v":[0,"Normal","UpperLeft",false,true,"Overflow","ImageLeft"]}
+{"k":"custom/2/layout","v":[0,0,0,0,true,false]}
+{"k":"custom/2/lineHeight","v":14}
+{"k":"skin/enumerated","v":["SliderMixed","box","button","horizontalscrollbar","horizontalscrollbarleftbutton","horizontalscrollbarrightbutton","horizontalscrollbarthumb","horizontalslider","horizontalsliderthumb","horizontalsliderthumbextent","label","leftbutton","rightbutton","scrollview","textarea","textfield","thumb","toggle","verticalscrollbar","verticalscrollbardownbutton","verticalscrollbarthumb","verticalscrollbarupbutton","verticalslider","verticalsliderthumb","verticalsliderthumbextent","window"]}
+{"k":"skin/findStyle","v":["button=button","BUTTON=button","textfield=textfield","horizontalsliderthumbextent=horizontalsliderthumbextent","verticalsliderthumbextent=verticalsliderthumbextent","SliderMixed=SliderMixed","nothing=null"]}
+{"k":"texture/box/info","v":["Texture2D",12,12,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/box/format","v":"RGBA32"}
+{"k":"texture/box/pixels","v":"ffffff00ffffff0000000058000000b9000000ca000000cc000000cc000000ca000000b900000058ffffff00ffffff00ffffff00000000910000009f0000007100000066000000660000006600000066000000710000009f00000091ffffff0000000058000000a10000006600000066000000660000006600000066000000660000006600000066000000a000000055000000c10000006f00000066000000660000006600000066000000660000006600000066000000660000006f000000bf000000cb00000066000000660000006600000066000000660000006600000066000000660000006600000066000000cb000000cc00000066000000660000006600000066000000660000006600000066000000660000006600000066000000cc000000cc00000066000000660000006600000066000000660000006600000066000000660000006600000066000000cc000000cb00000066000000660000006600000066000000660000006600000066000000660000006600000066000000cb000000c10000006f00000066000000660000006600000066000000660000006600000066000000660000006f000000bf00000058000000a10000006600000066000000660000006600000066000000660000006600000066000000a100000055ffffff0000000091000000a4000000720000006600000066000000660000006600000072000000a400000091ffffff00ffffff00ffffff0000000058000000b9000000ca000000cc000000cc000000ca000000b900000058ffffff00ffffff00"}
+{"k":"texture/button/info","v":["Texture2D",12,12,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/button/format","v":"RGBA32"}
+{"k":"texture/button/pixels","v":"ffffff00ffffff00000000320000008e000000b9000000cc000000cc000000b90000008e00000032ffffff00ffffff00ffffff000000005e131313872e2e2e893636368f3636368f3636368f3636368f2e2e2e89131313870000005effffff0000000032121212863636368f3535358f3535358f3535358f3535358f3535358f3636368f3535358f12121286000000300000009c2f2f2f893535358f3636368f3535358f3636368f3535358f3636368f3535358f3636368f2f2f2f890000009a000000c03636368f3535358f3636368f3535358f3535358f3535358f3535358f3535358f3535358f3535358f000000c2000000cc1a1a1a8f1a1a1a8f1a1a1a8f1a1a1a8f1a1a1a8f1a1a1a8f1a1a1a8f1a1a1a8f1a1a1a8f1b1b1b8f000000cc000000cc1a1a1a8f1b1b1b8f1b1b1b8f1a1a1a8f1b1b1b8f1b1b1b8f1a1a1a8f1b1b1b8f1a1a1a8f1a1a1a8f000000cc000000c040404096414141964040409640404096404040964040409641414196414141964040409640404096000000c00000009c4c4c4c945656569a5757579a5656569a5656569a5656569a5656569a5656569a5656569a4c4c4c940000009a000000322424248f6969699e6969699e6969699e6969699e6969699e6a6a6a9e6969699e6969699e2424248f00000030ffffff000000005e282828936666669a777777a2777777a2777777a2777777a26767679a282828930000005effffff00ffffff00ffffff00000000320000008e000000b6000000cc000000cc000000b60000008e00000032ffffff00ffffff00"}
+{"k":"texture/button active/info","v":["Texture2D",12,12,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/button active/format","v":"RGBA32"}
+{"k":"texture/button active/pixels","v":"ffffff00ffffff00929292329292928e929292b9929292cc929292cc929292b99292928e92929232ffffff00ffffff00ffffff009292925e74747484424242873636368f3636368f3636368f3636368f42424287747474849292925effffff0092929232737373863030308f3535358f3535358f3535358f3535358f3535358f3636368f2f2f2f8f72727285929292309292929c333333892f2f2f8f3636368f3535358f3636368f3535358f3636368f3535358f3030308f333333899292929a929292c02424248f2e2e2e8f3636368f3535358f3535358f3535358f3535358f3535358f2e2e2e8f2323238f929292c2929292cc1010108f1616168f1919198f1a1a1a8f1a1a1a8f1a1a1a8f1a1a1a8f1919198f1616168f1111118f929292cc929292cc0c0c0c8f1313138f1717178f1717178f1818188f1818188f1717178f1717178f1212128f0c0c0c8f929292cc929292c00808088f0d0d0d8f1010108f1212128f1212128f1212128f1212128f1111118f0c0c0c8f0808088f929292c09292929c181818890606068f0808088f0a0a0a8f0a0a0a8f0a0a0a8f0a0a0a8f0808088f0606068f181818899292929a929292326b6b6b860202028f0303038f0303038f0303038f0303038f0303038f0303038f0202028f6a6a6a8792929230ffffff009292925e6a6a6a8b1b1b1b8a0000008f0000008f0000008f0000008f1b1b1b8a6a6a6a8b9292925effffff00ffffff00ffffff00929292329292928e929292b6929292cc929292cc929292b69292928e92929232ffffff00ffffff00"}
+{"k":"texture/button hover/info","v":["Texture2D",12,12,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/button hover/format","v":"RGBA32"}
+{"k":"texture/button hover/pixels","v":"ffffff00ffffff00717171327171718e717171b9717171cc717171cc717171b97171718e71717132ffffff00ffffff00ffffff007171715e5e5e5e873d3d3d893636368f3535358f3535358f3535358f3e3e3e895e5e5e877171715effffff0071717132606060863535358f3636368f3636368f3535358f3535358f3636368f3636368f3535358f5f5f5f86717171307171719c3c3c3c893535358f3535358f3636368f3535358f3535358f3636368f3535358f3535358f3d3d3d897171719a717171c03535358f3535358f3535358f3535358f3535358f3535358f3636368f3535358f3535358f3535358f717171c2717171cc1a1a1a8f1a1a1a8f1a1a1a8f1a1a1a8f1a1a1a8f1b1b1b8f1a1a1a8f1a1a1a8f1a1a1a8f1b1b1b8f717171cc717171cc1b1b1b8f1a1a1a8f1b1b1b8f1b1b1b8f1b1b1b8f1a1a1a8f1a1a1a8f1a1a1a8f1b1b1b8f1a1a1a8f717171cc717171c04e4e4e984d4d4d984d4d4d984d4d4d984d4d4d984e4e4e984d4d4d984d4d4d984d4d4d984d4d4d98717171c07171719c676767986767679e6868689e6767679e6868689e6767679e6767679e6868689e6767679e676767987171719a7171713272727292808080a4818181a4818181a4808080a4808080a4818181a4808080a4818181a47272729271717130ffffff007171715e76767697878787a08f8f8fa78f8f8fa78f8f8fa78f8f8fa7878787a0767676977171715effffff00ffffff00ffffff00717171327171718e717171b6717171cc717171cc717171b67171718e71717132ffffff00ffffff00"}
+{"k":"texture/button on/info","v":["Texture2D",12,12,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/button on/format","v":"RGBA32"}
+{"k":"texture/button on/pixels","v":"ffffff00ffffff00000000320000008e000000b9000000cc000000cc000000b90000008e00000032ffffff00ffffff00ffffff000000005e22222287525252895e5e5e8f5e5e5e8f5e5e5e8f5f5f5f8f52525289222222870000005effffff00000000321f1f1f865f5f5f8f5f5f5f8f5f5f5f8f5f5f5f8f5f5f5f8f5f5f5f8f5f5f5f8f5f5f5f8f20202086000000300000009c555555895f5f5f8f5e5e5e8f5f5f5f8f5f5f5f8f5f5f5f8f5f5f5f8f5f5f5f8f5f5f5f8f555555890000009a000000c05e5e5e8f5f5f5f8f5e5e5e8f5f5f5f8f5f5f5f8f5f5f5f8f5f5f5f8f5f5f5f8f5f5f5f8f5f5f5f8f000000c2000000cc4c4c4c8f4b4b4b8f4b4b4b8f4b4b4b8f4c4c4c8f4b4b4b8f4c4c4c8f4c4c4c8f4b4b4b8f4c4c4c8f000000cc000000cc4b4b4b8f4b4b4b8f4b4b4b8f4b4b4b8f4b4b4b8f4b4b4b8f4b4b4b8f4b4b4b8f4b4b4b8f4b4b4b8f000000cc000000c07979799a7a7a7a9a7a7a7a9a7a7a7a9a7979799a7979799a7979799a7a7a7a9a7979799a7979799a000000c00000009c8282829b929292a2929292a2929292a2939393a2929292a2939393a2939393a2929292a28282829b0000009a000000323e3e3e96a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a93e3e3e9600000030ffffff000000005e4141419a9e9e9ea6b8b8b8aeb7b7b7aeb7b7b7aeb7b7b7ae9e9e9ea64141419a0000005effffff00ffffff00ffffff00000000320000008e000000b6000000cc000000cc000000b60000008e00000032ffffff00ffffff00"}
+{"k":"texture/button on hover/info","v":["Texture2D",12,12,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/button on hover/format","v":"RGBA32"}
+{"k":"texture/button on hover/pixels","v":"ffffff00ffffff00717171327171718e717171b9717171cc717171cc717171b97171718e71717132ffffff00ffffff00ffffff007171715e6b6b6b87626262895f5f5f8f5f5f5f8f5f5f5f8f5f5f5f8f626262896b6b6b877171715effffff00717171326b6b6b865e5e5e8f5f5f5f8f5f5f5f8f5f5f5f8f5f5f5f8f5e5e5e8f5e5e5e8f5e5e5e8f6b6b6b86717171307171719c616161895f5f5f8f5f5f5f8f5e5e5e8f5f5f5f8f5f5f5f8f5f5f5f8f5f5f5f8f5f5f5f8f616161897171719a717171c05e5e5e8f5f5f5f8f5f5f5f8f5f5f5f8f5e5e5e8f5e5e5e8f5f5f5f8f5e5e5e8f5f5f5f8f5e5e5e8f717171c2717171cc4b4b4b8f4c4c4c8f4b4b4b8f4b4b4b8f4b4b4b8f4b4b4b8f4b4b4b8f4b4b4b8f4b4b4b8f4c4c4c8f717171cc717171cc4b4b4b8f4b4b4b8f4b4b4b8f4b4b4b8f4c4c4c8f4c4c4c8f4b4b4b8f4c4c4c8f4b4b4b8f4c4c4c8f717171cc717171c07a7a7a9a7979799a7a7a7a9a7a7a7a9a7a7a7a9a7979799a7a7a7a9a7979799a7979799a7a7a7a9a717171c07171719c8d8d8d9b939393a2929292a2939393a2929292a2929292a2939393a2939393a2929292a28d8d8d9b7171719a7171713281818196a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a98181819671717130ffffff007171715e8484849aabababa6b8b8b8aeb7b7b7aeb8b8b8aeb7b7b7aeabababa68484849a7171715effffff00ffffff00ffffff00717171327171718e717171b6717171cc717171cc717171b67171718e71717132ffffff00ffffff00"}
+{"k":"texture/horizontal scrollbar/info","v":["Texture2D",18,15,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/horizontal scrollbar/format","v":"RGBA32"}
+{"k":"texture/horizontal scrollbar/pixels","v":"000000000000000000000000000000000000006e000000a7000000c0000000ca000000cc000000cc000000ca000000c0000000a70000006e00000000000000000000000000000000000000000000000000000028000000a6000000b2000000800000005e000000530000005200000052000000530000005e00000080000000b2000000a60000002800000000000000000000000000000022000000be0000009a0000005900000052000000520000005200000052000000520000005200000052000000520000005a0000009b000000bf000000220000000000000000000000a6000000a30000006a000000520000005200000052000000520000005200000052000000520000005200000052000000520000006a000000a5000000a6000000000000006c000000b9000000860000005b000000520000005200000052000000520000005200000052000000520000005200000052000000520000005c00000086000000ba00000064000000a9000000a10000007e0000005200000052000000520000005200000052000000520000005200000052000000520000005200000052000000520000007e000000a10000009a000000c20000009d0000007b0000005200000052000000520000005200000052000000520000005200000052000000520000005200000052000000520000007b0000009d000000b2000000cc0000009b0000007e0000005c000000520000005200000052000000520000005200000052000000520000005200000052000000520000005c0000007e0000009b000000c9000000c20000009d00000086000000690000005200000052000000520000005200000052000000520000005200000052000000520000005200000069000000860000009d000000b2000000a9000000a1000000950000007a0000005900000052000000520000005200000052000000520000005200000052000000520000005a0000007b00000096000000a10000009a0000006c000000b90000009b0000008a000000760000005900000052000000520000005200000052000000520000005200000059000000760000008c0000009b000000ba0000006400000000000000a6000000a60000009a000000880000007a000000690000005a00000052000000520000005b000000690000007a000000880000009a000000a7000000a6000000000000000000000022000000be000000a20000009b00000093000000860000007e0000007b0000007b0000007e00000086000000930000009b000000a3000000be0000002200000000000000000000000000000038000000b6000000b5000000a20000009d0000009b0000009b0000009b0000009b0000009d000000a2000000b5000000b40000003800000000000000000000000000000000000000000000000600000073000000a9000000c2000000cc000000cc000000cc000000cc000000c2000000a90000007100000006000000000000000000000000"}
+{"k":"texture/horizontal scrollbar thumb/info","v":["Texture2D",12,12,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/horizontal scrollbar thumb/format","v":"RGBA32"}
+{"k":"texture/horizontal scrollbar thumb/pixels","v":"ffffff00ffffff000000003f000000b1000000e7000000ff000000ff000000e7000000b10000003fffffff00ffffff00ffffff0000000075191919c0353535e93a3a3aff3a3a3aff3a3a3aff3a3a3aff353535e9191919c000000075ffffff000000003f181818bd3a3a3aff3a3a3aff3a3a3aff3a3a3aff3a3a3aff3a3a3aff3a3a3aff3a3a3aff191919be0000003c000000c3212121ec242424ff242424ff242424ff242424ff242424ff242424ff242424ff242424ff212121ec000000c0000000f01a1a1aff1a1a1aff1a1a1aff1a1a1aff1a1a1aff1a1a1aff1a1a1aff1a1a1aff1a1a1aff1a1a1aff000000f3000000ff1a1a1aff1a1a1aff1a1a1aff1a1a1aff1a1a1aff1a1a1aff1a1a1aff1a1a1aff1a1a1aff1a1a1aff000000ff000000ff1a1a1aff1a1a1aff1a1a1aff1a1a1aff1a1a1aff1a1a1aff1a1a1aff1b1b1bff1a1a1aff1a1a1aff000000ff000000f0373737ff373737ff373737ff373737ff373737ff373737ff373737ff383838ff373737ff373737ff000000f0000000c3404040ee494949ff484848ff484848ff484848ff484848ff484848ff494949ff484848ff404040ee000000c00000003f232323c6595959ff595959ff595959ff595959ff595959ff595959ff595959ff595959ff232323c60000003cffffff0000000075272727c9595959ed656565ff656565ff656565ff656565ff595959ed272727c900000075ffffff00ffffff00ffffff000000003f000000b1000000e4000000ff000000ff000000e4000000b10000003fffffff00ffffff00"}
+{"k":"texture/horizontalslider/info","v":["Texture2D",8,7,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/horizontalslider/format","v":"RGBA32"}
+{"k":"texture/horizontalslider/pixels","v":"0000000004040465000000b1000000cc000000cc000000b0040404650000000003030367000000be00000074000000520000005200000074000000be0404046c000000bc000000720000005200000052000000520000005200000070000000bc000000ca000000740000005b00000052000000520000005b00000072000000ca000000c20000009d000000810000007c0000007c000000810000009b000000c20606068a000000c6000000a30000009200000092000000a3000000c60606068f0000000007070785000000be000000cb000000cb000000be0606068300000000"}
+{"k":"texture/slider thumb/info","v":["Texture2D",8,12,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/slider thumb/format","v":"RGBA32"}
+{"k":"texture/slider thumb/pixels","v":"000000000000001600000089000000b9000000b900000089000000160000000000000022030303be474747cc757575cc757575cc494949cc030303be000000220000008b444444cc747474cc727272cc727272cc757575cc454545cc0000008b000000c0787878cc747474cc757575cc757575cc747474cc787878cc000000c2000000cc7f7f7fcc6e6e6ecc6f6f6fcc6f6f6fcc6f6f6fcc7f7f7fcc000000cc000000cc757575cc5f5f5fcc606060cc606060cc606060cc757575cc000000cc000000cc7f7f7fcc818181cc858585cc858585cc868686cc7f7f7fcc000000cc000000cc8e8e8ecc8f8f8fcc8f8f8fcc8f8f8fcc8f8f8fcc8e8e8ecc000000cc000000c09a9a9acc9c9c9ccc9d9d9dcc9d9d9dcc9c9c9ccc999999cc000000c200000089606060ccacacaccca5a5a5cca5a5a5ccaaaaaacc616161cc0000008b0000001f040404be666666ccb6b6b6ccb6b6b6cc696969cc040404be00000022000000000000001600000086000000b6000000b6000000860000001600000000"}
+{"k":"texture/slider thumb active/info","v":["Texture2D",8,12,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/slider thumb active/format","v":"RGBA32"}
+{"k":"texture/slider thumb active/pixels","v":"00000000404040168d8d8d89929292b9929292b9909090893e3e3e160000000058585822929292be959595cc9c9c9ccc9c9c9ccc979797cc929292be616161228d8d8d8b969696cc949494cc939393cc939393cc959595cc969696cc8e8e8e8b929292c09c9c9ccc949494cc969696cc969696cc949494cc9c9c9ccc929292c2929292cc9c9c9ccc919191cc909090cc919191cc919191cc9c9c9ccc919191cc929292cc959595cc868686cc868686cc868686cc868686cc969696cc919191cc929292cc9c9c9ccc9d9d9dcca0a0a0cca0a0a0cca1a1a1cc9c9c9ccc929292cc929292cca8a8a8cca9a9a9cca8a8a8cca8a8a8cca8a8a8cca8a8a8cc909090cc919191c0b6b6b6ccb2b2b2ccb3b3b3ccb3b3b3ccb2b2b2ccb6b6b6cc929292c28f8f8f89aaaaaaccbebebeccb8b8b8ccb8b8b8ccbcbcbcccaaaaaacc8f8f8f8b5959591f929292beaeaeaecccecececccecececcb0b0b0cc929292be6161612200000000474747168e8e8e86909090b6909090b6868686864c4c4c1600000000"}
+{"k":"texture/slidert humb hover/info","v":["Texture2D",8,12,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/slidert humb hover/format","v":"RGBA32"}
+{"k":"texture/slidert humb hover/pixels","v":"717171007171711671717189717171b9717171b971717189717171167070700071717122717171be767676cc7e7e7ecc7f7f7fcc777777cc717171be717171227171718b767676cc757575cc727272cc717171cc757575cc767676cc7171718b717171c0808080cc747474cc757575cc757575cc757575cc808080cc717171c2717171cc7f7f7fcc6f6f6fcc6f6f6fcc6f6f6fcc6f6f6fcc7f7f7fcc717171cc717171cc757575cc606060cc606060cc606060cc606060cc757575cc717171cc717171cc7f7f7fcc818181cc868686cc858585cc858585cc808080cc717171cc717171cc8e8e8ecc8f8f8fcc8f8f8fcc8f8f8fcc8f8f8fcc8e8e8ecc727272cc717171c0a1a1a1cc9c9c9ccc9d9d9dcc9d9d9dcc9c9c9ccca1a1a1cc717171c271717189919191ccacacaccca5a5a5cca5a5a5ccaaaaaacc919191cc7171718b7171711f727272be979797ccc0c0c0ccc0c0c0cc9a9a9acc727272be71717122717171007171711671717186717171b6717171b6717171867171711671717100"}
+{"k":"texture/textfield/info","v":["Texture2D",12,12,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/textfield/format","v":"RGBA32"}
+{"k":"texture/textfield/pixels","v":"ffffff00ffffff00a3a3a332a3a3a38ea3a3a3b9a3a3a3cca3a3a3cca3a3a3b9a3a3a38ea3a3a332ffffff00ffffff00ffffff00a3a3a35e727272871b1b1b890000008f0000008f0000008f0000008f1b1b1b8972727287a3a3a35effffff00a3a3a332777777860000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f75757586a3a3a330a3a3a39c181818890000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f18181889a3a3a39aa3a3a3c00000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008fa3a3a3c2a3a3a3cc0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008fa3a3a3cca3a3a3cc0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008fa3a3a3cca3a3a3c00000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008fa3a3a3c0a3a3a39c181818890000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f18181889a3a3a39aa3a3a332777777860000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f77777786a3a3a330ffffff00a3a3a35e797979891f1f1f880000008f0000008f0000008f0000008f1f1f1f8879797989a3a3a35effffff00ffffff00ffffff00a3a3a332a3a3a38ea3a3a3b6a3a3a3cca3a3a3cca3a3a3b6a3a3a38ea3a3a332ffffff00ffffff00"}
+{"k":"texture/textfield hover/info","v":["Texture2D",12,12,"Bilinear","Repeat","Repeat",1,0,1]}
+{"k":"texture/textfield hover/format","v":"RGBA32"}
+{"k":"texture/textfield hover/pixels","v":"ffffff00ffffff00d8d8d832d8d8d88ed8d8d8b9d8d8d8ccd8d8d8ccd8d8d8b9d8d8d88ed8d8d832ffffff00ffffff00ffffff00d8d8d85e929292871e1e1e890000008f0000008f0000008f0000008f1e1e1e8992929287d8d8d85effffff00d8d8d832989898860000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f96969686d8d8d830d8d8d89c1a1a1a890000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f1a1a1a89d8d8d89ad8d8d8c00000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008fd8d8d8c2d8d8d8cc0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008fd8d8d8ccd8d8d8cc0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008fd8d8d8ccd8d8d8c00000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008fd8d8d8c0d8d8d89c1a1a1a890000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f1a1a1a89d8d8d89ad8d8d832989898860000008f0000008f0000008f0000008f0000008f0000008f0000008f0000008f98989886d8d8d830ffffff00d8d8d85e9b9b9b89232323880000008f0000008f0000008f0000008f232323889b9b9b89d8d8d85effffff00ffffff00ffffff00d8d8d832d8d8d88ed8d8d8b6d8d8d8ccd8d8d8ccd8d8d8b6d8d8d88ed8d8d832ffffff00ffffff00"}
+{"k":"texture/textfield on/info","v":["Texture2D",12,12,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/textfield on/format","v":"RGBA32"}
+{"k":"texture/textfield on/pixels","v":"ffffff00ffffff00e2e2e232e2e2e28ee2e2e2b9e2e2e2cce2e2e2cce2e2e2b9e2e2e28ee2e2e232ffffff00ffffff00ffffff00e2e2e25e9898988d2222229a000000a3000000a3000000a3000000a32222229a9898988de2e2e25effffff00e2e2e2329e9e9e8c000000a3000000a3000000a3000000a3000000a3000000a3000000a3000000a39c9c9c8ce2e2e230e2e2e29c1e1e1e9a000000a3000000a3000000a3000000a3000000a3000000a3000000a3000000a31e1e1e9ae2e2e29ae2e2e2c0000000a3000000a3000000a3000000a3000000a3000000a3000000a3000000a3000000a3000000a3e2e2e2c2e2e2e2cc000000a3000000a3000000a3000000a3000000a3000000a3000000a3000000a3000000a3000000a3e2e2e2cce2e2e2cc000000a3000000a3000000a3000000a3000000a3000000a3000000a3000000a3000000a3000000a3e2e2e2cce2e2e2c0000000a3000000a3000000a3000000a3000000a3000000a3000000a3000000a3000000a3000000a3e2e2e2c0e2e2e29c1e1e1e9a000000a3000000a3000000a3000000a3000000a3000000a3000000a3000000a31e1e1e9ae2e2e29ae2e2e2329e9e9e8c000000a3000000a3000000a3000000a3000000a3000000a3000000a3000000a39e9e9e8ce2e2e230ffffff00e2e2e25ea1a1a18e26262698000000a3000000a3000000a3000000a326262698a1a1a18ee2e2e25effffff00ffffff00ffffff00e2e2e232e2e2e28ee2e2e2b6e2e2e2cce2e2e2cce2e2e2b6e2e2e28ee2e2e232ffffff00ffffff00"}
+{"k":"texture/toggle/info","v":["Texture2D",14,14,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/toggle/format","v":"RGBA32"}
+{"k":"texture/toggle/pixels","v":"ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00000000320000008e000000b9000000cc000000cc000000cc000000b90000008e00000032ffffff00ffffff00ffffff00ffffff000202025f1f1f1faa373737953e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f373737951f1f1faa0202025fffffff00ffffff00000000321e1e1eaa3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f1f1f1fa900000030ffffff000000009c383838943e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f383838940000009affffff00000000c03e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f000000c2ffffff00000000cc2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f000000ccffffff00000000cc1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f000000ccffffff00000000cc1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f000000ccffffff00000000c04242429642424296424242964242429642424296424242964242429642424296424242964242429642424296000000c0ffffff000000009c4b4b4b9e5757579a5757579a5757579a5757579a5757579a5757579a5757579a5757579a5757579a4b4b4b9e0000009affffff0000000032242424ae6b6b6b9e6b6b6b9e6b6b6b9e6b6b6b9e6b6b6b9e6b6b6b9e6b6b6b9e6b6b6b9e6b6b6b9e242424ae00000030ffffff00ffffff000000005f272727b2636363a5787878a2787878a2787878a2787878a2787878a2636363a5272727b20000005fffffff00ffffff00ffffff00ffffff00000000320000008e000000b6000000cc000000cc000000cc000000b60000008e00000032ffffff00ffffff00ffffff00"}
+{"k":"texture/toggle active/info","v":["Texture2D",14,14,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/toggle active/format","v":"RGBA32"}
+{"k":"texture/toggle active/pixels","v":"ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00929292329292928e929292b9929292cc929292cc929292cc929292b99292928e92929232ffffff00ffffff00ffffff00ffffff009292925e74747487494949893e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f49494989747474879292925effffff00ffffff0092929232757575863737378f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3737378f7373738692929230ffffff009292929c383838893838388f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3838388f383838899292929affffff00929292c02b2b2b8f3838388f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3838388f2b2b2b8f929292c2ffffff00929292cc2121218f2a2a2a8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2a2a2a8f2121218f929292ccffffff00929292cc1313138f1919198f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1919198f1313138f929292ccffffff00929292cc1111118f1818188f1b1b1b8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1b1b1b8f1818188f1111118f929292ccffffff00929292c00d0d0d8f1313138f1818188f1919198f1919198f1919198f1919198f1919198f1818188f1313138f0d0d0d8f929292c0ffffff009292929c1b1b1b890d0d0d8f1111118f1313138f1313138f1313138f1313138f1313138f1111118f0d0d0d8f1b1b1b899292929affffff00929292326b6b6b860707078f0808088f0a0a0a8f0b0b0b8f0b0b0b8f0b0b0b8f0a0a0a8f0808088f0707078f6b6b6b8692929230ffffff00ffffff009292925e6c6c6c891e1e1e880303038f0404048f0404048f0404048f0303038f1e1e1e886c6c6c899292925effffff00ffffff00ffffff00ffffff00929292329292928e929292b6929292cc929292cc929292cc929292b69292928e92929232ffffff00ffffff00ffffff00"}
+{"k":"texture/toggle hover/info","v":["Texture2D",14,14,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/toggle hover/format","v":"RGBA32"}
+{"k":"texture/toggle hover/pixels","v":"ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00717171327171718e717171b9717171cc717171cc717171cc717171b97171718e71717132ffffff00ffffff00ffffff00ffffff007070705f5a5a5aaa444444953e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f444444955a5a5aaa7070705fffffff00ffffff00717171325b5b5baa3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f5a5a5aa971717130ffffff007171719c444444943e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f444444947171719affffff00717171c03e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f717171c2ffffff00717171cc2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f2f2f2f8f717171ccffffff00717171cc1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f717171ccffffff00717171cc1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f717171ccffffff00717171c04e4e4e984e4e4e984e4e4e984e4e4e984e4e4e984e4e4e984e4e4e984e4e4e984e4e4e984e4e4e984e4e4e98717171c0ffffff007171719c646464a16969699e6969699e6969699e6969699e6969699e6969699e6969699e6969699e6969699e646464a17171719affffff0071717132656565af818181a4818181a4818181a4818181a4818181a4818181a4818181a4818181a4818181a4656565af71717130ffffff00ffffff007070705f696969b3838383a9909090a7909090a7909090a7909090a7909090a7838383a9696969b37070705fffffff00ffffff00ffffff00ffffff00717171327171718e717171b6717171cc717171cc717171cc717171b67171718e71717132ffffff00ffffff00ffffff00"}
+{"k":"texture/toggle on/info","v":["Texture2D",14,14,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/toggle on/format","v":"RGBA32"}
+{"k":"texture/toggle on/pixels","v":"ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00000000320000008e000000b9000000cc000000cc000000cc000000b90000008e00000032ffffff00ffffff00ffffff00ffffff000202025f1f1f1faa373737953e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f373737951f1f1faa0202025fffffff00ffffff00000000321e1e1eaa3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f1f1f1fa900000030ffffff000000009c383838943e3e3e8f3d3d3d901f1f1faa0f0f0fbb0f0f0fbb0f0f0fbb1f1f1faa3d3d3d903e3e3e8f383838940000009affffff00000000c03e3e3e8f3e3e3e8f272727aa979797c0d5d5d5c0d4d4d4c0d4d4d4c0979797c0262626aa3e3e3e8f3e3e3e8f000000c2ffffff00000000cc2f2f2f8f2f2f2f8f929292bee2e2e2c0e2e2e2c0e2e2e2c0e2e2e2c0e2e2e2c0949494be2f2f2f8f2f2f2f8f000000ccffffff00000000cc1d1d1d8f1d1d1d8fd3d3d3bfdfdfdfc0dfdfdfc0dfdfdfc0dfdfdfc0dfdfdfc0d3d3d3bf1d1d1d8f1d1d1d8f000000ccffffff00000000cc1d1d1d8f1d1d1d8fd4d4d4bedfdfdfc0dfdfdfc0dfdfdfc0dfdfdfc0dfdfdfc0d4d4d4be1d1d1d8f1d1d1d8f000000ccffffff00000000c05858589a5858589aacacacb0e5e5e5c2e5e5e5c2e5e5e5c2e5e5e5c2e5e5e5c2acacacb05858589a5858589a000000c0ffffff000000009c686868a4787878a27b7b7ba2b9b9b9b3dfdfdfc0dfdfdfc0dfdfdfc0b9b9b9b37b7b7ba2787878a2686868a40000009affffff0000000032313131b1949494a9949494a9949494a9949494a9949494a9949494a9949494a9949494a9949494a9313131b100000030ffffff00ffffff000000005f353535b5898989aea6a6a6aea6a6a6aea6a6a6aea6a6a6aea6a6a6ae898989ae353535b50000005fffffff00ffffff00ffffff00ffffff00000000320000008e000000b6000000cc000000cc000000cc000000b60000008e00000032ffffff00ffffff00ffffff00"}
+{"k":"texture/toggle on active/info","v":["Texture2D",14,14,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/toggle on active/format","v":"RGBA32"}
+{"k":"texture/toggle on active/pixels","v":"ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00929292329292928e929292b9929292cc929292cc929292cc929292b99292928e92929232ffffff00ffffff00ffffff00ffffff009292925e6c6c6c872d2d2d891d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f2d2d2d896c6c6c879292925effffff00ffffff00929292326f6f6f861919198f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1d1d1d8f1919198f6d6d6d8692929230ffffff009292929c242424891919198f1b1b1b900f0f0faa070707bb070707bb070707bb0f0f0faa1b1b1b901919198f242424899292929affffff00929292c01313138f1919198f161616aa939393c0d0d0d0c0d0d0d0c0d0d0d0c0929292c0161616aa1919198f1313138f929292c2ffffff00929292cc1313138f1919198f8f8f8fbedfdfdfc0dfdfdfc0dfdfdfc0dfdfdfc0dfdfdfc0919191be1919198f1313138f929292ccffffff00929292cc2020208f2a2a2a8fd5d5d5bfe2e2e2c0e2e2e2c0e2e2e2c0e2e2e2c0e2e2e2c0d5d5d5bf2a2a2a8f2020208f929292ccffffff00929292cc2626268f3434348fd9d9d9bee4e4e4c0e4e4e4c0e4e4e4c0e4e4e4c0e4e4e4c0d9d9d9be3434348f2626268f929292ccffffff00929292c01e1e1e8f2b2b2b8f9e9e9eaae3e3e3c0e3e3e3c0e3e3e3c0e3e3e3c0e3e3e3c09e9e9eaa2b2b2b8f1e1e1e8f929292c0ffffff009292929c232323891e1e1e8f2c2c2c90999999a9d3d3d3bad3d3d3bad3d3d3ba999999a92c2c2c901e1e1e8f232323899292929affffff00929292326c6c6c860f0f0f8f1313138f1616168f1717178f1717178f1717178f1616168f1313138f0f0f0f8f6c6c6c8692929230ffffff00ffffff009292925e6d6d6d89202020880808088f0808088f0808088f0808088f0808088f202020886d6d6d899292925effffff00ffffff00ffffff00ffffff00929292329292928e929292b6929292cc929292cc929292cc929292b69292928e92929232ffffff00ffffff00ffffff00"}
+{"k":"texture/toggle on hover/info","v":["Texture2D",14,14,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/toggle on hover/format","v":"RGBA32"}
+{"k":"texture/toggle on hover/pixels","v":"ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00ffffff00717171327171718e717171b9717171cc717171cc717171cc717171b97171718e71717132ffffff00ffffff00ffffff00ffffff007070705f5a5a5aaa444444953e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f444444955a5a5aaa7070705fffffff00ffffff00717171325b5b5baa3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f3e3e3e8f5a5a5aa971717130ffffff007171719c444444943e3e3e8f3d3d3d901f1f1faa0f0f0fbb0f0f0fbb0f0f0fbb1f1f1faa3d3d3d903e3e3e8f444444947171719affffff00717171c03e3e3e8f3e3e3e8f272727aa979797c0d5d5d5c0d5d5d5c0d4d4d4c0979797c0262626aa3e3e3e8f3e3e3e8f717171c2ffffff00717171cc2f2f2f8f2f2f2f8f929292bee2e2e2c0e2e2e2c0e2e2e2c0e2e2e2c0e2e2e2c0949494be2f2f2f8f2f2f2f8f717171ccffffff00717171cc1d1d1d8f1d1d1d8fd2d2d2bfdfdfdfc0dfdfdfc0dfdfdfc0dfdfdfc0dfdfdfc0d3d3d3bf1d1d1d8f1d1d1d8f717171ccffffff00717171cc1d1d1d8f1d1d1d8fd4d4d4bedfdfdfc0dfdfdfc0dfdfdfc0dfdfdfc0dfdfdfc0d4d4d4be1d1d1d8f1d1d1d8f717171ccffffff00717171c05858589a5858589aacacacb0e5e5e5c2e5e5e5c2e5e5e5c2e5e5e5c2e5e5e5c2acacacb05858589a5858589a717171c0ffffff007171719c737373a4787878a27b7b7ba2b9b9b9b3dfdfdfc0dfdfdfc0dfdfdfc0b9b9b9b37b7b7ba2787878a2737373a47171719affffff00717171326b6b6bb1949494a9949494a9949494a9949494a9949494a9949494a9949494a9949494a9949494a96b6b6bb171717130ffffff00ffffff007070705f6f6f6fb5969696aea6a6a6aea6a6a6aea6a6a6aea6a6a6aea6a6a6ae969696ae6f6f6fb57070705fffffff00ffffff00ffffff00ffffff00717171327171718e717171b6717171cc717171cc717171cc717171b67171718e71717132ffffff00ffffff00ffffff00"}
+{"k":"texture/vertical scrollbar/info","v":["Texture2D",15,18,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/vertical scrollbar/format","v":"RGBA32"}
+{"k":"texture/vertical scrollbar/pixels","v":"000000000000000000000000000000000000006c000000a9000000c2000000cc000000c2000000a90000006c00000000000000000000000000000000000000000000000000000022000000a6000000b9000000a10000009d0000009b0000009d000000a1000000b9000000a60000002200000000000000000000000000000038000000be000000a60000009b00000095000000860000007e0000007b0000007e00000086000000a3000000be000000280000000000000006000000b6000000a20000009a0000008a0000007a000000690000005c00000052000000520000005b0000006a0000009a000000a60000000000000073000000b50000009b00000088000000760000005900000052000000520000005200000052000000520000005200000059000000b20000006e000000a9000000a2000000930000007a00000059000000520000005200000052000000520000005200000052000000520000005200000080000000a7000000c20000009d00000086000000690000005200000052000000520000005200000052000000520000005200000052000000520000005e000000c0000000cc0000009b0000007e0000005a00000052000000520000005200000052000000520000005200000052000000520000005200000053000000ca000000cc0000009b0000007b0000005200000052000000520000005200000052000000520000005200000052000000520000005200000052000000cc000000cc0000009b0000007b0000005200000052000000520000005200000052000000520000005200000052000000520000005200000052000000cc000000cc0000009b0000007e0000005b00000052000000520000005200000052000000520000005200000052000000520000005200000053000000ca000000c20000009d00000086000000690000005200000052000000520000005200000052000000520000005200000052000000520000005e000000c0000000a9000000a2000000930000007a00000059000000520000005200000052000000520000005200000052000000520000005200000080000000a700000071000000b50000009b00000088000000760000005a0000005200000052000000520000005200000052000000520000005a000000b20000006e00000006000000b4000000a30000009a0000008c0000007b000000690000005c00000052000000520000005c0000006a0000009b000000a6000000000000000000000038000000be000000a70000009b00000096000000860000007e0000007b0000007e00000086000000a5000000bf0000002800000000000000000000000000000022000000a6000000ba000000a10000009d0000009b0000009d000000a1000000ba000000a600000022000000000000000000000000000000000000000000000000000000640000009a000000b2000000c9000000b20000009a0000006400000000000000000000000000000000"}
+{"k":"texture/vertical scrollbar thumb/info","v":["Texture2D",12,12,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/vertical scrollbar thumb/format","v":"RGBA32"}
+{"k":"texture/vertical scrollbar thumb/pixels","v":"ffffff00ffffff000000003f000000c3000000f0000000ff000000ff000000f0000000c30000003fffffff00ffffff00ffffff0000000075232323c6404040ee373737ff1a1a1aff1a1a1aff1a1a1aff212121ec181818bd00000075ffffff000000003f272727c9595959ff494949ff373737ff1a1a1aff1a1a1aff1a1a1aff242424ff3a3a3aff191919c00000003f000000b1595959ed595959ff484848ff373737ff1a1a1aff1a1a1aff1a1a1aff242424ff3a3a3aff353535e9000000b1000000e4656565ff595959ff484848ff373737ff1a1a1aff1a1a1aff1a1a1aff242424ff3a3a3aff3a3a3aff000000e7000000ff656565ff595959ff484848ff373737ff1a1a1aff1a1a1aff1a1a1aff242424ff3a3a3aff3a3a3aff000000ff000000ff656565ff595959ff484848ff373737ff1a1a1aff1a1a1aff1a1a1aff242424ff3a3a3aff3a3a3aff000000ff000000e4656565ff595959ff484848ff373737ff1a1a1aff1a1a1aff1a1a1aff242424ff3a3a3aff3a3a3aff000000e7000000b1595959ed595959ff494949ff383838ff1b1b1bff1a1a1aff1a1a1aff242424ff3a3a3aff353535e9000000b10000003f272727c9595959ff484848ff373737ff1a1a1aff1a1a1aff1a1a1aff242424ff3a3a3aff191919c00000003fffffff0000000075232323c6404040ee373737ff1a1a1aff1a1a1aff1a1a1aff212121ec191919be00000075ffffff00ffffff00ffffff000000003c000000c0000000f0000000ff000000ff000000f3000000c00000003cffffff00ffffff00"}
+{"k":"texture/verticalslider/info","v":["Texture2D",7,8,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/verticalslider/format","v":"RGBA32"}
+{"k":"texture/verticalslider/pixels","v":"0000000006060684000000c0000000ca000000bb030303670000000006060680000000c5000000970000007100000072000000be03030365000000bd0000009e0000007a0000005a0000005200000074000000b1000000cb0000008a00000076000000520000005200000052000000cc000000cb0000008a00000076000000520000005200000052000000cc000000bd0000009e0000007a0000005a0000005200000074000000b00606067e000000c5000000950000006e00000070000000be04040465000000000404048a000000c0000000ca000000bb0404046b00000000"}
+{"k":"texture/window/info","v":["Texture2D",17,27,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/window/format","v":"RGBA32"}
+{"k":"texture/window/pixels","v":"000000000000000000000000000000000000001f00000071000000a6000000cc000000cc000000cc000000a6000000710000001f000000000000000000000000000000000000000000000000000000000000005b000000c5000000cc000000cc000000cc000000cc000000cc000000cc000000cc000000c50000005b000000000000000000000000000000000000000500000092000000cc000000c70f0f0f8a2d2d2d784c4c4c7a4b4b4b7a4b4b4b7a2e2e2e770f0f0f8a000000c7000000cc0000009200000005000000000000000000000076000000cc020202b8373737774c4c4c7a4b4b4b7a4c4c4c7a4c4c4c7a4b4b4b7a4c4c4c7a4b4b4b7a37373777020202b8000000cc000000730000000000000024000000ca000000c7363636774c4c4c7a4b4b4b7a4b4b4b7a4b4b4b7a4c4c4c7a4b4b4b7a4c4c4c7a4b4b4b7a4b4b4b7a36363677000000c7000000ca0000002400000076000000cc0f0f0f8a4c4c4c7a4b4b4b7a4b4b4b7a4c4c4c7a4b4b4b7a4c4c4c7a4c4c4c7a4c4c4c7a4c4c4c7a4c4c4c7a4b4b4b7a0f0f0f8a000000cc00000073000000af000000cc303030774b4b4b7a4b4b4b7a4b4b4b7a4c4c4c7a4c4c4c7a4c4c4c7a4b4b4b7a4b4b4b7a4c4c4c7a4b4b4b7a4b4b4b7a30303077000000cc000000aa000000c7000000cc494949794b4b4b7a4b4b4b7a4c4c4c7a4b4b4b7a4c4c4c7a4b4b4b7a4b4b4b7a4b4b4b7a4c4c4c7a4b4b4b7a4b4b4b7a47474779000000cc000000c2000000cc000000cc4b4b4b7a4c4c4c7a4c4c4c7a4c4c4c7a4c4c4c7a4b4b4b7a4c4c4c7a4c4c4c7a4c4c4c7a4b4b4b7a4c4c4c7a4c4c4c7a4b4b4b7a000000cc000000cc000000cc000000cc4b4b4b7a4c4c4c7a4b4b4b7a4b4b4b7a4b4b4b7a4c4c4c7a4c4c4c7a4b4b4b7a4c4c4c7a4c4c4c7a4b4b4b7a4b4b4b7a4c4c4c7a000000cc000000cc000000cc000000cc4b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb8000000cc000000cc000000cc000000cc4b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb8000000cc000000cc000000cc000000cc4b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb8000000cc000000cc000000cc000000cc4b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb8000000cc000000cc000000cc000000cc4b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb8000000cc000000cc000000cc000000cc4b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb8000000cc000000cc000000cc000000cc4b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb8000000cc000000cc000000cc000000cc4b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb8000000cc000000cc000000cc000000cc4b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb8000000cc000000cc000000c7000000cc494949b94b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb8494949b9000000cc000000c0000000ad000000cc393939bd4b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb8393939bd000000cc000000aa00000073000000cc202020c34b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb8202020c3000000cc0000007100000024000000ca020202cb3d3d3dbb4b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb83d3d3dbb020202cb000000ca000000220000000002020275000000cc080808ca3d3d3dbc4b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb84b4b4bb83d3d3dbc080808ca000000cc0202027200000000000000000000000503030398000000cc020202cb202020c3383838bd494949b94b4b4bb8494949b9383838bd202020c3020202cb000000cc0303039800000005000000000000000000000000000000000303035e020202c7000000cc000000cc000000cc000000cc000000cc000000cc000000cc020202c70303035e000000000000000000000000000000000000000000000000000000000000001f00000071000000a3000000ca000000cc000000ca000000a3000000710000001f00000000000000000000000000000000"}
+{"k":"texture/window on/info","v":["Texture2D",17,27,"Bilinear","Clamp","Clamp",1,0,1]}
+{"k":"texture/window on/format","v":"RGBA32"}
+{"k":"texture/window on/pixels","v":"e6e6e600e6e6e600e6e6e600e6e6e600e6e6e623e6e6e67fe6e6e6bbe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6bbe6e6e67fe6e6e623e6e6e600e6e6e600e6e6e600e6e6e600e6e6e600e6e6e600e6e6e600e6e6e667e6e6e6dee6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6dee6e6e667e6e6e600e6e6e600e6e6e600e6e6e600e6e6e605e6e6e6a5e6e6e6e6e6e6e6e1cdcdcd9c8e8e8e874b4b4b8a4b4b4b8a4b4b4b8a8b8b8b86cdcdcd9ce6e6e6e1e6e6e6e6e6e6e6a5e6e6e605e6e6e600e6e6e600e6e6e685e6e6e6e6e5e5e5cf7c7c7c864b4b4b8a4b4b4b8a4c4c4c8a4c4c4c8a4b4b4b8a4c4c4c8a4b4b4b8a7c7c7c86e5e5e5cfe6e6e6e6e6e6e682e6e6e600e6e6e629e6e6e6e3e6e6e6e17d7d7d864b4b4b8a4b4b4b8a4c4c4c8a4c4c4c8a4b4b4b8a4b4b4b8a4b4b4b8a4b4b4b8a4c4c4c8a7c7c7c86e6e6e6e1e6e6e6e3e6e6e629e6e6e685e6e6e6e6cdcdcd9c4b4b4b8a4c4c4c8a4b4b4b8a4b4b4b8a4c4c4c8a4c4c4c8a4b4b4b8a4b4b4b8a4b4b4b8a4b4b4b8a4c4c4c8acdcdcd9ce6e6e6e6e6e6e682e6e6e6c6e6e6e6e6898989864b4b4b8a4c4c4c8a4c4c4c8a4b4b4b8a4c4c4c8a4b4b4b8a4b4b4b8a4b4b4b8a4b4b4b8a4b4b4b8a4c4c4c8a89898986e6e6e6e6e6e6e6c0e6e6e6e1e6e6e6e6515151884b4b4b8a4b4b4b8a4c4c4c8a4c4c4c8a4c4c4c8a4c4c4c8a4c4c4c8a4c4c4c8a4c4c4c8a4b4b4b8a4c4c4c8a58585888e6e6e6e6e6e6e6dbe6e6e6e6e6e6e6e64b4b4b8a4b4b4b8a4b4b4b8a4c4c4c8a4b4b4b8a4b4b4b8a4c4c4c8a4b4b4b8a4b4b4b8a4b4b4b8a4b4b4b8a4b4b4b8a4c4c4c8ae6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4b8a4c4c4c8a4c4c4c8a4b4b4b8a4b4b4b8a4c4c4c8a4b4b4b8a4c4c4c8a4b4b4b8a4b4b4b8a4c4c4c8a4b4b4b8a4c4c4c8ae6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e1e6e6e6e64f4f4fd04b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4f4f4fd0e6e6e6e6e6e6e6d8e6e6e6c3e6e6e6e6747474d54b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf747474d5e6e6e6e6e6e6e6c0e6e6e682e6e6e6e6abababdc4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfabababdce6e6e6e6e6e6e67fe6e6e629e5e5e5e4e4e4e4e56a6a6ad34b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf6a6a6ad3e4e4e4e5e5e5e5e4e6e6e626e6e6e600e4e4e484e6e6e6e6d9d9d9e36c6c6cd44b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf6c6c6cd4d9d9d9e3e6e6e6e6e4e4e481e6e6e600e6e6e600e6e6e605e1e1e1abe6e6e6e6e4e4e4e5abababdc767676d54f4f4fd04b4b4bcf4f4f4fd0767676d5abababdce4e4e4e5e6e6e6e6e1e1e1abe6e6e605e6e6e600e6e6e600e6e6e600e6e6e600e3e3e36ae4e4e4e1e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e4e4e4e1e3e3e36ae6e6e600e6e6e600e6e6e600e6e6e600e6e6e600e6e6e600e6e6e600e6e6e623e6e6e67fe6e6e6b8e6e6e6e3e6e6e6e6e6e6e6e3e6e6e6b8e6e6e67fe6e6e623e6e6e600e6e6e600e6e6e600e6e6e600"}
+{"k":"complete","v":true}

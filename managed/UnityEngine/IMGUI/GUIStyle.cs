@@ -292,7 +292,9 @@ namespace UnityEngine
         /// <summary>The font this style draws with: its own, else the current skin's, else the built-in one.</summary>
         internal Font ResolvedFont => m_Font != null ? m_Font : GUISkin.current != null && GUISkin.current.font != null ? GUISkin.current.font : BuiltinGuiSkin.Font;
 
-        public float lineHeight => Mathf.Round(GuiText.LineHeight(ResolvedFont, m_FontSize, m_FontStyle));
+        /// <summary>The font's line spacing in whole pixels, truncated as Font.lineHeight is
+        /// (measured: 14 for LegacyRuntime's 14.95 at 13 px, tests/projects/imguiskin).</summary>
+        public float lineHeight => Mathf.Floor(GuiText.LineHeight(ResolvedFont, m_FontSize, m_FontStyle));
 
         public bool isHeightDependantOnWidth => m_FixedHeight == 0f && m_WordWrap && m_ImagePosition != ImagePosition.ImageOnly;
 
@@ -597,10 +599,14 @@ namespace UnityEngine
         public bool tripleClickSelectsLine { get => m_TripleClickSelectsLine; set => m_TripleClickSelectsLine = value; }
         public Color cursorColor { get => m_CursorColor; set => m_CursorColor = value; }
 
-        /// <summary>Blinks per second; negative uses the platform's rate (no blinking here).</summary>
+        /// <summary>The platform's cursor flash speed, which a negative setting stands for (measured
+        /// in the Linux Unity 6000.0.71f1 Editor, tests/projects/imguiskin; unmeasured on macOS).</summary>
+        const float PlatformCursorFlashSpeed = 2f;
+
+        /// <summary>Blinks per second; negative uses the platform's rate.</summary>
         public float cursorFlashSpeed
         {
-            get => m_CursorFlashSpeed >= 0f ? m_CursorFlashSpeed : 0f;
+            get => m_CursorFlashSpeed >= 0f ? m_CursorFlashSpeed : PlatformCursorFlashSpeed;
             set => m_CursorFlashSpeed = value;
         }
 
@@ -735,7 +741,13 @@ namespace UnityEngine
             int i = 0;
             foreach (var style in Builtins())
             {
-                if (style != null) m_Styles[names[i]] = style;
+                if (style != null)
+                {
+                    // A built-in style without a name takes its own (measured: the GameSkin's
+                    // slider extents and SliderMixed, tests/projects/imguiskin).
+                    if (string.IsNullOrEmpty(style.name)) style.name = names[i];
+                    m_Styles[names[i]] = style;
+                }
                 i++;
             }
             if (m_CustomStyles != null)
@@ -784,25 +796,22 @@ namespace Unbound.Runtime
     using UnityEngine;
 
     /// <summary>
-    /// The skin GUI.skin starts as: Unity's built-in game skin (its metrics, colors and the legacy
-    /// runtime font), with backgrounds drawn here since Unity's skin textures ship inside the editor.
+    /// The skin GUI.skin starts as in Play mode: Unity's own GameSkin, read from the install's
+    /// `unity default resources` (the object the release profile names "GameSkin") with its
+    /// styles, settings, font and background textures (each with its stored sampler). Matches the
+    /// Unity 6000.0.71f1 Editor, tests/projects/imguiskin. Without the install (no host) the skin
+    /// has default styles and no backgrounds, which is reported once.
     /// </summary>
     internal static class BuiltinGuiSkin
     {
+        const int MonoBehaviourClassId = 114;
         static GUISkin s_Skin;
 
         internal static Font Font => UnityEngine.Font.GetDefault();
 
-        internal static GUISkin Skin
-        {
-            get
-            {
-                if (s_Skin == null) s_Skin = Build();
-                return s_Skin;
-            }
-        }
+        internal static GUISkin Skin => s_Skin ??= Load();
 
-        static GUISkin Build()
+        static GUISkin Load()
         {
             GUISkin skin;
             using (ObjectRegistry.AsAssets())
@@ -810,273 +819,59 @@ namespace Unbound.Runtime
             skin.name = "GameSkin";
             skin.hideFlags = HideFlags.HideAndDontSave;
             skin.IsPersistentAsset = true;
-            skin.font = Font;
-            var text = new Color(0.9f, 0.9f, 0.9f, 1f);
-            var dim = new Color(0.8f, 0.8f, 0.8f, 1f);
-
-            skin.box = Style("box", text: dim, border: (6, 6, 6, 6), margin: (4, 4, 4, 4), padding: (4, 4, 4, 4), alignment: TextAnchor.UpperCenter);
-            skin.box.normal.background = Textures.Box;
-
-            var button = Style("button", text: text, border: (6, 6, 6, 4), margin: (4, 4, 4, 4), padding: (6, 6, 3, 3), alignment: TextAnchor.MiddleCenter);
-            button.normal.background = Textures.Button;
-            button.hover.background = Textures.ButtonHover;
-            button.hover.textColor = Color.white;
-            button.active.background = Textures.ButtonActive;
-            button.active.textColor = text;
-            button.onNormal.background = Textures.ButtonOn;
-            button.onNormal.textColor = new Color(0.98f, 0.98f, 0.98f, 1f);
-            button.onHover.background = Textures.ButtonOnHover;
-            button.onHover.textColor = Color.white;
-            button.onActive.background = Textures.ButtonActive;
-            button.onActive.textColor = text;
-            skin.button = button;
-
-            var toggle = Style("toggle", text: new Color(0.89f, 0.89f, 0.89f, 1f), border: (14, 0, 14, 0), margin: (4, 4, 4, 4), padding: (15, 0, 3, 0), overflow: (-1, 0, -4, 0));
-            toggle.stretchWidth = false;
-            toggle.normal.background = Textures.Toggle;
-            toggle.hover.background = Textures.ToggleHover;
-            toggle.hover.textColor = Color.white;
-            toggle.active.background = Textures.ToggleActive;
-            toggle.active.textColor = Color.white;
-            toggle.onNormal.background = Textures.ToggleOn;
-            toggle.onNormal.textColor = new Color(0.89f, 0.89f, 0.89f, 1f);
-            toggle.onHover.background = Textures.ToggleOnHover;
-            toggle.onHover.textColor = Color.white;
-            toggle.onActive.background = Textures.ToggleOnActive;
-            toggle.onActive.textColor = Color.white;
-            skin.toggle = toggle;
-
-            var label = Style("label", text: text, margin: (4, 4, 4, 4), padding: (2, 2, 1, 2));
-            label.wordWrap = true;
-            skin.label = label;
-
-            var field = Style("textfield", text: dim, border: (3, 3, 3, 3), margin: (4, 4, 4, 4), padding: (3, 3, 3, 3));
-            field.clipping = TextClipping.Clip;
-            field.richText = false;
-            field.normal.background = Textures.TextField;
-            field.hover.background = Textures.TextFieldHover;
-            field.hover.textColor = text;
-            field.focused.background = Textures.TextFieldFocused;
-            field.focused.textColor = Color.white;
-            field.onNormal.background = Textures.TextFieldFocused;
-            field.onNormal.textColor = Color.white;
-            skin.textField = field;
-            var area = new GUIStyle(field) { name = "textarea", wordWrap = true };
-            skin.textArea = area;
-
-            var window = Style("window", text: Color.white, border: (8, 8, 18, 8), padding: (8, 8, 18, 8), alignment: TextAnchor.UpperCenter);
-            window.contentOffset = new Vector2(0f, -18f);
-            window.normal.background = Textures.Window;
-            window.onNormal.background = Textures.WindowOn;
-            window.onNormal.textColor = Color.white;
-            skin.window = window;
-
-            var hSlider = Style("horizontalslider", border: (3, 3, 0, 0), margin: (4, 4, 4, 4), padding: (-1, -1, 0, 0), overflow: (0, 0, -4, -3));
-            hSlider.fixedHeight = 12f;
-            hSlider.imagePosition = ImagePosition.ImageOnly;
-            hSlider.normal.background = Textures.SliderTrack;
-            skin.horizontalSlider = hSlider;
-            var hThumb = Style("horizontalsliderthumb", border: (4, 4, 0, 0), padding: (7, 7, 0, 0), overflow: (-1, -1, 0, 0));
-            hThumb.fixedHeight = 12f;
-            hThumb.stretchWidth = false;
-            hThumb.imagePosition = ImagePosition.ImageOnly;
-            hThumb.normal.background = Textures.Thumb;
-            hThumb.hover.background = Textures.ThumbHover;
-            hThumb.active.background = Textures.ThumbActive;
-            skin.horizontalSliderThumb = hThumb;
-            skin.horizontalSliderThumbExtent = Style("horizontalsliderthumbextent");
-
-            var vSlider = Style("verticalslider", border: (0, 0, 3, 3), margin: (4, 4, 4, 4), padding: (0, 0, -1, -1), overflow: (-2, -3, 0, 0));
-            vSlider.fixedWidth = 12f;
-            vSlider.stretchWidth = false;
-            vSlider.stretchHeight = true;
-            vSlider.imagePosition = ImagePosition.ImageOnly;
-            vSlider.normal.background = Textures.VerticalSliderTrack;
-            skin.verticalSlider = vSlider;
-            var vThumb = Style("verticalsliderthumb", border: (0, 0, 4, 4), padding: (0, 0, 7, 7), overflow: (0, 0, -1, -1));
-            vThumb.fixedWidth = 12f;
-            vThumb.stretchWidth = false;
-            vThumb.stretchHeight = false;
-            vThumb.imagePosition = ImagePosition.ImageOnly;
-            vThumb.normal.background = Textures.Thumb;
-            vThumb.hover.background = Textures.ThumbHover;
-            vThumb.active.background = Textures.ThumbActive;
-            skin.verticalSliderThumb = vThumb;
-            skin.verticalSliderThumbExtent = Style("verticalsliderthumbextent");
-            skin.sliderMixed = Style("SliderMixed");
-
-            var hBar = Style("horizontalscrollbar", border: (9, 9, 0, 0), margin: (4, 4, 1, 4));
-            hBar.fixedHeight = 15f;
-            hBar.imagePosition = ImagePosition.ImageOnly;
-            hBar.normal.background = Textures.ScrollTrack;
-            skin.horizontalScrollbar = hBar;
-            var hBarThumb = Style("horizontalscrollbarthumb", border: (6, 6, 6, 6), padding: (6, 6, 0, 0), overflow: (0, 0, -1, 1));
-            hBarThumb.fixedHeight = 13f;
-            hBarThumb.imagePosition = ImagePosition.ImageOnly;
-            hBarThumb.normal.background = Textures.ScrollThumb;
-            skin.horizontalScrollbarThumb = hBarThumb;
-            skin.horizontalScrollbarLeftButton = Style("horizontalscrollbarleftbutton");
-            skin.horizontalScrollbarRightButton = Style("horizontalscrollbarrightbutton");
-
-            var vBar = Style("verticalscrollbar", border: (0, 0, 9, 9), margin: (1, 4, 4, 4));
-            vBar.fixedWidth = 15f;
-            vBar.stretchWidth = false;
-            vBar.stretchHeight = true;
-            vBar.imagePosition = ImagePosition.ImageOnly;
-            vBar.normal.background = Textures.VerticalScrollTrack;
-            skin.verticalScrollbar = vBar;
-            var vBarThumb = Style("verticalscrollbarthumb", border: (6, 6, 6, 6), padding: (0, 0, 6, 6), overflow: (-1, -1, 0, 0));
-            vBarThumb.fixedWidth = 15f;
-            vBarThumb.stretchWidth = false;
-            vBarThumb.imagePosition = ImagePosition.ImageOnly;
-            vBarThumb.normal.background = Textures.ScrollThumb;
-            skin.verticalScrollbarThumb = vBarThumb;
-            skin.verticalScrollbarUpButton = Style("verticalscrollbarupbutton");
-            skin.verticalScrollbarDownButton = Style("verticalscrollbardownbutton");
-
-            skin.scrollView = Style("scrollview");
-            skin.customStyles = Array.Empty<GUIStyle>();
-            skin.settings.cursorColor = Color.white;
-            skin.settings.selectionColor = new Color(0.24f, 0.49f, 0.91f, 0.6f);
+            try
+            {
+                long fileId = SkinFileId();
+                var fields = BuiltinSpriteData.RecordFields(BuiltinShaders.DefaultGuid, fileId, MonoBehaviourClassId, "GUISkin");
+                using (ObjectRegistry.AsAssets())
+                    new YamlReader(new Resolver()).ReadScriptObject(skin, YNode.FromJson(fields));
+                skin.name = "GameSkin";
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Unbound: Unity's built-in GUI skin (GameSkin of unity default resources) is not available ({e.Message}); GUI.skin has default styles without backgrounds.");
+                skin.font = Font;
+            }
+            skin.Apply();
             return skin;
         }
 
-        static GUIStyle Style(string name, Color? text = null, (int l, int r, int t, int b) border = default,
-            (int l, int r, int t, int b) margin = default, (int l, int r, int t, int b) padding = default,
-            (int l, int r, int t, int b) overflow = default, TextAnchor alignment = TextAnchor.UpperLeft)
+        /// <summary>The release profile's GameSkin object of `unity default resources`.</summary>
+        static long SkinFileId()
         {
-            var style = new GUIStyle
-            {
-                name = name,
-                border = new RectOffset(border.l, border.r, border.t, border.b),
-                margin = new RectOffset(margin.l, margin.r, margin.t, margin.b),
-                padding = new RectOffset(padding.l, padding.r, padding.t, padding.b),
-                overflow = new RectOffset(overflow.l, overflow.r, overflow.t, overflow.b),
-                alignment = alignment,
-                richText = true,
-            };
-            var color = text ?? Color.black;
-            foreach (var state in new[] { style.normal, style.hover, style.active, style.focused, style.onNormal, style.onHover, style.onActive, style.onFocused })
-                state.textColor = color;
-            return style;
+            if (!Native.IsReady) throw new InvalidOperationException("the host, which reads the install's resources, is not connected");
+            foreach (var pair in BuiltinShaders.DefaultNames)
+                if (pair.Value == "GameSkin" && BuiltinObjects.DefaultClasses.TryGetValue(pair.Key, out var classId) && classId == MonoBehaviourClassId)
+                    return pair.Key;
+            throw new InvalidOperationException("the release profile names no GameSkin");
         }
 
-        /// <summary>The skin's backgrounds: rounded, shaded rectangles sized for their borders.</summary>
-        static class Textures
+        /// <summary>The skin's references: its background textures read from the install with their
+        /// sampler, other built-in objects (the font) as every reference resolves them.</summary>
+        sealed class Resolver : IReferenceResolver
         {
-            internal static readonly Texture2D Box = Panel(12, 12, 3, Gray(40, 200), Gray(30, 200), Gray(85, 220));
-            internal static readonly Texture2D Button = Panel(12, 12, 3, Gray(102, 255), Gray(72, 255), Gray(28, 255));
-            internal static readonly Texture2D ButtonHover = Panel(12, 12, 3, Gray(122, 255), Gray(88, 255), Gray(28, 255));
-            internal static readonly Texture2D ButtonActive = Panel(12, 12, 3, Gray(56, 255), Gray(66, 255), Gray(20, 255));
-            internal static readonly Texture2D ButtonOn = Panel(12, 12, 3, Gray(64, 255), Gray(76, 255), Gray(20, 255));
-            internal static readonly Texture2D ButtonOnHover = Panel(12, 12, 3, Gray(76, 255), Gray(90, 255), Gray(20, 255));
-            internal static readonly Texture2D TextField = Panel(8, 8, 2, Gray(24, 235), Gray(30, 235), Gray(80, 255));
-            internal static readonly Texture2D TextFieldHover = Panel(8, 8, 2, Gray(28, 235), Gray(34, 235), Gray(110, 255));
-            internal static readonly Texture2D TextFieldFocused = Panel(8, 8, 2, Gray(24, 235), Gray(30, 235), new Color32(90, 140, 230, 255));
-            internal static readonly Texture2D Toggle = Check(false, 100);
-            internal static readonly Texture2D ToggleHover = Check(false, 125);
-            internal static readonly Texture2D ToggleActive = Check(false, 70);
-            internal static readonly Texture2D ToggleOn = Check(true, 100);
-            internal static readonly Texture2D ToggleOnHover = Check(true, 125);
-            internal static readonly Texture2D ToggleOnActive = Check(true, 70);
-            internal static readonly Texture2D Window = TitledPanel(24, 24, 18, Gray(58, 245), Gray(46, 245));
-            internal static readonly Texture2D WindowOn = TitledPanel(24, 24, 18, Gray(74, 250), Gray(50, 250));
-            internal static readonly Texture2D SliderTrack = Track(8, 12, horizontal: true);
-            internal static readonly Texture2D VerticalSliderTrack = Track(12, 8, horizontal: false);
-            internal static readonly Texture2D Thumb = Panel(12, 12, 5, Gray(200, 255), Gray(160, 255), Gray(40, 255));
-            internal static readonly Texture2D ThumbHover = Panel(12, 12, 5, Gray(225, 255), Gray(180, 255), Gray(40, 255));
-            internal static readonly Texture2D ThumbActive = Panel(12, 12, 5, Gray(150, 255), Gray(130, 255), Gray(30, 255));
-            internal static readonly Texture2D ScrollTrack = Panel(18, 15, 6, Gray(32, 220), Gray(38, 220), Gray(60, 220));
-            internal static readonly Texture2D VerticalScrollTrack = Panel(15, 18, 6, Gray(32, 220), Gray(38, 220), Gray(60, 220));
-            internal static readonly Texture2D ScrollThumb = Panel(12, 12, 5, Gray(120, 255), Gray(96, 255), Gray(40, 255));
+            static readonly Dictionary<long, Texture2D> s_Textures = new Dictionary<long, Texture2D>();
 
-            static Color32 Gray(byte v, byte a) => new Color32(v, v, v, a);
-
-            static Texture2D Make(string name, int w, int h, Func<int, int, Color32> pixel)
+            public Object Resolve(ObjectRef reference, Type expected)
             {
-                Texture2D t;
-                using (ObjectRegistry.AsAssets())
-                    t = new Texture2D(w, h, TextureFormat.RGBA32, false) { name = name };
-                t.hideFlags = HideFlags.HideAndDontSave;
-                t.IsPersistentAsset = true;
-                t.filterMode = FilterMode.Bilinear;
-                t.wrapMode = TextureWrapMode.Clamp;
-                var pixels = new Color32[w * h];
-                // Rows are stored bottom first; the pixel callback counts from the top.
-                for (int y = 0; y < h; y++)
-                    for (int x = 0; x < w; x++)
-                        pixels[(h - 1 - y) * w + x] = pixel(x, y);
-                t.SetPixels32(pixels);
-                t.Apply(false, false);
-                return t;
-            }
-
-            /// <summary>Coverage of a rounded rectangle at a pixel center.</summary>
-            static float Inside(int x, int y, float x0, float y0, float x1, float y1, float radius)
-            {
-                float px = x + 0.5f, py = y + 0.5f;
-                float cx = Mathf.Clamp(px, x0 + radius, x1 - radius);
-                float cy = Mathf.Clamp(py, y0 + radius, y1 - radius);
-                float d = Mathf.Sqrt((px - cx) * (px - cx) + (py - cy) * (py - cy));
-                return Mathf.Clamp01(radius + 0.5f - d);
-            }
-
-            static Color32 Mix(Color32 a, Color32 b, float t) => Color32.Lerp(a, b, t);
-
-            static Color32 WithAlpha(Color32 c, float coverage) => new Color32(c.r, c.g, c.b, (byte)(c.a * coverage));
-
-            static Texture2D Panel(int w, int h, float radius, Color32 top, Color32 bottom, Color32 outline) =>
-                Make("gui panel", w, h, (x, y) =>
+                if (reference.Guid == null || reference.FileId == 0) return null;
+                bool fromDefault = string.Equals(reference.Guid, BuiltinShaders.DefaultGuid, StringComparison.OrdinalIgnoreCase);
+                if (fromDefault && BuiltinObjects.DefaultClasses.TryGetValue(reference.FileId, out var classId) && classId == 28
+                    && BuiltinShaders.DefaultNames.TryGetValue(reference.FileId, out var name))
                 {
-                    float outer = Inside(x, y, 0, 0, w, h, radius);
-                    if (outer <= 0f) return default;
-                    float inner = Inside(x, y, 1, 1, w - 1, h - 1, Math.Max(0f, radius - 1f));
-                    var fill = Mix(top, bottom, h <= 1 ? 0f : y / (float)(h - 1));
-                    return WithAlpha(Mix(outline, fill, inner), outer);
-                });
-
-            static Texture2D TitledPanel(int w, int h, int title, Color32 titleColor, Color32 body) =>
-                Make("gui window", w, h, (x, y) =>
-                {
-                    float outer = Inside(x, y, 0, 0, w, h, 4);
-                    if (outer <= 0f) return default;
-                    float inner = Inside(x, y, 1, 1, w - 1, h - 1, 3);
-                    var fill = y < title ? Mix(titleColor, body, y / (float)title * 0.6f) : body;
-                    return WithAlpha(Mix(Gray(20, 255), fill, inner), outer);
-                });
-
-            static Texture2D Track(int w, int h, bool horizontal) =>
-                Make("gui track", w, h, (x, y) =>
-                {
-                    float c = horizontal
-                        ? Inside(x, y, 0, h / 2f - 2f, w, h / 2f + 2f, 2f)
-                        : Inside(x, y, w / 2f - 2f, 0, w / 2f + 2f, h, 2f);
-                    return WithAlpha(Gray(30, 230), c);
-                });
-
-            static Texture2D Check(bool on, byte shade) =>
-                Make(on ? "gui toggle on" : "gui toggle", 16, 16, (x, y) =>
-                {
-                    if (x >= 14 || y >= 14) return default;
-                    float outer = Inside(x, y, 0, 0, 14, 14, 3);
-                    if (outer <= 0f) return default;
-                    float inner = Inside(x, y, 1, 1, 13, 13, 2);
-                    var color = Mix(Gray(25, 255), Gray(shade, 255), inner);
-                    if (on)
+                    if (!s_Textures.TryGetValue(reference.FileId, out var texture))
                     {
-                        // A tick from (3.5, 7) to (6, 10) to (11, 3.5).
-                        float d = Math.Min(Segment(x + 0.5f, y + 0.5f, 3.5f, 7f, 6f, 10f), Segment(x + 0.5f, y + 0.5f, 6f, 10f, 10.5f, 3.5f));
-                        color = Mix(color, Gray(240, 255), Mathf.Clamp01(1.6f - d));
+                        texture = BuiltinSpriteData.LoadTexture(BuiltinShaders.DefaultGuid, reference.FileId, name);
+                        if (texture != null)
+                        {
+                            texture.IsPersistentAsset = true;
+                            texture.hideFlags = HideFlags.HideAndDontSave;
+                        }
+                        s_Textures[reference.FileId] = texture;
                     }
-                    return WithAlpha(color, outer);
-                });
-
-            static float Segment(float px, float py, float ax, float ay, float bx, float by)
-            {
-                float vx = bx - ax, vy = by - ay;
-                float t = Mathf.Clamp01(((px - ax) * vx + (py - ay) * vy) / (vx * vx + vy * vy));
-                float dx = px - (ax + vx * t), dy = py - (ay + vy * t);
-                return Mathf.Sqrt(dx * dx + dy * dy);
+                    return texture;
+                }
+                return BuiltinShaders.Resolve(reference.Guid, reference.FileId);
             }
         }
     }

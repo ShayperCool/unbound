@@ -1,0 +1,4 @@
+{
+  "commands": ["python3 tests/projects/imguiskin/run.py gate"],
+  "summary": "imguiskin: .*"
+}

@@ -207,22 +207,6 @@ namespace Unbound.Runtime
         static YNode Property(JsonElement body, string name) =>
             body.ValueKind == JsonValueKind.Object && body.TryGetProperty(name, out var value) ? Node(value) : YNode.Null;
 
-        static YNode Node(JsonElement value)
-        {
-            switch (value.ValueKind)
-            {
-                case JsonValueKind.Object:
-                    var keys = new List<string>();
-                    var values = new List<YNode>();
-                    foreach (var p in value.EnumerateObject()) { keys.Add(p.Name); values.Add(Node(p.Value)); }
-                    return new YNode { Kind = YKind.Map, Keys = keys.ToArray(), Values = values.ToArray() };
-                case JsonValueKind.Array:
-                    var items = new List<YNode>();
-                    foreach (var item in value.EnumerateArray()) items.Add(Node(item));
-                    return new YNode { Kind = YKind.Seq, Items = items.ToArray() };
-                case JsonValueKind.Null: return new YNode { Kind = YKind.Null };
-                default: return YNode.MakeScalar(value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString());
-            }
-        }
+        static YNode Node(JsonElement value) => YNode.FromJson(value);
     }
 }
