@@ -70,7 +70,7 @@ any other difference. Two concern dead particles, `world-trail-death-head` and t
 
 - `newborn-trail-quad`: a newborn trail whose points still coincide gets its first quad across
   another direction in Unity (images `die1_9`, `world_9`; every `mvd/*` trail, whose two points
-  coincide each time it restarts).
+  coincide or lie along the view each time it restarts).
 - `death-child-age`: the separate Death sub-emitter child age residual (also after a speed kill).
 - `ribbon-order`: particles of one burst (equal ages) are joined in an order Unbound does not
   reproduce.

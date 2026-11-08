@@ -300,5 +300,40 @@ namespace UnityEngine.Tests
             }
             Assert.InRange(restarts, 3, 5);
         }
+
+        [Fact]
+        public void RepeatedRestartingSimulateCallsOfAPrewarmedParentAgree()
+        {
+            var parent = Parent();
+            var child = Child(parent);
+            float[] first = null;
+            float firstTime = 0f;
+            for (int call = 0; call < 3; call++)
+            {
+                parent.Simulate(0.05f, true, true, false);
+                var ages = Ages(child);
+                if (first == null) { first = ages; firstTime = child.time; continue; }
+                Assert.Equal(first, ages);
+                Assert.Equal(firstTime, child.time);
+            }
+            Assert.Equal(18, first.Length);
+        }
+
+        [Fact]
+        public void APrewarmGivesTheChildTheSameTimeOnEveryPlay()
+        {
+            var parent = Parent();
+            var child = Child(parent, c => { var m = c.main; m.loop = true; m.duration = 2.5f; });
+            var times = new List<float>();
+            for (int round = 0; round < 3; round++)
+            {
+                parent.Play();
+                times.Add(child.time);
+                for (int i = 0; i < 7; i++) Frame();
+                parent.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+            // A playback of the 3.7 s span: 1.2 s into the child's 2.5 s loop, every time.
+            Assert.All(times, t => Assert.Equal(1.2f, t, 3));
+        }
     }
 }

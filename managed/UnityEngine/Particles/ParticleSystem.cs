@@ -389,12 +389,13 @@ namespace UnityEngine
                 // advances its clock without restarting its delay or emission.
                 bool resume = !restart && ps.m_IsPaused;
                 stoppedSystems[index] = !restart && !ps.m_IsPlaying && ps.m_StopEmitting;
-                if (!ps.m_IsPlaying && !resume && !stoppedSystems[index])
-                {
-                    ps.Restart(prewarm: restart);
-                    startedSystems[index] = true;
-                }
+                startedSystems[index] = !ps.m_IsPlaying && !resume && !stoppedSystems[index];
             }
+            // Which systems start is decided before any restarts: a parent's prewarm starts its
+            // sub-emitters playing, and they are still restarted (keeping what the prewarm emitted
+            // into them), so repeated restarting calls give the same result.
+            for (int index = 0; index < systems.Count; index++)
+                if (startedSystems[index]) systems[index].Restart(prewarm: restart);
             foreach (var ps in systems)
             {
                 ps.m_SimulatingBirths = Compat.ParticleBirthStepsMeasured;
@@ -1106,7 +1107,7 @@ namespace UnityEngine
         /// then the playback restarts at time 0 keeping the emission's phase.</para></summary>
         void Prewarm()
         {
-            float lifetime = Mathf.Max(m_Main.startLifetime.MaxValue, 0.0001f);
+            float lifetime = Mathf.Max(LongestLifetime(m_Main.startLifetime), 0.0001f);
             if (!Compat.ParticlePrewarmMeasured)
             {
                 Advance(lifetime, 0f, false);
@@ -1134,6 +1135,27 @@ namespace UnityEngine
             m_Loop = 0;
             m_TotalTime = 0f;
             StartSubEmittersAfterPrewarm(span, 0);
+        }
+
+        /// <summary>The longest start lifetime a curve gives (curves sampled at 33 points), for the
+        /// prewarm's span and the lifetimes that bound its children.</summary>
+        internal static float LongestLifetime(in ModuleCurve curve)
+        {
+            switch (curve.mode)
+            {
+                case ParticleSystemCurveMode.TwoConstants: return Mathf.Max(curve.minScalar, curve.scalar);
+                case ParticleSystemCurveMode.Curve: return curve.scalar * MaxKey(curve.maxCurve);
+                case ParticleSystemCurveMode.TwoCurves: return curve.scalar * Mathf.Max(MaxKey(curve.minCurve), MaxKey(curve.maxCurve));
+                default: return curve.scalar;
+            }
+        }
+
+        static float MaxKey(AnimationCurve curve)
+        {
+            if (curve == null || curve.length == 0) return 0f;
+            float max = float.NegativeInfinity;
+            for (int i = 0; i <= 32; i++) max = Mathf.Max(max, curve.Evaluate(i / 32f));
+            return max;
         }
 
         /// <summary>Whether an earlier slot holds the same child (it is started once).</summary>
@@ -1173,15 +1195,15 @@ namespace UnityEngine
             {
                 var child = e.system;
                 if (child == null || child == this || child.m_Destroyed) continue;
-                span = Mathf.Max(span, Mathf.Max(child.m_Main.startLifetime.MaxValue, 0f) + child.SubEmitterLifetimeSpan(depth + 1));
+                span = Mathf.Max(span, Mathf.Max(LongestLifetime(child.m_Main.startLifetime), 0f) + child.SubEmitterLifetimeSpan(depth + 1));
             }
             return span;
         }
 
         /// <summary>After a prewarm every sub-emitter down the chains plays, without emitting, and
         /// stops again at the end of the frame if it is still empty, as after an update; the direct
-        /// sub-emitters' time has run for the prewarm's span (looping, or held at the duration),
-        /// the further ones' has not (6000.0.71f1, particlerender prewarm/chain, prewarm/childloop).</summary>
+        /// sub-emitters' time is that of a playback run for the prewarm's span (looping, or held at
+        /// the duration), the further ones' is left (6000.0.71f1, particlerender prewarm/chain, prewarm/childloop).</summary>
         void StartSubEmittersAfterPrewarm(float span, int depth)
         {
             if (!m_SubEmitters.enabled || depth >= MaxSubEmitterChain || !Compat.ParticleSubEmitterStartMeasured) return;
@@ -1199,9 +1221,9 @@ namespace UnityEngine
                 }
                 if (depth == 0)
                 {
+                    // As a fresh playback run for the span (not added to an earlier playback's time).
                     float duration = Mathf.Max(child.m_Main.duration, 0.0001f);
-                    float time = child.m_Time + span;
-                    child.m_Time = child.m_Main.loop ? time % duration : Mathf.Min(time, duration);
+                    child.m_Time = child.m_Main.loop ? span % duration : Mathf.Min(span, duration);
                 }
                 child.StartSubEmittersAfterPrewarm(span, depth + 1);
             }

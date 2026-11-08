@@ -1,6 +1,6 @@
 {
  "newborn-trail-quad": {
-  "reason": "A newborn trail whose points still coincide: Unity sets its first quad across a direction Unbound does not reproduce (Unbound uses the camera right). Also with dieWithParticles on; not a death behaviour. Also every quad of the mvd/* trails, whose two points coincide each time the trail restarts at its head (vertex counts and positions match).",
+  "reason": "A newborn trail whose points still coincide: Unity sets its first quad across a direction Unbound does not reproduce (Unbound uses the camera right). Also with dieWithParticles on; not a death behaviour. Also every quad of the mvd/* trails, which restart at their head each trail lifetime: two coinciding points (mvd/rest) or two points 0.024 apart along the camera's axis (mvd/slow); their vertex counts and point positions match.",
   "keys": [
    "mvd/rest/0/trailmesh",
    "mvd/rest/1/trailmesh",
