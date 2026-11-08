@@ -215,7 +215,15 @@ fn quad(colors: [Color32; 4], scale: f32) -> owned::Mesh {
             v3(0.5, 0.5, 0.0),
         ],
         normals: vec![v3(0.0, 0.0, -1.0); 4],
-        colors: colors.to_vec(),
+        colors: colors
+            .into_iter()
+            .map(|c| Vector4 {
+                x: f32::from(c.r) / 255.0,
+                y: f32::from(c.g) / 255.0,
+                z: f32::from(c.b) / 255.0,
+                w: f32::from(c.a) / 255.0,
+            })
+            .collect(),
         uv: [
             vec![
                 v4(0.0, 0.0, 0.0, scale),

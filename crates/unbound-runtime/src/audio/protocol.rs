@@ -310,9 +310,10 @@ mod tests {
 
     /// The source packet's filter descriptors were added at NativeApi 16; 20 adds the reverb
     /// kind and parameters, 21 the frame packet's reverb zone, 23 Distortion kind 5, 24 Chorus kind 6. Versions 25, 26 and 27 add mixer Flange, Normalize and Pitch Shifter, 28 render protocol 12, 29 input frame versions, 30 a decoded-resampling flag and 31 the imported texture's reported format, without changing these layouts.
-    /// The managed side pins the same value and refuses earlier versions and 32 (NativeApiVersionTests).
+    /// Version 32 adds floating-point mesh colors. The managed side pins the same value and
+    /// refuses earlier versions and 33 (NativeApiVersionTests).
     #[test]
-    fn the_filter_descriptor_layout_is_native_api_30() {
+    fn the_filter_descriptor_layout_is_native_api_32() {
         assert_eq!(crate::native_api::NATIVE_API_VERSION, 32);
         assert_eq!(
             [
