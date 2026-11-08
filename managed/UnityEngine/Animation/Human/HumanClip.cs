@@ -330,8 +330,13 @@ namespace UnityEngine
                 if (values == null) continue;
                 var slopes = curvesOut.Slopes[i];
                 var keys = new Keyframe[values.Length];
+                // Unweighted keys with the default 1/3 weights, as imported muscle keys report them
+                // (tests/projects/humanfirstpose); they evaluate as plain Hermite segments.
                 for (int k = 0; k < keys.Length; k++)
+                {
                     keys[k] = new Keyframe(curvesOut.Times[k], values[k], slopes[k], slopes[k], 1f / 3f, 1f / 3f);
+                    keys[k].weightedMode = WeightedMode.None;
+                }
                 m_Curves.Add(new ClipCurve
                 {
                     Binding = new CurveBinding { Path = "", Attribute = HumanClipImport.CurveNames[i], ClassId = AnimatorClassId },
