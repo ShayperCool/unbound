@@ -20,7 +20,7 @@ loads from disk on a dedicated streaming thread. These contracts do not define a
 exact publication instant for source getters after streamed output finishes.
 
 The two full Native repeats differ in 16115 of 1180848 compared records. The decoded
-controls agree. Streaming position can lag multiple Render calls and advance
+controls agree apart from a scheduled-end boundary tie described below. Streaming position can lag multiple Render calls and advance
 during the wall wait alone. In one scheduled non-looping case, the wall wait changes
 playing from true to false and position from 28672 to 36000; the next audio update
 then resets position to zero. Looped positions can similarly advance during the
@@ -33,6 +33,12 @@ completion publication together, using a repeatable synchronization experiment.
 A fixed number of extra DSP blocks would fit only the captured scheduling. No new
 reference is published and the engine's existing completion behavior is unchanged.
 Both raw runs and their full comparison remain in the run cache.
+
+Deferred: `decoded.once.end` differs at one scheduled-end sample. One run reports
+playing with position 9216 after render 12; the other reports stopped at 9215.
+The before-13/render-13 getter records and PCM samples 26622/26623 also differ.
+These five raw records remain in the full comparison. This boundary tie is not
+an asynchronous streaming follow-up and no clock or tolerance is changed for it.
 
 ```sh
 python3 tests/projects/mixersuspend/Diagnostics/completion-clocks-v2/run.py --release 6000.0.71f1 --work "$work/native-a"
