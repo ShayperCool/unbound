@@ -129,13 +129,22 @@ namespace UnityEngine
         }
 
         Vector4[] m_RenderColors;
+        // What m_RenderColors were converted from: a copy of the colors and of the raw channel.
+        // Colors are also written in place (mesh buffers, meshes that reuse their arrays), so the
+        // conversion is redone when these bytes differ, not when an array is replaced.
+        Color32[] m_RenderColorsFrom;
+        byte[] m_RenderColorsRawFrom;
+        VertexAttributeDescriptor m_RenderColorsRawDescriptor;
+        int m_RenderColorsRawCount = -1;
 
         // Keep floating-point and HDR vertex colors intact when uploading the draw layout.
         internal Vector4[] RenderColors()
         {
             if (m_Colors == null) return null;
-            if (m_RenderColors == null || m_RenderColors.Length != m_Colors.Length) m_RenderColors = new Vector4[m_Colors.Length];
             var raw = m_PackedChannels?[(int)VertexAttribute.Color];
+            if (m_RenderColors != null && RenderColorsCurrent(raw)) return m_RenderColors;
+            if (m_RenderColors == null || m_RenderColors.Length != m_Colors.Length) m_RenderColors = new Vector4[m_Colors.Length];
+            KeepRenderColorsSource(raw);
             for (int vertex = 0; vertex < m_RenderColors.Length; vertex++)
             {
                 Vector4 color = (Color)m_Colors[vertex];
@@ -149,6 +158,31 @@ namespace UnityEngine
                 m_RenderColors[vertex] = color;
             }
             return m_RenderColors;
+        }
+
+        bool RenderColorsCurrent(PackedChannel raw)
+        {
+            if (m_RenderColorsFrom == null || !System.Runtime.InteropServices.MemoryMarshal.AsBytes(m_Colors.AsSpan())
+                    .SequenceEqual(System.Runtime.InteropServices.MemoryMarshal.AsBytes(m_RenderColorsFrom.AsSpan())))
+                return false;
+            if (raw == null) return m_RenderColorsRawCount < 0;
+            return m_RenderColorsRawCount == raw.Count && m_RenderColorsRawDescriptor.Equals(raw.Descriptor)
+                && raw.Bytes.AsSpan().SequenceEqual(m_RenderColorsRawFrom);
+        }
+
+        void KeepRenderColorsSource(PackedChannel raw)
+        {
+            Copy(ref m_RenderColorsFrom, m_Colors);
+            if (raw == null) { m_RenderColorsRawCount = -1; return; }
+            Copy(ref m_RenderColorsRawFrom, raw.Bytes);
+            m_RenderColorsRawDescriptor = raw.Descriptor;
+            m_RenderColorsRawCount = raw.Count;
+
+            static void Copy<T>(ref T[] to, T[] from)
+            {
+                if (to == null || to.Length != from.Length) to = new T[from.Length];
+                from.AsSpan().CopyTo(to);
+            }
         }
 
         PackedChannel WritablePackedChannel(VertexAttributeDescriptor d)
