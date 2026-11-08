@@ -5,7 +5,10 @@
 //! undefined name inside an `#if` expression), so programs reach glslang already preprocessed.
 //!
 //! Macro expansion follows Prosser's algorithm: every token carries the set of macros it came
-//! from, which keeps self-referencing macros from recursing.
+//! from, which keeps self-referencing macros from recursing. Unlike C, an argument is expanded
+//! before it is pasted with `##` too (as Unity's preprocessor does, measured on 6000.0.71f1:
+//! with `#define A Name` and `#define CAT(a) a##Suffix`, `CAT(A)` is `NameSuffix`; URP's
+//! instanced `UNITY_MATRIX_I_M` relies on it).
 use anyhow::{Result, anyhow, bail};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
@@ -560,7 +563,7 @@ impl<'a> Preprocessor<'a> {
                 }
             }
             if let Some(p) = index(t) {
-                // An operand of `##` is the argument as written; otherwise fully expanded.
+                // Fully expanded, an operand of `##` too (see the module documentation).
                 let next_paste = body[i + 1..]
                     .iter()
                     .find(|t| !t.blank())
@@ -570,11 +573,7 @@ impl<'a> Preprocessor<'a> {
                     .rev()
                     .find(|t| !t.blank())
                     .is_some_and(|t| t.is("##"));
-                let arg = if next_paste || prev_paste {
-                    args[p].clone()
-                } else {
-                    self.expand(args[p].clone().into())?
-                };
+                let arg = self.expand(args[p].clone().into())?;
                 if arg.is_empty() && (next_paste || prev_paste) {
                     result.push(Tok::new(Kind::Space, "")); // a placemarker
                 }
@@ -1161,6 +1160,28 @@ mod tests {
         );
         // The call spanning two lines keeps the line count (every line ends with a newline).
         assert_eq!(out.text.matches('\n').count(), 9);
+    }
+
+    /// Unity's preprocessor expands an argument before pasting it (measured, 6000.0.71f1);
+    /// an argument that names no macro pastes as written.
+    #[test]
+    fn pasted_arguments_expand_first() {
+        let out = run(
+            "#define ALIAS Real
+#define CAT(a) a##Suffix
+#define CATR(a) Prefix##a
+             #define WRAP CAT(ALIAS)
+#define ACCESS(arr, var) arr##Array[0].var
+             #define BUILTINS unity_Builtins1
+#define I_M ACCESS(BUILTINS, unity_WorldToObjectArray)
+             CAT(ALIAS) CATR(ALIAS) WRAP CAT(Plain) I_M CAT()",
+            &[],
+        )
+        .unwrap();
+        assert_eq!(
+            words(&out.text),
+            "RealSuffix PrefixReal RealSuffix PlainSuffix unity_Builtins1Array[0] .unity_WorldToObjectArray Suffix"
+        );
     }
 
     #[test]
