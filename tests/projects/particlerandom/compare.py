@@ -13,10 +13,7 @@ TOLERANCE = 2e-4
 PARTICLE_FIELDS = 33
 # Local field indices include the two seed halves. These are unresolved measurements, not
 # alternative tolerances. See README.md for their scope and observable effects.
-RESIDUALS = [
-    (r'^start/gradients/', set(range(23, 31)), 'packed gradient interpolation'),
-    (r'^color/(gradients|randomcolor)/', set(range(27, 31)), 'packed gradient interpolation'),
-]
+RESIDUALS = []
 ANGULAR_CONTEXT = r'^(color/|custom/|subemit/|played/|vol/speedmodifier9/)'
 
 

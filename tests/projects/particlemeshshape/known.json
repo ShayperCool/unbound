@@ -1,52 +1,12 @@
 {
-  "colour-blend": {
-    "reason": "Start colours (the /color records only) from blended vertex colours: alpha, and any channel whose weights come from a loop-mode edge position, differs by 1/255 in some particles (each value within 1); red, green and blue of every random draw match. Positions, directions, rotations and seeds are in the strictly compared records.",
+  "loop-edge-colour": {
+    "reason": "Edge Loop with Single Material submesh 1: in some particles one colour channel differs by 1/255, where the place along the edge (from the emission time) falls differently by a float tie; positions and directions match.",
     "keys": [
-      "align/edge/color",
-      "align/triangle/color",
-      "loop/edge/tris/-1/color",
-      "loop/edge/tris/1/color",
-      "loop/triangle/tris/-1/color",
-      "loop/triangle/tris/1/color",
-      "material/edge/0/color",
-      "material/edge/1/color",
-      "material/edge/5/color",
-      "material/triangle/0/color",
-      "material/triangle/1/color",
-      "material/triangle/5/color",
-      "modifiers/edge/color",
-      "modifiers/triangle/color",
-      "normaloffset/edge/color",
-      "normaloffset/triangle/color",
-      "random/edge/burst/color",
-      "random/edge/rate/1/color",
-      "random/triangle/burst/color",
-      "random/triangle/emit/color",
-      "random/triangle/rate/0/color",
-      "random/triangle/rate/1/color",
-      "random/triangle/seed/color",
-      "skinned/blend/edge/color",
-      "skinned/blend/triangle/color",
-      "skinned/bone/edge/color",
-      "skinned/bone/triangle/color",
-      "skinned/rest/edge/color",
-      "skinned/rest/triangle/color",
-      "transform/edge/color",
-      "transform/triangle/color"
-    ]
-  },
-  "lines-topology": {
-    "reason": "A mesh of lines: Unity reads its index buffer as triangles and emits from the result (a degenerate first triangle and one past the index data), warning that the mesh is not valid; Unbound gives the same warning and emits at the shape's origin, as Unity does for point and empty meshes.",
-    "keys": [
-      "lines/edge",
-      "lines/triangle",
-      "lines/vertex",
-      "messages/lines/edge",
-      "messages/lines/triangle"
+      "loop/edge/tris/1/color"
     ]
   },
   "spread-boundary": {
-    "reason": "Edge Loop and Ping-Pong with spread 0.25: the rate particles born at exactly 0.25 s and 1.25 s snap to the next spread step in Unity and to the one before in Unbound (their birth time is just under the boundary there); every other particle matches.",
+    "reason": "Loop modes with spread 0.25 and Burst Spread with spread 0.3: particles whose place lands exactly on a spread step (born at 0.25 s, 0.5 s or 1.25 s; the last of ten burst lanes) snap to the neighbouring step in Unbound, a float tie of the emission time or the step quotient; every other particle matches.",
     "keys": [
       "loop/edge/1/0.25/0",
       "loop/edge/1/0.25/1",
@@ -55,7 +15,40 @@
       "pingpong/edge/1/0.25/0",
       "pingpong/edge/1/0.25/1",
       "pingpong/edge/1/0.25/2",
-      "pingpong/edge/1/0.25/3"
+      "pingpong/edge/1/0.25/3",
+      "spread/circle/20/0",
+      "spread/circle/20/1",
+      "spread/circle/20/2",
+      "spread/circle/20/3",
+      "spread/edge/20/0",
+      "spread/edge/20/1",
+      "spread/edge/20/2",
+      "spread/edge/20/3",
+      "spread/mesh/20/0",
+      "spread/mesh/20/1",
+      "spread/mesh/20/2",
+      "spread/mesh/20/3",
+      "spread/circle/burst"
+    ]
+  },
+  "warning-timing": {
+    "reason": "Unity logs the invalid-mesh warning and the mixed-primitive assertion when the system gets the mesh, which the probe counts for the scenario before; Unbound logs them while emitting. The same messages, attributed one scenario apart.",
+    "keys": [
+      "messages/lines/vertex",
+      "messages/lines/edge",
+      "messages/lines/triangle",
+      "messages/topology/mixed1/triangle",
+      "messages/topology/quads/triangle",
+      "messages/topology/strip/triangle"
+    ]
+  },
+  "texture-clip-rate": {
+    "reason": "Texture clipping with rate emission: Unity keeps far fewer particles (0 and 1 of about 10 a step) than the clip channel alone discards; Unbound keeps every particle the threshold passes. Burst and Emit clipping match. Open follow-up.",
+    "keys": [
+      "texture/clip/rate/0",
+      "texture/clip/rate/0/color",
+      "texture/clip/rate/1",
+      "texture/clip/rate/1/color"
     ]
   }
 }

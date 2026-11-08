@@ -1,0 +1,22 @@
+{
+  "gradient-rounding-ties": {
+    "reason": "Colour over lifetime in Blend mode: one channel of one particle per record is 1/255 apart where the gradient value lies within 0.001 of a half byte (147.4997, 175.4994): a float tie of the particle's age. Every other byte matches.",
+    "keys": [
+      "gradient/particles/both/color/gradient",
+      "gradient/particles/both/gradient/gradient",
+      "gradient/particles/both/twocolors/gradient",
+      "gradient/particles/life/gradient/0",
+      "gradient/particles/life/gradient/1",
+      "gradient/particles/life/twogradients/0"
+    ]
+  },
+  "perceptual-precision": {
+    "reason": "PerceptualBlend gradients: about one value in thirty is 1/255 apart (both directions), the Oklab round trip differing by a few hundredths of a byte; the key values 25.5 and 229.5 round the other way. Values are quantized to bytes as in Unity.",
+    "keys": [
+      "gradient/particles/life/perceptual/0",
+      "gradient/particles/life/perceptual/1",
+      "gradient/particles/start/perceptual",
+      "gradient/struct/perceptual"
+    ]
+  }
+}

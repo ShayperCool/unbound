@@ -213,9 +213,6 @@ registry names only the following fields; it does not change numeric tolerances.
   classified as known, after checking every field of the entire record. The nine old particles
   must remain in place. Every raw failure stays printed; no particle sorting or stronger order
   guarantee is imposed. These 72 newly exposed control records are outside modifier sampling.
-- `start/gradients`, `color/gradients`, `color/randomcolor`: packed color interpolation differs by
-  byte values after the random draw. Public MinMaxGradient evaluation and particle packed colors
-  need separate measurement before changing their arithmetic.
 - Color, custom, played, sub-emitter and the later speed-modifier records report nonzero reference
   angular velocity after the rotation scenarios, although they enable no rotation module. The
   cause is unresolved. Only the recorded nonzero-reference/zero-candidate angular Z field is
