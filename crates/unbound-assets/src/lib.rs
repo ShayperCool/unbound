@@ -14,8 +14,10 @@
 //!
 //! The library has no engine dependency: the runtime converts these outputs to its own types.
 pub mod audio;
+pub mod audio_download;
 pub mod builtin_shaders;
 pub mod bundle;
+pub mod bundle_cache;
 pub mod cache;
 pub mod font;
 pub mod fsb5;

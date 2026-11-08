@@ -208,6 +208,16 @@ impl Importer for AudioImporter {
 
 /// Decodes the default audio track: `(channels, sample rate, interleaved samples)`.
 pub fn decode(source: &Path, bytes: &[u8]) -> Result<(u16, u32, Vec<f32>)> {
+    decode_packets(source, bytes, false)
+}
+
+/// [`decode`]; `untrimmed` keeps the frames the container marks as encoder delay and padding
+/// (an MPEG file's LAME tag), as a plain decoder outputs them.
+pub fn decode_packets(
+    source: &Path,
+    bytes: &[u8],
+    untrimmed: bool,
+) -> Result<(u16, u32, Vec<f32>)> {
     let cursor = std::io::Cursor::new(bytes.to_vec());
     let stream = MediaSourceStream::new(Box::new(cursor), Default::default());
     let mut hint = Hint::new();
@@ -252,6 +262,11 @@ pub fn decode(source: &Path, bytes: &[u8]) -> Result<(u16, u32, Vec<f32>)> {
         };
         if packet.track_id != track_id {
             continue;
+        }
+        let mut packet = packet;
+        if untrimmed {
+            packet.trim_start = Default::default();
+            packet.trim_end = Default::default();
         }
         match decoder.decode(&packet) {
             Ok(buffer) => {

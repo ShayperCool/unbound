@@ -90,18 +90,59 @@ fn decompress(data: &[u8], compression: u32, size: usize) -> Result<Vec<u8>> {
     }
 }
 
-impl Bundle {
-    pub fn parse(data: &[u8]) -> Result<Bundle> {
-        Bundle::parse_with_crc(data, 0)
-    }
+/// A block of an archive: its uncompressed and stored sizes and its flags (the low six bits are
+/// the compression, 0x40 marks a streamed block).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Block {
+    pub size: u32,
+    pub stored: u32,
+    pub flags: u16,
+}
 
-    /// [`Bundle::parse`], checking the archive's uncompressed content against `crc` first when it
-    /// is not 0 (the `crc` of AssetBundle.LoadFromFile, LoadFromMemory and LoadFromStream). The
-    /// content is the data blocks decompressed, in order, without the header and the block and
-    /// directory information: its CRC-32 (IEEE, zlib's) is the `CRC:` the Editor writes to the
-    /// bundle's `.manifest`, the same for every compression. A mismatch fails before any file of
-    /// the archive is made.
-    pub fn parse_with_crc(data: &[u8], crc: u32) -> Result<Bundle> {
+/// A file of an archive's directory: where it lies in the content, its flags and path.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Node {
+    pub offset: i64,
+    pub size: i64,
+    pub flags: u32,
+    pub path: String,
+}
+
+/// A UnityFS archive as stored: its header strings, its block and directory information and
+/// where its data blocks start.
+#[derive(Debug, Clone)]
+pub(crate) struct Layout {
+    pub version: u32,
+    pub player: String,
+    pub unity_version: String,
+    /// The header's bytes, aligned as the format aligns it.
+    pub header_size: usize,
+    pub blocks: Vec<Block>,
+    pub nodes: Vec<Node>,
+    pub data_start: usize,
+}
+
+/// A nonzero CRC that does not match an archive's uncompressed content.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CrcMismatch {
+    pub expected: u32,
+    pub actual: u32,
+}
+
+impl std::fmt::Display for CrcMismatch {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "CRC mismatch: the AssetBundle's uncompressed content has CRC {}, not the expected {}",
+            self.actual, self.expected
+        )
+    }
+}
+
+impl std::error::Error for CrcMismatch {}
+
+impl Layout {
+    pub(crate) fn read(data: &[u8]) -> Result<Layout> {
         let mut r = Reader { data, at: 0 };
         let signature = r.cstring()?;
         if signature != "UnityFS" {
@@ -113,7 +154,7 @@ impl Bundle {
         if !(6..=8).contains(&version) {
             bail!("UnityFS format {version} is not supported");
         }
-        let _player = r.cstring()?;
+        let player = r.cstring()?;
         let unity_version = r.cstring()?;
         let _size = r.i64()?;
         let compressed_info = r.u32()? as usize;
@@ -122,9 +163,12 @@ impl Bundle {
         if version >= 7 {
             r.align(16);
         }
+        let header_size = r.at;
         let info_at_end = flags & 0x80 != 0;
         let info_bytes = if info_at_end {
-            data.get(data.len() - compressed_info..)
+            data.len()
+                .checked_sub(compressed_info)
+                .and_then(|start| data.get(start..))
                 .context("truncated bundle")?
         } else {
             r.bytes(compressed_info)?
@@ -138,53 +182,104 @@ impl Bundle {
             at: 16,
         };
         let block_count = ir.u32()? as usize;
-        let mut blocks = Vec::with_capacity(block_count);
+        let mut blocks = Vec::with_capacity(block_count.min(info.len()));
         for _ in 0..block_count {
-            let size = ir.u32()? as usize;
-            let compressed = ir.u32()? as usize;
-            let block_flags = ir.u16()? as u32;
-            blocks.push((size, compressed, block_flags));
+            blocks.push(Block {
+                size: ir.u32()?,
+                stored: ir.u32()?,
+                flags: ir.u16()?,
+            });
         }
         let node_count = ir.u32()? as usize;
-        let mut nodes = Vec::with_capacity(node_count);
+        let mut nodes = Vec::with_capacity(node_count.min(info.len()));
         for _ in 0..node_count {
-            let offset = ir.i64()? as usize;
-            let size = ir.i64()? as usize;
-            let node_flags = ir.u32()?;
-            let path = ir.cstring()?;
-            nodes.push((offset, size, node_flags, path));
+            nodes.push(Node {
+                offset: ir.i64()?,
+                size: ir.i64()?,
+                flags: ir.u32()?,
+                path: ir.cstring()?,
+            });
         }
-        let total: usize = blocks.iter().map(|b| b.0).sum();
+        Ok(Layout {
+            version,
+            player,
+            unity_version,
+            header_size,
+            blocks,
+            nodes,
+            data_start: r.at,
+        })
+    }
+
+    /// The data blocks decompressed, in order. A nonzero `crc` is checked against them (CRC-32,
+    /// IEEE, zlib's), as they decompress: no second pass, no extra copy.
+    pub(crate) fn content(&self, data: &[u8], crc: u32) -> Result<Vec<u8>> {
+        let total: usize = self.blocks.iter().map(|b| b.size as usize).sum();
         let mut stream = Vec::with_capacity(total);
-        // The checksum follows the blocks as they decompress: no second pass, no extra copy.
-        let mut content = (crc != 0).then(crc32fast::Hasher::new);
-        for (size, compressed, block_flags) in blocks {
-            let bytes = r.bytes(compressed)?;
+        let mut hasher = (crc != 0).then(crc32fast::Hasher::new);
+        let mut r = Reader {
+            data,
+            at: self.data_start,
+        };
+        for block in &self.blocks {
+            let bytes = r.bytes(block.stored as usize)?;
             let start = stream.len();
-            stream.extend(decompress(bytes, block_flags & 0x3f, size)?);
-            if let Some(hasher) = &mut content {
+            stream.extend(decompress(
+                bytes,
+                (block.flags & 0x3f) as u32,
+                block.size as usize,
+            )?);
+            if let Some(hasher) = &mut hasher {
                 hasher.update(&stream[start..]);
             }
         }
-        if let Some(hasher) = content {
+        if let Some(hasher) = hasher {
             let actual = hasher.finalize();
-            anyhow::ensure!(
-                actual == crc,
-                "CRC mismatch: the AssetBundle's uncompressed content has CRC {actual}, not the expected {crc}"
-            );
+            if actual != crc {
+                return Err(CrcMismatch {
+                    expected: crc,
+                    actual,
+                }
+                .into());
+            }
         }
-        let files = nodes
+        Ok(stream)
+    }
+}
+
+impl Bundle {
+    pub fn parse(data: &[u8]) -> Result<Bundle> {
+        Bundle::parse_with_crc(data, 0)
+    }
+
+    /// [`Bundle::parse`], checking the archive's uncompressed content against `crc` first when it
+    /// is not 0 (the `crc` of AssetBundle.LoadFromFile, LoadFromMemory and LoadFromStream). The
+    /// content is the data blocks decompressed, in order, without the header and the block and
+    /// directory information: its CRC-32 (IEEE, zlib's) is the `CRC:` the Editor writes to the
+    /// bundle's `.manifest`, the same for every compression. A mismatch fails with a
+    /// [`CrcMismatch`] before any file of the archive is made.
+    pub fn parse_with_crc(data: &[u8], crc: u32) -> Result<Bundle> {
+        let layout = Layout::read(data)?;
+        let stream = layout.content(data, crc)?;
+        let files = layout
+            .nodes
             .into_iter()
-            .map(|(offset, size, flags, path)| {
-                let data = stream
-                    .get(offset..offset + size)
-                    .with_context(|| format!("bundle file {path} lies past the data"))?
+            .map(|node| {
+                let (offset, size) = (node.offset as usize, node.size as usize);
+                let data = offset
+                    .checked_add(size)
+                    .and_then(|end| stream.get(offset..end))
+                    .with_context(|| format!("bundle file {} lies past the data", node.path))?
                     .to_vec();
-                Ok(BundleFile { path, flags, data })
+                Ok(BundleFile {
+                    path: node.path,
+                    flags: node.flags,
+                    data,
+                })
             })
             .collect::<Result<Vec<_>>>()?;
         Ok(Bundle {
-            unity_version,
+            unity_version: layout.unity_version,
             files,
         })
     }

@@ -37,6 +37,9 @@ libc = "0.2"
 postcard = { version = "1", default-features = false, features = ["use-std"] }
 serde_bytes = "0.11"
 lz4_flex = "0.14"
+# The AssetBundle cache's archives: LZ4 blocks and LZ4HC block information, byte for byte as the
+# reference library compresses them.
+lz4-sys = "1.11"
 rayon.workspace = true
 # AssetBundles: LZMA blocks, block-compressed (BC, ETC, ASTC) textures of player data.
 lzma-rs = "0.3"
