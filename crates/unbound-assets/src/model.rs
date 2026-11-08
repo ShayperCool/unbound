@@ -659,7 +659,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 28;
+    const VERSION: u32 = 29;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1281,10 +1281,21 @@ impl<'a> Builder<'a> {
                 if !range.mask.keeps(&path) {
                     continue;
                 }
-                // Every animated node gets all three curves, constant ones too (measured with
-                // every animation compression).
+                // Every animated translation, rotation and scale gets its curves, constant ones
+                // too (measured with every animation compression); a node whose take animates
+                // none of them (only custom properties) gets none. Humanoid clips keep every
+                // channel: their muscle curves are converted from the whole pose. So do pivoted
+                // nodes, whose position follows their rotation and scale (unmeasured).
+                let source = self.sources[index as usize];
+                let channels = if self.settings.animation_type == 3 || self.pivoted(index) {
+                    [true; 3]
+                } else {
+                    animated_channels(stack, source)
+                };
+                if channels == [false; 3] {
+                    continue;
+                }
                 if every_frame {
-                    let source = self.sources[index as usize];
                     let (mut positions, mut rotations, mut scales) =
                         (Vec::new(), Vec::new(), Vec::new());
                     for time in frame_times(start, end, fps) {
@@ -1310,9 +1321,9 @@ impl<'a> Builder<'a> {
                     }
                     curves.push(NodeCurves {
                         path,
-                        positions,
-                        rotations,
-                        scales,
+                        positions: only(channels[0], positions),
+                        rotations: only(channels[1], rotations),
+                        scales: only(channels[2], scales),
                     });
                     continue;
                 }
@@ -1369,9 +1380,9 @@ impl<'a> Builder<'a> {
                     .collect();
                 curves.push(NodeCurves {
                     path,
-                    positions: clip_range(&positions, start, end, lerp_key),
-                    rotations: clip_range(&rotations, start, end, slerp_key),
-                    scales: clip_range(&scales, start, end, lerp_key),
+                    positions: only(channels[0], clip_range(&positions, start, end, lerp_key)),
+                    rotations: only(channels[1], clip_range(&rotations, start, end, slerp_key)),
+                    scales: only(channels[2], clip_range(&scales, start, end, lerp_key)),
                 });
             }
             curves.sort_by(|a, b| a.path.cmp(&b.path));
@@ -3219,6 +3230,23 @@ fn default_attribute_is_bone(node: &ufbx::Node) -> bool {
         .ok()
         .and_then(|i| node.all_attribs.get(i))
         .is_some_and(|attrib| attrib.type_ == ufbx::ElementType::Bone)
+}
+
+/// Which of the node's local translation, rotation and scale the take animates: those with
+/// animation curves in one of its layers. The importer gives a clip curves for these only,
+/// constant ones included (measured, tests/projects/modeltoproot and modelclips).
+fn animated_channels(stack: &ufbx::AnimStack, node: &ufbx::Node) -> [bool; 3] {
+    ["Lcl Translation", "Lcl Rotation", "Lcl Scaling"].map(|prop| {
+        stack
+            .layers
+            .iter()
+            .any(|layer| ufbx::find_anim_prop(layer, &node.element, prop).is_some())
+    })
+}
+
+/// The keys of an animated channel, none for a channel the take leaves alone.
+fn only<T>(animated: bool, keys: Vec<T>) -> Vec<T> {
+    if animated { keys } else { Vec::new() }
 }
 
 fn animation_compression_off(imp: &Value) -> bool {
