@@ -147,14 +147,18 @@ namespace Unbound.Runtime
                 s_ZoneGeneration++;
                 s_ZoneActivationRejected = false;
                 if (Compat.AudioZoneStartupMeasured)
+                {
+                    double dspTime = AudioSettings.dspTime;
                     foreach (var source in s_Sources)
-                        if (source != null && source.m_HasAudioFrame && source.isPlaying)
+                        if (source != null && source.isPlaying
+                            && (source.m_HasAudioFrame || dspTime > source.m_PlaybackDspTime))
                         {
                             s_ZoneActivationRejected = true;
                             Debug.LogError("Unbound: AudioReverbZone on '" + zone.gameObject.name
                                 + "': activating zones during playback is not supported; stop the sources before activating the zones. The zone return is silent.", zone);
                             break;
                         }
+                }
             }
             s_Zones.Add(zone);
         }

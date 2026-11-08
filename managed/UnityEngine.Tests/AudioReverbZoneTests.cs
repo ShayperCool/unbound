@@ -369,6 +369,27 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ZoneActivationAfterDirectBackendRenderingStillReportsTheUnsupportedTransition()
+        {
+            var host = new GameObject("rendered-source"); m_Objects.Add(host);
+            var source = host.AddComponent<AudioSource>();
+            var clip = AudioClip.Create("tone", 48000, 1, 48000, false);
+            source.clip = clip;
+            source.Play();
+            Assert.False(source.m_HasAudioFrame);
+            m_Backend.Frame(new AudioFramePacket { DeltaTime = 0.04 });
+            var previous = Debug.unityLogger.logHandler;
+            var errors = new Errors();
+            Debug.unityLogger.logHandler = errors;
+            try
+            {
+                Zone(0);
+                Assert.Contains(errors.Messages, message => message.Contains("activating zones during playback is not supported"));
+            }
+            finally { Debug.unityLogger.logHandler = previous; Object.DestroyImmediate(clip); }
+        }
+
+        [Fact]
         public void ResetAndNonHearingListenerRemovalPreserveTheHearingPose()
         {
             var other = new GameObject("other-listener"); m_Objects.Add(other);

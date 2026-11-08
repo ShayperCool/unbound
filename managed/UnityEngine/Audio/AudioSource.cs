@@ -58,6 +58,7 @@ namespace UnityEngine
         internal bool m_KeepOutput;
         internal bool m_HasFilter;
         internal bool m_HasAudioFrame;
+        internal double m_PlaybackDspTime;
         internal Vector3 m_LastPosition;
         internal Vector3 m_Velocity;
         internal Vector3 m_SampledListenerVelocity;
@@ -429,7 +430,11 @@ namespace UnityEngine
             }
             if (m_Clip != null && (m_Clip.channels == 0 || m_Clip.samples == 0)) return;
             m_Paused = false;
-            if (m_Handle == 0 || AudioBackend.Current.State(m_Handle).OneShots == 0) m_HasAudioFrame = false;
+            if (m_Handle == 0 || AudioBackend.Current.State(m_Handle).OneShots == 0)
+            {
+                m_HasAudioFrame = false;
+                m_PlaybackDspTime = AudioSettings.dspTime;
+            }
             m_Clip?.EnsureLoaded();
             PreparePlaybackMotion();
             // Play can start a clipless OnAudioFilterRead generator before the first
@@ -479,6 +484,7 @@ namespace UnityEngine
             if (!isPlaying)
             {
                 m_HasAudioFrame = false;
+                m_PlaybackDspTime = AudioSettings.dspTime;
                 PreparePlaybackMotion();
             }
             Flush();
