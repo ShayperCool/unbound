@@ -389,8 +389,8 @@ The following Unity **6000.0** documentation was checked, including limitations:
 
 `--geometry-constraints` has one canonical 633-row reference from two identical
 GPU Editor captures. It gates the measured angular-constraint/assignment/sleep
-cases at the original tolerances. Its no-angular-constraint controls are explicit
-negative controls: 58 strict rows remain visible (11 body, 44 payload, 3 slot
+cases at the original tolerances. At Q177, its no-angular-constraint controls were explicit
+negative controls: 58 strict rows remained visible (11 body, 44 payload, 3 slot
 order), with counts, identities and finite values still checked. Their face-contact
 constraint sequence produces small residual spin: maxima over five steps are
 0.000324803 position units, 0.000841626 quaternion components, 0.00700853 units/s
@@ -428,3 +428,101 @@ body rows), with 575/633 strict matches and the same 58 free-rotation diagnostic
 rows afterward. Both extended GPU Editor recordings are byte-identical. Managed
 regressions also check full/partial first-step rotation, the rotated mass frame,
 position locks and allocation-free repeated constraint assignments.
+
+
+## Q189 free-rotation numerics
+
+`--geometry-rotation` records `geometry-rotation.tsv`, 718 rows from two
+byte-identical GPU Editor captures. It checks ten free-flight shape/scale
+combinations, two asymmetric explicit-inertia clamp controls, and sixteen face
+contacts. The contacts cross Discrete overlap/speculative approach, no lock/a
+position-Y lock, and automatic convex inertia/a primitive box/explicit inertia/
+12 position plus 4 velocity iterations. Every earlier reference stays unchanged.
+
+The original strict failures separate as follows. The row counts refer to whole
+records, so a row with several numeric fields is counted once.
+
+| Capture / scenario | Before | After | Quantity and maximum remaining error |
+| --- | ---: | ---: | --- |
+| Q06 `hinge/motor` | 40 | 40 | Angle, 0.005834882 degrees |
+| Q06 `hinge/motor-toggle` | 4 | 4 | Angle, 0.00056935 degrees |
+| Q06 `hinge/limits` | 33 | 33 | Angle, 0.00054944 degrees |
+| Q06 `hinge/wrap` | 8 | 8 | Equivalent wrapped angle, 0.000121 degrees |
+| Q06 `hinge/contact` | 15 | 15 | Twelve angles, 0.00027148 degrees; three resting speeds, 0.000341510 degrees/s |
+| `constraints/0/True` | 20 | 20 | Four body and sixteen contact/callback payload rows; pose/velocity bounds below |
+| `constraints/4/False` | 19 | 0 | Position-constrained Discrete contact |
+| `constraints/4/True` | 19 | 0 | Position-constrained speculative contact |
+
+The shared `ConstrainedBodyStateMeasured` path now publishes a dynamic body's
+pose for position constraints as well as angular constraints. The existing
+world-axis linear projection and mass-frame angular projection are reused.
+Publication does not wake sleeping bodies or change kinematic bodies. This is
+one constraint-state mechanism, independent of geometry, CCD mode, iteration
+counts or probe names. The constraint verifier now requires position-lock
+controls to match strictly, removing their former diagnostic exception.
+
+The explicit-inertia contact control isolates that change. Both engines have
+identical mass properties and a byte-identical first step. Without position
+publication they diverge on the next step. Publishing constrained poses makes
+all four explicit-inertia contexts pass. The primitive control also passes in
+all four contexts. This establishes the observed correction; refreshing the
+mass-frame pose before the next contact computation explains it, but is an
+implementation inference rather than a documented Unity algorithm.
+
+| Candidate cause | Control result |
+| --- | --- |
+| Angular integration / gyroscopic terms | Every freely spinning sphere, convex, compound and scaled body passes the original strict comparison, with constant world angular velocity in the measured five-step flights. The asymmetric assigned tensor/rotation also passes. There is no evidence for adding gyroscopic terms. |
+| Maximum angular speed | Both engines expose 50 rad/s by default in this fixture. Explicit 7/50 limits, a 100 rad/s assignment and an acceleration-mode torque step match. The clamp is a pre-integration speed bound; no post-solver clamp is added. |
+| Automatic / assigned inertia | Sphere and two-sphere properties agree exactly. Hull and box properties have a few float32 ulps of arithmetic difference; the unscaled hull moments differ by at most 2.8e-9, and the scaled mixed control by 1.5e-8. With the same explicitly assigned moments, unconstrained convex contacts match. This identifies automatic-mass arithmetic as a seed of the remaining contact numerics, without claiming a different physical inertia rule. |
+| Solver counts | Both engines start new bodies at 6 position/1 velocity iterations. The explicit 12/4 controls read back identically. Higher counts reduce residual velocity errors, but do not remove every pose/manifold reading difference. Changing defaults would change the problem rather than fix it. |
+| Sleeping | All contact and flight controls have `sleepThreshold=0`. Q177's explicit sleeping-publication checks continue to pass. Sleep thresholds cannot explain the active-body residuals. |
+| Shim float order / constrained publication | The position-constrained controls pass after general pose publication, including identical explicit inertia. Unconstrained bodies do not take that path. No per-step allocations or new native ABI, cache format, or vendored PhysX patch is introduced. |
+
+The twenty remaining original diagnostic rows belong only to the unconstrained
+speculative hull. Across its five steps, maximum absolute differences are
+1.88486e-5 position units, 9.17684e-5 quaternion components, 0.000489614 units/s
+linear velocity and 0.00484274 rad/s angular velocity. Its first-step angular
+velocity differs by only 3.172e-5 rad/s; repeated nearly parallel face contacts
+amplify that seed. There is no changed contact count, phase, collider identity,
+contact lifetime, collision outcome or visible trajectory in this trace.
+These are recorded insignificant residuals in `COMPATIBILITY_GAPS.md`, not full
+free-rotation solver parity or a universal error bound.
+
+The new higher-iteration unconstrained controls retain 33 further diagnostic
+rows, three body and thirty payload rows. Their maxima are 6.06526e-5 position
+units, 0.000253485 quaternion components, 9.61944e-6 units/s linear velocity and
+4.51996e-5 rad/s angular velocity. Planar manifold selection is ill-conditioned:
+complete point sets can select locations about 0.15 units apart on the same
+flat face, despite normals differing by at most 0.000112159 and separations by
+0.000211649. Such contact positions are not mislabeled as ulp-sized errors or
+slot permutations. The tiny input/pose differences select another clipped face
+witness; the measured motion, callbacks and identities retain their outcomes.
+The full raw point, normal, separation, impulse and velocity records remain in
+the strict comparison. Exact manifold payload parity is not claimed.
+
+The rotation gate requires free flight, configuration, primitive contacts,
+explicit-inertia contacts and every position-constrained contact to match at
+the unchanged strict tolerances. It reports the automatic-inertia unconstrained
+contacts separately, bounds their body differences by quantity, and still
+requires finite complete rows, exact counts, callback phases and collider
+identities. Mutation tests reject errors in those checks. Original Q06 angle
+and resting-speed bounds, all raw comparators and all existing oracle values
+remain unchanged.
+
+These Unity **6000.0** contracts were checked for Q189, including limitations:
+
+| Documentation | Guarantee and relevance |
+| --- | --- |
+| [Rigidbody.maxAngularVelocity](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rigidbody-maxAngularVelocity.html) | Limits speed before simulation; the solver may subsequently exceed it. The page's stated default of 7 differs from the measured fixture default of 50, so the capture records the actual setting. |
+| [Rigidbody.inertiaTensor](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rigidbody-inertiaTensor.html), [inertiaTensorRotation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rigidbody-inertiaTensorRotation.html) | Principal moments use the body's rotated mass frame. All attached colliders contribute to automatic inertia. Assigned zero moments prohibit rotation on those axes. These guarantees do not specify float accumulation order. |
+| [Physics.defaultSolverIterations](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics-defaultSolverIterations.html), [defaultSolverVelocityIterations](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics-defaultSolverVelocityIterations.html) | Positive position iterations trade cost for joint/contact accuracy. Defaults initialize new bodies; changing the global does not update existing bodies. Velocity iterations affect restitution and joint response. |
+| [CCD overview](https://docs.unity3d.com/6000.0/Documentation/Manual/ContinuousCollisionDetection.html), [speculative CCD](https://docs.unity3d.com/6000.0/Documentation/Manual/Speculative-CCD.html) | CCD predicts collisions between steps and is not a guarantee of exact physical outcomes. The public support guarantee covers box, sphere and capsule colliders. Speculative contacts can be missed or produce ghost collisions. The additional convex observations remain specific to this reference. |
+| [Rigidbody.constraints](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rigidbody-constraints.html), [PublishTransform](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rigidbody.PublishTransform.html) | Position locks use world axes and angular locks use inertia axes. PublishTransform publishes the simulated body pose to its Transform. Neither specifies the contact-cache arithmetic isolated by the controls. |
+
+Q189 validation: release build; 3706 managed tests; eight compatibility-profile
+Rust tests; 39 CCD verifier tests. All 24 physics probes run before/after retain
+their results, 21 pass, two pre-existing 2D failures and one contact-event report.
+All six CCD profiles pass their gates. Raw results are Q06 6714/6814,
+supplemental 1167/1167, broad geometry 11915/12400 with 485 slot permutations,
+construction 3842/4554 with zero consistency failures, constraints 613/633 and
+rotation controls 665/718. No missing/extra rows or new lifetime/count failures.

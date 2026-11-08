@@ -642,7 +642,9 @@ namespace UnityEngine
 
         internal void PublishConstrainedPose()
         {
-            if ((m_Constraints & RigidbodyConstraints.FreezeRotation) != 0)
+            // Position locks also publish the actor pose, preserving the next
+            // contact step's mass-frame transform, physicsccdhinge 6000.0.71f1.
+            if (m_Constraints != RigidbodyConstraints.None)
                 B3.ua3_body_publish_constraints(m_Body, Locks);
         }
 

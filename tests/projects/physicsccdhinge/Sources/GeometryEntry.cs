@@ -425,6 +425,73 @@ public class GeometryEntry : MonoBehaviour
         }
         finally { Physics.autoSyncTransforms=previous; }
     }
+    static void Properties(Rigidbody body)
+    {
+        Row(Scenario+"/properties",F(body.mass)+","+V(body.centerOfMass)+","+V(body.inertiaTensor)+","+Q(body.inertiaTensorRotation));
+        Row(Scenario+"/tuning",F(body.maxAngularVelocity)+","+body.solverIterations+","+body.solverVelocityIterations+","+F(body.sleepThreshold));
+    }
+    static void RotationControls()
+    {
+        Row("rotation/defaults",F(Physics.defaultMaxAngularSpeed)+","+Physics.defaultSolverIterations+","+Physics.defaultSolverVelocityIterations+","+F(Physics.sleepThreshold));
+        // Compare the same mass properties with the contact solver absent.
+        for(int shape=0;shape<5;shape++)
+        foreach(bool scaled in new[]{false,true})
+        {
+            Begin("rotation/flight/"+shape+"/"+scaled);
+            var body=Body("bullet",Vector3.zero,shape,CollisionDetectionMode.Discrete);
+            body.constraints=RigidbodyConstraints.None;
+            if(scaled)body.transform.localScale=new Vector3(2,.5f,1.5f);
+            Physics.SyncTransforms(); Space.Simulate(Dt);
+            Properties(body);
+            body.angularVelocity=new Vector3(4,5,6);
+            for(Step=0;Step<5;Step++)Tick(body);
+            Clear();
+        }
+        foreach(float maximum in new[]{7f,50f})
+        {
+            Begin("rotation/clamp/"+F(maximum));
+            var body=Body("bullet",Vector3.zero,0,CollisionDetectionMode.Discrete);
+            body.constraints=RigidbodyConstraints.None;
+            body.inertiaTensor=new Vector3(1,2,3);
+            body.inertiaTensorRotation=Quaternion.Euler(15,25,35);
+            body.maxAngularVelocity=maximum;
+            Physics.SyncTransforms(); Space.Simulate(Dt); Properties(body);
+            body.angularVelocity=new Vector3(60,80,0);
+            for(Step=0;Step<3;Step++)
+            {
+                if(Step==1)body.AddTorque(new Vector3(0,0,3000),ForceMode.Acceleration);
+                Tick(body);
+            }
+            Clear();
+        }
+        // Cross the original face contact with primitive geometry, explicit
+        // principal moments, and higher solver counts, changing one cause at a time.
+        foreach(int control in new[]{0,1,2,3})
+        foreach(bool lockY in new[]{false,true})
+        foreach(bool speculative in new[]{false,true})
+        {
+            Begin("rotation/contact/"+control+"/"+lockY+"/"+speculative);
+            Obstacle(0);
+            var body=Body("bullet",Vector3.left*(speculative?1:.06f),control==1?0:1,
+                speculative?CollisionDetectionMode.ContinuousSpeculative:CollisionDetectionMode.Discrete);
+            if(control==1)
+            {
+                DestroyImmediate(body.GetComponent<SphereCollider>());
+                body.gameObject.AddComponent<BoxCollider>().size=new Vector3(.2f,.3f,.4f);
+            }
+            body.constraints=lockY?RigidbodyConstraints.FreezePositionY:RigidbodyConstraints.None;
+            if(control==2)
+            {
+                body.inertiaTensor=new Vector3((.3f*.3f+.4f*.4f)/12f,(.2f*.2f+.4f*.4f)/12f,(.2f*.2f+.3f*.3f)/12f);
+                body.inertiaTensorRotation=Quaternion.identity;
+            }
+            if(control==3) { body.solverIterations=12; body.solverVelocityIterations=4; }
+            Physics.SyncTransforms(); Properties(body);
+            if(speculative) { Space.Simulate(Dt); body.linearVelocity=Vector3.right*100; }
+            for(Step=0;Step<5;Step++)Tick(body);
+            Clear();
+        }
+    }
     static void ConstraintControls()
     {
         var constraints=new[]{RigidbodyConstraints.None, RigidbodyConstraints.FreezePositionY,
@@ -525,13 +592,16 @@ public class GeometryEntry : MonoBehaviour
         string controls=Environment.GetEnvironmentVariable("PHYSICS_GEOMETRY_CONTROL_OUT");
         string ordering=Environment.GetEnvironmentVariable("PHYSICS_GEOMETRY_ORDER_OUT");
         string constraints=Environment.GetEnvironmentVariable("PHYSICS_GEOMETRY_CONSTRAINT_OUT");
+        string rotation=Environment.GetEnvironmentVariable("PHYSICS_GEOMETRY_ROTATION_OUT");
         if(!string.IsNullOrEmpty(controls))Output=controls;
         if(!string.IsNullOrEmpty(ordering))Output=ordering;
         if(!string.IsNullOrEmpty(constraints))Output=constraints;
+        if(!string.IsNullOrEmpty(rotation))Output=rotation;
         if(string.IsNullOrEmpty(Output))return;
         Time.fixedDeltaTime=Dt; Physics.simulationMode=SimulationMode.Script; Space=Physics.defaultPhysicsScene;
         try
         {
+            if(!string.IsNullOrEmpty(rotation)) { RotationControls(); Row("complete","yes"); Save(0); return; }
             if(!string.IsNullOrEmpty(constraints)) { ConstraintControls(); ConstraintTransitions(); Row("complete","yes"); Save(0); return; }
             if(!string.IsNullOrEmpty(ordering)) { Ordering(); FrameControls(); PendingFrames(); IdleControls(); Row("complete","yes"); Save(0); return; }
             if(!string.IsNullOrEmpty(controls)) { Controls(); Row("complete","yes"); Save(0); return; }

@@ -19,6 +19,13 @@ class ConstraintVerificationTests(unittest.TestCase):
         actual[key] = actual[key].replace('-1,0,0', '-2,0,0', 1)
         self.assertTrue(verify(expected, actual)['unresolved'])
 
+    def test_position_lock_motion_remains_strict(self):
+        expected = self.rows(4)
+        actual = dict(expected)
+        key = next(k for k in actual if k.endswith('/body'))
+        actual[key] = actual[key].replace('-1,0,0', '-1.0002,0,0', 1)
+        self.assertTrue(verify(expected, actual)['unresolved'])
+
     def test_negative_control_trace_is_retained_without_mutating_it(self):
         expected = self.rows(0)
         actual = dict(expected)

@@ -1,7 +1,7 @@
 """Gate constrained publication; retain the free-rotation controls as diagnostics.
 
-The controls without an angular constraint isolate the effect of publication.
-Their complete numeric trace remains open, with counts and structure checked.
+The unconstrained controls isolate the effect of publication.
+Their numeric trace retains the recorded residuals, with counts and structure checked.
 No capture, comparator, tolerance or raw failure is changed here.
 """
 import math
@@ -32,7 +32,7 @@ def verify(expected, actual):
     for failure in analysis['failures']:
         key = failure['key']
         fields = key.split('/')
-        free_rotation = fields[1] in ('0', '4') and fields[2] in ('False', 'True')
+        free_rotation = fields[1] == '0' and fields[2] in ('False', 'True')
         if not free_rotation:
             if failure['category'] not in ('order_only', 'pair_orientation'):
                 problems.append(failure)
