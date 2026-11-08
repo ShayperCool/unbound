@@ -17,7 +17,8 @@ after `Clear` and a restart; Ribbon mode), and `GetTrails`/`SetParticles`/`SetPl
 (per-particle, a fading carrier, Ribbon, world space, a trail ratio): the state after the restore and the steps after
 it, the capture applied with its first particle left out, applied without `SetParticles`, before `SetParticles`, and
 to another system. `cap/*` records births the cap blocks: a 20/s and a 30/s rate, cycling bursts and both, with
-trails that fade, trails that die with their particles, no trails and fading trails off the step grid, stepped by
+trails that fade, trails that die with their particles, no trails and fading trails off the step grid (also with no
+minimum vertex distance and with one of 0.3), stepped by
 `Simulate` calls of 0.02, 0.05 and 0.1 s and played over frames.
 
     python3 tests/projects/particletrails/run.py native --label native1   # Editor capture (GPU, job pool)
@@ -75,7 +76,12 @@ any other difference. Two concern dead particles, `world-trail-death-head` and t
 - `carrier-expiry-tie`: with trail lifetimes that are whole numbers of steps, carriers leave (and
   free their slot) a step apart from Unity, in both directions. Unresolved; the working hypothesis
   is a float tie where a carrier's newest point reaches the trail lifetime exactly at a step's end.
-  The same systems with the trail lifetime off the step grid (`cap/*/die0nt`) match every particle.
+  The same systems with the trail lifetime off the step grid (`cap/*/die0nt`) match every particle,
+  also with no minimum vertex distance (`cap/*/die0ntmv0`), so the last trail point a carrier keeps
+  is the one its own steps added (no point at its death).
+- `vertex-distance-tie`: with a minimum vertex distance of 0.3 and particles moving 0.1 a step
+  (`cap/*/die0ntmv3`), whether a point is added at exactly the minimum distance is a float tie that
+  Unity decides per particle (by its direction).
 - `restored-trail-other-index`: right after `SetTrails` gives a particle a trail another particle
   left, Unity draws it ending at its oldest kept point, Unbound cut at the lifetime; with the trail
   ratio such a carrier's trail samples other points afterwards.
