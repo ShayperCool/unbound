@@ -28,7 +28,20 @@ namespace UnityEngine
             }
         }
 
-        public bool humanMotion => HasHumanCurves;
+        /// <summary>AnimationClip.humanMotion: the clip animates a human beyond its body's position
+        /// and rotation (goal, muscle, finger or translation curves). Body curves (RootT/RootQ)
+        /// alone, as Editor-authored generic clips with root motion carry them, do not count (Unity
+        /// 6000.0.71f1, tests/projects/rootcurves stats.*).</summary>
+        public bool humanMotion
+        {
+            get
+            {
+                EnsureHumanCurves();
+                foreach (var c in m_Curves)
+                    if (c.Binding.ClassId == AnimatorClassId && HumanClipImport.CurveIndex(c.Binding.Attribute) >= HumanClipImport.GoalFirst) return true;
+                return false;
+            }
+        }
 
         HumanClipMotion m_HumanClipMotion;
         int m_HumanClipMotionVersion = -1;
@@ -103,6 +116,12 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>The clip's body curves move <paramref name="animator"/>'s root: it has
+        /// <see cref="HasBodyMotion"/> and the Animator no human, whether it plays the clip through
+        /// its controller, a controller playable or a clip playable (Unity 6000.0.71f1,
+        /// tests/projects/rootcurves).</summary>
+        internal bool BodyMovesRoot(Animator animator) => animator.Human == null && HasBodyMotion;
+
         float[] m_BodyValues;
 
         /// <summary>The body's motion at a clip time (<see cref="HumanRootMotion.MotionX"/>: its
@@ -147,7 +166,7 @@ namespace UnityEngine
             return motion != null;
         }
 
-        internal override bool GetIsHumanMotion() => HasHumanCurves;
+        internal override bool GetIsHumanMotion() => humanMotion;
 
         /// <summary>The humanoid curves in m_Curves are mirrored.</summary>
         internal bool m_HumanMirrored;

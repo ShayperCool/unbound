@@ -838,7 +838,7 @@ namespace Unbound.Runtime.Playables
             if (!motion.Known)
             {
                 Stubs.Ignored("Animator root motion of this playable graph output",
-                    "is not computed (only animation clips, mixers, layer mixers, controller playables and animation jobs carry it; offset, motion-to-delta, remove-scale and pose playables, mixers and layer mixers without inputs, controller playables playing humanoid clips and generic clips with body curves (RootT/RootQ) do not): the root keeps the graph's root curves and the Animator reports no motion");
+                    "is not computed (only animation clips, mixers, layer mixers, controller playables and animation jobs carry it; offset, motion-to-delta, remove-scale and pose playables, mixers and layer mixers without inputs and controller playables playing humanoid clips do not): the root keeps the graph's root curves and the Animator reports no motion");
                 if (dispatch && animator.m_Player != null) animator.m_Player.ProcessRootMotion();
                 return;
             }

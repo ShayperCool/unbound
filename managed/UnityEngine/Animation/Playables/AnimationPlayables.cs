@@ -98,8 +98,11 @@ namespace Unbound.Runtime.Playables
             }
             double t = e.ReferencePose ? 0.0 : ClipClock(node.Time);
             m_Pose.Reset(e.Bindings.FloatCount, e.Bindings.ObjectCount);
+            // The clip's loop pose applies as in the Animator's own sampling, generic and humanoid,
+            // whatever the root motion (Unity 6000.0.71f1, tests/projects/rootcurves graph.*); an
+            // additive reference pose keeps the plain curves of generic clips (unmeasured).
             ClipSampling.Sample(bound, (float)ClipTime(t), 1f, m_Pose,
-                loopPose: e.MotionMode == RootMotionMode.Human);
+                loopPose: !e.ReferencePose || e.MotionMode == RootMotionMode.Human);
             int n = Math.Min(into.FloatCount, e.Bindings.FloatCount);
             for (int c = 0; c < n; c++)
             {
@@ -138,11 +141,13 @@ namespace Unbound.Runtime.Playables
             e.Note(this, node);
         }
 
+        bool BodyMoves(AnimationEvaluation e) => Clip.BodyMovesRoot(e.Animator);
+
         /// <summary>The clip just sampled has curves for the Animator transform's position or
-        /// rotation, or a root node's motion (MotionT/MotionQ curves) that moves it.</summary>
+        /// rotation, a root node's motion (MotionT/MotionQ curves) or body curves that move it.</summary>
         bool AnimatesRoot(AnimationEvaluation e)
         {
-            if (Clip.MotionCurves() != null || !RootAnimation.Channels(e, out int pos, out int rot)) return true;
+            if (Clip.MotionCurves() != null || BodyMoves(e) || !RootAnimation.Channels(e, out int pos, out int rot)) return true;
             return RootAnimation.Any(m_Pose.Weight, e.Bindings.FloatCount, pos, rot);
         }
 
@@ -164,12 +169,9 @@ namespace Unbound.Runtime.Playables
             if ((node.FrameFlags & FrameData.Flags.Loop) != 0 && to < from && node.Duration > 0 && node.Duration < double.MaxValue)
                 to += node.Duration;
             if (from == to) return RootMotionStep.Zero;
-            // A generic clip's body curves (RootT/RootQ) move a controller's Animator
-            // (tests/projects/rootcurves); through an output they are not measured.
-            if (Clip.HasBodyMotion) return RootMotionStep.Unknown;
             var root = e.Animator.transform;
             int pos = e.Bindings.ChannelOf(root, "position"), rot = e.Bindings.ChannelOf(root, "rotation");
-            if (pos < 0 && rot < 0 && Clip.MotionCurves() == null) return RootMotionStep.Zero;
+            if (pos < 0 && rot < 0 && Clip.MotionCurves() == null && !BodyMoves(e)) return RootMotionStep.Zero;
             return Between(e, bound, from, to, pos, rot);
         }
 
@@ -203,6 +205,7 @@ namespace Unbound.Runtime.Playables
         (Vector3, Quaternion) RootPose(AnimationEvaluation e, BoundClip bound, float time, int pos, int rot)
         {
             if (Clip.MotionCurves() != null) return Clip.MotionPose(time);
+            if (BodyMoves(e)) return Clip.BodyMotionPose(time);
             m_MotionPose.Reset(e.Bindings.FloatCount, e.Bindings.ObjectCount);
             ClipSampling.Sample(bound, time, 1f, m_MotionPose);
             var p = Vector3.zero;

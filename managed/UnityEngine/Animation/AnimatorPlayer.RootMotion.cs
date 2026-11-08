@@ -232,7 +232,7 @@ namespace Unbound.Runtime
                 : parent.position + parent.rotation * Vector3.Scale(parent.lossyScale, t.localPosition);
             startRotation = parent == null ? t.localRotation : parent.rotation * t.localRotation;
             foreach (var (_, _, _, clip, _) in m_Contributions)
-                if (clip.HasHumanCurves) return false;
+                if (clip.HasHumanCurves && !clip.BodyMovesRoot(animator)) return false;
             if (!animator.m_ApplyRootMotion && !MoveCallbacks.Any(animator)) return true;
             int pos = Bindings.ChannelOf(t, "position"), rot = Bindings.ChannelOf(t, "rotation");
             var (delta, turn) = ContributionMotion(pos, rot);
@@ -242,12 +242,12 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A clip of the evaluation that just built this player's layer poses has a root
-        /// node's motion (MotionT/MotionQ curves), which moves the root without the root's own
-        /// channels showing it (for a controller playable in a layer mixer's layer).</summary>
+        /// node's motion (MotionT/MotionQ curves) or body curves that move the root, which moves
+        /// it without the root's own channels showing it (for a controller playable).</summary>
         internal bool SampledRootNodeMotion()
         {
             foreach (var (_, _, _, clip, _) in m_Contributions)
-                if (clip.MotionCurves() != null) return true;
+                if (clip.MotionCurves() != null || clip.BodyMovesRoot(m_Animator)) return true;
             return false;
         }
 
@@ -370,7 +370,7 @@ namespace Unbound.Runtime
             // Without a human, body curves (RootT/RootQ) move the root as a humanoid body's motion
             // would, without human scale or feet pivot; the root's own curves take no part
             // (Unity 6000.0.71f1, tests/projects/rootcurves).
-            if (m_Animator.Human == null && bound.Clip.HasBodyMotion) return bound.Clip.BodyMotionPose(time);
+            if (bound.Clip.BodyMovesRoot(m_Animator)) return bound.Clip.BodyMotionPose(time);
             var pose = m_RootScratch ??= new AnimationPose();
             pose.Reset(Bindings.FloatCount, Bindings.ObjectCount);
             ClipSampling.Sample(bound, time, 1f, pose);

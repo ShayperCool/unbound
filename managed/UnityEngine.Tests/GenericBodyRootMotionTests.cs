@@ -1,6 +1,8 @@
 using System.Linq;
 using Unbound.Runtime;
 using Unbound.Tests;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -108,6 +110,62 @@ namespace UnityEngine.Tests
                 Assert.False(animator.isMatchingTarget);
             }
             finally { Object.DestroyImmediate(animator.gameObject); }
+        }
+
+        /// <summary>The fixture's Move clip (body curves only).</summary>
+        static AnimationClip MoveClip(RuntimeAnimatorController controller) => controller.animationClips[0];
+
+        // rootcurves graph.*: graph outputs move a generic Animator by body curves as its
+        // controller does, through a clip playable, a mixer (inputs summed by weight) and a
+        // controller playable.
+        [Theory]
+        [InlineData("clip", 1f)]
+        [InlineData("mixer", 0.5f)]
+        [InlineData("controller", 1f)]
+        public void GraphOutputsMoveTheRootByBodyCurves(string shape, float share)
+        {
+            var root = new GameObject("Body");
+            root.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+            var animator = root.AddComponent<Animator>();
+            animator.applyRootMotion = true;
+            var controller = Controller();
+            var graph = PlayableGraph.Create("body-motion");
+            try
+            {
+                graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+                Playable source;
+                if (shape == "controller")
+                {
+                    source = AnimatorControllerPlayable.Create(graph, controller);
+                }
+                else
+                {
+                    source = AnimationClipPlayable.Create(graph, MoveClip(controller));
+                    if (shape == "mixer")
+                    {
+                        var mixer = AnimationMixerPlayable.Create(graph, 1);
+                        graph.Connect(source, 0, mixer, 0);
+                        mixer.SetInputWeight(0, 0.5f);
+                        source = mixer;
+                    }
+                }
+                AnimationPlayableOutput.Create(graph, "animation", animator).SetSourcePlayable(source);
+                graph.Evaluate(0f);
+                if (shape == "controller")
+                {
+                    // The fixture's default state has no motion.
+                    ((AnimatorControllerPlayable)source).Play("Move", 0, 0f);
+                    graph.Evaluate(0f);
+                }
+                graph.Evaluate(0.25f);
+                Near.Equal(new Vector3(0.5f * share, 0f, 0f), animator.deltaPosition, 1e-4f);
+                Near.Equal(new Vector3(0.5f * share, 0f, 0f), root.transform.position, 1e-4f);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+            }
         }
     }
 }
