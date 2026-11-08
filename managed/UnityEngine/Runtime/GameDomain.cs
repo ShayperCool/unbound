@@ -365,7 +365,7 @@ namespace Unbound.Runtime
                 // Adapting is slow (most assemblies are read and rewritten): the outcome is cached
                 // under the input's hash plus the filters' version.
                 var adapted = Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "AdaptedAssemblies");
-                var key = Hash(original, Path.GetFileName(game.Dll) + "|" + ImageFilterVersion);
+                var key = Hash(original, Path.GetFileName(game.Dll) + "|" + ImageFilterVersion + "|" + PeImage.Version);
                 var record = Path.Combine(adapted, "inputs", key);
                 string path = File.Exists(record) ? File.ReadAllText(record) : null;
                 if (path == null || (path.Length > 0 && !File.Exists(path)))
@@ -435,9 +435,17 @@ namespace Unbound.Runtime
     /// Mono ignores the 32-bit flags of IL-only assemblies; CoreCLR refuses them in a 64-bit process.
     /// Plugins built for 32-bit-preferred .NET Framework (Firebase's) are pure IL, so the flags are
     /// cleared in the image before it is loaded.
+    /// Mono also ignores the machine of an IL-only PE32+ image, so a plugin built with
+    /// PlatformTarget x64 loads in the Editor on Apple silicon; CoreCLR loads such an image only on
+    /// the CPU it names, so its machine becomes this process's.
     /// </summary>
     internal static class PeImage
     {
+        /// <summary>Part of the adapted-image cache key: what <see cref="MakePortable"/> does here
+        /// (it depends on the process's CPU).</summary>
+        internal static readonly string Version = "2-" + System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture;
+        const ushort MachineAmd64 = 0x8664;
+        const ushort MachineArm64 = 0xAA64;
         const int ComImageFlagsILOnly = 0x1;
         const int ComImageFlags32BitRequired = 0x2;
         const int ComImageFlags32BitPreferred = 0x20000;
@@ -477,9 +485,16 @@ namespace Unbound.Runtime
                 int flags = BitConverter.ToInt32(image, flagsOffset);
                 if ((flags & ComImageFlagsILOnly) == 0) return image;
                 int cleared = flags & ~(ComImageFlags32BitRequired | ComImageFlags32BitPreferred);
-                if (cleared == flags) return image;
+                ushort machine = BitConverter.ToUInt16(image, pe + 4);
+                ushort wanted = machine;
+                // ReadyToRun code (a ManagedNativeHeader) is for the CPU it names: such images keep it.
+                bool readyToRun = BitConverter.ToInt32(image, cliOffset + 64) != 0;
+                if (magic == 0x20b && !readyToRun && (machine == MachineAmd64 || machine == MachineArm64))
+                    wanted = NativeMachine() ?? machine;
+                if (cleared == flags && wanted == machine) return image;
                 var copy = (byte[])image.Clone();
                 BitConverter.GetBytes(cleared).CopyTo(copy, flagsOffset);
+                BitConverter.GetBytes(wanted).CopyTo(copy, pe + 4);
                 return copy;
             }
             catch (Exception)
@@ -487,6 +502,13 @@ namespace Unbound.Runtime
                 return image;
             }
         }
+
+        static ushort? NativeMachine() => System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture switch
+        {
+            System.Runtime.InteropServices.Architecture.X64 => MachineAmd64,
+            System.Runtime.InteropServices.Architecture.Arm64 => MachineArm64,
+            _ => null,
+        };
 
         static int RvaToOffset(byte[] image, int pe, int rva)
         {
