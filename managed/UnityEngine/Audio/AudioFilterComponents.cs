@@ -499,7 +499,7 @@ namespace Unbound.Runtime
             var go = source.m_GameObject;
             if (go == null) return 0;
             int count = 0;
-            bool scripts = false, below = false;
+            bool scripts = false, below = false, spatialComponents = false;
             bool spatial = !source.bypassEffects && source.UsesSpatialBlend;
             string error = null;
             foreach (var c in go.m_Components)
@@ -516,8 +516,12 @@ namespace Unbound.Runtime
                 bool ok = Describe(c, out var d);
                 if (!ok) continue;
                 if (Unmeasured(c) is string unmeasured) error ??= unmeasured;
-                if (spatial && !Compat.AudioSpatialStereoMeasured && (c is AudioDistortionFilter || c is AudioChorusFilter))
-                    error ??= c is AudioDistortionFilter ? SpatialDistortionError : SpatialChorusError;
+                if (spatial && (c is AudioDistortionFilter || c is AudioChorusFilter))
+                {
+                    spatialComponents = true;
+                    if (!Compat.AudioSpatialStereoMeasured)
+                        error ??= c is AudioDistortionFilter ? SpatialDistortionError : SpatialChorusError;
+                }
                 d.Id = unchecked((ulong)(long)c.GetInstanceID());
                 d.Stage = scripts ? AudioFilterStage.AfterScripts : AudioFilterStage.BeforeScripts;
                 if (scripts) below = true;
@@ -530,6 +534,8 @@ namespace Unbound.Runtime
                 if (table == null || table.Length == count) Array.Resize(ref table, Math.Max(4, count * 2));
                 table[count++] = d;
             }
+            if (spatialComponents && scripts)
+                error ??= "3D Distortion or Chorus combined with OnAudioFilterRead is not supported";
             source.ReportFilterChain(error);
             return error == null ? count : 0;
         }

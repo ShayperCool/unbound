@@ -75,3 +75,6 @@ and ReverbZoneMix at twice maxDistance. On 6000.0.71f1 they return the first
 curve value (0.8), rather than holding the final value (0.2). The reverb case
 uses a long clip to isolate curve evaluation from source completion. All prior
 oracle samples remain unchanged.
+
+Spatial Distortion/Chorus combined with source OnAudioFilterRead scripts remains
+unmeasured and rejected; doctor lists that placement.

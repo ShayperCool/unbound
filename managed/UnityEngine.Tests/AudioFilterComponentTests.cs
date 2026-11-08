@@ -262,6 +262,26 @@ namespace UnityEngine.Tests
             Assert.Single(Errors("AudioChorusFilter"));
         }
 
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public void SpatialComponentsKeepRejectingUnmeasuredSourceScripts(bool chorus, bool scriptFirst)
+        {
+            var source = Source("scripted-spatial");
+            source.spatialBlend = 1;
+            var script = scriptFirst ? source.gameObject.AddComponent<FilterScript>() : null;
+            if (chorus) source.gameObject.AddComponent<AudioChorusFilter>();
+            else source.gameObject.AddComponent<AudioDistortionFilter>();
+            if (!scriptFirst) script = source.gameObject.AddComponent<FilterScript>();
+            Assert.Empty(Collected(source));
+            Assert.Empty(Collected(source));
+            Assert.Single(Errors("3D Distortion or Chorus combined with OnAudioFilterRead"));
+            script.enabled = false;
+            Assert.Single(Collected(source));
+        }
+
         [Fact]
         public void NarrowSpatialCurveRetainsTheMeasuredSpatialComponent()
         {
