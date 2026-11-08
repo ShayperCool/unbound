@@ -129,10 +129,13 @@ Q06 gate and supplemental controls still compare all fields, with the existing
 verifier's separately retained native pair impulse directions.
 
 Callback phase, collider identity and incoming relative velocity are checked as
-unordered complete callback sets. The documented reflected contexts can swap
-the two symmetric child names. Contact counts remain exact except for the two
-convex/speculative manifold contexts named in the verifier, which retain one
-to four points. Contact payload collider identities must occur in the same
+unordered complete callback sets. A reflection uses one child mapping across
+every step and receiver, derived from the authored y-separated compound children;
+the full body trajectory must match that reflection. Contact counts remain
+exact except for Stay callbacks of convex pairs in the two named speculative
+contexts, which admit only their measured two/three-point alternatives. Sphere
+contacts and Enter/Exit cardinalities remain exact. Contact payload identities
+must agree within each pair and occur in the same
 scenario/receiver's reference. The open mixed-compound context admits only its
 reference callback pattern or the measured delayed-exit pattern, across all
 five steps and both receivers.

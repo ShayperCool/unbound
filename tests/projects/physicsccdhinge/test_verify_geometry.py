@@ -5,6 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'physicsbatch'))
 from compare import compare, load
 from verify_geometry import verify
+from verify_geometry import swap_child
 
 
 class GeometryVerificationTests(unittest.TestCase):
@@ -106,6 +107,49 @@ class GeometryVerificationTests(unittest.TestCase):
             if key.startswith(prefix+'/3/bullet/event/'): del actual[key]
         actual[prefix+'/3/bullet/events'] = '0'
         self.assertTrue(self.result(expected, actual)['unresolved'])
+
+    def test_convex_cardinality_exception_excludes_spheres_and_enter_callbacks(self):
+        expected = self.capture()
+        sphere = 'geometry/kinematic-target/4/3/3/0/wall/event/1'
+        self.assertEqual('rear', expected[sphere+'/0'].split(',')[-1])
+        actual = dict(expected)
+        fields = actual[sphere].split(','); fields[2] = '4'; actual[sphere] = ','.join(fields)
+        for i in range(1,4): actual[sphere+'/'+str(i)] = actual[sphere+'/0']
+        self.assertTrue(self.result(expected, actual)['unresolved'])
+        convex = 'geometry/kinematic-target/1/3/3/1/bullet/event/0'
+        for count, accepted in ((3,True),(4,False)):
+            actual = dict(expected)
+            fields = actual[convex].split(','); fields[2] = str(count); actual[convex] = ','.join(fields)
+            for i in range(2,count): actual[convex+'/'+str(i)] = actual[convex+'/0']
+            self.assertEqual(not accepted, bool(self.result(expected, actual)['unresolved']))
+        enter = 'geometry/kinematic-target/1/3/3/0/bullet/event/0'
+        actual = dict(expected)
+        fields = actual[enter].split(','); fields[2] = '3'; actual[enter] = ','.join(fields)
+        actual[enter+'/2'] = actual[enter+'/0']
+        self.assertTrue(self.result(expected, actual)['unresolved'])
+
+    def test_child_mapping_is_coherent_across_steps_and_receivers(self):
+        expected = self.capture()
+        prefix = 'geometry/kinematic-target/2/3/2'
+        def reflect(rows, selected):
+            for key in list(rows):
+                if not selected(key) or '/event/' not in key: continue
+                fields = rows[key].split(',')
+                if '/' not in key.rsplit('/event/',1)[1]:
+                    fields[1] = swap_child(fields[1]); fields[7] = str(-float(fields[7]))
+                else:
+                    fields[-2:] = [swap_child(x) for x in fields[-2:]]
+                rows[key] = ','.join(fields)
+        actual = dict(expected)
+        key = prefix+'/0/bullet/event/0'
+        actual[key] = actual[key].replace('enter,front,','enter,rear,',1)
+        self.assertTrue(self.result(expected, actual)['unresolved'])
+        actual = dict(expected); reflect(actual, lambda k:k.startswith(prefix+'/0/bullet/'))
+        self.assertTrue(self.result(expected, actual)['unresolved'])
+        actual = dict(expected); reflect(actual, lambda k:k.startswith(prefix+'/0/'))
+        self.assertTrue(self.result(expected, actual)['unresolved'])
+        actual = dict(expected); reflect(actual, lambda k:k.startswith(prefix+'/'))
+        self.assertFalse(self.result(expected, actual)['unresolved'])
 
 
 if __name__ == '__main__':

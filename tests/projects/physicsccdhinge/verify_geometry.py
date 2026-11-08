@@ -9,17 +9,9 @@ from collections import Counter, defaultdict
 from compare import equal
 
 
-# These scenes are symmetric about y=0. Different contact processing order can
-# select either side. Require the entire body reading to match one reflection.
-MIRRORED = {
-    'geometry/dynamic/3/0/3', 'geometry/dynamic/3/1/3', 'geometry/dynamic/3/3/3',
-    'geometry/kinematic-target/2/2/3',
-    'geometry/kinematic/2/1/3', 'geometry/kinematic/3/0/3',
-    'geometry/kinematic-target/2/3/2',  # tied child hit, with unchanged body motion
-}
 OPEN_MANIFOLD = 'geometry/kinematic-target/4/2/3'
-# These convex/speculative pairs have different manifold cardinalities. Keep
-# positive, at-most-four-point manifolds; other callback counts stay exact.
+# These convex/speculative pairs have measured two/three-point Stay manifolds.
+# Enter, Exit and sphere-contact cardinalities remain exact.
 OPEN_POINT_COUNTS = {'geometry/kinematic-target/1/3/3', 'geometry/kinematic-target/4/3/3'}
 # Authored mixed compound: centers +/-0.15 and radius/half-width 0.1.
 # Keep its center within one full compound width plus the target sphere radius.
@@ -28,11 +20,33 @@ TARGET_RADIUS = .1
 FRONT_CENTER = .15
 
 
+def reflection_roles(scenario):
+    """The authored y-symmetric setups, and which bodies have y-separated children."""
+    fields = scenario.split('/')
+    try:
+        family, shape = fields[1], int(fields[2])
+        if family in ('static', 'tuning', 'fixed'):
+            if family == 'static' and int(fields[3]) == 3: return None  # terrain is one-sided
+            return {'bullet':shape in (2,3), 'wall':False}
+        if family == 'dynamic':
+            left, right = (0,1,0,2,4), (0,0,1,1,2)
+            return {'a':left[shape] in (2,3), 'b':right[shape] in (2,3)}
+        if family == 'kinematic':
+            return {'mover':shape in (2,3), 'target':False}
+        if family == 'kinematic-target':
+            return {'bullet':shape in (2,3), 'wall':int(fields[3]) in (2,3)}
+    except (IndexError, ValueError):
+        pass
+    return None
+
+
 def headers(rows):
     groups = defaultdict(list)
     for key, value in rows.items():
         if '/event/' in key and '/' not in key.rsplit('/event/', 1)[1]:
-            groups[key.rsplit('/event/', 1)[0]].append(value.split(','))
+            fields = value.split(',')
+            pair = tuple(rows[key+'/0'].split(',')[-2:]) if int(fields[2]) else None
+            groups[key.rsplit('/event/', 1)[0]].append((fields, pair))
     return groups
 
 
@@ -41,7 +55,7 @@ def swap_child(name):
 
 
 def signature(fields):
-    return tuple(fields[:3])
+    return tuple(fields[0][:3])
 
 
 def open_callback_pattern(expected_groups, actual_groups, alternative):
@@ -98,6 +112,9 @@ def callback_checks(expected, actual, reflected_scenes):
             prefix = key.rsplit('/event/', 1)[0]
             scenario, _, role = prefix.rsplit('/', 2)
             allowed_pairs[scenario,role].add(tuple(value.split(',')[-2:]))
+    scenarios = defaultdict(set)
+    for prefix in left.keys() | right.keys():
+        scenarios[prefix.rsplit('/', 2)[0]].add(prefix)
     for prefix in left.keys() | right.keys():
         scenario, step, role = prefix.rsplit('/', 2)
         wanted, found = left[prefix], right[prefix]
@@ -108,35 +125,46 @@ def callback_checks(expected, actual, reflected_scenes):
             try:
                 incoming = [100,0,0] if int(step) == 0 else [float(x) for x in actual[f'{scenario}/{int(step)-1}/bullet/body'].split(',')[7:10]]
                 relative = ','.join(str(v * (-1 if role == 'bullet' else 1)) for v in incoming)
-                if any(not equal(','.join(x[6:]), relative) for x in found):
+                if any(not equal(','.join(x[0][6:]), relative) for x in found):
                     problems.append(dict(key=prefix, reason='Incorrect compound incoming velocity'))
             except (KeyError, ValueError):
                 problems.append(dict(key=prefix, reason='Missing compound incoming body'))
             continue
-        variants = [wanted]
-        if scenario in reflected_scenes:
-            reflected = []
-            for fields in wanted:
-                fields = list(fields)
-                fields[1] = swap_child(fields[1])
+    def matches(prefix, reflect):
+        scenario, _, role = prefix.rsplit('/', 2)
+        candidate = []
+        for fields, pair in left[prefix]:
+            fields = list(fields)
+            if reflect:
+                roles = reflection_roles(scenario)
+                other = next(name for name in roles if name != role)
+                if roles[other]: fields[1] = swap_child(fields[1])
                 fields[7] = str(-float(fields[7]))
-                reflected.append(fields)
-            variants.append(reflected)
-        def matches(candidate):
+                if pair is not None:
+                    pair = (swap_child(pair[0]) if roles[role] else pair[0],
+                            swap_child(pair[1]) if roles[other] else pair[1])
+            candidate.append((fields,pair))
+        def complete_match():
             remaining = list(candidate)
-            for fields in found:
-                for i, item in enumerate(remaining):
+            for fields, pair in right[prefix]:
+                for i, (item, item_pair) in enumerate(remaining):
                     count_ok = fields[2] == item[2]
-                    if scenario in OPEN_POINT_COUNTS and fields[0] != 'exit':
-                        count_ok = 1 <= int(fields[2]) <= 4 and 1 <= int(item[2]) <= 4
-                    if fields[:2] == item[:2] and count_ok and equal(','.join(fields[6:]), ','.join(item[6:])):
+                    convex = (scenario.endswith('/1/3/3') or pair is not None and pair[0 if role == 'bullet' else 1] == 'front')
+                    if scenario in OPEN_POINT_COUNTS and fields[0] == 'stay' and convex:
+                        count_ok = int(fields[2]) in (2,3) and int(item[2]) in (2,3)
+                    if fields[:2] == item[:2] and pair == item_pair and count_ok and equal(','.join(fields[6:]), ','.join(item[6:])):
                         remaining.pop(i)
                         break
                 else:
                     return False
             return not remaining
-        if not any(matches(candidate) for candidate in variants):
-            problems.append(dict(key=prefix, reason='Changed callback phase, collider, count or relative velocity'))
+        return complete_match()
+    for scenario, prefixes in scenarios.items():
+        if scenario == OPEN_MANIFOLD: continue
+        # One mapping must explain every step and receiver in the scenario.
+        mappings = (False,True) if scenario in reflected_scenes else (False,)
+        if not any(all(matches(prefix, reflect) for prefix in prefixes) for reflect in mappings):
+            problems.append(dict(key=scenario, reason='Changed callback phase, collider, count, relative velocity or child mapping'))
     for key, value in actual.items():
         if '/event/' in key and '/' in key.rsplit('/event/', 1)[1]:
             prefix = key.rsplit('/event/', 1)[0]
@@ -144,6 +172,9 @@ def callback_checks(expected, actual, reflected_scenes):
             pair = tuple(value.split(',')[-2:])
             if pair not in allowed_pairs[scenario,role]:
                 problems.append(dict(key=key, reason='Unmeasured contact collider identity'))
+            first = tuple(actual[key.rsplit('/',1)[0]+'/0'].split(',')[-2:])
+            if pair != first:
+                problems.append(dict(key=key, reason='Different collider identities within one contact pair'))
     return problems, open_callbacks
 
 
@@ -151,8 +182,11 @@ def verify(expected, actual, report):
     unresolved, contacts, mirrors, open_motion = [], [], [], []
     checked = 0
     reflected_scenes = set()
-    for scenario in MIRRORED:
-        bodies = [key for key in expected if key.startswith(scenario+'/') and key.endswith('/body')]
+    scenario_bodies = defaultdict(list)
+    for key in expected:
+        if key.endswith('/body'): scenario_bodies[key.rsplit('/',3)[0]].append(key)
+    for scenario, bodies in scenario_bodies.items():
+        if reflection_roles(scenario) is None: continue
         consistent = bool(bodies)
         for key in bodies:
             try:
