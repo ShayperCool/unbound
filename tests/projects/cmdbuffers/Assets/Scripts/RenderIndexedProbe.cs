@@ -15,6 +15,7 @@ public partial class CmdBuffersProbe
         while (fences.MoveNext()) yield return fences.Current;
         var meshInstances = MeshInstanceFrames();
         while (meshInstances.MoveNext()) yield return meshInstances.Current;
+        IndirectPool();
     }
 
     IEnumerator RenderIndexedFrames()
@@ -155,5 +156,69 @@ public partial class CmdBuffersProbe
             yield return null; // A separate camera frame per queued draw, including in batchmode.
         }
         cam.enabled = false;
+    }
+
+    void IndirectPool()
+    {
+        var image = Keep(new RenderTexture(32, 16, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear));
+        image.Create();
+        var material = Keep(new Material(Resources.Load<Shader>("IndirectPool")));
+        // Distinct arguments and pixels keep every draw observable across both pool growths.
+        const int draws = 257;
+        var words = new uint[draws * 4];
+        for (int i = 0; i < draws; i++)
+        {
+            words[i * 4] = i % 7 == 0 ? 0u : 3u;
+            words[i * 4 + 1] = (uint)(i % 3 + 1);
+            words[i * 4 + 3] = 23;
+        }
+        var args = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments | GraphicsBuffer.Target.Structured, words.Length, 4);
+        disposables.Add(args);
+        args.SetData(words);
+        for (int repeat = 0; repeat < 2; repeat++)
+        {
+            Try("indirect.pool.grow." + repeat, () =>
+            {
+                using var cmd = new CommandBuffer { name = "probe.indirect.pool" };
+                cmd.SetRenderTarget(image);
+                cmd.ClearRenderTarget(false, true, Color.clear);
+                for (int i = 0; i < draws; i++)
+                {
+                    cmd.SetViewport(new Rect(i % 32, i / 32, 1, 1));
+                    var block = new MaterialPropertyBlock();
+                    block.SetFloat("_Tag", i % 251 + 1);
+                    cmd.DrawProceduralIndirect(Matrix4x4.identity, material, 0, MeshTopology.Triangles, args, i * 16, block);
+                }
+                Graphics.ExecuteCommandBuffer(cmd);
+            });
+            Value("indirect.pool.grow." + repeat, Read(image));
+        }
+        // The first draw writes the next draw's arguments. Copying those arguments ahead of
+        // the writing render pass would read the initial zero vertex count and miss the pixel.
+        var written = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments | GraphicsBuffer.Target.Structured, 4, 4);
+        disposables.Add(written);
+        foreach (bool write in new[] { false, true })
+        {
+            written.SetData(new uint[] { 0, 1, 0, 23 });
+            string key = "indirect.pool.writer." + write;
+            Try(key, () =>
+            {
+                using var cmd = new CommandBuffer { name = "probe.indirect.writer" };
+                cmd.SetRenderTarget(image);
+                cmd.ClearRenderTarget(false, true, Color.clear);
+                cmd.SetViewport(new Rect(0, 0, 1, 1));
+                if (write)
+                {
+                    cmd.SetRandomWriteTarget(1, written);
+                    cmd.DrawProcedural(Matrix4x4.identity, material, 1, MeshTopology.Triangles, 3);
+                    cmd.ClearRandomWriteTargets();
+                }
+                cmd.SetViewport(new Rect(1, 0, 1, 1));
+                cmd.DrawProceduralIndirect(Matrix4x4.identity, material, 0, MeshTopology.Triangles, written);
+                Graphics.ExecuteCommandBuffer(cmd);
+            });
+            Value(key, Read(image));
+            Value(key + ".args", Words(written));
+        }
     }
 }

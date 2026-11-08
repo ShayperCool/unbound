@@ -195,3 +195,14 @@ All mesh-instancing records agreed. The prior fence oracle values and assertions
 unchanged; raw complete captures and strict comparisons retain these differences outside Git.
 This is a separate follow-up about Native fence progress in batchmode frames, not an
 additional exception to the engine gate.
+
+## Indirect argument pool coverage
+
+`indirect.pool.grow.*` draws 257 independently observable pixels twice, with distinct
+argument offsets, counts, empty draws and nonzero start instances. This crosses the initial
+64-slot capacity and its next growth, then exercises reuse on the next submission.
+`indirect.pool.writer.*` contrasts zero-count arguments with arguments written by a preceding
+fragment draw in the same command buffer. The following indirect draw must see that write;
+its argument copy cannot move ahead of the writing pass. Both the pixels and the caller's
+argument words are recorded. Two independent Unity 6000.0.71f1 GPU Editor captures were
+identical; all existing reference values are unchanged.
