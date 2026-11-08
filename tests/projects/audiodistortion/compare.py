@@ -30,7 +30,7 @@ def compare(reference, candidate, report, keys, exact=False, before=None, pcm_st
     roots = [reference, candidate] if before is None else [reference, before, candidate]
     manifests = [header(root) for root in roots]
     limits = {k+s: frames for k, frames in keys.items() for s in SUFFIXES}
-    fields = ['release', 'rate'] + (['captureDeltaTime'] if any('captureDeltaTime' in m for m in manifests) else []) + list(limits)
+    fields = ['release', 'rate'] + [f for f in ('captureDeltaTime', 'sessions') if any(f in m for m in manifests)] + list(limits)
     fields += sorted({f for m in manifests for f in m if f.split('.')[0] in keys and f not in fields
                       and not any(f == k+s for k in keys for s in SUFFIXES)})
     counts = dict(introduced=0, retained=0, resolved=0)

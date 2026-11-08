@@ -7,6 +7,13 @@ Component controls include AudioDistortionFilter and AudioChorusFilter on source
 mono input clips and listeners. The listener controls retain the upstream Master
 sink as well as the processed device output.
 
+The canonical profile contains 93 cases and six independent sessions per rate, declared by
+`live.sections()`. Each session begins with a fresh Editor or engine process.
+The device output includes preceding mixers' tails inside that session, so the
+same session boundaries are part of both recording and replay. The merged
+capture records these case lists in `sessions`; every earlier sample is retained.
+The two repeats agree exactly across 9,142,461 checked values per rate.
+
 Each control changes one parameter at buffers 6, 12, 13 and 18. This includes a
 one-buffer reversal and a return to the initial value. Exposed setters, immediate
 snapshots and four-buffer linear snapshots use the same signal. Every audible
@@ -21,9 +28,13 @@ small gain deltas on either side of the gain-change boundary.
 | Documented, Unity 6000.0 | [SetFloat](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Audio.AudioMixer.SetFloat.html) overrides snapshot ownership of an exposed parameter, returns false for a missing parameter or edited snapshots, and should be called in Start or later, rather than Awake/OnEnable/AfterSceneLoad. These controls call it after playback starts. |
 | Documented, Unity 6000.0 | [Distortion component](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioDistortionFilter.html) and [Chorus component](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioChorusFilter.html) describe parameters and source/listener processing. They specify neither sample-level update timing nor history resets. |
 | Documented, Unity 6000.0 | [AudioGroup Inspector](https://docs.unity3d.com/6000.0/Documentation/Manual/AudioMixerInspectors.html) specifies linear snapshot interpolation by default and target-snapshot transition overrides. Q167's existing scheduler supplies the values; the effect kernels do not implement another snapshot scheduler. |
-| Measured, Unity 6000.0.71f1, this offline profile | Submitted kernel values take effect at the next buffer, without an additional parameter ramp or reset. The shared Chorus/Flange span slew remains active, their phase/history remain continuous, Normalize retains its peak follower and Pitch Shifter retains its FFT/FIFO/phase state. Snapshot values are constant inside each buffer. This is a capture observation, not a general synchronization promise for every Unity backend. |
+| Measured, Unity 6000.0.71f1, this offline profile | Submitted values are constant inside the next buffer, without an additional parameter ramp. A Chorus delay change alone leaves the span target unchanged; a depth change rebuilds that target from the latest valid delay. Other Chorus controls and Flange retain their span slew, phase and history. Normalize retains its peak follower. Pitch changes retain FFT/FIFO/overlap audio and restart analysis and synthesis phase tracking. These per-kernel history rules share the existing release-gated cores. This is a capture observation, not a general synchronization promise for every Unity backend. |
 
-Record every case twice in fresh private projects:
+The last session primes its first memoryless control with a scheduled start, then
+seeks to integer sample zero before recording. [PlayScheduled](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.PlayScheduled.html)
+uses the absolute DSP clock and allows preparation time; the probe aligns its
+input without claiming a cross-backend scheduling-rounding guarantee. Two additional
+Chorus controls check delay recreation and a depth change after a deferred delay setter. Record every session twice in fresh private projects:
 
 ```sh
 python3 tests/projects/audiodistortion/native.py --profile live --release 6000.0.71f1 --rate RATE --work CACHE_A

@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 
 p = argparse.ArgumentParser()
 p.add_argument('--release', required=True)
@@ -14,11 +15,17 @@ p.add_argument('--profile', choices=('static', 'spatial', 'spatial-factor0', 'sp
 p.add_argument('--native-project', type=Path, required=True, help='Private mixer assets created by native.py')
 p.add_argument('--runtime', type=Path, required=True, help='Directory containing matching unbound and managed/')
 p.add_argument('--work', type=Path, required=True)
+p.add_argument('--cases', help='Comma-separated diagnostic subset of the live profile')
 p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 a = p.parse_args()
 fixture = Path(__file__).resolve().parent
 if (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0] != 'm_EditorVersion: '+a.release:
     p.error('release does not match fixture')
+if a.profile == 'live' and not a.cases:
+    from live import capture_sections
+    command = [sys.executable, str(fixture/'engine.py'), '--profile', 'live', '--release', a.release, '--rate', str(a.rate)]
+    command += ['--native-project', str(a.native_project), '--runtime', str(a.runtime)]
+    raise SystemExit(capture_sections(a.work, command, a.release, a.rate, author_project=False))
 a.work.mkdir(parents=True, exist_ok=False)
 project = a.work/'project'
 for name in ('Assets', 'Packages', 'ProjectSettings'): shutil.copytree(a.native_project/name, project/name)
@@ -35,13 +42,14 @@ hashes = {str(f.relative_to(a.runtime)): hashlib.sha256(f.read_bytes()).hexdiges
 (a.work/'command.json').write_text(json.dumps(command, indent=2)+'\n')
 env = dict(os.environ, EFFECT_PROBE_PROFILE=a.profile, EFFECT_PROBE_OUT=str(output), EFFECT_PROBE_RATE=str(a.rate), EFFECT_PROBE_ENGINE='1',
            UNBOUND_MANAGED_DIR=str(a.runtime/'managed'), LD_LIBRARY_PATH=str(a.runtime/'managed'))
+if a.cases: env['EFFECT_PROBE_CASES'] = a.cases
 with (a.work/'engine.log').open('w') as log:
     result = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT)
 (a.work/'exit.json').write_text(json.dumps({'returncode': result.returncode})+'\n')
 if result.returncode: raise SystemExit(result.returncode)
 if a.profile == 'live':
     from live import verify
-    verify(output, a.release, a.rate)
+    verify(output, a.release, a.rate, selected=a.cases.split(','))
 elif a.profile.startswith('spatial'):
     from spatial import verify
     verify(output, a.release, a.rate, a.profile)

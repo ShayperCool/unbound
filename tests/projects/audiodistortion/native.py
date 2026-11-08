@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 
 p = argparse.ArgumentParser()
 p.add_argument('--release', required=True)
@@ -18,6 +19,11 @@ a = p.parse_args()
 fixture = Path(__file__).resolve().parent
 if (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0] != 'm_EditorVersion: '+a.release:
     p.error('release does not match fixture')
+if a.profile == 'live' and not a.cases:
+    from live import capture_sections
+    command = [sys.executable, str(fixture/'native.py'), '--profile', 'live', '--release', a.release, '--rate', str(a.rate)]
+    if a.editor: command += ['--editor', str(a.editor)]
+    raise SystemExit(capture_sections(a.work, command, a.release, a.rate, author_project=True))
 a.work.mkdir(parents=True, exist_ok=False)
 project = a.work/'project'
 shutil.copytree(fixture, project, ignore=shutil.ignore_patterns('Authored', 'Reference', 'Library', 'Logs', '__pycache__', '*.py', '*.md'))
@@ -33,13 +39,11 @@ env = dict(os.environ, EFFECT_PROBE_PROFILE=a.profile, EFFECT_PROBE_OUT=str(outp
 if a.cases: env['EFFECT_PROBE_CASES'] = a.cases
 with (a.work/'stdout.log').open('w') as log:
     subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
-if not a.cases:
-    import sys
-    sys.path.insert(0, str(fixture))
-    if a.profile == 'live':
-        from live import verify
-        verify(output, a.release, a.rate)
-    elif a.profile.startswith('spatial'):
+if a.profile == 'live':
+    from live import verify
+    verify(output, a.release, a.rate, selected=a.cases.split(','))
+elif not a.cases:
+    if a.profile.startswith('spatial'):
         from spatial import verify
         verify(output, a.release, a.rate, a.profile)
     else:

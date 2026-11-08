@@ -12,7 +12,7 @@ public sealed class LiveCase
     public readonly float Initial, Changed;
     public LiveCase(string key, string kind, string parameter, float initial, float changed, string mode)
     { Key = key; Kind = kind; Parameter = parameter; Initial = initial; Changed = changed; Mode = mode; }
-    public bool Component => Mode == "source" || Mode == "mono" || Mode == "listener";
+    public bool Component => Mode == "source" || Mode == "mono" || Mode == "listener" || Mode == "delaydepth" || Mode == "recreate";
 }
 
 public class LiveEffectProbe : MonoBehaviour
@@ -109,6 +109,9 @@ public class LiveEffectProbe : MonoBehaviour
         new LiveCase("chorus_depth_down_set", "Chorus", "Depth", .5f, .1f, "set"),
         new LiveCase("chorus_depth_down_timed", "Chorus", "Depth", .5f, .1f, "timed"),
         new LiveCase("chorus_depth_down_source", "Chorus", "Depth", .5f, .1f, "source"),
+        new LiveCase("dist_lifecycle_control", "Distortion", "Level", .25f, .85f, "prime"),
+        new LiveCase("chorus_delay_depth", "Chorus", "Delay", 17.5f, 2f, "delaydepth"),
+        new LiveCase("chorus_delay_recreate", "Chorus", "Delay", 17.5f, 2f, "recreate"),
     };
     const BindingFlags Flags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
     static bool Engine => Environment.GetEnvironmentVariable("EFFECT_PROBE_ENGINE") == "1";
@@ -145,6 +148,13 @@ public class LiveEffectProbe : MonoBehaviour
         typeof(Time).GetField("s_RealDeltaTime", Flags).SetValue(null, (double)delta);
         typeof(Time).GetField("s_DeltaTime", Flags).SetValue(null, delta * Time.timeScale);
         Type.GetType("Unbound.Runtime.AudioSystem, UnityEngine.CoreModule", true).GetMethod("Update", Flags).Invoke(null, null);
+    }
+    static AudioChorusFilter AddChorus(GameObject host, float delay)
+    {
+        var chorus = host.AddComponent<AudioChorusFilter>();
+        chorus.dryMix = .25f; chorus.wetMix1 = .75f; chorus.wetMix2 = .375f;
+        chorus.delay = delay; chorus.rate = 5; chorus.depth = .5f;
+        return chorus;
     }
     static void SetComponent(Behaviour component, string parameter, float value)
     {
@@ -186,9 +196,7 @@ public class LiveEffectProbe : MonoBehaviour
                 var host = c.Mode == "listener" ? gameObject : go;
                 if (c.Kind == "Distortion") component = host.AddComponent<AudioDistortionFilter>();
                 else {
-                    var chorus = host.AddComponent<AudioChorusFilter>();
-                    chorus.dryMix = .25f; chorus.wetMix1 = .75f; chorus.wetMix2 = .375f;
-                    chorus.delay = 17.5f; chorus.rate = 5; chorus.depth = .5f; component = chorus;
+                    component = AddChorus(host, 17.5f);
                 }
                 SetComponent(component, c.Parameter, c.Initial);
             }
@@ -201,7 +209,18 @@ public class LiveEffectProbe : MonoBehaviour
                     seed = seed * 1664525u + 1013904223u;
                     signal[frame * channels + channel] = frame < 1024 ? 0 : ((int)(seed >> 18) - 8192) / 32768f;
                 }
-            clip.SetData(signal, 0); source.clip = clip; source.Play();
+            clip.SetData(signal, 0); source.clip = clip;
+            if (c.Mode == "prime") {
+                // Start the first control early, then align its integer sample position.
+                const int leadBuffers = 4;
+                source.PlayScheduled(AudioSettings.dspTime + leadBuffers * 1024.0 / config.sampleRate);
+                using (var prepare = new NativeArray<float>(2048, Allocator.Persistent))
+                    for (int i = 0; i <= leadBuffers; i++) {
+                        if (Engine) FlushEngine(Time.captureDeltaTime); else yield return null;
+                        if (!AudioRenderer.Render(prepare)) throw new Exception("Preparation render failed");
+                    }
+                source.timeSamples = 0;
+            } else source.Play();
             var sink = new NativeArray<float>(2048, Allocator.Persistent); sinks.Add(sink);
             using (var buffer = new NativeArray<float>(2048, Allocator.Persistent))
             using (var writer = new BinaryWriter(File.Create(Path.Combine(output, c.Key+".f32"))))
@@ -210,8 +229,13 @@ public class LiveEffectProbe : MonoBehaviour
                     if (block == 6 || block == 12 || block == 13 || block == 18) {
                         bool changed = block == 6 || block == 13;
                         float value = changed ? c.Changed : c.Initial;
-                        if (component) SetComponent(component, c.Parameter, value);
-                        else if ((c.Mode == "set" || c.Mode == "setwet")) {
+                        if (c.Mode == "recreate" && block == 12) {
+                            DestroyImmediate(component);
+                            component = AddChorus(go, c.Changed);
+                        } else if (c.Mode == "delaydepth" && block >= 12) {
+                            if (block == 12) ((AudioChorusFilter)component).depth = .3f;
+                        } else if (component) SetComponent(component, c.Parameter, value);
+                        else if ((c.Mode == "set" || c.Mode == "setwet" || c.Mode == "prime")) {
                             if (!mixer.SetFloat("Value", value)) throw new Exception("SetFloat failed");
                         } else mixer.FindSnapshot(changed ? "Other" : "Base").TransitionTo(c.Mode == "timed" ? delta * 4 : 0);
                     }
