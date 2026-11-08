@@ -98,3 +98,5 @@ shader sources. Icon, GUI texture and frustum drawing remain explicit unsupporte
 callbacks; doctor lists them. No Scene-view renderer is provided.
 
 Additional vertex-stream controls preserve packed colors and override positions, including GPU edits to both source meshes, positionless layouts, and inherited UV inputs. The Unity 6000.0.71f1 repeats retain all earlier reference records and images unchanged.
+
+Skinned lighting controls cover unit and nonuniform renderer scale with rotation, before/after requesting the current buffer and on the next frame. BakeMesh normals with both useScale settings remain invariant under that request.

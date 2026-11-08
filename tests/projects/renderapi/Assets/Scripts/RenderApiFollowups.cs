@@ -74,6 +74,31 @@ public sealed partial class RenderApiProbe
         DestroyImmediate(go); DestroyImmediate(mesh); DestroyImmediate(material);
     }
 
+    IEnumerator SkinNormalCases()
+    {
+        foreach (bool scaled in new[] {false,true})
+        {
+            var go=new GameObject("skinned lighting buffer control");
+            go.transform.localScale=scaled ? new Vector3(2,3,4) : Vector3.one;
+            go.transform.localRotation=Quaternion.Euler(0,0,17);
+            var mesh=Make();mesh.vertices=new[] {Vertices[0]*.35f,Vertices[1]*.35f,Vertices[2]*.35f};mesh.triangles=new[] {0,2,1};
+            var normal=new Vector3(1,1,-1).normalized;
+            mesh.normals=new[] {normal,normal,normal};
+            mesh.boneWeights=new[] {new BoneWeight {weight0=1},new BoneWeight {weight0=1},new BoneWeight {weight0=1}};
+            mesh.bindposes=new[] {Matrix4x4.identity};
+            var skin=go.AddComponent<SkinnedMeshRenderer>();skin.sharedMesh=mesh;skin.bones=new[] {go.transform};skin.updateWhenOffscreen=true;
+            var material=new Material(Resources.Load<Shader>("SkinNormal"));skin.sharedMaterial=material;
+            var baked=new Mesh();string key="skinNormal."+scaled;
+            yield return null;Image(key+".before");
+            foreach(bool useScale in new[] {false,true}) {skin.BakeMesh(baked,useScale);Value(key+".bakeBefore."+useScale,V(baked.normals[0]));}
+            using(var buffer=skin.GetVertexBuffer()) Buffer(key+".buffer",buffer,false);
+            Image(key+".after");
+            foreach(bool useScale in new[] {false,true}) {skin.BakeMesh(baked,useScale);Value(key+".bakeAfter."+useScale,V(baked.normals[0]));}
+            yield return null;Image(key+".next");
+            DestroyImmediate(go);DestroyImmediate(mesh);DestroyImmediate(material);DestroyImmediate(baked);
+        }
+    }
+
     void PositionlessStreamCases()
     {
         var mesh=Make();mesh.colors32=new[] {new Color32(255,255,255,255),new Color32(255,255,255,255),new Color32(255,255,255,255)};

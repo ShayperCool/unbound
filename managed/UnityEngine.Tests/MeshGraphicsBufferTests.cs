@@ -19,6 +19,35 @@ namespace UnityEngine.Tests
         };
 
         [Fact]
+        public void RequestingSkinBuffersPreservesWorldNormalsAndBakedNormals()
+        {
+            var go = new GameObject("skin normal control");
+            var source = Triangle();
+            var baked = new Mesh();
+            try
+            {
+                go.transform.localScale = new Vector3(2, 3, 4);
+                var normal = new Vector3(1, 1, 0);
+                source.normals = new[] {normal, normal, normal};
+                source.boneWeights = new[] {new BoneWeight {weight0=1},new BoneWeight {weight0=1},new BoneWeight {weight0=1}};
+                source.bindposes = new[] {Matrix4x4.identity};
+                var skin = go.AddComponent<SkinnedMeshRenderer>();
+                skin.sharedMesh = source; skin.bones = new[] {go.transform};
+                skin.BakeMesh(baked, false); var unscaled = baked.normals;
+                skin.BakeMesh(baked, true); var scaled = baked.normals;
+                using var buffer = skin.GetVertexBuffer();
+                var output = skin.DrawGeometry(out var model);
+                var local = output.normals[0];
+                Assert.Equal(new Vector3(2,3,0),model.inverse.transpose.MultiplyVector(local));
+                skin.BakeMesh(baked, false);
+                for (int i=0;i<unscaled.Length;i++) Assert.InRange(Vector3.Distance(unscaled[i],baked.normals[i]),0,1e-6f);
+                skin.BakeMesh(baked, true);
+                for (int i=0;i<scaled.Length;i++) Assert.InRange(Vector3.Distance(scaled[i],baked.normals[i]),0,1e-6f);
+            }
+            finally { Object.DestroyImmediate(go); Object.DestroyImmediate(source); Object.DestroyImmediate(baked); }
+        }
+
+        [Fact]
         public void PositionlessStreamsKeepTheirLayoutUntilPositionsAreAssigned()
         {
             var mesh = new Mesh();

@@ -193,10 +193,11 @@ namespace UnityEngine
                 if (m_GraphicsOutputRequested)
                 {
                     var inverse = transform.worldToLocalMatrix;
+                    var normalToLocal = transform.localToWorldMatrix.transpose;
                     for (int i = 0; i < positions.Length; i++)
                     {
                         positions[i] = inverse.MultiplyPoint3x4(positions[i]);
-                        if (normals != null) normals[i] = inverse.MultiplyVector(normals[i]);
+                        if (normals != null) normals[i] = normalToLocal.MultiplyVector(normals[i]);
                         if (tangents != null)
                         {
                             var t = inverse.MultiplyVector((Vector3)tangents[i]);
@@ -475,7 +476,8 @@ namespace UnityEngine
             var normals = source.normals;
             if (normals != null && normals.Length == vertices.Length)
             {
-                for (int i = 0; i < normals.Length; i++) normals[i] = fromSource.MultiplyVector(normals[i]);
+                var normalFromSource = skinned && m_GraphicsOutputRequested ? toLocal * t.worldToLocalMatrix.transpose : fromSource;
+                for (int i = 0; i < normals.Length; i++) normals[i] = normalFromSource.MultiplyVector(normals[i]);
                 mesh.normals = normals;
             }
             var tangents = source.tangents;
