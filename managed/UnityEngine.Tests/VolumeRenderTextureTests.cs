@@ -27,6 +27,32 @@ namespace Unbound.Tests
         }
 
         [Theory]
+        [InlineData(ColorSpace.Gamma, false)]
+        [InlineData(ColorSpace.Linear, true)]
+        public void TextureConstructorsKeepTheProjectsDefaultEncoding(ColorSpace space, bool srgb)
+        {
+            var previous = QualitySettings.s_ColorSpace;
+            QualitySettings.s_ColorSpace = space;
+            var implicitDefault = new RenderTexture(4, 2, 0, RenderTextureFormat.ARGB32);
+            var explicitDefault = new RenderTexture(4, 2, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
+            var custom = new CustomRenderTexture(4, 2);
+            var linear = new RenderTexture(4, 2, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+            try
+            {
+                Assert.Equal(srgb, implicitDefault.sRGB);
+                Assert.Equal(srgb, explicitDefault.sRGB);
+                Assert.Equal(srgb, custom.sRGB);
+                Assert.False(linear.sRGB);
+                Assert.False(new RenderTextureDescriptor(4, 2, RenderTextureFormat.ARGB32, 0).sRGB);
+            }
+            finally
+            {
+                foreach (var texture in new RenderTexture[] { implicitDefault, explicitDefault, custom, linear }) Object.DestroyImmediate(texture);
+                QualitySettings.s_ColorSpace = previous;
+            }
+        }
+
+        [Theory]
         [InlineData(TextureDimension.Tex2D, 1, -1, 3)]
         [InlineData(TextureDimension.Tex3D, 1, -1, 3)]
         [InlineData(TextureDimension.Tex3D, 8, -1, 3)]

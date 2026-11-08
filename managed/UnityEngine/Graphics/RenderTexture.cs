@@ -126,7 +126,7 @@ namespace UnityEngine
 
         static RenderTextureDescriptor Descriptor(int width, int height, RenderTextureFormat format, int depth, RenderTextureReadWrite readWrite)
         {
-            var d = new RenderTextureDescriptor(width, height, format, depth, -1);
+            var d = new RenderTextureDescriptor(width, height, format, depth, Texture.GenerateAllMips, RenderTextureReadWrite.Default);
             if (readWrite == RenderTextureReadWrite.Linear) d.sRGB = false;
             // Native ignores this constructor's sRGB request in a Gamma project.
             // An explicitly supplied GraphicsFormat/descriptor is a separate API.

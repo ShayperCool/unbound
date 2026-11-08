@@ -52,15 +52,17 @@ namespace Unbound.Tests
             var other = Target(TextureDimension.Tex2DArray, 3);
             var flat = Target(TextureDimension.Tex2D);
             var cube = Target(TextureDimension.Cube);
+            var volume = Target(TextureDimension.Tex3D, 4);
             try
             {
                 Assert.Equal(new[] { (2, 1) }, Blit(array, other, 2, 1));
                 Assert.Equal(new[] { (1, 0) }, Blit(array, flat, 1, 0));
                 Assert.Equal(new[] { (0, 5) }, Blit(array, cube, 0, 5));
+                Assert.Equal(new[] { (1, 3) }, Blit(array, volume, 1, 3));
             }
             finally
             {
-                foreach (var t in new[] { array, other, flat, cube }) Object.DestroyImmediate(t);
+                foreach (var t in new[] { array, other, flat, cube, volume }) Object.DestroyImmediate(t);
             }
         }
 
@@ -88,7 +90,7 @@ namespace Unbound.Tests
         [InlineData(TextureDimension.Tex2D, 1, 1)]
         [InlineData(TextureDimension.Tex2DArray, 2, 2)]
         [InlineData(TextureDimension.Cube, 1, 6)]
-        [InlineData(TextureDimension.Tex3D, 4, 1)]
+        [InlineData(TextureDimension.Tex3D, 4, 4)]
         [InlineData(TextureDimension.CubeArray, 2, 1)]
         public void ASlicePastTheDestinationLayersIsSkippedWithAWarning(TextureDimension dimension, int depth, int slice)
         {
