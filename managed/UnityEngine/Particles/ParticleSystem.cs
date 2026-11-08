@@ -1042,7 +1042,10 @@ namespace UnityEngine
                     return;
                 }
             }
-            if (m_IsPlaying && !m_StopEmitting && !m_PlaybackRestored) return;
+            // A system that is emitting plays on; a playing one that is not (its emission module
+            // off) starts a new playback, keeping its particles (6000.0.71f1,
+            // tests/projects/particlerender firstvis/*/shown_play against cull/catchup_replay).
+            if (m_IsPlaying && !m_StopEmitting && m_Emission.enabled && !m_PlaybackRestored) return;
             Restart(prewarm: true);
         }
 
