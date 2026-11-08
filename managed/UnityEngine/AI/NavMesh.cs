@@ -48,6 +48,18 @@ namespace UnityEngine.AI
             return new RcVec3f(s.agentRadius, s.agentHeight, s.agentRadius);
         }
 
+        /// <summary>Half-sizes, in agent radii, of the box SetDestination maps its target onto the
+        /// NavMesh within: across, and up and down (measured, Unity 6000.0.71f1,
+        /// tests/projects/navlinks targets: radius 0.5 reaches 10 m across and 7.5 m up and down,
+        /// whatever the agent's height (2 or 4) and its type's radius (0.5 or 1.5); radius 1 reaches
+        /// 15 m up).</summary>
+        const float DestinationReachAcross = 20f, DestinationReachUpDown = 15f;
+
+        /// <summary>The box SetDestination maps its target onto the NavMesh within, by the agent's
+        /// own radius: far larger than the queries' (<see cref="AgentExtents"/>).</summary>
+        internal static RcVec3f DestinationExtents(float radius) =>
+            new RcVec3f(radius * DestinationReachAcross, radius * DestinationReachUpDown, radius * DestinationReachAcross);
+
         internal static bool Nearest(NavWorld.Surface surface, Vector3 position, RcVec3f extents, IDtQueryFilter filter, out long polyRef, out Vector3 point)
         {
             polyRef = 0;

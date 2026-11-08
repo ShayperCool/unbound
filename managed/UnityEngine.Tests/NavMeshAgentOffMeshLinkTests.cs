@@ -113,6 +113,121 @@ namespace UnityEngine.Tests
             Assert.True(Dist2D(agent.nextPosition, destination) <= 1e-2f, $"stopped at {agent.nextPosition}");
         }
 
+        /// <summary>An agent standing at a link's start is on the link in the update that finds its
+        /// path (measured: tests/projects/navlinks startonlink).</summary>
+        [Fact]
+        public void AnAgentAtALinksStartCrossesFromTheFirstUpdate()
+        {
+            var go = new GameObject("agent");
+            m_Objects.Add(go);
+            go.transform.position = LinkStart;
+            var agent = go.AddComponent<NavMeshAgent>();
+            Assert.True(agent.SetDestination(Destination));
+            Step();
+            Assert.True(agent.isOnOffMeshLink);
+            Assert.Equal(LinkEnd, agent.currentOffMeshLinkData.endPos);
+        }
+
+        /// <summary>The crossing goes from the start on the NavMesh to the link's own end point
+        /// (here on the ground, below the NavMesh's surface), along the link at the agent's speed in
+        /// the plan; the update that ends it carries the agent on past the end onto the NavMesh,
+        /// leaving at full speed away from the link's end (measured: tests/projects/navlinks drop,
+        /// high, low, every automatic crossing).</summary>
+        [Fact]
+        public void ACrossingEndsAtTheLinksOwnEndAndLeavesAtSpeed()
+        {
+            var agent = Agent(autoTraverse: true);
+            StepOntoLink(agent);
+            Assert.Equal(LinkEnd, agent.currentOffMeshLinkData.endPos);
+            Assert.Equal(LinkEnd, agent.steeringTarget);
+            var start = agent.currentOffMeshLinkData.startPos;
+            Assert.True(start.y > 0.05f, $"start {start} not on the NavMesh");
+            var last = agent.nextPosition;
+            int steps = 0;
+            while (agent.isOnOffMeshLink)
+            {
+                last = agent.nextPosition;
+                Step();
+                Assert.True(steps++ < 200, "the agent stayed on the link");
+                if (agent.isOnOffMeshLink && agent.nextPosition.x > start.x + 0.5f)
+                {
+                    var along = (LinkEnd - start).normalized * agent.speed;
+                    Assert.True((agent.desiredVelocity - along).magnitude < 1e-3f, $"plan {agent.desiredVelocity}");
+                }
+            }
+            // The last step on the link went down towards the link's own end.
+            Assert.True(last.y < start.y - 0.01f, $"last {last}");
+            var left = agent.nextPosition;
+            Assert.True(left.x > LinkEnd.x, $"left at {left}");
+            Assert.True(left.y > last.y, "back on the NavMesh");
+            var plan = agent.desiredVelocity;
+            Assert.Equal(agent.speed, plan.magnitude, 3);
+            Assert.True(Vector3.Dot(plan.normalized, (left - LinkEnd).normalized) > 0.999f, $"plan {plan}");
+            // It walks on at that velocity at once, constrained to the NavMesh.
+            Step();
+            Assert.Equal(plan.x, agent.velocity.x, 2);
+        }
+
+        /// <summary>ResetPath on a link: the agent is off it at once, where it was; the next update
+        /// puts it on the landing side's NavMesh nearest to where it was (here the far platform's
+        /// edge) and it slides on to a stop; pathStatus keeps its value (measured:
+        /// tests/projects/navlinks resetmid).</summary>
+        [Fact]
+        public void ResetPathOnALinkLandsTheAgentAtTheLinksEnd()
+        {
+            var agent = Agent(autoTraverse: true);
+            StepOntoLink(agent);
+            Step();
+            Step();
+            var at = agent.nextPosition;
+            var status = agent.pathStatus;
+            agent.ResetPath();
+            Assert.False(agent.isOnOffMeshLink);
+            Assert.False(agent.hasPath);
+            Assert.Equal(at, agent.nextPosition);
+            Assert.Equal(status, agent.pathStatus);
+            // A NavMesh change before the next update keeps the landing and the slide.
+            NavMesh.SetLinkActive(m_Link, false);
+            RefreshNavMesh();
+            NavMesh.SetLinkActive(m_Link, true);
+            RefreshNavMesh();
+            Step();
+            var landed = agent.nextPosition;
+            // The far platform starts at x = 2; its NavMesh about a radius further.
+            Assert.InRange(landed.x, 2.3f, 2.8f);
+            Assert.True(landed.y > 0.05f, $"not on the NavMesh: {landed}");
+            Assert.False(NavMesh.IsLinkOccupied(m_Link));
+            for (int i = 0; i < 100; i++) Step();
+            Assert.True(agent.nextPosition.x > landed.x, $"stopped at {agent.nextPosition}");
+            Assert.Equal(Vector3.zero, agent.velocity);
+        }
+
+        /// <summary>An agent reaching a link another agent is on stops short of it, and takes it
+        /// once it is free (measured: tests/projects/navlinks crosstile, two).</summary>
+        [Fact]
+        public void AnAgentWaitsForALinkAnotherAgentIsOn()
+        {
+            // A slow crossing (6 s), so that the second agent reaches the link while it lasts.
+            var first = Agent(autoTraverse: true);
+            first.speed = 0.5f;
+            StepOntoLink(first);
+            var go = new GameObject("second");
+            m_Objects.Add(go);
+            go.transform.position = new Vector3(-6f, 0f, 1f);
+            var second = go.AddComponent<NavMeshAgent>();
+            Assert.True(second.SetDestination(Destination));
+            for (int i = 0; i < 120; i++) Step();
+            Assert.True(first.isOnOffMeshLink);
+            Assert.True(NavMesh.IsLinkOccupied(m_Link));
+            Assert.False(second.isOnOffMeshLink);
+            Assert.True(second.velocity.magnitude < 1e-3f, $"still moving: {second.velocity}");
+            Assert.Equal(Vector3.zero, second.desiredVelocity);
+            Assert.True(Dist2D(second.nextPosition, LinkStart) <= 2.25f * second.radius + 1e-3f, $"waiting at {second.nextPosition}");
+            while (first.isOnOffMeshLink) Step();
+            Step();
+            Assert.True(second.isOnOffMeshLink);
+        }
+
         [Fact]
         public void WithoutAutoTraverseTheAgentWaitsOnTheLinkWithItsData()
         {
@@ -311,8 +426,8 @@ namespace UnityEngine.Tests
                 Assert.True(steps++ < 100, "the agent stayed on the link");
                 Step();
             }
-            // Detour ends a traversal at its last tweened step, short of the end.
-            Assert.True(agent.nextPosition.x >= LinkEnd.x - 0.25f, $"left the link at {agent.nextPosition}");
+            // The update that ends the crossing carries the agent past the end.
+            Assert.True(agent.nextPosition.x > LinkEnd.x, $"left the link at {agent.nextPosition}");
         }
 
         [Fact]
@@ -321,9 +436,9 @@ namespace UnityEngine.Tests
             var agent = Agent(autoTraverse: true);
             StepOntoLink(agent);
             var start = agent.currentOffMeshLinkData.startPos;
-            // Detour's traversal: half the link's length at full speed, the first 15% of it to the
-            // link's start (measured: the Unity 6000.0.71f1 traversal is the same).
-            float tmax = Dist2D(start, LinkEnd) / agent.speed * 0.5f;
+            // Detour's traversal: half the link's length (in 3D) at full speed, the first 15% of it
+            // to the link's start (measured: the Unity 6000.0.71f1 traversal is the same).
+            float tmax = Vector3.Distance(start, LinkEnd) / agent.speed * 0.5f;
             int expected = (int)Math.Ceiling(tmax / Dt);
             float lastX = agent.nextPosition.x;
             int steps = 0;
@@ -335,8 +450,8 @@ namespace UnityEngine.Tests
                 lastX = agent.nextPosition.x;
             }
             Assert.InRange(steps, expected - 1, expected + 1);
-            // Detour ends a traversal at its last tweened step, short of the end.
-            Assert.True(agent.nextPosition.x >= LinkEnd.x - 0.25f, $"left the link at {agent.nextPosition}");
+            // The update that ends the crossing carries the agent past the end.
+            Assert.True(agent.nextPosition.x > LinkEnd.x, $"left the link at {agent.nextPosition}");
         }
 
         [Fact]
@@ -379,7 +494,7 @@ namespace UnityEngine.Tests
             var agent = Agent(autoTraverse: true);
             StepOntoLink(agent);
             var start = agent.currentOffMeshLinkData.startPos;
-            float tmax = Dist2D(start, LinkEnd) / agent.speed * 0.5f;
+            float tmax = Vector3.Distance(start, LinkEnd) / agent.speed * 0.5f;
             int expected = (int)Math.Ceiling(tmax / Dt);
             Step();
             Step();

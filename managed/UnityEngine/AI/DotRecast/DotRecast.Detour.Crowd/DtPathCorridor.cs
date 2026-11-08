@@ -269,8 +269,13 @@ namespace DotRecast.Detour.Crowd
             return false;
         }
 
-        public bool MoveOverOffmeshConnection(long offMeshConRef, Span<long> refs, ref RcVec3f startPos, ref RcVec3f endPos, DtNavMeshQuery navquery)
+        public bool MoveOverOffmeshConnection(long offMeshConRef, Span<long> refs, ref RcVec3f startPos, ref RcVec3f endPos, DtNavMeshQuery navquery) =>
+            MoveOverOffmeshConnection(offMeshConRef, refs, ref startPos, ref endPos, out _, navquery);
+
+        /// Unbound: also gives the connection's own end point (<paramref name="linkEnd"/>).
+        public bool MoveOverOffmeshConnection(long offMeshConRef, Span<long> refs, ref RcVec3f startPos, ref RcVec3f endPos, out RcVec3f linkEnd, DtNavMeshQuery navquery)
         {
+            linkEnd = default;
             // Advance the path up to and over the off-mesh connection.
             long prevRef = 0, polyRef = m_path[0];
             int npos = 0;
@@ -298,7 +303,7 @@ namespace DotRecast.Detour.Crowd
             DtNavMesh nav = navquery.GetAttachedNavMesh();
             RcDebug.Assert(null != nav);
             
-            var startEnd = nav.GetOffMeshConnectionPolyEndPoints(refs[0], refs[1], ref startPos, ref endPos);
+            var startEnd = nav.GetOffMeshConnectionPolyEndPoints(refs[0], refs[1], ref startPos, ref endPos, out linkEnd);
             if (startEnd.Succeeded())
             {
                 m_pos = endPos;

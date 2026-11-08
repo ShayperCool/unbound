@@ -62,6 +62,9 @@ namespace DotRecast.Detour.Crowd
         // agents act on their steering one frame late; measured).
         public RcVec3f pvel = new RcVec3f();
 
+        /// Unbound: the agent reached an off-mesh connection another agent is on and waits for it.
+        public bool waitingForConnection;
+
         /// Unbound: whether the plan in pvel brakes at the end of the path.
         public bool braking;
         internal bool brakingNow;

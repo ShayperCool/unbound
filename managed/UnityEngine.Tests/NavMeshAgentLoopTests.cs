@@ -133,6 +133,68 @@ namespace UnityEngine.Tests
             Assert.False(agent.isPathStale);
         }
 
+        /// <summary>A target off the NavMesh is mapped at once to the nearest NavMesh point within
+        /// 20 agent radii across and 15 up and down (measured: tests/projects/navlinks targets, also
+        /// for radius 1); the destination reports that point and the path leads to it.</summary>
+        [Fact]
+        public void ATargetBeyondTheEdgeIsMappedToTheNearestPoint()
+        {
+            var agent = Agent(new Vector3(-4f, 0f, -4f));
+            // 5 m beyond the ground's edge (z = -6).
+            Assert.True(agent.SetDestination(Center + new Vector3(-4f, 0f, -11f)));
+            var mapped = agent.destination;
+            Assert.InRange(mapped.z - Center.z, -6f, -5f);
+            Assert.InRange(mapped.x - Center.x, -4.001f, -3.999f);
+            Assert.Equal(agent.nextPosition.y, mapped.y, 3);
+            AgentSystem.Step();
+            Assert.False(agent.pathPending);
+            Assert.True(agent.hasPath);
+            Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
+            Assert.Equal(mapped, agent.pathEndPosition);
+        }
+
+        [Fact]
+        public void ATargetBeyondTheAgentsReachIsRefusedAndChangesNothing()
+        {
+            var agent = Walking(3);
+            var destination = agent.destination;
+            var end = agent.pathEndPosition;
+            // 12 m beyond the edge: more than 20 radii of 0.5 m.
+            Assert.False(agent.SetDestination(Center + new Vector3(-4f, 0f, -18f)));
+            Assert.False(agent.pathPending);
+            Assert.True(agent.hasPath);
+            Assert.Equal(destination, agent.destination);
+            Assert.Equal(end, agent.pathEndPosition);
+            // 8 m above the ground: more than 15 radii.
+            Assert.False(agent.SetDestination(Center + new Vector3(0f, 8f, -4f)));
+            Assert.True(agent.SetDestination(Center + new Vector3(0f, 7f, -4f)));
+            // A larger agent reaches farther (its own radius counts).
+            agent.radius = 1f;
+            Assert.True(agent.SetDestination(Center + new Vector3(-4f, 0f, -18f)));
+        }
+
+        /// <summary>While a new path is searched for, the agent goes on following its current path
+        /// and reports it (measured: tests/projects/navlinks pendingold, offedge).</summary>
+        [Fact]
+        public void APendingPathKeepsReportingTheCurrentOne()
+        {
+            var agent = Walking(5);
+            var corners = agent.path.corners;
+            float remaining = agent.remainingDistance;
+            var end = agent.pathEndPosition;
+            // Behind the agent: it needs a search.
+            Assert.True(agent.SetDestination(Center + new Vector3(-5f, 0f, -3f)));
+            Assert.True(agent.pathPending);
+            Assert.True(agent.hasPath);
+            Assert.Equal(end, agent.pathEndPosition);
+            Assert.Equal(remaining, agent.remainingDistance);
+            Assert.Equal(corners, agent.path.corners);
+            Assert.Equal(Center.x - 5f, agent.destination.x, 3);
+            AgentSystem.Step();
+            Assert.False(agent.pathPending);
+            Assert.Equal(agent.destination, agent.pathEndPosition);
+        }
+
         /// <summary>The centre of a polygon.</summary>
         static Vector3 PointOn(NavMeshAgent agent, long polyRef)
         {
@@ -152,9 +214,15 @@ namespace UnityEngine.Tests
             Assert.Equal(agent.m_Crowd.corridor.GetFirstPoly(), PolygonOf(agent, target));
             Assert.True(agent.SetDestination(target));
             Assert.False(agent.pathPending);
-            Assert.True(agent.hasPath);
+            // The path is there (its end, its corners), but hasPath counts it from the next agent
+            // update (measured: tests/projects/navlinks targets, incall).
+            Assert.False(agent.hasPath);
+            Assert.True(Vector2.Distance(new Vector2(target.x, target.z), new Vector2(agent.pathEndPosition.x, agent.pathEndPosition.z)) < 1e-3f);
+            Assert.Equal(2, agent.path.corners.Length);
             // Nothing steers until the agent update.
             Assert.Equal(Vector3.zero, agent.desiredVelocity);
+            AgentSystem.Step();
+            Assert.True(agent.hasPath);
         }
 
         [Fact]

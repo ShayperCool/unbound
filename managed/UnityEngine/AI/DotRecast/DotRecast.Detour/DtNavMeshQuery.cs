@@ -1579,6 +1579,12 @@ namespace DotRecast.Detour
                             var distSqr = DtUtils.DistancePtSegSqr2D(portalApex, left, right, out var t);
                             if (distSqr < RcMath.Sqr(0.001f))
                             {
+                                // Unbound: a start at an off-mesh connection's start is that
+                                // connection's corner, so an agent standing there takes it (Unity's;
+                                // measured: tests/projects/navlinks startonlink).
+                                if (toType == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION && straightPathCount > 0)
+                                    straightPath[straightPathCount - 1] = new DtStraightPath(straightPath[straightPathCount - 1].pos,
+                                        DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION, path[i + 1]);
                                 continue;
                             }
                         }

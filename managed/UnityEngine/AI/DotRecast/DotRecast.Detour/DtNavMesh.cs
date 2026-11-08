@@ -1484,8 +1484,14 @@ namespace DotRecast.Detour
         /// inside a normal polygon. So an off-mesh connection is "entered" from a 
         /// normal polygon at one of its endpoints. This is the polygon identified by 
         /// the prevRef parameter.
-        public DtStatus GetOffMeshConnectionPolyEndPoints(long prevRef, long polyRef, ref RcVec3f startPos, ref RcVec3f endPos)
+        public DtStatus GetOffMeshConnectionPolyEndPoints(long prevRef, long polyRef, ref RcVec3f startPos, ref RcVec3f endPos) =>
+            GetOffMeshConnectionPolyEndPoints(prevRef, polyRef, ref startPos, ref endPos, out _);
+
+        /// Unbound: also gives the connection's own end point as it was placed (<paramref name="linkEnd"/>),
+        /// where the polygon's end vertex is the point the end landed on.
+        public DtStatus GetOffMeshConnectionPolyEndPoints(long prevRef, long polyRef, ref RcVec3f startPos, ref RcVec3f endPos, out RcVec3f linkEnd)
         {
+            linkEnd = default;
             if (polyRef == 0)
             {
                 return DtStatus.DT_FAILURE;
@@ -1537,6 +1543,8 @@ namespace DotRecast.Detour
 
             startPos = tile.data.verts.ToVec3(poly.verts[idx0] * 3);
             endPos = tile.data.verts.ToVec3(poly.verts[idx1] * 3);
+            int con = ip - tile.data.header.offMeshBase;
+            linkEnd = con >= 0 && con < tile.data.offMeshCons.Length ? tile.data.offMeshCons[con].pos[idx1] : endPos;
 
             return DtStatus.DT_SUCCESS;
         }

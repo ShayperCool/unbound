@@ -40,6 +40,15 @@ Altered (marked `Unbound:` in the sources):
 - crowd separation and collisions as Unity's: a push of 1.4·(1 − (d/2.5r)²) from more important
   neighbours (half from equals), overlaps resolved by the less important agent alone (half each
   between equals);
+- off-mesh links as Unity's (`tests/projects/navlinks`): the crossing goes from its start on the
+  NavMesh to the link's own end point (`DtNavMesh.GetOffMeshConnectionPolyEndPoints` also gives
+  the connection's own end), taking half the time its 3D length takes at full speed, and plans
+  along the link at full speed once past the first 15%; the update that ends it carries the agent
+  on past the end at the crossing's velocity for the rest of the update, onto the landing
+  polygon, and the agent leaves at full speed in the direction it moved from the link's end; a
+  straight path starting at a connection's start marks that start as the connection's corner (an
+  agent standing there takes it); an agent reaching a link another agent is on
+  (`DtCrowd.tryEnterConnection`) plans to stand, without avoidance, until it is free;
 - `DtNavMeshQuery.GetPathToNode` is visible to the engine (partial paths end at the reachable
   polygon nearest to the target);
 - `DtNavMeshQuery.Raycast` (`DotRecast.Detour/DtNavMeshQuery.cs`) computes the hit wall edge's z

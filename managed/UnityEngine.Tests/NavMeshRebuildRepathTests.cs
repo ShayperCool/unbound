@@ -140,7 +140,9 @@ namespace UnityEngine.Tests
             // agents report).
             Assert.True(agent.hasPath);
             Assert.False(agent.pathPending);
-            Assert.Equal(goal, agent.destination);
+            // The goal as it lies on the NavMesh (measured: destination reports the mapped point,
+            // tests/projects/navlinks).
+            Assert.Equal(new Vector2(goal.x, goal.z), new Vector2(agent.destination.x, agent.destination.z));
             Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
             Step();
             Assert.True(agent.hasPath);
@@ -166,16 +168,19 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void TheNewPathIsNotStale()
+        public void ThePathPlannedAgainStaysStale()
         {
-            // The path planned again is a newly applied path, which clears the flag (Unbound's
-            // choice, as for any newly applied path; unmeasured).
+            // The agent goes on along its path, which stays stale until its next destination
+            // (measured: tests/projects/navlinks, every walking agent through each link toggle).
             var agent = WalkingAgent();
             NavMesh.SetLinkActive(m_Link, false);
             Assert.True(agent.isPathStale);
             RefreshNavMesh();
             Assert.True(agent.isOnNavMesh);
             Assert.True(agent.hasPath);
+            Assert.True(agent.isPathStale);
+            Assert.True(agent.SetDestination(Goal(1f)));
+            Step();
             Assert.False(agent.isPathStale);
         }
 
