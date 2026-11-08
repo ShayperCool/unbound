@@ -15,12 +15,12 @@ namespace UnityEngine
         [Serializable]
         public partial struct MinMaxCurve
         {
-            [SerializeField] ParticleSystemCurveMode m_Mode;
-            [SerializeField] float m_CurveMultiplier;
-            [SerializeField] AnimationCurve m_CurveMin;
-            [SerializeField] AnimationCurve m_CurveMax;
-            [SerializeField] float m_ConstantMin;
-            [SerializeField] float m_ConstantMax;
+            [SerializeField] internal ParticleSystemCurveMode m_Mode;
+            [SerializeField] internal float m_CurveMultiplier;
+            [SerializeField] internal AnimationCurve m_CurveMin;
+            [SerializeField] internal AnimationCurve m_CurveMax;
+            [SerializeField] internal float m_ConstantMin;
+            [SerializeField] internal float m_ConstantMax;
 
             public MinMaxCurve(float constant)
             {
