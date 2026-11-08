@@ -30,6 +30,7 @@ namespace DotRecast.Detour
         public RcVec3f pos; // Position of the node.
         public float cost; // Cost from previous node to current node.
         public float total; // Cost up to the node.
+        public float heuristic; // Unbound: the polygon's A* heuristic, set when the node is placed.
         public int pidx; // Index to parent node.
         public int state; // extra state information. A polyRef can have multiple nodes with different extra info. see DT_MAX_STATES_PER_NODE
         public int flags; // Node flags. A combination of dtNodeFlags.

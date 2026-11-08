@@ -13,10 +13,13 @@ Altered (marked `Unbound:` in the sources):
 - the nearest polygon to a point is ranked by distance, a polygon under or over the point by its
   height minus the climb (negative within it: the nearest in height wins), as Unity's queries choose;
 - of equally near polygons the last one found is the nearest (Unity's: ties on shared edges);
-- A* places a node at the portal's point nearest the node it is reached from (not at the portal's
-  middle), moves it when a cheaper way reaches it, and ranks the ways by their cost alone (Unity's
-  paths then weigh area costs by the distance really travelled: they go around a water area that
-  the midpoints would cross, and take the Editor's side round symmetric obstacles);
+- A* as Unity's (`tests/projects/navcost`): a polygon's node is placed once, when the search first
+  reaches the polygon, at the point of the portal from the polygon it is reached from nearest that
+  polygon's node (in 3D, kept 5% of the portal's length from its ends; a portal shorter than 1 cm
+  is its left end); a cheaper way found later changes the node's cost and parent, not its place;
+  a polygon's heuristic is the distance from the end to the polygon's nearest point (times
+  Detour's 0.999), and ways are compared by their total; there is no skip of nodes already reached
+  from the same parent; `FindPath` runs the sliced search to its end (one search for both);
 - the closest point of a polygon to a position outside it is the closest in 3D on its boundary
   (Unity's: on a slope it moves along the edge), not in the xz plane;
 - rasterized spans take the cell above the surface (`floor + 1`), as Unity's voxelization does;

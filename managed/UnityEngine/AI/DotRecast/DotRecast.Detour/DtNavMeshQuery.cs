@@ -851,196 +851,24 @@ namespace DotRecast.Detour
         public DtStatus FindPath(long startRef, long endRef, RcVec3f startPos, RcVec3f endPos, IDtQueryFilter filter, Span<long> path, out int pathCount, int maxPath)
         {
             pathCount = 0;
-
-            // Validate input
-            if (!m_nav.IsValidPolyRef(startRef) || !m_nav.IsValidPolyRef(endRef) || !startPos.IsFinite() || !endPos.IsFinite() || 
-                null == filter || path.IsEmpty || maxPath <= 0)
+            if (path.IsEmpty || maxPath <= 0)
             {
                 return DtStatus.DT_FAILURE | DtStatus.DT_INVALID_PARAM;
             }
 
-            if (startRef == endRef)
+            // Unbound: one search for both entry points (Unity's), the sliced one run to its end.
+            var status = InitSlicedFindPath(startRef, endRef, startPos, endPos, filter, 0);
+            if (status.Failed())
             {
-                path[0] = startRef;
-                pathCount = 1;
-                return DtStatus.DT_SUCCESS;
+                return DtStatus.DT_FAILURE | DtStatus.DT_INVALID_PARAM;
             }
 
-            m_nodePool.Clear();
-            m_openList.Clear();
-
-            DtNode startNode = m_nodePool.GetNode(startRef);
-            startNode.pos = startPos;
-            startNode.pidx = 0;
-            startNode.cost = 0;
-            startNode.total = RcVec3f.Distance(startPos, endPos) * DtDefaultQueryHeuristic.H_SCALE;
-            startNode.id = startRef;
-            startNode.flags = DtNodeFlags.DT_NODE_OPEN;
-            m_openList.Push(startNode);
-
-            DtNode lastBestNode = startNode;
-            float lastBestNodeCost = startNode.total;
-
-            bool outOfNodes = false;
-
-            while (!m_openList.IsEmpty())
+            while (m_query.status.InProgress())
             {
-                // Remove node from open list and put it in closed list.
-                DtNode bestNode = m_openList.Pop();
-                bestNode.flags &= ~DtNodeFlags.DT_NODE_OPEN;
-                bestNode.flags |= DtNodeFlags.DT_NODE_CLOSED;
-
-                // Reached the goal, stop searching.
-                if (bestNode.id == endRef)
-                {
-                    lastBestNode = bestNode;
-                    break;
-                }
-
-                // Get current poly and tile.
-                // The API input has been checked already, skip checking internal data.
-                long bestRef = bestNode.id;
-                m_nav.GetTileAndPolyByRefUnsafe(bestRef, out var bestTile, out var bestPoly);
-
-                // Get parent poly and tile.
-                long parentRef = 0;
-                DtMeshTile parentTile = null;
-                DtPoly parentPoly = null;
-                if (bestNode.pidx != 0)
-                {
-                    parentRef = m_nodePool.GetNodeAtIdx(bestNode.pidx).id;
-                }
-
-                if (parentRef != 0)
-                {
-                    m_nav.GetTileAndPolyByRefUnsafe(parentRef, out parentTile, out parentPoly);
-                }
-
-                for (int i = bestPoly.firstLink; i != DT_NULL_LINK; i = bestTile.links[i].next)
-                {
-                    long neighbourRef = bestTile.links[i].refs;
-
-                    // Skip invalid ids and do not expand back to where we came from.
-                    if (neighbourRef == 0 || neighbourRef == parentRef)
-                    {
-                        continue;
-                    }
-
-                    // Get neighbour poly and tile.
-                    // The API input has been checked already, skip checking internal data.
-                    m_nav.GetTileAndPolyByRefUnsafe(neighbourRef, out var neighbourTile, out var neighbourPoly);
-
-                    if (!filter.PassFilter(neighbourRef, neighbourTile, neighbourPoly))
-                    {
-                        continue;
-                    }
-
-                    // deal explicitly with crossing tile boundaries
-                    byte crossSide = 0;
-                    if (bestTile.links[i].side != 0xff)
-                        crossSide = (byte)(bestTile.links[i].side >> 1);
-
-                    // get the node
-                    DtNode neighbourNode = m_nodePool.GetNode(neighbourRef, crossSide);
-                    if (null == neighbourNode)
-                    {
-                        outOfNodes = true;
-                        continue;
-                    }
-
-                    // Unbound: Unity's planner places the node at the portal's point nearest the node it
-                    // is reached from, and moves it when a cheaper way reaches it (measured: paths
-                    // weigh area costs by the distance travelled, and keep the Editor's sides).
-                    RcVec3f nodePos = neighbourNode.pos;
-                    GetEdgeClosestPoint(bestRef, bestPoly, bestTile,
-                        neighbourRef, neighbourPoly, neighbourTile, bestNode.pos,
-                        ref nodePos);
-
-                    // Calculate cost and heuristic.
-                    float cost = 0;
-                    float heuristic = 0;
-
-                    // Special case for last node.
-                    if (neighbourRef == endRef)
-                    {
-                        // Cost
-                        float curCost = filter.GetCost(bestNode.pos, nodePos,
-                            parentRef, parentTile, parentPoly,
-                            bestRef, bestTile, bestPoly,
-                            neighbourRef, neighbourTile, neighbourPoly);
-                        float endCost = filter.GetCost(nodePos, endPos,
-                            bestRef, bestTile, bestPoly,
-                            neighbourRef, neighbourTile, neighbourPoly,
-                            0, null, null);
-
-                        cost = bestNode.cost + curCost + endCost;
-                        heuristic = 0;
-                    }
-                    else
-                    {
-                        // Cost
-                        float curCost = filter.GetCost(bestNode.pos, nodePos,
-                            parentRef, parentTile, parentPoly,
-                            bestRef, bestTile, bestPoly,
-                            neighbourRef, neighbourTile, neighbourPoly);
-                        cost = bestNode.cost + curCost;
-                        heuristic = RcVec3f.Distance(nodePos, endPos) * DtDefaultQueryHeuristic.H_SCALE;
-                    }
-
-                    float total = cost + heuristic;
-
-                    // The node is already in open list and the new result is worse, skip.
-                    // Unbound: worse by its cost (the node's place, so its heuristic, moves with it).
-                    if ((neighbourNode.flags & DtNodeFlags.DT_NODE_OPEN) != 0 && cost >= neighbourNode.cost)
-                    {
-                        continue;
-                    }
-
-                    // The node is already visited and process, and the new result is worse, skip.
-                    if ((neighbourNode.flags & DtNodeFlags.DT_NODE_CLOSED) != 0 && cost >= neighbourNode.cost)
-                    {
-                        continue;
-                    }
-
-                    // Add or update the node.
-                    neighbourNode.pidx = m_nodePool.GetNodeIdx(bestNode);
-                    neighbourNode.id = neighbourRef;
-                    neighbourNode.flags = (neighbourNode.flags & ~DtNodeFlags.DT_NODE_CLOSED);
-                    neighbourNode.cost = cost;
-                    neighbourNode.total = total;
-                    neighbourNode.pos = nodePos;
-
-                    if ((neighbourNode.flags & DtNodeFlags.DT_NODE_OPEN) != 0)
-                    {
-                        // Already in open, update node location.
-                        m_openList.Modify(neighbourNode);
-                    }
-                    else
-                    {
-                        // Put the node in open list.
-                        neighbourNode.flags |= DtNodeFlags.DT_NODE_OPEN;
-                        m_openList.Push(neighbourNode);
-                    }
-
-                    // Update nearest node to target so far.
-                    if (heuristic < lastBestNodeCost)
-                    {
-                        lastBestNodeCost = heuristic;
-                        lastBestNode = neighbourNode;
-                    }
-                }
+                UpdateSlicedFindPath(int.MaxValue, out _);
             }
 
-            var status = GetPathToNode(lastBestNode, path, out pathCount, maxPath);
-            if (lastBestNode.id != endRef)
-            {
-                status |= DtStatus.DT_PARTIAL_RESULT;
-            }
-
-            if (outOfNodes)
-                status |= DtStatus.DT_OUT_OF_NODES;
-
-            return status;
+            return FinalizeSlicedFindPath(path, out pathCount, maxPath);
         }
 
         ///@}
@@ -1100,7 +928,9 @@ namespace DotRecast.Detour
             startNode.pos = startPos;
             startNode.pidx = 0;
             startNode.cost = 0;
-            startNode.total = RcVec3f.Distance(startPos, endPos) * DtDefaultQueryHeuristic.H_SCALE;
+            // Unbound: the heuristic of a polygon is the distance from the end to the polygon (Unity's).
+            startNode.heuristic = PolyHeuristic(startRef, endPos);
+            startNode.total = startNode.heuristic;
             startNode.id = startRef;
             startNode.flags = DtNodeFlags.DT_NODE_OPEN;
             m_openList.Push(startNode);
@@ -1231,20 +1061,16 @@ namespace DotRecast.Detour
                         continue;
                     }
 
-                    // do not expand to nodes that were already visited from the
-                    // same parent
-                    if (neighbourNode.pidx != 0 && neighbourNode.pidx == bestNode.pidx)
+                    // Unbound: Unity's search places a polygon's node once, when the polygon is first
+                    // reached: at the point of the portal nearest the node it is reached from. A
+                    // cheaper way found later changes the node's cost and parent, not its place.
+                    if ((neighbourNode.flags & (DtNodeFlags.DT_NODE_OPEN | DtNodeFlags.DT_NODE_CLOSED)) == 0)
                     {
-                        continue;
+                        PlaceNode(neighbourNode, bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly, neighbourTile,
+                            bestNode.pos, m_query.endRef, m_query.endPos);
                     }
 
-                    // Unbound: Unity's planner places the node at the portal's point nearest the node it
-                    // is reached from, and moves it when a cheaper way reaches it (measured: paths
-                    // weigh area costs by the distance travelled, and keep the Editor's sides).
                     RcVec3f nodePos = neighbourNode.pos;
-                    GetEdgeClosestPoint(bestRef, bestPoly, bestTile,
-                        neighbourRef, neighbourPoly, neighbourTile, bestNode.pos,
-                        ref nodePos);
 
                     // Calculate cost and heuristic.
                     float cost = 0;
@@ -1288,20 +1114,19 @@ namespace DotRecast.Detour
                     }
                     else
                     {
-                        heuristic = RcVec3f.Distance(nodePos, m_query.endPos) * DtDefaultQueryHeuristic.H_SCALE;
+                        heuristic = neighbourNode.heuristic;
                     }
 
                     float total = cost + heuristic;
 
                     // The node is already in open list and the new result is worse, skip.
-                    // Unbound: worse by its cost (the node's place, so its heuristic, moves with it).
-                    if ((neighbourNode.flags & DtNodeFlags.DT_NODE_OPEN) != 0 && cost >= neighbourNode.cost)
+                    if ((neighbourNode.flags & DtNodeFlags.DT_NODE_OPEN) != 0 && total >= neighbourNode.total)
                     {
                         continue;
                     }
 
                     // The node is already visited and process, and the new result is worse, skip.
-                    if ((neighbourNode.flags & DtNodeFlags.DT_NODE_CLOSED) != 0 && cost >= neighbourNode.cost)
+                    if ((neighbourNode.flags & DtNodeFlags.DT_NODE_CLOSED) != 0 && total >= neighbourNode.total)
                     {
                         continue;
                     }
@@ -1312,7 +1137,6 @@ namespace DotRecast.Detour
                     neighbourNode.flags = (neighbourNode.flags & ~(DtNodeFlags.DT_NODE_CLOSED | DtNodeFlags.DT_NODE_PARENT_DETACHED));
                     neighbourNode.cost = cost;
                     neighbourNode.total = total;
-                    neighbourNode.pos = nodePos;
                     
                     if (foundShortCut)
                         neighbourNode.flags = (neighbourNode.flags | DtNodeFlags.DT_NODE_PARENT_DETACHED);
@@ -2254,19 +2078,45 @@ namespace DotRecast.Detour
             return DtStatus.DT_SUCCESS;
         }
 
-        /// Unbound: the point of the portal between two polygons nearest a position (in 2D).
-        protected DtStatus GetEdgeClosestPoint(long from, DtPoly fromPoly, DtMeshTile fromTile, long to,
-            DtPoly toPoly, DtMeshTile toTile, RcVec3f target, ref RcVec3f point)
+        /// Unbound: a portal point is kept this far (as a fraction of the portal) from the portal's
+        /// ends, and a portal shorter than the square root of the degenerate length squared is its
+        /// left end (Unity's search, tests/projects/navcost).
+        const float PortalEndMargin = 0.05f;
+        const float DegeneratePortalLengthSqr = 1e-4f;
+
+        /// Unbound: places a polygon's node when the search first reaches it: at the point of the
+        /// portal from the polygon it is reached from nearest that polygon's node (in 3D, kept off
+        /// the portal's ends), with the polygon's heuristic (zero for the end polygon).
+        void PlaceNode(DtNode node, long from, DtPoly fromPoly, DtMeshTile fromTile, long to, DtPoly toPoly, DtMeshTile toTile,
+            RcVec3f fromPos, long endRef, RcVec3f endPos)
         {
-            var ppStatus = GetPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, out var left, out var right);
-            if (ppStatus.Failed())
+            var point = fromPos;
+            if (GetPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, out var left, out var right).Succeeded())
             {
-                return DtStatus.DT_FAILURE | DtStatus.DT_INVALID_PARAM;
+                var edge = right - left;
+                float lengthSqr = edge.LengthSquared();
+                point = left;
+                if (lengthSqr > DegeneratePortalLengthSqr)
+                {
+                    float t = RcVec3f.Dot(fromPos - left, edge) / lengthSqr;
+                    point = left + edge * Math.Clamp(t, PortalEndMargin, 1f - PortalEndMargin);
+                }
             }
 
-            DtUtils.DistancePtSegSqr2D(target, left, right, out float t);
-            point = RcVec3f.Lerp(left, right, t);
-            return DtStatus.DT_SUCCESS;
+            node.pos = point;
+            node.heuristic = to == endRef ? 0f : PolyHeuristic(to, endPos);
+        }
+
+        /// Unbound: the A* heuristic of a polygon: the distance from the end to the polygon's
+        /// nearest point, scaled as Detour's (Unity's search).
+        float PolyHeuristic(long polyRef, RcVec3f endPos)
+        {
+            if (ClosestPointOnPoly(polyRef, endPos, out var closest, out _).Failed())
+            {
+                return 0f;
+            }
+
+            return RcVec3f.Distance(endPos, closest) * DtDefaultQueryHeuristic.H_SCALE;
         }
 
         protected DtStatus GetEdgeIntersectionPoint(RcVec3f fromPos, long from, DtPoly fromPoly, DtMeshTile fromTile,

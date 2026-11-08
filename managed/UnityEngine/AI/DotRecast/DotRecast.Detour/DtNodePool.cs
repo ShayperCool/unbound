@@ -98,6 +98,7 @@ namespace DotRecast.Detour
             node.pidx = 0;
             node.cost = 0;
             node.total = 0;
+            node.heuristic = 0;
             node.id = id;
             node.state = state;
             node.flags = 0;
