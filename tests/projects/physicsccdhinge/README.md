@@ -504,8 +504,14 @@ The rotation gate requires free flight, configuration, primitive contacts,
 explicit-inertia contacts and every position-constrained contact to match at
 the unchanged strict tolerances. It reports the automatic-inertia unconstrained
 contacts separately, bounds their body differences by quantity, and still
-requires finite complete rows, exact counts, callback phases and collider
-identities. Mutation tests reject errors in those checks. Original Q06 angle
+requires finite numeric fields, complete rows, exact counts, callback phases
+and collider identities. Diagnostic impulse components are bounded by 5e-4 at
+6/1 iterations and 2e-5 at 12/4; relative velocity uses the matching body bound.
+Normals and separations are bounded by 2e-4 and 3e-4. Different planar witnesses
+must preserve the face extents within 1.5e-4 and mutual plane distance within
+1e-4; the gate
+checks both point sets without rewriting their slots. Mutation tests reject
+large impulses, normals, separations, moved faces and nonnumeric payloads. Original Q06 angle
 and resting-speed bounds, all raw comparators and all existing oracle values
 remain unchanged.
 
@@ -520,9 +526,11 @@ These Unity **6000.0** contracts were checked for Q189, including limitations:
 | [Rigidbody.constraints](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rigidbody-constraints.html), [PublishTransform](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rigidbody.PublishTransform.html) | Position locks use world axes and angular locks use inertia axes. PublishTransform publishes the simulated body pose to its Transform. Neither specifies the contact-cache arithmetic isolated by the controls. |
 
 Q189 validation: release build; 3706 managed tests; eight compatibility-profile
-Rust tests; 39 CCD verifier tests. All 24 physics probes run before/after retain
+Rust tests; 40 CCD verifier tests. All 24 physics probes run before/after retain
 their results, 21 pass, two pre-existing 2D failures and one contact-event report.
 All six CCD profiles pass their gates. Raw results are Q06 6714/6814,
 supplemental 1167/1167, broad geometry 11915/12400 with 485 slot permutations,
 construction 3842/4554 with zero consistency failures, constraints 613/633 and
-rotation controls 665/718. No missing/extra rows or new lifetime/count failures.
+rotation controls 665/718. No missing/extra constraint or rotation rows, or new lifetime/count failures.
+The broad report still includes 65 missing and 65 extra raw contact slots within
+its 485 complete-payload permutations.

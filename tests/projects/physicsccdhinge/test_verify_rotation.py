@@ -41,6 +41,25 @@ class RotationVerificationTests(unittest.TestCase):
         self.assertEqual([key], [x['key'] for x in result['numeric_diagnostics']])
         self.assertEqual(before, (expected, actual))
 
+    def test_diagnostic_payloads_require_bounded_numbers(self):
+        expected = self.rows(3)
+        mutations = [
+            ('/event/0/0', '0,0,0,-1,0,0,1000,bullet,wall'),
+            ('/event/0/0', '0,0,0,-1,1000,0,0.1,bullet,wall'),
+            ('/event/0/0', '0,1000,0,-1,0,0,0.1,bullet,wall'),
+            ('/event/0/0', 'word,0,0,-1,0,0,0.1,bullet,wall'),
+            ('/event/0', 'enter,wall,1,1000000,0,0,-100,0,0'),
+            ('/event/0', 'enter,wall,1,-1,0,0,-101,0,0'),
+            ('/event/0', 'enter,wall,1,word,0,0,-100,0,0'),
+        ]
+        for suffix, value in mutations:
+            actual = dict(expected)
+            key = next(k for k in actual if k.endswith(suffix))
+            actual[key] = value
+            result = self.check(expected, actual)
+            self.assertTrue(result['unresolved'], value)
+            self.assertTrue(result['numeric_diagnostics'], value)
+
     def test_diagnostics_require_complete_finite_rows_counts_and_identities(self):
         expected = self.rows()
         for suffix, value in [('/events', '2'),
