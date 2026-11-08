@@ -1,0 +1,15 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6dfc8a93705255439d3c629a429a65e, type: 3}
+  m_Name: PostFxAssets
+  m_EditorClassIdentifier: 
+  lut: {fileID: 2800000, guid: 893637d8892b48abfa26b9c9b3921882, type: 3}

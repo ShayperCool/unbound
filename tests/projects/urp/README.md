@@ -41,7 +41,7 @@ sky mesh's vertices, read through a flat-shading probe shader). The Editor's are
 `Reference/scenarios/`:
 
     URP_PROBE_DIR=$PWD/tests/projects/urp/Reference/scenarios ... -executeMethod ProbeRunner.Record
-    URP_PROBE_DIR=/tmp/urp unbound run -p tests/projects/urp --no-watch --frames 30 --size 320x180
+    URP_PROBE_DIR=/tmp/urp unbound run -p tests/projects/urp --no-watch --frames 60 --size 320x180
     for f in base shadows lights skybox postfx; do python3 tests/projects/urp/compare.py tests/projects/urp/Reference/scenarios/$f.png /tmp/urp/$f.png; done
 
 ## Lighting scenarios
@@ -103,3 +103,33 @@ renderer feature (one setting changed) that is removed after it:
 On the Editor's OpenGL Core device URP's Decal feature turns the DBuffer technique away (it
 draws no decals; Automatic picks Screen Space) and does not enable decal layers (`decal_layers`
 is `decal_screen_space`), so the DBuffer surface data options are not measured here.
+
+## Post-processing scenarios
+
+`Editor/PostFxSetup.Create` (`-executeMethod PostFxSetup.Create`) authored `Assets/PostFx/Lut.png`,
+a 32-size Color Lookup strip imported as a LUT is (linear, no mipmaps, uncompressed). After the
+feature scenarios the probe records, with the main camera disabled (it renders only when the
+probe renders it), post-processing on and a global Volume, one setting each:
+
+- color grading, the URP asset's Low Dynamic Range mode: `postfx_lut` (Color Lookup, contribution
+  0.8), `postfx_tonemap_neutral`, `postfx_white_balance`, `postfx_channel_mixer`,
+  `postfx_lift_gamma_gain`, `postfx_shadows_midtones_highlights`, `postfx_split_toning`,
+  `postfx_curves` (master S-curve, hue versus saturation); High Dynamic Range grading:
+  `postfx_grading_hdr` (post exposure, saturation, contrast, ACES), `postfx_lut_hdr`;
+- lens: `postfx_dof_gaussian`, `postfx_dof_gaussian_hq`, `postfx_dof_bokeh`,
+  `postfx_lens_distortion`, `postfx_chromatic_aberration`, `postfx_panini`, `postfx_film_grain`;
+- motion blur over two frames (a render, then the move and the recorded render):
+  `motion_blur_camera` (camera only, low quality), `motion_blur_camera_high`, `motion_blur_objects`
+  (camera and objects, the cube moved);
+- the camera's anti-aliasing: `aa_fxaa`, `aa_smaa_low`, `aa_smaa_medium`, `aa_smaa_high`, `aa_taa`
+  (eight frames, one render each, before the recorded one);
+- render scale upscaling: `upscale_point`, `upscale_linear` (0.5), `upscale_auto_fractional`
+  (0.7), `upscale_fsr`, `upscale_fsr_sharpness` (0.75), `upscale_stp` (0.5, eight frames).
+
+Their constants record `frameCount` (film grain, dithering and TAA jitter follow it).
+`texture-samples.jsonl` (compared by `compare_constants.py`) records what the Single Channel
+textures sample as (blitted into a float target). Two Editor recordings gave identical images and
+constants for these scenarios. On the Editor's OpenGL Core device inline sampler states do not
+apply (Point upscaling equals Linear), and URP's C# runs in Mono's double precision (0.7 scales the
+target to 223x125); Unbound differs in both and does not run STP's compute kernels (see
+docs/COMPATIBILITY_GAPS.md).

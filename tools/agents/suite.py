@@ -307,7 +307,7 @@ def recipes(release):
                         [single_ref('json'), '{work}/out.json'], verdict='exit')
     R['navmesh'] = classic('NAVMESH_PROBE_OUT', 'out.json', ['--no-watch', '--frames', '300'],
                            [single_ref('json'), '{work}/out.json'], verdict='exit')
-    for name, variable, frames in [('urp', 'URP_PROBE_DIR', '30'), ('urp2d', 'URP2D_PROBE_DIR', '40')]:
+    for name, variable, frames in [('urp', 'URP_PROBE_DIR', '60'), ('urp2d', 'URP2D_PROBE_DIR', '40')]:
         scenarios = sorted((PROJECTS/name/'Reference/scenarios').glob('*.png'))
         R[name] = [run('--no-watch', '--frames', frames, '--size', '320x180', env={variable: '{work}/out'})]
         R[name] += [py('urp/compare.py', str(png), '{work}/out/'+png.name, verdict='none') for png in scenarios]
@@ -315,6 +315,8 @@ def recipes(release):
                        '{work}/out/per-object-constants.jsonl'))
     R['urp'].append(py('compare_constants.py', ref('scenarios/texture-formats.jsonl'),
                        '{work}/out/texture-formats.jsonl'))
+    R['urp'].append(py('compare_constants.py', ref('scenarios/texture-samples.jsonl'),
+                       '{work}/out/texture-samples.jsonl'))
     R['terrain'] = classic('TERRAIN_PROBE_OUT', 'out', ['--frames', '300', '--size', '320x180', '--no-watch'], images=True)
     R['lod'] = classic('LOD_PROBE_OUT', 'out', ['--frames', '20000', '--size', '320x180', '--no-watch'])
     R['assetbundles'] = classic('BUNDLE_PROBE_OUT', 'out', ['--frames', '600', '--size', '320x180', '--no-watch'],
