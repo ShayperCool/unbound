@@ -13,9 +13,9 @@ namespace UnityEngine.Tests
     /// scene, by activation or by enabled = true, and one warped, keeps its transform where it is
     /// until the next frame's early AI update (PreUpdate), while its nextPosition is on the NavMesh
     /// at once; AddComponent and setting baseOffset write the transform at once; a transform moved
-    /// by script is followed by nextPosition at once and written back at the next early update;
-    /// turning updatePosition on writes it at the next early update; the update after the scripts
-    /// leaves standing agents' transforms alone. The level is one runtime-built 12 m ground (top at
+    /// by script is followed by nextPosition at once and written back at the next early update; the
+    /// update after the scripts leaves standing agents' transforms alone. Turning updatePosition back
+    /// on writes it at once (documented). The level is one runtime-built 12 m ground (top at
     /// y = 0) away from other tests' levels.</summary>
     [Collection("Frames")]
     public sealed class NavMeshAgentPlacementTests : IDisposable
@@ -164,19 +164,33 @@ namespace UnityEngine.Tests
             Assert.Equal(m_Height + 1f, agent.nextPosition.y, 4);
         }
 
+        /// <summary>Documented (NavMeshAgent.nextPosition): turned back on, the transform moves to
+        /// nextPosition at once.</summary>
         [Fact]
-        public void TurningUpdatePositionOnWritesAtTheEarlyUpdate()
+        public void TurningUpdatePositionOnWritesAtOnce()
         {
             var agent = Agent(new Vector3(3f, 0.3f, 2f), active: false, before: a => a.updatePosition = false);
             agent.gameObject.SetActive(true);
             Frame();
             Assert.Equal(0.3f, agent.transform.position.y, 4);
             agent.updatePosition = true;
-            Assert.Equal(0.3f, agent.transform.position.y, 4);
-            AgentSystem.Step();
-            Assert.Equal(0.3f, agent.transform.position.y, 4);
-            AgentSystem.SyncTransforms();
             Assert.Equal(m_Height, agent.transform.position.y, 4);
+        }
+
+        /// <summary>Documented (NavMeshAgent.nextPosition): the transform matches the simulated
+        /// position when Update is called; a standing agent's nextPosition set by script reaches its
+        /// transform at the next early update.</summary>
+        [Fact]
+        public void ANextPositionSetOnAStandingAgentReachesTheTransform()
+        {
+            var agent = Agent(new Vector3(-3f, 0f, -3f));
+            var target = Center + new Vector3(-2f, 0f, -3f);
+            agent.nextPosition = target;
+            Assert.Equal(target.x, agent.nextPosition.x, 3);
+            AgentSystem.Step();
+            AgentSystem.SyncTransforms();
+            Assert.Equal(agent.nextPosition, agent.transform.position);
+            Assert.Equal(target.x, agent.transform.position.x, 3);
         }
     }
 }

@@ -49,9 +49,6 @@ namespace UnityEngine.AI
         // A new agent reports a complete path, also while its first path is pending (measured).
         NavMeshPathStatus m_PathStatus = NavMeshPathStatus.PathComplete;
         Vector3 m_WrittenPosition;
-        /// <summary>The transform is to be written at the agent's next early update (PreUpdate's
-        /// AIUpdate): the agent was placed (enabled, warped) or followed a script's move.</summary>
-        internal bool m_TransformPending;
         bool m_OnNavMesh;
         int m_WorldVersion = -1;
         internal int m_LinkId;
@@ -68,7 +65,8 @@ namespace UnityEngine.AI
         public int agentTypeID { get => m_AgentTypeID; set { m_AgentTypeID = value; AgentSystem.Reattach(this); } }
         public float radius { get => m_Radius; set { m_Radius = value; ApplyParams(); } }
         public float height { get => m_Height; set { m_Height = value; ApplyParams(); } }
-        /// <summary>Setting it moves the transform to the new height at once (measured).</summary>
+        /// <summary>Setting it moves the transform to the new height at once (measured right after
+        /// AddComponent; for an agent whose transform waits for its early update, unmeasured).</summary>
         public float baseOffset
         {
             get => m_BaseOffset;
@@ -101,15 +99,16 @@ namespace UnityEngine.AI
 
         public ObstacleAvoidanceType obstacleAvoidanceType { get => m_ObstacleAvoidanceType; set { m_ObstacleAvoidanceType = value; ApplyParams(); } }
         public int avoidancePriority { get => m_AvoidancePriority; set { m_AvoidancePriority = value; ApplyParams(); } }
-        /// <summary>Turned on, the transform moves to the agent's position at the agent's next early
-        /// update (measured).</summary>
+        /// <summary>Turned back on, the transform moves to nextPosition at once (documented,
+        /// NavMeshAgent.nextPosition, Scripting API 6000.0).</summary>
         public bool updatePosition
         {
             get => m_UpdatePosition;
             set
             {
-                if (value && !m_UpdatePosition && m_Crowd != null) AgentSystem.DeferTransform(this);
+                bool turnedOn = value && !m_UpdatePosition;
                 m_UpdatePosition = value;
+                if (turnedOn && m_Crowd != null) AgentSystem.WriteTransform(this);
             }
         }
         public bool updateRotation { get => m_UpdateRotation; set => m_UpdateRotation = value; }
@@ -207,8 +206,8 @@ namespace UnityEngine.AI
             }
         }
 
-        /// <summary>An agent not on a crowd (not enabled, or not placed) reports its transform
-        /// (measured for an agent on an inactive GameObject).</summary>
+        /// <summary>An agent not on a crowd reports its transform (measured for an agent on an
+        /// inactive GameObject; an enabled agent off the NavMesh, unmeasured, reports it too).</summary>
         public Vector3 nextPosition
         {
             get
@@ -606,7 +605,7 @@ namespace UnityEngine.AI
         /// one enabled by its scene, activation or enabled waits for its next early update).</summary>
         internal override void OnAddedByScript()
         {
-            if (m_TransformPending && m_UpdatePosition) AgentSystem.WriteTransform(this);
+            if (m_Crowd != null && m_UpdatePosition) AgentSystem.WriteTransform(this);
         }
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
@@ -675,21 +674,23 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The agents' early update (PreUpdate's AIUpdate): an agent follows its transform
-        /// moved by script, and the transform of an agent placed or moved since its last write goes
-        /// to where the agent stands (measured: a transform moved in Update or LateUpdate is seen as
-        /// moved until the next frame's Update; scene, activation, Warp and updatePosition wait).</summary>
+        /// moved by script, then every transform goes to where its agent stands (documented: the
+        /// transform matches the simulated position when Update is called; measured: an agent
+        /// placed by its scene, activation or Warp, or moved by script, keeps its transform until
+        /// then, and the update after the scripts leaves a standing agent's transform alone).</summary>
         internal static void SyncTransforms()
         {
             foreach (var agent in s_Agents)
             {
-                if (agent.m_Crowd == null) continue;
+                if (agent.m_Crowd == null || !agent.updatePosition) continue;
                 FollowTransform(agent);
-                if (agent.m_TransformPending && agent.updatePosition) WriteTransform(agent);
+                // Written when the agent stands elsewhere than it last wrote (or found) its transform.
+                if ((agent.m_NextPosition + Vector3.up * agent.baseOffset - agent.WrittenPosition).sqrMagnitude > 0f) WriteTransform(agent);
             }
         }
 
         /// <summary>A transform moved by script moves the agent (constrained to the NavMesh; freely
-        /// while it waits on a link; a completed link's end wins over the transform). The transform
+        /// while it waits on a link; a completed link's end wins over the transform); the transform
         /// is written back at the next early update.</summary>
         internal static void FollowTransform(NavMeshAgent agent)
         {
@@ -698,17 +699,13 @@ namespace Unbound.Runtime
             var moved = agent.transform.position;
             // Recorded first: the nextPosition setter syncs the agent again.
             agent.WrittenPosition = moved;
-            agent.m_TransformPending = true;
             if (agent.WaitingOnLink) agent.FollowTransformOnLink();
             else agent.nextPosition = moved;
         }
 
-        /// <summary>The transform is written at the agent's next early update.</summary>
-        internal static void DeferTransform(NavMeshAgent agent)
-        {
-            agent.WrittenPosition = agent.transform.position;
-            agent.m_TransformPending = true;
-        }
+        /// <summary>The agent stands where its transform does not: the transform is written at the
+        /// next early update, and is not a script's move until then.</summary>
+        internal static void DeferTransform(NavMeshAgent agent) => agent.WrittenPosition = agent.transform.position;
 
         /// <summary>The frame's agent update: path requests, then the crowds.</summary>
         internal static void Step()
@@ -1279,7 +1276,6 @@ namespace Unbound.Runtime
             var position = agent.m_NextPosition + Vector3.up * agent.baseOffset;
             agent.transform.position = position;
             agent.WrittenPosition = position;
-            agent.m_TransformPending = false;
         }
 
         static void Rotate(NavMeshAgent agent, float dt)

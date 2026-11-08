@@ -15,6 +15,9 @@ namespace UnityEngine.AI
     {
         public const int AllAreas = -1;
         const int MaxPath = 4096;
+        /// <summary>The polygons a raycast visits (reused: scripts cast every frame; the NavMesh
+        /// queries are main-thread only).</summary>
+        static readonly long[] s_RayPath = new long[MaxPath];
 
         public delegate void OnNavMeshPreUpdate();
 
@@ -111,7 +114,7 @@ namespace UnityEngine.AI
                 hit.hit = true;
                 return true;
             }
-            var ray = new DtRaycastHit { path = new long[MaxPath], maxPath = MaxPath };
+            var ray = new DtRaycastHit { path = s_RayPath, maxPath = MaxPath };
             surface.Query.Raycast(startRef, V(start), V(targetPosition), filter, 0, ref ray, 0);
             float t = ray.t;
             var normal = ray.hitNormal;

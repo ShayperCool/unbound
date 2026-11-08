@@ -273,7 +273,9 @@ namespace Unbound.Runtime
             if (!s_Registered)
             {
                 s_Registered = true;
-                PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PreUpdate.AIUpdate), UpdateCarving);
+                // Before the agents' transform sync at the same node (whichever registers first),
+                // so an agent placed again by a cut stands there from this frame's Update.
+                PlayerLoopDriver.RegisterFirst(typeof(UnityEngine.PlayerLoop.PreUpdate.AIUpdate), UpdateCarving);
             }
             if (!s_Obstacles.Contains(obstacle)) s_Obstacles.Add(obstacle);
         }
