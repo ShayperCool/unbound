@@ -179,7 +179,6 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         first_scene.context("no scene to start: the build settings list none; pass --scene")?
     };
 
-    let time = read_settings(project, "TimeManager.asset");
     let company = if settings.company_name.is_empty() {
         "DefaultCompany"
     } else {
@@ -229,10 +228,6 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "renderingLayers": rendering_layers(project),
         "layers": settings.layers,
         "inputAxes": input_axes(project),
-        "fixedDeltaTime": time.as_ref().and_then(|t| t.get("Fixed Timestep")).and_then(fixed_timestep).unwrap_or(0.02),
-        "maximumParticleDeltaTime": time.as_ref().and_then(|t| t.get("Maximum Particle Timestep")).and_then(Value::as_f64).unwrap_or(0.03),
-        "maximumDeltaTime": time.as_ref().and_then(|t| t.get("Maximum Allowed Timestep")).and_then(Value::as_f64).unwrap_or(1.0 / 3.0),
-        "timeScale": time.as_ref().and_then(|t| t.get("m_TimeScale")).and_then(Value::as_f64).unwrap_or(1.0),
         "simulateTouch": options.simulate_touch,
         // Player Settings' active input handling: 0 Input Manager, 1 Input System, 2 both.
         "activeInputHandler": match settings.input_handling {
@@ -256,10 +251,12 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "frameworkDir": project.install.data.join("MonoBleedingEdge/lib/mono/4.5"),
         "vSyncCount": vsync_count(project),
         "renderPipeline": render_pipeline(project),
-        "colorSpace": read_settings(project, "ProjectSettings.asset")
-            .and_then(|p| p.get("m_ActiveColorSpace").and_then(Value::as_i64))
-            .unwrap_or(0),
+
     });
+    config
+        .as_object_mut()
+        .unwrap()
+        .extend(time_and_color(project).as_object().unwrap().clone());
     if let Some(prefs) = &options.player_prefs {
         config["playerPrefsPath"] = json!(prefs);
     }
@@ -270,7 +267,10 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         graph
             .disabled_modules
             .iter()
-            .map(|m| project.install.managed_engine_dir().join(format!("{}.dll", m.assembly)))
+            .map(|m| project
+                .install
+                .managed_engine_dir()
+                .join(format!("{}.dll", m.assembly)))
             .collect::<Vec<_>>()
     );
     tracing::info!("prepared the game in {:.2?}", start.elapsed());
@@ -278,8 +278,9 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
 }
 
 fn read_settings(project: &Project, file: &str) -> Option<Value> {
-    let text = std::fs::read_to_string(project.root.join("ProjectSettings").join(file)).ok()?;
-    let docs = unbound_yaml::parse_documents(&text).ok()?;
+    let docs =
+        unbound_yaml::reads::read_documents(&project.root.join("ProjectSettings").join(file))
+            .ok()?;
     docs.into_iter().next().map(|d| d.body)
 }
 
@@ -509,10 +510,9 @@ fn execution_orders(graph: &unbound_project::Graph) -> BTreeMap<String, i64> {
             let Ok(text) = std::fs::read_to_string(&meta) else {
                 continue;
             };
-            let Some(order) = text
-                .lines()
-                .find_map(|l| l.trim().strip_prefix("executionOrder:"))
-                .and_then(|v| v.trim().parse::<i64>().ok())
+            let Some(order) = unbound_yaml::parse_value(&text)
+                .ok()
+                .and_then(|meta| execution_order(&meta))
             else {
                 continue;
             };
@@ -541,4 +541,32 @@ fn fixed_timestep(value: &Value) -> Option<f64> {
         .and_then(Value::as_f64)
         .unwrap_or(1.0);
     (numerator > 0.0).then(|| count * denominator / numerator)
+}
+
+fn time_and_color(project: &Project) -> Json {
+    let time = read_settings(project, "TimeManager.asset");
+    json!({
+        "fixedDeltaTime": time.as_ref().and_then(|t| t.get("Fixed Timestep")).and_then(fixed_timestep).unwrap_or(0.02),
+        "maximumParticleDeltaTime": time.as_ref().and_then(|t| t.get("Maximum Particle Timestep")).and_then(Value::as_f64).unwrap_or(0.03),
+        "maximumDeltaTime": time.as_ref().and_then(|t| t.get("Maximum Allowed Timestep")).and_then(Value::as_f64).unwrap_or(1.0 / 3.0),
+        "timeScale": time.as_ref().and_then(|t| t.get("m_TimeScale")).and_then(Value::as_f64).unwrap_or(1.0),
+        "colorSpace": read_settings(project, "ProjectSettings.asset")
+            .and_then(|p| p.get("m_ActiveColorSpace").and_then(Value::as_i64)).unwrap_or(0),
+    })
+}
+
+/// Run startup's data readers without compiling scripts, creating a game or writing a view.
+pub fn read_settings_inputs(project: &Project) {
+    let _ = time_and_color(project);
+    let _ = render_pipeline(project);
+    let _ = vsync_count(project);
+    let _ = sorting_layers(project);
+    let _ = rendering_layers(project);
+    let _ = input_axes(project);
+    let _ = crate::audio::ProjectAudioSettings::read(&project.root);
+}
+
+/// Script execution order, shared by startup and importer diagnostics.
+pub fn execution_order(meta: &Value) -> Option<i64> {
+    meta.get("MonoImporter")?.get("executionOrder")?.as_i64()
 }

@@ -1125,13 +1125,7 @@ impl<'a> Builder<'a> {
             .map(|s| s.as_ref())
             .filter(|s| s.time_end > s.time_begin)
             .collect();
-        let mut ranges: Vec<ClipRange> = imp
-            .path("animations.clipAnimations")
-            .and_then(Value::as_seq)
-            .unwrap_or_default()
-            .iter()
-            .map(ClipRange::read)
-            .collect();
+        let mut ranges = clip_ranges(imp);
         if ranges.is_empty() {
             for stack in &takes {
                 let name = stack.element.name.to_string();
@@ -1858,23 +1852,7 @@ impl<'a> Builder<'a> {
 
     /// Material fileIDs (by name) and `externalObjects` remaps.
     fn assign_material_ids(&mut self, imp: &Value, ids: &mut FileIdAllocator) {
-        let remaps: Vec<(String, ObjectRef)> = imp
-            .get("externalObjects")
-            .and_then(Value::as_seq)
-            .unwrap_or_default()
-            .iter()
-            .filter_map(|e| {
-                let first = e.get("first")?;
-                let ty = first.get("type")?.as_str()?;
-                if !ty.ends_with("Material") {
-                    return None;
-                }
-                Some((
-                    first.get("name")?.as_str()?.to_string(),
-                    e.get("second")?.as_ref()?,
-                ))
-            })
-            .collect();
+        let remaps = material_remaps(imp);
         let legacy = self.legacy;
         for material in &mut self.model.materials {
             material.file_id = if legacy {
@@ -3082,3 +3060,37 @@ mod triangulation;
 mod tests;
 #[cfg(test)]
 mod version_guard;
+
+fn clip_ranges(imp: &Value) -> Vec<ClipRange> {
+    imp.path("animations.clipAnimations")
+        .and_then(Value::as_seq)
+        .unwrap_or_default()
+        .iter()
+        .map(ClipRange::read)
+        .collect()
+}
+
+fn material_remaps(imp: &Value) -> Vec<(String, ObjectRef)> {
+    imp.get("externalObjects")
+        .and_then(Value::as_seq)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|e| {
+            let first = e.get("first")?;
+            let ty = first.get("type")?.as_str()?;
+            if !ty.ends_with("Material") {
+                return None;
+            }
+            Some((
+                first.get("name")?.as_str()?.to_string(),
+                e.get("second")?.as_ref()?,
+            ))
+        })
+        .collect()
+}
+
+pub(crate) fn read_metadata_inputs(imp: &Value) {
+    let _ = FileIdTable::read(imp);
+    let _ = clip_ranges(imp);
+    let _ = material_remaps(imp);
+}

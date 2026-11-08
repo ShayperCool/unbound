@@ -125,19 +125,23 @@ pub fn read_meta_header(meta: &Path) -> (Option<Guid>, Vec<String>) {
     let Ok(text) = std::fs::read_to_string(meta) else {
         return (None, Vec::new());
     };
-    let guid = text
+    // Only parse the envelope header here. An importer may reject its own data later without
+    // making an otherwise identifiable asset disappear from the database.
+    let header: String = text
         .lines()
-        .find_map(|line| line.strip_prefix("guid:"))
-        .and_then(|guid| Guid::parse(guid.trim()));
-    let mut labels = Vec::new();
-    let mut lines = text.lines().skip_while(|line| *line != "labels:").skip(1);
-    for line in lines.by_ref() {
-        match line.strip_prefix("- ") {
-            Some(label) => labels.push(label.trim().trim_matches('\'').to_string()),
-            None => break,
-        }
-    }
-    (guid, labels)
+        .scan(false, |in_importer, line| {
+            if !line.starts_with([' ', '-']) && !line.trim().is_empty() {
+                *in_importer = line.ends_with("Importer:");
+            }
+            Some(if *in_importer {
+                String::new()
+            } else {
+                format!("{line}\n")
+            })
+        })
+        .collect();
+    let value = unbound_yaml::parse_value(&header).unwrap_or_default();
+    meta_header(&value)
 }
 
 /// Reads only the `guid:` line; the rest of a `.meta` is parsed by the importer that needs it.
@@ -146,4 +150,18 @@ pub fn read_meta_guid(meta: &Path) -> Option<Guid> {
     text.lines()
         .find_map(|line| line.strip_prefix("guid:"))
         .and_then(|guid| Guid::parse(guid.trim()))
+}
+
+/// The database metadata reader, shared with field coverage.
+pub fn meta_header(value: &unbound_yaml::Value) -> (Option<Guid>, Vec<String>) {
+    let guid = value.get("guid").and_then(unbound_yaml::Value::as_guid);
+    let labels = value
+        .get("labels")
+        .and_then(unbound_yaml::Value::as_seq)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(unbound_yaml::Value::as_str)
+        .map(String::from)
+        .collect();
+    (guid, labels)
 }

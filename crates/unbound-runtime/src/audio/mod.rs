@@ -77,9 +77,8 @@ impl Default for ProjectAudioSettings {
 impl ProjectAudioSettings {
     pub fn read(project_root: &Path) -> Self {
         let path = project_root.join("ProjectSettings/AudioManager.asset");
-        let body = std::fs::read_to_string(&path)
+        let body = unbound_yaml::reads::read_documents(&path)
             .ok()
-            .and_then(|text| unbound_yaml::parse_documents(&text).ok())
             .and_then(|docs| docs.into_iter().next())
             .map(|d| d.body);
         match body {

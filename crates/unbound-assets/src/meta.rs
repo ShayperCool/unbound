@@ -92,6 +92,25 @@ pub(crate) fn polygons(v: Option<&Value>) -> Vec<Vec<[f32; 2]>> {
         .collect()
 }
 
+/// Execute the importers' metadata readers without decoding or converting source files.
+/// New fields read by these routines are automatically included in diagnostic coverage.
+pub fn read_inputs(meta: &Value, target: &str) {
+    if let Some(imp) = meta.get("TextureImporter") {
+        let settings = crate::TextureSettings::read(meta, target);
+        let _ = crate::sprite::read_sprites(imp, &settings.sprite, "", (1, 1), (1, 1));
+    }
+    if meta.get("ModelImporter").is_some() {
+        let _ = crate::ModelSettings::read(meta);
+        crate::model::read_metadata_inputs(importer(meta, "ModelImporter"));
+    }
+    if meta.get("AudioImporter").is_some() {
+        let _ = crate::AudioSettings::read(meta, target);
+    }
+    if meta.get("TrueTypeFontImporter").is_some() {
+        let _ = crate::font::FontSettings::read(meta);
+    }
+}
+
 /// Where a sub-asset's fileID came from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FileIdSource {

@@ -92,10 +92,11 @@ impl TierSettings {
 }
 
 fn first_document(path: &Path) -> Result<Option<Document>> {
-    let Ok(text) = std::fs::read_to_string(path) else {
+    if !path.exists() {
         return Ok(None);
-    };
-    let docs = unbound_yaml::parse_documents(&text).with_context(|| path.display().to_string())?;
+    }
+    let docs =
+        unbound_yaml::reads::read_documents(path).with_context(|| path.display().to_string())?;
     Ok(docs.into_iter().next())
 }
 

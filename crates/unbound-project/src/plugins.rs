@@ -88,6 +88,11 @@ pub fn native_editor_plugin(file: &Path) -> bool {
     let Ok(meta) = unbound_yaml::parse_value(&meta) else {
         return false;
     };
+    native_editor_plugin_from_meta(file, &meta)
+}
+
+/// The native plugin's actual platform reader, without opening the metadata again.
+pub fn native_editor_plugin_from_meta(file: &Path, meta: &Value) -> bool {
     let importer = meta.get("PluginImporter").cloned().unwrap_or_default();
     let plugin = Plugin {
         file: file.to_path_buf(),
@@ -158,6 +163,10 @@ pub fn read_plugin(file: &Path, path: String) -> Option<Plugin> {
     }
     let meta = std::fs::read_to_string(format!("{}.meta", file.display())).ok()?;
     let meta = unbound_yaml::parse_value(&meta).ok()?;
+    Some(plugin_from_meta(file, path, &meta))
+}
+
+pub fn plugin_from_meta(file: &Path, path: String, meta: &Value) -> Plugin {
     let labels: Vec<&str> = meta
         .get("labels")
         .and_then(Value::as_seq)
@@ -178,14 +187,14 @@ pub fn read_plugin(file: &Path, path: String) -> Option<Plugin> {
                 .collect()
         })
         .unwrap_or_default();
-    Some(Plugin {
+    Plugin {
         file: file.to_path_buf(),
         path,
         explicitly_referenced,
         define_constraints,
         analyzer: labels.contains(&"RoslynAnalyzer"),
         importer,
-    })
+    }
 }
 
 /// A managed DLL's importer settings. Unity imports every `.dll` with the PluginImporter whatever
@@ -248,7 +257,9 @@ mod tests {
 
     #[test]
     fn a_dll_without_plugin_importer_settings_is_for_any_platform() {
-        let p = plugin("fileFormatVersion: 2\nguid: f84de9af142947eeb3522e42d9487838\nDefaultImporter:\n  userData:\n");
+        let p = plugin(
+            "fileFormatVersion: 2\nguid: f84de9af142947eeb3522e42d9487838\nDefaultImporter:\n  userData:\n",
+        );
         assert!(p.compatible_with("Editor"));
         assert!(p.compatible_with("Android"));
     }
@@ -273,7 +284,10 @@ mod tests {
         )
         .unwrap();
         std::fs::write(bundle.join("Contents/MacOS/WrapperLib"), b"").unwrap();
-        assert_eq!(native_library_file(&bundle), Some(bundle.join("Contents/MacOS/WrapperLib")));
+        assert_eq!(
+            native_library_file(&bundle),
+            Some(bundle.join("Contents/MacOS/WrapperLib"))
+        );
         let file = dir.join("Plain.bundle");
         std::fs::write(&file, b"").unwrap();
         assert_eq!(native_library_file(&file), Some(file.clone()));

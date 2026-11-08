@@ -83,7 +83,12 @@ impl Map {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (&str, &Value)> {
-        self.0.iter().map(|(k, v)| (k.as_str(), v))
+        self.0.iter().map(|(k, v)| {
+            if let Some(reads) = &self.1 {
+                reads.note(k);
+            }
+            (k.as_str(), v)
+        })
     }
 
     pub fn len(&self) -> usize {
