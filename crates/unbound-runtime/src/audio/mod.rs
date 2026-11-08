@@ -685,6 +685,7 @@ mod tests {
                     ..Default::default()
                 },
             );
+            mixer.update_suspension();
         }
         FRAMES.store(0, Ordering::Relaxed);
         SAMPLE.store(0, Ordering::Relaxed);
