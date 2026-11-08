@@ -800,7 +800,10 @@ impl State {
                 } else {
                     (pass.name.clone(), canonical_tags(pass.own_tags.iter()))
                 };
-                passes.push(json!({ "name": name, "tags": tags_json(&tags) }));
+                let keyword_sets = self.pass_variant_sets(inputs, pass).ok();
+                passes.push(
+                    json!({ "name": name, "tags": tags_json(&tags), "keyword_sets": keyword_sets }),
+                );
             }
             out.push(json!({
                 "tags": tags_json(&canonical_tags(sub.tags.iter())),
@@ -810,6 +813,41 @@ impl State {
             }));
         }
         Ok(out)
+    }
+
+    /// Variant choices belong to the resolved pass's own program, including its scoped
+    /// includes. Unknown source forms leave this field null, preserving older-host behaviour.
+    fn pass_variant_sets(
+        &mut self,
+        inputs: &Inputs,
+        pass: &PassInfo,
+    ) -> Result<Vec<Vec<String>>, Unknown> {
+        let pass = match &pass.use_pass {
+            Some(target) => self.use_pass_program(inputs, target, 0)?,
+            None => pass.clone(),
+        };
+        if pass.glsl || pass.grab.is_some() {
+            return Err(Unknown::fixed("this pass's variant choices are not read"));
+        }
+        let Some(program) = &pass.program else {
+            return Err(Unknown::fixed(
+                "fixed-function variant choices are not read",
+            ));
+        };
+        if program.surface {
+            return Err(Unknown::fixed("surface variant choices are not read"));
+        }
+        let p = unbound_shaders::Program {
+            file: program.file.clone(),
+            source: program.code.clone(),
+            cg: program.cg,
+            light_mode: pass.states.tags.get("LightMode").cloned(),
+        };
+        let pragmas = self.compiler(inputs)?.pragma_lines(&p).map_err(|e| {
+            Unknown::fixed(format!("a pass's variant choices cannot be read: {e:#}"))
+        })?;
+        unbound_shaders::keywords::variant_sets(&pragmas)
+            .map_err(|e| Unknown::fixed(format!("{e:#}")))
     }
 
     /// The keywords a project shader's own SubShaders declare (an error: the space is unknown).

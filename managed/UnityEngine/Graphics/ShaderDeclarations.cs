@@ -35,6 +35,8 @@ namespace Unbound.Runtime
         {
             internal readonly Dictionary<string, string> Tags = new Dictionary<string, string>(StringComparer.Ordinal);
             internal readonly List<Dictionary<string, string>> Passes = new List<Dictionary<string, string>>();
+            /// <summary>Each pass's variant choices, null when the host cannot read them.</summary>
+            internal readonly List<string[][]> KeywordSets = new List<string[][]>();
             /// <summary>Its <c>LOD</c> (0: none); null when the host does not send it (an older
             /// host): Shader.passCount then keeps the renderer's pass list.</summary>
             internal int? Lod;
@@ -176,6 +178,19 @@ namespace Unbound.Runtime
                         var tags = new Dictionary<string, string>(StringComparer.Ordinal);
                         Tags(pass.GetProperty("tags"), tags);
                         s.Passes.Add(tags);
+                        string[][] sets = null;
+                        if (pass.TryGetProperty("keyword_sets", out var choices) && choices.ValueKind == JsonValueKind.Array)
+                        {
+                            var list = new List<string[]>();
+                            foreach (var group in choices.EnumerateArray())
+                            {
+                                var names = new List<string>();
+                                foreach (var keyword in group.EnumerateArray()) names.Add(keyword.GetString());
+                                list.Add(names.ToArray());
+                            }
+                            sets = list.ToArray();
+                        }
+                        s.KeywordSets.Add(sets);
                     }
                     d.SubShaders.Add(s);
                 }

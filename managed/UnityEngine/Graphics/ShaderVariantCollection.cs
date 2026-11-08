@@ -150,8 +150,8 @@ namespace UnityEngine
         /// <summary>A shader, a pass type and keywords. The constructor checks the variant against
         /// the shader as far as its declarations are known: a null shader, a pass type none of its
         /// passes (its Fallback's included) has, an undeclared keyword or one given twice throw
-        /// ArgumentException with Unity's messages. Whether each keyword belongs to that pass and
-        /// whether two keywords of one <c>multi_compile</c> set are given together is not checked.</summary>
+        /// ArgumentException with Unity's messages. Known pass declarations also check keyword
+        /// membership and mutually exclusive choices within explicit keyword declarations.</summary>
         public partial struct ShaderVariant
         {
             public Shader shader;
@@ -187,9 +187,43 @@ namespace UnityEngine
                     var k = keywords[i];
                     // An empty keyword is no keyword.
                     if (string.IsNullOrEmpty(k)) continue;
-                    if (declared.IndexOf(k) < 0 || Array.IndexOf(keywords, k, 0, i) >= 0)
-                        throw new ArgumentException($"passed shader keyword variant not found in shader {shader.name} pass type {(int)passType}");
+                    if (Array.IndexOf(keywords, k, 0, i) >= 0) Invalid();
                 }
+                bool unknown = !declared.SubShadersKnown;
+                foreach (var sub in declared.SubShaders)
+                    for (int i = 0; i < sub.Passes.Count; i++)
+                    {
+                        if (PassTypeOf(ShaderDeclarations.Tag(sub.Passes[i], "LightMode")) != passType) continue;
+                        var sets = sub.KeywordSets[i];
+                        if (sets == null) { unknown = true; continue; }
+                        if (Matches(sets, keywords)) return;
+                    }
+                if (!unknown) Invalid();
+                // Older hosts and unreadable programs retain the shader-wide validation.
+                if (declared.KeywordsKnown)
+                    foreach (var k in keywords)
+                        if (!string.IsNullOrEmpty(k) && declared.IndexOf(k) < 0) Invalid();
+
+                void Invalid() => throw new ArgumentException($"passed shader keyword variant not found in shader {shader.name} pass type {(int)passType}");
+            }
+
+            static bool Matches(string[][] sets, string[] keywords)
+            {
+                foreach (var keyword in keywords)
+                {
+                    if (string.IsNullOrEmpty(keyword)) continue;
+                    bool found = false;
+                    foreach (var set in sets)
+                        if (Array.IndexOf(set, keyword) >= 0) { found = true; break; }
+                    if (!found) return false;
+                }
+                foreach (var set in sets)
+                {
+                    int selected = 0;
+                    foreach (var keyword in keywords)
+                        if (!string.IsNullOrEmpty(keyword) && Array.IndexOf(set, keyword) >= 0 && ++selected > 1) return false;
+                }
+                return true;
             }
 
             static bool HasPass(ShaderDeclarations declared, PassType passType)

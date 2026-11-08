@@ -152,9 +152,12 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       are errors at load and listed by `unbound doctor`. `LightingSettings` (850595691) and
       `ShaderVariantCollection` (200) read their data (`lightingassets`): the scenes' Lighting
       Settings back `UnityEditor.Lightmapping` (bake inputs: they change no Play mode frame);
-      collections answer Unity's counts, queries and warm-up state. Open: the `ShaderVariant`
-      constructor checks keywords against the shader's whole space, not each pass's sets;
-      WarmUp only counts (variants compile when first drawn).
+      collections answer Unity's counts, queries and warm-up state. The `ShaderVariant` constructor
+      validates explicit per-pass keyword choices, including global/local `multi_compile`,
+      `shader_feature`, dynamic branches and placeholders (`lightingassets variant-sets`).
+      Built-in shorthand combination restrictions, serialized built-in, surface and fixed-function
+      pass choices remain unmeasured and retain prior validation. Open: WarmUp only counts
+      (variants compile when first drawn).
 - [ ] `SystemInfo` answers follow what the renderer does.
 - [ ] `api-gaps` noise: trivial attributes (`JetBrains.Annotations.*`, `ResourcePathAttribute`,
       `CategoryInfoAttribute`, `ShaderKeywordFilter.*`) implemented, so the coverage line counts

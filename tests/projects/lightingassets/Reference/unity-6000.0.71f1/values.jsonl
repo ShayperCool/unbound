@@ -271,6 +271,53 @@
 {"case":"runtime","step":"progressive empty","result":true,"collection":{"name":"","shaders":0,"variants":0,"warmed":0,"isWarmedUp":false}}
 {"case":"clone","collection":{"name":"Warmup(Clone)","shaders":3,"variants":7,"warmed":0,"isWarmedUp":false}}
 {"case":"clone","collection":{"name":"Authored(Clone)","shaders":3,"variants":4,"warmed":0,"isWarmedUp":false}}
+{"case":"variant-sets","name":"none","result":{"shader":"Probe/VariantSets","pass":0,"keywords":[]}}
+{"case":"variant-sets","name":"MC_A","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["MC_A"]}}
+{"case":"variant-sets","name":"MC_B","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["MC_B"]}}
+{"case":"variant-sets","name":"MC_A+MC_B","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"MC_A duplicate","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"MC_A other pass","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 4"}}
+{"case":"variant-sets","name":"LC_A","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["LC_A"]}}
+{"case":"variant-sets","name":"LC_B","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["LC_B"]}}
+{"case":"variant-sets","name":"LC_A+LC_B","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"LC_A duplicate","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"LC_A other pass","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 4"}}
+{"case":"variant-sets","name":"SF_A","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["SF_A"]}}
+{"case":"variant-sets","name":"SF_B","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["SF_B"]}}
+{"case":"variant-sets","name":"SF_A+SF_B","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"SF_A duplicate","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"SF_A other pass","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 4"}}
+{"case":"variant-sets","name":"LF_A","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["LF_A"]}}
+{"case":"variant-sets","name":"LF_B","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["LF_B"]}}
+{"case":"variant-sets","name":"LF_A+LF_B","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"LF_A duplicate","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"LF_A other pass","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 4"}}
+{"case":"variant-sets","name":"DB_A","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["DB_A"]}}
+{"case":"variant-sets","name":"DB_B","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["DB_B"]}}
+{"case":"variant-sets","name":"DB_A+DB_B","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"DB_A duplicate","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"DB_A other pass","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 4"}}
+{"case":"variant-sets","name":"independent sets","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["MC_A","LC_A","SF_A","LF_A"]}}
+{"case":"variant-sets","name":"second normal","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["SECOND_A"]}}
+{"case":"variant-sets","name":"two normal passes","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"first then second normal conflict","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"second normal conflict","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"forward","result":{"shader":"Probe/VariantSets","pass":4,"keywords":["FORWARD_A"]}}
+{"case":"variant-sets","name":"forward conflict","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 4"}}
+{"case":"variant-sets","name":"wrong pass","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"placeholder","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["_"]}}
+{"case":"variant-sets","name":"placeholder and keyword","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"double placeholder","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["__"]}}
+{"case":"variant-sets","name":"empty","result":{"shader":"Probe/VariantSets","pass":0,"keywords":[""]}}
+{"case":"variant-sets","name":"empty repeated","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["",""]}}
+{"case":"variant-sets","name":"null entry","result":{"shader":"Probe/VariantSets","pass":0,"keywords":[null]}}
+{"case":"variant-sets","name":"null keywords","result":{"shader":"Probe/VariantSets","pass":0,"keywords":null}}
+{"case":"variant-sets","name":"stereo","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"fog","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["FOG_LINEAR"]}}
+{"case":"variant-sets","name":"fog conflict","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"placeholder dynamic","result":{"shader":"Probe/VariantSets","pass":0,"keywords":["_","DB_A"]}}
+{"case":"variant-sets","name":"placeholder second pass","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
+{"case":"variant-sets","name":"two stereo","result":{"exception":"System.ArgumentException","message":"passed shader keyword variant not found in shader Probe/VariantSets pass type 0"}}
 {"case":"lit-api","try":true,"tried":"Lit","get":"Lit","forScene":"Lit","same":true,"bakedGI":false,"realtimeGI":true,"settings":{"name":"Lit","bakedGI":false,"realtimeGI":true,"realtimeEnvironmentLighting":true,"autoGenerate":false,"mixedBakeMode":1,"albedoBoost":3,"indirectScale":4,"lightmapper":1,"lightmapMaxSize":512,"lightmapResolution":8,"lightmapPadding":2,"lightmapCompression":3,"compressLightmaps":true,"ao":false,"aoMaxDistance":1,"aoExponentIndirect":1,"aoExponentDirect":0,"extractAO":false,"directionalityMode":1,"exportTrainingData":false,"trainingDataDestination":"TrainingData","indirectResolution":2,"sampling":1,"directSampleCount":32,"indirectSampleCount":128,"bounces":2,"maxBounces":2,"russianRouletteStartBounce":2,"minBounces":2,"prioritizeView":true,"filteringMode":0,"denoiserTypeDirect":0,"denoiserTypeIndirect":0,"denoiserTypeAO":0,"filterTypeDirect":0,"filterTypeIndirect":0,"filterTypeAO":0,"filteringGaussianRadiusDirect":1,"filteringGaussianRadiusIndirect":1,"filteringGaussianRadiusAO":1,"filteringGaussRadiusDirect":1,"filteringGaussRadiusIndirect":1,"filteringGaussRadiusAO":1,"filteringAtrousPositionSigmaDirect":0.5,"filteringAtrousPositionSigmaIndirect":2,"filteringAtrousPositionSigmaAO":1,"environmentImportanceSampling":true,"environmentSampleCount":64,"lightProbeSampleCountMultiplier":4,"respectSceneVisibilityWhenBakingGI":false}}
 {"case":"lit-lightmaps","lightmaps":1,"mode":0,"dir":false,"renderers":[["Cube",0,-1],["Cube",0,-1],["Plane",0,-1]],"lights":[["Directional Light",1,0,true],["Point Light",2,0,true]]}
 {"case":"lit-edited-lightmaps","lightmaps":1,"mode":0,"dir":false,"renderers":[["Cube",0,-1],["Cube",0,-1],["Plane",0,-1]],"lights":[["Directional Light",1,0,true],["Point Light",2,0,true]]}

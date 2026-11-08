@@ -21,6 +21,12 @@
 //!   "keywords": [{ "name", "local", "dynamic" }] }
 //! ```
 //!
+//! Each pass may also send `keyword_sets: [[name, ...], ...]`: choices read from its program
+//! for variant validation, including explicit placeholders. Null/missing means unknown (older
+//! hosts, serialized built-ins, surface/fixed-function programs). Light-pass shorthand lists
+//! currently carry membership only, as singleton sets; their combination restrictions are not
+//! established by this reply. Project choices use the profile's keyword rules, like the space.
+//!
 //! `lod` and `restricted` are optional: an older host omits them, and the managed side then
 //! keeps the renderer's pass list for `Shader.passCount` (the behaviour before they were sent).
 //! A built-in shader's SubShaders are never `restricted` (their serialized form does not say).

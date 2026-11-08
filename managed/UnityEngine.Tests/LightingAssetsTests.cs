@@ -565,6 +565,29 @@ ShaderVariantCollection:
         }
 
         [Fact]
+        public void VariantKeywordsMustBelongToOnePassAndOneChoicePerSet()
+        {
+            var shader = Declared(new string[] { null }, new[] { "A", "B", "C", "OTHER" });
+            m_Declarations[shader.name] = JsonSerializer.Serialize(new
+            {
+                found = true, subshaders_known = true, keywords_known = true,
+                keywords = new[] { "A", "B", "C", "OTHER" }.Select(name => new { name, local = false, dynamic = false }),
+                subshaders = new[] { new { tags = new string[0][], passes = new[] {
+                    new { name = "", tags = new string[0][], keyword_sets = new[] { new[] { "_", "A", "B" } } },
+                    new { name = "", tags = new string[0][], keyword_sets = new[] { new[] { "_", "C" } } },
+                    new { name = "", tags = new[] { new[] { "LIGHTMODE", "FORWARDBASE" } }, keyword_sets = new[] { new[] { "OTHER" } } },
+                } } },
+            });
+            foreach (var keys in new[] { new string[0], new[] { "A" }, new[] { "B" }, new[] { "C" }, new[] { "_" }, new[] { "", "", null } })
+                new ShaderVariantCollection.ShaderVariant(shader, PassType.Normal, keys);
+            foreach (var keys in new[] { new[] { "A", "B" }, new[] { "A", "C" }, new[] { "_", "A" }, new[] { "A", "A" }, new[] { "OTHER" } })
+                Assert.Equal($"passed shader keyword variant not found in shader {shader.name} pass type 0",
+                    Assert.Throws<ArgumentException>(() => new ShaderVariantCollection.ShaderVariant(shader, PassType.Normal, keys)).Message);
+            new ShaderVariantCollection.ShaderVariant(shader, PassType.ForwardBase, "OTHER");
+            Assert.Throws<ArgumentException>(() => new ShaderVariantCollection.ShaderVariant(shader, PassType.ForwardBase, "A"));
+        }
+
+        [Fact]
         public void TheVariantConstructorChecksWhatTheDeclarationsTell()
         {
             var shader = Declared(new[] { null, "FORWARDBASE", "SHADOWCASTER" }, new[] { "PLAIN_ON", "RED_ON", "DIRECTIONAL", "SHADOWS_DEPTH" });

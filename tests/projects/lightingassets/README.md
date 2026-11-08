@@ -56,9 +56,7 @@ settings' preloaded collection) with `run.py setup`:
 
 ## Unbound
 
-Matches every value except three `ShaderVariant` constructor checks that need each pass's own
-keyword sets (a keyword of another pass, two keywords of one `multi_compile` set): Unbound
-checks the shader's whole keyword space (`compare.py` RESIDUALS). Frames: the lit and
+Matches every recorded value, including per-pass `ShaderVariant` constructor checks. Frames: the lit and
 `realtimeoff-red` frames within a mean difference of 0.25 (limit 0.5); `realtime-red` and
 `realtime-blue` differ (Unbound does not draw Enlighten Realtime GI and warns once per scene;
 `unbound doctor` lists scenes whose loaded LightingData has realtime lightmap contributors,
@@ -91,3 +89,23 @@ scenes with precomputed output unsupported even if their settings were changed a
 Unassigned settings and scenes with the switch on but no output are informational. Broken
 references remain incomplete checks. This is a static inventory of serialized scene references;
 lighting data assigned later by game code is outside its scope.
+
+## Per-pass variant validation
+
+`VariantSets.shader` and `variant-sets` records measure global/local `multi_compile` and
+`shader_feature`, dynamic branches, fog choices, duplicate keywords, empty/null entries,
+placeholders and two distinct passes of the same type. A combination must belong to one
+pass, with at most one choice from each declaration. `_` is a choice, so it conflicts with
+a named choice in its declaration; empty/null entries select nothing. Stereo keywords
+absent from a program are rejected even though they appear in the shader's keyword space.
+Two independent 6000.0.71f1 GPU Editor captures agree, with all older values unchanged.
+The [6000.0 constructor contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ShaderVariantCollection.ShaderVariant-ctor.html)
+specifies ArgumentException for a missing variant, shader or pass type. Exact messages and
+choice rules above are reference observations, not a guarantee for other releases.
+
+Choices are read by the shader-declarations provider under the compatibility profile's
+keyword rules. Missing/unknown choices retain the older shader-wide check, including older
+hosts, serialized built-in shaders, generated surface passes and fixed-function passes.
+Built-in light-pass shorthand declarations currently constrain membership only; their
+combination restrictions remain open. Explicit declarations and fog sets constrain choices.
+The reply is session metadata, not a disk cache or an importer format.

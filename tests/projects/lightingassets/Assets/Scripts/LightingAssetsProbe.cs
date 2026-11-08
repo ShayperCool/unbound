@@ -18,7 +18,7 @@ using UnityEditor;
 /// LightingSettings), then Lit (settings changed after its bake), then Realtime (Enlighten realtime
 /// GI). Writes <c>values.jsonl</c> and PNGs into the folder, then quits.
 /// </summary>
-public class LightingAssetsProbe : MonoBehaviour
+public partial class LightingAssetsProbe : MonoBehaviour
 {
     const int Width = 320, Height = 180;
     readonly StringBuilder m_Out = new StringBuilder();
@@ -143,6 +143,7 @@ public class LightingAssetsProbe : MonoBehaviour
 #endif
 
         RecordCollections(holder);
+        RecordVariantSets();
 
         SceneManager.LoadScene("Lit");
         yield return null;

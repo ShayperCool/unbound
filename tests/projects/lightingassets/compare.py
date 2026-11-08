@@ -18,14 +18,8 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-# The keyword checks of ShaderVariantCollection.ShaderVariant's constructor that need each pass's
-# own keyword sets (which pass declares a keyword, which keywords one multi_compile set holds):
-# Unbound checks keywords against the shader's whole keyword space only.
-RESIDUALS = {
-    ('variant', 'plain other pass keyword'),
-    ('variant', 'forward PLAIN_ON'),
-    ('variant', 'plain ONE_A ONE_B'),
-}
+# Every measured constructor check is required to match.
+RESIDUALS = set()
 # Frames Unbound draws as Unity does; the realtime ones carry Enlighten's bounced light, which
 # Unbound does not draw (it warns instead).
 GATED_IMAGES = ['lit-authored', 'lit-edited', 'lit-assigned', 'realtimeoff-red']

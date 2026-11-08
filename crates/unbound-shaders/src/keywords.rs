@@ -137,7 +137,7 @@ fn declarations(pragmas: &[Pragma]) -> Result<Vec<Declaration>> {
         .filter(|p| p.words.first().is_some_and(|w| w == "skip_variants"))
         .flat_map(|p| p.words.iter().skip(1))
         .collect();
-    let mut out = declared(pragmas)?;
+    let mut out = declared(pragmas, false)?;
     for d in &mut out {
         d.keywords.retain(|k| !skipped.contains(&k));
     }
@@ -145,7 +145,7 @@ fn declarations(pragmas: &[Pragma]) -> Result<Vec<Declaration>> {
     Ok(out)
 }
 
-fn declared(pragmas: &[Pragma]) -> Result<Vec<Declaration>> {
+fn declared(pragmas: &[Pragma], placeholders: bool) -> Result<Vec<Declaration>> {
     let mut out = Vec::new();
     let procedural = pragmas.iter().any(|p| {
         p.words.first().is_some_and(|w| w == "instancing_options")
@@ -157,7 +157,13 @@ fn declared(pragmas: &[Pragma]) -> Result<Vec<Declaration>> {
         };
         let light = |words: &[&str]| set(words, Group::LightPass);
         match first.as_str() {
-            "multi_compile_fog" => out.push(set(&FOG, Group::Builtin)),
+            "multi_compile_fog" => {
+                let mut d = set(&FOG, Group::Builtin);
+                if placeholders {
+                    d.keywords.insert(0, "__".into());
+                }
+                out.push(d);
+            }
             "multi_compile_instancing" => {
                 let mut d = set(&["INSTANCING_ON"], Group::Builtin);
                 if procedural {
@@ -210,7 +216,7 @@ fn declared(pragmas: &[Pragma]) -> Result<Vec<Declaration>> {
                 };
                 let keywords: Vec<String> = rest
                     .iter()
-                    .filter(|k| !k.chars().all(|c| c == '_'))
+                    .filter(|k| placeholders || !k.chars().all(|c| c == '_'))
                     .cloned()
                     .collect();
                 if keywords.is_empty() {
@@ -226,6 +232,29 @@ fn declared(pragmas: &[Pragma]) -> Result<Vec<Declaration>> {
         }
     }
     Ok(out)
+}
+
+/// A pass's keyword choices for variant validation. Explicit declarations retain their
+/// placeholders, which the variant constructor treats as choices even though keywordSpace
+/// omits them. Light-pass shorthand lists describe keyword membership, not exclusive choices:
+/// e.g. DIRECTIONAL and LIGHTMAP_ON can coexist in a forward-base variant.
+pub fn variant_sets(pragmas: &[Pragma]) -> Result<Vec<Vec<String>>> {
+    let skipped: Vec<&String> = pragmas
+        .iter()
+        .filter(|p| p.words.first().is_some_and(|w| w == "skip_variants"))
+        .flat_map(|p| p.words.iter().skip(1))
+        .collect();
+    let mut sets = Vec::new();
+    for mut d in declared(pragmas, true)? {
+        d.keywords.retain(|k| !skipped.contains(&k));
+        match d.group {
+            Group::Global | Group::Local | Group::Builtin => sets.push(d.keywords),
+            Group::LightPass => {
+                sets.extend(d.keywords.into_iter().map(|k| vec![k]));
+            }
+        }
+    }
+    Ok(sets)
 }
 
 /// A keyword space being built: keywords in order, each once (its first declaration's kind).
@@ -432,6 +461,18 @@ mod tests {
     /// `Probe/KwForms` (after preprocessing on OpenGLCore: the `SHADER_API_D3D11` declaration
     /// and the plain `#include`'s are gone, the `#include_with_pragmas` file's are in), against
     /// the canonical `probe.Probe/KwForms.space.keywordNames` and its local/dynamic flags.
+    #[test]
+    fn variant_choices_keep_placeholders_and_separate_independent_sets() {
+        let sets = variant_sets(&pragmas("#pragma multi_compile _ A B\n#pragma shader_feature_local __ C D\n#pragma dynamic_branch E F\n#pragma multi_compile_fog\n#pragma multi_compile_fwdbase\n#pragma skip_variants B")).unwrap();
+        assert_eq!(sets[0], ["_", "A"]);
+        assert_eq!(sets[1], ["__", "C", "D"]);
+        assert_eq!(sets[2], ["E", "F"]);
+        assert_eq!(sets[3], ["__", "FOG_LINEAR", "FOG_EXP", "FOG_EXP2"]);
+        assert!(sets.iter().any(|s| s == &["DIRECTIONAL"]));
+        assert!(sets.iter().any(|s| s == &["LIGHTMAP_ON"]));
+        assert!(variant_sets(&pragmas("#pragma multi_compile_new_unmeasured A B")).is_err());
+    }
+
     #[test]
     fn pass_keywords_are_grouped_by_stage_and_kind() {
         let mut space = Space::shader();

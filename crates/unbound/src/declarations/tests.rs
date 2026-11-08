@@ -105,6 +105,67 @@ fn ask_compute(provider: &Provider, file: &Path) -> Value {
     serde_json::from_str(&provider.compute(file.to_str().unwrap())).unwrap()
 }
 
+#[test]
+fn variant_choices_follow_each_resolved_pass_program() {
+    let scratch = Scratch::new("decl-variant-choices");
+    scratch.write("CGIncludes/UnityCG.cginc", "// stand-in\n");
+    scratch.write(
+        "Assets/Sets.shader",
+        r#"Shader "Tests/Sets" {
+        SubShader {
+            Pass { Name "Plain"
+                HLSLPROGRAM
+                #pragma vertex vert
+                #pragma fragment frag
+                #pragma multi_compile _ A B
+                #pragma shader_feature_local __ C D
+                #pragma skip_variants B
+                float4 vert(float4 p : POSITION) : SV_POSITION { return p; }
+                float4 frag() : SV_Target { return 1; }
+                ENDHLSL
+            }
+            Pass { Tags { "LightMode" = "ForwardBase" }
+                HLSLPROGRAM
+                #pragma vertex vert
+                #pragma fragment frag
+                #pragma multi_compile _ FORWARD
+                float4 vert(float4 p : POSITION) : SV_POSITION { return p; }
+                float4 frag() : SV_Target { return 1; }
+                ENDHLSL
+            }
+        }
+    }"#,
+    );
+    scratch.write(
+        "Assets/UseSets.shader",
+        r#"Shader "Tests/UseSets" {
+        SubShader { UsePass "Tests/Sets/PLAIN" }
+    }"#,
+    );
+    let provider = Provider::new(inputs(
+        &scratch,
+        scratch.0.join("CGIncludes"),
+        scratch.0.join("no-install"),
+        MEASURED,
+        Arc::new(AtomicUsize::new(0)),
+        Arc::new(AtomicBool::new(false)),
+    ));
+    let answer = ask(&provider, "Tests/Sets");
+    assert_eq!(
+        answer["subshaders"][0]["passes"][0]["keyword_sets"],
+        json!([["_", "A"], ["__", "C", "D"]])
+    );
+    assert_eq!(
+        answer["subshaders"][0]["passes"][1]["keyword_sets"],
+        json!([["_", "FORWARD"]])
+    );
+    let used = ask(&provider, "Tests/UseSets");
+    assert_eq!(
+        used["subshaders"][0]["passes"][0]["keyword_sets"],
+        answer["subshaders"][0]["passes"][0]["keyword_sets"]
+    );
+}
+
 fn names(answer: &Value) -> Vec<String> {
     answer["keywords"]
         .as_array()
@@ -638,9 +699,10 @@ fn builtin_sources_declare_the_keywords_unity_lists() {
         eprintln!("skipped: no 6000.0.71f1 install");
         return;
     };
-    let Some(sources) = unbound_project::builtin_shaders::BuiltinShaders::cached(
-        "6000.0.71f1".parse().unwrap(),
-    ).unwrap() else {
+    let Some(sources) =
+        unbound_project::builtin_shaders::BuiltinShaders::cached("6000.0.71f1".parse().unwrap())
+            .unwrap()
+    else {
         eprintln!("skipped: no 6000.0.71f1 built-in shader sources");
         return;
     };
