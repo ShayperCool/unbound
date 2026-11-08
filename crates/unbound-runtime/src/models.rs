@@ -780,10 +780,10 @@ fn clip_document(clip: &ModelClip, mask: Option<&[(String, f32)]>) -> Document {
         }
     }
     let float_curve = |curve: Value, attribute: &str, class_id: i32| {
-        let Value::Map(map) = curve else {
+        let Value::Map(curve_map) = curve else {
             unreachable!()
         };
-        let mut entries = map.0;
+        let mut entries = curve_map.0;
         entries.push(("attribute".to_string(), scalar(attribute)));
         entries.push(("classID".to_string(), scalar(class_id)));
         entries.push(("script".to_string(), map(vec![("fileID", scalar(0))])));
