@@ -26,8 +26,8 @@ public partial class ParticleRenderProbe
     static ParticleSystem s_EventSystem;
     static readonly List<ParticleCollisionEvent> s_CollisionEvents = new List<ParticleCollisionEvent>();
 
-    /// <summary>The collision events of the frame on every box hit: count, then per event the
-    /// intersection relative to the control's origin, the normal and the velocity.</summary>
+    /// <summary>The collision events of the frame on the control's box: count, then per event (by
+    /// intersection x) the intersection relative to the emitter, the normal and the velocity.</summary>
     static void RecordCollisionEvents(string key, ParticleSystem ps)
     {
         var v = new List<float>();
@@ -36,6 +36,8 @@ public partial class ParticleRenderProbe
             if (box.gameObject.name != "collide box" || (box.transform.position - ps.transform.position).sqrMagnitude > 1e-6f) continue;
             int n = ps.GetCollisionEvents(box.gameObject, s_CollisionEvents);
             v.Add(n);
+            // By intersection: the list's order is not documented.
+            s_CollisionEvents.Sort((a, b) => a.intersection.x.CompareTo(b.intersection.x));
             for (int i = 0; i < n; i++)
             {
                 var e = s_CollisionEvents[i];
@@ -217,7 +219,8 @@ public partial class ParticleRenderProbe
                 {
                     var m = s.main; m.simulationSpace = ParticleSystemSimulationSpace.Local;
                 });
-                ps.transform.localScale = scale;
+                // Non-uniformly scaled across the slope's normal (local x is world x).
+                ps.transform.localScale = name == "scaled_y" ? new Vector3(2.5f, 1f, 1f) : scale;
                 controls.Add(("collide/world/" + name, ps, at));
                 extra.Add(CollideBox(at + new Vector3(0f, -0.5f, 0f), new Vector3(4f, 0.2f, 4f), Quaternion.Euler(0f, 0f, 25f)));
             }

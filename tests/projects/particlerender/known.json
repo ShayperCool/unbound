@@ -251,11 +251,5 @@
    "collide/planes/scaled_y/38",
    "collide/planes/scaled_y/39"
   ]
- },
- "collision-event-order": {
-  "reason": "Three particles starting inside one box collide in the same step (collide/events/inside/events/1): the events' intersections, normals and velocities match as a set, listed in another order; Unity documents no order (order only).",
-  "keys": [
-   "collide/events/inside/events/1"
-  ]
  }
 }
