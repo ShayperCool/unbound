@@ -275,6 +275,9 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>The bone-skinned mesh is drawn in world space (an identity model matrix).</summary>
+        internal bool DeformsInWorldSpace => IsSkinned && !m_GraphicsOutputRequested;
+
         // The authored local bound belongs to rootBone, falling back to the renderer transform.
         // It is independent of the drawing matrix (bone-skinned geometry is already in world space).
         Matrix4x4 RootMatrix => (m_RootBone != null ? m_RootBone : transform).localToWorldMatrix;

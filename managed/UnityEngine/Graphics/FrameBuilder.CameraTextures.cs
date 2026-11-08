@@ -221,26 +221,42 @@ namespace Unbound.Runtime
             GfxStream.Restore(saved);
         }
 
-        /// <summary>Whether a draw has object motion (a mesh renderer, not a draw set up by a
-        /// script, whose motion is not the camera's), with its renderer's previous matrix and
-        /// whether it moved since the matrices were last kept (<see cref="EndFrameMotion"/>) or
-        /// forces no motion. A renderer is taken to be still the first time it is drawn. Skinned
-        /// meshes (last frame's vertex positions) have none.</summary>
+        /// <summary>Whether a draw has object motion (a mesh renderer, or a skinned mesh renderer
+        /// without active cloth, not a draw set up by a script, whose motion is not the camera's),
+        /// with its previous matrix and whether it moved since the matrices were last kept
+        /// (<see cref="EndFrameMotion"/>) or forces no motion. A renderer is taken to be still the
+        /// first time it is drawn. On the Editor's OpenGL Core device (the one Unbound reports) a
+        /// skinned mesh moves as its renderer does and its bones' deformation adds no motion,
+        /// with or without skinnedMotionVectors and with CPU or GPU mesh deformation (Unity
+        /// 6000.0.71f1, tests/projects/urp motion_blur_skinned_moved, motion_blur_skinned,
+        /// motion_blur_skinned_off). A skin drawn in world space (an identity matrix) keeps its
+        /// renderer's matrix; its previous matrix places this frame's skin where the renderer
+        /// was (the kept matrix times the current inverse).</summary>
         internal static bool ObjectMotion(in DrawItem item, out Matrix4x4 previous, out bool moving, out bool forceNoMotion)
         {
             previous = default;
             moving = forceNoMotion = false;
-            if (item.Renderer is not MeshRenderer renderer || item.Setup.HasValue) return false;
+            if (item.Setup.HasValue) return false;
+            var renderer = item.Renderer;
+            var skin = renderer as SkinnedMeshRenderer;
+            if (skin != null)
+            {
+                var cloth = skin.GetComponent<Cloth>();
+                if (cloth != null && cloth.enabled && cloth.m_Active) return false;
+            }
+            else if (renderer is not MeshRenderer) return false;
             var mode = renderer.motionVectorGenerationMode;
             if (mode == MotionVectorGenerationMode.Camera) return false;
+            bool world = skin != null && skin.DeformsInWorldSpace;
+            var model = world ? renderer.transform.localToWorldMatrix : item.Model;
             if (!renderer.m_HasPreviousModel)
             {
-                renderer.m_PreviousModel = item.Model;
+                renderer.m_PreviousModel = model;
                 renderer.m_HasPreviousModel = true;
             }
-            previous = renderer.m_PreviousModel;
             forceNoMotion = mode == MotionVectorGenerationMode.ForceNoMotion;
-            moving = forceNoMotion || previous != item.Model;
+            moving = forceNoMotion || renderer.m_PreviousModel != model;
+            previous = world ? renderer.m_PreviousModel * model.inverse * item.Model : renderer.m_PreviousModel;
             return true;
         }
 

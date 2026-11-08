@@ -10,7 +10,9 @@ namespace UnityEngine.Tests
     /// <summary>Which draws a renderer list with per-object motion vectors keeps and which of them
     /// moved (tests/projects/urp motion_blur_objects): mesh renderers with object motion, still
     /// the first time they are drawn, moving once their matrix differs from the kept one or when
-    /// they force no motion; never camera-motion renderers, skinned meshes or queued draws.</summary>
+    /// they force no motion, and skinned mesh renderers, moving as their renderer does (their
+    /// deformation adds none: tests/projects/urp motion_blur_skinned_moved, motion_blur_skinned);
+    /// never camera-motion renderers or queued draws.</summary>
     public sealed class ObjectMotionVectorTests : IDisposable
     {
         readonly List<GameObject> m_Objects = new List<GameObject>();
@@ -210,12 +212,93 @@ namespace UnityEngine.Tests
                 new FrameBuilder.DrawItem { Model = Matrix4x4.identity },
             };
             FrameBuilder.KeepObjectMotion(items);
-            Assert.Equal(new Renderer[] { still, forced }, items.ConvertAll(i => i.Renderer));
+            Assert.Equal(new Renderer[] { still, forced, skinned }, items.ConvertAll(i => i.Renderer));
+            // A skinned renderer that has not moved is still.
+            Assert.False(FrameBuilder.MovingObject(items[2]));
             // A still object is not moving; one that forces no motion always draws as moving.
             Assert.False(FrameBuilder.MovingObject(items[0]));
             Assert.True(FrameBuilder.MovingObject(items[1]));
             FrameBuilder.ObjectMotion(items[1], out _, out _, out bool force);
             Assert.True(force);
+        }
+
+        /// <summary>A two-bone ribbon: the top row follows the upper bone.</summary>
+        SkinnedMeshRenderer Ribbon(out Transform upper)
+        {
+            var root = new GameObject("ribbon");
+            m_Objects.Add(root);
+            var lower = new GameObject("lower").transform;
+            lower.SetParent(root.transform, false);
+            upper = new GameObject("upper").transform;
+            upper.SetParent(lower, false);
+            upper.localPosition = new Vector3(0f, 1f, 0f);
+            var mesh = new Mesh
+            {
+                vertices = new[] { new Vector3(0f, 0f, 0f), new Vector3(1f, 0f, 0f), new Vector3(0f, 2f, 0f), new Vector3(1f, 2f, 0f) },
+                triangles = new[] { 0, 2, 1, 1, 2, 3 },
+                boneWeights = new[]
+                {
+                    new BoneWeight { boneIndex0 = 0, weight0 = 1f }, new BoneWeight { boneIndex0 = 0, weight0 = 1f },
+                    new BoneWeight { boneIndex0 = 1, weight0 = 1f }, new BoneWeight { boneIndex0 = 1, weight0 = 1f },
+                },
+                bindposes = new[] { Matrix4x4.identity, Matrix4x4.Translate(new Vector3(0f, -1f, 0f)) },
+            };
+            var skin = root.AddComponent<SkinnedMeshRenderer>();
+            skin.sharedMesh = mesh;
+            skin.bones = new[] { lower, upper };
+            return skin;
+        }
+
+        /// <summary>The motion pass's view of a skinned renderer's draw this frame, and its
+        /// deformed mesh (in world space, drawn with the identity).</summary>
+        static Mesh MotionDraw(SkinnedMeshRenderer skin, out bool moving, out Matrix4x4 previous)
+        {
+            Time.s_FrameCount++;
+            var mesh = skin.DrawGeometry(out var model);
+            Assert.Equal(Matrix4x4.identity, model);
+            Assert.True(FrameBuilder.ObjectMotion(new FrameBuilder.DrawItem { Renderer = skin, Model = model }, out previous, out moving, out _));
+            return mesh;
+        }
+
+        [Fact]
+        public void AMovedSkinMovesAsItsRenderer()
+        {
+            var skin = Ribbon(out _);
+            var root = skin.transform;
+            root.position = new Vector3(5f, 0f, 0f);
+            MotionDraw(skin, out bool moving, out var previous);
+            Assert.False(moving);
+            Assert.Equal(Matrix4x4.identity, previous);
+            // Turned a quarter and moved up: the previous matrix puts this frame's world-space
+            // skin back where the renderer was.
+            root.SetPositionAndRotation(new Vector3(5f, 1f, 0f), Quaternion.Euler(0f, 0f, 90f));
+            var mesh = MotionDraw(skin, out moving, out previous);
+            Assert.True(moving);
+            var was = new[] { new Vector3(5f, 0f, 0f), new Vector3(6f, 0f, 0f), new Vector3(5f, 2f, 0f), new Vector3(6f, 2f, 0f) };
+            for (int i = 0; i < 4; i++)
+                Assert.True((previous.MultiplyPoint3x4(mesh.m_Vertices[i]) - was[i]).magnitude < 1e-4f, $"{i}");
+            // Kept again (a player-loop motion render's frame end): still.
+            skin.m_PreviousModel = root.localToWorldMatrix;
+            MotionDraw(skin, out moving, out previous);
+            Assert.False(moving);
+            Assert.True((previous.MultiplyPoint3x4(Vector3.one) - Vector3.one).magnitude < 1e-5f);
+        }
+
+        /// <summary>Bending in place adds no motion, with skinnedMotionVectors or without
+        /// (measured on the Editor's OpenGL Core device).</summary>
+        [Fact]
+        public void DeformationAloneIsNoMotion()
+        {
+            foreach (bool skinnedMotionVectors in new[] { true, false })
+            {
+                var skin = Ribbon(out var upper);
+                skin.skinnedMotionVectors = skinnedMotionVectors;
+                MotionDraw(skin, out _, out _);
+                upper.localRotation = Quaternion.Euler(0f, 0f, 90f);
+                MotionDraw(skin, out bool moving, out var previous);
+                Assert.False(moving);
+                Assert.Equal(Matrix4x4.identity, previous);
+            }
         }
     }
 }
