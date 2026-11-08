@@ -14,25 +14,12 @@ namespace Unbound.Runtime
     internal static partial class FrameBuilder
     {
         static readonly List<DrawItem> s_Casters = new List<DrawItem>();
-        static readonly Dictionary<string, int> s_ShadowCasterPass = new Dictionary<string, int>();
+        static readonly Func<ShaderPassInfo, bool> s_HasShadowCaster = info => info.ShadowCasterPass >= 0;
         static readonly List<RenderTexture> s_ShadowTemporaries = new List<RenderTexture>();
         static Material s_Collector;
         static Mesh s_CollectorQuad;
         /// <summary>The camera being drawn has a screen-space shadow mask (SHADOWS_SCREEN).</summary>
         static bool s_ScreenShadows;
-
-        static int ShadowCasterPass(Shader shader)
-        {
-            if (shader == null) return -1;
-            if (s_ShadowCasterPass.TryGetValue(shader.DrawnName, out int pass)) return pass;
-            pass = -1;
-            var info = ShaderPassInfo.Of(shader);
-            if (info != null)
-                for (int i = 0; i < info.Passes.Count; i++)
-                    if (info.LightMode(i) == "ShadowCaster") { pass = i; break; }
-            s_ShadowCasterPass[shader.DrawnName] = pass;
-            return pass;
-        }
 
         /// <summary>A light's shadow map size, as the built-in pipeline picks it: the light's pixel
         /// size (the larger side of what it reaches on screen) times the quality's multiplier (Very
@@ -107,22 +94,11 @@ namespace Unbound.Runtime
         static bool ShadowCaster(Material material, out Material drawn, out int pass)
         {
             drawn = material;
-            pass = ShadowCasterPass(material.shader);
-            if (pass >= 0) return true;
-            var info = ShaderPassInfo.Of(material.shader);
-            for (int depth = 0; depth < 8 && info != null && info.Found && !string.IsNullOrEmpty(info.Fallback); depth++)
-            {
-                var fallback = Shader.Find(info.Fallback);
-                if (fallback == null) return false;
-                pass = ShadowCasterPass(fallback);
-                if (pass >= 0)
-                {
-                    drawn = ReplacementMaterial(material, fallback);
-                    return true;
-                }
-                info = ShaderPassInfo.Of(fallback);
-            }
-            return false;
+            var source = ShaderPassInfo.FindPassSource(material.shader, s_HasShadowCaster, out var info);
+            pass = source != null ? info.ShadowCasterPass : -1;
+            if (source == null) return false;
+            if (source != material.shader) drawn = ReplacementMaterial(material, source);
+            return true;
         }
 
         static RenderTexture s_CameraDepth;

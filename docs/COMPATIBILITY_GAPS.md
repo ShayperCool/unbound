@@ -162,7 +162,8 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       pass choices remain unmeasured and retain prior validation. Collection WarmUp and progressive
       warm-up prepare GPU programs and pipelines for the current attachments and render state
       (`lightingassets` cold GPU checks), with no extra program/pipeline creation on the covered
-      first draws. Empty full warm-up and saturating progressive counts match the Editor.
+      first draws. Empty full warm-up and saturating progressive counts match the Editor. Inherited pass
+      preparation follows the same fallback traversal as shadow drawing (`lightingassets fallback`).
       Open: Shader.WarmupAllShaders explicitly rejects complete loaded-variant enumeration until
       built-in and generated pass spaces are supported; later attachment/layout/state changes
       can still require driver work, as documented for Vulkan/Metal/DX12.

@@ -23,6 +23,7 @@ namespace Unbound.Tests
 
         public LightingAssetsTests()
         {
+            ShaderPassInfo.ResetForTests();
             ShaderWarmup.s_PrepareForTests = (_, _, _) => { };
             ShaderDeclarations.ResetForTests();
             ShaderDeclarations.s_FrameForTests = 1;
@@ -32,6 +33,7 @@ namespace Unbound.Tests
         public void Dispose()
         {
             ShaderWarmup.s_PrepareForTests = null;
+            ShaderPassInfo.ResetForTests();
             ShaderDeclarations.s_CallForTests = null;
             ShaderDeclarations.s_FrameForTests = null;
             ShaderDeclarations.ResetForTests();
@@ -484,6 +486,31 @@ LightingSettings:
             // Not a keyword name either way.
             Assert.True(c.Contains(V(shader, PassType.Normal, "A", "B", "A B")));
             Assert.False(c.Contains(V(shader, PassType.Normal, "A")));
+        }
+
+        [Fact]
+        public void PassSourcesBoundCyclesAndPreferAnOwnPass()
+        {
+            var a = Declared(new[] { "ForwardBase" }, Array.Empty<string>());
+            var b = Declared(new[] { "ForwardBase" }, Array.Empty<string>());
+            Shader.Register(a); Shader.Register(b);
+            string Info(string name, string fallback, string mode) => JsonSerializer.Serialize(new {
+                shader = name, found = true, tags = new Dictionary<string, string>(), fallback,
+                passes = new[] { new { name = "Test", tags = new Dictionary<string, string> { ["LightMode"] = mode } } }
+            });
+            ShaderPassInfo.s_CallForTests = name => Info(name, name == a.name ? b.name : a.name, "ForwardBase");
+            int visits = 0;
+            Assert.Null(ShaderPassInfo.FindPassSource(a, info => { visits++; return info.ShadowCasterPass >= 0; }, out _));
+            Assert.InRange(visits, 2, 16);
+            ShaderPassInfo.ResetForTests();
+            int fallbackQueries = 0;
+            ShaderPassInfo.s_CallForTests = name => {
+                if (name != a.name) fallbackQueries++;
+                return Info(name, b.name, "ShadowCaster");
+            };
+            Assert.Same(a, ShaderPassInfo.FindPassSource(a, info => info.ShadowCasterPass >= 0, out var selected));
+            Assert.Equal(0, selected.ShadowCasterPass);
+            Assert.Equal(0, fallbackQueries);
         }
 
         [Fact]

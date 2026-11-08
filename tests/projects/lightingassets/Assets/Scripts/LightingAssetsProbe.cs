@@ -129,6 +129,13 @@ public partial class LightingAssetsProbe : MonoBehaviour
             Finish();
             yield break;
         }
+        if (coldMode == "fallback")
+        {
+            var fallback = RecordFallbackWarmup();
+            while (fallback.MoveNext()) yield return fallback.Current;
+            Finish();
+            yield break;
+        }
         if (!string.IsNullOrEmpty(coldMode))
         {
             var cold = RecordColdShaderWarmup(coldMode);

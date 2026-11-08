@@ -15,6 +15,26 @@ namespace Unbound.Runtime
         /// <summary>The drawn shader's `Fallback` (null: none): passes it lacks, such as its
         /// shadow caster, come from there.</summary>
         internal string Fallback;
+        internal int ShadowCasterPass = -1;
+        // The same bounded traversal serves preparation and shadow drawing, including cycles.
+        const int FallbackPassLimit = 8;
+        internal static Func<string, string> s_CallForTests;
+        internal static void ResetForTests() { s_Cache.Clear(); s_CallForTests = null; }
+
+        internal static Shader FindPassSource(Shader shader, Func<ShaderPassInfo, bool> matches, out ShaderPassInfo info)
+        {
+            info = null;
+            for (int depth = 0; shader != null && depth <= FallbackPassLimit; depth++)
+            {
+                info = Of(shader);
+                if (info == null) return null;
+                if (matches(info)) return shader;
+                if (!info.Found || string.IsNullOrEmpty(info.Fallback)) return null;
+                shader = Shader.Find(info.Fallback);
+            }
+            info = null;
+            return null;
+        }
         internal readonly Dictionary<string, string> Tags = new Dictionary<string, string>();
         /// <summary>The properties marked [Gamma] (interpolated in linear space).</summary>
         internal readonly HashSet<string> Gamma = new HashSet<string>();
@@ -89,7 +109,7 @@ namespace Unbound.Runtime
             {
                 // The pipeline tag may still be in the stream.
                 GfxStream.Flush();
-                var root = JsonDocument.Parse(Native.Call("shader-passes", name)).RootElement;
+                var root = JsonDocument.Parse(s_CallForTests != null ? s_CallForTests(name) : Native.Call("shader-passes", name)).RootElement;
                 info = new ShaderPassInfo
                 {
                     DrawnShader = root.GetProperty("shader").GetString() ?? "",
@@ -111,6 +131,8 @@ namespace Unbound.Runtime
                 {
                     var tags = new Dictionary<string, string>();
                     foreach (var tag in pass.GetProperty("tags").EnumerateObject()) tags[tag.Name] = tag.Value.GetString() ?? "";
+                    if (info.ShadowCasterPass < 0 && tags.TryGetValue("LightMode", out var lightMode) && lightMode == "ShadowCaster")
+                        info.ShadowCasterPass = info.Passes.Count;
                     info.Passes.Add((pass.GetProperty("name").GetString() ?? "", tags));
                 }
             }

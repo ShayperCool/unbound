@@ -41,6 +41,14 @@ class WarmupGateTests(unittest.TestCase):
         self.assertEqual(self.compare([], [], 'WARMUP_GPU_PROOF startup 6 24 6 24 6 24\n' * 6, 'startup'), 0)
         self.assertNotEqual(self.compare([], [], 'WARMUP_GPU_PROOF startup 0 0 0 0 1 1\n' * 6, 'startup'), 0)
 
+    def test_fallback_prepares_inherited_pass_and_keeps_own_source_precedence(self):
+        proof = 'WARMUP_GPU_PROOF fallback 0 0 2 8 2 8\n' * 2
+        own = 'WARMUP_FALLBACK_OWN 1 4 0 0\n'
+        self.assertEqual(self.compare([], [], proof + own, 'fallback'), 0)
+        self.assertNotEqual(self.compare([], [], proof, 'fallback'), 0)
+        self.assertNotEqual(self.compare([], [], proof + 'WARMUP_FALLBACK_OWN 1 4 0 1\n', 'fallback'), 0)
+        self.assertNotEqual(self.compare([], [], proof.replace('2 8 2 8', '0 0 2 8') + own, 'fallback'), 0)
+
     def test_global_requires_exact_unsupported_error_and_keeps_other_rows(self):
         call = {'case': 'warmup-cold', 'step': 'all call', 'result': 'ok'}
         error = {**call, 'result': warmup.GLOBAL_ERROR}

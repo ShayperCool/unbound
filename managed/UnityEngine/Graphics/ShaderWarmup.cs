@@ -20,13 +20,17 @@ namespace Unbound.Runtime
             if (info == null || !info.Found)
                 throw new NotSupportedException("Unbound: shader warm-up requires readable passes and an active renderer.");
             var passes = new List<int>();
-            for (int i = 0; i < info.Passes.Count; i++)
+            var source = ShaderPassInfo.FindPassSource(shader, candidate =>
             {
-                info.Passes[i].Tags.TryGetValue("LightMode", out var mode);
-                if (ShaderVariantCollection.ShaderVariant.PassTypeOf(mode) == type) passes.Add(i);
-            }
-            if (passes.Count == 0) return;
-            Native.Call("shader-warmup", JsonSerializer.Serialize(new { shader = shader.DrawnName, passes, keywords = keys }));
+                for (int i = 0; i < candidate.Passes.Count; i++)
+                {
+                    candidate.Passes[i].Tags.TryGetValue("LightMode", out var mode);
+                    if (ShaderVariantCollection.ShaderVariant.PassTypeOf(mode) == type) passes.Add(i);
+                }
+                return passes.Count > 0;
+            }, out _);
+            if (source == null) return;
+            Native.Call("shader-warmup", JsonSerializer.Serialize(new { shader = source.DrawnName, passes, keywords = keys }));
         }
     }
 }

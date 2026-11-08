@@ -1,0 +1,9 @@
+{"case":"warmup-fallback","step":"own before","state":{"name":"","shaders":1,"variants":1,"warmed":0,"isWarmedUp":false}}
+{"case":"warmup-fallback","step":"own after","state":{"name":"","shaders":1,"variants":1,"warmed":1,"isWarmedUp":true}}
+{"case":"warmup-fallback","step":"own draw","pixels":"6666ccff6666ccff6666ccff6666ccff6666ccff6666ccff6666ccff6666ccff6666ccff6666ccff6666ccff6666ccff6666ccff6666ccff6666ccff6666ccff"}
+{"case":"warmup-fallback","step":"inherited before","state":{"name":"","shaders":1,"variants":2,"warmed":0,"isWarmedUp":false}}
+{"case":"warmup-fallback","step":"inherited after","state":{"name":"","shaders":1,"variants":2,"warmed":2,"isWarmedUp":true}}
+{"case":"warmup-fallback","step":"inherited draw 0","pixels":"33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff"}
+{"case":"warmup-fallback","step":"inherited draw 1","pixels":"cccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ff"}
+{"case":"warmup-fallback","step":"inherited repeat","state":{"name":"","shaders":1,"variants":2,"warmed":2,"isWarmedUp":true}}
+{"case":"end"}

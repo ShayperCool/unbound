@@ -8,7 +8,7 @@ import subprocess
 import sys
 import editor_runner
 
-MODES = ('collection', 'progressive', 'startup', 'all')
+MODES = ('collection', 'progressive', 'startup', 'fallback', 'all')
 GLOBAL_ERROR = {'exception': 'System.NotSupportedException', 'message':
                 'Unbound: warming all loaded shader variants is not supported; use ShaderVariantCollection warm-up for explicit variants.'}
 
@@ -84,7 +84,7 @@ def compare(reference, candidate, log, mode):
     if failures:
         return 1
     proofs = re.findall(r'WARMUP_GPU_PROOF ' + mode + r' (\d+) (\d+) (\d+) (\d+) (\d+) (\d+)', log)
-    valid = len(proofs) == 6
+    valid = len(proofs) == (2 if mode == 'fallback' else 6)
     for proof in proofs:
         before_programs, before_pipelines, warm_programs, warm_pipelines, after_programs, after_pipelines = map(int, proof)
         if mode == 'startup':
@@ -93,6 +93,12 @@ def compare(reference, candidate, log, mode):
         else:
             valid &= warm_programs > before_programs and warm_pipelines > before_pipelines
         valid &= warm_programs == after_programs and warm_pipelines == after_pipelines
+    if mode == 'fallback':
+        own = re.findall(r'WARMUP_FALLBACK_OWN (\d+) (\d+) (\d+) (\d+)', log)
+        valid &= len(own) == 1
+        if len(own) == 1:
+            programs, pipelines, before_base, after_base = map(int, own[0])
+            valid &= programs > 0 and pipelines > 0 and before_base == 0 and after_base == 0
     if mode == 'progressive':
         partials = re.findall(r'WARMUP_PARTIAL_GPU_PROOF (\d+) (\d+) (\d+) (\d+)', log)
         valid &= len(partials) == 1

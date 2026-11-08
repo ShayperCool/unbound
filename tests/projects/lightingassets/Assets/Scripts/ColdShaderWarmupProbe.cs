@@ -43,15 +43,32 @@ public partial class LightingAssetsProbe
         return JsonUtility.FromJson<WarmupStats>((string)call.Invoke(null, new object[] { "shader-warmup", "{\"stats\":true,\"shader\":" + S(shader.name) + "}" }));
     }
 
+    static Mesh WarmupMesh()
+    {
+        var mesh = new Mesh();
+        mesh.vertices = new[] { new Vector3(-1,-1,0), new Vector3(1,-1,0), new Vector3(1,1,0), new Vector3(-1,1,0) };
+        mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+        return mesh;
+    }
+
+    static string WarmupPixels(RenderTexture target)
+    {
+        var request = AsyncGPUReadback.Request(target, 0, TextureFormat.RGBA32);
+        request.WaitForCompletion();
+        if (request.hasError) throw new InvalidOperationException("warmup readback failed");
+        var data = request.GetData<byte>();
+        var hex = new StringBuilder(data.Length * 2);
+        foreach (byte value in data) hex.Append(value.ToString("x2"));
+        return hex.ToString();
+    }
+
     IEnumerator RecordColdShaderWarmup(string mode)
     {
         var shader = Resources.Load<Shader>("WarmupFresh");
         var material = new Material(shader);
         var target = mode == "startup" ? s_StartupWarmupTarget : new RenderTexture(4, 4, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
         target.Create();
-        var mesh = new Mesh();
-        mesh.vertices = new[] { new Vector3(-1,-1,0), new Vector3(1,-1,0), new Vector3(1,1,0), new Vector3(-1,1,0) };
-        mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+        var mesh = WarmupMesh();
         var collection = mode == "startup" ? s_StartupWarmup : WarmupCollection(shader);
         var keywords = s_WarmupKeywords;
         void State(string step, bool? result = null) => Record("warmup-cold", "\"step\":" + S(step) + ",\"mode\":" + S(mode)
@@ -73,19 +90,9 @@ public partial class LightingAssetsProbe
         else Record("warmup-cold", "\"step\":\"all call\",\"result\":" + Try(() => { Shader.WarmupAllShaders(); return "\"ok\""; }));
         State("after");
         var warm = GpuWarmupStats(shader);
-        string Pixels()
-        {
-            var request = AsyncGPUReadback.Request(target, 0, TextureFormat.RGBA32);
-            request.WaitForCompletion();
-            if (request.hasError) throw new InvalidOperationException("warmup readback failed");
-            var data = request.GetData<byte>();
-            var hex = new StringBuilder(data.Length * 2);
-            foreach (byte value in data) hex.Append(value.ToString("x2"));
-            return hex.ToString();
-        }
         void Proof(string step)
         {
-            Record("warmup-cold", "\"step\":" + S(step) + ",\"pixels\":" + S(Pixels()));
+            Record("warmup-cold", "\"step\":" + S(step) + ",\"pixels\":" + S(WarmupPixels(target)));
             var after = GpuWarmupStats(shader);
             if (before != null && warm != null && after != null)
                 Debug.Log("WARMUP_GPU_PROOF " + mode + " " + before.programs + " " + before.pipelines + " " + warm.programs + " " + warm.pipelines + " " + after.programs + " " + after.pipelines);
