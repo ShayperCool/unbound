@@ -44,11 +44,23 @@ public static class ProbeRunner
         if (suspend == null) throw new Exception("Missing mixer suspend setting");
         suspend.boolValue = false; serialized.ApplyModifiedPropertiesWithoutUndo();
         var snapshot = Get(mixer, "TargetSnapshot");
+        object child = null;
+        string cross = DuckProbe.Option(key, "cross=", "");
+        if (cross != "") {
+            child = T("AudioMixerController").GetMethod("CreateMixerControllerAtPath", F).Invoke(null, new object[] { "Assets/Resources/"+key+"_child.mixer" });
+            var settings = new SerializedObject((UnityEngine.Object)child);
+            settings.FindProperty("m_EnableSuspend").boolValue = false;
+            settings.ApplyModifiedPropertiesWithoutUndo();
+            ((UnityEngine.Audio.AudioMixer)child).outputAudioMixerGroup = (UnityEngine.Audio.AudioMixerGroup)Get(mixer, "masterGroup");
+        }
         var groups = new Dictionary<string, object> { { "Master", Get(mixer, "masterGroup") } };
+        var owners = new Dictionary<string, object> { { "Master", mixer } };
         foreach (var name in DuckProbe.Option(key, "order=", "Music,Voice,Fx").Split(',')) {
             if (DuckProbe.Chain(key, name) == null) continue;
-            var group = Call(mixer, "CreateNewGroup", name, true); Call(mixer, "AddChildToParent", group, groups["Master"]);
+            var owner = cross == name ? child : mixer;
+            var group = Call(owner, "CreateNewGroup", name, true); Call(owner, "AddChildToParent", group, Get(owner, "masterGroup"));
             groups[name] = group;
+            owners[name] = owner;
         }
         // First create every unit in chain order, then resolve the send targets.
         var units = new Dictionary<string, object>();
@@ -63,7 +75,7 @@ public static class ProbeRunner
                 else {
                     string name = token.StartsWith("Send>") ? "Send" : Units[token];
                     unit = Activator.CreateInstance(T("AudioMixerEffectController"), F, null, new object[] { name }, null);
-                    Call(unit, "PreallocateGUIDs"); Call(mixer, "AddNewSubAsset", unit, true);
+                    Call(unit, "PreallocateGUIDs"); Call(owners[pair.Key], "AddNewSubAsset", unit, true);
                     if (name == "Send") sends.Add((unit, token.Substring(5)));
                 }
                 units[pair.Key + "." + (token.StartsWith("Send>") ? "Send" : token)] = unit;
@@ -91,7 +103,9 @@ public static class ProbeRunner
             var path = pair.Key.Split('.');
             if (!groups.ContainsKey(path[0])) continue;
             float value = float.Parse(pair.Value, CultureInfo.InvariantCulture);
-            if (path.Length == 2 && path[1] == "Volume") Call(groups[path[0]], "SetValueForVolume", mixer, snapshot, value);
+            var owner = owners[path[0]];
+            var state = Get(owner, "TargetSnapshot");
+            if (path.Length == 2 && path[1] == "Volume") Call(groups[path[0]], "SetValueForVolume", owner, state, value);
             else if (path[path.Length - 1] == "bypass") continue;  // set with the chain
             else {
                 // A default override names a unit that the case may leave out (nosend).
@@ -99,8 +113,8 @@ public static class ProbeRunner
                     if (Array.IndexOf(DuckProbe.Tokens(key), pair.Key + "=" + pair.Value) >= 0) throw new Exception("No unit " + pair.Key);
                     continue;
                 }
-                if (path[2] == "Level") Call(unit, "SetValueForMixLevel", mixer, snapshot, value);
-                else Call(unit, "SetValueForParameter", mixer, snapshot, path[2], value);
+                if (path[2] == "Level") Call(unit, "SetValueForMixLevel", owner, state, value);
+                else Call(unit, "SetValueForParameter", owner, state, path[2], value);
             }
         }
         foreach (var (send, target) in sends) {
@@ -128,5 +142,6 @@ public static class ProbeRunner
             var exposed = Array.CreateInstance(type, 1); exposed.SetValue(item, 0); Set(mixer, "exposedParameters", exposed);
         }
         EditorUtility.SetDirty((UnityEngine.Object)mixer);
+        if (child != null) EditorUtility.SetDirty((UnityEngine.Object)child);
     }
 }

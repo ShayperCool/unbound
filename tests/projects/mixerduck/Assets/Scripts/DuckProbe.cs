@@ -103,6 +103,30 @@ public class DuckProbe : MonoBehaviour
         new[] { "snap_send", "voice=step0:0.5", "change=Send Level", "to=-6", "snapshot=1" },
         new[] { "late_post", "music=dc0", "voice=imp0", "Music:Receive,Att", "Voice:Att,Send>Music", "Voice.Volume=0", "late=8" },
         new[] { "late_post_create", "music=dc0", "voice=imp0", "Music:Receive,Att", "Voice:Att,Send>Music", "Voice.Volume=0", "late=8", "create=1" },
+        new[] { "cross_output_control", "cross=Music", "music=dc0", "Music:Att", "Voice:Att" },
+        new[] { "timed_send", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1" },
+        new[] { "timed_threshold", "voice=step0:0.5", "change=Threshold", "to=-25", "snapshot=1", "duration=0.1" },
+        new[] { "timed_ratio", "voice=step0:0.5", "change=Ratio", "to=5", "snapshot=1", "duration=0.1" },
+        new[] { "timed_attack", "voice=step0:0.5", "change=Attack Time", "to=0.01", "snapshot=1", "duration=0.1" },
+        new[] { "timed_release", "voice=step0:0.5", "change=Release Time", "to=0.01", "snapshot=1", "duration=0.1" },
+        new[] { "timed_makeup", "voice=step0:0.5", "change=Make-up Gain", "to=6", "snapshot=1", "duration=0.1" },
+        new[] { "timed_knee", "voice=step0:0.5", "change=Knee", "to=40", "snapshot=1", "duration=0.1" },
+        new[] { "timed_mix", "voice=step0:0.5", "change=Sidechain Mix", "to=0.3", "snapshot=1", "duration=0.1" },
+        new[] { "weighted_send", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "weight=0.75" },
+        new[] { "weighted_threshold", "voice=step0:0.5", "change=Threshold", "to=-25", "snapshot=1", "duration=0.1", "weight=0.25" },
+        new[] { "timed_send_scaled_half", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "scale=0.5" },
+        new[] { "timed_send_scaled_pause", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "scale=0" },
+        new[] { "timed_threshold_scaled_half", "voice=step0:0.5", "change=Threshold", "to=-25", "snapshot=1", "duration=0.1", "scale=0.5" },
+    };
+    // These connections are outside the Editor's Send destination menu. Record separately:
+    // an invalid graph may prevent the Editor from entering Play mode.
+    public static readonly string[][] DiagnosticCases = {
+        new[] { "timed_send_unscaled_pause", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "scale=0", "unscaled=1" },
+        new[] { "timed_threshold_unscaled_pause", "voice=step0:0.5", "change=Threshold", "to=-25", "snapshot=1", "duration=0.1", "scale=0", "unscaled=1" },
+        new[] { "cross_send_receive", "cross=Voice", "music=dc0", "voice=imp0", "Music:Receive,Att", "Voice:Send>Music,Att" },
+        new[] { "cross_send_duck", "cross=Voice", "music=dc0", "voice=step0:0.5" },
+        new[] { "cross_receive", "cross=Music", "music=dc0", "voice=imp0", "Music:Receive,Att", "Voice:Send>Music,Att" },
+        new[] { "cross_duck", "cross=Music", "music=dc0", "voice=step0:0.5" },
     };
     public const int BlockCount = 32;
     public const int ClipFrames = BlockCount * 1024;
@@ -111,9 +135,11 @@ public class DuckProbe : MonoBehaviour
         var only = Environment.GetEnvironmentVariable("DUCK_PROBE_CASES");
         var keys = new List<string>();
         foreach (var c in Cases) if (string.IsNullOrEmpty(only) || Array.IndexOf(only.Split(','), c[0]) >= 0) keys.Add(c[0]);
+        if (!string.IsNullOrEmpty(only))
+            foreach (var c in DiagnosticCases) if (Array.IndexOf(only.Split(','), c[0]) >= 0) keys.Add(c[0]);
         return keys.ToArray();
     }
-    public static string[] Tokens(string key) => Array.Find(Cases, c => c[0] == key);
+    public static string[] Tokens(string key) => Array.Find(Cases, c => c[0] == key) ?? Array.Find(DiagnosticCases, c => c[0] == key);
     public static string Option(string key, string name, string fallback)
     {
         foreach (var token in Tokens(key)) if (token.StartsWith(name)) return token.Substring(name.Length);
@@ -142,11 +168,11 @@ public class DuckProbe : MonoBehaviour
         Application.Quit(code);
 #endif
     }
-    void FlushEngine()
+    void FlushEngine(float delta = 0f)
     {
         var assembly = Type.GetType("Unbound.Runtime.AudioBackend, UnityEngine.CoreModule", true).Assembly;
-        typeof(Time).GetField("s_RealDeltaTime", Flags).SetValue(null, 0.0);
-        typeof(Time).GetField("s_DeltaTime", Flags).SetValue(null, 0f);
+        typeof(Time).GetField("s_RealDeltaTime", Flags).SetValue(null, (double)delta);
+        typeof(Time).GetField("s_DeltaTime", Flags).SetValue(null, delta * Time.timeScale);
         assembly.GetType("Unbound.Runtime.AudioSystem").GetMethod("Update", Flags).Invoke(null, null);
     }
     System.Collections.IEnumerator Start()
@@ -206,6 +232,10 @@ public class DuckProbe : MonoBehaviour
         foreach (string key in Selected()) {
             Debug.Log("Duck case " + key);
             var mixer = Resources.Load<AudioMixer>(key); if (!mixer) throw new Exception("Missing mixer " + key);
+            var child = Option(key, "cross=", "") != "" ? Resources.Load<AudioMixer>(key + "_child") : null;
+            bool timed = Option(key, "duration=", "") != "";
+            Time.timeScale = float.Parse(Option(key, "scale=", "1"), System.Globalization.CultureInfo.InvariantCulture);
+            mixer.updateMode = Option(key, "unscaled=", "0") == "1" ? AudioMixerUpdateMode.UnscaledTime : AudioMixerUpdateMode.Normal;
             var go = new GameObject(key);
             var clips = new List<AudioClip>();
             AudioSource delayed = null; Action createDelayed = null;
@@ -214,7 +244,8 @@ public class DuckProbe : MonoBehaviour
                 if (spec == "none") continue;
                 Action create = () => {
                 var source = go.AddComponent<AudioSource>();
-                source.outputAudioMixerGroup = Array.Find(mixer.FindMatchingGroups(""), g => g.name == name);
+                var owner = Option(key, "cross=", "") == name ? child : mixer;
+                source.outputAudioMixerGroup = Array.Find(owner.FindMatchingGroups(""), g => g.name == name);
                 if (!source.outputAudioMixerGroup) throw new Exception("Missing group " + name);
                 source.spatialBlend = 0; source.volume = 1;
                 var clip = AudioClip.Create(key + name, ClipFrames, 2, rate, false); clips.Add(clip);
@@ -236,12 +267,20 @@ public class DuckProbe : MonoBehaviour
                 for (int block = 0; block < BlockCount; block++) {
                     if (block == int.Parse(Option(key, "late=", "-1"))) { createDelayed?.Invoke(); delayed.Play(); if (Engine) FlushEngine(); }
                     if ((block == 8 || block == 20) && Option(key, "change=", "") != "") {
-                        if (Option(key, "snapshot=", "0") == "1") mixer.FindSnapshot(block == 8 ? "Other" : "Base").TransitionTo(0);
+                        if (Option(key, "snapshot=", "0") == "1") {
+                            float duration = float.Parse(Option(key, "duration=", "0"), System.Globalization.CultureInfo.InvariantCulture);
+                            if (Option(key, "weight=", "") != "") {
+                                float weight = block == 8 ? float.Parse(Option(key, "weight=", "1"), System.Globalization.CultureInfo.InvariantCulture) : 0f;
+                                mixer.TransitionToSnapshots(new[] { mixer.FindSnapshot("Base"), mixer.FindSnapshot("Other") }, new[] { 1f - weight, weight }, duration);
+                            } else mixer.FindSnapshot(block == 8 ? "Other" : "Base").TransitionTo(duration);
+                        }
                         else if (block == 8) { if (!mixer.SetFloat("Change", float.Parse(Option(key, "to=", "0"), System.Globalization.CultureInfo.InvariantCulture))) throw new Exception("SetFloat failed"); }
                         else if (!mixer.ClearFloat("Change")) throw new Exception("ClearFloat failed");
                         if (Engine) FlushEngine();
                     }
                     if (!Engine) yield return null;
+                    else if (timed) FlushEngine(1024f / rate);
+                    if (timed && mixer.GetFloat("Change", out float parameter)) Debug.Log(key + " block=" + block + " parameter=" + parameter.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false })) throw new Exception("AddMixerGroupSink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("AudioRenderer.Render failed");
                     for (int i = 0; i < buffer.Length; i++) { writer.Write(buffer[i]); masterWriter.Write(sink[i]); }
@@ -253,6 +292,7 @@ public class DuckProbe : MonoBehaviour
             Save(); buffer.Dispose();
             foreach (var source in go.GetComponents<AudioSource>()) source.Stop();
             DestroyImmediate(go); foreach (var clip in clips) DestroyImmediate(clip);
+            Time.timeScale = 1;
         }
         AudioRenderer.Stop(); foreach (var sink in sinks) sink.Dispose(); Save(); Exit(0);
     }

@@ -373,6 +373,8 @@ OnEnable and AfterSceneLoad; these captures change parameters after Start, betwe
 reaches a snapshot over the requested interval;
 [TransitionToSnapshots](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Audio.AudioMixer.TransitionToSnapshots.html)
 reaches a weighted mixture. Neither documents DSP interpolation steps or detector-state handling.
+The 6000.0 [updateMode API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Audio.AudioMixer-updateMode.html)
+specifies scaled game time for Normal and realtime independent of timeScale for UnscaledTime.
 The [mixer routing manual](https://docs.unity3d.com/6000.0/Documentation/Manual/AudioMixerSpecifics.html)
 guarantees mixer-output routing into another mixer's group; it does not establish cross-mixer Send
 semantics. The former AudioMixerEffects manual URL returns 404; the effect descriptions are in
@@ -427,7 +429,7 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
   and Sidechain Mix changes retain the detector envelope and eight-frame interpolation history.
   Threshold, Ratio, Attack, Release and Make-up are covered through exposed SetFloat/ClearFloat
   and zero-time snapshots; Knee and Sidechain Mix are covered through zero-time snapshots.
-  These are block-boundary changes; timed interpolation is a separate unmeasured mechanism.
+  These are block-boundary changes. The additional timed cases and their limits are below.
 
 ## Limits
 
@@ -438,13 +440,28 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
   parameters) fail loudly as unmeasured.
 - Send, Receive and Duck Volume require `Compat.MixerSidechainMeasured`, exactly 6000.0.71f1.
   Sends to another mixer fail explicitly, including when one mixer outputs into another mixer.
-  Timed snapshots that change Send levels or Duck Volume parameters fail before scheduling, on
-  both TransitionTo and TransitionToSnapshots. Unrelated snapshot changes and parameters held
-  by exposed overrides remain usable. Cross-mixer sends and timed sidechain interpolation are
-  follow-ups; no substitute routing or interpolation is certified.
+  Q141's separate cross-mixer diagnostic cases connect a Send across the mixer boundary in each
+  direction. The 6000.0.71f1 Editor reports an invalid audio handle and delivers no sidechain;
+  creating all four invalid graphs together can prevent entry into Play mode. The ordinary
+  mixer-output control is captured twice at both rates and passes. Cross-mixer Send processing
+  order and latency therefore remain unresolved; no rule is inferred from invalid graphs.
+- `Compat.MixerTimedSidechainMeasured` enables linear Normal-mode timed snapshots on exactly
+  6000.0.71f1. The Q141 cases cover every Duck parameter, Send Level, weighted mixtures, half-speed
+  scaled time and paused scaled time. Snapshot parameters advance once per game update in their
+  stored units; the existing Send gain ramp and persistent detector then process each DSP block.
+  Both independent Editor captures agree bit for bit at 48000 and 44100 Hz. Exposed overrides
+  retain ownership, and ClearFloat can release one into a supported transition. UnscaledTime and
+  non-linear sidechain transition overrides still fail before scheduling or changing updateMode.
+  UnscaledTime follows wall time even under captureDeltaTime, so a repeatable reference clock
+  remains a follow-up. Parameters held by overrides and unrelated snapshot changes remain usable.
 - The 6000.0 Editor exposes no Allow Wet Mixing or Wet Level control on Send or Duck Volume.
   The published [6000.0 Inspector implementation](https://github.com/Unity-Technologies/UnityCsReference/blob/6000.0/Editor/Mono/Audio/Mixer/GUI/AudioMixerEffectView.cs)
   excludes both units. Assets enabling wet mixing on either still fail explicitly.
+- The Q141 PCM check verifies each device sample against saturating truncation of the master
+  float multiplied by 32768, at both rates, for both the Editor and engine captures. There are
+  no conversion differences. The original 891 one-step differences per rate originate in the
+  mixer floats, with no evidence of dither or a different clamp order. The timed threshold cases
+  add six such samples at 48000 Hz and five at 44100 Hz; master floats still pass the unchanged tolerance.
 - Surround output, sample rates other than 48000/44100 Hz, other DSP buffer sizes and live effect
   insertion/retargeting remain unmeasured.
 - Compressor, ParamEQ, the simple filters and Distortion are below; the other mixer effects

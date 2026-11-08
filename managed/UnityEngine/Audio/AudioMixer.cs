@@ -64,7 +64,15 @@ namespace UnityEngine.Audio
         public AudioMixerUpdateMode updateMode
         {
             get => m_UpdateMode;
-            set => m_UpdateMode = value;
+            set
+            {
+                if (m_To != null)
+                    foreach (var guid in m_TimedSidechainParameters)
+                        if (!HasOverride(guid) && m_To.TryGetValue(guid, out var target)
+                            && target != SnapshotValue(guid) && !SupportsTimedSidechain(guid, m_TransitionTypes, value))
+                            throw new NotSupportedException("AudioMixer updateMode would enable an unmeasured timed sidechain transition");
+                m_UpdateMode = value;
+            }
         }
 
         public AudioMixerSnapshot FindSnapshot(string name)
@@ -140,15 +148,15 @@ namespace UnityEngine.Audio
                 m_To = null;
                 return;
             }
-            // Send levels and Duck Volume parameters have no measured timed interpolation yet.
-            // Unrelated snapshot changes remain usable, including changes on the same mixer.
+            // Validate every changing sidechain before scheduling anything. Exposed overrides
+            // keep their values; ClearFloat checks again before releasing one.
             var changingSidechains = new HashSet<string>();
             foreach (var group in m_Groups)
                 foreach (var effect in group.m_Effects)
                     effect.CollectTimedSidechainChanges(this, target, snapshots, weights, changingSidechains);
             foreach (var guid in changingSidechains)
-                if (!HasOverride(guid))
-                    throw new NotSupportedException("AudioMixer timed snapshot changes to Send levels or Duck Volume parameters are unmeasured");
+                if (!HasOverride(guid) && !SupportsTimedSidechain(guid, types, m_UpdateMode))
+                    throw new NotSupportedException("AudioMixer timed snapshot changes to Send levels or Duck Volume parameters require measured linear scaled-time transitions");
             m_TimedSidechainParameters = changingSidechains;
             m_InstantTarget = null;
             m_From = new Dictionary<string, float>(m_Values);
@@ -177,11 +185,16 @@ namespace UnityEngine.Audio
             Build();
             if (name == null || !m_Exposed.TryGetValue(name, out var guid)) return false;
             if (m_To != null && m_TimedSidechainParameters.Contains(guid)
+                && !SupportsTimedSidechain(guid, m_TransitionTypes, m_UpdateMode)
                 && m_To.TryGetValue(guid, out var target) && target != SnapshotValue(guid))
                 throw new NotSupportedException("AudioMixer ClearFloat would enable an unmeasured timed snapshot change to a Send level or Duck Volume parameter");
             m_PendingClears.Add(guid);
             return true;
         }
+
+        static bool SupportsTimedSidechain(string guid, Dictionary<string, int> types, AudioMixerUpdateMode mode)
+            => Compat.MixerTimedSidechainMeasured && mode == AudioMixerUpdateMode.Normal
+                && (types == null || !types.TryGetValue(guid, out var type) || type == 0);
 
         public bool GetFloat(string name, out float value)
         {

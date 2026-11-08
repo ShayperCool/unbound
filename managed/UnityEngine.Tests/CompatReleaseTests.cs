@@ -20,12 +20,12 @@ namespace UnityEngine.Tests
             bool all = true;
             for (int i = 0; i < 1000; i++)
                 all &= Compat.ModulatedDelayMeasured && Compat.DistortionMeasured && Compat.MixerNormalizeMeasured
-                    && Compat.MixerPitchShifterMeasured && Compat.MixerClearFloatSubmissionMeasured && Compat.MixerSidechainMeasured && Compat.MixerGraphStartupMeasured;
+                    && Compat.MixerPitchShifterMeasured && Compat.MixerClearFloatSubmissionMeasured && Compat.MixerSidechainMeasured && Compat.MixerTimedSidechainMeasured && Compat.MixerGraphStartupMeasured;
             Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
             Assert.True(all);
             ProjectInfo.UnityVersion = "6000.0.72f1";
             Assert.False(Compat.ModulatedDelayMeasured || Compat.DistortionMeasured || Compat.MixerNormalizeMeasured
-                || Compat.MixerPitchShifterMeasured || Compat.MixerClearFloatSubmissionMeasured || Compat.MixerSidechainMeasured || Compat.MixerGraphStartupMeasured);
+                || Compat.MixerPitchShifterMeasured || Compat.MixerClearFloatSubmissionMeasured || Compat.MixerSidechainMeasured || Compat.MixerTimedSidechainMeasured || Compat.MixerGraphStartupMeasured);
         }
     }
 }

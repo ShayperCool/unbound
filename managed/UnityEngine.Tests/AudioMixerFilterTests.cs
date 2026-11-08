@@ -350,6 +350,7 @@ namespace UnityEngine.Tests
         public void TimedSnapshotsRejectOnlyChangingUnmeasuredSidechainParameters(string kind, string parameter)
         {
             var (mixer, group, effect) = Fixture();
+            mixer.updateMode = AudioMixerUpdateMode.UnscaledTime;
             UseEffect(mixer, effect, kind, kind == "Send" ? Array.Empty<string>() : AudioMixerEffectController.DuckParameters);
             if (kind == "Send") { effect.m_MixLevelGuid = parameter; mixer.m_Exposed[parameter] = parameter; }
             mixer.Build();
@@ -377,6 +378,59 @@ namespace UnityEngine.Tests
             Assert.True(mixer.ClearFloat(parameter));
             target.m_Values[parameter] = original + change;
             Assert.Throws<NotSupportedException>(() => target.TransitionTo(0.2f));
+        }
+
+        [Theory]
+        [InlineData("Send", "send")]
+        [InlineData("Duck Volume", "Threshold")]
+        [InlineData("Duck Volume", "Ratio")]
+        [InlineData("Duck Volume", "Attack Time")]
+        [InlineData("Duck Volume", "Release Time")]
+        [InlineData("Duck Volume", "Make-up Gain")]
+        [InlineData("Duck Volume", "Knee")]
+        [InlineData("Duck Volume", "Sidechain Mix")]
+        public void LinearSidechainSnapshotsUseScaledTimeAndKeepExposedOwnership(string kind, string parameter)
+        {
+            var (mixer, _, effect) = Fixture();
+            UseEffect(mixer, effect, kind, kind == "Send" ? Array.Empty<string>() : AudioMixerEffectController.DuckParameters);
+            if (kind == "Send") { effect.m_MixLevelGuid = parameter; mixer.m_Exposed[parameter] = parameter; }
+            mixer.Build();
+            float initial = mixer.Value(parameter);
+            float change = parameter == "Sidechain Mix" ? -0.25f : 1f;
+            var start = new AudioMixerSnapshot { m_Mixer = mixer };
+            var target = new AudioMixerSnapshot { m_Mixer = mixer };
+            start.m_Values[parameter] = initial;
+            target.m_Values[parameter] = initial + change;
+            mixer.TransitionToSnapshots(new[] { start, target }, new[] { 1f, 3f }, 1f);
+            mixer.Tick(0f, 0.5f);
+            Assert.Equal(initial, mixer.Value(parameter));
+            mixer.Tick(0.5f, 0.5f);
+            Assert.Equal(initial + change * 0.375f, mixer.Value(parameter), 6);
+            Assert.Throws<NotSupportedException>(() => mixer.updateMode = AudioMixerUpdateMode.UnscaledTime);
+            Assert.Equal(AudioMixerUpdateMode.Normal, mixer.updateMode);
+            Assert.True(mixer.SetFloat(parameter, initial));
+            mixer.Tick(0f, 0f);
+            Assert.Equal(initial, mixer.Value(parameter));
+            Assert.True(mixer.ClearFloat(parameter));
+            mixer.Tick(0.5f, 0.5f);
+            Assert.Equal(initial + change * 0.75f, mixer.Value(parameter), 6);
+        }
+
+        [Theory]
+        [InlineData("6000.0.71f1", 1)]
+        [InlineData("6000.0.72f1", 0)]
+        public void UnmeasuredSidechainTransitionProfilesFailBeforeChangingTheSnapshot(string release, int transition)
+        {
+            ProjectInfo.UnityVersion = release;
+            var (mixer, _, effect) = Fixture();
+            UseEffect(mixer, effect, "Duck Volume", AudioMixerEffectController.DuckParameters);
+            mixer.Build();
+            var target = new AudioMixerSnapshot { m_Mixer = mixer };
+            target.m_Values["Threshold"] = -25f;
+            target.m_TransitionTypes["Threshold"] = transition;
+            Assert.Throws<NotSupportedException>(() => target.TransitionTo(1f));
+            mixer.Tick(1f, 1f);
+            Assert.Equal(-10f, mixer.Value("Threshold"));
         }
 
         [Fact]

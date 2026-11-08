@@ -22,7 +22,7 @@ project = a.work/'project'
 shutil.copytree(fixture, project, ignore=shutil.ignore_patterns('Reference', 'Library', 'Logs', '__pycache__', '*.py', '*.md'))
 output = a.work/'capture'
 editor = a.editor or Path.home()/'Unity/Hub/Editor'/a.release/'Editor/Unity'
-command = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '900', str(editor), '-batchmode', '-nographics',
+command = [str(Path.home()/'.cache/compat/with-heavy-job'), '--kind', 'editor-gpu', 'timeout', '900', str(editor), '-batchmode', '-nographics',
            '-projectPath', str(project), '-executeMethod', 'ProbeRunner.Record', '-logFile', str(a.work/'editor.log')]
 (a.work/'command.json').write_text(json.dumps(command, indent=2)+'\n')
 env = dict(os.environ, DUCK_PROBE_OUT=str(output), DUCK_PROBE_RATE=str(a.rate))

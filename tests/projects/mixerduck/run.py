@@ -45,6 +45,8 @@ for rate in a.rate or (48000, 44100):
     if run('engine.py', '--native-project', project, '--runtime', runtime,
            '--work', work/f'engine-{rate}'): raise SystemExit(f'engine {rate} failed')
     candidate = work/f'engine-{rate}/capture'
+    for label, capture in (('reference', fixture/'Reference'/('unity-'+a.release)/f'rate-{rate}'), ('engine', candidate)):
+        failed |= bool(run('pcm.py', '--capture', capture, '--report', work/f'pcm-{label}-{rate}.jsonl.gz'))
     run('compare.py', '--profile', 'all', '--candidate', candidate, '--report', work/f'strict-{rate}.jsonl.gz')
     failed |= bool(run('compare.py', '--profile', 'all', '--pcm-steps', '1', '--candidate', candidate,
                        '--report', work/f'gate-{rate}.jsonl.gz'))

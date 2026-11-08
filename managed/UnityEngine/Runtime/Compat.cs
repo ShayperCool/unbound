@@ -123,6 +123,10 @@ namespace Unbound.Runtime
         /// exactly 6000.0.71f1 (tests/projects/mixerduck). Other releases fail until measured.</summary>
         internal static bool MixerSidechainMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Linear scaled-time Send and Duck Volume snapshot changes, measured by
+        /// tests/projects/mixerduck. Unscaled-time and transition overrides remain unmeasured.</summary>
+        internal static bool MixerTimedSidechainMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Default mixer Pitch Shifter DSP measured on exactly 6000.0.71f1.
         /// Other releases fail until their kernels and state have been measured.</summary>
         internal static bool MixerPitchShifterMeasured => Release == (6000, 0, 71, 'f', 1);

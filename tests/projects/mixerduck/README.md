@@ -11,7 +11,7 @@ case records 32 complete 1024-frame stereo DSP blocks of the master group sink f
 (`<case>.master.f32`) and the returned device PCM (`<case>.f32`). No samples are shifted, trimmed or
 discarded.
 
-The 84 cases (`Cases` in `Assets/Scripts/DuckProbe.cs`) cover:
+The 98 cases (`Cases` in `Assets/Scripts/DuckProbe.cs`) cover:
 
 - Duck Volume: sidechain levels below, in and above the knee; linear ramps of the sidechain level
   for the static curve at Threshold, Ratio (expanding 0.2 and 10), Knee 0/50 and Make-up Gain;
@@ -30,7 +30,10 @@ The Q48 rows add late playback and late AudioSource creation, Send level activat
 running Duck Volume parameter changes via exposed SetFloat/ClearFloat and immediate snapshots,
 and routing-unit startup placement controls. Changes occur before rendering blocks 8 and 20;
 a late-source control starts at block 3. The complete earlier 51-case references remain bit for bit
-unchanged. Timed sidechain snapshots and cross-mixer sends remain explicit failures. The Editor
+unchanged. Q141 adds linear timed snapshots for Send Level and every Duck parameter, weighted
+Send/threshold snapshots, half-speed and paused scaled-time controls, and ordinary mixer-output
+routing. Unscaled timed sidechain snapshots, non-linear transition overrides and cross-mixer sends
+remain explicit failures. The Editor
 has no wet-mixing control for Send or Duck Volume; see docs/AUDIO.md for the 6000.0 contracts,
 measured rules and follow-ups.
 
@@ -76,12 +79,19 @@ python3 tests/authored_project.py record mixerduck default --release 6000.0.71f1
 
 The tolerances are ATOL `2e-5` and RTOL `2e-4` on floats, as in the other mixer probes, and exact
 on metadata. Independent Native repeats compare float bits exactly and agree at both rates
-(11010218/11010218 values each). The canonical reference is one capture per rate in
+(12845254/12845254 values each). The canonical reference is one capture per rate in
 `Reference/unity-6000.0.71f1/rate-<rate>/`, with gzip sample files. Both raw repeats stay in the
 cache.
 
 ## Result
 
-Gate: 11010218/11010218 values at 48000 Hz and at 44100 Hz. The strict comparison keeps one-step
-device PCM flips (891 at each rate) whose master floats pass; they are listed in
-docs/COMPATIBILITY_GAPS.md. The measured model and its limits are in docs/AUDIO.md.
+Gate: 12845254/12845254 values at 48000 Hz and at 44100 Hz. Independent Editor repeats agree exactly;
+every earlier reference value and sample is retained. The strict comparison keeps one-step
+device PCM flips whose master floats pass, listed in docs/COMPATIBILITY_GAPS.md. `pcm.py` checks
+every device sample against saturating truncation of its own master sample; both captures have
+zero conversion differences. The measured model and its limits are in docs/AUDIO.md.
+
+The opt-in `DiagnosticCases` are excluded from the canonical capture. Run one at a time with
+`native.py --cases <case>`. Cross-mixer targets report an invalid audio handle and can prevent
+Play mode. Unscaled transitions use wall time even under captureDeltaTime, so their repeats are
+not bit-identical. Neither diagnostic establishes a supported DSP rule.
