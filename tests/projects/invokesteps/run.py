@@ -16,21 +16,21 @@ from probe_paths import reference_root, run_root  # noqa: E402
 PROBE = Path(__file__).resolve().parent
 
 
-def publish_edges(labels):
+def publish_extra(labels, filename):
     roots = [run_root(PROBE, label) for label in labels]
 
     def write(target, first):
-        shutil.copyfile(first/'capture/edges.jsonl', target)
+        shutil.copyfile(first/'capture'/filename, target)
         print('published', target)
 
-    return editor_runner.publish(roots, reference_root(PROBE)/'edges.jsonl',
-                                 lambda _: ['capture/values.jsonl', 'capture/edges.jsonl'], write,
-                                 complete=[editor_runner.jsonl_complete('capture/edges.jsonl')], gpu=True)
+    return editor_runner.publish(roots, reference_root(PROBE)/filename,
+                                 lambda _: ['capture/values.jsonl', 'capture/edges.jsonl', 'capture/scale.jsonl'], write,
+                                 complete=[editor_runner.jsonl_complete('capture/'+filename)], gpu=True)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('record', 'publish', 'publish-edges', 'gate'))
+    parser.add_argument('mode', choices=('record', 'publish', 'publish-edges', 'publish-scale', 'gate'))
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label', default=None)
     args = parser.parse_args()
@@ -39,21 +39,25 @@ def main():
         return value_probe.record(PROBE, 'InvokeStepsRunner.Record', 'INVOKE_STEPS_OUT', label, False)
     if args.mode == 'publish':
         result = value_probe.publish(PROBE, args.labels)
-        return result or publish_edges(args.labels)
+        return result or publish_extra(args.labels, 'edges.jsonl') or publish_extra(args.labels, 'scale.jsonl')
     if args.mode == 'publish-edges':
-        return publish_edges(args.labels)
+        return publish_extra(args.labels, 'edges.jsonl')
+    if args.mode == 'publish-scale':
+        return publish_extra(args.labels, 'scale.jsonl')
     result = value_probe.gate(PROBE, 'INVOKE_STEPS_OUT', label, 0, ['--frames', '400', '--size', '160x90'])
-    try:
-        expected = value_probe.read_values(reference_root(PROBE)/'edges.jsonl')
-        actual = value_probe.read_values(run_root(PROBE, label)/'engine/edges.jsonl')
-    except (OSError, ValueError) as error:
-        print('invokesteps edges: no complete capture:', error)
-        return 1
-    matched, failures = value_probe.compare(expected, actual, 0)
-    for failure in failures:
-        print(json.dumps(failure))
-    print(f'invokesteps edges: {matched}/{len(expected)} values match, {len(failures)} failures')
-    return int(bool(result or failures))
+    for filename in ('edges.jsonl', 'scale.jsonl'):
+        try:
+            expected = value_probe.read_values(reference_root(PROBE)/filename)
+            actual = value_probe.read_values(run_root(PROBE, label)/'engine'/filename)
+        except (OSError, ValueError) as error:
+            print(f'invokesteps {filename}: no complete capture:', error)
+            return 1
+        matched, failures = value_probe.compare(expected, actual, 0)
+        for failure in failures:
+            print(json.dumps(failure))
+        print(f'invokesteps {filename}: {matched}/{len(expected)} values match, {len(failures)} failures')
+        result = result or int(bool(failures))
+    return int(bool(result))
 
 if __name__ == '__main__':
     sys.exit(main())

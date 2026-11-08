@@ -21,7 +21,12 @@ A second file, `edges.jsonl`, records cancellation and non-finite deadlines from
 Cancelling a neighbor before delivery leaves the single-repeat cadence unchanged. Cancelling it
 inside the repeating callback can expose the repeat already inserted behind it, allowing another
 call at that point. Two NaN-delay repeats remain pending and deliver no callbacks. The single
-probe gate compares both files without changing the original reference values.
+probe gate compares all files without changing the original reference values.
+
+`scale.jsonl` exercises the documented scaled-time guarantee after these windows. The timer
+is paused for four frames, then advances at half speed for twelve frames. Neither interval
+reaches the one-second delay in scaled time; unscaled time would have reached it. Resuming
+normal speed produces repeated calls, whose intervals are checked in scaled time.
 
 [Invoke](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.Invoke.html)
 documents the delay and leaves other execution order dependent on timing.

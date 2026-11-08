@@ -1,0 +1,6 @@
+{"k":"paused/noCalls","v":true}
+{"k":"halfSpeed/stillBeforeDelay","v":true}
+{"k":"resumed/multipleCalls","v":true}
+{"k":"delay/usesScaledTime","v":true}
+{"k":"interval/usesScaledTime","v":true}
+{"k":"complete","v":true}

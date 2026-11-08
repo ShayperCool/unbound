@@ -32,7 +32,7 @@ public sealed class InvokeEdgeProbe : MonoBehaviour
             m_Values.Add("{\"k\":\"complete\",\"v\":true}");
             File.WriteAllLines(Path.Combine(Environment.GetEnvironmentVariable("INVOKE_STEPS_OUT"), "edges.jsonl"), m_Values);
             enabled = false;
-            m_Finish();
+            new GameObject("Scaled Invoke control").AddComponent<InvokeScaleProbe>().Begin(m_Finish);
             return;
         }
         m_Timer = new GameObject("Timer " + m_Stage).AddComponent<InvokeEdgeTimer>();
