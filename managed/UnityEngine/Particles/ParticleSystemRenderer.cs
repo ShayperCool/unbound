@@ -705,6 +705,13 @@ namespace UnityEngine
             /// tail (1).</summary>
             // Scratch lists reused by every build (per frame and per camera).
             readonly List<Mesh> m_LiveMeshes = new List<Mesh>();
+            /// <summary>Whether a particle mesh of the last build has 32-bit indices.</summary>
+            bool m_SourceIndex32;
+
+            /// <summary>Whether the built geometry takes a 32-bit index buffer: more than 65535
+            /// vertices, or a particle mesh with 32-bit indices (6000.0.71f1,
+            /// tests/projects/particlerender meshindex/*: BakeMesh's index format).</summary>
+            internal bool Index32 => VertexCount > 65535 || m_SourceIndex32;
             readonly List<ParticleSystem.Trail> m_DrawTrails = new List<ParticleSystem.Trail>();
             readonly List<Vector3> m_TrailPoints = new List<Vector3>(), m_TrailSides = new List<Vector3>();
             readonly List<float> m_TrailWidths = new List<float>(), m_TrailDistances = new List<float>();
@@ -858,6 +865,12 @@ namespace UnityEngine
                 var toWorld = simulationPose ?? ps.SimulationToWorld();
                 var scale = ps.EmitterScale();
                 var systemRotation = ps.transform.rotation;
+                // Local-aligned meshes turn and scale with the emitter: its rotation and the scaling
+                // mode's scale, or with Hierarchy scaling of a local simulation the pose itself (its
+                // whole transform when drawn, none in a plain bake; tests/projects/particlerender
+                // meshscale/Hierarchy/Local/Local).
+                var localFrame = ps.m_Main.scalingMode == ParticleSystemScalingMode.Hierarchy && ps.m_Main.simulationSpace == ParticleSystemSimulationSpace.Local
+                    ? LinearPart(toWorld) : Matrix4x4.TRS(Vector3.zero, systemRotation, scale);
                 // The rotation from simulation space to the output (stretched quads scale their
                 // corners along the simulation's axes).
                 var outputRotation = r.m_RenderMode == ParticleSystemRenderMode.Stretch ? toWorld.rotation : Quaternion.identity;
@@ -871,12 +884,17 @@ namespace UnityEngine
 
                 List<Mesh> meshes = null;
                 bool rotation3D = ps.has3DParticleRotations;
+                m_SourceIndex32 = false;
                 if (r.m_RenderMode == ParticleSystemRenderMode.Mesh)
                 {
                     meshes = m_LiveMeshes;
                     meshes.Clear();
                     foreach (var m in r.m_Meshes)
-                        if (m != null) meshes.Add(m);
+                        if (m != null)
+                        {
+                            meshes.Add(m);
+                            m_SourceIndex32 |= m.indexFormat == IndexFormat.UInt32;
+                        }
                     if (meshes.Count == 0) return false;
                 }
 
@@ -917,8 +935,8 @@ namespace UnityEngine
                         var meshRotation = rotation3D || p.m_Rotation.x != 0f || p.m_Rotation.y != 0f
                             ? Quaternion.Euler(p.m_Rotation * Mathf.Rad2Deg)
                             : Quaternion.AngleAxis(p.m_Rotation.z * Mathf.Rad2Deg, p.m_AxisOfRotation);
-                        var orientation = AddMesh(r, m, position, size, meshRotation, systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
-                        NoteMeshParticle(orientation, streamSize, scale);
+                        var meshTransform = AddMesh(r, m, position, streamSize, scale, localFrame, meshRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
+                        NoteMeshParticle(meshTransform);
                     }
                     else
                     {
@@ -930,7 +948,7 @@ namespace UnityEngine
                             quadSize *= factor; size = clamped;
                         }
                         if (r.m_RenderMode == ParticleSystemRenderMode.Stretch)
-                            AddStretched(r, position, quadSize, scale, outputRotation, p.m_Velocity + p.m_AnimatedVelocity, p.m_Rotation.z, color, uvRect, view);
+                            AddStretched(r, position, quadSize, scale, outputRotation, toWorld, p.m_Velocity + p.m_AnimatedVelocity, p.m_Rotation.z, color, uvRect, view);
                         else
                             AddQuad(r, position, quadSize, scale, rotation, systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
                     }
@@ -1135,8 +1153,7 @@ namespace UnityEngine
                     return right * o.x + up * o.y + normal * o.z;
                 }
                 var diagonal0 = Offset(0); var diagonal1 = Offset(1);
-                var flat = Vector3.Cross(diagonal0.normalized, diagonal1.normalized);
-                var tangent = (diagonal1 - diagonal0).normalized;
+                QuadFrame(diagonal0, diagonal1, out var flat, out var tangent);
                 var shiftedPivot = Vector3.Scale(rotation * pivot, emitterScale);
                 var pivotOffset = right * shiftedPivot.x + up * shiftedPivot.y + normal * shiftedPivot.z;
                 for (int c = 0; c < 4; c++)
@@ -1150,6 +1167,23 @@ namespace UnityEngine
                     VertexCount++;
                 }
                 AddQuadIndices(start);
+            }
+
+            /// <summary>A quad's normal and tangent from the offsets of its first two corners from the
+            /// particle: the cross product of their directions (shorter than one when they are not
+            /// perpendicular) and the direction from the first to the second (6000.0.71f1,
+            /// tests/projects/particlerender meshattr/* for billboards, freenorm/* for freeform
+            /// stretched quads).</summary>
+            static void QuadFrame(Vector3 offset0, Vector3 offset1, out Vector3 normal, out Vector3 tangent)
+            {
+                normal = Vector3.Cross(offset0.normalized, offset1.normalized);
+                tangent = (offset1 - offset0).normalized;
+            }
+
+            static Matrix4x4 LinearPart(Matrix4x4 m)
+            {
+                m.m03 = m.m13 = m.m23 = 0f;
+                return m;
             }
 
             void AddQuadIndices(int start)
@@ -1209,7 +1243,7 @@ namespace UnityEngine
             /// direction (at rest) the quad collapses onto the particle. Freeform stretching: see
             /// <see cref="AddFreeform"/>.</summary>
             void AddStretched(ParticleSystemRenderer r, Vector3 position, Vector3 size, Vector3 emitterScale, Quaternion toOutput,
-                Vector3 localVelocity, float rotation, Color32 color, Rect uv, View view)
+                Matrix4x4 toWorld, Vector3 localVelocity, float rotation, Color32 color, Rect uv, View view)
             {
                 // The quad is built along the simulation's axes and turned into the output space.
                 var fromOutput = Quaternion.Inverse(toOutput);
@@ -1217,7 +1251,10 @@ namespace UnityEngine
                 float speed = v.magnitude;
                 if (r.m_FreeformStretching)
                 {
-                    AddFreeform(r, position, size, emitterScale, toOutput * v, speed, rotation, color, uv, view);
+                    // Freeform quads stretch along the velocity in the output space, its scale
+                    // included (6000.0.71f1, tests/projects/particlerender
+                    // freenorm/transform/*/front/transform).
+                    AddFreeform(r, position, size, emitterScale, toWorld.MultiplyVector(v), speed, rotation, color, uv, view);
                     return;
                 }
                 Vector3 c0, c1, c2, c3;
@@ -1247,10 +1284,14 @@ namespace UnityEngine
                     var toCamera = view.Orthographic ? -view.Forward : view.Position - position;
                     if (face.sqrMagnitude > 1e-20f) normal = (Vector3.Dot(face, toCamera) < 0f ? -face : face).normalized;
                 }
-                AddStretchedCorners(c0, c1, c2, c3, normal, color, uv);
+                // The tangent runs from the head to the tail (6000.0.71f1, particlerender
+                // freenorm/*/plain: the stretch direction reversed, w -1).
+                var tail = (c1 - c0).normalized;
+                AddStretchedCorners(c0, c1, c2, c3, normal, color, uv, new Vector4(tail.x, tail.y, tail.z, -1f));
             }
 
-            void AddStretchedCorners(Vector3 c0, Vector3 c1, Vector3 c2, Vector3 c3, Vector3 normal, Color32 color, Rect uv)
+            void AddStretchedCorners(Vector3 c0, Vector3 c1, Vector3 c2, Vector3 c3, Vector3 normal, Color32 color, Rect uv,
+                Vector4 tangent = default)
             {
                 Reserve(VertexCount + 4, IndexCount + 6);
                 int start = VertexCount;
@@ -1261,26 +1302,32 @@ namespace UnityEngine
                 for (int i = start; i < VertexCount; i++)
                 {
                     Normals[i] = normal;
+                    Tangents[i] = tangent;
                     Colors[i] = color;
                 }
                 AddQuadIndices(start);
             }
 
             /// <summary>A freeform stretched particle (6000.0.71f1, tests/projects/particlerender
-            /// freemove/*, camvel/*/freeform): a quad of the particle's size facing the camera's
-            /// position (its right across the camera's up and the direction to the camera), turned by
-            /// the particle's rotation plus, with rotateWithStretchDirection, the angle of the stretch
-            /// direction in that quad's plane; the pivot moves it pivot.x sizes along the quad's
-            /// right, pivot.y along its up and pivot.z away from the camera; then the whole quad is
-            /// scaled along the stretch direction by the stretched length over the size
-            /// (size.y × lengthScale × the emitter's x scale + speed × velocityScale). Corners in
-            /// the stretched billboard's uv order; the normal points at the camera (exact for
-            /// unstretched quads; a stretched quad's normal in the Editor leans by an unresolved
-            /// rule, COMPATIBILITY_GAPS). A particle at rest has no stretch direction: the Editor's
-            /// bake gives it NaN corners (drawn as nothing) and the view direction as normal, which
-            /// Unbound keeps for bakes and collapses onto the particle for drawing.
-            /// Rotated or non-uniformly scaled emitters are not matched (freemove/transform_freeform,
-            /// COMPATIBILITY_GAPS).</summary>
+            /// freemove/*, freenorm/*, camvel/*/freeform): a quad of the particle's size facing the
+            /// camera's position (its right across the camera's up and the direction to the
+            /// camera), turned by the particle's rotation plus, with rotateWithStretchDirection, the
+            /// angle of the stretch direction in that quad's plane, with the pivot (pivot.x sizes
+            /// against the turned right, pivot.y along the turned up), then scaled by the emitter
+            /// along the camera's right and up (as a billboard), moved pivot.z sizes away from the
+            /// camera, and scaled along the stretch direction by the stretched length over the size
+            /// (size.y × lengthScale × the emitter's x scale + speed × velocityScale, over size.y).
+            /// Corners in the stretched billboard's uv order. The normal and tangent are a
+            /// billboard's (<see cref="QuadFrame"/>) from the first two corners' offsets from the
+            /// particle, the pivot included, so a stretched quad's normal is shorter than one.
+            /// Measured with rotated and scaled emitters for each scaling mode and simulation space
+            /// (freenorm/transform/*); there, with a y scale other than 1, the Editor turns a quad
+            /// whose velocity points partly along the view by another stretch angle, unresolved
+            /// (known.json freeform-stretch-angle). Unmeasured: a pivot on a scaled emitter; a
+            /// normalDirection other than 1 (not applied: every corner takes the flat normal). A particle at rest has no
+            /// stretch direction: the Editor's bake gives it NaN corners (drawn as nothing) and +Z
+            /// as normal, which Unbound keeps for bakes and collapses onto the particle for
+            /// drawing.</summary>
             void AddFreeform(ParticleSystemRenderer r, Vector3 position, Vector3 size, Vector3 emitterScale, Vector3 stretchVelocity,
                 float speed, float rotation, Color32 color, Rect uv, View view)
             {
@@ -1288,8 +1335,9 @@ namespace UnityEngine
                 if (!(speed > 0f))
                 {
                     var rest = Baking ? new Vector3(float.NaN, float.NaN, float.NaN) : position;
-                    // Its normal is the view direction, as a collapsed stretched quad's.
-                    AddStretchedCorners(rest, rest, rest, rest, view.Forward, color, uv);
+                    // Its normal is +Z whatever the camera (6000.0.71f1, particlerender
+                    // freemove/*/rest*/side).
+                    AddStretchedCorners(rest, rest, rest, rest, Vector3.forward, color, uv);
                     return;
                 }
                 var right = Vector3.Cross(view.Up, toCamera).normalized;
@@ -1298,19 +1346,23 @@ namespace UnityEngine
                 if (r.m_RotateWithStretchDirection)
                     angle += Mathf.Atan2(Vector3.Dot(stretchVelocity, up), Vector3.Dot(stretchVelocity, right));
                 float cos = Mathf.Cos(angle), sin = Mathf.Sin(angle);
-                var quadRight = cos * right + sin * up;
-                var quadUp = cos * up - sin * right;
                 var direction = stretchVelocity / stretchVelocity.magnitude;
                 float length = size.y * Mathf.Abs(emitterScale.x) * r.m_LengthScale + speed * r.m_VelocityScale;
                 // The scale along the stretch direction (a zero size has no extent to scale).
                 float along = size.y != 0f ? length / size.y - 1f : 0f;
-                var pivot = -r.m_Pivot.x * size.x * quadRight + r.m_Pivot.y * size.y * quadUp - r.m_Pivot.z * size.x * toCamera;
-                Vector3 Corner(float x, float y)
+                var pivotDepth = -r.m_Pivot.z * size.x * toCamera;
+                // A corner (or the pivot) in the particle's turned frame, scaled by the emitter along
+                // the camera's right and up, as a billboard's (AddQuad), then stretched.
+                Vector3 Offset(float x, float y)
                 {
-                    var offset = quadRight * (x * size.x * 0.5f) + quadUp * (y * size.y * 0.5f) + pivot;
-                    return position + offset + direction * (Vector3.Dot(direction, offset) * along);
+                    float lx = (x * 0.5f - r.m_Pivot.x) * size.x, ly = (y * 0.5f + r.m_Pivot.y) * size.y;
+                    var offset = right * ((cos * lx - sin * ly) * emitterScale.x) + up * ((sin * lx + cos * ly) * emitterScale.y) + pivotDepth;
+                    return offset + direction * (Vector3.Dot(direction, offset) * along);
                 }
-                AddStretchedCorners(Corner(1f, 1f), Corner(-1f, 1f), Corner(-1f, -1f), Corner(1f, -1f), toCamera, color, uv);
+                var o0 = Offset(1f, 1f); var o1 = Offset(-1f, 1f); var o2 = Offset(-1f, -1f); var o3 = Offset(1f, -1f);
+                QuadFrame(o0, o1, out var normal, out var tangent);
+                AddStretchedCorners(position + o0, position + o1, position + o2, position + o3, normal, color, uv,
+                    new Vector4(tangent.x, tangent.y, tangent.z, -1f));
             }
 
             /// <summary>The width min/maxParticleSize allow a stretched billboard: as a fraction of
@@ -1351,12 +1403,21 @@ namespace UnityEngine
                 return length > 1e-12f ? side / length : Vector3.zero;
             }
 
-            /// <summary>Adds a mesh particle; returns its orientation.</summary>
-            Quaternion AddMesh(ParticleSystemRenderer r, Mesh mesh, Vector3 position, Vector3 size, Quaternion rotation, Quaternion systemRotation, Color32 color, Rect uv, Vector3 velocity, View view)
+            /// <summary>Adds a mesh particle; returns the linear part of its transform (mesh to output
+            /// space). The mesh is scaled by the particle's size, turned by its rotation and the
+            /// alignment's orientation, then scaled by the emitter scale along the output's axes;
+            /// with Local alignment it is turned and scaled by the emitter's frame instead
+            /// (<paramref name="localFrame"/>: its rotation and scaling-mode scale, or with Hierarchy
+            /// scaling of a local simulation the simulation pose itself). Normals take the inverse
+            /// transpose of that transform, normalized. Measured in 6000.0.71f1,
+            /// tests/projects/particlerender meshscale/* (every scaling mode and simulation space,
+            /// View, World and Local alignment, default and transformed bakes; Facing and Velocity
+            /// follow View, unmeasured) and bake/mesh.</summary>
+            Matrix4x4 AddMesh(ParticleSystemRenderer r, Mesh mesh, Vector3 position, Vector3 size, Vector3 emitterScale, Matrix4x4 localFrame,
+                Quaternion rotation, Color32 color, Rect uv, Vector3 velocity, View view)
             {
                 var vertices = mesh.m_Vertices;
                 int n = vertices.Length;
-                if (n == 0) return rotation;
                 Quaternion orientation;
                 switch (r.m_RenderAlignment)
                 {
@@ -1364,7 +1425,7 @@ namespace UnityEngine
                         orientation = Quaternion.LookRotation(view.Forward, view.Up);
                         break;
                     case ParticleSystemRenderSpace.Local:
-                        orientation = systemRotation;
+                        orientation = Quaternion.identity;
                         break;
                     case ParticleSystemRenderSpace.Facing:
                         orientation = Quaternion.LookRotation(position - view.Position, view.Up);
@@ -1376,7 +1437,11 @@ namespace UnityEngine
                         orientation = Quaternion.identity;
                         break;
                 }
-                var q = orientation * rotation;
+                var linear = r.m_RenderAlignment == ParticleSystemRenderSpace.Local
+                    ? localFrame * Matrix4x4.Rotate(rotation) * Matrix4x4.Scale(size)
+                    : Matrix4x4.Scale(emitterScale) * Matrix4x4.Rotate(orientation * rotation) * Matrix4x4.Scale(size);
+                if (n == 0) return linear;
+                var normalMatrix = CofactorMatrix(linear);
                 var normals = mesh.m_Normals;
                 var colors = mesh.m_Colors;
                 var uvs = mesh.m_UVs[0];
@@ -1387,10 +1452,10 @@ namespace UnityEngine
                 Color tint = color;
                 for (int v = 0; v < n; v++)
                 {
-                    Positions[VertexCount] = position + q * Vector3.Scale(vertices[v], size);
-                    Normals[VertexCount] = normals != null && v < normals.Length ? q * normals[v] : -view.Forward;
+                    Positions[VertexCount] = position + linear.MultiplyVector(vertices[v]);
+                    Normals[VertexCount] = normals != null && v < normals.Length ? normalMatrix.MultiplyVector(normals[v]).normalized : -view.Forward;
                     var tangent = mesh.m_Tangents != null && v < mesh.m_Tangents.Length ? mesh.m_Tangents[v] : new Vector4(1f, 0f, 0f, -1f);
-                    var direction = q * new Vector3(tangent.x, tangent.y, tangent.z);
+                    var direction = linear.MultiplyVector(new Vector3(tangent.x, tangent.y, tangent.z)).normalized;
                     Tangents[VertexCount] = new Vector4(direction.x, direction.y, direction.z, tangent.w);
                     Colors[VertexCount] = colors != null && v < colors.Length ? (Color32)((Color)colors[v] * tint) : color;
                     var t = uvs != null && v < uvs.Length ? uvs[v] : Vector4.zero;
@@ -1402,7 +1467,23 @@ namespace UnityEngine
                     if (s.Topology != MeshTopology.Triangles) continue;
                     foreach (var index in s.Indices) Indices[IndexCount++] = start + s.BaseVertex + index;
                 }
-                return q;
+                return linear;
+            }
+
+            /// <summary>The cofactor matrix of <paramref name="m"/>'s linear part: its inverse
+            /// transpose times its determinant, signed so that it keeps a normal's side (a mirroring
+            /// transform flips it back). Normals only need its direction.</summary>
+            static Matrix4x4 CofactorMatrix(Matrix4x4 m)
+            {
+                var c = Matrix4x4.identity;
+                c.m00 = m.m11 * m.m22 - m.m12 * m.m21; c.m01 = m.m12 * m.m20 - m.m10 * m.m22; c.m02 = m.m10 * m.m21 - m.m11 * m.m20;
+                c.m10 = m.m02 * m.m21 - m.m01 * m.m22; c.m11 = m.m00 * m.m22 - m.m02 * m.m20; c.m12 = m.m01 * m.m20 - m.m00 * m.m21;
+                c.m20 = m.m01 * m.m12 - m.m02 * m.m11; c.m21 = m.m02 * m.m10 - m.m00 * m.m12; c.m22 = m.m00 * m.m11 - m.m01 * m.m10;
+                float determinant = m.m00 * c.m00 + m.m01 * c.m01 + m.m02 * c.m02;
+                if (determinant < 0f)
+                    for (int i = 0; i < 3; i++)
+                        for (int j = 0; j < 3; j++) c[i, j] = -c[i, j];
+                return c;
             }
 
             /// <summary>Writes the built geometry into a mesh (vertices transformed by `transform`).
@@ -1438,7 +1519,7 @@ namespace UnityEngine
                 WriteStreamAttributes(mesh, transform, identity, length, streaming);
                 // Before the indices: a format change resets the submeshes and clears the index
                 // buffer (Mesh.indexFormat, 6000.0).
-                mesh.indexFormat = n > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;
+                mesh.indexFormat = Index32 ? IndexFormat.UInt32 : IndexFormat.UInt16;
                 if (mesh.m_SubMeshes.Count != 1)
                 {
                     mesh.m_SubMeshes.Clear();

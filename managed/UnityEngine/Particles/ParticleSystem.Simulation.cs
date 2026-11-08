@@ -258,10 +258,14 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>Emitter space to world.</summary>
+        /// <summary>Emitter space to world. With Hierarchy scaling it is the transform's whole
+        /// matrix, which keeps the skew of a rotated system under a non-uniformly scaled parent
+        /// (the lossy scale cannot): 6000.0.71f1, tests/projects/particlerender
+        /// meshscale/Hierarchy/Local/*/front/transform.</summary>
         internal Matrix4x4 EmitterMatrix()
         {
             var t = m_GameObject.m_Transform;
+            if (m_Main.scalingMode == ParticleSystemScalingMode.Hierarchy) return t.localToWorldMatrix;
             return Matrix4x4.TRS(t.position, t.rotation, EmitterScale());
         }
 

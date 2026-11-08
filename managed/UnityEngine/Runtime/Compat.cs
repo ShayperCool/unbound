@@ -297,6 +297,12 @@ namespace Unbound.Runtime
         /// (birthclock/, model/clock/). Other releases keep the division until measured.</summary>
         internal static bool ParticleLifetimeReciprocalEstimate => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>BakeTexture of mesh particles whose bake has a 16-bit index buffer fills the
+        /// indices texture with that buffer read as 32-bit words (two indices a texel), measured
+        /// by tests/projects/particlerender meshindex/* and bake/mesh on 6000.0.71f1. Other
+        /// releases write one index a texel, as for billboards, until measured.</summary>
+        internal static bool ParticleMeshBakeTextureReadsIndexPairs => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>6000.0's BakeTrailsMesh joins ribbon strips in its index count and rejects
         /// the resulting out-of-bounds indices. Regular ribbon rendering is unaffected.</summary>
         internal static bool ParticleRibbonBakeRejectsMultipleStrips => Major >= 6000;
