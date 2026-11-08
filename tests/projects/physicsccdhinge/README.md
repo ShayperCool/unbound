@@ -155,3 +155,9 @@ readings match the unchanged strict tolerances. The supplemental controls match
 all motion and contact data, retaining 24 opposite native pair impulse vectors.
 The extended gate therefore certifies CCD geometry coverage and the fixed
 mechanisms; it does not claim full speculative compound/contact-payload parity.
+
+Extended validation: release build, stub generation, 3529 managed tests,
+affected Rust tests and all three engine-only CCD profiles pass. Existing
+physics, joints, physicsbatch and contactmodify3d gates retain their results.
+The geometry verifier has mutation controls for changed motion/counts, missing
+payloads and inconsistent reflections across bodies or steps.

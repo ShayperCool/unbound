@@ -47,6 +47,19 @@ class GeometryVerificationTests(unittest.TestCase):
         outside = 'geometry/kinematic/1/1/3/0/target/body'
         self.assertTrue(self.result({outside:expected[key]}, {outside:actual[key]})['unresolved'])
 
+    def test_reflection_must_be_consistent_for_every_body_and_step(self):
+        prefix = 'geometry/dynamic/3/0/3'
+        a, b = prefix+'/0/a/body', prefix+'/0/b/body'
+        expected = {a:'-.3,.1,0,0,0,0,1,36,3,0,0,0,0', b:'.3,-.1,0,0,0,0,1,-36,-3,0,0,0,0'}
+        actual = dict(expected)
+        actual[a] = '-.3,-.1,0,0,0,0,1,36,-3,0,0,0,0'
+        self.assertTrue(self.result(expected, actual)['unresolved'])
+        actual[b] = '.3,.1,0,0,0,0,1,-36,3,0,0,0,0'
+        self.assertFalse(self.result(expected, actual)['unresolved'])
+        expected[prefix+'/1/a/body'] = expected[a]
+        actual[prefix+'/1/a/body'] = expected[a]
+        self.assertTrue(self.result(expected, actual)['unresolved'])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -21,6 +21,22 @@ OPEN_MANIFOLD = 'geometry/kinematic-target/4/2/3'
 def verify(expected, actual, report):
     unresolved, contacts, mirrors, open_motion = [], [], [], []
     checked = 0
+    reflected_scenes = set()
+    for scenario in MIRRORED:
+        bodies = [key for key in expected if key.startswith(scenario+'/') and key.endswith('/body')]
+        consistent = bool(bodies)
+        for key in bodies:
+            try:
+                values = [float(x) for x in actual[key].split(',')]
+                if len(values) != 13 or not all(math.isfinite(x) for x in values):
+                    raise ValueError('Malformed body')
+                values[1] = -values[1]
+                values[8] = -values[8]
+                consistent &= equal(expected[key], ','.join(map(str, values)))
+            except (KeyError, ValueError):
+                consistent = False
+        if consistent:
+            reflected_scenes.add(scenario)
     # Even reporting-only contact payloads must be complete and internally consistent.
     for key, value in actual.items():
         if key.endswith('/events'):
@@ -75,12 +91,9 @@ def verify(expected, actual, report):
                 values = [float(x) for x in right.split(',')]
                 if len(values) != 13 or not all(math.isfinite(x) for x in values):
                     raise ValueError('Malformed body')
-                if scenario in MIRRORED:
-                    values[1] = -values[1]
-                    values[8] = -values[8]
-                    if equal(left, ','.join(map(str, values))):
-                        mirrors.append(failure)
-                        continue
+                if scenario in reflected_scenes:
+                    mirrors.append(failure)
+                    continue
                 if scenario == OPEN_MANIFOLD and key.split('/')[-2] == 'bullet':
                     # Exact motion remains open here. Keep basic CCD outcome checks: the
                     # body stays behind the obstacle, in its contact region, without rotation.
