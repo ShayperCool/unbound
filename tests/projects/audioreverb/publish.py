@@ -10,12 +10,15 @@ from verify import verify
 
 p = argparse.ArgumentParser()
 p.add_argument('--release', required=True)
+p.add_argument('--profile', choices=('static', 'motion'), default='static')
 p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--capture', type=Path, required=True)
 p.add_argument('--extend', action='store_true', help='Add cases only; every existing metadata value and sample must remain identical')
 a = p.parse_args()
+if a.profile == 'motion':
+    from motion import verify
 verify(a.capture, a.release, a.rate)
-target = FIXTURE/'Reference'/('unity-'+a.release)/('rate-'+str(a.rate))
+target = FIXTURE/'Reference'/('unity-'+a.release)/(('motion-rate-' if a.profile == 'motion' else 'rate-')+str(a.rate))
 if target.exists():
     assert a.extend, 'reference already exists; --extend may only add identical controls'
     existing, incoming = header(target), header(a.capture)

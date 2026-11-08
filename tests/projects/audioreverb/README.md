@@ -95,3 +95,26 @@ previous oracle samples and tolerances are retained. These captures configure
 zones before rendering and stop before long sources finish. The separate
 [audiodistortion spatial profile](../audiodistortion/README.md) retains unresolved
 first-activation and source-completion send differences.
+
+The additional lifecycle, curve-key and overlapping-voice controls bring the
+reference to 136 cases and 13369927 values per rate. They retain every earlier
+metadata value and sample. Two independent captures agree bit for bit at each
+rate. Reset controls render one silent block before creating their source to
+establish the restarted clock; every subsequent case buffer is retained.
+The cases cover cold/warm zones, enabling or creating a zone during playback,
+explicit Stop, natural completion, per-voice sends with an overlapping one-shot,
+and source Distortion/Chorus. All four custom curve types record both the caller's
+keys and GetCustomCurve's returned keys, including negative, oversized, short,
+unsorted, weighted and single-key inputs.
+
+The `--profile motion` reference separately records 30 source/listener controls
+on the ordinary player loop. Each endpoint runs Auto, Fixed and Dynamic modes
+with its own Rigidbody, a parent Rigidbody, or transform motion in FixedUpdate
+or Update. Opposing Rigidbody velocity writes in FixedUpdate and Update expose
+the phase that supplies the source's Doppler sample. Flat custom rolloff isolates
+velocity from distance attenuation. The two independent repeats agree exactly
+on 2949182 values per rate, with 24 complete 1024-frame stereo buffers per case.
+Record and publish this profile with `native.py --profile motion` and
+`publish.py --profile motion`; `motion.py --exact --reference FIRST/capture
+--candidate SECOND/capture` checks independent agreement. Each command also
+requires the explicit release, rate and a cache output path as above.

@@ -9,6 +9,7 @@ import subprocess
 
 p = argparse.ArgumentParser()
 p.add_argument('--release', required=True)
+p.add_argument('--profile', choices=('static', 'motion'), default='static')
 p.add_argument('--work', type=Path, required=True)
 p.add_argument('--editor', type=Path)
 p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
@@ -25,12 +26,13 @@ editor = a.editor or Path.home()/'Unity/Hub/Editor'/a.release/'Editor/Unity'
 command = [str(Path.home()/'.cache/compat/with-heavy-job'), '--kind', 'editor-gpu', 'timeout', '900', str(editor), '-batchmode',
            '-projectPath', str(project), '-executeMethod', 'ProbeRunner.Record', '-logFile', str(a.work/'editor.log')]
 (a.work/'command.json').write_text(json.dumps(command, indent=2)+'\n')
-env = dict(os.environ, AUDIOREVERB_PROBE_OUT=str(output), AUDIOREVERB_PROBE_RATE=str(a.rate))
+env = dict(os.environ, AUDIOREVERB_PROBE_PROFILE=a.profile, AUDIOREVERB_PROBE_OUT=str(output), AUDIOREVERB_PROBE_RATE=str(a.rate))
 if a.cases: env['AUDIOREVERB_PROBE_CASES'] = a.cases
 with (a.work/'stdout.log').open('w') as log:
     subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
 if not a.cases:
     import sys
     sys.path.insert(0, str(fixture))
+    from motion import verify as motion_verify
     from verify import verify
-    verify(output, a.release, a.rate)
+    (motion_verify if a.profile == 'motion' else verify)(output, a.release, a.rate)

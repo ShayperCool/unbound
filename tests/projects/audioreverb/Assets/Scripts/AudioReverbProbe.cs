@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.IO;
 using System.Collections.Generic;
 using System.Globalization;
@@ -7,7 +8,7 @@ using UnityEngine;
 using UnityEngine.Audio;
 using Unity.Collections;
 
-public class AudioReverbProbe : MonoBehaviour
+public partial class AudioReverbProbe : MonoBehaviour
 {
     // Each case plays one AudioSource routed to the Child group of the effect-free Probe mixer, unless
     // it has a reverb zone (then it plays to the default output). Tokens:
@@ -118,6 +119,52 @@ public class AudioReverbProbe : MonoBehaviour
         new[] { "zone_noise_genericset", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "genericset" },
         new[] { "zone_noise_velocityset", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "velocityset" },
         new[] { "zone_noise_spreadset", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "spreadset" },
+        new[] { "zone_lifecycle_cold_mono0", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=cold" },
+        new[] { "zone_lifecycle_warm_mono0", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=warm" },
+        new[] { "zone_lifecycle_enable_mono0", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=enable" },
+        new[] { "zone_lifecycle_late_mono0", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=late" },
+        new[] { "zone_lifecycle_stop_mono0", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=stop" },
+        new[] { "zone_lifecycle_end_mono0", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=11265", "routed", "lifecycle=end" },
+        new[] { "zone_lifecycle_cold_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=cold", "mono" },
+        new[] { "zone_lifecycle_warm_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=warm", "mono" },
+        new[] { "zone_lifecycle_enable_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=enable", "mono" },
+        new[] { "zone_lifecycle_late_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=late", "mono" },
+        new[] { "zone_lifecycle_stop_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=stop", "mono" },
+        new[] { "zone_lifecycle_end_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=11265", "routed", "lifecycle=end", "mono" },
+        new[] { "zone_keys_customrolloff_long", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=CustomRolloff", "curveshape=long" },
+        new[] { "zone_keys_customrolloff_negative", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=CustomRolloff", "curveshape=negative" },
+        new[] { "zone_keys_customrolloff_short", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=CustomRolloff", "curveshape=short" },
+        new[] { "zone_keys_customrolloff_unsorted", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=CustomRolloff", "curveshape=unsorted" },
+        new[] { "zone_keys_customrolloff_weighted", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=CustomRolloff", "curveshape=weighted" },
+        new[] { "zone_keys_customrolloff_single", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=CustomRolloff", "curveshape=single" },
+        new[] { "zone_keys_spatialblend_long", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=SpatialBlend", "curveshape=long" },
+        new[] { "zone_keys_spatialblend_negative", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=SpatialBlend", "curveshape=negative" },
+        new[] { "zone_keys_spatialblend_short", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=SpatialBlend", "curveshape=short" },
+        new[] { "zone_keys_spatialblend_unsorted", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=SpatialBlend", "curveshape=unsorted" },
+        new[] { "zone_keys_spatialblend_weighted", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=SpatialBlend", "curveshape=weighted" },
+        new[] { "zone_keys_spatialblend_single", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=SpatialBlend", "curveshape=single" },
+        new[] { "zone_keys_spread_long", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=Spread", "curveshape=long" },
+        new[] { "zone_keys_spread_negative", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=Spread", "curveshape=negative" },
+        new[] { "zone_keys_spread_short", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=Spread", "curveshape=short" },
+        new[] { "zone_keys_spread_unsorted", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=Spread", "curveshape=unsorted" },
+        new[] { "zone_keys_spread_weighted", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=Spread", "curveshape=weighted" },
+        new[] { "zone_keys_spread_single", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=Spread", "curveshape=single" },
+        new[] { "zone_keys_reverbzonemix_long", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=ReverbZoneMix", "curveshape=long" },
+        new[] { "zone_keys_reverbzonemix_negative", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=ReverbZoneMix", "curveshape=negative" },
+        new[] { "zone_keys_reverbzonemix_short", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=ReverbZoneMix", "curveshape=short" },
+        new[] { "zone_keys_reverbzonemix_unsorted", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=ReverbZoneMix", "curveshape=unsorted" },
+        new[] { "zone_keys_reverbzonemix_weighted", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=ReverbZoneMix", "curveshape=weighted" },
+        new[] { "zone_keys_reverbzonemix_single", "zone=0", "position=7", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "curvekind=ReverbZoneMix", "curveshape=single" },
+        new[] { "zone_first_generic", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed" },
+        new[] { "zone_first_cave", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "Z:reverbPreset=Cave" },
+        new[] { "zone_first_user", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "Z:reverbPreset=User" },
+        new[] { "zone_first_reflect", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "Z:reflectionsDelay=0.023" },
+        new[] { "zone_first_late", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "Z:reverbDelay=0.033" },
+        new[] { "zone_first_level", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "Z:reverb=350" },
+        new[] { "zone_first_changed", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "Z:reflectionsDelay=0.023", "Z:reverbDelay=0.033", "Z:reverb=350" },
+        new[] { "zone_voices_dry", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "shotframes=5121", "component=dry" },
+        new[] { "zone_voices_distortion", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "shotframes=5121", "component=distortion" },
+        new[] { "zone_voices_chorus", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "shotframes=5121", "component=chorus" },
     };
     public static readonly string[] FilterProperties = {
         "reverbPreset", "dryLevel", "room", "roomHF", "roomLF", "decayTime", "decayHFRatio", "reflectionsLevel",
@@ -140,7 +187,7 @@ public class AudioReverbProbe : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Bootstrap()
     {
-        if (!Engine) return;
+        if (!Engine || Environment.GetEnvironmentVariable("AUDIOREVERB_PROBE_PROFILE") == "motion") return;
         foreach (var existing in UnityEngine.Object.FindObjectsOfType<AudioReverbProbe>()) DestroyImmediate(existing.gameObject);
         var probe = new GameObject("AudioReverbProbe").AddComponent<AudioReverbProbe>();
         try { var capture = probe.Capture(); while (capture.MoveNext()) throw new Exception("Engine capture yielded"); }
@@ -165,7 +212,7 @@ public class AudioReverbProbe : MonoBehaviour
     }
     System.Collections.IEnumerator Start()
     {
-        var routine = Capture();
+        var routine = Environment.GetEnvironmentVariable("AUDIOREVERB_PROBE_PROFILE") == "motion" ? CaptureMotion() : Capture();
         for (;;) {
             object next;
             try { if (!routine.MoveNext()) yield break; next = routine.Current; }
@@ -287,6 +334,14 @@ public class AudioReverbProbe : MonoBehaviour
         var addSink = typeof(AudioRenderer).GetMethod("AddMixerGroupSink", Flags);
         foreach (string key in Selected()) {
             Debug.Log("Audio reverb case " + key);
+            if (key.StartsWith("zone_first_")) {
+                if (!AudioSettings.Reset(config)) throw new Exception("Case reset failed");
+                if (!AudioRenderer.Start()) throw new Exception("Case renderer restart failed");
+                // Advance one silent block before scheduling a source on the restarted clock.
+                if (!Engine) yield return null;
+                using (var warm = new NativeArray<float>(2048, Allocator.Persistent))
+                    if (!AudioRenderer.Render(warm)) throw new Exception("Case clock warmup failed");
+            }
             var tokens = Array.Find(Cases, c => c[0] == key);
             int channels = Array.IndexOf(tokens, "mono") >= 0 ? 1 : 2;
             int frames = ClipFrames;
@@ -315,6 +370,8 @@ public class AudioReverbProbe : MonoBehaviour
             for (int t = 1; t < tokens.Length; t++) {
                 string token = tokens[t];
                 if (token == "lateclip") { }
+                else if (token.StartsWith("shotframes=") || token.StartsWith("component=")) { }
+                else if (token.StartsWith("lifecycle=") || token.StartsWith("curvekind=") || token.StartsWith("curveshape=")) { }
                 else if (token == "pitchset") source.pitch = 1;
                 else if (token == "genericset") zones[zones.Count - 1].reverbPreset = AudioReverbPreset.Generic;
                 else if (token == "velocityset") source.velocityUpdateMode = AudioVelocityUpdateMode.Dynamic;
@@ -337,16 +394,66 @@ public class AudioReverbProbe : MonoBehaviour
                 }
                 else throw new Exception("Unknown token " + token);
             }
+            string Option(string prefix, string fallback = "") {
+                foreach (var token in tokens) if (token.StartsWith(prefix)) return token.Substring(prefix.Length);
+                return fallback;
+            }
+            string lifecycle = Option("lifecycle=");
+            if (lifecycle == "enable") zones[0].gameObject.SetActive(false);
+            if (lifecycle == "late") { DestroyImmediate(zones[0].gameObject); zones.Clear(); }
+            string curveKind = Option("curvekind=");
+            if (curveKind != "") {
+                var type = (AudioSourceCurveType)Enum.Parse(typeof(AudioSourceCurveType), curveKind);
+                string shape = Option("curveshape=");
+                var keys = shape == "single" ? new[] { new Keyframe(4, 0.7f, 0.1f, -0.2f) }
+                    : shape == "negative" ? new[] { new Keyframe(-2, 0.2f, 0.1f, -0.2f), new Keyframe(-0.5f, 0.8f, 0.3f, -0.4f) }
+                    : shape == "short" ? new[] { new Keyframe(-0.2f, 0.2f, 0.1f, -0.2f), new Keyframe(0.5f, 0.8f, 0.3f, -0.4f) }
+                    : shape == "unsorted" ? new[] { new Keyframe(4, 0.8f, 0.3f, -0.4f), new Keyframe(-2, 0.2f, 0.1f, -0.2f), new Keyframe(1, 0.6f, -0.1f, 0.2f) }
+                    : new[] { new Keyframe(-2, 0.2f, 0.1f, -0.2f), new Keyframe(4, 0.8f, 0.3f, -0.4f) };
+                if (shape == "weighted") {
+                    for (int i = 0; i < keys.Length; i++) { keys[i].weightedMode = WeightedMode.Both; keys[i].inWeight = 0.2f; keys[i].outWeight = 0.4f; }
+                }
+                var curve = new AnimationCurve(keys) { preWrapMode = WrapMode.ClampForever, postWrapMode = WrapMode.Loop };
+                source.SetCustomCurve(type, curve);
+                string KeyTable(AnimationCurve c) {
+                    var values = new List<string>();
+                    foreach (var k in c.keys) values.Add(string.Join(",", new[] { k.time, k.value, k.inTangent, k.outTangent, k.inWeight, k.outWeight }.Select(v => BitConverter.SingleToInt32Bits(v).ToString(CultureInfo.InvariantCulture))) + "," + (int)k.weightedMode);
+                    return ((int)c.preWrapMode) + ":" + ((int)c.postWrapMode) + ":" + string.Join(";", values);
+                }
+                records.Add("\"" + key + ".inputCurve\":\"" + KeyTable(curve) + "\"");
+                records.Add("\"" + key + ".storedCurve\":\"" + KeyTable(source.GetCustomCurve(type)) + "\"");
+            }
+            if (lifecycle == "warm") {
+                if (Engine) FlushEngine(); else yield return null;
+            }
             if (Array.IndexOf(tokens, "lateclip") >= 0) source.clip = clip;
             if (filter) records.Add("\"" + key + ".filter\":\"" + Table(filter, FilterProperties) + "\"");
             for (int z = 0; z < zones.Count; z++) records.Add("\"" + key + ".zone" + z + "\":\"" + Table(zones[z], ZoneProperties) + "\"");
             var sink = new NativeArray<float>(2048, Allocator.Persistent); sinks.Add(sink);
             var buffer = new NativeArray<float>(2048, Allocator.Persistent);
+            AudioClip shot = null;
+            string componentKind = Option("component=");
+            if (componentKind == "distortion") go.AddComponent<AudioDistortionFilter>();
+            if (componentKind == "chorus") go.AddComponent<AudioChorusFilter>();
             source.Play();
+            string shotFrames = Option("shotframes=");
+            if (shotFrames != "") {
+                int count = int.Parse(shotFrames, CultureInfo.InvariantCulture);
+                shot = AudioClip.Create(key + ".shot", count, channels, rate, false);
+                var shotSignal = new float[count * channels];
+                Array.Copy(signal, shotSignal, shotSignal.Length);
+                shot.SetData(shotSignal, 0); source.PlayOneShot(shot, 0.5f);
+            }
             using (var masterWriter = new BinaryWriter(File.Create(Path.Combine(output, key+".master.f32"))))
             using (var writer = new BinaryWriter(File.Create(Path.Combine(output, key+".f32")))) {
                 if (Engine) FlushEngine();
                 for (int block = 0; block < Blocks; block++) {
+                    if (block == 8) {
+                        if (lifecycle == "enable") zones[0].gameObject.SetActive(true);
+                        if (lifecycle == "late") zones.Add(new GameObject(key + ".latezone").AddComponent<AudioReverbZone>());
+                        if (lifecycle == "stop") source.Stop();
+                        if (Engine && lifecycle != "") FlushEngine();
+                    }
                     if (!Engine) yield return null;
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false })) throw new Exception("AddMixerGroupSink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("AudioRenderer.Render failed");
@@ -357,6 +464,7 @@ public class AudioReverbProbe : MonoBehaviour
             foreach (string suffix in new[] { "", ".master" })
                 records.Add("\""+key+suffix+"\":{\"file\":\""+key+suffix+".f32\",\"frames\":"+(Blocks*1024)+",\"channels\":2}");
             Save(); buffer.Dispose(); source.Stop(); DestroyImmediate(go); DestroyImmediate(clip);
+            if (shot) DestroyImmediate(shot);
             if (Array.IndexOf(tokens, "listener") >= 0) DestroyImmediate(filter);
             foreach (var z in zones) DestroyImmediate(z.gameObject);
         }

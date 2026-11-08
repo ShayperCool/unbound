@@ -1,6 +1,7 @@
 """Reject incomplete, nonfinite or silent purported reverb filter/zone measurements."""
 import math
-from common import BLOCKS, GATE_ZONE, SUFFIXES, cases, header, samples
+from common import BLOCKS, GATE_ZONE, SUFFIXES, FIXTURE, cases, header, samples
+import re
 
 
 def verify(root, release, rate, zones=True):
@@ -9,6 +10,9 @@ def verify(root, release, rate, zones=True):
     assert meta['release'] == release and meta['rate'] == rate
     for key in ('filter.default', 'zone.default', 'filter.preset.User', 'zone.preset.User'):
         assert isinstance(meta.get(key), str), key
+    source = (FIXTURE/'Assets/Scripts/AudioReverbProbe.cs').read_text()
+    routed_cases = {row[0] for line in source.splitlines() if 'new[] {' in line and '"routed"' in line
+                    if (row := re.findall(r'"([^"]*)"', line))}
     for case in cases():
         for suffix in SUFFIXES:
             record = meta[case+suffix]
@@ -16,7 +20,7 @@ def verify(root, release, rate, zones=True):
             values = samples(root, record)
             assert len(values) == BLOCKS*1024*2 and all(map(math.isfinite, values)), case+suffix
             # Zone cases play to the default output: the mixer sink stays silent.
-            routed = '_r1_' in case or case.startswith(('zone_noise_routed_', 'zone_noise_lateclip', 'zone_noise_pitchset', 'zone_noise_genericset', 'zone_noise_velocityset', 'zone_noise_spreadset'))
+            routed = case in routed_cases
             silent = (case.startswith('zone') and suffix and not routed) or ('_s1_' in case and case.endswith(('_d20', '_d25')))
             if silent: assert all(v == 0 for v in values), case+suffix
             else: assert any(abs(v) > 1e-6 for v in values), case+suffix
