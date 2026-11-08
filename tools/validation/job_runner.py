@@ -361,6 +361,13 @@ def payload(command):
                 args.pop(0)
         if name == 'timeout' and args:
             args.pop(0)  # duration
+        if args and args[0].startswith('-'):
+            # Some implementations accept options after assignments, a lone
+            # env '-', or the timeout duration. Do not mistake those options
+            # for an executable and silently fall back to an exclusive job.
+            raise ValueError(f'ambiguous {name} wrapper options after positional arguments; '
+                             'put wrapper options first. Run tools/build.py directly '
+                             'because it manages its own build lease.')
     return args
 
 

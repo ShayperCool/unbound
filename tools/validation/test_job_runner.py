@@ -133,6 +133,18 @@ with runner.lock('parity-heavy-entry.lock'), runner.lock('parity-heavy-job.lock'
                              sys.executable,driver],capture_output=True,text=True,timeout=3)
     assert result.returncode==125,result
     assert 'cannot inspect env wrapper' in result.stderr,result.stderr
+    for command in [
+        ['env','CHECK=1','-S','python3 -I',driver],
+        ['env','-','-S','python3 -I',driver],
+        ['env','--','CHECK=1','--split-string=python3 -I',driver],
+        ['env','CHECK=1','-u','OTHER',sys.executable,'-I',driver],
+        ['timeout','2','-s','TERM',sys.executable,'-I',driver],
+        ['timeout','2','--','env','-S','python3 -I',driver],
+    ]:
+        result = subprocess.run([sys.executable,str(RUNNER),*command,'--','build','--release'],
+                                capture_output=True,text=True,timeout=3)
+        assert result.returncode==125,(command,result)
+        assert 'wrapper options after positional arguments' in result.stderr,result.stderr
 
 project=out/'project';project.mkdir()
 alias=out/'project-alias';alias.symlink_to(project.resolve(),target_is_directory=True)

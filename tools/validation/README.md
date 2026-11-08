@@ -155,6 +155,9 @@ arguments to the runner, or run the build driver directly.
 Wrapper options are parsed separately, including grouped short options and
 `env -- NAME=value` assignments. Unknown wrapper or Python options fail before
 admission with a diagnostic instead of guessing where the command starts.
+Put wrapper options before assignments or durations. Options after those
+positional arguments, or after a lone `env -`, are rejected because their
+interpretation differs between wrapper implementations.
 Cargo arguments follow `--`.
 
 The default target is `$XDG_CACHE_HOME/unbound/builds/targets/<checkout-path-hash>`
