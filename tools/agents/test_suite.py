@@ -7,6 +7,7 @@ import io
 import json
 import os
 import shlex
+import signal
 from pathlib import Path
 import subprocess
 import sys
@@ -258,6 +259,46 @@ class SharedGuardTests(unittest.TestCase):
             self.assertIn('launched the Unity Editor', gate.log.read_text())
             self.assertFalse((root/'after').exists())
             self.assertFalse((root/'later').exists())
+
+    def test_gate_process_waits_for_a_sigterm_resistant_editor_child(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            pidfile = root/'editor.pid'
+            child = ('import os,signal,time; from pathlib import Path; '
+                     'signal.signal(signal.SIGTERM, signal.SIG_IGN); '
+                     f'Path({str(pidfile)!r}).write_text(str(os.getpid())); time.sleep(60)')
+            editor = root/'6000.0.71f1/Editor/Unity'
+            command = 'bash -c '+shlex.quote(
+                f'(exec -a {shlex.quote(str(editor))} {shlex.quote(sys.executable)} -c {shlex.quote(child)}); '
+                'touch after')
+            script = root/'gate.py'
+            script.write_text(
+                f'import sys; sys.path.insert(0, {str(Path(land.__file__).parent)!r})\n'
+                'import land, probe_runtime\nfrom pathlib import Path\n'
+                'probe_runtime.EDITOR_POLL = 0.1\nprobe_runtime.EDITOR_WATCH.grace = 0.5\n'
+                f'land.Gate(Path({temp!r}), "HEAD", [{command!r}], False, '
+                f'Path({str(root/"gate.log")!r})).run_probes()\n')
+            try:
+                result = subprocess.run([sys.executable, str(script)], capture_output=True, text=True, timeout=15)
+                self.assertEqual(result.returncode, 5, result.stdout+result.stderr)
+                self.assertTrue(pidfile.is_file(), (root/'gate.log').read_text())
+                pid = int(pidfile.read_text())
+                # A zombie owns no running payload. Allow the kernel to deliver SIGKILL.
+                deadline = time.monotonic() + 2
+                while time.monotonic() < deadline:
+                    stat = Path(f'/proc/{pid}/stat')
+                    if not stat.exists() or stat.read_text().rsplit(')', 1)[1].split()[0] in ('Z', 'X'):
+                        break
+                    time.sleep(0.01)
+                else:
+                    self.fail('the Editor child survived the gate process')
+                self.assertFalse((root/'after').exists())
+            finally:
+                if pidfile.is_file():
+                    try:
+                        os.kill(int(pidfile.read_text()), signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
 
     def test_gate_refuses_editor_runner_and_queued_editor_job(self):
         for probe in ['test "$UNBOUND_SUITE_NO_EDITOR" = 1',

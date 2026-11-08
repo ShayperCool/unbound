@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 import re
+import select
 import shlex
 import signal
 import sys
@@ -114,14 +115,8 @@ class Tree:
                 pass
 
     def alive(self):
-        alive = False
-        for fd in self.fds.values():
-            try:
-                signal.pidfd_send_signal(fd, 0)
-                alive = True
-            except OSError:
-                pass
-        return alive
+        # A readable pidfd denotes an exited process, including an unreaped zombie.
+        return any(not select.select([fd], [], [], 0)[0] for fd in self.fds.values())
 
     def close(self):
         for fd in self.fds.values():
@@ -190,8 +185,9 @@ class EditorWatch:
     A suite (or gate) run compares the engine with the committed Reference/; Editor runs only record
     references. The step's process is told by remove(), which returns what was found."""
 
-    def __init__(self):
+    def __init__(self, grace=30):
         self.lock, self.trees, self.found, self.thread = threading.Lock(), {}, {}, None
+        self.stopping, self.grace = {}, grace
 
     def add(self, pid):
         require_process_watch()
@@ -205,6 +201,9 @@ class EditorWatch:
         with self.lock:
             tree = self.trees.pop(pid, None)
             found = self.found.pop(pid, None)
+            stopping = self.stopping.pop(pid, None)
+        if stopping is not None:
+            stopping.join()
         if tree is not None:
             tree.close()
         return found
@@ -224,20 +223,20 @@ class EditorWatch:
                 found = next(filter(None, map(editor_process, tree.fds)), None)
                 if found:
                     self.found[pid] = found
-                    threading.Thread(target=stop_root, args=(pid,), daemon=True).start()
+                    # Keep the captured descendants even if the shell exits before cleanup
+                    # finishes. remove() waits before closing these process handles.
+                    stopping = threading.Thread(target=stop_root, args=(tree, self.grace))
+                    self.stopping[pid] = stopping
+                    stopping.start()
 
 
-def stop_root(pid, grace=30):
-    """SIGTERM to a step's tree, SIGKILL to what is left after the grace period."""
-    tree = Tree(pid)
-    try:
-        tree.signal(signal.SIGTERM)
-        deadline = time.time() + grace
-        while time.time() < deadline and tree.alive():
-            time.sleep(0.5)
-        tree.signal(signal.SIGKILL)
-    finally:
-        tree.close()
+def stop_root(tree, grace=30):
+    """SIGTERM to the tracked tree, then SIGKILL before its owner may return."""
+    tree.signal(signal.SIGTERM)
+    deadline = time.monotonic() + grace
+    while time.monotonic() < deadline and tree.alive():
+        time.sleep(min(0.5, max(0, deadline - time.monotonic())))
+    tree.signal(signal.SIGKILL)
 
 
 EDITOR_WATCH = EditorWatch()
