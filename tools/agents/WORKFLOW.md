@@ -29,18 +29,38 @@ Its full instructions are in [ORCHESTRATOR.md](ORCHESTRATOR.md).
   - follow-ups that workers report.
 - Task size: one gap row or one behaviour, landing at roughly 500 changed engine lines or less.
   Split bigger rows before assigning them.
-- Starts each worker in its own new worktree from current `main`, with
-  [WORKER_BRIEF.md](WORKER_BRIEF.md) filled in. When a worker reports, it updates the queue and
-  starts the next task at once. It acts only on blockers, failures and decisions that are the
-  user's.
+- Gives each worker its own slot (see Slots below) and a branch name, with
+  [WORKER_BRIEF.md](WORKER_BRIEF.md) filled in. When a worker reports, it updates the queue, runs
+  `python3 tools/agents/slot.py reap` and starts the next task at once. It acts only on
+  blockers, failures and decisions that are the user's.
 - Starts a sheriff after about every 8 landings or 3 hours, whichever comes first.
 - Restarting: `QUEUE.md`, `landed.jsonl` and `git log main` are the whole state. A fresh
   orchestrator reads those, not old conversations.
 
+## Slots
+
+A slot is a persistent worktree, `slot-01` to `slot-10`, under `$UNBOUND_SLOT_ROOT` (default:
+`slots/` next to the build root). Its path never changes, so its private build target and its
+ignored caches (probe `Library/`, managed `obj/`) stay warm from task to task: the first build of
+a task is incremental instead of cold. No target is shared or copied between checkouts (see
+tools/validation/README.md for why that is unsafe).
+
+- `python3 tools/agents/slot.py create` makes the missing slots; `slot.py list` shows each slot's
+  branch, whether it still holds work, idle time and whether its target is warm.
+- A worker starts with `python3 tools/agents/slot.py prepare <slot> <branch>`: it refuses a slot
+  that still holds unlanded commits or changes (`--discard` drops them once they are landed or
+  abandoned), then switches the slot to a new branch from `main` and keeps ignored files.
+- One slot holds one task at a time. A slot is free once its branch is on `main` and it is clean.
+- A worker started by a tool that creates its own worktree works in its slot and leaves that
+  worktree untouched. `slot.py reap` removes such worktrees, and any other finished worktree
+  outside the slots, once it is clean, merged into `main` and idle (default 6 h), together with
+  its build target. It keeps worktrees that a symlink under the run caches points into.
+
 ## Worker
 
-1. Read `AGENTS.md`, this section and the code involved. Check that the gap is still real; if not,
-   report that and stop.
+1. Start in your slot: `python3 tools/agents/slot.py prepare <slot> <branch>`, then work only
+   there. Read `AGENTS.md`, this section and the code involved. Check that the gap is still real;
+   if not, report that and stop.
 2. Check the Unity contract: read the Manual and Scripting API pages for the release, including
    their limitations. Keep three things apart: what is documented, what the reference capture
    shows, and your own hypotheses.
@@ -91,7 +111,7 @@ Its full instructions are in [ORCHESTRATOR.md](ORCHESTRATOR.md).
    changed, the probe result, residuals, follow-ups.
 
 Rules:
-- Stay in your own worktree. Never touch the main checkout, another worktree or shared refs.
+- Stay in your own slot. Never touch the main checkout, another worktree or shared refs.
   `git stash`, `git reset --hard` and `git push --force` are off-limits outside your own branch.
 - Do not push your branch; `land.py` pushes `main`. If your branch tracks a remote, the
   post-commit hook would push every commit, so run `git branch --unset-upstream` first.
@@ -115,7 +135,7 @@ commit or land.
 
 ## Sheriff
 
-A worker with this task, in its own worktree from current `main`:
+A worker with this task, in its own slot on a branch from current `main`:
 
 1. Run `python3 tools/agents/land.py --check --full` (build, all managed and Rust tests), then the
    full probe suite on that build, in the background:

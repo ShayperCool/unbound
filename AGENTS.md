@@ -71,8 +71,9 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
 
 The full workflow is in [tools/agents/WORKFLOW.md](tools/agents/WORKFLOW.md). In short:
 
-- An orchestrator keeps about 5 workers busy, one per subsystem, each in its own worktree from
-  `main`. It writes no engine code and does not re-check workers.
+- An orchestrator keeps about 5 workers busy, one per subsystem, each in its own persistent slot
+  worktree (`tools/agents/slot.py`) on a fresh branch from `main`, so builds stay incremental.
+  It writes no engine code and does not re-check workers.
 - A worker owns its task end to end. It probes against the Unity Editor, implements, builds,
   tests and runs the engine and the Editor as often as it needs (no budgets; the job pool bounds
   the machine). It gets one independent reviewer subagent and fixes P1/P2 findings itself, then

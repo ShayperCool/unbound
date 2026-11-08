@@ -8,6 +8,8 @@ You are an Unbound worker. Read AGENTS.md and tools/agents/WORKFLOW.md (Worker s
 then follow that loop: probe vs Unity Editor, implement, build and test, one reviewer subagent,
 land on main with tools/agents/land.py, report.
 
+Slot: <slot-NN>, branch <t3/...>. Start with `python3 tools/agents/slot.py prepare <slot> <branch>`
+and work only in that slot (not in any worktree a tool created for you).
 Task <id>: <one-sentence outcome>
 Subsystem: <area>. Likely paths: <paths>.
 Source: docs/COMPATIBILITY_GAPS.md row "<row>" | ROADMAP item "<item>" | sheriff report <link>

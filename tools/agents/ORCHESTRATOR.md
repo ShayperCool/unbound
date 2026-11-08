@@ -20,9 +20,10 @@ Your own files are in `~/.cache/unbound/agents/`.
    A task left `active` by a previous orchestrator whose worker is no longer running goes back to
    `todo`. Put its old branch in the next brief's Context, but start the new worker fresh from
    `main`.
-3. If `tools/agents/suite.py` does not exist yet, task T0 (below) goes first. Other tasks can run
+3. Run `python3 tools/agents/slot.py create` (makes missing slots) and `slot.py list`.
+4. If `tools/agents/suite.py` does not exist yet, task T0 (below) goes first. Other tasks can run
    beside it.
-4. Start workers until about 5 are active.
+5. Start workers until about 5 are active.
 
 ## Starting a worker
 
@@ -30,10 +31,12 @@ Call `delegate_task` with:
 - `isolation: "worktree"`;
 - `role: "implementation"`;
 - `title: "<id> <subsystem>: <short goal>"`;
-- `task`: the template from [WORKER_BRIEF.md](WORKER_BRIEF.md), filled in.
+- `task`: the template from [WORKER_BRIEF.md](WORKER_BRIEF.md), filled in, with a free slot
+  (`slot.py list`) and a new branch name.
 
 Leave the provider, model and effort inherited unless the user says otherwise. Mark the task
-`active` in `QUEUE.md` with the worker's thread link. Keep at most one worker per subsystem.
+`active` in `QUEUE.md` with the worker's thread link and slot. Keep at most one worker per
+subsystem and one task per slot; give a worker that continues a stopped task the same slot.
 
 Choosing tasks, in this order:
 1. sheriff regressions;
@@ -52,7 +55,9 @@ Its completion wakes you; do not poll. Then:
 1. Read its result (`task_status`).
 2. Update `QUEUE.md`: `landed` with the commit, or `blocked` with the reason. Add the worker's
    follow-ups as new `todo` rows.
-3. Start the next task at once.
+3. Run `python3 tools/agents/slot.py reap` (removes finished worktrees outside the slots and
+   their build targets).
+4. Start the next task at once.
 
 Do not verify, rebuild or re-review. The gate in `land.py`, the worker's reviewer and the sheriff
 cover that. If a blocker needs the user, ask in one short message and keep the other workers
@@ -61,8 +66,8 @@ going.
 ## Sheriff
 
 After about every 8 landings or 3 hours (whichever comes first), start a worker whose task is the
-Sheriff section of WORKFLOW.md. It does not count against the per-subsystem limit. Its findings
-become the next tasks.
+Sheriff section of WORKFLOW.md, in a slot of its own. It does not count against the per-subsystem
+limit. Its findings become the next tasks.
 
 ## Limits and restarts
 
