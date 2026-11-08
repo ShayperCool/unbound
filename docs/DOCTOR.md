@@ -60,8 +60,7 @@ read for that target remain conservatively visible.
 script analysis, serialized-field analysis, settings analysis and total time. Project and
 database timings are included in inventory time.
 
-Rust map access capture follows cloned nodes through the binary conversions. Prefab declarations
-use the same override input decoder as flattening, with an empty destination; referenced prefabs
+Prefab declarations use the same override input decoder as flattening, with an empty destination; referenced prefabs
 and model imports are unnecessary to discover which fields the decoder accepts.
 Ordinary maps have no capture collector. The map's serialized representation and decoded loading
 output are unchanged. The metadata exception list is intentionally small; an exception requires a
