@@ -35,6 +35,7 @@ namespace UnityEngine.Tests
                 skin.sharedMesh = source; skin.bones = new[] {go.transform};
                 skin.BakeMesh(baked, false); var unscaled = baked.normals;
                 skin.BakeMesh(baked, true); var scaled = baked.normals;
+                Assert.True(skin.SkinnedPose(out var worldPositions,out var worldNormals));
                 using var buffer = skin.GetVertexBuffer();
                 var output = skin.DrawGeometry(out var model);
                 var local = output.normals[0];
@@ -43,6 +44,14 @@ namespace UnityEngine.Tests
                 for (int i=0;i<unscaled.Length;i++) Assert.InRange(Vector3.Distance(unscaled[i],baked.normals[i]),0,1e-6f);
                 skin.BakeMesh(baked, true);
                 for (int i=0;i<scaled.Length;i++) Assert.InRange(Vector3.Distance(scaled[i],baked.normals[i]),0,1e-6f);
+                Assert.True(skin.SkinnedPose(out var afterPositions,out var afterNormals));
+                for (int i=0;i<worldNormals.Length;i++)
+                {
+                    Assert.InRange(Vector3.Distance(worldPositions[i],afterPositions[i]),0,1e-6f);
+                    Assert.InRange(Vector3.Distance(worldNormals[i],afterNormals[i]),0,1e-6f);
+                }
+                var cloth = go.AddComponent<Cloth>();
+                Assert.InRange(Vector3.Distance(worldNormals[0].normalized,cloth.normals[0]),0,1e-6f);
             }
             finally { Object.DestroyImmediate(go); Object.DestroyImmediate(source); Object.DestroyImmediate(baked); }
         }

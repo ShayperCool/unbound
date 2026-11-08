@@ -418,10 +418,11 @@ namespace UnityEngine
             if (m_GraphicsOutputRequested)
             {
                 var world = transform.localToWorldMatrix;
+                var normalToWorld = transform.worldToLocalMatrix.transpose;
                 for (int i = 0; i < positions.Length; i++)
                 {
                     positions[i] = world.MultiplyPoint3x4(positions[i]);
-                    if (normals != null) normals[i] = world.MultiplyVector(normals[i]);
+                    if (normals != null) normals[i] = normalToWorld.MultiplyVector(normals[i]);
                 }
             }
             return true;
