@@ -433,13 +433,16 @@ AnimatorStateTransition:
         [Fact]
         public void ATimingLayerWithoutAStatesMotionTakesNoPart()
         {
-            // B has no synced motion: B keeps its 1 s source length at full synced weight.
+            // B has no synced motion: B keeps its 1 s source length at full synced weight, without
+            // warnings; 2 s after the transition started (at 0.3 s) B is 2 cycles in. (B's source is
+            // 1 s like a state without a motion; tests/projects/animatoradditive timingempty tells
+            // the two apart with a 1.5 s source.)
             var animator = NewAnimator(Load(Controller(timing: true, syncedB: false)), out _);
             animator.SetBool("Go", true);
             animator.Update(0.3f);
             animator.Update(2f);
-            AssertState(animator, 0, "B", animator.GetCurrentAnimatorStateInfo(0).normalizedTime, 1f);
-            AssertState(animator, 1, "B", animator.GetCurrentAnimatorStateInfo(0).normalizedTime, 1f);
+            AssertState(animator, 0, "B", 2f, 1f);
+            AssertState(animator, 1, "B", 2f, 1f);
         }
     }
 }

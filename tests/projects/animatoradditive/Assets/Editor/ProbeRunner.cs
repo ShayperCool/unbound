@@ -228,6 +228,7 @@ public static class ProbeRunner
         EmptyFirst("EmptyFirst", main, additive: true);
         EmptyFirst("OverEmptyFirst", main, additive: false);
         CreateMixed();
+        CreateTiming();
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/Probe.unity");

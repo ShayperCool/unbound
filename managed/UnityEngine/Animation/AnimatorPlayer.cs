@@ -899,10 +899,10 @@ namespace Unbound.Runtime
         /// Timing, the length is "a balance for both animations, based on weight". The balance
         /// (Unity 6000.0.71f1, tests/projects/animatoradditive timing*): starting from the source
         /// state's motion length, each Timing layer in layer order moves the duration toward its
-        /// own motion's length by its weight (clamped to 0..1). A layer without a motion for the
-        /// state takes no part, nor does a source state without a motion (the first Timing motion
-        /// then counts by its weight from zero); a duration of zero is the 1 s of a state without
-        /// a motion.
+        /// own motion's length by its weight (clamped to 0..1; weights outside it are unmeasured).
+        /// A layer without a motion for the state takes no part, nor does a source state without a
+        /// motion (the first Timing motion then counts by its weight from zero); a duration of zero
+        /// is the 1 s of a state without a motion.
         /// </summary>
         float TimedLength(LayerRun source, StateDef state, float length)
         {
