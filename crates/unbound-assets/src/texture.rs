@@ -628,7 +628,9 @@ impl Importer for TextureImporter {
     // 15: Lightmap and Shadowmask textures keep their input alpha under "Alpha Source: None".
     // 16: Single Channel textures are linear and, as one-channel imports, not BC7-compressed.
     // 17: a Single Channel texture of an explicit format keeps its sRGB setting.
-    const VERSION: u32 = 17;
+    // 18: glossy-convolved cubemaps follow the Editor's specular convolution; byte faces stay
+    //     gamma-encoded bytes.
+    const VERSION: u32 = 18;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -727,11 +729,13 @@ pub fn import_texture(
     let mut image = decode(source, bytes).context("decoding")?;
     let (original_width, original_height) = (image.width, image.height);
     // HDR colour in a gamma project is gamma-encoded: a 2D texture's per level after resizing and
-    // filtering (measured with tests/projects/textureimport), a cubemap's here.
+    // filtering (measured with tests/projects/textureimport), a cubemap's here (a glossy-convolved
+    // one's after the convolution, import_cubemap).
     if settings.gamma_hdr
         && settings.srgb
         && image.format == TextureFormat::Rgba32F
         && settings.shape == TextureShape::Cube
+        && !convolves(&settings)
     {
         image.linear_to_gamma();
     }
@@ -1111,6 +1115,11 @@ fn halve_axis(
     (out, ow, oh, od)
 }
 
+/// Whether a cubemap's mips are glossy-convolved ("Convolution Type: Specular").
+fn convolves(settings: &TextureSettings) -> bool {
+    settings.shape == TextureShape::Cube && settings.cubemap_convolution == 1 && settings.mipmaps
+}
+
 /// A cubemap: its faces cut from (or projected out of) the image, scaled as a texture of the
 /// face size would be, each with its mips (glossy-convolved when `cubemapConvolution` says so).
 fn import_cubemap(
@@ -1136,14 +1145,24 @@ fn import_cubemap(
     } else {
         1
     };
-    let mut srgb = settings.srgb;
-    let chains: Vec<Vec<Image>> = if settings.cubemap_convolution == 1 && levels > 1 {
-        // Convolved in linear light: sRGB bytes become linear floats.
-        if faces[0].format == TextureFormat::Rgba8 && srgb {
-            faces = faces.into_iter().map(Image::into_linear_float).collect();
-            srgb = false;
+    let srgb = settings.srgb;
+    let chains: Vec<Vec<Image>> = if convolves(&settings) && levels > 1 {
+        // Byte faces are convolved as linear light whatever their sRGB setting and stored
+        // gamma-encoded again; float faces stay linear except in a gamma project (measured:
+        // tests/projects/reflectionprobes import.*).
+        let bytes = faces[0].format == TextureFormat::Rgba8;
+        let linear: Vec<Image> = faces.into_iter().map(Image::into_linear_float).collect();
+        let mut chains = specular::convolve(&linear);
+        if bytes || (settings.gamma_hdr && srgb) {
+            chains.iter_mut().flatten().for_each(Image::linear_to_gamma);
         }
-        cubemap::specular_mips(&faces, levels)
+        if bytes {
+            chains = chains
+                .into_iter()
+                .map(|chain| chain.into_iter().map(Image::into_bytes).collect())
+                .collect();
+        }
+        chains
     } else {
         faces
             .into_iter()
@@ -1476,6 +1495,25 @@ impl Image {
         }
     }
 
+    /// Float texels as bytes (each channel clamped to 0..1 and rounded).
+    fn into_bytes(self) -> Image {
+        if self.format != TextureFormat::Rgba32F {
+            return self;
+        }
+        let data = self
+            .data
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|c| (f32::from_le_bytes(*c).clamp(0.0, 1.0) * 255.0 + 0.5) as u8)
+            .collect();
+        Image {
+            format: TextureFormat::Rgba8,
+            data,
+            ..self
+        }
+    }
+
     fn set_opaque(&mut self) {
         match self.format {
             TextureFormat::Rgba8 => self
@@ -1774,5 +1812,6 @@ fn srgb_to_linear_table() -> &'static [f32; 256] {
 mod cubemap;
 mod mipmaps;
 mod resize;
+mod specular;
 #[cfg(test)]
 mod tests;

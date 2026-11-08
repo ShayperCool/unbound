@@ -1,8 +1,6 @@
 //! Cubemaps from images (`textureShape: Cube`): the six faces cut from a 6:1 or 1:6 strip or a
 //! 4:3 or 3:4 cross, or projected from a 2:1 latitude-longitude panorama, as `generateCubemap`
-//! says (AutoCubemap picks by aspect), and Unity's "Specular (Glossy Reflection)" convolution
-//! (`cubemapConvolution: 1`): each mip prefiltered with the GGX lobe of the roughness the
-//! built-in shaders read it at.
+//! says (AutoCubemap picks by aspect). The glossy convolution of their mips is in `specular`.
 //!
 //! Faces are in Unity's order (+X, -X, +Y, -Y, +Z, -Z) and orientation: a face of a strip or
 //! cross is the square as the image shows it, top-down (the importer then flips rows as for any
@@ -126,32 +124,6 @@ fn normalize(d: [f32; 3]) -> [f32; 3] {
     [d[0] / l, d[1] / l, d[2] / l]
 }
 
-/// The face texel a direction lands on (the face its major axis picks).
-fn texel_of(d: [f32; 3], size: u32) -> (usize, usize, usize) {
-    let [x, y, z] = d;
-    let (ax, ay, az) = (x.abs(), y.abs(), z.abs());
-    let (face, sc, tc, ma) = if ax >= ay && ax >= az {
-        if x > 0.0 {
-            (0, -z, -y, ax)
-        } else {
-            (1, z, -y, ax)
-        }
-    } else if ay >= az {
-        if y > 0.0 {
-            (2, x, z, ay)
-        } else {
-            (3, x, -z, ay)
-        }
-    } else if z > 0.0 {
-        (4, x, -y, az)
-    } else {
-        (5, -x, -y, az)
-    };
-    let s = ((sc / ma + 1.0) * 0.5 * size as f32).clamp(0.0, size as f32 - 1.0) as usize;
-    let t = ((tc / ma + 1.0) * 0.5 * size as f32).clamp(0.0, size as f32 - 1.0) as usize;
-    (face, s, t)
-}
-
 /// A pixel as linear RGBA floats.
 fn pixel(image: &Image, x: usize, y: usize) -> [f32; 4] {
     let i = y * image.width as usize + x;
@@ -216,163 +188,9 @@ fn from_panorama(image: &Image, face: usize, size: u32) -> Image {
     }
 }
 
-/// The perceptual roughness the built-in shaders sample a mip at: the inverse of
-/// `perceptualRoughnessToMipmapLevel` (r·(1.7 − 0.7r)·6, UNITY_SPECCUBE_LOD_STEPS 6).
-fn mip_roughness(level: u32) -> f32 {
-    let m = (level as f32 / 6.0).min(1.0);
-    ((1.7 - (2.89 - 2.8 * m).max(0.0).sqrt()) / 1.4).clamp(0.0, 1.0)
-}
-
-/// Box-filtered mips of a face (top-down), mip 0 first, down to 1x1.
-fn box_chain(face: &Image) -> Vec<Image> {
-    let mut chain = vec![face.clone()];
-    while chain.last().unwrap().width > 1 {
-        let last = chain.last().unwrap();
-        let s = last.width / 2;
-        let mut data = Vec::with_capacity((s * s) as usize * last.format.bytes_per_pixel());
-        for y in 0..s as usize {
-            for x in 0..s as usize {
-                let mut sum = [0.0f32; 4];
-                for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
-                    let p = pixel(last, 2 * x + dx, 2 * y + dy);
-                    (0..4).for_each(|c| sum[c] += p[c] * 0.25);
-                }
-                store(last.format, sum, &mut data);
-            }
-        }
-        chain.push(Image {
-            width: s,
-            height: s,
-            format: last.format,
-            data,
-        });
-    }
-    chain
-}
-
-/// The i-th of n points of the Hammersley set.
-fn hammersley(i: u32, n: u32) -> (f32, f32) {
-    (
-        i as f32 / n as f32,
-        i.reverse_bits() as f32 * (1.0 / 4_294_967_296.0),
-    )
-}
-
-/// The mips of six top-down faces (each the same size), glossy-convolved: mip 0 as is, each
-/// further mip the GGX lobe of its level's roughness around each texel's direction (N = V = R),
-/// importance-sampled from box-filtered mips picked by each sample's solid angle. Returns per
-/// face its mip chain (top-down).
-pub(super) fn specular_mips(faces: &[Image], levels: u32) -> Vec<Vec<Image>> {
-    const SAMPLES: u32 = 256;
-    let size = faces[0].width;
-    let format = faces[0].format;
-    let chains: Vec<Vec<Image>> = faces.iter().map(box_chain).collect();
-    let texel_solid_angle = 4.0 * std::f32::consts::PI / (6.0 * (size * size) as f32);
-    let mut out: Vec<Vec<Image>> = faces.iter().map(|f| vec![f.clone()]).collect();
-    for level in 1..levels {
-        let s = (size >> level).max(1);
-        let roughness = mip_roughness(level);
-        let a = (roughness * roughness).max(1e-4);
-        let a2 = a * a;
-        // Per sample: its direction around +Z (as a tangent-space half vector) and source lod.
-        let samples: Vec<([f32; 3], f32)> = (0..SAMPLES)
-            .map(|i| {
-                let (u, v) = hammersley(i, SAMPLES);
-                let phi = std::f32::consts::TAU * u;
-                let cos_theta = ((1.0 - v) / (1.0 + (a2 - 1.0) * v)).sqrt();
-                let sin_theta = (1.0 - cos_theta * cos_theta).max(0.0).sqrt();
-                let h = [sin_theta * phi.cos(), sin_theta * phi.sin(), cos_theta];
-                let denom = cos_theta * cos_theta * (a2 - 1.0) + 1.0;
-                let d = a2 / (std::f32::consts::PI * denom * denom);
-                let pdf = d / 4.0;
-                let sample_solid_angle = 1.0 / (SAMPLES as f32 * pdf + 1e-6);
-                let lod = (0.5 * (sample_solid_angle / texel_solid_angle).log2() + 1.0).max(0.0);
-                (h, lod)
-            })
-            .collect();
-        for (f, chain) in out.iter_mut().enumerate() {
-            let mut data = Vec::with_capacity((s * s) as usize * format.bytes_per_pixel());
-            for y in 0..s {
-                for x in 0..s {
-                    let n = direction(f, (x as f32 + 0.5) / s as f32, (y as f32 + 0.5) / s as f32);
-                    // A basis around n.
-                    let up = if n[2].abs() < 0.999 {
-                        [0.0, 0.0, 1.0]
-                    } else {
-                        [1.0, 0.0, 0.0]
-                    };
-                    let tx = normalize(cross(up, n));
-                    let ty = cross(n, tx);
-                    let mut sum = [0.0f32; 4];
-                    let mut weight = 0.0f32;
-                    for (h, lod) in &samples {
-                        let hw = [
-                            tx[0] * h[0] + ty[0] * h[1] + n[0] * h[2],
-                            tx[1] * h[0] + ty[1] * h[1] + n[1] * h[2],
-                            tx[2] * h[0] + ty[2] * h[1] + n[2] * h[2],
-                        ];
-                        let nh = h[2];
-                        let l = [
-                            2.0 * nh * hw[0] - n[0],
-                            2.0 * nh * hw[1] - n[1],
-                            2.0 * nh * hw[2] - n[2],
-                        ];
-                        let nl = n[0] * l[0] + n[1] * l[1] + n[2] * l[2];
-                        if nl <= 0.0 {
-                            continue;
-                        }
-                        let mip = (lod.round() as usize).min(chains[0].len() - 1);
-                        let mip_size = chains[0][mip].width;
-                        let (face, tx_, ty_) = texel_of(normalize(l), mip_size);
-                        let p = pixel(&chains[face][mip], tx_, ty_);
-                        (0..4).for_each(|c| sum[c] += p[c] * nl);
-                        weight += nl;
-                    }
-                    let value = if weight > 0.0 {
-                        sum.map(|c| c / weight)
-                    } else {
-                        sum
-                    };
-                    store(format, value, &mut data);
-                }
-            }
-            chain.push(Image {
-                width: s,
-                height: s,
-                format,
-                data,
-            });
-        }
-    }
-    out
-}
-
-fn cross(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn a_face_texels_direction_lands_on_it() {
-        let size = 8;
-        for face in 0..6 {
-            for (x, y) in [(0, 0), (7, 0), (3, 5), (7, 7)] {
-                let d = direction(
-                    face,
-                    (x as f32 + 0.5) / size as f32,
-                    (y as f32 + 0.5) / size as f32,
-                );
-                assert_eq!(texel_of(d, size), (face, x, y), "face {face} texel {x},{y}");
-            }
-        }
-    }
 
     #[test]
     fn layouts_by_aspect() {
