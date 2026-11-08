@@ -308,10 +308,11 @@ namespace UnityEngine
         internal DownloadedForm m_Download;
 
         /// <summary>A downloaded clip, nameless: the file decoded as <paramref name="type"/>, or,
-        /// <paramref name="headerOnly"/>, a silent clip of the length a partial file announces,
-        /// to be filled by <see cref="FillDownload"/>. A file that does not decode gives a clip
-        /// without data (no channels, samples or frequency) and logs the Editor's error; one
-        /// of a type Unbound does not decode logs that instead.</summary>
+        /// <paramref name="headerOnly"/>, a clip of the length a partial file announces with no
+        /// samples yet, to be filled by <see cref="FillDownload"/>. A compressed clip stays so for
+        /// the codings played compressed (MP3 and ADPCM), the others are decoded. A file that does
+        /// not decode gives a clip without data (no channels, samples or frequency) and logs the
+        /// Editor's error; one of a type Unbound does not decode logs that instead.</summary>
         internal static AudioClip FromDownload(ReadOnlySpan<byte> data, AudioType type, DownloadedForm form, bool headerOnly)
         {
             var clip = new AudioClip { m_Name = "", m_LoadType = AudioClipLoadType.DecompressOnLoad, m_LoadState = AudioDataLoadState.Loaded, m_Download = form };
@@ -328,17 +329,24 @@ namespace UnityEngine
                     Debug.LogError($"Unbound: downloaded audio of AudioType.{type} is not supported; the clip has no data");
                 return clip;
             }
-            if (headerOnly) AudioBackend.Current.CreateClip(clip.m_Handle, info.Frames, info.Channels, info.Frequency, false);
+            // Until its file is complete a clip made from a header holds no samples (silence).
+            if (headerOnly) AudioBackend.Current.CreateClip(clip.m_Handle, info.Frames, info.Channels, info.Frequency, true);
+            else if (form == DownloadedForm.Compressed && info.CompressionFormat is not ((int)AudioCompressionFormat.MP3 or (int)AudioCompressionFormat.ADPCM))
+                clip.m_Download = DownloadedForm.Decompressed;
             clip.m_Samples = info.Frames;
             clip.m_Channels = info.Channels;
             clip.m_Frequency = info.Frequency;
             return clip;
         }
 
-        /// <summary>Decodes the whole file into a clip made from its header.</summary>
+        /// <summary>Decodes the whole file into a clip made from its header; the clip takes the
+        /// decoded format and length.</summary>
         internal void FillDownload(ReadOnlySpan<byte> data, AudioType type)
         {
-            if (m_Handle != 0) AudioBackend.Current.DecodeClip(m_Handle, data, (int)type, false, out _);
+            if (m_Handle == 0 || !AudioBackend.Current.DecodeClip(m_Handle, data, (int)type, false, out var info)) return;
+            m_Samples = info.Frames;
+            m_Channels = info.Channels;
+            m_Frequency = info.Frequency;
         }
 
         /// <summary>The clip of an imported audio asset.</summary>

@@ -309,11 +309,12 @@ namespace UnityEngine.Networking
             m_Operation = new UnityWebRequestAsyncOperation { m_WebRequest = this };
             m_Cancel = new CancellationTokenSource();
             // A handler with the response at hand (a cached AssetBundle) completes the request
-            // without a transfer: no response code, nothing downloaded.
+            // without a transfer: no response code, nothing downloaded. It completes as a
+            // transfer does, from the main thread's queue, never within SendWebRequest.
             if (m_DownloadHandler != null && !m_DownloadHandler.m_Disposed && m_DownloadHandler.StartRequest())
             {
                 m_ResponseCode = 0;
-                Finish(Result.Success, null);
+                MainThreadContext.Instance.Post(_ => Finish(Result.Success, null), null);
                 return m_Operation;
             }
             if (m_Timeout > 0) m_Cancel.CancelAfter(TimeSpan.FromSeconds(m_Timeout));

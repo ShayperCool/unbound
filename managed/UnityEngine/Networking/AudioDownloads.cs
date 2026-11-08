@@ -86,30 +86,8 @@ namespace UnityEngine.Networking
                 return clip;
             }
             if (!m_Complete) return AudioClip.FromDownload(default, m_Type, AudioClip.DownloadedForm.Decompressed, headerOnly: true);
-            var form = m_Compressed && KeptCompressed(data) ? AudioClip.DownloadedForm.Compressed : AudioClip.DownloadedForm.Decompressed;
+            var form = m_Compressed ? AudioClip.DownloadedForm.Compressed : AudioClip.DownloadedForm.Decompressed;
             return AudioClip.FromDownload(data, m_Type, form, headerOnly: false);
-        }
-
-        /// <summary>Whether a compressed clip of this file stays compressed: MPEG audio and IMA
-        /// ADPCM WAV files do, other formats are decoded.</summary>
-        static bool KeptCompressed(ReadOnlySpan<byte> data)
-        {
-            const ushort ImaAdpcm = 0x11;
-            if (data.Length >= 12 && data.Slice(0, 4).SequenceEqual("RIFF"u8) && data.Slice(8, 4).SequenceEqual("WAVE"u8))
-            {
-                for (int at = 12; at + 8 <= data.Length;)
-                {
-                    int size = BitConverter.ToInt32(data.Slice(at + 4, 4));
-                    if (data.Slice(at, 4).SequenceEqual("fmt "u8)) return at + 10 <= data.Length && BitConverter.ToUInt16(data.Slice(at + 8, 2)) == ImaAdpcm;
-                    if (size < 0) break;
-                    at += 8 + size + (size & 1);
-                }
-                return false;
-            }
-            int start = 0;
-            if (data.Length >= 10 && data.Slice(0, 3).SequenceEqual("ID3"u8))
-                start = 10 + (data[6] << 21 | data[7] << 14 | data[8] << 7 | data[9]);
-            return data.Length >= start + 2 && data[start] == 0xff && (data[start + 1] & 0xe0) == 0xe0;
         }
 
         internal override bool StartRequest()

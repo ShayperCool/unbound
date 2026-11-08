@@ -70,11 +70,21 @@ impl Container {
     }
 }
 
-/// A decoded download: its channels, rate and interleaved samples.
+/// How a downloaded file's audio is coded.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Codec {
+    Pcm,
+    Vorbis,
+    ImaAdpcm,
+    Mpeg,
+}
+
+/// A decoded download: its channels, rate, interleaved samples and codec.
 pub struct Decoded {
     pub channels: u16,
     pub rate: u32,
     pub samples: Vec<f32>,
+    pub codec: Codec,
 }
 
 /// Decodes a downloaded file of the container `container`.
@@ -91,7 +101,9 @@ pub fn decode(data: &[u8], container: Container) -> Result<Decoded> {
     let detected = |c: Container| container == c || (container == Container::Any && c.holds(data));
     let mpeg = detected(Container::Mpeg);
     let (channels, rate, mut samples) = crate::audio::decode_packets(&hint, data, mpeg)?;
+    let mut codec = Codec::Pcm;
     if mpeg {
+        codec = Codec::Mpeg;
         if let Some((frames, info_frame)) = mpeg_length(data) {
             if let Some(silence) = info_frame {
                 samples.splice(0..0, std::iter::repeat_n(0.0, silence * channels as usize));
@@ -100,6 +112,7 @@ pub fn decode(data: &[u8], container: Container) -> Result<Decoded> {
         }
         quantize(&mut samples, f32::trunc);
     } else if detected(Container::Ogg) {
+        codec = Codec::Vorbis;
         quantize(&mut samples, f32::round);
     }
     if Container::Wav.holds(data)
@@ -111,6 +124,7 @@ pub fn decode(data: &[u8], container: Container) -> Result<Decoded> {
         channels,
         rate,
         samples,
+        codec,
     })
 }
 
@@ -375,6 +389,7 @@ fn ima_adpcm(data: &[u8]) -> Option<Decoded> {
         channels: channels as u16,
         rate,
         samples,
+        codec: Codec::ImaAdpcm,
     })
 }
 

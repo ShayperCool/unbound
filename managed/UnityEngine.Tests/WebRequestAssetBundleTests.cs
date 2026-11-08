@@ -111,10 +111,10 @@ namespace UnityEngine.Tests
                     status = 1;
                     result = "not a UnityFS AssetBundle";
                 }
-                else if (crc != 0 && crc != Good)
+                else if (crc != 0 && crc != ContentCrc(data))
                 {
                     if (root.TryGetProperty("reportCrc", out var report) && report.GetBoolean())
-                        result = JsonSerializer.Serialize(new { crcMismatch = new { expected = crc, actual = Good } });
+                        result = JsonSerializer.Serialize(new { crcMismatch = new { expected = crc, actual = ContentCrc(data) } });
                     else
                     {
                         status = 1;
@@ -138,6 +138,10 @@ namespace UnityEngine.Tests
 
         [UnmanagedCallersOnly]
         static void Free(NativeBuffer buffer) => NativeMemory.Free(buffer.Data);
+
+        /// <summary>The stand-in's content CRC: <see cref="Good"/> for <see cref="bundleBytes"/>
+        /// (last byte 9), another value for other archives.</summary>
+        static uint ContentCrc(byte[] data) => data[^1] == 9 ? Good : Good ^ 7;
 
         string Write(string name, byte[] contents)
         {
@@ -303,6 +307,55 @@ namespace UnityEngine.Tests
             Assert.Equal(occupied, cache.spaceOccupied);
             Assert.True(Caching.ClearCache());
             Assert.Equal(0, cache.spaceOccupied);
+        }
+
+        [Fact]
+        public void ACachedCopyFailingItsCrcIsReplacedByAGoodDownload()
+        {
+            var cache = FreshCache("cache");
+            var hash = new Hash128(0, 0, 0, 3);
+            var other = (byte[])bundleBytes.Clone();
+            other[^1] = 10;
+            var url = Write("epsilon.bundle", other);
+            using (Send(UnityWebRequestAssetBundle.GetAssetBundle(url, 3, 0))) { }
+            Assert.True(Caching.IsVersionCached(url, hash));
+            // The server now has the bundle the CRC names; the cached copy is another.
+            Write("epsilon.bundle", bundleBytes);
+            using (var request = Send(UnityWebRequestAssetBundle.GetAssetBundle(url, 3, Good)))
+            {
+                Assert.Equal(UnityWebRequest.Result.Success, request.result);
+                Assert.Equal("", request.downloadHandler.error);
+                Assert.Equal((ulong)bundleBytes.Length, request.downloadedBytes);
+                var bundle = DownloadHandlerAssetBundle.GetContent(request);
+                Assert.NotNull(bundle);
+                bundle.Unload(false);
+            }
+            Assert.Equal(bundleBytes, File.ReadAllBytes(Path.Combine(cache.path, "epsilon", hash.ToString(), "__data")));
+            // A cached copy that is no archive at all is downloaded again as well.
+            File.WriteAllBytes(Path.Combine(cache.path, "epsilon", hash.ToString(), "__data"), new byte[] { 1, 2, 3 });
+            using (var request = Send(UnityWebRequestAssetBundle.GetAssetBundle(url, 3, 0)))
+            {
+                Assert.Equal(UnityWebRequest.Result.Success, request.result);
+                Assert.NotEqual(0UL, request.downloadedBytes);
+            }
+            Assert.Empty(TakeLogs());
+        }
+
+        [Fact]
+        public void ACacheHitCompletesAfterSendWebRequestReturns()
+        {
+            FreshCache("cache");
+            var url = Write("zeta.bundle", bundleBytes);
+            using (Send(UnityWebRequestAssetBundle.GetAssetBundle(url, 9, 0))) { }
+            using var request = UnityWebRequestAssetBundle.GetAssetBundle(url, 9, 0);
+            bool completedInside = false;
+            var operation = request.SendWebRequest();
+            completedInside = request.isDone;
+            operation.completed += _ => { };
+            Assert.False(completedInside);
+            WebRequestTestLoop.Until(() => request.isDone);
+            Assert.Equal(0, request.responseCode);
+            Assert.Equal(0UL, request.downloadedBytes);
         }
 
         [Fact]

@@ -168,8 +168,9 @@ pub struct NativeApi {
         extern "C" fn(u64, i32, i32, i32, i32, i32, i32, i32, *mut NativeBuffer) -> i32,
     // Version 37: downloaded audio.
     /// (clip handle, file bytes, length, Unity `AudioType`, header only, out info): 0 when the
-    /// file decodes as that type (`unbound_assets::audio_download`) into the clip, or, header
-    /// only, when a partial WAV announces its format and length (no clip is made); else 1.
+    /// file decodes as that type (`unbound_assets::audio_download`) into the clip, the info's
+    /// compression format being the file's coding, or, header only, when a partial WAV
+    /// announces its format and length (no clip is made); else 1.
     pub audio_decode_clip: extern "C" fn(u64, *const u8, i32, i32, i32, *mut AudioClipInfo) -> i32,
 }
 

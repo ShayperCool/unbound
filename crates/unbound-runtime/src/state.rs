@@ -1064,7 +1064,7 @@ pub fn decode_download(
     audio_type: i32,
     header_only: bool,
 ) -> Result<Option<crate::audio::protocol::AudioClipInfo>> {
-    use unbound_assets::audio_download::{Container, decode, header};
+    use unbound_assets::audio_download::{Codec, Container, decode, header};
     let Some(container) = Container::of_audio_type(audio_type) else {
         return Ok(None);
     };
@@ -1081,7 +1081,16 @@ pub fn decode_download(
     }
     let decoded = decode(data, container)?;
     let frames = decoded.samples.len() / decoded.channels.max(1) as usize;
-    let result = info(decoded.channels, decoded.rate, frames as u64);
+    let result = crate::audio::protocol::AudioClipInfo {
+        // Unity's AudioCompressionFormat of the file's coding.
+        compression_format: match decoded.codec {
+            Codec::Pcm => 0,
+            Codec::Vorbis => 1,
+            Codec::ImaAdpcm => 2,
+            Codec::Mpeg => 3,
+        },
+        ..info(decoded.channels, decoded.rate, frames as u64)
+    };
     state().audio.mixer().add_clip(
         handle,
         crate::audio::Clip::new(decoded.channels as usize, decoded.rate, decoded.samples),

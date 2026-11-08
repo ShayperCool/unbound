@@ -84,8 +84,18 @@ namespace Unbound.Runtime
                     foreach (var version in versions.Values) yield return version;
             }
 
-            /// <summary>Indexes what the directory holds: every <c>name/hash/__data</c>.</summary>
+            /// <summary>Indexes what the directory holds: every <c>name/hash/__data</c>. What cannot be
+            /// read is left out, with a warning.</summary>
             internal void Index()
+            {
+                try { IndexDirectory(); }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+                {
+                    Debug.LogWarning($"Unbound: the AssetBundle cache '{Path}' could not be read completely: {e.Message}");
+                }
+            }
+
+            void IndexDirectory()
             {
                 if (!System.IO.Directory.Exists(Path)) return;
                 foreach (var nameDirectory in System.IO.Directory.GetDirectories(Path))
@@ -154,12 +164,14 @@ namespace Unbound.Runtime
             internal void Touch(Version version)
             {
                 version.LastUsed = Now();
-                try { WriteInfo(version); }
-                catch (IOException) { }
-                catch (UnauthorizedAccessException) { }
-                long size = SizeOf(version.Directory);
-                Occupied += size - version.Size;
-                version.Size = size;
+                try
+                {
+                    WriteInfo(version);
+                    long size = SizeOf(version.Directory);
+                    Occupied += size - version.Size;
+                    version.Size = size;
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { }
             }
 
             void WriteInfo(Version version) =>
@@ -197,7 +209,11 @@ namespace Unbound.Runtime
             internal Version Keep(string name, Hash128 hash, string archive)
             {
                 var directory = System.IO.Path.Combine(Path, name, hash.ToString());
-                if (Find(name, hash) is { } previous) Delete(previous);
+                if (Find(name, hash) is { } previous)
+                {
+                    if (previous.Users > 0) return null;
+                    Delete(previous);
+                }
                 System.IO.Directory.CreateDirectory(directory);
                 var data = System.IO.Path.Combine(directory, DataFile);
                 File.Move(archive, data, true);
@@ -285,9 +301,9 @@ namespace Unbound.Runtime
             string folder = ProjectInfo.CompanyName + "_" + ProjectInfo.ProductName;
             var path = Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "Caching", folder).Replace('\\', '/');
             s_Default = new Store(++s_NextHandle, path, false);
-            s_Default.Index();
             s_Stores.Insert(0, s_Default);
             s_Current = s_Default;
+            s_Default.Index();
         }
 
         internal static int Count

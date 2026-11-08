@@ -52,7 +52,7 @@ namespace UnityEngine.Tests
             if (type is not ((int)AudioType.UNKNOWN or (int)AudioType.WAV or (int)AudioType.MPEG)) return null;
             if ((type == (int)AudioType.WAV && !wav) || (type == (int)AudioType.MPEG && !mpeg) || (!wav && !mpeg)) return null;
             int frames = wav ? BitConverter.ToInt32(data, 40) / 2 : 1152;
-            var info = new AudioClipInfo { Frames = frames, Channels = 1, Frequency = 22050 };
+            var info = new AudioClipInfo { Frames = frames, Channels = 1, Frequency = 22050, CompressionFormat = mpeg ? (int)AudioCompressionFormat.MP3 : (int)AudioCompressionFormat.PCM };
             return (info, Enumerable.Range(0, frames).Select(i => i / 32768f).ToArray());
         }
 

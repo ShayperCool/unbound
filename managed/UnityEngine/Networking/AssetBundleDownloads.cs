@@ -107,10 +107,13 @@ namespace UnityEngine.Networking
             var opened = OpenNative(new { path = version.DataPath, crc = m_Crc, reportCrc = true }, out var mismatch);
             if (opened == null || mismatch)
             {
-                // The cached copy is not the bundle asked for: it goes, and the bundle downloads.
-                // As measured, the room it took stays counted in the cache's occupied space.
+                // The cached copy is not the bundle asked for: it goes, and the bundle downloads,
+                // its own result deciding the request's. As measured, the room the copy took
+                // stays counted in the cache's occupied space.
                 if (version.Users == 0) store.Delete(version, keepCounted: true);
                 m_Redownload = mismatch;
+                m_Failure = null;
+                m_Error = "";
                 return false;
             }
             store.Touch(version);
@@ -134,28 +137,46 @@ namespace UnityEngine.Networking
         /// <summary>Checks and opens the download and, for a cached request, keeps it.</summary>
         void Receive()
         {
-            var data = m_Stream.ToArray();
-            string download = null;
+            string download = m_Cached ? WriteDownload() : null;
+            object request = download != null
+                ? new { path = download, crc = m_Crc, reportCrc = true }
+                : new { data = Convert.ToBase64String(m_Stream.GetBuffer(), 0, (int)m_Stream.Length), crc = m_Crc, reportCrc = true };
+            // The archive opens (or is refused) from here on: the download is not needed any more.
+            m_Stream.SetLength(0);
+            m_Stream.Capacity = 0;
             try
             {
-                object request;
-                if (m_Cached)
-                {
-                    download = Path.Combine(Path.GetTempPath(), "unbound-bundle-" + Guid.NewGuid().ToString("N"));
-                    File.WriteAllBytes(download, data);
-                    request = new { path = download, crc = m_Crc, reportCrc = true };
-                }
-                else
-                {
-                    request = new { data = Convert.ToBase64String(data), crc = m_Crc, reportCrc = true };
-                }
                 m_Opened = OpenNative(request, out _);
-                if (m_Opened == null) return;
-                if (m_Cached) m_Version = Keep(download);
+                if (m_Opened != null && download != null) m_Version = Keep(download);
             }
             finally
             {
-                if (download != null) File.Delete(download);
+                if (download != null)
+                {
+                    try { File.Delete(download); }
+                    catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { }
+                }
+            }
+        }
+
+        /// <summary>The download as a file next to the current cache, so keeping it is a move on one
+        /// volume; null, with a warning, when it cannot be written (the bundle then loads from
+        /// memory, not kept).</summary>
+        string WriteDownload()
+        {
+            var store = BundleCaches.Current;
+            var path = Path.Combine(store.Path, ".download-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(store.Path);
+                using (var file = File.Create(path)) m_Stream.WriteTo(file);
+                return path;
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                Debug.LogWarning($"Unbound: the AssetBundle '{m_Url}' cannot be kept in the cache '{store.Path}': {e.Message}");
+                if (File.Exists(path)) File.Delete(path);
+                return null;
             }
         }
 
@@ -203,6 +224,7 @@ namespace UnityEngine.Networking
                     ConsoleLog.Append($"Not enough space in cache to write file '{Path.Combine(store.Path, name, m_Hash.ToString())}'.");
                     return null;
                 }
+                // A version in use stays as it is; the download then loads without being kept.
                 return store.Keep(name, m_Hash, form);
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
