@@ -70,7 +70,8 @@ public class ModelImportProbe : MonoBehaviour
     void Start()
     {
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MATERIAL_SLOTS_OUT")) ||
-            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MTL_OUT"))) return;
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MTL_OUT")) ||
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SMOOTHING_OUT"))) return;
         foreach (var model in models)
         {
             var instance = Instantiate(model);

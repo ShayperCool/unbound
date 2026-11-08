@@ -480,6 +480,10 @@ def recipes(release):
                  env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'})
     mtl.kind = 'compare'
     R['modelimport'].append(mtl)
+    smoothing = driver('smoothing.py', 'unbound', '--release', '{release}', '--label', '{label}',
+                       env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'})
+    smoothing.kind = 'compare'
+    R['modelimport'].append(smoothing)
     R['humanfirstpose'] = [driver('run.py', 'unbound', '--release', '{release}', '--label', '{label}',
                                   '--frozen-runtime', '{runtime}'),
                            py('compare.py', single_ref(), '{runs}/unbound/values.jsonl',

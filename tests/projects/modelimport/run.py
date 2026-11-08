@@ -33,7 +33,7 @@ URP_FILES = ['Assets/Settings/ProbeURP.asset', 'Assets/Settings/ProbeRenderer.as
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 
 
-def copy_project(dest, space, material_slots=False, mtl=False):
+def copy_project(dest, space, material_slots=False, mtl=False, smoothing=False):
     if dest.exists():
         shutil.rmtree(dest)
     for part in ('Assets', 'Packages', 'ProjectSettings'):
@@ -41,6 +41,9 @@ def copy_project(dest, space, material_slots=False, mtl=False):
     if not mtl:
         shutil.rmtree(dest/'Assets/Resources/Mtl')
         (dest/'Assets/Resources/Mtl.meta').unlink()
+    if not smoothing:
+        shutil.rmtree(dest/'Assets/Resources/Smoothing')
+        (dest/'Assets/Resources/Smoothing.meta').unlink()
     if not material_slots:
         shutil.rmtree(dest/'Assets/Resources/Slots')
         (dest/'Assets/Resources/Slots.meta').unlink()
