@@ -381,11 +381,8 @@ namespace UnityEngine.Tests
             Assert.Equal("read", text.GetValueFromBag(new Bag(("label", "read")), CreationContext.Default));
         }
 
-        // [doc] BaseUxmlFactory: uxmlName/uxmlNamespace/uxmlQualifiedName/uxmlType are T0's,
-        // AcceptsAttributeBag is always true, substituteForTypeName is "VisualElement" only for
-        // VisualElement. VisualElement.UxmlTraits allows VisualElement children (a description of
-        // the VisualElement type: its name and namespace).
-        // Red on b988: the members are stubs returning null/false.
+        // Measured: tests/projects/uxmlbaseapi, Unity 6000.0.71f1. Factories expose traits'
+        // metadata, and derived elements substitute for VisualElement, whose own factory has no substitution.
         [Fact]
         public void FactoryAndTraitsMetadata()
         {
@@ -395,12 +392,71 @@ namespace UnityEngine.Tests
             Assert.Equal("UxmlControlProbes.LegacyBar", factory.uxmlQualifiedName);
             Assert.Equal(typeof(LegacyBar), factory.uxmlType);
             Assert.True(factory.AcceptsAttributeBag(new Bag(), CreationContext.Default));
-            Assert.Equal("", factory.substituteForTypeName);
-            Assert.Equal("VisualElement", new VisualElement.UxmlFactory().substituteForTypeName);
+            Assert.Equal("VisualElement", factory.substituteForTypeName);
+            Assert.Equal("UnityEngine.UIElements", factory.substituteForTypeNamespace);
+            Assert.Equal("UnityEngine.UIElements.VisualElement", factory.substituteForTypeQualifiedName);
+            var exact = new VisualElement.UxmlFactory();
+            Assert.Equal("", exact.substituteForTypeName);
+            Assert.Equal("", exact.substituteForTypeNamespace);
+            Assert.Equal("", exact.substituteForTypeQualifiedName);
             var child = Assert.Single(new VisualElement.UxmlTraits().uxmlChildElementsDescription);
             Assert.Equal("VisualElement", child.elementName);
             Assert.Equal("UnityEngine.UIElements", child.elementNamespace);
             Assert.Equal(default(CreationContext), CreationContext.Default);
+        }
+
+        public sealed class MetadataTraits : UnityEngine.UIElements.UxmlTraits
+        {
+            readonly UxmlStringAttributeDescription value = new UxmlStringAttributeDescription { name = "probe-value" };
+            public override IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription
+            {
+                get { yield return new UxmlChildElementDescription(typeof(Label)); }
+            }
+            public override void Init(VisualElement element, IUxmlAttributes bag, CreationContext context)
+            {
+                base.Init(element, bag, context);
+                element.name = value.GetValueFromBag(bag, context);
+            }
+        }
+
+        public sealed class EmptyMetadataTraits : UnityEngine.UIElements.UxmlTraits { }
+
+        sealed class SelectingFactory : UxmlFactory<VisualElement, MetadataTraits>
+        {
+            public override bool AcceptsAttributeBag(IUxmlAttributes bag, CreationContext context) =>
+                bag != null && bag.TryGetAttributeValue("probe-value", out var text) && text == "accepted";
+        }
+
+        [Fact]
+        public void FactoriesExposeTheirCustomTraitsSchemaAndInitialization()
+        {
+            var factory = new UxmlFactory<VisualElement, MetadataTraits>();
+            Assert.Equal("probe-value", Assert.Single(factory.uxmlAttributesDescription).name);
+            var child = Assert.Single(factory.uxmlChildElementsDescription);
+            Assert.Equal("Label", child.elementName);
+            Assert.Equal("UnityEngine.UIElements", child.elementNamespace);
+            Assert.Equal("accepted", factory.Create(new Bag(("probe-value", "accepted")), default).name);
+            Assert.NotEmpty(new VisualElement.UxmlFactory().uxmlAttributesDescription);
+            Assert.Single(new VisualElement.UxmlFactory().uxmlChildElementsDescription);
+        }
+
+        [Fact]
+        public void BaseDefaultsLeaveElementsUntouchedAndDoNotBypassFactoryOverrides()
+        {
+            var factory = new UxmlFactory<VisualElement, EmptyMetadataTraits>();
+            Assert.True(factory.AcceptsAttributeBag(null, default));
+            Assert.True(factory.AcceptsAttributeBag(new Bag(), default));
+            Assert.Empty(factory.uxmlAttributesDescription);
+            Assert.Empty(factory.uxmlChildElementsDescription);
+            var element = new VisualElement { name = "keep", tooltip = "keep-tooltip" };
+            new EmptyMetadataTraits().Init(element, new Bag(("name", "ignored")), default);
+            Assert.Equal("keep", element.name);
+            Assert.Equal("keep-tooltip", element.tooltip);
+            Assert.Equal(0, element.childCount);
+            new EmptyMetadataTraits().Init(null, null, default);
+            var selecting = new SelectingFactory();
+            Assert.True(selecting.AcceptsAttributeBag(new Bag(("probe-value", "accepted")), default));
+            Assert.False(selecting.AcceptsAttributeBag(new Bag(("probe-value", "rejected")), default));
         }
     }
 }

@@ -1,0 +1,17 @@
+{
+  "control.attributes.builtin": "true",
+  "control.children.builtin": "UnityEngine.UIElements.VisualElement",
+  "control.substitute.derived": "UnityEngine.UIElements.VisualElement",
+  "control.substitute.exact": "",
+  "factory.accepts.empty": "true",
+  "factory.accepts.null": "true",
+  "factory.attributes.custom": "probe-value",
+  "factory.attributes.empty": "",
+  "factory.children.custom": "UnityEngine.UIElements.Label",
+  "factory.children.empty": "",
+  "override.accepts.false": "false",
+  "override.accepts.true": "true",
+  "override.create": "accepted",
+  "traits.children.base": "",
+  "traits.init.base": "keep,keep-tooltip,0"
+}

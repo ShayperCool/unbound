@@ -459,6 +459,7 @@ namespace UnityEngine.UIElements
         /// included (Unbound reads them by reflection).</summary>
         public virtual IEnumerable<UxmlAttributeDescription> uxmlAttributesDescription => UxmlAttributeValues.DescriptionsOf(this, null);
 
+        [Unbound.EditorFaithful("Base traits describe no children; Unity 6000.0.71f1, tests/projects/uxmlbaseapi")]
         public virtual IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription => Array.Empty<UxmlChildElementDescription>();
     }
 
@@ -467,6 +468,7 @@ namespace UnityEngine.UIElements
     {
         protected UxmlTraits() { }
 
+        [Unbound.EditorFaithful("Base initialization leaves elements unchanged and accepts null arguments; Unity 6000.0.71f1, tests/projects/uxmlbaseapi")]
         public virtual void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc) { }
     }
 
@@ -477,6 +479,7 @@ namespace UnityEngine.UIElements
 
         protected BaseUxmlFactory() => m_Traits = new TTraits();
 
+        [Unbound.EditorFaithful("Base factories accept every attribute bag, including null; Unity 6000.0.71f1, tests/projects/uxmlbaseapi")]
         public virtual bool AcceptsAttributeBag(IUxmlAttributes bag, CreationContext cc) => true;
 
         public virtual string uxmlName => typeof(TCreatedType).Name;
@@ -489,17 +492,17 @@ namespace UnityEngine.UIElements
 
         public bool canHaveAnyAttribute => m_Traits.canHaveAnyAttribute;
 
-        // The Scripting API documents both as "Returns an empty enumerable."; the traits object holds
-        // the descriptions.
-        public virtual IEnumerable<UxmlAttributeDescription> uxmlAttributesDescription => Array.Empty<UxmlAttributeDescription>();
+        // Factories expose their traits' schema, including custom overrides and inherited descriptions
+        // (Unity 6000.0.71f1, tests/projects/uxmlbaseapi).
+        public virtual IEnumerable<UxmlAttributeDescription> uxmlAttributesDescription => m_Traits.uxmlAttributesDescription;
 
-        public virtual IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription => Array.Empty<UxmlChildElementDescription>();
+        public virtual IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription => m_Traits.uxmlChildElementsDescription;
 
-        public virtual string substituteForTypeName => typeof(TCreatedType) == typeof(VisualElement) ? nameof(VisualElement) : string.Empty;
+        public virtual string substituteForTypeName => typeof(TCreatedType) != typeof(VisualElement) ? nameof(VisualElement) : string.Empty;
 
-        public virtual string substituteForTypeNamespace => typeof(TCreatedType) == typeof(VisualElement) ? typeof(VisualElement).Namespace : string.Empty;
+        public virtual string substituteForTypeNamespace => typeof(TCreatedType) != typeof(VisualElement) ? typeof(VisualElement).Namespace : string.Empty;
 
-        public virtual string substituteForTypeQualifiedName => typeof(TCreatedType) == typeof(VisualElement) ? typeof(VisualElement).FullName : string.Empty;
+        public virtual string substituteForTypeQualifiedName => typeof(TCreatedType) != typeof(VisualElement) ? typeof(VisualElement).FullName : string.Empty;
     }
 
     [Obsolete("UxmlFactory<TCreatedType, TTraits> is deprecated and will be removed. Use UxmlElementAttribute instead.")]
