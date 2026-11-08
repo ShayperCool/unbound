@@ -856,7 +856,7 @@ namespace Unbound.Runtime
                 newPolys[groundCount + k] = poly;
                 for (int c = 0; c < cons.Length; c++)
                     if (cons[c].poly == offMesh[k].Poly)
-                        cons[c] = new DtOffMeshConnection { pos = cons[c].pos, rad = cons[c].rad, poly = groundCount + k, flags = cons[c].flags, side = cons[c].side, userId = cons[c].userId };
+                        cons[c] = new DtOffMeshConnection { pos = cons[c].pos, rad = cons[c].rad, poly = groundCount + k, flags = cons[c].flags, side = cons[c].side, userId = cons[c].userId, costModifier = cons[c].costModifier };
             }
 
             var flat = new float[verts.Count * 3];

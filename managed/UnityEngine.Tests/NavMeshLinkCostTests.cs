@@ -4,17 +4,19 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
-    /// <summary>A link's cost modifier in path search. Documented (AI Navigation 2.0 manual,
-    /// NavMeshLink: Cost Modifier; Scripting API 6000.0 NavMeshLinkData.costModifier): zero or more
-    /// replaces the cost of the link's area; a negative value keeps the area's cost. Measured (Unity
-    /// 6000.0.71f1, tests/projects/navlinks costhigh): a link of cost 3 over a 2 m gap loses to a
-    /// bridge round it. The level is two 6 m platforms with a 4 m gap at z = 0, joined by a bridge
+    /// <summary>A link's cost modifier in path search. Documented (Scripting API 6000.0
+    /// NavMeshLinkData.costModifier: it multiplies the distance between the link's ends, a negative
+    /// value keeps the area type's cost; AI Navigation 2.0 NavMeshLink.costModifier: "a positive or
+    /// zero value overrides the cost associated with the area type"). Measured (Unity 6000.0.71f1,
+    /// tests/projects/navlinks costhigh): a link of cost 3 loses to a bridge round it. Zero to one
+    /// is unmeasured. The level is two 6 m platforms with a 4 m gap at z = 0, joined by a bridge
     /// along their north sides; a link crosses the gap from x = -3 to x = 3.</summary>
     [Collection("Frames")]
     public sealed class NavMeshLinkCostTests : System.IDisposable
     {
         readonly NavMeshDataInstance m_Data;
         NavMeshLinkInstance m_Link;
+        bool m_HasLink;
 
         public NavMeshLinkCostTests()
         {
@@ -31,7 +33,7 @@ namespace UnityEngine.Tests
 
         public void Dispose()
         {
-            NavMesh.RemoveLink(m_Link);
+            if (m_HasLink) NavMesh.RemoveLink(m_Link);
             NavMesh.RemoveNavMeshData(m_Data);
         }
 
@@ -43,8 +45,10 @@ namespace UnityEngine.Tests
             area = 0,
         };
 
-        bool PathTakesTheBridge(float costModifier)
+        bool PathTakesTheBridge(float costModifier, int area = 0)
         {
+            if (m_HasLink) NavMesh.RemoveLink(m_Link);
+            m_HasLink = true;
             m_Link = NavMesh.AddLink(new NavMeshLinkData
             {
                 startPosition = new Vector3(-3f, 0f, 0f),
@@ -52,7 +56,7 @@ namespace UnityEngine.Tests
                 bidirectional = true,
                 costModifier = costModifier,
                 width = 0f,
-                area = 0,
+                area = area,
                 agentTypeID = 0,
             });
             var path = new NavMeshPath();
@@ -64,13 +68,19 @@ namespace UnityEngine.Tests
             return bridge;
         }
 
+        // The link route costs about 3 plus 6 times the link's cost per metre; the bridge about 13.
         [Fact]
-        public void ANegativeCostModifierKeepsTheAreaCost() => Assert.False(PathTakesTheBridge(-1f));
+        public void ANegativeCostModifierKeepsTheAreaCost()
+        {
+            Assert.False(PathTakesTheBridge(-1f));
+            // Jump (area 2) costs 2 per metre by default: the link loses.
+            Assert.True(PathTakesTheBridge(-1f, area: 2));
+        }
 
         [Fact]
         public void AHighCostModifierSendsThePathRound() => Assert.True(PathTakesTheBridge(3f));
 
         [Fact]
-        public void AZeroCostModifierMakesTheLinkFree() => Assert.False(PathTakesTheBridge(0f));
+        public void AZeroCostModifierReplacesTheAreaCost() => Assert.False(PathTakesTheBridge(0f, area: 2));
     }
 }
