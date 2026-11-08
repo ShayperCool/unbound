@@ -26,7 +26,7 @@ namespace Unbound.Runtime
             // Render protocol 9 (NativeApi 19).
             CopyDepthOp = 29,
             // Render protocol 11 (NativeApi 22); its element meaning from protocol 12 (NativeApi 28).
-            MeshInstanceOp = 30, MeshBuffersOp = 31;
+            MeshInstanceOp = 30, MeshBuffersOp = 31, InstanceMultiplierOp = 32;
 
         /// <summary>The sizes of a DrawIndices index: 16-bit, and 32-bit from render protocol 10.</summary>
         internal const byte DrawIndexSize = 2, DrawIndex32Size = 4;
@@ -306,6 +306,12 @@ namespace Unbound.Runtime
         /// <summary>The next draw is instance <paramref name="index"/> of a mesh-instancing call:
         /// its first logical instance, and the element its scalar uniforms take from the draw's
         /// property arrays (render protocol 12).</summary>
+        internal static void InstanceMultiplier(uint multiplier)
+        {
+            U8(InstanceMultiplierOp);
+            U32(multiplier);
+        }
+
         internal static void MeshInstance(uint index)
         {
             U8(MeshInstanceOp);

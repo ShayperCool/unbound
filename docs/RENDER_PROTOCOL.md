@@ -16,6 +16,12 @@ Meshes, textures and materials are identified by `u64` handles the managed side 
 is destroyed. Imported textures are uploaded by the native side itself (`import_texture`), which
 knows the asset pipeline and its cache.
 
+### Render protocol 14: instance multiplier (NativeApi 33)
+
+Opcode 32 carries one `u32` multiplier. It persists across submissions and frames, starts
+at one, and zero resets it to one. Direct draws multiply their instance count; indirect
+arguments remain unchanged. Measured in `tests/projects/cmdbuffers device.multiplier.*`.
+
 ### Render protocol 13: mesh GPU streams (NativeApi 32)
 
 MeshPacket colors are float4 values in NativeApi 32, preserving packed floating-point colors

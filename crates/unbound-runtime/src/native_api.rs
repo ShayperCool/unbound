@@ -34,7 +34,8 @@ use crate::{
 /// 31: the reported `TextureFormat` at the end of `ImportedTextureInfo`.
 /// 32: render protocol 13 (mesh GPU bindings, gizmo normal transforms and float4 mesh colors).
 /// 33: source component tail timing across partial device periods.
-pub const NATIVE_API_VERSION: u32 = 33;
+/// 34: render protocol 14 (persistent direct-draw instance multiplier).
+pub const NATIVE_API_VERSION: u32 = 34;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]

@@ -1,4 +1,4 @@
-"""The landing gate admits only the task-required invalid Append skip."""
+"""The gate requires the safe Append skip and explicit errors for unsupported mechanisms."""
 import json
 from pathlib import Path
 import tempfile
@@ -8,13 +8,27 @@ import run
 
 class SafeAppendGateTests(unittest.TestCase):
     def setUp(self):
+        (run.ROOT/'Library'/'Unbound').mkdir(parents=True, exist_ok=True)
         self.directory = tempfile.TemporaryDirectory(dir=run.ROOT/'Library'/'Unbound')
         self.addCleanup(self.directory.cleanup)
         self.out = Path(self.directory.name)
         self.rows = [json.loads(line) for line in run.reference_file(run.ROOT, 'jsonl').read_text().splitlines()]
         self.rows = [row for row in self.rows if row['k'] != 'uav.append.nocounter.log']
         next(row for row in self.rows if row['k'] == 'uav.append.nocounter')['v'] = [0xAAAA0000] * 48
+        self.unsupported('device.stereo.1',
+                         'Unbound: side-by-side stereo clipping without an XR device is not supported.')
+        mono = next(row['v'] for row in self.rows if row['k'] == 'device.stereo.0.pixels')
+        next(row for row in self.rows if row['k'] == 'device.stereo.1.pixels')['v'] = mono
+        for kind in ['blit', 'texture', 'texture1', 'texture2']:
+            key = 'device.plugin.' + kind + '.callback'
+            self.unsupported(key, 'Unbound: native rendering plugin callbacks require graphics-device interop, which is not supported.')
+            next(row for row in self.rows if row['k'] == key + '.events')['v'] = []
+            next(row for row in self.rows if row['k'] == key + '.texture')['v'] = ['000000ff' * 4]
         (self.out/'engine.log').write_text('shader uses the counter of buffer `_App`, which is not set or not an Append or Counter buffer: the draw is skipped')
+
+    def unsupported(self, key, message):
+        self.rows = [row for row in self.rows if row['k'] != key + '.record.ok']
+        self.rows.append({'k': key + '.record.error', 'v': 'NotSupportedException: ' + message})
 
     def verify(self, allow=True):
         candidate = self.out/'values.jsonl'
@@ -36,6 +50,14 @@ class SafeAppendGateTests(unittest.TestCase):
 
     def test_missing_warning_still_fails(self):
         (self.out/'engine.log').write_text('')
+        self.assertNotEqual(self.verify(), 0)
+
+    def test_ignored_plugin_callback_still_fails(self):
+        self.rows = [row for row in self.rows if row['k'] != 'device.plugin.texture2.callback.record.error']
+        self.assertNotEqual(self.verify(), 0)
+
+    def test_unrelated_device_difference_still_fails(self):
+        next(row for row in self.rows if row['k'] == 'device.rayTracing')['v'] = True
         self.assertNotEqual(self.verify(), 0)
 
     def test_unrelated_missing_value_still_fails(self):

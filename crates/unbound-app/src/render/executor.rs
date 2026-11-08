@@ -372,6 +372,7 @@ struct State {
     state_override: Option<commands::StateOverride>,
     /// How the next draw runs (`DrawSetup`): instances, arguments buffer, offset, indexed.
     draw_setup: Option<(u32, u64, u32, bool)>,
+    instance_multiplier: u32,
     /// The next draw is this instance of a mesh-instancing call (`MeshInstance`).
     mesh_instance: Option<u32>,
     /// The next draw's indices from a buffer (`DrawIndices`): buffer, index size, first, count.
@@ -550,6 +551,7 @@ impl UnityRenderer {
                 gizmo_draw: false,
                 state_override: None,
                 draw_setup: None,
+                instance_multiplier: 1,
                 mesh_instance: None,
                 draw_indices: None,
             },
@@ -2271,6 +2273,9 @@ impl UnityRenderer {
                 }
                 Command::Viewport(v) => self.state.viewport = v,
                 Command::MeshInstance(index) => self.state.mesh_instance = Some(index),
+                Command::InstanceMultiplier(multiplier) => {
+                    self.state.instance_multiplier = multiplier.max(1)
+                }
                 Command::DrawSetup {
                     instances,
                     args,
@@ -2556,6 +2561,13 @@ impl UnityRenderer {
                         match item {
                             Planned::Draw(mut d) => {
                                 d.first_instance = first_instance;
+                                if d.indirect.is_none() {
+                                    d.instances =
+                                        d.instances.wrapping_mul(self.state.instance_multiplier);
+                                    d.first_instance = d
+                                        .first_instance
+                                        .wrapping_mul(self.state.instance_multiplier);
+                                }
                                 if let Some(owned::PropertyValue::Vector(limits)) = draw
                                     .properties
                                     .iter()

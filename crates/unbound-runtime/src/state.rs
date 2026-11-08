@@ -187,6 +187,7 @@ fn asset_kind(path: &str) -> &'static str {
         "cs" => "script",
         "shader" | "cginc" | "hlsl" | "shadergraph" => "shader",
         "compute" => "compute",
+        "raytrace" => "raytrace",
         "uxml" => "uxml",
         "uss" => "uss",
         "tss" => "tss",
@@ -914,6 +915,7 @@ fn default_importer(path: &str) -> &'static str {
         "asmref" => "AssemblyDefinitionReferenceImporter",
         "shader" => "ShaderImporter",
         "compute" => "ComputeShaderImporter",
+        "raytrace" => "RayTracingShaderImporter",
         "png" | "jpg" | "jpeg" | "tga" | "psd" | "tif" | "tiff" | "gif" | "bmp" | "exr" | "hdr" => {
             "TextureImporter"
         }

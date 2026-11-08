@@ -937,7 +937,7 @@ namespace UnityEngine.Rendering
         public void SetWireframe(bool enable) => Add(c => GL.wireframe = enable);
         [Unbound.EditorFaithful("no-op is equivalent: the flags only restrict which commands a buffer may hold (async compute validation)")]
         public void SetExecutionFlags(CommandBufferExecutionFlags flags) { }
-        public void SetInstanceMultiplier(uint multiplier) => Stubs.Ignored("CommandBuffer.SetInstanceMultiplier", "is not honoured yet: instanced draws keep their instance count");
+        public void SetInstanceMultiplier(uint multiplier) => Add(c => GfxStream.InstanceMultiplier(multiplier));
         [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
         public void BeginSample(string name) { }
         [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]

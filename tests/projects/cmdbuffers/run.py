@@ -11,6 +11,7 @@ The release is $UNBOUND_PROBE_UNITY_VERSION (else tests/probe_paths.py's default
 under $XDG_CACHE_HOME/unbound/validation/runs/cmdbuffers/.
 """
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -37,13 +38,14 @@ def copy_project(target):
     (target/'ProjectSettings/ProjectVersion.txt').write_text(f'm_EditorVersion: {unity_version()}\n')
 
 
-def native(label):
+def native(label, section=None):
     jobs = []
     for repeat in (f'{label}-1', f'{label}-2'):
         out = WORK/repeat
         copy_project(out/'project')
         jobs.append(editor_runner.EditorJob(out/'project', out/'editor.log', out, ['-executeMethod', 'ProbeRunner.Record'],
-                                            batch=True, graphics=True, env={'CMDBUFFERS_PROBE_OUT': str(out/OUT)},
+                                            batch=True, graphics=True, env={'CMDBUFFERS_PROBE_OUT': str(out/OUT),
+                                                'CMDBUFFERS_PROBE_SECTION': section or ''},
                                             timeout=1200, label='cmdbuffers-'+repeat))
     for result in editor_runner.run_parallel(jobs):
         print(editor_runner.summary(result))
@@ -65,12 +67,33 @@ def engine(label):
     return 0 if code == 0 and (out/OUT).exists() else 1
 
 
-def publish(labels):
+def publish(labels, section=None):
     def write(path, first):
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(first/OUT, path)
-    return editor_runner.publish([WORK/label for label in labels], reference_file(ROOT, 'jsonl'), lambda d: [OUT], write,
-                                 complete=[editor_runner.jsonl_complete(OUT)])
+    target = reference_file(ROOT, 'jsonl')
+    if section != 'devices':
+        return editor_runner.publish([WORK/label for label in labels], target, lambda d: [OUT], write,
+                                     complete=[editor_runner.jsonl_complete(OUT)], gpu=True)
+    # Publish the independent section first, then merge new keys without replacing any value.
+    candidate = WORK/('publish-' + labels[0])/OUT
+    code = editor_runner.publish([WORK/label for label in labels], candidate, lambda d: [OUT], write,
+                                 complete=[editor_runner.jsonl_complete(OUT)], gpu=True)
+    if code:
+        return code
+    old = [json.loads(line) for line in target.read_text().splitlines() if line.strip()]
+    new = [json.loads(line) for line in candidate.read_text().splitlines() if line.strip()]
+    values = {row['k']: row['v'] for row in old}
+    for row in new:
+        if row['k'] != 'complete' and not row['k'].startswith('device.'):
+            raise SystemExit('device section contains another section')
+        if row['k'] in values and values[row['k']] != row['v']:
+            raise SystemExit('refusing to change existing reference value: ' + row['k'])
+    combined = [row for row in old if row['k'] != 'complete']
+    combined.extend(row for row in new if row['k'] not in values)
+    combined.append({'k': 'complete', 'v': True})
+    target.write_text(''.join(json.dumps(row, separators=(',', ':')) + '\n' for row in combined))
+    return 0
 
 
 def verify(candidate, safe_append_skip=False):
@@ -84,11 +107,33 @@ def verify(candidate, safe_append_skip=False):
     missing = object()
     differences = {key for key in ref.keys() | act.keys() if ref.get(key, missing) != act.get(key, missing)}
     warning = 'uses the counter of buffer `_App`, which is not set or not an Append or Counter buffer: the draw is skipped'
-    if (differences == {'uav.append.nocounter', 'uav.append.nocounter.log'}
+    expected = {'uav.append.nocounter', 'uav.append.nocounter.log'}
+    stereo = 'device.stereo.1'
+    if stereo + '.record.ok' in ref:
+        expected.update({stereo + '.record.ok', stereo + '.record.error', stereo + '.pixels'})
+        if (stereo + '.record.ok' in act or act.get(stereo + '.record.error') !=
+                'NotSupportedException: Unbound: side-by-side stereo clipping without an XR device is not supported.'
+                or act.get(stereo + '.pixels') != ref.get('device.stereo.0.pixels')):
+            return code or 1
+    plugin_message = ('NotSupportedException: Unbound: native rendering plugin callbacks require '
+                      'graphics-device interop, which is not supported.')
+    plugins = ['device.plugin.blit.callback', 'device.plugin.texture.callback',
+               'device.plugin.texture1.callback', 'device.plugin.texture2.callback']
+    for key in plugins:
+        if key + '.record.ok' not in ref:
+            continue
+        expected.update({key + '.record.ok', key + '.record.error', key + '.events'})
+        if key != plugins[0]:
+            expected.add(key + '.texture')
+        if (act.get(key + '.record.error') != plugin_message or key + '.record.ok' in act
+                or act.get(key + '.events') != []
+                or act.get(key + '.texture') != ['000000ff' * 4]):
+            return code or 1
+    if (differences == expected
             and act.get('uav.append.nocounter') == [0xAAAA0000] * 48
             and 'uav.append.nocounter.log' not in act
             and warning in (candidate.parent/'engine.log').read_text()):
-        print('gate: required safe Append skip verified; both raw differences remain above')
+        print('gate: safe Append skip, explicit unsupported stereo clipping and plugin interop verified; raw differences remain above')
         return 0
     return code or 1
 
@@ -99,15 +144,16 @@ def main():
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
     parser.add_argument('--candidate', type=Path)
+    parser.add_argument('--section', choices=['devices'])
     args = parser.parse_args()
     if args.mode in ('native', 'engine') and (not args.label or Path(args.label).name != args.label):
         parser.error('--label must be a single directory name')
     if args.mode == 'native':
-        return native(args.label)
+        return native(args.label, args.section)
     if args.mode == 'engine':
         return engine(args.label)
     if args.mode == 'publish':
-        return publish(args.labels)
+        return publish(args.labels, args.section)
     if args.mode == 'check':
         label = time.strftime('check-%Y%m%d-%H%M%S-') + str(os.getpid())
         return engine(label) or verify(WORK/label/OUT, safe_append_skip=True)

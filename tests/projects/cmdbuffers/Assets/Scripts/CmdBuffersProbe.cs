@@ -79,6 +79,7 @@ public partial class CmdBuffersProbe : MonoBehaviour
         yield return null;
         yield return null;
         int code = 0;
+        bool devicesOnly = Environment.GetEnvironmentVariable("CMDBUFFERS_PROBE_SECTION") == "devices";
         try
         {
             Debug.Log("CMDBUFFERS_DEVICE " + SystemInfo.graphicsDeviceType + " " + SystemInfo.graphicsDeviceName);
@@ -86,6 +87,8 @@ public partial class CmdBuffersProbe : MonoBehaviour
             uavAuto = Keep(new Material(Resources.Load<Shader>("UavWriteAuto")));
             target = Keep(new RenderTexture(4, 4, 0, RenderTextureFormat.ARGB32));
             target.Create();
+            if (!devicesOnly)
+            {
             RandomWriteTargets();
             CommandRandomWriteTargets();
             ConvertTextures();
@@ -94,6 +97,7 @@ public partial class CmdBuffersProbe : MonoBehaviour
             Instanced();
             IndexedDraws();
             ComputeParams();
+            }
         }
         catch (Exception e)
         {
@@ -102,7 +106,7 @@ public partial class CmdBuffersProbe : MonoBehaviour
         }
         // Fences span frames: run step by step, a failure recorded as fatal.
         var fences = FrameProbes();
-        while (code == 0)
+        while (code == 0 && !devicesOnly)
         {
             bool more;
             try { more = fences.MoveNext(); }
@@ -115,6 +119,7 @@ public partial class CmdBuffersProbe : MonoBehaviour
             if (!more) break;
             yield return fences.Current;
         }
+        if (code == 0) { DeviceCommands(); DeviceCallbacks(); }
         foreach (var d in disposables) d.Dispose();
         foreach (var o in made) if (o != null) DestroyImmediate(o);
         Value("complete", B(code == 0));

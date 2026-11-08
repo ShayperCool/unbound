@@ -162,6 +162,14 @@ namespace UnityEngine
         public static bool supportsComputeShaders => true;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static bool supportsInstancing => true;
+        [Unbound.EditorFaithful("The renderer exposes no ray tracing device, matching the measured OpenGL Core device.")]
+        public static bool supportsRayTracing => false;
+        [Unbound.EditorFaithful("The renderer exposes no ray tracing device, matching the measured OpenGL Core device.")]
+        public static bool supportsRayTracingShaders => false;
+        [Unbound.EditorFaithful("The renderer exposes no ray tracing device, matching the measured OpenGL Core device.")]
+        public static bool supportsInlineRayTracing => false;
+        [Unbound.EditorFaithful("No XR device or foveated rendering is exposed, matching cmdbuffers device.*.")]
+        public static UnityEngine.Rendering.FoveatedRenderingCaps foveatedRenderingCaps => UnityEngine.Rendering.FoveatedRenderingCaps.None;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static bool supportsHardwareQuadTopology => false;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]

@@ -1,0 +1,3 @@
+#pragma raytracing DeviceProbe
+[shader("raygeneration")]
+void RayGen() {}

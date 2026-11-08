@@ -375,6 +375,11 @@ namespace Unbound.Runtime
         /// warning, not an extrapolated table.</summary>
         internal static bool ShaderKeywordsMeasured => RenderingMeasured;
 
+        /// <summary>The standalone ray tracing shader's main object, measured for distinct source
+        /// names in cmdbuffers on 6000.0.71f1. This import has no disk cache.</summary>
+        internal static long RayTracingShaderFileId => RenderingMeasured ? 4807578003741378534L
+            : throw new NotSupportedException("Ray tracing shader asset identifiers are not measured for this Unity release.");
+
         /// <summary>The engine's built-in global shader keywords: the ones that exist before any is
         /// made (canonical global.builtin.types and global.all.contains, 6000.0.71f1 Linux Editor).
         /// Registered, not enabled: which keywords start enabled depends on quality, pipeline and

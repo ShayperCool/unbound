@@ -168,6 +168,8 @@ pub enum Command {
     /// its first logical instance, and the element its scalar uniforms take from the draw's
     /// property arrays.
     MeshInstance(u32),
+    /// Multiplies later direct draws, across submissions. Zero resets it to one.
+    InstanceMultiplier(u32),
     DrawSetup {
         instances: u32,
         args: u64,
@@ -324,6 +326,7 @@ mod op {
     // Render protocol 9 (NativeApi 19).
     pub const COPY_DEPTH: u8 = 29;
     pub const MESH_INSTANCE: u8 = 30;
+    pub const INSTANCE_MULTIPLIER: u8 = 32;
     pub const MESH_BUFFERS: u8 = 31;
 }
 
@@ -539,6 +542,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 }
             }
             op::MESH_INSTANCE => Command::MeshInstance(r.u32()?),
+            op::INSTANCE_MULTIPLIER => Command::InstanceMultiplier(r.u32()?),
             op::DRAW_SETUP => Command::DrawSetup {
                 instances: r.u32()?,
                 args: r.u64()?,
@@ -896,6 +900,10 @@ impl Writer {
                 self.u32(*mip as u32);
                 self.u32(*slice as u32);
             }
+            Command::InstanceMultiplier(multiplier) => {
+                self.bytes.push(op::INSTANCE_MULTIPLIER);
+                self.u32(*multiplier);
+            }
             Command::MeshInstance(first) => {
                 self.bytes.push(op::MESH_INSTANCE);
                 self.u32(*first);
@@ -1202,6 +1210,8 @@ mod tests {
             Command::Global("_Tint".into(), PropertyValue::Vector([1.0, 0.5, 0.25, 1.0])),
             Command::Keyword("FOG_LINEAR".into(), true),
             Command::MeshInstance(7),
+            Command::InstanceMultiplier(0),
+            Command::InstanceMultiplier(3),
             Command::RenderPipeline("UniversalPipeline".into()),
             Command::PassTags(vec!["UniversalForward".into(), "SRPDefaultUnlit".into()]),
             Command::DepthBias {
@@ -1547,7 +1557,7 @@ mod tests {
     /// reported format.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 33);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 34);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

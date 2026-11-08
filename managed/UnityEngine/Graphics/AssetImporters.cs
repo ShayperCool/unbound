@@ -22,6 +22,13 @@ namespace Unbound.Runtime
             AssetDatabaseRuntime.Importers["video"] = ImportVideo;
             AssetDatabaseRuntime.Importers["shader"] = ImportShader;
             AssetDatabaseRuntime.Importers["compute"] = ComputeShaderImporter.Import;
+            AssetDatabaseRuntime.Importers["raytrace"] = info =>
+            {
+                var shader = UnityEngine.Rendering.RayTracingShader.Create(System.IO.Path.GetFileNameWithoutExtension(info.Path));
+                var file = new LoadedFile { MainObject = shader };
+                file.Objects[Compat.RayTracingShaderFileId] = shader;
+                return file;
+            };
             AssetDatabaseRuntime.Importers["script"] = ImportScript;
             AssetDatabaseRuntime.Importers["scripted"] = ScriptedImports.Import;
             AssetDatabaseRuntime.Importers["scene"] = ImportScene;

@@ -206,3 +206,55 @@ fragment draw in the same command buffer. The following indirect draw must see t
 its argument copy cannot move ahead of the writing pass. Both the pixels and the caller's
 argument words are recorded. Two independent Unity 6000.0.71f1 GPU Editor captures were
 identical; all existing reference values are unchanged.
+
+## Commands without XR or ray tracing devices
+
+`device.*` records Unity 6000.0.71f1 on Linux OpenGL Core, with no XR device.
+Record this independent section without the frame-timed fence cases, then append its new
+keys to the existing canonical reference, preserving every older value:
+
+```sh
+UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/cmdbuffers/run.py native --section devices --label devices
+UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/cmdbuffers/run.py publish --section devices devices-1 devices-2
+```
+
+Both complete device captures are byte-identical. The ordinary engine gate runs all sections.
+
+| Mechanism | Reference observation | Unbound |
+| --- | --- | --- |
+| Foveation configuration/mode, late-latch marks, occlusion mesh | No errors/logs or pixel changes without XR, including invalid mode values measured | Ignored |
+| Late-latch projections | Null throws ArgumentNullException `projectionMat`; lengths other than two throw ArgumentException `Stereo Projection Matrix must be of size 2.` | Same checks, then ignored |
+| Instance multiplier | Zero means one; multiplies direct instance counts; persists between command buffers; indirect counts remain unchanged | Persistent render state, protocol 14 / NativeApi 34 |
+| Stereo None/Instancing/Multiview | No pixel change in these no-device controls | Ignored |
+| Stereo SideBySide | The following procedural draw produces no pixels, despite the documented VR limitation | Explicit NotSupportedException; no approximation of the unimplemented clipping state |
+| Ray tracing, every command-buffer overload | Valid objects are accepted with no execution effect; required shader/compute/structure/indirect-args objects throw ArgumentNullException in the measured order; other null values are ignored | Same no-device checks and behavior |
+| Ray tracing capabilities | supportsRayTracing, supportsRayTracingShaders and supportsInlineRayTracing are false; foveatedRenderingCaps is None | Same, without stub diagnostics |
+| Acceleration structure construction | Creates an object and logs Assert `Platform doesn't implement RayTracingAccelerationStructure.` | Same, with nothing to release |
+| Native plugin custom blit | Calls event 6 even without XR | Explicit NotSupportedException until graphics-device interop exists |
+| Native plugin texture updates, original/V1/V2 | Calls events 7/8 or 9/10 and updates GPU pixels; CPU pixels stay unchanged | Explicit NotSupportedException until graphics-device interop exists |
+
+The two `.raytrace` resources also measure the standalone main-object local identifier for
+distinct source names; the importer uses that identifier through Compat, and has no disk cache.
+Shader settings and other ray tracing APIs outside these command-buffer members remain outside
+this coverage. No ray tracing device or actual XR rendering behavior is inferred.
+
+The strict comparator retains every difference. The gate additionally requires the precise
+unsupported exceptions for SideBySide and all four plugin entry points, with untouched pixels
+and no callback execution. It accepts no other new difference. These are explicit unsupported
+mechanisms, not parity claims. Follow-ups are no-device side-by-side clipping and native rendering
+plugin graphics-device interop, including texture update callbacks. Null plugin callbacks/targets
+and null ray tracing constant buffers terminated both additional Editor repeats; they are omitted
+from the in-process gate. Unbound reports a managed error for those unsupported/invalid calls.
+Their repeat artifacts stay in the cache.
+
+### Contract notes for Unity 6000.0
+
+The following are documented; the table's exact errors and no-device results are observations:
+
+- [SetInstanceMultiplier](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.SetInstanceMultiplier.html) persists, treats zero as one, and excludes indirect draws.
+- [SetSinglePassStereo](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.SetSinglePassStereo.html) is described as used only with VR enabled. The no-device SideBySide result above is kept separate from that statement.
+- [SetFoveatedRenderingMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.SetFoveatedRenderingMode.html) and [ConfigureFoveatedRendering](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.ConfigureFoveatedRendering.html) configure supported foveated rendering.
+- [MarkLateLatchMatrixShaderPropertyID](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.MarkLateLatchMatrixShaderPropertyID.html), [SetLateLatchProjectionMatrices](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.SetLateLatchProjectionMatrices.html) and [UnmarkLateLatchMatrix](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.UnmarkLateLatchMatrix.html) concern late-latched matrices. Marks are documented as ignored by the built-in pipeline and HDRP.
+- [DrawOcclusionMesh](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.DrawOcclusionMesh.html) draws the active XR device's occlusion mesh.
+- [BuildRayTracingAccelerationStructure](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.BuildRayTracingAccelerationStructure.html), [DispatchRays](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.DispatchRays.html) and the SetRayTracing members describe ray tracing commands; this capture has no ray tracing support.
+- [IssuePluginCustomBlit](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.IssuePluginCustomBlit.html) and [IssuePluginCustomTextureUpdateV2](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.IssuePluginCustomTextureUpdateV2.html) invoke native rendering callbacks. Their public plugin callback layouts are in the SDK's `IUnityRenderingExtensions.h`. They are not no-device no-ops.
