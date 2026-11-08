@@ -262,6 +262,35 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ClippingRateBirthsWarnsOnEveryRatePath()
+        {
+            var ps = Make(ParticleSystemShapeType.Rectangle, Coords(4));
+            try
+            {
+                var main = ps.main;
+                main.ringBufferMode = ParticleSystemRingBufferMode.LoopUntilReplaced; // the per-particle rate path
+                var emission = ps.emission;
+                emission.enabled = true;
+                emission.rateOverTime = 100f;
+                var shape = ps.shape;
+                shape.textureClipThreshold = 0.5f;
+                ps.Simulate(0.2f, true, true, true);
+                Assert.Single(m_Logs, l => l.Contains("shape texture clipping of rate births"));
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void ModuleColourDataWithoutGradientsReadsTheDefaultOnes()
+        {
+            var g = ParticleSystem.MinMaxGradient.Read(TestYaml.DocumentBody("Thing:\n  minMaxState: 1\n"));
+            Assert.Equal(ParticleSystemGradientMode.Gradient, g.mode);
+            Assert.NotNull(g.gradientMax);
+            Assert.NotNull(g.gradientMin);
+            Assert.Equal(Color.white, g.Evaluate(0.5f));
+        }
+
+        [Fact]
         public void TheSettersKeepTheThresholdInZeroToOneAndTheChannelAtZeroOrMore()
         {
             var ps = Make(ParticleSystemShapeType.Rectangle, null);

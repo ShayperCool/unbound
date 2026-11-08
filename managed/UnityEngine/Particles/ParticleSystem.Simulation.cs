@@ -620,7 +620,9 @@ namespace UnityEngine
                 for (int m = first; m <= last; m++)
                 {
                     m_SpeedNt = Mathf.Clamp01((m - phase) / rate / duration);
+                    m_RateBirth = true;
                     EmitParticles(1, NextStepRateAge(), b, default, false, m - first, count);
+                    m_RateBirth = false;
                 }
             }
             else
@@ -633,7 +635,9 @@ namespace UnityEngine
                 {
                     float age = (m_RateAccumulator - k) / rate;
                     m_SpeedNt = Mathf.Clamp01((b - age) / duration);
+                    m_RateBirth = true;
                     EmitParticles(1, age + extraAge, b, default, false, k - 1, n);
+                    m_RateBirth = false;
                 }
                 m_RateAccumulator -= n;
             }
@@ -894,7 +898,9 @@ namespace UnityEngine
                     float at = Mathf.Clamp01((k - before) / gained);
                     float age = (1f - at) * span + extraAge;
                     m_SpeedNt = Mathf.Clamp01((a + at * span) / duration);
+                    m_RateBirth = true;
                     EmitParticles(1, age, b, default, false, k - 1, n);
+                    m_RateBirth = false;
                 }
                 m_DistanceAccumulator -= n;
             }
@@ -957,13 +963,13 @@ namespace UnityEngine
                         m_Particles[index].m_Flags |= Particle.FlagShapeDiscarded;
                         firstDiscarded = Math.Min(firstDiscarded, index);
                     }
-                    else RemoveAt(index);
+                    else RemoveNewborn(index, ref firstDiscarded);
                     continue;
                 }
                 var trailBirthPosition = m_Particles[index].m_Position;
                 if (simulate) BeginModuleSample(si, m_Particles[index].m_RandomSeed);
                 if (simulate && !Integrate(ref m_Particles[index], preAge, ref m_Context))
-                    RemoveAt(index);
+                    RemoveNewborn(index, ref firstDiscarded);
                 else StartTrail(ref m_Particles[index], simulate ? trailBirthPosition : null);
             }
             // Particles the shape texture discarded leave after the whole call, in ascending
@@ -975,6 +981,16 @@ namespace UnityEngine
                 else i++;
             }
             m_Newborn = false;
+        }
+
+        /// <summary>Removes a newborn of an Emit call at once; the particle taking its slot may be a
+        /// discarded one (a ring buffer reuses slots below the live count), so the final removal
+        /// of discarded particles starts at that slot at the latest.</summary>
+        void RemoveNewborn(int index, ref int firstDiscarded)
+        {
+            RemoveAt(index);
+            if (index < m_Count && (m_Particles[index].m_Flags & Particle.FlagShapeDiscarded) != 0)
+                firstDiscarded = Math.Min(firstDiscarded, index);
         }
 
         /// <summary>Integrating newborns (they share one error report per step).</summary>

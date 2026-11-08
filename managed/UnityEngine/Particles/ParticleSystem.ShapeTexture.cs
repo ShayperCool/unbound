@@ -201,7 +201,7 @@ namespace UnityEngine
                 // Measured for bursts and Emit only: with rate emission the Editor keeps far fewer
                 // particles than the clip channel alone discards (follow-up).
                 m_ShapeTextureRateClipReported = true;
-                ReportUnsupported("shape texture clipping of rate-over-time births (the Editor keeps fewer of them)");
+                Debug.LogWarning("Unbound: particle shape texture clipping of rate births does not match the Editor yet (it keeps fewer of them)");
             }
             if (clip < threshold) texel.a = 0;
             else

@@ -404,9 +404,12 @@ namespace UnityEngine
 
             /// <summary>The copy a module keeps when it is set: a missing gradient becomes the
             /// default white one (6000.0.71f1, tests/projects/particlecurves gradient/module/*/nullgradient).</summary>
-            internal MinMaxGradient ForModule()
+            internal MinMaxGradient ForModule() => Clone().WithBothGradients();
+
+            /// <summary>A module always holds both gradients: a missing one is the default white one.</summary>
+            MinMaxGradient WithBothGradients()
             {
-                var g = Clone();
+                var g = this;
                 g.m_GradientMax ??= new Gradient();
                 g.m_GradientMin ??= new Gradient();
                 return g;
@@ -416,7 +419,7 @@ namespace UnityEngine
             internal static MinMaxGradient Read(Unbound.Runtime.YNode node)
             {
                 if (node == null || node.Kind != Unbound.Runtime.YKind.Map)
-                    return new MinMaxGradient(Color.white).ForModule();
+                    return new MinMaxGradient(Color.white).WithBothGradients();
                 var g = new MinMaxGradient
                 {
                     m_Mode = (ParticleSystemGradientMode)node.Int("minMaxState"),
@@ -427,10 +430,7 @@ namespace UnityEngine
                     g.m_GradientMax = Unbound.Runtime.BuiltinReaders.Gradient(max);
                 if (node.Get("minGradient") is Unbound.Runtime.YNode min && min.Kind == Unbound.Runtime.YKind.Map)
                     g.m_GradientMin = Unbound.Runtime.BuiltinReaders.Gradient(min);
-                // A module always holds both gradients (a missing node reads as the default white one).
-                g.m_GradientMax ??= new Gradient();
-                g.m_GradientMin ??= new Gradient();
-                return g;
+                return g.WithBothGradients();
             }
         }
     }
