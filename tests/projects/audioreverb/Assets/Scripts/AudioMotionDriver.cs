@@ -38,6 +38,7 @@ public partial class AudioReverbProbe
         "source_parenttiming_auto", "source_parenttiming_fixed", "source_parenttiming_dynamic",
         "listener_parenttiming_auto", "listener_parenttiming_fixed", "listener_parenttiming_dynamic",
         "listener_offaxis_auto", "listener_offaxis_fixed", "listener_offaxis_dynamic",
+        "listener_offaxisgain_fixed",
     };
 
     System.Collections.IEnumerator CaptureMotion()
@@ -72,6 +73,10 @@ public partial class AudioReverbProbe
             source.rolloffMode = AudioRolloffMode.Custom;
             source.SetCustomCurve(AudioSourceCurveType.CustomRolloff, AnimationCurve.Linear(0, 1, 1, 1));
             source.maxDistance = 10000;
+            if (key.Contains("offaxisgain")) {
+                source.SetCustomCurve(AudioSourceCurveType.CustomRolloff, AnimationCurve.Linear(0, 1, 1, 0));
+                source.maxDistance = 200;
+            }
             source.outputAudioMixerGroup = child;
             string[] parts = key.Split('_');
             var mode = parts[parts.Length - 1] == "auto" ? AudioVelocityUpdateMode.Auto

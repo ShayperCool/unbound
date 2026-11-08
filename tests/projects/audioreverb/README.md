@@ -107,15 +107,16 @@ and source Distortion/Chorus. All four custom curve types record both the caller
 keys and GetCustomCurve's returned keys, including negative, oversized, short,
 unsorted, weighted and single-key inputs.
 
-The `--profile motion` reference separately records 39 source/listener controls
+The `--profile motion` reference separately records 40 source/listener controls
 on the ordinary player loop. Each endpoint runs Auto, Fixed and Dynamic modes
 with its own Rigidbody, a parent Rigidbody, or transform motion in FixedUpdate
 or Update. Opposing Rigidbody velocity writes in FixedUpdate and Update expose
 the phase that supplies the source's Doppler sample, including a child of the
 moving body. Off-axis listener controls cover all three update modes and distinguish the fixed
-source’s cached distance/pan pose from its newer Doppler pose. Flat custom rolloff isolates
+source’s cached panning pose from its newer distance/Doppler sample. A non-flat
+rolloff control checks distance attenuation independently of panning. Flat custom rolloff isolates
 velocity from distance attenuation. The two independent repeats agree exactly
-on 3833937 values per rate, with 24 complete 1024-frame stereo buffers per case.
+on 3932243 values per rate, with 24 complete 1024-frame stereo buffers per case.
 Record and publish this profile with `native.py --profile motion` and
 `publish.py --profile motion`; `motion.py --exact --reference FIRST/capture
 --candidate SECOND/capture` checks independent agreement. Each command also
@@ -130,4 +131,4 @@ first-zone Generic/Cave/User parameters and overlapping voice sends pass.
 The added User/Cave override controls distinguish stored scalar values from a
 selected preset's sound, and a repeated-preset property table retains its scalar
 getter values. Motion metadata records the public fixed-step getter bits as well
-as all 39 rendered controls. Existing oracle values and tolerances are unchanged.
+as all 40 rendered controls. Existing oracle values and tolerances are unchanged.
