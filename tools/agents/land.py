@@ -144,7 +144,7 @@ class Gate:
         die(5, f'gate failed at {name}; full log: {self.log}')
 
     def run(self):
-        changed = git('diff', '--name-only', f'{self.base}...HEAD', cwd=self.worktree).splitlines()
+        changed = git('diff', '--name-only', '--no-renames', f'{self.base}...HEAD', cwd=self.worktree).splitlines()
         guard = subprocess.run([sys.executable, str(HERE/'oracle_guard.py'), self.base, 'HEAD'],
                                cwd=self.worktree)
         if guard.returncode:
