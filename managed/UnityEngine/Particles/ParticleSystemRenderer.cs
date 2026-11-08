@@ -71,7 +71,7 @@ namespace UnityEngine
         public ParticleSystemRenderSpace alignment { get => m_RenderAlignment; set => m_RenderAlignment = value; }
         /// <summary>Mesh mode needs the particles' axes of rotation: a system switched to it turns
         /// the particles it already holds about up (6000.0.71f1, tests/projects/particlerender
-        /// bake/mesh against meshrot/*).</summary>
+        /// bake/mesh against meshrot/*); setting Mesh again changes nothing.</summary>
         public ParticleSystemRenderMode renderMode
         {
             get => m_RenderMode;

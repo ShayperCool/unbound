@@ -73,7 +73,9 @@ with a system set up as `particletriggerapi`'s, more particles, more colliders, 
 after a WaitForFixedUpdate. All of them still receive OnParticleTrigger in the pending window,
 logged at `PreLateUpdate.ParticleSystemBeginUpdateAll`. The callback is sent where the frame's
 particle update completes on the main thread: at `PostLateUpdate.ParticleSystemEndUpdateAll`, or
-earlier when a script uses a particle system after the update began. This fixture's own
+earlier when a script reads the system after the update began (inferred from this placement: no
+control separates the read from the rest of this fixture's loop, and a read of another system is
+unmeasured). This fixture's own
 `after.particles` sample reads the system right after `ParticleSystemBeginUpdateAll`, which
 completes the update there; without such a read (`particletriggerapi`'s `*/gone` windows) the
 completion comes after the PostLateUpdate scripting point has delivered the Destroy, and no

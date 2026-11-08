@@ -152,7 +152,7 @@
   ]
  },
  "birth-subemitter-start": {
-  "reason": "A Birth sub-emitter under a played parent (subcull/*/child): the Editor plays the child from the parent's first update (time and isPlaying from frame 0, Unbound from its first births), and its first births from the 10/s child rate come one update later than in Unbound (the rate reaches a whole particle exactly at a step's end), so counts, times, visibility and summed positions differ. The culling rule matches: a child freezes with its culled parent whatever its own culling mode, and runs on while its own renderer is seen (moved_*: positions keep moving after the parent leaves the view).",
+  "reason": "A Birth sub-emitter under a played parent (subcull/*/child): the Editor plays the child from the parent's first update (time and isPlaying from frame 0, Unbound from its first births), and its first births from the 10/s child rate come one update later than in Unbound (the rate reaches a whole particle exactly at a step's end), so counts, times, isPlaying, visibility and summed positions differ (under a parent culled after its grace updates the Editor's child has no particle and reports isPlaying false, Unbound's holds the births it got and plays). The culling rule matches: a child freezes with its culled parent whatever its own culling mode, and runs on while its own renderer is seen (moved_*: positions keep moving after the parent leaves the view).",
   "keys": [
    "subcull/always_pause/child/0",
    "subcull/always_pause/child/1",

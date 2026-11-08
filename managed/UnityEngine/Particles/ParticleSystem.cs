@@ -1522,8 +1522,10 @@ namespace Unbound.Runtime
 
         internal static void Remove(ParticleSystem ps) => s_Systems.Remove(ps);
 
-        /// <summary>A script uses a particle system: the frame's update completes first, as when
-        /// Unity waits for its particle jobs.</summary>
+        /// <summary>A script uses a particle system: the frame's update completes first. Measured
+        /// for a read of the system itself after the update began (destroyphases' after.particles
+        /// sample); that a read of one system completes every system's update is Unbound's
+        /// choice (unmeasured).</summary>
         internal static void Sync()
         {
             if (s_CompletionPending) CompleteUpdate();
