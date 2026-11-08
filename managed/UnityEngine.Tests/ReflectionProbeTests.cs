@@ -68,6 +68,55 @@ namespace UnityEngine.Tests
             }
         }
 
+        [Fact]
+        public void TiedProbesGoByDistanceAndFurtherOnesWeighNothing()
+        {
+            // tests/projects/reflectionprobes weights.equal.*, weights.three.* (6000.0.71f1).
+            var probes = new[]
+            {
+                Probe("A", Vector3.zero, new Vector3(4, 4, 4), 1),
+                Probe("B", new Vector3(2, 0, 0), new Vector3(4, 4, 4), 1),
+            };
+            try
+            {
+                Assert.Equal("A:0.500; B:0.500", Closest(new Vector3(1f, 0, 0), 0.5f));
+                Assert.Equal("B:0.500; A:0.500", Closest(new Vector3(1.25f, 0, 0), 0.5f));
+                Assert.Equal("A:0.667; B:0.333", Closest(Vector3.zero, 0.5f));
+                var c = Probe("C", new Vector3(1, 0, 0), new Vector3(3, 3, 3), 1);
+                Assert.Equal("A:0.500; C:0.500; B:0.000", Closest(Vector3.zero, 0.5f));
+                Assert.Equal("C:0.500; A:0.500; B:0.000", Closest(new Vector3(1f, 0, 0), 0.5f));
+                Object.DestroyImmediate(c.gameObject);
+            }
+            finally
+            {
+                foreach (var p in probes) Object.DestroyImmediate(p.gameObject);
+            }
+        }
+
+        [Fact]
+        public void ABoxProjectedProbesBoxHoldsTheRenderer()
+        {
+            // tests/projects/reflectionprobes forward_box: a floor larger than the probe.
+            var probe = Probe("A", Vector3.zero, new Vector3(4, 4, 4), 1);
+            try
+            {
+                var floor = new Bounds(new Vector3(1, -1, 0), new Vector3(10, 0, 10));
+                var plain = ReflectionProbe.Apply(floor, ReflectionProbeUsage.BlendProbes, null, false);
+                Assert.Equal(new Vector4(-2, -2, -2, 1), V(plain, "unity_SpecCube0_BoxMin"));
+                probe.boxProjection = true;
+                var boxed = ReflectionProbe.Apply(floor, ReflectionProbeUsage.BlendProbes, null, false);
+                Assert.Equal(new Vector4(-4, -2, -5, 1), V(boxed, "unity_SpecCube0_BoxMin"));
+                Assert.Equal(new Vector4(6, 2, 5, 0), V(boxed, "unity_SpecCube0_BoxMax"));
+                // A render pipeline's draw keeps the probe's own box.
+                var srp = ReflectionProbe.Apply(floor, ReflectionProbeUsage.BlendProbes, null, true);
+                Assert.Equal(-2f, V(srp, "unity_SpecCube0_BoxMin").x);
+            }
+            finally
+            {
+                Object.DestroyImmediate(probe.gameObject);
+            }
+        }
+
         static Dictionary<int, object> Apply(Vector3 position, ReflectionProbeUsage usage, bool srp) =>
             ReflectionProbe.Apply(new Bounds(position, Vector3.one), usage, null, srp);
 

@@ -111,11 +111,13 @@ namespace UnityEngine
         }
 
         /// <summary>
-        /// The probes a renderer reflects and their weights, as the Editor gives them (measured):
-        /// the probes whose box touches the renderer's bounds, by importance (highest first), then
-        /// by how much of the bounds they hold, then the smaller box. One probe: weight 1. A probe
-        /// more important than the next: the share of the bounds inside it, the next the rest.
-        /// Equally important probes share by what they hold. At most two; none with usage Off.
+        /// The probes a renderer reflects and their weights, as the Editor gives them (measured:
+        /// tests/projects/reflectionprobes weights.*): every probe whose box touches the renderer's
+        /// bounds, by importance (highest first), then by how much of the bounds they hold, then
+        /// the box whose centre is nearer the bounds' centre, then the earlier enabled. One probe:
+        /// weight 1. A probe more important than the next: the share of the bounds inside it, the
+        /// next the rest. Equally important probes share by what they hold. Only the first two
+        /// blend; any further probe is listed with weight 0. None with usage Off.
         /// </summary>
         internal static void Closest(Renderer renderer, List<ReflectionProbeBlendInfo> into) =>
             Closest(renderer.bounds, renderer.reflectionProbeUsage, into);
@@ -126,13 +128,16 @@ namespace UnityEngine
             if (usage == ReflectionProbeUsage.Off || s_Enabled.Count == 0) return;
             var candidates = s_Candidates;
             candidates.Clear();
+            var center = bounds.center;
+            int order = 0;
             foreach (var probe in s_Enabled)
             {
+                order++;
                 // A realtime probe counts before it has rendered (it reflects black).
                 if (!probe || (probe.texture == null && probe.m_Mode != ReflectionProbeMode.Realtime)) continue;
                 var box = probe.bounds;
                 if (!Touches(box, bounds)) continue;
-                candidates.Add((probe, InsideShare(box, bounds), box.size.x * box.size.y * box.size.z));
+                candidates.Add((probe, InsideShare(box, bounds), (box.center - center).sqrMagnitude, order));
             }
             if (candidates.Count == 0) return;
             candidates.Sort(s_ByImportance);
@@ -148,15 +153,18 @@ namespace UnityEngine
             else weight = first.Inside + second.Inside > 0f ? first.Inside / (first.Inside + second.Inside) : 1f;
             into.Add(new ReflectionProbeBlendInfo { probe = first.Probe, weight = weight });
             into.Add(new ReflectionProbeBlendInfo { probe = second.Probe, weight = 1f - weight });
+            for (int i = 2; i < candidates.Count; i++) into.Add(new ReflectionProbeBlendInfo { probe = candidates[i].Probe, weight = 0f });
         }
 
-        static readonly List<(ReflectionProbe Probe, float Inside, float Volume)> s_Candidates = new List<(ReflectionProbe, float, float)>();
-        static readonly Comparison<(ReflectionProbe Probe, float Inside, float Volume)> s_ByImportance = (a, b) =>
+        static readonly List<(ReflectionProbe Probe, float Inside, float Distance, int Order)> s_Candidates = new List<(ReflectionProbe, float, float, int)>();
+        static readonly Comparison<(ReflectionProbe Probe, float Inside, float Distance, int Order)> s_ByImportance = (a, b) =>
         {
             int c = b.Probe.m_Importance.CompareTo(a.Probe.m_Importance);
             if (c != 0) return c;
             c = b.Inside.CompareTo(a.Inside);
-            return c != 0 ? c : a.Volume.CompareTo(b.Volume);
+            if (c != 0) return c;
+            c = a.Distance.CompareTo(b.Distance);
+            return c != 0 ? c : a.Order.CompareTo(b.Order);
         };
 
         static bool Touches(Bounds a, Bounds b) =>
@@ -209,9 +217,9 @@ namespace UnityEngine
             var first = s_Blend[0].probe;
             var second = s_Blend.Count > 1 ? s_Blend[1].probe : null;
             bool blend = usage != ReflectionProbeUsage.Simple && second != null;
-            Set(properties, first, s_Cube0, s_Hdr0, s_Min0, s_Max0, s_Pos0, blend ? s_Blend[0].weight : 1f);
-            if (blend) Set(properties, second, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1, 0f);
-            else Set(properties, first, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1, 0f);
+            Set(properties, first, s_Cube0, s_Hdr0, s_Min0, s_Max0, s_Pos0, blend ? s_Blend[0].weight : 1f, renderer: bounds);
+            if (blend) Set(properties, second, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1, 0f, renderer: bounds);
+            else Set(properties, first, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1, 0f, renderer: bounds);
             return properties;
         }
 
@@ -260,9 +268,14 @@ namespace UnityEngine
             }
         }
 
-        static void Set(Dictionary<int, object> properties, ReflectionProbe probe, int cube, int hdr, int min, int max, int position, float weight, float maxW = 0f)
+        /// <summary>A probe's slot. With <paramref name="renderer"/> (the built-in pipeline's
+        /// draws), a box-projected probe's box also holds the renderer's bounds (measured:
+        /// tests/projects/reflectionprobes forward_box, a floor larger than the probes).</summary>
+        static void Set(Dictionary<int, object> properties, ReflectionProbe probe, int cube, int hdr, int min, int max, int position, float weight, float maxW = 0f,
+            Bounds? renderer = null)
         {
             var box = probe.bounds;
+            if (renderer is Bounds drawn && probe.m_BoxProjection) box.Encapsulate(drawn);
             bool pending = probe.m_Mode == ReflectionProbeMode.Custom && probe.m_CustomFrame >= Time.frameCount;
             properties[cube] = pending ? Black : probe.texture ?? Black;
             properties[hdr] = probe.textureHDRDecodeValues;

@@ -956,6 +956,37 @@ LightmapSettings:
             Assert.True(failed.isEmpty);
         }
 
+        /// <summary>A lightmapped renderer of the built-in pipeline draws with the ambient probe (no
+        /// probe constants of its own, whatever its usage: tests/projects/reflectionprobes sh.*),
+        /// with the lightmap and its scale-offset.</summary>
+        [Fact]
+        public void BuiltinLightmappedRenderersKeepTheAmbientProbe()
+        {
+            var previous = LightmapSettings.lightmaps;
+            var go = new GameObject("Lightmapped");
+            try
+            {
+                LightmapSettings.lightmaps = new[] { new LightmapData { lightmapColor = new Texture2D(4, 4, TextureFormat.RGBAHalf, false) } };
+                var renderer = go.AddComponent<MeshRenderer>();
+                renderer.lightmapIndex = 0;
+                renderer.lightmapScaleOffset = new Vector4(0.5f, 0.25f, 0.125f, 0.0625f);
+                foreach (var usage in new[] { LightProbeUsage.BlendProbes, LightProbeUsage.Off })
+                {
+                    renderer.lightProbeUsage = usage;
+                    var keywords = new List<string>();
+                    var properties = BakedLighting.Apply(renderer, null, keywords);
+                    Assert.Contains("LIGHTMAP_ON", keywords);
+                    Assert.Equal(new Vector4(0.5f, 0.25f, 0.125f, 0.0625f), (Vector4)properties[Shader.PropertyToID("unity_LightmapST")]);
+                    Assert.False(properties.ContainsKey(Shader.PropertyToID("unity_SHAr")));
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+                LightmapSettings.lightmaps = previous;
+            }
+        }
+
         /// <summary>A mesh renderer with LightProbeUsage.CustomProvided is lit by the first probe of
         /// its own property block (set with Renderer.SetPropertyBlock), which its draws carry in a
         /// material copy rather than as draw properties.</summary>

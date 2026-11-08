@@ -294,9 +294,12 @@ namespace UnityEngine
                         Unbound.Runtime.Stubs.Ignored("QualitySettings.shadowmaskMode",
                         "baked shadow masks are not mixed with realtime shadows yet (shadowmaskMode and Light.lightShadowCasterMode have no effect)");
                 }
-                // Its light is in the lightmap: no probe (zero SH; measured: tests/projects/urp
-                // per-object-constants.jsonl, the lightmapped renderers).
-                return WithProbe(default, properties, copy: false);
+                // Its light is in the lightmap: a render pipeline's draw gets no probe (zero SH;
+                // measured: tests/projects/urp per-object-constants.jsonl, the lightmapped
+                // renderers); the built-in pipeline's keeps the ambient probe whatever its probe
+                // usage (measured: tests/projects/reflectionprobes sh.*, with and without light
+                // probes in the scene).
+                return GraphicsSettings.currentRenderPipeline != null ? WithProbe(default, properties, copy: false) : properties;
             }
             if (probes && renderer.lightProbeUsage == LightProbeUsage.CustomProvided) return ProvidedProbes(properties, renderer.m_PropertyBlock);
             var lightProbes = LightmapSettings.lightProbes;
