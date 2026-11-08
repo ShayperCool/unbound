@@ -109,9 +109,28 @@ impl Placement {
         !is_zero(self.offset())
     }
 
-    /// Children of a skinned mesh's pivoted node: where the Editor puts them is unmeasured.
-    pub fn unmeasured_children(&self, node: &ufbx::Node) -> bool {
-        matches!(self, Self::WithoutPivots { .. }) && self.moves() && !node.children.is_empty()
+    /// What about a skinned mesh's pivoted node is unmeasured: its children's placement, and
+    /// pivots that differ or offsets (measured: equal rotation and scaling pivots, no offsets).
+    pub fn unmeasured(&self, node: &ufbx::Node) -> Option<&'static str> {
+        let Self::WithoutPivots {
+            rotation_pivot,
+            scaling_pivot,
+        } = *self
+        else {
+            return None;
+        };
+        let offsets = !is_zero(vec3_prop(node, "RotationOffset"))
+            || !is_zero(vec3_prop(node, "ScalingOffset"));
+        let differ = rotation_pivot.x != scaling_pivot.x
+            || rotation_pivot.y != scaling_pivot.y
+            || rotation_pivot.z != scaling_pivot.z;
+        if offsets || differ {
+            Some("its pivots differ or it has offsets")
+        } else if self.moves() && !node.children.is_empty() {
+            Some("its children keep their FBX translation")
+        } else {
+            None
+        }
     }
 
     /// The position depends on the node's rotation and scale, not only its translation.
@@ -269,92 +288,68 @@ fn rotation_of(m: &ufbx::Matrix) -> ufbx::Quat {
     ufbx::matrix_to_transform(&rotation).rotation
 }
 
-type Affine = [[f64; 4]; 3];
-
-fn trs(node: &ModelNode) -> Affine {
+fn matrix(node: &ModelNode) -> ufbx::Matrix {
     let [x, y, z, w] = node.rotation.map(f64::from);
-    let s = node.scale.map(f64::from);
-    let r = [
-        [
-            1.0 - 2.0 * (y * y + z * z),
-            2.0 * (x * y - z * w),
-            2.0 * (x * z + y * w),
-        ],
-        [
-            2.0 * (x * y + z * w),
-            1.0 - 2.0 * (x * x + z * z),
-            2.0 * (y * z - x * w),
-        ],
-        [
-            2.0 * (x * z - y * w),
-            2.0 * (y * z + x * w),
-            1.0 - 2.0 * (x * x + y * y),
-        ],
-    ];
-    std::array::from_fn(|i| {
-        [
-            r[i][0] * s[0],
-            r[i][1] * s[1],
-            r[i][2] * s[2],
-            f64::from(node.position[i]),
-        ]
+    let [tx, ty, tz] = node.position.map(f64::from);
+    let [sx, sy, sz] = node.scale.map(f64::from);
+    ufbx::transform_to_matrix(&ufbx::Transform {
+        translation: ufbx::Vec3 {
+            x: tx,
+            y: ty,
+            z: tz,
+        },
+        rotation: ufbx::Quat { x, y, z, w },
+        scale: ufbx::Vec3 {
+            x: sx,
+            y: sy,
+            z: sz,
+        },
     })
-}
-
-fn mul(a: &Affine, b: &Affine) -> Affine {
-    std::array::from_fn(|i| {
-        std::array::from_fn(|j| {
-            let t = if j == 3 { a[i][3] } else { 0.0 };
-            a[i][0] * b[0][j] + a[i][1] * b[1][j] + a[i][2] * b[2][j] + t
-        })
-    })
-}
-
-fn invert(m: &Affine) -> Affine {
-    let a = |i: usize, j: usize| m[i][j];
-    let det = a(0, 0) * (a(1, 1) * a(2, 2) - a(1, 2) * a(2, 1))
-        - a(0, 1) * (a(1, 0) * a(2, 2) - a(1, 2) * a(2, 0))
-        + a(0, 2) * (a(1, 0) * a(2, 1) - a(1, 1) * a(2, 0));
-    let inv = 1.0 / det;
-    let l = [
-        [
-            (a(1, 1) * a(2, 2) - a(1, 2) * a(2, 1)) * inv,
-            (a(0, 2) * a(2, 1) - a(0, 1) * a(2, 2)) * inv,
-            (a(0, 1) * a(1, 2) - a(0, 2) * a(1, 1)) * inv,
-        ],
-        [
-            (a(1, 2) * a(2, 0) - a(1, 0) * a(2, 2)) * inv,
-            (a(0, 0) * a(2, 2) - a(0, 2) * a(2, 0)) * inv,
-            (a(0, 2) * a(1, 0) - a(0, 0) * a(1, 2)) * inv,
-        ],
-        [
-            (a(1, 0) * a(2, 1) - a(1, 1) * a(2, 0)) * inv,
-            (a(0, 1) * a(2, 0) - a(0, 0) * a(2, 1)) * inv,
-            (a(0, 0) * a(1, 1) - a(0, 1) * a(1, 0)) * inv,
-        ],
-    ];
-    std::array::from_fn(|i| {
-        let t = -(l[i][0] * m[0][3] + l[i][1] * m[1][3] + l[i][2] * m[2][3]);
-        [l[i][0], l[i][1], l[i][2], t]
-    })
-}
-
-fn apply(m: &Affine, p: [f64; 3]) -> [f64; 3] {
-    std::array::from_fn(|i| m[i][0] * p[0] + m[i][1] * p[1] + m[i][2] * p[2] + m[i][3])
 }
 
 /// Each node's world matrix (Unity space), parents first in `nodes`.
-pub(super) fn world_matrices(nodes: &[ModelNode]) -> Vec<Affine> {
-    let mut world: Vec<Affine> = Vec::with_capacity(nodes.len());
+pub(super) fn world_matrices(nodes: &[ModelNode]) -> Vec<ufbx::Matrix> {
+    let mut world: Vec<ufbx::Matrix> = Vec::with_capacity(nodes.len());
     for node in nodes {
-        let local = trs(node);
+        let local = matrix(node);
         let matrix = match node.parent {
-            Some(p) => mul(&world[p as usize], &local),
+            Some(p) => ufbx::matrix_mul(&world[p as usize], &local),
             None => local,
         };
         world.push(matrix);
     }
     world
+}
+
+/// No clip moves a node away from its import transform: each transform curve of `curves`
+/// (bound by path, see `paths`) holds its node's imported position, rotation and scale.
+pub(super) fn poses_are_import_pose<'a>(
+    nodes: &[ModelNode],
+    paths: &std::collections::HashMap<String, u32>,
+    mut curves: impl Iterator<Item = &'a super::NodeCurves>,
+) -> bool {
+    // Keys and import transforms come from the same f32 conversion; this allows rounding only.
+    const TOLERANCE: f32 = 1e-5;
+    let near = |a: &[f32], b: &[f32]| {
+        a.iter()
+            .zip(b)
+            .all(|(x, y)| (x - y).abs() <= TOLERANCE * y.abs().max(1.0))
+    };
+    curves.all(|curve| {
+        let Some(node) = paths.get(&curve.path).and_then(|&i| nodes.get(i as usize)) else {
+            return false;
+        };
+        let q = node.rotation;
+        curve
+            .positions
+            .iter()
+            .all(|k| near(&k.value, &node.position))
+            && curve.scales.iter().all(|k| near(&k.value, &node.scale))
+            && curve.rotations.iter().all(|k| {
+                let dot: f32 = (0..4).map(|i| k.value[i] * q[i]).sum();
+                dot.abs() >= 1.0 - TOLERANCE
+            })
+    })
 }
 
 /// Every skinned renderer's local bounds in its final (axis-converted) hierarchy.
@@ -370,69 +365,138 @@ pub(super) fn set_skinned_local_bounds(model: &mut super::ImportedModel) {
     }
 }
 
+/// An axis-aligned box, empty until a point is added.
+#[derive(Clone, Copy)]
+struct Box3 {
+    lo: [f64; 3],
+    hi: [f64; 3],
+}
+
+impl Box3 {
+    const EMPTY: Self = Self {
+        lo: [f64::INFINITY; 3],
+        hi: [f64::NEG_INFINITY; 3],
+    };
+
+    fn add(&mut self, p: ufbx::Vec3) {
+        for (k, v) in [p.x, p.y, p.z].into_iter().enumerate() {
+            self.lo[k] = self.lo[k].min(v);
+            self.hi[k] = self.hi[k].max(v);
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.lo[0] > self.hi[0]
+    }
+
+    /// Adds this box, carried by `m`, as a box.
+    fn carry_into(&self, m: &ufbx::Matrix, out: &mut Self) {
+        let centre = ufbx::Vec3 {
+            x: (self.lo[0] + self.hi[0]) * 0.5,
+            y: (self.lo[1] + self.hi[1]) * 0.5,
+            z: (self.lo[2] + self.hi[2]) * 0.5,
+        };
+        let e: [f64; 3] = std::array::from_fn(|k| (self.hi[k] - self.lo[k]) * 0.5);
+        let c = ufbx::transform_position(m, centre);
+        let rows = [
+            [m.m00, m.m01, m.m02],
+            [m.m10, m.m11, m.m12],
+            [m.m20, m.m21, m.m22],
+        ];
+        for (i, (row, c)) in rows.iter().zip([c.x, c.y, c.z]).enumerate() {
+            let extent = row[0].abs() * e[0] + row[1].abs() * e[1] + row[2].abs() * e[2];
+            out.lo[i] = out.lo[i].min(c - extent);
+            out.hi[i] = out.hi[i].max(c + extent);
+        }
+    }
+}
+
+fn determinant(m: &ufbx::Matrix) -> f64 {
+    m.m00 * (m.m11 * m.m22 - m.m12 * m.m21) - m.m01 * (m.m10 * m.m22 - m.m12 * m.m20)
+        + m.m02 * (m.m10 * m.m21 - m.m11 * m.m20)
+}
+
 /// The imported `SkinnedMeshRenderer.localBounds` (centre, extents) in the root bone's space:
 /// per bone, the box of the vertices it influences (including their blend shape frame
 /// positions) in its bind space, carried as a box into the root bone's space by the bone's
-/// import pose; the union over bones. Bones without influenced vertices add nothing.
+/// import pose; the union over bones. Bones without influenced vertices add nothing. None for
+/// a degenerate (zero-scale) root bone.
 pub(super) fn skinned_local_bounds(
     renderer: &ModelRenderer,
     mesh: &ModelMesh,
-    world: &[Affine],
+    world: &[ufbx::Matrix],
 ) -> Option<([f32; 3], [f32; 3])> {
-    let root = renderer.root_bone? as usize;
-    let to_root = invert(world.get(root)?);
-    let mut lo = [f64::INFINITY; 3];
-    let mut hi = [f64::NEG_INFINITY; 3];
-    for (bone, &node) in renderer.bones.iter().enumerate() {
-        let (Some(bind), Some(bone_world)) = (mesh.bind_poses.get(bone), world.get(node as usize))
-        else {
-            continue;
-        };
-        let bind: Affine =
-            std::array::from_fn(|i| std::array::from_fn(|j| f64::from(bind[j * 4 + i])));
-        let mut box_lo = [f64::INFINITY; 3];
-        let mut box_hi = [f64::NEG_INFINITY; 3];
-        let mut add = |p: [f32; 3]| {
-            let p = apply(&bind, p.map(f64::from));
-            for k in 0..3 {
-                box_lo[k] = box_lo[k].min(p[k]);
-                box_hi[k] = box_hi[k].max(p[k]);
+    let root = world.get(renderer.root_bone? as usize)?;
+    let det = determinant(root);
+    if !det.is_finite() || det.abs() < f64::MIN_POSITIVE {
+        return None;
+    }
+    let to_root = ufbx::matrix_invert(root);
+    let binds: Vec<ufbx::Matrix> = mesh
+        .bind_poses
+        .iter()
+        .map(|b| {
+            let b = b.map(f64::from);
+            ufbx::Matrix {
+                m00: b[0],
+                m10: b[1],
+                m20: b[2],
+                m01: b[4],
+                m11: b[5],
+                m21: b[6],
+                m02: b[8],
+                m12: b[9],
+                m22: b[10],
+                m03: b[12],
+                m13: b[13],
+                m23: b[14],
             }
+        })
+        .collect();
+    let bones = renderer.bones.len().min(binds.len());
+    let mut boxes = vec![Box3::EMPTY; bones];
+    let frames: Vec<&super::ModelBlendFrame> =
+        mesh.blend_shapes.iter().flat_map(|s| &s.frames).collect();
+    for (v, weight) in mesh.bone_weights.iter().enumerate() {
+        let Some(&p) = mesh.positions.get(v) else {
+            break;
         };
-        for (v, weight) in mesh.bone_weights.iter().enumerate() {
-            let influences =
-                (0..4).any(|k| weight.weights[k] > 0.0 && weight.bones[k] as usize == bone);
-            if !influences {
-                continue;
-            }
-            let p = mesh.positions[v];
-            add(p);
-            for frame in mesh.blend_shapes.iter().flat_map(|s| &s.frames) {
-                if let Some(d) = frame.vertices.get(v) {
-                    add([p[0] + d[0], p[1] + d[1], p[2] + d[2]]);
+        let shaped = std::iter::once(p).chain(frames.iter().filter_map(|f| {
+            f.vertices
+                .get(v)
+                .map(|d| [p[0] + d[0], p[1] + d[1], p[2] + d[2]])
+        }));
+        for point in shaped {
+            let point = ufbx::Vec3 {
+                x: point[0].into(),
+                y: point[1].into(),
+                z: point[2].into(),
+            };
+            for k in 0..4 {
+                let bone = weight.bones[k] as usize;
+                if weight.weights[k] > 0.0 && bone < bones {
+                    boxes[bone].add(ufbx::transform_position(&binds[bone], point));
                 }
             }
         }
-        if box_lo[0] > box_hi[0] {
+    }
+    let mut out = Box3::EMPTY;
+    for (bone, b) in boxes.iter().enumerate() {
+        if b.is_empty() {
             continue;
         }
-        let m = mul(&to_root, bone_world);
-        let centre: [f64; 3] = std::array::from_fn(|k| (box_lo[k] + box_hi[k]) * 0.5);
-        let extent: [f64; 3] = std::array::from_fn(|k| (box_hi[k] - box_lo[k]) * 0.5);
-        let c = apply(&m, centre);
-        for i in 0..3 {
-            let e =
-                m[i][0].abs() * extent[0] + m[i][1].abs() * extent[1] + m[i][2].abs() * extent[2];
-            lo[i] = lo[i].min(c[i] - e);
-            hi[i] = hi[i].max(c[i] + e);
-        }
+        let Some(bone_world) = world.get(renderer.bones[bone] as usize) else {
+            continue;
+        };
+        b.carry_into(&ufbx::matrix_mul(&to_root, bone_world), &mut out);
     }
-    (lo[0] <= hi[0]).then(|| {
-        (
-            std::array::from_fn(|k| ((lo[k] + hi[k]) * 0.5) as f32),
-            std::array::from_fn(|k| ((hi[k] - lo[k]) * 0.5) as f32),
-        )
-    })
+    if out.is_empty() || out.lo.iter().chain(&out.hi).any(|v| !v.is_finite()) {
+        return None;
+    }
+    Some((
+        std::array::from_fn(|k| ((out.lo[k] + out.hi[k]) * 0.5) as f32),
+        std::array::from_fn(|k| ((out.hi[k] - out.lo[k]) * 0.5) as f32),
+    ))
 }
 
 #[cfg(test)]
@@ -660,6 +724,106 @@ mod tests {
         assert!(!placement.shifts_children() && placement.moves());
     }
 
+    /// The probe's `AnimPivot` (a legacy clip turning and moving pivoted nodes) with the given
+    /// animation compression.
+    fn anim_pivot(compression: u32) -> ImportedModel {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/modelaxis/Assets/Resources/Pivots");
+        let source = dir.join("AnimPivot.fbx");
+        let meta = std::fs::read_to_string(dir.join("AnimPivot.fbx.meta"))
+            .unwrap()
+            .replace(
+                "animationCompression: 0",
+                &format!("animationCompression: {compression}"),
+            );
+        let meta = unbound_yaml::parse_value(&meta).unwrap();
+        ModelImporter
+            .import(&source, &std::fs::read(&source).unwrap(), &meta)
+            .unwrap()
+    }
+
+    #[test]
+    fn reduced_clips_place_pivoted_nodes_on_every_frame() {
+        // A pivoted node's position follows its rotation along an arc: the reduced import keeps
+        // the uncompressed (measured) positions at every frame instead of chords between keys.
+        let exact = anim_pivot(0);
+        let reduced = anim_pivot(1);
+        let body = |m: &ImportedModel| {
+            let clip = m.clips.iter().find(|c| !c.preview).unwrap();
+            clip.curves
+                .iter()
+                .find(|c| c.path == "Body")
+                .unwrap()
+                .positions
+                .clone()
+        };
+        let (exact, reduced) = (body(&exact), body(&reduced));
+        assert!(reduced.len() > 2, "{reduced:?}");
+        for k in &reduced {
+            let e = exact
+                .iter()
+                .find(|e| (e.time - k.time).abs() < 1e-4)
+                .unwrap();
+            assert!(near(k.value, e.value), "{k:?} {e:?}");
+        }
+    }
+
+    fn curve(path: &str, position: [f32; 3], rotation: [f32; 4]) -> NodeCurves {
+        let key = |value| Key { time: 0.0, value };
+        NodeCurves {
+            path: path.into(),
+            positions: vec![
+                key(position),
+                Key {
+                    time: 1.0,
+                    value: position,
+                },
+            ],
+            rotations: vec![Key {
+                time: 0.0,
+                value: rotation,
+            }],
+            scales: vec![key([1.0; 3])],
+        }
+    }
+
+    #[test]
+    fn only_clips_holding_the_import_pose_keep_it_as_the_bounds_pose() {
+        let nodes = vec![
+            node_at(None, [0.0; 3], [0.0, 0.0, 0.0, 1.0]),
+            node_at(Some(0), [1.0, 2.0, 3.0], [0.0, 0.0, 0.0, 1.0]),
+        ];
+        let paths: std::collections::HashMap<String, u32> =
+            [("".to_string(), 0), ("Bone".to_string(), 1)].into();
+        let same = [curve("Bone", [1.0, 2.0, 3.0], [0.0, 0.0, 0.0, -1.0])];
+        assert!(poses_are_import_pose(&nodes, &paths, same.iter()));
+        // A constant pose other than the import pose (a one-frame "crouch" take).
+        let other = [curve("Bone", [1.0, 1.0, 3.0], [0.0, 0.0, 0.0, 1.0])];
+        assert!(!poses_are_import_pose(&nodes, &paths, other.iter()));
+        let turned = [curve("Bone", [1.0, 2.0, 3.0], [0.0, 0.0, 0.5, 0.866])];
+        assert!(!poses_are_import_pose(&nodes, &paths, turned.iter()));
+        let mut moving = curve("Bone", [1.0, 2.0, 3.0], [0.0, 0.0, 0.0, 1.0]);
+        moving.positions[1].value = [1.0, 2.5, 3.0];
+        assert!(!poses_are_import_pose(&nodes, &paths, [moving].iter()));
+        assert!(!poses_are_import_pose(
+            &nodes,
+            &paths,
+            [curve("Missing", [0.0; 3], [0.0, 0.0, 0.0, 1.0])].iter()
+        ));
+    }
+
+    #[test]
+    fn a_degenerate_root_bone_gives_no_bounds() {
+        let mut root = node_at(None, [0.0; 3], [0.0, 0.0, 0.0, 1.0]);
+        root.scale = [0.0, 1.0, 1.0];
+        let mesh = skinned_column();
+        let renderer = skinned_renderer(vec![0], Some(0));
+        assert_eq!(
+            skinned_local_bounds(&renderer, &mesh, &world_matrices(&[root])),
+            None
+        );
+    }
+
     fn node_at(parent: Option<u32>, position: [f32; 3], rotation: [f32; 4]) -> ModelNode {
         ModelNode {
             name: String::new(),
@@ -680,15 +844,7 @@ mod tests {
         }
     }
 
-    #[test]
-    fn skinned_bounds_are_per_bone_boxes_in_the_root_bones_space() {
-        let half = std::f32::consts::FRAC_1_SQRT_2;
-        // Root bone at (1,0,0); a child bone turned 90 degrees about Z at (0,1,0) in it.
-        let nodes = vec![
-            node_at(None, [0.0; 3], [0.0, 0.0, 0.0, 1.0]),
-            node_at(Some(0), [1.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0]),
-            node_at(Some(1), [0.0, 1.0, 0.0], [0.0, 0.0, half, half]),
-        ];
+    fn skinned_column() -> ModelMesh {
         let identity = [
             1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
         ];
@@ -696,7 +852,7 @@ mod tests {
             bones: [bone, 0, 0, 0],
             weights: [1.0, 0.0, 0.0, 0.0],
         };
-        let mesh = ModelMesh {
+        ModelMesh {
             name: String::new(),
             file_id: FileId {
                 id: 0,
@@ -722,18 +878,37 @@ mod tests {
                     tangents: Vec::new(),
                 }],
             }],
-        };
-        let renderer = ModelRenderer {
+        }
+    }
+
+    fn skinned_renderer(bones: Vec<u32>, root_bone: Option<u32>) -> ModelRenderer {
+        ModelRenderer {
             kind: RendererKind::SkinnedMesh,
             mesh: 0,
             materials: Vec::new(),
-            renderer: mesh.file_id,
+            renderer: FileId {
+                id: 0,
+                source: FileIdSource::Derived,
+            },
             filter: None,
-            bones: vec![1, 2, 0],
-            root_bone: Some(1),
+            bones,
+            root_bone,
             blend_shape_weights: Vec::new(),
             local_bounds: None,
-        };
+        }
+    }
+
+    #[test]
+    fn skinned_bounds_are_per_bone_boxes_in_the_root_bones_space() {
+        let half = std::f32::consts::FRAC_1_SQRT_2;
+        // Root bone at (1,0,0); a child bone turned 90 degrees about Z at (0,1,0) in it.
+        let nodes = vec![
+            node_at(None, [0.0; 3], [0.0, 0.0, 0.0, 1.0]),
+            node_at(Some(0), [1.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0]),
+            node_at(Some(1), [0.0, 1.0, 0.0], [0.0, 0.0, half, half]),
+        ];
+        let mesh = skinned_column();
+        let renderer = skinned_renderer(vec![1, 2, 0], Some(1));
         let (centre, extents) =
             skinned_local_bounds(&renderer, &mesh, &world_matrices(&nodes)).unwrap();
         // Bone 0 (the root): x 0..1, z 0..3 with the shape. Bone 1: the point (2,1) turned to

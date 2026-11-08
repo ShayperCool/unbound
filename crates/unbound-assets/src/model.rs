@@ -919,19 +919,19 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         _ => None,
     };
     builder.lod_group(&mut ids);
+    let paths: HashMap<String, u32> = (0..builder.model.nodes.len() as u32)
+        .map(|i| (builder.path_of(i), i))
+        .collect();
     let mut model = builder.model;
     model.clips = clips;
     // Unity bounds a skinned mesh over the poses of the model's animations (documented:
-    // Renderer.localBounds). Measured where those poses are the import pose: no clip, or clips
-    // whose transform curves are constant.
-    let still = |keys: &[Key<3>]| keys.windows(2).all(|w| w[0].value == w[1].value);
-    let still_rotation = |keys: &[Key<4>]| keys.windows(2).all(|w| w[0].value == w[1].value);
-    if model
-        .clips
-        .iter()
-        .flat_map(|c| &c.curves)
-        .all(|c| still(&c.positions) && still_rotation(&c.rotations) && still(&c.scales))
-    {
+    // Renderer.localBounds). Measured where every pose is the import pose: no clip, or clips
+    // whose transform curves hold the nodes' import transforms.
+    if pivots::poses_are_import_pose(
+        &model.nodes,
+        &paths,
+        model.clips.iter().flat_map(|c| &c.curves),
+    ) {
         pivots::set_skinned_local_bounds(&mut model);
     }
     model.warnings.extend(clip_warnings);
@@ -1084,10 +1084,9 @@ impl<'a> Builder<'a> {
         self.sources.push(node);
         let placement = pivots::Placement::of(node);
         self.pivots.push(placement);
-        if placement.unmeasured_children(node) {
+        if let Some(what) = placement.unmeasured(node) {
             self.model.warnings.push(format!(
-                "the pivots of skinned mesh node '{name}' are dropped; its children keep their \
-                 FBX translation (unmeasured)"
+                "skinned mesh node '{name}' is placed without its pivots; {what} (unmeasured)"
             ));
         }
         let parent_offset = parent.map_or(pivots::ZERO, |p| self.pivots[p as usize].offset());
@@ -1312,15 +1311,11 @@ impl<'a> Builder<'a> {
                     continue;
                 }
                 let positions: Vec<Key<3>> = if self.pivoted(index) {
-                    // The position follows rotation and scale too: keyed at every key time.
+                    // The position follows rotation and scale along an arc, which the reduced
+                    // keys would cut to chords: sampled on every frame (measured without
+                    // compression, tests/projects/modelaxis AnimPivot).
                     let source = self.sources[index as usize];
-                    let mut times: Vec<f64> = (node.translation_keys.iter().map(|k| k.time))
-                        .chain(node.rotation_keys.iter().map(|k| k.time))
-                        .chain(node.scale_keys.iter().map(|k| k.time))
-                        .collect();
-                    times.sort_by(f64::total_cmp);
-                    times.dedup();
-                    times
+                    frame_times(start, end, fps)
                         .into_iter()
                         .map(|time| Key {
                             time: time as f32,
@@ -1597,7 +1592,6 @@ impl<'a> Builder<'a> {
         ]
     }
 
-    /// A position in Unity's space, scaled.
     /// Node `index`'s GameObject position (FBX space) for its transform `t` (see `pivots`).
     fn placed(&self, index: u32, t: &ufbx::Transform) -> ufbx::Vec3 {
         let parent = self.model.nodes.get(index as usize).and_then(|n| n.parent);
@@ -1613,6 +1607,7 @@ impl<'a> Builder<'a> {
             || parent.is_some_and(|p| self.pivots[p as usize].shifts_children())
     }
 
+    /// A position in Unity's space, scaled.
     fn position(&self, v: ufbx::Vec3) -> [f32; 3] {
         [
             -v.x as f32 * self.scale,
