@@ -26,7 +26,8 @@ public class DestroyPhases : MonoBehaviour
         "UIEvent", "OnDestroy",
         "component", "builtin", "asset", "delay", "delayPaused", "zeroPaused", "delayFraction", "delayComponent", "delayAsset", "hierarchy", "deepHierarchy",
         "instantiate", "setActive", "unload", "immediateUpdate", "immediateTrigger",
-        "immediateCollision", "immediateAnimation", "immediateRender", "immediateAwake", "immediateTriggerComponent", "immediateTriggerAsset", "ownCoroutine", "immediateHierarchy", "unloadHierarchy", "persistentAsset", "persistentPrefab", "pendingAnimation", "disabledScript", "builtinBehaviour", "nestedCoroutine", "defaultCoroutine", "multiFixed", "particleReadBeforeDestroy", "alwaysSimulateCoroutine", "bareCoroutine", "bareStart", "matureCoroutine"
+        "immediateCollision", "immediateAnimation", "immediateRender", "immediateAwake", "immediateTriggerComponent", "immediateTriggerAsset", "ownCoroutine", "immediateHierarchy", "unloadHierarchy", "persistentAsset", "persistentPrefab", "pendingAnimation", "disabledScript", "builtinBehaviour", "nestedCoroutine", "defaultCoroutine", "multiFixed", "particleReadBeforeDestroy", "alwaysSimulateCoroutine", "bareCoroutine", "bareStart", "matureCoroutine",
+        "triggerApiShape", "triggerManyParticles", "triggerManyColliders", "triggerWorld", "triggerAfterFixedWait"
     };
     int index = -1, age, startFrame;
     readonly List<GameObject> cleanup = new List<GameObject>();
@@ -259,9 +260,30 @@ public class DestroyPhases : MonoBehaviour
         if (Mode == "immediateTriggerComponent") Target = observer;
         if (Mode == "immediateTriggerAsset") Target = ScriptableObject.CreateInstance<DestroyAsset>();
         if (Mode == "asset" || Mode == "delayAsset") Target = ScriptableObject.CreateInstance<DestroyAsset>();
+        // Trigger systems of other sizes: more particles, more colliders, world space, and a
+        // system set up as the particle trigger API probe's.
+        bool apiShape = Mode == "triggerApiShape";
+        if (apiShape || Mode == "triggerWorld") main.simulationSpace = ParticleSystemSimulationSpace.World;
+        if (apiShape || Mode == "triggerManyColliders")
+        {
+            trigger.exit = ParticleSystemOverlapAction.Callback;
+            for (int i = 0; i < 2; i++)
+            {
+                var other = GameObject.CreatePrimitive(i == 0 ? PrimitiveType.Sphere : PrimitiveType.Cube);
+                other.name = "triggerCollider" + i;
+                other.transform.position = new Vector3(0.3f + 1.2f * i, 0f, 0f);
+                other.GetComponent<Collider>().isTrigger = true;
+                cleanup.Add(other);
+                trigger.AddCollider(other.GetComponent<Collider>());
+            }
+            if (apiShape) trigger.colliderQueryMode = ParticleSystemColliderQueryMode.All;
+        }
         if (Mode != "setActive")
         {
             Subject.SetActive(true); ps.Play(); ps.Emit(1); audio.Play();
+            if (apiShape || Mode == "triggerManyParticles")
+                for (int i = 0; i < 5; i++)
+                    ps.Emit(new ParticleSystem.EmitParams { position = new Vector3(-0.5f, 0.1f * i, 0f), velocity = new Vector3(1.5f, 0f, 0f) }, 1);
             var animation = Subject.GetComponent<Animation>();
             if (animation != null) animation.Play("event");
         }
@@ -273,7 +295,13 @@ public class DestroyPhases : MonoBehaviour
         yield return null;
         if (current != Mode) yield break;
         Request("NullCoroutine");
-        if (Mode == "bareCoroutine") Issue();
+        if (Mode == "bareCoroutine" || (Mode.StartsWith("trigger") && Mode != "triggerAfterFixedWait")) Issue();
+        if (Mode == "triggerAfterFixedWait")
+        {
+            yield return new WaitForFixedUpdate();
+            yield return null;
+            Issue();
+        }
         if (Mode == "matureCoroutine")
         {
             for (int i = 1; i < 150; i++) yield return null;

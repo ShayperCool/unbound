@@ -671,6 +671,458 @@ public class ParticleRenderProbe : MonoBehaviour
         Time.captureDeltaTime = 0f;
     }
 
+    // ------------------------------------------------------------------ mesh particle rotation
+
+    /// <summary>Mesh particles with a 2D (30°) and a 3D (10°, 20°, 30°) rotation for every render
+    /// alignment, in a rotated emitter, baked from the front, side and a rolled camera, and with
+    /// the emitter's pose. Also the vertex attributes BakeMesh and BakeTexture keep for mesh
+    /// particles with the default vertex streams.</summary>
+    static void MeshRotation()
+    {
+        var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        var mesh = cube.GetComponent<MeshFilter>().sharedMesh;
+        DestroyImmediate(cube);
+        var roll = new GameObject("RollCamera");
+        roll.transform.SetPositionAndRotation(new Vector3(0f, 0f, -10f), Quaternion.Euler(0f, 0f, 25f));
+        var rollCamera = roll.AddComponent<Camera>();
+        rollCamera.enabled = false;
+        rollCamera.aspect = 4f / 3f;
+        var alignments = new[]
+        {
+            ParticleSystemRenderSpace.View, ParticleSystemRenderSpace.World, ParticleSystemRenderSpace.Local,
+            ParticleSystemRenderSpace.Facing, ParticleSystemRenderSpace.Velocity,
+        };
+        foreach (var alignment in alignments)
+            foreach (bool rotation3D in new[] { false, true })
+            {
+                string key = "meshrot/" + alignment + "/" + (rotation3D ? "3d" : "2d");
+                var ps = Make(key, s => { var m = s.main; m.startRotation3D = rotation3D; });
+                ps.transform.SetPositionAndRotation(new Vector3(0.3f, 0.2f, 0.1f), Quaternion.Euler(20f, 40f, 10f));
+                var r = ps.GetComponent<ParticleSystemRenderer>();
+                r.renderMode = ParticleSystemRenderMode.Mesh;
+                r.mesh = mesh;
+                r.alignment = alignment;
+                r.SetActiveVertexStreams(new List<ParticleSystemVertexStream> { ParticleSystemVertexStream.Position, ParticleSystemVertexStream.Normal });
+                foreach (var (position, velocity, size) in new[]
+                {
+                    (new Vector3(-1f, 0f, 0f), new Vector3(1f, 0.5f, 0.2f), 0.3f),
+                    (new Vector3(1f, 0.3f, 0f), new Vector3(0f, 0f, 1f), 0.4f),
+                })
+                {
+                    var e = new ParticleSystem.EmitParams { position = position, velocity = velocity, startSize = size, startLifetime = 5f, randomSeed = 99u };
+                    if (rotation3D) e.rotation3D = new Vector3(10f, 20f, 30f); else e.rotation = 30f;
+                    ps.Emit(e, 1);
+                }
+                ps.Simulate(0.1f, true, false, false);
+                BakeMesh(key + "/front", ps, s_BakeCamera);
+                BakeMesh(key + "/side", ps, s_SideCamera);
+                BakeMesh(key + "/roll", ps, rollCamera);
+                BakeMesh(key + "/front/transform", ps, s_BakeCamera, ParticleSystemBakeMeshOptions.BakePosition | ParticleSystemBakeMeshOptions.BakeRotationAndScale);
+                foreach (var (name, options) in new[]
+                {
+                    ("perparticle", ParticleSystemBakeTextureOptions.PerParticle),
+                    ("pervertex", ParticleSystemBakeTextureOptions.PerVertex),
+                    ("perparticle/transform", ParticleSystemBakeTextureOptions.PerParticle | ParticleSystemBakeTextureOptions.BakePosition | ParticleSystemBakeTextureOptions.BakeRotationAndScale),
+                })
+                {
+                    Texture2D v = null, ix = null;
+                    r.BakeTexture(ref v, ref ix, s_BakeCamera, options);
+                    // Only the baked records: two particles (12 floats each) or 48 vertices (6 floats).
+                    RecordTexture(key + "/texture/" + name, v, name.StartsWith("pervertex") ? 48 * 6 : 2 * 12);
+                }
+                // Mesh particles need an indices texture: the overload without one throws.
+                {
+                    Texture2D v = null;
+                    int thrown = 0, length = 0;
+                    try { r.BakeTexture(ref v, s_BakeCamera, ParticleSystemBakeTextureOptions.PerParticle); }
+                    catch (InvalidOperationException e) { thrown = 1; length = e.Message.Length; }
+                    Record(key + "/texture/noindices", new List<float> { thrown, length, v != null ? 1 : 0 });
+                }
+                Done(ps);
+            }
+        // The default vertex streams with mesh particles: the attributes and texels of the bakes.
+        var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        var quadMesh = quad.GetComponent<MeshFilter>().sharedMesh;
+        DestroyImmediate(quad);
+        foreach (var (name, m) in new[] { ("cube", mesh), ("quad", quadMesh) })
+        {
+            string key = "meshattr/" + name;
+            var ps = Make(key);
+            var r = ps.GetComponent<ParticleSystemRenderer>();
+            r.renderMode = ParticleSystemRenderMode.Mesh;
+            r.mesh = m;
+            Emit(ps, new Vector3(0.2f, 0.1f, 0f), Vector3.zero, 0.5f, 20f);
+            ps.Simulate(0.1f, true, false, false);
+            var baked = new Mesh();
+            r.BakeMesh(baked, s_BakeCamera, ParticleSystemBakeMeshOptions.Default);
+            var attributes = new List<float> { baked.vertexCount };
+            foreach (var a in baked.GetVertexAttributes()) { attributes.Add((int)a.attribute); attributes.Add((int)a.format); attributes.Add(a.dimension); }
+            Record(key + "/attributes", attributes);
+            for (int channel = 1; channel < 4; channel++)
+            {
+                s_Uvs.Clear();
+                baked.GetUVs(channel, s_Uvs);
+                var u = new List<float> { s_Uvs.Count };
+                foreach (var p in s_Uvs) { u.Add(p.x); u.Add(p.y); u.Add(p.z); u.Add(p.w); }
+                Record(key + "/uv" + channel, u);
+            }
+            var tangents = baked.tangents;
+            var t = new List<float> { tangents.Length };
+            foreach (var p in tangents) { t.Add(p.x); t.Add(p.y); t.Add(p.z); t.Add(p.w); }
+            Record(key + "/tangents", t);
+            DestroyImmediate(baked);
+            Texture2D v = null, ix = null;
+            int n = r.BakeTexture(ref v, ref ix, s_BakeCamera, ParticleSystemBakeTextureOptions.PerVertex);
+            Record(key + "/bake/result", new List<float> { n });
+            RecordTexture(key + "/bake/vertices", v, 24 * 20);
+            Done(ps);
+        }
+        DestroyImmediate(roll);
+    }
+
+    /// <summary>BakeTexture sizes for more particle counts, and whether a bake's size depends on
+    /// earlier bakes (the same renderer and a new one after a large bake).</summary>
+    static void BakeCapacity()
+    {
+        void Bake(string key, ParticleSystem ps)
+        {
+            Texture2D v = null, ix = null;
+            int n = ps.GetComponent<ParticleSystemRenderer>().BakeTexture(ref v, ref ix, s_BakeCamera, ParticleSystemBakeTextureOptions.PerVertex);
+            Record(key, new List<float>
+            {
+                v != null ? v.width : -1, v != null ? v.height : -1, n, ix != null ? ix.width : -1, ix != null ? ix.height : -1,
+            });
+        }
+        foreach (int count in new[] { 17, 33, 40, 50, 100, 130, 200, 300 })
+        {
+            var ps = Make("bakecap", s => { var m = s.main; m.maxParticles = 1000; });
+            for (int i = 0; i < count; i++) Emit(ps, new Vector3(i * 0.01f, 0f, 0f), Vector3.zero, 0.2f);
+            Bake("bakecap/" + count, ps);
+            if (count == 300)
+            {
+                ps.Clear();
+                Emit(ps, Vector3.zero, Vector3.zero, 0.2f);
+                Bake("bakecap/300/then1/same", ps);
+                var other = Make("bakecap");
+                Emit(other, Vector3.zero, Vector3.zero, 0.2f);
+                Bake("bakecap/300/then1/other", other);
+                Done(other);
+            }
+            Done(ps);
+        }
+    }
+
+    // ------------------------------------------------------------------ played systems over frames
+
+    static LateRender MakeLateCamera(string name, Vector3 position)
+    {
+        var go = new GameObject(name);
+        go.transform.position = position;
+        var camera = go.AddComponent<Camera>();
+        camera.enabled = false;
+        camera.fieldOfView = 60f;
+        camera.cullingMask = ~(1 << HiddenLayer);
+        camera.targetTexture = new RenderTexture(64, 64, 24, RenderTextureFormat.ARGB32);
+        var late = go.AddComponent<LateRender>();
+        late.Camera = camera;
+        return late;
+    }
+
+    static void DestroyLateCamera(LateRender late)
+    {
+        var target = late.Camera.targetTexture;
+        late.Camera.targetTexture = null;
+        DestroyImmediate(target);
+        DestroyImmediate(late.gameObject);
+    }
+
+    static void RecordPlayed(string key, ParticleSystem ps)
+    {
+        var r = ps.GetComponent<ParticleSystemRenderer>();
+        Record(key, new List<float> { ps.particleCount, ps.time, ps.isPlaying ? 1 : 0, r.isVisible ? 1 : 0 });
+    }
+
+    /// <summary>On which frame the renderer of a system just played, emitted into, instantiated or
+    /// simulated first becomes visible, when it starts in a frame that advances time and in a frame
+    /// whose delta time is 0 (timeScale 0 for four frames); and a system that has run with its only
+    /// particle out of view and gets one in view. Every frame a camera renders after the particle
+    /// update; the records are taken right after.</summary>
+    IEnumerator FirstVisible()
+    {
+        Time.captureDeltaTime = 1f / 20f;
+        var origin = new Vector3(0f, 50f, 0f);
+        var late = MakeLateCamera("FirstVisibleCamera", origin + new Vector3(0f, 0f, -12f));
+        var template = Make("firstvis/template", s =>
+        {
+            var m = s.main; m.playOnAwake = true; m.loop = true; m.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+            var e = s.emission; e.enabled = true; e.rateOverTime = 10f;
+        });
+        template.gameObject.SetActive(false);
+        foreach (bool paused in new[] { false, true })
+        {
+            string phase = paused ? "paused" : "running";
+            var systems = new List<(string, ParticleSystem)>();
+            ParticleSystem Add(string name, float x, Action<ParticleSystem> configure)
+            {
+                var ps = Make("firstvis/" + phase + "/" + name, s =>
+                {
+                    var m = s.main; m.loop = true; m.startSpeed = 0f; m.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+                    configure?.Invoke(s);
+                });
+                ps.transform.position = origin + new Vector3(x, 0f, 0f);
+                systems.Add((name, ps));
+                return ps;
+            }
+            // Runs with its only particle far out of view before the measured frames.
+            var stale = Add("stale", 4f, null);
+            stale.Play();
+            Emit(stale, new Vector3(-60f, 0f, 0f), Vector3.zero, 0.3f, 0f, 30f);
+            // Runs with a particle in view, then is paused by script before the measured frames.
+            var scriptPaused = Add("script_paused", 4.5f, null);
+            scriptPaused.Play();
+            Emit(scriptPaused, Vector3.zero, Vector3.zero, 0.3f, 0f, 30f);
+            // Plays at simulation speed 0, with a particle in view.
+            var still = Add("speed0", 5f, s => { var m = s.main; m.simulationSpeed = 0f; });
+            still.Play();
+            Emit(still, Vector3.zero, Vector3.zero, 0.3f, 0f, 30f);
+            // Playing without particles: world and local simulation space, emitter in and out of view.
+            Add("world_empty_in", 5.5f, s => { var m = s.main; m.simulationSpace = ParticleSystemSimulationSpace.World; }).Play();
+            var worldOut = Add("world_empty_out", 0f, s => { var m = s.main; m.simulationSpace = ParticleSystemSimulationSpace.World; });
+            worldOut.transform.position = origin + new Vector3(-40f, 0f, 0f);
+            worldOut.Play();
+            var localOut = Add("local_empty_out", 0f, null);
+            localOut.transform.position = origin + new Vector3(-40f, 2f, 0f);
+            localOut.Play();
+            yield return null;
+            yield return null;
+            scriptPaused.Pause();
+            if (paused) Time.timeScale = 0f;
+            // This frame's delta time is 0 when paused.
+            yield return null;
+            Add("play_rate", -4f, s => { var e = s.emission; e.enabled = true; e.rateOverTime = 10f; }).Play();
+            Add("play_auto", -3f, s =>
+            {
+                var m = s.main; m.cullingMode = ParticleSystemCullingMode.Automatic;
+                var e = s.emission; e.enabled = true; e.rateOverTime = 10f;
+            }).Play();
+            Add("play_burst", -2f, s => { var e = s.emission; e.enabled = true; e.rateOverTime = 0f; e.SetBursts(new[] { new ParticleSystem.Burst(0f, 3) }); }).Play();
+            var playEmit = Add("play_emit", -1f, null);
+            playEmit.Play();
+            Emit(playEmit, Vector3.zero, Vector3.zero, 0.3f, 0f, 30f);
+            Emit(Add("emit_only", 0f, null), Vector3.zero, Vector3.zero, 0.3f, 0f, 30f);
+            var simulated = Add("simulate", 1f, s => { var e = s.emission; e.enabled = true; e.rateOverTime = 10f; });
+            simulated.Simulate(0.2f, true, true, false);
+            // A system created and activated with Play On Awake, and a clone played by script.
+            Add("awake_new", 2f, s => { var m = s.main; m.playOnAwake = true; var e = s.emission; e.enabled = true; e.rateOverTime = 10f; });
+            var clonePlayed = Instantiate(template.gameObject, origin + new Vector3(3.5f, 1f, 0f), Quaternion.identity);
+            var clonePlayedSystem = clonePlayed.GetComponent<ParticleSystem>();
+            var cloneMain = clonePlayedSystem.main; cloneMain.playOnAwake = false;
+            clonePlayed.SetActive(true);
+            clonePlayedSystem.Play();
+            systems.Add(("clone_play", clonePlayedSystem));
+            var clone = Instantiate(template.gameObject, origin + new Vector3(3f, 0f, 0f), Quaternion.identity);
+            clone.SetActive(true);
+            systems.Add(("instantiate", clone.GetComponent<ParticleSystem>()));
+            Emit(stale, new Vector3(0f, 1f, 0f), Vector3.zero, 0.3f, 0f, 30f);
+            int frame = 0;
+            late.Late = () =>
+            {
+                foreach (var (name, ps) in systems) RecordPlayed("firstvis/" + phase + "/" + name + "/" + frame, ps);
+                frame++;
+            };
+            for (int i = 0; i < 6; i++)
+            {
+                if (i == 4) Time.timeScale = 1f;
+                yield return null;
+            }
+            late.Late = null;
+            Time.timeScale = 1f;
+            foreach (var (_, ps) in systems) Done(ps);
+        }
+        Done(template);
+        DestroyLateCamera(late);
+        Time.captureDeltaTime = 0f;
+    }
+
+    /// <summary>A parent out of view (a burst at once, then a rate) whose Birth sub-emitter's
+    /// world-space particles fly into view, for parent and child culling modes: both systems'
+    /// time, count, playing state and visibility.</summary>
+    IEnumerator SubEmitterCulling()
+    {
+        Time.captureDeltaTime = 1f / 20f;
+        var origin = new Vector3(0f, -50f, 0f);
+        var late = MakeLateCamera("SubCullCamera", origin + new Vector3(0f, 0f, -12f));
+        var systems = new List<(string, ParticleSystem)>();
+        var cases = new[]
+        {
+            ("pause_auto", ParticleSystemCullingMode.Pause, ParticleSystemCullingMode.Automatic),
+            ("pause_always", ParticleSystemCullingMode.Pause, ParticleSystemCullingMode.AlwaysSimulate),
+            ("pause_pause", ParticleSystemCullingMode.Pause, ParticleSystemCullingMode.Pause),
+            ("always_pause", ParticleSystemCullingMode.AlwaysSimulate, ParticleSystemCullingMode.Pause),
+            ("auto_auto", ParticleSystemCullingMode.Automatic, ParticleSystemCullingMode.Automatic),
+        };
+        int index = 0;
+        foreach (var (name, parentMode, childMode) in cases)
+        {
+            var parent = Make("subcull/" + name + "/parent", s =>
+            {
+                var m = s.main; m.loop = true; m.startSpeed = 0f; m.startLifetime = 0.5f; m.cullingMode = parentMode;
+                var e = s.emission; e.enabled = true; e.rateOverTime = 4f; e.SetBursts(new[] { new ParticleSystem.Burst(0f, 3) });
+            });
+            parent.transform.position = origin + new Vector3(-20f, index * 1.5f - 3f, 0f);
+            var child = Make("subcull/" + name + "/child", s =>
+            {
+                var m = s.main; m.startSpeed = 0f; m.startLifetime = 4f; m.cullingMode = childMode;
+                m.simulationSpace = ParticleSystemSimulationSpace.World;
+                var e = s.emission; e.enabled = true; e.rateOverTime = 10f;
+                var v = s.velocityOverLifetime; v.enabled = true; v.space = ParticleSystemSimulationSpace.World;
+                v.x = 10f; v.y = 0f; v.z = 0f;
+            });
+            child.transform.SetParent(parent.transform, false);
+            var sub = parent.subEmitters;
+            sub.enabled = true;
+            sub.AddSubEmitter(child, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing);
+            systems.Add(("subcull/" + name + "/parent", parent));
+            systems.Add(("subcull/" + name + "/child", child));
+            index++;
+        }
+        // Parents seen at first, moved out of view at frame 20 while their children's particles
+        // stay in view.
+        var moved = new List<ParticleSystem>();
+        foreach (var (name, parentMode, childMode) in new[]
+        {
+            ("moved_pause_auto", ParticleSystemCullingMode.Pause, ParticleSystemCullingMode.Automatic),
+            ("moved_pause_always", ParticleSystemCullingMode.Pause, ParticleSystemCullingMode.AlwaysSimulate),
+            ("moved_always_pause", ParticleSystemCullingMode.AlwaysSimulate, ParticleSystemCullingMode.Pause),
+        })
+        {
+            var parent = Make("subcull/" + name + "/parent", s =>
+            {
+                var m = s.main; m.loop = true; m.startSpeed = 0f; m.startLifetime = 0.5f; m.cullingMode = parentMode;
+                var e = s.emission; e.enabled = true; e.rateOverTime = 4f; e.SetBursts(new[] { new ParticleSystem.Burst(0f, 3) });
+            });
+            parent.transform.position = origin + new Vector3(-4f, 3f + moved.Count * 1.2f, 0f);
+            var child = Make("subcull/" + name + "/child", s =>
+            {
+                var m = s.main; m.startSpeed = 0f; m.startLifetime = 4f; m.cullingMode = childMode;
+                m.simulationSpace = ParticleSystemSimulationSpace.World;
+                var e = s.emission; e.enabled = true; e.rateOverTime = 10f;
+                var v = s.velocityOverLifetime; v.enabled = true; v.space = ParticleSystemSimulationSpace.World;
+                v.x = 1.5f; v.y = 0f; v.z = 0f;
+            });
+            child.transform.SetParent(parent.transform, false);
+            var sub = parent.subEmitters;
+            sub.enabled = true;
+            sub.AddSubEmitter(child, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing);
+            systems.Add(("subcull/" + name + "/parent", parent));
+            systems.Add(("subcull/" + name + "/child", child));
+            moved.Add(parent);
+        }
+        yield return null;
+        foreach (var (key, ps) in systems) if (key.EndsWith("/parent")) ps.Play();
+        int frame = 0;
+        late.Late = () =>
+        {
+            foreach (var (key, ps) in systems) RecordPlayed(key + "/" + frame, ps);
+            // The sum of the children's particle x positions shows whether they still move.
+            foreach (var (key, ps) in systems)
+            {
+                if (!key.EndsWith("/child")) continue;
+                int n = ps.GetParticles(s_Buffer);
+                float x = 0f;
+                for (int i = 0; i < n; i++) x += s_Buffer[i].position.x;
+                Record(key + "/x/" + frame, new List<float> { x });
+            }
+            frame++;
+        };
+        for (int i = 0; i < 70; i++)
+        {
+            if (i == 20) foreach (var parent in moved) parent.transform.position += new Vector3(-40f, 0f, 0f);
+            yield return null;
+        }
+        late.Late = null;
+        foreach (var (key, ps) in systems) if (key.EndsWith("/parent")) Done(ps);
+        DestroyLateCamera(late);
+        Time.captureDeltaTime = 0f;
+    }
+
+    /// <summary>The freeform stretch cases played at simulation speed 0 (a Simulate-stepped
+    /// freeform system bakes nothing), baked after one and two frames; one only simulated and one
+    /// simulated again after a frame, as controls.</summary>
+    IEnumerator FreeformPlayed()
+    {
+        Time.captureDeltaTime = 1f / 20f;
+        var systems = new List<(string, ParticleSystem)>();
+        foreach (var (name, configure, system, size3D) in s_StretchCases)
+        {
+            if (!name.Contains("freeform") && name != "base") continue;
+            var ps = MakeStretch("freeplay/" + name, configure, system, size3D);
+            var m = ps.main; m.simulationSpeed = 0f;
+            ps.Play();
+            systems.Add(("freeplay/" + name, ps));
+        }
+        var simulatedOnly = MakeStretch("freeplay/simulated", r => { r.freeformStretching = true; });
+        var resimulated = MakeStretch("freeplay/resimulated", r => { r.freeformStretching = true; });
+        for (int frame = 0; frame < 2; frame++)
+        {
+            yield return null;
+            if (frame == 1) resimulated.Simulate(0f, true, false, false);
+            foreach (var (key, ps) in systems)
+            {
+                BakeMesh(key + "/" + frame + "/front", ps, s_BakeCamera);
+                if (frame == 0)
+                {
+                    BakeMesh(key + "/" + frame + "/side", ps, s_SideCamera);
+                    BakeMesh(key + "/" + frame + "/front/transform", ps, s_BakeCamera, ParticleSystemBakeMeshOptions.BakePosition | ParticleSystemBakeMeshOptions.BakeRotationAndScale);
+                }
+            }
+            BakeMesh("freeplay/simulated/" + frame + "/front", simulatedOnly, s_BakeCamera);
+            BakeMesh("freeplay/resimulated/" + frame + "/front", resimulated, s_BakeCamera);
+        }
+        foreach (var (_, ps) in systems) Done(ps);
+        Done(simulatedOnly);
+        Done(resimulated);
+        Time.captureDeltaTime = 0f;
+    }
+
+    /// <summary>The freeform stretch cases with every particle moving (the fourth one of
+    /// <see cref="EmitFour"/> at rest bakes no freeform quad), and with a particle at rest emitted
+    /// first or second.</summary>
+    static void FreeformMoving()
+    {
+        foreach (var (name, configure, system, size3D) in s_StretchCases)
+        {
+            if (!name.Contains("freeform")) continue;
+            foreach (var order in new[] { "moving", "restfirst", "restsecond" })
+            {
+                string key = "freemove/" + name + "/" + order;
+                var ps = Make(key, s =>
+                {
+                    if (size3D) { var m = s.main; m.startSize3D = true; }
+                    system?.Invoke(s);
+                });
+                var r = ps.GetComponent<ParticleSystemRenderer>();
+                r.renderMode = ParticleSystemRenderMode.Stretch;
+                r.lengthScale = 2f;
+                r.velocityScale = 0f;
+                r.cameraVelocityScale = 0f;
+                configure?.Invoke(r);
+                if (order == "restfirst") Emit(ps, new Vector3(0.2f, 0.2f, 0f), Vector3.zero, 0.35f, 15f);
+                Emit(ps, new Vector3(-1f, 0.5f, 0f), new Vector3(2f, 0f, 0f), 0.3f, 0f, 5f, size3D ? new Vector3(0.2f, 0.6f, 1f) : (Vector3?)null);
+                if (order == "restsecond") Emit(ps, new Vector3(0.2f, 0.2f, 0f), Vector3.zero, 0.35f, 15f);
+                Emit(ps, new Vector3(1f, 0.5f, 0f), new Vector3(0f, 0.5f, 0f), 0.4f, 30f, 4f);
+                Emit(ps, new Vector3(-1f, -0.5f, 0f), new Vector3(0.3f, 0.2f, 3f), 0.25f, 0f, 3f);
+                Emit(ps, new Vector3(1f, -0.5f, 0f), new Vector3(-0.6f, 0.4f, -0.5f), 0.5f, 60f, 2f);
+                ps.Simulate(0.1f, true, false, false);
+                BakeMesh(key + "/front", ps, s_BakeCamera);
+                BakeMesh(key + "/side", ps, s_SideCamera);
+                if (order == "moving")
+                    BakeMesh(key + "/front/transform", ps, s_BakeCamera, ParticleSystemBakeMeshOptions.BakePosition | ParticleSystemBakeMeshOptions.BakeRotationAndScale);
+                Done(ps);
+            }
+        }
+    }
+
     void Start() => StartCoroutine(Probe());
 
     IEnumerator Probe()
@@ -696,6 +1148,12 @@ public class ParticleRenderProbe : MonoBehaviour
         Stretched();
         yield return Culling();
         yield return CameraVelocity();
+        MeshRotation();
+        BakeCapacity();
+        FreeformMoving();
+        yield return FirstVisible();
+        yield return SubEmitterCulling();
+        yield return FreeformPlayed();
         Record("complete", new List<float> { 1f });
         File.WriteAllText(s_Path, s_Out.ToString());
         Debug.Log("particle render complete: " + s_Path);

@@ -544,7 +544,8 @@ public class ParticleTrailProbe : MonoBehaviour
     static void CapControls()
     {
         foreach (var (name, configure) in CapSystems)
-            foreach (var (trail, trailsOn, die) in new[] { ("die0", true, false), ("die1", true, true), ("none", false, false), ("die0nt", true, false) })
+            foreach (var (trail, trailsOn, die) in new[] { ("die0", true, false), ("die1", true, true), ("none", false, false), ("die0nt", true, false),
+                ("die0ntmv0", true, false), ("die0ntmv3", true, false) })
                 foreach (float dt in new[] { 0.02f, 0.05f, 0.1f })
                 {
                     string key = "cap/" + name + "/" + trail + "/" + dt.ToString("R", CultureInfo.InvariantCulture);
@@ -553,7 +554,11 @@ public class ParticleTrailProbe : MonoBehaviour
                         configure(s);
                         var t = s.trails; t.enabled = trailsOn; t.dieWithParticles = die;
                         // Off the step grid: a trail point never expires exactly at a step's end.
-                        if (trail == "die0nt") t.lifetime = 0.47f;
+                        if (trail.StartsWith("die0nt")) t.lifetime = 0.47f;
+                        // Whether a particle's last step adds a trail point depends on how far it
+                        // moved: every step (no minimum distance) or only every few steps.
+                        if (trail == "die0ntmv0") t.minVertexDistance = 0f;
+                        if (trail == "die0ntmv3") t.minVertexDistance = 0.3f;
                     });
                     int calls = Mathf.RoundToInt(1.2f / dt);
                     for (int i = 0; i < calls; i++)
