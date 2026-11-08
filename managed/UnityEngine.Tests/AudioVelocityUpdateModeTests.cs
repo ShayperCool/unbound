@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Unbound.Runtime;
-using Unity.IntegerTime;
 using Xunit;
 using PL = UnityEngine.PlayerLoop;
 
@@ -222,21 +221,30 @@ namespace UnityEngine.Tests
         public void MeasuredVelocityInvertsThePreciseFrameDurationBeforeFloatConversion()
         {
             string previousRelease = ProjectInfo.UnityVersion;
+            var clock = new List<(FieldInfo field, object value)>();
+            foreach (var field in typeof(Time).GetFields(StaticPrivate))
+                if (!field.IsInitOnly && field.FieldType.IsValueType)
+                    clock.Add((field, field.GetValue(null)));
             try
             {
                 ProjectInfo.UnityVersion = "6000.0.71f1";
+                Time.timeScale = 1;
+                Time.captureDeltaTime = 1024f / 44100;
                 var source = Make(false, AudioVelocityUpdateMode.Dynamic);
                 source.MoveTo(20);
-                double duration = Unity.IntegerTime.RationalTime.FromDouble(1024f / 44100,
-                    Unity.IntegerTime.RationalTime.TicksPerSecond.DefaultTicksPerSecond).ToDouble();
-                Time.s_FrameDeltaTime = duration;
+                Time.BeginFrame(0.5);
                 AudioSystem.Update();
                 source.MoveTo(20 + 20f * 1024 / 44100);
+                Time.BeginFrame(0.5);
                 AudioSystem.Update();
                 Assert.Equal(X(20.000015258789062f), source.Velocity);
                 Assert.NotEqual(X(20.000017166137695f), source.Velocity);
             }
-            finally { ProjectInfo.UnityVersion = previousRelease; }
+            finally
+            {
+                foreach (var entry in clock) entry.field.SetValue(null, entry.value);
+                ProjectInfo.UnityVersion = previousRelease;
+            }
         }
 
         [Fact]
