@@ -110,3 +110,49 @@ The opt-in `DiagnosticCases` are excluded from the canonical capture. Run one at
 Send target. Cross-mixer targets report an invalid audio handle and can prevent
 Play mode. Unscaled transitions use wall time even under captureDeltaTime, so their repeats are
 not bit-identical. Neither diagnostic establishes a supported DSP rule.
+
+## Deferred snapshot progress roundoff
+
+The shared normalized-progress rule changes the following existing Q167 engine
+capture files relative to the preceding implementation. Editor references,
+comparators and tolerances remain unchanged. The largest float delta is
+2.9802322387695312e-8; device differences are exactly one 1/32768 PCM step.
+The existing gate still passes all 19,857,774 values; its strict report retains
+918 device PCM failures, as before. These numerical changes are Deferred by the
+user's decision; they are not follow-up work. Indices below are zero-based
+interleaved stereo sample indices, including all startup frames.
+
+| Engine capture file | Changed values | Maximum absolute delta |
+| --- | ---: | ---: |
+| `timed_threshold.master.f32` | 2926 | 2.9802322387695312e-08 |
+| `timed_threshold.f32` | 2 | 3.0517578125e-05 |
+| `timed_knee.master.f32` | 1880 | 2.9802322387695312e-08 |
+| `timed_knee.f32` | 2 | 3.0517578125e-05 |
+| `timed_threshold_scaled_half.master.f32` | 4272 | 2.9802322387695312e-08 |
+| `curve_threshold_smooth.master.f32` | 2776 | 2.9802322387695312e-08 |
+| `curve_threshold_smooth.f32` | 1 | 3.0517578125e-05 |
+| `curve_threshold_squared.master.f32` | 3734 | 2.9802322387695312e-08 |
+| `curve_threshold_squared.f32` | 1 | 3.0517578125e-05 |
+| `curve_threshold_sqrt.master.f32` | 2718 | 2.9802322387695312e-08 |
+| `curve_knee.master.f32` | 2142 | 2.9802322387695312e-08 |
+| `curve_knee.f32` | 4 | 3.0517578125e-05 |
+| `curve_dry_smooth.master.f32` | 2048 | 1.4901161193847656e-08 |
+| `curve_dry_squared.master.f32` | 4096 | 2.9802322387695312e-08 |
+| `curve_dry_sqrt.master.f32` | 2048 | 2.9802322387695312e-08 |
+| `control_volume_postduck.master.f32` | 4096 | 1.4901161193847656e-08 |
+| `control_volume_postduck.listener.f32` | 2250 | 2.9802322387695312e-08 |
+| `control_volume_parent_send.master.f32` | 4096 | 1.4901161193847656e-08 |
+| `control_volume_parent_send.listener.f32` | 4096 | 1.4901161193847656e-08 |
+
+| Device file | Sample index | Before | After |
+| --- | ---: | ---: | ---: |
+| `timed_threshold.f32` | 21896 | 0.1146240234375 | 0.114654541015625 |
+| `timed_threshold.f32` | 46194 | 0.204193115234375 | 0.20416259765625 |
+| `timed_knee.f32` | 21462 | 0.145477294921875 | 0.1455078125 |
+| `timed_knee.f32` | 21463 | -0.072723388671875 | -0.07275390625 |
+| `curve_threshold_smooth.f32` | 46630 | 0.211761474609375 | 0.21173095703125 |
+| `curve_threshold_squared.f32` | 45746 | 0.177154541015625 | 0.1771240234375 |
+| `curve_knee.f32` | 21676 | 0.14154052734375 | 0.141571044921875 |
+| `curve_knee.f32` | 45310 | 0.207489013671875 | 0.20745849609375 |
+| `curve_knee.f32` | 46366 | 0.20928955078125 | 0.209259033203125 |
+| `curve_knee.f32` | 46367 | -0.104644775390625 | -0.1046142578125 |

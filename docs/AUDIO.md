@@ -868,12 +868,17 @@ Submitted kernel parameters apply to the next rendered buffer without an extra
 sample ramp. Q167's shared snapshot scheduler supplies each buffer's interpolated values.
 `Compat.MixerSnapshotProgressMeasured` accumulates normalized frame durations;
 the live public parameter/time traces distinguish this from dividing accumulated
-elapsed time, which other releases retain as an unmeasured approximation.
+elapsed time, which other releases retain as an unmeasured approximation. This
+refinement changes 19 existing Q167 streams at 48000 Hz by float roundoff of at
+most 2.98e-8 and ten one-step PCM samples; 44100 Hz remains byte-identical. Every
+existing gate still passes. The [Deferred ledger](../tests/projects/mixerduck/README.md#deferred-snapshot-progress-roundoff)
+lists each file and sample without changing an oracle or comparison bound.
 Chorus and Flange reuse their delay/LFO cores and retain their histories. A Chorus
 Delay change alone defers its span target; changing Depth recomputes that target
 from the latest valid Delay. Component recreation starts fresh history. Normalize
 retains its gain follower. A Pitch change clears analysis/synthesis phase tracking
-while retaining the input/output FIFO, frame position and overlap audio. The
+while retaining the input/output FIFO, frame position and overlap audio. Ratio submissions
+apply this phase restart even while a zero-wet slot pauses audio processing. The
 existing exact-release kernel flags also select these state rules.
 
 `Compat.MixerEffectTransitionsMeasured` admits the five mixer parameter updates;
