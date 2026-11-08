@@ -28,6 +28,9 @@ namespace DotRecast.Detour.Crowd
         public float height; // < Agent height. [Limit: > 0]
         public float maxAcceleration; // < Maximum allowed acceleration. [Limit: >= 0]
         public float maxSpeed; // < Maximum allowed speed. [Limit: >= 0]
+        /// Unbound: the agent's speed setting, also while it is stopped (maxSpeed 0): how far it looks
+        /// for neighbours and edges.
+        public float reachSpeed;
 
         public float pathOptimizationRange; // < The path visibility optimization range. [Limit: > 0]
 

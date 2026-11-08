@@ -897,6 +897,7 @@ namespace Unbound.Runtime
                 height = agent.height,
                 maxAcceleration = agent.acceleration,
                 maxSpeed = agent.isStopped ? 0f : agent.speed,
+                reachSpeed = agent.speed,
                 pathOptimizationRange = agent.radius * 30f,
                 separationWeight = 1.4f,
                 updateFlags = flags,
@@ -1323,7 +1324,6 @@ namespace Unbound.Runtime
             ag.ncorners = ag.corridor.FindCorners(ag.corners, DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS, crowd.GetNavMeshQuery(), crowd.GetFilter(0));
         }
 
-        /// <summary>The crowds step: steering, avoidance, motion; then transforms follow.</summary>
         /// <summary>Unity's agents share one proximity grid whatever their agent type, its cells
         /// sized from all of them (see DtCrowd.GridCell) at the velocity this update steps them to.
         /// NavMeshObstacles do not count here (Unbound's choice: Unity counts them too).</summary>
@@ -1345,6 +1345,7 @@ namespace Unbound.Runtime
             foreach (var crowd in s_Crowds.Values) crowd.SetGridCellSize(x, z);
         }
 
+        /// <summary>The crowds step: steering, avoidance, motion; then transforms follow.</summary>
         static void UpdateCrowds()
         {
             if (s_Agents.Count == 0) return;

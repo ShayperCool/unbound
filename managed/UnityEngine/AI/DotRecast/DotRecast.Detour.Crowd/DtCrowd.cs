@@ -950,17 +950,12 @@ namespace DotRecast.Detour.Crowd
                     continue;
                 }
 
-                // Unbound: only agents that avoid gather neighbours and edges (Unity's: an agent
-                // without avoidance neither avoids, keeps apart from nor is pushed by others).
-                if ((ag.option.updateFlags & DtCrowdAgentUpdateFlags.DT_CROWD_OBSTACLE_AVOIDANCE) == 0)
-                {
-                    ag.nneis = 0;
-                    ag.boundary.Reset();
-                    continue;
-                }
-
+                // Unbound: an agent without avoidance keeps no edges; it still gathers neighbours,
+                // which push it out of overlaps (AI Navigation 2.0 manual, Quality None: "collisions
+                // resolve"), and avoids none of them (PlanVelocity).
                 float horizon = _obstacleQueryParams[ag.option.obstacleAvoidanceType].horizTime;
-                UpdateBoundary(ag, horizon);
+                if (Avoids(ag)) UpdateBoundary(ag, horizon);
+                else ag.boundary.Reset();
 
                 // Query neighbour agents
                 ag.nneis = GetNeighbours(ag, horizon, ag.neis, DtCrowdConst.DT_CROWDAGENT_MAX_NEIGHBOURS, _grid);
@@ -1018,7 +1013,10 @@ namespace DotRecast.Detour.Crowd
 
         /// Unbound: the half-width of the square an agent looks for neighbours in: its radius plus how
         /// far it goes at full speed within the prediction time (Unity's).
-        public static float NeighbourReach(DtCrowdAgent ag, float horizon) => ag.option.radius + ag.option.maxSpeed * horizon;
+        public static float NeighbourReach(DtCrowdAgent ag, float horizon) => ag.option.radius + ag.option.reachSpeed * horizon;
+
+        /// Unbound: whether the agent avoids others (any avoidance quality but none).
+        public static bool Avoids(DtCrowdAgent ag) => (ag.option.updateFlags & DtCrowdAgentUpdateFlags.DT_CROWD_OBSTACLE_AVOIDANCE) != 0;
 
         /// Unbound: whether a neighbour's height span meets the agent's (Unity's: its feet are not
         /// above the agent's head, its head not below the agent's feet).
@@ -1035,7 +1033,7 @@ namespace DotRecast.Detour.Crowd
         /// moved a quarter of the reach.
         private void UpdateBoundary(DtCrowdAgent ag, float horizon)
         {
-            float reach = ag.option.radius + 0.5f * horizon * ag.option.maxSpeed;
+            float reach = ag.option.radius + 0.5f * horizon * ag.option.reachSpeed;
             if (!ag.hasSteer || (ag.steerFlags & (DtStraightPathFlags.DT_STRAIGHTPATH_END | DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION)) != 0)
             {
                 RcVec3f target = ag.hasSteer ? ag.steerPos : ag.corridor.GetTarget();
@@ -1089,6 +1087,7 @@ namespace DotRecast.Detour.Crowd
                     continue;
                 }
 
+                // In 3D, as Unity's agents measure (a neighbour above or below is farther).
                 RcVec3f diff = RcVec3f.Subtract(ag.npos, pos);
                 float radii = skip.option.radius + ag.option.radius;
                 if (moving && RcVec3f.Dot(diff, heading) < -radii)
@@ -1096,7 +1095,9 @@ namespace DotRecast.Detour.Crowd
                     continue;
                 }
 
-                float time = (diff.Length() - radii) / (skip.option.maxSpeed + ag.vel.Length());
+                // Both at full speed (an agent standing with both speeds zero: at once if touching).
+                float gap = diff.Length() - radii, closing = skip.option.reachSpeed + ag.vel.Length();
+                float time = closing > 0f ? gap / closing : gap <= 0f ? 0f : float.PositiveInfinity;
                 if (time > horizon)
                 {
                     continue;
@@ -1363,7 +1364,7 @@ namespace DotRecast.Detour.Crowd
                 // Unbound: an agent waiting for an occupied link plans to stand, whatever comes near
                 // (Unity's; measured: tests/projects/navlinks crosstile); one about to take a link
                 // keeps its desired velocity (navlinks `areajump`).
-                if (ag.waitingForConnection || (ag.option.updateFlags & DtCrowdAgentUpdateFlags.DT_CROWD_OBSTACLE_AVOIDANCE) == 0
+                if (ag.waitingForConnection || !Avoids(ag)
                     || ag.OverOffmeshConnection(ag.option.radius * LinkTriggerRadiusScale))
                 {
                     ag.nvel = ag.dvel;
@@ -1398,7 +1399,7 @@ namespace DotRecast.Detour.Crowd
         /// avoided alone (1); equals that avoid each other share it (0.5).
         private static float AvoidanceShare(DtCrowdAgent ag, DtCrowdAgent nei)
         {
-            if (nei.option.avoidancePriority < ag.option.avoidancePriority)
+            if (nei.option.avoidancePriority < ag.option.avoidancePriority || !Avoids(nei))
                 return 1f;
             for (int k = 0; k < nei.nneis; ++k)
                 if (nei.neis[k].agent == ag)

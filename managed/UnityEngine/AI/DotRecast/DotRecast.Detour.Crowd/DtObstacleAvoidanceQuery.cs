@@ -20,7 +20,6 @@ freely, subject to the following restrictions:
 
 using System;
 using System.Runtime.CompilerServices;
-using System;
 using DotRecast.Core.Numerics;
 
 namespace DotRecast.Detour.Crowd
@@ -35,8 +34,6 @@ namespace DotRecast.Detour.Crowd
         public const int DT_MAX_PATTERN_DIVS = 32; // < Max numver of adaptive divs.
         public const int DT_MAX_PATTERN_RINGS = 4;
 
-        /// Unbound: the most obstacle circles and edges an agent avoids at once (Unity's).
-        public const int MaxObstacles = 104;
         /// Unbound: the agent's own sizes below which sampling gives up (Unity's).
         const float MinVelocity = 1e-5f;
         /// Unbound: how far right of the biased desired velocity the pattern is centred, as a share
@@ -63,12 +60,12 @@ namespace DotRecast.Detour.Crowd
 
         public DtObstacleAvoidanceQuery(int maxCircles, int maxSegments)
         {
-            m_maxCircles = Math.Min(maxCircles, MaxObstacles);
+            m_maxCircles = maxCircles;
             m_circles = new DtObstacleCircle[m_maxCircles];
             for (int i = 0; i < m_maxCircles; i++)
                 m_circles[i] = new DtObstacleCircle();
 
-            m_maxSegments = Math.Min(maxSegments, MaxObstacles);
+            m_maxSegments = maxSegments;
             m_segments = new DtObstacleSegment[m_maxSegments];
             for (int i = 0; i < m_maxSegments; i++)
                 m_segments[i] = new DtObstacleSegment();
@@ -239,6 +236,7 @@ namespace DotRecast.Detour.Crowd
             // The pattern: the centre, then rings from the outside in, each of nd points at even
             // angles from the desired direction, every other ring turned by half a step.
             Span<float> pat = stackalloc float[(DT_MAX_PATTERN_DIVS * DT_MAX_PATTERN_RINGS + 1) * 2];
+            // Unity's limits of the pattern (its presets stay within them).
             int nd = Math.Clamp(m_params.adaptiveDivs, 1, 7);
             int nr = Math.Clamp(m_params.adaptiveRings, 1, 3);
             int depth = m_params.adaptiveDepth;
