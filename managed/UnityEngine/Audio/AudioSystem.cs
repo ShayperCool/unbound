@@ -242,15 +242,15 @@ namespace Unbound.Runtime
         /// <summary>Velocity sampled on the selected update loop. A source's own Rigidbody supplies
         /// its velocity; listeners and other sources use a transform delta times reciprocal time.
         /// Measured by tests/projects/audiodistortion on 6000.0.71f1.</summary>
-        internal static void SampleMotion(GameObject owner, bool useBodyVelocity, Vector3 position, float deltaTime,
+        internal static void SampleMotion(GameObject owner, bool useBodyVelocity, Vector3 position, double deltaTime,
             ref Vector3 previous, ref bool hasPrevious, ref Vector3 velocity)
         {
             if (useBodyVelocity && Compat.AudioSpatialStereoMeasured && owner != null && owner.GetComponent<Rigidbody>() is Rigidbody body)
                 velocity = body.linearVelocity;
             else if (hasPrevious && deltaTime > 0f)
                 velocity = Compat.AudioSpatialStereoMeasured
-                    ? (position - previous) * (1f / deltaTime)
-                    : (position - previous) / deltaTime;
+                    ? (position - previous) * (float)(1.0 / deltaTime)
+                    : (position - previous) / (float)deltaTime;
             previous = position;
             hasPrevious = true;
         }
@@ -267,7 +267,7 @@ namespace Unbound.Runtime
         /// </summary>
         internal static void FixedUpdate()
         {
-            float step = Time.fixedDeltaTime;
+            double step = Compat.AudioSpatialStereoMeasured ? Time.FixedClockDuration : Time.fixedDeltaTime;
             int n = s_Sources.Count;
             if (n > 0)
             {
@@ -298,7 +298,7 @@ namespace Unbound.Runtime
             var backend = AudioBackend.Current;
             float realDelta = (float)Math.Max(0.0, Time.s_RealDeltaTime);
             // AudioRenderer controls distinguish the game frame step from elapsed wall time.
-            float motionDelta = Compat.AudioSpatialStereoMeasured ? Time.deltaTime : realDelta;
+            double motionDelta = Compat.AudioSpatialStereoMeasured ? Time.s_FrameDeltaTime : realDelta;
 
             foreach (var mixer in s_Mixers) mixer.Tick(Time.deltaTime, realDelta);
             for (int i = s_Groups.Count - 1; i >= 0; i--)

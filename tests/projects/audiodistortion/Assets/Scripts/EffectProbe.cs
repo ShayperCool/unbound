@@ -382,6 +382,8 @@ public class EffectProbe : MonoBehaviour
         var assembly = Type.GetType("Unbound.Runtime.AudioBackend, UnityEngine.CoreModule", true).Assembly;
         typeof(Time).GetField("s_RealDeltaTime", Flags).SetValue(null, (double)deltaTime);
         typeof(Time).GetField("s_DeltaTime", Flags).SetValue(null, deltaTime);
+        double duration = deltaTime > 0 ? (double)typeof(Time).GetProperty("CaptureDuration", Flags).GetValue(null) : 0;
+        typeof(Time).GetField("s_FrameDeltaTime", Flags)?.SetValue(null, duration);
         if (fixedMotion) assembly.GetType("Unbound.Runtime.AudioSystem").GetMethod("FixedUpdate", Flags).Invoke(null, null);
         assembly.GetType("Unbound.Runtime.AudioSystem").GetMethod("Update", Flags).Invoke(null, null);
     }

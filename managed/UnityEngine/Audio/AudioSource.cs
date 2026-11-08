@@ -733,7 +733,7 @@ namespace UnityEngine
         }
 
         /// <summary>The source's Rigidbody velocity, or its transform's motion since the last sample.</summary>
-        internal void UpdateMotion(float deltaTime)
+        internal void UpdateMotion(double deltaTime)
         {
             var position = transform.position;
             AudioSystem.SampleMotion(m_GameObject, true, position, deltaTime,
@@ -744,7 +744,7 @@ namespace UnityEngine
         /// <c>velocityUpdateMode</c> picks (<see cref="AudioSystem.UpdatesInFixedStep"/>). When the
         /// picked loop changes, sampling starts again from the next position and the last velocity
         /// is kept until then (Unbound's choice, unmeasured).</summary>
-        internal void SampleMotion(bool fixedStep, float deltaTime)
+        internal void SampleMotion(bool fixedStep, double deltaTime)
         {
             bool inFixedStep = AudioSystem.UpdatesInFixedStep(m_VelocityUpdateMode, m_GameObject);
             if (inFixedStep != fixedStep) return;

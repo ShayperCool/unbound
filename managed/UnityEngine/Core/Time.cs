@@ -14,6 +14,8 @@ namespace UnityEngine
         internal static double s_FixedTime;
         internal static double s_FixedUnscaledTime;
         internal static float s_DeltaTime;
+        // Retain the frame duration before its public float conversion for audio velocity.
+        internal static double s_FrameDeltaTime;
         internal static float s_UnscaledDeltaTime;
         internal static float s_SmoothDeltaTime;
         internal static float s_FixedDeltaTime = 0.02f;
@@ -159,7 +161,8 @@ namespace UnityEngine
                 s_CaptureClockTicks = (long)Math.Round(s_Time * rate.Numerator / rate.Denominator);
             long deltaTicks = (long)(CaptureStep.Count * (double)s_TimeScale);
             s_CaptureClockTicks += deltaTicks;
-            s_DeltaTime = (float)new RationalTime(deltaTicks, rate).ToDouble();
+            s_FrameDeltaTime = new RationalTime(deltaTicks, rate).ToDouble();
+            s_DeltaTime = (float)s_FrameDeltaTime;
             s_Time = new RationalTime(s_CaptureClockTicks, rate).ToDouble();
             s_CaptureClockTime = s_Time;
         }
@@ -186,6 +189,7 @@ namespace UnityEngine
                 // Start sets).
                 s_UnscaledDeltaTime = s_FixedDeltaTime;
                 s_DeltaTime = s_FixedDeltaTime * s_TimeScale;
+                s_FrameDeltaTime = FixedClockDuration * s_TimeScale;
                 // A capture rate set before the first frame (in Awake) steps the game clock from
                 // that frame on (measured, tests/projects/inputframes: captureFramerate 60 in Awake,
                 // the first frame's time and deltaTime 1/60, its fixed step at 0).
@@ -204,6 +208,7 @@ namespace UnityEngine
                 else
                 {
                     s_DeltaTime = unscaled * s_TimeScale;
+                    s_FrameDeltaTime = Math.Min(step, s_MaximumDeltaTime) * s_TimeScale;
                     s_Time += s_DeltaTime;
                 }
             }
@@ -226,6 +231,7 @@ namespace UnityEngine
             s_CaptureClockTicks = 0;
             s_CaptureClockTime = 0;
             s_DeltaTime = s_UnscaledDeltaTime = s_SmoothDeltaTime = 0f;
+            s_FrameDeltaTime = 0;
             s_TimeSinceLevelLoadStart = 0;
             s_FrameCount = 0;
         }

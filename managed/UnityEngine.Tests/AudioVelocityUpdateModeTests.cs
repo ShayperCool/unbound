@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Unbound.Runtime;
+using Unity.IntegerTime;
 using Xunit;
 using PL = UnityEngine.PlayerLoop;
 
@@ -33,6 +34,7 @@ namespace UnityEngine.Tests
         readonly float m_FixedDeltaTime = Time.s_FixedDeltaTime;
         readonly double m_RealDeltaTime = Time.s_RealDeltaTime;
         readonly float m_DeltaTime = Time.s_DeltaTime;
+        readonly double m_FrameDeltaTime = Time.s_FrameDeltaTime;
 
         public AudioVelocityUpdateModeTests()
         {
@@ -48,6 +50,7 @@ namespace UnityEngine.Tests
             Time.s_FixedDeltaTime = m_FixedDeltaTime;
             Time.s_RealDeltaTime = m_RealDeltaTime;
             Time.s_DeltaTime = m_DeltaTime;
+            Time.s_FrameDeltaTime = m_FrameDeltaTime;
             Time.s_InFixedTimeStep = false;
         }
 
@@ -108,6 +111,7 @@ namespace UnityEngine.Tests
         static void Frame(double realDelta)
         {
             Time.s_RealDeltaTime = realDelta;
+            Time.s_FrameDeltaTime = Time.s_DeltaTime;
             AudioSystem.Update();
         }
 
@@ -210,6 +214,27 @@ namespace UnityEngine.Tests
                 Frame(0.5);
                 Assert.Equal(X(8f), source.Velocity);
                 Assert.Equal(X(4f), listener.Velocity);
+            }
+            finally { ProjectInfo.UnityVersion = previousRelease; }
+        }
+
+        [Fact]
+        public void MeasuredVelocityInvertsThePreciseFrameDurationBeforeFloatConversion()
+        {
+            string previousRelease = ProjectInfo.UnityVersion;
+            try
+            {
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                var source = Make(false, AudioVelocityUpdateMode.Dynamic);
+                source.MoveTo(20);
+                double duration = Unity.IntegerTime.RationalTime.FromDouble(1024f / 44100,
+                    Unity.IntegerTime.RationalTime.TicksPerSecond.DefaultTicksPerSecond).ToDouble();
+                Time.s_FrameDeltaTime = duration;
+                AudioSystem.Update();
+                source.MoveTo(20 + 20f * 1024 / 44100);
+                AudioSystem.Update();
+                Assert.Equal(X(20.000015258789062f), source.Velocity);
+                Assert.NotEqual(X(20.000017166137695f), source.Velocity);
             }
             finally { ProjectInfo.UnityVersion = previousRelease; }
         }
