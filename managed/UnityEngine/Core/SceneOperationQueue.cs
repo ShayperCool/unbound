@@ -45,7 +45,12 @@ namespace UnityEngine.SceneManagement
             // The LoadScene API forces earlier asynchronous work, including held activations,
             // to complete at its next-frame load. Keep allowSceneActivation's public value.
             if (forced)
-                foreach (var pending in m_Requests) { pending.Forced = true; pending.ForcedFrame = frame + 1; }
+                foreach (var pending in m_Requests)
+                {
+                    if (pending.Forced) continue;
+                    pending.Forced = true;
+                    pending.ForcedFrame = frame + 1;
+                }
             m_Requests.Enqueue(new Request { Operation = operation, Scene = scene, Work = work,
                 Load = load, Frame = frame, Forced = forced, ForcedFrame = frame + 1, PrepareWork = prepare });
         }

@@ -92,6 +92,29 @@ namespace Unbound.Tests
         }
 
         [Fact]
+        public void ACallbackLoadCannotPostponeAnEarlierSynchronousRequest()
+        {
+            var first = new AsyncOperation();
+            AsyncOperation callbackLoad = null;
+            m_Queue.Enqueue(first, null, () => {
+                m_Events.Add("first.objects");
+                // Scene loading invokes sceneLoaded inside its work, before completion.
+                callbackLoad = Load("callback", 1, async: false);
+            }, true, false, 0);
+            var second = Load("second", 0, async: false);
+            m_Queue.Process(0);
+            Assert.False(first.isDone || second.isDone);
+            m_Queue.Process(1);
+            Assert.True(first.isDone && second.isDone);
+            Assert.NotNull(callbackLoad);
+            Assert.False(callbackLoad.isDone);
+            Assert.Equal(new[] { "first.objects", "second.objects", "second.completed" }, m_Events);
+            m_Queue.Process(2);
+            Assert.True(callbackLoad.isDone);
+            Assert.Equal(new[] { "first.objects", "second.objects", "second.completed", "callback.objects", "callback.completed" }, m_Events);
+        }
+
+        [Fact]
         public void CompletionReentryCannotConsumeNewRequestsInTheSamePass()
         {
             var first = Load("first", 0);

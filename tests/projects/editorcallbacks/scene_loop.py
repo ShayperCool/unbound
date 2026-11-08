@@ -15,7 +15,7 @@ from editor_runner import EditorJob, publish, run, summary
 
 SOURCE = PROBE / 'SceneLoop'
 CACHE = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache')) / 'unbound/q192'
-# The full case ladder finishes near frame 50; isolated profiles finish within frame 9.
+# The full case ladder finishes near frame 50; isolated profiles finish before frame 16.
 MATRIX_FRAMES = 160
 PROFILE_FRAMES = 30
 
