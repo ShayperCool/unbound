@@ -368,16 +368,16 @@ namespace UnityEngine
         /// change the scene meanwhile.</summary>
         internal static void SendWillRenderObject(Matrix4x4 viewProjection, int cullingMask)
         {
+            // Nothing changes the registry before the first script gets the message: walk it as it
+            // is, and copy the rest from that renderer on, since scripts may change the scene.
             s_WillRender.Clear();
-            s_WillRender.AddRange(RenderRegistry.Renderers);
-            foreach (var renderer in s_WillRender)
+            foreach (var renderer in RenderRegistry.Renderers)
+                if (s_WillRender.Count > 0 || WillRender(renderer, viewProjection, cullingMask)) s_WillRender.Add(renderer);
+            for (int r = 0; r < s_WillRender.Count; r++)
             {
-                if (!renderer || renderer.forceRenderingOff || !renderer.m_Enabled) continue;
-                var go = renderer.m_GameObject;
-                if ((cullingMask & (1 << go.m_Layer)) == 0 || !go.activeInHierarchy || renderer.NothingToDraw) continue;
-                renderer.PrepareCullingBounds();
-                if (!FrameBuilder.InFrustum(viewProjection, renderer.CullingBounds)) continue;
-                var components = go.m_Components;
+                var renderer = s_WillRender[r];
+                if (r > 0 && !WillRender(renderer, viewProjection, cullingMask)) continue;
+                var components = renderer.m_GameObject.m_Components;
                 for (int i = 0; i < components.Count; i++)
                 {
                     if (!(components[i] is MonoBehaviour script) || !script.IsActiveAndEnabledNoThrow) continue;
@@ -388,6 +388,29 @@ namespace UnityEngine
                 }
             }
             s_WillRender.Clear();
+        }
+
+        /// <summary>Whether a camera with this mask sends the renderer's object OnWillRenderObject:
+        /// the renderer draws on a layer the camera sees, has an enabled script with the message
+        /// and bounds that touch the frustum (the bounds and frustum are left alone for objects
+        /// without such a script).</summary>
+        static bool WillRender(Renderer renderer, Matrix4x4 viewProjection, int cullingMask)
+        {
+            if (!renderer || renderer.forceRenderingOff || !renderer.m_Enabled) return false;
+            var go = renderer.m_GameObject;
+            if ((cullingMask & (1 << go.m_Layer)) == 0 || !go.activeInHierarchy || renderer.NothingToDraw) return false;
+            renderer.PrepareCullingBounds();
+            return HasWillRenderScript(go) && FrameBuilder.InFrustum(viewProjection, renderer.CullingBounds);
+        }
+
+        static bool HasWillRenderScript(GameObject go)
+        {
+            var components = go.m_Components;
+            for (int i = 0; i < components.Count; i++)
+                if (components[i] is MonoBehaviour script && script.IsActiveAndEnabledNoThrow
+                    && ScriptMessages.For(script.GetType()).OnWillRenderObject != null)
+                    return true;
+            return false;
         }
 
         internal void SetVisible(bool visible)
@@ -1221,27 +1244,67 @@ namespace Unbound.Runtime
             m_Holes = 0;
         }
 
-        /// <summary>Enumerates a snapshot of the count at the start; renderers added meanwhile
-        /// are left for the next pass, removed ones are skipped.</summary>
-        public IEnumerator<UnityEngine.Renderer> GetEnumerator()
-        {
-            m_Enumerating++;
-            try
-            {
-                int count = m_Items.Count;
-                for (int i = 0; i < count && i < m_Items.Count; i++)
-                {
-                    var r = m_Items[i];
-                    if (r is not null) yield return r;
-                }
-            }
-            finally
-            {
-                m_Enumerating--;
-            }
-        }
+        public Enumerator GetEnumerator() => new Enumerator(this);
+
+        IEnumerator<UnityEngine.Renderer> IEnumerable<UnityEngine.Renderer>.GetEnumerator() => GetEnumerator();
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+
+        /// <summary>Enumerates a snapshot of the count when it starts; renderers added meanwhile
+        /// are left for the next pass, removed ones are skipped (the set is not compacted while
+        /// it is enumerated). A struct, so the per-frame loops over every renderer allocate
+        /// nothing.</summary>
+        internal struct Enumerator : IEnumerator<UnityEngine.Renderer>
+        {
+            readonly OrderedRenderers m_Set;
+            int m_Count, m_Next;
+            bool m_Started, m_Done;
+            UnityEngine.Renderer m_Current;
+
+            internal Enumerator(OrderedRenderers set)
+            {
+                m_Set = set;
+                m_Count = m_Next = 0;
+                m_Started = m_Done = false;
+                m_Current = null;
+            }
+
+            public UnityEngine.Renderer Current => m_Current;
+
+            object System.Collections.IEnumerator.Current => m_Current;
+
+            public bool MoveNext()
+            {
+                if (m_Done) return false;
+                var items = m_Set.m_Items;
+                if (!m_Started)
+                {
+                    m_Started = true;
+                    m_Count = items.Count;
+                    m_Set.m_Enumerating++;
+                }
+                while (m_Next < m_Count && m_Next < items.Count)
+                {
+                    var r = items[m_Next++];
+                    if (r is not null)
+                    {
+                        m_Current = r;
+                        return true;
+                    }
+                }
+                Dispose();
+                return false;
+            }
+
+            public void Dispose()
+            {
+                if (m_Started && !m_Done) m_Set.m_Enumerating--;
+                m_Done = true;
+                m_Current = null;
+            }
+
+            public void Reset() => throw new NotSupportedException();
+        }
     }
 }
 

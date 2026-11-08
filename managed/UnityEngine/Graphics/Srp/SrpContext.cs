@@ -885,7 +885,9 @@ namespace Unbound.Runtime
             {
                 if (!renderer || renderer.forceRenderingOff || !renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
                 if ((mask & (1u << renderer.gameObject.layer)) == 0) continue;
-                if (camera != null && !LODGroup.Drawn(renderer, camera, camera.transform.position)) continue;
+                // The camera's position (read anew, scripts may move it meanwhile) only for a
+                // renderer in an LOD group.
+                if (camera != null && renderer.m_LODGroup is not null && !LODGroup.Drawn(renderer, camera, camera.transform.position)) continue;
                 data.Renderers.Add(renderer);
                 renderer.PrepareCullingBounds();
                 if (InsidePlanes(ref parameters, renderer.bounds))
