@@ -47,6 +47,38 @@ namespace UnityEngine.Tests
             Coroutines.Run(Coroutines.Phase.Update);
         }
 
+        [Theory]
+        [InlineData(1.0)]
+        [InlineData(1000.0)]
+        public void SecondsWaitUsesThePreciseScaledClock(double start)
+        {
+            var (time, inFixed, frames) = (Time.s_Time, Time.s_InFixedTimeStep, Time.s_FrameCount);
+            try
+            {
+                Time.s_InFixedTimeStep = false;
+                Time.s_FrameCount = 1;
+                Time.s_Time = start;
+                double began = Time.timeAsDouble;
+                const float duration = 0.1f;
+                var coroutine = new Coroutine();
+                coroutine.Wait(new WaitForSeconds(duration));
+                Time.s_FrameCount++;
+                Time.s_Time = start + duration - 1e-9;
+                Assert.False(coroutine.ReadyIn(Coroutines.Phase.Update));
+                Time.s_Time = start + duration;
+                Assert.False(coroutine.ReadyIn(Coroutines.Phase.FixedUpdate));
+                Assert.True(coroutine.ReadyIn(Coroutines.Phase.Update));
+                Assert.True(Time.timeAsDouble - began >= duration);
+                // Subtracting rounded float timestamps is not a duration guarantee.
+                if (start == 1000.0)
+                    Assert.True(Time.time - (float)began < duration);
+            }
+            finally
+            {
+                (Time.s_Time, Time.s_InFixedTimeStep, Time.s_FrameCount) = (time, inFixed, frames);
+            }
+        }
+
         [Fact]
         public void ARoutineThatStopsItselfEndsQuietly()
         {

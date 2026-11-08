@@ -23,3 +23,14 @@ compare:
 ids, seeds, paths and stack traces are left out. Edit Mode matches entirely. In Play Mode the
 output of the test that logs an exception from `Update` differs: Unity prints the stack trace in
 its console form (`Thrower.Update () (at Assets/...:98)`), Unbound in .NET's.
+
+The seconds-wait assertion uses `Time.timeAsDouble` for both timestamps. Subtracting two rounded
+`Time.time` floats can produce a duration below 0.1 even when the actual scaled interval reached
+`0.1f`. Headless frames depend on execution time, so load exposed that boundary intermittently.
+The requested wait and assertion bound remain `0.1f`; neither the reference nor comparator changes.
+The 6000.0 contract is scaled-time suspension with frame-boundary limitations
+([WaitForSeconds](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/WaitForSeconds.html));
+Unity recommends the double clock for precision
+([Time.timeAsDouble](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Time-timeAsDouble.html)).
+The precise deadline and a float-subtraction counterexample are covered by
+`CoroutineTests.SecondsWaitUsesThePreciseScaledClock` at two starting times.

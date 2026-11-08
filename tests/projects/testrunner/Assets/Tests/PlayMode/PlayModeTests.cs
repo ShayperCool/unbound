@@ -53,9 +53,9 @@ public class PlayModeTests
     [UnityTest]
     public IEnumerator WaitsForSeconds()
     {
-        float start = Time.time;
+        double start = Time.timeAsDouble;
         yield return new WaitForSeconds(0.1f);
-        Assert.GreaterOrEqual(Time.time - start, 0.1f);
+        Assert.GreaterOrEqual(Time.timeAsDouble - start, 0.1f);
     }
 
     [UnityTest]
