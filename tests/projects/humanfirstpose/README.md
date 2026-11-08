@@ -41,8 +41,9 @@ The driver already admits each heavy job through `~/.cache/compat/with-heavy-job
 Publication requires complete, byte-identical independent Native captures and
 the original first body/root values. The old reference has no raw bits, so its
 zero signs are explicitly marked unknown in the cache comparison. A frozen
-engine capture requires all 33 manifest entries to verify before and after a
-private copy. It never builds the runtime or uses a shared build target.
+engine capture verifies every manifest entry in the frozen runtime and in its
+shared runtime snapshot. It never builds the runtime or uses a shared build
+target.
 
 All projects, logs, manifests, comparisons, and failed attempts remain under
 `$XDG_CACHE_HOME/unbound/validation/runs/humanfirstpose/<label>`. Only one canonical
