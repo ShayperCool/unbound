@@ -20,7 +20,7 @@ import sys
 
 PROBE = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROBE.parents[1]))
-from probe_paths import reference_file, run_root, unity_version  # noqa: E402
+from probe_paths import reference_file, reference_root, run_root, unity_version  # noqa: E402
 from editor_runner import EditorJob, jsonl_complete, publish as publish_reference, run, summary  # noqa: E402
 
 REPEATS = ('native1', 'native2')
@@ -56,6 +56,16 @@ def publish(repeats=REPEATS):
                              complete=[jsonl_complete(OUT, {'complete': True})], gpu=True)
 
 
+def publish_raycast(repeats):
+    def write(target, first):
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(first/'raycast.jsonl', target)
+        print('published', target)
+    return publish_reference([work(r) for r in repeats], reference_root(PROBE)/'raycast.jsonl',
+                             lambda _: [OUT, 'raycast.jsonl'], write,
+                             complete=[jsonl_complete('raycast.jsonl', {'complete': True})], gpu=True)
+
+
 def unbound(out, cli):
     cli = cli or os.environ.get('UNBOUND') or 'unbound'
     command = [cli, 'run', '-p', str(PROBE), '--headless', '30', '--no-watch']
@@ -66,7 +76,7 @@ def unbound(out, cli):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('command', choices=('editor', 'publish', 'unbound'))
+    parser.add_argument('command', choices=('editor', 'publish', 'publish-raycast', 'unbound'))
     parser.add_argument('--repeat')
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--out')
@@ -78,6 +88,8 @@ def main():
         return editor(args.repeat)
     if args.command == 'publish':
         return publish(tuple(args.labels) or REPEATS)
+    if args.command == 'publish-raycast':
+        return publish_raycast(tuple(args.labels))
     if not args.out:
         parser.error('unbound needs --out')
     return unbound(args.out, args.cli)

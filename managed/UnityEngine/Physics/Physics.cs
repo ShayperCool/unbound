@@ -393,7 +393,7 @@ namespace UnityEngine
 
         public static bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hitInfo, float maxDistance, int layerMask, QueryTriggerInteraction queryTriggerInteraction) { if (direction.sqrMagnitude > 0f) MainThreadCheck.Check("Internal_Raycast"); return Q.First(Q.Raycast(origin, direction, maxDistance, layerMask, queryTriggerInteraction, closest: true), out hitInfo); }
 
-        public static bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hitInfo, float maxDistance, int layerMask) { if (direction.sqrMagnitude > 0f) MainThreadCheck.Check("Internal_RaycastTest"); return Raycast(origin, direction, out hitInfo, maxDistance, layerMask, QueryTriggerInteraction.UseGlobal); }
+        public static bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hitInfo, float maxDistance, int layerMask) => Raycast(origin, direction, out hitInfo, maxDistance, layerMask, QueryTriggerInteraction.UseGlobal);
 
         public static bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hitInfo, float maxDistance) => Raycast(origin, direction, out hitInfo, maxDistance, DefaultRaycastLayers, QueryTriggerInteraction.UseGlobal);
 

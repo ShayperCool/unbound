@@ -41,8 +41,12 @@ ContactModifyEvent permits callbacks from any thread and limits the available AP
 UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/threadapis/run.py editor --repeat native1
 UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/threadapis/run.py editor --repeat native2
 UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/threadapis/run.py publish native1 native2
+UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/threadapis/run.py publish-raycast native1 native2
 UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/threadapis/gate.py
 ```
+
+A separate nine-outcome `raycast.jsonl` control records the exact single-hit layer-mask
+overload binding in every context.
 
 The gate makes a fresh project copy, runs only Unbound, and compares every outcome exactly.
 The current replay matches 1,213/1,222 outcomes. Nine existing successful return-value differences

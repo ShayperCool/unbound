@@ -46,6 +46,7 @@ public class ThreadApiProbe : MonoBehaviour
     static Context s_Context;
     static string s_Kind;
     static readonly StringBuilder s_Log = new StringBuilder();
+    static readonly StringBuilder s_RaycastLog = new StringBuilder();
     static readonly List<(string Name, Func<object> Call)> s_Calls = new List<(string, Func<object>)>();
     static int s_MainThread;
 
@@ -102,6 +103,11 @@ public class ThreadApiProbe : MonoBehaviour
             catch (Exception e) { result = "throws " + e.GetType().FullName + ": " + e.Message; }
             Record(name, result);
         }
+        string outcome;
+        try { Physics.Raycast(Vector3.up * 100, Vector3.down, out _, 1f, ~0); outcome = "ok"; }
+        catch (Exception e) { outcome = "throws " + e.GetType().FullName + ": " + e.Message; }
+        s_RaycastLog.Append("{\"thread\":\"").Append(s_Kind).Append("\",\"call\":\"Physics.Raycast hit layerMask\",\"result\":\"")
+            .Append(Escape(outcome)).Append("\"}\n");
     }
 
     static void Add(string name, Func<object> call) => s_Calls.Add((name, call));
@@ -400,7 +406,12 @@ public class ThreadApiProbe : MonoBehaviour
         Record("callback observed", m_AutomaticSeen ? "yes" : "no");
         s_Log.Append("{\"complete\":true}\n");
         var output = Environment.GetEnvironmentVariable("THREAD_APIS_OUT");
-        if (!string.IsNullOrEmpty(output)) File.WriteAllText(output, s_Log.ToString());
+        if (!string.IsNullOrEmpty(output))
+        {
+            File.WriteAllText(output, s_Log.ToString());
+            s_RaycastLog.Append("{\"complete\":true}\n");
+            File.WriteAllText(Path.Combine(Path.GetDirectoryName(output), "raycast.jsonl"), s_RaycastLog.ToString());
+        }
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
 #else

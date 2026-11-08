@@ -8,7 +8,7 @@ import time
 
 PROBE = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROBE.parents[1]))
-from probe_paths import reference_file, run_root  # noqa: E402
+from probe_paths import reference_file, reference_root, run_root  # noqa: E402
 from value_probe import assemble, LAUNCHER  # noqa: E402
 
 
@@ -25,7 +25,9 @@ def main():
     if code or not capture.exists():
         print(f'threadapis: engine exit {code}, capture exists {capture.exists()}; log {out}/engine.log')
         return 1
-    return subprocess.call([sys.executable, str(PROBE/'compare.py'), str(reference_file(PROBE, 'jsonl')), str(capture)])
+    code = subprocess.call([sys.executable, str(PROBE/'compare.py'), str(reference_file(PROBE, 'jsonl')), str(capture)])
+    extra = subprocess.call([sys.executable, str(PROBE/'compare.py'), str(reference_root(PROBE)/'raycast.jsonl'), str(out/'raycast.jsonl')])
+    return int(bool(code or extra))
 
 
 if __name__ == '__main__':

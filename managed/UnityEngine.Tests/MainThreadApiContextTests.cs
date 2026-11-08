@@ -55,6 +55,7 @@ namespace UnityEngine.Tests
                 Rejects("set_mass", () => body.mass = 2);
                 Rejects("Raycast", () => collider.Raycast(new Ray(Vector3.zero, Vector3.zero), out _, 1));
                 Rejects("Internal_RaycastTest", () => Physics.Raycast(Vector3.zero, Vector3.up, 1));
+                Rejects("Internal_Raycast", () => Physics.Raycast(Vector3.zero, Vector3.up, out _, 1, ~0));
                 Rejects("Internal_RaycastNonAlloc", () => Physics.RaycastNonAlloc(Vector3.zero, Vector3.up, null, 1));
                 Assert.Null(OnWorker(() =>
                 {
