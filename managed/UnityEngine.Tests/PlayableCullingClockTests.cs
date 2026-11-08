@@ -34,8 +34,10 @@ namespace UnityEngine.Tests
 
         sealed class Counter : PlayableBehaviour
         {
-            internal int Prepares, Plays, Pauses;
+            internal int Prepares, Plays, Pauses, Processes;
             internal double LastDelta = -1;
+
+            public override void ProcessFrame(Playable playable, FrameData info, object playerData) => Processes++;
 
             public override void PrepareFrame(Playable playable, FrameData info)
             {
@@ -184,6 +186,36 @@ namespace UnityEngine.Tests
             Assert.Equal(Step, clip.GetTime(), 9);
         }
 
+        /// <summary>A script playable held below a culled Animator's mixer is skipped by the process
+        /// pass of a script output that also reaches it, as a paused one is (Unbound's choice: no
+        /// reference measures a script output reaching a held playable), and processed again once
+        /// the hold ends.</summary>
+        [Fact]
+        public void TheProcessPassSkipsAHeldPlayable()
+        {
+            var animator = Rig(AnimatorCullingMode.CullCompletely);
+            var graph = Graph(DirectorUpdateMode.Manual);
+            var below = Script(graph, AnimationClipPlayable.Create(graph, Clip()));
+            below.SetOutputCount(2);
+            var mixer = AnimationMixerPlayable.Create(graph, 1);
+            mixer.ConnectInput(0, below, 0, 1f);
+            AnimationPlayableOutput.Create(graph, "animation", animator).SetSourcePlayable(mixer);
+            ScriptPlayableOutput.Create(graph, "script").SetSourcePlayable(below, 1);
+            graph.Play();
+            var held = below.GetBehaviour();
+
+            graph.Evaluate(0.1f);
+            graph.Evaluate(0.1f);
+            Assert.Equal((0, 0), (held.Prepares, held.Processes));
+            Assert.Equal(0, below.GetTime());
+
+            // Control: the same graph with the Animator never culled prepares and processes it.
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            graph.Evaluate(0.1f);
+            Assert.Equal((1, 1), (held.Prepares, held.Processes));
+            Assert.Equal(0.1, below.GetTime(), 6);
+        }
+
         [Fact]
         public void AClipOutsideAnyAnimationOutputKeepsTheGraphClock()
         {
@@ -241,6 +273,72 @@ namespace UnityEngine.Tests
             clip.SetDone(false);
             PlayableGraphData.LateUpdate();
             Assert.False(clip.IsDone());
+        }
+
+        /// <summary>A clip that a script output reaches is done right after the evaluation that
+        /// finished it, whichever output was created first, also when an animation output reaches it
+        /// too (6000.0.71f1, animculling clock/doneShared, doneSharedFirst, doneScript).</summary>
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        public void AClipAScriptOutputReachesIsDoneAtOnce(bool animationOutput, bool animationFirst)
+        {
+            var animator = Rig(AnimatorCullingMode.AlwaysAnimate);
+            var graph = Graph(DirectorUpdateMode.Manual);
+            var clip = AnimationClipPlayable.Create(graph, Clip());
+            clip.SetDuration(0.25);
+            clip.SetOutputCount(2);
+            var mine = Playable.Create(graph, 1);
+            mine.ConnectInput(0, clip, 0, 1f);
+            var theirs = Playable.Create(graph, 1);
+            theirs.ConnectInput(0, clip, 1, 1f);
+            if (animationOutput && animationFirst) AnimationPlayableOutput.Create(graph, "animation", animator).SetSourcePlayable(mine);
+            ScriptPlayableOutput.Create(graph, "script").SetSourcePlayable(theirs);
+            if (animationOutput && !animationFirst) AnimationPlayableOutput.Create(graph, "animation", animator).SetSourcePlayable(mine);
+            graph.Play();
+            graph.Evaluate(0.3f);
+            Assert.True(clip.IsDone());
+        }
+
+        /// <summary>In the player loop as well: done after the frame's script output pass, before
+        /// LateUpdate; control: the clip only an animation output reaches waits for the frame's end.</summary>
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void InThePlayerLoopAScriptOutputsClipIsDoneBeforeTheFrameEnds(bool scriptOutput)
+        {
+            var animator = Rig(AnimatorCullingMode.AlwaysAnimate);
+            var graph = Graph();
+            var clip = AnimationClipPlayable.Create(graph, Clip());
+            clip.SetDuration(0.25);
+            clip.SetOutputCount(2);
+            var mine = Playable.Create(graph, 1);
+            mine.ConnectInput(0, clip, 0, 1f);
+            AnimationPlayableOutput.Create(graph, "animation", animator).SetSourcePlayable(mine);
+            if (scriptOutput)
+            {
+                var theirs = Playable.Create(graph, 1);
+                theirs.ConnectInput(0, clip, 1, 1f);
+                ScriptPlayableOutput.Create(graph, "script").SetSourcePlayable(theirs);
+            }
+            graph.Play();
+            float delta = Time.s_DeltaTime;
+            Time.s_DeltaTime = 0.1f;
+            try
+            {
+                for (int frame = 0; frame < 2; frame++)
+                {
+                    PlayableGraphData.UpdateAll();
+                    PlayableGraphData.LateUpdate();
+                }
+                Assert.False(clip.IsDone());
+                PlayableGraphData.UpdateAll();
+                Assert.Equal(scriptOutput, clip.IsDone());
+                PlayableGraphData.LateUpdate();
+                Assert.True(clip.IsDone());
+            }
+            finally { Time.s_DeltaTime = delta; }
         }
 
         /// <summary>25 evaluations of 0.02f put a 0.5 s loop at 0.4999999888 s, which the clip

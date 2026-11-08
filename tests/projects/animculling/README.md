@@ -457,6 +457,11 @@ Observed (two byte-identical captures, 3,660 records):
   frame true; after an explicit Evaluate a plain or script playable is done at once
   (as tests/projects/playables measures) while a clip below the animation output is done
   only in the next frame.
+- A clip that a ScriptPlayableOutput reaches is done in the frame it reaches its duration,
+  in the player loop and after an explicit Evaluate alike, also when an animation output
+  reaches it too, whichever output was created first (`doneScript`, `doneShared`,
+  `doneSharedFirst`, AlwaysAnimate, GameTime and Manual: a clip of duration 0.3 below a plain
+  playable, through its second output port for the script output).
 - A clip samples its single-precision time: a Manual clip at 0.4999999888 s (25 x
   0.02f in double) of a 0.5 s loop samples the loop's start.
 
@@ -464,8 +469,11 @@ Implementation: `PlayableKind.AnimatorClock` marks the animation playables;
 `PlayableGraphData.PreparePass` holds the trees below them for culled outputs (the hold
 wins over other outputs). `Compat.PlayableCullingHoldsAnimationPlayablesOnly` selects
 this for 6000.0.71f1; other releases hold each culled output's whole source tree. Done
-flags of the player loop's passes, and of clips in explicit evaluations, are set in
-PostLateUpdate.DirectorLateUpdate. Pose, root motion and events of a clip all use its
+flags of playables a script output reaches are set right after the pass that finished them
+(the player loop's script output pass or the explicit evaluation); otherwise those of the
+player loop's passes, and of clips in explicit evaluations, are set in
+PostLateUpdate.DirectorLateUpdate. Which outputs reach a playable is collected over all of
+them before any playable is prepared, so their order does not matter. Pose, root motion and events of a clip all use its
 single-precision time, so a loop wrap is the same for all three (managed tests cover
 root motion across that boundary). The zero Play-entry interval of an animation output
 still applies to its whole tree.

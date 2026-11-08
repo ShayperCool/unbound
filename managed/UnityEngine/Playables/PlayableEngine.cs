@@ -637,12 +637,14 @@ namespace Unbound.Runtime.Playables
             };
         }
 
-        /// <summary>Playables that reached their duration (wrap mode None). They report done once
-        /// the explicit evaluation that moved them is over (tests/projects/playables), or at the end
-        /// of the frame when the player loop moved them, or when they are animation playables
-        /// themselves below an animation output: that frame's LateUpdate still sees them not done
-        /// (6000.0.71f1, animculling clock/duration, both update modes; measured for clips, other
-        /// animation playables with a duration follow them unmeasured).</summary>
+        /// <summary>Playables that reached their duration (wrap mode None). One that a script output
+        /// reaches reports done once the pass that moved it is over: the explicit evaluation
+        /// (tests/projects/playables) or the player loop's script output pass, whatever other
+        /// outputs reach it and in which order (6000.0.71f1, animculling clock/doneScript,
+        /// doneShared, doneSharedFirst). Otherwise it reports done at the end of the frame when the
+        /// player loop moved it, or when it is an animation playable below an animation output: that
+        /// frame's LateUpdate still sees it not done (animculling clock/duration, both update modes;
+        /// measured for clips, other animation playables with a duration follow them unmeasured).</summary>
         readonly List<PlayableNode> m_Finished = new List<PlayableNode>();
         readonly List<PlayableNode> m_FinishedAtFrameEnd = new List<PlayableNode>();
         static readonly List<PlayableGraphData> s_FinishAtFrameEnd = new List<PlayableGraphData>();
@@ -737,12 +739,15 @@ namespace Unbound.Runtime.Playables
             var outputs = Scratch<PlayableOutputData>.Rent();
             var held = Scratch<PlayableNode>.RentSet();
             var advancing = Scratch<PlayableNode>.RentSet();
+            var scripted = Scratch<PlayableNode>.RentSet();
+            var animated = Scratch<PlayableNode>.RentSet();
             try
             {
                 foreach (var o in Outputs)
                 {
                     if (o.Destroyed || o.Source == null) continue;
-                    var mark = new Mark { Held = held, Advancing = advancing, Step = dt };
+                    var mark = new Mark { Held = held, Advancing = advancing, Step = dt,
+                        Reached = o.OutputType == typeof(ScriptPlayableOutput) ? scripted : o.Engine is AnimationOutputState ? animated : null };
                     if (o.Engine is AnimationOutputState animation)
                     {
                         animation.Automatic = !evaluate;
@@ -759,7 +764,8 @@ namespace Unbound.Runtime.Playables
                 }
                 foreach (var o in outputs)
                 {
-                    var prepare = new Prepare { Graph = this, Output = o, Dt = dt, Frame = frame, Evaluate = evaluate, Held = held, Advancing = advancing };
+                    var prepare = new Prepare { Graph = this, Output = o, Dt = dt, Frame = frame, Evaluate = evaluate, Held = held, Advancing = advancing,
+                        Scripted = scripted, Animated = animated };
                     Walk(o, ref prepare, WholeTreeOnAnimatorClock(o));
                 }
             }
@@ -768,6 +774,8 @@ namespace Unbound.Runtime.Playables
                 Scratch<PlayableOutputData>.Return(outputs);
                 Scratch<PlayableNode>.Return(held);
                 Scratch<PlayableNode>.Return(advancing);
+                Scratch<PlayableNode>.Return(scripted);
+                Scratch<PlayableNode>.Return(animated);
             }
         }
 
@@ -790,15 +798,17 @@ namespace Unbound.Runtime.Playables
         static bool WholeTreeOnAnimatorClock(PlayableOutputData o) =>
             o.Engine is AnimationOutputState && !Compat.PlayableCullingHoldsAnimationPlayablesOnly;
 
-        /// <summary>Sorts one output's playables into held and advancing ones.</summary>
+        /// <summary>Sorts one output's playables into held and advancing ones, and records them as
+        /// reached by the output's kind (<see cref="Reached"/>: script or animation outputs).</summary>
         struct Mark : INodeVisitor
         {
-            internal HashSet<PlayableNode> Held, Advancing;
+            internal HashSet<PlayableNode> Held, Advancing, Reached;
             internal double Step;
             internal bool Animation, Hold;
 
             public void Visit(PlayableNode n, in NodeVisit v)
             {
+                Reached?.Add(n);
                 if (Animation && Hold && v.AnimatorClock) Held.Add(n);
                 else if (Advancing != null && Step != 0) Advancing.Add(n);
             }
@@ -811,14 +821,20 @@ namespace Unbound.Runtime.Playables
             internal double Dt;
             internal ulong Frame;
             internal bool Evaluate;
-            internal HashSet<PlayableNode> Held, Advancing;
+            internal HashSet<PlayableNode> Held, Advancing, Scripted, Animated;
 
             public void Visit(PlayableNode n, in NodeVisit v)
             {
                 if (n.Destroyed || n.PreparedFrame == Frame) return;
                 n.PreparedFrame = Frame;
                 if (Held.Contains(n)) Graph.HoldNode(n, v, Output, Evaluate);
-                else Graph.PrepareNode(n, v, Advancing.Contains(n) ? Dt : 0, Output, Evaluate);
+                else
+                {
+                    // When reaching its duration makes it done: see m_Finished. Decided over every
+                    // output that reaches it, not the one that prepares it first.
+                    bool atFrameEnd = !Scripted.Contains(n) && (!Evaluate || (Animated.Contains(n) && (n.Kind?.AnimatorClock ?? false)));
+                    Graph.PrepareNode(n, v, Advancing.Contains(n) ? Dt : 0, Output, Evaluate, atFrameEnd);
+                }
             }
         }
 
@@ -850,7 +866,7 @@ namespace Unbound.Runtime.Playables
 
         /// <summary>One playable's share of the prepare pass: its time, start and play-state
         /// notifications, then PrepareFrame (script) or the engine playable's own preparation.</summary>
-        void PrepareNode(PlayableNode n, in NodeVisit v, double step, PlayableOutputData o, bool evaluate)
+        void PrepareNode(PlayableNode n, in NodeVisit v, double step, PlayableOutputData o, bool evaluate, bool doneAtFrameEnd)
         {
             n.Held = false;
             var flags = (FrameData.Flags)0;
@@ -864,7 +880,7 @@ namespace Unbound.Runtime.Playables
                     flags |= FrameData.Flags.SeekOccured;
                     n.TimeSet = false;
                 }
-                else Advance(n, step * v.Speed, ref flags, !evaluate || (o.Engine is AnimationOutputState && (n.Kind?.AnimatorClock ?? false)));
+                else Advance(n, step * v.Speed, ref flags, doneAtFrameEnd);
             }
             n.FrameFlags = flags;
             var info = MakeInfo(n, step, v, flags, playing, o, evaluate);
@@ -1146,6 +1162,7 @@ namespace Unbound.Runtime.Playables
                     foreach (var o in outputs)
                         if (o.OutputType == typeof(ScriptPlayableOutput)) g.ProcessOutput(o, delta, deliver: false);
                     Scratch<PlayableOutputData>.Return(outputs);
+                    g.FlushFinished();
                     g.FrameId++;
                 }
                 s_Updated.Clear();
