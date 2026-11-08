@@ -548,7 +548,8 @@ impl Importer for TextureImporter {
     // 12: Texture2DArray and Texture3D shapes import their flipbook cells (were a 2D texture).
     // 13: single-cell arrays and volumes are no longer BC7-compressed.
     // 14: Cookie textures keep their alpha in every channel and are not sRGB.
-    const VERSION: u32 = 14;
+    // 15: Lightmap and Shadowmask textures keep their input alpha under "Alpha Source: None".
+    const VERSION: u32 = 15;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -656,7 +657,18 @@ pub fn import_texture(
 
     match settings.alpha_source {
         // Only an automatic format leaves the alpha out; an explicit one with alpha keeps it.
-        AlphaSource::None if settings.format_alpha != Some(true) => image.set_opaque(),
+        // Baked lightmaps and shadowmasks keep theirs under "None" (the Editor's lightmap alpha
+        // is 0 in unused texels, a shadowmask's unused fourth channel 0: Unity 6000.0.71f1,
+        // tests/projects/urp texture-formats.jsonl).
+        AlphaSource::None
+            if settings.format_alpha != Some(true)
+                && !matches!(
+                    settings.texture_type,
+                    TextureType::Lightmap | TextureType::Shadowmask
+                ) =>
+        {
+            image.set_opaque()
+        }
         AlphaSource::FromGrayScale => image.alpha_from_gray(),
         AlphaSource::None | AlphaSource::FromInput => {}
     }

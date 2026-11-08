@@ -873,3 +873,24 @@ fn a_cookie_keeps_its_alpha_in_every_channel() {
     );
     assert_eq!(tex.mips[0].data, [200, 40, 10, 83, 0, 0, 0, 0]);
 }
+
+/// A Shadowmask or Lightmap keeps its input alpha (an unused channel or texel 0) under "Alpha
+/// Source: None"; other textures are made opaque.
+#[test]
+fn baked_lightmaps_keep_their_alpha() {
+    let mask = png(4, 4, |x, _| [255 * (x % 2) as u8, 0, 0, 0]);
+    let alpha = |texture_type: i32| {
+        let meta = unbound_yaml::parse_value(&format!(
+            "TextureImporter:\n  nPOTScale: 0\n  alphaUsage: 0\n  textureType: {texture_type}\n"
+        ))
+        .unwrap();
+        TextureImporter::default()
+            .import(Path::new("Assets/a.png"), &mask, &meta)
+            .unwrap()
+            .mips[0]
+            .data[3]
+    };
+    assert_eq!(alpha(11), 0);
+    assert_eq!(alpha(6), 0);
+    assert_eq!(alpha(0), 255);
+}
