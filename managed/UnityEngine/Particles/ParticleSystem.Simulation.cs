@@ -1741,8 +1741,9 @@ namespace UnityEngine
         static bool InheritsOverLifetime(ParticleSystemCurveMode mode) =>
             mode == ParticleSystemCurveMode.Curve || mode == ParticleSystemCurveMode.TwoCurves;
 
-        /// <summary>The smallest factor Lifetime by Emitter Speed applies (6000.0.71f1: a factor of 0
-        /// leaves no particle past its first step, tests/projects/particlerandom lbes/zero).</summary>
+        /// <summary>The smallest factor Lifetime by Emitter Speed applies, the startLifetime
+        /// setter's floor (6000.0.71f1: a factor of 0 leaves no particle past its first step,
+        /// tests/projects/particlerandom lbes/zero; the value itself is not observable there).</summary>
         const float MinLifetimeByEmitterSpeedScale = 0.0001f;
 
         /// <summary>Lifetime by Emitter Speed's factor of a new particle's lifetime: the curve at the

@@ -14,8 +14,8 @@ PARTICLE_FIELDS = 33
 # Local field indices include the two seed halves. These are unresolved measurements, not
 # alternative tolerances. See README.md for their scope and observable effects.
 RESIDUALS = [
-    # (key pattern, particle fields, reason). Fields: 0-1 seed halves, 2-4 position, 32 remaining lifetime.
-    (r'^moving/distance/', {0, 1, 2, 3, 4, 32},
+    # (key pattern, particle fields, reason). Fields: 0-1 seed halves, 3 position y, 32 remaining lifetime.
+    (r'^moving/distance/', {0, 1, 3, 32},
      'emission over distance from a custom emitter velocity: Unity starts a frame\'s distance births '
      'as one batch, youngest first; Unbound starts them per internal step (same count and ages; open)'),
 ]
