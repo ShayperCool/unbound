@@ -111,6 +111,10 @@ namespace UnityEngine
         bool m_AllowSceneActivation = true;
         Action<AsyncOperation> m_Completed;
         internal Action m_OnAllowActivation;
+        /// <summary>The first coroutine that yielded the operation while it ran: it resumes when the
+        /// operation completes, before the completed handlers; others yielding it resume at their
+        /// next coroutine point (measured: tests/projects/navbaked resume.*).</summary>
+        internal Coroutine m_Waiter;
 
         public bool isDone => m_IsDone;
         public float progress => m_IsDone ? 1f : m_Progress;
@@ -143,6 +147,9 @@ namespace UnityEngine
             if (m_IsDone) return;
             m_IsDone = true;
             m_Progress = 1f;
+            var waiter = m_Waiter;
+            m_Waiter = null;
+            if (waiter != null) Unbound.Runtime.Coroutines.Resume(waiter, this);
             var handlers = m_Completed;
             m_Completed = null;
             if (handlers != null)

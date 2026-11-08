@@ -29,6 +29,12 @@ namespace UnityEngine.Tests
             yield break;
         }
 
+        internal IEnumerator Waits(AsyncOperation operation, string name)
+        {
+            yield return operation;
+            Log.Add(name + " resumed done=" + operation.isDone);
+        }
+
         IEnumerator Inner()
         {
             Log.Add("inner");
@@ -107,6 +113,63 @@ namespace UnityEngine.Tests
             var runner = new GameObject("Runner").AddComponent<CoroutineRunner>();
             Assert.Null(runner.StartCoroutine(CoroutineRunner.EndsAtOnce()));
             Assert.NotNull(runner.StartCoroutine(runner.Outer()));
+        }
+
+        /// <summary>Measured (tests/projects/navbaked resume.*): the first coroutine that yielded a
+        /// running operation resumes as it completes, before its completed handlers, wherever in the
+        /// frame that is; another coroutine yielding it resumes at the next Update's coroutine point.</summary>
+        [Fact]
+        public void TheFirstWaitingCoroutineResumesAsTheOperationCompletes()
+        {
+            var frames = Time.s_FrameCount;
+            var runner = new GameObject("Runner").AddComponent<CoroutineRunner>();
+            try
+            {
+                var operation = new AsyncOperation();
+                operation.completed += _ => runner.Log.Add("handler before");
+                runner.StartCoroutine(runner.Waits(operation, "first"));
+                operation.completed += _ => runner.Log.Add("handler after");
+                runner.StartCoroutine(runner.Waits(operation, "second"));
+                NextFrame();
+                Assert.Empty(runner.Log);
+                operation.Complete();
+                Assert.Equal(new[] { "first resumed done=True", "handler before", "handler after" }, runner.Log);
+                NextFrame();
+                Assert.Equal("second resumed done=True", runner.Log[3]);
+                Assert.Equal(4, runner.Log.Count);
+            }
+            finally
+            {
+                Object.DestroyImmediate(runner.gameObject);
+                Time.s_FrameCount = frames;
+            }
+        }
+
+        /// <summary>A stopped coroutine is not resumed by the completion; an operation already done
+        /// resumes its coroutine at the next frame's coroutine point (measured: navbaked
+        /// resume.resources).</summary>
+        [Fact]
+        public void AStoppedOrLateWaiterResumesOnlyAtTheCoroutinePoint()
+        {
+            var frames = Time.s_FrameCount;
+            var runner = new GameObject("Runner").AddComponent<CoroutineRunner>();
+            try
+            {
+                var operation = new AsyncOperation();
+                var stopped = runner.StartCoroutine(runner.Waits(operation, "stopped"));
+                runner.StopCoroutine(stopped);
+                operation.Complete();
+                Assert.Empty(runner.Log);
+                runner.StartCoroutine(runner.Waits(operation, "late"));
+                Assert.Empty(runner.Log);
+                NextFrame();
+                Assert.Equal(new[] { "late resumed done=True" }, runner.Log);
+            }
+            finally
+            {
+                Object.DestroyImmediate(runner.gameObject);
+                Time.s_FrameCount = frames;
+            }
         }
     }
 }

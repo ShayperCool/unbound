@@ -10,7 +10,8 @@ namespace Unbound.Runtime
     /// unknown values resume after the next Update; WaitForSeconds after its scaled time (checked
     /// after Update); WaitForFixedUpdate after the physics step; WaitForEndOfFrame after rendering; a
     /// Coroutine or nested IEnumerator when it finishes, in the next frame at the earliest when it
-    /// ends without waiting; AsyncOperation when done; a CustomYieldInstruction when keepWaiting
+    /// ends without waiting; AsyncOperation when done (the first routine to yield a running one
+    /// as it completes, the others after the next Update); a CustomYieldInstruction when keepWaiting
     /// turns false, checked when yielded and then each frame, in the next frame at the earliest. Routines stop when their behaviour is
     /// destroyed or its GameObject deactivated, not when the behaviour is disabled.
     /// </summary>
@@ -143,6 +144,16 @@ namespace Unbound.Runtime
             s_Running.RemoveAll(c => c.Done);
         }
 
+        /// <summary>A routine waiting for <paramref name="operation"/> resumes now, as it completes
+        /// (wherever in the frame that is), and then waits behind the routines already waiting.</summary>
+        internal static void Resume(Coroutine c, object operation)
+        {
+            if (c.Done || !c.IsWaitingFor(operation)) return;
+            Step(c);
+            s_Running.Remove(c);
+            if (!c.Done) s_Running.Add(c);
+        }
+
         internal static void Reset() => s_Running.Clear();
     }
 
@@ -244,8 +255,13 @@ namespace UnityEngine
                 case WaitForSeconds seconds:
                     m_WaitUntil = Time.timeAsDouble + seconds.m_Seconds;
                     break;
+                case AsyncOperation operation when !operation.isDone && operation.m_Waiter == null:
+                    operation.m_Waiter = this;
+                    break;
             }
         }
+
+        internal bool IsWaitingFor(object instruction) => ReferenceEquals(m_Waiting, instruction);
 
         internal bool ReadyIn(Unbound.Runtime.Coroutines.Phase phase)
         {
