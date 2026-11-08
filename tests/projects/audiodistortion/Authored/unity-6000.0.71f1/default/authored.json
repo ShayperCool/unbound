@@ -1,7 +1,8 @@
 {
- "command": "python3 tests/projects/audiodistortion/native.py --release 6000.0.71f1 --rate 48000 --work <new cache directory>",
+ "command": "python3 tests/projects/audiodistortion/native.py --release 6000.0.71f1 --rate 48000 --work CACHE_DIRECTORY",
  "files": {
   "Assets/Editor.meta": "de7e86fe9a9ea530f399e2d7226d8e6170cb724928a8a853de78f653b9ced1d4",
+  "Assets/Editor/LiveProbeRunner.cs.meta": "292e0ad370e436badf994c5d891ff0e33fffeb0355854b6f6ea83d05760d0603",
   "Assets/Editor/ProbeRunner.cs.meta": "6089ce53b2e92bcaa7a6d5a99a26e03af0e2c49211313744ce34faa8a260a030",
   "Assets/Resources.meta": "295ba557325c0aa89972d3b7c07b4d6e1d89eca7ea75367cec77398055d01afc",
   "Assets/Resources/Serialized.prefab": "fa392d6fc4281b3f6df9f5b563d1040ee743cb174083b962b82526eeb2222ecd",
@@ -668,6 +669,7 @@
   "Assets/Scripts.meta": "2a7ce90642f3f49a31596ee4ef0c48b81b87205f5af780760942347898879af8",
   "Assets/Scripts/EffectProbe.cs.meta": "c218d286241488ada412d74d8abf2bbee9a9e42312639bbefe073b673353969e",
   "Assets/Scripts/HalfSignal.cs.meta": "f9f6317201623c8d099e12635a76a0a09760bf838c2abd3ff4e91e26585d9cfe",
+  "Assets/Scripts/LiveEffectProbe.cs.meta": "02e17f72b5ba2c8043c62f368de7f9e8e4030d0dea3bc22d01aceb6db5bd96df",
   "Packages/packages-lock.json": "865ee257de2b28ad2977be657c77990e4c611ac2b5e44d3bfed573aadbb3eebb",
   "ProjectSettings/AudioManager.asset": "9a554916fe138ebcad8443ee9b079363ecc72795c39d0e80f5f7ca99e2c6f5e7",
   "ProjectSettings/ClusterInputManager.asset": "40e65dd214bf254955d2c8829ca8ce2130fd3510485560ce012e9a1ddd93e623",
@@ -691,12 +693,14 @@
   "ProjectSettings/VersionControlSettings.asset": "e199cdfa6a8f2bf33cfd47e549198f13e3eb2a5099e908fdb4e0f14d939ccc6b"
  },
  "fixture": {
+  "Assets/Editor/LiveProbeRunner.cs": "ad6ca27e596de1d84940122b8f35f020bf743ddc34ccb0154c8eecbad3e27698",
   "Assets/Editor/ProbeRunner.cs": "93ea8911a46b1d95ee520b0546968a56a995a358dcf621d3c379f4960f921f07",
-  "Assets/Scripts/EffectProbe.cs": "6f2a958005e7caf116fc62000c53c177217b3b6820da5770b2d53c7b7bc875d5",
+  "Assets/Scripts/EffectProbe.cs": "c1af23758aeadf4b5a749365174657caa578b084de43b5df5b8fcafcbc87cb60",
   "Assets/Scripts/HalfSignal.cs": "6e846603db6e56c450b7199ac4fe266ed4482849d76a6102aad70577689839c2",
+  "Assets/Scripts/LiveEffectProbe.cs": "cbdb7a8ec6dcbe28e580550a8d8618ce198860bed91f19c33637105898f16914",
   "Packages/manifest.json": "8f18966585790f5958f193b4a1bbb412fa1294b70972bbfabd7d3b9ba91cf030",
   "ProjectSettings/ProjectVersion.txt": "03282bc6dd30504666a9e67cce65afe9bac94643abcc8f1e62ddf9cf75017c6a",
-  "tests/projects/audiodistortion/native.py": "5baf3d52b829c34970d54f7993a962a92f18f11b788f90151e2e078ffcd89eb1"
+  "tests/projects/audiodistortion/native.py": "54d6c29ed2ace274dc3f65e0ecf21b36f1aacf513b59b355f70e52156d30a44d"
  },
  "format": 1,
  "probe": "audiodistortion",

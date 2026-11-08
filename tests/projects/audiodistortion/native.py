@@ -35,7 +35,7 @@ editor = a.editor or Path.home()/'Unity/Hub/Editor'/a.release/'Editor/Unity'
 command = [str(Path.home()/'.cache/compat/with-heavy-job'), '--kind', 'editor-gpu', 'timeout', '900', str(editor), '-batchmode',
            '-projectPath', str(project), '-executeMethod', 'LiveProbeRunner.Record' if a.profile == 'live' else 'ProbeRunner.Record', '-logFile', str(a.work/'editor.log')]
 (a.work/'command.json').write_text(json.dumps(command, indent=2)+'\n')
-env = dict(os.environ, EFFECT_PROBE_PROFILE=a.profile, EFFECT_PROBE_OUT=str(output), EFFECT_PROBE_RATE=str(a.rate))
+env = dict(os.environ, EFFECT_PROBE_PROFILE=a.profile, EFFECT_PROBE_TRACE='1', EFFECT_PROBE_OUT=str(output), EFFECT_PROBE_RATE=str(a.rate))
 if a.cases: env['EFFECT_PROBE_CASES'] = a.cases
 with (a.work/'stdout.log').open('w') as log:
     subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)

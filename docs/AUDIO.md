@@ -702,6 +702,7 @@ load); the GetFloat flag never fails (see below the table):
 | `Compat.MixerNormalizeMeasured` | linked peak envelope | mixer Normalize |
 | `Compat.MixerPitchShifterMeasured` | phase vocoder | mixer Pitch Shifter |
 | `Compat.MixerStaticWetMeasured` | static effect-slot mix and measured silence boundary | the five effects below and SFX Reverb boundary |
+| `Compat.MixerSnapshotProgressMeasured` | normalized snapshot progress accumulation | the shared snapshot scheduler |
 | `Compat.MixerEffectTransitionsMeasured` | live kernel-parameter submission | the five mixer effects below |
 | `Compat.MixerWetTransitionsMeasured` | shared live wet/dry gain transitions | the five mixer effects below |
 | `Compat.MixerClearFloatSubmissionMeasured` | GetFloat of an override cleared after its submission to audio | `AudioMixer` |
@@ -864,7 +865,10 @@ inside a wet slot. Two independent Editor captures agree per case. The profile
 keeps every startup sample and the existing float/PCM comparison bounds.
 
 Submitted kernel parameters apply to the next rendered buffer without an extra
-sample ramp. Q167's snapshot scheduler supplies each buffer's interpolated values.
+sample ramp. Q167's shared snapshot scheduler supplies each buffer's interpolated values.
+`Compat.MixerSnapshotProgressMeasured` accumulates normalized frame durations;
+the live public parameter/time traces distinguish this from dividing accumulated
+elapsed time, which other releases retain as an unmeasured approximation.
 Chorus and Flange reuse their delay/LFO cores and retain their histories. A Chorus
 Delay change alone defers its span target; changing Depth recomputes that target
 from the latest valid Delay. Component recreation starts fresh history. Normalize

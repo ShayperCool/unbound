@@ -40,7 +40,7 @@ artifacts = [a.runtime/'unbound', *sorted((a.runtime/'managed').rglob('*'))]
 hashes = {str(f.relative_to(a.runtime)): hashlib.sha256(f.read_bytes()).hexdigest() for f in artifacts if f.is_file()}
 (a.work/'runtime-hashes.json').write_text(json.dumps(hashes, indent=2)+'\n')
 (a.work/'command.json').write_text(json.dumps(command, indent=2)+'\n')
-env = dict(os.environ, EFFECT_PROBE_PROFILE=a.profile, EFFECT_PROBE_OUT=str(output), EFFECT_PROBE_RATE=str(a.rate), EFFECT_PROBE_ENGINE='1',
+env = dict(os.environ, EFFECT_PROBE_PROFILE=a.profile, EFFECT_PROBE_TRACE='1', EFFECT_PROBE_OUT=str(output), EFFECT_PROBE_RATE=str(a.rate), EFFECT_PROBE_ENGINE='1',
            UNBOUND_MANAGED_DIR=str(a.runtime/'managed'), LD_LIBRARY_PATH=str(a.runtime/'managed'))
 if a.cases: env['EFFECT_PROBE_CASES'] = a.cases
 with (a.work/'engine.log').open('w') as log:

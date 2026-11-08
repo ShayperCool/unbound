@@ -212,7 +212,7 @@ pub struct EffectSpec {
     /// Compat selects the static slot mechanism measured by the five effect probes.
     #[serde(default)]
     pub slot_wet_measured: bool,
-    /// Compat selects block-constant parameter changes retaining the kernel histories.
+    /// Compat selects block-constant parameter changes using each kernel's state rules.
     #[serde(default)]
     pub effect_transitions_measured: bool,
     /// Compat selects the shared 64-frame effect-slot gain transition.
@@ -954,7 +954,7 @@ impl Effect {
             && (!live_wet || (self.wet_ramp.value == 0.0 && self.dry_ramp.value == 1.0))
         {
             // The fully dry slot is an identity, including its startup frames. Keep the
-            // kernel history advancing, as the pre-existing reverb path does.
+            // static kernel history advancing; the live path above pauses it at zero wet.
             samples.copy_from_slice(&self.scratch[..samples.len()]);
         } else if let Some(level) = wet {
             let wet = if self.spec.mix_audible { level } else { 0.0 };

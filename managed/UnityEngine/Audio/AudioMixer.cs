@@ -44,6 +44,7 @@ namespace UnityEngine.Audio
         Dictionary<string, int> m_TransitionTypes;
         float m_Duration;
         float m_Elapsed;
+        float m_Progress;
 
         internal const float MinVolume = -80f;
         internal const float MaxVolume = 20f;
@@ -169,6 +170,7 @@ namespace UnityEngine.Audio
             m_TransitionTypes = types;
             m_Duration = timeToReach;
             m_Elapsed = 0f;
+            m_Progress = 0f;
         }
 
         public bool SetFloat(string name, float value)
@@ -296,8 +298,13 @@ namespace UnityEngine.Audio
                 m_InstantTarget = null;
             }
             if (m_To == null) return;
-            m_Elapsed += m_UpdateMode == AudioMixerUpdateMode.UnscaledTime ? unscaledDelta : scaledDelta;
-            float t = m_Duration > 0f ? Mathf.Clamp01(m_Elapsed / m_Duration) : 1f;
+            float delta = m_UpdateMode == AudioMixerUpdateMode.UnscaledTime ? unscaledDelta : scaledDelta;
+            m_Elapsed += delta;
+            // Accumulate normalized progress, preserving rounding across changing frame durations.
+            // Unity 6000.0.71f1, tests/projects/audiodistortion live snapshot controls.
+            m_Progress += m_Duration > 0f ? delta / m_Duration : 1f;
+            float t = m_Duration > 0f
+                ? Mathf.Clamp01(Compat.MixerSnapshotProgressMeasured ? m_Progress : m_Elapsed / m_Duration) : 1f;
             foreach (var pair in m_To)
             {
                 float from = m_From.TryGetValue(pair.Key, out var f) ? f : (m_Defaults.TryGetValue(pair.Key, out var d) ? d : 0f);

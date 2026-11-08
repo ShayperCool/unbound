@@ -47,6 +47,37 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SnapshotProgressAccumulatesNormalizedFrameDurationsForEveryParameter()
+        {
+            var (mixer, _, _) = Fixture();
+            var start = new AudioMixerSnapshot { m_Mixer = mixer };
+            var target = new AudioMixerSnapshot { m_Mixer = mixer };
+            mixer.m_Exposed["Control"] = "control";
+            start.m_Values["control"] = .75f; target.m_Values["control"] = 1.5f;
+            start.TransitionTo(0f); mixer.Tick(0f, 0f);
+            target.TransitionTo(4f * (1024f / 44100f));
+            float delta = 0.0232199468f;
+            foreach (float expected in new[] { .93749994f, 1.12499988f, 1.31249976f, 1.49999976f, 1.5f })
+            {
+                mixer.Tick(delta, 100f);
+                Assert.True(mixer.GetFloat("Control", out var actual));
+                Assert.Equal(expected, actual);
+            }
+            // A different duration and changing steps exercise the shared scheduler outside
+            // the audio-buffer fixture; pausing and interrupted targets keep their meanings.
+            target.m_Values["control"] = 3f;
+            target.TransitionTo(.7f);
+            float progress = 0f;
+            foreach (float step in new[] { .13f, 0f, .19f, .07f })
+            {
+                progress += step / .7f;
+                mixer.Tick(step, 100f);
+                mixer.GetFloat("Control", out var actual);
+                Assert.Equal(1.5f + (3f - 1.5f) * progress, actual);
+            }
+        }
+
+        [Fact]
         public void InitialSnapshotUsesTheMeasuredEditorSelectionWithStartFallback()
         {
             foreach (var release in new[] { "6000.0.71f1", "6000.0.70f1" })

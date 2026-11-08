@@ -240,6 +240,8 @@ public class LiveEffectProbe : MonoBehaviour
                         } else mixer.FindSnapshot(changed ? "Other" : "Base").TransitionTo(c.Mode == "timed" ? delta * 4 : 0);
                     }
                     if (Engine) FlushEngine(Time.captureDeltaTime); else yield return null;
+                    if (Environment.GetEnvironmentVariable("EFFECT_PROBE_TRACE") == "1" && mixer.GetFloat("Value", out float traced))
+                        Debug.Log("PARAMETER " + c.Key + " " + block + " " + traced.ToString("R") + " " + Time.deltaTime.ToString("R") + " " + Time.captureDeltaTime.ToString("R"));
                     if (!(bool)typeof(AudioRenderer).GetMethod("AddMixerGroupSink", Flags).Invoke(null, new object[] { source.outputAudioMixerGroup, sink, false })) throw new Exception("Sink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("Render failed");
                     for (int i = 0; i < buffer.Length; i++) { writer.Write(buffer[i]); master.Write(sink[i]); }

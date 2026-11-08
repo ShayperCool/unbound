@@ -31,6 +31,8 @@ for rate in a.rate or (48000, 44100):
                     '--rate', str(rate), '--native-project', str(work/'authored'), '--runtime', str(runtime),
                     '--work', str(work/f'engine-{rate}')])
     failed |= engine.returncode != 0
+    from parameter_trace import verify as verify_trace
+    verify_trace(work/f'engine-{rate}/kernel/engine.log', a.release, rate)
     for label, steps in (('strict', 0), ('gate', 1)):
         result = subprocess.run([sys.executable, str(FIXTURE/'live.py'), '--release', a.release,
                                  '--rate', str(rate), '--candidate', str(work/f'engine-{rate}/capture'),

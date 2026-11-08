@@ -140,6 +140,10 @@ namespace Unbound.Runtime
         /// tests/projects/mixerduck. Unscaled-time transitions remain unmeasured.</summary>
         internal static bool MixerTimedSidechainMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Normalized snapshot progress accumulation, measured by the live public
+        /// parameter trace in tests/projects/audiodistortion. Other releases retain elapsed-time division.</summary>
+        internal static bool MixerSnapshotProgressMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Single-snapshot scalar curves and linear weighted-array transitions,
         /// measured by tests/projects/mixerduck on exactly 6000.0.71f1.</summary>
         internal static bool MixerSnapshotCurvesMeasured => Release == (6000, 0, 71, 'f', 1);
