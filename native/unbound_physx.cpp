@@ -46,14 +46,15 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 17
+#define UA3_VERSION 18
 
 struct ua3_scene_def
 {
 	int solverType, frictionType, contactPairsMode;
 	int enableEnhancedDeterminism, enablePcm, improvedPatchFriction;
+	int ccdDiscreteDynamicTargets;
 };
-static_assert( sizeof( ua3_scene_def ) == 24, "scene settings must match the managed binding" );
+static_assert( sizeof( ua3_scene_def ) == 28, "scene settings must match the managed binding" );
 
 // Vectors and quaternions cross the API as plain structs: PxVec3 and PxQuat have user-defined
 // copy constructors, which the C ABI passes by reference instead of in registers.
@@ -641,11 +642,10 @@ PxFilterFlags Filter::pairFound( PxU32, PxFilterObjectAttributes, PxFilterData, 
 	return PxFilterFlag::eDEFAULT;
 }
 
-// Whether a moving body's own mode sweeps it against the other collider (Unity 6000.0 Manual,
-// Rigidbody component): Continuous against static colliders, ContinuousDynamic against every
-// other collider except those set to Discrete. ContinuousSpeculative is the body's speculative
-// CCD flag, not a swept pair.
-bool sweeps( bool moving, PxU32 flags, PxFilterObjectAttributes other, PxU32 otherFlags )
+// Continuous sweeps static colliders. ContinuousDynamic also sweeps dynamic and kinematic
+// targets. Compat selects Discrete dynamic targets measured by physicsccdhinge in 6000.0.71f1;
+// other releases retain their previous exclusion. Speculative CCD uses the body flag alone.
+bool sweeps( bool moving, PxU32 flags, PxFilterObjectAttributes other, PxU32 otherFlags, bool discreteTargets )
 {
 	PxU32 mode = ( flags & FlagCcdMask ) >> FlagCcdShift, otherMode = ( otherFlags & FlagCcdMask ) >> FlagCcdShift;
 	if ( !moving )
@@ -658,8 +658,8 @@ bool sweeps( bool moving, PxU32 flags, PxFilterObjectAttributes other, PxU32 oth
 	}
 	// Kinematic colliders remain sweep targets even though their own mode can be Discrete.
     // Unity 6000.0.71f1: physicsccdhinge, thin kinematic wall controls for all three shapes.
-    return mode == CcdContinuousDynamic &&
-        ( PxFilterObjectIsKinematic( other ) || otherMode != CcdDiscrete || ( otherFlags & FlagCcdModeless ) );
+	return mode == CcdContinuousDynamic &&
+		( discreteTargets || PxFilterObjectIsKinematic( other ) || otherMode != CcdDiscrete || ( otherFlags & FlagCcdModeless ) );
 }
 
 // Layers collide as layers_meet decides, unless either side contacts nothing. Trigger pairs include
@@ -668,7 +668,7 @@ bool sweeps( bool moving, PxU32 flags, PxFilterObjectAttributes other, PxU32 oth
 // A contact pair with a modifiable collider on either side goes to the contact modification
 // callbacks (Collider.hasModifiableContacts, 6000.0 Scripting API; trigger pairs have no contacts).
 PxFilterFlags shader( PxFilterObjectAttributes attributes0, PxFilterData data0, PxFilterObjectAttributes attributes1,
-					  PxFilterData data1, PxPairFlags& pairFlags, const void*, PxU32 )
+					  PxFilterData data1, PxPairFlags& pairFlags, const void* constantBlock, PxU32 constantBlockSize )
 {
 	if ( ( ( data0.word2 | data1.word2 ) & FlagNoContacts ) != 0 || !layers_meet( data0, data1, false ) )
 	{
@@ -695,7 +695,9 @@ PxFilterFlags shader( PxFilterObjectAttributes attributes0, PxFilterData data0, 
 	if ( moving0 || moving1 )
 	{
 		pairFlags |= PxPairFlag::eSOLVE_CONTACT;
-		if ( sweeps( moving0, data0.word2, attributes1, data1.word2 ) || sweeps( moving1, data1.word2, attributes0, data0.word2 ) )
+		bool discreteTargets = constantBlock != nullptr && constantBlockSize == sizeof( int ) && *static_cast<const int*>( constantBlock ) != 0;
+		if ( sweeps( moving0, data0.word2, attributes1, data1.word2, discreteTargets ) ||
+			 sweeps( moving1, data1.word2, attributes0, data0.word2, discreteTargets ) )
 		{
 			pairFlags |= PxPairFlag::eDETECT_CCD_CONTACT;
 		}
@@ -1133,6 +1135,8 @@ UA3_API uint32_t ua3_world_create( ua3_vec3 gravityIn, float restitutionThreshol
 	desc.gravity = gravity;
 	desc.cpuDispatcher = s_dispatcher;
 	desc.filterShader = shader;
+	desc.filterShaderData = &settings->ccdDiscreteDynamicTargets;
+	desc.filterShaderDataSize = sizeof( settings->ccdDiscreteDynamicTargets );
 	desc.filterCallback = &world->filter;
 	desc.simulationEventCallback = &world->events;
 	desc.bounceThresholdVelocity = restitutionThreshold;

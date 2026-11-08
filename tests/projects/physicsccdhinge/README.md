@@ -99,6 +99,34 @@ in this matrix, consistent with the documented possibility of missed contacts.
 Q06 has no geometry exclusion in its mode mapping, body flags or pair filter;
 its earlier reference measured only the three documented collider shapes.
 
+`--geometry-controls` selects the supplemental
+`Reference/unity-6000.0.71f1/geometry-controls.tsv`. It crosses stationary,
+slowly approaching and fast opposing Discrete dynamic targets with both sphere
+and convex geometry and target masses 1 and 1000. It also switches a triangle
+mesh between dynamic and kinematic on a root and child collider, then crosses
+a pending convex edit with a body-type change. Reference extensions use
+`publish --extend-reference`, which refuses any changed or missing existing key.
+
+| Mechanism | Measured result and implementation cause | Status |
+| --- | --- | --- |
+| ContinuousDynamic versus Discrete dynamic targets | The target can be swept, including when stationary. A sufficiently fast Discrete target can leave the projectile's swept bounds and be missed. Its destination bounds participate in broadphase, while an admitted CCD pair uses relative motion. The bounds explanation is an implementation inference from the crossed speeds and the PhysX path. | Fixed through Compat for 6000.0.71f1. Other releases retain the previous exclusion and remain unmeasured. |
+| The step after a dynamic CCD impact | The Discrete target can move to the impact pose too. Its old cached shape transform then produced false penetration on the next step. | Fixed by refreshing the shapes of moved Discrete bodies from the existing CCD update list; see `native/physx/UNBOUND_PATCHES.md`. |
+| Non-convex mesh body-type changes | Dynamic triangle meshes have no collision support; returning to kinematic restores both ray hits and CCD contacts. A pending convex edit must detach the old triangle shape before the actor becomes dynamic. | Fixed in the structural flush with one collider pass. |
+| Native pair orientation and contact manifolds | Native pair direction changes impulse sign and the surface used for a separated contact witness. Convex manifold clipping/reduction also produces different points, slot order and sometimes contact counts. Those fields are observable API residuals; a complete general rule for matching them is unresolved. | Open contact-generation follow-up. Every raw mismatch, missing row and extra row remains in the strict report. |
+| Speculative compound contact processing | Six symmetric contexts give the same full body readings after reflecting position-y and velocity-y. Their child contact order selects opposite lateral directions. | 43 reflected body rows are identified separately. The capture does not establish a universal contact-order guarantee. |
+| Mixed hull/sphere body against a two-sphere kinematic target | `geometry/kinematic-target/4/2/3` has a different speculative manifold and motion magnitude, with one additional child-pair exit delivered to both bodies. Different clipping and contact processing order are the suspected cause, not a settled algorithm. | Open: five body readings and two callback-count readings. This is a significant residual, not float roundoff. |
+
+The geometry gate checks all 2768 body readings and callback-count readings,
+except that it explicitly reports the reflected readings and the one open mixed
+compound context. The latter has only finite-state, contact-region and
+non-tunneling controls; exact motion and child-pair lifetime remain open.
+The complete contact trace is a strict **report**, not a contact-parity gate.
+Its records must be finite and structurally complete, including every declared
+callback and contact. `verify_geometry.py` does not sort or rewrite captures,
+alter tolerances, or report contact residuals as insignificant. The original
+Q06 gate and supplemental controls still compare all fields, with the existing
+verifier's separately retained native pair impulse directions.
+
 ## Results and retained differences
 
 The strict comparator is shared with physicsbatch and keeps its absolute 1e-4 /
@@ -118,3 +146,12 @@ Validation: release build; all 3268 managed tests; engine-only gate with zero
 unresolved checks. Existing physics, joints, physicsbatch and contactmodify3d
 probes retain their results. The latter two retain their previously recorded
 mesh slot permutations and ten contact-modification differences respectively.
+
+For the extended capture, the raw comparison retains 2441 differences across
+12440 keys, including extra/missing contact slots. Of these, 2391 are contact
+trace rows, 43 are reflected body readings, and seven belong to the explicitly
+open mixed-compound motion/lifetime context. All other body and callback-count
+readings match the unchanged strict tolerances. The supplemental controls match
+all motion and contact data, retaining 24 opposite native pair impulse vectors.
+The extended gate therefore certifies CCD geometry coverage and the fixed
+mechanisms; it does not claim full speculative compound/contact-payload parity.

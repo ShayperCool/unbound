@@ -264,6 +264,11 @@ namespace Unbound.Runtime
         /// measured (docs/COMPATIBILITY_GAPS.md).</summary>
         internal static bool SelectiveContactReportsMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>ContinuousDynamic also sweeps Discrete dynamic targets, measured by
+        /// physicsccdhinge geometry-controls in 6000.0.71f1. Other releases retain the previous
+        /// exclusion until their pair eligibility is measured.</summary>
+        internal static bool CcdDiscreteDynamicTargetsMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Hinge solver limit clamping and contact padding measured by physicsccdhinge in 6000.0.71f1.
         /// Other releases keep the previous unclamped limits and 0.01-radian default pad.</summary>
         internal static bool HingeLimitClampingMeasured => Release == (6000, 0, 71, 'f', 1);

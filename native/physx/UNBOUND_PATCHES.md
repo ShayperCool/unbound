@@ -3,7 +3,7 @@
 This is the complete source-patch inventory for the vendored PhysX 4.1.2 tree.
 [UNBOUND.md](UNBOUND.md) records its upstream revision,
 `a2c0428acab643e60618c681b501e86f7fd558cc`, and the directories retained at import.
-The local import is `9a4c8ad7`. Relative to that import, ten SDK source/header
+The local import is `9a4c8ad7`. Relative to that import, eleven SDK source/header
 files have changes, listed below. The import's directory exclusions and the
 Unbound build/shim code outside this directory are separate from these patches.
 
@@ -18,6 +18,7 @@ identified separately where relevant.
 | Patch | File and function | Introduced in |
 | --- | --- | --- |
 | Free-spinning twist motor | [PxD6Joint.h](include/extensions/PxD6Joint.h), drive flags; [ExtConstraintHelper.h](source/physxextensions/src/ExtConstraintHelper.h), angular drive helper; [ExtD6Joint.cpp](source/physxextensions/src/ExtD6Joint.cpp), twist drive preparation | Q06 |
+| Refresh Discrete bodies moved by CCD | [ScScene.cpp](source/simulationcontroller/src/ScScene.cpp), `Sc::Scene::postCCDPass` | Q145 |
 | Retain breaking force and torque | [ScConstraintCore.h](source/simulationcontroller/include/ScConstraintCore.h), `Sc::ConstraintCore::setBreakingForce`; [ScConstraintCore.cpp](source/simulationcontroller/src/ScConstraintCore.cpp), `Sc::ConstraintCore::getForce`; [ScConstraintSim.cpp](source/simulationcontroller/src/ScConstraintSim.cpp), `Sc::ConstraintSim::checkMaxForceExceeded` | `1b53e844` |
 | Cancel the controller retry's artificial step | [CctCharacterController.cpp](source/physxcharacterkinematic/src/CctCharacterController.cpp), `physx::Cct::SweepTest::moveCharacter` | `0207b818` |
 | Keep NEON lane constants valid for Clang | [PsUnixNeonInlineAoS.h](source/foundation/include/unix/neon/PsUnixNeonInlineAoS.h), `BSplatElement`, `V4U32SplatElement`, `V4SplatElement` | `ee55f99c` |
@@ -28,6 +29,28 @@ identified separately where relevant.
 The comparison against `4724b839e749590151e862695e1e31ad94447151` contains only
 the last three patches, in `ScNPhaseCore.cpp` and `ScShapeSim.cpp`. The older
 patches remain part of the current SDK and are included here.
+
+## Refresh Discrete bodies moved by CCD
+
+`Sc::Scene::postCCDPass` refreshes the cached shape transforms and bounds of
+dynamic bodies moved by CCD even when their own sweep flag is disabled. It uses
+the existing list of updated bodies, skipping sweep-enabled bodies and
+articulation links whose caches the existing passes already update. It adds no
+storage, allocations or pairwise scans.
+
+Measured requirement: Unity 6000.0.71f1 keeps two touching bodies at their actual
+post-impact separation on subsequent steps after a ContinuousDynamic body hits
+a Discrete dynamic target. The confirming reference is
+`tests/projects/physicsccdhinge/Reference/unity-6000.0.71f1/geometry-controls.tsv`,
+`control/dynamic/{0,1}/{1,1000}/-1/2`. It crosses sphere/convex targets and equal
+or unequal masses. Their poses, contact separations, velocities and callbacks
+are recorded on every step.
+
+The implementation cause is a stale shape transform: the original pass only
+refreshes the sweep-enabled bodies and articulations, although CCD can move
+both dynamic participants. The next narrow phase then sees the Discrete
+target's earlier pose. Updating its cache explains the measured correction;
+this is an implementation inference, not a claim about Unity's implementation.
 
 ## Free-spinning twist motor
 

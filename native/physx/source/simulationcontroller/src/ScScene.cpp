@@ -3525,6 +3525,16 @@ void Sc::Scene::postCCDPass(PxBaseTask* /*continuation*/)
 		{
 			articList[i]->getSim()->updateCached(&changedAABBMgrActorHandles);
 		}
+		// CCD can also move the other dynamic body when that body's own sweep is disabled.
+		// Refresh its shapes before the next narrow phase uses the transform cache.
+		const PxU32 rigidBodyOffset = BodySim::getRigidBodyOffset();
+		PxsRigidBody* const* updated = mCCDContext->getUpdatedBodies();
+		for (PxU32 i = 0; i < mCCDContext->getNumUpdatedBodies(); ++i)
+		{
+			BodySim* body = reinterpret_cast<BodySim*>(reinterpret_cast<PxU8*>(updated[i]) - rigidBodyOffset);
+			if (!(updated[i]->getCore().mFlags & PxRigidBodyFlag::eENABLE_CCD) && !body->isArticulationLink())
+				body->updateCached(&changedAABBMgrActorHandles);
+		}
 	}
 }
 

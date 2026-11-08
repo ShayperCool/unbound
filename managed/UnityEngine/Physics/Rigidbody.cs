@@ -53,6 +53,7 @@ namespace UnityEngine
         internal PhysicsWorld.Space m_Space;
         internal int m_SceneHandle;
         internal bool m_BodyDirty;
+        internal bool m_BodyTypeDirty;
         internal bool m_MassDirty;
         internal bool m_KinematicPending;
         internal Vector3 m_PendingVelocity;
@@ -361,6 +362,7 @@ namespace UnityEngine
             {
                 if (m_IsKinematic == value) return;
                 m_IsKinematic = value;
+                m_BodyTypeDirty = true;
                 Changed();
                 // Existing bodies apply both native sleep/wake transitions even for a
                 // true/false sequence without simulation. New bodies keep their lazy

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Xunit;
+using UnityEngine.SceneManagement;
 
 namespace UnityEngine.Tests
 {
@@ -12,9 +13,9 @@ namespace UnityEngine.Tests
     /// - Discrete: CCD is off; collisions are only checked at the fixed time step.
     /// - Continuous: sweep CCD against static colliders (colliders without a Rigidbody) only; the
     ///   Manual lists collisions with moving colliders as what it is not for.
-    /// - ContinuousDynamic: sweep CCD against every other collider except those set to Discrete
-    ///   (Manual, Rigidbody component); a Continuous body also stops a ContinuousDynamic one
-    ///   (Scripting API, CollisionDetectionMode.Continuous).
+    /// - ContinuousDynamic: the 6000.0.71f1 physicsccdhinge capture also measures Discrete
+    ///   dynamic targets, using their end-of-step pose. A Continuous body also stops a
+    ///   ContinuousDynamic one (Scripting API, CollisionDetectionMode.Continuous).
     /// - ContinuousSpeculative: speculative CCD against static and dynamic geometry, usable on
     ///   kinematic bodies too.
     /// Outcomes are asserted as tunnelled or not, with generous margins, in deterministic
@@ -23,7 +24,7 @@ namespace UnityEngine.Tests
     /// Not asserted: what a kinematic body in Continuous or ContinuousDynamic does itself (not
     /// documented; Unbound gives it no sweep, unmeasured), positions, impulses and event order.
     /// physicsccdhinge measures the static/kinematic target controls and per-step callbacks in
-    /// Unity 6000.0.71f1; the additional dynamic pair matrix remains a documentation control.
+    /// Unity 6000.0.71f1, including dynamic pairs and mesh/compound geometry controls.
     ///
     /// Red base 4d0029d5: the file compiles there (it uses only existing public API). There every
     /// mode other than Discrete raised sweep CCD on the body and every pair with a moving body was
@@ -40,9 +41,13 @@ namespace UnityEngine.Tests
         static int s_Lane;
 
         readonly List<GameObject> m_Made = new List<GameObject>();
+        readonly List<Mesh> m_Meshes = new List<Mesh>();
         readonly Vector3 m_Gravity;
         readonly SimulationMode m_Mode;
         readonly bool m_AutoSync;
+        readonly string m_Release;
+        readonly Scene m_PreviousScene, m_Scene;
+        readonly PhysicsScene m_Space;
 
         public PhysicsCcdModeTests()
         {
@@ -52,13 +57,24 @@ namespace UnityEngine.Tests
             Physics.gravity = Vector3.zero;
             Physics.autoSyncTransforms = true;
             Physics.simulationMode = SimulationMode.Script;
+            m_Release = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            m_PreviousScene = SceneManager.GetActiveScene();
+            m_Scene = SceneManager.CreateScene("ccd-test-" + s_Lane++, new CreateSceneParameters(LocalPhysicsMode.Physics3D));
+            SceneManager.SetActiveScene(m_Scene);
+            m_Space = m_Scene.GetPhysicsScene();
         }
 
         public void Dispose()
         {
             foreach (var go in m_Made)
                 if (go != null) Object.DestroyImmediate(go);
-            Physics.Simulate(Dt);
+            foreach (var mesh in m_Meshes) Object.DestroyImmediate(mesh);
+            m_Space.Simulate(Dt);
+            SceneManager.SetActiveScene(m_PreviousScene);
+            SceneManager.UnloadSceneAsync(m_Scene);
+            SceneManagerInternal.ProcessPending();
+            ProjectInfo.UnityVersion = m_Release;
             Physics.gravity = m_Gravity;
             Physics.autoSyncTransforms = m_AutoSync;
             Physics.simulationMode = m_Mode;
@@ -102,9 +118,9 @@ namespace UnityEngine.Tests
             return rb;
         }
 
-        static void Run(int steps)
+        void Run(int steps)
         {
-            for (int i = 0; i < steps; i++) Physics.Simulate(Dt);
+            for (int i = 0; i < steps; i++) m_Space.Simulate(Dt);
         }
 
         /// <summary>Tunnelled: the sphere's centre ends at least 0.5 m past the obstacle's centre
@@ -185,14 +201,10 @@ namespace UnityEngine.Tests
             Assert.Equal(!tunnels, Stopped(bullet, plate.position));
         }
 
-        // ContinuousDynamic sweeps against every collider except Discrete ones.
-        // Red at 4d0029d5: the Discrete row. The ContinuousDynamic and Continuous rows pass there;
-        // their red is head with only the managed mapping (Rigidbody.cs, PhysicsWorld.cs) reverted to
-        // 4d0029d5, which sends ContinuousDynamic as 1 (Continuous), so neither body sweeps the pair.
-        // The ContinuousSpeculative row is the same red under that revert (the plate becomes
-        // Continuous, the sphere too).
+        // physicsccdhinge geometry-controls, 6000.0.71f1: a Discrete dynamic target is also
+        // eligible for a ContinuousDynamic sweep. Its stationary pose is on the swept path.
         [Theory]
-        [InlineData(CollisionDetectionMode.Discrete, true)]
+        [InlineData(CollisionDetectionMode.Discrete, false)]
         [InlineData(CollisionDetectionMode.Continuous, false)]
         [InlineData(CollisionDetectionMode.ContinuousDynamic, false)]
         [InlineData(CollisionDetectionMode.ContinuousSpeculative, false)]
@@ -204,6 +216,82 @@ namespace UnityEngine.Tests
             Run(3);
             Assert.Equal(tunnels, Tunnelled(bullet, plate.position));
             Assert.Equal(!tunnels, Stopped(bullet, plate.position));
+        }
+
+        [Theory]
+        [InlineData(0f, -0.2f)]
+        [InlineData(-1f, -0.20792079f)]
+        [InlineData(-100f, 1f)]
+        public void DiscreteDynamicTargetNeedsItsDestinationInsideTheSweptBounds(float targetSpeed, float expectedX)
+        {
+            var lane = Lane();
+            var target = Make("target", PrimitiveType.Sphere, lane, Vector3.one * .2f).AddComponent<Rigidbody>();
+            target.useGravity = false;
+            target.linearDamping = 0;
+            var bullet = Bullet(lane, CollisionDetectionMode.ContinuousDynamic);
+            bullet.linearDamping = 0;
+            bullet.linearVelocity = Vector3.zero;
+            m_Space.Simulate(Dt);
+            bullet.linearVelocity = Vector3.right * Speed;
+            target.linearVelocity = Vector3.right * targetSpeed;
+            m_Space.Simulate(Dt);
+            Assert.InRange(Mathf.Abs(bullet.position.x - lane.x - expectedX), 0, 1e-4f);
+            float speed = targetSpeed == -100 ? Speed : (Speed + targetSpeed) * .5f;
+            for (int step = 1; step <= 3; step++)
+            {
+                m_Space.Simulate(Dt);
+                Assert.InRange(Mathf.Abs(bullet.position.x - lane.x - expectedX - speed * Dt * step), 0, 1e-4f);
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void NonConvexMeshReturnsAfterKinematicTypeChanges(bool child)
+        {
+            var lane = Lane();
+            var root = new GameObject("mesh-body"); root.transform.position = lane; m_Made.Add(root);
+            var owner = root;
+            if (child)
+            {
+                owner = new GameObject("mesh-child"); owner.transform.SetParent(root.transform, false);
+            }
+            var mesh = new Mesh(); m_Meshes.Add(mesh);
+            mesh.vertices = new[] { new Vector3(0,-1,-1), new Vector3(0,-1,1), new Vector3(0,1,-1), new Vector3(0,1,1) };
+            mesh.triangles = new[] { 0,1,2,2,1,3 };
+            owner.AddComponent<MeshCollider>().sharedMesh = mesh;
+            Physics.SyncTransforms();
+            var body = root.AddComponent<Rigidbody>(); body.useGravity = false;
+            foreach (bool kinematic in new[] { true, false, true })
+            {
+                body.isKinematic = kinematic;
+                Physics.SyncTransforms();
+                bool hit = m_Space.Raycast(lane + Vector3.left, Vector3.right, out var result, 2);
+                Assert.Equal(kinematic, hit);
+                if (hit) Assert.Same(owner.GetComponent<MeshCollider>(), result.collider);
+            }
+            var bullet = Bullet(lane, CollisionDetectionMode.ContinuousDynamic);
+            Run(2);
+            Assert.True(Stopped(bullet, lane));
+        }
+
+        [Fact]
+        public void PendingConvexEditAllowsChangingTheMeshBodyToDynamic()
+        {
+            var lane = Lane();
+            var go = GameObject.CreatePrimitive(PrimitiveType.Cube); go.transform.position = lane; m_Made.Add(go);
+            var mesh = go.GetComponent<MeshFilter>().sharedMesh;
+            Object.DestroyImmediate(go.GetComponent<BoxCollider>());
+            var collider = go.AddComponent<MeshCollider>(); collider.sharedMesh = mesh;
+            var body = go.AddComponent<Rigidbody>(); body.useGravity = false; body.linearDamping = 0;
+            body.isKinematic = true;
+            Physics.SyncTransforms();
+            collider.convex = true;
+            body.isKinematic = false;
+            body.linearVelocity = Vector3.right;
+            m_Space.Simulate(Dt);
+            Assert.InRange(Mathf.Abs(body.position.x - lane.x - Dt), 0, 1e-5f);
+            Assert.InRange(Mathf.Abs(body.linearVelocity.x - 1), 0, 1e-5f);
         }
 
         // A fast kinematic plate (0.1 m thin, MovePosition 2 m a step) passes a resting sphere of
@@ -224,12 +312,12 @@ namespace UnityEngine.Tests
             var plate = Make("paddle", PrimitiveType.Cube, start, new Vector3(0.1f, 2f, 2f)).AddComponent<Rigidbody>();
             plate.isKinematic = true;
             plate.collisionDetectionMode = mode;
-            Physics.Simulate(Dt);
+            m_Space.Simulate(Dt);
             Assert.Equal(mode, plate.collisionDetectionMode);
             for (int i = 1; i <= 3; i++)
             {
                 plate.MovePosition(start + new Vector3(Speed * Dt * i, 0f, 0f));
-                Physics.Simulate(Dt);
+                m_Space.Simulate(Dt);
             }
             // Hit: pushed ahead of the plate (about 5 m); missed: still at rest where it was.
             bool pushed = sphere.position.x - lane.x > 0.5f;
@@ -255,7 +343,7 @@ namespace UnityEngine.Tests
             var plateB = Plate(laneB, CollisionDetectionMode.Continuous);
             var bulletB = Bullet(laneB, CollisionDetectionMode.Continuous);
             bulletB.linearVelocity = Vector3.zero;
-            Physics.Simulate(Dt); // both bodies exist, at rest
+            m_Space.Simulate(Dt); // both bodies exist, at rest
 
             bulletA.collisionDetectionMode = CollisionDetectionMode.Continuous;
             bulletB.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
@@ -291,7 +379,7 @@ namespace UnityEngine.Tests
                 {
                     rb.collisionDetectionMode = mode;
                     Assert.Equal(mode, rb.collisionDetectionMode);
-                    Physics.Simulate(Dt);
+                    m_Space.Simulate(Dt);
                     Assert.Equal(mode, rb.collisionDetectionMode);
                 }
             }

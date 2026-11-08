@@ -19,6 +19,7 @@ public class GeometryEntry : MonoBehaviour
     static int Step;
     static PhysicsScene Space;
     static Mesh Hull;
+    static string Output;
     string Role;
     int Events;
     static string F(float x) => x.ToString("R", CultureInfo.InvariantCulture);
@@ -208,6 +209,56 @@ public class GeometryEntry : MonoBehaviour
             Clear();
         }
     }
+    static void Controls()
+    {
+        foreach(int target in new[]{0,1})
+        foreach(float mass in new[]{1f,1000f})
+        foreach(float velocity in new[]{0f,-1f,-100f})
+        foreach(var mode in Modes)
+        {
+            Begin("control/dynamic/"+target+"/"+F(mass)+"/"+F(velocity)+"/"+(int)mode);
+            var a=Body("bullet",Vector3.left,0,mode);
+            var b=Body("target",Vector3.zero,target,CollisionDetectionMode.Discrete); b.mass=mass;
+            Physics.SyncTransforms(); Space.Simulate(Dt);
+            a.linearVelocity=Vector3.right*100; b.linearVelocity=Vector3.right*velocity;
+            for(Step=0;Step<4;Step++)Tick(a,b);
+            Clear();
+        }
+        foreach(bool child in new[]{false,true})
+        {
+            Begin("control/mesh-transition/"+child);
+            var root=Make("wall",Vector3.zero);
+            var owner=child?Make("mesh-child",Vector3.zero):root;
+            if(child)owner.transform.SetParent(root.transform,false);
+            var c=owner.AddComponent<MeshCollider>(); c.sharedMesh=BoxMesh(new Vector3(.025f,2,2));
+            Physics.SyncTransforms();
+            var wall=root.AddComponent<Rigidbody>(); wall.useGravity=false;
+            var receiver=root.AddComponent<GeometryEntry>(); receiver.Role="wall";
+            for(int phase=0;phase<3;phase++)
+            {
+                wall.isKinematic=phase!=1;
+                Physics.SyncTransforms();
+                Row(Scenario+"/"+phase+"/ray",Physics.Raycast(Vector3.left,Vector3.right,out var hit,2)?hit.collider.name:"none");
+            }
+            var a=Body("bullet",Vector3.left,0,CollisionDetectionMode.ContinuousDynamic);
+            Physics.SyncTransforms(); Space.Simulate(Dt); a.linearVelocity=Vector3.right*100;
+            for(Step=0;Step<4;Step++)Tick(a,wall);
+            Clear();
+        }
+        Begin("control/mesh-convex-transition");
+        var go=Make("body",Vector3.zero);
+        var collider=go.AddComponent<MeshCollider>(); collider.sharedMesh=BoxMesh(new Vector3(.1f,.2f,.3f));
+        Physics.SyncTransforms();
+        var moving=go.AddComponent<Rigidbody>(); moving.useGravity=false; moving.linearDamping=0;
+        go.AddComponent<GeometryEntry>().Role="body";
+        moving.isKinematic=true; Physics.SyncTransforms();
+        collider.convex=true; moving.isKinematic=false;
+        moving.linearVelocity=Vector3.right;
+        for(Step=0;Step<3;Step++)Tick(moving);
+        collider.convex=false; moving.isKinematic=true;
+        moving.MovePosition(Vector3.right); Step=3; Tick(moving);
+        Clear();
+    }
     IEnumerator FixedSteps()
     {
         Space=Physics.defaultPhysicsScene;
@@ -225,7 +276,7 @@ public class GeometryEntry : MonoBehaviour
     }
     static void Save(int code)
     {
-        File.WriteAllLines(Environment.GetEnvironmentVariable("PHYSICS_GEOMETRY_OUT"),Lines);
+        File.WriteAllLines(Output,Lines);
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(code);
 #else
@@ -235,10 +286,14 @@ public class GeometryEntry : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run()
     {
-        if(string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PHYSICS_GEOMETRY_OUT")))return;
+        Output=Environment.GetEnvironmentVariable("PHYSICS_GEOMETRY_OUT");
+        string controls=Environment.GetEnvironmentVariable("PHYSICS_GEOMETRY_CONTROL_OUT");
+        if(!string.IsNullOrEmpty(controls))Output=controls;
+        if(string.IsNullOrEmpty(Output))return;
         Time.fixedDeltaTime=Dt; Physics.simulationMode=SimulationMode.Script; Space=Physics.defaultPhysicsScene;
         try
         {
+            if(!string.IsNullOrEmpty(controls)) { Controls(); Row("complete","yes"); Save(0); return; }
             StaticMatrix(); DynamicMatrix(); Tuning();
             var previous=SceneManager.GetActiveScene();
             var scene=SceneManager.CreateScene("geometry-kinematics",new CreateSceneParameters(LocalPhysicsMode.Physics3D));

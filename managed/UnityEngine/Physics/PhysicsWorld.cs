@@ -314,6 +314,7 @@ namespace Unbound.Runtime
                 EnableEnhancedDeterminism = Physics.s_EnableEnhancedDeterminism ? 1 : 0,
                 EnablePcm = Physics.s_EnablePcm ? 1 : 0,
                 ImprovedPatchFriction = Physics.s_ImprovedPatchFriction ? 1 : 0,
+                CcdDiscreteDynamicTargets = Compat.CcdDiscreteDynamicTargetsMeasured ? 1 : 0,
             };
             if (!s_ContactModifyRegistered)
             {
@@ -627,6 +628,19 @@ namespace Unbound.Runtime
         static void FlushCurrent()
         {
             s_StructureDirty = false;
+            // Triangle meshes can simulate on a static or kinematic actor, but not a dynamic
+            // one. Drop them before changing to dynamic and retry previously rejected meshes
+            // when changing back to kinematic (physicsccdhinge geometry-controls).
+            // Use one collider pass, rather than scanning the world for each changed body.
+            for (int i = 0; i < s_Colliders.Count; i++)
+            {
+                var c = s_Colliders[i];
+                var rb = c.m_AttachedBody;
+                if (rb == null || !rb.m_BodyTypeDirty || !(c is MeshCollider mesh) || mesh.m_Convex && !c.m_ShapeDirty) continue;
+                // A pending convex edit can still have the previous triangle shape attached.
+                if (!rb.m_IsKinematic) DestroyShape(c);
+                c.m_ShapeDirty = true;
+            }
             for (int i = 0; i < s_Rigidbodies.Count; i++)
             {
                 var rb = s_Rigidbodies[i];
@@ -652,6 +666,7 @@ namespace Unbound.Runtime
                 // New kinematic bodies become kinematic once their shapes are in (Unity creates the
                 // body, attaches the colliders, then applies isKinematic: PhysX orders the pairs by it).
                 ApplyPendingKinematic(rb);
+                rb.m_BodyTypeDirty = false;
                 if (rb.m_MassDirty) rb.ApplyMass();
             }
             BuildJoints();

@@ -16,6 +16,7 @@ from editor_runner import EditorJob, run, publish
 sys.path.insert(0, str(REPO/'tests/projects/physicsbatch'))
 from compare import load, compare as compare_rows
 from verify_results import verify
+from verify_geometry import verify as verify_geometry
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('mode', choices=['prepare', 'native', 'engine', 'publish', 'compare', 'gate'])
@@ -23,17 +24,21 @@ p.add_argument('--release', required=True)
 p.add_argument('--work', type=Path, default=Path.home()/'.cache/unbound/validation/runs/physicsccdhinge')
 p.add_argument('--label', default='engine')
 p.add_argument('--repeat-label')
+p.add_argument('--extend-reference', action='store_true', help='Append controls only if every existing value is unchanged')
 p.add_argument('--cli', type=Path)
-p.add_argument('--geometry', action='store_true', help='Extended mesh, compound and terrain CCD cases')
+suite = p.add_mutually_exclusive_group()
+suite.add_argument('--geometry', action='store_true', help='Extended mesh, compound and terrain CCD cases')
+suite.add_argument('--geometry-controls', action='store_true', help='Dynamic target and mesh type transition controls')
 a = p.parse_args()
 os.environ['UNBOUND_PROBE_UNITY_VERSION'] = a.release
-work = cache_artifact_path(a.work.resolve()) / ('geometry' if a.geometry else '')
+variant = 'geometry-controls' if a.geometry_controls else 'geometry' if a.geometry else ''
+work = cache_artifact_path(a.work.resolve()) / variant
 work.mkdir(parents=True, exist_ok=True)
 if Path(a.label).name != a.label or a.label in ('.','..'): p.error('Invalid label')
 project = work/('project-'+a.label)
 out = work/(a.label+'.tsv')
-ref = reference_root(ROOT)/'geometry.tsv' if a.geometry else reference_file(ROOT, 'tsv')
-output_variable = 'PHYSICS_GEOMETRY_OUT' if a.geometry else 'PHYSICS_PROBE_OUT'
+ref = reference_root(ROOT)/(variant+'.tsv') if variant else reference_file(ROOT, 'tsv')
+output_variable = 'PHYSICS_GEOMETRY_CONTROL_OUT' if a.geometry_controls else 'PHYSICS_GEOMETRY_OUT' if a.geometry else 'PHYSICS_PROBE_OUT'
 
 def prepare():
     if project.exists(): raise SystemExit('Project exists: '+str(project))
@@ -57,7 +62,12 @@ def compare(classify=False):
     report=compare_rows(expected,actual)
     (work/(a.label+'-comparison.json')).write_text(json.dumps(report,indent=2)+'\n')
     print(f"physicsccdhinge: {report['total']-len(report['failures'])}/{report['total']} records match; {len(report['failures'])} differences")
-    if not classify or a.geometry: return bool(report['failures'])
+    if not classify: return bool(report['failures'])
+    if a.geometry:
+        result = verify_geometry(expected,actual,report)
+        (work/(a.label+'-verification.json')).write_text(json.dumps(result,indent=2)+'\n')
+        print(f"physicsccdhinge: geometry motion gate: {result['checked_body_rows']} body rows; {len(result['unresolved'])} unexpected differences; contact trace remains a report with {len(result['contact_trace'])} raw differences; {len(result['mirrored_motion'])} reflected body rows; {len(result['open_manifold_motion'])} open mixed-compound rows")
+        return bool(result['unresolved'])
     result = verify(expected,actual,report)
     (work/(a.label+'-verification.json')).write_text(json.dumps(result,indent=2)+'\n')
     print(f"physicsccdhinge: {len(result['unresolved'])} unresolved; {len(result['angle_roundoff'])} angle roundoff; {len(result['resting_velocity_roundoff'])} resting velocity roundoff; {len(result['pair_orientation'])} pair orientation rows retained")
@@ -80,7 +90,13 @@ elif a.mode=='publish':
     def write(target,first):
         target.parent.mkdir(parents=True,exist_ok=True)
         shutil.copy2(first/'capture.tsv',target)
-    publish(directories,ref,lambda directory:['capture.tsv'],write,complete=[complete],gpu=True)
+    target = work/(a.label+'-validated-reference.tsv') if a.extend_reference else ref
+    publish(directories,target,lambda directory:['capture.tsv'],write,complete=[complete],gpu=True)
+    if a.extend_reference:
+        previous,extended=load(ref),load(target)
+        if any(extended.get(key)!=value for key,value in previous.items()):
+            raise SystemExit('Extension would change an existing reference value')
+        shutil.copy2(target,ref)
 elif a.mode=='engine':engine()
 elif a.mode=='compare':raise SystemExit(compare())
 elif a.mode=='gate':
