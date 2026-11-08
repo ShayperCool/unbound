@@ -116,8 +116,6 @@ namespace Unbound.Runtime
             // Only sent while the parent's RectTransform.sendChildDimensionsChange is true, which
             // Unbound does not implement (a generated stub).
             (typeof(MonoBehaviour), "OnChildRectTransformDimensionsChange"),
-            // No IK pass calls state behaviours; OnAnimatorIK is sent.
-            (typeof(StateMachineBehaviour), "OnStateIK"),
         };
 
         internal static System.Collections.Generic.IReadOnlyList<(Type Host, string Name)> NotSent => s_NotSent;

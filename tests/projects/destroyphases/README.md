@@ -79,8 +79,6 @@ functional residual, not an insignificant numerical difference.
 The comparator prints the entire ordered raw delta. Its comparison view names
 only these residuals, with bounds checked by `test_compare.py`:
 
-- IK currently originates at animation-begin instead of animation-end.
-  Frame, state and callback count remain checked.
 - In the delayed-fraction control, time resumes after a paused frame. The particle
   renderer becomes visible on its first simulation step in the Editor and one
   frame earlier in Unbound. Only the two captured first-frame visibility-count

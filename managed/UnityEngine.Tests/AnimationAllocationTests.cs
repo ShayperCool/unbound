@@ -9,7 +9,7 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
-    /// <summary>The Animators' per-frame update (<see cref="AnimationSystem.TickAnimators"/>)
+    /// <summary>The Animators' per-frame update (<see cref="AnimationSystem.TickAnimators"/> and its End leaf)
     /// allocates nothing once warm: controllers with their behaviour, move and event bookkeeping,
     /// playable clip and mixer outputs, humanoid mixer root motion, and the culled
     /// visibility-return record. The playable graphs' own passes around it
@@ -33,7 +33,7 @@ namespace UnityEngine.Tests
             PlayableGraphData.UpdateAll();
             PlayableGraphData.ProcessOtherOutputs();
             long before = GC.GetAllocatedBytesForCurrentThread();
-            AnimationSystem.TickAnimators(fixedStep: false);
+            AnimationTestLoop.Tick();
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
             PlayableGraphData.DeliverAllNotifications();
             return allocated;
@@ -47,7 +47,7 @@ namespace UnityEngine.Tests
             PlayableGraphData.UpdateAll();
             if (manual.IsValid()) manual.Evaluate(0.02f);
             PlayableGraphData.ProcessOtherOutputs();
-            AnimationSystem.TickAnimators(fixedStep: false);
+            AnimationTestLoop.Tick();
             PlayableGraphData.DeliverAllNotifications();
             PlayableGraphData.LateUpdate();
             return GC.GetAllocatedBytesForCurrentThread() - before;

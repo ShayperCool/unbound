@@ -145,15 +145,28 @@ namespace Unbound.Runtime.Humanoid
         /// <summary>Set while OnAnimatorIK runs (the IK API is meant for it).</summary>
         internal bool InIKPass;
 
-        /// <summary>After the layers are written: the pose of the muscle values onto the skeleton.
-        /// The retargeted pose is written, then each layer with an IK pass sends OnAnimatorIK and the
-        /// IK solve applies the goals set there, as the Editor's Animator does.</summary>
+        /// <summary>After the layers are written: the pose of the muscle values onto the skeleton,
+        /// then each layer with an IK pass (<see cref="RunIK"/>), as the Editor's Animator does in an
+        /// explicit evaluation. The player loop runs the IK passes of all Animators layer by layer
+        /// instead (<see cref="Unbound.Runtime.AnimationPhases"/>).</summary>
         /// <paramref name="playableIK"/>: playable outputs request an IK pass on the base layer;
         /// the controller's layers request theirs by their IK pass setting.
         internal void Apply(Unbound.Runtime.AnimatorPlayer player, bool playableIK)
         {
-            int layerCount = Math.Max(playableIK ? 1 : 0, player?.Layers.Length ?? 0);
-            if (!m_Dirty) return;
+            int layers = ApplyPose(player, playableIK);
+            for (int layer = 0; layer < layers; layer++) RunIK(layer);
+        }
+
+        Unbound.Runtime.AnimatorPlayer m_IKPlayer;
+        bool m_IKPlayable;
+        int m_IKLayers;
+
+        /// <summary>Retargets and writes the pose the layers wrote, before any IK pass. Returns the
+        /// number of layers whose IK pass <see cref="RunIK"/> may run (0 when nothing was posed).</summary>
+        internal int ApplyPose(Unbound.Runtime.AnimatorPlayer player, bool playableIK)
+        {
+            m_IKLayers = 0;
+            if (!m_Dirty) return 0;
             m_Dirty = false;
             var human = m_Constant.Human;
             HumanClipImport.PoseFromCurves(m_Values, m_Present, m_Pose);
@@ -171,23 +184,37 @@ namespace Unbound.Runtime.Humanoid
             HumanIK.EvaluateIK(human, Output, m_W0, m_W1, m_W2, true, out _, out _);
             HumanIK.EvaluateEnd(m_Constant, AvatarX(), m_W0, m_W1, m_W2, m_AvatarPose);
             Write();
-            for (int layer = 0; layer < layerCount; layer++)
+            m_IKPlayer = player;
+            m_IKPlayable = playableIK;
+            m_IKLayers = Math.Max(playableIK ? 1 : 0, player?.Layers.Length ?? 0);
+            return m_IKLayers;
+        }
+
+        /// <summary>How many layers the last <see cref="ApplyPose"/> may run an IK pass on.</summary>
+        internal int IKLayers => m_IKLayers;
+
+        /// <summary>Whether the last <see cref="ApplyPose"/> requested an IK pass on a layer.</summary>
+        internal bool HasIKPass(int layer) => layer < m_IKLayers
+            && (layer == 0 && m_IKPlayable || m_IKPlayer != null && layer < m_IKPlayer.Layers.Length && m_IKPlayer.Layers[layer].Def.IKPass);
+
+        /// <summary>One layer's IK pass: OnAnimatorIK(layer), then OnStateIK of that layer's
+        /// states, then the solve of the goals they set (6000.0.71f1, tests/projects/animcallbacks).</summary>
+        internal void RunIK(int layer)
+        {
+            if (!HasIKPass(layer)) return;
+            InIKPass = true;
+            try
             {
-                if (!(layer == 0 && playableIK || player != null && layer < player.Layers.Length && player.Layers[layer].Def.IKPass))
-                    continue;
-                InIKPass = true;
-                try
-                {
-                    SendOnAnimatorIK(layer);
-                }
-                finally
-                {
-                    InIKPass = false;
-                }
-                HumanIK.EvaluateIK(human, Output, m_W0, m_W1, m_W2, false, out _, out _);
-                HumanIK.EvaluateEnd(m_Constant, AvatarX(), m_W0, m_W1, m_W2, m_AvatarPose);
-                Write();
+                SendOnAnimatorIK(layer);
+                if (m_IKPlayer != null && m_IKPlayer.Attached) m_IKPlayer.InvokeStateIK(m_Animator, layer);
             }
+            finally
+            {
+                InIKPass = false;
+            }
+            HumanIK.EvaluateIK(m_Constant.Human, Output, m_W0, m_W1, m_W2, false, out _, out _);
+            HumanIK.EvaluateEnd(m_Constant, AvatarX(), m_W0, m_W1, m_W2, m_AvatarPose);
+            Write();
         }
 
         /// <summary>The avatar root's world transform (position, rotation, lossy scale).</summary>
@@ -205,8 +232,41 @@ namespace Unbound.Runtime.Humanoid
         {
             var go = m_Animator.gameObject;
             if (go == null) return;
-            var args = new object[] { layer };
-            foreach (var behaviour in go.GetComponents<MonoBehaviour>())
+            // Reentrant IK passes (an evaluation inside OnAnimatorIK) each take their own buffers.
+            var behaviours = s_Behaviours.Count > 0 ? s_Behaviours.Pop() : new System.Collections.Generic.List<MonoBehaviour>();
+            var args = LayerArguments(layer);
+            go.GetComponents(behaviours);
+            try
+            {
+                SendOnAnimatorIK(behaviours, args);
+            }
+            finally
+            {
+                behaviours.Clear();
+                s_Behaviours.Push(behaviours);
+            }
+        }
+
+        static readonly System.Collections.Generic.Stack<System.Collections.Generic.List<MonoBehaviour>> s_Behaviours =
+            new System.Collections.Generic.Stack<System.Collections.Generic.List<MonoBehaviour>>();
+        // The callee cannot keep or change a reflection argument array: one per layer index.
+        static object[][] s_LayerArguments = Array.Empty<object[]>();
+
+        static object[] LayerArguments(int layer)
+        {
+            if (layer >= s_LayerArguments.Length)
+            {
+                var grown = new object[layer + 8][];
+                Array.Copy(s_LayerArguments, grown, s_LayerArguments.Length);
+                for (int i = s_LayerArguments.Length; i < grown.Length; i++) grown[i] = new object[] { i };
+                s_LayerArguments = grown;
+            }
+            return s_LayerArguments[layer];
+        }
+
+        void SendOnAnimatorIK(System.Collections.Generic.List<MonoBehaviour> behaviours, object[] args)
+        {
+            foreach (var behaviour in behaviours)
             {
                 if (behaviour == null || (Compat.DestroyPhasesMeasured && !behaviour.IsActiveAndEnabledNoThrow)) continue;
                 var method = s_OnAnimatorIK.GetOrAdd(behaviour.GetType(), type => ScriptMessages.Find(type, "OnAnimatorIK", new[] { typeof(int) }));
@@ -271,7 +331,7 @@ namespace UnityEngine
             var h = m_Human;
             var player = m_Player;
             if (h == null) return;
-            h.Apply(player, playableIK: false);
+            Unbound.Runtime.AnimationPhases.ApplyHuman(h, player, playableIK: false);
         }
 
         /// <summary>Applies the combined playable pose and its requested IK pass. Measured in
@@ -282,7 +342,7 @@ namespace UnityEngine
             var h = m_Human;
             var player = m_Player;
             if (h == null) return;
-            h.Apply(player, playableIK);
+            Unbound.Runtime.AnimationPhases.ApplyHuman(h, player, playableIK);
         }
     }
 }

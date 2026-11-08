@@ -36,16 +36,16 @@ namespace UnityEngine.Tests
                 AnimationSystem.BeginPlayMode();
                 animator.Update(explicitDelta);
                 float before = animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
-                AnimationSystem.UpdateAnimators(fixedStep: false);
+                AnimationTestLoop.Update(fixedStep: false);
                 Near.Equal(before, animator.GetCurrentAnimatorStateInfo(0).normalizedTime);
                 Assert.True(animator.m_Player.Ticked);
                 AnimationSystem.EndPlayModeEntry();
-                AnimationSystem.UpdateAnimators(fixedStep: false);
+                AnimationTestLoop.Update(fixedStep: false);
                 Assert.True(animator.GetCurrentAnimatorStateInfo(0).normalizedTime > before);
                 var later = Create(out var laterRoot);
                 try
                 {
-                    AnimationSystem.UpdateAnimators(fixedStep: false);
+                    AnimationTestLoop.Update(fixedStep: false);
                     Assert.True(later.GetCurrentAnimatorStateInfo(0).normalizedTime > 0);
                 }
                 finally { Object.DestroyImmediate(laterRoot); }
@@ -71,9 +71,9 @@ namespace UnityEngine.Tests
                 Time.s_DeltaTime = .02f;
                 AnimationSystem.EndPlayModeEntry();
                 animator.Play("Move", 0, .25f);
-                AnimationSystem.UpdateAnimators(fixedStep: false);
+                AnimationTestLoop.Update(fixedStep: false);
                 Near.Equal(.25f, animator.GetCurrentAnimatorStateInfo(0).normalizedTime);
-                AnimationSystem.UpdateAnimators(fixedStep: false);
+                AnimationTestLoop.Update(fixedStep: false);
                 Assert.True(animator.GetCurrentAnimatorStateInfo(0).normalizedTime > .25f);
             }
             finally
@@ -153,12 +153,12 @@ namespace UnityEngine.Tests
                 Time.s_DeltaTime = .02f;
                 AnimationSystem.BeginPlayMode();
                 animator.updateMode = AnimatorUpdateMode.Fixed;
-                AnimationSystem.UpdateAnimators(fixedStep: true);
+                AnimationTestLoop.Update(fixedStep: true);
                 Assert.True(animator.GetCurrentAnimatorStateInfo(0).normalizedTime > 0);
                 animator.updateMode = AnimatorUpdateMode.Normal;
                 float before = animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
                 ProjectInfo.UnityVersion = "6000.0.72f1";
-                AnimationSystem.UpdateAnimators(fixedStep: false);
+                AnimationTestLoop.Update(fixedStep: false);
                 Assert.True(animator.GetCurrentAnimatorStateInfo(0).normalizedTime > before);
             }
             finally

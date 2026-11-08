@@ -572,17 +572,32 @@ namespace Unbound.Runtime.Playables
         /// in Unity 6000.0.71f1 (animculling): CullUpdateTransforms keeps time, events and movement
         /// but holds script fields and the pose, except for curves on the Animator's root itself.
         /// On visibility return the combined pose is written without another time/event step.</summary>
-        internal static void Run(Animator animator, List<(PlayableOutputData Output, double Dt, bool Seek)> outputs, bool suppressMovement = false)
+        /// <paramref name="deferPhases"/>: the player loop's automatic update, whose movement and
+        /// write wait for <see cref="AnimationPhases"/>; explicit evaluations run all at once.
+        internal static void Run(Animator animator, List<(PlayableOutputData Output, double Dt, bool Seek)> outputs,
+            bool suppressMovement = false, bool deferPhases = false)
         {
             if (animator == null || outputs.Count == 0) return;
             var bindings = animator.StreamBindings;
             if (bindings == null) return;
             var e = Rent(animator, bindings);
-            try { Run(e, animator, bindings, outputs, suppressMovement); }
+            PendingOutput pending;
+            try { pending = Run(e, animator, bindings, outputs, suppressMovement); }
             finally { Release(e); }
+            if (deferPhases && AnimationPhases.Split)
+            {
+                AnimationPhases.Defer(animator, pending);
+                return;
+            }
+            try
+            {
+                pending.Move();
+                pending.Write(animator.isActiveAndEnabled);
+            }
+            finally { pending.Release(); }
         }
 
-        static void Run(AnimationEvaluation e, Animator animator, AnimationBindings bindings,
+        static PendingOutput Run(AnimationEvaluation e, Animator animator, AnimationBindings bindings,
             List<(PlayableOutputData Output, double Dt, bool Seek)> outputs, bool suppressMovement)
         {
             if (outputs.Count > 1) outputs.Sort(static (a, b) =>
@@ -652,7 +667,16 @@ namespace Unbound.Runtime.Playables
                 result.BodyMotion = HumanRootMotion.Override(result.BodyMotion, s.BodyMotion, o.Weight);
                 AnimStream.Return(s);
             }
-            AnimatorRootMotion? humanMotion = null;
+            var pending = PendingOutput.Rent();
+            pending.Animator = animator;
+            pending.Result = result;
+            pending.Mode = e.MotionMode;
+            pending.Motion = motion;
+            pending.DeltaTime = motionDeltaTime;
+            pending.SuppressMovement = suppressMovement;
+            pending.ControllerMovement = withController && animator.m_Player.DeferOutput;
+            pending.PlayableIK = e.PlayableIK;
+            pending.Manual = AnyManual(outputs);
             if (e.MotionMode == RootMotionMode.Human)
             {
                 // The same sample and feet-pivot memory as controller-driven humanoid motion.
@@ -663,27 +687,16 @@ namespace Unbound.Runtime.Playables
                 // (6000.0.71f1, animculling humanMixerMotion and humanMixerShape).
                 var retained = step;
                 retained.Delta = result.BodyMotion.Delta;
-                humanMotion = retained;
-                ApplyHumanRootMotion(animator, step, dispatch: !suppressMovement);
+                pending.HumanStep = step;
+                pending.HumanMotion = retained;
+                pending.HumanWeights = MixerKind.TreeWeights(outputs[0].Output.Source);
             }
-            else if (e.MotionMode == RootMotionMode.Compute) ApplyRootMotion(animator, result, motion, motionDeltaTime, dispatch: !suppressMovement);
-            else if (!suppressMovement && withController && animator.m_Player.DeferOutput) animator.m_Player.ProcessRootMotion();
-            bool culled = animator.cullingMode != AnimatorCullingMode.AlwaysAnimate && !Animator.AnyRendererVisible(animator.gameObject);
-            WriteOutput(animator, result, culled, e.PlayableIK);
-            if (animator.isActiveAndEnabled)
-            {
-                var culledPose = AnimationOutputs.RememberCulled(animator, result, motion, motionDeltaTime, e.MotionMode, e.PlayableIK,
-                    AnyManual(outputs), humanMotion);
-                culledPose.HumanWeights = humanMotion.HasValue ? MixerKind.TreeWeights(outputs[0].Output.Source) : 0;
-                e.VisibilityEvents(culledPose.Events);
-            }
-            else
-            {
-                AnimationOutputs.ForgetCulled(animator);
-                AnimStream.Return(result);
-            }
+            e.VisibilityEvents(pending.Events);
             if (withController) evaluatedPlayer.Ticked = true;
+            // Clip events and the controller's state callbacks precede movement and the write
+            // (6000.0.71f1, tests/projects/animcallbacks).
             e.AfterWrite();
+            return pending;
         }
 
         internal static void WriteOutput(Animator animator, AnimStream result, bool culled, bool playableIK, bool preserveRoot = false)
@@ -849,6 +862,66 @@ namespace Unbound.Runtime.Playables
                     s.ObjectAnimated[c] = true;
                 }
             }
+        }
+    }
+
+    /// <summary>One Animator's evaluated playable outputs between their evaluation and their
+    /// movement and write (<see cref="AnimationPhases"/>); pooled.</summary>
+    internal sealed class PendingOutput
+    {
+        internal Animator Animator;
+        internal AnimStream Result;
+        internal RootMotionMode Mode;
+        internal RootMotionStep Motion;
+        internal AnimatorRootMotion HumanStep;
+        internal AnimatorRootMotion? HumanMotion;
+        internal float DeltaTime;
+        internal bool SuppressMovement, ControllerMovement, PlayableIK, Manual;
+        internal int HumanWeights;
+        internal readonly List<ClipEventInterval> Events = new List<ClipEventInterval>();
+
+        static readonly Stack<PendingOutput> s_Free = new Stack<PendingOutput>();
+
+        internal static PendingOutput Rent() => s_Free.Count > 0 ? s_Free.Pop() : new PendingOutput();
+
+        /// <summary>Movement: OnAnimatorMove (or builtin root motion) with this evaluation's deltas.</summary>
+        internal void Move()
+        {
+            if (Result == null) return;
+            if (Mode == RootMotionMode.Human) AnimationEvaluation.ApplyHumanRootMotion(Animator, HumanStep, dispatch: !SuppressMovement);
+            else if (Mode == RootMotionMode.Compute) AnimationEvaluation.ApplyRootMotion(Animator, Result, Motion, DeltaTime, dispatch: !SuppressMovement);
+            else if (!SuppressMovement && ControllerMovement) Animator.m_Player?.ProcessRootMotion();
+        }
+
+        /// <summary>Writes the pose (with its IK pass) and keeps it for a later visibility return;
+        /// a disabled Animator only drops its retained sample.</summary>
+        internal void Write(bool live)
+        {
+            var result = Result;
+            if (result == null) return;
+            Result = null;
+            if (!live)
+            {
+                AnimationOutputs.ForgetCulled(Animator);
+                AnimStream.Return(result);
+                return;
+            }
+            bool culled = Animator.cullingMode != AnimatorCullingMode.AlwaysAnimate && !Animator.AnyRendererVisible(Animator.gameObject);
+            AnimationEvaluation.WriteOutput(Animator, result, culled, PlayableIK);
+            var culledPose = AnimationOutputs.RememberCulled(Animator, result, Motion, DeltaTime, Mode, PlayableIK, Manual, HumanMotion);
+            culledPose.HumanWeights = HumanMotion.HasValue ? HumanWeights : 0;
+            culledPose.Events.Clear();
+            culledPose.Events.AddRange(Events);
+        }
+
+        internal void Release()
+        {
+            if (Result != null) AnimStream.Return(Result);
+            Result = null;
+            Animator = null;
+            HumanMotion = null;
+            Events.Clear();
+            s_Free.Push(this);
         }
     }
 
@@ -1072,22 +1145,26 @@ namespace Unbound.Runtime.Playables
             s_FreeLists.Push(list);
         }
 
-        internal static void RunPending(Animator animator)
+        internal static void RunPending(Animator animator, bool deferPhases = false)
         {
             if (s_Pending.Count == 0 || !s_Pending.TryGetValue(animator, out var list)) return;
             s_Pending.Remove(animator);
-            try { AnimationEvaluation.Run(animator, list); }
+            try { AnimationEvaluation.Run(animator, list, deferPhases: deferPhases); }
             catch (Exception e) { Debug.LogException(e, animator); }
             finally
             {
-                if (animator.m_Player != null) animator.m_Player.DeferOutput = false;
+                if (animator.m_Player != null)
+                {
+                    animator.m_Player.DeferOutput = false;
+                    animator.m_Player.RunDeferredCallbacks();
+                }
                 ReturnList(list);
             }
         }
 
         /// <summary>Every pending output (PlayableGraph.Evaluate, and Animators the update skipped).
         /// Evaluations can queue more reentrantly, so each call takes its own batch.</summary>
-        internal static void RunAllPending()
+        internal static void RunAllPending(bool deferPhases = false)
         {
             if (s_Pending.Count == 0) return;
             var all = s_FreeBatches.Count > 0 ? s_FreeBatches.Pop() : new List<KeyValuePair<Animator, List<(PlayableOutputData, double, bool)>>>();
@@ -1098,7 +1175,7 @@ namespace Unbound.Runtime.Playables
                 foreach (var pair in all)
                 {
                     if (pair.Key == null) continue;
-                    try { AnimationEvaluation.Run(pair.Key, pair.Value); }
+                    try { AnimationEvaluation.Run(pair.Key, pair.Value, deferPhases: deferPhases); }
                     catch (Exception e) { Debug.LogException(e, pair.Key); }
                 }
             }

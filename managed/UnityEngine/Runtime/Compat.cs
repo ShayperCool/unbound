@@ -214,6 +214,14 @@ namespace Unbound.Runtime
         /// releases keep the general miter rules.</summary>
         internal static bool LineOpenStripJoinsMeasured => RenderingMeasured;
 
+        /// <summary>The automatic Animator update split over two player-loop leaves (state machines,
+        /// events and movement in DirectorUpdateAnimationBegin; pose writes and IK passes, layer by
+        /// layer over all Animators, in DirectorUpdateAnimationEnd; the fixed-step leaves likewise),
+        /// measured by tests/projects/animcallbacks on exactly 6000.0.71f1
+        /// (<see cref="AnimationPhases"/>). Other releases keep Unbound's earlier single pass in the
+        /// Begin leaf (unmeasured there).</summary>
+        internal static bool AnimationUpdateSplitMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Humanoid root motion composed by mixer trees (any input count and nesting,
         /// input weights summing to one in each mixer, weights changed between evaluations),
         /// measured by animculling humanMixerMotion/humanMixerShape on exactly 6000.0.71f1.

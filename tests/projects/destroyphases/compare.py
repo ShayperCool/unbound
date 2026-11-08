@@ -38,10 +38,6 @@ def project_case(rows):
             if row['detail'] == expected:
                 row['detail'] = expected.replace("'ParticleSystem'", "'UnityEngine.ParticleSystem'")
                 notes.append('destroyed-object diagnostic type qualification')
-        # IK's remaining leaf-location residual does not excuse a changed frame or state.
-        if row['case'] == 'OnAnimatorIK' and phase == 'PreLateUpdate.DirectorUpdateAnimationBegin':
-            row['phase'] = 'PreLateUpdate.DirectorUpdateAnimationEnd'
-            notes.append('IK callback leaf')
         if event == 'returned':
             pending = fields(row['detail']).get('scriptEnabled') == 'false'
         if event.endswith('.OnDestroy'):

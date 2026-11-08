@@ -8,7 +8,8 @@ namespace Unbound.Runtime
     /// <summary>
     /// Runs the enabled animation components where Unity's player loop does: Animators in
     /// PreLateUpdate.DirectorUpdateAnimationBegin (frame time, or unscaled time) and in
-    /// FixedUpdate.DirectorFixedUpdate (AnimatorUpdateMode.Fixed); legacy Animations in
+    /// FixedUpdate.DirectorFixedUpdate (AnimatorUpdateMode.Fixed), their writes and IK passes in
+    /// the matching End and PostPhysics leaves (<see cref="AnimationPhases"/>); legacy Animations in
     /// PreLateUpdate.LegacyAnimationUpdate and FixedUpdate.LegacyFixedAnimationUpdate (animatePhysics).
     /// The systems are registered when the first component is enabled.
     /// </summary>
@@ -40,6 +41,9 @@ namespace Unbound.Runtime
             s_Registered = true;
             PlayerLoopDriver.Register(typeof(PL.PreLateUpdate.DirectorUpdateAnimationBegin), () => UpdateAnimators(fixedStep: false));
             PlayerLoopDriver.Register(typeof(PL.FixedUpdate.DirectorFixedUpdate), () => UpdateAnimators(fixedStep: true));
+            // The automatic update's pose writes and IK passes (AnimationPhases).
+            PlayerLoopDriver.Register(typeof(PL.PreLateUpdate.DirectorUpdateAnimationEnd), AnimationPhases.WritePoses);
+            PlayerLoopDriver.Register(typeof(PL.FixedUpdate.DirectorFixedUpdatePostPhysics), AnimationPhases.WritePoses);
             PlayerLoopDriver.Register(typeof(PL.PreLateUpdate.LegacyAnimationUpdate), () => UpdateAnimations(fixedStep: false));
             PlayerLoopDriver.Register(typeof(PL.FixedUpdate.LegacyFixedAnimationUpdate), () => UpdateAnimations(fixedStep: true));
         }
@@ -64,6 +68,7 @@ namespace Unbound.Runtime
         {
             if (!fixedStep) Unbound.Runtime.Playables.PlayableGraphData.ProcessOtherOutputs();
             TickAnimators(fixedStep);
+            AnimationPhases.DeliverMovement();
         }
 
         /// <summary>The Animators' own update: controllers, then their pending playable outputs.</summary>
@@ -91,9 +96,9 @@ namespace Unbound.Runtime
                     Debug.LogException(e, a);
                 }
                 // Playable outputs combine with the Animator controller's deferred pose and motion.
-                if (!fixedStep) Unbound.Runtime.Playables.AnimationOutputs.RunPending(a);
+                if (!fixedStep) Unbound.Runtime.Playables.AnimationOutputs.RunPending(a, deferPhases: true);
             }
-            if (!fixedStep) Unbound.Runtime.Playables.AnimationOutputs.RunAllPending();
+            if (!fixedStep) Unbound.Runtime.Playables.AnimationOutputs.RunAllPending(deferPhases: true);
         }
 
         internal static void UpdateAnimations(bool fixedStep)

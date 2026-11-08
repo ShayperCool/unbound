@@ -74,6 +74,10 @@ namespace Unbound.Runtime
         /// <summary>The source of a transition that completed in this update (see
         /// <see cref="AnimatorPlayer.BuildLayerPoses"/>); null otherwise.</summary>
         internal StateRun Completed;
+        /// <summary>The current and next states before this update's step: the states an
+        /// update's OnStateMove and OnStateIK still reach after they exit, and the order of its
+        /// state callbacks (see <see cref="AnimatorPlayer.OrderCallbacks"/>).</summary>
+        internal StateRun PreviousCurrent, PreviousNext;
     }
 
     /// <summary>Play / CrossFade requests: they take effect at the layer's next update, as in Unity.</summary>
@@ -384,6 +388,8 @@ namespace Unbound.Runtime
             {
                 var layer = Layers[i];
                 if (layer.Def.SyncedLayerIndex >= 0) continue;
+                layer.PreviousCurrent = layer.Current;
+                layer.PreviousNext = layer.Next;
                 Step(layer, i, dt);
             }
         }
@@ -405,14 +411,20 @@ namespace Unbound.Runtime
                 return;
             }
             FireEvents();
-            QueueUpdates();
+            OrderCallbacks();
             foreach (var layer in Layers)
             {
                 if (layer.Current != null) { layer.Current.Fresh = false; layer.Current.EnteredThisUpdate = false; }
                 if (layer.Next != null) { layer.Next.Fresh = false; layer.Next.EnteredThisUpdate = false; }
             }
+            // With pending playable outputs, their clip events fire first (6000.0.71f1,
+            // tests/projects/animcallbacks): AnimationOutputs.RunPending runs these afterwards.
+            if (DeferOutput) return;
             RunCallbacks();
         }
+
+        /// <summary>The state callbacks an update with pending playable outputs held back.</summary>
+        internal void RunDeferredCallbacks() => RunCallbacks();
 
         /// <summary>The controller's pose as an animation stream (a controller playable): layers
         /// over the stream's values (the default values), as <see cref="PoseWriter.WriteLayers"/>
@@ -1005,6 +1017,8 @@ namespace Unbound.Runtime
 
         void Evaluate()
         {
+            // A later evaluation replaces a deferred write (an explicit update between the leaves).
+            m_PendingWrite = false;
             int count = BuildLayerPoses();
             ComputeRootMotion(count);
             AfterEvaluate();
@@ -1015,8 +1029,34 @@ namespace Unbound.Runtime
                 WritePose(count, stream: m_DeferredPose);
                 return;
             }
+            if (m_AutomaticUpdate && Attached && AnimationPhases.Split)
+            {
+                // Movement after every Animator's state machines; the write in the End leaf.
+                m_PendingWrite = true;
+                m_PendingCount = count;
+                m_PendingSkipWrites = SkipWrites;
+                AnimationPhases.Defer(m_Animator, this);
+                return;
+            }
             ProcessRootMotion();
             WritePose(count, SkipWrites);
+        }
+
+        bool m_PendingWrite, m_PendingSkipWrites;
+        int m_PendingCount;
+
+        /// <summary>The deferred update's movement (<see cref="AnimationPhases"/>).</summary>
+        internal void DeliverDeferredMovement()
+        {
+            if (m_PendingWrite) ProcessRootMotion();
+        }
+
+        /// <summary>The deferred update's write and IK (<see cref="AnimationPhases"/>).</summary>
+        internal void WriteDeferred()
+        {
+            if (!m_PendingWrite) return;
+            m_PendingWrite = false;
+            WritePose(m_PendingCount, m_PendingSkipWrites);
         }
 
         void WritePose(int count, bool skipTransforms = false, Unbound.Runtime.Playables.AnimStream stream = null)
@@ -1704,7 +1744,7 @@ namespace Unbound.Runtime
                 foreach (var b in BehavioursOf(target.Layer, run.Def))
                 {
                     if (b == null) continue;
-                    m_Callbacks.Add(new StateCallback(StateCallbackKind.Enter, b, StateInfo(target.Layer, run), target.Index));
+                    m_Callbacks.Add(new StateCallback(StateCallbackKind.Enter, b, StateInfo(target.Layer, run), target.Index, run, target.Index));
                 }
             }
         }
@@ -1717,7 +1757,7 @@ namespace Unbound.Runtime
                 foreach (var b in BehavioursOf(target.Layer, run.Def))
                 {
                     if (b == null) continue;
-                    m_Callbacks.Add(new StateCallback(StateCallbackKind.Exit, b, StateInfo(target.Layer, run), target.Index));
+                    m_Callbacks.Add(new StateCallback(StateCallbackKind.Exit, b, StateInfo(target.Layer, run), target.Index, run, target.Index));
                 }
             }
         }
@@ -1729,7 +1769,7 @@ namespace Unbound.Runtime
                 var b = Instance(asset);
                 if (b == null) continue;
                 m_Callbacks.Add(new StateCallback(enter ? StateCallbackKind.MachineEnter : StateCallbackKind.MachineExit,
-                    b, default, machine.FullPathHash));
+                    b, default, machine.FullPathHash, null, Array.IndexOf(Layers, layer)));
             }
         }
 
@@ -1742,22 +1782,81 @@ namespace Unbound.Runtime
                 if (Layers[i].Def.SyncedLayerIndex == index && i != index) yield return (Layers[i], i);
         }
 
-        void QueueUpdates()
+        /// <summary>Orders an update's state callbacks layer by layer. Within a layer, the states
+        /// that played before the step come first, in slot order (current, then next), each with
+        /// OnStateExit if it left, else OnStateUpdate; then the layer's other callbacks (entered
+        /// states, state machines) in the order the step queued them. A transition's start is
+        /// "Update(source), Enter(destination)" and its end "Exit(source), Update(destination)"
+        /// (6000.0.71f1, tests/projects/animcallbacks).</summary>
+        void OrderCallbacks()
         {
+            var queued = m_Callbacks;
+            var ordered = s_CallbackLists.Count > 0 ? s_CallbackLists.Pop() : new List<StateCallback>();
+            if (m_Taken.Length < queued.Count) m_Taken = new bool[Math.Max(queued.Count, m_Taken.Length * 2)];
+            Array.Clear(m_Taken, 0, queued.Count);
             for (int i = 0; i < Layers.Length; i++)
             {
                 var layer = Layers[i];
                 var source = PlayedBy(layer);
-                QueueUpdate(layer, source.Current, i);
-                QueueUpdate(layer, source.Next, i);
+                AppendPrevious(ordered, layer, source, source.PreviousCurrent, i);
+                if (source.PreviousNext != source.PreviousCurrent) AppendPrevious(ordered, layer, source, source.PreviousNext, i);
+                for (int k = 0; k < queued.Count; k++)
+                    if (!m_Taken[k] && queued[k].Layer == i) { m_Taken[k] = true; ordered.Add(queued[k]); }
+                // States neither previous nor entered in this step (none in a normal update).
+                if (source.Current != source.PreviousCurrent && source.Current != source.PreviousNext) QueueUpdate(ordered, layer, source.Current, i);
+                if (source.Next != source.PreviousCurrent && source.Next != source.PreviousNext && source.Next != source.Current)
+                    QueueUpdate(ordered, layer, source.Next, i);
             }
+            for (int k = 0; k < queued.Count; k++)
+                if (!m_Taken[k]) ordered.Add(queued[k]);
+            queued.Clear();
+            s_CallbackLists.Push(queued);
+            m_Callbacks = ordered;
         }
 
-        void QueueUpdate(LayerRun layer, StateRun run, int layerIndex)
+        bool[] m_Taken = Array.Empty<bool>();
+
+        /// <summary>A state that played before the step: its queued OnStateExit when it left,
+        /// else OnStateUpdate while it still plays.</summary>
+        void AppendPrevious(List<StateCallback> ordered, LayerRun layer, LayerRun source, StateRun run, int layerIndex)
+        {
+            if (run == null) return;
+            var queued = m_Callbacks;
+            bool exited = false;
+            for (int k = 0; k < queued.Count; k++)
+            {
+                var call = queued[k];
+                if (m_Taken[k] || call.Layer != layerIndex || call.Kind != StateCallbackKind.Exit || call.Run != run) continue;
+                m_Taken[k] = true;
+                ordered.Add(call);
+                exited = true;
+            }
+            if (!exited && (source.Current == run || source.Next == run)) QueueUpdate(ordered, layer, run, layerIndex);
+        }
+
+        void QueueUpdate(List<StateCallback> into, LayerRun layer, StateRun run, int layerIndex)
         {
             if (run == null || run.EnteredThisUpdate) return;
             foreach (var b in BehavioursOf(layer, run.Def))
-                if (b != null) m_Callbacks.Add(new StateCallback(StateCallbackKind.Update, b, StateInfo(layer, run), layerIndex));
+                if (b != null) into.Add(new StateCallback(StateCallbackKind.Update, b, StateInfo(layer, run), layerIndex, run, layerIndex));
+        }
+
+        /// <summary>The <paramref name="index"/>th state an update of the layer evaluated (null past
+        /// the last), in slot order: those that played
+        /// before its step (also when they exited in it), then those entered. OnStateMove and
+        /// OnStateIK reach each of them (6000.0.71f1, tests/projects/animcallbacks: a transition's
+        /// source still gets OnStateMove in the update that completes it).</summary>
+        static StateRun UpdateRun(LayerRun source, int index)
+        {
+            int seen = 0;
+            for (int slot = 0; slot < 4; slot++)
+            {
+                var run = slot == 0 ? source.PreviousCurrent : slot == 1 ? source.PreviousNext : slot == 2 ? source.Current : source.Next;
+                if (run == null || slot > 0 && source.PreviousCurrent == run || slot > 1 && source.PreviousNext == run
+                    || slot > 2 && source.Current == run) continue;
+                if (seen++ == index) return run;
+            }
+            return null;
         }
 
         enum StateCallbackKind : byte { Enter, Update, Exit, MachineEnter, MachineExit }
@@ -1771,13 +1870,19 @@ namespace Unbound.Runtime
             internal readonly AnimatorStateInfo Info;
             /// <summary>The layer index; for machine callbacks, the machine's full path hash.</summary>
             internal readonly int Argument;
+            /// <summary>The state (null for machine callbacks) and the layer index it was queued for.</summary>
+            internal readonly StateRun Run;
+            internal readonly int Layer;
 
-            internal StateCallback(StateCallbackKind kind, StateMachineBehaviour behaviour, AnimatorStateInfo info, int argument)
+            internal StateCallback(StateCallbackKind kind, StateMachineBehaviour behaviour, AnimatorStateInfo info, int argument,
+                StateRun run, int layer)
             {
                 Kind = kind;
                 Behaviour = behaviour;
                 Info = info;
                 Argument = argument;
+                Run = run;
+                Layer = layer;
             }
         }
 

@@ -169,19 +169,15 @@ namespace UnityEngine.Tests
                 KeysFor("ParticleJobGenericBase", "ParticleJobIntScript", "ParticleJobTextScript"));
         }
 
-        /// <summary>Checks the unsupported-message list independently of instantiation.
-        /// The plain behaviour
-        /// and StateMachineBehaviour's own virtual stay silent (GREEN at 747e3f23; red recipe:
-        /// let the walk pass StateMachineBehaviour, or drop the host check).</summary>
+        /// <summary>OnStateIK is sent (IK passes, tests/projects/animcallbacks): neither a state
+        /// behaviour implementing it nor StateMachineBehaviour's own virtual warns.</summary>
         [Fact]
-        public void WarnNotSentFlagsStateBehaviourOnStateIKOnce()
+        public void StateBehaviourOnStateIKDoesNotWarn()
         {
             WarnNotSent(typeof(IKStateBehaviour));
             WarnNotSent(typeof(IKStateDerived));
             WarnNotSent(typeof(PlainStateBehaviour));
-            Assert.Equal(new[] { Prefix + "IKStateBehaviour.OnStateIK" },
-                KeysFor("IKStateBehaviour", "IKStateDerived"));
-            Assert.Empty(KeysFor("PlainStateBehaviour"));
+            Assert.Empty(KeysFor("IKStateBehaviour", "IKStateDerived", "PlainStateBehaviour"));
             Assert.DoesNotContain(Stubs.HitReport(), h => h.Key.StartsWith("UnityEngine.StateMachineBehaviour.", StringComparison.Ordinal));
         }
 
@@ -205,7 +201,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void InstantiatingStateBehavioursWarnsForUnsupportedIKOnce()
+        public void InstantiatingStateBehavioursWithIKDoesNotWarn()
         {
             var logger = Debug.unityLogger;
             var previous = logger.logHandler;
@@ -227,8 +223,7 @@ namespace UnityEngine.Tests
                 var graph = new ControllerGraph { Layers = new[] { layer } };
                 for (int i = 0; i < 2; i++)
                     new AnimatorPlayer(animator, controller, graph).InstantiateBehaviours();
-                var message = Assert.Single(warnings.Messages, m => m.Contains("RuntimeIKStateBehaviour.OnStateIK"));
-                Assert.Contains("does not send yet", message);
+                Assert.DoesNotContain(warnings.Messages, m => m.Contains("RuntimeIKStateBehaviour"));
                 Assert.DoesNotContain(warnings.Messages, m => m.Contains("RuntimePlainStateBehaviour"));
             }
             finally
@@ -329,7 +324,7 @@ namespace UnityEngine.Tests
             (ScriptableObjectPage, "Reset", Delivery.EditorAbsent),
             (StateMachineBehaviourPage, "OnStateEnter", Delivery.Sent),
             (StateMachineBehaviourPage, "OnStateExit", Delivery.Sent),
-            (StateMachineBehaviourPage, "OnStateIK", Delivery.NotSent),
+            (StateMachineBehaviourPage, "OnStateIK", Delivery.Sent),
             (StateMachineBehaviourPage, "OnStateMachineEnter", Delivery.Sent),
             (StateMachineBehaviourPage, "OnStateMachineExit", Delivery.Sent),
             (StateMachineBehaviourPage, "OnStateMove", Delivery.Sent),
@@ -349,7 +344,7 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>A documented static assertion against the curated table above. RED at 747e3f23:
-        /// OnChildRectTransformDimensionsChange and OnStateIK are not listed. The overlap checks
+        /// OnChildRectTransformDimensionsChange is not listed. The overlap checks
         /// are guards (GREEN at 747e3f23; red recipe: list a Sent or EditorAbsent name, or a
         /// name a ScriptMessages dispatch delegate is named after).</summary>
         [Fact]
@@ -357,7 +352,7 @@ namespace UnityEngine.Tests
         {
             Assert.Equal(74, s_Documented.Length);
             Assert.Equal(s_Documented.Length, s_Documented.Select(d => (d.Page, d.Name)).Distinct().Count());
-            Assert.Equal(67, s_Documented.Count(d => d.Class == Delivery.Sent));
+            Assert.Equal(68, s_Documented.Count(d => d.Class == Delivery.Sent));
             Assert.Equal(4, s_Documented.Count(d => d.Class == Delivery.EditorAbsent));
 
             var listed = ListedNames();

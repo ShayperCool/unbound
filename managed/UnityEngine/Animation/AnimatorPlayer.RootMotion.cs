@@ -22,14 +22,15 @@ namespace Unbound.Runtime
         LayerRun PlayedBy(LayerRun layer) =>
             layer.Def.SyncedLayerIndex >= 0 && layer.Def.SyncedLayerIndex < Layers.Length ? Layers[layer.Def.SyncedLayerIndex] : layer;
 
-        /// <summary>A behaviour of a playing state handles OnStateMove.</summary>
+        /// <summary>A behaviour of a state this update evaluated handles OnStateMove.</summary>
         bool AnyStateMove()
         {
             for (int i = 0; i < Layers.Length; i++)
             {
                 var layer = Layers[i];
                 var source = PlayedBy(layer);
-                if (HandlesStateMove(layer, source.Current) || HandlesStateMove(layer, source.Next)) return true;
+                for (int k = 0; UpdateRun(source, k) is { } run; k++)
+                    if (HandlesStateMove(layer, run)) return true;
             }
             return false;
         }
@@ -42,16 +43,37 @@ namespace Unbound.Runtime
             return false;
         }
 
-        /// <summary>OnStateMove of the playing states' behaviours, layer by layer.</summary>
+        /// <summary>OnStateMove of the states this update evaluated, layer by layer.</summary>
         void InvokeStateMoves(Animator animator)
         {
             for (int i = 0; i < Layers.Length; i++)
             {
                 var layer = Layers[i];
                 var source = PlayedBy(layer);
-                StateRun current = source.Current, next = source.Next;
-                InvokeStateMove(animator, layer, current, i);
-                InvokeStateMove(animator, layer, next, i);
+                for (int k = 0; UpdateRun(source, k) is { } run; k++) InvokeStateMove(animator, layer, run, i);
+            }
+        }
+
+        /// <summary>OnStateIK of the states the layer's update evaluated (its IK pass, after
+        /// OnAnimatorIK; 6000.0.71f1, tests/projects/animcallbacks).</summary>
+        internal void InvokeStateIK(Animator animator, int layerIndex)
+        {
+            if (layerIndex < 0 || layerIndex >= Layers.Length) return;
+            var layer = Layers[layerIndex];
+            var source = PlayedBy(layer);
+            for (int k = 0; UpdateRun(source, k) is { } run; k++)
+            {
+                foreach (var b in BehavioursOf(layer, run.Def))
+                {
+                    if (b == null) continue;
+                    try
+                    {
+                        var info = StateInfo(layer, run);
+                        b.OnStateIK(animator, info, layerIndex);
+                        b.OnStateIK(animator, info, layerIndex, Playable);
+                    }
+                    catch (Exception e) { Debug.LogException(e, animator); }
+                }
             }
         }
 
