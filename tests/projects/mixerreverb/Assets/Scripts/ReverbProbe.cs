@@ -64,6 +64,7 @@ public class ReverbProbe : MonoBehaviour
         new[] { "wetmix_m69", "Room=0", "Reflections=0", "Wet=-69" },
         new[] { "wetmix_m699", "Room=0", "Reflections=0", "Wet=-69.9" },
         new[] { "startup_wet_zero", "Room=0", "Reflections=0", "Wet=-80" },
+        new[] { "startup_wet_before", "Room=0", "Reflections=0", "Wet=-6" },
     };
     public static readonly string[] Parameters = {
         "Dry Level", "Room", "Room HF", "Decay Time", "Decay HF Ratio", "Reflections", "Reflect Delay",

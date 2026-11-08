@@ -58,6 +58,12 @@ public static class ProbeRunner
             object effect = null;
             if (key != "dry_stereo")
                 effect = Effect(mixer, key == "parent_reverb" ? master : child, "SFX Reverb", ReverbProbe.Overrides(key), key == "effect_bypass" || key == "bypass_startup_effect");
+            if (key == "startup_wet_before") {
+                var chain = (Array)Get(child, "effects");
+                var attenuation = chain.GetValue(0); chain.SetValue(effect, 0); chain.SetValue(attenuation, 1);
+                Set(child, "effects", chain);
+                Call(child, "SetValueForVolume", mixer, Get(mixer, "TargetSnapshot"), -12f);
+            }
             if (key == "reverb_lp") Effect(mixer, child, "Lowpass", null);
             if (key == "group_bypass" || key == "bypass_startup_group") Set(child, "bypassEffects", true);
             if (key == "volume_reverb") Call(child, "SetValueForVolume", mixer, Get(mixer, "TargetSnapshot"), -6f);

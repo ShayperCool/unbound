@@ -1032,11 +1032,15 @@ impl Mixer {
                         && EffectKind::parse(&effect.kind).is_some_and(EffectKind::static_wet)
                 })
             }
-            let has_previous_wet = static_wet_effects(&node.spec).next().is_some();
-            let has_next_wet = static_wet_effects(&spec).next().is_some();
+            let previous_wet_count = static_wet_effects(&node.spec).count();
+            let next_wet_count = static_wet_effects(&spec).count();
             anyhow::ensure!(
-                (!has_previous_wet && !has_next_wet)
-                    || (static_wet_effects(&node.spec).eq(static_wet_effects(&spec))
+                (previous_wet_count == 0 && next_wet_count == 0)
+                    || (previous_wet_count == next_wet_count
+                        && static_wet_effects(&node.spec)
+                            .zip(static_wet_effects(&spec))
+                            .all(|((i, previous), (j, next))| i == j
+                                && previous.static_wet_settings_match(next))
                         && node.spec.bypass == spec.bypass),
                 "AudioMixer wet mixing live parameter, placement and bypass changes are unmeasured"
             );
@@ -3703,6 +3707,13 @@ mod tests {
             mixer.configure_group(changed).unwrap();
             mixer.configure_group(original.clone()).unwrap();
             mixer.group_nodes.get_mut(&1).unwrap().rendered = 1;
+            mixer.configure_group(original.clone()).unwrap();
+            // These generic fields are unused by these kernels. Group attenuation may
+            // update its gain while a slot's wet level and kernel settings remain static.
+            let mut unrelated = original.clone();
+            unrelated.effects[0].gain = 0.25;
+            unrelated.effects[0].cutoff = 1234.0;
+            mixer.configure_group(unrelated).unwrap();
             mixer.configure_group(original.clone()).unwrap();
             for edit in 0..4 {
                 let mut changed = original.clone();

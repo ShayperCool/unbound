@@ -239,6 +239,22 @@ pub struct ParamEqSpec {
     pub gain: f32,
 }
 impl EffectSpec {
+    /// Only the slot and its kernel settings are frozen. Generic payload fields such as
+    /// group gain belong to other units and must not veto their supported updates.
+    pub(crate) fn static_wet_settings_match(&self, other: &Self) -> bool {
+        self.id == other.id
+            && self.kind == other.kind
+            && self.bypass == other.bypass
+            && self.mix_level == other.mix_level
+            && self.mix_audible == other.mix_audible
+            && self.slot_wet_measured == other.slot_wet_measured
+            && self.distortion == other.distortion
+            && self.chorus == other.chorus
+            && self.flange == other.flange
+            && self.normalize == other.normalize
+            && self.pitch_shifter == other.pitch_shifter
+    }
+
     /// Parameter and resource checks that hold wherever the effect runs (group or source).
     pub(crate) fn validate(&self, rate: u32, buffer: u32) -> anyhow::Result<()> {
         if self.kind == "Echo" {
@@ -1031,8 +1047,9 @@ impl GroupNode {
             after_attenuation |= kind == EffectKind::Attenuation;
             // The static wet wrapper before Attenuation supplies the startup fade itself.
             // Moving it after Attenuation retains the group's input fade as well.
-            let wet_before_attenuation =
-                kind.static_wet() && effect.spec.mix_level.is_some() && !after_attenuation;
+            let wet_before_attenuation = effect.spec.slot_wet_measured
+                && effect.spec.mix_level.is_some()
+                && !after_attenuation;
             !wet_before_attenuation
                 && (kind.fades_in_when_bypassed()
                     || (after_attenuation && kind.fades_in_after_attenuation())
