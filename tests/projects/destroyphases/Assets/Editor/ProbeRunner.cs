@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Diagnostics;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -10,7 +11,7 @@ public static class ProbeRunner
     static ProbeRunner()
     {
         if (typeof(Camera).Assembly.GetType("Unbound.Runtime.FrameBuilder") != null) return;
-        if (Environment.GetEnvironmentVariable("DESTROY_PHASES_OUT") == null) return;
+        if (Environment.GetEnvironmentVariable("DESTROY_PHASES_OUT") == null && Environment.GetEnvironmentVariable("RENDER_LOOP_OUT") == null && Environment.GetEnvironmentVariable("FOCUS_LOOP_OUT") == null) return;
         if (SessionState.GetBool("DestroyPhases.finished", false))
         {
             EditorApplication.delayCall += () => EditorApplication.Exit(0);
@@ -38,10 +39,31 @@ public static class ProbeRunner
         };
         EditorApplication.update += wait;
     }
+    static string focusedWindow;
+    static Process focusWindow;
+    static int focusTicks;
+    static string Xdotool(string args)
+    {
+        var process = Process.Start(new ProcessStartInfo("xdotool", args) { UseShellExecute = false, RedirectStandardOutput = true });
+        string output = process.StandardOutput.ReadToEnd(); process.WaitForExit();
+        if (process.ExitCode != 0) throw new Exception("xdotool failed: " + args);
+        return output.Trim();
+    }
     static void Tick()
     {
+        if (EditorApplication.isPlaying && Environment.GetEnvironmentVariable("FOCUS_LOOP_OUT") != null)
+        {
+            if (FocusLoopProbe.Step == 1 && focusWindow == null)
+            {
+                focusedWindow = Xdotool("getwindowfocus");
+                focusWindow = Process.Start(new ProcessStartInfo("xmessage", "-title q161-focus -geometry +1000+600 focus") { UseShellExecute = false });
+                Xdotool("search --sync --onlyvisible --name q161-focus windowfocus %@");
+            }
+            if (FocusLoopProbe.Step == 2 && ++focusTicks == 20) Xdotool("windowfocus " + focusedWindow);
+            if (FocusLoopProbe.Finished && focusWindow != null && !focusWindow.HasExited) focusWindow.Kill();
+        }
         if (EditorApplication.isPaused) EditorApplication.isPaused = false;
-        if (!EditorApplication.isPlaying || !DestroyPhases.Finished) return;
+        if (!EditorApplication.isPlaying || !(DestroyPhases.Finished || RenderLoopProbe.Finished || FocusLoopProbe.Finished)) return;
         SessionState.SetBool("DestroyPhases.finished", true);
         EditorApplication.ExitPlaymode();
     }

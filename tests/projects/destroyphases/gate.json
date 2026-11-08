@@ -1,6 +1,8 @@
 {
   "commands": [
-    "python3 tests/projects/destroyphases/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION"
+    "python3 tests/projects/destroyphases/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION",
+    "python3 tests/projects/destroyphases/run.py unbound --render-loop --release $UNBOUND_PROBE_UNITY_VERSION",
+    "python3 tests/projects/destroyphases/run.py unbound --focus-loop --release $UNBOUND_PROBE_UNITY_VERSION"
   ],
   "summary": "[0-9]+/[0-9]+ records match"
 }

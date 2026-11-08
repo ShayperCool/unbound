@@ -7,6 +7,11 @@ def row(event, frame=1, phase='Update.ScriptRunDelayedDynamicFrameRate', detail=
 
 
 class ResidualBounds(unittest.TestCase):
+    def test_renderer_phase_is_strict(self):
+        expected = [row('camera.preCull', phase=compare.RENDER_PHASE)]
+        actual = [row('camera.preCull', phase='PostLateUpdate.FinishFrameRendering')]
+        self.assertNotEqual(compare.project_case(expected)[0], compare.project_case(actual)[0])
+
     def test_wrong_destroy_point_stays_a_failure(self):
         expected = [row('parent.first.OnDestroy', phase='PostLateUpdate.ScriptRunDelayedDynamicFrameRate')]
         actual = [row('parent.first.OnDestroy')]

@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -170,13 +171,19 @@ namespace Unbound.Runtime
 
         static FrameBuilder()
         {
-            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.FinishFrameRendering), Render);
+            PlayerLoopDriver.RegisterFrameRendering(Render);
+            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.FinishFrameRendering), RenderLegacyFrame);
             // The frame's drawing ends after its end-of-frame callbacks.
             PlayerLoopDriver.RegisterFrameCleanup(() => InDrawingFrame = false);
             UnityEngine.Rendering.OnDemandRendering.EnsureRegistered();
         }
 
         internal static void EnsureRegistered() { }
+
+        static void RenderLegacyFrame()
+        {
+            if (!Compat.RenderingAfterPublicLoop) Render();
+        }
 
         internal static long NextSequence() => s_Sequence++;
 
@@ -1061,7 +1068,7 @@ namespace Unbound.Runtime
         /// <summary>
         /// Renders a camera with the built-in forward pipeline, as Unity orders it: OnPreCull, culling,
         /// OnPreRender, the clear, command buffers at each camera event around the opaque and the
-        /// transparent draws, OnRenderObject, OnPostRender, then the image effects (OnRenderImage) and
+        /// transparent draws, OnPostRender, OnRenderObject, then the image effects (OnRenderImage) and
         /// the last events. Used each frame and by Camera.Render.
         /// </summary>
         internal static void RenderCamera(Camera camera, bool automatic = false, bool restoreActive = true)
@@ -1528,29 +1535,46 @@ namespace Unbound.Runtime
 
         static void SendToCamera(Camera camera, Func<ScriptMessages, Action<MonoBehaviour>> message)
         {
-            foreach (var component in camera.m_GameObject.m_Components)
-            {
-                if (component is not MonoBehaviour script || !script.IsActiveAndEnabledNoThrow) continue;
-                var action = message(ScriptMessages.For(script.GetType()));
-                if (action == null) continue;
-                try { action(script); }
-                catch (Exception e) { Debug.LogException(e, script); }
-            }
+            // Rendering callbacks cannot remove components immediately. Additions participate
+            // in this same message pass (destroyphases' manual-camera addition control).
+            var components = camera.m_GameObject.m_Components;
+            for (int i = 0; i < components.Count; i++)
+                if (components[i] is MonoBehaviour script) SendMessage(script, message);
         }
 
         /// <summary>A message every active script with it receives (OnRenderObject).</summary>
         static void SendToAll(Func<ScriptMessages, Action<MonoBehaviour>> message)
         {
-            if (Lifecycle.RenderObjectBehaviours.Count == 0) return;
-            var scripts = new MonoBehaviour[Lifecycle.RenderObjectBehaviours.Count];
-            for (int i = 0; i < scripts.Length; i++) scripts[i] = Lifecycle.RenderObjectBehaviours[i];
-            foreach (var script in scripts)
+            var components = Lifecycle.RenderObjectBehaviours;
+            int count = components.Count;
+            if (count == 0) return;
+            var scripts = ArrayPool<MonoBehaviour>.Shared.Rent(count);
+            int length = 0;
+            for (int i = 0; i < count; i++)
+                if (components[i] is MonoBehaviour script && script.IsActiveAndEnabledNoThrow)
+                    scripts[length++] = script;
+            try
             {
-                var action = message(ScriptMessages.For(script.GetType()));
-                if (action == null) continue;
-                try { action(script); }
-                catch (Exception e) { Debug.LogException(e, script); }
+                for (int i = 0; i < length; i++)
+                {
+                    var script = scripts[i];
+                    SendMessage(script, message);
+                }
             }
+            finally
+            {
+                Array.Clear(scripts, 0, length);
+                ArrayPool<MonoBehaviour>.Shared.Return(scripts);
+            }
+        }
+
+        static void SendMessage(MonoBehaviour script, Func<ScriptMessages, Action<MonoBehaviour>> message)
+        {
+            if (!script.IsActiveAndEnabledNoThrow) return;
+            var action = message(ScriptMessages.For(script.GetType()));
+            if (action == null) return;
+            try { action(script); }
+            catch (Exception e) { Debug.LogException(e, script); }
         }
 
         /// <summary>The command buffers at a camera event; the camera's target and matrices are set

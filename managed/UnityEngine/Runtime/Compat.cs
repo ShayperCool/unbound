@@ -13,6 +13,10 @@ namespace Unbound.Runtime
         /// tests/projects/destroyphases on Unity 6000.0.71f1.</summary>
         internal static bool DestroyPhasesMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Automatic rendering follows the public player loop and precedes end-of-frame
+        /// coroutine resumes, measured by destroyphases' rendering controls on 6000.0.71f1.</summary>
+        internal static bool RenderingAfterPublicLoop => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Explicit simulation mode checks and contact refresh across sub-steps,
         /// measured by physics2dadvanced on Unity 6000.0.71f1.</summary>
         internal static bool Physics2DSimulationMeasured => Release == (6000, 0, 71, 'f', 1);

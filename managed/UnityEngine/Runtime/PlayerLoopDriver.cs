@@ -70,6 +70,7 @@ namespace Unbound.Runtime
         static bool s_EndOfFrameAfterLoop;
         static bool s_AdvanceAfterLoop;
         static readonly List<Action> s_FrameCleanup = new List<Action>();
+        static Action s_FrameRendering;
         static unsafe FrameInput* s_Input;
         static readonly Dictionary<Type, List<Action>> s_Engine = new Dictionary<Type, List<Action>>();
         static PlayerLoopSystem? s_Current;
@@ -201,6 +202,13 @@ namespace Unbound.Runtime
             bool endOfFrame = s_EndOfFrameAfterLoop;
             bool advance = s_AdvanceAfterLoop;
             s_EndOfFrameAfterLoop = s_AdvanceAfterLoop = false;
+            // Automatic cameras render outside the public loop, including custom tail systems.
+            // Explicit Camera.Render calls remain synchronous at their caller's current point.
+            if (Compat.RenderingAfterPublicLoop)
+            {
+                try { s_FrameRendering?.Invoke(); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
             // In the measured Editor, these coroutine resumes follow every public loop leaf.
             // They still see the previous rendered-frame count (destroyphases, coreapis).
             if (endOfFrame && UnityEngine.Rendering.OnDemandRendering.RendersThisFrame)
@@ -215,6 +223,8 @@ namespace Unbound.Runtime
         /// <summary>Drawing cleanup and screenshot writes follow end-of-frame coroutine drawing.
         /// Other releases retain their original GUIClearEvents delivery.</summary>
         internal static void RegisterFrameCleanup(Action action) => s_FrameCleanup.Add(action);
+
+        internal static void RegisterFrameRendering(Action action) => s_FrameRendering += action;
 
         static void CleanupFrame()
         {

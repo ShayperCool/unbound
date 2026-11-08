@@ -53,6 +53,20 @@ def capture_problem(directory):
     return None
 
 
+def render_problem(directory):
+    problem = result_problem(directory, gpu=True)
+    if problem:
+        return problem
+    result = json.loads((directory / 'editor-run.json').read_text())
+    if result.get('exit_code') != 0 or result.get('forced_exit'):
+        return 'capture did not exit normally'
+    path = directory / 'values.jsonl'
+    lines = path.read_text().splitlines() if path.exists() else []
+    if not lines or lines[-1] != 'complete':
+        return 'missing render-loop completion marker'
+    return None
+
+
 def compare(reference, actual):
     left, right = reference.read_text().splitlines(), actual.read_text().splitlines()
     if left == right:
@@ -69,18 +83,23 @@ def main():
     p.add_argument('--label', default='run-' + str(time.time_ns()))
     p.add_argument('--batch', action='store_true')
     p.add_argument('--default-loop', action='store_true')
+    modes = p.add_mutually_exclusive_group()
+    modes.add_argument('--render-loop', action='store_true')
+    modes.add_argument('--focus-loop', action='store_true')
     p.add_argument('--repeat', choices=('native1', 'native2'), default='native1')
     args = p.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
     work.mkdir(parents=True, exist_ok=True)
-    reference = PROBE / 'Reference' / ('unity-' + args.release + '.jsonl')
+    companion = args.render_loop or args.focus_loop
+    output_env = 'FOCUS_LOOP_OUT' if args.focus_loop else ('RENDER_LOOP_OUT' if args.render_loop else 'DESTROY_PHASES_OUT')
+    reference = PROBE / 'Reference' / ('unity-' + args.release + ('.focusloop' if args.focus_loop else ('.renderloop' if args.render_loop else '')) + ('.txt' if companion else '.jsonl'))
     if args.mode in ('editor', 'create'):
         out = work / args.repeat
         project = work / 'projects' / args.repeat
         create = args.mode == 'create'
         if not create and args.repeat == 'native2':
-            problem = capture_problem(work / 'native1')
+            problem = render_problem(work / 'native1') if companion else capture_problem(work / 'native1')
             if problem:
                 raise SystemExit('first capture failed: ' + problem)
         prepare(project, args.release)
@@ -88,7 +107,7 @@ def main():
         result = run(EditorJob(project, out / 'editor.log', out,
             args=['-executeMethod', 'ProbeRunner.Create', '-quit'] if create else [],
             batch=create or args.batch, graphics=True, timeout=900, label='destroyphases-' + args.repeat,
-            env={} if create else {'DESTROY_PHASES_OUT': str(out / 'values.jsonl'), 'DESTROY_PHASES_DEFAULT_LOOP': '1' if args.default_loop else '0'},
+            env={} if create else {output_env: str(out / 'values.jsonl'), 'DESTROY_PHASES_DEFAULT_LOOP': '1' if args.default_loop else '0'},
             launch_inputs={'release': args.release, 'paths': {'assets': str(project / 'Assets'), 'settings': str(project / 'ProjectSettings'), 'packages': str(project / 'Packages'), 'runner': str(PROBE / 'run.py'), 'supervisor': str(REPO / 'tests/editor_runner.py')}}))
         print(summary(result))
         if result_problem(out, gpu=True) or result.get('exit_code') != 0 or result.get('forced_exit'):
@@ -99,14 +118,14 @@ def main():
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(project / 'Assets/Resources' / name, target)
         else:
-            problem = capture_problem(out)
+            problem = render_problem(out) if companion else capture_problem(out)
             if problem:
                 raise SystemExit(problem)
         return 0
     if args.mode == 'publish':
         for repeat in ('native1', 'native2'):
             out = work / repeat
-            problem = capture_problem(out)
+            problem = render_problem(out) if companion else capture_problem(out)
             if problem:
                 raise SystemExit(f'invalid capture: {repeat}: {problem}')
         first, second = (work / r / 'values.jsonl' for r in ('native1', 'native2'))
@@ -123,12 +142,15 @@ def main():
         out.mkdir()
         cli = os.environ.get('UNBOUND', os.environ.get('UNBOUND_CLI', str(REPO / 'target/release/unbound')))
         with (out / 'engine.log').open('w') as log:
-            code = subprocess.run([str(Path.home() / '.cache/compat/with-heavy-job'), '--kind', 'engine-gpu',
-                cli, 'run', '-p', str(project), '--frames', '800', '--size', '320x240', '--no-watch'],
-                env=dict(os.environ, DESTROY_PHASES_OUT=str(out / 'values.jsonl')), stdout=log, stderr=subprocess.STDOUT).returncode
+            command = ([sys.executable, str(PROBE / 'focus_host.py'), cli, str(project), str(out / 'values.jsonl')]
+                       if args.focus_loop else [cli, 'run', '-p', str(project), '--frames', '800', '--size', '320x240', '--no-watch'])
+            code = subprocess.run([str(Path.home() / '.cache/compat/with-heavy-job'), '--kind', 'engine-gpu', *command],
+                env=dict(os.environ, **{output_env: str(out / 'values.jsonl')}), stdout=log, stderr=subprocess.STDOUT).returncode
         if code:
             print((out / 'engine.log').read_text()[-3000:])
             return code
+    if companion:
+        return compare(reference, work / 'unbound/values.jsonl')
     return subprocess.run([sys.executable, str(PROBE / 'compare.py'), str(reference), str(work / 'unbound/values.jsonl')]).returncode
 
 

@@ -79,9 +79,8 @@ functional residual, not an insignificant numerical difference.
 The comparator prints the entire ordered raw delta. Its comparison view names
 only these residuals, with bounds checked by `test_compare.py`:
 
-- Renderer callbacks currently originate at FinishFrameRendering; the Editor
-  calls them after its public loop. IK currently originates at animation-begin
-  instead of animation-end. Frame, state and callback count remain checked.
+- IK currently originates at animation-begin instead of animation-end.
+  Frame, state and callback count remain checked.
 - In the delayed-fraction control, time resumes after a paused frame. The particle
   renderer becomes visible on its first simulation step in the Editor and one
   frame earlier in Unbound. Only the two captured first-frame visibility-count
@@ -97,3 +96,43 @@ only these residuals, with bounds checked by `test_compare.py`:
 
 These are reported differences, including functional ones. They are not added to
 the table of insignificant numerical residuals.
+
+## Rendering and operating-system focus controls
+
+The `--render-loop` companion has 671 trace records from two identical windowed
+Unity 6000.0.71f1 GPU Editor captures. It brackets every public loop leaf, appends
+an extra custom tail, and later removes FinishFrameRendering. Automatic built-in
+camera callbacks still follow the complete public/custom loop, then
+WaitForEndOfFrame resumes. Explicit Camera.Render calls from Update and from an
+end-of-frame coroutine run their callbacks before returning. A disabled camera
+is rendered only by those explicit calls. Disabling/re-enabling a renderer gives
+immediate invisibility and visibility during its next culling pass. Destroy from
+Update and from EOF retains the delayed scripting delivery measured above.
+Adding a camera component inside OnPreCull includes its OnPreCull in that same
+pass. Built-in rendering sends no RenderPipelineManager camera/frame events.
+Only the camera being rendered logs OnRenderObject, so the trace imposes no
+order between different receivers of that message.
+
+The [6000.0 Camera.Render API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Camera.Render.html)
+documents explicit camera rendering and its callbacks; a camera cannot render
+itself recursively. The [OnWillRenderObject API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnWillRenderObject.html)
+applies per visible camera and excludes disabled scripts. The
+[OnBecameVisible API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnBecameVisible.html)
+includes Scene view cameras. The
+[WaitForEndOfFrame API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/WaitForEndOfFrame.html)
+places resumes after cameras/GUI, warns that changing to Scene view suspends them,
+and excludes batch mode. The exact position outside the public loop is this
+release's Play Mode observation, not a guarantee for other releases or pipelines.
+The original destruction capture now checks renderer phases strictly.
+
+The `--focus-loop` companion drives xdotool and xmessage on a private X11 display
+for both a windowed GPU Editor and the real Unbound host window. After a ready
+marker, each reports focus(false), focus(true), and no pause notification. The
+four trace records are identical across independent Editor runs and the host.
+Startup notifications are kept separately in each run's `.startup` sidecar;
+`messages` continues to check startup notifications. The host is forced onto X11
+for this control, because an inherited Wayland session would bypass its private
+display. Wayland and mobile background pause behavior are not certified here.
+
+Use the normal record/publish/unbound commands above with `--render-loop` or
+`--focus-loop` and a fresh label. The engine-only gate runs all three captures.

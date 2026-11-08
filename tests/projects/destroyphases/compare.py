@@ -38,11 +38,7 @@ def project_case(rows):
             if row['detail'] == expected:
                 row['detail'] = expected.replace("'ParticleSystem'", "'UnityEngine.ParticleSystem'")
                 notes.append('destroyed-object diagnostic type qualification')
-        # Render callbacks use the existing rendering node. IK is also currently delivered at
-        # animation-begin. These leaf-location residuals do not excuse a changed frame or state.
-        if phase == 'PostLateUpdate.FinishFrameRendering':
-            row['phase'] = RENDER_PHASE
-            notes.append('render callback leaf')
+        # IK's remaining leaf-location residual does not excuse a changed frame or state.
         if row['case'] == 'OnAnimatorIK' and phase == 'PreLateUpdate.DirectorUpdateAnimationBegin':
             row['phase'] = 'PreLateUpdate.DirectorUpdateAnimationEnd'
             notes.append('IK callback leaf')
