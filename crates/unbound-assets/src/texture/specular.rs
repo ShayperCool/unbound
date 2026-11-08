@@ -323,7 +323,14 @@ fn bilinear(level: &Level, face: usize, px: f32, py: f32) -> [f32; 4] {
     let (p01, p11) = (level.at(face, ix, iy + 1), level.at(face, ix + 1, iy + 1));
     let (w00, w10) = ((1.0 - fx) * (1.0 - fy), fx * (1.0 - fy));
     let (w01, w11) = ((1.0 - fx) * fy, fx * fy);
-    std::array::from_fn(|c| p00[c] * w00 + p10[c] * w10 + p01[c] * w01 + p11[c] * w11)
+    // A texel of zero weight is left out (an infinite one would make the read NaN).
+    let mut out = [0.0f32; 4];
+    for (p, w) in [(p00, w00), (p10, w10), (p01, w01), (p11, w11)] {
+        if w != 0.0 {
+            (0..4).for_each(|c| out[c] += p[c] * w);
+        }
+    }
+    out
 }
 
 /// A unit vector orthogonal to `n`, from the axis `n` leans on least.
@@ -571,6 +578,16 @@ mod tests {
                 [1.0, (size - 1) as f32, y as f32, 1.0]
             );
         }
+    }
+
+    /// An odd level's box mean reads the top-left 2x2 texels of each pair (NPOT faces).
+    #[test]
+    fn an_odd_level_downsamples_from_its_top_left() {
+        let texels: Vec<[f32; 4]> = (0..9).map(|i| [i as f32; 4]).collect();
+        assert_eq!(
+            downsample(&texels, 3),
+            vec![[(0.0 + 1.0 + 3.0 + 4.0) / 4.0; 4]]
+        );
     }
 
     #[test]

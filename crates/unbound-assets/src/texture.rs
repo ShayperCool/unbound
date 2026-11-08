@@ -729,7 +729,17 @@ pub fn import_texture(
     let mut image = decode(source, bytes).context("decoding")?;
     let (original_width, original_height) = (image.width, image.height);
     // HDR colour in a gamma project is gamma-encoded: a 2D texture's per level after resizing and
-    // filtering (measured with tests/projects/textureimport), a cubemap's in import_cubemap.
+    // filtering (measured with tests/projects/textureimport), a cubemap's here before its faces
+    // are cut (unmeasured order), a glossy-convolved cubemap's mips after the convolution
+    // (import_cubemap; unmeasured).
+    if settings.gamma_hdr
+        && settings.srgb
+        && image.format == TextureFormat::Rgba32F
+        && settings.shape == TextureShape::Cube
+        && !cube_convolves(&image, &settings)?
+    {
+        image.linear_to_gamma();
+    }
 
     match settings.alpha_source {
         // Only an automatic format leaves the alpha out; an explicit one with alpha keeps it.
@@ -1111,15 +1121,12 @@ fn convolves(settings: &TextureSettings) -> bool {
     settings.shape == TextureShape::Cube && settings.cubemap_convolution == 1 && settings.mipmaps
 }
 
-/// A cubemap: its faces cut from (or projected out of) the image, scaled as a texture of the
-/// face size would be, each with its mips (glossy-convolved when `cubemapConvolution` says so).
-fn import_cubemap(
-    source: &Path,
-    mut image: Image,
-    settings: TextureSettings,
-    original: (u32, u32),
-) -> Result<ImportedTexture> {
-    let layout = cubemap::layout(image.width, image.height, settings.cubemap_layout)?;
+/// A cubemap image's face size as cut, its size after scaling, and its mip count.
+fn cube_size(
+    image: &Image,
+    settings: &TextureSettings,
+    layout: cubemap::Layout,
+) -> (u32, u32, u32) {
     let face = cubemap::face_size(image.width, image.height, layout);
     let (size, _) = npot_size(face, face, settings.npot_scale);
     let (size, _) = fit_max_size(size, size, settings.max_size);
@@ -1128,14 +1135,32 @@ fn import_cubemap(
     } else {
         1
     };
-    let convolve = convolves(&settings) && levels > 1;
-    // HDR colour in a gamma project: the image gamma-encoded before its faces are cut (measured
-    // with tests/projects/textureimport), a glossy-convolved cube's mips after the convolution
-    // (unmeasured).
-    let gamma = settings.gamma_hdr && settings.srgb && image.format == TextureFormat::Rgba32F;
-    if gamma && !convolve {
-        image.linear_to_gamma();
+    (face, size, levels)
+}
+
+/// Whether a cubemap image will be glossy-convolved (it has mips to convolve).
+fn cube_convolves(image: &Image, settings: &TextureSettings) -> Result<bool> {
+    if !convolves(settings) {
+        return Ok(false);
     }
+    let layout = cubemap::layout(image.width, image.height, settings.cubemap_layout)?;
+    Ok(cube_size(image, settings, layout).2 > 1)
+}
+
+/// A cubemap: its faces cut from (or projected out of) the image, scaled as a texture of the
+/// face size would be, each with its mips (glossy-convolved when `cubemapConvolution` says so).
+fn import_cubemap(
+    source: &Path,
+    image: Image,
+    settings: TextureSettings,
+    original: (u32, u32),
+) -> Result<ImportedTexture> {
+    let layout = cubemap::layout(image.width, image.height, settings.cubemap_layout)?;
+    let (face, size, levels) = cube_size(&image, &settings, layout);
+    let convolve = convolves(&settings) && levels > 1;
+    // A gamma project's convolved HDR cube is gamma-encoded after the convolution (the others
+    // were before their faces were cut, import_texture).
+    let gamma = settings.gamma_hdr && settings.srgb && image.format == TextureFormat::Rgba32F;
     let mut faces = cubemap::faces(&image, layout);
     if size != face {
         faces = faces

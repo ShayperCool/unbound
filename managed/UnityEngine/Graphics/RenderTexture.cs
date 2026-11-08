@@ -83,8 +83,7 @@ namespace UnityEngine
         internal override int MipmapCount()
         {
             if (!m_Descriptor.useMipMap) return 1;
-            int full = 1 + (int)Math.Floor(Math.Log(Math.Max(1, Math.Max(m_Descriptor.width, m_Descriptor.height)), 2));
-            return m_Descriptor.mipCount > 0 ? Math.Min(m_Descriptor.mipCount, full) : full;
+            return MipLevels(m_Descriptor);
         }
 
         public RenderTexture(int width, int height, int depth) : this(width, height, depth, RenderTextureFormat.Default) { }
@@ -381,8 +380,16 @@ namespace UnityEngine
             a.width == b.width && a.height == b.height && a.graphicsFormat == b.graphicsFormat
             && a.depthStencilFormat == b.depthStencilFormat && a.msaaSamples == b.msaaSamples
             && a.dimension == b.dimension && a.volumeDepth == b.volumeDepth && a.useMipMap == b.useMipMap
-            && (!a.useMipMap || (a.mipCount == b.mipCount && a.autoGenerateMips == b.autoGenerateMips))
+            && (!a.useMipMap || (MipLevels(a) == MipLevels(b) && a.autoGenerateMips == b.autoGenerateMips))
             && a.enableRandomWrite == b.enableRandomWrite && a.memoryless == b.memoryless;
+
+        /// <summary>The mip levels a descriptor with mips gets (its mip count, the full chain when
+        /// that is 0 or less or more than the chain).</summary>
+        static int MipLevels(in RenderTextureDescriptor d)
+        {
+            int full = 32 - System.Numerics.BitOperations.LeadingZeroCount((uint)Math.Max(1, Math.Max(d.width, d.height)));
+            return d.mipCount > 0 ? Math.Min(d.mipCount, full) : full;
+        }
 
         static RenderTextureDescriptor TemporaryDescriptor(int width, int height, int depthBuffer, RenderTextureFormat format,
             RenderTextureReadWrite readWrite, int antiAliasing, RenderTextureMemoryless memorylessMode = RenderTextureMemoryless.None,

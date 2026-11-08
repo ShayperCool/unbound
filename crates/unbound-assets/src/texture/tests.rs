@@ -387,14 +387,15 @@ fn convolved_byte_cubes_stay_bytes() {
     assert_eq!(flat.mips[0].data, byte_cube(0, 1, 0).mips[0].data);
 }
 
-/// A float cube with an infinite texel stays finite away from it: zero-weight levels are not read.
+/// An infinite texel spreads as infinity, never as NaN: reads of zero weight (a level or a
+/// bilinear neighbour) leave it out.
 #[test]
-fn a_convolved_cube_with_an_infinite_texel_keeps_its_far_side() {
-    let size = 8u32;
+fn an_infinite_texel_never_turns_into_nan() {
+    let size = 16u32;
     let mut data = Vec::new();
     for y in 0..size {
         for x in 0..size * 6 {
-            let v = if x == 4 * size + 3 && y == 3 {
+            let v = if x == 4 * size + 8 && y == 8 {
                 f32::INFINITY
             } else {
                 0.5
@@ -402,23 +403,58 @@ fn a_convolved_cube_with_an_infinite_texel_keeps_its_far_side() {
             data.extend([v, v, v, 1.0].iter().flat_map(|c| c.to_le_bytes()));
         }
     }
-    let faces = cubemap::faces(
-        &Image {
-            width: size * 6,
-            height: size,
-            format: TextureFormat::Rgba32F,
-            data,
-        },
-        cubemap::Layout::HorizontalStrip,
-    );
-    let chains = specular::convolve(&faces);
-    // -Z faces away from the texel on +Z: its first convolved mip stays finite.
-    assert!(
-        chains[5][1]
-            .data
-            .chunks(4)
-            .all(|c| f32::from_le_bytes(c.try_into().unwrap()).is_finite())
-    );
+    let image = Image {
+        width: size * 6,
+        height: size,
+        format: TextureFormat::Rgba32F,
+        data,
+    };
+    let chains = specular::convolve(&cubemap::faces(&image, cubemap::Layout::HorizontalStrip));
+    let values = || {
+        chains.iter().flatten().flat_map(|m| {
+            m.data
+                .chunks(4)
+                .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
+        })
+    };
+    assert!(values().all(|v| !v.is_nan()));
+    assert!(values().any(f32::is_infinite));
+}
+
+/// In a gamma project an HDR cube is gamma-encoded, also a convolved one too small to convolve
+/// (one-texel faces).
+#[test]
+fn a_gamma_projects_hdr_cube_is_encoded_whatever_its_size() {
+    for size in [1u32, 4] {
+        let value = 0.25f32;
+        let data: Vec<u8> = (0..size * size * 6)
+            .flat_map(|_| [value, value, value, 1.0])
+            .flat_map(f32::to_le_bytes)
+            .collect();
+        let mut exr = Vec::new();
+        let img = image::Rgba32FImage::from_raw(
+            size * 6,
+            size,
+            data.chunks(4)
+                .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
+                .collect(),
+        )
+        .unwrap();
+        image::DynamicImage::ImageRgba32F(img)
+            .write_to(
+                &mut std::io::Cursor::new(&mut exr),
+                image::ImageFormat::OpenExr,
+            )
+            .unwrap();
+        let meta = unbound_yaml::parse_value("TextureImporter:\n  textureShape: 2\n  generateCubemap: 6\n  cubemapConvolution: 1\n  mipmaps:\n    sRGBTexture: 1\n").unwrap();
+        let importer = TextureImporter {
+            gamma: true,
+            ..TextureImporter::default()
+        };
+        let tex = importer.import(Path::new("Cube.exr"), &exr, &meta).unwrap();
+        let first = f32::from_le_bytes(tex.mips[0].data[..4].try_into().unwrap());
+        assert!((first - 0.537).abs() < 0.01, "{size}: {first}");
+    }
 }
 
 /// The baked reflection of tests/projects/baked (a 384x64 EXR, glossy convolution) imports as a
