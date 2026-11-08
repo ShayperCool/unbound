@@ -179,6 +179,10 @@ namespace Unbound.Runtime
                 if (Compat.PendingStartsAfterLateUpdate) Lifecycle.RunPendingStarts();
             });
             Register(typeof(PL.PostLateUpdate.ScriptRunDelayedDynamicFrameRate), Destruction.DeliverRequested);
+            Register(typeof(PL.PostLateUpdate.ScriptRunDelayedDynamicFrameRate), () =>
+            {
+                if (Compat.InvokeTimingMeasured) Invokes.Run();
+            });
             Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), NativeInput.BeforeRenderUpdate);
             Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), Application.Internal_BeforeRender);
             // A coroutine's WaitForEndOfFrame resumes only on a frame that renders the screen, as

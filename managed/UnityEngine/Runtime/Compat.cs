@@ -9,6 +9,8 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Compat
     {
+        /// <summary>Invoke deadlines and delayed-call points measured in tests/projects/invokesteps.</summary>
+        internal static bool InvokeTimingMeasured => Release == (6000, 0, 71, 'f', 1);
         /// <summary>Separate preparation and activation of scene operations, measured by
         /// tests/projects/editorcallbacks/SceneLoop on Unity 6000.0.71f1.</summary>
         internal static bool SceneAsyncPreparationMeasured => Release == (6000, 0, 71, 'f', 1);

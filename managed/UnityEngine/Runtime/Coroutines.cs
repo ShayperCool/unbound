@@ -197,12 +197,10 @@ namespace Unbound.Runtime
         internal bool IsOver => Time.s_FrameCount > m_Frame && Time.s_Time >= m_Until;
     }
 
-    /// <summary>Invoke and InvokeRepeating. A call is due at Time.time as read when it was made (the
-    /// fixed clock inside a fixed step) plus its delay, and runs at the first check after that: one
-    /// follows each fixed step and one follows Update, so Invoke(0) from Update still runs in that
-    /// frame (measured, 6000.0.71f1, tests/projects/waitforseconds). That a fixed-step check reads the
-    /// fixed clock is this implementation's choice: the probe shows the frame and phase, not which
-    /// step. A repeat that falls behind fires once per check, so up to once per fixed step.</summary>
+    /// <summary>Invoke and InvokeRepeating. The measured release schedules from the earlier of
+    /// the fixed and frame clocks, checks the current clock after each fixed step, Update and
+    /// LateUpdate, and retains the original cadence of late repeats
+    /// (6000.0.71f1, tests/projects/invokesteps).</summary>
     internal static class Invokes
     {
         sealed class Entry
@@ -212,19 +210,32 @@ namespace Unbound.Runtime
             internal double Time;
             internal float Repeat;
             internal bool Cancelled;
+            internal long CreatedCheck;
+            internal long Sequence;
         }
 
         static readonly List<Entry> s_Entries = new List<Entry>();
+        static readonly PriorityQueue<Entry, (double Time, long Sequence)> s_Due = new PriorityQueue<Entry, (double, long)>();
+        static long s_Check, s_Sequence;
+
+        static (double Time, long Sequence) Priority(Entry entry) => (entry.Time, entry.Sequence);
 
         internal static void Schedule(MonoBehaviour target, string method, float delay, float repeat)
         {
-            s_Entries.Add(new Entry
+            var entry = new Entry
             {
                 Target = target,
                 Method = method,
-                Time = UnityEngine.Time.timeAsDouble + Math.Max(0f, delay),
+                Time = (Compat.InvokeTimingMeasured ? Math.Min(UnityEngine.Time.s_Time, UnityEngine.Time.s_FixedTime)
+                    : UnityEngine.Time.TimeAsDoubleNoCheck) + Math.Max(0f, delay),
                 Repeat = repeat,
-            });
+                CreatedCheck = s_Check,
+                Sequence = ++s_Sequence,
+            };
+            s_Entries.Add(entry);
+            // Reserve when scheduling, so repeat delivery and rebuilding the queue do not allocate.
+            s_Due.EnsureCapacity(s_Entries.Count);
+            s_Due.Enqueue(entry, Priority(entry));
         }
 
         internal static void Cancel(MonoBehaviour target, string method)
@@ -244,30 +255,54 @@ namespace Unbound.Runtime
 
         internal static void Run()
         {
-            double now = UnityEngine.Time.timeAsDouble;
-            int count = s_Entries.Count;
-            for (int i = 0; i < count && i < s_Entries.Count; i++)
+            double now = UnityEngine.Time.TimeAsDoubleNoCheck;
+            bool measured = Compat.InvokeTimingMeasured;
+            long check = ++s_Check;
+            while (s_Due.TryPeek(out var e, out var priority) && !(priority.Time > now))
             {
-                var e = s_Entries[i];
-                if (e.Cancelled || e.Time > now) continue;
-                if (e.Target.m_Destroyed)
+                s_Due.Dequeue();
+                if (e.Cancelled || e.CreatedCheck == check) continue;
+                if (e.Target.m_Destroyed) { e.Cancelled = true; continue; }
+                // Delivery walks the due calls in deadline order. A repeat inserted behind the
+                // next pending call can be visited again; one inserted before it waits for the
+                // next check. With a single late repeat this gives one call per check.
+                bool hasNext = s_Due.TryPeek(out _, out var next);
+                if (measured)
                 {
-                    e.Cancelled = true;
-                    continue;
+                    if (e.Repeat > 0f)
+                    {
+                        e.Time += e.Repeat;
+                        e.Sequence = ++s_Sequence;
+                        if (hasNext && Comparer<(double, long)>.Default.Compare(Priority(e), next) >= 0)
+                            s_Due.Enqueue(e, Priority(e));
+                    }
+                    else e.Cancelled = true;
                 }
-                // Unity skips (but keeps) invokes of behaviours whose GameObject is inactive.
                 if (e.Target.m_GameObject.activeInHierarchy)
                 {
                     if (!Messaging.TryCall(e.Target, e.Method, null, out _))
                         Debug.LogError($"Trying to Invoke method: {e.Target.GetType().Name}.{e.Method} couldn't be called.", e.Target);
                 }
-                if (e.Repeat > 0f) e.Time += e.Repeat;
-                else e.Cancelled = true;
+                if (!measured)
+                {
+                    if (e.Repeat > 0f) e.Time += e.Repeat;
+                    else e.Cancelled = true;
+                }
             }
+            // Include repeats skipped by the traversal and calls scheduled by callbacks; discard
+            // cancelled calls immediately, including ones with far-future deadlines.
             s_Entries.RemoveAll(e => e.Cancelled);
+            s_Due.Clear();
+            foreach (var e in s_Entries) s_Due.Enqueue(e, Priority(e));
         }
 
-        internal static void Reset() => s_Entries.Clear();
+        internal static void Reset()
+        {
+            s_Entries.Clear();
+            s_Due.Clear();
+            s_Check = s_Sequence = 0;
+        }
+
     }
 }
 

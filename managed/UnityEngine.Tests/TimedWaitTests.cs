@@ -24,7 +24,9 @@ namespace UnityEngine.Tests
             Log.Add(name);
         }
 
-        void Called() => Log.Add("invoked");
+        internal bool InvokingAtCall;
+        void Called() { InvokingAtCall = IsInvoking(nameof(Called)); Log.Add("invoked"); }
+        void CancelledRepeat() { Log.Add("repeat"); CancelInvoke(nameof(CancelledRepeat)); }
     }
 
     /// <summary>
@@ -37,11 +39,14 @@ namespace UnityEngine.Tests
     {
         readonly (double Time, double Fixed, int Frames, bool InFixed) m_Clocks =
             (Time.s_Time, Time.s_FixedTime, Time.s_FrameCount, Time.s_InFixedTimeStep);
+        readonly string m_Release = ProjectInfo.UnityVersion;
+        public TimedWaitTests() => ProjectInfo.UnityVersion = "6000.0.71f1";
         readonly TimedWaitRunner m_Runner = new GameObject("Timed waits").AddComponent<TimedWaitRunner>();
 
         public void Dispose()
         {
             Object.DestroyImmediate(m_Runner.gameObject);
+            ProjectInfo.UnityVersion = m_Release;
             (Time.s_Time, Time.s_FixedTime, Time.s_FrameCount, Time.s_InFixedTimeStep) = m_Clocks;
         }
 
@@ -125,17 +130,18 @@ namespace UnityEngine.Tests
         public void InvokeWithoutDelayFromUpdateRunsInThatFrame()
         {
             Frame(5);
+            FixedStep(5);
             m_Runner.Invoke("Called", 0f);
             Run(typeof(UpdatePoint));
             Assert.Equal(new[] { "invoked" }, m_Runner.Log);
         }
 
-        // An Invoke comes due inside a fixed step, before that frame's Update (measured); that the step
-        // is the one whose fixed clock reaches the call's time is Unbound's choice.
+        // The fixed-step check reads that step's clock (tests/projects/invokesteps).
         [Fact]
         public void InvokeComesDueInsideTheFixedStepThatReachesItsTime()
         {
             Frame(5);
+            FixedStep(5);
             m_Runner.Invoke("Called", 0.3f);
             Run(typeof(UpdatePoint));
             Frame(5.25);
@@ -151,6 +157,67 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "invoked" }, m_Runner.Log);
             Run(typeof(UpdatePoint));
             Assert.Equal(new[] { "invoked" }, m_Runner.Log);
+        }
+
+        [Fact]
+        public void InvokeSchedulesFromTheEarlierClockAndRemovesOneShotBeforeCalling()
+        {
+            Frame(5);
+            FixedStep(4.9);
+            m_Runner.Invoke("Called", 0.3f);
+            Run(typeof(UpdatePoint));
+            Assert.Empty(m_Runner.Log);
+            Frame(5.25);
+            FixedStep(5.18);
+            Assert.Empty(m_Runner.Log);
+            FixedStep(5.22);
+            Assert.Equal(new[] { "invoked" }, m_Runner.Log);
+            Assert.False(m_Runner.InvokingAtCall);
+        }
+
+        [Fact]
+        public void LateRepeatsFireOnceAtEachDelayedPointAndRetainTheirCadence()
+        {
+            Frame(5);
+            FixedStep(5);
+            m_Runner.InvokeRepeating("Called", 0f, 0.07f);
+            Run(typeof(UpdatePoint));
+            Run(typeof(UnityEngine.PlayerLoop.PostLateUpdate.ScriptRunDelayedDynamicFrameRate));
+            Assert.Single(m_Runner.Log);
+            Frame(5.25);
+            FixedStep(5.1);
+            FixedStep(5.2);
+            Run(typeof(UpdatePoint));
+            Run(typeof(UnityEngine.PlayerLoop.PostLateUpdate.ScriptRunDelayedDynamicFrameRate));
+            Assert.Equal(4, m_Runner.Log.Count);
+            Assert.True(m_Runner.InvokingAtCall);
+            m_Runner.CancelInvoke();
+        }
+
+        [Fact]
+        public void ARepeatCanCancelItselfWithoutBeingReinserted()
+        {
+            Frame(5);
+            FixedStep(5);
+            m_Runner.InvokeRepeating("CancelledRepeat", 0f, 0.001f);
+            Run(typeof(UpdatePoint));
+            Frame(5.25);
+            FixedStep(5.1);
+            Run(typeof(UpdatePoint));
+            Assert.Equal(new[] { "repeat" }, m_Runner.Log);
+            Assert.False(m_Runner.IsInvoking());
+        }
+
+        [Fact]
+        public void InterleavedLateRepeatsCanBeVisitedAgainInDeadlineOrder()
+        {
+            Frame(5);
+            FixedStep(4);
+            m_Runner.InvokeRepeating("Called", 0f, 0.125f);
+            m_Runner.InvokeRepeating("Called", 0f, 0.125f);
+            Run(typeof(UpdatePoint));
+            Assert.Equal(18, m_Runner.Log.Count);
+            m_Runner.CancelInvoke();
         }
     }
 }

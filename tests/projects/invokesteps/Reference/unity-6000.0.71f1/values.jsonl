@@ -1,0 +1,12 @@
+{"k":"clock/currentClockReachedDue","v":false}
+{"k":"clock/fixedClockReachedDue","v":false}
+{"k":"clock/fixedDeadlineReached","v":true}
+{"k":"clock/fixedStepsSinceSchedule","v":3}
+{"k":"clock/frame","v":1}
+{"k":"clock/isInvokingInsideCallback","v":false}
+{"k":"clock/phase","v":"fixed/3"}
+{"k":"repeat/fast","v":"1/fixed/1,1/fixed/2,1/fixed/3,1/fixed/4,1/update,1/late,2/fixed/1,2/fixed/2,2/fixed/3,2/fixed/4,2/update,2/late,3/fixed/1,3/fixed/2,3/fixed/3,3/fixed/4,3/update,3/late,4/fixed/1,4/fixed/2,4/fixed/3,4/fixed/4,4/update,4/late,5/fixed/1,5/fixed/2,5/fixed/3,5/fixed/4,5/update,5/late"}
+{"k":"repeat/noFixed","v":"7/update,7/late,8/update,8/late,9/update,9/late"}
+{"k":"repeat/selfCancel","v":1}
+{"k":"repeat/slowCount","v":11}
+{"k":"complete","v":true}
