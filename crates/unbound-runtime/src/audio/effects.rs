@@ -175,6 +175,9 @@ pub struct EffectSpec {
     /// The compatibility profile selects block-constant mixer parameter submission.
     #[serde(default)]
     pub gain_immediate: bool,
+    /// Interior attenuation keeps an accumulated per-frame gain (tests/projects/mixerduck).
+    #[serde(default)]
+    pub gain_ramp_measured: bool,
     #[serde(default)]
     pub cutoff: f32,
     #[serde(default = "one")]
@@ -921,17 +924,29 @@ impl Effect {
         if kind == EffectKind::Attenuation {
             let from = self.gain;
             let frames = samples.len() / 2;
+            let measured_ramp = self.spec.gain_ramp_measured && !self.spec.gain_immediate;
+            let step = (self.spec.gain - from) / frames.max(1) as f32;
+            let mut current = from;
             for (frame, stereo) in samples.chunks_exact_mut(2).enumerate() {
                 let gain = if self.spec.gain_immediate {
                     self.spec.gain
+                } else if measured_ramp {
+                    current
                 } else {
                     from + (self.spec.gain - from) * (frame + 1) as f32 / frames as f32
                 };
                 for x in stereo {
                     *x *= gain;
                 }
+                if measured_ramp {
+                    current += step;
+                }
             }
-            self.gain = self.spec.gain;
+            self.gain = if measured_ramp {
+                current
+            } else {
+                self.spec.gain
+            };
         } else if kind == EffectKind::Echo {
             if !bypass && !self.spec.bypass {
                 self.echo.process(samples, &self.spec);
@@ -1091,6 +1106,40 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn interior_attenuation_carries_its_accumulated_gain_between_buffers() {
+        // mixerduck/control_volume_nosend, first changing block at 48000 Hz.
+        let spec = |gain| {
+            serde_json::from_value::<EffectSpec>(serde_json::json!({
+                "id": "level", "kind": "Attenuation", "gain": gain,
+                "gainRampMeasured": true
+            }))
+            .unwrap()
+        };
+        let mut effect = Effect::new(spec(1.0), 48000, 1024).unwrap();
+        effect.update(spec(0.644_302_37), 48000, 1024).unwrap();
+        let mut samples = vec![1.0; 2048];
+        for right in samples.iter_mut().skip(1).step_by(2) {
+            *right = -0.5;
+        }
+        effect.process(&mut samples, false);
+        assert_eq!(&samples[..4], &[1.0, -0.5, 0.999_652_6, -0.499_826_3]);
+        assert_eq!(samples[2046], 0.644_634_5);
+        assert_eq!(samples[2047], -0.322_317_24);
+        // Re-submitting an unchanged target retains the actual gain, including its rounding.
+        effect.update(spec(0.644_302_37), 48000, 1024).unwrap();
+        samples.fill(1.0);
+        effect.process(&mut samples, false);
+        assert_eq!(samples[0], 0.644_287_1);
+        assert!(samples.iter().all(|gain| *gain == 0.644_287_1));
+        // A different packet size and increasing gain retain the same first-frame rule.
+        effect.update(spec(1.0), 44100, 256).unwrap();
+        let mut shorter = vec![1.0; 512];
+        effect.process(&mut shorter, false);
+        assert_eq!(shorter[0], 0.644_287_1);
+        assert!(shorter[510] > shorter[0] && shorter[510] < 1.0);
     }
 
     #[test]

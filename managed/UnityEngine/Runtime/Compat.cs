@@ -91,9 +91,9 @@ namespace Unbound.Runtime
         /// snapshot until their Editor selection behavior is measured.</summary>
         internal static bool MixerSnapshotSelectionMeasured => Release == (6000, 0, 71, 'f', 1);
 
-        /// <summary>Mixer attenuation uses the parameter submitted for the whole DSP block,
-        /// measured on exactly 6000.0.71f1 (tests/projects/mixersuspend). Other releases retain
-        /// the unmeasured gain ramp until their parameter submission is measured.</summary>
+        /// <summary>Trailing attenuation submits gain directly; interior attenuation ramps per
+        /// frame. Measured on exactly 6000.0.71f1 (tests/projects/mixersuspend, mixerduck).
+        /// Other releases retain their unmeasured gain ramp.</summary>
         internal static bool MixerParameterGainMeasured => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>AudioSettings.Reset invalidates generated clip data and reloads

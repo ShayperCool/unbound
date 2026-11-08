@@ -15,7 +15,7 @@ public static class ProbeRunner
     static object Get(object o, string property) => o.GetType().GetProperty(property, F).GetValue(o);
     static void Set(object o, string property, object value) => o.GetType().GetProperty(property, F).SetValue(o, value);
     static readonly Dictionary<string, string> Units = new Dictionary<string, string> {
-        { "Duck", "Duck Volume" }, { "Receive", "Receive" }, { "Lowpass", "Lowpass" } };
+        { "Duck", "Duck Volume" }, { "Receive", "Receive" }, { "Lowpass", "Lowpass" }, { "Echo", "Echo" } };
     public static void Record()
     {
         T("MixerEffectDefinitions").GetMethod("Refresh", F).Invoke(null, null);

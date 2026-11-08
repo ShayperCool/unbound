@@ -154,6 +154,17 @@ public class DuckProbe : MonoBehaviour
         new[] { "curve_weighted_blend", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=1", "basecurve=0", "weight=0.25", "returnweight=0.75" },
         new[] { "curve_weighted_same", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=1", "weight=0.75" },
         new[] { "curve_weighted_single", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=1", "single=1" },
+        new[] { "control_volume_linear", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1" },
+        new[] { "control_volume_nosend", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Voice:Att" },
+        new[] { "control_volume_receive", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Att,Receive" },
+        new[] { "control_volume_send", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Att,Send>Fx", "Voice:Att", "Fx:Receive,Att", "Music.Send.Level=0", "Fx.Volume=-80" },
+        new[] { "control_volume_lowpass", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Att,Lowpass", "Voice:Att" },
+        new[] { "control_volume_echo", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Att,Echo", "Voice:Att" },
+        new[] { "control_volume_postduck", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Duck,Att" },
+        new[] { "control_volume_parent_send", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music:Att", "Voice:Send>Fx,Att", "Fx:Receive,Att", "Fx.Volume=-80" },
+        new[] { "control_volume_echo_bypass", "voice=step0:0.5", "Music:Att,Echo", "Voice:Att", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music.Echo.bypass=1" },
+        new[] { "control_volume_group_bypass", "voice=step0:0.5", "Music:Att,Echo", "Voice:Att", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music.bypass=1" },
+        new[] { "control_volume_lowpass_bypass", "voice=step0:0.5", "Music:Att,Lowpass", "Voice:Att", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "Music.Lowpass.bypass=1" },
     };
     // These connections are outside the Editor's Send destination menu. Record separately:
     // an invalid graph may prevent the Editor from entering Play mode.

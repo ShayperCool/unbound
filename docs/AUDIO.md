@@ -472,6 +472,13 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
   elapsed time `t`, these curves use `t*t*(3-2*t)`, `t*t`, `sqrt(t)`, `t>0 ? 1 : 0`, and
   `t>=1 ? 1 : 0`. BrickwallStart does not advance while scaled time is paused. The existing
   per-block Send ramp and Duck detector histories remain in use.
+  The volume controls also distinguish attenuation placement: a trailing Attenuation applies
+  the submitted gain directly. Before a following unit it starts from the prior actual gain,
+  adds `(target-current)/frames` after each stereo frame, and retains that accumulated float32
+  gain for the next block. Both channels use the same gain. Duck, Receive, Send, Lowpass and Echo
+  controls, with effect/group bypass and an unrelated Send in another group, distinguish chain
+  position from effect kind or global sidechain presence. Attenuation after Duck stays direct.
+  This refines `Compat.MixerParameterGainMeasured`; it adds no audio-thread storage or allocation.
   The same captures show that `TransitionToSnapshots` ignores overrides and uses linear
   interpolation, including a one-element array, matching and differing overrides, and weighted
   blends in both directions. `AudioMixerSnapshot.TransitionTo` applies the target override.

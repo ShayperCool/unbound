@@ -103,6 +103,26 @@ namespace UnityEngine.Tests
             Assert.Equal("Lowpass", root.GetProperty("effects")[1].GetProperty("kind").GetString());
         }
 
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        public void AttenuationSubmissionDependsOnChainPositionEvenWhenTheFollowingEffectIsBypassed(bool effectBypass, bool groupBypass)
+        {
+            var (_, group, filter) = Fixture();
+            var attenuation = new AudioMixerEffectController { m_EffectName = "Attenuation", m_EffectId = "level" };
+            group.m_Effects.Insert(0, attenuation);
+            filter.m_Bypass = effectBypass; group.m_BypassEffects = groupBypass;
+            foreach (bool trailing in new[] { false, true })
+            {
+                if (trailing) { group.m_Effects.Remove(attenuation); group.m_Effects.Add(attenuation); }
+                using var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration()));
+                var dsp = payload.RootElement.GetProperty("effects")[trailing ? 1 : 0];
+                Assert.Equal(trailing, dsp.GetProperty("gainImmediate").GetBoolean());
+                Assert.Equal(!trailing, dsp.GetProperty("gainRampMeasured").GetBoolean());
+            }
+        }
+
         [Fact]
         public void ClearFloatGetterRestoresTheSnapshotWhileDspChangesOnTheNextAudioUpdate()
         {

@@ -495,8 +495,9 @@ namespace UnityEngine.Audio
         {
             ValidateSidechains();
             var effects = new List<object>();
-            foreach (var effect in m_Effects)
+            for (int effectIndex = 0; effectIndex < m_Effects.Count; effectIndex++)
             {
+                var effect = m_Effects[effectIndex];
                 // Native ignores bypass on Send, Receive and Duck Volume (the Editor disallows it).
                 bool routed = effect.IsSidechain;
                 bool bypass = !routed && (m_BypassEffects || effect.m_Bypass);
@@ -527,7 +528,9 @@ namespace UnityEngine.Audio
                 effects.Add(new {
                     id = effect.m_EffectId, kind = effect.m_EffectName, bypass = effect.m_Bypass,
                     gain = AudioMixer.DspGain(m_Mixer.Value(m_VolumeGuid)),
-                    gainImmediate = Compat.MixerParameterGainMeasured,
+                    // A trailing attenuation is submitted directly; an interior one ramps per frame.
+                    gainImmediate = Compat.MixerParameterGainMeasured && effectIndex + 1 == m_Effects.Count,
+                    gainRampMeasured = Compat.MixerParameterGainMeasured && effectIndex + 1 < m_Effects.Count,
                     cutoff = effect.Parameter("Cutoff freq") is string cutoff ? m_Mixer.Value(cutoff) : AudioMixerEffectController.CutoffDefault(effect.m_EffectName),
                     resonance = effect.Parameter("Resonance") is string resonance ? m_Mixer.Value(resonance) : 1f,
                     delay = effect.Parameter("Delay") is string delay ? m_Mixer.Value(delay) : 500f,
