@@ -287,12 +287,12 @@ namespace UnityEngine
         public Vector3 linearVelocity
         {
             get
-            {
+            { MainThreadCheck.Check("get_linearVelocity");
                 var body = Body;
                 return body != 0 ? B3.ua3_body_get_linear_velocity(body) : m_PendingVelocity;
             }
             set
-            {
+            { MainThreadCheck.Check("set_linearVelocity");
                 var body = Body;
                 if (m_IsKinematic) return;
                 if (Compat.ConstrainedBodyStateMeasured) value = MaskVelocityAxes(value, (int)m_Constraints >> 1);
@@ -304,12 +304,12 @@ namespace UnityEngine
         public Vector3 angularVelocity
         {
             get
-            {
+            { MainThreadCheck.Check("get_angularVelocity");
                 var body = Body;
                 return body != 0 ? B3.ua3_body_get_angular_velocity(body) : m_PendingAngularVelocity;
             }
             set
-            {
+            { MainThreadCheck.Check("set_angularVelocity");
                 var body = Body;
                 if (m_IsKinematic) return;
                 int angularAxes = ((int)m_Constraints >> 4) & 7;
@@ -357,9 +357,9 @@ namespace UnityEngine
 
         public float mass
         {
-            get => m_Mass;
+            get { MainThreadCheck.Check("get_mass"); return m_Mass; }
             set
-            {
+            { MainThreadCheck.Check("set_mass");
                 m_Mass = Mathf.Max(1e-7f, value);
                 m_MassDirty = true;
                 if (m_Registered) W.MarkBodyDirty(this);
@@ -376,15 +376,15 @@ namespace UnityEngine
 
         public bool useGravity
         {
-            get => m_UseGravity;
-            set { m_UseGravity = value; Changed(); }
+            get { MainThreadCheck.Check("get_useGravity"); return m_UseGravity; }
+            set { MainThreadCheck.Check("set_useGravity"); m_UseGravity = value; Changed(); }
         }
 
         public bool isKinematic
         {
-            get => m_IsKinematic;
+            get { MainThreadCheck.Check("get_isKinematic"); return m_IsKinematic; }
             set
-            {
+            { MainThreadCheck.Check("set_isKinematic");
                 if (m_IsKinematic == value) return;
                 m_IsKinematic = value;
                 m_BodyTypeDirty = true;
@@ -408,9 +408,9 @@ namespace UnityEngine
 
         public RigidbodyConstraints constraints
         {
-            get => m_Constraints;
+            get { MainThreadCheck.Check("get_constraints"); return m_Constraints; }
             set
-            {
+            { MainThreadCheck.Check("set_constraints");
                 m_Constraints = value;
                 Changed();
                 if (!Compat.ConstrainedBodyStateMeasured || m_IsKinematic || value == RigidbodyConstraints.None) return;
@@ -427,14 +427,14 @@ namespace UnityEngine
 
         public CollisionDetectionMode collisionDetectionMode
         {
-            get => m_CollisionDetection;
-            set { m_CollisionDetection = value; Changed(); }
+            get { MainThreadCheck.Check("get_collisionDetectionMode"); return m_CollisionDetection; }
+            set { MainThreadCheck.Check("set_collisionDetectionMode"); m_CollisionDetection = value; Changed(); }
         }
 
         public RigidbodyInterpolation interpolation
         {
-            get => m_Interpolation;
-            set => m_Interpolation = value;
+            get { MainThreadCheck.Check("get_interpolation"); return m_Interpolation; }
+            set { MainThreadCheck.Check("set_interpolation"); m_Interpolation = value; }
         }
 
         public bool automaticCenterOfMass
@@ -464,12 +464,12 @@ namespace UnityEngine
         public Vector3 centerOfMass
         {
             get
-            {
+            { MainThreadCheck.Check("get_centerOfMass");
                 EnsureMass();
                 return m_Body != 0 && !m_IsKinematic ? m_AppliedCenter : m_CenterOfMass;
             }
             set
-            {
+            { MainThreadCheck.Check("set_centerOfMass");
                 m_CenterOfMass = value;
                 m_ImplicitCom = false;
                 MassChanged();
@@ -489,13 +489,13 @@ namespace UnityEngine
         public Vector3 inertiaTensor
         {
             get
-            {
+            { MainThreadCheck.Check("get_inertiaTensor");
                 EnsureMass();
                 if (m_Body == 0 || m_IsKinematic) return m_InertiaTensor;
                 return m_AppliedMoments;
             }
             set
-            {
+            { MainThreadCheck.Check("set_inertiaTensor");
                 m_InertiaTensor = value;
                 m_ImplicitTensor = false;
                 MassChanged();
@@ -532,9 +532,9 @@ namespace UnityEngine
 
         public bool detectCollisions
         {
-            get => m_DetectCollisions;
+            get { MainThreadCheck.Check("get_detectCollisions"); return m_DetectCollisions; }
             set
-            {
+            { MainThreadCheck.Check("set_detectCollisions");
                 if (m_DetectCollisions == value) return;
                 m_DetectCollisions = value;
                 foreach (var c in W.CollidersOf(this))
@@ -567,14 +567,14 @@ namespace UnityEngine
         public Vector3 position
         {
             get
-            {
+            { MainThreadCheck.Check("get_position");
                 var body = Body;
                 if (body == 0) return m_InactivePosition;
                 B3.ua3_body_get_transform(body, out var p, out _);
                 return p;
             }
             set
-            {
+            { MainThreadCheck.Check("set_position");
                 var body = Body;
                 if (body == 0)
                 {
@@ -591,14 +591,14 @@ namespace UnityEngine
         public Quaternion rotation
         {
             get
-            {
+            { MainThreadCheck.Check("get_rotation");
                 var body = Body;
                 if (body == 0) return m_InactiveRotation;
                 B3.ua3_body_get_transform(body, out _, out var q);
                 return q;
             }
             set
-            {
+            { MainThreadCheck.Check("set_rotation");
                 var body = Body;
                 if (body == 0)
                 {
@@ -613,7 +613,7 @@ namespace UnityEngine
             }
         }
 
-        public void MovePosition(Vector3 position) => Move(position, m_HasMove ? m_MoveRotation : rotation);
+        public void MovePosition(Vector3 position) { MainThreadCheck.Check("MovePosition"); Move(position, m_HasMove ? m_MoveRotation : rotation); }
 
         public void MoveRotation(Quaternion rot) => Move(m_HasMove ? m_MovePosition : position, rot);
 
@@ -662,8 +662,8 @@ namespace UnityEngine
 
         public float maxAngularVelocity
         {
-            get => m_MaxAngularVelocity;
-            set { m_MaxAngularVelocity = Mathf.Abs(value); ApplyTuning(); }
+            get { MainThreadCheck.Check("get_maxAngularVelocity"); return m_MaxAngularVelocity; }
+            set { MainThreadCheck.Check("set_maxAngularVelocity"); m_MaxAngularVelocity = Mathf.Abs(value); ApplyTuning(); }
         }
 
         public float maxLinearVelocity
@@ -680,8 +680,8 @@ namespace UnityEngine
 
         public float sleepThreshold
         {
-            get => m_SleepThreshold;
-            set { m_SleepThreshold = value; ApplyTuning(); }
+            get { MainThreadCheck.Check("get_sleepThreshold"); return m_SleepThreshold; }
+            set { MainThreadCheck.Check("set_sleepThreshold"); m_SleepThreshold = value; ApplyTuning(); }
         }
 
         // Unity 6000.0 takes the magnitude for body setters, unlike the global setters.
@@ -708,6 +708,7 @@ namespace UnityEngine
 
         public bool IsSleeping()
         {
+            MainThreadCheck.Check("IsSleeping");
             var body = Body;
             return body == 0 || B3.ua3_body_is_awake(body) == 0;
         }
@@ -742,6 +743,7 @@ namespace UnityEngine
 
         public void AddForce(Vector3 force, [Internal.DefaultValue("ForceMode.Force")] ForceMode mode)
         {
+            MainThreadCheck.Check("AddForce");
             EnsureMass();
             var body = Body;
             if (body == 0 || m_IsKinematic || !IsFinite(force)) return;

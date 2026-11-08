@@ -87,9 +87,9 @@ namespace UnityEngine
 
         public bool enabled
         {
-            get => m_Enabled;
+            get { MainThreadCheck.Check("get_enabled"); return m_Enabled; }
             set
-            {
+            { MainThreadCheck.Check("set_enabled");
                 if (m_Enabled == value) return;
                 m_Enabled = value;
                 if (!m_Active) return;
@@ -143,9 +143,9 @@ namespace UnityEngine
 
         public bool isTrigger
         {
-            get => m_IsTrigger;
+            get { MainThreadCheck.Check("get_isTrigger"); return m_IsTrigger; }
             set
-            {
+            { MainThreadCheck.Check("set_isTrigger");
                 if (m_IsTrigger == value) return;
                 m_IsTrigger = value;
                 ShapeChanged(geometryChanged: false);
@@ -155,7 +155,7 @@ namespace UnityEngine
         public Rigidbody attachedRigidbody
         {
             get
-            {
+            { MainThreadCheck.Check("get_attachedRigidbody");
                 if (m_Registered)
                 {
                     W.Flush();
@@ -174,9 +174,9 @@ namespace UnityEngine
 
         public PhysicsMaterial sharedMaterial
         {
-            get => m_Material;
+            get { MainThreadCheck.Check("get_sharedMaterial"); return m_Material; }
             set
-            {
+            { MainThreadCheck.Check("SetMaterial");
                 m_Material = value;
                 W.MaterialChanged(this);
             }
@@ -203,9 +203,9 @@ namespace UnityEngine
 
         public float contactOffset
         {
-            get => m_ContactOffset;
+            get { MainThreadCheck.Check("get_contactOffset"); return m_ContactOffset; }
             set
-            {
+            { MainThreadCheck.Check("set_contactOffset");
                 // Unity ignores assignments without a shape, including disabled and
                 // geometry-less colliders. Flush our lazy allocation before checking.
                 if (value <= 0f || !m_Registered) return;
@@ -219,9 +219,9 @@ namespace UnityEngine
 
         public bool hasModifiableContacts
         {
-            get => m_HasModifiableContacts;
+            get { MainThreadCheck.Check("get_hasModifiableContacts"); return m_HasModifiableContacts; }
             set
-            {
+            { MainThreadCheck.Check("set_hasModifiableContacts");
                 if (m_HasModifiableContacts == value) return;
                 m_HasModifiableContacts = value;
                 W.Refilter(this);
@@ -269,7 +269,7 @@ namespace UnityEngine
         public Bounds bounds
         {
             get
-            {
+            { MainThreadCheck.Check("get_bounds");
                 if (this is CharacterController controller)
                 {
                     if (m_Registered) W.PrepareQuery();
@@ -301,6 +301,7 @@ namespace UnityEngine
         /// <summary>The closest point of the collider to a position: the position itself when it is inside.</summary>
         public Vector3 ClosestPoint(Vector3 position)
         {
+            MainThreadCheck.Check("ClosestPoint");
             return PhysicsQueries.ClosestPoint(this, position);
         }
 
@@ -308,6 +309,7 @@ namespace UnityEngine
 
         public bool Raycast(Ray ray, out RaycastHit hitInfo, float maxDistance)
         {
+            MainThreadCheck.Check("Raycast");
             hitInfo = default;
             W.PrepareQuery();
             if (m_Shape == 0) return false;

@@ -1,3 +1,4 @@
+using Unbound.Runtime;
 using System;
 using Unity.Collections;
 
@@ -34,7 +35,7 @@ namespace UnityEngine
         private int m_index;
         private int m_version;
         public bool Equals(PhysicsScene other) => m_index == other.m_index && m_version == other.m_version;
-        public bool IsValid() => Unbound.Runtime.PhysicsWorld.Find(m_index, m_version) != null;
+        public bool IsValid() { MainThreadCheck.Check("IsValid_Internal"); return Unbound.Runtime.PhysicsWorld.Find(m_index, m_version) != null; }
         public override string ToString() => $"PhysicsScene(Index: {m_index}, Version: {m_version})";
         public override int GetHashCode() => base.GetHashCode();
         public override bool Equals(object other) => other is PhysicsScene scene && Equals(scene);

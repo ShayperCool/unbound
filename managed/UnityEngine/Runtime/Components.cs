@@ -15,12 +15,14 @@ namespace Unbound.Runtime
         internal static bool IsCreating => t_Creating > 0;
 
         /// <summary>Constructs a component of a type and attaches it, without lifecycle calls.</summary>
-        internal static Component Create(Type type, GameObject go)
+        internal static Component Create(Type type, GameObject go, bool deserializing = false)
         {
             t_Creating++;
             Component c;
             try
             {
+                using var construction = MainThreadCheck.Construct(typeof(MonoBehaviour).IsAssignableFrom(type) ? type : null,
+                    deserializing ? null : go?.m_Name);
                 c = (Component)Activator.CreateInstance(type, nonPublic: true);
             }
             catch (TargetInvocationException e)

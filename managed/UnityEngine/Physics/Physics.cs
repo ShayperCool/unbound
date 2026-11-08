@@ -338,6 +338,7 @@ namespace UnityEngine
 
         public static void SyncTransforms()
         {
+            MainThreadCheck.Check("SyncTransforms");
             if (!W.HasMembers) return;
             W.SyncTransforms();
         }
@@ -382,8 +383,7 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ rays
 
-        public static bool Raycast(Vector3 origin, Vector3 direction, [Internal.DefaultValue("Mathf.Infinity")] float maxDistance, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) =>
-            Q.Raycast(origin, direction, maxDistance, layerMask, queryTriggerInteraction, closest: true).Count > 0;
+        public static bool Raycast(Vector3 origin, Vector3 direction, [Internal.DefaultValue("Mathf.Infinity")] float maxDistance, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) { if (direction.sqrMagnitude > 0f) MainThreadCheck.Check("Internal_RaycastTest"); return Q.Raycast(origin, direction, maxDistance, layerMask, queryTriggerInteraction, closest: true).Count > 0; }
 
         public static bool Raycast(Vector3 origin, Vector3 direction, float maxDistance, int layerMask) => Raycast(origin, direction, maxDistance, layerMask, QueryTriggerInteraction.UseGlobal);
 
@@ -391,10 +391,9 @@ namespace UnityEngine
 
         public static bool Raycast(Vector3 origin, Vector3 direction) => Raycast(origin, direction, Mathf.Infinity, DefaultRaycastLayers, QueryTriggerInteraction.UseGlobal);
 
-        public static bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hitInfo, float maxDistance, int layerMask, QueryTriggerInteraction queryTriggerInteraction) =>
-            Q.First(Q.Raycast(origin, direction, maxDistance, layerMask, queryTriggerInteraction, closest: true), out hitInfo);
+        public static bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hitInfo, float maxDistance, int layerMask, QueryTriggerInteraction queryTriggerInteraction) { if (direction.sqrMagnitude > 0f) MainThreadCheck.Check("Internal_Raycast"); return Q.First(Q.Raycast(origin, direction, maxDistance, layerMask, queryTriggerInteraction, closest: true), out hitInfo); }
 
-        public static bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hitInfo, float maxDistance, int layerMask) => Raycast(origin, direction, out hitInfo, maxDistance, layerMask, QueryTriggerInteraction.UseGlobal);
+        public static bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hitInfo, float maxDistance, int layerMask) { if (direction.sqrMagnitude > 0f) MainThreadCheck.Check("Internal_RaycastTest"); return Raycast(origin, direction, out hitInfo, maxDistance, layerMask, QueryTriggerInteraction.UseGlobal); }
 
         public static bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hitInfo, float maxDistance) => Raycast(origin, direction, out hitInfo, maxDistance, DefaultRaycastLayers, QueryTriggerInteraction.UseGlobal);
 
@@ -436,8 +435,7 @@ namespace UnityEngine
 
         public static bool Linecast(Vector3 start, Vector3 end, out RaycastHit hitInfo) => Linecast(start, end, out hitInfo, DefaultRaycastLayers, QueryTriggerInteraction.UseGlobal);
 
-        public static RaycastHit[] RaycastAll(Vector3 origin, Vector3 direction, [Internal.DefaultValue("Mathf.Infinity")] float maxDistance, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) =>
-            Q.Raycast(origin, direction, maxDistance, layerMask, queryTriggerInteraction, closest: false).ToArray();
+        public static RaycastHit[] RaycastAll(Vector3 origin, Vector3 direction, [Internal.DefaultValue("Mathf.Infinity")] float maxDistance, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) { if (direction.sqrMagnitude > 0f) MainThreadCheck.Check("Internal_RaycastAll"); return Q.Raycast(origin, direction, maxDistance, layerMask, queryTriggerInteraction, closest: false).ToArray(); }
 
         public static RaycastHit[] RaycastAll(Vector3 origin, Vector3 direction, float maxDistance, int layerMask) => RaycastAll(origin, direction, maxDistance, layerMask, QueryTriggerInteraction.UseGlobal);
 
@@ -466,9 +464,8 @@ namespace UnityEngine
         // Every Ray and origin/direction overload ends here. A null buffer returns no results and
         // reports no error (6000.0 Scripting API), so the query, and the world preparation it
         // starts, never runs for it.
-        public static int RaycastNonAlloc(Vector3 origin, Vector3 direction, RaycastHit[] results, [Internal.DefaultValue("Mathf.Infinity")] float maxDistance, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) =>
-            results == null ? 0 :
-            Q.Fill(Q.Raycast(origin, direction, maxDistance, layerMask, queryTriggerInteraction, closest: false), results);
+        public static int RaycastNonAlloc(Vector3 origin, Vector3 direction, RaycastHit[] results, [Internal.DefaultValue("Mathf.Infinity")] float maxDistance, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) { if (direction.sqrMagnitude > 0f) MainThreadCheck.Check("Internal_RaycastNonAlloc"); return results == null ? 0 :
+            Q.Fill(Q.Raycast(origin, direction, maxDistance, layerMask, queryTriggerInteraction, closest: false), results); }
 
         public static int RaycastNonAlloc(Vector3 origin, Vector3 direction, RaycastHit[] results, float maxDistance, int layerMask) => RaycastNonAlloc(origin, direction, results, maxDistance, layerMask, QueryTriggerInteraction.UseGlobal);
 
@@ -481,8 +478,7 @@ namespace UnityEngine
         static List<RaycastHit> SphereCastHits(Vector3 origin, float radius, Vector3 direction, float maxDistance, int layerMask, QueryTriggerInteraction q, bool closest) =>
             Q.Cast(B3.Proxy.Sphere, origin, origin, Quaternion.identity, radius, direction, maxDistance, layerMask, q, closest);
 
-        public static bool SphereCast(Vector3 origin, float radius, Vector3 direction, out RaycastHit hitInfo, [Internal.DefaultValue("Mathf.Infinity")] float maxDistance, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) =>
-            Q.First(SphereCastHits(origin, radius, direction, maxDistance, layerMask, queryTriggerInteraction, true), out hitInfo);
+        public static bool SphereCast(Vector3 origin, float radius, Vector3 direction, out RaycastHit hitInfo, [Internal.DefaultValue("Mathf.Infinity")] float maxDistance, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) { if (direction.sqrMagnitude > 0f) MainThreadCheck.Check("Query_SphereCast"); return Q.First(SphereCastHits(origin, radius, direction, maxDistance, layerMask, queryTriggerInteraction, true), out hitInfo); }
 
         public static bool SphereCast(Vector3 origin, float radius, Vector3 direction, out RaycastHit hitInfo, float maxDistance, int layerMask) => SphereCast(origin, radius, direction, out hitInfo, maxDistance, layerMask, QueryTriggerInteraction.UseGlobal);
 
@@ -544,8 +540,7 @@ namespace UnityEngine
 
         public static int SphereCastNonAlloc(Ray ray, float radius, RaycastHit[] results) => SphereCastNonAlloc(ray.origin, radius, ray.direction, results, Mathf.Infinity, DefaultRaycastLayers, QueryTriggerInteraction.UseGlobal);
 
-        public static Collider[] OverlapSphere(Vector3 position, float radius, [Internal.DefaultValue("AllLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) =>
-            Q.Overlap(B3.Proxy.Sphere, position, position, Quaternion.identity, radius, layerMask, queryTriggerInteraction).ToArray();
+        public static Collider[] OverlapSphere(Vector3 position, float radius, [Internal.DefaultValue("AllLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) { MainThreadCheck.Check("OverlapSphere_Internal"); return Q.Overlap(B3.Proxy.Sphere, position, position, Quaternion.identity, radius, layerMask, queryTriggerInteraction).ToArray(); }
 
         public static Collider[] OverlapSphere(Vector3 position, float radius, int layerMask) => OverlapSphere(position, radius, layerMask, QueryTriggerInteraction.UseGlobal);
 
@@ -558,8 +553,7 @@ namespace UnityEngine
 
         public static int OverlapSphereNonAlloc(Vector3 position, float radius, Collider[] results) => OverlapSphereNonAlloc(position, radius, results, AllLayers, QueryTriggerInteraction.UseGlobal);
 
-        public static bool CheckSphere(Vector3 position, float radius, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) =>
-            Q.Overlap(B3.Proxy.Sphere, position, position, Quaternion.identity, radius, layerMask, queryTriggerInteraction).Count > 0;
+        public static bool CheckSphere(Vector3 position, float radius, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) { MainThreadCheck.Check("CheckSphere_Internal"); return Q.Overlap(B3.Proxy.Sphere, position, position, Quaternion.identity, radius, layerMask, queryTriggerInteraction).Count > 0; }
 
         public static bool CheckSphere(Vector3 position, float radius, int layerMask) => CheckSphere(position, radius, layerMask, QueryTriggerInteraction.UseGlobal);
 
@@ -579,8 +573,7 @@ namespace UnityEngine
 
         public static bool CapsuleCast(Vector3 point1, Vector3 point2, float radius, Vector3 direction) => CapsuleCast(point1, point2, radius, direction, Mathf.Infinity, DefaultRaycastLayers, QueryTriggerInteraction.UseGlobal);
 
-        public static bool CapsuleCast(Vector3 point1, Vector3 point2, float radius, Vector3 direction, out RaycastHit hitInfo, [Internal.DefaultValue("Mathf.Infinity")] float maxDistance, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) =>
-            Q.First(CapsuleCastHits(point1, point2, radius, direction, maxDistance, layerMask, queryTriggerInteraction, true), out hitInfo);
+        public static bool CapsuleCast(Vector3 point1, Vector3 point2, float radius, Vector3 direction, out RaycastHit hitInfo, [Internal.DefaultValue("Mathf.Infinity")] float maxDistance, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) { if (direction.sqrMagnitude > 0f) MainThreadCheck.Check("Query_CapsuleCast"); return Q.First(CapsuleCastHits(point1, point2, radius, direction, maxDistance, layerMask, queryTriggerInteraction, true), out hitInfo); }
 
         public static bool CapsuleCast(Vector3 point1, Vector3 point2, float radius, Vector3 direction, out RaycastHit hitInfo, float maxDistance, int layerMask) => CapsuleCast(point1, point2, radius, direction, out hitInfo, maxDistance, layerMask, QueryTriggerInteraction.UseGlobal);
 
@@ -606,8 +599,7 @@ namespace UnityEngine
 
         public static int CapsuleCastNonAlloc(Vector3 point1, Vector3 point2, float radius, Vector3 direction, RaycastHit[] results) => CapsuleCastNonAlloc(point1, point2, radius, direction, results, Mathf.Infinity, DefaultRaycastLayers, QueryTriggerInteraction.UseGlobal);
 
-        public static Collider[] OverlapCapsule(Vector3 point0, Vector3 point1, float radius, [Internal.DefaultValue("AllLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) =>
-            Q.Overlap(B3.Proxy.Capsule, point0, point1, Quaternion.identity, radius, layerMask, queryTriggerInteraction).ToArray();
+        public static Collider[] OverlapCapsule(Vector3 point0, Vector3 point1, float radius, [Internal.DefaultValue("AllLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) { MainThreadCheck.Check("OverlapCapsule_Internal"); return Q.Overlap(B3.Proxy.Capsule, point0, point1, Quaternion.identity, radius, layerMask, queryTriggerInteraction).ToArray(); }
 
         public static Collider[] OverlapCapsule(Vector3 point0, Vector3 point1, float radius, int layerMask) => OverlapCapsule(point0, point1, radius, layerMask, QueryTriggerInteraction.UseGlobal);
 
@@ -620,8 +612,7 @@ namespace UnityEngine
 
         public static int OverlapCapsuleNonAlloc(Vector3 point0, Vector3 point1, float radius, Collider[] results) => OverlapCapsuleNonAlloc(point0, point1, radius, results, AllLayers, QueryTriggerInteraction.UseGlobal);
 
-        public static bool CheckCapsule(Vector3 start, Vector3 end, float radius, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) =>
-            Q.Overlap(B3.Proxy.Capsule, start, end, Quaternion.identity, radius, layerMask, queryTriggerInteraction).Count > 0;
+        public static bool CheckCapsule(Vector3 start, Vector3 end, float radius, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) { MainThreadCheck.Check("CheckCapsule_Internal"); return Q.Overlap(B3.Proxy.Capsule, start, end, Quaternion.identity, radius, layerMask, queryTriggerInteraction).Count > 0; }
 
         public static bool CheckCapsule(Vector3 start, Vector3 end, float radius, int layerMask) => CheckCapsule(start, end, radius, layerMask, QueryTriggerInteraction.UseGlobal);
 
@@ -645,8 +636,7 @@ namespace UnityEngine
 
         public static bool BoxCast(Vector3 center, Vector3 halfExtents, Vector3 direction) => BoxCast(center, halfExtents, direction, Quaternion.identity, Mathf.Infinity, DefaultRaycastLayers, QueryTriggerInteraction.UseGlobal);
 
-        public static bool BoxCast(Vector3 center, Vector3 halfExtents, Vector3 direction, out RaycastHit hitInfo, [Internal.DefaultValue("Quaternion.identity")] Quaternion orientation, [Internal.DefaultValue("Mathf.Infinity")] float maxDistance, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) =>
-            Q.First(BoxCastHits(center, halfExtents, direction, orientation, maxDistance, layerMask, queryTriggerInteraction, true), out hitInfo);
+        public static bool BoxCast(Vector3 center, Vector3 halfExtents, Vector3 direction, out RaycastHit hitInfo, [Internal.DefaultValue("Quaternion.identity")] Quaternion orientation, [Internal.DefaultValue("Mathf.Infinity")] float maxDistance, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) { if (direction.sqrMagnitude > 0f) MainThreadCheck.Check("Query_BoxCast"); return Q.First(BoxCastHits(center, halfExtents, direction, orientation, maxDistance, layerMask, queryTriggerInteraction, true), out hitInfo); }
 
         public static bool BoxCast(Vector3 center, Vector3 halfExtents, Vector3 direction, out RaycastHit hitInfo, Quaternion orientation, float maxDistance, int layerMask) => BoxCast(center, halfExtents, direction, out hitInfo, orientation, maxDistance, layerMask, QueryTriggerInteraction.UseGlobal);
 
@@ -678,8 +668,7 @@ namespace UnityEngine
 
         public static int BoxCastNonAlloc(Vector3 center, Vector3 halfExtents, Vector3 direction, RaycastHit[] results) => BoxCastNonAlloc(center, halfExtents, direction, results, Quaternion.identity, Mathf.Infinity, DefaultRaycastLayers, QueryTriggerInteraction.UseGlobal);
 
-        public static Collider[] OverlapBox(Vector3 center, Vector3 halfExtents, [Internal.DefaultValue("Quaternion.identity")] Quaternion orientation, [Internal.DefaultValue("AllLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) =>
-            Q.Overlap(B3.Proxy.Box, center, Abs(halfExtents), orientation, 0f, layerMask, queryTriggerInteraction).ToArray();
+        public static Collider[] OverlapBox(Vector3 center, Vector3 halfExtents, [Internal.DefaultValue("Quaternion.identity")] Quaternion orientation, [Internal.DefaultValue("AllLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) { MainThreadCheck.Check("OverlapBox_Internal"); return Q.Overlap(B3.Proxy.Box, center, Abs(halfExtents), orientation, 0f, layerMask, queryTriggerInteraction).ToArray(); }
 
         public static Collider[] OverlapBox(Vector3 center, Vector3 halfExtents, Quaternion orientation, int layerMask) => OverlapBox(center, halfExtents, orientation, layerMask, QueryTriggerInteraction.UseGlobal);
 
@@ -696,8 +685,7 @@ namespace UnityEngine
 
         public static int OverlapBoxNonAlloc(Vector3 center, Vector3 halfExtents, Collider[] results) => OverlapBoxNonAlloc(center, halfExtents, results, Quaternion.identity, AllLayers, QueryTriggerInteraction.UseGlobal);
 
-        public static bool CheckBox(Vector3 center, Vector3 halfExtents, [Internal.DefaultValue("Quaternion.identity")] Quaternion orientation, [Internal.DefaultValue("DefaultRaycastLayers")] int layermask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) =>
-            Q.Overlap(B3.Proxy.Box, center, Abs(halfExtents), orientation, 0f, layermask, queryTriggerInteraction).Count > 0;
+        public static bool CheckBox(Vector3 center, Vector3 halfExtents, [Internal.DefaultValue("Quaternion.identity")] Quaternion orientation, [Internal.DefaultValue("DefaultRaycastLayers")] int layermask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) { MainThreadCheck.Check("CheckBox_Internal"); return Q.Overlap(B3.Proxy.Box, center, Abs(halfExtents), orientation, 0f, layermask, queryTriggerInteraction).Count > 0; }
 
         public static bool CheckBox(Vector3 center, Vector3 halfExtents, Quaternion orientation, int layerMask) => CheckBox(center, halfExtents, orientation, layerMask, QueryTriggerInteraction.UseGlobal);
 

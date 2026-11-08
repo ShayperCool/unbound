@@ -104,11 +104,25 @@ namespace Unbound.Runtime.Jobs
         }
 
         [ThreadStatic] static JobRecord t_Executing;
+        [ThreadStatic] static int t_AnimationJobDepth;
         [ThreadStatic] static int t_ThreadIndex;
         [ThreadStatic] static Safety.TempScope t_JobScope;
         [ThreadStatic] static Stack<Safety.TempScope> t_FreeJobScopes;
 
-        internal static bool IsExecutingJob => t_Executing != null;
+        internal static bool IsExecutingJob => t_Executing != null || t_AnimationJobDepth > 0;
+
+        internal static AnimationJobScope AnimationJob() => new AnimationJobScope(Compat.MainThreadContextsMeasured);
+
+        internal readonly ref struct AnimationJobScope
+        {
+            readonly bool m_Entered;
+            internal AnimationJobScope(bool entered)
+            {
+                m_Entered = entered;
+                if (entered) t_AnimationJobDepth++;
+            }
+            public void Dispose() { if (m_Entered) t_AnimationJobDepth--; }
+        }
         internal static int ThreadIndex => t_Executing != null ? t_ThreadIndex : 0;
 
         /// <summary>The temp memory scope of the job executing on this thread.</summary>

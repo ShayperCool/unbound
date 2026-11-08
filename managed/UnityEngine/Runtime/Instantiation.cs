@@ -243,7 +243,7 @@ namespace Unbound.Runtime
             foreach (var c in sourceGo.m_Components)
             {
                 if (c.m_Destroyed) continue;
-                var clone = ComponentFactory.Create(c.GetType(), go);
+                var clone = ComponentFactory.Create(c.GetType(), go, deserializing: true);
                 if (clone is Transform t)
                 {
                     transformClone = t;

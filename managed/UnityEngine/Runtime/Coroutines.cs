@@ -222,6 +222,7 @@ namespace Unbound.Runtime
 
         internal static void Schedule(MonoBehaviour target, string method, float delay, float repeat)
         {
+            MainThreadCheck.Check("InvokeDelayed");
             var entry = new Entry
             {
                 Target = target,

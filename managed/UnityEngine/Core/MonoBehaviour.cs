@@ -117,13 +117,13 @@ namespace UnityEngine
             Invokes.Schedule(this, methodName, time, repeatRate);
         }
 
-        public void CancelInvoke() => Invokes.Cancel(this, null);
+        public void CancelInvoke() { MainThreadCheck.Check("Internal_CancelInvokeAll"); Invokes.Cancel(this, null); }
 
-        public void CancelInvoke(string methodName) => Invokes.Cancel(this, methodName);
+        public void CancelInvoke(string methodName) { MainThreadCheck.Check("CancelInvoke"); Invokes.Cancel(this, methodName); }
 
-        public bool IsInvoking() => Invokes.IsInvoking(this, null);
+        public bool IsInvoking() { MainThreadCheck.Check("Internal_IsInvokingAll"); return Invokes.IsInvoking(this, null); }
 
-        public bool IsInvoking(string methodName) => Invokes.IsInvoking(this, methodName);
+        public bool IsInvoking(string methodName) { MainThreadCheck.Check("IsInvoking"); return Invokes.IsInvoking(this, methodName); }
 
         public static void print(object message) => Debug.Log(message);
     }

@@ -17,6 +17,8 @@ namespace Unbound.Runtime
     internal static class MainThreadCheck
     {
         [ThreadStatic] static int t_EngineDepth;
+        [ThreadStatic] static Type t_Constructing;
+        [ThreadStatic] static string t_ConstructingObject;
 
         /// <summary>Managed audio callbacks can run on the main thread during offline rendering.</summary>
         [ThreadStatic] internal static bool t_InAudioCallback;
@@ -26,7 +28,7 @@ namespace Unbound.Runtime
         internal static bool Allowed
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => (PlayerLoopDriver.IsMainThread && !Jobs.JobSystem.IsExecutingJob) || t_EngineDepth > 0;
+            get => t_Constructing == null && ((PlayerLoopDriver.IsMainThread && !Jobs.JobSystem.IsExecutingJob) || t_EngineDepth > 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -36,8 +38,48 @@ namespace Unbound.Runtime
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        internal static void Throw(string binding) =>
+        internal static void Throw(string binding)
+        {
+            var type = t_Constructing;
+            if (type != null)
+            {
+                bool behaviour = typeof(MonoBehaviour).IsAssignableFrom(type);
+                string kind = behaviour ? "MonoBehaviour" : "ScriptableObject";
+                string callback = behaviour ? "Awake or Start" : "OnEnable";
+                string owner = t_ConstructingObject == null ? "" : " on game object '" + t_ConstructingObject + "'";
+                throw new UnityException(binding + " is not allowed to be called from a " + kind
+                    + " constructor (or instance field initializer), call it in " + callback + " instead. Called from "
+                    + kind + " '" + type.Name + "'" + owner + ".\nSee \"Script Serialization\" page in the Unity Manual for further details.");
+            }
             throw new UnityException(binding + " can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function.");
+        }
+
+        /// <summary>Constructors have their own API restrictions even when creation runs on the
+        /// main thread. The object name is available for AddComponent, but not deserialization.</summary>
+        internal static ConstructionScope Construct(Type type, string objectName = null) => new ConstructionScope(type, objectName);
+
+        internal readonly ref struct ConstructionScope
+        {
+            readonly Type m_Previous;
+            readonly string m_PreviousObject;
+
+            internal ConstructionScope(Type type, string objectName)
+            {
+                m_Previous = t_Constructing;
+                m_PreviousObject = t_ConstructingObject;
+                if (Compat.MainThreadContextsMeasured && type != null)
+                {
+                    t_Constructing = type;
+                    t_ConstructingObject = objectName;
+                }
+            }
+
+            public void Dispose()
+            {
+                t_Constructing = m_Previous;
+                t_ConstructingObject = m_PreviousObject;
+            }
+        }
 
         /// <summary>Object.GetInstanceID's own check (and so a destroyed object's comparison with
         /// null): only the thread counts, so it passes inside IJob.Run (measured).</summary>

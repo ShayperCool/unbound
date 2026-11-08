@@ -78,15 +78,15 @@ namespace UnityEngine
 
         public float volume
         {
-            get => m_Volume;
-            set { m_Volume = Mathf.Clamp01(value); m_Dirty = true; }
+            get { MainThreadCheck.Check("get_volume"); return m_Volume; }
+            set { MainThreadCheck.Check("set_volume"); m_Volume = Mathf.Clamp01(value); m_Dirty = true; }
         }
 
         public float pitch
         {
-            get => m_Pitch;
+            get { MainThreadCheck.Check("GetPitch"); return m_Pitch; }
             set
-            {
+            { MainThreadCheck.Check("SetPitch");
                 if (float.IsNaN(value) || float.IsInfinity(value))
                 {
                     Debug.LogWarning("Attempt to set pitch to an invalid value", this);
@@ -115,9 +115,9 @@ namespace UnityEngine
 
         public int timeSamples
         {
-            get => m_Clip == null ? 0 : (int)State("get_timeSamples").Position;
+            get { MainThreadCheck.Check("get_timeSamples"); return m_Clip == null ? 0 : (int)State("get_timeSamples").Position; }
             set
-            {
+            { MainThreadCheck.Check("set_timeSamples");
                 if (m_Clip == null) return;
                 Seek(value, "set_timeSamples");
             }
@@ -125,9 +125,9 @@ namespace UnityEngine
 
         public AudioClip clip
         {
-            get => m_Clip;
+            get { MainThreadCheck.Check("get_resource"); return m_Clip; }
             set
-            {
+            { MainThreadCheck.Check("set_clip");
                 if (ReferenceEquals(m_Clip, value)) return;
                 // Another clip stops the main voice (one-shots play on).
                 if (m_Handle != 0 && AudioSystem.IsCallerAllowed())
@@ -171,7 +171,7 @@ namespace UnityEngine
         public bool isPlaying
         {
             get
-            {
+            { MainThreadCheck.Check("get_isPlaying");
                 if (m_Handle == 0 || m_Paused) return false;
                 var state = State("get_isPlaying");
                 return state.Main == AudioVoiceState.Playing || state.Main == AudioVoiceState.Scheduled || state.OneShots > 0;
@@ -182,8 +182,8 @@ namespace UnityEngine
 
         public bool loop
         {
-            get => m_Loop;
-            set { m_Loop = value; m_Dirty = true; }
+            get { MainThreadCheck.Check("get_loop"); return m_Loop; }
+            set { MainThreadCheck.Check("set_loop"); m_Loop = value; m_Dirty = true; }
         }
 
         public bool ignoreListenerVolume
@@ -194,8 +194,8 @@ namespace UnityEngine
 
         public bool playOnAwake
         {
-            get => m_PlayOnAwake;
-            set => m_PlayOnAwake = value;
+            get { MainThreadCheck.Check("get_playOnAwake"); return m_PlayOnAwake; }
+            set { MainThreadCheck.Check("set_playOnAwake"); m_PlayOnAwake = value; }
         }
 
         public bool ignoreListenerPause
@@ -218,8 +218,8 @@ namespace UnityEngine
 
         public float spatialBlend
         {
-            get => ConstantOf(m_SpatialBlendCurve);
-            set => SetConstant(ref m_SpatialBlendCurve, Mathf.Clamp01(value));
+            get { MainThreadCheck.Check("get_spatialBlend"); return ConstantOf(m_SpatialBlendCurve); }
+            set { MainThreadCheck.Check("set_spatialBlend"); SetConstant(ref m_SpatialBlendCurve, Mathf.Clamp01(value)); }
         }
 
         internal bool UsesSpatialBlend
@@ -294,8 +294,8 @@ namespace UnityEngine
 
         public bool mute
         {
-            get => m_Mute;
-            set { m_Mute = value; m_Dirty = true; }
+            get { MainThreadCheck.Check("get_mute"); return m_Mute; }
+            set { MainThreadCheck.Check("set_mute"); m_Mute = value; m_Dirty = true; }
         }
 
         public float minDistance
@@ -397,7 +397,7 @@ namespace UnityEngine
         /// <summary>Starts the main voice: time 0 now, &gt; 0 at that dsp time, &lt; 0 after that delay.</summary>
         void PlayAt(double time, string api)
         {
-            AudioSystem.CheckMainThread(api);
+            AudioSystem.CheckMainThread(api == "Play" ? "PlayHelper" : "Play");
             ThrowIfDestroyed();
             if (!isActiveAndEnabled)
             {

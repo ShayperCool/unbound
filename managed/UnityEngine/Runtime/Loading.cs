@@ -157,7 +157,7 @@ namespace Unbound.Runtime
                         Component c;
                         try
                         {
-                            c = ComponentFactory.Create(type, entry.Go);
+                            c = ComponentFactory.Create(type, entry.Go, deserializing: true);
                         }
                         catch (Exception e)
                         {

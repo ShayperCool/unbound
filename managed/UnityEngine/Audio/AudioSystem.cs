@@ -1,3 +1,4 @@
+using Unbound.Runtime;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -131,7 +132,7 @@ namespace Unbound.Runtime
 
         /// <summary>The audio API may only be used on the main thread outside the mixer's callbacks
         /// (where the mixer is busy).</summary>
-        internal static bool IsCallerAllowed() => !MainThreadCheck.t_InAudioCallback && PlayerLoopDriver.IsMainThread;
+        internal static bool IsCallerAllowed() => !MainThreadCheck.t_InAudioCallback && MainThreadCheck.Allowed;
 
         internal static void CheckMainThread(string api)
         {

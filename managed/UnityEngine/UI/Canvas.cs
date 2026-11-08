@@ -79,10 +79,10 @@ namespace UnityEngine
         // its GraphicRaycaster casts with the root's camera (measured, 6000.0).
         public RenderMode renderMode
         {
-            get => ParentCanvas() is Canvas parent ? parent.renderMode :
-                m_RenderMode == RenderMode.ScreenSpaceCamera && m_Camera == null ? RenderMode.ScreenSpaceOverlay : m_RenderMode;
+            get { MainThreadCheck.Check("get_renderMode"); return ParentCanvas() is Canvas parent ? parent.renderMode :
+                m_RenderMode == RenderMode.ScreenSpaceCamera && m_Camera == null ? RenderMode.ScreenSpaceOverlay : m_RenderMode; }
             set
-            {
+            { MainThreadCheck.Check("set_renderMode");
                 if (ParentCanvas() is Canvas parent) { parent.renderMode = value; return; }
                 if (m_RenderMode == value) return;
                 m_RenderMode = value;
@@ -90,7 +90,7 @@ namespace UnityEngine
             }
         }
 
-        public bool isRootCanvas => ParentCanvas() == null;
+        public bool isRootCanvas { get { MainThreadCheck.Check("get_isRootCanvas"); return ParentCanvas() == null; } }
 
         /// <summary>The canvas this one belongs to (itself for a root canvas).</summary>
         public Canvas rootCanvas
@@ -118,7 +118,7 @@ namespace UnityEngine
         public Rect pixelRect
         {
             get
-            {
+            { MainThreadCheck.Check("get_pixelRect");
                 var root = rootCanvas;
                 if (root.m_RenderMode == RenderMode.ScreenSpaceCamera && root.m_Camera != null) return root.m_Camera.pixelRect;
                 return new Rect(0, 0, Screen.width, Screen.height);
@@ -130,9 +130,9 @@ namespace UnityEngine
 
         public float scaleFactor
         {
-            get => isRootCanvas ? m_ScaleFactor : rootCanvas.scaleFactor;
+            get { MainThreadCheck.Check("get_scaleFactor"); return isRootCanvas ? m_ScaleFactor : rootCanvas.scaleFactor; }
             set
-            {
+            { MainThreadCheck.Check("set_scaleFactor");
                 if (!isRootCanvas || value <= 0f) return;
                 if (Mathf.Approximately(m_ScaleFactor, value)) return;
                 m_ScaleFactor = value;
@@ -175,8 +175,8 @@ namespace UnityEngine
 
         public int sortingOrder
         {
-            get => SortingSource.m_SortingOrder;
-            set => m_SortingOrder = (short)Mathf.Clamp(value, short.MinValue, short.MaxValue);
+            get { MainThreadCheck.Check("get_sortingOrder"); return SortingSource.m_SortingOrder; }
+            set { MainThreadCheck.Check("set_sortingOrder"); m_SortingOrder = (short)Mathf.Clamp(value, short.MinValue, short.MaxValue); }
         }
 
         public int targetDisplay { get => m_TargetDisplay; set => m_TargetDisplay = value; }

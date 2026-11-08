@@ -9,6 +9,8 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Compat
     {
+        /// <summary>Constructor and animation-job API contexts measured in tests/projects/threadapis.</summary>
+        internal static bool MainThreadContextsMeasured => Release == (6000, 0, 71, 'f', 1);
         /// <summary>Invoke deadlines and delayed-call points measured in tests/projects/invokesteps.</summary>
         internal static bool InvokeTimingMeasured => Release == (6000, 0, 71, 'f', 1);
         /// <summary>Separate preparation and activation of scene operations, measured by

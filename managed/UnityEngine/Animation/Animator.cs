@@ -94,12 +94,12 @@ namespace UnityEngine
             }
         }
 
-        public bool isInitialized => m_Player != null;
+        public bool isInitialized { get { MainThreadCheck.Check("get_isInitialized"); return m_Player != null; } }
 
         public bool applyRootMotion
         {
-            get => m_ApplyRootMotion;
-            set => m_ApplyRootMotion = value;
+            get { MainThreadCheck.Check("get_applyRootMotion"); return m_ApplyRootMotion; }
+            set { MainThreadCheck.Check("set_applyRootMotion"); m_ApplyRootMotion = value; }
         }
 
         [Obsolete("Animator.animatePhysics has been deprecated. Use Animator.updateMode instead.")]
@@ -111,8 +111,8 @@ namespace UnityEngine
 
         public AnimatorUpdateMode updateMode
         {
-            get => m_UpdateMode;
-            set => m_UpdateMode = value;
+            get { MainThreadCheck.Check("get_updateMode"); return m_UpdateMode; }
+            set { MainThreadCheck.Check("set_updateMode"); m_UpdateMode = value; }
         }
 
         public bool hasTransformHierarchy
@@ -126,8 +126,8 @@ namespace UnityEngine
 
         public float speed
         {
-            get => m_Speed;
-            set => m_Speed = value;
+            get { MainThreadCheck.Check("get_speed"); return m_Speed; }
+            set { MainThreadCheck.Check("set_speed"); m_Speed = value; }
         }
 
         /// <summary>Applied by the player loop's update (<see cref="Tick"/>) while no renderer of the
@@ -135,15 +135,15 @@ namespace UnityEngine
         /// CullCompletely skips the update.</summary>
         public AnimatorCullingMode cullingMode
         {
-            get => m_CullingMode;
-            set => m_CullingMode = value;
+            get { MainThreadCheck.Check("get_cullingMode"); return m_CullingMode; }
+            set { MainThreadCheck.Check("set_cullingMode"); m_CullingMode = value; }
         }
 
         public RuntimeAnimatorController runtimeAnimatorController
         {
-            get => m_Controller;
+            get { MainThreadCheck.Check("get_runtimeAnimatorController"); return m_Controller; }
             set
-            {
+            { MainThreadCheck.Check("set_runtimeAnimatorController");
                 if (m_Controller == value) return;
                 ResetBindings();
                 m_Controller = value;
@@ -189,9 +189,9 @@ namespace UnityEngine
         internal Vector3 m_DeltaPosition;
         internal Quaternion m_DeltaRotation = Quaternion.identity;
 
-        public Vector3 deltaPosition => m_DeltaPosition;
+        public Vector3 deltaPosition { get { MainThreadCheck.Check("get_deltaPosition"); return m_DeltaPosition; } }
 
-        public Quaternion deltaRotation => m_DeltaRotation;
+        public Quaternion deltaRotation { get { MainThreadCheck.Check("get_deltaRotation"); return m_DeltaRotation; } }
 
 
         /// <summary>How much the feet pivot follows the left foot (humanoids; 0.5 otherwise).</summary>
@@ -520,30 +520,34 @@ namespace UnityEngine
             return false;
         }
 
-        public float GetFloat(string name) => Parameter(name, AnimatorControllerParameterType.Float, out var p) is int i && i >= 0 ? p.Floats[i] : 0f;
+        public float GetFloat(string name) { MainThreadCheck.Check("GetFloatString"); return Parameter(name, AnimatorControllerParameterType.Float, out var p) is int i && i >= 0 ? p.Floats[i] : 0f; }
 
-        public float GetFloat(int id) => Parameter(id, AnimatorControllerParameterType.Float, out var p) is int i && i >= 0 ? p.Floats[i] : 0f;
+        public float GetFloat(int id) { MainThreadCheck.Check("GetFloatID"); return Parameter(id, AnimatorControllerParameterType.Float, out var p) is int i && i >= 0 ? p.Floats[i] : 0f; }
 
         public void SetFloat(string name, float value)
         {
+            MainThreadCheck.Check("SetFloatString");
             int i = Parameter(name, AnimatorControllerParameterType.Float, out var p);
             if (i >= 0) p.Floats[i] = value;
         }
 
         public void SetFloat(string name, float value, float dampTime, float deltaTime)
         {
+            MainThreadCheck.Check("SetFloatStringDamp");
             int i = Parameter(name, AnimatorControllerParameterType.Float, out var p);
             if (i >= 0) p.SetFloatDamped(i, value, dampTime, deltaTime);
         }
 
         public void SetFloat(int id, float value)
         {
+            MainThreadCheck.Check("SetFloatID");
             int i = Parameter(id, AnimatorControllerParameterType.Float, out var p);
             if (i >= 0) p.Floats[i] = value;
         }
 
         public void SetFloat(int id, float value, float dampTime, float deltaTime)
         {
+            MainThreadCheck.Check("SetFloatIDDamp");
             int i = Parameter(id, AnimatorControllerParameterType.Float, out var p);
             if (i >= 0) p.SetFloatDamped(i, value, dampTime, deltaTime);
         }
@@ -630,7 +634,7 @@ namespace UnityEngine
             }
         }
 
-        public int parameterCount => EnsurePlayer()?.Graph.Parameters.Length ?? 0;
+        public int parameterCount { get { MainThreadCheck.Check("get_parameterCount"); return EnsurePlayer()?.Graph.Parameters.Length ?? 0; } }
 
         public AnimatorControllerParameter GetParameter(int index)
         {
@@ -729,6 +733,7 @@ namespace UnityEngine
 
         public AnimatorStateInfo GetCurrentAnimatorStateInfo(int layerIndex)
         {
+            MainThreadCheck.Check("GetAnimatorStateInfo");
             var player = EnsurePlayer();
             if (!ValidLayer(player, layerIndex)) return default;
             var layer = player.Layers[layerIndex];
@@ -848,6 +853,7 @@ namespace UnityEngine
 
         public void Play(int stateNameHash, [Internal.DefaultValue("-1")] int layer, [Internal.DefaultValue("float.NegativeInfinity")] float normalizedTime)
         {
+            MainThreadCheck.Check("Play");
             if (Resolve(stateNameHash, layer, out var player, out int index, out var state))
                 player.RequestPlay(index, state, normalizedTime, fixedTime: false);
         }

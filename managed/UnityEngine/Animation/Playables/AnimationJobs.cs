@@ -94,14 +94,11 @@ namespace Unbound.Runtime.Playables
 
         // ------------------------------------------------------------------ transforms in the stream
 
-        internal Vector3 LocalPosition(Transform t, int channel) =>
-            channel >= 0 ? new Vector3(Stream.Values[channel], Stream.Values[channel + 1], Stream.Values[channel + 2]) : t.localPosition;
+        internal Vector3 LocalPosition(Transform t, int channel) { using var engine = MainThreadCheck.Engine(); return channel >= 0 ? new Vector3(Stream.Values[channel], Stream.Values[channel + 1], Stream.Values[channel + 2]) : t.localPosition; }
 
-        internal Quaternion LocalRotation(Transform t, int channel) =>
-            channel >= 0 ? AnimationEvaluation.Q(Stream.Values, channel).normalized : t.localRotation;
+        internal Quaternion LocalRotation(Transform t, int channel) { using var engine = MainThreadCheck.Engine(); return channel >= 0 ? AnimationEvaluation.Q(Stream.Values, channel).normalized : t.localRotation; }
 
-        internal Vector3 LocalScale(Transform t, int channel) =>
-            channel >= 0 ? new Vector3(Stream.Values[channel], Stream.Values[channel + 1], Stream.Values[channel + 2]) : t.localScale;
+        internal Vector3 LocalScale(Transform t, int channel) { using var engine = MainThreadCheck.Engine(); return channel >= 0 ? new Vector3(Stream.Values[channel], Stream.Values[channel + 1], Stream.Values[channel + 2]) : t.localScale; }
 
         /// <summary>A transform's local TRS as the stream has it (scene values where it does not).</summary>
         internal void Local(Transform t, out Vector3 p, out Quaternion r, out Vector3 s)
@@ -115,6 +112,7 @@ namespace Unbound.Runtime.Playables
         /// <summary>Local to world through the stream's values up to the Animator, the scene above.</summary>
         internal Matrix4x4 LocalToWorld(Transform t)
         {
+            using var engine = MainThreadCheck.Engine();
             var root = Handles.Animator.transform;
             var m = Matrix4x4.identity;
             var p = t;
@@ -134,6 +132,7 @@ namespace Unbound.Runtime.Playables
 
         internal void GlobalTR(Transform t, out Vector3 position, out Quaternion rotation)
         {
+            using var engine = MainThreadCheck.Engine();
             var root = Handles.Animator.transform;
             position = Vector3.zero;
             rotation = Quaternion.identity;
@@ -176,6 +175,7 @@ namespace Unbound.Runtime.Playables
 
         internal void ParentGlobalTR(Transform t, out Vector3 position, out Quaternion rotation)
         {
+            using var engine = MainThreadCheck.Engine();
             var parent = t.m_Parent;
             if (parent == null)
             {
@@ -306,6 +306,7 @@ namespace Unbound.Runtime.Playables
                 if (Job is UnityEngine.Animations.IAnimationJob job)
                 {
                     var stream = context.ToStream();
+                    using var jobScope = Unbound.Runtime.Jobs.JobSystem.AnimationJob();
                     job.ProcessRootMotion(stream);
                     job.ProcessAnimation(stream);
                 }
@@ -600,6 +601,7 @@ namespace UnityEngine.Animations
 
         public Vector3 GetPosition(AnimationStream stream)
         {
+            using var engine = MainThreadCheck.Engine();
             if (!Data(stream, out var c, out var d)) return Vector3.zero;
             c.GlobalTR(d.Transform, out var p, out _);
             return p;
@@ -616,6 +618,7 @@ namespace UnityEngine.Animations
 
         public Quaternion GetRotation(AnimationStream stream)
         {
+            using var engine = MainThreadCheck.Engine();
             if (!Data(stream, out var c, out var d)) return Quaternion.identity;
             c.GlobalTR(d.Transform, out _, out var r);
             return r;
@@ -628,21 +631,21 @@ namespace UnityEngine.Animations
             c.Write(d.Rotation, Quaternion.Inverse(pr) * rotation);
         }
 
-        public Vector3 GetLocalPosition(AnimationStream stream) => Data(stream, out var c, out var d) ? c.LocalPosition(d.Transform, d.Position) : Vector3.zero;
+        public Vector3 GetLocalPosition(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Data(stream, out var c, out var d) ? c.LocalPosition(d.Transform, d.Position) : Vector3.zero; }
 
         public void SetLocalPosition(AnimationStream stream, Vector3 position)
         {
             if (Data(stream, out var c, out var d)) c.Write(d.Position, position);
         }
 
-        public Quaternion GetLocalRotation(AnimationStream stream) => Data(stream, out var c, out var d) ? c.LocalRotation(d.Transform, d.Rotation) : Quaternion.identity;
+        public Quaternion GetLocalRotation(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Data(stream, out var c, out var d) ? c.LocalRotation(d.Transform, d.Rotation) : Quaternion.identity; }
 
         public void SetLocalRotation(AnimationStream stream, Quaternion rotation)
         {
             if (Data(stream, out var c, out var d)) c.Write(d.Rotation, rotation);
         }
 
-        public Vector3 GetLocalScale(AnimationStream stream) => Data(stream, out var c, out var d) ? c.LocalScale(d.Transform, d.Scale) : Vector3.one;
+        public Vector3 GetLocalScale(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Data(stream, out var c, out var d) ? c.LocalScale(d.Transform, d.Scale) : Vector3.one; }
 
         public void SetLocalScale(AnimationStream stream, Vector3 scale)
         {
@@ -651,6 +654,7 @@ namespace UnityEngine.Animations
 
         public Matrix4x4 GetLocalToParentMatrix(AnimationStream stream)
         {
+            using var engine = MainThreadCheck.Engine();
             if (!Data(stream, out var c, out var d)) return Matrix4x4.identity;
             return Matrix4x4.TRS(c.LocalPosition(d.Transform, d.Position), c.LocalRotation(d.Transform, d.Rotation), c.LocalScale(d.Transform, d.Scale));
         }
@@ -663,6 +667,7 @@ namespace UnityEngine.Animations
 
         public void GetLocalTRS(AnimationStream stream, out Vector3 position, out Quaternion rotation, out Vector3 scale)
         {
+            using var engine = MainThreadCheck.Engine();
             if (!Data(stream, out var c, out var d))
             {
                 position = Vector3.zero;
@@ -685,6 +690,7 @@ namespace UnityEngine.Animations
 
         public void GetGlobalTR(AnimationStream stream, out Vector3 position, out Quaternion rotation)
         {
+            using var engine = MainThreadCheck.Engine();
             if (!Data(stream, out var c, out var d))
             {
                 position = Vector3.zero;
@@ -694,7 +700,7 @@ namespace UnityEngine.Animations
             c.GlobalTR(d.Transform, out position, out rotation);
         }
 
-        public Matrix4x4 GetLocalToWorldMatrix(AnimationStream stream) => Data(stream, out var c, out var d) ? c.LocalToWorld(d.Transform) : Matrix4x4.identity;
+        public Matrix4x4 GetLocalToWorldMatrix(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Data(stream, out var c, out var d) ? c.LocalToWorld(d.Transform) : Matrix4x4.identity; }
 
         public void SetGlobalTR(AnimationStream stream, Vector3 position, Quaternion rotation, bool useMask)
         {
@@ -712,6 +718,7 @@ namespace UnityEngine.Animations
 
         static Vector3 ParentScale(StreamContext c, Transform t)
         {
+            using var engine = MainThreadCheck.Engine();
             var parent = t.m_Parent;
             if (parent == null) return Vector3.one;
             if (t == c.Handles.Animator.transform) return parent.lossyScale;
@@ -796,31 +803,31 @@ namespace UnityEngine.Animations
         public bool IsValid(AnimationStream stream) =>
             AnimatorHandles.Get(valid) is AnimatorHandles h && transformSceneHandleDefinitionIndex >= 0 && transformSceneHandleDefinitionIndex < h.SceneTransforms.Count;
 
-        public Vector3 GetPosition(AnimationStream stream) => Transform(stream)?.position ?? Vector3.zero;
+        public Vector3 GetPosition(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Transform(stream)?.position ?? Vector3.zero; }
 
         [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
         [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetPosition(AnimationStream stream, Vector3 position) { }
 
-        public Vector3 GetLocalPosition(AnimationStream stream) => Transform(stream)?.localPosition ?? Vector3.zero;
+        public Vector3 GetLocalPosition(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Transform(stream)?.localPosition ?? Vector3.zero; }
 
         [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
         [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetLocalPosition(AnimationStream stream, Vector3 position) { }
 
-        public Quaternion GetRotation(AnimationStream stream) => Transform(stream)?.rotation ?? Quaternion.identity;
+        public Quaternion GetRotation(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Transform(stream)?.rotation ?? Quaternion.identity; }
 
         [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
         [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetRotation(AnimationStream stream, Quaternion rotation) { }
 
-        public Quaternion GetLocalRotation(AnimationStream stream) => Transform(stream)?.localRotation ?? Quaternion.identity;
+        public Quaternion GetLocalRotation(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Transform(stream)?.localRotation ?? Quaternion.identity; }
 
         [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
         [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetLocalRotation(AnimationStream stream, Quaternion rotation) { }
 
-        public Vector3 GetLocalScale(AnimationStream stream) => Transform(stream)?.localScale ?? Vector3.one;
+        public Vector3 GetLocalScale(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Transform(stream)?.localScale ?? Vector3.one; }
 
         [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
         [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
@@ -828,6 +835,7 @@ namespace UnityEngine.Animations
 
         public void GetLocalTRS(AnimationStream stream, out Vector3 position, out Quaternion rotation, out Vector3 scale)
         {
+            using var engine = MainThreadCheck.Engine();
             var t = Transform(stream);
             position = t != null ? t.localPosition : Vector3.zero;
             rotation = t != null ? t.localRotation : Quaternion.identity;
@@ -836,18 +844,20 @@ namespace UnityEngine.Animations
 
         public Matrix4x4 GetLocalToParentMatrix(AnimationStream stream)
         {
+            using var engine = MainThreadCheck.Engine();
             var t = Transform(stream);
             return t != null ? Matrix4x4.TRS(t.localPosition, t.localRotation, t.localScale) : Matrix4x4.identity;
         }
 
         public void GetGlobalTR(AnimationStream stream, out Vector3 position, out Quaternion rotation)
         {
+            using var engine = MainThreadCheck.Engine();
             var t = Transform(stream);
             position = t != null ? t.position : Vector3.zero;
             rotation = t != null ? t.rotation : Quaternion.identity;
         }
 
-        public Matrix4x4 GetLocalToWorldMatrix(AnimationStream stream) => Transform(stream)?.localToWorldMatrix ?? Matrix4x4.identity;
+        public Matrix4x4 GetLocalToWorldMatrix(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Transform(stream)?.localToWorldMatrix ?? Matrix4x4.identity; }
     }
 
     /// <summary>A property read from the scene during an animation job.</summary>
@@ -858,6 +868,7 @@ namespace UnityEngine.Animations
 
         float Value(AnimationStream stream)
         {
+            using var engine = MainThreadCheck.Engine();
             var handles = AnimatorHandles.Get(valid);
             if (handles == null || handleIndex < 0 || handleIndex >= handles.SceneProperties.Count)
                 throw new InvalidOperationException("The PropertySceneHandle is invalid. Please use proper function to create the handle.");

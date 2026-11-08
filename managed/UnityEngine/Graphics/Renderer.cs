@@ -29,9 +29,9 @@ namespace UnityEngine
 
         public bool enabled
         {
-            get => m_Enabled;
+            get { MainThreadCheck.Check("get_enabled"); return m_Enabled; }
             set
-            {
+            { MainThreadCheck.Check("set_enabled");
                 if (m_Enabled == value) return;
                 m_Enabled = value;
                 if (m_GameObject != null && m_GameObject.activeInHierarchy)
@@ -80,7 +80,7 @@ namespace UnityEngine
             m_BlockMaterials = null;
         }
 
-        public bool isVisible => m_IsVisible;
+        public bool isVisible { get { MainThreadCheck.Check("get_isVisible"); return m_IsVisible; } }
         public bool forceRenderingOff { get; set; }
         public ShadowCastingMode shadowCastingMode { get => m_CastShadows; set => m_CastShadows = value; }
         public bool receiveShadows { get => m_ReceiveShadows; set => m_ReceiveShadows = value; }
@@ -126,8 +126,8 @@ namespace UnityEngine
 
         public int sortingLayerID
         {
-            get => m_SortingLayerID;
-            set => m_SortingLayerID = value;
+            get { MainThreadCheck.Check("get_sortingLayerID"); return m_SortingLayerID; }
+            set { MainThreadCheck.Check("set_sortingLayerID"); m_SortingLayerID = value; }
         }
 
         public string sortingLayerName
@@ -138,8 +138,8 @@ namespace UnityEngine
 
         public int sortingOrder
         {
-            get => m_SortingOrder;
-            set => m_SortingOrder = (short)Mathf.Clamp(value, short.MinValue, short.MaxValue);
+            get { MainThreadCheck.Check("get_sortingOrder"); return m_SortingOrder; }
+            set { MainThreadCheck.Check("set_sortingOrder"); m_SortingOrder = (short)Mathf.Clamp(value, short.MinValue, short.MaxValue); }
         }
 
         internal int sortingGroupID { get; set; }
@@ -149,9 +149,9 @@ namespace UnityEngine
 
         public Material sharedMaterial
         {
-            get => m_Materials.Length > 0 ? m_Materials[0] : null;
+            get { MainThreadCheck.Check("GetSharedMaterial"); return m_Materials.Length > 0 ? m_Materials[0] : null; }
             set
-            {
+            { MainThreadCheck.Check("SetMaterial");
                 if (m_Materials.Length == 0) m_Materials = new Material[1];
                 m_Materials[0] = value;
             }
@@ -159,30 +159,30 @@ namespace UnityEngine
 
         public Material[] sharedMaterials
         {
-            get => (Material[])m_Materials.Clone();
-            set => m_Materials = value != null ? (Material[])value.Clone() : Array.Empty<Material>();
+            get { MainThreadCheck.Check("GetSharedMaterialArray"); return (Material[])m_Materials.Clone(); }
+            set { MainThreadCheck.Check("SetMaterialArray"); m_Materials = value != null ? (Material[])value.Clone() : Array.Empty<Material>(); }
         }
 
         /// <summary>The first material, instantiated for this renderer on first access.</summary>
         public Material material
         {
             get
-            {
+            { MainThreadCheck.Check("IsPersistent");
                 if (m_Materials.Length == 0) return null;
                 m_Materials[0] = Own(m_Materials[0]);
                 return m_Materials[0];
             }
-            set => sharedMaterial = value;
+            set { MainThreadCheck.Check("SetMaterial"); sharedMaterial = value; }
         }
 
         public Material[] materials
         {
             get
-            {
+            { MainThreadCheck.Check("IsPersistent");
                 for (int i = 0; i < m_Materials.Length; i++) m_Materials[i] = Own(m_Materials[i]);
                 return (Material[])m_Materials.Clone();
             }
-            set => sharedMaterials = value;
+            set { MainThreadCheck.Check("SetMaterialArray"); sharedMaterials = value; }
         }
 
         Material Own(Material shared)
@@ -313,12 +313,12 @@ namespace UnityEngine
         public Bounds bounds
         {
             get
-            {
+            { MainThreadCheck.Check("get_bounds");
                 if (m_BoundsOverride is { } overridden)
                     return overridden;
                 return GetWorldBounds();
             }
-            set => m_BoundsOverride = value;
+            set { MainThreadCheck.Check("set_bounds"); m_BoundsOverride = value; }
         }
 
         public Bounds localBounds

@@ -60,6 +60,7 @@ namespace UnityEngine
 
         public Material(Shader shader)
         {
+            MainThreadCheck.Check("CreateWithShader");
             if (shader == null) throw new ArgumentNullException(nameof(shader), "Creating a material requires a shader.");
             m_Shader = shader;
             m_Name = shader.name;
@@ -169,9 +170,9 @@ namespace UnityEngine
 
         public Shader shader
         {
-            get => m_Shader;
+            get { MainThreadCheck.Check("get_shader"); return m_Shader; }
             set
-            {
+            { MainThreadCheck.Check("set_shader");
                 if (value != m_Shader)
                 {
                     KeepDefaultsOf(m_Shader);
@@ -246,14 +247,14 @@ namespace UnityEngine
 
         public Color color
         {
-            get => GetColor(MainColor);
-            set => SetColor(MainColor, value);
+            get { MainThreadCheck.Check("GetFirstPropertyNameIdByAttribute"); return GetColor(MainColor); }
+            set { MainThreadCheck.Check("GetFirstPropertyNameIdByAttribute"); SetColor(MainColor, value); }
         }
 
         public Texture mainTexture
         {
-            get => GetTexture(MainTex);
-            set => SetTexture(MainTex, value);
+            get { MainThreadCheck.Check("GetFirstPropertyNameIdByAttribute"); return GetTexture(MainTex); }
+            set { MainThreadCheck.Check("GetFirstPropertyNameIdByAttribute"); SetTexture(MainTex, value); }
         }
 
         public Vector2 mainTextureOffset
@@ -270,9 +271,9 @@ namespace UnityEngine
 
         public int renderQueue
         {
-            get => Inherited().m_CustomRenderQueue >= 0 ? m_CustomRenderQueue : m_Shader != null ? m_Shader.renderQueue : 2000;
+            get { MainThreadCheck.Check("get_renderQueue"); return Inherited().m_CustomRenderQueue >= 0 ? m_CustomRenderQueue : m_Shader != null ? m_Shader.renderQueue : 2000; }
             set
-            {
+            { MainThreadCheck.Check("set_renderQueue");
                 m_CustomRenderQueue = value;
                 MarkDirty();
             }
@@ -287,7 +288,7 @@ namespace UnityEngine
         public string[] shaderKeywords
         {
             get
-            {
+            { MainThreadCheck.Check("GetShaderKeywords");
                 Inherit();
                 var declarations = KeywordDeclarations;
                 var valid = new List<string>();
@@ -302,7 +303,7 @@ namespace UnityEngine
                 return valid.ToArray();
             }
             set
-            {
+            { MainThreadCheck.Check("SetShaderKeywords");
                 OwnKeywords();
                 m_Keywords.Clear();
                 m_KeywordExtras.Clear();
@@ -360,16 +361,16 @@ namespace UnityEngine
 
         public bool enableInstancing
         {
-            get { Inherit(); return m_EnableInstancing; }
+            get { MainThreadCheck.Check("get_enableInstancing"); Inherit(); return m_EnableInstancing; }
             set
-            {
+            { MainThreadCheck.Check("set_enableInstancing");
                 if (m_EnableInstancing == value) return;
                 m_EnableInstancing = value;
                 MarkDirty();
             }
         }
 
-        public int passCount => m_Shader != null ? m_Shader.passCount : 0;
+        public int passCount { get { MainThreadCheck.Check("get_passCount"); return m_Shader != null ? m_Shader.passCount : 0; } }
 
         /// <summary>Whether the material is a variant of another (it has a parent).</summary>
         public bool isVariant => m_Parent != null;
@@ -561,6 +562,7 @@ namespace UnityEngine
 
         public void EnableKeyword(string keyword)
         {
+            MainThreadCheck.Check("EnableKeyword");
             OwnKeywords();
             if (m_Keywords.Add(keyword)) MarkDirty();
         }
@@ -692,8 +694,7 @@ namespace UnityEngine
 
         // A material has the properties its shader declares and the ones set from script; values
         // saved for other names stay unseen (measured, 6000.0, tests/projects/materials).
-        public bool HasProperty(int nameID) =>
-            Declared(nameID) != null || m_ScriptSet.Contains(nameID) || ScaleOffsetOf(nameID, out _);
+        public bool HasProperty(int nameID) { MainThreadCheck.Check("HasProperty"); return Declared(nameID) != null || m_ScriptSet.Contains(nameID) || ScaleOffsetOf(nameID, out _); }
 
         ShaderPropertyType? Declared(int nameID) => m_Shader?.PropertyById(nameID)?.Type;
 
@@ -787,6 +788,7 @@ namespace UnityEngine
 
         public void SetFloat(int nameID, float value)
         {
+            MainThreadCheck.Check("SetFloatImpl");
             m_RawBindings.Remove(nameID);
             m_Floats[nameID] = value;
             ScriptSet(nameID);
@@ -797,6 +799,7 @@ namespace UnityEngine
 
         public float GetFloat(int nameID)
         {
+            MainThreadCheck.Check("GetFloatImpl");
             Inherit();
             if (!IsFloat(nameID)) { Missing(nameID, "a float or range"); return 0f; }
             if (m_Floats.TryGetValue(nameID, out var f)) return ConvertsProperty(nameID) ? Mathf.LinearToGammaSpace(Mathf.GammaToLinearSpace(f)) : f;

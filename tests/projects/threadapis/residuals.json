@@ -1,0 +1,65 @@
+[
+  {
+    "thread": "main",
+    "call": "Renderer.material get",
+    "unity": "ok",
+    "unbound": "ok null",
+    "reason": "Renderer.material creates a default instance from an empty slot in the Editor; rendering follow-up."
+  },
+  {
+    "thread": "main",
+    "call": "Animator.isInitialized get",
+    "unity": "ok true",
+    "unbound": "ok false",
+    "reason": "A newly attached Animator without a controller reports initialized in the Editor; animation follow-up."
+  },
+  {
+    "thread": "main",
+    "call": "AudioSource.isPlaying get",
+    "unity": "ok true",
+    "unbound": "ok false",
+    "reason": "A newly attached AudioSource without a clip reports playing in these initial Editor contexts; audio follow-up."
+  },
+  {
+    "thread": "contactModify",
+    "call": "Renderer.material get",
+    "unity": "ok",
+    "unbound": "ok null",
+    "reason": "Renderer.material creates a default instance from an empty slot in the Editor; rendering follow-up."
+  },
+  {
+    "thread": "contactModify",
+    "call": "Animator.isInitialized get",
+    "unity": "ok true",
+    "unbound": "ok false",
+    "reason": "A newly attached Animator without a controller reports initialized in the Editor; animation follow-up."
+  },
+  {
+    "thread": "contactModify",
+    "call": "AudioSource.isPlaying get",
+    "unity": "ok true",
+    "unbound": "ok false",
+    "reason": "A newly attached AudioSource without a clip reports playing in these initial Editor contexts; audio follow-up."
+  },
+  {
+    "thread": "contactAutomatic",
+    "call": "Renderer.material get",
+    "unity": "ok",
+    "unbound": "ok null",
+    "reason": "Renderer.material creates a default instance from an empty slot in the Editor; rendering follow-up."
+  },
+  {
+    "thread": "contactAutomatic",
+    "call": "Animator.isInitialized get",
+    "unity": "ok true",
+    "unbound": "ok false",
+    "reason": "A newly attached Animator without a controller reports initialized in the Editor; animation follow-up."
+  },
+  {
+    "thread": "contactAutomatic",
+    "call": "AudioSource.isPlaying get",
+    "unity": "ok true",
+    "unbound": "ok false",
+    "reason": "A newly attached AudioSource without a clip reports playing in these initial Editor contexts; audio follow-up."
+  }
+]

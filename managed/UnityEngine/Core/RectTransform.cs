@@ -32,7 +32,7 @@ namespace UnityEngine
         public Rect rect
         {
             get
-            {
+            { MainThreadCheck.Check("get_rect");
                 var size = ParentSize() * (m_AnchorMax - m_AnchorMin) + m_SizeDelta;
                 return new Rect(-m_Pivot.x * size.x, -m_Pivot.y * size.y, size.x, size.y);
             }
@@ -40,20 +40,20 @@ namespace UnityEngine
 
         public Vector2 anchorMin
         {
-            get => m_AnchorMin;
-            set { if (m_AnchorMin != value) { m_AnchorMin = value; DimensionsChanged(); } }
+            get { MainThreadCheck.Check("get_anchorMin"); return m_AnchorMin; }
+            set { MainThreadCheck.Check("set_anchorMin"); if (m_AnchorMin != value) { m_AnchorMin = value; DimensionsChanged(); } }
         }
 
         public Vector2 anchorMax
         {
-            get => m_AnchorMax;
-            set { if (m_AnchorMax != value) { m_AnchorMax = value; DimensionsChanged(); } }
+            get { MainThreadCheck.Check("get_anchorMax"); return m_AnchorMax; }
+            set { MainThreadCheck.Check("set_anchorMax"); if (m_AnchorMax != value) { m_AnchorMax = value; DimensionsChanged(); } }
         }
 
         public Vector2 anchoredPosition
         {
-            get => m_AnchoredPosition;
-            set { if (m_AnchoredPosition != value) { m_AnchoredPosition = value; MarkChanged(); } }
+            get { MainThreadCheck.Check("get_anchoredPosition"); return m_AnchoredPosition; }
+            set { MainThreadCheck.Check("set_anchoredPosition"); if (m_AnchoredPosition != value) { m_AnchoredPosition = value; MarkChanged(); } }
         }
 
         public Vector3 anchoredPosition3D
@@ -69,14 +69,14 @@ namespace UnityEngine
 
         public Vector2 sizeDelta
         {
-            get => m_SizeDelta;
-            set { if (m_SizeDelta != value) { m_SizeDelta = value; DimensionsChanged(); } }
+            get { MainThreadCheck.Check("get_sizeDelta"); return m_SizeDelta; }
+            set { MainThreadCheck.Check("set_sizeDelta"); if (m_SizeDelta != value) { m_SizeDelta = value; DimensionsChanged(); } }
         }
 
         public Vector2 pivot
         {
-            get => m_Pivot;
-            set { if (m_Pivot != value) { m_Pivot = value; DimensionsChanged(); } }
+            get { MainThreadCheck.Check("get_pivot"); return m_Pivot; }
+            set { MainThreadCheck.Check("set_pivot"); if (m_Pivot != value) { m_Pivot = value; DimensionsChanged(); } }
         }
 
         public Vector2 offsetMin
