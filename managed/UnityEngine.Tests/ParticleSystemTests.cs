@@ -1393,7 +1393,9 @@ namespace UnityEngine.Tests
 
         /// <summary>A MinMaxCurve script field serializes the struct's six fields, as the 6000.0.71f1
         /// Editor writes them (tests/projects/particlecurves Authored.prefab), and keeps all of them:
-        /// the constants and the multiplier stay apart, and a curve mode keeps its constants.</summary>
+        /// the constants and the multiplier stay apart, and a curve mode keeps its constants. A
+        /// MinMaxGradient field serializes as m_Mode, m_ColorMin, m_ColorMax and the gradients
+        /// (Gradients.prefab), not in a module's form.</summary>
         [Fact]
         public void ScriptFieldsOfCurveTypesReadAndCopyLikeUnitysData()
         {
@@ -1425,10 +1427,9 @@ namespace UnityEngine.Tests
     m_ConstantMin: 2
     m_ConstantMax: 4
   color:
-    serializedVersion: 2
-    minMaxState: 2
-    minColor: {r: 1, g: 0, b: 0, a: 1}
-    maxColor: {r: 0, g: 0, b: 1, a: 1}
+    m_Mode: 2
+    m_ColorMin: {r: 1, g: 0, b: 0, a: 1}
+    m_ColorMax: {r: 0, g: 0, b: 1, a: 1}
 ";
             var go = new GameObject("holder");
             var holder = go.AddComponent<CurveHolder>();

@@ -153,20 +153,29 @@ namespace UnityEngine
             GradientColorKey[] keys = m_ColorKeys;
             if (keys.Length == 0)
                 return Color.white;
-            if (time <= keys[0].time)
-                return keys[0].color;
             int last = keys.Length - 1;
-            if (time >= keys[last].time)
-                return keys[last].color;
-
-            int i = 1;
-            while (keys[i].time < time)
-                i++;
-            GradientColorKey k0 = keys[i - 1], k1 = keys[i];
-            if (m_Mode == GradientMode.Fixed)
-                return k1.color;
-            float span = k1.time - k0.time;
-            float t = span > 0f ? (time - k0.time) / span : 1f;
+            GradientColorKey k0, k1;
+            float t;
+            if (time <= keys[0].time || time >= keys[last].time)
+            {
+                k0 = k1 = time <= keys[0].time ? keys[0] : keys[last];
+                t = 0f;
+            }
+            else
+            {
+                int i = 1;
+                while (keys[i].time < time)
+                    i++;
+                k0 = keys[i - 1];
+                k1 = keys[i];
+                if (m_Mode == GradientMode.Fixed)
+                    return k1.color;
+                float span = k1.time - k0.time;
+                t = span > 0f ? (time - k0.time) / span : 1f;
+            }
+            // PerceptualBlend goes through Oklab also at and beyond the end keys (6000.0.71f1,
+            // tests/projects/particlecurves gradient/struct/perceptual); Blend and Fixed return the
+            // keys' own values.
             if (m_Mode == GradientMode.PerceptualBlend)
                 return PerceptualLerp(k0.color, k1.color, t, m_ColorSpace == ColorSpace.Linear);
             return Color.LerpUnclamped(k0.color, k1.color, t);
@@ -194,48 +203,47 @@ namespace UnityEngine
             return k0.alpha + (k1.alpha - k0.alpha) * t;
         }
 
-        // Interpolation in Oklab (Bjorn Ottosson, 2020) between colors given in sRGB or linear.
+        // Interpolation in Oklab (Bjorn Ottosson, 2020) between colors given in sRGB or linear, in
+        // single precision as the 6000.0.71f1 Editor computes it: the cube-rooted LMS values are
+        // interpolated (Oklab's L, a, b are a linear map of them), and a result for sRGB keys
+        // comes back in 8-bit steps (tests/projects/particlecurves gradient/struct/perceptual).
         private static Color PerceptualLerp(Color a, Color b, float t, bool linearKeys)
         {
-            Color la = linearKeys ? a : a.linear;
-            Color lb = linearKeys ? b : b.linear;
-            LinearToOklab(la, out double L1, out double A1, out double B1);
-            LinearToOklab(lb, out double L2, out double A2, out double B2);
-            double L = L1 + (L2 - L1) * t;
-            double A = A1 + (A2 - A1) * t;
-            double B = B1 + (B2 - B1) * t;
-            Color result = OklabToLinear(L, A, B);
-            return linearKeys ? result : result.gamma;
-        }
-
-        private static double Cbrt(double v) => Math.Cbrt(v);
-
-        private static void LinearToOklab(Color c, out double L, out double A, out double B)
-        {
-            double l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;
-            double m = 0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b;
-            double s = 0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b;
-            l = Cbrt(l);
-            m = Cbrt(m);
-            s = Cbrt(s);
-            L = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s;
-            A = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s;
-            B = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s;
-        }
-
-        private static Color OklabToLinear(double L, double A, double B)
-        {
-            double l = L + 0.3963377774 * A + 0.2158037573 * B;
-            double m = L - 0.1055613458 * A - 0.0638541728 * B;
-            double s = L - 0.0894841775 * A - 1.2914855480 * B;
+            Vector3 la = CubeRootLms(a, linearKeys), lb = CubeRootLms(b, linearKeys);
+            float l = la.x + (lb.x - la.x) * t, m = la.y + (lb.y - la.y) * t, s = la.z + (lb.z - la.z) * t;
             l = l * l * l;
             m = m * m * m;
             s = s * s * s;
-            return new Color(
-                (float)(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
-                (float)(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
-                (float)(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s),
-                1f);
+            float r = s * 0.230969936f + m * -3.3077116f + l * 4.0767417f;
+            float g = s * -0.341319382f + m * 2.60975742f + l * -1.26843798f;
+            float bl = s * 1.70761466f + m * -0.703418612f + l * -0.00419608643f;
+            if (linearKeys) return new Color(r, g, bl, 1f);
+            return new Color(LinearToSrgb(r), LinearToSrgb(g), LinearToSrgb(bl), 1f);
+        }
+
+        private static Vector3 CubeRootLms(Color c, bool linear)
+        {
+            float r = linear ? c.r : SrgbToLinear(c.r), g = linear ? c.g : SrgbToLinear(c.g), b = linear ? c.b : SrgbToLinear(c.b);
+            float l = g * 0.536332548f + b * 0.0514459945f + r * 0.412221462f;
+            float m = g * 0.680699527f + b * 0.10739696f + r * 0.211903498f;
+            float s = g * 0.28171885f + b * 0.629978716f + r * 0.0883024633f;
+            return new Vector3(MathF.Cbrt(l), MathF.Cbrt(m), MathF.Cbrt(s));
+        }
+
+        private static float SrgbToLinear(float c)
+        {
+            c = Math.Max(c, 0f);
+            if (c < 0.04045f) return c * 0.0773993805f;
+            return c < 1f ? MathF.Pow((c + 0.055f) * 0.947867334f, 2.4f) : MathF.Pow(c, 2.2f);
+        }
+
+        /// <summary>To sRGB: in 8-bit steps up to 1, by the power 1/2.2 above.</summary>
+        private static float LinearToSrgb(float x)
+        {
+            x = Math.Max(x, 0f);
+            if (x > 1f) return MathF.Pow(x, 0.454545468f);
+            float srgb = x <= 0.0031308f ? x * 12.92f : 1.055f * MathF.Pow(x, 0.416666687f) - 0.055f;
+            return MathF.Floor(srgb * 255f + 0.5f) / 255f;
         }
 
         public override bool Equals(object o)

@@ -26,9 +26,15 @@ namespace UnityEngine
     //   the renderer, in the frame of its position and rotation: local simulation space keeps
     //   that frame's coordinates, world space places the particle with the renderer. The area
     //   weights are those of the unscaled mesh, a skinned renderer's in its rest pose.
-    // - A mesh without triangles logs "not valid" and a surface without area (also no mesh)
-    //   logs "zero surface area" for Edge and Triangle; such a system emits at the shape's origin.
-    //   Single Material past the last submesh uses the last one.
+    // - Lines and line strips emit too, each segment weighed by its length where a triangle
+    //   weighs its area. Triangle takes a segment as the triangle (a, b, b). A mesh with line
+    //   submeshes samples every entry as a segment in the other types: Edge at the area draw's
+    //   place along a→b, Vertex at one of a, b (a whole draw word modulo 2); measured with a
+    //   triangle submesh before a lines submesh, which also asserts that the submeshes mix
+    //   primitive types. Points and quads emit nothing.
+    // - A mesh without triangles or segments logs "not valid" and a surface without area (also
+    //   no mesh) logs "zero surface area" for Edge and Triangle; such a system emits at the
+    //   shape's origin. Single Material past the last submesh uses the last one.
     public sealed partial class ParticleSystem
     {
         /// <summary>The colour the start colour is multiplied by (Use Mesh Colors), when
@@ -49,7 +55,7 @@ namespace UnityEngine
         static readonly int s_ColorId = Shader.PropertyToID("_Color");
         static readonly int s_TintColorId = Shader.PropertyToID("_TintColor");
 
-        enum MeshShapeProblem { NotValid, ZeroSurface, NotTriangles }
+        enum MeshShapeProblem { NotValid, ZeroSurface, MixedTopology }
 
         /// <summary>A mesh prepared for sampling, and what it was prepared from. Its two parts are
         /// kept apart: the triangles with their area weights change only with the topology (a
@@ -87,17 +93,20 @@ namespace UnityEngine
             // a mesh's own arrays (which Vertices and Normals may point at).
             Vector3[] m_LocalScratch = Array.Empty<Vector3>(), m_ScaledScratch = Array.Empty<Vector3>(), m_NormalScratch = Array.Empty<Vector3>();
             /// <summary>Triangle corners of the triangle submeshes (the selected one with Single
-            /// Material), degenerate triangles included.</summary>
+            /// Material), degenerate triangles included, and the segments of line submeshes as
+            /// (a, b, b).</summary>
             internal int[] Triangles = Array.Empty<int>();
             internal int TriangleCount;
             /// <summary>Per submesh in <see cref="SubMeshes"/>, the end of its triangles.</summary>
             internal int[] SubMeshTriangleEnds = Array.Empty<int>();
             internal int[] SubMeshes = Array.Empty<int>();
+            /// <summary>The mesh has line submeshes: Edge and Vertex sample every entry as a segment.</summary>
+            internal bool Segments;
             internal int SubMeshCount;
-            /// <summary>Running sums of the triangle areas.</summary>
+            /// <summary>Running sums of the triangle areas (segment lengths for lines).</summary>
             internal float[] AreaEnds = Array.Empty<float>();
-            /// <summary>Some (selected) submesh is not made of triangles.</summary>
-            internal bool SkippedTopology;
+            /// <summary>The mesh's submeshes use more than one primitive type.</summary>
+            internal bool MixedTopology;
 
             internal float TotalArea => TriangleCount > 0 ? AreaEnds[TriangleCount - 1] : 0f;
 
@@ -176,18 +185,22 @@ namespace UnityEngine
                 TopologyBuiltDirty = mesh.m_Dirty; TopologyBuiltFrame = frame; HasTopology = true;
                 if (SourceSubMeshes.Length != mesh.m_SubMeshes.Count) SourceSubMeshes = new (int[], int, MeshTopology)[mesh.m_SubMeshes.Count];
                 int count = 0, parts = 0;
-                SkippedTopology = false;
+                MixedTopology = false;
+                Segments = false;
+                MeshTopology? first = null;
                 for (int s = 0; s < mesh.m_SubMeshes.Count; s++)
                 {
                     var sm = mesh.m_SubMeshes[s];
                     SourceSubMeshes[s] = (sm.Indices, sm.BaseVertex, sm.Topology);
-                    if (subMesh >= 0 && s != subMesh) continue;
-                    if (sm.Topology == MeshTopology.Triangles)
+                    if (sm.Indices.Length > 0)
                     {
-                        count += sm.Indices.Length / 3;
-                        parts++;
+                        first ??= sm.Topology;
+                        if (first != sm.Topology) MixedTopology = true;
+                        if (sm.Topology == MeshTopology.Lines || sm.Topology == MeshTopology.LineStrip) Segments = true;
                     }
-                    else if (sm.Indices.Length > 0) SkippedTopology = true;
+                    if (subMesh >= 0 && s != subMesh) continue;
+                    count += Primitives(sm.Topology, sm.Indices.Length);
+                    parts++;
                 }
                 if (Triangles.Length < count * 3) Triangles = new int[count * 3];
                 if (AreaEnds.Length < count) AreaEnds = new float[count];
@@ -197,32 +210,49 @@ namespace UnityEngine
                     SubMeshTriangleEnds = new int[parts];
                 }
                 int k = 0, part = 0;
+                float area = 0f;
                 for (int s = 0; s < mesh.m_SubMeshes.Count; s++)
                 {
                     var sm = mesh.m_SubMeshes[s];
-                    if (subMesh >= 0 && s != subMesh || sm.Topology != MeshTopology.Triangles) continue;
+                    if (subMesh >= 0 && s != subMesh) continue;
                     var indices = sm.Indices;
-                    for (int i = 0; i + 2 < indices.Length; i += 3)
+                    int primitives = Primitives(sm.Topology, indices.Length);
+                    for (int i = 0; i < primitives; i++)
                     {
-                        int a = indices[i] + sm.BaseVertex, b = indices[i + 1] + sm.BaseVertex, c = indices[i + 2] + sm.BaseVertex;
+                        int a, b, c;
+                        switch (sm.Topology)
+                        {
+                            case MeshTopology.Lines: a = indices[2 * i]; b = c = indices[2 * i + 1]; break;
+                            case MeshTopology.LineStrip: a = indices[i]; b = c = indices[i + 1]; break;
+                            default: a = indices[3 * i]; b = indices[3 * i + 1]; c = indices[3 * i + 2]; break;
+                        }
+                        a += sm.BaseVertex; b += sm.BaseVertex; c += sm.BaseVertex;
                         if ((uint)a >= (uint)n || (uint)b >= (uint)n || (uint)c >= (uint)n) continue;
-                        Triangles[k++] = a;
-                        Triangles[k++] = b;
-                        Triangles[k++] = c;
+                        Triangles[3 * k] = a;
+                        Triangles[3 * k + 1] = b;
+                        Triangles[3 * k + 2] = c;
+                        var pa = areaVertices[a];
+                        area += sm.Topology == MeshTopology.Triangles
+                            ? 0.5f * Vector3.Cross(areaVertices[b] - pa, areaVertices[c] - pa).magnitude
+                            : (areaVertices[b] - pa).magnitude;
+                        AreaEnds[k++] = area;
                     }
                     SubMeshes[part] = s;
-                    SubMeshTriangleEnds[part++] = k / 3;
+                    SubMeshTriangleEnds[part++] = k;
                 }
-                TriangleCount = k / 3;
+                TriangleCount = k;
                 SubMeshCount = part;
-                float area = 0f;
-                for (int i = 0; i < TriangleCount; i++)
-                {
-                    var a = areaVertices[Triangles[i * 3]];
-                    area += 0.5f * Vector3.Cross(areaVertices[Triangles[i * 3 + 1]] - a, areaVertices[Triangles[i * 3 + 2]] - a).magnitude;
-                    AreaEnds[i] = area;
-                }
             }
+
+            /// <summary>The triangles or segments a submesh's indices make; none for points and
+            /// quads (measured: they emit nothing).</summary>
+            static int Primitives(MeshTopology topology, int indices) => topology switch
+            {
+                MeshTopology.Triangles => indices / 3,
+                MeshTopology.Lines => indices / 2,
+                MeshTopology.LineStrip => Math.Max(indices - 1, 0),
+                _ => 0,
+            };
         }
 
         static bool IsMeshShape(ParticleSystemShapeType type) =>
@@ -248,7 +278,7 @@ namespace UnityEngine
                 if (S.meshShapeType != ParticleSystemMeshShapeType.Vertex) WarnMeshShape(mesh, MeshShapeProblem.ZeroSurface);
                 return;
             }
-            if (t.SkippedTopology) WarnMeshShape(mesh, MeshShapeProblem.NotTriangles);
+            if (t.MixedTopology) WarnMeshShape(mesh, MeshShapeProblem.MixedTopology);
             if (!SampleMeshTable(t, out pos, out var normal, out var meshColor, out int triangle))
             {
                 WarnMeshShape(mesh, MeshShapeProblem.ZeroSurface);
@@ -386,7 +416,8 @@ namespace UnityEngine
                     else
                     {
                         triangle = (int)(ShapeWord() % (uint)t.TriangleCount);
-                        a = T[triangle * 3 + (int)(ShapeWord() % 3u)];
+                        uint corners = t.Segments ? 2u : 3u;
+                        a = T[triangle * 3 + (int)(ShapeWord() % corners)];
                     }
                     b = c = a;
                     wa = 1f;
@@ -410,10 +441,15 @@ namespace UnityEngine
                         return false;
                     }
                     // Three times the draw's place in the triangle's share: the edge, then the
-                    // point along it.
-                    float f = within * 3f;
-                    int e = Math.Min((int)f, 2);
-                    f -= e;
+                    // point along it; a segment's place is the point along it.
+                    float f = within;
+                    int e = 0;
+                    if (!t.Segments)
+                    {
+                        f = within * 3f;
+                        e = Math.Min((int)f, 2);
+                        f -= e;
+                    }
                     a = T[triangle * 3 + e];
                     b = c = T[triangle * 3 + (e + 1) % 3];
                     wa = 1f - f;
@@ -443,6 +479,8 @@ namespace UnityEngine
                     break;
                 }
             }
+            // The texture reads the topology mesh's UVs (a skinned pose shares its vertex order).
+            if (S.texture != null) SetMeshShapeUv(t.TopologyMesh, a, b, c, wa, wb, wc);
             var V = t.Vertices;
             pos = V[a] * wa + V[b] * wb + V[c] * wc;
             var N = t.Normals;
@@ -451,14 +489,16 @@ namespace UnityEngine
             return true;
         }
 
-        /// <summary>The vertex colours blended with the weights in 1/255 steps, truncated, and the
-        /// sum rounded to a byte (measured: red, green and blue exact; alpha within 1).</summary>
+        /// <summary>The vertex colours blended with the weights in 1/255 steps, truncated: each
+        /// colour times its weight rounded to a byte, the three added with saturation
+        /// (6000.0.71f1, tests/projects/particlemeshshape */color).</summary>
         static Color MeshShapeColor(Color32 a, Color32 b, Color32 c, float wa, float wb, float wc)
         {
-            int ia = (int)(wa * 255f), ib = (int)(wb * 255f), ic = (int)(wc * 255f);
+            byte ia = (byte)(wa * 255f), ib = (byte)(wb * 255f), ic = (byte)(wc * 255f);
             return new Color32(Blend(a.r, b.r, c.r), Blend(a.g, b.g, c.g), Blend(a.b, b.b, c.b), Blend(a.a, b.a, c.a));
 
-            byte Blend(byte x, byte y, byte z) => (byte)((x * ia + y * ib + z * ic + 127) / 255);
+            byte Blend(byte x, byte y, byte z) =>
+                (byte)Math.Min(255, Unbound.Runtime.ParticleColors.Multiply(x, ia) + Unbound.Runtime.ParticleColors.Multiply(y, ib) + Unbound.Runtime.ParticleColors.Multiply(z, ic));
         }
 
         /// <summary>The triangle a draw picks by area, and where in its share the draw lies (0..1);
@@ -500,7 +540,7 @@ namespace UnityEngine
                     Debug.LogWarning($"Particle System '{name}' is trying to spawn on a mesh with zero surface area", this);
                     break;
                 default:
-                    Debug.LogWarning($"Unbound: the shape of particle system '{name}': mesh '{mesh.name}' has submeshes that are not triangles; emitting from its triangle submeshes only.", this);
+                    Debug.LogAssertion("Particle System can only spawn from mesh if all submeshes use the same primitive type", this);
                     break;
             }
         }

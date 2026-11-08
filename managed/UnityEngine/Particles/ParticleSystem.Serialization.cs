@@ -1,3 +1,4 @@
+#pragma warning disable CS0612 // the obsolete shell shape types appear in old data
 using System;
 using System.Collections.Generic;
 using Unbound.Runtime;
@@ -377,6 +378,25 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>Data written before the shape module had a radius thickness named its shells
+        /// as shape types of their own (now obsolete, emitting nothing when a script sets them):
+        /// they read as the shape with thickness 0.</summary>
+        static void UpgradeShellShape(ShapeData D)
+        {
+            var type = D.shapeType switch
+            {
+                ParticleSystemShapeType.SphereShell => ParticleSystemShapeType.Sphere,
+                ParticleSystemShapeType.HemisphereShell => ParticleSystemShapeType.Hemisphere,
+                ParticleSystemShapeType.ConeShell => ParticleSystemShapeType.Cone,
+                ParticleSystemShapeType.ConeVolumeShell => ParticleSystemShapeType.ConeVolume,
+                ParticleSystemShapeType.CircleEdge => ParticleSystemShapeType.Circle,
+                _ => D.shapeType,
+            };
+            if (type == D.shapeType) return;
+            D.shapeType = type;
+            D.radiusThickness = 0f;
+        }
+
         void ReadShape(YNode S, IReferenceResolver resolver)
         {
             var D = m_Shape;
@@ -386,6 +406,7 @@ namespace UnityEngine
             D.length = S.Float("length", 5f);
             D.boxThickness = S.Vector3("boxThickness");
             D.radiusThickness = S.Float("radiusThickness", 1f);
+            if (S.Get("radiusThickness") == null) UpgradeShellShape(D);
             D.donutRadius = S.Float("donutRadius", 0.2f);
             D.position = S.Vector3("m_Position");
             D.rotation = S.Vector3("m_Rotation");
@@ -410,8 +431,8 @@ namespace UnityEngine
             D.alignToDirection = S.Bool("alignToDirection");
             D.texture = Resolve<Texture2D>(resolver, S.Get("m_Texture"));
             D.textureClipChannel = (ParticleSystemShapeTextureChannel)S.Int("m_TextureClipChannel", 3);
-            D.textureClipThreshold = S.Float("m_TextureClipThreshold");
-            D.textureUVChannel = S.Int("m_TextureUVChannel");
+            D.textureClipThreshold = Mathf.Clamp01(S.Float("m_TextureClipThreshold"));
+            D.textureUVChannel = Math.Max(0, S.Int("m_TextureUVChannel"));
             D.textureColorAffectsParticles = S.Bool("m_TextureColorAffectsParticles", true);
             D.textureAlphaAffectsParticles = S.Bool("m_TextureAlphaAffectsParticles", true);
             D.textureBilinearFiltering = S.Bool("m_TextureBilinearFiltering");
@@ -561,7 +582,13 @@ namespace UnityEngine
             Array.Copy(s.m_CustomData.modes, m_CustomData.modes, 2);
             Array.Copy(s.m_CustomData.componentCounts, m_CustomData.componentCounts, 2);
             Array.Copy(s.m_CustomData.vectors, m_CustomData.vectors, 8);
-            Array.Copy(s.m_CustomData.colors, m_CustomData.colors, 2);
+            for (int i = 0; i < 2; i++) m_CustomData.colors[i] = s.m_CustomData.colors[i].Clone();
+            // A module's gradients are its own: its getters hand them out live (measured).
+            m_Main.startColor = s.m_Main.startColor.Clone();
+            m_Color.color = s.m_Color.color.Clone();
+            m_ColorBySpeed.color = s.m_ColorBySpeed.color.Clone();
+            m_Trails.colorOverLifetime = s.m_Trails.colorOverLifetime.Clone();
+            m_Trails.colorOverTrail = s.m_Trails.colorOverTrail.Clone();
         }
     }
 

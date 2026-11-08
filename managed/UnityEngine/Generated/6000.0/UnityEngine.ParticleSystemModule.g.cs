@@ -49,14 +49,6 @@ namespace UnityEngine
             [global::Unbound.Stub] internal static global::UnityEngine.ParticleSystem.MinMaxCurveBlittable FromMixMaxCurve(in global::UnityEngine.ParticleSystem.MinMaxCurve minMaxCurve) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystem.MinMaxCurveBlittable.FromMixMaxCurve"); return default; }
             [global::Unbound.Stub] internal static global::UnityEngine.ParticleSystem.MinMaxCurve ToMinMaxCurve(in global::UnityEngine.ParticleSystem.MinMaxCurveBlittable minMaxCurveBlittable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystem.MinMaxCurveBlittable.ToMinMaxCurve"); return default; }
         }
-        unsafe partial struct MinMaxGradient
-        {
-            [global::Unbound.Stub] internal global::UnityEngine.ParticleSystemGradientMode m_Mode;
-            [global::Unbound.Stub] internal global::UnityEngine.Gradient m_GradientMin;
-            [global::Unbound.Stub] internal global::UnityEngine.Gradient m_GradientMax;
-            [global::Unbound.Stub] internal global::UnityEngine.Color m_ColorMin;
-            [global::Unbound.Stub] internal global::UnityEngine.Color m_ColorMax;
-        }
         [global::System.Serializable]
         [global::Unbound.Stub]
         internal unsafe partial struct MinMaxGradientBlittable

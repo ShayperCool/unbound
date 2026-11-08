@@ -939,6 +939,8 @@ namespace UnityEngine
             if (!m_HasContext) m_Context = MakeContext();
             m_Newborn = true;
             m_ShapeTime = m_TotalTime - preAge;
+            int first = m_Count;
+            bool discarded = false;
             for (int k = 0; k < count; k++)
             {
                 int index = Allocate();
@@ -946,12 +948,28 @@ namespace UnityEngine
                 int si = spreadIndex >= 0 ? spreadIndex : k;
                 int sn = spreadIndex >= 0 ? spreadCount : count;
                 if (!InitParticle(ref m_Particles[index], emitter, nt, hasOverrides, ref overrides, si, sn, null, si, sn))
-                { RemoveAt(index); continue; }
+                {
+                    if (m_ShapeTextureDiscarded)
+                    {
+                        m_Particles[index].m_Flags |= Particle.FlagShapeDiscarded;
+                        discarded = true;
+                    }
+                    else RemoveAt(index);
+                    continue;
+                }
                 var trailBirthPosition = m_Particles[index].m_Position;
                 if (simulate) BeginModuleSample(si, m_Particles[index].m_RandomSeed);
                 if (simulate && !Integrate(ref m_Particles[index], preAge, ref m_Context))
                     RemoveAt(index);
                 else StartTrail(ref m_Particles[index], simulate ? trailBirthPosition : null);
+            }
+            // Particles the shape texture discarded leave after the whole call, in ascending
+            // slot order, each taking the last particle in (6000.0.71f1,
+            // tests/projects/particlemeshshape texture/clip/emit).
+            for (int i = first; discarded && i < m_Count;)
+            {
+                if ((m_Particles[i].m_Flags & Particle.FlagShapeDiscarded) != 0) RemoveAt(i);
+                else i++;
             }
             m_Newborn = false;
         }
@@ -1002,12 +1020,15 @@ namespace UnityEngine
                 rotation = -rotation;
                 p.m_Flags |= Particle.FlagFlipRotation;
             }
-            var color = M.startColor.Evaluate(nt, samples.color);
+            var color = M.startColor.EvaluateParticle(nt, samples.color);
 
             BeginShapeSample(initializationIndex);
             SampleShape(spreadIndex, spreadCount, out var pos, out var dir);
-            // Use Mesh Colors modulates the start colour with the sampled mesh colour.
-            if (m_ShapeColorSet) color *= m_ShapeColor;
+            // Use Mesh Colors modulates the start colour with the sampled mesh colour, then the
+            // shape texture tints it or discards the particle.
+            Color32 startColor = m_ShapeColorSet ? ParticleColors.Multiply(color, ParticleColors.ToBytes(m_ShapeColor)) : color;
+            bool kept = ApplyShapeTexture(ref startColor);
+            m_ShapeTextureDiscarded = !kept;
             var shapeOffset = pos;
             var velocity = dir * speed;
             if (m_Shape.enabled && m_Shape.alignToDirection && dir.sqrMagnitude > 1e-12f)
@@ -1074,7 +1095,7 @@ namespace UnityEngine
                     MaterializeAxisOfRotation();
                     p.m_AxisOfRotation = o.m_Particle.m_AxisOfRotation;
                 }
-                if (o.m_StartColorSet) color = o.m_Particle.m_StartColor;
+                if (o.m_StartColorSet) startColor = o.m_Particle.m_StartColor;
                 if (o.m_MeshIndexSet)
                 {
                     p.m_MeshIndex = o.m_Particle.m_MeshIndex;
@@ -1088,13 +1109,13 @@ namespace UnityEngine
             p.m_InitialVelocity = velocity;
             p.m_StartSize = size;
             p.m_Rotation = rotation;
-            p.m_StartColor = color;
+            p.m_StartColor = startColor;
             p.m_StartLifetime = lifetime;
             p.m_Lifetime = lifetime;
             p.m_InvStartLifetime = StartLifetimeReciprocal(lifetime);
             p.m_AgePercent = 0f;
             p.m_Flags |= Particle.FlagAgeInitialized;
-            return lifetime > 0f;
+            return lifetime > 0f && kept;
         }
 
         void FromWorld(ParticleSystemSimulationSpace simSpace, Matrix4x4 emitter, Vector3 worldPos, Vector3 worldVel, out Vector3 pos, out Vector3 vel)
@@ -1124,7 +1145,7 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ the shape module
 
-        bool m_ShapeTextureReported;
+        bool m_ObsoleteShapeReported;
 
         /// <summary>A start position and direction in emitter space.</summary>
         void SampleShape(int spreadIndex, int spreadCount, out Vector3 pos, out Vector3 dir)
@@ -1132,16 +1153,12 @@ namespace UnityEngine
             var S = m_Shape;
             m_ShapeColorSet = false;
             m_ShapeFrameSet = false;
+            m_ShapeUvState = ShapeUv.None;
             if (!S.enabled)
             {
                 pos = Vector3.zero;
                 dir = Vector3.forward;
                 return;
-            }
-            if (S.texture != null && !m_ShapeTextureReported)
-            {
-                m_ShapeTextureReported = true;
-                ReportUnsupported("shape texture (clip channel and threshold, colour and alpha from the texture)");
             }
             bool measuredModifiers = (S.randomDirectionAmount > 0f || S.sphericalDirectionAmount > 0f || S.randomPositionAmount > 0f)
                 && Compat.ParticleShapeModifiersMeasured;
@@ -1150,33 +1167,44 @@ namespace UnityEngine
             float thickness = Mathf.Clamp01(S.radiusThickness);
             switch (S.shapeType)
             {
-                case ParticleSystemShapeType.Sphere:
                 case ParticleSystemShapeType.SphereShell:
-                case ParticleSystemShapeType.Hemisphere:
                 case ParticleSystemShapeType.HemisphereShell:
+                case ParticleSystemShapeType.ConeShell:
+                case ParticleSystemShapeType.ConeVolumeShell:
+                case ParticleSystemShapeType.CircleEdge:
+                    // The obsolete shell types (only a script can set them) are not sampled: the
+                    // particle starts at the origin facing +Z, the texture untouched, and the
+                    // Editor asserts (6000.0.71f1, tests/projects/particlemeshshape obsolete/*).
+                    if (!m_ObsoleteShapeReported)
+                    {
+                        m_ObsoleteShapeReported = true;
+                        Debug.LogAssertion("Assertion failed on expression: '!\"Shape not implemented.\"'", this);
+                    }
+                    pos = Vector3.zero;
+                    dir = Vector3.forward;
+                    break;
+                case ParticleSystemShapeType.Sphere:
+                case ParticleSystemShapeType.Hemisphere:
                 {
                     float phi = ArcAngle(spreadIndex, spreadCount) * Mathf.Deg2Rad;
                     float height = ShapeValue();
-                    bool hemisphere = S.shapeType == ParticleSystemShapeType.Hemisphere || S.shapeType == ParticleSystemShapeType.HemisphereShell;
+                    bool hemisphere = S.shapeType == ParticleSystemShapeType.Hemisphere;
                     float z = hemisphere ? height : height * 2f - 1f;
                     float ring = Mathf.Sqrt(Mathf.Max(0f, 1f - z * z));
                     dir = new Vector3(ring * Mathf.Cos(phi), ring * Mathf.Sin(phi), z);
-                    bool shell = S.shapeType == ParticleSystemShapeType.SphereShell || S.shapeType == ParticleSystemShapeType.HemisphereShell;
-                    float inner = shell ? 1f : Mathf.Pow(1f - thickness, 3f);
+                    float inner = Mathf.Pow(1f - thickness, 3f);
                     float sample = ShapeValue();
                     float r = radius * ShapeCubeRoot((1f - sample) + inner * sample);
                     pos = dir * r;
+                    SetShapeUv(phi / (2f * Mathf.PI), (z + 1f) * 0.5f);
                     break;
                 }
                 case ParticleSystemShapeType.Cone:
-                case ParticleSystemShapeType.ConeShell:
                 case ParticleSystemShapeType.ConeVolume:
-                case ParticleSystemShapeType.ConeVolumeShell:
                 {
                     float phi = ArcAngle(spreadIndex, spreadCount) * Mathf.Deg2Rad;
-                    bool shell = S.shapeType == ParticleSystemShapeType.ConeShell || S.shapeType == ParticleSystemShapeType.ConeVolumeShell;
                     float sample = ShapeValue();
-                    float r01 = Mathf.Sqrt((1f - sample) + Mathf.Max(0.001f, shell ? 1f : 1f - thickness) * sample);
+                    float r01 = Mathf.Sqrt((1f - sample) + Mathf.Max(0.001f, 1f - thickness) * sample);
                     float angle = Mathf.Clamp(S.angle, 0f, 90f) * Mathf.Deg2Rad;
                     float cos = Mathf.Cos(phi), sin = Mathf.Sin(phi);
                     float directionX = cos * r01, directionY = sin * r01;
@@ -1193,7 +1221,8 @@ namespace UnityEngine
                     }
                     dir = new Vector3(directionX * Mathf.Sin(angle), directionY * Mathf.Sin(angle), Mathf.Cos(angle)).normalized;
                     pos = new Vector3(cos * radius * r01, sin * radius * r01, 0f);
-                    if (S.shapeType == ParticleSystemShapeType.ConeVolume || S.shapeType == ParticleSystemShapeType.ConeVolumeShell)
+                    SetShapeUv(0.5f + 0.5f * r01 * r01 * cos, 0.5f + 0.5f * r01 * r01 * sin);
+                    if (S.shapeType == ParticleSystemShapeType.ConeVolume)
                     {
                         float along = ShapeValue() * S.length;
                         pos += dir * along;
@@ -1203,31 +1232,37 @@ namespace UnityEngine
                 case ParticleSystemShapeType.Box:
                     pos = new Vector3(ShapeValue() - 0.5f, ShapeValue() - 0.5f, ShapeValue() - 0.5f);
                     dir = Vector3.forward;
+                    SetShapeUv(pos.x + 0.5f, pos.y + 0.5f);
                     break;
                 case ParticleSystemShapeType.BoxShell:
-                {
-                    pos = new Vector3(ShapeValue() - 0.5f, ShapeValue() - 0.5f, ShapeValue() - 0.5f);
-                    int axis = (int)(ShapeValue() * 3f) % 3;
-                    pos[axis] = ShapeValue() < 0.5f ? -0.5f : 0.5f;
-                    dir = Vector3.forward;
-                    break;
-                }
                 case ParticleSystemShapeType.BoxEdge:
                 {
-                    pos = new Vector3(ShapeValue() < 0.5f ? -0.5f : 0.5f, ShapeValue() < 0.5f ? -0.5f : 0.5f, ShapeValue() < 0.5f ? -0.5f : 0.5f);
-                    int axis = (int)(ShapeValue() * 3f) % 3;
-                    pos[axis] = ShapeValue() - 0.5f;
+                    // A point of the box, then an axis from the next whole draw word modulo 3:
+                    // Shell moves the point onto the face of that axis on its own side, Edge onto
+                    // the edge along that axis (the other two coordinates to their sides). Each
+                    // point takes three further draws that do not move it (6000.0.71f1,
+                    // tests/projects/particlemeshshape texture/uv/boxshell, boxedge).
+                    pos = new Vector3(ShapeValue() - 0.5f, ShapeValue() - 0.5f, ShapeValue() - 0.5f);
+                    int axis = (int)(ShapeWord() % 3u);
+                    ShapeWord(); ShapeWord(); ShapeWord();
+                    bool shell = S.shapeType == ParticleSystemShapeType.BoxShell;
+                    for (int k = 0; k < 3; k++)
+                    {
+                        bool onSide = shell ? k == axis : k != axis;
+                        if (onSide) pos[k] = pos[k] >= 0f ? 0.5f : -0.5f;
+                    }
                     dir = Vector3.forward;
+                    SetShapeUv(pos.x + 0.5f, pos.y + 0.5f);
                     break;
                 }
                 case ParticleSystemShapeType.Circle:
-                case ParticleSystemShapeType.CircleEdge:
                 {
                     float phi = ArcAngle(spreadIndex, spreadCount) * Mathf.Deg2Rad;
                     float inner = 1f - thickness;
-                    float r01 = S.shapeType == ParticleSystemShapeType.CircleEdge ? 1f : Mathf.Sqrt(inner * inner + (1f - inner * inner) * ShapeValue());
+                    float r01 = Mathf.Sqrt(inner * inner + (1f - inner * inner) * ShapeValue());
                     dir = new Vector3(Mathf.Cos(phi), Mathf.Sin(phi), 0f);
                     pos = dir * (radius * r01);
+                    SetShapeUv(0.5f + 0.5f * r01 * dir.x, 0.5f + 0.5f * r01 * dir.y);
                     break;
                 }
                 case ParticleSystemShapeType.SingleSidedEdge:
@@ -1245,21 +1280,25 @@ namespace UnityEngine
                     if (S.radiusSpread > 0f) u = Mathf.Floor(u / S.radiusSpread) * S.radiusSpread;
                     pos = new Vector3(Mathf.Lerp(-radius, radius, u), 0f, 0f);
                     dir = Vector3.up;
+                    SetShapeUv(u, 0f);
                     break;
                 }
                 case ParticleSystemShapeType.Donut:
                 {
                     float phi = ArcAngle(spreadIndex, spreadCount) * Mathf.Deg2Rad;
                     float theta = ShapeValue() * Mathf.PI * 2f;
-                    float tube = S.donutRadius * Mathf.Lerp(Mathf.Max(0.001f, 1f - thickness), 1f, ShapeValue());
+                    float tubeFraction = Mathf.Lerp(Mathf.Max(0.001f, 1f - thickness), 1f, ShapeValue());
+                    float tube = S.donutRadius * tubeFraction;
                     var ring = new Vector3(Mathf.Cos(phi), Mathf.Sin(phi), 0f);
                     dir = ring * Mathf.Cos(theta) + Vector3.forward * Mathf.Sin(theta);
                     pos = ring * radius + dir * tube;
+                    SetShapeUv(0.5f + 0.5f * tubeFraction * Mathf.Cos(theta), 0.5f + 0.5f * tubeFraction * Mathf.Sin(theta));
                     break;
                 }
                 case ParticleSystemShapeType.Rectangle:
                     pos = new Vector3(ShapeValue() - 0.5f, ShapeValue() - 0.5f, 0f);
                     dir = Vector3.forward;
+                    SetShapeUv(pos.x + 0.5f, pos.y + 0.5f);
                     break;
                 case ParticleSystemShapeType.Mesh:
                 case ParticleSystemShapeType.MeshRenderer:
@@ -2115,15 +2154,16 @@ namespace UnityEngine
         /// <summary>A particle's color now: start color, color over lifetime, color by speed.</summary>
         internal Color32 CurrentColor(ref Particle p)
         {
-            Color c = p.m_StartColor;
+            // Modulated as bytes (6000.0.71f1, tests/projects/particlecurves gradient/particles).
+            Color32 c = p.m_StartColor;
             uint seed = p.m_RandomSeed;
             if (m_Color.enabled)
-                c *= m_Color.color.Evaluate(p.Age01, ModuleValue(seed, 1494990940u));
+                c = ParticleColors.Modulate(c, m_Color.color.EvaluateParticle(p.Age01, ModuleValue(seed, 1494990940u)));
             if (m_ColorBySpeed.enabled)
             {
                 var range = m_ColorBySpeed.range;
                 float s = Mathf.InverseLerp(range.x, range.y, (p.m_Velocity + p.m_AnimatedVelocity).magnitude);
-                c *= m_ColorBySpeed.color.Evaluate(s, ModuleValue(seed, 1089181156u));
+                c = ParticleColors.Modulate(c, m_ColorBySpeed.color.EvaluateParticle(s, ModuleValue(seed, 1089181156u)));
             }
             return c;
         }

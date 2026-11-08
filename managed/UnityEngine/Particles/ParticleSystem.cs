@@ -195,7 +195,7 @@ namespace UnityEngine
         public int safeCollisionEventSize => this.GetSafeCollisionEventSize();
 
         [Obsolete("startDelay property is deprecated. Use main.startDelay or main.startDelayMultiplier instead.", false)]
-        public float startDelay { get => m_Main.startDelay.Multiplier; set => ModifiedByScript().m_Main.startDelay.Set(value); }
+        public float startDelay { get => m_Main.startDelay.Multiplier; set => ModifiedByScript().m_Main.startDelay.Multiplier = value; }
 
         [Obsolete("loop property is deprecated. Use main.loop instead.", false)]
         public bool loop { get => m_Main.loop; set => ModifiedByScript().m_Main.loop = value; }
@@ -216,16 +216,16 @@ namespace UnityEngine
         public float emissionRate { get => m_Emission.rateOverTime.Multiplier; set => ModifiedByScript().m_Emission.rateOverTime.Set(value); }
 
         [Obsolete("startSpeed property is deprecated. Use main.startSpeed or main.startSpeedMultiplier instead.", false)]
-        public float startSpeed { get => m_Main.startSpeed.Multiplier; set => ModifiedByScript().m_Main.startSpeed.Set(value); }
+        public float startSpeed { get => m_Main.startSpeed.Multiplier; set => ModifiedByScript().m_Main.startSpeed.Multiplier = value; }
 
         [Obsolete("startSize property is deprecated. Use main.startSize or main.startSizeMultiplier instead.", false)]
-        public float startSize { get => m_Main.startSizeX.Multiplier; set => ModifiedByScript().m_Main.startSizeX.Set(value); }
+        public float startSize { get => m_Main.startSizeX.Multiplier; set => ModifiedByScript().m_Main.startSizeX.Multiplier = value; }
 
         [Obsolete("startColor property is deprecated. Use main.startColor instead.", false)]
         public Color startColor { get => m_Main.startColor.color; set => ModifiedByScript().m_Main.startColor = value; }
 
         [Obsolete("startRotation property is deprecated. Use main.startRotation or main.startRotationMultiplier instead.", false)]
-        public float startRotation { get => m_Main.startRotationZ.Multiplier; set => ModifiedByScript().m_Main.startRotationZ.Set(value); }
+        public float startRotation { get => m_Main.startRotationZ.Multiplier; set => ModifiedByScript().m_Main.startRotationZ.Multiplier = value; }
 
         [Obsolete("startRotation3D property is deprecated. Use main.startRotationX, main.startRotationY and main.startRotationZ instead. (Or main.startRotationXMultiplier, main.startRotationYMultiplier and main.startRotationZMultiplier).", false)]
         public Vector3 startRotation3D
@@ -233,17 +233,18 @@ namespace UnityEngine
             get => new Vector3(m_Main.startRotationX.Multiplier, m_Main.startRotationY.Multiplier, m_Main.startRotationZ.Multiplier);
             set
             {
-                m_Main.startRotationX.Set(value.x);
-                m_Main.startRotationY.Set(value.y);
-                m_Main.startRotationZ.Set(value.z);
+                var main = ModifiedByScript().m_Main;
+                main.startRotationX.Multiplier = value.x;
+                main.startRotationY.Multiplier = value.y;
+                main.startRotationZ.Multiplier = value.z;
             }
         }
 
         [Obsolete("startLifetime property is deprecated. Use main.startLifetime or main.startLifetimeMultiplier instead.", false)]
-        public float startLifetime { get => m_Main.startLifetime.Multiplier; set => ModifiedByScript().m_Main.startLifetime.Set(value); }
+        public float startLifetime { get => m_Main.startLifetime.Multiplier; set => ModifiedByScript().m_Main.startLifetime.Multiplier = value; }
 
         [Obsolete("gravityModifier property is deprecated. Use main.gravityModifier or main.gravityModifierMultiplier instead.", false)]
-        public float gravityModifier { get => m_Main.gravityModifier.Multiplier; set => ModifiedByScript().m_Main.gravityModifier.Set(value); }
+        public float gravityModifier { get => m_Main.gravityModifier.Multiplier; set => ModifiedByScript().m_Main.gravityModifier.Multiplier = value; }
 
         [Obsolete("maxParticles property is deprecated. Use main.maxParticles instead.", false)]
         public int maxParticles { get => m_Main.maxParticles; set => ModifiedByScript().m_Main.maxParticles = Math.Max(0, value); }

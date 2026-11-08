@@ -245,6 +245,25 @@ namespace UnityEngine
         {
             DecodeRaw();
             SyncFromStore();
+            if (m_Pixels == null && m_Hdr == null && m_UnreadableRaw != null && m_Store == null)
+            {
+                // Made non-readable by Apply: decode the kept data for the engine, leaving the
+                // texture unreadable to scripts.
+                DecodeMipChain(m_UnreadableRaw);
+                var decoded = m_Pixels;
+                var decodedHdr = m_Hdr;
+                m_Pixels = null;
+                m_Hdr = null;
+                m_MipPixels = null;
+                m_MipHdr = null;
+                if (decoded != null) return decoded;
+                if (decodedHdr != null)
+                {
+                    var converted = new Color32[decodedHdr.Length];
+                    for (int i = 0; i < converted.Length; i++) converted[i] = decodedHdr[i];
+                    return converted;
+                }
+            }
             if (m_Pixels == null && m_Hdr == null && m_AssetGuid != null) FetchImportedPixels();
             if (m_Pixels != null) return (Color32[])m_Pixels.Clone();
             if (m_Hdr != null)

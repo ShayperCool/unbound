@@ -286,82 +286,107 @@ namespace UnityEngine
         }
 
         /// <summary>A color that is a constant, a gradient, random between two colors or two
-        /// gradients, or a random color from a gradient. Stored the way Unity serializes it.</summary>
+        /// gradients, or a random color from a gradient. Script fields serialize it as <c>m_Mode</c>,
+        /// <c>m_GradientMin</c>, <c>m_GradientMax</c>, <c>m_ColorMin</c>, <c>m_ColorMax</c>; a module's
+        /// serialized value uses the module form <see cref="Read"/> reads (6000.0.71f1,
+        /// tests/projects/particlecurves gradient/fields).</summary>
         [Serializable]
         public partial struct MinMaxGradient
         {
-            [SerializeField] ParticleSystemGradientMode minMaxState;
-            [SerializeField] Color minColor;
-            [SerializeField] Color maxColor;
-            [SerializeField] Gradient maxGradient;
-            [SerializeField] Gradient minGradient;
+            [SerializeField] internal ParticleSystemGradientMode m_Mode;
+            [SerializeField] internal Gradient m_GradientMin;
+            [SerializeField] internal Gradient m_GradientMax;
+            [SerializeField] internal Color m_ColorMin;
+            [SerializeField] internal Color m_ColorMax;
 
             public MinMaxGradient(Color color)
             {
-                minMaxState = ParticleSystemGradientMode.Color;
-                minColor = Color.black;
-                maxColor = color;
-                maxGradient = null;
-                minGradient = null;
+                m_Mode = ParticleSystemGradientMode.Color;
+                m_ColorMin = Color.black;
+                m_ColorMax = color;
+                m_GradientMax = null;
+                m_GradientMin = null;
             }
 
             public MinMaxGradient(Gradient gradient)
             {
-                minMaxState = ParticleSystemGradientMode.Gradient;
-                minColor = Color.black;
-                maxColor = Color.black;
-                maxGradient = gradient;
-                minGradient = null;
+                m_Mode = ParticleSystemGradientMode.Gradient;
+                m_ColorMin = Color.black;
+                m_ColorMax = Color.black;
+                m_GradientMax = gradient;
+                m_GradientMin = null;
             }
 
             public MinMaxGradient(Color min, Color max)
             {
-                minMaxState = ParticleSystemGradientMode.TwoColors;
-                minColor = min;
-                maxColor = max;
-                maxGradient = null;
-                minGradient = null;
+                m_Mode = ParticleSystemGradientMode.TwoColors;
+                m_ColorMin = min;
+                m_ColorMax = max;
+                m_GradientMax = null;
+                m_GradientMin = null;
             }
 
             public MinMaxGradient(Gradient min, Gradient max)
             {
-                minMaxState = ParticleSystemGradientMode.TwoGradients;
-                minColor = Color.black;
-                maxColor = Color.black;
-                maxGradient = max;
-                minGradient = min;
+                m_Mode = ParticleSystemGradientMode.TwoGradients;
+                m_ColorMin = Color.black;
+                m_ColorMax = Color.black;
+                m_GradientMax = max;
+                m_GradientMin = min;
             }
 
-            public ParticleSystemGradientMode mode { get => minMaxState; set => minMaxState = value; }
-            public Gradient gradientMax { get => maxGradient; set => maxGradient = value; }
-            public Gradient gradientMin { get => minGradient; set => minGradient = value; }
-            public Color colorMax { get => maxColor; set => maxColor = value; }
-            public Color colorMin { get => minColor; set => minColor = value; }
-            public Color color { get => maxColor; set => maxColor = value; }
-            public Gradient gradient { get => maxGradient; set => maxGradient = value; }
+            public ParticleSystemGradientMode mode { get => m_Mode; set => m_Mode = value; }
+            public Gradient gradientMax { get => m_GradientMax; set => m_GradientMax = value; }
+            public Gradient gradientMin { get => m_GradientMin; set => m_GradientMin = value; }
+            public Color colorMax { get => m_ColorMax; set => m_ColorMax = value; }
+            public Color colorMin { get => m_ColorMin; set => m_ColorMin = value; }
+            public Color color { get => m_ColorMax; set => m_ColorMax = value; }
+            public Gradient gradient { get => m_GradientMax; set => m_GradientMax = value; }
 
             public Color Evaluate(float time) => Evaluate(time, 1f);
 
+            /// <summary>The colour by mode; a gradient mode without its gradient throws (measured,
+            /// 6000.0.71f1, tests/projects/particlecurves gradient/struct).</summary>
             public Color Evaluate(float time, float lerpFactor)
             {
-                switch (minMaxState)
+                switch (m_Mode)
                 {
                     case ParticleSystemGradientMode.Color:
-                        return maxColor;
+                        return m_ColorMax;
                     case ParticleSystemGradientMode.Gradient:
-                        return maxGradient != null ? maxGradient.Evaluate(time) : Color.white;
+                        return Required(m_GradientMax).Evaluate(time);
                     case ParticleSystemGradientMode.TwoColors:
-                        return Color.Lerp(minColor, maxColor, lerpFactor);
+                        return Color.Lerp(m_ColorMin, m_ColorMax, lerpFactor);
                     case ParticleSystemGradientMode.TwoGradients:
-                    {
-                        var min = minGradient != null ? minGradient.Evaluate(time) : Color.white;
-                        var max = maxGradient != null ? maxGradient.Evaluate(time) : Color.white;
-                        return Color.Lerp(min, max, lerpFactor);
-                    }
+                        return Color.Lerp(Required(m_GradientMin).Evaluate(time), Required(m_GradientMax).Evaluate(time), lerpFactor);
                     case ParticleSystemGradientMode.RandomColor:
-                        return maxGradient != null ? maxGradient.Evaluate(lerpFactor) : Color.white;
+                        return Required(m_GradientMax).Evaluate(lerpFactor);
                     default:
-                        return maxColor;
+                        return m_ColorMax;
+                }
+            }
+
+            static Gradient Required(Gradient gradient) => gradient ?? throw new NullReferenceException("Object reference not set to an instance of an object.");
+
+            /// <summary>The colour a particle takes from this value, as bytes (see
+            /// <see cref="Unbound.Runtime.ParticleColors"/>): a gradient mode evaluates its gradients
+            /// and rounds them to bytes first; two gradients blend those bytes. A missing gradient
+            /// counts as white.</summary>
+            internal Color32 EvaluateParticle(float time, float lerpFactor)
+            {
+                switch (m_Mode)
+                {
+                    case ParticleSystemGradientMode.Gradient:
+                        return Unbound.Runtime.ParticleColors.ToBytes(m_GradientMax?.Evaluate(time) ?? Color.white);
+                    case ParticleSystemGradientMode.TwoColors:
+                        return Unbound.Runtime.ParticleColors.ToBytes(Color.Lerp(m_ColorMin, m_ColorMax, lerpFactor));
+                    case ParticleSystemGradientMode.TwoGradients:
+                        return Unbound.Runtime.ParticleColors.Lerp(Unbound.Runtime.ParticleColors.ToBytes(m_GradientMin?.Evaluate(time) ?? Color.white),
+                            Unbound.Runtime.ParticleColors.ToBytes(m_GradientMax?.Evaluate(time) ?? Color.white), lerpFactor);
+                    case ParticleSystemGradientMode.RandomColor:
+                        return Unbound.Runtime.ParticleColors.ToBytes(m_GradientMax?.Evaluate(lerpFactor) ?? Color.white);
+                    default:
+                        return Unbound.Runtime.ParticleColors.ToBytes(m_ColorMax);
                 }
             }
 
@@ -372,26 +397,36 @@ namespace UnityEngine
             internal MinMaxGradient Clone()
             {
                 var g = this;
-                g.maxGradient = Unbound.Runtime.ParticleCopies.Gradient(maxGradient);
-                g.minGradient = Unbound.Runtime.ParticleCopies.Gradient(minGradient);
+                g.m_GradientMax = Unbound.Runtime.ParticleCopies.Gradient(m_GradientMax);
+                g.m_GradientMin = Unbound.Runtime.ParticleCopies.Gradient(m_GradientMin);
                 return g;
             }
 
-            /// <summary>The serialized form: `{minMaxState, minColor, maxColor, maxGradient, minGradient}`.</summary>
+            /// <summary>The copy a module keeps when it is set: a missing gradient becomes the
+            /// default white one (6000.0.71f1, tests/projects/particlecurves gradient/module/*/nullgradient).</summary>
+            internal MinMaxGradient ForModule()
+            {
+                var g = Clone();
+                g.m_GradientMax ??= new Gradient();
+                g.m_GradientMin ??= new Gradient();
+                return g;
+            }
+
+            /// <summary>A module's serialized form: `{minMaxState, minColor, maxColor, maxGradient, minGradient}`.</summary>
             internal static MinMaxGradient Read(Unbound.Runtime.YNode node)
             {
                 if (node == null || node.Kind != Unbound.Runtime.YKind.Map)
                     return new MinMaxGradient(Color.white);
                 var g = new MinMaxGradient
                 {
-                    minMaxState = (ParticleSystemGradientMode)node.Int("minMaxState"),
-                    minColor = node.Color("minColor", Color.white),
-                    maxColor = node.Color("maxColor", Color.white),
+                    m_Mode = (ParticleSystemGradientMode)node.Int("minMaxState"),
+                    m_ColorMin = node.Color("minColor", Color.white),
+                    m_ColorMax = node.Color("maxColor", Color.white),
                 };
                 if (node.Get("maxGradient") is Unbound.Runtime.YNode max && max.Kind == Unbound.Runtime.YKind.Map)
-                    g.maxGradient = Unbound.Runtime.BuiltinReaders.Gradient(max);
+                    g.m_GradientMax = Unbound.Runtime.BuiltinReaders.Gradient(max);
                 if (node.Get("minGradient") is Unbound.Runtime.YNode min && min.Kind == Unbound.Runtime.YKind.Map)
-                    g.minGradient = Unbound.Runtime.BuiltinReaders.Gradient(min);
+                    g.m_GradientMin = Unbound.Runtime.BuiltinReaders.Gradient(min);
                 return g;
             }
         }

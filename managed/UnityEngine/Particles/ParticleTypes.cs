@@ -41,6 +41,9 @@ namespace UnityEngine
             /// update: it shows zero remaining lifetime, and its last velocity, until the next update
             /// removes it without moving it.</summary>
             internal const uint FlagKilled = 64;
+            /// <summary>The shape texture's clip channel discarded this newborn of an Emit call: it
+            /// leaves when the call has emitted all its particles.</summary>
+            internal const uint FlagShapeDiscarded = 128;
 
             [Obsolete("Please use Particle.remainingLifetime instead. (UnityUpgradable) -> UnityEngine.ParticleSystem/Particle.remainingLifetime", false)]
             public float lifetime { get => remainingLifetime; set => remainingLifetime = value; }

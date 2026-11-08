@@ -61,7 +61,10 @@ namespace UnityEngine
             public MinMaxCurve startRotationZ { get => D.startRotationZ.Get(); set => W.startRotationZ.Set(value); }
             public float startRotationZMultiplier { get => D.startRotationZ.Multiplier; set => W.startRotationZ.Multiplier = value; }
             public float flipRotation { get => D.flipRotation; set => W.flipRotation = value; }
-            public MinMaxGradient startColor { get => D.startColor.Clone(); set => W.startColor = value.Clone(); }
+            /// <summary>Like every module colour, the getter hands out the module's own gradients:
+            /// changing a key of the read value changes the module; the setter keeps copies
+            /// (6000.0.71f1, tests/projects/particlecurves gradient/module).</summary>
+            public MinMaxGradient startColor { get => D.startColor; set => W.startColor = value.ForModule(); }
             public ParticleSystemGravitySource gravitySource { get => D.gravitySource; set => W.gravitySource = value; }
             public MinMaxCurve gravityModifier { get => D.gravityModifier.Get(); set => W.gravityModifier.Set(value); }
             public float gravityModifierMultiplier { get => D.gravityModifier.Multiplier; set => W.gravityModifier.Multiplier = value; }
@@ -205,11 +208,11 @@ namespace UnityEngine
             public Vector3 scale { get => D.scale; set => W.scale = value; }
             public Texture2D texture { get => D.texture; set => W.texture = value; }
             public ParticleSystemShapeTextureChannel textureClipChannel { get => D.textureClipChannel; set => W.textureClipChannel = value; }
-            public float textureClipThreshold { get => D.textureClipThreshold; set => W.textureClipThreshold = value; }
+            public float textureClipThreshold { get => D.textureClipThreshold; set => W.textureClipThreshold = Mathf.Clamp01(value); }
             public bool textureColorAffectsParticles { get => D.textureColorAffectsParticles; set => W.textureColorAffectsParticles = value; }
             public bool textureAlphaAffectsParticles { get => D.textureAlphaAffectsParticles; set => W.textureAlphaAffectsParticles = value; }
             public bool textureBilinearFiltering { get => D.textureBilinearFiltering; set => W.textureBilinearFiltering = value; }
-            public int textureUVChannel { get => D.textureUVChannel; set => W.textureUVChannel = value; }
+            public int textureUVChannel { get => D.textureUVChannel; set => W.textureUVChannel = Math.Max(0, value); }
         }
 
         public partial struct VelocityOverLifetimeModule
@@ -328,7 +331,7 @@ namespace UnityEngine
             ColorData W => m_ParticleSystem.ModifiedByScript().m_Color;
 
             public bool enabled { get => D.enabled; set => W.enabled = value; }
-            public MinMaxGradient color { get => D.color.Clone(); set => W.color = value.Clone(); }
+            public MinMaxGradient color { get => D.color; set => W.color = value.ForModule(); }
         }
 
         public partial struct ColorBySpeedModule
@@ -340,7 +343,7 @@ namespace UnityEngine
             ColorBySpeedData W => m_ParticleSystem.ModifiedByScript().m_ColorBySpeed;
 
             public bool enabled { get => D.enabled; set => W.enabled = value; }
-            public MinMaxGradient color { get => D.color.Clone(); set => W.color = value.Clone(); }
+            public MinMaxGradient color { get => D.color; set => W.color = value.ForModule(); }
             public Vector2 range { get => D.range; set => W.range = value; }
         }
 
@@ -760,10 +763,10 @@ namespace UnityEngine
             public bool sizeAffectsWidth { get => D.sizeAffectsWidth; set => W.sizeAffectsWidth = value; }
             public bool sizeAffectsLifetime { get => D.sizeAffectsLifetime; set => W.sizeAffectsLifetime = value; }
             public bool inheritParticleColor { get => D.inheritParticleColor; set => W.inheritParticleColor = value; }
-            public MinMaxGradient colorOverLifetime { get => D.colorOverLifetime.Clone(); set => W.colorOverLifetime = value.Clone(); }
+            public MinMaxGradient colorOverLifetime { get => D.colorOverLifetime; set => W.colorOverLifetime = value.ForModule(); }
             public MinMaxCurve widthOverTrail { get => D.widthOverTrail.Get(); set => W.widthOverTrail.Set(value); }
             public float widthOverTrailMultiplier { get => D.widthOverTrail.Multiplier; set => W.widthOverTrail.Multiplier = value; }
-            public MinMaxGradient colorOverTrail { get => D.colorOverTrail.Clone(); set => W.colorOverTrail = value.Clone(); }
+            public MinMaxGradient colorOverTrail { get => D.colorOverTrail; set => W.colorOverTrail = value.ForModule(); }
             public bool generateLightingData { get => D.generateLightingData; set => W.generateLightingData = value; }
             public int ribbonCount { get => D.ribbonCount; set => W.ribbonCount = value; }
             public float shadowBias { get => D.shadowBias; set => W.shadowBias = value; }
@@ -786,8 +789,8 @@ namespace UnityEngine
             public int GetVectorComponentCount(ParticleSystemCustomData stream) => D.componentCounts[(int)stream];
             public void SetVector(ParticleSystemCustomData stream, int component, MinMaxCurve curve) => D.vectors[(int)stream, component].Set(curve);
             public MinMaxCurve GetVector(ParticleSystemCustomData stream, int component) => D.vectors[(int)stream, component].Get();
-            public void SetColor(ParticleSystemCustomData stream, MinMaxGradient gradient) => D.colors[(int)stream] = gradient.Clone();
-            public MinMaxGradient GetColor(ParticleSystemCustomData stream) => D.colors[(int)stream].Clone();
+            public void SetColor(ParticleSystemCustomData stream, MinMaxGradient gradient) => D.colors[(int)stream] = gradient.ForModule();
+            public MinMaxGradient GetColor(ParticleSystemCustomData stream) => D.colors[(int)stream];
         }
     }
 }
