@@ -170,8 +170,8 @@ namespace UnityEngine.Tests
 
         /// <summary>ResetPath on a link: the agent is off it at once, where it was; the next update
         /// puts it on the landing side's NavMesh nearest to where it was (here the far platform's
-        /// edge) and it slides on to a stop; pathStatus keeps its value (measured:
-        /// tests/projects/navlinks resetmid).</summary>
+        /// edge) and it slides on to a stop; without a path it reports PathComplete (measured:
+        /// tests/projects/navlinks resetmid, targets).</summary>
         [Fact]
         public void ResetPathOnALinkLandsTheAgentAtTheLinksEnd()
         {
@@ -180,12 +180,11 @@ namespace UnityEngine.Tests
             Step();
             Step();
             var at = agent.nextPosition;
-            var status = agent.pathStatus;
             agent.ResetPath();
             Assert.False(agent.isOnOffMeshLink);
             Assert.False(agent.hasPath);
             Assert.Equal(at, agent.nextPosition);
-            Assert.Equal(status, agent.pathStatus);
+            Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
             // A NavMesh change before the next update keeps the landing and the slide.
             NavMesh.SetLinkActive(m_Link, false);
             RefreshNavMesh();
@@ -218,6 +217,70 @@ namespace UnityEngine.Tests
             Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
             Assert.True(agent.nextPosition.x > 2f, $"at {agent.nextPosition}");
             WalkTo(agent, Destination);
+        }
+
+        /// <summary>After ResetPath on a link, a destination on the landing polygon (no search needed
+        /// otherwise), a path set by script, or a NavMesh change before it lands: the agent lands
+        /// first and goes on from there, never from over the gap (Unbound's choices).</summary>
+        [Theory]
+        [InlineData("near")]
+        [InlineData("nearRebuild")]
+        [InlineData("setPath")]
+        public void AnAgentResetOnALinkLandsBeforeItsNextPath(string how)
+        {
+            var agent = Agent(autoTraverse: true);
+            StepOntoLink(agent);
+            for (int i = 0; i < 20; i++) Step();
+            agent.ResetPath();
+            var target = new Vector3(6f, 0f, 1f);
+            if (how == "setPath")
+            {
+                var path = new NavMeshPath();
+                Assert.True(NavMesh.CalculatePath(new Vector3(5f, 0f, 1.5f), target, NavMesh.AllAreas, path));
+                Assert.True(agent.SetPath(path));
+            }
+            else Assert.True(agent.SetDestination(target));
+            if (how == "nearRebuild")
+            {
+                NavMesh.SetLinkActive(m_Link, false);
+                RefreshNavMesh();
+                NavMesh.SetLinkActive(m_Link, true);
+                RefreshNavMesh();
+            }
+            Step();
+            Assert.InRange(agent.nextPosition.x, 2.3f, 2.8f);
+            WalkTo(agent, target);
+        }
+
+        /// <summary>A NavMesh change while an agent completes its link, or removes the link it crosses:
+        /// the agent goes on to its destination, from the link's end or from where it stands.</summary>
+        [Fact]
+        public void ANavMeshChangeAroundALinkKeepsTheAgentsDestination()
+        {
+            var agent = Agent(autoTraverse: false);
+            StepOntoLink(agent);
+            agent.CompleteOffMeshLink();
+            NavMesh.SetLinkActive(m_Link, false);
+            RefreshNavMesh();
+            NavMesh.SetLinkActive(m_Link, true);
+            RefreshNavMesh();
+            Assert.True(agent.hasPath);
+            WalkTo(agent, Destination);
+
+            var go = new GameObject("second");
+            m_Objects.Add(go);
+            go.transform.position = new Vector3(-7f, 0f, 1f);
+            var second = go.AddComponent<NavMeshAgent>();
+            Assert.True(second.SetDestination(new Vector3(-4f, 0f, -1f)));
+            Step();
+            Assert.True(second.SetDestination(Destination));
+            StepOntoLink(second);
+            NavMesh.RemoveLink(m_Link);
+            RefreshNavMesh();
+            // No way over any more: a partial path on its side, from where it stands.
+            for (int i = 0; i < 20; i++) Step();
+            Assert.Equal(NavMeshPathStatus.PathPartial, second.pathStatus);
+            Assert.True(second.nextPosition.x < -1f, $"at {second.nextPosition}");
         }
 
         /// <summary>Without a path an agent reports a complete one: after a partial path, ResetPath

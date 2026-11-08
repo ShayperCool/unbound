@@ -204,6 +204,8 @@ namespace UnityEngine.AI
             Vector3 m_Start, m_End;
             bool m_Done;
             internal NavMeshPath Result;
+            /// <summary>Where the search starts, on the NavMesh.</summary>
+            internal Vector3 Origin => m_Start;
 
             internal static PathSearch Begin(NavWorld.Surface surface, Vector3 source, Vector3 target, AreaFilter filter, int agentTypeID)
             {

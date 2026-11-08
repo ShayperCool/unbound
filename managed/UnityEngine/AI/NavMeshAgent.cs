@@ -966,6 +966,14 @@ namespace Unbound.Runtime
                     continue;
                 }
                 Place(agent, agent.m_NextPosition);
+                // Landing after ResetPath from over a gap: placed where it lands.
+                if (agent.m_Crowd == null && landing)
+                {
+                    var surface = NavWorld.Get(agent.agentTypeID);
+                    if (NavMesh.Nearest(surface, NavMesh.V(linkEnd), NavMesh.AgentExtents(agent.agentTypeID), agent.Filter, out var poly, out _)
+                        && surface.Query.ClosestPointOnPoly(poly, moving.npos, out var landed, out _).Succeeded())
+                        Place(agent, NavMesh.V(landed));
+                }
                 if (onLink)
                 {
                     // A link being left still lands at the next update (see LeaveLink).
@@ -979,10 +987,17 @@ namespace Unbound.Runtime
                     }
                     if (destination.HasValue && agent.m_Crowd != null)
                     {
-                        // A request under way starts again; a path being followed goes on from the
-                        // link's end.
+                        // A request under way starts again; an agent landing after ResetPath gets its
+                        // path at the next update, from where it lands; one completing its link goes on
+                        // from the link's end; one whose link is gone from where it stands.
                         if (agent.pathPending) RestartRequest(agent);
-                        else if (!landing) PlanFromLinkEnd(agent);
+                        else if (landing)
+                        {
+                            agent.SetPathPending(true);
+                            RequestPath(agent);
+                        }
+                        else if (completing) PlanFromLinkEnd(agent);
+                        else PlanAgain(agent);
                     }
                     continue;
                 }
@@ -1158,7 +1173,7 @@ namespace Unbound.Runtime
             var ag = agent.m_Crowd;
             // A stale path (areaMask or area costs changed, a link toggled) is searched anew
             // (measured: tests/projects/navlinks inactive, a destination set after the link opened).
-            if (ag == null || agent.isOnOffMeshLink || (hadPath && agent.isPathStale)) return;
+            if (ag == null || agent.isOnOffMeshLink || agent.m_LandAfterReset || (hadPath && agent.isPathStale)) return;
             if (!NavMesh.Nearest(agent.m_Surface, agent.RequestedDestination, NavMesh.AgentExtents(agent.agentTypeID), agent.Filter, out var targetPoly, out var target))
                 return;
             var point = NavMesh.V(target);
@@ -1241,7 +1256,8 @@ namespace Unbound.Runtime
                     agent.SetPathStatus(NavMeshPathStatus.PathInvalid);
                     continue;
                 }
-                ApplyPath(agent, search.Result);
+                // The corridor starts where the search did (see PathOrigin).
+                ApplyPath(agent, search.Result, NavMesh.V(search.Origin));
             }
         }
 
@@ -1269,13 +1285,18 @@ namespace Unbound.Runtime
         internal static void ApplyPath(NavMeshAgent agent, NavMeshPath path) => ApplyPath(agent, path, null);
 
         /// <summary>The agent follows the path; its corridor starts at <paramref name="from"/>, else
-        /// where it stands, or, waiting on a link, where the path starts.</summary>
+        /// where it stands: waiting on a link, where the path starts; landing after ResetPath, where
+        /// it lands.</summary>
         static void ApplyPath(NavMeshAgent agent, NavMeshPath path, RcVec3f? from)
         {
             var ag = agent.m_Crowd;
             var polys = path.m_Polygons;
             var target = path.m_Corners.Length > 0 ? path.m_Corners[path.m_Corners.Length - 1] : agent.m_NextPosition;
-            var start = from ?? ((agent.isOnOffMeshLink || agent.m_LandAfterReset) && path.m_Corners.Length > 0 ? NavMesh.V(path.m_Corners[0]) : ag.npos);
+            RcVec3f start;
+            if (from.HasValue) start = from.Value;
+            else if (agent.m_LandAfterReset && LandingPoint(agent, out _, out var landing)) start = landing;
+            else if (agent.WaitingOnLink && path.m_Corners.Length > 0) start = NavMesh.V(path.m_Corners[0]);
+            else start = ag.npos;
             ag.corridor.Reset(polys[0], start);
             Follow(agent, polys, polys.Length, NavMesh.V(target), path.status);
         }
