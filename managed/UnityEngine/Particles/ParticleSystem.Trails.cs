@@ -196,7 +196,18 @@ namespace UnityEngine
                 if (trail == null || trail.Orphan) continue;
                 UpdateTrailHead(ref p, trail);
                 if (p.m_AgePercent >= 100f) continue;
-                if (trail.Points.Count == 0 || (trail.Head - trail.Points[trail.Points.Count - 1]).sqrMagnitude > minDistance * minDistance)
+                int newest = trail.Points.Count - 1;
+                // A live particle whose newest point outlived the trail lifetime (a minimum vertex
+                // distance it has not covered since) restarts its trail at its head: the expired
+                // points go, without a cut tail, and a point is taken whatever the distance
+                // (6000.0.71f1, tests/projects/particletrails cap/*/die0ntmv0.29, 3 and 0.31 alike).
+                bool stale = newest >= 0 && m_TrailTime - trail.Times[newest] > trail.Lifetime;
+                if (stale)
+                {
+                    trail.Points.Clear();
+                    trail.Times.Clear();
+                }
+                if (newest < 0 || stale || (trail.Head - trail.Points[newest]).sqrMagnitude > minDistance * minDistance)
                 {
                     // Automatic births keep their emission coordinate in the first scheduled
                     // sample, even when newborn integration already moved the live head.
