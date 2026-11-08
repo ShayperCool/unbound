@@ -69,8 +69,10 @@ imported without keyframe reduction.
   over 0.3 s and 0.24 without a duration (`exit*`); `CrossFade("B", 0.3)`,
   `CrossFadeInFixedTime("B", 0.25)`, `CrossFade("B", 0.3, 0, 0.5)` and `Play("B")` before step 5
   (`crossFade`, `crossFadeFixed`, `crossFadeOffset`, `playState`); an empty base state under B on
-  an override layer of weight 0.5 (`emptyPartial`), an empty state leaving for A after an exit time
-  of 0.5 or when Go is set at step 5 (`emptyExit`, `emptyCond`); HumanA's Events clip (events at
+  an override layer of weight 0.5 and 0.25 (`emptyPartial`, `emptyPartialQuarter`), an empty state
+  leaving for A after an exit time of 0.5 or when Go is set at step 5 (`emptyExit`, `emptyCond`), A
+  leaving for an empty state after an exit time of 0.2 and coming back to A (state Back) after 0.3 of
+  it, 0.1 s each (`emptyBack`, also `generic.emptyBack`); HumanA's Events clip (events at
   0.1, 0.45 and 0.8) on a plain, a mirrored and a mirrored state with a cycle offset of 0.25
   (`events`, `eventsMirror`, `eventsMirrorCycle`); the Mirror clip on a mirrored state of an
   additive layer (`additiveMirrorClip`); `Play` at normalized times 20000.3 (A) and 30000.3 (B)
@@ -87,9 +89,16 @@ imported without keyframe reduction.
   first reached at the end of the first loop; in a transition from an empty state the destination's
   clip infos weigh 1 and its root motion applies in full; a mirrored state fires its humanoid
   clip's events at its pose's shifted times (half a cycle, plus its cycle offset); the Mirror clip
-  on a mirrored additive state logs nothing. Unbound matches these. Open: `emptyPartial` (body and
-  steps), the first update of `emptyExit`/`emptyCond` (a constant root offset) and the long play
-  times (`longStateB`, `longClipA`, `longClipB`), listed in docs/COMPATIBILITY_GAPS.md.
+  on a mirrored additive state logs nothing; an update without a humanoid clip rests the feet pivot
+  at the root (`Animator.pivotPosition` is the root, the pivot weight 0.5), so the next clip's
+  first update moves the root by its feet pivot's way back to the root (about (-0.34, 31.4, 0) on
+  HumanA); a layer over no humanoid clip moves the motion, the body and the feet from the identity by
+  its weight and follows the feet by that weight; a transition into an empty state poses and moves
+  the root with the motion state in full up to and including the update it completes in; at long
+  play times a clip reads its time in seconds (single precision for states) divided by its length,
+  rounded up to a single. Unbound matches these. Residuals (docs/COMPATIBILITY_GAPS.md): small-step
+  velocities, and the legs and the root's x of `longClipA`/`longClipB`, 2.8e6 units from the
+  origin.
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:
