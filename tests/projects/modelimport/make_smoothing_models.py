@@ -27,7 +27,7 @@ def guid(name):
     return hashlib.md5(('unbound-smoothing-' + name).encode()).hexdigest()
 
 
-def write_meta(path, animated=False, legacy=False):
+def write_meta(path, animated=False, legacy=False, srgb_colors=True):
     text = META_TEMPLATE.read_text()
     lines = text.splitlines()
     assert lines[1].startswith('guid: ')
@@ -41,6 +41,9 @@ def write_meta(path, animated=False, legacy=False):
     if legacy:
         assert '    materialImportMode: 2\n' in text
         text = text.replace('    materialImportMode: 2\n', '    materialImportMode: 1\n')
+    if not srgb_colors:
+        assert '    useSRGBMaterialColor: 1\n' in text
+        text = text.replace('    useSRGBMaterialColor: 1\n', '    useSRGBMaterialColor: 0\n')
     path.with_name(path.name + '.meta').write_text(text)
 
 
@@ -407,7 +410,7 @@ def main():
     files['TakeNoCurvesNoTime.fbx'] = take('TakeNoCurvesNoTime', [], keys, curves=False)
     # A span ending between keys, and two layers keyed at different times without a span.
     files['TakeStopBetween.fbx'] = take('TakeStopBetween', [('LocalStop', 0.6)], keys)
-    files['TakeTwoLayers.fbx'] = take('TakeTwoLayers', [], keys, second_layer=[1.0, 1.25, 1.5])
+    files['TakeTwoLayers.fbx'] = take('TakeTwoLayers', [], keys, second_layer=[1.0, 1.5, 2.0])
     # OBJ smoothing statements.
     rng = random.Random(3)
     groups = [[f's {rng.choice([1, 2, 3, 4])}'] for _ in quads]
@@ -420,6 +423,7 @@ def main():
     files['ObjOnOnly.obj'] = obj('ObjOnOnly', points, quads, [['s on']] + [None] * (faces - 1))
     # Faces without a material under the legacy material import, in a named group.
     files['ObjLegacy.obj'] = obj('ObjLegacy', points, quads, [['g left arm', 's 1']] + [None] * (faces - 1))
+    files['ObjLegacyLinear.obj'] = obj('ObjLegacyLinear', points, quads, [['s 1']] + [None] * (faces - 1))
     odd = [None] * faces
     odd[0], odd[4], odd[8], odd[12] = ['s -1'], ['s 33'], ['s 1.5'], ['s 6']
     files['ObjOdd.obj'] = obj('ObjOdd', points, quads, odd)
@@ -435,7 +439,8 @@ def main():
     for name, text in files.items():
         path = OUT/name
         path.write_text(text)
-        write_meta(path, animated=name.startswith('Take'), legacy=name == 'ObjLegacy.obj')
+        write_meta(path, animated=name.startswith('Take'), legacy=name.startswith('ObjLegacy'),
+                   srgb_colors=name != 'ObjLegacyLinear.obj')
     print('wrote', len(files), 'models to', OUT)
 
 
