@@ -146,6 +146,52 @@ public partial class ParticleRandomProbe : MonoBehaviour
 
     static ParticleSystem.MinMaxCurve Two(float a, float b) => new ParticleSystem.MinMaxCurve(a, b);
 
+    /// <summary>Emit with EmitParams overriding the start lifetime (Lifetime by Emitter Speed on)
+    /// and the velocity (Inherit Velocity Initial in a curve mode), then one step.</summary>
+    static void ModuleOverrides()
+    {
+        foreach (uint seed in Seeds)
+        {
+            var ps = Make("override", seed, s =>
+            {
+                var m = s.main; m.simulationSpace = ParticleSystemSimulationSpace.World;
+                m.emitterVelocityMode = ParticleSystemEmitterVelocityMode.Custom; m.emitterVelocity = new Vector3(2f, 1f, -3f);
+                var l = s.lifetimeByEmitterSpeed; l.enabled = true; l.curve = Two(0.3f, 2f); l.range = new Vector2(0f, 5f);
+                var iv = s.inheritVelocity; iv.enabled = true; iv.mode = ParticleSystemInheritVelocityMode.Initial;
+                iv.curve = new ParticleSystem.MinMaxCurve(1.5f, Rise, Fall);
+            }, 0);
+            ps.Simulate(0f, true, true, false);
+            ps.Emit(new ParticleSystem.EmitParams { startLifetime = 2f, applyShapeToPosition = true }, 2);
+            ps.Emit(new ParticleSystem.EmitParams { velocity = new Vector3(1f, 0f, 0f) }, 2);
+            ps.Simulate(Dt, true, false, false);
+            RecordParticles(Key("override/emitparams", seed, 0), ps);
+            DestroyImmediate(ps.gameObject);
+        }
+    }
+
+    /// <summary>A moving emitter with a custom emitter velocity (zero, and across the motion),
+    /// rate over time and over distance: where its newborns are placed.</summary>
+    static void MovingCustomEmitter()
+    {
+        foreach (var (name, velocity, distance) in new[] { ("zero", Vector3.zero, false), ("across", new Vector3(0f, 4f, 0f), false), ("distance", new Vector3(0f, 4f, 0f), true) })
+        {
+            var ps = Make("moving", 12345u, s =>
+            {
+                var m = s.main; m.simulationSpace = ParticleSystemSimulationSpace.World; m.startSpeed = 0f;
+                m.emitterVelocityMode = ParticleSystemEmitterVelocityMode.Custom; m.emitterVelocity = velocity;
+                var e = s.emission;
+                if (distance) e.rateOverDistance = 8f; else e.rateOverTime = 80f;
+            }, 0);
+            for (int i = 0; i < 3; i++)
+            {
+                ps.transform.position = new Vector3(0.5f * i, 0f, 0f);
+                ps.Simulate(Dt, true, i == 0, false);
+                RecordParticles("moving/" + name + "/" + i.ToString(CultureInfo.InvariantCulture), ps);
+            }
+            DestroyImmediate(ps.gameObject);
+        }
+    }
+
     static readonly AnimationCurve Rise = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, 1f));
     static readonly AnimationCurve Fall = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, -0.5f));
 
@@ -325,6 +371,21 @@ public partial class ParticleRandomProbe : MonoBehaviour
                 var l = ps.lifetimeByEmitterSpeed; l.enabled = true; l.curve = c0; l.range = r0;
             });
         }
+
+        // Lifetime by Emitter Speed at a factor of 0 and with an empty range.
+        Simulated("lbes/zero", ps =>
+        {
+            var m = ps.main; m.emitterVelocityMode = ParticleSystemEmitterVelocityMode.Custom; m.emitterVelocity = new Vector3(2f, 1f, -3f);
+            var l = ps.lifetimeByEmitterSpeed; l.enabled = true; l.curve = 0f; l.range = new Vector2(0f, 5f);
+        });
+        Simulated("lbes/degenerate", ps =>
+        {
+            var m = ps.main; m.startLifetime = Two(1f, 3f);
+            m.emitterVelocityMode = ParticleSystemEmitterVelocityMode.Custom; m.emitterVelocity = new Vector3(2f, 1f, -3f);
+            var l = ps.lifetimeByEmitterSpeed; l.enabled = true; l.curve = new ParticleSystem.MinMaxCurve(1f, Rise); l.range = new Vector2(2f, 2f);
+        });
+        ModuleOverrides();
+        MovingCustomEmitter();
 
         // Force over Lifetime, Inherit-free.
         Simulated("force/two", ps =>
