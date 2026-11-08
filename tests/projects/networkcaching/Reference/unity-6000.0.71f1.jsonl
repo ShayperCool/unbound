@@ -1,0 +1,1042 @@
+{"key":"caching.ready","value":"True"}
+{"key":"caching.cacheCount","value":"1"}
+{"key":"caching.compressionEnabled","value":"True"}
+{"key":"os.platform","value":"OSXEditor"}
+{"key":"os.defaultPath","value":"~/Library/Caches/Unity/DefaultCompany_networkcaching"}
+{"key":"default.isCurrent","value":"True"}
+{"key":"default.isAt0","value":"True"}
+{"key":"default.clear","value":"True"}
+{"key":"default","value":"valid=True index=0 readOnly=False path=<default> expiration=12960000 max=9223372036854775807 occupied=0 free=max-occupied"}
+{"key":"default.paths","value":"<default>"}
+{"key":"invalid.valid","value":"False"}
+{"key":"invalid.index","value":"-1"}
+{"key":"invalid.ready","value":"throws InvalidOperationException: Cache is invalid."}
+{"key":"invalid.path","value":"throws InvalidOperationException: Cache is invalid."}
+{"key":"invalid.occupied","value":"throws InvalidOperationException: Cache is invalid."}
+{"key":"invalid.equalsDefault","value":"False"}
+{"key":"defaults.logs","value":""}
+{"key":"add.missing","value":"throws ArgumentException: Cache path '<out>/missing' doesn't exist."}
+{"key":"add.missing.exists","value":"False"}
+{"key":"add.empty","value":"throws ArgumentNullException: Value cannot be null.\nParameter name: Cache path cannot be null or empty."}
+{"key":"add.null","value":"throws ArgumentNullException: Value cannot be null.\nParameter name: Cache path cannot be null or empty."}
+{"key":"add.count0","value":"1"}
+{"key":"add.a","value":"valid=True index=1 readOnly=False path=<out>/cacheA expiration=12960000 max=9223372036854775807 occupied=0 free=max-occupied"}
+{"key":"add.a.files","value":"__info"}
+{"key":"add.again","value":"throws InvalidOperationException: Cache with path '<out>/cacheA' has already been added."}
+{"key":"add.slash","value":"valid=True index=2 readOnly=False path=<out>/cacheA/ expiration=12960000 max=9223372036854775807 occupied=0 free=max-occupied"}
+{"key":"add.b","value":"valid=True index=3 readOnly=False path=<out>/cacheB expiration=12960000 max=9223372036854775807 occupied=0 free=max-occupied"}
+{"key":"add.r","value":"valid=True index=4 readOnly=False path=<out>/cacheR expiration=12960000 max=9223372036854775807 occupied=0 free=max-occupied"}
+{"key":"add.count","value":"5"}
+{"key":"add.paths","value":"<default>,<out>/cacheA,<out>/cacheA/,<out>/cacheB,<out>/cacheR"}
+{"key":"add.logs","value":""}
+{"key":"at.-1","value":"throws IndexOutOfRangeException: Invalid input cache index -1"}
+{"key":"at.count","value":"throws IndexOutOfRangeException: Invalid input cache index 5"}
+{"key":"at.1","value":"True"}
+{"key":"byPath.b","value":"valid=True index=3 readOnly=False path=<out>/cacheB expiration=12960000 max=9223372036854775807 occupied=0 free=max-occupied"}
+{"key":"byPath.slash","value":"throws InvalidOperationException: Cache is invalid."}
+{"key":"byPath.missing","value":"throws InvalidOperationException: Cache is invalid."}
+{"key":"byPath.default","value":"True"}
+{"key":"byPath.empty","value":"throws ArgumentException: Invalid empty input cache path."}
+{"key":"at.logs","value":""}
+{"key":"order.bBeforeA","value":"<default>,<out>/cacheB,<out>/cacheA,<out>/cacheA/,<out>/cacheR"}
+{"key":"order.bAfterR","value":"<default>,<out>/cacheA,<out>/cacheA/,<out>/cacheR,<out>/cacheB"}
+{"key":"order.rBeforeDefault","value":"<out>/cacheR,<default>,<out>/cacheA,<out>/cacheA/,<out>/cacheB"}
+{"key":"order.indices","value":"1 2 4 0"}
+{"key":"order.default","value":"1"}
+{"key":"order.restored","value":"<default>,<out>/cacheA,<out>/cacheA/,<out>/cacheB,<out>/cacheR"}
+{"key":"order.same","value":"<default>,<out>/cacheA,<out>/cacheA/,<out>/cacheB,<out>/cacheR"}
+{"key":"order.invalid","value":"throws ArgumentException: Cache src is invalid."}
+{"key":"order.logs","value":""}
+{"key":"current.r","value":"<out>/cacheR"}
+{"key":"current.invalid","value":"throws InvalidOperationException: The input cache is invalid."}
+{"key":"current.a","value":"True"}
+{"key":"current.logs","value":""}
+{"key":"expiration.default","value":"12960000"}
+{"key":"expiration.100","value":"100"}
+{"key":"expiration.over","value":"12960000"}
+{"key":"expiration.over.logs","value":"Error: Cache expiration may not be higher then 12960000"}
+{"key":"expiration.negative","value":"-5"}
+{"key":"expiration.zero","value":"0"}
+{"key":"expiration.r","value":"50"}
+{"key":"expiration.invalid","value":"throws InvalidOperationException: Cache is invalid."}
+{"key":"expiration.caching","value":"True"}
+{"key":"expiration.logs","value":""}
+{"key":"max.1000","value":"valid=True index=3 readOnly=False path=<out>/cacheB expiration=0 max=1000 occupied=0 free=max-occupied"}
+{"key":"max.negative","value":"valid=True index=3 readOnly=False path=<out>/cacheB expiration=0 max=-1 occupied=0 free=0"}
+{"key":"max.zero","value":"valid=True index=3 readOnly=False path=<out>/cacheB expiration=0 max=0 occupied=0 free=max-occupied"}
+{"key":"max.r","value":"10"}
+{"key":"max.restored","value":"valid=True index=3 readOnly=False path=<out>/cacheB expiration=12960000 max=9223372036854775807 occupied=0 free=max-occupied"}
+{"key":"max.caching","value":"True"}
+{"key":"max.logs","value":""}
+{"key":"remove.default","value":"False"}
+{"key":"remove.invalid","value":"throws InvalidOperationException: Input cache is invalid."}
+{"key":"remove.t","value":"True"}
+{"key":"remove.t.valid","value":"False"}
+{"key":"remove.t.path","value":"throws InvalidOperationException: Cache is invalid."}
+{"key":"remove.t.again","value":"throws InvalidOperationException: Input cache is invalid."}
+{"key":"remove.t.exists","value":"True"}
+{"key":"remove.missingDir","value":"throws ArgumentException: Cache path '<out>/cacheB2' doesn't exist."}
+{"key":"remove.current","value":"True"}
+{"key":"remove.current.after","value":"<default>"}
+{"key":"readonly.add","value":"valid=True index=5 readOnly=True path=<out>/cacheRO expiration=12960000 max=9223372036854775807 occupied=0 free=max-occupied"}
+{"key":"readonly.current","value":"throws InvalidOperationException: The input cache '<out>/cacheRO' is readonly."}
+{"key":"readonly.clear","value":"True"}
+{"key":"readonly.logs","value":"Warning: Cannot remove the default cache."}
+{"key":"readonly.remove","value":"True"}
+{"key":"remove.count","value":"5"}
+{"key":"remove.paths","value":"<default>,<out>/cacheA,<out>/cacheA/,<out>/cacheB,<out>/cacheR"}
+{"key":"remove.logs","value":""}
+{"key":"ready.all","value":"True,True,True,True,True"}
+{"key":"b1.result","value":"Success code=200 error=null bytes=2912 progress=1 complete=True"}
+{"key":"b1.requests","value":"1"}
+{"key":"b1.handlerError","value":""}
+{"key":"b1.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"b1.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"b1.text","value":"11"}
+{"key":"b1.same","value":"True"}
+{"key":"b1.logs","value":""}
+{"key":"b1.cached","value":"True"}
+{"key":"b1.cachedOtherUrl","value":"True"}
+{"key":"b1.cachedPlainName","value":"True"}
+{"key":"b1.cachedNamed","value":"True"}
+{"key":"b1.cachedOtherHash","value":"False"}
+{"key":"b1.versions","value":"0123456789abcdef0123456789abcdef"}
+{"key":"b1.versionsUrl","value":""}
+{"key":"b1.files","value":"__info,alpha/0123456789abcdef0123456789abcdef/__data:1468,alpha/0123456789abcdef0123456789abcdef/__info,alpha/0123456789abcdef0123456789abcdef/__lock:0"}
+{"key":"b1.cache","value":"valid=True index=1 readOnly=False path=<out>/cacheA expiration=12960000 max=9223372036854775807 occupied=1491 free=max-occupied"}
+{"key":"b1.after.logs","value":""}
+{"key":"b1.loaded.result","value":"Success code=0 error=null bytes=0 progress=1 complete=True"}
+{"key":"b1.loaded.requests","value":"0"}
+{"key":"b1.loaded.handlerError","value":""}
+{"key":"b1.loaded.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"b1.loaded.bundle","value":"null"}
+{"key":"b1.loaded.same","value":"True"}
+{"key":"b1.loaded.logs","value":"Error: The AssetBundle '<url>/bundles/alpha?v=1' can't be loaded because another AssetBundle with the same files is already loaded. | Error: Error while getting Asset Bundle: The AssetBundle '<url>/bundles/alpha?v=1' can't be loaded because another AssetBundle with the same files is already loaded."}
+{"key":"b1.hit.result","value":"Success code=0 error=null bytes=0 progress=1 complete=True"}
+{"key":"b1.hit.requests","value":"0"}
+{"key":"b1.hit.handlerError","value":""}
+{"key":"b1.hit.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"b1.hit.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"b1.hit.text","value":"11"}
+{"key":"b1.hit.same","value":"True"}
+{"key":"b1.hit.logs","value":""}
+{"key":"b1.hitQuery.result","value":"Success code=0 error=null bytes=0 progress=1 complete=True"}
+{"key":"b1.hitQuery.requests","value":"0"}
+{"key":"b1.hitQuery.handlerError","value":""}
+{"key":"b1.hitQuery.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"b1.hitQuery.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"b1.hitQuery.text","value":"11"}
+{"key":"b1.hitQuery.same","value":"True"}
+{"key":"b1.hitQuery.logs","value":""}
+{"key":"b1.hitGoodCrc.result","value":"Success code=0 error=null bytes=0 progress=1 complete=True"}
+{"key":"b1.hitGoodCrc.requests","value":"0"}
+{"key":"b1.hitGoodCrc.handlerError","value":""}
+{"key":"b1.hitGoodCrc.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"b1.hitGoodCrc.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"b1.hitGoodCrc.text","value":"11"}
+{"key":"b1.hitGoodCrc.same","value":"True"}
+{"key":"b1.hitGoodCrc.logs","value":""}
+{"key":"b1.hitGoodCrc.cached","value":"True"}
+{"key":"b1.hitGoodCrc.again.result","value":"Success code=0 error=null bytes=0 progress=1 complete=True"}
+{"key":"b1.hitGoodCrc.again.requests","value":"0"}
+{"key":"b1.hitGoodCrc.again.handlerError","value":""}
+{"key":"b1.hitGoodCrc.again.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"b1.hitGoodCrc.again.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"b1.hitGoodCrc.again.text","value":"11"}
+{"key":"b1.hitGoodCrc.again.same","value":"True"}
+{"key":"b1.hitGoodCrc.again.logs","value":""}
+{"key":"b1.hitBadCrc.result","value":"ConnectionError code=200 error=Unable to write data bytes=0 progress=1 complete=True"}
+{"key":"b1.hitBadCrc.requests","value":"1"}
+{"key":"b1.hitBadCrc.handlerError","value":"CRC Mismatch. Provided 3039, calculated 9c94b0b4 from data. Will not load AssetBundle '<url>/bundles/alpha?v=1'"}
+{"key":"b1.hitBadCrc.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"b1.hitBadCrc.bundle","value":"null"}
+{"key":"b1.hitBadCrc.same","value":"True"}
+{"key":"b1.hitBadCrc.logs","value":""}
+{"key":"b1.hitBadCrc.cached","value":"False"}
+{"key":"b1.hitBadCrc.versions","value":""}
+{"key":"b1.afterBadCrc.result","value":"Success code=200 error=null bytes=2912 progress=1 complete=True"}
+{"key":"b1.afterBadCrc.requests","value":"1"}
+{"key":"b1.afterBadCrc.handlerError","value":""}
+{"key":"b1.afterBadCrc.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"b1.afterBadCrc.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"b1.afterBadCrc.text","value":"11"}
+{"key":"b1.afterBadCrc.same","value":"True"}
+{"key":"b1.afterBadCrc.logs","value":""}
+{"key":"b2.result","value":"Success code=200 error=null bytes=2912 progress=1 complete=True"}
+{"key":"b2.requests","value":"1"}
+{"key":"b2.handlerError","value":""}
+{"key":"b2.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"b2.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"b2.text","value":"11"}
+{"key":"b2.same","value":"True"}
+{"key":"b2.logs","value":""}
+{"key":"b2.versions","value":"fedcba9876543210fedcba9876543210,0123456789abcdef0123456789abcdef"}
+{"key":"plain.result","value":"Success code=200 error=null bytes=2912 progress=1 complete=True"}
+{"key":"plain.requests","value":"1"}
+{"key":"plain.handlerError","value":""}
+{"key":"plain.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"plain.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"plain.text","value":"11"}
+{"key":"plain.same","value":"True"}
+{"key":"plain.logs","value":""}
+{"key":"plain.again.result","value":"Success code=200 error=null bytes=2912 progress=1 complete=True"}
+{"key":"plain.again.requests","value":"1"}
+{"key":"plain.again.handlerError","value":""}
+{"key":"plain.again.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"plain.again.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"plain.again.text","value":"11"}
+{"key":"plain.again.same","value":"True"}
+{"key":"plain.again.logs","value":""}
+{"key":"plain.versions","value":"fedcba9876543210fedcba9876543210,0123456789abcdef0123456789abcdef"}
+{"key":"v7.result","value":"Success code=200 error=null bytes=1210 progress=1 complete=True"}
+{"key":"v7.requests","value":"1"}
+{"key":"v7.handlerError","value":""}
+{"key":"v7.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"v7.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"v7.text","value":"45"}
+{"key":"v7.same","value":"True"}
+{"key":"v7.logs","value":""}
+{"key":"v7.versions","value":"00000000000000000000000007000000"}
+{"key":"v7.cachedHash","value":"True"}
+{"key":"v7.cachedInt","value":"True"}
+{"key":"v7.cachedInt8","value":"False"}
+{"key":"v7.hit.result","value":"Success code=0 error=null bytes=0 progress=1 complete=True"}
+{"key":"v7.hit.requests","value":"0"}
+{"key":"v7.hit.handlerError","value":""}
+{"key":"v7.hit.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"v7.hit.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"v7.hit.text","value":"45"}
+{"key":"v7.hit.same","value":"True"}
+{"key":"v7.hit.logs","value":""}
+{"key":"v0.result","value":"Success code=200 error=null bytes=1210 progress=1 complete=True"}
+{"key":"v0.requests","value":"1"}
+{"key":"v0.handlerError","value":""}
+{"key":"v0.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"v0.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"v0.text","value":"45"}
+{"key":"v0.same","value":"True"}
+{"key":"v0.logs","value":""}
+{"key":"v0.versions","value":"00000000000000000000000000000000,00000000000000000000000007000000"}
+{"key":"v0.again.result","value":"Success code=0 error=null bytes=0 progress=1 complete=True"}
+{"key":"v0.again.requests","value":"0"}
+{"key":"v0.again.handlerError","value":""}
+{"key":"v0.again.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"v0.again.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"v0.again.text","value":"45"}
+{"key":"v0.again.same","value":"True"}
+{"key":"v0.again.logs","value":""}
+{"key":"h0.result","value":"Success code=0 error=null bytes=0 progress=1 complete=True"}
+{"key":"h0.requests","value":"0"}
+{"key":"h0.handlerError","value":""}
+{"key":"h0.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"h0.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"h0.text","value":"45"}
+{"key":"h0.same","value":"True"}
+{"key":"h0.logs","value":""}
+{"key":"h0.versions","value":"00000000000000000000000000000000,00000000000000000000000007000000"}
+{"key":"named.result","value":"Success code=200 error=null bytes=880 progress=1 complete=True"}
+{"key":"named.requests","value":"1"}
+{"key":"named.handlerError","value":""}
+{"key":"named.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"named.bundle","value":"gamma.unity3d:assets/bundled/gamma.txt"}
+{"key":"named.text","value":"2041"}
+{"key":"named.same","value":"True"}
+{"key":"named.logs","value":""}
+{"key":"named.versions","value":"00000000000000000000000000000003"}
+{"key":"named.versionsUrlName","value":""}
+{"key":"named.cachedUrl","value":"False"}
+{"key":"named.cached","value":"True"}
+{"key":"named.files","value":"__info,alpha/0123456789abcdef0123456789abcdef/__data:1468,alpha/0123456789abcdef0123456789abcdef/__info,alpha/fedcba9876543210fedcba9876543210/__data:1468,alpha/fedcba9876543210fedcba9876543210/__info,beta/00000000000000000000000000000000/__data:1210,beta/00000000000000000000000000000000/__info,beta/00000000000000000000000007000000/__data:1210,beta/00000000000000000000000007000000/__info,custom/00000000000000000000000000000003/__data:1539,custom/00000000000000000000000000000003/__info"}
+{"key":"named.cache","value":"valid=True index=1 readOnly=False path=<out>/cacheA expiration=12960000 max=9223372036854775807 occupied=8501 free=max-occupied"}
+{"key":"named.hit.result","value":"Success code=0 error=null bytes=0 progress=1 complete=True"}
+{"key":"named.hit.requests","value":"0"}
+{"key":"named.hit.handlerError","value":""}
+{"key":"named.hit.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"named.hit.bundle","value":"gamma.unity3d:assets/bundled/gamma.txt"}
+{"key":"named.hit.text","value":"2041"}
+{"key":"named.hit.same","value":"True"}
+{"key":"named.hit.logs","value":""}
+{"key":"named.empty.result","value":"Success code=200 error=null bytes=880 progress=1 complete=True"}
+{"key":"named.empty.requests","value":"1"}
+{"key":"named.empty.handlerError","value":""}
+{"key":"named.empty.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"named.empty.bundle","value":"gamma.unity3d:assets/bundled/gamma.txt"}
+{"key":"named.empty.text","value":"2041"}
+{"key":"named.empty.same","value":"True"}
+{"key":"named.empty.logs","value":""}
+{"key":"named.empty.versions","value":"44444444444444444444444444444444"}
+{"key":"raw.result","value":"Success code=200 error=null bytes=880 progress=1 complete=True"}
+{"key":"raw.requests","value":"1"}
+{"key":"raw.handlerError","value":""}
+{"key":"raw.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"raw.bundle","value":"gamma.unity3d:assets/bundled/gamma.txt"}
+{"key":"raw.text","value":"2041"}
+{"key":"raw.same","value":"True"}
+{"key":"raw.logs","value":""}
+{"key":"raw.files","value":"__info,alpha/0123456789abcdef0123456789abcdef/__data:1468,alpha/0123456789abcdef0123456789abcdef/__info,alpha/fedcba9876543210fedcba9876543210/__data:1468,alpha/fedcba9876543210fedcba9876543210/__info,beta/00000000000000000000000000000000/__data:1210,beta/00000000000000000000000000000000/__info,beta/00000000000000000000000007000000/__data:1210,beta/00000000000000000000000007000000/__info,custom/00000000000000000000000000000003/__data:1539,custom/00000000000000000000000000000003/__info,custom2/00000000000000000000000000000003/__data:4951,custom2/00000000000000000000000000000003/__info,gamma/44444444444444444444444444444444/__data:1539,gamma/44444444444444444444444444444444/__info"}
+{"key":"raw.cache","value":"valid=True index=1 readOnly=False path=<out>/cacheA expiration=12960000 max=9223372036854775807 occupied=15037 free=max-occupied"}
+{"key":"raw.beta.result","value":"Success code=200 error=null bytes=1210 progress=1 complete=True"}
+{"key":"raw.beta.requests","value":"1"}
+{"key":"raw.beta.handlerError","value":""}
+{"key":"raw.beta.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"raw.beta.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"raw.beta.text","value":"45"}
+{"key":"raw.beta.same","value":"True"}
+{"key":"raw.beta.logs","value":""}
+{"key":"raw.beta.files","value":"__info,alpha/0123456789abcdef0123456789abcdef/__data:1468,alpha/0123456789abcdef0123456789abcdef/__info,alpha/fedcba9876543210fedcba9876543210/__data:1468,alpha/fedcba9876543210fedcba9876543210/__info,beta/00000000000000000000000000000000/__data:1210,beta/00000000000000000000000000000000/__info,beta/00000000000000000000000007000000/__data:1210,beta/00000000000000000000000007000000/__info,custom/00000000000000000000000000000003/__data:1539,custom/00000000000000000000000000000003/__info,custom2/00000000000000000000000000000003/__data:4951,custom2/00000000000000000000000000000003/__info,custom3/00000000000000000000000000000003/__data:2943,custom3/00000000000000000000000000000003/__info,gamma/44444444444444444444444444444444/__data:1539,gamma/44444444444444444444444444444444/__info"}
+{"key":"raw.alpha.result","value":"Success code=200 error=null bytes=2912 progress=1 complete=True"}
+{"key":"raw.alpha.requests","value":"1"}
+{"key":"raw.alpha.handlerError","value":""}
+{"key":"raw.alpha.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"raw.alpha.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"raw.alpha.text","value":"11"}
+{"key":"raw.alpha.same","value":"True"}
+{"key":"raw.alpha.logs","value":""}
+{"key":"raw.alpha.files","value":"00000000000000000000000000000003/__data:2912,00000000000000000000000000000003/__info"}
+{"key":"raw.alpha.hit.result","value":"Success code=0 error=null bytes=0 progress=1 complete=True"}
+{"key":"raw.alpha.hit.requests","value":"0"}
+{"key":"raw.alpha.hit.handlerError","value":""}
+{"key":"raw.alpha.hit.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"raw.alpha.hit.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"raw.alpha.hit.text","value":"11"}
+{"key":"raw.alpha.hit.same","value":"True"}
+{"key":"raw.alpha.hit.logs","value":""}
+{"key":"crc.ok.result","value":"Success code=200 error=null bytes=1210 progress=1 complete=True"}
+{"key":"crc.ok.requests","value":"1"}
+{"key":"crc.ok.handlerError","value":""}
+{"key":"crc.ok.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"crc.ok.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"crc.ok.text","value":"45"}
+{"key":"crc.ok.same","value":"True"}
+{"key":"crc.ok.logs","value":""}
+{"key":"crc.ok.again.result","value":"Success code=0 error=null bytes=0 progress=1 complete=True"}
+{"key":"crc.ok.again.requests","value":"0"}
+{"key":"crc.ok.again.handlerError","value":""}
+{"key":"crc.ok.again.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"crc.ok.again.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"crc.ok.again.text","value":"45"}
+{"key":"crc.ok.again.same","value":"True"}
+{"key":"crc.ok.again.logs","value":""}
+{"key":"crc.ok.zero.result","value":"Success code=0 error=null bytes=0 progress=1 complete=True"}
+{"key":"crc.ok.zero.requests","value":"0"}
+{"key":"crc.ok.zero.handlerError","value":""}
+{"key":"crc.ok.zero.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"crc.ok.zero.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"crc.ok.zero.text","value":"45"}
+{"key":"crc.ok.zero.same","value":"True"}
+{"key":"crc.ok.zero.logs","value":""}
+{"key":"crc.bad.result","value":"DataProcessingError code=200 error=Data Processing Error, see Download Handler error bytes=1210 progress=1 complete=True"}
+{"key":"crc.bad.requests","value":"1"}
+{"key":"crc.bad.handlerError","value":"CRC Mismatch. Provided ca69cc7a, calculated ca69cc7b from data. Will not load AssetBundle '<url>/bundles/beta.bundle'"}
+{"key":"crc.bad.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"crc.bad.bundle","value":"null"}
+{"key":"crc.bad.same","value":"True"}
+{"key":"crc.bad.logs","value":""}
+{"key":"crc.badAlpha.result","value":"DataProcessingError code=200 error=Data Processing Error, see Download Handler error bytes=2912 progress=1 complete=True"}
+{"key":"crc.badAlpha.requests","value":"1"}
+{"key":"crc.badAlpha.handlerError","value":"CRC Mismatch. Provided 9c94b0b5, calculated 9c94b0b4 from data. Will not load AssetBundle '<url>/bundles/alpha?v=1'"}
+{"key":"crc.badAlpha.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"crc.badAlpha.bundle","value":"null"}
+{"key":"crc.badAlpha.same","value":"True"}
+{"key":"crc.badAlpha.logs","value":""}
+{"key":"crc.badGamma.result","value":"DataProcessingError code=200 error=Data Processing Error, see Download Handler error bytes=880 progress=1 complete=True"}
+{"key":"crc.badGamma.requests","value":"1"}
+{"key":"crc.badGamma.handlerError","value":"CRC Mismatch. Provided 4b0958d3, calculated 4b0958d2 from data. Will not load AssetBundle '<url>/bundles/gamma.unity3d'"}
+{"key":"crc.badGamma.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"crc.badGamma.bundle","value":"null"}
+{"key":"crc.badGamma.same","value":"True"}
+{"key":"crc.badGamma.logs","value":""}
+{"key":"crc.badPlain.result","value":"DataProcessingError code=200 error=Data Processing Error, see Download Handler error bytes=2912 progress=1 complete=True"}
+{"key":"crc.badPlain.requests","value":"1"}
+{"key":"crc.badPlain.handlerError","value":"CRC Mismatch. Provided 9c94b0b5, calculated 9c94b0b4 from data. Will not load AssetBundle '<url>/bundles/alpha?v=1'"}
+{"key":"crc.badPlain.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"crc.badPlain.bundle","value":"null"}
+{"key":"crc.badPlain.same","value":"True"}
+{"key":"crc.badPlain.logs","value":""}
+{"key":"crc.goodGamma.result","value":"Success code=200 error=null bytes=880 progress=1 complete=True"}
+{"key":"crc.goodGamma.requests","value":"1"}
+{"key":"crc.goodGamma.handlerError","value":""}
+{"key":"crc.goodGamma.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"crc.goodGamma.bundle","value":"gamma.unity3d:assets/bundled/gamma.txt"}
+{"key":"crc.goodGamma.text","value":"2041"}
+{"key":"crc.goodGamma.same","value":"True"}
+{"key":"crc.goodGamma.logs","value":""}
+{"key":"crc.versions","value":"fedcba9876543210fedcba9876543210,0123456789abcdef0123456789abcdef / 44444444444444444444444444444444,66666666666666666666666666666666"}
+{"key":"crc.bad.versions","value":"00000000000000000000000000000000,00000000000000000000000007000000,44444444444444444444444444444444"}
+{"key":"crc.bad.again.result","value":"Success code=200 error=null bytes=1210 progress=1 complete=True"}
+{"key":"crc.bad.again.requests","value":"1"}
+{"key":"crc.bad.again.handlerError","value":""}
+{"key":"crc.bad.again.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"crc.bad.again.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"crc.bad.again.text","value":"45"}
+{"key":"crc.bad.again.same","value":"True"}
+{"key":"crc.bad.again.logs","value":""}
+{"key":"missing.result","value":"ProtocolError code=404 error=HTTP/1.1 404 Not Found bytes=0 progress=1 complete=True"}
+{"key":"missing.requests","value":"1"}
+{"key":"missing.handlerError","value":""}
+{"key":"missing.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"missing.bundle","value":"null"}
+{"key":"missing.same","value":"throws InvalidOperationException: HTTP/1.1 404 Not Found"}
+{"key":"missing.logs","value":""}
+{"key":"missing.cached","value":"False"}
+{"key":"missing.files","value":"__info,alpha/0123456789abcdef0123456789abcdef/__data:1468,alpha/0123456789abcdef0123456789abcdef/__info,alpha/fedcba9876543210fedcba9876543210/__data:1468,alpha/fedcba9876543210fedcba9876543210/__info,beta/00000000000000000000000000000000/__data:1210,beta/00000000000000000000000000000000/__info,beta/00000000000000000000000007000000/__data:1210,beta/00000000000000000000000007000000/__info,beta/44444444444444444444444444444444/__data:1210,beta/44444444444444444444444444444444/__info,beta/55555555555555555555555555555555/__data:1210,beta/55555555555555555555555555555555/__info,custom/00000000000000000000000000000003/__data:1539,custom/00000000000000000000000000000003/__info,custom2/00000000000000000000000000000003/__data:4951,custom2/00000000000000000000000000000003/__info,custom3/00000000000000000000000000000003/__data:2943,custom3/00000000000000000000000000000003/__info,custom4/00000000000000000000000000000003/__data:2912,custom4/00000000000000000000000000000003/__info,gamma/44444444444444444444444444444444/__data:1539,gamma/44444444444444444444444444444444/__info,gamma/66666666666666666666666666666666/__data:1539,gamma/66666666666666666666666666666666/__info"}
+{"key":"garbage.result","value":"DataProcessingError code=200 error=Data Processing Error, see Download Handler error bytes=22128 progress=1 complete=True"}
+{"key":"garbage.requests","value":"1"}
+{"key":"garbage.handlerError","value":"Failed to decompress data for the AssetBundle '<url>/audio/tone.wav'."}
+{"key":"garbage.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"garbage.bundle","value":"null"}
+{"key":"garbage.same","value":"True"}
+{"key":"garbage.logs","value":""}
+{"key":"garbage.plain.result","value":"DataProcessingError code=200 error=Data Processing Error, see Download Handler error bytes=22128 progress=1 complete=True"}
+{"key":"garbage.plain.requests","value":"1"}
+{"key":"garbage.plain.handlerError","value":"Failed to decompress data for the AssetBundle '<url>/audio/tone.wav'."}
+{"key":"garbage.plain.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"garbage.plain.bundle","value":"null"}
+{"key":"garbage.plain.same","value":"True"}
+{"key":"garbage.plain.logs","value":""}
+{"key":"garbage.auto.result","value":"DataProcessingError code=200 error=Data Processing Error, see Download Handler error bytes=22128 progress=1 complete=True"}
+{"key":"garbage.auto.requests","value":"1"}
+{"key":"garbage.auto.handlerError","value":"Failed to decompress data for the AssetBundle '<url>/audio/tone.wav'."}
+{"key":"garbage.auto.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"garbage.auto.bundle","value":"null"}
+{"key":"garbage.auto.same","value":"True"}
+{"key":"garbage.auto.logs","value":""}
+{"key":"garbage.cached","value":"False"}
+{"key":"auto.result","value":"Success code=200 error=null bytes=2912 progress=1 complete=True"}
+{"key":"auto.requests","value":"1"}
+{"key":"auto.handlerError","value":""}
+{"key":"auto.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"auto.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"auto.text","value":"11"}
+{"key":"auto.same","value":"True"}
+{"key":"auto.logs","value":""}
+{"key":"auto.hit.result","value":"Success code=0 error=null bytes=0 progress=1 complete=True"}
+{"key":"auto.hit.requests","value":"0"}
+{"key":"auto.hit.handlerError","value":""}
+{"key":"auto.hit.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"auto.hit.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"auto.hit.text","value":"11"}
+{"key":"auto.hit.same","value":"True"}
+{"key":"auto.hit.logs","value":""}
+{"key":"inB.result","value":"Success code=200 error=null bytes=2912 progress=1 complete=True"}
+{"key":"inB.requests","value":"1"}
+{"key":"inB.handlerError","value":""}
+{"key":"inB.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"inB.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"inB.text","value":"11"}
+{"key":"inB.same","value":"True"}
+{"key":"inB.logs","value":""}
+{"key":"inB.files","value":"__info,alpha/77777777777777777777777777777777/__data:1468,alpha/77777777777777777777777777777777/__info"}
+{"key":"inB.cached","value":"True"}
+{"key":"inB.versions","value":"fedcba9876543210fedcba9876543210,66666666666666666666666666666666,77777777777777777777777777777777,0123456789abcdef0123456789abcdef"}
+{"key":"inB.hit.result","value":"Success code=0 error=null bytes=0 progress=1 complete=True"}
+{"key":"inB.hit.requests","value":"0"}
+{"key":"inB.hit.handlerError","value":""}
+{"key":"inB.hit.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"inB.hit.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"inB.hit.text","value":"11"}
+{"key":"inB.hit.same","value":"True"}
+{"key":"inB.hit.logs","value":""}
+{"key":"inB.hit.filesA","value":"__info,alpha/0123456789abcdef0123456789abcdef/__data:1468,alpha/0123456789abcdef0123456789abcdef/__info,alpha/66666666666666666666666666666666/__data:1468,alpha/66666666666666666666666666666666/__info,alpha/fedcba9876543210fedcba9876543210/__data:1468,alpha/fedcba9876543210fedcba9876543210/__info,beta/00000000000000000000000000000000/__data:1210,beta/00000000000000000000000000000000/__info,beta/00000000000000000000000007000000/__data:1210,beta/00000000000000000000000007000000/__info,beta/44444444444444444444444444444444/__data:1210,beta/44444444444444444444444444444444/__info,beta/55555555555555555555555555555555/__data:1210,beta/55555555555555555555555555555555/__info,custom/00000000000000000000000000000003/__data:1539,custom/00000000000000000000000000000003/__info,custom2/00000000000000000000000000000003/__data:4951,custom2/00000000000000000000000000000003/__info,custom3/00000000000000000000000000000003/__data:2943,custom3/00000000000000000000000000000003/__info,custom4/00000000000000000000000000000003/__data:2912,custom4/00000000000000000000000000000003/__info,gamma/44444444444444444444444444444444/__data:1539,gamma/44444444444444444444444444444444/__info,gamma/66666666666666666666666666666666/__data:1539,gamma/66666666666666666666666666666666/__info"}
+{"key":"mark.cached","value":"True"}
+{"key":"mark.missing","value":"False"}
+{"key":"mark.named","value":"True"}
+{"key":"mark.inB","value":"True"}
+{"key":"mark.logs","value":""}
+{"key":"clear.version","value":"True"}
+{"key":"clear.version.again","value":"True"}
+{"key":"clear.version.versions","value":"fedcba9876543210fedcba9876543210,66666666666666666666666666666666,77777777777777777777777777777777"}
+{"key":"clear.others","value":"True"}
+{"key":"clear.others.versions","value":"44444444444444444444444444444444"}
+{"key":"clear.others.none","value":"True"}
+{"key":"clear.all","value":"True"}
+{"key":"clear.all.versions","value":""}
+{"key":"clear.all.none","value":"True"}
+{"key":"clear.files","value":"__info,alpha/66666666666666666666666666666666/__data:1468,alpha/66666666666666666666666666666666/__info,alpha/fedcba9876543210fedcba9876543210/__data:1468,alpha/fedcba9876543210fedcba9876543210/__info,beta/44444444444444444444444444444444/__data:1210,beta/44444444444444444444444444444444/__info,custom2/00000000000000000000000000000003/__data:4951,custom2/00000000000000000000000000000003/__info,custom3/00000000000000000000000000000003/__data:2943,custom3/00000000000000000000000000000003/__info,custom4/00000000000000000000000000000003/__data:2912,custom4/00000000000000000000000000000003/__info,gamma/44444444444444444444444444444444/__data:1539,gamma/44444444444444444444444444444444/__info,gamma/66666666666666666666666666666666/__data:1539,gamma/66666666666666666666666666666666/__info"}
+{"key":"clear.logs","value":""}
+{"key":"inuse.result","value":"Success code=0 error=null bytes=0 progress=1 complete=True"}
+{"key":"inuse.requests","value":"0"}
+{"key":"inuse.handlerError","value":""}
+{"key":"inuse.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"inuse.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"inuse.text","value":"11"}
+{"key":"inuse.same","value":"True"}
+{"key":"inuse.logs","value":""}
+{"key":"inuse.version","value":"False"}
+{"key":"inuse.version.logs","value":"Warning: AssetBundle 'alpha' with hash 'fedcba9876543210fedcba9876543210' is still in use. "}
+{"key":"inuse.others","value":"False"}
+{"key":"inuse.others.versions","value":"fedcba9876543210fedcba9876543210,66666666666666666666666666666666,77777777777777777777777777777777"}
+{"key":"inuse.all","value":"False"}
+{"key":"inuse.all.versions","value":"fedcba9876543210fedcba9876543210,77777777777777777777777777777777"}
+{"key":"inuse.clear","value":"False"}
+{"key":"inuse.clear.logs","value":"Warning: AssetBundle 'alpha' with hash 'fedcba9876543210fedcba9876543210' is still in use.  | Warning: AssetBundle 'alpha' with hash 'fedcba9876543210fedcba9876543210' is still in use. "}
+{"key":"inuse.clear.versions","value":"fedcba9876543210fedcba9876543210,77777777777777777777777777777777"}
+{"key":"inuse.clear.files","value":"__info,alpha/fedcba9876543210fedcba9876543210/__data:1468,alpha/fedcba9876543210fedcba9876543210/__info,alpha/fedcba9876543210fedcba9876543210/__lock:0,beta/44444444444444444444444444444444/__data:1210,beta/44444444444444444444444444444444/__info,custom2/00000000000000000000000000000003/__data:4951,custom2/00000000000000000000000000000003/__info,custom3/00000000000000000000000000000003/__data:2943,custom3/00000000000000000000000000000003/__info,custom4/00000000000000000000000000000003/__data:2912,custom4/00000000000000000000000000000003/__info,gamma/44444444444444444444444444444444/__data:1539,gamma/44444444444444444444444444444444/__info,gamma/66666666666666666666666666666666/__data:1539,gamma/66666666666666666666666666666666/__info"}
+{"key":"inuse.after","value":"True"}
+{"key":"inuse.after.files","value":" / "}
+{"key":"inuse.after.cache","value":"valid=True index=1 readOnly=False path=<out>/cacheA expiration=12960000 max=9223372036854775807 occupied=0 free=max-occupied"}
+{"key":"inuse.after.logs","value":""}
+{"key":"expire.clearAll","value":"True"}
+{"key":"expire.alpha.result","value":"Success code=200 error=null bytes=2912 progress=1 complete=True"}
+{"key":"expire.alpha.handlerError","value":""}
+{"key":"expire.alpha.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"expire.alpha.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"expire.alpha.text","value":"11"}
+{"key":"expire.alpha.same","value":"True"}
+{"key":"expire.alpha.logs","value":""}
+{"key":"expire.beta.result","value":"Success code=200 error=null bytes=1210 progress=1 complete=True"}
+{"key":"expire.beta.handlerError","value":""}
+{"key":"expire.beta.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"expire.beta.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"expire.beta.text","value":"45"}
+{"key":"expire.beta.same","value":"True"}
+{"key":"expire.beta.logs","value":""}
+{"key":"expire.3600","value":"True"}
+{"key":"expire.3600.versions","value":"0123456789abcdef0123456789abcdef / 0123456789abcdef0123456789abcdef"}
+{"key":"expire.2","value":"True"}
+{"key":"expire.2.versions","value":" / 0123456789abcdef0123456789abcdef"}
+{"key":"expire.2.cache","value":"valid=True index=5 readOnly=False path=<out>/cacheX expiration=12960000 max=9223372036854775807 occupied=1233 free=max-occupied"}
+{"key":"expire.logs","value":""}
+{"key":"used.clearAll","value":"True"}
+{"key":"used.alpha.result","value":"Success code=200 error=null bytes=2912 progress=1 complete=True"}
+{"key":"used.alpha.handlerError","value":""}
+{"key":"used.alpha.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"used.alpha.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"used.alpha.text","value":"11"}
+{"key":"used.alpha.same","value":"True"}
+{"key":"used.alpha.logs","value":""}
+{"key":"used.beta.result","value":"Success code=200 error=null bytes=1210 progress=1 complete=True"}
+{"key":"used.beta.handlerError","value":""}
+{"key":"used.beta.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"used.beta.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"used.beta.text","value":"45"}
+{"key":"used.beta.same","value":"True"}
+{"key":"used.beta.logs","value":""}
+{"key":"used.gamma.result","value":"Success code=200 error=null bytes=880 progress=1 complete=True"}
+{"key":"used.gamma.handlerError","value":""}
+{"key":"used.gamma.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"used.gamma.bundle","value":"gamma.unity3d:assets/bundled/gamma.txt"}
+{"key":"used.gamma.text","value":"2041"}
+{"key":"used.gamma.same","value":"True"}
+{"key":"used.gamma.logs","value":""}
+{"key":"used.mark","value":"True"}
+{"key":"used.reload.result","value":"Success code=0 error=null bytes=0 progress=1 complete=True"}
+{"key":"used.reload.requests","value":"0"}
+{"key":"used.reload.handlerError","value":""}
+{"key":"used.reload.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"used.reload.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"used.reload.text","value":"45"}
+{"key":"used.reload.same","value":"True"}
+{"key":"used.reload.logs","value":""}
+{"key":"used.2","value":"True"}
+{"key":"used.2.versions","value":"0123456789abcdef0123456789abcdef / 0123456789abcdef0123456789abcdef / "}
+{"key":"used.cache","value":"valid=True index=6 readOnly=False path=<out>/cacheY expiration=12960000 max=9223372036854775807 occupied=2724 free=max-occupied"}
+{"key":"delay.clearAll","value":"True"}
+{"key":"delay.alpha.result","value":"Success code=200 error=null bytes=2912 progress=1 complete=True"}
+{"key":"delay.alpha.handlerError","value":""}
+{"key":"delay.alpha.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"delay.alpha.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"delay.alpha.text","value":"11"}
+{"key":"delay.alpha.same","value":"True"}
+{"key":"delay.alpha.logs","value":""}
+{"key":"delay.waited","value":"fedcba9876543210fedcba9876543210"}
+{"key":"delay.beta.result","value":"Success code=200 error=null bytes=1210 progress=1 complete=True"}
+{"key":"delay.beta.handlerError","value":""}
+{"key":"delay.beta.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"delay.beta.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"delay.beta.text","value":"45"}
+{"key":"delay.beta.same","value":"True"}
+{"key":"delay.beta.logs","value":""}
+{"key":"delay.versions","value":"fedcba9876543210fedcba9876543210 / fedcba9876543210fedcba9876543210"}
+{"key":"delay.cache","value":"valid=True index=7 readOnly=False path=<out>/cacheE expiration=1 max=9223372036854775807 occupied=2724 free=max-occupied"}
+{"key":"delay.logs","value":""}
+{"key":"delay.remove","value":"True"}
+{"key":"delay.reopen","value":"fedcba9876543210fedcba9876543210 valid=True index=7 readOnly=False path=<out>/cacheE expiration=12960000 max=9223372036854775807 occupied=2724 free=max-occupied"}
+{"key":"delay.reopen.files","value":"__info,alpha/fedcba9876543210fedcba9876543210/__data:1468,alpha/fedcba9876543210fedcba9876543210/__info,beta/fedcba9876543210fedcba9876543210/__data:1210,beta/fedcba9876543210fedcba9876543210/__info"}
+{"key":"delay.reopen.logs","value":""}
+{"key":"space.clearAll","value":"True"}
+{"key":"space.alpha.result","value":"Success code=200 error=null bytes=2912 progress=1 complete=True"}
+{"key":"space.alpha.handlerError","value":""}
+{"key":"space.alpha.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"space.alpha.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"space.alpha.text","value":"11"}
+{"key":"space.alpha.same","value":"True"}
+{"key":"space.alpha.logs","value":""}
+{"key":"space.beta.result","value":"Success code=200 error=null bytes=1210 progress=1 complete=True"}
+{"key":"space.beta.handlerError","value":""}
+{"key":"space.beta.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"space.beta.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"space.beta.text","value":"45"}
+{"key":"space.beta.same","value":"True"}
+{"key":"space.beta.logs","value":""}
+{"key":"space.sizes","value":"1491 2724"}
+{"key":"space.markAlpha","value":"True"}
+{"key":"space.gamma.result","value":"Success code=200 error=null bytes=880 progress=1 complete=True"}
+{"key":"space.gamma.handlerError","value":""}
+{"key":"space.gamma.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"space.gamma.bundle","value":"gamma.unity3d:assets/bundled/gamma.txt"}
+{"key":"space.gamma.text","value":"2041"}
+{"key":"space.gamma.same","value":"True"}
+{"key":"space.gamma.logs","value":""}
+{"key":"space.versions","value":" /  / "}
+{"key":"space.cache","value":"valid=True index=8 readOnly=False path=<out>/cacheS expiration=12960000 max=2724 occupied=0 free=max-occupied"}
+{"key":"space.logs","value":""}
+{"key":"tiny.clearAll","value":"True"}
+{"key":"tiny.result","value":"Success code=200 error=null bytes=2912 progress=1 complete=True"}
+{"key":"tiny.requests","value":"1"}
+{"key":"tiny.handlerError","value":""}
+{"key":"tiny.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"tiny.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"tiny.text","value":"11"}
+{"key":"tiny.same","value":"True"}
+{"key":"tiny.logs","value":""}
+{"key":"tiny.versions","value":""}
+{"key":"tiny.cache","value":"valid=True index=9 readOnly=False path=<out>/cacheTiny expiration=12960000 max=16 occupied=0 free=max-occupied"}
+{"key":"tiny.files","value":"__info"}
+{"key":"tiny.again.result","value":"Success code=200 error=null bytes=2912 progress=1 complete=True"}
+{"key":"tiny.again.requests","value":"1"}
+{"key":"tiny.again.handlerError","value":""}
+{"key":"tiny.again.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"tiny.again.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"tiny.again.text","value":"11"}
+{"key":"tiny.again.same","value":"True"}
+{"key":"tiny.again.logs","value":""}
+{"key":"space.lowered","value":" /  / "}
+{"key":"space.lowered.cache","value":"valid=True index=8 readOnly=False path=<out>/cacheS expiration=12960000 max=16 occupied=0 free=max-occupied"}
+{"key":"space.lowered.logs","value":""}
+{"key":"limit.gamma.unity3d.4823.result","value":"Success code=200 error=null bytes=880 progress=1 complete=True"}
+{"key":"limit.gamma.unity3d.4823.handlerError","value":""}
+{"key":"limit.gamma.unity3d.4823.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"limit.gamma.unity3d.4823.bundle","value":"gamma.unity3d:assets/bundled/gamma.txt"}
+{"key":"limit.gamma.unity3d.4823.text","value":"2041"}
+{"key":"limit.gamma.unity3d.4823.same","value":"True"}
+{"key":"limit.gamma.unity3d.4823.logs","value":""}
+{"key":"limit.gamma.unity3d.4823.cached","value":"False valid=True index=10 readOnly=False path=<out>/cacheZ0 expiration=12960000 max=4823 occupied=0 free=max-occupied"}
+{"key":"limit.gamma.unity3d.4824.result","value":"Success code=200 error=null bytes=880 progress=1 complete=True"}
+{"key":"limit.gamma.unity3d.4824.handlerError","value":""}
+{"key":"limit.gamma.unity3d.4824.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"limit.gamma.unity3d.4824.bundle","value":"gamma.unity3d:assets/bundled/gamma.txt"}
+{"key":"limit.gamma.unity3d.4824.text","value":"2041"}
+{"key":"limit.gamma.unity3d.4824.same","value":"True"}
+{"key":"limit.gamma.unity3d.4824.logs","value":""}
+{"key":"limit.gamma.unity3d.4824.cached","value":"False valid=True index=11 readOnly=False path=<out>/cacheZ1 expiration=12960000 max=4824 occupied=0 free=max-occupied"}
+{"key":"limit.gamma.unity3d.4950.result","value":"Success code=200 error=null bytes=880 progress=1 complete=True"}
+{"key":"limit.gamma.unity3d.4950.handlerError","value":""}
+{"key":"limit.gamma.unity3d.4950.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"limit.gamma.unity3d.4950.bundle","value":"gamma.unity3d:assets/bundled/gamma.txt"}
+{"key":"limit.gamma.unity3d.4950.text","value":"2041"}
+{"key":"limit.gamma.unity3d.4950.same","value":"True"}
+{"key":"limit.gamma.unity3d.4950.logs","value":""}
+{"key":"limit.gamma.unity3d.4950.cached","value":"False valid=True index=12 readOnly=False path=<out>/cacheZ2 expiration=12960000 max=4950 occupied=0 free=max-occupied"}
+{"key":"limit.gamma.unity3d.4951.result","value":"Success code=200 error=null bytes=880 progress=1 complete=True"}
+{"key":"limit.gamma.unity3d.4951.handlerError","value":""}
+{"key":"limit.gamma.unity3d.4951.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"limit.gamma.unity3d.4951.bundle","value":"gamma.unity3d:assets/bundled/gamma.txt"}
+{"key":"limit.gamma.unity3d.4951.text","value":"2041"}
+{"key":"limit.gamma.unity3d.4951.same","value":"True"}
+{"key":"limit.gamma.unity3d.4951.logs","value":""}
+{"key":"limit.gamma.unity3d.4951.cached","value":"False valid=True index=13 readOnly=False path=<out>/cacheZ3 expiration=12960000 max=4951 occupied=0 free=max-occupied"}
+{"key":"limit.alpha?v=1.2911.result","value":"Success code=200 error=null bytes=2912 progress=1 complete=True"}
+{"key":"limit.alpha?v=1.2911.handlerError","value":""}
+{"key":"limit.alpha?v=1.2911.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"limit.alpha?v=1.2911.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"limit.alpha?v=1.2911.text","value":"11"}
+{"key":"limit.alpha?v=1.2911.same","value":"True"}
+{"key":"limit.alpha?v=1.2911.logs","value":""}
+{"key":"limit.alpha?v=1.2911.cached","value":"False valid=True index=14 readOnly=False path=<out>/cacheZ4 expiration=12960000 max=2911 occupied=0 free=max-occupied"}
+{"key":"limit.alpha?v=1.2912.result","value":"Success code=200 error=null bytes=2912 progress=1 complete=True"}
+{"key":"limit.alpha?v=1.2912.handlerError","value":""}
+{"key":"limit.alpha?v=1.2912.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"limit.alpha?v=1.2912.bundle","value":"alpha:assets/bundled/alpha.txt"}
+{"key":"limit.alpha?v=1.2912.text","value":"11"}
+{"key":"limit.alpha?v=1.2912.same","value":"True"}
+{"key":"limit.alpha?v=1.2912.logs","value":""}
+{"key":"limit.alpha?v=1.2912.cached","value":"False valid=True index=15 readOnly=False path=<out>/cacheZ5 expiration=12960000 max=2912 occupied=0 free=max-occupied"}
+{"key":"limit.beta.bundle.1209.result","value":"Success code=200 error=null bytes=1210 progress=1 complete=True"}
+{"key":"limit.beta.bundle.1209.handlerError","value":""}
+{"key":"limit.beta.bundle.1209.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"limit.beta.bundle.1209.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"limit.beta.bundle.1209.text","value":"45"}
+{"key":"limit.beta.bundle.1209.same","value":"True"}
+{"key":"limit.beta.bundle.1209.logs","value":""}
+{"key":"limit.beta.bundle.1209.cached","value":"False valid=True index=16 readOnly=False path=<out>/cacheZ6 expiration=12960000 max=1209 occupied=0 free=max-occupied"}
+{"key":"limit.beta.bundle.1210.result","value":"Success code=200 error=null bytes=1210 progress=1 complete=True"}
+{"key":"limit.beta.bundle.1210.handlerError","value":""}
+{"key":"limit.beta.bundle.1210.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"limit.beta.bundle.1210.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"limit.beta.bundle.1210.text","value":"45"}
+{"key":"limit.beta.bundle.1210.same","value":"True"}
+{"key":"limit.beta.bundle.1210.logs","value":""}
+{"key":"limit.beta.bundle.1210.cached","value":"True valid=True index=17 readOnly=False path=<out>/cacheZ7 expiration=12960000 max=1210 occupied=1233 free=0"}
+{"key":"limit.raw.beta.result","value":"Success code=200 error=null bytes=1210 progress=1 complete=True"}
+{"key":"limit.raw.beta.handlerError","value":""}
+{"key":"limit.raw.beta.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"limit.raw.beta.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"limit.raw.beta.text","value":"45"}
+{"key":"limit.raw.beta.same","value":"True"}
+{"key":"limit.raw.beta.logs","value":""}
+{"key":"limit.raw.beta.cached","value":"False valid=True index=18 readOnly=False path=<out>/cacheZraw expiration=12960000 max=1209 occupied=0 free=max-occupied"}
+{"key":"limit.raw.beta2.result","value":"Success code=200 error=null bytes=1210 progress=1 complete=True"}
+{"key":"limit.raw.beta2.handlerError","value":""}
+{"key":"limit.raw.beta2.data","value":"throws NotSupportedException: Raw data access is not supported for asset bundles"}
+{"key":"limit.raw.beta2.bundle","value":"beta.bundle:assets/bundled/beta.txt"}
+{"key":"limit.raw.beta2.text","value":"45"}
+{"key":"limit.raw.beta2.same","value":"True"}
+{"key":"limit.raw.beta2.logs","value":""}
+{"key":"limit.raw.beta2.cached","value":"False valid=True index=18 readOnly=False path=<out>/cacheZraw expiration=12960000 max=2944 occupied=0 free=max-occupied"}
+{"key":"audio.tone.wav.flags","value":"stream=False compressed=False"}
+{"key":"audio.tone.wav.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.tone.wav.result","value":"Success code=200 error=null bytes=22128 done=True"}
+{"key":"audio.tone.wav.handlerError","value":""}
+{"key":"audio.tone.wav.data","value":"22128"}
+{"key":"audio.tone.wav.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.tone.wav.clip","value":"name='' length=0.5 samples=11025 channels=1 frequency=22050 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.tone.wav.same","value":"True"}
+{"key":"audio.tone.wav.content","value":"True"}
+{"key":"audio.tone.wav.samples","value":"ok=True peak=0.1250 meanSquare=0.00781 first=1 at=0.0156,-0.0036,-0.0199,-0.0078"}
+{"key":"audio.tone.wav.loadAudioData","value":"True Loaded"}
+{"key":"audio.tone.wav.logs","value":""}
+{"key":"audio.tone.wav.disposed","value":"True Loaded"}
+{"key":"audio.tone.wav.compressed.flags","value":"stream=False compressed=True"}
+{"key":"audio.tone.wav.compressed.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.tone.wav.compressed.result","value":"Success code=200 error=null bytes=22128 done=True"}
+{"key":"audio.tone.wav.compressed.handlerError","value":""}
+{"key":"audio.tone.wav.compressed.data","value":"22128"}
+{"key":"audio.tone.wav.compressed.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.tone.wav.compressed.clip","value":"name='' length=0.5 samples=11025 channels=1 frequency=22050 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.tone.wav.compressed.same","value":"True"}
+{"key":"audio.tone.wav.compressed.content","value":"True"}
+{"key":"audio.tone.wav.compressed.samples","value":"ok=True peak=0.1250 meanSquare=0.00781 first=1 at=0.0156,-0.0036,-0.0199,-0.0078"}
+{"key":"audio.tone.wav.compressed.loadAudioData","value":"True Loaded"}
+{"key":"audio.tone.wav.compressed.logs","value":""}
+{"key":"audio.tone.wav.compressed.disposed","value":"True Loaded"}
+{"key":"audio.tone.wav.stream.flags","value":"stream=True compressed=False"}
+{"key":"audio.tone.wav.stream.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.tone.wav.stream.result","value":"Success code=200 error=null bytes=22128 done=True"}
+{"key":"audio.tone.wav.stream.handlerError","value":""}
+{"key":"audio.tone.wav.stream.data","value":"22128"}
+{"key":"audio.tone.wav.stream.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.tone.wav.stream.clip","value":"name='' length=0.5 samples=11025 channels=1 frequency=22050 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.tone.wav.stream.same","value":"True"}
+{"key":"audio.tone.wav.stream.content","value":"True"}
+{"key":"audio.tone.wav.stream.samples","value":"ok=False peak=0.0000 meanSquare=0.00000 first=-1 at=0.0000,0.0000,0.0000,0.0000"}
+{"key":"audio.tone.wav.stream.loadAudioData","value":"True Loaded"}
+{"key":"audio.tone.wav.stream.logs","value":"Error: Can't get data from streamed samples for audio clip \"\". If you created the audio clip with AudioClip.Create, set the 'stream' argument to false, so you can access the data with 'AudioClip.GetData'. For a disk-based audio clip, change the load type to 'DecompressOnLoad', so you can access the data with 'AudioClip.GetData'."}
+{"key":"audio.tone.wav.stream.disposed","value":"True Loaded"}
+{"key":"audio.tone24.wav.flags","value":"stream=False compressed=False"}
+{"key":"audio.tone24.wav.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.tone24.wav.result","value":"Success code=200 error=null bytes=72102 done=True"}
+{"key":"audio.tone24.wav.handlerError","value":""}
+{"key":"audio.tone24.wav.data","value":"72102"}
+{"key":"audio.tone24.wav.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.tone24.wav.clip","value":"name='' length=0.25 samples=12000 channels=2 frequency=48000 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.tone24.wav.same","value":"True"}
+{"key":"audio.tone24.wav.content","value":"True"}
+{"key":"audio.tone24.wav.samples","value":"ok=True peak=0.0884 meanSquare=0.00390 first=2 at=0.0000,-0.0391,-0.0876,-0.0884"}
+{"key":"audio.tone24.wav.loadAudioData","value":"True Loaded"}
+{"key":"audio.tone24.wav.logs","value":""}
+{"key":"audio.tone24.wav.disposed","value":"True Loaded"}
+{"key":"audio.tone24.wav.compressed.flags","value":"stream=False compressed=True"}
+{"key":"audio.tone24.wav.compressed.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.tone24.wav.compressed.result","value":"Success code=200 error=null bytes=72102 done=True"}
+{"key":"audio.tone24.wav.compressed.handlerError","value":""}
+{"key":"audio.tone24.wav.compressed.data","value":"72102"}
+{"key":"audio.tone24.wav.compressed.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.tone24.wav.compressed.clip","value":"name='' length=0.25 samples=12000 channels=2 frequency=48000 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.tone24.wav.compressed.same","value":"True"}
+{"key":"audio.tone24.wav.compressed.content","value":"True"}
+{"key":"audio.tone24.wav.compressed.samples","value":"ok=True peak=0.0884 meanSquare=0.00390 first=2 at=0.0000,-0.0391,-0.0876,-0.0884"}
+{"key":"audio.tone24.wav.compressed.loadAudioData","value":"True Loaded"}
+{"key":"audio.tone24.wav.compressed.logs","value":""}
+{"key":"audio.tone24.wav.compressed.disposed","value":"True Loaded"}
+{"key":"audio.tone24.wav.stream.flags","value":"stream=True compressed=False"}
+{"key":"audio.tone24.wav.stream.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.tone24.wav.stream.result","value":"Success code=200 error=null bytes=72102 done=True"}
+{"key":"audio.tone24.wav.stream.handlerError","value":""}
+{"key":"audio.tone24.wav.stream.data","value":"72102"}
+{"key":"audio.tone24.wav.stream.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.tone24.wav.stream.clip","value":"name='' length=0.25 samples=12000 channels=2 frequency=48000 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.tone24.wav.stream.same","value":"True"}
+{"key":"audio.tone24.wav.stream.content","value":"True"}
+{"key":"audio.tone24.wav.stream.samples","value":"ok=False peak=0.0000 meanSquare=0.00000 first=-1 at=0.0000,0.0000,0.0000,0.0000"}
+{"key":"audio.tone24.wav.stream.loadAudioData","value":"True Loaded"}
+{"key":"audio.tone24.wav.stream.logs","value":"Error: Can't get data from streamed samples for audio clip \"\". If you created the audio clip with AudioClip.Create, set the 'stream' argument to false, so you can access the data with 'AudioClip.GetData'. For a disk-based audio clip, change the load type to 'DecompressOnLoad', so you can access the data with 'AudioClip.GetData'."}
+{"key":"audio.tone24.wav.stream.disposed","value":"True Loaded"}
+{"key":"audio.stereo.ogg.flags","value":"stream=False compressed=False"}
+{"key":"audio.stereo.ogg.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.stereo.ogg.result","value":"Success code=200 error=null bytes=7702 done=True"}
+{"key":"audio.stereo.ogg.handlerError","value":""}
+{"key":"audio.stereo.ogg.data","value":"7702"}
+{"key":"audio.stereo.ogg.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.stereo.ogg.clip","value":"name='' length=1.001 samples=44160 channels=2 frequency=44100 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.stereo.ogg.same","value":"True"}
+{"key":"audio.stereo.ogg.content","value":"True"}
+{"key":"audio.stereo.ogg.samples","value":"ok=True peak=0.2036 meanSquare=0.00781 first=0 at=0.0062,-0.0003,0.0102,0.1180"}
+{"key":"audio.stereo.ogg.loadAudioData","value":"True Loaded"}
+{"key":"audio.stereo.ogg.logs","value":""}
+{"key":"audio.stereo.ogg.disposed","value":"True Loaded"}
+{"key":"audio.stereo.ogg.compressed.flags","value":"stream=False compressed=True"}
+{"key":"audio.stereo.ogg.compressed.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.stereo.ogg.compressed.result","value":"Success code=200 error=null bytes=7702 done=True"}
+{"key":"audio.stereo.ogg.compressed.handlerError","value":""}
+{"key":"audio.stereo.ogg.compressed.data","value":"7702"}
+{"key":"audio.stereo.ogg.compressed.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.stereo.ogg.compressed.clip","value":"name='' length=1.001 samples=44160 channels=2 frequency=44100 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.stereo.ogg.compressed.same","value":"True"}
+{"key":"audio.stereo.ogg.compressed.content","value":"True"}
+{"key":"audio.stereo.ogg.compressed.samples","value":"ok=True peak=0.2036 meanSquare=0.00781 first=0 at=0.0062,-0.0003,0.0102,0.1180"}
+{"key":"audio.stereo.ogg.compressed.loadAudioData","value":"True Loaded"}
+{"key":"audio.stereo.ogg.compressed.logs","value":""}
+{"key":"audio.stereo.ogg.compressed.disposed","value":"True Loaded"}
+{"key":"audio.stereo.ogg.stream.flags","value":"stream=True compressed=False"}
+{"key":"audio.stereo.ogg.stream.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.stereo.ogg.stream.result","value":"Success code=200 error=null bytes=7702 done=True"}
+{"key":"audio.stereo.ogg.stream.handlerError","value":""}
+{"key":"audio.stereo.ogg.stream.data","value":"7702"}
+{"key":"audio.stereo.ogg.stream.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.stereo.ogg.stream.clip","value":"name='' length=1.001 samples=44160 channels=2 frequency=44100 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.stereo.ogg.stream.same","value":"True"}
+{"key":"audio.stereo.ogg.stream.content","value":"True"}
+{"key":"audio.stereo.ogg.stream.samples","value":"ok=False peak=0.0000 meanSquare=0.00000 first=-1 at=0.0000,0.0000,0.0000,0.0000"}
+{"key":"audio.stereo.ogg.stream.loadAudioData","value":"True Loaded"}
+{"key":"audio.stereo.ogg.stream.logs","value":"Error: Can't get data from streamed samples for audio clip \"\". If you created the audio clip with AudioClip.Create, set the 'stream' argument to false, so you can access the data with 'AudioClip.GetData'. For a disk-based audio clip, change the load type to 'DecompressOnLoad', so you can access the data with 'AudioClip.GetData'."}
+{"key":"audio.stereo.ogg.stream.disposed","value":"True Loaded"}
+{"key":"audio.tone.mp3.flags","value":"stream=False compressed=False"}
+{"key":"audio.tone.mp3.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.tone.mp3.result","value":"Success code=200 error=null bytes=9238 done=True"}
+{"key":"audio.tone.mp3.handlerError","value":""}
+{"key":"audio.tone.mp3.data","value":"9238"}
+{"key":"audio.tone.mp3.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.tone.mp3.clip","value":"name='' length=0.626 samples=27648 channels=1 frequency=44100 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.tone.mp3.same","value":"True"}
+{"key":"audio.tone.mp3.content","value":"True"}
+{"key":"audio.tone.mp3.samples","value":"ok=True peak=0.1187 meanSquare=0.00562 first=1501 at=0.0000,0.0000,0.0000,-0.0407"}
+{"key":"audio.tone.mp3.loadAudioData","value":"True Loaded"}
+{"key":"audio.tone.mp3.logs","value":""}
+{"key":"audio.tone.mp3.disposed","value":"True Loaded"}
+{"key":"audio.tone.mp3.compressed.flags","value":"stream=False compressed=True"}
+{"key":"audio.tone.mp3.compressed.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.tone.mp3.compressed.result","value":"Success code=200 error=null bytes=9238 done=True"}
+{"key":"audio.tone.mp3.compressed.handlerError","value":""}
+{"key":"audio.tone.mp3.compressed.data","value":"9238"}
+{"key":"audio.tone.mp3.compressed.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.tone.mp3.compressed.clip","value":"name='' length=0.626 samples=27648 channels=1 frequency=44100 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.tone.mp3.compressed.same","value":"True"}
+{"key":"audio.tone.mp3.compressed.content","value":"True"}
+{"key":"audio.tone.mp3.compressed.samples","value":"ok=False peak=0.0000 meanSquare=0.00000 first=-1 at=0.0000,0.0000,0.0000,0.0000"}
+{"key":"audio.tone.mp3.compressed.loadAudioData","value":"True Loaded"}
+{"key":"audio.tone.mp3.compressed.logs","value":"Error: Cannot get data on compressed samples for audio clip \"\". Changing the load type to DecompressOnLoad on the audio clip will fix this."}
+{"key":"audio.tone.mp3.compressed.disposed","value":"True Loaded"}
+{"key":"audio.tone.mp3.stream.flags","value":"stream=True compressed=False"}
+{"key":"audio.tone.mp3.stream.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.tone.mp3.stream.result","value":"Success code=200 error=null bytes=9238 done=True"}
+{"key":"audio.tone.mp3.stream.handlerError","value":""}
+{"key":"audio.tone.mp3.stream.data","value":"9238"}
+{"key":"audio.tone.mp3.stream.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.tone.mp3.stream.clip","value":"name='' length=0.626 samples=27648 channels=1 frequency=44100 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.tone.mp3.stream.same","value":"True"}
+{"key":"audio.tone.mp3.stream.content","value":"True"}
+{"key":"audio.tone.mp3.stream.samples","value":"ok=False peak=0.0000 meanSquare=0.00000 first=-1 at=0.0000,0.0000,0.0000,0.0000"}
+{"key":"audio.tone.mp3.stream.loadAudioData","value":"True Loaded"}
+{"key":"audio.tone.mp3.stream.logs","value":"Error: Can't get data from streamed samples for audio clip \"\". If you created the audio clip with AudioClip.Create, set the 'stream' argument to false, so you can access the data with 'AudioClip.GetData'. For a disk-based audio clip, change the load type to 'DecompressOnLoad', so you can access the data with 'AudioClip.GetData'."}
+{"key":"audio.tone.mp3.stream.disposed","value":"True Loaded"}
+{"key":"audio.adpcm.wav.flags","value":"stream=False compressed=False"}
+{"key":"audio.adpcm.wav.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.adpcm.wav.result","value":"Success code=200 error=null bytes=6238 done=True"}
+{"key":"audio.adpcm.wav.handlerError","value":""}
+{"key":"audio.adpcm.wav.data","value":"6238"}
+{"key":"audio.adpcm.wav.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.adpcm.wav.clip","value":"name='' length=0.5 samples=11025 channels=1 frequency=22050 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.adpcm.wav.same","value":"True"}
+{"key":"audio.adpcm.wav.content","value":"True"}
+{"key":"audio.adpcm.wav.samples","value":"ok=True peak=0.1264 meanSquare=0.00779 first=1 at=0.0003,-0.0026,-0.0222,-0.0058"}
+{"key":"audio.adpcm.wav.loadAudioData","value":"True Loaded"}
+{"key":"audio.adpcm.wav.logs","value":""}
+{"key":"audio.adpcm.wav.disposed","value":"True Loaded"}
+{"key":"audio.adpcm.wav.compressed.flags","value":"stream=False compressed=True"}
+{"key":"audio.adpcm.wav.compressed.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.adpcm.wav.compressed.result","value":"Success code=200 error=null bytes=6238 done=True"}
+{"key":"audio.adpcm.wav.compressed.handlerError","value":""}
+{"key":"audio.adpcm.wav.compressed.data","value":"6238"}
+{"key":"audio.adpcm.wav.compressed.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.adpcm.wav.compressed.clip","value":"name='' length=0.5 samples=11025 channels=1 frequency=22050 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.adpcm.wav.compressed.same","value":"True"}
+{"key":"audio.adpcm.wav.compressed.content","value":"True"}
+{"key":"audio.adpcm.wav.compressed.samples","value":"ok=False peak=0.0000 meanSquare=0.00000 first=-1 at=0.0000,0.0000,0.0000,0.0000"}
+{"key":"audio.adpcm.wav.compressed.loadAudioData","value":"True Loaded"}
+{"key":"audio.adpcm.wav.compressed.logs","value":"Error: Cannot get data on compressed samples for audio clip \"\". Changing the load type to DecompressOnLoad on the audio clip will fix this."}
+{"key":"audio.adpcm.wav.compressed.disposed","value":"True Loaded"}
+{"key":"audio.adpcm.wav.stream.flags","value":"stream=True compressed=False"}
+{"key":"audio.adpcm.wav.stream.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.adpcm.wav.stream.result","value":"Success code=200 error=null bytes=6238 done=True"}
+{"key":"audio.adpcm.wav.stream.handlerError","value":""}
+{"key":"audio.adpcm.wav.stream.data","value":"6238"}
+{"key":"audio.adpcm.wav.stream.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.adpcm.wav.stream.clip","value":"name='' length=0.5 samples=11025 channels=1 frequency=22050 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.adpcm.wav.stream.same","value":"True"}
+{"key":"audio.adpcm.wav.stream.content","value":"True"}
+{"key":"audio.adpcm.wav.stream.samples","value":"ok=False peak=0.0000 meanSquare=0.00000 first=-1 at=0.0000,0.0000,0.0000,0.0000"}
+{"key":"audio.adpcm.wav.stream.loadAudioData","value":"True Loaded"}
+{"key":"audio.adpcm.wav.stream.logs","value":"Error: Can't get data from streamed samples for audio clip \"\". If you created the audio clip with AudioClip.Create, set the 'stream' argument to false, so you can access the data with 'AudioClip.GetData'. For a disk-based audio clip, change the load type to 'DecompressOnLoad', so you can access the data with 'AudioClip.GetData'."}
+{"key":"audio.adpcm.wav.stream.disposed","value":"True Loaded"}
+{"key":"audio.plain.mp3.flags","value":"stream=False compressed=False"}
+{"key":"audio.plain.mp3.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.plain.mp3.result","value":"Success code=200 error=null bytes=8777 done=True"}
+{"key":"audio.plain.mp3.handlerError","value":""}
+{"key":"audio.plain.mp3.data","value":"8777"}
+{"key":"audio.plain.mp3.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.plain.mp3.clip","value":"name='' length=0.6 samples=26496 channels=1 frequency=44100 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.plain.mp3.same","value":"True"}
+{"key":"audio.plain.mp3.content","value":"True"}
+{"key":"audio.plain.mp3.samples","value":"ok=True peak=0.1187 meanSquare=0.00586 first=349 at=0.0000,0.0000,0.0000,-0.0886"}
+{"key":"audio.plain.mp3.loadAudioData","value":"True Loaded"}
+{"key":"audio.plain.mp3.logs","value":""}
+{"key":"audio.plain.mp3.disposed","value":"True Loaded"}
+{"key":"audio.long.mp3.flags","value":"stream=False compressed=False"}
+{"key":"audio.long.mp3.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.long.mp3.result","value":"Success code=200 error=null bytes=33061 done=True"}
+{"key":"audio.long.mp3.handlerError","value":""}
+{"key":"audio.long.mp3.data","value":"33061"}
+{"key":"audio.long.mp3.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.long.mp3.clip","value":"name='' length=2.115 samples=93312 channels=2 frequency=44100 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.long.mp3.same","value":"True"}
+{"key":"audio.long.mp3.content","value":"True"}
+{"key":"audio.long.mp3.samples","value":"ok=True peak=0.0842 meanSquare=0.00333 first=2834 at=0.0000,0.0000,0.0000,0.0836"}
+{"key":"audio.long.mp3.loadAudioData","value":"True Loaded"}
+{"key":"audio.long.mp3.logs","value":""}
+{"key":"audio.long.mp3.disposed","value":"True Loaded"}
+{"key":"audio.vbr.mp3.flags","value":"stream=False compressed=False"}
+{"key":"audio.vbr.mp3.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.vbr.mp3.result","value":"Success code=200 error=null bytes=5038 done=True"}
+{"key":"audio.vbr.mp3.handlerError","value":""}
+{"key":"audio.vbr.mp3.data","value":"5038"}
+{"key":"audio.vbr.mp3.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.vbr.mp3.clip","value":"name='' length=1.044 samples=46080 channels=1 frequency=44100 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.vbr.mp3.same","value":"True"}
+{"key":"audio.vbr.mp3.content","value":"True"}
+{"key":"audio.vbr.mp3.samples","value":"ok=True peak=0.1281 meanSquare=0.00745 first=287 at=0.0000,0.0000,0.0007,0.0962"}
+{"key":"audio.vbr.mp3.loadAudioData","value":"True Loaded"}
+{"key":"audio.vbr.mp3.logs","value":""}
+{"key":"audio.vbr.mp3.disposed","value":"True Loaded"}
+{"key":"audio.low.mp3.flags","value":"stream=False compressed=False"}
+{"key":"audio.low.mp3.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.low.mp3.result","value":"Success code=200 error=null bytes=4849 done=True"}
+{"key":"audio.low.mp3.handlerError","value":""}
+{"key":"audio.low.mp3.data","value":"4849"}
+{"key":"audio.low.mp3.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.low.mp3.clip","value":"name='' length=0.653 samples=14400 channels=1 frequency=22050 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.low.mp3.same","value":"True"}
+{"key":"audio.low.mp3.content","value":"True"}
+{"key":"audio.low.mp3.samples","value":"ok=True peak=0.1188 meanSquare=0.00539 first=868 at=0.0000,0.0000,-0.0001,-0.0681"}
+{"key":"audio.low.mp3.loadAudioData","value":"True Loaded"}
+{"key":"audio.low.mp3.logs","value":""}
+{"key":"audio.low.mp3.disposed","value":"True Loaded"}
+{"key":"audio.unknown.wav.flags","value":"stream=False compressed=False"}
+{"key":"audio.unknown.wav.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.unknown.wav.result","value":"Success code=200 error=null bytes=22128 done=True"}
+{"key":"audio.unknown.wav.handlerError","value":""}
+{"key":"audio.unknown.wav.data","value":"22128"}
+{"key":"audio.unknown.wav.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.unknown.wav.clip","value":"name='' length=0.5 samples=11025 channels=1 frequency=22050 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.unknown.wav.same","value":"True"}
+{"key":"audio.unknown.wav.content","value":"True"}
+{"key":"audio.unknown.wav.samples","value":"ok=True peak=0.1250 meanSquare=0.00781 first=1 at=0.0156,-0.0036,-0.0199,-0.0078"}
+{"key":"audio.unknown.wav.loadAudioData","value":"True Loaded"}
+{"key":"audio.unknown.wav.logs","value":""}
+{"key":"audio.unknown.wav.disposed","value":"True Loaded"}
+{"key":"audio.unknown.ogg.flags","value":"stream=False compressed=False"}
+{"key":"audio.unknown.ogg.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.unknown.ogg.result","value":"Success code=200 error=null bytes=7702 done=True"}
+{"key":"audio.unknown.ogg.handlerError","value":""}
+{"key":"audio.unknown.ogg.data","value":"7702"}
+{"key":"audio.unknown.ogg.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.unknown.ogg.clip","value":"name='' length=1.001 samples=44160 channels=2 frequency=44100 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.unknown.ogg.same","value":"True"}
+{"key":"audio.unknown.ogg.content","value":"True"}
+{"key":"audio.unknown.ogg.samples","value":"ok=True peak=0.2036 meanSquare=0.00781 first=0 at=0.0062,-0.0003,0.0102,0.1180"}
+{"key":"audio.unknown.ogg.loadAudioData","value":"True Loaded"}
+{"key":"audio.unknown.ogg.logs","value":""}
+{"key":"audio.unknown.ogg.disposed","value":"True Loaded"}
+{"key":"audio.mismatch.ogg.flags","value":"stream=False compressed=False"}
+{"key":"audio.mismatch.ogg.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.mismatch.ogg.result","value":"Success code=200 error=null bytes=7702 done=True"}
+{"key":"audio.mismatch.ogg.handlerError","value":""}
+{"key":"audio.mismatch.ogg.data","value":"7702"}
+{"key":"audio.mismatch.ogg.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.mismatch.ogg.clip","value":"name='' length=0 samples=0 channels=0 frequency=0 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.mismatch.ogg.same","value":"True"}
+{"key":"audio.mismatch.ogg.content","value":"True"}
+{"key":"audio.mismatch.ogg.samples","value":"ok=False peak=0.0000 meanSquare=0.00000 first=-1 at=-,-,-,0.0000"}
+{"key":"audio.mismatch.ogg.loadAudioData","value":"True Loaded"}
+{"key":"audio.mismatch.ogg.logs","value":"Error: Error: Cannot create FMOD::Sound instance for clip \"\" (FMOD error: Unsupported file or audio format. ) | Log: AudioClip.GetData failed; AudioClip  contains no data"}
+{"key":"audio.mismatch.ogg.disposed","value":"True Loaded"}
+{"key":"audio.mismatch.wav.flags","value":"stream=False compressed=False"}
+{"key":"audio.mismatch.wav.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.mismatch.wav.result","value":"Success code=200 error=null bytes=22128 done=True"}
+{"key":"audio.mismatch.wav.handlerError","value":""}
+{"key":"audio.mismatch.wav.data","value":"22128"}
+{"key":"audio.mismatch.wav.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.mismatch.wav.clip","value":"name='' length=0 samples=0 channels=0 frequency=0 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.mismatch.wav.same","value":"True"}
+{"key":"audio.mismatch.wav.content","value":"True"}
+{"key":"audio.mismatch.wav.samples","value":"ok=False peak=0.0000 meanSquare=0.00000 first=-1 at=-,-,-,0.0000"}
+{"key":"audio.mismatch.wav.loadAudioData","value":"True Loaded"}
+{"key":"audio.mismatch.wav.logs","value":"Error: Error: Cannot create FMOD::Sound instance for clip \"\" (FMOD error: Unsupported file or audio format. ) | Log: AudioClip.GetData failed; AudioClip  contains no data"}
+{"key":"audio.mismatch.wav.disposed","value":"True Loaded"}
+{"key":"audio.notaudio.flags","value":"stream=False compressed=False"}
+{"key":"audio.notaudio.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.notaudio.result","value":"Success code=200 error=null bytes=30 done=True"}
+{"key":"audio.notaudio.handlerError","value":""}
+{"key":"audio.notaudio.data","value":"30"}
+{"key":"audio.notaudio.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.notaudio.clip","value":"name='' length=0 samples=0 channels=0 frequency=0 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.notaudio.same","value":"True"}
+{"key":"audio.notaudio.content","value":"True"}
+{"key":"audio.notaudio.samples","value":"ok=False peak=0.0000 meanSquare=0.00000 first=-1 at=-,-,-,0.0000"}
+{"key":"audio.notaudio.loadAudioData","value":"True Loaded"}
+{"key":"audio.notaudio.logs","value":"Error: Error: Cannot create FMOD::Sound instance for clip \"\" (FMOD error: Unsupported file or audio format. ) | Log: AudioClip.GetData failed; AudioClip  contains no data"}
+{"key":"audio.notaudio.disposed","value":"True Loaded"}
+{"key":"audio.missing.flags","value":"stream=False compressed=False"}
+{"key":"audio.missing.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.missing.result","value":"ProtocolError code=404 error=HTTP/1.1 404 Not Found bytes=0 done=False"}
+{"key":"audio.missing.handlerError","value":""}
+{"key":"audio.missing.data","value":"null"}
+{"key":"audio.missing.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.missing.clip","value":"throws InvalidOperationException: Cannot access the .audioClip property of an aborted DownloadHandlerAudioClip"}
+{"key":"audio.missing.same","value":"throws InvalidOperationException: Cannot access the .audioClip property of an aborted DownloadHandlerAudioClip"}
+{"key":"audio.missing.content","value":"throws InvalidOperationException: HTTP/1.1 404 Not Found"}
+{"key":"audio.missing.logs","value":""}
+{"key":"audio.missing.disposed","value":"null"}
+{"key":"audio.both.flags","value":"stream=True compressed=True"}
+{"key":"audio.both.before","value":"throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated"}
+{"key":"audio.both.result","value":"Success code=200 error=null bytes=22128 done=True"}
+{"key":"audio.both.handlerError","value":""}
+{"key":"audio.both.data","value":"22128"}
+{"key":"audio.both.text","value":"throws NotSupportedException: String access is not supported for audio clips"}
+{"key":"audio.both.clip","value":"name='' length=0.5 samples=11025 channels=1 frequency=22050 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"audio.both.same","value":"True"}
+{"key":"audio.both.content","value":"True"}
+{"key":"audio.both.samples","value":"ok=False peak=0.0000 meanSquare=0.00000 first=-1 at=0.0000,0.0000,0.0000,0.0000"}
+{"key":"audio.both.loadAudioData","value":"True Loaded"}
+{"key":"audio.both.logs","value":"Warning: Audio compression is not valid as streamAudio is set to true | Error: Can't get data from streamed samples for audio clip \"\". If you created the audio clip with AudioClip.Create, set the 'stream' argument to false, so you can access the data with 'AudioClip.GetData'. For a disk-based audio clip, change the load type to 'DecompressOnLoad', so you can access the data with 'AudioClip.GetData'."}
+{"key":"audio.both.disposed","value":"True Loaded"}
+{"key":"flags.compressedThenStream","value":"stream=True compressed=True logs=Warning: Audio compression is not valid as streamAudio is set to true"}
+{"key":"flags.streamThenCompressed","value":"stream=True compressed=True logs=Warning: Audio compression is not valid as streamAudio is set to true | Warning: Audio compression is not valid as streamAudio is set to true"}
+{"key":"flags.constructed","value":"stream=False compressed=False clip=throws InvalidOperationException: Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated logs="}
+{"key":"partial.stream.partial","value":"bytes=16384 done=False handlerDone=False"}
+{"key":"partial.stream.partial.clip","value":"name='' length=2 samples=44100 channels=1 frequency=22050 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"partial.stream.partial.logs","value":""}
+{"key":"partial.stream.result","value":"Success bytes=88244"}
+{"key":"partial.stream.clip","value":"name='' length=2 samples=44100 channels=1 frequency=22050 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"partial.stream.sameAsPartial","value":"True"}
+{"key":"partial.stream.samples","value":"ok=False peak=0.0000 meanSquare=0.00000 first=-1 at=0.0000,0.0000,0.0000,0.0000"}
+{"key":"partial.stream.logs","value":"Error: Can't get data from streamed samples for audio clip \"\". If you created the audio clip with AudioClip.Create, set the 'stream' argument to false, so you can access the data with 'AudioClip.GetData'. For a disk-based audio clip, change the load type to 'DecompressOnLoad', so you can access the data with 'AudioClip.GetData'."}
+{"key":"partial.plain.partial","value":"bytes=16384 done=False handlerDone=False"}
+{"key":"partial.plain.partial.clip","value":"name='' length=0 samples=0 channels=0 frequency=0 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"partial.plain.partial.logs","value":""}
+{"key":"partial.plain.result","value":"Success bytes=88244"}
+{"key":"partial.plain.clip","value":"name='' length=0 samples=0 channels=0 frequency=0 loadType=DecompressOnLoad loadState=Loaded preload=True background=False ambisonic=False hide=None"}
+{"key":"partial.plain.sameAsPartial","value":"True"}
+{"key":"partial.plain.samples","value":"ok=False peak=0.0000 meanSquare=0.00000 first=-1 at=-,-,-,0.0000"}
+{"key":"partial.plain.logs","value":"Log: AudioClip.GetData failed; AudioClip  contains no data"}
+{"key":"done","value":""}
