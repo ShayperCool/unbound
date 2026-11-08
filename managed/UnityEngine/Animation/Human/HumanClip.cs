@@ -113,7 +113,8 @@ namespace UnityEngine
             var values = m_BodyValues ??= new float[HumanClipImport.CurveCount];
             SampleHuman(time, values);
             var present = HumanPresent;
-            var motion = HumanClipMotion;
+            // SampleHuman refreshed the curves for this version: the constants are current if built.
+            var motion = m_HumanClipMotion ?? HumanClipMotion;
             var body = HumanRootMotion.ReadRoot(values, present);
             var x = HumanRootMotion.MotionX(motion, body.t, body.q, motion.HeightFromFeet ? HumanRootMotion.FeetY(values, present, body) : 0f);
             return (new Vector3(x.t.x, x.t.y, x.t.z), new Quaternion(x.q.x, x.q.y, x.q.z, x.q.w));

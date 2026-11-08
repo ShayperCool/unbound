@@ -57,4 +57,6 @@ in two byte-identical captures (2119 records), not a documented guarantee:
 - Loop pose bends the child's generic curve so that it loops (its value stays 0).
 
 Not covered: playable graph outputs playing body curves (Unbound warns and reports no motion),
-clips with both body and `MotionT`/`MotionQ` curves, additive layers, masks and other releases.
+clips with both body and `MotionT`/`MotionQ` curves, a body-curve clip blended with a clip moving
+the root by other curves, humanoid clips on an Animator without an Avatar, a generic Avatar with a
+root node, additive layers, masks and other releases. Unbound applies the same rule to all of them.
