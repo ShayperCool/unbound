@@ -160,7 +160,7 @@ def cmd_prepare(args, repo):
 
 
 def symlink_targets(base, checkouts=()):
-    """Run-cache links at any depth, including caches stored behind top-level aliases."""
+    """Run-cache links at any depth, including caches stored behind directory aliases."""
     found = set()
     if not base.is_dir():
         return found
@@ -179,49 +179,35 @@ def symlink_targets(base, checkouts=()):
             return  # a run was cleaned up, or its link no longer resolves
         raise SystemExit(f'cannot inspect run-cache links: {error}; refusing to reap worktrees')
 
-    targets = {}
+    resolved, resolving = {}, set()
 
-    def link_targets(path, parent):
-        raw = Path(os.readlink(path))
-        if raw.is_absolute():
-            target = raw
-        else:
-            # The traversal uses physical directories and never follows directory links.
-            # Only leading parent steps can be folded before resolving a target's links.
-            parts = list(raw.parts)
-            while parts and parts[0] == '..':
-                parent = parent.parent
-                parts.pop(0)
-            target = parent.joinpath(*parts)
-        found.add(target)  # keep a source checkout even when the target links onward
-        if target not in targets:
-            targets[target] = Path(os.path.realpath(target))
-        found.add(targets[target])
-        return targets[target]
-
-    roots = {base}
-    try:
-        for entry in base.iterdir():
-            if not entry.is_symlink():
-                continue
-            target = link_targets(entry, base)
-            if entry.name in excluded or inside(target, checkouts) or inside(target, excluded_roots):
-                continue
-            try:
-                directory = stat.S_ISDIR(entry.stat().st_mode)
-            except OSError as error:
+    def resolve(path):
+        # Cache physical prefixes too: run snapshots repeat the same runtime links.
+        if path in resolved:
+            return resolved[path]
+        if path in resolving:
+            return path  # a cyclic link cannot be traversed, but its targets are retained
+        if path.parent == path:
+            return path
+        resolving.add(path)
+        parent = resolve(path.parent)
+        candidate = parent.parent if path.name == '..' else parent/path.name
+        try:
+            raw = Path(os.readlink(candidate))
+        except OSError as error:
+            if error.errno != errno.EINVAL:
                 unreadable(error)
-                continue
-            if directory:
-                if target.parent == target:
-                    raise SystemExit(f'cannot scan filesystem root through run-cache alias {entry}')
-                roots.add(target)
-    except OSError as error:
-        unreadable(error)
+            result = candidate
+        else:
+            found.add(candidate)  # every source in a chain, including directory links
+            target = raw if raw.is_absolute() else candidate.parent/raw
+            found.add(target)
+            result = resolve(target)
+        resolving.remove(path)
+        resolved[path] = result
+        return result
 
-    # A runtime alias into a cache already covered by another root needs no second walk.
-    roots = {root for root in roots if not any(parent in roots for parent in root.parents)}
-    pending, visited = list(roots), set()
+    pending, visited = [base], set()
     while pending:
         directory = pending.pop()
         if inside(directory, checkouts):
@@ -240,7 +226,14 @@ def symlink_targets(base, checkouts=()):
                         continue
                     try:
                         if entry.is_symlink():
-                            link_targets(entry.path, directory)
+                            target = resolve(Path(entry.path))
+                            found.add(target)
+                            if inside(target, checkouts) or inside(target, excluded_roots):
+                                continue
+                            if stat.S_ISDIR(entry.stat().st_mode):
+                                if target.parent == target:
+                                    raise SystemExit(f'cannot scan filesystem root through run-cache alias {entry.path}')
+                                pending.append(target)
                         elif entry.is_dir(follow_symlinks=False):
                             pending.append(Path(entry.path))
                     except OSError as error:

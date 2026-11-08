@@ -264,6 +264,38 @@ class SlotTests(unittest.TestCase):
         self.assertTrue(source.exists() and destination.exists())
         self.assertFalse(unused.exists())
 
+    def test_reap_keeps_every_intermediate_checkout_in_a_reference_chain(self):
+        base = Path(self.temp.name).resolve()
+        paths = [base/name for name in ('first', 'middle', 'last')]
+        for path in paths:
+            self.git('worktree', 'add', '-q', '-b', f't3/{path.name}', str(path), 'main')
+        for source, destination in zip(paths, paths[1:]):
+            (source/'a.txt').unlink()
+            (source/'a.txt').symlink_to(destination/'a.txt')
+            self.git('add', '.', cwd=source)
+            self.git('commit', '-qm', 'reference', cwd=source)
+        for path in paths:
+            self.make_old(path)
+        cache = Path(self.env['XDG_CACHE_HOME'])/'unbound/runs'
+        cache.mkdir(parents=True)
+        (cache/'reference').symlink_to(paths[0]/'a.txt')
+        self.run_slot('reap')
+        self.assertTrue(all(path.exists() for path in paths))
+
+    def test_reap_follows_nested_directory_aliases(self):
+        base = Path(self.temp.name).resolve()
+        checkout = base/'linked'
+        self.git('worktree', 'add', '-q', '-b', 't3/linked', str(checkout), 'main')
+        self.make_old(checkout)
+        external = base/'external'
+        external.mkdir()
+        (external/'Assets').symlink_to(checkout, target_is_directory=True)
+        cache = Path(self.env['XDG_CACHE_HOME'])/'unbound/runs/probe'
+        cache.mkdir(parents=True)
+        (cache/'project').symlink_to(external, target_is_directory=True)
+        self.run_slot('reap')
+        self.assertTrue(checkout.exists())
+
     def test_parent_steps_after_a_directory_link_use_filesystem_resolution(self):
         base = Path(self.temp.name).resolve()
         checkout = base/'linked'
