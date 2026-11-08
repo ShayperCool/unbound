@@ -164,7 +164,7 @@ fn measured_doppler(offset: Vector3, velocity: Vector3, distance: f32, scale: f3
 pub struct SourceSpatial<'a> {
     pub position: Vector3,
     pub velocity: Vector3,
-    /// Doppler can sample a newer listener pose than distance and panning.
+    /// Distance and Doppler can sample a newer listener position than panning.
     pub doppler_listener_position: Option<Vector3>,
     pub pan_stereo: f32,
     pub spatial_blend: f32,
@@ -231,7 +231,14 @@ fn spatialize_impl(
     measured: bool,
 ) -> Spatialized {
     let offset = sub(s.position, listener.position);
-    let distance = length(offset);
+    let pan_distance = length(offset);
+    let motion_offset = if measured {
+        s.doppler_listener_position
+            .map_or(offset, |position| sub(s.position, position))
+    } else {
+        offset
+    };
+    let distance = length(motion_offset);
     let normalized = if s.max_distance > 0.0 {
         distance / s.max_distance
     } else {
@@ -271,11 +278,11 @@ fn spatialize_impl(
         rolloff_scale,
         s.rolloff_curve,
     );
-    let (pan, direction) = if distance > 1e-5 {
+    let (pan, direction) = if pan_distance > 1e-5 {
         let direction = Vector3 {
-            x: offset.x / distance,
-            y: offset.y / distance,
-            z: offset.z / distance,
+            x: offset.x / pan_distance,
+            y: offset.y / pan_distance,
+            z: offset.z / pan_distance,
         };
         let right = cross(listener.up, listener.forward);
         let right_length = length(right);
@@ -294,10 +301,8 @@ fn spatialize_impl(
     };
     let flat = 1.0 - blend;
     let pitch = if measured {
-        let doppler_offset = s
-            .doppler_listener_position
-            .map_or(offset, |position| sub(s.position, position));
-        let doppler_distance = length(doppler_offset);
+        let doppler_offset = motion_offset;
+        let doppler_distance = distance;
         let factor = if doppler_distance > 1e-5 {
             measured_doppler(
                 doppler_offset,
@@ -473,8 +478,12 @@ mod tests {
         let before = spatialize_measured(&s, &listener, 1.0, 1.0);
         s.doppler_listener_position = Some(v(0.0, 0.0, 1.0));
         let after = spatialize_measured(&s, &listener, 1.0, 1.0);
-        assert_eq!(after.matrix, before.matrix);
-        assert_eq!(after.mono_matrix, before.mono_matrix);
+        assert!(close(
+            after.matrix[0] / after.matrix[3],
+            before.matrix[0] / before.matrix[3]
+        ));
+        assert!(close(after.audibility, 1.0 / 85.0_f32.sqrt()));
+        assert_ne!(after.audibility, before.audibility);
         assert_ne!(after.pitch, before.pitch);
         s.doppler_listener_position = Some(s.position);
         assert_eq!(spatialize_measured(&s, &listener, 1.0, 1.0).pitch, 1.0);

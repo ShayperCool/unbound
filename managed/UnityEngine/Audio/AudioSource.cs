@@ -328,7 +328,7 @@ namespace UnityEngine
 
         float CurveTimeAtListener()
         {
-            float distance = m_GameObject != null ? Vector3.Distance(AudioPosition, Compat.AudioSpatialStereoMeasured ? m_ListenerPose.Position : AudioSystem.s_HearingPosition) : 0f;
+            float distance = m_GameObject != null ? Vector3.Distance(AudioPosition, Compat.AudioSpatialStereoMeasured ? m_DopplerListenerPosition : AudioSystem.s_HearingPosition) : 0f;
             return m_MaxDistance > 0f ? distance / m_MaxDistance : 1f;
         }
 
