@@ -104,13 +104,13 @@ def lock(name, mode=fcntl.LOCK_EX, on_wait=None):
         if on_wait is None:
             fcntl.flock(handle, mode)
         else:
-            while True:
-                try:
-                    fcntl.flock(handle, mode|fcntl.LOCK_NB)
-                    break
-                except BlockingIOError:
-                    on_wait()
-                    time.sleep(.05)
+            try:
+                fcntl.flock(handle, mode|fcntl.LOCK_NB)
+            except BlockingIOError:
+                on_wait()
+                # Queue in the kernel after the diagnostic, just as older
+                # runners do, rather than racing queued writers on a timer.
+                fcntl.flock(handle, mode)
         try:
             yield
         finally:
@@ -341,10 +341,15 @@ def payload(command):
                 if arg == '--':
                     args.pop(0)
                     break
+                if name == 'env' and (re.match(r'^-[iv0]*S', arg) or
+                        (arg.startswith('--') and '--split-string'.startswith(arg.split('=',1)[0]))):
+                    raise ValueError('env split-string wrappers are unsupported; pass expanded '
+                                     'command arguments to the runner. Run tools/build.py directly '
+                                     'because it manages its own build lease.')
                 if name == 'env' and '=' in arg and not arg.startswith('-'):
                     args.pop(0)
                 elif arg in ['-o', '--output', '-f', '--format', '-s', '--signal',
-                             '-k', '--kill-after', '-u', '--unset', '-C', '--chdir']:
+                             '-k', '--kill-after', '-u', '--unset', '-C', '--chdir', '-a', '--argv0']:
                     del args[:2]
                 elif arg.startswith('-'):
                     args.pop(0)

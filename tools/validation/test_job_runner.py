@@ -110,6 +110,15 @@ with runner.lock('parity-heavy-entry.lock'), runner.lock('parity-heavy-job.lock'
                                     capture_output=True,text=True,timeout=3)
             assert result.returncode==125,(command,result)
             assert 'run tools/build.py directly' in result.stderr,result.stderr
+    for split in [['-S','python3 -I'], ['-Spython3 -I'], ['-iS','python3 -I'],
+                  ['--split-string','python3 -I'], ['--split-string=python3 -I'],
+                  ['--split-s=python3 -I']]:
+        result = subprocess.run([sys.executable,str(RUNNER),'/usr/bin/time','timeout','2',
+                                 'env',*split,driver,'--','build','--release','--locked','-p','unbound'],
+                                capture_output=True,text=True,timeout=3)
+        assert result.returncode==125,(split,result)
+        assert 'env split-string wrappers are unsupported' in result.stderr,result.stderr
+        assert 'Run tools/build.py directly' in result.stderr,result.stderr
 
 project=out/'project';project.mkdir()
 alias=out/'project-alias';alias.symlink_to(project.resolve(),target_is_directory=True)

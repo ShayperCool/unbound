@@ -35,7 +35,8 @@ queue behind it and a writer cannot starve; a waiting pooled job (for example a
 second build behind a running one) never delays jobs that need other slots. Other (`heavy`) commands keep the
 exclusive lock, because they may start Editors without going through the pool.
 Waiting jobs log the blocking lock holders' PID, command and working directory
-immediately and every five seconds. These Linux `/proc` snapshots also identify
+before blocking on the entry lock, or every five seconds while retrying resource
+admission. These Linux `/proc` snapshots also identify
 jobs started by an older runner; an exited or inaccessible owner is reported
 as unavailable. Diagnostics do not release a waiting writer's entry lock.
 Direct engine runs on the same resolved project directory are serialized before
@@ -148,6 +149,9 @@ with exit 125 before taking any pool lock, including explicit `--kind` calls,
 absolute paths, Python options such as `-I`, and known `time`, `timeout` and `env`
 wrappers. Run the build driver directly instead. Refusal keeps lease ownership
 explicit, including for `--direct` invocations that require an existing lease.
+The runner also refuses `env -S` / `--split-string` wrappers before admission:
+their argument expansion can hide a self-leasing driver. Pass expanded command
+arguments to the runner, or run the build driver directly.
 Cargo arguments follow `--`.
 
 The default target is `$XDG_CACHE_HOME/unbound/builds/targets/<checkout-path-hash>`
