@@ -154,15 +154,20 @@ namespace Unbound.Runtime
 
         static bool RejectZoneActivationDuringPlayback(AudioReverbZone zone)
         {
-            double dspTime = AudioSettings.dspTime;
+            var backend = AudioBackend.Current;
+            double dspTime = backend.DspTime;
             foreach (var source in s_Sources)
-                if (source != null && source.isPlaying
-                    && (source.m_HasAudioFrame || dspTime > source.m_PlaybackDspTime))
+            {
+                if (source == null || source.m_Handle == 0) continue;
+                var state = backend.State(source.m_Handle);
+                bool hasVoices = state.Main != AudioVoiceState.None || state.OneShots > 0;
+                if (hasVoices && (source.m_HasAudioFrame || dspTime > source.m_PlaybackDspTime))
                 {
                     Debug.LogError("Unbound: AudioReverbZone on '" + zone.gameObject.name
                         + "': activating zones during playback is not supported; stop the sources and disable all zones before reactivating them. The zone return is silent.", zone);
                     return true;
                 }
+            }
             return false;
         }
 

@@ -98,6 +98,50 @@ namespace UnityEngine.Tests
             }
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void PausedVoicesStillRejectZoneActivationAndRemainRejectedAfterUnPause(bool oneShot)
+        {
+            var errors = new Errors();
+            var previous = Debug.unityLogger.logHandler;
+            double delta = Time.s_RealDeltaTime;
+            var clip = AudioClip.Create("paused-zone-activation", 32768, 1, 48000, false);
+            try
+            {
+                Debug.unityLogger.logHandler = errors;
+                Zone(0);
+                var host = new GameObject("paused-source"); m_Objects.Add(host);
+                var source = host.AddComponent<AudioSource>();
+                source.clip = clip;
+                if (oneShot) source.PlayOneShot(clip); else source.Play();
+                Time.s_RealDeltaTime = 0.01;
+                AudioSystem.Update();
+                Assert.Equal(AudioFilterKind.Reverb, m_Backend.LastFrame.Zone.Kind);
+                source.Pause();
+                Assert.False(source.isPlaying);
+                var retained = m_Backend.State(source.Handle);
+                if (oneShot) Assert.Equal(1, retained.OneShots);
+                else Assert.Equal(AudioVoiceState.Paused, retained.Main);
+                Zone(0);
+                AudioSystem.Update();
+                Assert.Single(errors.Messages);
+                Assert.Contains("activating zones during playback is not supported", errors.Messages[0]);
+                Assert.Equal(0, m_Backend.LastFrame.Zone.Kind);
+                source.UnPause();
+                AudioSystem.Update();
+                Assert.True(source.isPlaying);
+                Assert.Equal(0, m_Backend.LastFrame.Zone.Kind);
+                Assert.Single(errors.Messages);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                Time.s_RealDeltaTime = delta;
+                Object.DestroyImmediate(clip);
+            }
+        }
+
         [Fact]
         public void ANewOneShotAfterStopCanStartAlongsideANewZone()
         {
