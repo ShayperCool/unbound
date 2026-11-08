@@ -311,6 +311,9 @@ namespace Unbound.Runtime
             internal ImmediateLighting Lighting;
             /// <summary>A RenderParams draw's worldBounds, a legacy draw's bounds argument, or an instanced call's group bounds; null when unset.</summary>
             internal UnityEngine.Bounds? WorldBounds;
+            /// <summary>What a scriptable pipeline's renderer lists filter it by: a RenderParams
+            /// draw's renderingLayerMask, else the default rendering layer.</summary>
+            internal uint RenderingLayerMask;
         }
 
         /// <summary>Meshes queued with Graphics.DrawMesh, drawn by this frame's cameras.</summary>
@@ -354,7 +357,23 @@ namespace Unbound.Runtime
                 Properties = properties,
                 Setup = setup,
                 Lighting = lighting ?? ImmediateLighting.Default,
+                RenderingLayerMask = UnityEngine.Rendering.GraphicsSettings.defaultRenderingLayerMask,
             });
+        }
+
+        /// <summary>Removes the draws queued for <paramref name="camera"/> alone: its render took
+        /// them (a draw queued for every camera stays until the frame ends).</summary>
+        internal static void TakeCameraDraws(UnityEngine.Camera camera)
+        {
+            if (camera == null) return;
+            int kept = 0;
+            for (int i = 0; i < Queued.Count; i++)
+            {
+                var q = Queued[i];
+                if (q.Camera != null && q.Camera == camera) continue;
+                Queued[kept++] = q;
+            }
+            Queued.RemoveRange(kept, Queued.Count - kept);
         }
     }
 

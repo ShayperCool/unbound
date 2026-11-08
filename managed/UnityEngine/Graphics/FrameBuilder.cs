@@ -700,6 +700,19 @@ namespace Unbound.Runtime
                 try { renderer.CollectDraws(context, s_Items); }
                 catch (Exception e) { Debug.LogException(e, renderer); }
             }
+            // Graphics.DrawMesh draws (default sorting layer), filtered as renderers are. They get
+            // no per-object light data below (unmeasured; URP's decals set unity_LightData in
+            // their block themselves).
+            bool defaultSortingLayer = allLayers || (layers.lowerBound <= 0 && layers.upperBound >= 0);
+            foreach (var q in shadows.HasValue ? data.Queued : data.QueuedVisible)
+            {
+                var casting = q.Lighting.Cast;
+                if (shadows.HasValue ? casting == ShadowCastingMode.Off : casting == ShadowCastingMode.ShadowsOnly) continue;
+                if ((filtering.layerMask & (1 << q.Layer)) == 0) continue;
+                if ((filtering.renderingLayerMask & q.RenderingLayerMask) == 0) continue;
+                if (!defaultSortingLayer) continue;
+                s_Items.Add(QueuedItem(context, q));
+            }
             foreach (var source in Sources)
             {
                 try { source.CollectCameraDraws(context, s_Items); }
@@ -1532,34 +1545,41 @@ namespace Unbound.Runtime
             {
                 if (q.Camera != null && q.Camera != camera.Camera) continue;
                 if ((mask & (1 << q.Layer)) == 0) continue;
-                var bounds = WorldBounds(q.Mesh.bounds, q.Matrix);
                 bool seen = q.WorldBounds is not Bounds world || InFrustum(culling, world);
-                var item = new DrawItem
-                {
-                    Mesh = q.Mesh.Sync(),
-                    Submesh = Math.Min(q.Submesh, Math.Max(0, q.Mesh.subMeshCount - 1)),
-                    Material = q.Material,
-                    Model = q.Matrix,
-                    Color = Color.white,
-                    Queue = q.Material.renderQueue,
-                    Distance = Distance(camera, (q.WorldBounds ?? bounds).center),
-                    Sequence = s_Sequence++,
-                    Properties = q.Properties,
-                    Setup = q.Setup,
-                    Lighting = q.Lighting ?? ImmediateLighting.Default,
-                    Bounds = bounds,
-                    Layer = q.Layer,
-                };
+                var item = QueuedItem(camera, q);
                 s_Queued.Add(item);
                 if (seen && item.Lighting.Cast != ShadowCastingMode.ShadowsOnly) into.Add(item);
             }
             // A mesh queued for one camera is drawn by its next render only (measured:
             // tests/projects/graphics, a second Camera.Render the same frame draws none).
-            Immediate.Queued.RemoveAll(q => q.Camera != null && q.Camera == camera.Camera);
+            Immediate.TakeCameraDraws(camera.Camera);
+        }
+
+        /// <summary>A Graphics.DrawMesh / RenderMesh draw as a camera draws it: sorted by the
+        /// centre of its world bounds (set ones, else its mesh's through its matrix).</summary>
+        internal static DrawItem QueuedItem(CameraContext camera, in Immediate.QueuedMesh q)
+        {
+            var bounds = WorldBounds(q.Mesh.bounds, q.Matrix);
+            return new DrawItem
+            {
+                Mesh = q.Mesh.Sync(),
+                Submesh = Math.Min(q.Submesh, Math.Max(0, q.Mesh.subMeshCount - 1)),
+                Material = q.Material,
+                Model = q.Matrix,
+                Color = Color.white,
+                Queue = q.Material.renderQueue,
+                Distance = Distance(camera, (q.WorldBounds ?? bounds).center),
+                Sequence = s_Sequence++,
+                Properties = q.Properties,
+                Setup = q.Setup,
+                Lighting = q.Lighting ?? ImmediateLighting.Default,
+                Bounds = bounds,
+                Layer = q.Layer,
+            };
         }
 
         /// <summary>Local bounds through a matrix, as world-aligned bounds.</summary>
-        static Bounds WorldBounds(Bounds local, Matrix4x4 m)
+        internal static Bounds WorldBounds(Bounds local, Matrix4x4 m)
         {
             var center = m.MultiplyPoint(local.center);
             var e = local.extents;

@@ -845,6 +845,11 @@ namespace Unbound.Runtime
         internal readonly List<Renderer> Renderers = new List<Renderer>();
         /// <summary>Of those, the ones inside the culling planes: what the camera's lists draw.</summary>
         internal readonly List<Renderer> Visible = new List<Renderer>();
+        /// <summary>The Graphics.DrawMesh / RenderMesh draws queued for the camera (or every
+        /// camera) that its mask lets through, as <see cref="Renderers"/>, and the ones of them
+        /// inside the culling planes, as <see cref="Visible"/>.</summary>
+        internal readonly List<Unbound.Runtime.Immediate.QueuedMesh> Queued = new List<Unbound.Runtime.Immediate.QueuedMesh>();
+        internal readonly List<Unbound.Runtime.Immediate.QueuedMesh> QueuedVisible = new List<Unbound.Runtime.Immediate.QueuedMesh>();
         internal NativeArray<VisibleLight> Lights;
         internal NativeArray<VisibleLight> OffscreenVertexLights;
         internal NativeArray<VisibleReflectionProbe> Probes;
@@ -890,6 +895,18 @@ namespace Unbound.Runtime
                     if (renderer.shadowCastingMode != ShadowCastingMode.ShadowsOnly) renderer.MarkRendered();
                 }
             }
+            // Meshes queued with Graphics.DrawMesh and its kin are culled as renderers are, by
+            // their world bounds (set ones, else their mesh's). A draw queued for this camera
+            // alone is taken by this culling, as the built-in pipeline's next render of the
+            // camera takes it.
+            foreach (var q in Unbound.Runtime.Immediate.Queued)
+            {
+                if (q.Camera != null && q.Camera != camera) continue;
+                if ((mask & (1u << q.Layer)) == 0) continue;
+                data.Queued.Add(q);
+                if (InsidePlanes(ref parameters, q.WorldBounds ?? FrameBuilder.WorldBounds(q.Mesh.bounds, q.Matrix))) data.QueuedVisible.Add(q);
+            }
+            Unbound.Runtime.Immediate.TakeCameraDraws(camera);
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             var lights = new List<Light>();
             // The camera's culling mask leaves lights alone (measured: the URP probe's camera_stack,
@@ -1010,7 +1027,11 @@ namespace Unbound.Runtime
             if (list.index >= s_Lists.Count) return RendererListStatus.kRendererListInvalid;
             var e = s_Lists[(int)list.index];
             if (e.Kind == Kind.Empty) return RendererListStatus.kRendererListEmpty;
-            if (e.Kind == Kind.Renderers && (e.Params.cullingResults.Data?.Visible.Count ?? 0) == 0) return RendererListStatus.kRendererListEmpty;
+            if (e.Kind == Kind.Renderers)
+            {
+                var data = e.Params.cullingResults.Data;
+                if (data == null || data.Visible.Count == 0 && data.QueuedVisible.Count == 0) return RendererListStatus.kRendererListEmpty;
+            }
             return RendererListStatus.kRendererListPopulated;
         }
 

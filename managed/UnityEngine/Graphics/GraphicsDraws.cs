@@ -204,10 +204,11 @@ namespace UnityEngine
             // Bounds left at the constructor's zero value are not set: the draw keeps its mesh's
             // bounds (Unbound's choice; a RenderMesh with them is drawn, measured:
             // tests/projects/graphics renderMesh).
-            if (Immediate.Queued.Count == queued + 1 && !rparams.worldBounds.Equals(default(Bounds)))
+            if (Immediate.Queued.Count == queued + 1)
             {
                 var entry = Immediate.Queued[queued];
-                entry.WorldBounds = rparams.worldBounds;
+                if (!rparams.worldBounds.Equals(default(Bounds))) entry.WorldBounds = rparams.worldBounds;
+                entry.RenderingLayerMask = rparams.renderingLayerMask;
                 Immediate.Queued[queued] = entry;
             }
         }
