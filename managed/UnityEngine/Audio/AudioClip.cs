@@ -120,7 +120,8 @@ namespace UnityEngine
         public bool LoadAudioData()
         {
             ThrowIfDestroyed();
-            if (m_Handle == 0) return m_IsAsset && m_Samples == 0;
+            // A clip without data loads as nothing: an asset's empty clip, a download that did not decode.
+            if (m_Handle == 0) return (m_IsAsset || m_Download != DownloadedForm.None) && m_Samples == 0;
             EnsureSharedData();
             m_CloneAwaitingLoadRequest = false;
             if (m_LoadState == AudioDataLoadState.Loaded || m_LoadState == AudioDataLoadState.Loading) return true;
@@ -203,13 +204,13 @@ namespace UnityEngine
             ThrowIfDestroyed();
             if (m_Handle == 0) return false;
             if (Compat.AssetCloneResourcesMeasured) EnsureLoaded();
-            if (m_Stream || m_LoadType == AudioClipLoadType.Streaming)
+            if (m_Stream || m_LoadType == AudioClipLoadType.Streaming || m_Download == DownloadedForm.Streamed)
             {
                 Debug.LogError($"Can't get data from streamed samples for audio clip \"{m_Name}\". If you created the audio clip with AudioClip.Create, set the 'stream' argument to false, so you can access the data with 'AudioClip.GetData'. For a disk-based audio clip, change the load type to 'DecompressOnLoad', so you can access the data with 'AudioClip.GetData'.", this);
                 return false;
             }
             // Compressed data stays compressed in memory: only PCM reads back.
-            if (m_IsAsset && m_LoadType == AudioClipLoadType.CompressedInMemory && m_CompressionFormat != (int)AudioCompressionFormat.PCM)
+            if ((m_IsAsset && m_LoadType == AudioClipLoadType.CompressedInMemory && m_CompressionFormat != (int)AudioCompressionFormat.PCM) || m_Download == DownloadedForm.Compressed)
             {
                 Debug.LogError($"Cannot get data on compressed samples for audio clip \"{DataName}\". Changing the load type to DecompressOnLoad on the audio clip will fix this.", this);
                 return false;
@@ -223,12 +224,12 @@ namespace UnityEngine
             ThrowIfDestroyed();
             if (m_Handle == 0) return false;
             if (Compat.AssetCloneResourcesMeasured) EnsureLoaded();
-            if (m_Stream || m_LoadType == AudioClipLoadType.Streaming)
+            if (m_Stream || m_LoadType == AudioClipLoadType.Streaming || m_Download == DownloadedForm.Streamed)
             {
                 Debug.LogError($"Cannot set data on streamed samples for audio clip \"{m_Name}\". If the AudioClip was created via AudioClip.Create and no PCM read callback was provided, the 'stream' argument must be false. For a disk-based AudioClip changing the load type to DecompressOnLoad on the AudioClip will allow modification of the data.", this);
                 return false;
             }
-            if (m_IsAsset && m_LoadType == AudioClipLoadType.CompressedInMemory && m_CompressionFormat != (int)AudioCompressionFormat.PCM)
+            if ((m_IsAsset && m_LoadType == AudioClipLoadType.CompressedInMemory && m_CompressionFormat != (int)AudioCompressionFormat.PCM) || m_Download == DownloadedForm.Compressed)
             {
                 Debug.LogError($"Cannot set data on compressed samples for audio clip \"{DataName}\". Changing the load type to DecompressOnLoad on the audio clip will fix this.", this);
                 return false;
@@ -299,6 +300,46 @@ namespace UnityEngine
         internal void InvokePCMSetPosition(int position) => m_PCMSetPositionCallback?.Invoke(position);
 
         internal static AudioClip WithCallbacks(ulong handle) => s_WithCallbacks.TryGetValue(handle, out var clip) ? clip : null;
+
+        /// <summary>How a downloaded clip keeps its data (<see cref="UnityEngine.Networking.DownloadHandlerAudioClip"/>):
+        /// its samples read back as the clip's load type would let them, which stays DecompressOnLoad.</summary>
+        internal enum DownloadedForm { None, Decompressed, Compressed, Streamed }
+
+        internal DownloadedForm m_Download;
+
+        /// <summary>A downloaded clip, nameless: the file decoded as <paramref name="type"/>, or,
+        /// <paramref name="headerOnly"/>, a silent clip of the length a partial file announces,
+        /// to be filled by <see cref="FillDownload"/>. A file that does not decode gives a clip
+        /// without data (no channels, samples or frequency) and logs the Editor's error; one
+        /// of a type Unbound does not decode logs that instead.</summary>
+        internal static AudioClip FromDownload(ReadOnlySpan<byte> data, AudioType type, DownloadedForm form, bool headerOnly)
+        {
+            var clip = new AudioClip { m_Name = "", m_LoadType = AudioClipLoadType.DecompressOnLoad, m_LoadState = AudioDataLoadState.Loaded, m_Download = form };
+            clip.m_Handle = AudioBackend.NextHandle();
+            clip.m_SharedData = new SharedClipData(AudioBackend.Current, clip.m_Handle);
+            if (!AudioBackend.Current.DecodeClip(clip.m_Handle, data, (int)type, headerOnly, out var info))
+            {
+                clip.m_SharedData = null;
+                clip.m_Handle = 0;
+                if (headerOnly) return clip;
+                if (type is AudioType.UNKNOWN or AudioType.AIFF or AudioType.MPEG or AudioType.OGGVORBIS or AudioType.WAV)
+                    Debug.LogError("Error: Cannot create FMOD::Sound instance for clip \"\" (FMOD error: Unsupported file or audio format. )");
+                else
+                    Debug.LogError($"Unbound: downloaded audio of AudioType.{type} is not supported; the clip has no data");
+                return clip;
+            }
+            if (headerOnly) AudioBackend.Current.CreateClip(clip.m_Handle, info.Frames, info.Channels, info.Frequency, false);
+            clip.m_Samples = info.Frames;
+            clip.m_Channels = info.Channels;
+            clip.m_Frequency = info.Frequency;
+            return clip;
+        }
+
+        /// <summary>Decodes the whole file into a clip made from its header.</summary>
+        internal void FillDownload(ReadOnlySpan<byte> data, AudioType type)
+        {
+            if (m_Handle != 0) AudioBackend.Current.DecodeClip(m_Handle, data, (int)type, false, out _);
+        }
 
         /// <summary>The clip of an imported audio asset.</summary>
         internal static AudioClip FromImport(string guid, string name)

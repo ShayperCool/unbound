@@ -41,6 +41,9 @@ namespace Unbound.Runtime
         internal static ulong NextHandle() => (ulong)Interlocked.Increment(ref s_NextHandle);
 
         internal abstract bool ImportClip(ulong handle, string guid, out AudioClipInfo info);
+        /// <summary>A downloaded file of the Unity <c>AudioType</c> decoded into the clip; with
+        /// <paramref name="headerOnly"/>, only the format and length a partial file announces.</summary>
+        internal abstract bool DecodeClip(ulong handle, ReadOnlySpan<byte> data, int audioType, bool headerOnly, out AudioClipInfo info);
         internal abstract void CreateClip(ulong handle, int frames, int channels, int frequency, bool stream);
         internal abstract bool ClipData(ulong handle, int offsetFrames, Span<float> data, bool write);
         internal abstract void ReleaseClip(ulong handle);
@@ -96,6 +99,14 @@ namespace Unbound.Runtime
             fixed (byte* p = bytes)
             fixed (AudioClipInfo* i = &info)
                 return Native.Api.AudioImportClip(handle, p, bytes.Length, i) == 0;
+        }
+
+        internal override bool DecodeClip(ulong handle, ReadOnlySpan<byte> data, int audioType, bool headerOnly, out AudioClipInfo info)
+        {
+            info = default;
+            fixed (byte* p = data)
+            fixed (AudioClipInfo* i = &info)
+                return Native.Api.AudioDecodeClip(handle, p, data.Length, audioType, headerOnly ? 1 : 0, i) == 0;
         }
 
         internal override void CreateClip(ulong handle, int frames, int channels, int frequency, bool stream) =>
@@ -261,6 +272,19 @@ namespace Unbound.Runtime
             }
             info = asset.Info;
             m_Clips[handle] = new Clip { Channels = info.Channels, Frequency = info.Frequency, Frames = info.Frames, Samples = (float[])asset.Samples.Clone() };
+            return true;
+        }
+
+        /// <summary>Decodes downloaded files (tests set it): their info and samples, or null.</summary>
+        internal Func<byte[], int, bool, (AudioClipInfo Info, float[] Samples)?> Downloads;
+
+        internal override bool DecodeClip(ulong handle, ReadOnlySpan<byte> data, int audioType, bool headerOnly, out AudioClipInfo info)
+        {
+            info = default;
+            if (Downloads?.Invoke(data.ToArray(), audioType, headerOnly) is not { } decoded) return false;
+            info = decoded.Info;
+            if (!headerOnly)
+                m_Clips[handle] = new Clip { Channels = info.Channels, Frequency = info.Frequency, Frames = info.Frames, Samples = decoded.Samples };
             return true;
         }
 
