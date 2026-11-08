@@ -391,11 +391,14 @@ namespace UnityEngine
                 stoppedSystems[index] = !restart && !ps.m_IsPlaying && ps.m_StopEmitting;
                 startedSystems[index] = !ps.m_IsPlaying && !resume && !stoppedSystems[index];
             }
-            // Which systems start is decided before any restarts: a parent's prewarm starts its
-            // sub-emitters playing, and they are still restarted (keeping what the prewarm emitted
-            // into them), so repeated restarting calls give the same result.
+            // Every starting system restarts (drawing its playback random, in list order) before any
+            // prewarm runs: a prewarm emits into its sub-emitters with their own fresh random state,
+            // and no later restart erases it, so repeated restarting calls give the same result.
             for (int index = 0; index < systems.Count; index++)
-                if (startedSystems[index]) systems[index].Restart(prewarm: restart);
+                if (startedSystems[index]) systems[index].Restart(prewarm: false);
+            if (restart)
+                for (int index = 0; index < systems.Count; index++)
+                    if (startedSystems[index]) systems[index].PrewarmIfLooping();
             foreach (var ps in systems)
             {
                 ps.m_SimulatingBirths = Compat.ParticleBirthStepsMeasured;
@@ -1079,9 +1082,16 @@ namespace UnityEngine
             m_StopEmitting = false;
             m_StopPending = false;
             m_PlaybackRestored = false;
-            bool doPrewarm = prewarm && m_Main.prewarm && m_Main.loop;
-            m_DelayRemaining = doPrewarm ? 0f : Mathf.Max(0f, m_Main.startDelay.Evaluate(0f, ModuleValue(seed, 0u)));
-            if (doPrewarm) Prewarm();
+            m_DelayRemaining = Mathf.Max(0f, m_Main.startDelay.Evaluate(0f, ModuleValue(seed, 0u)));
+            if (prewarm) PrewarmIfLooping();
+        }
+
+        /// <summary>A freshly restarted looping system with prewarm on prewarms, with no start delay.</summary>
+        internal void PrewarmIfLooping()
+        {
+            if (!m_Main.prewarm || !m_Main.loop) return;
+            m_DelayRemaining = 0f;
+            Prewarm();
         }
 
         static uint NextAutoSeed()
@@ -1195,7 +1205,9 @@ namespace UnityEngine
             {
                 var child = e.system;
                 if (child == null || child == this || child.m_Destroyed) continue;
-                span = Mathf.Max(span, Mathf.Max(LongestLifetime(child.m_Main.startLifetime), 0f) + child.SubEmitterLifetimeSpan(depth + 1));
+                // Kept for the prewarm's child bounds (see PrewarmKeeps): the curve is sampled once.
+                child.m_PrewarmLifetime = Mathf.Max(LongestLifetime(child.m_Main.startLifetime), 0f);
+                span = Mathf.Max(span, child.m_PrewarmLifetime + child.SubEmitterLifetimeSpan(depth + 1));
             }
             return span;
         }
@@ -1212,6 +1224,8 @@ namespace UnityEngine
             {
                 var child = emitters[i].system;
                 if (child == null || child == this || child.m_Destroyed || child.m_GameObject == null || InEarlierSlot(emitters, i)) continue;
+                // A child this prewarm starts (or one its own restart just reset) is a fresh playback.
+                bool fresh = !child.m_IsPlaying && !child.m_IsPaused || child.m_TotalTime == 0f && child.m_Time == 0f;
                 if (!child.m_IsPaused && !child.m_IsPlaying)
                 {
                     child.m_IsPlaying = true;
@@ -1219,7 +1233,7 @@ namespace UnityEngine
                     child.m_StartedByParent = true;
                     ParticleSystemManager.NoteStartedByParent(child);
                 }
-                if (depth == 0)
+                if (depth == 0 && fresh)
                 {
                     // As a fresh playback run for the span (not added to an earlier playback's time).
                     float duration = Mathf.Max(child.m_Main.duration, 0.0001f);

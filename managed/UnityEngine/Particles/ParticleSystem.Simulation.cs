@@ -42,6 +42,9 @@ namespace UnityEngine
         /// <summary>Inside a prewarm (see Prewarm): sub-emitter children are bounded by the call
         /// time left and not aged by it.</summary>
         bool m_Prewarming;
+        /// <summary>This sub-emitter's longest start lifetime, taken when a prewarm of the system
+        /// emitting into it starts (see SubEmitterLifetimeSpan).</summary>
+        float m_PrewarmLifetime;
         bool m_BirthDelayClock;
         float m_BirthCallRemaining;
         /// <summary>Playing only because the update of the system it is a sub-emitter of started
@@ -1842,7 +1845,7 @@ namespace UnityEngine
         /// aged by the rest of the call, and only while the call time left at the step's start is
         /// below the child's longest start lifetime, as Birth children (6000.0.71f1, particlerender
         /// prewarm/death; Collision and Trigger follow it, unmeasured).</summary>
-        bool PrewarmKeeps(ParticleSystem child) => m_BirthCallRemaining < LongestLifetime(child.m_Main.startLifetime);
+        bool PrewarmKeeps(ParticleSystem child) => m_BirthCallRemaining < child.m_PrewarmLifetime;
 
         /// <summary>A Birth emission the frame's update held (see ParticleSystemManager): its
         /// children are emitted now with the ages they reach at the end of the frame, and the
@@ -2061,7 +2064,7 @@ namespace UnityEngine
             bool prewarm = parentSystem.m_Prewarming;
             if (birthCatchup >= 0f && (prewarm || !m_LifetimeByEmitterSpeed.enabled
                 && (lifetime.mode == ParticleSystemCurveMode.Constant || lifetime.mode == ParticleSystemCurveMode.TwoConstants))
-                && birthCatchup >= (prewarm ? LongestLifetime(lifetime) : lifetime.MaxValue)) return;
+                && birthCatchup >= (prewarm ? m_PrewarmLifetime : lifetime.MaxValue)) return;
             var origin = parentSystem.SimulationToWorld().MultiplyPoint3x4(parent.m_Position);
             Quaternion? frame = null;
             if (eventEmission || birthCatchup >= 0f)

@@ -335,5 +335,17 @@ namespace UnityEngine.Tests
             // A playback of the 3.7 s span: 1.2 s into the child's 2.5 s loop, every time.
             Assert.All(times, t => Assert.Equal(1.2f, t, 3));
         }
+
+        [Fact]
+        public void ChildrenAfterARestartingSimulateDrawFreshSeeds()
+        {
+            var parent = Parent();
+            var child = Child(parent);
+            parent.Simulate(0.05f, true, true, false);
+            for (int i = 0; i < 6; i++) parent.Simulate(0.05f, true, false, false);
+            var seeds = Particles(child).Select(p => p.randomSeed).ToArray();
+            Assert.True(seeds.Length > 18);
+            Assert.Equal(seeds.Length, seeds.Distinct().Count());
+        }
     }
 }
