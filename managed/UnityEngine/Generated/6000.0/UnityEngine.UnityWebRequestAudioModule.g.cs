@@ -7,18 +7,9 @@
 
 namespace UnityEngine.Networking
 {
-    [global::Unbound.Stub]
-    public unsafe sealed partial class DownloadHandlerAudioClip : global::UnityEngine.Networking.DownloadHandler
+    unsafe partial class DownloadHandlerAudioClip
     {
-        [global::Unbound.Stub] public DownloadHandlerAudioClip(string url, global::UnityEngine.AudioType audioType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerAudioClip.ctor"); }
-        [global::Unbound.Stub] public DownloadHandlerAudioClip(global::System.Uri uri, global::UnityEngine.AudioType audioType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerAudioClip.ctor"); }
         [global::Unbound.Stub] protected override global::Unity.Collections.NativeArray<byte> GetNativeData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerAudioClip.GetNativeData"); return default; }
-        [global::Unbound.Stub] public override void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerAudioClip.Dispose"); }
-        [global::Unbound.Stub] protected override string GetText() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerAudioClip.GetText"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AudioClip GetContent(global::UnityEngine.Networking.UnityWebRequest www) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerAudioClip.GetContent"); return default; }
-        public global::UnityEngine.AudioClip audioClip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerAudioClip.audioClip"); return default; } }
-        public bool streamAudio { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerAudioClip.streamAudio"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerAudioClip.streamAudio"); } }
-        public bool compressed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerAudioClip.compressed"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerAudioClip.compressed"); } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
@@ -35,11 +26,8 @@ namespace UnityEngine.Networking
         [global::Unbound.Stub] public static global::UnityEngine.MovieTexture GetContent(global::UnityEngine.Networking.UnityWebRequest uwr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerMovieTexture.GetContent"); return default; }
         public global::UnityEngine.MovieTexture movieTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.DownloadHandlerMovieTexture.movieTexture"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class UnityWebRequestMultimedia
+    unsafe static partial class UnityWebRequestMultimedia
     {
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest GetAudioClip(string uri, global::UnityEngine.AudioType audioType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequestMultimedia.GetAudioClip"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest GetAudioClip(global::System.Uri uri, global::UnityEngine.AudioType audioType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequestMultimedia.GetAudioClip"); return default; }
         [global::System.Obsolete("MovieTexture is deprecated. Use VideoPlayer instead.")] [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest GetMovieTexture(string uri) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequestMultimedia.GetMovieTexture"); return default; }
         [global::System.Obsolete("MovieTexture is deprecated. Use VideoPlayer instead.")] [global::Unbound.Stub] public static global::UnityEngine.Networking.UnityWebRequest GetMovieTexture(global::System.Uri uri) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.UnityWebRequestMultimedia.GetMovieTexture"); return default; }
     }
