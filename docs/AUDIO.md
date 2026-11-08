@@ -140,8 +140,8 @@ Unbound's choices (unmeasured):
 - On the hearing AudioListener only `AudioReverbFilter` runs. Other filter kinds there, and
   reverb filters next to listener OnAudioFilterRead scripts (an unmeasured order), log an error
   once per listener and are not applied.
-- Mixer slot wet mixing on Chorus and Distortion fails clearly. Their own effect parameters
-  and AudioSource components use the measured shared kernels described below.
+- Live mixer slot Wet changes and unmeasured wet layouts/buffers fail clearly. Static Wet on
+  Chorus and Distortion follows the shared rule described below.
 
 ## Follow-up
 
@@ -223,14 +223,13 @@ milliseconds converted with `floor(ms * rate / 1000)`. The constants are in `rev
   - **Output.** Transformed output `u` reaches channel `(u-1) mod 2` after the fan-out offset
     `(u-1) mod 8`.
   - **Gain.** `sqrt(mean_k(1 - c1_k^2) / 8) * level(Room + Reverb)`.
-- **Wet mixing** (SFX Reverb only).
-  - Output is `wet * effect + (1 - wet) * input`, where `wet` is the mixer's gain approximation
-    (`AudioMixer.DspGain`) of the Wet level.
-  - The slot output ramps in linearly over its first 64 frames.
-  - At -70 dB and below, the effect output is dropped while `1 - wet` still applies. -68 dB keeps
-    it; the boundary in between is unmeasured, and the engine uses -69 dB.
-- **Group fade.** The group keeps its 1024-frame input fade even when the effect or the group is
-  bypassed, as for Echo (`bypass_startup_effect`, `bypass_startup_group`).
+- **Wet mixing.** SFX Reverb follows the [shared static Wet rule](#static-effect-slot-wet-mixing)
+  through 0 dB. The measured release uses the -70 dB processed-output boundary, passes exactly
+  zero wet gain through without a slot fade, and applies the slot fade for nonzero wet gain.
+  The shared notes retain the earlier approximation used on other releases.
+- **Group fade.** Chains with SFX Reverb after Attenuation keep the 1024-frame group input fade
+  even when the effect or the group is bypassed, as for Echo (`bypass_startup_effect`,
+  `bypass_startup_group`). A wet slot before Attenuation follows the shared placement rule below.
 
 ## Limits
 
