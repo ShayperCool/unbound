@@ -6,13 +6,14 @@ namespace UnityEngine.Tests
 {
     /// <summary>How the Animator samples an authored clip curve: each key pair as a single-precision
     /// cubic in the time since the first key (Unity 6000.0.71f1: tests/projects/humanfirstpose,
-    /// animculling, humanoid), with weighted segments and times outside the keys left to
-    /// AnimationCurve.Evaluate.</summary>
+    /// animculling, humanoid), with weighted, stepped and very short segments and times outside
+    /// the keys left to AnimationCurve.Evaluate.</summary>
     public class ClipCurveSegmentsTests
     {
         static ClipCurve Of(AnimationCurve curve) => new ClipCurve { Curve = curve };
 
-        /// <summary>The expected cubic, written out independently of the implementation.</summary>
+        /// <summary>The expected cubic in the same single-precision operation order (the
+        /// rounding itself is checked against the Editor by the probes named above).</summary>
         static float Cubic(Keyframe k0, Keyframe k1, float time)
         {
             float dx = MathF.Max(k1.time - k0.time, 1e-4f);
@@ -79,16 +80,20 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void InfiniteSlopesStepToTheFirstOrSecondKey()
+        public void SteppedAndVeryShortSegmentsUseTheCurvesOwnEvaluation()
         {
-            var up = Of(new AnimationCurve(new Keyframe(0f, 1f, 0f, float.PositiveInfinity), new Keyframe(1f, 3f, 0f, 0f)));
-            var down = Of(new AnimationCurve(new Keyframe(0f, 1f, 0f, 0f), new Keyframe(1f, 3f, float.NegativeInfinity, 0f)));
-            Assert.Equal(1f, up.Evaluate(0.5f));
-            Assert.Equal(3f, down.Evaluate(0.5f));
-            // The whole segment holds that key's value, from its first key's time on.
-            Assert.Equal(1f, up.Evaluate(0f));
-            Assert.Equal(3f, down.Evaluate(0f));
-            Assert.Equal(3f, up.Evaluate(1f));
+            foreach (var curve in new[]
+            {
+                new AnimationCurve(new Keyframe(0f, 1f, 0f, float.PositiveInfinity), new Keyframe(1f, 3f, 0f, 0f)),
+                new AnimationCurve(new Keyframe(0f, 1f, 0f, 0f), new Keyframe(1f, 3f, float.NegativeInfinity, 0f)),
+                new AnimationCurve(new Keyframe(0f, 1f, 0f, 2f), new Keyframe(5e-5f, 3f, 4f, 0f), new Keyframe(1f, 0f)),
+            })
+            {
+                var clipCurve = Of(curve);
+                // Times on the stepped or very short first segment and on the last key.
+                foreach (float time in new[] { 0f, 2e-5f, curve.length == 2 ? 0.5f : 4e-5f, 1f })
+                    Assert.Equal(curve.Evaluate(time), clipCurve.Evaluate(time));
+            }
         }
 
         [Fact]

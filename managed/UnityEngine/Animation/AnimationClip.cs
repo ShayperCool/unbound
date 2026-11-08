@@ -800,27 +800,30 @@ namespace Unbound.Runtime
     /// An authored clip curve's keys as the Animator samples them: each pair of keys becomes the
     /// cubic ((a t + b) t + c) t + d in t = time − the first key's time (a = (d1 + d2 − 2 dy) / dx³,
     /// b = (3 dy − 2 d1 − d2) / dx², c the first key's out slope, d its value, with dx the keys'
-    /// distance, at least 1e-4, dy their value difference and d1, d2 the out and in slopes times dx),
-    /// computed and evaluated in single precision; a +∞ slope holds the first key's value and a −∞
-    /// slope the second's. This is the Hermite curve AnimationCurve.Evaluate gives, rounded as the
-    /// Animator rounds it (Unity 6000.0.71f1: tests/projects/humanfirstpose, animculling, humanoid).
-    /// Weighted segments and times outside the keys are left to AnimationCurve.Evaluate.
+    /// distance, dy their value difference and d1, d2 the out and in slopes times dx), computed and
+    /// evaluated in single precision. This is the Hermite curve AnimationCurve.Evaluate gives,
+    /// rounded as the Animator rounds it (Unity 6000.0.71f1: tests/projects/humanfirstpose,
+    /// animculling, humanoid). Segments outside that measured case keep AnimationCurve.Evaluate:
+    /// weighted tangents, infinite (stepped) tangents and keys closer than
+    /// <see cref="MinSegmentLength"/>; so do times outside the keys (wrap modes and clamping,
+    /// wrapped times then rounding as AnimationCurve.Evaluate does).
     /// </summary>
     internal sealed class KeySegments
     {
-        /// <summary>The smallest key distance of a segment (closer keys count as this far apart).</summary>
+        /// <summary>Keys closer than this keep the curve's own evaluation (their rounding is
+        /// not measured).</summary>
         const float MinSegmentLength = 1e-4f;
 
         readonly float[] m_Times;
         readonly float[] m_Coefficients;
-        /// <summary>Per segment: a weighted tangent shapes it (left to AnimationCurve.Evaluate).</summary>
-        readonly bool[] m_Weighted;
+        /// <summary>Per segment: it is left to AnimationCurve.Evaluate (see the class summary).</summary>
+        readonly bool[] m_OwnEvaluation;
 
-        KeySegments(float[] times, float[] coefficients, bool[] weighted)
+        KeySegments(float[] times, float[] coefficients, bool[] ownEvaluation)
         {
             m_Times = times;
             m_Coefficients = coefficients;
-            m_Weighted = weighted;
+            m_OwnEvaluation = ownEvaluation;
         }
 
         /// <summary>The segments of a curve's keys, or null with fewer than two keys.</summary>
@@ -831,39 +834,33 @@ namespace Unbound.Runtime
             int n = keys.Length - 1;
             var times = new float[keys.Length];
             var coefficients = new float[4 * n];
-            var weighted = new bool[n];
+            var ownEvaluation = new bool[n];
             for (int i = 0; i < keys.Length; i++) times[i] = keys[i].time;
             for (int i = 0; i < n; i++)
             {
                 Keyframe k0 = keys[i], k1 = keys[i + 1];
-                weighted[i] = (k0.weightedMode & WeightedMode.Out) != 0 || (k1.weightedMode & WeightedMode.In) != 0;
-                int c = 4 * i;
-                if (k0.outTangent >= float.PositiveInfinity || k1.inTangent >= float.PositiveInfinity)
+                float dx = k1.time - k0.time;
+                if ((k0.weightedMode & WeightedMode.Out) != 0 || (k1.weightedMode & WeightedMode.In) != 0
+                    || !float.IsFinite(k0.outTangent) || !float.IsFinite(k1.inTangent) || !(dx >= MinSegmentLength))
                 {
-                    coefficients[c + 3] = k0.value;
+                    ownEvaluation[i] = true;
                     continue;
                 }
-                if (k0.outTangent <= float.NegativeInfinity || k1.inTangent <= float.NegativeInfinity)
-                {
-                    coefficients[c + 3] = k1.value;
-                    continue;
-                }
-                float dx = MathF.Max(k1.time - k0.time, MinSegmentLength);
                 float inverse = 1f / dx;
                 float inverse2 = inverse * inverse;
                 float dy = k1.value - k0.value;
                 float d1 = k0.outTangent * dx, d2 = k1.inTangent * dx;
+                int c = 4 * i;
                 coefficients[c] = (d1 + d2 - dy - dy) * inverse2 * inverse;
                 coefficients[c + 1] = (dy + dy + dy - d1 - d1 - d2) * inverse2;
                 coefficients[c + 2] = k0.outTangent;
                 coefficients[c + 3] = k0.value;
             }
-            return new KeySegments(times, coefficients, weighted);
+            return new KeySegments(times, coefficients, ownEvaluation);
         }
 
-        /// <summary>The value at <paramref name="time"/> when it lies within the keys on an
-        /// unweighted segment; false otherwise (wrap modes, clamping and weights stay with the
-        /// curve's own evaluation).</summary>
+        /// <summary>The value at <paramref name="time"/> when it lies within the keys on a segment
+        /// of the measured case; false otherwise.</summary>
         internal bool TryEvaluate(float time, out float value)
         {
             value = 0f;
@@ -878,8 +875,7 @@ namespace Unbound.Runtime
                 if (times[mid] <= time) lo = mid;
                 else hi = mid - 1;
             }
-            if (lo == last) return false;
-            if (m_Weighted[lo]) return false;
+            if (lo == last || m_OwnEvaluation[lo]) return false;
             value = SampledCurve.Cubic(m_Coefficients, 4 * lo, time - times[lo]);
             return true;
         }
