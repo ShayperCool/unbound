@@ -27,7 +27,7 @@ def guid(name):
     return hashlib.md5(('unbound-smoothing-' + name).encode()).hexdigest()
 
 
-def write_meta(path, animated=False):
+def write_meta(path, animated=False, legacy=False):
     text = META_TEMPLATE.read_text()
     lines = text.splitlines()
     assert lines[1].startswith('guid: ')
@@ -38,6 +38,9 @@ def write_meta(path, animated=False):
                          ('  animationType: 0\n', '  animationType: 2\n')]:
             assert old in text
             text = text.replace(old, new)
+    if legacy:
+        assert '    materialImportMode: 2\n' in text
+        text = text.replace('    materialImportMode: 2\n', '    materialImportMode: 1\n')
     path.with_name(path.name + '.meta').write_text(text)
 
 
@@ -175,9 +178,9 @@ def edge_values(edges, sharp):
     return [0 if key in sharp or (key[1], key[0]) in sharp else 1 for _, key in edges]
 
 
-def take(name, props, keys, single_key=False, curves=True):
+def take(name, props, keys, single_key=False, curves=True, second_layer=None):
     """A cube animated along x (or, without `curves`, not at all), with an animation stack of the
-    given time properties."""
+    given time properties; `second_layer` keys a second layer's y curve at those times."""
     points = [(x, y, z) for z in (-0.5, 0.5) for y in (-0.5, 0.5) for x in (-0.5, 0.5)]
     quads = [(0, 2, 3, 1), (4, 5, 7, 6), (0, 1, 5, 4), (2, 6, 7, 3), (0, 4, 6, 2), (1, 3, 7, 5)]
     times = [int(round(t * KTIME)) for t in keys[:1 if single_key else None]]
@@ -216,6 +219,28 @@ def take(name, props, keys, single_key=False, curves=True):
         objects += curve_objects
     else:
         connections = connections.splitlines(keepends=True)[0]
+    if second_layer:
+        times2 = [int(round(t * KTIME)) for t in second_layer]
+        objects += f'''\tAnimationLayer: 3101, "AnimLayer::Second", "" {{
+\t}}
+\tAnimationCurveNode: 3102, "AnimCurveNode::T", "" {{
+\t\tProperties70:  {{
+\t\t\tP: "d|X", "Number", "", "A",0
+\t\t\tP: "d|Y", "Number", "", "A",0
+\t\t\tP: "d|Z", "Number", "", "A",0
+\t\t}}
+\t}}
+\tAnimationCurve: 3103, "AnimCurve::", "" {{
+\t\tDefault: 0
+\t\tKeyVer: 4009
+{array('KeyTime', times2, 2)}
+{array('KeyValueFloat', [float(i % 2) for i in range(len(times2))], 2)}
+{array('KeyAttrFlags', [24836], 2)}
+{array('KeyAttrDataFloat', [0, 0, 218434821, 0], 2)}
+{array('KeyAttrRefCount', [len(times2)], 2)}
+\t}}
+'''
+        connections += '\tC: "OO",3101,3000\n\tC: "OO",3102,3101\n\tC: "OP",3102,2000, "Lcl Translation"\n\tC: "OP",3103,3102, "d|Y"\n'
     return fbx_mesh(name, points, quads, extra_objects=objects, extra_connections=connections)
 
 
@@ -334,6 +359,11 @@ def main():
     files['GroupsAllZero.fbx'] = fbx_mesh('GroupsAllZero', points, quads, {'mapping': 'AllSame', 'values': [0]})
     files['GroupsShort.fbx'] = fbx_mesh('GroupsShort', points, quads, {'mapping': 'ByPolygon', 'values': masks[:10]})
     files['GroupsLegacy.fbx'] = legacy_fbx('GroupsLegacy', points, quads, masks)
+    # A mapping token the importer does not know, and per-point values of the wrong count.
+    files['GroupsByVertex.fbx'] = fbx_mesh('GroupsByVertex', points, quads, {
+        'mapping': 'ByVertex', 'values': [1 << (i % 3) for i in range(len(points))]})
+    files['GroupsPointsShort.fbx'] = fbx_mesh('GroupsPointsShort', points, quads, {
+        'mapping': 'ByVertice', 'values': [1 << (i % 3) for i in range(len(points) - 3)]})
     # Edge smoothing on a 6 x 6 grid.
     points6, quads6 = grid(6, 2)
     edges6 = edges_of(quads6)
@@ -356,6 +386,12 @@ def main():
     files['EdgesIndexed.fbx'] = fbx_mesh('EdgesIndexed', points6, quads6, {
         'mapping': 'ByEdge', 'reference': 'IndexToDirect', 'values': edge_values(edges6, sharp_edges(6, 'T')),
         'index': list(range(len(edges6)))}, [e for e, _ in edges6])
+    # Edge arrays shorter and longer than the edge list.
+    t_values = edge_values(edges6, sharp_edges(6, 'T'))
+    files['EdgesShort.fbx'] = fbx_mesh('EdgesShort', points6, quads6, {
+        'mapping': 'ByEdge', 'values': t_values[:60]}, [e for e, _ in edges6])
+    files['EdgesLong.fbx'] = fbx_mesh('EdgesLong', points6, quads6, {
+        'mapping': 'ByEdge', 'values': t_values + [0] * 8}, [e for e, _ in edges6])
     # Take spans: (properties, key times).
     keys = [0.25, 0.5, 0.75]
     for name, props, single in [('TakeStop', [('LocalStop', 1.0)], False),
@@ -369,6 +405,9 @@ def main():
     # Takes without curves, with and without a time span.
     files['TakeNoCurves.fbx'] = take('TakeNoCurves', [('LocalStop', 1.0)], keys, curves=False)
     files['TakeNoCurvesNoTime.fbx'] = take('TakeNoCurvesNoTime', [], keys, curves=False)
+    # A span ending between keys, and two layers keyed at different times without a span.
+    files['TakeStopBetween.fbx'] = take('TakeStopBetween', [('LocalStop', 0.6)], keys)
+    files['TakeTwoLayers.fbx'] = take('TakeTwoLayers', [], keys, second_layer=[1.0, 1.25, 1.5])
     # OBJ smoothing statements.
     rng = random.Random(3)
     groups = [[f's {rng.choice([1, 2, 3, 4])}'] for _ in quads]
@@ -379,6 +418,8 @@ def main():
     on[0], on[6], on[11] = ['s on'], ['s 2'], ['s on']
     files['ObjOn.obj'] = obj('ObjOn', points, quads, on)
     files['ObjOnOnly.obj'] = obj('ObjOnOnly', points, quads, [['s on']] + [None] * (faces - 1))
+    # Faces without a material under the legacy material import, in a named group.
+    files['ObjLegacy.obj'] = obj('ObjLegacy', points, quads, [['g left arm', 's 1']] + [None] * (faces - 1))
     odd = [None] * faces
     odd[0], odd[4], odd[8], odd[12] = ['s -1'], ['s 33'], ['s 1.5'], ['s 6']
     files['ObjOdd.obj'] = obj('ObjOdd', points, quads, odd)
@@ -394,7 +435,7 @@ def main():
     for name, text in files.items():
         path = OUT/name
         path.write_text(text)
-        write_meta(path, animated=name.startswith('Take'))
+        write_meta(path, animated=name.startswith('Take'), legacy=name == 'ObjLegacy.obj')
     print('wrote', len(files), 'models to', OUT)
 
 

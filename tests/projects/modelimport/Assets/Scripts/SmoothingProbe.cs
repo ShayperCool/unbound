@@ -8,7 +8,7 @@ using UnityEngine;
 
 /// <summary>
 /// With <c>SMOOTHING_OUT</c> set, records every model of Resources/Smoothing: each mesh's vertices,
-/// normals, submesh triangles and material names, and each imported clip's length and frame rate,
+/// normals, submesh triangles and material names and colours, and each imported clip's length and frame rate,
 /// as one JSON line per value in <c>smoothing.jsonl</c>, then quits.
 /// </summary>
 public class SmoothingProbe : MonoBehaviour
@@ -26,6 +26,7 @@ public class SmoothingProbe : MonoBehaviour
     static string F(float v) => v.ToString("R", CultureInfo.InvariantCulture);
     static string L<T>(IEnumerable<T> values, Func<T, string> f) => "[" + string.Join(",", values.Select(f)) + "]";
     static string V(Vector3 v) => $"[{F(v.x)},{F(v.y)},{F(v.z)}]";
+    static string C(Color c) => $"[{F(c.r)},{F(c.g)},{F(c.b)},{F(c.a)}]";
     void Add(string key, string value) => output.Append("{\"k\":").Append(Q(key)).Append(",\"v\":").Append(value).Append("}\n");
 
     void Start()
@@ -47,7 +48,10 @@ public class SmoothingProbe : MonoBehaviour
                 Add(key + "/triangles", L(Enumerable.Range(0, mesh.subMeshCount), i => L(mesh.GetTriangles(i), x => x.ToString())));
                 var renderer = filter.GetComponent<Renderer>();
                 if (renderer != null)
+                {
                     Add(key + "/materials", L(renderer.sharedMaterials, m => m == null ? "null" : Q(m.name)));
+                    Add(key + "/colors", L(renderer.sharedMaterials, m => m == null || !m.HasProperty("_Color") ? "null" : C(m.color)));
+                }
             }
         }
         foreach (var clip in Resources.LoadAll<AnimationClip>("Smoothing")
