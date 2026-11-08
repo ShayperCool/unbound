@@ -122,7 +122,8 @@ sampled keys exist only in these sets, so the `Axis` and `Signed` references are
 
 Two independent GPU Editor captures agree byte for byte for each set (1001 and 397 keys),
 published under `Reference/unity-6000.0.71f1/pivots` and `skinned`. These two sets bound each
-key by 1e-5 times the largest magnitude in its reference value (at least 1e-5): world bases of
+value by 1e-5 times the largest magnitude of its innermost reference vector (at least 1e-5):
+world bases of
 a centimetre-scaled root reach 100, where 1e-5 is below one float32 step. This was chosen
 after the first captures showed 1-4 float32-step differences in such bases; the `Axis` and
 `Signed` bound is unchanged.
@@ -133,7 +134,7 @@ after the first captures showed 1-4 float32-step differences in such bases; the 
 | --- | --- | --- |
 | [Importing models from 3D applications](https://docs.unity3d.com/6000.0/Documentation/Manual/HOWTO-ImportObjectsFrom3DApps.html) | Every application section: "All nodes with position, rotation and scale; pivot points and names are also imported". For Maya files it lists Rotate Axis (pre-rotation), Joint Orient and Segment Scale Compensate as unsupported. Geometric transforms are not mentioned. | FBX pre/post rotation is applied to the node rotation (`Pre`, `Post`, `PrePost`; ignored without `RotationActive`). Inherit types other than RSrs are ignored (`Inherit0`/`1`/`2`), consistent with Segment Scale Compensate being unsupported. |
 | [Model tab](https://docs.unity3d.com/6000.0/Documentation/Manual/FBXImporter-Model.html) | Bake Axis Conversion, Preserve Hierarchy, Sort Hierarchy By Name. | Pivots and geometric transforms compose with baked axis conversion (`*Bake` controls) and with an explicit root (`RootPivotH`). |
-| [Renderer.localBounds](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer-localBounds.html) | A SkinnedMeshRenderer's default local bounds are precomputed from the model's animations; Update When Offscreen recomputes them every frame. | Measured only where the animation poses are the import pose (no clip, or constant transform curves as in `BlenderBlob`). |
+| [Renderer.localBounds](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer-localBounds.html) | A SkinnedMeshRenderer's default local bounds are precomputed from the model's animations; Update When Offscreen recomputes them every frame. | Measured only where every animation pose is the import pose (no clip, or transform curves holding the import transforms, as in `BlenderBlob`). |
 
 Observed rules (one reference capture each; not documented guarantees):
 
@@ -161,16 +162,19 @@ Observed rules (one reference capture each; not documented guarantees):
 ### Implementation scope and limits
 
 `crates/unbound-assets/src/model/pivots.rs` implements these rules; the model cache format is
-v26. Clips of pivoted nodes sample positions with the same placement (at every frame without
-compression, otherwise at every baked key time). Not measured, implemented by the same rule
-or left as before:
+v26. Clips of pivoted nodes sample positions with the same placement on every frame. Not
+measured, implemented by the same rule or left as before:
 
 - `localBounds` of models whose clips move transforms (no `m_AABB`; the managed fallback and its
   unsupported-bounds warning remain), and of blend-shape meshes without bones.
-- Children of a pivoted skinned-mesh node (warning), rotation/scaling offsets on such a node,
+- Children of a pivoted skinned-mesh node, unequal pivots or offsets on such a node (warnings),
   vertices without bone weights (they add nothing to `localBounds`), and which of several shared
   instances is "first" beyond the measured parent-before-child order.
 - Blend shape deltas on meshes with geometric transforms (transformed with `G`'s linear part).
+- A LODGroup's size and reference point come from mesh bounds, which now include blend shape
+  frames; LOD levels with blend shapes are unmeasured.
+- Clips of pivoted nodes sample positions on every frame whatever the compression; a
+  keyframe-reduced clip therefore keeps more position keys than Unity's.
 - Keyframe-reduced clips: a first `AnimPivotReduced` capture (compression Keyframe Reduction)
   matched the uncompressed pose in the engine but differed in the Editor by up to 0.0005 in
   basis vectors and 7e-5 m in position at 0.5 s, on unpivoted rotations too. That is the clip
