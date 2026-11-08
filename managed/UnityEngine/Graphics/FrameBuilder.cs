@@ -351,7 +351,8 @@ namespace Unbound.Runtime
         static readonly List<(string Name, Vector4 Value)> s_Lighting = new List<(string, Vector4)>();
         static readonly List<string> s_FrameKeywords = new List<string>();
         static readonly string[] s_FogKeywords = { "FOG_LINEAR", "FOG_EXP", "FOG_EXP2" };
-        static int s_CameraCount, s_DrawCount;
+        static int s_CameraCount;
+        internal static int s_DrawCount;
         /// <summary>The render pipeline renders the player loop's cameras: their per-object motion
         /// vectors make the renderers' matrices the previous ones at the frame's end, as the
         /// built-in renderer's do (<see cref="EndFrameMotion"/>).</summary>
@@ -699,6 +700,29 @@ namespace Unbound.Runtime
 
         static readonly List<string> s_PassTagScratch = new List<string>();
 
+        /// <summary>The queue range of the renderer list collecting draws (with the LightModes in
+        /// <see cref="s_PassTagScratch"/>); null outside one.</summary>
+        static RenderQueueRange? s_CollectingList;
+
+        /// <summary>Whether a renderer list leaves out a draw of this material and queue: the queue
+        /// is outside its range, the shader is hidden by its LOD, or none of the shader's passes has
+        /// one of the list's LightModes.</summary>
+        static bool OutsideList(Material material, int queue, RenderQueueRange range, List<string> lightModes)
+        {
+            if (queue < range.lowerBound || queue > range.upperBound) return true;
+            var shader = material.shader;
+            if (shader != null && shader.IsLodHidden) return true;
+            var info = ShaderPassInfo.Of(shader);
+            return info != null && !info.HasPassFor(lightModes);
+        }
+
+        /// <summary>While a renderer list collects draws: whether it leaves out a draw of this
+        /// material at the material's queue, so a renderer can skip building its geometry for a
+        /// draw the list discards.</summary>
+        internal static bool CollectingListDrops(Material material) =>
+            s_CollectingList is RenderQueueRange range && material != null
+            && OutsideList(material, material.renderQueue, range, s_PassTagScratch);
+
         /// <summary>
         /// A renderer list: the culled renderers' draws whose queue, layer, rendering layer and
         /// sorting layer pass the filter, sorted by the criteria, each drawing its passes whose
@@ -721,24 +745,32 @@ namespace Unbound.Runtime
             var range = filtering.renderQueueRange;
             var layers = filtering.sortingLayerRange;
             bool allLayers = layers == SortingLayerRange.all;
-            foreach (var renderer in shadows.HasValue ? data.Renderers : data.Visible)
+            // Only draws whose material has a pass with one of the list's LightModes (the override
+            // material then draws them instead).
+            s_PassTagScratch.Clear();
+            foreach (var tag in passNames) s_PassTagScratch.Add(tag.name);
+            s_CollectingList = range;
+            try
             {
-                if (!renderer) continue;
-                var casting = renderer.shadowCastingMode;
-                if (shadows.HasValue ? casting == ShadowCastingMode.Off : casting == ShadowCastingMode.ShadowsOnly) continue;
-                if ((filtering.layerMask & (1 << renderer.gameObject.layer)) == 0) continue;
-                if ((filtering.renderingLayerMask & renderer.renderingLayerMask) == 0) continue;
-                if (filtering.excludeMotionVectorObjects && renderer.motionVectorGenerationMode == MotionVectorGenerationMode.Object) continue;
-                if (!allLayers)
+                foreach (var renderer in shadows.HasValue ? data.Renderers : data.Visible)
                 {
-                    int value = SortingLayer.GetLayerValueFromID(renderer.sortingLayerID);
-                    if (value < layers.lowerBound || value > layers.upperBound) continue;
+                    if (!renderer) continue;
+                    var casting = renderer.shadowCastingMode;
+                    if (shadows.HasValue ? casting == ShadowCastingMode.Off : casting == ShadowCastingMode.ShadowsOnly) continue;
+                    if ((filtering.layerMask & (1 << renderer.gameObject.layer)) == 0) continue;
+                    if ((filtering.renderingLayerMask & renderer.renderingLayerMask) == 0) continue;
+                    if (filtering.excludeMotionVectorObjects && renderer.motionVectorGenerationMode == MotionVectorGenerationMode.Object) continue;
+                    if (!allLayers)
+                    {
+                        int value = SortingLayer.GetLayerValueFromID(renderer.sortingLayerID);
+                        if (value < layers.lowerBound || value > layers.upperBound) continue;
+                    }
+                    if (shadows.HasValue) renderer.MarkRendered();
+                    try { renderer.CollectDraws(context, s_Items); }
+                    catch (Exception e) { Debug.LogException(e, renderer); }
                 }
-                int from = s_Items.Count;
-                if (shadows.HasValue) renderer.MarkRendered();
-                try { renderer.CollectDraws(context, s_Items); }
-                catch (Exception e) { Debug.LogException(e, renderer); }
             }
+            finally { s_CollectingList = null; }
             // Graphics.DrawMesh draws (default sorting layer), filtered as renderers are.
             bool defaultSortingLayer = allLayers || (layers.lowerBound <= 0 && layers.upperBound >= 0);
             foreach (var q in shadows.HasValue ? data.Queued : data.QueuedVisible)
@@ -755,10 +787,6 @@ namespace Unbound.Runtime
                 try { source.CollectCameraDraws(context, s_Items); }
                 catch (Exception e) { Debug.LogException(e); }
             }
-            // Only draws whose material has a pass with one of the list's LightModes (the override
-            // material then draws them instead).
-            s_PassTagScratch.Clear();
-            foreach (var tag in passNames) s_PassTagScratch.Add(tag.name);
             // Per-object motion vectors: the objects with object motion alone. A list that forces
             // every object's motion vectors is unmeasured: it draws what it matches, with a warning.
             bool motion = !shadows.HasValue && (drawing.perObjectData & PerObjectData.MotionVectors) != 0;
@@ -774,12 +802,9 @@ namespace Unbound.Runtime
             }
             s_Items.RemoveAll(item =>
             {
-                if (item.Queue < range.lowerBound || item.Queue > range.upperBound) return true;
-                var shader = item.Material.shader;
-                if (shader != null && shader.IsLodHidden) return true;
-                var info = ShaderPassInfo.Of(shader);
+                if (OutsideList(item.Material, item.Queue, range, s_PassTagScratch)) return true;
+                var info = ShaderPassInfo.Of(item.Material.shader);
                 if (info == null) return false;
-                if (!info.HasPassFor(s_PassTagScratch)) return true;
                 // An override draws the eligible object even if its own matching passes are disabled,
                 // and so does an object that moved its motion vector pass.
                 return drawing.overrideMaterial == null && drawing.overrideShader == null && item.Material.HasDisabledPasses

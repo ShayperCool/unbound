@@ -58,7 +58,7 @@ namespace UnityEngine
         ParticleSystem m_System;
         readonly Dictionary<Camera, Mesh> m_CameraMeshes = new Dictionary<Camera, Mesh>();
         Mesh m_FallbackMesh;
-        readonly Geometry m_Geometry = new Geometry();
+        internal readonly Geometry m_Geometry = new Geometry();
 
         /// <summary>A renderer added by script neither casts nor receives shadows (6000.0.71f1,
         /// tests/projects/particlemeshshape component/*); serialized ones read their own.</summary>
@@ -510,6 +510,13 @@ namespace UnityEngine
             var material = m_Materials.Length > 0 ? m_Materials[0] : null;
             if (material == null) material = ErrorMaterial;
             if (material == null) return;
+            // A renderer list that leaves the draw out gets no geometry built for it (the system
+            // still requests its streams, as building them would).
+            if (FrameBuilder.CollectingListDrops(material))
+            {
+                RequestStreams(ps);
+                return;
+            }
             if (!m_Geometry.Build(this, ps, View.Of(camera))) return;
             var mesh = MeshFor(camera.Camera);
             m_Geometry.WriteTo(mesh, Matrix4x4.identity, streaming: true);
@@ -542,6 +549,16 @@ namespace UnityEngine
             });
         }
 
+        /// <summary>The system keeps the optional per-particle sums the renderer's vertex streams
+        /// request: native allocates them when geometry first requests them, and they keep
+        /// accumulating if a later layout omits the stream, until restart.</summary>
+        void RequestStreams(ParticleSystem ps)
+        {
+            foreach (var stream in m_VertexStreams)
+                if (stream >= ParticleSystemVertexStream.NoiseSumX && stream <= ParticleSystemVertexStream.NoiseSumXYZ)
+                    ps.m_NoiseSumEnabled = true;
+        }
+
         static Material s_ErrorMaterial;
 
         static Material ErrorMaterial
@@ -564,7 +581,7 @@ namespace UnityEngine
         {
             if (!ps.m_Trails.enabled || (ps.m_Trails.mode == ParticleSystemTrailMode.PerParticle && ps.m_TrailList.Count == 0)) return;
             var material = trailMaterial;
-            if (material == null) return;
+            if (material == null || FrameBuilder.CollectingListDrops(material)) return;
             if (!m_TrailGeometry.BuildTrails(ps, View.Of(camera), TrailStreams(ps))) return;
             var key = camera.Camera;
             if (key == null || !m_TrailMeshes.TryGetValue(key, out var mesh) || mesh == null)
@@ -851,11 +868,7 @@ namespace UnityEngine
             {
                 ConfigureStreams(r.m_VertexStreams);
                 if (r.m_RenderMode == ParticleSystemRenderMode.Mesh && !r.m_CustomVertexStreams) ConfigureMeshLayout(r.m_Meshes);
-                // Native allocates the optional sum arrays when geometry first requests them.
-                // They keep accumulating if a later layout omits the stream, until restart.
-                foreach (var stream in r.m_VertexStreams)
-                    if (stream >= ParticleSystemVertexStream.NoiseSumX && stream <= ParticleSystemVertexStream.NoiseSumXYZ)
-                        ps.m_NoiseSumEnabled = true;
+                r.RequestStreams(ps);
                 VertexCount = 0;
                 IndexCount = 0;
                 ParticleCount = 0;
