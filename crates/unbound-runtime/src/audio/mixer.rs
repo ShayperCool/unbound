@@ -1026,23 +1026,18 @@ impl Mixer {
             .get(&spec.handle)
             .filter(|n| n.rendered > 0)
         {
-            let wet_signature = |group: &GroupSpec| -> Vec<_> {
-                group
-                    .effects
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, e)| {
-                        e.mix_level.is_some()
-                            && EffectKind::parse(&e.kind).is_some_and(EffectKind::static_wet)
-                    })
-                    .map(|(i, e)| (i, e.clone()))
-                    .collect()
-            };
-            let previous_wet = wet_signature(&node.spec);
-            let next_wet = wet_signature(&spec);
+            fn static_wet_effects(group: &GroupSpec) -> impl Iterator<Item = (usize, &EffectSpec)> {
+                group.effects.iter().enumerate().filter(|(_, effect)| {
+                    effect.mix_level.is_some()
+                        && EffectKind::parse(&effect.kind).is_some_and(EffectKind::static_wet)
+                })
+            }
+            let has_previous_wet = static_wet_effects(&node.spec).next().is_some();
+            let has_next_wet = static_wet_effects(&spec).next().is_some();
             anyhow::ensure!(
-                (previous_wet.is_empty() && next_wet.is_empty())
-                    || (previous_wet == next_wet && node.spec.bypass == spec.bypass),
+                (!has_previous_wet && !has_next_wet)
+                    || (static_wet_effects(&node.spec).eq(static_wet_effects(&spec))
+                        && node.spec.bypass == spec.bypass),
                 "AudioMixer wet mixing live parameter, placement and bypass changes are unmeasured"
             );
             for kind in EffectKind::LAYOUT_LIMITED {
