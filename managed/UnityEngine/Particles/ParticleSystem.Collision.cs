@@ -39,6 +39,9 @@ namespace UnityEngine
         /// <summary>A plane is not hit by a particle whose direction of travel makes a cosine below
         /// this with its normal (moving along it).</summary>
         const float PlaneParallelCosine = 1e-4f;
+        /// <summary>Squared axis scales of a simulation space further apart than this fraction
+        /// count as a non-uniform scale.</summary>
+        const float NonUniformScale = 1e-4f;
         /// <summary>A speed modifier closer to zero than this leaves a bounced particle at rest.</summary>
         const float MinSpeedModifier = 1e-6f;
 
@@ -49,13 +52,17 @@ namespace UnityEngine
         int m_CollisionPlaneCount;
 
         /// <summary>Puts the module's planes into simulation space for a step.</summary>
-        void PrepareCollisionPlanes(in Matrix4x4 simToWorld)
+        void PrepareCollisionPlanes(in Matrix4x4 simToWorld, in Matrix4x4 toSim)
         {
             m_CollisionPlaneCount = 0;
             m_CollisionPlaneObjects.Clear();
             var planes = m_Collision.planes;
             if (m_CollisionPlanes.Length < planes.Count) m_CollisionPlanes = new Vector4[planes.Count];
-            var toSim = simToWorld.inverse;
+            // Under a non-uniform scale the Editor places the planes elsewhere, unresolved
+            // (tests/projects/particlerender collide/planes/scaled_y): say so.
+            float sx = simToWorld.GetColumn(0).sqrMagnitude, sy = simToWorld.GetColumn(1).sqrMagnitude, sz = simToWorld.GetColumn(2).sqrMagnitude;
+            if (planes.Count > 0 && (Mathf.Abs(sx - sy) > NonUniformScale * sx || Mathf.Abs(sx - sz) > NonUniformScale * sx))
+                ReportUnsupported("collision planes in a non-uniformly scaled simulation space (planes placed differently)");
             foreach (var plane in planes)
             {
                 if (plane == null) continue;

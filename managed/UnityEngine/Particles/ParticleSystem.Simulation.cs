@@ -1511,11 +1511,12 @@ namespace UnityEngine
             c.BirthsInFinalStep = !Compat.ParticleBirthStepsMeasured;
             if (m_Collision.enabled)
             {
-                if (m_Collision.type == ParticleSystemCollisionType.World && m_Collision.quality != ParticleSystemCollisionQuality.High)
+                if (m_Collision.type == ParticleSystemCollisionType.World && m_Collision.mode == ParticleSystemCollisionMode.Collision3D
+                    && m_Collision.quality != ParticleSystemCollisionQuality.High)
                     ReportUnsupported("Medium and Low collision quality (collided at High)");
                 c.SimToWorld = SimulationToWorld();
                 c.WorldToSimMatrix = c.SimToWorld.inverse;
-                if (m_Collision.type == ParticleSystemCollisionType.Planes) PrepareCollisionPlanes(c.SimToWorld);
+                if (m_Collision.type == ParticleSystemCollisionType.Planes) PrepareCollisionPlanes(c.SimToWorld, c.WorldToSimMatrix);
             }
             return c;
         }

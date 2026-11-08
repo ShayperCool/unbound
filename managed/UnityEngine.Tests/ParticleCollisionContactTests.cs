@@ -214,6 +214,48 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ANonUniformlyScaledSystemBouncesOffThePlaneNormalCarriedInLikeADirection()
+        {
+            // As tests/projects/particlerender collide/planes/scaled_y: a Local system turned 90
+            // degrees about x and scaled (1, 2.5, 1), a plane turned 20 degrees about x. The
+            // plane's up carried into simulation space and normalized is (0, .14407, -.98957); a
+            // particle moving at (0, 0, 3) there bounces (0.6) to (0, .684, -1.700). Only the
+            // velocity is asserted: the Editor places such planes elsewhere (unresolved).
+            var plane = new GameObject("collision plane").transform;
+            plane.SetPositionAndRotation(new Vector3(0f, -.5f, 0f), Quaternion.Euler(20f, 0f, 0f));
+            var ps = Planes(plane);
+            var c = ps.collision; c.bounce = .6f;
+            ps.transform.SetPositionAndRotation(new Vector3(0f, 1f, 0f), Quaternion.Euler(90f, 0f, 0f));
+            ps.transform.localScale = new Vector3(1f, 2.5f, 1f);
+            try
+            {
+                // In simulation space, in front of the plane and ending within its reach.
+                var p = StepOne(ps, new Vector3(0f, 0f, 1.4f), new Vector3(0f, 0f, 3f));
+                Assert.Equal(0f, p.velocity.x, 3);
+                Assert.Equal(.684f, p.velocity.y, 2);
+                Assert.Equal(-1.700f, p.velocity.z, 2);
+            }
+            finally { Done(ps, plane); }
+        }
+
+        [Fact]
+        public void AParticleStartingInsideAColliderReportsANormalPointingIntoIt()
+        {
+            var box = Box(Vector3.zero, new Vector3(2f, 2f, 2f));
+            var ps = World();
+            var c = ps.collision; c.sendCollisionMessages = true;
+            try
+            {
+                StepOne(ps, new Vector3(0f, 0f, .6f), new Vector3(0f, -1f, 0f));
+                var events = new System.Collections.Generic.List<ParticleCollisionEvent>();
+                Assert.Equal(1, ps.GetCollisionEvents(box.gameObject, events));
+                Near(new Vector3(0f, 0f, -1f), events[0].normal);
+                Near(new Vector3(0f, 0f, 1.1f), events[0].intersection);
+            }
+            finally { Done(ps, box); }
+        }
+
+        [Fact]
         public void AParticleStartingInsideAColliderIsPushedOutOfItsNearestFace()
         {
             var box = Box(Vector3.zero, new Vector3(2f, 2f, 2f));
