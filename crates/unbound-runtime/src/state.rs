@@ -753,8 +753,16 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             Ok("{}".to_owned())
         }
         "audio-reset" => {
-            let configuration: crate::audio::AudioConfiguration = serde_json::from_str(request)?;
-            Ok(json!({ "ok": s.audio.reset(configuration) }).to_string())
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                #[serde(flatten)]
+                configuration: crate::audio::AudioConfiguration,
+                #[serde(default)]
+                finish_capture_buffer: bool,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(json!({ "ok": s.audio.reset_with_capture_tail(r.configuration, r.finish_capture_buffer) }).to_string())
         }
         "audio-renderer-start" => Ok(json!(s.audio.capture_start()).to_string()),
         "audio-renderer-stop" => Ok(json!(s.audio.capture_stop()).to_string()),

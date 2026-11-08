@@ -604,6 +604,8 @@ def recipes(release):
                                      '--work', '{work}/state'))
     R['mixersuspend'].append(driver('reset_data.py', 'gate', '--release', '{release}', '--runtime', '{runtime}',
                                      '--work', '{work}/reset-data'))
+    R['mixersuspend'].append(driver('delivery.py', 'gate', '--release', '{release}', '--runtime', '{runtime}',
+                                     '--work', '{work}/delivery'))
     for name in ('audiogeneratorboundaries', 'audiogeneratorlifecycle'):
         R[name] = native_project(name, ['default']) + [
             driver('run.py', 'engine', '--release', '{release}', '--work', '{work}/engine', '--runtime', '{runtime}',

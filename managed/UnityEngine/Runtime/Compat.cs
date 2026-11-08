@@ -114,6 +114,11 @@ namespace Unbound.Runtime
         /// Other releases retain their existing clip data until measured.</summary>
         internal static bool AudioClipResetDataMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Closing offline capture for a reset processes the old output buffer,
+        /// measured on 6000.0.71f1 by tests/projects/mixersuspend's reset delivery control.
+        /// Other releases retain their unmeasured reset delivery.</summary>
+        internal static bool AudioResetCaptureTailMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Script-created clip duration uses whole milliseconds, measured on exactly
         /// 6000.0.71f1 (tests/projects/mixersuspend). Imported duration remains sample-based.
         /// Other releases retain sample-based duration until measured.</summary>

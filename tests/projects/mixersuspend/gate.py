@@ -51,8 +51,12 @@ def main():
         prefix = '' if name == 'suspension' else name+'-'
         reference = FIXTURE/'Reference'/('unity-'+args.release)/(prefix+f'rate-{rate}')
         report = work/f'raw-{name}-{rate}.jsonl.gz'
-        compare(reference, capture/'capture', report, batch=True)
-        unexpected += check(report, name, rate)
+        failures = compare(reference, capture/'capture', report, batch=True)
+        # The reset delivery gap is fixed: retain its historical classifier, but require
+        # the complete original suspension matrix to pass without an admitted reset record.
+        unexpected += failures if name == 'suspension' else check(report, name, rate)
+    subprocess.run([sys.executable, str(FIXTURE/'delivery.py'), 'gate', '--release', args.release,
+                    '--runtime', str(runtime), '--work', str(work/'delivery')], check=True)
     print(f'AudioMixer suspension gate: {unexpected} unexplained failures; complete reports: {work}', flush=True)
     return bool(unexpected)
 

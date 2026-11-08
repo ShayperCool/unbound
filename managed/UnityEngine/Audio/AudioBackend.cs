@@ -88,6 +88,7 @@ namespace Unbound.Runtime
             public int SampleRate { get; set; }
             public int NumRealVoices { get; set; }
             public int NumVirtualVoices { get; set; }
+            public bool FinishCaptureBuffer { get; set; }
         }
 
         SettingsJson Query() => JsonSerializer.Deserialize<SettingsJson>(Native.Call("audio-settings", "{}"), s_Json);
@@ -198,6 +199,7 @@ namespace Unbound.Runtime
                 SampleRate = configuration.sampleRate,
                 NumRealVoices = configuration.numRealVoices,
                 NumVirtualVoices = configuration.numVirtualVoices,
+                FinishCaptureBuffer = Compat.AudioResetCaptureTailMeasured,
             }, s_Json);
             using var doc = JsonDocument.Parse(Native.Call("audio-reset", request));
             return doc.RootElement.GetProperty("ok").GetBoolean();

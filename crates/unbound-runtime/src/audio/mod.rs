@@ -222,7 +222,8 @@ impl Engine {
             capturing: Arc::new(AtomicBool::new(false)),
             capture_pending: Mutex::new(0.0),
         };
-        engine.start(configuration, open_device)
+        engine
+            .start(configuration, open_device)
             .expect("initial audio configuration has no mixer effects");
         engine
     }
@@ -307,10 +308,22 @@ impl Engine {
 
     /// `AudioSettings.Reset`: restarts the output with another configuration; every voice stops.
     pub fn reset(&self, configuration: AudioConfiguration) -> bool {
+        self.reset_with_capture_tail(configuration, false)
+    }
+
+    pub fn reset_with_capture_tail(
+        &self,
+        configuration: AudioConfiguration,
+        finish_capture_buffer: bool,
+    ) -> bool {
         let config = {
             let mixer = self.mixer();
             MixerConfig {
-                sample_rate: if configuration.sample_rate == 0 { VIRTUAL_SAMPLE_RATE } else { configuration.sample_rate },
+                sample_rate: if configuration.sample_rate == 0 {
+                    VIRTUAL_SAMPLE_RATE
+                } else {
+                    configuration.sample_rate
+                },
                 ..mixer.config
             }
         };
@@ -319,6 +332,15 @@ impl Engine {
             return false;
         }
         let had_device = self.device.lock().unwrap().take().is_some();
+        if finish_capture_buffer && self.capturing.load(Ordering::Acquire) {
+            let mut mixer = self.mixer();
+            // The closing output processes its current buffer before sources are reset and
+            // before OnAudioConfigurationChanged. Keep the old rate, graph and callback data.
+            // Unity 6000.0.71f1, tests/projects/mixersuspend reset delivery control.
+            let mut buffer = vec![0.0; mixer.config.buffer_size.max(1) as usize * 2];
+            mixer.render_capture_block(&mut buffer);
+            self.clock.store(&mixer);
+        }
         let open = had_device || OPENER.read().unwrap().is_some();
         if let Err(error) = self.start(configuration, open) {
             tracing::warn!("audio reset failed: {error:#}");
@@ -457,7 +479,10 @@ mod tests {
             Err(_) => started_rx.recv_timeout(Duration::from_secs(5)).unwrap(),
         };
         thread.join().unwrap();
-        assert!(early.is_err(), "capture returned while the device still owned the mixer");
+        assert!(
+            early.is_err(),
+            "capture returned while the device still owned the mixer"
+        );
         assert!(!flag_during_device_block);
         assert!(started.0);
         assert!(completed_device_time > 0.0);
@@ -604,17 +629,87 @@ mod tests {
     }
 
     #[test]
+    fn reset_finishes_the_captured_old_buffer_before_reconfiguring() {
+        static FRAMES: AtomicU32 = AtomicU32::new(0);
+        static SAMPLE: AtomicU32 = AtomicU32::new(0);
+        extern "C" fn callback(kind: i32, _: u64, data: *mut f32, frames: i32, _: i32, _: i64) {
+            if kind == protocol::callback::LISTENER_FILTER {
+                FRAMES.fetch_add(frames as u32, Ordering::Relaxed);
+                // SAFETY: the mixer lends the complete output buffer for this callback.
+                SAMPLE.store(
+                    unsafe { *data.add((frames as usize - 1) * 2) }.to_bits(),
+                    Ordering::Relaxed,
+                );
+            }
+        }
+        let engine = Engine::new(
+            ProjectAudioSettings {
+                sample_rate: 1000,
+                dsp_buffer_size: 100,
+                ..Default::default()
+            },
+            false,
+        );
+        {
+            let mut mixer = engine.mixer();
+            mixer.listener_filter = true;
+            mixer.set_callback(Some(callback));
+            mixer.add_clip(1, Clip::new(2, 1000, vec![0.125; 2000]));
+            mixer.update_source(
+                9,
+                SourceParams {
+                    clip: 1,
+                    ..Default::default()
+                },
+            );
+            mixer.command(
+                9,
+                &AudioSourceCommand {
+                    kind: command::PLAY,
+                    ..Default::default()
+                },
+            );
+        }
+        FRAMES.store(0, Ordering::Relaxed);
+        SAMPLE.store(0, Ordering::Relaxed);
+        assert!(engine.capture_start());
+        let configuration = AudioConfiguration {
+            sample_rate: 2000,
+            ..engine.configuration()
+        };
+        assert!(engine.reset_with_capture_tail(configuration, true));
+        assert_eq!(FRAMES.load(Ordering::Relaxed), 100);
+        assert_eq!(f32::from_bits(SAMPLE.load(Ordering::Relaxed)), 0.125);
+        assert_eq!(engine.dsp_time(), 0.1);
+        assert_eq!(engine.mixer().source_state(9).main, voice_state::NONE);
+        assert!(!engine.capturing.load(Ordering::Acquire));
+        // An ordinary reset has no captured output to finish.
+        assert!(engine.reset_with_capture_tail(configuration, true));
+        assert_eq!(FRAMES.load(Ordering::Relaxed), 100);
+        assert_eq!(engine.dsp_time(), 0.1);
+    }
+
+    #[test]
     fn reset_rejects_oversized_chorus_before_changing_the_configuration() {
         let engine = Engine::new(ProjectAudioSettings::default(), false);
-        engine.mixer().configure_group(serde_json::from_value(serde_json::json!({
-            "handle": 1, "parent": 0, "muted": false, "bypass": false,
-            "effects": [{ "id": "chorus", "kind": "Chorus", "chorus": {
-                "dry": 0.5, "wet1": 0.5, "wet2": 0.5, "wet3": 0.5,
-                "delay": 40.0, "rate": 0.8, "depth": 0.03 } }]
-        })).unwrap()).unwrap();
+        engine
+            .mixer()
+            .configure_group(
+                serde_json::from_value(serde_json::json!({
+                    "handle": 1, "parent": 0, "muted": false, "bypass": false,
+                    "effects": [{ "id": "chorus", "kind": "Chorus", "chorus": {
+                        "dry": 0.5, "wet1": 0.5, "wet2": 0.5, "wet3": 0.5,
+                        "delay": 40.0, "rate": 0.8, "depth": 0.03 } }]
+                }))
+                .unwrap(),
+            )
+            .unwrap();
         let before = engine.configuration();
         assert!(engine.capture_start());
-        assert!(!engine.reset(AudioConfiguration { sample_rate: i32::MAX as u32, ..before }));
+        assert!(!engine.reset(AudioConfiguration {
+            sample_rate: i32::MAX as u32,
+            ..before
+        }));
         assert_eq!(engine.configuration(), before);
         assert!(engine.capturing.load(Ordering::Acquire));
     }
@@ -626,10 +721,13 @@ mod tests {
             let spec = serde_json::from_value(serde_json::json!({
                 "handle": 1, "parent": 0, "muted": false, "bypass": false,
                 "effects": [{ "id": "echo", "kind": "Echo", "delay": delay }]
-            })).unwrap();
+            }))
+            .unwrap();
             engine.mixer().configure_group(spec).unwrap();
             let before = engine.configuration();
-            if !engine.capturing.load(Ordering::Acquire) { assert!(engine.capture_start()); }
+            if !engine.capturing.load(Ordering::Acquire) {
+                assert!(engine.capture_start());
+            }
             assert!(!engine.reset(AudioConfiguration {
                 sample_rate: i32::MAX as u32,
                 ..before
@@ -637,7 +735,10 @@ mod tests {
             assert_eq!(engine.configuration(), before);
             assert!(engine.capturing.load(Ordering::Acquire));
         }
-        assert!(engine.reset(AudioConfiguration { sample_rate: 44100, ..engine.configuration() }));
+        assert!(engine.reset(AudioConfiguration {
+            sample_rate: 44100,
+            ..engine.configuration()
+        }));
         assert_eq!(engine.configuration().sample_rate, 44100);
     }
 }

@@ -1,0 +1,1 @@
+{"release":"6000.0.71f1","rate":48000,"notified":true,"listener":{"file":"listener.f32","samples":6144,"callbacks":[[0,2048],[1,2048],[4,2048]]},"source":{"file":"source.f32","samples":4096,"callbacks":[[0,2048],[1,2048]]}}

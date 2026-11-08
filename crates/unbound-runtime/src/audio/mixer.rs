@@ -1518,25 +1518,9 @@ impl Mixer {
         // Preserve the internal DSP chunks and their arithmetic. Native capture delivers the
         // listener at the configured DSP-buffer boundary, as the submission profile records.
         // This renders no extra samples and leaves partial caller buffers untouched.
-        self.capture_listener_batch = true;
         for block in samples.chunks_mut(block_samples) {
-            self.render(block, 2);
-            if self.listener_filter
-                && self.has_listener
-                && let Some(cb) = self.callback
-            {
-                cb(
-                    callback::LISTENER_FILTER,
-                    0,
-                    block.as_mut_ptr(),
-                    (block.len() / 2) as i32,
-                    2,
-                    0,
-                );
-            }
-            self.listener_output.push(block);
+            self.render_capture_block(block);
         }
-        self.capture_listener_batch = false;
         self.discard_output = discarded;
         for value in &mut samples {
             *value = capture::pcm16(*value);
@@ -1555,6 +1539,27 @@ impl Mixer {
             samples,
             sinks,
         })
+    }
+
+    /// Processes one complete offline output block, including the listener's borrowed buffer.
+    pub fn render_capture_block(&mut self, block: &mut [f32]) {
+        self.capture_listener_batch = true;
+        self.render(block, 2);
+        if self.listener_filter
+            && self.has_listener
+            && let Some(cb) = self.callback
+        {
+            cb(
+                callback::LISTENER_FILTER,
+                0,
+                block.as_mut_ptr(),
+                (block.len() / 2) as i32,
+                2,
+                0,
+            );
+        }
+        self.listener_output.push(block);
+        self.capture_listener_batch = false;
     }
 
     /// Renders `out.len() / channels` frames of interleaved output.
