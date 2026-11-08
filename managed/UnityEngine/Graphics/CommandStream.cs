@@ -328,13 +328,20 @@ namespace Unbound.Runtime
         static int s_PendingCommand = -1;
         static readonly int s_BaseCommandId = Shader.PropertyToID("unity_BaseCommandID");
 
-        /// <summary>The next draw's per-object motion (<see cref="NextDrawMotion"/>).</summary>
-        static bool s_PendingMotion;
+        /// <summary>Which per-object motion values the next draw takes (<see cref="NextDrawMotion"/>,
+        /// <see cref="NextDrawBuiltinMotion"/>).</summary>
+        enum PendingMotion : byte { None, RenderPipeline, BuiltIn }
+
+        static PendingMotion s_PendingMotion;
         static Matrix4x4 s_MotionPrevious;
         static Vector4 s_MotionParams;
         static readonly int s_PreviousMId = Shader.PropertyToID("unity_MatrixPreviousM");
         static readonly int s_PreviousMIId = Shader.PropertyToID("unity_MatrixPreviousMI");
         static readonly int s_MotionParamsId = Shader.PropertyToID("unity_MotionVectorsParams");
+        static readonly int s_BuiltinPreviousMId = Shader.PropertyToID("_PreviousM");
+        static readonly int s_HasLastPositionDataId = Shader.PropertyToID("_HasLastPositionData");
+        static readonly int s_ForceNoMotionId = Shader.PropertyToID("_ForceNoMotion");
+        static readonly int s_MotionVectorDepthBiasId = Shader.PropertyToID("_MotionVectorDepthBias");
 
         /// <summary>The next draw's per-object motion vector values, which the engine sets for a
         /// renderer list with <see cref="UnityEngine.Rendering.PerObjectData.MotionVectors"/>:
@@ -344,10 +351,29 @@ namespace Unbound.Runtime
         /// property block's values of those names.</summary>
         internal static void NextDrawMotion(in Matrix4x4 previous, Vector4 parameters)
         {
-            s_PendingMotion = true;
+            s_PendingMotion = PendingMotion.RenderPipeline;
             s_MotionPrevious = previous;
             s_MotionParams = parameters;
         }
+
+        /// <summary>The next draw's per-object motion vector values in the built-in renderer's
+        /// motion vector pass (Hidden/Internal-MotionVectors' names): <c>_PreviousM</c>,
+        /// <c>_HasLastPositionData</c> (0: no last-frame vertex positions), <c>_ForceNoMotion</c>
+        /// and <c>_MotionVectorDepthBias</c> (0). They win over a property block's values of those
+        /// names.</summary>
+        internal static void NextDrawBuiltinMotion(in Matrix4x4 previous, bool forceNoMotion)
+        {
+            s_PendingMotion = PendingMotion.BuiltIn;
+            s_MotionPrevious = previous;
+            s_MotionParams = new Vector4(forceNoMotion ? 1f : 0f, 0f, 0f, 0f);
+        }
+
+        static bool IsMotionValue(PendingMotion motion, int id) => motion switch
+        {
+            PendingMotion.RenderPipeline => id == s_PreviousMId || id == s_PreviousMIId || id == s_MotionParamsId,
+            PendingMotion.BuiltIn => id == s_BuiltinPreviousMId || id == s_HasLastPositionDataId || id == s_ForceNoMotionId || id == s_MotionVectorDepthBiasId,
+            _ => false,
+        };
 
         /// <summary>How the next draw runs: instances, or counts read on the GPU from an arguments
         /// buffer (indexed: DrawMeshInstancedIndirect's layout; not: DrawProceduralIndirect's);
@@ -623,19 +649,26 @@ namespace Unbound.Runtime
             s_PendingCommand = -1;
             if (command >= 0)
                 s_Properties.Add(new PropertyValue { Name = "unity_BaseCommandID", Kind = IntKind, Vector = new Vector4(command, 0, 0, 0) });
-            bool motion = s_PendingMotion;
-            s_PendingMotion = false;
-            if (motion)
+            var motion = s_PendingMotion;
+            s_PendingMotion = PendingMotion.None;
+            if (motion == PendingMotion.RenderPipeline)
             {
                 s_Properties.Add(new PropertyValue { Name = "unity_MatrixPreviousM", Kind = MatrixKind, Matrix = s_MotionPrevious });
                 s_Properties.Add(new PropertyValue { Name = "unity_MatrixPreviousMI", Kind = MatrixKind, Matrix = s_MotionPrevious.inverse });
                 s_Properties.Add(new PropertyValue { Name = "unity_MotionVectorsParams", Kind = VectorKind, Vector = s_MotionParams });
             }
+            else if (motion == PendingMotion.BuiltIn)
+            {
+                s_Properties.Add(new PropertyValue { Name = "_PreviousM", Kind = MatrixKind, Matrix = s_MotionPrevious });
+                s_Properties.Add(new PropertyValue { Name = "_HasLastPositionData", Kind = FloatKind });
+                s_Properties.Add(new PropertyValue { Name = "_ForceNoMotion", Kind = FloatKind, Vector = s_MotionParams });
+                s_Properties.Add(new PropertyValue { Name = "_MotionVectorDepthBias", Kind = FloatKind });
+            }
             if (properties == null) return;
             foreach (var p in properties)
             {
                 if (command >= 0 && p.Key == s_BaseCommandId) continue;
-                if (motion && (p.Key == s_PreviousMId || p.Key == s_PreviousMIId || p.Key == s_MotionParamsId)) continue;
+                if (IsMotionValue(motion, p.Key)) continue;
                 var name = Shader.IdToName(p.Key);
                 if (name == null) continue;
                 var value = new PropertyValue { Name = name };

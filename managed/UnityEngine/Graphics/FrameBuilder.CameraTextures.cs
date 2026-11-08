@@ -141,10 +141,6 @@ namespace Unbound.Runtime
         static readonly Dictionary<Camera, RenderTexture> s_MotionTextures = new Dictionary<Camera, RenderTexture>();
         /// <summary>A camera the player loop rendered drew motion vectors this frame.</summary>
         static bool s_MotionRendered;
-        static readonly int s_PreviousMId = Shader.PropertyToID("_PreviousM");
-        static readonly int s_HasLastPositionDataId = Shader.PropertyToID("_HasLastPositionData");
-        static readonly int s_ForceNoMotionId = Shader.PropertyToID("_ForceNoMotion");
-        static readonly int s_MotionVectorDepthBiasId = Shader.PropertyToID("_MotionVectorDepthBias");
 
         /// <summary>_CameraMotionVectorsTexture (RG half): the camera's motion from the depth
         /// texture and its previous view-projection (Hidden/Internal-MotionVectors' camera pass,
@@ -195,24 +191,23 @@ namespace Unbound.Runtime
             {
                 var item = s_Items[i];
                 if (!ObjectMotion(item, out var previous, out bool moving, out bool force) || !moving) continue;
-                var properties = new Dictionary<int, object>
-                {
-                    [s_PreviousMId] = previous,
-                    [s_HasLastPositionDataId] = 0f,
-                    [s_ForceNoMotionId] = force ? 1f : 0f,
-                    [s_MotionVectorDepthBiasId] = 0f,
-                };
                 var info = ShaderPassInfo.Of(item.Material.shader);
                 int own = -1;
                 if (info != null && !item.Material.PassDisabled("MotionVectors"))
                     for (int p = 0; p < info.Passes.Count; p++)
                         if (info.LightMode(p) == "MotionVectors") { own = p; break; }
-                if (own >= 0) EmitDraw(item, item.Material.Sync(), own, false, false, properties);
+                // Set right before the draw: no other draw may take them.
+                if (own >= 0)
+                {
+                    ulong material = item.Material.Sync();
+                    GfxStream.NextDrawBuiltinMotion(previous, force);
+                    EmitDraw(item, material, own, false, false);
+                }
                 else
                 {
                     var draw = item;
                     draw.Material = s_MotionVectors;
-                    draw.Properties = MergeProperties(item.Properties, properties);
+                    GfxStream.NextDrawBuiltinMotion(previous, force);
                     EmitDraw(draw, internalPass, 0, false, false);
                 }
             }
@@ -285,33 +280,33 @@ namespace Unbound.Runtime
             GfxStream.NextDrawMotion(previous, new Vector4(0f, force ? 0f : 1f, 0f, 0f));
         }
 
-        static Dictionary<int, object> MergeProperties(Dictionary<int, object> a, Dictionary<int, object> b)
-        {
-            if (a == null) return b;
-            var merged = new Dictionary<int, object>(a);
-            foreach (var pair in b) merged[pair.Key] = pair.Value;
-            return merged;
-        }
+        static readonly Vector2[] s_MotionQuadCorners = { new Vector2(-1f, -1f), new Vector2(-1f, 1f), new Vector2(1f, 1f), new Vector2(1f, -1f) };
+        static readonly Vector3[] s_MotionQuadPositions = new Vector3[4];
+        static readonly Vector3[] s_MotionQuadNormals = new Vector3[4];
+        static readonly int[] s_MotionQuadTriangles = { 0, 1, 2, 2, 3, 0 };
+        /// <summary>The projection <see cref="s_MotionQuad"/> holds the view rays of.</summary>
+        static Matrix4x4 s_MotionQuadProjection;
 
         /// <summary>A screen-covering quad in clip space whose normals are the view rays to the
-        /// far plane (Unity's camera space, +z forward), as the camera motion pass reads them.</summary>
+        /// far plane (Unity's camera space, +z forward), as the camera motion pass reads them;
+        /// rebuilt only when the projection changes.</summary>
         static Mesh MotionQuad(Matrix4x4 projection)
         {
+            if (s_MotionQuad != null && s_MotionQuadProjection.Equals(projection)) return s_MotionQuad;
             s_MotionQuad ??= new Mesh { name = "Camera motion", hideFlags = HideFlags.HideAndDontSave };
+            s_MotionQuadProjection = projection;
             var inverse = projection.inverse;
-            var corners = new[] { new Vector2(-1f, -1f), new Vector2(-1f, 1f), new Vector2(1f, 1f), new Vector2(1f, -1f) };
-            var positions = new Vector3[4];
-            var normals = new Vector3[4];
             for (int i = 0; i < 4; i++)
             {
-                positions[i] = new Vector3(corners[i].x, corners[i].y, 0f);
-                var far = inverse * new Vector4(corners[i].x, corners[i].y, 1f, 1f);
+                var corner = s_MotionQuadCorners[i];
+                s_MotionQuadPositions[i] = new Vector3(corner.x, corner.y, 0f);
+                var far = inverse * new Vector4(corner.x, corner.y, 1f, 1f);
                 far /= far.w;
-                normals[i] = new Vector3(far.x, far.y, -far.z);
+                s_MotionQuadNormals[i] = new Vector3(far.x, far.y, -far.z);
             }
-            s_MotionQuad.vertices = positions;
-            s_MotionQuad.normals = normals;
-            s_MotionQuad.SetTriangles(new[] { 0, 1, 2, 2, 3, 0 }, 0);
+            s_MotionQuad.vertices = s_MotionQuadPositions;
+            s_MotionQuad.normals = s_MotionQuadNormals;
+            s_MotionQuad.SetTriangles(s_MotionQuadTriangles, 0);
             return s_MotionQuad;
         }
 
