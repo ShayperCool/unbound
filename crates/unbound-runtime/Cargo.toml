@@ -25,4 +25,5 @@ libloading = "0.8"
 arboard = { version = "=3.7.0", default-features = false, features = ["wayland-data-control"] }
 
 [dev-dependencies]
+flate2 = "1"
 syn = { version = "2", features = ["full"] }

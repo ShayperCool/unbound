@@ -157,7 +157,8 @@ namespace UnityEngine
         public float delay
         {
             get => m_Delay;
-            set => m_Delay = value;
+            set => m_Delay = Compat.AudioComponentEchoDelayMeasured && float.IsFinite(value)
+                ? unchecked((uint)(long)value) : value;
         }
 
         public float decayRatio
@@ -183,7 +184,7 @@ namespace UnityEngine
             d = new AudioFilterDescriptor
             {
                 Kind = AudioFilterKind.Echo,
-                Delay = Mathf.Clamp(m_Delay, 10f, 5000f),
+                Delay = Mathf.Clamp(m_Delay, Compat.AudioComponentEchoDelayMeasured ? 1f : 10f, 5000f),
                 Decay = Mathf.Clamp01(m_DecayRatio),
                 DryMix = Mathf.Clamp01(m_DryMix),
                 WetMix = Mathf.Clamp01(m_WetMix),
@@ -202,7 +203,7 @@ namespace UnityEngine
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
-            m_Delay = body.Float("m_Delay", 500f);
+            delay = body.Float("m_Delay", 500f);
             m_DecayRatio = body.Float("m_DecayRatio", 0.5f);
             m_DryMix = body.Float("m_DryMix", 1f);
             m_WetMix = body.Float("m_WetMix", 1f);
@@ -422,6 +423,9 @@ namespace Unbound.Runtime
     /// <summary>Collects an AudioSource's filter components for its packet.</summary>
     internal static class AudioFilterChain
     {
+        const string SpatialFilterLimit = " on a 3D AudioSource is not supported: common spatial gain, spread, doppler and reverb-zone send need exact measurements (tests/projects/audiodistortion spatial controls)";
+        const string SpatialDistortionError = "AudioDistortionFilter" + SpatialFilterLimit;
+        const string SpatialChorusError = "AudioChorusFilter" + SpatialFilterLimit;
         static readonly HashSet<string> s_Bookkeeping = new HashSet<string>
         {
             "m_ObjectHideFlags", "m_CorrespondingSourceObject", "m_PrefabInstance", "m_PrefabAsset", "m_GameObject",
@@ -473,6 +477,16 @@ namespace Unbound.Runtime
             }
         }
 
+        static bool Describe(Component component, out AudioFilterDescriptor descriptor)
+        {
+            if (component is AudioLowPassFilter lowPass) return lowPass.Describe(out descriptor);
+            if (component is AudioHighPassFilter highPass) return highPass.Describe(out descriptor);
+            if (component is AudioDistortionFilter distortion) return distortion.Describe(out descriptor);
+            if (component is AudioChorusFilter chorus) return chorus.Describe(out descriptor);
+            if (component is AudioReverbFilter reverb) return reverb.Describe(out descriptor);
+            return ((AudioEchoFilter)component).Describe(out descriptor);
+        }
+
         /// <summary>
         /// Fills <paramref name="table"/> with the enabled filter components of the source's
         /// GameObject in component order, each placed above or below its OnAudioFilterRead scripts,
@@ -486,6 +500,7 @@ namespace Unbound.Runtime
             if (go == null) return 0;
             int count = 0;
             bool scripts = false, below = false;
+            bool spatial = !source.bypassEffects && source.UsesSpatialBlend;
             string error = null;
             foreach (var c in go.m_Components)
             {
@@ -498,16 +513,11 @@ namespace Unbound.Runtime
                 if (!IsFilterComponent(c)) continue;
                 var behaviour = (Behaviour)c;
                 if (behaviour.m_Destroyed || !behaviour.isActiveAndEnabled) continue;
-                AudioFilterDescriptor d;
-                bool ok;
-                if (c is AudioLowPassFilter lowPass) ok = lowPass.Describe(out d);
-                else if (c is AudioHighPassFilter highPass) ok = highPass.Describe(out d);
-                else if (c is AudioDistortionFilter distortion) ok = distortion.Describe(out d);
-                else if (c is AudioChorusFilter chorus) ok = chorus.Describe(out d);
-                else if (c is AudioReverbFilter reverb) ok = reverb.Describe(out d);
-                else ok = ((AudioEchoFilter)c).Describe(out d);
+                bool ok = Describe(c, out var d);
                 if (!ok) continue;
                 if (Unmeasured(c) is string unmeasured) error ??= unmeasured;
+                if (spatial && (c is AudioDistortionFilter || c is AudioChorusFilter))
+                    error ??= c is AudioDistortionFilter ? SpatialDistortionError : SpatialChorusError;
                 d.Id = unchecked((ulong)(long)c.GetInstanceID());
                 d.Stage = scripts ? AudioFilterStage.AfterScripts : AudioFilterStage.BeforeScripts;
                 if (scripts) below = true;
@@ -524,15 +534,9 @@ namespace Unbound.Runtime
             return error == null ? count : 0;
         }
 
-        /// <summary>
-        /// Fills <paramref name="table"/> with the enabled AudioReverbFilter components of the
-        /// hearing AudioListener's GameObject in component order and returns how many; they run
-        /// on the final mix (tests/projects/audioreverb). Other filter kinds there, and reverb
-        /// filters next to OnAudioFilterRead scripts (an unmeasured order) or on a GameObject
-        /// that also has an AudioSource (whose chain already runs them; unmeasured), are reported
-        /// once per listener and not applied on the listener; the reverb filters still run in the
-        /// first case.
-        /// </summary>
+        /// <summary>The hearing listener's components in Inspector order on the final mix.
+        /// They share the source/mixer kernels. Scripts interleaved with listener components and
+        /// a listener sharing a GameObject with a source still fail clearly until measured.</summary>
         internal static int CollectListener(AudioListener listener, bool scripts, ref AudioFilterDescriptor[] table)
         {
             var go = listener.m_GameObject;
@@ -542,24 +546,25 @@ namespace Unbound.Runtime
             foreach (var c in go.m_Components)
             {
                 if (!IsFilterComponent(c) || ((Behaviour)c).m_Destroyed || !((Behaviour)c).isActiveAndEnabled) continue;
-                if (!(c is AudioReverbFilter reverb))
+                if (!Compat.AudioListenerChainMeasured && !(c is AudioReverbFilter))
                 {
                     error ??= c.GetType().Name + " on the AudioListener '" + go.m_Name + "' is not supported; it is not applied";
                     continue;
                 }
                 if (scripts)
                 {
-                    error ??= "AudioReverbFilter next to OnAudioFilterRead scripts on the AudioListener '" + go.m_Name + "' is not supported; listener filter components are not applied";
+                    error ??= "Filter components next to OnAudioFilterRead scripts on the AudioListener '" + go.m_Name + "' is not supported; listener filter components are not applied";
                     count = 0;
                     break;
                 }
                 if (go.GetComponent<AudioSource>() != null)
                 {
-                    error ??= "AudioReverbFilter on the AudioListener '" + go.m_Name + "', which also has an AudioSource, is not supported on the listener; it runs only in that source's chain (while the source plays)";
+                    error ??= "Filter components on the AudioListener '" + go.m_Name + "', which also has an AudioSource, is not supported on the listener; it runs only in that source's chain (while the source plays)";
                     count = 0;
                     break;
                 }
-                if (!reverb.Describe(out var d)) continue;
+                if (Unmeasured(c) is string unmeasured) { error ??= unmeasured; continue; }
+                if (!Describe(c, out var d)) continue;
                 if (count == AudioFilterDescriptor.MaxPerSource)
                 {
                     error ??= "more than " + AudioFilterDescriptor.MaxPerSource + " filter components on the AudioListener are not supported";

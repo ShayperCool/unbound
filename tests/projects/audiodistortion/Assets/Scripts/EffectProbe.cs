@@ -76,6 +76,85 @@ public class EffectProbe : MonoBehaviour
         new[] { "slot_wet_dc_processed", "music=dc0" },
         new[] { "slot_wet_startup_zero", "music=dc0", "Music.Dist.Wet=-80" },
         new[] { "slot_wet_before_zero", "music=dc0", "Music:Dist,Att", "Music.Volume=-12", "Music.Dist.Wet=-80" },
+        new[] { "listener_dist", "Music:Att", "music=noise:0.25", "listener=dist" },
+        new[] { "listener_chorus", "Music:Att", "music=noise:0.25", "listener=chorus" },
+        new[] { "listener_low_dist", "Music:Att", "music=noise:0.25", "listener=low,dist" },
+        new[] { "listener_dist_low", "Music:Att", "music=noise:0.25", "listener=dist,low" },
+        new[] { "listener_high_dist", "Music:Att", "music=noise:0.25", "listener=high,dist" },
+        new[] { "listener_dist_high", "Music:Att", "music=noise:0.25", "listener=dist,high" },
+        new[] { "listener_echo_dist", "Music:Att", "music=noise:0.25", "listener=echo,dist" },
+        new[] { "listener_dist_echo", "Music:Att", "music=noise:0.25", "listener=dist,echo" },
+        new[] { "listener_reverb_dist", "Music:Att", "music=noise:0.25", "listener=reverb,dist" },
+        new[] { "listener_dist_reverb", "Music:Att", "music=noise:0.25", "listener=dist,reverb" },
+        new[] { "listener_chorus_dist", "Music:Att", "music=noise:0.25", "listener=chorus,dist" },
+        new[] { "listener_dist_chorus", "Music:Att", "music=noise:0.25", "listener=dist,chorus" },
+        new[] { "listener_after_mixer", "music=noise:0.25", "Music.Dist.Level=0.25", "listener=dist" },
+        new[] { "listener_sum", "Music:Att", "music=noise:0.25", "listener=dist", "second=1" },
+        new[] { "listener_mixer_none", "Music:Att", "music=noise:0.25", "listener=dist", "route=mixer" },
+        new[] { "listener_none_none", "Music:Att", "music=noise:0.25", "listener=dist", "route=none" },
+        new[] { "listener_mixer_listener_bypass", "Music:Att", "music=noise:0.25", "listener=dist", "route=mixer", "listener_bypass=1" },
+        new[] { "listener_none_listener_bypass", "Music:Att", "music=noise:0.25", "listener=dist", "route=none", "listener_bypass=1" },
+        new[] { "listener_mixer_bypass", "Music:Att", "music=noise:0.25", "listener=dist", "route=mixer", "bypass=1" },
+        new[] { "listener_none_bypass", "Music:Att", "music=noise:0.25", "listener=dist", "route=none", "bypass=1" },
+        new[] { "listener_mixed_bypass", "Music:Att", "music=noise:0.25", "listener=dist", "route=none", "listener_bypass=1", "second=1" },
+        new[] { "listener_disabled", "Music:Att", "music=noise:0.25", "listener=disabled" },
+        new[] { "listener_echo_17", "Music:Att", "music=noise:0.25", "listener=echo", "echo_delay=17" },
+        new[] { "listener_echo_17p1", "Music:Att", "music=noise:0.25", "listener=echo", "echo_delay=17.1" },
+        new[] { "listener_echo_17p5", "Music:Att", "music=noise:0.25", "listener=echo", "echo_delay=17.5" },
+        new[] { "listener_echo_17p9", "Music:Att", "music=noise:0.25", "listener=echo", "echo_delay=17.9" },
+        new[] { "listener_echo_18", "Music:Att", "music=noise:0.25", "listener=echo", "echo_delay=18" },
+        new[] { "listener_echo_10p125", "Music:Att", "music=noise:0.25", "listener=echo", "echo_delay=10.125" },
+        new[] { "source_echo_17p5", "Music:Att", "music=noise:0.25", "sourcechain=echo", "echo_delay=17.5" },
+        new[] { "source_echo_17p9", "Music:Att", "music=noise:0.25", "sourcechain=echo", "echo_delay=17.9" },
+        new[] { "source_echo_mono", "Music:Att", "music=noise:0.25", "sourcechain=echo", "echo_delay=17.5", "mono=1" },
+        new[] { "source_echo_imp", "Music:Att", "sourcechain=echo", "echo_delay=17.5", "music=imp" },
+        new[] { "source_echo_low", "Music:Att", "music=noise:0.25", "sourcechain=echo", "echo_delay=1.25" },
+        new[] { "source_echo_negative", "Music:Att", "music=noise:0.25", "sourcechain=echo", "echo_delay=-1.25" },
+        new[] { "source_echo_high", "Music:Att", "music=noise:0.25", "sourcechain=echo", "echo_delay=5000.75" },
+    };
+    public static readonly string[][] SpatialCases = {
+        new[] { "spatial_dry_front_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5" },
+        new[] { "spatial_dry_side_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4" },
+        new[] { "spatial_dry_spread_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "spread=180" },
+        new[] { "spatial_dry_blend_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "blend=0.5" },
+        new[] { "spatial_dry_pitch_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "pitch=1.5" },
+        new[] { "spatial_dry_doppler_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "move=1" },
+        new[] { "spatial_dry_zone_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "zone=1" },
+        new[] { "spatial_dist_front_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "sourcechain=dist" },
+        new[] { "spatial_dist_side_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "sourcechain=dist" },
+        new[] { "spatial_dist_spread_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "spread=180", "sourcechain=dist" },
+        new[] { "spatial_dist_blend_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "blend=0.5", "sourcechain=dist" },
+        new[] { "spatial_dist_pitch_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "pitch=1.5", "sourcechain=dist" },
+        new[] { "spatial_dist_doppler_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "move=1", "sourcechain=dist" },
+        new[] { "spatial_dist_zone_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "zone=1", "sourcechain=dist" },
+        new[] { "spatial_chorus_front_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "sourcechain=chorus" },
+        new[] { "spatial_chorus_side_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "sourcechain=chorus" },
+        new[] { "spatial_chorus_spread_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "spread=180", "sourcechain=chorus" },
+        new[] { "spatial_chorus_blend_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "blend=0.5", "sourcechain=chorus" },
+        new[] { "spatial_chorus_pitch_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "pitch=1.5", "sourcechain=chorus" },
+        new[] { "spatial_chorus_doppler_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "move=1", "sourcechain=chorus" },
+        new[] { "spatial_chorus_zone_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "zone=1", "sourcechain=chorus" },
+        new[] { "spatial_dry_front_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5" },
+        new[] { "spatial_dry_side_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4" },
+        new[] { "spatial_dry_spread_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "spread=180" },
+        new[] { "spatial_dry_blend_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "blend=0.5" },
+        new[] { "spatial_dry_pitch_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "pitch=1.5" },
+        new[] { "spatial_dry_doppler_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "move=1" },
+        new[] { "spatial_dry_zone_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "zone=1" },
+        new[] { "spatial_dist_front_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "sourcechain=dist" },
+        new[] { "spatial_dist_side_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "sourcechain=dist" },
+        new[] { "spatial_dist_spread_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "spread=180", "sourcechain=dist" },
+        new[] { "spatial_dist_blend_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "blend=0.5", "sourcechain=dist" },
+        new[] { "spatial_dist_pitch_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "pitch=1.5", "sourcechain=dist" },
+        new[] { "spatial_dist_doppler_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "move=1", "sourcechain=dist" },
+        new[] { "spatial_dist_zone_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "zone=1", "sourcechain=dist" },
+        new[] { "spatial_chorus_front_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "sourcechain=chorus" },
+        new[] { "spatial_chorus_side_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "sourcechain=chorus" },
+        new[] { "spatial_chorus_spread_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "spread=180", "sourcechain=chorus" },
+        new[] { "spatial_chorus_blend_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "blend=0.5", "sourcechain=chorus" },
+        new[] { "spatial_chorus_pitch_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "pitch=1.5", "sourcechain=chorus" },
+        new[] { "spatial_chorus_doppler_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "move=1", "sourcechain=chorus" },
+        new[] { "spatial_chorus_zone_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "zone=1", "sourcechain=chorus" },
     };
     public const int BlockCount = 32;
     public const int ClipFrames = BlockCount * 1024;
@@ -83,10 +162,11 @@ public class EffectProbe : MonoBehaviour
     {
         var only = Environment.GetEnvironmentVariable("EFFECT_PROBE_CASES");
         var keys = new List<string>();
-        foreach (var c in Cases) if (string.IsNullOrEmpty(only) || Array.IndexOf(only.Split(','), c[0]) >= 0) keys.Add(c[0]);
+        var cases = Environment.GetEnvironmentVariable("EFFECT_PROBE_PROFILE") == "spatial" ? SpatialCases : Cases;
+        foreach (var c in cases) if (string.IsNullOrEmpty(only) || Array.IndexOf(only.Split(','), c[0]) >= 0) keys.Add(c[0]);
         return keys.ToArray();
     }
-    public static string[] Tokens(string key) => Array.Find(Cases, c => c[0] == key);
+    public static string[] Tokens(string key) => Array.Find(Cases, c => c[0] == key) ?? Array.Find(SpatialCases, c => c[0] == key);
     public static string Option(string key, string name, string fallback)
     {
         foreach (var token in Tokens(key)) if (token.StartsWith(name)) return token.Substring(name.Length);
@@ -172,6 +252,27 @@ public class EffectProbe : MonoBehaviour
         }
         return data;
     }
+    static List<Behaviour> Components(GameObject host, string chain, float echoDelay = 17.5f)
+    {
+        var components = new List<Behaviour>();
+        foreach (string name in chain.Split(',')) {
+            Behaviour component;
+            switch (name) {
+                case "": continue;
+                case "dist": component = host.AddComponent<AudioDistortionFilter>(); break;
+                case "disabled": component = host.AddComponent<AudioDistortionFilter>(); component.enabled = false; break;
+                case "low": var low = host.AddComponent<AudioLowPassFilter>(); low.cutoffFrequency = 1200; low.lowpassResonanceQ = 2; component = low; break;
+                case "high": var high = host.AddComponent<AudioHighPassFilter>(); high.cutoffFrequency = 800; high.highpassResonanceQ = 2; component = high; break;
+                case "echo": var echo = host.AddComponent<AudioEchoFilter>(); echo.delay = echoDelay; echo.decayRatio = 0.4f; echo.dryMix = 0.7f; echo.wetMix = 0.6f; component = echo; break;
+                case "reverb": var reverb = host.AddComponent<AudioReverbFilter>(); reverb.reverbPreset = AudioReverbPreset.Generic; component = reverb; break;
+                case "chorus": var chorus = host.AddComponent<AudioChorusFilter>(); chorus.dryMix = 0.25f; chorus.wetMix1 = 0.75f; chorus.wetMix2 = 0.375f; chorus.wetMix3 = 0.125f; chorus.delay = 17.5f; chorus.rate = 5; chorus.depth = 0.5f; component = chorus; break;
+                default: throw new Exception("Unknown filter " + name);
+            }
+            components.Add(component);
+        }
+        return components;
+    }
+    static float Number(string text) => float.Parse(text, System.Globalization.CultureInfo.InvariantCulture);
     System.Collections.IEnumerator Capture()
     {
         if (m_Captured) yield break;
@@ -212,6 +313,8 @@ public class EffectProbe : MonoBehaviour
                 records.Add("\""+key+".wetget\":"+(got ? "true" : "false"));
                 records.Add("\""+key+".wetvalue\":"+value.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
             }
+            float echoDelay = float.Parse(Option(key, "echo_delay=", "17.5"), System.Globalization.CultureInfo.InvariantCulture);
+            var listenerComponents = Components(gameObject, Option(key, "listener=", ""), echoDelay);
             var go = Option(key, "serialized=", "0") == "1" ? Instantiate(Resources.Load<GameObject>("Serialized")) : new GameObject(key);
             var source = go.GetComponent<AudioSource>(); if (!source) source = go.AddComponent<AudioSource>();
             if (Option(key, "script=", "") == "before") go.AddComponent<HalfSignal>();
@@ -227,13 +330,38 @@ public class EffectProbe : MonoBehaviour
             source.bypassListenerEffects = Option(key, "listener_bypass=", "0") == "1";
             source.outputAudioMixerGroup = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Music");
             if (!source.outputAudioMixerGroup) throw new Exception("Missing group Music");
-            source.spatialBlend = 0; source.volume = 1;
+            if (Option(key, "route=", "mixer") == "none") source.outputAudioMixerGroup = null;
+            var sourceComponents = Components(go, Option(key, "sourcechain=", ""), echoDelay);
+            if (Option(key, "echo_delay=", "") != "") {
+                var echo = go.GetComponent<AudioEchoFilter>(); if (!echo) echo = gameObject.GetComponent<AudioEchoFilter>();
+                records.Add("\""+key+".echoDelay\":"+echo.delay.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+            }
+            source.spatialBlend = Number(Option(key, "blend=", Option(key, "spatial=", "0"))); source.volume = 1;
+            source.pitch = Number(Option(key, "pitch=", "1"));
+            source.spread = Number(Option(key, "spread=", "0"));
+            if (Option(key, "spatial=", "0") == "1") {
+                var xyz = Option(key, "position=", "0,0,5").Split(',');
+                go.transform.position = new Vector3(Number(xyz[0]), Number(xyz[1]), Number(xyz[2]));
+                source.rolloffMode = AudioRolloffMode.Linear; source.minDistance = 1; source.maxDistance = 20;
+                source.velocityUpdateMode = AudioVelocityUpdateMode.Dynamic;
+            }
+            GameObject zone = null;
+            if (Option(key, "zone=", "0") == "1") {
+                zone = new GameObject("zone");
+                var reverb = zone.AddComponent<AudioReverbZone>(); reverb.reverbPreset = AudioReverbPreset.Generic;
+                reverb.minDistance = 10; reverb.maxDistance = 15;
+            }
             int channels = Option(key, "mono=", "0") == "1" ? 1 : 2;
             var clip = AudioClip.Create(key, ClipFrames, channels, rate, false);
             var data = Signal(Option(key, "music=", "dc:0.5"), rate);
             if (channels == 1) { var mono = new float[ClipFrames]; for (int f = 0; f < ClipFrames; f++) mono[f] = data[2*f]; data = mono; }
             if (!clip.SetData(data, 0)) throw new Exception("SetData failed");
             source.clip = clip; source.Play();
+            GameObject second = null;
+            if (Option(key, "second=", "0") == "1") {
+                second = new GameObject("second"); var other = second.AddComponent<AudioSource>();
+                other.clip = clip; other.volume = 0.25f; other.Play();
+            }
             var sink = new NativeArray<float>(2048, Allocator.Persistent); sinks.Add(sink);
             var buffer = new NativeArray<float>(2048, Allocator.Persistent);
             var master = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Master");
@@ -242,6 +370,7 @@ public class EffectProbe : MonoBehaviour
             using (var writer = new BinaryWriter(File.Create(Path.Combine(output, key+".f32")))) {
                 if (Engine) FlushEngine();
                 for (int block = 0; block < BlockCount; block++) {
+                    if (Option(key, "move=", "0") == "1") go.transform.position += new Vector3(0, 0, -20f * 1024 / rate);
                     if (!Engine) yield return null;
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false })) throw new Exception("AddMixerGroupSink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("AudioRenderer.Render failed");
@@ -253,6 +382,9 @@ public class EffectProbe : MonoBehaviour
                 records.Add("\""+key+suffix+"\":{\"file\":\""+key+suffix+".f32\",\"frames\":"+(BlockCount*1024)+",\"channels\":2}");
             Save(); buffer.Dispose();
             source.Stop(); DestroyImmediate(go); DestroyImmediate(clip);
+            if (second) DestroyImmediate(second);
+            if (zone) DestroyImmediate(zone);
+            foreach (var component in listenerComponents) DestroyImmediate(component);
         }
         AudioRenderer.Stop(); foreach (var sink in sinks) sink.Dispose(); Save(); Exit(0);
     }

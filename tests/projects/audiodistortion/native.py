@@ -9,6 +9,7 @@ import subprocess
 
 p = argparse.ArgumentParser()
 p.add_argument('--release', required=True)
+p.add_argument('--profile', choices=('static', 'spatial'), default='static')
 p.add_argument('--work', type=Path, required=True)
 p.add_argument('--editor', type=Path)
 p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
@@ -19,18 +20,21 @@ if (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0] !=
     p.error('release does not match fixture')
 a.work.mkdir(parents=True, exist_ok=False)
 project = a.work/'project'
-shutil.copytree(fixture, project, ignore=shutil.ignore_patterns('Reference', 'Library', 'Logs', '__pycache__', '*.py', '*.md'))
+shutil.copytree(fixture, project, ignore=shutil.ignore_patterns('Authored', 'Reference', 'Library', 'Logs', '__pycache__', '*.py', '*.md'))
 output = a.work/'capture'
 editor = a.editor or Path.home()/'Unity/Hub/Editor'/a.release/'Editor/Unity'
-command = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '900', str(editor), '-batchmode', '-nographics',
+command = [str(Path.home()/'.cache/compat/with-heavy-job'), '--kind', 'editor-gpu', 'timeout', '900', str(editor), '-batchmode',
            '-projectPath', str(project), '-executeMethod', 'ProbeRunner.Record', '-logFile', str(a.work/'editor.log')]
 (a.work/'command.json').write_text(json.dumps(command, indent=2)+'\n')
-env = dict(os.environ, EFFECT_PROBE_OUT=str(output), EFFECT_PROBE_RATE=str(a.rate))
+env = dict(os.environ, EFFECT_PROBE_PROFILE=a.profile, EFFECT_PROBE_OUT=str(output), EFFECT_PROBE_RATE=str(a.rate))
 if a.cases: env['EFFECT_PROBE_CASES'] = a.cases
 with (a.work/'stdout.log').open('w') as log:
     subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
 if not a.cases:
     import sys
     sys.path.insert(0, str(fixture))
-    from verify import verify
+    if a.profile == 'spatial':
+        from spatial import verify
+    else:
+        from verify import verify
     verify(output, a.release, a.rate)

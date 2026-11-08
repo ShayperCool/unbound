@@ -222,6 +222,18 @@ namespace UnityEngine
             set => SetConstant(ref m_SpatialBlendCurve, Mathf.Clamp01(value));
         }
 
+        internal bool UsesSpatialBlend
+        {
+            get
+            {
+                if (m_SpatialBlendCurve.length <= 1) return spatialBlend > 0f;
+                // This is the same bounded sampling used by the native spatial curve table.
+                for (int i = 0; i < CurveSamples; i++)
+                    if (m_SpatialBlendCurve.Evaluate(i / (float)(CurveSamples - 1)) > 0f) return true;
+                return false;
+            }
+        }
+
         public bool spatialize
         {
             get => m_Spatialize;
@@ -624,11 +636,15 @@ namespace UnityEngine
             if (m_IgnoreListenerVolume) flags |= AudioSourceFlags.IgnoreListenerVolume;
             if (m_IgnoreListenerPause) flags |= AudioSourceFlags.IgnoreListenerPause;
             if (m_BypassEffects) flags |= AudioSourceFlags.BypassEffects;
-            if (m_BypassListenerEffects) flags |= AudioSourceFlags.BypassListenerEffects;
+            // Listener routing is separate from bypassing this source's components. In the
+            // measured release bypassEffects does not skip listener filters, even unrouted.
+            if (m_BypassListenerEffects || (m_BypassEffects && !Compat.AudioListenerChainMeasured))
+                flags |= AudioSourceFlags.BypassListenerEffects;
             if (m_BypassReverbZones) flags |= AudioSourceFlags.BypassReverbZones;
             if (m_Spatialize) flags |= AudioSourceFlags.Spatialize;
             if (m_KeepOutput) flags |= AudioSourceFlags.KeepOutput;
             if (Compat.DecodedAudioResamplingMeasured) flags |= AudioSourceFlags.DecodedResampling;
+            if (Compat.AudioComponentTailMeasured) flags |= AudioSourceFlags.ComponentFilterTail;
             if (m_HasFilter && isActiveAndEnabled) flags |= AudioSourceFlags.Filter;
             var packet = new AudioSourcePacket
             {

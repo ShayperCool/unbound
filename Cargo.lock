@@ -6539,6 +6539,7 @@ dependencies = [
  "anyhow",
  "arboard",
  "blake3",
+ "flate2",
  "libloading",
  "memmap2",
  "notify",

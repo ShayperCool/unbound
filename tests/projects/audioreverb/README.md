@@ -79,3 +79,10 @@ The measured rules are in docs/AUDIO.md. Unmeasured: other releases, surround ou
 parameter changes while a tail runs, values outside the documented ranges, unrouted sources with
 `bypassListenerEffects`, listener reverb filters next to OnAudioFilterRead scripts, and other
 sample rates.
+
+Eight added `clip_end_*` cases retain the exact one-buffer tail cutoff on both
+sides of DSP boundaries at both rates. The gate compares 3834102 values per rate;
+every earlier oracle value is retained. Two independent repeats agree exactly.
+NativeApi 33 sends `Compat.AudioComponentTailMeasured`; partial device periods
+use the actual last voice's ending sample. Rust tests check complete output at
+100/255/257/441/1000/1300-frame periods, including one-shots outliving the main voice.

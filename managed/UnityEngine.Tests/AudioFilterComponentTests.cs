@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unbound.Runtime;
 using Xunit;
 
@@ -13,7 +14,8 @@ namespace UnityEngine.Tests
     /// 22000 on set (its Scripting API page). Unbound's choices (unmeasured): the other properties
     /// keep what was set while the descriptor clamps to the documented ranges; chains Unbound cannot place
     /// (a component between two scripts, one above a clipless generator script), a custom cutoff
-    /// curve, components on the AudioListener and unread serialized fields fail loudly. The wire
+    /// curve and unread serialized fields fail loudly. Listener component order is measured by
+    /// tests/projects/audiodistortion; scripts interleaved there still fail clearly. The wire
     /// layout is NativeApi 18's (added at 16), checked against the same offsets in
     /// crates/unbound-runtime/src/audio/protocol.rs. These tests do not measure the DSP; the Rust
     /// mixer tests check the kernel wiring and no capture establishes component parity.
@@ -101,13 +103,13 @@ namespace UnityEngine.Tests
         static ulong Id(Component c) => unchecked((ulong)(long)c.GetInstanceID());
 
         [Fact]
-        public void PacketAndDescriptorLayoutsUnchangedInNativeApi32()
+        public void PacketAndDescriptorLayoutsUnchangedInNativeApi33()
         {
             // Added at 16; 20 adds reverb parameters, 21 the frame zone; 22 adds render commands,
             // 23 adds Distortion, 24 adds Chorus, 25-27 mixer effects, 28 render protocol 12, 29
             // frame input versions, 30 the decoded-resampling flag and 31 the imported texture
             // format, 32 the floating-point mesh colors, without changing the audio descriptor layout.
-            Assert.Equal(32u, NativeApi.CurrentVersion);
+            Assert.Equal(33u, NativeApi.CurrentVersion);
             var frame = default(AudioFramePacket);
             byte* f = (byte*)&frame;
             Assert.Equal((64, 72, 80, 176), ((int)((byte*)&frame.FilterCount - f), (int)((byte*)&frame.Filters - f),
@@ -172,7 +174,7 @@ namespace UnityEngine.Tests
             var d = Collected(source);
             Assert.Equal((10f, 1f), (d[0].Cutoff, d[0].Resonance));
             Assert.Equal((22000f, 10f), (d[1].Cutoff, d[1].Resonance));
-            Assert.Equal((10f, 0f, 1f, 0f), (d[2].Delay, d[2].Decay, d[2].DryMix, d[2].WetMix));
+            Assert.Equal((1f, 0f, 1f, 0f), (d[2].Delay, d[2].Decay, d[2].DryMix, d[2].WetMix));
             echo.delay = 6000f;
             Assert.Equal(5000f, Collected(source)[2].Delay);
             Assert.Equal((10f, 30000f, 6000f), (lowPass.cutoffFrequency, highPass.cutoffFrequency, echo.delay));
@@ -181,6 +183,27 @@ namespace UnityEngine.Tests
             Assert.Equal(22000f, lowPass.cutoffFrequency);
             lowPass.cutoffFrequency = 4000f;
             Assert.Equal(4000f, lowPass.cutoffFrequency);
+        }
+
+        [Fact]
+        public void EchoUsesWholeMillisecondsOnTheMeasuredRelease()
+        {
+            var source = Source("echo delay");
+            var echo = source.gameObject.AddComponent<AudioEchoFilter>();
+            foreach (float value in new[] { 10.125f, 17.1f, 17.5f, 17.9f, 18f })
+            {
+                echo.delay = value;
+                Assert.Equal(MathF.Truncate(value), echo.delay);
+                Assert.Equal(MathF.Truncate(value), Assert.Single(Collected(source)).Delay);
+            }
+            echo.delay = -1.25f;
+            Assert.Equal((float)uint.MaxValue, echo.delay);
+            Assert.Equal(5000f, Assert.Single(Collected(source)).Delay);
+            echo.delay = 1.25f;
+            Assert.Equal(1f, Assert.Single(Collected(source)).Delay);
+            ProjectInfo.UnityVersion = "6000.0.70f1";
+            echo.delay = 17.5f;
+            Assert.Equal(17.5f, Assert.Single(Collected(source)).Delay);
         }
 
         [Fact]
@@ -457,20 +480,55 @@ namespace UnityEngine.Tests
             Assert.Empty(m_Backend.FiltersOf(9));
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void SpatialDistortionAndChorusFailClearlyUntilCommonSpatialProcessingIsExact(bool chorus)
+        {
+            var source = Source("spatial filter");
+            if (chorus) source.gameObject.AddComponent<AudioChorusFilter>();
+            else source.gameObject.AddComponent<AudioDistortionFilter>();
+            Assert.Single(Collected(source));
+            source.spatialBlend = 1f;
+            Assert.Empty(Collected(source));
+            Assert.Empty(Collected(source));
+            Assert.Single(Errors("on a 3D AudioSource is not supported"));
+            source.bypassEffects = true;
+            Assert.Single(Collected(source));
+            source.bypassEffects = false;
+            source.SetCustomCurve(AudioSourceCurveType.SpatialBlend,
+                new AnimationCurve(new Keyframe(0, 0), new Keyframe(1, 0)));
+            Assert.Single(Collected(source));
+            source.SetCustomCurve(AudioSourceCurveType.SpatialBlend,
+                new AnimationCurve(new Keyframe(0, 0), new Keyframe(1, 1)));
+            Assert.Empty(Collected(source));
+            Assert.Equal(2, Errors("on a 3D AudioSource is not supported").Count);
+        }
+
         [Fact]
-        public void OnlyReverbFiltersRunOnTheListener()
+        public void ListenerFiltersKeepInspectorOrderAndRejectUnmeasuredPlacements()
         {
             var go = new GameObject("ears");
             m_Objects.Add(go);
             var listener = go.AddComponent<AudioListener>();
-            go.AddComponent<AudioLowPassFilter>();
-            var reverb = go.AddComponent<AudioReverbFilter>();
+            var filters = new Behaviour[] {
+                go.AddComponent<AudioLowPassFilter>(), go.AddComponent<AudioDistortionFilter>(),
+                go.AddComponent<AudioChorusFilter>(), go.AddComponent<AudioHighPassFilter>(),
+                go.AddComponent<AudioEchoFilter>(), go.AddComponent<AudioReverbFilter>()
+            };
+            go.AddComponent<AudioDistortionFilter>().enabled = false;
             AudioFilterDescriptor[] table = null;
-            Assert.Equal(1, AudioFilterChain.CollectListener(listener, false, ref table));
+            Assert.Equal(6, AudioFilterChain.CollectListener(listener, false, ref table));
+            Assert.Equal(6, AudioFilterChain.CollectListener(listener, false, ref table));
+            Assert.Equal(new[] { 1, 5, 6, 2, 3, 4 }, table.Take(6).Select(d => d.Kind));
+            Assert.Equal(filters.Select(c => unchecked((ulong)(long)c.GetInstanceID())), table.Take(6).Select(d => d.Id));
+            Assert.Empty(Errors("AudioListener 'ears'"));
+            ProjectInfo.UnityVersion = "6000.0.70f1";
+            Assert.False(Compat.AudioListenerChainMeasured);
             Assert.Equal(1, AudioFilterChain.CollectListener(listener, false, ref table));
             Assert.Equal(AudioFilterKind.Reverb, table[0].Kind);
-            Assert.Equal(unchecked((ulong)(long)reverb.GetInstanceID()), table[0].Id);
-            Assert.Contains("AudioLowPassFilter on the AudioListener 'ears' is not supported", Assert.Single(Errors("AudioListener 'ears'")));
+            Assert.Single(Errors("AudioListener 'ears'"));
+            ProjectInfo.UnityVersion = "6000.0.71f1";
 
             var scripted = new GameObject("scripted ears");
             m_Objects.Add(scripted);
@@ -486,6 +544,22 @@ namespace UnityEngine.Tests
             shared.AddComponent<AudioReverbFilter>();
             Assert.Equal(0, AudioFilterChain.CollectListener(third, false, ref table));
             Assert.Contains("runs only in that source's chain", Assert.Single(Errors("AudioListener 'source ears'")));
+        }
+
+        [Fact]
+        public void ListenerBypassIsIndependentOfSourceComponentBypassOnTheMeasuredRelease()
+        {
+            var source = Source("bypass");
+            source.bypassEffects = true;
+            source.SendPacket(9, null, 1, false);
+            Assert.Equal(0u, m_Backend.ParamsOf(9).Flags & AudioSourceFlags.BypassListenerEffects);
+            source.bypassListenerEffects = true;
+            source.SendPacket(9, null, 1, false);
+            Assert.NotEqual(0u, m_Backend.ParamsOf(9).Flags & AudioSourceFlags.BypassListenerEffects);
+            source.bypassListenerEffects = false;
+            ProjectInfo.UnityVersion = "6000.0.70f1";
+            source.SendPacket(9, null, 1, false);
+            Assert.NotEqual(0u, m_Backend.ParamsOf(9).Flags & AudioSourceFlags.BypassListenerEffects);
         }
 
         // Measured in tests/projects/audioreverb (6000.0.71f1).

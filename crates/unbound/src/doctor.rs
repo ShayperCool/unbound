@@ -22,6 +22,11 @@ const RENDERING_LIMITATIONS: &[&str] = &[
     "Game-view Gizmos.DrawIcon, DrawGUITexture and DrawFrustum are not supported; Scene-view rendering is not available.",
 ];
 
+const AUDIO_LIMITATIONS: &[&str] = &[
+    "AudioDistortionFilter and AudioChorusFilter on 3D AudioSources are rejected pending exact common spatial gain, spread, doppler and reverb-zone send processing (audiodistortion spatial controls).",
+    "AudioListener filter components interleaved with OnAudioFilterRead scripts, or sharing their GameObject with an AudioSource, are not supported.",
+];
+
 /// The keys whose referenced object turns an ignored scene settings class into an unread one
 /// (`ClassCoverage.s_IgnoredWithoutData` on the managed side).
 const DATA_KEYS: &[&str] = &["m_OcclusionCullingData", "m_NavMeshData"];
@@ -330,6 +335,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             "projectSettingsFields": settings_coverage.project_settings_fields,
             "unreadInRelease": coverage.unread_in_release,
             "renderingLimitations": RENDERING_LIMITATIONS,
+            "audioLimitations": AUDIO_LIMITATIONS,
             "unsupportedMessages": messages.messages,
             "messageAnalysisFailedAssemblies": messages.failed_assemblies,
         });
@@ -386,6 +392,10 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
                 );
             }
         }
+    }
+    println!("\nAudio limitations:");
+    for limitation in AUDIO_LIMITATIONS {
+        println!("  {limitation}");
     }
     field_coverage.print();
     settings_coverage.print();

@@ -8,13 +8,14 @@ sections below. The structures are in
 The managed components are in `managed/UnityEngine/Audio/AudioFilterComponents.cs`, and the
 per-source chain is in `crates/unbound-runtime/src/audio/mixer.rs`.
 
-Status: source ready, unvalidated for LowPass, HighPass and Echo. No Unity capture measures
-these three on an AudioSource. The DSP reuses the AudioMixer Lowpass, Highpass and Echo kernels in `effects.rs`.
+Status: source ready, unvalidated for LowPass and HighPass on an AudioSource.
+Echo source/listener controls below measure static delay conversion and the shared kernel;
+other source Echo transitions remain unmeasured. The DSP reuses the AudioMixer Lowpass, Highpass and Echo kernels in `effects.rs`.
 Those kernels were measured on mixer groups by `tests/projects/mixerfilters` and
 `tests/projects/mixerecho` (Unity 6000.0.71f1, Linux, 48000 and 44100 Hz). Those captures do not
 establish parity for component chains.
 
-## Wire (NativeApi 27)
+## Wire (NativeApi 33)
 
 `AudioSourcePacket` passes through `NativeApi.AudioUpdateSource`. Version 16 appended the filter
 descriptors to it; version 18 carries them together with render protocol 8 (`DrawIndices`,
@@ -27,6 +28,8 @@ reverb zone descriptor (`zone` at 80, 176 bytes) and sends the source's zone sen
 adds Chorus kind 6, using the first seven reverb entries for dry, wet1..3, delay, rate and depth.
 These two additions keep the descriptor and packet layouts unchanged. Versions 25, 26 and 27 add
 measured mixer Flange, Normalize and Pitch Shifter JSON parameters without changing these layouts.
+NativeApi 33 adds the source flag for component tail timing across partial device periods,
+without changing the packet layouts.
 
 | `AudioSourcePacket` field | Offset | Size |
 | --- | --- | --- |
@@ -117,9 +120,12 @@ Unbound's choices (unmeasured):
     OnAudioFilterRead path ends its last voice, the chain runs on to the end of the next DSP
     buffer, then the tail is cut and the chain reset (clip end at frame 12288: last sample 13311;
     at 12800: 14335). The engine applies this to every component kind; for LowPass, HighPass and
-    Echo it is unmeasured. The end is taken at the 256-frame mix block in which the voice ends,
-    so a device period that is not a multiple of 256 frames can lengthen the tail by up to one DSP
-    buffer.
+    Echo it is unmeasured. `Compat.AudioComponentTailMeasured` selects the exact last-voice
+    ending sample before rounding to its containing DSP buffer, so partial device periods
+    cannot lengthen the tail. Other releases retain the previous render-chunk frontier,
+    unmeasured there. Eight added reverb clip lengths pin both sides of the buffer boundaries;
+    Rust controls retain the complete waveform across 100/255/257/441/1000/1300-frame device
+    periods, both rates, and a one-shot outliving the main voice.
   - `AudioSettings.Reset` (a new output rate) restarts every component empty at the new rate.
 - **No group fade.** The mixer group's startup input fade is not applied to components.
 - **Parameter timing.** Parameters reach the mixer with the source's next packet, at the latest
@@ -137,21 +143,66 @@ Unbound's choices (unmeasured):
   above a clipless generator script, or more than 64 components. Each logs an error once, and
   the source then sends no components.
 - A component with a non-finite parameter logs an error and is skipped.
-- On the hearing AudioListener only `AudioReverbFilter` runs. Other filter kinds there, and
-  reverb filters next to listener OnAudioFilterRead scripts (an unmeasured order), log an error
-  once per listener and are not applied.
+- On the hearing AudioListener all six component kinds use the same ordered chain on the
+  measured release. Components next to listener OnAudioFilterRead scripts, or on a listener
+  sharing its GameObject with a source, log an error once and are not applied on the listener.
 - Live mixer slot Wet changes and unmeasured wet layouts/buffers fail clearly. Static Wet on
   Chorus and Distortion follows the shared rule described below.
 
 ## Follow-up
 
-The compatibility stubs are regenerated. Source-chain parity for LowPass, HighPass and Echo
-still needs Native captures.
+The compatibility stubs are regenerated. Source-chain parity for LowPass and HighPass
+still need Native captures; Echo coverage is described below.
 - Run the managed `AudioFilterComponentTests` and `NativeApiVersionTests`.
 - Run the Rust `audio::mixer` and `audio::protocol` tests.
 - These need a fresh, matching NativeApi-18 CLI and Core. Current API-15 binaries cannot run
   this source.
-- A Native capture of the component chains is unfunded.
+- LowPass and HighPass still need source-chain captures; the listener chains and static Echo controls below are measured.
+
+# AudioListener component chains
+
+The additional listener and Echo cases in tests/projects/audiodistortion measure Unity
+6000.0.71f1 at 48000 and 44100 Hz, stereo output, 1024-frame DSP buffers. Two
+independent Editor captures agree on every metadata value and sample at each rate.
+The extension preserves every pre-existing reference value and tolerance.
+
+| Basis | Contract, observation or limit |
+| --- | --- |
+| Documented, Unity 6000.0 | [Use audio filters](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioEffect.html) describes enabled listener and source filters in Inspector order. [Distortion](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioDistortionFilter.html) explicitly permits the listener; the [Chorus Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioChorusFilter.html) describes the three taps and controls. Neither specifies their placement relative to mixer output or other rendering stages. |
+| Documented, Unity 6000.0 | [AudioSource.bypassListenerEffects](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-bypassListenerEffects.html) excludes listener effects from that source, with no effect when routed into a mixer group. [bypassEffects](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-bypassEffects.html) describes bypassing component and global listener effects. [AudioListener](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioListener.html) allows one listener in a scene. These pages do not define the per-sample arithmetic. |
+| Measured in this release/context | The listener runs after the mixer output and after source summation. Distortion paired with LowPass, HighPass, Echo, Reverb and Chorus, in both orders, follows Inspector order. The Master float sink remains upstream of listener components. The listener chain shares the source/mixer kernels, with independent histories per component. Disabled components are omitted. |
+| Measured in this release/context | An unrouted source with `bypassListenerEffects` joins after the listener chain; another source still passes through it. `bypassEffects` bypasses only the source's components, and does **not** bypass listener components, including on an unrouted source. Mixer-routed sources pass through listener components with either flag. The unrouted `bypassEffects` result narrows the wording of its API description. |
+| Documented, Unity 6000.0 | [AudioEchoFilter.delay](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioEchoFilter-delay.html) and the [Echo Filter Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioEchoFilter.html) describe a float delay, 10..5000 ms, without specifying conversion. |
+| Measured in this release/context | Echo component setters/getters store unsigned whole milliseconds: 17/17.1/17.5/17.9 all read 17, 18 reads 18, 10.125 reads 10, 1.25 reads 1, -1.25 reads 4294967296 as float, and 5000.75 reads 5000. The DSP minimum is 1 ms; the shared Echo core then applies its existing eight-frame conversion. `Compat.AudioComponentEchoDelayMeasured` selects this mapping for both source and listener, including the same source mono/noise/impulse controls. Other releases retain the prior float setter and 10 ms minimum until measured. |
+| Compatibility | `Compat.AudioListenerChainMeasured` selects listener support and packet routing on 6000.0.71f1. Other releases retain their previous reverb-only listener support and unmeasured bypass routing. No DSP kernel or audio-thread allocation is added. |
+| Still unmeasured | Listener components interleaved with OnAudioFilterRead scripts and listeners sharing their GameObject with an AudioSource fail clearly. Live parameter/bypass transitions and wider output layouts remain unmeasured. |
+
+# 3D component placement and remaining spatial playback gap
+
+The separate `spatial` profile in tests/projects/audiodistortion records 42 cases
+per rate at 48000 and 44100 Hz: dry, Distortion and Chorus, each with mono/stereo
+clips, front/side positions, 180-degree spread, half spatial blend, 1.5 pitch,
+motion for doppler and a reverb zone. Each canonical profile has two exact Editor
+repeats. The Rust kernel test feeds the captured dry Master floats through the
+shared Distortion and Chorus cores and compares every resulting Master float.
+Both cores therefore follow spatial gain/attenuation, spread and doppler in these
+measured contexts. This does not establish a cross-release ordering contract or
+the reverb-zone send point.
+
+The common dry spatial path still disagrees with the Editor. For example, with
+linear rolloff at distance 5, min/max distance 1/20, front mono gain is 0.5582422;
+the present path gives 0.7894737. Stereo front summation, side panning, spread,
+partial blend and moving-source controls also disagree. Fixing the common spatial
+matrix and doppler is a separate prerequisite, followed by zone-send placement.
+Active 3D Distortion/Chorus components are rejected with one explicit diagnostic
+per source; bypassed components and the ordinary dry path remain available.
+`unbound doctor` lists this limit and the remaining listener/script placements.
+
+The gate preserves a raw comparison of all 5505110 spatial values per rate,
+including all 5080122/5079854 failures at 48000/44100 Hz. It separately verifies
+all 28 active filter placements are explicitly refused and leave their dry
+controls byte-identical. That rejection check is not a 3D parity certification;
+no existing oracle or comparator bound is changed to accept those samples.
 
 # AudioMixer: SFX Reverb
 
@@ -325,12 +376,11 @@ the Manual (*Audio Reverb Filter*, *Audio Reverb Zone*):
 
 - Parameter values outside the documented ranges reach the kernel clamped to the mixer ranges.
   Native's response to them is unmeasured, as is HF Reference below 1000 Hz.
-- Unmeasured: an unrouted source with `bypassListenerEffects` or `bypassEffects` (it bypasses
-  the listener components, as documented). Also unmeasured, and failing loudly on the listener: a
+- The listener-chain controls above measure unrouted `bypassListenerEffects` and
+  `bypassEffects`, and mixer-routed `bypassEffects`. Still unmeasured, and failing loudly: a
   listener reverb filter next to OnAudioFilterRead scripts, one on a GameObject that also has an
-  AudioSource (it runs only in the source's chain), and other component kinds there. Parameter
-  changes while a tail runs, and a mixer-routed source with `bypassEffects` (the engine still
-  applies the listener components to it), are unmeasured too.
+  AudioSource (it runs only in the source's chain), there. Parameter
+  changes while a tail runs are unmeasured too.
 - Residuals: one-step device PCM flips only (filter and zone cases; the gate admits one step on
   device PCM, never on floats).
 - Zones, unmeasured: a source routed into a mixer group (it sends like any other source),
@@ -590,7 +640,7 @@ The [Distortion Effect Manual](https://docs.unity3d.com/6000.0/Documentation/Man
 [Distortion Filter Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioDistortionFilter.html)
 and [distortionLevel API](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/audiodistortionfilter/distortionlevel)
 document the range 0..1 and default 0.5. The Manual allows the component on a source or listener;
-the listener case is unmeasured here and reports an error. The documented component order,
+the listener case is measured by the controls above. The documented component order,
 enabled state and OnAudioFilterRead placement apply, including the callback's audio-thread and
 Web limitations. The full contract/cause table is in the probe's README.
 
@@ -611,7 +661,7 @@ input fade and 1024-frame mixer group input fade. `mix_clear` confirms the
 that after ClearFloat the getter reports the snapshot value; the DSP still changes on its next
 audio update.
 
-Static effect-slot Wet is covered below. Listener Distortion, 3D sources,
+Static effect-slot Wet is covered below. 3D sources,
 surround output, live level/bypass transitions and other sample rates remain unmeasured.
 Flange is covered by `tests/projects/audioflange`; Normalize is described below.
 Pitch Shifter is described below.
@@ -673,7 +723,8 @@ The 115 cases retain all startup frames, isolated controls before combinations, 
 noise and tones, impulses, small and large signed DC, defaults/endpoints/intermediates, exposed
 setters and DSP clamps, serialized component fields, group/slot/source/component bypass, mono
 and stereo clips, parent/prefader routing and source filters on both sides of OnAudioFilterRead.
-Listener Chorus reports an error. Listener and 3D processing, other output layouts or buffer
+Listener Chorus and its order with Distortion are measured by the listener controls above.
+3D processing, other output layouts or buffer
 sizes, live parameter/bypass changes and rates beyond the two captured rates remain unmeasured.
 
 # Mixer Normalize

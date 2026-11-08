@@ -25,7 +25,8 @@ public static class ProbeRunner
                     + " max=" + definition.GetType().GetField("maxRange").GetValue(definition)
                     + " default=" + definition.GetType().GetField("defaultValue").GetValue(definition));
         Directory.CreateDirectory("Assets/Resources");
-        foreach (string key in Array.ConvertAll(EffectProbe.Cases, row => row[0])) Build(key);
+        foreach (var cases in new[] { EffectProbe.Cases, EffectProbe.SpatialCases })
+            foreach (var row in cases) Build(row[0]);
         var prefab = new GameObject("Serialized");
         prefab.AddComponent<AudioSource>();
         prefab.AddComponent<AudioDistortionFilter>().distortionLevel = 0.37f;

@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &721468680
+--- !u!1 &450365677
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 721468682}
-  - component: {fileID: 721468681}
+  - component: {fileID: 450365679}
+  - component: {fileID: 450365678}
   m_Layer: 0
   m_Name: AudioReverbProbe
   m_TagString: Untagged
@@ -136,25 +136,25 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &721468681
+--- !u!114 &450365678
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 721468680}
+  m_GameObject: {fileID: 450365677}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0238823a377377af99e431ff60ba41af, type: 3}
+  m_Script: {fileID: 11500000, guid: a776b8df4fea9791fbf8800b74ac3e44, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!4 &721468682
+--- !u!4 &450365679
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 721468680}
+  m_GameObject: {fileID: 450365677}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -167,4 +167,4 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 721468682}
+  - {fileID: 450365679}

@@ -48,5 +48,9 @@ for rate in a.rate or (48000, 44100):
     run('compare.py', '--profile', 'all', '--candidate', candidate, '--report', work/f'strict-{rate}.jsonl.gz')
     failed |= bool(run('compare.py', '--profile', 'all', '--pcm-steps', '1', '--residuals', '--candidate', candidate,
                        '--report', work/f'gate-{rate}.jsonl.gz'))
+    if run('engine.py', '--native-project', project, '--runtime', runtime, '--profile', 'spatial',
+           '--work', work/f'spatial-{rate}'): raise SystemExit(f'spatial {rate} failed')
+    failed |= bool(run('spatial.py', '--candidate', work/f'spatial-{rate}/capture',
+                       '--log', work/f'spatial-{rate}/engine.log', '--report', work/f'spatial-{rate}.jsonl.gz'))
 print('reports:', work)
 raise SystemExit(failed)

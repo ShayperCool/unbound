@@ -149,6 +149,21 @@ namespace Unbound.Runtime
         /// tests/projects/audioflange). Other releases fail until measured.</summary>
         internal static bool ModulatedDelayMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Component tails end one DSP buffer after the last voice's containing
+        /// buffer, including partial device periods (tests/projects/audioreverb, 6000.0.71f1).
+        /// Other releases retain their previous render-chunk frontier until measured.</summary>
+        internal static bool AudioComponentTailMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>Echo component delay converts to unsigned whole milliseconds before the shared
+        /// mixer kernel's frame conversion (tests/projects/audiodistortion, 6000.0.71f1).
+        /// Other releases retain their previous float setter and 10 ms DSP minimum until measured.</summary>
+        internal static bool AudioComponentEchoDelayMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>Listener component ordering and per-source bypass, measured on exactly
+        /// 6000.0.71f1 by tests/projects/audiodistortion. Other releases retain reverb-only
+        /// listener support and their prior bypassEffects routing until measured.</summary>
+        internal static bool AudioListenerChainMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>The Distortion waveshaper of the mixer effect and AudioDistortionFilter, measured
         /// on exactly 6000.0.71f1 (tests/projects/audiodistortion). Other releases fail until measured.</summary>
         internal static bool DistortionMeasured => Release == (6000, 0, 71, 'f', 1);

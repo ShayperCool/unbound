@@ -59,6 +59,14 @@ public class AudioReverbProbe : MonoBehaviour
         new[] { "zone_cave", "zone=0", "Z:reverbPreset=Cave" },
         new[] { "zone_overlap", "zone=0", "zone=0", "Z:reverbPreset=Cave" },
         new[] { "zone_overlap_blend", "zone=0", "zone=12.5", "Z:reverbPreset=Cave" },
+        new[] { "clip_end_11264", "filter", "F:reverbPreset=Generic", "frames=11264" },
+        new[] { "clip_end_11265", "filter", "F:reverbPreset=Generic", "frames=11265" },
+        new[] { "clip_end_11519", "filter", "F:reverbPreset=Generic", "frames=11519" },
+        new[] { "clip_end_11521", "filter", "F:reverbPreset=Generic", "frames=11521" },
+        new[] { "clip_end_12287", "filter", "F:reverbPreset=Generic", "frames=12287" },
+        new[] { "clip_end_12289", "filter", "F:reverbPreset=Generic", "frames=12289" },
+        new[] { "clip_end_12500", "filter", "F:reverbPreset=Generic", "frames=12500" },
+        new[] { "clip_end_12801", "filter", "F:reverbPreset=Generic", "frames=12801" },
     };
     public static readonly string[] FilterProperties = {
         "reverbPreset", "dryLevel", "room", "roomHF", "roomLF", "decayTime", "decayHFRatio", "reflectionsLevel",
