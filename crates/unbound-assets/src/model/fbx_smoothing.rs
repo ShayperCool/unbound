@@ -435,22 +435,33 @@ pub fn per_mesh(
             let Some(layer) = layer else {
                 return Ok(None);
             };
+            let mapping = child(layer, "MappingInformationType")
+                .and_then(|m| m.values.first())
+                .map_or(Mapping::None, |v| Mapping::parse(&v.value_str));
             let mut values = match &arrays {
                 Some(arrays) => arrays[order[&(layer as *const _)]].clone(),
-                None if !mesh.edge_smoothing.is_empty() => {
-                    mesh.edge_smoothing.iter().map(|&s| s as u32).collect()
-                }
-                None => mesh.face_smoothing.iter().map(|&s| s as u32).collect(),
+                None => match loader_flags(mesh, mapping) {
+                    Some(values) => values,
+                    None => return Ok(None),
+                },
             };
             if child(layer, "Version").and_then(first_int).unwrap_or(0) < MASK_VERSION {
                 values.iter_mut().for_each(|v| *v = (*v != 0) as u32);
             }
-            let mapping = child(layer, "MappingInformationType")
-                .and_then(|m| m.values.first())
-                .map_or(Mapping::None, |v| Mapping::parse(&v.value_str));
             corners(mesh, mapping, &values, warnings)
         })
         .collect()
+}
+
+/// The loader's smooth/hard flags as layer values, where they stand for the layer's mapping
+/// (edge flags for edge smoothing, face flags for polygon smoothing); `None` otherwise.
+fn loader_flags(mesh: &ufbx::Mesh, mapping: Mapping) -> Option<Vec<u32>> {
+    let flags = match mapping {
+        Mapping::ByEdge => &mesh.edge_smoothing,
+        Mapping::ByPolygon => &mesh.face_smoothing,
+        _ => return None,
+    };
+    (!flags.is_empty()).then(|| flags.iter().map(|&s| s as u32).collect())
 }
 
 /// The layer's values spread over the mesh's face corners.
@@ -838,6 +849,26 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn the_fallback_uses_loader_flags_only_for_their_own_mapping() {
+        // Edge flags stand for edge smoothing (the file's values), face flags for polygon
+        // smoothing; any other mapping has no fallback (no smoothing rather than scrambled flags).
+        let bytes = fixture("EdgesT");
+        let scene = scene(&bytes);
+        let mesh = &scene.meshes[0];
+        let flags = loader_flags(mesh, Mapping::ByEdge).unwrap();
+        let file: Vec<u32> = raw_arrays(&bytes, 1 << 20).unwrap().remove(0);
+        assert_eq!(flags, file);
+        assert!(loader_flags(mesh, Mapping::ByPolygonVertex).is_none());
+        assert!(loader_flags(mesh, Mapping::AllSame).is_none());
+        let bytes = fixture("GroupsAscii");
+        let scene = scene(&bytes);
+        let faces = loader_flags(&scene.meshes[0], Mapping::ByPolygon).unwrap();
+        assert_eq!(faces.len(), scene.meshes[0].faces.len());
+        assert!(faces.iter().all(|&f| f <= 1));
+        assert!(loader_flags(&scene.meshes[0], Mapping::ByControlPoint).is_none());
     }
 
     #[test]
