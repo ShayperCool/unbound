@@ -122,11 +122,14 @@ namespace UnityEngine
             return false;
         }
 
+        /// <summary>The Editor names the type with its namespace (6000.0.71f1,
+        /// tests/projects/destroyphases immediateAwake: 'UnityEngine.ParticleSystem'; appfacts and
+        /// instantiateasync: 'UnityEngine.GameObject').</summary>
         internal void ThrowIfDestroyed()
         {
             if (m_Destroyed)
                 throw new MissingReferenceException(
-                    $"The object of type '{GetType().Name}' has been destroyed but you are still trying to access it.\n" +
+                    $"The object of type '{GetType().FullName}' has been destroyed but you are still trying to access it.\n" +
                     "Your script should either check if it is null or you should not destroy the object.");
         }
 
