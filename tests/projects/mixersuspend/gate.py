@@ -2,6 +2,7 @@
 """Engine-only gate retaining all raw suspension failures and their explicit classification."""
 import argparse
 import datetime
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -11,6 +12,8 @@ from acceptance import check
 
 FIXTURE = Path(__file__).resolve().parent
 REPO = FIXTURE.parents[2]
+sys.path.insert(0, str(REPO/'tests'))
+from probe_paths import shared_runtime
 
 
 def main():
@@ -22,12 +25,12 @@ def main():
     cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound/q43'
     work = args.work or cache/('gate-'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
     work.mkdir(parents=True, exist_ok=False)
-    runtime = args.runtime
-    if runtime is None:
-        cli = Path(os.environ['UNBOUND']).resolve()
-        managed = Path(os.environ.get('UNBOUND_MANAGED_DIR') or cli.parent.parent/'managed')
-        runtime = work/'runtime'; runtime.mkdir()
-        (runtime/'unbound').symlink_to(cli); (runtime/'managed').symlink_to(managed)
+    if args.runtime is None:
+        runtime = shared_runtime(Path(os.environ['UNBOUND']), work/'runtime')
+    else:
+        manifest = args.runtime/'runtime-manifest.json'
+        runtime = shared_runtime(args.runtime/'unbound', work/'runtime', managed=args.runtime/'managed',
+                                 manifest=json.loads(manifest.read_text()) if manifest.is_file() else None)
     def run(script, *flags):
         subprocess.run([sys.executable, str(script), '--release', args.release, *map(str, flags)], check=True)
     for item in ('default', 'submission', 'lifecycle', 'generators', 'state', 'reset-data'):

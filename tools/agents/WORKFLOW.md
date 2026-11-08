@@ -85,6 +85,12 @@ tools/validation/README.md for why that is unsafe).
 4. Implement:
    - Build with `python3 tools/build.py -- build --release --locked -p unbound`.
    - Run the managed tests and the probe against the reference. Iterate until it matches.
+   - Engine-only probes use immutable matching runtimes. `suite.py` and `land.py` capture them
+     automatically. For a manual replay, capture the completed build with
+     `tools/agents/runtime_snapshot.py create --cli <build-cli> --destination <run>/runtime`,
+     then use that reference's `unbound` and `managed/`. A rebuilt artifact gets a new run
+     reference. Keep project `Library/Unbound`, captures and logs private to the run.
+     See [Shared probe runtimes](../validation/README.md#shared-probe-runtimes).
    - Build, run the engine, run the Editor and run tests as often as you need. There are no budgets;
      the job pool bounds the machine.
 5. Commit in small Conventional Commits. Update your gap row in `docs/COMPATIBILITY_GAPS.md`

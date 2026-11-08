@@ -16,7 +16,7 @@ import sys
 PROBE = Path(__file__).resolve().parent
 FIXTURE = PROBE.parent / 'humanoid'
 sys.path.insert(0, str(PROBE.parents[1]))
-from probe_paths import editor_path, reference_file, run_root
+from probe_paths import editor_path, reference_file, run_root, shared_runtime
 from compare import compare, load, validate
 
 LAUNCHER = Path.home() / '.cache/compat/with-heavy-job'
@@ -84,10 +84,10 @@ def capture(work, name, release, runtime=None):
     if runtime:
         env.update(UNBOUND_MANAGED_DIR=str(runtime / 'managed'), LD_LIBRARY_PATH=str(runtime / 'managed'),
                    UNBOUND_CACHE=str(work / 'engine-cache'))
-        command = [str(LAUNCHER), 'timeout', '300', str(runtime / 'unbound'), 'run', '-p', str(project),
+        command = [str(LAUNCHER), '--kind', 'engine-cpu', 'timeout', '300', str(runtime / 'unbound'), 'run', '-p', str(project),
                    '--headless', '2', '--no-watch']
     else:
-        command = [str(LAUNCHER), 'timeout', '600', str(editor_path()), '-batchmode', '-nographics',
+        command = [str(LAUNCHER), '--kind', 'editor-cpu', 'timeout', '600', str(editor_path()), '-batchmode', '-nographics',
                    '-projectPath', str(project), '-executeMethod', 'ProbeRunner.Record', '-logFile', str(out / 'editor.log')]
     (out / 'command.json').write_text(json.dumps({'argv': command, 'env': {k: env[k] for k in env if k not in os.environ or env[k] != os.environ[k]}}, indent=2) + '\n')
     with (out / 'driver.log').open('w') as log:
@@ -106,11 +106,7 @@ def capture(work, name, release, runtime=None):
 
 def copy_runtime(source, work):
     manifest = json.loads((source / 'runtime-manifest.json').read_text())
-    if len(manifest) != 33:
-        raise ValueError('expected the complete 33-file frozen runtime manifest')
-    dest = work / 'runtime'
-    if dest.exists():
-        raise ValueError(f'refusing to overwrite runtime {dest}')
+    dest = shared_runtime(source/'unbound', work/'runtime', managed=source/'managed', manifest=manifest)
     checks = []
     for name, sha in manifest.items():
         if Path(name).is_absolute() or '..' in Path(name).parts:
@@ -118,12 +114,9 @@ def copy_runtime(source, work):
         actual = digest(source / name)
         if actual != sha:
             raise ValueError(f'frozen input hash mismatch: {name}: {actual} != {sha}')
-        target = dest / name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source / name, target)
-        copied = digest(target)
+        copied = digest(dest / name)
         if copied != sha:
-            raise ValueError(f'private copy hash mismatch: {name}')
+            raise ValueError(f'shared snapshot hash mismatch: {name}')
         checks.append({'path': name, 'expected': sha, 'source': actual, 'private': copied})
     (work / 'runtime-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     (work / 'runtime-verification.json').write_text(json.dumps(checks, indent=2) + '\n')

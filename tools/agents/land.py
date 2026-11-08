@@ -54,7 +54,7 @@ import time
 import tomllib
 import xml.etree.ElementTree as ET
 
-GATE_VERSION = '3'
+GATE_VERSION = '4'
 STATE = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound/agents'
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 DOCS_ONLY = re.compile(r'(\.md$)|(^docs/)')
@@ -66,6 +66,7 @@ STUB_PROJECT = 'tests/projects/packages'
 HERE = Path(__file__).resolve().parent
 from probe_runtime import (RELEASE_VARIABLE, default_release, probe_release, NO_EDITOR,
                            EDITOR_WATCH, EDITOR_MARK, EDITOR_EXIT, require_process_watch, stop_tree)
+from runtime_snapshot import snapshot_runtime, pin_main, atomic_json
 
 
 def die(code, message):
@@ -108,6 +109,7 @@ class Gate:
     def __init__(self, worktree, base, probes, full, log):
         self.worktree, self.base, self.probes, self.full, self.log = worktree, base, probes, full, log
         self.env = dict(os.environ)
+        self.probe_runtime = None
 
     def step(self, name, command, shell=False, env=None, guard_editor=False):
         if guard_editor:
@@ -178,8 +180,19 @@ class Gate:
             if self.step('rust tests', [*build_py, '--', 'test', '--release', '--locked', *args]):
                 self.fail('rust tests')
 
+        self.prepare_probe_runtime(target)
         self.run_probes()
 
+    def prepare_probe_runtime(self, target):
+        """Freeze matching build outputs before any probe, retaining their run reference."""
+        self.probe_runtime = snapshot_runtime(Path(self.env['UNBOUND']), target/'managed',
+                                              self.log.with_suffix('.runtime'))
+        runtime = self.probe_runtime
+        libraries = str(runtime/'managed')
+        if self.env.get('LD_LIBRARY_PATH'):
+            libraries += os.pathsep+self.env['LD_LIBRARY_PATH']
+        self.env.update(UNBOUND=str(runtime/'unbound'), UNBOUND_CLI=str(runtime/'unbound'), UNBOUND_RUNTIME=str(runtime),
+                        UNBOUND_MANAGED_DIR=str(runtime/'managed'), LD_LIBRARY_PATH=libraries)
     def run_probes(self):
         """Each --probe command, with the release it runs for in $UNBOUND_PROBE_UNITY_VERSION."""
         for index, probe in enumerate(self.probes, 1):
@@ -325,17 +338,23 @@ def stamp_path(tree, probes, full, root):
 def run_gate(worktree, base, probes, full, branch):
     tree = git('rev-parse', 'HEAD^{tree}', cwd=worktree)
     stamp = stamp_path(tree, probes, full, worktree)
+    runtime_record = stamp.with_suffix('.runtime.json')
     if stamp.is_file():
-        print(f'land: gate already passed for tree {tree[:12]} ({stamp.read_text().strip()})', flush=True)
-        return
+        runtime = json.loads(runtime_record.read_text())['runtime'] if runtime_record.is_file() else None
+        if runtime is None or Path(runtime).is_dir():
+            print(f'land: gate already passed for tree {tree[:12]} ({stamp.read_text().strip()})', flush=True)
+            return Path(runtime) if runtime else None
     logs = STATE/'logs'
     logs.mkdir(parents=True, exist_ok=True)
     safe = re.sub(r'[^A-Za-z0-9._-]+', '-', branch)
     log = logs/f'{datetime.datetime.now():%Y%m%d-%H%M%S}-{safe}.log'
     print(f'land: gate for tree {tree[:12]}, log {log}', flush=True)
-    Gate(worktree, base, probes, full, log).run()
+    gate = Gate(worktree, base, probes, full, log)
+    gate.run()
+    atomic_json(runtime_record, {'runtime': str(gate.probe_runtime) if gate.probe_runtime else None})
     stamp.parent.mkdir(parents=True, exist_ok=True)
     stamp.write_text(f'{branch} {datetime.datetime.now():%F %T}\n')
+    return gate.probe_runtime
 
 
 @contextlib.contextmanager
@@ -414,7 +433,8 @@ def main():
         new = git('rev-parse', 'HEAD')
         if old == new:
             die(2, 'nothing to land: the branch has no commits beyond main')
-        run_gate(worktree, old, args.probe, args.full, branch)
+        runtime = run_gate(worktree, old, args.probe, args.full, branch)
+        old_tree = git('rev-parse', 'main^{tree}')
         if main_checkout:
             require_clean(main_checkout, f'the main checkout {main_checkout}', allow_untracked=True)
             merge = subprocess.run(['git', 'merge', '--ff-only', '--quiet', new], cwd=main_checkout,
@@ -423,6 +443,12 @@ def main():
                 die(2, f'fast-forward of main failed in {main_checkout}:\n{merge.stderr.strip()}')
         else:
             git('update-ref', 'refs/heads/main', new, old)
+        try:
+            pin_main(runtime, worktree, git('rev-parse', 'HEAD^{tree}'), previous_tree=old_tree)
+        except (OSError, ValueError, subprocess.CalledProcessError) as error:
+            # Main has advanced. Its gate reference still retains the snapshot; record
+            # the successful landing even if the additional main pin could not be saved.
+            print(f'land: main advanced, but its runtime pin could not be saved: {error}', file=sys.stderr)
         commits = git('rev-list', '--count', f'{old}..{new}')
         STATE.mkdir(parents=True, exist_ok=True)
         with open(STATE/'landed.jsonl', 'a') as out:

@@ -14,7 +14,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import editor_path, reference_file, run_root
+from probe_paths import editor_path, reference_file, run_root, shared_runtime
 from editor_runner import EditorJob, load_result, result_problem, run as run_editor
 
 PROBE = Path(__file__).resolve().parent
@@ -119,19 +119,12 @@ def main():
         for rel, expected in manifest.items():
             if digest(args.runtime/rel) != expected:
                 raise SystemExit('runtime hash mismatch: '+rel)
-        # Make a verified private copy. Compiler/engine outputs cannot alter frozen inputs.
-        private = work/'runtime'
-        if private.exists():
-            raise SystemExit('refusing to replace private runtime')
-        for rel, expected in manifest.items():
-            out = private/rel
-            out.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(args.runtime/rel, out)
-            assert digest(out) == expected, rel
+        private = shared_runtime(args.runtime/'unbound', work/'runtime',
+                                 managed=args.runtime/'managed', manifest=manifest)
         (work/'runtime-manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
         dest = project(work/'project-engine', args.release)
         os.environ['UNBOUND_MANAGED_DIR'] = str(private/'managed')
-        run(work, 'engine', [LAUNCHER, 'timeout', '180', private/'unbound', 'run', '-p', dest,
+        run(work, 'engine', [LAUNCHER, '--kind', 'engine-cpu', 'timeout', '180', private/'unbound', 'run', '-p', dest,
                             '--target', 'Standalone', '--headless', '1000', '--no-watch'], work/'engine.jsonl')
 
 

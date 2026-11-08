@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run unchanged prior audio DSP comparators with one private matching runtime snapshot.
+"""Run unchanged prior audio DSP comparators with one shared immutable runtime snapshot.
 
 This engine-only ABI regression gate preserves all strict reports and original gate slack.
 Sharing just the runtime snapshot avoids four redundant half-gigabyte binary copies.
@@ -8,11 +8,12 @@ import argparse
 import datetime
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 
 fixture = Path(__file__).resolve().parent
+sys.path.insert(0, str(fixture.parents[1]))
+from probe_paths import shared_runtime
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--release', required=True)
 p.add_argument('--unbound', type=Path, default=os.environ.get('UNBOUND'))
@@ -22,9 +23,7 @@ if not a.unbound: p.error('--unbound or $UNBOUND is required')
 cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound/validation/runs'
 work = a.work or cache/('audio-pitch-regressions-'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
 work.mkdir(parents=True, exist_ok=False)
-runtime = work/'runtime'; runtime.mkdir()
-shutil.copy2(a.unbound, runtime/'unbound')
-shutil.copytree(a.unbound.resolve().parents[1]/'managed', runtime/'managed')
+runtime = shared_runtime(a.unbound, work/'runtime')
 env = dict(os.environ, UNBOUND_SUITE_NO_EDITOR='1', UNBOUND_MANAGED_DIR=str(runtime/'managed'),
            LD_LIBRARY_PATH=str(runtime/'managed'))
 failed = False

@@ -18,6 +18,8 @@ import subprocess
 import sys
 
 fixture = Path(__file__).resolve().parent
+sys.path.insert(0, str(fixture.parents[1]))
+from probe_paths import shared_runtime
 p = argparse.ArgumentParser()
 p.add_argument('--release', required=True)
 p.add_argument('--rate', type=int, choices=(44100, 48000), action='append')
@@ -29,9 +31,7 @@ if not a.unbound: p.error('--unbound or $UNBOUND is required')
 cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound/validation/runs'
 work = a.work or cache/('mixer-duck-gate-'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
 work.mkdir(parents=True, exist_ok=False)
-runtime = work/'runtime'; runtime.mkdir()
-(runtime/'unbound').symlink_to(Path(a.unbound).resolve())
-(runtime/'managed').symlink_to(Path(a.unbound).resolve().parents[1]/'managed', target_is_directory=True)
+runtime = shared_runtime(a.unbound, work/'runtime')
 if not a.native and subprocess.run([sys.executable, str(fixture.parents[1]/'authored_project.py'), 'assemble',
                                    fixture.name, 'default', '--release', a.release,
                                    '--out', str(work/'authored')]).returncode:

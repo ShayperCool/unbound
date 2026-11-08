@@ -90,6 +90,7 @@ DRIVER_TIMEOUT = 5400
 TOOL_TIMEOUT = 1800
 from probe_runtime import (NO_EDITOR, EDITOR_EXIT, EDITOR_MARK, EDITOR_WATCH, Tree,
                            stop_tree, require_process_watch, default_release, probe_release)
+from runtime_snapshot import snapshot_runtime, managed_for as snapshot_managed_for
 
 
 class Step:
@@ -806,8 +807,63 @@ def substitute(value, values):
     return value.format_map(values) if isinstance(value, str) else value
 
 
+def private_project(argv, work):
+    """Give legacy direct-engine recipes their own authored project and Library."""
+    argv = list(argv)
+    for index, argument in enumerate(argv):
+        if argument in ('-p', '--project') and index+1 < len(argv):
+            value, position = argv[index+1], index+1
+            prefix = ''
+        elif argument.startswith('--project='):
+            prefix, value, position = '--project=', argument.split('=', 1)[1], index
+        else:
+            continue
+        source = Path(value)
+        if not source.is_absolute():
+            source = REPO/source
+        source = source.resolve()
+        if not source.is_relative_to(PROJECTS.resolve()) or not (source/'Assets').is_dir():
+            continue
+        project = work/'projects'/source.relative_to(PROJECTS.resolve())
+        if not project.exists():
+            project.mkdir(parents=True)
+            for folder in ('Assets', 'Packages', 'ProjectSettings'):
+                if (source/folder).is_dir():
+                    shutil.copytree(source/folder, project/folder)
+            # Preserve local package locations when moving their manifest/lock to a run.
+            for filename in ('manifest.json', 'packages-lock.json'):
+                copied = project/'Packages'/filename
+                if not copied.is_file():
+                    continue
+                document = json.loads(copied.read_text())
+                changed = False
+                for name, dependency in document.get('dependencies', {}).items():
+                    version = dependency.get('version') if isinstance(dependency, dict) else dependency
+                    if isinstance(version, str) and version.startswith('file:'):
+                        location = Path(version[5:])
+                        if not location.is_absolute():
+                            absolute = 'file:'+str((source/'Packages'/location).resolve())
+                            if isinstance(dependency, dict):
+                                dependency['version'] = absolute
+                            else:
+                                document['dependencies'][name] = absolute
+                            changed = True
+                if changed:
+                    copied.write_text(json.dumps(document, indent=2)+'\n')
+            # Resolved package contents are inputs; mutable engine caches stay private.
+            if (source/'Library/PackageCache').is_dir():
+                (project/'Library').mkdir()
+                (project/'Library/PackageCache').symlink_to(source/'Library/PackageCache', target_is_directory=True)
+            # Some captures load committed bundle inputs relative to their project root.
+            if (source/'Reference').is_dir():
+                (project/'Reference').symlink_to(source/'Reference', target_is_directory=True)
+        argv[position] = prefix+str(project)
+    return argv
+
+
 def step_argv(step, values):
-    return list(step.argv) if step.literal else substitute(step.argv, values)
+    argv = list(step.argv) if step.literal else substitute(step.argv, values)
+    return private_project(argv, Path(values['work'])) if step.kind == 'engine' else argv
 
 
 def run_step(step, values, log, base_env):
@@ -837,7 +893,8 @@ def run_step(step, values, log, base_env):
             return extra.returncode, 'args command failed: ' + last_lines(extra.stderr or extra.stdout)
         argv = [*argv, *extra.stdout.split()]
     if step.kind == 'engine':
-        prefix = [str(LAUNCHER)] + (['--kind', step.launcher_kind] if step.launcher_kind else [])
+        kind = step.launcher_kind or ('engine-cpu' if any(arg.startswith('--headless') for arg in argv) else 'engine-gpu')
+        prefix = [str(LAUNCHER), '--kind', kind]
         argv = [*prefix, 'timeout', str(step.timeout), *argv]
     with log.open('w') as out:
         out.write('$ ' + shlex.join(argv) + '\n')
@@ -968,24 +1025,15 @@ def discover():
 
 
 def managed_for(cli):
-    if os.environ.get('UNBOUND_MANAGED_DIR'):
-        return Path(os.environ['UNBOUND_MANAGED_DIR']).resolve()
-    for candidate in (cli.parent/'managed', cli.parent.parent/'managed'):
-        if (candidate/'Unbound.Host.dll').is_file():
-            return candidate.resolve()
-    raise SystemExit(f'suite: no managed directory for {cli}; set UNBOUND_MANAGED_DIR')
+    try:
+        return snapshot_managed_for(cli)
+    except ValueError as error:
+        raise SystemExit(f'suite: {error}') from error
 
 
 def make_runtime(root, cli, managed):
-    """A runtime directory (unbound + managed/) with a hash manifest, for drivers that want one."""
-    runtime = root/'runtime'
-    runtime.mkdir(parents=True, exist_ok=True)
-    (runtime/'unbound').symlink_to(cli)
-    (runtime/'managed').symlink_to(managed)
-    files = ['unbound'] + sorted('managed/'+str(f.relative_to(managed)) for f in managed.rglob('*') if f.is_file())
-    manifest = {name: hashlib.sha256((runtime/name).read_bytes()).hexdigest() for name in files}
-    (runtime/'runtime-manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
-    return runtime
+    """Keep this suite's reference to a shared, immutable matching runtime."""
+    return snapshot_runtime(cli, managed, root/'runtime')
 
 
 def default_cli():
@@ -1166,7 +1214,12 @@ def main():
     work_root.mkdir(parents=True)
     summary_dir.mkdir(parents=True)
     runtime = make_runtime(work_root, cli, managed)
-    env = dict(os.environ, UNBOUND=str(cli), PYTHONDONTWRITEBYTECODE='1',
+    cli, managed = runtime/'unbound', runtime/'managed'
+    libraries = str(managed)
+    if os.environ.get('LD_LIBRARY_PATH'):
+        libraries += os.pathsep+os.environ['LD_LIBRARY_PATH']
+    env = dict(os.environ, UNBOUND=str(cli), UNBOUND_CLI=str(cli), UNBOUND_MANAGED_DIR=str(managed),
+               UNBOUND_RUNTIME=str(runtime), LD_LIBRARY_PATH=libraries, PYTHONDONTWRITEBYTECODE='1',
                **{NO_EDITOR: '1'})
     env.setdefault('DISPLAY', ':0')
     context = {'work_root': work_root, 'env': env,

@@ -307,3 +307,42 @@ On VDO-backed SSDs, check physical free space with `vdostats`; `df` reports the
 larger logical capacity. Do not move authored project files or canonical
 references independently of their project. A retained backup is frozen after
 the switch; future writes belong to the SSD copy.
+
+## Shared probe runtimes
+
+`suite.py` and the landing gate capture matching CLI, managed assemblies, native libraries,
+and configuration files before running probes. Runtime directories in probe work areas are
+references to read-only snapshots under `$XDG_CACHE_HOME/unbound/runtimes`, or
+`$UNBOUND_RUNTIME_CACHE` when set. Each snapshot key includes the format version, every relative
+file name, SHA256 content digest, and executable bit. Build outputs remain writable and separate.
+Legacy direct-engine suite recipes also stage their authored project under the run directory,
+so their Library is private. Committed bundle references remain shared inputs.
+A capture rejects inputs that change while being copied. Publication renames a complete snapshot
+into place; concurrent callers reuse the same content key.
+
+Probe drivers that need a runtime use `tests/probe_paths.py`'s
+`shared_runtime(cli, destination, managed=None, manifest=None)`. A supplied flat manifest must
+match all captured inputs. The returned path contains `unbound`, `managed/`, and the existing
+flat `runtime-manifest.json`. Existing per-run manifests, verifications, commands and results
+remain in their run directory. Project `Library/Unbound`, compiler caches, captures and logs
+belong to the private project/run, never to the snapshot. Do not chmod or write through runtime
+references.
+
+To capture a runtime for a manual probe:
+
+```bash
+python3 tools/agents/runtime_snapshot.py create --cli "$UNBOUND" \
+  --destination "$HOME/.cache/unbound/validation/runs/my-run/runtime"
+```
+
+To reclaim snapshots after deleting obsolete run directories or their runtime references:
+
+```bash
+python3 tools/agents/runtime_snapshot.py cleanup --days 14
+```
+
+Cleanup holds the same lock as reference publication. It removes snapshots older than the
+retention period only when no retained run reference or current-main gate pin uses them.
+The landing gate pins its successful main snapshot, including across documentation-only
+landings. Abandoned staging directories are collected after the same interval only when their
+publisher process has exited. Manifests and probe results are never deleted by this command.
