@@ -1408,15 +1408,17 @@ namespace Unbound.Runtime
         /// shift it).</summary>
         internal const float MirrorCycleOffset = 0.5f;
 
+        /// <summary>How much later a state plays a clip because the state is mirrored
+        /// (<see cref="MirrorCycleOffset"/> for humanoid clips, nothing otherwise): its pose, root
+        /// motion and events alike (events measured, tests/projects/humanoid eventsMirror*).</summary>
+        double MirrorShift(StateDef def, AnimationClip clip) => Mirrored(def) && clip.HasHumanCurves ? MirrorCycleOffset : 0.0;
+
         /// <summary>The clip a state plays: mirrored (a blend tree child's mirror toggles the
         /// state's), a humanoid clip as <see cref="AnimationClip.StateMirrored"/>.</summary>
         AnimationClip StateClip(AnimationClip original, bool mirror)
         {
             var clip = Controller.MapClip(original);
             if (clip == null || !mirror || clip.m_Legacy || !clip.HasHumanCurves) return clip;
-            if (clip.m_Events.Count > 0)
-                Unbound.Runtime.Stubs.Ignored("Animator mirrored humanoid state events",
-                    "a mirrored state's humanoid clip fires its events at the state's unshifted times (not measured)");
             return clip.StateMirrored;
         }
 
@@ -1436,15 +1438,12 @@ namespace Unbound.Runtime
                             Debug.LogWarning($"The AnimationClip '{clip.name}' used by the Animator '{m_Animator.name}' must not be legacy.", m_Animator);
                         return;
                     }
-                    if (mirror && layer.Def.Additive && clip.HasHumanCurves && clip.Asset.m_Mirror)
-                        Unbound.Runtime.Stubs.Ignored("Animator mirrored state of a mirrored humanoid clip on an additive layer",
-                            "it adds its difference from the clip's own mirrored first frame (not measured)");
                     var bound = Bindings.Bind(clip);
                     if (pose.Value.Length < Bindings.FloatCount || pose.Objects.Length < Bindings.ObjectCount) return; // bound after the poses were sized
                     // Cycle offsets (the clip's, the state's and blend trees') shift looping clips
                     // only; a clip without loop time plays from the state's time (measured,
                     // tests/projects/modelclips).
-                    if (Mirrored(run.Def) && clip.HasHumanCurves) normalized += MirrorCycleOffset;
+                    normalized += MirrorShift(run.Def, clip);
                     double time = clip.isLooping ? normalized + clip.m_CycleOffset : run.Normalized;
                     ClipSampling.Sample(bound, ClipSampling.ClipTime(clip, time, clip.isLooping), weight, pose, mask, objectMask,
                         layer.Def.Additive ? Bindings.AdditiveReference(bound) : null, loopPose: true);
@@ -1587,7 +1586,7 @@ namespace Unbound.Runtime
                 foreach (var (layer, run, end) in left)
                 {
                     if (!(MotionOf(layer.Def, run.Def) is AnimationClip leftClip) || leftClip.m_Events.Count == 0) continue;
-                    double leftOffset = leftClip.isLooping ? run.Def.CycleOffset + leftClip.m_CycleOffset : 0.0;
+                    double leftOffset = leftClip.isLooping ? run.Def.CycleOffset + leftClip.m_CycleOffset + MirrorShift(run.Def, leftClip) : 0.0;
                     FireClipEvents(leftClip, StateInfo(layer, run), 1f, Single(run.Previous + leftOffset), Single(end + leftOffset),
                         run.Fresh && !run.EventsStarted);
                 }
@@ -1596,7 +1595,7 @@ namespace Unbound.Runtime
                 {
                     var clip = played.Asset;
                     if (clip.m_Events.Count == 0 || weight <= 0f) continue;
-                    double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
+                    double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset + MirrorShift(run.Def, played) : 0.0;
                     FireClipEvents(clip, StateInfo(layer, run), weight, Single(run.Previous + offset), Single(run.Normalized + offset),
                         run.Fresh && !run.EventsStarted);
                 }

@@ -340,5 +340,50 @@ AnimatorStateMachine:
             Near.Equal(1f, animator.GetNextAnimatorClipInfo(0)[0].weight);
             Near.Equal(0.1f, animator.deltaPosition.x, 1e-5f);
         }
+
+        public sealed class EventReceiver : MonoBehaviour
+        {
+            public readonly List<float> Times = new List<float>();
+            void OnMark(AnimationEvent e) => Times.Add(e.animatorStateInfo.normalizedTime);
+        }
+
+        /// <summary>A mirrored state plays a looping humanoid clip half a cycle later, its events as
+        /// well: an event at 0.8 fires as the state passes 0.3. Control: the same state unmirrored.</summary>
+        [Theory]
+        [InlineData(true, 0.3f)]
+        [InlineData(false, 0.8f)]
+        public void AMirroredStateFiresItsHumanoidClipsEventsHalfACycleLater(bool mirror, float stateTime)
+        {
+            var yaml = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!91 &9100000\nAnimatorController:\n  m_Name: Events\n"
+                + "  serializedVersion: 5\n  m_AnimatorParameters: []\n  m_AnimatorLayers:\n" + Layer("Base Layer", 1107000001, 0)
+                + Machine(1107000001, WalkState, WalkState) + State(WalkState, "Walk", Walk, mirror) + Clip(Walk, "Walk", 1f, human: true);
+            var animator = Rig(Load(yaml));
+            var clip = animator.runtimeAnimatorController.animationClips[0];
+            Assert.True(clip.HasHumanCurves);
+            clip.AddEvent(new AnimationEvent { time = 0.8f, functionName = "OnMark" });
+            var receiver = animator.gameObject.AddComponent<EventReceiver>();
+            animator.Update(0f);
+            for (int i = 0; i < 10; i++) animator.Update(0.1f);
+            Assert.Single(receiver.Times);
+            Near.Equal(stateTime, receiver.Times[0], 1e-5f);
+        }
+
+        /// <summary>A mirrored state of a mirrored humanoid clip on an additive layer plays as the
+        /// Editor plays it, which logs nothing (tests/projects/humanoid additiveMirrorClip.log).</summary>
+        [Fact]
+        public void AMirroredClipOnAMirroredAdditiveStateLogsNothing()
+        {
+            var yaml = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!91 &9100000\nAnimatorController:\n  m_Name: Additive\n"
+                + "  serializedVersion: 5\n  m_AnimatorParameters: []\n  m_AnimatorLayers:\n"
+                + Layer("Base Layer", 1107000001, 0) + Layer("Additive", 1107000002, 1)
+                + Machine(1107000001, WalkState, WalkState) + Machine(1107000002, RunState, RunState)
+                + State(WalkState, "Walk", Walk) + State(RunState, "Run", Run, mirror: true)
+                + Clip(Walk, "Walk", 1f, human: true) + Clip(Run, "Run", 2f, human: true, mirror: true);
+            var animator = Rig(Load(yaml));
+            m_Logs.Clear();
+            animator.Update(0f);
+            animator.Update(0.1f);
+            Assert.True(m_Logs.Count == 0, string.Join("\n", m_Logs));
+        }
     }
 }

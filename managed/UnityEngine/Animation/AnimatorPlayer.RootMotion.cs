@@ -416,7 +416,7 @@ namespace Unbound.Runtime
                         // A state entered in this update steps the whole update (see Enter).
                         PreviousTime = (float)(run.MotionPrevious ?? run.Previous),
                         Speed = SpeedOf(def),
-                        CycleOffset = def.CycleOffset + (Mirrored(def) ? MirrorCycleOffset : 0f),
+                        CycleOffset = def.CycleOffset + (float)MirrorShift(def, clip),
                     };
                     if (additive)
                     {
