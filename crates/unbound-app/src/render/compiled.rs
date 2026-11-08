@@ -813,6 +813,13 @@ fn value(name: &str, source: Source, v: &DrawValues, textures: &[String]) -> Opt
             which
         }
     };
+    builtin_value(which, name, v, textures)
+}
+
+/// A built-in variable's value (past the draw's and material's properties of its name).
+fn builtin_value(which: Builtin, name: &str, v: &DrawValues, textures: &[String]) -> Option<Value> {
+    let vec = |a: [f32; 4]| Some(Value::Vector(a));
+    let mat = |m: Mat| Some(Value::Matrix(m));
     let t = v.time;
     let view_inverse = || inverse(&v.view);
     let camera_view_inverse = || inverse(&v.camera_view);
@@ -910,18 +917,27 @@ fn named_value(name: &str, v: &DrawValues, textures: &[String]) -> Option<Value>
     if let Some(value) = property_of(found, v.lab, name, v.linear) {
         return vec(value);
     }
-    if let Some(value) = v.globals_index.find(v.globals, name) {
-        match value {
-            PropertyValue::Float(f) => return vec([*f; 4]),
-            PropertyValue::Int(i) => return vec([*i as f32; 4]),
-            PropertyValue::Vector(x) => return vec(*x),
-            PropertyValue::Matrix(m) => return mat(*m),
-            PropertyValue::Texture { .. }
-            | PropertyValue::Buffer(_)
-            | PropertyValue::Array { .. }
-            | PropertyValue::Image { .. } => {}
-        }
+    global_value(v.globals_index.find(v.globals, name)).or_else(|| derived_value(name, v, textures))
+}
+
+/// A global property's value as a uniform's: a number, vector or matrix.
+fn global_value(found: Option<&PropertyValue>) -> Option<Value> {
+    match found? {
+        PropertyValue::Float(f) => Some(Value::Vector([*f; 4])),
+        PropertyValue::Int(i) => Some(Value::Vector([*i as f32; 4])),
+        PropertyValue::Vector(x) => Some(Value::Vector(*x)),
+        PropertyValue::Matrix(m) => Some(Value::Matrix(*m)),
+        PropertyValue::Texture { .. }
+        | PropertyValue::Buffer(_)
+        | PropertyValue::Array { .. }
+        | PropertyValue::Image { .. } => None,
     }
+}
+
+/// What a uniform no property gives takes from its name: a texture's scale and offset or size,
+/// or Unity's neutral values.
+fn derived_value(name: &str, v: &DrawValues, textures: &[String]) -> Option<Value> {
+    let vec = |a: [f32; 4]| Some(Value::Vector(a));
     if let Some(texture) = name.strip_suffix("_ST") {
         return vec(texture_st(v, texture));
     }
@@ -964,6 +980,57 @@ pub struct MaterialBlock {
     dynamic: Vec<u32>,
     /// By uniform index: whether it is one of `dynamic`.
     is_dynamic: Vec<bool>,
+    /// By place in `dynamic`: where its value comes from when the draw's own properties are
+    /// left out (the material's and the shader's are known with the block).
+    shared: Vec<Shared>,
+    /// By place in `dynamic`: where the global property of its name is, once looked up.
+    global_slots: Vec<GlobalSlot>,
+}
+
+/// Where a uniform the draw fills takes its value from, its own properties left out.
+#[derive(Clone, Copy, Debug)]
+enum Shared {
+    /// A built-in variable (the material has no number, vector or matrix of its name).
+    Builtin(Builtin),
+    /// The global property of its name, else what the name derives (the material and the
+    /// shader give it nothing).
+    Global,
+    /// Decided per draw (`_GizmoBatchColor`: the gizmo's colour or a property).
+    Draw,
+}
+
+/// Where a global property is among the globals, learnt once per uniform: global properties are
+/// only ever added or set in place, so a found position keeps the property (checked by name);
+/// an absence holds while the list keeps its length. Packed as the list's length at the last
+/// lookup (high half) and the position plus one, or zero when absent (low half).
+#[derive(Default)]
+struct GlobalSlot(std::sync::atomic::AtomicU64);
+
+impl GlobalSlot {
+    fn find<'g>(
+        &self,
+        globals: &'g [(String, PropertyValue)],
+        index: &unbound_runtime::render_protocol::owned::NameIndex,
+        name: &str,
+    ) -> Option<&'g PropertyValue> {
+        use std::sync::atomic::Ordering::Relaxed;
+        let packed = self.0.load(Relaxed);
+        let (length, at) = ((packed >> 32) as usize, (packed & 0xffff_ffff) as usize);
+        if at > 0 {
+            if let Some((n, value)) = globals.get(at - 1)
+                && n == name
+            {
+                return Some(value);
+            }
+        } else if length == globals.len() {
+            return None;
+        }
+        let found = index.find_position(globals, name);
+        let at = found.map_or(0, |i| i as u64 + 1);
+        self.0
+            .store(((globals.len() as u64) << 32) | (at & 0xffff_ffff), Relaxed);
+        found.map(|i| &globals[i].1)
+    }
 }
 
 /// A uniform's value when the material alone decides it (the same answer `value` gives for a draw
@@ -1076,6 +1143,7 @@ fn material_block(
     let mut bytes = vec![0u8; program.uniform_size as usize];
     let mut dynamic = Vec::new();
     let mut is_dynamic = vec![false; program.uniforms.len()];
+    let mut shared = Vec::new();
     for (i, (u, source)) in program.uniforms.iter().zip(plan).enumerate() {
         if u.count != 1 || u.stride > 0 {
             continue;
@@ -1085,13 +1153,26 @@ fn material_block(
             None => {
                 dynamic.push(i as u32);
                 is_dynamic[i] = true;
+                // Without a value of the material's (`static_value` found none), what `value`
+                // goes on to.
+                shared.push(match *source {
+                    Source::Builtin {
+                        which: Builtin::GizmoColor,
+                        ..
+                    } => Shared::Draw,
+                    Source::Builtin { which, .. } => Shared::Builtin(which),
+                    Source::Named => Shared::Global,
+                });
             }
         }
     }
+    let global_slots = dynamic.iter().map(|_| GlobalSlot::default()).collect();
     MaterialBlock {
         bytes,
         dynamic,
         is_dynamic,
+        shared,
+        global_slots,
     }
 }
 
@@ -1116,8 +1197,25 @@ fn fill_over_block(
         overrides: &[],
         ..*values
     };
-    for &i in &block.dynamic {
-        write_uniform(program, plan, i as usize, &shared, out);
+    for (k, &i) in block.dynamic.iter().enumerate() {
+        let u = &program.uniforms[i as usize];
+        // What `write_uniform` gives without the draw's properties, past the material's.
+        let value = match block.shared[k] {
+            Shared::Builtin(which) => builtin_value(which, &u.name, &shared, &program.textures),
+            Shared::Global => global_value(block.global_slots[k].find(
+                values.globals,
+                values.globals_index,
+                &u.name,
+            ))
+            .or_else(|| derived_value(&u.name, &shared, &program.textures)),
+            Shared::Draw => {
+                write_uniform(program, plan, i as usize, &shared, out);
+                continue;
+            }
+        };
+        if let Some(value) = value {
+            write_value(u, &value, out);
+        }
     }
     // The draw's own properties over the material's, written when a full fill writes them: the
     // `_ST` / `_TexelSize` the draw fills of an override that is no texture (they derive from
@@ -1506,6 +1604,32 @@ mod tests {
                 assert_eq!(full, over, "overrides {overrides:?}, instance {instance:?}");
             }
         }
+    }
+
+    /// A uniform's global property, looked up once: missing until it is added, then followed
+    /// where it is as it is set again (and as other globals are added).
+    #[test]
+    fn a_global_slot_follows_the_globals_as_they_are_added_and_set() {
+        use unbound_runtime::render_protocol::owned::NameIndex;
+        let slot = GlobalSlot::default();
+        let mut globals: Vec<(String, PropertyValue)> = Vec::new();
+        let mut index = NameIndex::default();
+        let float = |v: Option<&PropertyValue>| match v {
+            Some(PropertyValue::Float(f)) => Some(*f),
+            _ => None,
+        };
+        assert_eq!(float(slot.find(&globals, &index, "_G")), None);
+        globals.push(("_Other".into(), PropertyValue::Float(1.0)));
+        index.refresh(&globals);
+        assert_eq!(float(slot.find(&globals, &index, "_G")), None);
+        globals.push(("_G".into(), PropertyValue::Float(2.0)));
+        index.refresh(&globals);
+        assert_eq!(float(slot.find(&globals, &index, "_G")), Some(2.0));
+        globals[1].1 = PropertyValue::Float(3.0);
+        globals.push(("_More".into(), PropertyValue::Float(4.0)));
+        index.refresh(&globals);
+        assert_eq!(float(slot.find(&globals, &index, "_G")), Some(3.0));
+        assert_eq!(float(slot.find(&globals, &index, "_G")), Some(3.0));
     }
 
     #[test]

@@ -545,19 +545,27 @@ pub mod owned {
             properties: &'p [(String, PropertyValue)],
             name: &str,
         ) -> Option<&'p PropertyValue> {
+            self.find_position(properties, name)
+                .map(|i| &properties[i].1)
+        }
+
+        /// Where `name` is in `properties` (as [`NameIndex::find`] finds it).
+        pub fn find_position(
+            &self,
+            properties: &[(String, PropertyValue)],
+            name: &str,
+        ) -> Option<usize> {
             if self.len == properties.len() {
                 match self.map.get(name) {
                     Some(&i) => {
-                        if let Some((n, v)) = properties.get(i as usize)
-                            && n == name
-                        {
-                            return Some(v);
+                        if properties.get(i as usize).is_some_and(|(n, _)| n == name) {
+                            return Some(i as usize);
                         }
                     }
                     None => return None,
                 }
             }
-            properties.iter().find(|(n, _)| n == name).map(|(_, v)| v)
+            properties.iter().position(|(n, _)| n == name)
         }
     }
 
