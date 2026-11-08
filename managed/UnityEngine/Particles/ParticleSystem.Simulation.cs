@@ -80,7 +80,8 @@ namespace UnityEngine
         /// playing in the next frame's Update; particlerender subcull/pause_*: not playing once its
         /// culled parent no longer updates). A parent paused, culled or whose time does not move
         /// does not start it. Unmeasured, Unbound's choices: a parent whose Sub Emitters module is
-        /// disabled does not start it; one that stopped playing does not either.</summary>
+        /// disabled does not start it; one that is not playing does not either, unless its own
+        /// parent starts it this frame (<see cref="StartsSubEmitters"/>).</summary>
         internal void StartWithParent(ParticleSystem parent)
         {
             if (m_IsPlaying || m_IsPaused || !Compat.ParticleSubEmitterStartMeasured || !parent.StartsSubEmitters(0)) return;
@@ -99,7 +100,7 @@ namespace UnityEngine
         {
             if (!m_Registered || m_IsPaused || !m_SubEmitters.enabled) return false;
             float raw = m_Main.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
-            if (!(raw * m_Main.simulationSpeed > 0f)) return false;
+            if (!(raw * m_Main.simulationSpeed > 0f) || !SimulatesThisFrame(depth)) return false;
             if (m_IsPlaying) return true;
             var parent = m_SubEmitterParent;
             return depth < MaxSubEmitterChain && parent != null && !parent.m_Destroyed && parent != this
@@ -108,6 +109,18 @@ namespace UnityEngine
 
         /// <summary>How far up a chain of sub-emitters the start looks (a guard against cycles).</summary>
         const int MaxSubEmitterChain = 8;
+
+        /// <summary>Whether this system's frame update simulates (is not culled) this frame: a
+        /// sub-emitter while the system emitting into it simulates or its own renderer is seen,
+        /// whatever its own culling mode (6000.0.71f1, tests/projects/particlerender subcull/*;
+        /// followed up a chain of sub-emitters: unmeasured).</summary>
+        internal bool SimulatesThisFrame(int depth = 0)
+        {
+            var parent = m_SubEmitterParent;
+            if (parent == null || parent.m_Destroyed || parent.m_GameObject == null || parent == this || depth >= MaxSubEmitterChain)
+                return Culling(m_Main.cullingMode) != CullingState.Culled;
+            return parent.SimulatesThisFrame(depth + 1) || CullingRenderer is ParticleSystemRenderer own && own.enabled && own.isVisible;
+        }
 
         bool Drives(ParticleSystem child)
         {
@@ -287,9 +300,10 @@ namespace UnityEngine
 
         /// <summary><see cref="EmitterMatrix"/> moved to <paramref name="position"/> (where the
         /// emitter was when a particle was born).</summary>
-        Matrix4x4 EmitterMatrixAt(Vector3 position)
+        Matrix4x4 EmitterMatrixAt(Vector3 position) => Moved(EmitterMatrix(), position);
+
+        static Matrix4x4 Moved(Matrix4x4 m, Vector3 position)
         {
-            var m = EmitterMatrix();
             m.m03 = position.x; m.m13 = position.y; m.m23 = position.z;
             return m;
         }
@@ -669,7 +683,7 @@ namespace UnityEngine
             var marks = SlotMarks(m_Count);
             for (int j = 0; j < count; j++) marks[aligned + j] = SlotMark.Admitted;
             var overrides = default(EmitParams);
-            var t = m_GameObject.m_Transform;
+            var emitterFrame = EmitterMatrix();
             float duration = Mathf.Max(m_Main.duration, 0.0001f);
             int requestIndex = 0, requestStart = 0;
             m_Newborn = true;
@@ -694,7 +708,7 @@ namespace UnityEngine
                     m_SpeedNt = Mathf.Clamp01((birthTime - age) / duration);
                 }
                 int index = aligned + j;
-                var emitter = EmitterMatrixAt(EmitterPositionAt(age));
+                var emitter = Moved(emitterFrame, EmitterPositionAt(age));
                 m_ShapeTime = m_TotalTime - age;
                 int spread = request.spreadIndex >= 0 ? request.spreadIndex : local;
                 int spreadCount = request.spreadIndex >= 0 ? request.spreadCount : request.count;
@@ -920,7 +934,6 @@ namespace UnityEngine
                     speedNt = m_SpeedNt, spreadIndex = spreadIndex, spreadCount = spreadCount });
                 return;
             }
-            var t = m_GameObject.m_Transform;
             var emitter = EmitterMatrixAt(EmitterPositionAt(preAge));
             float nt = Mathf.Clamp01(birthTime / Mathf.Max(m_Main.duration, 0.0001f));
             if (!m_HasContext) m_Context = MakeContext();

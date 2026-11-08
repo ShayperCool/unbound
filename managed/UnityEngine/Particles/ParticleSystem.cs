@@ -1318,8 +1318,8 @@ namespace UnityEngine
             // of a culled parent runs on, a Pause child runs on with an AlwaysSimulate parent;
             // particletriggerapi carrier/*: the never played, never seen child of an
             // AlwaysSimulate parent updates).
-            bool linked = parent != null && !parent.m_Destroyed && parent.m_GameObject != null;
-            bool parentSimulates = linked && parent.Culling(parent.m_Main.cullingMode) != CullingState.Culled;
+            bool linked = parent != null && !parent.m_Destroyed && parent.m_GameObject != null && parent != this;
+            bool parentSimulates = linked && parent.SimulatesThisFrame(1);
             var culling = linked
                 ? (parentSimulates || CullingRenderer is ParticleSystemRenderer own && own.enabled && own.isVisible
                     ? CullingState.Simulated : CullingState.Culled)

@@ -189,6 +189,30 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ACulledTopSystemStartsNoneOfItsChain()
+        {
+            var c = Make("c", s => { var e = s.emission; e.SetBursts(new[] { new ParticleSystem.Burst(0f, 1) }); });
+            var b = Make("b", s => { var e = s.emission; e.SetBursts(new[] { new ParticleSystem.Burst(0f, 1) }); });
+            var a = Make("a", s =>
+            {
+                var m = s.main; m.cullingMode = ParticleSystemCullingMode.Pause;
+                var e = s.emission; e.SetBursts(new[] { new ParticleSystem.Burst(0f, 2) });
+            });
+            var bs = b.subEmitters; bs.enabled = true; bs.AddSubEmitter(c, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            var aSubs = a.subEmitters; aSubs.enabled = true; aSubs.AddSubEmitter(b, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            foreach (var ps in new[] { a, b, c }) ps.GetComponent<ParticleSystemRenderer>().SetVisible(false);
+            a.Play();
+            // A playback's first two updates simulate whatever the visibility; the third is culled.
+            Frame();
+            Frame();
+            bool bPlaying = true, cPlaying = true;
+            Frame(() => { bPlaying = b.isPlaying; cPlaying = c.isPlaying; });
+            Assert.False(bPlaying);
+            Assert.False(cPlaying);
+            Assert.Equal(2 * Dt, c.time, 4);
+        }
+
+        [Fact]
         public void AnUnmeasuredReleaseKeepsTheChildStoppedUntilItHasParticles()
         {
             ProjectInfo.UnityVersion = "2022.3.10f1";
