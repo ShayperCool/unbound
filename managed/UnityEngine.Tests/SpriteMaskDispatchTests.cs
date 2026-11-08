@@ -84,6 +84,22 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void FixtureKeepsInternedShaderIdsValidAfterDisposal()
+        {
+            string name = "Tests/ShaderIdLifetime/" + Guid.NewGuid().ToString("N");
+            int property, tag;
+            using (var fixture = new Fixture())
+            {
+                property = Shader.PropertyToID(name);
+                tag = new ShaderTagId(name).id;
+            }
+            Assert.Equal(name, Shader.IdToName(property));
+            Assert.Equal(property, Shader.PropertyToID(name));
+            Assert.Equal(name, Shader.IDToTag(tag));
+            Assert.Equal(tag, new ShaderTagId(name).id);
+        }
+
+        [Fact]
         public void APreviouslyWrittenMaskSurvivesStageFilteringAndCameraBeginOnItsOwnTarget()
         {
             using var f = new Fixture();
@@ -230,7 +246,8 @@ namespace UnityEngine.Tests
                     Save(typeof(PlayerLoopDriver), "s_Engine", clear: false);
                     Save(typeof(ObjectRegistry), "s_Objects");
                     Save(typeof(ObjectRegistry), "s_NextRuntimeId", "s_NextAssetId");
-                    Save(typeof(Shader), "s_PropertyIds", "s_PropertyNames", "s_TagIds", "s_TagNames", clear: false);
+                    // Interned ids outlive fixtures: static renderer caches can first register
+                    // names here and retain those ids for the rest of the process.
                     Save(typeof(ShaderPassInfo), "s_Cache");
                     Save(typeof(GfxStream), "s_Buffer", "s_Length", "s_State", "s_PassTags", "s_Properties", "<CurrentOverride>k__BackingField");
                     Save(typeof(FrameBuilder), "s_Items", "Sources", "s_DrawKeywords", "s_DrawDescriptions", "s_PassTagScratch");
@@ -322,7 +339,6 @@ namespace UnityEngine.Tests
 
             void Save(object owner, params string[] names) => Save(owner, names, true);
             void Save(object owner, string name, bool clear) => Save(owner, new[] { name }, clear);
-            void Save(object owner, string a, string b, string c, string d, bool clear) => Save(owner, new[] { a, b, c, d }, clear);
             void Save(object owner, string[] names, bool clear)
             {
                 var type = owner as Type ?? owner.GetType();

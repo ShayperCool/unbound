@@ -37,6 +37,22 @@ namespace UnityEngine.Tests
 
         // ------------------------------------------------------------------ batch identity and order
 
+        [Fact]
+        public void FixtureKeepsInternedShaderIdsValidAfterDisposal()
+        {
+            string name = "Tests/ShaderIdLifetime/" + Guid.NewGuid().ToString("N");
+            int property, tag;
+            using (var fixture = new Fixture())
+            {
+                property = Shader.PropertyToID(name);
+                tag = new ShaderTagId(name).id;
+            }
+            Assert.Equal(name, Shader.IdToName(property));
+            Assert.Equal(property, Shader.PropertyToID(name));
+            Assert.Equal(name, Shader.IDToTag(tag));
+            Assert.Equal(tag, new ShaderTagId(name).id);
+        }
+
         /// <summary>Unbound's choice (unmeasured): the same texture drawn blended, opaque, blended
         /// under one clip stays three draws, in call order, each with its own blending; the shared
         /// UI material is not touched. b3398e3b: one merged blended batch. Red: drop
@@ -323,7 +339,8 @@ namespace UnityEngine.Tests
                     Assert.False(Native.IsReady);
                     Save(typeof(ObjectRegistry), "s_Objects");
                     Save(typeof(ObjectRegistry), "s_NextRuntimeId", "s_NextAssetId");
-                    Save(typeof(Shader), "s_PropertyIds", "s_PropertyNames", "s_TagIds", "s_TagNames", clear: false);
+                    // Interned ids outlive fixtures: static renderer caches can first register
+                    // names here and retain those ids for the rest of the process.
                     Save(typeof(ShaderPassInfo), "s_Cache");
                     Save(typeof(GfxStream), "s_Buffer", "s_Length", "s_State", "s_PassTags", "s_Properties", "<CurrentOverride>k__BackingField");
                     Save(typeof(FrameBuilder), "s_Items", "s_DrawKeywords", "s_DrawDescriptions", "s_PassTagScratch");
