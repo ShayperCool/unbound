@@ -66,6 +66,8 @@ Altered (marked `Unbound:` in the sources):
   straight path starting at a connection's start marks that start as the connection's corner (an
   agent standing there takes it); an agent reaching a link another agent is on
   (`DtCrowd.tryEnterConnection`) plans to stand, without avoidance, until it is free;
+- `DtOffMeshConnection.costModifier` holds a link's cost modifier, which the engine's query filter
+  uses per metre in place of the link's area cost when it is zero or more (navlinks `costhigh`);
 - `DtNavMeshQuery.GetPathToNode` is visible to the engine (partial paths end at the reachable
   polygon nearest to the target);
 - `DtNavMeshQuery.Raycast` (`DotRecast.Detour/DtNavMeshQuery.cs`) computes the hit wall edge's z

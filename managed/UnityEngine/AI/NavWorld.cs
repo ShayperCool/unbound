@@ -391,6 +391,7 @@ namespace Unbound.Runtime
                     // so an end in the next tile lands there instead of never connecting.
                     side = DtNavMeshBuilder.ClassifyOffMeshPoint(endPos, h.bmin, h.bmax),
                     userId = link.Id,
+                    costModifier = link.Link.costModifier >= 0f ? link.Link.costModifier : -1f,
                 };
                 cons[tile.offMeshCons.Length + i] = con;
             }
@@ -461,7 +462,21 @@ namespace Unbound.Runtime
         public float GetCost(RcVec3f pa, RcVec3f pb, long prevRef, DtMeshTile prevTile, DtPoly prevPoly, long curRef, DtMeshTile curTile,
             DtPoly curPoly, long nextRef, DtMeshTile nextTile, DtPoly nextPoly)
         {
-            return RcVec3f.Distance(pa, pb) * Costs[curPoly.GetArea()];
+            return RcVec3f.Distance(pa, pb) * CostPerMetre(curTile, curPoly);
+        }
+
+        /// <summary>A polygon's cost per metre: its area's; a link's cost modifier in place of its
+        /// area's when that is zero or more (AI Navigation 2.0 manual, NavMeshLink Cost Modifier;
+        /// measured: tests/projects/navlinks costhigh).</summary>
+        float CostPerMetre(DtMeshTile tile, DtPoly poly)
+        {
+            if (poly.GetPolyType() == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION && tile?.data != null)
+            {
+                int i = poly.index - tile.data.header.offMeshBase;
+                var cons = tile.data.offMeshCons;
+                if (cons != null && i >= 0 && i < cons.Length && cons[i].costModifier >= 0f) return cons[i].costModifier;
+            }
+            return Costs[poly.GetArea()];
         }
     }
 

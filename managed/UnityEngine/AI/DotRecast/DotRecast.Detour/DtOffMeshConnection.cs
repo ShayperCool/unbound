@@ -45,5 +45,9 @@ namespace DotRecast.Detour
 
         /// The id of the offmesh connection. (User assigned when the navigation mesh is built.)
         public int userId;
+
+        /// Unbound: the cost per metre of crossing the connection in place of its area's cost; negative:
+        /// the area's cost (NavMeshLinkData.costModifier, Unity's).
+        public float costModifier = -1f;
     }
 }
