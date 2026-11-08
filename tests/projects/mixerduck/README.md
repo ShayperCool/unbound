@@ -90,6 +90,8 @@ every earlier reference value and sample is retained. The strict comparison keep
 device PCM flips whose master floats pass, listed in docs/COMPATIBILITY_GAPS.md. `pcm.py` checks
 every device sample against saturating truncation of its own master sample; both captures have
 zero conversion differences. The measured model and its limits are in docs/AUDIO.md.
+The original 84 engine cases also compare bit for bit before and after the timed transition
+change: 11010218 values at each rate.
 
 The opt-in `DiagnosticCases` are excluded from the canonical capture. Run one at a time with
 `native.py --cases <case>`. Cross-mixer targets report an invalid audio handle and can prevent
