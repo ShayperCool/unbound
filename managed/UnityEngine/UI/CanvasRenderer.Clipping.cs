@@ -21,15 +21,27 @@ namespace UnityEngine
         // Renderer data wins over material properties, including when clipping is disabled.
         internal Dictionary<int, object> CanvasProperties(bool alwaysGamma)
         {
-            m_CanvasProperties[s_GammaProperty] = alwaysGamma ? 1 : 0;
             var rect = m_ClipRect;
-            m_CanvasProperties[s_ClipRectProperty] = m_HasRectClipping
+            var clip = m_HasRectClipping
                 ? new Vector4(rect.xMin, rect.yMin, rect.xMax, rect.yMax)
                 : new Vector4(float.NegativeInfinity, float.NegativeInfinity, float.PositiveInfinity, float.PositiveInfinity);
-            m_CanvasProperties[s_SoftnessXProperty] = m_HasRectClipping ? m_ClippingSoftness.x : 0f;
-            m_CanvasProperties[s_SoftnessYProperty] = m_HasRectClipping ? m_ClippingSoftness.y : 0f;
+            var softness = m_HasRectClipping ? m_ClippingSoftness : Vector2.zero;
+            // Boxed anew only when a value changed (the draws read them every frame).
+            if (m_CanvasPropertiesSet && m_CanvasGamma == alwaysGamma && FloatBits.Same(m_CanvasClip, clip) && FloatBits.Same(m_CanvasSoftness, softness))
+                return m_CanvasProperties;
+            m_CanvasPropertiesSet = true;
+            (m_CanvasGamma, m_CanvasClip, m_CanvasSoftness) = (alwaysGamma, clip, softness);
+            m_CanvasProperties[s_GammaProperty] = alwaysGamma ? 1 : 0;
+            m_CanvasProperties[s_ClipRectProperty] = clip;
+            m_CanvasProperties[s_SoftnessXProperty] = softness.x;
+            m_CanvasProperties[s_SoftnessYProperty] = softness.y;
             return m_CanvasProperties;
         }
+
+        // The values m_CanvasProperties hold.
+        bool m_CanvasPropertiesSet, m_CanvasGamma;
+        Vector4 m_CanvasClip;
+        Vector2 m_CanvasSoftness;
 
         // A private draw material overrides the local keyword without changing the assigned
         // material, its users outside Canvas, or Material.Get*/shaderKeywords readback.

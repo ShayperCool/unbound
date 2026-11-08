@@ -251,7 +251,9 @@ namespace Unbound.Runtime
             int order = canvas.sortingOrder;
             int first = into.Count;
             s_HasDrawnBounds = false;
-            Walk(canvas.transform, canvas, root, camera, into, layer, order, ref depth, isCanvasRoot: true);
+            // Nothing the walk does moves the root: its matrices once for the whole canvas.
+            var placement = new RootPlacement(root.transform);
+            Walk(canvas.transform, canvas, placement, camera, into, layer, order, ref depth, isCanvasRoot: true);
             if (camera == null || first == into.Count) return;
             // Among the camera's draws a canvas sorts as one unit, at the centre of the bounds of
             // what it draws (not at its own transform): a canvas whose content lies behind its root
@@ -303,7 +305,19 @@ namespace Unbound.Runtime
             return false;
         }
 
-        void Walk(Transform t, Canvas canvas, Canvas root, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into,
+        /// <summary>The root canvas's placement: the world matrix its draws carry and its inverse.</summary>
+        readonly struct RootPlacement
+        {
+            internal readonly Matrix4x4 ToWorld, FromWorld;
+
+            internal RootPlacement(Transform root)
+            {
+                ToWorld = root.localToWorldMatrix;
+                FromWorld = root.worldToLocalMatrix;
+            }
+        }
+
+        void Walk(Transform t, Canvas canvas, in RootPlacement root, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into,
             int layer, int order, ref int depth, bool isCanvasRoot)
         {
             var go = t.m_GameObject;
@@ -336,9 +350,9 @@ namespace Unbound.Runtime
                 if (cr.m_CullTransparentMesh && Transparent(cr.m_Mesh)) continue;
                 var color = new Color(cr.m_Color.r, cr.m_Color.g, cr.m_Color.b, alpha);
                 bool alwaysGamma = canvas.m_VertexColorAlwaysGammaSpace;
-                var model = root.transform.localToWorldMatrix;
+                var model = root.ToWorld;
                 ulong mesh = cr.PrepareCanvasMesh(color, QualitySettings.activeColorSpace == ColorSpace.Linear && !alwaysGamma,
-                    root.transform.worldToLocalMatrix * t.localToWorldMatrix).Sync();
+                    root.FromWorld * t.localToWorldMatrix).Sync();
                 ulong texture = cr.m_Texture != null ? TextureHandles.Of(cr.m_Texture) : 0;
                 int submeshes = Math.Max(1, cr.m_Mesh.subMeshCount);
                 if (camera != null) AddDrawnBounds(cr.m_Mesh.bounds, t.localToWorldMatrix);
@@ -375,9 +389,9 @@ namespace Unbound.Runtime
                 if (cr.m_Cull || cr.m_Mesh == null || cr.m_MaterialCount == 0) continue;
                 bool alwaysGamma = canvas.m_VertexColorAlwaysGammaSpace;
                 var color = new Color(cr.m_Color.r, cr.m_Color.g, cr.m_Color.b, cr.m_Color.a * cr.GetInheritedAlpha());
-                var model = root.transform.localToWorldMatrix;
+                var model = root.ToWorld;
                 ulong mesh = cr.PrepareCanvasMesh(color, QualitySettings.activeColorSpace == ColorSpace.Linear && !alwaysGamma,
-                    root.transform.worldToLocalMatrix * t.localToWorldMatrix).Sync();
+                    root.FromWorld * t.localToWorldMatrix).Sync();
                 ulong texture = cr.m_Texture != null ? TextureHandles.Of(cr.m_Texture) : 0;
                 for (int i = 0; i < cr.m_PopMaterialCount && i < cr.m_PopMaterials.Length; i++)
                 {
