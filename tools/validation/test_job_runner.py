@@ -284,6 +284,36 @@ finally:
     for handle in handles:
         handle.close()
 
+# Weighted-memory policies define weights for pooled kinds, never for exclusive
+# writers. All kinds must still admit, and an ordinary writer must yield to a
+# weighted gate without querying a nonexistent heavy-job memory weight.
+original_policy=(state/'job-limits.json').read_text()
+weighted=json.loads(original_policy)
+weighted['memory_tokens']=8
+weighted['weights']={kind:1 for kind in runner.KINDS}
+(state/'job-limits.json').write_text(json.dumps(weighted))
+try:
+    assert not runner.pending_land_job('build',runner.policy())
+    assert not runner.pending_land_job('heavy',runner.policy())
+    for kind in [*runner.KINDS,'heavy']:
+        join([spawn(kind,'weighted-'+kind,.05)])
+    handles=[]
+    for number in range(weighted['build_slots']):
+        handle=(state/f'parity-build-slot-{number}.lock').open('a')
+        fcntl.flock(handle,fcntl.LOCK_EX)
+        handles.append(handle)
+    try:
+        gate=spawn('build','weighted-priority-gate',.1,priority=True)
+        wait_for_priority('heavy')
+        writer=spawn('heavy','weighted-priority-writer',.1)
+        handles.pop().close()
+        join([gate,writer])
+    finally:
+        for handle in handles:
+            handle.close()
+finally:
+    (state/'job-limits.json').write_text(original_policy)
+
 # A raw shared lock stands in for an older runner. The waiting writer must name
 # that holder, keep the turnstile, and be named by the reader queued behind it.
 with runner.lock('parity-heavy-job.lock',fcntl.LOCK_SH):

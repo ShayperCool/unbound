@@ -209,10 +209,10 @@ def blocking_holders(names):
 
 
 def pending_land_job(kind, config):
-    """Live gate waiters in a competing pool. Lock ownership survives no crashed waiter."""
-    resources = {name for group, _ in needs(kind, config) for name in group}
+    """Live gate waiters in a competing pool. Exited waiters release their locks automatically."""
+    resources = set() if kind == 'heavy' else {name for group, _ in needs(kind, config) for name in group}
     for other in [*KINDS, 'heavy']:
-        other_resources = {name for group, _ in needs(other, config) for name in group}
+        other_resources = set() if other == 'heavy' else {name for group, _ in needs(other, config) for name in group}
         if kind != 'heavy' and other != 'heavy' and not resources.intersection(other_resources):
             continue
         with (CACHE/f'parity-land-pending-{other}.lock').open('a') as marker:
