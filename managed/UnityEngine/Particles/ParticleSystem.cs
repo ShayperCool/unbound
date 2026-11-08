@@ -270,7 +270,6 @@ namespace UnityEngine
             foreach (var ps in Systems(withChildren, includeSubEmitters: false))
             {
                 ps.PlaySelf();
-                ps.m_BoundsStale = true;
             }
         }
 
@@ -366,8 +365,9 @@ namespace UnityEngine
         public void Simulate(float t, [Internal.DefaultValue("true")] bool withChildren, [Internal.DefaultValue("true")] bool restart, [Internal.DefaultValue("true")] bool fixedTimeStep)
         {
             ParticleSystemManager.Sync();
-            m_BoundsStale = m_DrawPending = false;
             var systems = SimulatedSystems(withChildren, out int hierarchyCount);
+            // Every simulated system has its bounds again.
+            foreach (var ps in systems) ps.GiveBounds();
             // Reset every selected system before a parent can emit into its children.
             // Otherwise the child's later reset erases that emission and its random cursors.
             if (restart)
@@ -502,7 +502,6 @@ namespace UnityEngine
         void EmitNow(int count, EmitParams emitParams, bool hasOverrides)
         {
             ParticleSystemManager.Sync();
-            m_BoundsStale = true;
             if (count == 0) return;
             if (!m_IsPlaying || m_IsPaused)
             {
@@ -531,7 +530,6 @@ namespace UnityEngine
         public void Emit(Particle particle)
         {
             ParticleSystemManager.Sync();
-            m_BoundsStale = true;
             int index = Allocate();
             if (index >= 0)
             {
@@ -1196,7 +1194,11 @@ namespace UnityEngine
                 m_GameObject.AddComponent<ParticleSystemRenderer>();
             SubEmittersChanged();
             m_HasLastPosition = false;
-            if (m_Main.playOnAwake && m_SubEmitterParent == null) PlaySelf();
+            if (m_Main.playOnAwake && m_SubEmitterParent == null)
+            {
+                PlaySelf();
+                GiveBounds();
+            }
         }
 
         internal override void OnEngineDisable()
@@ -1273,18 +1275,21 @@ namespace UnityEngine
         /// renderer counts as visible whenever a camera draws its layer, so the system keeps
         /// simulating, reported once.</para>
         /// </summary>
-        /// <summary>A script Play or Emit since the last frame update: the renderer's bounds are
-        /// stale.</summary>
-        bool m_BoundsStale;
+        // The renderer's culling bounds, as the Editor keeps them (6000.0.71f1,
+        // tests/projects/particlerender firstvis/*, destroyphases delayFraction, resources
+        // mask_particles): a frame update with a positive frame time (at any simulation speed),
+        // a Simulate, Play On Awake or a render before any update gives the system bounds; an
+        // update with zero frame time leaves them as they were (m_BoundsFrozen: particles emitted
+        // meanwhile do not extend them, a system seen keeps being seen), and a system that never
+        // had bounds then has nothing to draw (m_DrawPending: not drawn, not visible) until it
+        // gets them.
+        internal bool m_HasBounds, m_BoundsFrozen, m_DrawPending;
 
-        /// <summary>A frame update with zero frame time met stale bounds: the renderer has nothing
-        /// to draw (not drawn, not visible) until an update with a positive frame time, whatever
-        /// the simulation speed, or a Simulate (6000.0.71f1, tests/projects/particlerender
-        /// firstvis/*: frames at timeScale 0; Play On Awake, a script Pause and Simulate keep
-        /// the renderer drawable; tests/projects/destroyphases delayFraction). A camera rendering
-        /// before any update draws what was emitted (tests/projects/resources
-        /// mask_particles).</summary>
-        internal bool m_DrawPending;
+        internal void GiveBounds()
+        {
+            m_HasBounds = true;
+            m_BoundsFrozen = m_DrawPending = false;
+        }
 
         internal void CullingFrameUpdate()
         {
@@ -1300,15 +1305,14 @@ namespace UnityEngine
                 ? (parent.Culling(parent.m_Main.cullingMode) != CullingState.Culled || CullingRenderer is ParticleSystemRenderer own && own.enabled && own.isVisible
                     ? CullingState.Simulated : CullingState.Culled)
                 : Culling(mode);
-            // A frame that moves time gives the renderer its bounds again, culled or not (a culled
-            // system keeps the bounds it had; unmeasured, so it cannot stay hidden for good); one
-            // that does not loses stale bounds.
-            if ((m_Main.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime) > 0f) m_BoundsStale = m_DrawPending = false;
+            // A frame that moves time gives the renderer its bounds, culled or not (a culled
+            // system's bounds are unmeasured; this keeps it from staying hidden for good).
+            if ((m_Main.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime) > 0f) GiveBounds();
             else
             {
-                if (m_BoundsStale)
+                if (m_HasBounds) m_BoundsFrozen = true;
+                else if (!m_DrawPending)
                 {
-                    m_BoundsStale = false;
                     m_DrawPending = true;
                     // Nothing to draw: invisible at once, as a renderer turned off.
                     CullingRenderer?.SetVisible(false);

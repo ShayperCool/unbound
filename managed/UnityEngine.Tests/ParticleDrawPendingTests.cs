@@ -34,20 +34,23 @@ namespace UnityEngine.Tests
 
         static ParticleSystem Make(Action<ParticleSystem.MainModule> configure = null)
         {
-            var ps = new GameObject("pending").AddComponent<ParticleSystem>();
-            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            // Inactive while it is set up, so Play On Awake (on by default) does not play it.
+            var go = new GameObject("pending");
+            go.SetActive(false);
+            var ps = go.AddComponent<ParticleSystem>();
             var main = ps.main;
             main.playOnAwake = false;
             main.startLifetime = 5f;
             main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
             configure?.Invoke(main);
+            go.SetActive(true);
             return ps;
         }
 
         static bool Pending(ParticleSystem ps) => ps.GetComponent<ParticleSystemRenderer>().NothingToDraw;
 
         [Fact]
-        public void AZeroTimeUpdateAfterAScriptEmitLeavesNothingToDrawUntilTimeMoves()
+        public void ASystemWithoutBoundsHasNothingToDrawAfterAZeroTimeUpdate()
         {
             var ps = Make();
             try
@@ -62,14 +65,96 @@ namespace UnityEngine.Tests
                 Assert.True(Pending(ps));
                 Frame(0.02f);
                 Assert.False(Pending(ps));
-                // A zero-time update without a new Play or Emit keeps it drawable.
+                // Once it has bounds, zero-time updates keep them, also after an Emit or a Play.
+                ps.Emit(1);
+                ps.Play();
                 Frame(0f);
                 Assert.False(Pending(ps));
-                // Simulate gives the bounds back.
-                ps.Emit(1);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void ARenderBeforeAnyUpdateOrPlayOnAwakeGivesBounds()
+        {
+            var rendered = Make();
+            var awake = new GameObject("awake");
+            awake.SetActive(false);
+            var onAwake = awake.AddComponent<ParticleSystem>();
+            var main = onAwake.main; main.playOnAwake = true; main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+            try
+            {
+                rendered.Play();
+                rendered.Emit(1);
+                rendered.GetComponent<ParticleSystemRenderer>().PrepareCullingBounds();
+                awake.SetActive(true);
                 Frame(0f);
-                Assert.True(Pending(ps));
-                ps.Simulate(0f, true, false);
+                Assert.False(Pending(rendered));
+                Assert.False(Pending(onAwake));
+            }
+            finally
+            {
+                Object.DestroyImmediate(rendered.gameObject);
+                Object.DestroyImmediate(awake);
+            }
+        }
+
+        /// <summary>Bounds are the particles', the emitter only without one; zero-time updates keep
+        /// the last ones (particlerender firstvis/paused/stale and shown_emit).</summary>
+        [Fact]
+        public void ZeroTimeFramesKeepTheLastBoundsOfTheParticles()
+        {
+            var ps = Make();
+            try
+            {
+                var renderer = ps.GetComponent<ParticleSystemRenderer>();
+                ps.Play();
+                ps.Emit(new ParticleSystem.EmitParams { position = new Vector3(-60f, 0f, 0f), startSize = 0.3f, applyShapeToPosition = true }, 1);
+                Frame(0.02f);
+                renderer.PrepareCullingBounds();
+                var far = renderer.CullingBounds;
+                Assert.True(far.center.x < -50f);
+                ps.Emit(new ParticleSystem.EmitParams { position = Vector3.zero, startSize = 0.3f, applyShapeToPosition = true }, 1);
+                Frame(0f);
+                renderer.PrepareCullingBounds();
+                Assert.Equal(far.center, renderer.CullingBounds.center);
+                Frame(0.02f);
+                renderer.PrepareCullingBounds();
+                Assert.True(renderer.CullingBounds.max.x > -1f);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void SimulateGivesEverySimulatedSystemItsBoundsBack()
+        {
+            var parent = Make();
+            var child = Make();
+            child.transform.SetParent(parent.transform, false);
+            try
+            {
+                parent.Play();
+                child.Emit(1);
+                Frame(0f);
+                Assert.True(Pending(parent));
+                Assert.True(Pending(child));
+                parent.Simulate(0f, true, false);
+                Assert.False(Pending(parent));
+                Assert.False(Pending(child));
+            }
+            finally { Object.DestroyImmediate(parent.gameObject); }
+        }
+
+        [Fact]
+        public void EmittingNothingKeepsTheRendererDrawable()
+        {
+            var ps = Make();
+            try
+            {
+                ps.Play();
+                Frame(0.02f);
+                ps.Emit(0);
+                Frame(0f);
                 Assert.False(Pending(ps));
             }
             finally { Object.DestroyImmediate(ps.gameObject); }

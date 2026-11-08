@@ -379,8 +379,8 @@ namespace UnityEngine
 
         /// <summary>World bounds that cover what the renderer draws, from its live particles (centre
         /// ± size by the render mode: a quad's half diagonal, the stretched length, the mesh's
-        /// extent, the pivot) and the emitter's position, computed once per frame and simulation
-        /// state. Trails, a minimum particle size (a screen size) and stretching by the camera's
+        /// extent, the pivot), or the emitter's position without one, computed once per frame and
+        /// simulation state. Trails, a minimum particle size (a screen size) and stretching by the camera's
         /// velocity are not bounded: such a renderer keeps its plain bounds and is drawn (and
         /// visible) whenever a camera draws its layer (Unbound's choice; the bounds Unity culls
         /// particles by are not measured).</summary>
@@ -388,6 +388,13 @@ namespace UnityEngine
         {
             var ps = System;
             int frame = Time.frameCount;
+            if (ps != null)
+            {
+                // Frames with zero frame time keep the bounds the system had (see
+                // ParticleSystem.m_HasBounds); a render before any update gives it bounds.
+                if (ps.m_BoundsFrozen && m_CullingBoundsFrame >= 0) return;
+                if (!ps.m_HasBounds && !ps.m_DrawPending) ps.m_HasBounds = true;
+            }
             if (ps != null && frame == m_CullingBoundsFrame && ps.m_TotalTime == m_CullingBoundsTime && ps.m_Count == m_CullingBoundsCount) return;
             m_CullingBoundsFrame = frame;
             m_CullingBoundsTime = ps != null ? ps.m_TotalTime : -1f;
@@ -415,8 +422,11 @@ namespace UnityEngine
             var toWorld = ps.SimulationToWorld();
             var scale = ps.EmitterScale();
             float maxScale = Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
+            // The particles' bounds; a system without one is a point at its emitter (6000.0.71f1,
+            // particlerender firstvis/paused/stale: particles out of view, emitter in view, unseen).
             var emitter = m_GameObject.m_Transform.position;
-            Vector3 min = emitter, max = emitter;
+            Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue), max = -min;
+            bool any = false;
             for (int i = 0; i < ps.m_Count; i++)
             {
                 ref var p = ref ps.m_Particles[i];
@@ -427,7 +437,9 @@ namespace UnityEngine
                 if (speedReach > 0f) r += speedReach * (p.m_Velocity + p.m_AnimatedVelocity).magnitude;
                 min = Vector3.Min(min, w - new Vector3(r, r, r));
                 max = Vector3.Max(max, w + new Vector3(r, r, r));
+                any = true;
             }
+            if (!any) min = max = emitter;
             // Cameras treat bounds without extent as unknown (always seen); an empty system's
             // point at its emitter is seen only in view (6000.0.71f1, tests/projects/particlerender
             // firstvis/*_empty_*), so the point keeps a minimal extent.

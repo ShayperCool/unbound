@@ -881,6 +881,16 @@ public class ParticleRenderProbe : MonoBehaviour
             var scriptPaused = Add("script_paused", 4.5f, null);
             scriptPaused.Play();
             Emit(scriptPaused, Vector3.zero, Vector3.zero, 0.3f, 0f, 30f);
+            // Seen with a particle in view before the measured frames; at their first frame one
+            // more particle is emitted, or the playing system is played again.
+            var shownEmit = Add("shown_emit", -5f, null);
+            shownEmit.transform.position += new Vector3(0f, 1.5f, 0f);
+            shownEmit.Play();
+            Emit(shownEmit, Vector3.zero, Vector3.zero, 0.3f, 0f, 30f);
+            var shownPlay = Add("shown_play", -5.5f, null);
+            shownPlay.transform.position += new Vector3(0f, -1.5f, 0f);
+            shownPlay.Play();
+            Emit(shownPlay, Vector3.zero, Vector3.zero, 0.3f, 0f, 30f);
             // Plays at simulation speed 0, with a particle in view.
             var still = Add("speed0", 5f, s => { var m = s.main; m.simulationSpeed = 0f; });
             still.Play();
@@ -924,6 +934,8 @@ public class ParticleRenderProbe : MonoBehaviour
             clone.SetActive(true);
             systems.Add(("instantiate", clone.GetComponent<ParticleSystem>()));
             Emit(stale, new Vector3(0f, 1f, 0f), Vector3.zero, 0.3f, 0f, 30f);
+            Emit(shownEmit, new Vector3(0.3f, 0f, 0f), Vector3.zero, 0.3f, 0f, 30f);
+            shownPlay.Play();
             int frame = 0;
             late.Late = () =>
             {
