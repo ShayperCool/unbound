@@ -175,7 +175,9 @@ TexturePacket {
                        // 13 RG16 unorm, 14 RGBA16 unorm, 15 RGB10A2 unorm, 16 R16 unorm (float
                        // RGBA wire data; RGBA8 with a warning where the device cannot keep them),
                        // 17..=34 integer render targets: 17 + (channel index (R, RG, RGBA) × 3 +
-                       // bit index (8, 16, 32)) × 2 + signed; no data, single-sampled
+                       // bit index (8, 16, 32)) × 2 + signed; no data, single-sampled,
+                       // 35 R8 snorm, 36 RG8 snorm, 37 RGBA8 snorm (float RGBA wire data; RGBA8
+                       // with a warning where the device cannot keep them)
   i32 mip_count;       // levels present in data, largest first
   *const u8 data; i64 data_length;   // null: uninitialized (render targets); float formats: RGBA f32 wire data
   i32 filter_mode, wrap_u, wrap_v, aniso_level;
@@ -191,10 +193,10 @@ ImportedTextureInfo { i32 width, height, mip_count, srgb, filter_mode, wrap_u, w
   dimension;   // TextureDimension: 2 2D, 3 Texture3D, 4 cubemap, 5 Texture2DArray; an array's
                // slices and a volume's depth: the `texture-layers` JSON call
   wrap_w;      // the importer's wrapW (NativeApi 14)
-}
-
   texture_format; // Unity's TextureFormat the Editor reports (Alpha8, R8, RGB24 for automatic
                   // uncompressed formats), 0: the one `format`'s data gives (NativeApi 31)
+}
+
 MaterialPacket {
   *const u8 shader_name; i32 shader_name_length;
   i32 render_queue;

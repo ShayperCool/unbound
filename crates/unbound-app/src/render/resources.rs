@@ -479,6 +479,9 @@ pub struct NormFormatCaps {
     pub rg16: Option<wgpu::TextureFormatFeatures>,
     pub rgba16: Option<wgpu::TextureFormatFeatures>,
     pub rgb10a2: Option<wgpu::TextureFormatFeatures>,
+    pub r8snorm: Option<wgpu::TextureFormatFeatures>,
+    pub rg8snorm: Option<wgpu::TextureFormatFeatures>,
+    pub rgba8snorm: Option<wgpu::TextureFormatFeatures>,
     /// The [`INTEGER_FORMATS`] kernels may read and write (bit `i` for the `i`th).
     pub integer_storage: u32,
 }
@@ -564,6 +567,9 @@ impl NormFormatCaps {
         rg16: None,
         rgba16: None,
         rgb10a2: None,
+        r8snorm: None,
+        rg8snorm: None,
+        rgba8snorm: None,
         integer_storage: 0,
     };
 
@@ -583,6 +589,9 @@ impl NormFormatCaps {
             rg16: norm16.then(|| features(wgpu::TextureFormat::Rg16Unorm)),
             rgba16: norm16.then(|| features(wgpu::TextureFormat::Rgba16Unorm)),
             rgb10a2: Some(features(wgpu::TextureFormat::Rgb10a2Unorm)),
+            r8snorm: Some(features(wgpu::TextureFormat::R8Snorm)),
+            rg8snorm: Some(features(wgpu::TextureFormat::Rg8Snorm)),
+            rgba8snorm: Some(features(wgpu::TextureFormat::Rgba8Snorm)),
             integer_storage: INTEGER_FORMATS
                 .iter()
                 .enumerate()
@@ -612,8 +621,8 @@ fn norm_format_caps() -> NormFormatCaps {
     *NORM_FORMAT_CAPS.read().unwrap_or_else(|e| e.into_inner())
 }
 
-/// The format a normalized 16-bit or 10-10-10-2 code is stored in, or why this device cannot
-/// keep it. Every such texture must be one the device samples, filters, copies, draws into and
+/// The format a normalized 16-bit, 10-10-10-2 or signed normalized 8-bit code is stored in, or
+/// why this device cannot keep it. Every such texture must be one the device samples, filters, copies, draws into and
 /// blends, whatever its own use, so render textures and textures of one format stay
 /// copy-compatible (Graphics.CopyTexture). A multisampled target also needs the sample count
 /// and resolving, and one kernels write (enableRandomWrite) storage access.
@@ -630,9 +639,12 @@ pub fn norm_format(
         texture_format::RGBA16_UNORM => (F::Rgba16Unorm, caps.rgba16),
         texture_format::RGB10A2_UNORM => (F::Rgb10a2Unorm, caps.rgb10a2),
         texture_format::R16_UNORM => (F::R16Unorm, caps.r16),
+        texture_format::R8_SNORM => (F::R8Snorm, caps.r8snorm),
+        texture_format::RG8_SNORM => (F::Rg8Snorm, caps.rg8snorm),
+        texture_format::RGBA8_SNORM => (F::Rgba8Snorm, caps.rgba8snorm),
         _ => {
             return Err(format!(
-                "format code {code} is not a normalized 16-bit or 10-10-10-2 code"
+                "format code {code} is not a normalized 16-bit, 10-10-10-2 or signed normalized 8-bit code"
             ));
         }
     };
@@ -728,7 +740,8 @@ pub fn texture_storage(
         12 => stored(wgpu::TextureFormat::Rg16Float, 4),
         4 if packed && !t.random_write => stored(wgpu::TextureFormat::Rg11b10Ufloat, 4),
         4 => stored(wgpu::TextureFormat::Rgba16Float, 8),
-        texture_format::RG16_UNORM..=texture_format::R16_UNORM => {
+        texture_format::RG16_UNORM..=texture_format::R16_UNORM
+        | texture_format::R8_SNORM..=texture_format::RGBA8_SNORM => {
             // Where the device cannot keep them, linear RGBA8: what they were before they had
             // codes of their own.
             match norm_format(t.format, caps, t.render_target, t.random_write, samples) {
@@ -793,8 +806,17 @@ fn unorm(v: f32, max: u32) -> u32 {
     }
 }
 
-/// Upload data (four f32 per texel) of a normalized 16-bit or 10-10-10-2 code as `format`
-/// stores it: its own format, or RGBA8 where it falls back.
+/// Signed normalized: `v` clamped to [-1, 1] in steps of 1 / `max` (round to nearest).
+fn snorm(v: f32, max: u32) -> i32 {
+    if v.is_nan() {
+        0
+    } else {
+        (v.clamp(-1.0, 1.0) * max as f32).round() as i32
+    }
+}
+
+/// Upload data (four f32 per texel) of a normalized 16-bit, 10-10-10-2 or signed normalized
+/// 8-bit code as `format` stores it: its own format, or RGBA8 where it falls back.
 pub fn norm_texels(format: wgpu::TextureFormat, data: &[u8]) -> Vec<u8> {
     let texel = format.block_copy_size(None).unwrap_or(4) as usize;
     let mut out = Vec::with_capacity(data.len() / 16 * texel);
@@ -824,19 +846,31 @@ pub fn norm_texels(format: wgpu::TextureFormat, data: &[u8]) -> Vec<u8> {
                     | unorm(c[3], 3) << 30;
                 out.extend_from_slice(&packed.to_le_bytes());
             }
+            wgpu::TextureFormat::R8Snorm
+            | wgpu::TextureFormat::Rg8Snorm
+            | wgpu::TextureFormat::Rgba8Snorm => {
+                out.extend(c[..texel].iter().map(|v| snorm(*v, 0x7f) as i8 as u8));
+            }
             _ => out.extend(c.map(|v| unorm(v, 0xff) as u8)),
         }
     }
     out
 }
 
-/// A texel of a normalized 16-bit or 10-10-10-2 format as RGBA floats (a one- or two-channel one
-/// reads (r, 0, 0, 1) or (r, g, 0, 1), as the float formats do); none for other formats or a
-/// short texel.
+/// A texel of a normalized 16-bit, 10-10-10-2 or signed normalized 8-bit format as RGBA floats
+/// (a one- or two-channel one reads (r, 0, 0, 1) or (r, g, 0, 1), as the float formats do); none
+/// for other formats or a short texel.
 pub fn norm_texel_to_f32(format: wgpu::TextureFormat, texel: &[u8]) -> Option<[f32; 4]> {
     let u16_at =
         |i: usize| f32::from(u16::from_le_bytes([texel[i * 2], texel[i * 2 + 1]])) / 65535.0;
+    // -128 and -127 both read -1.
+    let i8_at = |i: usize| (f32::from(texel[i] as i8) / 127.0).max(-1.0);
     Some(match format {
+        wgpu::TextureFormat::R8Snorm if !texel.is_empty() => [i8_at(0), 0.0, 0.0, 1.0],
+        wgpu::TextureFormat::Rg8Snorm if texel.len() >= 2 => [i8_at(0), i8_at(1), 0.0, 1.0],
+        wgpu::TextureFormat::Rgba8Snorm if texel.len() >= 4 => {
+            [i8_at(0), i8_at(1), i8_at(2), i8_at(3)]
+        }
         wgpu::TextureFormat::R16Unorm if texel.len() >= 2 => [u16_at(0), 0.0, 0.0, 1.0],
         wgpu::TextureFormat::Rg16Unorm if texel.len() >= 4 => [u16_at(0), u16_at(1), 0.0, 1.0],
         wgpu::TextureFormat::Rgba16Unorm if texel.len() >= 8 => {
@@ -1164,7 +1198,8 @@ pub fn upload_texture(
                         &converted
                     }
                     // Normalized integers from floats, in the format the texture is stored in.
-                    texture_format::RG16_UNORM..=texture_format::R16_UNORM => {
+                    texture_format::RG16_UNORM..=texture_format::R16_UNORM
+                    | texture_format::R8_SNORM..=texture_format::RGBA8_SNORM => {
                         converted = norm_texels(format, src);
                         &converted
                     }
@@ -1301,6 +1336,17 @@ mod tests {
         assert_eq!(f32_to_f16(0.5), 0x3800);
         assert_eq!(f32_to_f16(65504.0), 0x7bff);
         assert_eq!(f32_to_f16(1e9), 0x7c00);
+        // Rounding up past the mantissa's last step carries into the exponent (a baked lightmap
+        // texel just below 0.5 read 0.25, tests/projects/urp lightmap_shadowmask).
+        let below = |v: f32| f32::from_bits(v.to_bits() - 1);
+        assert_eq!(f32_to_f16(below(0.5)), 0x3800);
+        assert_eq!(f32_to_f16(below(2.0)), 0x4000);
+        assert_eq!(f32_to_f16(-below(1.0)), 0xbc00);
+        assert_eq!(f32_to_f16(65520.0), 0x7c00);
+        assert_eq!(f32_to_f16(below(6.1035156e-5)), 0x0400);
+        for bits in (0u16..0x7c00).step_by(7) {
+            assert_eq!(f32_to_f16(f16_to_f32(bits)), bits, "{bits:#x}");
+        }
     }
 
     #[test]
@@ -1336,17 +1382,6 @@ mod tests {
             submeshes: vec![SubMeshPacket {
                 index_start: 0,
                 index_count: 4,
-        // Rounding up past the mantissa's last step carries into the exponent (a baked lightmap
-        // texel just below 0.5 read 0.25, tests/projects/urp lightmap_shadowmask).
-        let below = |v: f32| f32::from_bits(v.to_bits() - 1);
-        assert_eq!(f32_to_f16(below(0.5)), 0x3800);
-        assert_eq!(f32_to_f16(below(2.0)), 0x4000);
-        assert_eq!(f32_to_f16(-below(1.0)), 0xbc00);
-        assert_eq!(f32_to_f16(65520.0), 0x7c00);
-        assert_eq!(f32_to_f16(below(6.1035156e-5)), 0x0400);
-        for bits in (0u16..0x7c00).step_by(7) {
-            assert_eq!(f32_to_f16(f16_to_f32(bits)), bits, "{bits:#x}");
-        }
                 topology: 2,
                 base_vertex: 0,
             }],
@@ -1405,6 +1440,9 @@ mod tests {
             rg16: full(),
             rgba16: full(),
             rgb10a2: full(),
+            r8snorm: full(),
+            rg8snorm: full(),
+            rgba8snorm: full(),
             integer_storage: (1 << 18) - 1,
         }
     }
@@ -1444,6 +1482,9 @@ mod tests {
                 (14, F::Rgba16Unorm, 8),
                 (15, F::Rgb10a2Unorm, 4),
                 (16, F::R16Unorm, 2),
+                (35, F::R8Snorm, 1),
+                (36, F::Rg8Snorm, 2),
+                (37, F::Rgba8Snorm, 4),
             ] {
                 assert_eq!(
                     stored(code, rt, false, if rt { 4 } else { 1 }, &caps),
@@ -1475,7 +1516,7 @@ mod tests {
 
     #[test]
     fn unknown_codes_are_rejected() {
-        for code in [-1, 35, 99, i32::MAX] {
+        for code in [-1, 38, 99, i32::MAX] {
             let s = stored(code, true, false, 1, &full_caps());
             assert_eq!(s.format, wgpu::TextureFormat::Rgba8Unorm);
             assert!(
@@ -1494,6 +1535,9 @@ mod tests {
             rg16: None,
             rgba16: None,
             rgb10a2: full(),
+            r8snorm: full(),
+            rg8snorm: full(),
+            rgba8snorm: full(),
             integer_storage: 0,
         };
         for code in [13, 14, 16] {
@@ -1511,7 +1555,7 @@ mod tests {
             wgpu::TextureFormat::Rgb10a2Unorm
         );
         // Before the renderer reads the device, every one of them falls back.
-        for code in [13, 14, 15, 16] {
+        for code in [13, 14, 15, 16, 35, 36, 37] {
             assert!(
                 stored(code, false, false, 1, &NormFormatCaps::NONE)
                     .fallback
@@ -1532,6 +1576,9 @@ mod tests {
             rg16: guaranteed(F::Rg16Unorm, Features::TEXTURE_FORMAT_16BIT_NORM),
             rgba16: guaranteed(F::Rgba16Unorm, Features::TEXTURE_FORMAT_16BIT_NORM),
             rgb10a2: guaranteed(F::Rgb10a2Unorm, Features::empty()),
+            r8snorm: guaranteed(F::R8Snorm, Features::empty()),
+            rg8snorm: guaranteed(F::Rg8Snorm, Features::empty()),
+            rgba8snorm: guaranteed(F::Rgba8Snorm, Features::empty()),
             integer_storage: 0,
         };
         for code in [13, 14, 16] {
@@ -1591,6 +1638,9 @@ mod tests {
                 rg16: features,
                 rgba16: features,
                 rgb10a2: features,
+                r8snorm: features,
+                rg8snorm: features,
+                rgba8snorm: features,
                 integer_storage: 0,
             };
             for code in [13, 14, 15, 16] {
@@ -1610,6 +1660,9 @@ mod tests {
             rg16: None,
             rgba16: None,
             rgb10a2: full(),
+            r8snorm: full(),
+            rg8snorm: full(),
+            rgba8snorm: full(),
             integer_storage: 0,
         };
         for code in [13, 14, 16] {
@@ -1628,6 +1681,9 @@ mod tests {
             rg16: guaranteed(wgpu::TextureFormat::Rg16Unorm),
             rgba16: guaranteed(wgpu::TextureFormat::Rgba16Unorm),
             rgb10a2: full(),
+            r8snorm: full(),
+            rg8snorm: full(),
+            rgba8snorm: full(),
             integer_storage: 0,
         };
         for code in [13, 14, 16] {
@@ -1644,6 +1700,27 @@ mod tests {
             .flatten()
             .flat_map(|v| v.to_le_bytes())
             .collect()
+    }
+
+    #[test]
+    fn snorm_texels_keep_their_sign() {
+        use wgpu::TextureFormat as F;
+        let floats = |v: [f32; 4]| v.iter().flat_map(|f| f.to_le_bytes()).collect::<Vec<u8>>();
+        // Clamped to [-1, 1], nearest of 255 steps; NaN stores 0.
+        let data = floats([-1.5, -0.5, 0.25, f32::NAN]);
+        assert_eq!(norm_texels(F::Rgba8Snorm, &data), [0x81, 0xc0, 0x20, 0]);
+        assert_eq!(norm_texels(F::Rg8Snorm, &data), [0x81, 0xc0]);
+        assert_eq!(norm_texels(F::R8Snorm, &data), [0x81]);
+        // Read back: -128 reads -1 as -127 does; one-channel formats read (r, 0, 0, 1).
+        assert_eq!(
+            norm_texel_to_f32(F::Rgba8Snorm, &[0x80, 0x81, 0x7f, 0]),
+            Some([-1.0, -1.0, 1.0, 0.0])
+        );
+        assert_eq!(
+            norm_texel_to_f32(F::R8Snorm, &[0xc0]),
+            Some([-64.0 / 127.0, 0.0, 0.0, 1.0])
+        );
+        assert_eq!(norm_texel_to_f32(F::Rg8Snorm, &[0x7f]), None);
     }
 
     #[test]

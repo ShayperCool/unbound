@@ -3215,6 +3215,9 @@ impl UnityRenderer {
             wgpu::TextureFormat::Rgba16Unorm => texture_format::RGBA16_UNORM,
             wgpu::TextureFormat::Rgb10a2Unorm => texture_format::RGB10A2_UNORM,
             wgpu::TextureFormat::R16Unorm => texture_format::R16_UNORM,
+            wgpu::TextureFormat::R8Snorm => texture_format::R8_SNORM,
+            wgpu::TextureFormat::Rg8Snorm => texture_format::RG8_SNORM,
+            wgpu::TextureFormat::Rgba8Snorm => texture_format::RGBA8_SNORM,
             f => resources::integer_code(f).unwrap_or(0),
         };
         let next = handle::PLAIN_MAX - self.grabs.len() as u64;
@@ -3828,14 +3831,18 @@ impl UnityRenderer {
                 wgpu::TextureFormat::R16Unorm
                 | wgpu::TextureFormat::Rg16Unorm
                 | wgpu::TextureFormat::Rgba16Unorm
-                | wgpu::TextureFormat::Rgb10a2Unorm => {
+                | wgpu::TextureFormat::Rgb10a2Unorm
+                | wgpu::TextureFormat::R8Snorm
+                | wgpu::TextureFormat::Rg8Snorm
+                | wgpu::TextureFormat::Rgba8Snorm => {
                     for pixel in line.chunks_exact(texel as usize) {
                         let rgba = resources::norm_texel_to_f32(format, pixel)?;
                         for v in rgba {
                             if float {
                                 out.extend_from_slice(&v.to_le_bytes());
                             } else {
-                                out.push((v * 255.0).round() as u8);
+                                // Negative (signed) values read as 0.
+                                out.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
                             }
                         }
                     }

@@ -176,6 +176,15 @@ pub mod texture_format {
     /// The first integer code ([`integer`]): render targets only, no upload data.
     pub const INTEGER_FIRST: i32 = 17;
     pub const INTEGER_LAST: i32 = 34;
+    /// One signed normalized 8-bit channel (Unity's `R8_SNorm`); data: four f32 per texel, of
+    /// which the first is kept.
+    pub const R8_SNORM: i32 = 35;
+    /// Two signed normalized 8-bit channels (Unity's `R8G8_SNorm`); data: four f32 per texel,
+    /// of which the first two are kept.
+    pub const RG8_SNORM: i32 = 36;
+    /// Four signed normalized 8-bit channels (Unity's `R8G8B8A8_SNorm`: what URP's depth-normals
+    /// prepass draws into); data: four f32 per texel.
+    pub const RGBA8_SNORM: i32 = 37;
 
     /// The integer code of `channels` (1, 2 or 4) channels of `bits` (8, 16 or 32) each, signed
     /// or unsigned (Unity's R/RG/RGBA 8/16/32 SInt/UInt): 17 + (channel index × 3 + bit index)
@@ -197,7 +206,7 @@ pub mod texture_format {
     /// The packet's code, or why the renderer cannot take it: codes outside the table are
     /// rejected rather than drawn as some other format.
     pub fn validate(code: i32) -> Result<i32, String> {
-        if (SRGB_RGBA8..=INTEGER_LAST).contains(&code) {
+        if (SRGB_RGBA8..=RGBA8_SNORM).contains(&code) {
             Ok(code)
         } else {
             Err(format!(
@@ -210,7 +219,11 @@ pub mod texture_format {
     pub fn float_data(code: i32) -> bool {
         matches!(
             code,
-            RGBA_HALF | R32_FLOAT | RGBA32_FLOAT..=RG16_FLOAT | RG16_UNORM..=R16_UNORM
+            RGBA_HALF
+                | R32_FLOAT
+                | RGBA32_FLOAT..=RG16_FLOAT
+                | RG16_UNORM..=R16_UNORM
+                | R8_SNORM..=RGBA8_SNORM
         )
     }
 }
@@ -224,8 +237,8 @@ pub struct TexturePacket {
     /// 11/11/10 floats (render targets only, no data), 5 none: a depth-only render target, which
     /// reads as its depth when sampled; 6 R32F, 9 RGBA32F, 10 RG32F, 11 R16F, 12 RG16F,
     /// 13 RG16 unorm, 14 RGBA16 unorm, 15 RGB10A2 unorm, 16 R16 unorm, 17..=34 integer render
-    /// targets (see [`texture_format`]).
-    /// Float upload data is always four f32 channels (13..=16 included). 7/8 are BC7 color/data
+    /// targets, 35 R8 snorm, 36 RG8 snorm, 37 RGBA8 snorm (see [`texture_format`]).
+    /// Float upload data is always four f32 channels (13..=16 and 35..=37 included). 7/8 are BC7 color/data
     /// imported textures, passed only by native producers.
     pub format: i32,
     pub mip_count: i32,
@@ -700,8 +713,8 @@ mod tests {
         assert_eq!(offset_of!(MeshPacket, uv), 40);
     }
 
-    /// The normalized 16-bit, 10-10-10-2 and integer codes extend the table by value: the packet
-    /// keeps its layout, and codes past the table are rejected.
+    /// The normalized 16-bit, 10-10-10-2, integer and signed normalized 8-bit codes extend the
+    /// table by value: the packet keeps its layout, and codes past the table are rejected.
     #[test]
     fn texture_format_codes() {
         use texture_format::*;
@@ -709,16 +722,25 @@ mod tests {
             (RG16_UNORM, RGBA16_UNORM, RGB10A2_UNORM, R16_UNORM),
             (13, 14, 15, 16)
         );
-        for code in 0..=INTEGER_LAST {
+        assert_eq!((R8_SNORM, RG8_SNORM, RGBA8_SNORM), (35, 36, 37));
+        for code in 0..=RGBA8_SNORM {
             assert_eq!(validate(code), Ok(code));
         }
         // The integer codes follow the normalized ones, without upload data.
         assert_eq!((integer(1, 8, false), integer(4, 32, true)), (17, 34));
         assert!((INTEGER_FIRST..=INTEGER_LAST).all(|c| !float_data(c)));
-        for code in [-1, 35, 36, i32::MAX, i32::MIN] {
+        for code in [-1, 38, 39, i32::MAX, i32::MIN] {
             assert!(validate(code).is_err(), "{code} is accepted");
         }
-        for code in [RG16_UNORM, RGBA16_UNORM, RGB10A2_UNORM, R16_UNORM] {
+        for code in [
+            RG16_UNORM,
+            RGBA16_UNORM,
+            RGB10A2_UNORM,
+            R16_UNORM,
+            R8_SNORM,
+            RG8_SNORM,
+            RGBA8_SNORM,
+        ] {
             assert!(float_data(code), "{code} data is not four floats");
         }
         let floats: Vec<i32> = (0..=16).filter(|&c| float_data(c)).collect();

@@ -829,18 +829,24 @@ namespace Unbound.Runtime
         };
 
         /// <summary>Packet formats the renderer keeps at their own precision where the device can
-        /// (else as linear RGBA8, with a warning): normalized 16-bit R, RG and RGBA, and packed
-        /// 10-10-10-2. Their upload data is four floats per texel.</summary>
-        internal const int GpuRG16UNorm = 13, GpuRGBA16UNorm = 14, GpuRGB10A2UNorm = 15, GpuR16UNorm = 16;
+        /// (else as linear RGBA8, with a warning): normalized 16-bit R, RG and RGBA, packed
+        /// 10-10-10-2 and signed normalized 8-bit R, RG and RGBA. Their upload data is four floats
+        /// per texel.</summary>
+        internal const int GpuRG16UNorm = 13, GpuRGBA16UNorm = 14, GpuRGB10A2UNorm = 15, GpuR16UNorm = 16,
+            GpuR8SNorm = 35, GpuRG8SNorm = 36, GpuRGBA8SNorm = 37;
 
-        /// <summary>The packet format of a normalized 16-bit or 10-10-10-2 graphics format, or -1.
-        /// Textures and render textures of one format share it (copies between them need it).</summary>
+        /// <summary>The packet format of a normalized 16-bit, 10-10-10-2 or signed normalized 8-bit
+        /// graphics format, or -1. Textures and render textures of one format share it (copies
+        /// between them need it).</summary>
         internal static int GpuNormFormat(UnityEngine.Experimental.Rendering.GraphicsFormat format) => format switch
         {
             UnityEngine.Experimental.Rendering.GraphicsFormat.R16_UNorm => GpuR16UNorm,
             UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16_UNorm => GpuRG16UNorm,
             UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_UNorm => GpuRGBA16UNorm,
             UnityEngine.Experimental.Rendering.GraphicsFormat.A2B10G10R10_UNormPack32 => GpuRGB10A2UNorm,
+            UnityEngine.Experimental.Rendering.GraphicsFormat.R8_SNorm => GpuR8SNorm,
+            UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8_SNorm => GpuRG8SNorm,
+            UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_SNorm => GpuRGBA8SNorm,
             _ => -1,
         };
 

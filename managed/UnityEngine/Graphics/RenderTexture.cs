@@ -260,9 +260,10 @@ namespace UnityEngine
         public bool IsCreatedOrPending() => m_Created;
 
         /// <summary>The native target format: packed 11/11/10 floats as themselves, half floats for
-        /// other HDR formats, normalized 16-bit R/RG/RGBA and packed 10-10-10-2 as themselves (as
-        /// linear RGBA8, with a warning, where the device cannot keep them), 8/16/32-bit integer
-        /// formats as themselves, RGBA8 otherwise (an sRGB view for sRGB ones).</summary>
+        /// other HDR formats, normalized 16-bit R/RG/RGBA, packed 10-10-10-2 and signed normalized
+        /// 8-bit R/RG/RGBA as themselves (as linear RGBA8, with a warning, where the device cannot
+        /// keep them), 8/16/32-bit integer formats as themselves, RGBA8 otherwise (an sRGB view for
+        /// sRGB ones; other signed normalized formats with a warning: they lose their sign).</summary>
         internal int PacketFormat()
         {
             var f = m_Descriptor.graphicsFormat;
@@ -280,6 +281,8 @@ namespace UnityEngine
             if (integer >= 0) return integer;
             if (GraphicsFormatUtility.IsIntegerFormat(f) && s_WarnedIntegerFormats.Add(f))
                 Debug.LogWarning($"Unbound: render texture '{name}' has the packed integer format {f}, which Unbound does not store yet: it is kept as 8-bit RGBA (values beyond 8 bits per channel are lost).");
+            else if (GraphicsFormatUtility.IsSNormFormat(f) && s_WarnedIntegerFormats.Add(f))
+                Debug.LogWarning($"Unbound: render texture '{name}' has the signed normalized format {f}, which Unbound does not store yet: it is kept as 8-bit RGBA (negative values read as 0).");
             return GraphicsFormatUtility.IsSRGBFormat(f) ? 0 : 1;
         }
 
@@ -297,7 +300,7 @@ namespace UnityEngine
             return 17 + (c * 3 + b) * 2 + (GraphicsFormatUtility.IsSIntFormat(f) ? 1 : 0);
         }
 
-        /// <summary>Integer formats warned about (once each).</summary>
+        /// <summary>Integer and signed normalized formats warned about (once each).</summary>
         static readonly HashSet<GraphicsFormat> s_WarnedIntegerFormats = new HashSet<GraphicsFormat>();
 
         /// <summary>The layers the renderer allocates: an array's depth, a cube's six faces, else one
