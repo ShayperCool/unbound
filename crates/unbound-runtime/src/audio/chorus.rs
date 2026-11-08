@@ -13,7 +13,7 @@ pub struct ChorusSpec {
     pub dry: f32,
     pub wet1: f32,
     pub wet2: f32,
-    /// `None`: a Delay above 100 ms, which keeps the previous DSP delay.
+    /// `None`: a Delay above 100 ms, which keeps the previous valid control value.
     pub delay: Option<f32>,
     pub rate: f32,
     pub depth: f32,
@@ -40,8 +40,10 @@ const DEFAULT_DELAY_MS: f32 = 40.0;
 
 pub struct Chorus {
     line: ModulatedDelay,
-    /// The DSP delay in milliseconds: a Delay above 100 ms keeps the previous one.
+    /// Latest valid delay control; a delay change alone does not rebuild the span target.
     delay: f32,
+    depth: Option<f32>,
+    span: f32,
 }
 impl Chorus {
     /// 100 ms of history.
@@ -55,24 +57,33 @@ impl Chorus {
         Ok(Self {
             line: ModulatedDelay::new("Chorus", rate, buffer, Self::reach)?,
             delay: DEFAULT_DELAY_MS,
+            depth: None,
+            span: 0.0,
         })
     }
     pub fn configuration(&self) -> (u32, u32) {
         self.line.configuration()
     }
-    /// Forgets the history and the sweep; the retained DSP delay stays.
+    /// Clears history and sweep, rebuilding the span from retained controls on next use.
     pub fn clear(&mut self) {
         self.line.clear();
+        self.depth = None;
+        self.span = 0.0;
     }
     pub fn process(&mut self, samples: &mut [f32], spec: &ChorusSpec) {
         if let Some(delay) = spec.delay {
             self.delay = delay;
         }
-        let rate = self.line.rate() as f32;
-        let target = ((self.delay * spec.depth) * rate / 1000.0) * spec.depth;
+        if self.depth != Some(spec.depth) {
+            // Delay alone leaves this target unchanged; a depth change uses the latest valid
+            // delay. Unity 6000.0.71f1, tests/projects/audiodistortion live controls.
+            let rate = self.line.rate() as f32;
+            self.span = ((self.delay * spec.depth) * rate / 1000.0) * spec.depth;
+            self.depth = Some(spec.depth);
+        }
         self.line.process(
             samples,
-            target,
+            self.span,
             spec.rate,
             Taps::Quadrature,
             spec.dry,
@@ -94,6 +105,35 @@ mod tests {
             depth: 0.03,
         }
     }
+    #[test]
+    fn live_delay_setters_keep_the_span_until_a_depth_update_or_recreation() {
+        let input: Vec<f32> = (0..32768)
+            .map(|i| ((i * 37) % 997) as f32 / 2048.0 - 0.25)
+            .collect();
+        let mut baseline = input.clone();
+        let mut changed = input.clone();
+        let mut parameters = spec();
+        parameters.delay = Some(17.5);
+        parameters.depth = 0.5;
+        Chorus::new(44100, 1024)
+            .unwrap()
+            .process(&mut baseline, &parameters);
+        let mut effect = Chorus::new(44100, 1024).unwrap();
+        effect.process(&mut changed[..12288], &parameters);
+        parameters.delay = Some(2.0);
+        effect.process(&mut changed[12288..], &parameters);
+        assert_eq!(changed, baseline);
+        effect.clear();
+        let mut recreated = input.clone();
+        effect.process(&mut recreated, &parameters);
+        let mut fresh = input;
+        Chorus::new(44100, 1024)
+            .unwrap()
+            .process(&mut fresh, &parameters);
+        assert_eq!(recreated, fresh);
+        assert_ne!(recreated, baseline);
+    }
+
     #[test]
     fn native_impulses_constrain_interpolation_and_channel_phase() {
         let mut x = vec![0.0; 32768 * 2];

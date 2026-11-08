@@ -58,6 +58,7 @@ impl Channel {
 }
 pub struct PitchShifter {
     channels: [Channel; 2],
+    pitch: f32,
     window: Vec<f32>,
     twiddle: Vec<f32>,
     work: Vec<f32>,
@@ -84,6 +85,7 @@ impl PitchShifter {
         reverse(&mut twiddle);
         Self {
             channels: Default::default(),
+            pitch: 1.0,
             window: (0..N)
                 .map(|i| {
                     ((0.5 - 0.5 * (std::f64::consts::TAU * i as f64 / N as f64).cos()) as f32)
@@ -100,6 +102,15 @@ impl PitchShifter {
         self.channels.iter_mut().for_each(Channel::clear);
     }
     pub fn process(&mut self, samples: &mut [f32], spec: &PitchSpec, rate: u32) {
+        if self.pitch != spec.pitch {
+            // Live ratios restart phase tracking while keeping the FIFO and overlap audio.
+            // Unity 6000.0.71f1, tests/projects/audiodistortion live Pitch controls.
+            for state in &mut self.channels {
+                state.last.fill(0.0);
+                state.phase.fill(0.0);
+            }
+            self.pitch = spec.pitch;
+        }
         let bin = rate as f32 / N as f32;
         let expected = HOP as f32 * TAU / N as f32;
         let deviation = bin * 4.0 / TAU;
@@ -301,6 +312,26 @@ fn final_negative(a: &mut [f32], j: usize, l: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn live_ratios_retain_fifo_audio_across_arbitrary_render_chunks() {
+        let input: Vec<f32> = (0..2200)
+            .map(|i| ((i * 37) % 997) as f32 / 2048.0 - 0.25)
+            .collect();
+        let mut whole = PitchShifter::new();
+        let mut chunks = PitchShifter::new();
+        for pitch in [0.75, 1.5, 0.625, 1.0] {
+            let parameters = PitchSpec { pitch };
+            let mut a = input.clone();
+            let mut b = input.clone();
+            whole.process(&mut a, &parameters, 44100);
+            for part in b.chunks_mut(14) {
+                chunks.process(part, &parameters, 44100);
+            }
+            assert_eq!(a, b);
+            assert!(a.iter().any(|v| v.abs() > 1e-3));
+        }
+    }
+
     #[test]
     fn reset_and_packet_boundaries_preserve_native_phase_history() {
         let spec = PitchSpec { pitch: 0.75 };
