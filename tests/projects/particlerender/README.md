@@ -62,6 +62,12 @@ Systems built in code; each record is one JSON line `{"key", "value": [numbers]}
   inheriting colour, size, rotation, lifetime or duration from parents with colour, size and rotation
   over lifetime, children with a start size curve, a three-level chain and a looping parent: each
   child's start colour, size, rotation, lifetimes and position by seed.
+- `collide/*` (`ParticleRenderProbe.Collision.cs`): Collision module contacts and bounces at 0.02 s,
+  every particle each frame (position, velocity, total velocity, remaining lifetime). World: a sloped
+  box (size over lifetime, radius scale, bounce, dampen, lifetime loss, gravity) at High, Medium and
+  Low quality, a sphere, a plane under particles with an animated velocity and a speed modifier,
+  particles starting inside a box. Planes: particles starting behind a plane moving towards or away
+  from it, two planes reached in one step, a sloped plane.
 
     python3 tests/projects/particlerender/run.py native --label native1   # Editor capture (GPU, job pool)
     python3 tests/projects/particlerender/run.py publish native1 native2  # two identical captures
@@ -69,7 +75,8 @@ Systems built in code; each record is one JSON line `{"key", "value": [numbers]}
 
 The reference is `Reference/unity-6000.0.71f1/` (`values.jsonl`, 12 images); both captures were
 identical (re-recorded with the `birthstart`, `freenorm`, `meshscale` and `meshindex` controls, then
-with `prewarm`, `birthend` and `inherit`: every earlier record and image unchanged). Values compare with particletrails' comparator (0.0002 absolute plus 0.0002 relative);
+with `prewarm`, `birthend` and `inherit`, then with `collide`: every earlier record and image
+unchanged). Values compare with particletrails' comparator (0.0002 absolute plus 0.0002 relative);
 images go through `particles/compare_images.py` (report only). Run output stays under
 `$XDG_CACHE_HOME/unbound/validation/runs/particlerender/`.
 
@@ -103,6 +110,7 @@ Everything below is measured in this release, not documented.
 | `prewarm/*` | One simulation call of the longest start lifetime plus the longest lifetime down each sub-emitter chain, in equal steps of at most Time.maximumParticleDeltaTime, its clock starting at the duration less that span's remainder so it ends on a loop's end, where the reported time stays (the duration, or just past the loop's start). Sub-emitter children (Birth, Death) are kept only when the call time left at their step's start is below the child's longest start lifetime, and are not aged by the rest of the call; all sub-emitters then play without emitting, the direct ones' time advanced by the span (held at a non-looping child's duration), the further ones' not. A system in procedural mode is prewarmed differently (exact burst ages). |
 | `birthend/*` | A Birth child's disabled Emission module does not matter; a non-looping child's rate ends exclusively at its duration (no birth at it), in Play and Simulate. |
 | `inherit/*` | Children of every sub-emitter type sample their start curves at the parent particle's normalized age (after its step; a dying parent's: 1), with or without InheritDuration, which shows no other effect. InheritColor multiplies by the parent's current colour, InheritSize by its current size, InheritRotation adds its rotation after the step (Collision and Trigger too), InheritLifetime multiplies by its remaining seconds; Death, Collision and Trigger children it leaves at zero life are counted at the frame's end and gone after the child's next update. |
+| `collide/*`, `inherit/collision/*` | A particle's collision radius is half its largest size axis times the radius scale, its size taken where its previous step ended (a newborn's where its first step ends); a particle with less than 1e-6 s in the step collides with nothing. Planes are half-spaces tested where the step ended: the first plane of the list whose distance is at most the radius, unless the particle moves along it (cosine below 1e-4), particles behind it included; the contact is on the line of its velocity where the sphere touches the plane. World collisions sweep from the end less the step's movement to the end with a sphere 15.1% of the radius smaller and that much longer; the contact is that much before where it touches (head-on the full sphere's contact, deeper at a slant); a sphere starting inside a collider is put where it touches the collider's nearest face from outside, the normal pointing in. From the contact the rest of the movement and the whole velocity (with the animated part and the speed modifier) are reflected, scaled by 1 − dampen and their normal part by the bounce; the particle's own velocity takes the difference. The lifetime loss is added, then a particle beyond its life or outside the kill speeds (the speed it arrived with) dies, bounced. |
 | `freenorm/*` | A freeform quad's normal is the cross product of the directions from the particle to its first two corners (pivot included; shorter than one when stretched), its tangent the direction from the first corner to the second (w -1); plain stretched quads take the head-to-tail tangent. The emitter scale scales the turned quad along the camera's right and up, the stretch follows the output-space velocity; a particle at rest has a +Z normal. |
 | `meshscale/*` | A mesh particle's vertices: the mesh scaled by the particle's size, turned by its rotation and the alignment, then scaled by the emitter along the output axes; with Local alignment turned and scaled by the emitter's frame (Hierarchy scaling: the transform's whole matrix, skew included, the identity in a plain bake of a local simulation). Normals by the inverse transpose. |
 | `meshindex/*` | BakeMesh's index format is 32-bit for more than 65535 vertices or a 32-bit particle mesh. A mesh particles' BakeTexture whose bake has 16-bit indices holds its index buffer read as 32-bit words (two indices a texel, the first in the low half); with 32-bit indices one index a texel. |
@@ -123,8 +131,8 @@ Everything below is measured in this release, not documented.
   end (a 6 s child): the longer catch-up steps of long calls are not modelled.
 - `prewarm-end-tie`, `prewarm-equal-age-order`: float ties at the prewarm's loop end and in the
   age order of equal-age children.
-- `collision-bounce-position`: the Collision module's bounce position of inherit/collision parents.
-- `inherited-colour-rounding`: inherited colour bytes 1/255 apart.
+- `collision-quality-cache`: Low-quality world collisions, which the Editor resolves against planes
+  it caches per voxel; Unbound collides as at High (Medium matches in the control).
 
 Unmeasured: other releases; orthographic cameras for stretched particles; negative pivots; a
 system without a renderer under a culling mode (Unbound keeps simulating, reported); the bounds

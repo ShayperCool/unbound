@@ -1201,6 +1201,7 @@ public partial class ParticleRenderProbe : MonoBehaviour
         yield return PrewarmControls();
         yield return BirthEndControls();
         yield return InheritControls();
+        yield return CollideControls();
         Record("complete", new List<float> { 1f });
         File.WriteAllText(s_Path, s_Out.ToString());
         Debug.Log("particle render complete: " + s_Path);
