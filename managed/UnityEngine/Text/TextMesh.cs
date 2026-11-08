@@ -35,7 +35,7 @@ namespace UnityEngine
     /// - without a font (none set, or set to null) the font is the built-in LegacyRuntime.ttf, and
     ///   AddComponent gives a MeshRenderer without a material that font's material ("Font
     ///   Material"); a renderer that has one keeps it, and changing the font later changes no material;
-    /// - fontSize or fontStyle on a font that is not dynamic warns when either or the font is set.
+    /// - fontSize or fontStyle on a font that is not dynamic warns at each layout.
     /// Unbound's choices (unmeasured): which line's size sets the step after it (its own), a
     /// negative tabSize (as 0), and &lt;material&gt;/&lt;quad&gt; (warn: one submesh with the
     /// renderer's materials). Scene field names are Unity 6000.0 shipped data's (serializedVersion
@@ -94,40 +94,19 @@ namespace UnityEngine
             {
                 m_Font = value;
                 m_Dirty = true;
-                WarnCustomFontOverrides();
             }
         }
 
-        /// <summary>Warns when a font that is not dynamic gets a size or style override, whichever
-        /// is set last (measured: assigning the font, tests/projects/assetinstantiate, or the size
-        /// after it, tests/projects/textmesh).</summary>
-        void WarnCustomFontOverrides()
+        public int fontSize { get => m_FontSize; set { m_FontSize = value; m_Dirty = true; } }
+        public FontStyle fontStyle { get => m_FontStyle; set { m_FontStyle = value; m_Dirty = true; } }
+
+        /// <summary>Each layout of a font that is not dynamic with a size or style override warns
+        /// (measured: once per generation, none for setting the properties alone;
+        /// tests/projects/assetinstantiate font.overrides and use.font, tests/projects/textmesh).</summary>
+        void WarnCustomFontOverrides(Font font)
         {
-            var font = this.font;
-            if (Compat.AssetCloneResourcesMeasured && font != null && !font.dynamic && (m_FontSize != 0 || m_FontStyle != FontStyle.Normal))
+            if (Compat.AssetCloneResourcesMeasured && !font.dynamic && (m_FontSize != 0 || m_FontStyle != FontStyle.Normal))
                 Debug.LogWarning("Font size and style overrides are only supported for dynamic fonts.");
-        }
-
-        public int fontSize
-        {
-            get => m_FontSize;
-            set
-            {
-                m_FontSize = value;
-                m_Dirty = true;
-                WarnCustomFontOverrides();
-            }
-        }
-
-        public FontStyle fontStyle
-        {
-            get => m_FontStyle;
-            set
-            {
-                m_FontStyle = value;
-                m_Dirty = true;
-                WarnCustomFontOverrides();
-            }
         }
         public float offsetZ { get => m_OffsetZ; set { m_OffsetZ = value; m_Dirty = true; } }
         public TextAlignment alignment { get => m_Alignment; set { m_Alignment = value; m_Dirty = true; } }
@@ -186,6 +165,7 @@ namespace UnityEngine
         void Generate(Font font)
         {
             ReportUnsupportedTags();
+            WarnCustomFontOverrides(font);
             m_Verts ??= new List<UIVertex>();
             TextLayout.GenerateTextMesh(m_Text, font, m_Color, m_FontSize, m_FontStyle, m_LineSpacing, m_RichText, m_Anchor,
                 m_Alignment, m_TabSize, m_Verts, out var block);

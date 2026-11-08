@@ -295,22 +295,31 @@ namespace Unbound.Tests
             Assert.Equal(Font.NewFontLineSpacing, mesh.bounds.size.y, 4);
         }
 
-        // Measured: a size (or style) override on a font that is not dynamic warns when it is set
-        // after the font, as when the font is set after it.
+        // Measured: a size (or style) override on a font that is not dynamic warns at each layout,
+        // not when the properties are set.
         [Fact]
-        public void OverridesOnACustomFontWarn()
+        public void OverridesOnACustomFontWarnAtLayout()
         {
             string version = ProjectInfo.UnityVersion;
             try
             {
                 ProjectInfo.UnityVersion = "6000.0.71f1";
+                const string warning = "Warning: Font size and style overrides are only supported for dynamic fonts.";
                 var text = Make("A", new Font("Probe custom"));
                 m_Reports.Clear();
                 text.fontSize = 30;
-                Assert.Contains("Warning: Font size and style overrides are only supported for dynamic fonts.", m_Reports);
+                text.fontStyle = FontStyle.Bold;
+                Assert.Empty(m_Reports);
+                Drawn(text);
+                Assert.Equal(new[] { warning }, m_Reports);
+                Drawn(text);
+                Assert.Single(m_Reports);
+                text.text = "AA";
+                Drawn(text);
+                Assert.Equal(2, m_Reports.Count);
                 m_Reports.Clear();
                 text.font = BoxFont();
-                text.fontStyle = FontStyle.Bold;
+                Drawn(text);
                 Assert.Empty(m_Reports);
             }
             finally { ProjectInfo.UnityVersion = version; }
