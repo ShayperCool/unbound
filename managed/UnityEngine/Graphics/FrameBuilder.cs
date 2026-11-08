@@ -733,6 +733,8 @@ namespace Unbound.Runtime
         /// ShadowsOnly ones), else renderers drawn normally (without ShadowsOnly ones).</param>
         internal static void DrawRendererList(CullingData data, DrawingSettings drawing, FilteringSettings filtering, List<ShaderTagId> passNames, ShadowObjectsFilter? shadows = null)
         {
+            // The draws' merged properties live until the list is written.
+            using var pooled = DrawPropertyPool.Begin();
             var context = ContextOf(data.Camera);
             SpriteMasking.Begin(data.Camera, context);
             var sorting = drawing.sortingSettings;
@@ -902,6 +904,7 @@ namespace Unbound.Runtime
             Dictionary<int, object> extra = null, string extraKeyword = null, string extraKeyword2 = null, string extraKeyword3 = null,
             RenderDispatchContext dispatch = RenderDispatchContext.Unknown, bool srp = false)
         {
+            using var pooled = DrawPropertyPool.Begin();
             Describe(item);
             s_DrawCount++;
             s_DrawKeywords.Clear();
@@ -920,7 +923,7 @@ namespace Unbound.Runtime
             }
             if (extra != null)
             {
-                var merged = properties != null ? new Dictionary<int, object>(properties) : new Dictionary<int, object>();
+                var merged = DrawPropertyPool.Copy(properties);
                 foreach (var pair in extra) merged[pair.Key] = pair.Value;
                 properties = merged;
             }
@@ -1027,9 +1030,12 @@ namespace Unbound.Runtime
         /// first, at most 8; whether the main light lights it (unity_LightData.z). A
         /// <paramref name="lightmapped"/> renderer (the list binds lightmaps) leaves out the
         /// lights <see cref="InLightmap"/>.</summary>
+        static readonly List<(int Index, float Importance)> s_LightCandidates = new List<(int, float)>();
+
         internal static Dictionary<int, object> PerObjectLights(CullingData data, Bounds bounds, bool lightmapped, int mainLight)
         {
-            var candidates = new List<(int Index, float Importance)>();
+            var candidates = s_LightCandidates;
+            candidates.Clear();
             var map = data.LightIndexMap;
             // A lightmapped renderer is not lit at run time by the lights baked into its lightmap.
             float mainLit = lightmapped && mainLight >= 0 && mainLight < data.Lights.Length && InLightmap(data.Lights[mainLight].light) ? 0f : 1f;
@@ -1054,13 +1060,12 @@ namespace Unbound.Runtime
             }
             candidates.Sort((a, b) => b.Importance.CompareTo(a.Importance));
             int count = Math.Min(candidates.Count, MaxPerObjectLights);
-            var indices = new float[8];
+            Span<float> indices = stackalloc float[8];
             for (int k = 0; k < count; k++) indices[k] = candidates[k].Index;
-            return new Dictionary<int, object>
-            {
-                [s_LightDataId] = new Vector4(0f, count, mainLit, 0f),
-                [s_LightIndicesId] = new[] { new Vector4(indices[0], indices[1], indices[2], indices[3]), new Vector4(indices[4], indices[5], indices[6], indices[7]) },
-            };
+            var lights = DrawPropertyPool.Copy(null);
+            lights[s_LightDataId] = new Vector4(0f, count, mainLit, 0f);
+            lights[s_LightIndicesId] = new[] { new Vector4(indices[0], indices[1], indices[2], indices[3]), new Vector4(indices[4], indices[5], indices[6], indices[7]) };
+            return lights;
         }
 
         /// <summary>

@@ -212,7 +212,7 @@ namespace UnityEngine
             // A render pipeline blends by its own setting: Simple samples two probes as well.
             Closest(bounds, srp && usage == ReflectionProbeUsage.Simple ? ReflectionProbeUsage.BlendProbes : usage, s_Blend);
             if (s_Blend.Count == 0) return properties;
-            properties = properties != null ? new Dictionary<int, object>(properties) : new Dictionary<int, object>();
+            properties = DrawPropertyPool.Copy(properties);
             if (srp) return ApplySrp(properties);
             var first = s_Blend[0].probe;
             var second = s_Blend.Count > 1 ? s_Blend[1].probe : null;

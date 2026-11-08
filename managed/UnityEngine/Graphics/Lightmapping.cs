@@ -275,7 +275,7 @@ namespace UnityEngine
                 && renderer.lightmapIndex >= 0 && renderer.lightmapIndex < 0xFFFE;
             if ((map != null && map.m_Light != null) || terrainLightmapped)
             {
-                properties = properties != null ? new Dictionary<int, object>(properties) : new Dictionary<int, object>();
+                properties = DrawPropertyPool.Copy(properties);
                 properties[s_Lightmap] = map?.m_Light ?? (map != null ? DefaultTextures.Black : DefaultTextures.Gray);
                 properties[s_LightmapST] = renderer.lightmapScaleOffset;
                 keywords.Add("LIGHTMAP_ON");
@@ -299,7 +299,7 @@ namespace UnityEngine
                 // renderers); the built-in pipeline's keeps the ambient probe whatever its probe
                 // usage (measured: tests/projects/reflectionprobes sh.*, with and without light
                 // probes in the scene).
-                return GraphicsSettings.currentRenderPipeline != null ? WithProbe(default, properties, copy: false) : properties;
+                return GraphicsSettings.currentRenderPipeline != null ? WithProbe(default, properties, copy: false, renderer) : properties;
             }
             if (probes && renderer.lightProbeUsage == LightProbeUsage.CustomProvided) return ProvidedProbes(properties, renderer.m_PropertyBlock);
             var lightProbes = LightmapSettings.lightProbes;
@@ -311,7 +311,7 @@ namespace UnityEngine
             int cell = renderer.m_ProbeCell;
             if (!lightProbes.Interpolate(position, ref cell, out var sh)) return properties;
             renderer.m_ProbeCell = cell;
-            return WithProbe(sh, properties);
+            return WithProbe(sh, properties, owner: renderer);
         }
 
         static int s_ImmediateCell = -1;
@@ -345,7 +345,7 @@ namespace UnityEngine
                 object value = null;
                 if ((properties == null || !properties.TryGetValue(id, out value)) && block != null) block.m_Values.TryGetValue(id, out value);
                 if (!(value is Vector4[] array) || array.Length == 0) continue;
-                result ??= properties != null ? new Dictionary<int, object>(properties) : new Dictionary<int, object>();
+                result ??= DrawPropertyPool.Copy(properties);
                 result[id] = array[0];
             }
             return result ?? properties;
@@ -353,19 +353,23 @@ namespace UnityEngine
 
         /// <summary>The probe's ShadeSH9 constants on a copy of <paramref name="properties"/> (on
         /// them, without <paramref name="copy"/>: a dictionary this draw already owns).</summary>
-        static Dictionary<int, object> WithProbe(SphericalHarmonicsL2 sh, Dictionary<int, object> properties, bool copy = true)
+        static Dictionary<int, object> WithProbe(SphericalHarmonicsL2 sh, Dictionary<int, object> properties, bool copy = true, Renderer owner = null)
         {
             sh.ShaderConstants(out var ar, out var ag, out var ab, out var br, out var bg, out var bb, out var c);
             if (copy || properties == null)
-                properties = properties != null ? new Dictionary<int, object>(properties) : new Dictionary<int, object>();
-            properties[s_ShIds[0]] = ar;
-            properties[s_ShIds[1]] = ag;
-            properties[s_ShIds[2]] = ab;
-            properties[s_ShIds[3]] = br;
-            properties[s_ShIds[4]] = bg;
-            properties[s_ShIds[5]] = bb;
-            properties[s_ShIds[6]] = c;
+                properties = DrawPropertyPool.Copy(properties);
+            // A renderer keeps its constants boxed while they stay the same.
+            var boxes = owner != null ? owner.m_ProbeBoxes ??= new BoxedVectors(s_ShIds.Length) : null;
+            properties[s_ShIds[0]] = Boxed(boxes, 0, ar);
+            properties[s_ShIds[1]] = Boxed(boxes, 1, ag);
+            properties[s_ShIds[2]] = Boxed(boxes, 2, ab);
+            properties[s_ShIds[3]] = Boxed(boxes, 3, br);
+            properties[s_ShIds[4]] = Boxed(boxes, 4, bg);
+            properties[s_ShIds[5]] = Boxed(boxes, 5, bb);
+            properties[s_ShIds[6]] = Boxed(boxes, 6, c);
             return properties;
         }
+
+        static object Boxed(BoxedVectors boxes, int slot, Vector4 value) => boxes != null ? boxes.Box(slot, value) : value;
     }
 }
