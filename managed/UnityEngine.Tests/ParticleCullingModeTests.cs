@@ -20,10 +20,11 @@ namespace UnityEngine.Tests
     /// offscreen"; PauseAndCatchup also stops, then "when re-entering the view, the simulation
     /// performs a large step to reach the point where it would have been had it not paused";
     /// AlwaysSimulate simulates "regardless of whether it is on screen or not"; Automatic: "Looping
-    /// systems use Pause, and all other system use Always Simulate". Assertions on the play state
-    /// while culled, on the looping Automatic case (kept simulating, reported) and on the
-    /// visibility read from the renderer are checks of Unbound's choices, which are unmeasured, not
-    /// Unity guarantees.
+    /// systems use Pause, and all other system use Always Simulate", for procedural systems.
+    /// Measured in 6000.0.71f1 (tests/projects/particlerender cull/*, hidden/*): a playback's
+    /// first two updates simulate whatever the visibility, the second's time is caught up too; a
+    /// culled update holds time, particles, isPlaying and isPaused; a Play call drops the missed
+    /// time; the missed time and the frame's own are one advance.
     /// <para>Visibility is the system's ParticleSystemRenderer.isVisible: set directly here, or
     /// through the engine's camera culling (FrameBuilder.CullCamera) in the bounds test. The systems
     /// sit far from every other test's camera, on their own layer.</para>
@@ -92,9 +93,14 @@ namespace UnityEngine.Tests
 
         static void SetVisible(ParticleSystem ps, bool visible) => RendererOf(ps).SetVisible(visible);
 
+        /// <summary>The frame's particle update, then the next frame.</summary>
         static void Frames(int count)
         {
-            for (int i = 0; i < count; i++) ParticleSystemManager.UpdateAll();
+            for (int i = 0; i < count; i++)
+            {
+                ParticleSystemManager.UpdateAll();
+                Time.s_FrameCount++;
+            }
         }
 
         static ParticleSystem.Particle[] ParticlesOf(ParticleSystem ps)
@@ -182,23 +188,54 @@ namespace UnityEngine.Tests
             Assert.True(ps.particleCount > 0);
         }
 
-        [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public void AutomaticKeepsSimulatingOffscreen(bool loop)
+        [Fact]
+        public void AutomaticPausesALoopingProceduralSystemAndSimulatesTheOthers()
         {
-            const string automatic = "ParticleSystem.main.cullingMode Automatic";
-            var ps = Make(ParticleSystemCullingMode.Automatic, loop);
-            SetVisible(ps, false);
-            int reported = Hits(automatic);
+            var looping = Make(ParticleSystemCullingMode.Automatic, loop: true);
+            var once = Make(ParticleSystemCullingMode.Automatic, loop: false);
+            var world = Make(ParticleSystemCullingMode.Automatic, loop: true);
+            world.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = world.main;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            world.Play();
+            foreach (var ps in new[] { looping, once, world }) SetVisible(ps, false);
             Frames(10);
-            // One-shot: documented as Always Simulate. Looping: documented as Pause, but also
-            // documented to keep updating when not procedural, which Unbound does not decide, so it
-            // keeps simulating and is reported (Unbound's choice, unmeasured).
-            Near(10 * Dt, ps.time);
-            Assert.True(ps.particleCount > 0);
-            // (The count is process-wide, so the one-shot case asserts no absence of reports.)
-            if (loop) Assert.True(Hits(automatic) > reported);
+            Assert.True(looping.proceduralSimulationSupported);
+            Assert.False(world.proceduralSimulationSupported);
+            // Two updates after the playback started, then held.
+            Near(2 * Dt, looping.time);
+            Near(10 * Dt, once.time);
+            Near(10 * Dt, world.time);
+        }
+
+        [Fact]
+        public void APlaybackSimulatesItsFirstTwoUpdatesOffscreenAndCatchesUpTheSecond()
+        {
+            var ps = Make(ParticleSystemCullingMode.PauseAndCatchup);
+            SetVisible(ps, false);
+            Frames(10);
+            Near(2 * Dt, ps.time);
+            SetVisible(ps, true);
+            Frames(1);
+            // The second update's time, the eight culled frames' and the visible one's.
+            Near(2 * Dt + 9 * Dt + Dt, ps.time);
+        }
+
+        [Fact]
+        public void PlayDropsTheTimeMissedBeforeIt()
+        {
+            var ps = Make(ParticleSystemCullingMode.PauseAndCatchup);
+            SetVisible(ps, true);
+            Frames(5);
+            SetVisible(ps, false);
+            Frames(10);
+            float held = ps.time;
+            // Play on a playing system (also a resume from Pause) drops what was missed.
+            ps.Play();
+            Frames(4);
+            SetVisible(ps, true);
+            Frames(1);
+            Near(held + 4 * Dt + Dt, ps.time);
         }
 
         [Fact]
@@ -288,20 +325,20 @@ namespace UnityEngine.Tests
             return false;
         }
 
-        /// <summary>The camera culls the renderer by its bounds (the live particles' centres ±
-        /// size/2), which miss the view, and the next frame's EarlyUpdate makes it invisible.</summary>
-        static void CullOut(Camera camera, ParticleSystemRenderer renderer)
+        /// <summary>The camera culls the renderer: true when it saw it.</summary>
+        static bool CullSees(Camera camera, ParticleSystemRenderer renderer)
         {
             FrameBuilder.CullCamera(camera);
             Time.s_FrameCount += 2;
             Renderer.NotifyInvisible();
-            Assert.False(renderer.isVisible);
+            if (renderer.isVisible) return true;
+            FrameBuilder.CullCamera(camera);
+            return renderer.isVisible;
         }
 
         [Fact]
-        public void PauseKeepsSimulatingStretchedQuadsInViewWithTheirCentresOutside()
+        public void TheCameraSeesStretchedQuadsInViewWithTheirCentresOutside()
         {
-            const string notCovered = "Particle culling without covering bounds";
             var camera = MakeCamera(orthographic: false);
             var ps = Make(ParticleSystemCullingMode.Pause);
             // Above the view (its top is at y 5.77 at 10 m), each quad stretched 10 m down into it.
@@ -309,24 +346,31 @@ namespace UnityEngine.Tests
             var renderer = RendererOf(ps);
             renderer.renderMode = ParticleSystemRenderMode.Stretch;
             renderer.lengthScale = 10f;
+            // Moving up: each quad trails 10 m down behind its particle.
+            var velocity = ps.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.x = 0f; velocity.y = 1f; velocity.z = 0f;
             SetVisible(ps, true);
             Frames(10);
             Assert.True(ps.particleCount > 0);
             Assert.True(DrawsInView(renderer, camera));
-
-            CullOut(camera, renderer);
-            int reported = Hits(notCovered);
+            Assert.True(renderer.CullingBoundsCoverDraw);
+            // The culling bounds reach as far as the stretched quads: the camera sees them.
+            Assert.True(CullSees(camera, renderer));
             float time = ps.time;
             Frames(10);
-            // Drawn on screen, so not frozen there: the bounds Unbound culls by do not cover a
-            // stretched quad, and the system keeps simulating, reported (Unbound's choice,
-            // unmeasured).
             Near(time + 10 * Dt, ps.time);
-            Assert.True(Hits(notCovered) > reported);
+
+            // Moved well out of view, the camera does not see it, and it holds.
+            ps.transform.position = kFar + new Vector3(0f, 80f, 10f);
+            Assert.False(CullSees(camera, renderer));
+            time = ps.time;
+            Frames(10);
+            Assert.Equal(time, ps.time);
         }
 
         [Fact]
-        public void PauseKeepsSimulatingARotatedBillboardCornerInView()
+        public void TheCameraSeesARotatedBillboardCornerInView()
         {
             var camera = MakeCamera(orthographic: true);
             var ps = Make(ParticleSystemCullingMode.Pause);
@@ -340,12 +384,31 @@ namespace UnityEngine.Tests
             Frames(10);
             Assert.True(ps.particleCount > 0);
             Assert.True(DrawsInView(renderer, camera));
-
-            CullOut(camera, renderer);
+            Assert.True(CullSees(camera, renderer));
             float time = ps.time;
             Frames(10);
-            // The update's own test with centres ± size·√3/2 sees it (Unbound's choice, unmeasured).
             Near(time + 10 * Dt, ps.time);
+        }
+
+        [Fact]
+        public void ASystemWithTrailsCountsAsVisibleWheneverItsLayerIsDrawn()
+        {
+            const string notCovered = "Particle culling without covering bounds";
+            var camera = MakeCamera(orthographic: false);
+            var ps = Make(ParticleSystemCullingMode.Pause);
+            var trails = ps.trails;
+            trails.enabled = true;
+            ps.transform.position = kFar + new Vector3(0f, 80f, 10f);
+            var renderer = RendererOf(ps);
+            Frames(3);
+            Assert.False(renderer.CullingBoundsCoverDraw);
+            // Unbound cannot bound trails: it draws the system, so it stays visible, reported.
+            int reported = Hits(notCovered);
+            Assert.True(CullSees(camera, renderer));
+            float time = ps.time;
+            Frames(5);
+            Near(time + 5 * Dt, ps.time);
+            Assert.True(Hits(notCovered) > reported);
         }
 
         // Implementation invariant (an unmeasured inference, not a Native observation): a new
@@ -370,9 +433,10 @@ namespace UnityEngine.Tests
             Frames(25);
             SetVisible(ps, true);
             Frames(1);
-            // Only the new playback's 25 missed frames and the visible one (Unbound's choice,
-            // unmeasured: a new playback drops the time missed before it).
-            Near(26 * Dt, ps.time);
+            // Only the new playback's 25 frames (the first simulated, the second simulated and
+            // missed, 23 missed) and the visible one (Unbound's choice, unmeasured: a new playback
+            // drops the time missed before it).
+            Near(27 * Dt, ps.time);
         }
 
         // Implementation invariant (an unmeasured inference, not a Native observation):
@@ -392,13 +456,14 @@ namespace UnityEngine.Tests
             Frames(40);
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             ps.Emit(3);
+            float time = ps.time;
             SetVisible(ps, true);
             Frames(1);
             // Only the visible frame's own time ages the emitted particles (5 s lifetime).
             Assert.Equal(3, ps.particleCount);
             foreach (var p in ParticlesOf(ps))
                 Near(5f - Dt, p.remainingLifetime);
-            Near(Dt, ps.time);
+            Near(time + Dt, ps.time);
         }
 
         // Implementation invariant (an unmeasured inference, not a Native observation): the
@@ -430,7 +495,7 @@ namespace UnityEngine.Tests
             Frames(25);
             SetVisible(ps, true);
             Frames(1);
-            Near(26 * Dt, ps.time);
+            Near(27 * Dt, ps.time);
         }
     }
 }

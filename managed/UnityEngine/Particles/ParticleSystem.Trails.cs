@@ -77,7 +77,7 @@ namespace UnityEngine
         internal readonly List<Trail> m_TrailList = new List<Trail>();
         readonly Stack<int> m_FreeTrails = new Stack<int>();
         internal float m_TrailTime;
-        bool HasAliveTrails => m_TrailList.Count > m_FreeTrails.Count;
+        internal bool HasAliveTrails => m_TrailList.Count > m_FreeTrails.Count;
 
         bool TrailsEnabled => m_Trails.enabled;
 

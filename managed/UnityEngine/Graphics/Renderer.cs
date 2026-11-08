@@ -334,6 +334,10 @@ namespace UnityEngine
 
         internal virtual void PrepareCullingBounds() { }
 
+        /// <summary>The world bounds cameras cull this renderer by (after
+        /// <see cref="PrepareCullingBounds"/>): its bounds, unless the renderer keeps others.</summary>
+        internal virtual Bounds CullingBounds => bounds;
+
         internal virtual Bounds GetLocalBounds() => new Bounds(Vector3.zero, Vector3.zero);
 
         // ------------------------------------------------------------------ rendering
@@ -368,7 +372,7 @@ namespace UnityEngine
                 var go = renderer.m_GameObject;
                 if ((cullingMask & (1 << go.m_Layer)) == 0 || !go.activeInHierarchy) continue;
                 renderer.PrepareCullingBounds();
-                if (!FrameBuilder.InFrustum(viewProjection, renderer.bounds)) continue;
+                if (!FrameBuilder.InFrustum(viewProjection, renderer.CullingBounds)) continue;
                 var components = go.m_Components;
                 for (int i = 0; i < components.Count; i++)
                 {

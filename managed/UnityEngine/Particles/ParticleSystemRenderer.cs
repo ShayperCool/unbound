@@ -335,6 +335,95 @@ namespace UnityEngine
             return new Bounds(c, extents * 2f);
         }
 
+        // ------------------------------------------------------------------ culling bounds
+
+        Bounds m_CullingBounds;
+        bool m_CullingBoundsCoverDraw;
+        int m_CullingBoundsFrame = -1, m_CullingBoundsCount = -1;
+        float m_CullingBoundsTime = -1f;
+
+        /// <summary>Half the diagonal of a unit cube: a quad of a particle's size, at any rotation,
+        /// lies within this many sizes of its centre.</summary>
+        const float HalfCubeDiagonal = 0.8660254f;
+
+        internal override Bounds CullingBounds => m_CullingBounds;
+
+        /// <summary>Whether <see cref="CullingBounds"/> cover everything the renderer draws, so
+        /// cameras may cull it by them (see <see cref="ParticleSystem.CullingFrameUpdate"/>).</summary>
+        internal bool CullingBoundsCoverDraw
+        {
+            get
+            {
+                PrepareCullingBounds();
+                return m_CullingBoundsCoverDraw;
+            }
+        }
+
+        /// <summary>World bounds that cover what the renderer draws, from its live particles (centre
+        /// ± size by the render mode: a quad's half diagonal, the stretched length, the mesh's
+        /// extent, the pivot) and the emitter's position, computed once per frame and simulation
+        /// state. Trails, a minimum particle size (a screen size) and stretching by the camera's
+        /// velocity are not bounded: such a renderer keeps its plain bounds and is drawn (and
+        /// visible) whenever a camera draws its layer (Unbound's choice; the bounds Unity culls
+        /// particles by are not measured).</summary>
+        internal override void PrepareCullingBounds()
+        {
+            var ps = System;
+            int frame = Time.frameCount;
+            if (ps != null && frame == m_CullingBoundsFrame && ps.m_TotalTime == m_CullingBoundsTime && ps.m_Count == m_CullingBoundsCount) return;
+            m_CullingBoundsFrame = frame;
+            m_CullingBoundsTime = ps != null ? ps.m_TotalTime : -1f;
+            m_CullingBoundsCount = ps != null ? ps.m_Count : -1;
+            m_CullingBoundsCoverDraw = ps != null && !ps.m_Trails.enabled && !ps.HasAliveTrails && !(m_MinParticleSize > 0f)
+                && !(m_RenderMode == ParticleSystemRenderMode.Stretch && m_CameraVelocityScale != 0f);
+            if (!m_CullingBoundsCoverDraw)
+            {
+                m_CullingBounds = bounds;
+                return;
+            }
+            float reach;
+            switch (m_RenderMode)
+            {
+                case ParticleSystemRenderMode.Stretch: reach = HalfCubeDiagonal + Mathf.Abs(m_LengthScale); break;
+                case ParticleSystemRenderMode.Mesh: reach = MeshReach(); break;
+                case ParticleSystemRenderMode.None: reach = 0f; break;
+                default: reach = HalfCubeDiagonal; break;
+            }
+            reach += m_Pivot.magnitude;
+            float speedReach = m_RenderMode == ParticleSystemRenderMode.Stretch ? Mathf.Abs(m_VelocityScale) : 0f;
+            var toWorld = ps.SimulationToWorld();
+            var scale = ps.EmitterScale();
+            float maxScale = Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
+            var emitter = m_GameObject.m_Transform.position;
+            Vector3 min = emitter, max = emitter;
+            for (int i = 0; i < ps.m_Count; i++)
+            {
+                ref var p = ref ps.m_Particles[i];
+                if (p.IsTrailCarrier) continue;
+                var w = toWorld.MultiplyPoint3x4(p.m_Position);
+                var s = ps.CurrentSize3D(ref p);
+                float r = reach * maxScale * Mathf.Max(Mathf.Abs(s.x), Mathf.Max(Mathf.Abs(s.y), Mathf.Abs(s.z)));
+                if (speedReach > 0f) r += speedReach * toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity).magnitude;
+                min = Vector3.Min(min, w - new Vector3(r, r, r));
+                max = Vector3.Max(max, w + new Vector3(r, r, r));
+            }
+            m_CullingBounds = new Bounds((min + max) * 0.5f, max - min);
+        }
+
+        /// <summary>How far from a particle's centre its mesh reaches, in particle sizes: the
+        /// farthest corner of any of the renderer's meshes.</summary>
+        float MeshReach()
+        {
+            float reach = 0f;
+            foreach (var mesh in m_Meshes)
+            {
+                if (mesh == null) continue;
+                var b = mesh.bounds;
+                reach = Mathf.Max(reach, b.center.magnitude + b.extents.magnitude);
+            }
+            return reach;
+        }
+
         static Bounds WorldBounds(ParticleSystem ps)
         {
             var toWorld = ps.SimulationToWorld();

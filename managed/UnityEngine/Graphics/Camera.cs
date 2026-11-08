@@ -156,6 +156,27 @@ namespace UnityEngine
             }
         }
         public bool orthographic { get => m_Orthographic; set => m_Orthographic = value; }
+
+        Vector3 m_Velocity, m_VelocityPosition;
+        int m_VelocityFrame = -1;
+
+        /// <summary>Scripting API 6000.0: "the world-space speed of the camera". Measured in
+        /// 6000.0.71f1 (tests/projects/particlerender camvel/*): updated when the camera renders,
+        /// as its movement since it rendered in an earlier frame over the frame's delta time; zero
+        /// before its second frame rendered.</summary>
+        public Vector3 velocity => m_Velocity;
+
+        /// <summary>Called when the camera renders (once per frame counts).</summary>
+        internal void UpdateVelocity()
+        {
+            int frame = Time.frameCount;
+            if (frame == m_VelocityFrame) return;
+            var position = transform.position;
+            float dt = Time.deltaTime;
+            m_Velocity = m_VelocityFrame >= 0 && dt > 0f ? (position - m_VelocityPosition) / dt : Vector3.zero;
+            m_VelocityPosition = position;
+            m_VelocityFrame = frame;
+        }
         public float orthographicSize { get => m_OrthographicSize; set => m_OrthographicSize = value; }
         public float depth { get => m_Depth; set => m_Depth = value; }
         public int cullingMask { get => m_CullingMask; set => m_CullingMask = value; }

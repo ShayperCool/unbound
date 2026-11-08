@@ -267,15 +267,17 @@ namespace Unbound.Runtime
                 new Culler(camera.projectionMatrix * camera.worldToCameraMatrix, position, forward, camera.layerCullDistances, camera.layerCullSpherical);
 
             /// <summary>Renderers whose bounds are those Unity culls with (mesh and sprite
-            /// renderers); others are drawn whether culled or not.</summary>
+            /// renderers) or cover everything they draw (particle renderers that can bound their
+            /// draw); others are drawn whether culled or not.</summary>
             internal static bool TrustsBounds(Renderer renderer) =>
                 renderer.GetType() == typeof(MeshRenderer) || renderer is SpriteRenderer ||
-                renderer is SkinnedMeshRenderer skin && skin.HasMeasuredCullingBounds;
+                renderer is SkinnedMeshRenderer skin && skin.HasMeasuredCullingBounds ||
+                renderer is ParticleSystemRenderer particles && particles.CullingBoundsCoverDraw;
 
             internal bool Sees(Renderer renderer)
             {
                 renderer.PrepareCullingBounds();
-                var bounds = renderer.bounds;
+                var bounds = renderer.CullingBounds;
                 return InFrustum(m_Matrix, bounds) && WithinLayerDistance(renderer, bounds);
             }
 
@@ -298,7 +300,7 @@ namespace Unbound.Runtime
             internal bool SeesCaster(Renderer renderer, Light light)
             {
                 renderer.PrepareCullingBounds();
-                var bounds = renderer.bounds;
+                var bounds = renderer.CullingBounds;
                 if (!WithinLayerDistance(renderer, bounds)) return false;
                 var e = bounds.extents;
                 if (e.x <= 0f && e.y <= 0f && e.z <= 0f) return true;
@@ -1016,6 +1018,7 @@ namespace Unbound.Runtime
             var previousProjection = Immediate.Projection;
             var previousModelView = Immediate.ModelView;
             Camera.current = camera;
+            camera.UpdateVelocity();
             RenderTexture screenStandIn = null;
             try
             {

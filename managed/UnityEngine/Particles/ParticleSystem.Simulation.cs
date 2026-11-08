@@ -43,8 +43,9 @@ namespace UnityEngine
         float m_BirthCallRemaining;
 
         /// <summary>The frame's update; whether it advanced the system. <paramref name="catchUp"/>
-        /// is PauseAndCatchup's missed time, simulated first as one step inside the frame's
-        /// collision and trigger collection (see CullingFrameUpdate).</summary>
+        /// is PauseAndCatchup's missed time, simulated with the frame's own time as one advance
+        /// (split by Time.maximumParticleDeltaTime) inside the frame's collision and trigger
+        /// collection (see CullingFrameUpdate).</summary>
         internal bool FrameUpdate(float catchUp = 0f)
         {
             float raw = m_Main.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
@@ -59,12 +60,7 @@ namespace UnityEngine
             m_CollectTriggers = true;
             try
             {
-                if (catchUp > 0f)
-                {
-                    Step(catchUp, 0f);
-                    if (m_IsPaused || !m_Registered) return true;
-                }
-                Advance(dt, m_FrameDistance, true);
+                Advance(catchUp + dt, m_FrameDistance, true);
             }
             finally { m_CollectTriggers = false; }
             return true;

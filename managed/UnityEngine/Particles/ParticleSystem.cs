@@ -103,14 +103,47 @@ namespace UnityEngine
             }
         }
 
-        public bool proceduralSimulationSupported
+        /// <summary>Scripting API 6000.0: "Only a subset of modules and properties supports
+        /// procedural mode"; the Limit Velocity over Lifetime module and "modifying any properties
+        /// from script while the system is playing" disable it. Measured in 6000.0.71f1
+        /// (tests/projects/particlerender proc/*): true until the first playback starts; then
+        /// false with World or Custom simulation space, a rate over distance, a gravity modifier
+        /// that is not a constant, orbital or radial velocity, Limit Velocity, a randomized Force
+        /// over Lifetime, Rotation by Speed, External Forces, Noise, Collision, Trigger, Sub
+        /// Emitters or Trails enabled, or a stop action; and false after a property is set while
+        /// playing, until a new playback starts. The other modules and settings of the probe keep
+        /// it (velocity, force and start curves, color, size and speed modules, texture sheet,
+        /// lights, custom data, a mesh shape, start delay, prewarm, simulation speed, unscaled
+        /// time, ring buffer, emitter velocity mode).</summary>
+        public bool proceduralSimulationSupported => !m_HasPlayed || !m_ProceduralLost && ProceduralSettings();
+
+        /// <summary>A playback has started (procedural mode is decided from then on).</summary>
+        bool m_HasPlayed;
+        /// <summary>A property was set from script while the system played.</summary>
+        bool m_ProceduralLost;
+
+        /// <summary>Called by the module setters: a property set while playing ends procedural
+        /// mode until the next playback (see <see cref="proceduralSimulationSupported"/>).</summary>
+        internal ParticleSystem ModifiedByScript()
         {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("ParticleSystem.proceduralSimulationSupported", "is always false: procedural simulation is not decided per system");
-                return false;
-            }
+            if (m_IsPlaying) m_ProceduralLost = true;
+            return this;
         }
+
+        bool ProceduralSettings()
+        {
+            if (m_Main.simulationSpace != ParticleSystemSimulationSpace.Local) return false;
+            if (m_Main.gravityModifier.mode != ParticleSystemCurveMode.Constant) return false;
+            if (m_Main.stopAction != ParticleSystemStopAction.None) return false;
+            if (m_Emission.enabled && MayBeNonZero(m_Emission.rateOverDistance)) return false;
+            if (m_Velocity.enabled && (MayBeNonZero(m_Velocity.orbitalX) || MayBeNonZero(m_Velocity.orbitalY)
+                || MayBeNonZero(m_Velocity.orbitalZ) || MayBeNonZero(m_Velocity.radial))) return false;
+            if (m_Force.enabled && m_Force.randomized) return false;
+            return !m_LimitVelocity.enabled && !m_RotationBySpeed.enabled && !m_ExternalForces.enabled && !m_Noise.enabled
+                && !m_Collision.enabled && !m_Trigger.enabled && !m_SubEmitters.enabled && !m_Trails.enabled;
+        }
+
+        static bool MayBeNonZero(in ModuleCurve curve) => curve.mode != ParticleSystemCurveMode.Constant || curve.scalar != 0f;
 
         public bool has3DParticleRotations =>
             m_Main.startRotation3D || (m_Rotation.enabled && m_Rotation.separateAxes) || (m_RotationBySpeed.enabled && m_RotationBySpeed.separateAxes);
@@ -150,37 +183,37 @@ namespace UnityEngine
         public int safeCollisionEventSize => this.GetSafeCollisionEventSize();
 
         [Obsolete("startDelay property is deprecated. Use main.startDelay or main.startDelayMultiplier instead.", false)]
-        public float startDelay { get => m_Main.startDelay.Multiplier; set => m_Main.startDelay.Set(value); }
+        public float startDelay { get => m_Main.startDelay.Multiplier; set => ModifiedByScript().m_Main.startDelay.Set(value); }
 
         [Obsolete("loop property is deprecated. Use main.loop instead.", false)]
-        public bool loop { get => m_Main.loop; set => m_Main.loop = value; }
+        public bool loop { get => m_Main.loop; set => ModifiedByScript().m_Main.loop = value; }
 
         [Obsolete("playOnAwake property is deprecated. Use main.playOnAwake instead.", false)]
-        public bool playOnAwake { get => m_Main.playOnAwake; set => m_Main.playOnAwake = value; }
+        public bool playOnAwake { get => m_Main.playOnAwake; set => ModifiedByScript().m_Main.playOnAwake = value; }
 
         [Obsolete("duration property is deprecated. Use main.duration instead.", false)]
         public float duration => m_Main.duration;
 
         [Obsolete("playbackSpeed property is deprecated. Use main.simulationSpeed instead.", false)]
-        public float playbackSpeed { get => m_Main.simulationSpeed; set => m_Main.simulationSpeed = value; }
+        public float playbackSpeed { get => m_Main.simulationSpeed; set => ModifiedByScript().m_Main.simulationSpeed = value; }
 
         [Obsolete("enableEmission property is deprecated. Use emission.enabled instead.", false)]
-        public bool enableEmission { get => m_Emission.enabled; set => m_Emission.enabled = value; }
+        public bool enableEmission { get => m_Emission.enabled; set => ModifiedByScript().m_Emission.enabled = value; }
 
         [Obsolete("emissionRate property is deprecated. Use emission.rateOverTime, emission.rateOverDistance, emission.rateOverTimeMultiplier or emission.rateOverDistanceMultiplier instead.", false)]
-        public float emissionRate { get => m_Emission.rateOverTime.Multiplier; set => m_Emission.rateOverTime.Set(value); }
+        public float emissionRate { get => m_Emission.rateOverTime.Multiplier; set => ModifiedByScript().m_Emission.rateOverTime.Set(value); }
 
         [Obsolete("startSpeed property is deprecated. Use main.startSpeed or main.startSpeedMultiplier instead.", false)]
-        public float startSpeed { get => m_Main.startSpeed.Multiplier; set => m_Main.startSpeed.Set(value); }
+        public float startSpeed { get => m_Main.startSpeed.Multiplier; set => ModifiedByScript().m_Main.startSpeed.Set(value); }
 
         [Obsolete("startSize property is deprecated. Use main.startSize or main.startSizeMultiplier instead.", false)]
-        public float startSize { get => m_Main.startSizeX.Multiplier; set => m_Main.startSizeX.Set(value); }
+        public float startSize { get => m_Main.startSizeX.Multiplier; set => ModifiedByScript().m_Main.startSizeX.Set(value); }
 
         [Obsolete("startColor property is deprecated. Use main.startColor instead.", false)]
-        public Color startColor { get => m_Main.startColor.color; set => m_Main.startColor = value; }
+        public Color startColor { get => m_Main.startColor.color; set => ModifiedByScript().m_Main.startColor = value; }
 
         [Obsolete("startRotation property is deprecated. Use main.startRotation or main.startRotationMultiplier instead.", false)]
-        public float startRotation { get => m_Main.startRotationZ.Multiplier; set => m_Main.startRotationZ.Set(value); }
+        public float startRotation { get => m_Main.startRotationZ.Multiplier; set => ModifiedByScript().m_Main.startRotationZ.Set(value); }
 
         [Obsolete("startRotation3D property is deprecated. Use main.startRotationX, main.startRotationY and main.startRotationZ instead. (Or main.startRotationXMultiplier, main.startRotationYMultiplier and main.startRotationZMultiplier).", false)]
         public Vector3 startRotation3D
@@ -195,19 +228,19 @@ namespace UnityEngine
         }
 
         [Obsolete("startLifetime property is deprecated. Use main.startLifetime or main.startLifetimeMultiplier instead.", false)]
-        public float startLifetime { get => m_Main.startLifetime.Multiplier; set => m_Main.startLifetime.Set(value); }
+        public float startLifetime { get => m_Main.startLifetime.Multiplier; set => ModifiedByScript().m_Main.startLifetime.Set(value); }
 
         [Obsolete("gravityModifier property is deprecated. Use main.gravityModifier or main.gravityModifierMultiplier instead.", false)]
-        public float gravityModifier { get => m_Main.gravityModifier.Multiplier; set => m_Main.gravityModifier.Set(value); }
+        public float gravityModifier { get => m_Main.gravityModifier.Multiplier; set => ModifiedByScript().m_Main.gravityModifier.Set(value); }
 
         [Obsolete("maxParticles property is deprecated. Use main.maxParticles instead.", false)]
-        public int maxParticles { get => m_Main.maxParticles; set => m_Main.maxParticles = Math.Max(0, value); }
+        public int maxParticles { get => m_Main.maxParticles; set => ModifiedByScript().m_Main.maxParticles = Math.Max(0, value); }
 
         [Obsolete("simulationSpace property is deprecated. Use main.simulationSpace instead.", false)]
-        public ParticleSystemSimulationSpace simulationSpace { get => m_Main.simulationSpace; set => m_Main.simulationSpace = value; }
+        public ParticleSystemSimulationSpace simulationSpace { get => m_Main.simulationSpace; set => ModifiedByScript().m_Main.simulationSpace = value; }
 
         [Obsolete("scalingMode property is deprecated. Use main.scalingMode instead.", false)]
-        public ParticleSystemScalingMode scalingMode { get => m_Main.scalingMode; set => m_Main.scalingMode = value; }
+        public ParticleSystemScalingMode scalingMode { get => m_Main.scalingMode; set => ModifiedByScript().m_Main.scalingMode = value; }
 
         [Obsolete("automaticCullingEnabled property is deprecated. Use proceduralSimulationSupported instead (UnityUpgradable) -> proceduralSimulationSupported", false)]
         public bool automaticCullingEnabled => proceduralSimulationSupported;
@@ -955,6 +988,9 @@ namespace UnityEngine
         void PlaySelf()
         {
             m_StopPending = false;
+            // Any Play drops the time a PauseAndCatchup system missed while culled before it
+            // (6000.0.71f1, tests/projects/particlerender cull/catchup_loop and catchup_replay).
+            m_CullingMissed = 0f;
             if (m_IsPaused)
             {
                 m_IsPaused = false;
@@ -982,6 +1018,9 @@ namespace UnityEngine
             m_Time = 0f;
             m_TotalTime = 0f;
             m_CullingMissed = 0f;
+            m_HasPlayed = true;
+            m_ProceduralLost = false;
+            m_CullingGraceFrame = Time.frameCount;
             m_Loop = 0;
             m_RateAccumulator = 0f;
             m_EmitPhase = 0f;
@@ -1152,65 +1191,60 @@ namespace UnityEngine
         /// and plays, has particles or has trails left).</summary>
         bool CullingSimulates => !m_IsPaused && (m_IsPlaying || m_Count > 0 || HasAliveTrails);
 
+        /// <summary>The frame a playback started: a system simulates its first two updates whatever
+        /// its visibility (6000.0.71f1, tests/projects/particlerender hidden/* and the first frames
+        /// before any camera rendered).</summary>
+        int m_CullingGraceFrame = int.MinValue;
+
         /// <summary>
         /// The frame's update under MainModule.cullingMode. Documented (6000.0 Scripting API
         /// ParticleSystemCullingMode, Manual "Main module" Culling Mode): AlwaysSimulate simulates
         /// every frame "regardless of whether it is on screen or not"; Pause "stops simulating while
         /// offscreen"; PauseAndCatchup also stops and, "when re-entering the view, the simulation
         /// performs a large step to reach the point where it would have been had it not paused";
-        /// Automatic: "Looping systems use Pause, and all other system use Always Simulate".
-        /// <para>A culled frame is like a frame paused by a script: the emitter's position is still
-        /// tracked (the movement while culled is not emitted over later), nothing ages, moves,
-        /// emits or ends, and the play state is unchanged. It sends no collision or trigger
-        /// message (it has no simulation to report; Unbound's choice, unmeasured).</para>
-        /// <para>PauseAndCatchup: the missed time is simulated as one step of that length (not
-        /// split by Time.maximumParticleDeltaTime: the Manual's "large step"; unmeasured), before
-        /// the frame's own time, in the first update the system is visible and simulates; its
-        /// collision and trigger messages go out with that frame's. The emitter's movement while
-        /// culled is not replayed (the docs advise AlwaysSimulate for a moving system, especially
-        /// in World simulation space, whose culling bounds may be inaccurate). Time missed
-        /// while a script paused the system does not count, and a script call that changes the
-        /// playback while culled (Simulate, a restart) drops the time missed before it (Unbound's
-        /// choices, unmeasured). A new playback (Restart) and a deactivation clear the missed time,
-        /// so a restart or reactivation while culled from total time 0 drops it as well (an
-        /// implementation invariant, unmeasured against Unity). Stop(StopEmittingAndClear) drops
-        /// it too, so particles emitted right after it are not stepped by it (an implementation
-        /// invariant, unmeasured); plain Clear() does not, and its Emit edge stays open and
-        /// unmeasured.</para>
-        /// <para>Automatic with a looping system is not applied: the 6000.0 docs also say that a
-        /// non-procedural system "must continue updating itself even when offscreen"
-        /// (ParticleSystem.automaticCullingEnabled), and Unbound does not decide procedural
-        /// simulation (<see cref="proceduralSimulationSupported"/>). Such a system keeps simulating
-        /// offscreen, as with AlwaysSimulate, and the first such frame is reported once.</para>
-        /// <para>Visibility is <see cref="Renderer.isVisible"/> of the system's own
-        /// ParticleSystemRenderer, read when the update runs: what the previous frame's cameras and
-        /// shadow casters left after this frame's EarlyUpdate (Unity also counts shadow casting and,
-        /// in the Editor, the Scene view's cameras; Unbound has no Scene view). Before the first
-        /// camera has culled it a renderer is not visible, so a Pause or PauseAndCatchup system
-        /// waits for the first frame drawn (unmeasured). Unbound's choices (unmeasured): a
-        /// sub-emitter decides by its own renderer and mode, not its parent's; a system without an
-        /// enabled ParticleSystemRenderer keeps simulating (the docs do not say), reported once.
-        /// A paused system's bounds stay as they were, which lets it become visible again.</para>
-        /// <para>Drawn bounds (Unbound's choice, unmeasured: the bounds Unity culls particles by are
-        /// not measured). The renderer's bounds are its live particles' centres ± size/2, which
-        /// the engine draws particle renderers regardless of (FrameBuilder: they are not trusted),
-        /// so a system is paused only where Unbound can bound what it draws, see
-        /// <see cref="CullingBoundsCoverDraw"/>: then it pauses while it is not visible and no
-        /// enabled camera drawing its layer has the particles' centres ± size·√3/2 (emitter scale
-        /// applied) in its frustum, tested in the update (<see cref="ConservativeBoundsInView"/>),
-        /// reported once. Any other system (stretched, mesh or none render mode, trails, a pivot,
-        /// a minimum particle size) keeps simulating offscreen, as with AlwaysSimulate, reported
-        /// once. A camera rendered only by script while disabled (Camera.Render) is seen only
-        /// through isVisible.</para>
+        /// Automatic: "Looping systems use Pause, and all other system use Always Simulate", and
+        /// only a procedural system can be culled (ParticleSystem.proceduralSimulationSupported).
+        /// <para>Measured in 6000.0.71f1 (tests/projects/particlerender cull/*, hidden/*): a
+        /// system is offscreen when its ParticleSystemRenderer is not visible
+        /// (<see cref="Renderer.isVisible"/>, read at the update: a camera's culling makes it
+        /// visible at once, and it becomes invisible early in the frame after the first frame no
+        /// camera took it); its first two updates after a playback starts simulate whatever its
+        /// visibility. Automatic culls a looping procedural system as Pause and simulates a
+        /// one-shot or non-procedural one; Pause and PauseAndCatchup cull procedural and
+        /// non-procedural systems alike, whatever the render mode. A culled update changes
+        /// nothing: time, particles, isPlaying, isPaused stay. PauseAndCatchup simulates the
+        /// missed time in its first visible update, before the frame's own time; a Play call
+        /// (also a resume from Pause, or on a playing system) drops the time missed before it,
+        /// and time missed while a script paused the system does not count.</para>
+        /// <para>The missed time and the frame's own time are simulated as one advance, split by
+        /// Time.maximumParticleDeltaTime like a Simulate call (matches the measured times and
+        /// counts, except births due exactly at a step's end). Unbound's choices (unmeasured): the
+        /// emitter's movement while culled is not replayed; a culled update sends no collision or trigger message; a
+        /// sub-emitter decides by its own renderer and mode; a system without an enabled
+        /// ParticleSystemRenderer keeps simulating, reported once. Visibility comes from the
+        /// renderer's culling bounds (<see cref="ParticleSystemRenderer.CullingBounds"/>), which
+        /// Unbound computes conservatively from the particles and the emitter; where it cannot
+        /// bound what is drawn (trails, a minimum particle size, camera velocity stretching) the
+        /// renderer counts as visible whenever a camera draws its layer, so the system keeps
+        /// simulating, reported once.</para>
         /// </summary>
         internal void CullingFrameUpdate()
         {
             var mode = m_Main.cullingMode;
-            if (!CulledThisFrame(mode))
+            // A sub-emitter is culled as the system emitting into it is (6000.0.71f1,
+            // particletriggerapi carrier/*: the never played, never seen child of an AlwaysSimulate
+            // parent keeps its particles updating).
+            var decider = m_SubEmitterParent ?? this;
+            var culling = decider.Culling(decider.m_Main.cullingMode);
+            if (culling != CullingState.Culled)
             {
                 float catchUp = mode == ParticleSystemCullingMode.PauseAndCatchup && m_TotalTime == m_CullingMissedFrom ? m_CullingMissed : 0f;
                 // Missed time a frame cannot simulate yet (a zero time scale) waits for the next.
                 if (FrameUpdate(catchUp) || catchUp == 0f) m_CullingMissed = 0f;
+                // The second update of a playback simulates offscreen too, and its time is caught
+                // up again once the system is seen (6000.0.71f1, particlerender cull/catchup_*: the
+                // first visible update steps the culled frames and that one).
+                if (culling == CullingState.SimulatedOffscreen && mode == ParticleSystemCullingMode.PauseAndCatchup) MissCullingTime();
                 return;
             }
             float raw = m_Main.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
@@ -1222,6 +1256,15 @@ namespace UnityEngine
                 m_CullingMissed = 0f;
                 return;
             }
+            MissCullingTime();
+        }
+
+        /// <summary>Adds the frame's simulation time to the time PauseAndCatchup catches up (a
+        /// script pause or a zero step adds nothing; a new playback or a script call that moved
+        /// the playback drops what was missed before).</summary>
+        void MissCullingTime()
+        {
+            float raw = m_Main.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
             float dt = raw * m_Main.simulationSpeed;
             if (!CullingSimulates || !(dt > 0f)) return;
             if (m_CullingMissed == 0f || m_TotalTime != m_CullingMissedFrom)
@@ -1232,40 +1275,33 @@ namespace UnityEngine
             m_CullingMissed += dt;
         }
 
+        enum CullingState : byte { Simulated, Culled, SimulatedOffscreen }
+
         /// <summary>Whether <paramref name="mode"/> pauses the system this frame (see
         /// <see cref="CullingFrameUpdate"/>).</summary>
-        bool CulledThisFrame(ParticleSystemCullingMode mode)
+        CullingState Culling(ParticleSystemCullingMode mode)
         {
-            if (mode == ParticleSystemCullingMode.AlwaysSimulate) return false;
-            if (mode == ParticleSystemCullingMode.Automatic && !m_Main.loop) return false;
+            if (mode == ParticleSystemCullingMode.AlwaysSimulate) return CullingState.Simulated;
+            if (mode == ParticleSystemCullingMode.Automatic && !(m_Main.loop && proceduralSimulationSupported)) return CullingState.Simulated;
+            int frame = Time.frameCount;
+            // A playback's first update simulates; so does its second, offscreen or not.
+            if (frame <= m_CullingGraceFrame) return CullingState.Simulated;
             var renderer = CullingRenderer;
             if (renderer == null || !renderer.enabled)
             {
                 if (CullingSimulates)
                     Unbound.Runtime.Stubs.Ignored("ParticleSystem.main.cullingMode without a renderer",
                         "keeps simulating a system without an enabled ParticleSystemRenderer (its culling is not decided)");
-                return false;
+                return CullingState.Simulated;
             }
-            if (renderer.isVisible) return false;
-            if (mode == ParticleSystemCullingMode.Automatic)
+            if (renderer.isVisible)
             {
-                if (CullingSimulates)
-                    Unbound.Runtime.Stubs.Ignored("ParticleSystem.main.cullingMode Automatic",
-                        "keeps simulating an offscreen looping system: the docs also keep a non-procedural system updating offscreen, and Unbound does not decide procedural simulation");
-                return false;
-            }
-            if (!CullingBoundsCoverDraw(renderer))
-            {
-                if (CullingSimulates)
+                if (!renderer.CullingBoundsCoverDraw && CullingSimulates)
                     Unbound.Runtime.Stubs.Ignored("Particle culling without covering bounds",
-                        "keeps simulating an offscreen Pause or PauseAndCatchup system: its culling bounds do not cover what it draws (a stretched, mesh or none render mode, trails, a pivot or a minimum particle size)");
-                return false;
+                        "may keep simulating offscreen: Unbound cannot bound this system's drawing (trails, a minimum particle size, stretching by camera velocity), so it counts as visible whenever a camera draws its layer");
+                return CullingState.Simulated;
             }
-            if (ConservativeBoundsInView(renderer)) return false;
-            if (CullingSimulates)
-                Unbound.Runtime.Stubs.Ignored("Particle culling with approximate bounds",
-                    "pauses an offscreen billboard system by its live particles' centres ± size·√3/2 (the bounds Unity culls by are not measured)");
-            return true;
+            return frame == m_CullingGraceFrame + 1 ? CullingState.SimulatedOffscreen : CullingState.Culled;
         }
 
         /// <summary>The system's ParticleSystemRenderer, looked up again only when it is gone or
@@ -1281,75 +1317,6 @@ namespace UnityEngine
                     m_CullingRenderer = m_GameObject.GetComponent<ParticleSystemRenderer>();
                 return m_CullingRenderer;
             }
-        }
-
-        /// <summary>Whether every quad the renderer draws lies within √2/2 of the particle's
-        /// size (emitter scale applied) of its centre, so that centres ± size·√3/2 cover it: a
-        /// billboard render mode (a quad of the particle's size, or 1/√2 of it, about its centre,
-        /// at any rotation and alignment), no trails, a zero pivot and no minimum particle size
-        /// (which can enlarge a far particle). The maximum particle size only shrinks quads.
-        /// Stretched quads, meshes, trails and pivots reach further (Unbound's choice: they are not
-        /// culled, see <see cref="CullingFrameUpdate"/>).</summary>
-        bool CullingBoundsCoverDraw(ParticleSystemRenderer renderer)
-        {
-            switch (renderer.renderMode)
-            {
-                case ParticleSystemRenderMode.Billboard:
-                case ParticleSystemRenderMode.HorizontalBillboard:
-                case ParticleSystemRenderMode.VerticalBillboard:
-                    break;
-                default:
-                    return false;
-            }
-            var pivot = renderer.pivot;
-            return !m_Trails.enabled && !HasAliveTrails
-                && pivot.x == 0f && pivot.y == 0f && pivot.z == 0f
-                && !(renderer.minParticleSize > 0f);
-        }
-
-        /// <summary>Whether an enabled camera whose culling mask has the renderer's layer has the
-        /// live particles' centres ± size·√3/2 (the largest size axis, by the largest emitter scale
-        /// axis) at least partly in its view frustum now. Conservative on purpose: the cameras'
-        /// displays, layer cull distances and LOD groups are not applied (a camera that would not
-        /// draw the system only keeps it simulating).</summary>
-        bool ConservativeBoundsInView(ParticleSystemRenderer renderer)
-        {
-            if (m_Count == 0) return false;
-            int layer = 1 << renderer.m_GameObject.m_Layer;
-            bool bounded = false;
-            var bounds = new Bounds();
-            foreach (var camera in Camera.s_Enabled)
-            {
-                if (!camera || !camera.isActiveAndEnabled || (camera.cullingMask & layer) == 0) continue;
-                if (!bounded)
-                {
-                    bounds = ConservativeWorldBounds();
-                    bounded = true;
-                }
-                if (Unbound.Runtime.FrameBuilder.InFrustum(camera.projectionMatrix * camera.worldToCameraMatrix, bounds)) return true;
-            }
-            return false;
-        }
-
-        Bounds ConservativeWorldBounds()
-        {
-            const float halfSqrt3 = 0.8660254f;
-            var toWorld = SimulationToWorld();
-            var scale = EmitterScale();
-            float maxScale = Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
-            Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue), max = -min;
-            for (int i = 0; i < m_Count; i++)
-            {
-                ref var p = ref m_Particles[i];
-                var w = toWorld.MultiplyPoint3x4(p.m_Position);
-                var s = CurrentSize3D(ref p);
-                float r = halfSqrt3 * maxScale * Mathf.Max(Mathf.Abs(s.x), Mathf.Max(Mathf.Abs(s.y), Mathf.Abs(s.z)));
-                min = Vector3.Min(min, w - new Vector3(r, r, r));
-                max = Vector3.Max(max, w + new Vector3(r, r, r));
-            }
-            var b = new Bounds();
-            b.SetMinMax(min, max);
-            return b;
         }
 
         // ------------------------------------------------------------------ storage
