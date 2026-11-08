@@ -389,6 +389,8 @@ pub struct GpuTexture {
     pub cube_array: bool,
     /// A 3D texture (`layers` is its depth).
     pub volume: bool,
+    /// Writable views, prepared once for each mip.
+    pub storage_views: Vec<wgpu::TextureView>,
     /// One attachment view per volume mip, made with the resource and reused across draws.
     pub volume_targets: Vec<(wgpu::TextureView, Option<wgpu::TextureView>)>,
     pub width: u32,
@@ -1057,6 +1059,21 @@ pub fn upload_texture(
                     ..Default::default()
                 })
             });
+            let storage_views = if t.random_write {
+                (0..mip_count)
+                    .map(|mip| {
+                        texture.create_view(&wgpu::TextureViewDescriptor {
+                            format: Some(format.remove_srgb_suffix()),
+                            usage: Some(wgpu::TextureUsages::STORAGE_BINDING),
+                            base_mip_level: mip,
+                            mip_level_count: Some(1),
+                            ..Default::default()
+                        })
+                    })
+                    .collect()
+            } else {
+                Vec::new()
+            };
             let volume_targets = if volume && render_target {
                 (0..mip_count)
                     .map(|mip| {
@@ -1167,6 +1184,7 @@ pub fn upload_texture(
                 cube_array,
                 volume,
                 volume_targets,
+                storage_views,
                 width,
                 height,
                 format: t.format,

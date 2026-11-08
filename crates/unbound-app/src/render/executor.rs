@@ -441,6 +441,7 @@ pub struct UnityRenderer {
     /// Bound for a buffer a draw reads that nothing set: zeros.
     empty_storage: Option<wgpu::Buffer>,
     kernels: compute::KernelCache,
+    compute_bindings: compute::BindingCache,
     /// The pass writing a counter at a byte offset that is not a multiple of 4.
     unaligned_count: Option<(wgpu::ComputePipeline, wgpu::BindGroupLayout)>,
     generation: u64,
@@ -527,6 +528,7 @@ impl UnityRenderer {
             buffers: HashMap::default(),
             empty_storage: None,
             kernels: Default::default(),
+            compute_bindings: Default::default(),
             unaligned_count: None,
             generation: 1,
             draw_buffer: None,
@@ -714,9 +716,14 @@ impl UnityRenderer {
                 self.generation += 1;
                 let old = self.textures.remove(&handle);
                 let previous = old.as_ref().map(|gpu| gpu.texture.clone());
+                let previous_sampler = old.as_ref().map(|gpu| gpu.sampler_key);
                 let gpu =
                     resources::upload_texture(&device, &self.queue, old, &texture, self.generation);
+                if previous_sampler.is_some_and(|sampler| sampler != gpu.sampler_key) {
+                    self.compute_bindings.release_sampler(&gpu.texture);
+                }
                 if let Some(previous) = previous.filter(|previous| *previous != gpu.texture) {
+                    self.compute_bindings.release_texture(&previous);
                     self.mipmaps.release(&previous);
                     self.pending_mips.remove(&previous);
                 }
@@ -733,6 +740,7 @@ impl UnityRenderer {
             Upload::ReleaseTexture(handle) => {
                 self.generation += 1;
                 if let Some(texture) = self.textures.remove(&handle) {
+                    self.compute_bindings.release_texture(&texture.texture);
                     self.mipmaps.release(&texture.texture);
                     self.pending_mips.remove(&texture.texture);
                 }
@@ -745,8 +753,11 @@ impl UnityRenderer {
                 self.texture_mip_biases.insert(handle, bias);
                 if let Some(texture) = self.textures.get_mut(&handle) {
                     self.generation += 1;
-                    texture.sampler_key.lod_bias_bits =
-                        if bias == 0.0 { 0 } else { bias.to_bits() };
+                    let bias = if bias == 0.0 { 0 } else { bias.to_bits() };
+                    if texture.sampler_key.lod_bias_bits != bias {
+                        self.compute_bindings.release_sampler(&texture.texture);
+                        texture.sampler_key.lod_bias_bits = bias;
+                    }
                     texture.generation = self.generation;
                     texture.bind_groups = [None, None];
                 }
@@ -754,6 +765,16 @@ impl UnityRenderer {
             Upload::TextureSampler(handle, [filter, wrap_u, wrap_v, wrap_w, aniso]) => {
                 if let Some(texture) = self.textures.get_mut(&handle) {
                     self.generation += 1;
+                    if (
+                        texture.sampler_key.filter,
+                        texture.sampler_key.wrap_u,
+                        texture.sampler_key.wrap_v,
+                        texture.sampler_key.wrap_w,
+                        texture.sampler_key.aniso,
+                    ) != (filter, wrap_u, wrap_v, wrap_w, aniso)
+                    {
+                        self.compute_bindings.release_sampler(&texture.texture);
+                    }
                     texture.sampler_key.filter = filter;
                     texture.sampler_key.wrap_u = wrap_u;
                     texture.sampler_key.wrap_v = wrap_v;
@@ -2249,6 +2270,7 @@ impl UnityRenderer {
     /// Executes commands: plans them, then encodes and queues the work.
     pub fn execute(&mut self, commands: Vec<Command>) {
         self.uniforms.clear();
+        self.compute_bindings.begin();
         self.compiled.begin_frame();
         let time = self.started.elapsed().as_secs_f32();
         let device = self.device.clone();
@@ -3464,6 +3486,7 @@ impl UnityRenderer {
         }
         self.encode(std::mem::take(ops));
         self.uniforms.clear();
+        self.compute_bindings.begin();
         self.compiled.begin_frame();
         *open = false;
     }

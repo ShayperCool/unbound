@@ -236,7 +236,7 @@ namespace UnityEngine
 
         int Faces => dimension == TextureDimension.Cube ? 6 : 1;
 
-        /// <summary>3D targets are not drawn into by the renderer yet: the texture is left as it is,
+        /// <summary>Volume update zones are unsupported: the texture is left as it is,
         /// with an error.</summary>
         bool Unsupported()
         {
@@ -244,7 +244,7 @@ namespace UnityEngine
             if (!m_ReportedVolume)
             {
                 m_ReportedVolume = true;
-                Debug.LogError($"CustomRenderTexture '{name}' is a 3D texture: Unbound does not render into 3D render textures yet, so it is neither initialized nor updated.");
+                Debug.LogError($"CustomRenderTexture '{name}' is a 3D texture: volume update zones are not supported, so it is neither initialized nor updated.");
             }
             return true;
         }

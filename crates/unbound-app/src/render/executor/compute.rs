@@ -56,11 +56,179 @@ pub struct KernelGpu {
     kernel: Arc<CompiledKernel>,
     layout: wgpu::BindGroupLayout,
     pipeline: wgpu::ComputePipeline,
+    sampler_defaults: Vec<Option<super::SamplerKey>>,
+    sampler_alternates: Vec<Option<String>>,
+    constant_names: Vec<(String, String)>,
 }
 
-/// Compiled kernels by (file, kernel, keywords, RW texture formats); failures keep their reason.
-pub type KernelCache =
-    HashMap<(String, String, Vec<String>, Vec<(String, String)>), Result<Arc<KernelGpu>, String>>;
+#[derive(Clone, PartialEq, Eq, Hash)]
+enum Bound {
+    Buffer(wgpu::Buffer, u64, Option<std::num::NonZeroU64>),
+    View(Option<wgpu::Texture>, wgpu::TextureView),
+    Sampler(Option<wgpu::Texture>, super::SamplerKey),
+}
+
+struct UniformSlot {
+    buffer: wgpu::Buffer,
+    data: Vec<u8>,
+}
+
+/// Dispatches in one submission use distinct uniform slots. Later submissions reuse them;
+/// queue writes stay ordered after the commands that used the preceding contents.
+#[derive(Default)]
+pub(super) struct BindingCache {
+    uniforms: Vec<UniformSlot>,
+    next_uniform: usize,
+    groups: HashMap<wgpu::BindGroupLayout, HashMap<Vec<(u32, Bound)>, wgpu::BindGroup>>,
+    scratch: Vec<(u32, Bound)>,
+    formats: Vec<(usize, &'static str)>,
+}
+
+impl BindingCache {
+    pub(super) fn begin(&mut self) {
+        self.next_uniform = 0;
+    }
+
+    fn uniform(&mut self, device: &wgpu::Device, size: usize) -> &mut UniformSlot {
+        let index = self.next_uniform;
+        self.next_uniform += 1;
+        let make = || UniformSlot {
+            buffer: device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("unbound kernel uniforms"),
+                size: (size as u64).next_power_of_two(),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            }),
+            data: Vec::with_capacity(size),
+        };
+        if index == self.uniforms.len() {
+            self.uniforms.push(make());
+        } else if self.uniforms[index].buffer.size() < size as u64 {
+            let previous = self.uniforms[index].buffer.clone();
+            self.release_buffer(&previous);
+            self.uniforms[index] = make();
+        }
+        let slot = &mut self.uniforms[index];
+        slot.data.resize(size, 0);
+        slot.data.fill(0);
+        slot
+    }
+
+    fn group(
+        &mut self,
+        device: &wgpu::Device,
+        layout: &wgpu::BindGroupLayout,
+        bindings: &[(u32, Bound)],
+    ) -> wgpu::BindGroup {
+        let groups = self.groups.entry(layout.clone()).or_default();
+        if let Some(group) = groups.get(bindings) {
+            return group.clone();
+        }
+        // Samplers are created only on a binding-cache miss, including biased states.
+        let samplers: Vec<_> = bindings
+            .iter()
+            .filter_map(|(_, binding)| match binding {
+                Bound::Sampler(_, key) => {
+                    Some(super::super::resources::create_sampler(device, *key))
+                }
+                _ => None,
+            })
+            .collect();
+        let mut samplers = samplers.iter();
+        let entries: Vec<_> = bindings
+            .iter()
+            .map(|(binding, resource)| wgpu::BindGroupEntry {
+                binding: *binding,
+                resource: match resource {
+                    Bound::Buffer(buffer, offset, size) => {
+                        wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                            buffer,
+                            offset: *offset,
+                            size: *size,
+                        })
+                    }
+                    Bound::View(_, view) => wgpu::BindingResource::TextureView(view),
+                    Bound::Sampler(_, _) => {
+                        wgpu::BindingResource::Sampler(samplers.next().unwrap())
+                    }
+                },
+            })
+            .collect();
+        let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("unbound kernel"),
+            layout,
+            entries: &entries,
+        });
+        groups.insert(bindings.to_vec(), group.clone());
+        group
+    }
+
+    pub(super) fn release_texture(&mut self, texture: &wgpu::Texture) {
+        for groups in self.groups.values_mut() {
+            groups.retain(|bindings, _| !bindings.iter().any(|(_, binding)| matches!(binding, Bound::View(Some(source), _) | Bound::Sampler(Some(source), _) if source == texture)));
+        }
+    }
+
+    pub(super) fn release_sampler(&mut self, texture: &wgpu::Texture) {
+        for groups in self.groups.values_mut() {
+            groups.retain(|bindings, _| !bindings.iter().any(|(_, binding)| matches!(binding, Bound::Sampler(Some(source), _) if source == texture)));
+        }
+    }
+
+    fn release_buffer(&mut self, buffer: &wgpu::Buffer) {
+        for groups in self.groups.values_mut() {
+            groups.retain(|bindings, _| !bindings.iter().any(|(_, binding)| matches!(binding, Bound::Buffer(source, _, _) if source == buffer)));
+        }
+    }
+}
+
+#[derive(Hash, PartialEq, Eq)]
+pub(super) struct KernelKey {
+    file: String,
+    kernel: String,
+    keywords: Vec<String>,
+    formats: Vec<(String, String)>,
+}
+
+struct KernelLookup<'a> {
+    file: &'a str,
+    kernel: &'a str,
+    keywords: &'a [String],
+    formats: &'a [(usize, &'static str)],
+    properties: &'a [(String, PropertyValue)],
+}
+
+impl std::hash::Hash for KernelLookup<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.file.hash(state);
+        self.kernel.hash(state);
+        self.keywords.hash(state);
+        self.formats.len().hash(state);
+        for (index, format) in self.formats {
+            (self.properties[*index].0.as_str(), *format).hash(state);
+        }
+    }
+}
+
+impl bevy::platform::collections::Equivalent<KernelKey> for KernelLookup<'_> {
+    fn equivalent(&self, key: &KernelKey) -> bool {
+        key.file == self.file
+            && key.kernel == self.kernel
+            && key.keywords.as_slice() == self.keywords
+            && key.formats.len() == self.formats.len()
+            && key
+                .formats
+                .iter()
+                .zip(self.formats)
+                .all(|((name, format), (index, expected))| {
+                    name == &self.properties[*index].0 && format == expected
+                })
+    }
+}
+
+/// Compiled kernels by source, selected keywords and actual writable texture formats.
+pub(super) type KernelCache =
+    bevy::platform::collections::HashMap<KernelKey, Result<Arc<KernelGpu>, String>>;
 
 /// naga's name of a texture format a kernel writes (its RW textures are compiled in it).
 fn storage_format_name(format: wgpu::TextureFormat) -> Option<&'static str> {
@@ -213,6 +381,7 @@ fn write_uniform(u: &Uniform, value: &PropertyValue, out: &mut [u8]) {
 impl UnityRenderer {
     /// A new zeroed buffer (replacing one of the same handle).
     pub(super) fn create_buffer(&mut self, handle: u64, size: u64, usage: u32) {
+        self.release_buffer(handle);
         let mut flags = wgpu::BufferUsages::STORAGE
             | wgpu::BufferUsages::COPY_DST
             | wgpu::BufferUsages::COPY_SRC;
@@ -512,7 +681,12 @@ fn main() {
     }
 
     pub(super) fn release_buffer(&mut self, handle: u64) {
-        self.buffers.remove(&handle);
+        if let Some(buffer) = self.buffers.remove(&handle) {
+            self.compute_bindings.release_buffer(&buffer.buffer);
+            if let Some(counter) = buffer.counter {
+                self.compute_bindings.release_buffer(&counter);
+            }
+        }
     }
 
     /// A buffer's bytes after everything queued.
@@ -584,7 +758,7 @@ fn main() {
         keywords: &[String],
     ) -> Result<[u32; 3], String> {
         Ok(self
-            .kernel(file, kernel, keywords, Vec::new())?
+            .kernel(file, kernel, keywords, &[], &[])?
             .kernel
             .workgroup_size)
     }
@@ -594,18 +768,29 @@ fn main() {
         file: &str,
         kernel: &str,
         keywords: &[String],
-        formats: Vec<(String, String)>,
+        formats: &[(usize, &'static str)],
+        properties: &[(String, PropertyValue)],
     ) -> Result<Arc<KernelGpu>, String> {
-        let key = (
-            file.to_string(),
-            kernel.to_string(),
-            keywords.to_vec(),
-            formats.clone(),
-        );
-        if let Some(found) = self.kernels.get(&key) {
+        let lookup = KernelLookup {
+            file,
+            kernel,
+            keywords,
+            formats,
+            properties,
+        };
+        if let Some(found) = self.kernels.get(&lookup) {
             return found.clone();
         }
-        let built = self.build_kernel(file, kernel, keywords, &formats);
+        let key = KernelKey {
+            file: file.into(),
+            kernel: kernel.into(),
+            keywords: keywords.to_vec(),
+            formats: formats
+                .iter()
+                .map(|(index, format)| (properties[*index].0.clone(), (*format).into()))
+                .collect(),
+        };
+        let built = self.build_kernel(file, kernel, keywords, &key.formats);
         if let Err(e) = &built {
             tracing::warn!("compute kernel `{kernel}` of {file} cannot run: {e}");
         }
@@ -733,7 +918,46 @@ fn main() {
                 compiled.keywords.join(" ")
             }
         );
+        let sampler_defaults = compiled
+            .resources
+            .iter()
+            .map(|resource| match &resource.kind {
+                ResourceKind::Sampler { comparison, .. } => {
+                    let key = unbound_shaders::InlineSampler::from_name(&resource.name)
+                        .map_or(super::SamplerKey::LINEAR_CLAMP, super::SamplerKey::inline);
+                    Some(super::SamplerKey {
+                        compare: if *comparison { 4 } else { 0 },
+                        ..key
+                    })
+                }
+                _ => None,
+            })
+            .collect();
+        let sampler_alternates = compiled
+            .resources
+            .iter()
+            .map(|resource| match &resource.kind {
+                ResourceKind::Sampler {
+                    texture: Some(name),
+                    ..
+                } => Some(format!("_{name}")),
+                _ => None,
+            })
+            .collect();
+        let constant_names = compiled
+            .blocks
+            .iter()
+            .map(|block| {
+                (
+                    format!("{}{}", block.name, CONSTANT_OFFSET_SUFFIX),
+                    format!("{}@size", block.name),
+                )
+            })
+            .collect();
         Ok(Arc::new(KernelGpu {
+            sampler_defaults,
+            sampler_alternates,
+            constant_names,
             kernel: compiled,
             layout,
             pipeline,
@@ -755,292 +979,312 @@ fn main() {
 
     /// The pipeline and bindings of a dispatch, or `None` (logged) when it cannot run.
     pub(super) fn plan_dispatch(&mut self, d: &commands::Dispatch) -> Option<Op> {
-        let globals = self.globals.clone();
         // RW textures compile in the formats of the textures bound to them.
-        let mut formats = Vec::new();
-        for (name, value) in &d.properties {
+        let mut formats = std::mem::take(&mut self.compute_bindings.formats);
+        formats.clear();
+        for (index, (_, value)) in d.properties.iter().enumerate() {
             if let PropertyValue::Image { handle, .. } = value
                 && let Some(t) = self.textures.get(handle)
                 && let Some(f) = storage_format_name(t.texture.format())
             {
-                formats.push((name.clone(), f.to_string()));
+                formats.push((index, f));
             }
         }
-        formats.sort();
-        let gpu = self.kernel(&d.file, &d.kernel, &d.keywords, formats).ok()?;
+        formats.sort_unstable_by(|(a, af), (b, bf)| {
+            (&d.properties[*a].0, af).cmp(&(&d.properties[*b].0, bf))
+        });
+        let gpu = self.kernel(&d.file, &d.kernel, &d.keywords, &formats, &d.properties);
+        self.compute_bindings.formats = formats;
+        let gpu = gpu.ok()?;
         let space = self.color_space;
-        let mut uniform_buffers = Vec::new();
-        for block in &gpu.kernel.blocks {
-            let mut data = vec![0u8; block.size.max(16) as usize];
-            // Bind the original GPU buffer so earlier GPU writes remain ordered and visible.
-            if let Some(PropertyValue::Buffer(handle)) =
-                Self::dispatch_value(&d.properties, &globals, &block.name)
+        let mut bound = std::mem::take(&mut self.compute_bindings.scratch);
+        bound.clear();
+        let result = (|| {
+            for (block, (offset_name, size_name)) in
+                gpu.kernel.blocks.iter().zip(&gpu.constant_names)
             {
-                let integer = |suffix: &str| match Self::dispatch_value(
-                    &d.properties,
-                    &globals,
-                    &format!("{}{suffix}", block.name),
-                ) {
-                    Some(PropertyValue::Int(value)) => (*value).max(0) as u64,
-                    _ => 0,
-                };
-                let offset = integer(CONSTANT_OFFSET_SUFFIX);
-                let size = integer("@size");
-                let valid = self.buffers.get(handle).filter(|b| {
-                    b.buffer.usage().contains(wgpu::BufferUsages::UNIFORM)
-                        && offset.is_multiple_of(
-                            self.device.limits().min_uniform_buffer_offset_alignment as u64,
-                        )
-                        && size >= block.size.max(16) as u64
-                        && offset.checked_add(size).is_some_and(|end| end <= b.size)
-                });
-                let Some(buffer) = valid else {
-                    self.warn_once(format!("kconstant{}{}", d.kernel, block.name), || format!("kernel `{}`: constant buffer `{}` is missing, too small, unaligned or lacks Constant usage: the dispatch is skipped", d.kernel, block.name));
-                    return None;
-                };
-                uniform_buffers.push((block.binding, buffer.buffer.clone(), offset, size));
-                continue;
-            }
-            for u in &block.uniforms {
-                if let Some(v) = Self::dispatch_value(&d.properties, &globals, &u.name) {
-                    write_uniform(u, v, &mut data);
-                }
-            }
-            let buffer = self
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("unbound kernel uniforms"),
-                    contents: &data,
-                    usage: wgpu::BufferUsages::UNIFORM,
-                });
-            uniform_buffers.push((block.binding, buffer, 0, data.len() as u64));
-        }
-        enum Bound {
-            Buffer(wgpu::Buffer),
-            View(wgpu::TextureView),
-            Sampler(wgpu::Sampler),
-        }
-        let mut bound: Vec<(u32, Bound)> = Vec::new();
-        for r in &gpu.kernel.resources {
-            let value = Self::dispatch_value(&d.properties, &globals, &r.name);
-            match &r.kind {
-                ResourceKind::Buffer { .. } if r.name.ends_with(COUNTER_SUFFIX) => {
-                    // The hidden counter of the buffer bound to the name before the suffix.
-                    let owner = &r.name[..r.name.len() - COUNTER_SUFFIX.len()];
-                    let bound_to = match Self::dispatch_value(&d.properties, &globals, owner) {
-                        Some(PropertyValue::Buffer(h)) => Some(*h),
-                        _ => None,
+                // Bind the original GPU buffer so earlier GPU writes remain ordered and visible.
+                if let Some(PropertyValue::Buffer(handle)) =
+                    Self::dispatch_value(&d.properties, &self.globals, &block.name)
+                {
+                    let integer =
+                        |name: &str| match Self::dispatch_value(&d.properties, &self.globals, name)
+                        {
+                            Some(PropertyValue::Int(value)) => (*value).max(0) as u64,
+                            _ => 0,
+                        };
+                    let offset = integer(offset_name);
+                    let size = integer(size_name);
+                    let valid = self.buffers.get(handle).filter(|b| {
+                        b.buffer.usage().contains(wgpu::BufferUsages::UNIFORM)
+                            && offset.is_multiple_of(
+                                self.device.limits().min_uniform_buffer_offset_alignment as u64,
+                            )
+                            && size >= block.size.max(16) as u64
+                            && offset.checked_add(size).is_some_and(|end| end <= b.size)
+                    });
+                    let Some(buffer) = valid else {
+                        self.warn_once(format!("kconstant{}{}", d.kernel, block.name), || format!("kernel `{}`: constant buffer `{}` is missing, too small, unaligned or lacks Constant usage: the dispatch is skipped", d.kernel, block.name));
+                        return None;
                     };
-                    let counter = bound_to
-                        .and_then(|h| self.buffers.get_mut(&h))
-                        .and_then(|b| {
-                            b.counter_used |= b.counter.is_some();
-                            b.counter.clone()
-                        });
-                    let Some(counter) = counter else {
-                        self.warn_once(format!("kcount{}{owner}", d.kernel), || {
+                    bound.push((
+                        block.binding,
+                        Bound::Buffer(buffer.buffer.clone(), offset, wgpu::BufferSize::new(size)),
+                    ));
+                    continue;
+                }
+                let slot = self
+                    .compute_bindings
+                    .uniform(&self.device, block.size.max(16) as usize);
+                for u in &block.uniforms {
+                    if let Some(v) = Self::dispatch_value(&d.properties, &self.globals, &u.name) {
+                        write_uniform(u, v, &mut slot.data);
+                    }
+                }
+                self.queue.write_buffer(&slot.buffer, 0, &slot.data);
+                bound.push((
+                    block.binding,
+                    Bound::Buffer(
+                        slot.buffer.clone(),
+                        0,
+                        wgpu::BufferSize::new(slot.data.len() as u64),
+                    ),
+                ));
+            }
+            for (resource_index, r) in gpu.kernel.resources.iter().enumerate() {
+                let value = Self::dispatch_value(&d.properties, &self.globals, &r.name);
+                match &r.kind {
+                    ResourceKind::Buffer { .. } if r.name.ends_with(COUNTER_SUFFIX) => {
+                        // The hidden counter of the buffer bound to the name before the suffix.
+                        let owner = &r.name[..r.name.len() - COUNTER_SUFFIX.len()];
+                        let bound_to =
+                            match Self::dispatch_value(&d.properties, &self.globals, owner) {
+                                Some(PropertyValue::Buffer(h)) => Some(*h),
+                                _ => None,
+                            };
+                        let counter =
+                            bound_to
+                                .and_then(|h| self.buffers.get_mut(&h))
+                                .and_then(|b| {
+                                    b.counter_used |= b.counter.is_some();
+                                    b.counter.clone()
+                                });
+                        let Some(counter) = counter else {
+                            self.warn_once(format!("kcount{}{owner}", d.kernel), || {
                             format!(
                                 "kernel `{}` uses the counter of buffer `{owner}`, which is not set or not an Append or Counter buffer: the dispatch is skipped",
                                 d.kernel
                             )
                         });
-                        return None;
-                    };
-                    bound.push((r.binding, Bound::Buffer(counter)));
-                }
-                ResourceKind::Buffer { read_only } => {
-                    let Some(b) = (match value {
-                        Some(PropertyValue::Buffer(h)) => self.buffers.get_mut(h),
-                        _ => None,
-                    }) else {
-                        self.warn_once(format!("kbuf{}{}", d.kernel, r.name), || {
-                            format!(
-                                "kernel `{}`: buffer `{}` is not set: the dispatch is skipped",
-                                d.kernel, r.name
-                            )
-                        });
-                        return None;
-                    };
-                    if !read_only {
-                        b.revision = b.revision.wrapping_add(1);
+                            return None;
+                        };
+                        bound.push((r.binding, Bound::Buffer(counter, 0, None)));
                     }
-                    bound.push((r.binding, Bound::Buffer(b.buffer.clone())));
-                }
-                ResourceKind::Texture { dim, sample } => {
-                    let handle = match value {
-                        Some(PropertyValue::Texture { handle, .. }) => *handle,
-                        Some(PropertyValue::Image { handle, .. }) => *handle,
-                        _ => 0,
-                    };
-                    // Integer textures are read by 2D integer slots of their signedness; any
-                    // other pairing with an integer slot or texture reads the slot's default.
-                    let wanted = match sample.as_str() {
-                        "sint" => Some(wgpu::TextureSampleType::Sint),
-                        "uint" => Some(wgpu::TextureSampleType::Uint),
-                        _ => None,
-                    };
-                    let has = self
-                        .textures
-                        .get(&handle)
-                        .and_then(|t| t.texture.format().sample_type(None, None))
-                        .filter(|t| {
-                            matches!(
-                                t,
-                                wgpu::TextureSampleType::Sint | wgpu::TextureSampleType::Uint
-                            )
-                        });
-                    let view = if *dim == TextureDim::D2 && (wanted.is_some() || has.is_some()) {
-                        if wanted.is_some() && has == wanted {
-                            self.textures[&handle].view.clone()
-                        } else {
-                            if handle != 0 {
-                                self.warn_once(format!("kint{}{}{handle}", d.kernel, r.name), || {
-                                    format!("kernel `{}`: texture `{}` ({sample}) cannot read render texture {handle} of another texel type: it reads its default", d.kernel, r.name)
-                                });
-                            }
-                            match wanted {
-                                Some(w) => self.integer_default(w == wgpu::TextureSampleType::Sint),
-                                None => self.texture_or_default(0, "white").view_for(space).clone(),
-                            }
+                    ResourceKind::Buffer { read_only } => {
+                        let Some(b) = (match value {
+                            Some(PropertyValue::Buffer(h)) => self.buffers.get_mut(h),
+                            _ => None,
+                        }) else {
+                            self.warn_once(format!("kbuf{}{}", d.kernel, r.name), || {
+                                format!(
+                                    "kernel `{}`: buffer `{}` is not set: the dispatch is skipped",
+                                    d.kernel, r.name
+                                )
+                            });
+                            return None;
+                        };
+                        if !read_only {
+                            b.revision = b.revision.wrapping_add(1);
                         }
-                    } else if *dim == TextureDim::D2 {
-                        self.texture_or_default(handle, "white")
-                            .view_for(space)
-                            .clone()
-                    } else {
-                        self.dim_default(*dim, "white")
-                    };
-                    bound.push((r.binding, Bound::View(view)));
-                }
-                ResourceKind::StorageTexture { .. } => {
-                    let (handle, mip) = match value {
-                        Some(PropertyValue::Image { handle, mip }) => (*handle, *mip),
-                        Some(PropertyValue::Texture { handle, .. }) => (*handle, 0),
-                        _ => (0, 0),
-                    };
-                    let Some(t) = self.textures.get(&handle) else {
-                        self.warn_once(format!("ktex{}{}", d.kernel, r.name), || {
+                        bound.push((r.binding, Bound::Buffer(b.buffer.clone(), 0, None)));
+                    }
+                    ResourceKind::Texture { dim, sample } => {
+                        let handle = match value {
+                            Some(PropertyValue::Texture { handle, .. }) => *handle,
+                            Some(PropertyValue::Image { handle, .. }) => *handle,
+                            _ => 0,
+                        };
+                        // Integer textures are read by 2D integer slots of their signedness; any
+                        // other pairing with an integer slot or texture reads the slot's default.
+                        let wanted = match sample.as_str() {
+                            "sint" => Some(wgpu::TextureSampleType::Sint),
+                            "uint" => Some(wgpu::TextureSampleType::Uint),
+                            _ => None,
+                        };
+                        let has = self
+                            .textures
+                            .get(&handle)
+                            .and_then(|t| t.texture.format().sample_type(None, None))
+                            .filter(|t| {
+                                matches!(
+                                    t,
+                                    wgpu::TextureSampleType::Sint | wgpu::TextureSampleType::Uint
+                                )
+                            });
+                        let actual = self
+                            .textures
+                            .get(&handle)
+                            .filter(|t| texture_dimension(t) == *dim);
+                        let (source, view) = if let Some(texture) = actual.filter(|_| wanted == has)
+                        {
+                            (
+                                Some(texture.texture.clone()),
+                                texture.view_for(space).clone(),
+                            )
+                        } else {
+                            if handle != 0 && (wanted.is_some() || has.is_some()) {
+                                self.warn_once(format!("kint{}{}{handle}", d.kernel, r.name), || format!("kernel `{}`: texture `{}` ({sample}) cannot read render texture {handle} of another texel type: it reads its default", d.kernel, r.name));
+                            }
+                            let view = match wanted {
+                                Some(w) if *dim == TextureDim::D2 => {
+                                    self.integer_default(w == wgpu::TextureSampleType::Sint)
+                                }
+                                Some(_) => {
+                                    self.warn_once(format!("kintdim{}{}", d.kernel, r.name), || format!("kernel `{}`: missing or incompatible integer texture `{}` ({dim:?}): the dispatch is skipped", d.kernel, r.name));
+                                    return None;
+                                }
+                                None if *dim == TextureDim::D2 => {
+                                    self.texture_or_default(0, "white").view_for(space).clone()
+                                }
+                                None => self.dim_default(*dim, "white"),
+                            };
+                            (None, view)
+                        };
+                        bound.push((r.binding, Bound::View(source, view)));
+                    }
+                    ResourceKind::StorageTexture { dim, .. } => {
+                        let (handle, mip) = match value {
+                            Some(PropertyValue::Image { handle, mip }) => (*handle, *mip),
+                            Some(PropertyValue::Texture { handle, .. }) => (*handle, 0),
+                            _ => (0, 0),
+                        };
+                        let Some(t) = self.textures.get(&handle) else {
+                            self.warn_once(format!("ktex{}{}", d.kernel, r.name), || {
                             format!(
                                 "kernel `{}`: RW texture `{}` is not set: the dispatch is skipped",
                                 d.kernel, r.name
                             )
                         });
-                        return None;
-                    };
-                    if !t.random_write {
-                        self.warn_once(format!("kuav{handle}"), || {
+                            return None;
+                        };
+                        if !t.random_write {
+                            self.warn_once(format!("kuav{handle}"), || {
                             format!(
                                 "kernel `{}` writes texture `{}`, which is not a random-write target (RenderTexture.enableRandomWrite): skipped",
                                 d.kernel, r.name
                             )
                         });
-                        return None;
+                            return None;
+                        }
+                        let dimension = if t.volume {
+                            TextureDim::D3
+                        } else if t.layers > 1 {
+                            TextureDim::D2Array
+                        } else {
+                            TextureDim::D2
+                        };
+                        if mip < 0 || dimension != *dim || mip as usize >= t.storage_views.len() {
+                            self.warn_once(format!("kuavdim{handle}/{mip}/{dim:?}"), || format!("kernel `{}`: RW texture `{}` has an incompatible dimension or mip {mip}: the dispatch is skipped", d.kernel, r.name));
+                            return None;
+                        }
+                        bound.push((
+                            r.binding,
+                            Bound::View(
+                                Some(t.texture.clone()),
+                                t.storage_views[mip as usize].clone(),
+                            ),
+                        ));
                     }
-                    let view = t.texture.create_view(&wgpu::TextureViewDescriptor {
-                        format: Some(t.texture.format().remove_srgb_suffix()),
-                        base_mip_level: mip.max(0) as u32,
-                        mip_level_count: Some(1),
-                        ..Default::default()
-                    });
-                    bound.push((r.binding, Bound::View(view)));
-                }
-                ResourceKind::Sampler {
-                    texture,
-                    comparison,
-                    unfiltered,
-                } => {
-                    let key = texture
-                        .as_ref()
-                        .and_then(|t| {
-                            match Self::dispatch_value(&d.properties, &globals, t).or_else(|| {
-                                Self::dispatch_value(&d.properties, &globals, &format!("_{t}"))
-                            }) {
-                                Some(PropertyValue::Texture { handle, .. }) => {
-                                    self.textures.get(handle)
-                                }
+                    ResourceKind::Sampler {
+                        texture,
+                        comparison: _,
+                        unfiltered,
+                    } => {
+                        let texture = texture.as_ref().and_then(|t| {
+                            match Self::dispatch_value(&d.properties, &self.globals, t).or_else(
+                                || {
+                                    gpu.sampler_alternates[resource_index].as_ref().and_then(
+                                        |name| {
+                                            Self::dispatch_value(&d.properties, &self.globals, name)
+                                        },
+                                    )
+                                },
+                            ) {
+                                Some(
+                                    PropertyValue::Texture { handle, .. }
+                                    | PropertyValue::Image { handle, .. },
+                                ) => self.textures.get(handle),
                                 _ => None,
                             }
-                        })
-                        .map(|t| t.sampler_key)
-                        .unwrap_or_else(|| {
-                            // A sampler of no bound texture: the state its name spells (an
-                            // inline sampler the kernel could not pair with one texture), else
-                            // bilinear and clamped.
-                            let key = unbound_shaders::InlineSampler::from_name(&r.name)
-                                .map_or(super::SamplerKey::LINEAR_CLAMP, super::SamplerKey::inline);
+                        });
+                        let source = texture.map(|texture| texture.texture.clone());
+                        let key = texture
+                            .map(|texture| texture.sampler_key)
+                            .unwrap_or_else(|| {
+                                gpu.sampler_defaults[resource_index].expect("sampler fallback")
+                            });
+                        // One sampling an integer texture reads texels unfiltered.
+                        let key = if *unfiltered {
                             super::SamplerKey {
-                                compare: if *comparison { 4 } else { 0 },
+                                filter: 0,
+                                aniso: 1,
                                 ..key
                             }
-                        });
-                    // One sampling an integer texture reads texels unfiltered.
-                    let key = if *unfiltered {
-                        super::SamplerKey {
-                            filter: 0,
-                            aniso: 1,
-                            ..key
-                        }
-                    } else {
-                        key
-                    };
-                    bound.push((r.binding, Bound::Sampler(self.sampler(key))));
+                        } else {
+                            key
+                        };
+                        bound.push((r.binding, Bound::Sampler(source, key)));
+                    }
                 }
             }
-        }
-        let mut entries: Vec<wgpu::BindGroupEntry> = Vec::new();
-        for (binding, buffer, offset, size) in &uniform_buffers {
-            entries.push(wgpu::BindGroupEntry {
-                binding: *binding,
-                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                    buffer,
-                    offset: *offset,
-                    size: wgpu::BufferSize::new(*size),
-                }),
-            });
-        }
-        for (binding, b) in &bound {
-            entries.push(wgpu::BindGroupEntry {
-                binding: *binding,
-                resource: match b {
-                    Bound::Buffer(buffer) => buffer.as_entire_binding(),
-                    Bound::View(view) => wgpu::BindingResource::TextureView(view),
-                    Bound::Sampler(s) => wgpu::BindingResource::Sampler(s),
-                },
-            });
-        }
-        entries.sort_by_key(|e| e.binding);
-        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("unbound kernel"),
-            layout: &gpu.layout,
-            entries: &entries,
-        });
-        let indirect = match d.indirect {
-            None => None,
-            Some((args, offset)) => {
-                let fits = self
-                    .buffers
-                    .get(&args)
-                    .map(|b| (b.buffer.clone(), offset as u64 + 12 <= b.size));
-                match fits {
-                    Some((buffer, true)) if offset % 4 == 0 => Some((buffer, offset as u64)),
-                    _ => {
-                        self.warn_once(format!("kargs{args}"), || {
+            bound.sort_by_key(|(binding, _)| *binding);
+            let bind_group = self
+                .compute_bindings
+                .group(&self.device, &gpu.layout, &bound);
+            let indirect = match d.indirect {
+                None => None,
+                Some((args, offset)) => {
+                    let fits = self
+                        .buffers
+                        .get(&args)
+                        .map(|b| (b.buffer.clone(), offset as u64 + 12 <= b.size));
+                    match fits {
+                        Some((buffer, true)) if offset % 4 == 0 => Some((buffer, offset as u64)),
+                        _ => {
+                            self.warn_once(format!("kargs{args}"), || {
                             format!(
                                 "kernel `{}`: the indirect arguments at byte {offset} of buffer {args} do not exist, fit or align to 4 bytes: the dispatch is skipped",
                                 d.kernel
                             )
                         });
-                        return None;
+                            return None;
+                        }
                     }
                 }
-            }
-        };
-        Some(Op::Dispatch(DispatchOp {
-            pipeline: gpu.pipeline.clone(),
-            bind_group,
-            groups: d.groups,
-            indirect,
-        }))
+            };
+            Some(Op::Dispatch(DispatchOp {
+                pipeline: gpu.pipeline.clone(),
+                bind_group,
+                groups: d.groups,
+                indirect,
+            }))
+        })();
+        self.compute_bindings.scratch = bound;
+        result
+    }
+}
+
+fn texture_dimension(texture: &super::super::resources::GpuTexture) -> TextureDim {
+    if texture.volume {
+        TextureDim::D3
+    } else if texture.cube_array {
+        TextureDim::CubeArray
+    } else if texture.cube {
+        TextureDim::Cube
+    } else if texture.layers > 1 {
+        TextureDim::D2Array
+    } else {
+        TextureDim::D2
     }
 }
 
@@ -1074,6 +1318,48 @@ pub(super) fn encode_copy(encoder: &mut wgpu::CommandEncoder, c: &BufferCopyOp) 
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn kernel_lookup_uses_names_and_formats_independently_of_property_order() {
+        let mut cache = bevy::platform::collections::HashMap::new();
+        cache.insert(
+            KernelKey {
+                file: "volume.compute".into(),
+                kernel: "Fill".into(),
+                keywords: vec!["QUALITY".into()],
+                formats: vec![("Target".into(), "R32Float".into())],
+            },
+            17,
+        );
+        let keywords = vec!["QUALITY".into()];
+        let first = vec![
+            ("Bias".into(), PropertyValue::Float(1.0)),
+            ("Target".into(), PropertyValue::Image { handle: 3, mip: 0 }),
+        ];
+        let second = vec![
+            ("Target".into(), PropertyValue::Image { handle: 9, mip: 1 }),
+            ("Bias".into(), PropertyValue::Float(2.0)),
+        ];
+        for (properties, index) in [(&first, 1), (&second, 0)] {
+            let formats = [(index, "R32Float")];
+            let lookup = KernelLookup {
+                file: "volume.compute",
+                kernel: "Fill",
+                keywords: &keywords,
+                formats: &formats,
+                properties,
+            };
+            assert_eq!(cache.get(&lookup), Some(&17));
+            let changed = [(index, "Rgba32Float")];
+            assert_eq!(
+                cache.get(&KernelLookup {
+                    formats: &changed,
+                    ..lookup
+                }),
+                None
+            );
+        }
+    }
     use super::*;
 
     /// A kernel's RW texture of a normalized 16-bit format binds in that format, not RGBA8, so the

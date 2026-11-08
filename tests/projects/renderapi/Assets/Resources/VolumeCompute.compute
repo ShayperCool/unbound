@@ -1,0 +1,56 @@
+#pragma kernel FillVolume
+#pragma kernel LoadVolume
+#pragma kernel SampleVolume
+#pragma kernel Fill2D
+#pragma kernel FillUint
+#pragma kernel LoadUint
+RWTexture3D<float4> _Target;
+Texture3D<float4> _Source;
+SamplerState sampler_Source;
+RWTexture2D<float4> _Control;
+RWTexture3D<uint> _UintTarget;
+Texture3D<uint> _UintSource;
+RWStructuredBuffer<float4> _Read;
+int3 _Size;
+float _Bias;
+int _ReadMip;
+uint Address(uint3 id) { return id.x + _Size.x * (id.y + _Size.y * id.z); }
+[numthreads(2,2,2)]
+void FillVolume(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id >= (uint3)_Size)) return;
+    _Target[id] = float4((id.x + 1) * .125 + _Bias, (id.y + 1) * .125, (id.z + 1) * .125, 1);
+}
+[numthreads(2,2,2)]
+void LoadVolume(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id >= (uint3)_Size)) return;
+    _Read[Address(id)] = _Source.Load(int4(id, _ReadMip));
+}
+[numthreads(1,1,1)]
+void SampleVolume(uint3 id : SV_DispatchThreadID)
+{
+    _Read[0] = _Source.SampleLevel(sampler_Source, float3(.5,.5,.5), _ReadMip);
+}
+[numthreads(2,2,1)]
+void Fill2D(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id.xy >= (uint2)_Size.xy)) return;
+    _Control[id.xy] = float4((id.x + 1) * .125 + _Bias, (id.y + 1) * .125, .125, 1);
+}
+[numthreads(2,2,2)]
+void FillUint(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id >= (uint3)_Size)) return;
+    _UintTarget[id] = 7 + id.x + 4 * id.y + 16 * id.z;
+}
+[numthreads(2,2,2)]
+void LoadUint(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id >= (uint3)_Size)) return;
+    _Read[Address(id)] = float4(_UintSource.Load(int4(id, 0)), 0, 0, 1);
+}
+#pragma kernel WideGroup
+RWStructuredBuffer<uint> _Group;
+[numthreads(512,2,1)]
+void WideGroup(uint3 id : SV_DispatchThreadID) { InterlockedAdd(_Group[0], 1); }

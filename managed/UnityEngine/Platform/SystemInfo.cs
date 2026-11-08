@@ -305,16 +305,18 @@ namespace UnityEngine
         public static int maxAnisotropyLevel => 16;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static int computeSubGroupSize => 32;
-        // What Unbound's renderer (wgpu's default limits) runs; no geometry or tessellation stages,
-        // multiview or indirect arguments.
-        public static int maxComputeWorkGroupSize { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.maxComputeWorkGroupSize", "answers 256, what Unbound's renderer does (the Editor answers 1024): games take their fallback path"); return 256; } }
-        public static int maxComputeWorkGroupSizeX { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.maxComputeWorkGroupSizeX", "answers 256, what Unbound's renderer does (the Editor answers 1024): games take their fallback path"); return 256; } }
-        public static int maxComputeWorkGroupSizeY { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.maxComputeWorkGroupSizeY", "answers 256, what Unbound's renderer does (the Editor answers 1024): games take their fallback path"); return 256; } }
+        [Unbound.EditorFaithful("measured on the OpenGL Core device: tests/projects/renderapi volumeCompute.limits and wideGroup; the GPU backend requests adapter limits")]
+        public static int maxComputeWorkGroupSize => 1024;
+        [Unbound.EditorFaithful("measured: tests/projects/renderapi volumeCompute.limits")]
+        public static int maxComputeWorkGroupSizeX => 1024;
+        [Unbound.EditorFaithful("measured: tests/projects/renderapi volumeCompute.limits")]
+        public static int maxComputeWorkGroupSizeY => 1024;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers 64 too, and the renderer does it")]
         public static int maxComputeWorkGroupSizeZ => 64;
         [Unbound.EditorFaithful("measured on the OpenGL Core device: tests/projects/urp caps; the GPU backend requests the adapter's limits")]
         public static int maxTexture3DSize => 16384;
-        public static int maxTextureArraySlices { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.maxTextureArraySlices", "answers 256, what Unbound's renderer does (the Editor answers 2048): games take their fallback path"); return 256; } }
+        [Unbound.EditorFaithful("measured: tests/projects/renderapi volumeCompute.limits; the GPU backend requests adapter limits")]
+        public static int maxTextureArraySlices => 2048;
         public static bool supportsGeometryShaders { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsGeometryShaders", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }
         public static bool supportsTessellationShaders { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsTessellationShaders", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }
         public static bool supportsConservativeRaster { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsConservativeRaster", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }

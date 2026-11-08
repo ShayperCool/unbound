@@ -84,7 +84,7 @@ def main():
             out=work/repeat
             out.mkdir(parents=True)
             jobs.append(EditorJob(project,out/'editor.log',out,args=['-executeMethod','ProbeRunner.Record'],env={'RENDER_API_OUT':str(out)},
-                timeout=900,progress_files=[out/'values.jsonl'],progress_timeout=480,label='renderapi-'+repeat,
+                timeout=900,shutdown_grace=120,progress_files=[out/'values.jsonl'],progress_timeout=480,label='renderapi-'+repeat,
                 launch_inputs={'release': a.release, 'paths': {'assets': str(project/'Assets'),
                     'packages': str(project/'Packages'), 'settings': str(project/'ProjectSettings'),
                     'runner': str(Path(__file__).resolve()), 'supervisor': str(REPO/'tests/editor_runner.py')}}))

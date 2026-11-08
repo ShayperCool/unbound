@@ -169,6 +169,7 @@ public sealed partial class RenderApiProbe
         RenderTexture.active = saved;
         DestroyImmediate(odd); DestroyImmediate(material);
         VolumeAutoCases();
+        VolumeComputeCases();
     }
 
     void VolumeAutoCases()

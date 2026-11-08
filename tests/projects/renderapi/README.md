@@ -136,3 +136,22 @@ These are 6000.0.71f1 OpenGL Core observations, selected through Compat.Renderin
 other releases retain the earlier per-pass generation until measured. Odd-sized mip levels
 use the area of each source texel that overlaps the destination texel, including depth.
 Descriptor convenience constructors request Texture.GenerateAllMips by default.
+
+`volumeCompute.*` covers RGBA8, RGBAFloat and RFloat volume writes at depth 1 and 4,
+explicit mip writes and sampled mip reads, integer 3D loads, odd extents and a 2D write
+control. Point and linear samples use the bound texture's own sampler. Two queued writes
+with different uniforms are each read into a separate buffer before any CPU readback, so
+reusing one uniform buffer for both dispatches cannot pass. A 512x2-thread control confirms
+1024 invocations; the recorded device limits are 1024/1024/1024/64 and 2048 array slices.
+Both native repeats retain every previous record and image unchanged.
+
+Writable views are cached per texture mip. Dispatches reuse uniform slots between submissions
+and cache binding groups by their layout and resources. Texture and buffer replacement or
+release discard groups holding the old resource. Sampler changes retire its sampled groups. Missing or incompatible non-2D integer
+inputs fail with a diagnostic instead of binding a floating-point default.
+
+The [Unity 6000.0 compute portability guidance](https://docs.unity.com/en-us/engine/6000.0/manual/materials-and-shaders/shaders/writing-custom/class-compute-shader/crossplatform)
+requires bound resources, initialized contents before reads and guarded thread bounds.
+The controls write every texel before loading it and initialize the atomic counter explicitly.
+Its image-format qualifiers apply to read/write resources; these volume fill kernels only write.
+
