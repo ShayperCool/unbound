@@ -536,7 +536,7 @@ namespace Unbound.Runtime
             for (var parent = t; parent != null; parent = parent.m_Parent)
                 foreach (var component in parent.m_GameObject.m_Components)
                     if (component is Rigidbody && !component.m_Destroyed) hasBodyComponent = true;
-            if ((!hasBodyComponent || Compat.ColliderLifetimeMeasured) && !(c is CharacterController)) Rebuild(c);
+            if (!hasBodyComponent && !(c is CharacterController)) Rebuild(c);
         }
 
         internal static void Remove(Collider c)
