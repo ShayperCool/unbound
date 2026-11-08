@@ -4,7 +4,9 @@ within 2e-4 (absolute or relative), nested lists element by element; a rotation 
 in `.r`) also matches its negation. Lists every missing, extra and differing value; exits
 non-zero on any.
 
-    compare.py Reference/unity-6000.0.71f1.jsonl <capture>/values.jsonl [-q] [--json <summary>]
+    compare.py Reference/unity-6000.0.71f1.jsonl <capture>/values.jsonl [-q] [--json <summary>] [--name <probe>]
+
+Other probes with the same record format (rootcurves) use it with their own --name.
 """
 import json
 import math
@@ -55,6 +57,9 @@ def main():
     summary = sys.argv[sys.argv.index('--json') + 1] if '--json' in sys.argv else None
     if summary:
         args.remove(summary)
+    name = sys.argv[sys.argv.index('--name') + 1] if '--name' in sys.argv else 'modelroot'
+    if '--name' in sys.argv:
+        args.remove(name)
     reference, actual = load(args[0]), load(args[1])
     values = failed_records = failed_values = 0
     lines = []
@@ -84,7 +89,7 @@ def main():
     if not quiet:
         print('\n'.join(lines))
     total = len(reference)
-    print(f'modelroot: {total - failed_records}/{total} records, '
+    print(f'{name}: {total - failed_records}/{total} records, '
           f'{values - failed_values}/{values} values match')
     if summary:
         with open(summary, 'w') as handle:
