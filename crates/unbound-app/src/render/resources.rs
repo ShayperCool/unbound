@@ -444,6 +444,8 @@ pub fn f16_to_f32(h: u16) -> f32 {
     }
 }
 
+/// A float as a half float, rounding half up. A mantissa that rounds up past its last step
+/// carries into the exponent (0.49999997 is 0.5, the largest finite values round to infinity).
 fn f32_to_f16(value: f32) -> u16 {
     let bits = value.to_bits();
     let sign = ((bits >> 16) & 0x8000) as u16;
@@ -463,7 +465,7 @@ fn f32_to_f16(value: f32) -> u16 {
         let m = (mantissa | 0x80_0000) >> (1 - e);
         return sign | ((m + 0x1000) >> 13) as u16;
     }
-    sign | ((e as u32) << 10 | (mantissa + 0x1000) >> 13) as u16
+    sign | (((e as u32) << 10) + ((mantissa + 0x1000) >> 13)) as u16
 }
 
 /// What the device does with the formats only some devices have: those of the normalized 16-bit
@@ -1334,6 +1336,17 @@ mod tests {
             submeshes: vec![SubMeshPacket {
                 index_start: 0,
                 index_count: 4,
+        // Rounding up past the mantissa's last step carries into the exponent (a baked lightmap
+        // texel just below 0.5 read 0.25, tests/projects/urp lightmap_shadowmask).
+        let below = |v: f32| f32::from_bits(v.to_bits() - 1);
+        assert_eq!(f32_to_f16(below(0.5)), 0x3800);
+        assert_eq!(f32_to_f16(below(2.0)), 0x4000);
+        assert_eq!(f32_to_f16(-below(1.0)), 0xbc00);
+        assert_eq!(f32_to_f16(65520.0), 0x7c00);
+        assert_eq!(f32_to_f16(below(6.1035156e-5)), 0x0400);
+        for bits in (0u16..0x7c00).step_by(7) {
+            assert_eq!(f32_to_f16(f16_to_f32(bits)), bits, "{bits:#x}");
+        }
                 topology: 2,
                 base_vertex: 0,
             }],
