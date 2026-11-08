@@ -63,8 +63,9 @@ control point, all same, an array shorter than the faces, an FBX 6.1 file), edge
 sharp edges meeting in L, T and cross junctions, a loop with a tail, scattered sparse and dense
 sharp edges, the dense pattern with the edge list reversed and given from the other face, takes
 whose stack has only `LocalStop`, only `LocalStart`, neither, both reversed, both equal, only the
-reference span, a single key or no curves, and OBJ files with numbered, `on`, `off`, negative,
-wide and fractional smoothing groups, groups interleaved with two materials, and every MTL key the
+reference span, a single key, no curves, a stop between keys or two layers, and OBJ files with numbered, `on`, `off`, negative,
+wide and fractional smoothing groups, groups interleaved with two materials, a named group
+without materials under the legacy import, and every MTL key the
 importer reads (`illum`, `Ka`, `Kd`, `Ks`, `Ns`, `d`, `Tr`, `Tf`). Every model imports with
 calculated normals and mesh optimization off. `SmoothingProbe` records each mesh's vertices,
 normals, submesh triangles and materials (by hierarchy order) and every clip's length and frame
@@ -77,8 +78,9 @@ rate; the material descriptions are dumped as in the main probe.
 What the Editor does (6000.0.71f1, two identical captures in `Reference/unity-6000.0.71f1/smoothing`):
 - FBX smoothing comes from the smoothing element of layer 0. Layer versions before 102 hold
   flags, later ones group masks; `ReferenceInformationType` and an index array are ignored. The
-  mapping spreads values over face corners (missing values are 0, `ByVertice` needs one value per
-  control point, an unknown mapping gives 0 everywhere). Edge smoothing becomes polygon groups by a
+  mapping spreads values over face corners (missing values are 0, `ByVertice` of the wrong count is
+  ignored, an unknown mapping such as `ByVertex` gives 0 everywhere, edge arrays of the wrong
+  length cover the edges they reach). Edge smoothing becomes polygon groups by a
   depth-first walk over smooth edges in edge order; a face with a hard edge into its own region
   leaves it, and smooth edges to earlier regions give both faces a further shared bit. Sharp edges
   meeting in L/T/cross junctions or loops therefore stay sharp unless the walk's order re-joins
@@ -90,7 +92,8 @@ What the Editor does (6000.0.71f1, two identical captures in `Reference/unity-60
 - A take's span is its stack's `LocalStart`/`LocalStop` (0 where missing, in order; the
   reference span is not used); spans shorter than single precision's epsilon use the key range of
   the stack's curves of two or more keys. Each property keeps its keys inside the span; the clip
-  ends at the last key kept. A take whose keys all lie outside the span gives an empty clip
+  ends at the span's end or at the last key of the curves that overlap it, whichever is earlier
+  (a stop between keys ends the clip there). A take whose keys all lie outside the span gives an empty clip
   (length 1, as any clip without keys); a take without curves gives no clip.
 - MTL: `illum` below 2 makes a Lambert description, otherwise Phong; `Ka`/`Kd` (and `Ks` for Phong)
   set the colour and its factor to 1, `Ns` the shininess exponent; `d` gives transparency 1 − d with
