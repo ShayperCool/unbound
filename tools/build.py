@@ -16,12 +16,23 @@ import shlex
 import sys
 
 
+def build_root(env=os.environ):
+    """The cache volume holding every checkout's private target and the compiler cache."""
+    return Path(env.get('UNBOUND_BUILD_ROOT') or
+                Path(env.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound/builds').resolve()
+
+
+def default_target(root, cache):
+    """The private target of the checkout at `root`: one directory per checkout path."""
+    identity = hashlib.sha256(os.fsencode(Path(root).resolve())).hexdigest()[:16]
+    return Path(cache)/'targets'/identity
+
+
 def environment(root, cache, backend, env):
     env = dict(env)
     cargo_bin = Path.home()/'.cargo/bin'
     env['PATH'] = str(cargo_bin)+os.pathsep+env.get('PATH', '')
-    identity = hashlib.sha256(os.fsencode(root.resolve())).hexdigest()[:16]
-    target = Path(env.get('CARGO_TARGET_DIR') or cache/'targets'/identity)
+    target = Path(env.get('CARGO_TARGET_DIR') or default_target(root, cache))
     if not target.is_absolute():
         target = root/target
     target = target.resolve()
@@ -86,8 +97,7 @@ def main():
     parser.add_argument('cargo_args', nargs=argparse.REMAINDER)
     args = parser.parse_args()
     root = Path.cwd().resolve()
-    cache = Path(os.environ.get('UNBOUND_BUILD_ROOT') or
-                 Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound/builds').resolve()
+    cache = build_root()
     try:
         env, backend = environment(root, cache, args.cache, os.environ)
     except ValueError as error:
