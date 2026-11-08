@@ -357,7 +357,8 @@ fn read_settings_documents(path: &std::path::Path) -> Result<Vec<Document>> {
             scalar => Value::Scalar(scalar.to_string()),
         }
     }
-    let json: Json = serde_json::from_str(&std::fs::read_to_string(path)?)
+    let text = std::fs::read_to_string(path)?;
+    let json: Json = serde_json::from_str(text.trim_start_matches('\u{feff}'))
         .context("settings are neither a recognized serialized file nor valid JSON")?;
     anyhow::ensure!(
         json.is_object(),
@@ -656,7 +657,14 @@ mod tests {
             .join(format!("json-settings-{}", std::process::id()));
         std::fs::create_dir_all(&root).unwrap();
         let path = root.join("PackageSettings.asset");
-        std::fs::write(&path, r#"{"keys":["a"],"a.b":0,"nested":{"unused":false}}"#).unwrap();
+        std::fs::write(
+            &path,
+            concat!(
+                "\u{feff}",
+                r#"{"keys":["a"],"a.b":0,"nested":{"unused":false}}"#
+            ),
+        )
+        .unwrap();
         let doc = read_settings_documents(&path).unwrap().remove(0);
         let mut fields = BTreeMap::new();
         add_unread(

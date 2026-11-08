@@ -52,8 +52,7 @@ def main():
         for part in ('Assets', 'Packages', 'ProjectSettings'):
             shutil.copytree(PROBE / part, project / part)
         env = {**os.environ, 'FLARE_DEPENDENCY_OUT': str(out)}
-        if args.profile == 'sync-shaders':
-            env['FLARE_DEPENDENCY_SYNC_SHADERS'] = '1'
+        env['FLARE_DEPENDENCY_SYNC_SHADERS'] = '1' if args.profile == 'sync-shaders' else '0'
         if args.mode == 'editor':
             result = run(EditorJob(project, out / 'editor.log', out, env=env, timeout=600,
                                    args=['-executeMethod', 'DependencyRunner.Run']))
