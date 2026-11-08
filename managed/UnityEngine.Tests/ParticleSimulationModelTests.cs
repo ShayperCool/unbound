@@ -236,21 +236,23 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void AnUnusedLaneThatStartsWithoutLifetimeKeepsEveryLiveBirth()
+        public void AnUnusedLaneThatStartsWithoutLifetimeCostsALiveBirthItsPlace()
         {
             // Three births fill three lanes of a four-lane group; the fourth lane draws start
             // values too. With four births that lane is a birth of its own. When the four-birth
-            // step keeps exactly the three-birth step's particles, the fourth lane started
-            // without lifetime and all three births stayed; dropping a birth for the unused
-            // lane's death would keep only two.
-            int kept = 0;
+            // step keeps exactly three particles and the three-birth step keeps two of them, the
+            // fourth lane started without lifetime: its death lowered the three-birth step's count
+            // as a birth's would (6000.0.71f1: each lane that dies at its start lowers the count
+            // started, tests/projects/particlemeshshape texture/clip/rate).
+            int dropped = 0;
             for (uint seed = 1; seed <= 200; seed++)
             {
                 var four = RateBatchSeeds(seed, 4);
                 var three = RateBatchSeeds(seed, 3);
-                if (four.Length == 3 && three.SequenceEqual(four)) kept++;
+                Assert.False(four.Length == 3 && three.SequenceEqual(four), $"seed {seed}: the unused lane's death kept every birth");
+                if (four.Length == 3 && three.Length == 2 && three.All(four.Contains)) dropped++;
             }
-            Assert.True(kept > 0, "no seed in range starts only the unused lane without lifetime");
+            Assert.True(dropped > 0, "no seed in range starts only the unused lane without lifetime");
         }
 
         [Theory]

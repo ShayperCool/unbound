@@ -389,7 +389,7 @@ namespace UnityEngine
             float t1 = t0 + dt;
             m_TotalTime += dt;
             m_RateBatchStartLoop = m_Loop;
-            m_UseRateBatch = Compat.ParticleRateBatchesMeasured && m_Main.ringBufferMode == ParticleSystemRingBufferMode.Disabled;
+            m_UseRateBatch = StartsInBatches;
             bool planned = emit && (m_UseRateBatch ? PlanRate(t0, dt, duration, rateRandom) : PlanConstantRate(t0, dt, duration));
             m_CollectRateBatch = m_UseRateBatch && m_StepRateBirths > 0;
             int guard = 0;
@@ -440,6 +440,10 @@ namespace UnityEngine
         int m_StepRateBirths;
         float m_StepRateRemainder, m_StepRateInvGain, m_StepRateDt;
         bool m_RateBatchEmitted, m_UseRateBatch;
+
+        /// <summary>New particles start as one batch of four-slot groups (a step's rate and
+        /// burst births, an Emit call); measured for 6000.0.71f1 without a ring buffer.</summary>
+        bool StartsInBatches => Compat.ParticleRateBatchesMeasured && m_Main.ringBufferMode == ParticleSystemRingBufferMode.Disabled;
 
         // Count with the established float arithmetic, sharing the step's emission draw
         // across loops. Start curves use the final playback time of the whole batch.
@@ -626,9 +630,7 @@ namespace UnityEngine
                 for (int m = first; m <= last; m++)
                 {
                     m_SpeedNt = Mathf.Clamp01((m - phase) / rate / duration);
-                    m_RateBirth = true;
                     EmitParticles(1, NextStepRateAge(), b, default, false, m - first, count);
-                    m_RateBirth = false;
                 }
             }
             else
@@ -641,9 +643,7 @@ namespace UnityEngine
                 {
                     float age = (m_RateAccumulator - k) / rate;
                     m_SpeedNt = Mathf.Clamp01((b - age) / duration);
-                    m_RateBirth = true;
                     EmitParticles(1, age + extraAge, b, default, false, k - 1, n);
-                    m_RateBirth = false;
                 }
                 m_RateAccumulator -= n;
             }
@@ -676,8 +676,10 @@ namespace UnityEngine
 
         // Unity 6000.0.71f1, tests/projects/particlerandom: initialize the aligned
         // portion first, then the leading partial group. Rate ages increase in
-        // sample order. Bursts in that step share the initialization batch.
-        void FlushRateBatch()
+        // sample order. Bursts in that step share the initialization batch. Emit(count)
+        // initializes its particles as one such batch too, without simulating them
+        // (tests/projects/particlemeshshape texture/clip/emit*).
+        void FlushRateBatch(bool simulate = true)
         {
             if (m_EmissionRequests.Count == 0) return;
             int requested = 0;
@@ -691,7 +693,6 @@ namespace UnityEngine
             m_Count = aligned + lanes;
             for (int i = aligned; i < m_Count; i++) ClearCustom(i);
             var marks = SlotMarks(m_Count);
-            for (int j = 0; j < count; j++) marks[aligned + j] = SlotMark.Admitted;
             var overrides = default(EmitParams);
             var emitterFrame = EmitterMatrix();
             float duration = Mathf.Max(m_Main.duration, 0.0001f);
@@ -713,7 +714,7 @@ namespace UnityEngine
                 }
                 if (j >= count)
                 {
-                    age = m_StepRateDt * 1e-6f;
+                    age = simulate ? m_StepRateDt * 1e-6f : 0f;
                     birthTime = m_Time;
                     m_SpeedNt = Mathf.Clamp01((birthTime - age) / duration);
                 }
@@ -723,13 +724,12 @@ namespace UnityEngine
                 int spread = request.spreadIndex >= 0 ? request.spreadIndex : local;
                 int spreadCount = request.spreadIndex >= 0 ? request.spreadCount : request.count;
                 m_ShapeSampleDiscarded = j >= count;
-                m_RateBirth = request.rate;
                 bool initialized = InitParticle(ref m_Particles[index], emitter, Mathf.Clamp01(birthTime / duration),
                     false, ref overrides, spread, spreadCount, null, j, requested);
                 m_ShapeSampleDiscarded = false;
-                m_RateBirth = false;
                 if (!initialized) { marks[index] |= SlotMark.Dead; continue; }
                 m_SlotPoints[index] = m_Particles[index].m_Position;
+                if (!simulate) continue;
                 BeginModuleSample(j, m_Particles[index].m_RandomSeed);
                 var context = m_Context;
                 if (j >= count)
@@ -739,18 +739,19 @@ namespace UnityEngine
                 }
                 if (!Integrate(ref m_Particles[index], age, ref context)) marks[index] |= SlotMark.Dead;
             }
-            // Initialize complete groups before removing expired births, in ascending
-            // slot order (the existing particles' four-slot order regresses
-            // particlerandom ratebatch/edge). The unused final lanes take the minimum age
-            // and take part in the compaction. Each admitted birth that dies gives up its
-            // place; an unused lane that dies was never admitted, so it leaves the
-            // admitted count unchanged. The retained count can promote surviving unused
-            // lanes into the places of dead births.
+            // Initialize complete groups before removing the births that died at once
+            // (expired, or discarded by the shape texture), in ascending slot order (the
+            // existing particles' four-slot order regresses particlerandom ratebatch/edge).
+            // The unused final lanes take the minimum age and take part in the compaction:
+            // each dead lane, used or not, lowers the batch's count until it reaches zero,
+            // so dead unused lanes cost live births their places and surviving unused lanes
+            // can move into the places of dead births (6000.0.71f1,
+            // tests/projects/particlemeshshape texture/clip/rate: of ten births a step half
+            // the texture discards, none or one stays).
             for (int i = aligned; i < m_Count;)
             {
-                var mark = MarkOf(i);
-                if ((mark & SlotMark.Dead) == 0) { i++; continue; }
-                if ((mark & SlotMark.Admitted) != 0) count--;
+                if ((MarkOf(i) & SlotMark.Dead) == 0) { i++; continue; }
+                if (count > 0) count--;
                 RemoveSlot(i);
             }
             int prefix = Math.Min(count, aligned - start);
@@ -766,7 +767,7 @@ namespace UnityEngine
             for (int i = start; i < m_Count; i++)
             {
                 int origin = i < aligned ? count - prefix + i - start : i - aligned;
-                StartTrail(ref m_Particles[i], m_SlotPoints[aligned + origin]);
+                StartTrail(ref m_Particles[i], simulate ? m_SlotPoints[aligned + origin] : null);
             }
             m_Newborn = false;
             m_SpeedNt = -1f;
@@ -904,9 +905,7 @@ namespace UnityEngine
                     float at = Mathf.Clamp01((k - before) / gained);
                     float age = (1f - at) * span + extraAge;
                     m_SpeedNt = Mathf.Clamp01((a + at * span) / duration);
-                    m_RateBirth = true;
                     EmitParticles(1, age, b, default, false, k - 1, n);
-                    m_RateBirth = false;
                 }
                 m_DistanceAccumulator -= n;
             }
@@ -966,6 +965,7 @@ namespace UnityEngine
                 {
                     if (m_ShapeTextureDiscarded)
                     {
+                        ReportUnbatchedTextureClip();
                         m_Particles[index].m_Flags |= Particle.FlagShapeDiscarded;
                         firstDiscarded = Math.Min(firstDiscarded, index);
                     }

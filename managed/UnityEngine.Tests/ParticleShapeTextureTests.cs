@@ -14,14 +14,20 @@ namespace UnityEngine.Tests
         readonly List<string> m_Logs = new List<string>();
         readonly ILogger m_Logger = Debug.unityLogger;
         readonly ILogHandler m_PreviousHandler;
+        readonly string m_Version = ProjectInfo.UnityVersion;
 
         public ParticleShapeTextureTests()
         {
             m_PreviousHandler = m_Logger.logHandler;
             m_Logger.logHandler = new CaptureHandler(m_PreviousHandler, m_Logs);
+            ProjectInfo.UnityVersion = "6000.0.71f1";
         }
 
-        public void Dispose() => m_Logger.logHandler = m_PreviousHandler;
+        public void Dispose()
+        {
+            m_Logger.logHandler = m_PreviousHandler;
+            ProjectInfo.UnityVersion = m_Version;
+        }
 
         sealed class CaptureHandler : ILogHandler
         {
@@ -262,22 +268,90 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ClippingRateBirthsWarnsOnEveryRatePath()
+        public void ClippingOutsideAStartBatchWarnsOnce()
         {
             var ps = Make(ParticleSystemShapeType.Rectangle, Coords(4));
             try
             {
                 var main = ps.main;
-                main.ringBufferMode = ParticleSystemRingBufferMode.LoopUntilReplaced; // the per-particle rate path
+                main.ringBufferMode = ParticleSystemRingBufferMode.LoopUntilReplaced; // the per-particle path
                 var emission = ps.emission;
                 emission.enabled = true;
                 emission.rateOverTime = 100f;
                 var shape = ps.shape;
                 shape.textureClipThreshold = 0.5f;
                 ps.Simulate(0.2f, true, true, true);
-                Assert.Single(m_Logs, l => l.Contains("shape texture clipping of rate births"));
+                ps.Emit(7);
+                Assert.Single(m_Logs, l => l.Contains("shape texture clipping outside a start batch"));
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void ClippingInAnUnmeasuredReleaseWarns()
+        {
+            ProjectInfo.UnityVersion = "2022.3.0f1";
+            var ps = Make(ParticleSystemShapeType.Rectangle, Coords(4));
+            try
+            {
+                var shape = ps.shape;
+                shape.textureClipThreshold = 0.5f;
+                ps.Emit(40);
+                Assert.Single(m_Logs, l => l.Contains("shape texture clipping outside a start batch"));
+                foreach (var p in Read(ps)) Assert.True(p.startColor.a >= 128);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void ClippedBatchLanesEachLowerTheCountStartedPaddingLanesToo()
+        {
+            // Half of the rectangle is clipped. Emit(1) starts four lanes (one used, three padding):
+            // any discarded lane lowers the count, so a particle stays only when all four are kept,
+            // about one call in sixteen; one Emit of the same total keeps about half.
+            int Kept(int calls, int perCall)
+            {
+                var ps = Make(ParticleSystemShapeType.Rectangle, Coords(4));
+                try
+                {
+                    var shape = ps.shape;
+                    shape.textureClipThreshold = 0.5f;
+                    for (int i = 0; i < calls; i++) ps.Emit(perCall);
+                    var particles = Read(ps);
+                    foreach (var p in particles) Assert.True(p.startColor.a >= 128, "a discarded particle stayed");
+                    Assert.Empty(m_Logs);
+                    return particles.Length;
+                }
+                finally { Object.DestroyImmediate(ps.gameObject); }
+            }
+            int single = Kept(320, 1), batch = Kept(1, 320);
+            Assert.InRange(batch, 120, 200);
+            Assert.InRange(single, 5, 45);
+        }
+
+        [Fact]
+        public void AnEmitAfterAnUnalignedCountFillsTheGapWithItsLastParticles()
+        {
+            // The batch starts at the next multiple of four; its last particles move down into the
+            // free slots before it (the ring buffer's per-particle path keeps emission order).
+            uint[] Seeds(ParticleSystemRingBufferMode mode)
+            {
+                var ps = Make(ParticleSystemShapeType.Rectangle, null);
+                try
+                {
+                    var main = ps.main; main.ringBufferMode = mode;
+                    ps.Emit(5);
+                    ps.Emit(10);
+                    return Array.ConvertAll(Read(ps), p => p.randomSeed);
+                }
+                finally { Object.DestroyImmediate(ps.gameObject); }
+            }
+            var batch = Seeds(ParticleSystemRingBufferMode.Disabled);
+            var sequential = Seeds(ParticleSystemRingBufferMode.LoopUntilReplaced);
+            Assert.Equal(15, batch.Length);
+            Assert.Equal(sequential[..5], batch[..5]);
+            Assert.Equal(sequential[12..15], batch[5..8]);
+            Assert.Equal(sequential[5..12], batch[8..15]);
         }
 
         [Fact]

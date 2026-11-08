@@ -41,14 +41,5 @@
       "messages/topology/quads/triangle",
       "messages/topology/strip/triangle"
     ]
-  },
-  "texture-clip-rate": {
-    "reason": "Texture clipping with rate emission: Unity keeps far fewer particles (0 and 1 of about 10 a step) than the clip channel alone discards; Unbound keeps every particle the threshold passes. Burst and Emit clipping match. Open follow-up.",
-    "keys": [
-      "texture/clip/rate/0",
-      "texture/clip/rate/0/color",
-      "texture/clip/rate/1",
-      "texture/clip/rate/1/color"
-    ]
   }
 }

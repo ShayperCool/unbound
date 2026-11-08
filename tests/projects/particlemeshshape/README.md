@@ -24,7 +24,8 @@ renderer right after `AddComponent<ParticleSystem>()` on an active and an inacti
 `texture/*` sets a shape texture (start speed 0, so the recorded position is the start position):
 a 256×256 texture whose texel (x, y) is (x, y, 128, x) names the texel each particle read, for every
 shape, larger, partial-arc, thick and transformed shapes, mesh UV channels 0, 1 and a missing one;
-clip channels and thresholds over a burst, a rate and `Emit`; the colour and alpha switches and a
+clip channels and thresholds over a burst, a rate and `Emit` (also `Emit(10)` from the start and
+after five live particles, clipped and not); the colour and alpha switches and a
 start colour; point and bilinear sampling of a 4×4 texture in Clamp and Repeat; a texture made
 non-readable; the script API's bounds. `topology/*` emits from meshes of six line indices, lines
 whose indices would make triangles with area, a line strip, quads, and a triangle submesh beside
@@ -69,7 +70,7 @@ Everything below is measured in this release, not documented.
 | `component/*` | `AddComponent<ParticleSystem>()` adds the ParticleSystemRenderer at once, also on an inactive object: enabled, Billboard, one empty material slot, no shadows cast or received, four vertex streams. |
 | `texture/uv/*`, `texture/size/*`, `texture/transform/*` | The texture coordinate belongs to the unit shape, before the shape's transform: Box, Box Shell, Box Edge and Rectangle (x + 0.5, y + 0.5); Circle 0.5 + 0.5·r·(cos, sin), Cone and Cone Volume 0.5 + 0.5·r²·(cos, sin), r the sampled radius over the radius; Sphere and Hemisphere (azimuth over a full turn, (z + 1)/2 of the direction); Donut 0.5 + 0.5·(the tube offset over the donut radius) in the ring's (radial, z) plane; Edge (the place along it, 0); meshes the interpolated UV channel times 0.9999, repeated. |
 | `texture/filter/*`, `texture/uvchannel/*`, `texture/unreadable` | The coordinate is limited to 0.9999 and scaled by the size; point sampling takes the texel it falls in; bilinear starts half a texel lower (not below 0), blends with the right and upper texels clamped to the edge (the wrap mode does not matter) by 255ths of the fractions, truncated, a + (b − a)·w/256 per byte. A mesh without the channel discards every particle. A texture made non-readable still samples. |
-| `texture/clip/*`, `texture/affects/*`, `texture/startcolor` | A channel byte below threshold·256 (truncated) clips: alpha 0. Otherwise colour and alpha left out read as 255. The texel multiplies the start colour bytes, rounded; with a threshold above 0 a particle whose alpha is then 0 is born and removed with the step's deaths (a burst: four-slot compaction; `Emit`: after the call, ascending, the last particle taking each place). Threshold within [0, 1], UV channel ≥ 0. |
+| `texture/clip/*`, `texture/affects/*`, `texture/startcolor` | A channel byte below threshold·256 (truncated) clips: alpha 0. Otherwise colour and alpha left out read as 255. The texel multiplies the start colour bytes, rounded; with a threshold above 0 a particle whose alpha is then 0 is born and removed with the step's deaths. A step's births and an `Emit` call start as one batch of four-slot lanes after the next multiple of four, unused lanes included; the discarded lanes leave in ascending order, the last lane taking each place, and every one of them (unused lanes too) lowers the count started; the batch's last particles then fill the slots before its aligned start (`texture/clip/rate`: 0 and 1 of ten a step stay; `texture/clip/emit5then10`). Threshold within [0, 1], UV channel ≥ 0. |
 | `texture/uv/boxshell`, `boxedge` | Seven shape draws a point: the unit point (three), an axis from the next whole draw word modulo 3, three more. Shell moves the point onto the face of that axis on its own side, Edge onto the edge along it. |
 | `topology/*`, `lines/*` | Line and line-strip segments emit, weighed by length (triangles by area). Triangle takes a segment as (a, b, b); a mesh with line submeshes samples every entry as a segment in Edge (the area draw's place along a→b) and Vertex (a or b, a whole draw word modulo 2). Mixed primitive types assert ("can only spawn from mesh if all submeshes use the same primitive type") when the mesh is set and emit from all; quads and points emit at the origin as not valid. |
 | `obsolete/*` | The obsolete shell types set from script emit at the origin facing +Z, untinted, and assert "Shape not implemented" once. |
@@ -83,8 +84,6 @@ Everything below is measured in this release, not documented.
   0.25 s, 0.5 s, 1.25 s; the last of ten Burst Spread lanes) snap to the neighbouring step.
 - `warning-timing` (6): Unity logs the invalid-mesh warning and the mixed-primitive assertion when
   the mesh is set, which the probe counts for the scenario before; Unbound logs them while emitting.
-- `texture-clip-rate` (4): with rate emission Unity keeps far fewer particles than the clip
-  channel alone discards (bursts and `Emit` match). Open.
 
 Unmeasured: the Sprite and SpriteRenderer shapes' texture mapping (reported as not simulated),
 imported non-readable meshes, other releases.

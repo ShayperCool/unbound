@@ -42,9 +42,7 @@ namespace UnityEngine
         /// <summary>The last <see cref="InitParticle"/> failed because the shape texture discarded
         /// the particle.</summary>
         bool m_ShapeTextureDiscarded;
-        /// <summary>The particle being initialized is a rate-over-time birth.</summary>
-        bool m_RateBirth;
-        bool m_ShapeTextureRateClipReported;
+        bool m_ShapeTextureUnbatchedClipReported;
         bool m_ShapeTextureUnsupportedReported;
 
         enum ShapeUv : byte { None, Set, Missing }
@@ -138,6 +136,18 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>A particle the shape texture discarded outside a start batch (see
+        /// FlushRateBatch): in a ring buffer, an older release, Emit with EmitParams, or emission
+        /// over distance alone. The batch's rule (each discarded lane, padding lanes too, lowers
+        /// the count started) is measured only for batches; here only the discarded particle
+        /// leaves, which can keep more particles than Unity.</summary>
+        void ReportUnbatchedTextureClip()
+        {
+            if (m_ShapeTextureUnbatchedClipReported) return;
+            m_ShapeTextureUnbatchedClipReported = true;
+            Debug.LogWarning("Unbound: particle shape texture clipping outside a start batch (ring buffer, Emit with EmitParams or emission over distance alone) is not measured; Unity may keep fewer particles");
+        }
+
         void SetShapeUv(float u, float v)
         {
             m_ShapeUv = new Vector2(u, v);
@@ -196,13 +206,6 @@ namespace UnityEngine
                 _ => texel.a,
             };
             int threshold = (int)(S.textureClipThreshold * 256f);
-            if (threshold > 0 && m_RateBirth && !m_ShapeTextureRateClipReported)
-            {
-                // Measured for bursts and Emit only: with rate emission the Editor keeps far fewer
-                // particles than the clip channel alone discards (follow-up).
-                m_ShapeTextureRateClipReported = true;
-                Debug.LogWarning("Unbound: particle shape texture clipping of rate births does not match the Editor yet (it keeps fewer of them)");
-            }
             if (clip < threshold) texel.a = 0;
             else
             {

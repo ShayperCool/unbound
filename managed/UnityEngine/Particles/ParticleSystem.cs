@@ -514,6 +514,16 @@ namespace UnityEngine
                 m_StopEmitting = true;
             }
             m_IsPaused = false;
+            if (!hasOverrides && count > 0 && m_GameObject != null && StartsInBatches)
+            {
+                // Emit(count) starts its particles as one batch, like a step's emission
+                // (6000.0.71f1, tests/projects/particlemeshshape texture/clip/emit*).
+                m_EmissionRequests.Clear();
+                m_EmissionRequests.Add(new EmissionRequest { count = count, birthTime = m_Time, speedNt = -1f, spreadIndex = -1 });
+                try { FlushRateBatch(simulate: false); }
+                finally { m_EmissionRequests.Clear(); }
+                return;
+            }
             EmitParticles(count, 0f, m_Time, emitParams, hasOverrides, simulate: false);
         }
 
@@ -631,7 +641,7 @@ namespace UnityEngine
         enum DeadSlotRemoval : byte { Drop, Death, DeathWithSubEmitters }
 
         [Flags]
-        enum SlotMark : byte { Dead = 1, Admitted = 2 }
+        enum SlotMark : byte { Dead = 1 }
 
         // Per-slot removal state and a point each slot carries through the compaction (a dying
         // particle's event position, a newborn's origin), reused by every step (grown, never shrunk).
