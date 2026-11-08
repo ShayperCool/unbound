@@ -83,7 +83,15 @@ def unmerged_commits(path, repo):
 
 def changed_paths(path):
     # --no-optional-locks: a check must not refresh the index, whose mtime measures idleness.
-    return len(git('--no-optional-locks', 'status', '--porcelain', cwd=path).splitlines())
+    return len(git('--no-optional-locks', 'status', '--porcelain', '--untracked-files=all',
+                   '--ignore-submodules=none', cwd=path).splitlines())
+
+
+def hidden_index_paths(path):
+    # These flags can conceal edited tracked files even from worktree removal.
+    # Keep the checkout until its owner clears them rather than changing its index.
+    return any(row and (row[0].islower() or row[0] == 'S')
+               for row in git('ls-files', '-v', cwd=path).splitlines())
 
 
 def leftover_work(path, repo):
@@ -263,6 +271,8 @@ def cmd_reap(args, repo):
             reason = 'recently active'
         elif changed_paths(path):
             reason = 'has changed or untracked paths'
+        elif hidden_index_paths(path):
+            reason = 'has tracked paths hidden by index flags'
         else:
             if linked is None:
                 linked = symlink_targets(run_cache(), checkouts=[entry[0] for entry in entries])

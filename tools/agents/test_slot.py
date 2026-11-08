@@ -187,6 +187,43 @@ class SlotTests(unittest.TestCase):
         self.assertEqual((kept[2]/'a.txt').read_text(), 'staged work\n')
         self.assertEqual((kept[3]/'new.txt').read_text(), 'untracked work\n')
 
+    def test_reap_keeps_untracked_work_when_status_configuration_hides_it(self):
+        path = Path(self.temp.name).resolve()/'hidden-untracked'
+        self.git('worktree', 'add', '-q', '-b', 't3/hidden', str(path), 'main')
+        (path/'a.txt').write_text('unmerged\n')
+        self.git('commit', '-qam', 'unmerged', cwd=path)
+        self.git('config', 'status.showUntrackedFiles', 'no')
+        (path/'new.txt').write_text('uncommitted\n')
+        target = self.make_target(path)
+        self.make_old(path)
+        _, out = self.run_slot('reap', '--verbose')
+        self.assertEqual((path/'new.txt').read_text(), 'uncommitted\n')
+        self.assertTrue(target.exists())
+        self.assertIn('has changed or untracked paths', out)
+        self.assertIn('1 kept with unmerged commits', out)
+
+    def test_reap_keeps_work_hidden_by_index_flags(self):
+        base = Path(self.temp.name).resolve()
+        kept = []
+        for name, flag in [('assumed', '--assume-unchanged'), ('skipped', '--skip-worktree')]:
+            path = base/name
+            self.git('worktree', 'add', '-q', '-b', f't3/{name}', str(path), 'main')
+            self.git('update-index', flag, 'a.txt', cwd=path)
+            (path/'a.txt').write_text('uncommitted\n')
+            target = self.make_target(path)
+            self.make_old(path)
+            kept.append((path, target))
+        # A clean checkout without hidden entries remains eligible in the same invocation.
+        unused = base/'unused'
+        self.git('worktree', 'add', '-q', '-b', 't3/unused', str(unused), 'main')
+        self.make_old(unused)
+        _, out = self.run_slot('reap', '--verbose')
+        for path, target in kept:
+            self.assertEqual((path/'a.txt').read_text(), 'uncommitted\n')
+            self.assertTrue(target.exists())
+        self.assertFalse(unused.exists())
+        self.assertEqual(out.count('has tracked paths hidden by index flags'), 2)
+
     def test_reap_preserves_detached_unmerged_commits_before_removing_checkout(self):
         path = Path(self.temp.name).resolve()/'detached'
         self.git('worktree', 'add', '-q', '--detach', str(path), 'main')

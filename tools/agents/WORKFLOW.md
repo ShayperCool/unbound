@@ -56,8 +56,9 @@ tools/validation/README.md for why that is unsafe).
   outside the slots, once it is clean and idle (default 6 h), together with its build target.
   Branches and their commits are retained even when not on `main`; an unreferenced detached
   commit gets a `reaped-worktree/<commit>` branch before removal. It keeps dirty and recently
-  active worktrees, slots, the main checkout and worktrees that a symlink under the run caches
-  points into, and prints the count kept with unmerged commits.
+  active worktrees, slots, the main checkout, worktrees with tracked paths hidden by index
+  flags, and worktrees that a symlink under the run caches points into. Clear hidden-path flags
+  only after preserving any work. Reaping prints the count kept with unmerged commits.
 
 ## Worker
 
