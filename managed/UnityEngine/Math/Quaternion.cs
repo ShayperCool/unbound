@@ -257,7 +257,8 @@ namespace UnityEngine
             Vector3 to = Vector3.Normalize(toDirection);
             if (from == Vector3.zero || to == Vector3.zero)
                 return identity;
-            FromToMatrix(from, to, out double[,] m);
+            Span<double> m = stackalloc double[9];
+            FromToMatrix(from, to, m);
             return FromMatrix(m);
         }
 
@@ -297,11 +298,11 @@ namespace UnityEngine
             double uy = fz * rx - fx * rz;
             double uz = fx * ry - fy * rx;
 
-            var m = new double[3, 3]
+            Span<double> m = stackalloc double[9]
             {
-                { rx, ux, fx },
-                { ry, uy, fy },
-                { rz, uz, fz },
+                rx, ux, fx,
+                ry, uy, fy,
+                rz, uz, fz,
             };
             return FromMatrix(m);
         }
@@ -316,16 +317,17 @@ namespace UnityEngine
 
         // Rotation matrix taking unit vector 'from' to unit vector 'to' (Moller & Hughes, "Efficiently
         // Building a Matrix to Rotate One Vector to Another", 1999).
-        private static void FromToMatrix(Vector3 from, Vector3 to, out double[,] m)
+        /// <summary>The rotation matrix from <paramref name="from"/> to <paramref name="to"/>, row-major into <paramref name="m"/> (nine values).</summary>
+        private static void FromToMatrix(Vector3 from, Vector3 to, Span<double> m)
         {
-            double[] f = { from.x, from.y, from.z };
-            double[] t = { to.x, to.y, to.z };
+            Span<double> f = stackalloc double[3] { from.x, from.y, from.z };
+            Span<double> t = stackalloc double[3] { to.x, to.y, to.z };
             double e = f[0] * t[0] + f[1] * t[1] + f[2] * t[2];
-            m = new double[3, 3];
+            m.Clear();
             if (Math.Abs(e) > 1.0 - 1e-6)
             {
                 // Nearly parallel: reflect through the plane of a coordinate axis far from 'from'.
-                double[] axis = new double[3];
+                Span<double> axis = stackalloc double[3];
                 double ax = Math.Abs(f[0]), ay = Math.Abs(f[1]), az = Math.Abs(f[2]);
                 if (ax < ay)
                 {
@@ -341,7 +343,7 @@ namespace UnityEngine
                     else
                         axis[2] = 1.0;
                 }
-                double[] u = new double[3], v = new double[3];
+                Span<double> u = stackalloc double[3], v = stackalloc double[3];
                 for (int i = 0; i < 3; i++)
                 {
                     u[i] = axis[i] - f[i];
@@ -353,8 +355,8 @@ namespace UnityEngine
                 for (int i = 0; i < 3; i++)
                 {
                     for (int j = 0; j < 3; j++)
-                        m[i, j] = -c1 * u[i] * u[j] - c2 * v[i] * v[j] + c3 * v[i] * u[j];
-                    m[i, i] += 1.0;
+                        m[i * 3 + j] = -c1 * u[i] * u[j] - c2 * v[i] * v[j] + c3 * v[i] * u[j];
+                    m[i * 3 + i] += 1.0;
                 }
             }
             else
@@ -368,48 +370,49 @@ namespace UnityEngine
                 double hvxy = hvx * vy;
                 double hvxz = hvx * vz;
                 double hvyz = h * vy * vz;
-                m[0, 0] = e + hvx * vx;
-                m[0, 1] = hvxy - vz;
-                m[0, 2] = hvxz + vy;
-                m[1, 0] = hvxy + vz;
-                m[1, 1] = e + h * vy * vy;
-                m[1, 2] = hvyz - vx;
-                m[2, 0] = hvxz - vy;
-                m[2, 1] = hvyz + vx;
-                m[2, 2] = e + hvz * vz;
+                m[0 * 3 + 0] = e + hvx * vx;
+                m[0 * 3 + 1] = hvxy - vz;
+                m[0 * 3 + 2] = hvxz + vy;
+                m[1 * 3 + 0] = hvxy + vz;
+                m[1 * 3 + 1] = e + h * vy * vy;
+                m[1 * 3 + 2] = hvyz - vx;
+                m[2 * 3 + 0] = hvxz - vy;
+                m[2 * 3 + 1] = hvyz + vx;
+                m[2 * 3 + 2] = e + hvz * vz;
             }
         }
 
         // Rotation matrix (row, column) to quaternion (Shoemake). The trace branch yields w > 0.
-        internal static Quaternion FromMatrix(double[,] m)
+        /// <summary>The rotation of a row-major 3×3 matrix (nine values).</summary>
+        internal static Quaternion FromMatrix(ReadOnlySpan<double> m)
         {
-            double trace = m[0, 0] + m[1, 1] + m[2, 2];
+            double trace = m[0 * 3 + 0] + m[1 * 3 + 1] + m[2 * 3 + 2];
             double qx, qy, qz, qw;
             if (trace > 0.0)
             {
                 double s = Math.Sqrt(trace + 1.0);
                 qw = 0.5 * s;
                 s = 0.5 / s;
-                qx = (m[2, 1] - m[1, 2]) * s;
-                qy = (m[0, 2] - m[2, 0]) * s;
-                qz = (m[1, 0] - m[0, 1]) * s;
+                qx = (m[2 * 3 + 1] - m[1 * 3 + 2]) * s;
+                qy = (m[0 * 3 + 2] - m[2 * 3 + 0]) * s;
+                qz = (m[1 * 3 + 0] - m[0 * 3 + 1]) * s;
             }
             else
             {
                 int i = 0;
-                if (m[1, 1] > m[0, 0])
+                if (m[1 * 3 + 1] > m[0 * 3 + 0])
                     i = 1;
-                if (m[2, 2] > m[i, i])
+                if (m[2 * 3 + 2] > m[i * 3 + i])
                     i = 2;
                 int j = (i + 1) % 3;
                 int k = (j + 1) % 3;
-                double s = Math.Sqrt(m[i, i] - m[j, j] - m[k, k] + 1.0);
-                double[] q = new double[3];
+                double s = Math.Sqrt(m[i * 3 + i] - m[j * 3 + j] - m[k * 3 + k] + 1.0);
+                Span<double> q = stackalloc double[3];
                 q[i] = 0.5 * s;
                 s = 0.5 / s;
-                qw = (m[k, j] - m[j, k]) * s;
-                q[j] = (m[j, i] + m[i, j]) * s;
-                q[k] = (m[k, i] + m[i, k]) * s;
+                qw = (m[k * 3 + j] - m[j * 3 + k]) * s;
+                q[j] = (m[j * 3 + i] + m[i * 3 + j]) * s;
+                q[k] = (m[k * 3 + i] + m[i * 3 + k]) * s;
                 qx = q[0];
                 qy = q[1];
                 qz = q[2];

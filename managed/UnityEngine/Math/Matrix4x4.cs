@@ -339,58 +339,58 @@ namespace UnityEngine
         /// <summary>The inverse matrix; a singular matrix gives Matrix4x4.zero.</summary>
         public static Matrix4x4 Inverse(Matrix4x4 m)
         {
-            // t is the transpose of m in row-major order (t[i, j] = m[j, i]); the inverse of the
+            // t is the transpose of m in row-major order (t[i * 4 + j] = m[j, i]); the inverse of the
             // transpose, written back column-major, is the inverse of m. Cofactors are built from
             // the 2x2 determinants of the top two and bottom two rows.
-            double[,] t = new double[4, 4];
+            Span<double> t = stackalloc double[16];
             for (int i = 0; i < 4; i++)
                 for (int j = 0; j < 4; j++)
-                    t[i, j] = m[j, i];
+                    t[i * 4 + j] = m[j, i];
 
-            double s0 = t[0, 0] * t[1, 1] - t[1, 0] * t[0, 1];
-            double s1 = t[0, 0] * t[1, 2] - t[1, 0] * t[0, 2];
-            double s2 = t[0, 0] * t[1, 3] - t[1, 0] * t[0, 3];
-            double s3 = t[0, 1] * t[1, 2] - t[1, 1] * t[0, 2];
-            double s4 = t[0, 1] * t[1, 3] - t[1, 1] * t[0, 3];
-            double s5 = t[0, 2] * t[1, 3] - t[1, 2] * t[0, 3];
+            double s0 = t[0 * 4 + 0] * t[1 * 4 + 1] - t[1 * 4 + 0] * t[0 * 4 + 1];
+            double s1 = t[0 * 4 + 0] * t[1 * 4 + 2] - t[1 * 4 + 0] * t[0 * 4 + 2];
+            double s2 = t[0 * 4 + 0] * t[1 * 4 + 3] - t[1 * 4 + 0] * t[0 * 4 + 3];
+            double s3 = t[0 * 4 + 1] * t[1 * 4 + 2] - t[1 * 4 + 1] * t[0 * 4 + 2];
+            double s4 = t[0 * 4 + 1] * t[1 * 4 + 3] - t[1 * 4 + 1] * t[0 * 4 + 3];
+            double s5 = t[0 * 4 + 2] * t[1 * 4 + 3] - t[1 * 4 + 2] * t[0 * 4 + 3];
 
-            double c5 = t[2, 2] * t[3, 3] - t[3, 2] * t[2, 3];
-            double c4 = t[2, 1] * t[3, 3] - t[3, 1] * t[2, 3];
-            double c3 = t[2, 1] * t[3, 2] - t[3, 1] * t[2, 2];
-            double c2 = t[2, 0] * t[3, 3] - t[3, 0] * t[2, 3];
-            double c1 = t[2, 0] * t[3, 2] - t[3, 0] * t[2, 2];
-            double c0 = t[2, 0] * t[3, 1] - t[3, 0] * t[2, 1];
+            double c5 = t[2 * 4 + 2] * t[3 * 4 + 3] - t[3 * 4 + 2] * t[2 * 4 + 3];
+            double c4 = t[2 * 4 + 1] * t[3 * 4 + 3] - t[3 * 4 + 1] * t[2 * 4 + 3];
+            double c3 = t[2 * 4 + 1] * t[3 * 4 + 2] - t[3 * 4 + 1] * t[2 * 4 + 2];
+            double c2 = t[2 * 4 + 0] * t[3 * 4 + 3] - t[3 * 4 + 0] * t[2 * 4 + 3];
+            double c1 = t[2 * 4 + 0] * t[3 * 4 + 2] - t[3 * 4 + 0] * t[2 * 4 + 2];
+            double c0 = t[2 * 4 + 0] * t[3 * 4 + 1] - t[3 * 4 + 0] * t[2 * 4 + 1];
 
             double det = s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0;
             if (det == 0.0 || double.IsNaN(det) || double.IsInfinity(det))
                 return zeroMatrix;
             double inv = 1.0 / det;
 
-            double[,] b = new double[4, 4];
-            b[0, 0] = (t[1, 1] * c5 - t[1, 2] * c4 + t[1, 3] * c3) * inv;
-            b[0, 1] = (-t[0, 1] * c5 + t[0, 2] * c4 - t[0, 3] * c3) * inv;
-            b[0, 2] = (t[3, 1] * s5 - t[3, 2] * s4 + t[3, 3] * s3) * inv;
-            b[0, 3] = (-t[2, 1] * s5 + t[2, 2] * s4 - t[2, 3] * s3) * inv;
+            Span<double> b = stackalloc double[16];
+            b[0 * 4 + 0] = (t[1 * 4 + 1] * c5 - t[1 * 4 + 2] * c4 + t[1 * 4 + 3] * c3) * inv;
+            b[0 * 4 + 1] = (-t[0 * 4 + 1] * c5 + t[0 * 4 + 2] * c4 - t[0 * 4 + 3] * c3) * inv;
+            b[0 * 4 + 2] = (t[3 * 4 + 1] * s5 - t[3 * 4 + 2] * s4 + t[3 * 4 + 3] * s3) * inv;
+            b[0 * 4 + 3] = (-t[2 * 4 + 1] * s5 + t[2 * 4 + 2] * s4 - t[2 * 4 + 3] * s3) * inv;
 
-            b[1, 0] = (-t[1, 0] * c5 + t[1, 2] * c2 - t[1, 3] * c1) * inv;
-            b[1, 1] = (t[0, 0] * c5 - t[0, 2] * c2 + t[0, 3] * c1) * inv;
-            b[1, 2] = (-t[3, 0] * s5 + t[3, 2] * s2 - t[3, 3] * s1) * inv;
-            b[1, 3] = (t[2, 0] * s5 - t[2, 2] * s2 + t[2, 3] * s1) * inv;
+            b[1 * 4 + 0] = (-t[1 * 4 + 0] * c5 + t[1 * 4 + 2] * c2 - t[1 * 4 + 3] * c1) * inv;
+            b[1 * 4 + 1] = (t[0 * 4 + 0] * c5 - t[0 * 4 + 2] * c2 + t[0 * 4 + 3] * c1) * inv;
+            b[1 * 4 + 2] = (-t[3 * 4 + 0] * s5 + t[3 * 4 + 2] * s2 - t[3 * 4 + 3] * s1) * inv;
+            b[1 * 4 + 3] = (t[2 * 4 + 0] * s5 - t[2 * 4 + 2] * s2 + t[2 * 4 + 3] * s1) * inv;
 
-            b[2, 0] = (t[1, 0] * c4 - t[1, 1] * c2 + t[1, 3] * c0) * inv;
-            b[2, 1] = (-t[0, 0] * c4 + t[0, 1] * c2 - t[0, 3] * c0) * inv;
-            b[2, 2] = (t[3, 0] * s4 - t[3, 1] * s2 + t[3, 3] * s0) * inv;
-            b[2, 3] = (-t[2, 0] * s4 + t[2, 1] * s2 - t[2, 3] * s0) * inv;
+            b[2 * 4 + 0] = (t[1 * 4 + 0] * c4 - t[1 * 4 + 1] * c2 + t[1 * 4 + 3] * c0) * inv;
+            b[2 * 4 + 1] = (-t[0 * 4 + 0] * c4 + t[0 * 4 + 1] * c2 - t[0 * 4 + 3] * c0) * inv;
+            b[2 * 4 + 2] = (t[3 * 4 + 0] * s4 - t[3 * 4 + 1] * s2 + t[3 * 4 + 3] * s0) * inv;
+            b[2 * 4 + 3] = (-t[2 * 4 + 0] * s4 + t[2 * 4 + 1] * s2 - t[2 * 4 + 3] * s0) * inv;
 
-            b[3, 0] = (-t[1, 0] * c3 + t[1, 1] * c1 - t[1, 2] * c0) * inv;
-            b[3, 1] = (t[0, 0] * c3 - t[0, 1] * c1 + t[0, 2] * c0) * inv;
-            b[3, 2] = (-t[3, 0] * s3 + t[3, 1] * s1 - t[3, 2] * s0) * inv;
-            b[3, 3] = (t[2, 0] * s3 - t[2, 1] * s1 + t[2, 2] * s0) * inv;
+            b[3 * 4 + 0] = (-t[1 * 4 + 0] * c3 + t[1 * 4 + 1] * c1 - t[1 * 4 + 2] * c0) * inv;
+            b[3 * 4 + 1] = (t[0 * 4 + 0] * c3 - t[0 * 4 + 1] * c1 + t[0 * 4 + 2] * c0) * inv;
+            b[3 * 4 + 2] = (-t[3 * 4 + 0] * s3 + t[3 * 4 + 1] * s1 - t[3 * 4 + 2] * s0) * inv;
+            b[3 * 4 + 3] = (t[2 * 4 + 0] * s3 - t[2 * 4 + 1] * s1 + t[2 * 4 + 2] * s0) * inv;
 
             Matrix4x4 res = default;
             for (int i = 0; i < 4; i++)
                 for (int j = 0; j < 4; j++)
-                    res[j, i] = (float)b[i, j];
+                    res[j, i] = (float)b[i * 4 + j];
             return res;
         }
 
@@ -451,9 +451,9 @@ namespace UnityEngine
         {
             get
             {
-                double[] c0 = { m00, m10, m20 };
-                double[] c1 = { m01, m11, m21 };
-                double[] c2 = { m02, m12, m22 };
+                Span<double> c0 = stackalloc double[3] { m00, m10, m20 };
+                Span<double> c1 = stackalloc double[3] { m01, m11, m21 };
+                Span<double> c2 = stackalloc double[3] { m02, m12, m22 };
                 if (!NormalizeColumn(c0) || !NormalizeColumn(c1) || !NormalizeColumn(c2))
                     return Quaternion.identity;
                 double det = c0[0] * (c1[1] * c2[2] - c2[1] * c1[2]) -
@@ -465,17 +465,17 @@ namespace UnityEngine
                     c0[1] = -c0[1];
                     c0[2] = -c0[2];
                 }
-                var m = new double[3, 3]
+                Span<double> m = stackalloc double[9]
                 {
-                    { c0[0], c1[0], c2[0] },
-                    { c0[1], c1[1], c2[1] },
-                    { c0[2], c1[2], c2[2] },
+                    c0[0], c1[0], c2[0],
+                    c0[1], c1[1], c2[1],
+                    c0[2], c1[2], c2[2],
                 };
                 return Quaternion.FromMatrix(m);
             }
         }
 
-        private static bool NormalizeColumn(double[] c)
+        private static bool NormalizeColumn(Span<double> c)
         {
             double mag = Math.Sqrt(c[0] * c[0] + c[1] * c[1] + c[2] * c[2]);
             if (mag < 1e-20)
