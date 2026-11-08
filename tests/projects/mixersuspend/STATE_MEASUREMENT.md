@@ -102,3 +102,37 @@ sample 28553 at 44100 Hz is Native `-3/32768`, engine `-4/32768`. Each differs b
 one 16-bit step, `3.0517578125e-5`; every corresponding master/listener float passes.
 Rounding near the PCM boundary is the suspected cause. These exact sample positions
 and the one-step bound are checked without changing the original comparator.
+
+## Deferred normalized snapshot progress roundoff
+
+The shared normalized-progress scheduler refines the long `snap_early`
+transition. At each rate 363 existing streams were compared with the preceding
+implementation: nine float/control streams change, while every device PCM
+stream and every other stream is byte-identical. The seven one-frame streams
+are GetFloat observations in dB, not device samples. Audio-float differences
+are at most 1.6007106751203537e-9 at 48000 Hz and 1.2223608791828156e-9 at 44100 Hz.
+The existing 84,935,303-value state gate still passes at each rate, retaining
+its single known one-step Reverb PCM residual. Editor references, comparators
+and tolerances are unchanged. These invisible numerical differences are Deferred;
+the rule remains shared with effect snapshots and Q167.
+
+| Rate | Existing engine stream | Changed values | Maximum absolute delta | Kind |
+| ---: | --- | ---: | ---: | --- |
+| 48000 | `snap_early.beforewake.f32.gz` | 1 | 3.0040740966796875e-05 | GetFloat dB |
+| 48000 | `snap_early.block192.f32.gz` | 1 | 2.1457672119140625e-05 | GetFloat dB |
+| 48000 | `snap_early.afterplay.f32.gz` | 1 | 3.0040740966796875e-05 | GetFloat dB |
+| 48000 | `snap_early.block161.f32.gz` | 1 | 1.430511474609375e-05 | GetFloat dB |
+| 48000 | `snap_early.master.f32.gz` | 444414 | 1.6007106751203537e-09 | audio float |
+| 48000 | `snap_early.block257.f32.gz` | 1 | 3.0517578125e-05 | GetFloat dB |
+| 48000 | `snap_early.block320.f32.gz` | 1 | 2.0503997802734375e-05 | GetFloat dB |
+| 48000 | `snap_early.listener.f32.gz` | 444414 | 1.6007106751203537e-09 | audio float |
+| 48000 | `snap_early.block255.f32.gz` | 1 | 2.956390380859375e-05 | GetFloat dB |
+| 44100 | `snap_early.beforewake.f32.gz` | 1 | 2.47955322265625e-05 | GetFloat dB |
+| 44100 | `snap_early.block192.f32.gz` | 1 | 2.193450927734375e-05 | GetFloat dB |
+| 44100 | `snap_early.afterplay.f32.gz` | 1 | 2.47955322265625e-05 | GetFloat dB |
+| 44100 | `snap_early.block161.f32.gz` | 1 | 1.621246337890625e-05 | GetFloat dB |
+| 44100 | `snap_early.master.f32.gz` | 346110 | 1.2223608791828156e-09 | audio float |
+| 44100 | `snap_early.block257.f32.gz` | 1 | 2.4318695068359375e-05 | GetFloat dB |
+| 44100 | `snap_early.block320.f32.gz` | 1 | 1.52587890625e-05 | GetFloat dB |
+| 44100 | `snap_early.listener.f32.gz` | 346110 | 1.2223608791828156e-09 | audio float |
+| 44100 | `snap_early.block255.f32.gz` | 1 | 2.4318695068359375e-05 | GetFloat dB |
