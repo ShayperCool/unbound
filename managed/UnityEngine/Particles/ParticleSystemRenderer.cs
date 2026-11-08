@@ -633,6 +633,13 @@ namespace UnityEngine
             /// <summary>The trails as camera-facing ribbons from each particle back along its points:
             /// width and color along the trail by the module's curves, u from the particle (0) to the
             /// tail (1).</summary>
+            // Scratch lists reused by every build (per frame and per camera).
+            readonly List<Mesh> m_LiveMeshes = new List<Mesh>();
+            readonly List<ParticleSystem.Trail> m_DrawTrails = new List<ParticleSystem.Trail>();
+            readonly List<Vector3> m_TrailPoints = new List<Vector3>(), m_TrailSides = new List<Vector3>();
+            readonly List<float> m_TrailWidths = new List<float>(), m_TrailDistances = new List<float>();
+            readonly List<Color32> m_TrailColors = new List<Color32>();
+
             internal bool BuildTrails(ParticleSystem ps, View view, List<ParticleSystemVertexStream> streams, Matrix4x4? simulationPose = null)
             {
                 ConfigureStreams(streams);
@@ -642,16 +649,17 @@ namespace UnityEngine
                 var scale = ps.EmitterScale();
                 float uniformScale = Mathf.Pow(Mathf.Abs(scale.x * scale.y * scale.z), 1f / 3f);
                 bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
-                var points = new List<Vector3>(); var widths = new List<float>(); var colors = new List<Color32>();
-                var distances = new List<float>();
-                var segmentSides = new List<Vector3>();
+                var points = m_TrailPoints; var widths = m_TrailWidths; var colors = m_TrailColors;
+                var distances = m_TrailDistances;
+                var segmentSides = m_TrailSides;
                 bool meshMode = ps.GetComponent<ParticleSystemRenderer>()?.renderMode == ParticleSystemRenderMode.Mesh;
                 float maximumSize = ps.m_Main.startSizeX.MaxValue;
                 if (ps.m_Main.startSize3D)
                     maximumSize = meshMode ? Mathf.Pow(maximumSize * ps.m_Main.startSizeY.MaxValue * ps.m_Main.startSizeZ.MaxValue, 1f / 3f)
                         : Mathf.Sqrt(maximumSize * ps.m_Main.startSizeY.MaxValue);
                 Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue), max = -min;
-                foreach (var trail in ps.RenderTrails())
+                ps.RenderTrails(m_DrawTrails);
+                foreach (var trail in m_DrawTrails)
                 {
                     if (trail.Points.Count == 0) continue;
                     points.Clear(); widths.Clear(); colors.Clear();
@@ -790,11 +798,14 @@ namespace UnityEngine
                 count = Order(r, ps, view, toWorld);
                 if (count == 0) return false;
 
-                Mesh[] meshes = null;
+                List<Mesh> meshes = null;
                 if (r.m_RenderMode == ParticleSystemRenderMode.Mesh)
                 {
-                    meshes = r.m_Meshes.FindAll(m => m != null).ToArray();
-                    if (meshes.Length == 0) return false;
+                    meshes = m_LiveMeshes;
+                    meshes.Clear();
+                    foreach (var m in r.m_Meshes)
+                        if (m != null) meshes.Add(m);
+                    if (meshes.Count == 0) return false;
                 }
 
                 Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue), max = -min;
@@ -825,7 +836,7 @@ namespace UnityEngine
                     Mesh sourceMesh = null;
                     if (meshes != null)
                     {
-                        var m = meshes[Math.Min(ps.MeshIndexOf(ref p), meshes.Length - 1) % meshes.Length];
+                        var m = meshes[Math.Min(ps.MeshIndexOf(ref p), meshes.Count - 1) % meshes.Count];
                         sourceMesh = m;
                         var orientation = AddMesh(r, m, position, size, Quaternion.Euler(p.m_Rotation * Mathf.Rad2Deg), systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
                         NoteMeshParticle(orientation, streamSize, scale);

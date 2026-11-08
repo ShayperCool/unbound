@@ -114,7 +114,9 @@ namespace UnityEngine.Tests
                 Assert.Equal(live * 4, mesh.vertexCount);
                 var trails = new Mesh();
                 renderer.BakeTrailsMesh(trails, camera, ParticleSystemBakeMeshOptions.Default);
-                Assert.Equal(ps.particleCount, ps.RenderTrails().Count(t => t.Points.Count > 0));
+                var drawn = new List<ParticleSystem.Trail>();
+                ps.RenderTrails(drawn);
+                Assert.Equal(ps.particleCount, drawn.Count(t => t.Points.Count > 0));
 
                 // Only carriers left: no particle draws.
                 while (Particles(ps).Any(p => !p.IsTrailCarrier)) Simulate(ps, 1);
@@ -143,7 +145,9 @@ namespace UnityEngine.Tests
                     var particles = Particles(ps);
                     var links = particles.Select(p => p.m_TrailId).ToList();
                     reordered |= links.Count > 1 && !links.SequenceEqual(links.OrderBy(link => link));
-                    Assert.Equal(links.Select(link => ps.m_TrailList[link - 1]), ps.RenderTrails());
+                    var drawn = new List<ParticleSystem.Trail>();
+                    ps.RenderTrails(drawn);
+                    Assert.Equal(links.Select(link => ps.m_TrailList[link - 1]), drawn);
                 }
                 Assert.True(reordered);
             }

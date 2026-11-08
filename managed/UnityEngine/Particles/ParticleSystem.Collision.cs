@@ -534,12 +534,15 @@ namespace UnityEngine
             finally { ClearTriggerEvents(); }
         }
 
+        static readonly HashSet<GameObject> s_CollisionMessageTargets = new HashSet<GameObject>();
+
         /// <summary>Sends the frame's OnParticleCollision messages: to this system's scripts and to
         /// the object hit, once per object.</summary>
         internal void SendCollisionMessages()
         {
             if (m_CollisionEvents.Count == 0 || m_GameObject == null) return;
-            var seen = new HashSet<GameObject>();
+            var seen = s_CollisionMessageTargets;
+            seen.Clear();
             foreach (var (other, _) in m_CollisionEvents)
             {
                 if (other == null || !seen.Add(other)) continue;

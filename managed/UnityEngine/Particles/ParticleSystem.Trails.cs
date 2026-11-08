@@ -401,13 +401,18 @@ namespace UnityEngine
         }
 
         int m_RenderPass;
+        /// <summary>The Ribbon trails of the last <see cref="RenderTrails"/> call, reused (with
+        /// their lists) by the next one.</summary>
+        readonly List<Trail> m_RibbonTrails = new List<Trail>();
 
-        /// <summary>The trails to draw. Per-particle trails come in the order of the particles holding
-        /// them (live, or dead and carrying a fading trail), as Unity bakes and draws them
-        /// (6000.0.71f1, tests/projects/particletrails: a particle moved by a death takes its trail
-        /// along).</summary>
-        internal IEnumerable<Trail> RenderTrails()
+        /// <summary>Fills <paramref name="into"/> with the trails to draw. Per-particle trails come
+        /// in the order of the particles holding them (live, or dead and carrying a fading trail), as
+        /// Unity bakes and draws them (6000.0.71f1, tests/projects/particletrails: a particle moved by
+        /// a death takes its trail along). Ribbons are rebuilt from the particles into trails this
+        /// system keeps, so drawing every frame allocates nothing.</summary>
+        internal void RenderTrails(List<Trail> into)
         {
+            into.Clear();
             if (m_Trails.mode == ParticleSystemTrailMode.PerParticle)
             {
                 int pass = ++m_RenderPass;
@@ -417,24 +422,28 @@ namespace UnityEngine
                     var trail = link > 0 && link <= m_TrailList.Count ? m_TrailList[link - 1] : null;
                     if (trail == null || trail.RenderPass == pass) continue;
                     trail.RenderPass = pass;
-                    yield return trail;
+                    into.Add(trail);
                 }
-                yield break;
+                return;
             }
             int ribbons = Mathf.Max(1, m_Trails.ribbonCount);
-            if (m_Count / ribbons < 2) yield break;
+            if (m_Count / ribbons < 2) return;
+            int used = 0;
             for (int offset = 0; offset < Mathf.Min(ribbons, m_Count); offset++)
             {
                 int group = (m_Count - 1 - offset) % ribbons;
-                var trail = new Trail { Ribbon = true, Lifetime = float.PositiveInfinity,
-                    Widths = new List<float>(), Colors = new List<Color32>() };
+                if (used == m_RibbonTrails.Count)
+                    m_RibbonTrails.Add(new Trail { Ribbon = true, Widths = new List<float>(), Colors = new List<Color32>() });
+                var trail = m_RibbonTrails[used];
+                trail.Points.Clear(); trail.Times.Clear(); trail.Widths.Clear(); trail.Colors.Clear();
+                trail.Lifetime = float.PositiveInfinity;
                 for (int i = group; i < m_Count; i += ribbons)
                 {
                     UpdateTrailHead(ref m_Particles[i], trail);
                     trail.Points.Add(trail.Head); trail.Times.Add(m_TrailTime);
                     trail.Widths.Add(trail.Width); trail.Colors.Add(trail.Color);
                 }
-                if (trail.Points.Count > 1) yield return trail;
+                if (trail.Points.Count > 1) { into.Add(trail); used++; }
             }
         }
     }
