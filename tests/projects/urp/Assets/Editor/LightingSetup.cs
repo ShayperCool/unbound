@@ -28,10 +28,10 @@ public static class LightingSetup
             float v = ring ? 0.1f : cell ? 1f : 0.35f;
             return new Color(v, v, v, 1f);
         };
-        var cookieGray = WriteTexture("CookieGray", 64, 64, pattern, importer => DirectionalCookie(importer, TextureImporterAlphaSource.FromGrayScale));
-        var cookieOpaque = WriteTexture("CookieOpaque", 64, 64, pattern, importer => DirectionalCookie(importer, TextureImporterAlphaSource.FromInput));
+        var cookieGray = WriteTexture(Dir, "CookieGray", 64, 64, pattern, importer => DirectionalCookie(importer, TextureImporterAlphaSource.FromGrayScale));
+        var cookieOpaque = WriteTexture(Dir, "CookieOpaque", 64, 64, pattern, importer => DirectionalCookie(importer, TextureImporterAlphaSource.FromInput));
 
-        var cookieColor = WriteTexture("CookieColor", 64, 64, (x, y) =>
+        var cookieColor = WriteTexture(Dir, "CookieColor", 64, 64, (x, y) =>
         {
             // Colored quadrants inside a soft black border (a spot cookie's edge).
             float edge = Mathf.Min(Mathf.Min(x, 63 - x), Mathf.Min(y, 63 - y));
@@ -48,7 +48,7 @@ public static class LightingSetup
         });
         Color[] faces = { new Color(1f, 0.3f, 0.2f), new Color(0.2f, 1f, 0.3f), new Color(0.3f, 0.4f, 1f),
                           new Color(1f, 1f, 0.3f), new Color(1f, 0.3f, 1f), new Color(0.3f, 1f, 1f) };
-        var cookieCube = WriteTexture("CookieCube", 6 * 32, 32, (x, y) =>
+        var cookieCube = WriteTexture(Dir, "CookieCube", 6 * 32, 32, (x, y) =>
         {
             int face = x / 32, u = x % 32;
             bool bar = Mathf.Abs(u - 15.5f) < 3f || Mathf.Abs(y - 15.5f) < 3f;
@@ -61,7 +61,7 @@ public static class LightingSetup
             importer.wrapMode = TextureWrapMode.Clamp;
             importer.mipmapEnabled = false;
         });
-        var customCube = WriteTexture("CustomReflection", 6 * 64, 64, (x, y) =>
+        var customCube = WriteTexture(Dir, "CustomReflection", 6 * 64, 64, (x, y) =>
         {
             int face = x / 64, u = x % 64;
             bool stripe = ((u / 8) + (y / 8)) % 2 == 0;
@@ -111,14 +111,14 @@ public static class LightingSetup
         serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
-    static Texture WriteTexture(string name, int width, int height, System.Func<int, int, Color> pixel, System.Action<TextureImporter> configure)
+    internal static Texture WriteTexture(string dir, string name, int width, int height, System.Func<int, int, Color> pixel, System.Action<TextureImporter> configure)
     {
         var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
                 texture.SetPixel(x, y, pixel(x, y));
         texture.Apply();
-        string path = $"{Dir}/{name}.png";
+        string path = $"{dir}/{name}.png";
         File.WriteAllBytes(path, texture.EncodeToPNG());
         Object.DestroyImmediate(texture);
         AssetDatabase.ImportAsset(path);

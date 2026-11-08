@@ -313,6 +313,8 @@ def recipes(release):
         R[name] += [py('urp/compare.py', str(png), '{work}/out/'+png.name, verdict='none') for png in scenarios]
     R['urp'].append(py('compare_constants.py', ref('scenarios/per-object-constants.jsonl'),
                        '{work}/out/per-object-constants.jsonl'))
+    R['urp'].append(py('compare_constants.py', ref('scenarios/texture-formats.jsonl'),
+                       '{work}/out/texture-formats.jsonl'))
     R['terrain'] = classic('TERRAIN_PROBE_OUT', 'out', ['--frames', '300', '--size', '320x180', '--no-watch'], images=True)
     R['lod'] = classic('LOD_PROBE_OUT', 'out', ['--frames', '20000', '--size', '320x180', '--no-watch'])
     R['assetbundles'] = classic('BUNDLE_PROBE_OUT', 'out', ['--frames', '600', '--size', '320x180', '--no-watch'],

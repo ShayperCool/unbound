@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Compares the per-object constants the URP probe dumps (per-object-constants.jsonl: what each
 renderer of the baked scenes draws with, read back from a float target) with Unity's. Exits 1 on
-any missing, extra or differing value; every one is listed.
+any missing, extra or differing value; every one is listed. Also compares texture-formats.jsonl
+(names compare exactly).
 
     python3 tests/projects/urp/compare_constants.py \\
         tests/projects/urp/Reference/scenarios/per-object-constants.jsonl /tmp/urp/per-object-constants.jsonl
@@ -38,13 +39,17 @@ def main():
         if actual is None:
             print(f'missing  {key}')
             differences += 1
+        elif isinstance(expected, str) or isinstance(actual, str):
+            if actual != expected:
+                print(f'differs  {key}: unity {expected} unbound {actual}')
+                differences += 1
         elif len(actual) != len(expected) or not all(close(a, b) for a, b in zip(expected, actual)):
             print(f'differs  {key}: unity {expected} unbound {actual}')
             differences += 1
     for key in unbound.keys() - unity.keys():
         print(f'extra    {key}')
         differences += 1
-    print(f'{len(unity) - differences}/{len(unity)} per-object constants match, differences: {differences}')
+    print(f'{len(unity) - differences}/{len(unity)} values match, differences: {differences}')
     return 1 if differences else 0
 
 

@@ -1,0 +1,20 @@
+{"key":"shadowmask lightmap 0 color format","value":"RGBAHalf"}
+{"key":"shadowmask lightmap 0 color max","value":[2.0078125,0.8413086,0.672851563,1]}
+{"key":"shadowmask lightmap 0 dir format","value":"RGBA32"}
+{"key":"shadowmask lightmap 0 dir max","value":[0.929411769,0.992156863,0.8784314,0.992156863]}
+{"key":"shadowmask lightmap 0 shadowmask format","value":"RGBA32"}
+{"key":"shadowmask lightmap 0 shadowmask max","value":[1,0,0,0]}
+{"key":"subtractive lightmap 0 color format","value":"RGBAHalf"}
+{"key":"subtractive lightmap 0 color max","value":[2.171875,1.21972656,1.1171875,1]}
+{"key":"CookieGray format","value":"Alpha8"}
+{"key":"CookieGray graphicsFormat","value":"54"}
+{"key":"CookieOpaque format","value":"Alpha8"}
+{"key":"CookieOpaque graphicsFormat","value":"54"}
+{"key":"CookieColor format","value":"RGB24"}
+{"key":"CookieColor graphicsFormat","value":"R8G8B8_UNorm"}
+{"key":"CookieCube format","value":"RGB24"}
+{"key":"CookieCube graphicsFormat","value":"R8G8B8_UNorm"}
+{"key":"SingleAlpha format","value":"Alpha8"}
+{"key":"SingleAlpha graphicsFormat","value":"54"}
+{"key":"SingleRed format","value":"R8"}
+{"key":"SingleRed graphicsFormat","value":"R8_UNorm"}

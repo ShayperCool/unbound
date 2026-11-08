@@ -8,7 +8,7 @@ using UnityEngine.Rendering.Universal;
 
 /// <summary>Renders the main camera into a 320x180 render texture, reads it back and writes it to
 /// <c>URP_PROBE_OUT</c> (a PNG; with <c>URP_PROBE_JSON</c> also sample pixels), then quits.</summary>
-public class UrpProbe : MonoBehaviour
+public partial class UrpProbe : MonoBehaviour
 {
     const int Width = 320, Height = 180;
     /// <summary>The target's MSAA samples (the msaa scenario's 4).</summary>
@@ -355,6 +355,8 @@ public class UrpProbe : MonoBehaviour
         yield return Load("Reflections");
         var constants = Path.Combine(dir, "per-object-constants.jsonl");
         File.WriteAllText(constants, "");
+        var formats = Path.Combine(dir, "texture-formats.jsonl");
+        File.WriteAllText(formats, "");
         var reflectionObjects = new[] { "Baked Only", "Overlap", "Custom Only", "Outside", "Off", "Simple", "Floor", "Back Wall" };
         DumpPerObject(constants, "reflections simple", reflectionObjects);
         Scenario(dir, "reflections_simple", () => { }, () => { });
@@ -379,12 +381,24 @@ public class UrpProbe : MonoBehaviour
         var bakedObjects = new[] { "Ground", "Wall", "Block", "Lit Sphere", "Simple Lit Sphere", "Baked Lit Sphere", "Dynamic Cube", "Proxy Sphere" };
         yield return Load("Shadowmask");
         DumpPerObject(constants, "shadowmask", bakedObjects);
+        RecordLightmaps(formats, "shadowmask");
         var shadowmaskMode = QualitySettings.shadowmaskMode;
         Scenario(dir, "lightmap_shadowmask", () => QualitySettings.shadowmaskMode = ShadowmaskMode.Shadowmask, () => QualitySettings.shadowmaskMode = shadowmaskMode);
         Scenario(dir, "lightmap_distance_shadowmask", () => QualitySettings.shadowmaskMode = ShadowmaskMode.DistanceShadowmask, () => QualitySettings.shadowmaskMode = shadowmaskMode);
         yield return Load("Subtractive");
         DumpPerObject(constants, "subtractive", bakedObjects);
+        RecordLightmaps(formats, "subtractive");
         Scenario(dir, "lightmap_subtractive", () => { }, () => { });
+        // Strong occlusion: lightmapped and probe-lit objects, a far camera.
+        SsaoScenario(dir, rendererData, "ssao_lightmap", s =>
+        {
+            Set(s, "Intensity", 4f);
+            Set(s, "Radius", 0.3f);
+            Set(s, "DirectLightingStrength", 1f);
+        });
+        yield return Load("Probe");
+        RecordTextureFormats(formats);
+        FeatureScenarios(dir, rendererData);
         Quit();
     }
 

@@ -72,5 +72,34 @@ support) and `Subtractive` (the same content, non-directional). Scenarios:
 
 Two Editor recordings gave identical images and constants (the jsonl files' _TimeParameters
 differ). Unbound renders every new scenario within a mean of 0.65; the remaining differences are
-the glossy mips of the reflection cubemaps (sphere rims in `reflections*`) and a few lightmap
-texels in the lightmap scenarios (see docs/COMPATIBILITY_GAPS.md).
+the glossy mips of the reflection cubemaps (sphere rims in `reflections*`) and the edge of a
+sphere's realtime shadow in the lightmap scenarios (see docs/COMPATIBILITY_GAPS.md).
+
+`texture-formats.jsonl` (compared by `compare_constants.py`) records the `format` of the cookie
+textures, of two Single Channel textures (Alpha and Red) and of the baked lightmaps, with each
+lightmap channel's largest stored value (read back through a float target).
+
+## Renderer feature scenarios
+
+`Editor/FeatureSetup.Create` (`-executeMethod FeatureSetup.Create`) authored `Assets/Features`: a
+decal base map and normal map, a material of URP's own Decal Shader Graph and one of a copy of it
+with angle fade enabled, and the Single Channel textures. After the lighting scenes the probe
+loads the Probe scene again, moves the camera closer and records, each scenario with a new
+renderer feature (one setting changed) that is removed after it:
+
+- Screen Space Ambient Occlusion, with a lit wall behind the objects and a bright ambient probe:
+  `ssao_off` (the control), `ssao` (the defaults: depth-normals source, blue noise, high blur),
+  `ssao_depth`, `ssao_depth_normals_high` (depth source, high normal samples), `ssao_interleaved`,
+  `ssao_samples_high`, `ssao_blur_medium`, `ssao_blur_low`, `ssao_after_opaque`,
+  `ssao_downsample`, `ssao_params` (intensity, radius, falloff, direct lighting strength),
+  `ssao_forward_plus`, and `ssao_lightmap` (the Subtractive scene: lightmapped and probe-lit
+  objects);
+- Decals, a projector above the ground in front of the cube (configured before it is enabled, as
+  a serialized one: `renderingLayerMask`'s setter does not update an enabled projector):
+  `decal_screen_space`, `decal_normal_blend_medium`, `decal_normal_blend_high`,
+  `decal_automatic`, `decal_dbuffer`, `decal_size_pivot`, `decal_uv`, `decal_fade_factor`,
+  `decal_draw_distance`, `decal_angle_fade`, `decal_layers`, `decal_forward_plus`.
+
+On the Editor's OpenGL Core device URP's Decal feature turns the DBuffer technique away (it
+draws no decals; Automatic picks Screen Space) and does not enable decal layers (`decal_layers`
+is `decal_screen_space`), so the DBuffer surface data options are not measured here.
