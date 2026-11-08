@@ -316,6 +316,27 @@ namespace Unbound.Runtime
         static int s_PendingCommand = -1;
         static readonly int s_BaseCommandId = Shader.PropertyToID("unity_BaseCommandID");
 
+        /// <summary>The next draw's per-object motion (<see cref="NextDrawMotion"/>).</summary>
+        static bool s_PendingMotion;
+        static Matrix4x4 s_MotionPrevious;
+        static Vector4 s_MotionParams;
+        static readonly int s_PreviousMId = Shader.PropertyToID("unity_MatrixPreviousM");
+        static readonly int s_PreviousMIId = Shader.PropertyToID("unity_MatrixPreviousMI");
+        static readonly int s_MotionParamsId = Shader.PropertyToID("unity_MotionVectorsParams");
+
+        /// <summary>The next draw's per-object motion vector values, which the engine sets for a
+        /// renderer list with <see cref="UnityEngine.Rendering.PerObjectData.MotionVectors"/>:
+        /// <c>unity_MatrixPreviousM</c> and its inverse <c>unity_MatrixPreviousMI</c>, and
+        /// <c>unity_MotionVectorsParams</c> (x: last frame's vertex positions, y: 0 when the
+        /// renderer forces no motion, z: depth bias, w: camera motion only). They win over a
+        /// property block's values of those names.</summary>
+        internal static void NextDrawMotion(in Matrix4x4 previous, Vector4 parameters)
+        {
+            s_PendingMotion = true;
+            s_MotionPrevious = previous;
+            s_MotionParams = parameters;
+        }
+
         /// <summary>How the next draw runs: instances, or counts read on the GPU from an arguments
         /// buffer (indexed: DrawMeshInstancedIndirect's layout; not: DrawProceduralIndirect's);
         /// then, when it has them, the indices from a buffer it reads instead of its mesh's
@@ -590,10 +611,19 @@ namespace Unbound.Runtime
             s_PendingCommand = -1;
             if (command >= 0)
                 s_Properties.Add(new PropertyValue { Name = "unity_BaseCommandID", Kind = IntKind, Vector = new Vector4(command, 0, 0, 0) });
+            bool motion = s_PendingMotion;
+            s_PendingMotion = false;
+            if (motion)
+            {
+                s_Properties.Add(new PropertyValue { Name = "unity_MatrixPreviousM", Kind = MatrixKind, Matrix = s_MotionPrevious });
+                s_Properties.Add(new PropertyValue { Name = "unity_MatrixPreviousMI", Kind = MatrixKind, Matrix = s_MotionPrevious.inverse });
+                s_Properties.Add(new PropertyValue { Name = "unity_MotionVectorsParams", Kind = VectorKind, Vector = s_MotionParams });
+            }
             if (properties == null) return;
             foreach (var p in properties)
             {
                 if (command >= 0 && p.Key == s_BaseCommandId) continue;
+                if (motion && (p.Key == s_PreviousMId || p.Key == s_PreviousMIId || p.Key == s_MotionParamsId)) continue;
                 var name = Shader.IdToName(p.Key);
                 if (name == null) continue;
                 var value = new PropertyValue { Name = name };

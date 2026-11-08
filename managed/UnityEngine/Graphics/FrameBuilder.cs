@@ -350,6 +350,10 @@ namespace Unbound.Runtime
         static readonly List<string> s_FrameKeywords = new List<string>();
         static readonly string[] s_FogKeywords = { "FOG_LINEAR", "FOG_EXP", "FOG_EXP2" };
         static int s_CameraCount, s_DrawCount;
+        /// <summary>The render pipeline renders the player loop's cameras: their per-object motion
+        /// vectors make the renderers' matrices the previous ones at the frame's end, as the
+        /// built-in renderer's do (<see cref="EndFrameMotion"/>).</summary>
+        static bool s_PlayerLoopPipeline;
         static ulong[] s_MaterialHandles = new ulong[256];
 
         /// <summary>From the frame's rendering until its end-of-frame callbacks and screenshot
@@ -394,14 +398,22 @@ namespace Unbound.Runtime
             bool srp;
             int offscreen = 0;
             foreach (var c in cameras) if (c.RendersOffscreen) offscreen++;
-            if (offscreen > 0 && offscreen < cameras.Count)
+            s_PlayerLoopPipeline = true;
+            try
             {
-                srp = RenderPipelineManager.Render(cameras.GetRange(0, offscreen));
-                if (srp) RenderPipelineManager.Render(cameras.GetRange(offscreen, cameras.Count - offscreen));
+                if (offscreen > 0 && offscreen < cameras.Count)
+                {
+                    srp = RenderPipelineManager.Render(cameras.GetRange(0, offscreen));
+                    if (srp) RenderPipelineManager.Render(cameras.GetRange(offscreen, cameras.Count - offscreen));
+                }
+                else
+                {
+                    srp = RenderPipelineManager.Render(cameras);
+                }
             }
-            else
+            finally
             {
-                srp = RenderPipelineManager.Render(cameras);
+                s_PlayerLoopPipeline = false;
             }
             if (srp) s_CameraCount += cameras.Count;
             else
@@ -730,6 +742,13 @@ namespace Unbound.Runtime
             // material then draws them instead).
             s_PassTagScratch.Clear();
             foreach (var tag in passNames) s_PassTagScratch.Add(tag.name);
+            // Per-object motion vectors: the objects with object motion alone.
+            bool motion = !shadows.HasValue && (drawing.perObjectData & PerObjectData.MotionVectors) != 0;
+            if (motion)
+            {
+                KeepObjectMotion(s_Items);
+                if (s_PlayerLoopPipeline) s_MotionRendered = true;
+            }
             s_Items.RemoveAll(item =>
             {
                 if (item.Queue < range.lowerBound || item.Queue > range.upperBound) return true;
@@ -738,8 +757,10 @@ namespace Unbound.Runtime
                 var info = ShaderPassInfo.Of(shader);
                 if (info == null) return false;
                 if (!info.HasPassFor(s_PassTagScratch)) return true;
-                // An override draws the eligible object even if its own matching passes are disabled.
-                return drawing.overrideMaterial == null && drawing.overrideShader == null && item.Material.HasDisabledPasses && TaggedPasses(item.Material, info, s_PassTagScratch).Count == 0;
+                // An override draws the eligible object even if its own matching passes are disabled,
+                // and so does an object that moved its motion vector pass.
+                return drawing.overrideMaterial == null && drawing.overrideShader == null && item.Material.HasDisabledPasses
+                    && TaggedPasses(item.Material, info, s_PassTagScratch).Count == 0 && !(motion && MovingObject(item));
             });
             SortRendererList(s_Items, sorting.criteria);
 
@@ -769,9 +790,15 @@ namespace Unbound.Runtime
                 var item = s_Items[i];
                 if (overrideMaterial == null && overrideShader == null && item.Material.HasDisabledPasses && ShaderPassInfo.Of(item.Material.shader) is ShaderPassInfo info)
                 {
-                    foreach (var p in TaggedPasses(item.Material, info, s_PassTagScratch)) EmitDraw(item, s_MaterialHandles[i], p, lightmaps, probes, srp: true);
+                    bool moving = motion && MovingObject(item);
+                    foreach (var p in TaggedPasses(item.Material, info, s_PassTagScratch, includeDisabled: moving))
+                    {
+                        if (motion) NextDrawMotion(item);
+                        EmitDraw(item, s_MaterialHandles[i], p, lightmaps, probes, srp: true);
+                    }
                     continue;
                 }
+                if (motion) NextDrawMotion(item);
                 EmitDraw(item, s_MaterialHandles[i], pass, lightmaps, probes, srp: true);
             }
         }
@@ -779,13 +806,14 @@ namespace Unbound.Runtime
         static readonly List<int> s_TaggedScratch = new List<int>();
 
         /// <summary>The passes a renderer list draws of a material: per LightMode of the list in
-        /// order, the first pass with it, unless the material disables that LightMode.</summary>
-        static List<int> TaggedPasses(Material material, ShaderPassInfo info, List<string> lightModes)
+        /// order, the first pass with it, unless the material disables that LightMode (and
+        /// <paramref name="includeDisabled"/> is false).</summary>
+        static List<int> TaggedPasses(Material material, ShaderPassInfo info, List<string> lightModes, bool includeDisabled = false)
         {
             s_TaggedScratch.Clear();
             foreach (var mode in lightModes)
             {
-                if (material.PassDisabled(mode)) continue;
+                if (!includeDisabled && material.PassDisabled(mode)) continue;
                 for (int p = 0; p < info.Passes.Count; p++)
                 {
                     if (info.LightMode(p) != mode) continue;

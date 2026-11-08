@@ -194,17 +194,7 @@ namespace Unbound.Runtime
             for (int i = 0; i < opaqueCount; i++)
             {
                 var item = s_Items[i];
-                if (item.Renderer is not MeshRenderer renderer || item.Setup.HasValue) continue;
-                var mode = renderer.motionVectorGenerationMode;
-                if (mode == MotionVectorGenerationMode.Camera) continue;
-                if (!renderer.m_HasPreviousModel)
-                {
-                    renderer.m_PreviousModel = item.Model;
-                    renderer.m_HasPreviousModel = true;
-                }
-                var previous = renderer.m_PreviousModel;
-                bool force = mode == MotionVectorGenerationMode.ForceNoMotion;
-                if (!force && previous == item.Model) continue;
+                if (!ObjectMotion(item, out var previous, out bool moving, out bool force) || !moving) continue;
                 var properties = new Dictionary<int, object>
                 {
                     [s_PreviousMId] = previous,
@@ -229,6 +219,54 @@ namespace Unbound.Runtime
             GfxStream.GlobalTexture("_CameraMotionVectorsTexture", TextureHandles.Of(texture));
             if (s_CameraDepth != null) GfxStream.GlobalTexture("_CameraDepthTexture", TextureHandles.Of(s_CameraDepth));
             GfxStream.Restore(saved);
+        }
+
+        /// <summary>Whether a draw has object motion (a mesh renderer, not a draw set up by a
+        /// script, whose motion is not the camera's), with its renderer's previous matrix and
+        /// whether it moved since the matrices were last kept (<see cref="EndFrameMotion"/>) or
+        /// forces no motion. A renderer is taken to be still the first time it is drawn. Skinned
+        /// meshes (last frame's vertex positions) have none.</summary>
+        internal static bool ObjectMotion(in DrawItem item, out Matrix4x4 previous, out bool moving, out bool forceNoMotion)
+        {
+            previous = default;
+            moving = forceNoMotion = false;
+            if (item.Renderer is not MeshRenderer renderer || item.Setup.HasValue) return false;
+            var mode = renderer.motionVectorGenerationMode;
+            if (mode == MotionVectorGenerationMode.Camera) return false;
+            if (!renderer.m_HasPreviousModel)
+            {
+                renderer.m_PreviousModel = item.Model;
+                renderer.m_HasPreviousModel = true;
+            }
+            previous = renderer.m_PreviousModel;
+            forceNoMotion = mode == MotionVectorGenerationMode.ForceNoMotion;
+            moving = forceNoMotion || previous != item.Model;
+            return true;
+        }
+
+        /// <summary>A draw of a renderer list with <see cref="PerObjectData.MotionVectors"/> that
+        /// moved (or forces no motion): it draws its motion vector pass even when its material
+        /// disables that pass (as URP's materials do by default); a still one only when the
+        /// material enables it (URP 17's MaterialPostprocessor notes both).</summary>
+        internal static bool MovingObject(in DrawItem item) => ObjectMotion(item, out _, out bool moving, out _) && moving;
+
+        /// <summary>A renderer list with per-object motion vectors keeps the draws that have
+        /// object motion (<see cref="ObjectMotion"/>), in place.</summary>
+        internal static void KeepObjectMotion(List<DrawItem> items)
+        {
+            int kept = 0;
+            for (int i = 0; i < items.Count; i++)
+                if (ObjectMotion(items[i], out _, out _, out _)) items[kept++] = items[i];
+            items.RemoveRange(kept, items.Count - kept);
+        }
+
+        /// <summary>Before a renderer list draw with per-object motion vectors: the engine's
+        /// values for it (<see cref="GfxStream.NextDrawMotion"/>; depth bias and camera-only
+        /// unmeasured, 0).</summary>
+        static void NextDrawMotion(in DrawItem item)
+        {
+            ObjectMotion(item, out var previous, out _, out bool force);
+            GfxStream.NextDrawMotion(previous, new Vector4(0f, force ? 0f : 1f, 0f, 0f));
         }
 
         static Dictionary<int, object> MergeProperties(Dictionary<int, object> a, Dictionary<int, object> b)
