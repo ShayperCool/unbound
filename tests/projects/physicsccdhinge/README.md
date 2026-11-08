@@ -54,6 +54,51 @@ No importer or serialized cache output changes. The shim version changes with
 its collider-ray signature and drive flag semantics. The motor patch adds no
 constraint storage, scan, allocation or per-step configuration.
 
+## Extended geometry capture
+
+`--geometry` selects `Sources/GeometryEntry.cs` and the additional reference
+`Reference/unity-6000.0.71f1/geometry.tsv`. Use the commands above with
+`--geometry` on every invocation, including preparation and publishing. Each
+capture records callback counts as well as every callback and contact, so a
+missing callback remains visible even when its expected count is zero.
+
+The shape matrix contains a sphere control, a convex box-shaped mesh, two child
+spheres, two child convex meshes, and a convex mesh with a trailing sphere.
+Static and kinematic boxes and triangle meshes are crossed with all four modes.
+Terrain cases use a flat 33-by-33 heightfield and downward motion. Dynamic pairs
+approach at 100 m/s each, with all 16 mode combinations and five shape pairings.
+Moving kinematic hulls and compounds use `MovePosition` in Discrete and
+ContinuousSpeculative modes. Stationary kinematic hull and compound targets are
+also crossed with fast dynamic bodies in every mode. Automatic FixedUpdate
+controls cover convex meshes and compounds. Every body disables gravity,
+damping and sleeping; these translation cases lock rotation.
+
+Tuning cases cross contact offsets 0.001 and 0.05 with default maximum
+depenetration velocities 0.5 and 10, four body geometries, and all four modes.
+They include both fast approaches and bodies created already overlapping a
+wall. A live-default control records the settings of bodies created before and
+after changing the global default, followed by a per-body override.
+
+The additional Unity 6000.0 contracts checked for this capture are
+[Rigidbody.collisionDetectionMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rigidbody-collisionDetectionMode.html),
+[Continuous](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/CollisionDetectionMode.Continuous.html),
+[ContinuousDynamic](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/CollisionDetectionMode.ContinuousDynamic.html),
+[Physics.defaultMaxDepenetrationVelocity](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics-defaultMaxDepenetrationVelocity.html)
+and [Collider.contactOffset](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Collider-contactOffset.html).
+Continuous promises detection against static mesh geometry and eligibility as a
+ContinuousDynamic target. ContinuousDynamic covers other bodies with CCD
+enabled. The maximum depenetration speed must be positive; small values can
+prevent full correction and large values can cause instability. Contacts are
+generated inside the sum of the colliders' positive contact offsets.
+
+The documented box/sphere/capsule support list is a limitation of the public
+guarantee. The 6000.0.71f1 captures also show convex mesh and compound sweep CCD
+against static meshes and terrain. This observation is confined to the measured
+release and cases. Speculative convex meshes can still pass through the terrain
+in this matrix, consistent with the documented possibility of missed contacts.
+Q06 has no geometry exclusion in its mode mapping, body flags or pair filter;
+its earlier reference measured only the three documented collider shapes.
+
 ## Results and retained differences
 
 The strict comparator is shared with physicsbatch and keeps its absolute 1e-4 /
