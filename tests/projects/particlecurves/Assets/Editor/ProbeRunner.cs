@@ -107,6 +107,57 @@ public static class ProbeRunner
         EditorApplication.Exit(0);
     }
 
+    static Gradient Ramp(Color a, Color b, float middleTime)
+    {
+        var g = new Gradient();
+        g.SetKeys(new[] { new GradientColorKey(a, 0f), new GradientColorKey(Color.Lerp(a, b, 0.3f), middleTime), new GradientColorKey(b, 1f) },
+            new[] { new GradientAlphaKey(a.a, 0f), new GradientAlphaKey(b.a, 1f) });
+        return g;
+    }
+
+    /// <summary>Authors Resources/Gradients.prefab: MinMaxGradient script fields whose unused
+    /// colours and gradients are set too, and a system whose start colour and colour over lifetime
+    /// are authored in two-gradient and random-color modes.</summary>
+    public static void CreateGradients()
+    {
+        var root = new GameObject("Gradients");
+        var fields = root.AddComponent<GradientFields>();
+        var a = Ramp(new Color(0.1f, 0.2f, 0.3f, 0.4f), new Color(0.9f, 0.8f, 0.7f, 1f), 0.25f);
+        var b = Ramp(new Color(1f, 0f, 0.5f, 1f), new Color(0f, 1f, 0.25f, 0.5f), 0.6f);
+        var g = new ParticleSystem.MinMaxGradient(new Color(0.2f, 0.4f, 0.6f, 0.8f));
+        g.colorMin = new Color(0.9f, 0.1f, 0.1f, 1f); g.gradientMax = a;
+        fields.color = g;
+        g = new ParticleSystem.MinMaxGradient(new Color(0.1f, 0.2f, 0.3f, 1f), new Color(0.7f, 0.6f, 0.5f, 0.4f));
+        g.gradientMin = b;
+        fields.twoColors = g;
+        g = new ParticleSystem.MinMaxGradient(a);
+        g.colorMax = new Color(0.3f, 0.3f, 0.9f, 1f); g.gradientMin = b;
+        fields.gradient = g;
+        fields.twoGradients = new ParticleSystem.MinMaxGradient(b, a);
+        g = new ParticleSystem.MinMaxGradient(b) { mode = ParticleSystemGradientMode.RandomColor };
+        g.colorMin = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+        fields.randomColor = g;
+
+        var system = new GameObject("system");
+        system.transform.SetParent(root.transform, false);
+        var ps = system.AddComponent<ParticleSystem>();
+        ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        ps.useAutoRandomSeed = false;
+        ps.randomSeed = 99u;
+        var main = ps.main;
+        main.playOnAwake = false;
+        main.startColor = new ParticleSystem.MinMaxGradient(a, b);
+        var col = ps.colorOverLifetime;
+        col.enabled = true;
+        col.color = new ParticleSystem.MinMaxGradient(b) { mode = ParticleSystemGradientMode.RandomColor };
+
+        System.IO.Directory.CreateDirectory("Assets/Resources");
+        PrefabUtility.SaveAsPrefabAsset(root, "Assets/Resources/Gradients.prefab");
+        Object.DestroyImmediate(root);
+        AssetDatabase.SaveAssets();
+        EditorApplication.Exit(0);
+    }
+
     public static void Record()
     {
         EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");

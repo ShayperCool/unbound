@@ -379,6 +379,281 @@ public class MeshShapeProbe : MonoBehaviour
         }
     }
 
+    // ------------------------------------------------------------------ shape texture
+
+    /// <summary>256x256, texel (x, y) = (x, y, 128, x): the sampled texel reads back from red and
+    /// green, alpha grows to the right (clip controls).</summary>
+    static Texture2D CoordTexture()
+    {
+        var t = new Texture2D(256, 256, TextureFormat.RGBA32, false) { name = "coords", filterMode = FilterMode.Point };
+        var px = new Color32[256 * 256];
+        for (int y = 0; y < 256; y++)
+            for (int x = 0; x < 256; x++) px[y * 256 + x] = new Color32((byte)x, (byte)y, 128, (byte)x);
+        t.SetPixels32(px);
+        t.Apply(false, false);
+        return t;
+    }
+
+    /// <summary>4x4 texels of unrelated colours and alphas, for bilinear filtering and wrap modes.</summary>
+    static Texture2D SmallTexture(TextureWrapMode wrap)
+    {
+        var t = new Texture2D(4, 4, TextureFormat.RGBA32, false) { name = "small", wrapMode = wrap, filterMode = FilterMode.Point };
+        var px = new Color32[16];
+        for (int i = 0; i < 16; i++)
+            px[i] = new Color32((byte)((i * 97 + 13) & 255), (byte)((i * 53 + 200) & 255), (byte)((i * 151 + 7) & 255), (byte)((i * 71 + 90) & 255));
+        t.SetPixels32(px);
+        t.Apply(false, false);
+        return t;
+    }
+
+    /// <summary>Two triangles with UVs in channel 0 (a sheared square) and channel 1 (another
+    /// layout), so a sampled colour shows the interpolated coordinates.</summary>
+    static Mesh UvQuad()
+    {
+        var m = new Mesh { name = "uvquad" };
+        m.vertices = new[] { new Vector3(0f, 0f, 0f), new Vector3(2f, 0f, 0f), new Vector3(0f, 1f, 0f), new Vector3(2f, 1.5f, 0f) };
+        m.uv = new[] { new Vector2(0.1f, 0.05f), new Vector2(0.9f, 0.2f), new Vector2(0.2f, 0.85f), new Vector2(0.95f, 0.95f) };
+        m.uv2 = new[] { new Vector2(0.6f, 0.1f), new Vector2(0.1f, 0.3f), new Vector2(0.7f, 0.9f), new Vector2(0.3f, 0.6f) };
+        m.SetTriangles(new[] { 0, 2, 1, 1, 2, 3 }, 0);
+        m.RecalculateNormals();
+        return m;
+    }
+
+    static ParticleSystem Textured(string name, ParticleSystemShapeType type, Texture2D texture, Mesh mesh = null,
+        ParticleSystemMeshShapeType meshType = ParticleSystemMeshShapeType.Triangle, int burst = 32)
+    {
+        var ps = Make(name, type, meshType, mesh, burst);
+        var main = ps.main;
+        main.startSpeed = 0f;
+        var s = ps.shape;
+        s.texture = texture;
+        return ps;
+    }
+
+    static readonly (string Name, ParticleSystemShapeType Type)[] s_TextureShapes =
+    {
+        ("sphere", ParticleSystemShapeType.Sphere), ("sphereshell", ParticleSystemShapeType.SphereShell),
+        ("hemisphere", ParticleSystemShapeType.Hemisphere), ("cone", ParticleSystemShapeType.Cone),
+        ("conevolume", ParticleSystemShapeType.ConeVolume), ("box", ParticleSystemShapeType.Box),
+        ("boxshell", ParticleSystemShapeType.BoxShell), ("boxedge", ParticleSystemShapeType.BoxEdge),
+        ("circle", ParticleSystemShapeType.Circle), ("donut", ParticleSystemShapeType.Donut),
+        ("rectangle", ParticleSystemShapeType.Rectangle), ("edge", ParticleSystemShapeType.SingleSidedEdge),
+    };
+
+    /// <summary>Where each shape reads the texture, what the clip channel and threshold discard,
+    /// what the colour and alpha switches change, bilinear filtering with each wrap mode, the UV
+    /// channel of a mesh, and a texture made non-readable. Start speed 0: the recorded position is
+    /// the start position.</summary>
+    static void TextureScenarios()
+    {
+        var coords = CoordTexture();
+        var quad = UvQuad();
+        foreach (var (name, type) in s_TextureShapes)
+            Run("texture/uv/" + name, Textured("tx", type, coords));
+        foreach (var t in s_Types)
+            Run("texture/uv/mesh/" + T(t), Textured("tx", ParticleSystemShapeType.Mesh, coords, quad, t));
+
+        // The shape's size and transform: a larger sphere and cone, a scaled, moved and turned box
+        // and circle, a partial arc, a longer edge.
+        var big = Textured("tx", ParticleSystemShapeType.Sphere, coords);
+        var sb = big.shape; sb.radius = 2.5f;
+        Run("texture/size/sphere", big);
+        var cone = Textured("tx", ParticleSystemShapeType.ConeVolume, coords);
+        var sc = cone.shape; sc.radius = 2f; sc.angle = 40f; sc.length = 3f;
+        Run("texture/size/conevolume", cone);
+        foreach (var type in new[] { ParticleSystemShapeType.Box, ParticleSystemShapeType.Circle })
+        {
+            var moved = Textured("tx", type, coords);
+            var sm = moved.shape;
+            sm.position = new Vector3(1f, -2f, 0.5f);
+            sm.rotation = new Vector3(30f, 45f, 10f);
+            sm.scale = new Vector3(2f, 0.5f, 1.5f);
+            Run("texture/transform/" + type.ToString().ToLowerInvariant(), moved);
+        }
+        var arc = Textured("tx", ParticleSystemShapeType.Circle, coords);
+        var sarc = arc.shape; sarc.arc = 90f; sarc.radius = 3f;
+        Run("texture/size/circlearc", arc);
+        var edge = Textured("tx", ParticleSystemShapeType.SingleSidedEdge, coords);
+        var se = edge.shape; se.radius = 4f;
+        Run("texture/size/edge", edge);
+        var sphereArc = Textured("tx", ParticleSystemShapeType.Hemisphere, coords);
+        var ssa = sphereArc.shape; ssa.arc = 120f; ssa.radius = 2f; ssa.radiusThickness = 0.5f;
+        Run("texture/size/hemispherearc", sphereArc);
+        var thick = Textured("tx", ParticleSystemShapeType.Cone, coords);
+        var sth = thick.shape; sth.radiusThickness = 0.4f; sth.arc = 200f; sth.radius = 1.5f;
+        Run("texture/size/conethickness", thick);
+        var donut = Textured("tx", ParticleSystemShapeType.Donut, coords);
+        var sd = donut.shape; sd.radius = 2f; sd.donutRadius = 0.5f; sd.radiusThickness = 0.3f; sd.arc = 270f;
+        Run("texture/size/donut", donut);
+        var circleThick = Textured("tx", ParticleSystemShapeType.Circle, coords);
+        var sct = circleThick.shape; sct.radiusThickness = 0.4f;
+        Run("texture/size/circlethickness", circleThick);
+
+        // Clipping: by alpha (grows with x) at 0.5, by red at 0.25, green at 0.75, thresholds 0 and 1.
+        foreach (var (channel, threshold) in new[] { (ParticleSystemShapeTextureChannel.Alpha, 0.5f), (ParticleSystemShapeTextureChannel.Red, 0.25f),
+                     (ParticleSystemShapeTextureChannel.Green, 0.75f), (ParticleSystemShapeTextureChannel.Blue, 0.6f),
+                     (ParticleSystemShapeTextureChannel.Alpha, 0f), (ParticleSystemShapeTextureChannel.Alpha, 1f) })
+        {
+            foreach (var (name, type) in new[] { ("rectangle", ParticleSystemShapeType.Rectangle), ("mesh", ParticleSystemShapeType.Mesh) })
+            {
+                var ps = Textured("tx", type, coords, quad);
+                var s = ps.shape;
+                s.textureClipChannel = channel;
+                s.textureClipThreshold = threshold;
+                Run($"texture/clip/{channel.ToString().ToLowerInvariant()}/{F(threshold)}/{name}", ps);
+            }
+        }
+        // Clipping a rate over several steps (how many survive, which seeds they keep) and Emit.
+        var rate = Make("tx", ParticleSystemShapeType.Rectangle, ParticleSystemMeshShapeType.Vertex, null, 0, 100f);
+        var mr = rate.main; mr.startSpeed = 0f;
+        var sr = rate.shape; sr.texture = coords; sr.textureClipThreshold = 0.5f;
+        Run("texture/clip/rate", rate, 0.1f, 0.1f);
+        var emit = Textured("tx", ParticleSystemShapeType.Rectangle, coords, null, ParticleSystemMeshShapeType.Triangle, 0);
+        var sx = emit.shape; sx.textureClipThreshold = 0.5f;
+        s_Flags.Add(("texture/clip/emit", 0));
+        emit.Simulate(0f, true, true, true);
+        emit.Emit(20);
+        RecordParticles("texture/clip/emit", emit);
+        Destroy(emit.gameObject);
+
+        // Colour and alpha switches, a start colour, a gradient start colour.
+        foreach (var (colour, alpha) in new[] { (false, true), (true, false), (false, false) })
+        {
+            var ps = Textured("tx", ParticleSystemShapeType.Rectangle, coords);
+            var s = ps.shape;
+            s.textureColorAffectsParticles = colour;
+            s.textureAlphaAffectsParticles = alpha;
+            Run($"texture/affects/{(colour ? 1 : 0)}{(alpha ? 1 : 0)}", ps);
+        }
+        var tinted = Textured("tx", ParticleSystemShapeType.Rectangle, coords);
+        var mt = tinted.main; mt.startColor = new Color(0.5f, 0.25f, 1f, 0.6f);
+        Run("texture/startcolor", tinted);
+        var meshColours = Textured("tx", ParticleSystemShapeType.Mesh, coords, Tris(), ParticleSystemMeshShapeType.Triangle);
+        Run("texture/meshcolors", meshColours); // vertex colours and a texture without UVs
+
+        // Bilinear filtering and point sampling of a 4x4 texture, clamped and repeated.
+        foreach (var wrap in new[] { TextureWrapMode.Clamp, TextureWrapMode.Repeat })
+            foreach (var bilinear in new[] { false, true })
+                foreach (var (name, type) in new[] { ("rectangle", ParticleSystemShapeType.Rectangle), ("mesh", ParticleSystemShapeType.Mesh) })
+                {
+                    var ps = Textured("tx", type, SmallTexture(wrap), quad, ParticleSystemMeshShapeType.Triangle, 48);
+                    var s = ps.shape;
+                    s.textureBilinearFiltering = bilinear;
+                    Run($"texture/filter/{wrap.ToString().ToLowerInvariant()}/{(bilinear ? "bilinear" : "point")}/{name}", ps);
+                }
+
+        // UV channels: 1, and 2 which the mesh lacks.
+        foreach (int channel in new[] { 1, 2 })
+        {
+            var ps = Textured("tx", ParticleSystemShapeType.Mesh, coords, quad);
+            var s = ps.shape;
+            s.textureUVChannel = channel;
+            Run("texture/uvchannel/" + channel, ps);
+        }
+
+        // A texture made non-readable after upload.
+        var locked = CoordTexture();
+        locked.Apply(false, true);
+        Run("texture/unreadable", Textured("tx", ParticleSystemShapeType.Rectangle, locked));
+
+        // Script API round trip.
+        var api = Make("tx", ParticleSystemShapeType.Rectangle, ParticleSystemMeshShapeType.Vertex, null);
+        var sa = api.shape;
+        var before = new float[] { sa.texture == null ? 1 : 0, (int)sa.textureClipChannel, sa.textureClipThreshold, sa.textureColorAffectsParticles ? 1 : 0,
+            sa.textureAlphaAffectsParticles ? 1 : 0, sa.textureBilinearFiltering ? 1 : 0, sa.textureUVChannel };
+        sa.texture = coords; sa.textureClipChannel = ParticleSystemShapeTextureChannel.Green; sa.textureClipThreshold = 1.5f;
+        sa.textureColorAffectsParticles = false; sa.textureAlphaAffectsParticles = false; sa.textureBilinearFiltering = true; sa.textureUVChannel = 7;
+        var after = new float[] { sa.texture == coords ? 1 : 0, (int)sa.textureClipChannel, sa.textureClipThreshold, sa.textureColorAffectsParticles ? 1 : 0,
+            sa.textureAlphaAffectsParticles ? 1 : 0, sa.textureBilinearFiltering ? 1 : 0, sa.textureUVChannel };
+        sa.textureClipThreshold = -1f; sa.textureUVChannel = -2;
+        var bounds = new float[] { sa.textureClipThreshold, sa.textureUVChannel };
+        var api2 = new List<float>(before); api2.AddRange(after); api2.AddRange(bounds);
+        Record("texture/api", api2);
+        Destroy(api.gameObject);
+    }
+
+    // ------------------------------------------------------------------ other topologies
+
+    static Mesh Indexed(string name, Vector3[] vertices, params (int[] Indices, MeshTopology Topology)[] submeshes)
+    {
+        var m = new Mesh { name = name };
+        m.vertices = vertices;
+        m.subMeshCount = submeshes.Length;
+        for (int i = 0; i < submeshes.Length; i++) m.SetIndices(submeshes[i].Indices, submeshes[i].Topology, i);
+        return m;
+    }
+
+    /// <summary>Meshes whose index data is not a triangle list: six line indices (a whole number of
+    /// triangles), lines whose indices read as triangles with area, a line strip, quads, and a
+    /// triangle submesh beside a lines submesh.</summary>
+    static void LineScenarios()
+    {
+        var square = new[] { new Vector3(0f, 0f, 0f), new Vector3(2f, 0f, 0f), new Vector3(2f, 1f, 0f), new Vector3(0f, 1f, 0f), new Vector3(1f, 3f, 0f) };
+        var meshes = new[]
+        {
+            ("lines6", Indexed("lines6", square, (new[] { 0, 1, 1, 2, 2, 0 }, MeshTopology.Lines))),
+            ("linesarea", Indexed("linesarea", square, (new[] { 0, 1, 2, 3, 0, 2 }, MeshTopology.Lines))),
+            ("strip", Indexed("strip", square, (new[] { 0, 1, 2, 3, 4 }, MeshTopology.LineStrip))),
+            ("quads", Indexed("quads", square, (new[] { 0, 1, 2, 3 }, MeshTopology.Quads))),
+            ("mixed", Indexed("mixed", square, (new[] { 0, 1, 2 }, MeshTopology.Triangles), (new[] { 2, 3, 3, 4, 4, 0 }, MeshTopology.Lines))),
+        };
+        foreach (var (name, mesh) in meshes)
+            foreach (var t in s_Types)
+                Run($"topology/{name}/{T(t)}", Make("v", ParticleSystemShapeType.Mesh, t, mesh, 12));
+        // The mixed mesh's lines submesh alone (Single Material).
+        foreach (var t in s_Types)
+        {
+            var ps = Make("w", ParticleSystemShapeType.Mesh, t, meshes[4].Item2, 12);
+            var s = ps.shape;
+            s.useMeshMaterialIndex = true;
+            s.meshMaterialIndex = 1;
+            Run($"topology/mixed1/{T(t)}", ps);
+        }
+    }
+
+    // ------------------------------------------------------------------ spread steps
+
+    /// <summary>Arc spread (circle), radius spread (edge) and mesh spawn spread (mesh edge) in Loop
+    /// mode at speed 1 and spread 0.25: rate 20 births land on spread steps, rate 7 births never do;
+    /// Burst Spread with spread 0.3.</summary>
+    static void SpreadScenarios()
+    {
+        var grid = Grid();
+        foreach (float rate in new[] { 20f, 7f })
+        {
+            var circle = Make("x", ParticleSystemShapeType.Circle, ParticleSystemMeshShapeType.Vertex, null, 0, rate);
+            var sc = circle.shape;
+            sc.arcMode = ParticleSystemShapeMultiModeValue.Loop; sc.arcSpeed = 1f; sc.arcSpread = 0.25f; sc.radiusThickness = 0f;
+            Run($"spread/circle/{F(rate)}", circle, 0.4f, 0.4f, 0.4f, 0.4f);
+            var edge = Make("x", ParticleSystemShapeType.SingleSidedEdge, ParticleSystemMeshShapeType.Vertex, null, 0, rate);
+            var se = edge.shape;
+            se.radiusMode = ParticleSystemShapeMultiModeValue.Loop; se.radiusSpeed = 1f; se.radiusSpread = 0.25f;
+            Run($"spread/edge/{F(rate)}", edge, 0.4f, 0.4f, 0.4f, 0.4f);
+            var mesh = Make("x", ParticleSystemShapeType.Mesh, ParticleSystemMeshShapeType.Edge, grid, 0, rate);
+            var sm = mesh.shape;
+            sm.meshSpawnMode = ParticleSystemShapeMultiModeValue.Loop; sm.meshSpawnSpeed = 1f; sm.meshSpawnSpread = 0.25f;
+            Run($"spread/mesh/{F(rate)}", mesh, 0.4f, 0.4f, 0.4f, 0.4f);
+        }
+        var burstCircle = Make("y", ParticleSystemShapeType.Circle, ParticleSystemMeshShapeType.Vertex, null, 10);
+        var bc = burstCircle.shape;
+        bc.arcMode = ParticleSystemShapeMultiModeValue.BurstSpread; bc.arcSpread = 0.3f; bc.radiusThickness = 0f;
+        Run("spread/circle/burst", burstCircle);
+        var burstEdge = Make("y", ParticleSystemShapeType.SingleSidedEdge, ParticleSystemMeshShapeType.Vertex, null, 10);
+        var be = burstEdge.shape;
+        be.radiusMode = ParticleSystemShapeMultiModeValue.BurstSpread; be.radiusSpread = 0.3f;
+        Run("spread/edge/burst", burstEdge);
+    }
+
+    /// <summary>The obsolete shape types set from script, without a texture.</summary>
+    static void ObsoleteShapes()
+    {
+#pragma warning disable 618
+        foreach (var type in new[] { ParticleSystemShapeType.SphereShell, ParticleSystemShapeType.HemisphereShell, ParticleSystemShapeType.ConeShell,
+                     ParticleSystemShapeType.ConeVolumeShell, ParticleSystemShapeType.CircleEdge })
+#pragma warning restore 618
+            Run("obsolete/" + type.ToString().ToLowerInvariant(), Make("z", type, ParticleSystemMeshShapeType.Vertex, null, 8));
+    }
+
     // ------------------------------------------------------------------ AddComponent (Q146)
 
     /// <summary>Whether a ParticleSystemRenderer exists right after AddComponent&lt;ParticleSystem&gt;()
@@ -435,6 +710,10 @@ public class MeshShapeProbe : MonoBehaviour
         {
             Components();
             MeshScenarios();
+            TextureScenarios();
+            LineScenarios();
+            SpreadScenarios();
+            ObsoleteShapes();
         }
         catch (Exception e)
         {

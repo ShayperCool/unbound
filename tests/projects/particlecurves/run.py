@@ -2,6 +2,7 @@
 """Record the Unity Editor (native), run Unbound (engine), publish and verify.
 
     run.py create --label author1          # Editor authors Assets/Resources/Authored.prefab (copied back)
+    run.py create-gradients --label grad1  # Editor authors Assets/Resources/Gradients.prefab (copied back)
     run.py native --label native1          # a private project copy, GPU Editor through the job pool
     run.py publish native1 native2         # two identical captures become Reference/unity-<version>.jsonl
     run.py engine --label final            # Unbound (UNBOUND_CLI or target/release/unbound)
@@ -28,6 +29,7 @@ WORK = run_root(ROOT, 'runs')
 HEAVY = Path.home()/'.cache/compat/with-heavy-job'
 OUT = 'values.jsonl'
 AUTHORED = Path('Assets/Resources/Authored.prefab')
+GRADIENTS = Path('Assets/Resources/Gradients.prefab')
 
 
 def copy_project(target):
@@ -47,9 +49,9 @@ def editor(label, method, env):
     return out, project
 
 
-def create(label):
-    out, project = editor(label, 'Create', {})
-    for path in (AUTHORED, AUTHORED.with_suffix('.prefab.meta')):
+def create(label, method='Create', prefab=AUTHORED):
+    out, project = editor(label, method, {})
+    for path in (prefab, prefab.with_suffix('.prefab.meta')):
         if not (project/path).exists():
             print('missing', path)
             return 1
@@ -87,18 +89,21 @@ def publish(labels):
 
 def verify(candidate):
     reference = reference_file(ROOT, 'jsonl')
-    return subprocess.run([sys.executable, str(ROOT/'compare.py'), str(reference), str(candidate)]).returncode
+    return subprocess.run([sys.executable, str(ROOT/'compare.py'), str(reference), str(candidate),
+                           '--known', str(ROOT/'known.json')]).returncode
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=['create', 'native', 'engine', 'publish', 'verify', 'check'])
+    parser.add_argument('mode', choices=['create', 'create-gradients', 'native', 'engine', 'publish', 'verify', 'check'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
     parser.add_argument('--candidate', type=Path)
     args = parser.parse_args()
     if args.mode == 'create':
         return create(args.label)
+    if args.mode == 'create-gradients':
+        return create(args.label, 'CreateGradients', GRADIENTS)
     if args.mode == 'native':
         return native(args.label)
     if args.mode == 'engine':

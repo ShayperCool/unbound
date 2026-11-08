@@ -13,7 +13,7 @@ using UnityEngine;
 /// serialized scalar differs from its curve keys; and simulations that use those values. Each record
 /// is one JSON line {"key", "value": [numbers]} in <c>PARTICLE_CURVES_OUT</c>.
 /// </summary>
-public class ParticleCurveProbe : MonoBehaviour
+public partial class ParticleCurveProbe : MonoBehaviour
 {
     const float Thrown = -12345f;
     const float NullCurve = -1f;
@@ -483,6 +483,7 @@ public class ParticleCurveProbe : MonoBehaviour
         Authored();
         ScriptFields();
         Simulations();
+        Gradients();
         Record("complete", new List<float> { 1f });
         File.WriteAllText(s_Path, s_Out.ToString());
         Debug.Log("particle curves complete: " + s_Path);
