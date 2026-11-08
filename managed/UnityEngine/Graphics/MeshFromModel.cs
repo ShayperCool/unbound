@@ -131,7 +131,18 @@ namespace UnityEngine
                             deltaTangents.Length == positions.Length ? deltaTangents : null);
                     }
                 }
-            RecalculateBounds();
+            // The importer's bounds also hold the blend shape frames (measured,
+            // tests/projects/modelaxis Skinned set).
+            if (m.TryGetProperty("boundsMin", out var min) && m.TryGetProperty("boundsMax", out var max)
+                && min.ValueKind == JsonValueKind.Array && max.ValueKind == JsonValueKind.Array && positions.Length > 0)
+            {
+                var b = new Bounds();
+                b.SetMinMax(Element(min), Element(max));
+                bounds = b;
+            }
+            else RecalculateBounds();
         }
+
+        static Vector3 Element(JsonElement v) => new Vector3(v[0].GetSingle(), v[1].GetSingle(), v[2].GetSingle());
     }
 }
