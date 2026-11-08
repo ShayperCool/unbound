@@ -85,6 +85,44 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void TheAgentUpdateRunsAtPreUpdatesAIUpdateAndNothingAfterTheScripts()
+        {
+            Agent(new Vector3(-5f, 0f, 4f));
+            Assert.Contains((Action)AgentSystem.Step, PlayerLoopDriver.Registered(typeof(UnityEngine.PlayerLoop.PreUpdate.AIUpdate)));
+            foreach (var action in PlayerLoopDriver.Registered(typeof(UnityEngine.PlayerLoop.PreLateUpdate.AIUpdatePostScript)))
+                Assert.NotEqual(typeof(AgentSystem), action.Method.DeclaringType);
+        }
+
+        [Fact]
+        public void ADestinationOnTheRestOfThePathKeepsTheCorridorUpToIt()
+        {
+            var agent = Agent(new Vector3(-5f, 0f, 0f));
+            Assert.True(agent.SetDestination(Center + new Vector3(5f, 0f, 0f)));
+            AgentSystem.Step();
+            var ag = agent.m_Crowd;
+            int count = ag.corridor.GetPathCount();
+            Assert.True(count > 2, $"corridor of {count}");
+            var path = ag.corridor.GetPath().ToArray();
+            // A destination on the corridor's next-to-last polygon: the corridor is cut there.
+            var target = PointOn(agent, path[count - 2]);
+            Assert.True(agent.SetDestination(target));
+            Assert.False(agent.pathPending);
+            Assert.Equal(count - 1, ag.corridor.GetPathCount());
+            for (int i = 0; i < count - 1; i++) Assert.Equal(path[i], ag.corridor.GetPath()[i]);
+        }
+
+        /// <summary>The centre of a polygon.</summary>
+        static Vector3 PointOn(NavMeshAgent agent, long polyRef)
+        {
+            var mesh = agent.m_Surface.Query.GetAttachedNavMesh();
+            mesh.GetTileAndPolyByRefUnsafe(polyRef, out var tile, out var poly);
+            var c = Vector3.zero;
+            for (int i = 0; i < poly.vertCount; i++)
+                c += new Vector3(tile.data.verts[poly.verts[i] * 3], tile.data.verts[poly.verts[i] * 3 + 1], tile.data.verts[poly.verts[i] * 3 + 2]);
+            return c / poly.vertCount;
+        }
+
+        [Fact]
         public void ADestinationOnTheAgentsPolygonHasItsPathAtOnce()
         {
             var agent = Agent(new Vector3(-5f, 0f, 4f));

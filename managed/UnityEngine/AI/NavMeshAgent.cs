@@ -8,12 +8,12 @@ using Unbound.Runtime;
 namespace UnityEngine.AI
 {
     /// <summary>
-    /// An agent moving over the NavMesh, driven by a Detour crowd as Unity's agents are. After the
-    /// scripts' Update (PreLateUpdate's AIUpdatePostScript) the frame's path requests are found,
-    /// then the crowd steers from where the agents stand (to the next corners, avoiding other
-    /// agents) and moves them by the velocity planned the frame before (acceleration-limited), so
-    /// the frame that asks sees the path and its desired velocity but no motion; transforms follow
-    /// (measured in `tests/projects/navmesh`).
+    /// An agent moving over the NavMesh, driven by a Detour crowd as Unity's agents are. Before the
+    /// scripts' Update (PreUpdate's AIUpdate) the pending path requests are found, then the crowd
+    /// steers from where the agents stand (to the next corners, avoiding other agents) and moves
+    /// them by the velocity planned the update before (acceleration-limited), so the update that
+    /// finds a path plans with it but moves only from the next; transforms follow (measured in
+    /// `tests/projects/navmesh`, `navcost` loop.*).
     /// </summary>
     [ClassId(195)]
     public sealed partial class NavMeshAgent : Behaviour
@@ -688,11 +688,11 @@ namespace Unbound.Runtime
             PlayerLoopDriver.Register(typeof(PL.PreUpdate.AIUpdate), Step);
         }
 
-        /// <summary>The agents' early update (PreUpdate's AIUpdate): an agent follows its transform
-        /// moved by script, then every transform goes to where its agent stands (documented: the
-        /// transform matches the simulated position when Update is called; measured: an agent
-        /// placed by its scene, activation or Warp, or moved by script, keeps its transform until
-        /// then, and the update after the scripts leaves a standing agent's transform alone).</summary>
+        /// <summary>The start of the agent update (PreUpdate's AIUpdate): an agent follows its
+        /// transform moved by script, then every transform goes to where its agent stands
+        /// (documented: the transform matches the simulated position when Update is called;
+        /// measured: an agent placed by its scene, activation or Warp, or moved by script, keeps its
+        /// transform until then).</summary>
         internal static void SyncTransforms()
         {
             // A NavMesh changed before (this frame's carving) places its agents again first.
@@ -1037,42 +1037,41 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A new destination whose path needs no search is the agent's path at once: one on
-        /// the agent's own polygon, or, for an agent following a path, one on the rest of that path.
-        /// Any other waits for the next early update (measured, tests/projects/navcost loop.*:
-        /// pathPending right after SetDestination, for agents made in that frame and earlier, standing
-        /// and walking, with destinations on their polygon, ahead on their path, at its end, behind
-        /// them and beyond the NavMesh). An agent on a link keeps its request for the early update.</summary>
+        /// the agent's own polygon, or, for an agent following a path, one on the rest of that path;
+        /// the path is the agent's corridor up to the destination's polygon. Any other waits for the
+        /// next early update (measured, tests/projects/navcost loop.*: pathPending right after
+        /// SetDestination, for agents made in that frame and earlier, standing and walking, with
+        /// destinations on their polygon, ahead on their path, at its end, behind them and beyond the
+        /// NavMesh). An agent on a link keeps its request for the early update.</summary>
         internal static void PlanAtOnce(NavMeshAgent agent, bool hadPath)
         {
             var ag = agent.m_Crowd;
             if (ag == null || agent.isOnOffMeshLink) return;
             if (!NavMesh.Nearest(agent.m_Surface, agent.RequestedDestination, NavMesh.AgentExtents(agent.agentTypeID), agent.Filter, out var targetPoly, out var target))
                 return;
-            bool known = hadPath ? OnRemainingPath(ag, targetPoly, NavMesh.V(target)) : targetPoly == ag.corridor.GetFirstPoly();
-            if (!known) return;
-            var search = NavMesh.PathSearch.Begin(agent.m_Surface, PathOrigin(agent), agent.RequestedDestination, agent.Filter, agent.agentTypeID);
-            if (search == null) return;
-            // On the agent's polygon or its path: the search ends there.
-            int budget = int.MaxValue;
-            if (!search.Step(ref budget) || search.Result == null) return;
+            var point = NavMesh.V(target);
+            int end = hadPath ? RemainingPathIndex(ag, targetPoly, point) : ag.corridor.GetFirstPoly() == targetPoly ? 0 : -1;
+            if (end < 0) return;
             s_PathRequests.Remove(agent);
-            ApplyPath(agent, search.Result);
+            s_Searches.Remove(agent);
+            s_Restarted.Remove(agent);
+            Follow(agent, ag.corridor.GetPath(), end + 1, point, NavMeshPathStatus.PathComplete);
         }
 
-        /// <summary>Whether a point on <paramref name="polyRef"/> lies on the rest of the agent's path:
-        /// on a later polygon of its corridor, or on the agent's own polygon not behind it (against
-        /// the way to its next corner).</summary>
-        static bool OnRemainingPath(DtCrowdAgent ag, long polyRef, RcVec3f point)
+        /// <summary>Where on the rest of the agent's path a point on <paramref name="polyRef"/> lies:
+        /// the index of a later polygon of its corridor, 0 for the agent's own polygon when the point
+        /// is not behind it (against the way to its next corner), else -1.</summary>
+        static int RemainingPathIndex(DtCrowdAgent ag, long polyRef, RcVec3f point)
         {
             var path = ag.corridor.GetPath();
             int count = ag.corridor.GetPathCount();
             for (int i = 1; i < count; i++)
-                if (path[i] == polyRef) return true;
-            if (count == 0 || path[0] != polyRef) return false;
-            if (ag.ncorners == 0) return true;
+                if (path[i] == polyRef) return i;
+            if (count == 0 || path[0] != polyRef) return -1;
+            if (ag.ncorners == 0) return 0;
             var ahead = RcVec3f.Subtract(ag.corners[0].pos, ag.npos);
             var to = RcVec3f.Subtract(point, ag.npos);
-            return ahead.X * to.X + ahead.Z * to.Z >= 0f;
+            return ahead.X * to.X + ahead.Z * to.Z >= 0f ? 0 : -1;
         }
 
         internal static void RequestPath(NavMeshAgent agent)
@@ -1086,7 +1085,7 @@ namespace Unbound.Runtime
         /// <summary>Agents whose search under way a NavMesh rebuild restarted: finished in one go.</summary>
         static readonly HashSet<NavMeshAgent> s_Restarted = new HashSet<NavMeshAgent>();
 
-        /// <summary>Paths for the requests, after the scripts' Update, in request order within the
+        /// <summary>Paths for the pending requests, in the agent update, in request order within the
         /// frame's A* iteration budget; a request the budget does not finish goes on next frame.</summary>
         static void ProcessRequests()
         {
@@ -1156,23 +1155,32 @@ namespace Unbound.Runtime
         /// where it stands, or, waiting on a link, where the path starts.</summary>
         static void ApplyPath(NavMeshAgent agent, NavMeshPath path, RcVec3f? from)
         {
-            var crowd = CrowdOf(agent.m_Surface);
             var ag = agent.m_Crowd;
             var polys = path.m_Polygons;
             var target = path.m_Corners.Length > 0 ? path.m_Corners[path.m_Corners.Length - 1] : agent.m_NextPosition;
             var start = from ?? (agent.WaitingOnLink && path.m_Corners.Length > 0 ? NavMesh.V(path.m_Corners[0]) : ag.npos);
             ag.corridor.Reset(polys[0], start);
-            ag.corridor.SetCorridor(NavMesh.V(target), polys, polys.Length);
+            Follow(agent, polys, polys.Length, NavMesh.V(target), path.status);
+        }
+
+        /// <summary>The agent follows the corridor <paramref name="polys"/> (its first
+        /// <paramref name="count"/>) from where its corridor starts to <paramref name="target"/>.</summary>
+        static void Follow(NavMeshAgent agent, Span<long> polys, int count, RcVec3f target, NavMeshPathStatus status)
+        {
+            var crowd = CrowdOf(agent.m_Surface);
+            var ag = agent.m_Crowd;
+            var last = polys[count - 1];
+            ag.corridor.SetCorridor(target, polys, count);
             ag.boundary.Reset();
-            ag.partial = path.status == NavMeshPathStatus.PathPartial;
-            ag.targetRef = polys[polys.Length - 1];
-            ag.targetPos = NavMesh.V(target);
+            ag.partial = status == NavMeshPathStatus.PathPartial;
+            ag.targetRef = last;
+            ag.targetPos = target;
             ag.targetState = DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID;
             ag.targetReplanTime = 0f;
             ag.targetReplan = false;
             agent.SetPathPending(false);
             agent.SetArrived(false);
-            agent.SetPathStatus(path.status);
+            agent.SetPathStatus(status);
             agent.PathRenewed();
             // The corners the agent steers by, for this frame's queries.
             ag.ncorners = ag.corridor.FindCorners(ag.corners, DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS, crowd.GetNavMeshQuery(), crowd.GetFilter(0));

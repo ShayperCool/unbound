@@ -245,6 +245,10 @@ namespace Unbound.Runtime
             list.Add(action);
         }
 
+        /// <summary>The engine actions registered at the system of the given type (for tests).</summary>
+        internal static IReadOnlyList<Action> Registered(Type system) =>
+            s_Engine.TryGetValue(system, out var list) ? list : Array.Empty<Action>();
+
         /// <summary>Runs an engine action before the existing actions at this same system node.</summary>
         internal static void RegisterFirst(Type system, Action action)
         {
