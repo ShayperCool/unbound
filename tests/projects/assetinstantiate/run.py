@@ -64,13 +64,17 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('mode',choices=('editor','publish','check'))
     p.add_argument('--release',required=True)
-    p.add_argument('--followups',action='store_true')
+    modes=p.add_mutually_exclusive_group()
+    modes.add_argument('--followups',action='store_true')
+    modes.add_argument('--overrides',action='store_true')
     p.add_argument('--label',default=None)
     args=p.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION']=args.release
     if args.followups:
         os.environ['ASSET_INSTANTIATE_FOLLOWUPS']='1'
-    reference = PROBE/'Reference'/('unity-'+args.release+('.followups' if args.followups else '')+'.jsonl')
+    if args.overrides:
+        os.environ['ASSET_INSTANTIATE_OVERRIDES']='1'
+    reference = PROBE/'Reference'/('unity-'+args.release+('.overrides' if args.overrides else '.followups' if args.followups else '')+'.jsonl')
     label=args.label or ('engine-'+str(time.time_ns()))
     if Path(label).name!=label or label in ('.','..'):
         p.error('label must be a single directory name')
@@ -91,7 +95,7 @@ def main():
             shutil.copyfile(first/'values.jsonl',target)
         return publish([work/'native1',work/'native2'],target,lambda d:['values.jsonl'],write,complete=[complete],gpu=True)
     else:
-        dest=project(work/'project-engine', authored=args.followups);out=work/'engine';out.mkdir()
+        dest=project(work/'project-engine', authored=args.followups or args.overrides);out=work/'engine';out.mkdir()
         cli=os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND')
         if not cli:
             p.error('set UNBOUND_CLI to this checkout release build')

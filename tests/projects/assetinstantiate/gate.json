@@ -1,7 +1,8 @@
 {
   "commands": [
     "python3 tests/projects/assetinstantiate/run.py check --release $UNBOUND_PROBE_UNITY_VERSION",
-    "python3 tests/projects/assetinstantiate/run.py check --followups --release $UNBOUND_PROBE_UNITY_VERSION"
+    "python3 tests/projects/assetinstantiate/run.py check --followups --release $UNBOUND_PROBE_UNITY_VERSION",
+    "python3 tests/projects/assetinstantiate/run.py check --overrides --release $UNBOUND_PROBE_UNITY_VERSION"
   ],
   "summary": "\\d+/\\d+ records match.*"
 }

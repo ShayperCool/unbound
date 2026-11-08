@@ -210,6 +210,12 @@ namespace UnityEngine.Tests
                 overrideClone[clip] = null;
                 Assert.Same(clip, overrideClone[clip]);
                 Assert.Same(clip, overrideClone["motion"]);
+                var raw = new List<KeyValuePair<AnimationClip, AnimationClip>>();
+                overrideClone.GetOverrides(raw);
+                Assert.Null(Assert.Single(raw).Value);
+#pragma warning disable CS0618
+                Assert.Null(Assert.Single(overrideClone.clips).overrideClip);
+#pragma warning restore CS0618
                 Assert.Same(replacement, overrides[clip]);
                 Assert.Null(overrideClone[replacement]);
             }

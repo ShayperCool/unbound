@@ -99,3 +99,11 @@ UNBOUND_CLI=/path/to/private/unbound python3 tests/projects/assetinstantiate/run
 
 The gate runs both references. Imported bitmap fonts, arbitrary Editor-only graph
 mutation, GPU-only Texture2D cloning and other releases remain outside this scope.
+
+The `--overrides` companion adds 43 strict values for unset, set and cleared
+overrides on an original/clone pair. The indexers report the effective clip;
+GetOverrides and deprecated clips report the raw replacement, which is null
+when no replacement is set. The
+[6000.0 Unity C# reference](https://github.com/Unity-Technologies/UnityCsReference/blob/6000.0/Modules/Animation/ScriptBindings/AnimatorOverrideController.bindings.cs)
+exposes these as separate queries. Two independent GPU Editor captures agree;
+the gate checks this additional reference without changing the existing oracles.

@@ -180,7 +180,7 @@ namespace UnityEngine
             get
             {
                 foreach (var c in Originals())
-                    if (c.name == name) return Compat.AssetCloneResourcesMeasured ? MapClip(c) : m_Overrides.TryGetValue(c, out var o) ? o : null;
+                    if (c.name == name) return Compat.AssetCloneResourcesMeasured ? MapClip(c) : RawOverride(c);
                 return null;
             }
             set
@@ -198,7 +198,7 @@ namespace UnityEngine
         {
             get => Compat.AssetCloneResourcesMeasured
                 ? clip != null && Graph != null && Graph.Clips.Contains(clip) ? MapClip(clip) : null
-                : clip != null && m_Overrides.TryGetValue(clip, out var o) ? o : null;
+                : RawOverride(clip);
             set
             {
                 if (clip == null) return;
@@ -213,6 +213,9 @@ namespace UnityEngine
             m_Version++;
         }
 
+        AnimationClip RawOverride(AnimationClip original) =>
+            original != null && m_Overrides.TryGetValue(original, out var replacement) ? replacement : null;
+
         public int overridesCount => Originals().Count;
 
         [Obsolete("AnimatorOverrideController.clips property is deprecated. Use AnimatorOverrideController.GetOverrides and AnimatorOverrideController.ApplyOverrides instead.")]
@@ -223,7 +226,7 @@ namespace UnityEngine
                 var originals = Originals();
                 var result = new AnimationClipPair[originals.Count];
                 for (int i = 0; i < result.Length; i++)
-                    result[i] = new AnimationClipPair { originalClip = originals[i], overrideClip = this[originals[i]] };
+                    result[i] = new AnimationClipPair { originalClip = originals[i], overrideClip = RawOverride(originals[i]) };
                 return result;
             }
             set
@@ -240,7 +243,7 @@ namespace UnityEngine
             if (overrides == null) throw new ArgumentNullException(nameof(overrides));
             overrides.Clear();
             foreach (var c in Originals())
-                overrides.Add(new KeyValuePair<AnimationClip, AnimationClip>(c, this[c]));
+                overrides.Add(new KeyValuePair<AnimationClip, AnimationClip>(c, RawOverride(c)));
         }
 
         public void ApplyOverrides(IList<KeyValuePair<AnimationClip, AnimationClip>> overrides)

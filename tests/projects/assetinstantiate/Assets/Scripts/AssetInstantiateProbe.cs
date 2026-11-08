@@ -198,6 +198,8 @@ public partial class AssetInstantiateProbe : MonoBehaviour
     IEnumerator Start()
     {
         Application.logMessageReceived+=Log;
+        if (Environment.GetEnvironmentVariable("ASSET_INSTANTIATE_OVERRIDES") == "1")
+        { Case("overrides", OverrideEnumeration); WriteCapture(); yield break; }
         if (Environment.GetEnvironmentVariable("ASSET_INSTANTIATE_FOLLOWUPS") == "1")
         {
             var followups = Followups(); while (followups.MoveNext()) yield return followups.Current;
