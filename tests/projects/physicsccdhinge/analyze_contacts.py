@@ -76,6 +76,60 @@ def relation(left, right):
     return None
 
 
+def geometry_pair(key, rows):
+    """Describe the authored collider pair, independent of callback/contact slots."""
+    context, slot = key.split('/event/')
+    scenario, _, receiver = context.rsplit('/', 2)
+    fields = scenario.split('/')
+    if fields[0] != 'geometry':
+        return 'unclassified'
+    family = fields[1]
+    shape = int(fields[2])
+    if family == 'dynamic':
+        left, right = ((0, 0), (1, 0), (0, 1), (2, 1), (4, 2))[shape]
+        self_kind, other_kind = (left, right) if receiver == 'a' else (right, left)
+    elif family in ('static', 'tuning', 'fixed'):
+        self_kind = shape
+        target = int(fields[3]) if family == 'static' else 0
+        other_kind = ('box', 'box', 'triangle_mesh', 'terrain', 'triangle_mesh')[target]
+    elif family in ('kinematic', 'kinematic-target'):
+        target = int(fields[3])
+        first = 'mover' if family == 'kinematic' else 'bullet'
+        self_kind, other_kind = (shape, target) if receiver == first else (target, shape)
+    else:
+        return 'unclassified'
+
+    event = context+'/event/'+slot.split('/')[0]
+    point = rows.get(key) if '/' in slot else rows.get(event+'/0')
+    identities = point.split(',')[7:] if point else ('', '')
+
+    def collider(kind, name):
+        if isinstance(kind, str):
+            return kind
+        if kind in (0, 2):
+            return 'sphere'
+        if kind in (1, 3):
+            return 'convex'
+        return {'front': 'convex', 'rear': 'sphere'}.get(name, 'mixed')
+
+    return '/'.join(sorted((collider(self_kind, identities[0]), collider(other_kind, identities[1]))))
+
+
+def group_unmatched(failures, expected, actual):
+    """Count each raw unmatched row once, retaining ambiguous slot identities."""
+    pairs, scenarios = Counter(), Counter()
+    for failure in failures:
+        if failure['category'] != 'unmatched_payload':
+            continue
+        key = failure['key']
+        context = key.split('/event/')[0]
+        scenario = context.rsplit('/', 2)[0]
+        labels = {geometry_pair(key, rows) for rows in (expected, actual) if key in rows}
+        pairs[' | '.join(sorted(labels))] += 1
+        scenarios[scenario] += 1
+    return dict(collider_pairs=dict(sorted(pairs.items())), scenarios=dict(sorted(scenarios.items())))
+
+
 def analyze(expected, actual):
     report = compare(expected, actual)
     e, a = callbacks(expected), callbacks(actual)
@@ -112,7 +166,8 @@ def analyze(expected, actual):
             category = 'other'
         annotated.append(dict(failure, category=category))
     return dict(total=report['total'], differences=len(annotated),
-                counts=dict(Counter(x['category'] for x in annotated)), failures=annotated)
+                counts=dict(Counter(x['category'] for x in annotated)), failures=annotated,
+                unmatched_groups=group_unmatched(annotated, expected, actual))
 
 
 if __name__ == '__main__':

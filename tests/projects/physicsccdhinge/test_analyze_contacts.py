@@ -52,6 +52,27 @@ class ContactAnalysisTests(unittest.TestCase):
         self.assertEqual({'unmatched_payload': 2}, result['counts'])
         self.assertIsNone(next(x for x in result['failures'] if x['key'].endswith('/1'))['actual'])
 
+    def test_unmatched_groups_preserve_each_raw_failure(self):
+        prefix = 'geometry/static/1/2/3/0/bullet'
+        expected = {prefix+'/event/0': 'enter,wall,1,0,0,0,0,0,0',
+                    prefix+'/event/0/0': '0,0,0,-1,0,0,0.1,bullet,wall'}
+        actual = {prefix+'/event/0': 'enter,wall,0,0,0,0,0,0,0'}
+        before = copy.deepcopy((expected, actual))
+        result = analyze(expected, actual)
+        self.assertEqual(2, result['counts']['unmatched_payload'])
+        self.assertEqual({'convex/triangle_mesh': 2}, result['unmatched_groups']['collider_pairs'])
+        self.assertEqual({'geometry/static/1/2/3': 2}, result['unmatched_groups']['scenarios'])
+        self.assertEqual(before, (expected, actual))
+
+    def test_mixed_compound_slot_changes_remain_ambiguous(self):
+        prefix = 'geometry/dynamic/4/3/3/0/a'
+        expected = {prefix+'/event/0': 'enter,front,1,0,0,0,0,0,0',
+                    prefix+'/event/0/0': '0,0,0,-1,0,0,0.1,front,front'}
+        actual = dict(expected)
+        actual[prefix+'/event/0/0'] = '0,0,0,-1,0,0,0.1,rear,front'
+        result = analyze(expected, actual)
+        self.assertEqual({'convex/sphere | sphere/sphere': 1}, result['unmatched_groups']['collider_pairs'])
+
     def native_rows(self):
         rows = self.rows()
         rows['case/0/a/events'] = rows['case/0/b/events'] = '1'
