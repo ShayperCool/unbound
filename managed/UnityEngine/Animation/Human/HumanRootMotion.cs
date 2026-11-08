@@ -439,16 +439,23 @@ namespace Unbound.Runtime.Humanoid
         /// tests/projects/humanoid). Weights summing to less than 1 (a transition from a state
         /// without a motion, a partial layer over none) leave the rest of the step still, the feet
         /// slipping by what the root no longer covers; the other parts are normalized by the total
-        /// weight (not measured).</summary>
-        public static HumanRootMotionSample Blend(ReadOnlySpan<HumanRootMotionSample> samples, ReadOnlySpan<float> weights)
+        /// weight (not measured).
+        /// With <paramref name="sum"/> (an AnimationMixerPlayable's inputs) no part is normalized
+        /// by the total: each is Σ wᵢ·partᵢ, and below a total of 1 the identity takes the rest
+        /// (positions toward zero, rotations toward the identity), as the mixer's default values
+        /// do for generic channels (6000.0.71f1, tests/projects/animculling humanMixerShape: sums
+        /// 0, 0.5 and 1.5 scale the body and step; rotations are the normalized filled sum). Unit
+        /// sums give the same result either way.</summary>
+        public static HumanRootMotionSample Blend(ReadOnlySpan<HumanRootMotionSample> samples, ReadOnlySpan<float> weights, bool sum = false)
         {
-            if (samples.Length == 1 && weights[0] >= 1f) return samples[0];
+            if (samples.Length == 1 && (sum ? weights[0] == 1f : weights[0] >= 1f)) return samples[0];
             float total = 0f;
+            bool any = false;
             for (int i = 0; i < samples.Length; i++)
-                if (samples[i].HasMotion) total += weights[i];
+                if (samples[i].HasMotion) { total += weights[i]; any = true; }
             var r = new HumanRootMotionSample { Delta = Trs.Identity, Motion = Trs.Identity, Body = Trs.Identity, Root = Trs.Identity,
                 LeftFoot = Trs.Identity, RightFoot = Trs.Identity, LeftFootSlip = Trs.Identity, RightFootSlip = Trs.Identity };
-            if (total <= 0f) return samples.Length > 0 ? samples[0] : r;
+            if (sum ? !any : total <= 0f) return samples.Length > 0 ? samples[0] : r;
             r.HasMotion = true;
             Span<Trs> parts = stackalloc Trs[9];
             var zero = new Trs(F4.Zero, F4.Zero, F4.One3);
@@ -457,7 +464,7 @@ namespace Unbound.Runtime.Humanoid
             {
                 ref readonly var s = ref samples[i];
                 if (!s.HasMotion) continue;
-                float w = weights[i], n = w / total;
+                float w = weights[i], n = sum ? w : w / total;
                 Add(ref parts[0], s.Delta, w);
                 Add(ref parts[1], s.Motion, n);
                 Add(ref parts[2], s.LeftFoot, n);
@@ -466,11 +473,20 @@ namespace Unbound.Runtime.Humanoid
                 Add(ref parts[5], s.RightFootSlip, n);
                 Add(ref parts[6], s.Body, n);
                 Add(ref parts[7], s.Root, n);
-                Add(ref parts[8], s.Delta, n);
+                if (!sum) Add(ref parts[8], s.Delta, w / total);
                 r.ClipDeltaTime += s.ClipDeltaTime * w;
                 r.GravityWeight += s.GravityWeight * n;
             }
-            if (total < 1f) parts[0].q.w += parts[0].q.w < 0f ? total - 1f : 1f - total;
+            float rest = 1f - total;
+            if (rest > 0f)
+            {
+                // The rest of a step stays still; summed mixer parts also move toward the identity.
+                for (int k = 0; k < (sum ? 8 : 1); k++) parts[k].q.w += parts[k].q.w < 0f ? -rest : rest;
+                if (sum) r.GravityWeight += rest * NoMotion.GravityWeight;
+            }
+            // Above a total of one the feet pivot follows the feet by the clips' mean weight.
+            else if (sum && total > 1f) r.GravityWeight /= total;
+            if (sum) parts[8] = Trs.Identity;
             for (int k = 0; k < parts.Length; k++) parts[k].q = M.QNormalize(parts[k].q);
             r.Delta = parts[0];
             r.Motion = parts[1];
@@ -482,7 +498,7 @@ namespace Unbound.Runtime.Humanoid
             {
                 r.LeftFootSlip = parts[4];
                 r.RightFootSlip = parts[5];
-                if (total < 1f)
+                if (!sum && total < 1f)
                 {
                     // The feet stay where the clips' whole step leaves them.
                     r.LeftFootSlip = Slip(r.Delta, r.LeftFoot, Previous(parts[8], r.LeftFoot, r.LeftFootSlip));

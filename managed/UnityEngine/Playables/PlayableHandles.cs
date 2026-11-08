@@ -289,7 +289,7 @@ namespace UnityEngine.Playables
             {
                 if (n.Inputs[i].Node != source || source == null) continue;
                 var port = n.Inputs[i];
-                port.Weight = weight;
+                port.Weight = n.Kind?.StoredWeight(weight) ?? weight;
                 n.Inputs[i] = port;
             }
         }
@@ -334,7 +334,7 @@ namespace UnityEngine.Playables
         {
             var n = Node;
             var port = n.Inputs[index];
-            port.Weight = weight;
+            port.Weight = n.Kind?.StoredWeight(weight) ?? weight;
             n.Inputs[index] = port;
         }
 

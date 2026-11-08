@@ -222,10 +222,10 @@ namespace Unbound.Runtime
         /// Begin leaf (unmeasured there).</summary>
         internal static bool AnimationUpdateSplitMeasured => Release == (6000, 0, 71, 'f', 1);
 
-        /// <summary>Humanoid root motion composed by mixer trees (any input count and nesting,
-        /// input weights summing to one in each mixer, weights changed between evaluations),
-        /// measured by animculling humanMixerMotion/humanMixerShape on exactly 6000.0.71f1.
-        /// Other releases keep the unsupported diagnostic.</summary>
+        /// <summary>Humanoid root motion composed by mixer trees (any input count and nesting, any
+        /// input weight sum blended unnormalized, weights changed between evaluations or while
+        /// culled), measured by animculling humanMixerMotion/humanMixerShape on exactly
+        /// 6000.0.71f1. Other releases keep the unsupported diagnostic.</summary>
         internal static bool HumanPlayableMixerMotionMeasured => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>After skipped updates, a visibility return replays the last event intervals of

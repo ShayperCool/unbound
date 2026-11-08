@@ -135,6 +135,18 @@ namespace Unbound.Runtime.Humanoid
             HumanRootMotion.EndUpdate(m_Memory, deltaTime);
         }
 
+        /// <summary>A re-blended sample replaces the retained one (mixer weights changed while
+        /// culled): the feet pivot is placed between its feet again, with the pivot weight kept
+        /// (6000.0.71f1, tests/projects/animculling humanMixerShape/live: the pivot is the new
+        /// body's at the return). Nothing else of the motion memory changes.</summary>
+        internal void RepivotMotion(in HumanRootMotionSample sample)
+        {
+            var a = sample.LeftFoot.t;
+            var b = sample.RightFoot.t;
+            float pw = m_Memory.PivotWeight;
+            m_Memory.Pivot = new F4((b.x - a.x) * pw + a.x, (b.y - a.y) * pw + a.y, (b.z - a.z) * pw + a.z, (b.w - a.w) * pw + a.w);
+        }
+
         internal void ReplayMotion(in AnimatorRootMotion motion, float deltaTime, out AnimatorRootMotion result)
         {
             HumanRootMotion.ProjectMotion(motion.Delta, AvatarX(), deltaTime, m_Constant.Human.Scale,

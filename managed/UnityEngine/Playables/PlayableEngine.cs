@@ -69,6 +69,10 @@ namespace Unbound.Runtime.Playables
 
         internal virtual bool CanChangeInputs => true;
         internal virtual bool CanSetWeights => true;
+
+        /// <summary>The input weight a set (SetInputWeight, ConnectInput) stores; GetInputWeight
+        /// reads it back.</summary>
+        internal virtual float StoredWeight(float weight) => weight;
         internal virtual bool CanDestroy => true;
 
         /// <summary>An animation playable: below an animation output, it and its inputs run on the

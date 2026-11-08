@@ -21,6 +21,9 @@ namespace Unbound.Runtime.Playables
         internal bool LoopTime;
         internal float SampleRate;
         readonly AnimationPose m_Pose = new AnimationPose();
+        // The last evaluation's step and humanoid sample, reused by a replay (visibility re-blend).
+        RootMotionStep m_LastMotion;
+        Unbound.Runtime.Humanoid.HumanRootMotionSample m_LastBody;
         bool m_WarnedLegacy;
         // The step of time the last evaluation covered, for events.
         double m_From, m_To;
@@ -69,11 +72,18 @@ namespace Unbound.Runtime.Playables
             if (!e.ReferencePose && weight > 0f && ApplyPlayableIK) e.PlayableIK = true;
             var bound = e.Bindings.Bind(Clip);
             if (!e.ReferencePose && e.Animator.Human is { } human && Clip.HasHumanCurves && Clip.length > 0f)
-                human.SampleMotion(Clip, Clip.HumanClipMotion, new Unbound.Runtime.Humanoid.HumanClipMotionInput
+            {
+                if (e.Replay) into.BodyMotion = m_LastBody;
+                else
                 {
-                    Time = (float)(node.Time / Clip.length),
-                    PreviousTime = (float)((node.LastPlaying ? node.PreviousTime : node.Time) / Clip.length), Speed = 1f,
-                }, out into.BodyMotion);
+                    human.SampleMotion(Clip, Clip.HumanClipMotion, new Unbound.Runtime.Humanoid.HumanClipMotionInput
+                    {
+                        Time = (float)(node.Time / Clip.length),
+                        PreviousTime = (float)((node.LastPlaying ? node.PreviousTime : node.Time) / Clip.length), Speed = 1f,
+                    }, out into.BodyMotion);
+                    m_LastBody = into.BodyMotion;
+                }
+            }
             double t = e.ReferencePose ? 0.0 : Single(node.Time);
             m_Pose.Reset(e.Bindings.FloatCount, e.Bindings.ObjectCount);
             ClipSampling.Sample(bound, (float)ClipTime(t), 1f, m_Pose,
@@ -88,9 +98,10 @@ namespace Unbound.Runtime.Playables
             }
             if (!e.ReferencePose && e.MotionMode != RootMotionMode.Unsupported)
             {
-                var motion = e.MotionMode == RootMotionMode.Compute ? Motion(e, bound, node) : RootMotionStep.Zero;
+                var motion = e.Replay ? m_LastMotion : e.MotionMode == RootMotionMode.Compute ? Motion(e, bound, node) : RootMotionStep.Zero;
                 motion.RootUnanimated = !AnimatesRoot(e);
                 into.Motion = motion;
+                m_LastMotion = motion;
             }
             // Under root motion playables the root starts where the clip's first frame is removed.
             if (e.RootMotion && RemoveStartOffset) RemoveStart(e, bound, into);
@@ -101,7 +112,7 @@ namespace Unbound.Runtime.Playables
                 into.Objects[c] = m_Pose.Objects[c];
                 into.ObjectAnimated[c] = true;
             }
-            if (e.ReferencePose || Clip.m_Events.Count == 0 || weight <= 0f) return;
+            if (e.ReferencePose || e.Replay || Clip.m_Events.Count == 0 || weight <= 0f) return;
             // Events fire for the time playback moved through (not for seeks).
             if ((node.FrameFlags & FrameData.Flags.SeekOccured) != 0) return;
             // Startup sampling fires time-zero events once even without advancement. A first
@@ -267,39 +278,41 @@ namespace Unbound.Runtime.Playables
         }
     }
 
-    /// <summary>An AnimationMixerPlayable: its inputs summed by weight, the remainder of weight one
-    /// taken by the default values (channel by channel, over the inputs animating the channel).</summary>
+    /// <summary>An AnimationMixerPlayable: its inputs summed by weight (<see cref="InputWeight"/>),
+    /// the remainder of weight one taken by the default values (channel by channel, over the
+    /// inputs animating the channel); sums above one are not normalized.</summary>
     internal sealed class MixerKind : AnimationKind
     {
         /// <summary>Mixer trees deeper than this are not walked for humanoid motion (a guard
         /// against cyclic or runaway graphs; real graphs nest a few levels).</summary>
         const int MaxHumanTreeDepth = 64;
 
-        /// <summary>How far a mixer's input weights may sum from one and still count as a unit
-        /// sum: float rounding of weights authored to add up to one (0.1 + 0.1 + 0.8).</summary>
-        internal const float UnitWeightSumTolerance = 1e-5f;
+        /// <summary>A negative input weight is stored as 0 (GetInputWeight reads 0); NaN is kept
+        /// (6000.0.71f1, tests/projects/animculling humanMixerShape/negative and nan).</summary>
+        internal override float StoredWeight(float weight) => weight < 0f ? 0f : weight;
+
+        /// <summary>An input's weight as the mixer uses it: a NaN weight counts as 0 (pose,
+        /// curves, root motion and events), others as stored, without normalizing the sum
+        /// (6000.0.71f1, tests/projects/animculling genericMixerSum and humanMixerShape; the
+        /// AnimationMixerPlayable page specifies no normalization).</summary>
+        internal static float InputWeight(float weight) => weight > 0f ? weight : 0f;
 
         /// <summary>Whether a mixer and its inputs compose humanoid root motion through the
         /// humanoid sampler: every connected input is a humanoid motion clip or such a mixer,
-        /// is reached through port 0 and feeds only this mixer, at a finite nonnegative weight,
-        /// and each mixer's weights sum to one. Clips under a mixer need all four RootQ curves,
-        /// because the blended body is written back to those bindings (sparse body rotations
-        /// are a separate gap). Other weight sums blend unnormalized body positions in Unity
-        /// 6000.0.71f1 (animculling capture), which the normalized humanoid blend does not
-        /// reproduce, so they stay unsupported.</summary>
+        /// is reached through port 0 and feeds only this mixer, at a weight that is not infinite
+        /// (any sum: <see cref="HumanRootMotion.Blend"/> sums the inputs unnormalized). Clips
+        /// under a mixer need all four RootQ curves, because the blended body is written back to
+        /// those bindings (sparse body rotations are a separate gap).</summary>
         internal static bool HumanMotionTree(PlayableNode node, int depth = 0)
         {
             if (node == null || node.Destroyed || depth > MaxHumanTreeDepth || node.Kind is not MixerKind
                 || node.Traversal != PlayableTraversalMode.Mix) return false;
             int connected = 0;
-            float sum = 0f;
             foreach (var input in node.Inputs)
             {
                 if (input.Node == null) continue;
                 connected++;
-                sum += input.Weight;
-                if (!(input.Weight >= 0f) || float.IsInfinity(input.Weight) || input.SourcePort != 0
-                    || ConsumerCount(input.Node) != 1) return false;
+                if (float.IsInfinity(input.Weight) || input.SourcePort != 0 || ConsumerCount(input.Node) != 1) return false;
                 if (input.Node.Kind is MixerKind)
                 {
                     if (!HumanMotionTree(input.Node, depth + 1)) return false;
@@ -310,7 +323,7 @@ namespace Unbound.Runtime.Playables
                 for (int q = 0; q < 4; q++)
                     if (!present[Unbound.Runtime.Humanoid.HumanClipImport.RootFirst + 3 + q]) return false;
             }
-            return connected > 0 && Math.Abs(sum - 1f) <= UnitWeightSumTolerance;
+            return connected > 0;
         }
 
         /// <summary>A hash of a mixer tree's input weights, to tell whether they changed
@@ -353,8 +366,9 @@ namespace Unbound.Runtime.Playables
                     if (i.Node == null) continue;
                     var s = AnimStream.Rent(e.Bindings);
                     s.DeltaTime = e.DeltaTime;
-                    inputs.Add((s, i.Weight));
-                    e.EvaluateInto(i.Node, i.SourcePort, weight * i.Weight, s, depth + 1);
+                    float w = InputWeight(i.Weight);
+                    inputs.Add((s, w));
+                    e.EvaluateInto(i.Node, i.SourcePort, weight * w, s, depth + 1);
                 }
                 AnimationEvaluation.MixInto(into, inputs);
                 if (e.MotionMode == RootMotionMode.Human && into.BodyMotion.HasMotion) WriteHumanRoot(e, into);

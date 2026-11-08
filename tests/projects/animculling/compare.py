@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Compare two animation-culling recordings: compare.py REFERENCE CANDIDATE.
 
-Every record of either side is compared: numbers within 1e-4, everything else exactly. Every
+Every record of either side is compared: numbers within 1e-4 (NaN only matches NaN),
+everything else exactly. Every
 missing, extra and differing record is listed, then '<n>/<total> records match' and the
 differing records by case."""
 import json
+import math
 import sys
 
 TOLERANCE = 1e-4
@@ -26,6 +28,9 @@ def same(a, b):
     if isinstance(a, bool) or isinstance(b, bool):
         return a is b
     if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        # A NaN the probe recorded (a NaN input weight read back) only matches NaN.
+        if math.isnan(a) or math.isnan(b):
+            return math.isnan(a) and math.isnan(b)
         return abs(a - b) <= TOLERANCE
     if isinstance(a, list) and isinstance(b, list):
         return len(a) == len(b) and all(same(x, y) for x, y in zip(a, b))

@@ -162,10 +162,20 @@ namespace UnityEngine.Tests
                 top.ConnectInput(1, inner, 0, 0.6f);
                 return top;
             }
-            if (shape == "one")
+            if (shape == "one" || shape == "half")
             {
                 top = AnimationMixerPlayable.Create(graph, 1);
-                top.ConnectInput(0, Input(), 0, 1f);
+                top.ConnectInput(0, Input(), 0, shape == "half" ? 0.5f : 1f);
+                return top;
+            }
+            // Two inputs: the same clip at 0.25 + 0.25, 0 + 0, NaN + 1 and -0.25 + 1.
+            float[] pair = shape == "pairLow" ? new[] { 0.25f, 0.25f } : shape == "zero" ? new[] { 0f, 0f }
+                : shape == "nan" ? new[] { float.NaN, 1f } : shape == "negative" ? new[] { -0.25f, 1f } : null;
+            if (pair != null)
+            {
+                top = AnimationMixerPlayable.Create(graph, 2);
+                top.ConnectInput(0, Input(), 0, pair[0]);
+                top.ConnectInput(1, Input(), 0, pair[1]);
                 return top;
             }
             top = AnimationMixerPlayable.Create(graph, 3);
@@ -276,9 +286,66 @@ namespace UnityEngine.Tests
             }
         }
 
-        // A visibility return replays only the blended pose and step; Unity re-blends the clip
-        // poses and steps with the current weights (animculling capture), so the return warns
-        // when the mixer tree's weights hash differs from the one retained with them.
+        // Unity 6000.0.71f1 (animculling humanMixerShape low/zero/half/nan/negative): the inputs sum
+        // unnormalized, the identity taking the rest below one; NaN and negative weights count as
+        // nothing. The same clip twice at 0.25 therefore moves as it does once at 0.5 (a
+        // normalized blend would move as the clip itself), and at 0 + 0 not at all.
+        [Fact]
+        public void HumanMixerWeightsSumUnnormalized()
+        {
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            var clip = Clip();
+            try
+            {
+                var direct = Motion("direct", clip);
+                var half = Motion("half", clip);
+                var pair = Motion("pairLow", clip);
+                Assert.True(direct.Position.magnitude > 0.1f);
+                Assert.True(half.Position.magnitude < 0.75f * direct.Position.magnitude);
+                Near.Equal(half.Position, pair.Position, 1e-5f);
+                Near.SameRotation(half.Rotation, pair.Rotation, 1e-3f);
+                var zero = Motion("zero", clip);
+                Near.Equal(Vector3.zero, zero.Position, 1e-5f);
+                foreach (var ignored in new[] { "nan", "negative" })
+                {
+                    var motion = Motion(ignored, clip);
+                    Near.Equal(direct.Position, motion.Position, 1e-5f);
+                    Near.SameRotation(direct.Rotation, motion.Rotation, 1e-3f);
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(clip);
+                ProjectInfo.UnityVersion = version;
+            }
+        }
+
+        // An AnimationMixerPlayable stores a negative input weight as 0 and keeps NaN; a plain
+        // Playable keeps both (animculling humanMixerShape/negative and nan read them back).
+        [Fact]
+        public void MixerInputWeightsStoreNegativeAsZero()
+        {
+            var graph = PlayableGraph.Create("mixer-weights");
+            try
+            {
+                var mixer = AnimationMixerPlayable.Create(graph, 2);
+                var plain = Playable.Create(graph, 1);
+                mixer.ConnectInput(0, Playable.Create(graph), 0, -0.25f);
+                mixer.ConnectInput(1, Playable.Create(graph), 0, float.NaN);
+                plain.ConnectInput(0, Playable.Create(graph), 0, -0.25f);
+                Assert.Equal(0f, mixer.GetInputWeight(0));
+                Assert.True(float.IsNaN(mixer.GetInputWeight(1)));
+                mixer.SetInputWeight(1, -2f);
+                Assert.Equal(0f, mixer.GetInputWeight(1));
+                Assert.Equal(-0.25f, plain.GetInputWeight(0));
+            }
+            finally { graph.Destroy(); }
+        }
+
+        // A visibility return after the weights changed since the retained sample blends the
+        // retained clip poses and steps with the current weights (animculling humanMixerShape/live
+        // and genericMixerSum/liveCulled); the weights hash tells whether they changed.
         [Fact]
         public void TreeWeightsChangeOnlyWithAWeightAtAnyDepth()
         {
@@ -309,8 +376,6 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        [InlineData("sum")]
-        [InlineData("high")]
         [InlineData("release")]
         [InlineData("shared")]
         [InlineData("fractional")]
@@ -344,17 +409,18 @@ namespace UnityEngine.Tests
                 first.SetApplyFootIK(false);
                 second.SetApplyFootIK(false);
                 var mixer = AnimationMixerPlayable.Create(graph, 2);
-                // sum: weights summing to 0.5, high: to 1.5 (Unity blends them unnormalized).
-                float firstWeight = context == "sparse0" ? 0f : context == "sparse1" ? 1f : context == "high" ? 0.75f : 0.25f;
+                float firstWeight = context == "sparse0" ? 0f : context == "sparse1" ? 1f : 0.25f;
                 mixer.ConnectInput(0, first, 0, firstWeight);
-                mixer.ConnectInput(1, second, 0, context == "sum" ? 0.25f : context == "high" ? 0.75f : 1f - firstWeight);
+                mixer.ConnectInput(1, second, 0, 1f - firstWeight);
                 var output = AnimationPlayableOutput.Create(graph, "animation", animator);
                 output.SetSourcePlayable(mixer);
                 if (context == "fractional") output.SetWeight(0.5f);
                 if (context == "shared")
                 {
+                    // The clip also feeds another mixer through its second output port.
+                    first.SetOutputCount(2);
                     var other = AnimationMixerPlayable.Create(graph, 1);
-                    other.ConnectInput(0, first, 0, 1f);
+                    other.ConnectInput(0, first, 1, 1f);
                 }
                 const string diagnostic = "Animator root motion of unsupported humanoid mixer output";
                 int hits = 0;

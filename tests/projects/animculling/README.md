@@ -357,12 +357,7 @@ Observed in 6000.0.71f1:
 - Unit-sum mixer trees of any shape move as the humanoid blend of their clips, with
   the same retained-step replay as Q104, foot IK on the inputs included. Weights
   changed between evaluations take effect at the next one.
-- Weight sums other than one are not normalized: an exploratory capture (outside Git)
-  with sums 0.5 and 1.5 scaled the body position by about the sum, and at 0.5 also
-  turned the body toward a default pose. A weight change after the last evaluation
-  (CullCompletely skipping updates, or a culled Manual graph) re-blends the retained
-  clip poses and steps with the new weights at the visibility return. Both stay
-  unsupported (warn) and are not part of this probe.
+- Weight sums other than one: see "Mixer weight sums (Q120)" below.
 - A visibility return replays the last event intervals of clips combined by a mixer
   or layer mixer at any depth, one-input mixers included, and not of the output's
   source clip or of a clip reached only through a plain Playable.
@@ -371,6 +366,46 @@ Observed in 6000.0.71f1:
 
 The two independent Native captures agree byte for byte on 22,251 records.
 Publication appended 2,640 keys and preserved all 19,611 prior records.
+
+## Mixer weight sums (Q120)
+
+`humanMixerShape/` adds sums other than one on the same HumanA rig and schedule: two inputs
+at 0.25/0.25 (`low`, also with root motion off, culled and nested in a 0.4/0.6 mixer, and
+with foot IK), 0.75/0.75 (`high`), 0/0 (`zero`), one input at 0.5 (`half`), 0.5/0/0
+(`partial`), -0.25/1.25 (`negative`) and NaN/1 (`nan`), each with both clocks; `liveSum`
+changes three weights to sums 0.5, 1.5 and 0.3 at frames 10, 20 and 40; `live` and `liveSum`
+also run CullCompletely, so the frame-20 change happens while culled.
+`genericMixerSum/` mixes `PlayablePose` and `PlayableSecond` at the same sums, negative and
+NaN weights, with root motion off and builtin, and changes 0.25/0.75 to 0.75/0.25 while
+CullCompletely-culled (`liveCulled`, GameTime and Manual).
+
+Contract (6000.0): the [AnimationMixerPlayable](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationMixerPlayable.html),
+[SetInputWeight](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableExtensions.SetInputWeight.html)
+and [AnimatorCullingMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AnimatorCullingMode.html)
+pages specify no normalization, no range for weights and no re-blend at a visibility return.
+Everything below is observed in 6000.0.71f1 for these cases.
+
+Observed (two byte-identical captures, 28,613 records; 2,702 appended, all prior records kept):
+- A negative input weight is stored as 0 (`GetInputWeight` reads 0); NaN is kept but counts
+  as 0. Neither input contributes pose, curves, motion or events.
+- Generic and humanoid inputs blend as one rule: every value is Σ wᵢ·vᵢ without normalizing
+  the weights, and below a total of one the default takes the rest (0 for positions, muscles
+  and curves the inputs animate, the identity for rotations, which are normalized after
+  the sum). For humanoids this covers the body position and rotation, muscles, feet and the
+  root step; the turn is the normalized filled sum and the vertical step Σ wᵢ·dyᵢ.
+- The feet pivot follows the feet by the gravity weight, which sums like the other parts
+  below one and is the clips' mean above one.
+- Weights changed after the last evaluation (updates skipped by CullCompletely, a Manual graph
+  not evaluated) are used at the visibility return: the retained clip poses and steps are
+  blended again with the current weights, and the feet pivot is placed between the
+  re-blended feet. Unit-sum mixers are unchanged by this rule.
+
+Implementation: `MixerKind.StoredWeight` and `InputWeight`, `HumanRootMotion.Blend(sum: true)`
+for mixers, and `AnimationOutputs.Reblend` (a replay evaluation in which clips reuse their
+last step and humanoid sample). The humanoid part keeps `Compat.HumanPlayableMixerMotionMeasured`;
+other releases keep the unsupported diagnostic. Strict comparison: 28,609/28,613, the four
+documented rotation-predicate residuals only. `compare.py` treats a recorded NaN as equal only
+to NaN (the `nan` cases read their weight back).
 
 ## Playable clocks under culling (Q121)
 

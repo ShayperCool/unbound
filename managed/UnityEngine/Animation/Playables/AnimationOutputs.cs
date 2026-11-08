@@ -285,6 +285,24 @@ namespace Unbound.Runtime.Playables
         // Movement callbacks can evaluate other graphs reentrantly: each Run rents its own.
         static readonly Stack<AnimationEvaluation> s_Free = new Stack<AnimationEvaluation>();
 
+        /// <summary>Replay mode (<see cref="AnimationOutputs"/> visibility re-blend): clips sample
+        /// their held time and reuse their last step and humanoid sample; nothing advances.</summary>
+        internal bool Replay;
+
+        internal static AnimationEvaluation RentReplay(Animator animator, AnimationBindings bindings)
+        {
+            var e = Rent(animator, bindings);
+            e.Replay = true;
+            return e;
+        }
+
+        internal static void ReleaseReplay(AnimationEvaluation e) => Release(e);
+
+        /// <summary>The outputs' combined pose and motion in replay mode (no events fire).</summary>
+        internal static AnimStream SampleReplay(AnimationEvaluation e, Animator animator, AnimationBindings bindings,
+            List<(PlayableOutputData Output, double Dt, bool Seek)> outputs, out RootMotionStep motion) =>
+            Sample(e, animator, bindings, outputs, out motion, out _);
+
         static AnimationEvaluation Rent(Animator animator, AnimationBindings bindings)
         {
             var e = s_Free.Count > 0 ? s_Free.Pop() : new AnimationEvaluation();
@@ -298,7 +316,7 @@ namespace Unbound.Runtime.Playables
             e.Animator = null;
             e.Bindings = null;
             e.DeltaTime = 0f;
-            e.Seek = e.AutomaticFrame = e.RootMotion = e.ReferencePose = e.PlayableIK = false;
+            e.Seek = e.AutomaticFrame = e.RootMotion = e.ReferencePose = e.PlayableIK = e.Replay = false;
             e.MotionMode = default;
             e.Combining = 0;
             e.PreviousInputs = null;
@@ -493,7 +511,7 @@ namespace Unbound.Runtime.Playables
                     samples[i] = inputs[i].Stream.BodyMotion;
                     weights[i] = inputs[i].Weight;
                 }
-                into.BodyMotion = HumanRootMotion.Blend(samples[..inputs.Count], weights[..inputs.Count]);
+                into.BodyMotion = HumanRootMotion.Blend(samples[..inputs.Count], weights[..inputs.Count], sum: true);
             }
             var b = into.Bindings;
             var defaults = b.Defaults;
@@ -600,6 +618,45 @@ namespace Unbound.Runtime.Playables
         static PendingOutput Run(AnimationEvaluation e, Animator animator, AnimationBindings bindings,
             List<(PlayableOutputData Output, double Dt, bool Seek)> outputs, bool suppressMovement)
         {
+            var result = Sample(e, animator, bindings, outputs, out var motion, out float motionDeltaTime);
+            var evaluatedPlayer = animator.m_Player;
+            var withController = evaluatedPlayer != null && animator.isActiveAndEnabled;
+            var pending = PendingOutput.Rent();
+            pending.Animator = animator;
+            pending.Result = result;
+            pending.Mode = e.MotionMode;
+            pending.Motion = motion;
+            pending.DeltaTime = motionDeltaTime;
+            pending.SuppressMovement = suppressMovement;
+            pending.ControllerMovement = withController && animator.m_Player.DeferOutput;
+            pending.PlayableIK = e.PlayableIK;
+            pending.Manual = AnyManual(outputs);
+            pending.Weights = AnimationOutputs.TreeWeights(animator);
+            if (e.MotionMode == RootMotionMode.Human)
+            {
+                // The same sample and feet-pivot memory as controller-driven humanoid motion.
+                // Advance it once even when motion is not requested, as the controller does.
+                animator.Human.ApplyMotion(result.BodyMotion.HasMotion ? result.BodyMotion : HumanRootMotion.NoMotion, motionDeltaTime, out var step);
+                // Visibility return projects the retained (blended) clip step, before this
+                // evaluation's feet-pivot correction, in the root's current frame
+                // (6000.0.71f1, animculling humanMixerMotion and humanMixerShape).
+                var retained = step;
+                retained.Delta = result.BodyMotion.Delta;
+                pending.HumanStep = step;
+                pending.HumanMotion = retained;
+            }
+            e.VisibilityEvents(pending.Events);
+            if (withController) evaluatedPlayer.Ticked = true;
+            // Clip events and the controller's state callbacks precede movement and the write
+            // (6000.0.71f1, tests/projects/animcallbacks).
+            e.AfterWrite();
+            return pending;
+        }
+
+        /// <summary>The outputs' combined pose and motion, without movement, writes or events.</summary>
+        static AnimStream Sample(AnimationEvaluation e, Animator animator, AnimationBindings bindings,
+            List<(PlayableOutputData Output, double Dt, bool Seek)> outputs, out RootMotionStep motion, out float motionDeltaTime)
+        {
             if (outputs.Count > 1) outputs.Sort(static (a, b) =>
             {
                 int sa = (a.Output.Engine as AnimationOutputState)?.SortingOrder ?? 100;
@@ -613,8 +670,8 @@ namespace Unbound.Runtime.Playables
             var evaluatedPlayer = animator.m_Player;
             var withController = evaluatedPlayer != null && animator.isActiveAndEnabled;
             e.MotionMode = MotionModeOf(animator, outputs);
-            var motion = RootMotionStep.Zero;
-            float motionDeltaTime = (float)outputs[0].Dt;
+            motion = RootMotionStep.Zero;
+            motionDeltaTime = (float)outputs[0].Dt;
             if (withController)
             {
                 // Start from the scene, then combine the controller pose it deferred this frame.
@@ -667,36 +724,7 @@ namespace Unbound.Runtime.Playables
                 result.BodyMotion = HumanRootMotion.Override(result.BodyMotion, s.BodyMotion, o.Weight);
                 AnimStream.Return(s);
             }
-            var pending = PendingOutput.Rent();
-            pending.Animator = animator;
-            pending.Result = result;
-            pending.Mode = e.MotionMode;
-            pending.Motion = motion;
-            pending.DeltaTime = motionDeltaTime;
-            pending.SuppressMovement = suppressMovement;
-            pending.ControllerMovement = withController && animator.m_Player.DeferOutput;
-            pending.PlayableIK = e.PlayableIK;
-            pending.Manual = AnyManual(outputs);
-            if (e.MotionMode == RootMotionMode.Human)
-            {
-                // The same sample and feet-pivot memory as controller-driven humanoid motion.
-                // Advance it once even when motion is not requested, as the controller does.
-                animator.Human.ApplyMotion(result.BodyMotion.HasMotion ? result.BodyMotion : HumanRootMotion.NoMotion, motionDeltaTime, out var step);
-                // Visibility return projects the retained (blended) clip step, before this
-                // evaluation's feet-pivot correction, in the root's current frame
-                // (6000.0.71f1, animculling humanMixerMotion and humanMixerShape).
-                var retained = step;
-                retained.Delta = result.BodyMotion.Delta;
-                pending.HumanStep = step;
-                pending.HumanMotion = retained;
-                pending.HumanWeights = MixerKind.TreeWeights(outputs[0].Output.Source);
-            }
-            e.VisibilityEvents(pending.Events);
-            if (withController) evaluatedPlayer.Ticked = true;
-            // Clip events and the controller's state callbacks precede movement and the write
-            // (6000.0.71f1, tests/projects/animcallbacks).
-            e.AfterWrite();
-            return pending;
+            return result;
         }
 
         internal static void WriteOutput(Animator animator, AnimStream result, bool culled, bool playableIK, bool preserveRoot = false)
@@ -711,7 +739,7 @@ namespace Unbound.Runtime.Playables
         internal AnimStream PreviousInputs;
 
 
-        /// <summary>One humanoid clip, or one unit-weight-sum mixer tree of humanoid clips
+        /// <summary>One humanoid clip, or one mixer tree of humanoid clips
         /// (<see cref="MixerKind.HumanMotionTree"/>), through a single full-weight default-values
         /// output without an attached controller, uses the humanoid sampler. Mixer composition is
         /// measured on 6000.0.71f1 only (<see cref="Compat.HumanPlayableMixerMotionMeasured"/>).
@@ -738,7 +766,7 @@ namespace Unbound.Runtime.Playables
                     ? "Animator root motion of unsupported humanoid mixer output"
                     : "Animator root motion of composed playable graph outputs on humanoid avatars",
                     "is not applied: one full-weight output of a nonmirrored humanoid clip, or on measured 6000.0.71f1 of a mixer tree of such clips "
-                    + "with complete RootQ curves and nonnegative input weights summing to one in each mixer, is supported, without a playing controller, shared nodes or loop overrides; "
+                    + "with complete RootQ curves and finite input weights, is supported, without a playing controller, shared nodes or loop overrides; "
                     + "layer mixers, controller playables, animation jobs, fractional or multiple outputs remain unsupported");
             return RootMotionMode.Unsupported;
         }
@@ -877,7 +905,7 @@ namespace Unbound.Runtime.Playables
         internal AnimatorRootMotion? HumanMotion;
         internal float DeltaTime;
         internal bool SuppressMovement, ControllerMovement, PlayableIK, Manual;
-        internal int HumanWeights;
+        internal int Weights;
         internal readonly List<ClipEventInterval> Events = new List<ClipEventInterval>();
 
         static readonly Stack<PendingOutput> s_Free = new Stack<PendingOutput>();
@@ -909,7 +937,7 @@ namespace Unbound.Runtime.Playables
             bool culled = Animator.cullingMode != AnimatorCullingMode.AlwaysAnimate && !Animator.AnyRendererVisible(Animator.gameObject);
             AnimationEvaluation.WriteOutput(Animator, result, culled, PlayableIK);
             var culledPose = AnimationOutputs.RememberCulled(Animator, result, Motion, DeltaTime, Mode, PlayableIK, Manual, HumanMotion);
-            culledPose.HumanWeights = HumanMotion.HasValue ? HumanWeights : 0;
+            culledPose.Weights = Weights;
             culledPose.Events.Clear();
             culledPose.Events.AddRange(Events);
         }
@@ -940,8 +968,8 @@ namespace Unbound.Runtime.Playables
             internal float DeltaTime;
             internal RootMotionMode Mode;
             internal bool IK, Manual;
-            /// <summary><see cref="MixerKind.TreeWeights"/> of the humanoid source when sampled.</summary>
-            internal int HumanWeights;
+            /// <summary><see cref="AnimationOutputs.TreeWeights"/> when sampled.</summary>
+            internal int Weights;
             internal readonly List<ClipEventInterval> Events = new List<ClipEventInterval>();
             internal bool Writing, Retired;
         }
@@ -1046,12 +1074,58 @@ namespace Unbound.Runtime.Playables
             return frame;
         }
 
-        static int CurrentHumanWeights(Animator animator)
+        /// <summary>A hash of the input weights of every live output's source tree of the Animator,
+        /// to tell whether they changed since its retained sample.</summary>
+        internal static int TreeWeights(Animator animator)
         {
+            int hash = 17;
             if (Of(animator) is { } outputs)
                 foreach (var output in outputs)
-                    if (!output.Destroyed && output.Source != null) return MixerKind.TreeWeights(output.Source);
-            return 0;
+                    if (!output.Destroyed && output.Source != null) hash = hash * 31 + MixerKind.TreeWeights(output.Source);
+            return hash;
+        }
+
+        static readonly List<(PlayableOutputData, double, bool)> s_Replay = new List<(PlayableOutputData, double, bool)>();
+
+        /// <summary>Mixer weights changed after the retained sample (updates skipped, or a Manual
+        /// graph not evaluated): the visibility return blends the retained clip poses and steps
+        /// with the current weights (6000.0.71f1, tests/projects/animculling humanMixerShape/live
+        /// and genericMixerSum/liveCulled). The held tree is evaluated again in replay mode: clips
+        /// sample their held time and reuse their last step; no time, event or feet-pivot memory
+        /// advances. An attached controller's pending pose is not retained (unmeasured): those
+        /// Animators keep replaying the last blend and say so.</summary>
+        static void Reblend(Animator animator, CulledPose frame)
+        {
+            if (animator.m_Player != null || Of(animator) is not { } outputs || animator.StreamBindings is not { } bindings)
+            {
+                Stubs.Ignored("Animator visibility return with an attached controller after mixer weights changed",
+                    "replays the pose and root motion blended with the weights of the last evaluation");
+                return;
+            }
+            s_Replay.Clear();
+            foreach (var output in outputs)
+                if (!output.Destroyed && output.Source != null && !output.Graph.Destroyed) s_Replay.Add((output, frame.DeltaTime, false));
+            if (s_Replay.Count == 0) return;
+            var e = AnimationEvaluation.RentReplay(animator, bindings);
+            try
+            {
+                var result = AnimationEvaluation.SampleReplay(e, animator, bindings, s_Replay, out var motion);
+                AnimStream.Return(frame.Pose);
+                frame.Pose = result;
+                frame.Motion = motion;
+                if (frame.HumanMotion is { } human)
+                {
+                    human.Delta = result.BodyMotion.Delta;
+                    frame.HumanMotion = human;
+                    if (result.BodyMotion.HasMotion) animator.Human?.RepivotMotion(result.BodyMotion);
+                }
+                frame.Weights = TreeWeights(animator);
+            }
+            finally
+            {
+                AnimationEvaluation.ReleaseReplay(e);
+                s_Replay.Clear();
+            }
         }
 
         internal static bool EvaluateOnVisible(Animator animator, bool move)
@@ -1085,13 +1159,9 @@ namespace Unbound.Runtime.Playables
             try
             {
                 if (move) animator.m_RootMotionApplied = false;
+                if (frame.Weights != TreeWeights(animator)) Reblend(animator, frame);
                 if (frame.HumanMotion is { } humanMotion)
                 {
-                    // Unity 6000.0.71f1 (animculling capture) re-blends the retained clip poses
-                    // and steps with the mixer's current weights; only the blended ones are kept.
-                    if (frame.HumanWeights != CurrentHumanWeights(animator))
-                        Stubs.Ignored("Animator visibility return of a humanoid mixer whose weights changed after its last evaluation",
-                            "replays the pose and root motion blended with the weights of that evaluation");
                     if (move)
                     {
                         animator.Human.ReplayMotion(humanMotion, frame.DeltaTime, out var replay);

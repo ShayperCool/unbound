@@ -145,6 +145,7 @@ public class AnimCullingProbe : MonoBehaviour
         HumanMotionCases();
         HumanMixerMotionCases();
         HumanMixerShapeCases();
+        GenericMixerSumCases();
         EventShapeCases();
         ClockCases();
         foreach (var (name, mode) in modes)
@@ -304,9 +305,8 @@ public class AnimCullingProbe : MonoBehaviour
 
     // Mixer graphs beyond Q104's fixed pair: three inputs, input weights changed between
     // evaluations (visible, and culled while still evaluated), a nested mixer, a one-input
-    // mixer, foot IK, and the direct clip with the same pivot records. Every mixer's weights
-    // sum to one: other sums, and weights changed after the last evaluation before a
-    // visibility return, are outside the supported humanoid mixer context.
+    // mixer, foot IK, and the direct clip with the same pivot records; then weight sums other
+    // than one and weights changed while culled.
     void HumanMixerShapeCases()
     {
         var all = new[] { AnimatorCullingMode.AlwaysAnimate, AnimatorCullingMode.CullCompletely };
@@ -335,6 +335,58 @@ public class AnimCullingProbe : MonoBehaviour
         HumanShape("footIK", AnimatorCullingMode.CullCompletely, DirectorUpdateMode.Manual, "builtin");
         HumanShape("directFootIK", AnimatorCullingMode.AlwaysAnimate, DirectorUpdateMode.GameTime, "builtin");
         HumanShape("one", AnimatorCullingMode.CullCompletely, DirectorUpdateMode.Manual, "builtin");
+        // Weight sums other than one, one partial weight, negative and NaN weights, and weights
+        // changed while the Animator is culled (re-blended at the visibility return).
+        foreach (var clock in clocks)
+        foreach (string shape in new[] { "low", "high", "zero", "half", "partial", "negative", "nan", "nestedLow" })
+            HumanShape(shape, AnimatorCullingMode.AlwaysAnimate, clock, "builtin");
+        HumanShape("low", AnimatorCullingMode.AlwaysAnimate, DirectorUpdateMode.GameTime, "off");
+        HumanShape("footIKLow", AnimatorCullingMode.AlwaysAnimate, DirectorUpdateMode.GameTime, "builtin");
+        HumanShape("liveSum", AnimatorCullingMode.AlwaysAnimate, DirectorUpdateMode.GameTime, "builtin");
+        foreach (var clock in clocks)
+        {
+            HumanShape("low", AnimatorCullingMode.CullCompletely, clock, "builtin");
+            HumanShape("live", AnimatorCullingMode.CullCompletely, clock, "builtin");
+            HumanShape("liveSum", AnimatorCullingMode.CullCompletely, clock, "builtin");
+        }
+    }
+
+    // Generic mixers with the same weight sums, and a weight change while culled.
+    void GenericMixerSumCases()
+    {
+        var shapes = new (string Name, float[] Weights)[]
+        {
+            ("low", new[] { 0.25f, 0.25f }), ("high", new[] { 0.75f, 0.75f }), ("zero", new[] { 0f, 0f }),
+            ("half", new[] { 0.5f }), ("negative", new[] { -0.5f, 1.5f }), ("nan", new[] { float.NaN, 1f }),
+        };
+        foreach (var (name, weights) in shapes)
+        foreach (string motion in new[] { "pose", "builtin" })
+            GenericMixerSum("genericMixerSum/" + name + "/" + motion, AnimatorCullingMode.AlwaysAnimate, motion, weights, null);
+        foreach (var clock in new[] { DirectorUpdateMode.GameTime, DirectorUpdateMode.Manual })
+            GenericMixerSum("genericMixerSum/liveCulled/" + clock, AnimatorCullingMode.CullCompletely, "builtin", new[] { 0.25f, 0.75f },
+                new[] { 0.75f, 0.25f }, clock);
+    }
+
+    void GenericMixerSum(string name, AnimatorCullingMode mode, string motion, float[] weights, float[] culledWeights,
+        DirectorUpdateMode clock = DirectorUpdateMode.GameTime)
+    {
+        var c = Animated(name, null, mode, ScheduleA);
+        c.animator.applyRootMotion = motion != "pose";
+        c.explicitEvaluation = clock == DirectorUpdateMode.Manual;
+        c.graph = PlayableGraph.Create(c.name);
+        c.graph.SetTimeUpdateMode(clock);
+        var output = AnimationPlayableOutput.Create(c.graph, "Animation", c.animator);
+        c.clip = AnimationClipPlayable.Create(c.graph, Resources.Load<AnimationClip>("PlayablePose"));
+        var mix = AnimationMixerPlayable.Create(c.graph, weights.Length);
+        mix.ConnectInput(0, c.clip, 0, weights[0]);
+        if (weights.Length > 1)
+            mix.ConnectInput(1, AnimationClipPlayable.Create(c.graph, Resources.Load<AnimationClip>("PlayableSecond")), 0, weights[1]);
+        // Frame 20 is culled by ScheduleA: the new weights are first used at the visibility return.
+        if (culledWeights != null)
+            c.step = f => { if (f == 20) for (int i = 0; i < culledWeights.Length; i++) mix.SetInputWeight(i, culledWeights[i]); };
+        c.source = mix;
+        output.SetSourcePlayable(c.source);
+        c.graph.Play();
     }
 
     void HumanShape(string shape, AnimatorCullingMode mode, DirectorUpdateMode clock, string movement) =>
@@ -364,9 +416,9 @@ public class AnimCullingProbe : MonoBehaviour
     {
         c.humanInputs = new List<AnimationClipPlayable> { c.clip };
         c.humanWeights = new List<(AnimationMixerPlayable, int)>();
-        if (shape == "footIK" || shape == "directFootIK")
+        if (shape == "footIK" || shape == "directFootIK" || shape == "footIKLow")
         {
-            var source = HumanShapeSource(c, shape == "footIK" ? "three" : "direct");
+            var source = HumanShapeSource(c, shape == "footIK" ? "three" : shape == "footIKLow" ? "low" : "direct");
             foreach (var input in c.humanInputs) input.SetApplyFootIK(true);
             return source;
         }
@@ -377,6 +429,16 @@ public class AnimCullingProbe : MonoBehaviour
             case "nested":
                 var inner = HumanMixer(c, new Playable[] { HumanInput(c, 1), HumanInput(c, 2) }, new[] { 0.5f, 0.5f });
                 return HumanMixer(c, new Playable[] { c.clip, inner }, new[] { 0.4f, 0.6f });
+            case "nestedLow":
+                var low = HumanMixer(c, new Playable[] { HumanInput(c, 1), HumanInput(c, 2) }, new[] { 0.25f, 0.25f });
+                return HumanMixer(c, new Playable[] { c.clip, low }, new[] { 0.4f, 0.6f });
+            case "low": return HumanMixer(c, new Playable[] { c.clip, HumanInput(c, 1) }, new[] { 0.25f, 0.25f });
+            case "high": return HumanMixer(c, new Playable[] { c.clip, HumanInput(c, 1) }, new[] { 0.75f, 0.75f });
+            case "zero": return HumanMixer(c, new Playable[] { c.clip, HumanInput(c, 1) }, new[] { 0f, 0f });
+            case "half": return HumanMixer(c, new Playable[] { c.clip }, new[] { 0.5f });
+            case "partial": return HumanMixer(c, new Playable[] { c.clip, HumanInput(c, 1), HumanInput(c, 2) }, new[] { 0.5f, 0f, 0f });
+            case "negative": return HumanMixer(c, new Playable[] { c.clip, HumanInput(c, 1) }, new[] { -0.25f, 1.25f });
+            case "nan": return HumanMixer(c, new Playable[] { c.clip, HumanInput(c, 1) }, new[] { float.NaN, 1f });
         }
         var mixer = HumanMixer(c, new Playable[] { c.clip, HumanInput(c, 1), HumanInput(c, 2) }, new[] { 0.2f, 0.3f, 0.5f });
         if (shape == "live")
@@ -384,6 +446,13 @@ public class AnimCullingProbe : MonoBehaviour
             c.step = f =>
             {
                 float[] w = f == 10 ? new[] { 0.6f, 0.4f, 0f } : f == 20 ? new[] { 0.1f, 0.1f, 0.8f } : f == 40 ? new[] { 0.3f, 0.2f, 0.5f } : null;
+                if (w != null) for (int i = 0; i < w.Length; i++) mixer.SetInputWeight(i, w[i]);
+            };
+        if (shape == "liveSum")
+            // The same frames with sums 0.5, 1.5 and 0.3.
+            c.step = f =>
+            {
+                float[] w = f == 10 ? new[] { 0.3f, 0.2f, 0f } : f == 20 ? new[] { 0.6f, 0.6f, 0.3f } : f == 40 ? new[] { 0.1f, 0.1f, 0.1f } : null;
                 if (w != null) for (int i = 0; i < w.Length; i++) mixer.SetInputWeight(i, w[i]);
             };
         return mixer;
