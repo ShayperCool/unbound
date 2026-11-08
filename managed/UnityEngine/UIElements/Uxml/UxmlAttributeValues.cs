@@ -8,6 +8,7 @@ using System.Threading;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
+using Unbound.Runtime;
 using Object = UnityEngine.Object;
 
 // How UXML attribute text becomes the values of custom controls, and how the builder finds those
@@ -28,12 +29,21 @@ using Object = UnityEngine.Object;
 //     Rect, RectInt, Vector2/2Int/3/3Int/4, Gradient, AnimationCurve, ToggleButtonGroupState),
 //     assets by url, List<T> with comma-separated items, and other types through a
 //     UxmlAttributeConverter<T>; without one the documented error is reported.
-// Unbound's choices (not Unity guarantees): the text forms of vectors, rects and bounds
-// (comma-separated components), the accepted colour forms (#RRGGBB, #RRGGBBAA), arrays read like
-// lists, items not trimmed, the current name winning over an obsolete one, and errors logged when a
-// value cannot be read (the member keeps its value). Length, Gradient, AnimationCurve and
-// ToggleButtonGroupState values are not read yet and fail loudly. Background values (without a game
-// converter) and Texture values are asset urls read as UxmlImageReferences reads them.
+// Measured in the Unity 6000.0.71f1 Editor (tests/projects/uxmlattributes): a [UxmlAttribute]
+// value that does not convert silently takes its type's default (0, false, the enum's zero value,
+// a zero vector, an empty item in a list) and an unreadable colour is white; colours take HTML
+// forms (#RGB, #RRGGBB, #RRGGBBAA, names such as red, not rgb()); numbers allow surrounding spaces,
+// exponents and a sign; enum names ignore case and numbers are read; the current name wins over an
+// obsolete one. Asset references (absolute, relative or project://database urls) resolve to the
+// referenced object when it is of the member's type, else to the first object of that type in the
+// same file; an object of another type throws on assignment (logged, the member keeps its value);
+// an empty or unresolved url logs the warnings ReportUrl writes, once per document element. A
+// UxmlTypeReference type outside its base logs an error and an unknown type a TypeLoadException.
+// Unbound's choices: the text forms of vectors, rects and bounds (comma-separated components),
+// arrays read like lists, items not trimmed. Length, Gradient, AnimationCurve and
+// ToggleButtonGroupState values are not read yet and fail loudly; a game converter's failure is
+// reported. Background values (without a game converter) are asset urls read as
+// UxmlImageReferences reads them.
 
 namespace Unbound.UIElements
 {
@@ -460,8 +470,8 @@ namespace Unbound.UIElements
             }
             if (type == typeof(Color))
             {
-                if (UxmlBuilder.TryConvert(text, typeof(Color), out result)) return true;
-                return Fail(out error, text, "a #RRGGBB or #RRGGBBAA colour");
+                if (ColorUtility.TryParseHtmlString(text.Trim(), out var color)) { result = color; return true; }
+                return Fail(out error, text, "an HTML colour (#RGB, #RRGGBB, #RRGGBBAA or a colour name)");
             }
             if (type == typeof(Hash128))
             {
@@ -528,6 +538,175 @@ namespace Unbound.UIElements
             error = Problem(type, member?.DeclaringType?.Name ?? "?", member?.Name ?? "?") ?? $"Unbound cannot read values of type '{type.Name}' from UXML.";
             return false;
         }
+
+        /// <summary>A [UxmlAttribute] value as Unity converts it: <see cref="TryRead"/>'s, else the
+        /// type's default (white for a colour), item by item for a list (measured). Null with an
+        /// error only for values read through a game converter, which report their failure.</summary>
+        internal static bool TryReadLenient(string text, Type type, MemberInfo member, VisualTreeAsset document, out object result, out string error)
+        {
+            error = null;
+            // Game converters and image references (unmeasured failures) report what they cannot read.
+            if (UxmlTypeIndex.ConverterFor(type) != null || UxmlImageReferences.Reads(type)) return TryRead(text, type, member, document, out result, out error);
+            if (IsList(type, out var element) && !IsList(element, out _) && UxmlTypeIndex.ConverterFor(element) == null)
+            {
+                var items = new List<object>();
+                if (!string.IsNullOrEmpty(text))
+                    foreach (var part in text.Split(','))
+                        items.Add(TryRead(part, element, member, document, out var item, out _) ? item : DefaultOf(element));
+                result = MakeList(type, element, items);
+                return true;
+            }
+            if (!TryRead(text, type, member, document, out result, out _)) result = DefaultOf(type);
+            return true;
+        }
+
+        /// <summary>What a value that does not convert becomes (measured: default(T), white for a colour).</summary>
+        static object DefaultOf(Type type) =>
+            type == typeof(Color) ? Color.white : type.IsValueType ? Activator.CreateInstance(type) : null;
+
+        static object MakeList(Type type, Type element, List<object> items)
+        {
+            if (type.IsArray)
+            {
+                var array = Array.CreateInstance(element, items.Count);
+                for (int i = 0; i < items.Count; i++) array.SetValue(items[i], i);
+                return array;
+            }
+            var list = (IList)Activator.CreateInstance(type);
+            foreach (var item in items) list.Add(item);
+            return list;
+        }
+
+        internal enum Reference { Empty, Missing, Found, OtherType }
+
+        /// <summary>The object an asset url of <paramref name="document"/> names for a member of
+        /// <paramref name="type"/> (measured): the referenced object when it is of the type, else
+        /// the first object of the type in the same file; else the referenced object of another
+        /// type (<see cref="Reference.OtherType"/>), or nothing.</summary>
+        internal static Reference ResolveReference(string text, Type type, VisualTreeAsset document, out Object result)
+        {
+            result = null;
+            if (string.IsNullOrWhiteSpace(text)) return Reference.Empty;
+            var url = text.Trim();
+            var path = AssetPaths.Resolve(document?.m_UaAssetPath, url, out var guid, out var fileId, out var subAsset);
+            Object referenced = null;
+            string fileGuid = null;
+            IEnumerable<Object> all = null;
+            // The guid names the file (the path is only its hint), else the path does.
+            if (guid != null)
+            {
+                if (fileId != 0) referenced = Quietly(() => AssetDatabaseRuntime.Load(guid, fileId, null));
+                all = Quietly(() => AssetDatabaseRuntime.LoadAll(guid));
+                if (referenced != null || HasAny(all)) fileGuid = guid;
+            }
+            if (fileGuid == null && !string.IsNullOrEmpty(path))
+            {
+                var info = Quietly(() => AssetDatabaseRuntime.InfoByPath(path));
+                if (!string.IsNullOrEmpty(info?.Guid))
+                {
+                    fileGuid = info.Guid;
+                    all = Quietly(() => AssetDatabaseRuntime.LoadAll(fileGuid));
+                    if (string.IsNullOrEmpty(subAsset)) referenced = Quietly(() => AssetDatabaseRuntime.LoadMain(fileGuid, null));
+                }
+            }
+            if (fileGuid == null) return Reference.Missing;
+            all ??= Array.Empty<Object>();
+            if (referenced == null)
+                foreach (var o in all)
+                    if (o != null && (string.IsNullOrEmpty(subAsset) || o.name == subAsset)) { referenced = o; break; }
+            if (referenced != null && type.IsInstanceOfType(referenced))
+            {
+                result = referenced;
+                return Reference.Found;
+            }
+            Object first = null;
+            foreach (var o in all)
+            {
+                if (o == null || !type.IsInstanceOfType(o)) continue;
+                if (string.IsNullOrEmpty(subAsset) || o.name == subAsset) { result = o; return Reference.Found; }
+                first ??= o;
+            }
+            if (first != null)
+            {
+                result = first;
+                return Reference.Found;
+            }
+            if (referenced == null) return Reference.Missing;
+            result = referenced;
+            return Reference.OtherType;
+        }
+
+        static bool HasAny(IEnumerable<Object> objects)
+        {
+            if (objects == null) return false;
+            foreach (var o in objects)
+                if (o != null) return true;
+            return false;
+        }
+
+        /// <summary>An asset database answer, or null when it cannot answer (no such asset, no host).</summary>
+        static T Quietly<T>(Func<T> query) where T : class
+        {
+            try
+            {
+                return query();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>The warnings Unity's UXML importer logs for an empty or unresolved asset url
+        /// (measured texts), once per document element and attribute.</summary>
+        internal static void ReportUrl(UxmlNode node, string attribute, string text, VisualTreeAsset document)
+        {
+            if (node == null || !(node.ReportedUrls ??= new HashSet<string>()).Add(attribute)) return;
+            var where = $" ({node.Line},{node.Column}): Semantic - ";
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                Debug.LogWarning($"{where}The specified URL is empty or invalid : '{text}'");
+                return;
+            }
+            const string missing = "The specified URI does not exist in the current project : ";
+            var path = AssetPaths.Resolve(document?.m_UaAssetPath, text.Trim(), out var guid, out _, out _);
+            if (guid != null)
+            {
+                Debug.LogWarning($"{where}{missing}Invalid asset path hint \"{path}\" for referenced asset GUID \"{guid}\"");
+                Debug.LogWarning($"{where}{missing}{text}");
+            }
+            else
+            {
+                Debug.LogWarning($"{where}{missing}{path}");
+            }
+        }
+
+        /// <summary>A UxmlTypeReference value as Unity reads it (measured): a type outside the base
+        /// logs an error and an unknown type a TypeLoadException, once per document element; both
+        /// give null.</summary>
+        internal static Type ReadTypeReference(UxmlNode node, string attribute, string text, Type baseType)
+        {
+            if (TryReadTypeName(text, null, out var value, out _))
+            {
+                var found = (Type)value;
+                if (found == null || baseType == null || baseType.IsAssignableFrom(found)) return found;
+                if (Once(node, attribute))
+                    Debug.LogError($"Type: Invalid type \"{found.FullName}\". Type must derive from {baseType.FullName}.");
+                return null;
+            }
+            if (Once(node, attribute))
+            {
+                var name = text.Trim();
+                int comma = name.IndexOf(',');
+                var message = comma >= 0
+                    ? $"Could not load type '{name.Substring(0, comma).Trim()}' from assembly '{name.Substring(comma + 1).Trim()}'."
+                    : $"Could not load type '{name}'.";
+                Debug.LogException(new TypeLoadException(message));
+            }
+            return null;
+        }
+
+        static bool Once(UxmlNode node, string attribute) => node == null || (node.ReportedUrls ??= new HashSet<string>()).Add(attribute);
 
         static bool Fail(out string error, string text, string expected)
         {
@@ -676,12 +855,10 @@ namespace Unbound.UIElements
 
         static string Where(UxmlAttributeDescription description) => $"UXML attribute '{description?.name}'";
 
-        internal static T ReadTyped<T>(UxmlAttributeDescription description, string text, T fallback)
-        {
-            if (TryRead(text, typeof(T), null, null, out var value, out var error)) return (T)value;
-            Debug.LogWarning($"{Where(description)}: {error}; the default value is used.");
-            return fallback;
-        }
+        /// <summary>A legacy attribute description's value: a value that does not convert gives the
+        /// description's default, silently (measured, tests/projects/uxmlattributes).</summary>
+        internal static T ReadTyped<T>(UxmlAttributeDescription description, string text, T fallback) =>
+            TryRead(text, typeof(T), null, null, out var value, out _) ? (T)value : fallback;
 
         internal static Type ReadTypeName(UxmlAttributeDescription description, string text, Type baseType, Type fallback)
         {

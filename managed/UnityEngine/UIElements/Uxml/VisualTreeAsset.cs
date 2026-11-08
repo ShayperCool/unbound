@@ -146,6 +146,11 @@ namespace Unbound.UIElements
         public readonly List<StyleSheet> StyleSheets = new List<StyleSheet>();
         public StyleSheet InlineSheet;
         public string TemplateName;
+        /// <summary>Where the element's tag starts in the document (1-based line and column of its
+        /// name), as Unity's importer warnings name it.</summary>
+        public int Line, Column;
+        /// <summary>Attributes whose import-time warnings were logged (once per document element).</summary>
+        public HashSet<string> ReportedUrls;
 
         public string Attr(string name)
         {
@@ -165,10 +170,13 @@ namespace Unbound.UIElements
             var doc = new XmlDocument { PreserveWhitespace = false };
             doc.LoadXml(text);
             var root = doc.DocumentElement;
+            var positions = ElementPositions(text);
+            int next = 0;
             var rootNode = new UxmlNode { Namespace = root.NamespaceURI, Type = root.LocalName };
+            Locate(rootNode, positions, ref next);
             asset.m_UaAssetPath = assetPath;
             var errors = new List<string>();
-            ReadChildren(asset, assetPath, root, rootNode, errors);
+            ReadChildren(asset, assetPath, root, rootNode, errors, positions, ref next);
             asset.m_UaRoot = rootNode;
             foreach (var e in errors) Debug.LogWarning(assetPath + ": " + e);
             asset.importedWithWarnings = errors.Count > 0;
@@ -178,7 +186,34 @@ namespace Unbound.UIElements
 
         internal struct LoadedFileHandle { }
 
-        static void ReadChildren(VisualTreeAsset asset, string assetPath, XmlElement xml, UxmlNode node, List<string> errors)
+        /// <summary>The line and column of every element's name, in document order (the order the
+        /// document's elements are visited in, depth first).</summary>
+        static List<(int Line, int Column)> ElementPositions(string text)
+        {
+            var positions = new List<(int, int)>();
+            using var reader = XmlReader.Create(new System.IO.StringReader(text), new XmlReaderSettings { DtdProcessing = DtdProcessing.Ignore });
+            var info = (IXmlLineInfo)reader;
+            while (reader.Read())
+                if (reader.NodeType == XmlNodeType.Element) positions.Add((info.LineNumber, info.LinePosition));
+            return positions;
+        }
+
+        static void Locate(UxmlNode node, List<(int Line, int Column)> positions, ref int next)
+        {
+            if (next >= positions.Count) return;
+            (node.Line, node.Column) = positions[next++];
+        }
+
+        /// <summary>Skips the positions of an element that makes no node, and of its descendants.</summary>
+        static void Skip(XmlElement xml, ref int next)
+        {
+            next++;
+            foreach (XmlNode child in xml.ChildNodes)
+                if (child is XmlElement element) Skip(element, ref next);
+        }
+
+        static void ReadChildren(VisualTreeAsset asset, string assetPath, XmlElement xml, UxmlNode node, List<string> errors,
+            List<(int Line, int Column)> positions, ref int next)
         {
             foreach (XmlAttribute a in xml.Attributes)
             {
@@ -191,6 +226,7 @@ namespace Unbound.UIElements
             {
                 if (!(child is XmlElement element)) continue;
                 string local = element.LocalName;
+                if (local == "Style" || local == "Template" || local == "AttributeOverrides") Skip(element, ref next);
                 if (local == "Style")
                 {
                     var src = element.GetAttribute("src");
@@ -212,8 +248,9 @@ namespace Unbound.UIElements
                 }
                 if (local == "AttributeOverrides") continue;
                 var childNode = new UxmlNode { Namespace = element.NamespaceURI, Type = local };
+                Locate(childNode, positions, ref next);
                 if (local == "Instance") childNode.TemplateName = element.GetAttribute("template");
-                ReadChildren(asset, assetPath, element, childNode, errors);
+                ReadChildren(asset, assetPath, element, childNode, errors, positions, ref next);
                 node.Children.Add(childNode);
             }
         }
@@ -515,7 +552,35 @@ namespace Unbound.UIElements
                     continue;
                 }
                 if (member.Problem != null) continue;
-                if (!UxmlAttributeValues.TryRead(a.Value, member.ValueType, member.Info, asset, out var value, out var error))
+                object value;
+                if (typeof(Object).IsAssignableFrom(member.ValueType) && UxmlTypeIndex.ConverterFor(member.ValueType) == null)
+                {
+                    // Measured: an unresolved url warns and gives null; an object of another type
+                    // fails on assignment below.
+                    var found = UxmlAttributeValues.ResolveReference(a.Value, member.ValueType, asset, out var referenced);
+                    if (found == UxmlAttributeValues.Reference.Empty || found == UxmlAttributeValues.Reference.Missing)
+                        UxmlAttributeValues.ReportUrl(node, a.Key, a.Value, asset);
+                    if (found == UxmlAttributeValues.Reference.OtherType)
+                    {
+                        Debug.LogException(new ArgumentException($"Object of type '{referenced.GetType().FullName}' cannot be converted to type '{member.ValueType.FullName}'."));
+                        continue;
+                    }
+                    value = referenced;
+                }
+                else if (member.ValueType == typeof(Background) && UxmlTypeIndex.ConverterFor(member.ValueType) == null
+                    && UxmlAttributeValues.ResolveReference(a.Value, typeof(Object), asset, out _) is var image
+                    && (image == UxmlAttributeValues.Reference.Empty || image == UxmlAttributeValues.Reference.Missing))
+                {
+                    // As for object members: the importer's warnings and no image.
+                    UxmlAttributeValues.ReportUrl(node, a.Key, a.Value, asset);
+                    value = default(Background);
+                }
+                else if (member.ValueType == typeof(Type))
+                {
+                    value = UxmlAttributeValues.ReadTypeReference(node, a.Key, a.Value,
+                        member.Info.GetCustomAttribute<UxmlTypeReferenceAttribute>(false)?.baseType);
+                }
+                else if (!UxmlAttributeValues.TryReadLenient(a.Value, member.ValueType, member.Info, asset, out value, out var error))
                 {
                     Debug.LogError($"{Describe(asset, node)} attribute '{a.Key}': {error}; '{member.Info.Name}' keeps its value.");
                     continue;
@@ -696,12 +761,22 @@ namespace Unbound.UIElements
         // Unbound's elements declare) read from an asset reference. Documented (6000.0 Manual "Button"
         // and "Tab", attribute `icon-image` of type Object: "The Texture, Sprite, or VectorImage that
         // will represent an icon within a Button element" / "Sets the icon for the Tab's header",
-        // written as icon-image="/path/to/image-file.png"). Unbound's choices (unmeasured): the value
-        // is resolved and converted as UxmlImageReferences reads it, and a reference that does not
-        // resolve or convert logs ONE error naming the document, the element and the attribute, the
-        // property keeping its value. Other attributes Unbound cannot convert stay silent as before.
+        // written as icon-image="/path/to/image-file.png"). Measured (Unity 6000.0.71f1,
+        // tests/projects/uxmlattributes): textures and sprites by project url or path; an empty or
+        // unresolved url logs the importer's warnings and keeps the value. Unbound's choices
+        // (unmeasured): the value is converted as UxmlImageReferences reads it, and an asset of a class
+        // a Background cannot take logs ONE error naming the document, the element and the attribute,
+        // the property keeping its value. Other attributes Unbound cannot convert stay silent as before.
         static void ApplyImageAttribute(VisualElement element, PropertyInfo property, string name, string value, VisualTreeAsset asset, UxmlNode node)
         {
+            // An empty or unresolved url warns as Unity's importer does and leaves the image as it
+            // is (measured, tests/projects/uxmlattributes).
+            var found = UxmlAttributeValues.ResolveReference(value, typeof(Object), asset, out _);
+            if (found == UxmlAttributeValues.Reference.Empty || found == UxmlAttributeValues.Reference.Missing)
+            {
+                UxmlAttributeValues.ReportUrl(node, name, value, asset);
+                return;
+            }
             if (!UxmlImageReferences.TryRead(value, typeof(Background), asset, out var image, out var error))
             {
                 var where = node != null ? Describe(asset, node) : $"{(string.IsNullOrEmpty(asset?.m_UaAssetPath) ? asset?.name : asset.m_UaAssetPath)}: <{element.GetType().FullName}>";

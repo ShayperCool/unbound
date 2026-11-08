@@ -77,6 +77,22 @@ namespace UnityEngine.Tests
             return logs;
         }
 
+        /// <summary>Warnings and errors logged while <paramref name="action"/> runs that name this
+        /// file's document or are the UXML importer's url warnings, as "Type: message".</summary>
+        static List<string> LoggedAll(Action action)
+        {
+            var logs = new List<string>();
+            Application.LogCallback capture = (message, stack, type) =>
+            {
+                if (type != LogType.Log && message != null && (message.Contains(Path) || message.Contains("): Semantic - ")))
+                    lock (logs) logs.Add(type + ": " + message);
+            };
+            Application.logMessageReceived += capture;
+            try { action(); }
+            finally { Application.logMessageReceived -= capture; }
+            return logs;
+        }
+
         /// <summary>An image file as Unity's texture importer makes it in single sprite mode: a
         /// Texture2D main asset and a Sprite of the same name.</summary>
         sealed class IconFile : IDisposable
@@ -202,41 +218,33 @@ namespace UnityEngine.Tests
 
         // ------------------------------------------------------------------ diagnostics
 
-        // [choice] A reference that resolves to nothing logs ONE error naming the document, the
-        // element and the attribute; the icon the element already has stays (here one its
-        // constructor set, in a game [UxmlElement] subclass whose icon-image is Button's own).
-        // Red at 7718c50e: nothing is logged; Assert.Single(logs) fails (empty).
+        // Measured (tests/projects/uxmlattributes): a reference that resolves to nothing logs the
+        // importer's warnings (for a guid: its path hint, then the url) at the element's position,
+        // once however often the document is cloned; the icon the element already has stays (here
+        // one its constructor set, in a game [UxmlElement] subclass whose icon-image is Button's own).
         [Fact]
-        public void MissingReferenceLogsOneErrorAndKeepsTheIcon()
+        public void MissingReferenceWarnsOnceAndKeepsTheIcon()
         {
-            List<string> logs = null;
+            var url = Ref("Assets/UI/Icons/Missing.png", MissingGuid, TextureId, "Missing");
             VisualElement root = null;
-            logs = Logged(() => root = Clone(
-                $"<UxmlImageProbes.PresetIconButton icon-image=\"{Ref("Assets/UI/Icons/Missing.png", MissingGuid, TextureId, "Missing")}\" />").Root);
-            var button = Assert.IsType<PresetIconButton>(root[0]);
-            Assert.Same(PresetIconButton.Preset, button.iconImage.texture);
-            var error = Assert.Single(logs);
-            Assert.Contains("<UxmlImageProbes.PresetIconButton>", error);
-            Assert.Contains("'icon-image'", error);
-            Assert.Contains("no asset at", error);
-            Assert.Contains("keeps its value", error);
+            VisualTreeAsset asset = null;
+            var logs = LoggedAll(() => (root, asset) = Clone($"<UxmlImageProbes.PresetIconButton icon-image=\"{url}\" />"));
+            Assert.Same(PresetIconButton.Preset, Assert.IsType<PresetIconButton>(root[0]).iconImage.texture);
+            Assert.Equal(2, logs.Count);
+            Assert.All(logs, l => Assert.StartsWith("Warning:  (1,45): Semantic - The specified URI does not exist in the current project : ", l));
+            Assert.Empty(LoggedAll(() => asset.CloneTree(new VisualElement())));
         }
 
-        // [choice] A path reference that does not resolve (relative, without guid) is reported the
-        // same way on a Tab, whose icon stays empty.
-        // Red at 7718c50e: nothing is logged; Assert.Single(logs) fails (empty).
+        // Measured: a path reference that does not resolve (relative, without guid) logs one
+        // warning naming the project path it resolves to; the Tab's icon stays empty.
         [Fact]
-        public void MissingRelativeReferenceOnATabLogsOneError()
+        public void MissingRelativeReferenceOnATabWarns()
         {
-            List<string> logs = null;
             VisualElement root = null;
-            logs = Logged(() => root = Clone("<ui:TabView><ui:Tab label=\"A\" icon-image=\"Icons/Missing.png\" /></ui:TabView>").Root);
+            var logs = LoggedAll(() => root = Clone("<ui:TabView><ui:Tab label=\"A\" icon-image=\"Icons/Missing.png\" /></ui:TabView>").Root);
             var tab = Assert.IsType<TabView>(root[0]).GetTab(0);
             Assert.True(tab.iconImage.IsEmpty());
-            var error = Assert.Single(logs);
-            Assert.Contains("<UnityEngine.UIElements.Tab>", error);
-            Assert.Contains("'icon-image'", error);
-            Assert.Contains("'Icons/Missing.png'", error);
+            Assert.Equal(new[] { "Warning:  (1,57): Semantic - The specified URI does not exist in the current project : Assets/UI/Screens/Icons/Missing.png" }, logs);
         }
 
         // [choice] An asset of another class is not an image: ONE error names its class; the icon is
@@ -313,38 +321,34 @@ namespace UnityEngine.Tests
             Assert.Empty(logs);
         }
 
-        // [choice] A declared Background member that cannot be read: ONE error, the member keeps its
-        // value (its initializer's texture).
-        // Red at 7718c50e: the member is skipped with no error from the document;
-        // Assert.Single(logs) fails (empty).
+        // Measured for object members (tests/projects/uxmlattributes), applied to a declared
+        // Background: an unresolved reference logs the importer's two warnings (the guid's path hint
+        // and the url) and gives no image.
         [Fact]
-        public void DeclaredBackgroundAttributeWithAMissingReferenceKeepsItsValue()
+        public void DeclaredBackgroundAttributeWithAMissingReferenceWarnsAndHasNoImage()
         {
-            List<string> logs = null;
+            var url = Ref("Assets/UI/Icons/Missing.png", MissingGuid, TextureId, "Missing");
             VisualElement root = null;
-            logs = Logged(() => root = Clone($"<UxmlImageProbes.BadgeProbe badge=\"{Ref("Assets/UI/Icons/Missing.png", MissingGuid, TextureId, "Missing")}\" />").Root);
-            Assert.Same(PresetIconButton.Preset, Assert.IsType<BadgeProbe>(root[0]).badge.texture);
-            var error = Assert.Single(logs);
-            Assert.Contains("'badge'", error);
-            Assert.Contains("no asset at", error);
+            var logs = LoggedAll(() => root = Clone($"<UxmlImageProbes.BadgeProbe badge=\"{url}\" />").Root);
+            Assert.True(Assert.IsType<BadgeProbe>(root[0]).badge.IsEmpty());
+            Assert.Equal(new[]
+            {
+                $"Warning:  (1,45): Semantic - The specified URI does not exist in the current project : Invalid asset path hint \"Assets/UI/Icons/Missing.png\" for referenced asset GUID \"{MissingGuid}\"",
+                $"Warning:  (1,45): Semantic - The specified URI does not exist in the current project : {url.Replace("&amp;", "&")}",
+            }, logs);
         }
 
-        // [doc] The Manual's [UxmlAttribute] Texture2D written as a project reference. [choice] A member
-        // of a Texture type takes an asset of that type only; a Sprite is not its texture: ONE error
-        // naming the class, the member keeping its value.
-        // Red at 7718c50e: the error says "no Texture2D asset at ..." without the asset's class;
-        // Assert.Contains("is a Sprite, not a Texture2D", error) fails.
+        // [doc] The Manual's [UxmlAttribute] Texture2D written as a project reference. Measured
+        // (tests/projects/uxmlattributes): a reference to the file's sprite gives a Texture2D member
+        // the file's texture, without a log.
         [Fact]
-        public void DeclaredTextureAttributesReportTheWrongClass()
+        public void DeclaredTextureAttributesTakeTheTextureOfTheReferencedFile()
         {
             using var icon = new IconFile();
-            List<string> logs = null;
             VisualElement root = null;
-            logs = Logged(() => root = Clone($"<UxmlImageProbes.TextureProbe picture=\"{Ref("Assets/UI/Icons/Icon.png", IconGuid, SpriteId, "Icon")}\" />").Root);
-            Assert.Same(PresetIconButton.Preset, Assert.IsType<TextureProbe>(root[0]).picture);
-            var error = Assert.Single(logs);
-            Assert.Contains("'picture'", error);
-            Assert.Contains("is a Sprite, not a Texture2D", error);
+            var logs = LoggedAll(() => root = Clone($"<UxmlImageProbes.TextureProbe picture=\"{Ref("Assets/UI/Icons/Icon.png", IconGuid, SpriteId, "Icon")}\" />").Root);
+            Assert.Same(icon.Texture, Assert.IsType<TextureProbe>(root[0]).picture);
+            Assert.Empty(logs);
         }
 
         // [doc] A [UxmlAttribute] of type Texture holds any texture asset, here a Cubemap and the

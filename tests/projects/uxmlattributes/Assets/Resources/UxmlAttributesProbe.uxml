@@ -1,0 +1,47 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:probe="UxmlAttributesProbes">
+    <probe:TypedProbe name="defaults" />
+    <probe:TypedProbe name="values" my-int="42" my-float="1.5" my-bool="true" my-long="-9000000000" my-double="0.125" my-enum="Second" my-color="#336699" my-vector2="1,2" my-vector3="1, 2.5, -3" my-vector2-int="3,4" my-rect="1,2,3,4" my-string="hello world" my-char="x" my-type="UnityEngine.UIElements.Button, UnityEngine.UIElementsModule" my-ints="1,2,3" my-strings="a,b c" my-texture="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" my-sprite="project://database/Assets/UI/ProbeSprite.png?fileID=21300000&amp;guid=6b2d3f4a5c6e4f708192a3b4c5d6e7f8&amp;type=3#ProbeSprite" my-sheet="project://database/Assets/UI/Probe.uss?fileID=7433441132597879392&amp;guid=7c3e4a5b6d7f4a8192a3b4c5d6e7f809&amp;type=3#Probe" my-template="project://database/Assets/UI/Child.uxml?fileID=9197481963319205126&amp;guid=8d4f5b6c7e804b9203b4c5d6e7f8091a&amp;type=3#Child" my-object="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" />
+    <probe:TypedProbe name="absolutePaths" my-texture="/Assets/UI/Probe.png" my-sprite="/Assets/UI/ProbeSprite.png" my-sheet="/Assets/UI/Probe.uss" my-template="/Assets/UI/Child.uxml" />
+    <probe:TypedProbe name="relativePaths" my-texture="../UI/Probe.png" my-sheet="../UI/Probe.uss" my-template="../UI/Child.uxml" />
+    <probe:TypedProbe name="projectPathOnly" my-texture="project://database/Assets/UI/Probe.png" my-sheet="project://database/Assets/UI/Probe.uss" />
+    <probe:TypedProbe name="spriteAsTexture" my-texture="project://database/Assets/UI/ProbeSprite.png?fileID=21300000&amp;guid=6b2d3f4a5c6e4f708192a3b4c5d6e7f8&amp;type=3#ProbeSprite" my-sprite="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" />
+    <probe:TypedProbe name="wrongType" my-texture="project://database/Assets/UI/Probe.uss?fileID=7433441132597879392&amp;guid=7c3e4a5b6d7f4a8192a3b4c5d6e7f809&amp;type=3#Probe" my-sheet="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" />
+    <probe:TypedProbe name="missingAsset" my-texture="project://database/Assets/UI/Missing.png?fileID=2800000&amp;guid=0123456789abcdef0123456789abcdef&amp;type=3#Missing" my-sheet="/Assets/UI/Missing.uss" />
+    <probe:TypedProbe name="badInt" my-int="abc" />
+    <probe:TypedProbe name="badFloat" my-float="1,5" />
+    <probe:TypedProbe name="badBool" my-bool="yes" />
+    <probe:TypedProbe name="badEnum" my-enum="Nope" />
+    <probe:TypedProbe name="badColor" my-color="notacolor" />
+    <probe:TypedProbe name="badVector" my-vector3="1,x" />
+    <probe:TypedProbe name="badType" my-type="System.String" />
+    <probe:TypedProbe name="unknownType" my-type="No.Such.Type, Nowhere" />
+    <probe:TypedProbe name="badList" my-ints="1,x,3" />
+    <probe:TypedProbe name="spacedInt" my-int=" 7 " my-float=" 2.5 " />
+    <probe:TypedProbe name="exponent" my-float="1.5e3" my-double="-2E-2" my-int="+5" />
+    <probe:TypedProbe name="boolForms" my-bool="True" my-flag="1" />
+    <probe:TypedProbe name="enumNumber" my-enum="2" />
+    <probe:TypedProbe name="enumCase" my-enum="second" />
+    <probe:TypedProbe name="colorShort" my-color="#F00" />
+    <probe:TypedProbe name="colorAlpha" my-color="#33669980" />
+    <probe:TypedProbe name="colorName" my-color="red" />
+    <probe:TypedProbe name="colorRgb" my-color="rgb(0,128,255)" />
+    <probe:TypedProbe name="colorRgba" my-color="rgba(255,0,0,0.5)" />
+    <probe:TypedProbe name="vectorShort" my-vector3="1,2" my-vector2="5" />
+    <probe:TypedProbe name="emptyValues" my-int="" my-string="" my-ints="" my-texture="" />
+    <probe:TypedProbe name="customName" custom-name="7" />
+    <probe:TypedProbe name="defaultNameOfCustom" renamed="8" />
+    <probe:TypedProbe name="obsoleteName" old-name="via-old" />
+    <probe:TypedProbe name="currentAndObsolete" new-name="new" old-name="old" />
+    <probe:TypedProbe name="undeclared" not-declared="1" my-int="3" />
+    <probe:DerivedProbe name="derived" my-int="9" extra="x" />
+    <probe:custom-element-name name="renamedElement" value="4" />
+    <probe:RenamedElement name="renamedByClassName" value="5" />
+    <probe:LegacyProbe name="legacy" legacy-value="5" legacy-text="t" />
+    <probe:LegacyProbe name="legacyDefaults" />
+    <probe:LegacyProbe name="legacyBad" legacy-value="abc" />
+    <probe:BothProbe name="both" value="3" />
+    <ui:Button name="iconButton" icon-image="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" text="b" />
+    <ui:Button name="iconSprite" icon-image="project://database/Assets/UI/ProbeSprite.png?fileID=21300000&amp;guid=6b2d3f4a5c6e4f708192a3b4c5d6e7f8&amp;type=3#ProbeSprite" />
+    <ui:Button name="iconPath" icon-image="/Assets/UI/Probe.png" />
+    <ui:Button name="iconMissing" icon-image="/Assets/UI/Missing.png" />
+</ui:UXML>

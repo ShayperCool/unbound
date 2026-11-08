@@ -203,27 +203,39 @@ namespace UnityEngine.Tests
             Assert.Equal(new Bounds(Vector3.zero, new Vector3(2, 4, 6)), probe.myBounds);
         }
 
-        // [doc] UxmlTypeReference restricts the allowed base type. [choice] A type outside it is
-        // reported and the member keeps its value.
-        // Red on b988: no error is logged.
+        // [doc] UxmlTypeReference restricts the allowed base type. Measured
+        // (tests/projects/uxmlattributes): a type outside it logs Unity's error and gives null.
         [Fact]
         public void TypeOutsideTheReferenceBaseFailsLoudly()
         {
             VisualElement root = null;
-            var logs = Logged(() => root = Clone("<UxmlControlProbes.ValueProbe my-type=\"System.String\" />").Root, "my-type");
+            var logs = Logged(() => root = Clone("<UxmlControlProbes.ValueProbe my-type=\"System.String\" />").Root, "Invalid type");
             Assert.Null(Assert.IsType<ValueProbe>(root[0]).myType);
-            Assert.Contains(logs, l => l.Contains("does not derive from"));
+            Assert.Contains(logs, l => l.StartsWith("Type: Invalid type \"System.String\". Type must derive from", StringComparison.Ordinal));
         }
 
-        // [choice] An unreadable value is reported and the member keeps its initial value.
-        // Red on b988: nothing is reported.
+        // Measured (tests/projects/uxmlattributes): a value that does not convert silently gives the
+        // type's default (0 here, not the field's -1), an item of a list its default, a colour white.
         [Fact]
-        public void UnreadableValuesFailLoudlyAndKeepTheValue()
+        public void UnreadableValuesSilentlyTakeTheTypesDefault()
         {
             VisualElement root = null;
-            var logs = Logged(() => root = Clone("<UxmlControlProbes.FieldProbe my-int-value=\"abc\" />").Root, "my-int-value");
-            Assert.Equal(-1, Assert.IsType<FieldProbe>(root[0]).myIntValue);
-            Assert.Contains(logs, l => l.Contains("'abc' is not an int"));
+            var logs = Logged(() => root = Clone("<UxmlControlProbes.FieldProbe my-int-value=\"abc\" />"
+                + "<UxmlControlProbes.ValueProbe my-list-of-ints=\"1,x,3\" my-color=\"rgb(0,128,255)\" />").Root, "my-");
+            Assert.Equal(0, Assert.IsType<FieldProbe>(root[0]).myIntValue);
+            var probe = Assert.IsType<ValueProbe>(root[1]);
+            Assert.Equal(new List<int> { 1, 0, 3 }, probe.myListOfInts);
+            Assert.Equal(Color.white, probe.myColor);
+            Assert.Empty(logs);
+        }
+
+        // Measured: colours take HTML forms, including short hex and names.
+        [Fact]
+        public void ColoursTakeHtmlForms()
+        {
+            var (root, _) = Clone("<UxmlControlProbes.ValueProbe my-color=\"#F00\" /><UxmlControlProbes.ValueProbe my-color=\"blue\" />");
+            Assert.Equal(Color.red, Assert.IsType<ValueProbe>(root[0]).myColor);
+            Assert.Equal(Color.blue, Assert.IsType<ValueProbe>(root[1]).myColor);
         }
 
         // [doc] UxmlAttributeConverter<T> example: "Michael Scott:58:USA" and a comma-separated list
@@ -291,9 +303,27 @@ namespace UnityEngine.Tests
                 var (root, _) = Clone("<UxmlControlProbes.AssetProbe my-texture=\"project://database/Assets/UI/ProbeTexture.png?fileID=2800000&amp;guid=4c1f0e5e8f5d4a2b9c7d6e5f4a3b2c1d&amp;type=3#ProbeTexture\" />");
                 Assert.Same(texture, Assert.IsType<AssetProbe>(root[0]).myTexture);
                 VisualElement missing = null;
-                var logs = Logged(() => missing = Clone("<UxmlControlProbes.AssetProbe my-texture=\"project://database/Assets/UI/Missing.png?fileID=2800000&amp;guid=9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f&amp;type=3\" />").Root, "my-texture");
+                // Measured: an unresolved reference logs the importer's warnings and gives null.
+                var logs = Logged(() => missing = Clone("<UxmlControlProbes.AssetProbe my-texture=\"project://database/Assets/UI/Missing.png?fileID=2800000&amp;guid=9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f&amp;type=3\" />").Root, "Semantic");
                 Assert.Null(Assert.IsType<AssetProbe>(missing[0]).myTexture);
-                Assert.Contains(logs, l => l.Contains("no Texture2D asset"));
+                Assert.Contains(logs, l => l.EndsWith("Invalid asset path hint \"Assets/UI/Missing.png\" for referenced asset GUID \"9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f\"", StringComparison.Ordinal));
+                // A reference to an object of another type throws on assignment (logged) and the
+                // member keeps its value.
+                var sheet = ScriptableObject.CreateInstance<StyleSheet>();
+                sheet.name = "probe-sheet";
+                var sheetFile = new LoadedFile { Guid = "5d2a1f6e9a6e5b3cad8e7f6a5b4c3d2e", Path = "Assets/UI/Probe.uss", MainObject = sheet };
+                sheetFile.Objects[7433441132597879392] = sheet;
+                AssetDatabaseRuntime.AddLoaded(sheetFile);
+                try
+                {
+                    var thrown = Logged(() => Clone("<UxmlControlProbes.AssetProbe my-texture=\"project://database/Assets/UI/Probe.uss?fileID=7433441132597879392&amp;guid=5d2a1f6e9a6e5b3cad8e7f6a5b4c3d2e&amp;type=3\" />"), "cannot be converted");
+                    Assert.Contains(thrown, l => l.Contains("Object of type 'UnityEngine.UIElements.StyleSheet' cannot be converted to type 'UnityEngine.Texture2D'."));
+                }
+                finally
+                {
+                    AssetDatabaseRuntime.Invalidate(sheetFile.Guid);
+                    Object.DestroyImmediate(sheet, true);
+                }
             }
             finally
             {
