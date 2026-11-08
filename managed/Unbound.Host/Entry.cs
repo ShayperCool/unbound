@@ -90,6 +90,15 @@ public static unsafe class Entry
                     ?? throw new ArgumentException("empty message-coverage request");
                 return JsonSerializer.Serialize(Compiler.FindUnsupportedMessages(scripts,
                     Unbound.Runtime.ScriptMessages.NotSent.Select(m => (m.Host.FullName!, m.Name))), Json);
+            case "prepare-field-coverage":
+                var setup = JsonSerializer.Deserialize<FieldCoverageSetup>(body, Json)
+                    ?? throw new ArgumentException("empty prepare-field-coverage request");
+                FieldCoverageHost.Prepare(setup);
+                return "{}";
+            case "field-coverage":
+                var fields = JsonSerializer.Deserialize<List<Unbound.Runtime.FieldCoverage.Input>>(body, Json)
+                    ?? throw new ArgumentException("empty field-coverage request");
+                return JsonSerializer.Serialize(Unbound.Runtime.FieldCoverage.Report(fields), Json);
             case "class-coverage":
                 var coverage = JsonSerializer.Deserialize<ClassCoverageRequest>(body, Json)
                     ?? throw new ArgumentException("empty class-coverage request");

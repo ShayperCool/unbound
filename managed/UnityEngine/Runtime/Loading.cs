@@ -116,16 +116,7 @@ namespace Unbound.Runtime
                 {
                     if (doc.Stripped || doc.ClassId != EngineTypes.GameObjectId) continue;
                     var body = doc.Body;
-                    var go = new GameObject(body.Str("m_Name"), bare: true)
-                    {
-                        m_IsActive = body.Bool("m_IsActive", true),
-                        m_Layer = body.Int("m_Layer"),
-                        m_Tag = body.Str("m_TagString", "Untagged"),
-                        m_IsPrefabAsset = kind == Kind.PrefabAsset || kind == Kind.Bundle,
-                        IsPersistentAsset = isAsset,
-                    };
-                    go.isStatic = body.Long("m_StaticEditorFlags") != 0;
-                    if (scene != null) go.m_Scene = scene.Handle;
+                    var go = ReadGameObject(body, kind, scene);
                     if (instances != null) PrefabLinks.Link(go, body, instances);
                     gameObjects[doc.FileId] = (go, doc);
                     file.Objects[doc.FileId] = go;
@@ -149,7 +140,7 @@ namespace Unbound.Runtime
                         file.Objects[doc.FileId] = shader != null ? shader : Shader.Find("Hidden/InternalErrorShader");
                         continue;
                     }
-                    var owner = body.Ref("m_GameObject");
+                    var owner = OwnerOf(body);
                     if (!owner.IsNull)
                     {
                         if (!gameObjects.TryGetValue(owner.FileId, out var entry)) continue;
@@ -189,17 +180,16 @@ namespace Unbound.Runtime
             if (deleted.Count != 0)
             {
                 foreach (var (_, doc) in gameObjects.Values)
-                    foreach (var item in doc.Body.Get("m_Component")?.Seq() ?? Array.Empty<YNode>())
-                        if (deleted.Remove(item.Ref("component").FileId, out var type)) LogDeleted(type);
+                    foreach (var reference in ComponentReferences(doc.Body))
+                        if (deleted.Remove(reference.FileId, out var type)) LogDeleted(type);
                 foreach (var type in deleted.Values) LogDeleted(type);
             }
 
             // Component order as each GameObject lists it, the Transform first.
             foreach (var (go, doc) in gameObjects.Values)
             {
-                foreach (var item in doc.Body.Get("m_Component")?.Seq() ?? Array.Empty<YNode>())
+                foreach (var reference in ComponentReferences(doc.Body))
                 {
-                    var reference = item.Ref("component");
                     if (file.Objects.TryGetValue(reference.FileId, out var o) && o is Component c && c.m_GameObject == go)
                         go.m_Components.Add(c);
                 }
@@ -270,6 +260,42 @@ namespace Unbound.Runtime
             return file;
         }
 
+        internal static GameObject ReadGameObject(YNode body, Kind kind, SceneData scene)
+        {
+            var go = new GameObject(body.Str("m_Name"), bare: true)
+            {
+                m_IsActive = body.Bool("m_IsActive", true),
+                m_Layer = body.Int("m_Layer"),
+                m_Tag = body.Str("m_TagString", "Untagged"),
+                m_IsPrefabAsset = kind == Kind.PrefabAsset || kind == Kind.Bundle,
+                IsPersistentAsset = kind != Kind.Scene,
+            };
+            go.isStatic = body.Long("m_StaticEditorFlags") != 0;
+            if (scene != null) go.m_Scene = scene.Handle;
+            return go;
+        }
+
+        internal static IEnumerable<YNode> RootRefs(YNode body) => body.Get("m_Roots")?.Seq() ?? Array.Empty<YNode>();
+        internal static int RootOrder(YNode body) => body.Int("m_RootOrder");
+        internal static void ReadBehaviour(Behaviour component, YNode body) => component.m_Enabled = body.Bool("m_Enabled", true);
+        internal static void ReadName(Object target, YNode body) => target.m_Name = body.Str("m_Name");
+        internal static IEnumerable<ObjectRef> ComponentReferences(YNode body)
+        {
+            foreach (var item in ComponentOrder(body)) yield return item.Ref("component");
+        }
+        internal static IEnumerable<ObjectRef> ChildReferences(YNode body)
+        {
+            foreach (var item in ChildrenOf(body)) yield return item.AsRef();
+        }
+        internal static IEnumerable<ObjectRef> RootReferences(YNode body)
+        {
+            foreach (var item in RootRefs(body)) yield return item.AsRef();
+        }
+        internal static ObjectRef OwnerOf(YNode body) => body.Ref("m_GameObject");
+        internal static ObjectRef ParentOf(YNode body) => body.Ref("m_Father");
+        internal static IEnumerable<YNode> ChildrenOf(YNode body) => body.Get("m_Children")?.Seq() ?? Array.Empty<YNode>();
+        internal static IEnumerable<YNode> ComponentOrder(YNode body) => body.Get("m_Component")?.Seq() ?? Array.Empty<YNode>();
+
         /// <summary>Read a Sprite after the local texture documents it can reference.</summary>
         static IEnumerable<(Object Asset, YDocument Doc)> AssetsInReadOrder(List<(Object Asset, YDocument Doc)> assets)
         {
@@ -323,24 +349,24 @@ namespace Unbound.Runtime
                     // As in Unity, the asset still exists: an object of the base class, so lists
                     // of assets keep their entries (its data cannot be read).
                     var placeholder = ScriptableObject.CreateInstanceWithoutCallbacks(typeof(ScriptableObject));
-                    if (placeholder != null) placeholder.m_Name = doc.Body.Str("m_Name");
+                    if (placeholder != null) ReadName(placeholder, doc.Body);
                     return placeholder;
                 }
                 if (!typeof(ScriptableObject).IsAssignableFrom(type)) return null;
                 var so = ScriptableObject.CreateInstanceWithoutCallbacks(type);
-                if (so != null) so.m_Name = doc.Body.Str("m_Name");
+                if (so != null) ReadName(so, doc.Body);
                 return so;
             }
             var engine = EngineTypes.ForClassId(doc.ClassId, doc.TypeName, warn: false);
             if (engine == null || typeof(Component).IsAssignableFrom(engine)) return null;
             var asset = (Object)Activator.CreateInstance(engine, nonPublic: true);
-            asset.m_Name = doc.Body.Str("m_Name");
+            ReadName(asset, doc.Body);
             return asset;
         }
 
-        static void ReadComponent(Component c, YNode body, LoadedFile file)
+        internal static void ReadComponent(Component c, YNode body, IReferenceResolver file)
         {
-            if (c is Behaviour b) b.m_Enabled = body.Bool("m_Enabled", true);
+            if (c is Behaviour b) ReadBehaviour(b, body);
             if (c is MonoBehaviour)
                 new YamlReader(file).ReadScriptObject(c, body);
             else
@@ -373,14 +399,13 @@ namespace Unbound.Runtime
             foreach (var (t, body) in transforms)
             {
                 bodies[t] = body;
-                var father = body.Ref("m_Father");
+                var father = ParentOf(body);
                 t.m_Parent = !father.IsNull && file.Objects.TryGetValue(father.FileId, out var p) ? p as Transform : null;
             }
             foreach (var (t, body) in transforms)
             {
-                foreach (var item in body.Get("m_Children")?.Seq() ?? Array.Empty<YNode>())
+                foreach (var r in ChildReferences(body))
                 {
-                    var r = item.AsRef();
                     if (file.Objects.TryGetValue(r.FileId, out var o) && o is Transform child && child.m_Parent == t && !t.m_Children.Contains(child))
                         t.m_Children.Add(child);
                 }
@@ -393,14 +418,14 @@ namespace Unbound.Runtime
             var roots = new List<Transform>();
             if (sceneRoots != null)
             {
-                foreach (var item in sceneRoots.Body.Get("m_Roots")?.Seq() ?? Array.Empty<YNode>())
-                    if (file.Objects.TryGetValue(item.AsRef().FileId, out var o) && o is Transform root && root.m_Parent == null)
+                foreach (var reference in RootReferences(sceneRoots.Body))
+                    if (file.Objects.TryGetValue(reference.FileId, out var o) && o is Transform root && root.m_Parent == null)
                         roots.Add(root);
             }
             var unlisted = new List<(Transform T, int Order)>();
             foreach (var (t, body) in transforms)
                 if (t.m_Parent == null && !roots.Contains(t))
-                    unlisted.Add((t, body.Int("m_RootOrder")));
+                    unlisted.Add((t, RootOrder(body)));
             unlisted.Sort((a, b) => a.Order.CompareTo(b.Order));
             foreach (var (t, _) in unlisted) roots.Add(t);
             // GameObjects without a Transform document got one; they are roots.
@@ -491,6 +516,9 @@ namespace Unbound.Runtime
         /// <summary>OcclusionCullingSettings, RenderSettings, LightmapSettings, NavMeshSettings.</summary>
         internal static bool IsSettingsClass(int classId) => classId == 29 || classId == 104 || classId == 157 || classId == 196;
 
+        internal static (ObjectRef Data, ObjectRef Settings) LightingReferences(YNode body) =>
+            (body.Ref("m_LightingDataAsset"), body.Ref("m_LightingSettings"));
+
         internal static void Apply(YDocument doc, IReferenceResolver resolver, SceneData scene = null)
         {
             if (!IsSettingsClass(doc.ClassId)) return;
@@ -501,10 +529,11 @@ namespace Unbound.Runtime
                 // The first scene loaded (the others unloaded) replaces the baked lighting; an
                 // additive one adds to it.
                 bool first = scene == null || SceneRegistry.Loaded.TrueForAll(s => s == scene || SceneRegistry.IsDontDestroyOnLoad(s) || !s.IsLoaded);
-                RenderSettings.ReadLightingData(doc.Body.Ref("m_LightingDataAsset"), resolver as LoadedFile, first, scene?.Handle.Value ?? 0);
+                var references = LightingReferences(doc.Body);
+                RenderSettings.ReadLightingData(references.Data, resolver as LoadedFile, first, scene?.Handle.Value ?? 0);
                 if (scene != null)
                 {
-                    var settings = doc.Body.Ref("m_LightingSettings");
+                    var settings = references.Settings;
                     scene.LightingSettings = settings.IsNull || resolver == null ? null : resolver.Resolve(settings, typeof(LightingSettings)) as LightingSettings;
                 }
             }

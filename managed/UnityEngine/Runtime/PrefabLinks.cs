@@ -80,15 +80,21 @@ namespace Unbound.Runtime
             foreach (var doc in documents)
             {
                 if (doc.Stripped || doc.ClassId != EngineTypes.PrefabInstanceId) continue;
-                var data = new PrefabInstanceData { SourceGuid = doc.Body.Ref("m_SourcePrefab").Guid, InAsset = inAsset };
-                foreach (var m in doc.Body.Get("m_Modification")?.Get("m_Modifications")?.Seq() ?? Array.Empty<YNode>())
-                {
-                    var target = m.Ref("target");
-                    if (!target.IsNull) data.Modifications.Add((target.Guid, target.FileId, m.Str("propertyPath")));
-                }
+                var data = ReadInstance(doc.Body, inAsset);
                 (instances ??= new Dictionary<long, PrefabInstanceData>())[doc.FileId] = data;
             }
             return instances;
+        }
+
+        internal static PrefabInstanceData ReadInstance(YNode body, bool inAsset)
+        {
+            var data = new PrefabInstanceData { SourceGuid = body.Ref("m_SourcePrefab").Guid, InAsset = inAsset };
+            foreach (var m in body.Get("m_Modification")?.Get("m_Modifications")?.Seq() ?? Array.Empty<YNode>())
+            {
+                var target = m.Ref("target");
+                if (!target.IsNull) data.Modifications.Add((target.Guid, target.FileId, m.Str("propertyPath")));
+            }
+            return data;
         }
 
         /// <summary>Links the object a document made to its source and instance.</summary>

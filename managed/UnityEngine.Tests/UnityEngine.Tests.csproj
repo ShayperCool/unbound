@@ -27,4 +27,7 @@
   <ItemGroup>
     <None Include="$(UnboundNativeDir)/*unbound_physx.*" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Unbound.ReaderFields/Unbound.ReaderFields.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
 </Project>

@@ -170,17 +170,8 @@ namespace UnityEngine
                 {
                     if (doc.ClassId != 142) continue;
                     var body = doc.Body;
-                    m_Name = body.Str("m_Name");
-                    if (string.IsNullOrEmpty(m_Name)) m_Name = body.Str("m_AssetBundleName");
-                    m_IsStreamedScene = body.Bool("m_IsStreamedSceneAssetBundle");
                     m_AssetFile = file;
-                    foreach (var p in body.Get("m_PreloadTable")?.Seq() ?? Array.Empty<YNode>())
-                        m_PreloadTable.Add(p.Long("fileID"));
-                    foreach (var entry in body.Get("m_Container")?.Seq() ?? Array.Empty<YNode>())
-                    {
-                        var second = entry.Get("second");
-                        m_Container.Add((entry.Str("first"), second?.Int("preloadIndex") ?? 0, second?.Int("preloadSize") ?? 0, second?.Get("asset")?.Long("fileID") ?? 0));
-                    }
+                    ReadContentsDocument(body);
                 }
             }
             if (m_IsStreamedScene)
@@ -192,6 +183,20 @@ namespace UnityEngine
                     string path = m_Container.Select(c => c.Name).FirstOrDefault(n => string.Equals(Path.GetFileNameWithoutExtension(n), sceneName, StringComparison.OrdinalIgnoreCase)) ?? sceneName;
                     m_Scenes.Add((path, $"bundle:{m_NativeId}/{file}"));
                 }
+            }
+        }
+
+        internal void ReadContentsDocument(YNode body)
+        {
+            m_Name = body.Str("m_Name");
+            if (string.IsNullOrEmpty(m_Name)) m_Name = body.Str("m_AssetBundleName");
+            m_IsStreamedScene = body.Bool("m_IsStreamedSceneAssetBundle");
+            foreach (var p in body.Get("m_PreloadTable")?.Seq() ?? Array.Empty<YNode>())
+                m_PreloadTable.Add(p.Long("fileID"));
+            foreach (var entry in body.Get("m_Container")?.Seq() ?? Array.Empty<YNode>())
+            {
+                var second = entry.Get("second");
+                m_Container.Add((entry.Str("first"), second?.Int("preloadIndex") ?? 0, second?.Int("preloadSize") ?? 0, second?.Get("asset")?.Long("fileID") ?? 0));
             }
         }
 
@@ -544,10 +549,12 @@ namespace Unbound.Runtime
             {
                 if (doc.ClassId != 115) continue;
                 var body = doc.Body;
-                var type = ScriptType(body.Str("m_AssemblyName"), body.Str("m_Namespace"), body.Str("m_ClassName"));
+                var type = ScriptType(body);
                 if (type != null) s_Scripts[("bundle:" + file, doc.FileId)] = type;
             }
         }
+
+        internal static Type ScriptType(YNode body) => ScriptType(body.Str("m_AssemblyName"), body.Str("m_Namespace"), body.Str("m_ClassName"));
 
         static Type ScriptType(string assembly, string ns, string name)
         {

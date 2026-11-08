@@ -27,6 +27,11 @@ namespace Unbound.Runtime
         internal string[] Keys;
         internal YNode[] Values;
 
+        // Enabled only on the doctor's private trees. Loading uses the same getters with no
+        // tracking allocations, and the legacy trace keeps its existing representation.
+        internal bool CoverageOn;
+        internal bool CoverageRead;
+
         internal bool IsNull => Kind == YKind.Null;
 
         internal YNode this[string key] => Get(key);
@@ -40,6 +45,7 @@ namespace Unbound.Runtime
             for (int i = 0; i < Keys.Length; i++)
                 if (Keys[i] == key)
                 {
+                    if (CoverageOn) Values[i].CoverageRead = true;
                     if (Trace.UnreadOn && i < 64) ReadKeys |= 1UL << i;
                     return Values[i];
                 }
@@ -54,10 +60,11 @@ namespace Unbound.Runtime
 
         internal int Count => Kind == YKind.Seq ? Items.Length : Kind == YKind.Map ? Keys.Length : 0;
 
-        internal string AsString() => Kind == YKind.Scalar ? Scalar : "";
+        internal string AsString() { if (CoverageOn) CoverageRead = true; return Kind == YKind.Scalar ? Scalar : ""; }
 
         internal long AsLong(long fallback = 0)
         {
+            if (CoverageOn) CoverageRead = true;
             if (Kind != YKind.Scalar) return fallback;
             return long.TryParse(Scalar, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v :
                 ulong.TryParse(Scalar, NumberStyles.Integer, CultureInfo.InvariantCulture, out var u) ? unchecked((long)u) :
@@ -71,6 +78,7 @@ namespace Unbound.Runtime
 
         internal double AsDouble(double fallback = 0)
         {
+            if (CoverageOn) CoverageRead = true;
             if (Kind != YKind.Scalar) return fallback;
             switch (Scalar)
             {

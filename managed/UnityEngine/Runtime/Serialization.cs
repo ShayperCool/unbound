@@ -264,20 +264,59 @@ namespace Unbound.Runtime
             }
         }
 
+        static YNode MemberNode(YNode map, SerializedMember member)
+        {
+            var node = map.Get(member.Name);
+            if (node == null)
+                foreach (var former in member.FormerNames)
+                {
+                    node = map.Get(former);
+                    if (node != null) break;
+                }
+            return node;
+        }
+
+        /// <summary>Use the reader's member table and built-in value readers without constructing
+        /// project objects or invoking serialization callbacks. Used by doctor.</summary>
+        internal void ScanScriptObject(Type type, YNode body)
+        {
+            m_ReferenceTable = body.Get("references");
+            var visited = new HashSet<long>();
+            void Fields(Type owner, YNode map, int depth)
+            {
+                if (map == null || map.Kind != YKind.Map) return;
+                foreach (var member in SerializationRules.Members(owner))
+                {
+                    var node = MemberNode(map, member);
+                    if (node != null) Value(node, member.Field.FieldType, member.Shape, member.ElementType, member.ElementShape, depth);
+                }
+            }
+            void Value(YNode node, Type valueType, Shape shape, Type element, Shape elementShape, int depth)
+            {
+                if (shape == Shape.Composite) { if (depth < 10) Fields(valueType, node, depth + 1); }
+                else if (shape == Shape.Array || shape == Shape.List)
+                {
+                    foreach (var item in node.Seq()) Value(item, element, elementShape, null, Shape.Unsupported, depth + 1);
+                }
+                else if (shape == Shape.ManagedReference)
+                {
+                    long rid = ManagedReferenceId(node);
+                    if (rid < 0 || !visited.Add(rid)) return;
+                    var entry = ManagedReferenceEntry(rid);
+                    var target = ManagedReferenceType(entry);
+                    if (target != null) Fields(target, entry.Get("data"), 1);
+                }
+                else ReadValue(node, valueType, shape, element, elementShape, null, depth);
+            }
+            Fields(type, body, 0);
+        }
+
         internal void ReadFields(object target, Type type, YNode map, int depth)
         {
             if (map == null || map.Kind != YKind.Map) return;
             foreach (var member in SerializationRules.Members(type))
             {
-                var node = map.Get(member.Name);
-                if (node == null)
-                {
-                    foreach (var former in member.FormerNames)
-                    {
-                        node = map.Get(former);
-                        if (node != null) break;
-                    }
-                }
+                var node = MemberNode(map, member);
                 if (node == null)
                 {
                     FillMissing(target, member, depth);
@@ -474,30 +513,35 @@ namespace Unbound.Runtime
         /// <summary>A managed reference against the object's `references` table: `{rid: N}` and a
         /// `RefIds` list (version 2, Unity 2021.2+), or `{id: N}` and entries keyed by the id as eight
         /// uppercase hex digits (version 1, Unity 2019.3 to 2021.1).</summary>
-        object ReadManagedReference(YNode node)
+        static long ManagedReferenceId(YNode node) => node.Kind == YKind.Map ? node.Long("rid", node.Long("id", -2)) : node.AsLong(-2);
+
+        static Type ManagedReferenceType(YNode entry)
         {
-            long rid = node.Kind == YKind.Map ? node.Long("rid", node.Long("id", -2)) : node.AsLong(-2);
-            if (rid < 0 || m_ReferenceTable == null) return null;
-            m_ManagedReferences ??= new Dictionary<long, object>();
-            if (m_ManagedReferences.TryGetValue(rid, out var existing)) return existing;
-            YNode found = null;
+            var type = entry?.Get("type");
+            return type == null ? null : TypeResolver.Find(type.Str("class"), type.Str("ns"), type.Str("asm"));
+        }
+
+        YNode ManagedReferenceEntry(long rid)
+        {
+            if (m_ReferenceTable == null) return null;
             var list = m_ReferenceTable.Get("RefIds");
             if (list != null)
             {
                 foreach (var entry in list.Seq())
-                {
-                    if (entry.Long("rid", long.MinValue) != rid) continue;
-                    found = entry;
-                    break;
-                }
+                    if (entry.Long("rid", long.MinValue) == rid) return entry;
+                return null;
             }
-            else
-            {
-                found = m_ReferenceTable.Get(rid.ToString("X8", CultureInfo.InvariantCulture));
-            }
-            if (found == null) return null;
-            var typeNode = found.Get("type");
-            var type = TypeResolver.Find(typeNode?.Str("class"), typeNode?.Str("ns"), typeNode?.Str("asm"));
+            return m_ReferenceTable.Get(rid.ToString("X8", CultureInfo.InvariantCulture));
+        }
+
+        object ReadManagedReference(YNode node)
+        {
+            long rid = ManagedReferenceId(node);
+            if (rid < 0 || m_ReferenceTable == null) return null;
+            m_ManagedReferences ??= new Dictionary<long, object>();
+            if (m_ManagedReferences.TryGetValue(rid, out var existing)) return existing;
+            var found = ManagedReferenceEntry(rid);
+            var type = ManagedReferenceType(found);
             if (type == null) return null;
             var instance = SerializationRules.Create(type);
             m_ManagedReferences[rid] = instance;

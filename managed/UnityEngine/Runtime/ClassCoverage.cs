@@ -180,6 +180,8 @@ namespace Unbound.Runtime
             /// <summary>Unity's name of the class in the release's table; null when the release
             /// has no such class.</summary>
             public string UnityName { get; set; }
+            /// <summary>A loader or registered object type exists, including default-only types.</summary>
+            public bool InspectFields { get; set; }
         }
 
         internal sealed class Coverage
@@ -247,6 +249,7 @@ namespace Unbound.Runtime
                 {
                     ClassId = f.ClassId, TypeName = f.TypeName, Reading = reading.ToString(), Detail = detail,
                     UnityName = table != null && table.TryGetValue(f.ClassId, out var c) ? c.Name : null,
+                    InspectFields = reading != ClassReading.Ignored && (reading == ClassReading.Loader || EngineTypes.ForClassId(f.ClassId, null, warn: false) != null),
                 });
             }
             if (table != null)
