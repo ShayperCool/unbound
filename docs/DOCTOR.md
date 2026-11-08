@@ -40,7 +40,9 @@ assumed consumed. Doctor matches these declarations to private input trees witho
 runtime readers. Script fields use `SerializationRules.Members`, the table the script reader uses,
 including inherited fields, former names and managed references.
 
-Rust map access capture follows cloned nodes through the actual prefab and binary conversions.
+Rust map access capture follows cloned nodes through the binary conversions. Prefab declarations
+use the same override input decoder as flattening, with an empty destination; referenced prefabs
+and model imports are unnecessary to discover which fields the decoder accepts.
 Ordinary maps have no capture collector. The map's serialized representation and decoded loading
 output are unchanged. The metadata exception list is intentionally small; an exception requires a
 nonempty reason and review. A field being declared read does not establish support for every value

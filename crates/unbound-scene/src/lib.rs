@@ -5,7 +5,7 @@ mod flatten;
 pub mod path;
 
 pub use encode::{encode_documents, encode_value};
-pub use flatten::{PrefabSource, flatten};
+pub use flatten::{PrefabSource, flatten, read_prefab_inputs};
 
 use anyhow::{Context, Result};
 use std::{

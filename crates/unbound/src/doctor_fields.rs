@@ -206,8 +206,6 @@ pub(super) fn report(
     let mut report = Report::default();
     let mut fields = BTreeMap::new();
     let db = project.asset_db();
-    let loader =
-        unbound_scene::DocumentLoader::new(|guid| db.by_guid(guid).map(|a| a.file.clone()));
     let mut assets: Vec<_> = db.iter().filter(|a| !a.is_folder).collect();
     assets.sort_by(|a, b| a.path.cmp(&b.path));
     for asset in assets {
@@ -241,13 +239,7 @@ pub(super) fn report(
         if documents.is_empty() {
             continue;
         }
-        if documents.iter().any(|d| d.class_id == 1001) {
-            if let Err(error) = unbound_scene::flatten(&documents, &loader, &mut Vec::new()) {
-                report.incomplete.push(
-                    json!({"asset": asset.path, "error": format!("prefab reader: {error:#}")}),
-                );
-            }
-        }
+        unbound_scene::read_prefab_inputs(&documents);
         let request: Vec<_> = documents.iter().zip(&native_reads).map(|(d, (_, file_guid))| json!({"classId": d.class_id, "fileId": d.file_id, "fileGuid": file_guid, "typeName": d.type_name, "body": node(&d.body)})).collect();
         let results: Vec<ReaderResult> = runtime
             .call("field-coverage", &request)

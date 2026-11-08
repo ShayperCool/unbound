@@ -42,6 +42,30 @@ fn guid_of(value: Option<&Value>) -> Guid {
         .unwrap_or_default()
 }
 
+fn instance_source(body: &Value) -> Guid {
+    guid_of(body.get("m_SourcePrefab"))
+}
+
+fn instance_modification(body: &Value) -> &Value {
+    body.get("m_Modification").unwrap_or(&Value::Null)
+}
+
+/// Collect the prefab input declarations using the same decoder as flattening, without
+/// resolving referenced prefabs or importing models. The destination stays empty.
+pub fn read_prefab_inputs(docs: &[Document]) {
+    for instance in docs
+        .iter()
+        .filter(|d| d.class_id == PREFAB_INSTANCE && !d.stripped)
+    {
+        let _ = instance_source(&instance.body);
+        apply_instance(
+            &mut Vec::new(),
+            instance_modification(&instance.body),
+            &|id| id,
+        );
+    }
+}
+
 fn object_ref(file_id: i64) -> Value {
     Value::Map(Map::from(vec![(
         "fileID".into(),
@@ -96,7 +120,7 @@ pub fn flatten(
         .filter(|d| d.class_id == PREFAB_INSTANCE && !d.stripped)
     {
         let p = instance.file_id;
-        let source_guid = guid_of(instance.body.get("m_SourcePrefab"));
+        let source_guid = instance_source(&instance.body);
         if source_guid.is_zero() {
             continue;
         }
@@ -125,12 +149,7 @@ pub fn flatten(
                 d
             })
             .collect();
-        let modification = instance
-            .body
-            .get("m_Modification")
-            .cloned()
-            .unwrap_or_default();
-        apply_instance(&mut objects, &modification, &map_id);
+        apply_instance(&mut objects, instance_modification(&instance.body), &map_id);
         out.extend(objects);
     }
 
@@ -227,22 +246,23 @@ fn apply_instance(objects: &mut Vec<Document>, modification: &Value, map_id: &dy
     });
     for m in sizes.into_iter().chain(others) {
         let target = map_id(file_id(m.get("target")));
-        let Some(&i) = index.get(&target) else {
-            continue;
-        };
         let Some(property) = m.get("propertyPath").and_then(Value::as_str) else {
             continue;
         };
-        let reference = m.get("objectReference").cloned().unwrap_or(Value::Null);
-        let reference_set = file_id(Some(&reference)) != 0;
+        let reference = m.get("objectReference").unwrap_or(&Value::Null);
+        let reference_set = reference.as_ref().is_some_and(|r| r.file_id != 0);
+        let scalar = m.get("value");
+        let Some(&i) = index.get(&target) else {
+            continue;
+        };
         let body = &mut objects[i].body;
         let existing_is_ref = path::get(body, property)
             .and_then(Value::as_map)
             .is_some_and(|m| m.get("fileID").is_some());
         let value = if reference_set || existing_is_ref {
-            reference
+            reference.clone()
         } else {
-            match m.get("value") {
+            match scalar {
                 Some(Value::Scalar(s)) => Value::Scalar(s.clone()),
                 _ => Value::Scalar(String::new()),
             }
@@ -424,5 +444,84 @@ fn link_children(docs: &mut [Document]) {
         if let Some(Value::Seq(items)) = d.body.as_map_mut().and_then(|m| m.get_mut("m_Children")) {
             items.retain(|item| fathers.get(&file_id(Some(item))) == Some(&me));
         }
+    }
+}
+
+#[cfg(test)]
+mod field_tests {
+    use super::*;
+
+    #[test]
+    fn prefab_declarations_read_reference_parts_without_a_source_or_destination() {
+        let mut body = unbound_yaml::parse_value(
+            "m_SourcePrefab: {fileID: 100100000, guid: 11111111111111111111111111111111, type: 3}\nm_Modification:\n  m_Modifications:\n  - target: {fileID: 4}\n    propertyPath: m_LocalPosition.x\n    value: 3\n    objectReference: {fileID: 0}\n  - target: {fileID: 4}\n    propertyPath: m_Reference\n    value: unused\n    objectReference: {fileID: 5, guid: 22222222222222222222222222222222, type: 3, extra: 0}\n  m_AddedComponents:\n  - targetCorrespondingSourceObject: {fileID: 1}\n    addedObject: {fileID: 9}\n    insertIndex: 2\n",
+        ).unwrap();
+        let reads = unbound_yaml::reads::FieldReads::default();
+        reads.track(&mut body);
+        read_prefab_inputs(&[Document {
+            class_id: PREFAB_INSTANCE,
+            file_id: 10,
+            stripped: false,
+            type_name: "PrefabInstance".into(),
+            body: body.clone(),
+        }]);
+        let paths = reads.paths();
+        for field in [
+            "value",
+            "objectReference.fileID",
+            "objectReference.guid",
+            "objectReference.type",
+        ] {
+            assert!(
+                paths.contains(&format!("m_Modification.m_Modifications[].{field}")),
+                "{paths:?}"
+            );
+        }
+        assert!(paths.contains("m_Modification.m_AddedComponents[].insertIndex"));
+        assert!(!paths.contains("m_Modification.m_Modifications[].objectReference.extra"));
+
+        let mut objects = vec![Document {
+            class_id: TRANSFORM,
+            file_id: 4,
+            stripped: false,
+            type_name: "Transform".into(),
+            body: unbound_yaml::parse_value("m_LocalPosition: {x: 0}\n").unwrap(),
+        }];
+        apply_instance(&mut objects, instance_modification(&body), &|id| id);
+        assert_eq!(
+            objects[0]
+                .body
+                .get("m_LocalPosition")
+                .unwrap()
+                .get("x")
+                .unwrap()
+                .as_i64(),
+            Some(3)
+        );
+        let reference = objects[0].body.get("m_Reference").unwrap();
+        let decoded = reference.as_ref().unwrap();
+        assert_eq!(decoded.file_id, 5);
+        assert_eq!(
+            decoded.guid,
+            Guid::parse("22222222222222222222222222222222").unwrap()
+        );
+        assert_eq!(decoded.kind, 3);
+        assert_eq!(reference.get("extra").unwrap().as_i64(), Some(0));
+    }
+
+    #[test]
+    fn missing_targets_and_malformed_reference_ids_keep_their_existing_result() {
+        let modification = unbound_yaml::parse_value("m_Modifications:\n- target: {fileID: 99}\n  propertyPath: missing\n  value: 7\n  objectReference: {fileID: 5}\n- target: {fileID: 4}\n  propertyPath: number\n  value: 6\n  objectReference: {fileID: invalid, guid: invalid, type: invalid}\n").unwrap();
+        let mut objects = vec![Document {
+            class_id: TRANSFORM,
+            file_id: 4,
+            stripped: false,
+            type_name: "Transform".into(),
+            body: unbound_yaml::parse_value("number: 1\n").unwrap(),
+        }];
+        apply_instance(&mut objects, &modification, &|id| id);
+        assert_eq!(objects.len(), 1);
+        assert_eq!(objects[0].body.get("number").unwrap().as_i64(), Some(6));
+        assert!(objects[0].body.get("missing").is_none());
     }
 }
