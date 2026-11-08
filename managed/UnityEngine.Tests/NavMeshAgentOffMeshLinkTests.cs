@@ -145,6 +145,29 @@ namespace UnityEngine.Tests
             Assert.True(NavMesh.IsLinkOccupied(m_Link));
         }
 
+        /// <summary>Completing a link at the path's end: the agent does not walk on, and its transform
+        /// reaches the link's end at the next early AI update (documented, NavMeshAgent.nextPosition:
+        /// the transform matches the simulated position when Update is called).</summary>
+        [Fact]
+        public void CompletingALinkAtThePathsEndMovesTheTransformAtTheEarlyUpdate()
+        {
+            var go = new GameObject("agent");
+            m_Objects.Add(go);
+            go.transform.position = new Vector3(-7f, 0f, 0f);
+            var agent = go.AddComponent<NavMeshAgent>();
+            agent.autoTraverseOffMeshLink = false;
+            Assert.True(agent.SetDestination(LinkEnd));
+            StepOntoLink(agent);
+            var waiting = agent.transform.position;
+            agent.CompleteOffMeshLink();
+            Step();
+            Step();
+            Assert.Equal(LinkEnd.x, agent.nextPosition.x, 3);
+            AgentSystem.SyncTransforms();
+            Assert.NotEqual(waiting, agent.transform.position);
+            Assert.Equal(agent.nextPosition, agent.transform.position);
+        }
+
         [Fact]
         public void CompleteOffMeshLinkPutsTheAgentAtTheEndAndItWalksOn()
         {

@@ -274,7 +274,8 @@ namespace Unbound.Runtime
             {
                 s_Registered = true;
                 // Before the agents' transform sync at the same node (whichever registers first),
-                // so an agent placed again by a cut stands there from this frame's Update.
+                // which places the agents on the cut NavMesh: an agent placed again by a cut stands
+                // there from this frame's Update (Unbound's order; unmeasured).
                 PlayerLoopDriver.RegisterFirst(typeof(UnityEngine.PlayerLoop.PreUpdate.AIUpdate), UpdateCarving);
             }
             if (!s_Obstacles.Contains(obstacle)) s_Obstacles.Add(obstacle);

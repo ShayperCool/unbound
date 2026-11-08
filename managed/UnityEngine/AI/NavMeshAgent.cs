@@ -108,7 +108,9 @@ namespace UnityEngine.AI
             {
                 bool turnedOn = value && !m_UpdatePosition;
                 m_UpdatePosition = value;
-                if (turnedOn && m_Crowd != null) AgentSystem.WriteTransform(this);
+                if (!turnedOn) return;
+                AgentSystem.Sync(this);
+                if (m_Crowd != null) AgentSystem.WriteTransform(this);
             }
         }
         public bool updateRotation { get => m_UpdateRotation; set => m_UpdateRotation = value; }
@@ -680,6 +682,8 @@ namespace Unbound.Runtime
         /// then, and the update after the scripts leaves a standing agent's transform alone).</summary>
         internal static void SyncTransforms()
         {
+            // A NavMesh changed before (this frame's carving) places its agents again first.
+            if (s_CrowdVersion != NavWorld.Version) Rebuild();
             foreach (var agent in s_Agents)
             {
                 if (agent.m_Crowd == null || !agent.updatePosition) continue;

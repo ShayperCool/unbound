@@ -403,5 +403,28 @@ namespace UnityEngine.Tests
             }
             Assert.True((agent.nextPosition - new Vector3(8f, agent.nextPosition.y, 0f)).magnitude < 0.05f, $"stopped at {agent.nextPosition}");
         }
+
+        /// <summary>A hole cut under a standing agent near its edge (within the agent's radius of
+        /// it) places the agent at the edge, and the early AI update after the carving update writes
+        /// its transform there (Unbound's order within PreUpdate; unmeasured).</summary>
+        [Fact]
+        public void AStandingAgentInANewHoleStandsAtItsEdgeFromTheEarlyUpdate()
+        {
+            var go = new GameObject("agent");
+            m_Objects.Add(go);
+            go.transform.position = new Vector3(-6f, 0f, 2f);
+            var agent = go.AddComponent<NavMeshAgent>();
+            var before = agent.transform.position;
+            // The hole (the box grown by the 0.5 m radius) reaches x = -5.7: 0.3 m past the agent.
+            Box(new Vector3(-7.2f, 0.5f, 2f), new Vector3(2f, 1f, 2f), onlyStationary: false);
+            for (int i = 0; i < 3 && OnNavMesh(-6f, 2f); i++) ObstacleSystem.UpdateCarving();
+            Assert.False(OnNavMesh(-6f, 2f));
+            AgentSystem.SyncTransforms();
+            var p = agent.transform.position;
+            Assert.True(agent.isOnNavMesh);
+            Assert.True(p.x >= -5.7f - 1e-3f, $"inside the hole at {p}");
+            Assert.NotEqual(before, p);
+            Assert.Equal(agent.nextPosition, p);
+        }
     }
 }
