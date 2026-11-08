@@ -21,9 +21,9 @@ EPSILON = 1e-5
 SETS = dict(Axis=(32,'','/worldVertices',32), Signed=(8,'signed','/worldVertices',8),
             Pivots=(38,'pivots','/vertices',74), Skinned=(10,'skinned','/localBounds',10))
 SET = 'Axis'
-# The Pivots and Skinned sets scale the bound by the largest magnitude in each key's reference
-# value: their world bases reach 100 (a centimetre root's scale), where 1e-5 is below one
-# float32 step. Axis and Signed keep the absolute bound.
+# The Pivots and Skinned sets scale the bound by the largest magnitude of each innermost
+# reference vector (at least 1): their world bases reach 100 (a centimetre root's scale), where
+# 1e-5 is below one float32 step. Axis and Signed keep the absolute bound.
 SCALED = ('Pivots','Skinned')
 EXACT = ('/indices','/nodes','/rootBone','/bones','/updateWhenOffscreen')
 
@@ -50,13 +50,14 @@ def magnitude(v):
     if isinstance(v,list): return max((magnitude(x) for x in v),default=0)
     return abs(v) if isinstance(v,(float,int)) and not isinstance(v,bool) and math.isfinite(v) else 0
 
-def differences(a,b,path=(),numeric=True,scale=1):
+def differences(a,b,path=(),numeric=True,scaled=False,scale=1):
     if isinstance(a,list) and isinstance(b,list):
+        if scaled and a and not any(isinstance(x,list) for x in a): scale = max(1,magnitude(a))
         result = []
         for i in range(max(len(a),len(b))):
             if i >= len(a): result.append(dict(index=path+(i,),extra=b[i]))
             elif i >= len(b): result.append(dict(index=path+(i,),missing=a[i]))
-            else: result.extend(differences(a[i],b[i],path+(i,),numeric,scale))
+            else: result.extend(differences(a[i],b[i],path+(i,),numeric,scaled,scale))
         return result
     if numeric and isinstance(a,(float,int)) and isinstance(b,(float,int)):
         if math.isfinite(a) and math.isfinite(b) and abs(a-b) <= EPSILON*scale: return []
@@ -70,8 +71,7 @@ def compare(reference,candidate):
         if k not in a: report[k] = dict(extra=b[k])
         elif k not in b: report[k] = dict(missing=a[k])
         else:
-            scale = max(1,magnitude(a[k])) if SET in SCALED else 1
-            diff = differences(a[k],b[k],numeric=not k.endswith(EXACT),scale=scale)
+            diff = differences(a[k],b[k],numeric=not k.endswith(EXACT),scaled=SET in SCALED)
             if diff: report[k] = diff
     issue = complete(candidate)
     result = dict(values=report,invalid=issue,tolerance=EPSILON,scaled=SET in SCALED)
