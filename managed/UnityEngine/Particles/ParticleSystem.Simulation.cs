@@ -39,6 +39,9 @@ namespace UnityEngine
         // Birth newborns finish their own remaining Simulate call time when emitted,
         // after the child's existing particles have advanced.
         bool m_SimulatingBirths;
+        /// <summary>Inside a prewarm (see Prewarm): sub-emitter children are bounded by the call
+        /// time left and not aged by it.</summary>
+        bool m_Prewarming;
         bool m_BirthDelayClock;
         float m_BirthCallRemaining;
         /// <summary>Playing only because the update of the system it is a sub-emitter of started
@@ -1568,24 +1571,10 @@ namespace UnityEngine
             }
             var before = p.m_Position;
             float speedModifier = Move(ref p, dt, ref c, age, out var moving);
-            if (!c.TemporaryLane && (m_Collision.enabled && !Collide(ref p, before, age, dt, speedModifier)
-                || m_Trigger.enabled && !Trigger(ref p)))
-            {
-                // A newborn killed while it is emitted is never added (measured: none is
-                // reported, even in a call's last step). An existing particle's life ends
-                // here: it keeps its moved state with zero remaining lifetime, and the next
-                // update removes it (measured for triggers: killed in a call's last internal
-                // step it is reported at lifetime 0, killed in an earlier one it is gone; for
-                // collisions, tests/projects/particletrails pp/collision: reported at lifetime 0
-                // with its bounced velocity, then left at rest carrying its fading trail). The
-                // rest of this update still skips it, as before.
-                if (!existing) return false;
-                p.m_AgePercent = 100f;
-                p.m_Lifetime = 0f;
-                p.m_Flags |= Particle.FlagKilled;
-                return true;
-            }
-
+            // The step's rotation comes before collisions and triggers, so a Collision or Trigger
+            // sub-emitter inherits the parent's rotation at the end of the step (6000.0.71f1,
+            // particlerender inherit/collision/rotation, inherit/trigger/rotation); it depends only
+            // on the age and the velocity the particle moved with.
             uint seed = p.m_RandomSeed;
             var RO = m_Rotation;
             var RS = m_RotationBySpeed;
@@ -1608,6 +1597,23 @@ namespace UnityEngine
                 p.m_AngularVelocity = w;
             }
             p.m_Rotation += p.m_AngularVelocity * dt;
+            if (!c.TemporaryLane && (m_Collision.enabled && !Collide(ref p, before, age, dt, speedModifier)
+                || m_Trigger.enabled && !Trigger(ref p)))
+            {
+                // A newborn killed while it is emitted is never added (measured: none is
+                // reported, even in a call's last step). An existing particle's life ends
+                // here: it keeps its moved state with zero remaining lifetime, and the next
+                // update removes it (measured for triggers: killed in a call's last internal
+                // step it is reported at lifetime 0, killed in an earlier one it is gone; for
+                // collisions, tests/projects/particletrails pp/collision: reported at lifetime 0
+                // with its bounced velocity, then left at rest carrying its fading trail). The
+                // rest of this update still skips it, as before.
+                if (!existing) return false;
+                p.m_AgePercent = 100f;
+                p.m_Lifetime = 0f;
+                p.m_Flags |= Particle.FlagKilled;
+                return true;
+            }
 
             // A particle whose life ends exactly at the end of this step (kept at zero life until
             // the next) emits no Birth children in it, as one that dies inside it (6000.0.71f1,
@@ -1803,6 +1809,11 @@ namespace UnityEngine
             if (sub.emitProbability <= 0f || sub.emitProbability < 1f && ModuleValue(parent.m_RandomSeed, 1520730008u) > sub.emitProbability) return;
             int count = child.EventBurstCount(parent.m_RandomSeed, EventSeed);
             if (count <= 0) return;
+            if (m_Prewarming)
+            {
+                if (PrewarmKeeps(child)) child.EmitFromParent(this, ref parent, sub.properties, count, 0f, eventEmission: true);
+                return;
+            }
             if (ParticleSystemManager.Updating)
                 ParticleSystemManager.HoldEventEmission(new ParticleSystemManager.EventEmission
                 {
@@ -1811,18 +1822,27 @@ namespace UnityEngine
             else child.EmitFromParent(this, ref parent, sub.properties, count, 0f, eventEmission: true, keepSpent: fromScript);
         }
 
-        /// <summary>A Death emission the frame's update held (see ParticleSystemManager): emitted now,
-        /// and the child plays the particles it received.</summary>
+        /// <summary>A Death, Collision or Trigger emission the frame's update held (see
+        /// ParticleSystemManager): emitted now, after the update pass, and the child plays the
+        /// particles it received. Children an InheritLifetime leaves at zero life stay until the
+        /// child's next update, as from a script (6000.0.71f1, particlerender inherit/death/lifetime:
+        /// counted at the frame's end, gone after the next).</summary>
         internal void EmitEventNow(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count,
             bool turnToTravel = true)
         {
-            EmitFromParent(parentSystem, ref parent, properties, count, 0f, eventEmission: turnToTravel);
+            EmitFromParent(parentSystem, ref parent, properties, count, 0f, eventEmission: turnToTravel, keepSpent: true);
             if (m_Count > 0 && !m_IsPlaying)
             {
                 m_IsPlaying = true;
                 m_StopEmitting = true;
             }
         }
+
+        /// <summary>Inside a prewarm, event (Death, Collision, Trigger) children come at once, not
+        /// aged by the rest of the call, and only while the call time left at the step's start is
+        /// below the child's longest start lifetime, as Birth children (6000.0.71f1, particlerender
+        /// prewarm/death; Collision and Trigger follow it, unmeasured).</summary>
+        bool PrewarmKeeps(ParticleSystem child) => m_BirthCallRemaining < child.m_Main.startLifetime.MaxValue;
 
         /// <summary>A Birth emission the frame's update held (see ParticleSystemManager): its
         /// children are emitted now with the ages they reach at the end of the frame, and the
@@ -1877,6 +1897,11 @@ namespace UnityEngine
         /// birthstart/play05 frame 11; subcull/*: a rate that reaches a whole particle exactly at a
         /// step's end). Played children are emitted after every system has updated, as Death
         /// children are, so the update order does not age them again (birthstart/order02).</summary>
+        /// <summary>How close (in births) a Birth child's rate count at the end of a non-looping
+        /// child's duration must come to a whole count for that birth to count as due exactly at
+        /// the end: float noise of the summed step intervals, far below one birth.</summary>
+        const float BirthEndTie = 1e-4f;
+
         void BirthSubEmitters(ref Particle parent, float ageBefore, float ageAfter, float dt, Vector3 positionBefore)
         {
             bool held = !m_SimulatingBirths && ParticleSystemManager.Updating && Compat.ParticleBirthStepsMeasured;
@@ -1906,70 +1931,73 @@ namespace UnityEngine
                 var batch = m_BirthBatch;
                 batch.Clear();
                 var travel = dt > 0f ? (parent.m_Position - positionBefore) / dt : Vector3.zero;
-                if (child.m_Emission.enabled)
+                // The child's own Emission module being disabled does not matter: its rate and
+                // bursts still drive Birth emission (6000.0.71f1, particlerender
+                // birthstart/disabled*, Play and Simulate; Death children, subemitters probe).
+                var emissionRandom = ModuleRandom(parent.m_RandomSeed, PlaybackSeed);
+                float rate = child.m_Emission.rateOverTime.Evaluate(age01, emissionRandom.NextValue());
+                // The measured percent-clock endpoints retain rate boundary bits.
+                // The first interval cannot precede the newborn's integration span.
+                // Infinite lifetimes and a ring's age rewind have no such interval;
+                // retain their existing integration-delta path until measured.
+                bool useInterval = intervals && float.IsFinite(ageBefore)
+                    && float.IsFinite(ageAfter) && ageAfter >= ageBefore;
+                float delay = useInterval ? Mathf.Max(0f,
+                    child.m_Main.startDelay.Evaluate(0f, ModuleValue(child.PlaybackSeed, 0u))) : 0f;
+                float from = Mathf.Max(0f, ageBefore - delay);
+                float to = Mathf.Max(0f, ageAfter - delay);
+                if (!child.m_Main.loop)
                 {
-                    var emissionRandom = ModuleRandom(parent.m_RandomSeed, PlaybackSeed);
-                    float rate = child.m_Emission.rateOverTime.Evaluate(age01, emissionRandom.NextValue());
-                    // The measured percent-clock endpoints retain rate boundary bits.
-                    // The first interval cannot precede the newborn's integration span.
-                    // Infinite lifetimes and a ring's age rewind have no such interval;
-                    // retain their existing integration-delta path until measured.
-                    bool useInterval = intervals && float.IsFinite(ageBefore)
-                        && float.IsFinite(ageAfter) && ageAfter >= ageBefore;
-                    float delay = useInterval ? Mathf.Max(0f,
-                        child.m_Main.startDelay.Evaluate(0f, ModuleValue(child.PlaybackSeed, 0u))) : 0f;
-                    float from = Mathf.Max(0f, ageBefore - delay);
-                    float to = Mathf.Max(0f, ageAfter - delay);
-                    if (!child.m_Main.loop)
+                    from = Mathf.Min(from, child.m_Main.duration);
+                    to = Mathf.Min(to, child.m_Main.duration);
+                }
+                float emissionDt = useInterval ? to - from : dt;
+                if (useInterval && firstBirth) emissionDt = Mathf.Min(emissionDt, dt);
+                ref float accumulator = ref (slot == 0 ? ref parent.m_EmitAccumulator0 : ref parent.m_EmitAccumulator1);
+                accumulator += rate * emissionDt;
+                // A non-looping child's duration ends its rate exclusively, as a loop's end: a
+                // birth due exactly there is not emitted, in Play, Simulate and prewarm alike
+                // (6000.0.71f1, particlerender birthstart/childdur*: a 1 s child at 10/s under a
+                // parent living 1.5 s emits nine). The step's summed intervals can land a hair
+                // above that whole count, which still counts as due at the end.
+                if (useInterval && !child.m_Main.loop && ageAfter - delay >= child.m_Main.duration)
+                {
+                    float whole = Mathf.Round(accumulator);
+                    if (Mathf.Abs(accumulator - whole) <= BirthEndTie) accumulator = whole;
+                    n = Math.Max(0, (int)Math.Ceiling(accumulator) - 1);
+                }
+                else n = (int)accumulator;
+                accumulator -= n;
+                if (n > 0 && rate > 0f)
+                {
+                    float remainder = accumulator;
+                    birthAge = remainder / rate + (useInterval ? Mathf.Max(0f, ageAfter - delay - to) : 0f);
+                    spacing = -1f / rate;
+                    firstEmission = new BirthEmission { count = n, age = birthAge, spacing = spacing, velocity = travel,
+                        position = Vector3.LerpUnclamped(positionBefore, parent.m_Position, dt > 0f ? 1f - birthAge / dt : 0f) };
+                }
+                foreach (var burst in child.m_Emission.bursts)
+                {
+                    float at = burst.m_Time;
+                    bool first = firstBirth && at <= 0f;
+                    if ((first || (at > ageBefore && at <= ageAfter)) &&
+                        (burst.probability >= 1f || burst.probability > 0f && emissionRandom.NextValue() < burst.probability))
                     {
-                        from = Mathf.Min(from, child.m_Main.duration);
-                        to = Mathf.Min(to, child.m_Main.duration);
-                    }
-                    float emissionDt = useInterval ? to - from : dt;
-                    if (useInterval && firstBirth) emissionDt = Mathf.Min(emissionDt, dt);
-                    if (slot == 0)
-                    {
-                        parent.m_EmitAccumulator0 += rate * emissionDt;
-                        n = (int)parent.m_EmitAccumulator0;
-                        parent.m_EmitAccumulator0 -= n;
-                    }
-                    else
-                    {
-                        parent.m_EmitAccumulator1 += rate * emissionDt;
-                        n = (int)parent.m_EmitAccumulator1;
-                        parent.m_EmitAccumulator1 -= n;
-                    }
-                    if (n > 0 && rate > 0f)
-                    {
-                        float remainder = slot == 0 ? parent.m_EmitAccumulator0 : parent.m_EmitAccumulator1;
-                        birthAge = remainder / rate + (useInterval ? Mathf.Max(0f, ageAfter - delay - to) : 0f);
-                        spacing = -1f / rate;
-                        firstEmission = new BirthEmission { count = n, age = birthAge, spacing = spacing, velocity = travel,
-                            position = Vector3.LerpUnclamped(positionBefore, parent.m_Position, dt > 0f ? 1f - birthAge / dt : 0f) };
-                    }
-                    foreach (var burst in child.m_Emission.bursts)
-                    {
-                        float at = burst.m_Time;
-                        bool first = firstBirth && at <= 0f;
-                        if ((first || (at > ageBefore && at <= ageAfter)) &&
-                            (burst.probability >= 1f || burst.probability > 0f && emissionRandom.NextValue() < burst.probability))
+                        int burstCount = BurstCount(burst.m_Count, age01, ref emissionRandom);
+                        if (burstCount > 0 && intervals)
                         {
-                            int burstCount = BurstCount(burst.m_Count, age01, ref emissionRandom);
-                            if (burstCount > 0 && intervals)
+                            float preAge = first ? dt : Mathf.Max(0f, ageAfter - at);
+                            var emission = new BirthEmission { count = burstCount, age = preAge,
+                                position = Vector3.LerpUnclamped(positionBefore, parent.m_Position,
+                                    dt > 0f ? 1f - preAge / dt : 0f) };
+                            if (firstEmission.count == 0) firstEmission = emission;
+                            else
                             {
-                                float preAge = first ? dt : Mathf.Max(0f, ageAfter - at);
-                                var emission = new BirthEmission { count = burstCount, age = preAge,
-                                    position = Vector3.LerpUnclamped(positionBefore, parent.m_Position,
-                                        dt > 0f ? 1f - preAge / dt : 0f) };
-                                if (firstEmission.count == 0) firstEmission = emission;
-                                else
-                                {
-                                    if (batch.Count == 0) batch.Add(firstEmission);
-                                    batch.Add(emission);
-                                }
+                                if (batch.Count == 0) batch.Add(firstEmission);
+                                batch.Add(emission);
                             }
-                            n += burstCount;
                         }
+                        n += burstCount;
                     }
                 }
                 if (n > 0)
@@ -2010,13 +2038,14 @@ namespace UnityEngine
         /// combines that rotation with the frame in a way not reproduced here (Unbound applies it
         /// inside the frame); its emission direction stays a known difference. InheritLifetime
         /// multiplies the start lifetime by the parent's remaining lifetime in seconds, not its
-        /// fraction (2.013 × 3.863 s left gives 7.776; a dying parent leaves none, so the children
-        /// are not emitted).</para></summary>
+        /// fraction (2.013 × 3.863 s left gives 7.776; a dying parent leaves the children none).</para></summary>
         /// <param name="keepSpent">Children whose inherited lifetime is zero stay, at zero life,
-        /// until the child's next update removes them (TriggerSubEmitter from script on a dead
-        /// particle carrying its trail: 6000.0.71f1, tests/projects/particletriggerapi
-        /// carrier/inherit). Emissions inside an update or a Simulate meet that removal at once,
-        /// so their spent children never show (subemitters probe).</param>
+        /// until the child's next update removes them: emissions outside an update pass
+        /// (TriggerSubEmitter from script on a dead particle carrying its trail: 6000.0.71f1,
+        /// tests/projects/particletriggerapi carrier/inherit; held Death, Collision and Trigger
+        /// emissions after the frame's update: particlerender inherit/death/lifetime). Emissions
+        /// inside a Simulate meet that removal at once, so their spent children never show
+        /// (subemitters probe).</param>
         void EmitFromParent(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count, float preAge, bool eventEmission = false, float birthCatchup = -1f, float birthSpacing = 0f, Vector3 birthVelocity = default, System.Collections.Generic.List<BirthEmission> birthRequests = null, bool keepSpent = false)
         {
             // A Simulate Birth emission whose remaining call time reaches the child's own
@@ -2026,9 +2055,12 @@ namespace UnityEngine
             // one more child in Unity in a long call, open). Curve
             // lifetimes and lifetime by emitter speed have no such bound here: their
             // children are initialized and expire during the catch-up instead (unmeasured).
+            // A prewarm (no catch-up follows) bounds every lifetime mode by its longest value
+            // (measured for constant and two-constant children: particlerender prewarm/*).
             var lifetime = m_Main.startLifetime;
-            if (birthCatchup >= 0f && !m_LifetimeByEmitterSpeed.enabled
-                && (lifetime.mode == ParticleSystemCurveMode.Constant || lifetime.mode == ParticleSystemCurveMode.TwoConstants)
+            bool prewarm = parentSystem.m_Prewarming;
+            if (birthCatchup >= 0f && (prewarm || !m_LifetimeByEmitterSpeed.enabled
+                && (lifetime.mode == ParticleSystemCurveMode.Constant || lifetime.mode == ParticleSystemCurveMode.TwoConstants))
                 && birthCatchup >= lifetime.MaxValue) return;
             var origin = parentSystem.SimulationToWorld().MultiplyPoint3x4(parent.m_Position);
             Quaternion? frame = null;
@@ -2066,6 +2098,11 @@ namespace UnityEngine
             // birthlife/ and model/inherit/). Every child of one emission shares it,
             // including rate births with different initial ages.
             float parentLife = Mathf.Max(parent.m_Lifetime, 0f);
+            // A sub-emitter child's start values sample their curves at the parent particle's
+            // normalized age (a dying parent's is 1), not at the child's playback time, for every
+            // sub-emitter type, with or without InheritDuration (6000.0.71f1, particlerender
+            // inherit/*: a Birth child's start size curve at the parent's age after its step).
+            float startNt = parent.Age01;
             EmitParams none = default;
             var context = MakeContext();
             int requestIndex = 0, requestStart = 0;
@@ -2085,7 +2122,7 @@ namespace UnityEngine
                     particleAge = Mathf.Max(0f, request.age - request.spacing * local);
                     birthOrigin = parentSystem.SimulationToWorld().MultiplyPoint3x4(request.position + request.velocity * (request.spacing * local));
                 }
-                if (!InitParticle(ref p, emitter, Mathf.Clamp01(m_Time / Mathf.Max(m_Main.duration, 0.0001f)), false, ref none, k, count, birthOrigin,
+                if (!InitParticle(ref p, emitter, startNt, false, ref none, k, count, birthOrigin,
                     k, count, (properties & ParticleSystemSubEmitterProperties.InheritRotation) != 0 ? parent.m_AxisOfRotation : null, frame))
                 {
                     RemoveAt(index);
@@ -2120,7 +2157,7 @@ namespace UnityEngine
                 else
                 {
                     bool alive = true;
-                    if (birthCatchup >= 0f)
+                    if (birthCatchup >= 0f && !prewarm)
                     {
                         // Approximation (unmeasured, open): every catch-up step reuses the
                         // context made once for this emission, so system-time curves (gravity

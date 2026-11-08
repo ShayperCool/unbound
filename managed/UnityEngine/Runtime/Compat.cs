@@ -306,6 +306,13 @@ namespace Unbound.Runtime
         /// Other releases keep the previous rule (a child plays once it receives particles).</summary>
         internal static bool ParticleSubEmitterStartMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Prewarm simulates the longest start lifetime plus the sub-emitter chains'
+        /// lifetimes in one call ending on a loop's end, keeps the clock where it ends and emits
+        /// sub-emitter children within their lifetime of the end without aging them, measured by
+        /// tests/projects/particlerender prewarm/* on 6000.0.71f1. Other releases keep the previous
+        /// model (one longest lifetime from time 0, then time 0) until measured.</summary>
+        internal static bool ParticlePrewarmMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Start lifetimes take a reciprocal estimate with two Newton corrections
         /// instead of a correctly rounded division, measured by tests/projects/particlerandom
         /// (birthclock/, model/clock/). Other releases keep the division until measured.</summary>

@@ -163,8 +163,6 @@ namespace UnityEngine
                         ReportUnsupported("collision/trigger sub-emitter cycle (a sub-emitter that leads back to a system emitting it)");
                         continue;
                     }
-                    if ((e.properties & ParticleSystemSubEmitterProperties.InheritDuration) != 0)
-                        ReportUnsupported("sub-emitter Inherit Duration");
                     var child = e.system;
                     // As TriggerSubEmitterAt: never itself or a destroyed object, and the same
                     // stable emitProbability roll owned by the parent particle.
@@ -182,7 +180,11 @@ namespace UnityEngine
                     // In the frame's update the children come after every system has updated, as
                     // Death children do: not aged in the frame they are born in (6000.0.71f1,
                     // tests/projects/particlerender birthstart/events02).
-                    if (ParticleSystemManager.Updating)
+                    if (m_Prewarming)
+                    {
+                        if (PrewarmKeeps(child)) child.EmitFromParent(this, ref at, e.properties, count, 0f);
+                    }
+                    else if (ParticleSystemManager.Updating)
                         ParticleSystemManager.HoldEventEmission(new ParticleSystemManager.EventEmission
                         {
                             child = child, parentSystem = this, parent = at, properties = e.properties, count = count, ownFrame = true,

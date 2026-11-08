@@ -1089,37 +1089,122 @@ namespace UnityEngine
             return s_AutoSeed;
         }
 
-        /// <summary>Simulates one full loop so the system starts in its steady state.</summary>
-        /// <summary>Prewarm simulates one start lifetime (the longest), so every particle a loop
-        /// keeps alive is there, then playback starts from time 0 with the emission keeping its
-        /// phase (measured: a lifetime of 0.737 or 2.537 s in a 1 or 2 s loop).</summary>
+        /// <summary>Prewarm: the playback starts as though the system had already been running.
+        /// <para>Measured in 6000.0.71f1 (tests/projects/particlerender prewarm/*,
+        /// <see cref="Compat.ParticlePrewarmMeasured"/>): one simulation call as long as the longest
+        /// start lifetime plus, for systems with sub-emitters, the longest lifetime down each chain of
+        /// sub-emitters (<see cref="SubEmitterLifetimeSpan"/>), split into equal steps of at most
+        /// Time.maximumParticleDeltaTime, starting the playback clock at duration less that span's
+        /// remainder so it ends on a loop's end; the rate counts from the call's start and bursts
+        /// fire as the clock passes them. The clock then stays where the call left it (the duration,
+        /// or just past the loop's start). Sub-emitter children emitted in the call are kept only when
+        /// the call time left at their step's start is below the child's longest start lifetime, and
+        /// are not aged by the rest of the call (see <see cref="EmitFromParent"/>); the
+        /// sub-emitters play, without emitting, the direct ones with their time advanced by the span
+        /// (<see cref="StartSubEmittersAfterPrewarm"/>).</para>
+        /// <para>Other releases keep the previous model: one longest start lifetime from time 0,
+        /// then the playback restarts at time 0 keeping the emission's phase.</para></summary>
         void Prewarm()
         {
-            Advance(Mathf.Max(MaxValue(m_Main.startLifetime), 0.0001f), 0f, false);
-            KeepEmissionPhase();
-            m_Time = 0f;
+            float lifetime = Mathf.Max(m_Main.startLifetime.MaxValue, 0.0001f);
+            if (!Compat.ParticlePrewarmMeasured)
+            {
+                Advance(lifetime, 0f, false);
+                KeepEmissionPhase();
+                m_Time = 0f;
+                m_Loop = 0;
+                m_TotalTime = 0f;
+                Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
+                return;
+            }
+            float span = lifetime + SubEmitterLifetimeSpan(0);
+            float duration = Mathf.Max(m_Main.duration, 0.0001f);
+            float rest = span % duration;
+            if (rest > 0f) StartClockAt(duration - rest);
+            bool simulatingBirths = m_SimulatingBirths;
+            m_Prewarming = true;
+            m_SimulatingBirths = Compat.ParticleBirthStepsMeasured;
+            m_BirthCallRemaining = span;
+            try { Advance(span, 0f, false); }
+            finally
+            {
+                m_Prewarming = false;
+                m_SimulatingBirths = simulatingBirths;
+            }
             m_Loop = 0;
             m_TotalTime = 0f;
-            Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
+            StartSubEmittersAfterPrewarm(span, 0);
         }
 
-        static float MaxValue(in ModuleCurve curve)
+        /// <summary>Whether an earlier slot holds the same child (it is started once).</summary>
+        static bool InEarlierSlot(List<SubEmitter> emitters, int index)
         {
-            switch (curve.mode)
+            for (int j = 0; j < index; j++)
+                if (emitters[j].system == emitters[index].system) return true;
+            return false;
+        }
+
+        /// <summary>Moves a fresh playback's clock to <paramref name="time"/> as if it had started
+        /// there: the rate counts from now (its phase follows the clock) and the bursts due before
+        /// that time count as fired.</summary>
+        void StartClockAt(float time)
+        {
+            var rate = m_Emission.rateOverTime;
+            if (rate.mode == ParticleSystemCurveMode.Constant && rate.scalar > 0f)
             {
-                case ParticleSystemCurveMode.TwoConstants: return Mathf.Max(curve.minScalar, curve.scalar);
-                case ParticleSystemCurveMode.Curve: return curve.scalar * MaxKey(curve.maxCurve);
-                case ParticleSystemCurveMode.TwoCurves: return curve.scalar * Mathf.Max(MaxKey(curve.minCurve), MaxKey(curve.maxCurve));
-                default: return curve.scalar;
+                float phase = m_EmitPhase - rate.scalar * time;
+                m_EmitPhase = phase - (float)Math.Floor(phase);
             }
+            m_Time = time;
+            BurstsChanged();
         }
 
-        static float MaxKey(AnimationCurve curve)
+        /// <summary>How much longer than its own particles a prewarm keeps simulating a system for
+        /// its sub-emitters: the longest of each sub-emitter's longest start lifetime plus its own
+        /// span (6000.0.71f1, particlerender prewarm/*: a Birth or Death child with a 3 s lifetime
+        /// adds 3 s, a child of 1 to 4 s adds 4 s, a grandchild adds its own). That every type of
+        /// sub-emitter counts, and that a disabled Sub Emitters module adds nothing, is Unbound's
+        /// choice (unmeasured).</summary>
+        float SubEmitterLifetimeSpan(int depth)
         {
-            if (curve == null || curve.length == 0) return 0f;
-            float max = float.NegativeInfinity;
-            for (int i = 0; i <= 32; i++) max = Mathf.Max(max, curve.Evaluate(i / 32f));
-            return max;
+            if (!m_SubEmitters.enabled || depth >= MaxSubEmitterChain) return 0f;
+            float span = 0f;
+            foreach (var e in m_SubEmitters.emitters)
+            {
+                var child = e.system;
+                if (child == null || child == this || child.m_Destroyed) continue;
+                span = Mathf.Max(span, Mathf.Max(child.m_Main.startLifetime.MaxValue, 0f) + child.SubEmitterLifetimeSpan(depth + 1));
+            }
+            return span;
+        }
+
+        /// <summary>After a prewarm every sub-emitter down the chains plays, without emitting, and
+        /// stops again at the end of the frame if it is still empty, as after an update; the direct
+        /// sub-emitters' time has run for the prewarm's span (looping, or held at the duration),
+        /// the further ones' has not (6000.0.71f1, particlerender prewarm/chain, prewarm/childloop).</summary>
+        void StartSubEmittersAfterPrewarm(float span, int depth)
+        {
+            if (!m_SubEmitters.enabled || depth >= MaxSubEmitterChain || !Compat.ParticleSubEmitterStartMeasured) return;
+            var emitters = m_SubEmitters.emitters;
+            for (int i = 0; i < emitters.Count; i++)
+            {
+                var child = emitters[i].system;
+                if (child == null || child == this || child.m_Destroyed || child.m_GameObject == null || InEarlierSlot(emitters, i)) continue;
+                if (!child.m_IsPaused && !child.m_IsPlaying)
+                {
+                    child.m_IsPlaying = true;
+                    child.m_StopEmitting = true;
+                    child.m_StartedByParent = true;
+                    ParticleSystemManager.NoteStartedByParent(child);
+                }
+                if (depth == 0)
+                {
+                    float duration = Mathf.Max(child.m_Main.duration, 0.0001f);
+                    float time = child.m_Time + span;
+                    child.m_Time = child.m_Main.loop ? time % duration : Mathf.Min(time, duration);
+                }
+                child.StartSubEmittersAfterPrewarm(span, depth + 1);
+            }
         }
 
         void StopSelf(ParticleSystemStopBehavior behavior)
