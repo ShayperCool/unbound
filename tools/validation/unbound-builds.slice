@@ -1,5 +1,5 @@
 [Unit]
-Description=Unbound build pool (two builds of at most 9 GiB RAM each, may swap)
+Description=Unbound build pool (three builds of at most 9 GiB RAM each, may swap)
 
 [Slice]
 MemoryAccounting=yes

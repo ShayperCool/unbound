@@ -14,7 +14,7 @@ entry point and the user systemd slices. The source policy is `job-limits.json`;
 the previous serial launcher is backed up before replacement.
 
 Admission is by count: at most eight Unity Editors (`-nographics` or graphics),
-four direct `unbound run` engine jobs (`--headless` selects CPU mode), two builds
+four direct `unbound run` engine jobs (`--headless` selects CPU mode), three builds
 (`cargo build/test/check` and other known build verbs, `rustc`,
 `dotnet build/publish/restore/msbuild/pack/format`, also
 behind time, timeout and env; pass `--kind build` for a script that only builds),
@@ -34,6 +34,21 @@ Only an exclusive `heavy` job keeps the entry lock while it waits, so newer jobs
 queue behind it and a writer cannot starve; a waiting pooled job (for example a
 second build behind a running one) never delays jobs that need other slots. Other (`heavy`) commands keep the
 exclusive lock, because they may start Editors without going through the pool.
+A gate holding `land.py`'s machine-wide landing lock exports `UNBOUND_LAND_GATE=1`
+to its build, tests, tools and probe drivers. Its launcher jobs publish shared-lock
+notices while waiting. Competing ordinary jobs recheck those notices on every
+admission attempt and yield the next free slot to the gate. The notice is not a
+slot reservation: every unsuccessful attempt still releases all admission tokens,
+and independent pools keep running. An ordinary exclusive writer yields its entry
+turnstile too, so it cannot deadlock a gate behind that turnstile. A killed waiter
+releases its notice automatically; a running job is never preempted. `--check`
+does not hold the landing lock and keeps ordinary admission priority.
+
+Reinstall after landing runner changes with `python3 tools/validation/install_job_runner.py`.
+Already waiting processes retain the code they started with. Relaunch those jobs
+to adopt a changed admission protocol; all new runners observe later gate notices
+without needing another policy update or restart.
+
 Waiting jobs log the blocking lock holders' PID, command and working directory
 before blocking on the entry lock, or every five seconds while retrying resource
 admission. These Linux `/proc` snapshots also identify
@@ -96,7 +111,7 @@ the temporary benchmark slice's 16GiB limit first and hold the exclusive heavy-j
 lock around the driver. Direct mode refuses an unbounded slice. Each label is
 write-once. Its projects, raw Native captures, memory samples, manifests and
 process logs are cache-only. The integration check verifies the eight-token
-budget, the two-engine cap, actual mixed overlap, OS memory/swap limits,
+budget, the configured engine cap, actual mixed overlap, OS memory/swap limits,
 exclusive writers, shared GPU serialization and cancellation in both pools.
 Run pooled probes in independent projects with distinct output directories.
 Keep stateful probes exclusive.

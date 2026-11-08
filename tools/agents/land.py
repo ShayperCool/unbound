@@ -106,9 +106,12 @@ def tail(log, lines=30):
 
 
 class Gate:
-    def __init__(self, worktree, base, probes, full, log):
+    def __init__(self, worktree, base, probes, full, log, priority=False):
         self.worktree, self.base, self.probes, self.full, self.log = worktree, base, probes, full, log
         self.env = dict(os.environ)
+        self.env.pop('UNBOUND_LAND_GATE', None)
+        if priority:
+            self.env['UNBOUND_LAND_GATE'] = '1'
         self.probe_runtime = None
 
     def step(self, name, command, shell=False, env=None, guard_editor=False):
@@ -348,7 +351,7 @@ def stamp_path(tree, probes, full, root):
     return STATE/'gate-pass'/key
 
 
-def run_gate(worktree, base, probes, full, branch):
+def run_gate(worktree, base, probes, full, branch, priority=False):
     tree = git('rev-parse', 'HEAD^{tree}', cwd=worktree)
     stamp = stamp_path(tree, probes, full, worktree)
     runtime_record = stamp.with_suffix('.runtime.json')
@@ -362,7 +365,7 @@ def run_gate(worktree, base, probes, full, branch):
     safe = re.sub(r'[^A-Za-z0-9._-]+', '-', branch)
     log = logs/f'{datetime.datetime.now():%Y%m%d-%H%M%S}-{safe}.log'
     print(f'land: gate for tree {tree[:12]}, log {log}', flush=True)
-    gate = Gate(worktree, base, probes, full, log)
+    gate = Gate(worktree, base, probes, full, log, priority=priority)
     gate.run()
     atomic_json(runtime_record, {'runtime': str(gate.probe_runtime) if gate.probe_runtime else None})
     stamp.parent.mkdir(parents=True, exist_ok=True)
@@ -446,7 +449,7 @@ def main():
         new = git('rev-parse', 'HEAD')
         if old == new:
             die(2, 'nothing to land: the branch has no commits beyond main')
-        runtime = run_gate(worktree, old, args.probe, args.full, branch)
+        runtime = run_gate(worktree, old, args.probe, args.full, branch, priority=True)
         old_tree = git('rev-parse', 'main^{tree}')
         if main_checkout:
             require_clean(main_checkout, f'the main checkout {main_checkout}', allow_untracked=True)

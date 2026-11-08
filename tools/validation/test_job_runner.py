@@ -155,11 +155,16 @@ fake.write_text('#!/usr/bin/env bash\nset -euo pipefail\nexport TEST_ENGINE_PROJ
                shlex.quote(sys.executable)+' '+shlex.quote(str(Path(__file__).resolve()))+' "$@"\n')
 fake.chmod(0o755)
 
-def spawn(kind, name, seconds=.4, project=None):
+def spawn(kind, name, seconds=.4, project=None, priority=False):
     handle=(out/(name+'.log')).open('w')
     command=([str(fake),'run','-p',str(project)] if project else [sys.executable,__file__])
+    env = dict(os.environ)
+    env.pop(runner.LAND_PRIORITY, None)
+    if priority:
+        env[runner.LAND_PRIORITY] = '1'
     process=subprocess.Popen([sys.executable,str(RUNNER),'--kind',kind,*command,
-                              'worker',str(events),name,str(seconds),kind],stdout=handle,stderr=subprocess.STDOUT)
+                              'worker',str(events),name,str(seconds),kind],stdout=handle,stderr=subprocess.STDOUT,
+                              env=env)
     return process,handle
 
 
@@ -178,6 +183,106 @@ def wait_for_log(name, text):
         time.sleep(.05)
     raise AssertionError((name,text,contents))
 
+
+def wait_for_priority(kind, active=True):
+    deadline=time.monotonic()+10
+    while time.monotonic()<deadline:
+        if runner.pending_land_job(kind,runner.policy()) == active:
+            return
+        time.sleep(.05)
+    raise AssertionError((kind,'priority notice did not change',active))
+
+
+# An ordinary job already waiting must observe a later gate notice and leave the
+# next released slot to that gate. Waiting builds must not stop unrelated pools.
+for kind, pool, count in [('build','build',runner.policy()['build_slots']),
+                          ('test','test',runner.policy()['test_slots']),
+                          ('engine-cpu','engine',runner.policy()['engine_slots']),
+                          ('tool','tool',runner.policy()['tool_slots'])]:
+    handles=[]
+    for number in range(count):
+        handle=(state/f'parity-{pool}-slot-{number}.lock').open('a')
+        fcntl.flock(handle,fcntl.LOCK_EX)
+        handles.append(handle)
+    try:
+        ordinary=spawn(kind,'priority-ordinary-'+pool,.1)
+        wait_for_log('priority-ordinary-'+pool,'waiting for '+kind)
+        gate=spawn(kind,'priority-gate-'+pool,.3,priority=True)
+        wait_for_priority(kind)
+        # The marker is not a held admission token or an exclusive entry lock.
+        deadline=time.monotonic()+5
+        while True:
+            try:
+                with runner.lock('parity-heavy-entry.lock',fcntl.LOCK_EX|fcntl.LOCK_NB):
+                    break
+            except BlockingIOError:
+                assert time.monotonic()<deadline,'waiting gate pinned the entry turnstile'
+                time.sleep(.01)
+        independent=spawn('editor-cpu','priority-independent-'+pool,.1)
+        join([independent])
+        handles.pop().close()  # only one slot is free for the two contenders
+        join([gate,ordinary])
+    finally:
+        for handle in handles:
+            handle.close()
+    records=[json.loads(line) for line in events.read_text().splitlines()]
+    gate_end=next(r['time'] for r in records if r['name']=='priority-gate-'+pool and r['phase']=='end')
+    ordinary_start=next(r['time'] for r in records if r['name']=='priority-ordinary-'+pool and r['phase']=='start')
+    assert gate_end<=ordinary_start,('ordinary job bypassed gate',kind)
+
+# GPU notices compete with both graphics pools, while no engine admission token
+# is held before the queued gate has a GPU slot too.
+handles=[]
+for name in runner.GPU_SLOT_NAMES[:runner.policy()['gpu_slots']]:
+    handle=(state/name).open('a')
+    fcntl.flock(handle,fcntl.LOCK_EX)
+    handles.append(handle)
+try:
+    ordinary=spawn('editor-gpu','priority-ordinary-gpu',.1)
+    wait_for_log('priority-ordinary-gpu','waiting for editor-gpu')
+    gate=spawn('engine-gpu','priority-gate-gpu',.3,priority=True)
+    wait_for_priority('editor-gpu')
+    unpinned=runner.attempt('engine-cpu',runner.policy())
+    assert unpinned is not None,'waiting GPU gate pinned an engine slot'
+    unpinned.close()
+    join([spawn('editor-cpu','priority-independent-gpu',.1)])
+    handles.pop().close()
+    join([gate,ordinary])
+finally:
+    for handle in handles:
+        handle.close()
+records=[json.loads(line) for line in events.read_text().splitlines()]
+gate_end=next(r['time'] for r in records if r['name']=='priority-gate-gpu' and r['phase']=='end')
+ordinary_start=next(r['time'] for r in records if r['name']=='priority-ordinary-gpu' and r['phase']=='start')
+assert gate_end<=ordinary_start,'graphics Editor bypassed the waiting gate engine'
+
+# An ordinary exclusive writer must relinquish its turnstile when a gate arrives,
+# even while it is waiting for an older running reader to drain.
+with runner.lock('parity-heavy-job.lock',fcntl.LOCK_SH):
+    writer=spawn('heavy','priority-writer',.1)
+    wait_for_log('priority-writer',f'pid {os.getpid()}, cmd=')
+    gate=spawn('build','priority-before-writer',.1,priority=True)
+    join([gate])
+join([writer])
+
+# Cancellation of a queued gate cannot leave a stale priority notice blocking jobs.
+handles=[]
+for number in range(runner.policy()['build_slots']):
+    handle=(state/f'parity-build-slot-{number}.lock').open('a')
+    fcntl.flock(handle,fcntl.LOCK_EX)
+    handles.append(handle)
+try:
+    gate,log=spawn('build','priority-cancelled',.1,priority=True)
+    wait_for_priority('build')
+    gate.terminate()
+    assert gate.wait(timeout=10)!=0
+    log.close()
+    wait_for_priority('build',active=False)
+    handles.pop().close()
+    join([spawn('build','priority-after-cancel',.1)])
+finally:
+    for handle in handles:
+        handle.close()
 
 # A raw shared lock stands in for an older runner. The waiting writer must name
 # that holder, keep the turnstile, and be named by the reader queued behind it.
@@ -220,7 +325,7 @@ jobs.append(spawn('editor-cpu','late-reader',.2))
 jobs.append(spawn('engine-cpu','late-engine',.2))
 join(jobs)
 # Builds overlap Editors and engines, each other up to build_slots, never the exclusive writer.
-jobs=[spawn('build','build-'+str(i),.6) for i in range(2)]
+jobs=[spawn('build','build-'+str(i),.6) for i in range(config['build_slots']+1)]
 jobs += [spawn('editor-cpu','build-editor-'+str(i),.6) for i in range(5)]
 jobs.append(spawn('engine-cpu','build-engine',.6))
 join(jobs)
@@ -335,9 +440,9 @@ for kind in ['editor-cpu','engine-cpu']:
     join([spawn('heavy','after-'+name,.05)])
 (out/'summary.json').write_text(json.dumps(dict(editor_peak=peak,slot_limit=EDITORS,
     engine_peak=engine_peak,engine_slot_limit=ENGINES,gpu_peak=gpu_peak,gpu_slot_limit=GPUS,
-    mixed_overlap=mixed_overlap,no_head_of_line_blocking=True,
+    mixed_overlap=mixed_overlap,no_head_of_line_blocking=True,land_priority=True,
     combined_memory_max_bytes=16*2**30,engine_memory_max_bytes=8*2**30,
     engine_job_memory_max_bytes=4*2**30,swap_allowed=True,exclusive_builds=False,build_slots=config['build_slots'],
     build_overlap=build_overlap,project_serial=True,cancellation=True),indent=2)+'\n')
-print('Editor/engine/build/GPU slots, no head-of-line blocking, exclusive writer and cancellation verified;',
+print('Editor/engine/build/GPU slots, gate priority, no head-of-line blocking, exclusive writer and cancellation verified;',
       'Editor peak',peak,'engine peak',engine_peak,'GPU peak',gpu_peak)

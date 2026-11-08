@@ -5,6 +5,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
+import os
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import land
@@ -123,6 +125,16 @@ class TouchedCratesTests(unittest.TestCase):
 
     def test_deleted_crate_is_not_tested(self):
         self.assertEqual(self.gate.touched_crates(['crates/removed/src/lib.rs']), [])
+
+
+class GatePriorityTests(unittest.TestCase):
+    def test_only_lock_holding_gates_mark_all_their_child_jobs(self):
+        root = Path('/tmp/priority-control')
+        with mock.patch.dict(os.environ, {'UNBOUND_LAND_GATE': '1'}):
+            check = land.Gate(root, 'HEAD', [], False, root/'check.log')
+            gate = land.Gate(root, 'HEAD', [], False, root/'land.log', priority=True)
+        self.assertNotIn('UNBOUND_LAND_GATE', check.env)
+        self.assertEqual(gate.env['UNBOUND_LAND_GATE'], '1')
 
 
 if __name__ == '__main__':

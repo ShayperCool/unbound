@@ -40,6 +40,7 @@ BUILD_TOOLS = {'cargo': {'build', 'test', 'check', 'bench', 'clippy', 'doc',
 KINDS = ['editor-cpu', 'editor-gpu', 'engine-cpu', 'engine-gpu', 'build', 'test', 'tool']
 # CPU job kinds that run in the build slice with the per-build memory limits.
 CPU_KINDS = ('build', 'test', 'tool')
+LAND_PRIORITY = 'UNBOUND_LAND_GATE'
 GPU_SLOT_NAMES = ['parity-editor-gpu.lock']+['parity-gpu-slot-'+str(i)+'.lock' for i in range(1, 8)]
 
 
@@ -64,7 +65,7 @@ def policy():
     value.setdefault('memory_tokens', 0)
     value.setdefault('weights', {})
     assert 1 <= value['engine_slots'] <= 8
-    assert 1 <= value['build_slots'] <= 2
+    assert 1 <= value['build_slots'] <= 3
     assert 1 <= value['gpu_slots'] <= len(GPU_SLOT_NAMES)
     assert 1 <= value['tool_slots'] <= 8
     assert 1 <= value['test_slots'] <= 4
@@ -207,11 +208,26 @@ def blocking_holders(names):
     return result or ['holder details unavailable (owners exited or are inaccessible)']
 
 
+def pending_land_job(kind, config):
+    """Live gate waiters in a competing pool. Lock ownership survives no crashed waiter."""
+    resources = {name for group, _ in needs(kind, config) for name in group}
+    for other in [*KINDS, 'heavy']:
+        other_resources = {name for group, _ in needs(other, config) for name in group}
+        if kind != 'heavy' and other != 'heavy' and not resources.intersection(other_resources):
+            continue
+        with (CACHE/f'parity-land-pending-{other}.lock').open('a') as marker:
+            try:
+                fcntl.flock(marker, fcntl.LOCK_EX|fcntl.LOCK_NB)
+            except BlockingIOError:
+                return True
+    return False
+
+
 def admit(kind, config):
     # Only an exclusive job keeps the entry lock while it waits, so new pooled
     # jobs cannot keep bypassing it. A pooled job takes the entry lock just for
     # one attempt: a pooled waiter never delays jobs that need other slots.
-    # Pooled jobs each need one slot per pool, so retrying cannot starve them.
+    # A live gate notice makes competing ordinary waiters yield before taking any tokens.
     next_report = 0
 
     def report_wait():
@@ -220,28 +236,38 @@ def admit(kind, config):
             return
         next_report = time.monotonic()+5
         names = ['parity-heavy-entry.lock', 'parity-heavy-job.lock']
+        names += [f'parity-land-pending-{other}.lock' for other in [*KINDS, 'heavy']]
         if kind != 'heavy':
             names += [name for group, _ in needs(kind, config) for name in group]
         print(f'with-heavy-job: waiting for {kind}; '+ '; '.join(blocking_holders(names)),
               file=sys.stderr, flush=True)
 
-    while True:
-        # Re-read the policy while waiting, so a raised limit admits queued jobs.
-        try:
-            config = policy()
-        except (OSError, ValueError, AssertionError):
-            pass
-        with lock('parity-heavy-entry.lock', on_wait=report_wait):
-            while True:
-                held = attempt(kind, config)
-                if held is not None:
-                    return held
-                report_wait()
-                if kind != 'heavy':
-                    break
-                time.sleep(.05)
-        # Outside the entry lock, so other jobs can be admitted meanwhile.
-        time.sleep(.05+random.random()*.1)
+    priority = os.environ.get(LAND_PRIORITY) == '1'
+    with contextlib.ExitStack() as waiting:
+        if priority:
+            # This is a notice, not an admission token. Publish it before waiting for the
+            # entry turnstile, including when an ordinary exclusive writer owns it.
+            waiting.enter_context(lock(f'parity-land-pending-{kind}.lock', fcntl.LOCK_SH))
+        while True:
+            # Read policy and pending notices on every retry, including notices created after
+            # this waiter started. Never retain partial admission tokens across retries.
+            try:
+                config = policy()
+            except (OSError, ValueError, AssertionError):
+                pass
+            with lock('parity-heavy-entry.lock', on_wait=report_wait):
+                while True:
+                    defer = not priority and pending_land_job(kind, config)
+                    held = None if defer else attempt(kind, config)
+                    if held is not None:
+                        return held
+                    report_wait()
+                    if kind != 'heavy' or defer:
+                        break
+                    time.sleep(.05)
+            # Ordinary writers also release the turnstile for a pending gate. Holding it
+            # while yielding to that gate would keep the gate from ever being admitted.
+            time.sleep(.05+random.random()*.1)
 
 
 def run(command):
