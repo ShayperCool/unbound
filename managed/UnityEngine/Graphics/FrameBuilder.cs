@@ -1288,7 +1288,9 @@ namespace Unbound.Runtime
                 // The stack's first camera takes what any camera of the stack asks for.
                 var needs = (Hdr: hdrIntermediate, Samples: cameraSamples);
                 if (automatic && onScreen && fullScreen && !joins && !deferred && s_StackNeeds.TryGetValue(camera, out var group))
-                    needs = (hdrIntermediate || group.Hdr, Math.Max(cameraSamples, group.Samples));
+                    // The group's samples include the first camera's own (or are one when a
+                    // deferred camera continues the stack).
+                    needs = (hdrIntermediate || group.Hdr, group.Samples);
                 if (joins && (!hdrIntermediate || GraphicsFormatUtility.IsHDRFormat(stack.graphicsFormat)))
                 {
                     msaaTarget = stack;
@@ -1315,8 +1317,11 @@ namespace Unbound.Runtime
                 {
                     // Deferred: the light buffer is the intermediate (no MSAA), copied to the
                     // target where the MSAA one is resolved.
-                    int w = sceneTarget != null ? sceneTarget.width : Math.Max(1, Screen.width);
-                    int h = sceneTarget != null ? sceneTarget.height : Math.Max(1, Screen.height);
+                    // A partial screen camera's light buffer has its pixel size, as a forward
+                    // intermediate has (measured: tests/projects/camerastack *.part.*.def.persp).
+                    bool pixelSize = onScreen && !fullScreen;
+                    int w = pixelSize ? Math.Max(1, camera.pixelWidth) : sceneTarget != null ? sceneTarget.width : Math.Max(1, Screen.width);
+                    int h = pixelSize ? Math.Max(1, camera.pixelHeight) : sceneTarget != null ? sceneTarget.height : Math.Max(1, Screen.height);
                     msaaTarget = temporaries.Own(RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear));
                     sceneTarget = msaaTarget;
                     viewport = new Rect(0, 0, w, h);
@@ -1418,6 +1423,10 @@ namespace Unbound.Runtime
                         GfxStream.Clear((byte)(GfxStream.ClearDepth | GfxStream.ClearStencil), Color.black);
                     }
                     if (deferredSeed && automatic) EndScreenStack();
+                    // Depth only and Don't Clear: the light buffer starts as what is under the
+                    // camera, as a forward intermediate does (measured on the screen: a perspective
+                    // deferred camera in a stack, tests/projects/camerastack *.def.persp).
+                    if (keepsColor) SeedLightBuffer(camera, onScreen, cameraTarget, sceneTarget);
                     forwardOpaque = RenderDeferredOpaque(camera, context, sceneTarget, gbufferDepth, viewport, transparent);
                 }
                 // The forward opaque objects (in deferred, those without a Deferred pass; their
@@ -1788,6 +1797,10 @@ namespace Unbound.Runtime
             int samples = 1;
             foreach (var c in cameras)
             {
+                // A full-screen deferred camera that keeps the color continues the stack, which
+                // then renders without MSAA as the deferred path does (measured: camerastack
+                // q4.*.full.*.def.persp, identical to q0).
+                if (first != null && ContinuesStackDeferred(c)) samples = 1;
                 bool member = StacksOnScreen(c);
                 if (first == null || !member || c.clearFlags is not (CameraClearFlags.Depth or CameraClearFlags.Nothing))
                 {
@@ -1802,6 +1815,11 @@ namespace Unbound.Runtime
             }
             if (first != null) s_StackNeeds[first] = (hdr, samples);
         }
+
+        static bool ContinuesStackDeferred(Camera c) =>
+            c.targetTexture == null && c.BufferTarget == null && c.rect == new Rect(0f, 0f, 1f, 1f)
+            && c.actualRenderingPath == RenderingPath.DeferredShading
+            && c.clearFlags is CameraClearFlags.Depth or CameraClearFlags.Nothing;
 
         /// <summary>Whether a camera renders on the whole screen with nothing between it and the
         /// screen (RenderCamera's own intermediate aside): no target, image effects, deferred path
@@ -1819,6 +1837,19 @@ namespace Unbound.Runtime
                 RenderTexture.ReleaseTemporary(texture);
             s_ScreenStack = null;
             s_StackScreenMark = -1;
+        }
+
+        /// <summary>A deferred camera's light buffer (the size of its target) seeded with the
+        /// color under the camera's rect: the screen's, else its explicit target's.</summary>
+        static void SeedLightBuffer(Camera camera, bool onScreen, RenderTexture cameraTarget, RenderTexture light)
+        {
+            if (onScreen) SeedFromScreen(light, camera.pixelRect);
+            else if (cameraTarget != null && cameraTarget != light)
+            {
+                var rect = camera.pixelRect;
+                float w = Math.Max(1, cameraTarget.width), h = Math.Max(1, cameraTarget.height);
+                Graphics.Blit(cameraTarget, light, new Vector2(rect.width / w, rect.height / h), new Vector2(rect.x / w, rect.y / h));
+            }
         }
 
         /// <summary>The screen's pixels under <paramref name="pixelRect"/>, stretched over the
