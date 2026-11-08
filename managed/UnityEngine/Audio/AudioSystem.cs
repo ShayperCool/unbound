@@ -123,7 +123,7 @@ namespace Unbound.Runtime
             s_Listeners.Remove(listener);
             s_Listeners.Add(listener);
             s_HearingPose = AudioListenerPose.Of(listener);
-            s_HearingPosition = s_HearingPose.Position;
+            if (Compat.AudioSpatialStereoMeasured) s_HearingPosition = s_HearingPose.Position;
             s_HearingVelocity = listener.m_Velocity;
         }
 
@@ -135,7 +135,7 @@ namespace Unbound.Runtime
             s_Listeners.RemoveAll(l => l == null);
             var hearing = s_Listeners.Count > 0 ? s_Listeners[s_Listeners.Count - 1] : null;
             s_HearingPose = hearing != null ? AudioListenerPose.Of(hearing) : AudioListenerPose.Identity;
-            s_HearingPosition = s_HearingPose.Position;
+            if (Compat.AudioSpatialStereoMeasured) s_HearingPosition = s_HearingPose.Position;
             s_HearingVelocity = hearing != null ? hearing.m_Velocity : Vector3.zero;
         }
 
@@ -192,7 +192,7 @@ namespace Unbound.Runtime
             s_Listeners.RemoveAll(l => l == null);
             s_HearingPose = s_Listeners.Count > 0
                 ? AudioListenerPose.Of(s_Listeners[s_Listeners.Count - 1]) : AudioListenerPose.Identity;
-            s_HearingPosition = s_HearingPose.Position;
+            if (Compat.AudioSpatialStereoMeasured) s_HearingPosition = s_HearingPose.Position;
             ResetZoneInitialization();
             if (Compat.AudioClipResetDataMeasured)
             {
