@@ -45,3 +45,11 @@ def archived_root(probe, relative=''):
 def editor_path():
     return Path(os.environ.get('UNBOUND_PROBE_UNITY', str(
         Path.home()/'Unity/Hub/Editor'/unity_version()/'Editor/Unity')))
+
+
+def shared_runtime(cli, destination, managed=None, manifest=None):
+    """Reference one immutable build snapshot; all project/cache/output state stays in the run."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'tools/agents'))
+    from runtime_snapshot import snapshot_runtime, managed_for
+    return snapshot_runtime(cli, managed or managed_for(cli, prefer_environment=False), destination, expected=manifest)

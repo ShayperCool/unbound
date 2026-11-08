@@ -1,0 +1,282 @@
+#!/usr/bin/env python3
+"""Content identity, concurrent publication, permissions, and collection of probe runtimes."""
+import concurrent.futures
+import json
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+import threading
+import unittest
+from unittest import mock
+
+import runtime_snapshot as runtime
+
+
+def capture(cli, managed, destination, cache):
+    return str(runtime.snapshot_runtime(cli, managed, destination, cache=cache).resolve())
+
+
+class RuntimeSnapshotTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        self.cli = self.root/'build/release/unbound'
+        self.cli.parent.mkdir(parents=True)
+        self.cli.write_bytes(b'#!/bin/sh\nexit 0\n')
+        self.cli.chmod(0o755)
+        self.managed = self.root/'build/managed'
+        self.managed.mkdir()
+        (self.managed/'Unbound.Host.dll').write_bytes(b'host')
+        (self.managed/'nested').mkdir()
+        (self.managed/'nested/data').write_bytes(b'input')
+        self.cache = self.root/'cache'
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def snapshot(self, name='run', **kwargs):
+        return runtime.snapshot_runtime(self.cli, self.managed, self.root/name/'runtime',
+                                        cache=self.cache, **kwargs)
+
+    def test_reuses_all_contents_across_workers_and_keeps_build_outputs_independent(self):
+        first, second = self.snapshot(), self.snapshot('other')
+        self.assertTrue(first.is_symlink())
+        self.assertEqual(first.resolve(), second.resolve())
+        self.assertNotEqual(os.stat(first/'unbound').st_ino, self.cli.stat().st_ino)
+        self.cli.write_bytes(b'changed executable')
+        self.assertEqual((first/'unbound').read_bytes(), b'#!/bin/sh\nexit 0\n')
+        self.assertNotEqual(self.snapshot('third').resolve(), first.resolve())
+        (first.parent/'output.log').write_text('mutable output stays in run')
+
+    def test_key_covers_every_file_name_content_and_executable_bit(self):
+        previous = self.snapshot().resolve()
+        path = self.managed/'nested/data'
+        timestamp = path.stat().st_mtime_ns
+        path.write_bytes(b'other')
+        os.utime(path, ns=(timestamp, timestamp))
+        changed = self.snapshot('changed').resolve()
+        self.assertNotEqual(previous, changed)
+        path.rename(path.with_name('renamed'))
+        renamed = self.snapshot('renamed').resolve()
+        self.assertNotEqual(changed, renamed)
+        path = path.with_name('renamed')
+        path.chmod(0o755)
+        mode = self.snapshot('mode').resolve()
+        self.assertNotEqual(renamed, mode)
+        (self.managed/'new.dll').write_bytes(b'new')
+        self.assertNotEqual(mode, self.snapshot('new').resolve())
+        current = self.snapshot('before-version').resolve()
+        with mock.patch.object(runtime, 'FORMAT_VERSION', 2):
+            self.assertNotEqual(self.snapshot('version').resolve(), current)
+
+    def test_manifest_checks_keep_all_inputs_and_reject_mismatch(self):
+        first = self.snapshot()
+        manifest = json.loads((first/runtime.MANIFEST).read_text())
+        self.assertEqual(set(manifest), {'unbound', 'managed/Unbound.Host.dll', 'managed/nested/data'})
+        self.assertEqual(first.resolve(), self.snapshot('matching', expected=manifest).resolve())
+        manifest['../outside'] = 'bad'
+        with self.assertRaisesRegex(ValueError, 'supplied manifest'):
+            self.snapshot('bad', expected=manifest)
+
+    def test_run_cannot_write_replace_or_add_snapshot_files(self):
+        snapshot = self.snapshot()
+        for path in [snapshot, snapshot/'managed', snapshot/'unbound', snapshot/runtime.MANIFEST]:
+            self.assertEqual(path.stat().st_mode & 0o222, 0)
+        commands = [
+            "(p/'unbound').write_bytes(b'bad')",
+            "(p/'managed/Unbound.Host.dll').unlink()",
+            "(p/'managed/new.dll').write_bytes(b'bad')",
+            "(p/'runtime-manifest.json').write_text('{}')",
+        ]
+        for command in commands:
+            process = subprocess.run(['python3', '-c', f'from pathlib import Path; p=Path({str(snapshot)!r}); {command}'],
+                                     capture_output=True, text=True)
+            self.assertNotEqual(process.returncode, 0, command)
+            self.assertIn('PermissionError', process.stderr)
+
+    def test_simultaneous_processes_reuse_one_complete_snapshot(self):
+        with concurrent.futures.ProcessPoolExecutor(max_workers=8) as pool:
+            futures = [pool.submit(capture, self.cli, self.managed, self.root/f'run-{i}/runtime', self.cache)
+                       for i in range(8)]
+            paths = [future.result(timeout=30) for future in futures]
+        self.assertEqual(len(set(paths)), 1)
+        self.assertEqual(len(list((self.cache/'snapshots').iterdir())), 1)
+        self.assertEqual(list((self.cache/'snapshots').glob('.tmp-*')), [])
+        self.assertEqual(len(list((self.cache/'references').iterdir())), 8)
+
+    def test_publication_hides_incomplete_files(self):
+        copied, resume = threading.Event(), threading.Event()
+        original = runtime.shutil.copyfile
+        def blocked(source, destination):
+            result = original(source, destination)
+            if source == self.cli:
+                copied.set()
+                if not resume.wait(10):
+                    raise RuntimeError('publication test timed out')
+            return result
+        with mock.patch.object(runtime.shutil, 'copyfile', side_effect=blocked):
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(self.snapshot)
+                try:
+                    self.assertTrue(copied.wait(10))
+                    self.assertFalse((self.root/'run/runtime').exists())
+                    self.assertEqual([p for p in (self.cache/'snapshots').glob('*') if not p.name.startswith('.')], [])
+                finally:
+                    resume.set()
+                snapshot = future.result(timeout=10)
+        self.assertTrue((snapshot/runtime.MANIFEST).is_file())
+        self.assertEqual((snapshot/'managed/nested/data').read_bytes(), b'input')
+
+    def test_source_changes_abort_without_a_visible_snapshot(self):
+        original = runtime.shutil.copyfile
+        def changed(source, destination):
+            if source == self.cli:
+                source.write_bytes(b'changed while copying')
+            return original(source, destination)
+        with mock.patch.object(runtime.shutil, 'copyfile', side_effect=changed):
+            with self.assertRaisesRegex(ValueError, 'changed while'):
+                self.snapshot()
+        self.assertEqual(list((self.cache/'snapshots').glob('*')), [])
+        self.assertEqual(list((self.cache/'snapshots').glob('.tmp-*')), [])
+
+    def test_corrupt_or_writable_snapshot_is_not_reused(self):
+        first = self.snapshot()
+        (first/'unbound').chmod(0o755)
+        with self.assertRaisesRegex(ValueError, 'writable'):
+            self.snapshot('other')
+        (first/'unbound').write_bytes(b'bad')
+        (first/'unbound').chmod(0o555)
+        with self.assertRaisesRegex(ValueError, 'invalid snapshot file'):
+            self.snapshot('corrupt')
+
+    def test_old_unreferenced_snapshot_is_collected_but_live_run_is_preserved(self):
+        first, live = self.snapshot(), self.snapshot('live')
+        snapshot = first.resolve()
+        first.unlink()
+        os.utime(snapshot, (0, 0))
+        self.assertEqual(runtime.cleanup(cache=self.cache, days=14), [])
+        live.unlink()
+        self.assertEqual(runtime.cleanup(cache=self.cache, days=14), [snapshot.name])
+        self.assertFalse(snapshot.exists())
+        self.assertEqual(list((self.cache/'references').iterdir()), [])
+
+    def test_recent_unreferenced_snapshot_is_retained(self):
+        first = self.snapshot()
+        snapshot = first.resolve()
+        first.unlink()
+        self.assertEqual(runtime.cleanup(cache=self.cache), [])
+        self.assertTrue(snapshot.is_dir())
+
+    def test_main_pin_is_retained_until_a_new_main_build_is_pinned(self):
+        repo = self.root/'repo'
+        repo.mkdir()
+        def git(*args):
+            return subprocess.run(['git', '-C', str(repo), *args], check=True, capture_output=True, text=True).stdout.strip()
+        git('init', '-b', 'main')
+        git('-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '--allow-empty', '-m', 'initial')
+        tree = git('rev-parse', 'HEAD^{tree}')
+        first = self.snapshot()
+        snapshot = first.resolve()
+        runtime.pin_main(first, repo, tree, cache=self.cache)
+        first.unlink()
+        os.utime(snapshot, (0, 0))
+        self.assertEqual(runtime.cleanup(cache=self.cache), [])
+        (repo/'file').write_text('next tree')
+        git('add', 'file')
+        git('-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-m', 'next')
+        self.assertEqual(runtime.cleanup(cache=self.cache), [])
+        self.cli.write_bytes(b'next main build')
+        latest = self.snapshot('next')
+        runtime.pin_main(latest, repo, git('rev-parse', 'HEAD^{tree}'), cache=self.cache)
+        self.assertEqual(runtime.cleanup(cache=self.cache), [snapshot.name])
+        self.assertTrue(latest.is_dir())
+
+    def test_docs_only_main_advance_keeps_the_previous_build_pinned(self):
+        repo = self.root/'repo'
+        repo.mkdir()
+        def git(*args):
+            return subprocess.run(['git', '-C', str(repo), *args], check=True, capture_output=True, text=True).stdout.strip()
+        git('init', '-b', 'main')
+        git('-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '--allow-empty', '-m', 'initial')
+        previous = git('rev-parse', 'HEAD^{tree}')
+        first = self.snapshot()
+        snapshot = first.resolve()
+        runtime.pin_main(first, repo, previous, cache=self.cache)
+        first.unlink()
+        os.utime(snapshot, (0, 0))
+        (repo/'README.md').write_text('documentation')
+        git('add', 'README.md')
+        git('-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-m', 'docs')
+        current = git('rev-parse', 'HEAD^{tree}')
+        self.assertEqual(runtime.cleanup(cache=self.cache), [])
+        runtime.pin_main(None, repo, current, previous_tree=previous, cache=self.cache)
+        self.assertEqual(runtime.cleanup(cache=self.cache), [])
+        self.assertTrue(snapshot.is_dir())
+
+    def test_file_set_changes_during_capture_are_rejected(self):
+        original = runtime.shutil.copyfile
+        def changed(source, destination):
+            (self.managed/'new.dll').write_bytes(b'new build input')
+            return original(source, destination)
+        with mock.patch.object(runtime.shutil, 'copyfile', side_effect=changed):
+            with self.assertRaisesRegex(ValueError, 'file set changed'):
+                self.snapshot()
+        self.assertEqual(list((self.cache/'snapshots').glob('*')), [])
+
+    def test_cleanup_removes_abandoned_staging_but_keeps_live_publishers(self):
+        self.snapshot()
+        abandoned = self.cache/'snapshots/.tmp-1073741824-old'
+        live = self.cache/f'snapshots/.tmp-{os.getpid()}-live'
+        for directory in (abandoned, live):
+            directory.mkdir()
+            (directory/'partial').write_bytes(b'partial capture')
+            (directory/'partial').chmod(0o444)
+            directory.chmod(0o555)
+            os.utime(directory, (0, 0))
+        self.assertEqual(runtime.cleanup(cache=self.cache), [abandoned.name])
+        self.assertTrue(live.is_dir())
+
+    def test_snapshot_storage_can_be_linked_to_another_disk(self):
+        self.cache.mkdir()
+        storage = self.root/'other-disk'
+        storage.mkdir()
+        (self.cache/'snapshots').symlink_to(storage, target_is_directory=True)
+        first, second = self.snapshot(), self.snapshot('other')
+        snapshot = first.resolve()
+        self.assertEqual(snapshot.parent, storage)
+        os.utime(snapshot, (0, 0))
+        self.assertEqual(runtime.cleanup(cache=self.cache), [])
+        first.unlink()
+        second.unlink()
+        self.assertEqual(runtime.cleanup(cache=self.cache), [snapshot.name])
+
+    def test_cleanup_ignores_unrecognized_entries_and_directory_links(self):
+        self.snapshot()
+        foreign = self.cache/'snapshots/unrecognized'
+        foreign.mkdir()
+        (foreign/'keep').write_text('not a snapshot')
+        os.utime(foreign, (0, 0))
+        linked = self.cache/('snapshots/'+'a'*64)
+        linked.symlink_to(foreign, target_is_directory=True)
+        self.assertEqual(runtime.cleanup(cache=self.cache), [])
+        self.assertTrue((foreign/'keep').is_file())
+        self.assertTrue(linked.is_symlink())
+
+    def test_explicit_probe_cli_keeps_its_adjacent_managed_artifacts(self):
+        unrelated = self.root/'unrelated'
+        unrelated.mkdir()
+        with mock.patch.dict(os.environ, UNBOUND_MANAGED_DIR=str(unrelated)):
+            self.assertEqual(runtime.managed_for(self.cli), unrelated)
+            self.assertEqual(runtime.managed_for(self.cli, prefer_environment=False), self.managed)
+
+    def test_existing_destination_is_never_replaced(self):
+        first = self.snapshot()
+        self.cli.write_bytes(b'another build')
+        with self.assertRaisesRegex(ValueError, 'refusing to change'):
+            self.snapshot()
+        self.assertEqual((first/'unbound').read_bytes(), b'#!/bin/sh\nexit 0\n')
+
+
+if __name__ == '__main__':
+    unittest.main()
