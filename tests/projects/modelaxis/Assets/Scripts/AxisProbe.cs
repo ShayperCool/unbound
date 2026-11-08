@@ -32,13 +32,42 @@ public class AxisProbe : MonoBehaviour
                 Add(k + "/worldPosition", V(t.position));
                 Add(k + "/worldBasis", L(new[] { Vector3.right, Vector3.up, Vector3.forward }, v => V(t.TransformVector(v))));
                 var filter = t.GetComponent<MeshFilter>();
-                if (filter == null) continue;
-                var mesh = filter.sharedMesh;
+                var skinned = t.GetComponent<SkinnedMeshRenderer>();
+                var mesh = filter != null ? filter.sharedMesh : skinned != null ? skinned.sharedMesh : null;
+                if (mesh == null) continue;
                 Add(k + "/vertices", L(mesh.vertices, V));
-                Add(k + "/worldVertices", L(mesh.vertices, v => V(t.TransformPoint(v))));
+                // Normals and skinning keys exist only for the Pivots and Skinned sets.
+                if (mesh.normals.Length > 0) Add(k + "/normals", L(mesh.normals, V));
+                if (filter != null) Add(k + "/worldVertices", L(mesh.vertices, v => V(t.TransformPoint(v))));
                 Add(k + "/indices", L(mesh.triangles, i => i.ToString(CultureInfo.InvariantCulture)));
                 Add(k + "/meshBounds", "[" + V(mesh.bounds.center) + "," + V(mesh.bounds.size) + "]");
+                if (skinned == null) continue;
+                var root = instance.transform;
+                Add(k + "/rootBone", skinned.rootBone == null ? "null" : Q(PathOf(skinned.rootBone, root)));
+                Add(k + "/bones", L(skinned.bones, b => b == null ? "null" : Q(PathOf(b, root))));
+                Add(k + "/bindposes", L(mesh.bindposes, m => "[" + string.Join(",", Enumerable.Range(0, 16).Select(i => F(m[i]))) + "]"));
+                Add(k + "/updateWhenOffscreen", skinned.updateWhenOffscreen ? "true" : "false");
+                Add(k + "/localBounds", "[" + V(skinned.localBounds.center) + "," + V(skinned.localBounds.extents) + "]");
+                var baked = new Mesh();
+                skinned.BakeMesh(baked);
+                Add(k + "/bakedVertices", L(baked.vertices, V));
+                DestroyImmediate(baked);
             }
+            // Legacy clips (Pivots set): the local pose at frame-aligned times.
+            var animation = instance.GetComponent<Animation>();
+            if (animation != null)
+                foreach (AnimationState state in animation)
+                    foreach (var time in new[] { 0.5f, 1f })
+                    {
+                        state.clip.SampleAnimation(instance, time);
+                        foreach (var t in instance.GetComponentsInChildren<Transform>(true))
+                        {
+                            var k = model.name + "/" + state.clip.name + "@" + F(time) + "/" + PathOf(t, instance.transform);
+                            Add(k + "/localPosition", V(t.localPosition));
+                            Add(k + "/localScale", V(t.localScale));
+                            Add(k + "/localBasis", L(new[] { Vector3.right, Vector3.up, Vector3.forward }, v => V(t.localRotation * v)));
+                        }
+                    }
             DestroyImmediate(instance);
         }
         var directory = Environment.GetEnvironmentVariable("AXIS_OUT");

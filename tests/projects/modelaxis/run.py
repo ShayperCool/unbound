@@ -17,7 +17,15 @@ from probe_paths import reference_root, run_root
 
 # Fixed before the first capture. Node/vertex counts, hierarchy and indices stay exact.
 EPSILON = 1e-5
-COUNT = 32
+# Per set: models, Reference subdirectory, a key every model records, its minimum count.
+SETS = dict(Axis=(32,'','/worldVertices',32), Signed=(8,'signed','/worldVertices',8),
+            Pivots=(38,'pivots','/vertices',74), Skinned=(10,'skinned','/localBounds',10))
+SET = 'Axis'
+# The Pivots and Skinned sets scale the bound by the largest magnitude in each key's reference
+# value: their world bases reach 100 (a centimetre root's scale), where 1e-5 is below one
+# float32 step. Axis and Signed keep the absolute bound.
+SCALED = ('Pivots','Skinned')
+EXACT = ('/indices','/nodes','/rootBone','/bones','/updateWhenOffscreen')
 
 def load(path):
     values = {}
@@ -31,21 +39,27 @@ def complete(directory):
     path = directory/'axis.jsonl'
     if not path.is_file(): return 'missing axis.jsonl'
     rows = load(path)
-    if sum(k.endswith('/nodes') for k in rows) != COUNT: return 'missing model controls'
-    if sum(k.endswith('/worldVertices') for k in rows) != COUNT: return 'missing mesh controls'
-    if any(len(v) != 4 for k,v in rows.items() if k.endswith('/vertices')): return 'invalid tetrahedron'
+    count,_,mesh_key,meshes = SETS[SET]
+    if sum(k.endswith('/nodes') for k in rows) != count: return 'missing model controls'
+    if sum(k.endswith(mesh_key) for k in rows) < meshes: return 'missing mesh controls'
+    if SET in ('Axis','Signed') and any(len(v) != 4 for k,v in rows.items() if k.endswith('/vertices')):
+        return 'invalid tetrahedron'
     return None
 
-def differences(a,b,path=(),numeric=True):
+def magnitude(v):
+    if isinstance(v,list): return max((magnitude(x) for x in v),default=0)
+    return abs(v) if isinstance(v,(float,int)) and not isinstance(v,bool) and math.isfinite(v) else 0
+
+def differences(a,b,path=(),numeric=True,scale=1):
     if isinstance(a,list) and isinstance(b,list):
         result = []
         for i in range(max(len(a),len(b))):
             if i >= len(a): result.append(dict(index=path+(i,),extra=b[i]))
             elif i >= len(b): result.append(dict(index=path+(i,),missing=a[i]))
-            else: result.extend(differences(a[i],b[i],path+(i,),numeric))
+            else: result.extend(differences(a[i],b[i],path+(i,),numeric,scale))
         return result
     if numeric and isinstance(a,(float,int)) and isinstance(b,(float,int)):
-        if math.isfinite(a) and math.isfinite(b) and abs(a-b) <= EPSILON: return []
+        if math.isfinite(a) and math.isfinite(b) and abs(a-b) <= EPSILON*scale: return []
     elif type(a) == type(b) and a == b: return []
     return [dict(index=path,expected=a,actual=b)]
 
@@ -56,13 +70,14 @@ def compare(reference,candidate):
         if k not in a: report[k] = dict(extra=b[k])
         elif k not in b: report[k] = dict(missing=a[k])
         else:
-            diff = differences(a[k],b[k],numeric=not k.endswith(('/indices','/nodes')))
+            scale = max(1,magnitude(a[k])) if SET in SCALED else 1
+            diff = differences(a[k],b[k],numeric=not k.endswith(EXACT),scale=scale)
             if diff: report[k] = diff
     issue = complete(candidate)
-    result = dict(values=report,invalid=issue,tolerance=EPSILON)
+    result = dict(values=report,invalid=issue,tolerance=EPSILON,scaled=SET in SCALED)
     output = candidate/'comparison.json'
     output.write_text(json.dumps(result,indent=1)+'\n')
-    print(f'static FBX axis/units: {len(a.keys() | b.keys())-len(report)}/{len(a.keys() | b.keys())} keys within {EPSILON}; {output}')
+    print(f'FBX node transforms ({SET}): {len(a.keys() | b.keys())-len(report)}/{len(a.keys() | b.keys())} keys within {EPSILON}; {output}')
     for k in report: print('FAIL',k)
     if issue: print('FAIL',issue)
     return int(bool(report or issue))
@@ -78,17 +93,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode',choices=('editor','publish','unbound','check'))
     parser.add_argument('--release',required=True)
-    parser.add_argument('--set',choices=('Axis','Signed'),default='Axis')
+    parser.add_argument('--set',choices=tuple(SETS),default='Axis')
     parser.add_argument('--label',default='gate-'+str(time.time_ns()))
     args = parser.parse_args()
-    global COUNT
-    COUNT = 8 if args.set == 'Signed' else 32
+    global SET
+    SET = args.set
     os.environ['AXIS_SET'] = args.set
     if Path(args.label).name != args.label or args.label in ('.','..'): parser.error('invalid label')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE,args.label)
     reference = reference_root(PROBE)
-    if args.set == 'Signed': reference = reference/'signed'
+    if SETS[SET][1]: reference = reference/SETS[SET][1]
     work.mkdir(parents=True,exist_ok=True)
     if args.mode == 'editor':
         jobs = []

@@ -1,7 +1,9 @@
 {
   "commands": [
     "python3 tests/projects/modelaxis/run.py unbound --release \"$UNBOUND_PROBE_UNITY_VERSION\"",
-    "python3 tests/projects/modelaxis/run.py unbound --release \"$UNBOUND_PROBE_UNITY_VERSION\" --set Signed"
+    "python3 tests/projects/modelaxis/run.py unbound --release \"$UNBOUND_PROBE_UNITY_VERSION\" --set Signed",
+    "python3 tests/projects/modelaxis/run.py unbound --release \"$UNBOUND_PROBE_UNITY_VERSION\" --set Pivots",
+    "python3 tests/projects/modelaxis/run.py unbound --release \"$UNBOUND_PROBE_UNITY_VERSION\" --set Skinned"
   ],
-  "summary": "static FBX axis/units: .*"
+  "summary": "FBX node transforms .*"
 }

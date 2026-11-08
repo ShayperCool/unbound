@@ -87,6 +87,9 @@ def main():
             import re
             meta = re.sub(r'(?m)^(    '+key+r': ).*',lambda m:m[1]+str(value),meta)
         Path(str(path)+'.meta').write_text(meta)
+    write_missing_metas()
+
+def write_missing_metas():
     for path in sorted((ROOT/'Assets').rglob('*')):
         if path.suffix == '.meta': continue
         meta = Path(str(path)+'.meta')
