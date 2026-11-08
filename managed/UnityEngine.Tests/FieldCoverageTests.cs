@@ -43,6 +43,10 @@ namespace Unbound.Tests
         {
             for (int i = 2; i < 6; i += 2) body.Int($"k{i}");
         }
+        static void DeclaredCounted(YNode body)
+        {
+            for (int i = 0; i < body.Int("count"); i++) body.Int($"key{i}");
+        }
 
         [Fact]
         public void GeneratedFieldsFollowReadersAndHelpersWithoutInvokingThem()
@@ -67,6 +71,10 @@ namespace Unbound.Tests
             var indexed = YNode.MakeMap(Enumerable.Range(0, 7).Select(i => ($"k{i}", YNode.MakeScalar("0"))).ToArray());
             ReaderFieldSchema.Consume(indexed, ReaderFieldSchema.Fields(typeof(FieldCoverageTests), nameof(DeclaredIndexed), 1));
             Assert.Equal(new[] { "k2", "k4" }, indexed.Keys.Where((key, i) => indexed.Values[i].CoverageRead));
+            var counted = YNode.MakeMap(("key42", YNode.MakeScalar("0")), ("keyWrong", YNode.MakeScalar("0")));
+            ReaderFieldSchema.Consume(counted, ReaderFieldSchema.Fields(typeof(FieldCoverageTests), nameof(DeclaredCounted), 1));
+            Assert.True(counted.Values[0].CoverageRead);
+            Assert.False(counted.Values[1].CoverageRead);
         }
 
         [Fact]

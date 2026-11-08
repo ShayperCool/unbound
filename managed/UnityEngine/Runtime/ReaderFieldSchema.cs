@@ -75,9 +75,9 @@ namespace Unbound.Runtime
                             else if (step.StartsWith("k", StringComparison.Ordinal))
                             {
                                 string key = step.Substring(1);
-                                if (key.Contains('*'))
+                                if (key.Contains('*') || key.Contains('¤'))
                                 {
-                                    var matcher = s_Patterns.GetOrAdd(key, k => new Regex("\\A" + Regex.Escape(k).Replace("\\*", ".*") + "\\z", RegexOptions.CultureInvariant));
+                                    var matcher = s_Patterns.GetOrAdd(key, k => new Regex("\\A" + Regex.Escape(k).Replace("\\*", ".*").Replace("¤", "[0-9]+") + "\\z", RegexOptions.CultureInvariant));
                                     var next = new Branch();
                                     branch.Patterns.Add((matcher, next));
                                     branch = next;

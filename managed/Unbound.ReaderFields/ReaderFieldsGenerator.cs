@@ -232,13 +232,16 @@ public sealed class ReaderFieldsGenerator : IIncrementalGenerator
             if (variable.Initializer == null || Model(variable.Initializer.Value).GetConstantValue(variable.Initializer.Value) is not { HasValue: true, Value: int start }
                 || loop.Condition is not BinaryExpressionSyntax condition || !condition.IsKind(SyntaxKind.LessThanExpression)
                 || condition.Left is not IdentifierNameSyntax id || id.Identifier.ValueText != name
-                || Model(condition.Right).GetConstantValue(condition.Right) is not { HasValue: true, Value: int end }
                 || loop.Incrementors.Count != 1) return new[] { "!unknown loop field names" };
             var increment = loop.Incrementors[0];
             int step = increment is PostfixUnaryExpressionSyntax post && post.IsKind(SyntaxKind.PostIncrementExpression) && post.Operand.ToString() == name
                 || increment is PrefixUnaryExpressionSyntax pre && pre.IsKind(SyntaxKind.PreIncrementExpression) && pre.Operand.ToString() == name ? 1
                 : increment is AssignmentExpressionSyntax assignment && assignment.IsKind(SyntaxKind.AddAssignmentExpression) && assignment.Left.ToString() == name
                     && Model(assignment.Right).GetConstantValue(assignment.Right) is { HasValue: true, Value: int amount } ? amount : 0;
+            // A data-dependent count declares nonnegative numeric suffixes. This remains
+            // narrower than an arbitrary field-name wildcard (for example, gradient keys).
+            if (Model(condition.Right).GetConstantValue(condition.Right) is not { HasValue: true, Value: int end })
+                return start == 0 && step == 1 ? new[] { "¤" } : new[] { "!unknown loop field names" };
             if (step <= 0 || (long)end - start > (long)MaxExpandedLoopNames * step) return new[] { "!unknown loop field names" };
             var values = new List<string>();
             for (long value = start; value < end; value += step) values.Add(value.ToString(CultureInfo.InvariantCulture));
