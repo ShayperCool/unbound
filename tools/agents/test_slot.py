@@ -347,6 +347,22 @@ class SlotTests(unittest.TestCase):
         self.assertTrue(source.exists() and destination.exists())
         self.assertTrue((cache/'a.txt').is_file())
 
+    def test_reap_keeps_dangling_cache_root_reference_chains(self):
+        base = Path(self.temp.name).resolve()
+        source, destination = base/'source', base/'destination'
+        for path in (source, destination):
+            self.git('worktree', 'add', '-q', '-b', f't3/{path.name}', str(path), 'main')
+        (source/'cache').symlink_to(destination/'pending-run', target_is_directory=True)
+        self.git('add', '.', cwd=source)
+        self.git('commit', '-qm', 'reference', cwd=source)
+        for path in (source, destination):
+            self.make_old(path)
+        cache = Path(self.env['XDG_CACHE_HOME'])/'unbound'
+        cache.parent.mkdir(parents=True)
+        cache.symlink_to(source/'cache', target_is_directory=True)
+        self.run_slot('reap')
+        self.assertTrue(source.exists() and destination.exists())
+
     def test_parent_steps_after_a_directory_link_use_filesystem_resolution(self):
         base = Path(self.temp.name).resolve()
         checkout = base/'linked'

@@ -162,13 +162,6 @@ def cmd_prepare(args, repo):
 def symlink_targets(base, checkouts=()):
     """Run-cache links at any depth, including caches stored behind directory aliases."""
     found = set()
-    try:
-        if not stat.S_ISDIR(base.stat().st_mode):
-            return found
-    except FileNotFoundError:
-        return found
-    except OSError as error:
-        raise SystemExit(f'cannot inspect run-cache links: {error}; refusing to reap worktrees')
     base = base.absolute()
     checkouts = set(checkouts)
     # Compiler/Editor installations hold no live probe projects. Following the build
