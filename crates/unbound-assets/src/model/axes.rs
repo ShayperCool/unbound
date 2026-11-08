@@ -67,14 +67,7 @@ impl StaticAxes {
         let b = self.vector(mesh.bounds_max);
         mesh.bounds_min = std::array::from_fn(|i| a[i].min(b[i]));
         mesh.bounds_max = std::array::from_fn(|i| a[i].max(b[i]));
-        if self.determinant < 0.0 {
-            for indices in &mut mesh.submeshes {
-                for triangle in indices.chunks_exact_mut(3) {
-                    triangle.swap(1, 2);
-                }
-            }
-        }
-        // Vertex order, material slots and UV channels are unchanged.
+        // A reversing conversion's triangles were already turned while the mesh was built.
     }
 }
 

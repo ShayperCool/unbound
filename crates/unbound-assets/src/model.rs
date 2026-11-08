@@ -334,6 +334,9 @@ pub struct ModelRenderer {
     /// Skinned: the blend shapes' initial weights (percent; the file's DeformPercent).
     #[serde(default)]
     pub blend_shape_weights: Vec<f32>,
+    /// Skinned with a root bone: `localBounds` (centre, extents) in the root bone's space.
+    #[serde(default)]
+    pub local_bounds: Option<([f32; 3], [f32; 3])>,
 }
 
 /// A blend shape channel of a mesh: its frames by increasing weight.
@@ -720,11 +723,9 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
                     ufbx::CoordinateAxes::right_handed_y_up()
                 },
                 space_conversion: ufbx::SpaceConversion::AdjustTransforms,
-                geometry_transform_handling: ufbx::GeometryTransformHandling::ModifyGeometry,
-                // Unity moves a node to its pivot and its geometry by the opposite (measured: a Maya
-                // node with its pivot away from its origin imports at local zero with its mesh centred
-                // on the pivot), so a prefab or clip setting the node's position keeps the mesh in place.
-                pivot_handling: ufbx::PivotHandling::AdjustToPivot,
+                // Pivots and geometric transforms are baked as the Editor does (see `pivots`).
+                geometry_transform_handling: ufbx::GeometryTransformHandling::Preserve,
+                pivot_handling: ufbx::PivotHandling::Retain,
                 // Missing normals are calculated as the importer does (see `normals`).
                 generate_missing_normals: false,
                 // The DOM identifies each geometry's smoothing layer (see `fbx_smoothing`).
@@ -792,6 +793,7 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
     let mut builder = Builder {
         settings: &settings,
         scale,
+        reverse_winding: baked && conversion.as_ref().is_some_and(|c| c.reverses_handedness()),
         obj: scene.metadata.file_format == ufbx::FileFormat::Obj,
         name: asset_name(source),
         legacy: table.legacy,
@@ -812,6 +814,8 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         unique_names: HashMap::new(),
         node_index: HashMap::new(),
         sources: Vec::new(),
+        pivots: Vec::new(),
+        offsets: HashMap::new(),
         rest_pose: (settings.import_animation && settings.animation_type != 0)
             .then(|| scene.anim_stacks.first())
             .flatten()
@@ -917,6 +921,19 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
     builder.lod_group(&mut ids);
     let mut model = builder.model;
     model.clips = clips;
+    // Unity bounds a skinned mesh over the poses of the model's animations (documented:
+    // Renderer.localBounds). Measured where those poses are the import pose: no clip, or clips
+    // whose transform curves are constant.
+    let still = |keys: &[Key<3>]| keys.windows(2).all(|w| w[0].value == w[1].value);
+    let still_rotation = |keys: &[Key<4>]| keys.windows(2).all(|w| w[0].value == w[1].value);
+    if model
+        .clips
+        .iter()
+        .flat_map(|c| &c.curves)
+        .all(|c| still(&c.positions) && still_rotation(&c.rotations) && still(&c.scales))
+    {
+        pivots::set_skinned_local_bounds(&mut model);
+    }
     model.warnings.extend(clip_warnings);
     model.animator = animator;
     if matches!(settings.animation_type, 2 | 3) && settings.avatar_setup == 1 {
@@ -950,6 +967,8 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
 struct Builder<'a> {
     settings: &'a ModelSettings,
     scale: f32,
+    /// Triangles are turned (see `build_mesh`) for a baked handedness-reversing conversion.
+    reverse_winding: bool,
     /// The file is OBJ.
     obj: bool,
     name: String,
@@ -961,6 +980,10 @@ struct Builder<'a> {
     node_index: HashMap<u32, u32>,
     /// The ufbx node of each of `model.nodes`.
     sources: Vec<&'a ufbx::Node>,
+    /// Each of `model.nodes`' placement (see `pivots`).
+    pivots: Vec<pivots::Placement>,
+    /// ufbx mesh element id → the offset baked into it (its first node's).
+    offsets: HashMap<u32, pivots::GeometryOffset>,
     /// ufbx material element id → index in `model.materials`.
     material_index: HashMap<u32, u32>,
     obj_diffuse: Option<&'a ufbx::Texture>,
@@ -1059,11 +1082,20 @@ impl<'a> Builder<'a> {
         let index = self.model.nodes.len() as u32;
         self.node_index.insert(node.element.element_id, index);
         self.sources.push(node);
+        let placement = pivots::Placement::of(node);
+        self.pivots.push(placement);
+        if placement.unmeasured_children(node) {
+            self.model.warnings.push(format!(
+                "the pivots of skinned mesh node '{name}' are dropped; its children keep their \
+                 FBX translation (unmeasured)"
+            ));
+        }
+        let parent_offset = parent.map_or(pivots::ZERO, |p| self.pivots[p as usize].offset());
         self.model.nodes.push(ModelNode {
             name,
             parent,
             children: Vec::new(),
-            position: self.position(t.translation),
+            position: self.position(placement.position(t, parent_offset)),
             rotation: [
                 t.rotation.x as f32,
                 -t.rotation.y as f32,
@@ -1255,7 +1287,7 @@ impl<'a> Builder<'a> {
                         let time = (time - start) as f32;
                         positions.push(Key {
                             time,
-                            value: self.position(t.translation),
+                            value: self.position(self.placed(index, &t)),
                         });
                         rotations.push(Key {
                             time,
@@ -1279,14 +1311,34 @@ impl<'a> Builder<'a> {
                     });
                     continue;
                 }
-                let positions: Vec<Key<3>> = node
-                    .translation_keys
-                    .iter()
-                    .map(|k| Key {
-                        time: k.time as f32,
-                        value: self.position(k.value),
-                    })
-                    .collect();
+                let positions: Vec<Key<3>> = if self.pivoted(index) {
+                    // The position follows rotation and scale too: keyed at every key time.
+                    let source = self.sources[index as usize];
+                    let mut times: Vec<f64> = (node.translation_keys.iter().map(|k| k.time))
+                        .chain(node.rotation_keys.iter().map(|k| k.time))
+                        .chain(node.scale_keys.iter().map(|k| k.time))
+                        .collect();
+                    times.sort_by(f64::total_cmp);
+                    times.dedup();
+                    times
+                        .into_iter()
+                        .map(|time| Key {
+                            time: time as f32,
+                            value: self.position(self.placed(
+                                index,
+                                &ufbx::evaluate_transform(&stack.anim, source, time),
+                            )),
+                        })
+                        .collect()
+                } else {
+                    node.translation_keys
+                        .iter()
+                        .map(|k| Key {
+                            time: k.time as f32,
+                            value: self.position(k.value),
+                        })
+                        .collect()
+                };
                 let rotations: Vec<Key<4>> = node
                     .rotation_keys
                     .iter()
@@ -1491,7 +1543,7 @@ impl<'a> Builder<'a> {
             let (mut p, mut q, mut s) = ([0f32; 3], [0f32, 0.0, 0.0, 1.0], [1f32; 3]);
             for &i in &chain {
                 let t = ufbx::evaluate_transform(anim, self.sources[i as usize], time);
-                let lp = self.position(t.translation);
+                let lp = self.position(self.placed(i, &t));
                 let lq = [
                     t.rotation.x as f32,
                     -t.rotation.y as f32,
@@ -1546,6 +1598,21 @@ impl<'a> Builder<'a> {
     }
 
     /// A position in Unity's space, scaled.
+    /// Node `index`'s GameObject position (FBX space) for its transform `t` (see `pivots`).
+    fn placed(&self, index: u32, t: &ufbx::Transform) -> ufbx::Vec3 {
+        let parent = self.model.nodes.get(index as usize).and_then(|n| n.parent);
+        let parent = parent.map_or(pivots::ZERO, |p| self.pivots[p as usize].offset());
+        self.pivots[index as usize].position(t, parent)
+    }
+
+    /// The node or its parent is placed away from its FBX origin, so its position depends on
+    /// its rotation and scale as well as its translation.
+    fn pivoted(&self, index: u32) -> bool {
+        let parent = self.model.nodes[index as usize].parent;
+        self.pivots[index as usize].moves()
+            || parent.is_some_and(|p| self.pivots[p as usize].shifts_children())
+    }
+
     fn position(&self, v: ufbx::Vec3) -> [f32; 3] {
         [
             -v.x as f32 * self.scale,
@@ -1575,7 +1642,13 @@ impl<'a> Builder<'a> {
                 .iter()
                 .find(|s| !s.clusters.is_empty())
                 .map(|s| s.as_ref());
-            let (built, slots, warning) = self.build_mesh(mesh, node, skin)?;
+            let pivot = self.pivots[index].offset();
+            let offset = self
+                .offsets
+                .entry(mesh.element.element_id)
+                .or_insert_with(|| pivots::GeometryOffset::of(node, pivot))
+                .clone();
+            let (built, slots, warning) = self.build_mesh(mesh, node, skin, &offset)?;
             let mesh_name = if is_root {
                 node.element.name.to_string()
             } else {
@@ -1656,6 +1729,7 @@ impl<'a> Builder<'a> {
                     bones,
                     root_bone,
                     blend_shape_weights: weights,
+                    local_bounds: None,
                 }
             } else {
                 ModelRenderer {
@@ -1684,6 +1758,7 @@ impl<'a> Builder<'a> {
                     bones: Vec::new(),
                     root_bone: None,
                     blend_shape_weights: Vec::new(),
+                    local_bounds: None,
                 }
             };
             self.model.nodes[index].renderer = Some(renderer);
@@ -1872,6 +1947,7 @@ impl<'a> Builder<'a> {
         mesh: &'a ufbx::Mesh,
         node: &'a ufbx::Node,
         skin: Option<&ufbx::SkinDeformer>,
+        offset: &pivots::GeometryOffset,
     ) -> Result<(ModelMesh, Vec<Option<&'a ufbx::Material>>, Option<String>)> {
         let settings = self.settings;
         let with_normals = settings.normals != NormalMode::None;
@@ -1901,6 +1977,12 @@ impl<'a> Builder<'a> {
             blend_shapes: Vec::new(),
         };
         let channels = self.blend_channels(mesh);
+        // The control points with the node's geometric transform and pivot offset baked in.
+        let vertices: std::borrow::Cow<[ufbx::Vec3]> = if offset.is_identity() {
+            std::borrow::Cow::Borrowed(&*mesh.vertices)
+        } else {
+            mesh.vertices.iter().map(|&v| offset.point(v)).collect()
+        };
         // Control points as the importer welds them: in file order (an OBJ's in first-use order),
         // equal positions with equal skin weights made one (with blend shapes, only the same point).
         let mut welded = vec![0u32; mesh.vertices.len()];
@@ -1911,7 +1993,7 @@ impl<'a> Builder<'a> {
             let mut key = Vec::new();
             for v in self.control_point_order(mesh) {
                 // Mirrored into Unity's handedness, unscaled.
-                let p = mesh.vertices[v as usize];
+                let p = vertices[v as usize];
                 let p = [-p.x as f32, p.y as f32, p.z as f32];
                 key.clear();
                 key.extend(p.map(|c| (c + 0.0).to_bits()));
@@ -1934,7 +2016,7 @@ impl<'a> Builder<'a> {
         // Lightmap UVs replace UV2 (measured: tests/projects/lightmapuvs).
         let mut warning = None;
         let lightmap = settings.secondary_uv.as_ref().and_then(|unwrap| {
-            match self.lightmap_uvs(mesh, uv_sets.first().copied(), unwrap, &welded) {
+            match self.lightmap_uvs(mesh, &vertices, uv_sets.first().copied(), unwrap, &welded) {
                 Ok(lightmap) => Some(lightmap),
                 Err(error) => {
                     warning = Some(format!(
@@ -1994,7 +2076,7 @@ impl<'a> Builder<'a> {
                 range.clone().map(|c| mesh.vertex_indices[c]).collect(),
                 range.clone().collect(),
             ));
-            let face_pieces = face_pieces(mesh, *face, point)?;
+            let face_pieces = face_pieces(mesh, &vertices, *face, point)?;
             discarded += face_pieces.discarded as usize;
             let pieces: Vec<&[u32]> = match &face_pieces.quad {
                 Some(quad) => vec![&quad[..]],
@@ -2045,15 +2127,11 @@ impl<'a> Builder<'a> {
         let normals: Vec<[f32; 3]> = if !with_normals {
             Vec::new()
         } else if settings.normals == NormalMode::Import && mesh.vertex_normal.exists {
-            let n = |c: usize| mesh.vertex_normal[c];
             wedges
                 .iter()
                 .map(|w| {
-                    [
-                        -n(w.corner).x as f32,
-                        n(w.corner).y as f32,
-                        n(w.corner).z as f32,
-                    ]
+                    let n = offset.direction(mesh.vertex_normal[w.corner]);
+                    [-n.x as f32, n.y as f32, n.z as f32]
                 })
                 .collect()
         } else {
@@ -2095,7 +2173,7 @@ impl<'a> Builder<'a> {
         };
         let positions: Vec<[f32; 3]> = points
             .iter()
-            .map(|&v| self.position(mesh.vertices[v as usize]))
+            .map(|&v| self.position(vertices[v as usize]))
             .collect();
         // Tangents per wedge: the file's (with imported normals), or MikkTSpace on the wedges.
         let tangents: Vec<[f32; 4]> = match settings.tangents {
@@ -2109,9 +2187,9 @@ impl<'a> Builder<'a> {
                 wedges
                     .iter()
                     .map(|w| {
-                        let n = mesh.vertex_normal[w.corner];
-                        let t = mesh.vertex_tangent[w.corner];
-                        let b = mesh.vertex_bitangent[w.corner];
+                        let n = offset.direction(mesh.vertex_normal[w.corner]);
+                        let t = offset.direction(mesh.vertex_tangent[w.corner]);
+                        let b = offset.direction(mesh.vertex_bitangent[w.corner]);
                         // Handedness of the source frame, flipped by the mirror.
                         let cross = [
                             n.y * t.z - n.z * t.y,
@@ -2187,7 +2265,16 @@ impl<'a> Builder<'a> {
         let mut splitter = normals::Splitter::new(count);
         let mut corner_vertex = vec![u32::MAX; mesh.num_indices];
         for triangle in &triangles {
-            for (k, &i) in triangle.wedges.iter().enumerate() {
+            // A baked handedness-reversing axis conversion turns each triangle before its
+            // corners make vertices, so split vertices follow the turned order (measured,
+            // tests/projects/modelaxis MaxZupBake).
+            let order = if self.reverse_winding {
+                [0, 2, 1]
+            } else {
+                [0, 1, 2]
+            };
+            for k in order {
+                let i = triangle.wedges[k];
                 let w = &wedges[i];
                 let uv = |set: usize, w: &Wedge| match (set, triangle.uv2) {
                     (1, Some(uv2)) => uv2[k],
@@ -2272,6 +2359,8 @@ impl<'a> Builder<'a> {
         if !channels.is_empty() {
             self.add_blend_shapes(
                 mesh,
+                &vertices,
+                offset,
                 &channels,
                 &mut out,
                 &control_points,
@@ -2284,12 +2373,20 @@ impl<'a> Builder<'a> {
             out.bind_poses = skin
                 .clusters
                 .iter()
-                .map(|c| self.matrix(&c.geometry_to_bone))
+                .map(|c| self.matrix(&offset.bind(&c.geometry_to_bone)))
                 .collect();
         }
+        // The bounds hold every blend shape frame's positions too (measured,
+        // tests/projects/modelaxis Skinned set).
         if let Some(first) = out.positions.first() {
             let (mut min, mut max) = (*first, *first);
-            for p in &out.positions {
+            let shaped = out
+                .blend_shapes
+                .iter()
+                .flat_map(|s| &s.frames)
+                .flat_map(|f| out.positions.iter().zip(&f.vertices))
+                .map(|(p, d)| [p[0] + d[0], p[1] + d[1], p[2] + d[2]]);
+            for p in out.positions.iter().copied().chain(shaped) {
                 for i in 0..3 {
                     min[i] = min[i].min(p[i]);
                     max[i] = max[i].max(p[i]);
@@ -2326,6 +2423,7 @@ impl<'a> Builder<'a> {
     fn lightmap_uvs(
         &self,
         mesh: &ufbx::Mesh,
+        vertices: &[ufbx::Vec3],
         uv0: Option<&ufbx::VertexVec2>,
         settings: &SecondaryUvSettings,
         welded: &[u32],
@@ -2339,7 +2437,7 @@ impl<'a> Builder<'a> {
         let mut positions: Vec<[f32; 3]> = Vec::with_capacity(order.len());
         let mut first: HashMap<[u32; 3], u32> = HashMap::new();
         for &v in &order {
-            let p = self.position(mesh.vertices[v as usize]);
+            let p = self.position(vertices[v as usize]);
             index[v as usize] = *first
                 .entry(p.map(|c| (c + 0.0).to_bits()))
                 .or_insert_with(|| {
@@ -2353,7 +2451,7 @@ impl<'a> Builder<'a> {
         for &face in mesh.faces.iter() {
             first.push(triangles.len());
             // The mesh's own triangles (over its welded points), numbered as `build_mesh` does.
-            let pieces = face_pieces(mesh, face, |c| {
+            let pieces = face_pieces(mesh, vertices, face, |c| {
                 welded[mesh.vertex_indices[c as usize] as usize]
             })
             .map_err(|e| e.to_string())?;
@@ -2406,6 +2504,8 @@ impl<'a> Builder<'a> {
     fn add_blend_shapes(
         &self,
         mesh: &ufbx::Mesh,
+        vertices: &[ufbx::Vec3],
+        offset: &pivots::GeometryOffset,
         channels: &[&ufbx::BlendChannel],
         out: &mut ModelMesh,
         control_points: &[u32],
@@ -2414,7 +2514,7 @@ impl<'a> Builder<'a> {
         with_normals: bool,
     ) {
         let settings = self.settings;
-        let base: Vec<[f64; 3]> = mesh.vertices.iter().map(|v| [v.x, v.y, v.z]).collect();
+        let base: Vec<[f64; 3]> = vertices.iter().map(|v| [v.x, v.y, v.z]).collect();
         let cp_polygons: Vec<Vec<u32>> = polygons.iter().map(|(cps, _)| cps.clone()).collect();
         let uv0 = out.uvs.first().cloned().unwrap_or_default();
         // Tangent deltas compare MikkTSpace on the final vertices, shaped and not.
@@ -2430,14 +2530,16 @@ impl<'a> Builder<'a> {
                 let mut offsets = vec![[0f64; 3]; mesh.num_vertices];
                 let mut normal_offsets = vec![[0f64; 3]; mesh.num_vertices];
                 for (i, &v) in shape.offset_vertices.iter().enumerate() {
-                    if let Some(o) = shape.position_offsets.get(i)
+                    if let Some(&o) = shape.position_offsets.get(i)
                         && let Some(slot) = offsets.get_mut(v as usize)
                     {
+                        let o = offset.delta(o);
                         *slot = [o.x, o.y, o.z];
                     }
-                    if let Some(n) = shape.normal_offsets.get(i)
+                    if let Some(&n) = shape.normal_offsets.get(i)
                         && let Some(slot) = normal_offsets.get_mut(v as usize)
                     {
+                        let n = offset.direction(n);
                         *slot = [n.x, n.y, n.z];
                     }
                 }
@@ -2927,6 +3029,7 @@ struct FacePieces {
 ///   discarded. A triangle repeating a welded point is dropped.
 fn face_pieces(
     mesh: &ufbx::Mesh,
+    vertices: &[ufbx::Vec3],
     face: ufbx::Face,
     point: impl Fn(u32) -> u32,
 ) -> Result<FacePieces> {
@@ -2957,7 +3060,7 @@ fn face_pieces(
         return Ok(pieces);
     }
     let positions: Vec<[f32; 3]> = (b..b + n)
-        .map(|c| mesh.vertices[mesh.vertex_indices[c as usize] as usize])
+        .map(|c| vertices[mesh.vertex_indices[c as usize] as usize])
         .map(|p| [-p.x as f32, p.y as f32, p.z as f32])
         .collect();
     let Some(indices) = triangulation::polygon(&positions)? else {
@@ -3051,6 +3154,7 @@ mod fbx_smoothing;
 mod lightmap_uv;
 mod materials;
 mod normals;
+mod pivots;
 mod tangent_space;
 mod triangulation;
 

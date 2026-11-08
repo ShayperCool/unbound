@@ -252,30 +252,38 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
                         .root_bone
                         .and_then(|b| model.nodes.get(b as usize))
                         .map_or(0, |n| n.transform.id);
+                    // The importer's local bounds (Update When Offscreen off).
+                    let aabb = renderer.local_bounds.map(|(centre, extent)| {
+                        map(vec![("m_Center", vec3(centre)), ("m_Extent", vec3(extent))])
+                    });
                     docs.push(doc(
                         SKINNED_MESH_RENDERER,
                         renderer.renderer.id,
                         "SkinnedMeshRenderer",
-                        map(vec![
-                            ("m_GameObject", local(go)),
-                            ("m_Enabled", scalar(1)),
-                            ("m_CastShadows", scalar(1)),
-                            ("m_ReceiveShadows", scalar(1)),
-                            ("m_Materials", materials),
-                            ("m_Mesh", local(mesh_id)),
-                            ("m_Bones", Value::Seq(bones)),
-                            ("m_RootBone", local(root)),
-                            (
-                                "m_BlendShapeWeights",
-                                Value::Seq(
-                                    renderer
-                                        .blend_shape_weights
-                                        .iter()
-                                        .map(|w| scalar(w))
-                                        .collect(),
+                        map(aabb
+                            .map(|aabb| ("m_AABB", aabb))
+                            .into_iter()
+                            .chain([
+                                ("m_GameObject", local(go)),
+                                ("m_Enabled", scalar(1)),
+                                ("m_CastShadows", scalar(1)),
+                                ("m_ReceiveShadows", scalar(1)),
+                                ("m_Materials", materials),
+                                ("m_Mesh", local(mesh_id)),
+                                ("m_Bones", Value::Seq(bones)),
+                                ("m_RootBone", local(root)),
+                                (
+                                    "m_BlendShapeWeights",
+                                    Value::Seq(
+                                        renderer
+                                            .blend_shape_weights
+                                            .iter()
+                                            .map(|w| scalar(w))
+                                            .collect(),
+                                    ),
                                 ),
-                            ),
-                        ]),
+                            ])
+                            .collect()),
                     ));
                 }
             }

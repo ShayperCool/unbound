@@ -188,6 +188,9 @@ fn bind_pose_conversion_mirrors_and_scales() {
         unique_names: HashMap::new(),
         node_index: HashMap::new(),
         sources: Vec::new(),
+        reverse_winding: false,
+        pivots: Vec::new(),
+        offsets: HashMap::new(),
         material_index: HashMap::new(),
         obj_diffuse: None,
         obj_smoothing: Vec::new(),
@@ -243,8 +246,9 @@ fn unlisted_ids_are_unitys_hash_of_class_and_name() {
     );
 }
 
-/// An ASCII FBX 7.4 with two nodes under the root: `Pivoted`, a triangle around (-50, 10, 0) cm
-/// with its pivots there and `Lcl Translation` (50, -10, 0), and `Plain` beside it.
+/// An ASCII FBX 7.4 with three nodes under the root: `Pivoted`, a triangle around (-50, 10, 0)
+/// cm with its pivots there and `Lcl Translation` (50, -10, 0), `Unindexed`, the same without
+/// `DefaultAttributeIndex`, and `Plain` beside them.
 const PIVOTED_FBX: &str = r#"; FBX 7.4.0 project file
 FBXHeaderExtension:  {
 	FBXHeaderVersion: 1003
@@ -277,6 +281,23 @@ Objects:  {
 			P: "RotationPivot", "Vector3D", "Vector", "",-50,10,0
 			P: "ScalingPivot", "Vector3D", "Vector", "",-50,10,0
 			P: "Lcl Translation", "Lcl Translation", "", "A",50,-10,0
+			P: "DefaultAttributeIndex", "int", "Integer", "",0
+		}
+	}
+	Geometry: 102, "Geometry::Unindexed", "Mesh" {
+		Vertices: *9 {
+			a: -51,9,0,-49,9,0,-50,11,0
+		}
+		PolygonVertexIndex: *3 {
+			a: 0,1,-3
+		}
+	}
+	Model: 202, "Model::Unindexed", "Mesh" {
+		Version: 232
+		Properties70:  {
+			P: "RotationPivot", "Vector3D", "Vector", "",-50,10,0
+			P: "ScalingPivot", "Vector3D", "Vector", "",-50,10,0
+			P: "Lcl Translation", "Lcl Translation", "", "A",50,-10,0
 		}
 	}
 	Geometry: 101, "Geometry::Plain", "Mesh" {
@@ -299,30 +320,50 @@ Connections:  {
 	C: "OO",100,200
 	C: "OO",201,0
 	C: "OO",101,201
+	C: "OO",202,0
+	C: "OO",102,202
 }
 "#;
 
 #[test]
 fn a_node_moves_to_its_pivot_and_its_mesh_by_the_opposite() {
-    // Measured on the 6000.0 Editor with a Maya node like `Pivoted`: the node at local zero,
-    // its mesh centred on the pivot. A node without pivots keeps its translation and vertices.
+    // As in tests/projects/modelaxis (Pivots set, 6000.0.71f1): the node at local zero, its mesh
+    // centred on the pivot. A node without pivots keeps its translation and vertices. Without
+    // an attribute index the node still moves, but the mesh keeps its file vertices.
     let model = ModelImporter
-        .import(Path::new("Pivoted.fbx"), PIVOTED_FBX.as_bytes(), &Value::Null)
+        .import(
+            Path::new("Pivoted.fbx"),
+            PIVOTED_FBX.as_bytes(),
+            &Value::Null,
+        )
         .unwrap();
     let node = |name: &str| model.nodes.iter().find(|n| n.name == name).unwrap();
     let centre = |name: &str| {
         let m = model.meshes.iter().find(|m| m.name == name).unwrap();
         let n = m.positions.len() as f32;
-        (0..3).map(|k| m.positions.iter().map(|p| p[k]).sum::<f32>() / n).collect::<Vec<_>>()
+        (0..3)
+            .map(|k| m.positions.iter().map(|p| p[k]).sum::<f32>() / n)
+            .collect::<Vec<_>>()
     };
     let near = |a: &[f32], b: &[f32]| a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-4);
     // Centimetres to metres, mirrored on X.
-    assert!(near(&node("Pivoted").position, &[0.0, 0.0, 0.0]), "{:?}", node("Pivoted").position);
+    assert!(
+        near(&node("Pivoted").position, &[0.0, 0.0, 0.0]),
+        "{:?}",
+        node("Pivoted").position
+    );
     let pivoted = centre("Pivoted");
     assert!(near(&pivoted[..2], &[0.0, -0.00333]), "{pivoted:?}");
-    assert!(near(&node("Plain").position, &[0.0, 0.05, 0.0]), "{:?}", node("Plain").position);
+    assert!(
+        near(&node("Plain").position, &[0.0, 0.05, 0.0]),
+        "{:?}",
+        node("Plain").position
+    );
     let plain = centre("Plain");
     assert!(near(&plain[..2], &[-0.01333, 0.00333]), "{plain:?}");
+    assert!(near(&node("Unindexed").position, &[0.0, 0.0, 0.0]));
+    let unindexed = centre("Unindexed");
+    assert!(near(&unindexed[..2], &[0.5, 0.09667]), "{unindexed:?}");
 }
 
 #[test]
@@ -351,7 +392,10 @@ fn omitted_settings_take_the_defaults_of_the_meta_version() {
 fn clip_frames_start_and_end_off_the_take_frames() {
     let fps = 24.0;
     let times = frame_times(4.5 / fps, 7.5 / fps, fps);
-    let frames: Vec<f64> = times.iter().map(|t| (t * fps * 100.0).round() / 100.0).collect();
+    let frames: Vec<f64> = times
+        .iter()
+        .map(|t| (t * fps * 100.0).round() / 100.0)
+        .collect();
     assert_eq!(frames, vec![4.5, 5.0, 6.0, 7.0, 7.5]);
     let whole = frame_times(0.0, 2.0 / fps, fps);
     assert_eq!(whole.len(), 3);
@@ -359,7 +403,12 @@ fn clip_frames_start_and_end_off_the_take_frames() {
 
 #[test]
 fn clip_ranges_interpolate_their_ends() {
-    let keys: Vec<Key<1>> = (0..5).map(|i| Key { time: i as f32, value: [i as f32 * 2.0] }).collect();
+    let keys: Vec<Key<1>> = (0..5)
+        .map(|i| Key {
+            time: i as f32,
+            value: [i as f32 * 2.0],
+        })
+        .collect();
     let out = clip_range(&keys, 0.5, 2.5, lerp_key);
     let pairs: Vec<(f32, f32)> = out.iter().map(|k| (k.time, k.value[0])).collect();
     assert_eq!(pairs, vec![(0.0, 1.0), (0.5, 2.0), (1.5, 4.0), (2.0, 5.0)]);
@@ -414,7 +463,9 @@ maskType: 0
     assert!(!range.mask.keeps("Hips/Spine"));
     // Not listed while the mask lists others: left out.
     assert!(!range.mask.keeps("Hips"));
-    let none = ClipRange::read(&meta("name: A\nmaskType: 3\ntransformMask:\n- path: A\n  weight: 0\n"));
+    let none = ClipRange::read(&meta(
+        "name: A\nmaskType: 3\ntransformMask:\n- path: A\n  weight: 0\n",
+    ));
     assert!(none.mask.keeps("A"));
 }
 
@@ -471,11 +522,16 @@ fn lightmap_uvs_read_their_settings_and_replace_uv2() {
             "{uv:?}"
         );
     }
-    let unwelded = meta("ModelImporter:\n  meshes:\n    generateSecondaryUV: 1\n    weldVertices: 0\n");
+    let unwelded =
+        meta("ModelImporter:\n  meshes:\n    generateSecondaryUV: 1\n    weldVertices: 0\n");
     let model = ModelImporter
         .import(Path::new("Quad.obj"), obj.as_bytes(), &unwelded)
         .unwrap();
-    assert!(model.warnings.iter().any(|w| w.contains("weldVertices")), "{:?}", model.warnings);
+    assert!(
+        model.warnings.iter().any(|w| w.contains("weldVertices")),
+        "{:?}",
+        model.warnings
+    );
     let off = meta("ModelImporter:\n  meshes:\n    generateSecondaryUV: 0\n");
     assert!(ModelSettings::read(&off).secondary_uv.is_none());
     let model = ModelImporter
@@ -487,13 +543,21 @@ fn lightmap_uvs_read_their_settings_and_replace_uv2() {
 #[test]
 fn lightmap_uvs_unwrap_polygons_of_more_than_four_corners() {
     let obj = "o Pentagon\nv 0 0 0\nv 1 0 0\nv 1.3 1 0\nv 0.5 1.6 0\nv -0.3 1 0\nf 1 2 3 4 5\n";
-    let on = meta("ModelImporter:\n  serializedVersion: 22200\n  meshes:\n    generateSecondaryUV: 1\n");
-    let model = ModelImporter.import(Path::new("Pentagon.obj"), obj.as_bytes(), &on).unwrap();
+    let on =
+        meta("ModelImporter:\n  serializedVersion: 22200\n  meshes:\n    generateSecondaryUV: 1\n");
+    let model = ModelImporter
+        .import(Path::new("Pentagon.obj"), obj.as_bytes(), &on)
+        .unwrap();
     assert!(model.warnings.is_empty(), "{:?}", model.warnings);
     let mesh = &model.meshes[0];
     assert_eq!(mesh.submeshes[0].len(), 9);
     assert_eq!(mesh.uvs[1].len(), mesh.positions.len());
-    assert!(mesh.uvs[1].iter().flatten().all(|v| v.is_finite() && (0.0..=1.0).contains(v)));
+    assert!(
+        mesh.uvs[1]
+            .iter()
+            .flatten()
+            .all(|v| v.is_finite() && (0.0..=1.0).contains(v))
+    );
 }
 
 #[test]
@@ -534,10 +598,19 @@ fn lightmap_uvs_unwrap_parts_of_more_than_a_hundred_triangles() {
 #[test]
 fn weld_vertices_can_preserve_coincident_authored_points() {
     // The Model tab documents that disabling welding preserves distinct source vertices.
-    let obj = b"o Doubled\nv 0 0 0\nv 1 0 0\nv 0 1 0\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\nf 4 5 6\n";
-    let settings = |enabled| meta(&format!("ModelImporter:\n  meshes:\n    weldVertices: {enabled}\n"));
-    let welded = ModelImporter.import(Path::new("Doubled.obj"), obj, &settings(1)).unwrap();
-    let separate = ModelImporter.import(Path::new("Doubled.obj"), obj, &settings(0)).unwrap();
+    let obj =
+        b"o Doubled\nv 0 0 0\nv 1 0 0\nv 0 1 0\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\nf 4 5 6\n";
+    let settings = |enabled| {
+        meta(&format!(
+            "ModelImporter:\n  meshes:\n    weldVertices: {enabled}\n"
+        ))
+    };
+    let welded = ModelImporter
+        .import(Path::new("Doubled.obj"), obj, &settings(1))
+        .unwrap();
+    let separate = ModelImporter
+        .import(Path::new("Doubled.obj"), obj, &settings(0))
+        .unwrap();
     assert_eq!(welded.meshes[0].positions.len(), 3);
     assert_eq!(separate.meshes[0].positions.len(), 6);
 }
@@ -638,10 +711,16 @@ fn crossing_polygons_are_discarded_with_a_warning() {
 }
 
 fn assert_group_normals_match_reference(imported: &ImportedModel) {
-    let reference = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../tests/projects/lightmapuvs/Reference/unity-6000.0.71f1.jsonl")).unwrap();
-    let row: serde_json::Value = reference.lines().map(|l| serde_json::from_str::<serde_json::Value>(l).unwrap())
-        .find(|r| r["variant"] == "NormGroups" && r["mesh"] == "Groups/0").unwrap();
+    let reference = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/lightmapuvs/Reference/unity-6000.0.71f1.jsonl"),
+    )
+    .unwrap();
+    let row: serde_json::Value = reference
+        .lines()
+        .map(|l| serde_json::from_str::<serde_json::Value>(l).unwrap())
+        .find(|r| r["variant"] == "NormGroups" && r["mesh"] == "Groups/0")
+        .unwrap();
     let mesh = &imported.meshes[0];
     let positions: Vec<[f32; 3]> = serde_json::from_value(row["vertices"].clone()).unwrap();
     let normals: Vec<[f32; 3]> = serde_json::from_value(row["normals"].clone()).unwrap();
@@ -650,7 +729,12 @@ fn assert_group_normals_match_reference(imported: &ImportedModel) {
     assert_eq!(mesh.submeshes, indices);
     assert_eq!(mesh.normals.len(), normals.len());
     for (actual, expected) in mesh.normals.iter().zip(normals) {
-        for i in 0..3 { assert!((actual[i] - expected[i]).abs() <= 1.8e-7, "{actual:?} != {expected:?}"); }
+        for i in 0..3 {
+            assert!(
+                (actual[i] - expected[i]).abs() <= 1.8e-7,
+                "{actual:?} != {expected:?}"
+            );
+        }
     }
 }
 
@@ -658,10 +742,18 @@ fn assert_group_normals_match_reference(imported: &ImportedModel) {
 fn fbx_group_normals_match_the_editor_reference() {
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/projects/lightmapuvs/Sources/Normals/Groups.fbx");
-    let settings = meta("ModelImporter:\n  meshes:\n    meshOptimizationFlags: 0\n  tangentSpace:\n    normalImportMode: 1\n    normalSmoothingSource: 1\n");
-    let imported = ModelImporter.import(&source, &std::fs::read(&source).unwrap(), &settings).unwrap();
+    let settings = meta(
+        "ModelImporter:\n  meshes:\n    meshOptimizationFlags: 0\n  tangentSpace:\n    normalImportMode: 1\n    normalSmoothingSource: 1\n",
+    );
+    let imported = ModelImporter
+        .import(&source, &std::fs::read(&source).unwrap(), &settings)
+        .unwrap();
     assert_group_normals_match_reference(&imported);
-    assert!(!imported.warnings.iter().any(|w| w.contains("smoothing")), "{:?}", imported.warnings);
+    assert!(
+        !imported.warnings.iter().any(|w| w.contains("smoothing")),
+        "{:?}",
+        imported.warnings
+    );
 }
 
 #[test]
@@ -713,76 +805,147 @@ fn edge_smoothing_with_unenclosed_sharp_edges_matches_the_editor_reference() {
 fn unsupported_lightmap_settings_keep_the_supported_group_normals() {
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/projects/lightmapuvs/Sources/Normals/Groups.fbx");
-    let settings = meta("ModelImporter:\n  meshes:\n    meshOptimizationFlags: 0\n    generateSecondaryUV: 1\n    weldVertices: 0\n  tangentSpace:\n    normalImportMode: 1\n    normalSmoothingSource: 1\n");
-    let imported = ModelImporter.import(&source, &std::fs::read(&source).unwrap(), &settings).unwrap();
-    assert!(imported.warnings.iter().any(|w| w.contains("weldVertices")), "{:?}", imported.warnings);
+    let settings = meta(
+        "ModelImporter:\n  meshes:\n    meshOptimizationFlags: 0\n    generateSecondaryUV: 1\n    weldVertices: 0\n  tangentSpace:\n    normalImportMode: 1\n    normalSmoothingSource: 1\n",
+    );
+    let imported = ModelImporter
+        .import(&source, &std::fs::read(&source).unwrap(), &settings)
+        .unwrap();
+    assert!(
+        imported.warnings.iter().any(|w| w.contains("weldVertices")),
+        "{:?}",
+        imported.warnings
+    );
     assert_group_normals_match_reference(&imported);
 }
 
 #[test]
 fn obj_material_cache_tracks_library_content_and_missing_inputs() {
     use crate::cache::{AssetCache, Outcome};
-    let root = std::env::var_os("XDG_CACHE_HOME").map(std::path::PathBuf::from)
-        .unwrap_or_else(|| std::path::PathBuf::from(std::env::var_os("HOME").unwrap()).join(".cache"))
-        .join("unbound/validation").join(format!("obj-cache-{}", std::process::id()));
+    let root = std::env::var_os("XDG_CACHE_HOME")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from(std::env::var_os("HOME").unwrap()).join(".cache")
+        })
+        .join("unbound/validation")
+        .join(format!("obj-cache-{}", std::process::id()));
     std::fs::create_dir_all(&root).unwrap();
     let source = root.join("Shape.obj");
     let library = root.join("color library.mtl");
     std::fs::write(&source, "mtllib color library.mtl # authored library\no Face\nv 0 0 0\nv 1 0 0\nv 0 1 0\nusemtl Paint\nf 1 2 3\n").unwrap();
     let cache = AssetCache::new(root.join("cache"));
-    let load = || cache.get_or_import_traced(&ModelImporter, &source, &source.with_extension("obj.meta"));
+    let load =
+        || cache.get_or_import_traced(&ModelImporter, &source, &source.with_extension("obj.meta"));
     std::fs::write(&library, "newmtl Paint\nKd 0.2 0.4 0.8\nd 0.25\nTr 0.8\n").unwrap();
     let (model, outcome) = load().unwrap();
     assert_eq!(outcome, Outcome::Imported);
-    assert_eq!(model.materials[0].description.vector("DiffuseColor"), Some([0.2, 0.4, 0.8, 1.0]));
-    assert_eq!(model.materials[0].description.float("TransparencyFactor"), Some(0.75));
+    assert_eq!(
+        model.materials[0].description.vector("DiffuseColor"),
+        Some([0.2, 0.4, 0.8, 1.0])
+    );
+    assert_eq!(
+        model.materials[0].description.float("TransparencyFactor"),
+        Some(0.75)
+    );
     assert_eq!(load().unwrap().1, Outcome::Hit);
     std::fs::write(&library, "newmtl Paint\nKd 1 0 0\nTr 0.2\n").unwrap();
     let (model, outcome) = load().unwrap();
     assert_eq!(outcome, Outcome::Imported);
-    assert_eq!(model.materials[0].description.vector("DiffuseColor"), Some([1.0, 0.0, 0.0, 1.0]));
-    assert_eq!(model.materials[0].description.float("TransparencyFactor"), Some(0.2));
+    assert_eq!(
+        model.materials[0].description.vector("DiffuseColor"),
+        Some([1.0, 0.0, 0.0, 1.0])
+    );
+    assert_eq!(
+        model.materials[0].description.float("TransparencyFactor"),
+        Some(0.2)
+    );
     std::fs::remove_file(&library).unwrap();
-    assert!(load().is_err(), "missing authored MTL must not reuse the cached colors");
+    assert!(
+        load().is_err(),
+        "missing authored MTL must not reuse the cached colors"
+    );
     std::fs::write(&library, "newmtl Paint\nmap_Kd Tint.png\n").unwrap();
     let material = &load().unwrap().0.materials[0].description;
-    assert!(material.texture("DiffuseColor").unwrap().relative_path.ends_with("Tint.png"), "{material:?}");
+    assert!(
+        material
+            .texture("DiffuseColor")
+            .unwrap()
+            .relative_path
+            .ends_with("Tint.png"),
+        "{material:?}"
+    );
     let mut obj = std::fs::read_to_string(&source).unwrap();
     obj.push_str("usemtl Other\nf 1 3 2\n");
     std::fs::write(&source, obj).unwrap();
-    std::fs::write(&library, "newmtl Paint\nmap_Kd A.png\nnewmtl Other\nmap_Kd B.png\n").unwrap();
-    assert!(load().unwrap_err().to_string().contains("multiple diffuse texture maps"));
+    std::fs::write(
+        &library,
+        "newmtl Paint\nmap_Kd A.png\nnewmtl Other\nmap_Kd B.png\n",
+    )
+    .unwrap();
+    assert!(
+        load()
+            .unwrap_err()
+            .to_string()
+            .contains("multiple diffuse texture maps")
+    );
     let bytes = std::fs::read(&source).unwrap();
-    let disabled = ModelImporter.import(&source, &bytes,
-        &meta("ModelImporter:\n  materials:\n    materialImportMode: 0\n")).unwrap();
+    let disabled = ModelImporter
+        .import(
+            &source,
+            &bytes,
+            &meta("ModelImporter:\n  materials:\n    materialImportMode: 0\n"),
+        )
+        .unwrap();
     assert_eq!(disabled.meshes[0].submeshes.len(), 2);
     let remap_meta = |names: &[&str]| {
-        let mut text = "ModelImporter:\n  materials:\n    materialImportMode: 2\n  externalObjects:\n".to_string();
+        let mut text =
+            "ModelImporter:\n  materials:\n    materialImportMode: 2\n  externalObjects:\n"
+                .to_string();
         for name in names {
             text.push_str(&format!("  - first:\n      type: UnityEngine:Material\n      name: {name}\n    second: {{fileID: 2100000, guid: 286abb58d380806380ef7374c960f5c6, type: 2}}\n"));
         }
         meta(&text)
     };
-    let remapped = ModelImporter.import(&source, &bytes, &remap_meta(&["Paint", "Other"])).unwrap();
+    let remapped = ModelImporter
+        .import(&source, &bytes, &remap_meta(&["Paint", "Other"]))
+        .unwrap();
     assert_eq!(remapped.meshes[0].submeshes, disabled.meshes[0].submeshes);
-    assert!(remapped.materials.iter().all(|material|
-        material.remap.as_ref().is_some_and(|reference| !reference.is_null())));
-    assert!(ModelImporter.import(&source, &bytes, &remap_meta(&["Paint"])).unwrap_err()
-        .to_string().contains("multiple diffuse texture maps"));
+    assert!(remapped.materials.iter().all(|material| {
+        material
+            .remap
+            .as_ref()
+            .is_some_and(|reference| !reference.is_null())
+    }));
+    assert!(
+        ModelImporter
+            .import(&source, &bytes, &remap_meta(&["Paint"]))
+            .unwrap_err()
+            .to_string()
+            .contains("multiple diffuse texture maps")
+    );
     drop(cache);
     std::fs::remove_dir_all(root).unwrap();
 }
 
 #[test]
 fn baked_axis_conversion_rejects_unmeasured_deformers_and_animation() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/modelimport/Assets/Models");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/modelimport/Assets/Models");
     let settings = meta("ModelImporter:\n  meshes:\n    bakeAxisConversion: 1\n");
     assert!(ModelSettings::read(&settings).bake_axis_conversion);
     assert!(!ModelSettings::read(&Value::Null).bake_axis_conversion);
     for filename in ["Animated.fbx", "Skinned.fbx"] {
         let source = root.join(filename);
         let bytes = std::fs::read(&source).unwrap();
-        let error = ModelImporter.import(&source, &bytes, &settings).unwrap_err().to_string();
-        assert!(error.contains("FBX Bake Axis Conversion for animation or deformers is not yet supported"), "{error}");
+        let error = ModelImporter
+            .import(&source, &bytes, &settings)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error.contains(
+                "FBX Bake Axis Conversion for animation or deformers is not yet supported"
+            ),
+            "{error}"
+        );
     }
 }
