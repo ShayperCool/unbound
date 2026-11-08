@@ -26,7 +26,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 22;
+pub const FORMAT_VERSION: u32 = 23;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -410,6 +410,11 @@ void UnitySetupInstanceID(uint id) { unity_InstanceID = id; }
 #define UNITY_TRANSFER_INSTANCE_ID(input, output) output.instanceID = UNITY_GET_INSTANCE_ID(input)
 "#;
 
+/// The render pipelines' instancing library's flag for any instancing path, which their
+/// generated passes test to declare the instance ID input.
+const SRP_INSTANCE_MACROS: &str =
+    "#undef UNITY_ANY_INSTANCING_ENABLED\n#define UNITY_ANY_INSTANCING_ENABLED 1\n";
+
 /// DX9-style samplers as texture-and-sampler pairs (glslang has no `sampler2D` for HLSL), the
 /// way Unity's own DXC path emulates them; Unity's emulation is skipped (it names the struct
 /// `sampler2D` on OpenGL, a glslang keyword).
@@ -724,9 +729,14 @@ impl ShaderCompiler {
         let replay = defines.iter().any(|(k, _)| k == MESH_INSTANCE_REPLAY);
         let resolve = |dir: Option<&Path>, name: &str| {
             let (path, text) = resolve_include(includes, root, dir, name)?;
-            let text = if replay && name == "UnityInstancing.cginc" {
+            // The instancing library, built-in or the render pipelines', is read without
+            // instancing (its instanced properties are plain per-draw uniforms), then the
+            // replay's instance ID macros follow.
+            let srp = name.ends_with("/UnityInstancing.hlsl");
+            let text = if replay && (name == "UnityInstancing.cginc" || srp) {
+                let any = if srp { SRP_INSTANCE_MACROS } else { "" };
                 format!(
-                    "#ifndef UNBOUND_REPLAY_INSTANCING_INCLUDED\n#define UNBOUND_REPLAY_INSTANCING_INCLUDED\n#undef INSTANCING_ON\n{text}\n{MESH_INSTANCE_MACROS}\n#endif\n"
+                    "#ifndef UNBOUND_REPLAY_INSTANCING_INCLUDED\n#define UNBOUND_REPLAY_INSTANCING_INCLUDED\n#undef INSTANCING_ON\n{text}\n{MESH_INSTANCE_MACROS}{any}\n#endif\n"
                 )
             } else {
                 text
@@ -1431,6 +1441,78 @@ float4 array() : SV_Target { return float4(0.2, 0.4, 0.6, 1); }
         let module = naga::front::wgsl::parse_str(&compiled.fragment).unwrap();
         assert_ne!(compiled.fragment_entry, "array");
         assert_eq!(module.entry_points[0].name, compiled.fragment_entry);
+    }
+
+    /// The render pipelines' instancing library under the replay: read without instancing, so
+    /// an instanced property is a per-draw uniform, and the instance ID input is declared where
+    /// a generated pass tests `UNITY_ANY_INSTANCING_ENABLED`.
+    #[test]
+    fn mesh_replay_reads_the_render_pipelines_instancing_library_without_instancing() {
+        let dir = std::env::temp_dir().join(format!("unbound-srp-replay-{}", std::process::id()));
+        let library = dir.join("ShaderLibrary");
+        std::fs::create_dir_all(&library).unwrap();
+        // The library's shape: instanced properties are arrays only under INSTANCING_ON.
+        std::fs::write(
+            library.join("UnityInstancing.hlsl"),
+            r#"
+#if defined(INSTANCING_ON)
+    #define UNITY_ANY_INSTANCING_ENABLED 1
+    #define UNITY_INSTANCING_BUFFER_START(buf) cbuffer UnityInstancing_##buf { struct {
+    #define UNITY_INSTANCING_BUFFER_END(arr) } arr##Array[2]; }
+    #define UNITY_DEFINE_INSTANCED_PROP(type, var) type var;
+    #define UNITY_ACCESS_INSTANCED_PROP(arr, var) arr##Array[unity_InstanceID].var
+#else
+    #define UNITY_ANY_INSTANCING_ENABLED 0
+    #define UNITY_INSTANCING_BUFFER_START(buf) cbuffer buf {
+    #define UNITY_INSTANCING_BUFFER_END(arr) }
+    #define UNITY_DEFINE_INSTANCED_PROP(type, var) type var;
+    #define UNITY_ACCESS_INSTANCED_PROP(arr, var) var
+#endif
+"#,
+        )
+        .unwrap();
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+#pragma multi_compile_instancing
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
+UNITY_INSTANCING_BUFFER_START(Decal)
+UNITY_DEFINE_INSTANCED_PROP(float4x4, _NormalToWorld)
+UNITY_INSTANCING_BUFFER_END(Decal)
+struct A { float4 p : POSITION;
+#if UNITY_ANY_INSTANCING_ENABLED
+    uint instanceID : SV_InstanceID;
+#endif
+};
+float4 vert(A a) : SV_POSITION { UNITY_SETUP_INSTANCE_ID(a); return mul(UNITY_ACCESS_INSTANCED_PROP(Decal, _NormalToWorld), a.p); }
+float4 frag() : SV_Target { return 1; }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings {
+            includes: Includes {
+                packages: vec![("com.unity.render-pipelines.core".into(), dir.clone())],
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .unwrap();
+        let compiled = compiler
+            .compile(
+                &program(source, false),
+                &[MESH_INSTANCE_REPLAY.into()],
+                false,
+            )
+            .unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(
+            compiled
+                .instanced_properties
+                .iter()
+                .any(|p| p == "_NormalToWorld")
+        );
+        assert!(
+            compiled.uniforms.iter().any(|u| u.name == "_NormalToWorld"),
+            "a per-draw uniform"
+        );
     }
 
     #[test]
