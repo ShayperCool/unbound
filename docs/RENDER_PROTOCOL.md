@@ -16,6 +16,27 @@ Meshes, textures and materials are identified by `u64` handles the managed side 
 is destroyed. Imported textures are uploaded by the native side itself (`import_texture`), which
 knows the asset pipeline and its cache.
 
+### Render protocol 13: mesh GPU streams (NativeApi 32)
+
+MeshPacket colors are float4 values in NativeApi 32, preserving packed floating-point colors
+through the ordinary upload path.
+
+Camera flag 64 scopes a gizmo draw: its batch color comes from the draw color, and its normals
+use a direct model transform before the view normal transform. Ordinary draws retain their
+material/global values and inverse-transpose normals.
+
+Opcode 31, `MeshBuffers`, associates a mesh with its existing GraphicsBuffer streams. It carries
+`u64 mesh`, `u8 indicesOnly`, `u32 vertexCount`, four pairs of `u64 buffer, u32 stride`, a `u32` attribute count
+and four `u32`s per attribute, followed by `u64 indexBuffer, u32 indexSize, u32 logicalIndexCount`, a `u32` submesh
+count and three `u32`s per submesh. Attributes are attribute, format, dimension and stream;
+submeshes are source index start, count and topology. Buffer writes retain their command-stream
+order. Cached conversions update the drawing layout after writes, including 16-bit indices and submesh ranges. Quad buffers retain the logical indices followed
+by the expanded triangle ranges; draws read those appended ranges. An index-only binding shares a source mesh
+index buffer with a deformed drawing mesh while retaining its separate vertex streams.
+GPU changes leave CPU mesh channels unchanged. CPU vertex edits
+upload the vertex streams; layout and size changes replace storage. NativeApi 31 and 32
+refuse each other at startup.
+
 ### Render protocol 12: shared arrays and mesh-instance elements (NativeApi 28)
 
 Opcode 30 is `MeshInstance` (`u32 index`, the bytes of protocol 11's `FirstInstance`): the next

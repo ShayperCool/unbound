@@ -369,11 +369,16 @@ pub fn create_pipeline(
             depth_write_enabled: Some(s.zwrite),
             depth_compare: Some(compare(s.ztest)),
             stencil,
-            bias: wgpu::DepthBiasState {
-                // Constant bias is whole units in wgpu; Unity's are rounded the same way.
-                constant: s.offset[1] + f32::from_bits(key.depth_bias[0]).round() as i32,
-                slope_scale: s.offset[0] as f32 + f32::from_bits(key.depth_bias[1]),
-                clamp: 0.0,
+            // Polygon offset applies to triangle primitives. Lines and points do not
+            // support depth bias in wgpu (renderapi Game-view wire controls).
+            bias: if key.topology == Topology::Triangles {
+                wgpu::DepthBiasState {
+                    constant: s.offset[1] + f32::from_bits(key.depth_bias[0]).round() as i32,
+                    slope_scale: s.offset[0] as f32 + f32::from_bits(key.depth_bias[1]),
+                    clamp: 0.0,
+                }
+            } else {
+                wgpu::DepthBiasState::default()
             },
         }
     });

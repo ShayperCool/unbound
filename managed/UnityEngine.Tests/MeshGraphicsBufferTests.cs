@@ -100,7 +100,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void TargetsKeepRequiredBitsAndMeshWritesAreExplicitlyUnsupported()
+        public void TargetsKeepRequiredBitsAndMeshWritesKeepCpuChannelsSeparate()
         {
             var mesh = Triangle();
             try
@@ -114,13 +114,81 @@ namespace UnityEngine.Tests
                 Assert.Equal(mesh.vertexBufferTarget, vertices.target);
                 Assert.Equal(mesh.indexBufferTarget, indices.target);
                 Assert.Equal(3, vertices.count);
-                Assert.Throws<NotSupportedException>(() => vertices.SetData(new Vector3[3]));
-                Assert.Throws<NotSupportedException>(() => Graphics.CopyBuffer(vertices, vertices));
+                var cpu = mesh.vertices;
+                vertices.SetData(new Vector3[3]);
+                Assert.Equal(cpu, mesh.vertices);
                 var old = vertices.GetNativeBufferPtr();
                 mesh.vertexBufferTarget = GraphicsBuffer.Target.Structured;
                 using var changed = mesh.GetVertexBuffer(0);
                 Assert.False(vertices.IsValid());
                 Assert.NotEqual(old, changed.GetNativeBufferPtr());
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
+
+        [Fact]
+        public void ResizingPositionsInvalidatesEveryStreamWithoutReplacingIndices()
+        {
+            var mesh = new Mesh();
+            try
+            {
+                mesh.SetVertexBufferParams(3,
+                    new VertexAttributeDescriptor(VertexAttribute.Position),
+                    new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.UNorm8, 4, 1));
+                mesh.SetIndices(new[] {0,1,2}, MeshTopology.Triangles, 0);
+                using var colors = mesh.GetVertexBuffer(1);
+                using var indices = mesh.GetIndexBuffer();
+                var old = indices.GetNativeBufferPtr();
+                mesh.vertices = new Vector3[4];
+                using var resized = mesh.GetVertexBuffer(1);
+                Assert.False(colors.IsValid());
+                Assert.Equal(4, resized.count);
+                using var current = mesh.GetIndexBuffer();
+                Assert.Equal(old, current.GetNativeBufferPtr());
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
+
+        [Fact]
+        public void BufferAccessDoesNotChangeBakedSkinCoordinates()
+        {
+            var go = new GameObject(); var skin = go.AddComponent<SkinnedMeshRenderer>();
+            var mesh = Triangle(); var before = new Mesh(); var after = new Mesh();
+            try
+            {
+                go.transform.position = new Vector3(.7f,2,3); go.transform.localScale = new Vector3(2,3,4);
+                mesh.boneWeights = new[] {new BoneWeight {weight0=1},new BoneWeight {weight0=1},new BoneWeight {weight0=1}};
+                mesh.bindposes = new[] {Matrix4x4.identity};
+                skin.sharedMesh = mesh; skin.bones = new[] {go.transform};
+                skin.BakeMesh(before);
+                using var buffer = skin.GetVertexBuffer();
+                Assert.Equal(12, buffer.stride);
+                skin.BakeMesh(after);
+                for (int i=0;i<3;i++) Assert.True((before.vertices[i]-after.vertices[i]).sqrMagnitude < 1e-10f);
+            }
+            finally { Object.DestroyImmediate(go); Object.DestroyImmediate(mesh); Object.DestroyImmediate(before); Object.DestroyImmediate(after); }
+        }
+
+        [Fact]
+        public void TypedColorSettersPreserveFloatingValuesAndSelectTheirStorageFormats()
+        {
+            var mesh = Triangle();
+            try
+            {
+                var color = new Color(2,.3f,.7f,1);
+                mesh.colors = new[] {color,color,color};
+                Assert.Equal(color,mesh.colors[0]);
+                Assert.Equal(VertexAttributeFormat.Float32,mesh.GetVertexAttributeFormat(VertexAttribute.Color));
+                using var floats = mesh.GetVertexBuffer(0);
+                Assert.Equal(28,floats.stride);
+                mesh.vertices = new[] {Vector3.one,Vector3.right,Vector3.up};
+                Assert.Equal(color,mesh.colors[0]);
+                mesh.colors32 = new[] {new Color32(10,20,30,40),new Color32(10,20,30,40),new Color32(10,20,30,40)};
+                using var bytes = mesh.GetVertexBuffer(0);
+                Assert.False(floats.IsValid());
+                Assert.Equal(16,bytes.stride);
+                Assert.Equal(VertexAttributeFormat.UNorm8,mesh.GetVertexAttributeFormat(VertexAttribute.Color));
+                Assert.Equal((Color)new Color32(10,20,30,40),mesh.colors[0]);
             }
             finally { Object.DestroyImmediate(mesh); }
         }

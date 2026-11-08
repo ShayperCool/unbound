@@ -33,11 +33,15 @@ impl BuiltinShaders {
 
     /// Directories holding built-in `.shader` files.
     pub fn shader_roots(&self) -> Vec<PathBuf> {
-        ["DefaultResources", "DefaultResourcesExtra"]
-            .iter()
-            .map(|d| self.root.join(d))
-            .filter(|d| d.is_dir())
-            .collect()
+        [
+            "DefaultResources",
+            "DefaultResourcesExtra",
+            "EditorDefaultResources",
+        ]
+        .iter()
+        .map(|d| self.root.join(d))
+        .filter(|d| d.is_dir())
+        .collect()
     }
 
     pub fn cg_includes(&self) -> PathBuf {

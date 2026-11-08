@@ -4,6 +4,7 @@
 //! The screen is a ring of offscreen targets; a completed frame's target is handed to the window
 //! (`Presented`), which the render world shows.
 mod compute;
+mod mesh_buffers;
 #[path = "mipmaps.rs"]
 mod mipmaps;
 
@@ -366,6 +367,7 @@ struct State {
     no_srgb_write: bool,
     /// The global depth bias: units, slope factor (`CommandBuffer.SetGlobalDepthBias`).
     depth_bias: [f32; 2],
+    gizmo_draw: bool,
     /// A renderer list's render state overrides (`RenderStateBlock`).
     state_override: Option<commands::StateOverride>,
     /// How the next draw runs (`DrawSetup`): instances, arguments buffer, offset, indexed.
@@ -385,6 +387,8 @@ pub struct UnityRenderer {
     pipelines: Pipelines,
     mipmaps: mipmaps::Mipmaps,
     meshes: HashMap<u64, GpuMesh>,
+    mesh_buffers: HashMap<u64, mesh_buffers::Binding>,
+    mesh_index_sources: HashMap<u64, mesh_buffers::Binding>,
     /// Zeros standing in for channels 4..7 of meshes without them.
     zero_extra: Option<wgpu::Buffer>,
     textures: HashMap<u64, GpuTexture>,
@@ -489,6 +493,8 @@ impl UnityRenderer {
             fence_completed: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             mipmaps: Default::default(),
             meshes: HashMap::default(),
+            mesh_buffers: HashMap::default(),
+            mesh_index_sources: HashMap::default(),
             zero_extra: None,
             textures: HashMap::default(),
             texture_mip_biases: HashMap::default(),
@@ -543,6 +549,7 @@ impl UnityRenderer {
                 wireframe: false,
                 no_srgb_write: false,
                 depth_bias: [0.0; 2],
+                gizmo_draw: false,
                 state_override: None,
                 draw_setup: None,
                 mesh_instance: None,
@@ -649,7 +656,7 @@ impl UnityRenderer {
                         &self.queue,
                         old_extra,
                         bytemuck::cast_slice(&e),
-                        wgpu::BufferUsages::VERTEX,
+                        wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::STORAGE,
                         "unbound extra vertices",
                     )
                 });
@@ -658,17 +665,27 @@ impl UnityRenderer {
                     &self.queue,
                     old_vertex,
                     bytemuck::cast_slice(&vertices),
-                    wgpu::BufferUsages::VERTEX,
+                    wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::STORAGE,
                     "unbound vertices",
                 );
-                let index = resources::write_buffer(
-                    &device,
-                    &self.queue,
-                    old_index,
-                    bytemuck::cast_slice(&indices),
-                    wgpu::BufferUsages::INDEX,
-                    "unbound indices",
-                );
+                let keep_gpu_indices = (self.mesh_buffers.contains_key(&handle)
+                    || self.mesh_index_sources.contains_key(&handle))
+                    && old_index
+                        .as_ref()
+                        .is_some_and(|buffer| buffer.size() >= (indices.len() as u64 * 4).max(16));
+                self.invalidate_mesh_buffers(handle, keep_gpu_indices);
+                let index = if keep_gpu_indices {
+                    old_index.unwrap()
+                } else {
+                    resources::write_buffer(
+                        &device,
+                        &self.queue,
+                        old_index,
+                        bytemuck::cast_slice(&indices),
+                        wgpu::BufferUsages::INDEX | wgpu::BufferUsages::STORAGE,
+                        "unbound indices",
+                    )
+                };
                 self.meshes.insert(
                     handle,
                     GpuMesh {
@@ -681,6 +698,8 @@ impl UnityRenderer {
             }
             Upload::ReleaseMesh(handle) => {
                 self.meshes.remove(&handle);
+                self.mesh_buffers.remove(&handle);
+                self.mesh_index_sources.remove(&handle);
             }
             Upload::UploadTexture(handle, texture) => {
                 self.generation += 1;
@@ -1104,15 +1123,10 @@ impl UnityRenderer {
         let mut missing = Vec::new();
         let mut bound: Vec<wgpu::Buffer> = Vec::with_capacity(program.buffers.len());
         for b in &program.buffers {
-            if !b.read_only
-                && handle_of(b)
-                    .and_then(|h| self.buffers.get(&h))
-                    .is_some_and(|g| g.mesh_read_only)
-            {
-                self.warn_once(format!("meshdraw{shader}{}", b.name), || {
-                    format!("shader `{shader}` writes mesh buffer `{}`: GPU mesh editing is not supported; the draw is skipped. Update the mesh CPU data instead", b.name)
-                });
-                return Err(());
+            if !b.read_only {
+                if let Some(buffer) = handle_of(b).and_then(|h| self.buffers.get_mut(&h)) {
+                    buffer.revision = buffer.revision.wrapping_add(1);
+                }
             }
             // glslang's hidden counter of an Append or Counter buffer (`<name>@count`) binds
             // that buffer's counter.
@@ -2289,6 +2303,7 @@ impl UnityRenderer {
                     self.state.invert_culling = flags & commands::camera::INVERT_CULLING != 0;
                     self.state.wireframe = flags & commands::camera::WIREFRAME != 0;
                     self.state.no_srgb_write = flags & commands::camera::NO_SRGB_WRITE != 0;
+                    self.state.gizmo_draw = flags & commands::camera::GIZMO != 0;
                     if flags & commands::camera::BEGIN != 0 {
                         self.grabbed.clear();
                     }
@@ -2436,6 +2451,9 @@ impl UnityRenderer {
                     }
                 }
                 Command::Draw(draw) => {
+                    if self.sync_mesh_buffers(draw.mesh, &mut passes) {
+                        open = false;
+                    }
                     let mesh_instance = self.state.mesh_instance.take();
                     let first_instance = mesh_instance.unwrap_or(0);
                     // Taken first: a draw's indices never pass to a later draw.
@@ -2598,6 +2616,7 @@ impl UnityRenderer {
                         }
                     }
                 }
+                Command::MeshBuffers(binding) => self.bind_mesh_buffers(*binding),
                 Command::CreateBuffer {
                     handle,
                     size,
@@ -2640,6 +2659,9 @@ impl UnityRenderer {
                         destination_offset,
                         size,
                     ) {
+                        if let Some(buffer) = self.buffers.get_mut(&destination) {
+                            buffer.revision = buffer.revision.wrapping_add(1);
+                        }
                         passes.push(Op::BufferCopy(copy));
                         if self
                             .buffers
@@ -2676,6 +2698,9 @@ impl UnityRenderer {
                 } => {
                     open = false;
                     if let Some(op) = self.plan_counter_copy(source, destination, offset) {
+                        if let Some(buffer) = self.buffers.get_mut(&destination) {
+                            buffer.revision = buffer.revision.wrapping_add(1);
+                        }
                         passes.push(op);
                     }
                 }
@@ -3116,6 +3141,8 @@ impl UnityRenderer {
             };
             let (camera_view, camera_proj) = self.state.camera.unwrap_or((view, projection));
             let values = compiled::DrawValues {
+                gizmo_draw: self.state.gizmo_draw,
+                color: draw.color,
                 model: draw.model,
                 view,
                 proj: projection,

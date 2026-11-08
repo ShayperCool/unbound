@@ -110,9 +110,9 @@ namespace UnityEngine
                 {
                     VertexAttribute.Position or VertexAttribute.Normal => new VertexAttributeDescriptor(attr, VertexAttributeFormat.Float32, 3),
                     VertexAttribute.Tangent => new VertexAttributeDescriptor(attr, VertexAttributeFormat.Float32, 4),
-                    VertexAttribute.Color => new VertexAttributeDescriptor(attr, VertexAttributeFormat.UNorm8, 4),
-                    VertexAttribute.BlendWeight => new VertexAttributeDescriptor(attr, VertexAttributeFormat.Float32, 4),
-                    VertexAttribute.BlendIndices => new VertexAttributeDescriptor(attr, VertexAttributeFormat.UInt32, 4),
+                    VertexAttribute.Color => new VertexAttributeDescriptor(attr, m_PackedChannels?[(int)attr]?.Descriptor.format ?? VertexAttributeFormat.UNorm8, 4),
+                    VertexAttribute.BlendWeight => new VertexAttributeDescriptor(attr, VertexAttributeFormat.Float32, 4, 1),
+                    VertexAttribute.BlendIndices => new VertexAttributeDescriptor(attr, VertexAttributeFormat.UInt32, 4, 1),
                     _ => new VertexAttributeDescriptor(attr, VertexAttributeFormat.Float32, Math.Max(1, m_UVDimensions[(int)attr - (int)VertexAttribute.TexCoord0])),
                 };
             }
@@ -344,7 +344,7 @@ namespace UnityEngine
                     Store(d, v, f, n, attribute);
                 }
             }
-            Changed();
+            Changed(indices: false);
         }
 
         /// <summary>A component as a float (normalized formats to their range) and as an integer.</summary>
@@ -428,7 +428,7 @@ namespace UnityEngine
                 m_SubMeshes.Clear();
                 m_SubMeshes.Add(new SubMesh());
             }
-            Changed();
+            Changed(false);
         }
 
         public void SetIndexBufferData<T>(NativeArray<T> data, int dataStart, int meshBufferStart, int count, MeshUpdateFlags flags = MeshUpdateFlags.Default) where T : struct
@@ -476,7 +476,7 @@ namespace UnityEngine
             foreach (var s in m_SubMeshes)
                 if (s.IndexStart >= 0 && s.IndexStart + s.Indices.Length <= buffer.Length)
                     s.Indices = new ArraySegment<int>(buffer, s.IndexStart, s.Indices.Length).ToArray();
-            Changed();
+            Changed(false);
         }
 
         /// <summary>The index buffer: the one set, else the submeshes' indices one after another.</summary>
@@ -518,7 +518,7 @@ namespace UnityEngine
                 s.FirstVertex = desc.firstVertex;
                 s.VertexCount = desc.vertexCount;
             }
-            Changed();
+            Changed(false);
         }
 
         public void SetSubMeshes(SubMeshDescriptor[] desc, int start, int count, MeshUpdateFlags flags = MeshUpdateFlags.Default)

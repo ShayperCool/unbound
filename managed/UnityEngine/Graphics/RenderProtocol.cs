@@ -22,7 +22,7 @@ namespace Unbound.Runtime
         internal Vector3* Positions;
         internal Vector3* Normals;
         internal Vector4* Tangents;
-        internal Color32* Colors;
+        internal Vector4* Colors;
         internal Vector4* Uv0;
         internal Vector4* Uv1;
         internal Vector4* Uv2;

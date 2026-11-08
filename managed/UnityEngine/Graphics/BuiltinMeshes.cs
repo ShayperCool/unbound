@@ -27,6 +27,15 @@ namespace UnityEngine
             return b.ToMesh(name);
         }
 
+        /// <summary>A unit-diameter icosphere with one midpoint refinement (80 triangles).
+        /// Game-view sphere frames are measured by tests/projects/renderapi.</summary>
+        internal static Mesh Icosphere()
+        {
+            var b = new Builder();
+            b.Icosphere();
+            return b.ToMesh("Gizmo sphere");
+        }
+
         sealed class Builder
         {
             readonly List<Vector3> m_Vertices = new List<Vector3>();
@@ -151,6 +160,36 @@ namespace UnityEngine
                     profile.Add((n.y * radius, n.x * radius, n, v));
                 }
                 Revolve(profile, segments);
+            }
+
+            internal void Icosphere()
+            {
+                float phi = (1 + Mathf.Sqrt(5)) * .5f;
+                var vertices = new List<Vector3>(12);
+                foreach (float a in new[] {-1f,1f})
+                    foreach (float b in new[] {-phi,phi})
+                    {
+                        vertices.Add(new Vector3(a,0,b).normalized);
+                        vertices.Add(new Vector3(0,b,a).normalized);
+                        vertices.Add(new Vector3(b,a,0).normalized);
+                    }
+                float edge = float.PositiveInfinity;
+                for (int i=1;i<vertices.Count;i++) edge = Mathf.Min(edge,(vertices[0]-vertices[i]).sqrMagnitude);
+                // Every face joins three nearest neighbors of the regular icosahedron.
+                for (int a = 0; a < vertices.Count; a++)
+                    for (int b = a + 1; b < vertices.Count; b++)
+                        for (int c = b + 1; c < vertices.Count; c++)
+                        {
+                            var x = vertices[a]; var y = vertices[b]; var z = vertices[c];
+                            if (!Mathf.Approximately((x-y).sqrMagnitude,edge) || !Mathf.Approximately((y-z).sqrMagnitude,edge) || !Mathf.Approximately((z-x).sqrMagnitude,edge)) continue;
+                            var xy = (x+y).normalized; var yz = (y+z).normalized; var zx = (z+x).normalized;
+                            Face(x,xy,zx); Face(y,yz,xy); Face(z,zx,yz); Face(xy,yz,zx);
+                        }
+                void Face(Vector3 a, Vector3 b, Vector3 c)
+                {
+                    int x = Vertex(a*.5f,a,Vector2.zero), y = Vertex(b*.5f,b,Vector2.zero), z = Vertex(c*.5f,c,Vector2.zero);
+                    Triangle(x,y,z);
+                }
             }
 
             internal void Capsule(float radius, float height, int segments, int capRings)

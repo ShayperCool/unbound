@@ -68,6 +68,7 @@ namespace Unbound.Runtime
 
         internal static void Unregister(Object obj)
         {
+            Gizmos.Untrack(obj);
             lock (s_Objects) s_Objects.Remove(obj.m_InstanceID);
         }
 

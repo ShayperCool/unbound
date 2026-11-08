@@ -99,6 +99,35 @@ namespace UnityEngine
             set => m_SkinnedMotionVectors = value;
         }
 
+        bool m_GraphicsOutputRequested;
+        GraphicsBuffer.Target m_VertexBufferTarget = GraphicsBuffer.Target.Vertex;
+        public GraphicsBuffer.Target vertexBufferTarget
+        {
+            get => m_VertexBufferTarget;
+            set
+            {
+                m_VertexBufferTarget = value | GraphicsBuffer.Target.Vertex;
+                if (m_Skinned != null) m_Skinned.vertexBufferTarget = m_VertexBufferTarget;
+            }
+        }
+
+        public GraphicsBuffer GetPreviousVertexBuffer() =>
+            throw new NotSupportedException("Unbound: previous-frame skinned GPU vertex buffers are not supported.");
+
+        public GraphicsBuffer GetVertexBuffer()
+        {
+            if (m_Mesh == null) return null;
+            var cloth = GetComponent<Cloth>();
+            if (cloth != null && cloth.enabled && cloth.m_Active)
+                throw new NotSupportedException("Unbound: SkinnedMeshRenderer.GetVertexBuffer with active Cloth is not supported.");
+            if (!m_GraphicsOutputRequested) { m_GraphicsOutputRequested = true; m_SkinnedFrame = -1; }
+            var output = Deform();
+            output.vertexBufferTarget = m_VertexBufferTarget;
+            var buffer = output.GetVertexBuffer(0);
+            output.Sync();
+            return buffer;
+        }
+
         public float GetBlendShapeWeight(int index) => index >= 0 && index < m_BlendShapeWeights.Count ? m_BlendShapeWeights[index] : 0f;
 
         public void SetBlendShapeWeight(int index, float value)
@@ -146,6 +175,10 @@ namespace UnityEngine
                 if (m_Skinned != null) DestroyImmediate(m_Skinned);
                 m_Skinned = (Mesh)((Instantiation.ICloneable)mesh).CloneObject();
                 m_Skinned.ClearBlendShapes();
+                m_Skinned.m_BoneWeights = null;
+                m_Skinned.m_Bindposes = null;
+                m_Skinned.SetSkinOutputLayout();
+                m_Skinned.vertexBufferTarget = m_VertexBufferTarget;
                 m_Skinned.name = mesh.name + " (Skinned)";
                 m_SkinnedSource = mesh;
             }
@@ -154,7 +187,25 @@ namespace UnityEngine
             var tangents = mesh.m_Tangents != null && mesh.m_Tangents.Length == positions.Length ? (Vector4[])mesh.m_Tangents.Clone() : null;
             FitWeights();
             mesh.AddBlendShapes(m_BlendShapeWeights, positions, normals, tangents);
-            if (IsSkinned) Skin(positions, normals, tangents);
+            if (IsSkinned)
+            {
+                Skin(positions, normals, tangents);
+                if (m_GraphicsOutputRequested)
+                {
+                    var inverse = transform.worldToLocalMatrix;
+                    for (int i = 0; i < positions.Length; i++)
+                    {
+                        positions[i] = inverse.MultiplyPoint3x4(positions[i]);
+                        if (normals != null) normals[i] = inverse.MultiplyVector(normals[i]);
+                        if (tangents != null)
+                        {
+                            var t = inverse.MultiplyVector((Vector3)tangents[i]);
+                            tangents[i] = new Vector4(t.x,t.y,t.z,tangents[i].w);
+                        }
+                    }
+                }
+            }
+            m_Skinned.ShareDrawIndices(mesh);
             m_Skinned.vertices = positions;
             if (normals != null) m_Skinned.normals = normals;
             if (tangents != null) m_Skinned.tangents = tangents;
@@ -363,6 +414,15 @@ namespace UnityEngine
             positions = deformed.vertices;
             var n = deformed.normals;
             normals = n != null && n.Length == positions.Length ? n : null;
+            if (m_GraphicsOutputRequested)
+            {
+                var world = transform.localToWorldMatrix;
+                for (int i = 0; i < positions.Length; i++)
+                {
+                    positions[i] = world.MultiplyPoint3x4(positions[i]);
+                    if (normals != null) normals[i] = world.MultiplyVector(normals[i]);
+                }
+            }
             return true;
         }
 
@@ -389,9 +449,9 @@ namespace UnityEngine
             }
             if (!IsSkinned)
             {
-                return HasShapes ? Deform() : m_Mesh;
+                return HasShapes || m_GraphicsOutputRequested ? Deform() : m_Mesh;
             }
-            model = Matrix4x4.identity;
+            model = m_GraphicsOutputRequested ? transform.localToWorldMatrix : Matrix4x4.identity;
             return Deform();
         }
 
@@ -408,7 +468,7 @@ namespace UnityEngine
             var source = skinned || HasShapes ? Deform(now: true) : m_Mesh;
             mesh.Clear();
             var vertices = (Vector3[])source.m_Vertices.Clone();
-            var fromSource = skinned ? toLocal : (useScale ? Matrix4x4.identity : Matrix4x4.Scale(t.lossyScale));
+            var fromSource = skinned ? (m_GraphicsOutputRequested ? toLocal * t.localToWorldMatrix : toLocal) : (useScale ? Matrix4x4.identity : Matrix4x4.Scale(t.lossyScale));
             for (int i = 0; i < vertices.Length; i++) vertices[i] = fromSource.MultiplyPoint3x4(vertices[i]);
             mesh.vertices = vertices;
             // Normals and tangents as the matrices take them, not renormalized (as Unity's).

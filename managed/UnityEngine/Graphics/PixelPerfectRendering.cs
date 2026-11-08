@@ -10,8 +10,9 @@ namespace UnityEngine.U2D
         {
             float spacing = pixelSnapSpacing;
             if (spacing == 0) return model;
-            if (!float.IsFinite(spacing))
-                throw new System.NotSupportedException("Unbound: rendering sprites with non-finite PixelPerfectRendering.pixelSnapSpacing is not supported.");
+            if (!float.IsFinite(spacing) && !Unbound.Runtime.Compat.RenderingMeasured)
+                throw new System.NotSupportedException("Unbound: non-finite sprite snapping has only been measured for Unity 6000.0.71f1.");
+
             model.m03 = Mathf.Round(model.m03 / spacing) * spacing;
             model.m13 = Mathf.Round(model.m13 / spacing) * spacing;
             model.m23 = Mathf.Round(model.m23 / spacing) * spacing;

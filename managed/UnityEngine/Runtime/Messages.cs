@@ -21,6 +21,7 @@ namespace Unbound.Runtime
         /// <summary>OnRenderImage carries [ImageEffectOpaque]: it runs before transparent objects.</summary>
         internal bool OpaqueImageEffect;
         internal Action<MonoBehaviour> OnBecameVisible, OnBecameInvisible, OnWillRenderObject;
+        internal Action<MonoBehaviour> OnDrawGizmos, OnDrawGizmosSelected;
         internal Action<MonoBehaviour> Start;
         internal Func<MonoBehaviour, IEnumerator> StartCoroutine;
         internal Action<MonoBehaviour, bool> OnApplicationPause, OnApplicationFocus;
@@ -75,6 +76,8 @@ namespace Unbound.Runtime
             m.OnPreRender = Action(type, "OnPreRender");
             m.OnPostRender = Action(type, "OnPostRender");
             m.OnRenderObject = Action(type, "OnRenderObject");
+            m.OnDrawGizmos = Action(type, "OnDrawGizmos");
+            m.OnDrawGizmosSelected = Action(type, "OnDrawGizmosSelected");
             m.OnBecameVisible = Action(type, "OnBecameVisible");
             m.OnBecameInvisible = Action(type, "OnBecameInvisible");
             m.OnWillRenderObject = Action(type, "OnWillRenderObject");
@@ -107,8 +110,8 @@ namespace Unbound.Runtime
         /// class that documents it: a script that implements one would silently never get it, so
         /// the script class declaring it says so once. Remove an entry once it is sent.
         /// Reset is not listed because it is only called in Edit mode. Gizmo callbacks require
-        /// a Scene or Game view repaint with gizmos enabled (renderapi). Unbound keeps Game-view
-        /// gizmos disabled; doctor lists enabling that view as unsupported. Interface callbacks
+        /// a Scene or Game view repaint with gizmos enabled (renderapi). Game-view callbacks run
+        /// only when that view enables gizmos. Interface callbacks
         /// (ISerializationCallbackReceiver, ...) are not messages and are never listed.</summary>
         static readonly (Type Host, string Name)[] s_NotSent =
         {

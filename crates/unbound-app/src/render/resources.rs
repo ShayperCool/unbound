@@ -11,7 +11,7 @@ pub struct Vertex {
     pub position: [f32; 3],
     pub normal: [f32; 3],
     pub tangent: [f32; 4],
-    pub color: [u8; 4],
+    pub color: [f32; 4],
     pub uv: [[f32; 4]; 4],
 }
 
@@ -19,7 +19,7 @@ pub const VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 8] = wgpu::vertex_attr_arra
     0 => Float32x3,
     1 => Float32x3,
     2 => Float32x4,
-    3 => Unorm8x4,
+    3 => Float32x4,
     4 => Float32x4,
     5 => Float32x4,
     6 => Float32x4,
@@ -136,7 +136,7 @@ pub fn build_mesh(mesh: &owned::Mesh) -> (Vec<Vertex>, Vec<u32>, Vec<SubMesh>) {
         let color = mesh
             .colors
             .get(i)
-            .map_or([255; 4], |c| [c.r, c.g, c.b, c.a]);
+            .map_or([1.0; 4], |c| [c.x, c.y, c.z, c.w]);
         let mut uv = [[0.0; 4]; 4];
         for (channel, out) in uv.iter_mut().enumerate() {
             if let Some(v) = sources[channel].and_then(|source| mesh.uv[source].get(i)) {
@@ -1389,11 +1389,11 @@ mod tests {
         };
         let (vertices, indices, submeshes) = build_mesh(&mesh);
         assert_eq!(vertices.len(), 4);
-        assert_eq!(vertices[0].color, [255; 4]);
+        assert_eq!(vertices[0].color, [1.0; 4]);
         assert_eq!(indices, vec![0, 1, 2, 0, 2, 3]);
         assert_eq!(submeshes[0].count, 6);
         assert_eq!(submeshes[0].topology, Topology::Triangles);
-        assert_eq!(size_of::<Vertex>(), 108);
+        assert_eq!(size_of::<Vertex>(), 120);
     }
 
     #[test]

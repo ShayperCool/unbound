@@ -10,6 +10,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void PixelGridChangesWorldTranslationWithoutChangingRotationOrScale()
         {
+            string release = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
             float saved = PixelPerfectRendering.pixelSnapSpacing;
             try
             {
@@ -28,14 +30,25 @@ namespace UnityEngine.Tests
                     PixelPerfectRendering.pixelSnapSpacing = value;
                     Assert.Equal(model, PixelPerfectRendering.Snap(model));
                 }
-                foreach (float value in new[] {float.NaN, float.PositiveInfinity})
+                foreach (float value in new[] {float.NaN, float.PositiveInfinity, float.NegativeInfinity})
                 {
                     PixelPerfectRendering.pixelSnapSpacing = value;
                     Assert.Equal(value, PixelPerfectRendering.pixelSnapSpacing);
-                    Assert.Throws<NotSupportedException>(() => PixelPerfectRendering.Snap(model));
+                    Assert.True(float.IsNaN(PixelPerfectRendering.Snap(model).m03));
                 }
             }
-            finally { PixelPerfectRendering.pixelSnapSpacing = saved; }
+            finally { PixelPerfectRendering.pixelSnapSpacing = saved; ProjectInfo.UnityVersion = release; }
+        }
+
+        [Fact]
+        public void InvalidGizmoCallsDoNotCreateGeometry()
+        {
+            Gizmos.Reset();
+            int count = Unbound.Runtime.ObjectRegistry.All(typeof(Mesh)).Count;
+            Assert.Throws<ArgumentException>(() => Gizmos.DrawCube(Vector3.zero,Vector3.one));
+            Assert.Throws<ArgumentException>(() => Gizmos.DrawWireCube(Vector3.zero,Vector3.one));
+            Assert.Throws<ArgumentException>(() => Gizmos.DrawSphere(Vector3.zero,1));
+            Assert.Equal(count,Unbound.Runtime.ObjectRegistry.All(typeof(Mesh)).Count);
         }
 
         [Fact]

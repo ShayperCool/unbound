@@ -1430,6 +1430,15 @@ namespace Unbound.Runtime
                 var lateTarget = msaaTarget != null ? sceneTarget : cameraTarget;
                 RunEvent(camera, CameraEvent.AfterImageEffects, lateTarget);
                 RunEvent(camera, CameraEvent.AfterEverything, lateTarget);
+                if (automatic && onScreen && Gizmos.GameViewEnabled)
+                {
+                    var savedGizmoState = GfxStream.Current;
+                    GfxStream.SetTarget(lateTarget != null ? TextureHandles.Of(lateTarget) : 0);
+                    GfxStream.Camera(context.View, context.Projection);
+                    GfxStream.Viewport(viewport);
+                    Gizmos.Render(camera);
+                    GfxStream.Restore(savedGizmoState);
+                }
                 ResolveIntermediate();
                 if (screenStandIn != null)
                 {

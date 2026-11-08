@@ -3,12 +3,14 @@
 #pragma kernel Skin
 #pragma kernel Packed
 #pragma kernel PackedHdr
+#pragma kernel SourceColor
 
 RWByteAddressBuffer RawVertices;
 RWByteAddressBuffer RawIndices;
 RWStructuredBuffer<float3> StructuredVertices;
 int Stride;
 int Count;
+int ColorOffset;
 
 void Shift(uint n)
 {
@@ -57,4 +59,10 @@ void Packed(uint3 id : SV_DispatchThreadID)
 void PackedHdr(uint3 id : SV_DispatchThreadID)
 {
     for(uint n=0;n<3;n++) PackedColors.Store4(n*16,asuint(float4(4,.8,-1,1)));
+}
+
+[numthreads(1,1,1)]
+void SourceColor(uint3 id : SV_DispatchThreadID)
+{
+    for(uint n=0;n<(uint)Count;n++) RawVertices.Store(n*Stride+ColorOffset,0xffff0000);
 }

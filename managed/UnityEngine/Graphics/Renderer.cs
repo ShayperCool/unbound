@@ -717,6 +717,7 @@ namespace UnityEngine
             if (m_Sprite == null || m_Sprite.texture == null) return false;
             mesh = m_DrawMode == SpriteDrawMode.Simple ? DeformedMesh() ?? m_Sprite.RenderMesh() : SlicedMesh();
             model = UnityEngine.U2D.PixelPerfectRendering.Snap(transform.localToWorldMatrix);
+            if (Unbound.Runtime.Compat.RenderingMeasured && (!float.IsFinite(model.m03) || !float.IsFinite(model.m13) || !float.IsFinite(model.m23))) return false;
             if (m_FlipX || m_FlipY) mesh = FlippedMesh(mesh);
             texture = m_Sprite.texture;
             return true;

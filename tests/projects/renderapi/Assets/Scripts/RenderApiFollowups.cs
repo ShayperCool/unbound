@@ -74,6 +74,40 @@ public sealed partial class RenderApiProbe
         DestroyImmediate(go); DestroyImmediate(mesh); DestroyImmediate(material);
     }
 
+    IEnumerator SkinExtraCases()
+    {
+        var mesh=Make();mesh.triangles=new[] {0,2,1};mesh.colors32=new[] {new Color32(0,255,0,255),new Color32(0,255,0,255),new Color32(0,255,0,255)};
+        mesh.boneWeights=new[] {new BoneWeight {weight0=1},new BoneWeight {weight0=1},new BoneWeight {weight0=1}};mesh.bindposes=new[] {Matrix4x4.identity};
+        mesh.vertexBufferTarget|=GraphicsBuffer.Target.Raw;mesh.indexBufferTarget|=GraphicsBuffer.Target.Raw;
+        var go=new GameObject("skin shared channels");var skin=go.AddComponent<SkinnedMeshRenderer>();skin.sharedMesh=mesh;skin.bones=new[] {go.transform};skin.updateWhenOffscreen=true;
+        var material=new Material(Resources.Load<Shader>("PackedRead"));material.SetFloat("_UseUvs",0);skin.sharedMaterial=material;
+        yield return null;Image("skinExtra.before");
+        using(var b=mesh.GetVertexBuffer(0))
+        {
+            var compute=Resources.Load<ComputeShader>("MeshWrite");int kernel=compute.FindKernel("SourceColor");compute.SetBuffer(kernel,"RawVertices",b);
+            compute.SetInt("Stride",b.stride);compute.SetInt("Count",mesh.vertexCount);compute.SetInt("ColorOffset",mesh.GetVertexAttributeOffset(VertexAttribute.Color));compute.Dispatch(kernel,1,1,1);
+        }
+        Image("skinExtra.color");yield return null;Image("skinExtra.nextColor");
+        Value("skinExtra.cpuColor",C(mesh.colors[0]));
+        using(var b=mesh.GetIndexBuffer())b.SetData(new ushort[] {0,0,0,0});
+        Image("skinExtra.index");yield return null;Image("skinExtra.nextIndex");
+        DestroyImmediate(go);DestroyImmediate(mesh);DestroyImmediate(material);
+    }
+
+    void ColorArrayCases()
+    {
+        var mesh=Make();var color=new Color(2,.3f,.7f,1);mesh.colors=new[] {color,color,color};
+        var material=new Material(Resources.Load<Shader>("PackedRead"));material.SetFloat("_UseUvs",0);
+        var go=new GameObject("float color arrays");go.AddComponent<MeshFilter>().sharedMesh=mesh;go.AddComponent<MeshRenderer>().sharedMaterial=material;
+        Value("colorArray.float",C(mesh.colors[0]));Value("colorArray.float.format",((int)mesh.GetVertexAttributeFormat(VertexAttribute.Color)).ToString());
+        using(var b=mesh.GetVertexBuffer(0))Buffer("colorArray.float.buffer",b);
+        Image("colorArray.float");mesh.SetVertices(Vertices);Image("colorArray.positions");
+        mesh.colors32=new[] {new Color32(10,20,30,40),new Color32(10,20,30,40),new Color32(10,20,30,40)};
+        Value("colorArray.byte",C(mesh.colors[0]));Value("colorArray.byte.format",((int)mesh.GetVertexAttributeFormat(VertexAttribute.Color)).ToString());
+        using(var b=mesh.GetVertexBuffer(0))Buffer("colorArray.byte.buffer",b);
+        Image("colorArray.byte");DestroyImmediate(go);DestroyImmediate(mesh);DestroyImmediate(material);
+    }
+
     void QuadLayoutCases()
     {
         foreach(bool raw in new[] {false,true})

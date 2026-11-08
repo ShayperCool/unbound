@@ -26,7 +26,7 @@ namespace Unbound.Runtime
             // Render protocol 9 (NativeApi 19).
             CopyDepthOp = 29,
             // Render protocol 11 (NativeApi 22); its element meaning from protocol 12 (NativeApi 28).
-            MeshInstanceOp = 30;
+            MeshInstanceOp = 30, MeshBuffersOp = 31;
 
         /// <summary>The sizes of a DrawIndices index: 16-bit, and 32-bit from render protocol 10.</summary>
         internal const byte DrawIndexSize = 2, DrawIndex32Size = 4;
@@ -53,6 +53,7 @@ namespace Unbound.Runtime
         internal const uint CameraWireframe = 16;
         /// <summary>sRGB targets take the colors as they are, not converted (GL.sRGBWrite off).</summary>
         internal const uint CameraNoSrgbWrite = 32;
+        internal const uint CameraGizmoDraw = 64;
 
         /// <summary>GL's invertCulling, wireframe and sRGBWrite as camera flags: they apply to every
         /// camera setup and matrix change until changed.</summary>
@@ -727,6 +728,18 @@ namespace Unbound.Runtime
             U64(handle);
             U64((ulong)size);
             U32(usage);
+        }
+
+        internal static void MeshBuffers(ulong mesh, GpuBufferStorage[] streams, GpuBufferStorage indices,
+            UnityEngine.Rendering.VertexAttributeDescriptor[] layout, Mesh.MeshDataStore data, bool indicesOnly = false)
+        {
+            U8(MeshBuffersOp); U64(mesh); U8(indicesOnly ? (byte)1 : (byte)0); U32((uint)data.VertexCount);
+            for (int i = 0; i < 4; i++) { U64(streams?[i]?.Handle ?? 0); U32(indicesOnly ? 0u : (uint)data.Stride(i)); }
+            U32((uint)layout.Length);
+            foreach (var d in layout) { U32((uint)d.attribute); U32((uint)d.format); U32((uint)d.dimension); U32((uint)d.stream); }
+            U64(indices?.Handle ?? 0); U32(data.IndexFormat == UnityEngine.Rendering.IndexFormat.UInt32 ? 4u : 2u); U32((uint)data.IndexCount);
+            U32((uint)data.SubMeshes.Count);
+            foreach (var sub in data.SubMeshes) { U32((uint)sub.indexStart); U32((uint)sub.indexCount); U32((uint)sub.topology); }
         }
 
         internal static void BufferData(ulong handle, long offset, ReadOnlySpan<byte> data)

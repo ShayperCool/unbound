@@ -43,9 +43,6 @@ namespace Unbound.Runtime
             if (m_Views == 0) ReleaseGpu();
         }
 
-        // Internal protocol flag, separate from GraphicsBuffer.Target.
-        internal const uint MeshReadOnly = 1u << 31;
-
         const uint AppendOrCounter = (uint)(UnityEngine.GraphicsBuffer.Target.Append | UnityEngine.GraphicsBuffer.Target.Counter);
 
         /// <summary>The size in bytes.</summary>
@@ -65,7 +62,7 @@ namespace Unbound.Runtime
             Usage = usage;
             MeshOwned = meshOwned;
             Handle = RenderHandles.Next();
-            GfxStream.CreateBuffer(Handle, (long)count * stride, usage | (meshOwned ? MeshReadOnly : 0));
+            GfxStream.CreateBuffer(Handle, (long)count * stride, usage);
         }
 
         internal void Release()
@@ -116,7 +113,6 @@ namespace Unbound.Runtime
 
         internal unsafe (long Offset, byte[] Bytes) Prepare(void* data, int length, int elementSize, int start, int bufferStart, int count, Names names)
         {
-            if (MeshOwned) throw new NotSupportedException("Unbound: writing mesh GraphicsBuffers is not supported; update the mesh CPU data instead.");
             if (start < 0 || bufferStart < 0 || count < 0 || start + count > length)
                 throw new ArgumentOutOfRangeException($"Bad indices/count arguments (managedBufferStartIndex:{start} {names.Index}:{bufferStart} count:{count})");
             long offset = (long)bufferStart * elementSize, size = (long)count * elementSize;
@@ -160,6 +156,8 @@ namespace Unbound.Runtime
                 throw new ArgumentException($"GetData(): Buffer offset ({offset} bytes) is not integer multiple of Buffer stride ({Stride} bytes).");
             if (offset + length > Size)
                 throw new ArgumentException($"GetData(): Accessing {length} bytes at offset {offset} for Buffer of size {Size} bytes is not possible.");
+            if (length % Stride != 0)
+                throw new ArgumentException($"GetData(): Data size ({length} bytes) is not integer multiple of Buffer stride ({Stride} bytes).");
             // A destroyed mesh leaves its view metadata valid, but there is no GPU buffer to
             // read. The measured GetData leaves the destination untouched (renderapi).
             if (m_DestroyedOwner) return;
@@ -385,7 +383,6 @@ namespace Unbound.Runtime
         {
             if (source == null) throw new ArgumentNullException("src");
             if (destination == null) throw new ArgumentNullException("dst");
-            if (destination.MeshOwned) throw new NotSupportedException("Unbound: copying counters into mesh GraphicsBuffers is not supported; update the mesh CPU data instead.");
             if (offset % 4 != 0) UnityEngine.Debug.LogWarning("dstOffsetBytes must be a multiple of 4");
             if (offset < 0 || offset + 4 > destination.Size)
             {
@@ -405,7 +402,6 @@ namespace Unbound.Runtime
             var s = source.Storage;
             var d = dest.Storage;
             if (s.Released || d.Released) throw new NullReferenceException("Object reference not set to an instance of an object.");
-            if (d.MeshOwned) throw new NotSupportedException("Unbound: copying into mesh GraphicsBuffers is not supported; update the mesh CPU data instead.");
             if (s.Size != d.Size)
                 throw new ArgumentException($"CopyBuffer source and destination buffers must be the same size, source was {s.Size} bytes, dest was {d.Size} bytes");
             if (!s.Has(UnityEngine.GraphicsBuffer.Target.CopySource))

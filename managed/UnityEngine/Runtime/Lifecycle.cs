@@ -116,6 +116,7 @@ namespace Unbound.Runtime
         /// <summary>A component was just attached to a GameObject.</summary>
         internal static void OnComponentAdded(Component c)
         {
+            if (c is MonoBehaviour gizmoScript) Gizmos.Track(gizmoScript);
             var go = c.m_GameObject;
             if (go.m_IsPrefabAsset || !go.ActiveInHierarchyNoThrow) return;
             Activate(new List<Component> { c });
@@ -178,7 +179,7 @@ namespace Unbound.Runtime
             bool physics = false;
             foreach (var c in components)
             {
-                if (c is MonoBehaviour mb) scripts.Add(mb);
+                if (c is MonoBehaviour mb) { Gizmos.Track(mb); scripts.Add(mb); }
                 else if (!(c is Behaviour b) || b.m_Enabled) SafeEngineEnable(c);
                 physics |= c is Rigidbody || c is Collider;
             }
@@ -432,6 +433,7 @@ namespace Unbound.Runtime
         /// methods, without calling OnEnable (after code changed in place).</summary>
         internal static void RefreshRegistrations()
         {
+            Gizmos.Refresh();
             s_Update.Clear();
             s_LateUpdate.Clear();
             s_FixedUpdate.Clear();
@@ -456,6 +458,7 @@ namespace Unbound.Runtime
         /// <summary>Forgets every behaviour: used when the game domain is torn down.</summary>
         internal static void Reset()
         {
+            Gizmos.Reset();
             s_Update.Clear();
             s_LateUpdate.Clear();
             s_FixedUpdate.Clear();

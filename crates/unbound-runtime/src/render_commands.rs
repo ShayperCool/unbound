@@ -34,6 +34,8 @@ pub mod camera {
     pub const WIREFRAME: u32 = 16;
     /// sRGB targets store the shader's output as it is (`GL.sRGBWrite` off).
     pub const NO_SRGB_WRITE: u32 = 32;
+    /// Gizmo draws supply their batch color and transform normals as directions.
+    pub const GIZMO: u32 = 64;
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -54,11 +56,24 @@ pub struct Draw {
     pub properties: Vec<(String, PropertyValue)>,
 }
 
+/// Mesh-owned GPU streams and the layout used to translate them for drawing.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MeshBuffers {
+    pub mesh: u64,
+    pub indices_only: bool,
+    pub vertices: u32,
+    pub streams: [(u64, u32); 4],
+    /// Attribute, format, dimension, stream, in attribute order.
+    pub attributes: Vec<[u32; 4]>,
+    pub indices: u64,
+    pub index_size: u32,
+    pub index_count: u32,
+    /// Source index start, count, topology, in draw order.
+    pub submeshes: Vec<[u32; 3]>,
+}
+
 /// Buffer usage flags (GraphicsBuffer.Target's).
 pub mod buffer {
-    /// Internal flag: mesh-owned snapshots can be shader inputs, but GPU mesh editing is not
-    /// implemented. Reject writable bindings rather than letting drawing use stale geometry.
-    pub const MESH_READ_ONLY: u32 = 1 << 31;
     pub const VERTEX: u32 = 1;
     pub const INDEX: u32 = 2;
     pub const STRUCTURED: u32 = 16;
@@ -215,6 +230,7 @@ pub enum Command {
     },
     Draw(Box<Draw>),
     /// A buffer (GraphicsBuffer, ComputeBuffer) of `size` bytes, zeroed; [`buffer`] usage flags.
+    MeshBuffers(Box<MeshBuffers>),
     CreateBuffer {
         handle: u64,
         size: u64,
@@ -307,6 +323,7 @@ mod op {
     // Render protocol 9 (NativeApi 19).
     pub const COPY_DEPTH: u8 = 29;
     pub const MESH_INSTANCE: u8 = 30;
+    pub const MESH_BUFFERS: u8 = 31;
 }
 
 /// The sizes of a `DrawIndices` index on the wire: 16-bit indices, and 32-bit ones from render
@@ -647,6 +664,49 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                     properties,
                 }))
             }
+            op::MESH_BUFFERS => {
+                let mesh = r.u64()?;
+                let indices_only = r.u8()? != 0;
+                let vertices = r.u32()?;
+                let mut streams = [(0, 0); 4];
+                for stream in &mut streams {
+                    *stream = (r.u64()?, r.u32()?);
+                }
+                let count = r.u32()?;
+                if count > 14 {
+                    return Err("too many mesh attributes".into());
+                }
+                let mut attributes = Vec::new();
+                for _ in 0..count {
+                    let d = [r.u32()?, r.u32()?, r.u32()?, r.u32()?];
+                    if d[0] > 13 || d[1] > 11 || !(1..=4).contains(&d[2]) || d[3] > 3 {
+                        return Err("invalid mesh GPU layout".into());
+                    }
+                    attributes.push(d);
+                }
+                let indices = r.u64()?;
+                let index_size = r.u32()?;
+                if ![2, 4].contains(&index_size) {
+                    return Err("invalid mesh index size".into());
+                }
+                let index_count = r.u32()?;
+                let count = r.u32()?;
+                let mut submeshes = Vec::new();
+                for _ in 0..count {
+                    submeshes.push([r.u32()?, r.u32()?, r.u32()?]);
+                }
+                Command::MeshBuffers(Box::new(MeshBuffers {
+                    mesh,
+                    indices_only,
+                    vertices,
+                    streams,
+                    attributes,
+                    indices,
+                    index_size,
+                    index_count,
+                    submeshes,
+                }))
+            }
             op::CREATE_BUFFER => Command::CreateBuffer {
                 handle: r.u64()?,
                 size: r.u64()?,
@@ -940,6 +1000,31 @@ impl Writer {
                 ]);
                 self.bytes.extend_from_slice(&s.stencil);
             }
+            Command::MeshBuffers(m) => {
+                self.bytes.push(op::MESH_BUFFERS);
+                self.u64(m.mesh);
+                self.bytes.push(m.indices_only as u8);
+                self.u32(m.vertices);
+                for (handle, stride) in m.streams {
+                    self.u64(handle);
+                    self.u32(stride);
+                }
+                self.u32(m.attributes.len() as u32);
+                for d in &m.attributes {
+                    for n in d {
+                        self.u32(*n);
+                    }
+                }
+                self.u64(m.indices);
+                self.u32(m.index_size);
+                self.u32(m.index_count);
+                self.u32(m.submeshes.len() as u32);
+                for sub in &m.submeshes {
+                    for n in sub {
+                        self.u32(*n);
+                    }
+                }
+            }
             Command::CreateBuffer {
                 handle,
                 size,
@@ -1173,6 +1258,17 @@ mod tests {
                 source: 0,
                 destination: 4,
             },
+            Command::MeshBuffers(Box::new(MeshBuffers {
+                mesh: 7,
+                indices_only: false,
+                vertices: 4,
+                streams: [(8, 12), (0, 0), (0, 0), (0, 0)],
+                attributes: vec![[0, 0, 3, 0]],
+                indices: 9,
+                index_size: 2,
+                index_count: 6,
+                submeshes: vec![[2, 4, 2]],
+            })),
             Command::CreateBuffer {
                 handle: 8,
                 size: 64,
@@ -1443,7 +1539,7 @@ mod tests {
     /// reported format.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 31);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 32);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

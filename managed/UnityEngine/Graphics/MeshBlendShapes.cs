@@ -53,7 +53,7 @@ namespace UnityEngine
         public void ClearBlendShapes()
         {
             m_BlendShapes.Clear();
-            Changed();
+            Changed(false, false);
         }
 
         public string GetBlendShapeName(int shapeIndex) => Shape(shapeIndex).Name;
@@ -108,7 +108,7 @@ namespace UnityEngine
                 Normals = (Vector3[])deltaNormals?.Clone(),
                 Tangents = (Vector3[])deltaTangents?.Clone(),
             });
-            Changed();
+            Changed(false, false);
         }
 
         void CopyBlendShapesFrom(Mesh source)

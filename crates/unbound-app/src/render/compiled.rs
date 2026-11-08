@@ -43,6 +43,8 @@ pub struct CompiledPrograms {
 #[derive(Clone, Copy)]
 pub struct DrawValues<'a, 'buffers> {
     pub model: [f32; 16],
+    pub gizmo_draw: bool,
+    pub color: [f32; 4],
     pub view: [f32; 16],
     pub proj: [f32; 16],
     /// The camera's matrices (its last setup): the camera built-ins read them, not the current
@@ -702,6 +704,7 @@ enum Source {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Builtin {
+    GizmoColor,
     ObjectToWorld,
     WorldToObject,
     MatrixV,
@@ -734,6 +737,7 @@ impl Source {
     fn of(name: &str) -> Source {
         use Builtin::*;
         let which = match name {
+            "_GizmoBatchColor" => GizmoColor,
             "unity_ObjectToWorld" => ObjectToWorld,
             "unity_WorldToObject" => WorldToObject,
             "unity_MatrixV" => MatrixV,
@@ -822,8 +826,21 @@ fn value(name: &str, source: Source, v: &DrawValues, textures: &[String]) -> Opt
     };
     use Builtin::*;
     match which {
+        GizmoColor => {
+            if v.gizmo_draw {
+                vec(v.color)
+            } else {
+                named_value(name, v, textures)
+            }
+        }
         ObjectToWorld => mat(v.model),
-        WorldToObject => mat(inverse(&v.model)),
+        WorldToObject => mat(if v.gizmo_draw {
+            // Gizmos transform normals as directions. Unity's shader sources factor their
+            // normal matrix through this uniform and the inverse view matrix.
+            transpose(&v.model)
+        } else {
+            inverse(&v.model)
+        }),
         MatrixV => mat(v.view),
         MatrixInvV => mat(view_inverse()),
         MatrixVP => mat(mul(&v.proj, &v.view)),
@@ -832,7 +849,11 @@ fn value(name: &str, source: Source, v: &DrawValues, textures: &[String]) -> Opt
         WorldToCamera => mat(mul(&flip_z, &v.camera_view)),
         CameraToWorld => mat(inverse(&mul(&flip_z, &v.camera_view))),
         TransposeModelView => mat(transpose(&mul(&v.view, &v.model))),
-        InvTransModelView => mat(transpose(&inverse(&mul(&v.view, &v.model)))),
+        InvTransModelView => mat(if v.gizmo_draw {
+            mul(&transpose(&inverse(&v.view)), &v.model)
+        } else {
+            transpose(&inverse(&mul(&v.view, &v.model)))
+        }),
         ModelView => mat(mul(&v.view, &v.model)),
         Time => vec([t / 20.0, t, t * 2.0, t * 3.0]),
         SinTime => vec([(t / 8.0).sin(), (t / 4.0).sin(), (t / 2.0).sin(), t.sin()]),
@@ -1215,6 +1236,8 @@ mod tests {
         let size = |name: &str| (name == "_MainTex").then_some((64, 32));
         let globals_index = Default::default();
         let values = DrawValues {
+            gizmo_draw: false,
+            color: [1.0; 4],
             globals_index: &globals_index,
             overrides: &[],
             model,

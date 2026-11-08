@@ -48,9 +48,24 @@ namespace UnityEditor
 
     public sealed partial class Handles
     {
-        /// <summary>Whether the view being drawn shows gizmos: the game view, Unbound's only view,
-        /// has its Gizmos toggle off (its default).</summary>
+        /// <summary>Whether the Game view has its Gizmos toggle enabled, initially false.</summary>
         [Unbound.EditorFaithful("measured: tests/projects/editor sceneView.gizmos")]
-        public static bool ShouldRenderGizmos() => false;
+        public static bool ShouldRenderGizmos() => Gizmos.GameViewEnabled;
+    }
+}
+
+namespace UnityEditor
+{
+    [Serializable]
+    internal abstract partial class PlayModeView : EditorWindow
+    {
+        protected bool showGizmos { get => UnityEngine.Gizmos.GameViewEnabled; set { UnityEngine.Gizmos.GameViewEnabled = value; } }
+    }
+
+    internal partial class GameView : PlayModeView
+    {
+        public GameView() { }
+        internal bool m_Gizmos;
+        internal bool drawGizmos { get => m_Gizmos; set { m_Gizmos = value; UnityEngine.Gizmos.GameViewEnabled = value; } }
     }
 }

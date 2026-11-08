@@ -11310,10 +11310,8 @@ namespace UnityEditor
         public global::UnityEngine.Transform parentForDraggedObjectsOutsideItems { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectsTreeViewDragging.parentForDraggedObjectsOutsideItems"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectsTreeViewDragging.parentForDraggedObjectsOutsideItems"); } }
         public unsafe delegate global::UnityEditor.DragAndDropVisualMode CustomDraggingDelegate(global::UnityEditor.GameObjectTreeViewItem parentItem, global::UnityEditor.GameObjectTreeViewItem targetItem, global::UnityEditor.IMGUI.Controls.TreeViewDragging.DropPosition dropPos, bool perform);
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class GameView : global::UnityEditor.PlayModeView, global::UnityEditor.IHasCustomMenu, global::UnityEditor.IGameViewSizeMenuUser
+    unsafe partial class GameView : global::UnityEditor.IHasCustomMenu, global::UnityEditor.IGameViewSizeMenuUser
     {
-        [global::Unbound.Stub] public GameView() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameView.ctor"); }
         [global::Unbound.Stub] internal void SetTargetDisplay(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameView.SetTargetDisplay"); }
         [global::Unbound.Stub] public void OnEnable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameView.OnEnable"); }
         [global::Unbound.Stub] public void OnDisable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameView.OnDisable"); }
@@ -11332,7 +11330,6 @@ namespace UnityEditor
         public bool vSyncEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameView.vSyncEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameView.vSyncEnabled"); } }
         public int selectedSizeIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameView.selectedSizeIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameView.selectedSizeIndex"); } }
         internal global::UnityEngine.Vector2 targetRenderSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameView.targetRenderSize"); return default; } }
-        internal bool drawGizmos { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameView.drawGizmos"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameView.drawGizmos"); } }
         [global::Unbound.Stub]
         internal unsafe static partial class Styles
         {
@@ -18019,16 +18016,13 @@ namespace UnityEditor
         public static global::UnityEngine.Color activePlayModeTint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeTintResolver.activePlayModeTint"); return default; } }
         public static event global::System.Action<global::UnityEngine.Color> activePlayModeTintChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeTintResolver.activePlayModeTintChanged"); } [global::Unbound.Stub] remove { } }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class PlayModeView : global::UnityEditor.EditorWindow, global::UnityEngine.ISerializationCallbackReceiver
+    unsafe partial class PlayModeView : global::UnityEngine.ISerializationCallbackReceiver
     {
         [global::Unbound.Stub] protected bool m_SwitchingPlayModeViewType;
         protected const int k_MaxSupportedDisplays = 8;
         public const int kFullscreenInvalidIdx = -1;
         public const int kFullscreenNone = 0;
         [global::Unbound.Stub] protected static bool NeedToPerformRendering() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.NeedToPerformRendering"); return default; }
-        [global::Unbound.Stub] protected PlayModeView() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.ctor"); }
         [global::Unbound.Stub] protected global::UnityEngine.RenderTexture RenderView(global::UnityEngine.Vector2 mousePosition, bool clearTexture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.RenderView"); return default; }
         [global::Unbound.Stub] protected static string GetWindowTitle(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.GetWindowTitle"); return default; }
         [global::Unbound.Stub] internal static global::System.Collections.Generic.Dictionary<global::System.Type, string> GetAvailableWindowTypes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.GetAvailableWindowTypes"); return new global::System.Collections.Generic.Dictionary<global::System.Type, string>(); }
@@ -18052,7 +18046,6 @@ namespace UnityEditor
         internal global::UnityEngine.Vector2 viewPadding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.viewPadding"); return default; } [global::Unbound.Stub] private protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.viewPadding"); } }
         internal float viewMouseScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.viewMouseScale"); return default; } [global::Unbound.Stub] private protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.viewMouseScale"); } }
         protected string playModeViewName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.playModeViewName"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.playModeViewName"); } }
-        protected bool showGizmos { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.showGizmos"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.showGizmos"); } }
         public int targetDisplay { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.targetDisplay"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.targetDisplay"); } }
         protected global::UnityEngine.Color clearColor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.clearColor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.clearColor"); } }
         internal global::UnityEngine.Vector2 targetSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.targetSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeView.targetSize"); } }

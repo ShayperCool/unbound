@@ -2340,10 +2340,7 @@ namespace UnityEngine
     }
     unsafe partial class SkinnedMeshRenderer
     {
-        [global::Unbound.Stub] public global::UnityEngine.GraphicsBuffer GetVertexBuffer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.GetVertexBuffer"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.GraphicsBuffer GetPreviousVertexBuffer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.GetPreviousVertexBuffer"); return default; }
         internal global::UnityEngine.Transform actualRootBone { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.actualRootBone"); return default; } }
-        public global::UnityEngine.GraphicsBuffer.Target vertexBufferTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.vertexBufferTarget"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkinnedMeshRenderer.vertexBufferTarget"); } }
     }
     [global::System.Flags]
     public enum SnapAxis : byte

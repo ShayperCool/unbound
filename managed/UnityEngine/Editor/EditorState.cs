@@ -15,6 +15,7 @@ namespace UnityEditor
     public sealed partial class Selection
     {
         static int[] s_Ids = Array.Empty<int>();
+        static readonly HashSet<int> s_SelectedIds = new HashSet<int>();
         static int s_Active;
         static int s_Context;
         static bool s_Changed;
@@ -38,6 +39,8 @@ namespace UnityEditor
             if (s_Active == active && s_Context == context && s_Ids.SequenceEqual(clean)) return;
             if (!Undo.isProcessing) Undo.RecordSelection(s_Ids, s_Active, clean, active);
             s_Ids = clean;
+            s_SelectedIds.Clear();
+            s_SelectedIds.UnionWith(clean);
             s_Active = active;
             s_Context = context;
             s_Changed = true;
@@ -114,7 +117,7 @@ namespace UnityEditor
 
         public static int count => Selected().Count();
 
-        public static bool Contains(int instanceID) => Array.IndexOf(s_Ids, instanceID) >= 0 && Find(instanceID) != null;
+        public static bool Contains(int instanceID) => s_SelectedIds.Contains(instanceID) && Find(instanceID) != null;
 
         public static bool Contains(Object obj) => Contains(obj.GetInstanceID());
 
