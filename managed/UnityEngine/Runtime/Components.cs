@@ -81,6 +81,7 @@ namespace Unbound.Runtime
             }
             Lifecycle.OnComponentAdded(c);
             if (companion != null) Lifecycle.OnComponentAdded(companion);
+            if (!c.m_Destroyed) c.OnAddedByScript();
             ScriptMessages.Validate(c);
             return c;
         }

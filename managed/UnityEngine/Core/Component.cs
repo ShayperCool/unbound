@@ -152,6 +152,9 @@ namespace UnityEngine
         /// has none (not a RequireComponent: scenes and prefabs serialize it separately).</summary>
         internal virtual Type AddedCompanion => null;
 
+        /// <summary>GameObject.AddComponent added the component, after its Awake and OnEnable.</summary>
+        internal virtual void OnAddedByScript() { }
+
         /// <summary>The component became active and enabled (engine components register here).</summary>
         internal virtual void OnEngineEnable() { }
 
