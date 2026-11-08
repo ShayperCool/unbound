@@ -1119,28 +1119,40 @@ fn fill_over_block(
     for &i in &block.dynamic {
         write_uniform(program, plan, i as usize, &shared, out);
     }
-    fill_constant_buffers(program, values, out);
-    // The draw's own properties over the material's: each uniform of an override's name, and
-    // the `_ST` / `_TexelSize` of a texture override, or of any override where the draw fills
-    // them (they derive from the texture property's name).
-    let mut redo = |uniform: &str, texture: bool| {
-        if let Some(&i) = by_name.get(uniform)
+    // The draw's own properties over the material's, written when a full fill writes them: the
+    // `_ST` / `_TexelSize` the draw fills of an override that is no texture (they derive from
+    // the texture property's name) before the bound constant buffers; each uniform of an
+    // override's name, and the `_ST` / `_TexelSize` of a texture override, after them.
+    let mut redo = |out: &mut [u8], property: &str, suffix: &str, texture: bool| {
+        name.clear();
+        name.push_str(property);
+        name.push_str(suffix);
+        if let Some(&i) = by_name.get(name.as_str())
             && (texture || block.is_dynamic[i as usize])
         {
             write_uniform(program, plan, i as usize, values, out);
         }
     };
     for (property, value) in values.overrides {
-        redo(property, true);
-        let texture = matches!(value, PropertyValue::Texture { .. });
-        for suffix in ["_ST", "_TexelSize"] {
-            name.clear();
-            name.push_str(property);
-            name.push_str(suffix);
-            redo(name, texture);
+        if !matches!(value, PropertyValue::Texture { .. }) {
+            for suffix in TEXTURE_SUFFIXES {
+                redo(out, property, suffix, false);
+            }
+        }
+    }
+    fill_constant_buffers(program, values, out);
+    for (property, value) in values.overrides {
+        redo(out, property, "", true);
+        if matches!(value, PropertyValue::Texture { .. }) {
+            for suffix in TEXTURE_SUFFIXES {
+                redo(out, property, suffix, true);
+            }
         }
     }
 }
+
+/// The uniforms a texture property's name gives: its scale and offset, and its size.
+const TEXTURE_SUFFIXES: [&str; 2] = ["_ST", "_TexelSize"];
 
 /// Writes a program's uniform block for a draw. Members nothing provides stay zero: arrays (no
 /// material property or built-in Unbound fills is one) and unknown names.
@@ -1300,9 +1312,10 @@ mod tests {
 
     /// The block path (the material's part once, the draw's properties where they apply) writes
     /// what it wrote when every uniform the draw fills searched the draw's properties, and what a
-    /// full fill writes for draws without array properties (an array under a plain uniform's
-    /// name outside instancing leaves a full fill's uniform unwritten, the block's the
-    /// material's).
+    /// full fill writes for draws without array or texture properties (an array under a plain
+    /// uniform's name outside instancing leaves a full fill's uniform unwritten, the block's the
+    /// material's; a texture's `_ST` inside a bound constant buffer is the buffer's in a full
+    /// fill, the texture's over a block).
     #[test]
     fn a_draw_over_its_material_block_fills_what_it_did() {
         let lab = ShaderLab::parse(r#"Shader "S" { Properties { _Color ("C", Color) = (0.5, 1, 1, 1) _Cut ("Cut", Range(0,1)) = 0.25 } SubShader { Pass { } } }"#).unwrap();
@@ -1358,7 +1371,12 @@ mod tests {
             keywords: Vec::new(),
             texture_slots: Vec::new(),
             buffers: Vec::new(),
-            blocks: Vec::new(),
+            // A buffer bound over `_MainTex_ST` (offset 96).
+            blocks: vec![unbound_shaders::BlockRange {
+                name: "Bound".into(),
+                offset: 96,
+                size: 16,
+            }],
             extra_vertex_inputs: false,
             vertex_inputs: true,
         };
@@ -1457,7 +1475,7 @@ mod tests {
                 globals: &globals,
                 main_alpha_only: false,
                 texture_size: &size,
-                constant_buffer: &|_| None,
+                constant_buffer: &|name| (name == "Bound").then_some(&BOUND[..]),
                 instance,
                 element: None,
             };
@@ -1479,10 +1497,12 @@ mod tests {
                 reference, over,
                 "overrides {overrides:?}, instance {instance:?}"
             );
-            if !overrides
-                .iter()
-                .any(|(_, v)| matches!(v, PropertyValue::Array { .. }))
-            {
+            if !overrides.iter().any(|(_, v)| {
+                matches!(
+                    v,
+                    PropertyValue::Array { .. } | PropertyValue::Texture { .. }
+                )
+            }) {
                 assert_eq!(full, over, "overrides {overrides:?}, instance {instance:?}");
             }
         }

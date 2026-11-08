@@ -98,5 +98,23 @@ namespace UnityEngine.Tests
             Cull();
             Assert.Equal(new[] { "first", "enabled", "late" }, s_Calls);
         }
+
+        /// <summary>A script that culls a camera from OnWillRenderObject (a reflection camera)
+        /// gets the nested pass's messages; the outer pass still tells the objects after it.</summary>
+        [Fact]
+        public void ANestedCullingLeavesTheOuterPassWhole()
+        {
+            var first = Cube("first", Vector3.zero);
+            Cube("second", new Vector3(1, 0, 0));
+            bool nested = false;
+            first.GetComponent<Tell>().onWillRender = () =>
+            {
+                if (nested) return;
+                nested = true;
+                Cull();
+            };
+            Cull();
+            Assert.Equal(new[] { "first", "first", "second", "second" }, s_Calls);
+        }
     }
 }

@@ -360,7 +360,9 @@ namespace UnityEngine
         /// maskInteraction).</summary>
         internal virtual SpriteMaskInteraction MaskInteraction => SpriteMaskInteraction.None;
 
-        static readonly List<Renderer> s_WillRender = new List<Renderer>();
+        /// <summary>The lists of the passes below in progress, kept for the next ones (a script
+        /// may render a camera from OnWillRenderObject: each pass has its own).</summary>
+        static readonly Stack<List<Renderer>> s_WillRenderLists = new Stack<List<Renderer>>();
 
         /// <summary>OnWillRenderObject to the enabled scripts on the objects of the renderers a camera
         /// sees (its culling mask lets them through and their bounds touch its frustum), before any
@@ -370,24 +372,31 @@ namespace UnityEngine
         {
             // Nothing changes the registry before the first script gets the message: walk it as it
             // is, and copy the rest from that renderer on, since scripts may change the scene.
-            s_WillRender.Clear();
-            foreach (var renderer in RenderRegistry.Renderers)
-                if (s_WillRender.Count > 0 || WillRender(renderer, viewProjection, cullingMask)) s_WillRender.Add(renderer);
-            for (int r = 0; r < s_WillRender.Count; r++)
+            var list = s_WillRenderLists.Count > 0 ? s_WillRenderLists.Pop() : new List<Renderer>();
+            try
             {
-                var renderer = s_WillRender[r];
-                if (r > 0 && !WillRender(renderer, viewProjection, cullingMask)) continue;
-                var components = renderer.m_GameObject.m_Components;
-                for (int i = 0; i < components.Count; i++)
+                foreach (var renderer in RenderRegistry.Renderers)
+                    if (list.Count > 0 || WillRender(renderer, viewProjection, cullingMask)) list.Add(renderer);
+                for (int r = 0; r < list.Count; r++)
                 {
-                    if (!(components[i] is MonoBehaviour script) || !script.IsActiveAndEnabledNoThrow) continue;
-                    var call = ScriptMessages.For(script.GetType()).OnWillRenderObject;
-                    if (call == null) continue;
-                    try { call(script); }
-                    catch (Exception e) { Debug.LogException(e, script); }
+                    var renderer = list[r];
+                    if (r > 0 && !WillRender(renderer, viewProjection, cullingMask)) continue;
+                    var components = renderer.m_GameObject.m_Components;
+                    for (int i = 0; i < components.Count; i++)
+                    {
+                        if (!(components[i] is MonoBehaviour script) || !script.IsActiveAndEnabledNoThrow) continue;
+                        var call = ScriptMessages.For(script.GetType()).OnWillRenderObject;
+                        if (call == null) continue;
+                        try { call(script); }
+                        catch (Exception e) { Debug.LogException(e, script); }
+                    }
                 }
             }
-            s_WillRender.Clear();
+            finally
+            {
+                list.Clear();
+                s_WillRenderLists.Push(list);
+            }
         }
 
         /// <summary>Whether a camera with this mask sends the renderer's object OnWillRenderObject:
