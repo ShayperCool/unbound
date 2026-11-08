@@ -60,10 +60,14 @@ def callbacks(rows):
     return grouped
 
 
+def metadata_equal(left, right):
+    return equal(','.join(left[:3]+left[6:]), ','.join(right[:3]+right[6:]))
+
+
 def relation(left, right):
     a, ap = left
     b, bp = right
-    if not equal(','.join(a[:3]+a[6:]), ','.join(b[:3]+b[6:])):
+    if not metadata_equal(a, b):
         return None
     same_impulse = equal(','.join(a[3:6]), ','.join(b[3:6]))
     opposite_impulse = equal(','.join(str(-float(x)) for x in a[3:6]), ','.join(b[3:6]))
@@ -134,6 +138,7 @@ def analyze(expected, actual):
     report = compare(expected, actual)
     e, a = callbacks(expected), callbacks(actual)
     categories = {}
+    geometry_matches = set()
     # Prefer exact payload matches before orientation/witness matches. No callback
     # may be reused to explain a second expected callback.
     for context, events in e.items():
@@ -148,6 +153,13 @@ def analyze(expected, actual):
                         del remaining[key]
                         del available[candidate]
                         break
+        for key, (fields, points) in remaining.items():
+            for candidate, (other_fields, other_points) in list(available.items()):
+                if metadata_equal(fields, other_fields) and multiset_equal(points, other_points):
+                    geometry_matches.add(('expected', key))
+                    geometry_matches.add(('actual', candidate))
+                    del available[candidate]
+                    break
     annotated = []
     priority = ('unmatched_payload', 'surface_witness', 'pair_orientation', 'order_only')
     for failure in report['failures']:
@@ -164,9 +176,16 @@ def analyze(expected, actual):
             category = 'callback_count'
         else:
             category = 'other'
-        annotated.append(dict(failure, category=category))
+        item = dict(failure, category=category)
+        if category == 'unmatched_payload':
+            item['mechanism'] = ('geometry_match_with_different_impulse'
+                                 if all((side, event) in geometry_matches for side, rows in
+                                        (('expected', expected), ('actual', actual)) if key in rows)
+                                 else 'unmatched_geometry_or_metadata')
+        annotated.append(item)
     return dict(total=report['total'], differences=len(annotated),
                 counts=dict(Counter(x['category'] for x in annotated)), failures=annotated,
+                unmatched_mechanisms=dict(Counter(x['mechanism'] for x in annotated if 'mechanism' in x)),
                 unmatched_groups=group_unmatched(annotated, expected, actual))
 
 

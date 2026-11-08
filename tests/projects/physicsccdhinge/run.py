@@ -18,6 +18,7 @@ from compare import load, compare as compare_rows
 from verify_results import verify
 from verify_geometry import verify as verify_geometry
 from verify_ordering import verify as verify_ordering
+from verify_constraints import verify as verify_constraints
 from analyze_contacts import analyze
 from replay_compound_order import diagnose
 
@@ -33,16 +34,17 @@ suite = p.add_mutually_exclusive_group()
 suite.add_argument('--geometry', action='store_true', help='Extended mesh, compound and terrain CCD cases')
 suite.add_argument('--geometry-controls', action='store_true', help='Dynamic target and mesh type transition controls')
 suite.add_argument('--geometry-ordering', action='store_true', help='Actor, child and native contact orientation controls')
+suite.add_argument('--geometry-constraints', action='store_true', help='Constrained and unconstrained manifold lifetime controls')
 a = p.parse_args()
 os.environ['UNBOUND_PROBE_UNITY_VERSION'] = a.release
-variant = 'geometry-ordering' if a.geometry_ordering else 'geometry-controls' if a.geometry_controls else 'geometry' if a.geometry else ''
+variant = 'geometry-constraints' if a.geometry_constraints else 'geometry-ordering' if a.geometry_ordering else 'geometry-controls' if a.geometry_controls else 'geometry' if a.geometry else ''
 work = cache_artifact_path(a.work.resolve()) / variant
 work.mkdir(parents=True, exist_ok=True)
 if Path(a.label).name != a.label or a.label in ('.','..'): p.error('Invalid label')
 project = work/('project-'+a.label)
 out = work/(a.label+'.tsv')
 ref = reference_root(ROOT)/(variant+'.tsv') if variant else reference_file(ROOT, 'tsv')
-output_variable = 'PHYSICS_GEOMETRY_ORDER_OUT' if a.geometry_ordering else 'PHYSICS_GEOMETRY_CONTROL_OUT' if a.geometry_controls else 'PHYSICS_GEOMETRY_OUT' if a.geometry else 'PHYSICS_PROBE_OUT'
+output_variable = 'PHYSICS_GEOMETRY_CONSTRAINT_OUT' if a.geometry_constraints else 'PHYSICS_GEOMETRY_ORDER_OUT' if a.geometry_ordering else 'PHYSICS_GEOMETRY_CONTROL_OUT' if a.geometry_controls else 'PHYSICS_GEOMETRY_OUT' if a.geometry else 'PHYSICS_PROBE_OUT'
 
 def prepare():
     if project.exists(): raise SystemExit('Project exists: '+str(project))
@@ -67,6 +69,13 @@ def compare(classify=False):
     (work/(a.label+'-comparison.json')).write_text(json.dumps(report,indent=2)+'\n')
     print(f"physicsccdhinge: {report['total']-len(report['failures'])}/{report['total']} records match; {len(report['failures'])} differences")
     if not classify: return bool(report['failures'])
+    if a.geometry_constraints:
+        analysis = analyze(expected, actual)
+        result = verify_constraints(expected, actual)
+        (work/(a.label+'-contact-analysis.json')).write_text(json.dumps(analysis,indent=2)+'\n')
+        (work/(a.label+'-verification.json')).write_text(json.dumps(result,indent=2)+'\n')
+        print(f"physicsccdhinge: constraint controls: {analysis['counts']}; {len(result['unresolved'])} unexpected differences; {len(result['free_rotation_trace'])} free-rotation diagnostic rows retained")
+        return bool(result['unresolved'])
     if a.geometry_ordering:
         result = verify_ordering(expected, actual)
         (work/(a.label+'-verification.json')).write_text(json.dumps(result,indent=2)+'\n')
@@ -82,7 +91,10 @@ def compare(classify=False):
         result = verify_geometry(expected,actual,report)
         (work/(a.label+'-verification.json')).write_text(json.dumps(result,indent=2)+'\n')
         print(f"physicsccdhinge: geometry motion gate: {result['checked_body_rows']} body rows; {len(result['unresolved'])} unexpected differences; contact trace remains a report with {len(result['contact_trace'])} raw differences; {len(result['mirrored_motion'])} reflected body rows; {len(result['open_manifold_motion'])} open mixed-compound rows")
-        return bool(result['unresolved'])
+        content_failures = [failure for failure in analysis['failures']
+                            if failure['category'] in ('unmatched_payload', 'body', 'callback_count', 'other')]
+        print(f"physicsccdhinge: geometry content gate: {len(content_failures)} unmatched payload/body/count differences; ordering, pair orientation and alternate witnesses remain separately reported")
+        return bool(result['unresolved'] or content_failures)
     result = verify(expected,actual,report)
     (work/(a.label+'-verification.json')).write_text(json.dumps(result,indent=2)+'\n')
     print(f"physicsccdhinge: {len(result['unresolved'])} unresolved; {len(result['angle_roundoff'])} angle roundoff; {len(result['resting_velocity_roundoff'])} resting velocity roundoff; {len(result['pair_orientation'])} pair orientation rows retained")

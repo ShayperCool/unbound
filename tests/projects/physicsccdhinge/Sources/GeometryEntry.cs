@@ -73,12 +73,13 @@ public class GeometryEntry : MonoBehaviour
         Scenario=name; Step=-1;
         Hull=BoxMesh(new Vector3(.1f,.15f,.2f));
     }
-    static void Clear()
+    static void Clear(int idleSteps=1)
     {
         // Children are tracked too; destroying the root first makes their entries null.
         foreach(var o in Made) if(o is GameObject && o!=null) DestroyImmediate(o);
         foreach(var o in Made) if(!(o is GameObject) && o!=null) DestroyImmediate(o);
-        Made.Clear(); Physics.SyncTransforms(); Space.Simulate(Dt);
+        Made.Clear(); Physics.SyncTransforms();
+        for(int idle=0;idle<idleSteps;idle++)Space.Simulate(Dt);
     }
     static void ResetEvents(Rigidbody b) => b.GetComponent<GeometryEntry>().Events=0;
     static void State(Rigidbody b)
@@ -369,6 +370,29 @@ public class GeometryEntry : MonoBehaviour
             Clear();
         }
     }
+    static void IdleControls()
+    {
+        Physics.ContactEvent+=NativeContacts;
+        try
+        {
+            foreach(int idleSteps in new[]{0,1,3})
+            {
+                Begin("ordering/warm/"+idleSteps);
+                Body("warm",Vector3.left*10,1,CollisionDetectionMode.Discrete);
+                Physics.SyncTransforms(); Space.Simulate(Dt);
+                Clear(idleSteps);
+                ContactNames.Clear();
+                Begin("ordering/idle/"+idleSteps);
+                var a=OrderedBody("a",Vector3.left,2,false,false,false);
+                var b=OrderedBody("b",Vector3.zero,1,false,false,true);
+                Physics.SyncTransforms(); Space.Simulate(Dt);
+                a.linearVelocity=Vector3.right*100;
+                for(Step=0;Step<3;Step++) { NativeEvents=0; Tick(a,b); }
+                Clear(); ContactNames.Clear();
+            }
+        }
+        finally { Physics.ContactEvent-=NativeContacts; }
+    }
     static void PendingFrames()
     {
         bool previous=Physics.autoSyncTransforms;
@@ -400,6 +424,46 @@ public class GeometryEntry : MonoBehaviour
             }
         }
         finally { Physics.autoSyncTransforms=previous; }
+    }
+    static void ConstraintControls()
+    {
+        var constraints=new[]{RigidbodyConstraints.None, RigidbodyConstraints.FreezePositionY,
+            RigidbodyConstraints.FreezeRotationX, RigidbodyConstraints.FreezeRotationY,
+            RigidbodyConstraints.FreezeRotationZ, RigidbodyConstraints.FreezeRotation, RigidbodyConstraints.FreezeAll};
+        foreach(var constraint in constraints)
+        foreach(bool speculative in new[]{false,true})
+        {
+            Begin("constraints/"+(int)constraint+"/"+speculative);
+            Obstacle(0);
+            var body=Body("bullet",Vector3.left*(speculative?1:.06f),1,
+                speculative?CollisionDetectionMode.ContinuousSpeculative:CollisionDetectionMode.Discrete);
+            body.constraints=constraint;
+            Physics.SyncTransforms();
+            if(speculative) { Space.Simulate(Dt); body.linearVelocity=Vector3.right*100; }
+            Row(Scenario+"/assigned-velocity",V(body.linearVelocity));
+            for(Step=0;Step<5;Step++)Tick(body);
+            body.Sleep();
+            body.PublishTransform();
+            Row(Scenario+"/published-sleeping",body.IsSleeping().ToString());
+            Clear();
+        }
+        foreach(var constraint in new[]{RigidbodyConstraints.None, RigidbodyConstraints.FreezePositionX,
+            RigidbodyConstraints.FreezePositionY, RigidbodyConstraints.FreezePositionZ,
+            RigidbodyConstraints.FreezePosition, RigidbodyConstraints.FreezeRotationX,
+            RigidbodyConstraints.FreezeRotationY, RigidbodyConstraints.FreezeRotationZ, RigidbodyConstraints.FreezeRotation})
+        foreach(bool rotated in new[]{false,true})
+        {
+            Begin("constraints/velocity/"+(int)constraint+"/"+rotated);
+            var body=Body("bullet",Vector3.left*10,0,CollisionDetectionMode.Discrete);
+            if(rotated)body.rotation=Quaternion.Euler(20,30,40);
+            body.inertiaTensorRotation=rotated?Quaternion.Euler(15,25,35):Quaternion.identity;
+            body.constraints=constraint;
+            body.linearVelocity=new Vector3(1,2,3); body.angularVelocity=new Vector3(4,5,6);
+            Row(Scenario+"/linear",V(body.linearVelocity)); Row(Scenario+"/angular",V(body.angularVelocity));
+            body.constraints=RigidbodyConstraints.None;
+            Row(Scenario+"/released-linear",V(body.linearVelocity)); Row(Scenario+"/released-angular",V(body.angularVelocity));
+            Clear();
+        }
     }
     static void RecordPending(string phase, Collider collider)
     {
@@ -438,13 +502,16 @@ public class GeometryEntry : MonoBehaviour
         Output=Environment.GetEnvironmentVariable("PHYSICS_GEOMETRY_OUT");
         string controls=Environment.GetEnvironmentVariable("PHYSICS_GEOMETRY_CONTROL_OUT");
         string ordering=Environment.GetEnvironmentVariable("PHYSICS_GEOMETRY_ORDER_OUT");
+        string constraints=Environment.GetEnvironmentVariable("PHYSICS_GEOMETRY_CONSTRAINT_OUT");
         if(!string.IsNullOrEmpty(controls))Output=controls;
         if(!string.IsNullOrEmpty(ordering))Output=ordering;
+        if(!string.IsNullOrEmpty(constraints))Output=constraints;
         if(string.IsNullOrEmpty(Output))return;
         Time.fixedDeltaTime=Dt; Physics.simulationMode=SimulationMode.Script; Space=Physics.defaultPhysicsScene;
         try
         {
-            if(!string.IsNullOrEmpty(ordering)) { Ordering(); FrameControls(); PendingFrames(); Row("complete","yes"); Save(0); return; }
+            if(!string.IsNullOrEmpty(constraints)) { ConstraintControls(); Row("complete","yes"); Save(0); return; }
+            if(!string.IsNullOrEmpty(ordering)) { Ordering(); FrameControls(); PendingFrames(); IdleControls(); Row("complete","yes"); Save(0); return; }
             if(!string.IsNullOrEmpty(controls)) { Controls(); Row("complete","yes"); Save(0); return; }
             StaticMatrix(); DynamicMatrix(); Tuning();
             var previous=SceneManager.GetActiveScene();

@@ -121,7 +121,8 @@ except that it explicitly reports the reflected readings and the one open mixed
 compound context. The latter checks forward progress between x=-0.6 and x=-0.15,
 consistent per-step position/velocity integration, and the measured delayed-exit
 sequence. Exact motion magnitude remains open.
-The complete contact trace is a strict **report**, not a contact-parity gate.
+The complete contact trace remains a strict **report**. Q177 additionally gates
+unmatched payload, body and callback-count differences, as described below.
 Its records must be finite and structurally complete, including every declared
 callback and contact. `verify_geometry.py` does not sort or rewrite captures,
 alter tolerances, or report contact residuals as insignificant. The original
@@ -142,6 +143,9 @@ five steps and both receivers.
 
 ## Results and retained differences
 
+This section records the Q166 baseline and its construction analysis. The Q177
+section below gives the current results and the added content gate.
+
 The strict comparator is shared with physicsbatch and keeps its absolute 1e-4 /
 relative 1e-5 tolerances. The engine matches 6708/6814 rows. All 106 raw failures
 remain in the comparison JSON. The separate gate verifier identifies 97 hinge
@@ -160,7 +164,7 @@ unresolved checks. Existing physics, joints, physicsbatch and contactmodify3d
 probes retain their results. The latter two retain their previously recorded
 mesh slot permutations and ten contact-modification differences respectively.
 
-For the extended capture, the raw comparison retains 2441 differences across
+At the Q166 baseline, the extended raw comparison retained 2441 differences across
 12440 keys, including extra/missing contact slots. Of these, 2391 are contact
 trace rows, 43 are reflected body readings, and seven belong to the explicitly
 open mixed-compound motion/lifetime context. All other body and callback-count
@@ -224,8 +228,7 @@ four initial contact points, normals and separations, with a different impulse
 allocation among the child pairs. The reference bullet velocity is
 `25.4600449,7.784088,0`; Unbound reports `25.7584381,-5.54619646,0`.
 The normal-response replay below isolates the initial divergence to the contact
-sequence. Exact matching of actor/shape lifetime and constraint construction
-remains open. No global sort, child reversal or fixture-dependent engine rule
+sequence. Q177 corrects the actor/shape lifetime below. No global sort, child reversal or fixture-dependent engine rule
 is added.
 
 
@@ -246,16 +249,15 @@ matches the Editor's `25.4600449,7.784088,0`. Predicted position differs from th
 reference by less than 0.0000002 units. The original contact values and raw
 comparison remain untouched. The gate saves the complete replay report beside
 the contact analysis; this diagnostic adds no normative contact-order assertion.
-The construction/lifetime rule that selects these pair sequences remains a
-separate unresolved mechanism, rather than a reason to sort engine contacts.
+Q177 resolves this construction/lifetime cause below, without sorting contacts.
 
-Contact-content differences remain visible independently of motion. For example,
+The Q166 baseline had contact-content differences independently of motion. For example,
 `geometry/static/1/0/3/1/bullet/event/0` has four contacts on both sides. Unity
-reports the four face corners; Unbound retains an interior point and three
-corners. The shared normal, separation and body motion match. This is a reduced
+reported the four face corners; Unbound retained an interior point and three
+corners. Q177 corrects this manifold lifetime, as described below. The shared normal, separation and body motion match. This is a reduced
 manifold difference, not a slot permutation or an insignificant-contact claim.
 
-The supplemental controls retain 24 impulse-vector differences. Each has equal
+At the Q166 baseline, the supplemental controls retained 24 impulse-vector differences. Each has equal
 magnitude and the opposite sign, with all contact geometry, incoming velocities
 and body motion matching. The additional native controls below show that legacy
 callbacks on both receivers preserve the native pair impulse, while contact
@@ -291,23 +293,16 @@ body count, child count, or asset name. Ordinary, mirrored and nonuniform frame
 controls retain their body/bounds checks. No serialized cache format or vendored
 PhysX source changes.
 
-The far-origin control retains its complete strict contact/motion report as a
-separate numeric compatibility limit. Its body readings must remain finite,
-integrate their reported velocity, and supply the actual incoming velocity in
-callbacks. The contact and motion quantization rule at large local coordinates
-remains open. It retains 25 raw differences: four body readings, one bounds
-reading and 20 contact-trace rows. The maximum position difference is about
-0.001075 units, the maximum velocity difference is 0.0390625 units/s, and the
-bounds center differs by 0.0009766 units. Its failures are not relabeled as
-ordering or removed from the raw report. All original Q06, geometry and supplemental gates keep their
-assertions and tolerances.
+The Q166 baseline retained 25 far-origin raw differences: four body readings,
+one bounds reading and 20 contact rows. Its maximum position difference was
+about 0.001075 units, velocity difference 0.0390625 units/s and bounds-center
+difference 0.0009766 units. Q177 resolves all of them through the cooking frame
+correction below. Original gates, references and tolerances are preserved.
 
-Validation: release build; 3577 managed tests; seven compatibility-profile Rust
-tests; 26 probe-verifier tests; all four CCD profiles. Twenty-four physics probes
-were run before and after. Their results are retained, including the existing
-2D dynamics and query-parity failures. The new ordering profile reports 1872 raw
-differences and zero capture/native consistency failures; its 25 far-origin rows
-remain explicitly open.
+Q166 validation covered the release build, 3577 managed tests, seven
+compatibility-profile Rust tests, 26 probe-verifier tests and all four CCD
+profiles. Twenty-four physics probes retained their baseline results, including
+the existing 2D dynamics and query-parity failures.
 
 The deferred-frame controls also check Unity 6000.0
 [autoSyncTransforms](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics-autoSyncTransforms.html)
@@ -322,3 +317,100 @@ cached affine matrix, so property edits cannot combine two different frames.
 The reference extension preserves every earlier key/value and has two identical
 GPU Editor captures. Two managed regression tests exercise the same contract
 using the built-in cube mesh.
+
+
+## Q177: constrained publication, cooking frames and collider lifetime
+
+The original broad oracle, comparator, tolerances and motion verifier are unchanged.
+The strict contact analysis now reports **485 differences, all contact-slot
+permutations**. Every complete callback/contact multiset, body reading and callback
+count matches the Unity 6000.0.71f1 reference. No contact sort or solver-order rule
+was introduced. The seven compound first-step replays now reconstruct both sides
+without exchanging inputs, including the asymmetric mixed compound.
+
+| Strict class | Q166 baseline | Constrained publication | Collider-local cooking | Collider lifetime |
+| --- | ---: | ---: | ---: | ---: |
+| Order only | 812 | 690 | 690 | 485 |
+| Pair orientation | 172 | 176 | 176 | 0 |
+| Surface witness | 186 | 186 | 186 | 0 |
+| Unmatched payload | 1221 | 601 | 596 | 0 |
+| Body | 48 | 48 | 48 | 0 |
+| Callback count | 2 | 2 | 2 | 0 |
+| Total | 2441 | 1703 | 1698 | 485 |
+
+`analyze_contacts.py` also groups every unmatched raw row by authored collider-type
+pair and scenario, without changing its category or dropping missing/extra data.
+A second annotation distinguishes complete matching geometry with different
+impulses from unmatched geometry/metadata: the baseline splits 236/985; after
+publication 268/333; after collider-local cooking 268/328; finally 0/0.
+Thus an unmatched complete callback was not always evidence of a different point
+or normal; its impulse could prevent the original whole-callback match.
+
+| Authored pair (ambiguous slots shown explicitly) | Before | After |
+| --- | ---: | ---: |
+| box/convex | 581 | 0 |
+| box/convex or box/mixed | 8 | 0 |
+| box/sphere | 38 | 0 |
+| convex/convex | 122 | 0 |
+| convex/convex or convex/mixed | 4 | 0 |
+| convex/convex or convex/sphere | 8 | 0 |
+| convex/sphere | 250 | 0 |
+| convex/sphere or sphere/sphere | 8 | 0 |
+| convex/triangle_mesh | 127 | 0 |
+| mixed/sphere | 6 | 0 |
+| mixed/sphere or sphere/sphere | 2 | 0 |
+| sphere/sphere | 64 | 0 |
+| sphere/triangle_mesh | 3 | 0 |
+
+These are the measured mechanisms and their limits:
+
+| Mechanism | Implementation and confirming control |
+| --- | --- |
+| Angular constraints and contact-state lifetime | Constrained dynamic bodies project angular velocity in the current mass frame and republish their pose after simulation. Pose publication refreshes their cached contacts. It applies to ordinary overlapping Discrete bodies as well as speculative CCD. Sleeping and kinematic bodies are left asleep/kinematic. Partial constraints use inertia-space moments, rather than additional world-space angular locks. `geometry-constraints.tsv` crosses individual/all angular locks, no angular lock, a position lock, Discrete overlap and speculative approach; it also checks sleeping publication. |
+| Assigned velocity and constraints | Frozen position components are removed in world space. Angular assignments project through the assigned inertia rotation, including a rotated body and nonidentity inertia frame. Releasing the constraints retains the projected velocity. Cached principal axes avoid allocating on repeated assignments. The same reference records all position/angular axes, a rotated control and the values immediately after releasing constraints. |
+| Convex cooking frame | Cook scaled vertices in collider-local space and keep the rigid pose on the shape. Do not shift the vertices to their centroid during this cooking path. Existing translated, nonuniform, mirrored, sheared and deferred-frame controls retain their checks. All 25 original far-origin differences resolve exactly, including body, bounds and contact data; they were a transform/cooking-frame difference, not accepted float residuals. |
+| Collider construction and lifetime | Update same-kind shapes in place and retain them across attachment transfers. Apply authored geometry changes in place and create a Rigidbody when its component joins the world. Body-attached colliders join through the structural flush. A standalone mesh collider replaces its static actor when switching triangle/convex kind. An empty scene without rigid actors defers SDK simulation and pending removal work. These rules correct the first constraint sequence in all seven compound contexts. Existing construction/child-order/actor-order controls and new `ordering/idle/{0,1,3}` traces record native and legacy contacts after zero, one or three empty steps. Their order remains a report, not a public ordering guarantee. |
+
+All three measured mechanisms are selected by Compat for 6000.0.71f1. Other
+releases retain the previous cooking, publication and collider-lifetime paths;
+those paths remain unmeasured and can be wrong for those releases. There is no
+serialized cache output change. Shim ABI 19 covers the changed structures and
+functions. No vendored PhysX source/header patch is added.
+
+The following Unity **6000.0** documentation was checked, including limitations:
+
+| Source | Documented guarantee / limit |
+| --- | --- |
+| [MeshCollider](https://docs.unity3d.com/6000.0/Documentation/Manual/class-MeshCollider.html) | Cooking options control simulation preparation, cleaning, welding and the fast midphase. Convex colliders have a 255-triangle limit. Nondefault cooking and some transform cases require a readable mesh. These options do not specify exact contact reduction or slot order. |
+| [defaultContactOffset](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics-defaultContactOffset.html), [contactOffset](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Collider-contactOffset.html) | The default initializes new colliders; each offset must be positive. Contacts can be generated inside the sum of the two offsets. The existing 0.001/0.05 offset and live-default controls retain their values; this task changes neither contact/rest offsets nor reporting thresholds. |
+| [Collision.GetContacts](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Collision.GetContacts.html) | The array overload does not allocate; the list can grow if capacity is insufficient. No contact-slot ordering guarantee is documented. |
+| [Rigidbody.constraints](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rigidbody-constraints.html) | Position constraints use world axes; rotation constraints use inertia space relative to `inertiaTensorRotation`. The exact publication and assignment arithmetic above is an observation of this release and the named controls. |
+| [PublishTransform](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rigidbody.PublishTransform.html) | Publishes the simulated Rigidbody pose to its Transform. Child transforms are not updated by this method; callers must account for hierarchy order. The capture checks that publishing a sleeping constrained body does not wake it. |
+
+`--geometry-constraints` has one canonical 553-row reference from two identical
+GPU Editor captures. It gates the measured angular-constraint/assignment/sleep
+cases at the original tolerances. Its no-angular-constraint controls are explicit
+negative controls: 58 strict rows remain visible (11 body, 44 payload, 3 slot
+order), with counts, identities and finite values still checked. Their face-contact
+constraint sequence produces small residual spin: maxima over five steps are
+0.000324803 position units, 0.000841626 quaternion components, 0.00700853 units/s
+linear velocity and 0.0481988 radians/s angular velocity. This is a separate
+free-rotation numeric trace, not full solver parity or an insignificant-residual
+acceptance. The original broad capture locks rotation and has no such residual.
+
+The new idle controls are appended only after two identical GPU Editor captures
+that preserve every earlier ordering-reference key/value. The supplemental CCD
+controls improve from 1143/1167 to 1167/1167. Q06 improves from 6708/6814 to
+6714/6814: only its 97 hinge-angle and three resting-speed numeric residuals
+remain. The broad geometry trace has 485 slot permutations; the construction
+profile retains its full raw sequence/orientation report and native/legacy
+consistency checks. Far-origin differences are 25 -> 0.
+
+
+Q177 validation: release build; 3594 managed tests; seven compatibility-profile
+Rust tests; 34 verifier tests; regenerated stubs with no generated diff. All 24
+physics probes were run before and after with no regressions: 21 pass, two
+existing 2D failures and one contact-event report. Contact-event profiles retain
+their baseline results, including static-only scenes. All five CCD profiles
+pass their declared gates. Their raw failures and the new free-rotation
+negative-control trace remain available in the runner outputs.

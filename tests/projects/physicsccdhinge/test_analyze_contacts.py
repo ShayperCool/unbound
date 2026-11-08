@@ -36,6 +36,21 @@ class ContactAnalysisTests(unittest.TestCase):
         actual['case/0/a/event/0'] = 'enter,b,2,1,0,0,-2,0,0'
         self.assertEqual({'pair_orientation': 1}, analyze(self.rows(), actual)['counts'])
 
+    def test_impulse_distribution_keeps_the_raw_failure(self):
+        actual = self.rows()
+        actual['case/0/a/event/0'] = 'enter,b,2,-2,0,0,-2,0,0'
+        result = analyze(self.rows(), actual)
+        self.assertEqual({'unmatched_payload': 1}, result['counts'])
+        self.assertEqual({'geometry_match_with_different_impulse': 1}, result['unmatched_mechanisms'])
+        self.assertEqual(actual['case/0/a/event/0'], result['failures'][0]['actual'])
+
+    def test_changed_geometry_is_not_explained_by_impulse_distribution(self):
+        actual = self.rows()
+        actual['case/0/a/event/0'] = 'enter,b,2,-2,0,0,-2,0,0'
+        actual['case/0/a/event/0/0'] = '0,0,0,0,-1,0,0.1,a,b'
+        result = analyze(self.rows(), actual)
+        self.assertEqual({'unmatched_geometry_or_metadata': 2}, result['unmatched_mechanisms'])
+
     def test_alternate_surface_is_not_slot_order(self):
         actual = self.rows()
         actual['case/0/a/event/0/0'] = '-0.1,0,0,-1,0,0,0.1,a,b'
