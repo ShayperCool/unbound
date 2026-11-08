@@ -968,8 +968,7 @@ namespace Unbound.Runtime
                         agent.m_LinkCompleting = true;
                         agent.m_Crowd.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH;
                         agent.m_Crowd.animation.endPos = linkEnd;
-                        agent.m_Crowd.vel = moving.vel;
-                        agent.m_Crowd.pvel = moving.pvel;
+                        KeepMotion(agent.m_Crowd, moving, false);
                     }
                     if (destination.HasValue && agent.m_Crowd != null) RestartRequest(agent);
                     continue;
@@ -980,11 +979,14 @@ namespace Unbound.Runtime
                     agent.SetPathPending(false);
                     continue;
                 }
+                // It moves on as it moved (also an agent sliding to a stop without a path: measured,
+                // tests/projects/navlinks resetmid through a link toggle).
+                KeepMotion(agent.m_Crowd, moving, following || finishing);
                 if (agent.pathPending) RestartRequest(agent);
-                else if (following) PlanAgain(agent, moving);
+                else if (following) PlanAgain(agent);
                 else if (finishing)
                 {
-                    PlanAgain(agent, moving);
+                    PlanAgain(agent);
                     agent.SetArrived(true);
                 }
             }
@@ -1014,17 +1016,24 @@ namespace Unbound.Runtime
             return left;
         }
 
+        /// <summary>The agent placed again on the rebuilt NavMesh keeps its velocity and the step it
+        /// planned; one still following a path also the plan it reports (desired velocity).</summary>
+        static void KeepMotion(DtCrowdAgent ag, DtCrowdAgent moving, bool following)
+        {
+            ag.vel = moving.vel;
+            ag.pvel = moving.pvel;
+            ag.braking = moving.braking;
+            if (!following) return;
+            ag.nvel = moving.nvel;
+            ag.dvel = moving.dvel;
+            ag.desiredSpeed = moving.desiredSpeed;
+        }
+
         /// <summary>The path of an agent that was following one, planned again on the rebuilt
         /// NavMesh from where the agent now stands to its destination; the agent keeps its velocity
         /// (see the note on <see cref="Rebuild"/>).</summary>
-        static void PlanAgain(NavMeshAgent agent, DtCrowdAgent moving)
+        static void PlanAgain(NavMeshAgent agent)
         {
-            var ag = agent.m_Crowd;
-            ag.vel = moving.vel;
-            ag.nvel = moving.nvel;
-            ag.pvel = moving.pvel;
-            ag.dvel = moving.dvel;
-            ag.desiredSpeed = moving.desiredSpeed;
             var search = NavMesh.PathSearch.Begin(agent.m_Surface, agent.m_NextPosition, agent.RequestedDestination, agent.Filter, agent.agentTypeID);
             int budget = int.MaxValue;
             if (search != null && search.Step(ref budget) && search.Result != null)
