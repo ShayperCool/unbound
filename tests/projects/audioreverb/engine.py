@@ -25,7 +25,7 @@ for name in ('Assets', 'Packages', 'ProjectSettings'): shutil.copytree(a.native_
 for script in (fixture/'Assets/Scripts').glob('*.cs'): shutil.copy2(script, project/'Assets/Scripts'/script.name)
 output = a.work/'capture'; output.mkdir()
 command = [str(Path.home()/'.cache/compat/with-heavy-job'), '--kind', 'engine-cpu', 'timeout', '900', str(a.runtime/'unbound'), 'run', '-p', str(project),
-           '--scene', 'Assets/Scenes/Probe.unity', '--headless', '60', '--no-watch', '--fixed-fps', '60']
+           '--scene', 'Assets/Scenes/Probe.unity', '--headless', '2000' if a.profile == 'motion' else '60', '--no-watch', '--fixed-fps', '60']
 artifacts = [a.runtime/'unbound', *sorted((a.runtime/'managed').rglob('*'))]
 hashes = {str(f.relative_to(a.runtime)): hashlib.sha256(f.read_bytes()).hexdigest() for f in artifacts if f.is_file()}
 (a.work/'runtime-hashes.json').write_text(json.dumps(hashes, indent=2)+'\n')

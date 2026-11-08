@@ -107,13 +107,14 @@ and source Distortion/Chorus. All four custom curve types record both the caller
 keys and GetCustomCurve's returned keys, including negative, oversized, short,
 unsorted, weighted and single-key inputs.
 
-The `--profile motion` reference separately records 30 source/listener controls
+The `--profile motion` reference separately records 36 source/listener controls
 on the ordinary player loop. Each endpoint runs Auto, Fixed and Dynamic modes
 with its own Rigidbody, a parent Rigidbody, or transform motion in FixedUpdate
 or Update. Opposing Rigidbody velocity writes in FixedUpdate and Update expose
-the phase that supplies the source's Doppler sample. Flat custom rolloff isolates
+the phase that supplies the source's Doppler sample, including a child of the
+moving body. Flat custom rolloff isolates
 velocity from distance attenuation. The two independent repeats agree exactly
-on 2949182 values per rate, with 24 complete 1024-frame stereo buffers per case.
+on 3539018 values per rate, with 24 complete 1024-frame stereo buffers per case.
 Record and publish this profile with `native.py --profile motion` and
 `publish.py --profile motion`; `motion.py --exact --reference FIRST/capture
 --candidate SECOND/capture` checks independent agreement. Each command also

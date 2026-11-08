@@ -35,6 +35,8 @@ public partial class AudioReverbProbe
         "source_transform_dynamic_auto", "source_transform_dynamic_fixed", "source_transform_dynamic_dynamic",
         "listener_transform_fixed_auto", "listener_transform_fixed_fixed", "listener_transform_fixed_dynamic",
         "listener_transform_dynamic_auto", "listener_transform_dynamic_fixed", "listener_transform_dynamic_dynamic",
+        "source_parenttiming_auto", "source_parenttiming_fixed", "source_parenttiming_dynamic",
+        "listener_parenttiming_auto", "listener_parenttiming_fixed", "listener_parenttiming_dynamic",
     };
 
     System.Collections.IEnumerator CaptureMotion()
@@ -74,7 +76,7 @@ public partial class AudioReverbProbe
             source.velocityUpdateMode = mode; listener.velocityUpdateMode = mode;
             var moving = parts[0] == "source" ? sourceObject : listenerObject;
             GameObject parent = null;
-            if (parts[1] == "parent") {
+            if (parts[1].StartsWith("parent")) {
                 parent = new GameObject(key + ".body");
                 moving.transform.SetParent(parent.transform, true);
             }
@@ -82,7 +84,7 @@ public partial class AudioReverbProbe
                 var body = (parent ? parent : moving).AddComponent<Rigidbody>();
                 body.useGravity = false; body.linearDamping = 0;
                 body.linearVelocity = new Vector3(0, 0, 20);
-                if (parts[1] == "timing") { var driver = moving.AddComponent<AudioMotionDriver>(); driver.body = body; driver.phase = "timing"; }
+                if (parts[1].EndsWith("timing")) { var driver = moving.AddComponent<AudioMotionDriver>(); driver.body = body; driver.phase = "timing"; }
             } else {
                 moving.AddComponent<AudioMotionDriver>().phase = parts[2];
             }
