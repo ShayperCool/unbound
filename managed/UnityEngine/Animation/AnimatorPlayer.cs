@@ -895,34 +895,34 @@ namespace Unbound.Runtime
         /// <summary>
         /// A source layer state's duration with its synced layers' "Timing". The 6000.0 Manual
         /// (Animation Layers): without Timing, the synced layer's animation is stretched to the
-        /// length of the original layer's (the original layer is the sole master: the length stays
-        /// <paramref name="length"/>); with Timing, the length is "a balance for both animations,
-        /// based on weight", a compromise that both layers then play over. The balance as a linear
-        /// interpolation by the synced layer's weight (clamped to 0..1: its motion's length at 1,
-        /// the source's at 0) is Unbound's reading of "based on weight", not a measured curve. A
-        /// synced layer without a motion for the state counts as 1 s, like any state without a
-        /// motion: an unmeasured hypothesis that <see cref="TimingLayers"/> warns about.
+        /// length of the original layer's (the length stays <paramref name="length"/>); with
+        /// Timing, the length is "a balance for both animations, based on weight". The balance
+        /// (Unity 6000.0.71f1, tests/projects/animatoradditive timing*): starting from the source
+        /// state's motion length, each Timing layer in layer order moves the duration toward its
+        /// own motion's length by its weight (clamped to 0..1). A layer without a motion for the
+        /// state takes no part, nor does a source state without a motion (the first Timing motion
+        /// then counts by its weight from zero); a duration of zero is the 1 s of a state without
+        /// a motion.
         /// </summary>
         float TimedLength(LayerRun source, StateDef state, float length)
         {
             int index = source.Def.Index;
             var synced = index >= 0 && index < m_TimingLayers.Length ? m_TimingLayers[index] : null;
             if (synced == null) return length;
+            float duration = MotionOf(source.Def, state) != null ? length : 0f;
             foreach (int i in synced)
             {
                 var layer = Layers[i];
+                var motion = MotionOf(layer.Def, state);
+                if (motion == null) continue;
+                // The base layer's weight is always 1.
                 float weight = i == 0 ? 1f : Math.Clamp(layer.Evaluated, 0f, 1f);
-                if (weight <= 0f) continue;
-                length += weight * (MotionLength(layer, MotionOf(layer.Def, state)) - length);
+                duration += weight * (MotionLength(layer, motion) - duration);
             }
-            return length;
+            return duration > 0f ? duration : 1f;
         }
 
-        /// <summary>The layers synced with "Timing" on, by source layer. Several on one source
-        /// combine in layer order, which no reference measures: that warns. So does a Timing
-        /// layer without a motion of its own for a source state that has one: the balance then
-        /// counts the empty motion as 1 s (a state without a motion), an unmeasured hypothesis
-        /// that changes the source state's duration.</summary>
+        /// <summary>The layers synced with "Timing" on, by source layer, in layer order.</summary>
         static int[][] TimingLayers(RuntimeAnimatorController controller, ControllerGraph graph)
         {
             var result = new int[graph.Layers.Length][];
@@ -935,37 +935,17 @@ namespace Unbound.Runtime
                 Array.Resize(ref list, list.Length + 1);
                 list[^1] = i;
                 result[source] = list;
-                if (list.Length == 2)
-                    Debug.LogWarning($"Unbound: animator controller '{controller.name}' has several layers synced to layer '{graph.Layers[source].Name}' with Timing on; their durations are combined in layer order, which is not measured against Unity.");
-                WarnMotionlessTimingStates(controller, graph.Layers[i], graph.Layers[source]);
             }
             return result;
         }
 
-        /// <summary>Warns once per Timing layer when source states with a motion have none on it.</summary>
-        static void WarnMotionlessTimingStates(RuntimeAnimatorController controller, LayerDef layer, LayerDef source)
-        {
-            List<string> names = null;
-            foreach (var state in source.States)
-            {
-                if (state.Motion == null) continue;
-                if (layer.SyncedMotions.TryGetValue(state, out var motion) && motion != null) continue;
-                (names ??= new List<string>()).Add(state.Name);
-            }
-            if (names != null)
-                Debug.LogWarning($"Unbound: animator controller '{controller.name}' layer '{layer.Name}' is synced to layer '{source.Name}' with Timing on but has no motion for state(s) '{string.Join("', '", names)}'; their durations count the missing motion as 1 s, which is not measured against Unity.");
-        }
-
         /// <summary>The length a state info reports for a state of <paramref name="layer"/>: the
-        /// state's duration (AnimatorStateInfo.length). With Timing on, a synced layer plays the
-        /// source state's balanced duration and reports it; a synced layer without Timing keeps
-        /// reporting its own motion's length (what Unity reports there is not measured).</summary>
+        /// state's duration (AnimatorStateInfo.length). A synced layer, with Timing on or off,
+        /// reports its source state's duration (tests/projects/animatoradditive timing*).</summary>
         float InfoLength(LayerRun layer, StateDef state, Motion motion)
         {
             int source = layer.Def.SyncedLayerIndex;
             if (source < 0 || source >= Layers.Length) return TimedLength(layer, state, MotionLength(layer, motion));
-            var synced = m_TimingLayers[source];
-            if (synced == null || Array.IndexOf(synced, layer.Def.Index) < 0) return MotionLength(layer, motion);
             var owner = Layers[source];
             return TimedLength(owner, state, MotionLength(owner, MotionOf(owner.Def, state)));
         }

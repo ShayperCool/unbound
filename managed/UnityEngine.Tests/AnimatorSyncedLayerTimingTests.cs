@@ -11,15 +11,11 @@ namespace UnityEngine.Tests
     /// A synced layer's "Timing" (AnimatorControllerLayer.syncedLayerAffectsTiming). Documented
     /// (6000.0 Manual, Animation Layers): without Timing, the synced layer's animations are
     /// stretched to the length of the original layer's, which stays the sole master; with Timing,
-    /// the length is "a balance for both animations, based on weight", a compromise. The Scripting
-    /// API: "When active, the layer will take control of the duration of the Synced Layer", and
-    /// AnimatorStateInfo.length is the "current duration of the state". The endpoints (the
-    /// source's length at weight 0, the synced motion's at weight 1, which the other Timing tests
-    /// rely on) are documented inferences: Unbound's reading of those sentences, not stated
-    /// outright and not measured. Between them only the documented compromise is asserted (a
-    /// length strictly between both motions'), not Unbound's linear midpoint. What a synced layer
-    /// without Timing reports as its length, and the 1 s a missing synced motion counts as, are
-    /// not asserted (not measured; the latter warns).
+    /// the length is "a balance for both animations, based on weight". Measured (Unity
+    /// 6000.0.71f1, tests/projects/animatoradditive timing*): the balance moves the source's length
+    /// toward the synced motion's by the layer's weight, Timing layers in layer order; a layer
+    /// without a motion for the state takes no part; a synced layer reports the source state's
+    /// duration, Timing on or off.
     ///
     /// The fixture: the base layer plays A (1 s, Body x from 0 to 1) and B (1 s), going from A to
     /// B on "Go" over half of A's duration (a normalized duration). Layer 1 is synced to it, an
@@ -36,8 +32,6 @@ namespace UnityEngine.Tests
         readonly ILogHandler m_PreviousHandler;
         readonly bool m_PreviousLogEnabled;
         readonly LogType m_PreviousFilter;
-        const string SeveralTimingLayers = "with Timing on; their durations are combined in layer order";
-        const string MissingSyncedMotion = "with Timing on but has no motion for state(s) 'B'";
         const float PoseTolerance = 1e-4f;
 
         public AnimatorSyncedLayerTimingTests()
@@ -315,7 +309,8 @@ AnimatorStateTransition:
             animator.SetLayerWeight(1, weight);
             animator.Update(0.6f);
             AssertState(animator, 0, "A", 0.6f, 1f);
-            Near.Equal(0.6f, animator.GetCurrentAnimatorStateInfo(1).normalizedTime);
+            // Measured: the synced layer reports the source state's length, not its 3 s motion's.
+            AssertState(animator, 1, "A", 0.6f, 1f);
             Near.Equal(new Vector3(0.6f, weight * 1.8f, 0f), body.localPosition, PoseTolerance);
         }
 
@@ -347,8 +342,9 @@ AnimatorStateTransition:
         // ------------------------------------------------------------------ Timing on
 
         [Theory]
-        [InlineData(0f, 1f)] // documented inference (Unbound's reading of "based on weight"): the source's length alone
-        [InlineData(1f, 3f)] // documented inference (Unbound's reading of "take control of the duration"): the synced motion's length
+        [InlineData(0f, 1f)] // the source's length alone
+        [InlineData(0.5f, 2f)] // halfway between the 1 s source and the 3 s synced motion
+        [InlineData(1f, 3f)] // the synced motion's length
         public void WithTimingBothLayersPlayTheBalancedDuration(float weight, float duration)
         {
             var animator = NewAnimator(Load(Controller(timing: true)), out var body);
@@ -359,23 +355,6 @@ AnimatorStateTransition:
             AssertState(animator, 0, "A", normalized, duration);
             AssertState(animator, 1, "A", normalized, duration);
             Near.Equal(new Vector3(normalized, weight * 3f * normalized, 0f), body.localPosition, PoseTolerance);
-        }
-
-        [Fact]
-        public void WithTimingAtHalfWeightBothLayersPlayACompromise()
-        {
-            // Documented: "a balance for both animations, based on weight", a compromise. Only that
-            // the length lies strictly between the 1 s source and the 3 s synced motion is asserted;
-            // Unbound's linear midpoint is not.
-            var animator = NewAnimator(Load(Controller(timing: true)), out _);
-            animator.SetLayerWeight(1, 0.5f);
-            animator.Update(0.6f);
-            for (int layer = 0; layer < 2; layer++)
-            {
-                var info = animator.GetCurrentAnimatorStateInfo(layer);
-                Assert.True(info.IsName("A"), $"layer {layer} plays A");
-                Assert.True(info.length > 1f && info.length < 3f, $"layer {layer} length {info.length} between 1 and 3");
-            }
         }
 
         [Fact]
@@ -441,24 +420,26 @@ AnimatorStateTransition:
         }
 
         [Fact]
-        public void SeveralTimingLayersOnOneSourceWarn()
+        public void SeveralTimingLayersBalanceInLayerOrder()
         {
-            // How several Timing layers combine is not measured: the combination is not asserted.
-            m_Expected.Add(SeveralTimingLayers);
+            // 1 s toward 3 s by 0.5 (2 s), then toward 3 s by 0.5 again: 2.5 s, without warnings.
             var animator = NewAnimator(Load(Controller(timing: true, syncedLayers: 2)), out _);
-            animator.Update(0.1f);
-            Assert.Single(m_Logs.FindAll(l => l.StartsWith("Warning:") && l.Contains(SeveralTimingLayers)));
+            animator.SetLayerWeight(1, 0.5f);
+            animator.SetLayerWeight(2, 0.5f);
+            animator.Update(0.5f);
+            for (int layer = 0; layer < 3; layer++) AssertState(animator, layer, "A", 0.2f, 2.5f);
         }
 
         [Fact]
-        public void TimingLayerWithoutAStatesMotionWarns()
+        public void ATimingLayerWithoutAStatesMotionTakesNoPart()
         {
-            // What a missing synced motion counts as in the balance is not measured: only the
-            // warning is asserted, not the duration.
-            m_Expected.Add(MissingSyncedMotion);
+            // B has no synced motion: B keeps its 1 s source length at full synced weight.
             var animator = NewAnimator(Load(Controller(timing: true, syncedB: false)), out _);
-            animator.Update(0.1f);
-            Assert.Single(m_Logs.FindAll(l => l.StartsWith("Warning:") && l.Contains(MissingSyncedMotion)));
+            animator.SetBool("Go", true);
+            animator.Update(0.3f);
+            animator.Update(2f);
+            AssertState(animator, 0, "B", animator.GetCurrentAnimatorStateInfo(0).normalizedTime, 1f);
+            AssertState(animator, 1, "B", animator.GetCurrentAnimatorStateInfo(0).normalizedTime, 1f);
         }
     }
 }
