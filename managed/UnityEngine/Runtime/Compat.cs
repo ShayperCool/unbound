@@ -271,8 +271,10 @@ namespace Unbound.Runtime
         internal static bool PlayableCullingHoldsAnimationPlayablesOnly => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>Animator automatic Play-entry timing and startup controls measured by
-        /// tests/projects/animstartup in exactly 6000.0.71f1's Linux Editor. Other releases
-        /// retain the existing behavior until measured.</summary>
+        /// tests/projects/animstartup in exactly 6000.0.71f1's Linux Editor, and the time of a state
+        /// a Play or CrossFade request enters (held for the update it enters in: animstartup's Play
+        /// offsets, humanoid playState and crossFade*). Other releases retain the existing behavior
+        /// (the entered state advances) until measured.</summary>
         internal static bool AnimatorStartupMeasured => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>Root-space skinned bounds, single-bone defaults and cached public world

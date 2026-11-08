@@ -14,16 +14,15 @@ namespace Unbound.Runtime
         /// <summary>Normalized time, unwrapped: the integer part counts loops.</summary>
         internal double Normalized;
         internal double Previous;
-        // Initial automatic Play(offset) samples exactly the offset, but extracts movement
-        // over the interval ending there (6000.0.71f1, animstartup's later Play controls).
+        /// <summary>Where the root motion of the update the state was entered in starts: a whole
+        /// update's step before the time it was entered at (see <see cref="AnimatorPlayer.Enter"/>).
+        /// Null in later updates, whose motion starts at <see cref="Previous"/>.</summary>
         internal double? MotionPrevious;
         /// <summary>Entered since the last update: events at its start time fire.</summary>
         internal bool Fresh = true;
         /// <summary>Events were fired for the state's first evaluation (an Animator.Update(0) that
         /// enters no state yet still fires events at the start time).</summary>
         internal bool EventsStarted;
-        /// <summary>Its transitions have not been checked yet: an exit time at the start counts.</summary>
-        internal bool ExitInclusive = true;
         /// <summary>OnStateEnter was queued this update (OnStateUpdate waits for the next one).</summary>
         internal bool EnteredThisUpdate;
 
@@ -511,13 +510,12 @@ namespace Unbound.Runtime
         void Step(LayerRun layer, int index, float dt)
         {
             layer.Completed = null;
-            bool initialSeek = Attached && !Ticked && m_AutomaticUpdate && Compat.AnimatorStartupMeasured
-                && layer.Pending != null && !layer.Pending.CrossFade && !float.IsNegativeInfinity(layer.Pending.Time);
+            StateRun requested = null;
             if (layer.Pending != null)
             {
                 var pending = layer.Pending;
                 layer.Pending = null;
-                ApplyPending(layer, index, pending);
+                requested = ApplyPending(layer, index, pending);
             }
             if (layer.Current == null)
             {
@@ -528,15 +526,13 @@ namespace Unbound.Runtime
                 SetCurrent(layer, run);
                 QueueEnter(layer, run);
             }
-            double start = layer.Current.Normalized;
-            Advance(layer, layer.Current, dt);
-            if (initialSeek && layer.Current.Def.TimeParameter < 0)
-            {
-                var run = layer.Current;
-                run.MotionPrevious = start - (run.Normalized - run.Previous);
-                run.Normalized = run.Previous = start;
-            }
-            if (layer.Next != null) Advance(layer, layer.Next, dt);
+            // A state a Play or CrossFade request enters plays from the requested time: the update
+            // it enters in does not advance it (6000.0.71f1, tests/projects/animstartup and
+            // humanoid playState/crossFade*); its root motion covers that update up to there.
+            bool hold = requested != null && Compat.AnimatorStartupMeasured;
+            if (hold) Enter(layer, requested, dt);
+            if (!hold || layer.Current != requested) Advance(layer, layer.Current, dt);
+            if (layer.Next != null && (!hold || layer.Next != requested)) Advance(layer, layer.Next, dt);
             if (layer.Transition != null)
             {
                 var t = layer.Transition;
@@ -544,7 +540,18 @@ namespace Unbound.Runtime
                 t.Progress = t.Duration > 0f ? (float)Math.Min(1.0, t.Elapsed / t.Duration) : 1f;
                 if (t.Progress >= 1f) CompleteTransition(layer);
             }
-            EvaluateTransitions(layer);
+            EvaluateTransitions(layer, dt);
+        }
+
+        /// <summary>A state entered in this update at its current time: its root motion covers the
+        /// whole update, ending at that time, as if it had played all of it (measured,
+        /// tests/projects/humanoid: transitions' destinations at any exit time, with or without a
+        /// duration, generic and humanoid clips, and states entered by Play and CrossFade).</summary>
+        void Enter(LayerRun layer, StateRun run, float dt)
+        {
+            run.Previous = run.Normalized;
+            float length = StateLength(layer, run);
+            run.MotionPrevious = run.Def.TimeParameter < 0 && length > 0f ? run.Normalized - dt * SpeedOf(run.Def) / length : run.Normalized;
         }
 
         void Advance(LayerRun layer, StateRun run, float dt)
@@ -563,13 +570,15 @@ namespace Unbound.Runtime
 
         float SpeedOf(StateDef def) => def.Speed * (def.SpeedParameter >= 0 ? Floats[def.SpeedParameter] : 1f);
 
-        void ApplyPending(LayerRun layer, int index, PendingPlay p)
+        /// <summary>Applies a Play or CrossFade request; returns the state it enters (null when the
+        /// requested state already plays and continues).</summary>
+        StateRun ApplyPending(LayerRun layer, int index, PendingPlay p)
         {
             var state = p.State;
             if (!p.CrossFade)
             {
                 if (float.IsNegativeInfinity(p.Time) && layer.Current != null && layer.Current.Def == state && layer.Transition == null)
-                    return; // already playing: it continues
+                    return null; // already playing: it continues
                 double n = float.IsNegativeInfinity(p.Time) ? 0.0 : p.FixedTime ? p.Time / MotionLength(layer, MotionOf(layer.Def, state)) : p.Time;
                 ExitRun(layer, layer.Next);
                 ExitRun(layer, layer.Current);
@@ -578,7 +587,7 @@ namespace Unbound.Runtime
                 var run = new StateRun(state, n);
                 SetCurrent(layer, run);
                 QueueEnter(layer, run);
-                return;
+                return run;
             }
             CollapseTransition(layer);
             var from = layer.Current;
@@ -591,7 +600,7 @@ namespace Unbound.Runtime
                 ExitRun(layer, from);
                 SetCurrent(layer, next);
                 QueueEnter(layer, next);
-                return;
+                return next;
             }
             layer.Next = next;
             layer.Transition = new TransitionRun
@@ -606,6 +615,7 @@ namespace Unbound.Runtime
                 UserNameHash = 0,
             };
             QueueEnter(layer, next);
+            return next;
         }
 
         /// <summary>An ongoing transition collapses to the state with more weight.</summary>
@@ -639,7 +649,7 @@ namespace Unbound.Runtime
             layer.Transition = null;
         }
 
-        void EvaluateTransitions(LayerRun layer)
+        void EvaluateTransitions(LayerRun layer, float dt)
         {
             var current = layer.Current;
             if (current == null) return;
@@ -648,8 +658,7 @@ namespace Unbound.Runtime
                 var chosen = FindTransition(layer, current, layer.Def.AnyState, null);
                 if (chosen == null)
                     chosen = FindTransition(layer, current, current.Def.Transitions, null);
-                current.ExitInclusive = false;
-                if (chosen != null) StartTransition(layer, chosen, current, ExitOvershoot(layer, current, chosen));
+                if (chosen != null) StartTransition(layer, chosen, current, dt, ExitOvershoot(layer, current, chosen));
                 return;
             }
 
@@ -693,7 +702,7 @@ namespace Unbound.Runtime
             }
             layer.Next = null;
             layer.Transition = null;
-            StartTransition(layer, interrupt, layer.Current);
+            StartTransition(layer, interrupt, layer.Current, dt);
         }
 
         TransitionDef SourceInterrupt(LayerRun layer, StateRun current, TransitionDef active)
@@ -734,19 +743,12 @@ namespace Unbound.Runtime
         }
 
         /// <summary>
-        /// The exit time is crossed this update. Below 1 it recurs every loop (k + exitTime); from 1 up
-        /// it is crossed once.
+        /// The exit time is crossed this update: after the time the update started at, up to the time
+        /// it ends at. Below 1 it recurs every loop (k + exitTime); from 1 up it is crossed once. A
+        /// state does not cross the time it starts at (measured, tests/projects/humanoid exit000: an
+        /// exit time of 0 is first reached at the end of the first loop).
         /// </summary>
-        static bool ExitTimeReached(StateRun run, float exitTime)
-        {
-            double from = run.Previous, to = run.Normalized;
-            bool inclusive = run.ExitInclusive;
-            if (to < from) return false;
-            if (exitTime >= 1f) return inclusive ? from <= exitTime && exitTime <= to : from < exitTime && exitTime <= to;
-            double k = Math.Max(0.0, Math.Ceiling(from - exitTime));
-            if (!inclusive && k + exitTime <= from) k += 1.0;
-            return k + exitTime <= to;
-        }
+        static bool ExitTimeReached(StateRun run, float exitTime) => !double.IsNaN(ExitCrossing(run, exitTime));
 
         /// <summary>The time (seconds) an update ran past the exit time a transition left at: the
         /// transition starts there, its destination and progress already that far (Unity's
@@ -755,24 +757,23 @@ namespace Unbound.Runtime
         {
             if (!t.HasExitTime || run.Def.TimeParameter >= 0) return 0.0;
             double crossing = ExitCrossing(run, t.ExitTime);
-            if (double.IsNaN(crossing) || crossing > run.Normalized) return 0.0;
+            if (double.IsNaN(crossing)) return 0.0;
             float speed = Math.Abs(SpeedOf(run.Def));
             if (speed <= 1e-6f) return 0.0;
             return Math.Max(0.0, (run.Normalized - crossing) * StateLength(layer, run) / speed);
         }
 
-        /// <summary>The normalized time of the exit time crossed this update (as <see cref="ExitTimeReached"/>).</summary>
+        /// <summary>The normalized time of the exit time crossed this update, NaN when none is (see
+        /// <see cref="ExitTimeReached"/>).</summary>
         static double ExitCrossing(StateRun run, float exitTime)
         {
             double from = run.Previous, to = run.Normalized;
             if (to < from) return double.NaN;
-            if (exitTime >= 1f) return exitTime;
-            double k = Math.Max(0.0, Math.Ceiling(from - exitTime));
-            if (!run.ExitInclusive && k + exitTime <= from) k += 1.0;
-            return k + exitTime;
+            double crossing = exitTime >= 1f ? exitTime : Math.Max(0.0, Math.Floor(from - exitTime) + 1.0) + exitTime;
+            return from < crossing && crossing <= to ? crossing : double.NaN;
         }
 
-        void StartTransition(LayerRun layer, TransitionDef t, StateRun from, double overshoot = 0.0)
+        void StartTransition(LayerRun layer, TransitionDef t, StateRun from, float dt, double overshoot = 0.0)
         {
             ConsumeTriggers(t);
             var dest = Destination(layer, t, from.Def, 0);
@@ -785,6 +786,10 @@ namespace Unbound.Runtime
                 float length = StateLength(layer, next);
                 if (next.Def.TimeParameter < 0 && length > 0f) next.Normalized += overshoot * SpeedOf(next.Def) / length;
             }
+            // Its events still start at the offset; its root motion covers the whole update.
+            double eventsFrom = next.Previous;
+            Enter(layer, next, dt);
+            next.Previous = eventsFrom;
             if (duration <= 0f || overshoot >= duration)
             {
                 float fromLength = StateLength(layer, from);
@@ -1174,10 +1179,10 @@ namespace Unbound.Runtime
                     bool transitioning = source.Next != null && source.Transition != null;
                     float p = transitioning ? source.Transition.Progress : 0f;
                     var completed = !transitioning && i == 0 ? source.Completed : null;
-                    if (i == 0 && transitioning && EmptyWithDefaults(layer, source.Current) && MotionOf(layer.Def, source.Next.Def) != null)
-                        SampleAtFullWeight(layer, i, source.Next, p, pose, mask, objectMask);
-                    else if (i == 0 && transitioning && EmptyWithDefaults(layer, source.Next) && MotionOf(layer.Def, source.Current.Def) != null)
-                        SampleAtFullWeight(layer, i, source.Current, 1f - p, pose, mask, objectMask);
+                    if (transitioning && AloneBesideEmpty(layer, i, source.Next, source.Current))
+                        SampleAtFullWeight(layer, i, source.Next, 1f, pose, mask, objectMask);
+                    else if (transitioning && AloneBesideEmpty(layer, i, source.Current, source.Next))
+                        SampleAtFullWeight(layer, i, source.Current, 1f, pose, mask, objectMask);
                     else if (completed != null && EmptyWithDefaults(layer, source.Current) && MotionOf(layer.Def, completed.Def) != null)
                         SampleAtFullWeight(layer, i, completed, 0f, pose, mask, objectMask);
                     else
@@ -1221,13 +1226,22 @@ namespace Unbound.Runtime
 
         bool EmptyWithDefaults(LayerRun layer, StateRun run) => run != null && run.Def.WriteDefaults && MotionOf(layer.Def, run.Def) == null;
 
+        /// <summary>A base layer's state with a motion in a transition with a state without a motion
+        /// and with write defaults: its clips are all the layer plays, at full weight whatever the
+        /// transition's progress, for the pose, the clip infos, events and root motion (measured,
+        /// tests/projects/humanoid emptyExit, emptyCond, generic.emptyExit: the motion state's clip
+        /// infos report weight 1 and its root motion applies in full from the transition's start).</summary>
+        internal bool AloneBesideEmpty(LayerRun layer, int layerIndex, StateRun run, StateRun other) =>
+            layerIndex == 0 && EmptyWithDefaults(layer, other) && run != null && MotionOf(layer.Def, run.Def) != null;
+
         bool Holds(LayerRun layer, StateRun run) => run != null && !run.Def.WriteDefaults && MotionOf(layer.Def, run.Def) == null;
 
         /// <summary>The base layer's transitions between a state without a motion and with write
         /// defaults and a motion state: the former adds nothing, the motion state's values apply in
         /// full whatever the transition's progress, also in the update the transition completes
         /// (measured; alone, the state without a motion writes the defaults). Contributions (events,
-        /// root motion) keep the state's transition weight.</summary>
+        /// root motion) take <paramref name="weight"/>: 1 during the transition (see
+        /// <see cref="AloneBesideEmpty"/>), none once it completed.</summary>
         void SampleAtFullWeight(LayerRun layer, int layerIndex, StateRun run, float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
         {
             int first = m_Contributions.Count;
