@@ -533,6 +533,11 @@ public class AnimCullingProbe : MonoBehaviour
         foreach (string shape in new[] { "plain", "script", "mixerPlain", "mixerScript", "duration", "sharedClip", "controller" })
             ClockCase(shape, mode, DirectorUpdateMode.GameTime);
         ClockCase("scriptOutput", AnimatorCullingMode.CullCompletely, DirectorUpdateMode.GameTime);
+        // When a clip reaching its duration is done, reached by a script output alone or by a
+        // script and an animation output in either order.
+        foreach (var clock in new[] { DirectorUpdateMode.GameTime, DirectorUpdateMode.Manual })
+        foreach (string shape in new[] { "doneScript", "doneShared", "doneSharedFirst" })
+            ClockCase(shape, AnimatorCullingMode.AlwaysAnimate, clock);
     }
 
     void ClockCase(string shape, AnimatorCullingMode mode, DirectorUpdateMode clock)
@@ -644,6 +649,31 @@ public class AnimCullingProbe : MonoBehaviour
                 // An AnimatorControllerPlayable below a plain Playable; nt records its state time.
                 source = Plain("P", Node("A", AnimatorControllerPlayable.Create(g, Resources.Load<RuntimeAnimatorController>("Culling"))));
                 break;
+            case "doneScript":
+            {
+                // A clip with a duration under a script output only.
+                c.clockOnly = true;
+                var clip = Clip("C", pose);
+                clip.SetDuration(0.3);
+                source = Plain("P", clip);
+                ScriptPlayableOutput.Create(g, "Script").SetSourcePlayable(source);
+                g.Play();
+                return;
+            }
+            case "doneShared":
+            {
+                // The same clip under the Animator's output (through P) and a script output (through
+                // P2, its second port); the script output is created first unless doneSharedFirst.
+                var clip = Clip("C", pose);
+                clip.SetDuration(0.3);
+                clip.SetOutputCount(2);
+                source = Plain("P", clip);
+                var other = Node("P2", Playable.Create(g, 1));
+                other.ConnectInput(0, clip, 1, 1f);
+                if (first) output.SetSourcePlayable(source);
+                ScriptPlayableOutput.Create(g, "Script").SetSourcePlayable(other);
+                break;
+            }
             case "scriptOutput":
                 // No Animator output: a script output alone, a control for the clip clock.
                 source = Plain("P", Clip("C", pose));

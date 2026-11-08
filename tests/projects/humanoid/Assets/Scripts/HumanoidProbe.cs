@@ -4,6 +4,8 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 
 /// <summary>Records what the humanoid avatars of the probe's rigs give a game: the HumanTrait tables,
 /// the imported avatars and their human descriptions, the Animator's humanoid members, poses read
@@ -211,7 +213,7 @@ public class HumanoidProbe : MonoBehaviour
     /// <summary>Plays a controller on a fresh instance of a rig: Update(0), then 24 steps of 1/30 s
     /// and four of 0.1 s.</summary>
     static void Play(string key, string rig, string controller, Action<Animator> setup = null, bool motion = false, bool locals = true,
-        Action<Animator, int> beforeStep = null)
+        Action<Animator, int> beforeStep = null, bool detail = false)
     {
         var instance = Instantiate(Resources.Load<GameObject>(rig));
         var animator = instance.GetComponent<Animator>();
@@ -225,6 +227,7 @@ public class HumanoidProbe : MonoBehaviour
             animator.Update(step == 0 ? 0f : step <= 24 ? 1f / 30f : 0.1f);
             Step(key + ".step" + step, animator, handler, locals);
             if (motion) Motion(key + ".step" + step, animator);
+            if (detail) Detail(key + ".step" + step, animator);
         }
         s_IKKey = null;
         handler.Dispose();
@@ -246,6 +249,134 @@ public class HumanoidProbe : MonoBehaviour
             states.Add("[" + F(info.normalizedTime) + "," + B(animator.IsInTransition(layer)) + ",[" + string.Join(",", weights) + "]]");
         }
         Put(key + ".states", "[" + string.Join(",", states) + "]");
+    }
+
+    /// <summary>Each layer's states, transition and clips in detail: the current state's hash and
+    /// normalized time, whether it is in transition, the transition's normalized time and duration,
+    /// the next state's hash and normalized time, and the current and next clips with their weights.</summary>
+    static void Detail(string key, Animator animator)
+    {
+        string Clips(AnimatorClipInfo[] clips)
+        {
+            var parts = new List<string>();
+            foreach (var clip in clips) parts.Add("[" + S(clip.clip != null ? clip.clip.name : null) + "," + F(clip.weight) + "]");
+            return "[" + string.Join(",", parts) + "]";
+        }
+        var layers = new List<string>();
+        for (int layer = 0; layer < animator.layerCount; layer++)
+        {
+            var current = animator.GetCurrentAnimatorStateInfo(layer);
+            var next = animator.GetNextAnimatorStateInfo(layer);
+            var transition = animator.GetAnimatorTransitionInfo(layer);
+            layers.Add("{\"current\":[" + current.shortNameHash + "," + F(current.normalizedTime) + "," + F(current.length) + "]"
+                + ",\"inTransition\":" + B(animator.IsInTransition(layer))
+                + ",\"transition\":[" + F(transition.normalizedTime) + "," + F(transition.duration) + "]"
+                + ",\"next\":[" + next.shortNameHash + "," + F(next.normalizedTime) + "," + F(next.length) + "]"
+                + ",\"currentClips\":" + Clips(animator.GetCurrentAnimatorClipInfo(layer))
+                + ",\"nextClips\":" + Clips(animator.GetNextAnimatorClipInfo(layer)) + "}");
+        }
+        Put(key + ".detail", "[" + string.Join(",", layers) + "]");
+    }
+
+    /// <summary>A controller on a fresh instance of a rig, recorded with the root motion, the states
+    /// in detail, the animation events (<see cref="HumanoidEvents"/>) and what the play logged.</summary>
+    static void PlayFirst(string key, string rig, string controller, Action<Animator, int> beforeStep = null)
+    {
+        s_Log.Clear();
+        Play(key, rig, controller, animator => animator.gameObject.AddComponent<HumanoidEvents>(), motion: true, locals: false,
+            beforeStep: beforeStep, detail: true);
+        Put(key + ".log", "[" + string.Join(",", s_Log.ConvertAll(S)) + "]");
+    }
+
+    /// <summary>A generic controller on a plain GameObject whose clips move and turn it, with root
+    /// motion applied: the steps of <see cref="Play"/>, each with the root motion, the states in
+    /// detail and the GameObject's position and rotation.</summary>
+    static void PlayGeneric(string key, string controller, Action<Animator, int> beforeStep = null)
+    {
+        s_Log.Clear();
+        var instance = new GameObject("Generic");
+        var animator = instance.AddComponent<Animator>();
+        animator.applyRootMotion = true;
+        animator.runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>(controller);
+        for (int step = 0; step <= 28; step++)
+        {
+            beforeStep?.Invoke(animator, step);
+            animator.Update(step == 0 ? 0f : step <= 24 ? 1f / 30f : 0.1f);
+            Motion(key + ".step" + step, animator);
+            Detail(key + ".step" + step, animator);
+            Put(key + ".step" + step + ".root", "[" + V(instance.transform.position) + "," + Q(instance.transform.rotation) + "]");
+        }
+        Destroy(instance);
+        Put(key + ".log", "[" + string.Join(",", s_Log.ConvertAll(S)) + "]");
+    }
+
+    /// <summary>A humanoid clip in a manually updated PlayableGraph on a fresh HumanA instance with
+    /// root motion applied, its playable's time set to <paramref name="start"/> seconds: Evaluate(0),
+    /// then the steps of <see cref="Play"/>, each with the body, the root motion and the playable's
+    /// time.</summary>
+    static void PlayClipAt(string key, string rig, string clipName, double start)
+    {
+        var instance = Instantiate(Resources.Load<GameObject>("HumanA"));
+        var animator = instance.GetComponent<Animator>();
+        animator.applyRootMotion = true;
+        AnimationClip clip = null;
+        foreach (var c in Resources.LoadAll<AnimationClip>(rig)) if (c.name == clipName) clip = c;
+        var graph = PlayableGraph.Create(key);
+        graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+        var playable = AnimationClipPlayable.Create(graph, clip);
+        AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(playable);
+        playable.SetTime(start);
+        graph.Play();
+        var handler = new HumanPoseHandler(animator.avatar, instance.transform);
+        for (int step = 0; step <= 28; step++)
+        {
+            graph.Evaluate(step == 0 ? 0f : step <= 24 ? 1f / 30f : 0.1f);
+            Step(key + ".step" + step, animator, handler, false);
+            Put(key + ".step" + step + ".motion", "{\"deltaPosition\":" + V(animator.deltaPosition) + ",\"deltaRotation\":" + Q(animator.deltaRotation)
+                + ",\"time\":" + playable.GetTime().ToString("R", CultureInfo.InvariantCulture) + "}");
+        }
+        handler.Dispose();
+        graph.Destroy();
+        Destroy(instance);
+    }
+
+    /// <summary>The first steps of states (ProbeRunner.FirstSteps): exit times that leave mid-update
+    /// and at an update's end, cross-fades and Play called before step 5, empty states with a
+    /// transition out and under a partial layer, events of mirrored states, a mirrored clip on a
+    /// mirrored additive state, long play times, and the generic counterparts.</summary>
+    static void FirstSteps()
+    {
+        foreach (var suffix in new[] { "024", "026", "020", "000", "124", "024Instant" })
+            Guarded("exit" + suffix, () => PlayFirst("exit" + suffix, "HumanA", "HumanExit" + suffix));
+        Action<Animator, int> At5(Action<Animator> call) => (animator, step) => { if (step == 5) call(animator); };
+        Guarded("crossFade", () => PlayFirst("crossFade", "HumanA", "HumanTwoStates", At5(animator => animator.CrossFade("B", 0.3f))));
+        Guarded("crossFadeFixed", () => PlayFirst("crossFadeFixed", "HumanA", "HumanTwoStates",
+            At5(animator => animator.CrossFadeInFixedTime("B", 0.25f))));
+        Guarded("crossFadeOffset", () => PlayFirst("crossFadeOffset", "HumanA", "HumanTwoStates",
+            At5(animator => animator.CrossFade("B", 0.3f, 0, 0.5f))));
+        Guarded("playState", () => PlayFirst("playState", "HumanA", "HumanTwoStates", At5(animator => animator.Play("B"))));
+        Guarded("emptyPartial", () => PlayFirst("emptyPartial", "HumanA", "HumanEmptyPartial"));
+        Guarded("emptyExit", () => PlayFirst("emptyExit", "HumanA", "HumanEmptyExit"));
+        Guarded("emptyCond", () => PlayFirst("emptyCond", "HumanA", "HumanEmptyCond", At5(animator => animator.SetBool("Go", true))));
+        foreach (var name in new[] { "Events", "EventsMirror", "EventsMirrorCycle", "AdditiveMirrorClip" })
+        {
+            var key = char.ToLowerInvariant(name[0]) + name.Substring(1);
+            Guarded(key, () => PlayFirst(key, "HumanA", "Human" + name));
+        }
+        Guarded("longState", () => PlayFirst("longState", "HumanA", "HumanTwoStates",
+            (animator, step) => { if (step == 0) animator.Play("A", 0, 20000.3f); }));
+        Guarded("longStateB", () => PlayFirst("longStateB", "HumanA", "HumanTwoStates",
+            (animator, step) => { if (step == 0) animator.Play("B", 0, 30000.3f); }));
+        Guarded("longClipA", () => PlayClipAt("longClipA", "HumanA", "Scene", 70000.3));
+        Guarded("longClipB", () => PlayClipAt("longClipB", "HumanB", "Scene", 70000.3));
+        Guarded("generic.exit024", () => PlayGeneric("generic.exit024", "GenericExit024"));
+        Guarded("generic.exit025", () => PlayGeneric("generic.exit025", "GenericExit025"));
+        Guarded("generic.crossFade", () => PlayGeneric("generic.crossFade", "GenericTwoStates", At5(animator => animator.CrossFade("B", 0.3f))));
+        Guarded("generic.crossFadeFixed", () => PlayGeneric("generic.crossFadeFixed", "GenericTwoStates",
+            At5(animator => animator.CrossFadeInFixedTime("B", 0.25f))));
+        Guarded("generic.playState", () => PlayGeneric("generic.playState", "GenericTwoStates", At5(animator => animator.Play("B"))));
+        Guarded("generic.emptyExit", () => PlayGeneric("generic.emptyExit", "GenericEmptyExit"));
+        Guarded("generic.emptyPartial", () => PlayGeneric("generic.emptyPartial", "GenericEmptyPartial"));
     }
 
     /// <summary>Runs a part of the probe; an exception is recorded under its key and the probe goes
@@ -324,6 +455,7 @@ public class HumanoidProbe : MonoBehaviour
                 motion: true, locals: false));
             Guarded("ikClipMirror", () => Play("ikClipMirror", "HumanA", "HumanAIKClipMirror", animator => animator.gameObject.AddComponent<HumanoidIK>(),
                 motion: true, locals: false));
+            FirstSteps();
         }
         catch (Exception e)
         {

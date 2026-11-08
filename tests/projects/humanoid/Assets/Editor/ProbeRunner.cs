@@ -57,6 +57,7 @@ public static class ProbeRunner
             SettingsControllers();
             MuscleClips();
             MirrorStates();
+            FirstSteps();
             AssetDatabase.SaveAssets();
         }
         catch (System.Exception e)
@@ -111,6 +112,18 @@ public static class ProbeRunner
             };
             set(clip);
             list.Add(clip);
+        }
+        if (!list.Any(c => c.name == "Events"))
+        {
+            // HumanA's clip again (loop time) with three events calling ProbeEvent.
+            AnimationEvent Event(float time, float marker) =>
+                new AnimationEvent { time = time, functionName = "ProbeEvent", floatParameter = marker };
+            list.Add(new ModelImporterClipAnimation
+            {
+                name = "Events", takeName = source.takeName, firstFrame = source.firstFrame, lastFrame = source.lastFrame,
+                loopTime = true, keepOriginalPositionY = true,
+                events = new[] { Event(0.1f, 1f), Event(0.45f, 2f), Event(0.8f, 3f) },
+            });
         }
         return list.ToArray();
     }
@@ -464,6 +477,169 @@ public static class ProbeRunner
             t.hasFixedDuration = true;
             t.duration = 0.3f;
             EditorUtility.SetDirty(transition);
+        }
+    }
+
+    /// <summary>The first steps of states. Humanoid (A, B as in Blends): HumanExit{024,026,020,000,124}
+    /// (A, then B after an exit time of 0.24, 0.26, 0.2, 0 and 1.24 over 0.3 s), HumanExit024Instant
+    /// (exit time 0.24, no duration), HumanTwoStates (A and B, no transitions, for CrossFade and
+    /// Play), HumanEmptyPartial (an empty state with B on an override layer of weight 0.5),
+    /// HumanEmptyExit (an empty state, then A after an exit time of 0.5 over 0.3 s), HumanEmptyCond
+    /// (an empty state, then A when the bool Go is set, over 0.3 s), HumanEvents{,Mirror,MirrorCycle}
+    /// (HumanA's Events clip on a plain state, a mirrored one and a mirrored one with a cycle offset of
+    /// 0.25) and HumanAdditiveMirrorClip (A with the Mirror clip on a mirrored state of an additive
+    /// layer of weight 0.6). Generic (GenericMove G, 1 s, and GenericBack H, 0.8 s, moving and turning
+    /// the root): GenericExit{024,025}, GenericTwoStates, GenericEmptyExit and GenericEmptyPartial like
+    /// the humanoid ones.</summary>
+    static void FirstSteps()
+    {
+        var a = ClipOf("HumanA");
+        var b = ClipOf("HumanB");
+        AnimatorController Make(string name)
+        {
+            var path = Dir + name + ".controller";
+            if (AssetDatabase.LoadAssetAtPath<AnimatorController>(path) != null) return null;
+            return AnimatorController.CreateAnimatorControllerAtPath(path);
+        }
+        AnimationClip Generic(string name, float length, (string attribute, float[] keys)[] curves)
+        {
+            var path = Dir + name + ".anim";
+            var existing = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
+            if (existing != null) return existing;
+            var clip = new AnimationClip();
+            foreach (var (attribute, keys) in curves)
+            {
+                var curve = new AnimationCurve();
+                for (int i = 0; i < keys.Length; i += 2) curve.AddKey(keys[i], keys[i + 1]);
+                clip.SetCurve("", typeof(Transform), attribute, curve);
+            }
+            var settings = AnimationUtility.GetAnimationClipSettings(clip);
+            settings.loopTime = true;
+            settings.stopTime = length;
+            AnimationUtility.SetAnimationClipSettings(clip, settings);
+            AssetDatabase.CreateAsset(clip, path);
+            return clip;
+        }
+        var turnG = Quaternion.Euler(0f, 60f, 0f);
+        var g = Generic("GenericMove", 1f, new[]
+        {
+            ("localPosition.x", new[] { 0f, 0f, 1f, 0.5f }),
+            ("localPosition.y", new[] { 0f, 0f, 1f, 0f }),
+            ("localPosition.z", new[] { 0f, 0f, 0.5f, 0.4f, 1f, 2f }),
+            ("localRotation.x", new[] { 0f, 0f, 1f, 0f }),
+            ("localRotation.y", new[] { 0f, 0f, 1f, turnG.y }),
+            ("localRotation.z", new[] { 0f, 0f, 1f, 0f }),
+            ("localRotation.w", new[] { 0f, 1f, 1f, turnG.w }),
+        });
+        var turnH = Quaternion.Euler(0f, -45f, 0f);
+        var h = Generic("GenericBack", 0.8f, new[]
+        {
+            ("localPosition.x", new[] { 0f, 0f, 0.4f, 0.3f, 0.8f, 0f }),
+            ("localPosition.y", new[] { 0f, 0f, 0.8f, 0f }),
+            ("localPosition.z", new[] { 0f, 0f, 0.8f, -1f }),
+            ("localRotation.x", new[] { 0f, 0f, 0.8f, 0f }),
+            ("localRotation.y", new[] { 0f, 0f, 0.8f, turnH.y }),
+            ("localRotation.z", new[] { 0f, 0f, 0.8f, 0f }),
+            ("localRotation.w", new[] { 0f, 1f, 0.8f, turnH.w }),
+        });
+
+        void Exit(string name, Motion first, Motion second, float exitTime, float duration)
+        {
+            var controller = Make(name);
+            if (controller == null) return;
+            var machine = controller.layers[0].stateMachine;
+            var from = machine.AddState(first != null ? "A" : "Empty");
+            from.motion = first;
+            var to = machine.AddState("B");
+            to.motion = second;
+            machine.defaultState = from;
+            var t = from.AddTransition(to);
+            t.hasExitTime = true;
+            t.exitTime = exitTime;
+            t.hasFixedDuration = true;
+            t.duration = duration;
+            EditorUtility.SetDirty(controller);
+        }
+        foreach (var (suffix, exitTime) in new[] { ("024", 0.24f), ("026", 0.26f), ("020", 0.2f), ("000", 0f), ("124", 1.24f) })
+            Exit("HumanExit" + suffix, a, b, exitTime, 0.3f);
+        Exit("HumanExit024Instant", a, b, 0.24f, 0f);
+        Exit("HumanEmptyExit", null, a, 0.5f, 0.3f);
+        Exit("GenericExit024", g, h, 0.24f, 0.3f);
+        Exit("GenericExit025", g, h, 0.25f, 0.3f);
+        Exit("GenericEmptyExit", null, g, 0.5f, 0.3f);
+
+        void Two(string name, Motion first, Motion second)
+        {
+            var controller = Make(name);
+            if (controller == null) return;
+            var machine = controller.layers[0].stateMachine;
+            var from = machine.AddState("A");
+            from.motion = first;
+            machine.AddState("B").motion = second;
+            machine.defaultState = from;
+            EditorUtility.SetDirty(controller);
+        }
+        Two("HumanTwoStates", a, b);
+        Two("GenericTwoStates", g, h);
+
+        void Partial(string name, Motion over)
+        {
+            var controller = Make(name);
+            if (controller == null) return;
+            controller.layers[0].stateMachine.AddState("Empty");
+            controller.AddLayer("B");
+            var layers = controller.layers;
+            layers[1].blendingMode = AnimatorLayerBlendingMode.Override;
+            layers[1].defaultWeight = 0.5f;
+            controller.layers = layers;
+            controller.layers[1].stateMachine.AddState("B").motion = over;
+            EditorUtility.SetDirty(controller);
+        }
+        Partial("HumanEmptyPartial", b);
+        Partial("GenericEmptyPartial", g);
+
+        var cond = Make("HumanEmptyCond");
+        if (cond != null)
+        {
+            cond.AddParameter("Go", AnimatorControllerParameterType.Bool);
+            var machine = cond.layers[0].stateMachine;
+            var empty = machine.AddState("Empty");
+            var to = machine.AddState("A");
+            to.motion = a;
+            machine.defaultState = empty;
+            var t = empty.AddTransition(to);
+            t.hasExitTime = false;
+            t.hasFixedDuration = true;
+            t.duration = 0.3f;
+            t.AddCondition(AnimatorConditionMode.If, 0f, "Go");
+            EditorUtility.SetDirty(cond);
+        }
+
+        var events = ClipOf("HumanA", "Events");
+        foreach (var (name, mirror, cycle) in new[] { ("HumanEvents", false, 0f), ("HumanEventsMirror", true, 0f), ("HumanEventsMirrorCycle", true, 0.25f) })
+        {
+            var controller = Make(name);
+            if (controller == null) continue;
+            var state = controller.layers[0].stateMachine.AddState("A");
+            state.motion = events;
+            state.mirror = mirror;
+            state.cycleOffset = cycle;
+            EditorUtility.SetDirty(controller);
+        }
+
+        var additive = Make("HumanAdditiveMirrorClip");
+        if (additive != null)
+        {
+            additive.layers[0].stateMachine.AddState("A").motion = a;
+            additive.AddLayer("B");
+            var layers = additive.layers;
+            layers[1].blendingMode = AnimatorLayerBlendingMode.Additive;
+            layers[1].defaultWeight = 0.6f;
+            additive.layers = layers;
+            var state = additive.layers[1].stateMachine.AddState("B");
+            state.motion = ClipOf("HumanA", "Mirror");
+            state.mirror = true;
+            EditorUtility.SetDirty(additive);
         }
     }
 

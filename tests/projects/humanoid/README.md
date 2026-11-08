@@ -61,6 +61,35 @@ imported without keyframe reduction.
   (`additiveMirror`), a transition from A to A mirrored (exit time 0.25, 0.3 s:
   `transitionMirror`), and the IK pass of `ik` on a mirrored state and with the Mirror clip
   (`ikMirror`, `ikClipMirror`).
+- the first updates of states (`ProbeRunner.FirstSteps`, `HumanoidProbe.FirstSteps`), recorded like
+  the settings plays plus `.detail` (each layer's current and next state hash, normalized time and
+  length, the transition's normalized time and duration, the current and next clip infos), the
+  `ProbeEvent` animation events (`HumanoidEvents`: marker, time, state hash and time, clip and its
+  weight) and what each play logged (`.log`): A to B after exit times of 0.24, 0.26, 0.2, 0 and 1.24
+  over 0.3 s and 0.24 without a duration (`exit*`); `CrossFade("B", 0.3)`,
+  `CrossFadeInFixedTime("B", 0.25)`, `CrossFade("B", 0.3, 0, 0.5)` and `Play("B")` before step 5
+  (`crossFade`, `crossFadeFixed`, `crossFadeOffset`, `playState`); an empty base state under B on
+  an override layer of weight 0.5 (`emptyPartial`), an empty state leaving for A after an exit time
+  of 0.5 or when Go is set at step 5 (`emptyExit`, `emptyCond`); HumanA's Events clip (events at
+  0.1, 0.45 and 0.8) on a plain, a mirrored and a mirrored state with a cycle offset of 0.25
+  (`events`, `eventsMirror`, `eventsMirrorCycle`); the Mirror clip on a mirrored state of an
+  additive layer (`additiveMirrorClip`); `Play` at normalized times 20000.3 (A) and 30000.3 (B)
+  (`longState`, `longStateB`) and the clips in a Manual PlayableGraph at 70000.3 s (`longClipA`,
+  `longClipB`, with the playable's time); and on a plain GameObject with generic clips that move
+  and turn it (`GenericMove`, 1 s, `GenericBack`, 0.8 s; root motion applied) exit times of 0.24
+  and 0.25, cross-fades and Play before step 5, an empty state leaving after 0.5 and under a layer
+  of weight 0.5 (`generic.*`, with the GameObject's position and rotation).
+
+  Measured (6000.0.71f1, two identical captures): a state Play or CrossFade enters keeps the
+  requested time in the update it enters in (the cross-fade's transition advances); every entered
+  state, generic or humanoid, transitions' destinations at any exit time with or without a
+  duration included, moves the root over a whole update ending at its time; an exit time of 0 is
+  first reached at the end of the first loop; in a transition from an empty state the destination's
+  clip infos weigh 1 and its root motion applies in full; a mirrored state fires its humanoid
+  clip's events at its pose's shifted times (half a cycle, plus its cycle offset); the Mirror clip
+  on a mirrored additive state logs nothing. Unbound matches these. Open: `emptyPartial` (body and
+  steps), the first update of `emptyExit`/`emptyCond` (a constant root offset) and the long play
+  times (`longStateB`, `longClipA`, `longClipB`), listed in docs/COMPATIBILITY_GAPS.md.
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:
