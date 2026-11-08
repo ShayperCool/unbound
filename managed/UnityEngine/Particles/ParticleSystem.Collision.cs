@@ -29,10 +29,13 @@ namespace UnityEngine
         const float WorldSweepShrink = 0.151f;
         /// <summary>The smallest radius a world collision sweeps with.</summary>
         const float MinSweepRadius = 1e-6f;
-        /// <summary>A particle whose step is shorter than this collides with nothing (a newborn
-        /// emitted where its step ends, 6000.0.71f1 tests/projects/particles
-        /// collision_planes_kill); nor does a world sweep shorter than this.</summary>
+        /// <summary>A particle whose step is shorter than this (seconds) collides with nothing: a
+        /// newborn emitted where its step ends (6000.0.71f1, tests/projects/particles
+        /// collision_planes_kill).</summary>
         const float MinCollisionStep = 1e-6f;
+        /// <summary>A world sweep shorter than this (in world units) has no direction and hits
+        /// nothing.</summary>
+        const float MinSweepLength = 1e-6f;
         /// <summary>A plane is not hit by a particle whose direction of travel makes a cosine below
         /// this with its normal (moving along it).</summary>
         const float PlaneParallelCosine = 1e-4f;
@@ -56,9 +59,11 @@ namespace UnityEngine
             foreach (var plane in planes)
             {
                 if (plane == null) continue;
-                // A plane's normal is its transform's up; in simulation space it turns with the
-                // transpose of the space's linear part (simulation space may be scaled).
-                var n = simToWorld.transpose.MultiplyVector(plane.up).normalized;
+                // A plane's normal is its transform's up, carried into simulation space like a
+                // direction and normalized (under a non-uniform scale no longer perpendicular to
+                // the carried plane: 6000.0.71f1, tests/projects/particlerender
+                // collide/planes/scaled_y).
+                var n = toSim.MultiplyVector(plane.up).normalized;
                 var origin = toSim.MultiplyPoint3x4(plane.position);
                 m_CollisionPlanes[m_CollisionPlaneCount++] = new Vector4(n.x, n.y, n.z, -Vector3.Dot(n, origin));
                 m_CollisionPlaneObjects.Add(plane.gameObject);
@@ -90,7 +95,6 @@ namespace UnityEngine
                     ReportUnsupported("2D world collision");
                     return true;
                 }
-                if (C.quality != ParticleSystemCollisionQuality.High) ReportUnsupported("Medium and Low collision quality (collided at High)");
                 if (!WorldContact(end, velocity, radius, dt, c, out contact, out normal, out var hit)) return true;
                 other = hit != null ? hit.gameObject : null;
                 colliderId = hit != null ? hit.GetInstanceID() : 0;
@@ -177,7 +181,7 @@ namespace UnityEngine
             var w0 = c.SimToWorld.MultiplyPoint3x4(end - velocity * dt);
             var move = w1 - w0;
             float length = move.magnitude;
-            if (!(length > MinCollisionStep)) return false;
+            if (!(length > MinSweepLength)) return false;
             var direction = move / length;
             float shrink = radius * WorldSweepShrink;
             float sweepRadius = radius - shrink;
@@ -192,8 +196,9 @@ namespace UnityEngine
             }
             else
             {
-                // Pushed out by the penetration depth, the contact reached from outside; the
-                // normal points back in, so the rest of the movement turns inward from there.
+                // Pushed out by the penetration depth to where it touches the collider from
+                // outside; the normal (as the collision event reports it) points into the
+                // collider (6000.0.71f1, tests/projects/particlerender collide/events/inside).
                 worldContact = w0 - hitNormal * (distance - shrink);
                 worldNormal = -hitNormal;
             }

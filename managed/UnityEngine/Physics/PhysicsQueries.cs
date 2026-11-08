@@ -16,6 +16,9 @@ namespace Unbound.Runtime
         // Shared with the native query flags. The first two bits select triggers/backfaces.
         const int MultipleRayFaces = 1 << 2;
         const int SkipInitialOverlap = 1 << 3;
+        // A sweep reports an initial overlap at minus its penetration depth, along the direction
+        // that separates the shapes, even for the closest hit (particle World collisions).
+        const int InitialDepth = 1 << 4;
 
         [ThreadStatic] static B3.Hit[] s_Hits;
         [ThreadStatic] static ulong[] s_Shapes;
@@ -191,8 +194,6 @@ namespace Unbound.Runtime
 
         internal static List<RaycastHit> Cast(B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius, Vector3 direction, float maxDistance, int layerMask, QueryTriggerInteraction triggers, bool closest) =>
             Collect(ReadCast(false, kind, a, b, rotation, radius, direction, maxDistance, layerMask, triggers, closest, false), Length(maxDistance), direction.normalized);
-
-        const int InitialDepth = 1 << 4;
 
         /// <summary>The particle Collision module's world sweep: the closest hit of a sphere, without
         /// allocating. A sphere that starts inside a collider hits it at minus its penetration

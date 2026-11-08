@@ -162,6 +162,25 @@ namespace UnityEngine.Tests
             finally { Done(ps, plane); }
         }
 
+        [Fact]
+        public void KillSpeedsTakeTheSpeedTheParticleArrivesWithIncludingTheSpeedModifier()
+        {
+            var plane = Plane(-1f);
+            var slowed = Planes(plane);
+            var plain = Planes(plane);
+            foreach (var ps in new[] { slowed, plain }) { var c = ps.collision; c.minKillSpeed = 3f; }
+            var velocity = slowed.velocityOverLifetime; velocity.enabled = true; velocity.speedModifier = .5f;
+            try
+            {
+                // Stored at 8, arriving at 4 with the modifier: alive; at 8 without it: alive too.
+                Assert.True(StepOne(slowed, new Vector3(0f, -.9f, 0f), new Vector3(0f, -8f, 0f)).remainingLifetime > 0f);
+                // Stored at 4: arriving at 2 with the modifier dies (left at zero life), at 4 without it lives.
+                Assert.Equal(0f, StepOne(slowed, new Vector3(0f, -.9f, 0f), new Vector3(0f, -4f, 0f)).remainingLifetime);
+                Assert.True(StepOne(plain, new Vector3(0f, -.9f, 0f), new Vector3(0f, -4f, 0f)).remainingLifetime > 0f);
+            }
+            finally { Done(slowed, plain, plane); }
+        }
+
         static BoxCollider Box(Vector3 center, Vector3 size)
         {
             var box = new GameObject("collision box").AddComponent<BoxCollider>();
