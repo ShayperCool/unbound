@@ -296,6 +296,40 @@ class SlotTests(unittest.TestCase):
         self.run_slot('reap')
         self.assertTrue(checkout.exists())
 
+    def test_reap_follows_references_inside_a_protected_checkout(self):
+        base = Path(self.temp.name).resolve()
+        source, destination = base/'source', base/'destination'
+        for path in (source, destination):
+            self.git('worktree', 'add', '-q', '-b', f't3/{path.name}', str(path), 'main')
+        (source/'Assets').symlink_to(destination, target_is_directory=True)
+        self.git('add', '.', cwd=source)
+        self.git('commit', '-qm', 'reference', cwd=source)
+        for path in (source, destination):
+            self.make_old(path)
+        cache = Path(self.env['XDG_CACHE_HOME'])/'unbound/runs'
+        cache.mkdir(parents=True)
+        (cache/'project').symlink_to(source, target_is_directory=True)
+        self.run_slot('reap')
+        self.assertTrue(source.exists() and destination.exists())
+        self.assertTrue((cache/'project/Assets/a.txt').is_file())
+
+    @unittest.skipIf(os.geteuid() == 0, 'root can read a mode-000 directory')
+    def test_reap_refuses_an_inaccessible_run_cache_parent(self):
+        base = Path(self.temp.name).resolve()
+        checkout = base/'clean-idle'
+        self.git('worktree', 'add', '-q', '-b', 't3/clean-idle', str(checkout), 'main')
+        self.make_old(checkout)
+        parent = Path(self.env['XDG_CACHE_HOME'])
+        (parent/'unbound').mkdir(parents=True)
+        parent.chmod(0)
+        try:
+            with self.assertRaises(SystemExit) as raised:
+                self.run_slot('reap')
+            self.assertIn('refusing to reap worktrees', str(raised.exception))
+            self.assertTrue(checkout.exists())
+        finally:
+            parent.chmod(0o700)
+
     def test_parent_steps_after_a_directory_link_use_filesystem_resolution(self):
         base = Path(self.temp.name).resolve()
         checkout = base/'linked'
