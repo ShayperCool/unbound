@@ -242,8 +242,8 @@ namespace UnityEngine.Tests
             // values too. With four births that lane is a birth of its own. When the four-birth
             // step keeps exactly three particles and the three-birth step keeps two of them, the
             // fourth lane started without lifetime: its death lowered the three-birth step's count
-            // as a birth's would (6000.0.71f1: each lane that dies at its start lowers the count
-            // started, tests/projects/particlemeshshape texture/clip/rate).
+            // as a birth's would (6000.0.71f1: each lane discarded at its start lowers the count
+            // started, tests/projects/particlemeshshape texture/clip/*; expiry inferred alike).
             int dropped = 0;
             for (uint seed = 1; seed <= 200; seed++)
             {

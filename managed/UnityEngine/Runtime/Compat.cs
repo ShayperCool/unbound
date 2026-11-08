@@ -205,9 +205,10 @@ namespace Unbound.Runtime
         /// "Edit -> Project Settings... -> Input Manager"; earlier releases "Edit -> Settings -> Input".</summary>
         internal static string InputSettingsMenu => Major >= 6000 ? "Edit -> Project Settings... -> Input Manager" : "Edit -> Settings -> Input";
 
-        /// <summary>Rate batch initialization and birth ages measured by
-        /// tests/projects/particlerandom for exactly 6000.0.71f1. Other releases
-        /// keep the existing emission path until measured.</summary>
+        /// <summary>Start batches (a step's rate and burst births, and Emit(count)): their
+        /// initialization, birth ages and removal of births that die at their start, measured
+        /// by tests/projects/particlerandom and particlemeshshape texture/clip/* for exactly
+        /// 6000.0.71f1. Other releases keep the per-particle emission path until measured.</summary>
         internal static bool ParticleRateBatchesMeasured => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>Combined shape modifiers measured by tests/projects/particlerandom.

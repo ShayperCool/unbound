@@ -746,8 +746,9 @@ namespace UnityEngine
             // each dead lane, used or not, lowers the batch's count until it reaches zero,
             // so dead unused lanes cost live births their places and surviving unused lanes
             // can move into the places of dead births (6000.0.71f1,
-            // tests/projects/particlemeshshape texture/clip/rate: of ten births a step half
-            // the texture discards, none or one stays).
+            // tests/projects/particlemeshshape texture/clip/*: of ten births a step half
+            // the texture discards, none or one stays). Lanes that expire at their start are
+            // removed by the same rule (inferred: they leave with the discarded ones).
             for (int i = aligned; i < m_Count;)
             {
                 if ((MarkOf(i) & SlotMark.Dead) == 0) { i++; continue; }
@@ -2128,6 +2129,7 @@ namespace UnityEngine
                 if (!InitParticle(ref p, emitter, startNt, false, ref none, k, count, birthOrigin,
                     k, count, (properties & ParticleSystemSubEmitterProperties.InheritRotation) != 0 ? parent.m_AxisOfRotation : null, frame))
                 {
+                    if (m_ShapeTextureDiscarded) ReportUnbatchedTextureClip();
                     RemoveAt(index);
                     continue;
                 }
