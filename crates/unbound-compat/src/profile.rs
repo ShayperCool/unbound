@@ -305,7 +305,11 @@ impl Profile {
             out.extend(d.scripting.iter().cloned());
         }
         if mode == CompileMode::EditorPlayMode {
-            out.extend(d.editor.iter().cloned());
+            // The profile lists the Linux Editor's defines; the Editor of this OS names itself.
+            out.extend(d.editor.iter().map(|define| match define.as_str() {
+                "UNITY_EDITOR_LINUX" => EDITOR_OS_DEFINE.to_string(),
+                _ => define.clone(),
+            }));
         } else {
             out.push("DEVELOPMENT_BUILD".into());
         }
@@ -328,6 +332,15 @@ impl Profile {
         &self.data.language
     }
 }
+
+/// The define the Editor of this OS adds (`UNITY_EDITOR_OSX` in the macOS Editor).
+const EDITOR_OS_DEFINE: &str = if cfg!(target_os = "macos") {
+    "UNITY_EDITOR_OSX"
+} else if cfg!(windows) {
+    "UNITY_EDITOR_WIN"
+} else {
+    "UNITY_EDITOR_LINUX"
+};
 
 fn dedup_in_order(list: &mut Vec<String>) {
     let mut seen = std::collections::HashSet::new();
@@ -358,10 +371,33 @@ mod tests {
     }
 
     #[test]
+    fn play_mode_names_the_editor_of_this_os() {
+        let profile = Profile::for_version("6000.0.71f1".parse().unwrap()).unwrap();
+        let defines = profile.engine_defines(
+            CompileMode::EditorPlayMode,
+            "Android",
+            false,
+            true,
+            InputHandling::InputManager,
+        );
+        let os: Vec<_> = defines
+            .iter()
+            .filter(|d| d.starts_with("UNITY_EDITOR_") && d != &"UNITY_EDITOR_64")
+            .collect();
+        assert_eq!(os, [EDITOR_OS_DEFINE]);
+    }
+
+    #[test]
     fn input_handling_selects_the_input_defines() {
         let profile = Profile::for_version("6000.0.71f1".parse().unwrap()).unwrap();
         let defines = |input| {
-            profile.engine_defines(CompileMode::EditorPlayMode, "Standalone", false, true, input)
+            profile.engine_defines(
+                CompileMode::EditorPlayMode,
+                "Standalone",
+                false,
+                true,
+                input,
+            )
         };
         let legacy = defines(InputHandling::InputManager);
         assert!(legacy.contains(&"ENABLE_LEGACY_INPUT_MANAGER".to_string()));
@@ -373,7 +409,10 @@ mod tests {
         assert!(!new.contains(&"ENABLE_LEGACY_INPUT_MANAGER".to_string()));
         let both = defines(InputHandling::Both);
         let at = both.iter().position(|d| d == "ENABLE_TIMELINE").unwrap();
-        assert_eq!(both[at + 1..at + 3], ["ENABLE_INPUT_SYSTEM", "ENABLE_LEGACY_INPUT_MANAGER"]);
+        assert_eq!(
+            both[at + 1..at + 3],
+            ["ENABLE_INPUT_SYSTEM", "ENABLE_LEGACY_INPUT_MANAGER"]
+        );
         assert_eq!(InputHandling::from_setting(1), InputHandling::InputSystem);
         assert_eq!(InputHandling::from_setting(7), InputHandling::InputManager);
     }
