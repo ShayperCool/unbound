@@ -136,6 +136,12 @@ probe renders it), post-processing on and a global Volume, one setting each:
   (the renderer moves, its bones in another hierarchy stay) and `motion_blur_skinned_root_scale`
   (only the root bone's scale changes).
 
+Last, `light_data_block` (the Probe scene, a point and a spot light): a MaterialPropertyBlock that sets
+unity_LightData to zero on the cube (a renderer), on a Graphics.RenderMesh cube above it, and no block
+on a RenderMesh cube above the sphere (the control). The block wins over the per-object light data
+in both draws (no main or additional light). It runs in its own last frame: queued draws stay for
+the rest of a frame, and an earlier extra frame would shift the post-processing scenarios' frame counts.
+
 Their constants record `frameCount` (film grain, dithering and TAA jitter follow it).
 `texture-samples.jsonl` (compared by `compare_constants.py`) records what the Single Channel
 textures sample as (blitted into a float target): uncompressed and compressed (Alpha stays

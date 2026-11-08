@@ -953,18 +953,23 @@ namespace Unbound.Runtime
 
         static readonly int s_LightDataId = Shader.PropertyToID("unity_LightData");
         static readonly int s_LightIndicesId = Shader.PropertyToID("unity_LightIndices");
+        /// <summary>The constants <see cref="PerObjectLights"/> sets.</summary>
+        static readonly int[] s_PerObjectLightIds = { s_LightDataId, s_LightIndicesId };
         const int MaxPerObjectLights = 8;
 
-        static readonly Dictionary<Renderer, Dictionary<int, object>> s_RendererLights = new Dictionary<Renderer, Dictionary<int, object>>();
+        static readonly Dictionary<(Renderer Renderer, Dictionary<int, object> Own, MaterialPropertyBlock Block), Dictionary<int, object>> s_RendererLights =
+            new Dictionary<(Renderer, Dictionary<int, object>, MaterialPropertyBlock), Dictionary<int, object>>();
         static readonly Dictionary<(Dictionary<int, object> Own, Bounds Bounds), Dictionary<int, object>> s_QueuedLights =
             new Dictionary<(Dictionary<int, object>, Bounds), Dictionary<int, object>>();
 
         /// <summary>
         /// The per-object lights of a renderer list's draws, added to their properties: a
-        /// renderer's at its bounds (over its own values), a Graphics.DrawMesh draw's at the
-        /// bounds it is culled by, never lightmapped, under the values its own block sets (URP's
-        /// decals set unity_LightData; which side Unity lets win is unmeasured). The draws of
-        /// one call share their block and, instanced, their bounds: they share one answer.
+        /// renderer's at its bounds, a Graphics.DrawMesh draw's at the bounds it is culled by,
+        /// never lightmapped. A draw's own block wins over them where it sets the same constants
+        /// (unity_LightData zero in a block leaves a renderer and a Graphics.RenderMesh draw
+        /// unlit: Unity 6000.0.71f1, tests/projects/urp light_data_block; URP's decals rely on it).
+        /// The draws of one renderer or one call that share their block (and, queued, their
+        /// bounds) share one answer.
         /// </summary>
         internal static void ApplyPerObjectLights(CullingData data, List<DrawItem> items, int mainLight, bool lightmaps)
         {
@@ -976,23 +981,26 @@ namespace Unbound.Runtime
                 if (item.Renderer != null)
                 {
                     var r = item.Renderer;
-                    if (!s_RendererLights.TryGetValue(r, out var perObject))
+                    // The renderer's block is in the material it draws with (Renderer.DrawnMaterial).
+                    var block = r.BlockOfDrawn(item.Material);
+                    var key = (r, item.Properties, block);
+                    if (!s_RendererLights.TryGetValue(key, out var merged))
                     {
                         bool lightmapped = lightmaps && r.lightmapIndex >= 0 && r.lightmapIndex < 0xFFFE;
-                        s_RendererLights[r] = perObject = PerObjectLights(data, r.bounds, lightmapped, mainLight);
+                        merged = OverOwnValues(PerObjectLights(data, r.bounds, lightmapped, mainLight), item.Properties);
+                        if (block != null)
+                            foreach (int id in s_PerObjectLightIds)
+                                if (block.m_Values.TryGetValue(id, out var value)) merged[id] = value;
+                        s_RendererLights[key] = merged;
                     }
-                    var properties = item.Properties != null ? new Dictionary<int, object>(item.Properties) : new Dictionary<int, object>();
-                    foreach (var p in perObject) properties[p.Key] = p.Value;
-                    item.Properties = properties;
+                    item.Properties = merged;
                 }
                 else if (item.Lighting != null)
                 {
                     var key = (item.Properties, item.CullBounds);
                     if (!s_QueuedLights.TryGetValue(key, out var merged))
                     {
-                        merged = PerObjectLights(data, item.CullBounds, false, mainLight);
-                        if (item.Properties != null)
-                            foreach (var p in item.Properties) merged[p.Key] = p.Value;
+                        merged = OverOwnValues(PerObjectLights(data, item.CullBounds, false, mainLight), item.Properties);
                         s_QueuedLights[key] = merged;
                     }
                     item.Properties = merged;
@@ -1002,6 +1010,14 @@ namespace Unbound.Runtime
             }
             s_RendererLights.Clear();
             s_QueuedLights.Clear();
+        }
+
+        /// <summary>A draw's own (block) values written over its per-object lights.</summary>
+        static Dictionary<int, object> OverOwnValues(Dictionary<int, object> perObject, Dictionary<int, object> own)
+        {
+            if (own != null)
+                foreach (var p in own) perObject[p.Key] = p.Value;
+            return perObject;
         }
 
         /// <summary>The per-object lights (unity_LightData, unity_LightIndices) of a renderer or a

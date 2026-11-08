@@ -400,6 +400,9 @@ public partial class UrpProbe : MonoBehaviour
         RecordTextureFormats(formats);
         FeatureScenarios(dir, rendererData);
         yield return PostFxScenarios(dir, asset);
+        // Last: its queued draws stay for the rest of its frame, and the frame it adds would
+        // shift the frame counts the post-processing scenarios record.
+        yield return LightDataBlockScenario(dir);
         Quit();
     }
 
@@ -470,6 +473,45 @@ public partial class UrpProbe : MonoBehaviour
     {
         UnityEngine.SceneManagement.SceneManager.LoadScene(scene);
         for (int i = 0; i < 3; i++) yield return null;
+    }
+
+    /// <summary>light_data_block: per-object light data against a MaterialPropertyBlock that
+    /// sets the same constant (unity_LightData zero: no main light, no additional lights), under
+    /// a point and a spot light: the cube (a renderer with the block), a Graphics.RenderMesh cube
+    /// with the block above the scene's, and one without a block (the control) above the
+    /// sphere.</summary>
+    IEnumerator LightDataBlockScenario(string dir)
+    {
+        var cube = GameObject.Find("Cube").GetComponent<MeshRenderer>();
+        var mesh = cube.GetComponent<MeshFilter>().sharedMesh;
+        var block = new MaterialPropertyBlock();
+        block.SetVector("unity_LightData", Vector4.zero);
+        var point = new GameObject("Point Light").AddComponent<Light>();
+        point.transform.position = new Vector3(0f, 1.6f, -1.2f);
+        point.type = LightType.Point;
+        point.color = new Color(1f, 0.3f, 0.2f);
+        point.intensity = 2f;
+        point.range = 5f;
+        var spot = new GameObject("Spot Light").AddComponent<Light>();
+        spot.transform.SetPositionAndRotation(new Vector3(1.2f, 3.5f, -0.5f), Quaternion.Euler(80f, 0f, 0f));
+        spot.type = LightType.Spot;
+        spot.color = new Color(0.2f, 0.4f, 1f);
+        spot.intensity = 3f;
+        spot.range = 7f;
+        spot.spotAngle = 60f;
+        Scenario(dir, "light_data_block", () =>
+        {
+            cube.SetPropertyBlock(block);
+            var withBlock = new RenderParams(cube.sharedMaterial) { matProps = block };
+            Graphics.RenderMesh(withBlock, mesh, 0, Matrix4x4.Translate(new Vector3(-1.2f, 1.7f, 0f)));
+            Graphics.RenderMesh(new RenderParams(cube.sharedMaterial), mesh, 0, Matrix4x4.Translate(new Vector3(1.2f, 1.7f, 0f)));
+        }, () =>
+        {
+            cube.SetPropertyBlock(null);
+            DestroyImmediate(point.gameObject);
+            DestroyImmediate(spot.gameObject);
+        });
+        yield return null;
     }
 
     void Scenario(string dir, string name, Action setup, Action teardown)

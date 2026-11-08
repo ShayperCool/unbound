@@ -119,8 +119,9 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>A renderer list's per-object lights: a queued draw's at the bounds it is culled
-        /// by (its set world bounds, not its mesh's), under its own block's values; draws of one
-        /// call share one answer; a renderer's own values are overwritten.</summary>
+        /// by (its set world bounds, not its mesh's); a queued draw's and a renderer's own block
+        /// values win (tests/projects/urp light_data_block); draws sharing a block share one
+        /// answer; a renderer's draws with another block (a submesh's) get their own.</summary>
         [Fact]
         public void RendererListsLightQueuedDrawsAtTheirCullBoundsUnderTheirOwnValues()
         {
@@ -146,10 +147,13 @@ namespace UnityEngine.Tests
                     CullBounds = near,
                     Properties = properties,
                 };
+                var renderer = rendererObject.GetComponent<MeshRenderer>();
                 var items = new System.Collections.Generic.List<FrameBuilder.DrawItem>
                 {
                     Queued(null), Queued(own), Queued(own),
-                    new FrameBuilder.DrawItem { Renderer = rendererObject.GetComponent<MeshRenderer>(), Properties = own },
+                    new FrameBuilder.DrawItem { Renderer = renderer, Properties = own },
+                    new FrameBuilder.DrawItem { Renderer = renderer },
+                    new FrameBuilder.DrawItem { Renderer = renderer, Properties = own },
                 };
                 try
                 {
@@ -157,8 +161,55 @@ namespace UnityEngine.Tests
                     Assert.Equal(new Vector4(0f, 1f, 1f, 0f), (Vector4)items[0].Properties[lightData]);
                     Assert.Equal(new Vector4(1f, 1f, 1f, 0f), (Vector4)items[1].Properties[lightData]);
                     Assert.Same(items[1].Properties, items[2].Properties);
-                    Assert.Equal(new Vector4(0f, 1f, 1f, 0f), (Vector4)items[3].Properties[lightData]);
+                    Assert.Equal(new Vector4(1f, 1f, 1f, 0f), (Vector4)items[3].Properties[lightData]);
+                    Assert.Equal(new Vector4(0f, 1f, 1f, 0f), (Vector4)items[4].Properties[lightData]);
+                    Assert.Same(items[3].Properties, items[5].Properties);
+                    Assert.NotSame(items[3].Properties, items[4].Properties);
                     Assert.Single(own);
+                }
+                finally { data.Dispose(); }
+            }
+            finally
+            {
+                Object.DestroyImmediate(lightObject);
+                Object.DestroyImmediate(rendererObject);
+            }
+        }
+
+        /// <summary>A renderer's property block (drawn through a material made under it) wins over
+        /// its per-object lights where it sets the same constants; its other slot keeps them
+        /// (tests/projects/urp light_data_block).</summary>
+        [Fact]
+        public void ARenderersBlockWinsOverItsPerObjectLights()
+        {
+            var lightObject = new GameObject("srp block point light");
+            var rendererObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            try
+            {
+                var light = lightObject.AddComponent<Light>();
+                light.type = LightType.Point;
+                light.range = 3f;
+                var renderer = rendererObject.GetComponent<MeshRenderer>();
+                var shared = m_Material;
+                renderer.sharedMaterials = new[] { shared, shared };
+                var block = new MaterialPropertyBlock();
+                block.SetVector("unity_LightData", Vector4.zero);
+                renderer.SetPropertyBlock(block, 0);
+                var data = new CullingData { Camera = m_Camera };
+                data.Lights = new Unity.Collections.NativeArray<VisibleLight>(1, Unity.Collections.Allocator.Persistent);
+                data.Lights[0] = new VisibleLight(light, new Rect(0, 0, 1, 1), false, true, false);
+                int lightData = Shader.PropertyToID("unity_LightData");
+                var items = new System.Collections.Generic.List<FrameBuilder.DrawItem>
+                {
+                    new FrameBuilder.DrawItem { Renderer = renderer, Material = renderer.DrawnMaterial(0, shared) },
+                    new FrameBuilder.DrawItem { Renderer = renderer, Material = renderer.DrawnMaterial(1, shared) },
+                };
+                try
+                {
+                    Assert.NotSame(shared, items[0].Material);
+                    FrameBuilder.ApplyPerObjectLights(data, items, -1, false);
+                    Assert.Equal(Vector4.zero, (Vector4)items[0].Properties[lightData]);
+                    Assert.Equal(new Vector4(0f, 1f, 1f, 0f), (Vector4)items[1].Properties[lightData]);
                 }
                 finally { data.Dispose(); }
             }

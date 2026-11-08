@@ -229,6 +229,15 @@ namespace UnityEngine
         /// made from (source, its version, the block).</summary>
         (Material Drawn, Material Source, int Version, MaterialPropertyBlock Block)[] m_BlockMaterials;
 
+        /// <summary>The block a material this renderer draws with was made under (null: none).</summary>
+        internal MaterialPropertyBlock BlockOfDrawn(Material drawn)
+        {
+            if (m_BlockMaterials != null)
+                foreach (var b in m_BlockMaterials)
+                    if (b.Drawn != null && ReferenceEquals(b.Drawn, drawn)) return b.Block;
+            return null;
+        }
+
         /// <summary>The material slot <paramref name="index"/> draws with: the material itself, or,
         /// under a property block, a copy with the block's values (Unity applies them per draw).</summary>
         internal Material DrawnMaterial(int index, Material source)
