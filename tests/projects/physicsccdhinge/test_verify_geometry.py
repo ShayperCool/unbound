@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'physicsbatch'))
-from compare import compare
+from compare import compare, load
 from verify_geometry import verify
 
 
@@ -58,6 +58,53 @@ class GeometryVerificationTests(unittest.TestCase):
         self.assertFalse(self.result(expected, actual)['unresolved'])
         expected[prefix+'/1/a/body'] = expected[a]
         actual[prefix+'/1/a/body'] = expected[a]
+        self.assertTrue(self.result(expected, actual)['unresolved'])
+
+    def test_matching_callback_fields_and_contact_identities_still_gate(self):
+        key = 'geometry/static/1/0/2/0/bullet'
+        header, point = key+'/event/0', key+'/event/0/0'
+        expected = {key+'/events':'1', header:'enter,wall,1,1,0,0,-100,0,0',
+                    point:'0,0,0,-1,0,0,0,bullet,wall'}
+        for bad in ('exit,wall,1,1,0,0,-100,0,0',
+                    'enter,wrong-collider,1,1,0,0,-100,0,0',
+                    'enter,wall,1,1,0,0,-90,0,0'):
+            actual = dict(expected); actual[header] = bad
+            self.assertTrue(self.result(expected, actual)['unresolved'])
+        actual = dict(expected); actual[point] = '0,0,0,-1,0,0,0,bullet,wrong-collider'
+        self.assertTrue(self.result(expected, actual)['unresolved'])
+        actual = dict(expected); actual[header] = 'enter,wall,0,1,0,0,-100,0,0'; del actual[point]
+        self.assertTrue(self.result(expected, actual)['unresolved'])
+
+    def capture(self):
+        return load(Path(__file__).resolve().parent/'Reference/unity-6000.0.71f1/geometry.tsv')
+
+    def test_open_compound_rejects_unbounded_and_frozen_motion(self):
+        expected = self.capture()
+        prefix = 'geometry/kinematic-target/4/2/3'
+        actual = dict(expected)
+        key = prefix+'/0/bullet/body'
+        fields = actual[key].split(','); fields[0] = '-1000000'; actual[key] = ','.join(fields)
+        self.assertTrue(self.result(expected, actual)['unresolved'])
+        actual = dict(expected)
+        for key in list(actual):
+            if not key.startswith(prefix+'/'): continue
+            if '/event/' in key: del actual[key]
+            elif key.endswith('/events'): actual[key] = '0'
+            elif key.endswith('/bullet/body'): actual[key] = '-1,0,0,0,0,0,1,0,0,0,0,0,0'
+        self.assertTrue(self.result(expected, actual)['unresolved'])
+
+    def test_open_compound_does_not_exempt_other_callback_phases_or_missing_steps(self):
+        expected = self.capture()
+        self.assertFalse(self.result(expected, expected)['unresolved'])
+        prefix = 'geometry/kinematic-target/4/2/3'
+        actual = dict(expected)
+        key = prefix+'/0/bullet/event/0'
+        actual[key] = actual[key].replace('enter,', 'stay,', 1)
+        self.assertTrue(self.result(expected, actual)['unresolved'])
+        actual = dict(expected)
+        for key in list(actual):
+            if key.startswith(prefix+'/3/bullet/event/'): del actual[key]
+        actual[prefix+'/3/bullet/events'] = '0'
         self.assertTrue(self.result(expected, actual)['unresolved'])
 
 

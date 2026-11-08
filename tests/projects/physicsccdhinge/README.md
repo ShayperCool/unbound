@@ -114,18 +114,28 @@ a pending convex edit with a body-type change. Reference extensions use
 | Non-convex mesh body-type changes | Dynamic triangle meshes have no collision support; returning to kinematic restores both ray hits and CCD contacts. A pending convex edit must detach the old triangle shape before the actor becomes dynamic. | Fixed in the structural flush with one collider pass. |
 | Native pair orientation and contact manifolds | Native pair direction changes impulse sign and the surface used for a separated contact witness. Convex manifold clipping/reduction also produces different points, slot order and sometimes contact counts. Those fields are observable API residuals; a complete general rule for matching them is unresolved. | Open contact-generation follow-up. Every raw mismatch, missing row and extra row remains in the strict report. |
 | Speculative compound contact processing | Six symmetric contexts give the same full body readings after reflecting position-y and velocity-y. Their child contact order selects opposite lateral directions. | 43 reflected body rows are identified separately. The capture does not establish a universal contact-order guarantee. |
-| Mixed hull/sphere body against a two-sphere kinematic target | `geometry/kinematic-target/4/2/3` has a different speculative manifold and motion magnitude, with one additional child-pair exit delivered to both bodies. Different clipping and contact processing order are the suspected cause, not a settled algorithm. | Open: five body readings and two callback-count readings. This is a significant residual, not float roundoff. |
+| Mixed hull/sphere body against a two-sphere kinematic target | `geometry/kinematic-target/4/2/3` has a different speculative manifold and motion magnitude. One child-pair exit moves from step 1 to step 2 for both bodies. Different clipping and contact processing order are the suspected cause, not a settled algorithm. | Open: five body readings and two callback-count readings. This is a significant residual, not float roundoff. |
 
 The geometry gate checks all 2768 body readings and callback-count readings,
 except that it explicitly reports the reflected readings and the one open mixed
-compound context. The latter has only finite-state, contact-region and
-non-tunneling controls; exact motion and child-pair lifetime remain open.
+compound context. The latter checks forward progress between x=-0.6 and x=-0.15,
+consistent per-step position/velocity integration, and the measured delayed-exit
+sequence. Exact motion magnitude remains open.
 The complete contact trace is a strict **report**, not a contact-parity gate.
 Its records must be finite and structurally complete, including every declared
 callback and contact. `verify_geometry.py` does not sort or rewrite captures,
 alter tolerances, or report contact residuals as insignificant. The original
 Q06 gate and supplemental controls still compare all fields, with the existing
 verifier's separately retained native pair impulse directions.
+
+Callback phase, collider identity and incoming relative velocity are checked as
+unordered complete callback sets. The documented reflected contexts can swap
+the two symmetric child names. Contact counts remain exact except for the two
+convex/speculative manifold contexts named in the verifier, which retain one
+to four points. Contact payload collider identities must occur in the same
+scenario/receiver's reference. The open mixed-compound context admits only its
+reference callback pattern or the measured delayed-exit pattern, across all
+five steps and both receivers.
 
 ## Results and retained differences
 
