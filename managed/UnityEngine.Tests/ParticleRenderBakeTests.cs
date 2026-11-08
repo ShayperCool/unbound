@@ -243,14 +243,15 @@ namespace UnityEngine.Tests
             });
             var main = ps.main;
             main.maxParticles = 200;
-            for (int i = 0; i < 70; i++) Emit(ps, new Vector3(i * 0.1f, 0f, 0f), Vector3.zero, 0.3f);
+            // 100 records of 13 floats (1300) outgrow room for 129 vertex records of 9 (1161).
+            for (int i = 0; i < 100; i++) Emit(ps, new Vector3(i * 0.1f, 0f, 0f), Vector3.zero, 0.3f);
             Texture2D records = null;
             ps.GetComponent<ParticleSystemRenderer>().BakeTexture(ref records, camera, ParticleSystemBakeTextureOptions.PerParticle);
             Track(records);
             var texels = Texels(records);
             // 13 floats a particle (transform, centre, color): the last particle's centre is there.
-            Assert.True(texels.Length >= 70 * 13);
-            Assert.Equal(69 * 0.1f, texels[69 * 13 + 9], 4);
+            Assert.True(texels.Length >= 100 * 13);
+            Assert.Equal(99 * 0.1f, texels[99 * 13 + 9], 4);
         }
 
         [Fact]

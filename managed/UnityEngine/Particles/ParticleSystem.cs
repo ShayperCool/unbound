@@ -705,8 +705,9 @@ namespace UnityEngine
             if (held != null)
             {
                 held.Orphan = held.Spent = false;
-                // The draws a trail takes from its particle follow another particle written there;
-                // the same particle written back keeps them.
+                // The draws a trail takes from its particle follow another particle (seed) written
+                // there; the same particle written back keeps them, also with a changed start
+                // lifetime or size (unmeasured).
                 if (particle.m_RandomSeed != slotSeed) SetTrailDraws(ref m_Particles[index], held);
             }
         }
@@ -1222,9 +1223,10 @@ namespace UnityEngine
         /// <para>The missed time and the frame's own time are simulated as one advance, split by
         /// Time.maximumParticleDeltaTime like a Simulate call (matches the measured times and
         /// counts, except births due exactly at a step's end). Unbound's choices (unmeasured): the
-        /// emitter's movement while culled is not replayed; a culled update sends no collision or trigger message; a
-        /// sub-emitter decides by its own renderer and mode; a system without an enabled
-        /// ParticleSystemRenderer keeps simulating, reported once. Visibility comes from the
+        /// emitter's movement while culled is not replayed; a culled update sends no collision or
+        /// trigger message; a sub-emitter is culled only when both its own culling and its
+        /// parent's cull it (measured: an AlwaysSimulate parent keeps an unseen child updating);
+        /// a system without an enabled ParticleSystemRenderer keeps simulating, reported once. Visibility comes from the
         /// renderer's culling bounds (<see cref="ParticleSystemRenderer.CullingBounds"/>), which
         /// Unbound computes conservatively from the particles and the emitter; where it cannot
         /// bound what is drawn (trails, a minimum particle size, camera velocity stretching) the
