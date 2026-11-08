@@ -81,6 +81,9 @@ namespace Unbound.Runtime
             /// with its world bounds and layer.</summary>
             internal ImmediateLighting Lighting;
             internal Bounds Bounds;
+            /// <summary>What a Graphics.DrawMesh draw is culled by: its set world bounds, else
+            /// <see cref="Bounds"/>.</summary>
+            internal Bounds CullBounds;
             internal int Layer;
         }
 
@@ -745,33 +748,7 @@ namespace Unbound.Runtime
             // Per-object lights: the additional lights reaching each renderer, as the pipeline's
             // light index map numbers them.
             if ((drawing.perObjectData & (PerObjectData.LightData | PerObjectData.LightIndices)) != 0)
-            {
-                var lights = new Dictionary<Renderer, Dictionary<int, object>>();
-                bool lightmapsData = (drawing.perObjectData & PerObjectData.Lightmaps) != 0;
-                for (int i = 0; i < s_Items.Count; i++)
-                {
-                    var item = s_Items[i];
-                    Dictionary<int, object> perObject;
-                    if (item.Renderer != null)
-                    {
-                        if (!lights.TryGetValue(item.Renderer, out perObject))
-                        {
-                            var r = item.Renderer;
-                            bool lightmapped = lightmapsData && r.lightmapIndex >= 0 && r.lightmapIndex < 0xFFFE;
-                            lights[r] = perObject = PerObjectLights(data, r.bounds, lightmapped, drawing.mainLightIndex);
-                        }
-                    }
-                    // A Graphics.DrawMesh draw: lit as a renderer at its bounds, never lightmapped.
-                    // Values its own block sets stay (URP's decals set unity_LightData).
-                    else if (item.Lighting != null) perObject = PerObjectLights(data, item.Bounds, false, drawing.mainLightIndex);
-                    else continue;
-                    var properties = item.Properties != null ? new Dictionary<int, object>(item.Properties) : new Dictionary<int, object>();
-                    foreach (var p in perObject)
-                        if (item.Renderer != null || !properties.ContainsKey(p.Key)) properties[p.Key] = p.Value;
-                    item.Properties = properties;
-                    s_Items[i] = item;
-                }
-            }
+                ApplyPerObjectLights(data, s_Items, drawing.mainLightIndex, (drawing.perObjectData & PerObjectData.Lightmaps) != 0);
             if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
             ulong overrideHandle = overrideMaterial != null ? overrideMaterial.Sync() : 0;
             for (int i = 0; i < s_Items.Count; i++)
@@ -893,6 +870,55 @@ namespace Unbound.Runtime
         static readonly int s_LightDataId = Shader.PropertyToID("unity_LightData");
         static readonly int s_LightIndicesId = Shader.PropertyToID("unity_LightIndices");
         const int MaxPerObjectLights = 8;
+
+        static readonly Dictionary<Renderer, Dictionary<int, object>> s_RendererLights = new Dictionary<Renderer, Dictionary<int, object>>();
+        static readonly Dictionary<(Dictionary<int, object> Own, Bounds Bounds), Dictionary<int, object>> s_QueuedLights =
+            new Dictionary<(Dictionary<int, object>, Bounds), Dictionary<int, object>>();
+
+        /// <summary>
+        /// The per-object lights of a renderer list's draws, added to their properties: a
+        /// renderer's at its bounds (over its own values), a Graphics.DrawMesh draw's at the
+        /// bounds it is culled by, never lightmapped, under the values its own block sets (URP's
+        /// decals set unity_LightData; which side Unity lets win is unmeasured). The draws of
+        /// one call share their block and, instanced, their bounds: they share one answer.
+        /// </summary>
+        internal static void ApplyPerObjectLights(CullingData data, List<DrawItem> items, int mainLight, bool lightmaps)
+        {
+            s_RendererLights.Clear();
+            s_QueuedLights.Clear();
+            for (int i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                if (item.Renderer != null)
+                {
+                    var r = item.Renderer;
+                    if (!s_RendererLights.TryGetValue(r, out var perObject))
+                    {
+                        bool lightmapped = lightmaps && r.lightmapIndex >= 0 && r.lightmapIndex < 0xFFFE;
+                        s_RendererLights[r] = perObject = PerObjectLights(data, r.bounds, lightmapped, mainLight);
+                    }
+                    var properties = item.Properties != null ? new Dictionary<int, object>(item.Properties) : new Dictionary<int, object>();
+                    foreach (var p in perObject) properties[p.Key] = p.Value;
+                    item.Properties = properties;
+                }
+                else if (item.Lighting != null)
+                {
+                    var key = (item.Properties, item.CullBounds);
+                    if (!s_QueuedLights.TryGetValue(key, out var merged))
+                    {
+                        merged = PerObjectLights(data, item.CullBounds, false, mainLight);
+                        if (item.Properties != null)
+                            foreach (var p in item.Properties) merged[p.Key] = p.Value;
+                        s_QueuedLights[key] = merged;
+                    }
+                    item.Properties = merged;
+                }
+                else continue;
+                items[i] = item;
+            }
+            s_RendererLights.Clear();
+            s_QueuedLights.Clear();
+        }
 
         /// <summary>The per-object lights (unity_LightData, unity_LightIndices) of a renderer or a
         /// Graphics.DrawMesh draw with these world bounds: the visible lights other than those
@@ -1583,6 +1609,7 @@ namespace Unbound.Runtime
                 Setup = q.Setup,
                 Lighting = q.Lighting ?? ImmediateLighting.Default,
                 Bounds = bounds,
+                CullBounds = q.WorldBounds ?? bounds,
                 Layer = q.Layer,
             };
         }

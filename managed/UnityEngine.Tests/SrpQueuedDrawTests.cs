@@ -118,6 +118,57 @@ namespace UnityEngine.Tests
             Assert.Equal(GraphicsSettings.defaultRenderingLayerMask, data.QueuedVisible[1].RenderingLayerMask);
         }
 
+        /// <summary>A renderer list's per-object lights: a queued draw's at the bounds it is culled
+        /// by (its set world bounds, not its mesh's), under its own block's values; draws of one
+        /// call share one answer; a renderer's own values are overwritten.</summary>
+        [Fact]
+        public void RendererListsLightQueuedDrawsAtTheirCullBoundsUnderTheirOwnValues()
+        {
+            var lightObject = new GameObject("srp queued point light");
+            var rendererObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            try
+            {
+                lightObject.transform.position = new Vector3(50f, 0f, 0f);
+                var light = lightObject.AddComponent<Light>();
+                light.type = LightType.Point;
+                light.range = 3f;
+                rendererObject.transform.position = new Vector3(50f, 0f, 0f);
+                var data = new CullingData { Camera = m_Camera };
+                data.Lights = new Unity.Collections.NativeArray<VisibleLight>(1, Unity.Collections.Allocator.Persistent);
+                data.Lights[0] = new VisibleLight(light, new Rect(0, 0, 1, 1), false, true, false);
+                int lightData = Shader.PropertyToID("unity_LightData");
+                var own = new System.Collections.Generic.Dictionary<int, object> { [lightData] = new Vector4(1f, 1f, 1f, 0f) };
+                var near = new Bounds(new Vector3(50f, 0f, 0f), Vector3.one);
+                FrameBuilder.DrawItem Queued(System.Collections.Generic.Dictionary<int, object> properties) => new FrameBuilder.DrawItem
+                {
+                    Lighting = ImmediateLighting.Default,
+                    Bounds = new Bounds(Vector3.zero, Vector3.one),
+                    CullBounds = near,
+                    Properties = properties,
+                };
+                var items = new System.Collections.Generic.List<FrameBuilder.DrawItem>
+                {
+                    Queued(null), Queued(own), Queued(own),
+                    new FrameBuilder.DrawItem { Renderer = rendererObject.GetComponent<MeshRenderer>(), Properties = own },
+                };
+                try
+                {
+                    FrameBuilder.ApplyPerObjectLights(data, items, -1, false);
+                    Assert.Equal(new Vector4(0f, 1f, 1f, 0f), (Vector4)items[0].Properties[lightData]);
+                    Assert.Equal(new Vector4(1f, 1f, 1f, 0f), (Vector4)items[1].Properties[lightData]);
+                    Assert.Same(items[1].Properties, items[2].Properties);
+                    Assert.Equal(new Vector4(0f, 1f, 1f, 0f), (Vector4)items[3].Properties[lightData]);
+                    Assert.Single(own);
+                }
+                finally { data.Dispose(); }
+            }
+            finally
+            {
+                Object.DestroyImmediate(lightObject);
+                Object.DestroyImmediate(rendererObject);
+            }
+        }
+
         /// <summary>Every draw of an instanced RenderParams call carries its mask.</summary>
         [Fact]
         public void InstancedRenderParamsDrawsKeepTheirRenderingLayerMask()
