@@ -1487,7 +1487,7 @@ impl Mixer {
         sinks: Vec<capture::SinkRequest>,
     ) -> anyhow::Result<capture::Output> {
         anyhow::ensure!(
-            length <= 16_777_216,
+            length <= capture::MAX_SAMPLES,
             "invalid AudioRenderer stereo buffer length"
         );
         for request in &sinks {

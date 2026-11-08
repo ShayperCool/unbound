@@ -2,6 +2,9 @@
 //! the signed-16-bit conversion measured independently in Unity 6000.0.71f1.
 use serde::{Deserialize, Serialize};
 
+/// Engine resource limit for one interleaved stereo capture allocation.
+pub(super) const MAX_SAMPLES: usize = 16_777_216;
+
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SinkRequest {

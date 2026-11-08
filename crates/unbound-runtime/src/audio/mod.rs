@@ -330,13 +330,30 @@ impl Engine {
             tracing::warn!("audio reset rejected: {error:#}");
             return false;
         }
+        let tail = if finish_capture_buffer && self.capturing.load(Ordering::Acquire) {
+            let samples = self.mixer().config.buffer_size.max(1) as usize * 2;
+            if samples > capture::MAX_SAMPLES {
+                tracing::warn!(
+                    "audio reset rejected: closing capture buffer exceeds the supported allocation limit"
+                );
+                return false;
+            }
+            let mut buffer = Vec::new();
+            if buffer.try_reserve_exact(samples).is_err() {
+                tracing::warn!("audio reset rejected: cannot allocate closing capture buffer");
+                return false;
+            }
+            buffer.resize(samples, 0.0);
+            Some(buffer)
+        } else {
+            None
+        };
         let had_device = self.device.lock().unwrap().take().is_some();
-        if finish_capture_buffer && self.capturing.load(Ordering::Acquire) {
+        if let Some(mut buffer) = tail {
             let mut mixer = self.mixer();
             // The closing output processes its current buffer before sources are reset and
             // before OnAudioConfigurationChanged. Keep the old rate, graph and callback data.
             // Unity 6000.0.71f1, tests/projects/mixersuspend reset delivery control.
-            let mut buffer = vec![0.0; mixer.config.buffer_size.max(1) as usize * 2];
             mixer.render_capture_block(&mut buffer);
             self.clock.store(&mixer);
         }
@@ -740,6 +757,30 @@ mod tests {
         assert_eq!(engine.configuration(), before);
         assert_eq!(engine.dsp_time(), 0.0);
         assert!(engine.capturing.load(Ordering::Acquire));
+    }
+
+    #[test]
+    fn oversized_closing_buffer_fails_without_allocating_or_changing_capture() {
+        let engine = Engine::new(
+            ProjectAudioSettings {
+                dsp_buffer_size: u32::MAX,
+                ..Default::default()
+            },
+            false,
+        );
+        assert!(engine.capture_start());
+        let before = engine.configuration();
+        let valid = AudioConfiguration {
+            dsp_buffer_size: 1024,
+            ..before
+        };
+        assert!(!engine.reset_with_capture_tail(valid, true));
+        assert_eq!(engine.configuration(), before);
+        assert_eq!(engine.dsp_time(), 0.0);
+        assert!(engine.capturing.load(Ordering::Acquire));
+        assert!(engine.capture_stop());
+        assert!(engine.reset_with_capture_tail(valid, true));
+        assert_eq!(engine.configuration().dsp_buffer_size, 1024);
     }
 
     #[test]
