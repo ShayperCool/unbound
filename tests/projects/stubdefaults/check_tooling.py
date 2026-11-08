@@ -28,7 +28,13 @@ def main():
     expected = {
         ('DoctorCoverageControls.UnsentComponent', 'OnParticleUpdateJobScheduled'),
         ('DoctorCoverageControls.UnsentComponent', 'OnChildRectTransformDimensionsChange'),
+        ('DoctorCoverageControls.InheritedUnsentComponent', 'OnParticleUpdateJobScheduled'),
     }
+    # A message below a user-defined MonoBehaviour base must be found, and inherited uses
+    # must report its declaration once rather than adding a diagnostic for every leaf type.
+    source_lines = (ROOT/'Assets/Scripts/MessageCoverageControls.cs').read_text().splitlines()
+    inherited_line = next(i for i, line in enumerate(source_lines, 1)
+                          if 'protected void OnParticleUpdateJobScheduled' in line)
     for repeat in range(2):
         run = subprocess.run([str(HEAVY), '--kind', 'tool', cli, 'doctor', '-p', str(ROOT), '--json'],
                              cwd=REPO, capture_output=True, text=True)
@@ -39,7 +45,9 @@ def main():
         found = report['unsupportedMessages']
         actual = {(m['type'], m['message']) for m in found}
         bad_locations = [m for m in found if m['file'] != 'Assets/Scripts/MessageCoverageControls.cs' or m['line'] <= 0]
-        if actual != expected or len(found) != len(expected) or bad_locations or report['messageAnalysisFailedAssemblies']:
+        inherited = [m for m in found if m['type'] == 'DoctorCoverageControls.InheritedUnsentComponent']
+        bad_inheritance = len(inherited) != 1 or inherited[0]['line'] != inherited_line
+        if actual != expected or len(found) != len(expected) or bad_locations or bad_inheritance or report['messageAnalysisFailedAssemblies']:
             print(json.dumps(report, indent=2))
             print('missing:', sorted(expected - actual), 'extra:', sorted(actual - expected))
             return 1

@@ -25,6 +25,8 @@ python3 tests/projects/stubdefaults/run.py check                    # the land g
 `check` runs the engine (`UNBOUND_CLI`, else `$UNBOUND`, else `target/release/unbound`) and
 compares the run with the reference. `check_tooling.py` also runs the generator unit tests and
 checks doctor twice against uninstantiated message-control scripts, including warm-cache analysis.
+A positive control declares an unsupported message below a user-defined MonoBehaviour base, then
+inherits it in another script. Doctor must report its declaration and source line exactly once.
 Both commands are declared in `gate.json`. Run output goes to
 `$XDG_CACHE_HOME/unbound/validation/runs/stubdefaults/runs/<label>/`.
 

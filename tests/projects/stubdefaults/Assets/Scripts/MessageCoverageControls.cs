@@ -19,6 +19,15 @@ namespace DoctorCoverageControls
         void OnStateIK() { }
     }
 
+    public class MessageHost : MonoBehaviour { }
+
+    public class InheritedUnsentComponent : MessageHost
+    {
+        protected void OnParticleUpdateJobScheduled() { }
+    }
+
+    public class InheritedUnsentLeaf : InheritedUnsentComponent { }
+
     public class Ordinary
     {
         void OnStateIK() { }
