@@ -265,10 +265,14 @@ namespace UnityEngine.AI
         public Vector3 desiredVelocity => m_Crowd != null ? NavMesh.V(m_Crowd.nvel) : Vector3.zero;
 
         /// <summary>On a link: the link's end (measured: tests/projects/navlinks, every frame on a
-        /// link, crossing or waiting).</summary>
+        /// link, crossing or waiting). Else the corner the agent last steered by: a path given
+        /// between agent updates shows from the next update on (navlinks `incall`); without one, the
+        /// end of its path.</summary>
         public Vector3 steeringTarget =>
             isOnOffMeshLink ? CurrentLinkEnd()
-            : m_Crowd != null && m_Crowd.ncorners > 0 ? NavMesh.V(m_Crowd.corners[0].pos) : m_NextPosition;
+            : m_Crowd == null ? m_NextPosition
+            : m_Crowd.hasSteer ? NavMesh.V(m_Crowd.steerPos)
+            : FollowingPath ? NavMesh.V(m_Crowd.corridor.GetTarget()) : m_NextPosition;
 
         /// <summary>The destination as it lies on the NavMesh (the point the target was mapped to),
         /// then the end of the path found for it, partial ones included (measured:
@@ -343,6 +347,7 @@ namespace UnityEngine.AI
                 AgentSystem.CrowdOf(m_Surface)?.ResetMoveTarget(m_Crowd);
                 m_Crowd.corridor.Reset(m_Crowd.corridor.GetFirstPoly(), m_Crowd.npos);
                 m_Crowd.ncorners = 0;
+                m_Crowd.hasSteer = false;
             }
         }
 
@@ -647,7 +652,10 @@ namespace UnityEngine.AI
             m_LinkCompleting = true;
             var crowd = AgentSystem.CrowdOf(m_Surface);
             if (crowd != null)
+            {
                 m_Crowd.ncorners = m_Crowd.corridor.FindCorners(m_Crowd.corners, DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS, crowd.GetNavMeshQuery(), crowd.GetFilter(0));
+                m_Crowd.KeepSteer();
+            }
         }
 
         internal static bool LinkOccupied(int linkId) => AgentSystem.LinkOccupied(linkId);
@@ -861,22 +869,13 @@ namespace Unbound.Runtime
         static void ConfigureAvoidance(DtCrowd crowd)
         {
             s_ConfiguredPrediction = NavMesh.avoidancePredictionTime;
-            var p = new DtObstacleAvoidanceParams(crowd.GetObstacleAvoidanceParams(0));
             (int Divs, int Rings, int Depth)[] presets = { (5, 2, 1), (5, 2, 2), (7, 2, 3), (7, 3, 3) };
             for (int i = 0; i < presets.Length; i++)
             {
                 // Unity's sampling (measured, tests/projects/avoidance): Detour's adaptive patterns
-                // around 0.7 of the desired velocity, a little to its right; candidates weighed by
-                // their distance from the desired and current velocities and their time to impact
-                // within the prediction time, no side penalty.
-                var q = new DtObstacleAvoidanceParams(p);
-                q.velBias = 0.7f;
-                q.sideOffset = 0.04f;
-                q.unityVelocity = true;
-                q.weightDesVel = 1f;
-                q.weightCurVel = 0.5f;
-                q.weightSide = 0f;
-                q.weightToi = 2.5f;
+                // with the weights DtObstacleAvoidanceParams defaults to, looking as far ahead as
+                // the prediction time.
+                var q = new DtObstacleAvoidanceParams();
                 q.horizTime = NavMesh.avoidancePredictionTime;
                 q.adaptiveDivs = presets[i].Divs;
                 q.adaptiveRings = presets[i].Rings;
@@ -890,8 +889,7 @@ namespace Unbound.Runtime
             // Straight to the next corner along the corridor, as Unity's agents steer (measured).
             int flags = 0;
             if (agent.obstacleAvoidanceType != ObstacleAvoidanceType.NoObstacleAvoidance)
-                flags |= DtCrowdAgentUpdateFlags.DT_CROWD_OBSTACLE_AVOIDANCE | DtCrowdAgentUpdateFlags.DT_CROWD_SEPARATION
-                    | DtCrowdAgentUpdateFlags.UNBOUND_AVOID_EDGES;
+                flags |= DtCrowdAgentUpdateFlags.DT_CROWD_OBSTACLE_AVOIDANCE | DtCrowdAgentUpdateFlags.DT_CROWD_SEPARATION;
             if (!agent.autoBraking) flags |= DtCrowdAgentUpdateFlags.UNBOUND_NO_BRAKING;
             return new DtCrowdAgentParams
             {
@@ -899,9 +897,6 @@ namespace Unbound.Runtime
                 height = agent.height,
                 maxAcceleration = agent.acceleration,
                 maxSpeed = agent.isStopped ? 0f : agent.speed,
-                // Every neighbour the agent could meet within the prediction time (it may go and
-                // the neighbour come at full speed).
-                collisionQueryRange = agent.radius * 2f + 2f * Math.Max(agent.speed, 3.5f) * NavMesh.avoidancePredictionTime,
                 pathOptimizationRange = agent.radius * 30f,
                 separationWeight = 1.4f,
                 updateFlags = flags,
@@ -1055,6 +1050,9 @@ namespace Unbound.Runtime
             ag.nvel = moving.nvel;
             ag.dvel = moving.dvel;
             ag.desiredSpeed = moving.desiredSpeed;
+            ag.hasSteer = moving.hasSteer;
+            ag.steerPos = moving.steerPos;
+            ag.steerFlags = moving.steerFlags;
         }
 
         /// <summary>The path of an agent that was following one, planned again on the rebuilt
@@ -1326,6 +1324,27 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The crowds step: steering, avoidance, motion; then transforms follow.</summary>
+        /// <summary>Unity's agents share one proximity grid whatever their agent type, its cells
+        /// sized from all of them (see DtCrowd.GridCell) at the velocity this update steps them to.
+        /// NavMeshObstacles do not count here (Unbound's choice: Unity counts them too).</summary>
+        static void SizeGrids(float dt)
+        {
+            float horizon = NavMesh.avoidancePredictionTime, sx = 0f, sz = 0f;
+            int count = 0;
+            foreach (var agent in s_Agents)
+            {
+                var ag = agent.m_Crowd;
+                if (ag == null) continue;
+                // On a link: the velocity it crosses at (the crowd keeps none for it).
+                var vel = ag.state == DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING ? ag.NextVelocity(dt) : NavMesh.V(agent.m_Velocity);
+                DtCrowd.AddToGridCell(ag, vel, horizon, ref sx, ref sz);
+                count++;
+            }
+            if (count == 0) return;
+            float x = DtCrowd.GridCell(sx, count), z = DtCrowd.GridCell(sz, count);
+            foreach (var crowd in s_Crowds.Values) crowd.SetGridCellSize(x, z);
+        }
+
         static void UpdateCrowds()
         {
             if (s_Agents.Count == 0) return;
@@ -1359,10 +1378,11 @@ namespace Unbound.Runtime
                 else PrepareLink(agent);
                 if (agent.isOnOffMeshLink && agent.m_LinkId != 0) s_OccupiedLinks.Add(agent.m_LinkId);
             }
+            SizeGrids(dt);
             foreach (var pair in s_Crowds)
             {
                 // The enabled NavMeshObstacles, as they stand now, are among what the agents avoid.
-                ObstacleSystem.Feed(pair.Value, pair.Key);
+                ObstacleSystem.Feed(pair.Value);
                 pair.Value.Update(dt, null);
             }
             foreach (var agent in s_Agents)
@@ -1515,6 +1535,7 @@ namespace Unbound.Runtime
                 CrowdOf(agent.m_Surface)?.ResetMoveTarget(ag);
                 ag.corridor.Reset(ag.corridor.GetFirstPoly(), ag.npos);
                 ag.ncorners = 0;
+                ag.hasSteer = false;
                 agent.SetArrived(true);
                 return;
             }

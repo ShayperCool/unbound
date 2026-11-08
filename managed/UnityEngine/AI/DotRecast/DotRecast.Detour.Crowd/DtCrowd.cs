@@ -94,13 +94,6 @@ namespace DotRecast.Detour.Crowd
     @see dtObstacleAvoidanceParams, dtCrowd::setObstacleAvoidanceParams(),
          dtCrowd::getObstacleAvoidanceParams()
 
-    @var dtCrowdAgentParams::collisionQueryRange
-    @par
-
-    Collision elements include other agents and navigation mesh boundaries.
-
-    This value is often based on the agent radius and/or maximum speed. E.g. radius * 8
-
     @var dtCrowdAgentParams::pathOptimizationRange
     @par
 
@@ -434,6 +427,11 @@ namespace DotRecast.Detour.Crowd
             // Optimize path topology.
             UpdateTopologyOptimization(agents, dt);
 
+            // Unbound: Unity's agents take the step towards the last plan before steering and
+            // planning anew, and steer and plan with the velocity they move at this update (measured);
+            // their neighbours are chosen by that velocity too (tests/projects/avoidance separation).
+            Accelerate(dt, agents);
+
             // Register agents to proximity grid.
             BuildProximityGrid(agents);
 
@@ -442,10 +440,6 @@ namespace DotRecast.Detour.Crowd
 
             // Find next corner to steer to.
             FindCorners(agents, debug);
-
-            // Unbound: Unity's agents take the step towards the last plan before steering and
-            // planning anew, and steer and plan with the velocity they move at this update (measured).
-            Accelerate(dt, agents);
 
             // Calculate steering.
             CalculateSteering(agents, dt);
@@ -898,14 +892,51 @@ namespace DotRecast.Detour.Crowd
 
             _grid.Clear();
 
+            // Unbound: Unity's grid holds the agents' positions in cells sized by GridCell (over
+            // every crowd's agents when the caller gives the sizes, else over this crowd's).
+            if (_gridCellX > 0f)
+            {
+                _grid.SetCellSize(_gridCellX, _gridCellY);
+            }
+            else if (agents.Count > 0)
+            {
+                float horizon = _obstacleQueryParams[0].horizTime, sx = 0f, sz = 0f;
+                for (var i = 0; i < agents.Count; i++)
+                    AddToGridCell(agents[i], agents[i].vel, horizon, ref sx, ref sz);
+                _grid.SetCellSize(GridCell(sx, agents.Count), GridCell(sz, agents.Count));
+            }
+
             for (var i = 0; i < agents.Count; i++)
             {
                 var ag = agents[i];
                 RcVec3f p = ag.npos;
-                float r = ag.option.radius;
-                _grid.AddItem(ag, p.X - r, p.Z - r, p.X + r, p.Z + r);
+                _grid.AddItem(ag, p.X, p.Z, p.X, p.Z);
             }
         }
+
+        /// Unbound: the smallest proximity grid cell (Unity's), in metres.
+        public const float MinGridCell = 1f;
+
+        private float _gridCellX, _gridCellY;
+
+        /// Unbound: the grid cells of the next updates, along x and z (see GridCell); zero: this
+        /// crowd sizes them from its own agents.
+        public void SetGridCellSize(float x, float z)
+        {
+            _gridCellX = x;
+            _gridCellY = z;
+        }
+
+        /// Unbound: an agent's share in Unity's grid cell size: its diameter plus how far it goes
+        /// within the prediction time along each axis, at <paramref name="vel"/>.
+        public static void AddToGridCell(DtCrowdAgent ag, RcVec3f vel, float horizon, ref float sx, ref float sz)
+        {
+            sx += 2f * ag.option.radius + horizon * MathF.Abs(vel.X);
+            sz += 2f * ag.option.radius + horizon * MathF.Abs(vel.Z);
+        }
+
+        /// Unbound: Unity's grid cell along an axis: the agents' mean share, at least MinGridCell.
+        public static float GridCell(float sum, int count) => MathF.Max(MinGridCell, sum / count);
 
         private void BuildNeighbours(IList<DtCrowdAgent> agents)
         {
@@ -919,18 +950,20 @@ namespace DotRecast.Detour.Crowd
                     continue;
                 }
 
-                // Update the collision boundary after certain distance has been passed or
-                // if it has become invalid.
-                float updateThr = ag.option.collisionQueryRange * 0.25f;
-                if (RcVec.Dist2DSqr(ag.npos, ag.boundary.GetCenter()) > RcMath.Sqr(updateThr)
-                    || !ag.boundary.IsValid(_navQuery, _filters[ag.option.queryFilterType]))
+                // Unbound: only agents that avoid gather neighbours and edges (Unity's: an agent
+                // without avoidance neither avoids, keeps apart from nor is pushed by others).
+                if ((ag.option.updateFlags & DtCrowdAgentUpdateFlags.DT_CROWD_OBSTACLE_AVOIDANCE) == 0)
                 {
-                    ag.boundary.Update(ag.corridor.GetFirstPoly(), ag.npos, ag.option.collisionQueryRange, _navQuery,
-                        _filters[ag.option.queryFilterType]);
+                    ag.nneis = 0;
+                    ag.boundary.Reset();
+                    continue;
                 }
 
+                float horizon = _obstacleQueryParams[ag.option.obstacleAvoidanceType].horizTime;
+                UpdateBoundary(ag, horizon);
+
                 // Query neighbour agents
-                ag.nneis = GetNeighbours(ag.npos, ag.option.height, ag.option.collisionQueryRange, ag, ag.neis, DtCrowdConst.DT_CROWDAGENT_MAX_NEIGHBOURS, _grid);
+                ag.nneis = GetNeighbours(ag, horizon, ag.neis, DtCrowdConst.DT_CROWDAGENT_MAX_NEIGHBOURS, _grid);
             }
         }
 
@@ -977,39 +1010,99 @@ namespace DotRecast.Detour.Crowd
             return Math.Min(nneis + 1, maxNeis);
         }
 
-        private int GetNeighbours(RcVec3f pos, float height, float range, DtCrowdAgent skip, DtCrowdNeighbour[] result, int maxResult, DtProximityGrid grid)
+        /// How near (in radii) the start of a link on its path an agent takes the link (Detour's).
+        public const float LinkTriggerRadiusScale = 2.25f;
+
+        /// Unbound: the most neighbour candidates an agent's proximity query gathers (Unity's).
+        public const int NeighbourCandidates = 64;
+
+        /// Unbound: the half-width of the square an agent looks for neighbours in: its radius plus how
+        /// far it goes at full speed within the prediction time (Unity's).
+        public static float NeighbourReach(DtCrowdAgent ag, float horizon) => ag.option.radius + ag.option.maxSpeed * horizon;
+
+        /// Unbound: whether a neighbour's height span meets the agent's (Unity's: its feet are not
+        /// above the agent's head, its head not below the agent's feet).
+        public static bool HeightsOverlap(DtCrowdAgent ag, RcVec3f neiPos, float neiHeight)
+        {
+            float dy = neiPos.Y - ag.npos.Y;
+            return dy <= ag.option.height && dy >= -neiHeight;
+        }
+
+        /// Unbound: the agent's NavMesh edges, as Unity's agents keep them: none while their steering
+        /// target (as the last update found it) is the end of their path or a link within reach (their
+        /// radius plus half the way they go at full speed within the prediction time), else the
+        /// nearest edges within that reach, gathered again when the agent changes polygon or has
+        /// moved a quarter of the reach.
+        private void UpdateBoundary(DtCrowdAgent ag, float horizon)
+        {
+            float reach = ag.option.radius + 0.5f * horizon * ag.option.maxSpeed;
+            if (!ag.hasSteer || (ag.steerFlags & (DtStraightPathFlags.DT_STRAIGHTPATH_END | DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION)) != 0)
+            {
+                RcVec3f target = ag.hasSteer ? ag.steerPos : ag.corridor.GetTarget();
+                if (RcVec3f.Distance(target, ag.npos) < reach)
+                {
+                    ag.boundary.Reset();
+                    return;
+                }
+            }
+
+            long poly = ag.corridor.GetFirstPoly();
+            if (ag.boundary.GetPoly() != poly
+                || RcVec3f.DistanceSquared(ag.npos, ag.boundary.GetCenter()) > RcMath.Sqr(reach * 0.25f)
+                || !ag.boundary.IsValid(_navQuery, _filters[ag.option.queryFilterType]))
+            {
+                ag.boundary.Update(poly, ag.npos, reach, _navQuery, _filters[ag.option.queryFilterType]);
+            }
+        }
+
+        /// Unbound: an agent's neighbours as Unity's agents choose them: agents (and obstacle circles)
+        /// the proximity grid holds around the square of its neighbour reach, as or more important than it, not behind it by more
+        /// than both radii along the way it last meant to go, with heights that meet, and reachable
+        /// within the prediction time with both at full speed; the soonest reachable first, at most
+        /// <paramref name="maxResult"/>.
+        private int GetNeighbours(DtCrowdAgent skip, float horizon, DtCrowdNeighbour[] result, int maxResult, DtProximityGrid grid)
         {
             int n = 0;
+            RcVec3f pos = skip.npos;
+            float range = NeighbourReach(skip, horizon);
 
-            const int MAX_NEIS = 32;
-            Span<int> ids = stackalloc int[MAX_NEIS];
+            Span<int> ids = stackalloc int[NeighbourCandidates];
             int nids = grid.QueryItems(pos.X - range, pos.Z - range,
                 pos.X + range, pos.Z + range,
                 ids, ids.Length);
 
+            RcVec3f heading = skip.dvel;
+            float headingSqr = heading.LengthSquared();
+            bool moving = headingSqr > 0.01f;
+            if (moving) heading = heading * (1f / MathF.Sqrt(headingSqr));
+
             for (int i = 0; i < nids; ++i)
             {
                 var ag = GetAgent(ids[i]);
-                if (ag == skip)
+                if (ag == skip || ag.option.avoidancePriority > skip.option.avoidancePriority)
                 {
                     continue;
                 }
 
-                // Check for overlap.
-                RcVec3f diff = RcVec3f.Subtract(pos, ag.npos);
-                if (MathF.Abs(diff.Y) >= (height + ag.option.height) / 2.0f)
+                if (!HeightsOverlap(skip, ag.npos, ag.option.height))
                 {
                     continue;
                 }
 
-                diff.Y = 0;
-                float distSqr = diff.LengthSquared();
-                if (distSqr > RcMath.Sqr(range))
+                RcVec3f diff = RcVec3f.Subtract(ag.npos, pos);
+                float radii = skip.option.radius + ag.option.radius;
+                if (moving && RcVec3f.Dot(diff, heading) < -radii)
                 {
                     continue;
                 }
 
-                n = AddNeighbour(ag, distSqr, result, n, maxResult);
+                float time = (diff.Length() - radii) / (skip.option.maxSpeed + ag.vel.Length());
+                if (time > horizon)
+                {
+                    continue;
+                }
+
+                n = AddNeighbour(ag, time, result, n, maxResult);
             }
 
             return n;
@@ -1031,11 +1124,13 @@ namespace DotRecast.Detour.Crowd
                 if (ag.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_NONE
                     || ag.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VELOCITY)
                 {
+                    ag.hasSteer = false;
                     continue;
                 }
 
                 // Find corners for steering
                 ag.ncorners = ag.corridor.FindCorners(ag.corners, DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS, _navQuery, _filters[ag.option.queryFilterType]);
+                ag.KeepSteer();
 
                 // Check to see if the corner after the next corner is directly visible,
                 // and short cut to there.
@@ -1087,7 +1182,7 @@ namespace DotRecast.Detour.Crowd
                 }
 
                 // Check
-                float triggerRadius = ag.option.radius * 2.25f;
+                float triggerRadius = ag.option.radius * LinkTriggerRadiusScale;
                 ag.waitingForConnection = false;
                 if (ag.OverOffmeshConnection(triggerRadius))
                 {
@@ -1120,6 +1215,7 @@ namespace DotRecast.Detour.Crowd
 
                         ag.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH;
                         ag.ncorners = 0;
+                        ag.hasSteer = false;
                         ag.nneis = 0;
                         continue;
                     }
@@ -1185,7 +1281,8 @@ namespace DotRecast.Detour.Crowd
                         }
                     }
 
-                    ag.desiredSpeed = ag.option.maxSpeed;
+                    // Unbound: the speed it may plan at is the braked one (Unity's).
+                    ag.desiredSpeed = speed;
                     dvel = dvel * speed;
                     // Unbound: waiting for an occupied link, it plans to stand (see TriggerOffMeshConnections).
                     if (ag.waitingForConnection) dvel = RcVec3f.Zero;
@@ -1263,87 +1360,50 @@ namespace DotRecast.Detour.Crowd
                     continue;
                 }
 
-                // Unbound: with nothing to avoid, the velocity is the desired one as it is (Unity's: a
-                // braking or tilted desired velocity is not resampled; measured).
-                // Unbound: only neighbours as or more important than the agent count (Unity's priority).
-                int avoided = 0;
-                for (int j = 0; j < ag.nneis; ++j)
-                    if (ag.neis[j].agent.option.avoidancePriority <= ag.option.avoidancePriority) avoided++;
                 // Unbound: an agent waiting for an occupied link plans to stand, whatever comes near
-                // (Unity's; measured: tests/projects/navlinks crosstile).
-                bool avoid = !ag.waitingForConnection && (ag.option.updateFlags & DtCrowdAgentUpdateFlags.DT_CROWD_OBSTACLE_AVOIDANCE) != 0
-                    && (avoided > 0 || (ag.option.updateFlags & DtCrowdAgentUpdateFlags.UNBOUND_AVOID_EDGES) != 0 && ag.boundary.GetSegmentCount() > 0);
-                if (avoid)
+                // (Unity's; measured: tests/projects/navlinks crosstile); one about to take a link
+                // keeps its desired velocity (navlinks `areajump`).
+                if (ag.waitingForConnection || (ag.option.updateFlags & DtCrowdAgentUpdateFlags.DT_CROWD_OBSTACLE_AVOIDANCE) == 0
+                    || ag.OverOffmeshConnection(ag.option.radius * LinkTriggerRadiusScale))
                 {
-                    _obstacleQuery.Reset();
-                    _obstacleQuery.segmentReach = ag.ncorners > 0 ? RcVec.Dist2D(ag.npos, ag.corners[0].pos) + 1e-3f : float.MaxValue;
-
-                    // Add neighbours as obstacles.
-                    for (int j = 0; j < ag.nneis; ++j)
-                    {
-                        DtCrowdAgent nei = ag.neis[j].agent;
-                        if (nei.option.avoidancePriority > ag.option.avoidancePriority) continue;
-                        _obstacleQuery.AddCircle(nei.npos, nei.option.radius, nei.vel, nei.dvel);
-                    }
-
-                    // Append neighbour segments as obstacles.
-                    // Unbound: Unity's agents avoid other agents, not the NavMesh's edges (they walk
-                    // right up to them; measured): no segments unless asked for.
-                    for (int j = 0; (ag.option.updateFlags & DtCrowdAgentUpdateFlags.UNBOUND_AVOID_EDGES) != 0 && j < ag.boundary.GetSegmentCount(); ++j)
-                    {
-                        ref RcFixedArray2<RcVec3f> s = ref ag.boundary.GetSegment(j);
-                        RcVec3f s3 = s[1];
-                        //RcArrays.Copy(s, 3, s3, 0, 3);
-                        // Unbound: an edge the agent stands on does not face it (Unity's agents leave
-                        // it; measured).
-                        if (DtUtils.TriArea2D(ag.npos, s[0], s3) < 1e-5f)
-                        {
-                            continue;
-                        }
-
-                        _obstacleQuery.AddSegment(s[0], s3);
-                    }
-
-                    DtObstacleAvoidanceDebugData vod = null;
-                    if (debugAgent == ag)
-                    {
-                        vod = debug.vod;
-                    }
-
-                    // Sample new safe velocity.
-                    bool adaptive = true;
-                    int ns = 0;
-
-                    DtObstacleAvoidanceParams option = _obstacleQueryParams[ag.option.obstacleAvoidanceType];
-
-                    // Unbound: a desired velocity that meets no neighbour within the horizon is
-                    // kept as it is (Unity's; measured).
-                    if (option.unityVelocity && _obstacleQuery.DesiredVelocityIsFree(ag.npos, ag.option.radius, ag.dvel, option))
-                    {
-                        ag.nvel = ag.dvel;
-                    }
-                    else if (adaptive)
-                    {
-                        ns = _obstacleQuery.SampleVelocityAdaptive(ag.npos, ag.option.radius, ag.desiredSpeed,
-                            ag.vel, ag.dvel, out ag.nvel, option, vod);
-                    }
-                    else
-                    {
-                        ns = _obstacleQuery.SampleVelocityGrid(ag.npos, ag.option.radius,
-                            ag.desiredSpeed, ag.vel, ag.dvel, out ag.nvel, option, vod);
-                    }
-
-                    _velocitySampleCount += ns;
-                    // Unbound: a desired velocity nothing makes the agent change stays whole (Unity's
-                    // keeps its height: a steering target above the agent tilts it; measured).
-                    if (RcVec.Dist2DSqr(ag.nvel, ag.dvel) < 1e-8f) ag.nvel = ag.dvel;
-                }
-                else
-                {
-                    // If not using velocity planning, new velocity is directly the desired velocity.
                     ag.nvel = ag.dvel;
+                    continue;
                 }
+
+                _obstacleQuery.Reset();
+
+                // Add neighbours as obstacles, relative to the agent.
+                for (int j = 0; j < ag.nneis; ++j)
+                {
+                    DtCrowdAgent nei = ag.neis[j].agent;
+                    _obstacleQuery.AddCircle(RcVec3f.Subtract(nei.npos, ag.npos), nei.option.radius + ag.option.radius,
+                        nei.vel, AvoidanceShare(ag, nei));
+                }
+
+                // Append the NavMesh's edges as obstacles.
+                for (int j = 0; j < ag.boundary.GetSegmentCount(); ++j)
+                {
+                    ref RcFixedArray2<RcVec3f> s = ref ag.boundary.GetSegment(j);
+                    _obstacleQuery.AddSegment(RcVec3f.Subtract(s[0], ag.npos), RcVec3f.Subtract(s[1], ag.npos));
+                }
+
+                DtObstacleAvoidanceDebugData vod = debugAgent == ag ? debug.vod : null;
+                DtObstacleAvoidanceParams option = _obstacleQueryParams[ag.option.obstacleAvoidanceType];
+                _velocitySampleCount += _obstacleQuery.SampleVelocityAdaptive(ag.desiredSpeed, ag.vel, ag.dvel, out ag.nvel, option, vod);
             }
+        }
+
+        /// Unbound: the share of a neighbour's velocity in the velocity an agent avoids it with
+        /// (Unity's): an agent the neighbour does not avoid in turn, or a more important one, is
+        /// avoided alone (1); equals that avoid each other share it (0.5).
+        private static float AvoidanceShare(DtCrowdAgent ag, DtCrowdAgent nei)
+        {
+            if (nei.option.avoidancePriority < ag.option.avoidancePriority)
+                return 1f;
+            for (int k = 0; k < nei.nneis; ++k)
+                if (nei.neis[k].agent == ag)
+                    return 0.5f;
+            return 1f;
         }
 
         private void Accelerate(float dt, IList<DtCrowdAgent> agents)
@@ -1562,6 +1622,7 @@ namespace DotRecast.Detour.Crowd
             ag.pvel = ag.vel;
             ag.braking = false;
             ag.ncorners = ag.corridor.FindCorners(ag.corners, DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS, _navQuery, filter);
+            ag.KeepSteer();
         }
 
         private float Tween(float t, float t0, float t1)

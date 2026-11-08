@@ -239,18 +239,17 @@ namespace Unbound.Runtime
     //   longer than 16 times its width (or with no width) gets 16 circles of larger radius, whose
     //   bulge grows with its length; that is reported once per run.
     // C6 (Unbound's choice, unmeasured): an obstacle counts for an agent whose height span overlaps
-    //   its own. The span is the agent type's height (NavMeshBuildSettings.agentHeight): the test is
-    //   exact only for an agent whose height equals its agent type's height; for another height h
-    //   it is shifted by (h - agent type height) / 2.
+    //   its own (the test Unity's agents apply to each other: the obstacle's bottom is not above the
+    //   agent's head, its top not below the agent's feet).
     // C7 (Unbound's choice, unmeasured): an obstacle circle whose centre lies beyond an agent's
     //   neighbour range is not seen, and circles take places among the agent's nearest neighbours as
-    //   other agents do. Limit: Detour's crowd gathers at most 32 neighbour candidates per agent from
-    //   the proximity-grid cells its range touches before it keeps the nearest (DtCrowd
-    //   GetNeighbours), so obstacle circles there can leave agents out. To keep that from happening
-    //   needlessly, only circles that can be an agent's neighbour are fed: within some walking
-    //   agent's neighbour range plus the circle's radius, with an overlapping height span (C6). When
-    //   an agent's candidates still exceed 32 with obstacle circles among them, it is reported once
-    //   per run.
+    //   other agents do. Limit: the crowd gathers at most DtCrowd.NeighbourCandidates (64) neighbour
+    //   candidates per agent from the proximity-grid cells its range touches before it keeps the
+    //   soonest reachable (DtCrowd GetNeighbours), so obstacle circles there can leave agents out. To
+    //   keep that from happening needlessly, only circles that can be an agent's neighbour are fed:
+    //   within the square of some walking agent's neighbour reach, with an overlapping height span
+    //   (C6). When an agent's candidates still exceed that with obstacle circles among them, it is
+    //   reported once per run.
     // C8: agents keep apart from obstacle circles and are pushed out of them, including agents with
     //   NoObstacleAvoidance. Documented support: AI Navigation 2.0 Manual, NavMesh Agent component
     //   (https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/NavMeshAgent.html),
@@ -452,9 +451,9 @@ namespace Unbound.Runtime
         /// <summary>The most circles a box becomes (C5).</summary>
         internal const int MaxBoxCircles = 16;
 
-        /// <summary>The most neighbour candidates Detour's crowd gathers for an agent before it keeps
-        /// the nearest (DtCrowd.GetNeighbours; C7).</summary>
-        internal const int NeighbourCandidates = 32;
+        /// <summary>The most neighbour candidates the crowd gathers for an agent before it keeps the
+        /// soonest reachable (DtCrowd.GetNeighbours; C7).</summary>
+        internal const int NeighbourCandidates = DtCrowd.NeighbourCandidates;
 
         readonly struct Circle
         {
@@ -485,10 +484,10 @@ namespace Unbound.Runtime
         static readonly List<Circle> s_Near = new List<Circle>();
         static readonly List<RcVec3f> s_NearPositions = new List<RcVec3f>();
 
-        /// <summary>Before the crowd of <paramref name="surface"/> updates: the enabled obstacles,
+        /// <summary>Before <paramref name="crowd"/> updates: the enabled obstacles,
         /// where they are now, become its obstacle circles, those near a walking agent (C7). Without
         /// obstacles (and none fed before) the crowd is left untouched.</summary>
-        internal static void Feed(DtCrowd crowd, NavWorld.Surface surface)
+        internal static void Feed(DtCrowd crowd)
         {
             if (!s_InCrowd.TryGetValue(crowd, out var members))
             {
@@ -499,17 +498,15 @@ namespace Unbound.Runtime
             s_Circles.Clear();
             foreach (var obstacle in s_Obstacles)
                 if (obstacle != null && obstacle.isActiveAndEnabled && !IsCarved(obstacle)) AddCircles(obstacle, s_Circles);
-            // The agents' neighbour test compares their feet with the circle's position over half
-            // their heights together: placed half the agent type's height under the obstacle's
-            // middle, it passes when the height spans overlap (C6).
-            float agentHeight = surface != null ? surface.Settings.agentHeight : 2f;
+            // The circle stands on the obstacle's bottom, as tall as it (C6).
             var agents = crowd.GetActiveAgents();
+            float cell = LargestGridCell(agents, s_Circles);
             s_Near.Clear();
             s_NearPositions.Clear();
             foreach (var c in s_Circles)
             {
-                var position = new RcVec3f(c.Center.x, (c.Bottom + c.Top) * 0.5f - agentHeight * 0.5f, c.Center.z);
-                if (!NearAWalkingAgent(agents, position, c)) continue;
+                var position = new RcVec3f(c.Center.x, c.Bottom, c.Center.z);
+                if (!NearAWalkingAgent(agents, position, c, cell)) continue;
                 s_Near.Add(c);
                 s_NearPositions.Add(position);
             }
@@ -530,7 +527,6 @@ namespace Unbound.Runtime
                     height = c.Height,
                     maxAcceleration = 0f,
                     maxSpeed = 0f,
-                    collisionQueryRange = 0f,
                     pathOptimizationRange = 0f,
                     separationWeight = 0f,
                     updateFlags = 0,
@@ -557,23 +553,39 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Whether the circle, placed at <paramref name="position"/>, can be the neighbour of
-        /// a walking agent of the crowd: within its neighbour range plus the circle's radius, with
-        /// the crowd's height test passing (C6, C7).</summary>
-        static bool NearAWalkingAgent(IList<DtCrowdAgent> agents, RcVec3f position, Circle circle)
+        /// a walking agent of the crowd: its extent meets the square of the agent's neighbour reach
+        /// grown by a grid cell (the crowd gathers whole cells),
+        /// with the crowd's height test passing (C6, C7).</summary>
+        static bool NearAWalkingAgent(IList<DtCrowdAgent> agents, RcVec3f position, Circle circle, float cell)
         {
             float height = circle.Height;
+            float horizon = NavMesh.avoidancePredictionTime;
             for (int i = 0; i < agents.Count; i++)
             {
                 var ag = agents[i];
                 // Obstacle circles are never walking; agents on links or off the NavMesh do not look
                 // for neighbours.
                 if (ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING) continue;
-                if (MathF.Abs(ag.npos.Y - position.Y) >= (ag.option.height + height) * 0.5f) continue;
-                float dx = ag.npos.X - position.X, dz = ag.npos.Z - position.Z;
-                float reach = ag.option.collisionQueryRange + circle.Radius;
-                if (dx * dx + dz * dz <= reach * reach) return true;
+                if (!DtCrowd.HeightsOverlap(ag, position, height)) continue;
+                float reach = DtCrowd.NeighbourReach(ag, horizon) + circle.Radius + cell;
+                if (MathF.Abs(ag.npos.X - position.X) <= reach && MathF.Abs(ag.npos.Z - position.Z) <= reach) return true;
             }
             return false;
+        }
+
+        /// <summary>The widest grid cell the crowd can size this update (it takes the mean of what
+        /// these give, see DtCrowd.BuildProximityGrid).</summary>
+        static float LargestGridCell(IList<DtCrowdAgent> agents, List<Circle> circles)
+        {
+            float horizon = NavMesh.avoidancePredictionTime, cell = DtCrowd.MinGridCell;
+            for (int i = 0; i < agents.Count; i++)
+            {
+                var ag = agents[i];
+                cell = MathF.Max(cell, 2f * ag.option.radius + horizon * MathF.Max(MathF.Abs(ag.vel.X), MathF.Abs(ag.vel.Z)));
+            }
+            foreach (var c in circles)
+                cell = MathF.Max(cell, 2f * c.Radius + horizon * Mathf.Max(Mathf.Abs(c.Velocity.x), Mathf.Abs(c.Velocity.z)));
+            return cell;
         }
 
         /// <summary>Reports once when a walking agent's neighbour query will gather more candidates
@@ -583,24 +595,25 @@ namespace Unbound.Runtime
         static void CheckCandidates(DtCrowd crowd, IList<DtCrowdAgent> agents, int fedBefore)
         {
             if (agents.Count - fedBefore + s_Near.Count <= NeighbourCandidates) return;
-            float inv = 1.0f / crowd.GetGrid().GetCellSize();
+            // The cells the crowd last sized (the grid holds positions).
+            float invX = 1.0f / crowd.GetGrid().GetCellSizeX(), invZ = 1.0f / crowd.GetGrid().GetCellSizeY();
             for (int i = 0; i < agents.Count; i++)
             {
                 var ag = agents[i];
                 if (ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING) continue;
-                float range = ag.option.collisionQueryRange;
-                int x0 = Cell(ag.npos.X - range, inv), x1 = Cell(ag.npos.X + range, inv);
-                int z0 = Cell(ag.npos.Z - range, inv), z1 = Cell(ag.npos.Z + range, inv);
+                float range = DtCrowd.NeighbourReach(ag, NavMesh.avoidancePredictionTime);
+                int x0 = Cell(ag.npos.X - range, invX), x1 = Cell(ag.npos.X + range, invX);
+                int z0 = Cell(ag.npos.Z - range, invZ), z1 = Cell(ag.npos.Z + range, invZ);
                 int candidates = 0, circles = 0;
                 for (int j = 0; j < agents.Count; j++)
                 {
                     var other = agents[j];
                     // Last update's circles are replaced by this update's below.
                     if (other.option.userData is NavMeshObstacle) continue;
-                    if (InCells(other.npos.X, other.npos.Z, other.option.radius, x0, x1, z0, z1, inv)) candidates++;
+                    if (InCells(other.npos.X, other.npos.Z, x0, x1, z0, z1, invX, invZ)) candidates++;
                 }
                 for (int j = 0; j < s_Near.Count; j++)
-                    if (InCells(s_NearPositions[j].X, s_NearPositions[j].Z, s_Near[j].Radius, x0, x1, z0, z1, inv)) circles++;
+                    if (InCells(s_NearPositions[j].X, s_NearPositions[j].Z, x0, x1, z0, z1, invX, invZ)) circles++;
                 if (circles == 0 || candidates + circles <= NeighbourCandidates) continue;
                 s_WarnedCandidates = true;
                 Debug.LogWarning("Unbound: " + (candidates + circles) + " NavMesh agents and NavMeshObstacle circles ("
@@ -611,11 +624,14 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>The proximity grid's cell of a coordinate, as Detour's grid computes it.</summary>
+        /// <summary>The proximity grid's cell of a coordinate, as the crowd's grid computes it.</summary>
         static int Cell(float v, float inv) => (int)MathF.Floor(v * inv);
 
-        static bool InCells(float x, float z, float r, int x0, int x1, int z0, int z1, float inv) =>
-            Cell(x - r, inv) <= x1 && Cell(x + r, inv) >= x0 && Cell(z - r, inv) <= z1 && Cell(z + r, inv) >= z0;
+        static bool InCells(float x, float z, int x0, int x1, int z0, int z1, float invX, float invZ)
+        {
+            int cx = Cell(x, invX), cz = Cell(z, invZ);
+            return cx >= x0 && cx <= x1 && cz >= z0 && cz <= z1;
+        }
 
         /// <summary>The obstacle's shape as circles in the horizontal plane, with its height span.</summary>
         static void AddCircles(NavMeshObstacle obstacle, List<Circle> into)

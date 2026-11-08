@@ -16,7 +16,7 @@ namespace UnityEngine.Tests
     /// obstacle's motion and the height-span test are Unbound's choices (unmeasured); the bounds the
     /// tests check include per-step box clearance, without guaranteeing progress round long walls;
     /// other tests state the cover's bound (C5 in ObstacleSystem: circles at most sqrt(2) times a
-    /// box's half-width) or the crowd's 32 neighbour candidates (C7).
+    /// box's half-width) or the crowd's 64 neighbour candidates (C7).
     /// The level is one 20 m by 10 m platform; an agent walks from x = -8 to x = 8 along z = 0.
     /// The agent update runs directly at a fixed 0.02 s step, so this shares the frame-stepping
     /// collection (the global clock).</summary>
@@ -334,10 +334,10 @@ namespace UnityEngine.Tests
                 Assert.Single(warnings, w => w.Contains("times as long as it is wide"));
                 Assert.DoesNotContain(warnings, w => w.Contains("neighbours its avoidance considers"));
 
-                // 40 small obstacles near the agent: with the box's 16 circles and the agent, more
-                // than the 32 neighbour candidates the crowd gathers (C7).
-                for (int i = 0; i < 40; i++)
-                    Capsule(new Vector3(-4f + 0.2f * i, 1f, -3f), 0.05f);
+                // 60 small obstacles near the agent: with the box's 16 circles and the agent, more
+                // than the 64 neighbour candidates the crowd gathers (C7).
+                for (int i = 0; i < 60; i++)
+                    Capsule(new Vector3(-7f + 0.1f * i, 1f, -3f), 0.05f);
                 Step();
                 Step();
                 Assert.Single(warnings, w => w.Contains("times as long as it is wide"));

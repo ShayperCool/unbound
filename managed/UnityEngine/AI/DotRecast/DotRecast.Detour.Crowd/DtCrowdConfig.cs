@@ -31,8 +31,8 @@ namespace DotRecast.Detour.Crowd
         public float targetReplanDelay = 1.0f; // Min time between target re-planning (in seconds)
         public int maxTopologyOptimizationIterations = 32; // Max number of sliced path finding iterations executed per topology optimization per agent
         public float collisionResolveFactor = 0.7f;
-        public int maxObstacleAvoidanceCircles = 6; // Max number of neighbour agents to consider in obstacle avoidance processing
-        public int maxObstacleAvoidanceSegments = 128; // Max number of neighbour segments to consider in obstacle avoidance processing
+        public int maxObstacleAvoidanceCircles = DtCrowdConst.DT_CROWDAGENT_MAX_NEIGHBOURS; // Max number of neighbour agents to consider in obstacle avoidance processing
+        public int maxObstacleAvoidanceSegments = DtLocalBoundary.MAX_LOCAL_SEGS; // Max number of neighbour segments to consider in obstacle avoidance processing
 
         public DtCrowdConfig(float maxAgentRadius)
         {

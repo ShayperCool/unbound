@@ -28,14 +28,17 @@ namespace DotRecast.Detour.Crowd
 {
     internal class DtLocalBoundary
     {
-        public static readonly int MAX_LOCAL_SEGS = int.TryParse(Environment.GetEnvironmentVariable("T_SEGS"), out var t1) ? t1 : 32;
-        public static readonly int MAX_LOCAL_POLYS = int.TryParse(Environment.GetEnvironmentVariable("T_POLYS"), out var t2) ? t2 : 64;
+        // Unbound: Unity's agents keep the 8 nearest edges of up to 16 polygons around them.
+        public const int MAX_LOCAL_SEGS = 8;
+        public const int MAX_LOCAL_POLYS = 16;
 
         private RcVec3f m_center = new RcVec3f();
         private readonly DtSegment[] m_segs = new DtSegment[MAX_LOCAL_SEGS];
         private int m_nsegs;
         private readonly long[] m_polys = new long[MAX_LOCAL_POLYS];
         private int m_npolys;
+        // Unbound: the polygon the edges were gathered from (Unity's agents gather them again on another).
+        private long m_poly;
 
         public DtLocalBoundary()
         {
@@ -47,6 +50,7 @@ namespace DotRecast.Detour.Crowd
             m_center.X = m_center.Y = m_center.Z = float.MaxValue;
             m_npolys = 0;
             m_nsegs = 0;
+            m_poly = 0;
         }
 
         protected void AddSegment(float dist, RcSegmentVert s)
@@ -104,7 +108,7 @@ namespace DotRecast.Detour.Crowd
             seg.d = dist;
         }
 
-        public void Update(long startRef, RcVec3f pos, float collisionQueryRange, DtNavMeshQuery navquery, IDtQueryFilter filter)
+        public void Update(long startRef, RcVec3f pos, float range, DtNavMeshQuery navquery, IDtQueryFilter filter)
         {
             const int MAX_SEGS_PER_POLY = DtDetour.DT_VERTS_PER_POLYGON * 3;
 
@@ -115,9 +119,10 @@ namespace DotRecast.Detour.Crowd
             }
 
             m_center = pos;
+            m_poly = startRef;
 
             // First query non-overlapping polygons.
-            var status = navquery.FindLocalNeighbourhood(startRef, pos, collisionQueryRange, filter, m_polys.AsSpan(), null, out m_npolys, MAX_LOCAL_POLYS);
+            var status = navquery.FindLocalNeighbourhood(startRef, pos, range, filter, m_polys.AsSpan(), null, out m_npolys, MAX_LOCAL_POLYS);
             if (status.Succeeded())
             {
                 // Secondly, store all polygon edges.
@@ -138,7 +143,7 @@ namespace DotRecast.Detour.Crowd
 
                             // Skip too distant segments.
                             var distSqr = DtUtils.DistancePtSegSqr2D(pos, s0, s3, out var tseg);
-                            if (distSqr > RcMath.Sqr(collisionQueryRange))
+                            if (distSqr > RcMath.Sqr(range))
                             {
                                 continue;
                             }
@@ -167,6 +172,11 @@ namespace DotRecast.Detour.Crowd
             }
 
             return true;
+        }
+
+        public long GetPoly()
+        {
+            return m_poly;
         }
 
         public RcVec3f GetCenter()

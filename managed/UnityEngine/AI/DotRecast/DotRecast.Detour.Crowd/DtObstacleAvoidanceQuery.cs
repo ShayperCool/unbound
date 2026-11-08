@@ -20,21 +20,37 @@ freely, subject to the following restrictions:
 
 using System;
 using System.Runtime.CompilerServices;
-using DotRecast.Core;
+using System;
 using DotRecast.Core.Numerics;
-
 
 namespace DotRecast.Detour.Crowd
 {
+    /// Unbound: velocity sampling as Unity's agents sample (tests/projects/avoidance, navcost
+    /// `loop.redirect*`): the obstacles are kept relative to the agent in the horizontal plane;
+    /// the desired velocity is the first candidate, then Detour's adaptive rings of candidates
+    /// around a biased desired velocity; each is weighed by its distance from the desired and the
+    /// current velocity and its time to impact within the prediction time.
     internal class DtObstacleAvoidanceQuery
     {
         public const int DT_MAX_PATTERN_DIVS = 32; // < Max numver of adaptive divs.
         public const int DT_MAX_PATTERN_RINGS = 4;
-        public const float DT_PI = 3.14159265f;
+
+        /// Unbound: the most obstacle circles and edges an agent avoids at once (Unity's).
+        public const int MaxObstacles = 104;
+        /// Unbound: the agent's own sizes below which sampling gives up (Unity's).
+        const float MinVelocity = 1e-5f;
+        /// Unbound: how far right of the biased desired velocity the pattern is centred, as a share
+        /// of the desired velocity (Unity's).
+        const float CentreSideOffset = 0.04f;
+        /// Unbound: an edge nearer than this to the agent counts as at least SegmentMinDistance from
+        /// it on the edge's outer side, whichever side the agent is on (Unity's).
+        const float SegmentTouchDistance = 0.05f;
+        const float SegmentMinDistance = 0.025f;
+        /// Unbound: an edge's time to impact counts double (it is divided by this; Unity's).
+        const float SegmentTimeWeight = 0.5f;
 
         private DtObstacleAvoidanceParams m_params;
         private float m_invHorizTime;
-        private float m_vmax;
         private float m_invVmax;
 
         private readonly int m_maxCircles;
@@ -45,27 +61,17 @@ namespace DotRecast.Detour.Crowd
         private readonly DtObstacleSegment[] m_segments;
         private int m_nsegments;
 
-        /// Unbound: how far ahead the NavMesh's edges count: up to the agent's next corner (Unity's
-        /// agents do not avoid an edge they would only meet past it; measured).
-        public float segmentReach = float.MaxValue;
-
         public DtObstacleAvoidanceQuery(int maxCircles, int maxSegments)
         {
-            m_maxCircles = maxCircles;
-            m_ncircles = 0;
+            m_maxCircles = Math.Min(maxCircles, MaxObstacles);
             m_circles = new DtObstacleCircle[m_maxCircles];
             for (int i = 0; i < m_maxCircles; i++)
-            {
                 m_circles[i] = new DtObstacleCircle();
-            }
 
-            m_maxSegments = maxSegments;
-            m_nsegments = 0;
+            m_maxSegments = Math.Min(maxSegments, MaxObstacles);
             m_segments = new DtObstacleSegment[m_maxSegments];
             for (int i = 0; i < m_maxSegments; i++)
-            {
                 m_segments[i] = new DtObstacleSegment();
-            }
         }
 
         public void Reset()
@@ -74,484 +80,226 @@ namespace DotRecast.Detour.Crowd
             m_nsegments = 0;
         }
 
-        public void AddCircle(RcVec3f pos, float rad, RcVec3f vel, RcVec3f dvel)
+        /// A circle at <paramref name="rel"/> from the agent (x, z) of the agent's and the
+        /// neighbour's radii together, moving at <paramref name="vel"/>. <paramref name="weight"/> is
+        /// the neighbour's share in the relative velocity (1: the agent avoids it alone, 0.5: both
+        /// avoid each other).
+        public void AddCircle(RcVec3f rel, float rad, RcVec3f vel, float weight)
         {
             if (m_ncircles >= m_maxCircles)
                 return;
 
             DtObstacleCircle cir = m_circles[m_ncircles++];
-            cir.p = pos;
+            cir.p = new RcVec3f(rel.X, 0f, rel.Z);
             cir.rad = rad;
-            cir.vel = vel;
-            cir.dvel = dvel;
+            cir.vel = new RcVec3f(vel.X, 0f, vel.Z);
+            cir.weight = weight;
         }
 
+        /// A NavMesh edge from <paramref name="p"/> to <paramref name="q"/>, relative to the agent,
+        /// oriented as the NavMesh's wall edges are (the walkable side where p.z·dx − p.x·dz ≥ 0 puts
+        /// the agent). An edge the agent is behind does not count; one nearer than
+        /// SegmentTouchDistance counts, moved out to at least SegmentMinDistance from the agent.
         public void AddSegment(RcVec3f p, RcVec3f q)
         {
             if (m_nsegments >= m_maxSegments)
                 return;
 
+            float dx = q.X - p.X, dz = q.Z - p.Z;
+            float len2 = dx * dx + dz * dz;
+            float cx = p.X, cz = p.Z;
+            if (len2 != 0f)
+            {
+                float t = Math.Clamp((-p.X * dx - p.Z * dz) / len2, 0f, 1f);
+                cx += t * dx;
+                cz += t * dz;
+            }
+
+            if (cx * cx + cz * cz < SegmentTouchDistance * SegmentTouchDistance)
+            {
+                float len = MathF.Sqrt(len2);
+                if (len > 1e-6f)
+                {
+                    float ux = dx / len, uz = dz / len;
+                    // The outward normal (-uz, ux); how far the edge's line is in front of the agent.
+                    float push = MathF.Max(SegmentMinDistance - (ux * q.Z - uz * q.X), 0f);
+                    p = new RcVec3f(p.X - uz * push, 0f, p.Z + ux * push);
+                    q = new RcVec3f(q.X - uz * push, 0f, q.Z + ux * push);
+                }
+            }
+            else if (p.Z * dx - p.X * dz < 0f)
+            {
+                return;
+            }
+
             DtObstacleSegment seg = m_segments[m_nsegments++];
-            seg.p = p;
-            seg.q = q;
+            seg.p = new RcVec3f(p.X, 0f, p.Z);
+            seg.q = new RcVec3f(q.X, 0f, q.Z);
         }
 
-        public int GetObstacleCircleCount()
-        {
-            return m_ncircles;
-        }
+        public int GetObstacleCircleCount() => m_ncircles;
 
-        public DtObstacleCircle GetObstacleCircle(int i)
-        {
-            return m_circles[i];
-        }
+        public DtObstacleCircle GetObstacleCircle(int i) => m_circles[i];
 
-        public int GetObstacleSegmentCount()
-        {
-            return m_nsegments;
-        }
+        public int GetObstacleSegmentCount() => m_nsegments;
 
-        public DtObstacleSegment GetObstacleSegment(int i)
-        {
-            return m_segments[i];
-        }
+        public DtObstacleSegment GetObstacleSegment(int i) => m_segments[i];
 
-        private void Prepare(RcVec3f pos, RcVec3f dvel)
+        /// The time the agent, at the origin, moving at <paramref name="vcand"/> takes to meet the
+        /// nearest obstacle, at most the prediction time.
+        private float TimeToImpact(RcVec3f vcand, RcVec3f vel)
         {
-            // Prepare obstacles
+            float tmin = m_params.horizTime;
             for (int i = 0; i < m_ncircles; ++i)
             {
                 DtObstacleCircle cir = m_circles[i];
+                float w = cir.weight;
+                float vx = vcand.X - ((1f - w) * vel.X + w * cir.vel.X);
+                float vz = vcand.Z - ((1f - w) * vel.Z + w * cir.vel.Z);
+                float a = vx * vx + vz * vz;
+                if (a < 1e-4f)
+                    continue; // not moving towards or away from it
 
-                // Side
-                RcVec3f pa = pos;
-                RcVec3f pb = cir.p;
+                float b = vx * cir.p.X + vz * cir.p.Z;
+                float c = cir.p.X * cir.p.X + cir.p.Z * cir.p.Z - cir.rad * cir.rad;
+                float d = b * b - c * a;
+                if (d < 0f)
+                    continue; // no intersection
 
-                RcVec3f orig = new RcVec3f();
-                RcVec3f dv = new RcVec3f();
-                cir.dp = RcVec3f.Subtract(pb, pa);
-                cir.dp = RcVec3f.Normalize(cir.dp);
-                dv = RcVec3f.Subtract(cir.dvel, dvel);
-
-                float a = DtUtils.TriArea2D(orig, cir.dp, dv);
-                if (a < 0.01f)
+                float inva = 1f / a;
+                float rd = MathF.Sqrt(d);
+                float t = (b - rd) * inva;
+                if (t < 0f)
                 {
-                    cir.np.X = -cir.dp.Z;
-                    cir.np.Z = cir.dp.X;
+                    // Overlapping: the sooner it gets out, the more it counts.
+                    float tout = (b + rd) * inva;
+                    if (tout > 0f)
+                        t = t * -2f / tout;
                 }
-                else
-                {
-                    cir.np.X = cir.dp.Z;
-                    cir.np.Z = -cir.dp.X;
-                }
+
+                if (t >= 0f)
+                    tmin = MathF.Min(t, tmin);
             }
 
             for (int i = 0; i < m_nsegments; ++i)
             {
                 DtObstacleSegment seg = m_segments[i];
+                float sx = seg.q.X - seg.p.X, sz = seg.q.Z - seg.p.Z;
+                float den = sx * vcand.Z - sz * vcand.X;
+                float t = float.MaxValue;
+                if (MathF.Abs(den) >= 1e-6f)
+                {
+                    float inv = 1f / den;
+                    float along = (-sz * seg.p.X + sx * seg.p.Z) * inv;
+                    float s = (-seg.p.X * vcand.Z + seg.p.Z * vcand.X) * inv;
+                    if (along >= 0f && s >= 0f && s <= 1f)
+                        t = along;
+                }
 
-                // Precalc if the agent is really close to the segment.
-                float r = 0.01f;
-                var distSqr = DtUtils.DistancePtSegSqr2D(pos, seg.p, seg.q, out var t);
-                seg.touch = distSqr < RcMath.Sqr(r);
+                tmin = MathF.Min(t / SegmentTimeWeight, tmin);
             }
+
+            return tmin;
         }
 
-        private bool SweepCircleCircle(RcVec3f c0, float r0, RcVec3f v, RcVec3f c1, float r1, out float tmin, out float tmax)
+        private float ProcessSample(RcVec3f vcand, float cs, RcVec3f vel, RcVec3f dvel, DtObstacleAvoidanceDebugData debug)
         {
-            const float EPS = 0.0001f;
-
-            tmin = 0;
-            tmax = 0;
-
-            RcVec3f s = RcVec3f.Subtract(c1, c0);
-            float r = r0 + r1;
-            float c = s.Dot2D(s) - r * r;
-            float a = v.Dot2D(v);
-            if (a < EPS)
-                return false; // not moving
-
-            // Overlap, calc time to exit.
-            float b = v.Dot2D(s);
-            float d = b * b - a * c;
-            // Unbound: a grazing path does not hit (Unity's agents pass at exactly the radii).
-            if (d < (m_params.unityVelocity ? 1e-4f : 0.0f))
-                return false; // no intersection.
-
-            a = 1.0f / a;
-            float rd = MathF.Sqrt(d);
-
-            tmin = (b - rd) * a;
-            tmax = (b + rd) * a;
-
-            return true;
-        }
-
-        private bool IsectRaySeg(RcVec3f ap, RcVec3f u, RcVec3f bp, RcVec3f bq, ref float t)
-        {
-            RcVec3f v = RcVec3f.Subtract(bq, bp);
-            RcVec3f w = RcVec3f.Subtract(ap, bp);
-            float d = RcVec.Perp2D(u, v);
-            if (MathF.Abs(d) < 1e-6f)
-                return false;
-
-            d = 1.0f / d;
-            t = RcVec.Perp2D(v, w) * d;
-            if (t < 0 || t > 1)
-                return false;
-
-            float s = RcVec.Perp2D(u, w) * d;
-            if (s < 0 || s > 1)
-                return false;
-
-            return true;
-        }
-
-        /**
-     * Calculate the collision penalty for a given velocity vector
-     *
-     * @param vcand
-     *            sampled velocity
-     * @param dvel
-     *            desired velocity
-     * @param minPenalty
-     *            threshold penalty for early out
-     */
-        private float ProcessSample(RcVec3f vcand, float cs, RcVec3f pos, float rad, RcVec3f vel, RcVec3f dvel,
-            float minPenalty, DtObstacleAvoidanceDebugData debug)
-        {
-            // penalty for straying away from the desired and current velocities
+            float tmin = TimeToImpact(vcand, vel);
             float vpen = m_params.weightDesVel * (RcVec.Dist2D(vcand, dvel) * m_invVmax);
             float vcpen = m_params.weightCurVel * (RcVec.Dist2D(vcand, vel) * m_invVmax);
-
-            // find the threshold hit time to bail out based on the early out penalty
-            // (see how the penalty is calculated below to understand)
-            float minPen = minPenalty - vpen - vcpen;
-            float tThresold = (m_params.weightToi / minPen - 0.1f) * m_params.horizTime;
-            if (tThresold - m_params.horizTime > -float.MinValue)
-                return minPenalty; // already too much
-
-            // Find min time of impact and exit amongst all obstacles.
-            float tmin = m_params.horizTime;
-            float side = 0;
-            int nside = 0;
-
-            for (int i = 0; i < m_ncircles; ++i)
-            {
-                DtObstacleCircle cir = m_circles[i];
-
-                // RVO
-                // Unbound: Unity's agents take the whole avoidance on themselves: the relative
-                // velocity is the candidate's against the neighbour's velocity (measured).
-                RcVec3f vab = m_params.unityVelocity ? RcVec3f.Subtract(vcand, cir.vel) : RcVec3f.Subtract(RcVec3f.Subtract(vcand * 2, vel), cir.vel);
-
-                // Side
-                side += Math.Clamp(Math.Min(cir.dp.Dot2D(vab) * 0.5f + 0.5f, cir.np.Dot2D(vab) * 2), 0.0f, 1.0f);
-                nside++;
-
-                if (!SweepCircleCircle(pos, rad, vab, cir.p, cir.rad, out var htmin, out var htmax))
-                    continue;
-
-                // Handle overlapping obstacles.
-                if (htmin < 0.0f && htmax > 0.0f)
-                {
-                    // Unbound: Unity's agents only mind an overlapping neighbour they move towards.
-                    if (m_params.unityVelocity && vab.Dot2D(RcVec3f.Subtract(cir.p, pos)) <= 0.0f)
-                        continue;
-                    // Avoid more when overlapped.
-                    htmin = -htmin * 0.5f;
-                }
-
-                if (htmin >= 0.0f)
-                {
-                    // The closest obstacle is somewhere ahead of us, keep track of nearest obstacle.
-                    if (htmin < tmin)
-                    {
-                        tmin = htmin;
-                        if (tmin < tThresold)
-                            return minPenalty;
-                    }
-                }
-            }
-
-            for (int i = 0; i < m_nsegments; ++i)
-            {
-                DtObstacleSegment seg = m_segments[i];
-                float htmin = 0;
-
-                if (seg.touch)
-                {
-                    // Special case when the agent is very close to the segment.
-                    RcVec3f sdir = RcVec3f.Subtract(seg.q, seg.p);
-                    RcVec3f snorm = new RcVec3f();
-                    snorm.X = -sdir.Z;
-                    snorm.Z = sdir.X;
-                    // If the velocity is pointing towards the segment, no collision.
-                    if (snorm.Dot2D(vcand) < 0.0f)
-                        continue;
-                    // Else immediate collision.
-                    htmin = 0.0f;
-                }
-                else
-                {
-                    if (!IsectRaySeg(pos, vcand, seg.p, seg.q, ref htmin))
-                        continue;
-                    if (htmin * MathF.Sqrt(vcand.X * vcand.X + vcand.Z * vcand.Z) > segmentReach)
-                        continue;
-                }
-
-                // Avoid less when facing walls.
-                htmin *= 2.0f;
-
-                // The closest obstacle is somewhere ahead of us, keep track of nearest obstacle.
-                if (htmin < tmin)
-                {
-                    tmin = htmin;
-                    if (tmin < tThresold)
-                        return minPenalty;
-                }
-            }
-
-            // Normalize side bias, to prevent it dominating too much.
-            if (nside != 0)
-                side /= nside;
-
-            float spen = m_params.weightSide * side;
-            float tpen = m_params.weightToi * (1.0f / (0.1f + tmin * m_invHorizTime));
-
-            float penalty = vpen + vcpen + spen + tpen;
-            // Store different penalties for debug viewing
-            if (debug != null)
-                debug.AddSample(vcand, cs, penalty, vpen, vcpen, spen, tpen);
-
+            float tpen = 1f / (tmin * m_invHorizTime + 0.1f) * m_params.weightToi;
+            float penalty = vpen + vcpen + tpen;
+            debug?.AddSample(vcand, cs, penalty, vpen, vcpen, 0f, tpen);
             return penalty;
         }
 
-        /// Unbound: whether the desired velocity hits no neighbour within the horizon, in which case
-        /// Unity's agents keep it without sampling (measured).
-        public bool DesiredVelocityIsFree(RcVec3f pos, float rad, RcVec3f dvel, DtObstacleAvoidanceParams option)
-        {
-            Prepare(pos, dvel);
-            for (int i = 0; i < m_ncircles; ++i)
-            {
-                DtObstacleCircle cir = m_circles[i];
-                RcVec3f vab = RcVec3f.Subtract(dvel, cir.vel);
-                m_params = option;
-                if (!SweepCircleCircle(pos, rad, vab, cir.p, cir.rad, out var htmin, out var htmax))
-                    continue;
-                if (htmin < 0.0f && htmax > 0.0f)
-                {
-                    if (vab.Dot2D(RcVec3f.Subtract(cir.p, pos)) <= 0.0f)
-                        continue;
-                    htmin = -htmin * 0.5f;
-                }
-                if (htmin >= 0.0f && htmin < option.horizTime)
-                    return false;
-            }
-            // Unbound: and the NavMesh's edges it faces (as the samples meet them).
-            for (int i = 0; i < m_nsegments; ++i)
-            {
-                DtObstacleSegment seg = m_segments[i];
-                float htmin = 0;
-                if (seg.touch)
-                {
-                    RcVec3f sdir = RcVec3f.Subtract(seg.q, seg.p);
-                    RcVec3f snorm = new RcVec3f(-sdir.Z, 0, sdir.X);
-                    if (snorm.Dot2D(dvel) < 0.0f)
-                        continue;
-                    htmin = 0.0f;
-                }
-                else if (!IsectRaySeg(pos, dvel, seg.p, seg.q, ref htmin) || htmin * MathF.Sqrt(dvel.X * dvel.X + dvel.Z * dvel.Z) > segmentReach)
-                {
-                    continue;
-                }
-
-                if (htmin * 2.0f < option.horizTime)
-                    return false;
-            }
-            return true;
-        }
-
-        public int SampleVelocityGrid(RcVec3f pos, float rad, float vmax, RcVec3f vel, RcVec3f dvel, out RcVec3f nvel,
+        /// Unbound: the velocity the agent plans (in nvel): the desired velocity when there is
+        /// nothing to avoid (its height kept), else the best candidate (horizontal). Returns the
+        /// number of candidates weighed.
+        public int SampleVelocityAdaptive(float vmax, RcVec3f vel, RcVec3f dvel, out RcVec3f nvel,
             DtObstacleAvoidanceParams option, DtObstacleAvoidanceDebugData debug)
         {
-            Prepare(pos, dvel);
-            m_params = option;
-            m_invHorizTime = 1.0f / m_params.horizTime;
-            m_vmax = vmax;
-            m_invVmax = vmax > 0 ? 1.0f / vmax : float.MaxValue;
-
-            nvel = RcVec3f.Zero;
-
-            if (debug != null)
-                debug.Reset();
-
-            float cvx = dvel.X * m_params.velBias;
-            float cvz = dvel.Z * m_params.velBias;
-            float cs = vmax * 2 * (1 - m_params.velBias) / (m_params.gridSize - 1);
-            float half = (m_params.gridSize - 1) * cs * 0.5f;
-
-            float minPenalty = float.MaxValue;
-            int ns = 0;
-
-            for (int y = 0; y < m_params.gridSize; ++y)
+            debug?.Reset();
+            if (option.horizTime < MinVelocity || (m_ncircles == 0 && m_nsegments == 0))
             {
-                for (int x = 0; x < m_params.gridSize; ++x)
-                {
-                    RcVec3f vcand = new RcVec3f(cvx + x * cs - half, 0f, cvz + y * cs - half);
-                    if (RcMath.Sqr(vcand.X) + RcMath.Sqr(vcand.Z) > RcMath.Sqr(vmax + cs / 2))
-                        continue;
-
-                    float penalty = ProcessSample(vcand, cs, pos, rad, vel, dvel, minPenalty, debug);
-                    ns++;
-                    if (penalty < minPenalty)
-                    {
-                        minPenalty = penalty;
-                        nvel = vcand;
-                    }
-                }
+                nvel = dvel;
+                return 0;
             }
 
-            return ns;
-        }
+            nvel = RcVec3f.Zero;
+            if (vmax < MinVelocity)
+                return 0;
 
-        // vector normalization that ignores the y-component.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void DtNormalize2D(Span<float> v)
-        {
-            float d = MathF.Sqrt(v[0] * v[0] + v[2] * v[2]);
-            if (d == 0)
-                return;
-            d = 1.0f / d;
-            v[0] *= d;
-            v[2] *= d;
-        }
-
-        // vector normalization that ignores the y-component.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        RcVec3f DtRotate2D(Span<float> v, float ang)
-        {
-            RcVec3f dest = new RcVec3f();
-            float c = MathF.Cos(ang);
-            float s = MathF.Sin(ang);
-            dest.X = v[0] * c - v[2] * s;
-            dest.Z = v[0] * s + v[2] * c;
-            dest.Y = v[1];
-            return dest;
-        }
-
-
-        public int SampleVelocityAdaptive(RcVec3f pos, float rad, float vmax, RcVec3f vel, RcVec3f dvel, out RcVec3f nvel,
-            DtObstacleAvoidanceParams option,
-            DtObstacleAvoidanceDebugData debug)
-        {
-            Prepare(pos, dvel);
             m_params = option;
             m_invHorizTime = 1.0f / m_params.horizTime;
-            m_vmax = vmax;
-            m_invVmax = vmax > 0 ? 1.0f / vmax : float.MaxValue;
+            m_invVmax = 1.0f / vmax;
+            vel = new RcVec3f(vel.X, 0f, vel.Z);
+            dvel = new RcVec3f(dvel.X, 0f, dvel.Z);
 
-            nvel = RcVec3f.Zero;
-
-            if (debug != null)
-                debug.Reset();
-
-            // Build sampling pattern aligned to desired velocity.
+            // The pattern: the centre, then rings from the outside in, each of nd points at even
+            // angles from the desired direction, every other ring turned by half a step.
             Span<float> pat = stackalloc float[(DT_MAX_PATTERN_DIVS * DT_MAX_PATTERN_RINGS + 1) * 2];
-            int npat = 0;
-
-            int ndivs = m_params.adaptiveDivs;
-            int nrings = m_params.adaptiveRings;
+            int nd = Math.Clamp(m_params.adaptiveDivs, 1, 7);
+            int nr = Math.Clamp(m_params.adaptiveRings, 1, 3);
             int depth = m_params.adaptiveDepth;
-
-            int nd = Math.Clamp(ndivs, 1, DT_MAX_PATTERN_DIVS);
-            int nr = Math.Clamp(nrings, 1, DT_MAX_PATTERN_RINGS);
-            float da = (1.0f / nd) * DT_PI * 2;
-            float ca = MathF.Cos(da);
-            float sa = MathF.Sin(da);
-
-            // desired direction
-            Span<float> ddir = stackalloc float[6];
-            ddir[0] = dvel.X;
-            ddir[1] = dvel.Y;
-            ddir[2] = dvel.Z;
-            DtNormalize2D(ddir);
-            RcVec3f rotated = DtRotate2D(ddir, da * 0.5f); // rotated by da/2
-            ddir[3] = rotated.X;
-            ddir[4] = rotated.Y;
-            ddir[5] = rotated.Z;
-
-            // Always add sample at zero
-            pat[npat * 2 + 0] = 0;
-            pat[npat * 2 + 1] = 0;
-            npat++;
-
+            float da = 6.2831855f / nd;
+            float heading = MathF.Atan2(dvel.Z, dvel.X);
+            pat[0] = 0f;
+            pat[1] = 0f;
+            int npat = 1;
             for (int j = 0; j < nr; ++j)
             {
-                float r = (float)(nr - j) / (float)nr;
-                pat[npat * 2 + 0] = ddir[(j % 2) * 3] * r;
-                pat[npat * 2 + 1] = ddir[(j % 2) * 3 + 2] * r;
-                int last1 = npat * 2;
-                int last2 = last1;
-                npat++;
-
-                for (int i = 1; i < nd - 1; i += 2)
+                float r = (float)(nr - j) / nr;
+                float angle = (j & 1) * 0.5f * da + heading;
+                for (int i = 0; i < nd; ++i)
                 {
-                    // get next point on the "right" (rotate CW)
-                    pat[npat * 2 + 0] = pat[last1] * ca + pat[last1 + 1] * sa;
-                    pat[npat * 2 + 1] = -pat[last1] * sa + pat[last1 + 1] * ca;
-                    // get next point on the "left" (rotate CCW)
-                    pat[npat * 2 + 2] = pat[last2] * ca - pat[last2 + 1] * sa;
-                    pat[npat * 2 + 3] = pat[last2] * sa + pat[last2 + 1] * ca;
-
-                    last1 = npat * 2;
-                    last2 = last1 + 2;
-                    npat += 2;
-                }
-
-                if ((nd & 1) == 0)
-                {
-                    pat[npat * 2 + 0] = pat[last2] * ca - pat[last2 + 1] * sa;
-                    pat[npat * 2 + 1] = pat[last2] * sa + pat[last2 + 1] * ca;
+                    pat[npat * 2 + 0] = MathF.Cos(angle) * r;
+                    pat[npat * 2 + 1] = MathF.Sin(angle) * r;
                     npat++;
+                    angle += da;
                 }
             }
 
-            // Start sampling.
-            float cr = vmax * (1.0f - m_params.velBias);
-            // Unbound: Unity's pattern is centred a little to the right of the biased desired
-            // velocity (by 0.04 of it; measured), which breaks head-on ties.
-            RcVec3f res = new RcVec3f(dvel.X * m_params.velBias + dvel.Z * m_params.sideOffset, 0,
-                dvel.Z * m_params.velBias - dvel.X * m_params.sideOffset);
+            float cr = (1.0f - m_params.velBias) * vmax;
+            float limit = (vmax + 0.001f) * (vmax + 0.001f);
+            float resX = dvel.X * m_params.velBias + dvel.Z * CentreSideOffset;
+            float resZ = dvel.Z * m_params.velBias - dvel.X * CentreSideOffset;
             int ns = 0;
             for (int k = 0; k < depth; ++k)
             {
                 float minPenalty = float.MaxValue;
-                RcVec3f bvel = new RcVec3f();
-                bvel = RcVec3f.Zero;
-
+                float bx = 0f, bz = 0f;
                 for (int i = 0; i < npat; ++i)
                 {
-                    RcVec3f vcand = new RcVec3f(res.X + pat[i * 2 + 0] * cr, 0f, res.Z + pat[i * 2 + 1] * cr);
-                    if (RcMath.Sqr(vcand.X) + RcMath.Sqr(vcand.Z) > RcMath.Sqr(vmax + 0.001f))
-                        continue;
+                    RcVec3f vcand;
+                    if (k == 0 && i == 0)
+                    {
+                        vcand = dvel;
+                    }
+                    else
+                    {
+                        vcand = new RcVec3f(pat[i * 2 + 0] * cr + resX, 0f, pat[i * 2 + 1] * cr + resZ);
+                        if (vcand.X * vcand.X + vcand.Z * vcand.Z > limit)
+                            continue;
+                    }
 
-                    float penalty = ProcessSample(vcand, cr / 10, pos, rad, vel, dvel, minPenalty, debug);
+                    float penalty = ProcessSample(vcand, cr / 5f, vel, dvel, debug);
                     ns++;
                     if (penalty < minPenalty)
                     {
-                        minPenalty = penalty;
-                        bvel = vcand;
+                        bx = vcand.X;
+                        bz = vcand.Z;
                     }
+
+                    minPenalty = MathF.Min(minPenalty, penalty);
                 }
 
-                res = bvel;
-
+                resX = bx;
+                resZ = bz;
                 cr *= 0.5f;
             }
 
-            nvel = res;
-
+            nvel = new RcVec3f(resX, 0f, resZ);
             return ns;
         }
     }

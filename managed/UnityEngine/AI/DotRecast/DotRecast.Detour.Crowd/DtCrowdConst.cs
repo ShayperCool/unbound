@@ -5,7 +5,7 @@ namespace DotRecast.Detour.Crowd
         /// The maximum number of neighbors that a crowd agent can take into account
         /// for steering decisions.
         /// @ingroup crowd
-        public const int DT_CROWDAGENT_MAX_NEIGHBOURS = 6;
+        public const int DT_CROWDAGENT_MAX_NEIGHBOURS = 8; // Unbound: Unity's agents keep 8.
         
         /// The maximum number of corners a crowd agent will look ahead in the path.
         /// This value is used for sizing the crowd agent corner buffers.

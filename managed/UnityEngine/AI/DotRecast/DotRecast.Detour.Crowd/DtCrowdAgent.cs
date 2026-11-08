@@ -78,6 +78,23 @@ namespace DotRecast.Detour.Crowd
         /// The number of corners.
         public int ncorners;
 
+        /// Unbound: the corner the crowd last steered by (Unity's steering target and the corner its
+        /// edge rule looks at): set when the crowd steers, not when a path is given between updates.
+        public bool hasSteer;
+        public RcVec3f steerPos;
+        public int steerFlags;
+
+        /// Unbound: the first corner becomes the steering corner (none without corners).
+        public void KeepSteer()
+        {
+            hasSteer = ncorners > 0;
+            if (hasSteer)
+            {
+                steerPos = corners[0].pos;
+                steerFlags = corners[0].flags;
+            }
+        }
+
         public DtMoveRequestState targetState; // < State of the movement request.
         public long targetRef; // < Target polyref of the movement request.
         public RcVec3f targetPos = new RcVec3f(); // < Target position of the movement request (or velocity in case of DT_CROWDAGENT_TARGET_VELOCITY).

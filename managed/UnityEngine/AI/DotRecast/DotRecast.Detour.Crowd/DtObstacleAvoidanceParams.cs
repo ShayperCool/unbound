@@ -2,34 +2,20 @@ namespace DotRecast.Detour.Crowd
 {
     internal class DtObstacleAvoidanceParams
     {
-        public float velBias;
-        public float weightDesVel;
-        public float weightCurVel;
-        public float weightSide;
-        public float weightToi;
-        public float horizTime;
-        public int gridSize; // < grid
-        public int adaptiveDivs; // < adaptive
-        public int adaptiveRings; // < adaptive
-        public int adaptiveDepth; // < adaptive
-        /// Unbound: how far right of the biased desired velocity the pattern is centred, as a
-        /// fraction of the desired velocity, and whether candidates are judged as Unity's agents
-        /// judge them (against the neighbour's velocity alone, grazing paths free).
-        public float sideOffset;
-        public bool unityVelocity;
+        // Unbound: Unity's weights (tests/projects/avoidance, navlinks `fast`): candidates around 0.7
+        // of the desired velocity, weighed 0.2 by their distance from it, 0.1 from the current
+        // velocity and 2 by their time to impact; no side preference.
+        public float velBias = 0.7f;
+        public float weightDesVel = 0.2f;
+        public float weightCurVel = 0.1f;
+        public float weightToi = 2.0f;
+        public float horizTime = 2.0f;
+        public int adaptiveDivs = 7; // < adaptive
+        public int adaptiveRings = 2; // < adaptive
+        public int adaptiveDepth = 5; // < adaptive
 
         public DtObstacleAvoidanceParams()
         {
-            velBias = 0.4f;
-            weightDesVel = 2.0f;
-            weightCurVel = 0.75f;
-            weightSide = 0.75f;
-            weightToi = 2.5f;
-            horizTime = 2.5f;
-            gridSize = 33;
-            adaptiveDivs = 7;
-            adaptiveRings = 2;
-            adaptiveDepth = 5;
         }
 
         public DtObstacleAvoidanceParams(DtObstacleAvoidanceParams option)
@@ -37,15 +23,11 @@ namespace DotRecast.Detour.Crowd
             velBias = option.velBias;
             weightDesVel = option.weightDesVel;
             weightCurVel = option.weightCurVel;
-            weightSide = option.weightSide;
             weightToi = option.weightToi;
             horizTime = option.horizTime;
-            gridSize = option.gridSize;
             adaptiveDivs = option.adaptiveDivs;
             adaptiveRings = option.adaptiveRings;
             adaptiveDepth = option.adaptiveDepth;
-            sideOffset = option.sideOffset;
-            unityVelocity = option.unityVelocity;
         }
     };
 }

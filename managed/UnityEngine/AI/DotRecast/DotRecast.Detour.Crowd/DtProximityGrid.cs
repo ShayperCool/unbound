@@ -37,8 +37,10 @@ namespace DotRecast.Detour.Crowd
             public int next;
         }
 
-        private readonly float _cellSize;
-        private readonly float _invCellSize;
+        // Unbound: cells may differ along x and y, and change from update to update (Unity's crowd
+        // sizes them to its agents, see DtCrowd.BuildProximityGrid).
+        private float _cellSizeX, _cellSizeY;
+        private float _invCellSizeX, _invCellSizeY;
 
         private int[] _buckets; // index of the first pool item per bucket, -1 if empty
         private Item[] _pool;
@@ -46,8 +48,7 @@ namespace DotRecast.Detour.Crowd
 
         public DtProximityGrid(float cellSize)
         {
-            _cellSize = cellSize;
-            _invCellSize = 1.0f / cellSize;
+            SetCellSize(cellSize, cellSize);
             _pool = new Item[256];
             _buckets = new int[NextPow2(_pool.Length)];
             Array.Fill(_buckets, -1);
@@ -88,6 +89,15 @@ namespace DotRecast.Detour.Crowd
             return v;
         }
 
+        /// Unbound: the cells' sizes along x and y (takes effect for the items added after).
+        public void SetCellSize(float x, float y)
+        {
+            _cellSizeX = x;
+            _cellSizeY = y;
+            _invCellSizeX = 1.0f / x;
+            _invCellSizeY = 1.0f / y;
+        }
+
         public void Clear()
         {
             Array.Fill(_buckets, -1);
@@ -112,10 +122,10 @@ namespace DotRecast.Detour.Crowd
 
         public void AddItem(DtCrowdAgent agent, float minx, float miny, float maxx, float maxy)
         {
-            int iminx = (int)MathF.Floor(minx * _invCellSize);
-            int iminy = (int)MathF.Floor(miny * _invCellSize);
-            int imaxx = (int)MathF.Floor(maxx * _invCellSize);
-            int imaxy = (int)MathF.Floor(maxy * _invCellSize);
+            int iminx = (int)MathF.Floor(minx * _invCellSizeX);
+            int iminy = (int)MathF.Floor(miny * _invCellSizeY);
+            int imaxx = (int)MathF.Floor(maxx * _invCellSizeX);
+            int imaxy = (int)MathF.Floor(maxy * _invCellSizeY);
 
             for (int y = iminy; y <= imaxy; ++y)
             {
@@ -142,10 +152,10 @@ namespace DotRecast.Detour.Crowd
 
         public int QueryItems(float minx, float miny, float maxx, float maxy, Span<int> ids, int maxIds)
         {
-            int iminx = (int)MathF.Floor(minx * _invCellSize);
-            int iminy = (int)MathF.Floor(miny * _invCellSize);
-            int imaxx = (int)MathF.Floor(maxx * _invCellSize);
-            int imaxy = (int)MathF.Floor(maxy * _invCellSize);
+            int iminx = (int)MathF.Floor(minx * _invCellSizeX);
+            int iminy = (int)MathF.Floor(miny * _invCellSizeY);
+            int imaxx = (int)MathF.Floor(maxx * _invCellSizeX);
+            int imaxy = (int)MathF.Floor(maxy * _invCellSizeY);
 
             int n = 0;
 
@@ -202,9 +212,8 @@ namespace DotRecast.Detour.Crowd
             }
         }
 
-        public float GetCellSize()
-        {
-            return _cellSize;
-        }
+        public float GetCellSizeX() => _cellSizeX;
+
+        public float GetCellSizeY() => _cellSizeY;
     }
 }
