@@ -659,7 +659,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 29;
+    const VERSION: u32 = 30;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1283,11 +1283,12 @@ impl<'a> Builder<'a> {
                 }
                 // Every animated translation, rotation and scale gets its curves, constant ones
                 // too (measured with every animation compression); a node whose take animates
-                // none of them (only custom properties) gets none. Humanoid clips keep every
-                // channel: their muscle curves are converted from the whole pose. So do pivoted
-                // nodes, whose position follows their rotation and scale (unmeasured).
+                // none of them (only custom properties) gets none. Generic rigs only: humanoid
+                // clips keep every channel (their muscle curves are converted from the whole
+                // pose), legacy ones too (unmeasured), and so do pivoted nodes, whose position
+                // follows their rotation and scale (unmeasured).
                 let source = self.sources[index as usize];
-                let channels = if self.settings.animation_type == 3 || self.pivoted(index) {
+                let channels = if self.settings.animation_type != 2 || self.pivoted(index) {
                     [true; 3]
                 } else {
                     animated_channels(stack, source)
@@ -3232,9 +3233,10 @@ fn default_attribute_is_bone(node: &ufbx::Node) -> bool {
         .is_some_and(|attrib| attrib.type_ == ufbx::ElementType::Bone)
 }
 
-/// Which of the node's local translation, rotation and scale the take animates: those with
-/// animation curves in one of its layers. The importer gives a clip curves for these only,
-/// constant ones included (measured, tests/projects/modeltoproot and modelclips).
+/// Which of the node's local translation, rotation and scale the take animates: those with an
+/// animation curve node in one of its layers. The importer gives a clip curves for these only
+/// (measured for translation alone, tests/projects/modeltoproot; rotation or scale alone and
+/// curve nodes without curves are inferred), constant ones included (tests/projects/modelclips).
 fn animated_channels(stack: &ufbx::AnimStack, node: &ufbx::Node) -> [bool; 3] {
     ["Lcl Translation", "Lcl Rotation", "Lcl Scaling"].map(|prop| {
         stack

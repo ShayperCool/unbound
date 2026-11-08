@@ -61,11 +61,19 @@ What the Editor does (measured):
 - Curves of the root (a collapsed top-level node's) are written as they are when root motion is
   off: the instance moves to the clip's position. With root motion on they move it relatively.
 
-Also checked by hand (not part of the reference): the same rule decides for a binary FBX from
+The Manual (6000.0, Model tab, Preserve Hierarchy: https://docs.unity3d.com/6000.0/Documentation/Manual/FBXImporter-Model.html)
+only says the importer strips empty root nodes unless Preserve Hierarchy is set; it says
+nothing about bones, and a mesh node is not empty yet becomes the root as well. The rule above
+is this release's observed behaviour, not a documented guarantee.
+
+Also checked by hand once (one observation, not reproducible from committed files and not part
+of the reference): the same rule decides for a binary FBX from
 Maya whose top-level LimbNode `Root` has `DefaultAttributeIndex` 0; patched to -1, it becomes the
 root. The application that wrote the file, the node's name, its inheritance type, its
 `RotationActive` and the `.meta`'s fileID tables do not change the result.
 
 Not covered: a default attribute index pointing at another attribute than the first, mesh and
 other attribute types as the default attribute of a node with several, Z-up files with a kept
-top-level bone, humanoid rigs (their clips keep every channel in Unbound) and other releases.
+top-level bone, nodes with only rotation or only scale animated, animation curve nodes without
+curves, pivoted nodes, legacy and humanoid rigs (Unbound keeps every channel for these three)
+and other releases.
