@@ -1051,6 +1051,10 @@ namespace UnityEngine
                 return size;
             }
 
+            /// <summary>The Texture Sheet Animation module salts of the frame over time, start frame
+            /// and random row values (6000.0.71f1, tests/projects/particlerender sheet/*).</summary>
+            const uint SheetFrameSalt = 326370691u, SheetStartFrameSalt = 1454627760u, SheetRowSalt = 2941263940u;
+
             /// <summary>The particle's uv rectangle from the texture sheet animation.</summary>
             static Rect FrameRect(ParticleSystem ps, ref ParticleSystem.Particle p, out float animFrame, int frameOffset = 0)
             {
@@ -1069,7 +1073,7 @@ namespace UnityEngine
                     case ParticleSystemAnimationTimeMode.Speed:
                     {
                         float s = Mathf.InverseLerp(T.speedRange.x, T.speedRange.y, (p.m_Velocity + p.m_AnimatedVelocity).magnitude);
-                        phase = T.frameOverTime.Evaluate(s, R.Value(seed, R.Frame));
+                        phase = T.frameOverTime.Evaluate(s, ParticleSystem.ModuleValue(seed, SheetFrameSalt));
                         break;
                     }
                     case ParticleSystemAnimationTimeMode.FPS:
@@ -1081,11 +1085,11 @@ namespace UnityEngine
                         float t = age * cycles;
                         t = t - Mathf.Floor(t);
                         if (age >= 1f) t = 1f;
-                        phase = T.frameOverTime.Evaluate(t, R.Value(seed, R.Frame));
+                        phase = T.frameOverTime.Evaluate(t, ParticleSystem.ModuleValue(seed, SheetFrameSalt));
                         break;
                     }
                 }
-                float f = T.startFrame.Evaluate(age, R.Value(seed, R.StartFrame)) + phase;
+                float f = T.startFrame.Evaluate(age, ParticleSystem.ModuleValue(seed, SheetStartFrameSalt)) + phase;
                 f -= Mathf.Floor(f);
                 animFrame = f * frames;
                 int frame = (Math.Min((int)animFrame, frames - 1) + frameOffset) % frames;
@@ -1107,7 +1111,7 @@ namespace UnityEngine
                     switch (T.rowMode)
                     {
                         case ParticleSystemAnimationRowMode.Random:
-                            row = Math.Min((int)(R.Value(seed, R.Row) * tilesY), tilesY - 1);
+                            row = Math.Min((int)(ParticleSystem.ModuleValue(seed, SheetRowSalt) * tilesY), tilesY - 1);
                             break;
                         case ParticleSystemAnimationRowMode.MeshIndex:
                             row = ps.MeshIndexOf(ref p) % tilesY;

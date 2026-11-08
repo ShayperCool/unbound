@@ -477,11 +477,8 @@ namespace Unbound.Runtime
         /// <summary>A value in [0, 1).</summary>
         internal static float Value(uint seed, uint salt) => (Hash(seed ^ Hash(salt * 0x9e3779b9U + 0x632be5abU)) >> 8) * (1f / 16777216f);
 
-        // Salts of the per-particle random values.
-        internal const uint Lifetime = 1, Speed = 2, SizeX = 3, SizeY = 4, SizeZ = 5, RotX = 6, RotY = 7, RotZ = 8, Color = 9,
-            Flip = 10, Gravity = 11, VelX = 12, VelY = 13, VelZ = 14, SizeLife = 15, ColorLife = 16, RotLife = 17,
-            Frame = 18, StartFrame = 19, Row = 20, FlipU = 21, FlipV = 22, Noise = 23, Limit = 24, Drag = 25,
-            SizeSpeed = 26, ColorSpeed = 27, RotSpeed = 28, Orbital = 29, Radial = 30, SpeedMod = 31, Inherit = 32,
-            MeshIndex = 33, Force = 34, Custom = 35, SubEmit = 36, NoiseStrength = 37, Collision = 40, Light = 48;
+        // Salts of the per-particle random values that are not measured yet (the measured ones
+        // use the modules' own salts with ParticleSystem.ModuleValue).
+        internal const uint FlipU = 21, FlipV = 22, Force = 34, Collision = 40, Light = 48;
     }
 }

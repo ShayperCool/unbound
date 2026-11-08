@@ -19,6 +19,8 @@ Systems built in code; each record is one JSON line `{"key", "value": [numbers]}
   (looping, one-shot, non-procedural), while one disabled camera rendered by the probe (none for
   frames 0-4) looks at them for frames 5-14, away for 15-39 and back; `hidden/*` sit on a layer the
   camera never draws; one system is paused by script while culled, one played again.
+- `sheet/*`: Texture Sheet Animation in random modes (frame over time two constants and two curves,
+  random start frame, random row), read from the baked quads' texture coordinates.
 - `meshrot/*`, `meshattr/*`: mesh particles with a 2D and a 3D rotation for every render alignment
   in a rotated emitter, baked (BakeMesh and BakeTexture) from the front, side and a rolled camera;
   BakeTexture without an indices texture; the vertex attributes and texels of default-stream bakes

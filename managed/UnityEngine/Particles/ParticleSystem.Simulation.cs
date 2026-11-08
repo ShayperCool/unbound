@@ -186,7 +186,13 @@ namespace UnityEngine
             m_LastPosition = position;
             m_FrameDistance = delta.magnitude;
             if (m_Main.emitterVelocityMode == ParticleSystemEmitterVelocityMode.Custom)
+            {
+                // Newborns are placed back along the custom velocity, as if the emitter had
+                // moved with it over the frame (6000.0.71f1, tests/projects/particlerandom
+                // inherit/*: a still emitter's newborns sit at -velocity · age).
                 m_EmitterVelocity = m_Main.customEmitterVelocity;
+                m_FrameStartPosition = position - m_EmitterVelocity * dt;
+            }
             else if (dt > 0f)
                 m_EmitterVelocity = delta / dt;
         }
@@ -248,12 +254,7 @@ namespace UnityEngine
             m_LastStepDt = dt;
             // Newborns sample the current scroll but only existing particles advance it.
             if (m_Noise.enabled && m_Count > 0)
-            {
-                float duration = Mathf.Max(m_Main.duration, .0001f);
-                float endTime = m_Time + dt;
-                if (m_Main.loop) endTime %= duration;
-                m_NoiseScroll += m_Noise.scrollSpeed.Evaluate(Mathf.Clamp01(endTime / duration), 1f) * dt;
-            }
+                m_NoiseScroll += m_Noise.scrollSpeed.Evaluate(StepEndNt(dt), 1f) * dt;
             m_Context = MakeContext(dt);
             m_HasContext = true;
             m_LoggedNewbornError = false;
@@ -372,6 +373,11 @@ namespace UnityEngine
         {
             if (m_DelayRemaining > 0f)
             {
+                // A system whose emission ended before its start delay passed (Emit into a delayed
+                // system) keeps its clock at the start: the delay never elapses, no burst fires
+                // and module curves stay at time 0 (6000.0.71f1, tests/projects/particlegravity
+                // delay/*).
+                if (m_StopEmitting) return;
                 float d = Mathf.Min(dt, m_DelayRemaining);
                 m_DelayRemaining -= d;
                 m_TotalTime += d;
@@ -1023,12 +1029,7 @@ namespace UnityEngine
             p.m_NoiseSum = noiseSum;
             p.m_RandomSeed = seed;
             float lifetime = M.startLifetime.Evaluate(nt, samples.lifetime);
-            if (m_LifetimeByEmitterSpeed.enabled)
-            {
-                var range = m_LifetimeByEmitterSpeed.range;
-                float s = Mathf.InverseLerp(range.x, range.y, m_EmitterVelocity.magnitude);
-                lifetime *= m_LifetimeByEmitterSpeed.curve.Evaluate(s, R.Value(seed, R.Inherit + 100));
-            }
+            float lifetimeScale = LifetimeByEmitterSpeedScale(seed);
             float speed = M.startSpeed.Evaluate(m_SpeedNt >= 0f ? m_SpeedNt : nt, InitialSeedValue(seed, 2527743459u));
             Vector3 size;
             if (M.startSize3D)
@@ -1096,8 +1097,12 @@ namespace UnityEngine
 
             if (m_InheritVelocity.enabled && m_InheritVelocity.mode == ParticleSystemInheritVelocityMode.Initial && simSpace != ParticleSystemSimulationSpace.Local)
             {
-                var inherited = m_EmitterVelocity * m_InheritVelocity.curve.Evaluate(nt, R.Value(seed, R.Inherit));
-                velocity += simSpace == ParticleSystemSimulationSpace.World ? inherited : WorldToSimulationRotation() * inherited;
+                var emitterVelocity = simSpace == ParticleSystemSimulationSpace.World ? m_EmitterVelocity : WorldToSimulationRotation() * m_EmitterVelocity;
+                // Constant modes add the inherited part to the start velocity once; curve modes keep
+                // the birth velocity and scale it by the curve over the particle's life, as animated
+                // velocity (6000.0.71f1, tests/projects/particlerandom inherit/initial/*).
+                if (InheritsOverLifetime(m_InheritVelocity.curve.mode)) p.m_InheritedVelocity = emitterVelocity;
+                else velocity += emitterVelocity * m_InheritVelocity.curve.Evaluate(nt, ModuleValue(seed, InheritVelocitySalt));
             }
 
             if (hasOverrides)
@@ -1132,13 +1137,19 @@ namespace UnityEngine
 
             p.m_Position = pos;
             p.m_Velocity = velocity;
-            p.m_InitialVelocity = velocity;
             p.m_StartSize = size;
             p.m_Rotation = rotation;
             p.m_StartColor = startColor;
+            // Lifetime by Emitter Speed divides the start lifetime's reciprocal by its value.
+            float invLifetime = StartLifetimeReciprocal(lifetime);
+            if (lifetimeScale != 1f)
+            {
+                lifetime *= lifetimeScale;
+                invLifetime /= lifetimeScale;
+            }
             p.m_StartLifetime = lifetime;
             p.m_Lifetime = lifetime;
-            p.m_InvStartLifetime = StartLifetimeReciprocal(lifetime);
+            p.m_InvStartLifetime = invLifetime;
             p.m_AgePercent = 0f;
             p.m_Flags |= Particle.FlagAgeInitialized;
             return lifetime > 0f && kept;
@@ -1154,9 +1165,14 @@ namespace UnityEngine
                     return;
                 case ParticleSystemSimulationSpace.Custom:
                 {
+                    // A start velocity keeps its speed: only its direction goes through the custom
+                    // space's inverse transform, scale included (6000.0.71f1,
+                    // tests/projects/particlegravity custom/rotated_scaled).
                     var inv = m_Main.customSimulationSpace.worldToLocalMatrix;
                     pos = inv.MultiplyPoint3x4(worldPos);
-                    vel = inv.MultiplyVector(worldVel);
+                    var direction = inv.MultiplyVector(worldVel);
+                    float length = direction.magnitude;
+                    vel = length > 0f ? direction * (worldVel.magnitude / length) : direction;
                     return;
                 }
                 default:
@@ -1440,6 +1456,7 @@ namespace UnityEngine
             public Vector3 Center;
             public float NoiseTime;
             public bool InheritCurrent;
+            public bool InheritInitialOverLifetime;
             public bool BirthSubs;
             /// <summary>Whether a parent still emits Birth children in the step its life ends
             /// (releases other than the measured one keep the previous behaviour).</summary>
@@ -1447,15 +1464,28 @@ namespace UnityEngine
             public bool TemporaryLane;
         }
 
+        /// <summary>The normalized playback time where a step of <paramref name="dt"/> seconds ends,
+        /// at which system-time curves are read (the gravity modifier, the noise scroll speed). A
+        /// start delay still running takes its part of the step first, the playback time staying
+        /// at its start meanwhile; a system whose emission ended during the delay never leaves it
+        /// (6000.0.71f1, tests/projects/particlegravity delay/*).</summary>
+        float StepEndNt(float dt)
+        {
+            float duration = Mathf.Max(m_Main.duration, 0.0001f);
+            float advance = dt;
+            if (m_DelayRemaining > 0f && m_IsPlaying && !m_BirthDelayClock)
+                advance = m_StopEmitting ? 0f : Mathf.Max(0f, dt - m_DelayRemaining);
+            float endTime = m_Time + advance;
+            if (m_Main.loop) endTime %= duration;
+            return Mathf.Clamp01(endTime / duration);
+        }
+
         /// <param name="dt">The step's length: system-time curves are read where it ends (measured
         /// for the gravity modifier, as for the noise scroll speed).</param>
         StepContext MakeContext(float dt = 0f)
         {
             var c = new StepContext();
-            float duration = Mathf.Max(m_Main.duration, 0.0001f);
-            float endTime = m_Time + dt;
-            if (m_Main.loop) endTime %= duration;
-            c.Nt = Mathf.Clamp01(endTime / duration);
+            c.Nt = StepEndNt(dt);
             c.WorldToSim = WorldToSimulationRotation();
             c.HasGravity = m_Main.gravityModifier.mode != ParticleSystemCurveMode.Constant || m_Main.gravityModifier.scalar != 0f;
             bool simWorld = m_Main.simulationSpace == ParticleSystemSimulationSpace.World;
@@ -1470,6 +1500,8 @@ namespace UnityEngine
             if (m_Main.simulationSpace == ParticleSystemSimulationSpace.Custom && m_Main.customSimulationSpace != null)
                 c.Center = m_Main.customSimulationSpace.InverseTransformPoint(m_GameObject.m_Transform.position);
             c.InheritCurrent = m_InheritVelocity.enabled && m_InheritVelocity.mode == ParticleSystemInheritVelocityMode.Current && simWorld;
+            c.InheritInitialOverLifetime = m_InheritVelocity.enabled && m_InheritVelocity.mode == ParticleSystemInheritVelocityMode.Initial
+                && InheritsOverLifetime(m_InheritVelocity.curve.mode);
             c.NoiseTime = m_NoiseScroll;
             c.BirthSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Birth);
             c.BirthsInFinalStep = !Compat.ParticleBirthStepsMeasured;
@@ -1685,7 +1717,9 @@ namespace UnityEngine
             }
             if (m_Noise.enabled) animated += NoiseVelocity(ref p, age, c.NoiseTime, dt);
             if (c.InheritCurrent)
-                animated += m_EmitterVelocity * m_InheritVelocity.curve.Evaluate(age, R.Value(seed, R.Inherit));
+                animated += m_EmitterVelocity * m_InheritVelocity.curve.Evaluate(age, ModuleValue(seed, InheritVelocitySalt));
+            else if (c.InheritInitialOverLifetime)
+                animated += p.m_InheritedVelocity * m_InheritVelocity.curve.Evaluate(age, ModuleValue(seed, InheritVelocitySalt));
 
             // The limit applies to the whole velocity and takes the excess off the particle's own.
             if (m_LimitVelocity.enabled) LimitVelocity(ref v, animated, ref p, age, c.WorldToSim, dt);
@@ -1696,6 +1730,37 @@ namespace UnityEngine
             p.m_Position += moving * (speedModifier * dt);
             return speedModifier;
         }
+
+        /// <summary>The module salts of the Inherit Velocity and Lifetime by Emitter Speed random
+        /// values (6000.0.71f1, tests/projects/particlecurves inherit/*, lbes/*).</summary>
+        const uint InheritVelocitySalt = 3401255u, LifetimeByEmitterSpeedSalt = 3401256u;
+        /// <summary>Whether Inherit Velocity's Initial mode applies its curve over the particle's
+        /// life (curve modes) instead of once at birth (constant modes).</summary>
+        static bool InheritsOverLifetime(ParticleSystemCurveMode mode) =>
+            mode == ParticleSystemCurveMode.Curve || mode == ParticleSystemCurveMode.TwoCurves;
+
+        /// <summary>The smallest factor Lifetime by Emitter Speed applies (measured).</summary>
+        const float MinLifetimeByEmitterSpeedScale = 0.0001f;
+
+        /// <summary>Lifetime by Emitter Speed's factor of a new particle's lifetime: the curve at the
+        /// emitter speed's place in the range (clamped to [0, 1]), at least
+        /// <see cref="MinLifetimeByEmitterSpeedScale"/>; 1 when the module is off.</summary>
+        float LifetimeByEmitterSpeedScale(uint seed)
+        {
+            var L = m_LifetimeByEmitterSpeed;
+            if (!L.enabled) return 1f;
+            var range = L.range;
+            float span = range.y - range.x;
+            // The range maps to [0, 1] as speed·scale + offset; a range narrower than the
+            // tolerance keeps its start as the scale (as the Editor does).
+            float scale = Mathf.Abs(span) > InverseLerpMinSpan ? 1f / span : range.x;
+            float offset = -(range.x * scale);
+            float s = Mathf.Clamp01(m_EmitterVelocity.magnitude * scale + offset);
+            return Mathf.Max(L.curve.Evaluate(s, ModuleValue(seed, LifetimeByEmitterSpeedSalt)), MinLifetimeByEmitterSpeedScale);
+        }
+
+        /// <summary>The smallest range span Lifetime by Emitter Speed divides by (measured).</summary>
+        const float InverseLerpMinSpan = 1e-9f;
 
         static ModuleCurve InMode(ModuleCurve curve, ParticleSystemCurveMode mode)
         {

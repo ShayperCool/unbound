@@ -12,7 +12,9 @@ namespace UnityEngine
             internal Vector3 m_Position;
             internal Vector3 m_Velocity;
             internal Vector3 m_AnimatedVelocity;
-            internal Vector3 m_InitialVelocity;
+            /// <summary>Inherit Velocity (Initial, curve modes): the emitter's velocity at birth in
+            /// simulation space, scaled by the curve over the particle's life.</summary>
+            internal Vector3 m_InheritedVelocity;
             internal Vector3 m_NoiseImpulse;
             internal Vector3 m_NoiseSum;
             internal Vector3 m_AxisOfRotation;

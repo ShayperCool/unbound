@@ -11,11 +11,7 @@ import re
 import sys
 
 TOLERANCE = 2e-4
-KNOWN = [
-    (r'^custom/rotated_scaled/\d+$', 1,
-     'start velocity in a scaled custom space: Unity keeps the start speed along the '
-     'inverse-transformed direction, Unbound scales it'),
-]
+KNOWN = []
 
 
 def read(path):

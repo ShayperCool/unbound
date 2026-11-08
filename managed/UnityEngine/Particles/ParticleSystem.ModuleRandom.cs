@@ -8,7 +8,7 @@ namespace UnityEngine
         static Random.State ModuleRandom(uint seed, uint salt) =>
             Random.State.FromSeed(unchecked((int)(seed + salt)));
 
-        static float ModuleValue(uint seed, uint salt)
+        internal static float ModuleValue(uint seed, uint salt)
         {
             var random = ModuleRandom(seed, salt);
             return random.NextValue();

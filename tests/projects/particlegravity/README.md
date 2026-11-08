@@ -13,7 +13,8 @@ position and velocity after each step:
 - `world/*`: world simulation on a rotated, scaled emitter. `local/*`: local simulation on a rotated
   emitter, with Hierarchy, Local (under a scaled parent) and Shape scaling.
   `custom/*`: a rotated, scaled custom simulation space, with and without start speed.
-- `curve/*`: modifier curves over the duration. `random/*`: two constants and two curves (5 particles).
+- `curve/*`: modifier curves over the duration. `random/*`: two constants (also given reversed) and
+  two curves (5 particles). `delay/*`: a 0.2 s start delay with a rising curve, `Emit` during it.
 - `played/*`: two systems played over frames at `Time.captureDeltaTime` 0.02 with
   AlwaysSimulate culling (the scene has no camera); both gravities change in `Update` after frame 5's
   record. `settings/*`: the gravities the project starts with.
@@ -44,11 +45,15 @@ of zero switches gravity off."). Measured in this release, beyond that:
   (Hierarchy: lossy, Local: local, Shape: none); custom space by the custom transform's.
 - A modifier curve is read at the system time where each internal step ends (with the loop's wrap).
 
-Known differences outside gravity (the comparator lists each one and keeps them out of the verdict):
+- A start velocity in a scaled custom space keeps its speed along the inverse-transformed
+  direction (`custom/rotated_scaled`).
+- Random constants with the minimum above the maximum draw between them as given
+  (`random/constants_reversed`).
+- A start delay takes its part of a step before the playback time moves; curves read where the
+  step ends in playback time. A system that `Emit` stopped during its delay never leaves it: no
+  burst fires and the curve stays at time 0 (`delay/*`, looping and not).
 
-- `random/*`: per-particle random values come from Unbound's own stream, not Unity's.
-- `custom/rotated_scaled`: a start velocity in a scaled custom space. Unity keeps the start speed
-  along the inverse-transformed direction; Unbound also scales it. Gravity matches (the
-  `custom/rotated_scaled_still` scenario and the velocity deltas).
+The comparator has no known differences (KNOWN is empty).
 
-Unmeasured: other releases; zero or negative scales; random modes' exact values.
+Unmeasured: other releases; zero or negative scales; the noise scroll during a start delay (it
+reads the same playback time).
