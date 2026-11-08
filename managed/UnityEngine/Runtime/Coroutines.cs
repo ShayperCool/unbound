@@ -25,7 +25,9 @@ namespace Unbound.Runtime
         }
 
         static readonly List<Coroutine> s_Running = new List<Coroutine>();
+        // Reused by Run (the player loop's coroutine points, never nested).
         static readonly List<Coroutine> s_Scan = new List<Coroutine>();
+        static readonly List<Coroutine> s_Due = new List<Coroutine>();
 
         internal static Coroutine Start(MonoBehaviour owner, IEnumerator routine, string methodName)
         {
@@ -131,7 +133,8 @@ namespace Unbound.Runtime
         /// yielded during Update goes before one that yielded later, in the coroutine phase).</summary>
         internal static void Run(Phase phase)
         {
-            var due = new List<Coroutine>();
+            var due = s_Due;
+            due.Clear();
             // A snapshot: a wait's check (keepWaiting) may complete an operation, whose waiting
             // routine then resumes and moves in s_Running.
             s_Scan.Clear();
@@ -147,8 +150,11 @@ namespace Unbound.Runtime
                 s_Running.Remove(c);
                 if (!c.Done) s_Running.Add(c);
             }
-            s_Running.RemoveAll(c => c.Done);
+            due.Clear();
+            s_Running.RemoveAll(s_IsDone);
         }
+
+        static readonly Predicate<Coroutine> s_IsDone = c => c.Done;
 
         /// <summary>A routine waiting for <paramref name="operation"/> resumes now, as it completes
         /// (wherever in the frame that is), and then waits behind the routines already waiting.</summary>

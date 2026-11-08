@@ -29,6 +29,12 @@ namespace UnityEngine.Tests
             yield break;
         }
 
+        internal IEnumerator WaitsUntil(CustomYieldInstruction instruction, string name)
+        {
+            yield return instruction;
+            Log.Add(name + " resumed");
+        }
+
         internal IEnumerator Waits(AsyncOperation operation, string name)
         {
             yield return operation;
@@ -164,6 +170,56 @@ namespace UnityEngine.Tests
                 Assert.Empty(runner.Log);
                 NextFrame();
                 Assert.Equal(new[] { "late resumed done=True" }, runner.Log);
+            }
+            finally
+            {
+                Object.DestroyImmediate(runner.gameObject);
+                Time.s_FrameCount = frames;
+            }
+        }
+
+        /// <summary>A coroutine stopped while waiting hands the operation's waiter place to the next
+        /// one that yields it (Unbound's choice; unmeasured).</summary>
+        [Fact]
+        public void AStoppedWaitersPlacePassesToTheNextCoroutine()
+        {
+            var frames = Time.s_FrameCount;
+            var runner = new GameObject("Runner").AddComponent<CoroutineRunner>();
+            try
+            {
+                var operation = new AsyncOperation();
+                runner.StopCoroutine(runner.StartCoroutine(runner.Waits(operation, "stopped")));
+                runner.StartCoroutine(runner.Waits(operation, "next"));
+                operation.Complete();
+                Assert.Equal(new[] { "next resumed done=True" }, runner.Log);
+            }
+            finally
+            {
+                Object.DestroyImmediate(runner.gameObject);
+                Time.s_FrameCount = frames;
+            }
+        }
+
+        /// <summary>A wait's check that completes an operation resumes that operation's coroutine
+        /// in the middle of the coroutine phase without disturbing it.</summary>
+        [Fact]
+        public void AnOperationCompletedByAWaitsCheckResumesItsCoroutine()
+        {
+            var frames = Time.s_FrameCount;
+            var runner = new GameObject("Runner").AddComponent<CoroutineRunner>();
+            try
+            {
+                var operation = new AsyncOperation();
+                runner.StartCoroutine(runner.WaitsUntil(new WaitUntil(() =>
+                {
+                    if (Time.s_FrameCount > frames + 1) operation.Complete();
+                    return operation.isDone;
+                }), "check"));
+                runner.StartCoroutine(runner.Waits(operation, "operation"));
+                NextFrame();
+                Assert.Empty(runner.Log);
+                NextFrame();
+                Assert.Equal(new[] { "operation resumed done=True", "check resumed" }, runner.Log);
             }
             finally
             {
