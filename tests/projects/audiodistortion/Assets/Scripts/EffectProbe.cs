@@ -272,6 +272,62 @@ public class EffectProbe : MonoBehaviour
         new[] { "spatial_dry_twod_pan_0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0", "pan=0" },
         new[] { "spatial_dry_twod_pan_0p5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0", "pan=0.5" },
         new[] { "spatial_dry_twod_pan_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0", "pan=1" },
+        new[] { "spatial_dry_endpoint_m0_b0_p1p25", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "blend=0", "pitch=1.25" },
+        new[] { "spatial_dry_endpoint_m0_b0_p1p5", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "blend=0", "pitch=1.5" },
+        new[] { "spatial_dry_endpoint_m0_b0p5_p1p25", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "blend=0.5", "pitch=1.25" },
+        new[] { "spatial_dry_endpoint_m0_b0p5_p1p5", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "blend=0.5", "pitch=1.5" },
+        new[] { "spatial_dry_endpoint_m0_b1_p1p25", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "blend=1", "pitch=1.25" },
+        new[] { "spatial_dry_endpoint_m0_b1_p1p5", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "blend=1", "pitch=1.5" },
+        new[] { "spatial_dry_step_distance_mono0", "Music:Att", "music=dc0", "mono=0", "spatial=1", "doppler=0", "step=distance" },
+        new[] { "spatial_dry_step_blend_mono0", "Music:Att", "music=dc0", "mono=0", "spatial=1", "doppler=0", "step=blend" },
+        new[] { "spatial_dry_step_direction_mono0", "Music:Att", "music=dc0", "mono=0", "spatial=1", "doppler=0", "step=direction" },
+        new[] { "spatial_dry_step_spread_mono0", "Music:Att", "music=dc0", "mono=0", "spatial=1", "doppler=0", "step=spread" },
+        new[] { "spatial_dry_step_listener_mono0", "Music:Att", "music=dc0", "mono=0", "spatial=1", "doppler=0", "step=listener" },
+        new[] { "spatial_dry_step_volume_mono0", "Music:Att", "music=dc0", "mono=0", "spatial=1", "doppler=0", "step=volume" },
+        new[] { "spatial_dry_endpoint_m1_b0_p1p25", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0", "pitch=1.25" },
+        new[] { "spatial_dry_endpoint_m1_b0_p1p5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0", "pitch=1.5" },
+        new[] { "spatial_dry_endpoint_m1_b0p5_p1p25", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0.5", "pitch=1.25" },
+        new[] { "spatial_dry_endpoint_m1_b0p5_p1p5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0.5", "pitch=1.5" },
+        new[] { "spatial_dry_endpoint_m1_b1_p1p25", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=1", "pitch=1.25" },
+        new[] { "spatial_dry_endpoint_m1_b1_p1p5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=1", "pitch=1.5" },
+        new[] { "spatial_dry_step_distance_mono1", "Music:Att", "music=dc0", "mono=1", "spatial=1", "doppler=0", "step=distance" },
+        new[] { "spatial_dry_step_blend_mono1", "Music:Att", "music=dc0", "mono=1", "spatial=1", "doppler=0", "step=blend" },
+        new[] { "spatial_dry_step_direction_mono1", "Music:Att", "music=dc0", "mono=1", "spatial=1", "doppler=0", "step=direction" },
+        new[] { "spatial_dry_step_spread_mono1", "Music:Att", "music=dc0", "mono=1", "spatial=1", "doppler=0", "step=spread" },
+        new[] { "spatial_dry_step_listener_mono1", "Music:Att", "music=dc0", "mono=1", "spatial=1", "doppler=0", "step=listener" },
+        new[] { "spatial_dry_step_volume_mono1", "Music:Att", "music=dc0", "mono=1", "spatial=1", "doppler=0", "step=volume" },
+        new[] { "spatial_dry_boundary_m0_p0p5_r44100", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "blend=0", "pitch=0.5", "cliprate=44100", "frames=4096" },
+        new[] { "spatial_dry_boundary_m0_p0p5_r48000", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "blend=0", "pitch=0.5", "cliprate=48000", "frames=4096" },
+        new[] { "spatial_dry_boundary_m0_p1_r44100", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "blend=0", "pitch=1", "cliprate=44100", "frames=4096" },
+        new[] { "spatial_dry_boundary_m0_p1_r48000", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "blend=0", "pitch=1", "cliprate=48000", "frames=4096" },
+        new[] { "spatial_dry_boundary_m0_p1p5_r44100", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "blend=0", "pitch=1.5", "cliprate=44100", "frames=4096" },
+        new[] { "spatial_dry_boundary_m0_p1p5_r48000", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "blend=0", "pitch=1.5", "cliprate=48000", "frames=4096" },
+        new[] { "spatial_dry_boundary_m1_p0p5_r44100", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0", "pitch=0.5", "cliprate=44100", "frames=4096" },
+        new[] { "spatial_dry_boundary_m1_p0p5_r48000", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0", "pitch=0.5", "cliprate=48000", "frames=4096" },
+        new[] { "spatial_dry_boundary_m1_p1_r44100", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0", "pitch=1", "cliprate=44100", "frames=4096" },
+        new[] { "spatial_dry_boundary_m1_p1_r48000", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0", "pitch=1", "cliprate=48000", "frames=4096" },
+        new[] { "spatial_dry_boundary_m1_p1p5_r44100", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0", "pitch=1.5", "cliprate=44100", "frames=4096" },
+        new[] { "spatial_dry_boundary_m1_p1p5_r48000", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0", "pitch=1.5", "cliprate=48000", "frames=4096" },
+        new[] { "spatial_dry_head_boundary", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "blend=0", "pitch=0.5", "frames=4096", "cliprate=48000", "head=1" },
+        new[] { "spatial_dry_velocity_source_vn20_l0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=0", "speed=-20", "move=1" },
+        new[] { "spatial_dry_velocity_source_vn20_l1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=1", "speed=-20", "move=1" },
+        new[] { "spatial_dry_velocity_source_vn20_l2", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=2", "speed=-20", "move=1" },
+        new[] { "spatial_dry_velocity_source_v20_l0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=0", "speed=20", "move=1" },
+        new[] { "spatial_dry_velocity_source_v20_l1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=1", "speed=20", "move=1" },
+        new[] { "spatial_dry_velocity_source_v20_l2", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=2", "speed=20", "move=1" },
+        new[] { "spatial_dry_velocity_source_v40_l0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=0", "speed=40", "move=1" },
+        new[] { "spatial_dry_velocity_source_v40_l1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=1", "speed=40", "move=1" },
+        new[] { "spatial_dry_velocity_source_v40_l2", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=2", "speed=40", "move=1" },
+        new[] { "spatial_dry_velocity_listener_vn20_l0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=0", "speed=-20", "listenermove=1" },
+        new[] { "spatial_dry_velocity_listener_vn20_l1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=1", "speed=-20", "listenermove=1" },
+        new[] { "spatial_dry_velocity_listener_vn20_l2", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=2", "speed=-20", "listenermove=1" },
+        new[] { "spatial_dry_velocity_listener_v20_l0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=0", "speed=20", "listenermove=1" },
+        new[] { "spatial_dry_velocity_listener_v20_l1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=1", "speed=20", "listenermove=1" },
+        new[] { "spatial_dry_velocity_listener_v20_l2", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=2", "speed=20", "listenermove=1" },
+        new[] { "spatial_dry_velocity_listener_v40_l0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=0", "speed=40", "listenermove=1" },
+        new[] { "spatial_dry_velocity_listener_v40_l1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=1", "speed=40", "listenermove=1" },
+        new[] { "spatial_dry_velocity_listener_v40_l2", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=2", "speed=40", "listenermove=1" },
+        new[] { "spatial_dry_dual_velocity", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=1", "speed=20", "move=1", "listenermove=1" },
     };
     public const int BlockCount = 32;
     public const int ClipFrames = BlockCount * 1024;
@@ -279,7 +335,9 @@ public class EffectProbe : MonoBehaviour
     {
         var only = Environment.GetEnvironmentVariable("EFFECT_PROBE_CASES");
         var keys = new List<string>();
-        var cases = Environment.GetEnvironmentVariable("EFFECT_PROBE_PROFILE") == "spatial" ? SpatialCases : Cases;
+        string profile = Environment.GetEnvironmentVariable("EFFECT_PROBE_PROFILE") ?? "static";
+        var cases = profile.StartsWith("spatial") ? SpatialCases : Cases;
+        if (profile.StartsWith("spatial-factor")) cases = Array.FindAll(cases, row => row[0].StartsWith("spatial_dry_velocity_"));
         foreach (var c in cases) if (string.IsNullOrEmpty(only) || Array.IndexOf(only.Split(','), c[0]) >= 0) keys.Add(c[0]);
         return keys.ToArray();
     }
@@ -312,11 +370,11 @@ public class EffectProbe : MonoBehaviour
         Application.Quit(code);
 #endif
     }
-    void FlushEngine()
+    void FlushEngine(float deltaTime = 0)
     {
         var assembly = Type.GetType("Unbound.Runtime.AudioBackend, UnityEngine.CoreModule", true).Assembly;
-        typeof(Time).GetField("s_RealDeltaTime", Flags).SetValue(null, 0.0);
-        typeof(Time).GetField("s_DeltaTime", Flags).SetValue(null, 0f);
+        typeof(Time).GetField("s_RealDeltaTime", Flags).SetValue(null, (double)deltaTime);
+        typeof(Time).GetField("s_DeltaTime", Flags).SetValue(null, deltaTime);
         assembly.GetType("Unbound.Runtime.AudioSystem").GetMethod("Update", Flags).Invoke(null, null);
     }
     System.Collections.IEnumerator Start()
@@ -455,6 +513,8 @@ public class EffectProbe : MonoBehaviour
             }
             source.spatialBlend = Number(Option(key, "blend=", Option(key, "spatial=", "0"))); source.volume = 1;
             source.pitch = Number(Option(key, "pitch=", "1"));
+            source.dopplerLevel = Number(Option(key, "doppler=", "1"));
+            transform.position = Vector3.zero;
             source.spread = Number(Option(key, "spread=", "0"));
             source.panStereo = Number(Option(key, "pan=", "0"));
             transform.rotation = Quaternion.Euler(0, Number(Option(key, "listenerturn=", "0")), 0);
@@ -484,11 +544,20 @@ public class EffectProbe : MonoBehaviour
                 reverb.minDistance = 10; reverb.maxDistance = 15;
             }
             int channels = Option(key, "mono=", "0") == "1" ? 1 : 2;
-            var clip = AudioClip.Create(key, ClipFrames, channels, rate, false);
+            int clipFrames = int.Parse(Option(key, "frames=", ClipFrames.ToString()));
+            int clipRate = int.Parse(Option(key, "cliprate=", rate.ToString()));
+            var clip = AudioClip.Create(key, clipFrames, channels, clipRate, false);
             var data = Signal(Option(key, "music=", "dc:0.5"), rate);
+            if (Option(key, "head=", "0") == "1") { data[0] = 0.5f; data[1] = -0.25f; }
             if (channels == 1) { var mono = new float[ClipFrames]; for (int f = 0; f < ClipFrames; f++) mono[f] = data[2*f]; data = mono; }
+            if (clipFrames != ClipFrames) Array.Resize(ref data, clipFrames * channels);
             if (!clip.SetData(data, 0)) throw new Exception("SetData failed");
-            source.clip = clip; source.Play();
+            source.clip = clip;
+            if (Option(key, "listenermove=", "0") == "1") {
+                if (Engine) FlushEngine();
+                else yield return null;
+            }
+            source.Play();
             GameObject second = null;
             if (Option(key, "second=", "0") == "1") {
                 second = new GameObject("second"); var other = second.AddComponent<AudioSource>();
@@ -502,7 +571,24 @@ public class EffectProbe : MonoBehaviour
             using (var writer = new BinaryWriter(File.Create(Path.Combine(output, key+".f32")))) {
                 if (Engine) FlushEngine();
                 for (int block = 0; block < BlockCount; block++) {
-                    if (Option(key, "move=", "0") == "1") go.transform.position += new Vector3(0, 0, -20f * 1024 / rate);
+                    if (block == 8 && Option(key, "step=", "") != "") {
+                        switch (Option(key, "step=", "")) {
+                            case "distance": go.transform.position = new Vector3(0, 0, 10); break;
+                            case "blend": source.spatialBlend = 0.25f; break;
+                            case "direction": go.transform.position = new Vector3(3, 0, 4); break;
+                            case "spread": source.spread = 90; break;
+                            case "listener": transform.position = new Vector3(3, 0, 1); break;
+                            case "volume": source.volume = 0.25f; break;
+                        }
+                        if (Engine) FlushEngine();
+                    }
+                    if (Option(key, "move=", "0") == "1") {
+                        go.transform.position += new Vector3(0, 0, -Number(Option(key, "speed=", "20")) * 1024 / rate);
+                    }
+                    if (Option(key, "listenermove=", "0") == "1") {
+                        transform.position += new Vector3(0, 0, Number(Option(key, "speed=", "20")) * 1024 / rate);
+                    }
+                    if (Engine && (Option(key, "move=", "0") == "1" || Option(key, "listenermove=", "0") == "1")) FlushEngine(1024f / rate);
                     if (!Engine) yield return null;
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false })) throw new Exception("AddMixerGroupSink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("AudioRenderer.Render failed");

@@ -16,7 +16,7 @@ def verify(root, release, rate, zones=True):
             values = samples(root, record)
             assert len(values) == BLOCKS*1024*2 and all(map(math.isfinite, values)), case+suffix
             # Zone cases play to the default output: the mixer sink stays silent.
-            routed = '_r1_' in case
+            routed = '_r1_' in case or case.startswith(('zone_noise_routed_', 'zone_noise_lateclip', 'zone_noise_pitchset', 'zone_noise_genericset', 'zone_noise_velocityset', 'zone_noise_spreadset'))
             silent = (case.startswith('zone') and suffix and not routed) or ('_s1_' in case and case.endswith(('_d20', '_d25')))
             if silent: assert all(v == 0 for v in values), case+suffix
             else: assert any(abs(v) > 1e-6 for v in values), case+suffix

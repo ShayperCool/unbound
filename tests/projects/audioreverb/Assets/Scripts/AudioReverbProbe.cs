@@ -107,6 +107,17 @@ public class AudioReverbProbe : MonoBehaviour
         new[] { "zone_send_s1_r1_m0p5", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=0.5", "routed" },
         new[] { "zone_send_s1_r1_m1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=1", "routed" },
         new[] { "zone_send_s1_r1_m1p1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=1.1", "routed" },
+        new[] { "zone_noise_s0_mono0", "zone=0", "position=5", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768" },
+        new[] { "zone_noise_s0_mono1", "zone=0", "position=5", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "mono" },
+        new[] { "zone_noise_s1_mono0", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768" },
+        new[] { "zone_noise_s1_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "mono" },
+        new[] { "zone_noise_routed_mono0", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed" },
+        new[] { "zone_noise_routed_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "mono" },
+        new[] { "zone_noise_lateclip", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lateclip" },
+        new[] { "zone_noise_pitchset", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "pitchset" },
+        new[] { "zone_noise_genericset", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "genericset" },
+        new[] { "zone_noise_velocityset", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "velocityset" },
+        new[] { "zone_noise_spreadset", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "spreadset" },
     };
     public static readonly string[] FilterProperties = {
         "reverbPreset", "dryLevel", "room", "roomHF", "roomLF", "decayTime", "decayHFRatio", "reflectionsLevel",
@@ -283,7 +294,19 @@ public class AudioReverbProbe : MonoBehaviour
             var go = new GameObject(key); var source = go.AddComponent<AudioSource>();
             source.spatialBlend = 0; source.volume = 1;
             var clip = AudioClip.Create(key, frames, channels, rate, false);
-            if (!clip.SetData(Signal(channels, frames), 0)) throw new Exception("SetData failed"); source.clip = clip;
+            float[] signal = Signal(channels, frames);
+            if (Array.IndexOf(tokens, "noise") >= 0) {
+                uint seed = 12345;
+                for (int f = 0; f < frames; f++) {
+                    seed = seed * 1664525u + 1013904223u;
+                    float left = 0.25f * ((seed >> 8) / 8388608f - 1f);
+                    seed = seed * 1664525u + 1013904223u;
+                    float right = 0.25f * ((seed >> 8) / 8388608f - 1f);
+                    signal[f * channels] = f >= 1024 ? left : 0;
+                    if (channels == 2) signal[f * channels + 1] = f >= 1024 ? right : 0;
+                }
+            }
+            if (!clip.SetData(signal, 0)) throw new Exception("SetData failed"); if (Array.IndexOf(tokens, "lateclip") < 0) source.clip = clip;
             AudioReverbFilter filter = null;
             var zones = new List<AudioReverbZone>();
             bool hasZone = false;
@@ -291,14 +314,19 @@ public class AudioReverbProbe : MonoBehaviour
             if (!hasZone) source.outputAudioMixerGroup = child;
             for (int t = 1; t < tokens.Length; t++) {
                 string token = tokens[t];
-                if (token == "routed") source.outputAudioMixerGroup = child;
+                if (token == "lateclip") { }
+                else if (token == "pitchset") source.pitch = 1;
+                else if (token == "genericset") zones[zones.Count - 1].reverbPreset = AudioReverbPreset.Generic;
+                else if (token == "velocityset") source.velocityUpdateMode = AudioVelocityUpdateMode.Dynamic;
+                else if (token == "spreadset") source.spread = 0;
+                else if (token == "routed") source.outputAudioMixerGroup = child;
                 else if (token.StartsWith("position=")) go.transform.position = new Vector3(0, 0, float.Parse(token.Substring(9), CultureInfo.InvariantCulture));
                 else if (token == "curve=1") source.SetCustomCurve(AudioSourceCurveType.ReverbZoneMix,
                     new AnimationCurve(new Keyframe(0, 0.2f, 0, 0), new Keyframe(0.4f, 0.8f, 0, 0), new Keyframe(1, 0.3f, 0, 0)));
                 else if (token == "filter") filter = go.AddComponent<AudioReverbFilter>();
                 else if (token == "listener") filter = gameObject.AddComponent<AudioReverbFilter>();
                 else if (token == "disabled") filter.enabled = false;
-                else if (token == "mono" || token.StartsWith("frames=")) { }
+                else if (token == "mono" || token == "noise" || token.StartsWith("frames=")) { }
                 else if (token.StartsWith("F:")) Set(filter, token.Substring(2));
                 else if (token.StartsWith("S:")) Set(source, token.Substring(2));
                 else if (token.StartsWith("Z:")) Set(zones[zones.Count - 1], token.Substring(2));
@@ -309,6 +337,7 @@ public class AudioReverbProbe : MonoBehaviour
                 }
                 else throw new Exception("Unknown token " + token);
             }
+            if (Array.IndexOf(tokens, "lateclip") >= 0) source.clip = clip;
             if (filter) records.Add("\"" + key + ".filter\":\"" + Table(filter, FilterProperties) + "\"");
             for (int z = 0; z < zones.Count; z++) records.Add("\"" + key + ".zone" + z + "\":\"" + Table(zones[z], ZoneProperties) + "\"");
             var sink = new NativeArray<float>(2048, Allocator.Persistent); sinks.Add(sink);

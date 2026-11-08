@@ -1,21 +1,39 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!244 &-3617575166827186073
+--- !u!244 &-5575144956061945356
 AudioMixerEffectController:
   m_ObjectHideFlags: 3
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: 
-  m_EffectID: 05280f6a3f354731896bd8abc8df5e44
-  m_EffectName: Distortion
-  m_MixLevel: 24515266eb93f77dfbc61900cb8f3fb6
-  m_Parameters:
-  - m_ParameterName: Level
-    m_GUID: 58f723524500eab0a8161d084bf53147
+  m_EffectID: da395911aea5df05ebbcd8adcf99793a
+  m_EffectName: Attenuation
+  m_MixLevel: 8de722e1cfd52b4afa4a0d010b7879f0
+  m_Parameters: []
   m_SendTarget: {fileID: 0}
   m_EnableWetMix: 0
   m_Bypass: 0
+--- !u!243 &-3799500085027967868
+AudioMixerGroupController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Music
+  m_AudioMixer: {fileID: 24100000}
+  m_GroupID: 0ca761033317e2be0b66777cbb7d5b37
+  m_Children: []
+  m_Volume: 77366f0f3b339c86cbe93f4165b9629c
+  m_Pitch: ed4b88a879a5dfbaaa1357329f2e47ed
+  m_Send: 00000000000000000000000000000000
+  m_Effects:
+  - {fileID: -5575144956061945356}
+  - {fileID: 8676042785115582685}
+  m_UserColorIndex: 0
+  m_Mute: 0
+  m_Solo: 0
+  m_BypassEffects: 0
 --- !u!241 &24100000
 AudioMixerController:
   m_ObjectHideFlags: 0
@@ -32,7 +50,7 @@ AudioMixerController:
   m_EnableSuspend: 0
   m_UpdateMode: 0
   m_ExposedParameters:
-  - guid: 58f723524500eab0a8161d084bf53147
+  - guid: d946c71761d8158d48f05c54df4ef6ec
     name: Level
   m_AudioMixerGroupViews: []
   m_CurrentViewIndex: 0
@@ -45,11 +63,11 @@ AudioMixerGroupController:
   m_PrefabAsset: {fileID: 0}
   m_Name: Master
   m_AudioMixer: {fileID: 24100000}
-  m_GroupID: 43ea3e98bf5a555b1b48f4199f6092d7
+  m_GroupID: 8b7eb28ff719475ffa31057d34ee1aa0
   m_Children:
-  - {fileID: 1244159080380926064}
-  m_Volume: 6659f29e5cf8d41f197facc1ff421e92
-  m_Pitch: 00000fcbcf38e5129b8856a669f938a4
+  - {fileID: -3799500085027967868}
+  m_Volume: 88ed01dac3d5ebcffa0e02bae30d6fea
+  m_Pitch: 6ffb93580d5406b8b8bebe72828b48f3
   m_Send: 00000000000000000000000000000000
   m_Effects:
   - {fileID: 24400004}
@@ -64,9 +82,9 @@ AudioMixerEffectController:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: 
-  m_EffectID: 6c66f46709a4bd3a29c3fb5ec507693b
+  m_EffectID: 1267a0775d3fdcef4bae00684674f5c9
   m_EffectName: Attenuation
-  m_MixLevel: eb942eeb83b1417c4a2f55bd28d614bd
+  m_MixLevel: 0b190c8b62e820928b290d8a12482dec
   m_Parameters: []
   m_SendTarget: {fileID: 0}
   m_EnableWetMix: 0
@@ -79,40 +97,22 @@ AudioMixerSnapshotController:
   m_PrefabAsset: {fileID: 0}
   m_Name: Snapshot
   m_AudioMixer: {fileID: 24100000}
-  m_SnapshotID: de0624776e878e01d8c6854697035a4b
+  m_SnapshotID: a51c32276820d6f418810036ccb69a93
   m_FloatValues: {}
   m_TransitionOverrides: {}
---- !u!243 &1244159080380926064
-AudioMixerGroupController:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Music
-  m_AudioMixer: {fileID: 24100000}
-  m_GroupID: 0ebe4ce610bb70e7f89fc5a68045f854
-  m_Children: []
-  m_Volume: 2bc2d5c0b8141cf4dbb5ed2ca787ecdf
-  m_Pitch: dc3e3181d543b9d50ab8cad67032f23e
-  m_Send: 00000000000000000000000000000000
-  m_Effects:
-  - {fileID: 6888833667757007755}
-  - {fileID: -3617575166827186073}
-  m_UserColorIndex: 0
-  m_Mute: 0
-  m_Solo: 0
-  m_BypassEffects: 0
---- !u!244 &6888833667757007755
+--- !u!244 &8676042785115582685
 AudioMixerEffectController:
   m_ObjectHideFlags: 3
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: 
-  m_EffectID: 429b5a461305810e99036e9e9f10b437
-  m_EffectName: Attenuation
-  m_MixLevel: d2afe6a398cb5d812b72d60cf82b20be
-  m_Parameters: []
+  m_EffectID: 42cee420c2c05243b972141a4ce98521
+  m_EffectName: Distortion
+  m_MixLevel: 76f720767cb5a5b7880d983d30ad1f50
+  m_Parameters:
+  - m_ParameterName: Level
+    m_GUID: d946c71761d8158d48f05c54df4ef6ec
   m_SendTarget: {fileID: 0}
   m_EnableWetMix: 0
   m_Bypass: 0

@@ -37,3 +37,22 @@ def samples(root, meta):
         if raw.exists(): values.frombytes(raw.read_bytes())
         elif packed.exists(): values.frombytes(gzip.decompress(packed.read_bytes()))
     return values
+
+
+SPATIAL_PROFILES = ('spatial', 'spatial-factor0', 'spatial-factor2')
+
+
+def configure_spatial_profile(project, name):
+    """The factor profiles change only the documented Audio Manager Doppler Factor."""
+    if name == 'spatial': return
+    factor = {'spatial-factor0': 0, 'spatial-factor2': 2}[name]
+    path = project/'ProjectSettings/AudioManager.asset'
+    if path.exists():
+        text = path.read_text()
+        text, count = re.subn(r'(?m)^  Doppler Factor:.*$', '  Doppler Factor: '+str(factor), text)
+        assert count == 1, path
+    else:
+        text = (FIXTURE/'Authored/unity-6000.0.71f1/default/ProjectSettings/AudioManager.asset').read_text()
+        text, count = re.subn(r'(?m)^  Doppler Factor:.*$', '  Doppler Factor: '+str(factor), text)
+        assert count == 1
+    path.write_text(text)

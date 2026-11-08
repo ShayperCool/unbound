@@ -33,8 +33,7 @@ def profile(name):
 
 
 # Zone cases the gate covers (see README): all of them.
-GATE_ZONE = ('zone_in', 'zone_11', 'zone_12_5', 'zone_14', 'zone_out', 'zone_mix_half', 'zone_mix0', 'zone_user',
-             'zone_cave', 'zone_overlap', 'zone_overlap_blend')
+GATE_ZONE = tuple(key for key in cases() if key.startswith('zone'))
 # Metadata outside the cases: the property tables of each component.
 FILTER_TABLES = ('filter.', 'serialized.filter_')
 ZONE_TABLES = ('zone.', 'serialized.zone_', 'serialized.reverb_zone_mix')

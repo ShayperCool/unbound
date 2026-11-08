@@ -12,16 +12,17 @@ import re
 from common import BLOCKS, FIXTURE, SUFFIXES, header, samples
 
 
-def cases():
+def cases(profile="spatial"):
     source = (FIXTURE/'Assets/Scripts/EffectProbe.cs').read_text()
     body = source.split('SpatialCases = {', 1)[1].split('};', 1)[0]
-    return re.findall(r'new\[\] \{ "([a-z0-9_]+)"', body)
+    names = re.findall(r'new\[\] \{ "([a-z0-9_]+)"', body)
+    return [key for key in names if key.startswith('spatial_dry_velocity_')] if profile.startswith('spatial-factor') else names
 
 
-def verify(root, release, rate):
+def verify(root, release, rate, profile="spatial"):
     meta = header(root)
     assert meta['release'] == release and meta['rate'] == rate
-    for case in cases():
+    for case in cases(profile):
         for suffix in SUFFIXES:
             record = meta[case+suffix]
             assert record == dict(file=case+suffix+'.f32', frames=BLOCKS*1024, channels=2), case+suffix
@@ -42,6 +43,14 @@ def gate(candidate, log, report, release, rate):
     reference = FIXTURE/'Reference'/('unity-'+release)/('spatial-rate-'+str(rate))
     # Deliberately report every mismatch, with the unchanged comparator tolerances.
     failures = compare(reference, candidate, report, dict.fromkeys(cases()))
+    # These controls isolate the common source path. Zone startup/completion remains an
+    # explicit residual in the complete raw report, and components keep rejecting 3D sources.
+    dry = [key for key in cases() if key.startswith('spatial_dry_')
+           and key not in ('spatial_dry_zone_mono0', 'spatial_dry_zone_mono1')]
+    measured = compare(reference, candidate, report.with_name('dry-'+report.name),
+                       dict.fromkeys(dry), pcm_steps=1)
+    assert measured == 0, 'measured dry spatial controls differ; see dry-'+report.name
+    print(f'Spatial dry controls: {len(dry)} accepted at {rate} Hz')
     diagnostics = log.read_text()
     meta = header(candidate)
     rejected = 0
@@ -71,3 +80,10 @@ if __name__ == '__main__':
     p.add_argument('--report', type=Path, required=True)
     a = p.parse_args()
     gate(a.candidate, a.log, a.report, a.release, a.rate)
+
+
+def factor_gate(candidate, report, release, rate, profile):
+    from compare import compare
+    verify(candidate, release, rate, profile)
+    reference = FIXTURE/'Reference'/('unity-'+release)/(profile+'-rate-'+str(rate))
+    assert compare(reference, candidate, report, dict.fromkeys(cases(profile)), pcm_steps=1) == 0

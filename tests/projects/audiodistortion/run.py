@@ -52,5 +52,13 @@ for rate in a.rate or (48000, 44100):
            '--work', work/f'spatial-{rate}'): raise SystemExit(f'spatial {rate} failed')
     failed |= bool(run('spatial.py', '--candidate', work/f'spatial-{rate}/capture',
                        '--log', work/f'spatial-{rate}/engine.log', '--report', work/f'spatial-{rate}.jsonl.gz'))
+    for factor in (0, 2):
+        name = 'spatial-factor'+str(factor)
+        destination = work/(name+'-'+str(rate))
+        if run('engine.py', '--native-project', project, '--runtime', runtime, '--profile', name,
+               '--work', destination): raise SystemExit(f'{name} {rate} failed')
+        from spatial import factor_gate
+        try: factor_gate(destination/'capture', work/f'{name}-{rate}.jsonl.gz', a.release, rate, name)
+        except AssertionError: failed = True
 print('reports:', work)
 raise SystemExit(failed)

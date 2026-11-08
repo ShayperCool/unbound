@@ -10,7 +10,7 @@ import subprocess
 
 p = argparse.ArgumentParser()
 p.add_argument('--release', required=True)
-p.add_argument('--profile', choices=('static', 'spatial'), default='static')
+p.add_argument('--profile', choices=('static', 'spatial', 'spatial-factor0', 'spatial-factor2'), default='static')
 p.add_argument('--native-project', type=Path, required=True, help='Private mixer assets created by native.py')
 p.add_argument('--runtime', type=Path, required=True, help='Directory containing matching unbound and managed/')
 p.add_argument('--work', type=Path, required=True)
@@ -23,6 +23,9 @@ a.work.mkdir(parents=True, exist_ok=False)
 project = a.work/'project'
 for name in ('Assets', 'Packages', 'ProjectSettings'): shutil.copytree(a.native_project/name, project/name)
 for script in (fixture/'Assets/Scripts').glob('*.cs'): shutil.copy2(script, project/'Assets/Scripts'/script.name)
+if a.profile.startswith('spatial-factor'):
+    from common import configure_spatial_profile
+    configure_spatial_profile(project, a.profile)
 output = a.work/'capture'; output.mkdir()
 command = [str(Path.home()/'.cache/compat/with-heavy-job'), '--kind', 'engine-cpu', 'timeout', '900', str(a.runtime/'unbound'), 'run', '-p', str(project),
            '--scene', 'Assets/Scenes/Probe.unity', '--headless', '60', '--no-watch', '--fixed-fps', '60']
@@ -36,8 +39,9 @@ with (a.work/'engine.log').open('w') as log:
     result = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT)
 (a.work/'exit.json').write_text(json.dumps({'returncode': result.returncode})+'\n')
 if result.returncode: raise SystemExit(result.returncode)
-if a.profile == 'spatial':
+if a.profile.startswith('spatial'):
     from spatial import verify
+    verify(output, a.release, a.rate, a.profile)
 else:
     from verify import verify
-verify(output, a.release, a.rate)
+    verify(output, a.release, a.rate)
