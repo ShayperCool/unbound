@@ -10,7 +10,8 @@ using PL = UnityEngine.PlayerLoop;
 namespace UnityEngine.Tests
 {
     /// <summary>Default-loop Start boundaries measured by the phase markers in instantiateasync
-    /// and the Update/coroutine/LateUpdate ordering in lifecycle. These tests run only the driver's
+    /// and the Update/coroutine/LateUpdate ordering in lifecycle, plus editorcallbacks/SceneLoop's
+    /// coroutine/LateUpdate-created Start-only controls. These tests run only the driver's
     /// and Lifecycle's actions at the selected nodes, without rendering, clocks or async schedulers.</summary>
     [Collection("Frames")]
     public class StartPhaseTests
@@ -26,6 +27,24 @@ namespace UnityEngine.Tests
             void Start() => Calls.Add(name + ".Start");
             void Update() => Calls.Add(name + ".Update");
             void LateUpdate() => Calls.Add(name + ".LateUpdate");
+        }
+
+        public class StartOnlyActor : MonoBehaviour
+        {
+            void Awake() => Calls.Add(name + ".Awake");
+            void OnEnable() => Calls.Add(name + ".OnEnable");
+            void Start() => Calls.Add(name + ".Start");
+        }
+
+        public class LateCreator : MonoBehaviour
+        {
+            internal Action Next;
+            void LateUpdate()
+            {
+                var next = Next;
+                Next = null;
+                next?.Invoke();
+            }
         }
 
         public class Creator : MonoBehaviour
@@ -200,6 +219,38 @@ namespace UnityEngine.Tests
         {
             yield return null;
             go.SetActive(true);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ScriptsWithoutALateUpdateVisitStartAtThePostLateScriptingPoint(bool fromLateUpdate)
+        {
+            using var scope = new Scope();
+            string release = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            try
+            {
+                var host = scope.Make("creator").AddComponent<Creator>();
+                var lateCreator = scope.Make("lateCreator").AddComponent<LateCreator>();
+                var go = scope.Make("pending");
+                go.SetActive(false);
+                var actor = go.AddComponent<StartOnlyActor>();
+                RunDriverNode(typeof(PL.EarlyUpdate.ScriptRunDelayedStartupFrame));
+                if (fromLateUpdate) lateCreator.Next = () => go.SetActive(true);
+                else host.StartCoroutine(ActivateAfterYield(go));
+                Time.s_FrameCount++;
+                Calls.Clear();
+                RunDriverNode(typeof(PL.Update.ScriptRunDelayedDynamicFrameRate));
+                RunDriverNode(typeof(PL.PreLateUpdate.ScriptRunBehaviourLateUpdate));
+                Assert.True(actor.isActiveAndEnabled);
+                Assert.False(actor.didStart);
+                Assert.Equal(new[] { "pending.Awake", "pending.OnEnable" }, Calls);
+                RunDriverNode(typeof(PL.PostLateUpdate.ScriptRunDelayedDynamicFrameRate));
+                Assert.True(actor.didStart);
+                Assert.Equal(new[] { "pending.Awake", "pending.OnEnable", "pending.Start" }, Calls);
+            }
+            finally { ProjectInfo.UnityVersion = release; }
         }
 
         [Fact]

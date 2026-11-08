@@ -421,12 +421,12 @@ namespace Unbound.Runtime
         /// during it start at the following delayed-update node, before coroutines resume.</summary>
         internal static void RunUpdate() => s_Update.Run("Update");
 
-        /// <summary>LateUpdate, then Start for the behaviours enabled during it (measured: they
-        /// start at the end of the frame, without a LateUpdate).</summary>
+        /// <summary>LateUpdate visits can start a behaviour before its callback. Remaining
+        /// Starts use the PostLateUpdate scripting point in the measured release.</summary>
         internal static void RunLateUpdate()
         {
             s_LateUpdate.Run("LateUpdate");
-            RunPendingStarts();
+            if (!Compat.PendingStartsAfterLateUpdate) RunPendingStarts();
         }
 
         /// <summary>Rebuilds the update lists from the active and enabled behaviours with their current

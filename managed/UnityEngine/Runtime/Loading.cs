@@ -14,6 +14,9 @@ namespace Unbound.Runtime
         internal string Guid;
         internal readonly Dictionary<long, Object> Objects = new Dictionary<long, Object>();
         internal readonly List<GameObject> Roots = new List<GameObject>();
+        // Scene hierarchy queries use the serialized root list. Activation retains the
+        // construction traversal: Unity does not specify relative callbacks across objects.
+        internal IReadOnlyList<GameObject> SceneRoots;
         internal Object MainObject;
         /// <summary>The file ids are Unbound's, not Unity's (a ScriptedImporter's objects): references
         /// resolve by the objects themselves (<see cref="AssetDatabaseRuntime.Load"/>).</summary>
@@ -443,6 +446,31 @@ namespace Unbound.Runtime
                 if (go.m_Transform != null && go.m_Transform.m_Parent == null && !roots.Contains(go.m_Transform))
                     roots.Add(go.m_Transform);
             foreach (var root in roots) file.Roots.Add(root.m_GameObject);
+            if (sceneRoots != null)
+            {
+                // SceneRoots entries can name a Transform or a PrefabInstance. Expanded
+                // objects retain the latter's reference; only its top-level Transform is a root.
+                var instances = new Dictionary<long, GameObject>();
+                foreach (var (transform, body) in transforms)
+                {
+                    long instance = body.Ref("m_PrefabInstance").FileId;
+                    if (instance != 0 && transform.m_Parent == null)
+                        instances[instance] = transform.m_GameObject;
+                }
+                var ordered = new List<GameObject>(roots.Count);
+                var seen = new HashSet<GameObject>();
+                foreach (var reference in RootReferences(sceneRoots.Body))
+                {
+                    GameObject root = null;
+                    if (file.Objects.TryGetValue(reference.FileId, out var obj) && obj is Transform transform && transform.m_Parent == null)
+                        root = transform.m_GameObject;
+                    else instances.TryGetValue(reference.FileId, out root);
+                    if (root != null && seen.Add(root)) ordered.Add(root);
+                }
+                foreach (var root in file.Roots)
+                    if (seen.Add(root)) ordered.Add(root);
+                file.SceneRoots = ordered;
+            }
         }
     }
 
@@ -471,22 +499,26 @@ namespace Unbound.Runtime
     /// <summary>Scenes: builds the scene's objects into the scene and wakes them.</summary>
     internal static class SceneLoader
     {
-        internal static void LoadInto(SceneData scene, Action beforeAwake = null)
+        internal static List<YDocument> ReadDocuments(SceneData scene)
         {
-            List<YDocument> documents;
-            try
-            {
-                documents = Native.LoadDocuments(scene.LoadKey ?? scene.Path);
-            }
+            try { return Native.LoadDocuments(scene.LoadKey ?? scene.Path); }
             catch (Exception e)
             {
                 Debug.LogError($"Unbound: could not load scene {scene.Path}: {e.Message}" + ClassCoverage.DoctorHint);
-                return;
+                return null;
             }
+        }
+
+        internal static void LoadInto(SceneData scene, Action beforeAwake = null) =>
+            LoadPrepared(scene, ReadDocuments(scene), beforeAwake);
+
+        internal static void LoadPrepared(SceneData scene, List<YDocument> documents, Action beforeAwake = null)
+        {
+            if (documents == null) return;
             var file = ObjectGraphBuilder.Build(documents, scene.Path, null, ObjectGraphBuilder.Kind.Scene, scene);
             foreach (var doc in documents)
                 if (!doc.Stripped) SceneSettings.Apply(doc, file, scene);
-            foreach (var root in file.Roots) scene.Roots.Add(root);
+            foreach (var root in file.SceneRoots ?? file.Roots) scene.Roots.Add(root);
             foreach (var pair in file.Objects) scene.FileIds[pair.Value] = pair.Key;
 
             // 6000.0 RuntimeInitializeOnLoadMethod: the initial scene is loaded before

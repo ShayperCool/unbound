@@ -24,6 +24,8 @@ public sealed class SceneLoadLoop : MonoBehaviour
     static string UnloadPhase, UnloadLoadsDone;
     static int RenderUntil;
     static bool Recording;
+    bool CreateInLateUpdate;
+    int FrameSleepMilliseconds = 50;
 
     public static void Event(string message, GameObject target = null)
     {
@@ -108,6 +110,46 @@ public sealed class SceneLoadLoop : MonoBehaviour
     IEnumerator Start()
     {
         Recording = true;
+        if (Environment.GetEnvironmentVariable("SCENE_LOAD_QUEUE_ONLY") == "1")
+        {
+            Case = "queue.unheld";
+            FrameSleepMilliseconds = 500;
+            FirstFrame = Time.frameCount;
+            Phase = "request";
+            Operation = SceneManager.LoadSceneAsync("First", LoadSceneMode.Additive);
+            Queued = SceneManager.LoadSceneAsync("Second", LoadSceneMode.Additive);
+            Event("returned|" + State(Operation));
+            Event("queued.returned|" + State(Queued));
+            Operation.completed += op => Event("completed|" + State(op));
+            Queued.completed += op => Event("queued.completed|" + State(op));
+            while (!Queued.isDone)
+            {
+                yield return null;
+                Sample("coroutine");
+                if (Time.frameCount - FirstFrame > 60) throw new Exception("unheld queue timeout");
+            }
+            Event("done|first=" + Operation.isDone);
+            Operation = null;
+            Queued = null;
+            yield return null;
+            yield return null;
+            Finish();
+            yield break;
+        }
+        if (Environment.GetEnvironmentVariable("SCENE_LOAD_STARTS_ONLY") == "1")
+        {
+            Case = "starts.control";
+            FirstFrame = Time.frameCount;
+            yield return null;
+            Phase = "coroutine.create";
+            new GameObject("CoroutineNoLate").AddComponent<SceneLoadItem>();
+            new GameObject("CoroutineWithLate").AddComponent<SceneLoadLateItem>();
+            CreateInLateUpdate = true;
+            yield return null;
+            yield return null;
+            Finish();
+            yield break;
+        }
         if (Environment.GetEnvironmentVariable("SCENE_LOAD_FORCE_ONLY") == "1")
         {
             yield return ForceControl(false);
@@ -275,7 +317,12 @@ public sealed class SceneLoadLoop : MonoBehaviour
 
     void LateUpdate()
     {
+        if (CreateInLateUpdate)
+        {
+            CreateInLateUpdate = false;
+            new GameObject("LateNoLate").AddComponent<SceneLoadItem>();
+        }
         // Give the background reader time to settle between the fixture's small frames.
-        Thread.Sleep(50);
+        Thread.Sleep(FrameSleepMilliseconds);
     }
 }

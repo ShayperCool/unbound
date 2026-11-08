@@ -15,6 +15,9 @@ from editor_runner import EditorJob, publish, run, summary
 
 SOURCE = PROBE / 'SceneLoop'
 CACHE = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache')) / 'unbound/q192'
+# The full case ladder finishes near frame 50; isolated profiles finish within frame 9.
+MATRIX_FRAMES = 160
+PROFILE_FRAMES = 30
 
 
 def prepare(project, release):
@@ -40,8 +43,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode', choices=('create', 'editor', 'publish', 'check'))
     parser.add_argument('--release', required=True)
-    parser.add_argument('--single-first', action='store_true')
-    parser.add_argument('--force-only', action='store_true')
+    profiles = parser.add_mutually_exclusive_group()
+    profiles.add_argument('--single-first', action='store_true')
+    profiles.add_argument('--force-only', action='store_true')
+    profiles.add_argument('--starts-only', action='store_true')
+    profiles.add_argument('--queue-only', action='store_true')
     parser.add_argument('--label', default='run-' + str(time.time_ns()))
     parser.add_argument('--repeat', choices=('native1', 'native2'), default='native1')
     args = parser.parse_args()
@@ -49,7 +55,10 @@ def main():
         parser.error('label must be a single directory name')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = CACHE / args.label
-    reference = PROBE / 'Reference' / ('unity-' + args.release) / ('scene-loop-force.txt' if args.force_only else ('scene-loop-single-first.txt' if args.single_first else 'scene-loop.txt'))
+    names = {'single_first': 'scene-loop-single-first', 'force_only': 'scene-loop-force',
+             'starts_only': 'scene-loop-starts', 'queue_only': 'scene-loop-queue'}
+    name = next((name for flag, name in names.items() if getattr(args, flag)), 'scene-loop')
+    reference = PROBE / 'Reference' / ('unity-' + args.release) / (name + '.txt')
     if args.mode == 'publish':
         def write(target, first):
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -66,7 +75,7 @@ def main():
         result = run(EditorJob(project, out / 'editor.log', out,
                      args=['-executeMethod', 'SceneLoopRunner.Create', '-quit'] if create else ['-executeMethod', 'SceneLoopRunner.Record'],
                      batch=create, graphics=True, timeout=900, shutdown_grace=90,
-                     env={} if create else {'SCENE_LOAD_LOOP_OUT': str(out / 'values.txt'), 'SCENE_LOAD_SINGLE_FIRST': '1' if args.single_first else '0', 'SCENE_LOAD_FORCE_ONLY': '1' if args.force_only else '0'},
+                     env={} if create else {'SCENE_LOAD_LOOP_OUT': str(out / 'values.txt'), 'SCENE_LOAD_SINGLE_FIRST': '1' if args.single_first else '0', 'SCENE_LOAD_FORCE_ONLY': '1' if args.force_only else '0', 'SCENE_LOAD_STARTS_ONLY': '1' if args.starts_only else '0', 'SCENE_LOAD_QUEUE_ONLY': '1' if args.queue_only else '0'},
                      progress_files=[] if create else [out / 'values.txt'],
                      progress_timeout=None if create else 600))
         print(summary(result))
@@ -89,15 +98,17 @@ def main():
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND')
     if not cli:
         parser.error('set UNBOUND_CLI to an immutable runtime')
-    env = dict(os.environ, SCENE_LOAD_LOOP_OUT=str(out / 'values.txt'), SCENE_LOAD_SINGLE_FIRST='1' if args.single_first else '0', SCENE_LOAD_FORCE_ONLY='1' if args.force_only else '0')
+    frames = MATRIX_FRAMES if name == 'scene-loop' else PROFILE_FRAMES
+    env = dict(os.environ, SCENE_LOAD_LOOP_OUT=str(out / 'values.txt'), SCENE_LOAD_SINGLE_FIRST='1' if args.single_first else '0', SCENE_LOAD_FORCE_ONLY='1' if args.force_only else '0', SCENE_LOAD_STARTS_ONLY='1' if args.starts_only else '0', SCENE_LOAD_QUEUE_ONLY='1' if args.queue_only else '0')
     with (out / 'unbound.log').open('w') as log:
         result = subprocess.run([str(Path.home() / '.cache/compat/with-heavy-job'), '--kind', 'engine-gpu',
                                  'timeout', '600', cli, 'run', '-p', str(project), '--scene', 'Assets/Scenes/Boot.unity',
-                                 '--frames', '500', '--size', '320x240', '--no-watch'], env=env,
+                                 '--frames', str(frames), '--size', '320x240', '--no-watch'], env=env,
                                 stdout=log, stderr=subprocess.STDOUT)
     if result.returncode or complete(out):
         print(f'engine failed ({result.returncode}): {out / "unbound.log"}')
         return 1
+    print('capture:', out / 'values.txt', 'progress reads:', out / 'values.txt.raw.txt')
     from scene_loop_compare import compare
     return compare(reference.read_text().splitlines(), (out / 'values.txt').read_text().splitlines())
 

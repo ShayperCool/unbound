@@ -9,6 +9,14 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Compat
     {
+        /// <summary>Separate preparation and activation of scene operations, measured by
+        /// tests/projects/editorcallbacks/SceneLoop on Unity 6000.0.71f1.</summary>
+        internal static bool SceneAsyncPreparationMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>Pending Starts without an earlier callback visit run at the PostLateUpdate
+        /// scripting point, measured by editorcallbacks/SceneLoop on Unity 6000.0.71f1.</summary>
+        internal static bool PendingStartsAfterLateUpdate => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Camera dependency repair measured by
         /// flarelayerdependency in Unity 6000.0.71f1.</summary>
         internal static bool FlareCameraRepairMeasured => Release == (6000, 0, 71, 'f', 1);

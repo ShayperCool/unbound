@@ -174,6 +174,10 @@ namespace Unbound.Runtime
                 Destruction.FlushEndOfFrame();
             });
             Register(typeof(PL.PostLateUpdate.ScriptRunDelayedDynamicFrameRate), Destruction.BeginDelivery);
+            Register(typeof(PL.PostLateUpdate.ScriptRunDelayedDynamicFrameRate), () =>
+            {
+                if (Compat.PendingStartsAfterLateUpdate) Lifecycle.RunPendingStarts();
+            });
             Register(typeof(PL.PostLateUpdate.ScriptRunDelayedDynamicFrameRate), Destruction.DeliverRequested);
             Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), NativeInput.BeforeRenderUpdate);
             Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), Application.Internal_BeforeRender);
@@ -604,6 +608,7 @@ namespace Unbound.Runtime
         {
             if (s_Input == null) return;
             Time.BeginFrame(s_Input->RealDeltaTime);
+            SceneManagerInternal.PreparePending();
         }
 
         static unsafe void UpdateInput()

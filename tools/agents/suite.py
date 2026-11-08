@@ -411,7 +411,8 @@ def recipes(release):
                  'modelroot', 'navlinks'):
         R[name] = guarded(jsonl('values.jsonl'))
     # Scene-loop companions retain the original callback comparator and its raw failures.
-    for profile, flags in (('additive', []), ('single', ['--single-first']), ('forced', ['--force-only'])):
+    for profile, flags in (('additive', []), ('single', ['--single-first']), ('forced', ['--force-only']),
+                           ('starts', ['--starts-only']), ('queue', ['--queue-only'])):
         step = driver('scene_loop.py', 'check', '--release', '{release}',
                       '--label', '{label}-scene-' + profile, *flags)
         step.kind = 'compare'

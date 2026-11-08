@@ -11,7 +11,7 @@ from collections import defaultdict
 import difflib
 from pathlib import Path
 
-CALLBACKS = {'Awake', 'OnEnable', 'Start', 'OnRenderObject'}
+CALLBACKS = {'Awake', 'OnEnable', 'Start', 'LateUpdate', 'OnRenderObject'}
 
 
 def streams(lines):

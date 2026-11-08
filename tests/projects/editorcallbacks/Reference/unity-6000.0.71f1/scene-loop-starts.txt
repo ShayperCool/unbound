@@ -1,0 +1,10 @@
+starts.control|1|coroutine.create|Awake|CoroutineNoLate|Boot|loaded=True
+starts.control|1|coroutine.create|OnEnable|CoroutineNoLate|Boot|loaded=True
+starts.control|1|PreLateUpdate.ScriptRunBehaviourLateUpdate|Awake|LateNoLate|Boot|loaded=True
+starts.control|1|PreLateUpdate.ScriptRunBehaviourLateUpdate|OnEnable|LateNoLate|Boot|loaded=True
+starts.control|1|PreLateUpdate.ScriptRunBehaviourLateUpdate|Start|CoroutineWithLate|Boot|loaded=True
+starts.control|1|PreLateUpdate.ScriptRunBehaviourLateUpdate|LateUpdate|CoroutineWithLate|Boot|loaded=True
+starts.control|1|PostLateUpdate.ScriptRunDelayedDynamicFrameRate|Start|CoroutineNoLate|Boot|loaded=True
+starts.control|1|PostLateUpdate.ScriptRunDelayedDynamicFrameRate|Start|LateNoLate|Boot|loaded=True
+starts.control|2|PreLateUpdate.ScriptRunBehaviourLateUpdate|LateUpdate|CoroutineWithLate|Boot|loaded=True
+complete

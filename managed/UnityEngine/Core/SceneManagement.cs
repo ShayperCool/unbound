@@ -244,7 +244,7 @@ namespace UnityEngine.SceneManagement
             if (index < 0)
             {
                 if (AssetBundle.FindScene(sceneName, out var path, out var key))
-                    return SceneManagerInternal.LoadBundled(path, key, parameters).Scene;
+                    return SceneManagerInternal.LoadBundled(path, key, parameters, async: false).Scene;
                 Debug.LogError($"Scene '{sceneName}' couldn't be loaded because it has not been added to the build settings or the AssetBundle has not been loaded.\nTo add a scene to the build settings use the menu File->Build Settings...");
                 return default;
             }
@@ -292,7 +292,7 @@ namespace UnityEngine.SceneManagement
             if (index < 0)
             {
                 if (AssetBundle.FindScene(sceneName, out var path, out var key))
-                    return SceneManagerInternal.LoadBundled(path, key, parameters).Operation;
+                    return SceneManagerInternal.LoadBundled(path, key, parameters, async: true).Operation;
                 Debug.LogError($"Scene '{sceneName}' couldn't be loaded because it has not been added to the build settings or the AssetBundle has not been loaded.");
                 return null;
             }
@@ -364,7 +364,7 @@ namespace UnityEngine.SceneManagement
 
     /// <summary>Scene loading. A load creates the scene, reads its objects through the native side
     /// (which resolves prefab instances), then wakes them; Single mode unloads the other scenes
-    /// first. An async load completes on the next frame, honouring allowSceneActivation.</summary>
+    /// first. Async scene work is prepared before integration, honouring allowSceneActivation.</summary>
     internal static class SceneManagerInternal
     {
         internal static SceneData ActiveScene => SceneRegistry.Active;
@@ -375,8 +375,7 @@ namespace UnityEngine.SceneManagement
             internal AsyncOperation Operation;
         }
 
-        static readonly List<(AsyncOperation Op, int Index, LoadSceneParameters Parameters, SceneData Scene)> s_Pending =
-            new List<(AsyncOperation, int, LoadSceneParameters, SceneData)>();
+        static readonly SceneOperationQueue s_Operations = new SceneOperationQueue();
         /// <summary>Scenes requested by LoadScene/LoadSceneAsync (from an AssetBundle too) and not
         /// integrated yet: pending, held at 0.9 for allowSceneActivation, or being loaded; in
         /// request order.</summary>
@@ -440,9 +439,7 @@ namespace UnityEngine.SceneManagement
             {
                 foreach (var data in s_Requested)
                     if (data.LoadingState == Scene.LoadingState.Loading) return true;
-                foreach (var request in s_PendingUnloads)
-                    if (request.Scene.IsLoaded) return true;
-                return false;
+                return s_Operations.IsUnloading;
             }
         }
 
@@ -470,20 +467,11 @@ namespace UnityEngine.SceneManagement
             CreateLocalPhysics(data, parameters.localPhysicsMode);
             data.LoadingState = Scene.LoadingState.Loading;
             s_Requested.Add(data);
-            var op = new AsyncOperation();
-            if (async)
-            {
-                s_Pending.Add((op, buildIndex, parameters, data));
-                return new LoadResult { Scene = new Scene(data.Handle), Operation = op };
-            }
-            // LoadScene completes during the next frame in Unity too; the work is the same, done now
-            // and woken at once, which is what games observe after the frame.
-            s_Pending.Add((op, buildIndex, parameters, data));
-            return new LoadResult { Scene = new Scene(data.Handle), Operation = op };
+            return QueueLoad(data, parameters, async, sceneManagerLoad: true);
         }
 
         /// <summary>A scene of a loaded AssetBundle: its path and the key its documents load by.</summary>
-        internal static LoadResult LoadBundled(string path, string key, LoadSceneParameters parameters)
+        internal static LoadResult LoadBundled(string path, string key, LoadSceneParameters parameters, bool async)
         {
             Unbound.Runtime.Trace.Scenes($"load scene {path} from an AssetBundle ({parameters.loadSceneMode})");
             var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, -1);
@@ -491,8 +479,18 @@ namespace UnityEngine.SceneManagement
             data.LoadKey = key;
             data.LoadingState = Scene.LoadingState.Loading;
             s_Requested.Add(data);
+            return QueueLoad(data, parameters, async, sceneManagerLoad: false);
+        }
+
+        static LoadResult QueueLoad(SceneData data, LoadSceneParameters parameters, bool async, bool sceneManagerLoad)
+        {
             var op = new AsyncOperation();
-            s_Pending.Add((op, -1, parameters, data));
+            List<YDocument> documents = null;
+            s_Operations.Enqueue(op, data, () => {
+                try { Perform(data, parameters, sceneManagerLoad: sceneManagerLoad, documents: documents, prepared: true); }
+                finally { s_Requested.Remove(data); }
+                Unbound.Runtime.Trace.Scenes($"loaded scene '{data.Name}'");
+            }, load: true, async: async, frame: Time.frameCount, prepare: () => documents = SceneLoader.ReadDocuments(data));
             return new LoadResult { Scene = new Scene(data.Handle), Operation = op };
         }
 
@@ -509,61 +507,21 @@ namespace UnityEngine.SceneManagement
                 Debug.LogWarning($"Unbound: LocalPhysicsMode.Physics2D is not supported yet; the 2D physics of scene '{data.Name}' is simulated in the default 2D physics scene.");
         }
 
-        /// <summary>Runs the loads requested since the last frame (called early in the frame).</summary>
-        static readonly List<(AsyncOperation Op, SceneData Scene)> s_PendingUnloads =
-            new List<(AsyncOperation, SceneData)>();
-
-        // Session teardown discards queued operations without invoking a previous session's
-        // completion handlers from Edit mode or the next Play session.
-        internal static void ResetPendingUnloads() => s_PendingUnloads.Clear();
-
-        internal static void ProcessPending()
+        // Session teardown discards queued work without invoking a previous session's handlers.
+        internal static void ResetPending()
         {
-            int unloads = s_PendingUnloads.Count;
-            for (int i = 0; i < unloads; i++)
-            {
-                var request = s_PendingUnloads[i];
-                try
-                {
-                    if (request.Scene.IsLoaded)
-                    {
-                        if (SceneRegistry.Loaded.Count > 1) FinishUnload(request.Scene);
-                        else Debug.LogWarning("Unloading the last loaded scene is not supported.");
-                    }
-                }
-                catch (Exception e) { Debug.LogException(e); }
-                finally { request.Op.Complete(); }
-            }
-            if (unloads != 0) s_PendingUnloads.RemoveRange(0, unloads);
-            if (s_Pending.Count == 0) return;
-            var batch = s_Pending.ToArray();
-            s_Pending.Clear();
-            foreach (var (op, index, parameters, data) in batch)
-            {
-                if (!op.allowSceneActivation)
-                {
-                    op.m_Progress = 0.9f;
-                    var captured = (op, index, parameters, data);
-                    op.m_OnAllowActivation = () => s_Pending.Add(captured);
-                    continue;
-                }
-                // As in Unity, an exception from a loaded object or a sceneLoaded handler is logged
-                // and the load still completes.
-                // Entries with a build index are SceneManager.LoadScene(Async) loads; AssetBundle
-                // scenes (index -1) keep the general path.
-                try { Perform(data, parameters, sceneManagerLoad: index >= 0); }
-                catch (Exception e) { Debug.LogException(e); }
-                finally { s_Requested.Remove(data); }
-                Unbound.Runtime.Trace.Scenes($"loaded scene '{data.Name}'");
-                op.Complete();
-            }
+            s_Operations.Clear();
+            s_Requested.Clear();
         }
+
+        internal static void PreparePending() => s_Operations.Prepare(Time.frameCount);
+        internal static void ProcessPending() => s_Operations.Process(Time.frameCount);
 
         /// <summary>The mode sceneLoaded reports for the scenes Play mode starts with (measured:
         /// tests/projects/editorcallbacks, 4: a value LoadSceneMode does not name).</summary>
         internal const LoadSceneMode PlayModeEntry = (LoadSceneMode)4;
 
-        static void Perform(SceneData data, LoadSceneParameters parameters, LoadSceneMode? reported = null, bool sceneManagerLoad = false)
+        static void Perform(SceneData data, LoadSceneParameters parameters, LoadSceneMode? reported = null, bool sceneManagerLoad = false, List<YDocument> documents = null, bool prepared = false)
         {
             if (parameters.loadSceneMode == LoadSceneMode.Single)
             {
@@ -576,8 +534,10 @@ namespace UnityEngine.SceneManagement
             var previousActive = SceneRegistry.Active;
             if (parameters.loadSceneMode == LoadSceneMode.Single || previousActive == null)
                 SceneRegistry.Active = data;
-            SceneLoader.LoadInto(data, beforeAwake: reported == PlayModeEntry
-                ? () => Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSceneLoad) : null);
+            Action beforeAwake = reported == PlayModeEntry
+                ? () => Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSceneLoad) : null;
+            if (prepared) SceneLoader.LoadPrepared(data, documents, beforeAwake);
+            else SceneLoader.LoadInto(data, beforeAwake);
             // Play mode processes the loaded scene after its objects woke up (measured:
             // tests/projects/editorcallbacks); Edit mode opens scenes unprocessed.
             if (Unbound.Runtime.EditorSession.IsPlaying) UnityEditor.EditorInitialization.ProcessScene(new Scene(data.Handle));
@@ -768,7 +728,11 @@ namespace UnityEngine.SceneManagement
             if (asynchronously && Compat.DestroyPhasesMeasured)
             {
                 var operation = new AsyncOperation();
-                s_PendingUnloads.Add((operation, data));
+                s_Operations.Enqueue(operation, data, () => {
+                    if (!data.IsLoaded) return;
+                    if (SceneRegistry.Loaded.Count > 1) FinishUnload(data);
+                    else Debug.LogWarning("Unloading the last loaded scene is not supported.");
+                }, load: false, async: true, frame: Time.frameCount);
                 return operation;
             }
             FinishUnload(data);
