@@ -37,7 +37,7 @@ SECTION_ENDS = (
     ('gain_controls', 'pitch_parameter_wet'),
     ('gain_boundary', 'dist_wet_delta_bound_high'),
     ('follower', 'chorus_depth_down_source'),
-    ('delay_lifecycle', 'chorus_delay_recreate'),
+    ('delay_lifecycle', 'chorus_zero_edit'),
 )
 
 

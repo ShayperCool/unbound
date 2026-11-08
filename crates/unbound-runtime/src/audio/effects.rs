@@ -774,6 +774,10 @@ impl Effect {
         if spec.pitch_shifter.is_some() && self.pitch.is_none() {
             self.pitch = Some(PitchShifter::new());
         }
+        if let (Some(pitch), Some(parameters)) = (&mut self.pitch, &spec.pitch_shifter) {
+            // Parameter side effects apply even when a zero-wet slot pauses audio processing.
+            pitch.set_pitch(parameters.pitch);
+        }
         if self.buffer != buffer.max(1)
             || self.spec.gain_ramp_measured != spec.gain_ramp_measured
             || self.spec.gain_immediate != spec.gain_immediate

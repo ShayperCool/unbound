@@ -40,13 +40,21 @@ public static class LiveProbeRunner
                     Parameter(mixer, unit, snapshot, "Rate", 5);
                     Parameter(mixer, unit, snapshot, "Depth", .5f);
                 }
-                if (c.Parameter == "Wet" || c.Mode == "setwet") Set(unit, "enableWetMix", true);
-                if (c.Mode == "setwet") Parameter(mixer, unit, snapshot, "Wet", -6);
+                if (c.Parameter == "Wet" || (c.Mode == "setwet" || c.Mode.StartsWith("dry"))) Set(unit, "enableWetMix", true);
+                if ((c.Mode == "setwet" || c.Mode.StartsWith("dry"))) Parameter(mixer, unit, snapshot, "Wet", -6);
                 Parameter(mixer, unit, snapshot, c.Parameter, c.Initial);
                 var type = T("ExposedAudioParameter"); var item = Activator.CreateInstance(type);
                 type.GetField("name", F).SetValue(item, "Value");
                 type.GetField("guid", F).SetValue(item, c.Parameter == "Wet" ? Call(unit, "GetGUIDForMixLevel") : Call(unit, "GetGUIDForParameter", c.Parameter));
-                var exposed = Array.CreateInstance(type, 1); exposed.SetValue(item, 0); Set(mixer, "exposedParameters", exposed);
+                var exposed = Array.CreateInstance(type, c.Mode.StartsWith("dry") ? (c.Kind == "Chorus" ? 3 : 2) : 1); exposed.SetValue(item, 0);
+                if (c.Mode.StartsWith("dry")) {
+                    var wet = Activator.CreateInstance(type); type.GetField("name", F).SetValue(wet, "WetControl");
+                    type.GetField("guid", F).SetValue(wet, Call(unit, "GetGUIDForMixLevel")); exposed.SetValue(wet, 1);
+                    if (c.Kind == "Chorus") {
+                        var delay = Activator.CreateInstance(type); type.GetField("name", F).SetValue(delay, "DelayControl");
+                        type.GetField("guid", F).SetValue(delay, Call(unit, "GetGUIDForParameter", "Delay")); exposed.SetValue(delay, 2);
+                    }
+                } Set(mixer, "exposedParameters", exposed);
                 Call(mixer, "CloneNewSnapshotFromTarget", true);
                 var other = Get(mixer, "TargetSnapshot"); ((UnityEngine.Object)other).name = "Other";
                 Parameter(mixer, unit, other, c.Parameter, c.Changed);

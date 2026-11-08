@@ -25,7 +25,14 @@ target = FIXTURE/'Reference'/('unity-'+a.release)/(('rate-' if a.profile == 'sta
 if target.exists():
     assert a.extend, 'reference already exists; --extend may only add identical controls'
     existing, incoming = header(target), header(a.capture)
-    assert all(key in incoming and incoming[key] == value for key, value in existing.items()), 'existing metadata changed'
+    for key, value in existing.items():
+        if key == 'sessions' and a.profile == 'live':
+            # Extending a session appends controls after its existing buffers. Preserve every
+            # earlier case and boundary; sample identity is checked independently below.
+            assert list(incoming[key])[:len(value)] == list(value), 'existing sessions changed'
+            assert all(incoming[key][session][:len(cases)] == cases for session, cases in value.items()), 'existing session order changed'
+        else:
+            assert key in incoming and incoming[key] == value, 'existing metadata changed'
     for record in existing.values():
         if isinstance(record, dict) and 'file' in record:
             assert gzip.decompress((target/(record['file']+'.gz')).read_bytes()) == (a.capture/record['file']).read_bytes(), record['file']

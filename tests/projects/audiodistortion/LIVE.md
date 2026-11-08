@@ -7,16 +7,16 @@ Component controls include AudioDistortionFilter and AudioChorusFilter on source
 mono input clips and listeners. The listener controls retain the upstream Master
 sink as well as the processed device output.
 
-The canonical profile contains 93 cases and six independent sessions per rate, declared by
+The canonical profile contains 97 cases and six independent sessions per rate, declared by
 `live.sections()`. Each session begins with a fresh Editor or engine process.
 The device output includes preceding mixers' tails inside that session, so the
 same session boundaries are part of both recording and replay. The merged
 capture records these case lists in `sessions`; every earlier sample is retained.
-The two repeats agree exactly across 9,142,461 checked values per rate. Separate
+The two repeats agree exactly across 9,535,685 checked values per rate. Separate
 public parameter/time traces of the timed Pitch control agree across another 96
 fields per rate; `parameter_trace.py` checks them exactly during engine replay.
 
-Each control changes one parameter at buffers 6, 12, 13 and 18. This includes a
+The main controls change one parameter at buffers 6, 12, 13 and 18. This includes a
 one-buffer reversal and a return to the initial value. Exposed setters, immediate
 snapshots and four-buffer linear snapshots use the same signal. Every audible
 parameter has an exposed-setter and timed-snapshot control. Static-wet controls
@@ -36,7 +36,13 @@ The last session primes its first memoryless control with a scheduled start, the
 seeks to integer sample zero before recording. [PlayScheduled](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.PlayScheduled.html)
 uses the absolute DSP clock and allows preparation time; the probe aligns its
 input without claiming a cross-backend scheduling-rounding guarantee. Two additional
-Chorus controls check delay recreation and a depth change after a deferred delay setter. Record every session twice in fresh private projects:
+Chorus controls check delay recreation and a depth change after a deferred delay setter.
+Four additional controls hold or edit Pitch/Chorus parameters while Wet is zero:
+Wet changes at buffers 4/12, parameters change and return at 6/8. Pitch ratio
+submissions restart phase tracking during that pause, while queued audio survives.
+Chorus's deferred span behavior remains unchanged when Depth returns before processing resumes.
+
+Record every session twice in fresh private projects:
 
 ```sh
 python3 tests/projects/audiodistortion/native.py --profile live --release 6000.0.71f1 --rate RATE --work CACHE_A

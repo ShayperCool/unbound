@@ -112,6 +112,10 @@ public class LiveEffectProbe : MonoBehaviour
         new LiveCase("dist_lifecycle_control", "Distortion", "Level", .25f, .85f, "prime"),
         new LiveCase("chorus_delay_depth", "Chorus", "Delay", 17.5f, 2f, "delaydepth"),
         new LiveCase("chorus_delay_recreate", "Chorus", "Delay", 17.5f, 2f, "recreate"),
+        new LiveCase("pitch_zero_hold", "Pitch Shifter", "Pitch", .75f, 1.5f, "dryhold"),
+        new LiveCase("pitch_zero_edit", "Pitch Shifter", "Pitch", .75f, 1.5f, "dryedit"),
+        new LiveCase("chorus_zero_hold", "Chorus", "Depth", .5f, .3f, "dryhold"),
+        new LiveCase("chorus_zero_edit", "Chorus", "Depth", .5f, .3f, "dryedit"),
     };
     const BindingFlags Flags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
     static bool Engine => Environment.GetEnvironmentVariable("EFFECT_PROBE_ENGINE") == "1";
@@ -226,7 +230,13 @@ public class LiveEffectProbe : MonoBehaviour
             using (var writer = new BinaryWriter(File.Create(Path.Combine(output, c.Key+".f32"))))
             using (var master = new BinaryWriter(File.Create(Path.Combine(output, c.Key+".master.f32")))) {
                 for (int block = 0; block < Blocks; block++) {
-                    if (block == 6 || block == 12 || block == 13 || block == 18) {
+                    if (c.Mode.StartsWith("dry")) {
+                        if (block == 4 || block == 12) mixer.SetFloat("WetControl", block == 4 ? -80 : -6);
+                        if (c.Mode == "dryedit" && (block == 6 || block == 8)) {
+                            if (c.Kind == "Chorus" && block == 6) mixer.SetFloat("DelayControl", 2f);
+                            mixer.SetFloat("Value", block == 6 ? c.Changed : c.Initial);
+                        }
+                    } else if (block == 6 || block == 12 || block == 13 || block == 18) {
                         bool changed = block == 6 || block == 13;
                         float value = changed ? c.Changed : c.Initial;
                         if (c.Mode == "recreate" && block == 12) {

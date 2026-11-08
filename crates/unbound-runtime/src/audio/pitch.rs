@@ -101,16 +101,19 @@ impl PitchShifter {
     pub fn clear(&mut self) {
         self.channels.iter_mut().for_each(Channel::clear);
     }
-    pub fn process(&mut self, samples: &mut [f32], spec: &PitchSpec, rate: u32) {
-        if self.pitch != spec.pitch {
+    pub(crate) fn set_pitch(&mut self, pitch: f32) {
+        if self.pitch != pitch {
             // Live ratios restart phase tracking while keeping the FIFO and overlap audio.
             // Unity 6000.0.71f1, tests/projects/audiodistortion live Pitch controls.
             for state in &mut self.channels {
                 state.last.fill(0.0);
                 state.phase.fill(0.0);
             }
-            self.pitch = spec.pitch;
+            self.pitch = pitch;
         }
+    }
+    pub fn process(&mut self, samples: &mut [f32], spec: &PitchSpec, rate: u32) {
+        self.set_pitch(spec.pitch);
         let bin = rate as f32 / N as f32;
         let expected = HOP as f32 * TAU / N as f32;
         let deviation = bin * 4.0 / TAU;
@@ -312,6 +315,27 @@ fn final_negative(a: &mut [f32], j: usize, l: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn submitted_ratios_restart_phase_even_without_processing_between_edits() {
+        let signal: Vec<f32> = (0..4096)
+            .map(|i| ((i * 37) % 997) as f32 / 2048.0 - 0.25)
+            .collect();
+        let parameters = PitchSpec { pitch: 0.75 };
+        let mut edited = PitchShifter::new();
+        let mut held = PitchShifter::new();
+        edited.process(&mut signal.clone(), &parameters, 44100);
+        held.process(&mut signal.clone(), &parameters, 44100);
+        edited.set_pitch(1.5);
+        edited.set_pitch(parameters.pitch);
+        let mut a = signal.clone();
+        let mut b = signal;
+        edited.process(&mut a, &parameters, 44100);
+        held.process(&mut b, &parameters, 44100);
+        // Already queued output survives the two edits; newly synthesized audio changes.
+        assert_eq!(&a[..HOP * 2], &b[..HOP * 2]);
+        assert_ne!(&a[HOP * 2..], &b[HOP * 2..]);
+    }
+
     #[test]
     fn live_ratios_retain_fifo_audio_across_arbitrary_render_chunks() {
         let input: Vec<f32> = (0..2200)
