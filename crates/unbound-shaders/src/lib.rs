@@ -237,6 +237,9 @@ pub enum TextureDim {
     CubeArray,
 }
 
+/// `SHADER_TARGET` of a program without `#pragma target` (Unity's default target 2.5).
+const DEFAULT_SHADER_TARGET: u32 = 25;
+
 /// A program's `#pragma`s that matter here.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Pragmas {
@@ -256,7 +259,7 @@ pub struct Pragmas {
 impl Pragmas {
     fn read(pragmas: &[preprocess::Pragma]) -> Pragmas {
         let mut p = Pragmas {
-            target: 25,
+            target: DEFAULT_SHADER_TARGET,
             ..Default::default()
         };
         for pragma in pragmas {
@@ -483,14 +486,10 @@ impl ShaderCompiler {
         if let Some(p) = self.pragmas.get(&key) {
             return Ok(p.clone());
         }
-        let defines = self.defines(program, &[], 25, linear, "SHADER_STAGE_VERTEX");
-        let out = self.preprocess(program, &defines)?;
-        let mut pragmas = Pragmas::read(&out.pragmas);
+        let mut pragmas = Pragmas::read(&self.discover(program, linear)?);
         if let Some(words) = pragmas.surface.take() {
             let pass = surface::Surface::parse(&words)?.program(program, None);
-            let defines = self.defines(&pass, &[], 25, linear, "SHADER_STAGE_VERTEX");
-            let out = self.preprocess(&pass, &defines)?;
-            pragmas = Pragmas::read(&out.pragmas);
+            pragmas = Pragmas::read(&self.discover(&pass, linear)?);
             pragmas.surface = Some(words);
         }
         self.pragmas.insert(key, pragmas.clone());
@@ -501,8 +500,25 @@ impl ShaderCompiler {
     /// files), for its keyword declarations ([`keywords`]). Nothing is compiled or cached: a
     /// missing include or a preprocessing error is an error (the space is then unknown).
     pub fn pragma_lines(&self, program: &Program) -> Result<Vec<preprocess::Pragma>> {
-        let defines = self.defines(program, &[], 25, true, "SHADER_STAGE_VERTEX");
-        Ok(self.preprocess(program, &defines)?.pragmas)
+        self.discover(program, true)
+    }
+
+    /// A program's active `#pragma` lines under its own `#pragma target`: read with the default
+    /// target, then again with the target they name. An `#error` in code that tests
+    /// `SHADER_TARGET` before the pragma (URP's FSR include under `#pragma target 4.5`) does
+    /// not stop the reading; compiling the variant still fails on an active one.
+    fn discover(&self, program: &Program, linear: bool) -> Result<Vec<preprocess::Pragma>> {
+        let read = |target: u32| {
+            let defines = self.defines(program, &[], target, linear, "SHADER_STAGE_VERTEX");
+            self.preprocess_with(program, &defines, true)
+                .map(|out| out.pragmas)
+        };
+        let pragmas = read(DEFAULT_SHADER_TARGET)?;
+        let target = Pragmas::read(&pragmas).target;
+        if target == DEFAULT_SHADER_TARGET {
+            return Ok(pragmas);
+        }
+        read(target)
     }
 
     /// The variant of `program` a material with `keywords` enabled draws with.
@@ -724,6 +740,16 @@ impl ShaderCompiler {
         program: &Program,
         defines: &[(String, String)],
     ) -> Result<preprocess::Output> {
+        self.preprocess_with(program, defines, false)
+    }
+
+    /// [`Self::preprocess`], with `#error` collected instead of failing when `defer_errors`.
+    fn preprocess_with(
+        &self,
+        program: &Program,
+        defines: &[(String, String)],
+        defer_errors: bool,
+    ) -> Result<preprocess::Output> {
         let includes = &self.settings.includes;
         let root = program.file.parent();
         let replay = defines.iter().any(|(k, _)| k == MESH_INSTANCE_REPLAY);
@@ -744,6 +770,9 @@ impl ShaderCompiler {
             Some((path, text))
         };
         let mut pp = preprocess::Preprocessor::new(&resolve);
+        if defer_errors {
+            pp.defer_errors();
+        }
         for (k, v) in defines {
             pp.define(k, v);
         }
@@ -1822,6 +1851,31 @@ float4 frag() : SV_Target { return 1; }
         compiler
             .compile(&program(source, false), &[], false)
             .unwrap();
+    }
+
+    /// An include that requires a target (`#error` below 4.5) before the pass's `#pragma
+    /// target 4.5` (URP's FSR passes): the pragmas are read under that target and the variant
+    /// compiles; without the pragma it fails on the `#error`.
+    #[test]
+    fn a_target_check_before_the_target_pragma_compiles() {
+        let body = r#"
+#if SHADER_TARGET < 45
+#error needs 4.5
+#endif
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+float4 vert(float4 v : POSITION) : SV_POSITION { return mul(unity_MatrixVP, v); }
+float4 frag() : SV_Target { return 1; }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let targeted = program(&format!("{body}#pragma target 4.5\n"), false);
+        assert_eq!(compiler.pragmas(&targeted, false).unwrap().target, 45);
+        compiler.compile(&targeted, &[], false).unwrap();
+        let untargeted = program(body, false);
+        assert_eq!(compiler.pragmas(&untargeted, false).unwrap().target, 25);
+        let error = compiler.compile(&untargeted, &[], false).unwrap_err();
+        assert!(format!("{error:#}").contains("needs 4.5"), "{error:#}");
     }
 
     #[test]
