@@ -1,0 +1,7 @@
+using System.IO;using UnityEditor;using UnityEditor.SceneManagement;using UnityEngine;
+public static class StreamRunner{
+ public static void Record(){Directory.CreateDirectory("Assets/Resources");foreach(string name in new[]{"decoded","streamed"}){
+ string path="Assets/Resources/"+name+".wav";using(var w=new BinaryWriter(File.Create(path))){int n=36000,bytes=n*4;w.Write(System.Text.Encoding.ASCII.GetBytes("RIFF"));w.Write(36+bytes);w.Write(System.Text.Encoding.ASCII.GetBytes("WAVEfmt "));w.Write(16);w.Write((short)1);w.Write((short)2);w.Write(48000);w.Write(192000);w.Write((short)4);w.Write((short)16);w.Write(System.Text.Encoding.ASCII.GetBytes("data"));w.Write(bytes);for(int i=0;i<n;i++){w.Write((short)4096);w.Write((short)-2048);}}
+ AssetDatabase.ImportAsset(path,ImportAssetOptions.ForceSynchronousImport);var importer=(AudioImporter)AssetImporter.GetAtPath(path);var settings=importer.defaultSampleSettings;settings.loadType=name=="streamed"?AudioClipLoadType.Streaming:AudioClipLoadType.DecompressOnLoad;settings.compressionFormat=AudioCompressionFormat.PCM;importer.defaultSampleSettings=settings;importer.SaveAndReimport();}
+ EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);new GameObject("stream").AddComponent<StreamProbe>();Directory.CreateDirectory("Assets/Scenes");EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(),"Assets/Scenes/Stream.unity");AssetDatabase.SaveAssets();EditorApplication.EnterPlaymode();}
+}

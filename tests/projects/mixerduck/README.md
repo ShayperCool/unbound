@@ -156,3 +156,9 @@ interleaved stereo sample indices, including all startup frames.
 | `curve_knee.f32` | 45310 | 0.207489013671875 | 0.20745849609375 |
 | `curve_knee.f32` | 46366 | 0.20928955078125 | 0.209259033203125 |
 | `curve_knee.f32` | 46367 | -0.104644775390625 | -0.1046142578125 |
+
+
+[The unscaled-clock experiment](Diagnostics/unscaled-clocks-v2/README.md) retains
+complete independent Send, Threshold and dry-volume captures with public frame
+clock logs at half speed and zero scale. Their PCM does not repeat exactly, so no
+unscaled reference is published and the existing timed sidechain restriction stays.

@@ -184,3 +184,14 @@ controls, cloned storage, duration boundaries and resampling endpoints. Both Nat
 repeats match all 197097 values per rate; the engine compares them strictly.
 Generated-data loss resolves the six original replay impulse failures. The 2049
 remaining original records concern only the extra listener callback around reset.
+
+
+[RESET_DELIVERY_MEASUREMENT.md](RESET_DELIVERY_MEASUREMENT.md) defines the independent
+single-reset source/listener control. Its 48000 Hz reference agrees across three
+Editor captures on all 10245 values. It distinguishes processing the old graph's
+complete output buffer before the configuration notification from delivering a
+fabricated zero callback. The existing two-rate suspension matrix remains whole.
+
+[The completion-clock experiment](Diagnostics/completion-clocks-v2/README.md)
+retains the full non-agreeing stream/decompressed, loop and scheduled-end controls.
+It does not publish a completion oracle or change the earlier reset-data reference.
