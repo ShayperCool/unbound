@@ -8,6 +8,7 @@ use unbound_project::Project;
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct Input {
+    #[serde(rename = "realtimeGI")]
     realtime_gi: Option<bool>,
     data_guid: Option<String>,
     #[serde(default)]
@@ -146,6 +147,12 @@ pub(super) fn print(entries: &[Entry]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn managed_acronym_is_preserved_in_lighting_inputs() {
+        let input: Input = serde_json::from_value(serde_json::json!({"realtimeGI": true})).unwrap();
+        assert_eq!(input.realtime_gi, Some(true));
+    }
 
     #[test]
     fn impact_uses_loaded_data_and_scene_references_including_settings_changed_after_bake() {
