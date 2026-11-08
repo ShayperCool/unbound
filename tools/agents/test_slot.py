@@ -109,7 +109,7 @@ class SlotTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.run_slot('prepare', 'slot-07', 't3/task-a')
 
-    def test_reap_removes_only_finished_idle_worktrees_and_their_targets(self):
+    def test_reap_removes_clean_idle_worktrees_and_retains_their_branches(self):
         self.run_slot('create', '--count', '1')
         base = Path(self.temp.name).resolve()
         finished = base/'wt-finished'
@@ -120,6 +120,8 @@ class SlotTests(unittest.TestCase):
         (unlanded/'b.txt').write_text('b\n')
         self.git('add', '.', cwd=unlanded)
         self.git('commit', '-qm', 'not landed', cwd=unlanded)
+        unlanded_head = self.git('rev-parse', 'HEAD', cwd=unlanded)
+        unlanded_target = self.make_target(unlanded)
         dirty = base/'wt-dirty'
         self.git('worktree', 'add', '-q', '-b', 't3/dirty', str(dirty), 'main')
         (dirty/'new.txt').write_text('n\n')
@@ -138,15 +140,67 @@ class SlotTests(unittest.TestCase):
         code, out = self.run_slot('reap', '--dry-run')
         self.assertEqual(code, 0)
         self.assertTrue(finished.exists() and finished_target.exists() and orphan.exists())
-        self.assertIn('2 would be removed', out)
+        self.assertIn('3 would be removed', out)
+        self.assertTrue(unlanded.exists() and unlanded_target.exists())
 
         self.run_slot('reap')
         self.assertFalse(finished.exists())
         self.assertFalse(finished_target.exists())
         self.assertFalse(orphan.exists())
-        for kept in (unlanded, dirty, active, linked, self.slot_path(1), slot_target):
+        self.assertFalse(unlanded.exists())
+        self.assertFalse(unlanded_target.exists())
+        self.assertEqual(self.git('rev-parse', 't3/unlanded'), unlanded_head)
+        for kept in (dirty, active, linked, self.repo, self.slot_path(1), slot_target):
             self.assertTrue(kept.exists(), kept)
         self.assertIn('t3/finished', self.git('branch', '--list', 't3/finished'))
+
+    def test_reap_keeps_unmerged_dirty_active_slot_and_linked_worktrees(self):
+        self.run_slot('create', '--count', '1')
+        kept = [self.slot_path(1)]
+        for name in ('dirty', 'staged', 'untracked', 'active', 'linked'):
+            path = Path(self.temp.name).resolve()/name
+            self.git('worktree', 'add', '-q', '-b', f't3/{name}', str(path), 'main')
+            kept.append(path)
+        heads = {}
+        for path in kept:
+            (path/'a.txt').write_text('committed\n')
+            self.git('commit', '-qam', 'unmerged', cwd=path)
+            heads[path] = self.git('rev-parse', 'HEAD', cwd=path)
+            if path.name != 'active':
+                self.make_old(path)
+        (kept[1]/'a.txt').write_text('tracked work\n')
+        (kept[2]/'a.txt').write_text('staged work\n')
+        self.git('add', '.', cwd=kept[2])
+        self.make_old(kept[2])
+        (kept[3]/'new.txt').write_text('untracked work\n')
+        runs = Path(self.env['XDG_CACHE_HOME'])/'unbound/runs'
+        runs.mkdir(parents=True)
+        (runs/'linked').symlink_to(kept[-1]/'a.txt')
+        code, out = self.run_slot('reap', '--verbose')
+        self.assertEqual(code, 0)
+        self.assertIn('0 removed', out)
+        self.assertIn('6 kept with unmerged commits', out)
+        for path in kept:
+            self.assertTrue(path.exists())
+            self.assertEqual(heads[path], self.git('rev-parse', 'HEAD', cwd=path))
+        self.assertEqual((kept[1]/'a.txt').read_text(), 'tracked work\n')
+        self.assertEqual((kept[2]/'a.txt').read_text(), 'staged work\n')
+        self.assertEqual((kept[3]/'new.txt').read_text(), 'untracked work\n')
+
+    def test_reap_preserves_detached_unmerged_commits_before_removing_checkout(self):
+        path = Path(self.temp.name).resolve()/'detached'
+        self.git('worktree', 'add', '-q', '--detach', str(path), 'main')
+        (path/'a.txt').write_text('detached work\n')
+        self.git('commit', '-qam', 'unmerged', cwd=path)
+        head = self.git('rev-parse', 'HEAD', cwd=path)
+        self.make_old(path)
+        _, out = self.run_slot('reap', '--dry-run')
+        self.assertIn('would preserve detached commits', out)
+        self.assertTrue(path.exists())
+        self.assertEqual(self.git('branch', '--list', 'reaped-worktree/*'), '')
+        self.run_slot('reap')
+        self.assertFalse(path.exists())
+        self.assertEqual(self.git('rev-parse', f'reaped-worktree/{head}'), head)
 
 
 if __name__ == '__main__':

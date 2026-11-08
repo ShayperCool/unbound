@@ -53,8 +53,11 @@ tools/validation/README.md for why that is unsafe).
 - One slot holds one task at a time. A slot is free once its branch is on `main` and it is clean.
 - A worker started by a tool that creates its own worktree works in its slot and leaves that
   worktree untouched. `slot.py reap` removes such worktrees, and any other finished worktree
-  outside the slots, once it is clean, merged into `main` and idle (default 6 h), together with
-  its build target. It keeps worktrees that a symlink under the run caches points into.
+  outside the slots, once it is clean and idle (default 6 h), together with its build target.
+  Branches and their commits are retained even when not on `main`; an unreferenced detached
+  commit gets a `reaped-worktree/<commit>` branch before removal. It keeps dirty and recently
+  active worktrees, slots, the main checkout and worktrees that a symlink under the run caches
+  points into, and prints the count kept with unmerged commits.
 
 ## Worker
 

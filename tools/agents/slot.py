@@ -14,8 +14,8 @@ prepare refuses a slot that still holds work: tracked changes, untracked files t
 ignored, or commits that are not on main. --discard drops them; only use it for work that is
 landed or abandoned. Ignored files (caches) are kept.
 
-reap removes worktrees that are not slots and not the main checkout once they are clean, fully
-merged into main and idle for --idle-hours, together with their build targets. It skips a
+reap removes worktrees that are not slots and not the main checkout once they are clean and
+idle for --idle-hours, together with their build targets. Branches and commits are retained. It skips a
 worktree that a symlink under the run caches points into. It also deletes targets whose checkout
 no longer exists.
 
@@ -182,16 +182,17 @@ def cmd_reap(args, repo):
     main = main_checkout(repo)
     cache = build.build_root()
     linked = None
-    removed = 0
+    removed = kept_unmerged = 0
     for path, head, branch in worktrees(repo):
-        if path == main or path.parent == root or not path.exists():
+        if not path.exists():
+            continue
+        if path == main or path.parent == root:
+            kept_unmerged += bool(unmerged_commits(path, repo))
             continue
         # Cheapest checks first: there are many worktrees and `git status` is the slow one.
         reason = None
         if idle_seconds(path) < args.idle_hours*3600:
             reason = 'recently active'
-        elif unmerged_commits(path, repo):
-            reason = 'has commits not on main'
         elif changed_paths(path):
             reason = 'has changed or untracked paths'
         else:
@@ -200,9 +201,18 @@ def cmd_reap(args, repo):
             if any(link == path or path in link.parents for link in linked):
                 reason = 'a symlink under the run caches points into it'
         if reason:
+            kept_unmerged += bool(unmerged_commits(path, repo))
             if args.verbose:
                 print(f'keep {path} ({branch or "detached"}): {reason}')
             continue
+        # Branch worktrees retain their commits on removal. Give an otherwise unreferenced
+        # detached commit a branch as well so pruning the worktree cannot lose committed work.
+        if branch is None and unmerged_commits(path, repo) and not git(
+                'for-each-ref', '--contains', head, '--format=%(refname)', 'refs/heads', cwd=repo):
+            saved = f'reaped-worktree/{head}'
+            print(f'{"would preserve" if args.dry_run else "preserve"} detached commits as {saved}')
+            if not args.dry_run:
+                git('branch', saved, head, cwd=repo)
         target = build.default_target(path, cache)
         print(f'{"would remove" if args.dry_run else "remove"} {path} ({branch or "detached"})'
               f'{" and " + str(target) if target.exists() else ""}')
@@ -224,6 +234,7 @@ def cmd_reap(args, repo):
     if not args.dry_run:
         git('worktree', 'prune', cwd=repo)
     print(f'{removed} removed' if not args.dry_run else f'{removed} would be removed')
+    print(f'{kept_unmerged} kept with unmerged commits')
     return 0
 
 
