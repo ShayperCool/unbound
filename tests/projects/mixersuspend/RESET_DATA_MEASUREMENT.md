@@ -78,12 +78,18 @@ ordering or object-destruction delivery.
   request to each object once, preserving required-component removal refusals. Both
   preload settings and both source-stop orders are recorded. Overlapping main and
   one-shot playback of the same clip confirms ownership follows the latest voice.
-  main-clip replacement preserves a later one-shot buffer. The control-thread
+  Main-clip replacement preserves a later one-shot buffer. The control-thread
   owner list transfers and unlinks each clip in constant time without allocating.
   Native and virtual command receipts transfer ownership only for admitted voices,
   without polling voice counts across an audio update.
   Automatic streamed completion is outside this measurement; the exploratory
   offline-clock disagreement is retained in Diagnostics/stream-clock-v1.
+
+The cleanup implementation defers destruction requests made inside an audio
+callback to the regular destruction delivery. Callback regression tests use the
+production managed entry point for source, GameObject and ancestor targets. This
+keeps the active render free of recursive mixer calls, compatibility lookup and
+the new request-notification walk.
 
 Each measured mechanism is selected through Compat. Other releases retain their
 prior reset, duration, double rate ratio and zero-padded interpolation paths until

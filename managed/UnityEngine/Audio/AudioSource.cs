@@ -740,7 +740,7 @@ namespace UnityEngine
 
         internal override void OnEngineDestroyRequested()
         {
-            if (Compat.AudioSourceDestroyRequestMeasured) StopInternal();
+            if (AudioSystem.IsCallerAllowed() && Compat.AudioSourceDestroyRequestMeasured) StopInternal();
         }
 
         internal override void OnEngineDestroy()

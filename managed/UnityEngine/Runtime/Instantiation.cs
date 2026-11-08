@@ -304,6 +304,8 @@ namespace Unbound.Runtime
 
         static void NotifyEngineDestroyRequested(Object obj)
         {
+            // Audio callbacks leave cleanup to the regular destruction delivery.
+            if (MainThreadCheck.t_InAudioCallback) return;
             // A required component survives a refused removal. Destroying its whole
             // GameObject still notifies it through the hierarchy's request.
             if (obj is Component component && RequiredBy(component) != null) return;

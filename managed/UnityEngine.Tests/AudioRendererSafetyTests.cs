@@ -38,7 +38,7 @@ namespace UnityEngine.Tests
 
         public void Dispose()
         {
-            AudioSystem.t_InCallback = false;
+            MainThreadCheck.t_InAudioCallback = false;
             AudioRenderer.Stop();
             Api.SetValue(null, previousApi);
             Ready.SetValue(null, previousReady);
@@ -203,7 +203,7 @@ namespace UnityEngine.Tests
             var group = new AudioMixerGroup { m_Handle = 9 };
             AudioRenderer.AddMixerGroupSink(group, sink, false);
             int before = calls;
-            AudioSystem.t_InCallback = true;
+            MainThreadCheck.t_InAudioCallback = true;
             try
             {
                 Assert.Throws<UnityException>(() => AudioRenderer.Start());
@@ -215,7 +215,7 @@ namespace UnityEngine.Tests
                 Assert.Throws<UnityException>(() => AudioRenderer.Internal_AudioRenderer_AddMixerGroupSink(group, null, 0, false));
                 Assert.Equal(before, calls);
             }
-            finally { AudioSystem.t_InCallback = false; }
+            finally { MainThreadCheck.t_InAudioCallback = false; }
             Assert.True(AudioRenderer.Render(output));
             Assert.Equal(1, sinkRequests);
             Assert.Equal(0.75f, sink[0]);

@@ -133,6 +133,39 @@ namespace UnityEngine.Tests
             Destruction.FlushEndOfFrame(); Assert.True(source); Assert.True(source.isPlaying);
             Object.Destroy(source.gameObject); Assert.False(source.isPlaying); Destruction.DeliverRequested(); Destruction.FlushEndOfFrame();
         }
+        public class DestroyFromFilter : MonoBehaviour
+        {
+            internal Object Target;
+            internal AudioClip Clip;
+            internal bool Called, LoadedInside;
+            void OnAudioFilterRead(float[] data, int channels)
+            {
+                Object.Destroy(Target);
+                Called = true;
+                LoadedInside = Clip.loadState == AudioDataLoadState.Loaded;
+            }
+        }
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        public unsafe void CallbackDestructionDefersMixerCommandsUntilNormalDelivery(int target)
+        {
+            var clip = Clip(); var source = Source(clip);
+            var parent = new GameObject("callback parent"); m_Objects.Add(parent); source.transform.parent = parent.transform;
+            source.Play();
+            var filter = source.gameObject.AddComponent<DestroyFromFilter>();
+            filter.Target = target == 0 ? (Object)source : target == 1 ? source.gameObject : parent;
+            filter.Clip = clip;
+            Assert.True(AudioFilters.Update(source.Handle, source.gameObject));
+            float* samples = stackalloc float[2];
+            delegate* unmanaged<int, ulong, float*, int, int, long, void> invoke = &AudioFilters.Invoke;
+            invoke(AudioCallbackKind.SourceFilter, source.Handle, samples, 2, 1, 0);
+            Assert.True(filter.Called); Assert.True(filter.LoadedInside);
+            Assert.True(source.isPlaying); Assert.Same(source, clip.m_StreamBufferOwner);
+            Destruction.DeliverRequested(); Destruction.FlushEndOfFrame();
+            Assert.False(source); Assert.Equal(AudioDataLoadState.Unloaded, clip.loadState);
+        }
         [Fact]
         public void UnmeasuredReleaseKeepsDeferredPlaybackCleanup()
         {

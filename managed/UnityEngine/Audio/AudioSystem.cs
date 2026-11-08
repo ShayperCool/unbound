@@ -36,9 +36,6 @@ namespace Unbound.Runtime
         static bool s_WarnedNoListener;
         static AudioStatus s_Status;
 
-        /// <summary>Set while the mixer calls managed code (OnAudioFilterRead, PCM readers).</summary>
-        [ThreadStatic] internal static bool t_InCallback;
-
         static AudioSystem()
         {
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.UpdateAudio), Update);
@@ -134,7 +131,7 @@ namespace Unbound.Runtime
 
         /// <summary>The audio API may only be used on the main thread outside the mixer's callbacks
         /// (where the mixer is busy).</summary>
-        internal static bool IsCallerAllowed() => !t_InCallback && PlayerLoopDriver.IsMainThread;
+        internal static bool IsCallerAllowed() => !MainThreadCheck.t_InAudioCallback && PlayerLoopDriver.IsMainThread;
 
         internal static void CheckMainThread(string api)
         {
@@ -490,8 +487,8 @@ namespace Unbound.Runtime
         [UnmanagedCallersOnly]
         internal static void Invoke(int kind, ulong handle, float* data, int frames, int channels, long arg)
         {
-            bool was = AudioSystem.t_InCallback;
-            AudioSystem.t_InCallback = true;
+            bool was = MainThreadCheck.t_InAudioCallback;
+            MainThreadCheck.t_InAudioCallback = true;
             try
             {
                 Dispatch(kind, handle, data, frames, channels, arg);
@@ -502,7 +499,7 @@ namespace Unbound.Runtime
             }
             finally
             {
-                AudioSystem.t_InCallback = was;
+                MainThreadCheck.t_InAudioCallback = was;
             }
         }
 

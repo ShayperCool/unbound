@@ -18,6 +18,9 @@ namespace Unbound.Runtime
     {
         [ThreadStatic] static int t_EngineDepth;
 
+        /// <summary>Managed audio callbacks can run on the main thread during offline rendering.</summary>
+        [ThreadStatic] internal static bool t_InAudioCallback;
+
         /// <summary>The caller may use the main-thread API: the main thread outside a job, or engine
         /// code inside an <see cref="Engine"/> scope.</summary>
         internal static bool Allowed
