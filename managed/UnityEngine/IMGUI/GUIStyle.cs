@@ -805,11 +805,20 @@ namespace Unbound.Runtime
     internal static class BuiltinGuiSkin
     {
         const int MonoBehaviourClassId = 114;
+        const int Texture2DClassId = 28;
         static GUISkin s_Skin;
 
         internal static Font Font => UnityEngine.Font.GetDefault();
 
-        internal static GUISkin Skin => s_Skin ??= Load();
+        internal static GUISkin Skin
+        {
+            get
+            {
+                // Unity's null: a destroyed skin is loaded again.
+                if (s_Skin == null) s_Skin = Load();
+                return s_Skin;
+            }
+        }
 
         static GUISkin Load()
         {
@@ -856,7 +865,7 @@ namespace Unbound.Runtime
             {
                 if (reference.Guid == null || reference.FileId == 0) return null;
                 bool fromDefault = string.Equals(reference.Guid, BuiltinShaders.DefaultGuid, StringComparison.OrdinalIgnoreCase);
-                if (fromDefault && BuiltinObjects.DefaultClasses.TryGetValue(reference.FileId, out var classId) && classId == 28
+                if (fromDefault && BuiltinObjects.DefaultClasses.TryGetValue(reference.FileId, out var classId) && classId == Texture2DClassId
                     && BuiltinShaders.DefaultNames.TryGetValue(reference.FileId, out var name))
                 {
                     if (!s_Textures.TryGetValue(reference.FileId, out var texture))

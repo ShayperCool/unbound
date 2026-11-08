@@ -43,7 +43,8 @@ using Object = UnityEngine.Object;
 // arrays read like lists, items not trimmed. Length, Gradient, AnimationCurve and
 // ToggleButtonGroupState values are not read yet and fail loudly; a game converter's failure is
 // reported. Background values (without a game converter) are asset urls read as
-// UxmlImageReferences reads them.
+// UxmlImageReferences reads them; their empty or unresolved urls warn as object members' do
+// (unmeasured for Background).
 
 namespace Unbound.UIElements
 {
@@ -500,8 +501,9 @@ namespace Unbound.UIElements
                 else result = new BoundsInt(v[0], v[1], v[2], v[3], v[4], v[5]);
                 return true;
             }
-            // Background and Texture values: asset references read as images (VisualTreeAsset.cs).
-            if (UxmlImageReferences.Reads(type))
+            // Background values: asset references read as images (VisualTreeAsset.cs); objects
+            // (textures too) resolve as object members do.
+            if (type == typeof(Background))
                 return UxmlImageReferences.TryRead(text, type, document, out result, out error);
             if (typeof(Object).IsAssignableFrom(type))
                 return TryReadAsset(text, type, document, out result, out error);
@@ -539,15 +541,15 @@ namespace Unbound.UIElements
             return false;
         }
 
-        /// <summary>A [UxmlAttribute] value as Unity converts it: <see cref="TryRead"/>'s, else the
-        /// type's default (white for a colour), item by item for a list (measured). Null with an
-        /// error only for values read through a game converter, which report their failure.</summary>
+        /// <summary>A [UxmlAttribute] value as Unity converts it: <see cref="TryRead"/>'s, else, for
+        /// the measured types, the type's default (white for a colour), item by item for a list.
+        /// False with an error for other types, game converters and image references.</summary>
         internal static bool TryReadLenient(string text, Type type, MemberInfo member, VisualTreeAsset document, out object result, out string error)
         {
             error = null;
             // Game converters and image references (unmeasured failures) report what they cannot read.
-            if (UxmlTypeIndex.ConverterFor(type) != null || UxmlImageReferences.Reads(type)) return TryRead(text, type, member, document, out result, out error);
-            if (IsList(type, out var element) && !IsList(element, out _) && UxmlTypeIndex.ConverterFor(element) == null)
+            if (UxmlTypeIndex.ConverterFor(type) != null || type == typeof(Background)) return TryRead(text, type, member, document, out result, out error);
+            if (IsList(type, out var element) && !IsList(element, out _) && UxmlTypeIndex.ConverterFor(element) == null && DefaultsWhenUnreadable(element))
             {
                 var items = new List<object>();
                 if (!string.IsNullOrEmpty(text))
@@ -556,9 +558,17 @@ namespace Unbound.UIElements
                 result = MakeList(type, element, items);
                 return true;
             }
+            if (!DefaultsWhenUnreadable(type)) return TryRead(text, type, member, document, out result, out error);
             if (!TryRead(text, type, member, document, out result, out _)) result = DefaultOf(type);
             return true;
         }
+
+        /// <summary>The types whose unreadable values were measured to take the default silently
+        /// (bool, int, float, enums, Color, Vector2, Vector3, and lists of them); the others keep
+        /// reporting what they cannot read.</summary>
+        static bool DefaultsWhenUnreadable(Type type) =>
+            type == typeof(bool) || type == typeof(int) || type == typeof(float) || type.IsEnum
+            || type == typeof(Color) || type == typeof(Vector2) || type == typeof(Vector3);
 
         /// <summary>What a value that does not convert becomes (measured: default(T), white for a colour).</summary>
         static object DefaultOf(Type type) =>
@@ -577,13 +587,33 @@ namespace Unbound.UIElements
             return list;
         }
 
-        internal enum Reference { Empty, Missing, Found, OtherType }
+        internal enum Reference { Empty, Missing, Found, OtherType, Unreadable }
 
         /// <summary>The object an asset url of <paramref name="document"/> names for a member of
         /// <paramref name="type"/> (measured): the referenced object when it is of the type, else
         /// the first object of the type in the same file; else the referenced object of another
         /// type (<see cref="Reference.OtherType"/>), or nothing.</summary>
-        internal static Reference ResolveReference(string text, Type type, VisualTreeAsset document, out Object result)
+        internal static Reference ResolveReference(string text, Type type, VisualTreeAsset document, out Object result) =>
+            ResolveReference(text, type, document, out result, out _);
+
+        /// <summary>As above; <see cref="Reference.Unreadable"/> with <paramref name="failure"/> when
+        /// the asset database fails on the file (an import error, not a missing file).</summary>
+        internal static Reference ResolveReference(string text, Type type, VisualTreeAsset document, out Object result, out string failure)
+        {
+            failure = null;
+            try
+            {
+                return Resolve(text, type, document, out result);
+            }
+            catch (Exception e)
+            {
+                result = null;
+                failure = $"the asset at '{text}' could not be loaded ({e.GetType().Name}: {e.Message})";
+                return Reference.Unreadable;
+            }
+        }
+
+        static Reference Resolve(string text, Type type, VisualTreeAsset document, out Object result)
         {
             result = null;
             if (string.IsNullOrWhiteSpace(text)) return Reference.Empty;
@@ -595,18 +625,19 @@ namespace Unbound.UIElements
             // The guid names the file (the path is only its hint), else the path does.
             if (guid != null)
             {
-                if (fileId != 0) referenced = Quietly(() => AssetDatabaseRuntime.Load(guid, fileId, null));
-                all = Quietly(() => AssetDatabaseRuntime.LoadAll(guid));
+                if (fileId != 0) referenced = AssetDatabaseRuntime.Load(guid, fileId, null);
+                all = AssetDatabaseRuntime.LoadAll(guid);
                 if (referenced != null || HasAny(all)) fileGuid = guid;
             }
             if (fileGuid == null && !string.IsNullOrEmpty(path))
             {
-                var info = Quietly(() => AssetDatabaseRuntime.InfoByPath(path));
+                // A path the asset database does not know (or no host to ask) names nothing.
+                var info = NoAnswerAsNull(() => AssetDatabaseRuntime.InfoByPath(path));
                 if (!string.IsNullOrEmpty(info?.Guid))
                 {
                     fileGuid = info.Guid;
-                    all = Quietly(() => AssetDatabaseRuntime.LoadAll(fileGuid));
-                    if (string.IsNullOrEmpty(subAsset)) referenced = Quietly(() => AssetDatabaseRuntime.LoadMain(fileGuid, null));
+                    all = AssetDatabaseRuntime.LoadAll(fileGuid);
+                    if (string.IsNullOrEmpty(subAsset)) referenced = AssetDatabaseRuntime.LoadMain(fileGuid, null);
                 }
             }
             if (fileGuid == null) return Reference.Missing;
@@ -644,8 +675,9 @@ namespace Unbound.UIElements
             return false;
         }
 
-        /// <summary>An asset database answer, or null when it cannot answer (no such asset, no host).</summary>
-        static T Quietly<T>(Func<T> query) where T : class
+        /// <summary>The asset database's answer about a path, or null when it has none (no such
+        /// path, no host).</summary>
+        static T NoAnswerAsNull<T>(Func<T> query) where T : class
         {
             try
             {
@@ -826,29 +858,30 @@ namespace Unbound.UIElements
             return true;
         }
 
-        /// <summary>An asset by its UXML url, relative urls resolved against the document.</summary>
+        /// <summary>An asset by its UXML url, resolved as a [UxmlAttribute] object member's is
+        /// (<see cref="ResolveReference(string, Type, VisualTreeAsset, out Object)"/>); a url that
+        /// names no object of the type is an error here (list items, legacy descriptions).</summary>
         static bool TryReadAsset(string text, Type type, VisualTreeAsset document, out object result, out string error)
         {
             result = null;
             error = null;
-            if (string.IsNullOrWhiteSpace(text)) return true;
-            Object asset;
-            try
+            switch (ResolveReference(text, type, document, out var asset, out var failure))
             {
-                asset = AssetPaths.LoadAsset(document?.m_UaAssetPath, text.Trim(), type);
+                case Reference.Empty:
+                    return true;
+                case Reference.Found:
+                    result = asset;
+                    return true;
+                case Reference.OtherType:
+                    error = $"the asset at '{text}' is a {asset.GetType().Name}, not a {type.Name}";
+                    return false;
+                case Reference.Unreadable:
+                    error = failure;
+                    return false;
+                default:
+                    error = $"no {type.Name} asset at '{text}'";
+                    return false;
             }
-            catch (Exception e)
-            {
-                error = $"the asset at '{text}' could not be loaded ({e.GetType().Name}: {e.Message})";
-                return false;
-            }
-            if (asset == null || !type.IsInstanceOfType(asset))
-            {
-                error = $"no {type.Name} asset at '{text}'";
-                return false;
-            }
-            result = asset;
-            return true;
         }
 
         // ------------------------------------------------------------------ typed descriptions

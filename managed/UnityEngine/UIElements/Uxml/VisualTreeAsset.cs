@@ -557,7 +557,12 @@ namespace Unbound.UIElements
                 {
                     // Measured: an unresolved url warns and gives null; an object of another type
                     // fails on assignment below.
-                    var found = UxmlAttributeValues.ResolveReference(a.Value, member.ValueType, asset, out var referenced);
+                    var found = UxmlAttributeValues.ResolveReference(a.Value, member.ValueType, asset, out var referenced, out var failure);
+                    if (found == UxmlAttributeValues.Reference.Unreadable)
+                    {
+                        Debug.LogError($"{Describe(asset, node)} attribute '{a.Key}': {failure}; '{member.Info.Name}' keeps its value.");
+                        continue;
+                    }
                     if (found == UxmlAttributeValues.Reference.Empty || found == UxmlAttributeValues.Reference.Missing)
                         UxmlAttributeValues.ReportUrl(node, a.Key, a.Value, asset);
                     if (found == UxmlAttributeValues.Reference.OtherType)

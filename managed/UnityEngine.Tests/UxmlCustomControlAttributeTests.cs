@@ -229,6 +229,17 @@ namespace UnityEngine.Tests
             Assert.Empty(logs);
         }
 
+        // Control outside the measured types: an unreadable Bounds (not measured) is still
+        // reported and the member keeps its value.
+        [Fact]
+        public void UnreadableValuesOfUnmeasuredTypesAreReported()
+        {
+            VisualElement root = null;
+            var logs = Logged(() => root = Clone("<UxmlControlProbes.ValueProbe my-bounds=\"1,2\" />").Root, "my-bounds");
+            Assert.Equal(default(Bounds), Assert.IsType<ValueProbe>(root[0]).myBounds);
+            Assert.Contains(logs, l => l.Contains("'1,2' is not 6 comma-separated numbers") && l.Contains("keeps its value"));
+        }
+
         // Measured: colours take HTML forms, including short hex and names.
         [Fact]
         public void ColoursTakeHtmlForms()

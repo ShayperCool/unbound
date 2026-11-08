@@ -506,9 +506,10 @@ namespace Unbound.Runtime
             {
                 ref var item = ref items[i];
                 if (item.Kind != Kind.Glyph || item.Visible || IsSpace(item.Codepoint)) continue;
-                // A character the font has no pixels for still gets its (empty) quad.
+                // A character the font has no pixels for still gets its (empty) quad; one the font
+                // lacks does not advance (measured), one it has keeps its advance.
                 item.Visible = true;
-                item.Advance = 0f;
+                if (item.Glyph == null || !item.Glyph.Found) item.Advance = 0f;
                 if (item.Glyph != null)
                     (empty ??= new List<GlyphKey>()).Add(item.Glyph.Key);
             }
