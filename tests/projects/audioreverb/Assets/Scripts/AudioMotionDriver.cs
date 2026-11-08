@@ -37,6 +37,7 @@ public partial class AudioReverbProbe
         "listener_transform_dynamic_auto", "listener_transform_dynamic_fixed", "listener_transform_dynamic_dynamic",
         "source_parenttiming_auto", "source_parenttiming_fixed", "source_parenttiming_dynamic",
         "listener_parenttiming_auto", "listener_parenttiming_fixed", "listener_parenttiming_dynamic",
+        "listener_offaxis_auto", "listener_offaxis_fixed",
     };
 
     System.Collections.IEnumerator CaptureMotion()
@@ -66,6 +67,7 @@ public partial class AudioReverbProbe
             var source = sourceObject.AddComponent<AudioSource>();
             var listener = listenerObject.AddComponent<AudioListener>();
             sourceObject.transform.position = new Vector3(0, 0, 100);
+            if (key.Contains("offaxis")) sourceObject.transform.position = new Vector3(60, 0, 80);
             source.spatialBlend = 1; source.dopplerLevel = 1;
             source.rolloffMode = AudioRolloffMode.Custom;
             source.SetCustomCurve(AudioSourceCurveType.CustomRolloff, AnimationCurve.Linear(0, 1, 1, 1));
