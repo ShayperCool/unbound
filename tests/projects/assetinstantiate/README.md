@@ -7,7 +7,7 @@ It records identities, names, flags, data ownership, load state, readability, ov
 diagnostics and immediate/deferred destruction. It includes a stereo runtime audio control,
 shared audio resource lifetime controls, valid/invalid Sprite geometry, custom-font override
 controls, audible cloned imported audio and rendered cloned bitmap Font/Cubemap/Material controls.
-The controller fixture has no layers or animation clips; graph cloning is not certified.
+The original controller fixture has no layers or clips. The follow-up fixture below adds a two-layer graph and runtime-visible mutation controls.
 Dynamic Font cloning logs an error in the Editor, returns an object and shares its material.
 Its rendering is explicitly unsupported by that diagnostic; only bitmap Font rendering is certified.
 
@@ -46,3 +46,56 @@ have more extensive controls in `tests/projects/assetclones`, which remains a re
 ComputeShader clones retain the source and kernels but reset runtime parameter values, keywords and bindings.
 Full controller graph mutation, imported bitmap fonts, additional audio import configurations,
 GPU-only Cubemaps and other Unity releases remain outside this capture.
+
+## Clone follow-ups
+
+`--followups` records/checks a separate 530-value reference from two byte-identical
+Unity 6000.0.71f1 Play Mode GPU Editor captures. It leaves the original 2000-value
+oracle unchanged. Its explicit scene uses the default lighting settings from the
+lifecycle fixture, including the default skybox cubemap. No generated lighting
+or import cache is needed in a clean checkout. The engine gate assembles its
+Editor-authored graph/settings with `tests/authored_project.py` from
+`Authored/unity-6000.0.71f1/followups`, whose input hashes guard against staleness.
+
+- A controller with two layers, three states and repeated clip references retains
+  its runtime graph when cloned. Animator state, parameter and layer-weight edits
+  on an Animator using the clone leave another Animator using the original alone.
+  Clip arrays copy independently while their clip objects remain shared. The
+  animationClips array retains repeated state references; playback bindings keep
+  a unique clip set. Cloning an override controller copies its override mapping.
+  Clearing a clone's override restores its original clip without changing the
+  original override controller.
+- Readable and unreadable runtime cubemaps keep their retained red CPU snapshot
+  when their GPU faces were overwritten green. The GPU-only built-in cubemap
+  instead copies its GPU faces and every mip. Clone writes and destruction leave
+  the source intact. Readability, clone diagnostics, names and flags are checked.
+- All twelve combinations of DecompressOnLoad/CompressedInMemory/Streaming,
+  preload on/off and background loading on/off retain metadata, clone data,
+  load states, offline-rendered playability and reloading after original-object
+  destruction. Background completion is awaited in wall time; no exact loading
+  duration is promised. A loaded non-streamed source lends its existing load
+  status to its clone. Unloading that clone leaves the owner's loaded status
+  intact; unloading the owner updates both. Cloning an unloaded/loading source
+  gives the clone an independent load request. Streamed clips retain their
+  separate streaming load/buffer lifetime.
+
+The [6000.0 RuntimeAnimatorController API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RuntimeAnimatorController.html)
+exposes clip references, not writable controller layers or states. Arbitrary
+controller-graph editing is an Editor API and cannot be certified through the
+requested runtime-visible surface. The controls above test the available runtime
+operations; they do not claim independent copies of referenced AnimationClips.
+The [override indexer](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AnimatorOverrideController.Index_operator.html)
+replaces a clip, while [UnloadAudioData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioClip.UnloadAudioData.html)
+is limited to file-backed audio. Clone ownership and repeated clip occurrences
+are measured observations for this release, not additional cross-release API
+guarantees. Audio reset still starts new per-object load requests, with shared
+sample storage, as the existing reset controls require.
+
+```sh
+python3 tests/projects/assetinstantiate/run.py editor --followups --release 6000.0.71f1 --label native-followups
+python3 tests/projects/assetinstantiate/run.py publish --followups --release 6000.0.71f1 --label native-followups
+UNBOUND_CLI=/path/to/private/unbound python3 tests/projects/assetinstantiate/run.py check --followups --release 6000.0.71f1
+```
+
+The gate runs both references. Imported bitmap fonts, arbitrary Editor-only graph
+mutation, GPU-only Texture2D cloning and other releases remain outside this scope.

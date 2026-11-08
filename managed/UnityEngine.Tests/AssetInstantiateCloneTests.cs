@@ -144,6 +144,83 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(last);
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ImportedCloneLoadOwnershipDependsOnTheSourceLoadStatus(bool loaded)
+        {
+            m_Audio.Assets["owner"] = (new AudioClipInfo { Frames = 10, Channels = 3, Frequency = 11025, Preload = loaded ? 1 : 0 }, Ramp(30, .5f));
+            var source = AudioClip.FromImport("owner", "owner");
+            var clone = Object.Instantiate(source);
+            try
+            {
+                clone.LoadAudioData();
+                Assert.Equal(AudioDataLoadState.Loaded, clone.loadState);
+                clone.UnloadAudioData();
+                Assert.Equal(loaded ? AudioDataLoadState.Loaded : AudioDataLoadState.Unloaded, clone.loadState);
+                clone.LoadAudioData();
+                source.UnloadAudioData();
+                Assert.Equal(AudioDataLoadState.Unloaded, source.loadState);
+                Assert.Equal(loaded ? AudioDataLoadState.Unloaded : AudioDataLoadState.Loaded, clone.loadState);
+            }
+            finally { Object.DestroyImmediate(clone); Object.DestroyImmediate(source, true); }
+        }
+
+        [Fact]
+        public void NonPreloadedCloneWaitsForItsOwnRequestEvenWhenTheSourceWasRead()
+        {
+            m_Audio.Assets["nonpreloaded"] = (new AudioClipInfo { Frames = 10, Channels = 2, Frequency = 11025, Preload = 0 }, Ramp(20, .5f));
+            var source = AudioClip.FromImport("nonpreloaded", "nonpreloaded");
+            source.GetData(new float[2], 0);
+            var clone = Object.Instantiate(source);
+            try
+            {
+                Assert.Equal(AudioDataLoadState.Loaded, source.loadState);
+                Assert.Equal(AudioDataLoadState.Unloaded, clone.loadState);
+                Assert.True(clone.GetData(new float[2], 0));
+                Assert.Equal(AudioDataLoadState.Loaded, clone.loadState);
+                clone.UnloadAudioData();
+                Assert.Equal(AudioDataLoadState.Loaded, clone.loadState);
+            }
+            finally { Object.DestroyImmediate(clone); Object.DestroyImmediate(source, true); }
+        }
+
+        sealed class Controller : RuntimeAnimatorController { }
+
+        [Fact]
+        public void ControllerClipOccurrencesKeepPlaybackBindingsUniqueAndOverridesIndependent()
+        {
+            var clip = new AnimationClip { name = "motion" };
+            var replacement = new AnimationClip { name = "replacement" };
+            var controller = new Controller();
+            var machine = new ControllerStateMachineAsset();
+            machine.States.Add(new ControllerStateAsset { name = "A", Motion = clip });
+            machine.States.Add(new ControllerStateAsset { name = "B", Motion = clip });
+            controller.m_Layers.Add(new ControllerLayerData { Name = "Base", StateMachine = machine });
+            var clone = Object.Instantiate((RuntimeAnimatorController)controller);
+            var overrides = new AnimatorOverrideController(clone);
+            overrides[clip] = replacement;
+            var overrideClone = Object.Instantiate(overrides);
+            try
+            {
+                Assert.Equal(new[] { clip, clip }, clone.animationClips);
+                Assert.Single(clone.Graph.Clips);
+                Assert.Equal(new[] { replacement, replacement }, overrideClone.animationClips);
+                Assert.Equal(1, overrideClone.overridesCount);
+                overrideClone[clip] = null;
+                Assert.Same(clip, overrideClone[clip]);
+                Assert.Same(clip, overrideClone["motion"]);
+                Assert.Same(replacement, overrides[clip]);
+                Assert.Null(overrideClone[replacement]);
+            }
+            finally
+            {
+                Object.DestroyImmediate(overrideClone); Object.DestroyImmediate(overrides); Object.DestroyImmediate(clone);
+                Object.DestroyImmediate(controller); Object.DestroyImmediate(machine);
+                Object.DestroyImmediate(clip); Object.DestroyImmediate(replacement);
+            }
+        }
+
         [Fact]
         public void AssetResourceCloneRequiresMeasuredRelease()
         {
@@ -374,11 +451,12 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void CubemapWithoutRetainedPixelsFailsLoudly()
+        public void CubemapWithoutAnyStorageFailsLoudly()
         {
             var source = FilledCubemap();
             source.Apply(false, true);
-            source.m_UnreadablePixels = null; // As a cubemap held only on the GPU.
+            source.m_UnreadablePixels = null;
+            source.m_NativeHandle = 0;
             var error = Assert.Throws<ArgumentException>(() => Object.Instantiate(source));
             Assert.Contains("retained pixel data is unavailable", error.Message);
             Object.DestroyImmediate(source);

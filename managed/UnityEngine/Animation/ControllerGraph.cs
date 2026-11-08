@@ -16,6 +16,8 @@ namespace Unbound.Runtime
         internal LayerDef[] Layers = Array.Empty<LayerDef>();
         /// <summary>Every clip the states (and blend trees) play, before overrides.</summary>
         internal readonly List<AnimationClip> Clips = new List<AnimationClip>();
+        /// <summary>Clip occurrences in state/tree traversal order, including repeated references.</summary>
+        internal readonly List<AnimationClip> ClipReferences = new List<AnimationClip>();
 
         internal int ParameterIndex(string name) =>
             name != null && ParameterByHash.TryGetValue(Animator.StringToHash(name), out var i) ? i : -1;
@@ -92,6 +94,7 @@ namespace Unbound.Runtime
             switch (motion)
             {
                 case AnimationClip clip:
+                    g.ClipReferences.Add(clip);
                     if (!g.Clips.Contains(clip)) g.Clips.Add(clip);
                     break;
                 case BlendTreeMotion tree:

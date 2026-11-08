@@ -34,7 +34,14 @@ namespace UnityEngine
         internal bool m_PreloadAudioData = true;
         internal bool m_Ambisonic;
         internal bool m_LoadInBackground;
-        internal AudioDataLoadState m_LoadState = AudioDataLoadState.Unloaded;
+        sealed class ClipLoadStatus
+        {
+            internal AudioDataLoadState State = AudioDataLoadState.Unloaded;
+        }
+        ClipLoadStatus m_LoadStatus = new ClipLoadStatus();
+        bool m_OwnsLoadStatus = true;
+        bool m_CloneAwaitingLoadRequest;
+        internal AudioDataLoadState m_LoadState { get => m_LoadStatus.State; set => m_LoadStatus.State = value; }
         /// <summary>Made from an asset file (UnloadAudioData works on those only).</summary>
         internal bool m_IsAsset;
         internal bool m_Stream;
@@ -101,7 +108,8 @@ namespace UnityEngine
 
         public bool loadInBackground => m_LoadInBackground;
 
-        public AudioDataLoadState loadState => m_SharedData?.NeedsReload == true ? AudioDataLoadState.Unloaded : m_LoadState;
+        public AudioDataLoadState loadState => m_SharedData?.NeedsReload == true || m_CloneAwaitingLoadRequest
+            ? AudioDataLoadState.Unloaded : m_LoadState;
 
         void InitializePreloadedData()
         {
@@ -114,6 +122,7 @@ namespace UnityEngine
             ThrowIfDestroyed();
             if (m_Handle == 0) return m_IsAsset && m_Samples == 0;
             EnsureSharedData();
+            m_CloneAwaitingLoadRequest = false;
             if (m_LoadState == AudioDataLoadState.Loaded || m_LoadState == AudioDataLoadState.Loading) return true;
             // Retain the prior unloaded streaming state for unmeasured releases.
             if (m_IsAsset && m_LoadType == AudioClipLoadType.Streaming && !Compat.StreamingClipBufferLifetimeMeasured) return true;
@@ -135,7 +144,7 @@ namespace UnityEngine
             ThrowIfDestroyed();
             if (!m_IsAsset) return false;
             DetachStreamBuffer();
-            if (m_SharedData == null || m_SharedData.References == 1 || m_LoadType == AudioClipLoadType.Streaming)
+            if (m_OwnsLoadStatus || m_SharedData == null || m_SharedData.References == 1 || m_LoadType == AudioClipLoadType.Streaming)
                 m_LoadState = AudioDataLoadState.Unloaded;
             return true;
         }
@@ -144,6 +153,7 @@ namespace UnityEngine
         internal void EnsureLoaded()
         {
             EnsureSharedData();
+            m_CloneAwaitingLoadRequest = false;
             if (m_LoadState == AudioDataLoadState.Unloaded || m_LoadState == AudioDataLoadState.Loading)
                 m_LoadState = AudioDataLoadState.Loaded;
         }
@@ -355,6 +365,11 @@ namespace UnityEngine
             if (m_Handle == 0 || (m_SharedData == null || m_SharedData.Backend != AudioBackend.Current)) return;
             if (m_SharedData.Import != null)
             {
+                // Reset starts each object's new load request independently of its earlier
+                // loaded-resource status. The decoded resource is still shared.
+                m_LoadStatus = new ClipLoadStatus();
+                m_OwnsLoadStatus = true;
+                m_CloneAwaitingLoadRequest = false;
                 if (m_SharedData.ResetEpoch != epoch && !ReloadData(m_SharedData.Import, restoreProperties: false))
                 {
                     Debug.LogError($"Unbound: AudioSettings.Reset could not reload AudioClip '{m_Name}'.", this);

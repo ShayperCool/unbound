@@ -4,7 +4,8 @@ public static class ProbeRunner
 {
     public static void Record()
     {
-        EditorSceneManager.OpenScene("Assets/Scenes/Main.unity");
+        if (System.Environment.GetEnvironmentVariable("ASSET_INSTANTIATE_FOLLOWUPS") == "1") FollowupAuthor.Create();
+        EditorSceneManager.OpenScene(System.Environment.GetEnvironmentVariable("ASSET_INSTANTIATE_FOLLOWUPS") == "1" ? "Assets/Scenes/Followup.unity" : "Assets/Scenes/Main.unity");
         EditorApplication.EnterPlaymode();
     }
 }

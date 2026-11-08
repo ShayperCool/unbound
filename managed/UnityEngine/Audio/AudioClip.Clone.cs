@@ -5,8 +5,9 @@ namespace UnityEngine
 {
     public sealed partial class AudioClip : Instantiation.ICloneable
     {
-        // Imported clips share the decoded resource, while each Object keeps its own identity
-        // and loading state. Runtime PCM data and callbacks are not serialized into a clone.
+        // Imported clips share the decoded resource. A clone of loaded non-streamed data observes
+        // its owner's load state; an unloaded/loading source gives the clone its own load status.
+        // Runtime PCM data and callbacks are not serialized into a clone.
         sealed class SharedClipData
         {
             internal int References = 1;
@@ -44,6 +45,12 @@ namespace UnityEngine
                 copy.m_Samples = m_Samples;
                 copy.m_LoadType = m_LoadType;
                 copy.m_CompressionFormat = m_CompressionFormat;
+                if (m_LoadType != AudioClipLoadType.Streaming && loadState == AudioDataLoadState.Loaded)
+                {
+                    copy.m_LoadStatus = m_LoadStatus;
+                    copy.m_OwnsLoadStatus = false;
+                    copy.m_CloneAwaitingLoadRequest = !m_PreloadAudioData;
+                }
                 copy.InitializePreloadedData();
             }
             return copy;

@@ -18,7 +18,8 @@ namespace UnityEngine
 
         protected RuntimeAnimatorController() { }
 
-        /// <summary>The clips the controller plays (after overrides), each once.</summary>
+        /// <summary>The clips the controller plays, after overrides. The measured profile keeps
+        /// repeated state references; playback binding still uses the graph's unique clips.</summary>
         public AnimationClip[] animationClips
         {
             get
@@ -26,10 +27,11 @@ namespace UnityEngine
                 var graph = Graph;
                 if (graph == null) return Array.Empty<AnimationClip>();
                 var result = new List<AnimationClip>();
-                foreach (var original in graph.Clips)
+                bool occurrences = Compat.AssetCloneResourcesMeasured;
+                foreach (var original in occurrences ? graph.ClipReferences : graph.Clips)
                 {
                     var clip = MapClip(original);
-                    if (clip != null && !result.Contains(clip)) result.Add(clip);
+                    if (clip != null && (occurrences || !result.Contains(clip))) result.Add(clip);
                 }
                 return result.ToArray();
             }
@@ -178,7 +180,7 @@ namespace UnityEngine
             get
             {
                 foreach (var c in Originals())
-                    if (c.name == name) return m_Overrides.TryGetValue(c, out var o) ? o : null;
+                    if (c.name == name) return Compat.AssetCloneResourcesMeasured ? MapClip(c) : m_Overrides.TryGetValue(c, out var o) ? o : null;
                 return null;
             }
             set
@@ -194,7 +196,9 @@ namespace UnityEngine
 
         public AnimationClip this[AnimationClip clip]
         {
-            get => clip != null && m_Overrides.TryGetValue(clip, out var o) ? o : null;
+            get => Compat.AssetCloneResourcesMeasured
+                ? clip != null && Graph != null && Graph.Clips.Contains(clip) ? MapClip(clip) : null
+                : clip != null && m_Overrides.TryGetValue(clip, out var o) ? o : null;
             set
             {
                 if (clip == null) return;

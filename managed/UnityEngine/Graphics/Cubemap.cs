@@ -322,7 +322,6 @@ namespace UnityEngine
 
         unsafe void Upload()
         {
-            if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             bool hdr = IsHdr;
             int pixels = 0;
             for (int m = 0; m < m_MipCount; m++) { int s = Math.Max(1, m_Width >> m); pixels += s * s; }
@@ -353,16 +352,22 @@ namespace UnityEngine
                         }
                     }
                 }
+            UploadStorage(data);
+        }
+
+        unsafe void UploadStorage(byte[] data)
+        {
+            if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             fixed (byte* p = data)
             {
                 var packet = new TexturePacket
                 {
                     Width = m_Width,
                     Height = m_Height,
-                    Format = hdr ? PixelFormats.GpuFloatFormat(m_Format) : m_Linear ? 1 : 0,
+                    Format = IsHdr ? PixelFormats.GpuFloatFormat(m_Format) : m_Linear ? 1 : 0,
                     MipCount = m_MipCount,
                     Data = p,
-                    DataLength = data.Length,
+                    DataLength = data?.Length ?? 0,
                     FilterMode = (int)filterMode,
                     WrapU = (int)wrapModeU,
                     WrapV = (int)wrapModeV,
@@ -460,6 +465,7 @@ namespace UnityEngine
             Cubemap cube;
             using (ObjectRegistry.AsAssets())
                 cube = new Cubemap { IsPersistentAsset = true, m_Readable = false, m_Linear = true };
+            if (Compat.AssetCloneResourcesMeasured) cube.hideFlags = HideFlags.NotEditable;
             cube.m_NativeHandle = RenderHandles.Next();
             try
             {

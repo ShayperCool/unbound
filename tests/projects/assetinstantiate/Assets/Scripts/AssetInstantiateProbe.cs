@@ -8,7 +8,7 @@ using UnityEngine;
 using Unity.Collections;
 using Object = UnityEngine.Object;
 
-public class AssetInstantiateProbe : MonoBehaviour
+public partial class AssetInstantiateProbe : MonoBehaviour
 {
     readonly StringBuilder output = new StringBuilder();
     readonly List<KeyValuePair<string,Object>> deferred = new List<KeyValuePair<string,Object>>();
@@ -198,6 +198,11 @@ public class AssetInstantiateProbe : MonoBehaviour
     IEnumerator Start()
     {
         Application.logMessageReceived+=Log;
+        if (Environment.GetEnvironmentVariable("ASSET_INSTANTIATE_FOLLOWUPS") == "1")
+        {
+            var followups = Followups(); while (followups.MoveNext()) yield return followups.Current;
+            WriteCapture(); yield break;
+        }
         Case("audio.runtime",()=>{var a=AudioClip.Create("tone",22050,1,22050,false);var data=new float[22050];for(int i=0;i<data.Length;i++)data[i]=0.25f;a.SetData(data,0);AudioCase("audio.runtime",a);});
         Case("audio.callback",()=>AudioCase("audio.callback",AudioClip.Create("callback",22050,1,22050,false,data=>{for(int i=0;i<data.Length;i++)data[i]=0.5f;})));
         Case("audio.stream",()=>AudioCase("audio.stream",AudioClip.Create("stream",22050,1,22050,true,data=>{for(int i=0;i<data.Length;i++)data[i]=0.5f;})));
@@ -226,6 +231,10 @@ public class AssetInstantiateProbe : MonoBehaviour
         foreach(var n in new[]{"", "already(Clone)"," spaced "})Case("names."+n,()=>{var a=new TextAsset("a"){name=n};var b=Clone("names."+n,a);if(b)Finish("names."+n,a,b);});
         yield return null;
         foreach(var pair in deferred)V(pair.Key+".destroy.next_frame",pair.Value==null);
+        WriteCapture();
+    }
+    void WriteCapture()
+    {
         Application.logMessageReceived-=Log; V("done","ok");
         var path=Environment.GetEnvironmentVariable("ASSET_INSTANTIATE_OUT");Directory.CreateDirectory(Path.GetDirectoryName(path));File.WriteAllText(path,output.ToString());
 #if UNITY_EDITOR

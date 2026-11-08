@@ -14,15 +14,15 @@ namespace UnityEngine
         /// A clone copies the size, format, color space, mip count, readability and sampler, and
         /// uploads its own copy of every face's mip chain from the retained CPU data, including
         /// unapplied edits (as Texture2D clones do). An unreadable source still clones, into an
-        /// unreadable copy. A cubemap held only on the GPU (an AssetBundle's or a built-in one)
-        /// has no retained data and is rejected, as such textures are.
+        /// unreadable copy. A cubemap with no retained data copies each GPU face and mip instead
+        /// (6000.0.71f1: tests/projects/assetinstantiate).
         /// </summary>
         Object Instantiation.ICloneable.CloneObject()
         {
             if (!m_Readable && Compat.AssetCloneResourcesMeasured)
                 Debug.LogError($"Instantiating a non-readable '{name}' texture is not allowed! Please mark the texture readable in the inspector or don't instantiate it.");
             var faces = RetainedFaces();
-            if (faces == null)
+            if (faces == null && (!Compat.AssetCloneResourcesMeasured || m_NativeHandle == 0))
                 throw new ArgumentException($"Instantiating cubemap '{name}' is not supported because its retained pixel data is unavailable.");
             var copy = new Cubemap
             {
@@ -38,6 +38,15 @@ namespace UnityEngine
                 loadAllMips = loadAllMips,
             };
             copy.SetSamplerQuietly(filterMode, wrapModeU, wrapModeV, wrapModeW, anisoLevel, mipMapBias);
+            if (faces == null)
+            {
+                copy.UploadStorage(null);
+                for (int face = 0; face < 6; face++)
+                    for (int mip = 0; mip < m_MipCount; mip++)
+                        GfxStream.CopyTexture(m_NativeHandle, face, mip, new RectInt(0, 0, -1, -1),
+                            copy.m_NativeHandle, face, mip, 0, 0);
+                return copy;
+            }
             copy.Upload();
             if (!copy.m_Readable)
             {
