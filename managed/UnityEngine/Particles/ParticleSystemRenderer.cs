@@ -1415,18 +1415,27 @@ namespace UnityEngine
                 int n = VertexCount;
                 int length = streaming ? Capacity(mesh.m_Vertices.Length, n) : n;
                 var positions = mesh.m_Vertices.Length == length ? mesh.m_Vertices : new Vector3[length];
-                var normals = mesh.m_Normals != null && mesh.m_Normals.Length == length ? mesh.m_Normals : new Vector3[length];
-                var colors = mesh.m_Colors != null && mesh.m_Colors.Length == length ? mesh.m_Colors : new Color32[length];
                 for (int i = 0; i < n; i++)
-                {
                     positions[i] = identity ? Positions[i] : transform.MultiplyPoint3x4(Positions[i]);
-                    normals[i] = identity ? Normals[i] : transform.MultiplyVector(Normals[i]).normalized;
-                }
-                Array.Copy(Colors, colors, n);
                 mesh.m_Vertices = positions;
-                mesh.m_Normals = n > 0 && m_StreamNormals ? normals : null;
-                mesh.m_Colors = n > 0 && m_StreamColors ? colors : null;
-                WriteStreamAttributes(mesh, transform, identity, length);
+                // A channel exists when its stream does (a streamed mesh keeps it across empty
+                // frames; a baked one has none without vertices).
+                if (m_StreamNormals && (n > 0 || streaming))
+                {
+                    var normals = mesh.m_Normals != null && mesh.m_Normals.Length == length ? mesh.m_Normals : new Vector3[length];
+                    for (int i = 0; i < n; i++)
+                        normals[i] = identity ? Normals[i] : transform.MultiplyVector(Normals[i]).normalized;
+                    mesh.m_Normals = normals;
+                }
+                else mesh.m_Normals = null;
+                if (m_StreamColors && (n > 0 || streaming))
+                {
+                    var colors = mesh.m_Colors != null && mesh.m_Colors.Length == length ? mesh.m_Colors : new Color32[length];
+                    Array.Copy(Colors, colors, n);
+                    mesh.m_Colors = colors;
+                }
+                else mesh.m_Colors = null;
+                WriteStreamAttributes(mesh, transform, identity, length, streaming);
                 // Before the indices: a format change resets the submeshes and clears the index
                 // buffer (Mesh.indexFormat, 6000.0).
                 mesh.indexFormat = n > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;

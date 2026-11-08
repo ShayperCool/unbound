@@ -99,10 +99,13 @@ namespace UnityEngine.Tests
 
         /// <summary>A draw mesh rebuilt every frame keeps capacity-sized arrays and uploads the built
         /// counts: once grown, rebuilding it with fewer or as many particles allocates nothing.</summary>
-        [Fact]
-        public void StreamedDrawMeshesAllocateNothingOnceGrown()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void StreamedDrawMeshesAllocateNothingOnceGrown(bool positionAndUvOnly)
         {
-            int[] counts = { 40, 3, 17, 1, 25 };
+            // Includes an empty system, and streams without normals and colors.
+            int[] counts = { 40, 3, 17, 0, 1, 25 };
             var systems = new ParticleSystem[counts.Length];
             var mesh = new Mesh();
             try
@@ -111,12 +114,15 @@ namespace UnityEngine.Tests
                 {
                     systems[i] = Make(s => { var e = s.emission; e.rateOverTime = 0f; });
                     systems[i].Emit(counts[i]);
+                    if (positionAndUvOnly)
+                        systems[i].GetComponent<ParticleSystemRenderer>().SetActiveVertexStreams(new List<ParticleSystemVertexStream>
+                            { ParticleSystemVertexStream.Position, ParticleSystemVertexStream.UV });
                 }
                 var geometry = new ParticleSystemRenderer.Geometry();
                 var view = View();
                 void Draw(ParticleSystem ps)
                 {
-                    Assert.True(geometry.Build(ps.GetComponent<ParticleSystemRenderer>(), ps, view));
+                    geometry.Build(ps.GetComponent<ParticleSystemRenderer>(), ps, view);
                     geometry.WriteTo(mesh, Matrix4x4.identity, streaming: true);
                     mesh.Sync();
                 }
