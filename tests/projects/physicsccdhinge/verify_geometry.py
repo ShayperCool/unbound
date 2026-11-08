@@ -101,7 +101,7 @@ def open_motion_valid(actual):
     return True
 
 
-def callback_checks(expected, actual, reflected_scenes):
+def callback_checks(expected, actual, body_mappings):
     left, right = headers(expected), headers(actual)
     problems = []
     open_callbacks = (open_callback_pattern(left, right, False)
@@ -162,7 +162,7 @@ def callback_checks(expected, actual, reflected_scenes):
     for scenario, prefixes in scenarios.items():
         if scenario == OPEN_MANIFOLD: continue
         # One mapping must explain every step and receiver in the scenario.
-        mappings = (False,True) if scenario in reflected_scenes else (False,)
+        mappings = body_mappings.get(scenario, (False,))
         if not any(all(matches(prefix, reflect) for prefix in prefixes) for reflect in mappings):
             problems.append(dict(key=scenario, reason='Changed callback phase, collider, count, relative velocity or child mapping'))
     for key, value in actual.items():
@@ -182,10 +182,12 @@ def verify(expected, actual, report):
     unresolved, contacts, mirrors, open_motion = [], [], [], []
     checked = 0
     reflected_scenes = set()
+    body_mappings = {}
     scenario_bodies = defaultdict(list)
     for key in expected:
         if key.endswith('/body'): scenario_bodies[key.rsplit('/',3)[0]].append(key)
     for scenario, bodies in scenario_bodies.items():
+        body_mappings[scenario] = (False,) if all(equal(expected[key], actual.get(key)) for key in bodies) else ()
         if reflection_roles(scenario) is None: continue
         consistent = bool(bodies)
         for key in bodies:
@@ -200,6 +202,7 @@ def verify(expected, actual, report):
                 consistent = False
         if consistent:
             reflected_scenes.add(scenario)
+            body_mappings[scenario] += (True,)
     valid_open_motion = open_motion_valid(actual)
     # Even reporting-only contact payloads must be complete and internally consistent.
     for key, value in actual.items():
@@ -239,7 +242,7 @@ def verify(expected, actual, report):
             unresolved.append(dict(key=key, reason=str(error)))
     open_callbacks = False
     if not unresolved:
-        callback_problems, open_callbacks = callback_checks(expected, actual, reflected_scenes)
+        callback_problems, open_callbacks = callback_checks(expected, actual, body_mappings)
         unresolved.extend(callback_problems)
     for key in expected.keys() | actual.keys():
         if key.endswith('/body'):

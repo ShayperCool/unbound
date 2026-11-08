@@ -151,6 +151,26 @@ class GeometryVerificationTests(unittest.TestCase):
         actual = dict(expected); reflect(actual, lambda k:k.startswith(prefix+'/'))
         self.assertFalse(self.result(expected, actual)['unresolved'])
 
+    def test_one_mapping_must_cover_bodies_and_callbacks_together(self):
+        expected = self.capture()
+        actual = dict(expected)
+        prefix = 'geometry/dynamic/3/2/3/'
+        for key in actual:
+            if key.startswith(prefix) and key.endswith('/body'):
+                fields = actual[key].split(',')
+                fields[1] = str(-float(fields[1])); fields[8] = str(-float(fields[8]))
+                actual[key] = ','.join(fields)
+        self.assertTrue(self.result(expected, actual)['unresolved'])
+        for key in actual:
+            if not key.startswith(prefix) or '/event/' not in key: continue
+            fields = actual[key].split(',')
+            if '/' not in key.rsplit('/event/',1)[1]:
+                fields[1] = swap_child(fields[1]); fields[7] = str(-float(fields[7]))
+            else:
+                fields[-2:] = [swap_child(x) for x in fields[-2:]]
+            actual[key] = ','.join(fields)
+        self.assertFalse(self.result(expected, actual)['unresolved'])
+
 
 if __name__ == '__main__':
     unittest.main()
