@@ -50,13 +50,16 @@ These are observations in this release and built-in render pipeline, not univers
 | `Ks`, `Ns` control | Standard metallic and glossiness stay at zero for this conversion path. No broad specular/PBR/illumination conversion is claimed. |
 | Explicit remap | Authored green material wins in both library variants. |
 
+The MTL keys and their defaults are a per-release table, `unbound_compat::MtlRules` (the
+importer's cache key names it); `smoothing.py` ObjKeys adds `illum` (below 2: a Lambert
+description), `Ka`, `Ks`, `Ns` and `Tf` controls, exact against the Editor's descriptions.
 The implementation converts OBJ properties into the existing FBX-style material description,
 then uses the existing managed conversion and remap paths. MTL file bytes are cache dependencies;
 model cache format 22 invalidates old descriptions. No mesh indices, slot ordering, mesh naming,
 axis/pivot behavior or FBX geometry conversion changes are intended. Multiple competing diffuse maps fail explicitly when an imported texture would be consumed;
 None mode and complete explicit remaps keep importing geometry. Their conversion remains
 unmeasured. Other releases,
-broad PBR, normal maps and `illum` remain unmeasured follow-ups.
+broad PBR and normal maps remain unmeasured follow-ups.
 
 ## Validation
 

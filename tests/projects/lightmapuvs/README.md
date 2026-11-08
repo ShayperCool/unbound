@@ -90,12 +90,11 @@ matches. Multi's 12 material-slot ordering cases now match after the imported bi
 
 The SGI GLU sweep over mirrored float32 positions reproduces the convex, concave and non-planar
 n-gon triangle sequences in the reference. Mesh building and UV unwrapping share these triangles.
-Binary FBX 7.x polygon masks keep their original bits. Edge smoothing becomes polygon masks:
-faces joined by smooth edges form regions coloured with the lowest bit no hard-adjacent region
-has; a hard edge inside a region (a sharp edge that encloses nothing) then separates its later
-face, whose smooth neighbours add its bits (Edges, Slit and Seam, exact in every variant). Group masks in ASCII/legacy FBX and indexed
-smoothing layers fail explicitly. These
-cases, mesh optimization order and OBJ naming remain follow-ups. Imported material-slot order and
+FBX polygon masks keep their original bits. Edge smoothing becomes polygon masks by the
+importer's walk over smooth edges (described in modelimport/README.md, Smoothing and take
+ranges); Edges, Slit and Seam are exact in every variant. ASCII, legacy and per-corner smoothing
+layers and junctions of sharp edges are measured by
+`modelimport/smoothing.py`. Mesh optimization order and OBJ naming remain follow-ups. Imported material-slot order and
 face bindings are also gated by `modelimport/material_slots.py`, including rendered slot overrides.
 
 ## Imperfect content
