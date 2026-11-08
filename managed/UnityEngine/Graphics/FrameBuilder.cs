@@ -402,6 +402,7 @@ namespace Unbound.Runtime
                 PlanScreenStacks(cameras);
                 foreach (var camera in cameras) RenderCamera(camera, true);
                 s_StackNeeds.Clear();
+                s_SingleSampleStacks.Clear();
             }
 
             // Overlay canvases: a pixel-space camera over the whole screen, drawn last (unless the
@@ -1288,9 +1289,8 @@ namespace Unbound.Runtime
                 // The stack's first camera takes what any camera of the stack asks for.
                 var needs = (Hdr: hdrIntermediate, Samples: cameraSamples);
                 if (automatic && onScreen && fullScreen && !joins && !deferred && s_StackNeeds.TryGetValue(camera, out var group))
-                    // The group's samples include the first camera's own (or are one when a
-                    // deferred camera continues the stack).
-                    needs = (hdrIntermediate || group.Hdr, group.Samples);
+                    needs = (hdrIntermediate || group.Hdr,
+                        s_SingleSampleStacks.Contains(camera) ? 1 : Math.Max(cameraSamples, group.Samples));
                 if (joins && (!hdrIntermediate || GraphicsFormatUtility.IsHDRFormat(stack.graphicsFormat)))
                 {
                     msaaTarget = stack;
@@ -1369,7 +1369,7 @@ namespace Unbound.Runtime
                 // explicit target before blending. A pooled temporary's old color is unrelated.
                 if (!deferred && hdrIntermediate && sceneTarget != cameraTarget && cameraTarget != null
                     && camera.clearFlags is CameraClearFlags.Depth or CameraClearFlags.Nothing)
-                    Graphics.Blit(cameraTarget, sceneTarget);
+                    SeedFromTarget(cameraTarget, sceneTarget);
                 // On the screen the intermediate starts as the screen under the camera's rect:
                 // Depth only and Don't Clear keep the color earlier cameras drew there.
                 else if (!deferred && msaaTarget != null && !joins && resolveTarget == null && keepsColor)
@@ -1511,7 +1511,7 @@ namespace Unbound.Runtime
                 }
                 // A single-sample HDR intermediate is resolved before the late events: they see
                 // the camera's target (measured: tests/projects/rtdepth target.*.hdr.AfterEverything).
-                if (hdrIntermediate && cameraSamples == 1) ResolveIntermediate();
+                if (hdrIntermediate && (cameraSamples == 1 || msaaTarget?.antiAliasing == 1)) ResolveIntermediate();
                 var lateTarget = msaaTarget != null ? sceneTarget : cameraTarget;
                 RunEvent(camera, CameraEvent.AfterImageEffects, lateTarget);
                 RunEvent(camera, CameraEvent.AfterEverything, lateTarget);
@@ -1786,12 +1786,16 @@ namespace Unbound.Runtime
         /// without MSAA is antialiased under a later one with it, tests/projects/camerastack
         /// q4.aLn.*, q4.aHn.*).</summary>
         internal static readonly Dictionary<Camera, (bool Hdr, int Samples)> s_StackNeeds = new Dictionary<Camera, (bool, int)>();
+        /// <summary>The first cameras of stacks a deferred camera continues: those render with one
+        /// sample whatever their cameras ask for.</summary>
+        internal static readonly HashSet<Camera> s_SingleSampleStacks = new HashSet<Camera>();
 
         /// <summary>The screen's stacks: a full-screen camera, then the full-screen ones right after
         /// it that keep the color.</summary>
         internal static void PlanScreenStacks(List<Camera> cameras)
         {
             s_StackNeeds.Clear();
+            s_SingleSampleStacks.Clear();
             Camera first = null;
             bool hdr = false;
             int samples = 1;
@@ -1800,7 +1804,11 @@ namespace Unbound.Runtime
                 // A full-screen deferred camera that keeps the color continues the stack, which
                 // then renders without MSAA as the deferred path does (measured: camerastack
                 // q4.*.full.*.def.persp, identical to q0).
-                if (first != null && ContinuesStackDeferred(c)) samples = 1;
+                if (first != null && ContinuesStackDeferred(c))
+                {
+                    samples = 1;
+                    s_SingleSampleStacks.Add(first);
+                }
                 bool member = StacksOnScreen(c);
                 if (first == null || !member || c.clearFlags is not (CameraClearFlags.Depth or CameraClearFlags.Nothing))
                 {
@@ -1839,17 +1847,23 @@ namespace Unbound.Runtime
             s_StackScreenMark = -1;
         }
 
-        /// <summary>A deferred camera's light buffer (the size of its target) seeded with the
-        /// color under the camera's rect: the screen's, else its explicit target's.</summary>
+        /// <summary>A deferred camera's light buffer seeded with the color under the camera, as a
+        /// forward intermediate is: the screen's under its rect, else its whole explicit target
+        /// (the buffer goes back onto the whole target).</summary>
         static void SeedLightBuffer(Camera camera, bool onScreen, RenderTexture cameraTarget, RenderTexture light)
         {
             if (onScreen) SeedFromScreen(light, camera.pixelRect);
-            else if (cameraTarget != null && cameraTarget != light)
-            {
-                var rect = camera.pixelRect;
-                float w = Math.Max(1, cameraTarget.width), h = Math.Max(1, cameraTarget.height);
-                Graphics.Blit(cameraTarget, light, new Vector2(rect.width / w, rect.height / h), new Vector2(rect.x / w, rect.y / h));
-            }
+            else if (cameraTarget != null && cameraTarget != light) SeedFromTarget(cameraTarget, light);
+        }
+
+        /// <summary>An intermediate seeded with its explicit target's color (a copy, not a draw:
+        /// GL.wireframe leaves it alone).</summary>
+        static void SeedFromTarget(RenderTexture target, RenderTexture intermediate)
+        {
+            bool wireframe = GL.wireframe;
+            if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, false);
+            Graphics.Blit(target, intermediate);
+            if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, true);
         }
 
         /// <summary>The screen's pixels under <paramref name="pixelRect"/>, stretched over the

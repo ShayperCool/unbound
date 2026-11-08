@@ -164,10 +164,37 @@ namespace UnityEngine.Tests
                 Assert.Equal((false, 1), FrameBuilder.s_StackNeeds[d]);
                 Assert.Equal((false, 4), FrameBuilder.s_StackNeeds[e]);
                 Assert.Equal(3, FrameBuilder.s_StackNeeds.Count);
+                Assert.Empty(FrameBuilder.s_SingleSampleStacks);
+
+                // A full-screen deferred camera that keeps the color continues a stack, which then
+                // renders with one sample (tests/projects/camerastack *.full.*.def.persp); a partial
+                // one, or one that clears its color, leaves the stack as it is.
+                Camera Deferred(CameraClearFlags clear, Rect rect)
+                {
+                    var camera = Make(clear, true, true, rect);
+                    camera.renderingPath = RenderingPath.DeferredShading;
+                    return camera;
+                }
+                var g = Make(CameraClearFlags.SolidColor, false, true, full);
+                var h = Deferred(CameraClearFlags.Depth, full);
+                var i = Make(CameraClearFlags.SolidColor, false, true, full);
+                var j = Deferred(CameraClearFlags.Nothing, new Rect(0.1f, 0.1f, 0.5f, 0.5f));
+                var k = Make(CameraClearFlags.SolidColor, false, true, full);
+                var l = Deferred(CameraClearFlags.SolidColor, full);
+                var m = Make(CameraClearFlags.Nothing, false, true, full);
+                FrameBuilder.PlanScreenStacks(new List<Camera> { g, h, i, j, k, l, m });
+                Assert.Equal(RenderingPath.DeferredShading, h.actualRenderingPath);
+                Assert.Equal((false, 1), FrameBuilder.s_StackNeeds[g]);
+                Assert.Equal(new[] { g }, FrameBuilder.s_SingleSampleStacks);
+                Assert.Equal((false, 4), FrameBuilder.s_StackNeeds[i]);
+                Assert.Equal((false, 4), FrameBuilder.s_StackNeeds[k]);
+                // After the deferred camera, a camera keeping the color starts a stack of its own.
+                Assert.Equal((false, 4), FrameBuilder.s_StackNeeds[m]);
             }
             finally
             {
                 FrameBuilder.s_StackNeeds.Clear();
+                FrameBuilder.s_SingleSampleStacks.Clear();
                 QualitySettings.antiAliasing = antiAliasing;
                 foreach (var o in objects) Object.DestroyImmediate(o);
             }
