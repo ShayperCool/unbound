@@ -271,6 +271,7 @@ public sealed partial class RenderApiProbe : MonoBehaviour
     }
     IEnumerator Start()
     {
+        Application.runInBackground = true;
         directory=Environment.GetEnvironmentVariable("RENDER_API_OUT");Directory.CreateDirectory(directory);
         bool failed=false;
         try { MeshCases();Sorting();GizmoCases(); }
@@ -321,6 +322,7 @@ public sealed partial class RenderApiProbe : MonoBehaviour
         AdditionalStreamCases();
         PositionlessStreamCases();
         yield return SkinNormalCases();
+        VolumeCases();
         // Runtime queries and scene changes must not synthesize layer edits.
         Value("sorting.added",added.ToString());Value("sorting.removed",removed.ToString());
         SortingLayer.onLayerAdded-=OnAdded;SortingLayer.onLayerRemoved-=OnRemoved;

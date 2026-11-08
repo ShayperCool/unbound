@@ -8,6 +8,7 @@ namespace UnityEngine
     /// <summary>Base of every texture. The pixels live on the native side under a handle.</summary>
     public partial class Texture : Object
     {
+        public static readonly int GenerateAllMips = -1;
         /// <summary>The renderer's id of the texture (0: none yet).</summary>
         internal ulong m_NativeHandle;
         internal int m_Width;

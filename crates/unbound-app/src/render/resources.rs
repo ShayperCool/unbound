@@ -389,6 +389,8 @@ pub struct GpuTexture {
     pub cube_array: bool,
     /// A 3D texture (`layers` is its depth).
     pub volume: bool,
+    /// One attachment view per volume mip, made with the resource and reused across draws.
+    pub volume_targets: Vec<(wgpu::TextureView, Option<wgpu::TextureView>)>,
     pub width: u32,
     pub height: u32,
     pub format: i32,
@@ -397,6 +399,7 @@ pub struct GpuTexture {
     /// Kernels may write it (a storage binding).
     pub random_write: bool,
     pub auto_generate_mips: bool,
+    pub defer_mips: bool,
     pub alpha_only: bool,
     /// Bumped on every change: bind groups that use the texture compare it.
     pub generation: u64,
@@ -935,9 +938,9 @@ pub fn upload_texture(
     let render_target = t.render_target;
     let layers = t.layers.max(1) as u32;
     // A Texture3D: its layers are depth slices (mips shrink them too).
-    let volume = t.dimension == 3 && !render_target;
+    let volume = t.dimension == 3;
     let mip_count = gpu_mip_count(width, height, layers, volume, t.mip_count);
-    let samples = if render_target {
+    let samples = if render_target && !volume {
         t.samples.clamp(1, 8).next_power_of_two().min(8)
     } else {
         1
@@ -1054,6 +1057,29 @@ pub fn upload_texture(
                     ..Default::default()
                 })
             });
+            let volume_targets = if volume && render_target {
+                (0..mip_count)
+                    .map(|mip| {
+                        let descriptor = wgpu::TextureViewDescriptor {
+                            dimension: Some(wgpu::TextureViewDimension::D3),
+                            base_mip_level: mip,
+                            mip_level_count: Some(1),
+                            ..Default::default()
+                        };
+                        let raw = texture.create_view(&descriptor);
+                        let srgb = color.then(|| {
+                            texture.create_view(&wgpu::TextureViewDescriptor {
+                                format: Some(srgb_format),
+                                usage: view_usage(&texture, Some(srgb_format)),
+                                ..descriptor
+                            })
+                        });
+                        (raw, srgb)
+                    })
+                    .collect()
+            } else {
+                Vec::new()
+            };
             let depth_texture = (render_target && t.depth_bits > 0).then(|| {
                 device.create_texture(&wgpu::TextureDescriptor {
                     label: Some("unbound render texture depth"),
@@ -1140,6 +1166,7 @@ pub fn upload_texture(
                 cube,
                 cube_array,
                 volume,
+                volume_targets,
                 width,
                 height,
                 format: t.format,
@@ -1147,6 +1174,7 @@ pub fn upload_texture(
                 render_target,
                 random_write: t.random_write,
                 auto_generate_mips: t.auto_generate_mips,
+                defer_mips: t.defer_mips,
                 alpha_only: t.format == 3,
                 generation,
                 bind_groups: [None, None],
@@ -1155,6 +1183,7 @@ pub fn upload_texture(
     };
     gpu.generation = generation;
     gpu.auto_generate_mips = t.auto_generate_mips;
+    gpu.defer_mips = t.defer_mips;
 
     if !t.data.is_empty() && compressed {
         // BC7: 16 bytes per 4x4 block; levels below 4 pixels are a whole (padded) block.
@@ -1302,6 +1331,7 @@ pub fn default_textures(
         render_target: false,
         random_write: false,
         auto_generate_mips: false,
+        defer_mips: false,
         samples: 1,
         depth_bits: 0,
         layers: 1,

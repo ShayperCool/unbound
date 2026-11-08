@@ -117,6 +117,7 @@ pub struct Presented {
 #[derive(Clone)]
 struct Target {
     color: wgpu::TextureView,
+    depth_slice: Option<u32>,
     /// A multisampled target's resolve: the texture's own view.
     resolve: Option<wgpu::TextureView>,
     samples: u32,
@@ -131,16 +132,19 @@ struct Target {
     /// The single-sample texture (and layer) holding what is drawn, which copies read.
     texture: Option<(wgpu::Texture, u32, u32)>,
     auto_mips: bool,
+    defer_mips: Option<wgpu::TextureFormat>,
 }
 
 /// A further color of a target.
 #[derive(Clone)]
 struct ExtraColor {
     color: wgpu::TextureView,
+    depth_slice: Option<u32>,
     resolve: Option<wgpu::TextureView>,
     format: wgpu::TextureFormat,
     texture: Option<(wgpu::Texture, u32, u32)>,
     auto_mips: bool,
+    defer_mips: Option<wgpu::TextureFormat>,
 }
 
 impl Target {
@@ -388,6 +392,8 @@ pub struct UnityRenderer {
     resolver: Resolver,
     pipelines: Pipelines,
     mipmaps: mipmaps::Mipmaps,
+    pending_mips: HashMap<wgpu::Texture, wgpu::TextureFormat>,
+    framebuffer_dirty: bool,
     meshes: HashMap<u64, GpuMesh>,
     mesh_buffers: HashMap<(u64, u8), mesh_buffers::Binding>,
     /// Zeros standing in for channels 4..7 of meshes without them.
@@ -493,6 +499,8 @@ impl UnityRenderer {
             fence_issued: 0,
             fence_completed: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             mipmaps: Default::default(),
+            pending_mips: Default::default(),
+            framebuffer_dirty: true,
             meshes: HashMap::default(),
             mesh_buffers: HashMap::default(),
             zero_extra: None,
@@ -705,13 +713,29 @@ impl UnityRenderer {
             Upload::UploadTexture(handle, texture) => {
                 self.generation += 1;
                 let old = self.textures.remove(&handle);
+                let previous = old.as_ref().map(|gpu| gpu.texture.clone());
                 let gpu =
                     resources::upload_texture(&device, &self.queue, old, &texture, self.generation);
+                if let Some(previous) = previous.filter(|previous| *previous != gpu.texture) {
+                    self.mipmaps.release(&previous);
+                    self.pending_mips.remove(&previous);
+                }
+                if gpu.render_target && !resources::is_integer(gpu.texture.format()) {
+                    self.mipmaps
+                        .prepare(&device, &gpu.texture, gpu.target_format(0));
+                    if gpu.srgb_view.is_some() {
+                        self.mipmaps
+                            .prepare(&device, &gpu.texture, gpu.target_format(1));
+                    }
+                }
                 self.textures.insert(handle, gpu);
             }
             Upload::ReleaseTexture(handle) => {
                 self.generation += 1;
-                self.textures.remove(&handle);
+                if let Some(texture) = self.textures.remove(&handle) {
+                    self.mipmaps.release(&texture.texture);
+                    self.pending_mips.remove(&texture.texture);
+                }
                 self.texture_mip_biases.remove(&handle);
                 self.bit_views.retain(|(h, _), _| *h != handle);
                 self.depth_main_groups.retain(|(h, _), _| *h != handle);
@@ -2016,6 +2040,7 @@ impl UnityRenderer {
         let (color, format) = s.view(color_space);
         Target {
             color: color.clone(),
+            depth_slice: None,
             resolve: None,
             samples: 1,
             depth: Some(s.depth.clone()),
@@ -2026,6 +2051,7 @@ impl UnityRenderer {
             extra: Vec::new(),
             texture: Some((s.texture.clone(), 0, 0)),
             auto_mips: false,
+            defer_mips: None,
         }
     }
 
@@ -2046,7 +2072,12 @@ impl UnityRenderer {
                 });
                 return None;
             };
-            if mip < 0 || mip as u32 >= t.mip_count || slice < 0 || slice as u32 >= t.layers {
+            let layers = if t.volume {
+                t.layers.checked_shr(mip.max(0) as u32).unwrap_or(0).max(1)
+            } else {
+                t.layers
+            };
+            if mip < 0 || mip as u32 >= t.mip_count || slice < 0 || slice as u32 >= layers {
                 self.warn_once(format!("rt-sub{color}/{mip}/{slice}"), || {
                     format!("render target {color}: mip {mip} / slice {slice} is out of range; draw skipped")
                 });
@@ -2054,16 +2085,26 @@ impl UnityRenderer {
             }
             let mip = mip as u32;
             let layer = slice as u32;
-            let view = t.texture.create_view(&wgpu::TextureViewDescriptor {
-                format: Some(t.target_format(space)),
-                usage: resources::view_usage(&t.texture, Some(t.target_format(space))),
-                dimension: Some(wgpu::TextureViewDimension::D2),
-                base_mip_level: mip,
-                mip_level_count: Some(1),
-                base_array_layer: layer,
-                array_layer_count: Some(1),
-                ..Default::default()
-            });
+            let view = if t.volume {
+                let (raw, srgb) = &t.volume_targets[mip as usize];
+                if space == 1 {
+                    srgb.as_ref().unwrap_or(raw)
+                } else {
+                    raw
+                }
+                .clone()
+            } else {
+                t.texture.create_view(&wgpu::TextureViewDescriptor {
+                    format: Some(t.target_format(space)),
+                    usage: resources::view_usage(&t.texture, Some(t.target_format(space))),
+                    dimension: Some(wgpu::TextureViewDimension::D2),
+                    base_mip_level: mip,
+                    mip_level_count: Some(1),
+                    base_array_layer: layer,
+                    array_layer_count: Some(1),
+                    ..Default::default()
+                })
+            };
             let (color_view, resolve, samples) = match &t.msaa {
                 Some((raw, srgb)) if mip == 0 => {
                     let samples = match (srgb, space) {
@@ -2088,8 +2129,13 @@ impl UnityRenderer {
                         ..Default::default()
                     })
                 });
+            let generate_mips = t.auto_generate_mips
+                && mip == 0
+                && t.mip_count > 1
+                && !resources::is_integer(t.texture.format());
             Target {
                 color: color_view,
+                depth_slice: t.volume.then_some(layer),
                 resolve,
                 samples,
                 depth: depth_view,
@@ -2099,11 +2145,9 @@ impl UnityRenderer {
                 screen: false,
                 extra: Vec::new(),
                 texture: Some((t.texture.clone(), layer, mip)),
-                // Integer texels cannot be filtered into mips.
-                auto_mips: t.auto_generate_mips
-                    && mip == 0
-                    && t.mip_count > 1
-                    && !resources::is_integer(t.texture.format()),
+                auto_mips: generate_mips && !t.defer_mips,
+                defer_mips: (generate_mips && t.defer_mips)
+                    .then_some(t.target_format(self.color_space)),
             }
         };
         if depth == commands::NO_TEXTURE {
@@ -2112,6 +2156,56 @@ impl UnityRenderer {
             target.depth = self.textures.get(&depth).and_then(|d| d.depth.clone());
         }
         Some(target)
+    }
+
+    /// Whether a target command keeps the same framebuffer attachments.
+    fn same_target(&self, color: u64, depth: u64, mip: i32, slice: i32, extra: &[u64]) -> bool {
+        self.target_handles == (color, depth)
+            && self.state.target.as_ref().is_some_and(|target| {
+                target.texture.as_ref().is_some_and(|(_, layer, level)| {
+                    *layer == slice.max(0) as u32 && *level == mip.max(0) as u32
+                }) && target.extra.len() == extra.len()
+                    && target.extra.iter().zip(extra).all(|(bound, handle)| {
+                        bound
+                            .texture
+                            .as_ref()
+                            .zip(self.textures.get(handle))
+                            .is_some_and(|((texture, _, _), resource)| *texture == resource.texture)
+                    })
+            })
+    }
+
+    /// Pending automatic updates become visible when drawing prepares new attachments,
+    /// including a new slice of a volume (renderapi volumeMore.* and volumeAuto.*).
+    fn process_mips(&mut self, operations: &mut Vec<Op>) {
+        operations.extend(self.pending_mips.drain().map(|(texture, format)| {
+            let layers = texture.depth_or_array_layers();
+            Op::Mips(texture, format, layers)
+        }));
+    }
+
+    fn defer_target_mips(&mut self) {
+        let Some(target) = self.state.target.as_ref() else {
+            return;
+        };
+        for (format, image) in std::iter::once((target.defer_mips, &target.texture)).chain(
+            target
+                .extra
+                .iter()
+                .map(|extra| (extra.defer_mips, &extra.texture)),
+        ) {
+            if let (Some(format), Some((texture, _, _))) = (format, image) {
+                self.pending_mips.insert(texture.clone(), format);
+            }
+        }
+    }
+
+    fn prepare_framebuffer(&mut self, operations: &mut Vec<Op>) {
+        if self.framebuffer_dirty {
+            self.process_mips(operations);
+            self.defer_target_mips();
+            self.framebuffer_dirty = false;
+        }
     }
 
     fn new_pass(&mut self, target: Target) -> Pass {
@@ -2188,19 +2282,24 @@ impl UnityRenderer {
                     if let Some(t) = self.textures.get(&texture) {
                         if resources::is_integer(t.texture.format()) {
                             self.warn_once(format!("mips{texture}"), || format!("GenerateMips cannot filter the integer render texture {texture}: skipped"));
-                        } else if t.render_target && !t.volume {
+                        } else if t.render_target {
                             passes.push(Op::Mips(
                                 t.texture.clone(),
                                 t.target_format(self.color_space),
                                 t.layers,
                             ));
                         } else {
-                            self.warn_once(format!("mips{texture}"), || format!("GenerateMips requires a 2D, cube or array render target ({texture}); skipped"));
+                            self.warn_once(format!("mips{texture}"), || {
+                                format!(
+                                    "GenerateMips requires a render target ({texture}); skipped"
+                                )
+                            });
                         }
                     }
                     open = false;
                 }
                 Command::EndFrame => {
+                    self.process_mips(&mut passes);
                     self.copy_depth(&mut passes, depth_mark);
                     self.depth_target = None;
                     if !self.screen_touched {
@@ -2228,6 +2327,8 @@ impl UnityRenderer {
                     self.depth_target = depth_owner(color, depth)
                         .filter(|h| self.textures.get(h).is_some_and(|t| t.depth_copy.is_some()));
                     depth_mark = passes.len();
+                    let changed = !self.same_target(color, depth, mip, slice, &extra);
+                    self.framebuffer_dirty |= changed;
                     self.target_handles = (color, depth);
                     self.state.target = self.resolve_target(color, depth, mip, slice);
                     let size = self
@@ -2251,10 +2352,12 @@ impl UnityRenderer {
                             }
                             further.push(ExtraColor {
                                 color: t.color,
+                                depth_slice: t.depth_slice,
                                 resolve: t.resolve,
                                 format: t.format,
                                 texture: t.texture,
                                 auto_mips: t.auto_mips,
+                                defer_mips: t.defer_mips,
                             });
                         }
                         let target = self.state.target.as_mut().unwrap();
@@ -2385,6 +2488,7 @@ impl UnityRenderer {
                     let Some(target) = self.state.target.clone() else {
                         continue;
                     };
+                    self.prepare_framebuffer(&mut passes);
                     if !open {
                         let pass = self.new_pass(target.clone());
                         passes.push(Op::Pass(pass));
@@ -2461,6 +2565,7 @@ impl UnityRenderer {
                         });
                         continue;
                     };
+                    self.prepare_framebuffer(&mut passes);
                     if !open {
                         let pass = self.new_pass(target.clone());
                         passes.push(Op::Pass(pass));
@@ -3282,6 +3387,7 @@ impl UnityRenderer {
                 render_target: false,
                 random_write: false,
                 auto_generate_mips: false,
+                defer_mips: false,
                 samples: 1,
                 depth_bits: 0,
                 layers: 1,
@@ -3390,6 +3496,24 @@ impl UnityRenderer {
         if smip >= src.mip_level_count() || dmip >= dst.mip_level_count() {
             return None;
         }
+        let source_depth = src
+            .size()
+            .mip_level_size(smip, src.dimension())
+            .depth_or_array_layers;
+        let destination_depth = dst
+            .size()
+            .mip_level_size(dmip, dst.dimension())
+            .depth_or_array_layers;
+        if source_slice < 0
+            || source_slice as u32 >= source_depth
+            || destination_slice < 0
+            || destination_slice as u32 >= destination_depth
+        {
+            self.warn_once(format!("copy-slice{source}/{smip}/{source_slice}-{destination}/{dmip}/{destination_slice}"), || {
+                "CopyTexture element is outside the source or destination mip: skipped".into()
+            });
+            return None;
+        }
         let sw = (src.width() >> smip).max(1) as i32;
         let sh = (src.height() >> smip).max(1) as i32;
         let dw = (dst.width() >> dmip).max(1) as i32;
@@ -3478,7 +3602,7 @@ impl UnityRenderer {
                 Op::Pass(pass) => pass,
                 Op::Mips(texture, format, layers) => {
                     self.mipmaps
-                        .encode(&device, &mut encoder, texture, *format, 0, *layers);
+                        .encode(&mut encoder, texture, *format, 0, *layers);
                     continue;
                 }
                 Op::Dispatch(d) => {
@@ -3601,7 +3725,7 @@ impl UnityRenderer {
             };
             let colors: Vec<_> = std::iter::once(Some(wgpu::RenderPassColorAttachment {
                 view: &pass.target.color,
-                depth_slice: None,
+                depth_slice: pass.target.depth_slice,
                 resolve_target: pass.target.resolve.as_ref(),
                 ops: wgpu::Operations {
                     load: load(pass.target.format),
@@ -3611,7 +3735,7 @@ impl UnityRenderer {
             .chain(pass.target.extra.iter().map(|e| {
                 Some(wgpu::RenderPassColorAttachment {
                     view: &e.color,
-                    depth_slice: None,
+                    depth_slice: e.depth_slice,
                     resolve_target: e.resolve.as_ref(),
                     ops: wgpu::Operations {
                         load: load(e.format),
@@ -3705,27 +3829,15 @@ impl UnityRenderer {
             drop(rp);
             if pass.target.auto_mips {
                 if let Some((texture, layer, _)) = &pass.target.texture {
-                    self.mipmaps.encode(
-                        &device,
-                        &mut encoder,
-                        texture,
-                        pass.target.format,
-                        *layer,
-                        1,
-                    );
+                    self.mipmaps
+                        .encode(&mut encoder, texture, pass.target.format, *layer, 1);
                 }
             }
             for extra in &pass.target.extra {
                 if extra.auto_mips {
                     if let Some((texture, layer, _)) = &extra.texture {
-                        self.mipmaps.encode(
-                            &device,
-                            &mut encoder,
-                            texture,
-                            extra.format,
-                            *layer,
-                            1,
-                        );
+                        self.mipmaps
+                            .encode(&mut encoder, texture, extra.format, *layer, 1);
                     }
                 }
             }

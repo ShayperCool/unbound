@@ -1557,7 +1557,7 @@ mod tests {
     /// reported format.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 34);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 35);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

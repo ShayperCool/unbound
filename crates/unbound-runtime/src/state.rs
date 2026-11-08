@@ -1211,6 +1211,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             render_target: false,
             random_write: false,
             auto_generate_mips: false,
+            defer_mips: false,
             samples: 1,
             depth_bits: 0,
             layers: texture.layers as i32,

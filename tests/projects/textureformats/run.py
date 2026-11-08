@@ -109,7 +109,7 @@ def unbound(work, release, only=None):
     if only is not None:
         env['TEXTURE_FORMATS_PROBE_ONLY'] = only
     with (out/'unbound.log').open('w') as log:
-        result = subprocess.run([str(LAUNCHER), 'timeout', '600', cli, 'run', '-p', str(project),
+        result = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(project),
                                  '--no-watch', '--frames', '30', '--size', '64x64'],
                                 env=env, stdout=log, stderr=subprocess.STDOUT)
     print('unbound exit', result.returncode, out)

@@ -168,6 +168,7 @@ pub fn load_texture_object(
             render_target: false,
             random_write: false,
             auto_generate_mips: false,
+            defer_mips: false,
             samples: 1,
             depth_bits: 0,
             layers: t.image_count,

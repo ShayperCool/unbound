@@ -70,6 +70,7 @@ public static class ProbeRunner
         if((bool)field.GetValue(view)!=enabled || (bool)property.GetValue(view)!=enabled)
             throw new InvalidOperationException("Game view gizmo toggle did not change");
         view.Repaint();
+        view.Focus();
     }
     public static void Record()
     {

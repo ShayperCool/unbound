@@ -109,7 +109,7 @@ namespace UnityEngine.Tests
             // 23 adds Distortion, 24 adds Chorus, 25-27 mixer effects, 28 render protocol 12, 29
             // frame input versions, 30 the decoded-resampling flag and 31 the imported texture
             // format, 32 mesh colors, 33 component tail timing, and 34 the instance multiplier.
-            Assert.Equal(34u, NativeApi.CurrentVersion);
+            Assert.Equal(35u, NativeApi.CurrentVersion);
             var frame = default(AudioFramePacket);
             byte* f = (byte*)&frame;
             Assert.Equal((64, 72, 80, 176), ((int)((byte*)&frame.FilterCount - f), (int)((byte*)&frame.Filters - f),

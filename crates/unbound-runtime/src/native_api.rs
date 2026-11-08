@@ -35,7 +35,8 @@ use crate::{
 /// 32: render protocol 13 (mesh GPU bindings, gizmo normal transforms and float4 mesh colors).
 /// 33: source component tail timing across partial device periods.
 /// 34: render protocol 14 (persistent direct-draw instance multiplier).
-pub const NATIVE_API_VERSION: u32 = 34;
+/// 35: texture packet flag for deferred automatic mip visibility.
+pub const NATIVE_API_VERSION: u32 = 35;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]

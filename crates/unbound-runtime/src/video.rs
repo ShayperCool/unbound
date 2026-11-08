@@ -243,6 +243,7 @@ pub fn frame(id: u64, n: i64, handles: [u64; 3]) -> Result<bool> {
                 render_target: false,
                 random_write: false,
                 auto_generate_mips: false,
+                defer_mips: false,
                 samples: 1,
                 depth_bits: 0,
                 layers: 1,

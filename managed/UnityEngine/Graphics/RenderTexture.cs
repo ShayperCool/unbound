@@ -89,7 +89,7 @@ namespace UnityEngine
         public RenderTexture(int width, int height, int depth) : this(width, height, depth, RenderTextureFormat.Default) { }
 
         public RenderTexture(int width, int height, int depth, RenderTextureFormat format)
-            : this(new RenderTextureDescriptor(width, height, format, depth, -1)) { }
+            : this(new RenderTextureDescriptor(width, height, format, depth, Texture.GenerateAllMips, RenderTextureReadWrite.Default)) { }
 
         public RenderTexture(int width, int height, int depth, RenderTextureFormat format, RenderTextureReadWrite readWrite)
             : this(Descriptor(width, height, format, depth, readWrite)) { }
@@ -98,7 +98,7 @@ namespace UnityEngine
             : this(new RenderTextureDescriptor(width, height, format, depth, -1)) { }
 
         public RenderTexture(int width, int height, int depth, DefaultFormat format)
-            : this(new RenderTextureDescriptor(width, height, format == DefaultFormat.HDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default, depth, -1)) { }
+            : this(new RenderTextureDescriptor(width, height, format == DefaultFormat.HDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default, depth, Texture.GenerateAllMips, RenderTextureReadWrite.Default)) { }
 
         public RenderTexture(int width, int height, int depth, GraphicsFormat format, int mipCount)
             : this(new RenderTextureDescriptor(width, height, format, depth, mipCount)) { }
@@ -110,7 +110,7 @@ namespace UnityEngine
             : this(new RenderTextureDescriptor(width, height, colorFormat, depthStencilFormat, -1)) { }
 
         public RenderTexture(int width, int height, int depth, RenderTextureFormat format, int mipCount)
-            : this(new RenderTextureDescriptor(width, height, format, depth, mipCount)) { }
+            : this(new RenderTextureDescriptor(width, height, format, depth, mipCount, RenderTextureReadWrite.Default)) { }
 
         public RenderTexture(RenderTextureDescriptor desc)
         {
@@ -202,7 +202,7 @@ namespace UnityEngine
         public bool Create()
         {
             EnsureCreated();
-            return true;
+            return m_Created;
         }
 
         public void Release()
@@ -237,6 +237,11 @@ namespace UnityEngine
         public void GenerateMips()
         {
             if (!useMipMap) { Debug.LogError("RenderTexture.GenerateMips: the render texture has no mip maps."); return; }
+            if (Compat.RenderingMeasured && autoGenerateMips)
+            {
+                Debug.LogError("RenderTexture.GenerateMips failed:  mipmaps for this render texture are generated automatically (set autoGenerateMips to false to disable that behavior).");
+                return;
+            }
             GfxStream.GenerateMips(EnsureCreated());
         }
 
@@ -302,23 +307,28 @@ namespace UnityEngine
         /// <summary>Integer and signed normalized formats warned about (once each).</summary>
         static readonly HashSet<GraphicsFormat> s_WarnedIntegerFormats = new HashSet<GraphicsFormat>();
 
-        /// <summary>The layers the renderer allocates: an array's depth, a cube's six faces, else one
-        /// (3D and cube-array targets have a 2D stand-in).</summary>
+        /// <summary>The renderer's image count, or depth for a volume.</summary>
         internal int GpuLayers => m_Descriptor.dimension switch
         {
             TextureDimension.Cube => 6,
-            TextureDimension.Tex2DArray => Math.Max(1, m_Descriptor.volumeDepth),
+            TextureDimension.Tex2DArray or TextureDimension.Tex3D => Math.Max(1, m_Descriptor.volumeDepth),
             _ => 1,
         };
+
+        // Texture packet flag: process automatic mip updates at attachment transitions.
+        const int DeferredMipUpdates = 8;
 
         internal unsafe ulong EnsureCreated()
         {
             m_LastUsedFrame = Time.frameCount;
             if (m_Created) return m_NativeHandle;
+            if (m_Descriptor.dimension == TextureDimension.Tex3D && depth > 0)
+            {
+                Debug.LogError("RenderTexture.Create failed: 3D textures with depth are not supported.");
+                return 0;
+            }
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             var dimension = m_Descriptor.dimension;
-            if (dimension == TextureDimension.Tex3D)
-                Debug.LogWarning($"Unbound: RenderTexture '{name}' is a {dimension}; 3D render textures are not drawn into yet (a 2D one stands in).");
             int layers = GpuLayers;
             int depthBits = GraphicsFormatUtility.GetDepthBits(m_Descriptor.depthStencilFormat);
             var packet = new TexturePacket
@@ -333,10 +343,10 @@ namespace UnityEngine
                 WrapW = (int)wrapModeW,
                 AnisoLevel = anisoLevel,
                 // 1: drawn into; 2: written by kernels (a storage binding).
-                RenderTarget = 1 | (m_Descriptor.enableRandomWrite ? 2 : 0) | (m_Descriptor.useMipMap && m_Descriptor.autoGenerateMips ? 4 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),
+                RenderTarget = 1 | (Compat.RenderingMeasured ? DeferredMipUpdates : 0) | (m_Descriptor.enableRandomWrite ? 2 : 0) | (m_Descriptor.useMipMap && m_Descriptor.autoGenerateMips ? 4 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),
                 DepthBits = depthBits,
                 Layers = layers,
-                Dimension = layers > 1 ? (int)dimension : 0,
+                Dimension = dimension == TextureDimension.Tex3D || layers > 1 ? (int)dimension : 0,
             };
             UploadTexture(&packet);
             m_Created = true;
@@ -489,10 +499,10 @@ namespace UnityEngine
         public RenderTextureDescriptor(int width, int height, RenderTextureFormat colorFormat) : this(width, height, colorFormat, 0) { }
 
         public RenderTextureDescriptor(int width, int height, RenderTextureFormat colorFormat, int depthBufferBits)
-            : this(width, height, colorFormat, depthBufferBits, 1) { }
+            : this(width, height, colorFormat, depthBufferBits, Texture.GenerateAllMips) { }
 
         public RenderTextureDescriptor(int width, int height, RenderTextureFormat colorFormat, int depthBufferBits, int mipCount)
-            : this(width, height, colorFormat, depthBufferBits, mipCount, RenderTextureReadWrite.Default) { }
+            : this(width, height, colorFormat, depthBufferBits, mipCount, RenderTextureReadWrite.Linear) { }
 
         public RenderTextureDescriptor(int width, int height, RenderTextureFormat colorFormat, int depthBufferBits, int mipCount, RenderTextureReadWrite readWrite)
             : this(width, height, GraphicsFormatUtility.GetGraphicsFormat(colorFormat, readWrite), GraphicsFormatUtility.DepthStencilFormatForBits(depthBufferBits), mipCount)
@@ -501,13 +511,13 @@ namespace UnityEngine
         }
 
         public RenderTextureDescriptor(int width, int height, GraphicsFormat colorFormat, int depthBufferBits)
-            : this(width, height, colorFormat, depthBufferBits, 1) { }
+            : this(width, height, colorFormat, depthBufferBits, Texture.GenerateAllMips) { }
 
         public RenderTextureDescriptor(int width, int height, GraphicsFormat colorFormat, int depthBufferBits, int mipCount)
             : this(width, height, colorFormat, GraphicsFormatUtility.DepthStencilFormatForBits(depthBufferBits), mipCount) { }
 
         public RenderTextureDescriptor(int width, int height, GraphicsFormat colorFormat, GraphicsFormat depthStencilFormat)
-            : this(width, height, colorFormat, depthStencilFormat, 1) { }
+            : this(width, height, colorFormat, depthStencilFormat, Texture.GenerateAllMips) { }
 
         public RenderTextureDescriptor(int width, int height, GraphicsFormat colorFormat, GraphicsFormat depthStencilFormat, int mipCount)
         {

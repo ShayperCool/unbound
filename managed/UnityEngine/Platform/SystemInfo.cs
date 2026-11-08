@@ -154,7 +154,8 @@ namespace UnityEngine
         public static bool supports3DTextures => true;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static bool supports2DArrayTextures => true;
-        public static bool supports3DRenderTextures { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supports3DRenderTextures", "answers false, what Unbound's renderer does (the Editor answers true; a 2D target stands in for a 3D one): games take their fallback path"); return false; } }
+        [Unbound.EditorFaithful("measured on the OpenGL Core device: tests/projects/renderapi volume.supported")]
+        public static bool supports3DRenderTextures => true;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static bool supportsCubemapArrayTextures => true;
         public static CopyTextureSupport copyTextureSupport => CopyTextureSupport.Basic | CopyTextureSupport.Copy3D | CopyTextureSupport.DifferentTypes | CopyTextureSupport.TextureToRT | CopyTextureSupport.RTToTexture;
@@ -311,7 +312,8 @@ namespace UnityEngine
         public static int maxComputeWorkGroupSizeY { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.maxComputeWorkGroupSizeY", "answers 256, what Unbound's renderer does (the Editor answers 1024): games take their fallback path"); return 256; } }
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers 64 too, and the renderer does it")]
         public static int maxComputeWorkGroupSizeZ => 64;
-        public static int maxTexture3DSize { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.maxTexture3DSize", "answers 2048, what Unbound's renderer does (the Editor answers 16384): games take their fallback path"); return 2048; } }
+        [Unbound.EditorFaithful("measured on the OpenGL Core device: tests/projects/urp caps; the GPU backend requests the adapter's limits")]
+        public static int maxTexture3DSize => 16384;
         public static int maxTextureArraySlices { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.maxTextureArraySlices", "answers 256, what Unbound's renderer does (the Editor answers 2048): games take their fallback path"); return 256; } }
         public static bool supportsGeometryShaders { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsGeometryShaders", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }
         public static bool supportsTessellationShaders { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsTessellationShaders", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }

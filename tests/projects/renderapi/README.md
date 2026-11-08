@@ -100,3 +100,39 @@ callbacks; doctor lists them. No Scene-view renderer is provided.
 Additional vertex-stream controls preserve packed colors and override positions, including GPU edits to both source meshes, positionless layouts, and inherited UV inputs. The Unity 6000.0.71f1 repeats retain all earlier reference records and images unchanged.
 
 Skinned lighting controls cover unit and nonuniform renderer scale with rotation, before/after requesting the current buffer and on the next frame. BakeMesh normals with both useScale settings remain invariant under that request.
+
+## Volume render targets
+
+The `volume.*` controls cover 4x2 volumes of depth 1, 4 and 8, RGBA8 and RGBAFloat storage,
+individual slice clears, blits and copies, point and linear sampler3D reads, and explicit mip
+attachments. `volumeMore.*` also covers spatially varying writes and repeated automatic and
+explicit mip generation. A 2D target uses the same shader as a control.
+`volumeCopy.*` covers whole-volume copies of every mip, region copies between slices, odd
+3x5x3 mip filtering, and the device's maximum volume extent. The two native repeats also
+retain every earlier record and image unchanged.
+
+The Unity 6000.0 contracts are [volumeDepth](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture-volumeDepth.html),
+[dimension](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTextureDescriptor-dimension.html),
+[SetRenderTarget](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.SetRenderTarget.html)
+and [Blit](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.Blit.html).
+The descriptor selects a volume's extent; SetRenderTarget selects a mip and depth slice; Blit
+draws with the supplied shader into its destination slice. The 6000.0.71f1 OpenGL Core captures
+add device observations: supports3DRenderTextures is true, a volume with a depth buffer fails
+creation, and a color volume retains its requested MSAA value in its descriptor.
+The 4x2x8 render target exposes three mip levels, following its width and height. The
+maximum volume extent is 16384 on this device, matching the earlier URP capability capture.
+
+Volumes use GPU 3D textures, including single-slice volumes. Their attachment views and mip
+filter bindings are prepared with the resource and reused. Replacement and release discard
+the cached mip bindings. Mip generation shares the 2D/array filter path and filters all three
+axes for volumes. CustomRenderTexture's volume update zones remain separately unsupported.
+
+`volumeAuto.*` measures automatic mip visibility with both a 2D target and a volume.
+Changing the desired target alone leaves the previous mips visible. A subsequent draw or
+clear that prepares changed attachments publishes pending automatic updates. Repeated draws
+and repeated SetRenderTarget calls using the same attachments keep the preceding mip data.
+Public GenerateMips logs an error and leaves automatically generated mips unchanged.
+These are 6000.0.71f1 OpenGL Core observations, selected through Compat.RenderingMeasured;
+other releases retain the earlier per-pass generation until measured. Odd-sized mip levels
+use the area of each source texel that overlaps the destination texel, including depth.
+Descriptor convenience constructors request Texture.GenerateAllMips by default.

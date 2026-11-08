@@ -2660,7 +2660,6 @@ namespace UnityEngine
     }
     unsafe partial class Texture
     {
-        [global::Unbound.Stub] public static readonly int GenerateAllMips;
         [global::System.Obsolete("Use GetNativeTexturePtr instead.")] [global::Unbound.Stub] public int GetNativeTextureID() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.GetNativeTextureID"); return default; }
         [global::Unbound.Stub] public static void SetStreamingTextureMaterialDebugProperties() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.SetStreamingTextureMaterialDebugProperties"); }
         [global::Unbound.Stub] public static void SetStreamingTextureMaterialDebugProperties(int materialTextureSlot) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.SetStreamingTextureMaterialDebugProperties"); }

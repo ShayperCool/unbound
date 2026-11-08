@@ -81,7 +81,7 @@ namespace Unbound.Runtime
             if (destinationSlice < 0 || destinationSlice >= GpuLayers(destination))
             {
                 Stubs.Ignored("Blit from a texture array into a slice past the target's layers",
-                    "is not supported (3D and cube-array targets have one layer in Unbound): this blit is skipped");
+                    "is outside the destination: this blit is skipped");
                 return true;
             }
             if (source is UnityEngine.RenderTexture { antiAliasing: > 1 } || destination is UnityEngine.RenderTexture { antiAliasing: > 1 })
@@ -97,14 +97,14 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The layers the renderer holds for a texture: an array's slices, a cube's six
-        /// faces (six per cube of a cubemap array), one for 2D and 3D (a 3D render texture has a 2D
-        /// stand-in).</summary>
+        /// faces (six per cube of a cubemap array), or a volume's depth.</summary>
         internal static int GpuLayers(UnityEngine.Texture texture) => texture switch
         {
             UnityEngine.RenderTexture rt => rt.GpuLayers,
             UnityEngine.Texture2DArray array => array.depth,
             UnityEngine.CubemapArray cubes => 6 * cubes.cubemapCount,
             UnityEngine.Cubemap => 6,
+            UnityEngine.Texture3D volume => volume.depth,
             _ => 1,
         };
 
@@ -534,7 +534,26 @@ namespace UnityEngine
             GfxStream.SetTarget(rt != null ? rt.EnsureCreated() : 0, 0, mipLevel, face == CubemapFace.Unknown ? depthSlice : (int)face, GfxStream.LayersOf(rt));
         }
 
-        public static void CopyTexture(Texture src, Texture dst) => CopyTexture(src, 0, 0, -1, -1, -1, -1, dst, 0, 0, 0, 0);
+        public static void CopyTexture(Texture src, Texture dst)
+        {
+            if (src == null) throw new ArgumentNullException(nameof(src));
+            if (dst == null) throw new ArgumentNullException(nameof(dst));
+            if (src.dimension != TextureDimension.Tex3D && dst.dimension != TextureDimension.Tex3D)
+            {
+                CopyTexture(src, 0, 0, -1, -1, -1, -1, dst, 0, 0, 0, 0);
+                return;
+            }
+            int depth = Immediate.GpuLayers(src);
+            if (src.dimension != dst.dimension || src.width != dst.width || src.height != dst.height
+                || depth != Immediate.GpuLayers(dst) || src.mipmapCount != dst.mipmapCount)
+            {
+                Debug.LogError("Graphics.CopyTexture: whole volume copies require matching dimensions, sizes and mip counts.");
+                return;
+            }
+            for (int mip = 0; mip < src.mipmapCount; mip++)
+                for (int slice = 0; slice < Math.Max(1, depth >> mip); slice++)
+                    CopyTexture(src, slice, mip, -1, -1, -1, -1, dst, slice, mip, 0, 0);
+        }
         public static void CopyTexture(Texture src, int srcElement, Texture dst, int dstElement) => CopyTexture(src, srcElement, 0, -1, -1, -1, -1, dst, dstElement, 0, 0, 0);
         public static void CopyTexture(Texture src, int srcElement, int srcMip, Texture dst, int dstElement, int dstMip) =>
             CopyTexture(src, srcElement, srcMip, -1, -1, -1, -1, dst, dstElement, dstMip, 0, 0);
@@ -544,14 +563,6 @@ namespace UnityEngine
         {
             if (src == null) throw new ArgumentNullException(nameof(src));
             if (dst == null) throw new ArgumentNullException(nameof(dst));
-            // A 3D render texture is a single 2D layer on the GPU (RenderTexture.EnsureCreated):
-            // its slices cannot be copied, and a copy of a missing slice would stop the renderer.
-            if ((src is RenderTexture { dimension: TextureDimension.Tex3D } && srcElement > 0)
-                || (dst is RenderTexture { dimension: TextureDimension.Tex3D } && dstElement > 0))
-            {
-                Debug.LogError($"Graphics.CopyTexture: slices of 3D render textures are not supported by Unbound yet ('{(src is RenderTexture { dimension: TextureDimension.Tex3D } ? src.name : dst.name)}'); nothing is copied.");
-                return;
-            }
             if (src is Texture2D s2 && dst is Texture2D d2 && srcMip == 0 && dstMip == 0)
             {
                 int w = srcWidth < 0 ? s2.width : srcWidth, h = srcHeight < 0 ? s2.height : srcHeight;
