@@ -265,7 +265,7 @@ def recipes(release):
     R['properties'] = classic('PROPERTIES_PROBE_OUT', 'out.json', ['--headless', '5', '--no-watch'],
                               [single_ref('json'), '{work}/out.json'], verdict='exit')
     R['input'] = [Step('engine', ['sh', '{probe}/run-unbound.sh', single_ref(), '{work}/out.jsonl', '{cli}'],
-                       launcher_kind='engine-cpu'),
+                       env={'UNBOUND_PROBE_PROJECT': '{project}'}, launcher_kind='engine-cpu'),
                   py('compare.py', single_ref(), '{work}/out.jsonl')]
     R['messages'] = [run('--headless', '445', '--size', '960x540', '--no-watch',
                          env={'MESSAGES_PROBE_OUT': '{work}/out.jsonl'},),
@@ -337,8 +337,10 @@ def recipes(release):
                                     ('settings', 'SETTINGS_PROBE_OUT', 'exit'),
                                     ('editorui', 'EDITORUI_PROBE_OUT', 'exit')]:
         R[name] = classic(variable, 'out', [*headless, '--fixed-fps', '60'], verdict=verdict)
-    gamepad = ('GAMEPAD_PROBE_OUT={work}/out {cli} run -p {probe} --headless 300000 --fixed-fps 60')
-    R['gamepad'] = [Step('engine', ['sg', 'input', '-c', gamepad], launcher_kind='engine-cpu'),
+    gamepad = ('"$UNBOUND" run -p "$UNBOUND_PROBE_PROJECT" --headless 300000 --fixed-fps 60')
+    R['gamepad'] = [Step('engine', ['sg', 'input', '-c', gamepad], launcher_kind='engine-cpu',
+                         env={'UNBOUND': '{cli}', 'UNBOUND_PROBE_PROJECT': '{project}',
+                              'GAMEPAD_PROBE_OUT': '{work}/out'}),
                     py('compare.py', ref('gamepad.jsonl'), '{work}/out/gamepad.jsonl')]
     R['avoidance'] = []
     for config in sorted((PROJECTS/'avoidance/Configs').glob('*.txt')):
@@ -369,7 +371,7 @@ def recipes(release):
                             py('compare.py', ref(f'{stem}-{{release}}.xml'), f'{{work}}/{stem}.xml')]
     R['networkstreaming'] = [
         driver('run-probe.py', '{work}/engine', '--', 'env', 'UNBOUND_MANAGED_DIR={managed}', '{cli}', 'run',
-               '-p', '{probe}', '--scene', 'Assets/Scenes/Probe.unity', '--frames', '200000', '--size', '320x180',
+               '-p', '{project}', '--scene', 'Assets/Scenes/Probe.unity', '--frames', '200000', '--size', '320x180',
                '--no-watch'),
         py('compare.py', single_ref(), '{work}/engine/records.jsonl')]
     # run.sh scripts whose engine modes hard-code an old executable: the same command, current build.
@@ -807,8 +809,52 @@ def substitute(value, values):
     return value.format_map(values) if isinstance(value, str) else value
 
 
+def stage_project(source, work):
+    """Stage a legacy recipe's authored project, preserving immutable package inputs."""
+    source = Path(source)
+    if not source.is_absolute():
+        source = REPO/source
+    source = source.resolve()
+    if not source.is_relative_to(PROJECTS.resolve()) or not (source/'Assets').is_dir():
+        return None
+    project = work/'projects'/source.relative_to(PROJECTS.resolve())
+    if not project.exists():
+        project.mkdir(parents=True)
+        for folder in ('Assets', 'Packages', 'ProjectSettings'):
+            if (source/folder).is_dir():
+                shutil.copytree(source/folder, project/folder)
+        # Preserve local package locations when moving their manifest/lock to a run.
+        for filename in ('manifest.json', 'packages-lock.json'):
+            copied = project/'Packages'/filename
+            if not copied.is_file():
+                continue
+            document = json.loads(copied.read_text())
+            changed = False
+            for name, dependency in document.get('dependencies', {}).items():
+                version = dependency.get('version') if isinstance(dependency, dict) else dependency
+                if isinstance(version, str) and version.startswith('file:'):
+                    location = Path(version[5:])
+                    if not location.is_absolute():
+                        absolute = 'file:'+str((source/'Packages'/location).resolve())
+                        if isinstance(dependency, dict):
+                            dependency['version'] = absolute
+                        else:
+                            document['dependencies'][name] = absolute
+                        changed = True
+            if changed:
+                copied.write_text(json.dumps(document, indent=2)+'\n')
+        # Resolved package contents are inputs; mutable engine caches stay private.
+        if (source/'Library/PackageCache').is_dir():
+            (project/'Library').mkdir()
+            (project/'Library/PackageCache').symlink_to(source/'Library/PackageCache', target_is_directory=True)
+        # Some captures load committed bundle inputs relative to their project root.
+        if (source/'Reference').is_dir():
+            (project/'Reference').symlink_to(source/'Reference', target_is_directory=True)
+    return project
+
+
 def private_project(argv, work):
-    """Give legacy direct-engine recipes their own authored project and Library."""
+    """Rewrite direct engine project arguments to their per-run staged projects."""
     argv = list(argv)
     for index, argument in enumerate(argv):
         if argument in ('-p', '--project') and index+1 < len(argv):
@@ -818,46 +864,9 @@ def private_project(argv, work):
             prefix, value, position = '--project=', argument.split('=', 1)[1], index
         else:
             continue
-        source = Path(value)
-        if not source.is_absolute():
-            source = REPO/source
-        source = source.resolve()
-        if not source.is_relative_to(PROJECTS.resolve()) or not (source/'Assets').is_dir():
-            continue
-        project = work/'projects'/source.relative_to(PROJECTS.resolve())
-        if not project.exists():
-            project.mkdir(parents=True)
-            for folder in ('Assets', 'Packages', 'ProjectSettings'):
-                if (source/folder).is_dir():
-                    shutil.copytree(source/folder, project/folder)
-            # Preserve local package locations when moving their manifest/lock to a run.
-            for filename in ('manifest.json', 'packages-lock.json'):
-                copied = project/'Packages'/filename
-                if not copied.is_file():
-                    continue
-                document = json.loads(copied.read_text())
-                changed = False
-                for name, dependency in document.get('dependencies', {}).items():
-                    version = dependency.get('version') if isinstance(dependency, dict) else dependency
-                    if isinstance(version, str) and version.startswith('file:'):
-                        location = Path(version[5:])
-                        if not location.is_absolute():
-                            absolute = 'file:'+str((source/'Packages'/location).resolve())
-                            if isinstance(dependency, dict):
-                                dependency['version'] = absolute
-                            else:
-                                document['dependencies'][name] = absolute
-                            changed = True
-                if changed:
-                    copied.write_text(json.dumps(document, indent=2)+'\n')
-            # Resolved package contents are inputs; mutable engine caches stay private.
-            if (source/'Library/PackageCache').is_dir():
-                (project/'Library').mkdir()
-                (project/'Library/PackageCache').symlink_to(source/'Library/PackageCache', target_is_directory=True)
-            # Some captures load committed bundle inputs relative to their project root.
-            if (source/'Reference').is_dir():
-                (project/'Reference').symlink_to(source/'Reference', target_is_directory=True)
-        argv[position] = prefix+str(project)
+        project = stage_project(value, work)
+        if project is not None:
+            argv[position] = prefix+str(project)
     return argv
 
 
@@ -953,6 +962,9 @@ def run_probe(name, recipe, context):
     work.mkdir(parents=True)
     values = dict(context['values'], probe=str(PROJECTS/name), work=str(work),
                   runs=str(CACHE/'validation/runs'/name/context['values']['label']))
+    # Explicit project placeholders also cover drivers and shell-wrapped commands.
+    if any(not step.literal and '{project}' in repr((step.argv, step.env, step.args_from)) for step in recipe):
+        values['project'] = str(stage_project(PROJECTS/name, work) or PROJECTS/name)
     steps, summaries, verdicts, status, stopped = [], [], [], None, None
     continued = []
     for index, step in enumerate(recipe, 1):

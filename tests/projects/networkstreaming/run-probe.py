@@ -7,6 +7,9 @@ import subprocess
 import sys
 import time
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3]/'tools/agents'))
+from probe_runtime import is_editor_path
+
 p = argparse.ArgumentParser()
 p.add_argument('output', type=pathlib.Path)
 p.add_argument('command', nargs=argparse.REMAINDER)
@@ -25,7 +28,8 @@ try:
     command = a.command[1:] if a.command[:1] == ['--'] else a.command
     if not command:
         p.error('provide a command after --')
-    result = subprocess.run([str(pathlib.Path.home() / '.cache/compat/with-heavy-job'), 'timeout', '180', *command],
+    kind = 'editor-gpu' if any(is_editor_path(arg) for arg in command) else 'engine-gpu'
+    result = subprocess.run([str(pathlib.Path.home() / '.cache/compat/with-heavy-job'), '--kind', kind, 'timeout', '180', *command],
                             env=dict(os.environ, NETWORK_STREAMING_OUT=str(a.output)))
     if result.returncode:
         sys.exit(result.returncode)

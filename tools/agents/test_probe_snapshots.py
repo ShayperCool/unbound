@@ -5,6 +5,9 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -118,6 +121,81 @@ class ProbeSnapshotIntegrationTests(unittest.TestCase):
                 second = land.run_gate(self.root, 'main', [], False, 'branch')
         self.assertEqual(first, runtime)
         self.assertEqual(second, runtime)
+
+    def test_wrapped_recipes_execute_with_independent_project_libraries(self):
+        repo = Path(__file__).resolve().parents[2]
+        recipes = suite.recipes('6000.0.71f1')
+        projects = self.root/'source projects'
+        home = self.root/'fake-home'
+        launcher = home/'.cache/compat/with-heavy-job'
+        launcher.parent.mkdir(parents=True)
+        launcher.write_text(f'''#!{sys.executable}
+import json, os, pathlib, sys
+args = sys.argv[1:]
+pathlib.Path(os.environ['LAUNCH_RECORD']).write_text(json.dumps(args))
+assert args[0] == '--kind'
+command = args[2:]
+if len(command) > 2 and command[0] == 'timeout' and command[2] == 'sg':
+    command = command[:2] + ['sh', '-c', command[-1]]
+os.execvpe(command[0], command, os.environ)
+''')
+        launcher.chmod(0o755)
+        self.cli.write_text(f'''#!{sys.executable}
+import json, os, pathlib, sys
+args = sys.argv[1:]
+project = pathlib.Path(args[args.index('-p')+1])
+(project/'Library/Unbound').mkdir(parents=True, exist_ok=True)
+(project/'Library/Unbound/mutable').write_text('this run')
+pathlib.Path(os.environ['ARG_RECORD']).write_text(json.dumps({{'args': args, 'project': str(project)}}))
+if os.environ.get('NETWORK_STREAMING_OUT'):
+    (pathlib.Path(os.environ['NETWORK_STREAMING_OUT'])/'finished').touch()
+''')
+        for name in ('input', 'gamepad', 'networkstreaming'):
+            source = projects/name
+            (source/'Assets').mkdir(parents=True)
+            (source/'Assets/input').write_text(name)
+            (source/'Reference').mkdir()
+            (source/'Reference/unity-6000.0.71f1.jsonl').write_text('{"k":"meta","steps":"4:move 1,2"}\n')
+            for script in ('run-unbound.sh', 'compare.py', 'run-probe.py', 'server.py'):
+                if (repo/'tests/projects'/name/script).is_file():
+                    shutil.copyfile(repo/'tests/projects'/name/script, source/script)
+            captured = []
+            for label in ('first $literal', 'second'):
+                work = self.root/label
+                record, launch = self.root/f'{name}-{label}.json', self.root/f'{name}-{label}-launch.json'
+                context = {'work_root': work, 'values': {
+                    'cli': str(self.cli), 'managed': str(self.managed), 'python': sys.executable,
+                    'projects': str(projects), 'label': label, 'release': '6000.0.71f1'},
+                    'env': dict(os.environ, HOME=str(home), ARG_RECORD=str(record), LAUNCH_RECORD=str(launch),
+                                PYTHONPATH=str(repo/'tools/agents'))}
+                with mock.patch.multiple(suite, PROJECTS=projects, LAUNCHER=launcher), \
+                     contextlib.redirect_stdout(io.StringIO()):
+                    result = suite.run_probe(name, recipes[name][:1], context)
+                self.assertEqual(result['status'], 'pass', result)
+                actual = json.loads(record.read_text())
+                project = Path(actual['project'])
+                self.assertEqual(project, work/name/'projects'/name)
+                self.assertTrue((project/'Library/Unbound/mutable').is_file())
+                self.assertFalse((source/'Library').exists())
+                self.assertEqual(json.loads(launch.read_text())[:2],
+                                 ['--kind', 'engine-gpu' if name == 'networkstreaming' else 'engine-cpu'])
+                if name == 'input':
+                    self.assertEqual(actual['args'][actual['args'].index('--move')+1], '3:1,2')
+                captured.append(project)
+            self.assertNotEqual(*captured)
+
+    def test_input_wrapper_keeps_its_default_project(self):
+        repo = Path(__file__).resolve().parents[2]
+        record = self.root/'arguments.json'
+        self.cli.write_text(f'#!{sys.executable}\nimport json,sys\n'
+                            f'open({str(record)!r}, "w").write(json.dumps(sys.argv[1:]))\n')
+        env = dict(os.environ)
+        env.pop('UNBOUND_PROBE_PROJECT', None)
+        subprocess.run(['sh', str(repo/'tests/projects/input/run-unbound.sh'),
+                        str(repo/'tests/projects/input/Reference/unity-6000.0.71f1.jsonl'),
+                        str(self.root/'out'), str(self.cli)], env=env, check=True)
+        args = json.loads(record.read_text())
+        self.assertEqual(args[args.index('-p')+1], str(repo/'tests/projects/input'))
 
 
 if __name__ == '__main__':
