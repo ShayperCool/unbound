@@ -27,7 +27,12 @@ def verify(root, release, rate):
             assert record == dict(file=case+suffix+'.f32', frames=BLOCKS*1024, channels=2), case+suffix
             values = samples(root, record)
             assert len(values) == BLOCKS*1024*2 and all(map(math.isfinite, values)), case+suffix
-            assert any(abs(v) > 1e-6 for v in values), case+suffix
+            silent = case in {f'spatial_dry_gain_{mode}_{distance}'
+                              for mode in ('linear', 'custom') for distance in (20, 30, 100)}
+            if silent:
+                assert all(v == 0 for v in values), case+suffix
+            else:
+                assert any(abs(v) > 1e-6 for v in values), case+suffix
     print('Complete finite spatial measurement:', root)
 
 

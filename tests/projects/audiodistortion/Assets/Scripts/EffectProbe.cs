@@ -155,6 +155,123 @@ public class EffectProbe : MonoBehaviour
         new[] { "spatial_chorus_pitch_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "pitch=1.5", "sourcechain=chorus" },
         new[] { "spatial_chorus_doppler_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "move=1", "sourcechain=chorus" },
         new[] { "spatial_chorus_zone_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "zone=1", "sourcechain=chorus" },
+        new[] { "spatial_dry_gain_linear_0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,0", "rolloff=linear" },
+        new[] { "spatial_dry_gain_linear_0p5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,0.5", "rolloff=linear" },
+        new[] { "spatial_dry_gain_linear_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,1", "rolloff=linear" },
+        new[] { "spatial_dry_gain_linear_2", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,2", "rolloff=linear" },
+        new[] { "spatial_dry_gain_linear_5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "rolloff=linear" },
+        new[] { "spatial_dry_gain_linear_10", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,10", "rolloff=linear" },
+        new[] { "spatial_dry_gain_linear_19", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,19", "rolloff=linear" },
+        new[] { "spatial_dry_gain_linear_20", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "rolloff=linear" },
+        new[] { "spatial_dry_gain_linear_30", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,30", "rolloff=linear" },
+        new[] { "spatial_dry_gain_linear_100", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,100", "rolloff=linear" },
+        new[] { "spatial_dry_gain_log_0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,0", "rolloff=log" },
+        new[] { "spatial_dry_gain_log_0p5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,0.5", "rolloff=log" },
+        new[] { "spatial_dry_gain_log_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,1", "rolloff=log" },
+        new[] { "spatial_dry_gain_log_2", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,2", "rolloff=log" },
+        new[] { "spatial_dry_gain_log_5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "rolloff=log" },
+        new[] { "spatial_dry_gain_log_10", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,10", "rolloff=log" },
+        new[] { "spatial_dry_gain_log_19", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,19", "rolloff=log" },
+        new[] { "spatial_dry_gain_log_20", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "rolloff=log" },
+        new[] { "spatial_dry_gain_log_30", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,30", "rolloff=log" },
+        new[] { "spatial_dry_gain_log_100", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,100", "rolloff=log" },
+        new[] { "spatial_dry_gain_custom_0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,0", "rolloff=custom" },
+        new[] { "spatial_dry_gain_custom_0p5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,0.5", "rolloff=custom" },
+        new[] { "spatial_dry_gain_custom_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,1", "rolloff=custom" },
+        new[] { "spatial_dry_gain_custom_2", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,2", "rolloff=custom" },
+        new[] { "spatial_dry_gain_custom_5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "rolloff=custom" },
+        new[] { "spatial_dry_gain_custom_10", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,10", "rolloff=custom" },
+        new[] { "spatial_dry_gain_custom_19", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,19", "rolloff=custom" },
+        new[] { "spatial_dry_gain_custom_20", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "rolloff=custom" },
+        new[] { "spatial_dry_gain_custom_30", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,30", "rolloff=custom" },
+        new[] { "spatial_dry_gain_custom_100", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,100", "rolloff=custom" },
+        new[] { "spatial_dry_gain_blend_0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "blend=0" },
+        new[] { "spatial_dry_gain_blend_0p25", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "blend=0.25" },
+        new[] { "spatial_dry_gain_blend_0p5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "blend=0.5" },
+        new[] { "spatial_dry_gain_blend_0p75", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "blend=0.75" },
+        new[] { "spatial_dry_gain_blend_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "blend=1" },
+        new[] { "spatial_dry_pan_1_10", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=1,0,10", "rolloff=custom", "curve=flat" },
+        new[] { "spatial_dry_pan_1_5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=1,0,5", "rolloff=custom", "curve=flat" },
+        new[] { "spatial_dry_pan_1_2", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=1,0,2", "rolloff=custom", "curve=flat" },
+        new[] { "spatial_dry_pan_1_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=1,0,1", "rolloff=custom", "curve=flat" },
+        new[] { "spatial_dry_pan_2_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=2,0,1", "rolloff=custom", "curve=flat" },
+        new[] { "spatial_dry_pan_5_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=5,0,1", "rolloff=custom", "curve=flat" },
+        new[] { "spatial_dry_pan_10_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=10,0,1", "rolloff=custom", "curve=flat" },
+        new[] { "spatial_dry_pan_5_0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=5,0,0", "rolloff=custom", "curve=flat" },
+        new[] { "spatial_dry_pan_n3_4", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=-3,0,4", "rolloff=custom", "curve=flat" },
+        new[] { "spatial_dry_pan_3_n4", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,-4", "rolloff=custom", "curve=flat" },
+        new[] { "spatial_dry_pan_0_n5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,-5", "rolloff=custom", "curve=flat" },
+        new[] { "spatial_dry_pan_0_5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "rolloff=custom", "curve=flat" },
+        new[] { "spatial_dry_spread_30", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "spread=30" },
+        new[] { "spatial_dry_spread_60", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "spread=60" },
+        new[] { "spatial_dry_spread_90", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "spread=90" },
+        new[] { "spatial_dry_spread_120", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "spread=120" },
+        new[] { "spatial_dry_spread_180", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "spread=180" },
+        new[] { "spatial_dry_spread_270", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "spread=270" },
+        new[] { "spatial_dry_spread_360", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "spread=360" },
+        new[] { "spatial_dry_stereopan_0_n1_0p5", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "pan=-1", "blend=0.5" },
+        new[] { "spatial_dry_stereopan_0_n1_1", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "pan=-1", "blend=1" },
+        new[] { "spatial_dry_stereopan_0_n0p5_0p5", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "pan=-0.5", "blend=0.5" },
+        new[] { "spatial_dry_stereopan_0_n0p5_1", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "pan=-0.5", "blend=1" },
+        new[] { "spatial_dry_stereopan_0_0p5_0p5", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "pan=0.5", "blend=0.5" },
+        new[] { "spatial_dry_stereopan_0_0p5_1", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "pan=0.5", "blend=1" },
+        new[] { "spatial_dry_stereopan_0_1_0p5", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "pan=1", "blend=0.5" },
+        new[] { "spatial_dry_stereopan_0_1_1", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "pan=1", "blend=1" },
+        new[] { "spatial_dry_height_0_0_5_0_0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,5,0", "spread=0" },
+        new[] { "spatial_dry_height_0_0_5_0_90", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,5,0", "spread=90" },
+        new[] { "spatial_dry_height_0_0_5_0_180", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,5,0", "spread=180" },
+        new[] { "spatial_dry_height_0_3_4_0_0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,4,0", "spread=0" },
+        new[] { "spatial_dry_height_0_3_4_0_90", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,4,0", "spread=90" },
+        new[] { "spatial_dry_height_0_3_4_0_180", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,4,0", "spread=180" },
+        new[] { "spatial_dry_height_0_3_4_5_0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,4,5", "spread=0" },
+        new[] { "spatial_dry_height_0_3_4_5_90", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,4,5", "spread=90" },
+        new[] { "spatial_dry_height_0_3_4_5_180", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,4,5", "spread=180" },
+        new[] { "spatial_dry_height_0_0_0_0_0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,0", "spread=0" },
+        new[] { "spatial_dry_height_0_0_0_0_90", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,0", "spread=90" },
+        new[] { "spatial_dry_height_0_0_0_0_180", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,0", "spread=180" },
+        new[] { "spatial_dry_curve_customrolloff_0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "multi=CustomRolloff" },
+        new[] { "spatial_dry_curve_spatialblend_0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "multi=SpatialBlend" },
+        new[] { "spatial_dry_curve_spread_0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "multi=Spread" },
+        new[] { "spatial_dry_curve_reverbzonemix_0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "multi=ReverbZoneMix" },
+        new[] { "spatial_dry_listenerturn_0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "listenerturn=90" },
+        new[] { "spatial_dry_limits_0_2_10", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "min=2", "max=10" },
+        new[] { "spatial_dry_limits_0_0_10", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "min=0", "max=10" },
+        new[] { "spatial_dry_limits_0_5_5", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "min=5", "max=5" },
+        new[] { "spatial_dry_limits_0_10_5", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=0,0,5", "min=10", "max=5" },
+        new[] { "spatial_dry_stereopan_1_n1_0p5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "pan=-1", "blend=0.5" },
+        new[] { "spatial_dry_stereopan_1_n1_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "pan=-1", "blend=1" },
+        new[] { "spatial_dry_stereopan_1_n0p5_0p5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "pan=-0.5", "blend=0.5" },
+        new[] { "spatial_dry_stereopan_1_n0p5_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "pan=-0.5", "blend=1" },
+        new[] { "spatial_dry_stereopan_1_0p5_0p5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "pan=0.5", "blend=0.5" },
+        new[] { "spatial_dry_stereopan_1_0p5_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "pan=0.5", "blend=1" },
+        new[] { "spatial_dry_stereopan_1_1_0p5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "pan=1", "blend=0.5" },
+        new[] { "spatial_dry_stereopan_1_1_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "pan=1", "blend=1" },
+        new[] { "spatial_dry_height_1_0_5_0_0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,5,0", "spread=0" },
+        new[] { "spatial_dry_height_1_0_5_0_90", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,5,0", "spread=90" },
+        new[] { "spatial_dry_height_1_0_5_0_180", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,5,0", "spread=180" },
+        new[] { "spatial_dry_height_1_3_4_0_0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,4,0", "spread=0" },
+        new[] { "spatial_dry_height_1_3_4_0_90", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,4,0", "spread=90" },
+        new[] { "spatial_dry_height_1_3_4_0_180", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,4,0", "spread=180" },
+        new[] { "spatial_dry_height_1_3_4_5_0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,4,5", "spread=0" },
+        new[] { "spatial_dry_height_1_3_4_5_90", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,4,5", "spread=90" },
+        new[] { "spatial_dry_height_1_3_4_5_180", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,4,5", "spread=180" },
+        new[] { "spatial_dry_height_1_0_0_0_0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,0", "spread=0" },
+        new[] { "spatial_dry_height_1_0_0_0_90", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,0", "spread=90" },
+        new[] { "spatial_dry_height_1_0_0_0_180", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,0", "spread=180" },
+        new[] { "spatial_dry_curve_customrolloff_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "multi=CustomRolloff" },
+        new[] { "spatial_dry_curve_spatialblend_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "multi=SpatialBlend" },
+        new[] { "spatial_dry_curve_spread_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "multi=Spread" },
+        new[] { "spatial_dry_curve_reverbzonemix_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "multi=ReverbZoneMix" },
+        new[] { "spatial_dry_listenerturn_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "listenerturn=90" },
+        new[] { "spatial_dry_limits_1_2_10", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "min=2", "max=10" },
+        new[] { "spatial_dry_limits_1_0_10", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "min=0", "max=10" },
+        new[] { "spatial_dry_limits_1_5_5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "min=5", "max=5" },
+        new[] { "spatial_dry_limits_1_10_5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,5", "min=10", "max=5" },
+        new[] { "spatial_dry_twod_pan_n1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0", "pan=-1" },
+        new[] { "spatial_dry_twod_pan_n0p5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0", "pan=-0.5" },
+        new[] { "spatial_dry_twod_pan_0", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0", "pan=0" },
+        new[] { "spatial_dry_twod_pan_0p5", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0", "pan=0.5" },
+        new[] { "spatial_dry_twod_pan_1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "blend=0", "pan=1" },
     };
     public const int BlockCount = 32;
     public const int ClipFrames = BlockCount * 1024;
@@ -339,11 +456,26 @@ public class EffectProbe : MonoBehaviour
             source.spatialBlend = Number(Option(key, "blend=", Option(key, "spatial=", "0"))); source.volume = 1;
             source.pitch = Number(Option(key, "pitch=", "1"));
             source.spread = Number(Option(key, "spread=", "0"));
+            source.panStereo = Number(Option(key, "pan=", "0"));
+            transform.rotation = Quaternion.Euler(0, Number(Option(key, "listenerturn=", "0")), 0);
             if (Option(key, "spatial=", "0") == "1") {
                 var xyz = Option(key, "position=", "0,0,5").Split(',');
                 go.transform.position = new Vector3(Number(xyz[0]), Number(xyz[1]), Number(xyz[2]));
-                source.rolloffMode = AudioRolloffMode.Linear; source.minDistance = 1; source.maxDistance = 20;
+                source.rolloffMode = Option(key, "rolloff=", "linear") == "log" ? AudioRolloffMode.Logarithmic : AudioRolloffMode.Linear;
+                source.minDistance = Number(Option(key, "min=", "1")); source.maxDistance = Number(Option(key, "max=", "20"));
+                if (Option(key, "rolloff=", "") == "custom") {
+                    source.rolloffMode = AudioRolloffMode.Custom;
+                    source.SetCustomCurve(AudioSourceCurveType.CustomRolloff, Option(key, "curve=", "") == "flat"
+                        ? AnimationCurve.Linear(0, 1, 1, 1) : AnimationCurve.Linear(0, 1, 1, 0));
+                }
                 source.velocityUpdateMode = AudioVelocityUpdateMode.Dynamic;
+            }
+            string multi = Option(key, "multi=", "");
+            if (multi != "") {
+                var curve = new AnimationCurve(new Keyframe(0, 0.2f, 0, 0), new Keyframe(0.4f, 0.8f, 0, 0), new Keyframe(1, 0.3f, 0, 0));
+                var type = (AudioSourceCurveType)Enum.Parse(typeof(AudioSourceCurveType), multi);
+                source.SetCustomCurve(type, curve);
+                if (type == AudioSourceCurveType.CustomRolloff) source.rolloffMode = AudioRolloffMode.Custom;
             }
             GameObject zone = null;
             if (Option(key, "zone=", "0") == "1") {

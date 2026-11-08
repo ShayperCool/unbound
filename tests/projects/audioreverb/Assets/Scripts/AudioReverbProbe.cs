@@ -67,6 +67,46 @@ public class AudioReverbProbe : MonoBehaviour
         new[] { "clip_end_12289", "filter", "F:reverbPreset=Generic", "frames=12289" },
         new[] { "clip_end_12500", "filter", "F:reverbPreset=Generic", "frames=12500" },
         new[] { "clip_end_12801", "filter", "F:reverbPreset=Generic", "frames=12801" },
+        new[] { "zone_curve_s0_r0_d0", "zone=0", "position=0", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1" },
+        new[] { "zone_curve_s0_r0_d5", "zone=0", "position=5", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1" },
+        new[] { "zone_curve_s0_r0_d10", "zone=0", "position=10", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1" },
+        new[] { "zone_curve_s0_r0_d15", "zone=0", "position=15", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1" },
+        new[] { "zone_curve_s0_r0_d20", "zone=0", "position=20", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1" },
+        new[] { "zone_curve_s0_r0_d25", "zone=0", "position=25", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1" },
+        new[] { "zone_send_s0_r0_m0", "zone=0", "position=5", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=0" },
+        new[] { "zone_send_s0_r0_m0p5", "zone=0", "position=5", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=0.5" },
+        new[] { "zone_send_s0_r0_m1", "zone=0", "position=5", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=1" },
+        new[] { "zone_send_s0_r0_m1p1", "zone=0", "position=5", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=1.1" },
+        new[] { "zone_curve_s0_r1_d0", "zone=0", "position=0", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1", "routed" },
+        new[] { "zone_curve_s0_r1_d5", "zone=0", "position=5", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1", "routed" },
+        new[] { "zone_curve_s0_r1_d10", "zone=0", "position=10", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1", "routed" },
+        new[] { "zone_curve_s0_r1_d15", "zone=0", "position=15", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1", "routed" },
+        new[] { "zone_curve_s0_r1_d20", "zone=0", "position=20", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1", "routed" },
+        new[] { "zone_curve_s0_r1_d25", "zone=0", "position=25", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1", "routed" },
+        new[] { "zone_send_s0_r1_m0", "zone=0", "position=5", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=0", "routed" },
+        new[] { "zone_send_s0_r1_m0p5", "zone=0", "position=5", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=0.5", "routed" },
+        new[] { "zone_send_s0_r1_m1", "zone=0", "position=5", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=1", "routed" },
+        new[] { "zone_send_s0_r1_m1p1", "zone=0", "position=5", "S:spatialBlend=0", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=1.1", "routed" },
+        new[] { "zone_curve_s1_r0_d0", "zone=0", "position=0", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1" },
+        new[] { "zone_curve_s1_r0_d5", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1" },
+        new[] { "zone_curve_s1_r0_d10", "zone=0", "position=10", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1" },
+        new[] { "zone_curve_s1_r0_d15", "zone=0", "position=15", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1" },
+        new[] { "zone_curve_s1_r0_d20", "zone=0", "position=20", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1" },
+        new[] { "zone_curve_s1_r0_d25", "zone=0", "position=25", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1" },
+        new[] { "zone_send_s1_r0_m0", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=0" },
+        new[] { "zone_send_s1_r0_m0p5", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=0.5" },
+        new[] { "zone_send_s1_r0_m1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=1" },
+        new[] { "zone_send_s1_r0_m1p1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=1.1" },
+        new[] { "zone_curve_s1_r1_d0", "zone=0", "position=0", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1", "routed" },
+        new[] { "zone_curve_s1_r1_d5", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1", "routed" },
+        new[] { "zone_curve_s1_r1_d10", "zone=0", "position=10", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1", "routed" },
+        new[] { "zone_curve_s1_r1_d15", "zone=0", "position=15", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1", "routed" },
+        new[] { "zone_curve_s1_r1_d20", "zone=0", "position=20", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1", "routed" },
+        new[] { "zone_curve_s1_r1_d25", "zone=0", "position=25", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "curve=1", "routed" },
+        new[] { "zone_send_s1_r1_m0", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=0", "routed" },
+        new[] { "zone_send_s1_r1_m0p5", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=0.5", "routed" },
+        new[] { "zone_send_s1_r1_m1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=1", "routed" },
+        new[] { "zone_send_s1_r1_m1p1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "S:reverbZoneMix=1.1", "routed" },
     };
     public static readonly string[] FilterProperties = {
         "reverbPreset", "dryLevel", "room", "roomHF", "roomLF", "decayTime", "decayHFRatio", "reflectionsLevel",
@@ -251,7 +291,11 @@ public class AudioReverbProbe : MonoBehaviour
             if (!hasZone) source.outputAudioMixerGroup = child;
             for (int t = 1; t < tokens.Length; t++) {
                 string token = tokens[t];
-                if (token == "filter") filter = go.AddComponent<AudioReverbFilter>();
+                if (token == "routed") source.outputAudioMixerGroup = child;
+                else if (token.StartsWith("position=")) go.transform.position = new Vector3(0, 0, float.Parse(token.Substring(9), CultureInfo.InvariantCulture));
+                else if (token == "curve=1") source.SetCustomCurve(AudioSourceCurveType.ReverbZoneMix,
+                    new AnimationCurve(new Keyframe(0, 0.2f, 0, 0), new Keyframe(0.4f, 0.8f, 0, 0), new Keyframe(1, 0.3f, 0, 0)));
+                else if (token == "filter") filter = go.AddComponent<AudioReverbFilter>();
                 else if (token == "listener") filter = gameObject.AddComponent<AudioReverbFilter>();
                 else if (token == "disabled") filter.enabled = false;
                 else if (token == "mono" || token.StartsWith("frames=")) { }

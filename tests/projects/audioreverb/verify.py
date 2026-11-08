@@ -16,7 +16,9 @@ def verify(root, release, rate, zones=True):
             values = samples(root, record)
             assert len(values) == BLOCKS*1024*2 and all(map(math.isfinite, values)), case+suffix
             # Zone cases play to the default output: the mixer sink stays silent.
-            if case.startswith('zone') and suffix: assert all(v == 0 for v in values), case+suffix
+            routed = '_r1_' in case
+            silent = (case.startswith('zone') and suffix and not routed) or ('_s1_' in case and case.endswith(('_d20', '_d25')))
+            if silent: assert all(v == 0 for v in values), case+suffix
             else: assert any(abs(v) > 1e-6 for v in values), case+suffix
     # A reverb case must carry energy after the dry impulses (frames 2048, 3072 and 5120).
     for case, suffix in (('generic', '.master'), ('listener', ''), ('zone_in', ''))[:3 if zones else 2]:
