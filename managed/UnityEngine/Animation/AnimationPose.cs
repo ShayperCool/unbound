@@ -93,6 +93,27 @@ namespace Unbound.Runtime
 
     internal static class ClipSampling
     {
+        /// <summary>The normalized time a clip reads at a time of <paramref name="seconds"/> on a clip
+        /// of <paramref name="length"/>: seconds ÷ length rounded up to the next single (an exact
+        /// quotient stays). Matches the Unity 6000.0.71f1 Editor, tests/projects/humanoid longState,
+        /// longStateB (states) and longClipA/B (clip playables): at 2^14 cycles and more, where a
+        /// single's step is a visible part of a cycle, the pose and the root motion sample the
+        /// rounded-up time; below that it moves a time by at most one single's step.</summary>
+        internal static float ClipNormalized(double seconds, float length)
+        {
+            if (!(length > 0f)) return (float)seconds;
+            double x = seconds / length;
+            float f = (float)x;
+            return f < x ? MathF.BitIncrement(f) : f;
+        }
+
+        /// <summary>The normalized time a clip of a state reads at the state's
+        /// <paramref name="normalized"/> time: the state's time in seconds on the clip (normalized ×
+        /// length) in single precision, then <see cref="ClipNormalized"/> (tests/projects/humanoid
+        /// longStateB, a clip of 2/3 s at 30000 cycles).</summary>
+        internal static double StateClipNormalized(double normalized, float length) =>
+            length > 0f ? ClipNormalized((float)normalized * length, length) : normalized;
+
         /// <summary>Adds the clip's values at <paramref name="time"/> (on the clip's own timeline) with
         /// a weight. <paramref name="mask"/>, when given, excludes channels (layer masks, mixing transforms).
         /// With a <paramref name="reference"/> pose (additive layers) the values are differences from it:
@@ -210,7 +231,8 @@ namespace Unbound.Runtime
             pose.Value[c + 3] += weight * w; pose.Weight[c + 3] += weight;
         }
 
-        /// <summary>The time on a clip's own curves for a normalized time of a state.</summary>
+        /// <summary>The time on a clip's own curves for a normalized time of a state (already
+        /// read through <see cref="StateClipNormalized"/>).</summary>
         internal static float ClipTime(AnimationClip clip, double normalized, bool loop)
         {
             float length = clip.length;

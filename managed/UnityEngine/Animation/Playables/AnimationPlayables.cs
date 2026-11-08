@@ -36,11 +36,23 @@ namespace Unbound.Runtime.Playables
         internal override bool CanChangeInputs => false;
         internal override bool CanSetWeights => false;
 
-        /// <summary>The playable time as the clip uses it: in single precision, so a double time
-        /// just below a loop's end already samples the loop's start (6000.0.71f1, animculling
-        /// clock/*/Manual). Pose, root motion and events all read the clip through it, so they
-        /// agree on which loop a time is in.</summary>
-        static double Single(double t) => (float)t;
+        /// <summary>The clip's normalized time (time / length) at playable time <paramref name="t"/>
+        /// as its pose and root motion read it (<see cref="ClipSampling.ClipNormalized"/>): a time
+        /// between two singles samples the later one (6000.0.71f1, tests/projects/humanoid
+        /// longClipA/B at 70000 s, clips of 1 s and 2/3 s; animculling clock/*/Manual: 0.0999999978 s
+        /// samples the pose of 0.1 s), so a double time just below a loop's end already samples the
+        /// loop's start.</summary>
+        float Normalized(double t) => ClipSampling.ClipNormalized(t, Clip.length);
+
+        /// <summary>The playable time as the clip's pose and root motion use it: its
+        /// <see cref="Normalized"/> time in seconds (exact in double), so both agree on which loop a
+        /// time is in.</summary>
+        double ClipClock(double t) => Clip.length > 0f ? (double)Normalized(t) * Clip.length : (float)t;
+
+        /// <summary>The playable time as the clip's events compare with it: the nearest single
+        /// (animculling clock/*/Manual: an event at 0.1 s fires in the update that reaches
+        /// 0.0999999978 s + 0.02 s, not at 0.0999999978 s, whose pose is the one of 0.1 s).</summary>
+        static double EventClock(double t) => (float)t;
 
         /// <summary>The clip's local time at (single-precision) playable time <paramref name="t"/>.</summary>
         double ClipTime(double t)
@@ -76,18 +88,15 @@ namespace Unbound.Runtime.Playables
                 if (e.Replay) into.BodyMotion = m_LastBody;
                 else
                 {
-                    // The single-precision time the pose and events use, divided in single precision
-                    // (humanoid longClipA/B at 70000 s: closer to the Editor than the double time, not
-                    // matched; see docs/COMPATIBILITY_GAPS.md).
                     human.SampleMotion(Clip, Clip.HumanClipMotion, new Unbound.Runtime.Humanoid.HumanClipMotionInput
                     {
-                        Time = (float)Single(node.Time) / Clip.length,
-                        PreviousTime = (float)Single(node.LastPlaying ? node.PreviousTime : node.Time) / Clip.length, Speed = 1f,
+                        Time = Normalized(node.Time),
+                        PreviousTime = Normalized(node.LastPlaying ? node.PreviousTime : node.Time), Speed = 1f,
                     }, out into.BodyMotion);
                     m_LastBody = into.BodyMotion;
                 }
             }
-            double t = e.ReferencePose ? 0.0 : Single(node.Time);
+            double t = e.ReferencePose ? 0.0 : ClipClock(node.Time);
             m_Pose.Reset(e.Bindings.FloatCount, e.Bindings.ObjectCount);
             ClipSampling.Sample(bound, (float)ClipTime(t), 1f, m_Pose,
                 loopPose: e.MotionMode == RootMotionMode.Human);
@@ -123,8 +132,8 @@ namespace Unbound.Runtime.Playables
             m_IncludeStart = Compat.AnimatorStartupMeasured && e.AutomaticFrame && node.LastPlaying
                 && node.PreviousTime == 0 && !m_EventTargets.TryGetValue(e.Animator, out _);
             if (node.PreviousTime == node.Time && !m_IncludeStart) return;
-            m_From = Single(node.PreviousTime);
-            m_To = Single(node.Time);
+            m_From = EventClock(node.PreviousTime);
+            m_To = EventClock(node.Time);
             m_Weight = weight;
             e.Note(this, node);
         }
@@ -151,7 +160,7 @@ namespace Unbound.Runtime.Playables
         RootMotionStep Motion(AnimationEvaluation e, BoundClip bound, PlayableNode node)
         {
             if (!node.LastPlaying || (node.FrameFlags & FrameData.Flags.SeekOccured) != 0) return RootMotionStep.Zero;
-            double from = Single(node.PreviousTime), to = Single(node.Time);
+            double from = ClipClock(node.PreviousTime), to = ClipClock(node.Time);
             if ((node.FrameFlags & FrameData.Flags.Loop) != 0 && to < from && node.Duration > 0 && node.Duration < double.MaxValue)
                 to += node.Duration;
             if (from == to) return RootMotionStep.Zero;

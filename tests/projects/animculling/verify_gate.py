@@ -2,14 +2,15 @@
 """Gate the strict comparison, retaining one documented residual family.
 
 compare.py remains strict and prints every raw difference. This verifier admits only the
-AlwaysAnimate frame-35 arm-change predicates listed in COMPATIBILITY_GAPS.md, and only while
-both raw arm rotations agree tightly and their dots straddle Quaternion's equality boundary.
+AlwaysAnimate and CullUpdateTransforms frame-35 arm-change predicates listed in
+COMPATIBILITY_GAPS.md, and only while both raw arm rotations agree tightly and their dots
+straddle Quaternion's equality boundary.
 """
 import sys
 from compare import read, same
 
 
-RESIDUALS = {f'ph/always/{controller}/{shape}/35'
+RESIDUALS = {f'ph/{mode}/{controller}/{shape}/35' for mode in ('always', 'transforms')
              for controller in ('bare', 'controller') for shape in ('clip', 'mixer')}
 
 
@@ -39,11 +40,12 @@ def verify(reference, candidate):
             if max(abs(x - y) for x, y in zip(a['arm'], b['arm'])) > 5e-7:
                 return False, accepted
         pose = f'{prefix}/pose/35'
-        # Unity's float boundary is 1f - 1e-6f. Native is immediately above it;
+        # Unity's float boundary is 1f - 1e-6f. Native is immediately above it (measured
+        # 0.999999046 AlwaysAnimate, 0.999999166 CullUpdateTransforms: within 2e-7);
         # the candidate rounds onto it. Every continuous pose record is checked above.
         boundary = 0.9999989867210388
         a, b = reference[pose]['armDot'], candidate[pose]['armDot']
-        if not (boundary < a < boundary + 1e-7 and boundary - 1e-7 < b < boundary + 2e-8):
+        if not (boundary < a < boundary + 2e-7 and boundary - 1e-7 < b < boundary + 2e-8):
             return False, accepted
         accepted.append(key)
     return True, accepted

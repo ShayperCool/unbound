@@ -32,7 +32,7 @@ namespace UnityEngine.Tests
             return root;
         }
 
-        static AnimationClip Clip()
+        static AnimationClip Clip(bool turn = true)
         {
             var clip = new AnimationClip();
             void Add(string attribute, float from, float to) => clip.m_Curves.Add(new ClipCurve
@@ -43,9 +43,9 @@ namespace UnityEngine.Tests
             Add("RootT.x", 0f, 2f);
             Add("RootT.y", 1f, 1f);
             Add("RootQ.x", 0f, 0f);
-            Add("RootQ.y", 0f, 0.5f);
+            Add("RootQ.y", 0f, turn ? 0.5f : 0f);
             Add("RootQ.z", 0f, 0f);
-            Add("RootQ.w", 1f, 0.8660254f);
+            Add("RootQ.w", 1f, turn ? 0.8660254f : 1f);
             clip.m_Version++;
             return clip;
         }
@@ -101,6 +101,40 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(avatar);
                 Object.DestroyImmediate(clip);
             }
+        }
+
+        /// <summary>A clip's root motion at a long time reads the time rounded up to a single
+        /// (ClipSampling.ClipNormalized, tests/projects/humanoid longClipA/B): a step from 70000.3 s
+        /// to 70000.3333 s moves as one from 0.3046875 s to 0.3359375 s, the singles above, not as
+        /// one from the nearest singles (0.296875 s to 0.3359375 s).</summary>
+        [Fact]
+        public void LongTimesStepBetweenTheRoundedUpTimes()
+        {
+            Vector3 Step(double start, float dt)
+            {
+                var root = Rig(out var animator, out var avatar);
+                var clip = Clip(turn: false);
+                clip.m_LoopTime = true;
+                clip.m_Version++;
+                var graph = Graph(animator, clip, out var playable);
+                try
+                {
+                    playable.SetTime(start);
+                    graph.Evaluate(0f);
+                    graph.Evaluate(dt);
+                    return animator.deltaPosition;
+                }
+                finally
+                {
+                    graph.Destroy();
+                    Object.DestroyImmediate(root);
+                    Object.DestroyImmediate(avatar);
+                    Object.DestroyImmediate(clip);
+                }
+            }
+            var far = Step(70000.3, 1f / 30f);
+            Near.Equal(Step(0.3046875, 0.03125f), far, 1e-5f);
+            Assert.True((Step(0.296875, 0.0390625f) - far).magnitude > 1e-3f);
         }
 
         [Theory]

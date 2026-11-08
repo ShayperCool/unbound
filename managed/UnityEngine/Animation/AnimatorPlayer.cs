@@ -1450,8 +1450,9 @@ namespace Unbound.Runtime
                     // Cycle offsets (the clip's, the state's and blend trees') shift looping clips
                     // only; a clip without loop time plays from the state's time (measured,
                     // tests/projects/modelclips).
-                    normalized += MirrorShift(run.Def, clip);
-                    double time = clip.isLooping ? normalized + clip.m_CycleOffset : run.Normalized;
+                    // The clip reads the state's time (StateClipNormalized), then its cycle offsets.
+                    double read = ClipSampling.StateClipNormalized(run.Normalized, clip.length);
+                    double time = clip.isLooping ? read + (normalized - run.Normalized) + MirrorShift(run.Def, clip) + clip.m_CycleOffset : read;
                     ClipSampling.Sample(bound, ClipSampling.ClipTime(clip, time, clip.isLooping), weight, pose, mask, objectMask,
                         layer.Def.Additive ? Bindings.AdditiveReference(bound) : null, loopPose: true);
                     m_Contributions.Add((layer, layerIndex, run, clip, weight));

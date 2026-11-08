@@ -463,7 +463,9 @@ Observed (two byte-identical captures, 3,660 records):
   `doneSharedFirst`, AlwaysAnimate, GameTime and Manual: a clip of duration 0.3 below a plain
   playable, through its second output port for the script output).
 - A clip samples its single-precision time: a Manual clip at 0.4999999888 s (25 x
-  0.02f in double) of a 0.5 s loop samples the loop's start.
+  0.02f in double) of a 0.5 s loop samples the loop's start. The pose reads the time rounded up
+  (0.0999999978 s samples the pose of 0.1 s, as tests/projects/humanoid longClipA/B measures at
+  70000 s), while an event at 0.1 s fires only in the next update.
 
 Implementation: `PlayableKind.AnimatorClock` marks the animation playables;
 `PlayableGraphData.PreparePass` holds the trees below them for culled outputs (the hold

@@ -189,7 +189,8 @@ namespace Unbound.Runtime
                 if (w <= 0f) continue;
                 var bound = Bindings.Bind(clip);
                 double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
-                var (d, q) = MotionDelta(bound, clip, (run.MotionPrevious ?? run.Previous) + offset, run.Normalized + offset, pos, rot);
+                var (d, q) = MotionDelta(bound, clip, ClipSampling.StateClipNormalized(run.MotionPrevious ?? run.Previous, clip.length) + offset,
+                    ClipSampling.StateClipNormalized(run.Normalized, clip.length) + offset, pos, rot);
                 delta += d * w;
                 // States blend their rotation deltas in a layer; they do not compose them.
                 var sum = m_RootTurns[layerIndex];
@@ -332,8 +333,8 @@ namespace Unbound.Runtime
             {
                 if (layerIndex != 0 || contribution != run || weight <= 0f) continue;
                 double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
-                var (d, q) = MotionDelta(Bindings.Bind(clip), clip, from + offset,
-                    (match.Finish || match.PredictCurrentPose ? to : match.End) + offset, pos, rot);
+                var (d, q) = MotionDelta(Bindings.Bind(clip), clip, ClipSampling.StateClipNormalized(from, clip.length) + offset,
+                    ClipSampling.StateClipNormalized(match.Finish || match.PredictCurrentPose ? to : match.End, clip.length) + offset, pos, rot);
                 toEnd += d * weight;
                 turnToEnd *= Quaternion.Slerp(Quaternion.identity, q, weight);
             }
@@ -388,8 +389,9 @@ namespace Unbound.Runtime
         readonly List<Unbound.Runtime.Humanoid.Trs> m_HumanBodyDifferences = new List<Unbound.Runtime.Humanoid.Trs>();
 
         /// <summary>A humanoid Animator's root motion: each humanoid clip's body motion between its
-        /// state's previous and current times, blended by the clips' weights in each layer (the
-        /// states of a transition, a blend tree's clips); override layers move it towards theirs by
+        /// state's previous and current times as the clip reads them
+        /// (<see cref="ClipSampling.StateClipNormalized"/>), blended by the clips' weights in each
+        /// layer (the states of a transition, a blend tree's clips); override layers move it towards theirs by
         /// the layer weight, additive layers leave it (measured, tests/projects/humanoid) and compose
         /// their body differences onto the body below instead; layer masks filter both
         /// (<see cref="Unbound.Runtime.Humanoid.HumanRootMotion.CombineLayer"/>). It becomes a delta of the root
@@ -413,9 +415,9 @@ namespace Unbound.Runtime
                     var def = run.Def;
                     var input = new Unbound.Runtime.Humanoid.HumanClipMotionInput
                     {
-                        Time = (float)run.Normalized,
+                        Time = (float)ClipSampling.StateClipNormalized(run.Normalized, clip.length),
                         // A state entered in this update steps the whole update (see Enter).
-                        PreviousTime = (float)(run.MotionPrevious ?? run.Previous),
+                        PreviousTime = (float)ClipSampling.StateClipNormalized(run.MotionPrevious ?? run.Previous, clip.length),
                         Speed = SpeedOf(def),
                         CycleOffset = def.CycleOffset + (float)MirrorShift(def, clip),
                     };
