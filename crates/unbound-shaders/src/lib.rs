@@ -240,6 +240,43 @@ pub enum TextureDim {
 /// `SHADER_TARGET` of a program without `#pragma target` (Unity's default target 2.5).
 const DEFAULT_SHADER_TARGET: u32 = 25;
 
+/// The GPU features a `#pragma target` includes, as the `SHADER_AVAILABLE_<FEATURE>` names
+/// Unity's shader libraries test (the core library's GLCore API: RW textures under
+/// `RANDOMWRITE`, cube array sampling under `CUBEARRAY`). The sets are the Unity 6000.0 Manual's
+/// (HLSL pragma target command reference); `geometry` and `tessellation`, which Unity drops from
+/// a program without those stages, are left out (Unbound compiles none). Compute programs
+/// compile at 5.0.
+fn target_features(target: u32) -> &'static [&'static str] {
+    const T25: &[&str] = &["DERIVATIVES"];
+    const T30: &[&str] = &["DERIVATIVES", "INTERPOLATORS10", "SAMPLELOD", "FRAGCOORD"];
+    const T35: &[&str] = &[
+        "DERIVATIVES", "INTERPOLATORS10", "SAMPLELOD", "FRAGCOORD", "INTERPOLATORS15", "MRT4",
+        "INTEGERS", "2DARRAY", "INSTANCING",
+    ];
+    const T45: &[&str] = &[
+        "DERIVATIVES", "INTERPOLATORS10", "SAMPLELOD", "FRAGCOORD", "INTERPOLATORS15", "MRT4",
+        "INTEGERS", "2DARRAY", "INSTANCING", "COMPUTE", "RANDOMWRITE", "MSAATEX",
+    ];
+    const T46: &[&str] = &[
+        "DERIVATIVES", "INTERPOLATORS10", "SAMPLELOD", "FRAGCOORD", "INTERPOLATORS15", "MRT4",
+        "INTEGERS", "2DARRAY", "INSTANCING", "CUBEARRAY", "TESSHW", "MSAATEX",
+    ];
+    const T50: &[&str] = &[
+        "DERIVATIVES", "INTERPOLATORS10", "SAMPLELOD", "FRAGCOORD", "INTERPOLATORS15", "MRT4",
+        "INTEGERS", "2DARRAY", "INSTANCING", "COMPUTE", "RANDOMWRITE", "MSAATEX", "TESSHW",
+    ];
+    match target {
+        0..25 => &[],
+        25..30 => T25,
+        30..35 => T30,
+        // 4.0 adds only geometry.
+        35..45 => T35,
+        45 => T45,
+        46..50 => T46,
+        _ => T50,
+    }
+}
+
 /// A program's `#pragma`s that matter here.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Pragmas {
@@ -706,6 +743,11 @@ impl ShaderCompiler {
                 .map(|k| (k.clone(), "1".to_string())),
         );
         d.push(("SHADER_TARGET".into(), target.to_string()));
+        d.extend(
+            target_features(target)
+                .iter()
+                .map(|f| (format!("SHADER_AVAILABLE_{f}"), "1".to_string())),
+        );
         d.push((
             "UNITY_VERSION".into(),
             self.settings.unity_version.to_string(),
@@ -1876,6 +1918,26 @@ float4 frag() : SV_Target { return 1; }
         assert_eq!(compiler.pragmas(&untargeted, false).unwrap().target, 25);
         let error = compiler.compile(&untargeted, &[], false).unwrap_err();
         assert!(format!("{error:#}").contains("needs 4.5"), "{error:#}");
+    }
+
+    /// The target's GPU features are defined (RW textures from 4.5, cube arrays from 4.6);
+    /// compute programs have 5.0's.
+    #[test]
+    fn a_target_defines_its_gpu_features() {
+        assert!(target_features(25).contains(&"DERIVATIVES"));
+        assert!(!target_features(35).contains(&"RANDOMWRITE"));
+        assert!(target_features(45).contains(&"RANDOMWRITE"));
+        assert!(!target_features(45).contains(&"CUBEARRAY"));
+        assert!(target_features(46).contains(&"CUBEARRAY"));
+        assert!(!target_features(46).contains(&"RANDOMWRITE"));
+        assert!(target_features(50).contains(&"RANDOMWRITE"));
+        assert!(target_features(20).is_empty());
+        let compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let p = program("#pragma vertex v\n", false);
+        let defines = compiler.defines(&p, &[], 45, true, "SHADER_STAGE_VERTEX");
+        assert!(defines.iter().any(|(k, _)| k == "SHADER_AVAILABLE_RANDOMWRITE"));
+        let defines = compiler.defines(&p, &[], 35, true, "SHADER_STAGE_VERTEX");
+        assert!(!defines.iter().any(|(k, _)| k == "SHADER_AVAILABLE_RANDOMWRITE"));
     }
 
     #[test]
