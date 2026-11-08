@@ -102,6 +102,10 @@ namespace UnityEngine
             s_FixedClockDuration = Compat.FixedClockTicksMeasured && ticks >= 0 && ticks < long.MaxValue
                 ? RationalTime.FromDouble(s_FixedDeltaTime, rate).ToDouble()
                 : s_FixedDeltaTime;
+            // Public fixed-step time and physics use the same converted clock duration.
+            // tests/projects/audioreverb distinguishes this round trip at 44.1 kHz.
+            if (Compat.FixedClockTicksMeasured) s_FixedDeltaTime = (float)s_FixedClockDuration;
+            s_FixedClockSource = s_FixedDeltaTime;
         }
 
         public static float maximumDeltaTime

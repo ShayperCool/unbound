@@ -16,7 +16,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheVersionIncludesCachedDisplayAndImeFrameVersions()
         {
-            Assert.Equal(35u, NativeApi.CurrentVersion);
+            Assert.Equal(36u, NativeApi.CurrentVersion);
             Assert.Equal(56, System.Runtime.InteropServices.Marshal.SizeOf<ImportedTextureInfo>());
             Assert.Equal(52, (int)System.Runtime.InteropServices.Marshal.OffsetOf<ImportedTextureInfo>("TextureFormat"));
             Assert.Equal(112, System.Runtime.InteropServices.Marshal.SizeOf<FrameInput>());
@@ -47,7 +47,8 @@ namespace UnityEngine.Tests
         [InlineData(32u)]
         [InlineData(33u)]
         [InlineData(34u)]
-        [InlineData(36u)]
+        [InlineData(35u)]
+        [InlineData(37u)]
         public void AnotherNativeVersionIsRejectedBeforeInstalling(uint version)
         {
             var before = (NativeApi)Api.GetValue(null);
@@ -57,7 +58,7 @@ namespace UnityEngine.Tests
             try { Native.Initialize(&api); }
             catch (InvalidOperationException e) { error = e; }
             Assert.NotNull(error);
-            Assert.Equal($"native API version {version}, managed expects 35", error.Message);
+            Assert.Equal($"native API version {version}, managed expects 36", error.Message);
             Assert.Equal(before.Version, ((NativeApi)Api.GetValue(null)).Version);
             Assert.Equal(ready, (bool)Ready.GetValue(null));
         }

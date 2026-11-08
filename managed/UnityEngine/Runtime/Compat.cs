@@ -194,6 +194,12 @@ namespace Unbound.Runtime
         /// inverse-source-velocity Doppler and max-distance clamp until measured.</summary>
         internal static bool AudioSpatialStereoMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        // Per-voice zone send placement and completion (tests/projects/audioreverb).
+        internal static bool AudioZoneVoiceSendMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        // First zone processing defaults (tests/projects/audioreverb).
+        internal static bool AudioZoneStartupMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>The Distortion waveshaper of the mixer effect and AudioDistortionFilter, measured
         /// on exactly 6000.0.71f1 (tests/projects/audiodistortion). Other releases fail until measured.</summary>
         internal static bool DistortionMeasured => Release == (6000, 0, 71, 'f', 1);

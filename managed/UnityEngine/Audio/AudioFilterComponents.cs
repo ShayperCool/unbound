@@ -423,7 +423,7 @@ namespace Unbound.Runtime
     /// <summary>Collects an AudioSource's filter components for its packet.</summary>
     internal static class AudioFilterChain
     {
-        const string SpatialFilterLimit = " on a 3D AudioSource is not supported: reverb-zone first activation and source-completion sends still differ from the reference; physics-driven listener timing remains unmeasured (tests/projects/audiodistortion spatial controls)";
+        const string SpatialFilterLimit = " on a 3D AudioSource is not supported: the spatial component path has not been measured for this Unity release (tests/projects/audiodistortion spatial controls)";
         const string SpatialDistortionError = "AudioDistortionFilter" + SpatialFilterLimit;
         const string SpatialChorusError = "AudioChorusFilter" + SpatialFilterLimit;
         static readonly HashSet<string> s_Bookkeeping = new HashSet<string>
@@ -516,7 +516,7 @@ namespace Unbound.Runtime
                 bool ok = Describe(c, out var d);
                 if (!ok) continue;
                 if (Unmeasured(c) is string unmeasured) error ??= unmeasured;
-                if (spatial && (c is AudioDistortionFilter || c is AudioChorusFilter))
+                if (spatial && !Compat.AudioSpatialStereoMeasured && (c is AudioDistortionFilter || c is AudioChorusFilter))
                     error ??= c is AudioDistortionFilter ? SpatialDistortionError : SpatialChorusError;
                 d.Id = unchecked((ulong)(long)c.GetInstanceID());
                 d.Stage = scripts ? AudioFilterStage.AfterScripts : AudioFilterStage.BeforeScripts;

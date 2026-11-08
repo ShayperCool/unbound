@@ -35,6 +35,8 @@ namespace Unbound.Runtime
         internal const uint DecodedResampling = 1 << 10;
         internal const uint ComponentFilterTail = 1 << 11;
         internal const uint SpatialStereo = 1 << 12;
+        internal const uint ZoneVoiceSend = 1 << 13;
+        internal const uint ListenerSnapshot = 1 << 14;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -68,6 +70,11 @@ namespace Unbound.Runtime
         /// <summary><see cref="FilterCount"/> descriptors in component order; null when none. Valid
         /// during the call only (the mixer copies them).</summary>
         internal AudioFilterDescriptor* Filters;
+        // NativeApi 36: source-loop listener samples for distance/pan and Doppler.
+        internal Vector3 ListenerPosition;
+        internal Vector3 ListenerForward;
+        internal Vector3 ListenerUp;
+        internal Vector3 DopplerListenerPosition;
     }
 
     internal static class AudioFilterKind

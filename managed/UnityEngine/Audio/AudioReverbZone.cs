@@ -84,6 +84,7 @@ namespace UnityEngine
                     Debug.LogError("Unbound: AudioReverbZone.reverbPreset " + (int)value + " is not a preset; '" + m_GameObject?.m_Name + "' keeps " + m_ReverbPreset, this);
                     return;
                 }
+                if (Compat.AudioZoneStartupMeasured && m_ReverbPreset == value) return;
                 m_ReverbPreset = value;
                 if (value == AudioReverbPreset.User) return;
                 int p = (int)value;
@@ -152,19 +153,25 @@ namespace UnityEngine
                 if (z == null || z.m_GameObject == null) continue;
                 float w = z.Weight(listener);
                 if (!(w >= 0.001f)) continue;
-                room += Level(z.m_Room) * w;
-                roomHF += Level(z.m_RoomHF) * w;
-                roomLF += Level(z.m_RoomLF) * w;
-                decay += z.m_DecayTime * w;
-                decayHF += z.m_DecayHFRatio * w;
-                reflections += Level(z.m_Reflections) * w;
-                reflectionsDelay += z.m_ReflectionsDelay * w;
-                reverb += Level(z.m_Reverb) * w;
-                reverbDelay += z.m_ReverbDelay * w;
-                if (z.m_HFReference > 0f) hf += MathF.Log(z.m_HFReference) * w;
-                if (z.m_LFReference > 0f) lf += MathF.Log(z.m_LFReference) * w;
-                diffusion += z.m_Diffusion * w;
-                density += z.m_Density * w;
+                // A selected preset supplies the sound parameters. Scalar setters retain their
+                // values for User, without replacing the selected preset's processing values.
+                int p = Compat.AudioZoneStartupMeasured && z.m_ReverbPreset >= AudioReverbPreset.Off
+                    && z.m_ReverbPreset < AudioReverbPreset.User ? (int)z.m_ReverbPreset : -1;
+                room += Level(p >= 0 ? (int)s_Presets[p, 0] : z.m_Room) * w;
+                roomHF += Level(p >= 0 ? (int)s_Presets[p, 1] : z.m_RoomHF) * w;
+                roomLF += Level(p >= 0 ? 0 : z.m_RoomLF) * w;
+                decay += (p >= 0 ? s_Presets[p, 2] : z.m_DecayTime) * w;
+                decayHF += (p >= 0 ? s_Presets[p, 3] : z.m_DecayHFRatio) * w;
+                reflections += Level(p >= 0 ? (int)s_Presets[p, 4] : z.m_Reflections) * w;
+                reflectionsDelay += (p >= 0 ? s_Presets[p, 5] : z.m_ReflectionsDelay) * w;
+                reverb += Level(p >= 0 ? (int)s_Presets[p, 6] : z.m_Reverb) * w;
+                reverbDelay += (p >= 0 ? s_Presets[p, 7] : z.m_ReverbDelay) * w;
+                float hfReference = p >= 0 ? 5000f : z.m_HFReference;
+                float lfReference = p >= 0 ? 250f : z.m_LFReference;
+                if (hfReference > 0f) hf += MathF.Log(hfReference) * w;
+                if (lfReference > 0f) lf += MathF.Log(lfReference) * w;
+                diffusion += (p >= 0 ? s_Presets[p, 8] : z.m_Diffusion) * w;
+                density += (p >= 0 ? s_Presets[p, 9] : z.m_Density) * w;
                 total += w;
             }
             if (total < 1f)

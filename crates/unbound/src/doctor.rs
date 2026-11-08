@@ -23,8 +23,9 @@ const RENDERING_LIMITATIONS: &[&str] = &[
 ];
 
 const AUDIO_LIMITATIONS: &[&str] = &[
-    "AudioDistortionFilter and AudioChorusFilter on 3D AudioSources are rejected pending exact reverb-zone first activation and source-completion sends; physics-driven listener timing remains unmeasured (audiodistortion spatial controls).",
+    "3D AudioDistortionFilter and AudioChorusFilter are measured only on Unity 6000.0.71f1; other releases reject these placements.",
     "AudioListener filter components interleaved with OnAudioFilterRead scripts, or sharing their GameObject with an AudioSource, are not supported.",
+    "Activating or reactivating AudioReverbZones during playback is not supported; stop the sources before activating zones. The unsupported zone return is silent.",
 ];
 
 /// The keys whose referenced object turns an ignored scene settings class into an unread one

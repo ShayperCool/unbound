@@ -50,13 +50,12 @@ metadata and every raw sample are identical, then publish one with
 `publish.py --profile spatial`. The static and spatial profiles share the
 Editor-authored assets recorded by the default authoring command.
 
-3D playback remains unsupported for active Distortion/Chorus components because
-the dry spatial path is not exact. The Rust kernel test checks both cores after
-captured spatial PCM. The engine gate retains the full raw spatial failure report
-and checks one explicit diagnostic for each rejected placement, with its ordinary
-dry output unchanged. See the [measured rule, raw failure counts and follow-up](../../../docs/AUDIO.md#3d-component-placement-and-remaining-spatial-playback-gap).
-This rejection gate does not certify 3D parity. All prior static values and
-comparator tolerances remain unchanged.
+All 226 spatial controls now pass at both rates, including the original 42-case
+matrix and 3D Distortion/Chorus placements. The components are enabled for the
+measured release. The gate compares every placement and rejects unexpected source
+diagnostics. Full strict reports retain all one-step device PCM flips; Master
+float tolerances are unchanged. See the [measured spatial rules](../../../docs/AUDIO.md#3d-component-placement).
+All prior static values and comparator tolerances remain unchanged.
 
 The additional dry controls measure logarithmic/linear/custom rolloff, min/max
 boundaries, partial blend, normalized multi-key CustomRolloff/SpatialBlend/Spread
@@ -65,10 +64,11 @@ and listener motion, direct Rigidbody velocity, non-integer pitch and clip rates
 and extreme Doppler. `spatial-factor0` and `spatial-factor2` repeat 18 moving
 controls per rate with the corresponding project Doppler Factor. Record/publish
 these profiles by the same independent-repeat procedure. The gate runs every
-profile, retaining all raw failures while separately requiring the measured dry
-controls to pass. Only the two original zone cases are outside that dry gate.
-First-ever zone activation after rendering starts and the last source-buffer
-send remain unresolved. These retain the 3D component rejection.
+profile and requires every spatial output, including both original zone cases,
+to pass. Zone sends precede source components and omit each naturally ending
+voice's final DSP buffer. The separate audioreverb lifecycle profile retains the
+unsupported activation of zones during existing playback, with explicit
+diagnostics and an unchanged dry return.
 
 Four additional Loop-wrap controls evaluate CustomRolloff, SpatialBlend, Spread
 and ReverbZoneMix at twice maxDistance. On 6000.0.71f1 they return the first

@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Retain raw 3D measurements and gate explicit rejection of the unimplemented placements.
-
-The dry controls expose common spatial playback differences. This is not a parity acceptance
-for 3D filters: every raw failure stays in the report, and active 3D Distortion/Chorus must
-report the unsupported placement and leave the dry source path unchanged.
-"""
+"""Compare every measured 3D source and component placement against the immutable reference."""
 import argparse
 import math
 from pathlib import Path
@@ -45,32 +40,14 @@ def gate(candidate, log, report, release, rate):
     reference = FIXTURE/'Reference'/('unity-'+release)/('spatial-rate-'+str(rate))
     # Deliberately report every mismatch, with the unchanged comparator tolerances.
     failures = compare(reference, candidate, report, dict.fromkeys(cases()))
-    # These controls isolate the common source path. Zone startup/completion remains an
-    # explicit residual in the complete raw report, and components keep rejecting 3D sources.
-    dry = [key for key in cases() if key.startswith('spatial_dry_')
-           and key not in ('spatial_dry_zone_mono0', 'spatial_dry_zone_mono1')]
-    measured = compare(reference, candidate, report.with_name('dry-'+report.name),
-                       dict.fromkeys(dry), pcm_steps=1)
-    assert measured == 0, 'measured dry spatial controls differ; see dry-'+report.name
-    print(f'Spatial dry controls: {len(dry)} accepted at {rate} Hz')
+    accepted = compare(reference, candidate, report.with_name('gate-'+report.name),
+                       dict.fromkeys(cases()), pcm_steps=1)
+    assert accepted == 0, 'spatial playback or component output differs; see gate-'+report.name
     diagnostics = log.read_text()
-    meta = header(candidate)
-    rejected = 0
     for case in cases():
-        if case.startswith('spatial_dry_'):
-            assert "AudioSource on '"+case+"':" not in diagnostics, case
-            continue
-        effect = 'dist' if case.startswith('spatial_dist_') else 'chorus'
-        component = 'AudioDistortionFilter' if effect == 'dist' else 'AudioChorusFilter'
-        expected = "Unbound: AudioSource on '"+case+"': "+component+" on a 3D AudioSource is not supported:"
-        assert diagnostics.count(expected) == 1, case+': expected one explicit placement diagnostic'
-        dry = case.replace('spatial_'+effect+'_', 'spatial_dry_', 1)
-        # The refusal must preserve the ordinary dry source, including mono and zone sends.
-        for suffix in SUFFIXES:
-            assert samples(candidate, meta[case+suffix]) == samples(candidate, meta[dry+suffix]), case+suffix
-        rejected += 1
-    print(f'UNSUPPORTED 3D placements: {rejected} explicit rejections, dry controls retained; '
-          f'{failures} raw Native differences remain in {report}')
+        assert "AudioSource on '"+case+"':" not in diagnostics, case
+    print(f'Spatial playback and components: {len(cases())} cases accepted at {rate} Hz; '
+          f'{failures} strict differences retained in {report}')
 
 
 if __name__ == '__main__':

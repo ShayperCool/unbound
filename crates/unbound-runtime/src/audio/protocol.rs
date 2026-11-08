@@ -38,6 +38,10 @@ pub mod source_flags {
     pub const COMPONENT_FILTER_TAIL: u32 = 1 << 11;
     /// Measured mono/stereo spatial mapping, gain transitions and decoded playback.
     pub const SPATIAL_STEREO: u32 = 1 << 12;
+    /// Per-voice zone sends precede components and omit the completion buffer.
+    pub const ZONE_VOICE_SEND: u32 = 1 << 13;
+    /// Listener poses and relative velocity cached at the source's selected sample phase.
+    pub const LISTENER_SNAPSHOT: u32 = 1 << 14;
 }
 
 /// An AudioSource's parameters, sent when they change and once per frame (its transform).
@@ -81,6 +85,11 @@ pub struct AudioSourcePacket {
     /// `filter_count` [`AudioFilterDescriptor`]s in component order; null when the count is 0.
     /// Valid during the call only: the mixer copies them before it returns.
     pub filters: *const AudioFilterDescriptor,
+    /// Source-loop listener samples (NativeApi 36); used with `LISTENER_SNAPSHOT`.
+    pub listener_position: Vector3,
+    pub listener_forward: Vector3,
+    pub listener_up: Vector3,
+    pub doppler_listener_position: Vector3,
 }
 
 /// `AudioFilterDescriptor.kind`: the filter components the mixer runs on a source.
@@ -291,7 +300,14 @@ mod tests {
         assert_eq!(offset_of!(AudioSourcePacket, spread_curve), 112);
         assert_eq!(offset_of!(AudioSourcePacket, filter_count), 120);
         assert_eq!(offset_of!(AudioSourcePacket, filters), 128);
-        assert_eq!(size_of::<AudioSourcePacket>(), 136);
+        assert_eq!(size_of::<AudioSourcePacket>(), 184);
+        assert_eq!(offset_of!(AudioSourcePacket, listener_position), 136);
+        assert_eq!(offset_of!(AudioSourcePacket, listener_forward), 148);
+        assert_eq!(offset_of!(AudioSourcePacket, listener_up), 160);
+        assert_eq!(
+            offset_of!(AudioSourcePacket, doppler_listener_position),
+            172
+        );
         assert_eq!(size_of::<AudioFilterDescriptor>(), 96);
         assert_eq!(std::mem::align_of::<AudioFilterDescriptor>(), 8);
         assert_eq!(offset_of!(AudioFilterDescriptor, kind), 8);
@@ -314,12 +330,11 @@ mod tests {
 
     /// The source packet's filter descriptors were added at NativeApi 16; 20 adds the reverb
     /// kind and parameters, 21 the frame packet's reverb zone, 23 Distortion kind 5, 24 Chorus kind 6. Versions 25, 26 and 27 add mixer Flange, Normalize and Pitch Shifter, 28 render protocol 12, 29 input frame versions, 30 a decoded-resampling flag and 31 the imported texture's reported format, without changing these layouts.
-    /// Version 32 adds mesh colors, 33 component tail timing, 34 the instance multiplier,
-    /// and 35 deferred render-target mips. The audio layout stays the same.
+    /// Version 32 adds mesh colors, 33 component tail timing, 34 the instance multiplier, 35 deferred render-target mips, and 36 the source-loop listener poses.
     /// The managed side pins the same version and refuses every other version.
     #[test]
-    fn the_filter_descriptor_layout_is_native_api_34() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 35);
+    fn the_filter_descriptor_layout_is_native_api_36() {
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 36);
         assert_eq!(
             [
                 filter_kind::LOWPASS,

@@ -15,9 +15,11 @@ namespace UnityEngine.Tests
     {
         readonly List<GameObject> m_Objects = new List<GameObject>();
         readonly VirtualAudioBackend m_Backend = new VirtualAudioBackend();
+        readonly string m_Release = ProjectInfo.UnityVersion;
 
         public AudioReverbZoneTests()
         {
+            ProjectInfo.UnityVersion = "6000.0.71f1";
             AudioSystem.ResetForTests();
             AudioBackend.Use(m_Backend);
         }
@@ -27,6 +29,7 @@ namespace UnityEngine.Tests
             foreach (var go in m_Objects)
                 if (go != null) Object.DestroyImmediate(go);
             AudioSystem.ResetForTests();
+            ProjectInfo.UnityVersion = m_Release;
         }
 
         AudioReverbZone Zone(float x, AudioReverbPreset preset = AudioReverbPreset.Generic)
@@ -46,6 +49,80 @@ namespace UnityEngine.Tests
             return r;
         }
 
+        sealed class Errors : ILogHandler
+        {
+            internal readonly List<string> Messages = new List<string>();
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Error) Messages.Add(string.Format(format, args));
+            }
+            public void LogException(Exception error, Object context) => throw error;
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void MidPlaybackZoneActivationFailsClearlyAndCanRecoverAfterStopping(bool reactivate)
+        {
+            var errors = new Errors();
+            var previous = Debug.unityLogger.logHandler;
+            var delta = Time.s_RealDeltaTime;
+            var clip = AudioClip.Create("zone-activation", 32768, 1, 48000, false);
+            try
+            {
+                Debug.unityLogger.logHandler = errors;
+                AudioReverbZone zone = reactivate ? Zone(0) : null;
+                if (zone != null) zone.enabled = false;
+                var host = new GameObject("source"); m_Objects.Add(host);
+                var source = host.AddComponent<AudioSource>(); source.clip = clip; source.Play();
+                Time.s_RealDeltaTime = 0.01;
+                AudioSystem.Update();
+                if (reactivate) zone.enabled = true;
+                else zone = Zone(0);
+                AudioSystem.Update();
+                Assert.Single(errors.Messages);
+                Assert.Contains("activating zones during playback is not supported", errors.Messages[0]);
+                Assert.Equal(0, m_Backend.LastFrame.Zone.Kind);
+                Assert.True(source.isPlaying);
+                source.Stop();
+                zone.enabled = false; zone.enabled = true;
+                AudioSystem.Update();
+                Assert.Equal(AudioFilterKind.Reverb, m_Backend.LastFrame.Zone.Kind);
+                Assert.Single(errors.Messages);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                Time.s_RealDeltaTime = delta;
+                Object.DestroyImmediate(clip);
+            }
+        }
+
+        [Fact]
+        public void ANewOneShotAfterStopCanStartAlongsideANewZone()
+        {
+            var errors = new Errors();
+            var previous = Debug.unityLogger.logHandler;
+            var clip = AudioClip.Create("zone-start", 32768, 1, 48000, false);
+            try
+            {
+                Debug.unityLogger.logHandler = errors;
+                var host = new GameObject("source"); m_Objects.Add(host);
+                var source = host.AddComponent<AudioSource>(); source.clip = clip;
+                source.Play(); AudioSystem.Update(); source.Stop();
+                source.PlayOneShot(clip);
+                Zone(0);
+                AudioSystem.Update();
+                Assert.Empty(errors.Messages);
+                Assert.Equal(AudioFilterKind.Reverb, m_Backend.LastFrame.Zone.Kind);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                Object.DestroyImmediate(clip);
+            }
+        }
+
         [Fact]
         public void PresetsWriteEverythingButTheDistancesAndSettersClampUnderAnyPreset()
         {
@@ -61,6 +138,8 @@ namespace UnityEngine.Tests
                 (zone.reverbPreset, zone.room, zone.roomHF, zone.decayTime, zone.decayHFRatio, zone.reflections,
                  zone.reflectionsDelay, zone.reverb, zone.reverbDelay));
 
+            zone.reverbPreset = AudioReverbPreset.Cave;
+            Assert.Equal(-500, zone.room);
             zone.reverbPreset = AudioReverbPreset.User;
             zone.roomLF = -200;
             zone.reflectionsDelay = 0.05f;
@@ -124,6 +203,31 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { -10000f, -9999f, -10000f, 0.1f, 0.1f, -10000f, 0f, -10000f, 0f, 0f, 0f, 1000f, -10000f, 20f }, r);
         }
 
+        [Theory]
+        [InlineData(AudioReverbPreset.Generic, 0.02f, 0f, 0.04f)]
+        [InlineData(AudioReverbPreset.Cave, 0.015f, -301f, 0.022f)]
+        public void FirstZoneRetainsOnlyUnchangedGenericDefaults(AudioReverbPreset preset, float early, float level, float late)
+        {
+            var zone = Zone(0f, preset);
+            AudioSystem.Update();
+            var first = m_Backend.LastFrame.Zone;
+            Assert.Equal((early, level, late), (first.Reverb[6], first.Reverb[7], first.Reverb[8]));
+            AudioSystem.Update();
+            Assert.Equal(early, m_Backend.LastFrame.Zone.Reverb[6]);
+            zone.reflectionsDelay = 0.023f;
+            AudioSystem.Update();
+            Assert.Equal(early, m_Backend.LastFrame.Zone.Reverb[6]);
+            zone.reverbPreset = AudioReverbPreset.User;
+            AudioSystem.Update();
+            Assert.Equal(0.023f, m_Backend.LastFrame.Zone.Reverb[6]);
+            Assert.Equal(late, m_Backend.LastFrame.Zone.Reverb[8]);
+            zone.enabled = false;
+            AudioSystem.Update();
+            zone.enabled = true;
+            AudioSystem.Update();
+            Assert.Equal(zone.reverbDelay, m_Backend.LastFrame.Zone.Reverb[8]);
+        }
+
         [Fact]
         public void TheFramePacketCarriesTheZoneAndRestartsItAfterTheLastZoneWent()
         {
@@ -171,7 +275,11 @@ namespace UnityEngine.Tests
                 Assert.Equal(curve.Evaluate(0.25f) * 360f, packet.Spread);
                 Assert.Equal(1, packet.CurveLength);
                 Assert.NotEqual(0u, packet.Flags & AudioSourceFlags.SpatialStereo);
-                AudioSystem.s_HearingPosition = go.transform.position;
+                var ear = new GameObject("curve-listener");
+                m_Objects.Add(ear);
+                ear.transform.position = go.transform.position;
+                ear.AddComponent<AudioListener>();
+                source.UpdateMotion(0);
                 source.SendPacket(19, null, 1, false);
                 Assert.Equal(0.2f, m_Backend.ParamsOf(19).SpatialBlend);
                 ProjectInfo.UnityVersion = "6000.0.70f1";
@@ -181,6 +289,238 @@ namespace UnityEngine.Tests
                 Assert.Equal(0u, m_Backend.ParamsOf(19).Flags & AudioSourceFlags.SpatialStereo);
             }
             finally { ProjectInfo.UnityVersion = release; }
+        }
+
+        [Theory]
+        [InlineData(AudioSourceCurveType.CustomRolloff)]
+        [InlineData(AudioSourceCurveType.SpatialBlend)]
+        [InlineData(AudioSourceCurveType.Spread)]
+        [InlineData(AudioSourceCurveType.ReverbZoneMix)]
+        public void CustomCurvesNormalizeLongRangesWithoutChangingTheCaller(AudioSourceCurveType type)
+        {
+            var go = new GameObject("source"); m_Objects.Add(go);
+            var source = go.AddComponent<AudioSource>();
+            var first = new Keyframe(-2f, 0.2f, 0.1f, -0.2f) { weightedMode = WeightedMode.Both, inWeight = 0.2f, outWeight = 0.4f };
+            var last = new Keyframe(4f, 0.8f, 0.3f, -0.4f);
+            var curve = new AnimationCurve(last, first) { postWrapMode = WrapMode.Loop };
+            source.SetCustomCurve(type, curve);
+            var stored = source.GetCustomCurve(type);
+            Assert.Equal(-0.5f, stored[0].time);
+            Assert.Equal(1f, stored[1].time);
+            Assert.Equal(0.4f, stored[0].inTangent);
+            Assert.Equal(-0.8f, stored[0].outTangent);
+            Assert.Equal(first.weightedMode, stored[0].weightedMode);
+            Assert.Equal(first.inWeight, stored[0].inWeight);
+            Assert.Equal(first.outWeight, stored[0].outWeight);
+            Assert.Equal(WrapMode.ClampForever, stored.postWrapMode);
+            Assert.Equal(-2f, curve[0].time);
+            Assert.Equal(4f, curve[1].time);
+            Assert.Equal(WrapMode.Loop, curve.postWrapMode);
+            stored.ClearKeys();
+            Assert.Equal(2, source.GetCustomCurve(type).length);
+        }
+
+        [Theory]
+        [InlineData(-2f, -0.5f)]
+        [InlineData(-0.2f, 0.5f)]
+        [InlineData(0f, 1f)]
+        public void CustomCurveRangesEndingAtOrBeforeOneStayUnscaled(float start, float end)
+        {
+            var go = new GameObject("source"); m_Objects.Add(go);
+            var source = go.AddComponent<AudioSource>();
+            foreach (AudioSourceCurveType type in Enum.GetValues<AudioSourceCurveType>())
+            {
+                source.SetCustomCurve(type, AnimationCurve.Linear(start, 0.2f, end, 0.8f));
+                var stored = source.GetCustomCurve(type);
+                Assert.Equal(start, stored[0].time);
+                Assert.Equal(end, stored[1].time);
+            }
+        }
+
+        [Theory]
+        [InlineData(AudioReverbPreset.Generic)]
+        [InlineData(AudioReverbPreset.Forest)]
+        public void ScalarValuesWaitForUserBeforeReplacingTheSelectedPreset(AudioReverbPreset preset)
+        {
+            var zone = Zone(0f, preset);
+            var selected = Blend(Vector3.zero, zone);
+            zone.room = -200;
+            zone.roomHF = -300;
+            zone.roomLF = -400;
+            zone.decayTime = 0.75f;
+            zone.decayHFRatio = 0.25f;
+            zone.reflections = -500;
+            zone.reflectionsDelay = 0.025f;
+            zone.reverb = -600;
+            zone.reverbDelay = 0.035f;
+            zone.HFReference = 8000f;
+            zone.LFReference = 500f;
+            zone.diffusion = 30f;
+            zone.density = 40f;
+            Assert.Equal(selected, Blend(Vector3.zero, zone));
+            Assert.Equal(-200, zone.room);
+            zone.reverbPreset = AudioReverbPreset.User;
+            var custom = Blend(Vector3.zero, zone);
+            Assert.Equal(-199f, custom[1]);
+            Assert.Equal(0.025f, custom[6]);
+            Assert.Equal(0.035f, custom[8]);
+            Assert.Equal(30f, custom[9]);
+            Assert.Equal(40f, custom[10]);
+        }
+
+        [Fact]
+        public void ResetAndNonHearingListenerRemovalPreserveTheHearingPose()
+        {
+            var other = new GameObject("other-listener"); m_Objects.Add(other);
+            var otherListener = other.AddComponent<AudioListener>();
+            var ear = new GameObject("hearing-listener"); m_Objects.Add(ear);
+            ear.transform.position = Vector3.right * 9;
+            ear.AddComponent<AudioListener>().velocityUpdateMode = AudioVelocityUpdateMode.Fixed;
+            Assert.Equal(Vector3.right * 9, AudioSystem.s_HearingPose.Position);
+            ear.transform.position = Vector3.right * 12;
+            otherListener.enabled = false;
+            Assert.Equal(Vector3.right * 9, AudioSystem.s_HearingPose.Position);
+            var configuration = AudioSettings.GetConfiguration();
+            Assert.True(AudioSettings.Reset(configuration));
+            Assert.Equal(Vector3.right * 12, AudioSystem.s_HearingPose.Position);
+            var host = new GameObject("source"); m_Objects.Add(host);
+            var source = host.AddComponent<AudioSource>();
+            source.UpdateMotion(0);
+            source.SendPacket(19, null, 1, false);
+            Assert.Equal(Vector3.right * 12, m_Backend.ParamsOf(19).DopplerListenerPosition);
+        }
+
+        [Fact]
+        public void SourceDopplerKeepsTheListenerVelocityFromItsSelectedLoop()
+        {
+            var previous = Time.s_FrameDeltaTime;
+            try
+            {
+                Time.s_FrameDeltaTime = 0.04;
+                var ear = new GameObject("listener"); m_Objects.Add(ear);
+                ear.AddComponent<AudioListener>().velocityUpdateMode = AudioVelocityUpdateMode.Dynamic;
+                var host = new GameObject("source"); m_Objects.Add(host);
+                var source = host.AddComponent<AudioSource>();
+                source.velocityUpdateMode = AudioVelocityUpdateMode.Fixed;
+                AudioSystem.Update(); AudioSystem.FixedUpdate();
+                ear.transform.position = Vector3.forward;
+                AudioSystem.Update(); AudioSystem.FixedUpdate();
+                Assert.Equal(-25f, m_Backend.ParamsOf(source.Handle).Velocity.z);
+                Assert.Equal(Vector3.forward, m_Backend.ParamsOf(source.Handle).ListenerPosition);
+                Assert.Equal(Vector3.forward, m_Backend.ParamsOf(source.Handle).DopplerListenerPosition);
+                Assert.NotEqual(0u, m_Backend.ParamsOf(source.Handle).Flags & AudioSourceFlags.ListenerSnapshot);
+                ear.transform.position = Vector3.forward * 3;
+                AudioSystem.Update();
+                Assert.Equal(50f, AudioSystem.s_HearingVelocity.z);
+                Assert.Equal(-25f, m_Backend.ParamsOf(source.Handle).Velocity.z);
+                Assert.Equal(Vector3.forward, m_Backend.ParamsOf(source.Handle).DopplerListenerPosition);
+                AudioSystem.FixedUpdate();
+                Assert.Equal(-50f, m_Backend.ParamsOf(source.Handle).Velocity.z);
+                Assert.Equal(Vector3.forward * 3, m_Backend.ParamsOf(source.Handle).DopplerListenerPosition);
+            }
+            finally { Time.s_FrameDeltaTime = previous; }
+        }
+
+        [Fact]
+        public void FixedSamplesReachTheBackendWithoutResamplingTheDynamicListener()
+        {
+            var previous = Time.s_FrameDeltaTime;
+            try
+            {
+                Time.s_FrameDeltaTime = 0.04;
+                var host = new GameObject("source"); m_Objects.Add(host);
+                var source = host.AddComponent<AudioSource>();
+                source.velocityUpdateMode = AudioVelocityUpdateMode.Fixed;
+                var ear = new GameObject("listener"); m_Objects.Add(ear);
+                var listener = ear.AddComponent<AudioListener>();
+                listener.velocityUpdateMode = AudioVelocityUpdateMode.Dynamic;
+                AudioSystem.Update();
+                AudioSystem.FixedUpdate();
+                host.transform.position = Vector3.forward;
+                ear.transform.position = Vector3.right;
+                AudioSystem.FixedUpdate();
+                var packet = m_Backend.ParamsOf(source.Handle);
+                Assert.Equal(Vector3.forward, packet.Position);
+                Assert.Equal(source.m_Velocity, packet.Velocity);
+                Assert.True(packet.Velocity.z > 0);
+                Assert.Equal(Vector3.zero, m_Backend.LastFrame.ListenerPosition);
+                Assert.Equal(Vector3.zero, m_Backend.LastFrame.ListenerVelocity);
+                listener.velocityUpdateMode = AudioVelocityUpdateMode.Fixed;
+                AudioSystem.FixedUpdate();
+                ear.transform.position = Vector3.right * 2;
+                AudioSystem.FixedUpdate();
+                Assert.Equal(Vector3.right * 2, m_Backend.LastFrame.ListenerPosition);
+                Assert.Equal(listener.m_Velocity, m_Backend.LastFrame.ListenerVelocity);
+                Assert.True(m_Backend.LastFrame.ListenerVelocity.x > 0);
+                ear.transform.position = Vector3.right * 3;
+                host.transform.position = Vector3.forward * 2;
+                AudioSystem.Update();
+                Assert.Equal(Vector3.right * 2, m_Backend.LastFrame.ListenerPosition);
+                Assert.Equal(Vector3.forward, m_Backend.ParamsOf(source.Handle).Position);
+            }
+            finally { Time.s_FrameDeltaTime = previous; }
+        }
+
+        [Fact]
+        public void FixedStepRoundTripsThroughTheMeasuredClockBeforePhysicsAndAudio()
+        {
+            float previous = Time.fixedDeltaTime;
+            try
+            {
+                Time.fixedDeltaTime = 0.0232199468f;
+                Assert.Equal(0.0232199412f, Time.fixedDeltaTime);
+                Assert.Equal((float)Time.FixedClockDuration, Time.fixedDeltaTime);
+            }
+            finally { Time.fixedDeltaTime = previous; }
+        }
+
+        [Theory]
+        [InlineData(AudioRolloffMode.Logarithmic)]
+        [InlineData(AudioRolloffMode.Linear)]
+        [InlineData(AudioRolloffMode.Custom)]
+        public void SettingCustomRolloffPreservesTheSelectedMode(AudioRolloffMode mode)
+        {
+            var go = new GameObject("source"); m_Objects.Add(go);
+            var source = go.AddComponent<AudioSource>();
+            source.rolloffMode = mode;
+            source.SetCustomCurve(AudioSourceCurveType.CustomRolloff, AnimationCurve.Linear(-2, 0.2f, 4, 0.8f));
+            Assert.Equal(mode, source.rolloffMode);
+            Assert.Equal(1f, source.GetCustomCurve(AudioSourceCurveType.CustomRolloff)[1].time);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void PlayResetsTransformVelocityAtTheCurrentPosition(bool fixedStep)
+        {
+            var go = new GameObject("source"); m_Objects.Add(go);
+            var source = go.AddComponent<AudioSource>();
+            source.m_HasLastPosition = true;
+            source.m_MotionInFixedStep = fixedStep;
+            source.m_LastPosition = new Vector3(0, 0, 10);
+            source.m_Velocity = new Vector3(0, 0, 20);
+            go.transform.position = new Vector3(0, 0, 11);
+            source.Play();
+            Assert.Equal(Vector3.zero, source.m_Velocity);
+            Assert.Equal(new Vector3(0, 0, 11), source.m_LastPosition);
+            source.UpdateMotion(0.05);
+            Assert.Equal(Vector3.zero, source.m_Velocity);
+        }
+
+        [Fact]
+        public void PlayPreservesTheOwnBodyVelocityAlreadySampledOnTheSelectedLoop()
+        {
+            var go = new GameObject("source"); m_Objects.Add(go);
+            var source = go.AddComponent<AudioSource>();
+            var body = go.AddComponent<Rigidbody>();
+            body.linearVelocity = new Vector3(0, 0, -7);
+            source.m_HasLastPosition = true;
+            source.m_Velocity = new Vector3(0, 0, 20);
+            source.m_LastPosition = Vector3.back;
+            go.transform.position = Vector3.forward;
+            source.Play();
+            Assert.Equal(new Vector3(0, 0, 20), source.m_Velocity);
+            Assert.Equal(Vector3.forward, source.m_LastPosition);
         }
 
         [Theory]

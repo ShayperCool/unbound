@@ -15,7 +15,7 @@ Those kernels were measured on mixer groups by `tests/projects/mixerfilters` and
 `tests/projects/mixerecho` (Unity 6000.0.71f1, Linux, 48000 and 44100 Hz). Those captures do not
 establish parity for component chains.
 
-## Wire (NativeApi 33)
+## Wire (NativeApi 36)
 
 `AudioSourcePacket` passes through `NativeApi.AudioUpdateSource`. Version 16 appended the filter
 descriptors to it; version 18 carries them together with render protocol 8 (`DrawIndices`,
@@ -29,7 +29,8 @@ adds Chorus kind 6, using the first seven reverb entries for dry, wet1..3, delay
 These two additions keep the descriptor and packet layouts unchanged. Versions 25, 26 and 27 add
 measured mixer Flange, Normalize and Pitch Shifter JSON parameters without changing these layouts.
 NativeApi 33 adds the source flag for component tail timing across partial device periods,
-without changing the packet layouts.
+without changing the packet layouts. NativeApi 36 appends per-source listener poses: distance/pan
+uses the prior listener pose, and Doppler uses the newer source-loop sample and relative velocity.
 
 | `AudioSourcePacket` field | Offset | Size |
 | --- | --- | --- |
@@ -37,7 +38,11 @@ without changing the packet layouts.
 | `filter_count: i32` | 120 | 4 |
 | `_pad2: i32` | 124 | 4 |
 | `filters: *const AudioFilterDescriptor` | 128 | 8 |
-| total | | 136 (was 120) |
+| `listener_position: Vector3` | 136 | 12 |
+| `listener_forward: Vector3` | 148 | 12 |
+| `listener_up: Vector3` | 160 | 12 |
+| `doppler_listener_position: Vector3` | 172 | 12 |
+| total | | 184 |
 
 | `AudioFilterDescriptor` field | Offset |
 | --- | --- |
@@ -177,7 +182,7 @@ The extension preserves every pre-existing reference value and tolerance.
 | Compatibility | `Compat.AudioListenerChainMeasured` selects listener support and packet routing on 6000.0.71f1. Other releases retain their previous reverb-only listener support and unmeasured bypass routing. No DSP kernel or audio-thread allocation is added. |
 | Still unmeasured | Listener components interleaved with OnAudioFilterRead scripts and listeners sharing their GameObject with an AudioSource fail clearly. Live Distortion/Chorus parameter changes are measured below; bypass transitions and wider output layouts remain unmeasured. |
 
-# 3D component placement and remaining spatial playback gap
+# 3D component placement
 
 The `spatial` profile in tests/projects/audiodistortion has 226 cases at each of
 48000 and 44100 Hz, with 32768 stereo frames of device PCM and Master floats per
@@ -186,20 +191,30 @@ The additional `spatial-factor0` and `spatial-factor2` profiles repeat 18 moving
 source/listener controls with the project's Doppler Factor set to 0 and 2.
 Earlier oracle values and comparator tolerances are retained unchanged.
 
-The original 42-case profile had 5080122/5079854 raw failing values at the two
-rates. The common dry path is now measured independently: distance rolloff,
-channel mapping, gain transitions, custom curves, relative velocity and decoded
-sample-rate conversion. The complete raw comparison still includes unsupported
-3D filter output and zone-send differences. Its separate dry gate excludes only
-the two original zone controls and admits the existing one-step device PCM bound;
-Master floats retain the original absolute/relative tolerance.
+All 226 cases now pass at both rates, including the original 42-control matrix
+and source Distortion/Chorus placement. The components are enabled for this
+measured release. The gate uses the original Master float tolerances and the
+existing one-step device PCM bound; strict reports retain every PCM flip.
+Decoded interpolation weights the neighboring samples separately before adding
+them. This operation order also prevents a small input difference from crossing
+the Chorus history's quantization boundary.
 
-The shared Distortion and Chorus cores match every captured post-spatial Master
-float. Their source components still reject 3D placement, with one diagnostic per
-source and a matching `unbound doctor` entry, because first activation of a zone
-and the last source buffer's send remain different. The rejection gate checks
-all 28 placements and requires each output to be byte-identical to its dry
-control. It does not certify 3D filter parity.
+Zone sends receive each voice's spatial output before its source components.
+A naturally ending voice omits its entire final DSP buffer from the zone send;
+other overlapping voices keep sending. Explicit Stop removes subsequent sends
+while the zone return continues its prior history. Device periods that split a
+DSP buffer use the same completion decision, cached once per voice and buffer.
+`Compat.AudioZoneVoiceSendMeasured` selects this behavior.
+
+Cold zone activation, warm activation and source completion pass. Creating or
+reactivating zones during existing playback remains unsupported: it requires the
+reverb parameter transition while histories run. That context reports an error,
+keeps the dry source audible and silences the unsupported zone return. It is
+listed by `unbound doctor`. The four added lifecycle controls retain their full
+Native differences in the strict report; a separate gate requires the diagnostic,
+checks every dry Master float against Native, and checks device PCM against the
+unchanged dry output. Stop the sources before activating zones to use the measured
+startup path.
 
 ## Measured spatial playback
 
@@ -209,15 +224,16 @@ DSP buffers. They are not promises for other releases or output layouts.
 | Basis | Contract or observation |
 | --- | --- |
 | Documented, Unity 6000.0 | The [Audio Source component reference](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioSource.html) describes minimum distance, linear/custom maximum distance and logarithmic rolloff continuing beyond maximum distance. Spatial Blend controls how much the 3D settings apply. It does not specify gain arithmetic or DSP-buffer interpolation. |
-| Documented, Unity 6000.0 | [spatialBlend](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-spatialBlend.html) combines 2D and 3D processing with stereo panning. [spread](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-spread.html) locates channels together at zero and opposite the source direction at 360 degrees. [SetCustomCurve](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.SetCustomCurve.html) scales distance curves over maxDistance and may normalize returned keys. The controls here use normalized keys from 0 to 1. [AnimationCurve.postWrapMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AnimationCurve-postWrapMode.html) defines behavior after the last key; the audio controls below distinguish default and Loop wrapping. |
+| Documented, Unity 6000.0 | [spatialBlend](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-spatialBlend.html) combines 2D and 3D processing with stereo panning. [spread](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-spread.html) locates channels together at zero and opposite the source direction at 360 degrees. [SetCustomCurve](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.SetCustomCurve.html) scales distance curves over maxDistance and may normalize returned keys. [AnimationCurve.postWrapMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AnimationCurve-postWrapMode.html) defines behavior after the last key; the audio controls below distinguish default and Loop wrapping. |
 | Documented, Unity 6000.0 | [velocityUpdateMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-velocityUpdateMode.html) chooses fixed updates for Auto with a Rigidbody and dynamic updates otherwise. [dopplerLevel](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-dopplerLevel.html) scales the effect. The [Audio Manager](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioManager.html) documents global Doppler Factor and logarithmic Rolloff Scale; it does not define the per-buffer calculation. |
+| Documented, Unity 6000.0 | [AudioListener.velocityUpdateMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioListener-velocityUpdateMode.html) chooses the velocity update loop. [Time.fixedDeltaTime](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Time-fixedDeltaTime.html) is the interval of physics and other fixed updates, relative to game time and timeScale. These pages do not specify getter rounding, packet submission timing or velocity arithmetic. |
 | Measured | For lateral unit direction `p`, stereo gains are `(sqrt(2-p*p)-p)/2` and `(sqrt(2-p*p)+p)/2`. Spread rotates two input directions by opposite half angles in listener space. Stereo retains both input channels; mono averages the two directions. Controls include vertical/coincident positions and listener rotation. |
 | Measured | Channel mapping blends 2D panning with the 3D matrix; attenuation blends separately as `1-blend+blend*rolloff`. Stereo pan affects the 2D contribution. Mono 2D panning uses `sqrt((1-pan)/2)` and `sqrt((1+pan)/2)`. Logarithmic rolloff continues beyond maxDistance; linear rolloff stops there. Custom curves use their own wrap modes beyond their keys. |
-| Measured | Source updates evaluate the actual curve keys at distance/maxDistance. Multi-key CustomRolloff, SpatialBlend and Spread controls cover knots and intervals. Loop wrapping continues beyond maxDistance for all four curve kinds, including CustomRolloff; at twice maxDistance the measured 0.8-to-0.2 curves return 0.8. Default wrapping holds the endpoint. The Manual describes the usual maximum-distance limit but does not specify this non-default wrap behavior. Gain changes accumulate over 64 output samples, starting with the previous gain and reaching the exact target at sample 64. Distance, blend, direction, spread, volume and moving-listener controls use the same ramp. |
-| Measured | A source's own Rigidbody supplies its linearVelocity; a source without one and the listener use transform delta times reciprocal game-frame time (capture time differs from elapsed wall time). The reciprocal is calculated from the precise clock duration before conversion to float. Doppler projects source-minus-listener velocity along their offset before normalizing. The factor is `max(1e-6, (340-scale*radialSpeed)/340)`, then blended with 1 by spatialBlend. Controls cover both moving endpoints, source levels 0/1/2, project factors 0/1/2, a dynamic/Auto source body and transform motion of kinematic source/listener bodies. |
-| Measured | Decoded playback computes a single-precision frequency, capped at 1 MHz, before converting to a source-frame step and accumulating phase in double precision. Non-looping interpolation reads the first frame for lookahead past the last frame, then stops. Non-integer pitch, differing clip/output rates, an unrouted control and extreme velocities distinguish these operations. |
+| Measured | Source updates evaluate the actual curve keys at distance/maxDistance. SetCustomCurve sorts keys through AnimationCurve, then scales every key time and tangent when the last key time exceeds 1: time is multiplied by the reciprocal last time and tangents divided by that scale. Short and negative ranges stay unchanged; weights and the caller's curve are preserved. GetCustomCurve returns independent keys with default wrap modes, while internal evaluation retains the supplied wraps. Setting CustomRolloff preserves rolloffMode. Multi-key CustomRolloff, SpatialBlend and Spread controls cover knots and intervals. Loop wrapping continues beyond maxDistance for all four curve kinds, including CustomRolloff; at twice maxDistance the measured 0.8-to-0.2 curves return 0.8. Default wrapping holds the endpoint. The Manual describes the usual maximum-distance limit but does not specify this non-default wrap behavior. Gain changes accumulate over 64 output samples, starting with the previous gain and reaching the exact target at sample 64. Distance, blend, direction, spread, volume and moving-listener controls use the same ramp. |
+| Measured | A source's own Rigidbody supplies linearVelocity; sources without one and listeners use transform delta times reciprocal clock duration. Auto selects the fixed loop with a Rigidbody on the object or a parent; Fixed always selects it, Dynamic selects the frame loop. Parent-body sources use their transform delta, not the parent's linearVelocity. The fixed node samples before script FixedUpdate and physics and submits its packets immediately. Starting playback resets the transform sample while retaining a source body's selected-loop velocity. The public fixed-step getter round-trips through the existing clock conversion (`Compat.FixedClockTicksMeasured`), which changes the 44.1 kHz body motion. The 38 audioreverb player-loop controls cover both endpoints, own/parent bodies, transform motion and opposing fixed/dynamic body writes and off-axis listener motion at both rates. Each source caches the listener pose before its update for distance/pan, and the newer listener position and relative velocity for Doppler, at the source’s selected loop. Doppler projects source-minus-listener velocity along their offset before normalizing. The factor is `max(1e-6, (340-scale*radialSpeed)/340)`, then blended with 1 by spatialBlend. The audiodistortion controls additionally cover source levels 0/1/2, project factors 0/1/2 and extreme velocities. |
+| Measured | Decoded playback computes a single-precision frequency, capped at 1 MHz, before converting to a source-frame step and accumulating phase in double precision. Interpolation computes `first*(1-fraction)+second*fraction`. Non-looping interpolation reads the first frame for lookahead past the last frame, then stops. Non-integer pitch, differing clip/output rates, an unrouted control and extreme velocities distinguish these operations. |
 | Implementation | `Compat.AudioSpatialStereoMeasured` selects these mechanisms. Each voice chooses its clip's mono/stereo matrix, including one-shots. Curves use cached packet storage. Spatial state and voice-priority storage are reused on the audio thread; priority selection partitions rather than sorting every source. Other releases retain the previous approximate spatial path until measured. |
-| Unresolved | Physics-driven listener timing, parent-body attachment and curve-key normalization outside 0..1 remain unmeasured. First-ever zone activation after rendering starts differs from a zone configured before rendering. The original long zone-source control also differs in its final DSP buffer. Both raw failures remain visible; 3D Distortion/Chorus remain explicitly unsupported. |
+| Measured startup | `Compat.AudioZoneStartupMeasured` selects the initial zone state. The first Generic zone uses processing delays of 0.02/0.04 seconds and reverb level 0 until the requested values change. Later activations use their requested values. A selected zone preset supplies the sound parameters; scalar setters retain values for User without changing the selected preset's sound. Reassigning the same preset preserves those stored scalar values. The additional first-zone controls cover Generic, Cave, User and individual overrides. Mid-playback activation still fails clearly as described above. |
 
 # AudioMixer: SFX Reverb
 
@@ -404,11 +420,11 @@ the Manual (*Audio Reverb Filter*, *Audio Reverb Zone*):
   The [Reverb Zone manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioReverbZone.html)
   describes the listener's zone influence; [reverbZoneMix](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-reverbZoneMix.html)
   describes the source send and permits 1..1.1 for a near-field boost. Neither specifies its
-  whole-mB quantization or first-activation timing. These controls configure zones before
-  rendering and capture before long sources finish. First-ever zone activation after rendering
-  starts and the final buffer of a long source remain unresolved in audiodistortion.
+  whole-mB quantization or first-activation timing. Added lifecycle controls extend this
+  to cold/warm activation, Stop, natural completion and overlapping voices. Mid-playback
+  activation remains explicitly unsupported; its strict comparison and refusal gate remain visible.
 - Still unmeasured: listener components processing zone reverb, disable/re-enable within one
-  frame, parameter changes while a tail runs, curve normalization outside 0..1, other output
+  frame, parameter changes while a tail runs, other output
   layouts, sample rates and releases.
 
 # AudioMixer: Send, Receive and Duck Volume

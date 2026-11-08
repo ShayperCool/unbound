@@ -26,6 +26,7 @@ p.add_argument('--rate', type=int, choices=(44100, 48000), action='append')
 p.add_argument('--unbound', type=Path, default=os.environ.get('UNBOUND'))
 p.add_argument('--work', type=Path)
 p.add_argument('--native', action='store_true', help='Author a fresh Native project per rate in the Editor')
+p.add_argument('--spatial-only', action='store_true', help='Run the spatial placement gate only')
 a = p.parse_args()
 if not a.unbound: p.error('--unbound or $UNBOUND is required')
 cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound/validation/runs'
@@ -42,17 +43,18 @@ for rate in a.rate or (48000, 44100):
                                                 '--rate', str(rate), *map(str, args)]).returncode
     if a.native and run('native.py', '--work', work/f'native-{rate}'): raise SystemExit(f'Native {rate} failed')
     project = work/f'native-{rate}/project' if a.native else work/'authored'
-    if run('engine.py', '--native-project', project, '--runtime', runtime,
-           '--work', work/f'engine-{rate}'): raise SystemExit(f'engine {rate} failed')
-    candidate = work/f'engine-{rate}/capture'
-    run('compare.py', '--profile', 'all', '--candidate', candidate, '--report', work/f'strict-{rate}.jsonl.gz')
-    failed |= bool(run('compare.py', '--profile', 'all', '--pcm-steps', '1', '--residuals', '--candidate', candidate,
-                       '--report', work/f'gate-{rate}.jsonl.gz'))
+    if not a.spatial_only:
+        if run('engine.py', '--native-project', project, '--runtime', runtime,
+               '--work', work/f'engine-{rate}'): raise SystemExit(f'engine {rate} failed')
+        candidate = work/f'engine-{rate}/capture'
+        run('compare.py', '--profile', 'all', '--candidate', candidate, '--report', work/f'strict-{rate}.jsonl.gz')
+        failed |= bool(run('compare.py', '--profile', 'all', '--pcm-steps', '1', '--residuals', '--candidate', candidate,
+                           '--report', work/f'gate-{rate}.jsonl.gz'))
     if run('engine.py', '--native-project', project, '--runtime', runtime, '--profile', 'spatial',
            '--work', work/f'spatial-{rate}'): raise SystemExit(f'spatial {rate} failed')
     failed |= bool(run('spatial.py', '--candidate', work/f'spatial-{rate}/capture',
                        '--log', work/f'spatial-{rate}/engine.log', '--report', work/f'spatial-{rate}.jsonl.gz'))
-    for factor in (0, 2):
+    for factor in (() if a.spatial_only else (0, 2)):
         name = 'spatial-factor'+str(factor)
         destination = work/(name+'-'+str(rate))
         if run('engine.py', '--native-project', project, '--runtime', runtime, '--profile', name,

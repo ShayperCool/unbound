@@ -10,6 +10,15 @@ using B2BodyType = Unbound.Box2D.Dynamics.BodyType;
 
 namespace Unbound.Runtime
 {
+    // Listener samples shared by the source and frame packets.
+    internal struct AudioListenerPose
+    {
+        internal Vector3 Position, Forward, Up;
+        internal static AudioListenerPose Identity => new AudioListenerPose { Forward = Vector3.forward, Up = Vector3.up };
+        internal static AudioListenerPose Of(AudioListener listener) => new AudioListenerPose
+        { Position = listener.transform.position, Forward = listener.transform.forward, Up = listener.transform.up };
+    }
+
     /// <summary>
     /// The audio update (PlayerLoop PostLateUpdate.UpdateAudio, registered when an audio type is
     /// first used): snapshot transitions and mixer group levels, every active source's transform and
@@ -23,8 +32,41 @@ namespace Unbound.Runtime
         static readonly List<AudioReverbZone> s_Zones = new List<AudioReverbZone>();
         // Counts the times zones appeared after none were enabled: the zone reverb then starts empty.
         static ulong s_ZoneGeneration;
+        static bool s_ZoneActivationRejected;
+        // The first zone retains these processing defaults until the corresponding value
+        // changes. Later activations use the requested values (tests/projects/audioreverb).
+        struct InitialZoneParameter
+        {
+            float m_Requested, m_Effective;
+            internal InitialZoneParameter(float initial, float requested) { m_Requested = requested; m_Effective = initial; }
+            internal float Observe(float requested)
+            {
+                if (!float.IsFinite(requested)) return requested;
+                if (requested != m_Requested) m_Effective = requested;
+                m_Requested = requested;
+                return m_Effective;
+            }
+        }
+        const float InitialZoneReflectionsDelay = 0.02f;
+        const float InitialZoneReverbLevel = 0f;
+        const float InitialZoneReverbDelay = 0.04f;
+        static InitialZoneParameter s_InitialReflectionsDelay = new InitialZoneParameter(InitialZoneReflectionsDelay, 0.007f);
+        static InitialZoneParameter s_InitialReverbLevel = new InitialZoneParameter(InitialZoneReverbLevel, 200f);
+        static InitialZoneParameter s_InitialReverbDelay = new InitialZoneParameter(InitialZoneReverbDelay, 0.011f);
+
+        static void ResetZoneInitialization()
+        {
+            s_ZoneGeneration = s_Zones.Count > 0 ? 1ul : 0ul;
+            s_ZoneActivationRejected = false;
+            s_InitialReflectionsDelay = new InitialZoneParameter(InitialZoneReflectionsDelay, 0.007f);
+            s_InitialReverbLevel = new InitialZoneParameter(InitialZoneReverbLevel, 200f);
+            s_InitialReverbDelay = new InitialZoneParameter(InitialZoneReverbDelay, 0.011f);
+        }
+
         /// <summary>The hearing listener's position at the last update (reverb zone mix curves).</summary>
         internal static Vector3 s_HearingPosition;
+        internal static Vector3 s_HearingVelocity;
+        internal static AudioListenerPose s_HearingPose = AudioListenerPose.Identity;
         static readonly List<AudioSource> s_Sources = new List<AudioSource>();
         static readonly List<AudioListener> s_Listeners = new List<AudioListener>();
         static readonly List<AudioMixer> s_Mixers = new List<AudioMixer>();
@@ -80,14 +122,40 @@ namespace Unbound.Runtime
         {
             s_Listeners.Remove(listener);
             s_Listeners.Add(listener);
+            s_HearingPose = AudioListenerPose.Of(listener);
+            s_HearingPosition = s_HearingPose.Position;
+            s_HearingVelocity = listener.m_Velocity;
         }
 
-        internal static void Remove(AudioListener listener) => s_Listeners.Remove(listener);
+        internal static void Remove(AudioListener listener)
+        {
+            bool wasHearing = s_Listeners.Count > 0 && ReferenceEquals(s_Listeners[s_Listeners.Count - 1], listener);
+            s_Listeners.Remove(listener);
+            if (!wasHearing) return;
+            s_Listeners.RemoveAll(l => l == null);
+            var hearing = s_Listeners.Count > 0 ? s_Listeners[s_Listeners.Count - 1] : null;
+            s_HearingPose = hearing != null ? AudioListenerPose.Of(hearing) : AudioListenerPose.Identity;
+            s_HearingPosition = s_HearingPose.Position;
+            s_HearingVelocity = hearing != null ? hearing.m_Velocity : Vector3.zero;
+        }
 
         internal static void Add(AudioReverbZone zone)
         {
             if (s_Zones.Contains(zone)) return;
-            if (s_Zones.Count == 0) s_ZoneGeneration++;
+            if (s_Zones.Count == 0)
+            {
+                s_ZoneGeneration++;
+                s_ZoneActivationRejected = false;
+                if (Compat.AudioZoneStartupMeasured)
+                    foreach (var source in s_Sources)
+                        if (source != null && source.m_HasAudioFrame && source.isPlaying)
+                        {
+                            s_ZoneActivationRejected = true;
+                            Debug.LogError("Unbound: AudioReverbZone on '" + zone.gameObject.name
+                                + "': activating zones during playback is not supported; stop the sources before activating the zones. The zone return is silent.", zone);
+                            break;
+                        }
+            }
             s_Zones.Add(zone);
         }
 
@@ -116,6 +184,12 @@ namespace Unbound.Runtime
         /// <summary>AudioSettings.Reset stopped every voice.</summary>
         internal static void OnReset()
         {
+            s_HearingVelocity = Vector3.zero;
+            s_Listeners.RemoveAll(l => l == null);
+            s_HearingPose = s_Listeners.Count > 0
+                ? AudioListenerPose.Of(s_Listeners[s_Listeners.Count - 1]) : AudioListenerPose.Identity;
+            s_HearingPosition = s_HearingPose.Position;
+            ResetZoneInitialization();
             if (Compat.AudioClipResetDataMeasured)
             {
                 ulong epoch = ++s_ClipResetEpoch;
@@ -125,6 +199,7 @@ namespace Unbound.Runtime
             {
                 source.m_Paused = false;
                 source.m_Dirty = true;
+                source.m_HasAudioFrame = false;
             }
         }
 
@@ -269,6 +344,9 @@ namespace Unbound.Runtime
         internal static void FixedUpdate()
         {
             double step = Compat.AudioSpatialStereoMeasured ? Time.FixedClockDuration : Time.fixedDeltaTime;
+            bool submit = false;
+            var previousListenerPose = s_HearingPose;
+            if (Compat.AudioSpatialStereoMeasured) SampleHearingMotion(fixedStep: true, step);
             int n = s_Sources.Count;
             if (n > 0)
             {
@@ -279,7 +357,15 @@ namespace Unbound.Runtime
                     var source = s_Snapshot[i];
                     s_Snapshot[i] = null;
                     if (source == null || source.m_GameObject == null) continue;
-                    try { source.SampleMotion(fixedStep: true, step); }
+                    try
+                    {
+                        source.SampleMotion(fixedStep: true, step, previousListenerPose);
+                        if (Compat.AudioSpatialStereoMeasured && UpdatesInFixedStep(source.m_VelocityUpdateMode, source.gameObject))
+                        {
+                            source.Flush(always: true);
+                            submit = true;
+                        }
+                    }
                     catch (Exception e) { Debug.LogException(e, source); }
                 }
             }
@@ -287,12 +373,38 @@ namespace Unbound.Runtime
             if (s_Listeners.Count > 0)
             {
                 var listener = s_Listeners[s_Listeners.Count - 1];
-                try { listener.SampleMotion(fixedStep: true, step); }
+                try
+                {
+                    if (!Compat.AudioSpatialStereoMeasured) listener.SampleMotion(fixedStep: true, step);
+                    submit |= Compat.AudioSpatialStereoMeasured && UpdatesInFixedStep(listener.m_VelocityUpdateMode, listener.gameObject);
+                }
                 catch (Exception e) { Debug.LogException(e, listener); }
             }
+            if (submit) SubmitFrame(0f, 0, 0, fixedStep: true);
         }
 
         // ------------------------------------------------------------------ the frame
+
+        static void SampleHearingMotion(bool fixedStep, double deltaTime)
+        {
+            s_Listeners.RemoveAll(l => l == null);
+            if (s_Listeners.Count == 0)
+            {
+                s_HearingVelocity = Vector3.zero;
+                s_HearingPose = AudioListenerPose.Identity;
+                s_HearingPosition = Vector3.zero;
+                return;
+            }
+            var listener = s_Listeners[s_Listeners.Count - 1];
+            listener.SampleMotion(fixedStep, deltaTime);
+            s_HearingVelocity = listener.m_Velocity;
+            if (fixedStep == UpdatesInFixedStep(listener.m_VelocityUpdateMode, listener.gameObject))
+            {
+                s_HearingPose = AudioListenerPose.Of(listener);
+                s_HearingPose.Position = listener.m_LastPosition;
+                s_HearingPosition = s_HearingPose.Position;
+            }
+        }
 
         internal static void Update()
         {
@@ -320,8 +432,14 @@ namespace Unbound.Runtime
             }
             s_Loading.Clear();
 
+            var previousListenerPose = s_HearingPose;
+            if (Compat.AudioSpatialStereoMeasured) SampleHearingMotion(fixedStep: false, motionDelta);
             s_Listeners.RemoveAll(l => l == null);
-            if (s_Listeners.Count > 0) s_HearingPosition = s_Listeners[s_Listeners.Count - 1].transform.position;
+            if (s_Listeners.Count > 0)
+            {
+                var hearing = s_Listeners[s_Listeners.Count - 1];
+                if (!Compat.AudioSpatialStereoMeasured) s_HearingPosition = hearing.transform.position;
+            }
             int n = s_Sources.Count;
             if (s_Snapshot.Length < n) s_Snapshot = new AudioSource[Math.Max(n, s_Snapshot.Length * 2)];
             s_Sources.CopyTo(s_Snapshot);
@@ -333,7 +451,7 @@ namespace Unbound.Runtime
                 if (source == null || source.m_GameObject == null) continue;
                 try
                 {
-                    source.SampleMotion(fixedStep: false, motionDelta);
+                    source.SampleMotion(fixedStep: false, motionDelta, previousListenerPose);
                     bool hasFilter = AudioFilters.Update(source.Handle, source.m_GameObject);
                     source.m_HasFilter = hasFilter;
                     source.Flush(always: true);
@@ -342,6 +460,7 @@ namespace Unbound.Runtime
                         var state = backend.State(source.m_Handle);
                         if (state.Main != AudioVoiceState.None || state.OneShots > 0) playing++;
                     }
+                    source.m_HasAudioFrame = true;
                 }
                 catch (Exception e)
                 {
@@ -349,6 +468,13 @@ namespace Unbound.Runtime
                 }
             }
 
+            SubmitFrame(realDelta, playing, motionDelta, fixedStep: false);
+        }
+
+        // A fixed sample reaches the backend at the fixed node. Dynamic listener state remains
+        // at its last frame sample; this submission neither samples it nor advances mixer time.
+        static void SubmitFrame(float realDelta, int playing, double motionDelta, bool fixedStep)
+        {
             var frame = new AudioFramePacket
             {
                 DeltaTime = realDelta,
@@ -364,10 +490,11 @@ namespace Unbound.Runtime
                 // The most recently enabled listener hears.
                 var listener = s_Listeners[listeners - 1];
                 var t = listener.transform;
-                listener.SampleMotion(fixedStep: false, motionDelta);
-                frame.ListenerPosition = t.position;
-                frame.ListenerForward = t.forward;
-                frame.ListenerUp = t.up;
+                if (!fixedStep && !Compat.AudioSpatialStereoMeasured) listener.SampleMotion(fixedStep: false, motionDelta);
+                var pose = Compat.AudioSpatialStereoMeasured ? s_HearingPose : AudioListenerPose.Of(listener);
+                frame.ListenerPosition = pose.Position;
+                frame.ListenerForward = pose.Forward;
+                frame.ListenerUp = pose.Up;
                 frame.ListenerVelocity = listener.m_Velocity;
                 frame.Flags |= AudioFrameFlags.HasListener;
                 bool scripts = AudioFilters.Update(AudioFilters.ListenerKey, listener.m_GameObject);
@@ -389,26 +516,37 @@ namespace Unbound.Runtime
             s_WarnedListeners = Math.Max(1, listeners);
 
             s_Zones.RemoveAll(z => z == null);
-            if (s_Zones.Count > 0)
+            if (s_Zones.Count > 0 && !s_ZoneActivationRejected)
             {
                 frame.Zone.Kind = AudioFilterKind.Reverb;
                 frame.Zone.Id = s_ZoneGeneration;
                 AudioReverbZone.Blend(s_Zones, frame.ListenerPosition, frame.Zone.Reverb);
+                if (Compat.AudioZoneStartupMeasured && s_ZoneGeneration == 1)
+                {
+                    frame.Zone.Reverb[6] = s_InitialReflectionsDelay.Observe(frame.Zone.Reverb[6]);
+                    frame.Zone.Reverb[7] = s_InitialReverbLevel.Observe(frame.Zone.Reverb[7]);
+                    frame.Zone.Reverb[8] = s_InitialReverbDelay.Observe(frame.Zone.Reverb[8]);
+                }
+
             }
             fixed (AudioFilterDescriptor* filters = s_ListenerFilters)
             {
                 if (frame.FilterCount > 0) frame.Filters = filters;
-                s_Status = backend.Frame(frame);
+                s_Status = AudioBackend.Current.Frame(frame);
             }
+            frame.Filters = null;
         }
 
         /// <summary>Forgets everything (tests).</summary>
         internal static void ResetForTests()
         {
+            s_HearingPose = AudioListenerPose.Identity;
             s_Sources.Clear();
             s_Listeners.Clear();
             s_Zones.Clear();
+            ResetZoneInitialization();
             s_HearingPosition = Vector3.zero;
+            s_HearingVelocity = Vector3.zero;
             s_Mixers.Clear();
             s_Groups.Clear();
             s_Loading.Clear();

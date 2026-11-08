@@ -164,6 +164,8 @@ fn measured_doppler(offset: Vector3, velocity: Vector3, distance: f32, scale: f3
 pub struct SourceSpatial<'a> {
     pub position: Vector3,
     pub velocity: Vector3,
+    /// Doppler can sample a newer listener pose than distance and panning.
+    pub doppler_listener_position: Option<Vector3>,
     pub pan_stereo: f32,
     pub spatial_blend: f32,
     pub spread: f32,
@@ -291,26 +293,35 @@ fn spatialize_impl(
         _ => s.spread,
     };
     let flat = 1.0 - blend;
-    let pitch = match direction {
-        Some(_) if measured => {
-            let factor = measured_doppler(
-                offset,
+    let pitch = if measured {
+        let doppler_offset = s
+            .doppler_listener_position
+            .map_or(offset, |position| sub(s.position, position));
+        let doppler_distance = length(doppler_offset);
+        let factor = if doppler_distance > 1e-5 {
+            measured_doppler(
+                doppler_offset,
                 sub(s.velocity, listener.velocity),
-                distance,
+                doppler_distance,
                 s.doppler_level * doppler_factor,
-            );
-            factor * blend + flat
+            )
+        } else {
+            1.0
+        };
+        factor * blend + flat
+    } else {
+        match direction {
+            Some(direction) => {
+                let factor = doppler(
+                    direction,
+                    s.velocity,
+                    listener.velocity,
+                    s.doppler_level * doppler_factor,
+                );
+                1.0 + (factor - 1.0) * blend
+            }
+            None => 1.0,
         }
-        Some(direction) => {
-            let factor = doppler(
-                direction,
-                s.velocity,
-                listener.velocity,
-                s.doppler_level * doppler_factor,
-            );
-            1.0 + (factor - 1.0) * blend
-        }
-        None => 1.0,
     };
     let matrix;
     let mono_matrix;
@@ -440,6 +451,7 @@ mod tests {
         SourceSpatial {
             position,
             velocity: Vector3::default(),
+            doppler_listener_position: None,
             pan_stereo: 0.0,
             spatial_blend: blend,
             spread: 0.0,
@@ -451,6 +463,21 @@ mod tests {
             spatial_blend_curve: None,
             spread_curve: None,
         }
+    }
+
+    #[test]
+    fn measured_doppler_pose_is_independent_of_panning_and_handles_coincidence() {
+        let mut s = source(v(6.0, 0.0, 8.0), 1.0);
+        s.velocity = v(0.0, 0.0, -20.0);
+        let listener = Listener::default();
+        let before = spatialize_measured(&s, &listener, 1.0, 1.0);
+        s.doppler_listener_position = Some(v(0.0, 0.0, 1.0));
+        let after = spatialize_measured(&s, &listener, 1.0, 1.0);
+        assert_eq!(after.matrix, before.matrix);
+        assert_eq!(after.mono_matrix, before.mono_matrix);
+        assert_ne!(after.pitch, before.pitch);
+        s.doppler_listener_position = Some(s.position);
+        assert_eq!(spatialize_measured(&s, &listener, 1.0, 1.0).pitch, 1.0);
     }
 
     #[test]

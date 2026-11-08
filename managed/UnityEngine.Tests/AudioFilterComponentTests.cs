@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Linq;
 using Unbound.Runtime;
@@ -108,8 +109,8 @@ namespace UnityEngine.Tests
             // Added at 16; 20 adds reverb parameters, 21 the frame zone; 22 adds render commands,
             // 23 adds Distortion, 24 adds Chorus, 25-27 mixer effects, 28 render protocol 12, 29
             // frame input versions, 30 the decoded-resampling flag and 31 the imported texture
-            // format, 32 mesh colors, 33 component tail timing, and 34 the instance multiplier.
-            Assert.Equal(35u, NativeApi.CurrentVersion);
+            // format, 32 mesh colors, 33 component tail timing, 34 the instance multiplier, 35 deferred render-target mips, and 36 source-loop listener poses.
+            Assert.Equal(36u, NativeApi.CurrentVersion);
             var frame = default(AudioFramePacket);
             byte* f = (byte*)&frame;
             Assert.Equal((64, 72, 80, 176), ((int)((byte*)&frame.FilterCount - f), (int)((byte*)&frame.Filters - f),
@@ -122,7 +123,11 @@ namespace UnityEngine.Tests
             Assert.Equal(112, (int)((byte*)&p.SpreadCurve - b));
             Assert.Equal(120, (int)((byte*)&p.FilterCount - b));
             Assert.Equal(128, (int)((byte*)&p.Filters - b));
-            Assert.Equal(136, sizeof(AudioSourcePacket));
+            Assert.Equal(184, sizeof(AudioSourcePacket));
+            Assert.Equal(136, Marshal.OffsetOf<AudioSourcePacket>(nameof(AudioSourcePacket.ListenerPosition)).ToInt32());
+            Assert.Equal(148, Marshal.OffsetOf<AudioSourcePacket>(nameof(AudioSourcePacket.ListenerForward)).ToInt32());
+            Assert.Equal(160, Marshal.OffsetOf<AudioSourcePacket>(nameof(AudioSourcePacket.ListenerUp)).ToInt32());
+            Assert.Equal(172, Marshal.OffsetOf<AudioSourcePacket>(nameof(AudioSourcePacket.DopplerListenerPosition)).ToInt32());
             var d = default(AudioFilterDescriptor);
             byte* e = (byte*)&d;
             Assert.Equal(96, sizeof(AudioFilterDescriptor));
@@ -258,7 +263,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void NarrowSpatialCurveCannotAdmitAnUnsupportedFilter()
+        public void NarrowSpatialCurveRetainsTheMeasuredSpatialComponent()
         {
             var source = Source("narrow-spatial-curve");
             source.gameObject.AddComponent<AudioDistortionFilter>();
@@ -270,8 +275,8 @@ namespace UnityEngine.Tests
                 new Keyframe(0.251f, 0, -1000, 0), new Keyframe(1, 0)));
             AudioFilterDescriptor[] table = null;
             Assert.True(source.UsesSpatialBlend);
-            Assert.Equal(0, AudioFilterChain.Collect(source, false, ref table));
-            Assert.Single(Errors("on a 3D AudioSource is not supported"));
+            Assert.Equal(1, AudioFilterChain.Collect(source, false, ref table));
+            Assert.Empty(Errors("on a 3D AudioSource is not supported"));
         }
 
         [Fact]
@@ -500,16 +505,16 @@ namespace UnityEngine.Tests
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void SpatialDistortionAndChorusFailClearlyUntilCommonSpatialProcessingIsExact(bool chorus)
+        public void SpatialDistortionAndChorusRetainTheirMeasuredDescriptors(bool chorus)
         {
             var source = Source("spatial filter");
             if (chorus) source.gameObject.AddComponent<AudioChorusFilter>();
             else source.gameObject.AddComponent<AudioDistortionFilter>();
             Assert.Single(Collected(source));
             source.spatialBlend = 1f;
-            Assert.Empty(Collected(source));
-            Assert.Empty(Collected(source));
-            Assert.Single(Errors("on a 3D AudioSource is not supported"));
+            Assert.Single(Collected(source));
+            Assert.Single(Collected(source));
+            Assert.Empty(Errors("on a 3D AudioSource is not supported"));
             source.bypassEffects = true;
             Assert.Single(Collected(source));
             source.bypassEffects = false;
@@ -518,8 +523,8 @@ namespace UnityEngine.Tests
             Assert.Single(Collected(source));
             source.SetCustomCurve(AudioSourceCurveType.SpatialBlend,
                 new AnimationCurve(new Keyframe(0, 0), new Keyframe(1, 1)));
-            Assert.Empty(Collected(source));
-            Assert.Equal(2, Errors("on a 3D AudioSource is not supported").Count);
+            Assert.Single(Collected(source));
+            Assert.Empty(Errors("on a 3D AudioSource is not supported"));
         }
 
         [Fact]

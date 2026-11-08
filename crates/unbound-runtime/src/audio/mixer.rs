@@ -73,6 +73,7 @@ pub struct SourceParams {
     pub group: u64,
     pub position: Vector3,
     pub velocity: Vector3,
+    pub listener_snapshot: Option<(Listener, Vector3)>,
     pub volume: f32,
     pub pitch: f32,
     pub pan_stereo: f32,
@@ -102,6 +103,7 @@ impl Default for SourceParams {
             group: 0,
             position: Vector3::default(),
             velocity: Vector3::default(),
+            listener_snapshot: None,
             volume: 1.0,
             pitch: 1.0,
             pan_stereo: 0.0,
@@ -407,6 +409,15 @@ impl SourceParams {
             group: p.group,
             position: p.position,
             velocity: p.velocity,
+            listener_snapshot: (p.flags & source_flags::LISTENER_SNAPSHOT != 0).then_some((
+                Listener {
+                    position: p.listener_position,
+                    forward: p.listener_forward,
+                    up: p.listener_up,
+                    velocity: Vector3::default(),
+                },
+                p.doppler_listener_position,
+            )),
             volume: p.volume,
             pitch: p.pitch,
             pan_stereo: p.pan_stereo,
@@ -474,6 +485,7 @@ struct Voice {
     /// Accumulated gain for the next sample.
     fade_matrix: [f32; 4],
     stream: Option<StreamState>,
+    zone_send: ZoneSendState,
 }
 
 impl Voice {
@@ -492,6 +504,7 @@ impl Voice {
             fade_delta: [0.0; 4],
             fade_matrix: [0.0; 4],
             stream: None,
+            zone_send: ZoneSendState::default(),
         }
     }
 
@@ -1634,6 +1647,9 @@ impl Mixer {
         playing.clear();
         for (&handle, source) in &mut self.sources {
             let p = &source.params;
+            let (sampled_listener, doppler_listener_position) = p
+                .listener_snapshot
+                .map_or((listener, None), |(pose, doppler)| (pose, Some(doppler)));
             let spatialize = if p.has(source_flags::SPATIAL_STEREO) {
                 spatial::spatialize_measured
             } else {
@@ -1643,6 +1659,7 @@ impl Mixer {
                 &SourceSpatial {
                     position: p.position,
                     velocity: p.velocity,
+                    doppler_listener_position,
                     pan_stereo: p.pan_stereo,
                     spatial_blend: p.spatial_blend,
                     spread: p.spread,
@@ -1655,7 +1672,7 @@ impl Mixer {
                         .then_some(&p.spatial_blend_curve[..]),
                     spread_curve: (!p.spread_curve.is_empty()).then_some(&p.spread_curve[..]),
                 },
-                &listener,
+                &sampled_listener,
                 config.rolloff_scale,
                 config.doppler_factor,
             );
@@ -1793,6 +1810,7 @@ impl Mixer {
                     looping,
                     audible,
                     callback,
+                    None,
                 );
                 // Components below the generating script (none may sit above it). Unbound's
                 // choice (unmeasured): they also process the source's one-shots.
@@ -1835,6 +1853,7 @@ impl Mixer {
                                     looping,
                                     audible,
                                     callback,
+                                    None,
                                 );
                             }
                             // The Inspector order is the processing order: components above
@@ -1872,6 +1891,14 @@ impl Mixer {
                     }
                 }
             } else {
+                let mut zone_send = ZoneSend {
+                    samples: &mut zone_input[..n * 2],
+                    gain: source.params.reverb_zone_mix,
+                    buffer_size: dsp_frames,
+                };
+                let measured_send = zone_on
+                    && source.params.reverb_zone_mix > 0.0
+                    && flags & source_flags::ZONE_VOICE_SEND != 0;
                 let finished_at = render_source_voices(
                     source,
                     clips,
@@ -1886,6 +1913,7 @@ impl Mixer {
                     looping,
                     audible,
                     callback,
+                    measured_send.then_some(&mut zone_send),
                 );
                 if voices_running
                     && source.main.is_none()
@@ -1918,10 +1946,10 @@ impl Mixer {
             if let Some(ring) = &mut source.output {
                 ring.push(buffer);
             }
-            // The zone send takes the source's output after its components, also for a source
-            // routed into a mixer group (unmeasured there).
+            // Scripted sources and unmeasured releases retain their earlier send placement.
+            // Decoded voices on the measured profile have already sent before components.
             let send = source.params.reverb_zone_mix;
-            if zone_on && send > 0.0 {
+            if zone_on && send > 0.0 && (filter || flags & source_flags::ZONE_VOICE_SEND == 0) {
                 for (z, b) in zone_input.iter_mut().zip(buffer.iter()) {
                     *z += *b * send;
                 }
@@ -2180,6 +2208,62 @@ impl PlaybackPitch {
     }
 }
 
+#[derive(Debug, Default)]
+struct ZoneSendState {
+    until: u64,
+    next_at: u64,
+    next_position: f64,
+    end_at: u64,
+    looping: bool,
+    step: f64,
+    include: bool,
+}
+
+/// Reused zone input receives each decoded voice before source components.
+struct ZoneSend<'a> {
+    samples: &'a mut [f32],
+    gain: f32,
+    buffer_size: u64,
+}
+
+/// A naturally completing voice omits its entire last DSP buffer from the zone send.
+/// Predict with the same additions as playback, including partial device periods, so a
+/// fractional cursor near an endpoint cannot select a different buffer.
+fn voice_finishes_before(
+    voice: &Voice,
+    clip: &Clip,
+    step: f64,
+    start: u64,
+    end: u64,
+    looping: bool,
+) -> bool {
+    if looping && voice.end_at >= end {
+        return false;
+    }
+    let mut position = voice.position;
+    let origin = voice
+        .stream
+        .as_ref()
+        .map_or(0.0, |stream| stream.origin as f64);
+    for dsp in start..end {
+        if dsp < voice.start_at {
+            continue;
+        }
+        if dsp >= voice.end_at {
+            return true;
+        }
+        position += if voice.stream.is_some() {
+            step.abs()
+        } else {
+            step
+        };
+        if !looping && (position + origin >= clip.frames as f64 || position < 0.0) {
+            return true;
+        }
+    }
+    false
+}
+
 /// Advance decoded voices and accumulate their PCM without invoking the source filter.
 #[allow(clippy::too_many_arguments)]
 fn render_source_voices(
@@ -2196,6 +2280,7 @@ fn render_source_voices(
     looping: bool,
     audible: bool,
     callback: Option<Callback>,
+    mut zone_send: Option<&mut ZoneSend<'_>>,
 ) -> Option<u64> {
     let mut finished_at: Option<u64> = None;
     let target_for = |clip: Option<&Clip>| {
@@ -2229,6 +2314,7 @@ fn render_source_voices(
             measured_matrix,
             audible.then_some(&mut *out),
             callback,
+            zone_send.as_deref_mut(),
         ) {
             finished_at = Some(end);
             source.pending_position = if source.component_playback {
@@ -2257,6 +2343,7 @@ fn render_source_voices(
             measured_matrix,
             audible.then_some(&mut *out),
             callback,
+            zone_send.as_deref_mut(),
         );
         if let Some(end) = finished {
             finished_at = Some(finished_at.map_or(end, |previous| previous.max(end)));
@@ -2286,6 +2373,7 @@ fn render_voice(
     measured_matrix: bool,
     mut out: Option<&mut [f32]>,
     callback: Option<Callback>,
+    mut zone_send: Option<&mut ZoneSend<'_>>,
 ) -> Option<u64> {
     let Some(clip) = clip else {
         return Some(t0);
@@ -2333,6 +2421,15 @@ fn render_voice(
         measured_matrix && voice.stream.is_none(),
         measured_resampling && voice.stream.is_none(),
     );
+    if zone_send.is_some()
+        && (voice.zone_send.next_at != t0
+            || voice.zone_send.next_position != voice.position
+            || voice.zone_send.step != step
+            || voice.zone_send.end_at != voice.end_at
+            || voice.zone_send.looping != looping)
+    {
+        voice.zone_send.until = 0;
+    }
     let inv_n = 1.0 / n as f32;
     for f in 0..n {
         let dsp = t0 + f as u64;
@@ -2344,6 +2441,17 @@ fn render_voice(
         }
         if dsp >= voice.end_at {
             return Some(dsp);
+        }
+        if let Some(send) = zone_send.as_ref()
+            && dsp >= voice.zone_send.until
+        {
+            let until = (dsp / send.buffer_size + 1) * send.buffer_size;
+            voice.zone_send.include =
+                !voice_finishes_before(voice, clip, step, dsp, until, looping);
+            voice.zone_send.until = until;
+            voice.zone_send.step = step;
+            voice.zone_send.end_at = voice.end_at;
+            voice.zone_send.looping = looping;
         }
         let (l, r) = if let Some(stream) = &mut voice.stream {
             let i = voice.position.floor();
@@ -2370,7 +2478,12 @@ fn render_voice(
             };
             let (l0, r0) = fetch(i0);
             let (l1, r1) = fetch(i0 + 1);
-            (l0 + (l1 - l0) * frac, r0 + (r1 - r0) * frac)
+            if measured_matrix {
+                let inverse = 1.0 - frac;
+                (l0 * inverse + l1 * frac, r0 * inverse + r1 * frac)
+            } else {
+                (l0 + (l1 - l0) * frac, r0 + (r1 - r0) * frac)
+            }
         };
         if let Some(out) = out.as_deref_mut() {
             let t = (f + 1) as f32 * inv_n;
@@ -2396,8 +2509,16 @@ fn render_voice(
                 }
             }
             let v = voice.volume_scale;
-            out[f * 2] += (m[0] * l + m[1] * r) * v;
-            out[f * 2 + 1] += (m[2] * l + m[3] * r) * v;
+            let left = (m[0] * l + m[1] * r) * v;
+            let right = (m[2] * l + m[3] * r) * v;
+            out[f * 2] += left;
+            out[f * 2 + 1] += right;
+            if voice.zone_send.include
+                && let Some(send) = zone_send.as_deref_mut()
+            {
+                send.samples[f * 2] += left * send.gain;
+                send.samples[f * 2 + 1] += right * send.gain;
+            }
         }
         voice.advance_fade(measured_matrix);
         if let Some(stream) = &mut voice.stream {
@@ -2417,6 +2538,8 @@ fn render_voice(
             }
         }
     }
+    voice.zone_send.next_at = t0 + n as u64;
+    voice.zone_send.next_position = voice.position;
     None
 }
 
@@ -4579,6 +4702,10 @@ mod tests {
             } else {
                 filters.as_ptr()
             },
+            listener_position: Vector3::default(),
+            listener_forward: Listener::default().forward,
+            listener_up: Listener::default().up,
+            doppler_listener_position: Vector3::default(),
         }
     }
 
@@ -4869,6 +4996,139 @@ mod tests {
                             render(period),
                             reference,
                             "rate={rate}, frames={frames}, shot={shot}, period={period}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn listener_snapshot_retains_its_sample_when_the_global_listener_changes() {
+        for rate in [48000, 44100] {
+            let setup = |relative: bool| {
+                let mut m = Mixer::new(MixerConfig {
+                    sample_rate: rate,
+                    ..Default::default()
+                });
+                m.listener.velocity.z = 20.0;
+                m.add_clip(1, ramp_clip(8192, rate));
+                source_with(&mut m, 7, 1, |p| {
+                    p.flags = source_flags::SPATIAL_STEREO;
+                    p.spatial_blend = 1.0;
+                    p.position.z = 10.0;
+                    if relative {
+                        p.listener_snapshot = Some((Listener::default(), Vector3::default()));
+                        p.velocity.z = -20.0;
+                    }
+                });
+                play(&mut m, 7, command::PLAY, 0.0);
+                m
+            };
+            let mut absolute = setup(false);
+            let mut relative = setup(true);
+            let mut expected = vec![0.0; 2048];
+            let mut actual = vec![0.0; 2048];
+            absolute.render(&mut expected, 2);
+            relative.render(&mut actual, 2);
+            assert_eq!(actual, expected);
+            relative.listener.velocity.z = 40.0;
+            relative.listener.position.x = 3.0;
+            relative.listener.forward = Vector3 {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            };
+            absolute.render(&mut expected, 2);
+            relative.render(&mut actual, 2);
+            assert_eq!(actual, expected);
+            assert_eq!(
+                relative.source_state(7).position,
+                absolute.source_state(7).position
+            );
+            absolute.listener.velocity.z = 40.0;
+            absolute.render(&mut expected, 2);
+            relative.render(&mut actual, 2);
+            assert_ne!(actual, expected);
+        }
+    }
+
+    #[test]
+    fn voice_zone_send_omits_completion_buffer_before_components_across_device_periods() {
+        for rate in [48000, 44100] {
+            for frames in [1024_usize, 1025, 11265, 12288] {
+                for shot in [false, true] {
+                    let render = |period: usize, filtered: bool, last_sample: f32| {
+                        let mut m = Mixer::new(MixerConfig {
+                            sample_rate: rate,
+                            ..Default::default()
+                        });
+                        let mut clip = impulse_clip(frames);
+                        clip.rate = rate;
+                        // The final buffer has a nonzero sample, distinct from an earlier impulse.
+                        clip.samples[2 * (frames - 1)] = last_sample;
+                        m.add_clip(1, clip);
+                        let mut short = impulse_clip(frames / 2);
+                        short.rate = rate;
+                        m.add_clip(2, short);
+                        let mut zone = component(100, filter_kind::REVERB, 0);
+                        zone.reverb[0] = -10000.0;
+                        zone.reverb[8] = 0.0;
+                        m.update_zone(&zone);
+                        source_with(&mut m, 7, 1, |p| {
+                            p.flags = source_flags::ZONE_VOICE_SEND | source_flags::SPATIAL_STEREO;
+                            if filtered {
+                                p.filters = vec![component(7, filter_kind::DISTORTION, 0)];
+                            }
+                        });
+                        play(&mut m, 7, command::PLAY, 0.0);
+                        if shot {
+                            m.command(
+                                7,
+                                &AudioSourceCommand {
+                                    kind: command::PLAY_ONE_SHOT,
+                                    clip: 2,
+                                    volume_scale: 0.5,
+                                    ..Default::default()
+                                },
+                            );
+                        }
+                        let mut out = vec![0.0; 16384 * 2];
+                        for chunk in out.chunks_mut(period * 2) {
+                            m.render(chunk, 2);
+                        }
+                        // Inspect the zone's histories directly: component output cannot affect them.
+                        let zone = m.zone.as_mut().unwrap();
+                        let mut tail = vec![0.0; 16384 * 2];
+                        zone.reverb.process(&mut tail);
+                        (out, tail)
+                    };
+                    let reference = render(1024, false, 0.6);
+                    let no_last_sample = render(1024, false, 0.0);
+                    assert_eq!(
+                        reference.1, no_last_sample.1,
+                        "completion sample reached the zone"
+                    );
+                    assert_ne!(
+                        reference.0, no_last_sample.0,
+                        "completion sample disappeared from dry output"
+                    );
+                    if frames > 1024 {
+                        assert!(
+                            reference.1.iter().any(|v| v.abs() > 1e-8),
+                            "earlier voice samples did not reach the zone"
+                        );
+                    }
+                    assert_eq!(
+                        reference.1,
+                        render(1024, true, 0.6).1,
+                        "source components changed the send"
+                    );
+                    for period in [100, 255, 257, 441, 1000, 1300] {
+                        assert_eq!(
+                            render(period, false, 0.6),
+                            reference,
+                            "{rate} {frames} {shot} {period}"
                         );
                     }
                 }

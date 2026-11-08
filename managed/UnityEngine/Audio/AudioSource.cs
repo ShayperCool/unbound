@@ -57,8 +57,12 @@ namespace UnityEngine
         internal bool m_CurvesDirty = true;
         internal bool m_KeepOutput;
         internal bool m_HasFilter;
+        internal bool m_HasAudioFrame;
         internal Vector3 m_LastPosition;
         internal Vector3 m_Velocity;
+        internal Vector3 m_SampledListenerVelocity;
+        AudioListenerPose m_ListenerPose = AudioListenerPose.Identity;
+        Vector3 m_DopplerListenerPosition;
         internal bool m_HasLastPosition;
         // The loop the last position was sampled in (false: the frame loop).
         internal bool m_MotionInFixedStep;
@@ -318,9 +322,12 @@ namespace UnityEngine
 
         static float ConstantOf(AnimationCurve curve) => curve.length > 0 ? curve[0].value : 0f;
 
+        Vector3 AudioPosition => Compat.AudioSpatialStereoMeasured && m_MotionInFixedStep && m_HasLastPosition
+            ? m_LastPosition : transform.position;
+
         float CurveTimeAtListener()
         {
-            float distance = m_GameObject != null ? Vector3.Distance(transform.position, AudioSystem.s_HearingPosition) : 0f;
+            float distance = m_GameObject != null ? Vector3.Distance(AudioPosition, Compat.AudioSpatialStereoMeasured ? m_ListenerPose.Position : AudioSystem.s_HearingPosition) : 0f;
             return m_MaxDistance > 0f ? distance / m_MaxDistance : 1f;
         }
 
@@ -352,11 +359,25 @@ namespace UnityEngine
         public void SetCustomCurve(AudioSourceCurveType type, AnimationCurve curve)
         {
             var copy = curve == null ? new AnimationCurve() : new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
+            if (Compat.AudioSpatialStereoMeasured && copy.length > 0 && copy[copy.length - 1].time > 1f)
+            {
+                // Distance curves ending past one scale time and tangents together. Negative
+                // keys keep their relative positions (tests/projects/audioreverb, 6000.0.71f1).
+                float scale = 1f / copy[copy.length - 1].time;
+                var keys = copy.keys;
+                for (int i = 0; i < keys.Length; i++)
+                {
+                    keys[i].time *= scale;
+                    keys[i].inTangent /= scale;
+                    keys[i].outTangent /= scale;
+                }
+                copy.keys = keys;
+            }
             switch (type)
             {
                 case AudioSourceCurveType.CustomRolloff:
                     m_RolloffCurve = copy;
-                    m_RolloffMode = AudioRolloffMode.Custom;
+                    if (!Compat.AudioSpatialStereoMeasured) m_RolloffMode = AudioRolloffMode.Custom;
                     break;
                 case AudioSourceCurveType.SpatialBlend:
                     m_SpatialBlendCurve = copy;
@@ -381,6 +402,8 @@ namespace UnityEngine
                 AudioSourceCurveType.ReverbZoneMix => m_ReverbZoneMixCurve,
                 _ => m_SpreadCurve,
             };
+            // The returned curve uses the default wrap modes in this measured release.
+            if (Compat.AudioSpatialStereoMeasured) return new AnimationCurve(curve.keys);
             return new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
         }
 
@@ -406,7 +429,9 @@ namespace UnityEngine
             }
             if (m_Clip != null && (m_Clip.channels == 0 || m_Clip.samples == 0)) return;
             m_Paused = false;
+            if (m_Handle == 0 || AudioBackend.Current.State(m_Handle).OneShots == 0) m_HasAudioFrame = false;
             m_Clip?.EnsureLoaded();
+            PreparePlaybackMotion();
             // Play can start a clipless OnAudioFilterRead generator before the first
             // audio update. Submit its callback identity with the Play command.
             bool hasFilter = AudioFilters.Update(Handle, m_GameObject);
@@ -415,6 +440,23 @@ namespace UnityEngine
             if (Command(new AudioSourceCommand { Kind = AudioCommandKind.Play, Time = time }))
                 m_Clip?.ClaimStreamBuffer(this, main: true);
             if (Trace.AudioOn) Trace.Audio($"{api} '{m_Clip?.m_Name}' ({m_Clip?.length:F2}s) on '{m_GameObject.m_Name}' at {time:F3}, loop {m_Loop}, volume {m_Volume}, group '{m_OutputGroup?.m_Name}'");
+        }
+
+        void PreparePlaybackMotion()
+        {
+            if (Compat.AudioSpatialStereoMeasured)
+            {
+                SampleListenerMotion();
+                // Play establishes a fresh transform sample. A source's own body retains
+                // the velocity from its selected loop, or supplies the first sample directly.
+                if (m_GameObject.GetComponent<Rigidbody>() == null)
+                {
+                    m_Velocity = Vector3.zero;
+                    UpdateMotion(0.0);
+                }
+                else if (!m_HasLastPosition) UpdateMotion(0.0);
+                else m_LastPosition = transform.position;
+            }
         }
 
         public void PlayOneShot(AudioClip clip) => PlayOneShot(clip, 1f);
@@ -434,6 +476,11 @@ namespace UnityEngine
                 return;
             }
             clip.EnsureLoaded();
+            if (!isPlaying)
+            {
+                m_HasAudioFrame = false;
+                PreparePlaybackMotion();
+            }
             Flush();
             if (Command(new AudioSourceCommand { Kind = AudioCommandKind.PlayOneShot, Clip = clip.m_Handle, VolumeScale = volumeScale }))
                 clip.ClaimStreamBuffer(this, main: false);
@@ -463,6 +510,7 @@ namespace UnityEngine
 
         internal void StopInternal()
         {
+            m_HasAudioFrame = false;
             m_Paused = false;
             ReleaseStreamBuffers();
             if (m_Handle == 0) return;
@@ -676,13 +724,19 @@ namespace UnityEngine
             if (Compat.DecodedAudioResamplingMeasured) flags |= AudioSourceFlags.DecodedResampling;
             if (Compat.AudioComponentTailMeasured) flags |= AudioSourceFlags.ComponentFilterTail;
             if (Compat.AudioSpatialStereoMeasured) flags |= AudioSourceFlags.SpatialStereo;
+            if (Compat.AudioSpatialStereoMeasured) flags |= AudioSourceFlags.ListenerSnapshot;
+            if (Compat.AudioZoneVoiceSendMeasured) flags |= AudioSourceFlags.ZoneVoiceSend;
             if (m_HasFilter && isActiveAndEnabled) flags |= AudioSourceFlags.Filter;
             var packet = new AudioSourcePacket
             {
                 Clip = clip != null ? clip.m_Handle : 0,
                 Group = m_OutputGroup != null ? m_OutputGroup.Handle : 0,
-                Position = m_GameObject != null ? transform.position : Vector3.zero,
-                Velocity = m_Velocity,
+                Position = m_GameObject != null ? AudioPosition : Vector3.zero,
+                Velocity = Compat.AudioSpatialStereoMeasured ? m_Velocity - m_SampledListenerVelocity : m_Velocity,
+                ListenerPosition = m_ListenerPose.Position,
+                ListenerForward = m_ListenerPose.Forward,
+                ListenerUp = m_ListenerPose.Up,
+                DopplerListenerPosition = m_DopplerListenerPosition,
                 Volume = volume,
                 Pitch = m_Pitch,
                 PanStereo = m_PanStereo,
@@ -733,18 +787,19 @@ namespace UnityEngine
         }
 
         /// <summary>The source's Rigidbody velocity, or its transform's motion since the last sample.</summary>
-        internal void UpdateMotion(double deltaTime)
+        internal void UpdateMotion(double deltaTime, AudioListenerPose? previousListenerPose = null)
         {
             var position = transform.position;
             AudioSystem.SampleMotion(m_GameObject, true, position, deltaTime,
                 ref m_LastPosition, ref m_HasLastPosition, ref m_Velocity);
+            SampleListenerMotion(previousListenerPose);
         }
 
         /// <summary>Samples the velocity when <paramref name="fixedStep"/> is the loop
         /// <c>velocityUpdateMode</c> picks (<see cref="AudioSystem.UpdatesInFixedStep"/>). When the
         /// picked loop changes, sampling starts again from the next position and the last velocity
         /// is kept until then (Unbound's choice, unmeasured).</summary>
-        internal void SampleMotion(bool fixedStep, double deltaTime)
+        internal void SampleMotion(bool fixedStep, double deltaTime, AudioListenerPose? previousListenerPose = null)
         {
             bool inFixedStep = AudioSystem.UpdatesInFixedStep(m_VelocityUpdateMode, m_GameObject);
             if (inFixedStep != fixedStep) return;
@@ -755,19 +810,28 @@ namespace UnityEngine
             }
             if (!fixedStep)
             {
-                UpdateMotion(deltaTime);
+                UpdateMotion(deltaTime, previousListenerPose);
                 return;
             }
             // The step's simulated pose, not an interpolated Transform's (Unbound's choice, unmeasured).
             var position = AudioSystem.FixedStepPosition(transform);
             AudioSystem.SampleMotion(m_GameObject, true, position, deltaTime,
                 ref m_LastPosition, ref m_HasLastPosition, ref m_Velocity);
+            SampleListenerMotion(previousListenerPose);
+        }
+
+        void SampleListenerMotion(AudioListenerPose? previousListenerPose = null)
+        {
+            m_ListenerPose = previousListenerPose ?? AudioSystem.s_HearingPose;
+            m_DopplerListenerPosition = AudioSystem.s_HearingPose.Position;
+            m_SampledListenerVelocity = AudioSystem.s_HearingVelocity;
         }
 
         // ------------------------------------------------------------------ engine hooks
 
         internal override void OnEngineEnable()
         {
+            m_HasAudioFrame = false;
             AudioSystem.Add(this);
             m_HasLastPosition = false;
             m_Velocity = Vector3.zero;
