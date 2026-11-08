@@ -2,6 +2,7 @@
 """Unit checks of the suite's regression rules, declared probe gates and the land gate's stub check:
 python3 -m unittest tools/agents/test_suite.py"""
 import contextlib
+import fcntl
 import importlib.util
 import io
 import json
@@ -233,6 +234,20 @@ class ContinuationTests(unittest.TestCase):
 
 
 class SharedGuardTests(unittest.TestCase):
+    def test_process_liveness_handles_large_descriptors_and_exited_children(self):
+        process = subprocess.Popen([sys.executable, '-c', 'pass'])
+        fd = os.pidfd_open(process.pid)
+        high_fd = fcntl.fcntl(fd, fcntl.F_DUPFD_CLOEXEC, 1100)
+        os.close(fd)
+        tree = probe_runtime.Tree(process.pid)
+        tree.fds[process.pid] = high_fd
+        try:
+            process.wait(timeout=5)
+            self.assertFalse(tree.alive())
+        finally:
+            tree.close()
+            process.wait()
+
     def test_unsupported_platform_fails_before_starting_a_probe(self):
         with tempfile.TemporaryDirectory() as temp:
             gate = land.Gate(Path(temp), 'HEAD', ['touch unsafe'], False, Path(temp)/'gate.log')

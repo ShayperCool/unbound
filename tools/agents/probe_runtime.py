@@ -116,7 +116,11 @@ class Tree:
 
     def alive(self):
         # A readable pidfd denotes an exited process, including an unreaped zombie.
-        return any(not select.select([fd], [], [], 0)[0] for fd in self.fds.values())
+        poll = select.poll()
+        for fd in self.fds.values():
+            poll.register(fd, select.POLLIN)
+        exited = {fd for fd, _ in poll.poll(0)}
+        return any(fd not in exited for fd in self.fds.values())
 
     def close(self):
         for fd in self.fds.values():
