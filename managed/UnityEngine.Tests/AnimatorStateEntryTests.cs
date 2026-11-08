@@ -272,6 +272,36 @@ AnimatorStateMachine:
             Near.Equal(0.1f, animator.deltaPosition.x, 1e-5f);
         }
 
+        /// <summary>In the update a transition from a motion state into an empty state (write
+        /// defaults) completes, the motion state still moves the root over the whole update; then
+        /// nothing moves it (humanoid emptyBack, generic.emptyBack). Control: a transition into a
+        /// motion state ends with the destination's step alone.</summary>
+        [Fact]
+        public void ATransitionIntoAnEmptyStateMovesTheRootUntilItCompletes()
+        {
+            var animator = Rig(Controller(WalkState, EmptyState, 0.2f, 0.1f));
+            animator.Update(0f);
+            bool completed = false;
+            for (int step = 0; step < 12 && !completed; step++)
+            {
+                animator.Update(0.05f);
+                completed = animator.GetCurrentAnimatorStateInfo(0).IsName("Empty") && !animator.IsInTransition(0);
+                Near.Equal(0.05f, animator.deltaPosition.x, 1e-5f);
+            }
+            Assert.True(completed);
+            animator.Update(0.05f);
+            Near.Equal(0f, animator.deltaPosition.x, 1e-6f);
+
+            var control = Rig(Controller(WalkState, RunState, 0.2f, 0.1f));
+            control.Update(0f);
+            for (int step = 0; step < 12; step++)
+            {
+                control.Update(0.05f);
+                if (!control.IsInTransition(0) && control.GetCurrentAnimatorStateInfo(0).IsName("Run")) break;
+            }
+            Near.Equal(0.1f, control.deltaPosition.x, 1e-5f);
+        }
+
         /// <summary>A state driven by a motion time parameter takes the parameter in the update Play
         /// enters it in (control for the hold above, which applies to states that advance).</summary>
         [Fact]

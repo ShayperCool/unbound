@@ -1186,7 +1186,7 @@ namespace Unbound.Runtime
                     else if (transitioning && AloneBesideEmpty(layer, i, source.Current, source.Next))
                         SampleAtFullWeight(layer, i, source.Current, 1f, pose, mask, objectMask);
                     else if (completed != null && EmptyWithDefaults(layer, source.Current) && MotionOf(layer.Def, completed.Def) != null)
-                        SampleAtFullWeight(layer, i, completed, 0f, pose, mask, objectMask);
+                        SampleAtFullWeight(layer, i, completed, 1f, pose, mask, objectMask);
                     else
                     {
                         SampleState(layer, i, source.Current, 1f - p, pose, mask, objectMask);
@@ -1233,8 +1233,9 @@ namespace Unbound.Runtime
         /// transition's progress, for the pose, the clip infos, events and root motion (measured,
         /// tests/projects/humanoid emptyExit, emptyCond, generic.emptyExit: the motion state's clip
         /// infos report weight 1 and its root motion applies in full from the transition's start).
-        /// A motion state's transition into an empty state follows the same rule, unmeasured for
-        /// clip infos, events and root motion (its pose at full weight is measured).</summary>
+        /// A motion state's transition into an empty state follows the same rule (measured for the
+        /// pose, clip infos and root motion, tests/projects/humanoid emptyBack, generic.emptyBack;
+        /// events unmeasured).</summary>
         internal bool AloneBesideEmpty(LayerRun layer, int layerIndex, StateRun run, StateRun other) =>
             layerIndex == 0 && EmptyWithDefaults(layer, other) && run != null && MotionOf(layer.Def, run.Def) != null;
 
@@ -1245,7 +1246,9 @@ namespace Unbound.Runtime
         /// full whatever the transition's progress, also in the update the transition completes
         /// (measured; alone, the state without a motion writes the defaults). Contributions (events,
         /// root motion) take <paramref name="weight"/>: 1 during the transition (see
-        /// <see cref="AloneBesideEmpty"/>), none once it completed.</summary>
+        /// <see cref="AloneBesideEmpty"/>) and in the update a transition into the state without a
+        /// motion completes, whose root motion covers that whole update (6000.0.71f1,
+        /// tests/projects/humanoid emptyBack, generic.emptyBack).</summary>
         void SampleAtFullWeight(LayerRun layer, int layerIndex, StateRun run, float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
         {
             int first = m_Contributions.Count;
