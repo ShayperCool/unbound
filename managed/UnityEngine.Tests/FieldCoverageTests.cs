@@ -39,6 +39,10 @@ namespace Unbound.Tests
             for (int r = 0; r < 4; r++)
                 for (int c = 0; c < 4; c++) body.Float($"e{r}{c}");
         }
+        static void DeclaredIndexed(YNode body)
+        {
+            for (int i = 2; i < 6; i += 2) body.Int($"k{i}");
+        }
 
         [Fact]
         public void GeneratedFieldsFollowReadersAndHelpersWithoutInvokingThem()
@@ -60,6 +64,9 @@ namespace Unbound.Tests
             ReaderFieldSchema.Consume(matrix, ReaderFieldSchema.Fields(typeof(FieldCoverageTests), nameof(DeclaredMatrix), 1));
             Assert.True(matrix.Get("e33").CoverageRead);
             Assert.False(matrix.Get("e44").CoverageRead);
+            var indexed = YNode.MakeMap(Enumerable.Range(0, 7).Select(i => ($"k{i}", YNode.MakeScalar("0"))).ToArray());
+            ReaderFieldSchema.Consume(indexed, ReaderFieldSchema.Fields(typeof(FieldCoverageTests), nameof(DeclaredIndexed), 1));
+            Assert.Equal(new[] { "k2", "k4" }, indexed.Keys.Where((key, i) => indexed.Values[i].CoverageRead));
         }
 
         [Fact]

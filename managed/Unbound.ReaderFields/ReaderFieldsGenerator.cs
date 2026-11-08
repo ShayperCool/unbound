@@ -205,9 +205,8 @@ public sealed class ReaderFieldsGenerator : IIncrementalGenerator
                     Walk(loop.Statement, state, depth, stack, root);
                     return;
                 case ForStatementSyntax loop:
-                    if (loop.Declaration != null && loop.Condition is BinaryExpressionSyntax condition && condition.IsKind(SyntaxKind.LessThanExpression)
-                        && Model(condition.Right).GetConstantValue(condition.Right) is { HasValue: true, Value: int end } && end > 0 && end <= MaxExpandedLoopNames)
-                        foreach (var v in loop.Declaration.Variables) state.Text(v.Identifier.ValueText, Enumerable.Range(0, end).Select(i => i.ToString(CultureInfo.InvariantCulture)));
+                    if (loop.Declaration != null)
+                        foreach (var v in loop.Declaration.Variables) state.Text(v.Identifier.ValueText, LoopValues(loop, v));
                     if (loop.Condition != null) Eval(loop.Condition, state, depth, stack);
                     Walk(loop.Statement, state, depth, stack, root);
                     return;
@@ -225,6 +224,25 @@ public sealed class ReaderFieldsGenerator : IIncrementalGenerator
                     return;
             }
             foreach (var child in node.ChildNodes()) Walk(child, state, depth, stack, root);
+        }
+
+        IEnumerable<string> LoopValues(ForStatementSyntax loop, VariableDeclaratorSyntax variable)
+        {
+            string name = variable.Identifier.ValueText;
+            if (variable.Initializer == null || Model(variable.Initializer.Value).GetConstantValue(variable.Initializer.Value) is not { HasValue: true, Value: int start }
+                || loop.Condition is not BinaryExpressionSyntax condition || !condition.IsKind(SyntaxKind.LessThanExpression)
+                || condition.Left is not IdentifierNameSyntax id || id.Identifier.ValueText != name
+                || Model(condition.Right).GetConstantValue(condition.Right) is not { HasValue: true, Value: int end }
+                || loop.Incrementors.Count != 1) return new[] { "!unknown loop field names" };
+            var increment = loop.Incrementors[0];
+            int step = increment is PostfixUnaryExpressionSyntax post && post.IsKind(SyntaxKind.PostIncrementExpression) && post.Operand.ToString() == name
+                || increment is PrefixUnaryExpressionSyntax pre && pre.IsKind(SyntaxKind.PreIncrementExpression) && pre.Operand.ToString() == name ? 1
+                : increment is AssignmentExpressionSyntax assignment && assignment.IsKind(SyntaxKind.AddAssignmentExpression) && assignment.Left.ToString() == name
+                    && Model(assignment.Right).GetConstantValue(assignment.Right) is { HasValue: true, Value: int amount } ? amount : 0;
+            if (step <= 0 || (long)end - start > (long)MaxExpandedLoopNames * step) return new[] { "!unknown loop field names" };
+            var values = new List<string>();
+            for (long value = start; value < end; value += step) values.Add(value.ToString(CultureInfo.InvariantCulture));
+            return values;
         }
 
         HashSet<string> Eval(ExpressionSyntax expression, State state, int depth, HashSet<SyntaxNode> stack, HashSet<string> receiver = null)
@@ -446,7 +464,7 @@ public sealed class ReaderFieldsGenerator : IIncrementalGenerator
                     {
                         var next = content is InterpolatedStringTextSyntax literal ? Set(literal.TextToken.ValueText)
                             : content is InterpolationSyntax item ? Text(item.Expression, state) : Empty();
-                        if (next.Count == 0) next.Add("*");
+                        if (next.Count == 0) next.Add("!unknown interpolated field name");
                         parts = new(parts.SelectMany(p => next.Select(n => p + n)), StringComparer.Ordinal);
                     }
                     return parts;

@@ -64,10 +64,10 @@ pub fn managed_dir() -> Result<PathBuf> {
     {
         candidates.push(dir.join("managed"));
         candidates.push(dir.join("../managed"));
-        // Cargo's test executables sit one directory below the ordinary binary.
-        if dir.file_name().is_some_and(|name| name == "deps") {
-            candidates.push(dir.join("../../managed"));
-        }
+    }
+    // Cargo may keep test executables in a separate build directory.
+    if let Some(target) = std::env::var_os("CARGO_TARGET_DIR") {
+        candidates.push(PathBuf::from(target).join("managed"));
     }
     candidates.push(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/managed"));
     candidates
