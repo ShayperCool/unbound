@@ -570,6 +570,30 @@ public class ParticleTrailProbe : MonoBehaviour
                 }
     }
 
+    /// <summary>The minimum vertex distance controls off the float tie: 0.29 and 0.31 with particles
+    /// moving 0.1 a step (die0ntmv3 sits exactly on a three-step distance).</summary>
+    static void CapDistanceTieControls()
+    {
+        foreach (var (name, configure) in CapSystems)
+            foreach (float distance in new[] { 0.29f, 0.31f })
+                foreach (float dt in new[] { 0.02f, 0.05f, 0.1f })
+                {
+                    string key = "cap/" + name + "/die0ntmv" + distance.ToString("R", CultureInfo.InvariantCulture) + "/" + dt.ToString("R", CultureInfo.InvariantCulture);
+                    var ps = Make(key, s =>
+                    {
+                        configure(s);
+                        var t = s.trails; t.enabled = true; t.dieWithParticles = false; t.lifetime = 0.47f; t.minVertexDistance = distance;
+                    });
+                    int calls = Mathf.RoundToInt(1.2f / dt);
+                    for (int i = 0; i < calls; i++)
+                    {
+                        ps.Simulate(dt, true, i == 0, false);
+                        RecordLight(key + "/" + i, ps);
+                    }
+                    Done(ps);
+                }
+    }
+
     static readonly (string, Action<ParticleSystem>)[] CapSystems =
     {
         ("rate", s =>
@@ -730,6 +754,7 @@ public class ParticleTrailProbe : MonoBehaviour
         yield return Played();
         yield return CapPlayed(0.05f);
         yield return CapPlayed(0.02f);
+        CapDistanceTieControls();
         Record("complete", new List<float> { 1f });
         File.WriteAllText(s_Path, s_Out.ToString());
         Debug.Log("particle trails complete: " + s_Path);

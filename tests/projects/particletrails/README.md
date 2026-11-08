@@ -26,7 +26,8 @@ minimum vertex distance and with one of 0.3), stepped by
     python3 tests/projects/particletrails/run.py check                    # Unbound run + compare (the gate)
 
 The reference is `Reference/unity-6000.0.71f1/` (`values.jsonl`, 15 images); both captures were
-identical, values and image bytes. Values compare at the particle probes' bound (0.0002 absolute
+identical, values and image bytes (re-recorded with the `cap/*/die0ntmv0.29` and `die0ntmv0.31`
+controls: every earlier record and image unchanged). Values compare at the particle probes' bound (0.0002 absolute
 plus 0.0002 relative); images go through `particles/compare_images.py` (report only). Run output
 stays under `$XDG_CACHE_HOME/unbound/validation/runs/particletrails/`.
 
@@ -74,14 +75,17 @@ any other difference. Two concern dead particles, `world-trail-death-head` and t
   `dieWithParticles` off a rate birth into the slot a leaving carrier frees comes one step later in
   Unbound (the `die1` control matches every particle): the `carrier-expiry-tie` below.
 - `carrier-expiry-tie`: with trail lifetimes that are whole numbers of steps, carriers leave (and
-  free their slot) a step apart from Unity, in both directions. Unresolved; the working hypothesis
-  is a float tie where a carrier's newest point reaches the trail lifetime exactly at a step's end.
-  The same systems with the trail lifetime off the step grid (`cap/*/die0nt`) match every particle,
-  also with no minimum vertex distance (`cap/*/die0ntmv0`), so the last trail point a carrier keeps
-  is the one its own steps added (no point at its death).
-- `vertex-distance-tie`: with a minimum vertex distance of 0.3 and particles moving 0.1 a step
-  (`cap/*/die0ntmv3`), whether a point is added at exactly the minimum distance is a float tie that
-  Unity decides per particle (by its direction).
+  free their slot) a step apart from Unity, in both directions: an insignificant float tie where a
+  carrier's newest point reaches the trail lifetime exactly at a step's end. The same systems with
+  the trail lifetime off the step grid (`cap/*/die0nt`) match every particle, also with no minimum
+  vertex distance (`cap/*/die0ntmv0`), so the last trail point a carrier keeps is the one its own
+  steps added (no point at its death).
+- `vertex-distance-tie`: with a minimum vertex distance that keeps a particle from taking a point
+  every step (0.3 with particles moving 0.1 a step, `cap/*/die0ntmv3`), a birth waiting for the slot
+  of a particle leaving at zero life comes a step later in Unbound. The controls off that tie
+  (`cap/*/die0ntmv0.29`, `die0ntmv0.31`, recorded last) differ the same way, so it is not a float
+  tie but an unresolved rule tied to the minimum distance; with no minimum distance every particle
+  matches.
 - `restored-trail-other-index`: right after `SetTrails` gives a particle a trail another particle
   left, Unity draws it ending at its oldest kept point, Unbound cut at the lifetime; with the trail
   ratio such a carrier's trail samples other points afterwards.
