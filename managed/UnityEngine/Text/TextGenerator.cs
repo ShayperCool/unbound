@@ -509,7 +509,7 @@ namespace Unbound.Runtime
                 // A character the font has no pixels for still gets its (empty) quad; one the font
                 // lacks does not advance (measured), one it has keeps its advance.
                 item.Visible = true;
-                if (item.Glyph == null || !item.Glyph.Found) item.Advance = 0f;
+                if (item.CustomIndex < 0 && (item.Glyph == null || !item.Glyph.Found)) item.Advance = 0f;
                 if (item.Glyph != null)
                     (empty ??= new List<GlyphKey>()).Add(item.Glyph.Key);
             }

@@ -236,7 +236,7 @@ namespace UnityEngine.Tests
         {
             VisualElement root = null;
             var logs = Logged(() => root = Clone("<UxmlControlProbes.ValueProbe my-bounds=\"1,2\" />").Root, "my-bounds");
-            Assert.Equal(default(Bounds), Assert.IsType<ValueProbe>(root[0]).myBounds);
+            Assert.Equal(new Bounds(Vector3.one, Vector3.one), Assert.IsType<ValueProbe>(root[0]).myBounds);
             Assert.Contains(logs, l => l.Contains("'1,2' is not 6 comma-separated numbers") && l.Contains("keeps its value"));
         }
 
@@ -575,7 +575,7 @@ namespace UxmlControlProbes
         [UxmlAttribute] public Hash128 myHash;
         [UxmlAttribute] public Vector3 myVector;
         [UxmlAttribute] public RectInt myRectInt;
-        [UxmlAttribute] public Bounds myBounds;
+        [UxmlAttribute] public Bounds myBounds = new Bounds(Vector3.one, Vector3.one);
     }
 
     [Serializable]

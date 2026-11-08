@@ -966,14 +966,15 @@ namespace Unbound.UIElements
     //   - a Background is made by the factory of the asset's type; a Texture2D, RenderTexture, Sprite or
     //     VectorImage only, never another texture type (Cubemap, Texture3D, ...) nor an image derived
     //     from the asset (no sprite's texture, no texture's sprite);
-    //   - a [UxmlAttribute] of a Texture type takes an asset of that type only;
-    //   - an empty value is no image (an empty Background, a null texture);
+    //   - (a [UxmlAttribute] of a Texture type is an object member: UxmlAttributeValues.ResolveReference,
+    //     measured);
+    //   - an empty value is no image (an empty Background);
     //   - each of these is an error the caller reports once, the value kept: no asset at the
     //     reference, an asset of another class, a texture type a Background cannot show, and a #name
     //     (without a fileID that resolves) naming more than one asset the value could take.
     /// <summary>UXML asset references read as images: Background values (Button and Tab `icon-image`, a
-    /// [UxmlAttribute] of type Background) and Texture values (a [UxmlAttribute] of type Texture or a
-    /// subclass).</summary>
+    /// [UxmlAttribute] of type Background); also ListView/TreeView templates. Texture members resolve
+    /// as other object members do.</summary>
     internal static class UxmlImageReferences
     {
         const string BackgroundTypes = "Texture2D, RenderTexture, Sprite or VectorImage";
