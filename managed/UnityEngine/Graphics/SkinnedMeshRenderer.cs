@@ -182,9 +182,11 @@ namespace UnityEngine
                 m_Skinned.name = mesh.name + " (Skinned)";
                 m_SkinnedSource = mesh;
             }
-            var positions = (Vector3[])mesh.m_Vertices.Clone();
-            var normals = mesh.m_Normals != null && mesh.m_Normals.Length == positions.Length ? (Vector3[])mesh.m_Normals.Clone() : null;
-            var tangents = mesh.m_Tangents != null && mesh.m_Tangents.Length == positions.Length ? (Vector4[])mesh.m_Tangents.Clone() : null;
+            // The deformed copy keeps its arrays from frame to frame: refilled here, then given
+            // back to it, so a frame's skinning allocates nothing.
+            var positions = Refill(ref m_DeformedPositions, mesh.m_Vertices);
+            var normals = mesh.m_Normals != null && mesh.m_Normals.Length == positions.Length ? Refill(ref m_DeformedNormals, mesh.m_Normals) : null;
+            var tangents = mesh.m_Tangents != null && mesh.m_Tangents.Length == positions.Length ? Refill(ref m_DeformedTangents, mesh.m_Tangents) : null;
             FitWeights();
             mesh.AddBlendShapes(m_BlendShapeWeights, positions, normals, tangents);
             if (IsSkinned)
@@ -207,11 +209,23 @@ namespace UnityEngine
                 }
             }
             m_Skinned.ShareDrawIndices(mesh);
-            m_Skinned.vertices = positions;
-            if (normals != null) m_Skinned.normals = normals;
-            if (tangents != null) m_Skinned.tangents = tangents;
+            m_Skinned.AdoptVertices(positions);
+            if (normals != null) m_Skinned.AdoptNormals(normals);
+            if (tangents != null) m_Skinned.AdoptTangents(tangents);
             m_Skinned.RecalculateBounds();
             return m_Skinned;
+        }
+
+        Vector3[] m_DeformedPositions, m_DeformedNormals;
+        Vector4[] m_DeformedTangents;
+
+        /// <summary>A copy of <paramref name="source"/> in <paramref name="buffer"/>, made anew
+        /// only when the length changes.</summary>
+        static T[] Refill<T>(ref T[] buffer, T[] source)
+        {
+            if (buffer == null || buffer.Length != source.Length) buffer = new T[source.Length];
+            Array.Copy(source, buffer, source.Length);
+            return buffer;
         }
 
         /// <summary>The vertices, normals and tangents (in the mesh's space) into world space by the

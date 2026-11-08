@@ -189,28 +189,32 @@ namespace UnityEngine
                 }
                 return (Vector3[])m_Vertices.Clone();
             }
-            set
+            set => AdoptVertices(value != null ? (Vector3[])value.Clone() : Array.Empty<Vector3>());
+        }
+
+        /// <summary>Mesh.vertices with an array the mesh keeps as it is (not a copy): the caller
+        /// no longer changes it, or sets it again after every change.</summary>
+        internal void AdoptVertices(Vector3[] value)
+        {
+            m_Vertices = value;
+            if (m_Layout != null && !LayoutHas(VertexAttribute.Position))
             {
-                m_Vertices = value != null ? (Vector3[])value.Clone() : Array.Empty<Vector3>();
-                if (m_Layout != null && !LayoutHas(VertexAttribute.Position))
-                {
-                    Array.Resize(ref m_Layout, m_Layout.Length + 1);
-                    m_Layout[m_Layout.Length - 1] = new VertexAttributeDescriptor(VertexAttribute.Position);
-                }
-                // Unity 6000.0 Mesh.vertices documents that existing vertex attributes resize
-                // with the positions. Null channels stay absent; UV dimensions stay unchanged.
-                int count = m_Vertices.Length;
-                ResizeVertexChannel(ref m_Normals, count);
-                ResizeVertexChannel(ref m_Tangents, count);
-                ResizeVertexChannel(ref m_Colors, count);
-                ResizeVertexChannel(ref m_BoneWeights, count);
-                for (int channel = 0; channel < m_UVs.Length; channel++)
-                    ResizeVertexChannel(ref m_UVs[channel], count);
-                RecalculateBounds();
-                InvalidatePackedChannel(VertexAttribute.Position);
-                ResizePackedChannels(count);
-                Changed(indices: false);
+                Array.Resize(ref m_Layout, m_Layout.Length + 1);
+                m_Layout[m_Layout.Length - 1] = new VertexAttributeDescriptor(VertexAttribute.Position);
             }
+            // Unity 6000.0 Mesh.vertices documents that existing vertex attributes resize
+            // with the positions. Null channels stay absent; UV dimensions stay unchanged.
+            int count = m_Vertices.Length;
+            ResizeVertexChannel(ref m_Normals, count);
+            ResizeVertexChannel(ref m_Tangents, count);
+            ResizeVertexChannel(ref m_Colors, count);
+            ResizeVertexChannel(ref m_BoneWeights, count);
+            for (int channel = 0; channel < m_UVs.Length; channel++)
+                ResizeVertexChannel(ref m_UVs[channel], count);
+            RecalculateBounds();
+            InvalidatePackedChannel(VertexAttribute.Position);
+            ResizePackedChannels(count);
+            Changed(indices: false);
         }
 
         static void ResizeVertexChannel<T>(ref T[] channel, int count)
@@ -221,13 +225,25 @@ namespace UnityEngine
         public Vector3[] normals
         {
             get => m_Normals != null ? (Vector3[])m_Normals.Clone() : Array.Empty<Vector3>();
-            set { m_Normals = Checked(value, "normals"); InvalidatePackedChannel(VertexAttribute.Normal); Changed(indices: false); }
+            set => AdoptNormals(Checked(value, "normals"));
+        }
+
+        /// <summary>Mesh.normals with a checked array the mesh keeps (see <see cref="AdoptVertices"/>).</summary>
+        internal void AdoptNormals(Vector3[] value)
+        {
+            m_Normals = value; InvalidatePackedChannel(VertexAttribute.Normal); Changed(indices: false);
         }
 
         public Vector4[] tangents
         {
             get => m_Tangents != null ? (Vector4[])m_Tangents.Clone() : Array.Empty<Vector4>();
-            set { m_Tangents = Checked(value, "tangents"); InvalidatePackedChannel(VertexAttribute.Tangent); Changed(indices: false); }
+            set => AdoptTangents(Checked(value, "tangents"));
+        }
+
+        /// <summary>Mesh.tangents with a checked array the mesh keeps (see <see cref="AdoptVertices"/>).</summary>
+        internal void AdoptTangents(Vector4[] value)
+        {
+            m_Tangents = value; InvalidatePackedChannel(VertexAttribute.Tangent); Changed(indices: false);
         }
 
         public Color[] colors
