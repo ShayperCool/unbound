@@ -292,6 +292,40 @@ public partial class ParticleRandomProbe : MonoBehaviour
             var l = ps.limitVelocityOverLifetime; l.enabled = true; l.limit = 100f; l.drag = Two(0f, 2f);
         });
 
+        // Inherit Velocity (Initial, Current) and Lifetime by Emitter Speed, from a custom
+        // emitter velocity in world space: their random modes' per-particle values.
+        foreach (var (name, mode, curve) in new[]
+                 {
+                     ("initial/two", ParticleSystemInheritVelocityMode.Initial, Two(0.2f, 1.5f)),
+                     ("initial/curves", ParticleSystemInheritVelocityMode.Initial, new ParticleSystem.MinMaxCurve(1.5f, Rise, Fall)),
+                     ("current/two", ParticleSystemInheritVelocityMode.Current, Two(0f, 1f)),
+                     ("current/curves", ParticleSystemInheritVelocityMode.Current, new ParticleSystem.MinMaxCurve(1.5f, Rise, Fall)),
+                 })
+        {
+            var (m0, c0) = (mode, curve);
+            Simulated("inherit/" + name, ps =>
+            {
+                var m = ps.main; m.simulationSpace = ParticleSystemSimulationSpace.World;
+                m.emitterVelocityMode = ParticleSystemEmitterVelocityMode.Custom; m.emitterVelocity = new Vector3(2f, 1f, -3f);
+                var iv = ps.inheritVelocity; iv.enabled = true; iv.mode = m0; iv.curve = c0;
+            });
+        }
+        foreach (var (name, curve, range) in new[]
+                 {
+                     ("two", Two(0.3f, 2f), new Vector2(0f, 5f)),
+                     ("curves", new ParticleSystem.MinMaxCurve(2f, Rise, Fall), new Vector2(1f, 6f)),
+                     ("below", Two(0.5f, 1.5f), new Vector2(6f, 9f)),
+                 })
+        {
+            var (c0, r0) = (curve, range);
+            Simulated("lbes/" + name, ps =>
+            {
+                var m = ps.main; m.startLifetime = Two(1f, 3f);
+                m.emitterVelocityMode = ParticleSystemEmitterVelocityMode.Custom; m.emitterVelocity = new Vector3(2f, 1f, -3f);
+                var l = ps.lifetimeByEmitterSpeed; l.enabled = true; l.curve = c0; l.range = r0;
+            });
+        }
+
         // Force over Lifetime, Inherit-free.
         Simulated("force/two", ps =>
         {

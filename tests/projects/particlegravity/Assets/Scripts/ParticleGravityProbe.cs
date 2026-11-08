@@ -224,6 +224,22 @@ public class ParticleGravityProbe : MonoBehaviour
         {
             var main = s.main; main.gravityModifier = new ParticleSystem.MinMaxCurve(1.5f, rise, fall);
         }, 5));
+        // Random constants given with the minimum above the maximum.
+        Step("random/constants_reversed", Make("random", s =>
+        {
+            var main = s.main; main.gravityModifier = new ParticleSystem.MinMaxCurve(2f, -0.5f);
+        }, 5));
+        // A start delay: particles emitted during it fall under the modifier curve, read at the
+        // system time the delay leaves (constant and rising curve), looping and not.
+        foreach (var (name, loop) in new[] { ("delay/curve", true), ("delay/curve_once", false) })
+        {
+            bool l = loop;
+            Step(name, Make("delay", s =>
+            {
+                var main = s.main; main.startDelay = 0.2f; main.loop = l;
+                main.gravityModifier = new ParticleSystem.MinMaxCurve(2f, rise);
+            }), (i, ps) => { if (i == 1 || i == 6) ps.Emit(2); });
+        }
     }
 
     void Start() => StartCoroutine(Probe());

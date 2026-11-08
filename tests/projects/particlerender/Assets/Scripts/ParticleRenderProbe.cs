@@ -422,6 +422,33 @@ public partial class ParticleRenderProbe : MonoBehaviour
 
     // ------------------------------------------------------------------ stretched billboards
 
+    /// <summary>Texture Sheet Animation's random modes: per particle, the frame over time, the
+    /// start frame and a random row, read from the baked quads' texture coordinates.</summary>
+    static void Sheets()
+    {
+        var rise = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+        var fall = AnimationCurve.Linear(0f, 1f, 1f, 0.2f);
+        var cases = new (string, Action<ParticleSystem.TextureSheetAnimationModule>)[]
+        {
+            ("grid_two", t => { t.frameOverTime = new ParticleSystem.MinMaxCurve(0f, 1f); }),
+            ("grid_curves", t => { t.frameOverTime = new ParticleSystem.MinMaxCurve(1f, rise, fall); }),
+            ("grid_start", t => { t.frameOverTime = new ParticleSystem.MinMaxCurve(0.5f, rise); t.startFrame = new ParticleSystem.MinMaxCurve(0f, 5f); }),
+            ("row_random", t => { t.animation = ParticleSystemAnimationType.SingleRow; t.rowMode = ParticleSystemAnimationRowMode.Random; t.frameOverTime = new ParticleSystem.MinMaxCurve(1f, rise); }),
+        };
+        foreach (var (name, configure) in cases)
+        {
+            var ps = Make("sheet/" + name, s =>
+            {
+                var t = s.textureSheetAnimation; t.enabled = true; t.numTilesX = 4; t.numTilesY = 2;
+                configure(t);
+            });
+            ps.Emit(8);
+            ps.Simulate(0.7f, true, false, false);
+            BakeMesh("sheet/" + name, ps, s_BakeCamera);
+            Done(ps);
+        }
+    }
+
     static ParticleSystem MakeStretch(string name, Action<ParticleSystemRenderer> configure, Action<ParticleSystem> system = null, bool size3D = false)
     {
         var ps = Make(name, s =>
@@ -1158,6 +1185,7 @@ public partial class ParticleRenderProbe : MonoBehaviour
         BakeTextures();
         BakeSizes();
         Stretched();
+        Sheets();
         yield return Culling();
         yield return CameraVelocity();
         MeshRotation();
