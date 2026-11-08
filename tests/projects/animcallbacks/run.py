@@ -111,7 +111,8 @@ def main():
         if result.get('exit_code') != 0 or result.get('forced_exit'):
             return 1
         for path in sorted((project / 'Assets/Resources').iterdir()):
-            if path.name.split('.')[0] in ('GenericEvents', 'HumanEvents', 'LegacyEvents', 'GenericOrder', 'HumanOrder'):
+            if path.name.split('.')[0] in ('GenericEvents', 'HumanEvents', 'LegacyEvents', 'GenericOrder', 'HumanOrder',
+                                            'GenericRoot', 'HumanPlain'):
                 shutil.copy2(path, PROBE / 'Assets/Resources' / path.name)
                 print('wrote', (PROBE / 'Assets/Resources' / path.name).relative_to(REPO))
         return 0

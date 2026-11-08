@@ -24,6 +24,7 @@ public class AnimCallbacks : MonoBehaviour
     static readonly string[] Cases = {
         "genericController", "humanController", "twoHumans", "humanLegacy", "genericGraph", "humanGraph",
         "humanManual", "humanUpdateCall", "humanFixed", "humanCulled", "humanControllerGraph",
+        "rootPlain", "rootMove", "rootApply", "rootGraph", "humanPlain",
     };
     const int CaseFrames = 8;
     int index = -1, age, startFrame;
@@ -146,7 +147,7 @@ public class AnimCallbacks : MonoBehaviour
         return string.Join(" ", parts);
     }
 
-    Observer Human(string label, Vector3 at, string controller)
+    Observer Human(string label, Vector3 at, string controller, bool moves = true)
     {
         var go = Object.Instantiate(Resources.Load<GameObject>("HumanA"));
         go.SetActive(false);
@@ -156,10 +157,10 @@ public class AnimCallbacks : MonoBehaviour
         animator.runtimeAnimatorController = controller == null ? null : Resources.Load<RuntimeAnimatorController>(controller);
         animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
         animator.applyRootMotion = true;
-        return Attach(go, label);
+        return Attach(go, label, moves);
     }
 
-    Observer Generic(string label, Vector3 at, string controller)
+    Observer Generic(string label, Vector3 at, string controller, bool moves = true, bool rootMotion = true)
     {
         var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
         go.SetActive(false);
@@ -170,27 +171,29 @@ public class AnimCallbacks : MonoBehaviour
         var animator = go.AddComponent<Animator>();
         animator.runtimeAnimatorController = controller == null ? null : Resources.Load<RuntimeAnimatorController>(controller);
         animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-        animator.applyRootMotion = true;
-        return Attach(go, label);
+        animator.applyRootMotion = rootMotion;
+        return Attach(go, label, moves);
     }
 
-    Observer Attach(GameObject go, string label)
+    /// <summary>A subject with OnAnimatorMove and OnAnimatorIK (<see cref="Mover"/>), or with
+    /// neither (only the pose observer and its event receiver).</summary>
+    Observer Attach(GameObject go, string label, bool moves = true)
     {
         cleanup.Add(go);
-        var o = go.AddComponent<Observer>();
+        var o = moves ? go.AddComponent<Mover>() : go.AddComponent<Observer>();
         o.label = label;
         o.Snapshot();
         Subjects.Add(o);
         return o;
     }
 
-    PlayableGraph Graph(Observer o, string clip, DirectorUpdateMode mode)
+    PlayableGraph Graph(Observer o, string clip, DirectorUpdateMode mode, bool playableIK = true)
     {
         var g = PlayableGraph.Create(Mode);
         g.SetTimeUpdateMode(mode);
         var output = AnimationPlayableOutput.Create(g, "Animation", o.GetComponent<Animator>());
         var playable = AnimationClipPlayable.Create(g, Resources.Load<AnimationClip>(clip));
-        playable.SetApplyPlayableIK(true);
+        playable.SetApplyPlayableIK(playableIK);
         output.SetSourcePlayable(playable);
         g.Play();
         return g;
@@ -242,10 +245,19 @@ public class AnimCallbacks : MonoBehaviour
             case "humanControllerGraph":
                 main = Human("h", Vector3.zero, "HumanOrder");
                 break;
+            // The root's own position curves and a child's, with no script movement callback, with
+            // OnAnimatorMove, with builtin root motion, and from a graph output; then a humanoid
+            // with neither movement nor IK consumers (a controller without behaviours or IK pass).
+            case "rootPlain": main = Generic("g", Vector3.zero, "GenericRoot", moves: false, rootMotion: false); break;
+            case "rootMove": main = Generic("g", Vector3.zero, "GenericRoot", moves: true, rootMotion: false); break;
+            case "rootApply": main = Generic("g", Vector3.zero, "GenericRoot", moves: false, rootMotion: true); break;
+            case "rootGraph": main = Generic("g", Vector3.zero, null, moves: false, rootMotion: false); break;
+            case "humanPlain": main = Human("h", Vector3.zero, "HumanPlain", moves: false); break;
         }
         foreach (var s in Subjects) s.gameObject.SetActive(true);
         if (Mode == "genericGraph") graph = Graph(main, "GenericEvents", DirectorUpdateMode.GameTime);
         if (Mode == "humanGraph" || Mode == "humanControllerGraph") graph = Graph(main, "HumanEvents", DirectorUpdateMode.GameTime);
+        if (Mode == "rootGraph") graph = Graph(main, "GenericRoot", DirectorUpdateMode.GameTime, playableIK: false);
         if (Mode == "humanManual") graph = Graph(main, "HumanEvents", DirectorUpdateMode.Manual);
         if (Mode == "humanUpdateCall") updated = main.GetComponent<Animator>();
         Log("setup.done", States());
@@ -259,7 +271,7 @@ public class AnimCallbacks : MonoBehaviour
     }
 }
 
-/// <summary>Logs the Animator's script callbacks with the pose and root state.</summary>
+/// <summary>Records the subject's pose and root state and logs its clip events.</summary>
 public class Observer : MonoBehaviour
 {
     public string label;
@@ -304,9 +316,15 @@ public class Observer : MonoBehaviour
         "pose=" + (PoseSame() ? "old" : "new") + ",root=" + (Same(transform.position, rootPosition) ? "still" : "moved");
 
     // Every subject's state: whether other Animators were already moved or posed.
-    void Visit(string e, string detail = "") =>
+    protected void Visit(string e, string detail = "") =>
         AnimCallbacks.Log(label + "." + e, (detail.Length > 0 ? detail + " " : "") + AnimCallbacks.States());
 
+    void OnClipEvent(string clip) => Visit("event", clip);
+}
+
+/// <summary>An <see cref="Observer"/> that also logs the Animator's script callbacks.</summary>
+public class Mover : Observer
+{
     void OnAnimatorMove()
     {
         Visit("OnAnimatorMove");
@@ -314,7 +332,6 @@ public class Observer : MonoBehaviour
     }
 
     void OnAnimatorIK(int layer) => Visit("OnAnimatorIK", "layer=" + layer);
-    void OnClipEvent(string clip) => Visit("event", clip);
 }
 
 /// <summary>A legacy Animation's event, between the Animators' two animation leaves.</summary>

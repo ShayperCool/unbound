@@ -86,9 +86,29 @@ public static class ProbeRunner
         AnimationUtility.SetAnimationEvents(legacy, Events("LegacyEvents"));
         AssetDatabase.CreateAsset(legacy, "Assets/Resources/LegacyEvents.anim");
 
+        var root = new AnimationClip { name = "GenericRoot", frameRate = 60f };
+        AnimationUtility.SetEditorCurve(root, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition.y"),
+            AnimationCurve.Linear(0f, 0f, .5f, 1f));
+        AnimationUtility.SetEditorCurve(root, EditorCurveBinding.FloatCurve("Marker", typeof(Transform), "m_LocalPosition.x"),
+            AnimationCurve.Linear(0f, 0f, .5f, 1f));
+        var rootSettings = AnimationUtility.GetAnimationClipSettings(root);
+        rootSettings.loopTime = true;
+        AnimationUtility.SetAnimationClipSettings(root, rootSettings);
+        AssetDatabase.CreateAsset(root, "Assets/Resources/GenericRoot.anim");
+
         Controller("GenericOrder", generic);
         Controller("HumanOrder", human);
+        Plain("GenericRoot", root);
+        Plain("HumanPlain", human);
         AssetDatabase.SaveAssets();
+    }
+
+    /// <summary>One layer without an IK pass, one state without behaviours.</summary>
+    static void Plain(string name, AnimationClip clip)
+    {
+        var controller = AnimatorController.CreateAnimatorControllerAtPath("Assets/Resources/" + name + ".controller");
+        var state = controller.layers[0].stateMachine.AddState("A");
+        state.motion = clip;
     }
 
     /// <summary>Base layer: A, then B after 12% of A with a 0.04 s transition; a second layer at

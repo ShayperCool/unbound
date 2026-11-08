@@ -17,8 +17,12 @@ per eight frames (`Time.captureFramerate` 50, fixed step 0.02 s):
 | `humanFixed` | `AnimatorUpdateMode.Fixed` |
 | `humanCulled` | CullUpdateTransforms, off screen |
 | `humanControllerGraph` | `HumanOrder` and a GameTime clip output on the same Animator |
+| `rootPlain`, `rootMove`, `rootApply` | a generic Animator playing `GenericRoot` (curves on its own position and on `Marker`): no movement script and root motion off; `OnAnimatorMove` and root motion off; builtin root motion |
+| `rootGraph` | `GenericRoot` from a GameTime clip output, no movement script, root motion off |
+| `humanPlain` | the humanoid with `HumanPlain` (no IK pass, no behaviours) and no movement or IK script |
 
-Both controllers (`ProbeRunner.Create`) have a base layer A → B (exit time 0.12, a 0.04 s fixed
+The first eleven cases' subjects have `OnAnimatorMove` and `OnAnimatorIK`; the last five have
+neither. `GenericOrder` and `HumanOrder` (`ProbeRunner.Create`) have a base layer A → B (exit time 0.12, a 0.04 s fixed
 transition) and a second layer at weight 0.5 playing C; both layers have an IK pass, and every state
 has an `OrderState` behaviour logging OnStateEnter/Update/Exit/Move/IK. The clips carry events at
 0.03 s and 0.25 s. Every callback logs its leaf and, for every subject, whether its pose (any
@@ -47,7 +51,7 @@ layer with an IK pass. Neither page names player-loop leaves, orders callbacks a
 says when transforms are written. Everything below is observed in 6000.0.71f1 for these cases, not a
 documented guarantee.
 
-## Observed (two byte-identical captures, 1584 records)
+## Observed (two byte-identical captures, 1928 records)
 
 - PreLateUpdate.DirectorUpdateAnimationBegin runs every Animator's state machines first, Animator by
   Animator: clip events (of the controller and of its playable outputs), then OnStateExit/Update/Enter.
@@ -56,6 +60,10 @@ documented guarantee.
 - PreLateUpdate.DirectorUpdateAnimationEnd: the humanoids' poses are written, then the IK passes run
   layer by layer over all Animators (OnAnimatorIK(layer), then OnStateIK of that layer's states).
   A generic Animator's pose is written in the same leaf, after those IK passes.
+- The Animator's own Transform is written in the Begin leaf, with the movement: its position curves
+  (with root motion off and no movement script, also from a graph output) and its root motion.
+  Only the transforms below it wait for the End leaf. Whether the Animator has a movement or IK
+  script, an IK pass or state behaviours does not change this.
 - AnimatorUpdateMode.Fixed: the same split over FixedUpdate.DirectorFixedUpdate and
   FixedUpdate.DirectorFixedUpdatePostPhysics. CullUpdateTransforms: the Begin part only.
 - `PlayableGraph.Evaluate` and `Animator.Update` run everything at once in the calling script, in the
@@ -66,4 +74,5 @@ documented guarantee.
 
 Not covered: several Animators with playable outputs and controllers at once, Animators enabled or
 destroyed between the two leaves, the generic write order relative to humanoids without an IK pass,
-interrupted transitions, sub-state machines and other releases.
+interrupted transitions, sub-state machines, the root's rotation and scale curves and the Animator's
+non-Transform properties (when they are written), and other releases.
