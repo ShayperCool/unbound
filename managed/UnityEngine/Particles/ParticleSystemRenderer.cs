@@ -357,6 +357,11 @@ namespace UnityEngine
 
         Bounds m_CullingBounds;
         bool m_CullingBoundsCoverDraw;
+        /// <summary>The system's bounds generation and simulation-to-world matrix the culling
+        /// bounds were computed with: frozen bounds follow the emitter's pose since then.</summary>
+        int m_CullingBoundsGeneration = -1;
+        Matrix4x4 m_CullingBoundsToWorld;
+        Bounds m_ComputedCullingBounds;
         int m_CullingBoundsFrame = -1, m_CullingBoundsCount = -1;
         float m_CullingBoundsTime = -1f;
 
@@ -394,8 +399,16 @@ namespace UnityEngine
             {
                 // Frames with zero frame time keep the bounds the system had (see
                 // ParticleSystem.m_HasBounds); a render before any update gives it bounds.
-                if (ps.m_BoundsFrozen && m_CullingBoundsFrame >= 0) return;
+                if (ps.m_BoundsFrozen && m_CullingBoundsFrame >= 0 && m_CullingBoundsGeneration == ps.m_BoundsGeneration)
+                {
+                    // The kept bounds move with the emitter (a local-space system moved while time
+                    // stands still; world-space ones stay put).
+                    var moved = ps.SimulationToWorld() * m_CullingBoundsToWorld.inverse;
+                    m_CullingBounds = m_CullingBoundsCoverDraw ? TransformBounds(m_ComputedCullingBounds, moved) : bounds;
+                    return;
+                }
                 if (!ps.m_HasBounds && !ps.m_DrawPending) ps.m_HasBounds = true;
+                m_CullingBoundsGeneration = ps.m_BoundsGeneration;
             }
             if (ps != null && frame == m_CullingBoundsFrame && ps.m_TotalTime == m_CullingBoundsTime && ps.m_Count == m_CullingBoundsCount) return;
             m_CullingBoundsFrame = frame;
@@ -446,6 +459,8 @@ namespace UnityEngine
             // point at its emitter is seen only in view (6000.0.71f1, tests/projects/particlerender
             // firstvis/*_empty_*), so the point keeps a minimal extent.
             m_CullingBounds = new Bounds((min + max) * 0.5f, Vector3.Max(max - min, new Vector3(MinCullingExtent, MinCullingExtent, MinCullingExtent)));
+            m_ComputedCullingBounds = m_CullingBounds;
+            m_CullingBoundsToWorld = toWorld;
         }
 
         /// <summary>The smallest size of particle culling bounds (see PrepareCullingBounds).</summary>

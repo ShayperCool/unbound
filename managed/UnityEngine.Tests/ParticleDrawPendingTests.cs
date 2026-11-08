@@ -125,6 +125,59 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
 
+        /// <summary>A Simulate during frames that keep bounds, and an emitter moved meanwhile: the
+        /// kept bounds follow (Simulate gives new ones; a local-space system's move carries them).</summary>
+        [Fact]
+        public void KeptBoundsFollowASimulateAndTheEmitter()
+        {
+            var ps = Make();
+            try
+            {
+                var renderer = ps.GetComponent<ParticleSystemRenderer>();
+                ps.Play();
+                ps.Emit(new ParticleSystem.EmitParams { position = Vector3.zero, startSize = 0.3f, applyShapeToPosition = true }, 1);
+                Frame(0.02f);
+                renderer.PrepareCullingBounds();
+                var before = renderer.CullingBounds.center;
+                Frame(0f);
+                ps.transform.position = new Vector3(10f, 0f, 0f);
+                renderer.PrepareCullingBounds();
+                Assert.Equal(before.x + 10f, renderer.CullingBounds.center.x, 3);
+                Assert.Equal(before.y, renderer.CullingBounds.center.y, 3);
+                // Simulate in a frame that keeps bounds: the next culling takes the new particles.
+                ps.Emit(new ParticleSystem.EmitParams { position = new Vector3(0f, 20f, 0f), startSize = 0.3f, applyShapeToPosition = true }, 1);
+                ps.Simulate(0f, true, false);
+                Frame(0f);
+                renderer.PrepareCullingBounds();
+                Assert.True(renderer.CullingBounds.max.y > 19f);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        /// <summary>Play on a playing system whose emission module is off starts it again from
+        /// time 0 and keeps its particles; an emitting one plays on (particlerender
+        /// firstvis/*/shown_play, cull/catchup_replay).</summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void PlayRestartsAPlayingSystemThatIsNotEmitting(bool emitting)
+        {
+            var ps = Make();
+            try
+            {
+                var emission = ps.emission; emission.enabled = emitting; emission.rateOverTime = 0f;
+                ps.Play();
+                ps.Emit(1);
+                Frame(0.02f);
+                Frame(0.02f);
+                ps.Play();
+                if (emitting) Assert.True(ps.time > 0.03f);
+                else Assert.Equal(0f, ps.time);
+                Assert.Equal(1, ps.particleCount);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
         [Fact]
         public void SimulateGivesEverySimulatedSystemItsBoundsBack()
         {

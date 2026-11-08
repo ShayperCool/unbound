@@ -1200,6 +1200,7 @@ namespace UnityEngine
             // and later reads keep them (only a switch to Mesh mode was measured).
             if (CullingRenderer is ParticleSystemRenderer meshRenderer && meshRenderer.renderMode == ParticleSystemRenderMode.Mesh)
                 MaterializeAxisOfRotation();
+            m_BoundsGeneration++;
             SubEmittersChanged();
             m_HasLastPosition = false;
             if (m_Main.playOnAwake && m_SubEmitterParent == null)
@@ -1292,11 +1293,15 @@ namespace UnityEngine
         // had bounds then has nothing to draw (m_DrawPending: not drawn, not visible) until it
         // gets them.
         internal bool m_HasBounds, m_BoundsFrozen, m_DrawPending;
+        /// <summary>Changes when the system gets bounds anew (Simulate, Play On Awake, enabling):
+        /// the renderer then recomputes them once even in a frame that keeps bounds.</summary>
+        internal int m_BoundsGeneration;
 
         internal void GiveBounds()
         {
             m_HasBounds = true;
             m_BoundsFrozen = m_DrawPending = false;
+            m_BoundsGeneration++;
         }
 
         internal void CullingFrameUpdate()
