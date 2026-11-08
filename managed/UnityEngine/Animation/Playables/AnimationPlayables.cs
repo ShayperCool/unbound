@@ -76,10 +76,13 @@ namespace Unbound.Runtime.Playables
                 if (e.Replay) into.BodyMotion = m_LastBody;
                 else
                 {
+                    // The single-precision time the pose and events use, divided in single precision
+                    // (humanoid longClipA/B at 70000 s: closer to the Editor than the double time, not
+                    // matched; see docs/COMPATIBILITY_GAPS.md).
                     human.SampleMotion(Clip, Clip.HumanClipMotion, new Unbound.Runtime.Humanoid.HumanClipMotionInput
                     {
-                        Time = (float)(node.Time / Clip.length),
-                        PreviousTime = (float)((node.LastPlaying ? node.PreviousTime : node.Time) / Clip.length), Speed = 1f,
+                        Time = (float)Single(node.Time) / Clip.length,
+                        PreviousTime = (float)Single(node.LastPlaying ? node.PreviousTime : node.Time) / Clip.length, Speed = 1f,
                     }, out into.BodyMotion);
                     m_LastBody = into.BodyMotion;
                 }
