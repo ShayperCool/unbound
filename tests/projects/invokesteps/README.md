@@ -25,8 +25,10 @@ probe gate compares all files without changing the original reference values.
 
 `scale.jsonl` exercises the documented scaled-time guarantee after these windows. The timer
 is paused for four frames, then advances at half speed for twelve frames. Neither interval
-reaches the one-second delay in scaled time; unscaled time would have reached it. Resuming
-normal speed produces repeated calls, whose intervals are checked in scaled time.
+reaches the one-second delay in scaled time; unscaled time would have reached it. Continuing at
+half speed produces multiple calls, whose intervals are checked in scaled time. A second pause
+stops that active timer; it resumes again at half speed. `scaled-repeat.jsonl` records these
+additional controls, so an unscaled repeat interval cannot pass the scaled-time check.
 
 [Invoke](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.Invoke.html)
 documents the delay and leaves other execution order dependent on timing.

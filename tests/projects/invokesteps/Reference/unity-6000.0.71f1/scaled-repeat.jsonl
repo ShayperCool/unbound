@@ -1,0 +1,6 @@
+{"k":"halfSpeed/multipleCalls","v":true}
+{"k":"halfSpeed/scaledIntervals","v":true}
+{"k":"runningRepeat/noCallsWhilePaused","v":true}
+{"k":"runningRepeat/resumesAtHalfSpeed","v":true}
+{"k":"runningRepeat/scaledIntervalsAfterPause","v":true}
+{"k":"complete","v":true}

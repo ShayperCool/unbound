@@ -24,13 +24,13 @@ def publish_extra(labels, filename):
         print('published', target)
 
     return editor_runner.publish(roots, reference_root(PROBE)/filename,
-                                 lambda _: ['capture/values.jsonl', 'capture/edges.jsonl', 'capture/scale.jsonl'], write,
+                                 lambda _: ['capture/values.jsonl', 'capture/edges.jsonl', 'capture/scale.jsonl', 'capture/scaled-repeat.jsonl'], write,
                                  complete=[editor_runner.jsonl_complete('capture/'+filename)], gpu=True)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('record', 'publish', 'publish-edges', 'publish-scale', 'gate'))
+    parser.add_argument('mode', choices=('record', 'publish', 'publish-edges', 'publish-scale', 'publish-scaled-repeat', 'gate'))
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label', default=None)
     args = parser.parse_args()
@@ -39,13 +39,15 @@ def main():
         return value_probe.record(PROBE, 'InvokeStepsRunner.Record', 'INVOKE_STEPS_OUT', label, False)
     if args.mode == 'publish':
         result = value_probe.publish(PROBE, args.labels)
-        return result or publish_extra(args.labels, 'edges.jsonl') or publish_extra(args.labels, 'scale.jsonl')
+        return result or publish_extra(args.labels, 'edges.jsonl') or publish_extra(args.labels, 'scale.jsonl') or publish_extra(args.labels, 'scaled-repeat.jsonl')
     if args.mode == 'publish-edges':
         return publish_extra(args.labels, 'edges.jsonl')
     if args.mode == 'publish-scale':
         return publish_extra(args.labels, 'scale.jsonl')
+    if args.mode == 'publish-scaled-repeat':
+        return publish_extra(args.labels, 'scaled-repeat.jsonl')
     result = value_probe.gate(PROBE, 'INVOKE_STEPS_OUT', label, 0, ['--frames', '400', '--size', '160x90'])
-    for filename in ('edges.jsonl', 'scale.jsonl'):
+    for filename in ('edges.jsonl', 'scale.jsonl', 'scaled-repeat.jsonl'):
         try:
             expected = value_probe.read_values(reference_root(PROBE)/filename)
             actual = value_probe.read_values(run_root(PROBE, label)/'engine'/filename)

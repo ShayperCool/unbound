@@ -6,10 +6,11 @@ using UnityEngine;
 public sealed class InvokeScaleProbe : MonoBehaviour
 {
     Action m_Finish;
-    int m_Frame, m_Calls;
+    int m_Frame, m_Calls, m_PausedCalls;
     double m_Start, m_Last;
     bool m_Intervals = true, m_Delay = true;
     readonly List<string> m_Values = new List<string>();
+    readonly List<string> m_Repeat = new List<string>();
     public void Begin(Action finish)
     {
         m_Finish = finish;
@@ -32,16 +33,32 @@ public sealed class InvokeScaleProbe : MonoBehaviour
         if (m_Frame == 21)
         {
             Put("halfSpeed/stillBeforeDelay", m_Calls == 0);
-            Time.timeScale = 1;
         }
         if (m_Frame == 37)
         {
             Put("resumed/multipleCalls", m_Calls >= 2);
             Put("delay/usesScaledTime", m_Delay);
             Put("interval/usesScaledTime", m_Intervals);
-            CancelInvoke();
             m_Values.Add("{\"k\":\"complete\",\"v\":true}");
             File.WriteAllLines(Path.Combine(Environment.GetEnvironmentVariable("INVOKE_STEPS_OUT"), "scale.jsonl"), m_Values);
+            Repeat("halfSpeed/multipleCalls", m_Calls >= 2);
+            Repeat("halfSpeed/scaledIntervals", m_Intervals);
+            Time.timeScale = 0;
+        }
+        if (m_Frame == 38) m_PausedCalls = m_Calls;
+        if (m_Frame == 45)
+        {
+            Repeat("runningRepeat/noCallsWhilePaused", m_Calls == m_PausedCalls);
+            Time.timeScale = 0.5f;
+        }
+        if (m_Frame == 61)
+        {
+            Repeat("runningRepeat/resumesAtHalfSpeed", m_Calls > m_PausedCalls);
+            Repeat("runningRepeat/scaledIntervalsAfterPause", m_Intervals);
+            CancelInvoke();
+            m_Repeat.Add("{\"k\":\"complete\",\"v\":true}");
+            File.WriteAllLines(Path.Combine(Environment.GetEnvironmentVariable("INVOKE_STEPS_OUT"), "scaled-repeat.jsonl"), m_Repeat);
+            Time.timeScale = 1;
             enabled = false;
             m_Finish();
         }
@@ -54,5 +71,6 @@ public sealed class InvokeScaleProbe : MonoBehaviour
         m_Last = now;
         m_Calls++;
     }
+    void Repeat(string key, bool value) => m_Repeat.Add("{\"k\":\"" + key + "\",\"v\":" + (value ? "true" : "false") + "}");
     void Put(string key, bool value) => m_Values.Add("{\"k\":\"" + key + "\",\"v\":" + (value ? "true" : "false") + "}");
 }
