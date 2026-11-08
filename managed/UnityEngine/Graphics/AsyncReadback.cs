@@ -253,12 +253,13 @@ namespace Unbound.Runtime
             && GraphicsFormatUtility.GetComponentCount(format) > 0
             && GraphicsFormatUtility.GetBlockSize(format) == GraphicsFormatUtility.GetComponentCount(format);
 
-        /// <summary>Sources whose missing channels read as 1 when converted (measured: R16 and RG32
-        /// render targets read into RGBAFloat as (r, 1, 1, 1) and (r, g, 1, 1),
-        /// tests/projects/textureformats rt.*.asyncfloat; Texture2D sources and other destination
-        /// formats follow the same rule unmeasured).</summary>
+        /// <summary>Format conversion fills missing color channels with 1, independently of
+        /// sampler defaults (6000.0.71f1: renderapi volumeReadback.*, textureformats rt.*).
+        /// Unmeasured releases retain the earlier R16/RG32 conversion rule.</summary>
         static bool MissingChannelsReadAsOne(GraphicsFormat format) =>
-            format is GraphicsFormat.R16_UNorm or GraphicsFormat.R16G16_UNorm;
+            format is GraphicsFormat.R16_UNorm or GraphicsFormat.R16G16_UNorm
+            || (Compat.RenderingMeasured && GraphicsFormatUtility.GetComponentCount(format) > 0
+                && !GraphicsFormatUtility.IsDepthStencilFormat(format));
 
         internal static Result Texture(Texture src, int mip, int x, int width, int y, int height, int z, int depth, ReadbackFormat format,
             Action<UnityEngine.Rendering.AsyncGPUReadbackRequest> callback, bool reportUnsupported = false)
@@ -307,7 +308,15 @@ namespace Unbound.Runtime
             }
             ulong handle = TextureHandles.Of(src);
             bool floats = !EightBit(src.graphicsFormat);
-            bool alpha = src is Texture2D a8 && a8.format == TextureFormat.Alpha8;
+            bool alpha = src switch
+            {
+                Texture2D t => t.format == TextureFormat.Alpha8,
+                Texture3D t => t.format == TextureFormat.Alpha8,
+                Texture2DArray t => t.format == TextureFormat.Alpha8,
+                Cubemap t => t.format == TextureFormat.Alpha8,
+                CubemapArray t => t.format == TextureFormat.Alpha8,
+                _ => false,
+            };
             int channels = MissingChannelsReadAsOne(src.graphicsFormat) ? (int)GraphicsFormatUtility.GetComponentCount(src.graphicsFormat) : 4;
             result.Layers = new byte[depth][];
             for (int layer = 0; layer < depth; layer++)
@@ -408,10 +417,11 @@ namespace Unbound.Runtime
                     }
                     else
                     {
-                        // A one-channel texture reads (r, 0, 0, 1); Alpha8 (0, 0, 0, a).
-                        b = inChannels == 4 ? texels[i * 4 + c]
-                            : alpha ? (c == 3 ? texels[i] : (byte)0)
-                            : c == 0 ? texels[i] : c == 3 ? (byte)255 : (byte)0;
+                        // Explicit conversion fills missing color channels; Alpha8 keeps alpha.
+                        b = !alpha && c >= sourceChannels ? (byte)255
+                            : inChannels == 4 ? texels[i * 4 + c]
+                            : alpha ? (c == 3 ? texels[i * inChannels] : (byte)0)
+                            : c < inChannels ? texels[i * inChannels + c] : c == 3 ? (byte)255 : (byte)0;
                         f = b * (1f / 255f);
                     }
                     switch (m_Size)

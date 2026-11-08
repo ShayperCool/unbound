@@ -155,3 +155,8 @@ requires bound resources, initialized contents before reads and guarded thread b
 The controls write every texel before loading it and initialize the atomic counter explicitly.
 Its image-format qualifiers apply to read/write resources; these volume fill kernels only write.
 
+`volumeReadback.*` compares the RGBAFloat conversion of ten byte, normalized 16-bit, half and
+float formats, using both 2D and 3D targets. Missing color components become 1 in the readback,
+while shader sampling keeps its own component defaults. Full RGBA targets retain their alpha.
+Compat.RenderingMeasured selects this conversion for the measured release; other releases
+retain the older R16/RG32-only padding rule. Alpha-only input keeps its alpha mapping.
