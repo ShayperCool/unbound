@@ -657,7 +657,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 26;
+    const VERSION: u32 = 27;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -919,9 +919,10 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         _ => None,
     };
     builder.lod_group(&mut ids);
-    let paths: HashMap<String, u32> = (0..builder.model.nodes.len() as u32)
-        .map(|i| (builder.path_of(i), i))
-        .collect();
+    let mut paths: HashMap<String, Vec<u32>> = HashMap::new();
+    for i in 0..builder.model.nodes.len() as u32 {
+        paths.entry(builder.path_of(i)).or_default().push(i);
+    }
     let mut model = builder.model;
     model.clips = clips;
     // Unity bounds a skinned mesh over the poses of the model's animations (documented:
@@ -1311,11 +1312,17 @@ impl<'a> Builder<'a> {
                     continue;
                 }
                 let positions: Vec<Key<3>> = if self.pivoted(index) {
-                    // The position follows rotation and scale along an arc, which the reduced
-                    // keys would cut to chords: sampled on every frame (measured without
-                    // compression, tests/projects/modelaxis AnimPivot).
+                    // The position depends on rotation and scale too: evaluated at every key
+                    // time of the three. The baker does not reduce rotation keys, so a turning
+                    // node is keyed on every frame (checked by the AnimPivot unit test).
                     let source = self.sources[index as usize];
-                    frame_times(start, end, fps)
+                    let mut times: Vec<f64> = (node.translation_keys.iter().map(|k| k.time))
+                        .chain(node.rotation_keys.iter().map(|k| k.time))
+                        .chain(node.scale_keys.iter().map(|k| k.time))
+                        .collect();
+                    times.sort_by(f64::total_cmp);
+                    times.dedup();
+                    times
                         .into_iter()
                         .map(|time| Key {
                             time: time as f32,

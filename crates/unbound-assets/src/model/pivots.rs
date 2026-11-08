@@ -124,12 +124,14 @@ impl Placement {
         let differ = rotation_pivot.x != scaling_pivot.x
             || rotation_pivot.y != scaling_pivot.y
             || rotation_pivot.z != scaling_pivot.z;
-        if offsets || differ {
-            Some("its pivots differ or it has offsets")
-        } else if self.moves() && !node.children.is_empty() {
-            Some("its children keep their FBX translation")
-        } else {
-            None
+        let children = self.moves() && !node.children.is_empty();
+        match (offsets || differ, children) {
+            (true, true) => Some(
+                "its pivots differ or it has offsets, and its children keep their FBX translation",
+            ),
+            (true, false) => Some("its pivots differ or it has offsets"),
+            (false, true) => Some("its children keep their FBX translation"),
+            (false, false) => None,
         }
     }
 
@@ -321,34 +323,42 @@ pub(super) fn world_matrices(nodes: &[ModelNode]) -> Vec<ufbx::Matrix> {
     world
 }
 
-/// No clip moves a node away from its import transform: each transform curve of `curves`
-/// (bound by path, see `paths`) holds its node's imported position, rotation and scale.
+/// No clip moves a node away from its import transform: each transform curve of `curves` holds
+/// the imported position, rotation and scale of a node at its path (`paths`: every node index
+/// per path; names may repeat).
 pub(super) fn poses_are_import_pose<'a>(
     nodes: &[ModelNode],
-    paths: &std::collections::HashMap<String, u32>,
+    paths: &std::collections::HashMap<String, Vec<u32>>,
     mut curves: impl Iterator<Item = &'a super::NodeCurves>,
 ) -> bool {
-    // Keys and import transforms come from the same f32 conversion; this allows rounding only.
+    // Keys and import transforms come from the same f32 conversion; this allows rounding only
+    // (a 0.1 degree turn changes a quaternion component by ~9e-4).
     const TOLERANCE: f32 = 1e-5;
     let near = |a: &[f32], b: &[f32]| {
         a.iter()
             .zip(b)
             .all(|(x, y)| (x - y).abs() <= TOLERANCE * y.abs().max(1.0))
     };
-    curves.all(|curve| {
-        let Some(node) = paths.get(&curve.path).and_then(|&i| nodes.get(i as usize)) else {
-            return false;
-        };
+    let holds = |curve: &super::NodeCurves, node: &ModelNode| {
         let q = node.rotation;
+        let flipped = q.map(|v| -v);
         curve
             .positions
             .iter()
             .all(|k| near(&k.value, &node.position))
             && curve.scales.iter().all(|k| near(&k.value, &node.scale))
-            && curve.rotations.iter().all(|k| {
-                let dot: f32 = (0..4).map(|i| k.value[i] * q[i]).sum();
-                dot.abs() >= 1.0 - TOLERANCE
-            })
+            && curve
+                .rotations
+                .iter()
+                .all(|k| near(&k.value, &q) || near(&k.value, &flipped))
+    };
+    curves.all(|curve| {
+        paths.get(&curve.path).is_some_and(|indices| {
+            indices
+                .iter()
+                .filter_map(|&i| nodes.get(i as usize))
+                .any(|node| holds(curve, node))
+        })
     })
 }
 
@@ -743,28 +753,30 @@ mod tests {
     }
 
     #[test]
-    fn reduced_clips_place_pivoted_nodes_on_every_frame() {
-        // A pivoted node's position follows its rotation along an arc: the reduced import keeps
-        // the uncompressed (measured) positions at every frame instead of chords between keys.
-        let exact = anim_pivot(0);
-        let reduced = anim_pivot(1);
-        let body = |m: &ImportedModel| {
+    fn reduced_clips_keep_pivoted_positions_on_every_frame() {
+        // A pivoted node's position follows its rotation along an arc. The keyframe-reduced
+        // import, interpolated as clips are, gives the uncompressed (measured) position at every
+        // frame, not a chord between sparse keys.
+        let curve = |m: &ImportedModel| {
             let clip = m.clips.iter().find(|c| !c.preview).unwrap();
-            clip.curves
-                .iter()
-                .find(|c| c.path == "Body")
-                .unwrap()
-                .positions
-                .clone()
+            let body = clip.curves.iter().find(|c| c.path == "Body").unwrap();
+            body.positions.clone()
         };
-        let (exact, reduced) = (body(&exact), body(&reduced));
-        assert!(reduced.len() > 2, "{reduced:?}");
-        for k in &reduced {
-            let e = exact
+        let (exact, reduced) = (curve(&anim_pivot(0)), curve(&anim_pivot(1)));
+        assert!(exact.len() > 20, "{exact:?}");
+        for e in &exact {
+            let after = reduced
                 .iter()
-                .find(|e| (e.time - k.time).abs() < 1e-4)
+                .position(|k| k.time >= e.time - 1e-6)
                 .unwrap();
-            assert!(near(k.value, e.value), "{k:?} {e:?}");
+            let value = if after == 0 || (reduced[after].time - e.time).abs() < 1e-6 {
+                reduced[after].value
+            } else {
+                let (a, b) = (&reduced[after - 1], &reduced[after]);
+                let t = (e.time - a.time) / (b.time - a.time);
+                std::array::from_fn(|i| a.value[i] + (b.value[i] - a.value[i]) * t)
+            };
+            assert!(near(value, e.value), "{e:?} {value:?}");
         }
     }
 
@@ -793,8 +805,23 @@ mod tests {
             node_at(None, [0.0; 3], [0.0, 0.0, 0.0, 1.0]),
             node_at(Some(0), [1.0, 2.0, 3.0], [0.0, 0.0, 0.0, 1.0]),
         ];
-        let paths: std::collections::HashMap<String, u32> =
-            [("".to_string(), 0), ("Bone".to_string(), 1)].into();
+        // Two siblings named Bone, each curve holding one of them.
+        let nodes = [
+            nodes,
+            vec![node_at(Some(0), [5.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0])],
+        ]
+        .concat();
+        let paths: std::collections::HashMap<String, Vec<u32>> =
+            [("".to_string(), vec![0]), ("Bone".to_string(), vec![1, 2])].into();
+        let twins = [
+            curve("Bone", [1.0, 2.0, 3.0], [0.0, 0.0, 0.0, 1.0]),
+            curve("Bone", [5.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0]),
+        ];
+        assert!(poses_are_import_pose(&nodes, &paths, twins.iter()));
+        // A 0.1 degree turn is a pose of its own.
+        let (sin, cos) = 0.05f32.to_radians().sin_cos();
+        let nudged = [curve("Bone", [1.0, 2.0, 3.0], [0.0, 0.0, sin, cos])];
+        assert!(!poses_are_import_pose(&nodes, &paths, nudged.iter()));
         let same = [curve("Bone", [1.0, 2.0, 3.0], [0.0, 0.0, 0.0, -1.0])];
         assert!(poses_are_import_pose(&nodes, &paths, same.iter()));
         // A constant pose other than the import pose (a one-frame "crouch" take).
