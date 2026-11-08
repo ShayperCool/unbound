@@ -682,6 +682,7 @@ pub struct Effect {
     rate: u32,
     gain: f32,
     gain_step: f32,
+    gain_target: f32,
     gain_frames: u32,
     send_from: f32,
     send_frames: u32,
@@ -712,6 +713,7 @@ impl Effect {
             send_from: spec.send_level,
             send_frames: 0,
             gain_step: 0.0,
+            gain_target: spec.gain,
             gain_frames: 0,
             buffer: buffer.max(1),
             gain: if spec.kind == EffectKind::Send.name() {
@@ -749,6 +751,7 @@ impl Effect {
         {
             self.gain_frames = 0;
             self.gain_step = 0.0;
+            self.gain_target = self.gain;
         }
         let kind = EffectKind::parse(&spec.kind);
         if kind == Some(EffectKind::Echo) {
@@ -806,6 +809,7 @@ impl Effect {
         self.send_frames = 0;
         self.gain_frames = 0;
         self.gain_step = 0.0;
+        self.gain_target = self.spec.gain;
         self.cutoff = 5000.0;
         self.resonance = 1.0;
         self.gain = if self.kind == Some(EffectKind::Send) {
@@ -941,7 +945,13 @@ impl Effect {
             let mut current = from;
             for (frame, stereo) in samples.chunks_exact_mut(2).enumerate() {
                 if measured_ramp && self.gain_frames == 0 {
-                    self.gain_step = (self.spec.gain - current) / self.buffer as f32;
+                    if self.gain_target == self.spec.gain {
+                        current = self.spec.gain;
+                        self.gain_step = 0.0;
+                    } else {
+                        self.gain_step = (self.spec.gain - current) / self.buffer as f32;
+                    }
+                    self.gain_target = self.spec.gain;
                 }
                 let gain = if self.spec.gain_immediate {
                     self.spec.gain
@@ -1147,17 +1157,21 @@ mod tests {
         assert_eq!(&samples[..4], &[1.0, -0.5, 0.999_652_6, -0.499_826_3]);
         assert_eq!(samples[2046], 0.644_634_5);
         assert_eq!(samples[2047], -0.322_317_24);
-        // Re-submitting an unchanged target retains the actual gain, including its rounding.
-        effect.update(spec(0.644_302_37), 48000, 1024).unwrap();
+        // A different target starts from the preceding accumulated gain, including rounding.
+        effect.update(spec(0.415_118_93), 48000, 1024).unwrap();
         samples.fill(1.0);
         effect.process(&mut samples, false);
         assert_eq!(samples[0], 0.644_287_1);
-        assert!(samples.iter().all(|gain| *gain == 0.644_287_1));
+        assert_eq!(samples[2046], 0.415_335_2);
+        // An unchanged request is held exactly on the next DSP buffer.
+        samples.fill(1.0);
+        effect.process(&mut samples, false);
+        assert!(samples.iter().all(|gain| *gain == 0.415_118_93));
         // A different packet size and increasing gain retain the same first-frame rule.
         effect.update(spec(1.0), 44100, 256).unwrap();
         let mut shorter = vec![1.0; 512];
         effect.process(&mut shorter, false);
-        assert_eq!(shorter[0], 0.644_287_1);
+        assert_eq!(shorter[0], 0.415_118_93);
         assert!(shorter[510] > shorter[0] && shorter[510] < 1.0);
     }
 
@@ -1186,7 +1200,7 @@ mod tests {
             let whole = render(&[1024, 1024]);
             assert_eq!(render(&[256; 8]), whole);
             assert_eq!(render(&[63, 1, 192, 256, 512, 480, 480, 64]), whole);
-            assert_eq!(whole[2048], 0.644_287_1);
+            assert_eq!(whole[2048], 0.644_302_37);
         }
     }
 
