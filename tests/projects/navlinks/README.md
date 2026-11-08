@@ -3,8 +3,8 @@
 `NavLinksProbe` plays NavMesh agents over off-mesh links at a fixed 0.02 s step for 400 frames and
 records every agent's state in every frame (in LateUpdate): position, rotation, next position,
 velocity, desired velocity, steering target, remaining distance, path flags and corners,
-destination and path end, `currentOffMeshLinkData`/`nextOffMeshLinkData` and the link's
-`occupied`/`activated`. Each lane of `Lanes.cs` lies in its own 40 m cell: two 10 m platforms with
+destination and path end, `isPathStale`, `navMeshOwner`, `currentOffMeshLinkData`/
+`nextOffMeshLinkData` and the link's `occupied`/`activated`. Each lane of `Lanes.cs` lies in its own 40 m cell: two 10 m platforms with
 a 2 m gap only a link crosses (B 1.5 m lower in the drop lanes, a bridge in front in the cost
 lanes). The level and its baked NavMesh are committed (`Assets/Scenes`); one lane's NavMeshLink and
 another's legacy OffMeshLink are serialized in the scene, the other links are added by the probe.
@@ -19,6 +19,11 @@ another's legacy OffMeshLink are serialized in the scene, the other links are ad
 | `two`, `inactive`, `inactive130`, `deactivatemid`, `deactivatewait` | occupancy; activating and deactivating links |
 | `manualwait`, `manualmove`, `manualcurve`, `manualtoggle`, `autooffmid` | `autoTraverseOffMeshLink = false`: waiting, scripts moving the agent, `CompleteOffMeshLink` |
 | `warpwait`, `warpauto`, `stopmid`, `resetmid`, `redirectmid`, `speedmid`, `completeauto`, `disableagent` | Warp, isStopped, ResetPath, SetDestination, speed, CompleteOffMeshLink, disabling the agent on a link |
+| `offedge`, `island`, `aheadoff`, `pendingold`, `incall` | destinations beyond the NavMesh's edge (standing, walking ahead and behind), on another island and over the gap; the current path while a new one is pending; a path given in the SetDestination call |
+| `targets` | `NavMesh.CalculatePath`, `NavMeshAgent.CalculatePath` and `SetDestination` to targets beyond an edge, a corner, above, below and over the gap, each bisected (17 steps, one frame per `SetDestination` step) for where it stops finding a path; agents of radius 0.25, 0.5, 0.75 and 1 and height 4 |
+| `widetype` | the same for an agent of the second agent type ("Wide", radius 1.5, height 5, `ProjectSettings/NavMeshAreas.asset`) on a NavMesh built at run time |
+| `low`, `lowmanual`, `crosstile` | links whose ends lie 0.3 m below the NavMesh (crossed, completed by script); a link across a NavMesh tile edge, crossed both ways (occupancy) |
+| `turning`, `staleowner` | turning at another speed and angularSpeed (1.5 m/s and 40°/s, 6 m/s and 400°/s); areaMask and the agent's own area cost changed, a new destination |
 
 `run.py` makes the level, records the Editor and runs Unbound, each run on a fresh copy of the
 project under `$XDG_CACHE_HOME/unbound/validation/runs/navlinks/<label>` (labels are never
@@ -36,15 +41,16 @@ NavMesh probes' tolerances), everything else exactly, and counts and reports eve
 or failing value. The probe raises `NavMesh.pathfindingIterationsPerFrame` so that every lane's
 path is found in the first frame; the per-frame A* budget is not measured here.
 
-The staged `Reference/unity-6000.0.71f1.jsonl` contains 19254 records, SHA-256
-`b5d6cbe7a9dabf78aaa53d45d3690859be35227b71bf20e058a054b734bc23bf`.
-It comes from source `982cee918eab8018bce2a5b723e76f2079033592`. The retained
-`native-c/native1` and `native-c/native2` captures agree byte for byte, but were
-concurrent processes in distinct project copies from one setup, not independent
-setups. The later `native-d` pair supports only the recorded matching
-`deactivatewait`, `deactivatemid` and `redirectmid` lanes for agent `a`, not the
-whole reference. Staging this canonical file does not admit the reference or a
-runtime. Keep raw repeats outside Git.
+The staged `Reference/unity-6000.0.71f1.jsonl` contains 29090 records, SHA-256
+`3a85a43b489b4303f8837638b26d51d624427fe96a1fdd29c8b50b8fc6b7792c`: the 19254 records of
+the earlier reference (source `982cee918eab8018bce2a5b723e76f2079033592`), unchanged, with
+`isPathStale` (`stale`) and `navMeshOwner` (`own`) added to each agent record, and the lanes from
+`offedge` on. Its two Editor captures (concurrent processes in distinct project copies from one
+setup) agree byte for byte. In two earlier pairs of captures of the same lanes the second agent of
+lane `two` planned another desired velocity from frame 4 in one capture of each pair (avoidance
+between the two agents varies between Editor runs); the published values are the ones the earlier
+reference recorded. Staging this canonical file does not admit the reference or a runtime. Keep
+raw repeats outside Git.
 
 Select the release explicitly as above. The runner uses `tests/probe_paths.py` to
 select that release for Editor paths, project copies and `Reference/`; the

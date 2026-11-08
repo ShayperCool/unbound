@@ -359,6 +359,85 @@ public class NavLinksProbe : MonoBehaviour
                     if (f == lane.OnLink + 30) agent.CompleteOffMeshLink();
                 };
                 break;
+            case "offedge":
+                lane.Link = AddLink(lane, ls, le);
+                // Beyond platform A's side (its NavMesh edge is near z = 2.5).
+                Agent(lane, "a", a, new Vector3(-6f, 0f, 6f));
+                agent = Agent(lane, "b", new Vector3(-8f, 0f, -1.5f), new Vector3(-3f, 0f, -1.5f));
+                // Walking: 2.5 m beyond the platform's end, behind it.
+                lane.Act = f => { if (f == 20) Log(lane, "set", agent.SetDestination(lane.O + new Vector3(-13.5f, 0f, -1.5f))); };
+                break;
+            case "crosstile":
+                // From A over the gap to B, its end past the NavMesh tile edge at x = 42.67.
+                lane.Link = AddLink(lane, ls, new Vector3(3f, 0f, 0f));
+                Agent(lane, "a", a, b);
+                agent = Agent(lane, "b", b, a);
+                break;
+            case "island":
+                // No link: B is another island.
+                Agent(lane, "a", a, b);
+                Agent(lane, "b", new Vector3(-8f, 0f, 2f), new Vector3(0.3f, 0f, 2f));
+                Agent(lane, "c", new Vector3(-8f, 0f, -2f), new Vector3(8f, 4f, -2f));
+                break;
+            case "targets":
+                // No link. Paths to targets off the NavMesh, by NavMesh.CalculatePath now and by
+                // SetDestination over the next frames, each bisected for where it stops being found.
+                agent = Agent(lane, "a", a, null);
+                Targets(lane, agent);
+                break;
+            case "pendingold":
+                lane.Link = AddLink(lane, ls, le);
+                agent = Agent(lane, "a", new Vector3(-8f, 0f, 1.5f), b);
+                // Behind the walking agent (a search).
+                lane.Act = f => { if (f == 25) Log(lane, "set", agent.SetDestination(lane.O + new Vector3(-9f, 0f, 2f))); };
+                break;
+            case "aheadoff":
+                lane.Link = AddLink(lane, ls, le);
+                agent = Agent(lane, "a", new Vector3(-8f, 0f, -1.5f), new Vector3(8f, 0f, -1.5f));
+                // Beyond B's side, ahead of the walking agent.
+                lane.Act = f => { if (f == 25) Log(lane, "set", agent.SetDestination(lane.O + new Vector3(8f, 0f, 5f))); };
+                break;
+            case "incall":
+                // Destinations whose path needs no search: on a standing agent's polygon, and on the
+                // rest of a walking agent's path (no link: A and B are separate).
+                agent = Agent(lane, "a", a, null);
+                var walker = Agent(lane, "b", new Vector3(2.5f, 0f, -1.5f), new Vector3(10f, 0f, -1.5f));
+                lane.Act = f =>
+                {
+                    if (f == 10) Log(lane, "set", agent.SetDestination(lane.O + new Vector3(-6f, 0f, 1f)));
+                    if (f == 30) Log(lane, "set", walker.SetDestination(lane.O + new Vector3(9f, 0f, 1f)));
+                };
+                break;
+            case "widetype":
+                WideType(lane);
+                break;
+            case "turning":
+                // Turning controls: slow with a low angularSpeed on A, fast with a high one on B.
+                Agent(lane, "a", new Vector3(-10f, 0f, 2f), new Vector3(-3f, 0f, -2f), g => { g.speed = 1.5f; g.angularSpeed = 40f; });
+                Agent(lane, "b", new Vector3(2.5f, 0f, -2f), new Vector3(10f, 0f, 2f), g => { g.speed = 6f; g.acceleration = 20f; g.angularSpeed = 400f; });
+                break;
+            case "staleowner":
+                lane.Link = AddLink(lane, ls, le);
+                agent = Agent(lane, "a", a, b);
+                // On B only, clear of the link.
+                var own = Agent(lane, "b", new Vector3(3f, 0f, 1.5f), new Vector3(10f, 0f, 1.5f));
+                lane.Act = f =>
+                {
+                    if (f == 20) agent.areaMask = ~(1 << 3);
+                    if (f == 20) own.SetAreaCost(3, 7f);
+                    if (f == 50) Log(lane, "set", agent.SetDestination(lane.O + b));
+                };
+                break;
+            case "low":
+                // Link ends 0.3 m below the NavMesh.
+                lane.Link = AddLink(lane, new Vector3(-2f, -0.3f, 0f), new Vector3(2f, -0.3f, 0f));
+                Agent(lane, "a", a, b);
+                break;
+            case "lowmanual":
+                lane.Link = AddLink(lane, new Vector3(-2f, -0.3f, 0f), new Vector3(2f, -0.3f, 0f));
+                agent = Agent(lane, "a", a, b, g => g.autoTraverseOffMeshLink = false);
+                lane.Act = f => { if (lane.OnLink >= 0 && f == lane.OnLink + 10) agent.CompleteOffMeshLink(); };
+                break;
             default:
                 throw new InvalidOperationException("no setup for lane " + lane.Name);
         }
@@ -398,6 +477,186 @@ public class NavLinksProbe : MonoBehaviour
             }
             yield return null;
         }
+    }
+
+    // ------------------------------------------------------------------ targets off the NavMesh
+
+    /// <summary>Platform A's targets (lane "targets"): beyond its west end, beyond its side, beyond
+    /// its corner, above and below it, and over the gap towards B; the distance swept is how far
+    /// beyond the platform's surface (the gap: how far from A's edge).</summary>
+    static readonly (string Name, Func<float, Vector3> At, float Max)[] Sweeps =
+    {
+        ("west", d => new Vector3(-11f - d, 0f, 0f), 16f),
+        // Up to 24 m: the radius 1 agent's search reaches past 16 m (rows are 40 m apart).
+        ("side", d => new Vector3(-6f, 0f, 3f + d), 24f),
+        ("corner", d => new Vector3(-11f - d, 0f, 3f + d), 16f),
+        ("above", d => new Vector3(-6f, d, 0f), 16f),
+        ("below", d => new Vector3(-6f, -d, 0f), 16f),
+        ("gap", d => new Vector3(-1f + d, 0f, 0f), 2f),
+    };
+
+    const int BisectSteps = 17;
+    /// <summary>The frame of the first SetDestination step.</summary>
+    const int SweepStart = 2;
+
+    /// <summary>Whether a path is found (the gap: a complete one).</summary>
+    static bool Found(string sweep, bool found, NavMeshPathStatus status) =>
+        found && (sweep != "gap" || status == NavMeshPathStatus.PathComplete);
+
+    void Targets(Lane lane, NavMeshAgent agent)
+    {
+        var from = lane.O + new Vector3(-8f, 0f, 0f);
+        var path = new NavMeshPath();
+        // NavMesh.CalculatePath (and the agent's, for two of them) at fixed distances, then bisected.
+        foreach (var (name, at, max) in Sweeps)
+        {
+            foreach (var d in new[] { 0.25f, 1f, 2f, 3f, 6f })
+            {
+                if (d > max) continue;
+                bool found = NavMesh.CalculatePath(from, lane.O + at(d), NavMesh.AllAreas, path);
+                Line(lane.Name, "-", 0, "\"sweep\":" + Text(name) + ",\"d\":" + N(d) + ",\"path\":" + B(found) + PathText(path));
+            }
+            float edge = Bisect(name, max, d => (NavMesh.CalculatePath(from, lane.O + at(d), NavMesh.AllAreas, path), path.status));
+            Line(lane.Name, "-", 0, "\"who\":\"a\",\"sweep\":" + Text(name) + ",\"query\":\"NavMesh\",\"edge\":" + N(edge));
+            if (name == "west" || name == "above")
+            {
+                edge = Bisect(name, max, d => (agent.CalculatePath(lane.O + at(d), path), path.status));
+                Line(lane.Name, "-", 0, "\"who\":\"a\",\"sweep\":" + Text(name) + ",\"query\":\"agent\",\"edge\":" + N(edge));
+            }
+        }
+        // Agents of other sizes on the same platform (their own radius and height), and one of the
+        // second agent type on its own NavMesh (lane "widetype"): their own CalculatePath, then
+        // SetDestination.
+        var wide = Agent(lane, "b", new Vector3(-9f, 0f, -1.6f), null, g => g.radius = 1f);
+        var tall = Agent(lane, "c", new Vector3(-5f, 0f, -1.6f), null, g => g.height = 4f);
+        var small = Agent(lane, "d", new Vector3(-3f, 0f, 1.5f), null, g => g.radius = 0.25f);
+        var middle = Agent(lane, "e", new Vector3(-3f, 0f, -1.5f), null, g => g.radius = 0.75f);
+        foreach (var (who, other) in new[] { ("b", wide), ("c", tall), ("d", small), ("e", middle) })
+        {
+            foreach (int k in SizeSweeps)
+            {
+                var (name, at, max) = Sweeps[k];
+                float edge = Bisect(name, max, d => (other.CalculatePath(lane.O + at(d), path), path.status));
+                Line(lane.Name, "-", 0, "\"who\":" + Text(who) + ",\"sweep\":" + Text(name) + ",\"query\":\"agent\",\"edge\":" + N(edge));
+            }
+        }
+        m_Runs.Add((lane, "a", agent, lane.O, AllSweeps));
+        m_Runs.Add((lane, "b", wide, lane.O, SizeSweeps));
+        m_Runs.Add((lane, "c", tall, lane.O, SizeSweeps));
+        m_Runs.Add((lane, "d", small, lane.O, SizeSweeps));
+        m_Runs.Add((lane, "e", middle, lane.O, SizeSweeps));
+        lane.Act = f => StepRuns(f);
+    }
+
+    static readonly int[] AllSweeps = { 0, 1, 2, 3, 4, 5 };
+    /// <summary>Beyond the side, above.</summary>
+    static readonly int[] SizeSweeps = { 1, 3 };
+
+    /// <summary>The largest distance (of <paramref name="max"/>) at which the query finds a path.</summary>
+    static float Bisect(string sweep, float max, Func<float, (bool Found, NavMeshPathStatus Status)> query)
+    {
+        float lo = 0f, hi = max;
+        for (int i = 0; i < BisectSteps; i++)
+        {
+            float mid = 0.5f * (lo + hi);
+            var (found, status) = query(mid);
+            if (Found(sweep, found, status)) lo = mid; else hi = mid;
+        }
+        return lo;
+    }
+
+    /// <summary>The SetDestination bisections, run one after the other (agent, its platform's origin, sweeps).</summary>
+    readonly List<(Lane Lane, string Who, NavMeshAgent Agent, Vector3 O, int[] Sweeps)> m_Runs = new List<(Lane, string, NavMeshAgent, Vector3, int[])>();
+    int m_Run, m_RunSweep, m_RunStep;
+    float m_Low, m_High, m_Tried;
+    Vector3 m_RunStart;
+
+    /// <summary>One SetDestination bisection step per frame: set in Update, read in the next Update.</summary>
+    void StepRuns(int f)
+    {
+        if (f < SweepStart || m_Run >= m_Runs.Count) return;
+        var run = m_Runs[m_Run];
+        if (f == SweepStart)
+        {
+            m_RunStart = run.Agent.transform.position;
+            m_High = Sweeps[run.Sweeps[0]].Max;
+        }
+        else
+        {
+            var (name, _, _) = Sweeps[run.Sweeps[m_RunSweep]];
+            var agent = run.Agent;
+            bool found = !agent.pathPending && agent.hasPath;
+            Line(run.Lane.Name, "-", f, "\"who\":" + Text(run.Who) + ",\"sweep\":" + Text(name) + ",\"d\":" + N(m_Tried) + ",\"pp\":" + B(agent.pathPending)
+                + ",\"hp\":" + B(agent.hasPath) + ",\"ps\":" + Text(agent.pathStatus.ToString()) + ",\"pe\":" + V(agent.pathEndPosition)
+                + ",\"dst\":" + V(agent.destination));
+            if (Found(name, found, agent.pathStatus)) m_Low = m_Tried; else m_High = m_Tried;
+            if (++m_RunStep == BisectSteps)
+            {
+                Line(run.Lane.Name, "-", f, "\"who\":" + Text(run.Who) + ",\"sweep\":" + Text(name) + ",\"query\":\"SetDestination\",\"edge\":" + N(m_Low));
+                m_RunStep = 0;
+                m_Low = 0f;
+                if (++m_RunSweep >= run.Sweeps.Length)
+                {
+                    agent.ResetPath();
+                    agent.Warp(m_RunStart);
+                    m_RunSweep = 0;
+                    if (++m_Run >= m_Runs.Count) return;
+                    run = m_Runs[m_Run];
+                    m_RunStart = run.Agent.transform.position;
+                }
+                m_High = Sweeps[run.Sweeps[m_RunSweep]].Max;
+            }
+        }
+        var (sweep, at, _) = Sweeps[run.Sweeps[m_RunSweep]];
+        run.Agent.ResetPath();
+        run.Agent.Warp(m_RunStart);
+        m_Tried = 0.5f * (m_Low + m_High);
+        Line(run.Lane.Name, "-", f, "\"who\":" + Text(run.Who) + ",\"sweep\":" + Text(sweep) + ",\"set\":" + B(run.Agent.SetDestination(run.O + at(m_Tried))));
+    }
+
+    /// <summary>Platform A of the lane on a NavMesh of the second agent type, built now, with an
+    /// agent of that type; its sweeps run after the targets lane's.</summary>
+    void WideType(Lane lane)
+    {
+        int type = -1;
+        for (int i = 0; i < NavMesh.GetSettingsCount(); i++)
+            if (NavMesh.GetSettingsNameFromID(NavMesh.GetSettingsByIndex(i).agentTypeID) == "Wide") type = NavMesh.GetSettingsByIndex(i).agentTypeID;
+        if (type == -1) throw new InvalidOperationException("no agent type Wide");
+        var sources = new List<NavMeshBuildSource>
+        {
+            new NavMeshBuildSource
+            {
+                shape = NavMeshBuildSourceShape.Box,
+                size = new Vector3(10f, 1f, 6f),
+                transform = Matrix4x4.Translate(lane.O + new Vector3(-6f, -0.5f, 0f)),
+                area = 0,
+            },
+        };
+        var data = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(type), sources,
+            new Bounds(lane.O + new Vector3(-6f, 0f, 0f), new Vector3(14f, 4f, 10f)), Vector3.zero, Quaternion.identity);
+        NavMesh.AddNavMeshData(data);
+        // Off the line of the sweeps' targets (x = -6).
+        var agent = Agent(lane, "a", new Vector3(-8f, 0f, -1f), null, g => g.agentTypeID = type);
+        var filter = new NavMeshQueryFilter { agentTypeID = type, areaMask = NavMesh.AllAreas };
+        var path = new NavMeshPath();
+        var from = lane.O + new Vector3(-6f, 0f, 0f);
+        Line(lane.Name, "-", 0, "\"type\":" + Text(NavMesh.GetSettingsByID(type).agentRadius + "/" + NavMesh.GetSettingsByID(type).agentHeight)
+            + ",\"path\":" + B(NavMesh.CalculatePath(from, lane.O + new Vector3(-6f, 0f, 1f), filter, path)) + PathText(path));
+        foreach (int k in SizeSweeps)
+        {
+            var (name, at, max) = Sweeps[k];
+            float edge = Bisect(name, max, d => (NavMesh.CalculatePath(from, lane.O + at(d), filter, path), path.status));
+            Line(lane.Name, "-", 0, "\"who\":\"a\",\"sweep\":" + Text(name) + ",\"query\":\"NavMesh\",\"edge\":" + N(edge));
+        }
+        m_Runs.Add((lane, "a", agent, lane.O, SizeSweeps));
+    }
+
+    static string PathText(NavMeshPath path)
+    {
+        var c = new StringBuilder();
+        var corners = path.corners;
+        for (int k = 0; k < corners.Length; k++) c.Append(k > 0 ? "," : "").Append(V(corners[k]));
+        return ",\"ps\":" + Text(path.status.ToString()) + ",\"c\":[" + c + "]";
     }
 
     // ------------------------------------------------------------------ frames
@@ -462,6 +721,9 @@ public class NavLinksProbe : MonoBehaviour
         s.Append(",\"auto\":").Append(B(agent.autoTraverseOffMeshLink));
         s.Append(",\"dst\":").Append(V(agent.destination));
         s.Append(",\"pe\":").Append(V(agent.pathEndPosition));
+        s.Append(",\"stale\":").Append(B(agent.isPathStale));
+        var owner = agent.navMeshOwner;
+        s.Append(",\"own\":").Append(Text(owner == null ? "null" : owner.name + ":" + owner.GetType().Name));
         s.Append(",\"c\":[");
         var corners = agent.path.corners;
         for (int i = 0; i < corners.Length; i++) s.Append(i > 0 ? "," : "").Append(V(corners[i]));

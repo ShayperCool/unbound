@@ -69,6 +69,21 @@ public static class Lanes
         ("query", Kind.Gap),
         ("disableagent", Kind.Gap),
         ("deactivatewait", Kind.Gap),
+        // Destinations and paths off the NavMesh, a link across a NavMesh tile edge (x = 42.67:
+        // this lane's column), turning controls, stale paths and owners, links below the NavMesh.
+        ("offedge", Kind.Gap),
+        ("crosstile", Kind.Gap),
+        ("island", Kind.Gap),
+        ("targets", Kind.Gap),
+        ("pendingold", Kind.Gap),
+        ("turning", Kind.Gap),
+        ("staleowner", Kind.Gap),
+        ("low", Kind.Gap),
+        ("lowmanual", Kind.Gap),
+        ("aheadoff", Kind.Gap),
+        ("incall", Kind.Gap),
+        // Platform A built at run time for the second agent type ("Wide", radius 1.5, height 5).
+        ("widetype", Kind.Gap),
     };
 
     public const float Spacing = 40f;
