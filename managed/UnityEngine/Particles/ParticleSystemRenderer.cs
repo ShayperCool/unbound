@@ -83,14 +83,6 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>A renderer that starts in Mesh mode (loaded or copied) has the axes from the
-        /// start: its births turn about forward, and later reads keep them (unmeasured beyond a
-        /// switch to Mesh mode; the axis a loaded system's held particles get is not measured).</summary>
-        internal override void OnEngineEnable()
-        {
-            base.OnEngineEnable();
-            if (m_RenderMode == ParticleSystemRenderMode.Mesh) System?.MaterializeAxisOfRotation();
-        }
         public ParticleSystemMeshDistribution meshDistribution { get => m_MeshDistribution; set => m_MeshDistribution = value; }
         public ParticleSystemSortMode sortMode { get => m_SortMode; set => m_SortMode = value; }
         public float lengthScale { get => m_LengthScale; set => m_LengthScale = value; }

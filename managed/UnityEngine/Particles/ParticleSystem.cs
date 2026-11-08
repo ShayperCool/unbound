@@ -1195,6 +1195,11 @@ namespace UnityEngine
             // unmeasured; AddComponent adds it with the system).
             if (m_GameObject.GetComponent<ParticleSystemRenderer>() == null)
                 m_GameObject.AddComponent<ParticleSystemRenderer>();
+            // A system that starts with a Mesh-mode renderer (loaded or copied) has its axes of
+            // rotation before Play On Awake or a prewarm makes particles: births turn about forward
+            // and later reads keep them (only a switch to Mesh mode was measured).
+            if (CullingRenderer is ParticleSystemRenderer meshRenderer && meshRenderer.renderMode == ParticleSystemRenderMode.Mesh)
+                MaterializeAxisOfRotation();
             SubEmittersChanged();
             m_HasLastPosition = false;
             if (m_Main.playOnAwake && m_SubEmitterParent == null)

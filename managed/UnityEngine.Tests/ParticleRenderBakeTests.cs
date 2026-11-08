@@ -293,6 +293,28 @@ namespace UnityEngine.Tests
         /// <summary>Mesh particles turn a z rotation about their axis of rotation: forward for births,
         /// up for particles a system held when it switched to Mesh mode; setting Mesh again, or
         /// reading the particles, keeps the axes (6000.0.71f1, particlerender bake/mesh, meshrot/*).</summary>
+        /// <summary>A system that starts with a Mesh-mode renderer and a prewarm: its prewarmed
+        /// particles turn about forward and keep it.</summary>
+        [Fact]
+        public void APrewarmedMeshSystemKeepsForwardAxes()
+        {
+            var go = new GameObject("prewarmed mesh");
+            go.SetActive(false);
+            try
+            {
+                var ps = go.AddComponent<ParticleSystem>();
+                var main = ps.main; main.playOnAwake = true; main.loop = true; main.prewarm = true; main.startLifetime = 2f;
+                var emission = ps.emission; emission.rateOverTime = 5f;
+                go.GetComponent<ParticleSystemRenderer>().renderMode = ParticleSystemRenderMode.Mesh;
+                go.SetActive(true);
+                var particles = new ParticleSystem.Particle[64];
+                int n = ps.GetParticles(particles);
+                Assert.True(n > 0);
+                for (int i = 0; i < n; i++) Assert.Equal(Vector3.forward, particles[i].axisOfRotation);
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
+
         [Fact]
         public void MeshModeGivesHeldParticlesAnAxisOnceAndKeepsItAfterwards()
         {
