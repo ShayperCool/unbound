@@ -9,6 +9,7 @@ use super::mixer::MixerConfig;
 use super::modulated_delay::MAX_HISTORY_BYTES;
 use super::normalize::{Normalize, NormalizeSpec};
 use super::pitch::{PitchShifter, PitchSpec};
+use super::ramp::ParameterRamp;
 use super::reverb::{SfxReverb, SfxReverbSpec};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -46,6 +47,8 @@ const STATIC_SLOT_WET: Option<SlotWet> = Some(SlotWet {
 });
 // Static wet startup controls in the five effect probes and mixerreverb.
 const SLOT_STARTUP_FRAMES: f32 = 64.0;
+// Live wet/dry gain controls in tests/projects/audiodistortion, Unity 6000.0.71f1.
+const SLOT_TRANSITION_FRAMES: u32 = 64;
 const UNIT_SLOT_WET: Option<SlotWet> = Some(SlotWet {
     maximum: 1.0,
     static_only: false,
@@ -134,6 +137,13 @@ impl EffectKind {
     pub(crate) fn layout_limited(self) -> bool {
         Self::LAYOUT_LIMITED.contains(&self)
     }
+    pub(crate) const TRANSITION_LIMITED: [Self; 5] = [
+        Self::Distortion,
+        Self::Chorus,
+        Self::Flange,
+        Self::Normalize,
+        Self::PitchShifter,
+    ];
     pub(crate) const LAYOUT_LIMITED: [Self; 2] = [Self::PitchShifter, Self::Normalize];
 }
 
@@ -202,6 +212,12 @@ pub struct EffectSpec {
     /// Compat selects the static slot mechanism measured by the five effect probes.
     #[serde(default)]
     pub slot_wet_measured: bool,
+    /// Compat selects block-constant parameter changes retaining the kernel histories.
+    #[serde(default)]
+    pub effect_transitions_measured: bool,
+    /// Compat selects the shared 64-frame effect-slot gain transition.
+    #[serde(default)]
+    pub slot_wet_transitions_measured: bool,
     /// False when the wet level is low enough that Native drops the effect's output.
     #[serde(default = "yes")]
     pub mix_audible: bool,
@@ -242,20 +258,29 @@ pub struct ParamEqSpec {
     pub gain: f32,
 }
 impl EffectSpec {
-    /// Only the slot and its kernel settings are frozen. Generic payload fields such as
-    /// group gain belong to other units and must not veto their supported updates.
-    pub(crate) fn static_wet_settings_match(&self, other: &Self) -> bool {
+    /// The measured live path changes values, keeping identity, placement and bypass fixed.
+    /// Generic payloads owned by other units do not constrain supported group updates.
+    pub(crate) fn live_identity_matches(&self, other: &Self) -> bool {
         self.id == other.id
             && self.kind == other.kind
             && self.bypass == other.bypass
-            && self.mix_level == other.mix_level
-            && self.mix_audible == other.mix_audible
             && self.slot_wet_measured == other.slot_wet_measured
-            && self.distortion == other.distortion
-            && self.chorus == other.chorus
-            && self.flange == other.flange
-            && self.normalize == other.normalize
-            && self.pitch_shifter == other.pitch_shifter
+            && self.effect_transitions_measured == other.effect_transitions_measured
+            && self.slot_wet_transitions_measured == other.slot_wet_transitions_measured
+    }
+    pub(crate) fn kernel_settings_match(&self, other: &Self) -> bool {
+        (self.effect_transitions_measured && other.effect_transitions_measured)
+            || (self.distortion == other.distortion
+                && self.chorus == other.chorus
+                && self.flange == other.flange
+                && self.normalize == other.normalize
+                && self.pitch_shifter == other.pitch_shifter)
+    }
+    pub(crate) fn static_wet_settings_match(&self, other: &Self) -> bool {
+        self.live_identity_matches(other)
+            && ((self.slot_wet_transitions_measured && other.slot_wet_transitions_measured)
+                || (self.mix_level == other.mix_level && self.mix_audible == other.mix_audible))
+            && self.kernel_settings_match(other)
     }
 
     /// Parameter and resource checks that hold wherever the effect runs (group or source).
@@ -681,9 +706,9 @@ pub struct Effect {
     resonance: f32,
     rate: u32,
     gain: f32,
-    gain_step: f32,
-    gain_target: f32,
-    gain_frames: u32,
+    gain_ramp: ParameterRamp,
+    wet_ramp: ParameterRamp,
+    dry_ramp: ParameterRamp,
     send_from: f32,
     send_frames: u32,
     buffer: u32,
@@ -712,9 +737,13 @@ impl Effect {
             rate,
             send_from: spec.send_level,
             send_frames: 0,
-            gain_step: 0.0,
-            gain_target: spec.gain,
-            gain_frames: 0,
+            gain_ramp: ParameterRamp::new(spec.gain),
+            wet_ramp: ParameterRamp::new(if spec.mix_audible {
+                spec.mix_level.unwrap_or(1.0)
+            } else {
+                0.0
+            }),
+            dry_ramp: ParameterRamp::new((1.0 - spec.mix_level.unwrap_or(1.0)).max(-1.0)),
             buffer: buffer.max(1),
             gain: if spec.kind == EffectKind::Send.name() {
                 spec.send_level
@@ -749,9 +778,7 @@ impl Effect {
             || self.spec.gain_ramp_measured != spec.gain_ramp_measured
             || self.spec.gain_immediate != spec.gain_immediate
         {
-            self.gain_frames = 0;
-            self.gain_step = 0.0;
-            self.gain_target = self.gain;
+            self.gain_ramp = ParameterRamp::new(self.gain);
         }
         let kind = EffectKind::parse(&spec.kind);
         if kind == Some(EffectKind::Echo) {
@@ -807,9 +834,13 @@ impl Effect {
         self.frames = 0;
         self.send_from = self.spec.send_level;
         self.send_frames = 0;
-        self.gain_frames = 0;
-        self.gain_step = 0.0;
-        self.gain_target = self.spec.gain;
+        self.gain_ramp = ParameterRamp::new(self.spec.gain);
+        self.wet_ramp = ParameterRamp::new(if self.spec.mix_audible {
+            self.spec.mix_level.unwrap_or(1.0)
+        } else {
+            0.0
+        });
+        self.dry_ramp = ParameterRamp::new((1.0 - self.spec.mix_level.unwrap_or(1.0)).max(-1.0));
         self.cutoff = 5000.0;
         self.resonance = 1.0;
         self.gain = if self.kind == Some(EffectKind::Send) {
@@ -912,8 +943,16 @@ impl Effect {
         if wet.is_some() {
             self.scratch[..samples.len()].copy_from_slice(samples);
         }
-        self.process_effect(samples, bypass);
-        if wet == Some(0.0) && self.spec.slot_wet_measured {
+        let live_wet = self.spec.slot_wet_transitions_measured
+            && self.kind.is_some_and(EffectKind::static_wet);
+        // A fully dry live slot skips the kernel while its gains can still be finishing.
+        if !(live_wet && wet == Some(0.0)) {
+            self.process_effect(samples, bypass);
+        }
+        if wet == Some(0.0)
+            && self.spec.slot_wet_measured
+            && (!live_wet || (self.wet_ramp.value == 0.0 && self.dry_ramp.value == 1.0))
+        {
             // The fully dry slot is an identity, including its startup frames. Keep the
             // kernel history advancing, as the pre-existing reverb path does.
             samples.copy_from_slice(&self.scratch[..samples.len()]);
@@ -926,6 +965,14 @@ impl Effect {
                 .zip(self.scratch.chunks_exact(2))
                 .enumerate()
             {
+                let (wet, dry) = if live_wet {
+                    (
+                        self.wet_ramp.gain(level, SLOT_TRANSITION_FRAMES),
+                        self.dry_ramp.gain(dry, SLOT_TRANSITION_FRAMES),
+                    )
+                } else {
+                    (wet, dry)
+                };
                 let ramp = ((self.frames as usize + frame) as f32 / SLOT_STARTUP_FRAMES).min(1.0);
                 for (x, input) in out.iter_mut().zip(input) {
                     *x = (wet * *x + dry * input) * ramp;
@@ -942,37 +989,20 @@ impl Effect {
             let from = self.gain;
             let frames = samples.len() / 2;
             let measured_ramp = self.spec.gain_ramp_measured && !self.spec.gain_immediate;
-            let mut current = from;
             for (frame, stereo) in samples.chunks_exact_mut(2).enumerate() {
-                if measured_ramp && self.gain_frames == 0 {
-                    if self.gain_target == self.spec.gain {
-                        current = self.spec.gain;
-                        self.gain_step = 0.0;
-                    } else {
-                        self.gain_step = (self.spec.gain - current) / self.buffer as f32;
-                    }
-                    self.gain_target = self.spec.gain;
-                }
                 let gain = if self.spec.gain_immediate {
                     self.spec.gain
                 } else if measured_ramp {
-                    current
+                    self.gain_ramp.next(self.spec.gain, self.buffer)
                 } else {
                     from + (self.spec.gain - from) * (frame + 1) as f32 / frames as f32
                 };
                 for x in stereo {
                     *x *= gain;
                 }
-                if measured_ramp {
-                    current += self.gain_step;
-                    self.gain_frames += 1;
-                    if self.gain_frames == self.buffer {
-                        self.gain_frames = 0;
-                    }
-                }
             }
             self.gain = if measured_ramp {
-                current
+                self.gain_ramp.value
             } else {
                 self.spec.gain
             };
@@ -1107,6 +1137,31 @@ impl GroupNode {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn wet_transitions_survive_partial_chunks_and_repeated_descriptors() {
+        let spec = |wet| {
+            serde_json::from_value::<EffectSpec>(serde_json::json!({
+                "id": "live", "kind": "Distortion", "distortion": 0.5,
+                "mixLevel": wet, "slotWetMeasured": true, "slotWetTransitionsMeasured": true,
+                "effectTransitionsMeasured": true
+            }))
+            .unwrap()
+        };
+        let mut whole = Effect::new(spec(0.25), 44100, 1024).unwrap();
+        let mut chunks = Effect::new(spec(0.25), 44100, 1024).unwrap();
+        for target in [0.25, 0.5, 1.0, 0.0, 0.25] {
+            whole.update(spec(target), 44100, 1024).unwrap();
+            let mut a: Vec<f32> = (0..2048).map(|i| (i % 31) as f32 / 128.0 - 0.125).collect();
+            let mut b = a.clone();
+            whole.process(&mut a, false);
+            for part in b.chunks_mut(14) {
+                chunks.update(spec(target), 44100, 1024).unwrap();
+                chunks.process(part, false);
+            }
+            assert_eq!(a, b, "wet {target}");
+        }
+    }
 
     #[test]
     fn attenuation_parameter_submission_applies_across_the_whole_packet() {

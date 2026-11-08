@@ -236,6 +236,8 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         sfx: (d.kind == filter_kind::REVERB).then(|| sfx_spec(&r)),
         mix_level: None,
         slot_wet_measured: false,
+        effect_transitions_measured: false,
+        slot_wet_transitions_measured: false,
         mix_audible: true,
         duck: None,
         send_target: None,
@@ -1068,30 +1070,30 @@ impl Mixer {
                         && node.spec.bypass == spec.bypass),
                 "AudioMixer wet mixing live parameter, placement and bypass changes are unmeasured"
             );
-            for kind in EffectKind::LAYOUT_LIMITED {
-                // Each unit's place, identity, bypass and settings, which must stay as they
-                // were when the group started rendering.
-                let signature = |group: &GroupSpec| -> Vec<_> {
-                    group
-                        .effects
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, e)| e.kind == kind.name())
-                        .map(|(i, e)| {
-                            (
-                                i,
-                                e.id.clone(),
-                                e.bypass,
-                                e.pitch_shifter.clone(),
-                                e.normalize.clone(),
-                            )
-                        })
-                        .collect()
-                };
-                let (previous, next) = (signature(&node.spec), signature(&spec));
+            for kind in EffectKind::TRANSITION_LIMITED {
+                fn units(
+                    group: &GroupSpec,
+                    kind: EffectKind,
+                ) -> impl Iterator<Item = (usize, &EffectSpec)> {
+                    group.effects.iter().enumerate().filter(move |(_, e)| {
+                        e.kind == kind.name()
+                            && (kind.layout_limited() || e.effect_transitions_measured)
+                    })
+                }
+                let mut previous = units(&node.spec, kind);
+                let mut next = units(&spec, kind);
+                let counts_match = units(&node.spec, kind).count() == units(&spec, kind).count();
+                let same = previous
+                    .by_ref()
+                    .zip(next.by_ref())
+                    .all(|((i, a), (j, b))| {
+                        i == j && a.live_identity_matches(b) && a.kernel_settings_match(b)
+                    });
                 anyhow::ensure!(
-                    (previous.is_empty() && next.is_empty())
-                        || (previous == next && node.spec.bypass == spec.bypass),
+                    counts_match
+                        && same
+                        && (units(&node.spec, kind).next().is_none()
+                            || node.spec.bypass == spec.bypass),
                     "AudioMixer {} live parameter, placement and bypass changes are unmeasured",
                     kind.name()
                 );
@@ -3904,6 +3906,59 @@ mod tests {
         );
         m.configure_group(spec(true, false, compressor)).unwrap();
     }
+    #[test]
+    fn measured_effect_changes_keep_the_unit_and_still_reject_placement_or_bypass() {
+        for (kind, a, b) in [
+            (
+                "Normalize",
+                serde_json::json!({"normalize": {"fade": 5000.0, "lowest": 0.1, "maximum": 20.0}}),
+                serde_json::json!({"normalize": {"fade": 100.0, "lowest": 0.6, "maximum": 0.5}}),
+            ),
+            (
+                "Pitch Shifter",
+                serde_json::json!({"pitchShifter": {"pitch": 0.75}}),
+                serde_json::json!({"pitchShifter": {"pitch": 1.5}}),
+            ),
+        ] {
+            let group = |mut parameters: serde_json::Value| {
+                parameters["id"] = "live".into();
+                parameters["kind"] = kind.into();
+                parameters["mixLevel"] = 0.25.into();
+                parameters["slotWetMeasured"] = true.into();
+                parameters["effectTransitionsMeasured"] = true.into();
+                parameters["slotWetTransitionsMeasured"] = true.into();
+                serde_json::from_value::<GroupSpec>(serde_json::json!({
+                    "handle": 1, "parent": 0, "mixer": 1, "muted": false, "bypass": false, "effects": [parameters]
+                }))
+                .unwrap()
+            };
+            let mut mixer = Mixer::new(MixerConfig::default());
+            mixer.configure_group(group(a)).unwrap();
+            mixer.group_nodes.get_mut(&1).unwrap().rendered = 1024;
+            let mut next = group(b);
+            next.effects[0].mix_level = Some(0.5);
+            mixer.configure_group(next.clone()).unwrap();
+            for edit in 0..4 {
+                let mut rejected = next.clone();
+                match edit {
+                    0 => rejected.effects[0].id = "new identity".into(),
+                    1 => rejected.effects[0].bypass = true,
+                    2 => rejected.effects[0].mix_level = None,
+                    _ => rejected.effects.clear(),
+                }
+                assert!(mixer.configure_group(rejected).is_err());
+                assert_eq!(mixer.group_nodes[&1].spec, next);
+            }
+        }
+        // A group without these limited effects keeps its ordinary bypass support.
+        let mut mixer = Mixer::new(MixerConfig::default());
+        let mut group = filter_group(1, 0, "Echo");
+        mixer.configure_group(group.clone()).unwrap();
+        mixer.group_nodes.get_mut(&1).unwrap().rendered = 1024;
+        group.bypass = true;
+        mixer.configure_group(group).unwrap();
+    }
+
     #[test]
     fn static_wet_changes_are_accepted_before_rendering_and_rejected_atomically_after_it() {
         for (kind, parameters) in [

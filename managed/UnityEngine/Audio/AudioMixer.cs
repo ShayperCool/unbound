@@ -542,6 +542,8 @@ namespace UnityEngine.Audio
                     // Slot Wet uses dB, separately from an effect's own linear wet-tap controls.
                     mixLevel = !bypass && rule.Wet && effect.m_EnableWetMix ? AudioMixer.DspGain(wetDb, rule.MaxWetDb) : (float?)null,
                     slotWetMeasured = Compat.MixerStaticWetMeasured,
+                    effectTransitionsMeasured = Compat.MixerEffectTransitionsMeasured,
+                    slotWetTransitionsMeasured = Compat.MixerWetTransitionsMeasured,
                     mixAudible = wetDb > (Compat.MixerStaticWetMeasured ? AudioMixer.MeasuredWetAudibilityDb : AudioMixer.LegacyWetAudibilityDb),
                     duck = effect.m_EffectName == AudioMixerEffectController.DuckVolume ? effect.DuckConfiguration(m_Mixer) : null,
                     compressor = effect.m_EffectName == AudioMixerEffectController.Compressor && !bypass ? effect.CompressorConfiguration(m_Mixer) : null,

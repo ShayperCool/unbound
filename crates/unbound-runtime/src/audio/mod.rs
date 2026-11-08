@@ -8,17 +8,18 @@
 //! the frame's time in whole DSP buffers each frame, so playback, `time`, `isPlaying` and
 //! scheduling behave the same, deterministically, without opening a device.
 pub mod capture;
-pub mod compressor;
 pub mod chorus;
-pub mod flange;
-pub mod normalize;
-pub mod pitch;
+pub mod compressor;
 pub mod duck;
 pub mod effects;
 pub mod fft;
+pub mod flange;
 pub mod mixer;
 pub(crate) mod modulated_delay;
+pub mod normalize;
+pub mod pitch;
 pub mod protocol;
+pub(crate) mod ramp;
 pub mod reverb;
 pub mod spatial;
 pub(crate) mod wavetable;

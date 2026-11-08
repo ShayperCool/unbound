@@ -157,6 +157,14 @@ namespace Unbound.Runtime
         /// tests/projects/audioflange). Other releases fail until measured.</summary>
         internal static bool ModulatedDelayMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Block-constant effect parameters retaining delay, phase and follower state,
+        /// measured on 6000.0.71f1 by tests/projects/audiodistortion's live profile.</summary>
+        internal static bool MixerEffectTransitionsMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>Shared effect-slot wet/dry gains over 64 frames, measured on 6000.0.71f1
+        /// by tests/projects/audiodistortion's live profile. Other releases keep static slots.</summary>
+        internal static bool MixerWetTransitionsMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Component tails end one DSP buffer after the last voice's containing
         /// buffer, including partial device periods (tests/projects/audioreverb, 6000.0.71f1).
         /// Other releases retain their previous render-chunk frontier until measured.</summary>
