@@ -1170,6 +1170,9 @@ public partial class ParticleRenderProbe : MonoBehaviour
         FreeformNormals();
         MeshScale();
         MeshIndexFormats();
+        yield return PrewarmControls();
+        yield return BirthEndControls();
+        yield return InheritControls();
         Record("complete", new List<float> { 1f });
         File.WriteAllText(s_Path, s_Out.ToString());
         Debug.Log("particle render complete: " + s_Path);

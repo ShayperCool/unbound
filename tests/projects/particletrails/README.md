@@ -19,7 +19,8 @@ it, the capture applied with its first particle left out, applied without `SetPa
 to another system. `cap/*` records births the cap blocks: a 20/s and a 30/s rate, cycling bursts and both, with
 trails that fade, trails that die with their particles, no trails and fading trails off the step grid (also with no
 minimum vertex distance and with one of 0.3), stepped by
-`Simulate` calls of 0.02, 0.05 and 0.1 s and played over frames.
+`Simulate` calls of 0.02, 0.05 and 0.1 s and played over frames. `mvd/*` records a slow particle and
+one at rest with a minimum vertex distance they never cover within the trail lifetime.
 
     python3 tests/projects/particletrails/run.py native --label native1   # Editor capture (GPU, job pool)
     python3 tests/projects/particletrails/run.py publish native1 native2  # two identical captures
@@ -27,7 +28,7 @@ minimum vertex distance and with one of 0.3), stepped by
 
 The reference is `Reference/unity-6000.0.71f1/` (`values.jsonl`, 15 images); both captures were
 identical, values and image bytes (re-recorded with the `cap/*/die0ntmv0.29` and `die0ntmv0.31`
-controls: every earlier record and image unchanged). Values compare at the particle probes' bound (0.0002 absolute
+controls, then with `mvd/*`: every earlier record and image unchanged). Values compare at the particle probes' bound (0.0002 absolute
 plus 0.0002 relative); images go through `particles/compare_images.py` (report only). Run output
 stays under `$XDG_CACHE_HOME/unbound/validation/runs/particletrails/`.
 
@@ -58,6 +59,7 @@ Everything below is measured in this release, not documented.
 | `played/*` | Played over frames the same holds; the stop callback comes when the last carrier leaves. |
 | `api/*` | `GetTrails` returns the size of the system's trail storage, not the number of trails (the documented return): particle slots (at least 32, a power of two) times points per trail (at least 4, a power of two), from the most particles and the longest trail so far; it never shrinks (also after `Clear` and a restart) and is 0 in Ribbon mode. The `Trails`' capacity becomes that size when it is smaller; a larger presized capacity stays. |
 | `api/rt/*` | `SetTrails` puts trails back by particle index: the particle at index i takes the trail captured at index i (or none, if the particle there had none), whatever particle held it, also in another system of the same setup. A round trip with `SetParticles` and `SetPlaybackState` restores the trails exactly and the later steps repeat. `SetParticles` leaves each trail at its index: a particle written into a live slot keeps that slot's trail; one written past the live slots starts its own. |
+| `cap/*/die0ntmv*`, `mvd/*` | With a minimum vertex distance, a live particle takes a point once it moved farther than the distance from its newest point, or whatever the distance once that point outlived the trail lifetime: the expired points then go, with no cut tail drawn, and the trail restarts at the head (0.29, 0.3 and 0.31 alike with particles moving 0.1 a step and 0.141 s trails). A carrier's trail is spent, and it leaves, when its newest point expires. |
 | `cap/*` | A birth the cap blocks is dropped, not retried later (single and multi-step calls, Play, rate and bursts); with fading trails the waiting birth takes the slot in the step its carrier leaves. |
 
 ## Known differences (`known.json`)
@@ -67,7 +69,8 @@ any other difference. Two concern dead particles, `world-trail-death-head` and t
 `rate-at-capacity`; the others also show with `dieWithParticles` on or while every particle lives:
 
 - `newborn-trail-quad`: a newborn trail whose points still coincide gets its first quad across
-  another direction in Unity (images `die1_9`, `world_9`).
+  another direction in Unity (images `die1_9`, `world_9`; every `mvd/*` trail, whose two points
+  coincide each time it restarts).
 - `death-child-age`: the separate Death sub-emitter child age residual (also after a speed kill).
 - `ribbon-order`: particles of one burst (equal ages) are joined in an order Unbound does not
   reproduce.
@@ -80,12 +83,10 @@ any other difference. Two concern dead particles, `world-trail-death-head` and t
   the trail lifetime off the step grid (`cap/*/die0nt`) match every particle, also with no minimum
   vertex distance (`cap/*/die0ntmv0`), so the last trail point a carrier keeps is the one its own
   steps added (no point at its death).
-- `vertex-distance-birth-slot`: with a minimum vertex distance that keeps a particle from taking a point
-  every step (0.3 with particles moving 0.1 a step, `cap/*/die0ntmv3`), a birth waiting for the slot
-  of a particle leaving at zero life comes a step later in Unbound. The controls off that tie
-  (`cap/*/die0ntmv0.29`, `die0ntmv0.31`, recorded last) differ the same way, so it is not a float
-  tie but an unresolved rule tied to the minimum distance; with no minimum distance every particle
-  matches.
+- `vertex-distance-tie`: float ties of the minimum vertex distance rule (`cap/burst/die0ntmv3`, a
+  distance of exactly six steps of movement; `cap/burstrate/die0ntmv0.29`, a carrier born and dying
+  exactly on step ends): a point, and with it a carrier's leaving and the birth waiting for its slot,
+  a step apart. The controls off the tie match every particle, birth and removal.
 - `restored-trail-other-index`: right after `SetTrails` gives a particle a trail another particle
   left, Unity draws it ending at its oldest kept point, Unbound cut at the lifetime; with the trail
   ratio such a carrier's trail samples other points afterwards.

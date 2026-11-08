@@ -594,6 +594,30 @@ public class ParticleTrailProbe : MonoBehaviour
                 }
     }
 
+    /// <summary>One slow particle (0.2 units/s) and one at rest, a minimum vertex distance of 0.05
+    /// and a 0.2 s trail lifetime: the newest trail point outlives the trail lifetime long before
+    /// the particle covers the distance. Simulate calls of 0.02 s.</summary>
+    static void VertexDistanceRestartControls()
+    {
+        foreach (var (name, speed) in new[] { ("slow", 0.2f), ("rest", 0f) })
+        {
+            string key = "mvd/" + name;
+            var ps = Make(key, s =>
+            {
+                var m = s.main; m.startLifetime = 2f; m.startSpeed = speed;
+                var shape = s.shape; shape.enabled = false;
+                var e = s.emission; e.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+                var t = s.trails; t.lifetime = 0.1f; t.minVertexDistance = 0.05f; t.dieWithParticles = true;
+            });
+            for (int i = 0; i < 40; i++)
+            {
+                ps.Simulate(0.02f, true, i == 0, false);
+                RecordState(key + "/" + i, ps);
+            }
+            Done(ps);
+        }
+    }
+
     static readonly (string, Action<ParticleSystem>)[] CapSystems =
     {
         ("rate", s =>
@@ -755,6 +779,7 @@ public class ParticleTrailProbe : MonoBehaviour
         yield return CapPlayed(0.05f);
         yield return CapPlayed(0.02f);
         CapDistanceTieControls();
+        VertexDistanceRestartControls();
         Record("complete", new List<float> { 1f });
         File.WriteAllText(s_Path, s_Out.ToString());
         Debug.Log("particle trails complete: " + s_Path);
