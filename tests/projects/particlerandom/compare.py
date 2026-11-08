@@ -13,7 +13,12 @@ TOLERANCE = 2e-4
 PARTICLE_FIELDS = 33
 # Local field indices include the two seed halves. These are unresolved measurements, not
 # alternative tolerances. See README.md for their scope and observable effects.
-RESIDUALS = []
+RESIDUALS = [
+    # (key pattern, particle fields, reason). Fields: 0-1 seed halves, 2-4 position, 32 remaining lifetime.
+    (r'^moving/distance/', {0, 1, 2, 3, 4, 32},
+     'emission over distance from a custom emitter velocity: Unity starts a frame\'s distance births '
+     'as one batch, youngest first; Unbound starts them per internal step (same count and ages; open)'),
+]
 ANGULAR_CONTEXT = r'^(color/|custom/|subemit/|played/|vol/speedmodifier9/)'
 
 

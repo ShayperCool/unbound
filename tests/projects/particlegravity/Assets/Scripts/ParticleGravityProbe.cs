@@ -229,8 +229,8 @@ public class ParticleGravityProbe : MonoBehaviour
         {
             var main = s.main; main.gravityModifier = new ParticleSystem.MinMaxCurve(2f, -0.5f);
         }, 5));
-        // A start delay: particles emitted during it fall under the modifier curve, read at the
-        // system time the delay leaves (constant and rising curve), looping and not.
+        // A start delay with Emit during it (which stops emission): which playback time the
+        // modifier curve is read at afterwards, looping and not.
         foreach (var (name, loop) in new[] { ("delay/curve", true), ("delay/curve_once", false) })
         {
             bool l = loop;

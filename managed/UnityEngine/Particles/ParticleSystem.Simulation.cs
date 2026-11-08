@@ -187,11 +187,13 @@ namespace UnityEngine
             m_FrameDistance = delta.magnitude;
             if (m_Main.emitterVelocityMode == ParticleSystemEmitterVelocityMode.Custom)
             {
-                // Newborns are placed back along the custom velocity, as if the emitter had
-                // moved with it over the frame (6000.0.71f1, tests/projects/particlerandom
-                // inherit/*: a still emitter's newborns sit at -velocity · age).
+                // The emitter counts as moving with the custom velocity over the frame, whatever
+                // its transform did: newborns sit back along it from the current position and
+                // emission over distance counts its distance (6000.0.71f1,
+                // tests/projects/particlerandom inherit/*, moving/*).
                 m_EmitterVelocity = m_Main.customEmitterVelocity;
                 m_FrameStartPosition = position - m_EmitterVelocity * dt;
+                m_FrameDistance = m_EmitterVelocity.magnitude * dt;
             }
             else if (dt > 0f)
                 m_EmitterVelocity = delta / dt;
@@ -1732,14 +1734,15 @@ namespace UnityEngine
         }
 
         /// <summary>The module salts of the Inherit Velocity and Lifetime by Emitter Speed random
-        /// values (6000.0.71f1, tests/projects/particlecurves inherit/*, lbes/*).</summary>
+        /// values (6000.0.71f1, tests/projects/particlerandom inherit/*, lbes/*).</summary>
         const uint InheritVelocitySalt = 3401255u, LifetimeByEmitterSpeedSalt = 3401256u;
         /// <summary>Whether Inherit Velocity's Initial mode applies its curve over the particle's
         /// life (curve modes) instead of once at birth (constant modes).</summary>
         static bool InheritsOverLifetime(ParticleSystemCurveMode mode) =>
             mode == ParticleSystemCurveMode.Curve || mode == ParticleSystemCurveMode.TwoCurves;
 
-        /// <summary>The smallest factor Lifetime by Emitter Speed applies (measured).</summary>
+        /// <summary>The smallest factor Lifetime by Emitter Speed applies (6000.0.71f1: a factor of 0
+        /// leaves no particle past its first step, tests/projects/particlerandom lbes/zero).</summary>
         const float MinLifetimeByEmitterSpeedScale = 0.0001f;
 
         /// <summary>Lifetime by Emitter Speed's factor of a new particle's lifetime: the curve at the
@@ -1751,15 +1754,16 @@ namespace UnityEngine
             if (!L.enabled) return 1f;
             var range = L.range;
             float span = range.y - range.x;
-            // The range maps to [0, 1] as speed·scale + offset; a range narrower than the
-            // tolerance keeps its start as the scale (as the Editor does).
+            // The range maps to [0, 1] as speed·scale + offset; a range narrower than
+            // InverseLerpMinSpan keeps its start as the scale, so a speed past an empty range
+            // reads 1 (6000.0.71f1, tests/projects/particlerandom lbes/degenerate).
             float scale = Mathf.Abs(span) > InverseLerpMinSpan ? 1f / span : range.x;
             float offset = -(range.x * scale);
             float s = Mathf.Clamp01(m_EmitterVelocity.magnitude * scale + offset);
             return Mathf.Max(L.curve.Evaluate(s, ModuleValue(seed, LifetimeByEmitterSpeedSalt)), MinLifetimeByEmitterSpeedScale);
         }
 
-        /// <summary>The smallest range span Lifetime by Emitter Speed divides by (measured).</summary>
+        /// <summary>The smallest range span Lifetime by Emitter Speed divides by.</summary>
         const float InverseLerpMinSpan = 1e-9f;
 
         static ModuleCurve InMode(ModuleCurve curve, ParticleSystemCurveMode mode)

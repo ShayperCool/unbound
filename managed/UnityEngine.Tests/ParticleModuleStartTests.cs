@@ -104,6 +104,31 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ACustomEmitterVelocityPlacesNewbornsFromTheCurrentPosition()
+        {
+            // The transform moves, the custom velocity is zero: every newborn sits on the
+            // emitter's current position, not along the path it moved.
+            var ps = Make(ps =>
+            {
+                var m = ps.main; m.simulationSpace = ParticleSystemSimulationSpace.World; m.startSpeed = 0f;
+                m.emitterVelocityMode = ParticleSystemEmitterVelocityMode.Custom; m.emitterVelocity = Vector3.zero;
+                ps.emission.SetBursts(new ParticleSystem.Burst[0]);
+                var e = ps.emission; e.rateOverTime = 80f;
+            });
+            try
+            {
+                ps.Simulate(0.05f, true, true, false);
+                int before = ps.particleCount;
+                ps.transform.position = new Vector3(0.5f, 0f, 0f);
+                ps.Simulate(0.05f, true, false, false);
+                var particles = Read(ps);
+                Assert.True(particles.Length > before);
+                for (int i = before; i < particles.Length; i++) Assert.Equal(new Vector3(0.5f, 0f, 0f), particles[i].position);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
         public void AScaledCustomSpaceKeepsTheStartSpeed()
         {
             var space = new GameObject("space").transform;
