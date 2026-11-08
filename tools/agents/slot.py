@@ -169,12 +169,11 @@ def symlink_targets(base, checkouts=()):
         return found
     except OSError as error:
         raise SystemExit(f'cannot inspect run-cache links: {error}; refusing to reap worktrees')
-    base = base.resolve()
+    base = base.absolute()
     checkouts = set(checkouts)
     # Compiler/Editor installations hold no live probe projects. Following the build
     # cache would scan every private target on each reap.
     excluded = {'builds', 'editors', 'tools'}
-    excluded_roots = {(base/name).resolve() for name in excluded}
 
     def inside(path, roots):
         return any(parent in roots for parent in (path, *path.parents))
@@ -212,6 +211,8 @@ def symlink_targets(base, checkouts=()):
         resolved[path] = result
         return result
 
+    base = resolve(base)
+    excluded_roots = {resolve(base/name) for name in excluded}
     pending, visited = [base], set()
     while pending:
         directory = pending.pop()
