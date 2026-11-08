@@ -681,6 +681,8 @@ pub struct Effect {
     resonance: f32,
     rate: u32,
     gain: f32,
+    gain_step: f32,
+    gain_frames: u32,
     send_from: f32,
     send_frames: u32,
     buffer: u32,
@@ -709,6 +711,8 @@ impl Effect {
             rate,
             send_from: spec.send_level,
             send_frames: 0,
+            gain_step: 0.0,
+            gain_frames: 0,
             buffer: buffer.max(1),
             gain: if spec.kind == EffectKind::Send.name() {
                 spec.send_level
@@ -738,6 +742,13 @@ impl Effect {
         }
         if spec.pitch_shifter.is_some() && self.pitch.is_none() {
             self.pitch = Some(PitchShifter::new());
+        }
+        if self.buffer != buffer.max(1)
+            || self.spec.gain_ramp_measured != spec.gain_ramp_measured
+            || self.spec.gain_immediate != spec.gain_immediate
+        {
+            self.gain_frames = 0;
+            self.gain_step = 0.0;
         }
         let kind = EffectKind::parse(&spec.kind);
         if kind == Some(EffectKind::Echo) {
@@ -793,6 +804,8 @@ impl Effect {
         self.frames = 0;
         self.send_from = self.spec.send_level;
         self.send_frames = 0;
+        self.gain_frames = 0;
+        self.gain_step = 0.0;
         self.cutoff = 5000.0;
         self.resonance = 1.0;
         self.gain = if self.kind == Some(EffectKind::Send) {
@@ -925,9 +938,11 @@ impl Effect {
             let from = self.gain;
             let frames = samples.len() / 2;
             let measured_ramp = self.spec.gain_ramp_measured && !self.spec.gain_immediate;
-            let step = (self.spec.gain - from) / frames.max(1) as f32;
             let mut current = from;
             for (frame, stereo) in samples.chunks_exact_mut(2).enumerate() {
+                if measured_ramp && self.gain_frames == 0 {
+                    self.gain_step = (self.spec.gain - current) / self.buffer as f32;
+                }
                 let gain = if self.spec.gain_immediate {
                     self.spec.gain
                 } else if measured_ramp {
@@ -939,7 +954,11 @@ impl Effect {
                     *x *= gain;
                 }
                 if measured_ramp {
-                    current += step;
+                    current += self.gain_step;
+                    self.gain_frames += 1;
+                    if self.gain_frames == self.buffer {
+                        self.gain_frames = 0;
+                    }
                 }
             }
             self.gain = if measured_ramp {
@@ -1140,6 +1159,35 @@ mod tests {
         effect.process(&mut shorter, false);
         assert_eq!(shorter[0], 0.644_287_1);
         assert!(shorter[510] > shorter[0] && shorter[510] < 1.0);
+    }
+
+    #[test]
+    fn measured_attenuation_ramp_is_independent_of_render_chunk_boundaries() {
+        let spec = |gain| {
+            serde_json::from_value::<EffectSpec>(serde_json::json!({
+                "id": "level", "kind": "Attenuation", "gain": gain,
+                "gainRampMeasured": true
+            }))
+            .unwrap()
+        };
+        for bypass in [false, true] {
+            let render = |chunks: &[usize]| {
+                let mut effect = Effect::new(spec(1.0), 48000, 1024).unwrap();
+                effect.update(spec(0.644_302_37), 48000, 1024).unwrap();
+                let mut output = vec![1.0; 4096];
+                let mut offset = 0;
+                for &frames in chunks {
+                    effect.process(&mut output[offset..offset + frames * 2], bypass);
+                    offset += frames * 2;
+                }
+                assert_eq!(offset, output.len());
+                output
+            };
+            let whole = render(&[1024, 1024]);
+            assert_eq!(render(&[256; 8]), whole);
+            assert_eq!(render(&[63, 1, 192, 256, 512, 480, 480, 64]), whole);
+            assert_eq!(whole[2048], 0.644_287_1);
+        }
     }
 
     #[test]
