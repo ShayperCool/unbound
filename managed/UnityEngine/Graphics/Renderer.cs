@@ -54,6 +54,10 @@ namespace UnityEngine
         internal Matrix4x4 m_PreviousModel;
         internal bool m_HasPreviousModel;
 
+        /// <summary>The object matrix the renderer's object motion follows (what
+        /// <see cref="m_PreviousModel"/> keeps).</summary>
+        internal virtual Matrix4x4 MotionMatrix => transform.localToWorldMatrix;
+
         /// <summary>A visible renderer turned off (disabled, or its object deactivated) becomes
         /// invisible at once (measured: tests/projects/messages, OnBecameInvisible during the
         /// Update that turned it off).</summary>

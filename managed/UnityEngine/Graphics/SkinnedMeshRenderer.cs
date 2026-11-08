@@ -289,8 +289,22 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>The bone-skinned mesh is drawn in world space (an identity model matrix).</summary>
-        internal bool DeformsInWorldSpace => IsSkinned && !m_GraphicsOutputRequested;
+        /// <summary>The object matrix of a bone-skinned mesh, which its object motion follows: its
+        /// actual root bone's (rootBone, else the renderer's own transform) position and rotation,
+        /// without scale (the skin's scale is in its pose). Moving only the root bone moves the
+        /// skin; moving the renderer apart from its bones does not (Unity 6000.0.71f1,
+        /// tests/projects/urp motion_blur_skinned_root, motion_blur_skinned_renderer,
+        /// motion_blur_skinned_root_scale).</summary>
+        internal override Matrix4x4 MotionMatrix
+        {
+            get
+            {
+                if (!IsSkinned) return base.MotionMatrix;
+                var root = m_RootBone != null ? m_RootBone : transform;
+                root.GetPositionAndRotation(out var position, out var rotation);
+                return Matrix4x4.TRS(position, rotation, Vector3.one);
+            }
+        }
 
         // The authored local bound belongs to rootBone, falling back to the renderer transform.
         // It is independent of the drawing matrix (bone-skinned geometry is already in world space).

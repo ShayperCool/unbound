@@ -226,12 +226,12 @@ namespace Unbound.Runtime
         /// with its previous matrix and whether it moved since the matrices were last kept
         /// (<see cref="EndFrameMotion"/>) or forces no motion. A renderer is taken to be still the
         /// first time it is drawn. On the Editor's OpenGL Core device (the one Unbound reports) a
-        /// skinned mesh moves as its renderer does and its bones' deformation adds no motion,
-        /// with or without skinnedMotionVectors and with CPU or GPU mesh deformation (Unity
-        /// 6000.0.71f1, tests/projects/urp motion_blur_skinned_moved, motion_blur_skinned,
-        /// motion_blur_skinned_off). A skin drawn in world space (an identity matrix) keeps its
-        /// renderer's matrix; its previous matrix places this frame's skin where the renderer
-        /// was (the kept matrix times the current inverse).</summary>
+        /// bone-skinned mesh moves as its object matrix (<see cref="Renderer.MotionMatrix"/>, its
+        /// root bone's) does and its bones' deformation adds no motion, with or without
+        /// skinnedMotionVectors and with CPU or GPU mesh deformation (Unity 6000.0.71f1,
+        /// tests/projects/urp motion_blur_skinned*). Unbound draws such a skin with another matrix
+        /// than that one (the identity: in world space); its previous matrix places this frame's
+        /// skin where the object matrix was (the kept matrix times the current inverse).</summary>
         internal static bool ObjectMotion(in DrawItem item, out Matrix4x4 previous, out bool moving, out bool forceNoMotion)
         {
             previous = default;
@@ -247,8 +247,8 @@ namespace Unbound.Runtime
             else if (renderer is not MeshRenderer) return false;
             var mode = renderer.motionVectorGenerationMode;
             if (mode == MotionVectorGenerationMode.Camera) return false;
-            bool world = skin != null && skin.DeformsInWorldSpace;
-            var model = world ? renderer.transform.localToWorldMatrix : item.Model;
+            bool boned = skin != null && skin.IsBoneSkinned;
+            var model = boned ? skin.MotionMatrix : item.Model;
             if (!renderer.m_HasPreviousModel)
             {
                 renderer.m_PreviousModel = model;
@@ -256,7 +256,7 @@ namespace Unbound.Runtime
             }
             forceNoMotion = mode == MotionVectorGenerationMode.ForceNoMotion;
             moving = forceNoMotion || renderer.m_PreviousModel != model;
-            previous = world ? renderer.m_PreviousModel * model.inverse * item.Model : renderer.m_PreviousModel;
+            previous = boned ? renderer.m_PreviousModel * model.inverse * item.Model : renderer.m_PreviousModel;
             return true;
         }
 
@@ -324,7 +324,7 @@ namespace Unbound.Runtime
             foreach (var renderer in RenderRegistry.Renderers)
             {
                 if (!renderer) continue;
-                renderer.m_PreviousModel = renderer.transform.localToWorldMatrix;
+                renderer.m_PreviousModel = renderer.MotionMatrix;
                 renderer.m_HasPreviousModel = true;
             }
         }

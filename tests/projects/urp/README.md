@@ -131,7 +131,10 @@ probe renders it), post-processing on and a global Volume, one setting each:
 - skinned motion (Camera and Objects motion blur, a two-bone ribbon in front of the camera, one
   render, the change, a frame, the recorded render: Unity skins after the scripts' updates):
   `motion_blur_skinned` (the upper bone bends, the renderer stays), `motion_blur_skinned_off`
-  (the same with skinnedMotionVectors off), `motion_blur_skinned_moved` (the ribbon moves whole).
+  (the same with skinnedMotionVectors off), `motion_blur_skinned_moved` (the ribbon moves whole),
+  `motion_blur_skinned_root` (only the root bone moves and turns), `motion_blur_skinned_renderer`
+  (the renderer moves, its bones in another hierarchy stay) and `motion_blur_skinned_root_scale`
+  (only the root bone's scale changes).
 
 Their constants record `frameCount` (film grain, dithering and TAA jitter follow it).
 `texture-samples.jsonl` (compared by `compare_constants.py`) records what the Single Channel
@@ -142,5 +145,6 @@ constants for these scenarios. On the Editor's OpenGL Core device inline sampler
 apply (each texture samples through its own state: Point upscaling equals Linear,
 `inline_sampler`), and a skinned mesh moves as its renderer does: bending adds no motion, with
 skinnedMotionVectors on or off (the project deforms meshes on the CPU; set to GPU (Batched) the
-Editor recorded the same bend, not committed). URP's C# runs in Mono's double precision (0.7
+Editor recorded the same bend, not committed); its object motion follows its root bone's position
+and rotation, neither the renderer's transform nor the root bone's scale. URP's C# runs in Mono's double precision (0.7
 scales the target to 223x125), which Unbound does not (see docs/COMPATIBILITY_GAPS.md).

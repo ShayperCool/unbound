@@ -182,9 +182,15 @@ public partial class UrpProbe
         // Inline sampler states, and skinned meshes' motion vectors (with skinnedMotionVectors
         // off: the control).
         InlineSamplerScenario(dir, camera);
-        yield return SkinnedMotion(dir, "motion_blur_skinned", camera, true, false, p => blur(p, MotionBlurMode.CameraAndObjects, MotionBlurQuality.Medium));
-        yield return SkinnedMotion(dir, "motion_blur_skinned_off", camera, false, false, p => blur(p, MotionBlurMode.CameraAndObjects, MotionBlurQuality.Medium));
-        yield return SkinnedMotion(dir, "motion_blur_skinned_moved", camera, true, true, p => blur(p, MotionBlurMode.CameraAndObjects, MotionBlurQuality.Medium));
+        Action<VolumeProfile> objectBlur = p => blur(p, MotionBlurMode.CameraAndObjects, MotionBlurQuality.Medium);
+        yield return SkinnedMotion(dir, "motion_blur_skinned", camera, true, SkinChange.Bend, objectBlur);
+        yield return SkinnedMotion(dir, "motion_blur_skinned_off", camera, false, SkinChange.Bend, objectBlur);
+        yield return SkinnedMotion(dir, "motion_blur_skinned_moved", camera, true, SkinChange.MoveWhole, objectBlur);
+        // What a skin's object motion follows: its root bone (moved alone, or only scaled), not
+        // its renderer (moved apart from its bones).
+        yield return SkinnedMotion(dir, "motion_blur_skinned_root", camera, true, SkinChange.MoveRootBone, objectBlur);
+        yield return SkinnedMotion(dir, "motion_blur_skinned_renderer", camera, true, SkinChange.MoveRendererApart, objectBlur);
+        yield return SkinnedMotion(dir, "motion_blur_skinned_root_scale", camera, true, SkinChange.ScaleRootBone, objectBlur);
 
         camera.enabled = true;
         s_Camera = null;
@@ -224,19 +230,40 @@ public partial class UrpProbe
         });
     }
 
-    /// <summary>A two-bone ribbon (a SkinnedMeshRenderer with the cube's material) in front of
-    /// the camera whose upper bone bends between two frames of a motion blur scenario (the
-    /// renderer itself does not move), or that moves whole (<paramref name="moveRoot"/>: the
-    /// renderer and its bones, unbent). Unity skins once a frame after the scripts' updates, so
-    /// each render here follows a frame: one render, the change, a frame, the recorded
+    /// <summary>What changes between the two frames of a skinned motion scenario.</summary>
+    enum SkinChange
+    {
+        /// <summary>The upper bone bends (the renderer and root bone stay).</summary>
+        Bend,
+        /// <summary>The renderer moves with its bones, unbent.</summary>
+        MoveWhole,
+        /// <summary>Only the root bone moves and turns (in-place animation's root motion).</summary>
+        MoveRootBone,
+        /// <summary>The renderer moves; its bones, in another hierarchy, stay.</summary>
+        MoveRendererApart,
+        /// <summary>Only the root bone's scale changes.</summary>
+        ScaleRootBone,
+    }
+
+    /// <summary>A two-bone ribbon (a SkinnedMeshRenderer with the cube's material, its lower bone
+    /// the root bone) in front of the camera that changes between two frames of a motion blur
+    /// scenario (<paramref name="change"/>). Unity skins once a frame after the scripts' updates,
+    /// so each render here follows a frame: one render, the change, a frame, the recorded
     /// render.</summary>
-    IEnumerator SkinnedMotion(string dir, string name, Camera camera, bool skinnedMotionVectors, bool moveRoot, Action<VolumeProfile> configure)
+    IEnumerator SkinnedMotion(string dir, string name, Camera camera, bool skinnedMotionVectors, SkinChange change, Action<VolumeProfile> configure)
     {
         var root = new GameObject("Ribbon");
         root.transform.SetParent(camera.transform, false);
         root.transform.localPosition = new Vector3(-0.6f, -0.9f, 4f);
+        // Bones apart from the renderer: a sibling at the renderer's place.
+        var bones = change == SkinChange.MoveRendererApart ? new GameObject("Ribbon Bones") : null;
+        if (bones != null)
+        {
+            bones.transform.SetParent(camera.transform, false);
+            bones.transform.localPosition = root.transform.localPosition;
+        }
         var lower = new GameObject("Lower").transform;
-        lower.SetParent(root.transform, false);
+        lower.SetParent(bones != null ? bones.transform : root.transform, false);
         var upper = new GameObject("Upper").transform;
         upper.SetParent(lower, false);
         upper.localPosition = new Vector3(0f, 0.8f, 0f);
@@ -265,12 +292,19 @@ public partial class UrpProbe
         var (volume, profile) = AddVolume(configure);
         yield return null;
         RenderOnce();
-        if (moveRoot) root.transform.localPosition += new Vector3(0.3f, 0.1f, 0f);
-        else upper.localRotation = Quaternion.Euler(0f, 0f, 35f);
+        switch (change)
+        {
+            case SkinChange.Bend: upper.localRotation = Quaternion.Euler(0f, 0f, 35f); break;
+            case SkinChange.MoveWhole: root.transform.localPosition += new Vector3(0.3f, 0.1f, 0f); break;
+            case SkinChange.MoveRootBone: lower.SetLocalPositionAndRotation(new Vector3(0.3f, 0.1f, 0f), Quaternion.Euler(0f, 0f, -20f)); break;
+            case SkinChange.MoveRendererApart: root.transform.localPosition += new Vector3(0.3f, 0.1f, 0f); break;
+            case SkinChange.ScaleRootBone: lower.localScale = new Vector3(1.4f, 1.4f, 1.4f); break;
+        }
         yield return null;
         Record(Path.Combine(dir, name + ".png"), Path.Combine(dir, name + ".jsonl"));
         RemoveVolume(volume, profile);
         DestroyImmediate(root);
+        if (bones != null) DestroyImmediate(bones);
         DestroyImmediate(mesh);
         yield return null;
     }

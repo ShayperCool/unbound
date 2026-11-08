@@ -10,8 +10,8 @@ namespace UnityEngine.Tests
     /// <summary>Which draws a renderer list with per-object motion vectors keeps and which of them
     /// moved (tests/projects/urp motion_blur_objects): mesh renderers with object motion, still
     /// the first time they are drawn, moving once their matrix differs from the kept one or when
-    /// they force no motion, and skinned mesh renderers, moving as their renderer does (their
-    /// deformation adds none: tests/projects/urp motion_blur_skinned_moved, motion_blur_skinned);
+    /// they force no motion, and skinned mesh renderers, moving as their root bone does (their
+    /// deformation adds none: tests/projects/urp motion_blur_skinned*);
     /// never camera-motion renderers or queued draws.</summary>
     public sealed class ObjectMotionVectorTests : IDisposable
     {
@@ -299,6 +299,85 @@ namespace UnityEngine.Tests
                 Assert.False(moving);
                 Assert.Equal(Matrix4x4.identity, previous);
             }
+        }
+
+        /// <summary>Where the skin's vertices are (world space) after this frame's draw.</summary>
+        static Vector3[] Pose(Mesh mesh) => (Vector3[])mesh.m_Vertices.Clone();
+
+        static void AssertPlaces(Matrix4x4 previous, Mesh mesh, Vector3[] was)
+        {
+            for (int i = 0; i < was.Length; i++)
+                Assert.True((previous.MultiplyPoint3x4(mesh.m_Vertices[i]) - was[i]).magnitude < 1e-4f, $"{i}: {previous.MultiplyPoint3x4(mesh.m_Vertices[i])} vs {was[i]}");
+        }
+
+        /// <summary>Only the root bone moves (in-place animation's root motion): the skin moves
+        /// with it, the renderer's own transform stays.</summary>
+        [Fact]
+        public void ARootBoneMovedAloneMovesTheSkin()
+        {
+            var skin = Ribbon(out var upper);
+            var lower = upper.parent;
+            skin.rootBone = lower;
+            var was = Pose(MotionDraw(skin, out bool moving, out _));
+            Assert.False(moving);
+            lower.SetLocalPositionAndRotation(new Vector3(0.5f, 0.25f, 0f), Quaternion.Euler(0f, 30f, 10f));
+            var mesh = MotionDraw(skin, out moving, out var previous);
+            Assert.True(moving);
+            AssertPlaces(previous, mesh, was);
+        }
+
+        /// <summary>A scaled root bone (outside the probe's unscaled ones) that moves: its scale
+        /// is not part of the object matrix, the motion still places the skin where it was.</summary>
+        [Fact]
+        public void AScaledRootBoneThatMovesPlacesTheSkinWhereItWas()
+        {
+            var skin = Ribbon(out var upper);
+            var lower = upper.parent;
+            lower.localScale = new Vector3(2f, 0.5f, 1.5f);
+            skin.rootBone = lower;
+            var was = Pose(MotionDraw(skin, out _, out _));
+            Assert.Equal(Matrix4x4.TRS(lower.position, lower.rotation, Vector3.one), skin.MotionMatrix);
+            lower.SetPositionAndRotation(new Vector3(-1f, 2f, 0.5f), Quaternion.Euler(10f, 0f, 45f));
+            var mesh = MotionDraw(skin, out bool moving, out var previous);
+            Assert.True(moving);
+            AssertPlaces(previous, mesh, was);
+        }
+
+        /// <summary>The root bone's scale alone changes: the object matrix (position and
+        /// rotation) does not, so there is no object motion (the skin grows in place).</summary>
+        [Fact]
+        public void ARootBoneScaledAloneIsNoMotion()
+        {
+            var skin = Ribbon(out var upper);
+            var lower = upper.parent;
+            skin.rootBone = lower;
+            MotionDraw(skin, out _, out _);
+            lower.localScale = new Vector3(1.5f, 1.5f, 1.5f);
+            MotionDraw(skin, out bool moving, out var previous);
+            Assert.False(moving);
+            Assert.Equal(Matrix4x4.identity, previous);
+        }
+
+        /// <summary>The renderer moves while its bones (another hierarchy) stay: the skin does
+        /// not move and has no object motion.</summary>
+        [Fact]
+        public void ARendererMovedApartFromItsBonesIsStill()
+        {
+            var skin = Ribbon(out var upper);
+            var lower = upper.parent;
+            var bones = new GameObject("bones");
+            m_Objects.Add(bones);
+            lower.SetParent(bones.transform, false);
+            skin.rootBone = lower;
+            MotionDraw(skin, out _, out _);
+            skin.transform.SetPositionAndRotation(new Vector3(3f, 0f, 1f), Quaternion.Euler(0f, 90f, 0f));
+            MotionDraw(skin, out bool moving, out var previous);
+            Assert.False(moving);
+            Assert.Equal(Matrix4x4.identity, previous);
+            // Kept at a frame end: the bones' matrix, not the renderer's.
+            typeof(FrameBuilder).GetField("s_MotionRendered", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.SetValue(null, true);
+            FrameBuilder.EndFrameMotion();
+            Assert.Equal(skin.MotionMatrix, skin.m_PreviousModel);
         }
     }
 }
