@@ -59,6 +59,29 @@ public class EffectProbe : MonoBehaviour
         new[] { "slot_bypass", "music=noise:0.25", "Music.Norm.bypass=1" },
         new[] { "source_bypass", "music=noise:0.25", "bypass=1" },
         new[] { "master_route", "music=noise:0.25", "blocks=128", "Music:Att", "Master:Att,Norm", "Master.Norm.Fade in time=100" },
+        new[] { "slot_wet_zero", "music=noise:0.25", "Music.Norm.Wet=-80" },
+        new[] { "slot_wet_quarter", "music=noise:0.25", "Music.Norm.Wet=-12" },
+        new[] { "slot_wet_half", "music=noise:0.25", "Music.Norm.Wet=-6" },
+        new[] { "slot_wet_threequarter", "music=noise:0.25", "Music.Norm.Wet=-2.5" },
+        new[] { "slot_wet_full", "music=noise:0.25", "Music.Norm.Wet=0" },
+        new[] { "slot_wet_above", "music=noise:0.25", "Music.Norm.Wet=6" },
+        new[] { "slot_wet_quiet", "music=noise:0.25", "Music.Norm.Wet=-70" },
+        new[] { "slot_wet_audible", "music=noise:0.25", "Music.Norm.Wet=-68" },
+        new[] { "slot_wet_set", "music=noise:0.25", "wetset=-6", "Music.Norm.Wet=-6" },
+        new[] { "slot_wet_set_above", "music=noise:0.25", "wetset=6", "Music.Norm.Wet=-6" },
+        new[] { "slot_wet_startup", "music=dc0", "Music.Norm.Wet=-6" },
+        new[] { "slot_wet_before", "music=dc0", "Music:Norm,Att", "Music.Volume=-12", "Music.Norm.Wet=-6" },
+        new[] { "slot_wet_bypass", "music=noise:0.25", "Music.Norm.bypass=1", "Music.Norm.Wet=-6" },
+        new[] { "slot_wet_dry", "music=noise:0.25", "Music:Att" },
+        new[] { "slot_wet_processed", "music=noise:0.25" },
+        new[] { "slot_wet_boostlimit", "music=noise:0.25", "Music.Norm.Wet=20" },
+        new[] { "slot_wet_boostclamp", "music=noise:0.25", "Music.Norm.Wet=30" },
+        new[] { "slot_wet_threshold", "music=noise:0.25", "Music.Norm.Wet=-69" },
+        new[] { "slot_wet_thresholdlower", "music=noise:0.25", "Music.Norm.Wet=-69.9" },
+        new[] { "slot_wet_dc_dry", "music=dc0", "Music:Att" },
+        new[] { "slot_wet_dc_processed", "music=dc0" },
+        new[] { "slot_wet_startup_zero", "music=dc0", "Music.Norm.Wet=-80" },
+        new[] { "slot_wet_before_zero", "music=dc0", "Music:Norm,Att", "Music.Volume=-12", "Music.Norm.Wet=-80" },
     };
     static int BlockCount, ClipFrames;
     public static string[] Selected()
@@ -188,6 +211,13 @@ public class EffectProbe : MonoBehaviour
                     mixer.GetFloat(name, out float v);
                     records.Add("\""+key+".mixer_"+name+"\":"+v.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
                 }
+            if (key.StartsWith("slot_wet_") && key != "slot_wet_dry" && key != "slot_wet_processed" && key != "slot_wet_dc_dry" && key != "slot_wet_dc_processed") {
+                string set = Option(key, "wetset=", "");
+                if (set != "") records.Add("\""+key+".wetset\":"+(mixer.SetFloat("Wet", float.Parse(set, System.Globalization.CultureInfo.InvariantCulture)) ? "true" : "false"));
+                bool got = mixer.GetFloat("Wet", out float value);
+                records.Add("\""+key+".wetget\":"+(got ? "true" : "false"));
+                records.Add("\""+key+".wetvalue\":"+value.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+            }
             var go = new GameObject(key);
             var source = go.AddComponent<AudioSource>();
             source.bypassEffects = Option(key, "bypass=", "0") == "1";

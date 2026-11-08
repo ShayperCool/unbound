@@ -38,6 +38,7 @@ def header(root):
 def verify(root, release, rate):
     data = header(root)
     expected = {'release', 'rate', 'complete'} | {f'{case}.{step}' for case in CASES for step in STEPS}
+    expected |= {f'wet_{effect}.{step}' for effect in ('Distortion','Chorus','Flange','Normalize','PitchShifter') for step in ('initial','set','set.get','override','clear','other','base')}
     if data.keys() != expected: raise ValueError(f'capture key mismatch: {sorted(data.keys() ^ expected)}')
     if data['release'] != release or data['rate'] != rate or data['complete'] is not True:
         raise ValueError('wrong release/rate or incomplete capture')
@@ -87,6 +88,7 @@ def main():
     p.add_argument('--reference', type=Path)
     p.add_argument('--candidate', type=Path)
     p.add_argument('--repeat', type=Path)
+    p.add_argument('--extend', action='store_true', help='Add fields only, preserving every existing reference value')
     p.add_argument('--report', type=Path)
     a = p.parse_args()
     reference = a.reference or FIXTURE/'Reference'/('unity-'+a.release)/('rate-'+str(a.rate))
@@ -98,7 +100,13 @@ def main():
         if not a.repeat or a.candidate.resolve() == a.repeat.resolve(): p.error('two independent captures required')
         for source in (a.candidate, a.repeat): verify(source, a.release, a.rate)
         if compare(a.candidate, a.repeat, a.report): raise SystemExit('Native repeats disagree')
-        reference.mkdir(parents=True, exist_ok=False)
+        if reference.exists():
+            if not a.extend: raise ValueError('reference exists; use --extend only for additive fields')
+            old, new = header(reference), header(a.candidate)
+            if any(new.get(key) != value for key, value in old.items()):
+                raise ValueError('existing reference values changed')
+        else:
+            reference.mkdir(parents=True)
         shutil.copy2(a.candidate/'capture.json', reference/'capture.json')
     else:
         work = a.work or CACHE/('gate-'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f'))

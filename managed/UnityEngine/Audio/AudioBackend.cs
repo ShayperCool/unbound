@@ -53,7 +53,7 @@ namespace Unbound.Runtime
         internal abstract void UpdateGroup(ulong handle, float gain, float pitch);
         internal virtual void UpdateGroup(UnityEngine.Audio.AudioMixerGroup group)
         {
-            group.ValidateSidechains();
+            _ = group.DspConfiguration();
             UpdateGroup(group.m_Handle, group.EffectiveGain(0), group.EffectivePitch(0));
         }
         internal abstract AudioStatus Frame(in AudioFramePacket frame);

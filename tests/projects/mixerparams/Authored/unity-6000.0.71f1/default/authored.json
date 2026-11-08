@@ -1,5 +1,5 @@
 {
- "command": "python3 tests/projects/mixerparams/run.py native --release 6000.0.71f1 --rate 48000 --work <fresh cache directory>",
+ "command": "python3 tests/projects/mixerparams/run.py native --release 6000.0.71f1 --rate 48000 --work CACHE",
  "files": {
   "Assets/Editor.meta": "3cf7e3df8d3a57b8fbc9f4944394309f83ff46ba9a90f952ebc38dd646416c2e",
   "Assets/Editor/ProbeRunner.cs.meta": "70261a56e74aa46f417a2e403205ceb4b3648d23c137a22c4939659294423351",
@@ -12,6 +12,16 @@
   "Assets/Resources/lp_idle.mixer.meta": "05257a4414b7a3fc1c61b1c0f022e1af38d8ff0df582fd670da82a47dd390041",
   "Assets/Resources/lp_render.mixer": "3dfb6a135976f68816b6d1398e241bc21ba5965948aa11c31e96224b88c8a3dd",
   "Assets/Resources/lp_render.mixer.meta": "4ed0c44dd4e19ef1a4eadf0abf3c6a8c24bc39f99796c91380394627011f8ecd",
+  "Assets/Resources/wet_Chorus.mixer": "16f54c70e9726a968bb08d6f5ed4278438fa37b160a9f298e953d29a4b39a4c7",
+  "Assets/Resources/wet_Chorus.mixer.meta": "3664e18d1152aae9b5cb5c0a32d483b6ade56490c2b72b4aa9ddc19ce3be3ef4",
+  "Assets/Resources/wet_Distortion.mixer": "6de0ead757651c036394fa6a7bec8cfcc968045f9006c7937385b9038c82265a",
+  "Assets/Resources/wet_Distortion.mixer.meta": "d1d32832d5427ac6b3d1c20a1f5825cf75c811eb9d03af170629de5f1a3679c2",
+  "Assets/Resources/wet_Flange.mixer": "c8d831e6d108e1014cf174c5aa97f8925a2d671a039709f3824ea20b443f7e7d",
+  "Assets/Resources/wet_Flange.mixer.meta": "3e67b3f87f3461144ecaf8061bc39dcbfb349c8aeaa66f494ea742bba7a29f3b",
+  "Assets/Resources/wet_Normalize.mixer": "27e2bb859605c1b85e6ad7eab3a95e06b1ffde8410dfb9c77012114c07936204",
+  "Assets/Resources/wet_Normalize.mixer.meta": "d60098496c0b54974fb9d95bf123d9b267a382340d67e41ed1e3c3dfebfbd19a",
+  "Assets/Resources/wet_PitchShifter.mixer": "37facc14444fe3fa10ac8886a9ff5fea439605bcbb78f206272f204946be8ddd",
+  "Assets/Resources/wet_PitchShifter.mixer.meta": "e316745495156cf3b804e3773c99bc7c83c3b3451597cccf97bd88e7332fcb56",
   "Assets/Scenes.meta": "405bd481ef20f31146bb8ed49c6099c7cb51cc0b54f7db646f801790d8fd14fc",
   "Assets/Scenes/Probe.unity": "91d3a9de77acd9a89f6e6d99e60b2d428f44fa3b73bacce378d7efa163bf4ba5",
   "Assets/Scenes/Probe.unity.meta": "ec6a6e5d1dfe06f995e030e941d2c554b95b0bd09d6c9b8607966163e9e91568",
@@ -40,11 +50,11 @@
   "ProjectSettings/VersionControlSettings.asset": "e199cdfa6a8f2bf33cfd47e549198f13e3eb2a5099e908fdb4e0f14d939ccc6b"
  },
  "fixture": {
-  "Assets/Editor/ProbeRunner.cs": "1cfaf1a8d5108ebc53f42dbe82086a0240c5c0120fa4e27c7db5c307f8de982c",
-  "Assets/Scripts/ParamsProbe.cs": "d8616838099a28c5d8984f430c1a68fc80942d3c2351b903ca6e084dcd386bd9",
+  "Assets/Editor/ProbeRunner.cs": "f8ec7d3398b90eb22b96a181e14898c73435071af5f2a8585bc46135eab5c54b",
+  "Assets/Scripts/ParamsProbe.cs": "e9e9539d6d4cecd44cd0203238bb3721d5b1ee80b942e79b2994152655212496",
   "Packages/manifest.json": "86577de3e8b3b1d8925d7d77df7880352ee16a5ed0d4e06447d1a54c19b9e76d",
   "ProjectSettings/ProjectVersion.txt": "03282bc6dd30504666a9e67cce65afe9bac94643abcc8f1e62ddf9cf75017c6a",
-  "tests/projects/mixerparams/run.py": "034a2090aefd48759bb2a4f8f40d6dac57954ce076f4c89e0f22aec2b2c3c4b1"
+  "tests/projects/mixerparams/run.py": "c5952bd3fe75783c48204548772b1236f2858e0dc5fe598fba0bb4fc1ee499e1"
  },
  "format": 1,
  "probe": "mixerparams",

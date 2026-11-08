@@ -494,7 +494,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void DistortionExposedLevelKeepsRawValuesWhileDspClampsAndWetMixFails()
+        public void DistortionExposedLevelKeepsRawValuesWhileDspClampsAndSlotWetMixes()
         {
             var (mixer, group, effect) = Fixture();
             effect.m_EffectName = "Distortion"; effect.m_ParameterGuids.Clear();
@@ -508,7 +508,7 @@ namespace UnityEngine.Tests
                 Assert.Equal(Mathf.Clamp01(value), payload.RootElement.GetProperty("effects")[0].GetProperty("distortion").GetSingle());
             }
             effect.m_EnableWetMix = true;
-            Assert.Contains("wet mixing", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+            group.DspConfiguration();
             effect.m_Bypass = true; group.DspConfiguration();
             effect.m_EnableWetMix = false; effect.m_Bypass = false;
             mixer.SetFloat("Level", float.NaN);
@@ -516,7 +516,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ChorusClampsDspKeepsExposedValuesAndRefusesSlotWetMixing()
+        public void ChorusClampsDspKeepsExposedValuesAndAcceptsStaticSlotWetMixing()
         {
             var (mixer, group, effect) = Fixture();
             effect.m_EffectName = "Chorus"; effect.m_ParameterGuids.Clear();
@@ -537,7 +537,7 @@ namespace UnityEngine.Tests
             Assert.True(mixer.GetFloat("Wet mix tap 3", out float tap3)); Assert.Equal(200f, tap3);
             Assert.False(chorus.TryGetProperty("wet3", out _));
             effect.m_EnableWetMix = true;
-            Assert.Contains("wet mixing", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+            group.DspConfiguration();
             effect.m_Bypass = true; group.DspConfiguration();
             effect.m_Bypass = false; effect.m_EnableWetMix = false;
             mixer.SetFloat("Depth", float.NaN);
@@ -545,7 +545,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void FlangeDefaultsRawSettersDspClampsAndUnsupportedWetMixing()
+        public void FlangeDefaultsRawSettersDspClampsAndStaticWetMixing()
         {
             var (mixer, group, effect) = Fixture();
             effect.m_EffectName = "Flange"; effect.m_ParameterGuids.Clear();
@@ -568,7 +568,7 @@ namespace UnityEngine.Tests
             Assert.Equal(1f, flange.GetProperty("dry").GetSingle());
             Assert.Equal(0f, flange.GetProperty("wet").GetSingle());
             effect.m_EnableWetMix = true;
-            Assert.Contains("wet mixing", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+            group.DspConfiguration();
             effect.m_Bypass = true; group.DspConfiguration();
             effect.m_Bypass = false; effect.m_EnableWetMix = false;
             mixer.SetFloat("Depth", float.NaN);
@@ -577,7 +577,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void NormalizeDefaultsRawSettersDspClampsAndUnsupportedWetMixing()
+        public void NormalizeDefaultsRawSettersDspClampsAndStaticWetMixing()
         {
             var (mixer, group, effect) = Fixture();
             effect.m_EffectName = "Normalize"; effect.m_ParameterGuids.Clear();
@@ -598,7 +598,7 @@ namespace UnityEngine.Tests
             Assert.Equal(1f, normalize.GetProperty("lowest").GetSingle());
             Assert.Equal(100000f, normalize.GetProperty("maximum").GetSingle());
             effect.m_EnableWetMix = true;
-            Assert.Contains("wet mixing", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+            group.DspConfiguration();
             effect.m_Bypass = true; group.DspConfiguration();
             effect.m_Bypass = false; effect.m_EnableWetMix = false;
             mixer.SetFloat("Fade in time", float.NaN);
@@ -637,7 +637,7 @@ namespace UnityEngine.Tests
                 mixer.SetFloat("Pitch", float.NaN);
                 Assert.Contains("finite", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
                 mixer.SetFloat("Pitch", 1f); effect.m_EnableWetMix = true;
-                Assert.Contains("wet mixing", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+                group.DspConfiguration();
                 effect.m_EnableWetMix = false;
                 ProjectInfo.UnityVersion = "6000.0.72f1";
                 Assert.Contains("6000.0.71f1", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
@@ -717,6 +717,43 @@ namespace UnityEngine.Tests
             mixer.Tick(0, 0);
             Assert.True(mixer.GetFloat("Cutoff", out value));
             Assert.Equal(5000f, value);
+        }
+
+        [Theory]
+        [InlineData("Distortion")]
+        [InlineData("Chorus")]
+        [InlineData("Flange")]
+        [InlineData("Normalize")]
+        [InlineData("Pitch Shifter")]
+        public void StaticSlotWetUsesTheSameAcceptanceAndDbGainForBothBackends(string kind)
+        {
+            var (mixer, group, effect) = Fixture();
+            effect.m_EffectName = kind;
+            effect.m_EnableWetMix = true; effect.m_MixLevelGuid = "slotwet";
+            mixer.m_Exposed["Wet"] = "slotwet";
+            foreach (Action submit in new Action[] { () => group.DspConfiguration(), () => AudioBackend.Current.UpdateGroup(group) })
+            {
+                foreach (float db in new[] { -80f, -69.9f, -6f, 0f, 6f, 20f, 30f })
+                {
+                    Assert.True(mixer.SetFloat("Wet", db)); submit();
+                    using var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration()));
+                    var slot = payload.RootElement.GetProperty("effects")[0];
+                    Assert.Equal(AudioMixer.DspGain(db, 30f), slot.GetProperty("mixLevel").GetSingle());
+                    Assert.Equal(db > -70f, slot.GetProperty("mixAudible").GetBoolean());
+                    Assert.True(slot.GetProperty("slotWetMeasured").GetBoolean());
+                    Assert.True(mixer.GetFloat("Wet", out var raw)); Assert.Equal(db, raw);
+                }
+                mixer.SetFloat("Wet", 31f);
+                Assert.Throws<NotSupportedException>(submit);
+                mixer.SetFloat("Wet", -6f);
+                ProjectInfo.UnityVersion = "6000.0.70f1";
+                Assert.Contains("6000.0.71f1", Assert.Throws<NotSupportedException>(submit).Message);
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                var config = AudioSettings.GetConfiguration(); config.dspBufferSize = 512;
+                AudioSettings.Reset(config);
+                Assert.Contains("1024-frame stereo", Assert.Throws<NotSupportedException>(submit).Message);
+                config.dspBufferSize = 1024; AudioSettings.Reset(config);
+            }
         }
 
         [Fact]

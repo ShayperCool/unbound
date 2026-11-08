@@ -35,38 +35,63 @@ pub(crate) enum EffectKind {
     Normalize,
     PitchShifter,
 }
+#[derive(Clone, Copy)]
+struct SlotWet {
+    maximum: f32,
+    static_only: bool,
+}
+const STATIC_SLOT_WET: Option<SlotWet> = Some(SlotWet {
+    maximum: f32::MAX,
+    static_only: true,
+});
+// Static wet startup controls in the five effect probes and mixerreverb.
+const SLOT_STARTUP_FRAMES: f32 = 64.0;
+const UNIT_SLOT_WET: Option<SlotWet> = Some(SlotWet {
+    maximum: 1.0,
+    static_only: false,
+});
+
 impl EffectKind {
-    const NAMES: [(Self, &'static str); 17] = [
-        (Self::Attenuation, "Attenuation"),
-        (Self::Lowpass, "Lowpass"),
-        (Self::Highpass, "Highpass"),
-        (Self::Echo, "Echo"),
-        (Self::SfxReverb, "SFX Reverb"),
-        (Self::Send, "Send"),
-        (Self::Receive, "Receive"),
-        (Self::DuckVolume, "Duck Volume"),
-        (Self::Compressor, "Compressor"),
-        (Self::ParamEq, "ParamEQ"),
-        (Self::LowpassSimple, "Lowpass Simple"),
-        (Self::HighpassSimple, "Highpass Simple"),
-        (Self::Distortion, "Distortion"),
-        (Self::Chorus, "Chorus"),
-        (Self::Flange, "Flange"),
-        (Self::Normalize, "Normalize"),
-        (Self::PitchShifter, "Pitch Shifter"),
+    const NAMES: [(Self, &'static str, Option<SlotWet>); 17] = [
+        (Self::Attenuation, "Attenuation", None),
+        (Self::Lowpass, "Lowpass", None),
+        (Self::Highpass, "Highpass", None),
+        (Self::Echo, "Echo", None),
+        (Self::SfxReverb, "SFX Reverb", UNIT_SLOT_WET),
+        (Self::Send, "Send", None),
+        (Self::Receive, "Receive", None),
+        (Self::DuckVolume, "Duck Volume", None),
+        (Self::Compressor, "Compressor", None),
+        (Self::ParamEq, "ParamEQ", None),
+        (Self::LowpassSimple, "Lowpass Simple", None),
+        (Self::HighpassSimple, "Highpass Simple", None),
+        (Self::Distortion, "Distortion", STATIC_SLOT_WET),
+        (Self::Chorus, "Chorus", STATIC_SLOT_WET),
+        (Self::Flange, "Flange", STATIC_SLOT_WET),
+        (Self::Normalize, "Normalize", STATIC_SLOT_WET),
+        (Self::PitchShifter, "Pitch Shifter", STATIC_SLOT_WET),
     ];
     /// None for a kind the mixer does not run.
     pub(crate) fn parse(name: &str) -> Option<Self> {
         Self::NAMES
             .iter()
-            .find(|(_, n)| *n == name)
-            .map(|(kind, _)| *kind)
+            .find(|(_, n, _)| *n == name)
+            .map(|(kind, _, _)| *kind)
     }
     pub(crate) fn name(self) -> &'static str {
         Self::NAMES
             .iter()
-            .find(|(kind, _)| *kind == self)
-            .map_or("", |(_, name)| name)
+            .find(|(kind, _, _)| *kind == self)
+            .map_or("", |(_, name, _)| name)
+    }
+    fn wet_policy(self) -> Option<SlotWet> {
+        Self::NAMES
+            .iter()
+            .find(|(kind, _, _)| *kind == self)
+            .and_then(|(_, _, wet)| *wet)
+    }
+    pub(crate) fn static_wet(self) -> bool {
+        self.wet_policy().is_some_and(|policy| policy.static_only)
     }
     /// Kernels with their own state that a bypass skips, leaving the state as it is.
     fn bypass_keeps_state(self) -> bool {
@@ -168,9 +193,12 @@ pub struct EffectSpec {
     /// SFX Reverb parameters; required for that kind.
     #[serde(default)]
     pub sfx: Option<SfxReverbSpec>,
-    /// The effect slot's linear wet level when wet mixing is enabled (measured for SFX Reverb).
+    /// The effect slot's linear wet level when wet mixing is enabled.
     #[serde(default)]
     pub mix_level: Option<f32>,
+    /// Compat selects the static slot mechanism measured by the five effect probes.
+    #[serde(default)]
+    pub slot_wet_measured: bool,
     /// False when the wet level is low enough that Native drops the effect's output.
     #[serde(default = "yes")]
     pub mix_audible: bool,
@@ -298,13 +326,19 @@ impl EffectSpec {
             self.send_level
         );
         if let Some(level) = self.mix_level {
+            let policy = EffectKind::parse(&self.kind).and_then(EffectKind::wet_policy);
             anyhow::ensure!(
-                self.kind == "SFX Reverb",
+                policy.is_some(),
                 "AudioMixer wet mixing is unsupported for effect '{}'",
                 self.kind
             );
+            let policy = policy.unwrap();
             anyhow::ensure!(
-                level.is_finite() && (0.0..=1.0).contains(&level),
+                !policy.static_only || self.slot_wet_measured,
+                "AudioMixer static wet mixing is measured only for Unity 6000.0.71f1"
+            );
+            anyhow::ensure!(
+                level.is_finite() && (0.0..=policy.maximum).contains(&level),
                 "invalid AudioMixer wet level {level}"
             );
         }
@@ -349,7 +383,9 @@ impl EffectSpec {
             self.id,
             self.cutoff
         );
-        if kind.layout_limited() {
+        if kind.layout_limited()
+            || (self.mix_level.is_some() && kind.wet_policy().is_some_and(|p| p.static_only))
+        {
             MEASURED_LAYOUT.ensure(&self.kind, config)?;
         }
         Ok(())
@@ -699,6 +735,11 @@ impl Effect {
             self.send_from = self.gain;
             self.send_frames = 0;
         }
+        if spec.mix_level.is_some() {
+            // Group processing splits at BLOCK; reserve also for direct DSP-buffer callers.
+            self.scratch
+                .resize(buffer.max(super::mixer::BLOCK as u32) as usize * 2, 0.0);
+        }
         self.buffer = buffer.max(1);
         self.kind = kind;
         self.rate = rate;
@@ -831,6 +872,35 @@ impl Effect {
         }
     }
     pub fn process(&mut self, samples: &mut [f32], bypass: bool) {
+        let wet = self.spec.mix_level.filter(|_| !bypass && !self.spec.bypass);
+        if wet.is_some() {
+            self.scratch[..samples.len()].copy_from_slice(samples);
+        }
+        self.process_effect(samples, bypass);
+        if wet == Some(0.0) && self.spec.slot_wet_measured {
+            // The fully dry slot is an identity, including its startup frames. Keep the
+            // kernel history advancing, as the pre-existing reverb path does.
+            samples.copy_from_slice(&self.scratch[..samples.len()]);
+        } else if let Some(level) = wet {
+            let wet = if self.spec.mix_audible { level } else { 0.0 };
+            let dry = (1.0 - level).max(-1.0);
+            // The slot adds its own 64-frame startup fade around the processed/dry sum.
+            for (frame, (out, input)) in samples
+                .chunks_exact_mut(2)
+                .zip(self.scratch.chunks_exact(2))
+                .enumerate()
+            {
+                let ramp = ((self.frames as usize + frame) as f32 / SLOT_STARTUP_FRAMES).min(1.0);
+                for (x, input) in out.iter_mut().zip(input) {
+                    *x = (wet * *x + dry * input) * ramp;
+                }
+            }
+        }
+        if !bypass && !self.spec.bypass {
+            self.frames = self.frames.saturating_add((samples.len() / 2) as u32);
+        }
+    }
+    fn process_effect(&mut self, samples: &mut [f32], bypass: bool) {
         let Some(kind) = self.kind else { return };
         if kind == EffectKind::Attenuation {
             let from = self.gain;
@@ -898,30 +968,7 @@ impl Effect {
             }
         } else if let Some(reverb) = &mut self.reverb {
             if !bypass && !self.spec.bypass {
-                match self.spec.mix_level {
-                    None => reverb.process(samples),
-                    Some(wet) => {
-                        // Native: wet * effect + (1 - wet) * input, the slot ramping in over
-                        // its first 64 frames; an inaudible wet level drops the effect output.
-                        let processed = &mut self.scratch;
-                        processed.clear();
-                        processed.extend_from_slice(samples);
-                        reverb.process(processed);
-                        let wet = if self.spec.mix_audible { wet } else { 0.0 };
-                        let dry = 1.0 - self.spec.mix_level.unwrap_or(0.0);
-                        for (frame, (out, effect)) in samples
-                            .chunks_exact_mut(2)
-                            .zip(processed.chunks_exact(2))
-                            .enumerate()
-                        {
-                            let ramp = ((self.frames as usize + frame) as f32 / 64.0).min(1.0);
-                            for (x, e) in out.iter_mut().zip(effect) {
-                                *x = (wet * e + dry * *x) * ramp;
-                            }
-                        }
-                    }
-                }
-                self.frames = self.frames.saturating_add((samples.len() / 2) as u32);
+                reverb.process(samples);
             }
         } else if kind.fades_in_when_active() && !bypass && !self.spec.bypass {
             for stereo in samples.chunks_exact_mut(2) {
@@ -982,9 +1029,14 @@ impl GroupNode {
                 return false;
             };
             after_attenuation |= kind == EffectKind::Attenuation;
-            kind.fades_in_when_bypassed()
-                || (after_attenuation && kind.fades_in_after_attenuation())
-                || (!spec.bypass && !effect.spec.bypass && kind.fades_in_when_active())
+            // The static wet wrapper before Attenuation supplies the startup fade itself.
+            // Moving it after Attenuation retains the group's input fade as well.
+            let wet_before_attenuation =
+                kind.static_wet() && effect.spec.mix_level.is_some() && !after_attenuation;
+            !wet_before_attenuation
+                && (kind.fades_in_when_bypassed()
+                    || (after_attenuation && kind.fades_in_after_attenuation())
+                    || (!spec.bypass && !effect.spec.bypass && kind.fades_in_when_active()))
         });
         self.spec = spec;
         Ok(())
@@ -1063,7 +1115,7 @@ mod tests {
 
     #[test]
     fn the_kind_table_round_trips_and_keeps_the_former_kind_lists() {
-        for (kind, name) in EffectKind::NAMES {
+        for (kind, name, _) in EffectKind::NAMES {
             assert_eq!(EffectKind::parse(name), Some(kind));
             assert_eq!(kind.name(), name);
         }
@@ -1071,8 +1123,8 @@ mod tests {
         let names = |rule: fn(EffectKind) -> bool| -> Vec<&str> {
             EffectKind::NAMES
                 .iter()
-                .filter(|(kind, _)| rule(*kind))
-                .map(|(_, name)| *name)
+                .filter(|(kind, _, _)| rule(*kind))
+                .map(|(_, name, _)| *name)
                 .collect()
         };
         assert_eq!(
@@ -1135,6 +1187,78 @@ mod tests {
             effect.process(&mut samples, false);
             effect.process_routed(&mut samples, &mut HashMap::new(), 0);
             assert_eq!(samples, [0.25, -0.5, 0.125, 0.0], "{kind}");
+        }
+    }
+
+    #[test]
+    fn slot_wet_blends_independent_dry_and_processed_signals_without_growing_scratch() {
+        for rate in [48000, 44100] {
+            for (kind, parameters) in [
+                ("Distortion", serde_json::json!({ "distortion": 0.5 })),
+                (
+                    "Chorus",
+                    serde_json::json!({ "chorus": { "dry": 0.5, "wet1": 0.5, "wet2": 0.5, "delay": 40.0, "rate": 0.8, "depth": 0.03 } }),
+                ),
+                (
+                    "Flange",
+                    serde_json::json!({ "flange": { "dry": 0.45, "wet": 0.55, "depth": 1.0, "rate": 0.1 } }),
+                ),
+                (
+                    "Normalize",
+                    serde_json::json!({ "normalize": { "fade": 5000.0, "lowest": 0.1, "maximum": 20.0 } }),
+                ),
+                (
+                    "Pitch Shifter",
+                    serde_json::json!({ "pitchShifter": { "pitch": 0.75 } }),
+                ),
+            ] {
+                for level in [0.0, 0.25, 0.5, 1.0, 2.5, 31.674294] {
+                    let mut json = parameters.clone();
+                    json["id"] = "wet".into();
+                    json["kind"] = kind.into();
+                    let dry_spec: EffectSpec = serde_json::from_value(json).unwrap();
+                    let mut wet_spec = dry_spec.clone();
+                    wet_spec.mix_level = Some(level);
+                    wet_spec.slot_wet_measured = true;
+                    wet_spec
+                        .validate_in_group(&MixerConfig::default(), false)
+                        .unwrap();
+                    let mut processed = Effect::new(dry_spec, rate, 1024).unwrap();
+                    let mut wet = Effect::new(wet_spec, rate, 1024).unwrap();
+                    let allocation = wet.scratch.as_ptr();
+                    let capacity = wet.scratch.capacity();
+                    let mut frame = 0;
+                    // Irregular chunks verify the fade is a continuous frame clock.
+                    for frames in [17, 31, 256, 1024, 1024] {
+                        let input: Vec<f32> = (0..frames * 2)
+                            .map(|i| ((i * 17 % 127) as f32 - 63.0) / 128.0)
+                            .collect();
+                        let mut expected = input.clone();
+                        let mut actual = input.clone();
+                        processed.process(&mut expected, false);
+                        wet.process(&mut actual, false);
+                        for i in 0..actual.len() {
+                            let ramp = ((frame + i / 2) as f32 / 64.0).min(1.0);
+                            assert_eq!(
+                                actual[i],
+                                if level == 0.0 {
+                                    input[i]
+                                } else {
+                                    (level * expected[i] + (1.0 - level).max(-1.0) * input[i])
+                                        * ramp
+                                },
+                                "{kind}, {level}, {frame}, {i}"
+                            );
+                        }
+                        assert_eq!(allocation, wet.scratch.as_ptr());
+                        assert_eq!(capacity, wet.scratch.capacity());
+                        frame += frames;
+                    }
+                    let mut bypass = [0.25, -0.5];
+                    wet.process(&mut bypass, true);
+                    assert_eq!(bypass, [0.25, -0.5]);
+                }
+            }
         }
     }
 

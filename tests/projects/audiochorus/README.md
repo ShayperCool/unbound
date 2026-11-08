@@ -32,3 +32,7 @@ Float tolerances are the existing audio bounds, 2e-5 absolute plus 2e-4 relative
 The strict report applies them to every sample. The separate gate admits one
 1/32768 device PCM step and never adds float-sink slack. No modulation phase or
 startup frame is dropped. All run artifacts stay in the cache.
+
+Static effect-slot Wet is now covered by the additional `slot_wet_*` cases. See the
+[shared contract, measured equation, controls and limits](../../../docs/AUDIO.md#static-effect-slot-wet-mixing).
+These additive captures retain all earlier oracle values and comparator tolerances.

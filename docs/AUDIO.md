@@ -546,10 +546,10 @@ input fade and 1024-frame mixer group input fade. `mix_clear` confirms the
 that after ClearFloat the getter reports the snapshot value; the DSP still changes on its next
 audio update.
 
-Wet mixing is unmeasured and fails clearly when enabled. Listener Distortion, 3D sources,
+Static effect-slot Wet is covered below. Listener Distortion, 3D sources,
 surround output, live level/bypass transitions and other sample rates remain unmeasured.
 Flange is covered by `tests/projects/audioflange`; Normalize is described below.
-Pitch Shifter remains separate work.
+Pitch Shifter is described below.
 
 
 # Release gates of the measured effect kernels
@@ -564,6 +564,7 @@ load); the GetFloat flag never fails (see below the table):
 | `Compat.DistortionMeasured` | waveshaper | mixer Distortion, `AudioDistortionFilter` |
 | `Compat.MixerNormalizeMeasured` | linked peak envelope | mixer Normalize |
 | `Compat.MixerPitchShifterMeasured` | phase vocoder | mixer Pitch Shifter |
+| `Compat.MixerStaticWetMeasured` | static effect-slot mix and measured silence boundary | the five effects below and SFX Reverb boundary |
 | `Compat.MixerClearFloatSubmissionMeasured` | GetFloat of an override cleared after its submission to audio | `AudioMixer` |
 
 GetFloat reads the snapshot value after ClearFloat on every release, as documented. The last
@@ -589,7 +590,7 @@ describe dry and three wet volumes, delay, modulation rate and depth, with succe
 by 90 degrees. The full contract table, member links and callback limitations are in the probe
 README. Feedback is obsolete: the API getter warns and returns zero, and its setter only warns.
 The obsolete mixer's Feedback control also changes none of the captured output. Slot wet mixing
-is separate from Chorus's own dry/wet controls, remains unmeasured and fails clearly when enabled.
+is separate from Chorus's own dry/wet controls and follows the shared static rule below.
 
 Measured in this release/context, setters retain their arguments, while the DSP clamps dry/wet
 volumes and depth to 0..1 and rate to 0..20 Hz. Negative delay becomes zero; a delay above
@@ -646,9 +647,9 @@ mono clips, bypass and Master routing. Every startup frame remains compared.
 The committed authored inputs assemble without the Editor; the declared gate runs
 the engine and preserves strict float/PCM failures under the existing tolerances.
 
-Other rates, buffers and layouts fail explicitly. Enabled slot wet mixing and live
-Normalize parameter, bypass or placement changes fail clearly. Other effect wet
-mixing, timed transitions and Pitch Shifter remain follow-ups. Existing audio
+Other rates, buffers and layouts fail explicitly. Static slot Wet follows the shared
+rule below. Live Normalize parameter, bypass or placement changes and timed
+transitions remain unmeasured and fail clearly. Existing audio
 residuals are retained unchanged.
 
 # Mixer Pitch Shifter
@@ -677,8 +678,37 @@ single-precision radix-4/2 transform follows Ooura fft4g's arithmetic order and 
 quarter-wave lookup for twiddles and synthesis. This describes the measured implementation;
 the Manual does not guarantee it for other releases.
 
-Enabled slot wet mixing and live changes remain unsupported. Active unmeasured releases,
+Static slot Wet follows the shared rule below; live changes remain unsupported. Active unmeasured releases,
 FFT/overlap/channel-limit settings, output rates/layouts/buffers fail clearly. `unbound doctor`
 lists these Pitch Shifter limits in the effect-class detail. No prior DSP kernel or ClearFloat
 ownership behavior changes. The optional `audiopitch/regressions.py` runs the unchanged
 Distortion, Chorus, Flange, Normalize and ClearFloat probes with one private runtime snapshot.
+
+# Static effect-slot wet mixing
+
+Unity 6000.0.71f1 is measured at 48000 and 44100 Hz with stereo, 1024-frame
+DSP buffers in `audiodistortion`, `audiochorus`, `audioflange`, `audionormalize`
+and `audiopitch`. Their `slot_wet_*` controls add 23 cases per effect and rate, plus a quiet startup
+control for Flange.
+Two independent Editor captures agree byte for byte. Existing reference samples,
+metadata values and comparator tolerances are unchanged.
+
+| Basis | Contract, observation or implementation |
+|---|---|
+| Documented, Unity 6000.0 | The [AudioGroup Inspector](https://docs.unity3d.com/6000.0/Documentation/Manual/AudioMixerInspectors.html) describes a dry path around the effect and a percentage split. Wet Level can be exposed to script. [SetFloat](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Audio.AudioMixer.SetFloat.html) takes ownership from snapshots; its limitations warn against calls in Awake, OnEnable or AfterSceneLoad. Editor measurements here call it from Start before playback. The engine capture bootstrap is only a capture adapter, not an assertion about Unity callback timing. |
+| Documented effect controls | The [Distortion](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioDistortionEffect.html), [Chorus](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioChorusEffect.html), [Flange](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioFlangeEffect.html), [Normalize](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioNormalizeEffect.html) and [Pitch Shifter](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioPitchShifterEffect.html) pages describe each kernel's controls. Chorus/Flange dry and wet taps are linear controls inside the effect; they are separate from the slot's Wet level. Those pages do not specify a slot equation, dB approximation, silence boundary or startup interpolation. Pitch Shifter documents variable FFT size, overlap and channel count; this implementation still accepts only the measured defaults. |
+| Measured steady state | For all five effects, `output = w * effect(input) + max(-1, 1-w) * input`. The effect receives the full input. Wet is in dB and uses the mixer's existing gain approximation, without Volume's +20 dB ceiling. Captured levels are -80, -70, -69.9, -69, -68, -12, -6, -2.5, 0, +6, +20 and +30 dB. For example, -6 gives `w=0.50105947`, +6 gives `w=1.9959166`, and +30 gives `w=31.674294`. The dry coefficient stops at -1. At or below -70 dB the processed contribution is dropped; the dry coefficient still uses the requested gain. -80 dB gives zero wet gain. |
+| Measured startup and placement | For nonzero wet gain the slot multiplies the combined signal by `min(age/64, 1)` using frame age, identically on both channels. Exactly zero wet gain passes the dry input through without that slot fade. This also holds for SFX Reverb; the kernel history is retained. A wet slot after Attenuation retains the group's existing input fade. A wet slot before Attenuation does not request that additional group fade. The `startup`, `before`, zero-wet controls at both placements and independent dry/processed DC controls retain every startup sample. Flange also keeps the slot fade at -70 dB, whose tiny nonzero gain still attenuates the dry path. This is a static startup observation, not a measured live parameter smoothing rule. |
+| Measured parameter ownership | Script-set -6/+6 dB and snapshot-stored levels give the same audio. `mixerparams` adds 35 exact fields per rate for Wet on all five effects: +6 dB remains exposed across a snapshot target; clearing restores -12 dB after the update; the base snapshot restores -6 dB. These ownership controls have no playing source and establish no live DSP transition behavior. |
+| Shared implementation | One wet capability/policy column accompanies each effect kind. Managed configuration validates both native and virtual submissions. `Compat.MixerStaticWetMeasured` selects this measured release. The shared wrapper retains dry input in storage allocated during configuration, runs the existing kernel and applies the same equation/fade. It adds no audio-thread allocation, lock or version parsing. Live wet-enabled parameter/placement/bypass changes are rejected before graph mutation. Send/Receive/Duck routing retains its separate measured Send Level behavior and wet mixing remains rejected on those units. |
+| Limits | Static Wet is accepted through +30 dB on the measured stereo/rate/buffer profile. Higher values, live changes, other rates/buffers/layouts and alternate Pitch Shifter FFT/overlap remain unmeasured and fail clearly. Non-wet support is unchanged. SFX Reverb retains its existing 0 dB upper bound; its extra -69/-69.9 dB and zero-wet startup controls establish the same processed-output boundary and identity case. Other releases retain the earlier unmeasured SFX Reverb boundary approximation and zero-wet startup fade. |
+
+To reproduce the five extensions, run each probe's `native.py --release 6000.0.71f1
+--rate RATE --cases LIST --work FRESH_CACHE_DIRECTORY` twice, with `plain` and all
+`slot_wet_*` names in LIST. Its Editor runner authors all cases even when capture is
+restricted. Publish with `python3 tests/publish_audio_extension.py PROBE --release
+6000.0.71f1 --rate RATE --capture FIRST/capture --repeat SECOND/capture`. Publication
+checks both complete captures of the extension byte for byte, preserves every
+existing value/sample, and verifies the combined reference. Record authored inputs
+with `tests/authored_project.py record`. The unchanged engine-only `run.py` gates
+compare every old and new case at both rates.

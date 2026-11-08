@@ -237,6 +237,7 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         wet_mix: d.wet_mix,
         sfx: (d.kind == filter_kind::REVERB).then(|| sfx_spec(&r)),
         mix_level: None,
+        slot_wet_measured: false,
         mix_audible: true,
         duck: None,
         send_target: None,
@@ -1025,6 +1026,25 @@ impl Mixer {
             .get(&spec.handle)
             .filter(|n| n.rendered > 0)
         {
+            let wet_signature = |group: &GroupSpec| -> Vec<_> {
+                group
+                    .effects
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, e)| {
+                        e.mix_level.is_some()
+                            && EffectKind::parse(&e.kind).is_some_and(EffectKind::static_wet)
+                    })
+                    .map(|(i, e)| (i, e.clone()))
+                    .collect()
+            };
+            let previous_wet = wet_signature(&node.spec);
+            let next_wet = wet_signature(&spec);
+            anyhow::ensure!(
+                (previous_wet.is_empty() && next_wet.is_empty())
+                    || (previous_wet == next_wet && node.spec.bypass == spec.bypass),
+                "AudioMixer wet mixing live parameter, placement and bypass changes are unmeasured"
+            );
             for kind in EffectKind::LAYOUT_LIMITED {
                 // Each unit's place, identity, bypass and settings, which must stay as they
                 // were when the group started rendering.
@@ -3652,6 +3672,63 @@ mod tests {
         );
         m.configure_group(spec(true, false, compressor)).unwrap();
     }
+    #[test]
+    fn static_wet_changes_are_accepted_before_rendering_and_rejected_atomically_after_it() {
+        for (kind, parameters) in [
+            ("Distortion", serde_json::json!({ "distortion": 0.5 })),
+            (
+                "Chorus",
+                serde_json::json!({ "chorus": { "dry": 0.5, "wet1": 0.5, "wet2": 0.5, "delay": 40.0, "rate": 0.8, "depth": 0.03 } }),
+            ),
+            (
+                "Flange",
+                serde_json::json!({ "flange": { "dry": 0.45, "wet": 0.55, "depth": 1.0, "rate": 0.1 } }),
+            ),
+            (
+                "Normalize",
+                serde_json::json!({ "normalize": { "fade": 5000.0, "lowest": 0.1, "maximum": 20.0 } }),
+            ),
+            (
+                "Pitch Shifter",
+                serde_json::json!({ "pitchShifter": { "pitch": 0.75 } }),
+            ),
+        ] {
+            let mut effect = parameters;
+            effect["id"] = "wet".into();
+            effect["kind"] = kind.into();
+            effect["mixLevel"] = 0.5.into();
+            effect["slotWetMeasured"] = true.into();
+            let original: GroupSpec = serde_json::from_value(serde_json::json!({
+                "handle": 1, "parent": 0, "mixer": 1, "muted": false, "bypass": false, "effects": [effect]
+            })).unwrap();
+            let mut mixer = Mixer::new(MixerConfig::default());
+            mixer.configure_group(original.clone()).unwrap();
+            let mut changed = original.clone();
+            changed.effects[0].mix_level = Some(0.25);
+            mixer.configure_group(changed).unwrap();
+            mixer.configure_group(original.clone()).unwrap();
+            mixer.group_nodes.get_mut(&1).unwrap().rendered = 1;
+            mixer.configure_group(original.clone()).unwrap();
+            for edit in 0..4 {
+                let mut changed = original.clone();
+                match edit {
+                    0 => changed.effects[0].mix_level = Some(0.25),
+                    1 => changed.effects[0].mix_level = None,
+                    2 => changed.effects[0].bypass = true,
+                    _ => changed.bypass = true,
+                }
+                assert!(
+                    mixer
+                        .configure_group(changed)
+                        .unwrap_err()
+                        .to_string()
+                        .contains("live parameter")
+                );
+                assert_eq!(mixer.group_nodes[&1].spec, original);
+            }
+        }
+    }
+
     #[test]
     fn flange_needs_valid_parameters_and_rejects_unmeasured_slot_wet_mixing() {
         let mut mixer = Mixer::new(MixerConfig::default());

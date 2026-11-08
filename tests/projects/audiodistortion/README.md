@@ -29,3 +29,7 @@ release build. The comparator retains every failing or missing/extra value,
 using the existing audio float tolerances of 2e-5 absolute plus 2e-4 relative.
 The strict report uses those bounds for everything; the gate separately admits
 one device PCM step, never extra float-sink slack. All reports stay in the cache.
+
+Static effect-slot Wet is now covered by the additional `slot_wet_*` cases. See the
+[shared contract, measured equation, controls and limits](../../../docs/AUDIO.md#static-effect-slot-wet-mixing).
+These additive captures retain all earlier oracle values and comparator tolerances.

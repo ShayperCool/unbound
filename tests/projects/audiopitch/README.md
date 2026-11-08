@@ -36,3 +36,7 @@ values per rate. The engine strict and separate gate comparisons each pass all
 exact comparison also passes every value at both rates. There are no added
 residuals. `regressions.py --release 6000.0.71f1` runs the unchanged prior DSP
 and ClearFloat comparators with one runtime snapshot to limit disk duplication.
+
+Static effect-slot Wet is now covered by the additional `slot_wet_*` cases. See the
+[shared contract, measured equation, controls and limits](../../../docs/AUDIO.md#static-effect-slot-wet-mixing).
+These additive captures retain all earlier oracle values and comparator tolerances.

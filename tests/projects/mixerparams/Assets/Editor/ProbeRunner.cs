@@ -44,6 +44,27 @@ public static class ProbeRunner
             Set(mixer, "TargetSnapshot", snapshot);
             EditorUtility.SetDirty((UnityEngine.Object)mixer);
         }
+        foreach (string effect in ParamsProbe.WetEffects) {
+            string key = "wet_" + effect.Replace(" ", "");
+            var mixer = T("AudioMixerController").GetMethod("CreateMixerControllerAtPath", F).Invoke(null, new object[] { "Assets/Resources/" + key + ".mixer" });
+            var group = Get(mixer, "masterGroup");
+            var unit = Activator.CreateInstance(T("AudioMixerEffectController"), F, null, new object[] { effect }, null);
+            Call(unit, "PreallocateGUIDs"); Call(mixer, "AddNewSubAsset", unit, true); Set(unit, "enableWetMix", true);
+            var old = (Array)Get(group, "effects");
+            var chain = Array.CreateInstance(T("AudioMixerEffectController"), old.Length + 1);
+            Array.Copy(old, chain, old.Length); chain.SetValue(unit, old.Length); Set(group, "effects", chain);
+            var snapshot = Get(mixer, "TargetSnapshot"); ((UnityEngine.Object)snapshot).name = "Base";
+            Call(unit, "SetValueForMixLevel", mixer, snapshot, -6f);
+            var type = T("ExposedAudioParameter"); var item = Activator.CreateInstance(type);
+            type.GetField("name", F).SetValue(item, "Value");
+            type.GetField("guid", F).SetValue(item, Call(unit, "GetGUIDForMixLevel"));
+            var exposed = Array.CreateInstance(type, 1); exposed.SetValue(item, 0); Set(mixer, "exposedParameters", exposed);
+            Call(mixer, "CloneNewSnapshotFromTarget", true);
+            var other = Get(mixer, "TargetSnapshot"); ((UnityEngine.Object)other).name = "Other";
+            Call(unit, "SetValueForMixLevel", mixer, other, -12f);
+            Set(mixer, "TargetSnapshot", snapshot);
+            EditorUtility.SetDirty((UnityEngine.Object)mixer);
+        }
         AssetDatabase.SaveAssets();
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         new GameObject("ParamsProbe").AddComponent<ParamsProbe>(); Directory.CreateDirectory("Assets/Scenes");

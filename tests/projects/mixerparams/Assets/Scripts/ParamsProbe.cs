@@ -8,6 +8,7 @@ using Unity.Collections;
 public class ParamsProbe : MonoBehaviour
 {
     public static readonly string[] Cases = { "lp_render", "dist_render", "lp_idle", "dist_idle" };
+    public static readonly string[] WetEffects = { "Distortion", "Chorus", "Flange", "Normalize", "Pitch Shifter" };
     static bool Engine => Environment.GetEnvironmentVariable("PARAMS_ENGINE") == "1";
     StreamWriter output;
     string key;
@@ -97,6 +98,18 @@ public class ParamsProbe : MonoBehaviour
             if (render && !AudioRenderer.Render(buffer)) throw new Exception("Base render failed");
             Read(mixer, "snapshot.base.applied");
             source.Stop(); DestroyImmediate(go); DestroyImmediate(clip);
+        }
+        foreach (string effect in WetEffects) {
+            key = "wet_" + effect.Replace(" ", "");
+            var mixer = Resources.Load<AudioMixer>(key);
+            Read(mixer, "initial");
+            Record("set", mixer.SetFloat("Value", 6f)); Read(mixer, "set.get");
+            mixer.FindSnapshot("Other").TransitionTo(0);
+            yield return null; Read(mixer, "override");
+            Record("clear", mixer.ClearFloat("Value"));
+            yield return null; Read(mixer, "other");
+            mixer.FindSnapshot("Base").TransitionTo(0);
+            yield return null; Read(mixer, "base");
         }
         output.WriteLine("\"complete\":true}"); output.Dispose(); AudioRenderer.Stop(); Exit(0);
     }

@@ -39,6 +39,29 @@ public class EffectProbe : MonoBehaviour
         new[] { "invalid_pitch_low", "music=noise:0.25", "set:Pitch=-1" },
         new[] { "invalid_pitch_high", "music=noise:0.25", "set:Pitch=3" },
         new[] { "absent_missing", "music=imp", "set:Missing=0.5" },
+        new[] { "slot_wet_zero", "music=noise:0.25", "Music.Shift.Wet=-80" },
+        new[] { "slot_wet_quarter", "music=noise:0.25", "Music.Shift.Wet=-12" },
+        new[] { "slot_wet_half", "music=noise:0.25", "Music.Shift.Wet=-6" },
+        new[] { "slot_wet_threequarter", "music=noise:0.25", "Music.Shift.Wet=-2.5" },
+        new[] { "slot_wet_full", "music=noise:0.25", "Music.Shift.Wet=0" },
+        new[] { "slot_wet_above", "music=noise:0.25", "Music.Shift.Wet=6" },
+        new[] { "slot_wet_quiet", "music=noise:0.25", "Music.Shift.Wet=-70" },
+        new[] { "slot_wet_audible", "music=noise:0.25", "Music.Shift.Wet=-68" },
+        new[] { "slot_wet_set", "music=noise:0.25", "wetset=-6", "Music.Shift.Wet=-6" },
+        new[] { "slot_wet_set_above", "music=noise:0.25", "wetset=6", "Music.Shift.Wet=-6" },
+        new[] { "slot_wet_startup", "music=dc0", "Music.Shift.Wet=-6" },
+        new[] { "slot_wet_before", "music=dc0", "Music:Shift,Att", "Music.Volume=-12", "Music.Shift.Wet=-6" },
+        new[] { "slot_wet_bypass", "music=noise:0.25", "Music.Shift.bypass=1", "Music.Shift.Wet=-6" },
+        new[] { "slot_wet_dry", "music=noise:0.25", "Music:Att" },
+        new[] { "slot_wet_processed", "music=noise:0.25" },
+        new[] { "slot_wet_boostlimit", "music=noise:0.25", "Music.Shift.Wet=20" },
+        new[] { "slot_wet_boostclamp", "music=noise:0.25", "Music.Shift.Wet=30" },
+        new[] { "slot_wet_threshold", "music=noise:0.25", "Music.Shift.Wet=-69" },
+        new[] { "slot_wet_thresholdlower", "music=noise:0.25", "Music.Shift.Wet=-69.9" },
+        new[] { "slot_wet_dc_dry", "music=dc0", "Music:Att" },
+        new[] { "slot_wet_dc_processed", "music=dc0" },
+        new[] { "slot_wet_startup_zero", "music=dc0", "Music.Shift.Wet=-80" },
+        new[] { "slot_wet_before_zero", "music=dc0", "Music:Shift,Att", "Music.Volume=-12", "Music.Shift.Wet=-80" },
     };
     static int BlockCount, ClipFrames;
     public static string[] Selected()
@@ -175,6 +198,13 @@ public class EffectProbe : MonoBehaviour
                     mixer.GetFloat(name, out float v);
                     records.Add("\""+key+".mixer_"+name+"\":"+v.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
                 }
+            if (key.StartsWith("slot_wet_") && key != "slot_wet_dry" && key != "slot_wet_processed" && key != "slot_wet_dc_dry" && key != "slot_wet_dc_processed") {
+                string set = Option(key, "wetset=", "");
+                if (set != "") records.Add("\""+key+".wetset\":"+(mixer.SetFloat("Wet", float.Parse(set, System.Globalization.CultureInfo.InvariantCulture)) ? "true" : "false"));
+                bool got = mixer.GetFloat("Wet", out float value);
+                records.Add("\""+key+".wetget\":"+(got ? "true" : "false"));
+                records.Add("\""+key+".wetvalue\":"+value.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+            }
             var go = new GameObject(key);
             var source = go.AddComponent<AudioSource>();
             source.bypassEffects = Option(key, "bypass=", "0") == "1";

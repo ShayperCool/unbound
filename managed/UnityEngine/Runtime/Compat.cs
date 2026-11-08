@@ -72,6 +72,11 @@ namespace Unbound.Runtime
         /// groups first used later (tests/projects/mixerduck, exactly 6000.0.71f1).</summary>
         internal static bool MixerGraphStartupMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Static effect-slot Wet mixing measured on 6000.0.71f1 by the five
+        /// audio effect probes. Other releases keep rejecting this unmeasured mechanism.</summary>
+        internal static bool MixerStaticWetMeasured => Release == (6000, 0, 71, 'f', 1);
+
+
         /// <summary>The Editor starts with its saved mixer snapshot selection, measured on
         /// exactly 6000.0.71f1 (tests/projects/mixersuspend). Other releases retain the start
         /// snapshot until their Editor selection behavior is measured.</summary>

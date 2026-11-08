@@ -25,7 +25,7 @@ public static class ProbeRunner
                     + " max=" + definition.GetType().GetField("maxRange").GetValue(definition)
                     + " default=" + definition.GetType().GetField("defaultValue").GetValue(definition));
         Directory.CreateDirectory("Assets/Resources");
-        foreach (string key in EffectProbe.Selected()) Build(key);
+        foreach (string key in Array.ConvertAll(EffectProbe.Cases, row => row[0])) Build(key);
         var prefab = new GameObject("Serialized");
         prefab.AddComponent<AudioSource>();
         var filter = prefab.AddComponent<AudioChorusFilter>();
@@ -87,6 +87,11 @@ public static class ProbeRunner
             else if (path[path.Length - 1] == "bypass") continue;  // set with the chain
             else {
                 if (!units.TryGetValue(path[0] + "." + path[1], out var unit)) throw new Exception("No unit " + pair[0]);
+                if (path[2] == "Wet") {
+                    Set(unit, "enableWetMix", true);
+                    Call(unit, "SetValueForMixLevel", mixer, snapshot, value);
+                    continue;
+                }
                 bool known = false;
                 foreach (var definition in (Array)T("MixerEffectDefinitions").GetMethod("GetEffectParameters", F).Invoke(null, new object[] { Units[path[1]] }))
                     known |= (string)definition.GetType().GetField("name").GetValue(definition) == path[2];
@@ -103,6 +108,15 @@ public static class ProbeRunner
                 type.GetField("guid", F).SetValue(item, Call(chorus, "GetGUIDForParameter", names[i]));
                 exposed.SetValue(item, i);
             }
+            Set(mixer, "exposedParameters", exposed);
+        }
+        if (key.StartsWith("slot_wet_") && units.TryGetValue("Music.Cho", out var wetUnit)) {
+            var type = T("ExposedAudioParameter"); var item = Activator.CreateInstance(type);
+            type.GetField("name", F).SetValue(item, "Wet");
+            type.GetField("guid", F).SetValue(item, Call(wetUnit, "GetGUIDForMixLevel"));
+            var previous = (Array)Get(mixer, "exposedParameters");
+            var exposed = Array.CreateInstance(type, previous.Length + 1);
+            Array.Copy(previous, exposed, previous.Length); exposed.SetValue(item, previous.Length);
             Set(mixer, "exposedParameters", exposed);
         }
         EditorUtility.SetDirty((UnityEngine.Object)mixer);

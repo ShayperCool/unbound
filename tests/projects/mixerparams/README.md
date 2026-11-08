@@ -30,3 +30,9 @@ It assembles the content-checked authored project without the Editor, runs both
 rates, and compares the complete key union exactly. Reports retain every missing,
 extra and differing key under the cache. The original audio probes retain their
 original float and PCM tolerances and all raw residuals.
+
+The static Wet extension adds 35 exact fields per rate, for 182 total. It tests Wet
+ownership and snapshot values on Distortion, Chorus, Flange, Normalize and Pitch
+Shifter without a playing source. Two independent captures agree exactly. The
+[shared wet notes](../../../docs/AUDIO.md#static-effect-slot-wet-mixing) describe
+the separate rendered controls and the retained rejection of live DSP changes.

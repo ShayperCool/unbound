@@ -34,3 +34,7 @@ Certification: both independent Native repeats agree exactly across 36,831,499
 values at each rate. The engine strict and separate gate comparisons each pass
 36,831,499/36,831,499 at both rates, including all metadata and startup samples.
 There are zero raw float/PCM failures and no added residuals.
+
+Static effect-slot Wet is now covered by the additional `slot_wet_*` cases. See the
+[shared contract, measured equation, controls and limits](../../../docs/AUDIO.md#static-effect-slot-wet-mixing).
+These additive captures retain all earlier oracle values and comparator tolerances.

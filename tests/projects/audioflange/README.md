@@ -43,3 +43,7 @@ of Native `True:4000`. The untouched NativeApi 24 predecessor reproduces it.
 Complete Native/before/after unions report zero introduced, one retained and zero
 resolved failures per rate; all PCM and other filter profiles pass. The separate
 compatibility gap remains open. No oracle, tolerance or sample was changed.
+
+Static effect-slot Wet is now covered by the additional `slot_wet_*` cases. See the
+[shared contract, measured equation, controls and limits](../../../docs/AUDIO.md#static-effect-slot-wet-mixing).
+These additive captures retain all earlier oracle values and comparator tolerances.

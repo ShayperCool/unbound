@@ -45,7 +45,7 @@ public static class ProbeRunner
                 + " max=" + definition.GetType().GetField("maxRange").GetValue(definition)
                 + " default=" + definition.GetType().GetField("defaultValue").GetValue(definition));
         Directory.CreateDirectory("Assets/Resources");
-        foreach (string key in ReverbProbe.Selected()) {
+        foreach (string key in Array.ConvertAll(ReverbProbe.Cases, row => row[0])) {
             string path = "Assets/Resources/"+key+".mixer";
             var mixer = T("AudioMixerController").GetMethod("CreateMixerControllerAtPath", F).Invoke(null, new object[] { path });
             // Keep the effect observable through quiet tails and after the source ends.

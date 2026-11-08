@@ -47,6 +47,9 @@ namespace UnityEngine.Audio
 
         internal const float MinVolume = -80f;
         internal const float MaxVolume = 20f;
+        // Static slot controls in the effect probes and mixerreverb.
+        internal const float MeasuredWetAudibilityDb = -70f;
+        internal const float LegacyWetAudibilityDb = -69f;
 
         internal AudioMixer() { }
 
@@ -247,10 +250,11 @@ namespace UnityEngine.Audio
 
         // Unity's mixer DSP uses this quadratic exponent approximation. The parameter itself
         // remains in dB; the independently repeated gain matrix constrains this conversion.
-        internal static float DspGain(float db)
+        internal static float DspGain(float db) => DspGain(db, MaxVolume);
+        internal static float DspGain(float db, float maximum)
         {
             if (db <= MinVolume) return 0f;
-            float exponent = (Mathf.Min(db, MaxVolume) * 0.05f) * 3.3229959f;
+            float exponent = (Mathf.Min(db, maximum) * 0.05f) * 3.3229959f;
             int integral = Mathf.FloorToInt(exponent);
             float fraction = exponent - integral;
             float polynomial = (1f + fraction * 0.6822701f) + (fraction * fraction) * 0.31772992f;
@@ -477,7 +481,8 @@ namespace UnityEngine.Audio
                 bool routed = effect.IsSidechain;
                 bool bypass = !routed && (m_BypassEffects || effect.m_Bypass);
                 bool reverb = effect.m_EffectName == AudioMixerEffectController.SfxReverb;
-                bool measured = Array.IndexOf(AudioMixerEffectController.MeasuredEffects, effect.m_EffectName) >= 0;
+                var rule = AudioMixerEffectController.Rule(effect.m_EffectName);
+                bool measured = rule.Supported;
                 if (!bypass && !reverb && !routed && !measured)
                     throw new NotSupportedException("Unsupported AudioMixer effect '" + effect.m_EffectName + "' in group '" + Path + "'");
                 bool simple = effect.m_EffectName == "Lowpass Simple" || effect.m_EffectName == "Highpass Simple";
@@ -488,13 +493,14 @@ namespace UnityEngine.Audio
                 var target = effect.m_EffectName == "Send" ? effect.m_SendTarget : null;
                 var targetGroup = target == null ? null : m_Mixer?.FindEffectGroup(target);
                 if (targetGroup != null) _ = targetGroup.Handle;
-                // Wet mixing is measured only on SFX Reverb (tests/projects/mixerreverb).
-                if (!bypass && !reverb && effect.m_EnableWetMix)
+                if (!bypass && effect.m_EnableWetMix && !rule.Wet)
                     throw new NotSupportedException("AudioMixer wet mixing is unsupported for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
                 float wetDb = effect.m_MixLevelGuid != null ? m_Mixer.Value(effect.m_MixLevelGuid) : 0f;
-                // The Editor's Wet ends at 0 dB; a louder level (e.g. via an exposed parameter) is unmeasured.
-                if (!bypass && reverb && effect.m_EnableWetMix && wetDb > 0f)
-                    throw new NotSupportedException("AudioMixer wet level " + wetDb + " dB above 0 dB is unmeasured for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
+                if (!bypass && effect.m_EnableWetMix && rule.StaticWet) effect.RequireMeasuredOutput();
+                if (!bypass && effect.m_EnableWetMix && rule.StaticWet && !Compat.MixerStaticWetMeasured)
+                    throw new NotSupportedException("AudioMixer static wet mixing is measured only for Unity 6000.0.71f1");
+                if (!bypass && effect.m_EnableWetMix && (!float.IsFinite(wetDb) || wetDb > rule.MaxWetDb))
+                    throw new NotSupportedException("AudioMixer wet level " + wetDb + " dB exceeds the measured maximum " + rule.MaxWetDb + " dB for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
                 // tests/projects/mixerduck measures Send levels up to 0 dB.
                 if (targetGroup != null && !(wetDb <= 0f))
                     throw new NotSupportedException("AudioMixer send level " + wetDb + " dB above 0 dB is unmeasured in group '" + Path + "'");
@@ -510,10 +516,10 @@ namespace UnityEngine.Audio
                     dryMix = effect.Parameter("Drymix") is string dry ? m_Mixer.Value(dry) : 1f,
                     wetMix = effect.Parameter("Wetmix") is string wet ? m_Mixer.Value(wet) : 1f,
                     sfx = reverb ? effect.SfxReverbConfiguration(m_Mixer) : null,
-                    // The slot uses the mixer's gain approximation; Native keeps -68 dB and drops the
-                    // effect output at -70 dB (the boundary between them is unmeasured).
-                    mixLevel = reverb && effect.m_EnableWetMix ? AudioMixer.DspGain(wetDb) : (float?)null,
-                    mixAudible = wetDb > -69f,
+                    // Slot Wet uses dB, separately from an effect's own linear wet-tap controls.
+                    mixLevel = !bypass && rule.Wet && effect.m_EnableWetMix ? AudioMixer.DspGain(wetDb, rule.MaxWetDb) : (float?)null,
+                    slotWetMeasured = Compat.MixerStaticWetMeasured,
+                    mixAudible = wetDb > (Compat.MixerStaticWetMeasured ? AudioMixer.MeasuredWetAudibilityDb : AudioMixer.LegacyWetAudibilityDb),
                     duck = effect.m_EffectName == AudioMixerEffectController.DuckVolume ? effect.DuckConfiguration(m_Mixer) : null,
                     compressor = effect.m_EffectName == AudioMixerEffectController.Compressor && !bypass ? effect.CompressorConfiguration(m_Mixer) : null,
                     pitchShifter = effect.m_EffectName == AudioMixerEffectController.PitchShifter && !bypass ? effect.PitchShifterConfiguration(m_Mixer) : null,
@@ -685,9 +691,24 @@ namespace Unbound.Runtime
         static readonly float[] ParamEqDefaults = { 8000f, 1f, 1f };
         static readonly float[] ParamEqMinimums = { 20f, 0.2f, 0.05f };
         static readonly float[] ParamEqMaximums = { 22000f, 5f, 3f };
-        /// <summary>Kinds the DSP runs besides SFX Reverb and the routed units.</summary>
-        internal static readonly string[] MeasuredEffects = {
-            "Attenuation", "Lowpass", "Highpass", "Echo", Compressor, ParamEq, Distortion, Chorus, Flange, Normalize, PitchShifter, "Lowpass Simple", "Highpass Simple" };
+        // Wet capability and measured maximum dB, alongside each supported effect kind.
+        const float MaximumStaticWetDb = 30f;
+        static readonly (string Name, bool Wet, bool StaticWet, float MaxWetDb)[] EffectKinds = {
+            ("Attenuation", false, false, 0), ("Lowpass", false, false, 0),
+            ("Highpass", false, false, 0), ("Echo", false, false, 0),
+            (SfxReverb, true, false, 0), ("Send", false, false, 0),
+            ("Receive", false, false, 0), (DuckVolume, false, false, 0),
+            (Compressor, false, false, 0), (ParamEq, false, false, 0),
+            ("Lowpass Simple", false, false, 0), ("Highpass Simple", false, false, 0),
+            (Distortion, true, true, MaximumStaticWetDb), (Chorus, true, true, MaximumStaticWetDb),
+            (Flange, true, true, MaximumStaticWetDb), (Normalize, true, true, MaximumStaticWetDb),
+            (PitchShifter, true, true, MaximumStaticWetDb) };
+        internal static (bool Supported, bool Wet, bool StaticWet, float MaxWetDb) Rule(string kind)
+        {
+            foreach (var rule in EffectKinds)
+                if (rule.Name == kind) return (true, rule.Wet, rule.StaticWet, rule.MaxWetDb);
+            return (false, false, false, 0);
+        }
         internal static float CutoffDefault(string effect) => effect == "Highpass Simple" ? 1000f : 5000f;
         internal static (string[], float[], float[], float[]) Ranges(string effect) =>
             effect == Compressor ? (CompressorParameters, CompressorDefaults, CompressorMinimums, CompressorMaximums)
@@ -726,7 +747,7 @@ namespace Unbound.Runtime
         /// Editor, tests/projects/audionormalize, tests/projects/audiopitch); other rates, DSP buffer
         /// sizes and speaker modes are unmeasured and fail. The native mixer checks the same
         /// layout (MEASURED_LAYOUT in crates/unbound-runtime/src/audio/effects.rs).</summary>
-        void RequireMeasuredOutput()
+        internal void RequireMeasuredOutput()
         {
             var config = AudioSettings.GetConfiguration();
             if ((config.sampleRate != 48000 && config.sampleRate != 44100) || config.dspBufferSize != 1024 || config.speakerMode != AudioSpeakerMode.Stereo)

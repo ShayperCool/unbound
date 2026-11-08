@@ -85,3 +85,10 @@ residuals, both listed in docs/COMPATIBILITY_GAPS.md:
 The model and its measured rules are in docs/AUDIO.md. Unmeasured: other releases, surround
 output, parameter changes while a tail runs, timed snapshot transitions, wet levels between -68 and
 -70 dB, and sample rates other than 48000 and 44100 Hz.
+
+Two added -69/-69.9 dB static Wet controls, each repeated independently at both
+rates in the complete capture sequence, establish the shared -70 dB processed
+output boundary. See the [shared wet notes](../../../docs/AUDIO.md#static-effect-slot-wet-mixing).
+Earlier sample data and tolerances are unchanged. Publish only the new keys with
+`tests/publish_audio_extension.py --case-prefix wetmix_m69`; existing device PCM
+includes earlier mixers' tails, so a partial sequence is not its recording context.
