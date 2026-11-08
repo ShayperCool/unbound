@@ -850,9 +850,16 @@ namespace Unbound.Runtime
                 float inverse2 = inverse * inverse;
                 float dy = k1.value - k0.value;
                 float d1 = k0.outTangent * dx, d2 = k1.inTangent * dx;
+                float a = (d1 + d2 - dy - dy) * inverse2 * inverse, b = (dy + dy + dy - d1 - d1 - d2) * inverse2;
+                // Huge finite tangents can overflow the coefficients.
+                if (!float.IsFinite(a) || !float.IsFinite(b))
+                {
+                    ownEvaluation[i] = true;
+                    continue;
+                }
                 int c = 4 * i;
-                coefficients[c] = (d1 + d2 - dy - dy) * inverse2 * inverse;
-                coefficients[c + 1] = (dy + dy + dy - d1 - d1 - d2) * inverse2;
+                coefficients[c] = a;
+                coefficients[c + 1] = b;
                 coefficients[c + 2] = k0.outTangent;
                 coefficients[c + 3] = k0.value;
             }

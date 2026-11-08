@@ -16,7 +16,7 @@ namespace UnityEngine.Tests
         /// rounding itself is checked against the Editor by the probes named above).</summary>
         static float Cubic(Keyframe k0, Keyframe k1, float time)
         {
-            float dx = MathF.Max(k1.time - k0.time, 1e-4f);
+            float dx = k1.time - k0.time;
             float inv = 1f / dx;
             float dy = k1.value - k0.value;
             float d1 = k0.outTangent * dx, d2 = k1.inTangent * dx;
@@ -87,6 +87,7 @@ namespace UnityEngine.Tests
                 new AnimationCurve(new Keyframe(0f, 1f, 0f, float.PositiveInfinity), new Keyframe(1f, 3f, 0f, 0f)),
                 new AnimationCurve(new Keyframe(0f, 1f, 0f, 0f), new Keyframe(1f, 3f, float.NegativeInfinity, 0f)),
                 new AnimationCurve(new Keyframe(0f, 1f, 0f, 2f), new Keyframe(5e-5f, 3f, 4f, 0f), new Keyframe(1f, 0f)),
+                new AnimationCurve(new Keyframe(0f, 1f, 0f, 3e38f), new Keyframe(1f / 30f, 3f, 0f, 0f), new Keyframe(1f, 0f)),
             })
             {
                 var clipCurve = Of(curve);
