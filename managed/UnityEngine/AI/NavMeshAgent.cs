@@ -1042,11 +1042,14 @@ namespace Unbound.Runtime
         /// next early update (measured, tests/projects/navcost loop.*: pathPending right after
         /// SetDestination, for agents made in that frame and earlier, standing and walking, with
         /// destinations on their polygon, ahead on their path, at its end, behind them and beyond the
-        /// NavMesh). An agent on a link keeps its request for the early update.</summary>
+        /// NavMesh). Cutting the corridor is Unbound's way to give that path (unmeasured). An agent
+        /// on a link, or whose path is stale, keeps its request for the early update.</summary>
         internal static void PlanAtOnce(NavMeshAgent agent, bool hadPath)
         {
             var ag = agent.m_Crowd;
-            if (ag == null || agent.isOnOffMeshLink) return;
+            // A stale path (areaMask or area costs changed, a link toggled) is searched anew
+            // (measured: tests/projects/navlinks inactive, a destination set after the link opened).
+            if (ag == null || agent.isOnOffMeshLink || agent.isPathStale) return;
             if (!NavMesh.Nearest(agent.m_Surface, agent.RequestedDestination, NavMesh.AgentExtents(agent.agentTypeID), agent.Filter, out var targetPoly, out var target))
                 return;
             var point = NavMesh.V(target);

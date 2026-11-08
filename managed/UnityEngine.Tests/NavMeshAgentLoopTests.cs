@@ -90,7 +90,11 @@ namespace UnityEngine.Tests
             Agent(new Vector3(-5f, 0f, 4f));
             Assert.Contains((Action)AgentSystem.Step, PlayerLoopDriver.Registered(typeof(UnityEngine.PlayerLoop.PreUpdate.AIUpdate)));
             foreach (var action in PlayerLoopDriver.Registered(typeof(UnityEngine.PlayerLoop.PreLateUpdate.AIUpdatePostScript)))
+            {
+                // Methods and lambdas (declared in a nested compiler-made class) of the agents.
                 Assert.NotEqual(typeof(AgentSystem), action.Method.DeclaringType);
+                Assert.NotEqual(typeof(AgentSystem), action.Method.DeclaringType?.DeclaringType);
+            }
         }
 
         [Fact]
@@ -109,6 +113,24 @@ namespace UnityEngine.Tests
             Assert.False(agent.pathPending);
             Assert.Equal(count - 1, ag.corridor.GetPathCount());
             for (int i = 0; i < count - 1; i++) Assert.Equal(path[i], ag.corridor.GetPath()[i]);
+            Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
+            Assert.True(Vector2.Distance(new Vector2(target.x, target.z), new Vector2(agent.pathEndPosition.x, agent.pathEndPosition.z)) < 1e-3f);
+            // The corners lead to the destination: the remaining distance is at least the straight line.
+            float straight = Vector2.Distance(new Vector2(target.x, target.z), new Vector2(agent.nextPosition.x, agent.nextPosition.z));
+            Assert.InRange(agent.remainingDistance, straight - 1e-3f, straight + 6f);
+        }
+
+        [Fact]
+        public void AStalePathIsSearchedAnewEvenForADestinationOnIt()
+        {
+            var agent = Walking(5);
+            agent.SetAreaCost(0, 2f);
+            Assert.True(agent.isPathStale);
+            Assert.True(agent.SetDestination(Center + new Vector3(4f, 0f, -4f)));
+            Assert.True(agent.pathPending);
+            AgentSystem.Step();
+            Assert.False(agent.pathPending);
+            Assert.False(agent.isPathStale);
         }
 
         /// <summary>The centre of a polygon.</summary>
