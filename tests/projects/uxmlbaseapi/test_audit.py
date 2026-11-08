@@ -8,6 +8,13 @@ spec.loader.exec_module(probe)
 
 
 class AuditTests(unittest.TestCase):
+    def test_comparison_keeps_missing_extra_and_wrong_values_with_an_accurate_match_count(self):
+        matched, failures = probe.compare_values({'a': 'same', 'b': 'before', 'c': 'missing'},
+                                               {'a': 'same', 'b': 'after', 'd': 'extra'})
+        self.assertEqual(matched, 1)
+        self.assertCountEqual(failures, [{'key': 'b', 'expected': 'before', 'actual': 'after'},
+                                         {'key': 'c', 'missing': 'missing'}, {'key': 'd', 'extra': 'extra'}])
+
     def test_existing_particle_errors_remain_explicit(self):
         report = "access (1)\n  UnityEngine.ParticleSystem+MinMaxCurve\n    float m_ConstantMax is private, Unity's is internal\n1 errors in 2427 hand-written types checked against Unity\n"
         issues = probe.parse_api_audit(report, 1)

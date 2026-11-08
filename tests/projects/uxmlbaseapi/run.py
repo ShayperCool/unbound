@@ -111,6 +111,20 @@ def record(label):
         raise SystemExit(problem)
 
 
+def compare_values(expected, actual):
+    failed, matched = [], 0
+    for key in sorted(expected.keys() | actual.keys()):
+        if key not in actual:
+            failed.append({'key': key, 'missing': expected[key]})
+        elif key not in expected:
+            failed.append({'key': key, 'extra': actual[key]})
+        elif expected[key] != actual[key]:
+            failed.append({'key': key, 'expected': expected[key], 'actual': actual[key]})
+        else:
+            matched += 1
+    return matched, failed
+
+
 def gate(label):
     out = run_root(ROOT, label)
     path = project(out)
@@ -122,14 +136,7 @@ def gate(label):
             stdout=log, stderr=subprocess.STDOUT).returncode
     expected = json.loads((reference_root(ROOT)/'values.json').read_text())
     actual = values(out/'engine') if (out/'engine/values.tsv').exists() else {}
-    failed = []
-    for key in sorted(expected.keys() | actual.keys()):
-        if key not in actual:
-            failed.append({'key': key, 'missing': expected[key]})
-        elif key not in expected:
-            failed.append({'key': key, 'extra': actual[key]})
-        elif expected[key] != actual[key]:
-            failed.append({'key': key, 'expected': expected[key], 'actual': actual[key]})
+    matched, failed = compare_values(expected, actual)
     for failure in failed:
         print(json.dumps(failure))
     with (out/'api-check.log').open('w') as log:
@@ -143,7 +150,7 @@ def gate(label):
     unexpected = [issue for issue in issues if not baseline_issue(issue)]
     for issue in issues:
         print(json.dumps({'apiAudit': issue, 'knownParticlesBaseline': baseline_issue(issue)}))
-    print(f'uxmlbaseapi: {len(expected)-len(failed)}/{len(expected)} records, {len(failed)} failures; engine exit {engine}, API audit {len(unexpected)} unexpected, {len(issues)-len(unexpected)} existing particle field-access errors; logs {out}')
+    print(f'uxmlbaseapi: {matched}/{len(expected)} records, {len(failed)} failures; engine exit {engine}, API audit {len(unexpected)} unexpected, {len(issues)-len(unexpected)} existing particle field-access errors; logs {out}')
     return 1 if failed or engine or unexpected else 0
 
 
