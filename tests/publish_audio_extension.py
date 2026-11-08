@@ -59,9 +59,22 @@ def publish(fixture, capture, repeat, release, rate, case_prefix=None):
         module.verify(staging, release, rate)
         for filename in files:
             if not (target/(filename+'.gz')).exists():
-                with gzip.GzipFile(target/(filename+'.gz'), 'wb', mtime=0) as output:
-                    output.write((capture/filename).read_bytes())
-        shutil.copyfile(staging/'capture.json', target/'capture.json')
+                with tempfile.NamedTemporaryFile(prefix=filename+'.', suffix='.tmp', dir=target, delete=False) as handle:
+                    temporary_sample = Path(handle.name)
+                try:
+                    with temporary_sample.open('wb') as stream:
+                        with gzip.GzipFile(filename=filename, mode='wb', fileobj=stream, mtime=0) as output:
+                            output.write((capture/filename).read_bytes())
+                    temporary_sample.replace(target/(filename+'.gz'))
+                finally:
+                    temporary_sample.unlink(missing_ok=True)
+        with tempfile.NamedTemporaryFile(prefix='capture.', suffix='.tmp', dir=target, delete=False) as handle:
+            temporary_header = Path(handle.name)
+        try:
+            shutil.copyfile(staging/'capture.json', temporary_header)
+            temporary_header.replace(target/'capture.json')
+        finally:
+            temporary_header.unlink(missing_ok=True)
     print(f'{fixture.name} {rate}: repeats identical; {len(first)} captured fields; existing values unchanged')
 
 
