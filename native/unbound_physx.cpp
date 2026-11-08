@@ -1516,17 +1516,26 @@ UA3_API void ua3_body_set_transform( uint64_t id, ua3_vec3 positionIn, ua3_quat 
 	}
 }
 
-UA3_API void ua3_body_publish_constraints( uint64_t id, int angularAxes )
+static PxVec3 mask_axes( PxVec3 velocity, int axes )
+{
+	if ( axes & 1 ) velocity.x = 0.0f;
+	if ( axes & 2 ) velocity.y = 0.0f;
+	if ( axes & 4 ) velocity.z = 0.0f;
+	return velocity;
+}
+
+UA3_API void ua3_body_publish_constraints( uint64_t id, int locks )
 {
 	PxRigidDynamic* body = dynamic_of( id );
 	if ( body == nullptr || body->getRigidBodyFlags().isSet( PxRigidBodyFlag::eKINEMATIC ) || body->isSleeping() ) return;
 	const PxTransform pose = body->getGlobalPose();
-	const PxQuat axes = pose.q * body->getCMassLocalPose().q;
-	PxVec3 angular = axes.rotateInv( body->getAngularVelocity() );
-	if ( angularAxes & 1 ) angular.x = 0.0f;
-	if ( angularAxes & 2 ) angular.y = 0.0f;
-	if ( angularAxes & 4 ) angular.z = 0.0f;
-	body->setAngularVelocity( axes.rotate( angular ), false );
+	if ( locks & 7 ) body->setLinearVelocity( mask_axes( body->getLinearVelocity(), locks ), false );
+	int angularAxes = ( locks >> 3 ) & 7;
+	if ( angularAxes )
+	{
+		const PxQuat axes = pose.q * body->getCMassLocalPose().q;
+		body->setAngularVelocity( axes.rotate( mask_axes( axes.rotateInv( body->getAngularVelocity() ), angularAxes ) ), false );
+	}
 	body->setGlobalPose( pose, false );
 }
 

@@ -409,7 +409,20 @@ namespace UnityEngine
         public RigidbodyConstraints constraints
         {
             get => m_Constraints;
-            set { m_Constraints = value; Changed(); }
+            set
+            {
+                m_Constraints = value;
+                Changed();
+                if (!Compat.ConstrainedBodyStateMeasured || m_IsKinematic || value == RigidbodyConstraints.None) return;
+                EnsureMass();
+                if (m_Body != 0) B3.ua3_body_publish_constraints(m_Body, Locks);
+                else
+                {
+                    m_PendingVelocity = MaskVelocityAxes(m_PendingVelocity, Locks);
+                    var axes = m_InactiveRotation * (m_ImplicitTensor ? m_AppliedAxes : m_InertiaRotation);
+                    m_PendingAngularVelocity = axes * MaskVelocityAxes(Quaternion.Inverse(axes) * m_PendingAngularVelocity, Locks >> 3);
+                }
+            }
         }
 
         public CollisionDetectionMode collisionDetectionMode
@@ -630,7 +643,7 @@ namespace UnityEngine
         internal void PublishConstrainedPose()
         {
             if ((m_Constraints & RigidbodyConstraints.FreezeRotation) != 0)
-                B3.ua3_body_publish_constraints(m_Body, ((int)m_Constraints >> 4) & 7);
+                B3.ua3_body_publish_constraints(m_Body, Locks);
         }
 
         /// <summary>The solver settings PhysX keeps per body.</summary>

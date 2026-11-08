@@ -465,6 +465,28 @@ public class GeometryEntry : MonoBehaviour
             Clear();
         }
     }
+    static void ConstraintTransitions()
+    {
+        foreach(var constraint in new[]{RigidbodyConstraints.None, RigidbodyConstraints.FreezePositionX,
+            RigidbodyConstraints.FreezePosition, RigidbodyConstraints.FreezeRotationX,
+            RigidbodyConstraints.FreezeRotationY, RigidbodyConstraints.FreezeRotationZ,
+            RigidbodyConstraints.FreezeRotation, RigidbodyConstraints.FreezeAll})
+        foreach(bool rotated in new[]{false,true})
+        {
+            Begin("constraints/transition/"+(int)constraint+"/"+rotated);
+            var body=Body("bullet",Vector3.left*10,0,CollisionDetectionMode.Discrete);
+            body.constraints=RigidbodyConstraints.None;
+            if(rotated)body.rotation=Quaternion.Euler(20,30,40);
+            body.inertiaTensor=new Vector3(1,2,3);
+            body.inertiaTensorRotation=rotated?Quaternion.Euler(15,25,35):Quaternion.identity;
+            body.linearVelocity=new Vector3(1,2,3); body.angularVelocity=new Vector3(4,5,6);
+            body.constraints=constraint;
+            Row(Scenario+"/linear",V(body.linearVelocity)); Row(Scenario+"/angular",V(body.angularVelocity));
+            Row(Scenario+"/rotation",Q(body.rotation));
+            Step=0; Tick(body);
+            Clear();
+        }
+    }
     static void RecordPending(string phase, Collider collider)
     {
         var bounds=collider.bounds;
@@ -510,7 +532,7 @@ public class GeometryEntry : MonoBehaviour
         Time.fixedDeltaTime=Dt; Physics.simulationMode=SimulationMode.Script; Space=Physics.defaultPhysicsScene;
         try
         {
-            if(!string.IsNullOrEmpty(constraints)) { ConstraintControls(); Row("complete","yes"); Save(0); return; }
+            if(!string.IsNullOrEmpty(constraints)) { ConstraintControls(); ConstraintTransitions(); Row("complete","yes"); Save(0); return; }
             if(!string.IsNullOrEmpty(ordering)) { Ordering(); FrameControls(); PendingFrames(); IdleControls(); Row("complete","yes"); Save(0); return; }
             if(!string.IsNullOrEmpty(controls)) { Controls(); Row("complete","yes"); Save(0); return; }
             StaticMatrix(); DynamicMatrix(); Tuning();

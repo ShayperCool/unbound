@@ -262,7 +262,7 @@ namespace Unbound.Box3D
         [LibraryImport(Library)] internal static partial void ua3_bodies_state(ulong* bodies, int count, BodyState* output);
         [LibraryImport(Library), SuppressGCTransition] internal static partial void ua3_body_get_transform(ulong body, out Vector3 position, out Quaternion rotation);
         [LibraryImport(Library), SuppressGCTransition] internal static partial void ua3_body_set_transform(ulong body, Vector3 position, Quaternion rotation);
-        [LibraryImport(Library)] internal static partial void ua3_body_publish_constraints(ulong body, int angularAxes);
+        [LibraryImport(Library)] internal static partial void ua3_body_publish_constraints(ulong body, int locks);
         [LibraryImport(Library), SuppressGCTransition] internal static partial void ua3_body_set_target_transform(ulong body, Vector3 position, Quaternion rotation, float timeStep);
         [LibraryImport(Library), SuppressGCTransition] internal static partial Vector3 ua3_body_get_linear_velocity(ulong body);
         [LibraryImport(Library), SuppressGCTransition] internal static partial void ua3_body_set_linear_velocity(ulong body, Vector3 v);

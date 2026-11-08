@@ -387,7 +387,7 @@ The following Unity **6000.0** documentation was checked, including limitations:
 | [Rigidbody.constraints](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rigidbody-constraints.html) | Position constraints use world axes; rotation constraints use inertia space relative to `inertiaTensorRotation`. The exact publication and assignment arithmetic above is an observation of this release and the named controls. |
 | [PublishTransform](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rigidbody.PublishTransform.html) | Publishes the simulated Rigidbody pose to its Transform. Child transforms are not updated by this method; callers must account for hierarchy order. The capture checks that publishing a sleeping constrained body does not wake it. |
 
-`--geometry-constraints` has one canonical 553-row reference from two identical
+`--geometry-constraints` has one canonical 633-row reference from two identical
 GPU Editor captures. It gates the measured angular-constraint/assignment/sleep
 cases at the original tolerances. Its no-angular-constraint controls are explicit
 negative controls: 58 strict rows remain visible (11 body, 44 payload, 3 slot
@@ -407,10 +407,24 @@ profile retains its full raw sequence/orientation report and native/legacy
 consistency checks. Far-origin differences are 25 -> 0.
 
 
-Q177 validation: release build; 3594 managed tests; seven compatibility-profile
+Q177 validation: release build; 3667 managed tests; seven compatibility-profile
 Rust tests; 34 verifier tests; regenerated stubs with no generated diff. All 24
 physics probes were run before and after with no regressions: 21 pass, two
 existing 2D failures and one contact-event report. Contact-event profiles retain
 their baseline results, including static-only scenes. All five CCD profiles
 pass their declared gates. Their raw failures and the new free-rotation
 negative-control trace remain available in the runner outputs.
+
+
+The constraint-transition controls append 80 rows while preserving all original
+553 rows. They assign velocity before applying full/partial angular or position
+locks, with identity and rotated body/inertia frames, then simulate one step.
+Changing constraints immediately projects existing linear velocity in world
+axes and angular velocity in the current world mass frame. The projection is
+shared with constrained pose publication and runs before the next integration;
+full rotation freezing therefore preserves the initial rotation on that step.
+These controls resolved 26 new strict failures (16 immediate-velocity and ten
+body rows), with 575/633 strict matches and the same 58 free-rotation diagnostic
+rows afterward. Both extended GPU Editor recordings are byte-identical. Managed
+regressions also check full/partial first-step rotation, the rotated mass frame,
+position locks and allocation-free repeated constraint assignments.
