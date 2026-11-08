@@ -45,25 +45,27 @@ public class StackProbe : MonoBehaviour
         public bool AHdr, AMsaa;
         public CameraClearFlags BClear;
         public bool BPartial, BHdr, BMsaa, BDeferred;
+        public bool CFull;           // C covers the whole screen (else its right-hand rect)
     }
 
     static List<Case> Cases()
     {
         var list = new List<Case>();
-        void Add(int q, bool a, bool aHdr, bool aMsaa, CameraClearFlags clear, bool partial, bool hdr, bool msaa, bool deferred)
+        void Add(int q, bool a, bool aHdr, bool aMsaa, CameraClearFlags clear, bool partial, bool hdr, bool msaa, bool deferred, bool cFull = false)
         {
             var name = new StringBuilder();
             name.Append("q").Append(q);
             name.Append(a ? (aHdr ? ".aH" : ".aL") + (aMsaa ? "" : "n") : ".first");
-            name.Append(clear == CameraClearFlags.Depth ? ".bD" : ".bN");
+            name.Append(clear == CameraClearFlags.Depth ? ".bD" : clear == CameraClearFlags.SolidColor ? ".bS" : ".bN");
             name.Append(partial ? ".part" : ".full");
             name.Append(hdr ? ".bH" : ".bL");
             if (!msaa) name.Append("n");
             if (deferred) name.Append(".def");
+            if (cFull) name.Append(".cF");
             list.Add(new Case
             {
                 Name = name.ToString(), Quality = q, A = a, AHdr = aHdr, AMsaa = aMsaa, BClear = clear,
-                BPartial = partial, BHdr = hdr, BMsaa = msaa, BDeferred = deferred,
+                BPartial = partial, BHdr = hdr, BMsaa = msaa, BDeferred = deferred, CFull = cFull,
             });
         }
         var clears = new[] { CameraClearFlags.Depth, CameraClearFlags.Nothing };
@@ -93,6 +95,20 @@ public class StackProbe : MonoBehaviour
         foreach (var clear in clears)
             foreach (bool partial in new[] { false, true })
                 Add(0, true, false, true, clear, partial, true, true, true);
+        // B deferred under quality AA 4.
+        foreach (var clear in clears)
+            foreach (bool partial in new[] { false, true })
+                Add(4, true, false, true, clear, partial, true, true, true);
+        // B clears its color (solid color) inside the stack.
+        foreach (int q in new[] { 0, 4 })
+            foreach (bool partial in new[] { false, true })
+                foreach (bool hdr in new[] { false, true })
+                    Add(q, true, false, true, CameraClearFlags.SolidColor, partial, hdr, true, false);
+        // A partial B between full-screen cameras: C covers the whole screen.
+        foreach (int q in new[] { 0, 4 })
+            foreach (var clear in clears)
+                foreach (bool hdr in new[] { false, true })
+                    Add(q, true, false, true, clear, true, hdr, true, false, true);
         return list;
     }
 
@@ -208,6 +224,8 @@ public class StackProbe : MonoBehaviour
                     b.allowHDR = test.BHdr;
                     b.allowMSAA = test.BMsaa;
                     b.renderingPath = test.BDeferred ? RenderingPath.DeferredShading : RenderingPath.Forward;
+                    b.backgroundColor = new Color(0.3f, 0.25f, 0.05f, 1f);
+                    c.rect = test.CFull ? Full : RectC;
                     foreach (var counter in counters) counter.renders = 0;
                     for (int frame = 1; frame <= 4; frame++)
                     {

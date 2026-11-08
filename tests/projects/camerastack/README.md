@@ -11,7 +11,8 @@ What the Editor's Game view (160x90, built-in RP) shows of three orthographic sc
   view. Where yellow is hidden, the screen kept a nearer depth (A's red, B's cyan).
 
 Cases: quality AA 0 and 4, A LDR/HDR (and without MSAA), B's clear/rect/HDR/MSAA, B first on
-the screen (A off), and B deferred. Each case starts with one frame in which A alone clears the
+the screen (A off), B deferred (quality AA 0 and 4), B clearing its color (solid, full and
+partial), and a partial B under a full-screen Don't Clear C (`.cF`). Each case starts with one frame in which A alone clears the
 screen to magenta (color and depth). The Game view is captured after the case's first (`f1`) and
 fourth (`f4`) frames, so `f4` also shows what the case's earlier frames left on the screen.
 
@@ -28,7 +29,9 @@ Measured in 6000.0.71f1 (Linear and Gamma; both repeats byte-identical):
 - A partial camera with HDR, or with MSAA under quality AA, renders into an intermediate of its
   pixel size, antialiased. A Don't Clear one starts with cleared depth and leaves the screen's
   depth alone.
-- Deferred B (quality AA 0 only, A in LDR): full screen, a Don't Clear one starts from the
+- A color-clearing B inside the stack, and a partial B between full-screen A and C, follow the
+  same rules (no case of its own).
+- Deferred B (quality AA 0 and 4, A in LDR): full screen, a Don't Clear one starts from the
   screen's depth; a partial one is drawn as Unbound draws it (full size into its rect) and matches
   pixel for pixel.
 
