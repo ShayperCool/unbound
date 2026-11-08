@@ -71,28 +71,37 @@ namespace Unbound.Runtime
         }
 
         /// <summary>
-        /// The first SubShader `Queue` tag of a source (2000 without one), as a render queue:
-        /// a `Tags` block directly in a SubShader, not one of a Pass (Queue is a SubShader tag;
-        /// URP's Simple Lit tags its Universal2D pass "Transparent", and its materials are
-        /// Geometry in the Unity 6000.0.71f1 Editor, tests/projects/urp ssao_lightmap). A fallback
-        /// only: the SubShader may be another pipeline's or one a LOD limit skips.
-        /// <see cref="UnityEngine.Shader.renderQueue"/> answers from the selected SubShader's
-        /// declared tag whenever that is known.
+        /// The first SubShader's `Queue` tag in a source (2000 without one), as a render queue: a
+        /// `Tags` block directly in a SubShader, else in the `Category` around it (whose tags its
+        /// SubShaders take), not one of a Pass (Queue is a SubShader tag; URP's Simple Lit tags its
+        /// Universal2D pass "Transparent", and its materials are Geometry in the Unity
+        /// 6000.0.71f1 Editor, tests/projects/urp ssao_lightmap). A SubShader without one reads on
+        /// to the next. A fallback only: the SubShader may be another pipeline's or one a LOD
+        /// limit skips. <see cref="UnityEngine.Shader.renderQueue"/> answers from the selected
+        /// SubShader's declared tag whenever that is known.
         /// </summary>
         internal static int Queue(string source)
         {
-            // The kinds of the open blocks (the word before each `{`).
+            // The kinds of the open blocks (the word before each `{`), and the queue of each
+            // open Category's tags (null: none).
             var blocks = new List<string>();
+            var categories = new List<string>();
             string word = null;
             bool key = false, equals = false;
             for (var m = s_QueueScan.Match(source); m.Success; m = m.NextMatch())
             {
                 var token = m.Value;
-                bool inSubShaderTags = blocks.Count >= 2 && blocks[^1] == "Tags" && blocks[^2] == "SubShader";
+                string owner = blocks.Count >= 2 && blocks[^1] == "Tags" ? blocks[^2] : null;
+                bool tags = owner == "SubShader" || owner == "Category";
                 if (token[0] == '"')
                 {
-                    if (inSubShaderTags && key && equals) return QueueTag(token.Substring(1, token.Length - 2));
-                    key = inSubShaderTags && !equals && token == "\"Queue\"";
+                    if (tags && key && equals)
+                    {
+                        var value = token.Substring(1, token.Length - 2);
+                        if (owner == "SubShader") return QueueTag(value);
+                        categories[^1] = value;
+                    }
+                    key = tags && !equals && token == "\"Queue\"";
                     equals = false;
                     word = null;
                     continue;
@@ -106,11 +115,17 @@ namespace Unbound.Runtime
                 if (token == "{")
                 {
                     blocks.Add(word ?? "");
+                    if (word == "Category") categories.Add(null);
                     word = null;
                 }
                 else if (token == "}")
                 {
-                    if (blocks.Count > 0) blocks.RemoveAt(blocks.Count - 1);
+                    if (blocks.Count == 0) continue;
+                    var closed = blocks[^1];
+                    blocks.RemoveAt(blocks.Count - 1);
+                    // A SubShader without a Queue of its own takes its Category's.
+                    if (closed == "SubShader" && categories.Count > 0 && categories[^1] is string inherited) return QueueTag(inherited);
+                    if (closed == "Category") categories.RemoveAt(categories.Count - 1);
                     word = null;
                 }
                 else if (token[0] != '/')

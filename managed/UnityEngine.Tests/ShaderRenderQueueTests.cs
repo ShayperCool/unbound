@@ -189,6 +189,12 @@ namespace UnityEngine.Tests
                 "Tags { \"Queue\" = \"AlphaTest\" } } }"));
             Assert.Equal(3000, ShaderLab.Queue("SubShader { Tags { \"Queue\"=\"Transparent\" \"RenderType\"=\"Transparent\" } }"));
             Assert.Equal(2000, ShaderLab.Queue("Shader \"B\" { }"));
+            // A Category's tags are its SubShaders' (the legacy particle shaders); a SubShader's
+            // own Queue comes first, a SubShader outside the Category does not take it.
+            Assert.Equal(3000, ShaderLab.Queue("Category { Tags { \"Queue\"=\"Transparent\" } SubShader { Pass { } } }"));
+            Assert.Equal(2450, ShaderLab.Queue("Category { Tags { \"Queue\"=\"Transparent\" } SubShader { Tags { \"Queue\"=\"AlphaTest\" } Pass { } } }"));
+            Assert.Equal(2000, ShaderLab.Queue("Category { Tags { \"Queue\"=\"Transparent\" } } SubShader { Pass { } }"));
+            Assert.Equal(4000, ShaderLab.Queue("SubShader { Pass { } } SubShader { Tags { \"Queue\"=\"Overlay\" } }"));
         }
 
         /// <summary>A value of no documented form keeps Geometry and says so; Unity's answer for
