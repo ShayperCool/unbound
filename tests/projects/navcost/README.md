@@ -29,10 +29,9 @@ the 1e-3 tolerance is absolute for them.
 `check` runs Unbound on a fresh copy under `$XDG_CACHE_HOME/unbound/validation/runs/navcost/` and
 compares it with the reference using `tests/projects/navmesh/compare.py` (numbers within 1e-3,
 text exactly; every missing, extra or differing value is listed). The agents' frames are compared
-per agent (`walk.<agent>`, `loop.<lane>`). It gates every scenario except `fans.*`, `walk.later`
-and the lanes `loop.redirect`, `loop.redirectSame`, `loop.redirectOff` and `loop.velocity`, whose
-residuals are in docs/COMPATIBILITY_GAPS.md (the path cost, agent placement, agent update and
-destination rows).
+per agent (`walk.<agent>`, `loop.<lane>`). It gates every scenario except `fans.*` and the lanes
+`loop.redirect`, `loop.redirectSame`, `loop.redirectOff` and `loop.velocity`, whose residuals are
+in docs/COMPATIBILITY_GAPS.md (the path cost, agent update and local avoidance rows).
 
 The reference `Reference/unity-6000.0.71f1.json` holds 31857 values, SHA-256
 `d17b809a6d27a8550cd87cfb14f542847acb82229cbadf7e46f50efab4a330f7`.

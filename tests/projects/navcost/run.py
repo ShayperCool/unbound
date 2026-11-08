@@ -129,13 +129,12 @@ def unbound(work):
 # a value per agent) are compared per agent (`walk.<agent>`, `loop.<lane>`), each agent being one
 # mechanism. Every scenario is gated except these, whose residuals are listed in
 # docs/COMPATIBILITY_GAPS.md and are compared and listed, not gated: the carved NavMesh's triangle
-# fans (`fans.*`: the first vertex of a carved polygon), the agent that walks near standing agents
-# (`walk.later`: avoidance), destinations behind a walking agent, on and beyond the NavMesh
-# (`loop.redirect`, `loop.redirectOff`: the desired velocity of the update that applies its path,
-# and avoidance of the neighbouring lane), a destination re-set to itself (`loop.redirectSame`: a
-# small sideways desired velocity Unity's agents pick up from the neighbouring lane) and a velocity
-# set by script (`loop.velocity`: the turn).
-LISTED = ('fans.', 'walk.later', 'loop.redirect', 'loop.redirectSame', 'loop.redirectOff', 'loop.velocity')
+# fans (`fans.*`: the first vertex of a carved polygon), destinations behind a walking agent, on and
+# beyond the NavMesh (`loop.redirect`, `loop.redirectOff`: the turn while the velocity passes
+# through zero), a destination re-set to itself (`loop.redirectSame`: a sideways desired velocity
+# for three updates whose cause is not found) and a velocity set by script (`loop.velocity`: the
+# turn).
+LISTED = ('fans.', 'loop.redirect', 'loop.redirectSame', 'loop.redirectOff', 'loop.velocity')
 
 
 def gated(name):
