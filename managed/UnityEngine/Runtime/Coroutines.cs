@@ -197,6 +197,10 @@ namespace Unbound.Runtime
         internal bool IsOver => Time.s_FrameCount > m_Frame && Time.s_Time >= m_Until;
     }
 
+    /// <summary>Invoke and InvokeRepeating. A call is due at Time.time as read when it was made (the
+    /// fixed clock inside a fixed step) plus its delay, and runs at the first check after that: one
+    /// follows each fixed step, against the fixed clock, and one follows Update, so Invoke(0) from
+    /// Update still runs in that frame (measured, 6000.0.71f1, tests/projects/waitforseconds).</summary>
     internal static class Invokes
     {
         sealed class Entry

@@ -146,7 +146,13 @@ namespace Unbound.Runtime
             // the next point (6000.0.71f1: destroyphases, destroycontract, instantiateasync).
             Register(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), Destruction.BeginDelivery);
             Register(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), Destruction.DeliverRequested);
-            Register(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), () => Coroutines.Run(Coroutines.Phase.FixedUpdate));
+            // Invokes come due at the fixed steps too, against the fixed clock (measured,
+            // tests/projects/waitforseconds: Invoke(0.3) from Update runs inside a fixed step).
+            Register(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), () =>
+            {
+                Invokes.Run();
+                Coroutines.Run(Coroutines.Phase.FixedUpdate);
+            });
             Register(typeof(PL.Update.ScriptRunBehaviourUpdate), Lifecycle.RunUpdate);
             // Objects enabled or created during Update start at this node, before coroutines
             // (measured: tests/projects/instantiateasync phase markers and lifecycle records).

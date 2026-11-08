@@ -23,10 +23,12 @@ namespace UnityEngine.Tests
             await Awaitable.WaitForSecondsAsync(seconds);
             Log.Add(name);
         }
+
+        void Called() => Log.Add("invoked");
     }
 
     /// <summary>
-    /// When WaitForSeconds and Awaitable.WaitForSecondsAsync come due, at the player loop's
+    /// When WaitForSeconds, Awaitable.WaitForSecondsAsync and Invoke come due, at the player loop's
     /// real check points (6000.0.71f1, tests/projects/waitforseconds). Frames are simulated through
     /// the clocks; each test restores them.
     /// </summary>
@@ -117,6 +119,37 @@ namespace UnityEngine.Tests
             Frame(5.125);
             Run(typeof(UpdatePoint));
             Assert.Equal(new[] { "coroutine" }, m_Runner.Log);
+        }
+
+        [Fact]
+        public void InvokeWithoutDelayFromUpdateRunsInThatFrame()
+        {
+            Frame(5);
+            m_Runner.Invoke("Called", 0f);
+            Run(typeof(UpdatePoint));
+            Assert.Equal(new[] { "invoked" }, m_Runner.Log);
+        }
+
+        // An Invoke comes due at the fixed step whose fixed clock reaches it, before that frame's Update.
+        [Fact]
+        public void InvokeComesDueInsideTheFixedStepThatReachesItsTime()
+        {
+            Frame(5);
+            m_Runner.Invoke("Called", 0.3f);
+            Run(typeof(UpdatePoint));
+            Frame(5.25);
+            FixedStep(5.15);
+            FixedStep(5.25);
+            Run(typeof(UpdatePoint));
+            Assert.Empty(m_Runner.Log);
+
+            Frame(5.375);
+            FixedStep(5.28);
+            Assert.Empty(m_Runner.Log);
+            FixedStep(5.32);
+            Assert.Equal(new[] { "invoked" }, m_Runner.Log);
+            Run(typeof(UpdatePoint));
+            Assert.Equal(new[] { "invoked" }, m_Runner.Log);
         }
     }
 }
