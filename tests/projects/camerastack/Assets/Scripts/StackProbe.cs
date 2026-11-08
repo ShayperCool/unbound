@@ -31,7 +31,7 @@ public class StackProbe : MonoBehaviour
 {
     public static Action<int> finished;
 
-    const int LayerA = 8, LayerB = 9, LayerC = 10;
+    const int LayerA = 8, LayerB = 9, LayerC = 10, LayerCHalf = 11;
     static readonly Rect Full = new Rect(0f, 0f, 1f, 1f);
     // Whole pixels at the probe's 160x90 Game view.
     static readonly Rect PartialB = new Rect(0.1f, 0.2f, 0.6f, 0.6f);
@@ -46,12 +46,13 @@ public class StackProbe : MonoBehaviour
         public CameraClearFlags BClear;
         public bool BPartial, BHdr, BMsaa, BDeferred;
         public bool CFull;           // C covers the whole screen (else its right-hand rect)
+        public bool BPerspective;    // B perspective (a deferred camera renders deferred only so)
     }
 
     static List<Case> Cases()
     {
         var list = new List<Case>();
-        void Add(int q, bool a, bool aHdr, bool aMsaa, CameraClearFlags clear, bool partial, bool hdr, bool msaa, bool deferred, bool cFull = false)
+        void Add(int q, bool a, bool aHdr, bool aMsaa, CameraClearFlags clear, bool partial, bool hdr, bool msaa, bool deferred, bool cFull = false, bool perspective = false)
         {
             var name = new StringBuilder();
             name.Append("q").Append(q);
@@ -62,10 +63,11 @@ public class StackProbe : MonoBehaviour
             if (!msaa) name.Append("n");
             if (deferred) name.Append(".def");
             if (cFull) name.Append(".cF");
+            if (perspective) name.Append(".persp");
             list.Add(new Case
             {
                 Name = name.ToString(), Quality = q, A = a, AHdr = aHdr, AMsaa = aMsaa, BClear = clear,
-                BPartial = partial, BHdr = hdr, BMsaa = msaa, BDeferred = deferred, CFull = cFull,
+                BPartial = partial, BHdr = hdr, BMsaa = msaa, BDeferred = deferred, CFull = cFull, BPerspective = perspective,
             });
         }
         var clears = new[] { CameraClearFlags.Depth, CameraClearFlags.Nothing };
@@ -95,20 +97,24 @@ public class StackProbe : MonoBehaviour
         foreach (var clear in clears)
             foreach (bool partial in new[] { false, true })
                 Add(0, true, false, true, clear, partial, true, true, true);
-        // B deferred under quality AA 4.
-        foreach (var clear in clears)
-            foreach (bool partial in new[] { false, true })
-                Add(4, true, false, true, clear, partial, true, true, true);
+        // B deferred and perspective (an orthographic camera falls back to Forward), quality AA
+        // 0 and 4.
+        foreach (int q in new[] { 0, 4 })
+            foreach (var clear in clears)
+                foreach (bool partial in new[] { false, true })
+                    Add(q, true, false, true, clear, partial, true, true, true, perspective: true);
         // B clears its color (solid color) inside the stack.
         foreach (int q in new[] { 0, 4 })
             foreach (bool partial in new[] { false, true })
                 foreach (bool hdr in new[] { false, true })
                     Add(q, true, false, true, CameraClearFlags.SolidColor, partial, hdr, true, false);
-        // A partial B between full-screen cameras: C covers the whole screen.
+        // A partial B between full-screen cameras: C covers the whole screen and draws a quad
+        // over its left half only, so the colour C's target carries shows on the right.
         foreach (int q in new[] { 0, 4 })
-            foreach (var clear in clears)
-                foreach (bool hdr in new[] { false, true })
-                    Add(q, true, false, true, clear, true, hdr, true, false, true);
+            foreach (bool aHdr in new[] { false, true })
+                foreach (var clear in clears)
+                    foreach (bool hdr in new[] { false, true })
+                        Add(q, true, aHdr, true, clear, true, hdr, true, false, true);
         return list;
     }
 
@@ -188,6 +194,7 @@ public class StackProbe : MonoBehaviour
                 Quad(mesh, "blue", LayerB, blended, new Color(0.2f, 0.4f, 1f, 0.5f), new Vector2(-0.6f, 0.3f), new Vector2(1.4f, 0.8f), 0f, 2f);
                 Quad(mesh, "cyan", LayerB, unlit, new Color(0f, 1f, 1f, 1f), new Vector2(1.2f, 0.55f), new Vector2(0.5f, 0.5f), 0f, 5f);
                 Quad(mesh, "yellow", LayerC, unlit, new Color(1f, 1f, 0f, 1f), Vector2.zero, new Vector2(10f, 10f), 0f, 6f);
+                Quad(mesh, "yellow half", LayerCHalf, unlit, new Color(1f, 1f, 0f, 1f), new Vector2(-1.25f, 0f), new Vector2(2.5f, 10f), 0f, 6f);
                 var a = MakeCamera("A", 0f, LayerA);
                 a.clearFlags = CameraClearFlags.SolidColor;
                 var b = MakeCamera("B", 1f, LayerB);
@@ -226,6 +233,9 @@ public class StackProbe : MonoBehaviour
                     b.renderingPath = test.BDeferred ? RenderingPath.DeferredShading : RenderingPath.Forward;
                     b.backgroundColor = new Color(0.3f, 0.25f, 0.05f, 1f);
                     c.rect = test.CFull ? Full : RectC;
+                    c.cullingMask = 1 << (test.CFull ? LayerCHalf : LayerC);
+                    b.orthographic = !test.BPerspective;
+                    b.fieldOfView = 2f * Mathf.Atan(1f / 10f) * Mathf.Rad2Deg;
                     foreach (var counter in counters) counter.renders = 0;
                     for (int frame = 1; frame <= 4; frame++)
                     {
