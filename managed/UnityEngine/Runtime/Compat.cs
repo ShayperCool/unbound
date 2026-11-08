@@ -240,7 +240,10 @@ namespace Unbound.Runtime
         /// graph's clock. Measured by tests/projects/animculling clock/ on exactly 6000.0.71f1.
         /// Other releases (unmeasured) hold each culled output's whole source tree, as Unbound did
         /// before, but with the measured hold itself: it wins over other outputs reaching a held
-        /// playable and pauses held behaviours instead of preparing them with a zero step.</summary>
+        /// playable and pauses held behaviours instead of preparing them with a zero step.
+        /// The same measured release also re-blends a held clip/mixer tree whose weights changed
+        /// while culled at the visibility return (animculling humanMixerShape/live,
+        /// genericMixerSum/liveCulled); other releases replay the last blend and warn.</summary>
         internal static bool PlayableCullingHoldsAnimationPlayablesOnly => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>Animator automatic Play-entry timing and startup controls measured by

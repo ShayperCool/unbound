@@ -60,7 +60,15 @@ namespace Unbound.Runtime
                 if (!Live(d.Animator)) continue;
                 try
                 {
-                    if (d.Output != null) d.Output.Move();
+                    if (d.Output != null)
+                    {
+                        // Part of the attached controller's update too (an Animator.Update from
+                        // OnAnimatorMove is ignored).
+                        var player = d.Animator.m_Player;
+                        bool outer = player?.EnterDeferred() ?? false;
+                        try { d.Output.Move(); }
+                        finally { player?.ExitDeferred(outer); }
+                    }
                     else if (d.Player == d.Animator.m_Player) d.Player.DeliverDeferredMovement();
                 }
                 catch (Exception e) { Debug.LogException(e, d.Animator); }

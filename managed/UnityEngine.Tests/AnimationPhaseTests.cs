@@ -229,6 +229,53 @@ namespace UnityEngine.Tests
             }
         }
 
+        public class EvaluateOnMove : MonoBehaviour
+        {
+            internal PlayableGraph Graph;
+            void OnAnimatorMove()
+            {
+                var graph = Graph;
+                Graph = default;
+                if (graph.IsValid()) graph.Evaluate(0.5f);
+            }
+        }
+
+        // An explicit evaluation between the leaves replaces the deferred automatic one: the End
+        // leaf does not write the older pose over it.
+        [Fact]
+        public void ANewerExplicitEvaluationIsNotOverwrittenByTheEndLeaf()
+        {
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            var root = new GameObject("Root");
+            var body = new GameObject("Body").transform;
+            body.SetParent(root.transform, false);
+            var animator = root.AddComponent<Animator>();
+            var hook = root.AddComponent<EvaluateOnMove>();
+            var clip = new AnimationClip();
+            clip.SetCurve("Body", typeof(Transform), "m_LocalPosition.x", AnimationCurve.Linear(0f, 0.5f, 1f, 1f));
+            var graph = PlayableGraph.Create("explicit-between");
+            try
+            {
+                var output = AnimationPlayableOutput.Create(graph, "Animation", animator);
+                output.SetSourcePlayable(AnimationClipPlayable.Create(graph, clip));
+                graph.Play();
+                hook.Graph = graph;
+                PlayableGraphData.UpdateAll();
+                AnimationSystem.UpdateAnimators(fixedStep: false);
+                // The explicit evaluation in OnAnimatorMove wrote its pose at once.
+                Assert.Equal(0.75f, body.localPosition.x, 4);
+                AnimationPhases.WritePoses();
+                Assert.Equal(0.75f, body.localPosition.x, 4);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+                ProjectInfo.UnityVersion = version;
+            }
+        }
+
         [Fact]
         public void AnAnimatorDisabledBetweenTheLeavesIsNotWritten()
         {
