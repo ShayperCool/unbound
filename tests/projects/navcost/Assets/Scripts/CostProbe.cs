@@ -22,6 +22,7 @@ using UnityEngine.AI;
 /// scene, by AddComponent, by activation or re-enabling, after Warp, a script's move or turning
 /// updatePosition on, from Awake and in each Update and LateUpdate; <c>walk.*</c>: the same for
 /// walking agents.</item>
+/// <item><c>loop.*</c>: where in the player loop walking agents change (<see cref="LoopTiming"/>).</item>
 /// </list>
 /// </summary>
 public class CostProbe : MonoBehaviour
@@ -342,6 +343,8 @@ public class CostProbe : MonoBehaviour
         if (m_Frame == CreateFrame) CreateAgents();
         if (m_Frame == ChangeFrame) ChangeAgents();
         if (m_Frame == UpdatePositionFrame) Find("idleNoUpdate").updatePosition = true;
+        // Then the player-loop timing of walking agents, in the other rigs (loop.*).
+        if (m_Frame == PlaceFrames) gameObject.AddComponent<LoopTiming>();
     }
 
     // ------------------------------------------------------------------ run
@@ -389,7 +392,7 @@ public class CostProbe : MonoBehaviour
         Scenario("fans.carvebox", () => Mesh("carvebox", true));
         Scenario("fans.carvebar", () => Mesh("carvebar", true));
 
-        while (m_Frame < PlaceFrames) yield return null;
+        while (m_Frame < PlaceFrames || !LoopTiming.Done) yield return null;
 
         File.WriteAllText(Out, ProbeLog.Json());
         Debug.Log("NavMesh cost probe written");

@@ -15,6 +15,7 @@ themselves (a watchdog in ProbeRunner; the launcher's timeout kills them at 900 
 """
 import argparse
 import filecmp
+import json
 import os
 import re
 from pathlib import Path
@@ -124,12 +125,38 @@ def unbound(work):
     return result.returncode
 
 
-# Every scenario is gated except the walking agents' frames (`walk.*`: Unity moves its agents in
-# the early AI update, before Update; Unbound after the scripts) and the carved NavMesh's triangle
-# fans (`fans.*`: the first vertex of a carved polygon), residuals listed in
-# docs/COMPATIBILITY_GAPS.md; they are compared and listed, not gated.
+# The agents' frames (`walk.*`, `loop.*`: one scenario per frame and point of the player loop,
+# a value per agent) are compared per agent (`walk.<agent>`, `loop.<lane>`), each agent being one
+# mechanism. Every scenario is gated except these, whose residuals are listed in
+# docs/COMPATIBILITY_GAPS.md and are compared and listed, not gated: the carved NavMesh's triangle
+# fans (`fans.*`: the first vertex of a carved polygon), the agent that walks near standing agents
+# (`walk.later`: avoidance), the link lane (`loop.link`: the link's end heights, the speed carried
+# off it), a destination behind a walking agent (`loop.redirect`: the desired velocity of the update
+# that applies its path), destinations re-set ahead (`loop.redirectAhead`, `loop.redirectSame`:
+# a small sideways desired velocity Unity's agents pick up later), a destination beyond the
+# NavMesh (`loop.redirectOff`) and a velocity set by script (`loop.velocity`: the turn).
+LISTED = ('fans.', 'walk.later', 'loop.link', 'loop.redirect', 'loop.redirectAhead', 'loop.redirectSame',
+          'loop.redirectOff', 'loop.velocity')
+
+
 def gated(name):
-    return not name.startswith(('walk.', 'fans.'))
+    return not any(name == listed or (listed.endswith('.') and name.startswith(listed)) for listed in LISTED)
+
+
+def by_agent(values):
+    """`walk.<frame>` and `loop.<point><frame>` scenarios regrouped per agent: `walk.<agent>` and
+    `loop.<lane>` with keys `<frame>.<field>`; other scenarios as they are."""
+    out = {}
+    for scenario, fields in values.items():
+        group = scenario.split('.', 1)[0]
+        if group not in ('walk', 'loop'):
+            out[scenario] = fields
+            continue
+        moment = scenario.split('.', 1)[1]
+        for key, value in fields.items():
+            agent, field = key.split('.', 1)
+            out.setdefault(f'{group}.{agent}', {})[f'{moment}.{field}'] = value
+    return out
 
 
 def check(work):
@@ -138,10 +165,15 @@ def check(work):
     if not out.exists():
         print(f'no capture (unbound exit {code})')
         return 1
+    files = []
+    for name, source in (('reference', reference_file(PROBE, 'json')), ('unbound', out)):
+        regrouped = work/'unbound'/f'{name}.by-agent.json'
+        regrouped.write_text(json.dumps(by_agent(json.loads(Path(source).read_text())), indent=1))
+        files.append(regrouped)
     report = work/'unbound'/'report.txt'
     with report.open('w') as f:
         subprocess.run([sys.executable, str(REPO/'tests/projects/navmesh/compare.py'),
-                        str(reference_file(PROBE, 'json')), str(out), '--details', '1000'],
+                        str(files[0]), str(files[1]), '--details', '1000'],
                        stdout=f, stderr=subprocess.STDOUT)
     text = report.read_text()
     print(text, end='')

@@ -13,7 +13,8 @@ and in Unbound by `CostProbe` (`Assets/Scripts`):
 | `fans.*` | the carved NavMesh's triangles (listed, not gated: the first vertex of each polygon's fan) |
 | `raycast`, `raycast.agent` | NavMesh.Raycast stopped where the mask excludes Mud or Water (from either side, over an allowed area, starting inside an excluded one), at a border, and clear; NavMeshAgent.Raycast with the agent's mask |
 | `place.*` | standing agents' transform and nextPosition from Awake, at Start and in every Update and LateUpdate of 14 frames: agents saved in the scene (at the ground's height, above it, beside the NavMesh's edge), added in Awake and later by AddComponent, activated, re-enabled, warped, moved by script in Update and LateUpdate, with baseOffset set, and with updatePosition turned on |
-| `walk.*` | the same for walking agents (listed, not gated) |
+| `walk.*` | the same for walking agents |
+| `loop.*` | where in the player loop walking agents change (`Assets/Scripts/LoopTiming.cs`, after `place.*`): 21 lanes in the strip, obstacle and rays rigs, each one mechanism (a destination set in Update or LateUpdate, on the agent's polygon or needing a search, re-set ahead, behind, to itself or beyond the NavMesh; updatePosition or updateRotation off; transform.position, nextPosition, Move, Warp, velocity, isStopped set in Update, or the transform or nextPosition in LateUpdate; a short path's arrival; a link crossed; an agent made in Update), recorded after `PreUpdate.AIUpdate` (`a`), in Update (`u`), after `PreLateUpdate.AIUpdatePostScript` (`s`), in LateUpdate (`l`) and right after the scripted changes (`c`, `d`) of 20 frames |
 
 A route is the path's interior corners (NavMesh vertices, which stay fixed while an end moves), so
 each sweep records its first route and every change of route, bisected to the parameter where it
@@ -27,9 +28,11 @@ the 1e-3 tolerance is absolute for them.
 
 `check` runs Unbound on a fresh copy under `$XDG_CACHE_HOME/unbound/validation/runs/navcost/` and
 compares it with the reference using `tests/projects/navmesh/compare.py` (numbers within 1e-3,
-text exactly; every missing, extra or differing value is listed). It gates every scenario except
-`walk.*` and `fans.*`, whose residuals are in docs/COMPATIBILITY_GAPS.md (the path cost and
-agent placement rows).
+text exactly; every missing, extra or differing value is listed). The agents' frames are compared
+per agent (`walk.<agent>`, `loop.<lane>`). It gates every scenario except `fans.*`, `walk.later`
+and the lanes `loop.link`, `loop.redirect`, `loop.redirectAhead`, `loop.redirectSame`,
+`loop.redirectOff` and `loop.velocity`, whose residuals are in docs/COMPATIBILITY_GAPS.md (the
+path cost, agent placement, agent update, destination and link rows).
 
-The reference `Reference/unity-6000.0.71f1.json` holds 4017 values, SHA-256
-`f32091505a255a5b0831859b37b085a49a96b51c5edc4b9686428df5d192e236`.
+The reference `Reference/unity-6000.0.71f1.json` holds 31857 values, SHA-256
+`d17b809a6d27a8550cd87cfb14f542847acb82229cbadf7e46f50efab4a330f7`.
