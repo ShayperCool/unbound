@@ -70,7 +70,7 @@ def capture(args):
         command = [str(args.unbound), 'run', '-p', str(project), '--scene', 'Assets/Scenes/Probe.unity',
                    '--headless', '120', '--no-watch', '--fixed-fps', '60']
     env = dict(os.environ, PARAMS_RATE=str(args.rate), PARAMS_OUT=str(work/'capture'), PARAMS_ENGINE='1' if args.mode == 'engine' else '0')
-    command = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '900', *command]
+    command = [str(Path.home()/'.cache/compat/with-heavy-job'), '--kind', 'editor-gpu' if args.mode == 'native' else 'engine-cpu', 'timeout', '900', *command]
     with (work/'run.log').open('w') as log: subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
     if args.mode == 'native': verify(work/'capture', args.release, args.rate)
     else: header(work/'capture')

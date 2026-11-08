@@ -23,7 +23,7 @@ project = a.work/'project'
 for name in ('Assets', 'Packages', 'ProjectSettings'): shutil.copytree(a.native_project/name, project/name)
 shutil.copy2(fixture/'Assets/Scripts/AudioReverbProbe.cs', project/'Assets/Scripts/AudioReverbProbe.cs')
 output = a.work/'capture'; output.mkdir()
-command = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '900', str(a.runtime/'unbound'), 'run', '-p', str(project),
+command = [str(Path.home()/'.cache/compat/with-heavy-job'), '--kind', 'engine-cpu', 'timeout', '900', str(a.runtime/'unbound'), 'run', '-p', str(project),
            '--scene', 'Assets/Scenes/Probe.unity', '--headless', '60', '--no-watch', '--fixed-fps', '60']
 artifacts = [a.runtime/'unbound', *sorted((a.runtime/'managed').rglob('*'))]
 hashes = {str(f.relative_to(a.runtime)): hashlib.sha256(f.read_bytes()).hexdigest() for f in artifacts if f.is_file()}
