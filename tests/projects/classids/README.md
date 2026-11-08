@@ -13,10 +13,24 @@ captures were byte-identical. The engine embeds it (`managed/UnityEngine/UnityEn
 `ClassCoverage` checks the registered classes against it, and `unbound doctor` names the classes a
 project holds that the release does not have and lists the release's classes without a reader.
 
-The Manual's table lists classes the 6000.0 Editor no longer has, such as `GUILayer` (92). Content
-still holding one (written as `Behaviour`) is listed by `unbound doctor` as "not a class of Unity
-6000.0.71f1". The ids 100000 to 100011 (`int`, `bool`, `Vector3f`, ...) are serialization
-placeholders without a base class, never objects of a file.
+The Manual's table includes old classes such as `GUILayer` (92) that the measured Editor no
+longer loads. `LegacyComponents.cs` opens a copied scene containing that component and independent
+AudioListener/FlareLayer controls, then records Edit and Play Mode component lists. The two
+independent captures in `Reference/unity-6000.0.71f1-legacy.txt` match: GUILayer is absent in both
+modes; the enabled-only controls keep `enabled = false`. Doctor classifies the old GUILayer as
+ignored for that measured release and both controls as read, including its release-wide list.
+Other releases keep the unsupported-class diagnostic until measured.
+
+FlareLayer's control also acquires a Camera on load. Matching that dependency repair remains a
+rendering follow-up; it does not add serialized properties to FlareLayer itself. Unity 6000.0's
+[FlareLayer API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/FlareLayer.html)
+documents that it has no own properties. The base Behaviour enabled flag has a shared reader.
+[Preset](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Presets.Preset.html) is an
+Editor API for stored properties and applying them to objects. Unbound does not implement that
+asset's reader or API and doctor lists ClassID 181963792 explicitly as unsupported.
+
+The ids 100000 to 100011 (`int`, `bool`, `Vector3f`, ...) are serialization placeholders without a
+base class, never objects of a file.
 
 ## Running
 
@@ -25,10 +39,12 @@ From the repository root, with the release in `UNBOUND_PROBE_UNITY_VERSION`:
 ```sh
 python3 tests/projects/classids/run.py native --label native1   # and native2
 python3 tests/projects/classids/run.py publish native1 native2
+python3 tests/projects/classids/run.py legacy --label legacy1   # and legacy2
+python3 tests/projects/classids/run.py publish-legacy legacy1 legacy2
 python3 tests/projects/classids/run.py check                    # the land gate (gate.json)
 ```
 
-`check` runs `unbound doctor --all --json` on this project (`UNBOUND_CLI`, else `$UNBOUND`, else
+`check` runs `unbound doctor --all --json` on a private copy with the component controls (`UNBOUND_CLI`, else `$UNBOUND`, else
 `target/release/unbound`) and checks that the doctor found the release's table and lists as
 unread only concrete, non-editor classes of the reference. Run output goes to
 `$XDG_CACHE_HOME/unbound/validation/runs/classids/runs/<label>/`.

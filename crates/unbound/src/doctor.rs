@@ -1,6 +1,9 @@
 //! `unbound doctor`: what in the project Unbound does not support. It lists the Unity classes
 //! of the objects in the project's scenes, prefabs and YAML assets that the engine does not read
 //! (each also warns when it loads), with the files that hold them.
+#[path = "doctor_fields.rs"]
+mod fields;
+
 use crate::ProjectArgs;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -55,6 +58,8 @@ struct Entry {
     reading: String,
     detail: String,
     unity_name: Option<String>,
+    #[serde(default)]
+    inspect_fields: bool,
 }
 
 #[derive(Deserialize)]
@@ -98,6 +103,23 @@ fn message_coverage(
         false,
         unbound_project::CodeOptimization::at_startup(&[]),
     );
+    let facade_dir = unbound_project::cache_root()
+        .join("facades")
+        .join(project.version.to_string());
+    let _: serde_json::Value = runtime.call(
+        "facades",
+        &json!({
+            "unityManagedEngineDir": project.install.managed_engine_dir(),
+            "platformModules": project.install.platform_modules(),
+            "outputDir": facade_dir,
+        }),
+    )?;
+    let _: serde_json::Value = runtime.call(
+        "prepare-field-coverage",
+        &json!({
+            "compilation": request, "release": project.version.to_string(), "facadeDir": facade_dir,
+        }),
+    )?;
     let mut coverage: MessageCoverage = runtime
         .call("message-coverage", &request)
         .context("checking the project's unsupported script messages")?;
@@ -183,6 +205,24 @@ fn scan(text: &str, path: &str, found: &mut BTreeMap<i32, Found>) {
     }
 }
 
+/// The same class inventory for binary documents after the shared serialized-file decoder.
+fn scan_binary(documents: &[unbound_yaml::Document], path: &str, found: &mut BTreeMap<i32, Found>) {
+    for doc in documents.iter().filter(|d| !d.stripped) {
+        let entry = found.entry(doc.class_id).or_default();
+        entry.type_name = doc.type_name.clone();
+        entry.objects += 1;
+        entry.files.insert(path.into());
+        if let unbound_yaml::Value::Map(map) = &doc.body {
+            for (key, value) in map.iter() {
+                entry.keys.insert(key.into());
+                if DATA_KEYS.contains(&key) && value.as_ref().is_some_and(|r| !r.is_null()) {
+                    entry.referenced.insert(key.into());
+                }
+            }
+        }
+    }
+}
+
 /// The file's bytes when it is Unity YAML (`%YAML 1.1`); other files are not read past the header.
 fn read_yaml(path: &std::path::Path) -> Option<Vec<u8>> {
     use std::io::Read;
@@ -218,11 +258,16 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
     let mut files = 0usize;
     for asset in db.iter().filter(|a| !a.is_folder) {
         // Unity YAML only (scenes, prefabs, YAML assets); imported files are not objects here.
-        let Some(bytes) = read_yaml(&asset.file) else {
-            continue;
-        };
-        files += 1;
-        scan(&String::from_utf8_lossy(&bytes), &asset.path, &mut found);
+        if let Some(bytes) = read_yaml(&asset.file) {
+            files += 1;
+            scan(&String::from_utf8_lossy(&bytes), &asset.path, &mut found);
+        } else if let Some(result) = fields::read_documents(&asset.file) {
+            files += 1;
+            match result {
+                Ok(documents) => scan_binary(&documents, &asset.path, &mut found),
+                Err(error) => tracing::warn!("serialized scan {}: {error:#}", asset.path),
+            }
+        }
     }
     let request: Vec<FoundRequest> = found
         .iter()
@@ -243,6 +288,16 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
         )
         .context("classifying the project's classes")?;
     let messages = message_coverage(&project, args, &runtime)?;
+    let field_coverage = fields::report(
+        &project,
+        &runtime,
+        &coverage
+            .classes
+            .iter()
+            .filter(|e| e.inspect_fields)
+            .map(|e| e.class_id)
+            .collect(),
+    )?;
     if as_json {
         let classes: Vec<_> = coverage
             .classes
@@ -256,6 +311,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             "release": release,
             "hasTable": coverage.has_table,
             "classes": classes,
+            "serializedFields": field_coverage,
             "unreadInRelease": coverage.unread_in_release,
             "renderingLimitations": RENDERING_LIMITATIONS,
             "unsupportedMessages": messages.messages,
@@ -270,7 +326,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
         by_reading.entry(&entry.reading).or_default().push(entry);
     }
     println!(
-        "{} classes in {} Unity YAML files of {} ({:.2?})",
+        "{} classes in {} serialized files of {} ({:.2?})",
         coverage.classes.len(),
         files,
         project.root.display(),
@@ -315,6 +371,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             }
         }
     }
+    field_coverage.print();
     println!(
         "\n{} script messages Unbound does not deliver:",
         messages.messages.len()
@@ -357,6 +414,52 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn q67_classification_and_real_reader_consumption() {
+        let runtime = unbound_host::ManagedRuntime::start().unwrap();
+        let coverage: Coverage = runtime
+            .call(
+                "class-coverage",
+                &json!({
+                    "release": "6000.0.71f1", "classes": [
+                        {"classId": 81, "typeName": "AudioListener", "keys": ["m_Enabled"]},
+                        {"classId": 124, "typeName": "FlareLayer", "keys": ["m_Enabled"]},
+                        {"classId": 92, "typeName": "GUILayer", "keys": ["m_Enabled"]},
+                        {"classId": 181963792, "typeName": "Preset", "keys": ["m_Properties"]}
+                    ]
+                }),
+            )
+            .unwrap();
+        let reading: Vec<_> = coverage
+            .classes
+            .iter()
+            .map(|e| e.reading.as_str())
+            .collect();
+        assert_eq!(reading, ["Read", "Read", "Ignored", "Unsupported"]);
+        assert!(
+            !coverage
+                .unread_in_release
+                .iter()
+                .any(|e| matches!(e.class_id, 81 | 124))
+        );
+        let read: serde_json::Value = runtime
+            .call(
+                "field-coverage",
+                &json!([{
+                    "classId": 4, "fileId": 1, "typeName": "Transform", "body": {
+                        "m_LocalPosition": {"x": "0", "y": "1", "z": "2", "extra": "3"},
+                        "notRead": "0"
+                    }
+                }]),
+            )
+            .unwrap();
+        assert!(read[0].get("error").is_none(), "{read}");
+        let consumed = read[0]["consumed"].as_array().unwrap();
+        assert!(consumed.contains(&json!("m_LocalPosition.x")));
+        assert!(!consumed.contains(&json!("m_LocalPosition.extra")));
+        assert!(!consumed.contains(&json!("notRead")));
+    }
 
     #[test]
     fn message_report_preserves_file_type_and_message() {

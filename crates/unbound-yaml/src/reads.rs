@@ -75,6 +75,11 @@ mod tests {
         reads.track(&mut value);
         let cloned = value.clone();
         assert_eq!(cloned, plain);
+        let legacy = crate::parse_value("x: 0").unwrap();
+        assert_eq!(
+            serde_json::to_value(legacy).unwrap(),
+            serde_json::json!({"Map": [["x", {"Scalar": "0"}]]})
+        );
         assert_eq!(
             serde_json::to_string(&cloned).unwrap(),
             serde_json::to_string(&plain).unwrap()

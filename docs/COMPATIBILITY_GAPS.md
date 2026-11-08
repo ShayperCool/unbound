@@ -110,9 +110,14 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       compiler references, defines and inheritance, including cached compilations. Compilation
       failures are reported as incomplete analysis. `MessageCoverageTests` classifies the Unity
       6000.0 MonoBehaviour, UIBehaviour, ScriptableObject and StateMachineBehaviour messages.
-- [ ] Unread serialized data: diff each class's native type tree (already dumped for settings
-      assets) against the keys its reader consumes; `unbound doctor` lists non-default values of
-      unread keys in the project's scenes, prefabs, assets and `.meta` import settings.
+- [x] Serialized-object field coverage: `unbound doctor` inventories YAML and binary fields in
+      scenes, prefabs, assets and AssetBundles, including zero and empty values. Built-in reader
+      declarations are generated from their getters and helper calls in the same compilation;
+      scripts use the actual serialization member table, and Rust decoding/prefab accesses are
+      captured on private trees. JSON groups field paths by class, with object counts, example
+      assets and explicit reasons for authoring metadata exceptions. Incomplete scans and script
+      analysis remain visible. See [doctor](DOCTOR.md) and `classids`.
+- [ ] Extend field coverage to importer `.meta` and ProjectSettings readers.
 - [x] ClassId coverage: Unity's class-ID table against registered readers; a ClassId without a
       reader fails loudly instead of default-constructing. Done (`classids`: Unity 6000.0.71f1's
       own class table; `Runtime/ClassCoverage.cs`): a document whose class has no engine class, or
@@ -123,7 +128,10 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       (NavMeshSettings loads the scene's baked NavMesh: `navbaked`). Found in real content
       without a reader (follow-ups): VFX Graph (`VisualEffect` 2083052967, `VFXRenderer`
       73398921, `VisualEffectResource` 2058629511), `Preset` (181963792; editor scripts can apply
-      one), and legacy `GUILayer` (92, not a class of 6000.0). YAML `Sprite` documents (213)
+      one, explicitly unsupported). Legacy `GUILayer` (92) is discarded on load in the measured
+      6000.0.71f1 release, so its doctor entry is ignored (`classids` legacy control). AudioListener
+      and FlareLayer have only the enabled flag read by the shared Behaviour reader and are not
+      listed as missing readers. Bundle-scene load failures point to doctor. YAML `Sprite` documents (213)
       now read ordinary un-atlased geometry and references (`spriteassets`); rejected layouts
       are errors at load and listed by `unbound doctor`. `LightingSettings` (850595691) and
       `ShaderVariantCollection` (200) read their data (`lightingassets`): the scenes' Lighting
