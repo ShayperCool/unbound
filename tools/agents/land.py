@@ -51,6 +51,7 @@ import shlex
 import subprocess
 import sys
 import time
+import tomllib
 import xml.etree.ElementTree as ET
 
 GATE_VERSION = '3'
@@ -257,11 +258,13 @@ class Gate:
 
     def touched_crates(self, changed):
         """Crates whose tests the change can affect: crates with changed files, crates whose
-        build.rs compiles a changed native/ entry, and crates depending on a package whose
-        locked version changed in Cargo.lock (so importer output guards, such as the model
-        cache's VERSION guard, also run for native sources and dependency bumps)."""
+        build.rs compiles a changed native/ entry, and consumers of changed locked packages.
+        Workspace manifest edits conservatively select every crate. This keeps importer
+        output guards active for native sources and dependency changes as well."""
         crates = self.worktree/'crates'
         directories = {path.split('/')[1] for path in changed if path.startswith('crates/')}
+        if 'Cargo.toml' in changed:
+            directories.update(path.parent.name for path in crates.glob('*/Cargo.toml'))
         native = {path.split('/')[1] for path in changed if path.startswith('native/')}
         if native:
             for build in crates.glob('*/build.rs'):
@@ -269,13 +272,38 @@ class Gate:
                 if any(re.search(r'\b' + re.escape(entry) + r'\b', text) for entry in native):
                     directories.add(build.parent.name)
         if 'Cargo.lock' in changed:
-            diff = git('diff', '-U12', f'{self.base}...HEAD', '--', 'Cargo.lock', cwd=self.worktree)
-            bumped = set()
-            for hunk in diff.split('\n@@')[1:]:
-                if re.search(r'^[-+]version = ', hunk, re.M):
-                    bumped.update(re.findall(r'^[ +-]name = "([^"]+)"', hunk, re.M))
+            # Compare whole package records; diff context can include unchanged
+            # neighbors and misses changes to sources, checksums or dependencies.
+            snapshots = []
+            for revision in [self.base, 'HEAD']:
+                text = git('show', f'{revision}:Cargo.lock', cwd=self.worktree)
+                packages = tomllib.loads(text).get('package', [])
+                grouped = {}
+                for package in packages:
+                    key = (package['name'], package['version'], package.get('source', ''))
+                    grouped[key] = package
+                snapshots.append(grouped)
+            before, after = snapshots
+            bumped = {key[0] for key in before.keys() | after.keys() if before.get(key)!=after.get(key)}
+            # Follow reverse dependencies in both snapshots, including removed
+            # edges and renamed manifest dependencies, without repeated scans.
+            consumers = {}
+            for package in [*before.values(), *after.values()]:
+                for dependency in package.get('dependencies', []):
+                    consumers.setdefault(dependency.split()[0], set()).add(package['name'])
+            pending = list(bumped)
+            while pending:
+                for consumer in consumers.get(pending.pop(), set())-bumped:
+                    bumped.add(consumer)
+                    pending.append(consumer)
             for manifest in crates.glob('*/Cargo.toml'):
-                deps = set(re.findall(r'^([A-Za-z0-9_-]+)\s*[.=]', manifest.read_text(), re.M))
+                data = tomllib.loads(manifest.read_text())
+                deps = {data['package']['name']}
+                sections = [data, *data.get('target', {}).values()]
+                for section in sections:
+                    for group in ['dependencies', 'build-dependencies', 'dev-dependencies']:
+                        for name, spec in section.get(group, {}).items():
+                            deps.add(spec.get('package', name) if isinstance(spec, dict) else name)
                 if deps & bumped:
                     directories.add(manifest.parent.name)
         names = set()
