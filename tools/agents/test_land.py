@@ -229,13 +229,14 @@ if os.environ.get('TRAIN_PAUSE_LEADER'):
             time.sleep(.02)
         return original_lead(self)
     land_train.LandTrain.lead = paused_lead
-if os.environ.get('TRAIN_CRASH_FINAL') or os.environ.get('TRAIN_CRASH_PREFIX'):
+if any(os.environ.get(key) for key in ('TRAIN_CRASH_FINAL', 'TRAIN_CRASH_PREFIX', 'TRAIN_CRASH_AFTER_FINAL_RECORD')):
     original_record = land_train.LandTrain.record
     def crash_record(self, entry, result):
         if os.environ.get('TRAIN_CRASH_FINAL') and entry['branch'] == 'second':
             os._exit(73)
         original_record(self, entry, result)
-        if os.environ.get('TRAIN_CRASH_PREFIX') and entry['branch'] == 'first':
+        if ((os.environ.get('TRAIN_CRASH_PREFIX') and entry['branch'] == 'first') or
+                (os.environ.get('TRAIN_CRASH_AFTER_FINAL_RECORD') and entry['branch'] == 'second')):
             os._exit(73)
     land_train.LandTrain.record = crash_record
 sys.argv = ['land.py', *sys.argv[4:]]
@@ -297,13 +298,14 @@ class TrainIntegrationTests(unittest.TestCase):
         return path
 
     def start(self, path, probes=(), *, crash=False, pause_lock=False, pause_leader=False,
-              crash_final=False, crash_prefix=False):
+              crash_final=False, crash_prefix=False, crash_after_final_record=False):
         log = self.root/(path.name+'.log')
         stream = log.open('w')
         env = dict(os.environ, UNBOUND_LAND_NO_PUSH='1')
         settings = {'TRAIN_CRASH_AFTER_ADVANCE': crash, 'TRAIN_PAUSE_LOCK': pause_lock,
                     'TRAIN_PAUSE_LEADER': pause_leader, 'TRAIN_CRASH_FINAL': crash_final,
-                    'TRAIN_CRASH_PREFIX': crash_prefix}
+                    'TRAIN_CRASH_PREFIX': crash_prefix,
+                    'TRAIN_CRASH_AFTER_FINAL_RECORD': crash_after_final_record}
         for key, enabled in settings.items():
             env.pop(key, None)
             if enabled:
@@ -374,6 +376,8 @@ class TrainIntegrationTests(unittest.TestCase):
         rows = self.rows()
         self.assertEqual([row['branch'] for row in rows], ['first', 'second', 'third'])
         self.assertEqual(len({row['train_id'] for row in rows}), 1)
+        self.assertEqual(json.loads((self.state/'land-publications.json').read_text())['trains'], {})
+        self.assertEqual(self.git('for-each-ref', '--format=%(refname)', 'refs/unbound/land-publications/'), '')
         self.assertEqual(sum('"push"' in line for line in self.events.read_text().splitlines()), 1)
         for path in (first, second, third):
             head = self.git('rev-parse', 'HEAD', cwd=path)
@@ -501,14 +505,15 @@ class TrainIntegrationTests(unittest.TestCase):
         self.assertEqual([row['branch'] for row in self.rows()], ['first', 'second'])
         self.assertEqual(sum('"push"' in line for line in self.events.read_text().splitlines()), 1)
 
-    def ready_caller_recovers(self, final):
+    def ready_caller_recovers(self, final, after_record=False):
         first = self.branch('first', {'a.txt': 'ok'})
         second = self.branch('second', {'b.txt': 'ok'})
         pause = self.state/'pause-lock'
         pause.write_text('pause')
         workers = [self.start(first, pause_lock=True)]
         self.wait_for(lambda: (self.state/'before-lock').exists(), 'first caller did not register')
-        workers.append(self.start(second, crash_final=final, crash_prefix=not final))
+        workers.append(self.start(second, crash_final=final and not after_record, crash_prefix=not final,
+                                  crash_after_final_record=after_record))
         self.assertEqual(workers[1][0].wait(timeout=20), 73, workers[1][1].read_text())
         pause.unlink()
         results = self.finish(workers)
@@ -518,6 +523,9 @@ class TrainIntegrationTests(unittest.TestCase):
 
     def test_ready_caller_recovers_another_advanced_branch(self):
         self.ready_caller_recovers(True)
+
+    def test_publication_survives_completion_of_every_caller_result(self):
+        self.ready_caller_recovers(True, after_record=True)
 
     def test_ready_caller_pushes_an_advanced_prefix(self):
         self.ready_caller_recovers(False)

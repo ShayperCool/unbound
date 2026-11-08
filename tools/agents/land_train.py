@@ -159,7 +159,6 @@ class LandTrain:
         self.id = uuid.uuid4().hex
         self.repo = None
         self.worktree = None
-        self.advanced = False
 
     def git(self, *args, cwd=None, **kwargs):
         return self.api.git(*args, cwd=cwd or self.worktree, **kwargs)
@@ -175,7 +174,7 @@ class LandTrain:
 
     def reject(self, entry, code, message, log=None):
         self.queue.update(entry['id'], result={'code': code, 'message': message,
-                                             'log': str(log) if log else None})
+                                             'log': str(log) if log else None, 'train_id': self.id})
 
     def valid(self, entry):
         if not self.queue.live(entry):
@@ -198,10 +197,11 @@ class LandTrain:
     def record(self, entry, result):
         path = self.api.STATE/'landed.jsonl'
         # Prepared records make recovery idempotent if a leader exits after advancing main.
-        known = set()
+        known = {}
         if path.exists():
             for line in path.read_text().splitlines():
-                known.add(json.loads(line).get('request_id'))
+                row = json.loads(line)
+                known[row.get('request_id')] = row
         if entry['id'] not in known:
             row = {'time': f'{datetime.datetime.now():%F %T}', 'branch': entry['branch'],
                    'old': result['old'], 'new': result['new'], 'commits': result['commits'],
@@ -211,30 +211,70 @@ class LandTrain:
                 stream.write(json.dumps(row)+'\n')
                 stream.flush()
                 os.fsync(stream.fileno())
+        else:
+            row = known[entry['id']]
+            result = dict(result, **{key: row[key] for key in ('old', 'new', 'commits', 'train_id', 'log')})
         self.queue.update(entry['id'], result=result)
 
+    def publications(self):
+        path = self.api.STATE/'land-publications.json'
+        if not path.exists():
+            return {}
+        value = json.loads(path.read_text())
+        if value['version'] != 1:
+            self.api.die(2, 'unsupported landing publication format')
+        return value['trains']
+
+    def save_publications(self, trains):
+        self.api.atomic_json(self.api.STATE/'land-publications.json', {'version': 1, 'trains': trains})
+
+    def prepare_publication(self, prepared):
+        trains = self.publications()
+        for entry, result in prepared:
+            train = trains.setdefault(result['train_id'], {'repo': entry['repo'], 'entries': {}})
+            snapshot = {key: entry[key] for key in ('id', 'branch', 'worktree', 'repo')}
+            train['entries'][entry['id']] = {'entry': snapshot, 'result': result}
+            # Keep decided commits reachable independently of caller worktrees.
+            ref = f"refs/unbound/land-publications/{result['train_id']}/{entry['id']}"
+            self.git('update-ref', ref, result['new'])
+        self.save_publications(trains)
+
+    def publish_pending(self, main_checkout):
+        if not main_checkout:
+            return
+        trains, delivered = self.publications(), []
+        for train_id, train in trains.items():
+            if train['repo'] != self.repo:
+                continue
+            for request_id, item in train['entries'].items():
+                if self.ancestor(item['result']['new'], 'main'):
+                    self.record(item['entry'], item['result'])
+                    delivered.append((train_id, request_id))
+        if not delivered:
+            return
+        # The intent survives both completed caller results and an interrupted push.
+        # Replaying a push after a crash is safe; a healthy train launches it once.
+        self.api.push_main(main_checkout)
+        for train_id, request_id in delivered:
+            del trains[train_id]['entries'][request_id]
+            if not trains[train_id]['entries']:
+                del trains[train_id]
+        self.save_publications(trains)
+        for train_id, request_id in delivered:
+            self.git('update-ref', '-d', f'refs/unbound/land-publications/{train_id}/{request_id}')
+
     def recover(self, entries):
-        rows = []
-        history = self.api.STATE/'landed.jsonl'
-        if history.exists():
-            rows = [json.loads(line) for line in history.read_text().splitlines()]
         for entry in entries:
             prepared = entry.get('prepared')
             if prepared and self.ancestor(prepared['new'], 'main'):
-                self.advanced = True
+                self.prepare_publication([(entry, prepared)])
                 self.record(entry, prepared)
                 if not self.queue.live(entry):
                     self.queue.remove(entry['id'])
             elif not self.queue.live(entry):
-                # A previous prefix can have a result already, while its leader
-                # exits before advancing the next branch or pushing that prefix.
-                if prepared and any(row.get('train_id') == prepared['train_id']
-                                    and self.ancestor(row['new'], 'main') for row in rows):
-                    self.advanced = True
                 self.queue.remove(entry['id'])
 
     def recover_ready(self, request):
-        self.advanced = False
         self.worktree = Path(request['worktree'])
         self.repo = request['repo']
         main_checkout = self.api.main_worktree(cwd=self.worktree)
@@ -244,8 +284,7 @@ class LandTrain:
             self.recover([item for item in self.queue.entries()
                           if item['repo'] == self.repo and not item.get('result')])
         finally:
-            if self.advanced and main_checkout:
-                self.api.push_main(main_checkout)
+            self.publish_pending(main_checkout)
 
     def oracle(self, entry, before, after, workspace):
         log = self.log_path('oracle-'+entry['id'][:10])
@@ -353,13 +392,13 @@ class LandTrain:
                       'train_id': self.id, 'log': outcome['log']}
             self.queue.update(entry['id'], prepared=record)
             prepared.append((entry, record))
+        self.prepare_publication(prepared)
         for entry, record in prepared:
             if main_checkout:
                 self.api.require_clean(main_checkout, f'the main checkout {main_checkout}', allow_untracked=True)
                 self.git('merge', '--ff-only', '--quiet', entry['tip'], cwd=main_checkout)
             else:
                 self.git('update-ref', 'refs/heads/main', entry['tip'], entry['before'])
-            self.advanced = True
             self.record(entry, record)
         try:
             runtime = Path(outcome['runtime']) if outcome['runtime'] else None
@@ -383,7 +422,6 @@ class LandTrain:
 
     def lead(self):
         self.id = uuid.uuid4().hex
-        self.advanced = False
         records = self.queue.entries()
         for item in records:
             if not self.queue.live(item) and (item.get('result') or not item.get('prepared')):
@@ -400,8 +438,7 @@ class LandTrain:
         try:
             self.integrate(pending, main_checkout)
         finally:
-            if self.advanced and main_checkout:
-                self.api.push_main(main_checkout)
+            self.publish_pending(main_checkout)
 
     def integrate(self, pending, main_checkout):
         self.recover(pending)
@@ -498,8 +535,8 @@ class LandTrain:
             while True:
                 records = self.queue.entries()
                 current = next((item for item in records if item['id'] == request['id']), None)
-                pending_recovery = any(item['repo'] == request['repo'] and item.get('prepared')
-                                       and not item.get('result') for item in records)
+                pending_recovery = (current and current.get('result') and
+                                    current['result'].get('train_id') in self.publications())
                 if current and current.get('result') and not pending_recovery:
                     return self.finish(current, current['result'])
                 # Join the same blocking lock queue as older callers. Polling a
