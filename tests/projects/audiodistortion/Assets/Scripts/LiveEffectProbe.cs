@@ -143,7 +143,7 @@ public class LiveEffectProbe : MonoBehaviour
     static void FlushEngine(float delta)
     {
         typeof(Time).GetField("s_RealDeltaTime", Flags).SetValue(null, (double)delta);
-        typeof(Time).GetField("s_DeltaTime", Flags).SetValue(null, delta);
+        typeof(Time).GetField("s_DeltaTime", Flags).SetValue(null, delta * Time.timeScale);
         Type.GetType("Unbound.Runtime.AudioSystem, UnityEngine.CoreModule", true).GetMethod("Update", Flags).Invoke(null, null);
     }
     static void SetComponent(Behaviour component, string parameter, float value)
@@ -215,7 +215,7 @@ public class LiveEffectProbe : MonoBehaviour
                             if (!mixer.SetFloat("Value", value)) throw new Exception("SetFloat failed");
                         } else mixer.FindSnapshot(changed ? "Other" : "Base").TransitionTo(c.Mode == "timed" ? delta * 4 : 0);
                     }
-                    if (Engine) FlushEngine(delta); else yield return null;
+                    if (Engine) FlushEngine(Time.captureDeltaTime); else yield return null;
                     if (!(bool)typeof(AudioRenderer).GetMethod("AddMixerGroupSink", Flags).Invoke(null, new object[] { source.outputAudioMixerGroup, sink, false })) throw new Exception("Sink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("Render failed");
                     for (int i = 0; i < buffer.Length; i++) { writer.Write(buffer[i]); master.Write(sink[i]); }
