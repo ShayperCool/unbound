@@ -223,10 +223,31 @@ distinct scenario keys. In `geometry/kinematic-target/4/2/3`, step 0 has the sam
 four initial contact points, normals and separations, with a different impulse
 allocation among the child pairs. The reference bullet velocity is
 `25.4600449,7.784088,0`; Unbound reports `25.7584381,-5.54619646,0`.
-Sequential constraint processing explains the sensitivity to pair order, but
-callback order alone does not prove the solver's input order. Exact matching of
-the actor/shape lifetime and constraint construction remains open. No global
-sort, child reversal or fixture-dependent solver rule is added.
+The normal-response replay below isolates the initial divergence to the contact
+sequence. Exact matching of actor/shape lifetime and constraint construction
+remains open. No global sort, child reversal or fixture-dependent engine rule
+is added.
+
+
+`replay_compound_order.py` reconstructs the first step in all seven affected
+contexts from captured contact normals, separations, identities, and the
+fixture's prescribed incoming motion. Its six position iterations and one
+velocity iteration use the fixture settings; the 0.8 normal-response fraction
+is the one used by the vendored PhysX contact preparation. Bodies have unit
+mass or are kinematic, rotations are locked, and the measured contacts are
+separated. The model is confined to that context.
+
+At the unchanged comparator tolerances, the model reconstructs all 14 reference
+body readings and all 14 engine body readings. Replaying the engine contacts in
+the reference's child-pair sequence reconstructs all 14 reference readings too.
+For the mixed compound, exchanging the middle two inputs changes predicted
+velocity from `25.7584400,-5.5461922,0` to `25.4600525,7.7840900,0`; the latter
+matches the Editor's `25.4600449,7.784088,0`. Predicted position differs from the
+reference by less than 0.0000002 units. The original contact values and raw
+comparison remain untouched. The gate saves the complete replay report beside
+the contact analysis; this diagnostic adds no normative contact-order assertion.
+The construction/lifetime rule that selects these pair sequences remains a
+separate unresolved mechanism, rather than a reason to sort engine contacts.
 
 Contact-content differences remain visible independently of motion. For example,
 `geometry/static/1/0/3/1/bullet/event/0` has four contacts on both sides. Unity
@@ -281,9 +302,23 @@ bounds center differs by 0.0009766 units. Its failures are not relabeled as
 ordering or removed from the raw report. All original Q06, geometry and supplemental gates keep their
 assertions and tolerances.
 
-Validation: release build; 3575 managed tests; seven compatibility-profile Rust
-tests; 23 probe-verifier tests; all four CCD profiles. Twenty-four physics probes
+Validation: release build; 3577 managed tests; seven compatibility-profile Rust
+tests; 26 probe-verifier tests; all four CCD profiles. Twenty-four physics probes
 were run before and after. Their results are retained, including the existing
 2D dynamics and query-parity failures. The new ordering profile reports 1872 raw
 differences and zero capture/native consistency failures; its 25 far-origin rows
 remain explicitly open.
+
+The deferred-frame controls also check Unity 6000.0
+[autoSyncTransforms](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics-autoSyncTransforms.html)
+and [SyncTransforms](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics.SyncTransforms.html).
+With automatic synchronization disabled, Transform edits are deferred until the
+physics synchronization point or an explicit SyncTransforms call. Six controls
+cross dynamic/kinematic bodies with trigger, contact-offset and material edits
+after an unsynchronized child rotation. Before synchronization, bounds and an
+overlap query retain the previous frame; after synchronization, both use the
+rotated frame. Shape reconstruction retains the authored rotation alongside its
+cached affine matrix, so property edits cannot combine two different frames.
+The reference extension preserves every earlier key/value and has two identical
+GPU Editor captures. Two managed regression tests exercise the same contract
+using the built-in cube mesh.

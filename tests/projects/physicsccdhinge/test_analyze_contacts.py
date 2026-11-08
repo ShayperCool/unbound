@@ -1,8 +1,11 @@
 import copy
 import unittest
+from pathlib import Path
 
 from analyze_contacts import analyze, multiset_equal
 from verify_ordering import verify
+from replay_compound_order import PREFIX, contacts, replay, matches_body, diagnose
+from compare import load
 
 
 class ContactAnalysisTests(unittest.TestCase):
@@ -76,6 +79,27 @@ class ContactAnalysisTests(unittest.TestCase):
         rows = self.native_rows()
         actual = {key: value for key, value in rows.items() if '/native/' not in key}
         self.assertTrue(verify(rows, actual)['unresolved'])
+
+    def test_normal_response_reconstructs_independent_editor_body_reading(self):
+        rows = load(Path(__file__).parent/'Reference/unity-6000.0.71f1/geometry.tsv')
+        self.assertTrue(matches_body(replay(contacts(rows)), rows[PREFIX+'/body']))
+
+    def test_middle_pair_exchange_changes_motion_magnitude_and_direction(self):
+        rows = load(Path(__file__).parent/'Reference/unity-6000.0.71f1/geometry.tsv')
+        inputs = contacts(rows)
+        original = replay(inputs)
+        inputs[1], inputs[2] = inputs[2], inputs[1]
+        changed = replay(inputs)
+        self.assertGreater(original['velocity'][1], 0)
+        self.assertLess(changed['velocity'][1], 0)
+        self.assertGreater(abs(original['velocity'][0]-changed['velocity'][0]), .2)
+
+    def test_normal_response_covers_all_seven_measured_contexts(self):
+        rows = load(Path(__file__).parent/'Reference/unity-6000.0.71f1/geometry.tsv')
+        result = diagnose(rows, rows)
+        self.assertEqual(7, len(result['cases']))
+        self.assertTrue(result['reference_reconstructed'])
+        self.assertTrue(result['engine_reconstructed'])
 
 
 if __name__ == '__main__':

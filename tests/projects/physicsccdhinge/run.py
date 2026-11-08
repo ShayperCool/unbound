@@ -19,6 +19,7 @@ from verify_results import verify
 from verify_geometry import verify as verify_geometry
 from verify_ordering import verify as verify_ordering
 from analyze_contacts import analyze
+from replay_compound_order import diagnose
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('mode', choices=['prepare', 'native', 'engine', 'publish', 'compare', 'gate'])
@@ -75,6 +76,9 @@ def compare(classify=False):
         analysis = analyze(expected, actual)
         (work/(a.label+'-contact-analysis.json')).write_text(json.dumps(analysis,indent=2)+'\n')
         print(f"physicsccdhinge: contact analysis: {analysis['counts']}")
+        replay = diagnose(expected, actual)
+        (work/(a.label+'-compound-order-replay.json')).write_text(json.dumps(replay,indent=2)+'\n')
+        print(f"physicsccdhinge: compound normal-response replay: reference={replay['reference_reconstructed']}; engine={replay['engine_reconstructed']}; reference response from engine contacts={replay['reference_response_from_engine_contacts']}")
         result = verify_geometry(expected,actual,report)
         (work/(a.label+'-verification.json')).write_text(json.dumps(result,indent=2)+'\n')
         print(f"physicsccdhinge: geometry motion gate: {result['checked_body_rows']} body rows; {len(result['unresolved'])} unexpected differences; contact trace remains a report with {len(result['contact_trace'])} raw differences; {len(result['mirrored_motion'])} reflected body rows; {len(result['open_manifold_motion'])} open mixed-compound rows")
