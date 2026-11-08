@@ -26,7 +26,8 @@ and [MonoBehaviour.Invoke](https://docs.unity3d.com/6000.0/Documentation/ScriptR
 give no frame placement. Measured here: both timed waits count from the starting frame's time (also
 from a fixed step) and never end in that frame, even at 0 or -1 s; the long frame does not move the
 start (`hitch` false/false). Invoke counts from Time.time as read at the call (the fixed clock in a
-fixed step) and comes due after a fixed step or after Update, whichever first reaches its time.
+fixed step) and comes due after a fixed step or after Update; which clock a fixed-step check reads
+is not shown (the values give the frame and phase, not the step).
 
 ```sh
 python3 tests/projects/waitforseconds/run.py record --label native-a
@@ -36,4 +37,4 @@ python3 tests/projects/waitforseconds/run.py gate
 ```
 
 Values compare exactly (tolerance 0). Unmeasured: timeScale changes during a wait, InvokeRepeating
-rates shorter than a frame, custom player loops without the delayed-call points.
+rates shorter than a frame (Unbound fires a late repeat once per check, so up to once per fixed step), custom player loops without the delayed-call points.

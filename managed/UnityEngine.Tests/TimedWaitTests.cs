@@ -130,7 +130,8 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "invoked" }, m_Runner.Log);
         }
 
-        // An Invoke comes due at the fixed step whose fixed clock reaches it, before that frame's Update.
+        // An Invoke comes due inside a fixed step, before that frame's Update (measured); that the step
+        // is the one whose fixed clock reaches the call's time is Unbound's choice.
         [Fact]
         public void InvokeComesDueInsideTheFixedStepThatReachesItsTime()
         {

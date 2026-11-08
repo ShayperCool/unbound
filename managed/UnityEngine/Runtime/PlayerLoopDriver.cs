@@ -146,8 +146,8 @@ namespace Unbound.Runtime
             // the next point (6000.0.71f1: destroyphases, destroycontract, instantiateasync).
             Register(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), Destruction.BeginDelivery);
             Register(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), Destruction.DeliverRequested);
-            // Invokes come due at the fixed steps too, against the fixed clock (measured,
-            // tests/projects/waitforseconds: Invoke(0.3) from Update runs inside a fixed step).
+            // Invokes come due at the fixed steps too (measured, tests/projects/waitforseconds:
+            // Invoke(0.3) from Update runs inside a fixed step); see Invokes for the clock.
             Register(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), () =>
             {
                 Invokes.Run();

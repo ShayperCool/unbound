@@ -199,8 +199,10 @@ namespace Unbound.Runtime
 
     /// <summary>Invoke and InvokeRepeating. A call is due at Time.time as read when it was made (the
     /// fixed clock inside a fixed step) plus its delay, and runs at the first check after that: one
-    /// follows each fixed step, against the fixed clock, and one follows Update, so Invoke(0) from
-    /// Update still runs in that frame (measured, 6000.0.71f1, tests/projects/waitforseconds).</summary>
+    /// follows each fixed step and one follows Update, so Invoke(0) from Update still runs in that
+    /// frame (measured, 6000.0.71f1, tests/projects/waitforseconds). That a fixed-step check reads the
+    /// fixed clock is this implementation's choice: the probe shows the frame and phase, not which
+    /// step. A repeat that falls behind fires once per check, so up to once per fixed step.</summary>
     internal static class Invokes
     {
         sealed class Entry
