@@ -1,0 +1,12 @@
+{"k":"stage/0/ticks","v":2}
+{"k":"stage/0/neighbor","v":0}
+{"k":"stage/1/ticks","v":2}
+{"k":"stage/1/neighbor","v":0}
+{"k":"stage/2/ticks","v":3}
+{"k":"stage/2/neighbor","v":0}
+{"k":"stage/3/ticks","v":0}
+{"k":"stage/3/neighbor","v":0}
+{"k":"nan/first","v":0}
+{"k":"nan/second","v":0}
+{"k":"nan/pending","v":true}
+{"k":"complete","v":true}

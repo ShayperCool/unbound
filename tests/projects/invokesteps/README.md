@@ -12,9 +12,16 @@ order; an interleaved repeat can be visited again if its next deadline follows t
 call. The original cadence remains, rather than restarting the interval from delivery time.
 A one-shot is no longer IsInvoking inside its callback; a repeating call can cancel itself.
 
-The initial fixed/frame offset varies when Play mode starts. The canonical repeat windows begin
+The initial fixed/frame offset varies when Play mode starts. A single half-fixed-step capture
+frame separates clocks that start too close together, before the measured window. The canonical repeat windows begin
 after the scheduling frame. The complete initial sequences remain in each capture's raw.txt.
 The slower control counts all calls without asserting a phase at a clock boundary.
+
+A second file, `edges.jsonl`, records cancellation and non-finite deadlines from the same run.
+Cancelling a neighbor before delivery leaves the single-repeat cadence unchanged. Cancelling it
+inside the repeating callback can expose the repeat already inserted behind it, allowing another
+call at that point. Two NaN-delay repeats remain pending and deliver no callbacks. The single
+probe gate compares both files without changing the original reference values.
 
 [Invoke](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.Invoke.html)
 documents the delay and leaves other execution order dependent on timing.

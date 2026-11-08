@@ -253,6 +253,11 @@ namespace Unbound.Runtime
             return false;
         }
 
+        static void DiscardCancelledHeads()
+        {
+            while (s_Due.TryPeek(out var entry, out _) && entry.Cancelled) s_Due.Dequeue();
+        }
+
         internal static void Run()
         {
             double now = UnityEngine.Time.TimeAsDoubleNoCheck;
@@ -263,9 +268,13 @@ namespace Unbound.Runtime
                 s_Due.Dequeue();
                 if (e.Cancelled || e.CreatedCheck == check) continue;
                 if (e.Target.m_Destroyed) { e.Cancelled = true; continue; }
+                // Non-finite deadlines remain pending until cancelled; they must not enter a
+                // repeat traversal that cannot advance to a later deadline.
+                if (measured && !double.IsFinite(e.Time)) continue;
                 // Delivery walks the due calls in deadline order. A repeat inserted behind the
                 // next pending call can be visited again; one inserted before it waits for the
                 // next check. With a single late repeat this gives one call per check.
+                DiscardCancelledHeads();
                 bool hasNext = s_Due.TryPeek(out _, out var next);
                 if (measured)
                 {

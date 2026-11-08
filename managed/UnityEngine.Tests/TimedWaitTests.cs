@@ -27,6 +27,8 @@ namespace UnityEngine.Tests
         internal bool InvokingAtCall;
         void Called() { InvokingAtCall = IsInvoking(nameof(Called)); Log.Add("invoked"); }
         void CancelledRepeat() { Log.Add("repeat"); CancelInvoke(nameof(CancelledRepeat)); }
+        void Neighbor() => Log.Add("neighbor");
+        void CancelsNeighbor() { Log.Add("cancel tick"); CancelInvoke(nameof(Neighbor)); }
     }
 
     /// <summary>
@@ -217,6 +219,44 @@ namespace UnityEngine.Tests
             m_Runner.InvokeRepeating("Called", 0f, 0.125f);
             Run(typeof(UpdatePoint));
             Assert.Equal(18, m_Runner.Log.Count);
+            m_Runner.CancelInvoke();
+        }
+
+        [Fact]
+        public void CancelledCallsDoNotChangeRepeatTraversal()
+        {
+            Frame(5);
+            FixedStep(4);
+            m_Runner.InvokeRepeating("Called", 0f, 0.1f);
+            m_Runner.Invoke("Neighbor", 0.05f);
+            m_Runner.CancelInvoke("Neighbor");
+            Run(typeof(UpdatePoint));
+            Assert.Single(m_Runner.Log);
+            m_Runner.CancelInvoke();
+        }
+
+        [Fact]
+        public void ARepeatReinsertedBeforeItsCallbackRemainsVisibleAfterNeighborCancellation()
+        {
+            Frame(5);
+            FixedStep(4);
+            m_Runner.InvokeRepeating("CancelsNeighbor", 0f, 0.1f);
+            m_Runner.Invoke("Neighbor", 0.05f);
+            Run(typeof(UpdatePoint));
+            Assert.Equal(new[] { "cancel tick", "cancel tick" }, m_Runner.Log);
+            m_Runner.CancelInvoke();
+        }
+
+        [Fact]
+        public void NonFiniteDeadlinesRemainPendingWithoutHangingDelivery()
+        {
+            Frame(5);
+            FixedStep(5);
+            m_Runner.InvokeRepeating("Called", float.NaN, 0.1f);
+            m_Runner.InvokeRepeating("Neighbor", float.NaN, 0.1f);
+            Run(typeof(UpdatePoint));
+            Assert.Empty(m_Runner.Log);
+            Assert.True(m_Runner.IsInvoking("Called"));
             m_Runner.CancelInvoke();
         }
     }

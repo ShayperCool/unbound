@@ -36,6 +36,12 @@ public sealed class InvokeStepsProbe : MonoBehaviour
         if (m_First < 0) m_First = Time.frameCount;
         int frame = Time.frameCount - m_First;
         if (frame == 3) { Time.captureDeltaTime = FrameStep; Time.fixedDeltaTime = FixedStep; }
+        // Keep the frame and fixed clocks apart when testing which clock schedules an Invoke.
+        // Play mode's initial offset varies. One half-step frame moves a small gap away from
+        // the 0.09 s deadline's third fixed step without changing the later four-step frames.
+        if (frame == 5 && Time.timeAsDouble - Time.fixedTimeAsDouble < FixedStep / 4)
+            Time.captureDeltaTime = FrameStep + FixedStep / 2;
+        if (frame == 6) Time.captureDeltaTime = FrameStep;
         if (frame == 8)
         {
             m_Start = Time.frameCount;
@@ -62,7 +68,7 @@ public sealed class InvokeStepsProbe : MonoBehaviour
         {
             CancelInvoke();
             m_Values["repeat/noFixed"] = string.Join(",", m_Fast.FindAll(v => !v.StartsWith("6/")));
-            Finish();
+            new GameObject("Invoke edge cases").AddComponent<InvokeEdgeProbe>().Begin(Finish);
         }
     }
 
