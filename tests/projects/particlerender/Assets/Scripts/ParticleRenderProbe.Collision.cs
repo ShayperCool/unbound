@@ -12,14 +12,41 @@ using UnityEngine;
 /// <item><c>world/*</c>: World collisions with a sloped box (size over lifetime, radius scale,
 /// bounce, dampen, lifetime loss, gravity), a sphere, a plane under particles with an animated
 /// velocity and a speed modifier, particles starting inside a box, and the sloped box at Medium and
-/// Low quality.</item>
+/// Low quality, uniformly and non-uniformly scaled Local systems, kill speeds with a speed modifier, and
+/// the collision events of particles starting inside a box.</item>
 /// <item><c>planes/*</c>: Planes collisions of particles starting behind a plane and moving towards or
-/// away from it, two planes reached in one step (list order), and a sloped plane.</item>
+/// away from it, two planes reached in one step (list order), a sloped plane, and scaled Local
+/// systems.</item>
+/// <item><c>trigger/size</c>: a Trigger module killing fast-shrinking particles on Enter.</item>
 /// </list>
 /// </summary>
 public partial class ParticleRenderProbe
 {
     static readonly Vector3 s_CollideOrigin = new Vector3(0f, 0f, 60f);
+    static ParticleSystem s_EventSystem;
+    static readonly List<ParticleCollisionEvent> s_CollisionEvents = new List<ParticleCollisionEvent>();
+
+    /// <summary>The collision events of the frame on every box hit: count, then per event the
+    /// intersection relative to the control's origin, the normal and the velocity.</summary>
+    static void RecordCollisionEvents(string key, ParticleSystem ps)
+    {
+        var v = new List<float>();
+        foreach (var box in FindObjectsByType<BoxCollider>(FindObjectsSortMode.None))
+        {
+            if (box.gameObject.name != "collide box" || (box.transform.position - ps.transform.position).sqrMagnitude > 1e-6f) continue;
+            int n = ps.GetCollisionEvents(box.gameObject, s_CollisionEvents);
+            v.Add(n);
+            for (int i = 0; i < n; i++)
+            {
+                var e = s_CollisionEvents[i];
+                var at = e.intersection - ps.transform.position;
+                v.Add(at.x); v.Add(at.y); v.Add(at.z);
+                v.Add(e.normal.x); v.Add(e.normal.y); v.Add(e.normal.z);
+                v.Add(e.velocity.x); v.Add(e.velocity.y); v.Add(e.velocity.z);
+            }
+        }
+        Record(key, v);
+    }
 
     /// <summary>count, then per particle (by seed): seed low half, position relative to
     /// <see cref="s_CollideOrigin"/>, velocity, total velocity, remaining lifetime.</summary>
@@ -170,11 +197,79 @@ public partial class ParticleRenderProbe
                 var c = s.collision; c.type = ParticleSystemCollisionType.Planes; c.AddPlane(plane); c.radiusScale = 1.2f; c.dampen = 0.3f; c.bounce = 0.4f;
             }), at));
         }
+        foreach (var (name, scale) in new[] { ("scaled", new Vector3(2f, 2f, 2f)), ("scaled_y", new Vector3(1f, 2.5f, 1f)) })
+        {
+            {
+                var at = Next();
+                var plane = CollidePlane(at + new Vector3(0f, -0.5f, 0f), Quaternion.Euler(20f, 0f, 0f));
+                extra.Add(plane.gameObject);
+                var ps = CollideEmitter("collide/planes/" + name, at + Vector3.up, 6, 3f, s =>
+                {
+                    var m = s.main; m.simulationSpace = ParticleSystemSimulationSpace.Local;
+                    var c = s.collision; c.type = ParticleSystemCollisionType.Planes; c.AddPlane(plane);
+                });
+                ps.transform.localScale = scale;
+                controls.Add(("collide/planes/" + name, ps, at));
+            }
+            {
+                var at = Next();
+                var ps = CollideEmitter("collide/world/" + name, at + Vector3.up, 6, 3f, s =>
+                {
+                    var m = s.main; m.simulationSpace = ParticleSystemSimulationSpace.Local;
+                });
+                ps.transform.localScale = scale;
+                controls.Add(("collide/world/" + name, ps, at));
+                extra.Add(CollideBox(at + new Vector3(0f, -0.5f, 0f), new Vector3(4f, 0.2f, 4f), Quaternion.Euler(0f, 0f, 25f)));
+            }
+        }
+        {
+            // The kill speeds against the speed modifier: arriving at 4 with a modifier of 0.5.
+            var at = Next();
+            controls.Add(("collide/world/killspeed", CollideEmitter("collide/world/killspeed", at + Vector3.up, 4, 4f, s =>
+            {
+                var vel = s.velocityOverLifetime; vel.enabled = true; vel.speedModifier = 0.5f;
+                var c = s.collision; c.minKillSpeed = 3f;
+            }), at));
+            var plane = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            plane.transform.position = at + new Vector3(0f, -0.3f, 0f);
+            extra.Add(plane);
+        }
+        {
+            // A trigger killing on Enter, particles shrinking fast: when they are killed shows
+            // which size the trigger sees.
+            var at = Next();
+            var sphere = new GameObject("collide trigger").AddComponent<SphereCollider>();
+            sphere.isTrigger = true; sphere.radius = 0.3f;
+            sphere.transform.position = at + new Vector3(0f, -0.6f, 0f);
+            extra.Add(sphere.gameObject);
+            controls.Add(("collide/trigger/size", CollideEmitter("collide/trigger/size", at + Vector3.up, 6, 3f, s =>
+            {
+                var m = s.main; m.startSize = 1f; m.startLifetime = 0.8f;
+                var sz = s.sizeOverLifetime; sz.enabled = true; sz.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 0f));
+                var c = s.collision; c.enabled = false;
+                var t = s.trigger; t.enabled = true; t.AddCollider(sphere);
+                t.enter = ParticleSystemOverlapAction.Kill; t.inside = ParticleSystemOverlapAction.Ignore;
+                t.exit = ParticleSystemOverlapAction.Ignore; t.outside = ParticleSystemOverlapAction.Ignore;
+            }), at));
+        }
+        {
+            // A particle starting inside a collider, with collision events: the event's normal.
+            var at = Next();
+            var ps = CollideEmitter("collide/events/inside", at, 3, 1f, s =>
+            {
+                var m = s.main; m.startSize = 0.2f;
+                var c = s.collision; c.bounce = 0.5f; c.sendCollisionMessages = true;
+            });
+            controls.Add(("collide/events/inside", ps, at));
+            extra.Add(CollideBox(at, new Vector3(2f, 2f, 2f), Quaternion.identity));
+            s_EventSystem = ps;
+        }
         foreach (var (_, ps, _) in controls) ps.Play();
         for (int frame = 0; frame < 40; frame++)
         {
             yield return null;
             foreach (var (key, ps, origin) in controls) RecordCollide(key + "/" + frame.ToString(CultureInfo.InvariantCulture), ps, origin);
+            RecordCollisionEvents("collide/events/inside/events/" + frame.ToString(CultureInfo.InvariantCulture), s_EventSystem);
         }
         foreach (var (_, ps, _) in controls) Done(ps);
         foreach (var go in extra) DestroyImmediate(go);
