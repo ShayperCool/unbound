@@ -34,6 +34,7 @@ namespace UnityEngine.Tests
         readonly HttpListener m_Listener = new HttpListener();
         readonly string m_Base;
         readonly Thread m_Thread;
+        readonly WebRequestTestLoop m_Loop;
         string m_LastBody = "";
         string m_LastContentType = "";
 
@@ -49,6 +50,7 @@ namespace UnityEngine.Tests
             m_Listener.Start();
             m_Thread = new Thread(Serve) { IsBackground = true };
             m_Thread.Start();
+            m_Loop = new WebRequestTestLoop();
         }
 
         void Serve()
@@ -91,16 +93,15 @@ namespace UnityEngine.Tests
 
         public void Dispose()
         {
-            m_Listener.Stop();
-            m_Listener.Close();
+            try
+            {
+                m_Listener.Stop();
+                m_Listener.Close();
+            }
+            finally { m_Loop.Dispose(); }
         }
 
-        static void Wait(UnityWebRequest request)
-        {
-            var deadline = DateTime.UtcNow.AddSeconds(15);
-            while (!request.isDone && DateTime.UtcNow < deadline) Thread.Sleep(5);
-            Assert.True(request.isDone, "the request did not complete");
-        }
+        static void Wait(UnityWebRequest request) => WebRequestTestLoop.Until(() => request.isDone);
 
         [Fact]
         public void GetReturnsTheBodyHeadersAndCode()
@@ -117,6 +118,42 @@ namespace UnityEngine.Tests
             Assert.Equal(1f, request.downloadProgress);
             Assert.False(request.isModifiable);
             Assert.Throws<InvalidOperationException>(() => request.SendWebRequest());
+        }
+
+        // Main-thread delivery is recorded by tests/projects/networkstreaming. Unity 6000.0
+        // documents next-frame completion and synchronous late subscription at
+        // https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AsyncOperation-completed.html
+        [Theory]
+        [InlineData("hello", UnityWebRequest.Result.Success)]
+        [InlineData("nothing", UnityWebRequest.Result.ProtocolError)]
+        public void CompletionRunsOnTheMainThreadWithBothDoneFlagsSet(string path, UnityWebRequest.Result expected)
+        {
+            for (int i = 0; i < 16; i++)
+            {
+                using var request = UnityWebRequest.Get(m_Base + path);
+                var operation = request.SendWebRequest();
+                int callbacks = 0, callbackThread = 0;
+                bool requestDone = false, operationDone = false;
+                operation.completed += op =>
+                {
+                    callbacks++;
+                    callbackThread = Environment.CurrentManagedThreadId;
+                    requestDone = request.isDone;
+                    operationDone = op.isDone;
+                };
+                Assert.False(request.isDone);
+                Assert.False(operation.isDone);
+                Assert.Equal(0, callbacks);
+                Wait(request);
+                Assert.Equal(1, callbacks);
+                Assert.Equal(Environment.CurrentManagedThreadId, callbackThread);
+                Assert.True(requestDone);
+                Assert.True(operationDone);
+                Assert.Equal(expected, request.result);
+                int lateCallbacks = 0;
+                operation.completed += _ => lateCallbacks++;
+                Assert.Equal(1, lateCallbacks);
+            }
         }
 
         [Fact]
@@ -184,14 +221,13 @@ namespace UnityEngine.Tests
         {
 #pragma warning disable CS0618
             using var www = new WWW(m_Base + "hello");
-            var deadline = DateTime.UtcNow.AddSeconds(15);
-            while (www.keepWaiting && DateTime.UtcNow < deadline) Thread.Sleep(5);
+            WebRequestTestLoop.Until(() => !www.keepWaiting);
             Assert.True(www.isDone);
             Assert.Null(www.error);
             Assert.Equal("hello Ünity", www.text);
             Assert.Equal("HTTP/1.1 200 OK", www.responseHeaders["STATUS"]);
             using var missing = new WWW(m_Base + "nothing");
-            while (missing.keepWaiting && DateTime.UtcNow < deadline) Thread.Sleep(5);
+            WebRequestTestLoop.Until(() => !missing.keepWaiting);
             Assert.Equal("404 Not Found", missing.error);
 #pragma warning restore CS0618
         }

@@ -36,11 +36,11 @@ namespace UnityEngine.Tests
         const string CacheWarning = "DownloadHandlerAssetBundle caching";
         static readonly FieldInfo Api = typeof(Native).GetField("s_Api", BindingFlags.Static | BindingFlags.NonPublic);
         static readonly FieldInfo Ready = typeof(Native).GetField("s_Ready", BindingFlags.Static | BindingFlags.NonPublic);
-        static readonly FieldInfo MainThread = typeof(PlayerLoopDriver).GetField("s_MainThreadId", BindingFlags.Static | BindingFlags.NonPublic);
+        readonly WebRequestTestLoop loop = new WebRequestTestLoop();
         static readonly List<string> s_Opens = new List<string>();
         static ulong s_NextId;
         static readonly byte[] Signature = Encoding.ASCII.GetBytes("UnityFS\0");
-        readonly object previousApi, previousReady, previousMainThread;
+        readonly object previousApi, previousReady;
         readonly string directory;
         readonly byte[] bundleBytes = { 0x55, 0x6e, 0x69, 0x74, 0x79, 0x46, 0x53, 0x00, 7, 8, 9 };
         readonly List<(LogType Type, string Message)> logs = new List<(LogType, string)>();
@@ -62,9 +62,6 @@ namespace UnityEngine.Tests
             logger.filterLogType = LogType.Log;
             previousApi = Api.GetValue(null);
             previousReady = Ready.GetValue(null);
-            previousMainThread = MainThread.GetValue(null);
-            // Main-thread deliveries run inline on the request's worker, as in the other request tests.
-            MainThread.SetValue(null, -1);
             var api = new NativeApi { Version = NativeApi.CurrentVersion, Call = &Call, FreeBuffer = &Free };
             Native.Initialize(&api);
             lock (s_Opens) s_Opens.Clear();
@@ -76,6 +73,7 @@ namespace UnityEngine.Tests
 
         public void Dispose()
         {
+            loop.Dispose();
             Application.logMessageReceivedThreaded -= Capture;
             logger.logHandler = previousHandler;
             logger.logEnabled = previousLogEnabled;
@@ -84,7 +82,6 @@ namespace UnityEngine.Tests
                 if (bundle.m_NativeId > 9500) bundle.Unload(false);
             Api.SetValue(null, previousApi);
             Ready.SetValue(null, previousReady);
-            MainThread.SetValue(null, previousMainThread);
             Directory.Delete(directory, true);
         }
 
@@ -208,12 +205,7 @@ namespace UnityEngine.Tests
             return "file://" + path;
         }
 
-        static void Wait(UnityWebRequest request)
-        {
-            var deadline = DateTime.UtcNow.AddSeconds(15);
-            while (!request.isDone && DateTime.UtcNow < deadline) Thread.Sleep(5);
-            Assert.True(request.isDone, "the request did not complete");
-        }
+        static void Wait(UnityWebRequest request) => WebRequestTestLoop.Until(() => request.isDone);
 
         static UnityWebRequest Send(UnityWebRequest request)
         {
@@ -363,10 +355,6 @@ namespace UnityEngine.Tests
         public void AFailedAutoLoadCompletesOnceAfterItsOneError()
         {
             var garbage = Write("garbage.bundle", Encoding.ASCII.GetBytes("<html>not a bundle</html>"));
-            // This thread becomes the main thread, so every delivery, the completion included, runs
-            // only while it is pumped here and the completed handler is attached before it can run.
-            MainThreadContext.Instance.RunPending();
-            MainThread.SetValue(null, Environment.CurrentManagedThreadId);
             var handler = new DownloadHandlerAssetBundle(garbage, 0U) { autoLoadAssetBundle = true };
             using var request = new UnityWebRequest(garbage, UnityWebRequest.kHttpVerbGET, handler, null);
             int completions = 0;
