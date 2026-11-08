@@ -78,10 +78,11 @@ The full workflow is in [tools/agents/WORKFLOW.md](tools/agents/WORKFLOW.md). In
   tests and runs the engine and the Editor as often as it needs (no budgets; the job pool bounds
   the machine). It gets one independent reviewer subagent and fixes P1/P2 findings itself, then
   lands with `tools/agents/land.py` and reports in at most 10 lines.
-- `land.py` serializes landings with a lock. It rebases onto `main` and runs the gate on the
-  rebased tree: oracle guard, release build, managed tests, Rust tests of touched crates and the
-  worker's probes. Then it fast-forwards `main`. A conflict or a failed gate goes back to the
-  worker.
+- `land.py` queues branches and serializes their integration with a lock. The holder rebases the
+  queued branches in order and runs one combined release build, managed tests, Rust tests of the
+  union of touched crates and all requested probes, with an oracle guard per branch. Passing
+  branches fast-forward `main` in order. A conflict rejects only its branch; a failed train is
+  bisected to land its passing prefix and return each failure to its caller.
 - A sheriff periodically runs the full suite on `main`, bisects new failures and reverts or fixes
   them.
 

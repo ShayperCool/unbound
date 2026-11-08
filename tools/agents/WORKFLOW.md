@@ -9,7 +9,8 @@ Machine-local state lives in `~/.cache/unbound/agents/` (not in Git):
 | Path | Contents |
 |---|---|
 | `QUEUE.md` | the orchestrator's task queue |
-| `landed.jsonl` | one line per landing, written by `land.py` |
+| `landed.jsonl` | one line per landed branch, including its train ID and gate log |
+| `land-queue.json` | queued callers, requested probes, and recoverable results |
 | `logs/` | gate logs |
 | `suite/<label>/` | `summary.json` of each `tools/agents/suite.py` run |
 | `baseline/` | the sheriff's last full-suite results (a promoted `summary.json`) |
@@ -137,6 +138,41 @@ Rules:
 - Your final message is your report: do not end your turn before landing or a real blocker. Wait
   for background builds, tests and `land.py` with `t3_background_wait` (or run them in the
   foreground); an ended turn wakes the orchestrator with nothing to act on.
+
+## Land trains
+
+The worker command stays `python3 tools/agents/land.py --probe '<command>' ...`.
+Each caller registers its branch, committed head, worktree and probe releases in the queue,
+then waits for its own result. Keep that worktree unchanged until the command finishes.
+Use the current tooling: processes started before a tooling update retain their loaded code.
+Rebase and restart a waiting caller to adopt a new queue protocol.
+
+The lock holder takes all queued branches for one repository in registration order. A train
+with several branches rebases them in a temporary integration checkout beside the slots and
+build targets. A branch with a rebase conflict or a refused oracle change is rejected on its
+own. Each branch gets its own oracle guard, so one branch's trailer cannot authorize another
+branch's changes.
+
+The combined tree gets one release build, one managed test run, Rust tests for the union of
+touched crates, and the union of probe commands and their requested releases. Any `--full`
+request makes the train run the full gate. These jobs retain landing priority in the shared
+job pool. A passing train fast-forwards main through each branch, records one `landed.jsonl`
+line per branch and pushes once. Each caller then refreshes its own branch to its rebased tip.
+A single queued branch uses its original worktree and warm target, as before. `--check` remains
+an independent gate and can still supply a reusable pass when main and the checks are unchanged.
+
+A failed train is bisected by gating prefixes. Passing prefixes land; the first failing branch
+receives its failed gate log. Remaining branches are rebased without that branch and tested
+again. Checks from a landed prefix stay in subsequent gates. A stacked branch also retains
+the declared probes of earlier queued commits it carries, even if their own request fails.
+
+Caller locks identify live requests without depending on reusable process IDs. A caller that
+changes its head or authored files while queued is rejected without discarding its work.
+Prepared results are saved before main advances; a later lock holder can recover the log and
+result after an interrupted leader. Temporary integration checkouts are locked while active.
+An interrupted or changed checkout is retained, with its location reported. Inspect it before
+unlocking or removing it; normal cleanup never forces removal. Old callers cannot join a new
+train until restarted with the updated tooling.
 
 ## Reviewer
 
