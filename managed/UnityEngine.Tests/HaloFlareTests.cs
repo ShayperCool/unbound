@@ -44,33 +44,6 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ColdDisabledCameraInitializesVisibilityForTheFollowingFrame()
-        {
-            string release = ProjectInfo.UnityVersion;
-            ProjectInfo.UnityVersion = "6000.0.71f1";
-            var cold = new GameObject("ColdCamera").AddComponent<Camera>();
-            var warm = new GameObject("WarmCamera").AddComponent<Camera>();
-            try
-            {
-                cold.enabled = false;
-                var coldLayer = cold.gameObject.AddComponent<FlareLayer>();
-                Assert.False(coldLayer.VisibilityReady(cold, 10));
-                Assert.False(coldLayer.VisibilityReady(cold, 10));
-                Assert.True(coldLayer.VisibilityReady(cold, 11));
-                var warmLayer = warm.gameObject.AddComponent<FlareLayer>();
-                warm.enabled = false;
-                Assert.True(warmLayer.VisibilityReady(warm, 10));
-                Assert.True(warmLayer.VisibilityReady(warm, 11));
-            }
-            finally
-            {
-                ProjectInfo.UnityVersion = release;
-                Object.DestroyImmediate(cold.gameObject);
-                Object.DestroyImmediate(warm.gameObject);
-            }
-        }
-
-        [Fact]
         public void UnmeasuredReleaseRejectsOnlyTheMissingCameraRepair()
         {
             string release = ProjectInfo.UnityVersion;

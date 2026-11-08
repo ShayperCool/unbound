@@ -55,28 +55,12 @@ namespace UnityEngine
     [EnabledOnlySerializedState]
     public partial class FlareLayer : Behaviour
     {
-        int m_FirstVisibilityFrame = -1;
         internal FlareLayer() { }
-
-        internal override void OnEngineEnable()
-        {
-            m_FirstVisibilityFrame = GetComponent<Camera>()?.enabled == true ? int.MinValue : -1;
-        }
-
-        internal bool VisibilityReady(Camera camera, int frame)
-        {
-            if (!Compat.FlareCameraInitializationMeasured) return true;
-            // Enabling the layer with an enabled Camera initializes visibility immediately.
-            // A cold disabled Camera's first explicit render initializes it for later frames.
-            if (camera.enabled) m_FirstVisibilityFrame = int.MinValue;
-            else if (m_FirstVisibilityFrame == -1) m_FirstVisibilityFrame = frame;
-            return m_FirstVisibilityFrame != frame;
-        }
 
         internal static void RepairCamera(GameObject go, string path, bool persistent)
         {
             if (go.FindComponent<FlareLayer>() == null || go.FindComponent<Camera>() != null) return;
-            if (!Compat.FlareCameraInitializationMeasured)
+            if (!Compat.FlareCameraRepairMeasured)
                 throw new NotSupportedException("FlareLayer without Camera: load repair is measured only in Unity 6000.0.71f1 (tests/projects/flarelayerdependency)");
             var camera = ComponentFactory.Create(typeof(Camera), go);
             camera.IsPersistentAsset = persistent;

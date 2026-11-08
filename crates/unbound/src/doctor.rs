@@ -15,6 +15,7 @@ use std::{
 use unbound_project::Project;
 
 const RENDERING_LIMITATIONS: &[&str] = &[
+    "Editor asynchronous shader-compilation startup delays are not reproduced; the FlareLayer probe controls compilation synchronously.",
     "Mesh GraphicsBuffers support GetData and read-only shader/compute inputs. GPU mesh editing and SetData/CopyBuffer into mesh buffers are not supported; update the mesh CPU data instead.",
     "Rendering sprites with non-finite PixelPerfectRendering.pixelSnapSpacing is not supported; finite spacing and property get/set are supported.",
     "Game-view gizmo drawing and OnDrawGizmos/OnDrawGizmosSelected repaint callbacks are not supported. Gizmos state and calls outside those callbacks match the measured Play-mode API.",
@@ -472,7 +473,8 @@ mod tests {
             {"classId": 20, "fileId": 3, "typeName": "Camera", "body": {"m_GameObject": {"fileID": "20"}, "m_Enabled": "false"}},
             {"context": "projectSettings", "classId": 55, "fileId": 4, "typeName": "PhysicsManager", "body": {"m_Gravity": {"x": "0", "y": "-9.81", "z": "0", "ignored": "0"}, "ignored": "0"}},
             {"classId": 1, "fileId": 10, "typeName": "GameObject", "body": {}},
-            {"classId": 1, "fileId": 20, "typeName": "GameObject", "body": {}}
+            {"classId": 1, "fileId": 20, "typeName": "GameObject", "body": {}},
+            {"context": "projectSettings", "classId": 126, "fileId": 5, "typeName": "NavMeshProjectSettings", "body": {"areas": [{"name":"Walkable", "cost":"1", "unread":"0"}], "m_Settings":[{"agentRadius":"0.5", "unread":"0"}], "m_SettingNames":["Humanoid"], "unread":"0"}}
         ])).unwrap();
         assert!(
             dependencies[0]["dependency"]
@@ -490,6 +492,18 @@ mod tests {
         assert!(settings_reads.contains(&json!("m_Gravity.y")));
         assert!(!settings_reads.contains(&json!("m_Gravity.ignored")));
         assert!(!settings_reads.contains(&json!("ignored")));
+        let nav_reads = dependencies[6]["consumed"].as_array().unwrap();
+        for path in [
+            "areas[].name",
+            "areas[].cost",
+            "m_Settings[].agentRadius",
+            "m_SettingNames[]",
+        ] {
+            assert!(nav_reads.contains(&json!(path)), "{dependencies}");
+        }
+        for path in ["unread", "areas[].unread", "m_Settings[].unread"] {
+            assert!(!nav_reads.contains(&json!(path)), "{dependencies}");
+        }
         let read: serde_json::Value = runtime
             .call(
                 "field-coverage",

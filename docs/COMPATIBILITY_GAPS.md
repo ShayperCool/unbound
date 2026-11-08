@@ -141,10 +141,10 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       generated physics reader declarations, with JSON and human totals. Unread options remain
       "may change behaviour", including options that affect imported data; each no-runtime-effect
       exception carries a reason. Field consumption does not establish full feature parity.
-      Enabling FlareLayer on a disabled Camera leaves visibility cold until its first explicit
-      render; later frames can draw. Layers enabled with an enabled Camera are ready immediately.
-      Other releases' missing-Camera load behavior fails explicitly as unmeasured; their
-      existing immediate fade initialization is retained pending a reference.
+      The Camera probe controls asynchronous Editor shader compilation through ShaderUtil;
+      the first dark explicit frame in the original observation follows shader readiness, not a
+      fixed Camera initialization delay. Other releases' missing-Camera load repair fails
+      explicitly as unmeasured. Editor asynchronous shader-startup timing remains a follow-up.
       Bundle-scene load failures point to doctor. YAML `Sprite` documents (213)
       now read ordinary un-atlased geometry and references (`spriteassets`); rejected layouts
       are errors at load and listed by `unbound doctor`. `LightingSettings` (850595691) and

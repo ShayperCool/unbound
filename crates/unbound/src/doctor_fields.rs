@@ -589,6 +589,25 @@ mod tests {
     }
 
     #[test]
+    fn model_animation_inputs_use_the_same_decoder_as_the_importer() {
+        let mut value = unbound_yaml::parse_value("ModelImporter:\n  animations:\n    animationCompression: 0\n    motionNodeName: Root\n    unread: 0\n").unwrap();
+        let reads = unbound_yaml::reads::FieldReads::default();
+        reads.track(&mut value);
+        unbound_assets::meta::read_inputs(&value, "Standalone");
+        assert!(
+            reads
+                .paths()
+                .contains("ModelImporter.animations.animationCompression")
+        );
+        assert!(
+            reads
+                .paths()
+                .contains("ModelImporter.animations.motionNodeName")
+        );
+        assert!(!reads.paths().contains("ModelImporter.animations.unread"));
+    }
+
+    #[test]
     fn retained_but_unapplied_import_options_still_may_change_behaviour() {
         let mut body = unbound_yaml::parse_value(
             "AudioImporter:\n  forceToMono: 1\n  defaultSettings:\n    quality: 0.25\n    sampleRateSetting: 1\n    compressionFormat: 1\n",

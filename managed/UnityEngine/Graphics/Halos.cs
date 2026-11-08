@@ -168,7 +168,7 @@ namespace Unbound.Runtime
         {
             bool drawn = DrawHalos(camera, view);
             var layer = camera.GetComponent<FlareLayer>();
-            if (layer != null && layer.enabled && layer.VisibilityReady(camera, Time.frameCount)) drawn |= DrawFlares(camera, view, projection, viewport);
+            if (layer != null && layer.enabled) drawn |= DrawFlares(camera, view, projection, viewport);
             else ForgetCamera(camera);
             if (!drawn) return;
             if (camera.m_ReplacementShader != null)

@@ -108,7 +108,7 @@ namespace Unbound.Runtime
             // These registered Behaviour classes declare no serialized data beyond the
             // enabled flag that ReadComponent consumes for every Behaviour.
             if (type == typeof(FlareLayer))
-                return (ClassReading.Read, type.FullName + " (Behaviour enabled flag; requires Camera on the same GameObject; " + (Compat.FlareCameraInitializationMeasuredFor(release ?? ProjectInfo.UnityVersion) ? "creates a missing Camera on load with a warning" : "missing-Camera load repair is unmeasured for this release and rejected") + "; disabled cameras do not render automatically)");
+                return (ClassReading.Read, type.FullName + " (Behaviour enabled flag; requires Camera on the same GameObject; " + (Compat.FlareCameraRepairMeasuredFor(release ?? ProjectInfo.UnityVersion) ? "creates a missing Camera on load with a warning" : "missing-Camera load repair is unmeasured for this release and rejected") + "; disabled cameras do not render automatically)");
             if (type.IsDefined(typeof(EnabledOnlySerializedStateAttribute), inherit: false))
                 return (ClassReading.Read, type.FullName + " (Behaviour enabled flag)");
             if (Reads(type)) return (ClassReading.Read, type.FullName);

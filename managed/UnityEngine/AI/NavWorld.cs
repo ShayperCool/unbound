@@ -503,7 +503,7 @@ namespace Unbound.Runtime
             if (Agents.Count == 0) Agents.Add(("Humanoid", NavMeshBuildSettings.Default));
         }
 
-        static void Read(YNode body)
+        internal static void Read(YNode body)
         {
             int i = 0;
             foreach (var area in body.Get("areas")?.Seq() ?? Array.Empty<YNode>())

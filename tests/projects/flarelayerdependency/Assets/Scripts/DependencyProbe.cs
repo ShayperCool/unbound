@@ -6,6 +6,7 @@ using UnityEngine;
 public class DependencyProbe : MonoBehaviour
 {
     public static Action Finished;
+    public static Action<Camera> ManualRenderOverride;
     string output;
     static string B(bool value) => value ? "true" : "false";
     void Record(string key, bool value) => File.AppendAllText(output, key + "=" + B(value) + "\n");
@@ -55,17 +56,22 @@ public class DependencyProbe : MonoBehaviour
         Record("disabled.staysDisabled", !camera.enabled);
         for (int i = 0; i < 5; i++) yield return new WaitForEndOfFrame();
         Record("disabled.automaticDraws", Lit(target));
-        camera.Render();
+        ManualRender(camera);
         Record("disabled.manualDraws", Lit(target));
-        for (int i = 0; i < 5; i++) { camera.Render(); yield return new WaitForEndOfFrame(); }
+        for (int i = 0; i < 5; i++)
+        {
+            ManualRender(camera);
+            yield return new WaitForEndOfFrame();
+            Record("disabled.manual.f" + (i + 1), Lit(target));
+        }
         File.AppendAllText(Path.Combine(Path.GetDirectoryName(output), "init-trace.txt"), "afterFiveExplicitRenders=" + B(Lit(target)) + "\n");
-        for (int i = 0; i < 55; i++) { camera.Render(); yield return new WaitForEndOfFrame(); }
+        for (int i = 0; i < 55; i++) { ManualRender(camera); yield return new WaitForEndOfFrame(); }
         Record("disabled.repeatedManualDraws", Lit(target));
         camera.enabled = true;
         for (int i = 0; i < 5; i++) yield return new WaitForEndOfFrame();
         Record("enabled.draws", Lit(target));
         camera.enabled = false;
-        camera.Render();
+        ManualRender(camera);
         Record("disabled.warmManualDraws", Lit(target));
         camera.enabled = true;
         camera.GetComponent<FlareLayer>().enabled = false;
@@ -76,7 +82,7 @@ public class DependencyProbe : MonoBehaviour
         coldCamera.transform.position = camera.transform.position;
         coldCamera.gameObject.AddComponent<FlareLayer>();
         camera.enabled = false;
-        coldCamera.Render();
+        ManualRender(coldCamera);
         Record("coldEnabled.manualFirstDraws", Lit(target));
         yield return new WaitForEndOfFrame();
         Record("coldEnabled.firstDraws", Lit(target));
@@ -87,7 +93,7 @@ public class DependencyProbe : MonoBehaviour
         newFlare.flare = Resources.Load<Flare>("S20");
         newFlare.brightness = 1;
         newFlare.fadeSpeed = 1000;
-        coldCamera.Render();
+        ManualRender(coldCamera);
         Record("warmCamera.newSourceManualFirstDraws", Lit(target));
         yield return new WaitForEndOfFrame();
         Record("warmCamera.newSourceFirstDraws", Lit(target));
@@ -96,7 +102,7 @@ public class DependencyProbe : MonoBehaviour
         flagCamera.transform.position = coldCamera.transform.position;
         flagCamera.gameObject.AddComponent<FlareLayer>();
         flagCamera.enabled = false;
-        flagCamera.Render();
+        ManualRender(flagCamera);
         Record("enabledThenDisabled.manualFirstDraws", Lit(target));
         coldCamera.enabled = false;
         newFlare.enabled = false;
@@ -104,11 +110,16 @@ public class DependencyProbe : MonoBehaviour
         disabledNewFlare.flare = Resources.Load<Flare>("S20");
         disabledNewFlare.brightness = 1;
         disabledNewFlare.fadeSpeed = 1000;
-        coldCamera.Render();
+        ManualRender(coldCamera);
         Record("warmDisabledCamera.newSourceManualFirstDraws", Lit(target));
         Application.logMessageReceived -= log;
         Record("complete", true);
         if (Finished != null) Finished(); else Application.Quit();
+    }
+    static void ManualRender(Camera camera)
+    {
+        if (ManualRenderOverride != null) ManualRenderOverride(camera);
+        else camera.Render();
     }
     static bool Lit(RenderTexture target)
     {

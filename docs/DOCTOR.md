@@ -48,7 +48,7 @@ including inherited fields, former names and managed references.
 Rust map access capture follows cloned nodes through the binary conversions. Importer metadata
 runs through the actual texture, sprite, model, audio, font and plugin metadata readers, without
 loading source geometry, decoding media or loading plugins. Startup settings use a scoped file
-collector around the ordinary readers. Managed physics settings use the same generated reader
+collector around the ordinary readers. Managed physics and navigation settings use the same generated reader
 declarations as serialized assets. Removing a read exposes the field in the next report.
 Reader annotations keep retained-but-unapplied import effects visible, including lossy audio
 quality/compression and the currently unapplied Optimize sample-rate selection. These are

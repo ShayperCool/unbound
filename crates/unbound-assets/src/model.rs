@@ -1166,14 +1166,12 @@ impl<'a> Builder<'a> {
         // Compression Off keeps a key on every frame from the clip's first one, with smooth
         // tangents; the reducing modes are approximated by the baker's (nearly lossless) key
         // reduction with linear tangents.
-        let every_frame = int(imp, "animations.animationCompression") == Some(0);
+        let every_frame = animation_compression_off(imp);
         // The root node of a generic avatar (`motionNodeName`): its motion relative to the model's
         // root becomes the clips' MotionT/MotionQ curves on the Animator, which root motion uses
         // (measured, tests/projects/modelroot). Without an avatar there is none. Humanoid clips
         // move the root through their body curves; a root node there is not supported.
-        let motion_node = imp
-            .path("animations.motionNodeName")
-            .and_then(Value::as_str)
+        let motion_node = motion_node_name(imp)
             .filter(|name| !name.is_empty() && self.settings.avatar_setup != 0)
             .filter(|name| {
                 let generic = self.settings.animation_type == 2;
@@ -3093,4 +3091,15 @@ pub(crate) fn read_metadata_inputs(imp: &Value) {
     let _ = FileIdTable::read(imp);
     let _ = clip_ranges(imp);
     let _ = material_remaps(imp);
+    let _ = animation_compression_off(imp);
+    let _ = motion_node_name(imp);
+}
+
+fn animation_compression_off(imp: &Value) -> bool {
+    int(imp, "animations.animationCompression") == Some(0)
+}
+
+fn motion_node_name(imp: &Value) -> Option<&str> {
+    imp.path("animations.motionNodeName")
+        .and_then(Value::as_str)
 }

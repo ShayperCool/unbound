@@ -66,6 +66,7 @@ namespace Unbound.Runtime
                     {
                         if (doc.ClassId == 55) Schema(typeof(Physics), nameof(Physics.ReadSettings), 1);
                         if (doc.ClassId == 19) Schema(typeof(Physics2D), nameof(Physics2D.ReadSettings), 1);
+                        if (doc.ClassId == 126) Schema(typeof(NavMeshAreas), nameof(NavMeshAreas.Read), 1);
                     }
                     else switch (doc.ClassId)
                     {
@@ -115,7 +116,7 @@ namespace Unbound.Runtime
                             {
                                 if (!owners.TryGetValue((doc.FileGuid ?? "", owner), out bool inherited) || inherited)
                                     result.Dependency = "Camera dependency unresolved: owner or inherited components require prefab expansion";
-                                else result.Dependency = Compat.FlareCameraInitializationMeasured
+                                else result.Dependency = Compat.FlareCameraRepairMeasured
                                     ? "Camera missing: loader creates Camera and warns, as in the Unity 6000.0.71f1 Editor"
                                     : "Camera missing: load repair is unmeasured for this release and the loader rejects it";
                             }

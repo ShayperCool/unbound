@@ -27,6 +27,9 @@ def main():
     control = project/'Assets/CoverageControl.prefab'
     control.write_text('%YAML 1.1\n--- !u!1 &1\nGameObject:\n  m_Name: control\n  m_Component:\n  - component: {fileID: 4}\n--- !u!4 &4\nTransform:\n  m_GameObject: {fileID: 1}\n  doctorUnknownControl: 0\n  m_EditorHideFlags: 0\n')
     control.with_suffix('.prefab.meta').write_text(meta.format('5930f18ef0614ba3a17eacfa090b1593'))
+    model = project/'Assets/DoctorModel.obj'
+    model.write_text('v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n')
+    model.with_suffix('.obj.meta').write_text('fileFormatVersion: 2\nguid: c4bb026c034d4db5b3932acd97f3f6a9\nModelImporter:\n  animations:\n    animationCompression: 0\n    motionNodeName: Root\n    doctorUnreadModelAnimation: 0\n')
     texture = project/'Assets/DoctorTexture.png'
     shutil.copy2(ROOT.parent/'flares/Assets/Resources/Uv.png', texture)
     texture.with_suffix('.png.meta').write_text('fileFormatVersion: 2\nguid: 05770d8bc6a958fc2f2d162a2f819175\nTextureImporter:\n  mipmaps:\n    enableMipMap: 0\n  doctorUnknownImporter: 0\n')
@@ -71,6 +74,14 @@ def main():
             problems.append(category + ': metadata exception without reason')
     if not any(field['path'] == 'doctorUnknownJsonSettings' for field in report['projectSettingsFields']['unreadMayChangeBehaviour']):
         problems.append('JSON package settings field is missing')
+    importer_unread = {field['path'] for field in report['importerFields']['unreadMayChangeBehaviour']}
+    if 'ModelImporter.animations.doctorUnreadModelAnimation' not in importer_unread:
+        problems.append('model animation unknown-field control missing')
+    if importer_unread & {'ModelImporter.animations.animationCompression', 'ModelImporter.animations.motionNodeName'}:
+        problems.append('actual model animation readers omitted')
+    nav_unread = [field['path'] for field in report['projectSettingsFields']['unreadMayChangeBehaviour'] if field['typeName'] == 'NavMeshProjectSettings']
+    if any(path in {'areas[].name', 'areas[].cost', 'm_Settings[].agentRadius', 'm_SettingNames[]'} for path in nav_unread):
+        problems.append('navigation settings readers omitted')
     for problem in problems:
         print(problem)
     print(f"field coverage: {fields['objects']} objects, {len(problems)} problems; {out}")
