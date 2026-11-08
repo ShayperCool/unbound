@@ -32,6 +32,9 @@ def read(path):
 
 
 def near(x, y):
+    # A NaN matches only a NaN (a bake can hold NaN vertices); finite values keep the bound.
+    if x != x or y != y:
+        return x != x and y != y
     return abs(x - y) <= TOLERANCE + TOLERANCE * abs(x)
 
 

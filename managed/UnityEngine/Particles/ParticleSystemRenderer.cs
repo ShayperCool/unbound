@@ -229,9 +229,21 @@ namespace UnityEngine
                 pose = system.SimulationToWorld();
                 if ((options & ParticleSystemBakeMeshOptions.BakePosition) == 0) pose.m03 = pose.m13 = pose.m23 = 0f;
             }
-            if (!m_Geometry.Build(this, system, view, pose)) return;
+            m_Geometry.Baking = true;
+            try
+            {
+                if (!m_Geometry.Build(this, system, view, pose)) return;
+            }
+            finally { m_Geometry.Baking = false; }
+            // The Editor gathers the baked vertices' bounds in order, a NaN vertex replacing them
+            // and the next finite one replacing that again: a mesh whose last vertex is NaN (a
+            // freeform particle at rest drawn last) has no valid bounds and bakes empty
+            // (6000.0.71f1, tests/projects/particlerender freemove/*/rest*, stretch/*freeform*).
+            if (m_Geometry.VertexCount > 0 && !IsFinite(m_Geometry.Positions[m_Geometry.VertexCount - 1])) return;
             m_Geometry.WriteTo(mesh, Matrix4x4.identity);
         }
+
+        static bool IsFinite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
 
         public void BakeTrailsMesh(Mesh mesh, ParticleSystemBakeMeshOptions options) => BakeTrailsMesh(mesh, Camera.main, options);
 
@@ -611,6 +623,8 @@ namespace UnityEngine
         /// <summary>Builds the particles' vertices for one view, reusing its buffers.</summary>
         internal sealed partial class Geometry
         {
+            /// <summary>The build is for a bake (BakeMesh, BakeTexture), not for drawing.</summary>
+            internal bool Baking;
             internal Vector3[] Positions = new Vector3[64];
             internal Vector3[] Normals = new Vector3[64];
             internal Color32[] Colors = new Color32[64];
@@ -859,7 +873,7 @@ namespace UnityEngine
                             quadSize *= factor; size = clamped;
                         }
                         if (r.m_RenderMode == ParticleSystemRenderMode.Stretch)
-                            AddStretched(r, position, quadSize, scale, outputRotation, p.m_Velocity + p.m_AnimatedVelocity, color, uvRect, view);
+                            AddStretched(r, position, quadSize, scale, outputRotation, p.m_Velocity + p.m_AnimatedVelocity, p.m_Rotation.z, color, uvRect, view);
                         else
                             AddQuad(r, position, quadSize, scale, rotation, systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
                     }
@@ -1135,18 +1149,20 @@ namespace UnityEngine
             /// camera's plane); the pivot moves it by pivot.x sizes along the stretch and pivot.y
             /// twice the size across. Corners: head and tail on one side, then tail and head on the other, u along
             /// the length from 0 at the head; the normal faces back along the view. With no stretch
-            /// direction (at rest) the quad collapses onto the particle. Freeform stretching centres
-            /// the quad on the particle and turns it about the stretch axis towards the camera
-            /// (approximate: the Editor's freeform geometry is only partly measured).</summary>
+            /// direction (at rest) the quad collapses onto the particle. Freeform stretching: see
+            /// <see cref="AddFreeform"/>.</summary>
             void AddStretched(ParticleSystemRenderer r, Vector3 position, Vector3 size, Vector3 emitterScale, Quaternion toOutput,
-                Vector3 localVelocity, Color32 color, Rect uv, View view)
+                Vector3 localVelocity, float rotation, Color32 color, Rect uv, View view)
             {
                 // The quad is built along the simulation's axes and turned into the output space.
                 var fromOutput = Quaternion.Inverse(toOutput);
                 var v = localVelocity - fromOutput * view.Velocity * r.m_CameraVelocityScale;
                 float speed = v.magnitude;
-                Reserve(VertexCount + 4, IndexCount + 6);
-                int start = VertexCount;
+                if (r.m_FreeformStretching)
+                {
+                    AddFreeform(r, position, size, emitterScale, toOutput * v, speed, rotation, color, uv, view);
+                    return;
+                }
                 Vector3 c0, c1, c2, c3;
                 // A collapsed quad's normal is the view direction (measured).
                 var normal = view.Forward;
@@ -1157,7 +1173,7 @@ namespace UnityEngine
                     // The length takes the emitter's x scale; the width the scale along its axis
                     // (measured with a rotated, non-uniformly scaled emitter, stretch/transform).
                     var stretch = toOutput * (v / speed * (size.y * Mathf.Abs(emitterScale.x) * r.m_LengthScale + speed * r.m_VelocityScale));
-                    var axis = r.m_FreeformStretching ? FreeformSide(stretch, position, view) : ScreenSide(stretch, position, view);
+                    var axis = ScreenSide(stretch, position, view);
                     float width = StretchedWidth(r, view, position, size.x);
                     var half = toOutput * Vector3.Scale(fromOutput * axis * (width * 0.5f), emitterScale);
                     // The pivot in particle sizes: x along the stretch, y across it in two sizes
@@ -1165,17 +1181,22 @@ namespace UnityEngine
                     var along = stretch.sqrMagnitude > 0f ? stretch.normalized : Vector3.zero;
                     var pivot = along * (r.m_Pivot.x * width * Mathf.Abs(emitterScale.x)) + half * (4f * r.m_Pivot.y);
                     var head = position + pivot;
-                    if (r.m_FreeformStretching) head += stretch * 0.5f;
                     c0 = head + half;
                     c1 = head - stretch + half;
                     c2 = head - stretch - half;
                     c3 = head - half;
-                    if (r.m_FreeformStretching) { var t = c0; c0 = c3; c3 = t; t = c1; c1 = c2; c2 = t; }
                     // The quad's own normal, turned towards the camera.
                     var face = Vector3.Cross(half, stretch);
                     var toCamera = view.Orthographic ? -view.Forward : view.Position - position;
                     if (face.sqrMagnitude > 1e-20f) normal = (Vector3.Dot(face, toCamera) < 0f ? -face : face).normalized;
                 }
+                AddStretchedCorners(c0, c1, c2, c3, normal, color, uv);
+            }
+
+            void AddStretchedCorners(Vector3 c0, Vector3 c1, Vector3 c2, Vector3 c3, Vector3 normal, Color32 color, Rect uv)
+            {
+                Reserve(VertexCount + 4, IndexCount + 6);
+                int start = VertexCount;
                 Positions[VertexCount] = c0; Uvs[VertexCount++] = new Vector4(uv.x, uv.y + uv.height, 0f, 0f);
                 Positions[VertexCount] = c1; Uvs[VertexCount++] = new Vector4(uv.x + uv.width, uv.y + uv.height, 0f, 0f);
                 Positions[VertexCount] = c2; Uvs[VertexCount++] = new Vector4(uv.x + uv.width, uv.y, 0f, 0f);
@@ -1186,6 +1207,53 @@ namespace UnityEngine
                     Colors[i] = color;
                 }
                 AddQuadIndices(start);
+            }
+
+            /// <summary>A freeform stretched particle (6000.0.71f1, tests/projects/particlerender
+            /// freemove/*, camvel/*/freeform): a quad of the particle's size facing the camera's
+            /// position (its right across the camera's up and the direction to the camera), turned by
+            /// the particle's rotation plus, with rotateWithStretchDirection, the angle of the stretch
+            /// direction in that quad's plane; the pivot moves it pivot.x sizes along the quad's
+            /// right, pivot.y along its up and pivot.z away from the camera; then the whole quad is
+            /// scaled along the stretch direction by the stretched length over the size
+            /// (size.y × lengthScale × the emitter's x scale + speed × velocityScale). Corners in
+            /// the stretched billboard's uv order; the normal points at the camera (exact for
+            /// unstretched quads; a stretched quad's normal in the Editor leans by an unresolved
+            /// rule, COMPATIBILITY_GAPS). A particle at rest has no stretch direction: the Editor's
+            /// bake gives it NaN corners (drawn as nothing) and the view direction as normal, which
+            /// Unbound keeps for bakes and collapses onto the particle for drawing.
+            /// Rotated or non-uniformly scaled emitters are not matched (freemove/transform_freeform,
+            /// COMPATIBILITY_GAPS).</summary>
+            void AddFreeform(ParticleSystemRenderer r, Vector3 position, Vector3 size, Vector3 emitterScale, Vector3 stretchVelocity,
+                float speed, float rotation, Color32 color, Rect uv, View view)
+            {
+                var toCamera = view.Orthographic ? -view.Forward : (view.Position - position).normalized;
+                if (!(speed > 0f))
+                {
+                    var rest = Baking ? new Vector3(float.NaN, float.NaN, float.NaN) : position;
+                    // Its normal is the view direction, as a collapsed stretched quad's.
+                    AddStretchedCorners(rest, rest, rest, rest, view.Forward, color, uv);
+                    return;
+                }
+                var right = Vector3.Cross(view.Up, toCamera).normalized;
+                var up = Vector3.Cross(toCamera, right);
+                float angle = rotation;
+                if (r.m_RotateWithStretchDirection)
+                    angle += Mathf.Atan2(Vector3.Dot(stretchVelocity, up), Vector3.Dot(stretchVelocity, right));
+                float cos = Mathf.Cos(angle), sin = Mathf.Sin(angle);
+                var quadRight = cos * right + sin * up;
+                var quadUp = cos * up - sin * right;
+                var direction = stretchVelocity / stretchVelocity.magnitude;
+                float length = size.y * Mathf.Abs(emitterScale.x) * r.m_LengthScale + speed * r.m_VelocityScale;
+                // The scale along the stretch direction (a zero size has no extent to scale).
+                float along = size.y != 0f ? length / size.y - 1f : 0f;
+                var pivot = -r.m_Pivot.x * size.x * quadRight + r.m_Pivot.y * size.y * quadUp - r.m_Pivot.z * size.x * toCamera;
+                Vector3 Corner(float x, float y)
+                {
+                    var offset = quadRight * (x * size.x * 0.5f) + quadUp * (y * size.y * 0.5f) + pivot;
+                    return position + offset + direction * (Vector3.Dot(direction, offset) * along);
+                }
+                AddStretchedCorners(Corner(1f, 1f), Corner(-1f, 1f), Corner(-1f, -1f), Corner(1f, -1f), toCamera, color, uv);
             }
 
             /// <summary>The width min/maxParticleSize allow a stretched billboard: as a fraction of
@@ -1222,15 +1290,6 @@ namespace UnityEngine
                     sy = uy * cz - cy * uz;
                 }
                 var side = view.Right * sy - view.Up * sx;
-                float length = side.magnitude;
-                return length > 1e-12f ? side / length : Vector3.zero;
-            }
-
-            /// <summary>Freeform stretching: across the stretch axis, facing the camera.</summary>
-            static Vector3 FreeformSide(Vector3 stretch, Vector3 position, View view)
-            {
-                var toCamera = view.Orthographic ? -view.Forward : view.Position - position;
-                var side = Vector3.Cross(stretch, toCamera);
                 float length = side.magnitude;
                 return length > 1e-12f ? side / length : Vector3.zero;
             }

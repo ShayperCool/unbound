@@ -62,7 +62,12 @@ namespace UnityEngine
                 if (ps.m_Main.simulationSpace != ParticleSystemSimulationSpace.World && rotationAndScale)
                     pose = BakePose(ps, position);
                 geometry = m_Geometry;
-                if (!geometry.Build(this, ps, view, pose)) return 0;
+                geometry.Baking = true;
+                try
+                {
+                    if (!geometry.Build(this, ps, view, pose)) return 0;
+                }
+                finally { geometry.Baking = false; }
             }
             if (geometry.VertexCount == 0) return 0;
 
