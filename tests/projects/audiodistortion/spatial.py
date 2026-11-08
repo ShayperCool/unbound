@@ -22,13 +22,15 @@ def cases(profile="spatial"):
 def verify(root, release, rate, profile="spatial"):
     meta = header(root)
     assert meta['release'] == release and meta['rate'] == rate
+    if profile == 'spatial':
+        assert math.isfinite(meta['captureDeltaTime']) and 0 < meta['captureDeltaTime'] <= 1024/rate
     for case in cases(profile):
         for suffix in SUFFIXES:
             record = meta[case+suffix]
             assert record == dict(file=case+suffix+'.f32', frames=BLOCKS*1024, channels=2), case+suffix
             values = samples(root, record)
             assert len(values) == BLOCKS*1024*2 and all(map(math.isfinite, values)), case+suffix
-            silent = case in {f'spatial_dry_gain_{mode}_{distance}'
+            silent = (suffix == '.master' and '_unrouted_' in case) or case in {f'spatial_dry_gain_{mode}_{distance}'
                               for mode in ('linear', 'custom') for distance in (20, 30, 100)}
             if silent:
                 assert all(v == 0 for v in values), case+suffix

@@ -328,6 +328,13 @@ public class EffectProbe : MonoBehaviour
         new[] { "spatial_dry_velocity_listener_v40_l1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=1", "speed=40", "listenermove=1" },
         new[] { "spatial_dry_velocity_listener_v40_l2", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=2", "speed=40", "listenermove=1" },
         new[] { "spatial_dry_dual_velocity", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=40", "doppler=1", "speed=20", "move=1", "listenermove=1" },
+        new[] { "spatial_dry_body_source_dynamic", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=10000", "rolloff=custom", "curve=flat", "body=source", "bodykind=dynamic", "warm=1" },
+        new[] { "spatial_dry_body_source_kinematic", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=10000", "rolloff=custom", "curve=flat", "body=source", "bodykind=kinematic", "move=1", "warm=1" },
+        new[] { "spatial_dry_body_source_auto", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=10000", "rolloff=custom", "curve=flat", "body=source", "bodykind=auto", "warm=1" },
+        new[] { "spatial_dry_body_listener_kinematic", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=10000", "rolloff=custom", "curve=flat", "body=listener", "bodykind=kinematic", "listenermove=1", "warm=1" },
+        new[] { "spatial_dry_supersonic_away", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,20", "max=10000", "head=1", "move=1", "speed=-400", "warm=1" },
+        new[] { "spatial_dry_supersonic_towards", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=0,0,2000", "max=10000", "head=1", "move=1", "speed=10000", "warm=1" },
+        new[] { "spatial_dry_boundary_unrouted_pitch", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "blend=0", "pitch=1.5", "frames=4096", "cliprate=44100", "route=none", "warm=1" },
     };
     public const int BlockCount = 32;
     public const int ClipFrames = BlockCount * 1024;
@@ -370,11 +377,12 @@ public class EffectProbe : MonoBehaviour
         Application.Quit(code);
 #endif
     }
-    void FlushEngine(float deltaTime = 0)
+    void FlushEngine(float deltaTime = 0, bool fixedMotion = false)
     {
         var assembly = Type.GetType("Unbound.Runtime.AudioBackend, UnityEngine.CoreModule", true).Assembly;
         typeof(Time).GetField("s_RealDeltaTime", Flags).SetValue(null, (double)deltaTime);
         typeof(Time).GetField("s_DeltaTime", Flags).SetValue(null, deltaTime);
+        if (fixedMotion) assembly.GetType("Unbound.Runtime.AudioSystem").GetMethod("FixedUpdate", Flags).Invoke(null, null);
         assembly.GetType("Unbound.Runtime.AudioSystem").GetMethod("Update", Flags).Invoke(null, null);
     }
     System.Collections.IEnumerator Start()
@@ -463,6 +471,8 @@ public class EffectProbe : MonoBehaviour
         if (!AudioRenderer.Start()) throw new Exception("AudioRenderer.Start failed");
         var sinks = new List<NativeArray<float>>();
         var records = new List<string> { "\"release\":\"" + Application.unityVersion + "\"", "\"rate\":" + rate };
+        if (Environment.GetEnvironmentVariable("EFFECT_PROBE_PROFILE") == "spatial")
+            records.Add("\"captureDeltaTime\":" + Time.captureDeltaTime.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
         void Save() => File.WriteAllText(Path.Combine(output, "capture.json"), "{" + string.Join(",", records) + "}\n");
         Save();
         foreach (string key in Selected()) {
@@ -537,6 +547,18 @@ public class EffectProbe : MonoBehaviour
                 source.SetCustomCurve(type, curve);
                 if (type == AudioSourceCurveType.CustomRolloff) source.rolloffMode = AudioRolloffMode.Custom;
             }
+            Rigidbody body = null;
+            string bodyTarget = Option(key, "body=", "");
+            string bodyKind = Option(key, "bodykind=", "dynamic");
+            if (bodyTarget != "") {
+                body = (bodyTarget == "source" ? go : gameObject).AddComponent<Rigidbody>();
+                body.useGravity = false; body.linearDamping = 0;
+                body.isKinematic = bodyKind == "kinematic";
+                if (!body.isKinematic) body.linearVelocity = new Vector3(0, 0, bodyTarget == "source" ? -20 : 20);
+                var mode = bodyKind == "auto" ? AudioVelocityUpdateMode.Auto : AudioVelocityUpdateMode.Dynamic;
+                if (bodyTarget == "source") source.velocityUpdateMode = mode;
+                else GetComponent<AudioListener>().velocityUpdateMode = mode;
+            }
             GameObject zone = null;
             if (Option(key, "zone=", "0") == "1") {
                 zone = new GameObject("zone");
@@ -553,7 +575,7 @@ public class EffectProbe : MonoBehaviour
             if (clipFrames != ClipFrames) Array.Resize(ref data, clipFrames * channels);
             if (!clip.SetData(data, 0)) throw new Exception("SetData failed");
             source.clip = clip;
-            if (Option(key, "listenermove=", "0") == "1") {
+            if (Option(key, "listenermove=", "0") == "1" || Option(key, "warm=", "0") == "1") {
                 if (Engine) FlushEngine();
                 else yield return null;
             }
@@ -588,7 +610,8 @@ public class EffectProbe : MonoBehaviour
                     if (Option(key, "listenermove=", "0") == "1") {
                         transform.position += new Vector3(0, 0, Number(Option(key, "speed=", "20")) * 1024 / rate);
                     }
-                    if (Engine && (Option(key, "move=", "0") == "1" || Option(key, "listenermove=", "0") == "1")) FlushEngine(1024f / rate);
+                    if (Engine && (Option(key, "move=", "0") == "1" || Option(key, "listenermove=", "0") == "1")) FlushEngine(Time.captureDeltaTime);
+                    if (Engine && bodyTarget != "" && Option(key, "move=", "0") != "1" && Option(key, "listenermove=", "0") != "1") FlushEngine(Time.captureDeltaTime, bodyKind == "auto");
                     if (!Engine) yield return null;
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false })) throw new Exception("AddMixerGroupSink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("AudioRenderer.Render failed");
@@ -602,6 +625,7 @@ public class EffectProbe : MonoBehaviour
             source.Stop(); DestroyImmediate(go); DestroyImmediate(clip);
             if (second) DestroyImmediate(second);
             if (zone) DestroyImmediate(zone);
+            if (bodyTarget == "listener") { DestroyImmediate(body); GetComponent<AudioListener>().velocityUpdateMode = AudioVelocityUpdateMode.Dynamic; }
             foreach (var component in listenerComponents) DestroyImmediate(component);
         }
         AudioRenderer.Stop(); foreach (var sink in sinks) sink.Dispose(); Save(); Exit(0);
