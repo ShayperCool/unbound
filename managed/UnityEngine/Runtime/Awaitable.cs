@@ -202,7 +202,7 @@ namespace UnityEngine
         public static Awaitable WaitForSecondsAsync(float seconds, CancellationToken cancellationToken = default)
         {
             var awaitable = new Awaitable();
-            AwaitableScheduler.AtTime(awaitable, Time.TimeAsDoubleNoCheck + seconds);
+            AwaitableScheduler.AtTime(awaitable, FrameTimedWait.Start(seconds));
             awaitable.WatchCancellation(cancellationToken);
             return awaitable;
         }
@@ -561,7 +561,7 @@ namespace Unbound.Runtime
     internal static class AwaitableScheduler
     {
         static readonly List<(Awaitable Awaitable, int Frame)> s_NextFrame = new List<(Awaitable, int)>();
-        static readonly List<(Awaitable Awaitable, double Time)> s_Timed = new List<(Awaitable, double)>();
+        static readonly List<(Awaitable Awaitable, FrameTimedWait Wait)> s_Timed = new List<(Awaitable, FrameTimedWait)>();
         static readonly List<Awaitable> s_FixedUpdate = new List<Awaitable>();
         static readonly List<Awaitable> s_EndOfFrame = new List<Awaitable>();
         static bool s_Registered;
@@ -576,7 +576,7 @@ namespace Unbound.Runtime
         }
 
         internal static void NextFrame(Awaitable awaitable, int frame) { EnsureRegistered(); s_NextFrame.Add((awaitable, frame)); }
-        internal static void AtTime(Awaitable awaitable, double time) { EnsureRegistered(); s_Timed.Add((awaitable, time)); }
+        internal static void AtTime(Awaitable awaitable, FrameTimedWait wait) { EnsureRegistered(); s_Timed.Add((awaitable, wait)); }
         internal static void FixedUpdate(Awaitable awaitable) { EnsureRegistered(); s_FixedUpdate.Add(awaitable); }
         internal static void EndOfFrame(Awaitable awaitable) { EnsureRegistered(); s_EndOfFrame.Add(awaitable); }
 
@@ -591,15 +591,26 @@ namespace Unbound.Runtime
 
         internal static void RunUpdate()
         {
-            var due = new List<Awaitable>();
-            foreach (var (a, frame) in s_NextFrame)
-                if (frame < Time.frameCount) due.Add(a);
-            foreach (var (a, time) in s_Timed)
-                if (time <= Time.timeAsDouble) due.Add(a);
-            Complete(due);
+            if (s_NextFrame.Count == 0 && s_Timed.Count == 0) return;
+            var due = Playables.Scratch<Awaitable>.Rent();
+            try
+            {
+                foreach (var (a, frame) in s_NextFrame)
+                    if (frame < Time.frameCount) due.Add(a);
+                foreach (var (a, wait) in s_Timed)
+                    if (wait.IsOver) due.Add(a);
+                Complete(due);
+            }
+            finally { Playables.Scratch<Awaitable>.Return(due); }
         }
 
-        internal static void RunFixedUpdate() => Complete(new List<Awaitable>(s_FixedUpdate));
+        internal static void RunFixedUpdate()
+        {
+            if (s_FixedUpdate.Count == 0) return;
+            var due = Playables.Scratch<Awaitable>.Rent(s_FixedUpdate);
+            try { Complete(due); }
+            finally { Playables.Scratch<Awaitable>.Return(due); }
+        }
 
         static void RunLegacyEndOfFrame()
         {

@@ -7,8 +7,8 @@ namespace Unbound.Runtime
 {
     /// <summary>
     /// Coroutines with Unity's timing: a routine runs at once until its first yield; `null` and
-    /// unknown values resume after the next Update; WaitForSeconds after its scaled time (checked
-    /// after Update); WaitForFixedUpdate after the physics step; WaitForEndOfFrame after rendering; a
+    /// unknown values resume after the next Update; WaitForSeconds as <see cref="FrameTimedWait"/>
+    /// says (checked after Update); WaitForFixedUpdate after the physics step; WaitForEndOfFrame after rendering; a
     /// Coroutine or nested IEnumerator when it finishes, in the next frame at the earliest when it
     /// ends without waiting; AsyncOperation when done (the first routine to yield a running one
     /// as it completes, the others after the next Update); a CustomYieldInstruction when keepWaiting
@@ -169,6 +169,34 @@ namespace Unbound.Runtime
         internal static void Reset() => s_Running.Clear();
     }
 
+    /// <summary>
+    /// A wait of scaled seconds: a coroutine's WaitForSeconds and Awaitable.WaitForSecondsAsync. It
+    /// counts from the time of the frame it starts in, also when it starts in a fixed step (where
+    /// Time.time reads the fixed clock), and it is over at the first check in a later frame whose time
+    /// has reached that start plus the delay. So no such wait ends in the frame that started it, not
+    /// even a zero or negative one. Unity 6000.0 documents for WaitForSeconds that the coroutine
+    /// continues "on the first frame after 't' seconds has passed"; the start point is measured
+    /// (6000.0.71f1, tests/projects/waitforseconds: at 0.125 s per frame, 0 and -1 s resume one
+    /// frame later and 0.3 s three frames later wherever in the frame they start; a 0.2 s wait
+    /// started in a 250 ms frame resumes in the next frame, so a long frame does not move the start).
+    /// </summary>
+    internal readonly struct FrameTimedWait
+    {
+        readonly int m_Frame;
+        readonly double m_Until;
+
+        FrameTimedWait(int frame, double until)
+        {
+            m_Frame = frame;
+            m_Until = until;
+        }
+
+        /// <summary>Starts now; safe off the main thread (an awaitable may be created there).</summary>
+        internal static FrameTimedWait Start(float seconds) => new FrameTimedWait(Time.s_FrameCount, Time.s_Time + seconds);
+
+        internal bool IsOver => Time.s_FrameCount > m_Frame && Time.s_Time >= m_Until;
+    }
+
     internal static class Invokes
     {
         sealed class Entry
@@ -247,7 +275,7 @@ namespace UnityEngine
         internal IEnumerator Root;
         internal bool Done;
         object m_Waiting;
-        double m_WaitUntil;
+        Unbound.Runtime.FrameTimedWait m_Timed;
         int m_WaitFrame;
 
         internal Coroutine() { }
@@ -265,7 +293,7 @@ namespace UnityEngine
             switch (instruction)
             {
                 case WaitForSeconds seconds:
-                    m_WaitUntil = Time.timeAsDouble + seconds.m_Seconds;
+                    m_Timed = Unbound.Runtime.FrameTimedWait.Start(seconds.m_Seconds);
                     break;
                 case AsyncOperation operation when !operation.isDone && (operation.m_Waiter == null || operation.m_Waiter.Done):
                     operation.m_Waiter = this;
@@ -284,7 +312,7 @@ namespace UnityEngine
                 case WaitForEndOfFrame _:
                     return phase == Unbound.Runtime.Coroutines.Phase.EndOfFrame;
                 case WaitForSeconds _:
-                    return phase == Unbound.Runtime.Coroutines.Phase.Update && Time.timeAsDouble >= m_WaitUntil;
+                    return phase == Unbound.Runtime.Coroutines.Phase.Update && m_Timed.IsOver;
                 case Coroutine other:
                     return phase == Unbound.Runtime.Coroutines.Phase.Update && other.Done;
                 case CustomYieldInstruction custom:
