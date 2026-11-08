@@ -1,0 +1,281 @@
+; FBX 7.4.0 project file
+FBXHeaderExtension:  {
+	FBXHeaderVersion: 1003
+	FBXVersion: 7400
+	Creator: "Unbound modeltoproot probe"
+}
+GlobalSettings:  {
+	Version: 1000
+	Properties70:  {
+		P: "UpAxis", "int", "Integer", "",1
+		P: "UpAxisSign", "int", "Integer", "",1
+		P: "FrontAxis", "int", "Integer", "",2
+		P: "FrontAxisSign", "int", "Integer", "",1
+		P: "CoordAxis", "int", "Integer", "",0
+		P: "CoordAxisSign", "int", "Integer", "",1
+		P: "OriginalUpAxis", "int", "Integer", "",1
+		P: "OriginalUpAxisSign", "int", "Integer", "",1
+		P: "UnitScaleFactor", "double", "Number", "",1
+		P: "OriginalUnitScaleFactor", "double", "Number", "",1
+		P: "TimeMode", "enum", "", "",6
+		P: "TimeSpanStart", "KTime", "Time", "",0
+		P: "TimeSpanStop", "KTime", "Time", "",46186158000
+		P: "CustomFrameRate", "double", "Number", "",-1
+	}
+}
+Definitions:  {
+	Version: 100
+	Count: 18
+	ObjectType: "AnimationStack" {
+		Count: 1
+	}
+	ObjectType: "AnimationLayer" {
+		Count: 1
+	}
+	ObjectType: "Model" {
+		Count: 3
+	}
+	ObjectType: "NodeAttribute" {
+		Count: 3
+	}
+	ObjectType: "AnimationCurveNode" {
+		Count: 3
+	}
+	ObjectType: "AnimationCurve" {
+		Count: 7
+	}
+}
+Objects:  {
+	AnimationStack: 1000, "AnimStack::Take 001", "" {
+		Properties70:  {
+			P: "LocalStart", "KTime", "Time", "",0
+			P: "LocalStop", "KTime", "Time", "",46186158000
+			P: "ReferenceStart", "KTime", "Time", "",0
+			P: "ReferenceStop", "KTime", "Time", "",46186158000
+		}
+	}
+	AnimationLayer: 1001, "AnimLayer::BaseLayer", "" {
+	}
+	Model: 1002, "Model::Top", "Null" {
+		Version: 232
+		Properties70:  {
+			P: "Lcl Translation", "Lcl Translation", "", "A",0,0,0
+			P: "Lcl Rotation", "Lcl Rotation", "", "A",90,0,0
+			P: "Lcl Scaling", "Lcl Scaling", "", "A",1,1,1
+			P: "lockInfluenceWeights", "Bool", "", "A+U",0
+		}
+		Shading: Y
+		Culling: "CullingOff"
+	}
+	NodeAttribute: 1003, "NodeAttribute::", "Null" {
+		TypeFlags: "Null"
+	}
+	Model: 1004, "Model::ChildA", "Null" {
+		Version: 232
+		Properties70:  {
+			P: "Lcl Translation", "Lcl Translation", "", "A",100,0,0
+			P: "Lcl Rotation", "Lcl Rotation", "", "A",0,0,0
+			P: "Lcl Scaling", "Lcl Scaling", "", "A",1,1,1
+		}
+		Shading: Y
+		Culling: "CullingOff"
+	}
+	NodeAttribute: 1005, "NodeAttribute::", "Null" {
+		TypeFlags: "Null"
+	}
+	Model: 1006, "Model::ChildB", "Null" {
+		Version: 232
+		Properties70:  {
+			P: "Lcl Translation", "Lcl Translation", "", "A",0,100,0
+			P: "Lcl Rotation", "Lcl Rotation", "", "A",0,0,0
+			P: "Lcl Scaling", "Lcl Scaling", "", "A",1,1,1
+		}
+		Shading: Y
+		Culling: "CullingOff"
+	}
+	NodeAttribute: 1007, "NodeAttribute::", "Null" {
+		TypeFlags: "Null"
+	}
+	AnimationCurveNode: 1008, "AnimCurveNode::lockInfluenceWeights", "" {
+		Properties70:  {
+			P: "d|lockInfluenceWeights", "Number", "", "A",0
+		}
+	}
+	AnimationCurve: 1009, "AnimCurve::", "" {
+		Default: 0
+		KeyVer: 4009
+		KeyTime: *2 {
+			a: 0,46186158000
+		}
+		KeyValueFloat: *2 {
+			a: 0,0
+		}
+		KeyAttrFlags: *1 {
+			a: 8456
+		}
+		KeyAttrDataFloat: *4 {
+			a: 0,0,218434821,0
+		}
+		KeyAttrRefCount: *1 {
+			a: 2
+		}
+	}
+	AnimationCurveNode: 1010, "AnimCurveNode::Lcl Translation", "" {
+		Properties70:  {
+			P: "d|X", "Number", "", "A",100
+			P: "d|Y", "Number", "", "A",0
+			P: "d|Z", "Number", "", "A",0
+		}
+	}
+	AnimationCurve: 1011, "AnimCurve::", "" {
+		Default: 100
+		KeyVer: 4009
+		KeyTime: *2 {
+			a: 0,46186158000
+		}
+		KeyValueFloat: *2 {
+			a: 100,100
+		}
+		KeyAttrFlags: *1 {
+			a: 8456
+		}
+		KeyAttrDataFloat: *4 {
+			a: 0,0,218434821,0
+		}
+		KeyAttrRefCount: *1 {
+			a: 2
+		}
+	}
+	AnimationCurve: 1012, "AnimCurve::", "" {
+		Default: 0
+		KeyVer: 4009
+		KeyTime: *2 {
+			a: 0,46186158000
+		}
+		KeyValueFloat: *2 {
+			a: 0,50
+		}
+		KeyAttrFlags: *1 {
+			a: 8456
+		}
+		KeyAttrDataFloat: *4 {
+			a: 0,0,218434821,0
+		}
+		KeyAttrRefCount: *1 {
+			a: 2
+		}
+	}
+	AnimationCurve: 1013, "AnimCurve::", "" {
+		Default: 0
+		KeyVer: 4009
+		KeyTime: *2 {
+			a: 0,46186158000
+		}
+		KeyValueFloat: *2 {
+			a: 0,0
+		}
+		KeyAttrFlags: *1 {
+			a: 8456
+		}
+		KeyAttrDataFloat: *4 {
+			a: 0,0,218434821,0
+		}
+		KeyAttrRefCount: *1 {
+			a: 2
+		}
+	}
+	AnimationCurveNode: 1014, "AnimCurveNode::Lcl Translation", "" {
+		Properties70:  {
+			P: "d|X", "Number", "", "A",0
+			P: "d|Y", "Number", "", "A",100
+			P: "d|Z", "Number", "", "A",0
+		}
+	}
+	AnimationCurve: 1015, "AnimCurve::", "" {
+		Default: 0
+		KeyVer: 4009
+		KeyTime: *2 {
+			a: 0,46186158000
+		}
+		KeyValueFloat: *2 {
+			a: 0,0
+		}
+		KeyAttrFlags: *1 {
+			a: 8456
+		}
+		KeyAttrDataFloat: *4 {
+			a: 0,0,218434821,0
+		}
+		KeyAttrRefCount: *1 {
+			a: 2
+		}
+	}
+	AnimationCurve: 1016, "AnimCurve::", "" {
+		Default: 100
+		KeyVer: 4009
+		KeyTime: *2 {
+			a: 0,46186158000
+		}
+		KeyValueFloat: *2 {
+			a: 100,100
+		}
+		KeyAttrFlags: *1 {
+			a: 8456
+		}
+		KeyAttrDataFloat: *4 {
+			a: 0,0,218434821,0
+		}
+		KeyAttrRefCount: *1 {
+			a: 2
+		}
+	}
+	AnimationCurve: 1017, "AnimCurve::", "" {
+		Default: 0
+		KeyVer: 4009
+		KeyTime: *2 {
+			a: 0,46186158000
+		}
+		KeyValueFloat: *2 {
+			a: 0,50
+		}
+		KeyAttrFlags: *1 {
+			a: 8456
+		}
+		KeyAttrDataFloat: *4 {
+			a: 0,0,218434821,0
+		}
+		KeyAttrRefCount: *1 {
+			a: 2
+		}
+	}
+}
+Connections:  {
+	C: "OO",1001,1000
+	C: "OO",1002,0
+	C: "OO",1003,1002
+	C: "OO",1004,1002
+	C: "OO",1005,1004
+	C: "OO",1006,1002
+	C: "OO",1007,1006
+	C: "OO",1008,1001
+	C: "OP",1008,1002, "lockInfluenceWeights"
+	C: "OP",1009,1008, "d|lockInfluenceWeights"
+	C: "OO",1010,1001
+	C: "OP",1010,1004, "Lcl Translation"
+	C: "OP",1011,1010, "d|X"
+	C: "OP",1012,1010, "d|Y"
+	C: "OP",1013,1010, "d|Z"
+	C: "OO",1014,1001
+	C: "OP",1014,1006, "Lcl Translation"
+	C: "OP",1015,1014, "d|X"
+	C: "OP",1016,1014, "d|Y"
+	C: "OP",1017,1014, "d|Z"
+}
+Takes:  {
+	Current: "Take 001"
+	Take: "Take 001" {
+		FileName: "Take_001.tak"
+		LocalTime: 0,46186158000
+		ReferenceTime: 0,46186158000
+	}
+}
