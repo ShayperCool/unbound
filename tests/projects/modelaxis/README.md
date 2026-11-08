@@ -96,3 +96,94 @@ engine -81.6585. Their complete raw comparisons remain under `as3-signed-normali
 The first attempt to build consistent static normalization stopped on storage exhaustion;
 that interrupted build and managed run were not counted as passes. All prior captures,
 failures and independent Native repeats remain preserved. No reference or comparator changed.
+
+## Node transforms: pivots, geometric transforms and skinned bounds
+
+`Tools/make_pivots.py` authors the `Pivots` and `Skinned` sets as ASCII FBX with explicit
+metas; `Tools/blender_models.py` exports their Blender-convention files (`BlenderTree`,
+`BlenderApply` with Apply Transform, `BlenderRig`), which are committed. Each `Pivots` control
+puts one feature on the middle node `Body` of `Top`/`Body`/`Leaf`, where `Body` has rotation
+and nonuniform scale: rotation and scaling pivots and offsets, pre/post rotation with and
+without `RotationActive`, rotation order, geometric translation/rotation/scaling (also negative,
+on a null and on a geometry two nodes share), inherit types RrSs/RSrs/Rrs, pivots on the root
+(with and without Preserve Hierarchy), Maya-style combinations (pivots, offsets, joint orient as
+pre-rotation, segment scale compensation as Rrs) and 3ds Max-style Z-up files with object
+offsets, each also with Bake Axis Conversion. `AnimPivot` is a legacy clip on pivoted nodes
+(Animation Compression Off) that the probe samples at 0.5 s and 1 s. `MayaNoIndex` and
+`GeoAllNoIndex` leave out `DefaultAttributeIndex`, which exporters always write.
+
+The `Skinned` set binds a three-bone column with mixed weights (bind pose equal to or away
+from the file's node pose, the mesh node moved, a pivot or pre-rotation on a bone, a pivot or
+geometric transform on the mesh node) plus the Blender-exported skinned models of
+`modelimport` and `blendshapes` (`isReadable` on and mesh optimization off in these copies).
+It records bones, root bone, bind poses, `Mesh.bounds`, `SkinnedMeshRenderer.localBounds` with
+Update When Offscreen off, and `BakeMesh` vertices. Normals, bones, bind poses, skinned and
+sampled keys exist only in these sets, so the `Axis` and `Signed` references are unchanged.
+
+Two independent GPU Editor captures agree byte for byte for each set (1001 and 397 keys),
+published under `Reference/unity-6000.0.71f1/pivots` and `skinned`. These two sets bound each
+key by 1e-5 times the largest magnitude in its reference value (at least 1e-5): world bases of
+a centimetre-scaled root reach 100, where 1e-5 is below one float32 step. This was chosen
+after the first captures showed 1-4 float32-step differences in such bases; the `Axis` and
+`Signed` bound is unchanged.
+
+### Contract and observations
+
+| Source | Documented | Measured in 6000.0.71f1 / implication |
+| --- | --- | --- |
+| [Importing models from 3D applications](https://docs.unity3d.com/6000.0/Documentation/Manual/HOWTO-ImportObjectsFrom3DApps.html) | Every application section: "All nodes with position, rotation and scale; pivot points and names are also imported". For Maya files it lists Rotate Axis (pre-rotation), Joint Orient and Segment Scale Compensate as unsupported. Geometric transforms are not mentioned. | FBX pre/post rotation is applied to the node rotation (`Pre`, `Post`, `PrePost`; ignored without `RotationActive`). Inherit types other than RSrs are ignored (`Inherit0`/`1`/`2`), consistent with Segment Scale Compensate being unsupported. |
+| [Model tab](https://docs.unity3d.com/6000.0/Documentation/Manual/FBXImporter-Model.html) | Bake Axis Conversion, Preserve Hierarchy, Sort Hierarchy By Name. | Pivots and geometric transforms compose with baked axis conversion (`*Bake` controls) and with an explicit root (`RootPivotH`). |
+| [Renderer.localBounds](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer-localBounds.html) | A SkinnedMeshRenderer's default local bounds are precomputed from the model's animations; Update When Offscreen recomputes them every frame. | Measured only where the animation poses are the import pose (no clip, or constant transform curves as in `BlenderBlob`). |
+
+Observed rules (one reference capture each; not documented guarantees):
+
+- A node keeps its rotation (pre-rotation, rotation, inverse post-rotation, in its rotation
+  order) and scale. With `c` = RotationPivot - ScalingOffset, its GameObject sits at `M·c`
+  for the FBX node matrix `M`, and its children move by `-c`. Its mesh is baked as
+  `G·v - c` with the geometric transform `G`, which keeps every vertex and child where the FBX
+  places it. No extra GameObjects are created.
+- Normals take only the rotation of `G` (columns normalized, all negated for a negative
+  determinant); geometric scaling leaves them unchanged and a negative scale keeps the winding.
+- A geometry shared by several nodes is baked once with its first node's `G` and `-c`
+  (`GeoShared`, `GeoSharedLeaf`, `PivotShared`).
+- Without `DefaultAttributeIndex` the node is still placed at `M·c` but the vertices stay as in
+  the file.
+- A node holding a bone-skinned mesh is placed at its transform without its pivots, its vertices
+  take only `G`, and its bind poses follow (`MeshPivot`, `MeshGeo`); pivots on bones follow the
+  general rule (`BonePivot`).
+- A baked handedness-reversing axis conversion turns each triangle before vertices are split,
+  so split vertices are numbered in the turned order (`MaxZupBake`).
+- `Mesh.bounds` includes every blend shape frame's positions. `localBounds` is, per bone, the
+  box of the vertices the bone influences (with their blend shape frame positions) in its bind
+  space, carried as a box into the root bone's space by the bone's import pose; the union over
+  bones.
+
+### Implementation scope and limits
+
+`crates/unbound-assets/src/model/pivots.rs` implements these rules; the model cache format is
+v26. Clips of pivoted nodes sample positions with the same placement (at every frame without
+compression, otherwise at every baked key time). Not measured, implemented by the same rule
+or left as before:
+
+- `localBounds` of models whose clips move transforms (no `m_AABB`; the managed fallback and its
+  unsupported-bounds warning remain), and of blend-shape meshes without bones.
+- Children of a pivoted skinned-mesh node (warning), rotation/scaling offsets on such a node,
+  vertices without bone weights (they add nothing to `localBounds`), and which of several shared
+  instances is "first" beyond the measured parent-before-child order.
+- Blend shape deltas on meshes with geometric transforms (transformed with `G`'s linear part).
+- Keyframe-reduced clips: a first `AnimPivotReduced` capture (compression Keyframe Reduction)
+  matched the uncompressed pose in the engine but differed in the Editor by up to 0.0005 in
+  basis vectors and 7e-5 m in position at 0.5 s, on unpivoted rotations too. That is the clip
+  reduction approximation, not pivot handling; it stays a follow-up and is not in the set.
+
+```sh
+python3 tests/projects/modelaxis/Tools/make_pivots.py
+python3 tests/projects/modelaxis/run.py editor --release 6000.0.71f1 --set Pivots --label <fresh>
+python3 tests/projects/modelaxis/run.py unbound --release "$UNBOUND_PROBE_UNITY_VERSION" --set Pivots
+python3 tests/projects/modelaxis/run.py unbound --release "$UNBOUND_PROBE_UNITY_VERSION" --set Skinned
+```
+
+With the same comparator the previous engine matched 909/1031 `Pivots` keys (17 of 38 models
+failing, including a helper GameObject for `GeoShared`) and 383/402 `Skinned` keys (9 of 10
+models failing: no imported local bounds, a helper node under a pivoted bone); now all 1001 and
+397 keys pass.
