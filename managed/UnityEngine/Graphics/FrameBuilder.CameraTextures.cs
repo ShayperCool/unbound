@@ -301,7 +301,7 @@ namespace Unbound.Runtime
 
         /// <summary>After a frame whose player-loop cameras drew motion vectors, the renderers'
         /// matrices become the previous ones.</summary>
-        static void EndFrameMotion()
+        internal static void EndFrameMotion()
         {
             if (!s_MotionRendered) return;
             s_MotionRendered = false;

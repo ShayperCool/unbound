@@ -391,30 +391,8 @@ namespace Unbound.Runtime
                 int rt = b.RendersOffscreen.CompareTo(a.RendersOffscreen);
                 return rt != 0 ? rt : a.depth.CompareTo(b.depth);
             });
-            // A scriptable pipeline renders the cameras itself; else the built-in one does. As the
-            // engine does, the cameras that render into textures go to the pipeline in a call of
-            // their own before the ones on the screen (URP draws overlay UI in the last base camera
-            // of a call: in one list with an offscreen camera after it, the UI would be lost).
-            bool srp;
-            int offscreen = 0;
-            foreach (var c in cameras) if (c.RendersOffscreen) offscreen++;
-            s_PlayerLoopPipeline = true;
-            try
-            {
-                if (offscreen > 0 && offscreen < cameras.Count)
-                {
-                    srp = RenderPipelineManager.Render(cameras.GetRange(0, offscreen));
-                    if (srp) RenderPipelineManager.Render(cameras.GetRange(offscreen, cameras.Count - offscreen));
-                }
-                else
-                {
-                    srp = RenderPipelineManager.Render(cameras);
-                }
-            }
-            finally
-            {
-                s_PlayerLoopPipeline = false;
-            }
+            // A scriptable pipeline renders the cameras itself; else the built-in one does.
+            bool srp = RenderPipelineCameras(cameras);
             if (srp) s_CameraCount += cameras.Count;
             else
             {
@@ -435,6 +413,43 @@ namespace Unbound.Runtime
             Immediate.Queued.Clear();
             Culling.EndFrame();
             RenderTexture.CollectTemporaries();
+        }
+
+        /// <summary>The player loop's cameras (sorted, offscreen ones first) through the active
+        /// render pipeline; false when there is none. As the engine does, the cameras that render
+        /// into textures go to the pipeline in a call of their own before the ones on the screen
+        /// (URP draws overlay UI in the last base camera of a call: in one list with an offscreen
+        /// camera after it, the UI would be lost). Their renderer lists' per-object motion
+        /// vectors keep the renderers' matrices at the frame's end (<see cref="s_PlayerLoopPipeline"/>).</summary>
+        internal static bool RenderPipelineCameras(List<Camera> cameras)
+        {
+            int offscreen = 0;
+            foreach (var c in cameras) if (c.RendersOffscreen) offscreen++;
+            s_PlayerLoopPipeline = true;
+            try
+            {
+                if (offscreen > 0 && offscreen < cameras.Count)
+                {
+                    bool srp = RenderPipelineManager.Render(cameras.GetRange(0, offscreen));
+                    if (srp) RenderPipelineManager.Render(cameras.GetRange(offscreen, cameras.Count - offscreen));
+                    return srp;
+                }
+                return RenderPipelineManager.Render(cameras);
+            }
+            finally
+            {
+                s_PlayerLoopPipeline = false;
+            }
+        }
+
+        static bool s_WarnedForcedMotionVectors;
+
+        static void WarnForcedMotionVectorsOnce()
+        {
+            if (s_WarnedForcedMotionVectors) return;
+            s_WarnedForcedMotionVectors = true;
+            Debug.LogWarning("Unbound: FilteringSettings.forceAllMotionVectorObjects is not measured; such a renderer list draws the " +
+                             "objects it matches without per-object motion vectors.");
         }
 
         static bool s_WarnedOnDemandPipeline;
@@ -742,8 +757,14 @@ namespace Unbound.Runtime
             // material then draws them instead).
             s_PassTagScratch.Clear();
             foreach (var tag in passNames) s_PassTagScratch.Add(tag.name);
-            // Per-object motion vectors: the objects with object motion alone.
+            // Per-object motion vectors: the objects with object motion alone. A list that forces
+            // every object's motion vectors is unmeasured: it draws what it matches, with a warning.
             bool motion = !shadows.HasValue && (drawing.perObjectData & PerObjectData.MotionVectors) != 0;
+            if (motion && filtering.forceAllMotionVectorObjects)
+            {
+                WarnForcedMotionVectorsOnce();
+                motion = false;
+            }
             if (motion)
             {
                 KeepObjectMotion(s_Items);
