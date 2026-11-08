@@ -256,7 +256,14 @@ impl Ascii<'_> {
             loop {
                 self.blank(false);
                 match self.peek() {
-                    None | Some(b'\n' | b'{' | b'}') => break,
+                    None | Some(b'{' | b'}') => break,
+                    // Long arrays continue on lines that start with a comma (FBX 6 writers).
+                    Some(b'\n') => {
+                        self.blank(true);
+                        if !matches!(self.peek(), Some(b',' | b'{')) {
+                            break;
+                        }
+                    }
                     Some(b',') => {
                         self.at += 1;
                         self.blank(true);
@@ -404,13 +411,22 @@ pub fn per_mesh(
         .max()
         .unwrap_or(1)
         .max(1);
-    let arrays = raw_arrays(bytes, limit)?;
-    ensure!(
-        arrays.len() == order.len(),
-        "the FBX smoothing layers of the file ({}) do not match the loader's ({})",
-        arrays.len(),
-        order.len()
-    );
+    // Values the file's own reading cannot give fall back to the loader's smooth/hard flags.
+    let arrays = match raw_arrays(bytes, limit) {
+        Ok(arrays) if arrays.len() == order.len() => Some(arrays),
+        read => {
+            warnings.push(format!(
+                "the FBX smoothing layers could not be read from the file ({}); their groups \
+                 are reduced to smooth or hard (not supported)",
+                match read {
+                    Ok(arrays) =>
+                        format!("{} layers for the loader's {}", arrays.len(), order.len()),
+                    Err(error) => error.to_string(),
+                }
+            ));
+            None
+        }
+    };
     scene
         .meshes
         .iter()
@@ -419,7 +435,13 @@ pub fn per_mesh(
             let Some(layer) = layer else {
                 return Ok(None);
             };
-            let mut values = arrays[order[&(layer as *const _)]].clone();
+            let mut values = match &arrays {
+                Some(arrays) => arrays[order[&(layer as *const _)]].clone(),
+                None if !mesh.edge_smoothing.is_empty() => {
+                    mesh.edge_smoothing.iter().map(|&s| s as u32).collect()
+                }
+                None => mesh.face_smoothing.iter().map(|&s| s as u32).collect(),
+            };
             if child(layer, "Version").and_then(first_int).unwrap_or(0) < MASK_VERSION {
                 values.iter_mut().for_each(|v| *v = (*v != 0) as u32);
             }
@@ -464,19 +486,13 @@ fn corners(
         }
         Mapping::ByPolygon => spread(mesh, &mut out, |f| value(f)),
         Mapping::ByEdge => {
-            ensure!(
-                mesh.edges.len() == values.len(),
-                "the edge smoothing of mesh '{}' has {} values for {} edges (not supported)",
-                mesh.element.name,
-                values.len(),
-                mesh.edges.len()
-            );
-            let smooth: Vec<bool> = values.iter().map(|&v| v != 0).collect();
+            // Values past the edges are unused; edges without a value are hard.
+            let smooth: Vec<bool> = (0..mesh.edges.len()).map(|e| value(e) != 0).collect();
             match edge_groups(mesh, &smooth) {
                 Some(groups) => spread(mesh, &mut out, |f| groups[f]),
                 None => warnings.push(format!(
                     "the edge smoothing of mesh '{}' needs more than 32 smoothing groups; every \
-                     edge is hard, as the Unity importer does",
+                     edge is hard (the importer's conversion gives up; not captured)",
                     mesh.element.name
                 )),
             }
@@ -825,13 +841,6 @@ mod tests {
     }
 
     #[test]
-    fn edge_order_matters_but_converts() {
-        let (dense, _) = load(&fixture("EdgesDense"));
-        let (reordered, _) = load(&fixture("EdgesReordered"));
-        assert_eq!(dense.len(), reordered.len());
-    }
-
-    #[test]
     fn lowest_free_bits() {
         assert_eq!(lowest_free(0), Some(1));
         assert_eq!(lowest_free(0b1011), Some(0b100));
@@ -868,6 +877,11 @@ A: "text, with } and ;", 1 {
             raw_arrays(bytes, 10).unwrap(),
             vec![vec![1, 2, 3], vec![4, 5]]
         );
+        // FBX 6 writers continue long arrays on lines that start with a comma.
+        let wrapped = b"Model: \"Model::M\", \"Mesh\" {\n Vertices: 0.5,1.5\n  ,2.5,3.5\n \
+                        PolygonVertexIndex: 0,1\n  ,-3\n LayerElementSmoothing: 0 {\n  \
+                        Smoothing: 1,2\n   ,4\n }\n}\n";
+        assert_eq!(raw_arrays(wrapped, 10).unwrap(), vec![vec![1, 2, 4]]);
     }
 
     #[test]

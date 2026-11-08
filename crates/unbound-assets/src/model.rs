@@ -45,12 +45,12 @@ use crate::{
     meta::{FileIdAllocator, FileIdSource, FileIdTable, boolean, class, float, importer, int},
 };
 use anyhow::{Result, anyhow};
-use unbound_compat::{MtlRules, UnityVersion};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
     path::Path,
 };
+use unbound_compat::{MtlRules, UnityVersion};
 use unbound_yaml::{ObjectRef, Value};
 
 pub use materials::{MaterialDescription, TextureDescription};
@@ -1739,10 +1739,10 @@ impl<'a> Builder<'a> {
                     Some(m) => Some(self.material(m)),
                     // An OBJ face without a material uses its mesh group's default one.
                     None if self.obj => {
-                        let name = self.obj_meshes.get(mesh.element.typed_id as usize).map_or(
-                            "defaultMat".to_string(),
-                            |o| o.default_material.clone(),
-                        );
+                        let name = self
+                            .obj_meshes
+                            .get(mesh.element.typed_id as usize)
+                            .map_or("defaultMat".to_string(), |o| o.default_material.clone());
                         Some(self.obj_default_material(name))
                     }
                     // The legacy importer gives a slot without material one named "No Name".
@@ -1863,27 +1863,7 @@ impl<'a> Builder<'a> {
         self.model.materials.push(ModelMaterial {
             name: material.element.name.to_string(),
             description: if self.obj {
-                let mut description =
-                    materials::describe_obj(Some(material), self.obj_diffuse, self.mtl);
-                if self.settings.material_import == MaterialImportMode::Legacy
-                    && self.obj_diffuse.is_none()
-                    && !self.settings.use_srgb_material_color
-                {
-                    if let Some((_, color)) = description
-                        .vectors
-                        .iter_mut()
-                        .find(|(n, _)| n == "DiffuseColor")
-                    {
-                        for channel in &mut color[..3] {
-                            *channel = if *channel <= 0.0031308 {
-                                12.92 * *channel
-                            } else {
-                                1.055 * channel.powf(1.0 / 2.4) - 0.055
-                            };
-                        }
-                    }
-                }
-                description
+                self.obj_description(Some(material))
             } else {
                 materials::describe(material)
             },
@@ -1976,16 +1956,46 @@ impl<'a> Builder<'a> {
         p
     }
 
+    /// An OBJ material's description (`None`: the class defaults); the legacy importer without
+    /// sRGB material colors stores the diffuse color gamma-encoded.
+    fn obj_description(&self, material: Option<&ufbx::Material>) -> MaterialDescription {
+        let mut description = materials::describe_obj(material, self.obj_diffuse, self.mtl);
+        if self.settings.material_import == MaterialImportMode::Legacy
+            && self.obj_diffuse.is_none()
+            && !self.settings.use_srgb_material_color
+        {
+            if let Some((_, color)) = description
+                .vectors
+                .iter_mut()
+                .find(|(n, _)| n == "DiffuseColor")
+            {
+                for channel in &mut color[..3] {
+                    *channel = if *channel <= 0.0031308 {
+                        12.92 * *channel
+                    } else {
+                        1.055 * channel.powf(1.0 / 2.4) - 0.055
+                    };
+                }
+            }
+        }
+        description
+    }
+
     /// An OBJ mesh's material for faces without one (`obj_smoothing`): the class defaults, one
     /// per name.
     fn obj_default_material(&mut self, name: String) -> u32 {
-        if let Some(index) = self.obj_defaults.iter().find(|(n, _)| *n == name).map(|(_, i)| *i) {
+        if let Some(index) = self
+            .obj_defaults
+            .iter()
+            .find(|(n, _)| *n == name)
+            .map(|(_, i)| *i)
+        {
             return index;
         }
         let index = self.model.materials.len() as u32;
         self.model.materials.push(ModelMaterial {
             name: name.clone(),
-            description: materials::describe_obj(None, None, self.mtl),
+            description: self.obj_description(None),
             file_id: FileId {
                 id: 0,
                 source: FileIdSource::Derived,
@@ -2255,7 +2265,10 @@ impl<'a> Builder<'a> {
                     order
                         .iter()
                         .flat_map(|&f| {
-                            std::iter::repeat_n(groups[f as usize], mesh.faces[f as usize].num_indices as usize)
+                            std::iter::repeat_n(
+                                groups[f as usize],
+                                mesh.faces[f as usize].num_indices as usize,
+                            )
                         })
                         .collect::<Vec<u32>>()
                         .into(),
@@ -3061,7 +3074,8 @@ fn clip_range<const N: usize>(
     out
 }
 
-/// A take as its clips use it: the span from [`take_span`] up to the last key inside it.
+/// A take as its clips use it: the span from [`take_span`], ending at the span's end or at the
+/// last key of the curves that overlap it, whichever is earlier.
 #[derive(Clone, Copy)]
 struct Take<'a> {
     stack: &'a ufbx::AnimStack,
@@ -3073,9 +3087,10 @@ struct Take<'a> {
 
 impl<'a> Take<'a> {
     /// The importer keeps a property's keys where they overlap the span, so the take ends at the
-    /// last key inside it; keys all outside leave the clip empty, and a take without keys makes
-    /// no clip (matches the Unity 6000.0.71f1 Editor, tests/projects/modelimport `smoothing.py`
-    /// takes).
+    /// span's end or the last key of the overlapping curves, whichever is earlier; keys all
+    /// outside leave the clip empty, and a take without keys makes no clip (matches the Unity
+    /// 6000.0.71f1 Editor, tests/projects/modelimport `smoothing.py` takes; curves of every layer
+    /// count, while the span's fallback reads the last layer, unmeasured where they differ).
     fn new(scene: &ufbx::Scene, stack: &'a ufbx::AnimStack) -> Option<Self> {
         let (begin, end) = take_span(scene, stack);
         let mut elements = node_elements(scene);

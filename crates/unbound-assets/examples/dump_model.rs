@@ -19,7 +19,12 @@ fn main() -> Result<()> {
         &std::fs::read_to_string(&meta_path)
             .with_context(|| format!("reading {}", meta_path.display()))?,
     )?;
-    let model = unbound_assets::model::import_model(&path, &bytes, &meta, unbound_assets::ModelImporter::default().mtl)?;
+    let model = unbound_assets::model::import_model(
+        &path,
+        &bytes,
+        &meta,
+        unbound_assets::ModelImporter::default().mtl,
+    )?;
     if std::env::args().any(|a| a == "--clips") {
         for clip in &model.clips {
             eprintln!(

@@ -836,8 +836,13 @@ fn obj_material_cache_tracks_library_content_and_missing_inputs() {
     let library = root.join("color library.mtl");
     std::fs::write(&source, "mtllib color library.mtl # authored library\no Face\nv 0 0 0\nv 1 0 0\nv 0 1 0\nusemtl Paint\nf 1 2 3\n").unwrap();
     let cache = AssetCache::new(root.join("cache"));
-    let load =
-        || cache.get_or_import_traced(&ModelImporter::default(), &source, &source.with_extension("obj.meta"));
+    let load = || {
+        cache.get_or_import_traced(
+            &ModelImporter::default(),
+            &source,
+            &source.with_extension("obj.meta"),
+        )
+    };
     std::fs::write(&library, "newmtl Paint\nKd 0.2 0.4 0.8\nd 0.25\nTr 0.8\n").unwrap();
     let (model, outcome) = load().unwrap();
     assert_eq!(outcome, Outcome::Imported);
@@ -950,4 +955,39 @@ fn baked_axis_conversion_rejects_unmeasured_deformers_and_animation() {
             "{error}"
         );
     }
+}
+
+/// Take spans and clip ends as the importer derives them (tests/projects/modelimport
+/// `smoothing.py` takes: keys at 0.25, 0.5 and 0.75 s).
+#[test]
+fn take_spans_follow_local_times_and_keys() {
+    let take = |name: &str| -> Option<(f64, f64, bool)> {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
+            "../../tests/projects/modelimport/Assets/Resources/Smoothing/{name}.fbx"
+        ));
+        let scene = ufbx::load_file(path.to_str().unwrap(), ufbx::LoadOpts::default()).unwrap();
+        let stack = &scene.anim_stacks[0];
+        Take::new(&scene, stack).map(|t| (t.begin, t.end, t.empty))
+    };
+    let close = |a: Option<(f64, f64, bool)>, b: (f64, f64, bool)| {
+        let a = a.expect("a clip");
+        assert!(
+            (a.0 - b.0).abs() < 1e-9 && (a.1 - b.1).abs() < 1e-9 && a.2 == b.2,
+            "{a:?} != {b:?}"
+        );
+    };
+    // Only a stop: from 0 to the last key before it.
+    close(take("TakeStop"), (0.0, 0.75, false));
+    close(take("TakeStopBetween"), (0.0, 0.6, false));
+    // Only a start: from 0 to it.
+    close(take("TakeStart"), (0.0, 0.5, false));
+    // Start after stop: in order.
+    close(take("TakeReversed"), (0.5, 0.75, false));
+    // No span, an empty one or only the reference span: the keys' range.
+    for name in ["TakeNone", "TakeEmpty", "TakeReference"] {
+        close(take(name), (0.25, 0.75, false));
+    }
+    // A single key outside the (empty) span: an empty clip; no curves: no clip.
+    close(take("TakeSingleKey"), (0.0, 0.0, true));
+    assert!(take("TakeNoCurves").is_none() && take("TakeNoCurvesNoTime").is_none());
 }
