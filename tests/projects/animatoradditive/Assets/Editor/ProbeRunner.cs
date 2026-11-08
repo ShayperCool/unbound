@@ -372,6 +372,64 @@ public static class ProbeRunner
         c.layers[1].stateMachine.defaultState = state;
     }
 
+    /// <summary>Synced layers with and without Timing: base states of 1 s (Base) and 1.5 s
+    /// (TMid), synced motions of 2 s (TSlow) and 0.5 s (TFast), states without a motion on
+    /// either side and two Timing layers on one source.</summary>
+    public static void CreateTiming()
+    {
+        var slow = new AnimationClip { name = "TSlow", frameRate = 60f };
+        Float(slow, "D", typeof(Transform), "m_LocalPosition.x", 0f, 0f, 2f, 4f);
+        Float(slow, "", typeof(AdditiveTarget), "g", 0f, 0f, 2f, 20f);
+        Save(slow, true);
+        var fast = new AnimationClip { name = "TFast", frameRate = 60f };
+        Float(fast, "C", typeof(Transform), "m_LocalPosition.z", 0f, 0f, 0.5f, 1f);
+        Save(fast, true);
+        var mid = new AnimationClip { name = "TMid", frameRate = 60f };
+        Float(mid, "A", typeof(Transform), "m_LocalPosition.y", 0f, 0f, 1.5f, 3f);
+        Float(mid, "", typeof(AdditiveTarget), "f", 0f, 0f, 1.5f, 3f);
+        Save(mid, true);
+        AssetDatabase.SaveAssets();
+        Timing("TimingOn", true, Load("Base"), Load("TMid"), Load("TSlow"), Load("TFast"));
+        Timing("TimingOff", false, Load("Base"), Load("TMid"), Load("TSlow"), Load("TFast"));
+        Timing("TimingEmpty", true, Load("Base"), Load("TMid"), Load("TSlow"), null);
+        Timing("TimingBaseEmpty", true, null, Load("TMid"), Load("TSlow"), Load("TFast"));
+        var two = Timing("TimingTwo", true, Load("Base"), Load("TMid"), Load("TSlow"), Load("TFast"));
+        two.AddLayer("Sync2");
+        var layers = two.layers;
+        var states = layers[0].stateMachine.states;
+        layers[2].defaultWeight = 1f;
+        layers[2].syncedLayerIndex = 0;
+        layers[2].syncedLayerAffectsTiming = true;
+        layers[2].SetOverrideMotion(states[0].state, Load("TFast"));
+        layers[2].SetOverrideMotion(states[1].state, Load("TSlow"));
+        two.layers = layers;
+        AssetDatabase.SaveAssets();
+    }
+
+    /// <summary>Base S1 to S2 on "go" (0.25 s); an override layer synced to it, Timing on or off.</summary>
+    static AnimatorController Timing(string name, bool timing, AnimationClip s1Motion, AnimationClip s2Motion,
+        AnimationClip sync1, AnimationClip sync2)
+    {
+        var c = AnimatorController.CreateAnimatorControllerAtPath(Dir + name + ".controller");
+        c.AddParameter("go", AnimatorControllerParameterType.Bool);
+        var machine = c.layers[0].stateMachine;
+        var s1 = machine.AddState("S1"); s1.motion = s1Motion;
+        var s2 = machine.AddState("S2"); s2.motion = s2Motion;
+        machine.defaultState = s1;
+        var t = s1.AddTransition(s2);
+        t.hasExitTime = false; t.hasFixedDuration = true; t.duration = 0.25f;
+        t.AddCondition(AnimatorConditionMode.If, 0f, "go");
+        c.AddLayer("Sync");
+        var layers = c.layers;
+        layers[1].defaultWeight = 1f;
+        layers[1].syncedLayerIndex = 0;
+        layers[1].syncedLayerAffectsTiming = timing;
+        if (sync1 != null) layers[1].SetOverrideMotion(s1, sync1);
+        if (sync2 != null) layers[1].SetOverrideMotion(s2, sync2);
+        c.layers = layers;
+        return c;
+    }
+
     static AnimationClip Load(string name) => AssetDatabase.LoadAssetAtPath<AnimationClip>(Dir + name + ".anim");
 
     public static void Record()

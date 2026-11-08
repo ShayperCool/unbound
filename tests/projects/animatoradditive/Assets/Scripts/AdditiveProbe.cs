@@ -41,7 +41,22 @@ public class AdditiveProbe : MonoBehaviour
     }
 
     /// <summary>Eleven updates (0, then ten of 0.125 s); <paramref name="before"/> runs before each.</summary>
-    static void Case(string key, string controller, Action<Animator, int> before = null)
+    static void Case(string key, string controller, Action<Animator, int> before = null) => Case(key, controller, before, false);
+
+    /// <summary>Every layer's current and next state info (l0, l1, ...): normalized time and length.</summary>
+    static string Info(Animator animator)
+    {
+        var layers = new string[animator.layerCount];
+        for (int i = 0; i < layers.Length; i++)
+        {
+            var current = animator.GetCurrentAnimatorStateInfo(i);
+            var next = animator.GetNextAnimatorStateInfo(i);
+            layers[i] = "\"l" + i + "\":[" + F(current.normalizedTime) + "," + F(current.length) + "," + F(next.normalizedTime) + "," + F(next.length) + "]";
+        }
+        return "{" + string.Join(",", layers) + "}";
+    }
+
+    static void Case(string key, string controller, Action<Animator, int> before, bool info)
     {
         var root = new GameObject("Rig");
         root.AddComponent<AdditiveTarget>();
@@ -56,6 +71,8 @@ public class AdditiveProbe : MonoBehaviour
             before?.Invoke(animator, step);
             animator.Update(step == 0 ? 0f : 0.125f);
             s_Output.Append("{\"k\":\"").Append(key).Append(".step").Append(step).Append("\",\"v\":").Append(Snapshot(animator)).Append("}\n");
+            if (info)
+                s_Output.Append("{\"k\":\"").Append(key).Append(".info").Append(step).Append("\",\"v\":").Append(Info(animator)).Append("}\n");
         }
         DestroyImmediate(root);
     }
@@ -113,6 +130,26 @@ public class AdditiveProbe : MonoBehaviour
         Case("overabove", "OverAbove");
         Case("baseadditive", "BaseAdditive");
         Case("sync", "Sync", At(3, animator => animator.SetBool("go", true)));
+        // Synced layers with Timing on and off, at several synced-layer weights (Manual: Animation
+        // Layers); "go" at step 3 starts a 0.25 s transition to S2.
+        foreach (string name in new[] { "TimingOn", "TimingOff", "TimingEmpty", "TimingBaseEmpty" })
+        foreach (float w in new[] { 1f, 0.5f, 0f })
+            Case(name.ToLowerInvariant() + "." + F(w), name, (animator, step) =>
+            {
+                if (step == 0) animator.SetLayerWeight(1, w);
+                if (step == 3) animator.SetBool("go", true);
+            }, true);
+        Case("timingon.change", "TimingOn", (animator, step) =>
+        {
+            if (step == 0) animator.SetLayerWeight(1, 0.25f);
+            if (step == 5) animator.SetLayerWeight(1, 1f);
+        }, true);
+        foreach (var (w1, w2) in new[] { (1f, 1f), (0.5f, 0.5f), (1f, 0.25f), (0.25f, 1f) })
+            Case("timingtwo." + F(w1) + "." + F(w2), "TimingTwo", (animator, step) =>
+            {
+                if (step == 0) { animator.SetLayerWeight(1, w1); animator.SetLayerWeight(2, w2); }
+                if (step == 3) animator.SetBool("go", true);
+            }, true);
         foreach (string name in new[] { "WdOn", "WdOff", "EmptyOn", "EmptyOff", "OverWdOn", "OverWdOff", "OverEmptyOn", "OverEmptyOff" })
             Case(name.ToLowerInvariant(), name, (animator, step) =>
             {

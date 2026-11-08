@@ -1,8 +1,8 @@
 # Additive and override layer probe
 
-Generic-rig Animator layers on Unity 6000.0.71f1: 100 cases of eleven fixed `Animator.Update`
-steps (0, then ten of 0.125 s), 1100 records of the local position, rotation and scale of an
-animated hierarchy, two script floats and the layer weights. Humanoid rigs are not covered.
+Generic-rig Animator layers on Unity 6000.0.71f1: 117 cases of eleven fixed `Animator.Update`
+steps (0, then ten of 0.125 s), 1474 records: 1287 of the local position, rotation and scale of an
+animated hierarchy, two script floats and the layer weights, and 187 of state infos. Humanoid rigs are not covered.
 
 The cases cover additive reference poses (none, another clip at a time, the clip itself at a time,
 references without some curves, a clip start time, non-looping clips), quaternion and Euler
@@ -10,6 +10,10 @@ references without some curves, a clip start time, non-looping clips), quaternio
 -2 to 3 and changed between updates, default weights, a base layer without states or additive,
 transform masks (no root, sparse) on additive and override layers, a six-layer stack, override
 layers above additive ones, a synced additive layer with override motions across a transition,
+synced override layers with Timing on and off (`timing*`: synced-layer weights 1, 0.5 and 0 and one
+changed between updates, a synced or source state without a motion, two Timing layers on one
+source; their `.info<step>` records hold each layer's current and next state normalized time and
+length),
 blend trees in additive layers, and transitions to and from motion and empty states with and
 without write defaults in additive and override layers, including empty first states.
 The `mix*` cases transition between a state with write defaults and one without, both ways, in
