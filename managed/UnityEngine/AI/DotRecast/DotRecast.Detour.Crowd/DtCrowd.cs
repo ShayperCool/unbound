@@ -441,9 +441,6 @@ namespace DotRecast.Detour.Crowd
             // Find next corner to steer to.
             FindCorners(agents, debug);
 
-            // Trigger off-mesh connections (depends on corners).
-            TriggerOffMeshConnections(agents);
-
             // Unbound: Unity's agents take the step towards the last plan before steering and
             // planning anew, and steer and plan with the velocity they move at this update (measured).
             Accelerate(dt, agents);
@@ -461,6 +458,11 @@ namespace DotRecast.Detour.Crowd
             HandleCollisions(agents);
 
             MoveAgents(agents);
+
+            // Trigger off-mesh connections (depends on corners).
+            // Unbound: Unity's agents reach a link from where this update's step took them, and
+            // begin to cross it in the same update (measured: tests/projects/navlinks).
+            TriggerOffMeshConnections(agents);
 
             // Update agents using off-mesh connection.
             UpdateOffMeshConnections(agents, dt);

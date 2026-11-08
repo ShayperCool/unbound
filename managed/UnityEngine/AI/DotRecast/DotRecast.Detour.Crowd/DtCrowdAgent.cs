@@ -95,7 +95,10 @@ namespace DotRecast.Detour.Crowd
 
         /// Unbound: the step towards the previous update's planned velocity (in 3D: a steering
         /// target above or below the agent tilts it, measured), taken before this update plans.
-        public void Accelerate(float dt)
+        public void Accelerate(float dt) => vel = NextVelocity(dt);
+
+        /// Unbound: the velocity the next Accelerate gives (towards the plan in pvel), unapplied.
+        public RcVec3f NextVelocity(float dt)
         {
             // Fake dynamic constraint.
             float maxDelta = option.maxAcceleration * dt;
@@ -111,7 +114,7 @@ namespace DotRecast.Detour.Crowd
             float ds = dv.Length();
             if (ds > maxDelta)
                 dv = dv * (maxDelta / ds);
-            vel = RcVec3f.Add(vel, dv);
+            return RcVec3f.Add(vel, dv);
         }
 
         public void Integrate(float dt)

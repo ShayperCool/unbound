@@ -14,7 +14,7 @@ namespace UnityEngine.Tests
     /// until the next frame's early AI update (PreUpdate), while its nextPosition is on the NavMesh
     /// at once; AddComponent and setting baseOffset write the transform at once; a transform moved
     /// by script is followed by nextPosition at once and written back at the next early update; the
-    /// update after the scripts leaves standing agents' transforms alone. Turning updatePosition back
+    /// update after the scripts changes no agent. Turning updatePosition back
     /// on writes it at once (documented). The level is one runtime-built 12 m ground (top at
     /// y = 0) away from other tests' levels.</summary>
     [Collection("Frames")]
@@ -69,12 +69,8 @@ namespace UnityEngine.Tests
             return agent;
         }
 
-        /// <summary>One frame of the agents: the early update, then the update after the scripts.</summary>
-        static void Frame()
-        {
-            AgentSystem.SyncTransforms();
-            AgentSystem.Step();
-        }
+        /// <summary>One frame of the agents: the early update (the update after the scripts changes none).</summary>
+        static void Frame() => AgentSystem.Step();
 
         [Fact]
         public void AddComponentPlacesTheTransformAtOnce()
@@ -95,8 +91,7 @@ namespace UnityEngine.Tests
             Assert.True(agent.isOnNavMesh);
             Assert.Equal(m_Height, agent.nextPosition.y, 4);
             Assert.Equal(0.3f, agent.transform.position.y, 4);
-            // The update after the scripts leaves a standing agent's transform alone.
-            AgentSystem.Step();
+            // Until the early update the transform stays.
             Assert.Equal(0.3f, agent.transform.position.y, 4);
             AgentSystem.SyncTransforms();
             Assert.Equal(m_Height, agent.transform.position.y, 4);
@@ -122,7 +117,6 @@ namespace UnityEngine.Tests
             Assert.True(agent.Warp(target));
             Assert.Equal(target, agent.transform.position);
             Assert.Equal(m_Height, agent.nextPosition.y, 4);
-            AgentSystem.Step();
             Assert.Equal(target, agent.transform.position);
             AgentSystem.SyncTransforms();
             Assert.Equal(new Vector3(target.x, m_Height, target.z), agent.transform.position);
@@ -135,7 +129,6 @@ namespace UnityEngine.Tests
             var moved = Center + new Vector3(-2f, 0.5f, -1.5f);
             agent.transform.position = moved;
             Assert.Equal(new Vector3(moved.x, m_Height, moved.z), agent.nextPosition);
-            AgentSystem.Step();
             Assert.Equal(moved, agent.transform.position);
             AgentSystem.SyncTransforms();
             Assert.Equal(new Vector3(moved.x, m_Height, moved.z), agent.transform.position);

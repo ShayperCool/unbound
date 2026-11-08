@@ -243,6 +243,9 @@ namespace UnityEngine.Tests
             var agent = Agent(new Vector3(-7f, 0f, 1f));
             Assert.True(agent.isOnNavMesh);
             Assert.True(agent.SetDestination(Goal(1f)));
+            for (int i = 0; i < 3; i++) Step();
+            // A walking agent's destination off its path (over the link) waits for the agent update.
+            Assert.True(agent.SetDestination(new Vector3(5f, 0f, 1f)));
             NavMesh.SetLinkActive(m_Link, false);
             RefreshNavMesh();
             Assert.True(agent.isOnNavMesh);

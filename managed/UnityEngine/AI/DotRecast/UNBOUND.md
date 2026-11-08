@@ -27,7 +27,10 @@ Altered (marked `Unbound:` in the sources):
   towards the previous update's plan (`DtCrowdAgent.pvel`; a braking agent's speed follows it at
   once), then steers with that velocity in 3D (a corner above slows them in the plane) and plans;
   they brake once the end is nearer than two radii scaled by their speed over full speed, losing
-  v²/2d per second, steer to the end however close, and land on it when a step reaches it;
+  v²/2d per second, steer to the end however close, and land on it when a step reaches it; they
+  reach an off-mesh link from where the update's step took them and begin to cross it in that
+  update (`tests/projects/navlinks`); `DtCrowdAgent.NextVelocity` gives the next step's velocity
+  without taking it (the agents turn towards it);
 - crowd avoidance as Unity's: Detour's adaptive patterns around 0.7 of the desired velocity offset
   right by 0.04 of it, candidates weighed 1 (desired), 0.5 (current) and 2.5 (time to impact)
   within the prediction time, against the neighbours' own velocities (not RVO's halves), no side

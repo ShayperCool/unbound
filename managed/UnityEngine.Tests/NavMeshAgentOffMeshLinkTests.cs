@@ -122,6 +122,8 @@ namespace UnityEngine.Tests
             // It reached the link within Detour's trigger distance (2.25 radii) of its start.
             Assert.True(waiting.x <= LinkStart.x, $"waiting at {waiting}");
             Assert.True(Dist2D(waiting, LinkStart) <= 2.25f * agent.radius + 1e-3f, $"waiting at {waiting}");
+            // On a link the rest of the path is unknown (measured: navlinks, every frame on a link).
+            Assert.Equal(float.PositiveInfinity, agent.remainingDistance);
             // Waits in place with no velocity (measured).
             for (int i = 0; i < 60; i++)
             {
@@ -178,17 +180,14 @@ namespace UnityEngine.Tests
 
             agent.CompleteOffMeshLink();
             Assert.False(agent.isOnOffMeshLink);
+            Assert.False(NavMesh.IsLinkOccupied(m_Link));
             Assert.Equal(LinkEnd, agent.nextPosition);
-            // The transform follows with the next update that moves the agent (measured).
+            // The transform stays until the next early update, which moves the agent (measured).
+            Assert.Equal(waiting, agent.transform.position);
             Assert.Equal(waiting, agent.transform.position);
 
             Step();
             Assert.False(agent.isOnOffMeshLink);
-            Assert.False(NavMesh.IsLinkOccupied(m_Link));
-            Assert.Equal(LinkEnd, agent.nextPosition);
-            Assert.Equal(waiting, agent.transform.position);
-
-            Step();
             // On at its planned velocity at once: one full-speed step past the end (measured).
             Assert.InRange(agent.nextPosition.x, LinkEnd.x + agent.speed * Dt - 1e-2f, LinkEnd.x + agent.speed * Dt + 1e-2f);
             Assert.InRange(agent.velocity.x, agent.speed - 0.05f, agent.speed + 0.05f);
@@ -368,8 +367,6 @@ namespace UnityEngine.Tests
             // Then it crosses as over an active link (measured) and walks on.
             agent.CompleteOffMeshLink();
             Assert.False(agent.isOnOffMeshLink);
-            Assert.Equal(LinkEnd, agent.nextPosition);
-            Step();
             Assert.Equal(LinkEnd, agent.nextPosition);
             Step();
             Assert.InRange(agent.nextPosition.x, LinkEnd.x + agent.speed * Dt - 1e-2f, LinkEnd.x + agent.speed * Dt + 1e-2f);
