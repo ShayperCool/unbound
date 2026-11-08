@@ -87,6 +87,9 @@ fn vertex_shader(m: &MeshBuffers, stream: u32, extra: bool) -> String {
             })
             .collect();
         offset += dimension * width(format);
+        if m.vertex_mask & (1 << attribute) == 0 {
+            continue;
+        }
         let mut targets = Vec::new();
         if !extra {
             match attribute {
@@ -99,7 +102,9 @@ fn vertex_shader(m: &MeshBuffers, stream: u32, extra: bool) -> String {
                         if uv > attribute && m.attributes.iter().any(|a| a[0] == uv) {
                             break;
                         }
-                        targets.push((14 + (uv - 4) * 4, 4));
+                        if m.vertex_mask & (1 << uv) != 0 {
+                            targets.push((14 + (uv - 4) * 4, 4));
+                        }
                     }
                 }
                 _ => {}
@@ -155,15 +160,15 @@ fn index_shader(m: &MeshBuffers) -> (String, u32) {
 
 impl UnityRenderer {
     pub(super) fn bind_mesh_buffers(&mut self, m: MeshBuffers) {
+        let key = (m.mesh, m.source_slot);
+        if m.vertices == 0 && m.indices == 0 && m.attributes.is_empty() {
+            self.mesh_buffers.remove(&key);
+            return;
+        }
         let Some(mesh) = self.meshes.get(&m.mesh) else {
             return;
         };
-        let bindings = if m.indices_only {
-            &mut self.mesh_index_sources
-        } else {
-            &mut self.mesh_buffers
-        };
-        if bindings.get(&m.mesh).is_some_and(|b| {
+        if self.mesh_buffers.get(&key).is_some_and(|b| {
             b.description == m
                 && b.vertex == mesh.vertex
                 && b.extra == mesh.extra
@@ -229,7 +234,10 @@ impl UnityRenderer {
             if source == 0 {
                 continue;
             }
-            if m.attributes.iter().any(|a| a[3] == stream && a[0] <= 7) {
+            if m.attributes
+                .iter()
+                .any(|a| a[3] == stream && a[0] <= 7 && m.vertex_mask & (1 << a[0]) != 0)
+            {
                 add(
                     source,
                     &binding.vertex,
@@ -239,10 +247,9 @@ impl UnityRenderer {
                 );
             }
             if let Some(extra) = &binding.extra {
-                if m.attributes
-                    .iter()
-                    .any(|a| a[3] == stream && (8..=11).contains(&a[0]))
-                {
+                if m.attributes.iter().any(|a| {
+                    a[3] == stream && (8..=11).contains(&a[0]) && m.vertex_mask & (1 << a[0]) != 0
+                }) {
                     add(
                         source,
                         extra,
@@ -255,12 +262,20 @@ impl UnityRenderer {
         }
         let (code, count) = index_shader(&m);
         add(m.indices, &binding.index, code, count, true);
-        bindings.insert(m.mesh, binding);
+        self.mesh_buffers.insert(key, binding);
+    }
+
+    pub(super) fn mesh_has_gpu_indices(&self, mesh: u64) -> bool {
+        (0..4).any(|slot| {
+            self.mesh_buffers
+                .get(&(mesh, slot))
+                .is_some_and(|b| b.description.indices != 0)
+        })
     }
 
     pub(super) fn invalidate_mesh_buffers(&mut self, mesh: u64, keep_indices: bool) {
-        for bindings in [&mut self.mesh_buffers, &mut self.mesh_index_sources] {
-            if let Some(binding) = bindings.get_mut(&mesh) {
+        for slot in 0..4 {
+            if let Some(binding) = self.mesh_buffers.get_mut(&(mesh, slot)) {
                 for conversion in &mut binding.conversions {
                     if !keep_indices || !conversion.index {
                         conversion.revision = u64::MAX;
@@ -271,17 +286,18 @@ impl UnityRenderer {
     }
 
     pub(super) fn sync_mesh_buffers(&mut self, mesh: u64, ops: &mut Vec<Op>) -> bool {
-        let external_indices = self.mesh_index_sources.contains_key(&mesh);
+        let index_source = (0..4).rev().find(|slot| {
+            self.mesh_buffers
+                .get(&(mesh, *slot))
+                .is_some_and(|b| b.description.indices != 0)
+        });
         let mut changed = false;
-        for (bindings, skip_indices) in [
-            (&mut self.mesh_buffers, external_indices),
-            (&mut self.mesh_index_sources, false),
-        ] {
-            let Some(binding) = bindings.get_mut(&mesh) else {
+        for slot in 0..4 {
+            let Some(binding) = self.mesh_buffers.get_mut(&(mesh, slot)) else {
                 continue;
             };
             for conversion in &mut binding.conversions {
-                if skip_indices && conversion.index {
+                if conversion.index && index_source != Some(slot) {
                     continue;
                 }
                 let Some(source) = self.buffers.get(&conversion.source) else {
@@ -324,7 +340,8 @@ mod tests {
         for format in 0..12 {
             let m = MeshBuffers {
                 mesh: 1,
-                indices_only: false,
+                source_slot: 0,
+                vertex_mask: u32::MAX,
                 vertices: 4,
                 streams: [(1, 64); 4],
                 attributes: vec![
@@ -347,10 +364,34 @@ mod tests {
     }
 
     #[test]
+    fn masked_attributes_keep_source_offsets_and_limit_uv_aliases() {
+        let m = MeshBuffers {
+            mesh: 1,
+            source_slot: 3,
+            vertex_mask: (1 << 4) | (1 << 5),
+            vertices: 3,
+            streams: [(1, 32), (0, 0), (0, 0), (0, 0)],
+            attributes: vec![[0, 0, 3, 0], [3, 0, 4, 0], [4, 1, 2, 0]],
+            indices: 0,
+            index_size: 2,
+            index_count: 0,
+            submeshes: vec![],
+        };
+        let code = vertex_shader(&m, 0, false);
+        validate(&code);
+        assert!(code.contains("base + 28u"));
+        assert!(code.contains("+ 14u]"));
+        assert!(code.contains("+ 18u]"));
+        assert!(!code.contains("+ 22u]"));
+        assert!(!code.contains("+ 10u]"));
+    }
+
+    #[test]
     fn index_conversion_preserves_ranges_and_expands_quads() {
         let m = MeshBuffers {
             mesh: 1,
-            indices_only: false,
+            source_slot: 0,
+            vertex_mask: u32::MAX,
             vertices: 4,
             streams: [(0, 0); 4],
             attributes: vec![],

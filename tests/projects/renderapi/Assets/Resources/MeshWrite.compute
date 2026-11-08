@@ -4,6 +4,7 @@
 #pragma kernel Packed
 #pragma kernel PackedHdr
 #pragma kernel SourceColor
+#pragma kernel SourceUV
 
 RWByteAddressBuffer RawVertices;
 RWByteAddressBuffer RawIndices;
@@ -65,4 +66,10 @@ void PackedHdr(uint3 id : SV_DispatchThreadID)
 void SourceColor(uint3 id : SV_DispatchThreadID)
 {
     for(uint n=0;n<(uint)Count;n++) RawVertices.Store(n*Stride+ColorOffset,0xffff0000);
+}
+
+[numthreads(1,1,1)]
+void SourceUV(uint3 id : SV_DispatchThreadID)
+{
+    for(uint n=0;n<(uint)Count;n++) RawVertices.Store2(n*Stride+ColorOffset,asuint(float2(1,.5)));
 }

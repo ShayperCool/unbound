@@ -40,6 +40,43 @@ namespace UnityEngine
             }
         }
 
+        internal uint OverrideVertexChannels(Mesh source)
+        {
+            uint mask = 0;
+            int count = vertexCount;
+            void Keep(VertexAttribute attribute) { mask |= 1u << (int)attribute; CopyPackedChannelFrom(source,attribute); }
+            if (source.HasVertexAttribute(VertexAttribute.Position) && source.vertexCount == count) { m_Vertices = source.m_Vertices; Keep(VertexAttribute.Position); }
+            if (source.m_Normals != null && source.m_Normals.Length == count) { m_Normals = source.m_Normals; Keep(VertexAttribute.Normal); }
+            if (source.m_Tangents != null && source.m_Tangents.Length == count) { m_Tangents = source.m_Tangents; Keep(VertexAttribute.Tangent); }
+            if (source.m_Colors != null && source.m_Colors.Length == count) { m_Colors = source.m_Colors; Keep(VertexAttribute.Color); }
+            for (int channel=0;channel<8;channel++)
+                if (source.m_UVs[channel] != null && source.m_UVs[channel].Length == count)
+                {
+                    m_UVs[channel] = source.m_UVs[channel]; m_UVDimensions[channel] = source.m_UVDimensions[channel];
+                    Keep(VertexAttribute.TexCoord0 + channel);
+                }
+            // Missing primary UV inputs inherit the nearest lower channel of the merged layout.
+            for (int channel=0;channel<4;channel++)
+                for (int lower=channel;lower>=0;lower--)
+                    if (m_UVs[lower] != null)
+                    {
+                        if ((mask & (1u << ((int)VertexAttribute.TexCoord0 + lower))) != 0) mask |= 1u << ((int)VertexAttribute.TexCoord0 + channel);
+                        break;
+                    }
+            return mask;
+        }
+
+        internal void CopyPackedChannelFrom(Mesh source, VertexAttribute attribute)
+        {
+            var channel = source.m_PackedChannels?[(int)attribute];
+            if (channel == null) { InvalidatePackedChannel(attribute); return; }
+            m_PackedChannels ??= new PackedChannel[MaxVertexAttributes];
+            m_PackedChannels[(int)attribute] = new PackedChannel
+            {
+                Descriptor = channel.Descriptor, Count = channel.Count, Bytes = (byte[])channel.Bytes.Clone(),
+            };
+        }
+
         void CopyPackedChannels(Mesh source)
         {
             m_PackedChannels = null;

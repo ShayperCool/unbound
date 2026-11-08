@@ -19,6 +19,27 @@ namespace UnityEngine.Tests
         };
 
         [Fact]
+        public void PositionlessStreamsKeepTheirLayoutUntilPositionsAreAssigned()
+        {
+            var mesh = new Mesh();
+            try
+            {
+                mesh.SetVertexBufferParams(3,
+                    new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.UNorm8, 4),
+                    new VertexAttributeDescriptor(VertexAttribute.TexCoord2, VertexAttributeFormat.Float32, 2, 1));
+                Assert.Equal(3, mesh.vertexCount);
+                Assert.False(mesh.HasVertexAttribute(VertexAttribute.Position));
+                Assert.Equal(4, mesh.GetVertexBufferStride(0));
+                mesh.vertices = new[] {Vector3.zero, Vector3.right, Vector3.up};
+                Assert.True(mesh.HasVertexAttribute(VertexAttribute.Position));
+                Assert.Equal(16, mesh.GetVertexBufferStride(0));
+                Assert.True(mesh.HasVertexAttribute(VertexAttribute.Color));
+                Assert.Equal(8, mesh.GetVertexBufferStride(1));
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
+
+        [Fact]
         public void DisposingAViewPreservesItsAliasesAndTheMeshOwner()
         {
             var mesh = Triangle();

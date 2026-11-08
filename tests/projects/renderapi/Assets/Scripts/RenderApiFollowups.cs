@@ -74,6 +74,54 @@ public sealed partial class RenderApiProbe
         DestroyImmediate(go); DestroyImmediate(mesh); DestroyImmediate(material);
     }
 
+    void PositionlessStreamCases()
+    {
+        var mesh=Make();mesh.colors32=new[] {new Color32(255,255,255,255),new Color32(255,255,255,255),new Color32(255,255,255,255)};
+        mesh.uv=new[] {new Vector2(.25f,.5f),new Vector2(.25f,.5f),new Vector2(.25f,.5f)};mesh.vertexBufferTarget|=GraphicsBuffer.Target.Raw;
+        var extra=new Mesh();extra.SetVertexBufferParams(3,new VertexAttributeDescriptor(VertexAttribute.Color,VertexAttributeFormat.UNorm8,4,0),new VertexAttributeDescriptor(VertexAttribute.TexCoord2,VertexAttributeFormat.Float32,2,1));
+        extra.SetVertexBufferData(new uint[] {0xffffffff,0xffffffff,0xffffffff},0,0,3,0);
+        extra.SetVertexBufferData(new[] {new Vector2(.2f,.8f),new Vector2(.2f,.8f),new Vector2(.2f,.8f)},0,0,3,1);extra.vertexBufferTarget|=GraphicsBuffer.Target.Raw;
+        Bool("streamOnly.position",extra.HasVertexAttribute(VertexAttribute.Position));
+        var go=new GameObject("positionless override streams");go.AddComponent<MeshFilter>().sharedMesh=mesh;var renderer=go.AddComponent<MeshRenderer>();renderer.additionalVertexStreams=extra;
+        var material=new Material(Resources.Load<Shader>("StreamRead"));renderer.sharedMaterial=material;Image("streamOnly.before");
+        var compute=Resources.Load<ComputeShader>("MeshWrite");int uv=compute.FindKernel("SourceUV"),position=compute.FindKernel("Skin");
+        using(var b=mesh.GetVertexBuffer(0))
+        {
+            compute.SetInt("Count",3);compute.SetInt("Stride",b.stride);compute.SetBuffer(position,"RawVertices",b);compute.Dispatch(position,1,1,1);
+            compute.SetBuffer(uv,"RawVertices",b);compute.SetInt("ColorOffset",mesh.GetVertexAttributeOffset(VertexAttribute.TexCoord0));compute.Dispatch(uv,1,1,1);
+        }
+        Image("streamOnly.baseGpu");
+        using(var b=extra.GetVertexBuffer(1))
+        {
+            Buffer("streamOnly.uv",b,false);compute.SetInt("Stride",b.stride);compute.SetBuffer(uv,"RawVertices",b);compute.SetInt("ColorOffset",0);compute.Dispatch(uv,1,1,1);
+        }
+        Image("streamOnly.overrideGpu");
+        extra.vertices=new[] {Vertices[0]+Vector3.left*.1f,Vertices[1]+Vector3.left*.1f,Vertices[2]+Vector3.left*.1f};
+        Bool("streamOnly.addedPosition",extra.HasVertexAttribute(VertexAttribute.Position));Image("streamOnly.addedPosition");
+        DestroyImmediate(go);DestroyImmediate(mesh);DestroyImmediate(extra);DestroyImmediate(material);
+    }
+
+    void AdditionalStreamCases()
+    {
+        var mesh=Make();mesh.colors32=new[] {new Color32(255,255,255,255),new Color32(255,255,255,255),new Color32(255,255,255,255)};
+        var extra=Make();extra.vertexBufferTarget|=GraphicsBuffer.Target.Raw;
+        extra.colors32=new[] {new Color32(0,255,0,255),new Color32(0,255,0,255),new Color32(0,255,0,255)};
+        extra.vertices=new[] {Vertices[0]+Vector3.right*.2f,Vertices[1]+Vector3.right*.2f,Vertices[2]+Vector3.right*.2f};
+        var go=new GameObject("additional GPU streams");go.AddComponent<MeshFilter>().sharedMesh=mesh;var renderer=go.AddComponent<MeshRenderer>();renderer.additionalVertexStreams=extra;
+        var material=new Material(Resources.Load<Shader>("PackedRead"));material.SetFloat("_UseUvs",0);renderer.sharedMaterial=material;
+        Image("streamExtra.before");
+        using(var b=extra.GetVertexBuffer(0))
+        {
+            var compute=Resources.Load<ComputeShader>("MeshWrite");int color=compute.FindKernel("SourceColor"),position=compute.FindKernel("Skin");
+            compute.SetBuffer(color,"RawVertices",b);compute.SetInt("Stride",b.stride);compute.SetInt("Count",extra.vertexCount);compute.SetInt("ColorOffset",extra.GetVertexAttributeOffset(VertexAttribute.Color));compute.Dispatch(color,1,1,1);
+            compute.SetBuffer(position,"RawVertices",b);compute.Dispatch(position,1,1,1);
+        }
+        Image("streamExtra.gpu");Value("streamExtra.cpu",V(extra.vertices[0]));
+        extra.SetVertices(new[] {Vertices[0]+Vector3.right*.2f,Vertices[1]+Vector3.right*.2f,Vertices[2]+Vector3.right*.2f});
+        Image("streamExtra.cpuEdit");
+        DestroyImmediate(go);DestroyImmediate(mesh);DestroyImmediate(extra);DestroyImmediate(material);
+    }
+
     IEnumerator SkinExtraCases()
     {
         var mesh=Make();mesh.triangles=new[] {0,2,1};mesh.colors32=new[] {new Color32(0,255,0,255),new Color32(0,255,0,255),new Color32(0,255,0,255)};

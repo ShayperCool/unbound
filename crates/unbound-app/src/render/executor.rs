@@ -387,8 +387,7 @@ pub struct UnityRenderer {
     pipelines: Pipelines,
     mipmaps: mipmaps::Mipmaps,
     meshes: HashMap<u64, GpuMesh>,
-    mesh_buffers: HashMap<u64, mesh_buffers::Binding>,
-    mesh_index_sources: HashMap<u64, mesh_buffers::Binding>,
+    mesh_buffers: HashMap<(u64, u8), mesh_buffers::Binding>,
     /// Zeros standing in for channels 4..7 of meshes without them.
     zero_extra: Option<wgpu::Buffer>,
     textures: HashMap<u64, GpuTexture>,
@@ -494,7 +493,6 @@ impl UnityRenderer {
             mipmaps: Default::default(),
             meshes: HashMap::default(),
             mesh_buffers: HashMap::default(),
-            mesh_index_sources: HashMap::default(),
             zero_extra: None,
             textures: HashMap::default(),
             texture_mip_biases: HashMap::default(),
@@ -668,8 +666,7 @@ impl UnityRenderer {
                     wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::STORAGE,
                     "unbound vertices",
                 );
-                let keep_gpu_indices = (self.mesh_buffers.contains_key(&handle)
-                    || self.mesh_index_sources.contains_key(&handle))
+                let keep_gpu_indices = self.mesh_has_gpu_indices(handle)
                     && old_index
                         .as_ref()
                         .is_some_and(|buffer| buffer.size() >= (indices.len() as u64 * 4).max(16));
@@ -698,8 +695,9 @@ impl UnityRenderer {
             }
             Upload::ReleaseMesh(handle) => {
                 self.meshes.remove(&handle);
-                self.mesh_buffers.remove(&handle);
-                self.mesh_index_sources.remove(&handle);
+                for slot in 0..4 {
+                    self.mesh_buffers.remove(&(handle, slot));
+                }
             }
             Upload::UploadTexture(handle, texture) => {
                 self.generation += 1;

@@ -539,16 +539,9 @@ namespace UnityEngine
                     m_StreamedMesh = new Mesh { hideFlags = HideFlags.HideAndDontSave };
             m_StreamedMesh.CopyGeometryFrom(mesh);
             m_StreamedMesh.name = mesh.name;
-            int count = mesh.m_Vertices.Length;
-            if (streams.m_Colors != null && streams.m_Colors.Length == count) m_StreamedMesh.m_Colors = streams.m_Colors;
-            if (streams.m_Normals != null && streams.m_Normals.Length == count) m_StreamedMesh.m_Normals = streams.m_Normals;
-            if (streams.m_Tangents != null && streams.m_Tangents.Length == count) m_StreamedMesh.m_Tangents = streams.m_Tangents;
-            for (int i = 0; i < 8; i++)
-                if (streams.m_UVs[i] != null && streams.m_UVs[i].Length == count)
-                {
-                    m_StreamedMesh.m_UVs[i] = streams.m_UVs[i];
-                    m_StreamedMesh.m_UVDimensions[i] = streams.m_UVDimensions[i];
-                }
+            uint overridden = m_StreamedMesh.OverrideVertexChannels(streams);
+            m_StreamedMesh.ShareDrawIndices(mesh);
+            m_StreamedMesh.ShareVertexSources(mesh,streams,overridden);
             m_StreamedMesh.m_Dirty = true;
             m_StreamedKey = key;
             return m_StreamedMesh;

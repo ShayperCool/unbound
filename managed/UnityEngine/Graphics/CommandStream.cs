@@ -731,15 +731,16 @@ namespace Unbound.Runtime
         }
 
         internal static void MeshBuffers(ulong mesh, GpuBufferStorage[] streams, GpuBufferStorage indices,
-            UnityEngine.Rendering.VertexAttributeDescriptor[] layout, Mesh.MeshDataStore data, bool indicesOnly = false)
+            UnityEngine.Rendering.VertexAttributeDescriptor[] layout, Mesh.MeshDataStore data, byte sourceSlot = 0, uint vertexMask = uint.MaxValue)
         {
-            U8(MeshBuffersOp); U64(mesh); U8(indicesOnly ? (byte)1 : (byte)0); U32((uint)data.VertexCount);
-            for (int i = 0; i < 4; i++) { U64(streams?[i]?.Handle ?? 0); U32(indicesOnly ? 0u : (uint)data.Stride(i)); }
+            U8(MeshBuffersOp); U64(mesh); U8(sourceSlot); U32(vertexMask); U32((uint)(data?.VertexCount ?? 0));
+            for (int i=0;i<4;i++) { U64(streams?[i]?.Handle ?? 0); U32((uint)(data?.Stride(i) ?? 0)); }
             U32((uint)layout.Length);
             foreach (var d in layout) { U32((uint)d.attribute); U32((uint)d.format); U32((uint)d.dimension); U32((uint)d.stream); }
-            U64(indices?.Handle ?? 0); U32(data.IndexFormat == UnityEngine.Rendering.IndexFormat.UInt32 ? 4u : 2u); U32((uint)data.IndexCount);
-            U32((uint)data.SubMeshes.Count);
-            foreach (var sub in data.SubMeshes) { U32((uint)sub.indexStart); U32((uint)sub.indexCount); U32((uint)sub.topology); }
+            U64(indices?.Handle ?? 0); U32(data?.IndexFormat == UnityEngine.Rendering.IndexFormat.UInt32 ? 4u : 2u); U32((uint)(data?.IndexCount ?? 0));
+            U32((uint)(data?.SubMeshes.Count ?? 0));
+            if (data != null)
+                foreach (var sub in data.SubMeshes) { U32((uint)sub.indexStart); U32((uint)sub.indexCount); U32((uint)sub.topology); }
         }
 
         internal static void BufferData(ulong handle, long offset, ReadOnlySpan<byte> data)

@@ -19,9 +19,14 @@ namespace UnityEngine
         bool m_GraphicsDirtyIndices = true;
         bool m_GraphicsBindingDirty;
         int m_GraphicsBindingVersion;
-        Mesh m_GraphicsIndexSource;
-        int m_IndexSourceVersion = -1;
-        ulong m_IndexSourceHandle;
+        struct GraphicsSource
+        {
+            internal Mesh Mesh;
+            internal uint VertexMask;
+            internal bool Indices, Active;
+            internal int Version;
+        }
+        GraphicsSource[] m_GraphicsSources;
 
         public GraphicsBuffer.Target vertexBufferTarget
         {
@@ -142,12 +147,39 @@ namespace UnityEngine
             m_Layout = attributes;
         }
 
+        void SetGraphicsSource(int slot, Mesh source, uint vertexMask, bool indices)
+        {
+            m_GraphicsSources ??= new GraphicsSource[3];
+            ref var link = ref m_GraphicsSources[slot-1];
+            if (ReferenceEquals(link.Mesh,source) && link.VertexMask == vertexMask && link.Indices == indices) return;
+            link.Mesh = source; link.VertexMask = vertexMask; link.Indices = indices; link.Version = -1;
+        }
+
         internal void ShareDrawIndices(Mesh source)
         {
             m_IndexFormat = source.m_IndexFormat;
             m_IndexBuffer = source.m_IndexBuffer;
             m_SubMeshes.Clear(); m_SubMeshes.AddRange(source.m_SubMeshes);
-            m_GraphicsIndexSource = source;
+            SetGraphicsSource(1,source,0,true);
+        }
+
+        internal void ShareVertexSources(Mesh source, Mesh overrides, uint overriddenAttributes)
+        {
+            SetGraphicsSource(2,source,~overriddenAttributes,false);
+            SetGraphicsSource(3,overrides,overriddenAttributes,false);
+        }
+
+        // Drop a previous source before a CPU upload decides whether its GPU indices can stay.
+        void ClearGraphicsSources()
+        {
+            if (m_GraphicsSources == null) return;
+            for (int i=0;i<m_GraphicsSources.Length;i++)
+            {
+                ref var link = ref m_GraphicsSources[i];
+                if (!link.Active || (link.Mesh != null && link.Mesh.m_GraphicsVertexBuffers != null)) continue;
+                GfxStream.MeshBuffers(m_Handle,null,null,Array.Empty<VertexAttributeDescriptor>(),null,(byte)(i+1),0);
+                link.Active = false;
+            }
         }
 
         void SyncGraphicsBinding()
@@ -157,15 +189,18 @@ namespace UnityEngine
                 GfxStream.MeshBuffers(m_Handle, m_GraphicsVertexBuffers, m_GraphicsIndexBuffer, m_GraphicsLayout, m_GraphicsData);
                 m_GraphicsBindingDirty = false;
             }
-            var source = m_GraphicsIndexSource;
-            if (source == null || source.m_GraphicsVertexBuffers == null) return;
-            source.SyncGraphicsBuffers();
-            var indices = source.m_GraphicsIndexBuffer;
-            if (indices == null) return;
-            if (m_IndexSourceHandle == indices.Handle && m_IndexSourceVersion == source.m_GraphicsBindingVersion) return;
-            GfxStream.MeshBuffers(m_Handle, null, indices, Array.Empty<VertexAttributeDescriptor>(), source.m_GraphicsData, indicesOnly: true);
-            m_IndexSourceHandle = indices.Handle;
-            m_IndexSourceVersion = source.m_GraphicsBindingVersion;
+            if (m_GraphicsSources == null) return;
+            for (int i=0;i<m_GraphicsSources.Length;i++)
+            {
+                ref var link = ref m_GraphicsSources[i];
+                var source = link.Mesh;
+                if (source == null || source.m_GraphicsVertexBuffers == null) continue;
+                source.SyncGraphicsBuffers();
+                if (link.Active && link.Version == source.m_GraphicsBindingVersion) continue;
+                GfxStream.MeshBuffers(m_Handle,source.m_GraphicsVertexBuffers,link.Indices ? source.m_GraphicsIndexBuffer : null,
+                    source.m_GraphicsLayout,source.m_GraphicsData,(byte)(i+1),link.VertexMask);
+                link.Version = source.m_GraphicsBindingVersion; link.Active = true;
+            }
         }
 
         static void Upload(ref GpuBufferStorage storage, int count, int stride, GraphicsBuffer.Target target, ReadOnlySpan<byte> bytes)

@@ -60,7 +60,7 @@ namespace UnityEngine
         {
             switch (attr)
             {
-                case VertexAttribute.Position: return m_Vertices.Length > 0 || LayoutHas(attr);
+                case VertexAttribute.Position: return m_Layout != null ? LayoutHas(attr) : m_Vertices.Length > 0;
                 case VertexAttribute.Normal: return m_Normals != null;
                 case VertexAttribute.Tangent: return m_Tangents != null;
                 case VertexAttribute.Color: return m_Colors != null;

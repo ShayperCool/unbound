@@ -318,6 +318,8 @@ public sealed partial class RenderApiProbe : MonoBehaviour
         QuadLayoutCases();
         ColorArrayCases();
         yield return SkinExtraCases();
+        AdditionalStreamCases();
+        PositionlessStreamCases();
         // Runtime queries and scene changes must not synthesize layer edits.
         Value("sorting.added",added.ToString());Value("sorting.removed",removed.ToString());
         SortingLayer.onLayerAdded-=OnAdded;SortingLayer.onLayerRemoved-=OnRemoved;

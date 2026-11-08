@@ -60,7 +60,8 @@ pub struct Draw {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MeshBuffers {
     pub mesh: u64,
-    pub indices_only: bool,
+    pub source_slot: u8,
+    pub vertex_mask: u32,
     pub vertices: u32,
     pub streams: [(u64, u32); 4],
     /// Attribute, format, dimension, stream, in attribute order.
@@ -666,7 +667,11 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
             }
             op::MESH_BUFFERS => {
                 let mesh = r.u64()?;
-                let indices_only = r.u8()? != 0;
+                let source_slot = r.u8()?;
+                if source_slot > 3 {
+                    return Err("invalid mesh GPU source slot".into());
+                }
+                let vertex_mask = r.u32()?;
                 let vertices = r.u32()?;
                 let mut streams = [(0, 0); 4];
                 for stream in &mut streams {
@@ -697,7 +702,8 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 }
                 Command::MeshBuffers(Box::new(MeshBuffers {
                     mesh,
-                    indices_only,
+                    source_slot,
+                    vertex_mask,
                     vertices,
                     streams,
                     attributes,
@@ -1003,7 +1009,8 @@ impl Writer {
             Command::MeshBuffers(m) => {
                 self.bytes.push(op::MESH_BUFFERS);
                 self.u64(m.mesh);
-                self.bytes.push(m.indices_only as u8);
+                self.bytes.push(m.source_slot);
+                self.u32(m.vertex_mask);
                 self.u32(m.vertices);
                 for (handle, stride) in m.streams {
                     self.u64(handle);
@@ -1260,7 +1267,8 @@ mod tests {
             },
             Command::MeshBuffers(Box::new(MeshBuffers {
                 mesh: 7,
-                indices_only: false,
+                source_slot: 0,
+                vertex_mask: u32::MAX,
                 vertices: 4,
                 streams: [(8, 12), (0, 0), (0, 0), (0, 0)],
                 attributes: vec![[0, 0, 3, 0]],

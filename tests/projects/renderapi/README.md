@@ -96,3 +96,5 @@ uses the same Game-view toggle and Selection state as Editor scripts.
 Game-view drawing reuses the release's published `Hidden/Editor Gizmo` and `Hidden/Editor Gizmo Lit`
 shader sources. Icon, GUI texture and frustum drawing remain explicit unsupported operations in
 callbacks; doctor lists them. No Scene-view renderer is provided.
+
+Additional vertex-stream controls preserve packed colors and override positions, including GPU edits to both source meshes, positionless layouts, and inherited UV inputs. The Unity 6000.0.71f1 repeats retain all earlier reference records and images unchanged.

@@ -26,13 +26,15 @@ use a direct model transform before the view normal transform. Ordinary draws re
 material/global values and inverse-transpose normals.
 
 Opcode 31, `MeshBuffers`, associates a mesh with its existing GraphicsBuffer streams. It carries
-`u64 mesh`, `u8 indicesOnly`, `u32 vertexCount`, four pairs of `u64 buffer, u32 stride`, a `u32` attribute count
+`u64 mesh`, `u8 sourceSlot`, `u32 vertexMask`, `u32 vertexCount`, four pairs of `u64 buffer, u32 stride`, a `u32` attribute count
 and four `u32`s per attribute, followed by `u64 indexBuffer, u32 indexSize, u32 logicalIndexCount`, a `u32` submesh
 count and three `u32`s per submesh. Attributes are attribute, format, dimension and stream;
 submeshes are source index start, count and topology. Buffer writes retain their command-stream
 order. Cached conversions update the drawing layout after writes, including 16-bit indices and submesh ranges. Quad buffers retain the logical indices followed
-by the expanded triangle ranges; draws read those appended ranges. An index-only binding shares a source mesh
-index buffer with a deformed drawing mesh while retaining its separate vertex streams.
+by the expanded triangle ranges; draws read those appended ranges. Slot 0 binds the mesh's own buffers;
+slot 1 shares source indices with deformed meshes, and slots 2/3 supply the base/override vertex
+attributes of additional vertex streams. The attribute mask keeps these sources disjoint,
+including inherited UV channels. An empty description clears a source binding.
 GPU changes leave CPU mesh channels unchanged. CPU vertex edits
 upload the vertex streams; layout and size changes replace storage. NativeApi 31 and 32
 refuse each other at startup.

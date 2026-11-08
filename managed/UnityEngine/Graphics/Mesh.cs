@@ -190,6 +190,11 @@ namespace UnityEngine
             set
             {
                 m_Vertices = value != null ? (Vector3[])value.Clone() : Array.Empty<Vector3>();
+                if (m_Layout != null && !LayoutHas(VertexAttribute.Position))
+                {
+                    Array.Resize(ref m_Layout, m_Layout.Length + 1);
+                    m_Layout[m_Layout.Length - 1] = new VertexAttributeDescriptor(VertexAttribute.Position);
+                }
                 // Unity 6000.0 Mesh.vertices documents that existing vertex attributes resize
                 // with the positions. Null channels stay absent; UV dimensions stay unchanged.
                 int count = m_Vertices.Length;
@@ -838,6 +843,7 @@ namespace UnityEngine
             }
             if (m_Handle == 0) m_Handle = RenderHandles.Next();
             SyncGraphicsBuffers();
+            ClearGraphicsSources();
             if (!m_Dirty) { SyncGraphicsBinding(); return m_Handle; }
             m_Dirty = false;
             m_SyncVersion++;
