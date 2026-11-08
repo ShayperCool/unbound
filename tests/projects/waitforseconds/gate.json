@@ -1,0 +1,4 @@
+{
+  "commands": ["python3 tests/projects/waitforseconds/run.py gate"],
+  "summary": "waitforseconds: .*"
+}
