@@ -329,8 +329,9 @@ namespace UnityEngine
                     Debug.LogError($"Unbound: downloaded audio of AudioType.{type} is not supported; the clip has no data");
                 return clip;
             }
-            // Until its file is complete a clip made from a header holds no samples (silence).
-            if (headerOnly) AudioBackend.Current.CreateClip(clip.m_Handle, info.Frames, info.Channels, info.Frequency, true);
+            // Until its file is complete a clip made from a header is silence of that length; a
+            // voice already playing it reads the samples once they replace the silence.
+            if (headerOnly) AudioBackend.Current.CreateClip(clip.m_Handle, info.Frames, info.Channels, info.Frequency, false);
             else if (form == DownloadedForm.Compressed && info.CompressionFormat is not ((int)AudioCompressionFormat.MP3 or (int)AudioCompressionFormat.ADPCM))
                 clip.m_Download = DownloadedForm.Decompressed;
             clip.m_Samples = info.Frames;
@@ -343,7 +344,12 @@ namespace UnityEngine
         /// decoded format and length.</summary>
         internal void FillDownload(ReadOnlySpan<byte> data, AudioType type)
         {
-            if (m_Handle == 0 || !AudioBackend.Current.DecodeClip(m_Handle, data, (int)type, false, out var info)) return;
+            if (m_Handle == 0) return;
+            if (!AudioBackend.Current.DecodeClip(m_Handle, data, (int)type, false, out var info))
+            {
+                Debug.LogError("Error: Cannot create FMOD::Sound instance for clip \"\" (FMOD error: Unsupported file or audio format. )");
+                return;
+            }
             m_Samples = info.Frames;
             m_Channels = info.Channels;
             m_Frequency = info.Frequency;

@@ -186,8 +186,15 @@ pub fn header(data: &[u8], container: Container) -> Option<(u16, u32, u64)> {
             format = Some((channels, rate, align, bits, tag));
         } else if id == b"data" {
             let (channels, rate, align, bits, tag) = format?;
-            // Only PCM and float data have a fixed frame size to count frames by.
-            if align == 0 || bits == 0 || !matches!(tag, WAV_PCM | WAV_FLOAT | WAV_EXTENSIBLE) {
+            // Only PCM and float data have a fixed frame size to count frames by; a stream
+            // written before its length was known leaves the size 0 or unset.
+            const UNKNOWN_SIZE: usize = u32::MAX as usize;
+            if align == 0
+                || bits == 0
+                || !matches!(tag, WAV_PCM | WAV_FLOAT | WAV_EXTENSIBLE)
+                || size == 0
+                || size == UNKNOWN_SIZE
+            {
                 return None;
             }
             return Some((channels, rate, size as u64 / align));
@@ -433,10 +440,40 @@ mod tests {
 
     #[test]
     fn a_partial_wav_announces_its_whole_length() {
-        let data = wav(1, 22050, 1000);
+        let mut data = wav(1, 22050, 1000);
         assert_eq!(header(&data[..60], Container::Wav), Some((1, 22050, 1000)));
         assert_eq!(header(&data[..30], Container::Wav), None);
         assert_eq!(header(&data, Container::Ogg), None);
+        // A stream written before its length was known announces none.
+        data[40..44].copy_from_slice(&u32::MAX.to_le_bytes());
+        assert_eq!(header(&data[..60], Container::Wav), None);
+    }
+
+    /// Real files: what the probe serves (tests/projects/networkcaching/Content/audio).
+    fn served(name: &str) -> Vec<u8> {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/networkcaching/Content/audio");
+        std::fs::read(root.join(name)).unwrap()
+    }
+
+    #[test]
+    fn decoded_files_name_their_coding() {
+        for (file, container, codec, frames) in [
+            ("tone.wav", Container::Wav, Codec::Pcm, 11025),
+            ("adpcm.wav", Container::Any, Codec::ImaAdpcm, 11025),
+            ("stereo.ogg", Container::Ogg, Codec::Vorbis, 44160),
+            ("tone.mp3", Container::Any, Codec::Mpeg, 27648),
+            ("vbr.mp3", Container::Mpeg, Codec::Mpeg, 46080),
+        ] {
+            let decoded = decode(&served(file), container).unwrap();
+            assert_eq!(decoded.codec, codec, "{file}");
+            assert_eq!(
+                decoded.samples.len() / decoded.channels as usize,
+                frames,
+                "{file}"
+            );
+        }
+        assert!(decode(&served("stereo.ogg"), Container::Wav).is_err());
     }
 
     #[test]

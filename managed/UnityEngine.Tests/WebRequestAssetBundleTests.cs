@@ -348,12 +348,13 @@ namespace UnityEngine.Tests
             var url = Write("zeta.bundle", bundleBytes);
             using (Send(UnityWebRequestAssetBundle.GetAssetBundle(url, 9, 0))) { }
             using var request = UnityWebRequestAssetBundle.GetAssetBundle(url, 9, 0);
-            bool completedInside = false;
             var operation = request.SendWebRequest();
-            completedInside = request.isDone;
-            operation.completed += _ => { };
-            Assert.False(completedInside);
+            bool doneInside = request.isDone, completed = false;
+            operation.completed += _ => completed = true;
+            Assert.False(doneInside);
+            Assert.False(completed, "an operation already done calls a new completed handler at once");
             WebRequestTestLoop.Until(() => request.isDone);
+            Assert.True(completed);
             Assert.Equal(0, request.responseCode);
             Assert.Equal(0UL, request.downloadedBytes);
         }

@@ -151,11 +151,7 @@ namespace UnityEngine.Networking
             }
             finally
             {
-                if (download != null)
-                {
-                    try { File.Delete(download); }
-                    catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { }
-                }
+                if (download != null) BundleCaches.TryDelete(download);
             }
         }
 
@@ -165,7 +161,7 @@ namespace UnityEngine.Networking
         string WriteDownload()
         {
             var store = BundleCaches.Current;
-            var path = Path.Combine(store.Path, ".download-" + Guid.NewGuid().ToString("N"));
+            var path = Path.Combine(store.Path, BundleCaches.DownloadPrefix + Guid.NewGuid().ToString("N"));
             try
             {
                 Directory.CreateDirectory(store.Path);
@@ -175,7 +171,7 @@ namespace UnityEngine.Networking
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
                 Debug.LogWarning($"Unbound: the AssetBundle '{m_Url}' cannot be kept in the cache '{store.Path}': {e.Message}");
-                if (File.Exists(path)) File.Delete(path);
+                BundleCaches.TryDelete(path);
                 return null;
             }
         }
@@ -210,7 +206,7 @@ namespace UnityEngine.Networking
         {
             var store = BundleCaches.Current;
             var name = BundleCaches.NameOf(m_Url, m_Name);
-            var form = download + ".cache";
+            var form = download + BundleCaches.FormSuffix;
             try
             {
                 var answer = JsonDocument.Parse(Native.Call("bundle-cache-form", JsonSerializer.Serialize(new
@@ -234,7 +230,7 @@ namespace UnityEngine.Networking
             }
             finally
             {
-                if (File.Exists(form)) File.Delete(form);
+                BundleCaches.TryDelete(form);
             }
         }
 

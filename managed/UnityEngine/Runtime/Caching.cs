@@ -41,6 +41,15 @@ namespace Unbound.Runtime
         const string DataFile = "__data";
         const string InfoFile = "__info";
         const string LockFile = "__lock";
+        /// <summary>A download written next to a cache while it is checked, and its cache form.</summary>
+        internal const string DownloadPrefix = ".download-";
+        internal const string FormSuffix = ".cache";
+
+        internal static void TryDelete(string path)
+        {
+            try { File.Delete(path); }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { }
+        }
 
         internal sealed class Version
         {
@@ -98,6 +107,8 @@ namespace Unbound.Runtime
             void IndexDirectory()
             {
                 if (!System.IO.Directory.Exists(Path)) return;
+                // Downloads a run left behind while checking them are not versions.
+                foreach (var stale in System.IO.Directory.GetFiles(Path, DownloadPrefix + "*")) TryDelete(stale);
                 foreach (var nameDirectory in System.IO.Directory.GetDirectories(Path))
                 {
                     string name = System.IO.Path.GetFileName(nameDirectory);
