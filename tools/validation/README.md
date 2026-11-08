@@ -152,6 +152,9 @@ explicit, including for `--direct` invocations that require an existing lease.
 The runner also refuses `env -S` / `--split-string` wrappers before admission:
 their argument expansion can hide a self-leasing driver. Pass expanded command
 arguments to the runner, or run the build driver directly.
+Wrapper options are parsed separately, including grouped short options and
+`env -- NAME=value` assignments. Unknown wrapper or Python options fail before
+admission with a diagnostic instead of guessing where the command starts.
 Cargo arguments follow `--`.
 
 The default target is `$XDG_CACHE_HOME/unbound/builds/targets/<checkout-path-hash>`

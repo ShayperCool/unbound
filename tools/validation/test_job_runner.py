@@ -61,6 +61,9 @@ for command,expected in [
     (['/usr/bin/time','-v','-o','time.log','timeout','-s','KILL','600',
       '/tmp/unbound','run','--frames','8'],'engine-gpu'),
     (['env','KEY=value','timeout','600','/tmp/unbound','run','--headless','1'],'engine-cpu'),
+    (['/usr/bin/time','-a','-ofile','timeout','-vsTERM','600','env','--','KEY=value',
+      '/tmp/unbound','run','--headless','1'],'engine-cpu'),
+    (['env','-uKEY','-C/tmp','--','KEY=value','cargo','build'],'build'),
     (['/tmp/unbound','run','--headless=1'],'engine-cpu'),
     (['python3','driver.py','/tmp/unbound','run','--headless','1'],'heavy'),
     (['cargo','build','--release'],'build'),
@@ -88,10 +91,13 @@ build_commands = [
     ['python3','tools/build.py'],
     [sys.executable,'-I',driver],
     [sys.executable,'-I','--check-hash-based-pycs','always',driver],
+    [sys.executable,'-IX','dev',driver],
     ['tools/build.py'],
     ['/usr/bin/time','-o',str(out/'wrapped-time.log'),'timeout','-s','TERM','2',
      'env','CHECK=1',sys.executable,'-I','-W','ignore',driver],
     ['env','--chdir=/tmp','timeout','2',sys.executable,'-I',driver],
+    ['/usr/bin/time','-a','-o',str(out/'append-time.log'),'env','--','CHECK=1',
+     'timeout','-vsTERM','2',sys.executable,'-IWignore',driver],
 ]
 for command in build_commands:
     assert runner.is_build_driver(command),command
@@ -99,6 +105,9 @@ for command in [
     ['python3','driver.py','tools/build.py'],
     ['python3','-c','pass','tools/build.py'],
     ['python3','-m','driver','tools/build.py'],
+    ['python3','-Ic','pass','tools/build.py'],
+    ['python3','-c','pass','--unknown-script-option','tools/build.py'],
+    ['python3','-m','driver','--unknown-script-option','tools/build.py'],
     ['python3','other/build.py'],
 ]:
     assert not runner.is_build_driver(command),command
@@ -113,12 +122,17 @@ with runner.lock('parity-heavy-entry.lock'), runner.lock('parity-heavy-job.lock'
     for split in [['-S','python3 -I'], ['-Spython3 -I'], ['-iS','python3 -I'],
                   ['--split-string','python3 -I'], ['--split-string=python3 -I'],
                   ['--split-s=python3 -I']]:
-        result = subprocess.run([sys.executable,str(RUNNER),'/usr/bin/time','timeout','2',
+        result = subprocess.run([sys.executable,str(RUNNER),'/usr/bin/time','-a','timeout','2',
                                  'env',*split,driver,'--','build','--release','--locked','-p','unbound'],
                                 capture_output=True,text=True,timeout=3)
         assert result.returncode==125,(split,result)
         assert 'env split-string wrappers are unsupported' in result.stderr,result.stderr
         assert 'Run tools/build.py directly' in result.stderr,result.stderr
+    # Unknown options cannot silently hide the executable behind an operand.
+    result = subprocess.run([sys.executable,str(RUNNER),'env','--unknown-option','value',
+                             sys.executable,driver],capture_output=True,text=True,timeout=3)
+    assert result.returncode==125,result
+    assert 'cannot inspect env wrapper' in result.stderr,result.stderr
 
 project=out/'project';project.mkdir()
 alias=out/'project-alias';alias.symlink_to(project.resolve(),target_is_directory=True)

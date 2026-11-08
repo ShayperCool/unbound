@@ -10,6 +10,7 @@ keeps the entry lock while it waits, so newer pooled jobs queue behind it.
 Every job appends its wait and run time to job-timings.jsonl."""
 import contextlib
 import fcntl
+import getopt
 import hashlib
 import json
 import os
@@ -332,33 +333,34 @@ def payload(command):
     # Inspect the payload of known wrappers only. An executable passed as a
     # script argument does not make that whole script a pooled engine job.
     args = list(command)
+    options = {
+        'time': ('af:o:pqvVhl', ['append', 'format=', 'output=', 'portability', 'quiet',
+                                'verbose', 'version', 'help']),
+        'timeout': ('k:s:v', ['kill-after=', 'signal=', 'foreground', 'preserve-status',
+                              'verbose', 'version', 'help']),
+        'env': ('i0vu:C:a:S:', ['ignore-environment', 'null', 'debug', 'unset=', 'chdir=',
+                               'argv0=', 'split-string=', 'version', 'help']),
+    }
     while args:
         name = Path(args[0]).name
-        if name in ['time', 'timeout', 'env']:
-            args.pop(0)
-            while args:
-                arg = args[0]
-                if arg == '--':
-                    args.pop(0)
-                    break
-                if name == 'env' and (re.match(r'^-[iv0]*S', arg) or
-                        (arg.startswith('--') and '--split-string'.startswith(arg.split('=',1)[0]))):
-                    raise ValueError('env split-string wrappers are unsupported; pass expanded '
-                                     'command arguments to the runner. Run tools/build.py directly '
-                                     'because it manages its own build lease.')
-                if name == 'env' and '=' in arg and not arg.startswith('-'):
-                    args.pop(0)
-                elif arg in ['-o', '--output', '-f', '--format', '-s', '--signal',
-                             '-k', '--kill-after', '-u', '--unset', '-C', '--chdir', '-a', '--argv0']:
-                    del args[:2]
-                elif arg.startswith('-'):
-                    args.pop(0)
-                else:
-                    break
-            if name == 'timeout' and args:
-                args.pop(0)  # duration
-            continue
-        break
+        if name not in options:
+            break
+        try:
+            parsed, args = getopt.getopt(args[1:], *options[name])
+        except getopt.GetoptError as error:
+            raise ValueError(f'cannot inspect {name} wrapper: {error}; '
+                             'pass expanded command arguments directly') from error
+        if name == 'env':
+            if any(option in ['-S', '--split-string'] for option, _ in parsed):
+                raise ValueError('env split-string wrappers are unsupported; pass expanded '
+                                 'command arguments to the runner. Run tools/build.py directly '
+                                 'because it manages its own build lease.')
+            if args and args[0] == '-':
+                args.pop(0)  # env's alternate spelling of --ignore-environment
+            while args and '=' in args[0] and not args[0].startswith('-'):
+                args.pop(0)
+        if name == 'timeout' and args:
+            args.pop(0)  # duration
     return args
 
 
@@ -378,13 +380,29 @@ def is_build_driver(command):
     args = payload(command)
     if args and re.fullmatch(r'python(?:3(?:\.\d+)?)?', Path(args[0]).name):
         args = args[1:]
-        while args and args[0].startswith('-'):
+        while args and args[0].startswith('-') and args[0]!='-':
             option = args.pop(0)
             if option == '--':
                 break
-            if option.startswith(('-c', '-m')):
-                return False
-            if option in ['-W', '-X', '--check-hash-based-pycs'] and args:
+            takes_value = option == '--check-hash-based-pycs'
+            if option.startswith('--'):
+                if not takes_value and option not in ['--help', '--help-env', '--help-xoptions',
+                                                       '--help-all', '--version']:
+                    raise ValueError('cannot inspect Python option '+option)
+            else:
+                for index, flag in enumerate(option[1:], 1):
+                    if flag in 'cm':
+                        # The rest belongs to the module or code, including
+                        # option-looking script arguments. Do not inspect it.
+                        return False
+                    if flag in 'WX':
+                        takes_value = index == len(option)-1
+                        break
+                    if flag not in 'bBdEhiIOPqRsSuvVx?':
+                        raise ValueError('cannot inspect Python option -'+flag)
+            if takes_value:
+                if not args:
+                    raise ValueError('missing Python option value for '+option)
                 args.pop(0)
     return bool(args and Path(os.path.normpath(args[0])).parts[-2:]==('tools', 'build.py'))
 
