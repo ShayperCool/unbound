@@ -17,6 +17,7 @@
     <Compile Include="Generated/$(UnboundStubFamily)/**/*.cs" Condition="'$(UnboundNoStubs)' != 'true'" />
     <!-- Settings classes' type trees, by release family (tests/projects/settings/schema.py). -->
     <EmbeddedResource Include="Editor/Data/*.json;Editor/Data/*.txt" LogicalName="Unbound.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Runtime/Data/*.json" LogicalName="Unbound.%(Filename)%(Extension)" />
     <!-- Unity's class table by release, the probe's Editor reference (tests/projects/classids). -->
     <EmbeddedResource Include="../../tests/projects/classids/Reference/unity-*.jsonl" LogicalName="Unbound.class-ids-%(Filename)%(Extension)" />
   </ItemGroup>

@@ -308,9 +308,9 @@ namespace UnityEngine.SceneManagement
         [Obsolete("Use SceneManager.UnloadSceneAsync. This function is not safe to use during triggers and under other circumstances. See Scripting reference for more details.")]
         public static bool UnloadScene(string sceneName) => UnloadScene(GetSceneByName(sceneName));
 
-        public static AsyncOperation UnloadSceneAsync(int sceneBuildIndex) => SceneManagerInternal.Unload(GetSceneByBuildIndex(sceneBuildIndex).Data);
-        public static AsyncOperation UnloadSceneAsync(string sceneName) => SceneManagerInternal.Unload(GetSceneByName(sceneName).Data);
-        public static AsyncOperation UnloadSceneAsync(Scene scene) => SceneManagerInternal.Unload(scene.Data);
+        public static AsyncOperation UnloadSceneAsync(int sceneBuildIndex) => SceneManagerInternal.Unload(GetSceneByBuildIndex(sceneBuildIndex).Data, asynchronously: true);
+        public static AsyncOperation UnloadSceneAsync(string sceneName) => SceneManagerInternal.Unload(GetSceneByName(sceneName).Data, asynchronously: true);
+        public static AsyncOperation UnloadSceneAsync(Scene scene) => SceneManagerInternal.Unload(scene.Data, asynchronously: true);
         public static AsyncOperation UnloadSceneAsync(int sceneBuildIndex, UnloadSceneOptions options) => UnloadSceneAsync(sceneBuildIndex);
         public static AsyncOperation UnloadSceneAsync(string sceneName, UnloadSceneOptions options) => UnloadSceneAsync(sceneName);
         public static AsyncOperation UnloadSceneAsync(Scene scene, UnloadSceneOptions options) => UnloadSceneAsync(scene);
@@ -432,13 +432,16 @@ namespace UnityEngine.SceneManagement
 
         /// <summary>Application.isLoadingLevel: a requested scene is still in
         /// <see cref="Scene.LoadingState.Loading"/>, held loads included. A scene is Loaded before
-        /// its sceneLoaded, where the value is already false (measured: tests/projects/appfacts).</summary>
+        /// its sceneLoaded, where the value is already false. Pending async unloads also report
+        /// true until their teardown removes the scene (measured: tests/projects/appfacts).</summary>
         internal static bool IsLoading
         {
             get
             {
                 foreach (var data in s_Requested)
                     if (data.LoadingState == Scene.LoadingState.Loading) return true;
+                foreach (var request in s_PendingUnloads)
+                    if (request.Scene.IsLoaded) return true;
                 return false;
             }
         }
@@ -507,8 +510,27 @@ namespace UnityEngine.SceneManagement
         }
 
         /// <summary>Runs the loads requested since the last frame (called early in the frame).</summary>
+        static readonly List<(AsyncOperation Op, SceneData Scene)> s_PendingUnloads =
+            new List<(AsyncOperation, SceneData)>();
+
         internal static void ProcessPending()
         {
+            int unloads = s_PendingUnloads.Count;
+            for (int i = 0; i < unloads; i++)
+            {
+                var request = s_PendingUnloads[i];
+                try
+                {
+                    if (request.Scene.IsLoaded)
+                    {
+                        if (SceneRegistry.Loaded.Count > 1) FinishUnload(request.Scene);
+                        else Debug.LogWarning("Unloading the last loaded scene is not supported.");
+                    }
+                }
+                catch (Exception e) { Debug.LogException(e); }
+                finally { request.Op.Complete(); }
+            }
+            if (unloads != 0) s_PendingUnloads.RemoveRange(0, unloads);
             if (s_Pending.Count == 0) return;
             var batch = s_Pending.ToArray();
             s_Pending.Clear();
@@ -729,7 +751,7 @@ namespace UnityEngine.SceneManagement
             return true;
         }
 
-        internal static AsyncOperation Unload(SceneData data)
+        internal static AsyncOperation Unload(SceneData data, bool asynchronously = false)
         {
             Unbound.Runtime.Trace.Scenes($"unload scene '{data?.Name}'");
             if (data == null || !data.IsLoaded)
@@ -739,10 +761,21 @@ namespace UnityEngine.SceneManagement
                 Debug.LogWarning("Unloading the last loaded scene is not supported.");
                 return null;
             }
+            if (asynchronously && Compat.DestroyPhasesMeasured)
+            {
+                var operation = new AsyncOperation();
+                s_PendingUnloads.Add((operation, data));
+                return operation;
+            }
+            FinishUnload(data);
+            return AsyncOperation.Completed();
+        }
+
+        static void FinishUnload(SceneData data)
+        {
             UnloadNow(data);
             if (SceneRegistry.Active == data || SceneRegistry.Active == null)
                 SceneRegistry.Active = SceneRegistry.Loaded.Count > 0 ? SceneRegistry.Loaded[0] : null;
-            return AsyncOperation.Completed();
         }
 
         /// <summary>The roots a Single load keeps: those that must not be saved
@@ -779,8 +812,8 @@ namespace UnityEngine.SceneManagement
             // branch t3/light-probes-lifecycle-2, commit f8516528). A SceneManager Single load
             // takes its outgoing scenes' probes out of the set here (objectsDestroyed), once, so
             // nothing is raised then.
-            // Unity raises the group (needs, sceneUnloaded, the operation's completion) after
-            // UnloadSceneAsync returns; here it happens within the call (not fixed).
+            // For UnloadSceneAsync the measured profile reaches this teardown from the next
+            // preloading pass. Its callbacks precede completion of that operation.
             try
             {
                 objectsDestroyed?.Invoke();

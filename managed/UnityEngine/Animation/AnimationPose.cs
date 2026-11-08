@@ -772,6 +772,13 @@ namespace Unbound.Runtime
         /// AnimationEvent itself).</summary>
         internal static void Dispatch(GameObject go, AnimationEvent e, AnimationClip clip)
         {
+            Destruction.ImmediateForbiddenDepth++;
+            try { DispatchCore(go, e, clip); }
+            finally { Destruction.ImmediateForbiddenDepth--; }
+        }
+
+        static void DispatchCore(GameObject go, AnimationEvent e, AnimationClip clip)
+        {
             if (go == null || string.IsNullOrEmpty(e.m_FunctionName)) return;
             bool received = false;
             foreach (var c in go.m_Components.ToArray())

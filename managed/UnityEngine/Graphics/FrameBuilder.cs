@@ -1034,6 +1034,13 @@ namespace Unbound.Runtime
         /// before gathering draws (measured: tests/projects/cullinggroup).</summary>
         internal static CameraContext CullCamera(Camera camera)
         {
+            Destruction.ImmediateForbiddenDepth++;
+            try { return CullCameraCore(camera); }
+            finally { Destruction.ImmediateForbiddenDepth--; }
+        }
+
+        static CameraContext CullCameraCore(Camera camera)
+        {
             CullingGroup.EvaluateForCamera(camera);
             var context = ContextOf(camera);
             SpriteMasking.Begin(camera, context);
@@ -1058,6 +1065,13 @@ namespace Unbound.Runtime
         /// the last events. Used each frame and by Camera.Render.
         /// </summary>
         internal static void RenderCamera(Camera camera, bool automatic = false, bool restoreActive = true)
+        {
+            Destruction.ImmediateForbiddenDepth++;
+            try { RenderCameraCore(camera, automatic, restoreActive); }
+            finally { Destruction.ImmediateForbiddenDepth--; }
+        }
+
+        static void RenderCameraCore(Camera camera, bool automatic, bool restoreActive)
         {
             using var temporaries = new CameraTemporaries();
             var previousCamera = Camera.current;

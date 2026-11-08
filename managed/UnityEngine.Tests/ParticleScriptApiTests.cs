@@ -107,12 +107,14 @@ namespace UnityEngine.Tests
         readonly float m_DeltaTime = Time.s_DeltaTime;
         readonly float m_UnscaledDeltaTime = Time.s_UnscaledDeltaTime;
         readonly bool m_Playing = EditorSession.IsPlaying;
+        readonly string m_Version = ProjectInfo.UnityVersion;
 
         public ParticleDestroyFrameTests()
         {
             Time.s_DeltaTime = 0.02f;
             Time.s_UnscaledDeltaTime = 0.02f;
             EditorSession.IsPlaying = true;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
         }
 
         public void Dispose()
@@ -120,6 +122,7 @@ namespace UnityEngine.Tests
             Time.s_DeltaTime = m_DeltaTime;
             Time.s_UnscaledDeltaTime = m_UnscaledDeltaTime;
             EditorSession.IsPlaying = m_Playing;
+            ProjectInfo.UnityVersion = m_Version;
         }
 
         /// <summary>A system whose Destroy (or its parent's) is pending does not update any more:
@@ -149,6 +152,9 @@ namespace UnityEngine.Tests
                 // Last frame's collision events must not go out again.
                 doomed.m_CollisionEvents.Add((control, default));
                 Object.Destroy(destroyParent ? root : go);
+                // Run the scripting boundary between Update and particle simulation.
+                Destruction.BeginDelivery();
+                Destruction.DeliverRequested();
                 ParticleSystemManager.UpdateAll();
                 Assert.Equal(0f, doomed.time);
                 Assert.Equal(0, doomed.particleCount);

@@ -209,14 +209,14 @@ namespace Unbound.Runtime
             for (int i = 0; i < keyed.Count; i++) scripts[i] = keyed[i].B;
         }
 
-        internal static void Deactivate(List<Component> components)
+        internal static void Deactivate(List<Component> components, bool destroying = false)
         {
             foreach (var c in components)
             {
                 if (c.m_Destroyed) continue;
                 if (c is MonoBehaviour mb)
                 {
-                    if (mb.m_Enabled) Disable(mb);
+                    if (mb.m_Enabled) Disable(mb, includeAwakened: destroying);
                     Coroutines.StopAll(mb);
                 }
                 else if (!(c is Behaviour b) || b.m_Enabled)
@@ -256,6 +256,7 @@ namespace Unbound.Runtime
             if (m.OnGUI != null && !s_OnGUI.Contains(mb)) s_OnGUI.Add(mb);
             if (m.OnRenderObject != null && !s_OnRenderObject.Contains(mb)) s_OnRenderObject.Add(mb);
             mb.m_EnabledState = true;
+            mb.m_DestroyDisableSent = false;
             if (m.OnEnable != null)
             {
                 try { m.OnEnable(mb); }
@@ -263,12 +264,13 @@ namespace Unbound.Runtime
             }
         }
 
-        static void Disable(MonoBehaviour mb)
+        static void Disable(MonoBehaviour mb, bool includeAwakened = false)
         {
             RemoveFromLists(mb);
-            // Only a behaviour whose OnEnable ran gets OnDisable (one deactivated during its
-            // GameObject's activation, before its turn, gets neither).
-            if (!mb.m_EnabledState) return;
+            // Ordinary deactivation requires OnEnable. Destruction also notifies an awakened
+            // script before OnEnable, exactly once even under callback reentrancy.
+            if (!mb.m_EnabledState && (!(includeAwakened && mb.m_DidAwake) || mb.m_DestroyDisableSent)) return;
+            if (includeAwakened) mb.m_DestroyDisableSent = true;
             mb.m_EnabledState = false;
             var m = ScriptMessages.For(mb.GetType());
             if (m.OnDisable != null)
@@ -289,36 +291,56 @@ namespace Unbound.Runtime
 
         // ------------------------------------------------------------------ destruction
 
-        /// <summary>Object.Destroy's request of a GameObject or a script. Measured in 6000.0.71f1
-        /// (tests/projects/destroycontract: awakened scripts, one per object, a single-child tree):
-        /// before Destroy returns the scripts report enabled=false; enabled active scripts get
-        /// OnDisable now, parent before child, while inactive or already disabled scripts get none.
-        /// Objects stay alive, listed, active and findable. Sibling/deeper-tree traversal and
-        /// component order are implementation choices, not measured here. This path leaves
-        /// coroutines and built-ins until Destruction.DeliverRequested; that coroutine timing is
-        /// unmeasured. The Coroutines manual says enabled=false alone does not stop coroutines,
-        /// but does not specify their timing between a Destroy request and actual destruction.
-        /// Scripts added after the request are not disabled here.</summary>
+        static readonly Stack<List<Behaviour>> s_DestroySnapshots = new Stack<List<Behaviour>>(4);
+
+        /// <summary>A zero-delay request disables Behaviours synchronously without changing the
+        /// GameObject's active state or object identity. In 6000.0.71f1 this visits the target and
+        /// direct children; deeper descendants remain enabled until delivery. Awake counts even
+        /// before OnEnable. Coroutines survive until actual destruction (destroyphases controls).
+        /// Component order within a GameObject is an implementation choice, not an API promise.</summary>
         internal static void DisableForDestroyRequest(UnityEngine.Object target)
         {
-            var scripts = new List<MonoBehaviour>();
-            if (target is GameObject go) CollectScripts(go.m_Transform, scripts);
-            else if (target is MonoBehaviour single) scripts.Add(single);
-            foreach (var mb in scripts)
+            var scripts = s_DestroySnapshots.Count == 0 ? new List<Behaviour>() : s_DestroySnapshots.Pop();
+            try
             {
-                // An earlier OnDisable may have disabled or destroyed a later script already.
-                if (mb.m_Destroyed || !mb.m_Enabled) continue;
-                mb.m_Enabled = false;
-                OnBehaviourEnabledChanged(mb, false);
+                if (target is GameObject go)
+                {
+                    if (Compat.DestroyPhasesMeasured)
+                    {
+                        CollectOwnBehaviours(go, scripts);
+                        foreach (var child in go.m_Transform.m_Children) CollectOwnBehaviours(child.m_GameObject, scripts);
+                    }
+                    else CollectScripts(go.m_Transform, scripts);
+                }
+                else if (target is Behaviour single && (Compat.DestroyPhasesMeasured || single is MonoBehaviour)) scripts.Add(single);
+                foreach (var behaviour in scripts)
+                {
+                    // An earlier OnDisable may have disabled or destroyed a later script already.
+                    if (behaviour.m_Destroyed || !behaviour.m_Enabled) continue;
+                    behaviour.m_Enabled = false;
+                    if (Compat.DestroyPhasesMeasured && behaviour is MonoBehaviour mb && mb.m_DidAwake && mb.m_GameObject.activeInHierarchy)
+                        Disable(mb, includeAwakened: true);
+                    else OnBehaviourEnabledChanged(behaviour, false);
+                }
+            }
+            finally
+            {
+                scripts.Clear();
+                s_DestroySnapshots.Push(scripts);
             }
         }
 
-        static void CollectScripts(Transform t, List<MonoBehaviour> into)
+        static void CollectOwnBehaviours(GameObject go, List<Behaviour> into)
+        {
+            foreach (var c in go.m_Components)
+                if (c is Behaviour b && !b.m_Destroyed && (Compat.DestroyPhasesMeasured || b is MonoBehaviour)) into.Add(b);
+        }
+
+        static void CollectScripts(Transform t, List<Behaviour> into)
         {
             var go = t.m_GameObject;
             if (go.m_Destroyed) return;
-            foreach (var c in go.m_Components)
-                if (c is MonoBehaviour mb && !mb.m_Destroyed) into.Add(mb);
+            CollectOwnBehaviours(go, into);
             foreach (var child in t.m_Children)
                 CollectScripts(child, into);
         }
@@ -328,7 +350,7 @@ namespace Unbound.Runtime
         {
             if (c is MonoBehaviour mb)
             {
-                if (mb.isActiveAndEnabled) Disable(mb);
+                if (mb.isActiveAndEnabled) Disable(mb, includeAwakened: Compat.DestroyPhasesMeasured);
                 else RemoveFromLists(mb);
                 s_PendingStart.Remove(mb);
                 Coroutines.StopAll(mb);

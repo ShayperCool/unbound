@@ -254,6 +254,7 @@ namespace UnityEngine
 
         public void Play([Internal.DefaultValue("true")] bool withChildren)
         {
+            ThrowIfDestroyed();
             foreach (var ps in Systems(withChildren, includeSubEmitters: false)) ps.PlaySelf();
         }
 
@@ -1180,6 +1181,8 @@ namespace UnityEngine
         internal override void OnEngineDestroy()
         {
             OnEngineDisable();
+            m_CollisionEvents.Clear();
+            ClearTriggerEvents();
             foreach (var e in m_SubEmitters.emitters)
                 if (e.system != null && e.system.m_SubEmitterParent == this) e.system.m_SubEmitterParent = null;
         }
@@ -1418,10 +1421,10 @@ namespace Unbound.Runtime
 
         internal static IReadOnlyList<ParticleSystem> Systems => s_Systems;
 
-        /// <summary>A Destroy of the system or an object above it is pending: Unity destroys it
-        /// after the Update loop ("Actual object destruction is always delayed until after the
-        /// current Update loop"), so it no longer updates or sends its messages this frame
-        /// (measured: tests/projects/particletriggerapi */gone).</summary>
+        /// <summary>Preserves the particletriggerapi reference's pending-destroy windows.
+        /// destroyphases also records smaller coroutine controls that keep simulating until
+        /// delivery. This retained simulation guard is a functional gap in those contexts;
+        /// their particle callback difference remains unresolved.</summary>
         static bool DestroyRequested(ParticleSystem ps)
         {
             if (ps.m_PendingDestroy) return true;

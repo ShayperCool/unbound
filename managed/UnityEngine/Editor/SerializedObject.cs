@@ -128,8 +128,10 @@ namespace UnityEditor
         {
             var method = ScriptMessages.Find(target.GetType(), "OnValidate", Type.EmptyTypes);
             if (method == null) return;
+            Destruction.ImmediateForbiddenDepth++;
             try { method.Invoke(target, null); }
             catch (TargetInvocationException e) { Debug.LogException(e.InnerException ?? e); }
+            finally { Destruction.ImmediateForbiddenDepth--; }
         }
 
         public void SetIsDifferentCacheDirty() => m_OtherRoots = null;

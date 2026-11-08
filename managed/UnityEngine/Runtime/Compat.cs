@@ -9,6 +9,10 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Compat
     {
+        /// <summary>Deferred object lifetime at delayed scripting points, measured in
+        /// tests/projects/destroyphases on Unity 6000.0.71f1.</summary>
+        internal static bool DestroyPhasesMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Explicit simulation mode checks and contact refresh across sub-steps,
         /// measured by physics2dadvanced on Unity 6000.0.71f1.</summary>
         internal static bool Physics2DSimulationMeasured => Release == (6000, 0, 71, 'f', 1);

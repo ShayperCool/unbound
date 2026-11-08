@@ -45,6 +45,7 @@ namespace Unbound.Runtime
             if (!(target is MonoBehaviour) && !(target is ScriptableObject)) return;
             var method = s_OnValidate.GetOrAdd(target.GetType(), t => Find(t, "OnValidate", Type.EmptyTypes));
             if (method == null) return;
+            Destruction.ImmediateForbiddenDepth++;
             try
             {
                 method.Invoke(target, null);
@@ -53,6 +54,7 @@ namespace Unbound.Runtime
             {
                 Debug.LogException(e.InnerException ?? e, target);
             }
+            finally { Destruction.ImmediateForbiddenDepth--; }
         }
 
         static ScriptMessages Build(Type type)

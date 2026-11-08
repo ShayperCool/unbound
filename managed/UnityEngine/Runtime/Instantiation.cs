@@ -275,13 +275,11 @@ namespace Unbound.Runtime
     internal static class Destruction
     {
         static readonly List<(Object Target, double Time)> s_Delayed = new List<(Object, double)>();
-        /// <summary>All deferred requests, in enqueue order. The scripting points remove manual
-        /// requests early; end-of-frame delivery skips those while the complete scripting pump
-        /// is present. Keeping one queue preserves the old interleaving with assets and due
-        /// delayed requests if a custom loop requires the end-of-frame fallback.</summary>
+        /// <summary>Deferred requests in enqueue order, retained for the automatic stop-action
+        /// path and the fallback in custom loops without the three scripting delivery points.</summary>
         static readonly List<Object> s_EndOfFrame = new List<Object>();
-        /// <summary>Zero-delay requests of scene GameObjects and scripts, in request order: their
-        /// scripts were disabled by the request; <see cref="DeliverRequested"/> destroys them.</summary>
+        /// <summary>Requests awaiting a scripting delivery point. Zero-delay scene object/Behaviour
+        /// requests disable Behaviours synchronously; positive delays keep them enabled.</summary>
         static readonly List<Object> s_Requested = new List<Object>();
 
         internal static void Destroy(Object obj, float delay)
@@ -295,11 +293,13 @@ namespace Unbound.Runtime
             obj.m_PendingDestroy = true;
             s_EndOfFrame.Add(obj);
             NotifyEngineDestroyRequested(obj);
-            if (!IsScriptRequest(obj)) return;
+            bool script = DisablesBehavioursOnRequest(obj);
+            if (!script && !(Compat.DestroyPhasesMeasured && EditorSession.IsPlaying)) return;
+            obj.m_DestroyAtScriptingPoint = true;
             // Accounted before any callback: Destroy of the same object from its OnDisable returns
             // above, and destructions requested by the callbacks queue after this one.
             s_Requested.Add(obj);
-            Lifecycle.DisableForDestroyRequest(obj);
+            if (script) Lifecycle.DisableForDestroyRequest(obj);
         }
 
         static void NotifyEngineDestroyRequested(Object obj)
@@ -322,91 +322,128 @@ namespace Unbound.Runtime
             NotifyEngineDestroyRequested(obj);
         }
 
-        /// <summary>A zero-delay request whose scripts Destroy disables before it returns (measured
-        /// in Play mode for awakened MonoBehaviours, GameObject and component targets:
-        /// tests/projects/destroycontract). Edit mode, assets, prefab assets, built-in components
-        /// and a script that another component still requires keep the end-of-frame path.</summary>
-        static bool IsScriptRequest(Object obj)
+        /// <summary>Scene GameObjects and removable Behaviours disable synchronously. Other
+        /// components and runtime assets still join the same delivery queue in the measured
+        /// release, while required components remain enabled until validation at delivery.</summary>
+        static bool DisablesBehavioursOnRequest(Object obj)
         {
             if (!EditorSession.IsPlaying) return false;
             switch (obj)
             {
                 case GameObject go:
                     return !go.m_IsPrefabAsset && !go.IsPersistentAsset;
-                case MonoBehaviour mb:
-                    var owner = mb.m_GameObject;
-                    return owner != null && !owner.m_IsPrefabAsset && !owner.IsPersistentAsset && RequiredBy(mb) == null;
+                case Behaviour behaviour:
+                    if (!Compat.DestroyPhasesMeasured && !(behaviour is MonoBehaviour)) return false;
+                    var owner = behaviour.m_GameObject;
+                    return owner != null && !owner.m_IsPrefabAsset && !owner.IsPersistentAsset && RequiredBy(behaviour) == null;
                 default:
                     return false;
             }
         }
 
-        /// <summary>Destroys the pending GameObject and script requests. It runs at the delayed
-        /// scripting points where Unity delivered their OnDestroy: FixedUpdate's and Update's
-        /// after their behaviour updates, and PostLateUpdate's (measured: tests/projects/
-        /// destroycontract brackets; a request after TriggerEndOfFrameCallbacks reaches the next
-        /// frame's FixedUpdate point). The scripts are already disabled, so no second OnDisable.
-        /// Requests made by OnDestroy during the pass finish in the same pass.</summary>
+        static int s_DeliveryCount;
+
+        /// <summary>Freeze the delivery set before Starts, callbacks or coroutines at this
+        /// scripting point can queue more requests. Those requests belong to the next point
+        /// (Unity 6000.0.71f1, tests/projects/destroyphases).</summary>
+        internal static void BeginDelivery()
+        {
+            if (!Compat.DestroyPhasesMeasured) return;
+            RunDelayed();
+            s_DeliveryCount = s_Requested.Count;
+        }
+
+        /// <summary>Deliver only requests present at entry to this scripting point. Reentrant
+        /// requests remain queued. The lists retain capacity between frames.</summary>
         internal static void DeliverRequested()
         {
-            while (s_Requested.Count > 0)
+            if (!PlayerLoopDriver.HasDestroyDeliveryPoints) return;
+            bool measured = Compat.DestroyPhasesMeasured;
+            int count = measured ? s_DeliveryCount : s_Requested.Count;
+            for (int i = 0; i < count; i++)
             {
-                if (!PlayerLoopDriver.HasDestroyDeliveryPoints) return;
-                var batch = s_Requested.ToArray();
-                s_Requested.Clear();
-                var targets = new HashSet<Object>(batch, ReferenceEqualityComparer.Instance);
-                s_EndOfFrame.RemoveAll(targets.Contains);
-                foreach (var obj in batch)
+                var obj = s_Requested[i];
+                obj.m_DestroyAtScriptingPoint = false;
+                if (!obj.m_Destroyed)
                 {
-                    if (obj.m_Destroyed) continue;
                     try { DestroyImmediate(obj); }
                     catch (Exception e) { Debug.LogException(e); }
                 }
+                if (!measured && i + 1 == count && PlayerLoopDriver.HasDestroyDeliveryPoints)
+                    count = s_Requested.Count;
             }
+            if (count != 0) s_Requested.RemoveRange(0, count);
+            s_DeliveryCount = 0;
+            CompactDestroyed(s_EndOfFrame);
         }
 
-        /// <summary>Moves due delayed destructions to the end-of-frame list.</summary>
+        static void CompactDestroyed(List<Object> queue)
+        {
+            int retained = 0;
+            for (int i = 0; i < queue.Count; i++)
+                if (!queue[i].m_Destroyed && queue[i].m_PendingDestroy) queue[retained++] = queue[i];
+            if (retained < queue.Count) queue.RemoveRange(retained, queue.Count - retained);
+        }
+
+        /// <summary>Positive delays use scaled time and expire at a later scripting point,
+        /// when their deadline is reached. They do not disable scripts when scheduled.</summary>
         internal static void RunDelayed()
         {
-            if (s_Delayed.Count == 0) return;
+            int retained = 0;
             double now = Time.timeAsDouble;
-            for (int i = s_Delayed.Count - 1; i >= 0; i--)
+            int count = s_Delayed.Count;
+            for (int i = 0; i < count; i++)
             {
-                if (s_Delayed[i].Time > now) continue;
-                var target = s_Delayed[i].Target;
-                s_Delayed.RemoveAt(i);
-                if (!target.m_Destroyed && !target.m_PendingDestroy)
+                var request = s_Delayed[i];
+                if (request.Time > now)
                 {
-                    target.m_PendingDestroy = true;
-                    s_EndOfFrame.Add(target);
-                    NotifyEngineDestroyRequested(target);
+                    s_Delayed[retained++] = request;
+                    continue;
+                }
+                var target = request.Target;
+                if (target.m_Destroyed || target.m_PendingDestroy) continue;
+                target.m_PendingDestroy = true;
+                s_EndOfFrame.Add(target);
+                NotifyEngineDestroyRequested(target);
+                if (Compat.DestroyPhasesMeasured && EditorSession.IsPlaying)
+                {
+                    target.m_DestroyAtScriptingPoint = true;
+                    s_Requested.Add(target);
                 }
             }
+            if (retained < count) s_Delayed.RemoveRange(retained, count - retained);
         }
 
         internal static void FlushEndOfFrame()
         {
-            while (s_EndOfFrame.Count > 0)
+            if (s_EndOfFrame.Count == 0) return;
+            bool held = PlayerLoopDriver.HasDestroyDeliveryPoints;
+            int retained = 0;
+            // Callbacks append to this same list. A growing read cursor preserves queue order
+            // and avoids copying or searching the request set for each object.
+            for (int i = 0; i < s_EndOfFrame.Count; i++)
             {
-                var held = s_Requested.Count > 0 && PlayerLoopDriver.HasDestroyDeliveryPoints
-                    ? new HashSet<Object>(s_Requested, ReferenceEqualityComparer.Instance) : null;
-                var batch = s_EndOfFrame.ToArray();
-                s_EndOfFrame.Clear();
-                var due = new List<Object>();
-                // Partition before callbacks: new requests must follow every retained request,
-                // even if a legacy request's OnDestroy enqueues them during this flush.
-                foreach (var obj in batch)
-                    if (held != null && held.Contains(obj)) s_EndOfFrame.Add(obj);
-                    else due.Add(obj);
-                if (due.Count == 0) return;
-                if (held == null) s_Requested.Clear();
-                foreach (var obj in due)
-                    if (!obj.m_Destroyed) DestroyImmediate(obj);
+                var obj = s_EndOfFrame[i];
+                if (obj.m_Destroyed) continue;
+                if (held && obj.m_DestroyAtScriptingPoint) s_EndOfFrame[retained++] = obj;
+                else DestroyImmediate(obj);
             }
+            if (retained < s_EndOfFrame.Count) s_EndOfFrame.RemoveRange(retained, s_EndOfFrame.Count - retained);
+            if (!held) s_Requested.Clear();
         }
+
+        internal static int ImmediateForbiddenDepth;
 
         internal static void DestroyImmediate(Object obj)
         {
+            if (Compat.DestroyPhasesMeasured && (obj is GameObject || obj is Component) &&
+                (ImmediateForbiddenDepth != 0 || PhysicsWorld.IsStepping || Physics2DWorld.IsStepping))
+            {
+                Debug.LogError(obj is GameObject
+                    ? "Destroying GameObjects immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead."
+                    : "Destroying components immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead.", obj);
+                return;
+            }
             if (Physics2DWorld.IsStepping && HasPhysics2D(obj))
             {
                 Debug.LogError("DestroyImmediate is not permitted during a 2D physics callback.", obj);
@@ -500,11 +537,13 @@ namespace Unbound.Runtime
             if (root.activeInHierarchy)
             {
                 var active = new List<Component>();
-                foreach (var go in all)
-                    if (go.activeInHierarchy)
-                        foreach (var c in go.m_Components)
-                            if (!c.m_Destroyed) active.Add(c);
-                Lifecycle.Deactivate(active);
+                if (Compat.DestroyPhasesMeasured) CollectActivePostOrder(root.m_Transform, active);
+                else
+                    foreach (var go in all)
+                        if (go.activeInHierarchy)
+                            foreach (var c in go.m_Components)
+                                if (!c.m_Destroyed) active.Add(c);
+                Lifecycle.Deactivate(active, destroying: Compat.DestroyPhasesMeasured);
             }
             foreach (var go in all)
                 foreach (var c in go.m_Components.ToArray())
@@ -529,6 +568,16 @@ namespace Unbound.Runtime
             }
         }
 
+        // Children deactivate before their parent; OnDestroy below still walks parent first.
+        // Measured for deferred/immediate destruction and scene unload in destroyphases.
+        static void CollectActivePostOrder(Transform t, List<Component> into)
+        {
+            if (!t.m_GameObject.activeInHierarchy) return;
+            foreach (var child in t.m_Children) CollectActivePostOrder(child, into);
+            foreach (var c in t.m_GameObject.m_Components)
+                if (!c.m_Destroyed) into.Add(c);
+        }
+
         static void Collect(Transform t, List<GameObject> into)
         {
             into.Add(t.m_GameObject);
@@ -540,6 +589,7 @@ namespace Unbound.Runtime
             s_Delayed.Clear();
             s_EndOfFrame.Clear();
             s_Requested.Clear();
+            s_DeliveryCount = 0;
         }
     }
 }

@@ -67,6 +67,8 @@ namespace Unbound.Runtime
         static bool s_Booted;
         static bool s_QuitDone;
         static bool s_EnteredPlayMode;
+        static bool s_EndOfFrameAfterLoop;
+        static bool s_AdvanceAfterLoop;
         static unsafe FrameInput* s_Input;
         static readonly Dictionary<Type, List<Action>> s_Engine = new Dictionary<Type, List<Action>>();
         static PlayerLoopSystem? s_Current;
@@ -137,16 +139,16 @@ namespace Unbound.Runtime
             // The Editor skips the cameras that render into textures.
             Register(typeof(PL.PreUpdate.SendMouseEvents), () => UnityEngine.SendMouseEvents.DoSendMouseEvents(1));
             Register(typeof(PL.FixedUpdate.ScriptRunBehaviourFixedUpdate), Lifecycle.RunFixedUpdate);
-            // Destroy's GameObject and script requests finish at the three delayed scripting points
-            // where Unity delivered their OnDestroy, never at EarlyUpdate's startup point (measured:
-            // tests/projects/destroycontract brackets). Their place before Invokes and coroutines at
-            // the same node is not measured; Update's pending Starts run first (measured:
-            // tests/projects/instantiateasync, Start before a pending Destroy's callbacks).
+            // Destroy requests present on entry finish at these three scripting points. Starts
+            // precede delivery, while requests made by Starts, OnDestroy and coroutines wait for
+            // the next point (6000.0.71f1: destroyphases, destroycontract, instantiateasync).
+            Register(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), Destruction.BeginDelivery);
             Register(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), Destruction.DeliverRequested);
             Register(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), () => Coroutines.Run(Coroutines.Phase.FixedUpdate));
             Register(typeof(PL.Update.ScriptRunBehaviourUpdate), Lifecycle.RunUpdate);
             // Objects enabled or created during Update start at this node, before coroutines
             // (measured: tests/projects/instantiateasync phase markers and lifecycle records).
+            Register(typeof(PL.Update.ScriptRunDelayedDynamicFrameRate), Destruction.BeginDelivery);
             Register(typeof(PL.Update.ScriptRunDelayedDynamicFrameRate), Lifecycle.RunPendingStarts);
             Register(typeof(PL.Update.ScriptRunDelayedDynamicFrameRate), Destruction.DeliverRequested);
             Register(typeof(PL.Update.ScriptRunDelayedDynamicFrameRate), () =>
@@ -156,12 +158,14 @@ namespace Unbound.Runtime
             });
             Register(typeof(PL.Update.ScriptRunDelayedTasks), MainThreadContext.Instance.RunPending);
             Register(typeof(PL.PreLateUpdate.ScriptRunBehaviourLateUpdate), Lifecycle.RunLateUpdate);
-            // Due delayed destructions, assets and built-in components keep the end-of-frame flushes.
+            // Automatic stop actions and custom loops without the scripting pump retain their
+            // end-of-frame fallback. Other releases keep their previous, unmeasured timing.
             Register(typeof(PL.PostLateUpdate.PlayerSendFrameStarted), () =>
             {
-                Destruction.RunDelayed();
+                if (!Compat.DestroyPhasesMeasured || !HasDestroyDeliveryPoints) Destruction.RunDelayed();
                 Destruction.FlushEndOfFrame();
             });
+            Register(typeof(PL.PostLateUpdate.ScriptRunDelayedDynamicFrameRate), Destruction.BeginDelivery);
             Register(typeof(PL.PostLateUpdate.ScriptRunDelayedDynamicFrameRate), Destruction.DeliverRequested);
             Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), NativeInput.BeforeRenderUpdate);
             Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), Application.Internal_BeforeRender);
@@ -169,7 +173,8 @@ namespace Unbound.Runtime
             // the interval latched when the frame began decides (measured: tests/projects/coreapis).
             Register(typeof(PL.PostLateUpdate.TriggerEndOfFrameCallbacks), () =>
             {
-                if (UnityEngine.Rendering.OnDemandRendering.RendersThisFrame) Coroutines.Run(Coroutines.Phase.EndOfFrame);
+                if (Compat.DestroyPhasesMeasured) s_EndOfFrameAfterLoop = true;
+                else if (UnityEngine.Rendering.OnDemandRendering.RendersThisFrame) Coroutines.Run(Coroutines.Phase.EndOfFrame);
             });
             Register(typeof(PL.PostLateUpdate.PlayerSendFrameComplete), Destruction.FlushEndOfFrame);
             Register(typeof(PL.PostLateUpdate.InputEndFrame), Input.EndFrame);
@@ -180,7 +185,23 @@ namespace Unbound.Runtime
             Register(typeof(PL.PostLateUpdate.GUIClearEvents), AdvanceRenderedFrameCount);
         }
 
-        static void AdvanceRenderedFrameCount() => Time.s_RenderedFrameCount++;
+        static void AdvanceRenderedFrameCount()
+        {
+            if (Compat.DestroyPhasesMeasured) s_AdvanceAfterLoop = true;
+            else Time.s_RenderedFrameCount++;
+        }
+
+        static void AfterLoop()
+        {
+            bool endOfFrame = s_EndOfFrameAfterLoop;
+            bool advance = s_AdvanceAfterLoop;
+            s_EndOfFrameAfterLoop = s_AdvanceAfterLoop = false;
+            // In the measured Editor, these coroutine resumes follow every public loop leaf.
+            // They still see the previous rendered-frame count (destroyphases, coreapis).
+            if (endOfFrame && UnityEngine.Rendering.OnDemandRendering.RendersThisFrame)
+                Coroutines.Run(Coroutines.Phase.EndOfFrame);
+            if (advance) Time.s_RenderedFrameCount++;
+        }
 
         /// <summary>Engine code that runs where Unity runs the system of the given type.</summary>
         internal static void Register(Type system, Action action)
@@ -213,6 +234,7 @@ namespace Unbound.Runtime
                 typeof(PL.TimeUpdate), typeof(PL.Initialization), typeof(PL.EarlyUpdate), typeof(PL.FixedUpdate),
                 typeof(PL.PreUpdate), typeof(PL.Update), typeof(PL.PreLateUpdate), typeof(PL.PostLateUpdate),
             };
+            if (Compat.DestroyPhasesMeasured) return MeasuredDefaultLoop(phases);
             var root = new PlayerLoopSystem { subSystemList = new PlayerLoopSystem[phases.Length] };
             for (int i = 0; i < phases.Length; i++)
             {
@@ -221,6 +243,35 @@ namespace Unbound.Runtime
                 foreach (var t in nested)
                     if (t.GetCustomAttribute<ObsoleteAttribute>() == null)
                         subs.Add(new PlayerLoopSystem { type = t });
+                root.subSystemList[i] = new PlayerLoopSystem { type = phases[i], subSystemList = subs.ToArray() };
+            }
+            return root;
+        }
+
+        static string[] s_MeasuredLoopLeaves;
+
+        // The active loop is not the set of public API structs. Its order and internal leaves
+        // come from destroycontract's loop.leaves reference for this compatibility profile.
+        static PlayerLoopSystem MeasuredDefaultLoop(Type[] phases)
+        {
+            if (s_MeasuredLoopLeaves == null)
+            {
+                using var stream = typeof(PlayerLoopDriver).Assembly.GetManifestResourceStream("Unbound.PlayerLoop.unity-6000.0.71f1.json");
+                if (stream == null) throw new InvalidOperationException("The measured player-loop profile is missing.");
+                s_MeasuredLoopLeaves = System.Text.Json.JsonSerializer.Deserialize<string[]>(stream);
+            }
+            var root = new PlayerLoopSystem { subSystemList = new PlayerLoopSystem[phases.Length] };
+            for (int i = 0; i < phases.Length; i++)
+            {
+                var subs = new List<PlayerLoopSystem>();
+                string prefix = phases[i].Name + ".";
+                foreach (string name in s_MeasuredLoopLeaves)
+                {
+                    if (!name.StartsWith(prefix, StringComparison.Ordinal)) continue;
+                    var type = phases[i].GetNestedType(name.Substring(prefix.Length), BindingFlags.Public | BindingFlags.NonPublic);
+                    if (type == null) throw new InvalidOperationException("The player-loop profile requires " + name + ". Regenerate the compatibility API.");
+                    subs.Add(new PlayerLoopSystem { type = type });
+                }
                 root.subSystemList[i] = new PlayerLoopSystem { type = phases[i], subSystemList = subs.ToArray() };
             }
             return root;
@@ -363,6 +414,7 @@ namespace Unbound.Runtime
                     Jobs.JobSystem.Flush();
                 }
             }
+            AfterLoop();
             if (!s_EnteredPlayMode)
             {
                 AnimationSystem.EndPlayModeEntry();

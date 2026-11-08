@@ -15,7 +15,7 @@ namespace UnityEngine.Tests
     /// follows at the delayed scripting points. These tests run only the driver's, Lifecycle's and
     /// Destruction's actions at the selected nodes, without rendering, clocks or async schedulers.</summary>
     [Collection("Frames")]
-    public class ManualDestroyTests
+    public partial class ManualDestroyTests
     {
         const BindingFlags PrivateStatic = BindingFlags.NonPublic | BindingFlags.Static;
         const BindingFlags PrivateInstance = BindingFlags.NonPublic | BindingFlags.Instance;
@@ -114,10 +114,12 @@ namespace UnityEngine.Tests
             readonly FieldInfo m_Loop = typeof(PlayerLoopDriver).GetField("s_Current", PrivateStatic);
             readonly object m_OldLoop;
             readonly bool m_Playing = EditorSession.IsPlaying;
+            readonly string m_Version = ProjectInfo.UnityVersion;
             readonly string[] m_Calls = Calls.ToArray();
 
-            internal Scope()
+            internal Scope(bool measured = false)
             {
+                if (measured) ProjectInfo.UnityVersion = "6000.0.71f1";
                 _ = Engine; // Complete the driver's registrations before isolating its queues.
                 m_OldSequence = m_Sequence.GetValue(null);
                 m_OldLoop = m_Loop.GetValue(null);
@@ -172,6 +174,7 @@ namespace UnityEngine.Tests
                     m_Sequence.SetValue(null, m_OldSequence);
                     m_Loop.SetValue(null, m_OldLoop);
                     EditorSession.IsPlaying = m_Playing;
+                    ProjectInfo.UnityVersion = m_Version;
                     Calls.Clear();
                     Calls.AddRange(m_Calls);
                 }

@@ -208,7 +208,7 @@ namespace Unbound.Runtime.Humanoid
             var args = new object[] { layer };
             foreach (var behaviour in go.GetComponents<MonoBehaviour>())
             {
-                if (behaviour == null) continue;
+                if (behaviour == null || (Compat.DestroyPhasesMeasured && !behaviour.IsActiveAndEnabledNoThrow)) continue;
                 var method = s_OnAnimatorIK.GetOrAdd(behaviour.GetType(), type => ScriptMessages.Find(type, "OnAnimatorIK", new[] { typeof(int) }));
                 if (method == null) continue;
                 try

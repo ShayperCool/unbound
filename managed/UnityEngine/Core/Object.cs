@@ -28,9 +28,10 @@ namespace UnityEngine
             get => m_CachedPtr == IntPtr.Zero;
             set => m_CachedPtr = value ? IntPtr.Zero : (IntPtr)1;
         }
-        /// <summary>Destroy() was called; the destruction happens at the end of the frame.</summary>
+        /// <summary>Destroy() was called; teardown awaits a player-loop delivery point.</summary>
         internal bool m_PendingDestroy;
         bool m_EngineDestroyRequestNotified;
+        internal bool m_DestroyAtScriptingPoint;
         HideFlags m_HideFlags;
 
         public Object()
@@ -196,6 +197,12 @@ namespace UnityEngine
         {
             MainThreadCheck.Check("Destroy");
             if ((object)obj == null || obj.m_Destroyed) return;
+            if (Compat.DestroyPhasesMeasured && obj.IsPersistentAsset)
+            {
+                Debug.LogError("Destroying assets is not permitted to avoid data loss.\n" +
+                    "If you really want to remove an asset use DestroyImmediate (theObject, true);", obj);
+                return;
+            }
             Destruction.Destroy(obj, t);
         }
 
@@ -205,7 +212,7 @@ namespace UnityEngine
         {
             MainThreadCheck.Check("DestroyImmediate");
             if ((object)obj == null || obj.m_Destroyed) return;
-            if (Unbound.Runtime.PhysicsWorld.IsStepping && obj is GameObject)
+            if (!Compat.DestroyPhasesMeasured && Unbound.Runtime.PhysicsWorld.IsStepping && obj is GameObject)
             {
                 Debug.LogError("Destroying GameObjects immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead.");
                 return;
