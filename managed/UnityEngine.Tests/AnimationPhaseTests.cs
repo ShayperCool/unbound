@@ -107,6 +107,40 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ALoopWithoutTheEndLeafWritesAtTheNextBegin()
+        {
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            var root = new GameObject("Root");
+            var body = new GameObject("Body").transform;
+            body.SetParent(root.transform, false);
+            var animator = root.AddComponent<Animator>();
+            var clip = new AnimationClip();
+            clip.SetCurve("Body", typeof(Transform), "m_LocalPosition.x", AnimationCurve.Linear(0f, 0.5f, 1f, 1f));
+            var graph = PlayableGraph.Create("no-end");
+            try
+            {
+                var output = AnimationPlayableOutput.Create(graph, "Animation", animator);
+                output.SetSourcePlayable(AnimationClipPlayable.Create(graph, clip));
+                graph.Play();
+                PlayableGraphData.UpdateAll();
+                AnimationSystem.UpdateAnimators(fixedStep: false);
+                Assert.Equal(0f, body.localPosition.x);
+                // The next Begin writes the update the missing End leaf left.
+                body.localPosition = new Vector3(-1f, 0f, 0f);
+                graph.Stop();
+                AnimationSystem.UpdateAnimators(fixedStep: false);
+                Assert.Equal(0.5f, body.localPosition.x, 4);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+                ProjectInfo.UnityVersion = version;
+            }
+        }
+
+        [Fact]
         public void AnAnimatorDisabledBetweenTheLeavesIsNotWritten()
         {
             string version = ProjectInfo.UnityVersion;

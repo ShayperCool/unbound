@@ -66,6 +66,9 @@ namespace Unbound.Runtime
 
         internal static void UpdateAnimators(bool fixedStep)
         {
+            // A player loop without the End leaf (a game's custom loop) still gets its writes,
+            // one update late, instead of accumulating them.
+            AnimationPhases.WritePoses();
             if (!fixedStep) Unbound.Runtime.Playables.PlayableGraphData.ProcessOtherOutputs();
             TickAnimators(fixedStep);
             AnimationPhases.DeliverMovement();
