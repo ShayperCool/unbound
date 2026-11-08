@@ -35,7 +35,7 @@ def profile(name):
 # Mid-playback activation retains its Native comparison in the all-case report.
 # The gate separately requires an explicit diagnostic and an unchanged dry return.
 REJECTED_ACTIVATIONS = tuple(f'zone_lifecycle_{mode}_mono{mono}'
-                             for mode in ('enable', 'late') for mono in (0, 1))
+                             for mode in ('enable', 'late') for mono in (0, 1)) + ('zone_lifecycle_pauseactivate_mono1',)
 GATE_ZONE = tuple(key for key in cases() if key.startswith('zone') and key not in REJECTED_ACTIVATIONS)
 # Metadata outside the cases: the property tables of each component.
 FILTER_TABLES = ('filter.', 'serialized.filter_')

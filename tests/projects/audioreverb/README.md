@@ -97,7 +97,7 @@ zones before rendering and stop before long sources finish. The separate
 first-activation and source-completion send differences.
 
 The additional lifecycle, curve-key and overlapping-voice controls bring the
-reference to 138 cases and 13566542 values per rate. They retain every earlier
+reference to 140 cases and 13763160 values per rate. They retain every earlier
 metadata value and sample. Two independent captures agree bit for bit at each
 rate. Reset controls render one silent block before creating their source to
 establish the restarted clock; every subsequent case buffer is retained.
@@ -122,8 +122,8 @@ Record and publish this profile with `native.py --profile motion` and
 --candidate SECOND/capture` checks independent agreement. Each command also
 requires the explicit release, rate and a cache output path as above.
 
-The static gate compares all 134 supported cases. The strict all-case report also
-retains the four mid-playback zone-activation cases; `rejection.py` requires one
+The static gate compares all 135 supported cases. The strict all-case report also
+retains the five mid-playback zone-activation cases; `rejection.py` requires one
 clear diagnostic per case, Native-equivalent dry Master floats and the exact dry
 device return. Mid-playback activation needs reverb parameter transitions while
 histories run and remains a follow-up. Cold/warm starts, Stop, natural completion,
@@ -132,3 +132,10 @@ The added User/Cave override controls distinguish stored scalar values from a
 selected preset's sound, and a repeated-preset property table retains its scalar
 getter values. Motion metadata records the public fixed-step getter bits as well
 as all 40 rendered controls. Existing oracle values and tolerances are unchanged.
+
+The pause controls keep a nonzero source paused across four rendered buffers,
+record isPlaying false and then true on UnPause, and compare the resumed sample
+sequence. Adding a Cave zone while the existing source is paused remains an
+explicit refusal; its dry-return check begins at that activation, preserving the
+ordinary zone return before it. Paused main and one-shot voices are also covered
+by captured-log managed tests.

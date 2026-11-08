@@ -24,6 +24,12 @@ def verify(root, release, rate, zones=True):
             silent = (case.startswith('zone') and suffix and not routed) or ('_s1_' in case and case.endswith(('_d20', '_d25')))
             if silent: assert all(v == 0 for v in values), case+suffix
             else: assert any(abs(v) > 1e-6 for v in values), case+suffix
+    for key in ('zone_lifecycle_pause_mono1', 'zone_lifecycle_pauseactivate_mono1'):
+        assert meta[key+'.pausedPlaying'] is False, key
+        assert meta[key+'.resumedPlaying'] is True, key
+        dry = samples(root, meta[key+'.master'])
+        assert all(v == 0 for v in dry[9*1024*2:12*1024*2]), key
+        assert any(abs(v) > 1e-5 for v in dry[13*1024*2:]), key
     # A reverb case must carry energy after the dry impulses (frames 2048, 3072 and 5120).
     for case, suffix in (('generic', '.master'), ('listener', ''), ('zone_in', ''))[:3 if zones else 2]:
         values = samples(root, meta[case+suffix])

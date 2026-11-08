@@ -30,13 +30,23 @@ def gate(candidate, log, report, release, rate):
             dry = samples(candidate, engine.get(case+'.master'))
             expected = samples(reference, native.get(case+'.master'))
             device = samples(candidate, engine.get(case))
+            native_device = samples(reference, native.get(case))
+            first_rejected_sample = 10 * 1024 * 2 if case == 'zone_lifecycle_pauseactivate_mono1' else 0
             check(case+'.master.length', len(expected), len(dry))
             check(case+'.length', len(dry), len(device))
             for i, (a, b) in enumerate(zip(expected, dry)):
                 check(case+'.master', a, b, i, True)
             for i, (a, b) in enumerate(zip(dry, device)):
-                pcm = max(-32768, min(32767, int(a*32768)))/32768
-                check(case+'.dry', pcm, b, i)
+                if i < first_rejected_sample:
+                    # Before activation this case retains its ordinary measured zone return.
+                    if bad(native_device[i], b, True, False, pcm_steps=1):
+                        failed += 1
+                        output.write(json.dumps(dict(key=case+'.before', sample=i,
+                                                     expected=native_device[i], actual=b))+'\n')
+                    tested += 1
+                else:
+                    pcm = max(-32768, min(32767, int(a*32768)))/32768
+                    check(case+'.dry', pcm, b, i)
         result = dict(tested=tested, failed=failed, cases=REJECTED_ACTIVATIONS)
         output.write(json.dumps(dict(summary=result))+'\n')
     print(json.dumps(result), flush=True)

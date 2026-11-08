@@ -167,6 +167,8 @@ public partial class AudioReverbProbe : MonoBehaviour
         new[] { "zone_voices_dry", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "shotframes=5121", "component=dry" },
         new[] { "zone_voices_distortion", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "shotframes=5121", "component=distortion" },
         new[] { "zone_voices_chorus", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "shotframes=5121", "component=chorus" },
+        new[] { "zone_lifecycle_pause_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=pause", "mono" },
+        new[] { "zone_lifecycle_pauseactivate_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=pauseactivate", "mono" },
     };
     public static readonly string[] FilterProperties = {
         "reverbPreset", "dryLevel", "room", "roomHF", "roomLF", "decayTime", "decayHFRatio", "reflectionsLevel",
@@ -456,7 +458,22 @@ public partial class AudioReverbProbe : MonoBehaviour
                         if (lifecycle == "enable") zones[0].gameObject.SetActive(true);
                         if (lifecycle == "late") zones.Add(new GameObject(key + ".latezone").AddComponent<AudioReverbZone>());
                         if (lifecycle == "stop") source.Stop();
+                        if (lifecycle == "pause" || lifecycle == "pauseactivate") {
+                            source.Pause();
+                            records.Add("\"" + key + ".pausedPlaying\":" + (source.isPlaying ? "true" : "false"));
+                        }
                         if (Engine && lifecycle != "") FlushEngine();
+                    }
+                    if (block == 10 && lifecycle == "pauseactivate") {
+                        var added = new GameObject(key + ".pausedzone").AddComponent<AudioReverbZone>();
+                        added.reverbPreset = AudioReverbPreset.Cave;
+                        zones.Add(added);
+                        if (Engine) FlushEngine();
+                    }
+                    if (block == 12 && (lifecycle == "pause" || lifecycle == "pauseactivate")) {
+                        source.UnPause();
+                        records.Add("\"" + key + ".resumedPlaying\":" + (source.isPlaying ? "true" : "false"));
+                        if (Engine) FlushEngine();
                     }
                     if (!Engine) yield return null;
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false })) throw new Exception("AddMixerGroupSink failed");

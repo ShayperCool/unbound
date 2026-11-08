@@ -212,7 +212,7 @@ Cold zone activation, warm activation and source completion pass. Creating or
 reactivating zones during existing playback remains unsupported: it requires the
 reverb parameter transition while histories run. That context reports an error,
 keeps the dry source audible and silences the unsupported zone return. It is
-listed by `unbound doctor`. The four added lifecycle controls retain their full
+listed by `unbound doctor`. The five activation lifecycle controls retain their full
 Native differences in the strict report; a separate gate requires the diagnostic,
 checks every dry Master float against Native, and checks device PCM against the
 unchanged dry output. Stop the sources and disable all zones before reactivating them to use the measured
