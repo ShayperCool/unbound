@@ -69,6 +69,7 @@ namespace Unbound.Runtime
         static bool s_EnteredPlayMode;
         static bool s_EndOfFrameAfterLoop;
         static bool s_AdvanceAfterLoop;
+        static readonly List<Action> s_FrameCleanup = new List<Action>();
         static unsafe FrameInput* s_Input;
         static readonly Dictionary<Type, List<Action>> s_Engine = new Dictionary<Type, List<Action>>();
         static PlayerLoopSystem? s_Current;
@@ -188,7 +189,11 @@ namespace Unbound.Runtime
         static void AdvanceRenderedFrameCount()
         {
             if (Compat.DestroyPhasesMeasured) s_AdvanceAfterLoop = true;
-            else Time.s_RenderedFrameCount++;
+            else
+            {
+                Time.s_RenderedFrameCount++;
+                CleanupFrame();
+            }
         }
 
         static void AfterLoop()
@@ -200,7 +205,24 @@ namespace Unbound.Runtime
             // They still see the previous rendered-frame count (destroyphases, coreapis).
             if (endOfFrame && UnityEngine.Rendering.OnDemandRendering.RendersThisFrame)
                 Coroutines.Run(Coroutines.Phase.EndOfFrame);
-            if (advance) Time.s_RenderedFrameCount++;
+            if (advance)
+            {
+                Time.s_RenderedFrameCount++;
+                CleanupFrame();
+            }
+        }
+
+        /// <summary>Drawing cleanup and screenshot writes follow end-of-frame coroutine drawing.
+        /// Other releases retain their original GUIClearEvents delivery.</summary>
+        internal static void RegisterFrameCleanup(Action action) => s_FrameCleanup.Add(action);
+
+        static void CleanupFrame()
+        {
+            for (int i = 0; i < s_FrameCleanup.Count; i++)
+            {
+                try { s_FrameCleanup[i](); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
         }
 
         /// <summary>Engine code that runs where Unity runs the system of the given type.</summary>

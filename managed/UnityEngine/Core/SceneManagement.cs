@@ -513,6 +513,10 @@ namespace UnityEngine.SceneManagement
         static readonly List<(AsyncOperation Op, SceneData Scene)> s_PendingUnloads =
             new List<(AsyncOperation, SceneData)>();
 
+        // Session teardown discards queued operations without invoking a previous session's
+        // completion handlers from Edit mode or the next Play session.
+        internal static void ResetPendingUnloads() => s_PendingUnloads.Clear();
+
         internal static void ProcessPending()
         {
             int unloads = s_PendingUnloads.Count;

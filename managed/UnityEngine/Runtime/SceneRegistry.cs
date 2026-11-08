@@ -154,6 +154,7 @@ namespace Unbound.Runtime
         /// <summary>Back to Edit mode: no scene is loaded but a new untitled one.</summary>
         internal static void ResetToUntitled()
         {
+            UnityEngine.SceneManagement.SceneManagerInternal.ResetPendingUnloads();
             foreach (var scene in Loaded.ToArray()) Forget(scene);
             if (s_DontDestroyOnLoad != null) s_DontDestroyOnLoad.Roots.Clear();
             s_Detached?.Roots.Clear();

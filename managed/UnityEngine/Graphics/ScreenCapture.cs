@@ -133,7 +133,7 @@ namespace UnityEngine
 
         // A requested screenshot holds what the end-of-frame callbacks drew (tests/projects/screencapture).
         static ScreenCapture() =>
-            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.GUIClearEvents), WritePending);
+            PlayerLoopDriver.RegisterFrameCleanup(WritePending);
 
         /// <summary>Writes the frame's requested screenshot (after the end-of-frame callbacks).</summary>
         static void WritePending()

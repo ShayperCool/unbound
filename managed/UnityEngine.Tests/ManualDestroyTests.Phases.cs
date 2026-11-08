@@ -208,6 +208,44 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "subject.OnDisable", "subject.OnDestroy", "completed" }, Calls);
         }
 
+        [Fact]
+        public void LeavingPlayModeDiscardsQueuedUnloadBeforeReentry()
+        {
+            using var scope = new Scope(measured: true);
+            using var scenes = new Unbound.Tests.LightProbesTests.Scenes();
+            scenes.Loaded("keep");
+            var scene = scenes.Loaded("unload");
+            bool completed = false;
+            var operation = SceneManager.UnloadSceneAsync(new Scene(scene.Handle));
+            operation.completed += _ => completed = true;
+            Assert.True(Application.isLoadingLevel);
+            bool startedInEditMode = EditorSession.StartedInEditMode;
+            var persistent = SceneRegistry.DontDestroyOnLoad;
+            var roots = persistent.Roots.ToArray();
+            persistent.Roots.Clear();
+            try
+            {
+                EditorSession.StartedInEditMode = true;
+                EditorSession.Request(false);
+                EditorSession.ApplyRequest();
+                Assert.False(EditorSession.IsPlaying);
+                Assert.False(Application.isLoadingLevel);
+                // Re-enter the runtime session state and run its first preloading pass.
+                EditorSession.BeginEnteringPlayMode();
+                EditorSession.EndEnteringPlayMode();
+                SceneManagerInternal.ProcessPending();
+                Assert.False(Application.isLoadingLevel);
+                Assert.False(completed);
+                Assert.True(SceneManager.GetActiveScene().isLoaded);
+                SceneRegistry.Forget(SceneRegistry.Active);
+            }
+            finally
+            {
+                EditorSession.StartedInEditMode = startedInEditMode;
+                persistent.Roots.AddRange(roots);
+            }
+        }
+
         sealed class DestroyErrors : ILogHandler
         {
             internal readonly System.Collections.Generic.List<string> Errors = new System.Collections.Generic.List<string>();
