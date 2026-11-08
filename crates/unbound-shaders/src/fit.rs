@@ -891,7 +891,42 @@ pub(crate) fn parse(words: &[u32]) -> Result<Module> {
         strict_capabilities: false,
         block_ctx_dump_prefix: None,
     };
-    naga::front::spv::parse_u8_slice(&bytes, &options).map_err(|e| anyhow!("reading SPIR-V: {e:?}"))
+    let mut module = naga::front::spv::parse_u8_slice(&bytes, &options)
+        .map_err(|e| anyhow!("reading SPIR-V: {e:?}"))?;
+    finite_float_literals(&mut module);
+    Ok(module)
+}
+
+/// Infinite float constants (`asfloat(0x7F800000)`, core's `FLT_INF`, STP's sign tests
+/// `saturate(x * INF)`), which glslang folds into literals and WGSL cannot hold, become the
+/// largest finite float of their sign: the same in comparisons with finite values and in
+/// saturated products (`0 * INF` is NaN, which saturates to 0, as `0 * FLT_MAX` is); `isinf` of
+/// them differs. NaN literals stay (the validator reports them).
+fn finite_float_literals(module: &mut Module) {
+    fn finite(e: &mut Expression) {
+        match e {
+            Expression::Literal(Literal::F32(v)) if v.is_infinite() => {
+                *v = f32::MAX.copysign(*v);
+            }
+            Expression::Literal(Literal::F64(v)) if v.is_infinite() => {
+                *v = f64::MAX.copysign(*v);
+            }
+            _ => {}
+        }
+    }
+    for (_, e) in module.global_expressions.iter_mut() {
+        finite(e);
+    }
+    for (_, f) in module.functions.iter_mut() {
+        for (_, e) in f.expressions.iter_mut() {
+            finite(e);
+        }
+    }
+    for entry in &mut module.entry_points {
+        for (_, e) in entry.function.expressions.iter_mut() {
+            finite(e);
+        }
+    }
 }
 
 /// A texture variable's dimension.

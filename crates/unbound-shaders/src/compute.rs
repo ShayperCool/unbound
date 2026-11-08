@@ -68,10 +68,12 @@ pub enum ResourceKind {
         write_only: bool,
     },
     /// A sampler: of the texture `sampler_<name>` pairs with, or an inline state its name spells
-    /// (`linear`/`point`/`trilinear`, `clamp`/`repeat`/`mirror`/`mirroronce`).
+    /// (`linear`/`point`/`trilinear`, `clamp`/`repeat`/`mirror`/`mirroronce`). `unfiltered`: it
+    /// samples (gathers) an integer texture, which no filtering sampler may.
     Sampler {
         texture: Option<String>,
         comparison: bool,
+        unfiltered: bool,
     },
 }
 
@@ -287,6 +289,35 @@ fn loaded_images(module: &Module) -> HashSet<naga::Handle<naga::GlobalVariable>>
     loaded
 }
 
+/// The sampler globals a module samples or gathers an integer texture with.
+fn integer_samplers(module: &Module) -> HashSet<naga::Handle<naga::GlobalVariable>> {
+    let mut found = HashSet::new();
+    let functions = module
+        .functions
+        .iter()
+        .map(|(_, f)| f)
+        .chain(module.entry_points.iter().map(|e| &e.function));
+    for f in functions {
+        for (_, e) in f.expressions.iter() {
+            if let Expression::ImageSample { image, sampler, .. } = e
+                && let Expression::GlobalVariable(i) = f.expressions[*image]
+                && let Expression::GlobalVariable(s) = f.expressions[*sampler]
+                && let TypeInner::Image {
+                    class:
+                        ImageClass::Sampled {
+                            kind: naga::ScalarKind::Sint | naga::ScalarKind::Uint,
+                            ..
+                        },
+                    ..
+                } = module.types[module.global_variables[i].ty].inner
+            {
+                found.insert(s);
+            }
+        }
+    }
+    found
+}
+
 /// Binds a kernel's resources in group 0 by order, reads its uniform blocks, sets its RW
 /// textures' formats and access, and writes WGSL.
 fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<CompiledKernel> {
@@ -305,6 +336,7 @@ fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<Compi
         .ok_or_else(|| anyhow!("no compute entry point"))?;
     let workgroup_size = entry.workgroup_size;
     let loaded = loaded_images(&module);
+    let integer_samplers = integer_samplers(&module);
     let mut blocks = Vec::new();
     let mut resources = Vec::new();
     let mut next = 0u32;
@@ -347,6 +379,7 @@ fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<Compi
                     Some(ResourceKind::Sampler {
                         texture,
                         comparison,
+                        unfiltered: integer_samplers.contains(&h),
                     })
                 }
                 TypeInner::Image {
@@ -745,5 +778,32 @@ RWStructuredBuffer<uint> _Out;
             .compile_kernel(&program(), "Scale", &[], &[])
             .unwrap();
         assert_eq!(second.workgroup_size, [64, 1, 1]);
+    }
+
+    /// A sampler that gathers an integer texture is marked unfiltered (STP gathers its packed
+    /// depth and motion through a point sampler); one sampling a float texture is not.
+    #[test]
+    fn samplers_of_integer_textures_are_unfiltered() {
+        let program = ComputeProgram {
+            file: PathBuf::from("Gather.compute"),
+            source: "#pragma kernel Main\nTexture2D<uint> _Ids; Texture2D _Color;\n\
+                SamplerState s_point_clamp_sampler; SamplerState s_linear_clamp_sampler;\n\
+                RWStructuredBuffer<float> _Out;\n\
+                [numthreads(1,1,1)] void Main(uint3 id : SV_DispatchThreadID) \
+                { _Out[id.x] = _Ids.GatherRed(s_point_clamp_sampler, float2(0.5, 0.5)).x \
+                + _Color.SampleLevel(s_linear_clamp_sampler, float2(0.5, 0.5), 0).x; }"
+                .into(),
+        };
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let k = compiler.compile_kernel(&program, "Main", &[], &[]).unwrap();
+        let unfiltered = |n: &str| {
+            k.resources.iter().find(|r| r.name == n).map(|r| match r.kind {
+                ResourceKind::Sampler { unfiltered, .. } => unfiltered,
+                _ => panic!("{n} is not a sampler"),
+            })
+        };
+        assert_eq!(unfiltered("s_point_clamp_sampler"), Some(true));
+        // The float texture now samples through its own sampler (`sampler_Color`).
+        assert_eq!(unfiltered("sampler_Color"), Some(false));
     }
 }

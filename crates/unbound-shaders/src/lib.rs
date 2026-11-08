@@ -15,6 +15,7 @@ pub mod preprocess;
 
 mod fit;
 mod samplers;
+mod scopes;
 mod surface;
 
 use anyhow::{Context, Result, anyhow, bail};
@@ -27,7 +28,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 25;
+pub const FORMAT_VERSION: u32 = 26;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -925,11 +926,14 @@ fn dump_failed(source: &str, name: &str, kind: shaderc::ShaderKind) {
 }
 
 /// Expanded HLSL rewritten where FXC is more lenient than glslang: overloads that differ only in
-/// `half`/minimum precision types (one stays), and empty member declarations (`;;` in a struct or
-/// cbuffer, left by macros).
+/// `half`/minimum precision types (one stays), empty member declarations (`;;` in a struct or
+/// cbuffer, left by macros), namespaces and member functions defined outside their struct
+/// ([`scopes`]).
 fn fxc_compatible(source: &str) -> String {
     writable_globals(&constructor_statements(&flat_bool_varyings(
-        &rename_type_semantics(&drop_empty_declarations(&drop_duplicate_overloads(source))),
+        &rename_type_semantics(&drop_empty_declarations(&drop_duplicate_overloads(
+            &scopes::flatten_scopes(source),
+        ))),
     )))
 }
 
@@ -2746,5 +2750,42 @@ void surf (Input IN, inout SurfaceOutput o) { o.Albedo = tex2D(_MainTex, IN.uv_M
             let cube = c.textures.iter().position(|t| t == "_Cube").unwrap();
             assert_eq!(c.texture_dims[cube], TextureDim::Cube);
         }
+    }
+
+    /// Infinite constants (WGSL has none) read as the largest finite floats: a kernel testing
+    /// signs by saturating a product with them (STP's) validates and keeps its results.
+    #[test]
+    fn infinite_constants_become_the_largest_floats() {
+        let source = "RWStructuredBuffer<float> o;\n\
+            [numthreads(4, 1, 1)] void main(uint i : SV_DispatchThreadID) \
+            { float x = o[i]; o[i] = saturate(x * asfloat(0x7f800000u)) - saturate(x * asfloat(0xff800000u)); }";
+        let compiler = shaderc::Compiler::new().unwrap();
+        let mut o = shaderc::CompileOptions::new().unwrap();
+        o.set_source_language(shaderc::SourceLanguage::HLSL);
+        o.set_auto_bind_uniforms(true);
+        o.set_target_env(shaderc::TargetEnv::Vulkan, shaderc::EnvVersion::Vulkan1_1 as u32);
+        let spv = compiler
+            .compile_into_spirv(source, shaderc::ShaderKind::Compute, "t", "main", Some(&o))
+            .unwrap();
+        let module = fit::parse(spv.as_binary()).unwrap();
+        let literals = module
+            .global_expressions
+            .iter()
+            .map(|(_, e)| e)
+            .chain(module.entry_points[0].function.expressions.iter().map(|(_, e)| e))
+            .filter_map(|e| match e {
+                naga::Expression::Literal(naga::Literal::F32(v)) => Some(*v),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert!(literals.contains(&f32::MAX), "{literals:?}");
+        assert!(literals.contains(&-f32::MAX), "{literals:?}");
+        assert!(literals.iter().all(|v| v.is_finite()));
+        naga::valid::Validator::new(
+            naga::valid::ValidationFlags::all(),
+            naga::valid::Capabilities::all(),
+        )
+        .validate(&module)
+        .unwrap();
     }
 }

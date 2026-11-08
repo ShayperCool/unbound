@@ -681,13 +681,17 @@ fn main() {
                     format: wgpu_storage_format(format),
                     view_dimension: view_dimension(*dim),
                 },
-                ResourceKind::Sampler { comparison, .. } => {
-                    wgpu::BindingType::Sampler(if *comparison {
-                        wgpu::SamplerBindingType::Comparison
-                    } else {
-                        wgpu::SamplerBindingType::Filtering
-                    })
-                }
+                ResourceKind::Sampler {
+                    comparison,
+                    unfiltered,
+                    ..
+                } => wgpu::BindingType::Sampler(if *comparison {
+                    wgpu::SamplerBindingType::Comparison
+                } else if *unfiltered {
+                    wgpu::SamplerBindingType::NonFiltering
+                } else {
+                    wgpu::SamplerBindingType::Filtering
+                }),
             };
             entries.push(entry(r.binding, ty));
         }
@@ -943,6 +947,7 @@ fn main() {
                 ResourceKind::Sampler {
                     texture,
                     comparison,
+                    unfiltered,
                 } => {
                     let key = texture
                         .as_ref()
@@ -968,6 +973,16 @@ fn main() {
                                 ..key
                             }
                         });
+                    // One sampling an integer texture reads texels unfiltered.
+                    let key = if *unfiltered {
+                        super::SamplerKey {
+                            filter: 0,
+                            aniso: 1,
+                            ..key
+                        }
+                    } else {
+                        key
+                    };
                     bound.push((r.binding, Bound::Sampler(self.sampler(key))));
                 }
             }
