@@ -1464,6 +1464,8 @@ namespace UnityEngine
             /// (releases other than the measured one keep the previous behaviour).</summary>
             public bool BirthsInFinalStep;
             public bool TemporaryLane;
+            /// <summary>Simulation to world space and back, for collisions.</summary>
+            public Matrix4x4 SimToWorld, WorldToSimMatrix;
         }
 
         /// <summary>The normalized playback time where a step of <paramref name="dt"/> seconds ends,
@@ -1507,6 +1509,12 @@ namespace UnityEngine
             c.NoiseTime = m_NoiseScroll;
             c.BirthSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Birth);
             c.BirthsInFinalStep = !Compat.ParticleBirthStepsMeasured;
+            if (m_Collision.enabled)
+            {
+                c.SimToWorld = SimulationToWorld();
+                c.WorldToSimMatrix = c.SimToWorld.inverse;
+                if (m_Collision.type == ParticleSystemCollisionType.Planes) PrepareCollisionPlanes(c.SimToWorld);
+            }
             return c;
         }
 
@@ -1580,6 +1588,10 @@ namespace UnityEngine
             if ((p.m_Flags & Particle.FlagAgeInitialized) == 0) p.InitializeAge();
             float age = p.Age01;
             float ageBefore = p.m_StartLifetime - p.m_Lifetime;
+            // Collisions and triggers see the size a particle had where its previous step ended (a
+            // newborn's where its first step ends, below): the sizes are updated after them.
+            bool events = !c.TemporaryLane && (m_Collision.enabled || m_Trigger.enabled);
+            var eventSize = events && existing ? CurrentSize3D(ref p) : default;
             // Native stores age in percent, not a repeatedly subtracted remaining lifetime.
             // Exact boundaries such as .5 seconds in .025 steps otherwise die one step early.
             if (p.m_AgePercent <= 100f)
@@ -1635,8 +1647,9 @@ namespace UnityEngine
                 p.m_AngularVelocity = w;
             }
             p.m_Rotation += p.m_AngularVelocity * dt;
-            if (!c.TemporaryLane && (m_Collision.enabled && !Collide(ref p, before, age, dt, speedModifier)
-                || m_Trigger.enabled && !Trigger(ref p)))
+            if (events && !existing) eventSize = CurrentSize3D(ref p);
+            if (events && (m_Collision.enabled && !Collide(ref p, eventSize, moving * speedModifier, age, dt, speedModifier, c)
+                || m_Trigger.enabled && !Trigger(ref p, eventSize)))
             {
                 // A newborn killed while it is emitted is never added (measured: none is
                 // reported, even in a call's last step). An existing particle's life ends

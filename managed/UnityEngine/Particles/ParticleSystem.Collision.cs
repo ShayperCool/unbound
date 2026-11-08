@@ -5,10 +5,10 @@ using R = Unbound.Runtime.ParticleRandom;
 namespace UnityEngine
 {
     // Collisions and force fields, as measured in the Editor: a particle is a sphere of half its size
-    // (times the radius scale); it stops where it meets a plane or collider and spends the rest of the
-    // step moving away with its velocity reflected (bounce on the normal part) and reduced by the
-    // dampen; it loses lifetimeLoss of its start lifetime. Force fields push with their direction
-    // and pull to their center with 30 × gravity.
+    // (times the radius scale) that meets a plane or collider at a contact point, from where the
+    // rest of its step's movement and its velocity are reflected (bounce on the normal part) and
+    // reduced by the dampen; it loses lifetimeLoss of its start lifetime. Force fields push with
+    // their direction and pull to their center with 30 × gravity.
     public sealed partial class ParticleSystem
     {
         /// <summary>The collisions of the frame so far, for OnParticleCollision and GetCollisionEvents.</summary>
@@ -22,46 +22,66 @@ namespace UnityEngine
             if (s_Unsupported.Add(what)) Debug.LogWarning("Unbound: particle " + what + " is not simulated yet");
         }
 
-        /// <summary>Moves a particle that started the step at <paramref name="start"/> (simulation
-        /// space) to its first collision on the way to where it ended, and bounces it there; false
-        /// when the collision kills it.</summary>
-        bool Collide(ref Particle p, Vector3 start, float age, float dt, float speedModifier)
+        /// <summary>World collisions sweep a sphere this fraction of the particle's radius smaller,
+        /// that much further than the step's movement, and place the contact that much before where
+        /// the smaller sphere touches: head-on, the full sphere's contact; at a slant, slightly
+        /// deeper (6000.0.71f1, tests/projects/particlerender collide/world/*).</summary>
+        const float WorldSweepShrink = 0.151f;
+        /// <summary>The smallest radius a world collision sweeps with.</summary>
+        const float MinSweepRadius = 1e-6f;
+        /// <summary>A particle whose step is shorter than this collides with nothing (a newborn
+        /// emitted where its step ends, 6000.0.71f1 tests/projects/particles
+        /// collision_planes_kill); nor does a world sweep shorter than this.</summary>
+        const float MinCollisionStep = 1e-6f;
+        /// <summary>A plane is not hit by a particle whose direction of travel makes a cosine below
+        /// this with its normal (moving along it).</summary>
+        const float PlaneParallelCosine = 1e-4f;
+        /// <summary>A speed modifier closer to zero than this leaves a bounced particle at rest.</summary>
+        const float MinSpeedModifier = 1e-6f;
+
+        /// <summary>The collision planes of the step in simulation space: normal (xyz) and offset
+        /// (w), for <see cref="m_CollisionPlaneCount"/> planes in the module's order.</summary>
+        Vector4[] m_CollisionPlanes = System.Array.Empty<Vector4>();
+        readonly List<GameObject> m_CollisionPlaneObjects = new List<GameObject>();
+        int m_CollisionPlaneCount;
+
+        /// <summary>Puts the module's planes into simulation space for a step.</summary>
+        void PrepareCollisionPlanes(in Matrix4x4 simToWorld)
+        {
+            m_CollisionPlaneCount = 0;
+            m_CollisionPlaneObjects.Clear();
+            var planes = m_Collision.planes;
+            if (m_CollisionPlanes.Length < planes.Count) m_CollisionPlanes = new Vector4[planes.Count];
+            var toSim = simToWorld.inverse;
+            foreach (var plane in planes)
+            {
+                if (plane == null) continue;
+                // A plane's normal is its transform's up; in simulation space it turns with the
+                // transpose of the space's linear part (simulation space may be scaled).
+                var n = simToWorld.transpose.MultiplyVector(plane.up).normalized;
+                var origin = toSim.MultiplyPoint3x4(plane.position);
+                m_CollisionPlanes[m_CollisionPlaneCount++] = new Vector4(n.x, n.y, n.z, -Vector3.Dot(n, origin));
+                m_CollisionPlaneObjects.Add(plane.gameObject);
+            }
+        }
+
+        /// <summary>Collides a particle that has just moved by <paramref name="dt"/> with
+        /// <paramref name="velocity"/> (simulation space, the speed modifier applied) and bounces
+        /// it; false when the collision kills it. <paramref name="size"/> is the particle's size as
+        /// the collision sees it: at the end of its previous step, or of this one for a newborn
+        /// (6000.0.71f1, tests/projects/particlerender inherit/collision/*, collide/*).</summary>
+        bool Collide(ref Particle p, Vector3 size, Vector3 velocity, float age, float dt, float speedModifier, in StepContext c)
         {
             var C = m_Collision;
-            var toWorld = SimulationToWorld();
-            var w0 = toWorld.MultiplyPoint3x4(start);
-            var w1 = toWorld.MultiplyPoint3x4(p.m_Position);
-            var move = w1 - w0;
-            float distance = move.magnitude;
-            if (distance <= 0f) return true;
-            var size = CurrentSize3D(ref p);
-            float radius = Mathf.Max(size.x, Mathf.Max(size.y, size.z)) * 0.5f * C.radiusScale;
-
-            float fraction = float.PositiveInfinity;
-            Vector3 normal = Vector3.zero;
-            GameObject other = null;
+            if (dt < MinCollisionStep) return true;
+            float radius = Mathf.Max(size.x, Mathf.Max(size.y, size.z)) * (C.radiusScale * 0.5f);
+            var end = p.m_Position;
+            Vector3 contact, normal;
+            GameObject other;
             int colliderId = 0;
             if (C.type == ParticleSystemCollisionType.Planes)
             {
-                foreach (var plane in C.planes)
-                {
-                    if (plane == null) continue;
-                    var n = plane.up;
-                    var origin = plane.position;
-                    float d0 = Vector3.Dot(w0 - origin, n) - radius;
-                    float d1 = Vector3.Dot(w1 - origin, n) - radius;
-                    // Moving into the plane, the center not yet past it, and deeper than a hair
-                    // (a newborn grazing it in its first instant does not bounce, measured).
-                    if (d1 >= -1e-5f || d1 >= d0 || d0 < -radius) continue;
-                    float f = Mathf.Clamp01(d0 / (d0 - d1));
-                    if (f < fraction)
-                    {
-                        fraction = f;
-                        normal = n;
-                        other = plane.gameObject;
-                        colliderId = 0;
-                    }
-                }
+                if (!PlaneContact(end, velocity, radius, out contact, out normal, out other)) return true;
             }
             else
             {
@@ -70,52 +90,116 @@ namespace UnityEngine
                     ReportUnsupported("2D world collision");
                     return true;
                 }
-                if (Physics.SphereCast(w0, radius, move / distance, out var hit, distance, C.collidesWith, QueryTriggerInteraction.Ignore))
-                {
-                    fraction = hit.distance / distance;
-                    normal = hit.normal;
-                    other = hit.collider != null ? hit.collider.gameObject : null;
-                    colliderId = hit.collider != null ? hit.collider.GetInstanceID() : 0;
-                    if (C.colliderForce != 0f && hit.collider != null) ReportColliderForce(hit.collider.attachedRigidbody);
-                }
+                if (C.quality != ParticleSystemCollisionQuality.High) ReportUnsupported("Medium and Low collision quality (collided at High)");
+                if (!WorldContact(end, velocity, radius, dt, c, out contact, out normal, out var hit)) return true;
+                other = hit != null ? hit.gameObject : null;
+                colliderId = hit != null ? hit.GetInstanceID() : 0;
+                if (C.colliderForce != 0f && hit != null) ReportColliderForce(hit.attachedRigidbody);
             }
-            if (float.IsPositiveInfinity(fraction)) return true;
 
             uint seed = p.m_RandomSeed;
-            var simToWorldRotation = Quaternion.Inverse(WorldToSimulationRotation());
-            var velocity = simToWorldRotation * p.m_Velocity;
-            float speed = (simToWorldRotation * (p.m_Velocity + p.m_AnimatedVelocity)).magnitude;
-            var impact = w0 + move * fraction;
             // Collision sub-emitters ("Spawns new particles when particles from the parent
             // system collide with something"; collision0/1 spawn "at the locations of the
-            // collision") emit at the point the particle meets the plane or collider, the
-            // ParticleCollisionEvent intersection, whether or not collision messages are sent.
-            // Unbound's choices (unmeasured): one emission per detected collision, also when the
-            // collision then kills the particle (its Death sub-emitters fire as well), and what
-            // the children inherit is the particle as it arrives, before the bounce, dampen and
-            // lifetime loss.
-            if (m_SubEmitters.enabled) EventSubEmitters(ParticleSystemSubEmitterType.Collision, p, toWorld.inverse.MultiplyPoint3x4(impact));
+            // collision") emit at the contact, the ParticleCollisionEvent intersection, whether
+            // or not collision messages are sent. Unbound's choices (unmeasured): one emission per
+            // detected collision, also when the collision then kills the particle (its Death
+            // sub-emitters fire as well), and what the children inherit is the particle as it
+            // arrives, before the bounce, dampen and lifetime loss.
+            if (m_SubEmitters.enabled) EventSubEmitters(ParticleSystemSubEmitterType.Collision, p, contact);
             if (C.sendCollisionMessages && other != null)
                 m_CollisionEvents.Add((other, new ParticleCollisionEvent
                 {
-                    m_Intersection = impact,
-                    m_Normal = normal,
-                    m_Velocity = simToWorldRotation * (p.m_Velocity + p.m_AnimatedVelocity),
+                    m_Intersection = c.SimToWorld.MultiplyPoint3x4(contact),
+                    m_Normal = c.SimToWorld.MultiplyVector(normal).normalized,
+                    m_Velocity = c.SimToWorld.MultiplyVector(velocity),
                     m_ColliderInstanceID = colliderId,
                 }));
             float bounce = C.bounce.Evaluate(age, R.Value(seed, R.Collision));
             float dampen = C.dampen.Evaluate(age, R.Value(seed, R.Collision + 1));
-            var normalPart = normal * Vector3.Dot(velocity, normal);
-            velocity = (velocity - normalPart - normalPart * bounce) * (1f - dampen);
-            p.m_Velocity = WorldToSimulationRotation() * velocity;
-            var after = impact + simToWorldRotation * ((p.m_Velocity + p.m_AnimatedVelocity) * (speedModifier * dt * (1f - fraction)));
-            p.m_Position = toWorld.inverse.MultiplyPoint3x4(after);
+            // The rest of the movement, from the contact to where the step ended, and the whole
+            // velocity (the particle's own and the animated part) bounce alike; the animated part
+            // stays as it is, so the particle's own velocity takes the difference.
+            p.m_Position = contact + Bounce(end - contact, normal, bounce, dampen);
+            var bounced = Bounce(velocity, normal, bounce, dampen);
+            p.m_Velocity = Mathf.Abs(speedModifier) > MinSpeedModifier ? bounced / speedModifier - p.m_AnimatedVelocity : Vector3.zero;
             p.m_AgePercent += C.lifetimeLoss.Evaluate(age, R.Value(seed, R.Collision + 2)) * 100f;
             p.ExportLifetime();
-            // A kill by speed also comes after the bounce: the killed particle reports its bounced
-            // velocity (6000.0.71f1, tests/projects/particletrails pp/collision/speedkill).
-            if (speed < C.minKillSpeed || speed > C.maxKillSpeed) return false;
+            // The kill by speed takes the speed it arrived with; the killed particle still bounced
+            // (6000.0.71f1, tests/projects/particletrails pp/collision/speedkill).
+            float speed2 = velocity.sqrMagnitude;
+            if (speed2 < C.minKillSpeed * C.minKillSpeed || speed2 > C.maxKillSpeed * C.maxKillSpeed) return false;
             return p.m_AgePercent <= 100f;
+        }
+
+        /// <summary>Reflects <paramref name="x"/> on the plane of <paramref name="normal"/>, scales
+        /// it by 1 − dampen and its normal part by the bounce.</summary>
+        static Vector3 Bounce(Vector3 x, Vector3 normal, float bounce, float dampen)
+        {
+            x += normal * (Vector3.Dot(x, normal) * -2f);
+            x *= 1f - dampen;
+            return x - normal * Vector3.Dot(x, normal) * (1f - bounce);
+        }
+
+        /// <summary>Planes are half-spaces: the first plane in the module's list that the particle's
+        /// sphere reaches into where the step ended, wherever it came from (behind the plane
+        /// included), unless it moves along it. The contact is where the sphere touches it on the
+        /// line of the particle's velocity (6000.0.71f1, tests/projects/particlerender
+        /// collide/planes/*).</summary>
+        bool PlaneContact(Vector3 end, Vector3 velocity, float radius, out Vector3 contact, out Vector3 normal, out GameObject other)
+        {
+            float speed = velocity.magnitude;
+            var direction = speed > 0f ? velocity / speed : Vector3.zero;
+            for (int i = 0; i < m_CollisionPlaneCount; i++)
+            {
+                var plane = m_CollisionPlanes[i];
+                var n = new Vector3(plane.x, plane.y, plane.z);
+                float distance = Vector3.Dot(n, end) + plane.w;
+                if (distance > radius || Mathf.Abs(Vector3.Dot(n, direction)) < PlaneParallelCosine) continue;
+                contact = end + velocity * ((radius - distance) / Vector3.Dot(velocity, n));
+                normal = n;
+                other = m_CollisionPlaneObjects[i];
+                return true;
+            }
+            contact = normal = default;
+            other = null;
+            return false;
+        }
+
+        /// <summary>World collisions sweep from where the step's movement started to where it
+        /// ended (see <see cref="WorldSweepShrink"/>), in world space; the closest hit is the
+        /// contact. A sphere that starts inside a collider meets it where it started, and bounces
+        /// straight back.</summary>
+        bool WorldContact(Vector3 end, Vector3 velocity, float radius, float dt, in StepContext c, out Vector3 contact, out Vector3 normal, out Collider hit)
+        {
+            contact = normal = default;
+            hit = null;
+            var w1 = c.SimToWorld.MultiplyPoint3x4(end);
+            var w0 = c.SimToWorld.MultiplyPoint3x4(end - velocity * dt);
+            var move = w1 - w0;
+            float length = move.magnitude;
+            if (!(length > MinCollisionStep)) return false;
+            var direction = move / length;
+            float shrink = radius * WorldSweepShrink;
+            float sweepRadius = radius - shrink;
+            if (!(sweepRadius > MinSweepRadius)) sweepRadius = MinSweepRadius;
+            if (!PhysicsQueries.ParticleSweep(w0, sweepRadius, direction, length + shrink, m_Collision.collidesWith, out float distance, out var hitNormal, out hit))
+                return false;
+            Vector3 worldContact, worldNormal;
+            if (distance > 0f)
+            {
+                worldContact = w0 + direction * (distance - shrink);
+                worldNormal = hitNormal;
+            }
+            else
+            {
+                // Pushed out by the penetration depth, the contact reached from outside; the
+                // normal points back in, so the rest of the movement turns inward from there.
+                worldContact = w0 - hitNormal * (distance - shrink);
+                worldNormal = -hitNormal;
+            }
+            contact = c.WorldToSimMatrix.MultiplyPoint3x4(worldContact);
+            normal = c.WorldToSimMatrix.MultiplyVector(worldNormal).normalized;
+            return true;
         }
 
         /// <summary>colliderForce: the 6000.0 docs say only that it is "How much force is
@@ -219,8 +303,9 @@ namespace UnityEngine
         }
 
         /// <summary>Classifies the particle against cached collider geometry, then applies the
-        /// trigger actions. False when an action kills it.</summary>
-        bool Trigger(ref Particle p)
+        /// trigger actions. False when an action kills it. <paramref name="size"/>: as
+        /// <see cref="Collide"/>'s.</summary>
+        bool Trigger(ref Particle p, Vector3 size)
         {
             var T = m_Trigger;
             // A module without a collider reports no event, Outside included (6000.0.71f1,
@@ -232,7 +317,6 @@ namespace UnityEngine
             if (!anyCollider) return true;
             var toWorld = SimulationToWorld();
             var world = toWorld.MultiplyPoint3x4(p.m_Position);
-            var size = CurrentSize3D(ref p);
             // The particle sweeps the step's movement: a collider counts when the sphere moving
             // from where the step started to where it ended touches it (6000.0.71f1: sphere
             // colliders through the measured path of SPHERE_MECHANISM.md; other colliders as a

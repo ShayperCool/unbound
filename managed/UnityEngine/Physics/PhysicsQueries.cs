@@ -192,6 +192,32 @@ namespace Unbound.Runtime
         internal static List<RaycastHit> Cast(B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius, Vector3 direction, float maxDistance, int layerMask, QueryTriggerInteraction triggers, bool closest) =>
             Collect(ReadCast(false, kind, a, b, rotation, radius, direction, maxDistance, layerMask, triggers, closest, false), Length(maxDistance), direction.normalized);
 
+        const int InitialDepth = 1 << 4;
+
+        /// <summary>The particle Collision module's world sweep: the closest hit of a sphere, without
+        /// allocating. A sphere that starts inside a collider hits it at minus its penetration
+        /// depth, <paramref name="normal"/> then being the direction that separates them.</summary>
+        internal static bool ParticleSweep(Vector3 origin, float radius, Vector3 direction, float maxDistance, int layerMask,
+            out float distance, out Vector3 normal, out Collider collider)
+        {
+            int count = ReadCast(false, B3.Proxy.Sphere, origin, origin, Quaternion.identity, radius, direction, maxDistance, layerMask,
+                QueryTriggerInteraction.Ignore, true, false, InitialDepth);
+            float length = Length(maxDistance);
+            for (int i = 0; i < count; i++)
+            {
+                var raw = s_Hits[i];
+                collider = W.ColliderOf(raw.Shape);
+                if (collider == null) continue;
+                distance = raw.Fraction * length;
+                normal = raw.Normal;
+                return true;
+            }
+            distance = 0f;
+            normal = default;
+            collider = null;
+            return false;
+        }
+
         internal static int BatchCast(PhysicsScene scene, bool ray, B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius,
             Vector3 direction, float distance, QueryParameters parameters, RaycastHit[] results, bool closest, int capacity)
         {

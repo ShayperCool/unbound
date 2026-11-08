@@ -46,7 +46,7 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 19
+#define UA3_VERSION 20
 
 struct ua3_scene_def
 {
@@ -286,6 +286,10 @@ const int QueryHitTriggers = 1;
 const int QueryHitBackfaces = 2;
 const int QueryMultipleFaces = 4;
 const int QuerySkipInitial = 8;
+// Sweeps report an initial overlap as a hit at minus its penetration depth, along the direction
+// that separates the shapes (PxHitFlag::eMTD), even for the closest hit: the particle Collision
+// module's world sweep (Unity 6000.0.71f1, particlerender collide/world/inside).
+const int QueryInitialDepth = 16;
 
 // Shared by scene, collider and batch casts (Unity 6000.0.71f1, physicsccdhinge).
 PxHitFlags cast_flags( PxHitFlags flags, int queryFlags )
@@ -2577,9 +2581,12 @@ UA3_API int ua3_shapecast( uint32_t id, int kind, ua3_vec3 aIn, ua3_vec3 bIn, ua
 	CastCollector<PxSweepHit> buffer(hits, capacity, length, closest != 0);
 	QueryFilter filter;
 	filter.hitTriggers = ( hitTriggers & QueryHitTriggers ) != 0;
-    filter.skipInitial = closest != 0 || (hitTriggers & QuerySkipInitial) != 0;
+    const bool initialDepth = (hitTriggers & QueryInitialDepth) != 0;
+    filter.skipInitial = !initialDepth && (closest != 0 || (hitTriggers & QuerySkipInitial) != 0);
+    PxHitFlags sweepFlags = PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX;
+    if (initialDepth) sweepFlags |= PxHitFlag::eMTD;
 	world->scene->sweep( geometry.any(), pose, translation / length, length, buffer,
-						 cast_flags( PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX, hitTriggers ), query_filter( maskBits, filter.skipInitial ),
+						 cast_flags( sweepFlags, hitTriggers ), query_filter( maskBits, filter.skipInitial ),
 						 &filter );
 	return buffer.count;
 }
