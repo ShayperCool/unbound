@@ -37,7 +37,7 @@ public partial class AudioReverbProbe
         "listener_transform_dynamic_auto", "listener_transform_dynamic_fixed", "listener_transform_dynamic_dynamic",
         "source_parenttiming_auto", "source_parenttiming_fixed", "source_parenttiming_dynamic",
         "listener_parenttiming_auto", "listener_parenttiming_fixed", "listener_parenttiming_dynamic",
-        "listener_offaxis_auto", "listener_offaxis_fixed",
+        "listener_offaxis_auto", "listener_offaxis_fixed", "listener_offaxis_dynamic",
     };
 
     System.Collections.IEnumerator CaptureMotion()
