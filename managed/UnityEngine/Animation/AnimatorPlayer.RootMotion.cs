@@ -387,6 +387,13 @@ namespace Unbound.Runtime
         readonly List<float> m_HumanWeights = new List<float>();
         readonly List<Unbound.Runtime.Humanoid.Trs> m_HumanBodyDifferences = new List<Unbound.Runtime.Humanoid.Trs>();
 
+        /// <summary>A transition's destination entering beside an empty state on the base layer.</summary>
+        bool EntersFromEmpty(LayerRun layer, StateRun run)
+        {
+            var source = PlayedBy(layer);
+            return source.Transition != null && source.Next == run && AloneBesideEmpty(layer, 0, run, source.Current);
+        }
+
         /// <summary>A humanoid Animator's root motion: each humanoid clip's body motion between its
         /// state's previous and current times, blended by the clips' weights in each layer (the
         /// states of a transition, a blend tree's clips); override layers move it towards theirs by
@@ -418,6 +425,9 @@ namespace Unbound.Runtime
                         Speed = SpeedOf(def),
                         CycleOffset = def.CycleOffset + (float)MirrorShift(def, clip),
                     };
+                    if (i == 0 && run.MotionPrevious.HasValue && EntersFromEmpty(layer, run))
+                        Unbound.Runtime.Stubs.Ignored("Animator humanoid root motion entering from a state without a motion",
+                            "the first update of a transition from an empty state leaves out a root offset the Editor adds (measured, not reproduced)");
                     if (additive)
                     {
                         // Additive layers leave the root motion alone; only their body differences apply.

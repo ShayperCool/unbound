@@ -529,7 +529,8 @@ namespace Unbound.Runtime
             // A state a Play or CrossFade request enters plays from the requested time: the update
             // it enters in does not advance it (6000.0.71f1, tests/projects/animstartup and
             // humanoid playState/crossFade*); its root motion covers that update up to there.
-            bool hold = requested != null && Compat.AnimatorStartupMeasured;
+            // A state driven by a motion time parameter takes the parameter at once.
+            bool hold = requested != null && requested.Def.TimeParameter < 0 && Compat.AnimatorStartupMeasured;
             if (hold) Enter(layer, requested, dt);
             if (!hold || layer.Current != requested) Advance(layer, layer.Current, dt);
             if (layer.Next != null && (!hold || layer.Next != requested)) Advance(layer, layer.Next, dt);
@@ -1230,7 +1231,9 @@ namespace Unbound.Runtime
         /// and with write defaults: its clips are all the layer plays, at full weight whatever the
         /// transition's progress, for the pose, the clip infos, events and root motion (measured,
         /// tests/projects/humanoid emptyExit, emptyCond, generic.emptyExit: the motion state's clip
-        /// infos report weight 1 and its root motion applies in full from the transition's start).</summary>
+        /// infos report weight 1 and its root motion applies in full from the transition's start).
+        /// A motion state's transition into an empty state follows the same rule, unmeasured for
+        /// clip infos, events and root motion (its pose at full weight is measured).</summary>
         internal bool AloneBesideEmpty(LayerRun layer, int layerIndex, StateRun run, StateRun other) =>
             layerIndex == 0 && EmptyWithDefaults(layer, other) && run != null && MotionOf(layer.Def, run.Def) != null;
 

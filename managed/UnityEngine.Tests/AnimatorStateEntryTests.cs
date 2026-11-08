@@ -128,7 +128,10 @@ AnimationClip:
 """;
 
         /// <summary>A state with its transitions (fileIDs).</summary>
-        static string State(long id, string name, long motion, bool mirror = false, params long[] transitions) => $$"""
+        static string State(long id, string name, long motion, bool mirror = false, params long[] transitions) =>
+            State(id, name, motion, mirror, null, transitions);
+
+        static string State(long id, string name, long motion, bool mirror, string timeParameter, params long[] transitions) => $$"""
 --- !u!1102 &{{id}}
 AnimatorState:
   serializedVersion: 6
@@ -138,6 +141,8 @@ AnimatorState:
   m_Transitions:{{(transitions.Length == 0 ? " []" : "\n" + string.Join("\n", System.Array.ConvertAll(transitions, t => "  - {fileID: " + t + "}")))}}
   m_StateMachineBehaviours: []
   m_Mirror: {{(mirror ? 1 : 0)}}
+  m_TimeParameterActive: {{(timeParameter != null ? 1 : 0)}}
+  m_TimeParameter: {{timeParameter ?? ""}}
   m_WriteDefaultValues: 1
   m_Motion: {fileID: {{motion}}}
   m_Tag:
@@ -265,6 +270,25 @@ AnimatorStateMachine:
             animator.Update(0.1f);
             AssertState(animator, "Walk", 0.5f);
             Near.Equal(0.1f, animator.deltaPosition.x, 1e-5f);
+        }
+
+        /// <summary>A state driven by a motion time parameter takes the parameter in the update Play
+        /// enters it in (control for the hold above, which applies to states that advance).</summary>
+        [Fact]
+        public void AMotionTimeStateTakesItsParameterAtOnce()
+        {
+            var yaml = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!91 &9100000\nAnimatorController:\n  m_Name: Timed\n"
+                + "  serializedVersion: 5\n  m_AnimatorParameters:\n  - m_Name: Aim\n    m_Type: 1\n    m_DefaultFloat: 0.7\n"
+                + "    m_DefaultInt: 0\n    m_DefaultBool: 0\n    m_Controller: {fileID: 9100000}\n  m_AnimatorLayers:\n"
+                + Layer("Base Layer", 1107000001, 0) + Machine(1107000001, WalkState, WalkState, RunState)
+                + State(WalkState, "Walk", Walk) + State(RunState, "Run", Run, false, "Aim")
+                + Clip(Walk, "Walk", 1f) + Clip(Run, "Run", 2f);
+            var animator = Rig(Load(yaml));
+            animator.Update(0f);
+            animator.Update(0.1f);
+            animator.Play("Run");
+            animator.Update(0.1f);
+            AssertState(animator, "Run", 0.7f);
         }
 
         /// <summary>Other releases keep advancing the state Play enters (not measured there).</summary>
