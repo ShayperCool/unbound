@@ -25,7 +25,7 @@ using UnityEngine;
 /// Each record is one JSON line {"key", "value": [numbers]} in <c>PARTICLE_RENDER_OUT</c>; images
 /// go to <c>PARTICLE_RENDER_IMAGES</c>.
 /// </summary>
-public class ParticleRenderProbe : MonoBehaviour
+public partial class ParticleRenderProbe : MonoBehaviour
 {
     const int ImageSize = 128;
     const int HiddenLayer = 8;
@@ -1166,6 +1166,10 @@ public class ParticleRenderProbe : MonoBehaviour
         yield return FirstVisible();
         yield return SubEmitterCulling();
         yield return FreeformPlayed();
+        yield return BirthStart();
+        FreeformNormals();
+        MeshScale();
+        MeshIndexFormats();
         Record("complete", new List<float> { 1f });
         File.WriteAllText(s_Path, s_Out.ToString());
         Debug.Log("particle render complete: " + s_Path);

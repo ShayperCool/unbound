@@ -33,13 +33,31 @@ Systems built in code; each record is one JSON line `{"key", "value": [numbers]}
   moves time and in frames at timeScale 0.
 - `subcull/*`: parents out of view (or seen, then moved out of view) with a Birth sub-emitter whose
   world-space particles fly into view, for parent and child culling modes.
+- `birthstart/*` (`ParticleRenderProbe.Controls.cs`): per frame, each system's count, time, isPlaying,
+  isEmitting, isPaused and sorted particle ages, also right after creation and after Play: Birth
+  children of played parents at frames of 0.02 and 0.05 s, a child outside the parent's hierarchy or
+  made before it, a delayed parent, a parent without particles of its own (emitted into later),
+  child bursts, a stopped parent, Play On Awake, prewarm, Simulate, parents dying with a birth due
+  exactly at, inside and one step before their life's end, and Death, Collision, Trigger and Manual
+  children (alone, together, beside a Birth child, under Collision or Trigger modules, looping).
+- `freenorm/*`: one freeform stretched particle per system (lengths, directions, rotations with and
+  without rotateWithStretchDirection, 3D size, a pivot, an off-axis particle; plain stretching as a
+  control) and two in transformed emitters (rotated, uniformly and non-uniformly scaled, each scaling
+  mode, world space): the particles, and BakeMesh positions, normals and tangents (a Tangent
+  stream) from the front and side cameras, and with BakeRotationAndScale.
+- `meshscale/*`: mesh particles (an asymmetric mesh, 3D rotations and sizes) of a rotated,
+  non-uniformly scaled emitter under a scaled parent, for each scaling mode, simulation space and
+  View, World and Local alignment, baked plain and with BakeRotationAndScale.
+- `meshindex/*`: BakeMesh and BakeTexture of mesh particles below and above 65535 baked vertices with
+  16- and 32-bit particle meshes: index format, counts and index digests.
 
     python3 tests/projects/particlerender/run.py native --label native1   # Editor capture (GPU, job pool)
     python3 tests/projects/particlerender/run.py publish native1 native2  # two identical captures
     python3 tests/projects/particlerender/run.py check                    # Unbound run + compare (the gate)
 
 The reference is `Reference/unity-6000.0.71f1/` (`values.jsonl`, 12 images); both captures were
-identical. Values compare with particletrails' comparator (0.0002 absolute plus 0.0002 relative);
+identical (re-recorded with the `birthstart`, `freenorm`, `meshscale` and `meshindex` controls: every
+earlier record and image unchanged). Values compare with particletrails' comparator (0.0002 absolute plus 0.0002 relative);
 images go through `particles/compare_images.py` (report only). Run output stays under
 `$XDG_CACHE_HOME/unbound/validation/runs/particlerender/`.
 
@@ -64,24 +82,26 @@ Everything below is measured in this release, not documented.
 | `bake/*`, `bakesize/*`, `bakecap/*`, `meshattr/*` | The vertices texture is RFloat: the vertex buffer, the active streams packed in order (position, normal, tangent, color as four bytes in one texel, the other streams), every vertex (PerVertex) or one record per particle (its first vertex; per trail point; a mesh particle's 3×3 transform, centre and color). Mesh particles without custom streams take the mesh's layout: its tangents and its second uv as a four-float TexCoord1 join the record (BakeMesh keeps the same attributes). The indices texture holds the triangle list as floats; with IncludeParticleIndices (particles) it is RGFloat with each particle's own indices (0 1 2 2 3 0) and its index; PerParticle without it holds one particle's indices. Sizes leave room for the records, at least as many as the most particles the system has held (a later smaller bake on it keeps that room), rounded up to a multiple of 64, plus one (indices: multiples of 128), rows of whole records. A texture passed in is kept in its format and reinitialized only when too small. Nothing to bake returns 0. Mesh particles without an indices texture throw. |
 | `meshrot/*` | Mesh particles with only a z rotation turn about their axis of rotation (forward for births; a system switched to Mesh mode gives the particles it holds up, as in bake/mesh), those with 3D angles by Euler angles, for every alignment and camera, drawn and baked alike. |
 | `stretch/*`, `camvel/*` | The quad trails back from the particle along its velocity less the camera's velocity × cameraVelocityScale, length size.y × lengthScale × the emitter's x scale + speed × velocityScale (negative: forwards), size.x wide across the stretch's direction on screen in the camera's plane (scaled along that axis); corners head and tail on one side, then tail and head on the other, u from 0 at the head; the normal is the quad's, towards the camera; at rest the quad collapses onto the particle. The pivot moves it by pivot.x sizes along the stretch and pivot.y twice the size across. Min and max particle size clamp the width only, as a fraction of the viewport's width. Oldest/youngest in front sort by the fraction of the life lived. `Camera.velocity` is the movement since the camera last rendered over the frame's delta time. |
-| `freemove/*`, `freeplay/*`, `camvel/*/freeform` | Freeform: a quad of the particle's size facing the camera's position (right across the camera's up and the direction to the camera), turned by the particle's rotation plus, with rotateWithStretchDirection, the stretch direction's angle in that plane, moved by pivot.x sizes along its right, pivot.y along its up and pivot.z away from the camera, then scaled along the stretch direction by length over size.y; normal towards the camera (unstretched quads). A particle at rest bakes NaN corners with the view direction as normal; BakeMesh is empty when the last baked vertex is NaN (the at-rest particle drawn last), not when an earlier one is. |
+| `freemove/*`, `freeplay/*`, `camvel/*/freeform` | Freeform: a quad of the particle's size facing the camera's position (right across the camera's up and the direction to the camera), turned by the particle's rotation plus, with rotateWithStretchDirection, the stretch direction's angle in that plane, moved by pivot.x sizes along its right, pivot.y along its up and pivot.z away from the camera, then scaled along the stretch direction by length over size.y; normal and tangent as in `freenorm/*`. A particle at rest bakes NaN corners with a +Z normal; BakeMesh is empty when the last baked vertex is NaN (the at-rest particle drawn last), not when an earlier one is. |
 | `firstvis/*` | Culling bounds are the particles' (the emitter point without one). Frames with zero frame time keep the last bounds: a seen system stays seen after an Emit or Play (shown_*), one whose particles are all out of view stays unseen though its emitter is in view (stale). A system that never had bounds (played or emitted by script, never updated while time moved, never rendered) has nothing to draw after a zero-time update: invisible at once and until an update whose frame time is positive (at any simulation speed) or a Simulate. Play On Awake and a render before any update give bounds (tests/projects/resources mask_particles). A playback's two grace updates are updates that move time. Play restarts a playing system whose emission module is off, keeping its particles (shown_play; an emitting one plays on, cull/catchup_replay). |
 | `subcull/*` | A sub-emitter updates while its parent updates or its own renderer is seen, whatever its own culling mode: an unseen AlwaysSimulate child freezes with its culled parent; a seen child runs on after its parent left the view. |
+| `birthstart/*`, `subcull/*` | Every sub-emitter (Birth, Death, Collision, Trigger, Manual) plays, without emitting, after each update of its playing parent, from the parent's first update (not at Play), with a start delay and without parent particles too, whatever the update order; it is not playing again before the next update (tests/projects/subemitters played/*) and keeps its time; a culled parent no longer starts it. Birth children of played frames are as old at the frame's end as they were due before the end of the parent's internal step (a later internal step of the frame does not age them); a rate reaching a whole particle exactly at a step's end comes in the next step, as in Simulate; a parent emits no Birth child in the step its life ends. Collision and Trigger children, like Death children, are emitted after every system has updated (age 0 at the frame's end). |
+| `freenorm/*` | A freeform quad's normal is the cross product of the directions from the particle to its first two corners (pivot included; shorter than one when stretched), its tangent the direction from the first corner to the second (w -1); plain stretched quads take the head-to-tail tangent. The emitter scale scales the turned quad along the camera's right and up, the stretch follows the output-space velocity; a particle at rest has a +Z normal. |
+| `meshscale/*` | A mesh particle's vertices: the mesh scaled by the particle's size, turned by its rotation and the alignment, then scaled by the emitter along the output axes; with Local alignment turned and scaled by the emitter's frame (Hierarchy scaling: the transform's whole matrix, skew included, the identity in a plain bake of a local simulation). Normals by the inverse transpose. |
+| `meshindex/*` | BakeMesh's index format is 32-bit for more than 65535 vertices or a 32-bit particle mesh. A mesh particles' BakeTexture whose bake has 16-bit indices holds its index buffer read as 32-bit words (two indices a texel, the first in the low half); with 32-bit indices one index a texel. |
 
 ## Known differences (`known.json`)
 
 - `catchup-step-births`: a birth due exactly at a step's end inside the catch-up advance falls one
   step apart.
-- `bake-scratch-memory`: a texture passed in shows the Editor's scratch memory past the data.
-- `mesh-bake-layout`: a non-uniformly scaled emitter's mesh particle vertices (scaled after the
-  turn in the Editor) and the mesh-mode index texture (16-bit indices read as 32-bit).
-- `freeform-stretching`: stretched freeform normals lean from the camera direction by an unresolved
-  rule; freeform quads of a rotated, non-uniformly scaled emitter.
+- `bake-scratch-memory`: a texture passed in shows the Editor's scratch memory past the data; so do
+  mesh particles' indices textures past their index pairs and with PerParticle.
+- `freeform-stretching`: with rotateWithStretchDirection on an emitter whose y scale is not 1, a
+  particle moving partly along the view turns by another, unresolved stretch angle.
 - `stretched-normals`: side-view normals differ by up to 1e-3, the normal of a collapsed particle in
   a sorted system, and BakeRotationAndScale with a rotated non-uniformly scaled emitter.
-- `birth-subemitter-start`: a Birth sub-emitter child under a played parent starts playing in the
-  parent's first update in the Editor, and its first births from a rate that reaches a whole
-  particle exactly at a step's end come one update later; the culling rule matches.
+- `birth-prewarm`: a prewarmed parent's Birth children (the Editor's prewarm emits about six times
+  as many, all younger than 0.03 s) and its reported time and count right after Play.
 
 Unmeasured: other releases; orthographic cameras for stretched particles; negative pivots; a
 system without a renderer under a culling mode (Unbound keeps simulating, reported); the bounds
