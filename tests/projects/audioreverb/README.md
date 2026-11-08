@@ -97,7 +97,7 @@ zones before rendering and stop before long sources finish. The separate
 first-activation and source-completion send differences.
 
 The additional lifecycle, curve-key and overlapping-voice controls bring the
-reference to 136 cases and 13369927 values per rate. They retain every earlier
+reference to 138 cases and 13566542 values per rate. They retain every earlier
 metadata value and sample. Two independent captures agree bit for bit at each
 rate. Reset controls render one silent block before creating their source to
 establish the restarted clock; every subsequent case buffer is retained.
@@ -114,8 +114,19 @@ or Update. Opposing Rigidbody velocity writes in FixedUpdate and Update expose
 the phase that supplies the source's Doppler sample, including a child of the
 moving body. Flat custom rolloff isolates
 velocity from distance attenuation. The two independent repeats agree exactly
-on 3539018 values per rate, with 24 complete 1024-frame stereo buffers per case.
+on 3539019 values per rate, with 24 complete 1024-frame stereo buffers per case.
 Record and publish this profile with `native.py --profile motion` and
 `publish.py --profile motion`; `motion.py --exact --reference FIRST/capture
 --candidate SECOND/capture` checks independent agreement. Each command also
 requires the explicit release, rate and a cache output path as above.
+
+The static gate compares all 134 supported cases. The strict all-case report also
+retains the four mid-playback zone-activation cases; `rejection.py` requires one
+clear diagnostic per case, Native-equivalent dry Master floats and the exact dry
+device return. Mid-playback activation needs reverb parameter transitions while
+histories run and remains a follow-up. Cold/warm starts, Stop, natural completion,
+first-zone Generic/Cave/User parameters and overlapping voice sends pass.
+The added User/Cave override controls distinguish stored scalar values from a
+selected preset's sound, and a repeated-preset property table retains its scalar
+getter values. Motion metadata records the public fixed-step getter bits as well
+as all 36 rendered controls. Existing oracle values and tolerances are unchanged.

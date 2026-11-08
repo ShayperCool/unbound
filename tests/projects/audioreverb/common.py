@@ -21,7 +21,7 @@ def profile(name):
     """Maps each selected case to the number of frames compared (None: all).
 
     filter: every case without a reverb zone; zone: the zone cases; all: both. gate: the cases the
-    engine reproduces, which the README lists (it changes only with the engine); now all of them.
+    engine reproduces, which the README lists. Mid-playback activation has a separate refusal gate.
     """
     keys = cases()
     zone = [k for k in keys if k.startswith('zone')]
@@ -32,8 +32,11 @@ def profile(name):
     return selected
 
 
-# Zone cases the gate covers (see README): all of them.
-GATE_ZONE = tuple(key for key in cases() if key.startswith('zone'))
+# Mid-playback activation retains its Native comparison in the all-case report.
+# The gate separately requires an explicit diagnostic and an unchanged dry return.
+REJECTED_ACTIVATIONS = tuple(f'zone_lifecycle_{mode}_mono{mono}'
+                             for mode in ('enable', 'late') for mono in (0, 1))
+GATE_ZONE = tuple(key for key in cases() if key.startswith('zone') and key not in REJECTED_ACTIVATIONS)
 # Metadata outside the cases: the property tables of each component.
 FILTER_TABLES = ('filter.', 'serialized.filter_')
 ZONE_TABLES = ('zone.', 'serialized.zone_', 'serialized.reverb_zone_mix')

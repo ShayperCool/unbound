@@ -11,6 +11,7 @@ def cases():
 def verify(root, release, rate):
     meta = header(root)
     assert meta['release'] == release and meta['rate'] == rate
+    assert isinstance(meta.get('fixedDeltaTime'), int), 'missing fixed-step getter bits'
     for case in cases():
         for suffix in SUFFIXES:
             record = meta[case+suffix]
@@ -36,5 +37,5 @@ if __name__ == '__main__':
     reference = a.reference or FIXTURE/'Reference'/('unity-'+a.release)/('motion-rate-'+str(a.rate))
     verify(reference, a.release, a.rate)
     failed = compare(reference, a.candidate, a.report, dict.fromkeys(cases()), exact=a.exact,
-                     pcm_steps=0 if a.exact else 1)
+                     pcm_steps=0 if a.exact else 1, prefixes=('fixedDeltaTime',))
     raise SystemExit(bool(failed))

@@ -53,6 +53,7 @@ public partial class AudioReverbProbe
         string output = Environment.GetEnvironmentVariable("AUDIOREVERB_PROBE_OUT");
         Directory.CreateDirectory(output);
         var records = new List<string> { "\"release\":\"" + Application.unityVersion + "\"", "\"rate\":" + rate };
+        records.Add("\"fixedDeltaTime\":" + BitConverter.SingleToInt32Bits(Time.fixedDeltaTime));
         var mixer = Resources.Load<AudioMixer>("Probe");
         var child = mixer.FindMatchingGroups("Child")[0];
         var master = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Master");

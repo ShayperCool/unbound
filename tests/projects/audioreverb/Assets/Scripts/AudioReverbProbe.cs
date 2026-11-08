@@ -162,6 +162,8 @@ public partial class AudioReverbProbe : MonoBehaviour
         new[] { "zone_first_late", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "Z:reverbDelay=0.033" },
         new[] { "zone_first_level", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "Z:reverb=350" },
         new[] { "zone_first_changed", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "Z:reflectionsDelay=0.023", "Z:reverbDelay=0.033", "Z:reverb=350" },
+        new[] { "zone_first_user_changed", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "Z:reverbPreset=User", "Z:reflectionsDelay=0.023", "Z:reverbDelay=0.033", "Z:reverb=-302" },
+        new[] { "zone_first_cave_changed", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "Z:reverbPreset=Cave", "Z:reflectionsDelay=0.023", "Z:reverbDelay=0.033", "Z:reverb=350" },
         new[] { "zone_voices_dry", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "shotframes=5121", "component=dry" },
         new[] { "zone_voices_distortion", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "shotframes=5121", "component=distortion" },
         new[] { "zone_voices_chorus", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "shotframes=5121", "component=chorus" },
@@ -281,6 +283,8 @@ public partial class AudioReverbProbe : MonoBehaviour
         Add("filter.set_on_preset_then_user", Table(filter, FilterProperties));
         zone.reverbPreset = AudioReverbPreset.Cave; zone.room = -500;
         Add("zone.set_on_preset", Table(zone, ZoneProperties));
+        zone.reverbPreset = AudioReverbPreset.Cave;
+        Add("zone.repeated_preset", Table(zone, ZoneProperties));
         // Custom values in every field, then a preset: which fields a preset writes.
         foreach (string assignment in Array.Find(Cases, c => c[0] == "user_all"))
             if (assignment.StartsWith("F:")) Set(filter, assignment.Substring(2));

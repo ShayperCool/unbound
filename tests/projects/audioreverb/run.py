@@ -47,6 +47,8 @@ for rate in a.rate or (48000, 44100):
     run('compare.py', '--profile', 'all', '--candidate', candidate, '--report', work/f'all-{rate}.jsonl.gz')
     failed |= bool(run('compare.py', '--profile', 'gate', '--pcm-steps', '1', '--candidate', candidate,
                        '--report', work/f'gate-{rate}.jsonl.gz'))
+    failed |= bool(run('rejection.py', '--candidate', candidate, '--log', work/f'engine-{rate}/engine.log',
+                       '--report', work/f'rejected-activation-{rate}.jsonl.gz'))
     motion = work/f'motion-{rate}'
     if run('engine.py', '--native-project', project, '--runtime', runtime,
            '--profile', 'motion', '--work', motion): raise SystemExit(f'motion {rate} failed')
