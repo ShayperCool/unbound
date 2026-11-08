@@ -233,10 +233,12 @@ impl TextureSettings {
             None => !boolean(imp, "mipmaps.linearTexture").unwrap_or(false),
         } && texture_type != TextureType::NormalMap
             // A cookie is one (alpha) channel, which no sRGB decode applies to; a Single Channel
-            // texture stays linear even when marked sRGB (R8_UNorm in the Unity 6000.0.71f1
-            // Editor, tests/projects/urp texture-samples.jsonl SingleRedSrgb).
+            // texture of an automatic format stays linear even when marked sRGB (R8_UNorm in the
+            // Unity 6000.0.71f1 Editor, tests/projects/urp texture-samples.jsonl SingleRedSrgb;
+            // explicit formats are unmeasured and keep the setting).
             && texture_type != TextureType::Cookie
-            && texture_type != TextureType::SingleChannel;
+            && !(texture_type == TextureType::SingleChannel
+                && platform_format(imp, build_target).is_none());
         let alpha_source = match int(imp, "alphaUsage") {
             Some(0) => AlphaSource::None,
             Some(2) => AlphaSource::FromGrayScale,
@@ -505,18 +507,23 @@ impl ImportedTexture {
     /// format automatic and uncompressed (Unity 6000.0.71f1 Editor, tests/projects/urp
     /// texture-formats.jsonl): a Cookie keeps its alpha alone (Alpha8), a Single Channel texture
     /// its channel (Alpha8 or R8), other textures RGB24 without transparent texels and RGBA32
-    /// with them. None where Unbound keeps its RGBA32 or float answer: explicit and compressed
-    /// formats, HDR, normal maps and lightmaps (unmeasured).
+    /// with them. A Single Channel Alpha texture is Alpha8 compressed too (texture-samples.jsonl
+    /// SingleAlphaCompressed). None where Unbound keeps its RGBA32 or float answer: explicit
+    /// formats, other compressed ones (BC4, DXT1, DXT5: measured, Unbound keeps no blocks), HDR,
+    /// normal maps and lightmaps (unmeasured).
     pub fn reported_format(&self) -> Option<i32> {
         let s = &self.settings;
-        if self.format != TextureFormat::Rgba8 || s.format_alpha.is_some() || !s.uncompressed {
+        if self.format != TextureFormat::Rgba8 || s.format_alpha.is_some() {
+            return None;
+        }
+        if s.texture_type == TextureType::SingleChannel && s.single_channel_component == 0 {
+            return Some(unity_format::ALPHA8);
+        }
+        if !s.uncompressed {
             return None;
         }
         match s.texture_type {
             TextureType::Cookie => Some(unity_format::ALPHA8),
-            TextureType::SingleChannel if s.single_channel_component == 0 => {
-                Some(unity_format::ALPHA8)
-            }
             TextureType::SingleChannel => Some(unity_format::R8),
             TextureType::NormalMap
             | TextureType::Lightmap
@@ -620,7 +627,8 @@ impl Importer for TextureImporter {
     // 14: Cookie textures keep their alpha in every channel and are not sRGB.
     // 15: Lightmap and Shadowmask textures keep their input alpha under "Alpha Source: None".
     // 16: Single Channel textures are linear and, as one-channel imports, not BC7-compressed.
-    const VERSION: u32 = 16;
+    // 17: a Single Channel texture of an explicit format keeps its sRGB setting.
+    const VERSION: u32 = 17;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);

@@ -274,7 +274,6 @@ public partial class UrpProbe
         var lines = new StringBuilder();
         foreach (var texture in new[] { features.singleAlpha, features.singleRed, postFx.singleAlphaCompressed, postFx.singleRedCompressed, postFx.singleRedSrgb })
         {
-            Debug.Log($"texture-samples: {texture.name} is {texture.graphicsFormat}");
             var target = new RenderTexture(texture.width, texture.height, 0, RenderTextureFormat.ARGBFloat);
             Graphics.Blit(texture, target);
             var readback = new Texture2D(texture.width, texture.height, TextureFormat.RGBAFloat, false);
@@ -292,6 +291,10 @@ public partial class UrpProbe
             DestroyImmediate(target);
             DestroyImmediate(readback);
         }
+        // The formats of the controls, but SingleRedCompressed's BC4: Unbound keeps compressed
+        // imports' texels uncompressed (docs/COMPATIBILITY_GAPS.md, Q126 row).
+        AppendTextureFormat(lines, postFx.singleAlphaCompressed);
+        AppendTextureFormat(lines, postFx.singleRedSrgb);
         File.WriteAllText(path, lines.ToString());
     }
 }

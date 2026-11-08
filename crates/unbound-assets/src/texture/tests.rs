@@ -921,8 +921,18 @@ fn automatic_uncompressed_formats_are_reported() {
         report(&opaque, &format!("{uncompressed}  textureType: 1\n")),
         None
     );
-    // Compressed (the default) and explicit formats are not reported.
+    // Compressed (the default) and explicit formats are not reported, but for a Single Channel
+    // Alpha texture, which stays Alpha8.
     assert_eq!(report(&opaque, ""), None);
+    assert_eq!(
+        report(&opaque, "  textureType: 10\n  singleChannelComponent: 0\n"),
+        Some(unity_format::ALPHA8)
+    );
+    assert_eq!(
+        report(&opaque, "  textureType: 10\n  singleChannelComponent: 1\n"),
+        None
+    );
+    assert_eq!(report(&opaque, "  textureType: 4\n"), None);
     assert_eq!(report(&opaque, "  textureFormat: 4\n"), None);
 }
 
@@ -976,9 +986,10 @@ fn one_channel_imports_keep_their_channel_on_the_gpu() {
     assert_eq!(default.gpu_channel(), None);
     assert!(default.bc7.is_some());
     assert!(default.srgb);
-    // An explicit format keeps the texture's RGBA.
+    // An explicit format keeps the texture's RGBA and its sRGB setting (unmeasured).
     let explicit = import("  textureType: 10\n  singleChannelComponent: 1\n  textureFormat: 4\n");
     assert_eq!(explicit.gpu_channel(), None);
+    assert!(explicit.srgb);
 }
 
 /// A Shadowmask or Lightmap keeps its input alpha (an unused channel or texel 0) under "Alpha

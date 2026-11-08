@@ -192,12 +192,16 @@ public partial class UrpProbe
         var features = Resources.Load<FeatureAssets>("FeatureAssets");
         var lines = new StringBuilder();
         foreach (var texture in new[] { lighting.cookieGray, lighting.cookieOpaque, lighting.cookieColor, lighting.cookieCube, features.singleAlpha, features.singleRed })
-        {
-            string format = texture is Texture2D t2 ? t2.format.ToString() : texture is Cubemap c ? c.format.ToString() : "-";
-            lines.Append("{\"key\":\"").Append(texture.name).Append(" format\",\"value\":\"").Append(format).Append("\"}\n");
-            lines.Append("{\"key\":\"").Append(texture.name).Append(" graphicsFormat\",\"value\":\"").Append(texture.graphicsFormat).Append("\"}\n");
-        }
+            AppendTextureFormat(lines, texture);
         File.AppendAllText(path, lines.ToString());
+    }
+
+    /// <summary>A texture's reported format and graphicsFormat, one line each.</summary>
+    static void AppendTextureFormat(StringBuilder lines, Texture texture)
+    {
+        string format = texture is Texture2D t2 ? t2.format.ToString() : texture is Cubemap c ? c.format.ToString() : "-";
+        lines.Append("{\"key\":\"").Append(texture.name).Append(" format\",\"value\":\"").Append(format).Append("\"}\n");
+        lines.Append("{\"key\":\"").Append(texture.name).Append(" graphicsFormat\",\"value\":\"").Append(texture.graphicsFormat).Append("\"}\n");
     }
 
     /// <summary>The loaded scene's lightmaps: format and, read back raw through a float target,
