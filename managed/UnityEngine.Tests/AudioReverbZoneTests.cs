@@ -368,9 +368,12 @@ namespace UnityEngine.Tests
             Assert.Equal(40f, custom[10]);
         }
 
-        [Fact]
-        public void ZoneActivationAfterDirectBackendRenderingStillReportsTheUnsupportedTransition()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ZoneActivationAfterDirectBackendRenderingStillReportsTheUnsupportedTransition(bool anotherZoneIsActive)
         {
+            if (anotherZoneIsActive) Zone(0);
             var host = new GameObject("rendered-source"); m_Objects.Add(host);
             var source = host.AddComponent<AudioSource>();
             var clip = AudioClip.Create("tone", 48000, 1, 48000, false);
@@ -409,6 +412,31 @@ namespace UnityEngine.Tests
             source.UpdateMotion(0);
             source.SendPacket(19, null, 1, false);
             Assert.Equal(Vector3.right * 12, m_Backend.ParamsOf(19).DopplerListenerPosition);
+        }
+
+        [Fact]
+        public void FrameSourceUsesTheLatestListenerPoseAndVelocity()
+        {
+            double previous = Time.s_FrameDeltaTime;
+            try
+            {
+                Time.s_FrameDeltaTime = 0.04;
+                var ear = new GameObject("frame-listener"); m_Objects.Add(ear);
+                ear.AddComponent<AudioListener>().velocityUpdateMode = AudioVelocityUpdateMode.Dynamic;
+                var host = new GameObject("frame-source"); m_Objects.Add(host);
+                var source = host.AddComponent<AudioSource>();
+                source.velocityUpdateMode = AudioVelocityUpdateMode.Dynamic;
+                AudioSystem.Update();
+                ear.transform.position = Vector3.forward;
+                ear.transform.rotation = Quaternion.Euler(0, 90, 0);
+                AudioSystem.Update();
+                var packet = m_Backend.ParamsOf(source.Handle);
+                Assert.Equal(Vector3.forward, packet.ListenerPosition);
+                Assert.Equal(Vector3.forward, packet.DopplerListenerPosition);
+                Assert.Equal(ear.transform.forward, packet.ListenerForward);
+                Assert.Equal(-25f, packet.Velocity.z);
+            }
+            finally { Time.s_FrameDeltaTime = previous; }
         }
 
         [Fact]

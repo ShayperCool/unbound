@@ -146,21 +146,24 @@ namespace Unbound.Runtime
             {
                 s_ZoneGeneration++;
                 s_ZoneActivationRejected = false;
-                if (Compat.AudioZoneStartupMeasured)
-                {
-                    double dspTime = AudioSettings.dspTime;
-                    foreach (var source in s_Sources)
-                        if (source != null && source.isPlaying
-                            && (source.m_HasAudioFrame || dspTime > source.m_PlaybackDspTime))
-                        {
-                            s_ZoneActivationRejected = true;
-                            Debug.LogError("Unbound: AudioReverbZone on '" + zone.gameObject.name
-                                + "': activating zones during playback is not supported; stop the sources before activating the zones. The zone return is silent.", zone);
-                            break;
-                        }
-                }
             }
+            if (Compat.AudioZoneStartupMeasured && !s_ZoneActivationRejected)
+                s_ZoneActivationRejected = RejectZoneActivationDuringPlayback(zone);
             s_Zones.Add(zone);
+        }
+
+        static bool RejectZoneActivationDuringPlayback(AudioReverbZone zone)
+        {
+            double dspTime = AudioSettings.dspTime;
+            foreach (var source in s_Sources)
+                if (source != null && source.isPlaying
+                    && (source.m_HasAudioFrame || dspTime > source.m_PlaybackDspTime))
+                {
+                    Debug.LogError("Unbound: AudioReverbZone on '" + zone.gameObject.name
+                        + "': activating zones during playback is not supported; stop the sources and disable all zones before reactivating them. The zone return is silent.", zone);
+                    return true;
+                }
+            return false;
         }
 
         internal static void Remove(AudioReverbZone zone) => s_Zones.Remove(zone);
@@ -437,7 +440,13 @@ namespace Unbound.Runtime
             s_Loading.Clear();
 
             var previousListenerPose = s_HearingPose;
-            if (Compat.AudioSpatialStereoMeasured) SampleHearingMotion(fixedStep: false, motionDelta);
+            if (Compat.AudioSpatialStereoMeasured)
+            {
+                SampleHearingMotion(fixedStep: false, motionDelta);
+                // Frame sources use the listener's latest pose; fixed sources retain the pose
+                // from before the fixed listener sample (tests/projects/audioreverb).
+                previousListenerPose = s_HearingPose;
+            }
             s_Listeners.RemoveAll(l => l == null);
             if (s_Listeners.Count > 0)
             {
