@@ -58,6 +58,9 @@ namespace UnityEngine.AI
         /// <summary>CompleteOffMeshLink was called: the agent stands at the link's end and leaves
         /// the link with the next crowd update.</summary>
         internal bool m_LinkCompleting;
+        /// <summary>ResetPath took the agent off its link: it lands on the link's landing side at the
+        /// end of the next agent update (whatever path it is given meanwhile).</summary>
+        internal bool m_LandAfterReset;
         /// <summary>The agent was walking when the crowd update began (a link it reaches is new).</summary>
         internal bool m_StepWalking;
 
@@ -322,9 +325,9 @@ namespace UnityEngine.AI
             return true;
         }
 
-        /// <summary>The path and destination are dropped; pathStatus keeps its value (measured:
-        /// tests/projects/navlinks resetmid, targets). On a link the agent is off it at once and,
-        /// at the next agent update, on the NavMesh nearest the link's end (measured: resetmid).</summary>
+        /// <summary>The path and destination are dropped (see ForgetPath). On a link the agent is off
+        /// it at once and, at the end of the next agent update, on the landing side's NavMesh
+        /// (measured: tests/projects/navlinks resetmid; see AgentSystem.LandOffLink).</summary>
         public void ResetPath()
         {
             ForgetPath();
@@ -335,6 +338,7 @@ namespace UnityEngine.AI
                     m_Crowd.animation.active = false;
                     m_LinkId = 0;
                     m_LinkCompleting = true;
+                    m_LandAfterReset = true;
                 }
                 AgentSystem.CrowdOf(m_Surface)?.ResetMoveTarget(m_Crowd);
                 m_Crowd.corridor.Reset(m_Crowd.corridor.GetFirstPoly(), m_Crowd.npos);
@@ -479,9 +483,8 @@ namespace UnityEngine.AI
         // ------------------------------------------------------------------ queries
 
         /// <summary>The transform goes to the position given; the agent stands on the NavMesh below
-        /// it, where the transform follows at its next early update (measured).</summary>
-        /// <summary>The agent stands at the new position with no path or destination (measured:
-        /// tests/projects/navlinks warpauto, warpwait; navcost loop.*).</summary>
+        /// it, where the transform follows at its next early update, with no path or destination
+        /// (measured: tests/projects/navlinks warpauto, warpwait; navcost loop.*).</summary>
         public bool Warp(Vector3 newPosition)
         {
             transform.position = newPosition;
@@ -491,10 +494,12 @@ namespace UnityEngine.AI
             return AgentSystem.Place(this, newPosition - Vector3.up * m_BaseOffset);
         }
 
-        /// <summary>No destination, path or request any more; pathStatus stays; a path change before
-        /// is no longer this agent's stale path.</summary>
+        /// <summary>No destination, path or request any more; a path change before is no longer this
+        /// agent's stale path. Without a path the agent reports a complete one, as a new agent does
+        /// (measured: tests/projects/navlinks targets, after a partial path, ResetPath and Warp).</summary>
         void ForgetPath()
         {
+            m_PathStatus = NavMeshPathStatus.PathComplete;
             m_PathFromCall = false;
             m_HasDestination = false;
             m_PathPending = false;
@@ -824,6 +829,7 @@ namespace Unbound.Runtime
             agent.m_Surface = null;
             agent.m_LinkId = 0;
             agent.m_LinkCompleting = false;
+            agent.m_LandAfterReset = false;
             agent.SetOnNavMesh(false);
         }
 
@@ -949,7 +955,7 @@ namespace Unbound.Runtime
                     && agent.m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID
                     && FlatRemaining(agent.m_Crowd) < 0.01f;
                 var moving = agent.m_Crowd;
-                bool completing = agent.m_LinkCompleting;
+                bool completing = agent.m_LinkCompleting, landing = agent.m_LandAfterReset;
                 var linkEnd = moving.animation.endPos;
                 agent.m_Crowd = null;
                 agent.m_Surface = null;
@@ -966,11 +972,18 @@ namespace Unbound.Runtime
                     if (completing && agent.m_Crowd != null)
                     {
                         agent.m_LinkCompleting = true;
+                        agent.m_LandAfterReset = landing;
                         agent.m_Crowd.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH;
                         agent.m_Crowd.animation.endPos = linkEnd;
                         KeepMotion(agent.m_Crowd, moving, false);
                     }
-                    if (destination.HasValue && agent.m_Crowd != null) RestartRequest(agent);
+                    if (destination.HasValue && agent.m_Crowd != null)
+                    {
+                        // A request under way starts again; a path being followed goes on from the
+                        // link's end.
+                        if (agent.pathPending) RestartRequest(agent);
+                        else if (!landing) PlanFromLinkEnd(agent);
+                    }
                     continue;
                 }
                 if (agent.m_Crowd == null)
@@ -1232,13 +1245,18 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>Where the agent's paths start: where it stands; while it waits on a link, the
-        /// link's end, where it goes on once a script completes the link (a path from where it
-        /// waits would take it back over the link). The navlinks capture measured this with automatic
-        /// traversal only: an agent given a new destination on a link finishes the link and follows
-        /// the new path from its end; a waiting agent's re-target is unmeasured.</summary>
-        static Vector3 PathOrigin(NavMeshAgent agent) =>
-            agent.WaitingOnLink ? NavMesh.V(agent.m_Crowd.animation.endPos) : agent.m_NextPosition;
+        /// <summary>Where the agent's paths start: where it stands; on a link (crossing or waiting),
+        /// the link's end, where it goes on (a path from where it is would take it back over the
+        /// link, or start off the NavMesh); taken off its link by ResetPath, where it lands. The
+        /// navlinks capture measured this with automatic traversal only: an agent given a new
+        /// destination on a link finishes the link and follows the new path from its end; a
+        /// waiting or reset agent's re-target is unmeasured.</summary>
+        static Vector3 PathOrigin(NavMeshAgent agent)
+        {
+            if (agent.isOnOffMeshLink) return NavMesh.V(agent.m_Crowd.animation.endPos);
+            if (agent.m_LandAfterReset && LandingPoint(agent, out _, out var landing)) return NavMesh.V(landing);
+            return agent.m_NextPosition;
+        }
 
         /// <summary>A path search under way began on the other side of a link the agent now waits
         /// on, or no longer waits on: it begins again from where the agent's paths now start.</summary>
@@ -1257,7 +1275,7 @@ namespace Unbound.Runtime
             var ag = agent.m_Crowd;
             var polys = path.m_Polygons;
             var target = path.m_Corners.Length > 0 ? path.m_Corners[path.m_Corners.Length - 1] : agent.m_NextPosition;
-            var start = from ?? (agent.WaitingOnLink && path.m_Corners.Length > 0 ? NavMesh.V(path.m_Corners[0]) : ag.npos);
+            var start = from ?? ((agent.isOnOffMeshLink || agent.m_LandAfterReset) && path.m_Corners.Length > 0 ? NavMesh.V(path.m_Corners[0]) : ag.npos);
             ag.corridor.Reset(polys[0], start);
             Follow(agent, polys, polys.Length, NavMesh.V(target), path.status);
         }
@@ -1314,8 +1332,8 @@ namespace Unbound.Runtime
                 if (agent.m_Crowd == null) continue;
                 if (agent.m_LinkCompleting)
                 {
-                    // Without a path (ResetPath on the link) it lands after this update's step.
-                    if (agent.m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID) LeaveLink(agent);
+                    // After ResetPath on the link it lands after this update's step.
+                    if (!agent.m_LandAfterReset) LeaveLink(agent);
                 }
                 else PrepareLink(agent);
                 if (agent.isOnOffMeshLink && agent.m_LinkId != 0) s_OccupiedLinks.Add(agent.m_LinkId);
@@ -1329,7 +1347,7 @@ namespace Unbound.Runtime
             foreach (var agent in s_Agents)
             {
                 if (agent.m_Crowd == null) continue;
-                if (agent.m_LinkCompleting) LandOffLink(agent);
+                if (agent.m_LandAfterReset) LandOffLink(agent);
                 else if (agent.m_StepWalking && agent.m_Crowd.animation.polyRef != 0) ReachLink(agent);
                 if (agent.m_Crowd.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH) agent.m_LinkId = 0;
                 var previous = agent.m_NextPosition;
@@ -1409,10 +1427,13 @@ namespace Unbound.Runtime
         {
             var ag = agent.m_Crowd;
             agent.m_LinkCompleting = false;
+            agent.m_LandAfterReset = false;
             ag.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING;
             ag.animation.polyRef = 0;
-            if (NavMesh.Nearest(agent.m_Surface, NavMesh.V(ag.animation.endPos), NavMesh.AgentExtents(agent.agentTypeID), agent.Filter, out var poly, out _)
-                && agent.m_Surface.Query.ClosestPointOnPoly(poly, ag.npos, out var landing, out _).Succeeded())
+            if (ag.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID)
+                // A path given since starts at the landing point (see PathOrigin, ApplyPath).
+                ag.npos = ag.corridor.GetPos();
+            else if (LandingPoint(agent, out var poly, out var landing))
             {
                 ag.corridor.Reset(poly, landing);
                 ag.npos = landing;
@@ -1421,6 +1442,16 @@ namespace Unbound.Runtime
             ag.pvel = RcVec3f.Zero;
             ag.nvel = RcVec3f.Zero;
             ag.dvel = RcVec3f.Zero;
+        }
+
+        /// <summary>Where an agent taken off its link by ResetPath lands: the point of the link's
+        /// landing polygon nearest to where it is.</summary>
+        static bool LandingPoint(NavMeshAgent agent, out long poly, out RcVec3f landing)
+        {
+            landing = default;
+            var ag = agent.m_Crowd;
+            return NavMesh.Nearest(agent.m_Surface, NavMesh.V(ag.animation.endPos), NavMesh.AgentExtents(agent.agentTypeID), agent.Filter, out poly, out _)
+                && agent.m_Surface.Query.ClosestPointOnPoly(poly, ag.npos, out landing, out _).Succeeded();
         }
 
         /// <summary>The end of the path (measured): within the stopping distance an agent stops;

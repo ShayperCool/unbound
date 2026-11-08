@@ -372,6 +372,8 @@ namespace DotRecast.Detour.Crowd
             agent.targetPathQueryResult = null;
             agent.targetReplan = false;
             agent.targetState = DtMoveRequestState.DT_CROWDAGENT_TARGET_NONE;
+            // Unbound: with no path it waits for no link.
+            agent.waitingForConnection = false;
             return true;
         }
 

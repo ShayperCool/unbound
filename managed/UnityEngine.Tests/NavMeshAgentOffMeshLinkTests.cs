@@ -202,6 +202,45 @@ namespace UnityEngine.Tests
             Assert.Equal(Vector3.zero, agent.velocity);
         }
 
+        /// <summary>A destination given after ResetPath on a link, before the agent lands: it lands
+        /// and follows the new path from there (Unbound's choice; Unity measured only without one).</summary>
+        [Fact]
+        public void ANewDestinationAfterResetPathOnALinkStartsWhereTheAgentLands()
+        {
+            var agent = Agent(autoTraverse: true);
+            StepOntoLink(agent);
+            for (int i = 0; i < 20; i++) Step();
+            Assert.True(agent.isOnOffMeshLink);
+            agent.ResetPath();
+            Assert.True(agent.SetDestination(Destination));
+            Step();
+            Assert.False(agent.pathPending);
+            Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
+            Assert.True(agent.nextPosition.x > 2f, $"at {agent.nextPosition}");
+            WalkTo(agent, Destination);
+        }
+
+        /// <summary>Without a path an agent reports a complete one: after a partial path, ResetPath
+        /// and Warp report PathComplete (measured: tests/projects/navlinks targets).</summary>
+        [Fact]
+        public void APathlessAgentReportsAPathComplete()
+        {
+            NavMesh.SetLinkActive(m_Link, false);
+            RefreshNavMesh();
+            var agent = Agent(autoTraverse: true);
+            Step();
+            Assert.Equal(NavMeshPathStatus.PathPartial, agent.pathStatus);
+            agent.ResetPath();
+            Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
+            Assert.True(agent.SetDestination(Destination));
+            Step();
+            Assert.Equal(NavMeshPathStatus.PathPartial, agent.pathStatus);
+            agent.Warp(new Vector3(-6f, 0f, 1f));
+            Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
+            Assert.False(agent.hasPath);
+            NavMesh.SetLinkActive(m_Link, true);
+        }
+
         /// <summary>An agent reaching a link another agent is on stops short of it, and takes it
         /// once it is free (measured: tests/projects/navlinks crosstile, two).</summary>
         [Fact]
