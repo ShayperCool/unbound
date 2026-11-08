@@ -24,6 +24,7 @@ namespace UnityEngine
     {
         internal ulong m_Handle;
         internal AudioClip m_Clip;
+        internal AudioClip m_StreamBuffers;
         internal AudioMixerGroup m_OutputGroup;
         internal float m_Volume = 1f;
         internal float m_Pitch = 1f;
@@ -135,6 +136,8 @@ namespace UnityEngine
                     if (state.Main != AudioVoiceState.None)
                         AudioBackend.Current.Command(m_Handle, new AudioSourceCommand { Kind = AudioCommandKind.StopMain });
                 }
+                if (ReferenceEquals(m_Clip?.m_StreamBufferOwner, this) && m_Clip.m_StreamBufferMain)
+                    m_Clip.ReleaseStreamBuffer();
                 m_Paused = false;
                 m_Clip = value;
                 m_Dirty = true;
@@ -387,7 +390,8 @@ namespace UnityEngine
             bool hasFilter = AudioFilters.Update(Handle, m_GameObject);
             if (m_HasFilter != hasFilter) { m_HasFilter = hasFilter; m_Dirty = true; }
             Flush();
-            Command(new AudioSourceCommand { Kind = AudioCommandKind.Play, Time = time });
+            if (Command(new AudioSourceCommand { Kind = AudioCommandKind.Play, Time = time }))
+                m_Clip?.ClaimStreamBuffer(this, main: true);
             if (Trace.AudioOn) Trace.Audio($"{api} '{m_Clip?.m_Name}' ({m_Clip?.length:F2}s) on '{m_GameObject.m_Name}' at {time:F3}, loop {m_Loop}, volume {m_Volume}, group '{m_OutputGroup?.m_Name}'");
         }
 
@@ -409,7 +413,8 @@ namespace UnityEngine
             }
             clip.EnsureLoaded();
             Flush();
-            Command(new AudioSourceCommand { Kind = AudioCommandKind.PlayOneShot, Clip = clip.m_Handle, VolumeScale = volumeScale });
+            if (Command(new AudioSourceCommand { Kind = AudioCommandKind.PlayOneShot, Clip = clip.m_Handle, VolumeScale = volumeScale }))
+                clip.ClaimStreamBuffer(this, main: false);
             if (Trace.AudioOn) Trace.Audio($"PlayOneShot '{clip.m_Name}' on '{m_GameObject.m_Name}'");
         }
 
@@ -437,6 +442,7 @@ namespace UnityEngine
         internal void StopInternal()
         {
             m_Paused = false;
+            ReleaseStreamBuffers();
             if (m_Handle == 0) return;
             if (Trace.AudioOn) Trace.Audio($"Stop '{m_Clip?.m_Name}' on '{m_GameObject?.m_Name}'");
             Command(new AudioSourceCommand { Kind = AudioCommandKind.Stop });
@@ -586,7 +592,12 @@ namespace UnityEngine
             Command(new AudioSourceCommand { Kind = AudioCommandKind.Seek, Time = Math.Max(0.0, frames) });
         }
 
-        void Command(in AudioSourceCommand command) => AudioBackend.Current.Command(Handle, command);
+        bool Command(in AudioSourceCommand command) => AudioBackend.Current.Command(Handle, command);
+
+        void ReleaseStreamBuffers()
+        {
+            while (!ReferenceEquals(m_StreamBuffers, null)) m_StreamBuffers.ReleaseStreamBuffer();
+        }
 
         /// <summary>Sends the settings (and the transform) to the mixer when they changed.</summary>
         internal void Flush(bool always = false)
@@ -727,8 +738,14 @@ namespace UnityEngine
             if (m_Handle != 0 && AudioSystem.IsCallerAllowed()) StopInternal();
         }
 
+        internal override void OnEngineDestroyRequested()
+        {
+            if (Compat.AudioSourceDestroyRequestMeasured) StopInternal();
+        }
+
         internal override void OnEngineDestroy()
         {
+            ReleaseStreamBuffers();
             AudioSystem.Remove(this);
             if (m_Handle == 0) return;
             AudioBackend.Current.ReleaseSource(m_Handle);

@@ -114,7 +114,7 @@ pub struct NativeApi {
     pub audio_clip_data: extern "C" fn(u64, i32, *mut f32, i32, i32) -> i32,
     pub audio_release_clip: extern "C" fn(u64),
     pub audio_update_source: extern "C" fn(u64, *const AudioSourcePacket),
-    pub audio_source_command: extern "C" fn(u64, *const AudioSourceCommand),
+    pub audio_source_command: extern "C" fn(u64, *const AudioSourceCommand) -> i32,
     pub audio_source_state: extern "C" fn(u64, *mut AudioSourceState),
     pub audio_release_source: extern "C" fn(u64),
     pub audio_update_group: extern "C" fn(u64, f32, f32),
@@ -696,12 +696,12 @@ extern "C" fn audio_update_source(handle: u64, packet: *const AudioSourcePacket)
     state::state().audio.mixer().update_source(handle, params);
 }
 
-extern "C" fn audio_source_command(handle: u64, command: *const AudioSourceCommand) {
+extern "C" fn audio_source_command(handle: u64, command: *const AudioSourceCommand) -> i32 {
     if command.is_null() {
-        return;
+        return 0;
     }
     let command = unsafe { *command };
-    state::state().audio.mixer().command(handle, &command);
+    i32::from(state::state().audio.mixer().command(handle, &command))
 }
 
 extern "C" fn audio_source_state(handle: u64, out: *mut AudioSourceState) {

@@ -294,11 +294,20 @@ namespace Unbound.Runtime
             if (obj.m_PendingDestroy) return;
             obj.m_PendingDestroy = true;
             s_EndOfFrame.Add(obj);
+            NotifyEngineDestroyRequested(obj);
             if (!IsScriptRequest(obj)) return;
             // Accounted before any callback: Destroy of the same object from its OnDisable returns
             // above, and destructions requested by the callbacks queue after this one.
             s_Requested.Add(obj);
             Lifecycle.DisableForDestroyRequest(obj);
+        }
+
+        static void NotifyEngineDestroyRequested(Object obj)
+        {
+            // A required component survives a refused removal. Destroying its whole
+            // GameObject still notifies it through the hierarchy's request.
+            if (obj is Component component && RequiredBy(component) != null) return;
+            obj.NotifyEngineDestroyRequested();
         }
 
         /// <summary>Preserves the existing automatic particle stop-action delivery at the end
@@ -308,6 +317,7 @@ namespace Unbound.Runtime
             if (obj == null || obj.m_PendingDestroy) return;
             obj.m_PendingDestroy = true;
             s_EndOfFrame.Add(obj);
+            NotifyEngineDestroyRequested(obj);
         }
 
         /// <summary>A zero-delay request whose scripts Destroy disables before it returns (measured
@@ -367,6 +377,7 @@ namespace Unbound.Runtime
                 {
                     target.m_PendingDestroy = true;
                     s_EndOfFrame.Add(target);
+                    NotifyEngineDestroyRequested(target);
                 }
             }
         }

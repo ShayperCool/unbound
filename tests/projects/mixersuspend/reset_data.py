@@ -22,10 +22,12 @@ def verify(root, release, rate):
     meta = header(root)
     expected = {'release', 'rate', 'complete', 'asset.write', 'clone.asset.write', 'clone.script.write',
                 'reset', 'restart', 'rewrite.old'}
-    fields = ['valid', 'frames', 'channels', 'frequency', 'lengthBits', 'load', 'read', 'loadAfterRead'] + ['data'+str(i) for i in range(8)]
-    prefixes = [stage+'.'+str(i) for stage in ('before', 'after') for i in range(8)] + ['playedClone', 'rewritten']
+    fields = ['valid', 'frames', 'channels', 'frequency', 'lengthBits', 'type', 'background', 'load', 'read', 'loadAfterRead'] + ['data'+str(i) for i in range(8)]
+    prefixes = [stage+'.'+str(i) for stage in ('before', 'after') for i in range(8)] + ['playedClone', 'rewritten', 'stream.preloaded', 'stream.deferred']
     expected |= {prefix+'.'+field for prefix in prefixes for field in fields}
     expected |= {'length.'+str(rate)+'.'+str(frames) for rate in (44100,48000) for frames in (1,43,44,45,47,48,49,4096,48000)}
+    expected |= {key+'.'+field for key in ('stream.preloaded','stream.deferred') for field in ('preload','loadReturn','afterLoad','idleStop','afterPlay','afterRender','afterStop','afterDestroy','afterReplace','shotPlaying','shotAfterStop','forward.both','forward.firstStop','forward.lastStop','reverse.both','reverse.firstStop','reverse.lastStop','overlap.mainLast','overlap.shotLast','overlap.mainStop','overlap.shotStop')}
+    expected |= {key+'.'+request+'.'+str(target)+'.'+field for key in ('stream.preloaded','stream.deferred') for request in ('request','pcmRequest') for target in range(3) for field in ('load','playing','valid')}
     expected |= {'phase'+str(i) for i in range(12)} | {'play.'+str(i) for i in range(12)}
     assert meta.keys() == expected, meta.keys() ^ expected
     assert meta['release'] == release and meta['rate'] == rate and meta['complete'] is True

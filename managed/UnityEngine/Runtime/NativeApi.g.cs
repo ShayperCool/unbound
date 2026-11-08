@@ -46,7 +46,7 @@ namespace Unbound.Runtime
         internal delegate* unmanaged<ulong, int, float*, int, int, int> AudioClipData;
         internal delegate* unmanaged<ulong, void> AudioReleaseClip;
         internal delegate* unmanaged<ulong, AudioSourcePacket*, void> AudioUpdateSource;
-        internal delegate* unmanaged<ulong, AudioSourceCommand*, void> AudioSourceCommand;
+        internal delegate* unmanaged<ulong, AudioSourceCommand*, int> AudioSourceCommand;
         internal delegate* unmanaged<ulong, AudioSourceState*, void> AudioSourceState;
         internal delegate* unmanaged<ulong, void> AudioReleaseSource;
         internal delegate* unmanaged<ulong, float, float, void> AudioUpdateGroup;

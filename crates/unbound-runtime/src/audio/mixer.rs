@@ -1173,7 +1173,8 @@ impl Mixer {
         active
     }
 
-    pub fn command(&mut self, handle: u64, cmd: &AudioSourceCommand) {
+    /// Reports admission before a later render can change the source's voice counts.
+    pub fn command(&mut self, handle: u64, cmd: &AudioSourceCommand) -> bool {
         let now = self.frames;
         let rate = self.config.sample_rate;
         let callback = self.callback;
@@ -1206,7 +1207,7 @@ impl Mixer {
                     main.paused = false;
                     source.filter_paused = false;
                     source.one_shots.iter_mut().for_each(|v| v.paused = false);
-                    return;
+                    return true;
                 }
                 source.played = true;
                 source.filter_paused = false;
@@ -1218,11 +1219,11 @@ impl Mixer {
                     let mut voice = Voice::new(0, 0.0, now, 1.0);
                     voice.submitted = !deferred;
                     source.main = Some(voice);
-                    return;
+                    return true;
                 }
                 let Some(clip) = clips.get(&clip_handle) else {
                     source.main = None;
-                    return;
+                    return false;
                 };
                 let mut position = source.pending_position;
                 source.pending_position = 0.0;
@@ -1289,7 +1290,7 @@ impl Mixer {
             }
             command::PLAY_ONE_SHOT => {
                 let Some(clip) = clips.get(&cmd.clip) else {
-                    return;
+                    return false;
                 };
                 let position = if source.params.pitch < 0.0 && !clip.stream {
                     clip.frames as f64
@@ -1345,8 +1346,9 @@ impl Mixer {
                     main.end_at = (cmd.time.max(0.0) * rate as f64) as u64;
                 }
             }
-            _ => {}
+            _ => return false,
         }
+        true
     }
 
     pub fn source_state(&self, handle: u64) -> AudioSourceState {
@@ -2286,6 +2288,29 @@ fn render_voice(
 mod tests {
     use super::*;
     use crate::audio::protocol::AudioSourceCommand;
+
+    #[test]
+    fn command_receipt_tracks_play_admission_without_polling_voice_counts() {
+        let mut m = mixer();
+        source_with(&mut m, 1, 99, |_| {});
+        let play = AudioSourceCommand {
+            kind: command::PLAY,
+            ..Default::default()
+        };
+        let shot = AudioSourceCommand {
+            kind: command::PLAY_ONE_SHOT,
+            clip: 99,
+            ..Default::default()
+        };
+        assert!(!m.command(1, &play));
+        assert!(!m.command(1, &shot));
+        m.add_clip(99, ramp_clip(100, 1000));
+        assert!(m.command(1, &play));
+        assert!(m.command(1, &shot));
+        m.release_clip(99);
+        assert!(!m.command(1, &shot));
+        assert!(!m.command(1, &play));
+    }
 
     fn mono_gain(age: usize) -> f32 {
         if age >= 64 {

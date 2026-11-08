@@ -44,7 +44,7 @@ namespace UnityEngine
                 copy.m_Samples = m_Samples;
                 copy.m_LoadType = m_LoadType;
                 copy.m_CompressionFormat = m_CompressionFormat;
-                if (m_PreloadAudioData) copy.LoadAudioData();
+                copy.InitializePreloadedData();
             }
             return copy;
         }

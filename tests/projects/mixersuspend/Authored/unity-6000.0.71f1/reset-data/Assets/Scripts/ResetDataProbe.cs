@@ -13,6 +13,7 @@ public class ResetDataProbe : MonoBehaviour
     void State(string key, AudioClip clip) {
         Value(key + ".valid", clip ? 1 : 0);
         Value(key + ".frames", clip.samples); Value(key + ".channels", clip.channels);
+        Value(key + ".type", (int)clip.loadType); Value(key + ".background", clip.loadInBackground ? 1 : 0);
         Value(key + ".frequency", clip.frequency); Value(key + ".lengthBits", BitConverter.ToInt32(BitConverter.GetBytes(clip.length), 0));
         Value(key + ".load", (int)clip.loadState);
         var data = new float[8]; Array.Fill(data, 0.375f);
@@ -99,6 +100,55 @@ public class ResetDataProbe : MonoBehaviour
         }
         var rewrite = new float[8192]; Array.Fill(rewrite, 0.5f);
         Value("rewrite.old", clips[0].SetData(rewrite, 0) ? 1 : 0); State("rewritten", clips[0]);
+        var streamPreloaded = Resources.Load<AudioClip>("reset_stream_preloaded");
+        var streamDeferred = Resources.Load<AudioClip>("reset_stream_deferred");
+        foreach (bool preload in new[] { true, false }) {
+            var clip = preload ? streamPreloaded : streamDeferred;
+            string key = "stream." + (preload ? "preloaded" : "deferred");
+            State(key, clip); Value(key + ".preload", clip.preloadAudioData ? 1 : 0);
+            Value(key + ".loadReturn", clip.LoadAudioData() ? 1 : 0); Value(key + ".afterLoad", (int)clip.loadState);
+            source.clip = clip; source.loop = false; source.pitch = 1;
+            source.Stop(); Value(key + ".idleStop", (int)clip.loadState);
+            clip.LoadAudioData(); source.Play(); Value(key + ".afterPlay", (int)clip.loadState);
+            yield return null; AudioRenderer.Render(buffer); Value(key + ".afterRender", (int)clip.loadState);
+            source.Stop(); Value(key + ".afterStop", (int)clip.loadState);
+            var go = new GameObject("stream owner"); var other = go.AddComponent<AudioSource>(); other.playOnAwake = false; other.clip = clip;
+            foreach (bool reverse in new[] { false, true }) {
+                string order = key + (reverse ? ".reverse" : ".forward");
+                clip.LoadAudioData(); source.Play(); other.Play(); yield return null; AudioRenderer.Render(buffer);
+                Value(order + ".both", (int)clip.loadState);
+                (reverse ? other : source).Stop(); Value(order + ".firstStop", (int)clip.loadState);
+                (reverse ? source : other).Stop(); Value(order + ".lastStop", (int)clip.loadState);
+            }
+            clip.LoadAudioData(); other.Play(); yield return null; AudioRenderer.Render(buffer);
+            DestroyImmediate(go); Value(key + ".afterDestroy", (int)clip.loadState);
+            source.clip = null; clip.LoadAudioData(); source.PlayOneShot(clip);
+            yield return null; AudioRenderer.Render(buffer); Value(key + ".shotPlaying", source.isPlaying ? 1 : 0);
+            source.Stop(); Value(key + ".shotAfterStop", (int)clip.loadState);
+            source.clip = clip; clip.LoadAudioData(); source.Play();
+            yield return null; AudioRenderer.Render(buffer); source.clip = disk;
+            Value(key + ".afterReplace", (int)clip.loadState); source.Stop();
+            foreach (bool mainLast in new[] { false, true }) {
+                source.clip = clip; clip.LoadAudioData();
+                if (mainLast) { source.PlayOneShot(clip); source.Play(); }
+                else { source.Play(); source.PlayOneShot(clip); }
+                source.clip = disk;
+                Value(key + (mainLast ? ".overlap.mainLast" : ".overlap.shotLast"), (int)clip.loadState);
+                source.Stop(); Value(key + (mainLast ? ".overlap.mainStop" : ".overlap.shotStop"), (int)clip.loadState);
+            }
+            foreach (bool streamRequest in new[] { true, false })
+            for (int target = 0; target < 3; target++) {
+                var parent = new GameObject("destroy parent"); var child = new GameObject("destroy child"); child.transform.parent = parent.transform;
+                var pending = child.AddComponent<AudioSource>(); pending.playOnAwake = false; pending.clip = streamRequest ? clip : disk;
+                pending.clip.LoadAudioData(); pending.Play(); yield return null; AudioRenderer.Render(buffer);
+                Destroy(target == 0 ? (UnityEngine.Object)pending : target == 1 ? child : parent);
+                string request = key + (streamRequest ? ".request." : ".pcmRequest.") + target;
+                Value(request + ".load", (int)pending.clip.loadState);
+                Value(request + ".playing", pending.isPlaying ? 1 : 0);
+                Value(request + ".valid", pending ? 1 : 0);
+                DestroyImmediate(parent);
+            }
+        }
         rows.Add("\"complete\":true"); AudioRenderer.Stop(); buffer.Dispose(); Save(); Exit(0);
     }
 }

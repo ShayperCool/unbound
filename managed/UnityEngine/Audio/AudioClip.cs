@@ -40,6 +40,38 @@ namespace UnityEngine
         internal bool m_Stream;
         /// <summary><c>AudioCompressionFormat</c> of an asset's data.</summary>
         internal int m_CompressionFormat;
+        // One node per streamed clip; the latest voice owns its cached buffer.
+        // Control-thread transfers and cleanup unlink in constant time.
+        internal AudioSource m_StreamBufferOwner;
+        internal AudioClip m_StreamBufferPrevious, m_StreamBufferNext;
+        internal bool m_StreamBufferMain;
+
+        internal bool TracksStreamBuffer => m_IsAsset && m_LoadType == AudioClipLoadType.Streaming && Compat.StreamingClipBufferLifetimeMeasured;
+
+        internal void ClaimStreamBuffer(AudioSource source, bool main)
+        {
+            if (!TracksStreamBuffer) return;
+            DetachStreamBuffer();
+            m_StreamBufferOwner = source; m_StreamBufferMain = main;
+            m_StreamBufferNext = source.m_StreamBuffers;
+            if (!ReferenceEquals(m_StreamBufferNext, null)) m_StreamBufferNext.m_StreamBufferPrevious = this;
+            source.m_StreamBuffers = this;
+        }
+
+        internal void DetachStreamBuffer()
+        {
+            if (ReferenceEquals(m_StreamBufferOwner, null)) return;
+            if (!ReferenceEquals(m_StreamBufferPrevious, null)) m_StreamBufferPrevious.m_StreamBufferNext = m_StreamBufferNext;
+            else m_StreamBufferOwner.m_StreamBuffers = m_StreamBufferNext;
+            if (!ReferenceEquals(m_StreamBufferNext, null)) m_StreamBufferNext.m_StreamBufferPrevious = m_StreamBufferPrevious;
+            m_StreamBufferOwner = null; m_StreamBufferPrevious = null; m_StreamBufferNext = null;
+        }
+
+        internal void ReleaseStreamBuffer()
+        {
+            DetachStreamBuffer(); m_LoadState = AudioDataLoadState.Unloaded;
+        }
+
         event PCMReaderCallback m_PCMReaderCallback = null;
         event PCMSetPositionCallback m_PCMSetPositionCallback = null;
 
@@ -71,14 +103,20 @@ namespace UnityEngine
 
         public AudioDataLoadState loadState => m_SharedData?.NeedsReload == true ? AudioDataLoadState.Unloaded : m_LoadState;
 
+        void InitializePreloadedData()
+        {
+            if (m_PreloadAudioData && (m_LoadType != AudioClipLoadType.Streaming || !Compat.StreamingClipBufferLifetimeMeasured))
+                LoadAudioData();
+        }
+
         public bool LoadAudioData()
         {
             ThrowIfDestroyed();
             if (m_Handle == 0) return m_IsAsset && m_Samples == 0;
             EnsureSharedData();
             if (m_LoadState == AudioDataLoadState.Loaded || m_LoadState == AudioDataLoadState.Loading) return true;
-            // A streamed asset stays unloaded until a data access or playback requests it.
-            if (m_IsAsset && m_LoadType == AudioClipLoadType.Streaming) return true;
+            // Retain the prior unloaded streaming state for unmeasured releases.
+            if (m_IsAsset && m_LoadType == AudioClipLoadType.Streaming && !Compat.StreamingClipBufferLifetimeMeasured) return true;
             if (m_LoadInBackground)
             {
                 // Loaded on the next audio update, as a background load completes a frame later.
@@ -96,6 +134,7 @@ namespace UnityEngine
         {
             ThrowIfDestroyed();
             if (!m_IsAsset) return false;
+            DetachStreamBuffer();
             if (m_SharedData == null || m_SharedData.References == 1 || m_LoadType == AudioClipLoadType.Streaming)
                 m_LoadState = AudioDataLoadState.Unloaded;
             return true;
@@ -283,7 +322,7 @@ namespace UnityEngine
             m_LoadInBackground = info.LoadInBackground != 0;
             m_Ambisonic = info.Ambisonic != 0;
             m_CompressionFormat = info.CompressionFormat;
-            if (m_PreloadAudioData) LoadAudioData();
+            InitializePreloadedData();
         }
 
         /// <summary>
@@ -312,6 +351,7 @@ namespace UnityEngine
 
         internal void OnAudioReset(ulong epoch)
         {
+            DetachStreamBuffer();
             if (m_Handle == 0 || (m_SharedData == null || m_SharedData.Backend != AudioBackend.Current)) return;
             if (m_SharedData.Import != null)
             {
@@ -364,11 +404,12 @@ namespace UnityEngine
                 return;
             }
             m_Samples = info.Frames;
-            if (m_PreloadAudioData) LoadAudioData();
+            InitializePreloadedData();
         }
 
         internal override void OnEngineDestroy()
         {
+            DetachStreamBuffer();
             if (m_Handle == 0) return;
             s_WithCallbacks.TryRemove(m_Handle, out _);
             if (m_SharedData != null)

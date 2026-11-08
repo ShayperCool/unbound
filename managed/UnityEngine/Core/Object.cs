@@ -30,6 +30,7 @@ namespace UnityEngine
         }
         /// <summary>Destroy() was called; the destruction happens at the end of the frame.</summary>
         internal bool m_PendingDestroy;
+        bool m_EngineDestroyRequestNotified;
         HideFlags m_HideFlags;
 
         public Object()
@@ -346,6 +347,16 @@ namespace UnityEngine
             ObjectRegistry.Unregister(this);
             MainThreadCheck.Throw(binding);
         }
+
+        internal void NotifyEngineDestroyRequested()
+        {
+            if (m_EngineDestroyRequestNotified) return;
+            m_EngineDestroyRequestNotified = true;
+            OnEngineDestroyRequested();
+        }
+
+        /// <summary>Deferred destruction was requested; the object remains valid until delivery.</summary>
+        internal virtual void OnEngineDestroyRequested() { }
 
         // Called when the engine object is gone; subclasses release what they hold.
         internal virtual void OnEngineDestroy() { }

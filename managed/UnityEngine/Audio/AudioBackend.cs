@@ -46,7 +46,8 @@ namespace Unbound.Runtime
         internal abstract void ReleaseClip(ulong handle);
         /// <summary>The packet's curve and filter pointers are valid during the call only.</summary>
         internal abstract void UpdateSource(ulong handle, ref AudioSourcePacket packet);
-        internal abstract void Command(ulong handle, in AudioSourceCommand command);
+        /// <summary>Reports admission under the same operation that changes the voice state.</summary>
+        internal abstract bool Command(ulong handle, in AudioSourceCommand command);
         internal abstract AudioSourceState State(ulong handle);
         internal abstract void ReleaseSource(ulong handle);
         internal abstract void UpdateGroup(ulong handle, float gain, float pitch);
@@ -116,10 +117,10 @@ namespace Unbound.Runtime
             fixed (AudioSourcePacket* p = &packet) Native.Api.AudioUpdateSource(handle, p);
         }
 
-        internal override void Command(ulong handle, in AudioSourceCommand command)
+        internal override bool Command(ulong handle, in AudioSourceCommand command)
         {
             var c = command;
-            Native.Api.AudioSourceCommand(handle, &c);
+            return Native.Api.AudioSourceCommand(handle, &c) != 0;
         }
 
         internal override AudioSourceState State(ulong handle)
@@ -348,7 +349,7 @@ namespace Unbound.Runtime
             return null;
         }
 
-        internal override void Command(ulong handle, in AudioSourceCommand command)
+        internal override bool Command(ulong handle, in AudioSourceCommand command)
         {
             var source = SourceOf(handle);
             long now = m_Frames;
@@ -361,12 +362,12 @@ namespace Unbound.Runtime
                     {
                         source.Main.Paused = false;
                         foreach (var v in source.OneShots) v.Paused = false;
-                        return;
+                        return true;
                     }
                     if (!m_Clips.TryGetValue(source.Params.Clip, out var clip))
                     {
                         source.Main = null;
-                        return;
+                        return false;
                     }
                     double position = source.Pending;
                     source.Pending = 0;
@@ -392,8 +393,8 @@ namespace Unbound.Runtime
                     foreach (var v in source.OneShots) v.Paused = false;
                     break;
                 case AudioCommandKind.PlayOneShot:
-                    if (m_Clips.TryGetValue(command.Clip, out var shot))
-                        source.OneShots.Add(new Voice { Clip = command.Clip, Position = source.Params.Pitch < 0 ? shot.Frames : 0, StartAt = now });
+                    if (!m_Clips.TryGetValue(command.Clip, out var shot)) return false;
+                    source.OneShots.Add(new Voice { Clip = command.Clip, Position = source.Params.Pitch < 0 ? shot.Frames : 0, StartAt = now });
                     break;
                 case AudioCommandKind.Seek:
                 {
@@ -410,7 +411,9 @@ namespace Unbound.Runtime
                 case AudioCommandKind.SetScheduledEnd:
                     if (source.Main != null) source.Main.EndAt = FrameOf(command.Time);
                     break;
+                default: return false;
             }
+            return true;
         }
 
         internal override AudioSourceState State(ulong handle)

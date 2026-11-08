@@ -447,6 +447,12 @@ namespace UnityEngine
 
         public static GameObject CreatePrimitive(PrimitiveType type) => Primitives.Create(type);
 
+        internal override void OnEngineDestroyRequested()
+        {
+            foreach (var component in m_Components) component.NotifyEngineDestroyRequested();
+            foreach (var child in m_Transform.m_Children) child.m_GameObject.NotifyEngineDestroyRequested();
+        }
+
         internal override void OnEngineDestroy()
         {
             SceneRegistry.RemoveRoot(this);

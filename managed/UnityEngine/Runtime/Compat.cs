@@ -91,6 +91,17 @@ namespace Unbound.Runtime
         /// a double rate ratio and zero padding until measured; looping still wraps.</summary>
         internal static bool DecodedAudioResamplingMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Destroy requests stop AudioSource voices before the deferred object
+        /// destruction, including sources below a destroyed GameObject. Measured on exactly
+        /// 6000.0.71f1 (tests/projects/mixersuspend). Other releases retain end-of-frame cleanup.</summary>
+        internal static bool AudioSourceDestroyRequestMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>A streamed clip's cached buffer is owned by the most recent voice
+        /// that starts it; stopping its source releases the buffer. Measured on exactly
+        /// 6000.0.71f1 (tests/projects/mixersuspend). Other releases keep their previous
+        /// loading and stop behavior until measured.</summary>
+        internal static bool StreamingClipBufferLifetimeMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Send/Receive routing, startup and Duck Volume detector state, measured on
         /// exactly 6000.0.71f1 (tests/projects/mixerduck). Other releases fail until measured.</summary>
         internal static bool MixerSidechainMeasured => Release == (6000, 0, 71, 'f', 1);
