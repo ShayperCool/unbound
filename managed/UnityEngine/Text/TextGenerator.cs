@@ -476,6 +476,138 @@ namespace Unbound.Runtime
                 : new Rect(0f, 0f, ext.x, ext.y);
         }
 
+        /// <summary>
+        /// The layout of a legacy <see cref="TextMesh"/>, which differs from UI Text's in its metrics
+        /// and placement (matches the Unity 6000.0.71f1 Editor, tests/projects/textmesh). Positions
+        /// are in font pixels, y up, about the point the anchor names:
+        /// - a line's baseline is its unrounded ascent below its top; lines step down by the font's
+        ///   unrounded line spacing at the line's largest size times <paramref name="lineSpacing"/>;
+        ///   the block is those steps plus the last line's ascent minus descent high, and as wide as
+        ///   its widest line (trailing spaces count); lines are aligned within it, unrounded;
+        /// - a tab moves the pen to the next multiple, strictly after it, of the whole part of
+        ///   <paramref name="tabSize"/> times the space's advance (a width of 0 or less goes to the
+        ///   line's start);
+        /// - every character except whitespace and newlines has a quad: a glyph the font lacks gets an
+        ///   empty one (a dynamic font's padded empty glyph in its texture, a custom font's a point at
+        ///   the pen), as does a carriage return, and they do not advance.
+        /// <paramref name="verts"/> receives four vertices per quad (top left, top right, bottom
+        /// right, bottom left); <paramref name="rect"/> is the block.
+        /// </summary>
+        internal static void GenerateTextMesh(string text, Font font, Color color, int fontSize, FontStyle style, float lineSpacing,
+            bool richText, TextAnchor anchor, TextAlignment alignment, float tabSize, List<UIVertex> verts, out Rect rect)
+        {
+            verts.Clear();
+            text ??= "";
+            var items = RichText.Parse(text, richText, style, (Color32)color);
+            int basePixelSize = font.PixelSize(font.dynamic ? fontSize : 0);
+            Measure(items, font, basePixelSize, 1f);
+            List<GlyphKey> empty = null;
+            for (int i = 0; i < items.Length; i++)
+            {
+                ref var item = ref items[i];
+                if (item.Kind != Kind.Glyph || item.Visible || IsSpace(item.Codepoint)) continue;
+                // A character the font has no pixels for still gets its (empty) quad.
+                item.Visible = true;
+                item.Advance = 0f;
+                if (item.Glyph != null)
+                    (empty ??= new List<GlyphKey>()).Add(item.Glyph.Key);
+            }
+            if (font.m_Source != null)
+            {
+                var keys = new List<GlyphKey>();
+                foreach (var item in items)
+                    if (item.Visible && item.Glyph != null && item.Glyph.HasPixels) keys.Add(item.Glyph.Key);
+                if (keys.Count > 0 || empty != null) font.Atlas.Request(keys, empty);
+            }
+
+            // Lines: their sizes, metrics and widths (tabs resolved).
+            int wholeTab = (int)tabSize;
+            var lines = new List<(int Start, int End, int Size, float Width)>();
+            int start = 0;
+            for (int i = 0; i <= items.Length; i++)
+            {
+                if (i < items.Length && items[i].Kind != Kind.Newline) continue;
+                int end = i < items.Length ? i + 1 : i;
+                int size = 0;
+                float pen = 0f;
+                for (int k = start; k < end; k++)
+                {
+                    ref var item = ref items[k];
+                    if (item.Kind != Kind.Glyph && item.Kind != Kind.Quad) continue;
+                    size = Math.Max(size, item.PixelSize);
+                    if (item.Kind == Kind.Glyph && item.Codepoint == '\t')
+                    {
+                        float stop = wholeTab * SpaceAdvance(font, item);
+                        item.Advance = stop > 0f ? ((float)Math.Floor(pen / stop) + 1f) * stop - pen : -pen;
+                    }
+                    pen += item.Advance;
+                }
+                if (size == 0)
+                {
+                    int at = Math.Min(start, items.Length - 1);
+                    size = at >= 0 && items[at].PixelSize > 0 ? items[at].PixelSize : basePixelSize;
+                }
+                lines.Add((start, end, size, pen));
+                start = end;
+                if (i == items.Length) break;
+            }
+
+            float width = 0f, height = 0f;
+            for (int li = 0; li < lines.Count; li++)
+            {
+                width = Math.Max(width, lines[li].Width);
+                int size = lines[li].Size;
+                height += li < lines.Count - 1 ? font.LineSpacingAt(size) * lineSpacing : font.AscentAt(size) - font.DescentAt(size);
+            }
+            float left = -width * AnchorColumn(anchor) * 0.5f;
+            float top = height * AnchorRow(anchor) * 0.5f;
+            float align = alignment == TextAlignment.Center ? 0.5f : alignment == TextAlignment.Right ? 1f : 0f;
+            float lineTop = top;
+            foreach (var line in lines)
+            {
+                float baseline = lineTop - font.AscentAt(line.Size);
+                float pen = left + (width - line.Width) * align;
+                for (int i = line.Start; i < line.End; i++)
+                {
+                    var item = items[i];
+                    if (item.Visible)
+                    {
+                        if (item.Kind == Kind.Quad || item.Glyph != null || item.CustomIndex >= 0) EmitQuad(verts, item, font, pen, baseline);
+                        else EmitPoint(verts, item.Color, pen, baseline);
+                    }
+                    // A carriage return is an empty quad at the pen.
+                    else if (item.Kind == Kind.Hidden && text[i] == '\r') EmitPoint(verts, item.Color, pen, baseline);
+                    pen += item.Kind == Kind.Glyph || item.Kind == Kind.Quad ? item.Advance : 0f;
+                }
+                lineTop -= font.LineSpacingAt(line.Size) * lineSpacing;
+            }
+            rect = new Rect(left, top - height, width, height);
+        }
+
+        static float SpaceAdvance(Font font, in Item item)
+        {
+            if (font.m_Source != null)
+                return font.Atlas.Get(new GlyphKey(' ', item.PixelSize, font.dynamic ? item.Style : FontStyle.Normal)).Advance;
+#pragma warning disable 618
+            foreach (var info in font.m_CharacterRects)
+                if (info.index == ' ') return info.width;
+#pragma warning restore 618
+            return 0f;
+        }
+
+        static void EmitPoint(List<UIVertex> verts, Color32 color, float x, float y)
+        {
+            var v = UIVertex.simpleVert;
+            v.color = color;
+            v.position = new Vector3(x, y, 0f);
+            v.uv0 = Vector4.zero;
+            for (int k = 0; k < 4; k++) verts.Add(v);
+        }
+
+        static int AnchorRow(TextAnchor a) => a >= TextAnchor.UpperLeft && a <= TextAnchor.LowerRight ? (int)a / 3 : 0;
+
+        static int AnchorColumn(TextAnchor a) => a >= TextAnchor.UpperLeft && a <= TextAnchor.LowerRight ? (int)a % 3 : 0;
+
         static float Floor(float v) => (float)Math.Floor(v + Epsilon);
 
         static float Ceil(float v) => (float)Math.Ceiling(v - Epsilon);

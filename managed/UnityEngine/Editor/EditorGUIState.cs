@@ -673,7 +673,9 @@ namespace UnityEditor
 
         static Font MakeFont(string name)
         {
-            var font = new Font(name) { name = name };
+            // A dynamic font of the OS font of that name (new Font(name) is an empty custom font).
+            var font = Font.CreateDynamicFontFromOSFont(name, 16);
+            font.name = name;
             return font;
         }
     }

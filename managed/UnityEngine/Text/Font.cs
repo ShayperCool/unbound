@@ -46,15 +46,22 @@ namespace UnityEngine
         {
         }
 
-        /// <summary>A dynamic font of an installed OS font (a name) or a font file (a path).</summary>
+        /// <summary>A font named <paramref name="name"/>: an empty custom font (not dynamic, no
+        /// characters, ascent 0, line spacing <see cref="NewFontLineSpacing"/>; measured, a script
+        /// fills it through characterInfo and material, tests/projects/textmesh), or for a path, a
+        /// dynamic font of that file.</summary>
         public Font(string name)
         {
             m_Name = name ?? "";
             if (string.IsNullOrEmpty(System.IO.Path.GetDirectoryName(name ?? "")))
-                InitFromSource(NativeGlyphSource.Open(new { names = new[] { name } }), 16, name);
+                m_LineSpacing = NewFontLineSpacing;
             else
                 InitFromSource(NativeGlyphSource.Open(new { file = name }), 16, System.IO.Path.GetFileNameWithoutExtension(name));
         }
+
+        /// <summary>The line spacing of a font made by <c>new Font(name)</c>, in pixels (measured:
+        /// TextMesh lines of such a font step 0.1 font pixels apart, tests/projects/textmesh).</summary>
+        internal const float NewFontLineSpacing = 0.1f;
 
         /// <summary>A dynamic font over a face (the importers and tests).</summary>
         internal Font(GlyphSource source, int fontSize, string name)
@@ -221,7 +228,7 @@ namespace UnityEngine
                 info = default;
                 return false;
             }
-            return Atlas.TryGetCharacterInfo(ch, PixelSize(size), style, out info);
+            return Atlas.TryGetCharacterInfo(ch, PixelSize(size), size, style, out info);
         }
 
         public bool GetCharacterInfo(char ch, out CharacterInfo info, int size) => GetCharacterInfo(ch, out info, size, FontStyle.Normal);
@@ -240,7 +247,9 @@ namespace UnityEngine
                     c = char.ConvertToUtf32(characters[i], characters[++i]);
                 keys.Add(new GlyphKey(c, pixelSize, style));
             }
-            Atlas.Request(keys);
+            // Characters without pixels (a space) get an empty cell too (measured: their
+            // CharacterInfo has the padding's uvs, tests/projects/textmesh).
+            Atlas.Request(keys, keys);
         }
 
         public void RequestCharactersInTexture(string characters, int size) => RequestCharactersInTexture(characters, size, FontStyle.Normal);

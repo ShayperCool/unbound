@@ -327,16 +327,26 @@ namespace Unbound.Tests
             Assert.Equal('A', info.index);
             Assert.Equal(10, info.size);
             Assert.Equal(5, info.advance);
-            Assert.Equal(5, info.glyphWidth);
-            Assert.Equal(7, info.glyphHeight);
-            Assert.Equal(0, info.bearing);
-            Assert.Equal(0, info.minY);
-            Assert.Equal(7, info.maxY);
-            Assert.Equal(0, info.minX);
-            Assert.Equal(5, info.maxX);
-            Assert.True(info.uvTopRight.x > info.uvBottomLeft.x && info.uvTopRight.y > info.uvBottomLeft.y);
+            // Measured (tests/projects/textmesh characterInfo): the metrics and uvs include the
+            // atlas' one-pixel padding on every side, as the drawn quads do.
+            Assert.Equal(7, info.glyphWidth);
+            Assert.Equal(9, info.glyphHeight);
+            Assert.Equal(-1, info.bearing);
+            Assert.Equal(-1, info.minY);
+            Assert.Equal(8, info.maxY);
+            Assert.Equal(-1, info.minX);
+            Assert.Equal(6, info.maxX);
+            var texture = font.material.mainTexture;
+            Assert.Equal(7f, (info.uvTopRight.x - info.uvBottomLeft.x) * texture.width, 3);
+            Assert.Equal(9f, (info.uvTopRight.y - info.uvBottomLeft.y) * texture.height, 3);
             Assert.True(font.GetCharacterInfo(' ', out var space, 10));
             Assert.Equal(5, space.advance);
+            // A requested space gets an empty cell: its padding (measured).
+            Assert.Equal(2f, (space.uvTopRight.x - space.uvBottomLeft.x) * texture.width, 3);
+            // The size asked for is answered, 0 for the font's own size (measured).
+            font.RequestCharactersInTexture("A");
+            Assert.True(font.GetCharacterInfo('A', out var own));
+            Assert.Equal(0, own.size);
             Assert.False(font.GetCharacterInfo('A', out _, 10, FontStyle.Bold));
             Assert.Contains(font.characterInfo, c => c.index == 'A');
         }

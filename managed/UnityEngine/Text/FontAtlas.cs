@@ -335,9 +335,11 @@ namespace Unbound.Runtime
             foreach (var key in drop) m_Glyphs.Remove(key);
         }
 
-        /// <summary>Puts the glyphs in the texture. Returns true when the texture was rebuilt (and
+        /// <summary>Puts the glyphs in the texture, and the <paramref name="empty"/> ones (characters
+        /// with no pixels that are still drawn, as a TextMesh draws a glyph the font lacks) as empty
+        /// cells: their padding only. Returns true when the texture was rebuilt (and
         /// <see cref="Font.textureRebuilt"/> raised).</summary>
-        internal bool Request(IReadOnlyList<GlyphKey> keys)
+        internal bool Request(IReadOnlyList<GlyphKey> keys, IReadOnlyList<GlyphKey> empty = null)
         {
             var pending = new List<AtlasGlyph>();
             var seen = new HashSet<GlyphKey>();
@@ -346,6 +348,19 @@ namespace Unbound.Runtime
                 if (!seen.Add(key)) continue;
                 var glyph = Get(key);
                 if (glyph.HasPixels && !glyph.Placed) pending.Add(glyph);
+            }
+            if (empty != null)
+            {
+                HashSet<GlyphKey> cells = null;
+                foreach (var key in empty)
+                {
+                    var glyph = Get(key);
+                    // An empty cell: Blit copies no coverage for a glyph without width or height.
+                    if (glyph.HasPixels || glyph.Placed || (glyph.Width != 0 && glyph.Height != 0)) continue;
+                    if (!(cells ??= new HashSet<GlyphKey>()).Add(key)) continue;
+                    seen.Add(key);
+                    pending.Add(glyph);
+                }
             }
             if (pending.Count == 0) return false;
             // Engine glyph writes take back the cells before changing pixels or atlas size.
@@ -410,15 +425,15 @@ namespace Unbound.Runtime
 
         bool Fits(List<AtlasGlyph> glyphs, int width, int height)
         {
-            int pad = Padding, x = pad, y = pad, shelf = 0;
+            int pad = Padding, x = 0, y = 0, shelf = 0;
             foreach (var g in glyphs)
             {
-                int w = g.Width + pad, h = g.Height + pad;
-                if (w + pad > width || h + pad > height) return false;
+                int w = g.Width + 2 * pad, h = g.Height + 2 * pad;
+                if (w > width || h > height) return false;
                 if (x + w > width)
                 {
                     y += shelf;
-                    x = pad;
+                    x = 0;
                     shelf = 0;
                 }
                 if (y + h > height) return false;
@@ -430,22 +445,21 @@ namespace Unbound.Runtime
 
         bool TryPlace(AtlasGlyph g)
         {
-            // Every glyph keeps `pad` empty pixels on each side (the first row and column too):
-            // its quad samples them.
-            int pad = Padding, w = g.Width + pad, h = g.Height + pad;
+            // Every glyph has a cell of its own with `pad` empty pixels on each side: its quad
+            // samples them, and a bilinear sample at the quad's edge reads only its own cell's
+            // padding (with cells sharing one padding gap, a neighbour's edge bled in).
+            int pad = Padding, w = g.Width + 2 * pad, h = g.Height + 2 * pad;
             int width = Texture.m_Width, height = Texture.m_Height;
-            if (w + pad > width || h + pad > height) return false;
-            m_ShelfX = Math.Max(m_ShelfX, pad);
-            m_ShelfY = Math.Max(m_ShelfY, pad);
+            if (w > width || h > height) return false;
             if (m_ShelfX + w > width)
             {
                 m_ShelfY += m_ShelfHeight;
-                m_ShelfX = pad;
+                m_ShelfX = 0;
                 m_ShelfHeight = 0;
             }
             if (m_ShelfY + h > height) return false;
-            g.X = m_ShelfX;
-            g.Y = m_ShelfY;
+            g.X = m_ShelfX + pad;
+            g.Y = m_ShelfY + pad;
             g.Placed = true;
             m_ShelfX += w;
             m_ShelfHeight = Math.Max(m_ShelfHeight, h);
@@ -475,27 +489,34 @@ namespace Unbound.Runtime
             return new Rect((g.X - pad) / w, (g.Y - pad) / h, (g.Width + 2 * pad) / w, (g.Height + 2 * pad) / h);
         }
 
-        internal CharacterInfo ToCharacterInfo(AtlasGlyph g)
+        /// <summary>A glyph as CharacterInfo: its cell with the padding on every side (uvs and
+        /// minX/maxX/minY/maxY, as the quads text layouts draw), its advance, and the size it was
+        /// asked for (0 for the font's own size). Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/textmesh characterInfo.</summary>
+        internal CharacterInfo ToCharacterInfo(AtlasGlyph g, int requestedSize)
         {
+            int pad = Padding;
 #pragma warning disable 618
             return new CharacterInfo
             {
                 index = g.Key.Codepoint,
-                size = g.Key.Size,
+                size = requestedSize,
                 style = g.Key.Style,
-                uv = g.Placed ? UV(g) : default,
-                vert = new Rect(g.Left, g.Top, g.Width, -g.Height),
+                uv = g.Placed ? UV(g, pad) : default,
+                vert = new Rect(g.Left - pad, g.Top + pad, g.Width + 2 * pad, -(g.Height + 2 * pad)),
                 width = g.Advance,
                 flipped = false,
             };
 #pragma warning restore 618
         }
 
-        internal bool TryGetCharacterInfo(int codepoint, int size, FontStyle style, out CharacterInfo info)
+        internal bool TryGetCharacterInfo(int codepoint, int size, int requestedSize, FontStyle style, out CharacterInfo info)
         {
-            if (m_Glyphs.TryGetValue(new GlyphKey(codepoint, size, style), out var g) && g.Found && (g.Placed || !g.HasPixels))
+            // A character the font lacks has one once it has an (empty) cell in the texture, as
+            // Unity's font answers for its missing-glyph glyph (measured, tests/projects/textmesh).
+            if (m_Glyphs.TryGetValue(new GlyphKey(codepoint, size, style), out var g) && (g.Found ? g.Placed || !g.HasPixels : g.Placed))
             {
-                info = ToCharacterInfo(g);
+                info = ToCharacterInfo(g, requestedSize);
                 return true;
             }
             info = default;
@@ -506,7 +527,7 @@ namespace Unbound.Runtime
         {
             var list = new List<CharacterInfo>();
             foreach (var g in m_Glyphs.Values)
-                if (g.Found && (g.Placed || !g.HasPixels)) list.Add(ToCharacterInfo(g));
+                if (g.Found && (g.Placed || !g.HasPixels)) list.Add(ToCharacterInfo(g, g.Key.Size));
             return list.ToArray();
         }
     }

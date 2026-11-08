@@ -9,16 +9,15 @@ namespace Unbound.Tests
 {
     /// <summary>
     /// The legacy TextMesh (Unity 6000.0 Scripting API, TextMesh and its properties): its text is
-    /// laid out into one quad per visible character, which the MeshRenderer draws instead of a
-    /// MeshFilter's mesh. No Reference measures TextMesh: these are expectations per the docs, plus
-    /// Unbound's labelled choices (a font pixel is characterSize / 10 units; the legacy
-    /// generator's metrics and padding). The box font (<see cref="BoxGlyphSource"/>) at its size 10
+    /// laid out into one quad per character, which the MeshRenderer draws instead of a
+    /// MeshFilter's mesh. The rules tested are those measured in the Unity 6000.0.71f1 Editor
+    /// (tests/projects/textmesh: a font pixel is characterSize / 10 units, unrounded metrics,
+    /// tab stops, empty quads, bounds), applied to a font of the tests' own. The box font (<see cref="BoxGlyphSource"/>) at its size 10
     /// advances 5 pixels per glyph; ink is 5 x 7 on the baseline, ascent 8, descent 2, and every
     /// quad takes the atlas' one-pixel padding on each side. characterSize 10 makes one pixel one
-    /// unit, so the expected positions below are the generator's pixel positions.
-    /// Only API that exists before TextMesh is implemented is used, so each case fails on its own
-    /// against the stub.
+    /// unit, so the expected positions below are the layout's pixel positions.
     /// </summary>
+    [Collection("Project release")]
     public sealed class TextMeshTests : IDisposable
     {
         readonly List<GameObject> m_Made = new List<GameObject>();
@@ -111,7 +110,8 @@ namespace Unbound.Tests
             Assert.NotNull(go.GetComponent<MeshRenderer>());
         }
 
-        // Red at the stub: the MeshRenderer has no MeshFilter, so it draws no mesh (null).
+        // Measured (tests/projects/textmesh): one quad per character except whitespace and
+        // newlines, triangles (1, 2, 0) and (2, 3, 0) of each quad, an unnamed hidden mesh.
         [Fact]
         public void GeneratesOneQuadPerVisibleCharacter()
         {
@@ -122,31 +122,48 @@ namespace Unbound.Tests
             Assert.Equal(16, mesh.vertexCount);
             var triangles = mesh.triangles;
             Assert.Equal(24, triangles.Length);
-            Assert.Equal(new[] { 0, 1, 2, 2, 3, 0 }, triangles.Take(6));
+            Assert.Equal(new[] { 1, 2, 0, 2, 3, 0, 5, 6, 4, 6, 7, 4 }, triangles.Take(12));
             Assert.Equal(16, mesh.colors32.Length);
             Assert.Equal(16, mesh.uv.Length);
+            Assert.Empty(mesh.normals);
             Assert.All(mesh.colors32, c => Assert.Equal(new Color32(255, 255, 255, 255), c));
+            Assert.Equal("", mesh.name);
+            Assert.Equal(HideFlags.HideAndDontSave, mesh.hideFlags);
         }
 
-        // Red at the stub: no mesh is drawn (null).
         [Fact]
         public void ChangingAPropertyRegeneratesTheMesh()
         {
             var text = Make("A", BoxFont());
-            Assert.Equal(4, Drawn(text).vertexCount);
+            var first = Drawn(text);
+            Assert.Equal(4, first.vertexCount);
             text.text = "AB";
             Assert.Equal(8, Drawn(text).vertexCount);
             text.color = Color.red;
             Assert.All(Drawn(text).colors32, c => Assert.Equal(new Color32(255, 0, 0, 255), c));
         }
 
-        // "anchor: Which point of the text shares the position of the Transform." One line "AB" is
-        // 10 pixels wide; the line spans 8 above and 2 below its baseline.
-        // Red at the stub: no mesh is drawn (null).
+        // Rebuilt only on change: drawing unchanged text again allocates nothing.
+        [Fact]
+        public void UnchangedTextIsNotRegenerated()
+        {
+            var text = Make("AB\nCD", BoxFont());
+            var mesh = text.RenderMesh();
+            var vertices = mesh.vertices;
+            text.RenderMesh();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 10; i++) Assert.Same(mesh, text.RenderMesh());
+            Assert.Equal(before, GC.GetAllocatedBytesForCurrentThread());
+            Assert.Equal(vertices, mesh.vertices);
+        }
+
+        // "anchor: Which point of the text shares the position of the Transform." Measured: the
+        // bounds are the text block (advances wide, ascent minus descent high), not the quads.
+        // One line "AB" is 10 pixels wide; the box font's ascent is 8 and its descent 2.
         [Theory]
-        [InlineData(TextAnchor.UpperLeft, TextAlignment.Left, -1f, -9f, 11f, 0f)]
-        [InlineData(TextAnchor.MiddleCenter, TextAlignment.Center, -6f, -4f, 6f, 5f)]
-        [InlineData(TextAnchor.LowerRight, TextAlignment.Right, -11f, 1f, 1f, 10f)]
+        [InlineData(TextAnchor.UpperLeft, TextAlignment.Left, 0f, -10f, 10f, 0f)]
+        [InlineData(TextAnchor.MiddleCenter, TextAlignment.Center, -5f, -5f, 5f, 5f)]
+        [InlineData(TextAnchor.LowerRight, TextAlignment.Right, -10f, 0f, 0f, 10f)]
         public void AnchorPutsItsPointOfTheTextOnTheTransform(TextAnchor anchor, TextAlignment alignment, float minX, float minY, float maxX, float maxY)
         {
             var text = Make("AB", BoxFont());
@@ -155,18 +172,19 @@ namespace Unbound.Tests
             var bounds = Drawn(text).bounds;
             Assert.Equal(new Vector3(minX, minY, 0f), bounds.min);
             Assert.Equal(new Vector3(maxX, maxY, 0f), bounds.max);
+            Assert.Equal(bounds, text.GetComponent<MeshRenderer>().localBounds);
         }
 
         // "alignment: How lines of text are aligned (Left, Right, Center)": within the block, which
-        // the anchor places. Lines "AB" (10 pixels) and "A" (5); quads 0, 1 are line one's A, B and
-        // quad 2 is line two's A, one line (10 pixels) lower.
-        // Red at the stub: no mesh is drawn (null).
+        // the anchor places, unrounded (measured). Lines "AB" (10 pixels) and "A" (5); quads 0, 1
+        // are line one's A, B and quad 2 is line two's A, one line (10 pixels) lower.
         [Theory]
         [InlineData(TextAnchor.UpperLeft, TextAlignment.Left, -1f, -1f)]
         [InlineData(TextAnchor.UpperLeft, TextAlignment.Right, -1f, 4f)]
-        [InlineData(TextAnchor.UpperLeft, TextAlignment.Center, -1f, 1f)]
+        [InlineData(TextAnchor.UpperLeft, TextAlignment.Center, -1f, 1.5f)]
         [InlineData(TextAnchor.UpperRight, TextAlignment.Left, -11f, -11f)]
         [InlineData(TextAnchor.UpperRight, TextAlignment.Right, -11f, -6f)]
+        [InlineData(TextAnchor.UpperCenter, TextAlignment.Left, -6f, -6f)]
         public void AlignmentAlignsLinesWithinTheAnchoredBlock(TextAnchor anchor, TextAlignment alignment, float firstLineLeft, float secondLineLeft)
         {
             var text = Make("AB\nA", BoxFont());
@@ -179,9 +197,23 @@ namespace Unbound.Tests
             Assert.Equal(Quad(vertices, 0).max.y - 10f, Quad(vertices, 2).max.y);
         }
 
+        // Measured: lines step by the font's line spacing times lineSpacing, unrounded; the block
+        // is those steps plus the last line's ascent minus descent; the first baseline is the
+        // ascent below the top (quad tops: ink 7 above the baseline, plus one pixel of padding).
+        [Fact]
+        public void LinesStepByTheUnroundedLineSpacing()
+        {
+            var text = Make("A\nA\nA", BoxFont());
+            text.lineSpacing = 1.25f;
+            var mesh = Drawn(text);
+            Assert.Equal(0f - 8f + 7f + 1f, Quad(mesh.vertices, 0).max.y);
+            Assert.Equal(-12.5f, Quad(mesh.vertices, 1).max.y);
+            Assert.Equal(-25f, Quad(mesh.vertices, 2).max.y);
+            Assert.Equal(new Vector3(0f, -35f, 0f), mesh.bounds.min);
+        }
+
         // "characterSize: The size of each character (This scales the whole text)"; offsetZ moves
-        // the text along z, unscaled (Unbound's choice).
-        // Red at the stub: no mesh is drawn (null).
+        // the text along z, unscaled (measured).
         [Fact]
         public void CharacterSizeScalesTheWholeText()
         {
@@ -196,24 +228,95 @@ namespace Unbound.Tests
                 Assert.Equal(small[i] * 2f, large[i]);
             text.offsetZ = 0.5f;
             Assert.All(Drawn(text).vertices, v => Assert.Equal(0.5f, v.z));
+            Assert.Equal(0.5f, Drawn(text).bounds.center.z);
+            Assert.Equal(0f, Drawn(text).bounds.size.z);
         }
 
-        // "tabSize: How much space will be inserted for a tab '\t' character. This is a multiplum of
-        // the 'spacebar' character offset": with tabSize 2, B starts 5 + 2 x 5 pixels after A.
-        // Red at the stub: no mesh is drawn (null).
-        [Fact]
-        public void TabsAdvanceTabSizeSpaces()
+        // "tabSize: ... a multiplum of the 'spacebar' character offset". Measured: a tab moves the
+        // pen to the next multiple, strictly after it, of the whole part of tabSize times the space
+        // advance (5 pixels here); 0 goes back to the line's start.
+        [Theory]
+        [InlineData("A\tB", 2f, 10f)]
+        [InlineData("A\tB", 2.9f, 10f)]
+        [InlineData("AB\tC", 2f, 20f)]
+        [InlineData("\tB", 3f, 15f)]
+        [InlineData("AB\tC", 0f, 0f)]
+        public void TabsAdvanceToTheNextTabStop(string line, float tabSize, float lastPen)
         {
-            var text = Make("A\tB", BoxFont());
-            text.tabSize = 2f;
+            var text = Make(line, BoxFont());
+            text.tabSize = tabSize;
             var vertices = Drawn(text).vertices;
-            Assert.Equal(8, vertices.Length);
-            Assert.Equal(-1f, Quad(vertices, 0).min.x);
-            Assert.Equal(14f, Quad(vertices, 1).min.x);
+            Assert.Equal(lastPen - 1f, Quad(vertices, vertices.Length / 4 - 1).min.x);
         }
 
-        // The MeshRenderer draws the TextMesh's mesh, not its MeshFilter's, and its bounds are the
-        // text's. Red at the stub: the renderer draws the MeshFilter's three-vertex mesh.
+        // Measured: a character the font lacks keeps an empty quad (the atlas' padding around an
+        // empty cell) at the pen and does not advance; so does a carriage return (a point).
+        [Fact]
+        public void MissingGlyphsAndCarriageReturnsKeepEmptyQuads()
+        {
+            var font = BoxFont();
+            var mesh = Drawn(Make("A☃B", font));
+            Assert.Equal(12, mesh.vertexCount);
+            var (min, max) = Quad(mesh.vertices, 1);
+            Assert.Equal(new Vector2(4f, -9f), min);
+            Assert.Equal(new Vector2(6f, -7f), max);
+            Assert.Equal(4f, Quad(mesh.vertices, 2).min.x);
+            var texture = font.material.mainTexture;
+            var uv = mesh.uv.Skip(4).Take(4).ToArray();
+            Assert.Equal(2f, (uv.Max(p => p.x) - uv.Min(p => p.x)) * texture.width, 3);
+            Assert.Equal(2f, (uv.Max(p => p.y) - uv.Min(p => p.y)) * texture.height, 3);
+
+            var returned = Drawn(Make("A\r\nB", font));
+            Assert.Equal(12, returned.vertexCount);
+            Assert.All(returned.vertices.Skip(4).Take(4), v => Assert.Equal(new Vector3(5f, -8f, 0f), v));
+            Assert.All(returned.uv.Skip(4).Take(4), p => Assert.Equal(Vector2.zero, p));
+        }
+
+        // Measured: new Font(name) is an empty custom font (not dynamic, ascent 0, lines 0.1 pixels
+        // apart) filled through characterInfo; a character it lacks is a point at the pen; its own
+        // uvs go to the quad's corners as given.
+        [Fact]
+        public void ScriptMadeCustomFontsLayOutTheirCharacterRects()
+        {
+            var font = new Font("Probe custom");
+            Assert.False(font.dynamic);
+            var a = new CharacterInfo { index = 'A', advance = 9, minX = 1, maxX = 8, minY = -2, maxY = 10 };
+            a.uvTopLeft = new Vector2(0f, 1f); a.uvTopRight = new Vector2(0.5f, 1f);
+            a.uvBottomRight = new Vector2(0.5f, 0f); a.uvBottomLeft = new Vector2(0f, 0f);
+            font.characterInfo = new[] { a };
+            var text = Make("AxA\nA", font);
+            var mesh = Drawn(text);
+            Assert.Equal(16, mesh.vertexCount);
+            Assert.Equal((new Vector2(1f, -2f), new Vector2(8f, 10f)), Quad(mesh.vertices, 0));
+            Assert.All(mesh.vertices.Skip(4).Take(4), v => Assert.Equal(new Vector3(9f, 0f, 0f), v));
+            Assert.Equal(10f, Quad(mesh.vertices, 2).min.x);
+            Assert.Equal(-2f - Font.NewFontLineSpacing, Quad(mesh.vertices, 3).min.y, 4);
+            Assert.Equal(new[] { a.uvTopLeft, a.uvTopRight, a.uvBottomRight, a.uvBottomLeft }, mesh.uv.Take(4));
+            Assert.Equal(Font.NewFontLineSpacing, mesh.bounds.size.y, 4);
+        }
+
+        // Measured: a size (or style) override on a font that is not dynamic warns when it is set
+        // after the font, as when the font is set after it.
+        [Fact]
+        public void OverridesOnACustomFontWarn()
+        {
+            string version = ProjectInfo.UnityVersion;
+            try
+            {
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                var text = Make("A", new Font("Probe custom"));
+                m_Reports.Clear();
+                text.fontSize = 30;
+                Assert.Contains("Warning: Font size and style overrides are only supported for dynamic fonts.", m_Reports);
+                m_Reports.Clear();
+                text.font = BoxFont();
+                text.fontStyle = FontStyle.Bold;
+                Assert.Empty(m_Reports);
+            }
+            finally { ProjectInfo.UnityVersion = version; }
+        }
+
+        // The MeshRenderer draws the TextMesh's mesh, not its MeshFilter's.
         [Fact]
         public void MeshRendererDrawsTheTextMeshInsteadOfTheMeshFilter()
         {
@@ -227,41 +330,50 @@ namespace Unbound.Tests
             Assert.NotNull(mesh);
             Assert.NotSame(other, mesh);
             Assert.Equal(4, mesh.vertexCount);
-            Assert.Equal(new Vector3(-1f, -9f, 0f), renderer.localBounds.min);
-            Assert.Equal(new Vector3(6f, 0f, 0f), renderer.localBounds.max);
-            // Drawn with the renderer's own material: Unbound assigns none.
+            Assert.Equal(new Vector3(0f, -10f, 0f), renderer.localBounds.min);
+            Assert.Equal(new Vector3(5f, 0f, 0f), renderer.localBounds.max);
             Assert.Same(material, renderer.sharedMaterial);
         }
 
-        // Loud, not silent: a TextMesh whose MeshRenderer has no material (as one added by script
-        // has) is reported once per regeneration through the stub report. Unbound's choice
-        // (unmeasured): no material is assigned. Red at 6eb03391: nothing is reported; red at the
-        // stub: nothing is drawn.
+        // Measured: AddComponent gives a renderer without a material the font's material, keeps
+        // one the renderer has, and a later font change changes no material.
+        [Fact]
+        public void AddedTextMeshesTakeTheFontMaterialOnlyWhenTheRendererHasNone()
+        {
+            var go = new GameObject("preset");
+            m_Made.Add(go);
+            var preset = new Material(Shader.Create("Probe/Preset", 2000));
+            go.AddComponent<MeshRenderer>().sharedMaterial = preset;
+            var text = go.AddComponent<TextMesh>();
+            Assert.Same(preset, go.GetComponent<MeshRenderer>().sharedMaterial);
+            text.font = BoxFont();
+            Assert.Same(preset, go.GetComponent<MeshRenderer>().sharedMaterial);
+        }
+
+        // Loud, not silent: a TextMesh whose MeshRenderer has no material is reported once per
+        // regeneration through the stub report.
         [Fact]
         public void AMissingMaterialIsReported()
         {
             static int Hits() => Stubs.HitReport().FirstOrDefault(h => h.Key == "TextMesh without a material").Value;
             int before = Hits();
             var text = Make("AB", BoxFont());
+            text.GetComponent<MeshRenderer>().sharedMaterials = new Material[1];
             Assert.NotNull(Drawn(text));
             Assert.Equal(before + 1, Hits());
         }
 
-        // Without a font nothing is drawn, not even a MeshFilter's mesh.
-        // Red at the stub: the renderer draws the MeshFilter's mesh.
+        // Measured: a TextMesh without a font (none set, or set to null) uses the built-in
+        // LegacyRuntime.ttf, which its font property answers.
         [Fact]
-        public void NoFontDrawsNothing()
+        public void WithoutAFontTheBuiltInFontIsUsed()
         {
             var text = Make("AB", null);
-            var other = new Mesh { vertices = new[] { Vector3.zero, Vector3.right, Vector3.up }, triangles = new[] { 0, 1, 2 } };
-            text.gameObject.AddComponent<MeshFilter>().sharedMesh = other;
-            var renderer = text.GetComponent<MeshRenderer>();
-            Assert.Null(renderer.DrawGeometry(out _));
-            Assert.Equal(default(Bounds), renderer.localBounds);
+            Assert.Same(Font.GetDefault(), text.font);
             text.font = BoxFont();
-            Assert.Equal(8, renderer.DrawGeometry(out _).vertexCount);
+            Assert.Equal(8, text.GetComponent<MeshRenderer>().DrawGeometry(out _).vertexCount);
             text.font = null;
-            Assert.Null(renderer.DrawGeometry(out _));
+            Assert.Same(Font.GetDefault(), text.font);
         }
 
         // A TextMesh as Unity 6000.0's shipped data serializes it (the URP package samples'
@@ -331,7 +443,7 @@ namespace Unbound.Tests
             Assert.Equal(50, text.fontSize);
             Assert.Equal(FontStyle.Italic, text.fontStyle);
             Assert.False(text.richText);
-            Assert.Null(text.font);
+            Assert.Same(Font.GetDefault(), text.font);
             Assert.Equal((Color)new Color32(0x11, 0x22, 0x33, 0x44), text.color);
             Assert.Same(text, text.gameObject.GetComponent<TextMesh>());
             Assert.DoesNotContain(m_Reports, r => r.Contains("TextMesh serializedVersion"));
