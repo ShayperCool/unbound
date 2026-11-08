@@ -178,7 +178,7 @@ class GateCacheTests(unittest.TestCase):
 
 
 TRAIN_CALLER = r'''
-import json, os, sys, time
+import contextlib, json, os, sys, time
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 import land, land_train
@@ -211,6 +211,33 @@ if os.environ.get('TRAIN_CRASH_AFTER_ADVANCE'):
     def crash(*args, **kwargs):
         os._exit(73)
     land_train.LandTrain.record = crash
+if os.environ.get('TRAIN_PAUSE_LOCK'):
+    original_lock = land.land_lock
+    @contextlib.contextmanager
+    def paused_lock(*args, **kwargs):
+        (land.STATE/'before-lock').write_text('waiting')
+        while (land.STATE/'pause-lock').exists():
+            time.sleep(.02)
+        with original_lock(*args, **kwargs) as value:
+            yield value
+    land.land_lock = paused_lock
+if os.environ.get('TRAIN_PAUSE_LEADER'):
+    original_lead = land_train.LandTrain.lead
+    def paused_lead(self):
+        (land.STATE/'leader-running').write_text('waiting')
+        while (land.STATE/'pause-leader').exists():
+            time.sleep(.02)
+        return original_lead(self)
+    land_train.LandTrain.lead = paused_lead
+if os.environ.get('TRAIN_CRASH_FINAL') or os.environ.get('TRAIN_CRASH_PREFIX'):
+    original_record = land_train.LandTrain.record
+    def crash_record(self, entry, result):
+        if os.environ.get('TRAIN_CRASH_FINAL') and entry['branch'] == 'second':
+            os._exit(73)
+        original_record(self, entry, result)
+        if os.environ.get('TRAIN_CRASH_PREFIX') and entry['branch'] == 'first':
+            os._exit(73)
+    land_train.LandTrain.record = crash_record
 sys.argv = ['land.py', *sys.argv[4:]]
 raise SystemExit(land.main())
 '''
@@ -269,13 +296,18 @@ class TrainIntegrationTests(unittest.TestCase):
         self.git('commit', '-qm', message or f'test(agents): train {name}', cwd=path)
         return path
 
-    def start(self, path, probes=(), *, crash=False):
+    def start(self, path, probes=(), *, crash=False, pause_lock=False, pause_leader=False,
+              crash_final=False, crash_prefix=False):
         log = self.root/(path.name+'.log')
         stream = log.open('w')
         env = dict(os.environ, UNBOUND_LAND_NO_PUSH='1')
-        env.pop('TRAIN_CRASH_AFTER_ADVANCE', None)
-        if crash:
-            env['TRAIN_CRASH_AFTER_ADVANCE'] = '1'
+        settings = {'TRAIN_CRASH_AFTER_ADVANCE': crash, 'TRAIN_PAUSE_LOCK': pause_lock,
+                    'TRAIN_PAUSE_LEADER': pause_leader, 'TRAIN_CRASH_FINAL': crash_final,
+                    'TRAIN_CRASH_PREFIX': crash_prefix}
+        for key, enabled in settings.items():
+            env.pop(key, None)
+            if enabled:
+                env[key] = '1'
         command = [sys.executable, str(self.caller), str(Path(land.__file__).parent),
                    str(self.state), str(self.events)]
         for probe in probes:
@@ -453,6 +485,42 @@ class TrainIntegrationTests(unittest.TestCase):
         self.assertEqual([code for code, _ in results], [73, 0], results)
         self.assertEqual({row['branch'] for row in self.rows()}, {'first', 'second'})
         self.assertEqual(len(self.rows()), 2)
+
+    def test_terminal_recovery_pushes_after_the_last_main_advance(self):
+        first = self.branch('first', {'a.txt': 'ok'})
+        second = self.branch('second', {'b.txt': 'ok'})
+        pause = self.state/'pause-leader'
+        pause.write_text('pause')
+        workers = [self.start(first, pause_leader=True, crash_final=True)]
+        self.wait_for(lambda: (self.state/'leader-running').exists(), 'leader did not acquire lock')
+        workers.append(self.start(second))
+        self.registered(2)
+        pause.unlink()
+        results = self.finish(workers)
+        self.assertEqual([code for code, _ in results], [73, 0], results)
+        self.assertEqual([row['branch'] for row in self.rows()], ['first', 'second'])
+        self.assertEqual(sum('"push"' in line for line in self.events.read_text().splitlines()), 1)
+
+    def ready_caller_recovers(self, final):
+        first = self.branch('first', {'a.txt': 'ok'})
+        second = self.branch('second', {'b.txt': 'ok'})
+        pause = self.state/'pause-lock'
+        pause.write_text('pause')
+        workers = [self.start(first, pause_lock=True)]
+        self.wait_for(lambda: (self.state/'before-lock').exists(), 'first caller did not register')
+        workers.append(self.start(second, crash_final=final, crash_prefix=not final))
+        self.assertEqual(workers[1][0].wait(timeout=20), 73, workers[1][1].read_text())
+        pause.unlink()
+        results = self.finish(workers)
+        self.assertEqual(results[0][0], 0, results)
+        self.assertEqual([row['branch'] for row in self.rows()], ['first', 'second'] if final else ['first'])
+        self.assertEqual(sum('"push"' in line for line in self.events.read_text().splitlines()), 1)
+
+    def test_ready_caller_recovers_another_advanced_branch(self):
+        self.ready_caller_recovers(True)
+
+    def test_ready_caller_pushes_an_advanced_prefix(self):
+        self.ready_caller_recovers(False)
 
     def test_cancelled_waiter_is_removed_without_landing_its_branch(self):
         first = self.branch('first', {'a.txt': 'ok'})

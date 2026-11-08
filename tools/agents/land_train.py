@@ -214,6 +214,10 @@ class LandTrain:
         self.queue.update(entry['id'], result=result)
 
     def recover(self, entries):
+        rows = []
+        history = self.api.STATE/'landed.jsonl'
+        if history.exists():
+            rows = [json.loads(line) for line in history.read_text().splitlines()]
         for entry in entries:
             prepared = entry.get('prepared')
             if prepared and self.ancestor(prepared['new'], 'main'):
@@ -222,7 +226,26 @@ class LandTrain:
                 if not self.queue.live(entry):
                     self.queue.remove(entry['id'])
             elif not self.queue.live(entry):
+                # A previous prefix can have a result already, while its leader
+                # exits before advancing the next branch or pushing that prefix.
+                if prepared and any(row.get('train_id') == prepared['train_id']
+                                    and self.ancestor(row['new'], 'main') for row in rows):
+                    self.advanced = True
                 self.queue.remove(entry['id'])
+
+    def recover_ready(self, request):
+        self.advanced = False
+        self.worktree = Path(request['worktree'])
+        self.repo = request['repo']
+        main_checkout = self.api.main_worktree(cwd=self.worktree)
+        if main_checkout:
+            self.worktree = Path(main_checkout)
+        try:
+            self.recover([item for item in self.queue.entries()
+                          if item['repo'] == self.repo and not item.get('result')])
+        finally:
+            if self.advanced and main_checkout:
+                self.api.push_main(main_checkout)
 
     def oracle(self, entry, before, after, workspace):
         log = self.log_path('oracle-'+entry['id'][:10])
@@ -374,6 +397,13 @@ class LandTrain:
         if main_checkout:
             self.worktree = Path(main_checkout)
         pending = [item for item in records if item['repo'] == self.repo and not item.get('result')]
+        try:
+            self.integrate(pending, main_checkout)
+        finally:
+            if self.advanced and main_checkout:
+                self.api.push_main(main_checkout)
+
+    def integrate(self, pending, main_checkout):
         self.recover(pending)
         # Earlier leaders cannot still hold the land lock. Their candidate tips are
         # either on main, retained by a checkout, or rebuilt from the original heads.
@@ -393,7 +423,6 @@ class LandTrain:
         if not original:
             workspace.create()
         print(f'land: train {self.id[:12]}: {len(pending)} queued branches', flush=True)
-        landed = False
         try:
             while pending:
                 base = self.git('rev-parse', 'main')
@@ -407,7 +436,6 @@ class LandTrain:
                     continue
                 if outcome['code'] == 0:
                     self.advance(entries, outcome, context, [], main_checkout, workspace)
-                    landed = True
                     break
                 low, high, passing = 0, len(entries), None
                 failing = outcome
@@ -426,14 +454,11 @@ class LandTrain:
                 if low:
                     context = self.advance(entries[:low], passing, context, entries[low:],
                                            main_checkout, workspace)
-                    landed = True
                 bad = entries[low]
                 self.reject(bad, failing['code'], 'gate failed; full log: '+failing['log'], failing['log'])
                 pending = entries[low+1:]
         finally:
             workspace.close()
-            if (landed or self.advanced) and main_checkout:
-                self.api.push_main(main_checkout)
 
     def finish(self, request, result):
         if result['code']:
@@ -471,14 +496,21 @@ class LandTrain:
                    'build_environment': {key: os.environ.get(key) for key in BUILD_ENVIRONMENT}}
         with self.queue.register(request):
             while True:
-                current = next((item for item in self.queue.entries() if item['id'] == request['id']), None)
-                if current and current.get('result'):
+                records = self.queue.entries()
+                current = next((item for item in records if item['id'] == request['id']), None)
+                pending_recovery = any(item['repo'] == request['repo'] and item.get('prepared')
+                                       and not item.get('result') for item in records)
+                if current and current.get('result') and not pending_recovery:
                     return self.finish(current, current['result'])
                 # Join the same blocking lock queue as older callers. Polling a
                 # nonblocking lock could starve behind a continuous legacy queue.
                 with self.api.land_lock(branch):
                     current = next((item for item in self.queue.entries() if item['id'] == request['id']), None)
                     if current and current.get('result'):
-                        continue
-                    self.lead()
+                        self.recover_ready(current)
+                    else:
+                        self.lead()
+                current = next((item for item in self.queue.entries() if item['id'] == request['id']), None)
+                if current and current.get('result'):
+                    return self.finish(current, current['result'])
                 time.sleep(POLL_SECONDS)
