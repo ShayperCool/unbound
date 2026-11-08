@@ -62,6 +62,8 @@ public static class ProbeRunner
             groups[name] = group;
             owners[name] = owner;
         }
+        if (child != null)
+            ((UnityEngine.Audio.AudioMixer)child).outputAudioMixerGroup = (UnityEngine.Audio.AudioMixerGroup)groups[DuckProbe.Option(key, "route=", "Master")];
         // First create every unit in chain order, then resolve the send targets.
         var units = new Dictionary<string, object>();
         var sends = new List<(object, string)>();
@@ -128,17 +130,25 @@ public static class ProbeRunner
         }
         string change = DuckProbe.Option(key, "change=", "");
         if (change != "") {
-            var unit = units[change == "Send Level" ? "Voice.Send" : "Music.Duck"];
+            var unit = units[change == "Send Level" ? "Voice.Send" : change == "Volume" ? "Music.Att" : "Music.Duck"];
             ((UnityEngine.Object)snapshot).name = "Base";
             Call(mixer, "CloneNewSnapshotFromTarget", true);
             var other = Get(mixer, "TargetSnapshot"); ((UnityEngine.Object)other).name = "Other";
             float to = float.Parse(DuckProbe.Option(key, "to=", "0"), CultureInfo.InvariantCulture);
-            if (change == "Send Level") Call(unit, "SetValueForMixLevel", mixer, other, to);
+            if (change == "Volume") Call(groups["Music"], "SetValueForVolume", mixer, other, to);
+            else if (change == "Send Level") Call(unit, "SetValueForMixLevel", mixer, other, to);
             else Call(unit, "SetValueForParameter", mixer, other, change, to);
+            object guid = change == "Volume" ? Call(groups["Music"], "GetGUIDForVolume") : change == "Send Level" ? Call(unit, "GetGUIDForMixLevel") : Call(unit, "GetGUIDForParameter", change);
+            int curve = int.Parse(DuckProbe.Option(key, "curve=", "0"));
+            if (curve != 0) {
+                var value = Enum.ToObject(T("ParameterTransitionType"), curve);
+                Call(other, "SetTransitionTypeOverride", guid, value);
+                Call(snapshot, "SetTransitionTypeOverride", guid, Enum.ToObject(T("ParameterTransitionType"), int.Parse(DuckProbe.Option(key, "basecurve=", curve.ToString()))));
+            }
             Set(mixer, "TargetSnapshot", snapshot);
             var type = T("ExposedAudioParameter"); var item = Activator.CreateInstance(type);
             type.GetField("name", F).SetValue(item, "Change");
-            type.GetField("guid", F).SetValue(item, change == "Send Level" ? Call(unit, "GetGUIDForMixLevel") : Call(unit, "GetGUIDForParameter", change));
+            type.GetField("guid", F).SetValue(item, guid);
             var exposed = Array.CreateInstance(type, 1); exposed.SetValue(item, 0); Set(mixer, "exposedParameters", exposed);
         }
         EditorUtility.SetDirty((UnityEngine.Object)mixer);

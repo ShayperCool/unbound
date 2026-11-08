@@ -119,12 +119,49 @@ public class DuckProbe : MonoBehaviour
         new[] { "timed_send_scaled_half", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "scale=0.5" },
         new[] { "timed_send_scaled_pause", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "scale=0" },
         new[] { "timed_threshold_scaled_half", "voice=step0:0.5", "change=Threshold", "to=-25", "snapshot=1", "duration=0.1", "scale=0.5" },
+        new[] { "curve_send_smooth", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=1" },
+        new[] { "curve_threshold_smooth", "voice=step0:0.5", "change=Threshold", "to=-25", "snapshot=1", "duration=0.1", "curve=1" },
+        new[] { "curve_volume_smooth", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "curve=1" },
+        new[] { "curve_send_squared", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=2" },
+        new[] { "curve_threshold_squared", "voice=step0:0.5", "change=Threshold", "to=-25", "snapshot=1", "duration=0.1", "curve=2" },
+        new[] { "curve_volume_squared", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "curve=2" },
+        new[] { "curve_send_sqrt", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=3" },
+        new[] { "curve_threshold_sqrt", "voice=step0:0.5", "change=Threshold", "to=-25", "snapshot=1", "duration=0.1", "curve=3" },
+        new[] { "curve_volume_sqrt", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "curve=3" },
+        new[] { "curve_send_start", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=4" },
+        new[] { "curve_threshold_start", "voice=step0:0.5", "change=Threshold", "to=-25", "snapshot=1", "duration=0.1", "curve=4" },
+        new[] { "curve_volume_start", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "curve=4" },
+        new[] { "curve_send_end", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=5" },
+        new[] { "curve_threshold_end", "voice=step0:0.5", "change=Threshold", "to=-25", "snapshot=1", "duration=0.1", "curve=5" },
+        new[] { "curve_volume_end", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "curve=5" },
+        new[] { "curve_ratio_min", "voice=step0:0.5", "Music.Duck.Ratio=10", "change=Ratio", "to=0.2", "snapshot=1", "duration=0.1", "curve=1" },
+        new[] { "curve_attack", "voice=step0:0.5", "change=Attack Time", "to=0.01", "snapshot=1", "duration=0.1", "curve=1" },
+        new[] { "curve_release", "voice=step0:0.5", "change=Release Time", "to=0.01", "snapshot=1", "duration=0.1", "curve=1" },
+        new[] { "curve_makeup", "voice=step0:0.5", "change=Make-up Gain", "to=6", "snapshot=1", "duration=0.1", "curve=1" },
+        new[] { "curve_knee", "voice=step0:0.5", "change=Knee", "to=40", "snapshot=1", "duration=0.1", "curve=1" },
+        new[] { "curve_mix", "voice=step0:0.5", "change=Sidechain Mix", "to=0.3", "snapshot=1", "duration=0.1", "curve=1" },
+        new[] { "curve_weighted_smooth", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=1", "basecurve=0", "weight=0.75" },
+        new[] { "curve_dry_smooth", "Music:Att", "Voice:Att", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "curve=1" },
+        new[] { "curve_weighted_squared", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=2", "basecurve=0", "weight=0.75" },
+        new[] { "curve_dry_squared", "Music:Att", "Voice:Att", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "curve=2" },
+        new[] { "curve_weighted_sqrt", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=3", "basecurve=0", "weight=0.75" },
+        new[] { "curve_dry_sqrt", "Music:Att", "Voice:Att", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "curve=3" },
+        new[] { "curve_weighted_start", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=4", "basecurve=0", "weight=0.75" },
+        new[] { "curve_dry_start", "Music:Att", "Voice:Att", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "curve=4" },
+        new[] { "curve_weighted_end", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=5", "basecurve=0", "weight=0.75" },
+        new[] { "curve_dry_end", "Music:Att", "Voice:Att", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "curve=5" },
+        new[] { "curve_start_paused", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=4", "scale=0" },
+        new[] { "curve_weighted_blend", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=1", "basecurve=0", "weight=0.25", "returnweight=0.75" },
+        new[] { "curve_weighted_same", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=1", "weight=0.75" },
+        new[] { "curve_weighted_single", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "curve=1", "single=1" },
     };
     // These connections are outside the Editor's Send destination menu. Record separately:
     // an invalid graph may prevent the Editor from entering Play mode.
     public static readonly string[][] DiagnosticCases = {
         new[] { "timed_send_unscaled_pause", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "scale=0", "unscaled=1" },
         new[] { "timed_threshold_unscaled_pause", "voice=step0:0.5", "change=Threshold", "to=-25", "snapshot=1", "duration=0.1", "scale=0", "unscaled=1" },
+        new[] { "cross_routed_receive", "cross=Voice", "route=Music", "music=dc0", "voice=imp0", "Music:Receive,Att", "Voice:Send>Music,Att" },
+        new[] { "cross_routed_duck", "cross=Voice", "route=Music", "music=dc0", "voice=step0:0.5" },
         new[] { "cross_send_receive", "cross=Voice", "music=dc0", "voice=imp0", "Music:Receive,Att", "Voice:Send>Music,Att" },
         new[] { "cross_send_duck", "cross=Voice", "music=dc0", "voice=step0:0.5" },
         new[] { "cross_receive", "cross=Music", "music=dc0", "voice=imp0", "Music:Receive,Att", "Voice:Send>Music,Att" },
@@ -271,8 +308,10 @@ public class DuckProbe : MonoBehaviour
                     if ((block == 8 || block == 20) && Option(key, "change=", "") != "") {
                         if (Option(key, "snapshot=", "0") == "1") {
                             float duration = float.Parse(Option(key, "duration=", "0"), System.Globalization.CultureInfo.InvariantCulture);
-                            if (Option(key, "weight=", "") != "") {
-                                float weight = block == 8 ? float.Parse(Option(key, "weight=", "1"), System.Globalization.CultureInfo.InvariantCulture) : 0f;
+                            if (Option(key, "single=", "0") == "1")
+                                mixer.TransitionToSnapshots(new[] { mixer.FindSnapshot(block == 8 ? "Other" : "Base") }, new[] { 1f }, duration);
+                            else if (Option(key, "weight=", "") != "") {
+                                float weight = float.Parse(Option(key, block == 8 ? "weight=" : "returnweight=", block == 8 ? "1" : "0"), System.Globalization.CultureInfo.InvariantCulture);
                                 mixer.TransitionToSnapshots(new[] { mixer.FindSnapshot("Base"), mixer.FindSnapshot("Other") }, new[] { 1f - weight, weight }, duration);
                             } else mixer.FindSnapshot(block == 8 ? "Other" : "Base").TransitionTo(duration);
                         }

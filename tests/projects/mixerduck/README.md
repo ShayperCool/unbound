@@ -11,7 +11,7 @@ case records 32 complete 1024-frame stereo DSP blocks of the master group sink f
 (`<case>.master.f32`) and the returned device PCM (`<case>.f32`). No samples are shifted, trimmed or
 discarded.
 
-The 100 cases (`Cases` in `Assets/Scripts/DuckProbe.cs`) cover:
+The 135 cases (`Cases` in `Assets/Scripts/DuckProbe.cs`) cover:
 
 - Duck Volume: sidechain levels below, in and above the knee; linear ramps of the sidechain level
   for the static curve at Threshold, Ratio (expanding 0.2 and 10), Knee 0/50 and Make-up Gain;
@@ -32,8 +32,11 @@ and routing-unit startup placement controls. Changes occur before rendering bloc
 a late-source control starts at block 3. The complete earlier 51-case references remain bit for bit
 unchanged. Q141 adds linear timed snapshots for Send Level and every Duck parameter, weighted
 Send/threshold snapshots, half-speed and paused scaled-time controls, and ordinary mixer-output
-routing. Unscaled timed sidechain snapshots, non-linear transition overrides and cross-mixer sends
-remain explicit failures. The Editor
+routing. Q167 adds all five nonlinear transition overrides on Send Level, Duck parameters and ordinary
+volumes, dry volume controls, paused BrickwallStart, and weighted-array controls. Single-snapshot
+transitions apply overrides; TransitionToSnapshots uses linear interpolation even with a single
+element and matching overrides. Unscaled timed sidechain snapshots and cross-mixer sends remain
+explicit failures. The Editor
 has no wet-mixing control for Send or Duck Volume; see docs/AUDIO.md for the 6000.0 contracts,
 measured rules and follow-ups.
 The Ratio 10-to-0.2 boundary has timed and immediate controls. The timed case also records the
@@ -67,7 +70,7 @@ counts failures per case.
 `Authored/unity-6000.0.71f1/default/` holds every file a Native run authored in the Editor: mixer
 assets, the scene, `.meta` GUIDs, the Editor's ProjectSettings and `packages-lock.json`.
 `authored.json` records the authoring command and the hash of every fixture file it started from.
-The set was recorded with `tests/authored_project.py record` from the 48 kHz Native project of a
+The set was refreshed for Q167 with `tests/authored_project.py record` from the 48 kHz Native project of a
 gate run whose captures passed at both rates; the authoring reads no rate, and the two rates'
 projects differ only in random GUIDs. `run.py` assembles it and starts no Editor; `run.py --native`
 authors a fresh private Native project per rate in the Editor instead, as before. A set is refused
@@ -81,13 +84,13 @@ python3 tests/authored_project.py record mixerduck default --release 6000.0.71f1
 
 The tolerances are ATOL `2e-5` and RTOL `2e-4` on floats, as in the other mixer probes, and exact
 on metadata. Independent Native repeats compare float bits exactly and agree at both rates
-(13107403/13107403 values each). The canonical reference is one capture per rate in
+(17694993/17694993 values each). The canonical reference is one capture per rate in
 `Reference/unity-6000.0.71f1/rate-<rate>/`, with gzip sample files. Both raw repeats stay in the
 cache.
 
 ## Result
 
-Gate: 13107403/13107403 values at 48000 Hz and at 44100 Hz. Independent Editor repeats agree exactly;
+Gate: 17694993/17694993 values at 48000 Hz and at 44100 Hz. Independent Editor repeats agree exactly;
 every earlier reference value and sample is retained. The strict comparison keeps one-step
 device PCM flips whose master floats pass, listed in docs/COMPATIBILITY_GAPS.md. `pcm.py` checks
 every device sample against saturating truncation of its own master sample; both captures have
@@ -96,6 +99,7 @@ The original 84 engine cases also compare bit for bit before and after the timed
 change: 11010218 values at each rate.
 
 The opt-in `DiagnosticCases` are excluded from the canonical capture. Run one at a time with
-`native.py --cases <case>`. Cross-mixer targets report an invalid audio handle and can prevent
+`native.py --cases <case>`. The routed controls connect the child's output directly to the receiving group as well as its
+Send target. Cross-mixer targets report an invalid audio handle and can prevent
 Play mode. Unscaled transitions use wall time even under captureDeltaTime, so their repeats are
 not bit-identical. Neither diagnostic establishes a supported DSP rule.
