@@ -14,6 +14,7 @@ the Navigation window does: the scene's `NavMeshSettings.m_NavMeshData` referenc
 | `additive` | after `LoadSceneAsync("Second", Additive)`: both NavMeshes' triangulation, samples over the second, whether its agent is on the NavMesh, paths to and within it |
 | `agent2` | the second scene's agent's position then |
 | `unloaded` | after `UnloadSceneAsync("Second")`: the first scene's NavMesh alone again |
+| `resume.*` | where in the player loop asynchronous operations complete and the coroutines waiting for them resume (`Assets/Scripts/ResumeTiming.cs`; a marker before every player-loop system names the next one): the additive load and unload above (`load`, `unload`, with the second scene's agent as found and moved), the same load held by `allowSceneActivation` (`held`), `Resources.LoadAsync` with completed handlers added before and after a coroutine waits and a second waiting coroutine, then yielded again once done (`resources`), `InstantiateAsync` (`instantiate`) |
 
 The level is `ProbeSetup.Create`'s (`Assets/Editor`): a ground with a Mud strip, a step, a 1.5 m
 platform (OffMeshLink generation on, ledge drop height 2), the OffMeshLink and an agent; the second
@@ -28,9 +29,12 @@ scene is a ground 2 m beyond the first one's and an agent. Both scenes, their Na
 `check` runs Unbound on a fresh copy under `$XDG_CACHE_HOME/unbound/validation/runs/navbaked/`
 and compares it with the reference using `tests/projects/navmesh/compare.py` (numbers within 1e-3,
 text exactly; every missing, extra or differing value is listed). It exits with the scenarios of the
-scene's NavMesh itself (`awake`, `areas`, `baked`, `paths`, `additive`, `unloaded`); `sample`,
-`raycast`, `agent` and `agent2` measure the general queries and agent model and are listed, not
-gated (their residuals: docs/COMPATIBILITY_GAPS.md, the legacy-baked NavMesh row).
+scene's NavMesh itself (`awake`, `areas`, `baked`, `paths`, `additive`, `unloaded`), the second
+scene's agent (`agent2`) and the resume points (`resume.unload`, `resume.held`,
+`resume.resources`, `resume.instantiate`); `sample`, `raycast`, `agent` and `resume.load` (the
+first load's frame) measure the general queries, the agent model and scene loading time and are
+listed, not gated (their residuals: docs/COMPATIBILITY_GAPS.md, the legacy-baked NavMesh and
+asynchronous operation rows).
 
-The reference `Reference/unity-6000.0.71f1.json` holds 1291 values, SHA-256
-`9d94959b488ec164107d2a542a71fc7f2a23dcb1a867c7bd4cd7ce5d62790983`.
+The reference `Reference/unity-6000.0.71f1.json` holds 1335 values, SHA-256
+`3b38f65dc7b959238afcd1d51730f23cb0f7e0ec5a6df600d438734885e41d68`.

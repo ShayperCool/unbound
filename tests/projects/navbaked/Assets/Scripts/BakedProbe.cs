@@ -14,7 +14,8 @@ using UnityEngine.SceneManagement;
 /// write: whether it is there in Awake, its triangulation, samples, raycasts and paths (area cost
 /// and mask, a step, a one-way OffMeshLink up and the bake's drop links down), an agent walked
 /// up and back down at a fixed 0.02 s step, then the additive load of a second baked scene and
-/// its unload.
+/// its unload; then where in the player loop asynchronous operations complete and the coroutines
+/// waiting for them resume (<see cref="ResumeTiming"/>).
 /// </summary>
 public class BakedProbe : MonoBehaviour
 {
@@ -87,7 +88,10 @@ public class BakedProbe : MonoBehaviour
             }
         }
 
-        yield return SceneManager.LoadSceneAsync("Second", LoadSceneMode.Additive);
+        // Player-loop markers for the resume.* scenarios (ResumeTiming), from here on.
+        ResumeTiming.Install();
+        yield return ResumeTiming.Load();
+        ResumeTiming.Resumed("load");
         Scenario("additive", () =>
         {
             Triangulation("both");
@@ -97,7 +101,13 @@ public class BakedProbe : MonoBehaviour
             Path("second", new Vector3(13f, 0f, -3f), new Vector3(21f, 0f, 3f), NavMesh.AllAreas);
         });
         Scenario("agent2", () => ProbeLog.Value("position", GameObject.Find("Agent2").transform.position));
-        yield return SceneManager.UnloadSceneAsync("Second");
+        // Two frames more, for the agent's transform in resume.load.
+        yield return null;
+        yield return null;
+        yield return ResumeTiming.Unload();
+        ResumeTiming.Resumed("unload");
+        yield return null;
+        ResumeTiming.End();
         Scenario("unloaded", () =>
         {
             Triangulation("left");
@@ -105,6 +115,8 @@ public class BakedProbe : MonoBehaviour
             Sample("home", Home);
             Path("across", Home, new Vector3(17f, 0f, 0f), NavMesh.AllAreas);
         });
+
+        yield return ResumeTiming.Controls(this);
 
         File.WriteAllText(Out, ProbeLog.Json());
         Debug.Log("NavMesh baked probe written");
@@ -114,6 +126,8 @@ public class BakedProbe : MonoBehaviour
         Application.Quit();
 #endif
     }
+
+    void Update() => ResumeTiming.Update();
 
     static void Triangulation(string key)
     {

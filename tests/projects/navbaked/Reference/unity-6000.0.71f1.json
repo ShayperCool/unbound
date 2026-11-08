@@ -1257,6 +1257,25 @@
     "position.y": 0,
     "position.z": 2
   },
+  "resume.load": {
+    "e0": "f0 ? load.started done=false",
+    "e1": "f0 ? op done=false",
+    "e2": "f2 EarlyUpdate.UpdatePreloading sceneLoaded Second",
+    "e3": "f2 EarlyUpdate.UpdatePreloading load.resumed",
+    "e4": "f2 EarlyUpdate.UpdatePreloading load.completed",
+    "e5": "f2 EarlyUpdate.UpdateContentLoading agent2 y=0 onNavMesh=true",
+    "e6": "f2 EarlyUpdate.UpdateContentLoading op done=true",
+    "e7": "f2 PreUpdate.WindUpdate agent2 y=0.083 onNavMesh=true"
+  },
+  "resume.unload": {
+    "e0": "f0 Update.ScriptRunDelayedDynamicFrameRate unload.started done=false",
+    "e1": "f0 Update.ScriptRunDelayedDynamicFrameRate op done=false",
+    "e2": "f0 Update.ScriptRunDelayedTasks agent2 y=0.083 onNavMesh=true",
+    "e3": "f1 EarlyUpdate.UpdatePreloading unload.resumed",
+    "e4": "f1 EarlyUpdate.UpdatePreloading unload.completed",
+    "e5": "f1 EarlyUpdate.UpdateContentLoading agent2.gone",
+    "e6": "f1 EarlyUpdate.UpdateContentLoading op done=true"
+  },
   "unloaded": {
     "left.vertices": 85,
     "left.indices": 117,
@@ -1309,5 +1328,40 @@
     "across.found": false,
     "across.status": "PathInvalid",
     "across.corners": 0
+  },
+  "resume.held": {
+    "e0": "f0 Update.ScriptRunDelayedDynamicFrameRate held.started done=false",
+    "e1": "f0 Update.ScriptRunDelayedDynamicFrameRate op done=false",
+    "e2": "f1 Update.ScriptRunDelayedDynamicFrameRate held.progress=0.9+ done=false",
+    "e3": "f2 Update.ScriptRunDelayedDynamicFrameRate held.progress=0.9+ done=false",
+    "e4": "f3 Update.ScriptRunDelayedDynamicFrameRate held.progress=0.9+ done=false",
+    "e5": "f4 Update.ScriptRunBehaviourUpdate held.allow",
+    "e6": "f4 Update.ScriptRunBehaviourUpdate held.allowed done=false",
+    "e7": "f5 EarlyUpdate.UpdatePreloading sceneLoaded Second",
+    "e8": "f5 EarlyUpdate.UpdatePreloading held.resumed done=true",
+    "e9": "f5 EarlyUpdate.UpdatePreloading held.completed",
+    "e10": "f5 EarlyUpdate.UpdateContentLoading agent2 y=0 onNavMesh=true",
+    "e11": "f5 EarlyUpdate.UpdateContentLoading op done=true",
+    "e12": "f5 PreUpdate.WindUpdate agent2 y=0.083 onNavMesh=true"
+  },
+  "resume.resources": {
+    "e0": "f0 Update.ScriptRunDelayedDynamicFrameRate resources.started done=false",
+    "e1": "f0 Update.ScriptRunDelayedDynamicFrameRate op done=false",
+    "e2": "f1 EarlyUpdate.UpdatePreloading resources.first.resumed done=true",
+    "e3": "f1 EarlyUpdate.UpdatePreloading resources.handlerBefore",
+    "e4": "f1 EarlyUpdate.UpdatePreloading resources.completed",
+    "e5": "f1 EarlyUpdate.UpdatePreloading resources.handlerAfter",
+    "e6": "f1 EarlyUpdate.UpdateContentLoading op done=true",
+    "e7": "f1 Update.ScriptRunDelayedDynamicFrameRate resources.second.resumed done=true",
+    "e8": "f1 Update.ScriptRunDelayedDynamicFrameRate resources.resumed asset=ResumeProbe",
+    "e9": "f1 Update.ScriptRunDelayedDynamicFrameRate done.yield",
+    "e10": "f2 Update.ScriptRunDelayedDynamicFrameRate done.resumed"
+  },
+  "resume.instantiate": {
+    "e0": "f0 Update.ScriptRunDelayedDynamicFrameRate instantiate.started done=false",
+    "e1": "f0 Update.ScriptRunDelayedDynamicFrameRate op done=false",
+    "e2": "f1 EarlyUpdate.UpdateAsyncInstantiate instantiate.resumed result=1",
+    "e3": "f1 EarlyUpdate.UpdateAsyncInstantiate instantiate.completed",
+    "e4": "f1 EarlyUpdate.UpdateAsyncReadbackManager op done=true"
   }
 }
