@@ -202,6 +202,83 @@ class SlotTests(unittest.TestCase):
         self.assertFalse(path.exists())
         self.assertEqual(self.git('rev-parse', f'reaped-worktree/{head}'), head)
 
+    def test_reap_keeps_deep_run_links_through_a_cache_directory_alias(self):
+        base = Path(self.temp.name).resolve()
+        linked = base/'deep-linked'
+        self.git('worktree', 'add', '-q', '-b', 't3/deep-linked', str(linked), 'main')
+        (linked/'a.txt').write_text('unmerged\n')
+        self.git('commit', '-qam', 'unmerged', cwd=linked)
+        target = self.make_target(linked)
+        self.make_old(linked)
+        cache = Path(self.env['XDG_CACHE_HOME'])/'unbound'
+        external = base/'external-runs'
+        external.mkdir()
+        cache.mkdir(parents=True)
+        (cache/'validation').symlink_to(external, target_is_directory=True)
+        deep = external/'runs/probe/runs/label/project/Assets'
+        deep.parent.mkdir(parents=True)
+        deep.symlink_to(linked, target_is_directory=True)
+        # Internal aliases and cycles must not make the walk infinite or omit a link.
+        (external/'cycle').symlink_to(external, target_is_directory=True)
+        (cache/'cycle').symlink_to(cache, target_is_directory=True)
+        _, out = self.run_slot('reap', '--verbose')
+        self.assertTrue(linked.exists() and target.exists())
+        self.assertIn('a symlink under the run caches points into it', out)
+        self.assertIn('1 kept with unmerged commits', out)
+
+    @unittest.skipIf(os.geteuid() == 0, 'root can read a mode-000 directory')
+    def test_reap_refuses_to_delete_when_run_cache_links_cannot_be_scanned(self):
+        base = Path(self.temp.name).resolve()
+        checkout = base/'clean-idle'
+        self.git('worktree', 'add', '-q', '-b', 't3/clean-idle', str(checkout), 'main')
+        self.make_old(checkout)
+        unreadable = Path(self.env['XDG_CACHE_HOME'])/'unbound/private-runs'
+        unreadable.mkdir(parents=True)
+        unreadable.chmod(0)
+        try:
+            with self.assertRaises(SystemExit) as raised:
+                self.run_slot('reap')
+            self.assertIn('refusing to reap worktrees', str(raised.exception))
+            self.assertTrue(checkout.exists())
+        finally:
+            unreadable.chmod(0o700)
+
+    def test_reap_keeps_both_source_and_destination_of_a_reference_chain(self):
+        base = Path(self.temp.name).resolve()
+        source, destination, unused = [base/name for name in ('source', 'destination', 'unused')]
+        for path in (source, destination, unused):
+            self.git('worktree', 'add', '-q', '-b', f't3/{path.name}', str(path), 'main')
+            (path/'b.txt').write_text('unmerged\n')
+            self.git('add', '.', cwd=path)
+            self.git('commit', '-qm', 'unmerged', cwd=path)
+        (source/'a.txt').unlink()
+        (source/'a.txt').symlink_to(destination/'a.txt')
+        self.git('add', '.', cwd=source)
+        self.git('commit', '-qm', 'reference', cwd=source)
+        for path in (source, destination, unused):
+            self.make_old(path)
+        cache = Path(self.env['XDG_CACHE_HOME'])/'unbound/runs'
+        cache.mkdir(parents=True)
+        (cache/'reference').symlink_to(source/'a.txt')
+        self.run_slot('reap')
+        self.assertTrue(source.exists() and destination.exists())
+        self.assertFalse(unused.exists())
+
+    def test_parent_steps_after_a_directory_link_use_filesystem_resolution(self):
+        base = Path(self.temp.name).resolve()
+        checkout = base/'linked'
+        self.git('worktree', 'add', '-q', '-b', 't3/linked', str(checkout), 'main')
+        self.make_old(checkout)
+        external = base/'external'
+        (external/'child').mkdir(parents=True)
+        (external/'reference').symlink_to(checkout/'a.txt')
+        cache = Path(self.env['XDG_CACHE_HOME'])/'unbound/subdir'
+        cache.mkdir(parents=True)
+        (cache/'directory-alias').symlink_to(external/'child', target_is_directory=True)
+        (cache/'reference').symlink_to('directory-alias/../reference')
+        self.run_slot('reap')
+        self.assertTrue(checkout.exists())
+
 
 if __name__ == '__main__':
     unittest.main()

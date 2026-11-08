@@ -23,10 +23,12 @@ Slots live in $UNBOUND_SLOT_ROOT, else next to the build root (tools/build.py), 
 targets share the cache volume.
 """
 import argparse
+import errno
 import fcntl
 import os
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -157,19 +159,94 @@ def cmd_prepare(args, repo):
     return 0
 
 
-def symlink_targets(base, depth=5):
-    """Resolved destinations of the symlinks under the run caches (to depth), to protect live runs."""
+def symlink_targets(base, checkouts=()):
+    """Run-cache links at any depth, including caches stored behind top-level aliases."""
     found = set()
     if not base.is_dir():
         return found
-    for dirpath, dirnames, filenames in os.walk(base):
-        level = len(Path(dirpath).relative_to(base).parts)
-        for name in dirnames + filenames:
-            entry = Path(dirpath)/name
-            if entry.is_symlink():
-                found.add(Path(os.path.realpath(entry)))
-        if level >= depth:
-            dirnames[:] = []
+    base = base.resolve()
+    checkouts = set(checkouts)
+    # Compiler/Editor installations hold no live probe projects. Following the build
+    # cache would scan every private target on each reap.
+    excluded = {'builds', 'editors', 'tools'}
+    excluded_roots = {(base/name).resolve() for name in excluded}
+
+    def inside(path, roots):
+        return any(parent in roots for parent in (path, *path.parents))
+
+    def unreadable(error):
+        if error.errno in (errno.ENOENT, errno.ENOTDIR, errno.ELOOP):
+            return  # a run was cleaned up, or its link no longer resolves
+        raise SystemExit(f'cannot inspect run-cache links: {error}; refusing to reap worktrees')
+
+    targets = {}
+
+    def link_targets(path, parent):
+        raw = Path(os.readlink(path))
+        if raw.is_absolute():
+            target = raw
+        else:
+            # The traversal uses physical directories and never follows directory links.
+            # Only leading parent steps can be folded before resolving a target's links.
+            parts = list(raw.parts)
+            while parts and parts[0] == '..':
+                parent = parent.parent
+                parts.pop(0)
+            target = parent.joinpath(*parts)
+        found.add(target)  # keep a source checkout even when the target links onward
+        if target not in targets:
+            targets[target] = Path(os.path.realpath(target))
+        found.add(targets[target])
+        return targets[target]
+
+    roots = {base}
+    try:
+        for entry in base.iterdir():
+            if not entry.is_symlink():
+                continue
+            target = link_targets(entry, base)
+            if entry.name in excluded or inside(target, checkouts) or inside(target, excluded_roots):
+                continue
+            try:
+                directory = stat.S_ISDIR(entry.stat().st_mode)
+            except OSError as error:
+                unreadable(error)
+                continue
+            if directory:
+                if target.parent == target:
+                    raise SystemExit(f'cannot scan filesystem root through run-cache alias {entry}')
+                roots.add(target)
+    except OSError as error:
+        unreadable(error)
+
+    # A runtime alias into a cache already covered by another root needs no second walk.
+    roots = {root for root in roots if not any(parent in roots for parent in root.parents)}
+    pending, visited = list(roots), set()
+    while pending:
+        directory = pending.pop()
+        if inside(directory, checkouts):
+            found.add(directory)
+            if not directory.is_relative_to(base):
+                continue
+        try:
+            info = directory.stat()
+            identity = (info.st_dev, info.st_ino)
+            if identity in visited:
+                continue
+            visited.add(identity)
+            with os.scandir(directory) as entries:
+                for entry in entries:
+                    if directory == base and entry.name in excluded:
+                        continue
+                    try:
+                        if entry.is_symlink():
+                            link_targets(entry.path, directory)
+                        elif entry.is_dir(follow_symlinks=False):
+                            pending.append(Path(entry.path))
+                    except OSError as error:
+                        unreadable(error)
+        except OSError as error:
+            unreadable(error)
     return found
 
 
@@ -183,7 +260,8 @@ def cmd_reap(args, repo):
     cache = build.build_root()
     linked = None
     removed = kept_unmerged = 0
-    for path, head, branch in worktrees(repo):
+    entries = worktrees(repo)
+    for path, head, branch in entries:
         if not path.exists():
             continue
         if path == main or path.parent == root:
@@ -197,7 +275,7 @@ def cmd_reap(args, repo):
             reason = 'has changed or untracked paths'
         else:
             if linked is None:
-                linked = symlink_targets(run_cache())
+                linked = symlink_targets(run_cache(), checkouts=[entry[0] for entry in entries])
             if any(link == path or path in link.parents for link in linked):
                 reason = 'a symlink under the run caches points into it'
         if reason:
