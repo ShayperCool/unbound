@@ -651,6 +651,19 @@ struct NoStubsBuild {
     dll: PathBuf,
 }
 
+/// Build products belong to the source checkout, independently of the loaded runtime bundle.
+fn api_build_target(source: &Path, configured: Option<PathBuf>) -> Result<PathBuf> {
+    let checkout = source
+        .parent()
+        .and_then(Path::parent)
+        .context("the managed implementation has no checkout root")?;
+    Ok(match configured {
+        Some(path) if path.is_absolute() => path,
+        Some(path) => checkout.join(path),
+        None => checkout.join("target"),
+    })
+}
+
 /// Builds `managed/UnityEngine` without stubs (`-p:UnboundNoStubs=true`, own intermediate
 /// directory so the normal build stays incremental) into `target/managed-nostubs`.
 fn build_without_stubs(family: &str) -> Result<NoStubsBuild> {
@@ -658,11 +671,12 @@ fn build_without_stubs(family: &str) -> Result<NoStubsBuild> {
         .join("../../managed/UnityEngine")
         .canonicalize()
         .context("the managed/UnityEngine sources (this command runs from a Unbound checkout)")?;
-    let target = unbound_host::managed_dir()?
-        .canonicalize()?
-        .parent()
-        .context("the managed engine directory has no parent")?
-        .to_path_buf();
+    let target = api_build_target(
+        &source,
+        std::env::var_os("CARGO_TARGET_DIR")
+            .filter(|value| !value.is_empty())
+            .map(PathBuf::from),
+    )?;
     let no_stubs = target.join("managed-nostubs");
     let status = std::process::Command::new(unbound_host::dotnet_root()?.join("dotnet"))
         .args([
@@ -1366,6 +1380,24 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
 #[cfg(test)]
 mod stub_generation_tests {
     use super::*;
+
+    #[test]
+    fn api_build_outputs_do_not_depend_on_runtime_location() {
+        let source = Path::new("/checkout/managed/UnityEngine");
+        assert_eq!(
+            api_build_target(source, None).unwrap(),
+            Path::new("/checkout/target")
+        );
+        assert_eq!(
+            api_build_target(source, Some("/private/build".into())).unwrap(),
+            Path::new("/private/build")
+        );
+        assert_eq!(
+            api_build_target(source, Some("isolated".into())).unwrap(),
+            Path::new("/checkout/isolated")
+        );
+        assert!(api_build_target(Path::new("/"), None).is_err());
+    }
 
     fn report(errors: &[&str]) -> StubReport {
         serde_json::from_value(json!({
