@@ -1,0 +1,4 @@
+{
+  "commands": ["python3 tests/projects/textmesh/run.py gate"],
+  "summary": "textmesh: .*"
+}
