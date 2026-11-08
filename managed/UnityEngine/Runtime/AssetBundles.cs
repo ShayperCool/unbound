@@ -21,6 +21,8 @@ namespace UnityEngine
         internal readonly List<long> m_PreloadTable = new List<long>();
         internal string m_AssetFile;
         internal bool m_IsStreamedScene;
+        /// <summary>The AssetBundle cache version it was loaded from, in use until it unloads.</summary>
+        internal BundleCaches.Version m_CacheVersion;
         internal readonly List<(string Path, string Key)> m_Scenes = new List<(string, string)>();
         static readonly List<AssetBundle> s_Loaded = new List<AssetBundle>();
 
@@ -128,6 +130,16 @@ namespace UnityEngine
                 Debug.LogError($"Failed to read data for the AssetBundle '{description}'. ({e.Message})");
                 return null;
             }
+            return FromOpened(info, description, out _);
+        }
+
+        /// <summary>The AssetBundle of an archive the native side has opened (`bundle-open`'s
+        /// answer). Null, with the reason logged and given in <paramref name="error"/>, when
+        /// another bundle of the same files is loaded or its contents do not read; the archive is
+        /// closed then.</summary>
+        internal static AssetBundle FromOpened(JsonElement info, string description, out string error)
+        {
+            error = null;
             ulong id = info.GetProperty("id").GetUInt64();
             var bundle = new AssetBundle { m_NativeId = id };
             foreach (var f in info.GetProperty("files").EnumerateArray())
@@ -137,7 +149,8 @@ namespace UnityEngine
                 if (other.m_Files.Intersect(bundle.m_Files).Any())
                 {
                     Native.Call("bundle-close", JsonSerializer.Serialize(new { id }));
-                    Debug.LogError($"The AssetBundle '{description}' can't be loaded because another AssetBundle with the same files is already loaded.");
+                    error = $"The AssetBundle '{description}' can't be loaded because another AssetBundle with the same files is already loaded.";
+                    Debug.LogError(error);
                     return null;
                 }
             try
@@ -147,7 +160,8 @@ namespace UnityEngine
             catch (Exception e)
             {
                 Native.Call("bundle-close", JsonSerializer.Serialize(new { id }));
-                Debug.LogError($"Failed to read the AssetBundle '{description}': {e.Message}");
+                error = $"Failed to read the AssetBundle '{description}': {e.Message}";
+                Debug.LogError(error);
                 return null;
             }
             s_Loaded.Add(bundle);
@@ -375,6 +389,8 @@ namespace UnityEngine
         {
             if (m_NativeId == 0) return;
             s_Loaded.Remove(this);
+            if (m_CacheVersion != null) BundleCaches.Release(m_CacheVersion);
+            m_CacheVersion = null;
             foreach (var file in m_Files) BundleFiles.Unregister(file, unloadAllLoadedObjects);
             try { Native.Call("bundle-close", JsonSerializer.Serialize(new { id = m_NativeId })); }
             catch (Exception) { }
@@ -683,12 +699,3 @@ namespace UnityEngine
     }
 }
 
-namespace UnityEngine
-{
-    /// <summary>The cache of downloaded AssetBundles. The Editor's is set up before any script runs.</summary>
-    public sealed partial class Caching
-    {
-        [Unbound.EditorFaithful("the Editor's cache is ready before any script runs")]
-        public static bool ready => true;
-    }
-}

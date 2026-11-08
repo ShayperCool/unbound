@@ -120,11 +120,16 @@ namespace UnityEngine.Networking
             }
         }
 
-        /// <summary>Read by UnityWebRequest.Finish after a successful End: true when the handler
-        /// could not process the data it received and has already reported why, so the request
-        /// completes as a data processing error without another log entry. Opt-in: only the
-        /// AssetBundle handler sets it; every other handler keeps false.</summary>
-        internal virtual bool ProcessingFailed => false;
+        /// <summary>Read by UnityWebRequest.Finish after a successful End: the result the request
+        /// completes with when the handler could not process the data it received and has set its
+        /// own error: DataProcessingError, or ConnectionError for data it refused to write. Opt-in:
+        /// only the AssetBundle handler sets it; every other handler keeps null.</summary>
+        internal virtual UnityWebRequest.Result? CompletionFailure => null;
+
+        /// <summary>Called by SendWebRequest on the main thread as the request starts: true when the
+        /// handler already has the response (a cached AssetBundle), so the request completes
+        /// without a transfer.</summary>
+        internal virtual bool StartRequest() => false;
 
         void CheckDisposed()
         {

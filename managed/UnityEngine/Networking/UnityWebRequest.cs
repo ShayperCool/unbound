@@ -308,6 +308,14 @@ namespace UnityEngine.Networking
             m_Sent = true;
             m_Operation = new UnityWebRequestAsyncOperation { m_WebRequest = this };
             m_Cancel = new CancellationTokenSource();
+            // A handler with the response at hand (a cached AssetBundle) completes the request
+            // without a transfer: no response code, nothing downloaded.
+            if (m_DownloadHandler != null && !m_DownloadHandler.m_Disposed && m_DownloadHandler.StartRequest())
+            {
+                m_ResponseCode = 0;
+                Finish(Result.Success, null);
+                return m_Operation;
+            }
             if (m_Timeout > 0) m_Cancel.CancelAfter(TimeSpan.FromSeconds(m_Timeout));
             var token = m_Cancel.Token;
             Task.Run(() => RunAsync(token));
@@ -546,11 +554,13 @@ namespace UnityEngine.Networking
                         error = "Data Processing Error, see Download Handler error";
                     }
                     // A handler that opted in has reported its own failure: complete it the same
-                    // way without throwing, so nothing else is logged.
-                    if (result == Result.Success && m_DownloadHandler.ProcessingFailed)
+                    // way without throwing, so nothing else is logged. Data it refused to write
+                    // does not count as downloaded.
+                    if (result == Result.Success && m_DownloadHandler.CompletionFailure is { } failure)
                     {
-                        result = Result.DataProcessingError;
-                        error = "Data Processing Error, see Download Handler error";
+                        result = failure;
+                        error = failure == Result.ConnectionError ? "Unable to write data" : "Data Processing Error, see Download Handler error";
+                        if (failure == Result.ConnectionError) Interlocked.Exchange(ref m_DownloadedBytes, 0);
                     }
                 }
                 m_Result = result;

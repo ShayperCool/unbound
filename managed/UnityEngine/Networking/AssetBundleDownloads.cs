@@ -1,41 +1,59 @@
 using System;
+using System.IO;
+using System.Text.Json;
+using Unbound.Runtime;
 
 namespace UnityEngine.Networking
 {
     /// <summary>
-    /// Keeps the downloaded bytes and loads them as an AssetBundle through AssetBundle.LoadFromMemory,
-    /// with the handler's CRC. Unity's documentation (6000.0, Scripting API and the installed module
-    /// documentation) guarantees: a nonzero CRC that does not match logs an error and loads nothing;
-    /// with autoLoadAssetBundle the bundle is loaded as part of the request, otherwise on the first
-    /// access of assetBundle; autoLoadAssetBundle is false by default ("Default: false.",
-    /// https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/networking/downloadhandlerassetbundle/autoloadassetbundle);
-    /// an error decoding the bundle is logged and assetBundle returns null; assetBundle and GetContent
-    /// give the bundle or null; data and text throw NotSupportedException; isDownloadComplete is true
-    /// once the download part is complete.
+    /// Downloads an AssetBundle and opens it as the request completes; with a version, a hash or a
+    /// <see cref="CachedAssetBundle"/> it goes through the AssetBundle cache
+    /// (<see cref="BundleCaches"/>). As the Unity 6000.0.71f1 Editor does
+    /// (tests/projects/networkcaching):
     ///
-    /// Unbound's choices (unmeasured): by default (load on access) data that does not load leaves
-    /// the request's result Success; the first access logs the loader's error once, sets the
-    /// handler's error and returns null, and later accesses return null without loading again.
-    /// With autoLoadAssetBundle the bundle is loaded when the request completes, before its isDone,
-    /// its completed event and waiting coroutines see it; data that does not load completes the
-    /// request as DataProcessingError with the error "Data Processing Error, see Download Handler
-    /// error" (Unity documents that result for data "corrupted or not in the correct format"; its
-    /// use and that error text here are unmeasured), and only the loader's error is logged: no
-    /// exception is logged for it. The wording of the handler's messages is Unbound's own.
+    /// The archive is checked when the download completes, whether or not it loads then: a
+    /// nonzero CRC that does not match the uncompressed content, or data that is no archive,
+    /// completes the request as a DataProcessingError ("Data Processing Error, see Download
+    /// Handler error") with the reason as the handler's error ("CRC Mismatch. Provided …,
+    /// calculated … from data. Will not load AssetBundle '&lt;url&gt;'", "Failed to decompress data
+    /// for the AssetBundle '&lt;url&gt;'."), nothing logged, nothing cached. A cached request
+    /// whose version is in a cache completes without a transfer (response code 0, no bytes);
+    /// with a nonzero CRC the cached version is checked first and, when it does not match, removed
+    /// and downloaded again, a mismatch of that download then completing as a ConnectionError
+    /// ("Unable to write data") with no bytes downloaded. Otherwise a cached request keeps the
+    /// download in the current cache when there is room (bundle_cache) and the bundle loads from
+    /// the cache, which keeps that version in use until the bundle unloads.
     ///
-    /// The versioned, hashed and CachedAssetBundle constructors do not use a cache: Unbound has no
-    /// AssetBundle cache yet. They warn once, then download and load the bundle every time, as the
-    /// plain constructor does; nothing reports a cache hit.
+    /// The AssetBundle object is made on the first access to assetBundle (or GetContent), or with
+    /// the request when autoLoadAssetBundle is set (it is false by default, documented); when
+    /// another bundle of the same files is loaded it is null, the loader's error is logged and
+    /// then again as "Error while getting Asset Bundle: …", and the request stays Success.
+    /// isDownloadComplete is true once the request has finished, whatever its result. data and
+    /// text throw NotSupportedException.
+    ///
+    /// Unbound's choices (unmeasured): with autoLoadAssetBundle, a bundle that does not load
+    /// completes the request as a DataProcessingError with the loader's error as the handler's;
+    /// a cached version that does not open is removed and downloaded again; the cached version is
+    /// opened on the main thread as the request is sent.
     /// </summary>
     public sealed partial class DownloadHandlerAssetBundle : DownloadHandler
     {
-        readonly System.IO.MemoryStream m_Stream = new System.IO.MemoryStream();
+        readonly MemoryStream m_Stream = new MemoryStream();
         readonly string m_Url;
         readonly uint m_Crc;
+        readonly bool m_Cached;
+        readonly string m_Name;
+        readonly Hash128 m_Hash;
         bool m_AutoLoad;
         bool m_DownloadComplete;
-        bool m_LoadAttempted;
-        bool m_AutoLoadFailed;
+        /// <summary>A cached version failed its CRC and is being downloaded again.</summary>
+        bool m_Redownload;
+        UnityWebRequest.Result? m_Failure;
+        /// <summary>The archive opened natively (its `bundle-open` answer), not yet made into an
+        /// AssetBundle object.</summary>
+        JsonElement? m_Opened;
+        BundleCaches.Version m_Version;
+        bool m_Made;
         AssetBundle m_AssetBundle;
 
         public DownloadHandlerAssetBundle(string url, uint crc)
@@ -44,18 +62,18 @@ namespace UnityEngine.Networking
             m_Crc = crc;
         }
 
-        public DownloadHandlerAssetBundle(string url, uint version, uint crc) : this(url, crc) => WarnUncached();
+        public DownloadHandlerAssetBundle(string url, uint version, uint crc) : this(url, "", new Hash128(0, 0, 0, version), crc) { }
 
-        public DownloadHandlerAssetBundle(string url, Hash128 hash, uint crc) : this(url, crc) => WarnUncached();
+        public DownloadHandlerAssetBundle(string url, Hash128 hash, uint crc) : this(url, "", hash, crc) { }
 
-        public DownloadHandlerAssetBundle(string url, string name, Hash128 hash, uint crc) : this(url, crc) => WarnUncached();
+        public DownloadHandlerAssetBundle(string url, string name, Hash128 hash, uint crc) : this(url, crc)
+        {
+            m_Cached = true;
+            m_Name = name ?? "";
+            m_Hash = hash;
+        }
 
-        public DownloadHandlerAssetBundle(string url, CachedAssetBundle cachedBundle, uint crc) : this(url, crc) => WarnUncached();
-
-        /// <summary>One warning for every cached request: the cache is not there, so each downloads.</summary>
-        static void WarnUncached() =>
-            Unbound.Runtime.Stubs.Ignored("DownloadHandlerAssetBundle caching",
-                "is not supported yet: Unbound does not cache AssetBundles, so a versioned, hashed or CachedAssetBundle request downloads and loads the bundle every time");
+        public DownloadHandlerAssetBundle(string url, CachedAssetBundle cachedBundle, uint crc) : this(url, cachedBundle.name, cachedBundle.hash, crc) { }
 
         public bool autoLoadAssetBundle
         {
@@ -69,7 +87,8 @@ namespace UnityEngine.Networking
         {
             get
             {
-                if (m_DownloadComplete && !m_LoadAttempted) Load();
+                if (m_DownloadComplete && !m_Made && Make() is { } error)
+                    Debug.LogError("Error while getting Asset Bundle: " + error);
                 return m_AssetBundle;
             }
         }
@@ -80,35 +99,155 @@ namespace UnityEngine.Networking
             return true;
         }
 
-        /// <summary>Loads once; a failure keeps the handler's error, the loader has logged why.</summary>
-        bool Load()
+        internal override bool StartRequest()
         {
-            m_LoadAttempted = true;
-            m_AssetBundle = AssetBundle.LoadFromMemory(m_Stream.ToArray(), m_Crc);
-            if (m_AssetBundle != null) return true;
-            m_Error = $"Unbound: the data downloaded from '{m_Url}' could not be loaded as an AssetBundle";
-            return false;
+            if (!m_Cached) return false;
+            var (store, version) = BundleCaches.Find(m_Url, m_Name, m_Hash);
+            if (version == null) return false;
+            var opened = OpenNative(new { path = version.DataPath, crc = m_Crc, reportCrc = true }, out var mismatch);
+            if (opened == null || mismatch)
+            {
+                // The cached copy is not the bundle asked for: it goes, and the bundle downloads.
+                // As measured, the room it took stays counted in the cache's occupied space.
+                if (version.Users == 0) store.Delete(version, keepCounted: true);
+                m_Redownload = mismatch;
+                return false;
+            }
+            store.Touch(version);
+            m_Opened = opened;
+            m_Version = version;
+            return true;
         }
 
         internal override void End(bool received)
         {
-            m_DownloadComplete = received;
-            // The loader has logged why; UnityWebRequest.Finish reads this instead of an exception,
-            // so the failure is reported once, as Unity documents one logged error.
-            m_AutoLoadFailed = received && m_AutoLoad && !Load();
+            m_DownloadComplete = true;
+            if (received && m_Opened == null) Receive();
+            if (received && m_Failure == null && m_AutoLoad && Make() is { } error)
+            {
+                m_Error = error;
+                m_Failure = UnityWebRequest.Result.DataProcessingError;
+            }
             base.End(received);
         }
 
-        internal override bool ProcessingFailed => m_AutoLoadFailed;
+        /// <summary>Checks and opens the download and, for a cached request, keeps it.</summary>
+        void Receive()
+        {
+            var data = m_Stream.ToArray();
+            string download = null;
+            try
+            {
+                object request;
+                if (m_Cached)
+                {
+                    download = Path.Combine(Path.GetTempPath(), "unbound-bundle-" + Guid.NewGuid().ToString("N"));
+                    File.WriteAllBytes(download, data);
+                    request = new { path = download, crc = m_Crc, reportCrc = true };
+                }
+                else
+                {
+                    request = new { data = Convert.ToBase64String(data), crc = m_Crc, reportCrc = true };
+                }
+                m_Opened = OpenNative(request, out _);
+                if (m_Opened == null) return;
+                if (m_Cached) m_Version = Keep(download);
+            }
+            finally
+            {
+                if (download != null) File.Delete(download);
+            }
+        }
 
-        protected override byte[] GetData() => throw new NotSupportedException("Unbound: DownloadHandlerAssetBundle does not expose the downloaded bytes; read the bundle from assetBundle or DownloadHandlerAssetBundle.GetContent");
+        /// <summary>Opens an archive natively; null, with the handler's error and failure set,
+        /// when it does not.</summary>
+        JsonElement? OpenNative(object request, out bool crcMismatch)
+        {
+            crcMismatch = false;
+            JsonElement info;
+            try
+            {
+                info = JsonDocument.Parse(Native.Call("bundle-open", JsonSerializer.Serialize(request))).RootElement;
+            }
+            catch (Exception e)
+            {
+                // The reason goes to the log file only: the Editor logs nothing here.
+                ConsoleLog.Append($"Unbound: the AssetBundle '{m_Url}' does not open: {e.Message}");
+                m_Error = $"Failed to decompress data for the AssetBundle '{m_Url}'.";
+                m_Failure = UnityWebRequest.Result.DataProcessingError;
+                return null;
+            }
+            if (!info.TryGetProperty("crcMismatch", out var mismatch)) return info;
+            crcMismatch = true;
+            m_Error = $"CRC Mismatch. Provided {mismatch.GetProperty("expected").GetUInt32():x}, calculated {mismatch.GetProperty("actual").GetUInt32():x} from data. Will not load AssetBundle '{m_Url}'";
+            m_Failure = m_Redownload ? UnityWebRequest.Result.ConnectionError : UnityWebRequest.Result.DataProcessingError;
+            return null;
+        }
 
-        protected override string GetText() => throw new NotSupportedException("Unbound: DownloadHandlerAssetBundle has no text form of the download; read the bundle from assetBundle or DownloadHandlerAssetBundle.GetContent");
+        /// <summary>Keeps the download in the current cache when it has room for it.</summary>
+        BundleCaches.Version Keep(string download)
+        {
+            var store = BundleCaches.Current;
+            var name = BundleCaches.NameOf(m_Url, m_Name);
+            var form = download + ".cache";
+            try
+            {
+                var answer = JsonDocument.Parse(Native.Call("bundle-cache-form", JsonSerializer.Serialize(new
+                {
+                    source = download,
+                    dest = form,
+                    compress = BundleCaches.CompressionEnabled,
+                }))).RootElement;
+                if (!store.Reserve(answer.GetProperty("required").GetInt64()))
+                {
+                    ConsoleLog.Append($"Not enough space in cache to write file '{Path.Combine(store.Path, name, m_Hash.ToString())}'.");
+                    return null;
+                }
+                return store.Keep(name, m_Hash, form);
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
+            {
+                Debug.LogWarning($"Unbound: the AssetBundle '{m_Url}' could not be kept in the cache '{store.Path}': {e.Message}");
+                return null;
+            }
+            finally
+            {
+                if (File.Exists(form)) File.Delete(form);
+            }
+        }
+
+        /// <summary>Makes the AssetBundle object once; the loader's error when it is not made.</summary>
+        string Make()
+        {
+            m_Made = true;
+            if (m_Opened is not { } opened) return null;
+            m_Opened = null;
+            m_AssetBundle = AssetBundle.FromOpened(opened, m_Url, out var error);
+            if (m_AssetBundle != null && m_Version != null)
+            {
+                m_AssetBundle.m_CacheVersion = m_Version;
+                BundleCaches.Use(m_Version);
+            }
+            return m_AssetBundle == null ? error : null;
+        }
+
+        internal override UnityWebRequest.Result? CompletionFailure => m_Failure;
+
+        protected override byte[] GetData() => throw new NotSupportedException("Raw data access is not supported for asset bundles");
+
+        protected override string GetText() => throw new NotSupportedException("String access is not supported for asset bundles");
 
         public override void Dispose()
         {
             base.Dispose();
             m_Stream.Dispose();
+            // An archive opened for a bundle nobody asked for is closed.
+            if (m_Opened is { } opened)
+            {
+                m_Opened = null;
+                try { Native.Call("bundle-close", JsonSerializer.Serialize(new { id = opened.GetProperty("id").GetUInt64() })); }
+                catch (Exception) { }
+            }
         }
 
         public static AssetBundle GetContent(UnityWebRequest www) => GetCheckedDownloader<DownloadHandlerAssetBundle>(www).assetBundle;
@@ -146,12 +285,4 @@ namespace UnityEngine.Networking
         public static UnityWebRequest GetAssetBundle(Uri uri, CachedAssetBundle cachedAssetBundle, uint crc = 0U) =>
             Get(uri, new DownloadHandlerAssetBundle(UrlOf(uri), cachedAssetBundle, crc));
     }
-}
-
-namespace UnityEngine
-{
-    // Declared here so that the hand-written requests taking one build alone for `unbound gen-stubs`;
-    // its members are still generated stubs.
-    [global::Unbound.Stub]
-    public partial struct CachedAssetBundle { }
 }
