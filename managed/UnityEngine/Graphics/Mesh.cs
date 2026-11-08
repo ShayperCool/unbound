@@ -132,6 +132,8 @@ namespace UnityEngine
 
         void Changed(bool vertices = true, bool indices = true)
         {
+            // An edit through the API makes the arrays the mesh again (not a streamed prefix).
+            m_StreamVertexCount = m_StreamIndexCount = -1;
             m_Dirty = true; m_GraphicsBuffersDirty = true;
             m_GraphicsVerticesDirty |= vertices; m_GraphicsDirtyIndices |= indices;
         }
@@ -826,20 +828,30 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ renderer side
 
+        /// <summary>Engine meshes rebuilt every frame (particle draws) keep their channel arrays
+        /// at a capacity and upload only the first m_StreamVertexCount vertices and, of their
+        /// single submesh, m_StreamIndexCount indices; -1 uploads whole arrays.</summary>
+        internal int m_StreamVertexCount = -1, m_StreamIndexCount = -1;
+
+        // Index and submesh packets reused by every upload (main thread; ThreadStatic for safety).
+        [ThreadStatic] static uint[] s_UploadIndices;
+        [ThreadStatic] static SubMeshPacket[] s_UploadSubmeshes;
+
         /// <summary>Sends the mesh to the renderer when it changed; returns its handle.</summary>
         internal unsafe ulong Sync()
         {
-            int count = m_Vertices.Length;
+            bool streaming = m_StreamVertexCount >= 0;
+            int count = streaming ? m_StreamVertexCount : m_Vertices.Length;
             if (m_Dirty)
             {
                 // MeshPacket supplies one count for every non-null attribute pointer. Check
                 // internal writers too, before consuming dirty state or passing pointers to Rust.
-                CheckVertexChannelLength(m_Normals, count, "normals");
-                CheckVertexChannelLength(m_Tangents, count, "tangents");
-                CheckVertexChannelLength(m_Colors, count, "colors");
-                CheckVertexChannelLength(m_BoneWeights, count, "boneWeights");
+                CheckVertexChannelLength(m_Normals, count, "normals", streaming: streaming);
+                CheckVertexChannelLength(m_Tangents, count, "tangents", streaming: streaming);
+                CheckVertexChannelLength(m_Colors, count, "colors", streaming: streaming);
+                CheckVertexChannelLength(m_BoneWeights, count, "boneWeights", streaming: streaming);
                 for (int channel = 0; channel < m_UVs.Length; channel++)
-                    CheckVertexChannelLength(m_UVs[channel], count, "uv", channel);
+                    CheckVertexChannelLength(m_UVs[channel], count, "uv", channel, streaming);
             }
             if (m_Handle == 0) m_Handle = RenderHandles.Next();
             SyncGraphicsBuffers();
@@ -847,15 +859,20 @@ namespace UnityEngine
             if (!m_Dirty) { SyncGraphicsBinding(); return m_Handle; }
             m_Dirty = false;
             m_SyncVersion++;
-            var indices = new List<uint>();
-            var subs = new SubMeshPacket[m_SubMeshes.Count];
-            for (int i = 0; i < m_SubMeshes.Count; i++)
+            int submeshCount = m_SubMeshes.Count, indexTotal = 0;
+            for (int i = 0; i < submeshCount; i++) indexTotal += SyncedIndexCount(i);
+            if (s_UploadIndices == null || s_UploadIndices.Length < indexTotal) s_UploadIndices = new uint[Math.Max(indexTotal, (s_UploadIndices?.Length ?? 64) * 2)];
+            if (s_UploadSubmeshes == null || s_UploadSubmeshes.Length < submeshCount) s_UploadSubmeshes = new SubMeshPacket[Math.Max(submeshCount, 4)];
+            var indexArray = s_UploadIndices;
+            var subs = s_UploadSubmeshes;
+            int written = 0;
+            for (int i = 0; i < submeshCount; i++)
             {
                 var s = m_SubMeshes[i];
-                subs[i] = new SubMeshPacket { IndexStart = indices.Count, IndexCount = s.Indices.Length, Topology = (int)s.Topology, BaseVertex = s.BaseVertex };
-                foreach (var index in s.Indices) indices.Add((uint)index);
+                int n = SyncedIndexCount(i);
+                subs[i] = new SubMeshPacket { IndexStart = written, IndexCount = n, Topology = (int)s.Topology, BaseVertex = s.BaseVertex };
+                for (int k = 0; k < n; k++) indexArray[written++] = (uint)s.Indices[k];
             }
-            var indexArray = indices.ToArray();
             fixed (Vector3* positions = m_Vertices)
             fixed (Vector3* normals = m_Normals)
             fixed (Vector4* tangents = m_Tangents)
@@ -886,9 +903,9 @@ namespace UnityEngine
                     Uv5 = uv5,
                     Uv6 = uv6,
                     Uv7 = uv7,
-                    IndexCount = indexArray.Length,
+                    IndexCount = indexTotal,
                     Indices = idx,
-                    SubmeshCount = subs.Length,
+                    SubmeshCount = submeshCount,
                     Submeshes = sub,
                 };
                 Native.UploadMesh(m_Handle, &packet);
@@ -897,10 +914,13 @@ namespace UnityEngine
             return m_Handle;
         }
 
-        static void CheckVertexChannelLength(Array values, int count, string channel, int uvChannel = -1)
+        int SyncedIndexCount(int submesh) =>
+            m_StreamIndexCount >= 0 && submesh == 0 ? m_StreamIndexCount : m_SubMeshes[submesh].Indices.Length;
+
+        static void CheckVertexChannelLength(Array values, int count, string channel, int uvChannel = -1, bool streaming = false)
         {
             // Pinning an empty array yields a null pointer, the protocol's absent channel.
-            if (values == null || values.Length == 0 || values.Length == count) return;
+            if (values == null || values.Length == 0 || values.Length == count || streaming && values.Length >= count) return;
             if (uvChannel >= 0) channel += uvChannel;
             throw new InvalidOperationException($"Cannot upload Mesh: {channel} has {values.Length} values for {count} vertices.");
         }

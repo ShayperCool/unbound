@@ -96,5 +96,48 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(cube);
             }
         }
+
+        /// <summary>A draw mesh rebuilt every frame keeps capacity-sized arrays and uploads the built
+        /// counts: once grown, rebuilding it with fewer or as many particles allocates nothing.</summary>
+        [Fact]
+        public void StreamedDrawMeshesAllocateNothingOnceGrown()
+        {
+            int[] counts = { 40, 3, 17, 1, 25 };
+            var systems = new ParticleSystem[counts.Length];
+            var mesh = new Mesh();
+            try
+            {
+                for (int i = 0; i < counts.Length; i++)
+                {
+                    systems[i] = Make(s => { var e = s.emission; e.rateOverTime = 0f; });
+                    systems[i].Emit(counts[i]);
+                }
+                var geometry = new ParticleSystemRenderer.Geometry();
+                var view = View();
+                void Draw(ParticleSystem ps)
+                {
+                    Assert.True(geometry.Build(ps.GetComponent<ParticleSystemRenderer>(), ps, view));
+                    geometry.WriteTo(mesh, Matrix4x4.identity, streaming: true);
+                    mesh.Sync();
+                }
+                foreach (var ps in systems) Draw(ps);
+                Draw(systems[0]);
+                Assert.Equal(160, mesh.m_StreamVertexCount);
+                Assert.Equal(240, mesh.m_StreamIndexCount);
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                for (int round = 0; round < 3; round++)
+                    foreach (var ps in systems) Draw(ps);
+                Assert.Equal(0L, GC.GetAllocatedBytesForCurrentThread() - before);
+                Assert.Equal(100, mesh.m_StreamVertexCount);
+                // An edit through the API makes its arrays the mesh again.
+                mesh.vertices = new Vector3[3];
+                Assert.Equal(-1, mesh.m_StreamVertexCount);
+            }
+            finally
+            {
+                foreach (var ps in systems) if (ps != null) Object.DestroyImmediate(ps.gameObject);
+                Object.DestroyImmediate(mesh);
+            }
+        }
     }
 }

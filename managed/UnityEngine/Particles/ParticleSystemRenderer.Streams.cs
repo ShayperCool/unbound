@@ -250,12 +250,12 @@ namespace UnityEngine
                 }
             }
 
-            void WriteStreamAttributes(Mesh mesh, Matrix4x4 transform, bool identity)
+            void WriteStreamAttributes(Mesh mesh, Matrix4x4 transform, bool identity, int length)
             {
                 int count = VertexCount;
                 if (m_StreamTangents && count > 0)
                 {
-                    var tangents = mesh.m_Tangents != null && mesh.m_Tangents.Length == count ? mesh.m_Tangents : new Vector4[count];
+                    var tangents = mesh.m_Tangents != null && mesh.m_Tangents.Length == length ? mesh.m_Tangents : new Vector4[length];
                     for (int i = 0; i < count; i++)
                     {
                         var t = Tangents[i];
@@ -269,7 +269,7 @@ namespace UnityEngine
                 {
                     int dimension = m_Streams == null ? (channel == 0 ? 2 : 0) : m_ChannelDimensions[channel];
                     if (dimension == 0 || count == 0) { mesh.m_UVs[channel] = null; mesh.m_UVDimensions[channel] = 0; continue; }
-                    var values = mesh.m_UVs[channel] != null && mesh.m_UVs[channel].Length == count ? mesh.m_UVs[channel] : new Vector4[count];
+                    var values = mesh.m_UVs[channel] != null && mesh.m_UVs[channel].Length == length ? mesh.m_UVs[channel] : new Vector4[length];
                     Array.Copy(m_Streams == null ? Uvs : m_PackedUvs[channel], values, count);
                     mesh.m_UVs[channel] = values; mesh.m_UVDimensions[channel] = dimension;
                 }

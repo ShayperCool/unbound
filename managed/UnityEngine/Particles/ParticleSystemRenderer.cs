@@ -483,7 +483,7 @@ namespace UnityEngine
             if (material == null) return;
             if (!m_Geometry.Build(this, ps, View.Of(camera))) return;
             var mesh = MeshFor(camera.Camera);
-            m_Geometry.WriteTo(mesh, Matrix4x4.identity);
+            m_Geometry.WriteTo(mesh, Matrix4x4.identity, streaming: true);
             float distance = FrameBuilder.Distance(camera, m_Geometry.Center);
             if (m_SortingFudge != 0f)
             {
@@ -543,7 +543,7 @@ namespace UnityEngine
                 mesh = new Mesh { name = "ParticleSystemRenderer Trails" };
                 if (key != null) m_TrailMeshes[key] = mesh;
             }
-            m_TrailGeometry.WriteTo(mesh, Matrix4x4.identity);
+            m_TrailGeometry.WriteTo(mesh, Matrix4x4.identity, streaming: true);
             into.Add(new FrameBuilder.DrawItem
             {
                 Mesh = mesh.Sync(),
@@ -1376,14 +1376,18 @@ namespace UnityEngine
                 return q;
             }
 
-            /// <summary>Writes the built geometry into a mesh (vertices transformed by `transform`).</summary>
-            internal void WriteTo(Mesh mesh, Matrix4x4 transform)
+            /// <summary>Writes the built geometry into a mesh (vertices transformed by `transform`).
+            /// A draw mesh (<paramref name="streaming"/>) keeps its arrays at a capacity that only
+            /// grows and uploads the built counts, so a mesh rebuilt every frame allocates nothing
+            /// once its capacity covers the geometry; a baked mesh gets exact arrays.</summary>
+            internal void WriteTo(Mesh mesh, Matrix4x4 transform, bool streaming = false)
             {
                 bool identity = transform == Matrix4x4.identity;
                 int n = VertexCount;
-                var positions = mesh.m_Vertices.Length == n ? mesh.m_Vertices : new Vector3[n];
-                var normals = mesh.m_Normals != null && mesh.m_Normals.Length == n ? mesh.m_Normals : new Vector3[n];
-                var colors = mesh.m_Colors != null && mesh.m_Colors.Length == n ? mesh.m_Colors : new Color32[n];
+                int length = streaming ? Capacity(mesh.m_Vertices.Length, n) : n;
+                var positions = mesh.m_Vertices.Length == length ? mesh.m_Vertices : new Vector3[length];
+                var normals = mesh.m_Normals != null && mesh.m_Normals.Length == length ? mesh.m_Normals : new Vector3[length];
+                var colors = mesh.m_Colors != null && mesh.m_Colors.Length == length ? mesh.m_Colors : new Color32[length];
                 for (int i = 0; i < n; i++)
                 {
                     positions[i] = identity ? Positions[i] : transform.MultiplyPoint3x4(Positions[i]);
@@ -1393,7 +1397,7 @@ namespace UnityEngine
                 mesh.m_Vertices = positions;
                 mesh.m_Normals = n > 0 && m_StreamNormals ? normals : null;
                 mesh.m_Colors = n > 0 && m_StreamColors ? colors : null;
-                WriteStreamAttributes(mesh, transform, identity);
+                WriteStreamAttributes(mesh, transform, identity, length);
                 // Before the indices: a format change resets the submeshes and clears the index
                 // buffer (Mesh.indexFormat, 6000.0).
                 mesh.indexFormat = n > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;
@@ -1403,13 +1407,22 @@ namespace UnityEngine
                     mesh.m_SubMeshes.Add(new Mesh.SubMesh());
                 }
                 var sub = mesh.m_SubMeshes[0];
-                if (sub.Indices.Length != IndexCount) sub.Indices = new int[IndexCount];
+                int indexLength = streaming ? Capacity(sub.Indices.Length, IndexCount) : IndexCount;
+                if (sub.Indices.Length != indexLength) sub.Indices = new int[indexLength];
                 Array.Copy(Indices, sub.Indices, IndexCount);
                 sub.Topology = MeshTopology.Triangles;
                 sub.BaseVertex = 0;
-                mesh.RecalculateBounds();
+                // A draw mesh's bounds are not used (its draw is culled by the particles').
+                if (!streaming) mesh.RecalculateBounds();
+                // Last: the setters above reset the streamed counts.
+                mesh.m_StreamVertexCount = streaming ? n : -1;
+                mesh.m_StreamIndexCount = streaming ? IndexCount : -1;
                 mesh.m_Dirty = true;
             }
+
+            /// <summary>The array length a streaming mesh keeps for <paramref name="needed"/>
+            /// elements: its current length while that suffices, else doubled.</summary>
+            static int Capacity(int current, int needed) => needed <= current ? current : Math.Max(needed, Math.Max(64, current * 2));
         }
     }
 }
