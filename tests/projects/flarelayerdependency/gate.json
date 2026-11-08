@@ -1,0 +1,6 @@
+{
+  "commands": [
+    "python3 tests/projects/flarelayerdependency/run.py check --release \"$UNBOUND_PROBE_UNITY_VERSION\""
+  ],
+  "summary": "FlareLayer dependency: all values match"
+}

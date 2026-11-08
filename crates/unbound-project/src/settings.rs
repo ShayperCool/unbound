@@ -92,11 +92,11 @@ impl TierSettings {
 }
 
 fn first_document(path: &Path) -> Result<Option<Document>> {
-    if !path.exists() {
-        return Ok(None);
-    }
-    let docs =
-        unbound_yaml::reads::read_documents(path).with_context(|| path.display().to_string())?;
+    let docs = match unbound_yaml::reads::read_documents(path) {
+        Ok(docs) => docs,
+        Err(error) if error.is::<std::io::Error>() => return Ok(None),
+        Err(error) => return Err(error).with_context(|| path.display().to_string()),
+    };
     Ok(docs.into_iter().next())
 }
 

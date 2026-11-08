@@ -253,7 +253,9 @@ fn some_files(files: &BTreeSet<String>, shown: usize) -> String {
 pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
     let start = Instant::now();
     let project = Project::open(&args.project)?;
+    let project_seconds = start.elapsed().as_secs_f64();
     let db = project.asset_db();
+    let database_seconds = start.elapsed().as_secs_f64() - project_seconds;
     let mut found = BTreeMap::new();
     let mut files = 0usize;
     for asset in db.iter().filter(|a| !a.is_folder) {
@@ -269,6 +271,8 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             }
         }
     }
+    let inventory_seconds = start.elapsed().as_secs_f64();
+    let message_start = Instant::now();
     let request: Vec<FoundRequest> = found
         .iter()
         .map(|(&class_id, f)| FoundRequest {
@@ -288,6 +292,8 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
         )
         .context("classifying the project's classes")?;
     let messages = message_coverage(&project, args, &runtime)?;
+    let message_seconds = message_start.elapsed().as_secs_f64();
+    let fields_start = Instant::now();
     let field_coverage = fields::report(
         &project,
         &runtime,
@@ -298,6 +304,9 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             .map(|e| e.class_id)
             .collect(),
     )?;
+    let fields_seconds = fields_start.elapsed().as_secs_f64();
+    let settings_start = Instant::now();
+    let settings_coverage = fields::settings_report(&project, &runtime, &args.target)?;
     if as_json {
         let classes: Vec<_> = coverage
             .classes
@@ -309,9 +318,13 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             .collect();
         let report = json!({
             "release": release,
+            "target": args.target,
+            "analysisSeconds": {"project": project_seconds, "database": database_seconds, "inventory": inventory_seconds, "messages": message_seconds, "serializedFields": fields_seconds, "settings": settings_start.elapsed().as_secs_f64(), "total": start.elapsed().as_secs_f64()},
             "hasTable": coverage.has_table,
             "classes": classes,
             "serializedFields": field_coverage,
+            "importerFields": settings_coverage.importer_fields,
+            "projectSettingsFields": settings_coverage.project_settings_fields,
             "unreadInRelease": coverage.unread_in_release,
             "renderingLimitations": RENDERING_LIMITATIONS,
             "unsupportedMessages": messages.messages,
@@ -372,6 +385,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
         }
     }
     field_coverage.print();
+    settings_coverage.print();
     println!(
         "\n{} script messages Unbound does not deliver:",
         messages.messages.len()
@@ -443,6 +457,39 @@ mod tests {
                 .iter()
                 .any(|e| matches!(e.class_id, 81 | 124))
         );
+        assert!(
+            coverage
+                .classes
+                .iter()
+                .find(|entry| entry.class_id == 124)
+                .unwrap()
+                .detail
+                .contains("requires Camera")
+        );
+        let dependencies: serde_json::Value = runtime.call("field-coverage", &json!([
+            {"classId": 124, "fileId": 1, "typeName": "FlareLayer", "body": {"m_GameObject": {"fileID": "10"}, "m_Enabled": "1"}},
+            {"classId": 124, "fileId": 2, "typeName": "FlareLayer", "body": {"m_GameObject": {"fileID": "20"}, "m_Enabled": "1"}},
+            {"classId": 20, "fileId": 3, "typeName": "Camera", "body": {"m_GameObject": {"fileID": "20"}, "m_Enabled": "0"}},
+            {"context": "projectSettings", "classId": 55, "fileId": 4, "typeName": "PhysicsManager", "body": {"m_Gravity": {"x": "0", "y": "-9.81", "z": "0", "ignored": "0"}, "ignored": "0"}},
+            {"classId": 1, "fileId": 10, "typeName": "GameObject", "body": {}},
+            {"classId": 1, "fileId": 20, "typeName": "GameObject", "body": {}}
+        ])).unwrap();
+        assert!(
+            dependencies[0]["dependency"]
+                .as_str()
+                .unwrap()
+                .contains("Camera missing")
+        );
+        assert!(
+            dependencies[1]["dependency"]
+                .as_str()
+                .unwrap()
+                .contains("Camera disabled")
+        );
+        let settings_reads = dependencies[3]["consumed"].as_array().unwrap();
+        assert!(settings_reads.contains(&json!("m_Gravity.y")));
+        assert!(!settings_reads.contains(&json!("m_Gravity.ignored")));
+        assert!(!settings_reads.contains(&json!("ignored")));
         let read: serde_json::Value = runtime
             .call(
                 "field-coverage",

@@ -183,7 +183,7 @@ def unbound(work):
     out = fresh_output(work/'unbound')
     env = dict(os.environ, FLARES_PROBE_OUT=str(out))
     with (out/'unbound.log').open('w') as log:
-        result = subprocess.run([str(LAUNCHER), 'timeout', '900', cli, 'run', '-p', str(project),
+        result = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '900', cli, 'run', '-p', str(project),
                                  '--no-watch', '--frames', '3000', '--size', '128x128'],
                                 env=env, stdout=log, stderr=subprocess.STDOUT)
     print('unbound exit', result.returncode, out)

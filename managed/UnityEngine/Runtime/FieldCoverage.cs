@@ -13,6 +13,7 @@ namespace Unbound.Runtime
     {
         internal sealed class Input
         {
+            public string Context { get; set; }
             public int ClassId { get; set; }
             public long FileId { get; set; }
             public string FileGuid { get; set; }
@@ -25,6 +26,7 @@ namespace Unbound.Runtime
             public long FileId { get; set; }
             public List<string> Consumed { get; set; } = new List<string>();
             public string Error { get; set; }
+            public string Dependency { get; set; }
         }
 
         sealed class References : IReferenceResolver
@@ -36,6 +38,15 @@ namespace Unbound.Runtime
         {
             var results = new List<Result>();
             var scripts = new Dictionary<(string File, long Id), Type>();
+            var cameras = new Dictionary<(string File, long Owner), bool>();
+            var owners = new Dictionary<(string File, long Id), bool>();
+            if (documents.Any(input => input.Context == null && input.ClassId == 124))
+            {
+                foreach (var input in documents.Where(input => input.Context == null && input.ClassId == 1))
+                    owners[(input.FileGuid ?? "", input.FileId)] = !Property(input.Body, "m_CorrespondingSourceObject").AsRef().IsNull;
+                foreach (var input in documents.Where(input => input.Context == null && input.ClassId == 20))
+                    cameras[(input.FileGuid ?? "", Property(input.Body, "m_GameObject").AsRef().FileId)] = Property(input.Body, "m_Enabled").AsInt(1) != 0;
+            }
             foreach (var group in documents.Where(doc => doc.ClassId == 115 && doc.FileGuid?.StartsWith("bundle:", StringComparison.Ordinal) == true).GroupBy(doc => doc.FileGuid))
                 BundleFiles.RegisterScripts(group.Key.Substring("bundle:".Length), group.Select(input => new YDocument
                 {
@@ -51,7 +62,12 @@ namespace Unbound.Runtime
                     ReaderFieldSchema.Consume(body, ReaderFieldSchema.Fields(owner, method, parameters, nodeParameter));
                 try
                 {
-                    switch (doc.ClassId)
+                    if (doc.Context == "projectSettings")
+                    {
+                        if (doc.ClassId == 55) Schema(typeof(Physics), nameof(Physics.ReadSettings), 1);
+                        if (doc.ClassId == 19) Schema(typeof(Physics2D), nameof(Physics2D.ReadSettings), 1);
+                    }
+                    else switch (doc.ClassId)
                     {
                         case EngineTypes.MonoBehaviourId:
                             Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.OwnerOf), 1);
@@ -90,6 +106,21 @@ namespace Unbound.Runtime
                             break;
                         case 196:
                             Schema(typeof(SceneNavMesh), nameof(SceneNavMesh.SceneLoaded), 3, 1);
+                            break;
+                        case 124:
+                            Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadComponentHeader), 2);
+                            Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadBehaviour), 2, 1);
+                            var owner = body.Ref("m_GameObject").FileId;
+                            if (!cameras.TryGetValue((doc.FileGuid ?? "", owner), out bool cameraEnabled))
+                            {
+                                if (!owners.TryGetValue((doc.FileGuid ?? "", owner), out bool inherited) || inherited)
+                                    result.Dependency = "Camera dependency unresolved: owner or inherited components require prefab expansion";
+                                else result.Dependency = Compat.FlareCameraInitializationMeasured
+                                    ? "Camera missing: loader creates Camera and warns, as in the Unity 6000.0.71f1 Editor"
+                                    : "Camera missing: load repair is unmeasured for this release and the loader rejects it";
+                            }
+                            else if (!cameraEnabled)
+                                result.Dependency = "Camera disabled: retained disabled; no automatic LensFlare drawing, explicit Camera.Render remains available";
                             break;
                         default:
                             var type = EngineTypes.ForClassId(doc.ClassId, doc.TypeName, warn: false);
@@ -156,6 +187,9 @@ namespace Unbound.Runtime
             key = key.Replace("\\", "\\\\").Replace(".", "\\.").Replace("[", "\\[").Replace("]", "\\]");
             return prefix.Length == 0 ? key : prefix + "." + key;
         }
+
+        static YNode Property(JsonElement body, string name) =>
+            body.ValueKind == JsonValueKind.Object && body.TryGetProperty(name, out var value) ? Node(value) : YNode.Null;
 
         static YNode Node(JsonElement value)
         {

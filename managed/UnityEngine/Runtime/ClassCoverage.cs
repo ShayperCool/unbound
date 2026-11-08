@@ -107,6 +107,8 @@ namespace Unbound.Runtime
                 return (ClassReading.Read, type.FullName + " (Chorus, Flange, Distortion, Normalize and Pitch Shifter support only Unity 6000.0.71f1; Normalize and Pitch Shifter only 1024-frame stereo at 48000/44100 Hz and no live changes, Pitch Shifter only FFT size 1024, Overlap 4, Max channels 0; static wet mixing on those five effects supports 1024-frame stereo at 48000/44100 Hz through +30 dB with no live effect changes; SFX Reverb wet mixing retains its 0 dB maximum; other slot wet mixing is unsupported; Send/Receive/Duck Volume require Unity 6000.0.71f1; sends to another mixer, unscaled timed sidechain snapshots and sidechain transition overrides are unmeasured and fail; linear scaled-time Send and Duck Volume snapshots are supported)");
             // These registered Behaviour classes declare no serialized data beyond the
             // enabled flag that ReadComponent consumes for every Behaviour.
+            if (type == typeof(FlareLayer))
+                return (ClassReading.Read, type.FullName + " (Behaviour enabled flag; requires Camera on the same GameObject; " + (Compat.FlareCameraInitializationMeasuredFor(release ?? ProjectInfo.UnityVersion) ? "creates a missing Camera on load with a warning" : "missing-Camera load repair is unmeasured for this release and rejected") + "; disabled cameras do not render automatically)");
             if (type.IsDefined(typeof(EnabledOnlySerializedStateAttribute), inherit: false))
                 return (ClassReading.Read, type.FullName + " (Behaviour enabled flag)");
             if (Reads(type)) return (ClassReading.Read, type.FullName);

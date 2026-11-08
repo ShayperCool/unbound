@@ -9,6 +9,90 @@ namespace UnityEngine.Tests
     public class HaloFlareTests
     {
         [Fact]
+        public void FlareLayerRequiresCameraAndLoadingRepairsOnlyMissingCameras()
+        {
+            string release = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            var added = new GameObject("AddedLayer");
+            var loaded = new GameObject("LoadedLayer");
+            var disabled = new GameObject("DisabledCamera");
+            try
+            {
+                added.AddComponent<FlareLayer>();
+                Assert.NotNull(added.GetComponent<Camera>());
+                var layer = ComponentFactory.Create(typeof(FlareLayer), loaded);
+                loaded.m_Components.Add(layer);
+                Assert.Null(loaded.GetComponent<Camera>());
+                FlareLayer.RepairCamera(loaded, "fixture", false);
+                Assert.Single(loaded.GetComponents<Camera>());
+                FlareLayer.RepairCamera(loaded, "fixture", false);
+                Assert.Single(loaded.GetComponents<Camera>());
+                var camera = disabled.AddComponent<Camera>();
+                camera.enabled = false;
+                disabled.AddComponent<FlareLayer>();
+                FlareLayer.RepairCamera(disabled, "fixture", false);
+                Assert.Same(camera, disabled.GetComponent<Camera>());
+                Assert.False(camera.enabled);
+            }
+            finally
+            {
+                ProjectInfo.UnityVersion = release;
+                Object.DestroyImmediate(added);
+                Object.DestroyImmediate(loaded);
+                Object.DestroyImmediate(disabled);
+            }
+        }
+
+        [Fact]
+        public void ColdDisabledCameraInitializesVisibilityForTheFollowingFrame()
+        {
+            string release = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            var cold = new GameObject("ColdCamera").AddComponent<Camera>();
+            var warm = new GameObject("WarmCamera").AddComponent<Camera>();
+            try
+            {
+                cold.enabled = false;
+                var coldLayer = cold.gameObject.AddComponent<FlareLayer>();
+                Assert.False(coldLayer.VisibilityReady(cold, 10));
+                Assert.False(coldLayer.VisibilityReady(cold, 10));
+                Assert.True(coldLayer.VisibilityReady(cold, 11));
+                var warmLayer = warm.gameObject.AddComponent<FlareLayer>();
+                warm.enabled = false;
+                Assert.True(warmLayer.VisibilityReady(warm, 10));
+                Assert.True(warmLayer.VisibilityReady(warm, 11));
+            }
+            finally
+            {
+                ProjectInfo.UnityVersion = release;
+                Object.DestroyImmediate(cold.gameObject);
+                Object.DestroyImmediate(warm.gameObject);
+            }
+        }
+
+        [Fact]
+        public void UnmeasuredReleaseRejectsOnlyTheMissingCameraRepair()
+        {
+            string release = ProjectInfo.UnityVersion;
+            var orphan = new GameObject("UnmeasuredOrphan");
+            try
+            {
+                ProjectInfo.UnityVersion = "2022.3.0f1";
+                orphan.m_Components.Add(ComponentFactory.Create(typeof(FlareLayer), orphan));
+                Assert.Throws<System.NotSupportedException>(() => FlareLayer.RepairCamera(orphan, "fixture", false));
+                var camera = orphan.AddComponent<Camera>();
+                camera.enabled = false;
+                FlareLayer.RepairCamera(orphan, "fixture", false);
+                Assert.False(camera.enabled);
+            }
+            finally
+            {
+                ProjectInfo.UnityVersion = release;
+                Object.DestroyImmediate(orphan);
+            }
+        }
+
+        [Fact]
         public void FalloffIsTheEditorsTexture()
         {
             var falloff = Halos.Falloff;

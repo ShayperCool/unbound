@@ -13,7 +13,13 @@ use std::{
 };
 
 #[derive(Clone, Default, Debug)]
-pub struct FieldReads(Arc<Mutex<BTreeSet<String>>>);
+pub struct FieldReads(Arc<Mutex<ReadState>>);
+
+#[derive(Default, Debug)]
+struct ReadState {
+    consumed: BTreeSet<String>,
+    unapplied: BTreeSet<String>,
+}
 
 /// Join a diagnostic path without confusing literal punctuation with path separators.
 pub fn field_path(prefix: &str, key: &str) -> String {
@@ -39,7 +45,23 @@ pub(crate) struct TrackedMap {
 impl TrackedMap {
     pub(crate) fn note(&self, key: &str) {
         let path = field_path(&self.prefix, key);
-        self.reads.0.lock().unwrap().insert(path);
+        self.reads.0.lock().unwrap().consumed.insert(path);
+    }
+}
+
+/// A reader retains this metadata for inspection, but does not apply its import-time effect.
+/// This annotation lives at the actual reader, so diagnostics need no separate option table.
+pub fn unapplied(value: &Value, key: &str) {
+    if let Value::Map(map) = value
+        && let Some(tracked) = &map.1
+    {
+        tracked
+            .reads
+            .0
+            .lock()
+            .unwrap()
+            .unapplied
+            .insert(field_path(&tracked.prefix, key));
     }
 }
 
@@ -69,7 +91,12 @@ impl FieldReads {
     }
 
     pub fn paths(&self) -> BTreeSet<String> {
-        self.0.lock().unwrap().clone()
+        let state = self.0.lock().unwrap();
+        state
+            .consumed
+            .difference(&state.unapplied)
+            .cloned()
+            .collect()
     }
 }
 

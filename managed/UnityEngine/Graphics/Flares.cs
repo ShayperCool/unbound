@@ -50,11 +50,39 @@ namespace UnityEngine
     }
 
     /// <summary>Lets a camera show lens flares (halos draw without it).</summary>
+    [RequireComponent(typeof(Camera))]
     [ClassId(124)]
     [EnabledOnlySerializedState]
     public partial class FlareLayer : Behaviour
     {
+        int m_FirstVisibilityFrame = -1;
         internal FlareLayer() { }
+
+        internal override void OnEngineEnable()
+        {
+            m_FirstVisibilityFrame = GetComponent<Camera>()?.enabled == true ? int.MinValue : -1;
+        }
+
+        internal bool VisibilityReady(Camera camera, int frame)
+        {
+            if (!Compat.FlareCameraInitializationMeasured) return true;
+            // Enabling the layer with an enabled Camera initializes visibility immediately.
+            // A cold disabled Camera's first explicit render initializes it for later frames.
+            if (camera.enabled) m_FirstVisibilityFrame = int.MinValue;
+            else if (m_FirstVisibilityFrame == -1) m_FirstVisibilityFrame = frame;
+            return m_FirstVisibilityFrame != frame;
+        }
+
+        internal static void RepairCamera(GameObject go, string path, bool persistent)
+        {
+            if (go.FindComponent<FlareLayer>() == null || go.FindComponent<Camera>() != null) return;
+            if (!Compat.FlareCameraInitializationMeasured)
+                throw new NotSupportedException("FlareLayer without Camera: load repair is measured only in Unity 6000.0.71f1 (tests/projects/flarelayerdependency)");
+            var camera = ComponentFactory.Create(typeof(Camera), go);
+            camera.IsPersistentAsset = persistent;
+            go.m_Components.Add(camera);
+            Debug.LogWarning($"Creating missing Camera component for FlareLayer in {go.name}.");
+        }
     }
 
     /// <summary>A lens flare at the object's position, seen by cameras with a FlareLayer.</summary>

@@ -208,6 +208,8 @@ namespace Unbound.Runtime
                 }
             }
 
+            foreach (var (go, _) in gameObjects.Values) FlareLayer.RepairCamera(go, path, isAsset);
+
             BuildHierarchy(file, components, gameObjects, sceneRoots);
             if (created != null)
             {

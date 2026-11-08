@@ -125,23 +125,7 @@ pub fn read_meta_header(meta: &Path) -> (Option<Guid>, Vec<String>) {
     let Ok(text) = std::fs::read_to_string(meta) else {
         return (None, Vec::new());
     };
-    // Only parse the envelope header here. An importer may reject its own data later without
-    // making an otherwise identifiable asset disappear from the database.
-    let header: String = text
-        .lines()
-        .scan(false, |in_importer, line| {
-            if !line.starts_with([' ', '-']) && !line.trim().is_empty() {
-                *in_importer = line.ends_with("Importer:");
-            }
-            Some(if *in_importer {
-                String::new()
-            } else {
-                format!("{line}\n")
-            })
-        })
-        .collect();
-    let value = unbound_yaml::parse_value(&header).unwrap_or_default();
-    meta_header(&value)
+    header(text.as_str())
 }
 
 /// Reads only the `guid:` line; the rest of a `.meta` is parsed by the importer that needs it.
@@ -152,16 +136,70 @@ pub fn read_meta_guid(meta: &Path) -> Option<Guid> {
         .and_then(|guid| Guid::parse(guid.trim()))
 }
 
-/// The database metadata reader, shared with field coverage.
+/// The database metadata reader, shared with field coverage. The file scanner retains its
+/// lightweight envelope reader; diagnostics supply tracked nodes to the same field accesses.
 pub fn meta_header(value: &unbound_yaml::Value) -> (Option<Guid>, Vec<String>) {
-    let guid = value.get("guid").and_then(unbound_yaml::Value::as_guid);
-    let labels = value
-        .get("labels")
-        .and_then(unbound_yaml::Value::as_seq)
-        .unwrap_or_default()
-        .iter()
-        .filter_map(unbound_yaml::Value::as_str)
-        .map(String::from)
-        .collect();
-    (guid, labels)
+    header(value)
+}
+
+trait Header {
+    fn scalar(&self, key: &str) -> Option<&str>;
+    fn strings(&self, key: &str) -> Vec<String>;
+}
+
+fn header(source: &(impl Header + ?Sized)) -> (Option<Guid>, Vec<String>) {
+    (
+        source.scalar("guid").and_then(Guid::parse),
+        source.strings("labels"),
+    )
+}
+
+impl Header for str {
+    fn scalar(&self, key: &str) -> Option<&str> {
+        self.lines()
+            .find_map(|line| line.strip_prefix(key)?.strip_prefix(':'))
+            .map(str::trim)
+    }
+    fn strings(&self, key: &str) -> Vec<String> {
+        self.lines()
+            .skip_while(|line| line.strip_suffix(':') != Some(key))
+            .skip(1)
+            .map_while(|line| line.strip_prefix("- "))
+            .map(|label| label.trim().trim_matches('\'').to_string())
+            .collect()
+    }
+}
+
+impl Header for unbound_yaml::Value {
+    fn scalar(&self, key: &str) -> Option<&str> {
+        self.get(key)?.as_str()
+    }
+    fn strings(&self, key: &str) -> Vec<String> {
+        self.get(key)
+            .and_then(unbound_yaml::Value::as_seq)
+            .unwrap_or_default()
+            .iter()
+            .filter_map(unbound_yaml::Value::as_str)
+            .map(String::from)
+            .collect()
+    }
+}
+
+#[cfg(test)]
+mod header_tests {
+    use super::*;
+
+    #[test]
+    fn envelope_scan_and_tracked_metadata_share_the_same_field_reader() {
+        let text = "fileFormatVersion: 2\nguid: 11111111111111111111111111111111\nModelImporter:\n  ignored: 0\nlabels:\n- first\n- 'second label'\n";
+        let mut value = unbound_yaml::parse_value(text).unwrap();
+        let reads = unbound_yaml::reads::FieldReads::default();
+        reads.track(&mut value);
+        assert_eq!(header(text), meta_header(&value));
+        assert_eq!(header(text).1, ["first", "second label"]);
+        assert_eq!(reads.paths(), ["guid".into(), "labels".into()].into());
+        // An importer can reject its body without hiding the asset's envelope identity.
+        let malformed = "guid: 11111111111111111111111111111111\nModelImporter:\n  invalid: [\n";
+        assert_eq!(header(malformed).0, header(text).0);
+    }
 }

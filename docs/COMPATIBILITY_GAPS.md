@@ -117,7 +117,10 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       captured on private trees. JSON groups field paths by class, with object counts, example
       assets and explicit reasons for authoring metadata exceptions. Incomplete scans and script
       analysis remain visible. See [doctor](DOCTOR.md) and `classids`.
-- [ ] Extend field coverage to importer `.meta` and ProjectSettings readers.
+- [x] Importer `.meta` and ProjectSettings field coverage uses the actual metadata/startup
+      readers, including JSON package settings and read-but-unapplied audio import options.
+      Reasoned exceptions, complete JSON, human totals and Camera dependencies are covered by
+      `classids/field_coverage.py` and `flarelayerdependency` (Unity 6000.0.71f1).
 - [x] ClassId coverage: Unity's class-ID table against registered readers; a ClassId without a
       reader fails loudly instead of default-constructing. Done (`classids`: Unity 6000.0.71f1's
       own class table; `Runtime/ClassCoverage.cs`): a document whose class has no engine class, or
@@ -131,7 +134,18 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       one, explicitly unsupported). Legacy `GUILayer` (92) is discarded on load in the measured
       6000.0.71f1 release, so its doctor entry is ignored (`classids` legacy control). AudioListener
       and FlareLayer have only the enabled flag read by the shared Behaviour reader and are not
-      listed as missing readers. Bundle-scene load failures point to doctor. YAML `Sprite` documents (213)
+      listed as missing readers. FlareLayer adds a required Camera, repairs a missing Camera on
+      load with the Editor's warning, and retains disabled Cameras (`flarelayerdependency`,
+      Unity 6000.0.71f1). Doctor reports missing/disabled Camera dependencies. Importer `.meta`
+      and `ProjectSettings/*.asset` unread leaf paths now use the metadata/startup readers and
+      generated physics reader declarations, with JSON and human totals. Unread options remain
+      "may change behaviour", including options that affect imported data; each no-runtime-effect
+      exception carries a reason. Field consumption does not establish full feature parity.
+      Enabling FlareLayer on a disabled Camera leaves visibility cold until its first explicit
+      render; later frames can draw. Layers enabled with an enabled Camera are ready immediately.
+      Other releases' missing-Camera load behavior fails explicitly as unmeasured; their
+      existing immediate fade initialization is retained pending a reference.
+      Bundle-scene load failures point to doctor. YAML `Sprite` documents (213)
       now read ordinary un-atlased geometry and references (`spriteassets`); rejected layouts
       are errors at load and listed by `unbound doctor`. `LightingSettings` (850595691) and
       `ShaderVariantCollection` (200) read their data (`lightingassets`): the scenes' Lighting

@@ -76,10 +76,31 @@ impl AudioSettings {
                 2 => LoadType::Streaming,
                 _ => LoadType::DecompressOnLoad,
             },
-            sample_rate_setting: int(v, "sampleRateSetting").unwrap_or(0) as i32,
+            sample_rate_setting: {
+                let setting = int(v, "sampleRateSetting").unwrap_or(0) as i32;
+                if setting == 1 {
+                    // Optimize currently preserves the source rate.
+                    unbound_yaml::reads::unapplied(v, "sampleRateSetting");
+                }
+                setting
+            },
             sample_rate_override: int(v, "sampleRateOverride").unwrap_or(44100) as u32,
-            compression_format: int(v, "compressionFormat").unwrap_or(1) as i32,
-            quality: crate::meta::float(v, "quality").unwrap_or(1.0),
+            compression_format: {
+                let format = int(v, "compressionFormat").unwrap_or(1) as i32;
+                if format != 0 {
+                    // Clip metadata and ADPCM frame padding are applied, but the lossy sample
+                    // conversion of compressed formats is not.
+                    unbound_yaml::reads::unapplied(v, "compressionFormat");
+                }
+                format
+            },
+            quality: {
+                let quality = crate::meta::float(v, "quality").unwrap_or(1.0);
+                // The value is retained for inspection; decoded samples currently keep source
+                // fidelity rather than applying the importer's lossy quality setting.
+                unbound_yaml::reads::unapplied(v, "quality");
+                quality
+            },
             preload_audio_data: boolean(v, "preloadAudioData").unwrap_or(preload_default),
         };
         // Keyed by `BuildTargetGroup` number.

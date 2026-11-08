@@ -9,6 +9,11 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Compat
     {
+        /// <summary>Camera dependency repair and cold flare visibility measured by
+        /// flarelayerdependency in Unity 6000.0.71f1.</summary>
+        internal static bool FlareCameraInitializationMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool FlareCameraInitializationMeasuredFor(string release) => Parse(release ?? "") == (6000, 0, 71, 'f', 1);
+
         /// <summary>Deferred object lifetime at delayed scripting points, measured in
         /// tests/projects/destroyphases on Unity 6000.0.71f1.</summary>
         internal static bool DestroyPhasesMeasured => Release == (6000, 0, 71, 'f', 1);
