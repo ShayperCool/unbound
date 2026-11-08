@@ -34,10 +34,17 @@ namespace UnityEngine
         /// <see cref="m_ShapeUvState"/> is <see cref="ShapeUv.Set"/>.</summary>
         Vector2 m_ShapeUv;
         ShapeUv m_ShapeUvState;
+        /// <summary>Every texture's pixels, shared by the systems sampling it.</summary>
+        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Texture2D, ShapeTextureCache> s_ShapeTextures = new();
+        /// <summary>The cache of the texture this system sampled last (saves the table lookup).</summary>
         ShapeTextureCache m_ShapeTexture;
+        Texture2D m_ShapeTextureKey;
         /// <summary>The last <see cref="InitParticle"/> failed because the shape texture discarded
         /// the particle.</summary>
         bool m_ShapeTextureDiscarded;
+        /// <summary>The particle being initialized is a rate-over-time birth.</summary>
+        bool m_RateBirth;
+        bool m_ShapeTextureRateClipReported;
         bool m_ShapeTextureUnsupportedReported;
 
         enum ShapeUv : byte { None, Set, Missing }
@@ -45,8 +52,8 @@ namespace UnityEngine
         /// <summary>The factor a mesh's texture coordinate takes before it repeats (measured).</summary>
         const float MeshUvScale = 0.9999f;
 
-        /// <summary>A texture's pixels for the shape module, read once per texture content (the
-        /// texture and its update count), not per particle.</summary>
+        /// <summary>A texture's pixels for the shape module, read once per texture content (its
+        /// update count), not per particle or per system.</summary>
         internal sealed class ShapeTextureCache
         {
             Texture2D m_Texture;
@@ -174,7 +181,11 @@ namespace UnityEngine
             }
             if (m_ShapeUvState == ShapeUv.Missing) return false;
             if (m_ShapeUvState != ShapeUv.Set) return true;
-            m_ShapeTexture ??= new ShapeTextureCache();
+            if (!ReferenceEquals(texture, m_ShapeTextureKey))
+            {
+                m_ShapeTexture = s_ShapeTextures.GetValue(texture, _ => new ShapeTextureCache());
+                m_ShapeTextureKey = texture;
+            }
             if (!m_ShapeTexture.Prepare(texture)) return true;
             var texel = m_ShapeTexture.Sample(m_ShapeUv, S.textureBilinearFiltering);
             byte clip = S.textureClipChannel switch
@@ -185,6 +196,13 @@ namespace UnityEngine
                 _ => texel.a,
             };
             int threshold = (int)(S.textureClipThreshold * 256f);
+            if (threshold > 0 && m_RateBirth && !m_ShapeTextureRateClipReported)
+            {
+                // Measured for bursts and Emit only: with rate emission the Editor keeps far fewer
+                // particles than the clip channel alone discards (follow-up).
+                m_ShapeTextureRateClipReported = true;
+                ReportUnsupported("shape texture clipping of rate-over-time births (the Editor keeps fewer of them)");
+            }
             if (clip < threshold) texel.a = 0;
             else
             {

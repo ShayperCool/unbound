@@ -241,6 +241,27 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void DiscardedNewbornsLeaveAlsoFromRingBufferSlots()
+        {
+            var ps = Make(ParticleSystemShapeType.Rectangle, null);
+            try
+            {
+                var main = ps.main;
+                main.maxParticles = 4;
+                main.ringBufferMode = ParticleSystemRingBufferMode.LoopUntilReplaced;
+                ps.Emit(4);
+                var shape = ps.shape;
+                shape.texture = Coords(4);
+                shape.textureClipThreshold = 0.5f;
+                for (int i = 0; i < 4; i++) ps.Emit(8);
+                var particles = Read(ps);
+                Assert.InRange(particles.Length, 1, 4);
+                foreach (var p in particles) Assert.True(p.startColor.a >= 128, "a discarded newborn stayed in a reused slot");
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
         public void TheSettersKeepTheThresholdInZeroToOneAndTheChannelAtZeroOrMore()
         {
             var ps = Make(ParticleSystemShapeType.Rectangle, null);

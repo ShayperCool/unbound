@@ -416,7 +416,7 @@ namespace UnityEngine
             internal static MinMaxGradient Read(Unbound.Runtime.YNode node)
             {
                 if (node == null || node.Kind != Unbound.Runtime.YKind.Map)
-                    return new MinMaxGradient(Color.white);
+                    return new MinMaxGradient(Color.white).ForModule();
                 var g = new MinMaxGradient
                 {
                     m_Mode = (ParticleSystemGradientMode)node.Int("minMaxState"),
@@ -427,6 +427,9 @@ namespace UnityEngine
                     g.m_GradientMax = Unbound.Runtime.BuiltinReaders.Gradient(max);
                 if (node.Get("minGradient") is Unbound.Runtime.YNode min && min.Kind == Unbound.Runtime.YKind.Map)
                     g.m_GradientMin = Unbound.Runtime.BuiltinReaders.Gradient(min);
+                // A module always holds both gradients (a missing node reads as the default white one).
+                g.m_GradientMax ??= new Gradient();
+                g.m_GradientMin ??= new Gradient();
                 return g;
             }
         }

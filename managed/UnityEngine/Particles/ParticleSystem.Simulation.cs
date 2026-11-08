@@ -713,9 +713,11 @@ namespace UnityEngine
                 int spread = request.spreadIndex >= 0 ? request.spreadIndex : local;
                 int spreadCount = request.spreadIndex >= 0 ? request.spreadCount : request.count;
                 m_ShapeSampleDiscarded = j >= count;
+                m_RateBirth = request.rate;
                 bool initialized = InitParticle(ref m_Particles[index], emitter, Mathf.Clamp01(birthTime / duration),
                     false, ref overrides, spread, spreadCount, null, j, requested);
                 m_ShapeSampleDiscarded = false;
+                m_RateBirth = false;
                 if (!initialized) { marks[index] |= SlotMark.Dead; continue; }
                 m_SlotPoints[index] = m_Particles[index].m_Position;
                 BeginModuleSample(j, m_Particles[index].m_RandomSeed);
@@ -939,8 +941,9 @@ namespace UnityEngine
             if (!m_HasContext) m_Context = MakeContext();
             m_Newborn = true;
             m_ShapeTime = m_TotalTime - preAge;
-            int first = m_Count;
-            bool discarded = false;
+            // The lowest slot a discarded newborn took: in a ring buffer a newborn can reuse an old
+            // particle's slot below the live count.
+            int firstDiscarded = int.MaxValue;
             for (int k = 0; k < count; k++)
             {
                 int index = Allocate();
@@ -952,7 +955,7 @@ namespace UnityEngine
                     if (m_ShapeTextureDiscarded)
                     {
                         m_Particles[index].m_Flags |= Particle.FlagShapeDiscarded;
-                        discarded = true;
+                        firstDiscarded = Math.Min(firstDiscarded, index);
                     }
                     else RemoveAt(index);
                     continue;
@@ -966,7 +969,7 @@ namespace UnityEngine
             // Particles the shape texture discarded leave after the whole call, in ascending
             // slot order, each taking the last particle in (6000.0.71f1,
             // tests/projects/particlemeshshape texture/clip/emit).
-            for (int i = first; discarded && i < m_Count;)
+            for (int i = firstDiscarded; i < m_Count;)
             {
                 if ((m_Particles[i].m_Flags & Particle.FlagShapeDiscarded) != 0) RemoveAt(i);
                 else i++;
