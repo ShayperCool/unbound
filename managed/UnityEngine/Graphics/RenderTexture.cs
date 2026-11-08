@@ -381,6 +381,7 @@ namespace UnityEngine
             a.width == b.width && a.height == b.height && a.graphicsFormat == b.graphicsFormat
             && a.depthStencilFormat == b.depthStencilFormat && a.msaaSamples == b.msaaSamples
             && a.dimension == b.dimension && a.volumeDepth == b.volumeDepth && a.useMipMap == b.useMipMap
+            && (!a.useMipMap || (a.mipCount == b.mipCount && a.autoGenerateMips == b.autoGenerateMips))
             && a.enableRandomWrite == b.enableRandomWrite && a.memoryless == b.memoryless;
 
         static RenderTextureDescriptor TemporaryDescriptor(int width, int height, int depthBuffer, RenderTextureFormat format,

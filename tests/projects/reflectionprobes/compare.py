@@ -2,7 +2,7 @@
 """Compares the reflection probe probe's output (Unity's reference directory, then Unbound's).
 
 * values.jsonl record by record: numbers within 2e-3 or 1e-3 relative (as builtinfx), names and
-  list lengths exactly; every reference record must be present.
+  list lengths exactly; every reference record must be present and no other.
 * *.bin cube dumps mip by mip (RGB). Imported float cubes: every texel within 0.5% of the mip's
   largest value (the convolution's whole-level weights differ from the Editor's by a fraction of
   that). Byte cubes: within 1. Realtime (half float) cubes: within 1% of the mip's largest value,
@@ -111,6 +111,9 @@ def main():
             continue
         differ += 1
         print(f"value {key}: unity {json.dumps(value)[:200]} unbound {json.dumps(cand.get(key, 'MISSING'))[:200]}")
+    for key in cand.keys() - ref.keys():
+        differ += 1
+        print(f"value {key}: EXTRA (unbound {json.dumps(cand[key])[:200]})")
     cubes = failed_cubes = 0
     images = over_images = 0
     worst_mean = 0.0

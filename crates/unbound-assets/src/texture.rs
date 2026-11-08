@@ -729,16 +729,7 @@ pub fn import_texture(
     let mut image = decode(source, bytes).context("decoding")?;
     let (original_width, original_height) = (image.width, image.height);
     // HDR colour in a gamma project is gamma-encoded: a 2D texture's per level after resizing and
-    // filtering (measured with tests/projects/textureimport), a cubemap's here (a glossy-convolved
-    // one's after the convolution, import_cubemap).
-    if settings.gamma_hdr
-        && settings.srgb
-        && image.format == TextureFormat::Rgba32F
-        && settings.shape == TextureShape::Cube
-        && !convolves(&settings)
-    {
-        image.linear_to_gamma();
-    }
+    // filtering (measured with tests/projects/textureimport), a cubemap's in import_cubemap.
 
     match settings.alpha_source {
         // Only an automatic format leaves the alpha out; an explicit one with alpha keeps it.
@@ -1124,15 +1115,28 @@ fn convolves(settings: &TextureSettings) -> bool {
 /// face size would be, each with its mips (glossy-convolved when `cubemapConvolution` says so).
 fn import_cubemap(
     source: &Path,
-    image: Image,
+    mut image: Image,
     settings: TextureSettings,
     original: (u32, u32),
 ) -> Result<ImportedTexture> {
     let layout = cubemap::layout(image.width, image.height, settings.cubemap_layout)?;
-    let mut faces = cubemap::faces(&image, layout);
-    let face = faces[0].width;
+    let face = cubemap::face_size(image.width, image.height, layout);
     let (size, _) = npot_size(face, face, settings.npot_scale);
     let (size, _) = fit_max_size(size, size, settings.max_size);
+    let levels = if settings.mipmaps {
+        32 - size.leading_zeros()
+    } else {
+        1
+    };
+    let convolve = convolves(&settings) && levels > 1;
+    // HDR colour in a gamma project: the image gamma-encoded before its faces are cut (measured
+    // with tests/projects/textureimport), a glossy-convolved cube's mips after the convolution
+    // (unmeasured).
+    let gamma = settings.gamma_hdr && settings.srgb && image.format == TextureFormat::Rgba32F;
+    if gamma && !convolve {
+        image.linear_to_gamma();
+    }
+    let mut faces = cubemap::faces(&image, layout);
     if size != face {
         faces = faces
             .into_iter()
@@ -1140,20 +1144,15 @@ fn import_cubemap(
             .collect::<Result<_>>()?;
     }
     let has_alpha = faces.iter().any(Image::has_alpha);
-    let levels = if settings.mipmaps {
-        32 - size.leading_zeros()
-    } else {
-        1
-    };
     let srgb = settings.srgb;
-    let chains: Vec<Vec<Image>> = if convolves(&settings) && levels > 1 {
+    let chains: Vec<Vec<Image>> = if convolve {
         // Byte faces are convolved as linear light whatever their sRGB setting and stored
-        // gamma-encoded again; float faces stay linear except in a gamma project (measured:
-        // tests/projects/reflectionprobes import.*).
+        // gamma-encoded again; float faces stay linear (measured: tests/projects/reflectionprobes
+        // import.*).
         let bytes = faces[0].format == TextureFormat::Rgba8;
         let linear: Vec<Image> = faces.into_iter().map(Image::into_linear_float).collect();
         let mut chains = specular::convolve(&linear);
-        if bytes || (settings.gamma_hdr && srgb) {
+        if bytes || gamma {
             chains.iter_mut().flatten().for_each(Image::linear_to_gamma);
         }
         if bytes {

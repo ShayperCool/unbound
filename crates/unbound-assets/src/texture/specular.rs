@@ -103,14 +103,19 @@ fn strata(level: u32) -> &'static Strata {
 
 /// The unnormalised direction of a face position (`sc`, `tc` in -1..1 from the face's top-left),
 /// the major axis ±1 (Unity's cube layout).
-fn face_vector(face: usize, sc: f32, tc: f32) -> [f32; 3] {
+fn face_vector<T: Copy + std::ops::Neg<Output = T> + From<i8>>(
+    face: usize,
+    sc: T,
+    tc: T,
+) -> [T; 3] {
+    let one = T::from(1);
     match face {
-        0 => [1.0, -tc, -sc],
-        1 => [-1.0, -tc, sc],
-        2 => [sc, 1.0, tc],
-        3 => [sc, -1.0, -tc],
-        4 => [sc, -tc, 1.0],
-        _ => [-sc, -tc, -1.0],
+        0 => [one, -tc, -sc],
+        1 => [-one, -tc, sc],
+        2 => [sc, one, tc],
+        3 => [sc, -one, -tc],
+        4 => [sc, -tc, one],
+        _ => [-sc, -tc, -one],
     }
 }
 
@@ -150,7 +155,7 @@ impl Level {
             let edge = (0..size as isize)
                 .flat_map(|i| [(i, -1), (i, size as isize), (-1, i), (size as isize, i)]);
             for (x, y) in edge {
-                let (f, nx, ny) = texel_of(face_vector_f64(face, border(x), border(y)), size);
+                let (f, nx, ny) = texel_of(face_vector(face, border(x), border(y)), size);
                 out[((y + 1) as usize) * stride + (x + 1) as usize] = texels[f][ny * size + nx];
             }
             // A corner: the mean of the two border texels beside it.
@@ -163,17 +168,6 @@ impl Level {
             out
         });
         Level { size, faces }
-    }
-}
-
-fn face_vector_f64(face: usize, sc: f64, tc: f64) -> [f64; 3] {
-    match face {
-        0 => [1.0, -tc, -sc],
-        1 => [-1.0, -tc, sc],
-        2 => [sc, 1.0, tc],
-        3 => [sc, -1.0, -tc],
-        4 => [sc, -tc, 1.0],
-        _ => [-sc, -tc, -1.0],
     }
 }
 
@@ -409,8 +403,14 @@ fn sampled(
             let (face, px, py) = locate(d, chain[l].size as f32);
             bilinear(&chain[l], face, px, py)
         };
-        let (a, b) = (read(l0), read(l1));
-        (0..4).for_each(|c| sum[c] += a[c] * (1.0 - f) + b[c] * f);
+        // A level of zero weight is not read (an infinite texel would make it NaN).
+        let a = read(l0);
+        if f > 0.0 {
+            let b = read(l1);
+            (0..4).for_each(|c| sum[c] += a[c] * (1.0 - f) + b[c] * f);
+        } else {
+            (0..4).for_each(|c| sum[c] += a[c]);
+        }
     }
     sum.map(|c| c / samples as f32)
 }
@@ -488,8 +488,9 @@ pub(super) fn convolve(faces: &[Image]) -> Vec<Vec<Image>> {
                 })
                 .collect()
         } else {
+            let above = (size >> (level - 1)) as usize;
             out.iter()
-                .map(|chain| downsample(chain.last().unwrap(), s * 2))
+                .map(|chain| downsample(chain.last().unwrap(), above))
                 .collect()
         };
         for (f, texels) in next.into_iter().enumerate() {
@@ -547,7 +548,7 @@ mod tests {
         for face in 0..6 {
             for (x, y) in [(0, 0), (7, 0), (3, 5), (7, 7)] {
                 let c = |i: usize| (i as f64 + 0.5) / size as f64 * 2.0 - 1.0;
-                let d = face_vector_f64(face, c(x), c(y));
+                let d = face_vector(face, c(x), c(y));
                 assert_eq!(texel_of(d, size), (face, x, y), "face {face} texel {x},{y}");
             }
         }

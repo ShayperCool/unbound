@@ -21,8 +21,13 @@ namespace UnityEngine
         const float k_RoughnessStep = 1f / 6f;
         /// <summary>The chain level of the mips below four texels (the chain's last levels).</summary>
         const float k_SmallMipLevel = 7f;
+        /// <summary>The highest power-of-two step the chain level is placed between (2^8 texels):
+        /// wider blurs keep interpolating past it rather than moving up a level. Measured at
+        /// resolutions 32 and 64 only.</summary>
+        const int k_ChainLevelTopStep = 10;
 
         static Material s_CubeBlur, s_CubeCopy;
+        static bool s_ConvolutionUnavailable;
         static Mesh s_FaceQuads;
         static readonly Dictionary<int, object> s_ConvolveProperties = new Dictionary<int, object>();
         static readonly int s_MainTexId = Shader.PropertyToID("_MainTex");
@@ -42,13 +47,15 @@ namespace UnityEngine
             int size = cube.width;
             int mips = cube.mipmapCount;
             if (mips < 2) return;
+            if (s_ConvolutionUnavailable) return;
             if (s_CubeBlur == null)
             {
                 var blur = Shader.Find("Hidden/CubeBlur");
                 var copy = Shader.Find("Hidden/CubeCopy");
                 if (blur == null || copy == null)
                 {
-                    Debug.LogError("Unbound: the built-in Hidden/CubeBlur or Hidden/CubeCopy shader is missing; realtime reflection probes keep box-filtered mips.");
+                    s_ConvolutionUnavailable = true;
+                    Debug.LogError("Unbound: the built-in Hidden/CubeBlur or Hidden/CubeCopy shader is missing; realtime reflection probes get no glossy mips (only mip 0 is drawn).");
                     return;
                 }
                 using (ObjectRegistry.AsAssets())
@@ -69,10 +76,25 @@ namespace UnityEngine
             var chain = RenderTexture.GetTemporary(descriptor);
             chain.filterMode = FilterMode.Trilinear;
             var active = RenderTexture.active;
+            var saved = GfxStream.Current;
+            try
+            {
+                Convolve(cube, chain, size, mips, saved.Flags);
+            }
+            finally
+            {
+                s_ConvolveProperties.Clear();
+                GfxStream.Camera(saved.View, saved.Projection, saved.Flags);
+                RenderTexture.active = active;
+                RenderTexture.ReleaseTemporary(chain);
+            }
+        }
+
+        static void Convolve(RenderTexture cube, RenderTexture chain, int size, int mips, uint flags)
+        {
             ulong cubeHandle = cube.EnsureCreated(), chainHandle = chain.EnsureCreated();
             ulong mesh = s_FaceQuads.Sync(), blurMaterial = s_CubeBlur.Sync(), copyMaterial = s_CubeCopy.Sync();
-            var saved = GfxStream.Current;
-            GfxStream.Camera(Matrix4x4.identity, Matrix4x4.identity, saved.Flags);
+            GfxStream.Camera(Matrix4x4.identity, Matrix4x4.identity, flags);
             var properties = s_ConvolveProperties;
             // The blur chain: odd mips into the temporary from the cube's mip above, even ones back.
             for (int mip = 1; mip < mips; mip++)
@@ -87,7 +109,7 @@ namespace UnityEngine
                 for (int face = 0; face < 6; face++)
                     Graphics.CopyTexture(cube, face, mip, chain, face, mip);
             // Every mip from 1: the chain at its roughness's level.
-            var levels = ChainLevels(size, mips);
+            var levels = ChainLevels(size);
             properties[s_MainTexId] = chain;
             properties.Remove(s_TexelId);
             for (int mip = 1; mip < mips; mip++)
@@ -95,10 +117,6 @@ namespace UnityEngine
                 properties[s_LevelId] = levels[mip];
                 DrawFaces(cubeHandle, mip, mesh, copyMaterial, properties);
             }
-            properties.Clear();
-            GfxStream.Camera(saved.View, saved.Projection, saved.Flags);
-            RenderTexture.active = active;
-            RenderTexture.ReleaseTemporary(chain);
         }
 
         static void DrawFaces(ulong target, int mip, ulong mesh, ulong material, Dictionary<int, object> properties)
@@ -118,10 +136,13 @@ namespace UnityEngine
 
         static object WholeLevel(int level) => s_WholeLevels[level] ??= (float)level;
 
-        /// <summary>The chain level each mip of a cube of <paramref name="size"/> reads.</summary>
-        static object[] ChainLevels(int size, int mips)
+        /// <summary>The chain level each mip of a cube of <paramref name="size"/> reads (every mip
+        /// down to 1x1, whatever mip count a cube asks for).</summary>
+        static object[] ChainLevels(int size)
         {
             if (s_ChainLevels.TryGetValue(size, out var levels)) return levels;
+            int mips = 1;
+            while ((size >> mips) > 0) mips++;
             levels = new object[mips];
             float roughness = 0f;
             int texels = size;
@@ -133,7 +154,7 @@ namespace UnityEngine
                 {
                     float width = 2f * size * MathF.Pow(roughness, k_ChainRoughnessExponent);
                     // Between the powers of two around it: below 2^(k-2) moves down a level.
-                    int k = 10;
+                    int k = k_ChainLevelTopStep;
                     while (k > 0 && width < Pow2(k - 2)) k--;
                     float low = Pow2(k - 2), high = Pow2(k - 1);
                     level = k - 3 + (width - low) / (high - low);

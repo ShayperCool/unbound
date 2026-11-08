@@ -334,6 +334,93 @@ fn a_strip_imports_as_a_cubemap() {
     }
 }
 
+/// A byte strip of one colour per face (faces 8 texels wide), imported as a cubemap.
+fn byte_cube(convolution: i32, srgb: i32, mipmaps: i32) -> ImportedTexture {
+    let colors = [
+        [200u8, 30, 10, 255],
+        [20, 180, 40, 255],
+        [10, 20, 220, 255],
+        [240, 240, 10, 255],
+        [10, 230, 230, 255],
+        [128, 64, 200, 255],
+    ];
+    let bytes = png(48, 8, |x, _| colors[(x / 8) as usize]);
+    let meta = unbound_yaml::parse_value(&format!(
+        "TextureImporter:\n  textureShape: 2\n  generateCubemap: 6\n  cubemapConvolution: {convolution}\n  mipmaps:\n    enableMipMap: {mipmaps}\n    sRGBTexture: {srgb}\n"
+    ))
+    .unwrap();
+    TextureImporter::default()
+        .import(Path::new("Cube.png"), &bytes, &meta)
+        .unwrap()
+}
+
+/// Specular convolution of byte faces keeps bytes (and the sRGB setting), mip 0 unchanged, a
+/// uniform face uniform deep inside; without mipmaps nothing is convolved.
+#[test]
+fn convolved_byte_cubes_stay_bytes() {
+    for srgb in [0, 1] {
+        let plain = byte_cube(0, srgb, 1);
+        let tex = byte_cube(1, srgb, 1);
+        assert_eq!(
+            (tex.format, tex.srgb, tex.mips.len()),
+            (TextureFormat::Rgba8, srgb == 1, 6 * 4)
+        );
+        for face in 0..6 {
+            assert_eq!(
+                tex.mips[face * 4].data,
+                plain.mips[face * 4].data,
+                "mip 0 of face {face}"
+            );
+        }
+        // Convolved mips mix neighbouring faces: the corner texel of +Z's mip 1 differs from the
+        // box-filtered one.
+        let corner = &tex.mips[4 * 4 + 1].data;
+        assert_ne!(&corner[..3], &plain.mips[4 * 4 + 1].data[..3]);
+        assert!(
+            tex.mips
+                .iter()
+                .all(|m| m.data.chunks(4).all(|p| p[3] == 255))
+        );
+    }
+    let flat = byte_cube(1, 1, 0);
+    assert_eq!(flat.mips.len(), 6);
+    assert_eq!(flat.mips[0].data, byte_cube(0, 1, 0).mips[0].data);
+}
+
+/// A float cube with an infinite texel stays finite away from it: zero-weight levels are not read.
+#[test]
+fn a_convolved_cube_with_an_infinite_texel_keeps_its_far_side() {
+    let size = 8u32;
+    let mut data = Vec::new();
+    for y in 0..size {
+        for x in 0..size * 6 {
+            let v = if x == 4 * size + 3 && y == 3 {
+                f32::INFINITY
+            } else {
+                0.5
+            };
+            data.extend([v, v, v, 1.0].iter().flat_map(|c| c.to_le_bytes()));
+        }
+    }
+    let faces = cubemap::faces(
+        &Image {
+            width: size * 6,
+            height: size,
+            format: TextureFormat::Rgba32F,
+            data,
+        },
+        cubemap::Layout::HorizontalStrip,
+    );
+    let chains = specular::convolve(&faces);
+    // -Z faces away from the texel on +Z: its first convolved mip stays finite.
+    assert!(
+        chains[5][1]
+            .data
+            .chunks(4)
+            .all(|c| f32::from_le_bytes(c.try_into().unwrap()).is_finite())
+    );
+}
+
 /// The baked reflection of tests/projects/baked (a 384x64 EXR, glossy convolution) imports as a
 /// 64 cubemap of floats, every mip finite. BakedSetup sets the probe resolution to 64.
 #[test]
