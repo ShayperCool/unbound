@@ -322,7 +322,7 @@ pub(super) fn report(
         }
     }
     finish(&mut report, fields);
-    report.realtime_gi = lighting.report(project, runtime)?;
+    report.realtime_gi = lighting.report(project, &db, runtime)?;
     Ok(report)
 }
 

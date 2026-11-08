@@ -47,9 +47,9 @@ impl Inventory {
     pub(super) fn report(
         self,
         project: &Project,
+        db: &unbound_project::AssetDb,
         runtime: &unbound_host::ManagedRuntime,
     ) -> Result<Vec<Entry>> {
-        let db = project.asset_db();
         self.inspect(|guid, id| {
             let data =
                 unbound_runtime::lighting::lighting_data(&db, &project.install.data, guid, id)?;
