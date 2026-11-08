@@ -387,13 +387,6 @@ namespace Unbound.Runtime
         readonly List<float> m_HumanWeights = new List<float>();
         readonly List<Unbound.Runtime.Humanoid.Trs> m_HumanBodyDifferences = new List<Unbound.Runtime.Humanoid.Trs>();
 
-        /// <summary>A transition's destination entering beside an empty state on the base layer.</summary>
-        bool EntersFromEmpty(LayerRun layer, StateRun run)
-        {
-            var source = PlayedBy(layer);
-            return source.Transition != null && source.Next == run && AloneBesideEmpty(layer, 0, run, source.Current);
-        }
-
         /// <summary>A humanoid Animator's root motion: each humanoid clip's body motion between its
         /// state's previous and current times, blended by the clips' weights in each layer (the
         /// states of a transition, a blend tree's clips); override layers move it towards theirs by
@@ -401,7 +394,8 @@ namespace Unbound.Runtime
         /// their body differences onto the body below instead; layer masks filter both
         /// (<see cref="Unbound.Runtime.Humanoid.HumanRootMotion.CombineLayer"/>). It becomes a delta of the root
         /// (applied like generic root motion) and places the body relative to it for the pose.
-        /// False when no humanoid clip plays.</summary>
+        /// False when no humanoid clip plays; the feet pivot then rests at the root
+        /// (<see cref="Unbound.Runtime.Humanoid.HumanRootMotion.Idle"/>).</summary>
         bool HumanRootMotion(Animator animator, Unbound.Runtime.Humanoid.AnimatorHuman human)
         {
             human.ClearMotion();
@@ -425,9 +419,6 @@ namespace Unbound.Runtime
                         Speed = SpeedOf(def),
                         CycleOffset = def.CycleOffset + (float)MirrorShift(def, clip),
                     };
-                    if (i == 0 && run.MotionPrevious.HasValue && EntersFromEmpty(layer, run))
-                        Unbound.Runtime.Stubs.Ignored("Animator humanoid root motion entering from a state without a motion",
-                            "the first update of a transition from an empty state leaves out a root offset the Editor adds (measured for controller transitions, not reproduced)");
                     if (additive)
                     {
                         // Additive layers leave the root motion alone; only their body differences apply.
@@ -448,7 +439,11 @@ namespace Unbound.Runtime
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanWeights), additive, layerWeight,
                     mask != null && mask.MasksHumanoidParts ? mask.m_HumanoidParts : null);
             }
-            if (!any) return false;
+            if (!any)
+            {
+                human.IdleMotion(m_RootDeltaTime);
+                return false;
+            }
             human.ApplyMotion(blended, m_RootDeltaTime, out var rm);
             if (!animator.m_ApplyRootMotion && !m_HasMonoMove) return true;
             animator.m_DeltaPosition = new Vector3(rm.DeltaPosition.x, rm.DeltaPosition.y, rm.DeltaPosition.z);

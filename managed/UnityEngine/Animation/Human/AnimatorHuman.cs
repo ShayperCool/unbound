@@ -135,6 +135,9 @@ namespace Unbound.Runtime.Humanoid
             HumanRootMotion.EndUpdate(m_Memory, deltaTime);
         }
 
+        /// <summary>An update in which no humanoid clip plays (<see cref="HumanRootMotion.Idle"/>).</summary>
+        internal void IdleMotion(float deltaTime) => PivotPosition = HumanRootMotion.Idle(m_Memory, AvatarX(), deltaTime);
+
         /// <summary>A re-blended sample replaces the retained one (mixer weights changed while
         /// culled): the feet pivot is placed between its feet again, with the pivot weight kept
         /// (6000.0.71f1, tests/projects/animculling humanMixerShape/live: the pivot is the new

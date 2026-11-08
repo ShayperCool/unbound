@@ -121,6 +121,81 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A layer over no humanoid clip moves every part from the identity by its weight,
+        /// as a mixer's inputs over default values, and the feet pivot weight from none (humanoid
+        /// emptyPartial at 0.5 and emptyPartialQuarter at 0.25).</summary>
+        [Theory]
+        [InlineData(0.25f)]
+        [InlineData(0.5f)]
+        public void ALayerOverNoHumanoidClipScalesEveryPartByItsWeight(float weight)
+        {
+            var layer = Sample(4f, 0f, 0.5f);
+            layer.Body = X(0.2f, 0.6f, 0f);
+            layer.LeftFoot = X(0.3f, 0.4f, 0f);
+            var below = default(HumanRootMotionSample);
+            bool any = false;
+            HumanRootMotion.CombineLayer(ref below, ref any, new[] { layer }, ReadOnlySpan<Trs>.Empty, new[] { 1f }, false, weight, null);
+            Assert.True(any);
+            Near(4f * weight, below.Delta.t.z);
+            Near(0.2f * weight, below.Body.t.x);
+            Near(0.6f * weight, below.Body.t.z);
+            Near(0.3f * weight, below.LeftFoot.t.x);
+            Near(0.5f * weight, below.LeftFootSlip.t.z);
+            Near(weight, below.GravityWeight);
+            // Control: over no motion elsewhere (a playable output over none, a layer over humanoid
+            // clips without body curves) only the step takes the share; the body stays the layer's.
+            var over = HumanRootMotion.Override(HumanRootMotion.NoMotion, layer, weight);
+            Near(4f * weight, over.Delta.t.z);
+            Near(0.2f, over.Body.t.x);
+            Near(1f, over.GravityWeight);
+        }
+
+        /// <summary>A partial layer over humanoid clips without body curves is not measured: it warns.</summary>
+        [Fact]
+        public void APartialLayerOverHumanoidClipsWithoutBodyCurvesWarns()
+        {
+            const string member = "Animator humanoid root motion of a partial layer over humanoid clips without body curves";
+            int Hits() => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
+            int before = Hits();
+            var below = default(HumanRootMotionSample);
+            bool any = true;
+            HumanRootMotion.CombineLayer(ref below, ref any, new[] { Sample(3f, 0f, 0f) }, ReadOnlySpan<Trs>.Empty, new[] { 1f }, false, 0.5f, null);
+            Assert.Equal(before + 1, Hits());
+            // Over no humanoid clip at all it is measured: no warning.
+            below = default;
+            any = false;
+            HumanRootMotion.CombineLayer(ref below, ref any, new[] { Sample(3f, 0f, 0f) }, ReadOnlySpan<Trs>.Empty, new[] { 1f }, false, 0.5f, null);
+            Assert.Equal(before + 1, Hits());
+        }
+
+        /// <summary>An update without a humanoid clip rests the feet pivot at the root and ends the
+        /// first evaluation; the next clip's first update then moves the root by its feet pivot's
+        /// way back to the root (humanoid emptyExit, emptyCond, emptyBack).</summary>
+        [Fact]
+        public void AnIdleUpdateRestsThePivotAtTheRoot()
+        {
+            var memory = new HumanRootMotionMemory();
+            var root = new Trs(new F4(1f, 2f, 3f, 0f), F4.QIdentity, F4.One3);
+            Assert.Equal(root.t.x, HumanRootMotion.Idle(memory, root, 0f).x);
+            Assert.True(memory.FirstEvaluation);
+            memory.PivotWeight = 0.3f;
+            memory.Pivot = new F4(0.5f, 0f, 0.5f, 0f);
+            var pivot = HumanRootMotion.Idle(memory, root, 1f / 30f);
+            Assert.Equal(root.t.z, pivot.z);
+            Assert.False(memory.FirstEvaluation);
+            Assert.Equal(0.5f, memory.PivotWeight);
+            Assert.Equal(0f, memory.Pivot.x);
+
+            var walk = Sample(0.05f, 0f, 0f);
+            walk.LeftFoot = X(0.1f, 0.3f, 0f);
+            walk.RightFoot = X(-0.1f, 0.5f, 0f);
+            walk.LeftFootSlip = walk.RightFootSlip = Trs.Identity;
+            HumanRootMotion.ApplyToAnimator(walk, root, 1f / 30f, 1f, 1f, memory, out var result);
+            // The step, less the feet pivot between where the feet were before it (0, 0.45).
+            Near(0.05f - 0.45f, result.DeltaPosition.z);
+            Near(0f, result.DeltaPosition.x);
+        }
+
         [Fact]
         public void ThePoseBodyIsTheBlendedBodyPlusWhatTheValuesAdd()
         {

@@ -437,16 +437,18 @@ namespace Unbound.Runtime.Humanoid
         /// transition, a blend tree's clips): every part (step, motion, body, feet, feet slips)
         /// summed by weight, rotations by their weighted sum (aligned), normalized (measured,
         /// tests/projects/humanoid). Weights summing to less than 1 (a transition from a state
-        /// without a motion, a partial layer over none) leave the rest of the step still, the feet
-        /// slipping by what the root no longer covers; the other parts are normalized by the total
-        /// weight (not measured).
-        /// With <paramref name="sum"/> (an AnimationMixerPlayable's inputs) no part is normalized
-        /// by the total: each is Σ wᵢ·partᵢ, and below a total of 1 the identity takes the rest
-        /// (positions toward zero, rotations toward the identity), as the mixer's default values
-        /// do for generic channels (6000.0.71f1, tests/projects/animculling humanMixerShape: sums
-        /// 0, 0.5 and 1.5 scale the body and step; rotations are the normalized filled sum). Unit
-        /// sums give the same result either way.</summary>
-        public static HumanRootMotionSample Blend(ReadOnlySpan<HumanRootMotionSample> samples, ReadOnlySpan<float> weights, bool sum = false)
+        /// without a motion outside the cases <c>AloneBesideEmpty</c> covers, <see cref="Override"/>
+        /// over no motion) leave the rest of the step still, the feet slipping by what the root no longer covers; the other parts are
+        /// normalized by the total weight (not measured).
+        /// With <paramref name="sum"/> (an AnimationMixerPlayable's inputs, <see cref="OverNoClip"/>)
+        /// no part is normalized by the total: each is Σ wᵢ·partᵢ, and below a total of 1 the
+        /// identity takes the rest (positions toward zero, rotations toward the identity) and
+        /// <paramref name="restGravity"/> the rest of the feet pivot weight, as default values do
+        /// for generic channels (6000.0.71f1, tests/projects/animculling humanMixerShape: sums 0,
+        /// 0.5 and 1.5 scale the body and step; rotations are the normalized filled sum). Unit sums
+        /// give the same result either way.</summary>
+        public static HumanRootMotionSample Blend(ReadOnlySpan<HumanRootMotionSample> samples, ReadOnlySpan<float> weights, bool sum = false,
+            float restGravity = 1f)
         {
             if (samples.Length == 1 && (sum ? weights[0] == 1f : weights[0] >= 1f)) return samples[0];
             float total = 0f;
@@ -482,7 +484,7 @@ namespace Unbound.Runtime.Humanoid
             {
                 // The rest of a step stays still; summed mixer parts also move toward the identity.
                 for (int k = 0; k < (sum ? 8 : 1); k++) parts[k].q.w += parts[k].q.w < 0f ? -rest : rest;
-                if (sum) r.GravityWeight += rest * NoMotion.GravityWeight;
+                if (sum) r.GravityWeight += rest * restGravity;
             }
             // Above a total of one the feet pivot follows the feet by the clips' mean weight.
             else if (sum && total > 1f) r.GravityWeight /= total;
@@ -515,9 +517,25 @@ namespace Unbound.Runtime.Humanoid
             RightFoot = Trs.Identity, LeftFootSlip = Trs.Identity, RightFootSlip = Trs.Identity, GravityWeight = 1f,
         };
 
+        /// <summary>A layer's root motion when no layer below plays a humanoid clip: every part
+        /// (step, motion, body, feet, feet slips) moves from the identity by the layer's weight,
+        /// as a mixer's inputs over its default values do, and the feet pivot follows the feet by
+        /// that weight alone (6000.0.71f1, tests/projects/humanoid emptyPartial and
+        /// emptyPartialQuarter, layers of weight 0.5 and 0.25 over an empty base state: the body
+        /// stays on the root at the weight's share of its height).</summary>
+        public static HumanRootMotionSample OverNoClip(in HumanRootMotionSample layer, float weight)
+        {
+            if (!layer.HasMotion || weight >= 1f) return layer;
+            Span<HumanRootMotionSample> one = stackalloc HumanRootMotionSample[] { layer };
+            Span<float> share = stackalloc float[] { weight };
+            return Blend(one, share, sum: true, restGravity: 0f);
+        }
+
         /// <summary>An override layer's root motion over the layers below it: each part moved
         /// towards the layer's by its weight (positions lerped, rotations by the normalized lerp).
-        /// Over no motion the layer's step is its weight's share (not measured).</summary>
+        /// Over no motion (a playable output over none, a layer over humanoid clips without body
+        /// curves) the layer's step is its weight's share and its body and feet stay its own (not
+        /// measured; a layer over no humanoid clip is <see cref="OverNoClip"/>).</summary>
         public static HumanRootMotionSample Override(in HumanRootMotionSample below, in HumanRootMotionSample layer, float weight)
         {
             if (!layer.HasMotion || weight <= 0f) return below;
@@ -601,11 +619,11 @@ namespace Unbound.Runtime.Humanoid
                 return;
             }
             var layer = Blend(samples, weights);
-            if (layerWeight < 1f && layer.HasMotion && !(any && below.HasMotion))
-                Unbound.Runtime.Stubs.Ignored("Animator humanoid root motion of a partial layer over none",
-                    "a layer's humanoid root motion over no humanoid root motion below moves the root by the layer weight's share; the Editor keeps the body on the root at that share and steps differently (measured, not reproduced)");
+            if (any && !below.HasMotion && layer.HasMotion && layerWeight < 1f)
+                Unbound.Runtime.Stubs.Ignored("Animator humanoid root motion of a partial layer over humanoid clips without body curves",
+                    "a partial layer over humanoid clips without body curves moves the root by its weight's share with its own body and feet (not measured)");
             // Skipped layers (weight 0) and no humanoid motion below keep the feet pivot as it was.
-            var result = any ? Override(below, layer, layerWeight) : layer.HasMotion ? Override(NoMotion, layer, layerWeight) : layer;
+            var result = any ? Override(below, layer, layerWeight) : OverNoClip(layer, layerWeight);
             if (any && below.HasMotion && layer.HasMotion && parts != null)
             {
                 if (!parts[9]) { result.LeftFoot = below.LeftFoot; result.LeftFootSlip = below.LeftFootSlip; }
@@ -699,6 +717,20 @@ namespace Unbound.Runtime.Humanoid
             memory.Pivot = new F4((b.x - a.x) * pw + a.x, (b.y - a.y) * pw + a.y, (b.z - a.z) * pw + a.z, (b.w - a.w) * pw + a.w);
 
             ProjectMotion(new Trs(dt, dq, F4.One3), root, deltaTime, humanScale, memory.Pivot, out result);
+        }
+
+        /// <summary>An update in which no humanoid clip plays (a state without a motion on the base
+        /// layer): the root stays, the feet pivot rests at it, the pivot weight returns to 0.5 and
+        /// the first evaluation ends, so the next humanoid clip's first update moves the root by
+        /// its feet pivot's way back to where this one rests (6000.0.71f1, tests/projects/humanoid
+        /// emptyExit, emptyCond and emptyBack: about (-0.34, 31.4, 0) on HumanA). Returns
+        /// Animator.pivotPosition (the root's position).</summary>
+        public static F4 Idle(HumanRootMotionMemory memory, in Trs root, float deltaTime)
+        {
+            if (deltaTime != 0f) memory.PivotWeight = 0.5f;
+            memory.Pivot = F4.Zero;
+            EndUpdate(memory, deltaTime);
+            return root.t;
         }
 
         /// <summary>Convert a retained local step in the current root frame without updating
