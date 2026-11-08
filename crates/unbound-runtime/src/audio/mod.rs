@@ -232,6 +232,18 @@ impl Engine {
         self.mixer.lock().unwrap_or_else(|e| e.into_inner())
     }
 
+    fn mixer_config(&self, requested: AudioConfiguration, rate: u32) -> MixerConfig {
+        MixerConfig {
+            sample_rate: rate,
+            buffer_size: requested.dsp_buffer_size.max(64),
+            speaker_mode: requested.speaker_mode,
+            real_voices: requested.num_real_voices.max(1) as usize,
+            virtual_voices: requested.num_virtual_voices.max(1) as usize,
+            rolloff_scale: self.settings.rolloff_scale,
+            doppler_factor: self.settings.doppler_factor,
+        }
+    }
+
     /// Opens the device (or not) and configures the mixer for it.
     fn start(&self, requested: AudioConfiguration, open_device: bool) -> Result<()> {
         let mut rate = if requested.sample_rate > 0 {
@@ -277,15 +289,7 @@ impl Engine {
         }
         {
             let mut mixer = self.mixer();
-            mixer.reconfigure(MixerConfig {
-                sample_rate: rate,
-                buffer_size: buffer,
-                speaker_mode: requested.speaker_mode,
-                real_voices: requested.num_real_voices.max(1) as usize,
-                virtual_voices: requested.num_virtual_voices.max(1) as usize,
-                rolloff_scale: self.settings.rolloff_scale,
-                doppler_factor: self.settings.doppler_factor,
-            })?;
+            mixer.reconfigure(self.mixer_config(requested, rate))?;
             mixer.discard_output = device.is_none();
             self.clock.store(&mixer);
         }
@@ -316,17 +320,12 @@ impl Engine {
         configuration: AudioConfiguration,
         finish_capture_buffer: bool,
     ) -> bool {
-        let config = {
-            let mixer = self.mixer();
-            MixerConfig {
-                sample_rate: if configuration.sample_rate == 0 {
-                    VIRTUAL_SAMPLE_RATE
-                } else {
-                    configuration.sample_rate
-                },
-                ..mixer.config
-            }
+        let rate = if configuration.sample_rate > 0 {
+            configuration.sample_rate
+        } else {
+            VIRTUAL_SAMPLE_RATE
         };
+        let config = self.mixer_config(configuration, rate);
         if let Err(error) = self.mixer().validate_configuration(&config) {
             tracing::warn!("audio reset rejected: {error:#}");
             return false;
@@ -711,6 +710,35 @@ mod tests {
             ..before
         }));
         assert_eq!(engine.configuration(), before);
+        assert!(engine.capturing.load(Ordering::Acquire));
+    }
+
+    #[test]
+    fn rejected_reset_buffer_preserves_capture_and_does_not_process_the_old_output() {
+        let engine = Engine::new(ProjectAudioSettings::default(), false);
+        engine
+            .mixer()
+            .configure_group(
+                serde_json::from_value(serde_json::json!({
+                    "handle": 1, "parent": 0, "muted": false, "bypass": false,
+                    "effects": [{ "id": "chorus", "kind": "Chorus", "chorus": {
+                        "dry": 0.5, "wet1": 0.5, "wet2": 0.5, "wet3": 0.5,
+                        "delay": 40.0, "rate": 0.8, "depth": 0.03 } }]
+                }))
+                .unwrap(),
+            )
+            .unwrap();
+        let before = engine.configuration();
+        assert!(engine.capture_start());
+        assert!(!engine.reset_with_capture_tail(
+            AudioConfiguration {
+                dsp_buffer_size: u32::MAX,
+                ..before
+            },
+            true
+        ));
+        assert_eq!(engine.configuration(), before);
+        assert_eq!(engine.dsp_time(), 0.0);
         assert!(engine.capturing.load(Ordering::Acquire));
     }
 

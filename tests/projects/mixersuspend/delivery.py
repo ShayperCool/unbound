@@ -85,6 +85,7 @@ def main():
         for root in (args.candidate, args.repeat): verify(root, args.release, args.rate)
         if compare(args.candidate, args.repeat, args.report, exact=True): raise SystemExit('Native repeats differ')
         shutil.copytree(args.candidate, reference)
+        pack(reference)
     else:
         work = args.work or Path.home()/'.cache/unbound'/('q158-delivery-gate-'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
         work.mkdir(parents=True, exist_ok=False)
