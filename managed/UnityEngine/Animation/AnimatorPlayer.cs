@@ -1043,6 +1043,7 @@ namespace Unbound.Runtime
         {
             // A later evaluation replaces a deferred write (an explicit update between the leaves).
             m_PendingWrite = false;
+            m_PendingComposed = false;
             int count = BuildLayerPoses();
             ComputeRootMotion(count);
             AfterEvaluate();
@@ -1066,27 +1067,58 @@ namespace Unbound.Runtime
             WritePose(count, SkipWrites);
         }
 
-        bool m_PendingWrite, m_PendingSkipWrites;
+        bool m_PendingWrite, m_PendingSkipWrites, m_PendingComposed;
         int m_PendingCount;
+        Unbound.Runtime.Playables.AnimStream m_PendingPose;
 
-        /// <summary>The deferred update's movement (<see cref="AnimationPhases"/>).</summary>
+        /// <summary>The deferred update's movement (<see cref="AnimationPhases"/>), then the write of
+        /// the Animator's own Transform: the pose is composed once here, its root channels are
+        /// written with the movement and the rest in the End leaf (6000.0.71f1,
+        /// tests/projects/animcallbacks root* cases).</summary>
         internal void DeliverDeferredMovement()
         {
             if (!m_PendingWrite) return;
             bool outer = EnterDeferred();
-            try { ProcessRootMotion(); }
+            try
+            {
+                ProcessRootMotion();
+                if (!m_PendingWrite) return;
+                m_PendingPose ??= new Unbound.Runtime.Playables.AnimStream();
+                m_PendingPose.Reset(Bindings);
+                WritePose(m_PendingCount, stream: m_PendingPose);
+                m_PendingComposed = true;
+                // A culled Animator keeps its Transforms, except the root an output animates.
+                if (!m_PendingSkipWrites || RootDuringCull() != null) PoseWriter.WriteStream(m_PendingPose, onlyRoot: m_Animator.transform);
+            }
             finally { ExitDeferred(outer); }
         }
 
-        /// <summary>The deferred update's write and IK (<see cref="AnimationPhases"/>).</summary>
+        /// <summary>The deferred update's write and IK (<see cref="AnimationPhases"/>): what its
+        /// movement step composed, but the root, or the whole pose when that step did not run.</summary>
         internal void WriteDeferred()
         {
             if (!m_PendingWrite) return;
             m_PendingWrite = false;
+            bool composed = m_PendingComposed;
+            m_PendingComposed = false;
             bool outer = EnterDeferred();
-            try { WritePose(m_PendingCount, m_PendingSkipWrites); }
+            try
+            {
+                if (!composed)
+                {
+                    WritePose(m_PendingCount, m_PendingSkipWrites);
+                    return;
+                }
+                PoseWriter.WriteStream(m_PendingPose, skipRoot: m_Animator.transform, skipTransforms: m_PendingSkipWrites);
+                if (!m_PendingSkipWrites) FinishWrite(m_PendingCount);
+            }
             finally { ExitDeferred(outer); }
         }
+
+        /// <summary>The root a culled Animator still writes: an attached controller's, when
+        /// playable outputs animate it too (measured, tests/projects/animculling).</summary>
+        Transform RootDuringCull() =>
+            Attached && Unbound.Runtime.Playables.AnimationOutputs.Of(m_Animator)?.Count > 0 ? m_Animator.transform : null;
 
         void WritePose(int count, bool skipTransforms = false, Unbound.Runtime.Playables.AnimStream stream = null)
         {
@@ -1102,12 +1134,19 @@ namespace Unbound.Runtime
                 Array.Resize(ref m_WrittenHeld, Bindings.FloatCount);
             }
             PoseWriter.WriteLayers(Bindings, m_LayerPoses, count, m_Written, m_WrittenHeld, humanBodyInRootMotion: Attached,
-                skipTransforms: skipTransforms, stream: stream,
-                rootDuringCull: Attached && Unbound.Runtime.Playables.AnimationOutputs.Of(m_Animator)?.Count > 0 ? m_Animator.transform : null);
+                skipTransforms: skipTransforms, stream: stream, rootDuringCull: RootDuringCull());
             if (skipTransforms || stream != null) return;
-            if (Attached) WriteMassCenterPose(count);
-            if (Attached) m_Animator.ApplyHumanPose();
-            if (Attached) m_Animator.CaptureRootMotionPose();
+            FinishWrite(count);
+        }
+
+        /// <summary>After the layers are written: the humanoid's body and muscles, and the root pose
+        /// the next root motion starts from.</summary>
+        void FinishWrite(int count)
+        {
+            if (!Attached) return;
+            WriteMassCenterPose(count);
+            m_Animator.ApplyHumanPose();
+            m_Animator.CaptureRootMotionPose();
         }
 
         LayerPose[] m_MassCenterLayers = Array.Empty<LayerPose>();

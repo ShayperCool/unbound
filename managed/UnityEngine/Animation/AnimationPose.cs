@@ -599,20 +599,33 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Writes the channels an animation stream animates (playable outputs): their
-        /// values as they are, the other channels of their properties as they were.</summary>
+        /// values as they are, the other channels of their properties as they were. With
+        /// <paramref name="onlyRoot"/> only that Transform's channels, with <paramref name="skipRoot"/>
+        /// all but its channels; with <paramref name="skipTransforms"/> no Transform or humanoid
+        /// curve.</summary>
         internal static void WriteStream(AnimationBindings b, float[] values, bool[] animated, Object[] objects, bool[] objectAnimated,
-            Transform onlyRoot = null, Transform skipRoot = null)
+            Transform onlyRoot = null, Transform skipRoot = null, bool skipTransforms = false) =>
+            WriteStream(b, values, animated, Math.Min(b.FloatCount, values.Length), objects, objectAnimated,
+                Math.Min(b.ObjectCount, objects.Length), onlyRoot, skipRoot, skipTransforms);
+
+        /// <summary><see cref="WriteStream(AnimationBindings, float[], bool[], Object[], bool[], Transform, Transform, bool)"/>
+        /// for a stream's own channels (bindings added since it was composed stay as they are).</summary>
+        internal static void WriteStream(Unbound.Runtime.Playables.AnimStream stream, Transform onlyRoot = null, Transform skipRoot = null,
+            bool skipTransforms = false) =>
+            WriteStream(stream.Bindings, stream.Values, stream.Animated, Math.Min(stream.FloatCount, stream.Bindings.FloatCount),
+                stream.Objects, stream.ObjectAnimated, Math.Min(stream.ObjectCount, stream.Bindings.ObjectCount), onlyRoot, skipRoot, skipTransforms);
+
+        static void WriteStream(AnimationBindings b, float[] values, bool[] animated, int n, Object[] objects, bool[] objectAnimated, int m,
+            Transform onlyRoot, Transform skipRoot, bool skipTransforms)
         {
             var s = Rent(b);
             try
             {
-                int n = Math.Min(b.FloatCount, values.Length);
                 for (int c = 0; c < n; c++)
                 {
                     s.Touched[c] = animated[c];
                     s.Result[c] = values[c];
                 }
-                int m = Math.Min(b.ObjectCount, objects.Length);
                 for (int c = 0; c < m; c++)
                 {
                     s.ObjectTouched[c] = objectAnimated[c];
@@ -623,11 +636,11 @@ namespace Unbound.Runtime
                     {
                         if ((onlyRoot == null || ReferenceEquals(group.Target, onlyRoot))
                             && (skipRoot == null || !ReferenceEquals(group.Target, skipRoot))) continue;
-                        if (group.IsObject) s.ObjectTouched[group.First] = false;
-                        else for (int c = group.First; c < group.First + group.Width; c++) s.Touched[c] = false;
+                        if (group.IsObject) { if (group.First < m) s.ObjectTouched[group.First] = false; }
+                        else for (int c = group.First; c < Math.Min(group.First + group.Width, n); c++) s.Touched[c] = false;
                     }
                 ReadCurrent(b, s);
-                Write(b, s);
+                Write(b, s, skipTransforms);
             }
             finally
             {

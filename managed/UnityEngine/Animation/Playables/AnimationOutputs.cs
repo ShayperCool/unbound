@@ -745,11 +745,16 @@ namespace Unbound.Runtime.Playables
             return result;
         }
 
-        internal static void WriteOutput(Animator animator, AnimStream result, bool culled, bool playableIK, bool preserveRoot = false)
+        /// <summary>Writes an output pose: a culled Animator only its own Transform, the rest also
+        /// the humanoid pose with its IK pass. <paramref name="preserveRoot"/> or
+        /// <paramref name="rootWritten"/> (the movement step wrote it) leave the root alone.</summary>
+        internal static void WriteOutput(Animator animator, AnimStream result, bool culled, bool playableIK, bool preserveRoot = false,
+            bool rootWritten = false)
         {
             if (result.BodyMotion.HasMotion) animator.Human?.SetPoseMotion(result.BodyMotion);
-            PoseWriter.WriteStream(result.Bindings, result.Values, result.Animated, result.Objects, result.ObjectAnimated,
-                onlyRoot: culled ? animator.transform : null, skipRoot: preserveRoot ? animator.transform : null);
+            if (!(culled && rootWritten))
+                PoseWriter.WriteStream(result, onlyRoot: culled ? animator.transform : null,
+                    skipRoot: preserveRoot || rootWritten ? animator.transform : null);
             if (!culled) animator.ApplyPlayableHumanPose(playableIK);
         }
 
@@ -933,14 +938,23 @@ namespace Unbound.Runtime.Playables
 
         internal static PendingOutput Rent() => s_Free.Count > 0 ? s_Free.Pop() : new PendingOutput();
 
-        /// <summary>Movement: OnAnimatorMove (or builtin root motion) with this evaluation's deltas.</summary>
+        /// <summary>Movement: OnAnimatorMove (or builtin root motion) with this evaluation's deltas,
+        /// then the write of the Animator's own Transform; the rest waits for <see cref="Write"/>
+        /// (6000.0.71f1, tests/projects/animcallbacks and playables anim.frames).</summary>
         internal void Move()
         {
             if (Result == null || Evaluation != Animator.m_OutputEvaluations) return;
             if (Mode == RootMotionMode.Human) AnimationEvaluation.ApplyHumanRootMotion(Animator, HumanStep, dispatch: !SuppressMovement);
             else if (Mode == RootMotionMode.Compute) AnimationEvaluation.ApplyRootMotion(Animator, Result, Motion, DeltaTime, dispatch: !SuppressMovement);
             else if (!SuppressMovement && ControllerMovement) Animator.m_Player?.ProcessRootMotion();
+            // A movement callback may have evaluated the outputs again or disabled the Animator.
+            if (Result == null || Evaluation != Animator.m_OutputEvaluations || !Animator.isActiveAndEnabled) return;
+            PoseWriter.WriteStream(Result, onlyRoot: Animator.transform);
+            RootWritten = true;
         }
+
+        /// <summary><see cref="Move"/> wrote the root: <see cref="Write"/> leaves it.</summary>
+        internal bool RootWritten;
 
         /// <summary>Writes the pose (with its IK pass) and keeps it for a later visibility return;
         /// a disabled Animator only drops its retained sample.</summary>
@@ -957,7 +971,7 @@ namespace Unbound.Runtime.Playables
                 return;
             }
             bool culled = Animator.cullingMode != AnimatorCullingMode.AlwaysAnimate && !Animator.AnyRendererVisible(Animator.gameObject);
-            AnimationEvaluation.WriteOutput(Animator, result, culled, PlayableIK);
+            AnimationEvaluation.WriteOutput(Animator, result, culled, PlayableIK, rootWritten: RootWritten);
             var culledPose = AnimationOutputs.RememberCulled(Animator, result, Motion, DeltaTime, Mode, PlayableIK, Manual, HumanMotion);
             culledPose.Weights = Weights;
             culledPose.Events.Clear();
@@ -968,6 +982,7 @@ namespace Unbound.Runtime.Playables
         {
             if (Result != null) AnimStream.Return(Result);
             Result = null;
+            RootWritten = false;
             Animator = null;
             HumanMotion = null;
             Events.Clear();

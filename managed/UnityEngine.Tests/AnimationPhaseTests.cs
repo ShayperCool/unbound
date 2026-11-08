@@ -195,6 +195,58 @@ namespace UnityEngine.Tests
             }
         }
 
+        // The Animator's own Transform is written in the Begin leaf with the movement, the
+        // transforms below it in the End leaf, for a controller and for a graph output, without
+        // any movement script (6000.0.71f1, animcallbacks rootPlain and rootGraph).
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void TheRootIsWrittenWithTheMovementAndTheRestInTheEndLeaf(bool output)
+        {
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            var root = new GameObject("Root");
+            root.transform.localPosition = new Vector3(-1f, 0f, 0f);
+            var child = new GameObject("Child").transform;
+            child.SetParent(root.transform, false);
+            child.localPosition = new Vector3(0f, -1f, 0f);
+            var animator = root.AddComponent<Animator>();
+            animator.applyRootMotion = false;
+            var graph = PlayableGraph.Create("root-leaf");
+            try
+            {
+                if (output)
+                {
+                    var clip = new AnimationClip();
+                    clip.SetCurve("", typeof(Transform), "m_LocalPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 2f));
+                    clip.SetCurve("Child", typeof(Transform), "m_LocalPosition.y", AnimationCurve.Linear(0f, 0f, 1f, 3f));
+                    var playable = AnimationPlayableOutput.Create(graph, "Animation", animator);
+                    playable.SetSourcePlayable(AnimationClipPlayable.Create(graph, clip));
+                    graph.Play();
+                }
+                else
+                {
+                    // Move: the root's x from 0 to 2 and Child's y from 0 to 3 over a second.
+                    animator.runtimeAnimatorController = (RuntimeAnimatorController)ObjectGraphBuilder.Build(
+                        UnityYaml.Parse(AnimationFixtures.RootMotion), "rootleaf.asset", null, ObjectGraphBuilder.Kind.Asset, null).Objects[9100000];
+                    animator.Play("Move");
+                }
+                PlayableGraphData.UpdateAll();
+                AnimationSystem.UpdateAnimators(fixedStep: false);
+                Assert.Equal(0f, root.transform.localPosition.x, 4);
+                Assert.Equal(-1f, child.localPosition.y);
+                AnimationPhases.WritePoses();
+                Assert.Equal(0f, root.transform.localPosition.x, 4);
+                Assert.Equal(0f, child.localPosition.y, 4);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+                ProjectInfo.UnityVersion = version;
+            }
+        }
+
         [Fact]
         public void ALoopWithoutTheEndLeafWritesAtTheNextBegin()
         {

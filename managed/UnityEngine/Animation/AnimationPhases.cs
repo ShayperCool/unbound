@@ -14,11 +14,12 @@ namespace Unbound.Runtime
     /// <item>PreLateUpdate.DirectorUpdateAnimationBegin (FixedUpdate.DirectorFixedUpdate for
     /// AnimatorUpdateMode.Fixed): every Animator's state machines, animation events and state
     /// callbacks, Animator by Animator; then every Animator's movement (OnAnimatorMove, OnStateMove,
-    /// builtin root motion). No pose is written yet.</item>
+    /// builtin root motion), each followed by the write of the Animator's own Transform (its
+    /// curves; the transforms below it wait).</item>
     /// <item>PreLateUpdate.DirectorUpdateAnimationEnd (FixedUpdate.DirectorFixedUpdatePostPhysics):
-    /// the humanoid Animators write their pose, then the IK passes run layer by layer over all of
-    /// them (OnAnimatorIK, then OnStateIK, then the solve), then the other Animators write
-    /// theirs.</item>
+    /// the humanoid Animators write the rest of their pose, then the IK passes run layer by layer
+    /// over all of them (OnAnimatorIK, then OnStateIK, then the solve), then the other Animators
+    /// write theirs.</item>
     /// </list>
     /// Explicit evaluations (Animator.Update, PlayableGraph.Evaluate, a visibility return) still
     /// run all of it at once. Release-specific: <see cref="Compat.AnimationUpdateSplitMeasured"/>;
@@ -50,7 +51,8 @@ namespace Unbound.Runtime
         internal static void Defer(Animator animator, PendingOutput output) =>
             s_Pending.Add(new Deferred { Animator = animator, Output = output });
 
-        /// <summary>The Begin leaf's second pass: each deferred update's movement, in update order.</summary>
+        /// <summary>The Begin leaf's second pass: each deferred update's movement and root write, in
+        /// update order.</summary>
         internal static void DeliverMovement()
         {
             // Movement callbacks run explicit evaluations at once; they add nothing here.
