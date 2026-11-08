@@ -442,14 +442,14 @@ namespace Unbound.Runtime
             }
         }
 
-        static bool s_WarnedForcedMotionVectors;
+        internal static bool s_WarnedForcedMotionVectors;
 
         static void WarnForcedMotionVectorsOnce()
         {
             if (s_WarnedForcedMotionVectors) return;
             s_WarnedForcedMotionVectors = true;
-            Debug.LogWarning("Unbound: FilteringSettings.forceAllMotionVectorObjects is not measured; such a renderer list draws the " +
-                             "objects it matches without per-object motion vectors.");
+            Debug.LogWarning("Unbound: FilteringSettings.forceAllMotionVectorObjects is not measured; such a renderer list draws every " +
+                             "object it matches, without the engine's previous matrices (unity_MatrixPreviousM is the material's or global value).");
         }
 
         static bool s_WarnedOnDemandPipeline;

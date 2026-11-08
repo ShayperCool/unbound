@@ -63,6 +63,7 @@ namespace UnityEngine.Tests
         sealed class MotionListPipeline : RenderPipeline
         {
             internal static int Lists;
+            internal static bool ForceAll;
 
             protected override void Render(ScriptableRenderContext context, Camera[] cameras) { }
 
@@ -76,7 +77,7 @@ namespace UnityEngine.Tests
                     {
                         perObjectData = PerObjectData.MotionVectors,
                     };
-                    var filtering = new FilteringSettings(RenderQueueRange.opaque);
+                    var filtering = new FilteringSettings(RenderQueueRange.opaque) { forceAllMotionVectorObjects = ForceAll };
                     context.DrawRenderers(culling, ref drawing, ref filtering);
                     Lists++;
                 }
@@ -101,6 +102,7 @@ namespace UnityEngine.Tests
             var saved = GraphicsSettings.defaultRenderPipeline;
             GraphicsSettings.defaultRenderPipeline = asset;
             MotionListPipeline.Lists = 0;
+            MotionListPipeline.ForceAll = false;
             try
             {
                 Assert.True(FrameBuilder.RenderPipelineCameras(cameras));
@@ -138,6 +140,59 @@ namespace UnityEngine.Tests
                 RenderPipelineManager.CleanupRenderPipeline();
                 Object.DestroyImmediate(asset);
             }
+        }
+
+        /// <summary>A list that forces every object's motion vectors is unmeasured: it warns and
+        /// draws what it matches without the engine's per-object motion (the renderer's matrix
+        /// is not taken).</summary>
+        [Fact]
+        public void AListForcingAllMotionVectorObjectsWarns()
+        {
+            var renderer = Cube(MotionVectorGenerationMode.Object);
+            m_Material = new Material(m_Shader);
+            renderer.sharedMaterial = m_Material;
+            var cameraObject = new GameObject("motion camera");
+            m_Objects.Add(cameraObject);
+            cameraObject.transform.position = new Vector3(0f, 0f, -10f);
+            var cameras = new List<Camera> { cameraObject.AddComponent<Camera>() };
+            var asset = ScriptableObject.CreateInstance<MotionListPipelineAsset>();
+            var saved = GraphicsSettings.defaultRenderPipeline;
+            var logs = new List<string>();
+            var logger = Debug.unityLogger;
+            var previousHandler = logger.logHandler;
+            GraphicsSettings.defaultRenderPipeline = asset;
+            MotionListPipeline.Lists = 0;
+            MotionListPipeline.ForceAll = true;
+            FrameBuilder.s_WarnedForcedMotionVectors = false;
+            logger.logHandler = new WarningCapture(logs);
+            try
+            {
+                RenderPipelineManager.Render(cameras);
+                RenderPipelineManager.Render(cameras);
+                Assert.Equal(2, MotionListPipeline.Lists);
+                Assert.False(renderer.m_HasPreviousModel);
+                // Once, for both lists.
+                Assert.Single(logs, l => l.Contains("forceAllMotionVectorObjects"));
+            }
+            finally
+            {
+                logger.logHandler = previousHandler;
+                MotionListPipeline.ForceAll = false;
+                GraphicsSettings.defaultRenderPipeline = saved;
+                RenderPipelineManager.CleanupRenderPipeline();
+                Object.DestroyImmediate(asset);
+            }
+        }
+
+        sealed class WarningCapture : ILogHandler
+        {
+            readonly List<string> m_Logs;
+            internal WarningCapture(List<string> logs) => m_Logs = logs;
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Warning) m_Logs.Add(args.Length > 0 ? string.Format(format, args) : format);
+            }
+            public void LogException(Exception exception, Object context) => m_Logs.Add(exception.ToString());
         }
 
         [Fact]
