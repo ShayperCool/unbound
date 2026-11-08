@@ -129,8 +129,12 @@ namespace Unbound.Runtime
         internal static bool MixerSidechainMeasured => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>Linear scaled-time Send and Duck Volume snapshot changes, measured by
-        /// tests/projects/mixerduck. Unscaled-time and transition overrides remain unmeasured.</summary>
+        /// tests/projects/mixerduck. Unscaled-time transitions remain unmeasured.</summary>
         internal static bool MixerTimedSidechainMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>Single-snapshot scalar curves and linear weighted-array transitions,
+        /// measured by tests/projects/mixerduck on exactly 6000.0.71f1.</summary>
+        internal static bool MixerSnapshotCurvesMeasured => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>Default mixer Pitch Shifter DSP measured on exactly 6000.0.71f1.
         /// Other releases fail until their kernels and state have been measured.</summary>

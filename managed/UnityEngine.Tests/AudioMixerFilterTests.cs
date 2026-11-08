@@ -417,7 +417,9 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        [InlineData("6000.0.71f1", 1)]
+        [InlineData("6000.0.71f1", -1)]
+        [InlineData("6000.0.71f1", 6)]
+        [InlineData("6000.0.71f1", 99)]
         [InlineData("6000.0.72f1", 0)]
         public void UnmeasuredSidechainTransitionProfilesFailBeforeChangingTheSnapshot(string release, int transition)
         {
@@ -431,6 +433,72 @@ namespace UnityEngine.Tests
             Assert.Throws<NotSupportedException>(() => target.TransitionTo(1f));
             mixer.Tick(1f, 1f);
             Assert.Equal(-10f, mixer.Value("Threshold"));
+        }
+
+        [Theory]
+        [InlineData(1, -6.5f)]
+        [InlineData(2, -5f)]
+        [InlineData(3, -12f)]
+        [InlineData(4, -20f)]
+        [InlineData(5, -4f)]
+        public void SnapshotCurvesApplyToScalarParametersAndKeepExposedOwnership(int curve, float expected)
+        {
+            foreach (string kind in new[] { "Send", "Duck Volume", "Attenuation" })
+            {
+                var (mixer, group, effect) = Fixture();
+                UseEffect(mixer, effect, kind, kind == "Duck Volume" ? AudioMixerEffectController.DuckParameters : Array.Empty<string>());
+                string parameter = kind == "Send" ? "send" : kind == "Duck Volume" ? "Threshold" : "volume";
+                if (kind == "Send") effect.m_MixLevelGuid = parameter;
+                mixer.m_Exposed["Change"] = parameter;
+                var start = new AudioMixerSnapshot { m_Mixer = mixer };
+                start.m_Values[parameter] = -4f;
+                start.TransitionTo(0f); mixer.Tick(0f, 0f);
+                var target = new AudioMixerSnapshot { m_Mixer = mixer };
+                target.m_Values[parameter] = -20f;
+                target.m_TransitionTypes[parameter] = curve;
+                mixer.SetFloat("Change", -4f);
+                target.TransitionTo(2f);
+                mixer.Tick(0.5f, 100f);
+                Assert.Equal(-4f, mixer.Value(parameter));
+                Assert.True(mixer.ClearFloat("Change"));
+                mixer.Tick(0f, 100f);
+                Assert.Equal(expected, mixer.Value(parameter));
+                Assert.NotNull(group.DspConfiguration());
+                // No scaled time means no progress, including BrickwallStart at t == 0.
+                mixer.ClearFloat("Change"); start.TransitionTo(0f); mixer.Tick(0f, 0f);
+                target.TransitionTo(2f); mixer.Tick(0f, 100f);
+                Assert.Equal(-4f, mixer.Value(parameter));
+                mixer.Tick(2f, 0f);
+                Assert.Equal(-20f, mixer.Value(parameter));
+            }
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(4)]
+        [InlineData(5)]
+        public void WeightedSnapshotApiUsesLinearTimeEvenForOneTargetWithAnOverride(int curve)
+        {
+            foreach (string kind in new[] { "Send", "Duck Volume", "Attenuation" })
+            foreach (bool single in new[] { false, true })
+            {
+                var (mixer, _, effect) = Fixture();
+                UseEffect(mixer, effect, kind, kind == "Duck Volume" ? AudioMixerEffectController.DuckParameters : Array.Empty<string>());
+                string parameter = kind == "Send" ? "send" : kind == "Duck Volume" ? "Threshold" : "volume";
+                if (kind == "Send") effect.m_MixLevelGuid = parameter;
+                var start = new AudioMixerSnapshot { m_Mixer = mixer };
+                start.m_Values[parameter] = -4f;
+                start.TransitionTo(0f); mixer.Tick(0f, 0f);
+                var a = new AudioMixerSnapshot { m_Mixer = mixer };
+                var b = new AudioMixerSnapshot { m_Mixer = mixer };
+                a.m_Values[parameter] = -20f; b.m_Values[parameter] = -12f;
+                a.m_TransitionTypes[parameter] = curve; b.m_TransitionTypes[parameter] = curve;
+                mixer.TransitionToSnapshots(single ? new[] { a } : new[] { a, b }, single ? new[] { 1f } : new[] { 1f, 3f }, 2f);
+                mixer.Tick(0.5f, 100f);
+                Assert.Equal(single ? -8f : -6.5f, mixer.Value(parameter));
+            }
         }
 
         [Theory]

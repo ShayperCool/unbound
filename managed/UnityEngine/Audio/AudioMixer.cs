@@ -110,10 +110,15 @@ namespace UnityEngine.Audio
         internal void TransitionToSnapshot(AudioMixerSnapshot snapshot, float timeToReach)
         {
             if (snapshot == null) throw new ArgumentException("null Snapshot passed to AudioMixerSnapshot.TransitionTo of AudioMixer '" + m_Name + "'");
-            TransitionToSnapshots(new[] { snapshot }, new[] { 1f }, timeToReach);
+            ScheduleTransition(new[] { snapshot }, new[] { 1f }, timeToReach, true);
         }
 
         public void TransitionToSnapshots(AudioMixerSnapshot[] snapshots, float[] weights, float timeToReach)
+            // 6000.0.71f1 uses linear transitions for this API, including one-element arrays.
+            // Snapshot.TransitionTo applies overrides (tests/projects/mixerduck).
+            => ScheduleTransition(snapshots, weights, timeToReach, !Compat.MixerSnapshotCurvesMeasured);
+
+        void ScheduleTransition(AudioMixerSnapshot[] snapshots, float[] weights, float timeToReach, bool useOverrides)
         {
             if (snapshots == null || weights == null) throw new ArgumentNullException(snapshots == null ? nameof(snapshots) : nameof(weights));
             if (snapshots.Length != weights.Length) throw new ArgumentException("Snapshots and weights arrays must be of the same length");
@@ -138,7 +143,7 @@ namespace UnityEngine.Audio
                     if (snapshot == null) continue;
                     float w = Mathf.Max(0f, weights[i]) / total;
                     sum += w * snapshot.ValueOf(key, m_Defaults);
-                    if (!types.ContainsKey(key) && snapshot.m_TransitionTypes.TryGetValue(key, out var type)) types[key] = type;
+                    if (useOverrides && !types.ContainsKey(key) && snapshot.m_TransitionTypes.TryGetValue(key, out var type)) types[key] = type;
                 }
                 target[key] = sum;
             }
@@ -156,7 +161,7 @@ namespace UnityEngine.Audio
                     effect.CollectTimedSidechainChanges(this, target, snapshots, weights, changingSidechains);
             foreach (var guid in changingSidechains)
                 if (!HasOverride(guid) && !SupportsTimedSidechain(guid, types, m_UpdateMode))
-                    throw new NotSupportedException("AudioMixer timed snapshot changes to Send levels or Duck Volume parameters require measured linear scaled-time transitions");
+                    throw new NotSupportedException("AudioMixer timed snapshot changes to Send levels or Duck Volume parameters require measured scaled-time transitions");
             m_TimedSidechainParameters = changingSidechains;
             m_InstantTarget = null;
             m_From = new Dictionary<string, float>(m_Values);
@@ -194,7 +199,8 @@ namespace UnityEngine.Audio
 
         static bool SupportsTimedSidechain(string guid, Dictionary<string, int> types, AudioMixerUpdateMode mode)
             => Compat.MixerTimedSidechainMeasured && mode == AudioMixerUpdateMode.Normal
-                && (types == null || !types.TryGetValue(guid, out var type) || type == 0);
+                && (types == null || !types.TryGetValue(guid, out var type) || type == 0
+                    || (Compat.MixerSnapshotCurvesMeasured && type >= 1 && type <= 5));
 
         public bool GetFloat(string name, out float value)
         {

@@ -377,8 +377,11 @@ The 6000.0 [updateMode API](https://docs.unity3d.com/6000.0/Documentation/Script
 specifies scaled game time for Normal and realtime independent of timeScale for UnscaledTime.
 The [mixer routing manual](https://docs.unity3d.com/6000.0/Documentation/Manual/AudioMixerSpecifics.html)
 guarantees mixer-output routing into another mixer's group; it does not establish cross-mixer Send
-semantics. The former AudioMixerEffects manual URL returns 404; the effect descriptions are in
-AudioMixerInspectors, linked above.
+semantics. The former AudioMixerEffects and AudioMixerSnapshots manual URLs return 404; effect descriptions
+and transition overrides are in AudioMixerInspectors, linked above. That page specifies linear
+transitions by default and per-parameter overrides selected by the target snapshot. It gives no
+weighted-array override rule, curve arithmetic, buffer timing or clock-control guarantee for
+offline AudioRenderer captures.
 
 Editor definitions of 6000.0.71f1 (`MixerEffectDefinitions`): Threshold -80 to 0 dB (default -10),
 Ratio 0.2 to 10 (displayed in %, default 2), Attack Time and Release Time 0 to 10 s (default 0.1),
@@ -445,13 +448,17 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
   creating all four invalid graphs together can prevent entry into Play mode. The ordinary
   mixer-output control is captured twice at both rates and passes. Cross-mixer Send processing
   order and latency therefore remain unresolved; no rule is inferred from invalid graphs.
+  Q167 adds a child mixer routed directly into the target's group, with a Send from the child
+  targeting that group's Receive or Duck Volume. Both still produce invalid-handle errors in
+  6000.0.71f1 and terminate before delivering usable buffers. The diagnostic cases are opt-in;
+  their failures do not establish any processing-order rule.
 - `Compat.MixerTimedSidechainMeasured` enables linear Normal-mode timed snapshots on exactly
   6000.0.71f1. The Q141 cases cover every Duck parameter, Send Level, weighted mixtures, half-speed
   scaled time and paused scaled time. Snapshot parameters advance once per game update in their
   stored units; the existing Send gain ramp and persistent detector then process each DSP block.
   Both independent Editor captures agree bit for bit at 48000 and 44100 Hz. Exposed overrides
-  retain ownership, and ClearFloat can release one into a supported transition. UnscaledTime and
-  non-linear sidechain transition overrides still fail before scheduling or changing updateMode.
+  retain ownership, and ClearFloat can release one into a supported transition. UnscaledTime
+  sidechain transitions still fail before scheduling or changing updateMode.
   UnscaledTime follows wall time even under captureDeltaTime, so a repeatable reference clock
   remains a follow-up. Parameters held by overrides and unrelated snapshot changes remain usable.
   The Ratio 10-to-0.2 boundary capture retains the rounded GetFloat result 0.199999809 and
@@ -459,6 +466,22 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
   step at the larger absolute Editor range bound; the DSP receives the stored value. Script
   overrides, including pending clears, retain strict range checks. The boundary's public float
   bits are part of the reference, with an immediate exposed-parameter control alongside it.
+- `Compat.MixerSnapshotCurvesMeasured` extends Normal-mode single-snapshot transitions with
+  Smoothstep, Squared, SquareRoot, BrickwallStart and BrickwallEnd on Send Level, every Duck
+  parameter and ordinary volumes. One scalar evaluator serves all parameters. For normalized
+  elapsed time `t`, these curves use `t*t*(3-2*t)`, `t*t`, `sqrt(t)`, `t>0 ? 1 : 0`, and
+  `t>=1 ? 1 : 0`. BrickwallStart does not advance while scaled time is paused. The existing
+  per-block Send ramp and Duck detector histories remain in use.
+  The same captures show that `TransitionToSnapshots` ignores overrides and uses linear
+  interpolation, including a one-element array, matching and differing overrides, and weighted
+  blends in both directions. `AudioMixerSnapshot.TransitionTo` applies the target override.
+  Both paths share one scheduler. Other releases retain the previous, unmeasured weighted-array
+  override selection; timed sidechain changes on those releases still fail clearly. The
+  Attenuation override and unknown override values remain unsupported on changing sidechains.
+- Q167 repeats the opt-in unscaled Send and Threshold captures at both output rates. Realtime
+  progression produces different parameters and master buffers under the same captureDeltaTime.
+  These diagnostics are not oracles. A controllable unscaled reference clock remains a follow-up;
+  an endpoint-only capture would not establish the running detector's timing.
 - The 6000.0 Editor exposes no Allow Wet Mixing or Wet Level control on Send or Duck Volume.
   The published [6000.0 Inspector implementation](https://github.com/Unity-Technologies/UnityCsReference/blob/6000.0/Editor/Mono/Audio/Mixer/GUI/AudioMixerEffectView.cs)
   excludes both units. Assets enabling wet mixing on either still fail explicitly.
