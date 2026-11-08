@@ -365,7 +365,7 @@
   ]
  },
  "carrier-expiry-tie": {
-  "reason": "Particles carrying fading trails (dieWithParticles off) at maxParticles, with a trail lifetime that is a whole number of steps (cap/*/die0, also played): a carrier's newest trail point reaches the trail lifetime exactly at a step's end, and whether that float tie counts as expired decides whether the carrier leaves, and frees its slot for a waiting birth, in that step or the next; Unity and Unbound resolve some ties differently, in both directions. With the trail lifetime off the step grid (cap/*/die0nt: rate, faster rate, cycling bursts, both, at Simulate steps of 0.02, 0.05 and 0.1 s), with dieWithParticles on (die1) and without trails (none) every particle, birth and removal matches: a birth the cap blocks is not retried later.",
+  "reason": "Particles carrying fading trails (dieWithParticles off) at maxParticles, with a trail lifetime that is a whole number of steps (cap/*/die0, also played): carriers leave, and free their slot for a waiting birth, a step earlier or later than in Unity, in both directions. Unresolved; the working hypothesis is a float tie: a carrier's newest trail point reaches the trail lifetime exactly at a step's end. Supporting controls: with the trail lifetime off the step grid (cap/*/die0nt: rate, faster rate, cycling bursts, both, at Simulate steps of 0.02, 0.05 and 0.1 s), with dieWithParticles on (die1) and without trails (none) every particle, birth and removal matches, so a birth the cap blocks is not retried later.",
   "keys": [
    "cap/burst/die0/0.05/9",
    "cap/burst/die0/0.1/4",

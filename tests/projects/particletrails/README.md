@@ -72,10 +72,10 @@ any other difference. Two concern dead particles, `world-trail-death-head` and t
 - `rate-at-capacity`: short trails of rate births sample other points (`die0` and `die1`); with
   `dieWithParticles` off a rate birth into the slot a leaving carrier frees comes one step later in
   Unbound (the `die1` control matches every particle): the `carrier-expiry-tie` below.
-- `carrier-expiry-tie`: with trail lifetimes that are whole numbers of steps, a carrier's newest
-  point reaches the trail lifetime exactly at a step's end; Unity and Unbound resolve some of these
-  float ties differently, so the carrier leaves (and frees its slot) a step apart. The same systems
-  with the trail lifetime off the step grid (`cap/*/die0nt`) match every particle.
+- `carrier-expiry-tie`: with trail lifetimes that are whole numbers of steps, carriers leave (and
+  free their slot) a step apart from Unity, in both directions. Unresolved; the working hypothesis
+  is a float tie where a carrier's newest point reaches the trail lifetime exactly at a step's end.
+  The same systems with the trail lifetime off the step grid (`cap/*/die0nt`) match every particle.
 - `restored-trail-other-index`: right after `SetTrails` gives a particle a trail another particle
   left, Unity draws it ending at its oldest kept point, Unbound cut at the lifetime; with the trail
   ratio such a carrier's trail samples other points afterwards.

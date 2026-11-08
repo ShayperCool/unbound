@@ -114,7 +114,8 @@ namespace UnityEngine
         /// playing, until a new playback starts. The other modules and settings of the probe keep
         /// it (velocity, force and start curves, color, size and speed modules, texture sheet,
         /// lights, custom data, a mesh shape, start delay, prewarm, simulation speed, unscaled
-        /// time, ring buffer, emitter velocity mode).</summary>
+        /// time, ring buffer, emitter velocity mode). Module methods that change settings (bursts,
+        /// planes, colliders, sub-emitters, sprites) are unmeasured and keep it.</summary>
         public bool proceduralSimulationSupported => !m_HasPlayed || !m_ProceduralLost && ProceduralSettings();
 
         /// <summary>A playback has started (procedural mode is decided from then on).</summary>
@@ -692,6 +693,7 @@ namespace UnityEngine
             var noiseSum = m_Particles[index].m_NoiseSum;
             var noiseImpulse = m_Particles[index].m_NoiseImpulse;
             int trail = live ? m_Particles[index].m_TrailId : 0;
+            uint slotSeed = m_Particles[index].m_RandomSeed;
             m_Particles[index] = particle;
             m_Particles[index].m_NoiseSum = noiseSum;
             m_Particles[index].m_NoiseImpulse = noiseImpulse;
@@ -703,8 +705,9 @@ namespace UnityEngine
             if (held != null)
             {
                 held.Orphan = held.Spent = false;
-                // The draws a trail takes from its particle follow the written one.
-                SetTrailDraws(ref m_Particles[index], held);
+                // The draws a trail takes from its particle follow another particle written there;
+                // the same particle written back keeps them.
+                if (particle.m_RandomSeed != slotSeed) SetTrailDraws(ref m_Particles[index], held);
             }
         }
 
@@ -1231,11 +1234,16 @@ namespace UnityEngine
         internal void CullingFrameUpdate()
         {
             var mode = m_Main.cullingMode;
-            // A sub-emitter is culled as the system emitting into it is (6000.0.71f1,
-            // particletriggerapi carrier/*: the never played, never seen child of an AlwaysSimulate
-            // parent keeps its particles updating).
-            var decider = m_SubEmitterParent ?? this;
-            var culling = decider.Culling(decider.m_Main.cullingMode);
+            var culling = Culling(mode);
+            var parent = m_SubEmitterParent;
+            if (parent != null && culling == CullingState.Culled)
+            {
+                // A sub-emitter the parent keeps updating updates (6000.0.71f1, particletriggerapi
+                // carrier/*: the never played, never seen child of an AlwaysSimulate parent);
+                // one whose own renderer is seen updates too (unmeasured; it may be on screen while
+                // its parent's particles and emitter are not).
+                if (parent.Culling(parent.m_Main.cullingMode) != CullingState.Culled) culling = CullingState.Simulated;
+            }
             if (culling != CullingState.Culled)
             {
                 float catchUp = mode == ParticleSystemCullingMode.PauseAndCatchup && m_TotalTime == m_CullingMissedFrom ? m_CullingMissed : 0f;

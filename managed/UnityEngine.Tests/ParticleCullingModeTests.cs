@@ -369,6 +369,42 @@ namespace UnityEngine.Tests
             Assert.Equal(time, ps.time);
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void TheCameraSeesStretchedQuadsOfAScaledEmitterAndAcrossPivot(bool pivot)
+        {
+            var camera = MakeCamera(orthographic: false);
+            var ps = Make(ParticleSystemCullingMode.Pause);
+            var renderer = RendererOf(ps);
+            renderer.renderMode = ParticleSystemRenderMode.Stretch;
+            renderer.lengthScale = 0f;
+            var velocity = ps.velocityOverLifetime;
+            velocity.enabled = true;
+            if (pivot)
+            {
+                // Moving along x above the view: the quad sits 2 × 4 = 8 sizes across, down into it.
+                velocity.x = 1f; velocity.y = 0f; velocity.z = 0f;
+                renderer.lengthScale = 1f;
+                renderer.pivot = new Vector3(0f, 4f, 0f);
+                ps.transform.position = kFar + new Vector3(0f, 9f, 10f);
+            }
+            else
+            {
+                // A 0.1-scaled emitter: positions shrink, but the speed part of the length (the
+                // unscaled speed × velocityScale = 10 m) does not; the tail ends inside the view.
+                velocity.x = 0f; velocity.y = 20f; velocity.z = 0f;
+                renderer.velocityScale = 0.5f;
+                ps.transform.localScale = Vector3.one * 0.1f;
+                ps.transform.position = kFar + new Vector3(0f, 9f, 10f);
+            }
+            SetVisible(ps, true);
+            Frames(10);
+            Assert.True(ps.particleCount > 0);
+            Assert.True(DrawsInView(renderer, camera));
+            Assert.True(CullSees(camera, renderer));
+        }
+
         [Fact]
         public void TheCameraSeesARotatedBillboardCornerInView()
         {
@@ -388,6 +424,38 @@ namespace UnityEngine.Tests
             float time = ps.time;
             Frames(10);
             Near(time + 10 * Dt, ps.time);
+        }
+
+        [Fact]
+        public void ASubEmitterUpdatesWhileItsParentOrItsOwnRendererSaysSo()
+        {
+            var parent = Make(ParticleSystemCullingMode.Pause);
+            var child = Make(ParticleSystemCullingMode.Pause);
+            child.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var sub = parent.subEmitters;
+            sub.enabled = true;
+            sub.AddSubEmitter(child, ParticleSystemSubEmitterType.Manual, ParticleSystemSubEmitterProperties.InheritNothing);
+            Frames(3);
+            child.Emit(2);
+            child.m_SubEmitterParent = parent;
+            SetVisible(parent, false);
+            SetVisible(child, false);
+            Frames(2);
+            float held = child.particleCount > 0 ? ParticlesOf(child)[0].remainingLifetime : 0f;
+            Frames(3);
+            // Both unseen: the child holds.
+            Assert.Equal(held, ParticlesOf(child)[0].remainingLifetime);
+            // Its own renderer seen: it updates although its parent is culled.
+            SetVisible(child, true);
+            Frames(1);
+            Near(held - Dt, ParticlesOf(child)[0].remainingLifetime);
+            // An AlwaysSimulate parent keeps an unseen child updating (measured).
+            SetVisible(child, false);
+            var main = parent.main;
+            main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+            float before = ParticlesOf(child)[0].remainingLifetime;
+            Frames(1);
+            Near(before - Dt, ParticlesOf(child)[0].remainingLifetime);
         }
 
         [Fact]

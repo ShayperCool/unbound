@@ -293,6 +293,23 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void WritingTheSameParticlesBackKeepsTheirTrailLifetimes()
+        {
+            using var scene = new Scene();
+            var ps = scene.NewSystem("set-particles-trail-lifetime");
+            var trails = ps.trails;
+            trails.sizeAffectsLifetime = true;
+            var size = ps.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 0.1f));
+            Step(ps, 20);
+            var lifetimes = Enumerable.Range(0, ps.m_Count).Select(i => ps.m_TrailList[ps.m_Particles[i].m_TrailId - 1].Lifetime).ToArray();
+            ps.SetParticles(Particles(ps));
+            var after = Enumerable.Range(0, ps.m_Count).Select(i => ps.m_TrailList[ps.m_Particles[i].m_TrailId - 1].Lifetime).ToArray();
+            Assert.Equal(lifetimes, after);
+        }
+
+        [Fact]
         public void GetTrailsReturnsTheStorageSizeThatOnlyGrows()
         {
             using var scene = new Scene();

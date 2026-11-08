@@ -73,8 +73,11 @@ namespace UnityEngine
             int recordFloats = !perVertex && mesh ? geometry.MeshParticleFloats : stride;
             int floats = records * recordFloats;
             int capacity = Math.Max(MinBakedVertexRecords, NextPowerOfTwo(records)) + 1;
-            int width = RoundUp(CeilSqrt(capacity * stride), stride);
-            int height = (capacity * stride + width - 1) / width;
+            // Room as for vertex records; mesh particle records are larger than a vertex, so the
+            // room also covers them all (the measured bakes fit; larger ones are not measured).
+            int room = Math.Max(capacity * stride, floats);
+            int width = RoundUp(CeilSqrt(room), stride);
+            int height = (room + width - 1) / width;
             int texels = Math.Max(floats, width * height);
             if (s_BakeVertices.Length < texels) s_BakeVertices = new float[texels];
             Array.Clear(s_BakeVertices, 0, texels);
@@ -167,7 +170,9 @@ namespace UnityEngine
             internal int[] ParticleFirst = new int[16];
             int[] m_ParticleFirstIndex = new int[16];
             Vector3[] m_ParticleCentres = new Vector3[16];
-            Matrix4x4[] m_ParticleTransforms = new Matrix4x4[16];
+            Quaternion[] m_ParticleOrientations = new Quaternion[16];
+            Vector3[] m_ParticleSizes = new Vector3[16];
+            Vector3 m_EmitterScale;
 
             void NoteParticle(int firstVertex, Vector3 centre)
             {
@@ -176,7 +181,8 @@ namespace UnityEngine
                     Array.Resize(ref ParticleFirst, ParticleCount * 2);
                     Array.Resize(ref m_ParticleFirstIndex, ParticleCount * 2);
                     Array.Resize(ref m_ParticleCentres, ParticleCount * 2);
-                    Array.Resize(ref m_ParticleTransforms, ParticleCount * 2);
+                    Array.Resize(ref m_ParticleOrientations, ParticleCount * 2);
+                    Array.Resize(ref m_ParticleSizes, ParticleCount * 2);
                 }
                 ParticleFirst[ParticleCount] = firstVertex;
                 m_ParticleFirstIndex[ParticleCount] = IndexCount;
@@ -184,7 +190,14 @@ namespace UnityEngine
                 ParticleCount++;
             }
 
-            void NoteMeshParticle(Matrix4x4 transform) => m_ParticleTransforms[ParticleCount - 1] = transform;
+            /// <summary>A mesh particle's orientation and size (its baked transform is built from
+            /// them only when baked).</summary>
+            void NoteMeshParticle(Quaternion orientation, Vector3 size, Vector3 emitterScale)
+            {
+                m_ParticleOrientations[ParticleCount - 1] = orientation;
+                m_ParticleSizes[ParticleCount - 1] = size;
+                m_EmitterScale = emitterScale;
+            }
 
             /// <summary>The floats a vertex takes in the vertex buffer: position, the normal,
             /// tangent and color streams (a color is four bytes), then the other streams.</summary>
@@ -208,7 +221,7 @@ namespace UnityEngine
 
             internal void PackMeshParticle(int k, float[] into, ref int at)
             {
-                var m = m_ParticleTransforms[k];
+                var m = Matrix4x4.Scale(m_EmitterScale) * Matrix4x4.Rotate(m_ParticleOrientations[k]) * Matrix4x4.Scale(m_ParticleSizes[k]);
                 for (int column = 0; column < 3; column++)
                     for (int row = 0; row < 3; row++) into[at++] = m[row, column];
                 var c = m_ParticleCentres[k];

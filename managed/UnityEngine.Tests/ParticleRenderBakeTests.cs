@@ -228,6 +228,32 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void APerParticleBakeOfManyMeshParticlesKeepsEveryRecord()
+        {
+            var camera = FrontCamera();
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var mesh = cube.GetComponent<MeshFilter>().sharedMesh;
+            Object.DestroyImmediate(cube);
+            var ps = MakeSystem(r =>
+            {
+                r.renderMode = ParticleSystemRenderMode.Mesh;
+                r.mesh = mesh;
+                r.SetActiveVertexStreams(new List<ParticleSystemVertexStream>
+                    { ParticleSystemVertexStream.Position, ParticleSystemVertexStream.Normal, ParticleSystemVertexStream.Color, ParticleSystemVertexStream.UV });
+            });
+            var main = ps.main;
+            main.maxParticles = 200;
+            for (int i = 0; i < 70; i++) Emit(ps, new Vector3(i * 0.1f, 0f, 0f), Vector3.zero, 0.3f);
+            Texture2D records = null;
+            ps.GetComponent<ParticleSystemRenderer>().BakeTexture(ref records, camera, ParticleSystemBakeTextureOptions.PerParticle);
+            Track(records);
+            var texels = Texels(records);
+            // 13 floats a particle (transform, centre, color): the last particle's centre is there.
+            Assert.True(texels.Length >= 70 * 13);
+            Assert.Equal(69 * 0.1f, texels[69 * 13 + 9], 4);
+        }
+
+        [Fact]
         public void ProceduralModeIsDecidedWhenAPlaybackStartsAndLostByAPropertySetWhilePlaying()
         {
             var ps = MakeSystem();

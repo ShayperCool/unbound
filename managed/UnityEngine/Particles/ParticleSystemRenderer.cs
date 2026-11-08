@@ -374,7 +374,10 @@ namespace UnityEngine
                 case ParticleSystemRenderMode.None: reach = 0f; break;
                 default: reach = HalfCubeDiagonal; break;
             }
-            reach += m_Pivot.magnitude;
+            // A stretched quad's pivot moves it pivot.x sizes along and 2·pivot.y sizes across
+            // (see Geometry.AddStretched); other quads move by the pivot in sizes.
+            reach += m_RenderMode == ParticleSystemRenderMode.Stretch ? Mathf.Abs(m_Pivot.x) + 2f * Mathf.Abs(m_Pivot.y) : m_Pivot.magnitude;
+            // The speed part of a stretched length is the simulation-space speed, unscaled.
             float speedReach = m_RenderMode == ParticleSystemRenderMode.Stretch ? Mathf.Abs(m_VelocityScale) : 0f;
             var toWorld = ps.SimulationToWorld();
             var scale = ps.EmitterScale();
@@ -388,7 +391,7 @@ namespace UnityEngine
                 var w = toWorld.MultiplyPoint3x4(p.m_Position);
                 var s = ps.CurrentSize3D(ref p);
                 float r = reach * maxScale * Mathf.Max(Mathf.Abs(s.x), Mathf.Max(Mathf.Abs(s.y), Mathf.Abs(s.z)));
-                if (speedReach > 0f) r += speedReach * toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity).magnitude;
+                if (speedReach > 0f) r += speedReach * (p.m_Velocity + p.m_AnimatedVelocity).magnitude;
                 min = Vector3.Min(min, w - new Vector3(r, r, r));
                 max = Vector3.Max(max, w + new Vector3(r, r, r));
             }
@@ -825,7 +828,7 @@ namespace UnityEngine
                         var m = meshes[Math.Min(ps.MeshIndexOf(ref p), meshes.Length - 1) % meshes.Length];
                         sourceMesh = m;
                         var orientation = AddMesh(r, m, position, size, Quaternion.Euler(p.m_Rotation * Mathf.Rad2Deg), systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
-                        NoteMeshParticle(Matrix4x4.Scale(scale) * Matrix4x4.Rotate(orientation) * Matrix4x4.Scale(streamSize));
+                        NoteMeshParticle(orientation, streamSize, scale);
                     }
                     else
                     {
