@@ -26,7 +26,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 23;
+pub const FORMAT_VERSION: u32 = 24;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -968,7 +968,8 @@ fn writable_globals(source: &str) -> String {
                     .filter(|l| !l.trim_start().starts_with('#'))
                     .collect::<Vec<_>>()
                     .join(" ");
-                let declaration = statement.split(':').next().unwrap_or("");
+                // An initializer (`float2 g = 0.0.xx;`) is the uniform's default value.
+                let declaration = statement.split([':', '=']).next().unwrap_or("");
                 let words: Vec<&str> = declaration
                     .split_whitespace()
                     .filter(|w| *w != "uniform")
@@ -976,7 +977,7 @@ fn writable_globals(source: &str) -> String {
                 if let [ty, name] = words[..]
                     && is_type_name(ty)
                     && name.bytes().all(is_ident_byte)
-                    && !declaration.contains(['(', '[', '='])
+                    && !declaration.contains(['(', '['])
                 {
                     if depth == 0 {
                         globals.push((ty.to_string(), name.to_string(), i + 1));
@@ -1789,6 +1790,38 @@ float4 frag() : SV_Target { return _MainTex_ST; }
             .compile(&program(source, false), &[], false)
             .unwrap();
         assert!(compiled.uniforms.iter().any(|u| u.name == "_MainTex_ST"));
+    }
+
+    /// A global with an initializer is a uniform too (URP's FXAA keeps a paper-white value in
+    /// one); a `static` one or a constant stays as it is.
+    #[test]
+    fn initialized_globals_a_function_writes_get_copies() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+float2 g_PaperWhite = 0.0.xx;
+static float g_Scale = 2.0;
+float Luma(float4 c) { return c.y * g_PaperWhite.y * g_Scale; }
+float4 vert(float4 v : POSITION, float4 c : COLOR) : SV_POSITION
+{
+    g_PaperWhite = c.xy;
+    g_Scale = 3.0;
+    return mul(unity_MatrixVP, v) * Luma(c);
+}
+float4 frag() : SV_Target { return 1; }
+"#;
+        let out = writable_globals(source);
+        assert!(
+            out.contains("static float2 g_PaperWhite__unbound = g_PaperWhite;"),
+            "{out}"
+        );
+        assert!(out.contains("c.y * g_PaperWhite__unbound.y"), "{out}");
+        assert!(!out.contains("g_Scale__unbound"), "{out}");
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
     }
 
     #[test]
