@@ -3244,15 +3244,24 @@ impl UnityRenderer {
             // A buffer bound by a cbuffer's name: the draw's, the material's, else a global one.
             let buffers = &self.buffers;
             let constant_buffer = |name: &str| -> Option<&[u8]> {
-                let handle = draw
-                    .properties
-                    .iter()
-                    .chain(material_props.properties.iter())
-                    .chain(globals.iter())
-                    .find_map(|(n, v)| match v {
-                        owned::PropertyValue::Buffer(h) if n == name => Some(*h),
-                        _ => None,
-                    })?;
+                let buffer = |(n, v): &(String, owned::PropertyValue)| match v {
+                    owned::PropertyValue::Buffer(h) if n == name => Some(*h),
+                    _ => None,
+                };
+                // The material and the globals are searched only when they have a property of
+                // the name (most cbuffers are bound to none).
+                let handle = draw.properties.iter().find_map(buffer).or_else(|| {
+                    (material_props.get(name).is_some()
+                        || globals_index.find(&globals, name).is_some())
+                    .then(|| {
+                        material_props
+                            .properties
+                            .iter()
+                            .chain(globals.iter())
+                            .find_map(buffer)
+                    })
+                    .flatten()
+                })?;
                 buffers.get(&handle)?.shadow.as_deref()
             };
             let (camera_view, camera_proj) = self.state.camera.unwrap_or((view, projection));

@@ -45,6 +45,8 @@ pub struct CompiledPrograms {
     data: Vec<u8>,
     used: HashSet<u32>,
     buffer: Option<wgpu::Buffer>,
+    /// A uniform name being built (an override's `_ST` / `_TexelSize`), reused from draw to draw.
+    name: String,
 }
 
 /// What a draw's uniform block is filled from.
@@ -164,6 +166,7 @@ impl CompiledPrograms {
             data: Vec::new(),
             used: HashSet::default(),
             buffer: None,
+            name: String::new(),
         }
     }
 
@@ -419,26 +422,18 @@ impl CompiledPrograms {
         let size = (gpu.program.uniform_size.max(16) as u64).div_ceil(DRAW_SLOT) * DRAW_SLOT;
         self.data.resize(offset + size as usize, 0);
         let out = &mut self.data[offset..offset + gpu.program.uniform_size as usize];
+        let (program, plan) = (&gpu.program, gpu.plan.as_slice());
         match block {
-            Some(block) => {
-                let n = block.bytes.len().min(out.len());
-                out[..n].copy_from_slice(&block.bytes[..n]);
-                fill(&gpu.program, &gpu.plan, values, out, Some(&block.dynamic));
-                // The draw's own properties over the material's.
-                for (name, value) in values.overrides {
-                    let mut redo = |uniform: &str| {
-                        if let Some(&i) = gpu.by_name.get(uniform) {
-                            write_uniform(&gpu.program, &gpu.plan, i as usize, values, out);
-                        }
-                    };
-                    redo(name);
-                    if matches!(value, PropertyValue::Texture { .. }) {
-                        redo(&format!("{name}_ST"));
-                        redo(&format!("{name}_TexelSize"));
-                    }
-                }
-            }
-            None => fill(&gpu.program, &gpu.plan, values, out, None),
+            Some(block) => fill_over_block(
+                program,
+                plan,
+                &gpu.by_name,
+                block,
+                values,
+                out,
+                &mut self.name,
+            ),
+            None => fill(program, plan, values, out),
         }
         offset as u32
     }
@@ -453,19 +448,7 @@ impl CompiledPrograms {
         linear: bool,
     ) -> MaterialBlock {
         let gpu = &self.programs[id as usize];
-        let program = &gpu.program;
-        let mut bytes = vec![0u8; program.uniform_size as usize];
-        let mut dynamic = Vec::new();
-        for (i, (u, source)) in program.uniforms.iter().zip(&gpu.plan).enumerate() {
-            if u.count != 1 || u.stride > 0 {
-                continue;
-            }
-            match static_value(&u.name, *source, material, lab, linear) {
-                Some(value) => write_value(u, &value, &mut bytes),
-                None => dynamic.push(i as u32),
-            }
-        }
-        MaterialBlock { bytes, dynamic }
+        material_block(&gpu.program, &gpu.plan, material, lab, linear)
     }
 
     /// The uniform values a draw gets, by name (`UNBOUND_TRACE_UNIFORMS` tracing).
@@ -652,11 +635,6 @@ fn gamma_to_linear(c: f32) -> f32 {
     } else {
         c.powf(2.2)
     }
-}
-
-/// A material property's value: the material's, else the shader's default.
-fn property(v: &DrawValues, lab: &ShaderLab, name: &str, linear: bool) -> Option<[f32; 4]> {
-    property_of(v.get(name), lab, name, linear)
 }
 
 /// Assigned material/override values already use working space. Only shader defaults
@@ -925,10 +903,11 @@ fn value(name: &str, source: Source, v: &DrawValues, textures: &[String]) -> Opt
 fn named_value(name: &str, v: &DrawValues, textures: &[String]) -> Option<Value> {
     let vec = |a: [f32; 4]| Some(Value::Vector(a));
     let mat = |m: Mat| Some(Value::Matrix(m));
-    if let Some(PropertyValue::Matrix(m)) = v.get(name) {
+    let found = v.get(name);
+    if let Some(PropertyValue::Matrix(m)) = found {
         return mat(*m);
     }
-    if let Some(value) = property(v, v.lab, name, v.linear) {
+    if let Some(value) = property_of(found, v.lab, name, v.linear) {
         return vec(value);
     }
     if let Some(value) = v.globals_index.find(v.globals, name) {
@@ -983,6 +962,8 @@ pub struct MaterialBlock {
     /// The uniforms the draw fills (built-in variables, global properties, values derived from
     /// bound textures).
     dynamic: Vec<u32>,
+    /// By uniform index: whether it is one of `dynamic`.
+    is_dynamic: Vec<bool>,
 }
 
 /// A uniform's value when the material alone decides it (the same answer `value` gives for a draw
@@ -1045,13 +1026,19 @@ fn write_uniform(program: &Compiled, plan: &[Source], i: usize, v: &DrawValues, 
             false
         }
     };
-    let selected = DrawValues {
-        overrides: &[],
-        element: element.as_ref().map(|e| (u.name.as_str(), e)),
-        ..*v
+    // The material's values with the selected element, made only for the uniforms that take
+    // them: a copy of the draw's values per uniform would cost more than the uniform itself.
+    let value = if material_only {
+        let selected = DrawValues {
+            overrides: &[],
+            element: element.as_ref().map(|e| (u.name.as_str(), e)),
+            ..*v
+        };
+        value(&u.name, plan[i], &selected, &program.textures)
+    } else {
+        value(&u.name, plan[i], v, &program.textures)
     };
-    let v = if material_only { &selected } else { v };
-    if let Some(value) = value(&u.name, plan[i], v, &program.textures) {
+    if let Some(value) = value {
         write_value(u, &value, out);
     }
 }
@@ -1078,11 +1065,95 @@ fn write_value(u: &unbound_shaders::Uniform, value: &Value, out: &mut [u8]) {
     }
 }
 
+/// A program's uniform block as a material fills it (see [`CompiledPrograms::material_block`]).
+fn material_block(
+    program: &Compiled,
+    plan: &[Source],
+    material: &Material,
+    lab: &ShaderLab,
+    linear: bool,
+) -> MaterialBlock {
+    let mut bytes = vec![0u8; program.uniform_size as usize];
+    let mut dynamic = Vec::new();
+    let mut is_dynamic = vec![false; program.uniforms.len()];
+    for (i, (u, source)) in program.uniforms.iter().zip(plan).enumerate() {
+        if u.count != 1 || u.stride > 0 {
+            continue;
+        }
+        match static_value(&u.name, *source, material, lab, linear) {
+            Some(value) => write_value(u, &value, &mut bytes),
+            None => {
+                dynamic.push(i as u32);
+                is_dynamic[i] = true;
+            }
+        }
+    }
+    MaterialBlock {
+        bytes,
+        dynamic,
+        is_dynamic,
+    }
+}
+
+/// A draw's uniform block over its material's: the same bytes as [`fill`] gives.
+fn fill_over_block(
+    program: &Compiled,
+    plan: &[Source],
+    by_name: &rustc_hash::FxHashMap<String, u32>,
+    block: &MaterialBlock,
+    values: &DrawValues,
+    out: &mut [u8],
+    name: &mut String,
+) {
+    let n = block.bytes.len().min(out.len());
+    out[..n].copy_from_slice(&block.bytes[..n]);
+    fill_arrays(program, values, out);
+    // The uniforms the draw fills, from everything but its own properties: a uniform takes the
+    // draw's properties only by its own name (or, for `_ST` and `_TexelSize`, its texture's),
+    // so the overrides below give each the value it would get from all of them, and the others
+    // need no search through the draw's list.
+    let shared = DrawValues {
+        overrides: &[],
+        ..*values
+    };
+    for &i in &block.dynamic {
+        write_uniform(program, plan, i as usize, &shared, out);
+    }
+    fill_constant_buffers(program, values, out);
+    // The draw's own properties over the material's: each uniform of an override's name, and
+    // the `_ST` / `_TexelSize` of a texture override, or of any override where the draw fills
+    // them (they derive from the texture property's name).
+    let mut redo = |uniform: &str, texture: bool| {
+        if let Some(&i) = by_name.get(uniform)
+            && (texture || block.is_dynamic[i as usize])
+        {
+            write_uniform(program, plan, i as usize, values, out);
+        }
+    };
+    for (property, value) in values.overrides {
+        redo(property, true);
+        let texture = matches!(value, PropertyValue::Texture { .. });
+        for suffix in ["_ST", "_TexelSize"] {
+            name.clear();
+            name.push_str(property);
+            name.push_str(suffix);
+            redo(name, texture);
+        }
+    }
+}
+
 /// Writes a program's uniform block for a draw. Members nothing provides stay zero: arrays (no
 /// material property or built-in Unbound fills is one) and unknown names.
-/// With `only`, just those uniforms (and the arrays and constant buffers).
-fn fill(program: &Compiled, plan: &[Source], v: &DrawValues, out: &mut [u8], only: Option<&[u32]>) {
-    // Arrays: the draw's or material's array property, else the global one.
+fn fill(program: &Compiled, plan: &[Source], v: &DrawValues, out: &mut [u8]) {
+    fill_arrays(program, v, out);
+    for i in 0..program.uniforms.len() {
+        write_uniform(program, plan, i, v, out);
+    }
+    fill_constant_buffers(program, v, out);
+}
+
+/// Arrays: the draw's or material's array property, else the global one.
+fn fill_arrays(program: &Compiled, v: &DrawValues, out: &mut [u8]) {
     for u in program.uniforms.iter().filter(|u| u.stride > 0) {
         let value = match v.get(&u.name) {
             Some(value @ PropertyValue::Array { .. }) => Some(value),
@@ -1095,19 +1166,10 @@ fn fill(program: &Compiled, plan: &[Source], v: &DrawValues, out: &mut [u8], onl
             write_array(u, *components, data, out);
         }
     }
-    match only {
-        Some(indices) => {
-            for &i in indices {
-                write_uniform(program, plan, i as usize, v, out);
-            }
-        }
-        None => {
-            for i in 0..program.uniforms.len() {
-                write_uniform(program, plan, i, v, out);
-            }
-        }
-    }
-    // A constant buffer bound to a cbuffer's name fills the cbuffer's range.
+}
+
+/// A constant buffer bound to a cbuffer's name fills the cbuffer's range.
+fn fill_constant_buffers(program: &Compiled, v: &DrawValues, out: &mut [u8]) {
     for block in &program.blocks {
         let Some(bytes) = (v.constant_buffer)(&block.name) else {
             continue;
@@ -1205,6 +1267,227 @@ mod tests {
         );
     }
 
+    /// The block path as it was before the draw's own properties were left out of the uniforms
+    /// it fills: those from all of the draw's values, then the overrides by name.
+    fn fill_over_block_reference(
+        program: &Compiled,
+        plan: &[Source],
+        by_name: &rustc_hash::FxHashMap<String, u32>,
+        block: &MaterialBlock,
+        values: &DrawValues,
+        out: &mut [u8],
+    ) {
+        let n = block.bytes.len().min(out.len());
+        out[..n].copy_from_slice(&block.bytes[..n]);
+        fill_arrays(program, values, out);
+        for &i in &block.dynamic {
+            write_uniform(program, plan, i as usize, values, out);
+        }
+        fill_constant_buffers(program, values, out);
+        for (name, value) in values.overrides {
+            let mut redo = |uniform: &str| {
+                if let Some(&i) = by_name.get(uniform) {
+                    write_uniform(program, plan, i as usize, values, out);
+                }
+            };
+            redo(name);
+            if matches!(value, PropertyValue::Texture { .. }) {
+                redo(&format!("{name}_ST"));
+                redo(&format!("{name}_TexelSize"));
+            }
+        }
+    }
+
+    /// The block path (the material's part once, the draw's properties where they apply) writes
+    /// what it wrote when every uniform the draw fills searched the draw's properties, and what a
+    /// full fill writes for draws without array properties (an array under a plain uniform's
+    /// name outside instancing leaves a full fill's uniform unwritten, the block's the
+    /// material's).
+    #[test]
+    fn a_draw_over_its_material_block_fills_what_it_did() {
+        let lab = ShaderLab::parse(r#"Shader "S" { Properties { _Color ("C", Color) = (0.5, 1, 1, 1) _Cut ("Cut", Range(0,1)) = 0.25 } SubShader { Pass { } } }"#).unwrap();
+        let material = Material {
+            shader: "S".into(),
+            properties: vec![
+                (
+                    "_MainTex".into(),
+                    PropertyValue::Texture {
+                        handle: 7,
+                        st: [2.0, 3.0, 0.5, 0.0],
+                    },
+                ),
+                (
+                    "_Detail_ST".into(),
+                    PropertyValue::Vector([5.0, 6.0, 7.0, 8.0]),
+                ),
+            ],
+            ..Default::default()
+        };
+        let names = [
+            ("unity_ObjectToWorld", 4),
+            ("_Color", 1),
+            ("_Cut", 1),
+            ("_MainTex_ST", 1),
+            ("_MainTex_TexelSize", 1),
+            ("_Detail_ST", 1),
+            ("_Mask_ST", 1),
+            ("_Global", 1),
+            ("unity_SHAr", 1),
+            ("_ClipRect", 1),
+        ];
+        let mut uniforms = Vec::new();
+        let mut offset = 0;
+        for (name, columns) in names {
+            uniforms.push(uniform(name, offset, 4, columns));
+            offset += 16 * columns;
+        }
+        let program = Compiled {
+            vertex: String::new(),
+            fragment: String::new(),
+            vertex_entry: String::new(),
+            fragment_entry: String::new(),
+            instanced_properties: vec!["_Cut".into()],
+            mesh_instance_stride: Some(0),
+            mesh_instance_uniform_scaling: false,
+            mesh_instance_max_count: None,
+            uniforms,
+            uniform_size: offset,
+            textures: Vec::new(),
+            texture_dims: Vec::new(),
+            main_texture: true,
+            keywords: Vec::new(),
+            texture_slots: Vec::new(),
+            buffers: Vec::new(),
+            blocks: Vec::new(),
+            extra_vertex_inputs: false,
+            vertex_inputs: true,
+        };
+        let plan: Vec<Source> = program
+            .uniforms
+            .iter()
+            .map(|u| Source::of(&u.name))
+            .collect();
+        let by_name = program
+            .uniforms
+            .iter()
+            .enumerate()
+            .map(|(i, u)| (u.name.clone(), i as u32))
+            .collect();
+        let block = material_block(&program, &plan, &material, &lab, true);
+        assert!(
+            block.is_dynamic[3] && !block.is_dynamic[5],
+            "_MainTex_ST per draw, _Detail_ST the material's"
+        );
+        let mut model = [0.0; 16];
+        for i in 0..4 {
+            model[i * 5] = 1.0;
+        }
+        model[12] = 5.0;
+        let size = |name: &str| (name == "_MainTex").then_some((64, 32));
+        let globals_index = Default::default();
+        let globals = [
+            ("_Global".to_string(), PropertyValue::Float(3.0)),
+            (
+                "unity_SHAr".to_string(),
+                PropertyValue::Vector([0.1, 0.2, 0.3, 0.4]),
+            ),
+        ];
+        let texture = |handle, st| PropertyValue::Texture { handle, st };
+        let cases: Vec<Vec<(String, PropertyValue)>> = vec![
+            vec![],
+            vec![
+                (
+                    "_Color".into(),
+                    PropertyValue::Vector([0.25, 0.5, 0.75, 1.0]),
+                ),
+                ("_Global".into(), PropertyValue::Float(9.0)),
+                (
+                    "unity_SHAr".into(),
+                    PropertyValue::Vector([1.0, 2.0, 3.0, 4.0]),
+                ),
+            ],
+            // A value of another kind under a texture's name hides the material's texture.
+            vec![("_MainTex".into(), PropertyValue::Float(1.0))],
+            vec![("_Detail".into(), PropertyValue::Float(1.0))],
+            vec![
+                ("_MainTex".into(), texture(9, [4.0, 4.0, 1.0, 1.0])),
+                ("_Mask".into(), texture(3, [0.5, 0.5, 0.0, 0.0])),
+                ("_Cut".into(), PropertyValue::Float(0.75)),
+                ("_Cut".into(), PropertyValue::Float(0.5)),
+            ],
+            // Mesh instancing: per-instance arrays and an instanced property's single value.
+            vec![
+                (
+                    "_Global".into(),
+                    PropertyValue::Array {
+                        components: 1,
+                        data: vec![4.0, 5.0].into(),
+                    },
+                ),
+                (
+                    "_Color".into(),
+                    PropertyValue::Array {
+                        components: 4,
+                        data: vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8].into(),
+                    },
+                ),
+                ("_Cut".into(), PropertyValue::Float(0.5)),
+            ],
+        ];
+        let instances = [None, Some(0), Some(1), Some(2)];
+        for (overrides, instance) in cases
+            .iter()
+            .flat_map(|o| instances.iter().map(move |i| (o, *i)))
+        {
+            let values = DrawValues {
+                gizmo_draw: false,
+                color: [1.0; 4],
+                globals_index: &globals_index,
+                overrides,
+                model,
+                view: model,
+                proj: model,
+                camera_view: model,
+                camera_proj: model,
+                screen: [960.0, 540.0],
+                time: 1.0,
+                linear: true,
+                material: &material,
+                lab: &lab,
+                globals: &globals,
+                main_alpha_only: false,
+                texture_size: &size,
+                constant_buffer: &|_| None,
+                instance,
+                element: None,
+            };
+            let mut full = vec![0u8; offset as usize];
+            fill(&program, &plan, &values, &mut full);
+            let mut over = vec![0xffu8; offset as usize];
+            fill_over_block(
+                &program,
+                &plan,
+                &by_name,
+                &block,
+                &values,
+                &mut over,
+                &mut String::new(),
+            );
+            let mut reference = vec![0u8; offset as usize];
+            fill_over_block_reference(&program, &plan, &by_name, &block, &values, &mut reference);
+            assert_eq!(
+                reference, over,
+                "overrides {overrides:?}, instance {instance:?}"
+            );
+            if !overrides
+                .iter()
+                .any(|(_, v)| matches!(v, PropertyValue::Array { .. }))
+            {
+                assert_eq!(full, over, "overrides {overrides:?}, instance {instance:?}");
+            }
+        }
+    }
+
     #[test]
     fn uniforms_are_filled_by_name() {
         let lab = ShaderLab::parse(r#"Shader "S" { Properties { _Color ("C", Color) = (0.5, 1, 1, 1) _Cut ("Cut", Range(0,1)) = 0.25 } SubShader { Pass { } } }"#).unwrap();
@@ -1287,7 +1570,7 @@ mod tests {
             .iter()
             .map(|u| Source::of(&u.name))
             .collect();
-        fill(&program, &plan, &values, &mut out, None);
+        fill(&program, &plan, &values, &mut out);
         let f = |at: usize| f32::from_le_bytes(out[at..at + 4].try_into().unwrap());
         assert_eq!(f(48), 5.0, "the model's translation");
         // A Color property in linear space: converted (0.5 → 0.214); alpha is not.
@@ -1310,7 +1593,7 @@ mod tests {
             instance: Some(1),
             ..values
         };
-        fill(&instanced, &plan, &later_instance, &mut out, None);
+        fill(&instanced, &plan, &later_instance, &mut out);
         assert!(
             (f32::from_le_bytes(out[64..68].try_into().unwrap()) - 0.214).abs() < 0.001,
             "a scalar instanced property falls back to the material after instance zero"
@@ -1324,7 +1607,7 @@ mod tests {
             instance: Some(0),
             ..later_instance
         };
-        fill(&instanced, &plan, &first_instance, &mut out, None);
+        fill(&instanced, &plan, &first_instance, &mut out);
         assert_eq!(
             f32::from_le_bytes(out[64..68].try_into().unwrap()),
             1.0,
@@ -1360,7 +1643,7 @@ mod tests {
         let mut plan = plan.clone();
         plan.push(Source::Named);
         out.resize(208, 0);
-        fill(&instanced, &plan, &instance, &mut out, None);
+        fill(&instanced, &plan, &instance, &mut out);
         let f = |out: &[u8], at: usize| f32::from_le_bytes(out[at..at + 4].try_into().unwrap());
         assert_eq!(
             f(&out, 64),
@@ -1381,7 +1664,7 @@ mod tests {
             instance: Some(2),
             ..instance
         };
-        fill(&instanced, &plan, &past, &mut out, None);
+        fill(&instanced, &plan, &past, &mut out);
         assert!(
             (f(&out, 64) - 0.214).abs() < 0.001 && f(&out, 80) == 0.25,
             "past an array's end the material's value applies"
@@ -1390,7 +1673,7 @@ mod tests {
             instance: None,
             ..instance
         };
-        fill(&instanced, &plan, &not_instance, &mut out, None);
+        fill(&instanced, &plan, &not_instance, &mut out);
         assert!(
             (f(&out, 64) - 0.214).abs() < 0.001,
             "outside mesh instancing an instanced property's array keeps the material's value"
@@ -1415,7 +1698,7 @@ mod tests {
             ..values
         };
         out.resize(224, 0);
-        fill(&instanced, &plan, &instance, &mut out, None);
+        fill(&instanced, &plan, &instance, &mut out);
         assert_eq!(
             f(&out, 208),
             0.5,
