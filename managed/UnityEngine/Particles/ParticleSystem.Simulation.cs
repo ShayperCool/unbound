@@ -41,6 +41,12 @@ namespace UnityEngine
         bool m_SimulatingBirths;
         bool m_BirthDelayClock;
         float m_BirthCallRemaining;
+        /// <summary>Playing only because the update of the system it is a sub-emitter of started
+        /// it this frame (see <see cref="StartWithParent"/>); cleared at the end of the frame.</summary>
+        internal bool m_StartedByParent;
+        /// <summary>Birth emissions of one parent particle's step that share an initialization
+        /// batch (reused, so emitting allocates nothing).</summary>
+        readonly System.Collections.Generic.List<BirthEmission> m_BirthBatch = new System.Collections.Generic.List<BirthEmission>();
 
         /// <summary>The frame's update; whether it advanced the system. <paramref name="catchUp"/>
         /// is PauseAndCatchup's missed time, simulated with the frame's own time as one advance
@@ -64,6 +70,34 @@ namespace UnityEngine
             }
             finally { m_CollectTriggers = false; }
             return true;
+        }
+
+        /// <summary>A sub-emitter starts playing, without emitting, in each update of the playing
+        /// system it belongs to (any sub-emitter type, also before it has particles; its time runs
+        /// from that update), and stops again, silently and keeping its time, at the end of a frame
+        /// that leaves it empty (6000.0.71f1, tests/projects/particlerender birthstart/*: isPlaying
+        /// after the update, whatever the update order; tests/projects/subemitters played/*: not
+        /// playing in the next frame's Update; particlerender subcull/pause_*: not playing once its
+        /// culled parent no longer updates). A parent paused, culled or whose time does not move
+        /// does not start it. Unmeasured, Unbound's choices: a parent whose Sub Emitters module is
+        /// disabled does not start it; one that stopped playing does not either.</summary>
+        internal void StartWithParent(ParticleSystem parent)
+        {
+            if (m_IsPlaying || m_IsPaused || !Compat.ParticleSubEmitterStartMeasured) return;
+            if (!parent.m_Registered || !parent.m_IsPlaying || parent.m_IsPaused || !parent.m_SubEmitters.enabled) return;
+            float raw = parent.m_Main.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
+            if (!(raw * parent.m_Main.simulationSpeed > 0f) || !parent.Drives(this)) return;
+            m_IsPlaying = true;
+            m_StopEmitting = true;
+            m_StartedByParent = true;
+            ParticleSystemManager.NoteStartedByParent(this);
+        }
+
+        bool Drives(ParticleSystem child)
+        {
+            foreach (var e in m_SubEmitters.emitters)
+                if (e.system == child) return true;
+            return false;
         }
 
         /// <summary>A sub-emitter that is not playing itself moves its particles only while the system
@@ -197,7 +231,8 @@ namespace UnityEngine
                 if (m_TrailList.Count > 0) UpdateTrails();
             }
             finally { m_HasContext = false; }
-            if (m_IsPlaying && m_StopEmitting && m_Count == 0)
+            // A sub-emitter its parent started this frame stays playing until the frame ends.
+            if (m_IsPlaying && m_StopEmitting && m_Count == 0 && !m_StartedByParent)
             {
                 m_IsPlaying = false;
                 m_StopEmitting = false;
@@ -1470,7 +1505,10 @@ namespace UnityEngine
             }
             p.m_Rotation += p.m_AngularVelocity * dt;
 
-            if (c.BirthSubs) BirthSubEmitters(ref p, ageBefore, p.m_StartLifetime - p.m_Lifetime, dt, before);
+            // A particle whose life ends exactly at the end of this step (kept at zero life until
+            // the next) emits no Birth children in it, as one that dies inside it (6000.0.71f1,
+            // tests/projects/particlerender birthstart/deathtie05 and deathin05, subcull/*).
+            if (c.BirthSubs && p.m_AgePercent < 100f) BirthSubEmitters(ref p, ageBefore, p.m_StartLifetime - p.m_Lifetime, dt, before);
             return true;
         }
 
@@ -1671,9 +1709,26 @@ namespace UnityEngine
 
         /// <summary>A Death emission the frame's update held (see ParticleSystemManager): emitted now,
         /// and the child plays the particles it received.</summary>
-        internal void EmitEventNow(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count)
+        internal void EmitEventNow(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count,
+            bool turnToTravel = true)
         {
-            EmitFromParent(parentSystem, ref parent, properties, count, 0f, eventEmission: true);
+            EmitFromParent(parentSystem, ref parent, properties, count, 0f, eventEmission: turnToTravel);
+            if (m_Count > 0 && !m_IsPlaying)
+            {
+                m_IsPlaying = true;
+                m_StopEmitting = true;
+            }
+        }
+
+        /// <summary>A Birth emission the frame's update held (see ParticleSystemManager): its
+        /// children are emitted now with the ages they reach at the end of the frame, and the
+        /// child plays the particles it received.</summary>
+        internal void EmitBirthNow(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count,
+            in BirthEmission first, System.Collections.Generic.List<BirthEmission> requests)
+        {
+            // No catch-up: the held ages already end at the end of the frame.
+            EmitFromParent(parentSystem, ref parent, properties, count, first.age, birthCatchup: 0f, birthSpacing: first.spacing,
+                birthVelocity: first.velocity, birthRequests: requests);
             if (m_Count > 0 && !m_IsPlaying)
             {
                 m_IsPlaying = true;
@@ -1703,21 +1758,30 @@ namespace UnityEngine
 
         // Rates precede bursts in one measured Birth initialization batch. Each part
         // keeps its own age and origin while sharing the start-sample advancement.
-        struct BirthEmission
+        internal struct BirthEmission
         {
             internal int count;
             internal float age, spacing;
             internal Vector3 position, velocity;
         }
 
-        /// <summary>Birth sub-emitters emit with their own rate and bursts over the parent particle's life.</summary>
+        /// <summary>Birth sub-emitters emit with their own rate and bursts over the parent particle's life.
+        /// The measured emission intervals, ages and origins (particlerandom, Simulate) hold in the
+        /// frame's update too, without Simulate's catch-up: a child due a time before the end of
+        /// its parent's internal step has that age at the end of the frame, also when a later
+        /// internal step of the same frame follows (6000.0.71f1, tests/projects/particlerender
+        /// birthstart/play05 frame 11; subcull/*: a rate that reaches a whole particle exactly at a
+        /// step's end). Played children are emitted after every system has updated, as Death
+        /// children are, so the update order does not age them again (birthstart/order02).</summary>
         void BirthSubEmitters(ref Particle parent, float ageBefore, float ageAfter, float dt, Vector3 positionBefore)
         {
-            bool firstBirth = ageBefore <= 0f && (!m_SimulatingBirths || (parent.m_Flags & Particle.FlagBirthBurstsDone) == 0);
+            bool held = !m_SimulatingBirths && ParticleSystemManager.Updating && Compat.ParticleBirthStepsMeasured;
+            bool intervals = m_SimulatingBirths || held;
+            bool firstBirth = ageBefore <= 0f && (!intervals || (parent.m_Flags & Particle.FlagBirthBurstsDone) == 0);
             // Reconstruct the previous endpoint in the stored percent clock, then
             // divide both normalized endpoints by inverse lifetime. Subtracting
             // exported remaining seconds loses boundary bits before rate scaling.
-            if (m_SimulatingBirths && float.IsFinite(ageBefore) && float.IsFinite(ageAfter)
+            if (intervals && float.IsFinite(ageBefore) && float.IsFinite(ageAfter)
                 && ageAfter >= ageBefore && parent.m_InvStartLifetime > 0f)
             {
                 ageAfter = (parent.m_AgePercent * .01f) / parent.m_InvStartLifetime;
@@ -1735,7 +1799,8 @@ namespace UnityEngine
                 int n = 0;
                 float birthAge = 0f, spacing = 0f;
                 BirthEmission firstEmission = default;
-                System.Collections.Generic.List<BirthEmission> combined = null;
+                var batch = m_BirthBatch;
+                batch.Clear();
                 var travel = dt > 0f ? (parent.m_Position - positionBefore) / dt : Vector3.zero;
                 if (child.m_Emission.enabled)
                 {
@@ -1745,7 +1810,7 @@ namespace UnityEngine
                     // The first interval cannot precede the newborn's integration span.
                     // Infinite lifetimes and a ring's age rewind have no such interval;
                     // retain their existing integration-delta path until measured.
-                    bool useInterval = m_SimulatingBirths && float.IsFinite(ageBefore)
+                    bool useInterval = intervals && float.IsFinite(ageBefore)
                         && float.IsFinite(ageAfter) && ageAfter >= ageBefore;
                     float delay = useInterval ? Mathf.Max(0f,
                         child.m_Main.startDelay.Evaluate(0f, ModuleValue(child.PlaybackSeed, 0u))) : 0f;
@@ -1786,7 +1851,7 @@ namespace UnityEngine
                             (burst.probability >= 1f || burst.probability > 0f && emissionRandom.NextValue() < burst.probability))
                         {
                             int burstCount = BurstCount(burst.m_Count, age01, ref emissionRandom);
-                            if (burstCount > 0 && m_SimulatingBirths)
+                            if (burstCount > 0 && intervals)
                             {
                                 float preAge = first ? dt : Mathf.Max(0f, ageAfter - at);
                                 var emission = new BirthEmission { count = burstCount, age = preAge,
@@ -1795,8 +1860,8 @@ namespace UnityEngine
                                 if (firstEmission.count == 0) firstEmission = emission;
                                 else
                                 {
-                                    combined ??= new System.Collections.Generic.List<BirthEmission> { firstEmission };
-                                    combined.Add(emission);
+                                    if (batch.Count == 0) batch.Add(firstEmission);
+                                    batch.Add(emission);
                                 }
                             }
                             n += burstCount;
@@ -1805,19 +1870,26 @@ namespace UnityEngine
                 }
                 if (n > 0)
                 {
-                    if (m_SimulatingBirths)
+                    var requests = batch.Count > 0 ? batch : null;
+                    if (held)
+                    {
+                        var birth = parent;
+                        birth.m_Position = firstEmission.position;
+                        ParticleSystemManager.HoldBirthEmission(child, this, ref birth, e.properties, n, firstEmission, requests);
+                    }
+                    else if (m_SimulatingBirths)
                     {
                         var birth = parent;
                         birth.m_Position = firstEmission.position;
                         child.EmitFromParent(this, ref birth, e.properties, n, firstEmission.age,
                             birthCatchup: m_BirthCallRemaining, birthSpacing: firstEmission.spacing,
-                            birthVelocity: firstEmission.velocity, birthRequests: combined);
+                            birthVelocity: firstEmission.velocity, birthRequests: requests);
                     }
                     else child.EmitFromParent(this, ref parent, e.properties, n, 0f);
                 }
                 slot++;
             }
-            if (m_SimulatingBirths) parent.m_Flags |= Particle.FlagBirthBurstsDone;
+            if (intervals) parent.m_Flags |= Particle.FlagBirthBurstsDone;
         }
 
         /// <summary>Emits `count` particles at a parent system's particle, inheriting what the

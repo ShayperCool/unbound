@@ -178,7 +178,16 @@ namespace UnityEngine
                     if (type == ParticleSystemSubEmitterType.Trigger && child.m_Emission.bursts.Count > 1)
                         ReportUnsupported("trigger sub-emitter bursts after the first (Unbound emits only the first, the rule Unity documents for Collision)");
                     int count = child.EventBurstCount(parent.m_RandomSeed, EventSeed);
-                    if (count > 0) child.EmitFromParent(this, ref at, e.properties, count, 0f);
+                    if (count <= 0) continue;
+                    // In the frame's update the children come after every system has updated, as
+                    // Death children do: not aged in the frame they are born in (6000.0.71f1,
+                    // tests/projects/particlerender birthstart/events02).
+                    if (ParticleSystemManager.Updating)
+                        ParticleSystemManager.HoldEventEmission(new ParticleSystemManager.EventEmission
+                        {
+                            child = child, parentSystem = this, parent = at, properties = e.properties, count = count, ownFrame = true,
+                        });
+                    else child.EmitFromParent(this, ref at, e.properties, count, 0f);
                 }
             }
             finally { s_EventSubEmitting.RemoveAt(s_EventSubEmitting.Count - 1); }

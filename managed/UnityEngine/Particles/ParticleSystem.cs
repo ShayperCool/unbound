@@ -1316,10 +1316,13 @@ namespace UnityEngine
             // of a culled parent runs on, a Pause child runs on with an AlwaysSimulate parent;
             // particletriggerapi carrier/*: the never played, never seen child of an
             // AlwaysSimulate parent updates).
-            var culling = parent != null && !parent.m_Destroyed && parent.m_GameObject != null
-                ? (parent.Culling(parent.m_Main.cullingMode) != CullingState.Culled || CullingRenderer is ParticleSystemRenderer own && own.enabled && own.isVisible
+            bool linked = parent != null && !parent.m_Destroyed && parent.m_GameObject != null;
+            bool parentSimulates = linked && parent.Culling(parent.m_Main.cullingMode) != CullingState.Culled;
+            var culling = linked
+                ? (parentSimulates || CullingRenderer is ParticleSystemRenderer own && own.enabled && own.isVisible
                     ? CullingState.Simulated : CullingState.Culled)
                 : Culling(mode);
+            if (parentSimulates) StartWithParent(parent);
             // A frame that moves time gives the renderer its bounds, culled or not (a culled
             // system's bounds are unmeasured; this keeps it from staying hidden for good).
             if ((m_Main.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime) > 0f) GiveBounds();
@@ -1523,7 +1526,7 @@ namespace Unbound.Runtime
         static ParticleSystemManager()
         {
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PreLateUpdate.ParticleSystemBeginUpdateAll), UpdateAll);
-            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.ParticleSystemEndUpdateAll), CompleteUpdate);
+            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.ParticleSystemEndUpdateAll), EndUpdateAll);
         }
 
         internal static void EnsureRegistered() { }
@@ -1547,6 +1550,7 @@ namespace Unbound.Runtime
         {
             // A loop without the end-of-update system completes the previous frame here.
             CompleteUpdate();
+            StopIdleSubEmitters();
             int n = s_Systems.Count;
             if (s_Snapshot.Length < n) s_Snapshot = new ParticleSystem[Math.Max(n, s_Snapshot.Length * 2)];
             s_Systems.CopyTo(s_Snapshot);
@@ -1573,6 +1577,36 @@ namespace Unbound.Runtime
             }
             Array.Clear(s_Snapshot, 0, n);
             s_CompletionPending = true;
+        }
+
+        /// <summary>The end of the frame's particle update (PostLateUpdate): the update completes
+        /// and the sub-emitters their parents started without giving them particles stop.</summary>
+        internal static void EndUpdateAll()
+        {
+            CompleteUpdate();
+            StopIdleSubEmitters();
+        }
+
+        static readonly List<ParticleSystem> s_StartedByParent = new List<ParticleSystem>();
+
+        internal static void NoteStartedByParent(ParticleSystem ps) => s_StartedByParent.Add(ps);
+
+        /// <summary>Sub-emitters started by their parent's update this frame stop again if they
+        /// are still empty (see ParticleSystem.StartWithParent); a script reading them before
+        /// this point sees them playing.</summary>
+        static void StopIdleSubEmitters()
+        {
+            int n = s_StartedByParent.Count;
+            for (int i = 0; i < n; i++)
+            {
+                var ps = s_StartedByParent[i];
+                if (ps == null || !ps.m_StartedByParent) continue;
+                ps.m_StartedByParent = false;
+                if (ps.m_Count > 0 || ps.HasAliveTrails || !ps.m_IsPlaying) continue;
+                ps.m_IsPlaying = false;
+                ps.m_StopEmitting = false;
+            }
+            s_StartedByParent.Clear();
         }
 
         /// <summary>Completes the last update: every system's collision and trigger messages go
@@ -1623,39 +1657,82 @@ namespace Unbound.Runtime
         /// outside it).</summary>
         internal static bool Updating => s_Deferring;
 
-        /// <summary>A Death sub-emitter's emission that the frame's update holds until every system
-        /// has updated.</summary>
+        /// <summary>A sub-emitter emission that the frame's update holds until every system has
+        /// updated: a Death one, or a Birth one (<see cref="birth"/>) with the ages its children
+        /// reach at the end of the frame and its batch in <see cref="s_BirthRequests"/>.</summary>
         internal struct EventEmission
         {
             public ParticleSystem child, parentSystem;
             public ParticleSystem.Particle parent;
             public ParticleSystemSubEmitterProperties properties;
             public int count;
+            /// <summary>A Collision or Trigger emission: the child keeps its own frame.</summary>
+            public bool ownFrame;
+            public bool birth;
+            public ParticleSystem.BirthEmission first;
+            public int requestStart, requestCount;
         }
 
-        static readonly List<EventEmission> s_EventEmissions = new List<EventEmission>();
+        static List<EventEmission> s_EventEmissions = new List<EventEmission>();
+        static List<EventEmission> s_Flushing = new List<EventEmission>();
+        static readonly List<ParticleSystem.BirthEmission> s_BirthRequests = new List<ParticleSystem.BirthEmission>();
+        static readonly List<ParticleSystem.BirthEmission> s_BirthBatch = new List<ParticleSystem.BirthEmission>();
 
         internal static void HoldEventEmission(EventEmission emission) => s_EventEmissions.Add(emission);
 
-        /// <summary>Emits what the frame's Death sub-emitters held, after every system has updated:
-        /// the children are not aged in the frame they are born in, at any update order, and a child
-        /// that receives particles starts playing (6000.0.71f1 subemitters played/death and
-        /// played/finish: remaining lifetime equal to the start lifetime at the end of the frame,
-        /// isPlaying true).</summary>
+        /// <summary>Holds a Birth emission with its batch.</summary>
+        internal static void HoldBirthEmission(ParticleSystem child, ParticleSystem parentSystem, ref ParticleSystem.Particle parent,
+            ParticleSystemSubEmitterProperties properties, int count, ParticleSystem.BirthEmission first,
+            List<ParticleSystem.BirthEmission> requests)
+        {
+            int start = s_BirthRequests.Count;
+            if (requests != null) s_BirthRequests.AddRange(requests);
+            s_EventEmissions.Add(new EventEmission
+            {
+                child = child, parentSystem = parentSystem, parent = parent, properties = properties, count = count,
+                birth = true, first = first, requestStart = start, requestCount = s_BirthRequests.Count - start,
+            });
+        }
+
+        /// <summary>Emits what the frame's Death and Birth sub-emitters held, after every system has
+        /// updated: the children are not aged again in the frame they are born in, at any update
+        /// order, and a child that receives particles starts playing (6000.0.71f1 subemitters
+        /// played/death and played/finish: remaining lifetime equal to the start lifetime at the
+        /// end of the frame, isPlaying true; particlerender birthstart/*).</summary>
         static void FlushEventEmissions()
         {
             if (s_EventEmissions.Count == 0) return;
-            var held = s_EventEmissions.ToArray();
-            s_EventEmissions.Clear();
-            foreach (var e in held)
+            (s_Flushing, s_EventEmissions) = (s_EventEmissions, s_Flushing);
+            try
             {
-                if (e.child == null || e.child.m_Destroyed || e.child.m_GameObject == null) continue;
-                try
+                for (int i = 0; i < s_Flushing.Count; i++)
                 {
-                    var parent = e.parent;
-                    e.child.EmitEventNow(e.parentSystem, ref parent, e.properties, e.count);
+                    var e = s_Flushing[i];
+                    if (e.child == null || e.child.m_Destroyed || e.child.m_GameObject == null) continue;
+                    try
+                    {
+                        var parent = e.parent;
+                        if (!e.birth)
+                        {
+                            e.child.EmitEventNow(e.parentSystem, ref parent, e.properties, e.count, !e.ownFrame);
+                            continue;
+                        }
+                        List<ParticleSystem.BirthEmission> requests = null;
+                        if (e.requestCount > 0)
+                        {
+                            s_BirthBatch.Clear();
+                            for (int r = 0; r < e.requestCount; r++) s_BirthBatch.Add(s_BirthRequests[e.requestStart + r]);
+                            requests = s_BirthBatch;
+                        }
+                        e.child.EmitBirthNow(e.parentSystem, ref parent, e.properties, e.count, e.first, requests);
+                    }
+                    catch (Exception ex) { Debug.LogException(ex, e.child); }
                 }
-                catch (Exception ex) { Debug.LogException(ex, e.child); }
+            }
+            finally
+            {
+                s_Flushing.Clear();
+                s_BirthRequests.Clear();
             }
         }
 

@@ -281,9 +281,16 @@ namespace Unbound.Runtime
         /// bounds measured by skinnedbounds in the Linux 6000.0.71f1 Editor.</summary>
         internal static bool SkinnedBoundsMeasured => Release == (6000, 0, 71, 'f', 1);
 
-        /// <summary>Birth sub-emitter origins and Simulate ages measured by
-        /// tests/projects/particlerandom. Other releases retain their previous path.</summary>
+        /// <summary>Birth sub-emitter origins, emission intervals and ages measured by
+        /// tests/projects/particlerandom (Simulate) and tests/projects/particlerender birthstart/*
+        /// (the frame's update). Other releases retain their previous path.</summary>
         internal static bool ParticleBirthStepsMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>Sub-emitters of every type play from each update of their playing parent and
+        /// stop at the end of a frame that leaves them empty, measured by
+        /// tests/projects/particlerender birthstart/* and subemitters played/* on 6000.0.71f1.
+        /// Other releases keep the previous rule (a child plays once it receives particles).</summary>
+        internal static bool ParticleSubEmitterStartMeasured => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>Start lifetimes take a reciprocal estimate with two Newton corrections
         /// instead of a correctly rounded division, measured by tests/projects/particlerandom
