@@ -24,8 +24,9 @@ The `serializedFields` JSON object contains:
 - `objects`: analyzed non-stripped documents of supported classes.
 
 Each field includes `classId`, `typeName`, `path`, `count` and `exampleAsset`. Counts are object
-counts, not element counts. Array elements share `[]` paths. Classes and paths are sorted; the
-example is the first asset in path order. The human report shows the totals and a small sample;
+counts, not element counts. Array elements share `[]` paths. Literal key characters `.`, `[`, `]`
+and `\` are escaped with `\`, so dotted keys and nested fields cannot collide. Classes and paths
+are sorted; the example is the first asset in path order. The human report shows a small sample;
 JSON retains every field, reason and failure.
 
 ## Where reader declarations come from
@@ -49,3 +50,5 @@ or representation of that field; class-level layout and feature diagnostics stil
 JSON protocol without starting the Editor. Managed tests cover reader-derived declarations,
 helpers, nested values, dynamic keys and script tables. Rust tests cover removed consumption,
 counts, stable examples, metadata reasons and binary scan failures.
+`tests/projects/classids/field_coverage.py` checks the committed binary bundle's script fields,
+serialized-file identity and independent unknown-field and metadata controls.

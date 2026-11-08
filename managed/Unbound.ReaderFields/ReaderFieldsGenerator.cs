@@ -208,6 +208,7 @@ public sealed class ReaderFieldsGenerator : IIncrementalGenerator
                     if (loop.Declaration != null)
                         foreach (var v in loop.Declaration.Variables) state.Text(v.Identifier.ValueText, LoopValues(loop, v));
                     if (loop.Condition != null) Eval(loop.Condition, state, depth, stack);
+                    if (loop.Declaration?.Variables.Count == 1 && state.Strings[loop.Declaration.Variables[0].Identifier.ValueText].Count == 0) return;
                     Walk(loop.Statement, state, depth, stack, root);
                     return;
                 case ReturnStatementSyntax ret:

@@ -48,3 +48,8 @@ python3 tests/projects/classids/run.py check                    # the land gate 
 `target/release/unbound`) and checks that the doctor found the release's table and lists as
 unread only concrete, non-editor classes of the reference. Run output goes to
 `$XDG_CACHE_HOME/unbound/validation/runs/classids/runs/<label>/`.
+
+The second gate command, `python3 tests/projects/classids/field_coverage.py`, copies the
+assetbundles fixture and its committed binary bundle into the cache. It checks that both bundle
+scripts resolve and their fields are read, while an independent zero-valued unknown field remains
+visible and the metadata exception carries a reason. No project callbacks or renderer run.

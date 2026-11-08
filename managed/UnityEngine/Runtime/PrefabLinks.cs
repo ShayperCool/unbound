@@ -100,10 +100,16 @@ namespace Unbound.Runtime
         /// <summary>Links the object a document made to its source and instance.</summary>
         internal static void Link(Object o, YNode body, Dictionary<long, PrefabInstanceData> instances)
         {
+            var link = ReadLink(body, instances);
+            if (link != null) Set(o, link);
+        }
+
+        internal static PrefabLink ReadLink(YNode body, Dictionary<long, PrefabInstanceData> instances)
+        {
             var instance = body.Ref("m_PrefabInstance");
-            if (instance.IsNull || !instance.IsLocal || !instances.TryGetValue(instance.FileId, out var data)) return;
+            if (instance.IsNull || !instance.IsLocal || !instances.TryGetValue(instance.FileId, out var data)) return null;
             var source = body.Ref("m_CorrespondingSourceObject");
-            Set(o, new PrefabLink { SourceGuid = source.Guid ?? data.SourceGuid, SourceFileId = source.FileId, Instance = data });
+            return new PrefabLink { SourceGuid = source.Guid ?? data.SourceGuid, SourceFileId = source.FileId, Instance = data };
         }
 
         /// <summary>The object of the source prefab an instance's object comes from.</summary>

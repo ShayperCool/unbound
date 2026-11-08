@@ -76,11 +76,7 @@ fn paths(value: &Value, prefix: &str, out: &mut BTreeSet<String>) {
     match value {
         Value::Map(map) if !map.is_empty() => {
             for (name, child) in map.iter() {
-                let path = if prefix.is_empty() {
-                    name.into()
-                } else {
-                    format!("{prefix}.{name}")
-                };
+                let path = unbound_yaml::reads::field_path(prefix, name);
                 paths(child, &path, out);
             }
         }
@@ -134,13 +130,13 @@ fn add_unread(
 /// images, audio and models are left to their importers. A recognized but unreadable file is an
 /// explicit scan failure, including binary files without the type trees needed for a field audit.
 pub(super) fn read_documents(path: &std::path::Path) -> Option<Result<Vec<Document>>> {
-    read_with(path, false, &mut |_| {})
+    read_with(path, false, &mut |_, _| {})
 }
 
 fn read_with(
     path: &std::path::Path,
     prepare: bool,
-    observe: &mut dyn FnMut(&mut Document),
+    observe: &mut dyn FnMut(&mut Document, &str),
 ) -> Option<Result<Vec<Document>>> {
     use std::io::Read;
     let mut file = match std::fs::File::open(path) {
@@ -183,14 +179,10 @@ fn read_with(
         } else {
             let archive = unbound_assets::bundle::Bundle::parse(&bytes)?;
             let mut documents = Vec::new();
-            for file in archive
-                .files
-                .iter()
-                .filter(|f| f.flags & unbound_assets::bundle::NODE_SERIALIZED != 0)
-            {
+            for file in archive.serialized_files() {
                 let mut docs = archive.raw_documents(&file.path)?;
                 for doc in &mut docs {
-                    observe(doc);
+                    observe(doc, &format!("bundle:{}", file.path));
                 }
                 if prepare {
                     archive.prepare_documents(&mut docs)?;
@@ -200,7 +192,7 @@ fn read_with(
             return Ok(documents);
         };
         for doc in &mut documents {
-            observe(doc);
+            observe(doc, "");
         }
         Ok(documents)
     })())
@@ -221,11 +213,11 @@ pub(super) fn report(
     for asset in assets {
         let mut original = Vec::new();
         let mut native_reads = Vec::new();
-        let Some(input) = read_with(&asset.file, true, &mut |doc| {
+        let Some(input) = read_with(&asset.file, true, &mut |doc, file_guid| {
             let reads = unbound_yaml::reads::FieldReads::default();
             reads.track(&mut doc.body);
             original.push(doc.clone());
-            native_reads.push(reads);
+            native_reads.push((reads, file_guid.to_owned()));
         }) else {
             continue;
         };
@@ -256,7 +248,7 @@ pub(super) fn report(
                 );
             }
         }
-        let request: Vec<_> = documents.iter().map(|d| json!({"classId": d.class_id, "fileId": d.file_id, "typeName": d.type_name, "body": node(&d.body)})).collect();
+        let request: Vec<_> = documents.iter().zip(&native_reads).map(|(d, (_, file_guid))| json!({"classId": d.class_id, "fileId": d.file_id, "fileGuid": file_guid, "typeName": d.type_name, "body": node(&d.body)})).collect();
         let results: Vec<ReaderResult> = runtime
             .call("field-coverage", &request)
             .with_context(|| format!("auditing serialized fields in {}", asset.path))?;
@@ -264,7 +256,8 @@ pub(super) fn report(
             results.len() == documents.len(),
             "field reader omitted an object"
         );
-        for ((doc, mut result), native) in original.into_iter().zip(results).zip(native_reads) {
+        for ((doc, mut result), (native, _)) in original.into_iter().zip(results).zip(native_reads)
+        {
             anyhow::ensure!(
                 doc.file_id == result.file_id,
                 "field reader reordered objects"
@@ -363,5 +356,25 @@ mod tests {
         }
         assert!(reason("m_Enabled").is_none());
         assert!(reason("nested.serializedVersion").is_none());
+    }
+
+    #[test]
+    fn literal_field_names_cannot_collide_with_nested_or_array_paths() {
+        let doc = unbound_yaml::parse_documents(
+            "--- !u!4 &1\nTransform:\n  a.b: 1\n  a:\n    b: 2\n  'items[]': 3\n  items: [4]\n",
+        )
+        .unwrap()
+        .remove(0);
+        let mut fields = BTreeMap::new();
+        add_unread(
+            &doc,
+            "Assets/a.asset",
+            &BTreeSet::from(["a\\.b".into()]),
+            &mut fields,
+        );
+        assert!(!fields.contains_key(&(4, "a\\.b".into())));
+        for path in ["a.b", "items\\[\\]", "items[]"] {
+            assert_eq!(fields[&(4, path.into())].count, 1);
+        }
     }
 }

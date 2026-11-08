@@ -47,6 +47,11 @@ namespace Unbound.Tests
         {
             for (int i = 0; i < body.Int("count"); i++) body.Int($"key{i}");
         }
+        static void DeclaredDotted(YNode body) => body.Int("a.b");
+        static void DeclaredEmpty(YNode body)
+        {
+            for (int i = 0; i < 0; i++) body.Int($"key{i}");
+        }
 
         [Fact]
         public void GeneratedFieldsFollowReadersAndHelpersWithoutInvokingThem()
@@ -75,6 +80,12 @@ namespace Unbound.Tests
             ReaderFieldSchema.Consume(counted, ReaderFieldSchema.Fields(typeof(FieldCoverageTests), nameof(DeclaredCounted), 1));
             Assert.True(counted.Values[0].CoverageRead);
             Assert.False(counted.Values[1].CoverageRead);
+            Assert.Empty(ReaderFieldSchema.Fields(typeof(FieldCoverageTests), nameof(DeclaredEmpty), 1));
+            var dotted = YNode.MakeMap(("a.b", YNode.MakeScalar("0")), ("a", YNode.MakeMap(("b", YNode.MakeScalar("0")))));
+            ReaderFieldSchema.Consume(dotted, ReaderFieldSchema.Fields(typeof(FieldCoverageTests), nameof(DeclaredDotted), 1));
+            var dottedReads = new List<string>();
+            FieldCoverage.Leaves(dotted, "", dottedReads);
+            Assert.Equal(new[] { "a\\.b" }, dottedReads);
         }
 
         [Fact]
@@ -106,6 +117,50 @@ namespace Unbound.Tests
             Assert.Contains("m_TileAssetArray[].m_Data.fileID", result[1].Consumed);
             Assert.Contains("m_TileColorArray[].m_Data.r", result[1].Consumed);
             Assert.DoesNotContain("m_TileColorArray[].m_Data.extra", result[1].Consumed);
+        }
+
+        [Fact]
+        public void PrefabAttachmentHeadersMatchTheLoaderForObjectsAndComponents()
+        {
+            const string fields = "{\"m_GameObject\":{\"fileID\":\"7\"},\"m_PrefabInstance\":{\"fileID\":\"8\"},\"m_CorrespondingSourceObject\":{\"fileID\":\"9\",\"guid\":\"source\",\"type\":\"3\",\"extra\":\"0\"}}";
+            var input = new List<FieldCoverage.Input>();
+            foreach (int id in new[] { 1, 4, 81 }) input.Add(new FieldCoverage.Input { ClassId = id, FileId = id, Body = System.Text.Json.JsonDocument.Parse(fields).RootElement });
+            foreach (var result in FieldCoverage.Report(input))
+            {
+                Assert.Null(result.Error);
+                Assert.Contains("m_PrefabInstance.fileID", result.Consumed);
+                Assert.Contains("m_CorrespondingSourceObject.fileID", result.Consumed);
+                Assert.Contains("m_CorrespondingSourceObject.guid", result.Consumed);
+                Assert.DoesNotContain("m_CorrespondingSourceObject.extra", result.Consumed);
+            }
+            var body = UnityYaml.Parse("--- !u!4 &4\nTransform:\n  m_GameObject: {fileID: 7}\n  m_PrefabInstance: {fileID: 8}\n  m_CorrespondingSourceObject: {fileID: 9, guid: source, type: 3}\n").Single().Body;
+            var instance = new PrefabInstanceData { SourceGuid = "fallback" };
+            var header = ObjectGraphBuilder.ReadComponentHeader(body, new Dictionary<long, PrefabInstanceData> { [8] = instance });
+            Assert.Equal(7, header.Owner.FileId);
+            Assert.Equal(9, header.Link.SourceFileId);
+            Assert.Equal("source", header.Link.SourceGuid);
+            Assert.Same(instance, header.Link.Instance);
+        }
+
+        [Fact]
+        public void BundleScriptResolutionKeepsFileIdentityAndDoesNotChangeTheRuntimeRegistry()
+        {
+            var inputs = new List<FieldCoverage.Input>();
+            void Add(int id, long fileId, string file, string json) => inputs.Add(new FieldCoverage.Input
+            {
+                ClassId = id, FileId = fileId, FileGuid = "bundle:" + file, Body = System.Text.Json.JsonDocument.Parse(json).RootElement,
+            });
+            Add(115, 1, "doctor-a", "{\"m_AssemblyName\":\"UnityEngine.CoreModule.dll\",\"m_Namespace\":\"UnityEngine\",\"m_ClassName\":\"MonoBehaviour\"}");
+            Add(115, 1, "doctor-b", "{\"m_AssemblyName\":\"UnityEngine.CoreModule.dll\",\"m_Namespace\":\"UnityEngine\",\"m_ClassName\":\"ScriptableObject\"}");
+            Add(114, 2, "doctor-a", "{\"m_Script\":{\"fileID\":\"1\"},\"m_Enabled\":\"0\"}");
+            Add(114, 2, "doctor-b", "{\"m_Script\":{\"fileID\":\"1\"},\"m_Enabled\":\"0\"}");
+            Add(114, 3, "doctor-b", "{\"m_Script\":{\"fileID\":\"1\",\"guid\":\"bundle:doctor-a\"},\"m_Enabled\":\"0\"}");
+            var results = FieldCoverage.Report(inputs);
+            Assert.All(results, result => Assert.Null(result.Error));
+            Assert.Contains("m_Enabled", results[2].Consumed);
+            Assert.DoesNotContain("m_Enabled", results[3].Consumed);
+            Assert.Contains("m_Enabled", results[4].Consumed);
+            Assert.Null(BundleFiles.Script(new ObjectRef(1, null, 0), "bundle:doctor-a"));
         }
 
         [Fact]

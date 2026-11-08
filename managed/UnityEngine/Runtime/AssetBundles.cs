@@ -543,14 +543,14 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The classes the file's MonoScripts name (by assembly, namespace and class).</summary>
-        internal static void RegisterScripts(string file, List<YDocument> documents)
+        internal static void RegisterScripts(string file, List<YDocument> documents, Dictionary<(string File, long Id), Type> scripts = null)
         {
             foreach (var doc in documents)
             {
                 if (doc.ClassId != 115) continue;
                 var body = doc.Body;
                 var type = ScriptType(body);
-                if (type != null) s_Scripts[("bundle:" + file, doc.FileId)] = type;
+                if (type != null) (scripts ?? s_Scripts)[("bundle:" + file, doc.FileId)] = type;
             }
         }
 
@@ -568,11 +568,11 @@ namespace Unbound.Runtime
 
         /// <summary>The class a MonoBehaviour's `m_Script` names in a bundle file; null when the
         /// reference is not into a bundle.</summary>
-        internal static Type Script(ObjectRef script, string fileGuid)
+        internal static Type Script(ObjectRef script, string fileGuid, Dictionary<(string File, long Id), Type> scripts = null)
         {
             string file = script.IsLocal ? fileGuid : script.Guid;
             if (file == null || !file.StartsWith("bundle:", StringComparison.Ordinal)) return null;
-            return s_Scripts.TryGetValue((file, script.FileId), out var type) ? type : null;
+            return (scripts ?? s_Scripts).TryGetValue((file, script.FileId), out var type) ? type : null;
         }
 
         internal static bool IsBundleScript(ObjectRef script, string fileGuid)

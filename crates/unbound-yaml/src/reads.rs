@@ -10,6 +10,21 @@ use std::{
 #[derive(Clone, Default, Debug)]
 pub struct FieldReads(Arc<Mutex<BTreeSet<String>>>);
 
+/// Join a diagnostic path without confusing literal punctuation with path separators.
+pub fn field_path(prefix: &str, key: &str) -> String {
+    let mut path = prefix.to_owned();
+    if !path.is_empty() {
+        path.push('.');
+    }
+    for ch in key.chars() {
+        if matches!(ch, '.' | '[' | ']' | '\\') {
+            path.push('\\');
+        }
+        path.push(ch);
+    }
+    path
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct TrackedMap {
     prefix: String,
@@ -18,11 +33,7 @@ pub(crate) struct TrackedMap {
 
 impl TrackedMap {
     pub(crate) fn note(&self, key: &str) {
-        let path = if self.prefix.is_empty() {
-            key.into()
-        } else {
-            format!("{}.{}", self.prefix, key)
-        };
+        let path = field_path(&self.prefix, key);
         self.reads.0.lock().unwrap().insert(path);
     }
 }
@@ -40,14 +51,7 @@ impl FieldReads {
                     reads: self.clone(),
                 });
                 for (name, child) in &mut map.0 {
-                    self.track_at(
-                        child,
-                        &if prefix.is_empty() {
-                            name.clone()
-                        } else {
-                            format!("{prefix}.{name}")
-                        },
-                    );
+                    self.track_at(child, &field_path(prefix, name));
                 }
             }
             Value::Seq(items) => {

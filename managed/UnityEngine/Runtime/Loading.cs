@@ -116,8 +116,7 @@ namespace Unbound.Runtime
                 {
                     if (doc.Stripped || doc.ClassId != EngineTypes.GameObjectId) continue;
                     var body = doc.Body;
-                    var go = ReadGameObject(body, kind, scene);
-                    if (instances != null) PrefabLinks.Link(go, body, instances);
+                    var go = ReadGameObject(body, kind, scene, instances);
                     gameObjects[doc.FileId] = (go, doc);
                     file.Objects[doc.FileId] = go;
                 }
@@ -140,7 +139,8 @@ namespace Unbound.Runtime
                         file.Objects[doc.FileId] = shader != null ? shader : Shader.Find("Hidden/InternalErrorShader");
                         continue;
                     }
-                    var owner = OwnerOf(body);
+                    var header = ReadComponentHeader(body, instances);
+                    var owner = header.Owner;
                     if (!owner.IsNull)
                     {
                         if (!gameObjects.TryGetValue(owner.FileId, out var entry)) continue;
@@ -162,7 +162,7 @@ namespace Unbound.Runtime
                             continue;
                         }
                         c.IsPersistentAsset = isAsset;
-                        if (instances != null) PrefabLinks.Link(c, body, instances);
+                        if (header.Link != null) PrefabLinks.Set(c, header.Link);
                         if (c is Transform t) entry.Go.m_Transform = t;
                         file.Objects[doc.FileId] = c;
                         components.Add((c, doc));
@@ -260,7 +260,7 @@ namespace Unbound.Runtime
             return file;
         }
 
-        internal static GameObject ReadGameObject(YNode body, Kind kind, SceneData scene)
+        internal static GameObject ReadGameObject(YNode body, Kind kind, SceneData scene, Dictionary<long, PrefabInstanceData> instances)
         {
             var go = new GameObject(body.Str("m_Name"), bare: true)
             {
@@ -272,7 +272,15 @@ namespace Unbound.Runtime
             };
             go.isStatic = body.Long("m_StaticEditorFlags") != 0;
             if (scene != null) go.m_Scene = scene.Handle;
+            if (instances != null) PrefabLinks.Link(go, body, instances);
             return go;
+        }
+
+        // The attachment header is shared with field coverage, including prefab links.
+        internal static (ObjectRef Owner, PrefabLink Link) ReadComponentHeader(YNode body, Dictionary<long, PrefabInstanceData> instances)
+        {
+            var owner = OwnerOf(body);
+            return (owner, owner.IsNull || instances == null ? null : PrefabLinks.ReadLink(body, instances));
         }
 
         internal static IEnumerable<YNode> RootRefs(YNode body) => body.Get("m_Roots")?.Seq() ?? Array.Empty<YNode>();
@@ -314,8 +322,8 @@ namespace Unbound.Runtime
 
         /// <summary>The class a MonoBehaviour's `m_Script` names: a project script by GUID, or an
         /// AssetBundle's MonoScript by its class.</summary>
-        static Type ScriptOf(ObjectRef script, string fileGuid) =>
-            BundleFiles.IsBundleScript(script, fileGuid) ? BundleFiles.Script(script, fileGuid) : GameDomain.ResolveScript(script.Guid, script.FileId);
+        internal static Type ScriptOf(ObjectRef script, string fileGuid, Dictionary<(string File, long Id), Type> scripts = null) =>
+            BundleFiles.IsBundleScript(script, fileGuid) ? BundleFiles.Script(script, fileGuid, scripts) : GameDomain.ResolveScript(script.Guid, script.FileId);
 
         static void LogDeleted(Type type) =>
             Debug.Log($"{type.Name} component deleted: Component belongs to a disabled built-in package.");

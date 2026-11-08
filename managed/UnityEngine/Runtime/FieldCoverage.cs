@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -14,6 +15,7 @@ namespace Unbound.Runtime
         {
             public int ClassId { get; set; }
             public long FileId { get; set; }
+            public string FileGuid { get; set; }
             public string TypeName { get; set; }
             public JsonElement Body { get; set; }
         }
@@ -33,6 +35,12 @@ namespace Unbound.Runtime
         internal static List<Result> Report(List<Input> documents)
         {
             var results = new List<Result>();
+            var scripts = new Dictionary<(string File, long Id), Type>();
+            foreach (var group in documents.Where(doc => doc.ClassId == 115 && doc.FileGuid?.StartsWith("bundle:", StringComparison.Ordinal) == true).GroupBy(doc => doc.FileGuid))
+                BundleFiles.RegisterScripts(group.Key.Substring("bundle:".Length), group.Select(input => new YDocument
+                {
+                    ClassId = input.ClassId, FileId = input.FileId, Body = Node(input.Body),
+                }).ToList(), scripts);
             foreach (var doc in documents)
             {
                 var result = new Result { FileId = doc.FileId };
@@ -47,10 +55,11 @@ namespace Unbound.Runtime
                     {
                         case EngineTypes.MonoBehaviourId:
                             Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.OwnerOf), 1);
-                            Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadName), 2, 1);
                             var script = body.Ref("m_Script");
-                            var scriptType = GameDomain.ResolveScript(script.Guid, script.FileId);
+                            var scriptType = ObjectGraphBuilder.ScriptOf(script, doc.FileGuid, scripts);
                             if (scriptType == null) throw new NotSupportedException("script type is missing or its assembly failed to compile");
+                            if (typeof(Component).IsAssignableFrom(scriptType)) Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadComponentHeader), 2);
+                            else Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadName), 2, 1);
                             if (typeof(Behaviour).IsAssignableFrom(scriptType)) Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadBehaviour), 2, 1);
                             new YamlReader(new References()).ScanScriptObject(scriptType, body);
                             break;
@@ -70,7 +79,7 @@ namespace Unbound.Runtime
                             // Recognized by the loader, but its data has no reader.
                             break;
                         case EngineTypes.GameObjectId:
-                            Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadGameObject), 3);
+                            Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadGameObject), 4);
                             Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ComponentReferences), 1);
                             break;
                         case 104:
@@ -88,6 +97,7 @@ namespace Unbound.Runtime
                             Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.OwnerOf), 1);
                             if (typeof(Component).IsAssignableFrom(type))
                             {
+                                Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadComponentHeader), 2);
                                 if (typeof(Behaviour).IsAssignableFrom(type)) Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadBehaviour), 2, 1);
                                 if (typeof(Transform).IsAssignableFrom(type))
                                 {
@@ -132,13 +142,19 @@ namespace Unbound.Runtime
             if (node.Kind == YKind.Map && node.Keys.Length != 0)
             {
                 for (int i = 0; i < node.Keys.Length; i++)
-                    Leaves(node.Values[i], path.Length == 0 ? node.Keys[i] : path + "." + node.Keys[i], consumed);
+                    Leaves(node.Values[i], JoinPath(path, node.Keys[i]), consumed);
             }
             else if (node.Kind == YKind.Seq && node.Items.Length != 0)
             {
                 foreach (var item in node.Items) Leaves(item, path + "[]", consumed, node.CoverageRead);
             }
             else if (node.CoverageRead || parentRead) consumed.Add(path);
+        }
+
+        static string JoinPath(string prefix, string key)
+        {
+            key = key.Replace("\\", "\\\\").Replace(".", "\\.").Replace("[", "\\[").Replace("]", "\\]");
+            return prefix.Length == 0 ? key : prefix + "." + key;
         }
 
         static YNode Node(JsonElement value)
