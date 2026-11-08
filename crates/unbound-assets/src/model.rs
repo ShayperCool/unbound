@@ -14,7 +14,9 @@
 //!
 //! **Hierarchy.** The prefab root is a GameObject named after the file (`//RootNode` in the
 //! fileID tables). When the file has a single top-level node and `preserveHierarchy` is off, that
-//! node *is* the root (its transform and renderer move to the root). Node names are made unique
+//! node *is* the root (its transform and renderer move to the root), unless its default node
+//! attribute (`DefaultAttributeIndex`) is a skeleton: a bone stays a child of the root (measured,
+//! tests/projects/modeltoproot). Node names are made unique
 //! across the model by appending ` 1`, ` 2`, ... in depth-first order, and children are sorted by
 //! name when `sortHierarchyByName` (the default) is set.
 //!
@@ -657,7 +659,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 27;
+    const VERSION: u32 = 28;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -837,9 +839,12 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         fbx_smoothing,
     };
 
-    // The root: the single top-level node, or the scene root.
+    // The root: the single top-level node unless it is a bone, or the scene root.
     let root_node: &ufbx::Node = &scene.root_node;
-    let root: &ufbx::Node = if !settings.preserve_hierarchy && root_node.children.len() == 1 {
+    let root: &ufbx::Node = if !settings.preserve_hierarchy
+        && root_node.children.len() == 1
+        && !default_attribute_is_bone(&root_node.children[0])
+    {
         &root_node.children[0]
     } else {
         root_node
@@ -3199,6 +3204,21 @@ pub(crate) fn read_metadata_inputs(imp: &Value) {
     let _ = material_remaps(imp);
     let _ = animation_compression_off(imp);
     let _ = motion_node_name(imp);
+}
+
+/// Whether the node's default attribute (the one `DefaultAttributeIndex` selects, none when it is
+/// absent or -1) is a skeleton. The FBX SDK reads a node's type from it; a node can have attributes
+/// without a default one.
+fn default_attribute_is_bone(node: &ufbx::Node) -> bool {
+    let index = node
+        .element
+        .props
+        .find_prop("DefaultAttributeIndex")
+        .map_or(-1, |p| p.value_int);
+    usize::try_from(index)
+        .ok()
+        .and_then(|i| node.all_attribs.get(i))
+        .is_some_and(|attrib| attrib.type_ == ufbx::ElementType::Bone)
 }
 
 fn animation_compression_off(imp: &Value) -> bool {

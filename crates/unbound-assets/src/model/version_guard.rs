@@ -33,6 +33,7 @@ const PROJECTS: &[&str] = &[
     "modelclips",
     "modelimport",
     "modelroot",
+    "modeltoproot",
 ];
 
 fn models(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
