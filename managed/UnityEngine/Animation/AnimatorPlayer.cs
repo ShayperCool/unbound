@@ -529,7 +529,8 @@ namespace Unbound.Runtime
             // A state a Play or CrossFade request enters plays from the requested time: the update
             // it enters in does not advance it (6000.0.71f1, tests/projects/animstartup and
             // humanoid playState/crossFade*); its root motion covers that update up to there.
-            // A state driven by a motion time parameter takes the parameter at once.
+            // A state driven by a motion time parameter takes the parameter at once (AnimatorState.timeParameter
+            // replaces the normalized time; its entry update is not measured).
             bool hold = requested != null && requested.Def.TimeParameter < 0 && Compat.AnimatorStartupMeasured;
             if (hold) Enter(layer, requested, dt);
             if (!hold || layer.Current != requested) Advance(layer, layer.Current, dt);

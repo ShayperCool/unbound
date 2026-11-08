@@ -427,7 +427,7 @@ namespace Unbound.Runtime
                     };
                     if (i == 0 && run.MotionPrevious.HasValue && EntersFromEmpty(layer, run))
                         Unbound.Runtime.Stubs.Ignored("Animator humanoid root motion entering from a state without a motion",
-                            "the first update of a transition from an empty state leaves out a root offset the Editor adds (measured, not reproduced)");
+                            "the first update of a transition from an empty state leaves out a root offset the Editor adds (measured for controller transitions, not reproduced)");
                     if (additive)
                     {
                         // Additive layers leave the root motion alone; only their body differences apply.
