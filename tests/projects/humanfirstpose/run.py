@@ -43,11 +43,17 @@ def stage(dest, release):
     start = source.index('        void Write(', source.index('    static void Handler('))
     end = source.index('        handler.Dispose();', start)
     source = source[:start] + source[end:]
-    source = replace_once(source, 'for (int step = 0; step <= 28; step++)', 'for (int step = 0; step == 0; step++)')
-    source = replace_once(source, '            animator.Update(step == 0 ? 0f : step <= 24 ? 1f / 30f : 0.1f);',
-                          '            HumanFirstPoseCapture.Snapshot(key + ".before", animator);\n'
-                          '            animator.Update(0f);\n'
-                          '            HumanFirstPoseCapture.Snapshot(key + ".after", animator);')
+    # Only Play's step loop: other helpers repeat it, and the block replaced below is
+    # their only caller.
+    play = source.index('    static void Play(string key,')
+    play_end = source.index('\n    static void ', play + 1)
+    body = source[play:play_end]
+    body = replace_once(body, 'for (int step = 0; step <= 28; step++)', 'for (int step = 0; step == 0; step++)')
+    body = replace_once(body, '            animator.Update(step == 0 ? 0f : step <= 24 ? 1f / 30f : 0.1f);',
+                        '            HumanFirstPoseCapture.Snapshot(key + ".before", animator);\n'
+                        '            animator.Update(0f);\n'
+                        '            HumanFirstPoseCapture.Snapshot(key + ".after", animator);')
+    source = source[:play] + body + source[play_end:]
     begin = source.index('            Play("playA",')
     end = source.index('\n        }\n        catch', begin)
     source = source[:begin] + (
