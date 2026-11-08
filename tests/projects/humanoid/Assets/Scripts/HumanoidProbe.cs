@@ -358,6 +358,8 @@ public class HumanoidProbe : MonoBehaviour
         Guarded("emptyPartial", () => PlayFirst("emptyPartial", "HumanA", "HumanEmptyPartial"));
         Guarded("emptyExit", () => PlayFirst("emptyExit", "HumanA", "HumanEmptyExit"));
         Guarded("emptyCond", () => PlayFirst("emptyCond", "HumanA", "HumanEmptyCond", At5(animator => animator.SetBool("Go", true))));
+        Guarded("emptyPartialQuarter", () => PlayFirst("emptyPartialQuarter", "HumanA", "HumanEmptyPartialQuarter"));
+        Guarded("emptyBack", () => PlayFirst("emptyBack", "HumanA", "HumanEmptyBack"));
         foreach (var name in new[] { "Events", "EventsMirror", "EventsMirrorCycle", "AdditiveMirrorClip" })
         {
             var key = char.ToLowerInvariant(name[0]) + name.Substring(1);
@@ -377,6 +379,7 @@ public class HumanoidProbe : MonoBehaviour
         Guarded("generic.playState", () => PlayGeneric("generic.playState", "GenericTwoStates", At5(animator => animator.Play("B"))));
         Guarded("generic.emptyExit", () => PlayGeneric("generic.emptyExit", "GenericEmptyExit"));
         Guarded("generic.emptyPartial", () => PlayGeneric("generic.emptyPartial", "GenericEmptyPartial"));
+        Guarded("generic.emptyBack", () => PlayGeneric("generic.emptyBack", "GenericEmptyBack"));
     }
 
     /// <summary>Runs a part of the probe; an exception is recorded under its key and the probe goes

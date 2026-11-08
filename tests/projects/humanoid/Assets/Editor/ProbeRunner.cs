@@ -582,7 +582,7 @@ public static class ProbeRunner
         Two("HumanTwoStates", a, b);
         Two("GenericTwoStates", g, h);
 
-        void Partial(string name, Motion over)
+        void Partial(string name, Motion over, float weight = 0.5f)
         {
             var controller = Make(name);
             if (controller == null) return;
@@ -590,13 +590,43 @@ public static class ProbeRunner
             controller.AddLayer("B");
             var layers = controller.layers;
             layers[1].blendingMode = AnimatorLayerBlendingMode.Override;
-            layers[1].defaultWeight = 0.5f;
+            layers[1].defaultWeight = weight;
             controller.layers = layers;
             controller.layers[1].stateMachine.AddState("B").motion = over;
             EditorUtility.SetDirty(controller);
         }
         Partial("HumanEmptyPartial", b);
         Partial("GenericEmptyPartial", g);
+        Partial("HumanEmptyPartialQuarter", b, 0.25f);
+
+        // A motion state leaving into an empty state and back: A, then Empty after an exit time
+        // of 0.2 (0.1 s), then A again (state Back) after an exit time of 0.3 of the empty state
+        // (0.1 s).
+        void Back(string name, Motion motion)
+        {
+            var controller = Make(name);
+            if (controller == null) return;
+            var machine = controller.layers[0].stateMachine;
+            var first = machine.AddState("A");
+            first.motion = motion;
+            var empty = machine.AddState("Empty");
+            var back = machine.AddState("Back");
+            back.motion = motion;
+            machine.defaultState = first;
+            void Link(AnimatorState from, AnimatorState to, float exitTime)
+            {
+                var t = from.AddTransition(to);
+                t.hasExitTime = true;
+                t.exitTime = exitTime;
+                t.hasFixedDuration = true;
+                t.duration = 0.1f;
+            }
+            Link(first, empty, 0.2f);
+            Link(empty, back, 0.3f);
+            EditorUtility.SetDirty(controller);
+        }
+        Back("HumanEmptyBack", a);
+        Back("GenericEmptyBack", g);
 
         var cond = Make("HumanEmptyCond");
         if (cond != null)
