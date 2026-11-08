@@ -3089,8 +3089,8 @@ impl<'a> Take<'a> {
     /// The importer keeps a property's keys where they overlap the span, so the take ends at the
     /// span's end or the last key of the overlapping curves, whichever is earlier; keys all
     /// outside leave the clip empty, and a take without keys makes no clip (matches the Unity
-    /// 6000.0.71f1 Editor, tests/projects/modelimport `smoothing.py` takes; curves of every layer
-    /// count, while the span's fallback reads the last layer, unmeasured where they differ).
+    /// 6000.0.71f1 Editor, tests/projects/modelimport `smoothing.py` takes, TakeTwoLayers: the
+    /// span's fallback reads the last layer, the end counts the curves of every layer).
     fn new(scene: &ufbx::Scene, stack: &'a ufbx::AnimStack) -> Option<Self> {
         let (begin, end) = take_span(scene, stack);
         let mut elements = node_elements(scene);

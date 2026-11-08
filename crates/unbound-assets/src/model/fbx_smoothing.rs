@@ -856,19 +856,20 @@ mod tests {
         // Edge flags stand for edge smoothing (the file's values), face flags for polygon
         // smoothing; any other mapping has no fallback (no smoothing rather than scrambled flags).
         let bytes = fixture("EdgesT");
-        let scene = scene(&bytes);
-        let mesh = &scene.meshes[0];
+        let edges = scene(&bytes);
+        let mesh = &edges.meshes[0];
         let flags = loader_flags(mesh, Mapping::ByEdge).unwrap();
         let file: Vec<u32> = raw_arrays(&bytes, 1 << 20).unwrap().remove(0);
         assert_eq!(flags, file);
         assert!(loader_flags(mesh, Mapping::ByPolygonVertex).is_none());
         assert!(loader_flags(mesh, Mapping::AllSame).is_none());
         let bytes = fixture("GroupsAscii");
-        let scene = scene(&bytes);
-        let faces = loader_flags(&scene.meshes[0], Mapping::ByPolygon).unwrap();
-        assert_eq!(faces.len(), scene.meshes[0].faces.len());
+        let groups = scene(&bytes);
+        let mesh = &groups.meshes[0];
+        let faces = loader_flags(mesh, Mapping::ByPolygon).unwrap();
+        assert_eq!(faces.len(), mesh.faces.len());
         assert!(faces.iter().all(|&f| f <= 1));
-        assert!(loader_flags(&scene.meshes[0], Mapping::ByControlPoint).is_none());
+        assert!(loader_flags(mesh, Mapping::ByControlPoint).is_none());
     }
 
     #[test]

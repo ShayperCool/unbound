@@ -91,7 +91,7 @@ What the Editor does (6000.0.71f1, two identical captures in `Reference/unity-60
   numbered. A mesh whose faces are all group 0 smooths by angle.
 - A take's span is its stack's `LocalStart`/`LocalStop` (0 where missing, in order; the
   reference span is not used); spans shorter than single precision's epsilon use the key range of
-  the stack's curves of two or more keys. Each property keeps its keys inside the span; the clip
+  the curves of two or more keys in the stack's last layer. Each property keeps its keys inside the span; the clip
   ends at the span's end or at the last key of the curves that overlap it, whichever is earlier
   (a stop between keys ends the clip there). A take whose keys all lie outside the span gives an empty clip
   (length 1, as any clip without keys); a take without curves gives no clip.
