@@ -162,8 +162,9 @@ Observed rules (one reference capture each; not documented guarantees):
 ### Implementation scope and limits
 
 `crates/unbound-assets/src/model/pivots.rs` implements these rules; the model cache format is
-v26. Clips of pivoted nodes sample positions with the same placement on every frame. Not
-measured, implemented by the same rule or left as before:
+v27. Clips of pivoted nodes take positions with the same placement at every key time of their
+translation, rotation and scale; rotation keys are not reduced, so a turning node is keyed on
+every frame. Not measured, implemented by the same rule or left as before:
 
 - `localBounds` of models whose clips move transforms (no `m_AABB`; the managed fallback and its
   unsupported-bounds warning remain), and of blend-shape meshes without bones.
@@ -173,8 +174,6 @@ measured, implemented by the same rule or left as before:
 - Blend shape deltas on meshes with geometric transforms (transformed with `G`'s linear part).
 - A LODGroup's size and reference point come from mesh bounds, which now include blend shape
   frames; LOD levels with blend shapes are unmeasured.
-- Clips of pivoted nodes sample positions on every frame whatever the compression; a
-  keyframe-reduced clip therefore keeps more position keys than Unity's.
 - Keyframe-reduced clips: a first `AnimPivotReduced` capture (compression Keyframe Reduction)
   matched the uncompressed pose in the engine but differed in the Editor by up to 0.0005 in
   basis vectors and 7e-5 m in position at 0.5 s, on unpivoted rotations too. That is the clip
