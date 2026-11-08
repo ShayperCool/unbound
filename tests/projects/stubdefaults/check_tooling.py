@@ -22,8 +22,10 @@ def main():
     if result.returncode:
         return result.returncode
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
+    # StateMachineBehaviour.OnStateIK is sent since the animation update runs IK passes
+    # (tests/projects/animcallbacks), so UnsentIK and InheritedIK are now controls that doctor
+    # must not report.
     expected = {
-        ('DoctorCoverageControls.UnsentIK', 'OnStateIK'),
         ('DoctorCoverageControls.UnsentComponent', 'OnParticleUpdateJobScheduled'),
         ('DoctorCoverageControls.UnsentComponent', 'OnChildRectTransformDimensionsChange'),
     }
