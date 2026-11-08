@@ -144,6 +144,10 @@ with different uniforms are each read into a separate buffer before any CPU read
 reusing one uniform buffer for both dispatches cannot pass. A 512x2-thread control confirms
 1024 invocations; the recorded device limits are 1024/1024/1024/64 and 2048 array slices.
 Both native repeats retain every previous record and image unchanged.
+`volumeGuarantee.sampleBindingMip.*` binds a sampled texture at mip 1 after mip 0 and 1
+have different contents, then reads mip 0 explicitly. It tests the [Unity 6000.0
+ComputeShader.SetTexture](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ComputeShader.SetTexture.html)
+guarantee that the binding mip selects an RW image only; sampled textures keep all levels.
 
 Writable views are cached per texture mip. Dispatches reuse uniform slots between submissions
 and cache binding groups by their layout and resources. Texture and buffer replacement or

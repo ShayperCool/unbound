@@ -58,6 +58,9 @@ public sealed partial class RenderApiProbe
                 compute.SetTexture(fill, "_Target", volume, 1); compute.Dispatch(fill, 1, 1, (Math.Max(1, depth >> 1) + 1) / 2);
                 VolumeRead(key + ".mipWritten", volume, 1);
                 compute.SetInt("_ReadMip", 1); compute.Dispatch(sample, 1, 1, 1); ComputeColors(key + ".mipSample", read);
+                // A sampled binding keeps every mip; only an RW binding selects one mip.
+                compute.SetTexture(sample, "_Source", volume, 1); compute.SetInt("_ReadMip", 0);
+                compute.Dispatch(sample, 1, 1, 1); ComputeColors("volumeGuarantee.sampleBindingMip." + format + "." + depth, read);
             }
             RenderTexture.active = saved;
             DestroyImmediate(volume);
