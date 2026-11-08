@@ -128,7 +128,9 @@ probe renders it), post-processing on and a global Volume, one setting each:
 
 Their constants record `frameCount` (film grain, dithering and TAA jitter follow it).
 `texture-samples.jsonl` (compared by `compare_constants.py`) records what the Single Channel
-textures sample as (blitted into a float target). Two Editor recordings gave identical images and
+textures sample as (blitted into a float target): uncompressed and compressed (Alpha stays
+Alpha8, Red becomes BC4; the compressed controls hold only values every block format keeps),
+and a Red one marked sRGB (still R8_UNorm). Authored by `PostFxSetup.CreateSingleChannelControls`. Two Editor recordings gave identical images and
 constants for these scenarios. On the Editor's OpenGL Core device inline sampler states do not
 apply (Point upscaling equals Linear), and URP's C# runs in Mono's double precision (0.7 scales the
 target to 223x125); Unbound differs in both and does not run STP's compute kernels (see

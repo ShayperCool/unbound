@@ -926,6 +926,61 @@ fn automatic_uncompressed_formats_are_reported() {
     assert_eq!(report(&opaque, "  textureFormat: 4\n"), None);
 }
 
+/// The channel the GPU samples of a one-channel import (tests/projects/urp
+/// texture-samples.jsonl): a Single Channel texture keeps its channel compressed or not (Alpha8,
+/// or R8 / BC4), stays linear when marked sRGB and is not BC7-compressed; an uncompressed Cookie
+/// keeps its alpha. Controls: a compressed Cookie (unmeasured) and a Default texture keep their
+/// RGBA and BC7.
+#[test]
+fn one_channel_imports_keep_their_channel_on_the_gpu() {
+    let bytes = png(8, 8, |x, y| [x as u8 * 30, y as u8 * 30, 7, 200]);
+    let import = |meta: &str| {
+        let meta = unbound_yaml::parse_value(&format!(
+            "TextureImporter:\n  nPOTScale: 0\n  sRGBTexture: 1\n{meta}"
+        ))
+        .unwrap();
+        TextureImporter {
+            compress: true,
+            ..TextureImporter::default()
+        }
+        .import(Path::new("Assets/a.png"), &bytes, &meta)
+        .unwrap()
+    };
+    let uncompressed = "  textureCompression: 0\n";
+    for compression in ["", uncompressed] {
+        let alpha = import(&format!(
+            "{compression}  textureType: 10\n  singleChannelComponent: 0\n"
+        ));
+        assert_eq!(
+            alpha.gpu_channel(),
+            Some(GpuChannel::Alpha),
+            "{compression:?}"
+        );
+        assert!(alpha.bc7.is_none());
+        let red = import(&format!(
+            "{compression}  textureType: 10\n  singleChannelComponent: 1\n"
+        ));
+        assert_eq!(red.gpu_channel(), Some(GpuChannel::Red), "{compression:?}");
+        assert!(red.bc7.is_none());
+        assert!(
+            !red.srgb,
+            "a Single Channel texture marked sRGB stays linear"
+        );
+    }
+    let cookie = import(&format!("{uncompressed}  textureType: 4\n"));
+    assert_eq!(cookie.gpu_channel(), Some(GpuChannel::Alpha));
+    let compressed_cookie = import("  textureType: 4\n");
+    assert_eq!(compressed_cookie.gpu_channel(), None);
+    assert!(compressed_cookie.bc7.is_some());
+    let default = import("  textureType: 0\n");
+    assert_eq!(default.gpu_channel(), None);
+    assert!(default.bc7.is_some());
+    assert!(default.srgb);
+    // An explicit format keeps the texture's RGBA.
+    let explicit = import("  textureType: 10\n  singleChannelComponent: 1\n  textureFormat: 4\n");
+    assert_eq!(explicit.gpu_channel(), None);
+}
+
 /// A Shadowmask or Lightmap keeps its input alpha (an unused channel or texel 0) under "Alpha
 /// Source: None"; other textures are made opaque.
 #[test]

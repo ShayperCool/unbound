@@ -1096,16 +1096,20 @@ pub fn import_audio(handle: u64, guid: &str) -> Result<crate::audio::protocol::A
     Ok(info)
 }
 
-/// The GPU texels of an imported RGBA8 texture that reports a one-channel format, sampled as
-/// the Unity 6000.0.71f1 Editor samples them (tests/projects/urp texture-samples.jsonl): Alpha8
-/// as (0, 0, 0, a) (the renderer's alpha-only format 3), R8 as (r, 0, 0, 1). Other formats
-/// keep `format` and their data.
-fn single_channel_texels(reported: i32, format: i32, mut data: Vec<u8>) -> (i32, Vec<u8>) {
-    use unbound_assets::texture::unity_format;
+/// The GPU texels of an imported RGBA8 texture that keeps one channel
+/// ([`ImportedTexture::gpu_channel`](unbound_assets::texture::ImportedTexture::gpu_channel)):
+/// alpha as (0, 0, 0, a) (the renderer's alpha-only format 3), red as (r, 0, 0, 1). Other
+/// textures keep `format` and their data.
+fn single_channel_texels(
+    channel: Option<unbound_assets::texture::GpuChannel>,
+    format: i32,
+    mut data: Vec<u8>,
+) -> (i32, Vec<u8>) {
+    use unbound_assets::texture::GpuChannel;
     const ALPHA_ONLY: i32 = 3;
-    match reported {
-        unity_format::ALPHA8 => (ALPHA_ONLY, data.chunks_exact(4).map(|p| p[3]).collect()),
-        unity_format::R8 => {
+    match channel {
+        Some(GpuChannel::Alpha) => (ALPHA_ONLY, data.chunks_exact(4).map(|p| p[3]).collect()),
+        Some(GpuChannel::Red) => {
             for p in data.chunks_exact_mut(4) {
                 p[1] = 0;
                 p[2] = 0;
@@ -1113,7 +1117,7 @@ fn single_channel_texels(reported: i32, format: i32, mut data: Vec<u8>) -> (i32,
             }
             (format, data)
         }
-        _ => (format, data),
+        None => (format, data),
     }
 }
 
@@ -1181,7 +1185,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             for mip in mips {
                 data.extend_from_slice(&mip.data);
             }
-            single_channel_texels(texture_format, format, data)
+            single_channel_texels(texture.gpu_channel(), format, data)
         }
     };
     let wrap = |w: unbound_assets::texture::WrapMode| w as i32;
@@ -1256,25 +1260,21 @@ fn open_bundle(request: &str) -> Result<String> {
 mod tests {
     use super::*;
 
-    /// Alpha8 imports go up alpha-only, R8 imports keep red alone; other formats are untouched.
+    /// Alpha channel imports go up alpha-only, red channel imports keep red alone; other
+    /// textures are untouched.
     #[test]
     fn one_channel_imports_sample_their_channel() {
-        use unbound_assets::texture::unity_format;
+        use unbound_assets::texture::GpuChannel;
         let texels = vec![10, 20, 30, 40, 50, 60, 70, 80];
         assert_eq!(
-            single_channel_texels(unity_format::ALPHA8, 1, texels.clone()),
+            single_channel_texels(Some(GpuChannel::Alpha), 1, texels.clone()),
             (3, vec![40, 80])
         );
         assert_eq!(
-            single_channel_texels(unity_format::R8, 1, texels.clone()),
+            single_channel_texels(Some(GpuChannel::Red), 1, texels.clone()),
             (1, vec![10, 0, 0, 255, 50, 0, 0, 255])
         );
-        for other in [0, unity_format::RGB24, unity_format::RGBA32] {
-            assert_eq!(
-                single_channel_texels(other, 0, texels.clone()),
-                (0, texels.clone())
-            );
-        }
+        assert_eq!(single_channel_texels(None, 0, texels.clone()), (0, texels));
     }
 
     #[test]

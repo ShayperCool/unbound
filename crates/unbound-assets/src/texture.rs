@@ -141,8 +141,9 @@ impl TextureFormat {
 pub struct TextureSettings {
     pub texture_type: TextureType,
     pub shape: TextureShape,
-    /// For [`TextureType::SingleChannel`]: 0 alpha (Unity makes an Alpha8 texture), 1 red (R8).
-    /// The imported data stays RGBA ([`ImportedTexture::reported_format`] names the format).
+    /// For [`TextureType::SingleChannel`]: 0 alpha (Unity makes an Alpha8 texture), 1 red (R8,
+    /// or BC4 compressed). The imported data stays RGBA ([`ImportedTexture::reported_format`]
+    /// names the format, [`ImportedTexture::gpu_channel`] what the GPU samples).
     pub single_channel_component: i32,
     /// Colour data is sRGB (`sRGBTexture`, formerly `!linearTexture`). Normal maps never are.
     pub srgb: bool,
@@ -231,8 +232,11 @@ impl TextureSettings {
             Some(srgb) => srgb,
             None => !boolean(imp, "mipmaps.linearTexture").unwrap_or(false),
         } && texture_type != TextureType::NormalMap
-            // A cookie is one (alpha) channel, which no sRGB decode applies to.
-            && texture_type != TextureType::Cookie;
+            // A cookie is one (alpha) channel, which no sRGB decode applies to; a Single Channel
+            // texture stays linear even when marked sRGB (R8_UNorm in the Unity 6000.0.71f1
+            // Editor, tests/projects/urp texture-samples.jsonl SingleRedSrgb).
+            && texture_type != TextureType::Cookie
+            && texture_type != TextureType::SingleChannel;
         let alpha_source = match int(imp, "alphaUsage") {
             Some(0) => AlphaSource::None,
             Some(2) => AlphaSource::FromGrayScale,
@@ -484,6 +488,15 @@ pub mod unity_format {
     pub const R8: i32 = 63;
 }
 
+/// The channel a one-channel GPU format carries ([`ImportedTexture::gpu_channel`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GpuChannel {
+    /// Alpha8: samples (0, 0, 0, a).
+    Alpha,
+    /// R8 or BC4: samples (r, 0, 0, 1).
+    Red,
+}
+
 impl ImportedTexture {
     /// The Texture2D's fileID within the asset.
     pub const FILE_ID: i64 = TEXTURE_FILE_ID;
@@ -511,6 +524,29 @@ impl ImportedTexture {
             | TextureType::DirectionalLightmap => None,
             _ if self.has_alpha => Some(unity_format::RGBA32),
             _ => Some(unity_format::RGB24),
+        }
+    }
+
+    /// The one channel the GPU samples of an 8-bit import that keeps a single channel, as the
+    /// Unity 6000.0.71f1 Editor samples it (tests/projects/urp texture-samples.jsonl): a Single
+    /// Channel texture its alpha (Alpha8, compressed or not) or its red (R8, or BC4 compressed),
+    /// a Cookie its alpha where it imports as Alpha8 (uncompressed; compressed cookies are
+    /// unmeasured and keep their alpha in every channel). None for other textures and explicit
+    /// formats.
+    pub fn gpu_channel(&self) -> Option<GpuChannel> {
+        let s = &self.settings;
+        if self.format != TextureFormat::Rgba8 || s.format_alpha.is_some() {
+            return None;
+        }
+        match s.texture_type {
+            TextureType::SingleChannel if s.single_channel_component == 0 => {
+                Some(GpuChannel::Alpha)
+            }
+            TextureType::SingleChannel => Some(GpuChannel::Red),
+            TextureType::Cookie if self.reported_format() == Some(unity_format::ALPHA8) => {
+                Some(GpuChannel::Alpha)
+            }
+            _ => None,
         }
     }
 
@@ -583,7 +619,8 @@ impl Importer for TextureImporter {
     // 13: single-cell arrays and volumes are no longer BC7-compressed.
     // 14: Cookie textures keep their alpha in every channel and are not sRGB.
     // 15: Lightmap and Shadowmask textures keep their input alpha under "Alpha Source: None".
-    const VERSION: u32 = 15;
+    // 16: Single Channel textures are linear and, as one-channel imports, not BC7-compressed.
+    const VERSION: u32 = 16;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -613,7 +650,8 @@ impl Importer for TextureImporter {
 /// The mips of a 2D RGBA8 texture whose size is divisible by 4, compressed to BC7 (levels below 4
 /// pixels padded with their edge, as the GPU's 4x4 blocks need); `None` for any other texture.
 /// Arrays and volumes stay RGBA8 even with a single slice: the renderer binds them through
-/// RGBA8 array and volume views.
+/// RGBA8 array and volume views. One-channel imports ([`ImportedTexture::gpu_channel`]) upload
+/// that channel alone instead.
 pub fn compress_bc7(texture: &ImportedTexture) -> Option<Vec<serde_bytes::ByteBuf>> {
     use rayon::prelude::*;
     if texture.format != TextureFormat::Rgba8
@@ -621,6 +659,7 @@ pub fn compress_bc7(texture: &ImportedTexture) -> Option<Vec<serde_bytes::ByteBu
         || texture.layers != 1
         || texture.width % 4 != 0
         || texture.height % 4 != 0
+        || texture.gpu_channel().is_some()
     {
         return None;
     }

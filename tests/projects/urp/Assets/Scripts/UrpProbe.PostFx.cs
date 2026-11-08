@@ -270,9 +270,11 @@ public partial class UrpProbe
     static void RecordTextureSamples(string path)
     {
         var features = Resources.Load<FeatureAssets>("FeatureAssets");
+        var postFx = Resources.Load<PostFxAssets>("PostFxAssets");
         var lines = new StringBuilder();
-        foreach (var texture in new[] { features.singleAlpha, features.singleRed })
+        foreach (var texture in new[] { features.singleAlpha, features.singleRed, postFx.singleAlphaCompressed, postFx.singleRedCompressed, postFx.singleRedSrgb })
         {
+            Debug.Log($"texture-samples: {texture.name} is {texture.graphicsFormat}");
             var target = new RenderTexture(texture.width, texture.height, 0, RenderTextureFormat.ARGBFloat);
             Graphics.Blit(texture, target);
             var readback = new Texture2D(texture.width, texture.height, TextureFormat.RGBAFloat, false);

@@ -13,3 +13,6 @@ MonoBehaviour:
   m_Name: PostFxAssets
   m_EditorClassIdentifier: 
   lut: {fileID: 2800000, guid: 893637d8892b48abfa26b9c9b3921882, type: 3}
+  singleAlphaCompressed: {fileID: 2800000, guid: a4e5e86a04579cf90a460ccd191b5106, type: 3}
+  singleRedCompressed: {fileID: 2800000, guid: a7bfa5d9fc180fd7bba8874fecc0d915, type: 3}
+  singleRedSrgb: {fileID: 2800000, guid: c5c13f15a5241eeff81b438e07a3dd2c, type: 3}

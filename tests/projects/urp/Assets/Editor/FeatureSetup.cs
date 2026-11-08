@@ -71,7 +71,7 @@ public static class FeatureSetup
     }
 
     /// <summary>TextureImporterSettings.singleChannelComponent: 0 Alpha, 1 Red.</summary>
-    static void SetSingleChannel(TextureImporter importer, int component)
+    internal static void SetSingleChannel(TextureImporter importer, int component)
     {
         var settings = new TextureImporterSettings();
         importer.ReadTextureSettings(settings);
