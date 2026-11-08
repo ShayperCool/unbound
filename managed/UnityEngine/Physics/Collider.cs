@@ -57,6 +57,8 @@ namespace UnityEngine
         internal Matrix4x4 m_AddedMatrix;
         internal int m_AddedVersion;
         internal Matrix4x4 m_ShapeMatrix;
+        // Authored rotation in the same cached body frame as m_ShapeMatrix.
+        internal Quaternion m_ShapeRotation;
         internal int m_Layer;
         internal PhysicsMaterial m_UsedMaterial;
         internal int m_MaterialVersion;
@@ -623,7 +625,7 @@ namespace UnityEngine
             {
                 // Convex colliders project scale onto the authored rotation, including
                 // sheared hierarchies (physicsccdhinge, frames/4, Unity 6000.0.71f1).
-                var rotation = rigidbody != null ? Quaternion.Inverse(rigidbody.transform.rotation) * transform.rotation : Quaternion.identity;
+                var rotation = m_ShapeRotation;
                 var scale = new Vector3(
                     Vector3.Dot(rotation * Vector3.right, new Vector3(toBody.m00, toBody.m10, toBody.m20)),
                     Vector3.Dot(rotation * Vector3.up, new Vector3(toBody.m01, toBody.m11, toBody.m21)),

@@ -56,6 +56,30 @@ namespace UnityEngine.Tests
             Assert.Throws<IndexOutOfRangeException>(()=>default(ContactPairHeader).GetContactPair(0));
             Assert.Throws<IndexOutOfRangeException>(()=>default(ContactPair).GetContactPoint(0));
         }
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ConvexContactPropertyKeepsUnsyncedChildFrame(bool kinematic)
+        {
+            var root=new GameObject("convex-frame");objects.Add(root);
+            var body=root.AddComponent<Rigidbody>();body.useGravity=false;body.isKinematic=kinematic;
+            var child=GameObject.CreatePrimitive(PrimitiveType.Cube);objects.Add(child);
+            child.transform.SetParent(root.transform,false);
+            child.transform.localScale=new Vector3(.2f,.3f,.4f);
+            Object.DestroyImmediate(child.GetComponent<BoxCollider>());
+            var collider=child.AddComponent<MeshCollider>();
+            collider.sharedMesh=child.GetComponent<MeshFilter>().sharedMesh;collider.convex=true;
+            Physics.SyncTransforms();
+            var before=collider.bounds;
+            child.transform.localRotation=Quaternion.Euler(0,0,90);
+            collider.isTrigger=true;
+            Assert.InRange((collider.bounds.size-before.size).magnitude,0,1e-5f);
+            Assert.Contains(collider,Physics.OverlapSphere(new Vector3(.08f,0,0),.005f,~0,QueryTriggerInteraction.Collide));
+            Physics.SyncTransforms();
+            Assert.InRange(collider.bounds.size.x,.29999f,.30001f);
+            Assert.InRange(collider.bounds.size.y,.19999f,.20001f);
+            Assert.Contains(collider,Physics.OverlapSphere(new Vector3(.08f,0,0),.005f,~0,QueryTriggerInteraction.Collide));
+        }
         [Fact]
         public void PublicReportHasActualIdentityAndSdkPoints()
         {

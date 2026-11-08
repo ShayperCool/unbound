@@ -950,6 +950,8 @@ namespace Unbound.Runtime
 
             var matrix = keepPose ? c.m_ShapeMatrix : PoseMatrix(framePosition, frameRotation).inverse * world;
             c.m_ShapeMatrix = matrix;
+            if (!keepPose)
+                c.m_ShapeRotation = Quaternion.Inverse(frameRotation) * (rb == null && addedPose ? c.m_AddedRotation : transform.rotation);
             var shapeDef = ShapeDefOf(c, rb);
             try
             {

@@ -369,6 +369,45 @@ public class GeometryEntry : MonoBehaviour
             Clear();
         }
     }
+    static void PendingFrames()
+    {
+        bool previous=Physics.autoSyncTransforms;
+        Physics.autoSyncTransforms=false;
+        try
+        {
+            foreach(bool kinematic in new[]{false,true})
+            foreach(int property in new[]{0,1,2})
+            {
+                Begin("frames/pending/"+kinematic+"/"+property);
+                var root=Make("body",Vector3.zero);
+                var body=root.AddComponent<Rigidbody>(); body.useGravity=false; body.isKinematic=kinematic;
+                var child=Make("hull",Vector3.zero); child.transform.SetParent(root.transform,false);
+                Shape(child,1); var collider=child.GetComponent<MeshCollider>();
+                Physics.SyncTransforms();
+                RecordPending("before",collider);
+                child.transform.localRotation=Quaternion.Euler(0,0,90);
+                if(property==0)collider.isTrigger=true;
+                else if(property==1)collider.contactOffset=.02f;
+                else
+                {
+                    var material=new PhysicsMaterial(); Made.Add(material);
+                    material.dynamicFriction=.7f; collider.sharedMaterial=material;
+                }
+                RecordPending("pending",collider);
+                Physics.SyncTransforms();
+                RecordPending("synced",collider);
+                Clear();
+            }
+        }
+        finally { Physics.autoSyncTransforms=previous; }
+    }
+    static void RecordPending(string phase, Collider collider)
+    {
+        var bounds=collider.bounds;
+        Row(Scenario+"/"+phase+"/bounds",V(bounds.center)+","+V(bounds.size));
+        var hits=Physics.OverlapSphere(new Vector3(.08f,0,0),.005f,~0,QueryTriggerInteraction.Collide);
+        Row(Scenario+"/"+phase+"/hit",(Array.IndexOf(hits,collider)>=0).ToString());
+    }
     IEnumerator FixedSteps()
     {
         Space=Physics.defaultPhysicsScene;
@@ -405,7 +444,7 @@ public class GeometryEntry : MonoBehaviour
         Time.fixedDeltaTime=Dt; Physics.simulationMode=SimulationMode.Script; Space=Physics.defaultPhysicsScene;
         try
         {
-            if(!string.IsNullOrEmpty(ordering)) { Ordering(); FrameControls(); Row("complete","yes"); Save(0); return; }
+            if(!string.IsNullOrEmpty(ordering)) { Ordering(); FrameControls(); PendingFrames(); Row("complete","yes"); Save(0); return; }
             if(!string.IsNullOrEmpty(controls)) { Controls(); Row("complete","yes"); Save(0); return; }
             StaticMatrix(); DynamicMatrix(); Tuning();
             var previous=SceneManager.GetActiveScene();

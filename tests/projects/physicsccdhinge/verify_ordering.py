@@ -9,6 +9,8 @@ from compare import compare, equal
 def verify(expected, actual):
     problems = []
     for key in expected:
+        if key.startswith('frames/pending/') and not equal(expected[key], actual.get(key)):
+            problems.append(dict(key=key, reason='Deferred convex frame or overlap query differs', expected=expected[key], actual=actual.get(key)))
         if key.endswith(('/body', '/events', '/bounds')) and key not in actual:
             problems.append(dict(key=key, reason='Missing body, count or bounds'))
         elif key.startswith('frames/') and not key.startswith('frames/5/') and key.endswith(('/body', '/bounds')) and not equal(expected[key], actual.get(key)):
