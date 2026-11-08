@@ -420,6 +420,57 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A skinned renderer away from the origin (the table keeps the pose in the
+        /// renderer's space, in arrays of its own) skinned again within a frame (BakeMesh skins
+        /// at once, into the arrays the drawn mesh keeps): the next emission takes that pose.</summary>
+        [Fact]
+        public void ASkinnedShapeTakesAPoseSkinnedAgainWithinTheFrame()
+        {
+            var root = new GameObject("root");
+            root.transform.position = new Vector3(10f, 0f, 0f);
+            var bone = new GameObject("bone").transform;
+            bone.SetParent(root.transform, false);
+            var mesh = new Mesh
+            {
+                vertices = new[] { new Vector3(0f, 0f, 0f), new Vector3(1f, 0f, 0f), new Vector3(0f, 1f, 0f) },
+                triangles = new[] { 0, 1, 2 },
+                boneWeights = new[]
+                {
+                    new BoneWeight { boneIndex0 = 0, weight0 = 1f },
+                    new BoneWeight { boneIndex0 = 0, weight0 = 1f },
+                    new BoneWeight { boneIndex0 = 0, weight0 = 1f },
+                },
+                bindposes = new[] { bone.worldToLocalMatrix * root.transform.localToWorldMatrix },
+            };
+            var renderer = root.AddComponent<SkinnedMeshRenderer>();
+            renderer.sharedMesh = mesh;
+            renderer.bones = new[] { bone };
+            var ps = Make(null, ParticleSystemMeshShapeType.Vertex);
+            try
+            {
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.SkinnedMeshRenderer;
+                shape.skinnedMeshRenderer = renderer;
+                Time.s_FrameCount++;
+                ps.Emit(1);
+                var table = ps.m_MeshShapeTable;
+                Assert.Contains(new Vector3(1f, 0f, 0f), table.Vertices);
+
+                bone.localPosition = new Vector3(0f, 0f, 3f);
+                var baked = new Mesh();
+                renderer.BakeMesh(baked);
+                Object.DestroyImmediate(baked);
+                ps.Emit(1);
+                Assert.Contains(new Vector3(1f, 0f, 3f), table.Vertices);
+            }
+            finally
+            {
+                Object.DestroyImmediate(ps.gameObject);
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(mesh);
+            }
+        }
+
         [Fact]
         public void SkinnedMeshRendererEmitsFromTheCurrentPose()
         {

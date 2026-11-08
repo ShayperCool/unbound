@@ -25,6 +25,10 @@ namespace UnityEngine
         internal bool m_Dirty = true;
         /// <summary>How many times changes were sent: what a mesh made from this one checks.</summary>
         internal int m_SyncVersion;
+        /// <summary>Changes whenever the positions or normals are set, also into the arrays the
+        /// mesh already has (<see cref="AdoptVertices"/>): caches of them compare it, not only
+        /// the arrays.</summary>
+        internal int m_PositionsVersion;
         bool m_IsReadable = true;
         // Model import's Editor-only CPU access remains unchanged until measured. An explicit
         // UploadMeshData(true) removes script access; renderers still own the retained geometry.
@@ -197,6 +201,7 @@ namespace UnityEngine
         internal void AdoptVertices(Vector3[] value)
         {
             m_Vertices = value;
+            m_PositionsVersion++;
             if (m_Layout != null && !LayoutHas(VertexAttribute.Position))
             {
                 Array.Resize(ref m_Layout, m_Layout.Length + 1);
@@ -231,7 +236,7 @@ namespace UnityEngine
         /// <summary>Mesh.normals with a checked array the mesh keeps (see <see cref="AdoptVertices"/>).</summary>
         internal void AdoptNormals(Vector3[] value)
         {
-            m_Normals = value; InvalidatePackedChannel(VertexAttribute.Normal); Changed(indices: false);
+            m_Normals = value; m_PositionsVersion++; InvalidatePackedChannel(VertexAttribute.Normal); Changed(indices: false);
         }
 
         public Vector4[] tangents

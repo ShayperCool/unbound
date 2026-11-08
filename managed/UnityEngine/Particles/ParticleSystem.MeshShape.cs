@@ -68,7 +68,7 @@ namespace UnityEngine
             internal Mesh Mesh;
             internal Vector3[] SourceVertices, SourceNormals;
             internal Color32[] SourceColors;
-            internal int SyncVersion;
+            internal int SyncVersion, PositionsVersion;
             internal Matrix4x4 ToLocal;
             internal Vector3 Scale;
             /// <summary>Built while the mesh had unsent changes: valid for the frame it was built
@@ -115,7 +115,8 @@ namespace UnityEngine
             internal void Update(Mesh mesh, Matrix4x4 toLocal, Vector3 scale, Mesh topologyMesh, int subMesh, int frame)
             {
                 bool vertices = ReferenceEquals(Mesh, mesh) && ReferenceEquals(SourceVertices, mesh.m_Vertices) && ReferenceEquals(SourceNormals, mesh.m_Normals)
-                    && ReferenceEquals(SourceColors, mesh.m_Colors) && SyncVersion == mesh.m_SyncVersion && ToLocal.Equals(toLocal) && Scale == scale
+                    && ReferenceEquals(SourceColors, mesh.m_Colors) && SyncVersion == mesh.m_SyncVersion && PositionsVersion == mesh.m_PositionsVersion
+                    && ToLocal.Equals(toLocal) && Scale == scale
                     && Fresh(mesh, BuiltDirty, BuiltFrame, frame);
                 if (!vertices) BuildVertices(mesh, toLocal, scale, frame);
                 // The areas weigh the unscaled mesh: the rest mesh's vertices for a deformed pose,
@@ -147,7 +148,7 @@ namespace UnityEngine
                 var source = mesh.m_Vertices;
                 int n = source.Length;
                 Mesh = mesh; SourceVertices = source; SourceNormals = mesh.m_Normals; SourceColors = mesh.m_Colors;
-                SyncVersion = mesh.m_SyncVersion; ToLocal = toLocal; Scale = scale;
+                SyncVersion = mesh.m_SyncVersion; PositionsVersion = mesh.m_PositionsVersion; ToLocal = toLocal; Scale = scale;
                 BuiltDirty = mesh.m_Dirty; BuiltFrame = frame;
                 // Positions and normals take the scale (the areas do not).
                 var local = source;
