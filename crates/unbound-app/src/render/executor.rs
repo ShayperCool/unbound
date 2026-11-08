@@ -936,7 +936,14 @@ impl UnityRenderer {
                 .insert((base, slot), (generation, bg.clone()));
             return (bg, false);
         }
-        if self.unreadable_as_float(handle, "_MainTex") {
+        // The legacy slot is a 2D texture: a cube `_MainTex` (Hidden/CubeBlur, Hidden/CubeCopy)
+        // reaches its shader through the named binding only.
+        if self
+            .textures
+            .get(&handle)
+            .is_some_and(|t| t.cube || t.cube_array)
+            || self.unreadable_as_float(handle, "_MainTex")
+        {
             return self.main_bind_group(0, default, space);
         }
         if self.drawn_into(handle) {

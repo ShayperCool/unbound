@@ -360,8 +360,13 @@ namespace UnityEngine
             // The active target as drawn into: a screen camera's stand-in while it renders (what
             // the screen shows once it is presented).
             var active = RenderTexture.ActiveTarget;
-            int sourceWidth = active != null ? active.width : Screen.width;
-            int sourceHeight = active != null ? active.height : Screen.height;
+            // The level and layer Graphics.SetRenderTarget bound (a cube face, an array slice).
+            ulong activeHandle = active != null ? active.EnsureCreated() : 0;
+            var bound = GfxStream.Current;
+            bool level = active != null && bound.Color == activeHandle && (bound.Mip > 0 || bound.Slice > 0);
+            int mip = level ? bound.Mip : 0, layer = level ? Math.Max(0, bound.Slice) : 0;
+            int sourceWidth = active != null ? Math.Max(1, active.width >> mip) : Screen.width;
+            int sourceHeight = active != null ? Math.Max(1, active.height >> mip) : Screen.height;
             int x0 = Math.Max(0, (int)source.x), y0 = Math.Max(0, (int)source.y);
             int x1 = Math.Min(sourceWidth, (int)(source.x + source.width)), y1 = Math.Min(sourceHeight, (int)(source.y + source.height));
             // The destination clips too.
@@ -384,7 +389,8 @@ namespace UnityEngine
                 Debug.LogError($"Unbound: ReadPixels cannot read the integer render texture '{active.name}' ({active.graphicsFormat}); the texture is left unchanged.");
                 return;
             }
-            var bytes = Native.ReadPixels(active != null ? active.EnsureCreated() : 0, x0, y0, w, h, true);
+            var bytes = level ? Native.ReadTexture(activeHandle, mip, layer, x0, y0, w, h, true)
+                : Native.ReadPixels(activeHandle, x0, y0, w, h, true);
             if (bytes == null)
             {
                 Debug.LogWarning("Unbound: Texture2D.ReadPixels has no GPU to read from (headless run); the texture is left unchanged.");

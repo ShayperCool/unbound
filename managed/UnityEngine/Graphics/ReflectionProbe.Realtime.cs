@@ -8,7 +8,8 @@ namespace UnityEngine
     // Realtime reflection probes (measured: tests/projects/builtinfx probe.*): rendered before the
     // frame's cameras, once when enabled (OnAwake), every frame (EveryFrame) or when RenderProbe asks
     // (ViaScripting), into an HDR cube of their resolution, as a camera at the probe's position with
-    // its clearing, culling mask and clip planes. A render counts as finished the frame after
+    // its clearing, culling mask and clip planes, its mips then glossy-convolved
+    // (ReflectionProbe.Convolution.cs). A render counts as finished the frame after
     // (NoTimeSlicing), three frames after (AllFacesAtOnce) or eight (IndividualFaces); Unbound draws
     // every face at once. Nothing renders while QualitySettings.realtimeReflectionProbes is off.
     public sealed partial class ReflectionProbe
@@ -148,7 +149,8 @@ namespace UnityEngine
                         {
                             dimension = TextureDimension.Cube,
                             useMipMap = true,
-                            autoGenerateMips = true,
+                            // Its mips are the glossy convolution (ConvolveRealtime).
+                            autoGenerateMips = false,
                             name = "Reflection probe " + name,
                             hideFlags = HideFlags.HideAndDontSave,
                         };
@@ -176,6 +178,7 @@ namespace UnityEngine
             camera.allowMSAA = false;
             camera.cameraType = CameraType.Reflection;
             FrameBuilder.RenderCubeFaces(camera, transform.position, target, 63);
+            ConvolveRealtime(target);
         }
     }
 }
