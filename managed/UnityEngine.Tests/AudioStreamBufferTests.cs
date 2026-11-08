@@ -121,7 +121,7 @@ namespace UnityEngine.Tests
             Assert.Equal(stream ? AudioDataLoadState.Unloaded : AudioDataLoadState.Loaded, clip.loadState);
             Assert.Null(clip.m_StreamBufferOwner);
             Assert.True(clip.LoadAudioData()); Assert.Equal(AudioDataLoadState.Loaded, clip.loadState);
-            Destruction.DeliverRequested(); Destruction.FlushEndOfFrame(); Assert.False(source);
+            Destruction.BeginDelivery(); Destruction.DeliverRequested(); Destruction.FlushEndOfFrame(); Assert.False(source);
         }
         [RequireComponent(typeof(AudioSource))]
         public class KeepsSource : MonoBehaviour { }
@@ -131,7 +131,7 @@ namespace UnityEngine.Tests
             var clip = Clip(); var source = Source(clip); source.gameObject.AddComponent<KeepsSource>(); source.Play();
             Object.Destroy(source); Assert.True(source.isPlaying);
             Destruction.FlushEndOfFrame(); Assert.True(source); Assert.True(source.isPlaying);
-            Object.Destroy(source.gameObject); Assert.False(source.isPlaying); Destruction.DeliverRequested(); Destruction.FlushEndOfFrame();
+            Object.Destroy(source.gameObject); Assert.False(source.isPlaying); Destruction.BeginDelivery(); Destruction.DeliverRequested(); Destruction.FlushEndOfFrame();
         }
         public class DestroyFromFilter : MonoBehaviour
         {
@@ -163,7 +163,7 @@ namespace UnityEngine.Tests
             invoke(AudioCallbackKind.SourceFilter, source.Handle, samples, 2, 1, 0);
             Assert.True(filter.Called); Assert.True(filter.LoadedInside);
             Assert.True(source.isPlaying); Assert.Same(source, clip.m_StreamBufferOwner);
-            Destruction.DeliverRequested(); Destruction.FlushEndOfFrame();
+            Destruction.BeginDelivery(); Destruction.DeliverRequested(); Destruction.FlushEndOfFrame();
             Assert.False(source); Assert.Equal(AudioDataLoadState.Unloaded, clip.loadState);
         }
         [Fact]
@@ -171,7 +171,7 @@ namespace UnityEngine.Tests
         {
             ProjectInfo.UnityVersion = "6000.0.72f1";
             var source = Source(Clip(stream: false)); source.Play(); Object.Destroy(source);
-            Assert.True(source.isPlaying); Destruction.DeliverRequested(); Destruction.FlushEndOfFrame(); Assert.False(source);
+            Assert.True(source.isPlaying); Destruction.BeginDelivery(); Destruction.DeliverRequested(); Destruction.FlushEndOfFrame(); Assert.False(source);
         }
         [Fact]
         public void BackendRejectionDoesNotTransferBufferOwnership()
