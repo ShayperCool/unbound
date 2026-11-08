@@ -26,7 +26,7 @@ public class DestroyPhases : MonoBehaviour
         "UIEvent", "OnDestroy",
         "component", "builtin", "asset", "delay", "delayPaused", "zeroPaused", "delayFraction", "delayComponent", "delayAsset", "hierarchy", "deepHierarchy",
         "instantiate", "setActive", "unload", "immediateUpdate", "immediateTrigger",
-        "immediateCollision", "immediateAnimation", "immediateRender", "immediateAwake", "immediateTriggerComponent", "immediateTriggerAsset", "ownCoroutine", "immediateHierarchy", "unloadHierarchy", "persistentAsset", "persistentPrefab", "pendingAnimation", "disabledScript", "builtinBehaviour", "nestedCoroutine", "defaultCoroutine", "multiFixed", "particleReadBeforeDestroy", "alwaysSimulateCoroutine"
+        "immediateCollision", "immediateAnimation", "immediateRender", "immediateAwake", "immediateTriggerComponent", "immediateTriggerAsset", "ownCoroutine", "immediateHierarchy", "unloadHierarchy", "persistentAsset", "persistentPrefab", "pendingAnimation", "disabledScript", "builtinBehaviour", "nestedCoroutine", "defaultCoroutine", "multiFixed", "particleReadBeforeDestroy", "alwaysSimulateCoroutine", "bareCoroutine", "bareStart", "matureCoroutine"
     };
     int index = -1, age, startFrame;
     readonly List<GameObject> cleanup = new List<GameObject>();
@@ -58,7 +58,7 @@ public class DestroyPhases : MonoBehaviour
     public static void Request(string point)
     {
         if (Issued || Mode == null) return;
-        bool match = Mode == point || (Mode == "multiFixed" && point == "FixedUpdate") || Mode == "immediate" + point.Replace("On", "").Replace("Enter", "");
+        bool match = Mode == point || (Mode == "multiFixed" && point == "FixedUpdate") || (Mode == "bareStart" && point == "Start") || Mode == "immediate" + point.Replace("On", "").Replace("Enter", "");
         if (!match) return;
         Issue();
     }
@@ -134,7 +134,7 @@ public class DestroyPhases : MonoBehaviour
     void Update()
     {
         if (Finished) return;
-        if (index < 0 || ++age == 9)
+        if (index < 0 || ++age == (Mode == "matureCoroutine" ? 160 : 9))
         {
             if (Mode != null) Log("case.end", "issued=" + B(Issued));
             Mode = null;
@@ -199,12 +199,16 @@ public class DestroyPhases : MonoBehaviour
             Subject.GetComponent<Animator>().runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("HumanAIK");
             Subject.GetComponent<Animator>().cullingMode = AnimatorCullingMode.AlwaysAnimate;
         }
-        else Subject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        else Subject = Mode.StartsWith("bare") ? new GameObject("bare") : GameObject.CreatePrimitive(PrimitiveType.Cube);
         Subject.name = "subject";
         Subject.SetActive(false);
         cleanup.Add(Subject);
         Target = Subject;
         var observer = Subject.AddComponent<DestroyObserver>();
+        if (Mode.StartsWith("bare"))
+        {
+            Subject.SetActive(true); StartCoroutine(Resumes()); return;
+        }
         if (Mode == "hierarchy" || Mode.EndsWith("Hierarchy"))
         {
             Subject.AddComponent<DestroyObserver>().label = "parent.second";
@@ -269,6 +273,12 @@ public class DestroyPhases : MonoBehaviour
         yield return null;
         if (current != Mode) yield break;
         Request("NullCoroutine");
+        if (Mode == "bareCoroutine") Issue();
+        if (Mode == "matureCoroutine")
+        {
+            for (int i = 1; i < 150; i++) yield return null;
+            Issue();
+        }
         if (Mode == "particleReadBeforeDestroy" || Mode == "alwaysSimulateCoroutine")
         {
             if (Mode == "particleReadBeforeDestroy")

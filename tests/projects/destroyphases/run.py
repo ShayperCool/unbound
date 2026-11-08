@@ -124,12 +124,12 @@ def main():
         cli = os.environ.get('UNBOUND', os.environ.get('UNBOUND_CLI', str(REPO / 'target/release/unbound')))
         with (out / 'engine.log').open('w') as log:
             code = subprocess.run([str(Path.home() / '.cache/compat/with-heavy-job'), '--kind', 'engine-gpu',
-                cli, 'run', '-p', str(project), '--frames', '500', '--size', '320x240', '--no-watch'],
+                cli, 'run', '-p', str(project), '--frames', '800', '--size', '320x240', '--no-watch'],
                 env=dict(os.environ, DESTROY_PHASES_OUT=str(out / 'values.jsonl')), stdout=log, stderr=subprocess.STDOUT).returncode
         if code:
             print((out / 'engine.log').read_text()[-3000:])
             return code
-    return compare(reference, work / 'unbound/values.jsonl')
+    return subprocess.run([sys.executable, str(PROBE / 'compare.py'), str(reference), str(work / 'unbound/values.jsonl')]).returncode
 
 
 if __name__ == '__main__':
