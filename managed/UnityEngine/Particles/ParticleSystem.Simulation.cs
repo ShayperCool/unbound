@@ -672,6 +672,7 @@ namespace UnityEngine
                     if (m_Custom[stream] != null) m_Custom[stream][start + i] = m_Custom[stream][source];
             }
             m_Count = start + count;
+            NoteMostParticles();
             for (int i = start; i < m_Count; i++)
             {
                 int origin = i < aligned ? count - prefix + i - start : i - aligned;

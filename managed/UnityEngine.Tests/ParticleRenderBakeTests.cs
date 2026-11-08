@@ -245,9 +245,12 @@ namespace UnityEngine.Tests
             main.maxParticles = 200;
             // 100 records of 13 floats (1300) outgrow room for 129 vertex records of 9 (1161).
             for (int i = 0; i < 100; i++) Emit(ps, new Vector3(i * 0.1f, 0f, 0f), Vector3.zero, 0.3f);
-            Texture2D records = null;
-            ps.GetComponent<ParticleSystemRenderer>().BakeTexture(ref records, camera, ParticleSystemBakeTextureOptions.PerParticle);
+            Texture2D records = null, indices = null;
+            // Mesh particles bake only with an indices texture (the overload without one throws).
+            Assert.Throws<InvalidOperationException>(() => ps.GetComponent<ParticleSystemRenderer>().BakeTexture(ref records, camera, ParticleSystemBakeTextureOptions.PerParticle));
+            ps.GetComponent<ParticleSystemRenderer>().BakeTexture(ref records, ref indices, camera, ParticleSystemBakeTextureOptions.PerParticle);
             Track(records);
+            Track(indices);
             var texels = Texels(records);
             // 13 floats a particle (transform, centre, color): the last particle's centre is there.
             Assert.True(texels.Length >= 100 * 13);

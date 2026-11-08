@@ -6,10 +6,12 @@ namespace UnityEngine
     // builds, written into float textures (6000.0.71f1, tests/projects/particlerender bake/*).
     public sealed partial class ParticleSystemRenderer
     {
-        /// <summary>The fewest vertex (or particle) records a vertices texture holds room for.</summary>
-        const int MinBakedVertexRecords = 64;
-        /// <summary>The fewest indices an indices texture holds room for (particles; trails).</summary>
-        const int MinBakedIndices = 128, MinBakedTrailIndices = 256;
+        /// <summary>Vertex (or particle) records a vertices texture holds room for come in steps of
+        /// this many, at least one step (6000.0.71f1, particlerender bakesize/* and bakecap/*).</summary>
+        const int BakedVertexRecordStep = 64;
+        /// <summary>Likewise for indices (particles; trails: only bakes within the first step of
+        /// 256 were measured).</summary>
+        const int BakedIndexStep = 128, BakedTrailIndexStep = 256;
 
         static float[] s_BakeVertices = Array.Empty<float>(), s_BakeIndices = Array.Empty<float>();
 
@@ -28,11 +30,12 @@ namespace UnityEngine
         /// IncludeParticleIndices (particles only) it is RGFloat: each particle's own vertex
         /// indices (0 1 2 2 3 0 for a quad) and the particle's index. PerParticle without it holds
         /// one particle's indices.</item>
-        /// <item>Sizes: room for max(64, next power of two of the records) + 1 records (vertices
-        /// or particles), width the smallest whole number of records at least the square root of
-        /// the floats, height what that needs; indices likewise for max(128, ...) + 1 (256 for
-        /// trails) single texels. The Editor keeps these buffers between bakes and grows them,
-        /// so after a larger bake its textures are larger (Unbound sizes each bake on its own).</item>
+        /// <item>Sizes: room for the records (vertices or particles; for particle bakes at least as
+        /// many as the most particles the system has held) rounded up to a multiple of 64, plus
+        /// one, width the smallest whole number of records at least the square root of the floats,
+        /// height what that needs; indices likewise in multiples of 128 (256 for trails) single
+        /// texels. Mesh particles without custom streams take the mesh's layout (tangents, a
+        /// second uv), which widens the records.</item>
         /// <item>A texture passed in is kept: refilled in its format (its texels take the bytes),
         /// reinitialized to the size only when it has fewer bytes. Nothing to bake returns 0 and
         /// leaves the textures as they were. The return value is the number of indices.</item>
@@ -77,7 +80,8 @@ namespace UnityEngine
             int records = perVertex ? geometry.VertexCount : trails ? geometry.VertexCount / 2 : geometry.ParticleCount;
             int recordFloats = !perVertex && mesh ? geometry.MeshParticleFloats : stride;
             int floats = records * recordFloats;
-            int capacity = Math.Max(MinBakedVertexRecords, NextPowerOfTwo(records)) + 1;
+            int most = trails ? 0 : ps.m_MostParticles;
+            int capacity = RoundUp(Math.Max(1, Math.Max(records, most)), BakedVertexRecordStep) + 1;
             // Room as for vertex records; mesh particle records are larger than a vertex, so the
             // room also covers them all (the measured bakes fit; larger ones are not measured).
             int room = Math.Max(capacity * stride, floats);
@@ -101,7 +105,7 @@ namespace UnityEngine
             {
                 bool particleIndices = !trails && (options & ParticleSystemBakeTextureOptions.IncludeParticleIndices) != 0;
                 int channels = particleIndices ? 2 : 1;
-                int indexCapacity = Math.Max(trails ? MinBakedTrailIndices : MinBakedIndices, NextPowerOfTwo(geometry.IndexCount)) + 1;
+                int indexCapacity = RoundUp(Math.Max(1, Math.Max(geometry.IndexCount, most)), trails ? BakedTrailIndexStep : BakedIndexStep) + 1;
                 int indexWidth = CeilSqrt(indexCapacity);
                 int indexHeight = (indexCapacity + indexWidth - 1) / indexWidth;
                 int indexTexels = indexWidth * indexHeight;
@@ -149,13 +153,6 @@ namespace UnityEngine
         }
 
         static byte[] s_BakeBytes = Array.Empty<byte>();
-
-        static int NextPowerOfTwo(int n)
-        {
-            int p = 1;
-            while (p < n && p < (1 << 30)) p <<= 1;
-            return p;
-        }
 
         static int CeilSqrt(int n)
         {
@@ -221,7 +218,8 @@ namespace UnityEngine
                 if (m_StreamNormals) { var n = Normals[v]; into[at++] = n.x; into[at++] = n.y; into[at++] = n.z; }
                 if (m_StreamTangents) { var t = Tangents[v]; into[at++] = t.x; into[at++] = t.y; into[at++] = t.z; into[at++] = t.w; }
                 if (m_StreamColors) into[at++] = PackedColor(Colors[v]);
-                for (int f = 0; f < m_StreamFloats; f++) into[at++] = m_PackedUvs[f >> 2][v][f & 3];
+                for (int channel = 0; channel < m_ChannelDimensions.Length && m_ChannelDimensions[channel] > 0; channel++)
+                    for (int f = 0; f < m_ChannelDimensions[channel]; f++) into[at++] = m_PackedUvs[channel][v][f];
             }
 
             internal void PackMeshParticle(int k, float[] into, ref int at)

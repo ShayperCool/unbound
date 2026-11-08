@@ -36,6 +36,12 @@ namespace UnityEngine
             bool m_StreamNormals = true, m_StreamColors = true, m_StreamTangents;
             int m_StreamFloats;
             readonly Vector4[][] m_PackedUvs = new Vector4[8][];
+            /// <summary>The floats each texture coordinate channel holds (streams pack four to a
+            /// channel; the mesh layout keeps its own channels).</summary>
+            readonly int[] m_ChannelDimensions = new int[8];
+            /// <summary>Mesh particles with the default streams copy the meshes' second uv
+            /// channel into TexCoord1.</summary>
+            bool m_MeshUv1;
 
             void ConfigureStreams(List<ParticleSystemVertexStream> streams)
             {
@@ -48,6 +54,31 @@ namespace UnityEngine
                     else m_StreamFloats += Width(stream);
                 }
                 if (m_StreamFloats > 32) throw new NotSupportedException("Unbound: particle vertex streams exceed eight float4 texture coordinates.");
+                m_MeshUv1 = false;
+                for (int channel = 0; channel < m_ChannelDimensions.Length; channel++)
+                    m_ChannelDimensions[channel] = Mathf.Clamp(m_StreamFloats - channel * 4, 0, 4);
+            }
+
+            /// <summary>Mesh particles without custom vertex streams take the meshes' own layout
+            /// (6000.0.71f1, tests/projects/particlerender meshattr/* and bakesize/*): position,
+            /// normal, the mesh tangents when a mesh has them, color, uv (TexCoord0, two floats) and
+            /// the mesh's second uv channel as TexCoord1 (four floats) when a mesh has one. Only the
+            /// built-in cube (uv and uv2) and quad (uv) were measured; further mesh uv channels are
+            /// not copied, and a mesh without tangents beside one with them gets the default
+            /// tangent (unmeasured).</summary>
+            void ConfigureMeshLayout(List<Mesh> meshes)
+            {
+                foreach (var mesh in meshes)
+                {
+                    if (mesh == null) continue;
+                    if (mesh.m_Tangents != null && mesh.m_Tangents.Length > 0) m_StreamTangents = true;
+                    if (mesh.m_UVs[1] != null && mesh.m_UVs[1].Length > 0) m_MeshUv1 = true;
+                }
+                if (!m_MeshUv1) return;
+                // The default streams leave the uv alone in TexCoord0.
+                m_ChannelDimensions[0] = m_StreamFloats;
+                m_ChannelDimensions[1] = 4;
+                m_StreamFloats += 4;
             }
 
             static int Width(ParticleSystemVertexStream stream)
@@ -178,6 +209,11 @@ namespace UnityEngine
                         for (int component = 0; component < width; component++, cursor++)
                             m_PackedUvs[cursor / 4][vertex][cursor % 4] = value[component];
                     }
+                    if (m_MeshUv1)
+                    {
+                        var uv1 = source?.m_UVs[1];
+                        m_PackedUvs[1][vertex] = uv1 != null && local < uv1.Length ? uv1[local] : Vector4.zero;
+                    }
                 }
             }
 
@@ -229,10 +265,9 @@ namespace UnityEngine
                     mesh.m_Tangents = tangents;
                 }
                 else mesh.m_Tangents = null;
-                int floats = m_Streams == null ? 2 : m_StreamFloats;
                 for (int channel = 0; channel < 8; channel++)
                 {
-                    int dimension = Mathf.Clamp(floats - channel * 4, 0, 4);
+                    int dimension = m_Streams == null ? (channel == 0 ? 2 : 0) : m_ChannelDimensions[channel];
                     if (dimension == 0 || count == 0) { mesh.m_UVs[channel] = null; mesh.m_UVDimensions[channel] = 0; continue; }
                     var values = mesh.m_UVs[channel] != null && mesh.m_UVs[channel].Length == count ? mesh.m_UVs[channel] : new Vector4[count];
                     Array.Copy(m_Streams == null ? Uvs : m_PackedUvs[channel], values, count);
@@ -249,9 +284,9 @@ namespace UnityEngine
                 if (m_StreamNormals) attributes.Add(new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Normal));
                 if (m_StreamTangents) attributes.Add(new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Tangent, UnityEngine.Rendering.VertexAttributeFormat.Float32, 4));
                 if (m_StreamColors) attributes.Add(new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Color, UnityEngine.Rendering.VertexAttributeFormat.UNorm8, 4));
-                for (int channel = 0; channel * 4 < m_StreamFloats; channel++)
+                for (int channel = 0; channel < m_ChannelDimensions.Length && m_ChannelDimensions[channel] > 0; channel++)
                     attributes.Add(new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.TexCoord0 + channel,
-                        UnityEngine.Rendering.VertexAttributeFormat.Float32, Mathf.Min(4, m_StreamFloats - channel * 4)));
+                        UnityEngine.Rendering.VertexAttributeFormat.Float32, m_ChannelDimensions[channel]));
                 mesh.SetVertexBufferParams(0, attributes.ToArray());
             }
         }

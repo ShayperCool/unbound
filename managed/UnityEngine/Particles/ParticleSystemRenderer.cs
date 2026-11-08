@@ -47,6 +47,9 @@ namespace UnityEngine
             ParticleSystemVertexStream.Position, ParticleSystemVertexStream.Normal, ParticleSystemVertexStream.Color, ParticleSystemVertexStream.UV,
         };
         bool m_CustomTrailStreams;
+        /// <summary>The main streams were chosen (SetActiveVertexStreams or the serialized
+        /// m_UseCustomVertexStreams); otherwise mesh particles take the mesh's own vertex layout.</summary>
+        bool m_CustomVertexStreams;
         static readonly List<ParticleSystemVertexStream> s_TrailUnlitStreams = new List<ParticleSystemVertexStream>
         { ParticleSystemVertexStream.Position, ParticleSystemVertexStream.Color, ParticleSystemVertexStream.UV };
         static readonly List<ParticleSystemVertexStream> s_TrailLitStreams = new List<ParticleSystemVertexStream>
@@ -66,7 +69,18 @@ namespace UnityEngine
         }
 
         public ParticleSystemRenderSpace alignment { get => m_RenderAlignment; set => m_RenderAlignment = value; }
-        public ParticleSystemRenderMode renderMode { get => m_RenderMode; set => m_RenderMode = value; }
+        /// <summary>Mesh mode needs the particles' axes of rotation: a system switched to it turns
+        /// the particles it already holds about up (6000.0.71f1, tests/projects/particlerender
+        /// bake/mesh against meshrot/*).</summary>
+        public ParticleSystemRenderMode renderMode
+        {
+            get => m_RenderMode;
+            set
+            {
+                m_RenderMode = value;
+                if (value == ParticleSystemRenderMode.Mesh) System?.MaterializeAxisOfRotation();
+            }
+        }
         public ParticleSystemMeshDistribution meshDistribution { get => m_MeshDistribution; set => m_MeshDistribution = value; }
         public ParticleSystemSortMode sortMode { get => m_SortMode; set => m_SortMode = value; }
         public float lengthScale { get => m_LengthScale; set => m_LengthScale = value; }
@@ -156,6 +170,7 @@ namespace UnityEngine
         {
             m_VertexStreams.Clear();
             if (streams != null) m_VertexStreams.AddRange(streams);
+            m_CustomVertexStreams = true;
         }
 
         public void GetActiveVertexStreams(List<ParticleSystemVertexStream> streams)
@@ -283,8 +298,12 @@ namespace UnityEngine
         public int BakeTexture(ref Texture2D verticesTexture, ParticleSystemBakeTextureOptions options) =>
             BakeTexture(ref verticesTexture, Camera.main, options);
 
+        /// <summary>Mesh particles are only baked with an indices texture: without one the Editor
+        /// throws (6000.0.71f1, tests/projects/particlerender meshrot/*/texture/noindices).</summary>
         public int BakeTexture(ref Texture2D verticesTexture, Camera camera, ParticleSystemBakeTextureOptions options)
         {
+            if (m_RenderMode == ParticleSystemRenderMode.Mesh)
+                throw new InvalidOperationException("Baking mesh particles to texture requires supplying an indices texture");
             Texture2D none = null;
             return BakeTextures(ref verticesTexture, ref none, false, camera, options, trails: false);
         }
@@ -795,6 +814,7 @@ namespace UnityEngine
             internal bool Build(ParticleSystemRenderer r, ParticleSystem ps, View view, Matrix4x4? simulationPose = null)
             {
                 ConfigureStreams(r.m_VertexStreams);
+                if (r.m_RenderMode == ParticleSystemRenderMode.Mesh && !r.m_CustomVertexStreams) ConfigureMeshLayout(r.m_Meshes);
                 // Native allocates the optional sum arrays when geometry first requests them.
                 // They keep accumulating if a later layout omits the stream, until restart.
                 foreach (var stream in r.m_VertexStreams)
@@ -821,6 +841,7 @@ namespace UnityEngine
                 if (count == 0) return false;
 
                 List<Mesh> meshes = null;
+                bool rotation3D = ps.has3DParticleRotations;
                 if (r.m_RenderMode == ParticleSystemRenderMode.Mesh)
                 {
                     meshes = m_LiveMeshes;
@@ -860,7 +881,14 @@ namespace UnityEngine
                     {
                         var m = meshes[Math.Min(ps.MeshIndexOf(ref p), meshes.Count - 1) % meshes.Count];
                         sourceMesh = m;
-                        var orientation = AddMesh(r, m, position, size, Quaternion.Euler(p.m_Rotation * Mathf.Rad2Deg), systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
+                        // A 3D rotation (of a 3D-rotation system, or x and y angles a script wrote)
+                        // turns the mesh by its Euler angles; a z angle alone turns it about the
+                        // particle's axis of rotation (6000.0.71f1, tests/projects/particlerender
+                        // meshrot/* and bake/mesh, particlestreams mesh.*).
+                        var meshRotation = rotation3D || p.m_Rotation.x != 0f || p.m_Rotation.y != 0f
+                            ? Quaternion.Euler(p.m_Rotation * Mathf.Rad2Deg)
+                            : Quaternion.AngleAxis(p.m_Rotation.z * Mathf.Rad2Deg, p.m_AxisOfRotation);
+                        var orientation = AddMesh(r, m, position, size, meshRotation, systemRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
                         NoteMeshParticle(orientation, streamSize, scale);
                     }
                     else

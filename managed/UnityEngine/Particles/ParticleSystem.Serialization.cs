@@ -612,6 +612,7 @@ namespace UnityEngine
                 var hex = streams.Scalar;
                 for (int i = 0; i + 1 < hex.Length; i += 2)
                     m_VertexStreams.Add((ParticleSystemVertexStream)Convert.ToInt32(hex.Substring(i, 2), 16));
+                m_CustomVertexStreams = true;
             }
             m_CustomTrailStreams = body.Bool("m_UseCustomTrailVertexStreams");
             if (m_CustomTrailStreams && body.Get("m_TrailVertexStreams") is YNode trailStreams && trailStreams.Kind == YKind.Scalar)
@@ -652,6 +653,7 @@ namespace UnityEngine
             m_MeshWeightings.AddRange(s.m_MeshWeightings);
             m_VertexStreams.Clear();
             m_VertexStreams.AddRange(s.m_VertexStreams);
+            m_CustomVertexStreams = s.m_CustomVertexStreams;
             m_TrailVertexStreams.Clear();
             m_TrailVertexStreams.AddRange(s.m_TrailVertexStreams);
             m_CustomTrailStreams = s.m_CustomTrailStreams;

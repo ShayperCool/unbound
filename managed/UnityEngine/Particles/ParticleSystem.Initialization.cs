@@ -234,7 +234,10 @@ namespace UnityEngine
             }
         }
 
-        void MaterializeAxisOfRotation()
+        /// <summary>Gives the system its per-particle axis of rotation: the particles it already
+        /// holds turn about up, later births about forward (measured through GetParticles and
+        /// Mesh render mode: tests/projects/particlerender bake/mesh, meshrot/*).</summary>
+        internal void MaterializeAxisOfRotation()
         {
             if (m_AxisOfRotationAllocated) return;
             m_AxisOfRotationAllocated = true;

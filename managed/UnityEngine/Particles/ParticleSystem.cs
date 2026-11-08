@@ -605,6 +605,7 @@ namespace UnityEngine
             for (int s = 0; s < 2; s++)
                 if (m_Custom[s] != null && m_Custom[s].Length < count) Array.Resize(ref m_Custom[s], m_Particles.Length);
             m_Count = count;
+            NoteMostParticles();
             // Native consumes the input lifetime before encoding normalized age. Nonpositive
             // inputs die immediately; tiny positive inputs can export as zero and still survive.
             // The retained prefix is untouched, even when its exported lifetime is zero.
@@ -1400,6 +1401,16 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ storage
 
+        /// <summary>The most particles the system has held (never lowered by deaths or Clear):
+        /// BakeTexture keeps room for at least this many records (6000.0.71f1,
+        /// tests/projects/particlerender bakecap/300/then1).</summary>
+        internal int m_MostParticles;
+
+        void NoteMostParticles()
+        {
+            if (m_Count > m_MostParticles) m_MostParticles = m_Count;
+        }
+
         void Reserve(int count)
         {
             if (m_Particles.Length >= count) return;
@@ -1434,7 +1445,9 @@ namespace UnityEngine
             }
             Reserve(m_Count + 1);
             ClearCustom(m_Count);
-            return m_Count++;
+            int slot = m_Count++;
+            NoteMostParticles();
+            return slot;
         }
 
         void ClearCustom(int index)
