@@ -619,6 +619,17 @@ namespace UnityEngine
             if (mesh == null) return 0;
             var source = mesh.m_Vertices;
             if (source == null || source.Length == 0) return 0;
+            if (m_Convex)
+            {
+                // Convex colliders project scale onto the authored rotation, including
+                // sheared hierarchies (physicsccdhinge, frames/4, Unity 6000.0.71f1).
+                var rotation = rigidbody != null ? Quaternion.Inverse(rigidbody.transform.rotation) * transform.rotation : Quaternion.identity;
+                var scale = new Vector3(
+                    Vector3.Dot(rotation * Vector3.right, new Vector3(toBody.m00, toBody.m10, toBody.m20)),
+                    Vector3.Dot(rotation * Vector3.up, new Vector3(toBody.m01, toBody.m11, toBody.m21)),
+                    Vector3.Dot(rotation * Vector3.forward, new Vector3(toBody.m02, toBody.m12, toBody.m22)));
+                toBody = Matrix4x4.TRS(toBody.MultiplyPoint3x4(Vector3.zero), rotation, scale);
+            }
             var vertices = new Vector3[source.Length];
             for (int i = 0; i < source.Length; i++) vertices[i] = toBody.MultiplyPoint3x4(source[i]);
             if (m_Convex)

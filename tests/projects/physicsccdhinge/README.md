@@ -174,3 +174,116 @@ affected Rust tests and all three engine-only CCD profiles pass. Existing
 physics, joints, physicsbatch and contactmodify3d gates retain their results.
 The geometry verifier has mutation controls for changed motion/counts, missing
 payloads and inconsistent reflections across bodies or steps.
+
+## Contact ordering and content analysis
+
+Q166 checked the Unity 6000.0 documentation for
+[Collision.GetContacts](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Collision.GetContacts.html),
+[Collision.contacts](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Collision-contacts.html),
+[ContactPoint](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ContactPoint.html),
+[ContactPairPoint](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ContactPairPoint.html)
+and [Physics.ContactEvent](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics.ContactEvent.html).
+They define contact data and retrieval without specifying contact-slot, native
+pair or compound-child order. GetContacts writes into the supplied array or
+list; a list can grow. ContactEvent supplies read-only headers, pairs and points,
+excludes triggers, runs after transform synchronization, and requires consumers
+to finish using its buffers before the next simulation. None of these rules
+establishes a solver-order guarantee. The CCD limitations in the contract table
+above still apply, including speculative ghost contacts and tunneling.
+
+`analyze_contacts.py` annotates the unchanged strict comparison. It matches
+complete callback/contact multisets within one step and receiver, including
+collider identities, normals, separations, relative velocity and impulse. A
+callback cannot explain two different callbacks. A point on the opposite surface
+witness, displaced by the signed separation along the normal, has its own
+category. Those points are not classified as slot permutations.
+
+```sh
+python3 tests/projects/physicsccdhinge/analyze_contacts.py \
+  tests/projects/physicsccdhinge/Reference/unity-6000.0.71f1/geometry.tsv \
+  "$HOME/.cache/unbound/validation/runs/physicsccdhinge/geometry/engine.tsv" \
+  --output "$HOME/.cache/unbound/validation/runs/physicsccdhinge/geometry/contact-analysis.json"
+```
+
+The retained 2441 strict differences partition as follows:
+
+| Category | Raw rows | Meaning |
+| --- | ---: | --- |
+| Order only | 812 | The complete callback/contact payload matches after one-to-one slot matching. |
+| Native pair impulse orientation | 172 | Contact payloads match; the pair impulse has the opposite direction and equal magnitude. |
+| Opposite surface witness | 186 | The normal, separation and identities match, but a reported point lies on the other surface witness. Impulse orientation can also differ. |
+| Unmatched payload | 1221 | Complete matching fails. This includes manifold points/counts, solver impulse distribution, and contacts after different body motion. These are not certified as order only. |
+| Body readings | 48 | The six reflected contexts contribute 43 rows; the mixed compound contributes five. |
+| Callback counts | 2 | The mixed compound's child exit moves from step 1 to step 2, observed by both receivers. |
+
+The six reflected contexts are `geometry/dynamic/3/{0,1,3}/3`,
+`geometry/kinematic/2/1/3`, `geometry/kinematic/3/0/3`, and
+`geometry/kinematic-target/2/2/3`. Including the mixed compound gives seven
+distinct scenario keys. In `geometry/kinematic-target/4/2/3`, step 0 has the same
+four initial contact points, normals and separations, with a different impulse
+allocation among the child pairs. The reference bullet velocity is
+`25.4600449,7.784088,0`; Unbound reports `25.7584381,-5.54619646,0`.
+Sequential constraint processing explains the sensitivity to pair order, but
+callback order alone does not prove the solver's input order. Exact matching of
+the actor/shape lifetime and constraint construction remains open. No global
+sort, child reversal or fixture-dependent solver rule is added.
+
+Contact-content differences remain visible independently of motion. For example,
+`geometry/static/1/0/3/1/bullet/event/0` has four contacts on both sides. Unity
+reports the four face corners; Unbound retains an interior point and three
+corners. The shared normal, separation and body motion match. This is a reduced
+manifold difference, not a slot permutation or an insignificant-contact claim.
+
+The supplemental controls retain 24 impulse-vector differences. Each has equal
+magnitude and the opposite sign, with all contact geometry, incoming velocities
+and body motion matching. The additional native controls below show that legacy
+callbacks on both receivers preserve the native pair impulse, while contact
+normals face their own receiver. Flipping every callback impulse toward its
+receiver would violate this measured convention.
+
+## Native orientation and convex frame controls
+
+`--geometry-ordering` selects `geometry-ordering.tsv`. Record and publish it with
+the same two-repeat workflow above. Its 64 construction cases cross four shape
+types, Rigidbody-before-collider construction, child creation order, actor
+creation order, and a dynamic or kinematic target. Native ContactEvent rows
+record collider orientation, per-point impulses and the pair impulse sum.
+`verify_ordering.py` requires native/legacy agreement for both receivers and
+checks every declared payload, including finite values and missing reports.
+The native and legacy sequences remain strict reports; the verifier adds no
+ordering guarantee.
+
+The frame controls cover a translated hull, nonuniform scale, rotation, a mirror,
+a sheared hierarchy, and a hull whose local vertices are offset by 10000 units.
+The Unity 6000.0 [MeshCollider reference](https://docs.unity3d.com/6000.0/Documentation/Manual/class-MeshCollider.html)
+and [convex limitations](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MeshCollider-convex.html)
+were also checked. The documented convex limit and mesh-readability requirements
+do not specify exact manifold reduction or floating-point results.
+
+`frames/4` measures a convex child rotated 20 degrees under scale `(2,1,0.5)`.
+Its reference bounds size is `0.4685012,0.443691134,0.200000033`; the previous
+full affine hull produced `0.581089139,0.350311875,0.2` and stopped about 0.056
+units farther back. Projecting the affine scale onto the authored rotation
+matches the measured shape. Convex collider construction now applies that rule
+before cooking. This is a rule for convex transforms, independent of CCD mode,
+body count, child count, or asset name. Ordinary, mirrored and nonuniform frame
+controls retain their body/bounds checks. No serialized cache format or vendored
+PhysX source changes.
+
+The far-origin control retains its complete strict contact/motion report as a
+separate numeric compatibility limit. Its body readings must remain finite,
+integrate their reported velocity, and supply the actual incoming velocity in
+callbacks. The contact and motion quantization rule at large local coordinates
+remains open. It retains 25 raw differences: four body readings, one bounds
+reading and 20 contact-trace rows. The maximum position difference is about
+0.001075 units, the maximum velocity difference is 0.0390625 units/s, and the
+bounds center differs by 0.0009766 units. Its failures are not relabeled as
+ordering or removed from the raw report. All original Q06, geometry and supplemental gates keep their
+assertions and tolerances.
+
+Validation: release build; 3575 managed tests; seven compatibility-profile Rust
+tests; 23 probe-verifier tests; all four CCD profiles. Twenty-four physics probes
+were run before and after. Their results are retained, including the existing
+2D dynamics and query-parity failures. The new ordering profile reports 1872 raw
+differences and zero capture/native consistency failures; its 25 far-origin rows
+remain explicitly open.

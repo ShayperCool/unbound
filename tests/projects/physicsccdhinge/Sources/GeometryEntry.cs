@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Unity.Collections;
 
 // The extended capture has its own output switch so the original Q06 oracle stays intact.
 public class GeometryEntry : MonoBehaviour
@@ -20,6 +21,8 @@ public class GeometryEntry : MonoBehaviour
     static PhysicsScene Space;
     static Mesh Hull;
     static string Output;
+    static readonly Dictionary<int,string> ContactNames = new Dictionary<int,string>();
+    static int NativeEvents;
     string Role;
     int Events;
     static string F(float x) => x.ToString("R", CultureInfo.InvariantCulture);
@@ -259,6 +262,113 @@ public class GeometryEntry : MonoBehaviour
         moving.MovePosition(Vector3.right); Step=3; Tick(moving);
         Clear();
     }
+    static void NativeContacts(PhysicsScene scene, NativeArray<ContactPairHeader>.ReadOnly headers)
+    {
+        for(int h=0;h<headers.Length;h++)
+        for(int i=0;i<headers[h].pairCount;i++)
+        {
+            ref readonly var pair=ref headers[h].GetContactPair(i);
+            string first,second;
+            if(!ContactNames.TryGetValue(pair.colliderInstanceID,out first) ||
+               !ContactNames.TryGetValue(pair.otherColliderInstanceID,out second))continue;
+            string key=Key+"/native/"+(NativeEvents++);
+            Row(key,first+","+second+","+pair.isCollisionEnter+","+pair.isCollisionStay+","+pair.isCollisionExit+","+pair.contactCount+","+V(pair.impulseSum));
+            for(int j=0;j<pair.contactCount;j++)
+            {
+                ref readonly var point=ref pair.GetContactPoint(j);
+                Row(key+"/"+j,V(point.position)+","+V(point.normal)+","+F(point.separation)+","+V(point.impulse));
+            }
+        }
+    }
+    static Rigidbody OrderedBody(string role, Vector3 at, int kind, bool earlyBody, bool reverseChildren, bool kinematic)
+    {
+        var go=Make(role,at);
+        var b=earlyBody?go.AddComponent<Rigidbody>():null;
+        if(kind<2)Shape(go,kind);
+        else for(int index=0;index<2;index++)
+        {
+            int i=reverseChildren?1-index:index;
+            var child=Make(i==0?"front":"rear",at);
+            child.transform.SetParent(go.transform,false);
+            child.transform.localPosition=new Vector3(0,i==0?.25f:-.25f,0);
+            Shape(child,kind==2?0:1);
+        }
+        if(b==null)b=go.AddComponent<Rigidbody>();
+        b.useGravity=false; b.linearDamping=0; b.angularDamping=0;
+        b.sleepThreshold=0; b.constraints=RigidbodyConstraints.FreezeRotation;
+        b.isKinematic=kinematic; b.collisionDetectionMode=CollisionDetectionMode.ContinuousSpeculative;
+        go.AddComponent<GeometryEntry>().Role=role;
+        foreach(var c in go.GetComponentsInChildren<Collider>())ContactNames[c.GetInstanceID()]=role+"/"+c.name;
+        return b;
+    }
+    static void Ordering()
+    {
+        Physics.ContactEvent+=NativeContacts;
+        try
+        {
+            foreach(int shape in new[]{0,1,2,3})
+            foreach(bool early in new[]{false,true})
+            foreach(bool reverseChildren in new[]{false,true})
+            foreach(bool reverseActors in new[]{false,true})
+            foreach(bool kinematic in new[]{false,true})
+            {
+                Begin("ordering/"+shape+"/"+early+"/"+reverseChildren+"/"+reverseActors+"/"+kinematic);
+                Rigidbody a,b;
+                if(reverseActors)
+                {
+                    b=OrderedBody("b",Vector3.zero,1,early,false,kinematic);
+                    a=OrderedBody("a",Vector3.left,shape,early,reverseChildren,false);
+                }
+                else
+                {
+                    a=OrderedBody("a",Vector3.left,shape,early,reverseChildren,false);
+                    b=OrderedBody("b",Vector3.zero,1,early,false,kinematic);
+                }
+                Physics.SyncTransforms(); Space.Simulate(Dt);
+                a.linearVelocity=Vector3.right*100;
+                for(Step=0;Step<4;Step++) { NativeEvents=0; Tick(a,b); }
+                Clear(); ContactNames.Clear();
+            }
+        }
+        finally { Physics.ContactEvent-=NativeContacts; }
+    }
+    static void FrameControls()
+    {
+        foreach(int frame in new[]{0,1,2,3,4,5})
+        {
+            Begin("frames/"+frame);
+            Obstacle(0);
+            var root=Make("bullet",Vector3.left);
+            var b=root.AddComponent<Rigidbody>();
+            b.useGravity=false; b.linearDamping=0; b.angularDamping=0; b.sleepThreshold=0;
+            b.constraints=RigidbodyConstraints.FreezeRotation;
+            b.collisionDetectionMode=CollisionDetectionMode.ContinuousSpeculative;
+            root.AddComponent<GeometryEntry>().Role="bullet";
+            var child=Make("hull",Vector3.zero); child.transform.SetParent(root.transform,false);
+            child.transform.localPosition=new Vector3(.15f,.25f,0);
+            if(frame==1)child.transform.localScale=new Vector3(2,.5f,1.5f);
+            if(frame==2)child.transform.localRotation=Quaternion.Euler(0,0,20);
+            if(frame==3)child.transform.localScale=new Vector3(-1,1,1);
+            if(frame==4)
+            {
+                root.transform.localScale=new Vector3(2,1,.5f);
+                child.transform.localRotation=Quaternion.Euler(0,0,20);
+            }
+            if(frame==5)
+            {
+                var vertices=Hull.vertices;
+                for(int i=0;i<vertices.Length;i++)vertices[i]+=Vector3.right*10000;
+                Hull.vertices=vertices;
+                child.transform.localPosition=new Vector3(.15f-10000,.25f,0);
+            }
+            Shape(child,1);
+            Physics.SyncTransforms(); Space.Simulate(Dt);
+            Row(Scenario+"/bounds",V(child.GetComponent<Collider>().bounds.center)+","+V(child.GetComponent<Collider>().bounds.size));
+            b.linearVelocity=Vector3.right*100;
+            for(Step=0;Step<4;Step++)Tick(b);
+            Clear();
+        }
+    }
     IEnumerator FixedSteps()
     {
         Space=Physics.defaultPhysicsScene;
@@ -288,11 +398,14 @@ public class GeometryEntry : MonoBehaviour
     {
         Output=Environment.GetEnvironmentVariable("PHYSICS_GEOMETRY_OUT");
         string controls=Environment.GetEnvironmentVariable("PHYSICS_GEOMETRY_CONTROL_OUT");
+        string ordering=Environment.GetEnvironmentVariable("PHYSICS_GEOMETRY_ORDER_OUT");
         if(!string.IsNullOrEmpty(controls))Output=controls;
+        if(!string.IsNullOrEmpty(ordering))Output=ordering;
         if(string.IsNullOrEmpty(Output))return;
         Time.fixedDeltaTime=Dt; Physics.simulationMode=SimulationMode.Script; Space=Physics.defaultPhysicsScene;
         try
         {
+            if(!string.IsNullOrEmpty(ordering)) { Ordering(); FrameControls(); Row("complete","yes"); Save(0); return; }
             if(!string.IsNullOrEmpty(controls)) { Controls(); Row("complete","yes"); Save(0); return; }
             StaticMatrix(); DynamicMatrix(); Tuning();
             var previous=SceneManager.GetActiveScene();

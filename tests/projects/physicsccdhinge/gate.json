@@ -1,1 +1,9 @@
-{"commands": ["python3 tests/projects/physicsccdhinge/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\" --cli \"$UNBOUND\"", "python3 tests/projects/physicsccdhinge/run.py gate --geometry-controls --release \"$UNBOUND_PROBE_UNITY_VERSION\" --cli \"$UNBOUND\"", "python3 tests/projects/physicsccdhinge/run.py gate --geometry --release \"$UNBOUND_PROBE_UNITY_VERSION\" --cli \"$UNBOUND\""], "summary": "physicsccdhinge: .*"}
+{
+  "commands": [
+    "python3 tests/projects/physicsccdhinge/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\" --cli \"$UNBOUND\"",
+    "python3 tests/projects/physicsccdhinge/run.py gate --geometry-controls --release \"$UNBOUND_PROBE_UNITY_VERSION\" --cli \"$UNBOUND\"",
+    "python3 tests/projects/physicsccdhinge/run.py gate --geometry --release \"$UNBOUND_PROBE_UNITY_VERSION\" --cli \"$UNBOUND\"",
+    "python3 tests/projects/physicsccdhinge/run.py gate --geometry-ordering --release \"$UNBOUND_PROBE_UNITY_VERSION\" --cli \"$UNBOUND\""
+  ],
+  "summary": "physicsccdhinge: .*"
+}
