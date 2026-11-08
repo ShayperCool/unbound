@@ -243,38 +243,34 @@ const DEFAULT_SHADER_TARGET: u32 = 25;
 /// The GPU features a `#pragma target` includes, as the `SHADER_AVAILABLE_<FEATURE>` names
 /// Unity's shader libraries test (the core library's GLCore API: RW textures under
 /// `RANDOMWRITE`, cube array sampling under `CUBEARRAY`). The sets are the Unity 6000.0 Manual's
-/// (HLSL pragma target command reference); `geometry` and `tessellation`, which Unity drops from
-/// a program without those stages, are left out (Unbound compiles none). Compute programs
-/// compile at 5.0.
-fn target_features(target: u32) -> &'static [&'static str] {
-    const T25: &[&str] = &["DERIVATIVES"];
-    const T30: &[&str] = &["DERIVATIVES", "INTERPOLATORS10", "SAMPLELOD", "FRAGCOORD"];
-    const T35: &[&str] = &[
-        "DERIVATIVES", "INTERPOLATORS10", "SAMPLELOD", "FRAGCOORD", "INTERPOLATORS15", "MRT4",
-        "INTEGERS", "2DARRAY", "INSTANCING",
+/// (HLSL pragma target command reference): each target has everything of the ones below it up to
+/// 3.5 (4.0 adds only geometry), then 4.5, 4.6 and 5.0 each add their own set to 3.5's.
+/// `geometry` and `tessellation`, which Unity drops from a program without those stages, are left
+/// out (Unbound compiles none). Compute programs compile at 5.0.
+fn target_features(target: u32) -> impl Iterator<Item = &'static str> {
+    /// The features up to 3.5, with the lowest target that has each.
+    const CUMULATIVE: [(&str, u32); 9] = [
+        ("DERIVATIVES", 25),
+        ("INTERPOLATORS10", 30),
+        ("SAMPLELOD", 30),
+        ("FRAGCOORD", 30),
+        ("INTERPOLATORS15", 35),
+        ("MRT4", 35),
+        ("INTEGERS", 35),
+        ("2DARRAY", 35),
+        ("INSTANCING", 35),
     ];
-    const T45: &[&str] = &[
-        "DERIVATIVES", "INTERPOLATORS10", "SAMPLELOD", "FRAGCOORD", "INTERPOLATORS15", "MRT4",
-        "INTEGERS", "2DARRAY", "INSTANCING", "COMPUTE", "RANDOMWRITE", "MSAATEX",
-    ];
-    const T46: &[&str] = &[
-        "DERIVATIVES", "INTERPOLATORS10", "SAMPLELOD", "FRAGCOORD", "INTERPOLATORS15", "MRT4",
-        "INTEGERS", "2DARRAY", "INSTANCING", "CUBEARRAY", "TESSHW", "MSAATEX",
-    ];
-    const T50: &[&str] = &[
-        "DERIVATIVES", "INTERPOLATORS10", "SAMPLELOD", "FRAGCOORD", "INTERPOLATORS15", "MRT4",
-        "INTEGERS", "2DARRAY", "INSTANCING", "COMPUTE", "RANDOMWRITE", "MSAATEX", "TESSHW",
-    ];
-    match target {
-        0..25 => &[],
-        25..30 => T25,
-        30..35 => T30,
-        // 4.0 adds only geometry.
-        35..45 => T35,
-        45 => T45,
-        46..50 => T46,
-        _ => T50,
-    }
+    let added: &'static [&'static str] = match target {
+        45 => &["COMPUTE", "RANDOMWRITE", "MSAATEX"],
+        46..50 => &["CUBEARRAY", "TESSHW", "MSAATEX"],
+        50.. => &["COMPUTE", "RANDOMWRITE", "MSAATEX", "TESSHW"],
+        _ => &[],
+    };
+    CUMULATIVE
+        .iter()
+        .filter(move |&&(_, lowest)| target >= lowest)
+        .map(|&(feature, _)| feature)
+        .chain(added.iter().copied())
 }
 
 /// A program's `#pragma`s that matter here.
@@ -744,9 +740,7 @@ impl ShaderCompiler {
         );
         d.push(("SHADER_TARGET".into(), target.to_string()));
         d.extend(
-            target_features(target)
-                .iter()
-                .map(|f| (format!("SHADER_AVAILABLE_{f}"), "1".to_string())),
+            target_features(target).map(|f| (format!("SHADER_AVAILABLE_{f}"), "1".to_string())),
         );
         d.push((
             "UNITY_VERSION".into(),
@@ -785,7 +779,7 @@ impl ShaderCompiler {
         self.preprocess_with(program, defines, false)
     }
 
-    /// [`Self::preprocess`], with `#error` collected instead of failing when `defer_errors`.
+    /// [`Self::preprocess`], skipping active `#error` lines when `defer_errors`.
     fn preprocess_with(
         &self,
         program: &Program,
@@ -1924,20 +1918,35 @@ float4 frag() : SV_Target { return 1; }
     /// compute programs have 5.0's.
     #[test]
     fn a_target_defines_its_gpu_features() {
-        assert!(target_features(25).contains(&"DERIVATIVES"));
-        assert!(!target_features(35).contains(&"RANDOMWRITE"));
-        assert!(target_features(45).contains(&"RANDOMWRITE"));
-        assert!(!target_features(45).contains(&"CUBEARRAY"));
-        assert!(target_features(46).contains(&"CUBEARRAY"));
-        assert!(!target_features(46).contains(&"RANDOMWRITE"));
-        assert!(target_features(50).contains(&"RANDOMWRITE"));
-        assert!(target_features(20).is_empty());
+        let has = |target: u32, feature: &str| target_features(target).any(|f| f == feature);
+        assert!(has(25, "DERIVATIVES"));
+        assert!(!has(25, "SAMPLELOD"));
+        assert!(has(30, "SAMPLELOD"));
+        assert!(has(40, "INSTANCING"));
+        assert!(!has(35, "RANDOMWRITE"));
+        assert!(!has(40, "RANDOMWRITE"));
+        assert!(has(45, "RANDOMWRITE"));
+        assert!(has(45, "INSTANCING"));
+        assert!(!has(45, "CUBEARRAY"));
+        assert!(has(46, "CUBEARRAY"));
+        assert!(!has(46, "RANDOMWRITE"));
+        assert!(has(50, "RANDOMWRITE"));
+        assert!(has(50, "TESSHW"));
+        assert_eq!(target_features(20).count(), 0);
         let compiler = ShaderCompiler::new(Settings::default()).unwrap();
         let p = program("#pragma vertex v\n", false);
         let defines = compiler.defines(&p, &[], 45, true, "SHADER_STAGE_VERTEX");
-        assert!(defines.iter().any(|(k, _)| k == "SHADER_AVAILABLE_RANDOMWRITE"));
+        assert!(
+            defines
+                .iter()
+                .any(|(k, _)| k == "SHADER_AVAILABLE_RANDOMWRITE")
+        );
         let defines = compiler.defines(&p, &[], 35, true, "SHADER_STAGE_VERTEX");
-        assert!(!defines.iter().any(|(k, _)| k == "SHADER_AVAILABLE_RANDOMWRITE"));
+        assert!(
+            !defines
+                .iter()
+                .any(|(k, _)| k == "SHADER_AVAILABLE_RANDOMWRITE")
+        );
     }
 
     #[test]

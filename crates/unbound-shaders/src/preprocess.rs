@@ -77,8 +77,6 @@ pub struct Output {
     /// Active instanced-property declarations, including those in included files.
     pub instanced_properties: HashSet<String>,
     pub instanced_buffer_sizes: HashMap<String, Option<u32>>,
-    /// Active `#error` messages, when [`Preprocessor::defer_errors`] kept them from failing.
-    pub errors: Vec<String>,
 }
 
 pub struct Preprocessor<'a> {
@@ -93,9 +91,8 @@ pub struct Preprocessor<'a> {
     /// Expanding an `#if` expression: `defined` that macros produce is answered too (as GCC and
     /// Unity's compilers do; Unity's includes rely on it).
     in_condition: bool,
-    /// `#error` is collected in [`Output::errors`] instead of failing the run.
+    /// `#error` does not fail the run ([`Preprocessor::defer_errors`]).
     defer_errors: bool,
-    errors: Vec<String>,
 }
 
 const MAX_INCLUDE_DEPTH: usize = 64;
@@ -113,12 +110,12 @@ impl<'a> Preprocessor<'a> {
             depth: 0,
             in_condition: false,
             defer_errors: false,
-            errors: Vec::new(),
         }
     }
 
-    /// Collects active `#error` lines instead of failing: for reading a program's pragmas,
-    /// whose `#pragma target` decides `SHADER_TARGET` for code that tests it before.
+    /// Skips active `#error` lines instead of failing: for reading a program's pragmas, whose
+    /// `#pragma target` decides `SHADER_TARGET` for code that tests it before (compiling the
+    /// variant then fails on an `#error` that is still active).
     pub fn defer_errors(&mut self) {
         self.defer_errors = true;
     }
@@ -143,7 +140,6 @@ impl<'a> Preprocessor<'a> {
             pragmas: self.pragmas,
             instanced_properties: self.instanced_properties,
             instanced_buffer_sizes: self.instanced_buffer_sizes,
-            errors: self.errors,
         })
     }
 
@@ -255,9 +251,7 @@ impl<'a> Preprocessor<'a> {
                             }
                         }
                     }
-                    "error" if self.defer_errors => {
-                        self.errors.push(format!("{}: #error {rest}", context()))
-                    }
+                    "error" if self.defer_errors => {}
                     "error" => bail!("{}: #error {rest}", context()),
                     _ => {} // #line, #warning, unknown
                 }
