@@ -48,5 +48,8 @@ namespace DotRecast.Detour
 
         ///  The cost of the path until hit.
         public float pathCost;
+
+        /// Unbound: the polygon beyond the hit edge that the filter excluded (0 at a border).
+        public long blockedRef;
     }
 }

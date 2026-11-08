@@ -42,4 +42,7 @@ Altered (marked `Unbound:` in the sources):
 - `DtNavMeshQuery.Raycast` (`DotRecast.Detour/DtNavMeshQuery.cs`) computes the hit wall edge's z
   extent as its end's z minus its start's z (the port subtracted the start's x), so the hit normal
   is perpendicular to the wall that stops the ray (`NavMesh.Raycast`'s and `NavMeshAgent.Raycast`'s
-  `NavMeshHit.normal`).
+  `NavMeshHit.normal`);
+- `DtNavMeshQuery.Raycast` records the polygon beyond the hit edge that the filter excludes
+  (`DtRaycastHit.blockedRef`; it finds the link holding the crossing before applying the filter),
+  which `NavMesh.Raycast` reports as `NavMeshHit.mask`.

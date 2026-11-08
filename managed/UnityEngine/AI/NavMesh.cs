@@ -111,9 +111,12 @@ namespace UnityEngine.AI
                 hit.hit = true;
                 return true;
             }
-            var path = new long[MaxPath];
-            surface.Query.Raycast(startRef, V(start), V(targetPosition), filter, out float t, out var normal, path, out int count, MaxPath);
-            long lastRef = count > 0 ? path[count - 1] : startRef;
+            var ray = new DtRaycastHit { path = new long[MaxPath], maxPath = MaxPath };
+            surface.Query.Raycast(startRef, V(start), V(targetPosition), filter, 0, ref ray, 0);
+            float t = ray.t;
+            var normal = ray.hitNormal;
+            int count = ray.pathCount;
+            long lastRef = count > 0 ? ray.path[count - 1] : startRef;
             bool blocked = t < 1f;
             var end = blocked ? start + (targetPosition - start) * t : targetPosition;
             // The hit is on the NavMesh: its height there (an edge point may fall outside the
@@ -124,8 +127,9 @@ namespace UnityEngine.AI
             hit.normal = blocked ? V(normal) : Vector3.zero;
             // Measured from the position asked for, not the start on the NavMesh.
             hit.distance = Vector3.Distance(sourcePosition, end);
-            // A blocked ray reports no area (measured).
-            hit.mask = blocked ? 0 : 1 << AreaOf(surface, lastRef);
+            // A ray stopped where the filter excludes the polygon beyond reports that polygon's
+            // area; one stopped at the NavMesh's border reports none (tests/projects/navcost).
+            hit.mask = !blocked ? 1 << AreaOf(surface, lastRef) : ray.blockedRef != 0 ? 1 << AreaOf(surface, ray.blockedRef) : 0;
             hit.hit = blocked;
             return blocked;
         }

@@ -2139,6 +2139,39 @@ namespace DotRecast.Detour
             return DtStatus.DT_SUCCESS;
         }
 
+        /// Whether a link's part of its edge contains the point where the segment from startPos to
+        /// endPos (at tmax) crosses the edge: an internal link or one spanning the edge always
+        /// does; a partial link at a tile border when the crossing is within it.
+        static bool LinkContainsCrossing(DtLink link, DtMeshTile tile, DtPoly poly, RcVec3f startPos, RcVec3f endPos, float tmax)
+        {
+            if (link.side == 0xff || (link.bmin == 0 && link.bmax == 255))
+            {
+                return true;
+            }
+
+            const float s = 1.0f / 255.0f;
+            int left = poly.verts[link.edge] * 3;
+            int right = poly.verts[(link.edge + 1) % poly.vertCount] * 3;
+            // The axis along the border: z for x borders (sides 0 and 4), x for z borders (2 and 6).
+            int axis = link.side == 0 || link.side == 4 ? 2 : link.side == 2 || link.side == 6 ? 0 : -1;
+            if (axis < 0)
+            {
+                return false;
+            }
+
+            float lmin = tile.data.verts[left + axis] + (tile.data.verts[right + axis] - tile.data.verts[left + axis]) * (link.bmin * s);
+            float lmax = tile.data.verts[left + axis] + (tile.data.verts[right + axis] - tile.data.verts[left + axis]) * (link.bmax * s);
+            if (lmin > lmax)
+            {
+                (lmin, lmax) = (lmax, lmin);
+            }
+
+            float start = axis == 2 ? startPos.Z : startPos.X;
+            float end = axis == 2 ? endPos.Z : endPos.X;
+            float at = start + (end - start) * tmax;
+            return at >= lmin && at <= lmax;
+        }
+
         /// @par
         ///
         /// This method is meant to be used for quick, short distance checks.
@@ -2258,6 +2291,7 @@ namespace DotRecast.Detour
             hit.t = 0;
             hit.pathCount = 0;
             hit.pathCost = 0;
+            hit.blockedRef = 0;
 
             RcVec3f curPos = RcVec3f.Zero;
             RcVec3f lastPos = RcVec3f.Zero;
@@ -2339,6 +2373,7 @@ namespace DotRecast.Detour
 
                 // Follow neighbours.
                 long nextRef = 0;
+                hit.blockedRef = 0;
 
                 for (int i = poly.firstLink; i != DT_NULL_LINK; i = tile.links[i].next)
                 {
@@ -2359,77 +2394,21 @@ namespace DotRecast.Detour
                         continue;
                     }
 
-                    // Skip links based on filter.
-                    if (!filter.PassFilter(link.refs, nextTile, nextPoly))
+                    // Unbound: the polygon beyond the edge where the ray crosses it first, then the
+                    // filter: one it excludes is where the ray stopped (Unity's NavMeshHit.mask).
+                    if (!LinkContainsCrossing(link, tile, poly, startPos, endPos, tmax))
                     {
                         continue;
                     }
 
-                    // If the link is internal, just return the ref.
-                    if (link.side == 0xff)
+                    if (!filter.PassFilter(link.refs, nextTile, nextPoly))
                     {
-                        nextRef = link.refs;
-                        break;
+                        hit.blockedRef = link.refs;
+                        continue;
                     }
 
-                    // If the link is at tile boundary,
-
-                    // Check if the link spans the whole edge, and accept.
-                    if (link.bmin == 0 && link.bmax == 255)
-                    {
-                        nextRef = link.refs;
-                        break;
-                    }
-
-                    // Check for partial edge links.
-                    int v0 = poly.verts[link.edge];
-                    int v1 = poly.verts[(link.edge + 1) % poly.vertCount];
-                    int left = v0 * 3;
-                    int right = v1 * 3;
-
-                    // Check that the intersection lies inside the link portal.
-                    if (link.side == 0 || link.side == 4)
-                    {
-                        // Calculate link size.
-                        const float s = 1.0f / 255.0f;
-                        float lmin = tile.data.verts[left + 2]
-                                     + (tile.data.verts[right + 2] - tile.data.verts[left + 2]) * (link.bmin * s);
-                        float lmax = tile.data.verts[left + 2]
-                                     + (tile.data.verts[right + 2] - tile.data.verts[left + 2]) * (link.bmax * s);
-                        if (lmin > lmax)
-                        {
-                            (lmin, lmax) = (lmax, lmin);
-                        }
-
-                        // Find Z intersection.
-                        float z = startPos.Z + (endPos.Z - startPos.Z) * tmax;
-                        if (z >= lmin && z <= lmax)
-                        {
-                            nextRef = link.refs;
-                            break;
-                        }
-                    }
-                    else if (link.side == 2 || link.side == 6)
-                    {
-                        // Calculate link size.
-                        const float s = 1.0f / 255.0f;
-                        float lmin = tile.data.verts[left]
-                                     + (tile.data.verts[right] - tile.data.verts[left]) * (link.bmin * s);
-                        float lmax = tile.data.verts[left]
-                                     + (tile.data.verts[right] - tile.data.verts[left]) * (link.bmax * s);
-                        if (lmin > lmax)
-                        {
-                            (lmin, lmax) = (lmax, lmin);
-                        }
-
-                        // Find X intersection.
-                        float x = startPos.X + (endPos.X - startPos.X) * tmax;
-                        if (x >= lmin && x <= lmax)
-                        {
-                            nextRef = link.refs;
-                            break;
-                        }
-                    }
+                    nextRef = link.refs;
+                    break;
                 }
 
                 // add the cost
