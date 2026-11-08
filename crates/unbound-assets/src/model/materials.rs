@@ -10,6 +10,7 @@
 //! that name, with the texture's `Translation` and `Scaling` as offset and scale. (Measured with the
 //! Editor's own descriptions: tests/projects/modelimport.)
 use serde::{Deserialize, Serialize};
+use unbound_compat::MtlRules;
 
 /// A texture of a material description. The texture asset itself is found by the caller (see
 /// [`TextureDescription::path`]).
@@ -190,46 +191,55 @@ pub fn describe(material: &ufbx::Material) -> MaterialDescription {
     out
 }
 
-/// OBJ's FBX-SDK description in Unity 6000.0.71f1. MTL keys are observations,
-/// not a Wavefront-wide contract; see modelimport/MTL_PROPERTIES.md.
+/// The description an OBJ material gets: the shading model's class defaults with the MTL
+/// statements the release reads applied (`MtlRules`; see modelimport/MTL_PROPERTIES.md); without
+/// a material, the defaults of a Phong one.
 pub fn describe_obj(
-    material: &ufbx::Material,
+    material: Option<&ufbx::Material>,
     diffuse_texture: Option<&ufbx::Texture>,
+    rules: &MtlRules,
 ) -> MaterialDescription {
+    let prop = |keyword: &str| material.and_then(|m| m.element.props.find_prop(keyword));
+    let number = |keyword: &str| prop(keyword).map(|p| p.value_vec4.x);
+    let color =
+        |keyword: &str| prop(keyword).map(|p| [p.value_vec4.x, p.value_vec4.y, p.value_vec4.z]);
+    let illumination = prop(rules.illumination).map_or(rules.default_illumination, |p| p.value_int);
+    let phong = illumination >= rules.phong_from;
     let mut out = MaterialDescription::default();
-    for &(name, default) in LAMBERT.iter().chain(PHONG) {
+    let class: &[_] = if phong { PHONG } else { &[] };
+    for &(name, default) in LAMBERT.iter().chain(class) {
         match default {
             ClassDefault::Float(v) => out.floats.push((name.into(), v)),
             ClassDefault::Color(v) => out.vectors.push((name.into(), [v, v, v, 1.0])),
         }
     }
     out.floats.push(("MultiLayer".into(), 0.0));
-    out.strings.push(("ShadingModel".into(), "Phong".into()));
-    if material.fbx.diffuse_color.has_value {
-        let v = material.fbx.diffuse_color.value_vec4;
-        out.vectors
-            .iter_mut()
-            .find(|(n, _)| n == "DiffuseColor")
-            .unwrap()
-            .1 = [v.x as f32, v.y as f32, v.z as f32, 1.0];
+    let model = if phong { "Phong" } else { "Lambert" };
+    out.strings.push(("ShadingModel".into(), model.into()));
+    let set_float = |out: &mut MaterialDescription, name: &str, v: f64| {
+        out.floats.iter_mut().find(|(n, _)| n == name).unwrap().1 = v as f32;
+    };
+    let set_color = |out: &mut MaterialDescription, name: &str, c: [f64; 3]| {
+        out.vectors.iter_mut().find(|(n, _)| n == name).unwrap().1 =
+            [c[0] as f32, c[1] as f32, c[2] as f32, 1.0];
+    };
+    for c in rules.colors.iter().filter(|c| phong || !c.phong_only) {
+        if let Some(value) = color(c.keyword) {
+            set_color(&mut out, c.property, value);
+            set_float(&mut out, c.factor, 1.0);
+        }
     }
-    let props = &material.element.props;
-    // Unity gives d precedence even when Tr occurs later in the source.
-    let transparency = props
-        .find_prop("d")
-        .map(|p| 1.0 - p.value_vec4.x as f32)
-        .or_else(|| props.find_prop("Tr").map(|p| p.value_vec4.x as f32));
-    if let Some(v) = transparency {
-        out.floats
-            .iter_mut()
-            .find(|(n, _)| n == "TransparencyFactor")
-            .unwrap()
-            .1 = v;
-        out.vectors
-            .iter_mut()
-            .find(|(n, _)| n == "TransparentColor")
-            .unwrap()
-            .1 = [1.0; 4];
+    if phong && let Some(v) = number(rules.shininess.0) {
+        set_float(&mut out, rules.shininess.1, v);
+    }
+    let transparency = rules.transparency(
+        number(rules.dissolve),
+        number(rules.transparency),
+        color(rules.filter),
+    );
+    if let Some(t) = transparency {
+        set_color(&mut out, "TransparentColor", t.color);
+        set_float(&mut out, "TransparencyFactor", t.factor);
     }
     if let Some(texture) = diffuse_texture {
         out.textures.push(TextureDescription {

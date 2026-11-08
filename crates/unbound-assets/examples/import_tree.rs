@@ -177,7 +177,7 @@ fn run(cache: &AssetCache, files: &[(AssetKind, PathBuf)], target: &str) -> Stat
                 }
                 AssetKind::Model => {
                     let (model, outcome) =
-                        cache.get_or_import_traced(&ModelImporter, path, &meta)?;
+                        cache.get_or_import_traced(&ModelImporter::default(), path, &meta)?;
                     let mut s = stats.lock().unwrap();
                     s.models += 1;
                     s.meshes += model.meshes.len();

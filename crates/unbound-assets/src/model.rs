@@ -45,6 +45,7 @@ use crate::{
     meta::{FileIdAllocator, FileIdSource, FileIdTable, boolean, class, float, importer, int},
 };
 use anyhow::{Result, anyhow};
+use unbound_compat::{MtlRules, UnityVersion};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -652,14 +653,31 @@ const UNUSED_VERTEX_NORMAL: [f32; 3] = [1.0, 1.0, 1.0];
 /// `MeshOptimizationFlags.VertexOrder`.
 const MESH_OPTIMIZATION_VERTEX_ORDER: i64 = 2;
 
-/// The model importer.
-#[derive(Debug, Clone, Default)]
-pub struct ModelImporter;
+/// The model importer, with the release's reading of OBJ material libraries.
+#[derive(Debug, Clone, Copy)]
+pub struct ModelImporter {
+    pub mtl: &'static MtlRules,
+}
+
+impl ModelImporter {
+    pub fn for_release(version: &UnityVersion) -> Self {
+        Self {
+            mtl: MtlRules::of(version),
+        }
+    }
+}
+
+impl Default for ModelImporter {
+    /// The importer of the default release (the 6000.0 family).
+    fn default() -> Self {
+        Self::for_release(&UnityVersion::new(6000, 0, 0))
+    }
+}
 
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 30;
+    const VERSION: u32 = 31;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -673,7 +691,11 @@ impl Importer for ModelImporter {
     }
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
-        import_model(source, bytes, meta)
+        import_model(source, bytes, meta, self.mtl)
+    }
+
+    fn options_key(&self) -> String {
+        self.mtl.name.into()
     }
 }
 
@@ -699,7 +721,12 @@ fn obj_material_library(source: &Path, bytes: &[u8]) -> Option<std::path::PathBu
         .last()
 }
 
-pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
+pub fn import_model(
+    source: &Path,
+    bytes: &[u8],
+    meta: &Value,
+    mtl: &'static MtlRules,
+) -> Result<ImportedModel> {
     let settings = ModelSettings::read(meta);
     let imp = importer(meta, "ModelImporter");
     let is_obj = source
@@ -752,7 +779,14 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         source.display()
     );
     let conversion = if !is_obj && (baked || static_geometry) {
-        let axes = axes::StaticAxes::new(scene.settings.axes, baked)?;
+        // A file without axis metadata (FBX 6 without `GlobalSettings`) has the FBX default
+        // system, Y up and right-handed (tests/projects/modelimport `smoothing.py` GroupsLegacy).
+        let file_axes = if ufbx::coordinate_axes_valid(scene.settings.axes) {
+            scene.settings.axes
+        } else {
+            ufbx::CoordinateAxes::right_handed_y_up()
+        };
+        let axes = axes::StaticAxes::new(file_axes, baked)?;
         (baked || axes.reverses_handedness()).then_some(axes)
     } else {
         None
@@ -790,6 +824,11 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
     } else {
         Vec::new()
     };
+    let obj_meshes = if is_obj {
+        obj_smoothing::meshes(bytes, &scene, &mut warnings)
+    } else {
+        Vec::new()
+    };
     let table = FileIdTable::read(imp);
     let mut ids = FileIdAllocator::new(&table);
     let mut builder = Builder {
@@ -821,7 +860,7 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         rest_pose: (settings.import_animation && settings.animation_type != 0)
             .then(|| scene.anim_stacks.first())
             .flatten()
-            .map(|stack| (stack.anim.as_ref(), stack.time_begin)),
+            .map(|stack| (stack.anim.as_ref(), take_span(&scene, stack).0)),
         material_index: HashMap::new(),
         obj_diffuse: is_obj
             .then(|| {
@@ -831,12 +870,10 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
                     .find_map(|m| m.fbx.diffuse_color.texture.as_deref())
             })
             .flatten(),
-        obj_smoothing: if is_obj {
-            obj_smoothing_groups(bytes, &scene)
-        } else {
-            Vec::new()
-        },
+        obj_meshes,
         fbx_smoothing,
+        mtl,
+        obj_defaults: Vec::new(),
     };
 
     // The root: the single top-level node unless it is a bone, or the scene root.
@@ -993,10 +1030,15 @@ struct Builder<'a> {
     /// ufbx material element id → index in `model.materials`.
     material_index: HashMap<u32, u32>,
     obj_diffuse: Option<&'a ufbx::Texture>,
-    /// An OBJ's smoothing group per face of each mesh (ufbx keeps only smooth or not).
-    obj_smoothing: Vec<Vec<u32>>,
-    /// Preserved FBX smoothing masks per face, indexed by the mesh's typed ID.
+    /// What an OBJ gives each mesh beyond the loader (`obj_smoothing`: smoothing groups, which
+    /// ufbx keeps only as smooth or not, and the default material), by the mesh's typed ID.
+    obj_meshes: Vec<obj_smoothing::ObjMesh>,
+    /// FBX smoothing masks per face corner (`fbx_smoothing`), indexed by the mesh's typed ID.
     fbx_smoothing: Vec<Option<Vec<u32>>>,
+    /// How the release reads MTL statements.
+    mtl: &'static MtlRules,
+    /// The OBJ default materials made so far, by name.
+    obj_defaults: Vec<(String, u32)>,
     /// With animation import, nodes rest in the first take's pose at its start, not in the file's
     /// static transforms, which can hold another frame's pose (measured, tests/projects/modelclips
     /// and tests/projects/humanoid).
@@ -1156,21 +1198,16 @@ impl<'a> Builder<'a> {
         } else {
             30.0
         };
-        let takes: Vec<&ufbx::AnimStack> = scene
+        let takes: Vec<Take> = scene
             .anim_stacks
             .iter()
-            .map(|s| s.as_ref())
-            .filter(|s| s.time_end > s.time_begin)
+            .filter_map(|s| Take::new(scene, s))
             .collect();
         let mut ranges = clip_ranges(imp);
         if ranges.is_empty() {
-            for stack in &takes {
-                let name = stack.element.name.to_string();
-                ranges.push(ClipRange::take(
-                    &name,
-                    stack.time_begin * fps,
-                    stack.time_end * fps,
-                ));
+            for take in &takes {
+                let name = take.stack.element.name.to_string();
+                ranges.push(ClipRange::take(&name, take.begin * fps, take.end * fps));
             }
         }
         // IDs the meta gives clips (`internalID`) are taken first, so a hashed ID never collides.
@@ -1181,7 +1218,7 @@ impl<'a> Builder<'a> {
         }
         let previews: Vec<(String, i64)> = takes
             .iter()
-            .map(|stack| {
+            .map(|Take { stack, .. }| {
                 let name = format!("__preview__{}", stack.element.name);
                 let (id, _) = self.asset_id(ids, class::ANIMATION_CLIP, "AnimationClip", &name);
                 (stack.element.name.to_string(), id)
@@ -1228,19 +1265,27 @@ impl<'a> Builder<'a> {
             });
         let mut clips = Vec::new();
         let mut warnings = Vec::new();
-        let preview_ranges = takes.iter().map(|stack| {
-            let name = stack.element.name.to_string();
-            let mut range = ClipRange::take(&name, stack.time_begin * fps, stack.time_end * fps);
+        let preview_ranges = takes.iter().map(|take| {
+            let name = take.stack.element.name.to_string();
+            let mut range = ClipRange::take(&name, take.begin * fps, take.end * fps);
             range.name = format!("__preview__{name}");
             range.preview = true;
             range
         });
         for range in ranges.into_iter().chain(preview_ranges.collect::<Vec<_>>()) {
-            let stack = takes
+            let take = takes
                 .iter()
-                .find(|s| s.element.name.to_string() == range.take)
+                .find(|t| t.stack.element.name.to_string() == range.take)
                 .or_else(|| takes.first());
-            let Some(stack) = stack else { continue };
+            let Some(&Take {
+                stack,
+                begin: time_begin,
+                end: time_end,
+                empty,
+            }) = take
+            else {
+                continue;
+            };
             let opts = ufbx::BakeOpts {
                 resample_rate: fps,
                 minimum_sample_rate: fps,
@@ -1250,16 +1295,14 @@ impl<'a> Builder<'a> {
             let Ok(baked) = ufbx::bake_anim(scene, &stack.anim, opts) else {
                 continue;
             };
-            // A range past the take's end ends with the take (measured).
+            // A range past the take's end ends with the take (its last key inside the span).
             let start = range.first / fps;
-            let end = (range.last.max(range.first) / fps).min(stack.time_end.max(start));
+            let end = (range.last.max(range.first) / fps).min(time_end.max(start));
             // Humanoid clips are converted to muscle curves from these transform curves; that
             // conversion is measured for whole takes without a transform mask only.
             if self.settings.animation_type == 3 && !range.preview {
                 let half_frame = 0.5 / fps;
-                if (start - stack.time_begin).abs() > half_frame
-                    || (stack.time_end - end).abs() > half_frame
-                {
+                if (start - time_begin).abs() > half_frame || (time_end - end).abs() > half_frame {
                     warnings.push(format!(
                         "humanoid clip '{}' covers only a part of its take: its muscle curves are not measured (not supported)",
                         range.name
@@ -1273,7 +1316,7 @@ impl<'a> Builder<'a> {
                 }
             }
             let mut curves = Vec::new();
-            for node in baked.nodes.iter() {
+            for node in baked.nodes.iter().filter(|_| !empty) {
                 let Some(&index) = self.node_index.get(&node.element_id) else {
                     continue;
                 };
@@ -1389,7 +1432,7 @@ impl<'a> Builder<'a> {
             curves.sort_by(|a, b| a.path.cmp(&b.path));
             // Blend shape weights: the channels' DeformPercent, on their meshes' renderers.
             let mut floats = Vec::new();
-            for element in baked.elements.iter() {
+            for element in baked.elements.iter().filter(|_| !empty) {
                 let Some(targets) = shape_channels.get(&element.element_id) else {
                     continue;
                 };
@@ -1448,7 +1491,12 @@ impl<'a> Builder<'a> {
             });
             // In single precision, as the Editor's clip length (a range from frame 40 to 48 at
             // 24 fps is 0.33333337 s).
-            let length = end as f32 - start as f32;
+            // A clip without keys has the range (0, 1) of an empty AnimationClip.
+            let length = if empty {
+                1.0
+            } else {
+                end as f32 - start as f32
+            };
             let additive_reference = match range.additive_frame {
                 Some(frame) if range.has_additive_reference => {
                     let inside = frame >= range.first && frame <= range.last;
@@ -1465,7 +1513,7 @@ impl<'a> Builder<'a> {
                         time: if inside {
                             ((frame - range.first) / fps) as f32
                         } else {
-                            (frame / fps - stack.time_begin) as f32
+                            (frame / fps - time_begin) as f32
                         },
                     }
                 }
@@ -1689,6 +1737,14 @@ impl<'a> Builder<'a> {
                 .into_iter()
                 .map(|m| match m {
                     Some(m) => Some(self.material(m)),
+                    // An OBJ face without a material uses its mesh group's default one.
+                    None if self.obj => {
+                        let name = self.obj_meshes.get(mesh.element.typed_id as usize).map_or(
+                            "defaultMat".to_string(),
+                            |o| o.default_material.clone(),
+                        );
+                        Some(self.obj_default_material(name))
+                    }
                     // The legacy importer gives a slot without material one named "No Name".
                     None if self.settings.material_import == MaterialImportMode::Legacy => {
                         Some(self.no_name_material())
@@ -1807,7 +1863,8 @@ impl<'a> Builder<'a> {
         self.model.materials.push(ModelMaterial {
             name: material.element.name.to_string(),
             description: if self.obj {
-                let mut description = materials::describe_obj(material, self.obj_diffuse);
+                let mut description =
+                    materials::describe_obj(Some(material), self.obj_diffuse, self.mtl);
                 if self.settings.material_import == MaterialImportMode::Legacy
                     && self.obj_diffuse.is_none()
                     && !self.settings.use_srgb_material_color
@@ -1919,6 +1976,26 @@ impl<'a> Builder<'a> {
         p
     }
 
+    /// An OBJ mesh's material for faces without one (`obj_smoothing`): the class defaults, one
+    /// per name.
+    fn obj_default_material(&mut self, name: String) -> u32 {
+        if let Some(index) = self.obj_defaults.iter().find(|(n, _)| *n == name).map(|(_, i)| *i) {
+            return index;
+        }
+        let index = self.model.materials.len() as u32;
+        self.model.materials.push(ModelMaterial {
+            name: name.clone(),
+            description: materials::describe_obj(None, None, self.mtl),
+            file_id: FileId {
+                id: 0,
+                source: FileIdSource::Derived,
+            },
+            remap: None,
+        });
+        self.obj_defaults.push((name, index));
+        index
+    }
+
     /// The legacy importer's material for slots the file assigns none.
     fn no_name_material(&mut self) -> u32 {
         const NO_NAME: &str = "No Name";
@@ -1996,6 +2073,7 @@ impl<'a> Builder<'a> {
             blend_shapes: Vec::new(),
         };
         let channels = self.blend_channels(mesh);
+        let order = self.face_order(mesh);
         // The control points with the node's geometric transform and pivot offset baked in.
         let vertices: std::borrow::Cow<[ufbx::Vec3]> = if offset.is_identity() {
             std::borrow::Cow::Borrowed(&*mesh.vertices)
@@ -2010,7 +2088,7 @@ impl<'a> Builder<'a> {
         {
             let mut first: HashMap<Vec<u32>, u32> = HashMap::new();
             let mut key = Vec::new();
-            for v in self.control_point_order(mesh) {
+            for v in self.control_point_order(mesh, &order) {
                 // Mirrored into Unity's handedness, unscaled.
                 let p = vertices[v as usize];
                 let p = [-p.x as f32, p.y as f32, p.z as f32];
@@ -2035,7 +2113,14 @@ impl<'a> Builder<'a> {
         // Lightmap UVs replace UV2 (measured: tests/projects/lightmapuvs).
         let mut warning = None;
         let lightmap = settings.secondary_uv.as_ref().and_then(|unwrap| {
-            match self.lightmap_uvs(mesh, &vertices, uv_sets.first().copied(), unwrap, &welded) {
+            match self.lightmap_uvs(
+                mesh,
+                &order,
+                &vertices,
+                uv_sets.first().copied(),
+                unwrap,
+                &welded,
+            ) {
                 Ok(lightmap) => Some(lightmap),
                 Err(error) => {
                     warning = Some(format!(
@@ -2059,8 +2144,14 @@ impl<'a> Builder<'a> {
             part_of.fill(Some(0));
             materials.push(None);
         } else {
-            for &part in mesh.material_part_usage_order.iter() {
-                let p = &mesh.material_parts[part as usize];
+            // First use in the importer's face order.
+            let mut used = vec![false; mesh.material_parts.len()];
+            let usage = order.iter().filter_map(|&f| {
+                let part = mesh.face_material.get(f as usize).copied().unwrap_or(0) as usize;
+                (part < used.len() && !std::mem::replace(&mut used[part], true)).then_some(part)
+            });
+            for part in usage.collect::<Vec<_>>() {
+                let p = &mesh.material_parts[part];
                 if p.num_triangles == 0 {
                     continue;
                 }
@@ -2086,7 +2177,9 @@ impl<'a> Builder<'a> {
         let mut triangles: Vec<TriangleCorners> = Vec::new();
         let mut discarded = 0usize;
         let point = |c: u32| welded[mesh.vertex_indices[c as usize] as usize];
-        for (face_index, face) in mesh.faces.iter().enumerate() {
+        for &face_index in &order {
+            let face_index = face_index as usize;
+            let face = &mesh.faces[face_index];
             let Some(part) = part_of[face_index] else {
                 continue;
             };
@@ -2107,7 +2200,6 @@ impl<'a> Builder<'a> {
                 for (&c, &point) in piece.iter().zip(&p) {
                     wedges.push(Wedge {
                         corner: c as usize,
-                        face: face_index,
                         point,
                     });
                 }
@@ -2154,18 +2246,26 @@ impl<'a> Builder<'a> {
                 })
                 .collect()
         } else {
-            // Smoothing groups per wedge: an OBJ's `s` groups, an FBX's per-polygon smoothing.
-            let obj = self.obj_smoothing.get(mesh.element.typed_id as usize);
-            let smoothing = match obj {
-                Some(groups) if !groups.is_empty() => {
-                    Some(wedges.iter().map(|w| groups[w.face]).collect::<Vec<u32>>())
-                }
+            // Smoothing groups per face corner of the file's polygons in the importer's face
+            // order (before triangulation and winding changes), which the importer reads at a
+            // point's index (`normals::calculate`): an OBJ's `s` groups, an FBX's smoothing layer.
+            let obj = self.obj_meshes.get(mesh.element.typed_id as usize);
+            let smoothing: Option<std::borrow::Cow<[u32]>> = match obj.map(|o| &o.groups) {
+                Some(groups) if obj_smoothing::smooths(groups) => Some(
+                    order
+                        .iter()
+                        .flat_map(|&f| {
+                            std::iter::repeat_n(groups[f as usize], mesh.faces[f as usize].num_indices as usize)
+                        })
+                        .collect::<Vec<u32>>()
+                        .into(),
+                ),
                 _ if self.obj => None,
                 _ => self
                     .fbx_smoothing
                     .get(mesh.element.typed_id as usize)
-                    .and_then(Option::as_ref)
-                    .map(|groups| wedges.iter().map(|w| groups[w.face]).collect()),
+                    .and_then(Option::as_deref)
+                    .map(Into::into),
             };
             normals::calculate(
                 &file_positions,
@@ -2417,17 +2517,32 @@ impl<'a> Builder<'a> {
         Ok((out, materials, warning))
     }
 
+    /// The mesh's faces in the importer's order: the file's, an OBJ's ordered by smoothing group
+    /// (`obj_smoothing`).
+    fn face_order(&self, mesh: &ufbx::Mesh) -> Vec<u32> {
+        match self.obj_meshes.get(mesh.element.typed_id as usize) {
+            Some(obj) if self.obj && !obj.groups.is_empty() => {
+                obj_smoothing::face_order(&obj.groups)
+            }
+            _ => (0..mesh.faces.len() as u32).collect(),
+        }
+    }
+
     /// The control points in the importer's order: the file's, an OBJ's in the order the faces'
     /// corners first use them.
-    fn control_point_order(&self, mesh: &ufbx::Mesh) -> Vec<u32> {
+    fn control_point_order(&self, mesh: &ufbx::Mesh, faces: &[u32]) -> Vec<u32> {
         if !self.obj {
             return (0..mesh.vertices.len() as u32).collect();
         }
         let mut seen = vec![false; mesh.vertices.len()];
         let mut order = Vec::with_capacity(mesh.vertices.len());
-        for &v in mesh.vertex_indices.iter() {
-            if !std::mem::replace(&mut seen[v as usize], true) {
-                order.push(v);
+        for &f in faces {
+            let face = mesh.faces[f as usize];
+            for c in face.index_begin..face.index_begin + face.num_indices {
+                let v = mesh.vertex_indices[c as usize];
+                if !std::mem::replace(&mut seen[v as usize], true) {
+                    order.push(v);
+                }
             }
         }
         order.extend((0..mesh.vertices.len() as u32).filter(|&v| !seen[v as usize]));
@@ -2442,6 +2557,7 @@ impl<'a> Builder<'a> {
     fn lightmap_uvs(
         &self,
         mesh: &ufbx::Mesh,
+        faces: &[u32],
         vertices: &[ufbx::Vec3],
         uv0: Option<&ufbx::VertexVec2>,
         settings: &SecondaryUvSettings,
@@ -2450,12 +2566,12 @@ impl<'a> Builder<'a> {
         if !self.settings.weld_vertices {
             return Err("meshes without weldVertices are not measured".into());
         }
-        let order = self.control_point_order(mesh);
+        let points = self.control_point_order(mesh, faces);
         // Equal positions weld to the first (compared as floats: -0 and 0 weld).
         let mut index = vec![0u32; mesh.vertices.len()];
-        let mut positions: Vec<[f32; 3]> = Vec::with_capacity(order.len());
+        let mut positions: Vec<[f32; 3]> = Vec::with_capacity(points.len());
         let mut first: HashMap<[u32; 3], u32> = HashMap::new();
-        for &v in &order {
+        for &v in &points {
             let p = self.position(vertices[v as usize]);
             index[v as usize] = *first
                 .entry(p.map(|c| (c + 0.0).to_bits()))
@@ -2466,9 +2582,10 @@ impl<'a> Builder<'a> {
         }
         let mut triangles = Vec::new();
         let mut uvs = Vec::new();
-        let mut first = Vec::with_capacity(mesh.faces.len());
-        for &face in mesh.faces.iter() {
-            first.push(triangles.len());
+        let mut first = vec![0; mesh.faces.len()];
+        for &f in faces {
+            let face = mesh.faces[f as usize];
+            first[f as usize] = triangles.len();
             // The mesh's own triangles (over its welded points), numbered as `build_mesh` does.
             let pieces = face_pieces(mesh, vertices, face, |c| {
                 welded[mesh.vertex_indices[c as usize] as usize]
@@ -2944,6 +3061,104 @@ fn clip_range<const N: usize>(
     out
 }
 
+/// A take as its clips use it: the span from [`take_span`] up to the last key inside it.
+#[derive(Clone, Copy)]
+struct Take<'a> {
+    stack: &'a ufbx::AnimStack,
+    begin: f64,
+    end: f64,
+    /// No curve has keys inside the span: the take's clips have no curves.
+    empty: bool,
+}
+
+impl<'a> Take<'a> {
+    /// The importer keeps a property's keys where they overlap the span, so the take ends at the
+    /// last key inside it; keys all outside leave the clip empty, and a take without keys makes
+    /// no clip (matches the Unity 6000.0.71f1 Editor, tests/projects/modelimport `smoothing.py`
+    /// takes).
+    fn new(scene: &ufbx::Scene, stack: &'a ufbx::AnimStack) -> Option<Self> {
+        let (begin, end) = take_span(scene, stack);
+        let mut elements = node_elements(scene);
+        elements.extend(scene.blend_channels.iter().map(|c| c.element.element_id));
+        let mut keyed = false;
+        let mut last: Option<f64> = None;
+        let curves = stack
+            .layers
+            .iter()
+            .flat_map(|layer| layer.anim_props.iter())
+            .filter(|prop| elements.contains(&prop.element.element_id))
+            .flat_map(|prop| prop.anim_value.curves.iter().flatten());
+        for curve in curves {
+            let (first, final_key) = match curve.keyframes.as_ref() {
+                [first, .., last] => (first.time, last.time),
+                [only] => (only.time, only.time),
+                [] => continue,
+            };
+            keyed = true;
+            if first <= end && begin <= final_key {
+                last = Some(last.map_or(final_key, |l: f64| l.max(final_key)));
+            }
+        }
+        keyed.then(|| Self {
+            stack,
+            begin,
+            end: last.map_or(begin, |l| l.min(end)),
+            empty: last.is_none(),
+        })
+    }
+}
+
+/// The scene's nodes and their attributes (cameras, lights, meshes, ...).
+fn node_elements(scene: &ufbx::Scene) -> HashSet<u32> {
+    scene
+        .nodes
+        .iter()
+        .flat_map(|n| {
+            std::iter::once(n.element.element_id).chain(n.all_attribs.iter().map(|a| a.element_id))
+        })
+        .collect()
+}
+
+/// A take's time span in seconds as the importer reads it (matches the Unity 6000.0.71f1 Editor,
+/// tests/projects/modelimport `smoothing.py` takes): the stack's `LocalStart` and `LocalStop`
+/// (0 where missing; `ReferenceStart`/`ReferenceStop` are not used), earlier first. A span shorter
+/// than [`MIN_TAKE_SPAN`] is replaced by the keys of the stack's last layer on the scene's nodes and
+/// their attributes (curves of two keys or more); without such keys it stays as it is.
+fn take_span(scene: &ufbx::Scene, stack: &ufbx::AnimStack) -> (f64, f64) {
+    let second = scene.metadata.ktime_second.max(1) as f64;
+    let time = |name: &str| {
+        stack
+            .element
+            .props
+            .find_prop(name)
+            .map_or(0.0, |p| p.value_int as f64 / second)
+    };
+    let (a, b) = (time("LocalStart"), time("LocalStop"));
+    let span = (a.min(b), a.max(b));
+    if span.1 - span.0 >= MIN_TAKE_SPAN {
+        return span;
+    }
+    let Some(layer) = stack.layers.last() else {
+        return span;
+    };
+    let animated = node_elements(scene);
+    let mut keys = (f64::INFINITY, f64::NEG_INFINITY);
+    for prop in layer.anim_props.iter() {
+        if !animated.contains(&prop.element.element_id) {
+            continue;
+        }
+        for curve in prop.anim_value.curves.iter().flatten() {
+            if let [first, .., last] = curve.keyframes.as_ref() {
+                keys = (keys.0.min(first.time), keys.1.max(last.time));
+            }
+        }
+    }
+    if keys.0 <= keys.1 { keys } else { span }
+}
+
+/// Spans shorter than this (single precision's epsilon, in seconds) fall back to the keys.
+const MIN_TAKE_SPAN: f64 = f32::EPSILON as f64;
+
 /// The times a clip is resampled at: its start, every frame of the take after it, and its end
 /// (a range from frame 4.5 has keys at 4.5, 5, 6, ...; measured, tests/projects/modelclips).
 fn frame_times(start: f64, end: f64, fps: f64) -> Vec<f64> {
@@ -3096,10 +3311,9 @@ fn face_pieces(
     Ok(pieces)
 }
 
-/// A face corner: its file corner, face and welded control point.
+/// A face corner: its file corner and welded control point.
 struct Wedge {
     corner: usize,
-    face: usize,
     point: u32,
 }
 
@@ -3108,38 +3322,6 @@ struct TriangleCorners {
     part: usize,
     wedges: [usize; 3],
     uv2: Option<[[f32; 2]; 3]>,
-}
-
-/// An OBJ file's smoothing group per face, per mesh in ufbx's order (`s off` and `s 0` are no
-/// group); empty when no face has a group (the file has no smoothing then, as measured) or the
-/// faces do not add up to the meshes'.
-fn obj_smoothing_groups(bytes: &[u8], scene: &ufbx::Scene) -> Vec<Vec<u32>> {
-    let mut group = 0;
-    let mut faces = Vec::new();
-    for line in bytes.split(|&b| b == b'\n') {
-        let line = String::from_utf8_lossy(line);
-        let mut words = line.split_whitespace();
-        match words.next() {
-            Some("s") => group = words.next().and_then(|w| w.parse().ok()).unwrap_or(0),
-            Some("f") => faces.push(group),
-            _ => {}
-        }
-    }
-    if faces.iter().all(|&g| g == 0)
-        || faces.len() != scene.meshes.iter().map(|m| m.faces.len()).sum::<usize>()
-    {
-        return Vec::new();
-    }
-    let mut rest = &faces[..];
-    scene
-        .meshes
-        .iter()
-        .map(|m| {
-            let (mine, others) = rest.split_at(m.faces.len());
-            rest = others;
-            mine.to_vec()
-        })
-        .collect()
 }
 
 /// The four heaviest influences on a skin vertex, renormalized.
@@ -3173,6 +3355,7 @@ mod fbx_smoothing;
 mod lightmap_uv;
 mod materials;
 mod normals;
+mod obj_smoothing;
 mod pivots;
 mod tangent_space;
 mod triangulation;

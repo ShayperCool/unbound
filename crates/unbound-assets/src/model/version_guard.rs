@@ -297,7 +297,7 @@ fn fingerprints(root: &Path) -> BTreeMap<String, String> {
             let bytes = std::fs::read(source).unwrap();
             let mut hasher = blake3::Hasher::new();
             let root = root.to_string_lossy();
-            match ModelImporter.import(source, &bytes, &meta) {
+            match ModelImporter::default().import(source, &bytes, &meta) {
                 // A failure is output too: the cache keeps no entry for it.
                 Err(_) => {
                     hasher.update(b"error");

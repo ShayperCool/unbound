@@ -28,6 +28,8 @@ pub struct RuntimeState {
     imports: AssetCache,
     /// Imports textures with the active build target's overrides.
     texture_importer: RwLock<TextureImporter>,
+    /// Imports models as the project's release does.
+    model_importer: unbound_assets::ModelImporter,
     /// Imported textures' sprites by GUID (asked for after the import). Only the name and the
     /// sprites stay: the pixels live on the GPU once uploaded.
     textures: RwLock<HashMap<Guid, TextureSprites>>,
@@ -113,6 +115,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             gamma: project_in_gamma_space(project),
             ..TextureImporter::default()
         }),
+        model_importer: unbound_assets::ModelImporter::for_release(&project.version),
         textures: RwLock::new(HashMap::new()),
         shaders: RwLock::new(None),
         builtin_shader_roots: builtin_shader_roots(
@@ -834,7 +837,7 @@ fn imported_model(guid: Guid) -> Result<Arc<unbound_assets::ImportedModel>> {
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
     let model = s
         .imports
-        .get_or_import(&unbound_assets::ModelImporter, &asset.file, &meta)?;
+        .get_or_import(&s.model_importer, &asset.file, &meta)?;
     for warning in &model.warnings {
         tracing::warn!("{}: {warning}", asset.path);
     }
@@ -1334,7 +1337,8 @@ mod tests {
             unbound_yaml::parse_value(meta).unwrap()
         };
         let source = std::path::Path::new("Tri.obj");
-        unbound_assets::model::import_model(source, TRIANGLE_OBJ.as_bytes(), &meta).unwrap()
+        let mtl = unbound_assets::ModelImporter::default().mtl;
+        unbound_assets::model::import_model(source, TRIANGLE_OBJ.as_bytes(), &meta, mtl).unwrap()
     }
 
     /// The Read/Write Enabled setting where the committed 6000.0.71f1 probe metas write it (under

@@ -582,7 +582,7 @@ mod tests {
             "ModelImporter:\n  meshes:\n    meshOptimizationFlags: 0\n    preserveHierarchy: 1\n  tangentSpace:\n    normalImportMode: 0\n",
         )
         .unwrap();
-        ModelImporter
+        ModelImporter::default()
             .import(Path::new("Pivots.fbx"), text.as_bytes(), &meta)
             .unwrap()
     }
@@ -747,7 +747,7 @@ mod tests {
                 &format!("animationCompression: {compression}"),
             );
         let meta = unbound_yaml::parse_value(&meta).unwrap();
-        ModelImporter
+        ModelImporter::default()
             .import(&source, &std::fs::read(&source).unwrap(), &meta)
             .unwrap()
     }

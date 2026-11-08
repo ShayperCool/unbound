@@ -296,8 +296,8 @@ impl Adjacency {
 
 /// Calculated normals per corner (unit length, before scaling into the mesh's space) of `faces`
 /// over `positions` (the file's, mirrored into Unity's handedness). `smoothing` holds a
-/// smoothing group per corner; the importer looks it up at the control point's index, which is
-/// reproduced.
+/// smoothing group per corner of the file's polygons (in face order, before triangulation); the
+/// importer looks it up at the control point's index, which is reproduced.
 pub fn calculate(
     positions: &[V3],
     faces: &Faces,

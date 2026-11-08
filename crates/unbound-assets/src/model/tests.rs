@@ -87,7 +87,7 @@ f 4 5 6
 
 #[test]
 fn imports_an_obj_in_unity_space() {
-    let model = ModelImporter
+    let model = ModelImporter::default()
         .import(
             Path::new("Assets/Shapes.obj"),
             OBJ.as_bytes(),
@@ -139,7 +139,7 @@ fn imports_an_obj_in_unity_space() {
 #[test]
 fn a_single_top_level_node_becomes_the_root() {
     let obj = "o Only\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n";
-    let model = ModelImporter
+    let model = ModelImporter::default()
         .import(Path::new("Single.obj"), obj.as_bytes(), &Value::Null)
         .unwrap();
     assert_eq!(model.nodes.len(), 1);
@@ -151,7 +151,7 @@ fn a_single_top_level_node_becomes_the_root() {
     assert_eq!(renderer.renderer.id, ROOT_MESH_RENDERER_ID);
     assert_eq!(model.meshes[0].name, "Only");
 
-    let preserved = ModelImporter
+    let preserved = ModelImporter::default()
         .import(
             Path::new("Single.obj"),
             obj.as_bytes(),
@@ -193,8 +193,10 @@ fn bind_pose_conversion_mirrors_and_scales() {
         offsets: HashMap::new(),
         material_index: HashMap::new(),
         obj_diffuse: None,
-        obj_smoothing: Vec::new(),
+        obj_meshes: Vec::new(),
+        obj_defaults: Vec::new(),
         fbx_smoothing: Vec::new(),
+        mtl: ModelImporter::default().mtl,
         rest_pose: None,
     };
     // A translation by (1, 2, 3) and a rotation of 90° about Z (x → y).
@@ -330,7 +332,7 @@ fn a_node_moves_to_its_pivot_and_its_mesh_by_the_opposite() {
     // As in tests/projects/modelaxis (Pivots set, 6000.0.71f1): the node at local zero, its mesh
     // centred on the pivot. A node without pivots keeps its translation and vertices. Without
     // an attribute index the node still moves, but the mesh keeps its file vertices.
-    let model = ModelImporter
+    let model = ModelImporter::default()
         .import(
             Path::new("Pivoted.fbx"),
             PIVOTED_FBX.as_bytes(),
@@ -474,7 +476,7 @@ fn triangles_and_quads_split_like_unity() {
     // A kite whose short diagonal is 1-3: Unity still splits at 0-2 of the reversed corners,
     // giving (c0, c3, c2) and (c0, c2, c1) (measured: tests/projects/lightmapuvs).
     let obj = "o Kite\nv 0 0 0\nv 1 0 0\nv 3 3 0\nv 0 1 0\nv 5 0 0\nv 6 0 0\nv 5 1 0\nf 1 2 3 4\nf 5 6 7\n";
-    let model = ModelImporter
+    let model = ModelImporter::default()
         .import(Path::new("Kite.obj"), obj.as_bytes(), &Value::Null)
         .unwrap();
     let mesh = &model.meshes[0];
@@ -508,7 +510,7 @@ fn lightmap_uvs_read_their_settings_and_replace_uv2() {
     );
     assert_eq!(settings.margin_method, 1);
     assert_eq!(settings.min_lightmap_resolution, 10.0);
-    let model = ModelImporter
+    let model = ModelImporter::default()
         .import(Path::new("Quad.obj"), obj.as_bytes(), &on)
         .unwrap();
     assert!(model.warnings.is_empty(), "{:?}", model.warnings);
@@ -524,7 +526,7 @@ fn lightmap_uvs_read_their_settings_and_replace_uv2() {
     }
     let unwelded =
         meta("ModelImporter:\n  meshes:\n    generateSecondaryUV: 1\n    weldVertices: 0\n");
-    let model = ModelImporter
+    let model = ModelImporter::default()
         .import(Path::new("Quad.obj"), obj.as_bytes(), &unwelded)
         .unwrap();
     assert!(
@@ -534,7 +536,7 @@ fn lightmap_uvs_read_their_settings_and_replace_uv2() {
     );
     let off = meta("ModelImporter:\n  meshes:\n    generateSecondaryUV: 0\n");
     assert!(ModelSettings::read(&off).secondary_uv.is_none());
-    let model = ModelImporter
+    let model = ModelImporter::default()
         .import(Path::new("Quad.obj"), obj.as_bytes(), &off)
         .unwrap();
     assert_eq!(model.meshes[0].uvs.len(), 1);
@@ -545,7 +547,7 @@ fn lightmap_uvs_unwrap_polygons_of_more_than_four_corners() {
     let obj = "o Pentagon\nv 0 0 0\nv 1 0 0\nv 1.3 1 0\nv 0.5 1.6 0\nv -0.3 1 0\nf 1 2 3 4 5\n";
     let on =
         meta("ModelImporter:\n  serializedVersion: 22200\n  meshes:\n    generateSecondaryUV: 1\n");
-    let model = ModelImporter
+    let model = ModelImporter::default()
         .import(Path::new("Pentagon.obj"), obj.as_bytes(), &on)
         .unwrap();
     assert!(model.warnings.is_empty(), "{:?}", model.warnings);
@@ -577,7 +579,7 @@ fn lightmap_uvs_unwrap_parts_of_more_than_a_hundred_triangles() {
     }
     let on =
         meta("ModelImporter:\n  serializedVersion: 22200\n  meshes:\n    generateSecondaryUV: 1\n");
-    let model = ModelImporter
+    let model = ModelImporter::default()
         .import(Path::new("Grid.obj"), obj.as_bytes(), &on)
         .unwrap();
     assert!(
@@ -605,10 +607,10 @@ fn weld_vertices_can_preserve_coincident_authored_points() {
             "ModelImporter:\n  meshes:\n    weldVertices: {enabled}\n"
         ))
     };
-    let welded = ModelImporter
+    let welded = ModelImporter::default()
         .import(Path::new("Doubled.obj"), obj, &settings(1))
         .unwrap();
-    let separate = ModelImporter
+    let separate = ModelImporter::default()
         .import(Path::new("Doubled.obj"), obj, &settings(0))
         .unwrap();
     assert_eq!(welded.meshes[0].positions.len(), 3);
@@ -616,7 +618,7 @@ fn weld_vertices_can_preserve_coincident_authored_points() {
 }
 
 fn import_obj(name: &str, obj: &str, meta_text: &str) -> ImportedModel {
-    ModelImporter
+    ModelImporter::default()
         .import(Path::new(name), obj.as_bytes(), &meta(meta_text))
         .unwrap()
 }
@@ -745,7 +747,7 @@ fn fbx_group_normals_match_the_editor_reference() {
     let settings = meta(
         "ModelImporter:\n  meshes:\n    meshOptimizationFlags: 0\n  tangentSpace:\n    normalImportMode: 1\n    normalSmoothingSource: 1\n",
     );
-    let imported = ModelImporter
+    let imported = ModelImporter::default()
         .import(&source, &std::fs::read(&source).unwrap(), &settings)
         .unwrap();
     assert_group_normals_match_reference(&imported);
@@ -777,7 +779,7 @@ fn edge_smoothing_with_unenclosed_sharp_edges_matches_the_editor_reference() {
         ] {
             let source = root.join(format!("Assets/Resources/{variant}/{name}.fbx"));
             let meta = meta(&std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap());
-            let model = ModelImporter
+            let model = ModelImporter::default()
                 .import(&source, &std::fs::read(&source).unwrap(), &meta)
                 .unwrap();
             let row = rows
@@ -808,7 +810,7 @@ fn unsupported_lightmap_settings_keep_the_supported_group_normals() {
     let settings = meta(
         "ModelImporter:\n  meshes:\n    meshOptimizationFlags: 0\n    generateSecondaryUV: 1\n    weldVertices: 0\n  tangentSpace:\n    normalImportMode: 1\n    normalSmoothingSource: 1\n",
     );
-    let imported = ModelImporter
+    let imported = ModelImporter::default()
         .import(&source, &std::fs::read(&source).unwrap(), &settings)
         .unwrap();
     assert!(
@@ -835,7 +837,7 @@ fn obj_material_cache_tracks_library_content_and_missing_inputs() {
     std::fs::write(&source, "mtllib color library.mtl # authored library\no Face\nv 0 0 0\nv 1 0 0\nv 0 1 0\nusemtl Paint\nf 1 2 3\n").unwrap();
     let cache = AssetCache::new(root.join("cache"));
     let load =
-        || cache.get_or_import_traced(&ModelImporter, &source, &source.with_extension("obj.meta"));
+        || cache.get_or_import_traced(&ModelImporter::default(), &source, &source.with_extension("obj.meta"));
     std::fs::write(&library, "newmtl Paint\nKd 0.2 0.4 0.8\nd 0.25\nTr 0.8\n").unwrap();
     let (model, outcome) = load().unwrap();
     assert_eq!(outcome, Outcome::Imported);
@@ -889,7 +891,7 @@ fn obj_material_cache_tracks_library_content_and_missing_inputs() {
             .contains("multiple diffuse texture maps")
     );
     let bytes = std::fs::read(&source).unwrap();
-    let disabled = ModelImporter
+    let disabled = ModelImporter::default()
         .import(
             &source,
             &bytes,
@@ -906,7 +908,7 @@ fn obj_material_cache_tracks_library_content_and_missing_inputs() {
         }
         meta(&text)
     };
-    let remapped = ModelImporter
+    let remapped = ModelImporter::default()
         .import(&source, &bytes, &remap_meta(&["Paint", "Other"]))
         .unwrap();
     assert_eq!(remapped.meshes[0].submeshes, disabled.meshes[0].submeshes);
@@ -917,7 +919,7 @@ fn obj_material_cache_tracks_library_content_and_missing_inputs() {
             .is_some_and(|reference| !reference.is_null())
     }));
     assert!(
-        ModelImporter
+        ModelImporter::default()
             .import(&source, &bytes, &remap_meta(&["Paint"]))
             .unwrap_err()
             .to_string()
@@ -937,7 +939,7 @@ fn baked_axis_conversion_rejects_unmeasured_deformers_and_animation() {
     for filename in ["Animated.fbx", "Skinned.fbx"] {
         let source = root.join(filename);
         let bytes = std::fs::read(&source).unwrap();
-        let error = ModelImporter
+        let error = ModelImporter::default()
             .import(&source, &bytes, &settings)
             .unwrap_err()
             .to_string();

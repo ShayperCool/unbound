@@ -11,6 +11,8 @@ crc32fast = "1"
 serde.workspace = true
 tracing.workspace = true
 unbound-yaml.workspace = true
+# Per-release behaviour (MTL reading).
+unbound-compat.workspace = true
 # Textures
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tga", "bmp", "gif", "tiff", "hdr", "exr", "rayon"] }
 # EXR layouts the image crate does not read (single-channel, luminance).
