@@ -1114,6 +1114,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         },
     );
     let sprite_count = s.textures.read().unwrap()[&guid].sprites.len();
+    let texture_format = texture.reported_format().unwrap_or(0);
     let format = match texture.format {
         unbound_assets::texture::TextureFormat::Rgba8 => i32::from(!texture.srgb),
         unbound_assets::texture::TextureFormat::Rgba32F => {
@@ -1201,6 +1202,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         format,
         dimension,
         wrap_w: wrap(texture.wrap_w),
+        texture_format,
     })
 }
 

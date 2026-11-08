@@ -1439,10 +1439,11 @@ mod tests {
     /// audio filter descriptors (17 was render protocol 8 alone, 16 the audio descriptors alone);
     /// 19 adds render protocol 9's `CopyDepth`, 20 the AudioReverbFilter descriptors, 21 the reverb
     /// zone, 22 render protocols 10/11's 32-bit indices and logical instance IDs, 23 the
-    /// Distortion filter kind and 28 render protocol 12's shared arrays.
+    /// Distortion filter kind, 28 render protocol 12's shared arrays and 31 the imported texture's
+    /// reported format.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 30);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 31);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

@@ -142,7 +142,7 @@ pub struct TextureSettings {
     pub texture_type: TextureType,
     pub shape: TextureShape,
     /// For [`TextureType::SingleChannel`]: 0 alpha (Unity makes an Alpha8 texture), 1 red (R8).
-    /// The imported data stays RGBA; the runtime picks the channel.
+    /// The imported data stays RGBA ([`ImportedTexture::reported_format`] names the format).
     pub single_channel_component: i32,
     /// Colour data is sRGB (`sRGBTexture`, formerly `!linearTexture`). Normal maps never are.
     pub srgb: bool,
@@ -476,9 +476,43 @@ pub struct ImportedTexture {
     pub bc7: Option<Vec<serde_bytes::ByteBuf>>,
 }
 
+/// Unity's `TextureFormat` values an import reports ([`ImportedTexture::reported_format`]).
+pub mod unity_format {
+    pub const ALPHA8: i32 = 1;
+    pub const RGB24: i32 = 3;
+    pub const RGBA32: i32 = 4;
+    pub const R8: i32 = 63;
+}
+
 impl ImportedTexture {
     /// The Texture2D's fileID within the asset.
     pub const FILE_ID: i64 = TEXTURE_FILE_ID;
+
+    /// The `format` the Editor reports for this 8-bit import where the build target leaves the
+    /// format automatic and uncompressed (Unity 6000.0.71f1 Editor, tests/projects/urp
+    /// texture-formats.jsonl): a Cookie keeps its alpha alone (Alpha8), a Single Channel texture
+    /// its channel (Alpha8 or R8), other textures RGB24 without transparent texels and RGBA32
+    /// with them. None where Unbound keeps its RGBA32 or float answer: explicit and compressed
+    /// formats, HDR, normal maps and lightmaps (unmeasured).
+    pub fn reported_format(&self) -> Option<i32> {
+        let s = &self.settings;
+        if self.format != TextureFormat::Rgba8 || s.format_alpha.is_some() || !s.uncompressed {
+            return None;
+        }
+        match s.texture_type {
+            TextureType::Cookie => Some(unity_format::ALPHA8),
+            TextureType::SingleChannel if s.single_channel_component == 0 => {
+                Some(unity_format::ALPHA8)
+            }
+            TextureType::SingleChannel => Some(unity_format::R8),
+            TextureType::NormalMap
+            | TextureType::Lightmap
+            | TextureType::Shadowmask
+            | TextureType::DirectionalLightmap => None,
+            _ if self.has_alpha => Some(unity_format::RGBA32),
+            _ => Some(unity_format::RGB24),
+        }
+    }
 
     /// The sprite with `file_id`.
     pub fn sprite(&self, file_id: i64) -> Option<&SpriteDef> {

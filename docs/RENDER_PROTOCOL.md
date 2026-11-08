@@ -193,6 +193,8 @@ ImportedTextureInfo { i32 width, height, mip_count, srgb, filter_mode, wrap_u, w
   wrap_w;      // the importer's wrapW (NativeApi 14)
 }
 
+  texture_format; // Unity's TextureFormat the Editor reports (Alpha8, R8, RGB24 for automatic
+                  // uncompressed formats), 0: the one `format`'s data gives (NativeApi 31)
 MaterialPacket {
   *const u8 shader_name; i32 shader_name_length;
   i32 render_queue;

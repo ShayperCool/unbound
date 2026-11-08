@@ -874,6 +874,58 @@ fn a_cookie_keeps_its_alpha_in_every_channel() {
     assert_eq!(tex.mips[0].data, [200, 40, 10, 83, 0, 0, 0, 0]);
 }
 
+/// The format the Editor reports for automatic uncompressed formats (tests/projects/urp
+/// texture-formats.jsonl): Cookie and Single Channel textures keep their channel, others RGB24
+/// or RGBA32 by their alpha; compression, explicit formats and normal maps keep Unbound's
+/// RGBA32 answer.
+#[test]
+fn automatic_uncompressed_formats_are_reported() {
+    let opaque = png(4, 4, |x, _| [x as u8 * 60, 10, 20, 255]);
+    let clear = png(4, 4, |x, _| {
+        [x as u8 * 60, 10, 20, if x == 0 { 0 } else { 255 }]
+    });
+    let report = |bytes: &[u8], meta: &str| {
+        let meta = unbound_yaml::parse_value(&format!("TextureImporter:\n  nPOTScale: 0\n{meta}"))
+            .unwrap();
+        TextureImporter::default()
+            .import(Path::new("Assets/a.png"), bytes, &meta)
+            .unwrap()
+            .reported_format()
+    };
+    let uncompressed = "  textureCompression: 0\n";
+    assert_eq!(report(&opaque, uncompressed), Some(unity_format::RGB24));
+    assert_eq!(report(&clear, uncompressed), Some(unity_format::RGBA32));
+    assert_eq!(
+        report(&clear, &format!("{uncompressed}  alphaUsage: 0\n")),
+        Some(unity_format::RGB24)
+    );
+    assert_eq!(
+        report(&opaque, &format!("{uncompressed}  textureType: 4\n")),
+        Some(unity_format::ALPHA8)
+    );
+    assert_eq!(
+        report(
+            &opaque,
+            &format!("{uncompressed}  textureType: 10\n  singleChannelComponent: 0\n")
+        ),
+        Some(unity_format::ALPHA8)
+    );
+    assert_eq!(
+        report(
+            &opaque,
+            &format!("{uncompressed}  textureType: 10\n  singleChannelComponent: 1\n")
+        ),
+        Some(unity_format::R8)
+    );
+    assert_eq!(
+        report(&opaque, &format!("{uncompressed}  textureType: 1\n")),
+        None
+    );
+    // Compressed (the default) and explicit formats are not reported.
+    assert_eq!(report(&opaque, ""), None);
+    assert_eq!(report(&opaque, "  textureFormat: 4\n"), None);
+}
+
 /// A Shadowmask or Lightmap keeps its input alpha (an unused channel or texel 0) under "Alpha
 /// Source: None"; other textures are made opaque.
 #[test]

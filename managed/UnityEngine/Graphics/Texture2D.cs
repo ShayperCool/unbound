@@ -647,13 +647,7 @@ namespace UnityEngine
             m_GpuMipCount = Math.Max(1, info.MipCount);
             m_IsReadable = info.Readable != 0;
             m_Linear = info.Srgb == 0 || info.Format == 2;
-            // The target override may keep HDR working pixels as float32 instead of half.
-            m_Format = info.Format switch
-            {
-                2 => TextureFormat.RGBAHalf,
-                9 => TextureFormat.RGBAFloat,
-                _ => TextureFormat.RGBA32,
-            };
+            m_Format = PixelFormats.ImportedFormat(info);
             m_WrapModeW = (TextureWrapMode)info.WrapW;
             filterMode = (FilterMode)info.FilterMode;
             wrapModeU = (TextureWrapMode)info.WrapU;
@@ -805,6 +799,22 @@ namespace Unbound.Runtime
     /// <summary>Raw pixel data of the common texture formats, to and from RGBA32.</summary>
     internal static class PixelFormats
     {
+        /// <summary>The format an imported texture reports: the one the import names (Alpha8, R8,
+        /// RGB24: what the Editor reports for automatic uncompressed formats), else its data's
+        /// (the target override may keep HDR working pixels as float32 instead of half).</summary>
+        internal static UnityEngine.TextureFormat ImportedFormat(in ImportedTextureInfo info) => info.TextureFormat switch
+        {
+            (int)UnityEngine.TextureFormat.Alpha8 => UnityEngine.TextureFormat.Alpha8,
+            (int)UnityEngine.TextureFormat.R8 => UnityEngine.TextureFormat.R8,
+            (int)UnityEngine.TextureFormat.RGB24 => UnityEngine.TextureFormat.RGB24,
+            _ => info.Format switch
+            {
+                2 => UnityEngine.TextureFormat.RGBAHalf,
+                9 => UnityEngine.TextureFormat.RGBAFloat,
+                _ => UnityEngine.TextureFormat.RGBA32,
+            },
+        };
+
         internal static int GpuFloatFormat(UnityEngine.TextureFormat format) => format switch
         {
             UnityEngine.TextureFormat.RFloat => 6,

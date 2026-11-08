@@ -265,6 +265,9 @@ pub struct ImportedTextureInfo {
     pub dimension: i32,
     /// The importer's `wrapW` (`NativeApi` 14).
     pub wrap_w: i32,
+    /// Unity's `TextureFormat` the Editor reports for the import (`Texture2D.format`), 0 when
+    /// it is the one `format`'s data gives (`NativeApi` 31).
+    pub texture_format: i32,
 }
 
 #[repr(C)]

@@ -79,6 +79,9 @@ namespace Unbound.Runtime
         internal int Dimension;
         /// <summary>The importer's wrapW (NativeApi 14).</summary>
         internal int WrapW;
+        /// <summary>Unity's TextureFormat the Editor reports for the import, 0 when it is the one
+        /// <see cref="Format"/>'s data gives (NativeApi 31).</summary>
+        internal int TextureFormat;
     }
 
     [StructLayout(LayoutKind.Sequential)]

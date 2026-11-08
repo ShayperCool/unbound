@@ -31,7 +31,8 @@ use crate::{
 /// 28: render protocol 12 (shared property arrays, `MeshInstance` elements).
 /// 29: cached display and IME versions at the end of `FrameInput`.
 /// 30: decoded audio resampling flag.
-pub const NATIVE_API_VERSION: u32 = 30;
+/// 31: the reported `TextureFormat` at the end of `ImportedTextureInfo`.
+pub const NATIVE_API_VERSION: u32 = 31;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]
