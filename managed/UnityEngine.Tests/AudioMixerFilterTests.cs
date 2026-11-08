@@ -433,6 +433,45 @@ namespace UnityEngine.Tests
             Assert.Equal(-10f, mixer.Value("Threshold"));
         }
 
+        [Theory]
+        [InlineData("Ratio", 10f, 0.2f)]
+        [InlineData("Ratio", 0.2f, 10f)]
+        [InlineData("Attack Time", 10f, 0.01f)]
+        public void SidechainTransitionsRetainRoundedParametersAndStayRenderable(string parameter, float from, float to)
+        {
+            var (mixer, group, effect) = Fixture();
+            UseEffect(mixer, effect, "Duck Volume", AudioMixerEffectController.DuckParameters);
+            var start = new AudioMixerSnapshot { m_Mixer = mixer };
+            start.m_Values[parameter] = from;
+            start.TransitionTo(0f);
+            mixer.Tick(0f, 0f);
+            var target = new AudioMixerSnapshot { m_Mixer = mixer };
+            target.m_Values[parameter] = to;
+            target.TransitionTo(1f);
+            for (int i = 0; i < 4; i++)
+            {
+                mixer.Tick(0.25f, 0.25f);
+                Assert.NotNull(group.DspConfiguration());
+            }
+            Assert.InRange(mixer.Value(parameter), to - 1e-6f, to + 1e-6f);
+            if (parameter == "Ratio" && from == 10f)
+                Assert.Equal(1045220544, BitConverter.SingleToInt32Bits(mixer.Value(parameter)));
+            if (parameter == "Ratio" && to == 0.2f)
+            {
+                // Explicit values stay strict, including a clear not yet submitted to audio.
+                Assert.True(mixer.SetFloat(parameter, mixer.Value(parameter)));
+                Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+                Assert.True(mixer.ClearFloat(parameter));
+                Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+                mixer.Tick(0f, 0f);
+                Assert.NotNull(group.DspConfiguration());
+                target.m_Values[parameter] = 0.1999f;
+                target.TransitionTo(0f);
+                mixer.Tick(0f, 0f);
+                Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+            }
+        }
+
         [Fact]
         public void WeightedSnapshotsWithIdenticalSidechainValuesCanChangeOnlyTheirFaders()
         {

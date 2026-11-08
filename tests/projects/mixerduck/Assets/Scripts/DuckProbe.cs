@@ -107,6 +107,8 @@ public class DuckProbe : MonoBehaviour
         new[] { "timed_send", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1" },
         new[] { "timed_threshold", "voice=step0:0.5", "change=Threshold", "to=-25", "snapshot=1", "duration=0.1" },
         new[] { "timed_ratio", "voice=step0:0.5", "change=Ratio", "to=5", "snapshot=1", "duration=0.1" },
+        new[] { "timed_ratio_min", "voice=step0:0.5", "Music.Duck.Ratio=10", "change=Ratio", "to=0.2", "snapshot=1", "duration=0.1" },
+        new[] { "live_ratio_min", "voice=step0:0.5", "Music.Duck.Ratio=10", "change=Ratio", "to=0.2" },
         new[] { "timed_attack", "voice=step0:0.5", "change=Attack Time", "to=0.01", "snapshot=1", "duration=0.1" },
         new[] { "timed_release", "voice=step0:0.5", "change=Release Time", "to=0.01", "snapshot=1", "duration=0.1" },
         new[] { "timed_makeup", "voice=step0:0.5", "change=Make-up Gain", "to=6", "snapshot=1", "duration=0.1" },
@@ -280,7 +282,11 @@ public class DuckProbe : MonoBehaviour
                     }
                     if (!Engine) yield return null;
                     else if (timed) FlushEngine(1024f / rate);
-                    if (timed && mixer.GetFloat("Change", out float parameter)) Debug.Log(key + " block=" + block + " parameter=" + parameter.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+                    if (timed && mixer.GetFloat("Change", out float parameter)) {
+                        Debug.Log(key + " block=" + block + " parameter=" + parameter.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+                        if (key == "timed_ratio_min" && block == 15)
+                            records.Add("\"" + key + ".endParameterBits\":" + BitConverter.SingleToInt32Bits(parameter));
+                    }
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false })) throw new Exception("AddMixerGroupSink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("AudioRenderer.Render failed");
                     for (int i = 0; i < buffer.Length; i++) { writer.Write(buffer[i]); masterWriter.Write(sink[i]); }

@@ -235,7 +235,8 @@ namespace UnityEngine.Audio
             return false;
         }
 
-        internal bool HasOverride(string guid) => m_Overrides.ContainsKey(guid) && !m_PendingClears.Contains(guid);
+        internal bool HasOverride(string guid) => HasDspOverride(guid) && !m_PendingClears.Contains(guid);
+        internal bool HasDspOverride(string guid) => m_Overrides.ContainsKey(guid);
         internal float SnapshotValue(string guid) => m_Values.TryGetValue(guid, out var value) ? value : m_Defaults.TryGetValue(guid, out value) ? value : 0f;
 
         /// <summary>A parameter's current value.</summary>
@@ -852,9 +853,18 @@ namespace Unbound.Runtime
             var v = new float[DuckParameters.Length];
             for (int i = 0; i < v.Length; i++)
             {
-                v[i] = Parameter(DuckParameters[i]) is string guid ? mixer.Value(guid) : DuckDefaults[i];
+                string guid = Parameter(DuckParameters[i]);
+                v[i] = guid != null ? mixer.Value(guid) : DuckDefaults[i];
+                float minimum = DuckMinimums[i], maximum = DuckMaximums[i];
+                // Snapshot interpolation can round just beyond an endpoint. The 6000.0.71f1
+                // ratio boundary control retains that API value and keeps rendering. Allow
+                // one float step at the larger range bound for snapshot-owned parameters;
+                // explicit script values retain strict range validation, including pending clears.
+                float magnitude = Mathf.Max(Mathf.Abs(minimum), Mathf.Abs(maximum));
+                float rounding = Compat.MixerTimedSidechainMeasured && guid != null && !mixer.HasDspOverride(guid)
+                    ? MathF.BitIncrement(magnitude) - magnitude : 0f;
                 // Values outside the Editor's ranges (reachable through exposed parameters) are unmeasured.
-                if (!(v[i] >= DuckMinimums[i] && v[i] <= DuckMaximums[i]))
+                if (!(v[i] >= minimum - rounding && v[i] <= maximum + rounding))
                     throw new NotSupportedException("AudioMixer Duck Volume " + DuckParameters[i] + " " + v[i] + " is outside the Editor's range " + DuckMinimums[i] + " to " + DuckMaximums[i]);
             }
             return new {

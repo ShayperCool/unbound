@@ -454,6 +454,11 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
   non-linear sidechain transition overrides still fail before scheduling or changing updateMode.
   UnscaledTime follows wall time even under captureDeltaTime, so a repeatable reference clock
   remains a follow-up. Parameters held by overrides and unrelated snapshot changes remain usable.
+  The Ratio 10-to-0.2 boundary capture retains the rounded GetFloat result 0.199999809 and
+  continues rendering. Snapshot-owned Duck parameters therefore admit rounding within one float
+  step at the larger absolute Editor range bound; the DSP receives the stored value. Script
+  overrides, including pending clears, retain strict range checks. The boundary's public float
+  bits are part of the reference, with an immediate exposed-parameter control alongside it.
 - The 6000.0 Editor exposes no Allow Wet Mixing or Wet Level control on Send or Duck Volume.
   The published [6000.0 Inspector implementation](https://github.com/Unity-Technologies/UnityCsReference/blob/6000.0/Editor/Mono/Audio/Mixer/GUI/AudioMixerEffectView.cs)
   excludes both units. Assets enabling wet mixing on either still fail explicitly.

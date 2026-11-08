@@ -11,7 +11,7 @@ case records 32 complete 1024-frame stereo DSP blocks of the master group sink f
 (`<case>.master.f32`) and the returned device PCM (`<case>.f32`). No samples are shifted, trimmed or
 discarded.
 
-The 98 cases (`Cases` in `Assets/Scripts/DuckProbe.cs`) cover:
+The 100 cases (`Cases` in `Assets/Scripts/DuckProbe.cs`) cover:
 
 - Duck Volume: sidechain levels below, in and above the knee; linear ramps of the sidechain level
   for the static curve at Threshold, Ratio (expanding 0.2 and 10), Knee 0/50 and Make-up Gain;
@@ -36,6 +36,8 @@ routing. Unscaled timed sidechain snapshots, non-linear transition overrides and
 remain explicit failures. The Editor
 has no wet-mixing control for Send or Duck Volume; see docs/AUDIO.md for the 6000.0 contracts,
 measured rules and follow-ups.
+The Ratio 10-to-0.2 boundary has timed and immediate controls. The timed case also records the
+public GetFloat bits at the endpoint, so range acceptance cannot be fixed by changing that value.
 
 ## Reproduce
 
@@ -79,13 +81,13 @@ python3 tests/authored_project.py record mixerduck default --release 6000.0.71f1
 
 The tolerances are ATOL `2e-5` and RTOL `2e-4` on floats, as in the other mixer probes, and exact
 on metadata. Independent Native repeats compare float bits exactly and agree at both rates
-(12845254/12845254 values each). The canonical reference is one capture per rate in
+(13107403/13107403 values each). The canonical reference is one capture per rate in
 `Reference/unity-6000.0.71f1/rate-<rate>/`, with gzip sample files. Both raw repeats stay in the
 cache.
 
 ## Result
 
-Gate: 12845254/12845254 values at 48000 Hz and at 44100 Hz. Independent Editor repeats agree exactly;
+Gate: 13107403/13107403 values at 48000 Hz and at 44100 Hz. Independent Editor repeats agree exactly;
 every earlier reference value and sample is retained. The strict comparison keeps one-step
 device PCM flips whose master floats pass, listed in docs/COMPATIBILITY_GAPS.md. `pcm.py` checks
 every device sample against saturating truncation of its own master sample; both captures have

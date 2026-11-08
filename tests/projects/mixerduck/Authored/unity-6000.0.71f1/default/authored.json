@@ -54,6 +54,8 @@
   "Assets/Resources/live_makeup.mixer.meta": "f39a25df8c7dea0cd40d4c0b5e4d233df2bef0dfc9836e98989e00deda3f5ae1",
   "Assets/Resources/live_ratio.mixer": "40e21dbd56783de77167962073929498b3af4fbe4c05bf9a23dcc1d0c526c1a3",
   "Assets/Resources/live_ratio.mixer.meta": "8de6c12fc7753d1a8358afca16f0d926e8a970790237a7b161cb62a7b47bebae",
+  "Assets/Resources/live_ratio_min.mixer": "3513c21462c5673e51873d5769fa24ab8d165811b84f202d04c52290cdddb685",
+  "Assets/Resources/live_ratio_min.mixer.meta": "fcab8b032432914cd1412bea5dc669c7dbcb98d6102e52493cba3c92c78f252a",
   "Assets/Resources/live_release.mixer": "62eef29e2b12d2b771b02cbd909b05b34283752ace7bfd29f239397b597365f4",
   "Assets/Resources/live_release.mixer.meta": "206e81fc5093ec5def62aa8ed86f6eea64d1eef370e257e179f72a2e18ea2025",
   "Assets/Resources/live_send.mixer": "ba1e99faf32c91c7c87b316acecdc6dda5632e1da4ae6f9fd3936d9ba9c7013f",
@@ -180,6 +182,8 @@
   "Assets/Resources/timed_mix.mixer.meta": "279f555ad74324fb0a2db8a44f7d00f16dbf6397cafee5af9ddd677b4b2708c9",
   "Assets/Resources/timed_ratio.mixer": "a43bd3dcb6b330fe30fa8722ab103a5fd77eee5fe608a94331b8ea342b12d633",
   "Assets/Resources/timed_ratio.mixer.meta": "b3f932cd74b6bfb258790ffdaf720af178e44d2814bfe6a952e8a2db13fe80e9",
+  "Assets/Resources/timed_ratio_min.mixer": "8120d0a999a634edf498ad4b52671808b8dc168dc0dcb5db1285c41023814fde",
+  "Assets/Resources/timed_ratio_min.mixer.meta": "d0b0b203069820edbfe5bafdf7eb0b948e29809173befc003aaa6b1ae71416cf",
   "Assets/Resources/timed_release.mixer": "ba3a4916d98a69682dcbbf7cb1ad237c0d0415c3e5736d357ceb1b6c1e0ea628",
   "Assets/Resources/timed_release.mixer.meta": "3000da59963512ac9de054927628258c7b56c3062d8a2def9e5bc40e6b742a32",
   "Assets/Resources/timed_send.mixer": "eff09660f94ded54bf026ae9d15121a3cfe984da599f9d30a69d910ceb1f045d",
@@ -231,7 +235,7 @@
  },
  "fixture": {
   "Assets/Editor/ProbeRunner.cs": "cd2f5f76a930784e7d6dab2b67c5c9857a629470d8e1dceda6d31d166084df82",
-  "Assets/Scripts/DuckProbe.cs": "fb1ec62678510e976abea9760dc1863c5a678038f04ce8892dd3d9be2dd2d7af",
+  "Assets/Scripts/DuckProbe.cs": "f98a1d2c52df371652a60f54c6086fca14dc9db0b1a58492053c5d7d34e69543",
   "Packages/manifest.json": "86577de3e8b3b1d8925d7d77df7880352ee16a5ed0d4e06447d1a54c19b9e76d",
   "ProjectSettings/ProjectVersion.txt": "03282bc6dd30504666a9e67cce65afe9bac94643abcc8f1e62ddf9cf75017c6a",
   "tests/projects/mixerduck/native.py": "7f1d369ea2c15279b75eef87ad4fa89cd2dd49768366971de27fc58d04776492"
