@@ -1,4 +1,5 @@
 using System;
+using Unbound.Runtime;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Xunit;
@@ -7,6 +8,20 @@ namespace Unbound.Tests
 {
     public class CommandBufferDevicesTests
     {
+        [Fact]
+        public void MeshExpansionRejectsNontrivialInstanceMultipliers()
+        {
+            try
+            {
+                GfxStream.InstanceMultiplier(2);
+                Assert.Equal("Unbound: instance multipliers on CPU-expanded mesh instances are not supported.",
+                    Assert.Throws<NotSupportedException>(() => GfxStream.MeshInstance(0)).Message);
+                GfxStream.InstanceMultiplier(0);
+                GfxStream.MeshInstance(1);
+            }
+            finally { GfxStream.InstanceMultiplier(1); }
+        }
+
         [Fact]
         public void MissingDeviceCapabilitiesStayConsistent()
         {

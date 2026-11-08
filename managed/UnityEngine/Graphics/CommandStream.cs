@@ -303,17 +303,23 @@ namespace Unbound.Runtime
             I32(Math.Max(slice, 0));
         }
 
-        /// <summary>The next draw is instance <paramref name="index"/> of a mesh-instancing call:
-        /// its first logical instance, and the element its scalar uniforms take from the draw's
-        /// property arrays (render protocol 12).</summary>
+        static uint s_InstanceMultiplier = 1;
+
         internal static void InstanceMultiplier(uint multiplier)
         {
+            s_InstanceMultiplier = Math.Max(1u, multiplier);
             U8(InstanceMultiplierOp);
             U32(multiplier);
         }
 
+        /// <summary>The next draw is instance <paramref name="index"/> of a mesh-instancing call:
+        /// its first logical instance, and the element its scalar uniforms take from the draw's
+        /// property arrays (render protocol 12).</summary>
         internal static void MeshInstance(uint index)
         {
+            // Expanded draws cannot supply another instance's matrix and property element.
+            if (s_InstanceMultiplier != 1)
+                throw new NotSupportedException("Unbound: instance multipliers on CPU-expanded mesh instances are not supported.");
             U8(MeshInstanceOp);
             U32(index);
         }

@@ -545,3 +545,5 @@ ScriptedImporters, UnityWebRequest core (multipart, certificates, timeouts, file
 
 Deferred by decision (see ROADMAP): VFX Graph, XR, LOD cross-fades, Terrain leftovers, console
 codecs.
+
+Q64 follow-up: nontrivial instance multipliers on CPU-expanded mesh instances fail explicitly until GPU mesh data replay can supply every logical instance. `cmdbuffers` records two distinct transforms/colors and raw IDs at multipliers 0, 1, 2, 3; procedural multiplier support is separate.

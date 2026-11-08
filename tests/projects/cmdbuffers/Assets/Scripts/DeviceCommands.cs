@@ -6,6 +6,35 @@ using UnityEngine.Rendering;
 
 public partial class CmdBuffersProbe
 {
+    void MeshMultiplier(RenderTexture image)
+    {
+        var quad = Keep(new Mesh());
+        quad.vertices = new[] { new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(1, 1, 0), new Vector3(0, 1, 0) };
+        quad.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+        var mat = Keep(new Material(Resources.Load<Shader>("Instanced")) { enableInstancing = true });
+        var ids = Keep(new Material(Resources.Load<Shader>("InstancedIds")) { enableInstancing = true });
+        var matrices = Enumerable.Range(0, 4).Select(i => Matrix4x4.TRS(new Vector3(-1 + 0.5f * i, -1, 0), Quaternion.identity, new Vector3(0.5f, 2, 1))).ToArray();
+        var colors = new[] { Rgb(200, 20, 40), Rgb(30, 180, 50), Rgb(40, 60, 210), Rgb(220, 200, 70) };
+        var block = new MaterialPropertyBlock();
+        block.SetVectorArray("_Color", colors);
+        foreach (uint multiplier in new uint[] { 0, 1, 2, 3 })
+        foreach (bool raw in new[] { false, true })
+        {
+            string key = "device.multiplier.mesh." + multiplier + (raw ? ".ids" : ".colors");
+            using var cmd = new CommandBuffer();
+            cmd.SetRenderTarget(image);
+            cmd.ClearRenderTarget(false, true, Color.clear);
+            cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
+            cmd.SetInstanceMultiplier(multiplier);
+            cmd.DrawMeshInstanced(quad, 0, raw ? ids : mat, 0, matrices, 2, raw ? null : block);
+            Try(key, () => { Graphics.ExecuteCommandBuffer(cmd); Value(key + ".ok", "true"); });
+            Value(key + ".pixels", Read(image));
+            using var reset = new CommandBuffer();
+            reset.SetInstanceMultiplier(1);
+            Graphics.ExecuteCommandBuffer(reset);
+        }
+    }
+
     void DeviceCommands()
     {
         Value("device.rayTracing", B(SystemInfo.supportsRayTracing));
@@ -43,6 +72,7 @@ public partial class CmdBuffersProbe
             Case("device.multiplier." + n, cmd => cmd.SetInstanceMultiplier(n));
             Case("device.multiplier.twoInstances." + n, cmd => cmd.SetInstanceMultiplier(n), 2);
         }
+        MeshMultiplier(image);
         foreach (int n in new[] { -1, 0, 1, 2, 3 })
             Case("device.late.projection." + n, cmd => cmd.SetLateLatchProjectionMatrices(n < 0 ? null : Enumerable.Repeat(Matrix4x4.identity, n).ToArray()));
         Case("device.occlusion", cmd => cmd.DrawOcclusionMesh(new RectInt(0, 0, 8, 8)));

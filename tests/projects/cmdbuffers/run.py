@@ -115,6 +115,16 @@ def verify(candidate, safe_append_skip=False):
                 'NotSupportedException: Unbound: side-by-side stereo clipping without an XR device is not supported.'
                 or act.get(stereo + '.pixels') != ref.get('device.stereo.0.pixels')):
             return code or 1
+    for multiplier in (2, 3):
+        for field in ('colors', 'ids'):
+            key = f'device.multiplier.mesh.{multiplier}.{field}'
+            if key + '.ok' not in ref:
+                continue
+            expected.update({key + '.log', key + '.pixels'})
+            if (act.get(key + '.ok') is not True or act.get(key + '.log') !=
+                    ['Exception: NotSupportedException: Unbound: instance multipliers on CPU-expanded mesh instances are not supported.']
+                    or act.get(key + '.pixels') != ref.get('device.stereo.1.pixels')):
+                return code or 1
     plugin_message = ('NotSupportedException: Unbound: native rendering plugin callbacks require '
                       'graphics-device interop, which is not supported.')
     plugins = ['device.plugin.blit.callback', 'device.plugin.texture.callback',
