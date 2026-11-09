@@ -8,8 +8,9 @@ into `REFLECTION_PROBES_OUT`:
   "Convolution Type: Specular" (6:1 strips, readable, uncompressed): float `Noise32` (six mips)
   and `Noise16` (five), byte `NoiseSrgb32` and `NoiseLinear32` (the same pixels, sRGB on and off).
 * **Realtime convolution** (`realtime_sky32.bin`, `realtime.*`): a realtime probe (resolution 32,
-  HDR) of a skybox showing the `Sky32` cubemap (float texels within 0..1: Unbound still clamps an
-  HDR skybox at 1, an open gap), its cube's mips read back as half floats.
+  HDR) of a skybox showing the `Sky32` cubemap (float texels within 0..1), its cube's mips read
+  back as half floats; `realtime_hdr_sky32.bin`: the same at exposure 4, values above 1;
+  `realtime_texels_sky32.bin`: a run-time RGBAFloat cubemap with texels from 0.5 to 8.
 * **Probe weights** (`weights.*`): `Renderer.GetClosestReflectionProbes` for cubes along two
   overlapping custom probes (A over x -2..2, B over 0..4): equal importance, B half the size, no
   blend distance, B more important, and a third probe C between them.

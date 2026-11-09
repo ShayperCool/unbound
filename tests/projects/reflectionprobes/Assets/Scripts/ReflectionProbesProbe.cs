@@ -40,7 +40,21 @@ public class ReflectionProbesProbe : MonoBehaviour
         // recomputes the ambient probe.
         try { ProbeConstants(); } catch (Exception e) { Value("sh.fatal", Quote(e.ToString())); }
         try { ImportedMips(); } catch (Exception e) { Value("import.fatal", Quote(e.ToString())); }
-        yield return RealtimeMips();
+        yield return RealtimeMips("realtime", sky, 1f);
+        // Exposure 4: the skybox draws values above 1 (an HDR probe keeps them).
+        yield return RealtimeMips("realtime_hdr", sky, 4f);
+        // An RGBAFloat cubemap made at run time with texels from 0.5 to 8.
+        var hot = new Cubemap(16, TextureFormat.RGBAFloat, false);
+        for (int face = 0; face < 6; face++)
+        {
+            var texels = new Color[16 * 16];
+            for (int i = 0; i < texels.Length; i++)
+                texels[i] = new Color(0.5f + face * 1.5f, 0.5f + (i % 16) * 0.5f, 0.5f + (i / 16) * 0.25f, 1f);
+            hot.SetPixels(texels, (CubemapFace)face);
+        }
+        hot.Apply(false);
+        yield return RealtimeMips("realtime_texels", hot, 1f);
+        Destroy(hot);
         yield return Weights();
         yield return Frames();
         yield return GlossySpheres();
@@ -77,14 +91,14 @@ public class ReflectionProbesProbe : MonoBehaviour
 
     static byte Byte(float v) => (byte)Mathf.RoundToInt(Mathf.Clamp01(v) * 255f);
 
-    /// <summary>A realtime probe of the <see cref="sky"/> skybox (texels within 0..1) (nothing else drawn), its cube's
-    /// mips read back as half floats.</summary>
-    IEnumerator RealtimeMips()
+    /// <summary>A realtime probe of a Skybox/Cubemap skybox of <paramref name="source"/> at an exposure
+    /// (nothing else drawn), its cube's mips read back as half floats (<c>&lt;name&gt;_sky32.bin</c>).</summary>
+    IEnumerator RealtimeMips(string name, Cubemap source, float exposure)
     {
         var skybox = new Material(Shader.Find("Skybox/Cubemap"));
-        skybox.SetTexture("_Tex", sky);
+        skybox.SetTexture("_Tex", source);
         skybox.SetColor("_Tint", new Color(0.5f, 0.5f, 0.5f, 0.5f));
-        skybox.SetFloat("_Exposure", 1f);
+        skybox.SetFloat("_Exposure", exposure);
         RenderSettings.skybox = skybox;
         var probe = new GameObject("realtime").AddComponent<ReflectionProbe>();
         probe.mode = ReflectionProbeMode.Realtime;
@@ -97,10 +111,10 @@ public class ReflectionProbesProbe : MonoBehaviour
         int id = probe.RenderProbe();
         for (int i = 0; i < 10 && !probe.IsFinishedRendering(id); i++) yield return null;
         var cube = probe.realtimeTexture;
-        Value("realtime.texture", cube == null ? "null" : Quote(cube.format + " " + cube.width + " mips " + cube.mipmapCount));
+        Value(name + ".texture", cube == null ? "null" : Quote(cube.format + " " + cube.width + " mips " + cube.mipmapCount));
         if (cube != null)
         {
-            using var w = new BinaryWriter(File.Create(Path.Combine(output, "realtime_sky32.bin")));
+            using var w = new BinaryWriter(File.Create(Path.Combine(output, name + "_sky32.bin")));
             w.Write(cube.width); w.Write(cube.mipmapCount); w.Write(2);
             for (int face = 0; face < 6; face++)
                 for (int mip = 0; mip < cube.mipmapCount; mip++)

@@ -67,6 +67,8 @@
 {"k":"import.NoiseSrgb32.format","v":"RGBA32 32 mips 6"}
 {"k":"import.NoiseLinear32.format","v":"RGBA32 32 mips 6"}
 {"k":"realtime.texture","v":"ARGBHalf 32 mips 6"}
+{"k":"realtime_hdr.texture","v":"ARGBHalf 32 mips 6"}
+{"k":"realtime_texels.texture","v":"ARGBHalf 32 mips 6"}
 {"k":"weights.equal.x-1.5","v":[["A",1]]}
 {"k":"weights.equal.x0","v":[["A",0.6666667],["B",0.3333333]]}
 {"k":"weights.equal.x0.5","v":[["A",0.5],["B",0.5]]}
