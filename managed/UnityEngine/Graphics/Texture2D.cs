@@ -287,6 +287,7 @@ namespace UnityEngine
                     return converted;
                 }
             }
+            if (m_Pixels == null && m_Hdr == null && DecodeTopBlocks() is { } blockPixels) return blockPixels;
             if (m_Pixels == null && m_Hdr == null && m_AssetGuid != null) FetchImportedPixels();
             if (m_Pixels != null) return (Color32[])m_Pixels.Clone();
             if (m_Hdr != null)

@@ -799,8 +799,9 @@ pub fn texture_storage(
     }
 }
 
-/// A block-compressed packet as RGBA8, decoded as the Editor's CPU reads do (colour codes
-/// sampled through an sRGB view in linear projects, the others linear; BC6H clamped to 0..1).
+/// A block-compressed packet as RGBA8, decoded as a GPU samples it (BC3 colour always in
+/// four-colour mode; colour codes sampled through an sRGB view in linear projects, the others
+/// linear; BC6H clamped to 0..1).
 fn decode_blocks(t: &owned::Texture) -> owned::Texture {
     use unbound_assets::texture::{BlockFormat, decode_level_as_gpu};
     let format = match t.format {

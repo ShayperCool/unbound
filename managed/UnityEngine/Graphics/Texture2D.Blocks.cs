@@ -84,15 +84,7 @@ namespace UnityEngine
             if (format is TextureFormat.BC6H or TextureFormat.BC7)
             {
                 // One block decoded as a 4x4 level.
-                var json = Native.Call("texture-decode-blocks", JsonSerializer.Serialize(new
-                {
-                    format = (int)format,
-                    width = 4,
-                    height = 4,
-                    data = Convert.ToBase64String(block),
-                }));
-                using var doc = JsonDocument.Parse(json);
-                var rgba = Convert.FromBase64String(doc.RootElement.GetProperty("rgba").GetString());
+                var rgba = DecodeBlockRgba(block, 4, 4);
                 texel = new Color32(rgba[k * 4], rgba[k * 4 + 1], rgba[k * 4 + 2], rgba[k * 4 + 3]);
             }
             else texel = BlockFormats.DecodeTexel(format, block, k);
@@ -100,19 +92,50 @@ namespace UnityEngine
             return Texture2DTexels.Pixel(m_Format, texel);
         }
 
-        /// <summary>Decodes one level of blocks into the pixel cells.</summary>
-        void DecodeBlockLevel(ReadOnlySpan<byte> blocks, int mip)
+        /// <summary>A `width` x `height` level of blocks decoded to RGBA8 as GetPixels32 reads it
+        /// (BC6H clamped to 0..1).</summary>
+        byte[] DecodeBlockRgba(ReadOnlySpan<byte> blocks, int width, int height)
         {
-            int w = MipWidth(mip), h = MipHeight(mip);
             var json = Native.Call("texture-decode-blocks", JsonSerializer.Serialize(new
             {
                 format = (int)m_SourceFormat.Value,
-                width = w,
-                height = h,
+                width,
+                height,
                 data = Convert.ToBase64String(blocks),
             }));
             using var doc = JsonDocument.Parse(json);
-            var rgba = Convert.FromBase64String(doc.RootElement.GetProperty("rgba").GetString());
+            return Convert.FromBase64String(doc.RootElement.GetProperty("rgba").GetString());
+        }
+
+        /// <summary>The top level's pixels decoded from the blocks, leaving the texture's cells
+        /// alone (engine reads of an unreadable texture); null when there are no blocks.</summary>
+        Color32[] DecodeTopBlocks()
+        {
+            if (!SourceBlocks || BlockFormats.BlockBytes(m_SourceFormat.Value) == 0) return null;
+            var blocks = CurrentBlocks();
+            if (blocks == null) return null;
+            var format = m_SourceFormat.Value;
+            var pixels = new Color32[m_Width * m_Height];
+            if (format is TextureFormat.BC6H or TextureFormat.BC7)
+            {
+                var rgba = DecodeBlockRgba(new ReadOnlySpan<byte>(blocks, 0, SourceLevelSize(0)), m_Width, m_Height);
+                for (int i = 0; i < pixels.Length; i++) pixels[i] = new Color32(rgba[i * 4], rgba[i * 4 + 1], rgba[i * 4 + 2], rgba[i * 4 + 3]);
+                return pixels;
+            }
+            int size = BlockFormats.BlockBytes(format), across = (m_Width + 3) / 4;
+            for (int y = 0; y < m_Height; y++)
+            for (int x = 0; x < m_Width; x++)
+            {
+                var block = new ReadOnlySpan<byte>(blocks, ((y / 4) * across + x / 4) * size, size);
+                pixels[y * m_Width + x] = BlockFormats.DecodeTexel(format, block, (y % 4) * 4 + x % 4);
+            }
+            return pixels;
+        }
+
+        /// <summary>Decodes one level of blocks into the pixel cells.</summary>
+        void DecodeBlockLevel(ReadOnlySpan<byte> blocks, int mip)
+        {
+            var rgba = DecodeBlockRgba(blocks, MipWidth(mip), MipHeight(mip));
             if (Texture2DTexels.FloatStored(m_Format))
             {
                 Stubs.Ignored("Texture2D BC6H blocks", "written BC6H blocks read back clamped to 0..1 in 8-bit steps: Unbound has no float decoding of them");
@@ -379,7 +402,7 @@ namespace UnityEngine
             int size = src.SourceBlocks ? BlockFormats.BlockBytes(src.m_SourceFormat.Value) : 0;
             if (size == 0 || !dst.SourceBlocks || BlockFormats.BlockBytes(dst.m_SourceFormat.Value) != size)
             {
-                Stubs.Ignored($"Graphics.CopyTexture {src.format} to {dst.format}", "copies nothing between formats whose blocks differ (as the Editor)");
+                Stubs.Ignored("Graphics.CopyTexture between block sizes", "copies nothing between formats whose blocks differ (as the Editor)");
                 return;
             }
             if (!src.ValidMip(srcMip) || !dst.ValidMip(dstMip)) return;
@@ -389,7 +412,7 @@ namespace UnityEngine
                 bool aligned = srcX % 4 == 0 && srcY % 4 == 0 && srcWidth % 4 == 0 && srcHeight % 4 == 0 && dstX % 4 == 0 && dstY % 4 == 0;
                 if (!aligned) return;
                 if (src.m_SourceFormat == dst.m_SourceFormat) gpuCopy();
-                else Stubs.Ignored($"Graphics.CopyTexture region {src.format} to {dst.format}", "does not copy a region between different block formats on Unbound's renderer (unmeasured)");
+                else Stubs.Ignored("Graphics.CopyTexture region between block formats", "does not copy a region between different block formats on Unbound's renderer (unmeasured)");
                 return;
             }
             var from = src.CurrentBlocks();
@@ -407,8 +430,9 @@ namespace UnityEngine
             int levels = allLevels ? Math.Min(src.m_SourceMips, dst.m_SourceMips) : 1;
             // Pixel cells the destination already has (an import's, a bundle texture's decoded
             // ones) follow the blocks; cells not made yet are decoded when first read.
+            // An unreadable destination keeps no cells (engine reads decode its blocks).
             dst.DecodeRaw();
-            bool cells = dst.m_Pixels != null || dst.m_Hdr != null || dst.m_AssetGuid != null;
+            bool cells = dst.m_Pixels != null || dst.m_Hdr != null || (dst.m_IsReadable && dst.m_AssetGuid != null);
             if (cells) dst.EnsureBlockCells();
             bool copied = false;
             for (int i = 0; i < levels; i++)

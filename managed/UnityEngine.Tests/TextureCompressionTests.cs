@@ -160,7 +160,7 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>Reinitialize to sides a block format cannot have changes nothing
-        /// (tests/projects/texturecompression reinit.*).</summary>
+        /// (tests/projects/texturecompression reinit.*; the false it returns is Unbound's, unmeasured).</summary>
         [Fact]
         public void ReinitializeRefusesSidesThatAreNotBlockSized()
         {
@@ -179,6 +179,26 @@ namespace UnityEngine.Tests
             Assert.Equal(new byte[] { 0xff, 0xff, 0, 0, 0, 0, 0, 0 }, texture.GetRawTextureData());
             Assert.Throws<UnityException>(() => texture.GetPixelData<byte>(0));
             Object.DestroyImmediate(texture);
+        }
+
+        /// <summary>The engine's own reads of an unreadable compressed texture (particle shapes,
+        /// terrain details) decode its blocks: a bundle's and one made by code and locked by Apply.</summary>
+        [Fact]
+        public void EngineReadsOfUnreadableCompressedTexturesDecodeTheirBlocks()
+        {
+            var bundled = SerializedDxt1(false);
+            Assert.All(bundled.EnginePixels32(), p => Assert.Equal(new Color32(255, 255, 255, 255), p));
+            Object.DestroyImmediate(bundled);
+
+            var made = new Texture2D(8, 4, TextureFormat.DXT1, false) { hideFlags = HideFlags.HideAndDontSave };
+            // Block 0 red, block 1 blue (index 0 = colour 0).
+            made.LoadRawTextureData(new byte[] { 0x00, 0xf8, 0, 0, 0, 0, 0, 0, 0x1f, 0x00, 0, 0, 0, 0, 0, 0 });
+            made.Apply(false, true);
+            Assert.False(made.isReadable);
+            var pixels = made.EnginePixels32();
+            Assert.Equal(new Color32(255, 0, 0, 255), pixels[1 * 8 + 3]);
+            Assert.Equal(new Color32(0, 0, 255, 255), pixels[2 * 8 + 4]);
+            Object.DestroyImmediate(made);
         }
 
         [Theory]
