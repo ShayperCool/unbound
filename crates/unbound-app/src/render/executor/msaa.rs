@@ -38,6 +38,7 @@ impl Iterator for ResolveCopies {
         }
         self.next += 1;
         Some(Copy {
+            channels: None,
             source: self.source.clone(),
             source_mip: mip,
             source_origin: wgpu::Origin3d::ZERO,

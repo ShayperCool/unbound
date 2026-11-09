@@ -576,6 +576,22 @@ pub fn unorm8_clear(format: wgpu::TextureFormat, color: [f32; 4]) -> [f32; 4] {
     color.map(|v| (v.clamp(0.0, 1.0) * 255.0 - 0.5).ceil().max(0.0) / 255.0)
 }
 
+/// [`unorm8_clear`] of a pass's clear color (each attachment's own format).
+pub fn unorm8_clear_color(format: wgpu::TextureFormat, color: wgpu::Color) -> wgpu::Color {
+    if !matches!(
+        format,
+        wgpu::TextureFormat::R8Unorm | wgpu::TextureFormat::Rg8Unorm
+    ) {
+        return color;
+    }
+    let [r, g, b, a] = unorm8_clear(
+        format,
+        [color.r, color.g, color.b, color.a].map(|v| v as f32),
+    )
+    .map(f64::from);
+    wgpu::Color { r, g, b, a }
+}
+
 /// A clear color as an integer target stores it: each channel's float bits as a signed or
 /// unsigned integer, clamped to the channel's range (measured on the Editor's OpenGLCore device:
 /// 3.0 clears R32_SInt to 0x40400000 and R8_SInt to 127, tests/projects/textureformats
@@ -700,9 +716,14 @@ pub fn norm_format(
         }
     };
     let Some(features) = features else {
-        return Err(format!(
-            "{format:?} needs the TEXTURE_FORMAT_16BIT_NORM device feature, which this device does not have"
-        ));
+        return Err(match format {
+            F::R8Unorm | F::Rg8Unorm => {
+                format!("{format:?}: the device's formats are not known yet")
+            }
+            _ => format!(
+                "{format:?} needs the TEXTURE_FORMAT_16BIT_NORM device feature, which this device does not have"
+            ),
+        });
     };
     let usages = U::TEXTURE_BINDING | U::COPY_SRC | U::COPY_DST | U::RENDER_ATTACHMENT;
     if !features.allowed_usages.contains(usages)
@@ -2118,6 +2139,17 @@ mod tests {
         assert_eq!(integer_clear(F::Rgba8Unorm, color), color);
         let half = [0.25, 0.5, 2.0, -1.0];
         assert_eq!(unorm8_clear(F::Rgba8Unorm, half), half);
+        let c = unorm8_clear_color(
+            F::R8Unorm,
+            wgpu::Color {
+                r: 0.5,
+                g: 0.25,
+                b: 0.0,
+                a: 1.0,
+            },
+        );
+        assert_eq!((c.r * 255.0).round(), 127.0);
+        assert_eq!((c.g * 255.0).round(), 64.0);
         assert_eq!(
             unorm8_clear(F::Rg8Unorm, half),
             [64.0 / 255.0, 127.0 / 255.0, 1.0, 0.0]

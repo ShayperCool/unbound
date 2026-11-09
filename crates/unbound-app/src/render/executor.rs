@@ -213,6 +213,8 @@ struct Copy {
     destination_mip: u32,
     destination_origin: wgpu::Origin3d,
     size: wgpu::Extent3d,
+    /// Set when the textures keep their texels in different 8-bit storages.
+    channels: Option<ChannelCopy>,
 }
 
 /// A texture copied texel for texel into another of its size by a draw: a render target's depth
@@ -235,11 +237,46 @@ enum CopyKind {
     UintBits,
     /// Floats as signed integer bits.
     SintBits,
+    /// 8-bit normalized texels into one channel and into four ([`ChannelCopy`]).
+    ToR8,
+    ToRgba8,
 }
 
 impl CopyKind {
+    const COUNT: usize = 6;
+
     fn index(self) -> usize {
         self as usize
+    }
+}
+
+/// How a [`Copy`] between R8 textures kept in different 8-bit storages repacks the texels:
+/// R8_UNorm is kept in one channel, R8_SRGB (sRGB in a linear project) as RGBA8. The source level
+/// is drawn into a texture of the destination's storage, which is then copied. The Unity
+/// 6000.0.71f1 Editor copies between R8_UNorm and R8_SRGB on the GPU, but leaves the GPU texels of
+/// R8G8_UNorm and R8G8_SRGB copies as they were (tests/projects/texturecompression
+/// channels.copy.*), so RG8 and RGBA8 storages are not joined.
+struct ChannelCopy {
+    /// The source's level (and slice), viewed as stored.
+    source: wgpu::TextureView,
+    size: wgpu::Extent3d,
+    kind: CopyKind,
+}
+
+/// The [`ChannelCopy`] kind from `source` storage into `destination` storage: between R8 and
+/// RGBA8.
+fn channel_copy_kind(
+    source: wgpu::TextureFormat,
+    destination: wgpu::TextureFormat,
+) -> Option<CopyKind> {
+    use wgpu::TextureFormat as F;
+    match (
+        source.remove_srgb_suffix(),
+        destination.remove_srgb_suffix(),
+    ) {
+        (F::Rgba8Unorm, F::R8Unorm) => Some(CopyKind::ToR8),
+        (F::R8Unorm, F::Rgba8Unorm) => Some(CopyKind::ToRgba8),
+        _ => None,
     }
 }
 
@@ -421,7 +458,7 @@ pub struct UnityRenderer {
     depth_target: Option<u64>,
     /// The pipelines (and their layouts) that copy a depth buffer into a float color texture:
     /// single-sample and multisampled.
-    depth_copy_pipelines: [Option<(wgpu::RenderPipeline, wgpu::BindGroupLayout)>; 4],
+    depth_copy_pipelines: [Option<(wgpu::RenderPipeline, wgpu::BindGroupLayout)>; CopyKind::COUNT],
     /// The `CopyDepth` pipelines, by (source multisampled, destination samples, per sample).
     depth_blit_pipelines: HashMap<(bool, u32, bool), (wgpu::RenderPipeline, wgpu::BindGroupLayout)>,
     /// Integer copies of float textures that integer slots read, by texture and signedness.
@@ -525,7 +562,7 @@ impl UnityRenderer {
             error_program: None,
             depth_default: [None, None],
             depth_target: None,
-            depth_copy_pipelines: [None, None, None, None],
+            depth_copy_pipelines: Default::default(),
             depth_blit_pipelines: HashMap::default(),
             bit_views: HashMap::default(),
             depth_main_groups: HashMap::default(),
@@ -934,6 +971,7 @@ impl UnityRenderer {
         let copy = self.feedback_copies[&handle].clone();
         for mip in 0..source.mip_level_count() {
             self.pre_copies.push(Copy {
+                channels: None,
                 source: source.clone(),
                 source_mip: mip,
                 source_origin: wgpu::Origin3d::ZERO,
@@ -1766,6 +1804,7 @@ impl UnityRenderer {
                 ),
             CopyKind::UintBits => BITS_COPY_WGSL.replace("SCALAR", "u32"),
             CopyKind::SintBits => BITS_COPY_WGSL.replace("SCALAR", "i32"),
+            CopyKind::ToR8 | CopyKind::ToRgba8 => CHANNEL_COPY_WGSL.into(),
         };
         let (sample_type, target_format) = match kind {
             CopyKind::Depth | CopyKind::DepthMultisampled => (
@@ -1779,6 +1818,14 @@ impl UnityRenderer {
             CopyKind::SintBits => (
                 wgpu::TextureSampleType::Float { filterable: false },
                 wgpu::TextureFormat::Rgba32Sint,
+            ),
+            CopyKind::ToR8 => (
+                wgpu::TextureSampleType::Float { filterable: false },
+                wgpu::TextureFormat::R8Unorm,
+            ),
+            CopyKind::ToRgba8 => (
+                wgpu::TextureSampleType::Float { filterable: false },
+                wgpu::TextureFormat::Rgba8Unorm,
             ),
         };
         let multisampled = kind == CopyKind::DepthMultisampled;
@@ -3557,6 +3604,7 @@ impl UnityRenderer {
             }
         }
         Some(Copy {
+            channels: None,
             source,
             source_mip: mip,
             source_origin: wgpu::Origin3d {
@@ -3611,7 +3659,13 @@ impl UnityRenderer {
             });
             return None;
         };
-        if src.format().remove_srgb_suffix() != dst.format().remove_srgb_suffix() {
+        let channel_kind = channel_copy_kind(src.format(), dst.format()).filter(|_| {
+            src.dimension() == wgpu::TextureDimension::D2
+                && dst.dimension() == wgpu::TextureDimension::D2
+        });
+        if src.format().remove_srgb_suffix() != dst.format().remove_srgb_suffix()
+            && channel_kind.is_none()
+        {
             self.warn_once(format!("copyfmt{source}-{destination}"), || {
                 format!(
                     "CopyTexture from {:?} to {:?}: the formats differ (Unity needs them compatible): skipped",
@@ -3671,7 +3725,26 @@ impl UnityRenderer {
             return None;
         }
         self.mark_resolve_copied(&destination_attachment);
+        let channels = channel_kind.map(|kind| ChannelCopy {
+            source: src.create_view(&wgpu::TextureViewDescriptor {
+                label: Some("unbound channel copy source"),
+                format: Some(src.format().remove_srgb_suffix()),
+                dimension: Some(wgpu::TextureViewDimension::D2),
+                base_mip_level: smip,
+                mip_level_count: Some(1),
+                base_array_layer: source_slice.max(0) as u32,
+                array_layer_count: Some(1),
+                ..Default::default()
+            }),
+            size: wgpu::Extent3d {
+                width: sw as u32,
+                height: sh as u32,
+                depth_or_array_layers: 1,
+            },
+            kind,
+        });
         Some(Copy {
+            channels,
             source: src,
             source_mip: smip,
             source_origin: wgpu::Origin3d {
@@ -3830,11 +3903,67 @@ impl UnityRenderer {
                     continue;
                 }
                 Op::Copy(c) => {
+                    // Texels in another storage are drawn into a level of the destination's first.
+                    let repacked = c.channels.as_ref().map(|channels| {
+                        let (pipeline, layout) = self.depth_copy_pipeline(channels.kind);
+                        let texture = device.create_texture(&wgpu::TextureDescriptor {
+                            label: Some("unbound channel copy"),
+                            size: channels.size,
+                            mip_level_count: 1,
+                            sample_count: 1,
+                            dimension: wgpu::TextureDimension::D2,
+                            format: c.destination.format().remove_srgb_suffix(),
+                            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                                | wgpu::TextureUsages::COPY_SRC,
+                            view_formats: &[],
+                        });
+                        let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("unbound channel copy"),
+                            layout: &layout,
+                            entries: &[wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: wgpu::BindingResource::TextureView(&channels.source),
+                            }],
+                        });
+                        let target = texture.create_view(&Default::default());
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some("unbound channel copy"),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: &target,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(&pipeline);
+                        rp.set_bind_group(0, &group, &[]);
+                        rp.draw(0..3, 0..1);
+                        drop(rp);
+                        texture
+                    });
+                    let (source, source_mip, source_origin) = match &repacked {
+                        Some(texture) => (
+                            texture,
+                            0,
+                            wgpu::Origin3d {
+                                z: 0,
+                                ..c.source_origin
+                            },
+                        ),
+                        None => (&c.source, c.source_mip, c.source_origin),
+                    };
                     encoder.copy_texture_to_texture(
                         wgpu::TexelCopyTextureInfo {
-                            texture: &c.source,
-                            mip_level: c.source_mip,
-                            origin: c.source_origin,
+                            texture: source,
+                            mip_level: source_mip,
+                            origin: source_origin,
                             aspect: wgpu::TextureAspect::All,
                         },
                         wgpu::TexelCopyTextureInfo {
@@ -3864,7 +3993,10 @@ impl UnityRenderer {
             // The first color, then the further ones (cleared or loaded alike; integer ones
             // store the clear color's bits).
             let load = |format| match pass.color_load {
-                wgpu::LoadOp::Clear(c) => wgpu::LoadOp::Clear(resources::integer_clear(format, c)),
+                wgpu::LoadOp::Clear(c) => wgpu::LoadOp::Clear(resources::integer_clear(
+                    format,
+                    resources::unorm8_clear_color(format, c),
+                )),
                 load => load,
             };
             let colors: Vec<_> = std::iter::once(Some(wgpu::RenderPassColorAttachment {
@@ -4210,6 +4342,24 @@ const DEPTH_MSAA_SAMPLE: u32 = 1;
 
 /// Copies a float texture's values into an integer texture of its size as their bits, texel for
 /// texel (`SCALAR`: `u32` or `i32`).
+/// Copies 8-bit normalized texels into a texture of their level's size in another channel count
+/// ([`ChannelCopy`]).
+const CHANNEL_COPY_WGSL: &str = r#"
+@group(0) @binding(0) var source: texture_2d<f32>;
+
+@vertex
+fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
+    let uv = vec2<f32>(f32((i << 1u) & 2u), f32(i & 2u));
+    return vec4<f32>(uv * 2.0 - 1.0, 0.0, 1.0);
+}
+
+@fragment
+fn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
+    let texel = textureLoad(source, vec2<i32>(p.xy), 0);
+    return texel;
+}
+"#;
+
 const BITS_COPY_WGSL: &str = r#"
 @group(0) @binding(0) var source: texture_2d<f32>;
 
@@ -4459,6 +4609,24 @@ fn external_index_refusal(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Copies between R8 storages repack their texels; others (RG8 with RGBA8) do not.
+    #[test]
+    fn channel_copies_join_r8_and_rgba8_storages() {
+        use wgpu::TextureFormat as F;
+        assert_eq!(
+            channel_copy_kind(F::Rgba8UnormSrgb, F::R8Unorm),
+            Some(CopyKind::ToR8)
+        );
+        assert_eq!(
+            channel_copy_kind(F::R8Unorm, F::Rgba8Unorm),
+            Some(CopyKind::ToRgba8)
+        );
+        assert_eq!(channel_copy_kind(F::Rg8Unorm, F::Rgba8Unorm), None);
+        assert_eq!(channel_copy_kind(F::Rgba8Unorm, F::Rg8Unorm), None);
+        assert_eq!(channel_copy_kind(F::R8Unorm, F::Rg8Unorm), None);
+        assert_eq!(channel_copy_kind(F::Rgba16Float, F::R8Unorm), None);
+    }
 
     #[test]
     fn forced_anisotropy_spares_level_zero() {
