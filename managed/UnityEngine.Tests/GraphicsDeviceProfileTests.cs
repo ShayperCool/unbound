@@ -30,6 +30,9 @@ namespace Unbound.Tests
         public void VulkanReversesDepthAndFlipsRenderTextures()
         {
             var vulkan = GraphicsDeviceProfile.Vulkan;
+            // Shadow casters' clip-space bias (lighting shadow_globals_*: half, negated).
+            Assert.Equal(-0.5f, vulkan.ClipDepthSlope);
+            Assert.Equal(1f, GraphicsDeviceProfile.OpenGLCore.ClipDepthSlope);
             var p = vulkan.GpuProjection(s_Perspective, false);
             Assert.Equal(0.000300049782f, p.m22);
             Assert.Equal(0.300090015f, p.m23);

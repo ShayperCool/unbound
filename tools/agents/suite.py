@@ -320,7 +320,8 @@ def recipes(release):
                           env={'PARTICLES_PROBE_OUT': '{work}/out.jsonl', 'PARTICLES_IMAGE_DIR': '{work}/images'}),
                       py('compare.py', single_ref(), '{work}/out.jsonl', verdict='summary'),
                       py('compare_images.py', ref('images'), '{work}/images', verdict='none')]
-    R['lighting'] = [run('--frames', '10', '--size', '320x180', '--no-watch', env={'LIGHTING_PROBE_OUT': '{work}/out'}),
+    R['lighting'] = [run('--frames', '10', '--size', '320x180', '--no-watch', '--force-glcore',
+                         env={'LIGHTING_PROBE_OUT': '{work}/out'}),
                      py('particles/compare_images.py', ref('images'), '{work}/out', verdict='none')]
     # On the Vulkan device too, against the Vulkan Editor's capture (shadow biases differ).
     if (PROJECTS/'lighting/Reference'/f'unity-{release}'/'vulkan').is_dir():

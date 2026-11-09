@@ -18,7 +18,7 @@ The Vulkan Editor's capture (`Reference/unity-6000.0.71f1/vulkan`, two identical
 recorded the same way with `-force-vulkan` on the GPU-backed display :0. Its images match the
 OpenGL Core ones (mean difference at most 0.01); its shadow globals differ: the directional
 `unity_LightShadowBias.x` is half the OpenGL Core one, negated (clip depth from 0 to 1, reversed),
-a point light's half of it, a spot light's the same, and the shadow matrices map depth reversed.
+as is a spot light's; a point light's is half of it; and the shadow matrices map depth reversed.
 
 Run Unbound (in a window: the images need a GPU) and compare:
 

@@ -389,8 +389,10 @@ namespace Unbound.Runtime
             SetupCamera(TextureHandles.Of(map), new Rect(0, 0, size, size), CameraClearFlags.Depth, Color.black, view, projection, 0);
             RunLightEvent(camera, light, LightEvent.BeforeShadowMap, map);
             RunLightEvent(camera, light, LightEvent.BeforeShadowMapPass, map, ShadowMapPass.Spotlight);
-            // Twice the bias in clip space, no normal offset (measured, shadow_globals_spot_*).
-            GfxStream.GlobalVector("unity_LightShadowBias", new Vector4(2f * light.shadowBias, 0f, 0f, 0f));
+            // Twice the bias in clip-space depth, scaled by the device's clip depth as a
+            // directional light's, no normal offset (measured, shadow_globals_spot_*).
+            float spotBias = 2f * light.shadowBias * Unbound.Runtime.GraphicsDeviceProfile.Current.ClipDepthSlope;
+            GfxStream.GlobalVector("unity_LightShadowBias", new Vector4(spotBias, 0f, 0f, 0f));
             var p = t.position;
             GfxStream.GlobalVector("_WorldSpaceLightPos0", new Vector4(p.x, p.y, p.z, 1f));
             DrawCasters();
@@ -444,8 +446,8 @@ namespace Unbound.Runtime
             CollectCasters(light, context);
             GfxStream.DepthBias(1f, 1f);
             GfxStream.Keyword("SHADOWS_CUBE", true);
-            // Twice the bias, scaled by the size of the device's clip depth range (Vulkan: half;
-            // a spot light's is the same on both: shadow_globals_point_* and _spot_*).
+            // Twice the bias, a world distance the built-in shaders do not read for depth cube
+            // maps; half of it on Vulkan, unsigned (measured: shadow_globals_point_*).
             float pointBias = 2f * light.shadowBias * Mathf.Abs(Unbound.Runtime.GraphicsDeviceProfile.Current.ClipDepthSlope);
             GfxStream.GlobalVector("unity_LightShadowBias", new Vector4(pointBias, 0f, 0f, 0f));
             GfxStream.GlobalVector("_WorldSpaceLightPos0", new Vector4(p.x, p.y, p.z, 1f));
