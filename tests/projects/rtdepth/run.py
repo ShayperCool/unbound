@@ -10,6 +10,11 @@
 --mode controls records the probe's controls (RTDEPTH_PROBE_MODE=controls) instead; their
 reference is Reference/unity-R/controls.
 
+--device selects the graphics device of both sides: opengl (the default; the Linux Editor's own
+device, on a private Xvfb through VirtualGL; Unbound with --force-glcore) or vulkan (the Editor
+with -force-vulkan on the GPU-backed display :0, one capture after the other; Unbound with
+--force-vulkan). Vulkan references are Reference/unity-R/vulkan (and vulkan/controls).
+
 Every capture runs on a fresh copy of the probe's Assets/Packages/ProjectSettings under
 $XDG_CACHE_HOME/unbound/validation/runs/rtdepth/<label>; nothing is written here except by
 publish, which refuses to overwrite an existing reference. Editors run through the shared
@@ -34,6 +39,7 @@ PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 MODE = 'probe'
+DEVICE = 'opengl'
 
 
 def copy_project(dest):
@@ -92,7 +98,43 @@ def create(work):
     return code
 
 
+def xwayland_auth():
+    """The authority file of the GPU-backed display :0 (the headless shell's Xwayland)."""
+    for process in Path('/proc').glob('[0-9]*'):
+        try:
+            argv = (process/'cmdline').read_bytes().split(b'\0')
+        except (FileNotFoundError, PermissionError):
+            continue
+        if argv and argv[0].endswith(b'Xwayland') and b':0' in argv and b'-auth' in argv:
+            return argv[argv.index(b'-auth')+1].decode()
+    sys.exit('no Xwayland on :0 for the Vulkan Editor')
+
+
+def editor_vulkan(work):
+    """The Editor on Vulkan, windowed on :0, one capture after the other."""
+    codes = []
+    for repeat in ('native1', 'native2'):
+        project = copy_project(work/'projects'/repeat)
+        out = fresh_output(work/repeat)
+        env = dict(os.environ, DISPLAY=':0', XAUTHORITY=xwayland_auth(), RTDEPTH_PROBE_OUT=str(out),
+                   PWD=str(project), RTDEPTH_PROBE_MODE=MODE)
+        job = subprocess.Popen(
+            [str(LAUNCHER), '--kind', 'editor-gpu', 'timeout', '-s', 'KILL', '1800', str(editor_path()),
+             '-force-vulkan', '-projectPath', str(project), '-logFile', str(out/'editor.log')], cwd=project, env=env)
+        try:
+            codes.append(job.wait())
+        finally:
+            if job.poll() is None:
+                job.kill()
+            stop_compilers(project)
+        (out/'exit.txt').write_text(f'{codes[-1]}\n')
+    print('editor exits', codes)
+    return int(any(codes))
+
+
 def editor(work):
+    if DEVICE == 'vulkan':
+        return editor_vulkan(work)
     started = []
     try:
         for repeat in ('native1', 'native2'):
@@ -127,7 +169,8 @@ def incomplete(repeat, editor=True):
     """Why a capture cannot be published (None when it is complete)."""
     if editor:
         log = (repeat/'editor.log').read_text(errors='replace') if (repeat/'editor.log').exists() else ''
-        if 'NVIDIA' not in next((line for line in log.splitlines() if 'Renderer:' in line), ''):
+        device = '[Vulkan init] Physical Device' if DEVICE == 'vulkan' else 'Renderer:'
+        if 'NVIDIA' not in next((line for line in log.splitlines() if device in line), ''):
             return 'NVIDIA GPU renderer was not verified'
         exit_file = repeat/'exit.txt'
         if not exit_file.exists() or exit_file.read_text().strip() != '0':
@@ -171,7 +214,8 @@ def publish(work):
         sys.exit('the two Editor captures differ in values; not publishing')
     if images(a) != images(b) or any((a/n).read_bytes() != (b/n).read_bytes() for n in images(a)):
         sys.exit('the two Editor captures differ in images; not publishing')
-    target = reference_root(PROBE)/'controls' if MODE == 'controls' else reference_root(PROBE)
+    target = reference_root(PROBE)/'vulkan' if DEVICE == 'vulkan' else reference_root(PROBE)
+    target = target/'controls' if MODE == 'controls' else target
     if target.exists():
         sys.exit(f'refusing to overwrite reference: {target}')
     target.mkdir(parents=True)
@@ -190,7 +234,8 @@ def unbound(work):
     env = dict(os.environ, RTDEPTH_PROBE_OUT=str(out), RTDEPTH_PROBE_MODE=MODE)
     with (out/'unbound.log').open('w') as log:
         result = subprocess.run([str(LAUNCHER), 'timeout', '900', cli, 'run', '-p', str(project),
-                                 '--no-watch', '--frames', '600', '--size', '64x32'],
+                                 '--no-watch', '--frames', '600', '--size', '64x32',
+                                 '--force-vulkan' if DEVICE == 'vulkan' else '--force-glcore'],
                                 env=env, stdout=log, stderr=subprocess.STDOUT)
     print('unbound exit', result.returncode, out)
     return result.returncode
@@ -202,9 +247,11 @@ def main():
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
     parser.add_argument('--mode', dest='probe_mode', choices=('probe', 'controls'), default='probe')
+    parser.add_argument('--device', choices=('opengl', 'vulkan'), default='opengl')
     args = parser.parse_args()
-    global MODE
+    global MODE, DEVICE
     MODE = args.probe_mode
+    DEVICE = args.device
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release

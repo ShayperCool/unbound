@@ -357,15 +357,19 @@ def recipes(release):
                        '{work}/out/texture-samples.jsonl'))
     R['urp'].append(py('compare_constants.py', ref('scenarios/light-order.jsonl'),
                        '{work}/out/light-order.jsonl'))
-    # The rendering path scenarios (a run of their own) against the Editor's OpenGL Core device,
-    # which Unbound's device is; paths-vulkan (URP's Deferred path) has no Unbound counterpart.
-    paths = PROJECTS/'urp/Reference'/f'unity-{release}'/'paths-opengl'
-    if paths.is_dir():
-        R['urp'].append(run('--no-watch', '--frames', '200', '--size', '320x180',
-                            env={'URP_PROBE_DEFERRED_DIR': '{work}/paths'}))
-        R['urp'] += [py('urp/compare.py', str(png), '{work}/paths/'+png.name, verdict='none')
+    # The rendering path scenarios (a run of their own) on each graphics device the Editor
+    # recorded them on: OpenGL Core (Deferred falls back to Forward) and Vulkan (URP's Deferred
+    # path). Each run selects its device explicitly.
+    for device, flag in (('opengl', '--force-glcore'), ('vulkan', '--force-vulkan')):
+        paths = PROJECTS/'urp/Reference'/f'unity-{release}'/f'paths-{device}'
+        if not paths.is_dir():
+            continue
+        out = '{work}/paths' + ('' if device == 'opengl' else '-'+device)
+        R['urp'].append(run('--no-watch', '--frames', '200', '--size', '320x180', flag,
+                            env={'URP_PROBE_DEFERRED_DIR': out}))
+        R['urp'] += [py('urp/compare.py', str(png), out+'/'+png.name, verdict='none')
                      for png in sorted(paths.glob('*.png'))]
-        R['urp'].append(py('compare_constants.py', str(paths/'modes.jsonl'), '{work}/paths/modes.jsonl'))
+        R['urp'].append(py('compare_constants.py', str(paths/'modes.jsonl'), out+'/modes.jsonl'))
     R['terrain'] = classic('TERRAIN_PROBE_OUT', 'out', ['--frames', '300', '--size', '320x180', '--no-watch'], images=True)
     R['lod'] = classic('LOD_PROBE_OUT', 'out', ['--frames', '20000', '--size', '320x180', '--no-watch'])
     R['assetbundles'] = classic('BUNDLE_PROBE_OUT', 'out', ['--frames', '600', '--size', '320x180', '--no-watch'],
@@ -470,6 +474,12 @@ def recipes(release):
                               'Authored,Bare,Bridge,BridgeObj,Cross,Cube,Cylinder,Edges,Faces,FlatPoly,FlatQuad,FlatTri,Grid,Groups,Ico,Kite,Multi,Organic,Pieces,Pinch,Polys,Prism,Seam,Slit,SlitGroups,Sphere,Star,StarObj,Tent,Torus,Triangle,TwoUV,WeldDiag,WeldQuad,WeldTri')]
     for name in ('appfacts', 'customrt', 'flares', 'gpubuffers', 'lines', 'rtdepth'):
         R[name] = guarded(folder)
+    # rtdepth on the Vulkan device too (screen and render texture orientation, reversed depth).
+    if (PROJECTS/'rtdepth/Reference'/f'unity-{release}'/'vulkan').is_dir():
+        R['rtdepth'] += [driver('run.py', 'unbound', '--release', '{release}', '--label', '{label}-vulkan',
+                                '--device', 'vulkan', env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'}),
+                         py('compare.py', '{probe}/Reference/unity-{release}/vulkan', '{runs}-vulkan/unbound',
+                            '--report', '{work}/report-vulkan.json')]
     # Keep the full strict verdict, including the disjoint cap/reversal controls.
     R['lines'] = guarded(lambda runs: [*folder(runs), '--mode', 'miter'])
     R['assetclones'] = guarded(lambda runs: ['{probe}/Reference/unity-{release}/Main.jsonl', f'{runs}/values.jsonl',
