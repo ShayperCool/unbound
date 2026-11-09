@@ -272,7 +272,7 @@ namespace Unbound.UIElements
             var v2 = UaVector.Normalized(p2 - p1);
             var b = UaVector.Normalized(new Vector2((v1.x + v2.x) * 0.5f, (v1.y + v2.y) * 0.5f));
             float cos = UaVector.Dot(v1, b) / (UaVector.Length(v1) * UaVector.Length(b));
-            float half = MathF.Acos(Math.Min(1f, Math.Max(-1f, cos)));
+            float half = MathF.Acos(UaVector.ClampUnit(cos));
             if (UaVector.Epsilon > half)
             {
                 t1 = t2 = center = Vector2.zero;
@@ -299,7 +299,9 @@ namespace Unbound.UIElements
         static float Angle(Vector2 v)
         {
             float l = UaVector.Length(v);
-            float a = MathF.Acos(Math.Min(1f, Math.Max(-1f, (v.y * 0f + v.x) / l)));
+            // A zero radius puts the tangent point on the center: 0/0 clamps to -1 (angle π), so
+            // both ends get the same angle and the arc sweeps nothing.
+            float a = MathF.Acos(UaVector.ClampUnit((v.y * 0f + v.x) / l));
             return v.y - v.x * 0f < 0f ? -a : a;
         }
     }

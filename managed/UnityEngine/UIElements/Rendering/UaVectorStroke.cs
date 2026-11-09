@@ -173,7 +173,15 @@ namespace Unbound.UIElements
             var color = m_Style.StrokeColor;
             var tint = UaVector.Tint(color);
             Vector2 us = UaVector.Normalized(start - c), ue = UaVector.Normalized(end - c);
-            if (UaVector.Epsilon < Math.Abs(step))
+            if (!(UaVector.Epsilon < Math.Abs(step)))
+            {
+                // No sweep (an arc-to of radius 0): nothing is drawn and the segments around it
+                // are not joined (measured, stroke-arcto-radius-zero). A sweepless arc whose ends
+                // differ is unmeasured; it is treated the same.
+                m_Starts[index] = default;
+                m_Ends[index] = default;
+                return;
+            }
             {
                 float ratio = sweep / Math.Abs(step);
                 int n = Math.Abs((int)(ratio >= 0f ? ratio + AlmostOne : ratio));
@@ -467,7 +475,7 @@ namespace Unbound.UIElements
             Vector2 d1 = a.Dir, d2 = b.Dir;
             float l1 = UaVector.Length(d1), l2 = UaVector.Length(d2);
             float cos = (-(d1.y * d2.y) - d1.x * d2.x) / (l1 * l2);
-            float angle = MathF.Acos(Math.Min(1f, Math.Max(-1f, cos)));
+            float angle = MathF.Acos(UaVector.ClampUnit(cos));
             float limit = MathF.Asin(1f / m_Style.MiterLimit) * 2f;
             if (!(angle > limit))
             {
@@ -554,12 +562,18 @@ namespace Unbound.UIElements
             float lD = MathF.Sqrt(d.y * d.y + d.x * d.x);
             var u = new Vector2(d.y / lD * extent, extent * (-d.x / lD));
             if (cross < 0f) u = -u;
-            Fan(a.P1, a.Color, o2, o2 + u, o3 + u, o3);
+            Fan(a.P1, a.Color, o2, o2 + u, o3 + u, o3, squareBounds: false);
+            // Bounds: half the line width out along the corner's bisector.
+            var m = (o2 + o3) * 0.5f - a.P1;
+            float l2 = m.x * m.x + m.y * m.y;
+            if (UaVector.TangentEpsilon * UaVector.TangentEpsilon >= l2) return;
+            float l = MathF.Sqrt(l2);
+            m_Mesh.AddBounds(m.x / l * half + a.P1.x, half * (m.y / l) + a.P1.y);
         }
 
         /// <summary>A round join or cap: three triangles from the center over a quad around its
         /// circle, coverage by that circle (radius half the line width).</summary>
-        void Fan(Vector2 c, Color color, Vector2 q0, Vector2 q1, Vector2 q2, Vector2 q3)
+        void Fan(Vector2 c, Color color, Vector2 q0, Vector2 q1, Vector2 q2, Vector2 q3, bool squareBounds = true)
         {
             float half = m_Half;
             var tint = UaVector.Tint(color);
@@ -571,6 +585,7 @@ namespace Unbound.UIElements
             m_Mesh.TriangleCW(i, i + 1, i + 2);
             m_Mesh.TriangleCW(i, i + 2, i + 3);
             m_Mesh.TriangleCW(i, i + 3, i + 4);
+            if (!squareBounds) return;
             m_Mesh.AddBounds(c.x - half, c.y - half);
             m_Mesh.AddBounds(c.x + half, c.y + half);
         }
