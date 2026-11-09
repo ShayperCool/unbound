@@ -83,6 +83,7 @@ namespace Unbound.Runtime.Playables
             if (Clip == null || Clip.m_Legacy) return;
             if (!e.ReferencePose && weight > 0f && ApplyPlayableIK) e.PlayableIK = true;
             if (!e.ReferencePose && weight > 0f && ApplyFootIK) into.FootIK = true;
+            into.ClipSampled = true;
             var bound = e.Bindings.Bind(Clip);
             if (!e.ReferencePose && e.Animator.Human is { } human && Clip.HasHumanCurves && Clip.length > 0f)
             {
@@ -621,6 +622,8 @@ namespace Unbound.Runtime.Playables
                 finally { e.Combining--; }
                 any = true;
                 if (input.Weight > 0f && s.FootIK) into.FootIK = true;
+                into.ClipSampled |= s.ClipSampled;
+                into.JobRan |= s.JobRan;
                 bool additive = l < Additive.Count && Additive[l];
                 var parts = HumanParts(l);
                 // Goals blend in one frame: the motion's when both sides have it there (the body

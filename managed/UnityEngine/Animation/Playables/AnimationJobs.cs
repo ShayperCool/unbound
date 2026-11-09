@@ -276,6 +276,7 @@ namespace Unbound.Runtime.Playables
 
         internal override void Evaluate(AnimationEvaluation e, PlayableNode node, int viaPort, float weight, AnimStream into)
         {
+            into.JobRan = true;
             if (e.ReferencePose) return;
             var handles = AnimatorHandles.Of(e.Animator);
             var context = StreamContext.Open(into, handles);

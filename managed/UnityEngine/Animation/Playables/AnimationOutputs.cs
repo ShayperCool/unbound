@@ -46,6 +46,10 @@ namespace Unbound.Runtime.Playables
         /// <see cref="LayerMixerKind"/>); null otherwise.</summary>
         internal float[] MassCenter;
         internal bool HasMassCenter;
+        /// <summary>Whether a clip was sampled into the stream, and whether an animation job ran on
+        /// it: an output that wrote no humanoid curve poses the avatar by default only when its
+        /// pose comes from clips alone (the measured case).</summary>
+        internal bool ClipSampled, JobRan;
 
         static readonly Stack<AnimStream> s_Free = new Stack<AnimStream>();
 
@@ -73,6 +77,7 @@ namespace Unbound.Runtime.Playables
             FootIK = false;
             GoalsInMotion = false;
             HasMassCenter = false;
+            ClipSampled = JobRan = false;
             FloatCount = b.FloatCount;
             ObjectCount = b.ObjectCount;
             if (Values.Length < FloatCount)
@@ -97,6 +102,8 @@ namespace Unbound.Runtime.Playables
             FootIK = o.FootIK;
             GoalsInMotion = o.GoalsInMotion;
             HasMassCenter = o.HasMassCenter;
+            ClipSampled = o.ClipSampled;
+            JobRan = o.JobRan;
             if (o.HasMassCenter)
             {
                 MassCenter ??= new float[Unbound.Runtime.Humanoid.HumanClipImport.CurveCount];
@@ -610,7 +617,11 @@ namespace Unbound.Runtime.Playables
         {
             into.GoalsInMotion = AlignGoalFrames(inputs);
             foreach (var (stream, weight) in inputs)
+            {
                 if (weight > 0f && stream.FootIK) into.FootIK = true;
+                into.ClipSampled |= stream.ClipSampled;
+                into.JobRan |= stream.JobRan;
+            }
             if (AnyBodyMotion(inputs))
             {
                 const int StackInputs = 16;
@@ -854,6 +865,8 @@ namespace Unbound.Runtime.Playables
                 BlendOver(result, s, o.Weight);
                 result.BodyMotion = HumanRootMotion.Override(result.BodyMotion, s.BodyMotion, o.Weight);
                 if (o.Weight > 0f && s.FootIK) result.FootIK = true;
+                result.ClipSampled |= s.ClipSampled;
+                result.JobRan |= s.JobRan;
                 if (s.HasMassCenter && o.Weight >= 1f)
                 {
                     result.MassCenter ??= new float[Unbound.Runtime.Humanoid.HumanClipImport.CurveCount];
@@ -888,9 +901,10 @@ namespace Unbound.Runtime.Playables
             if (!(culled && rootWritten))
                 PoseWriter.WriteStream(result, onlyRoot: culled ? animator.transform : null,
                     skipRoot: preserveRoot || rootWritten ? animator.transform : null);
-            // Without a controller taking part, an output that wrote no humanoid curve poses the
-            // avatar by default; a controller's own pose stays otherwise.
-            if (!culled && animator.m_Player == null) animator.Human?.DefaultPoseUnlessWritten();
+            // An output of clips that wrote no humanoid curve poses the avatar by default (measured
+            // without a controller); a controller's own pose and a job's bone writes stay (Unbound's
+            // choice, unmeasured).
+            if (!culled && animator.m_Player == null && result.ClipSampled && !result.JobRan) animator.Human?.DefaultPoseUnlessWritten();
             if (!culled) animator.ApplyPlayableHumanPose(playableIK);
         }
 
