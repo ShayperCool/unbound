@@ -124,7 +124,7 @@ namespace UnityEngine.UIElements
         CollectionVirtualizationMethod m_VirtualizationMethod;
         readonly ScrollView m_ScrollView;
         CollectionViewController m_ViewController;
-        CollectionVirtualizationController m_VirtualizationController;
+        private protected CollectionVirtualizationController m_VirtualizationController;
         KeyboardNavigationManipulator m_NavigationManipulator;
         readonly List<int> m_SelectedIds = new List<int>();
         readonly Selection m_Selection;

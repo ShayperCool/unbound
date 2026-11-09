@@ -386,6 +386,11 @@ namespace UnityEngine.Tests
             int shown = list.activeItems.Count(r => r.rootElement.resolvedStyle.display == DisplayStyle.Flex && r.index >= 0);
             Assert.InRange(shown, 1, 10);
             Assert.All(list.activeItems, r => Assert.True(r.index < 10));
+            var cache = ((DynamicHeightVirtualizationController<ReusableListViewItem>)list.virtualizationController).itemHeightCache;
+            Assert.All(cache.Keys, k => Assert.True(k < 10));
+            float expected = 0;
+            for (int i = 0; i < 10; i++) expected += cache.TryGetValue(i, out float h) ? h : list.virtualizationController.GetExpectedItemHeight(i);
+            Assert.Equal(expected, list.virtualizationController.GetExpectedContentHeight());
 
             list.itemsSource = null;
             Settle(panel);
@@ -396,9 +401,12 @@ namespace UnityEngine.Tests
 
             list.style.height = 60;
             Settle(panel);
+            int few = list.activeItems.Count(r => r.index >= 0 && r.rootElement.resolvedStyle.display == DisplayStyle.Flex);
             list.style.height = 300;
             Settle(panel);
-            Assert.True(list.activeItems.Count() <= items.Count);
+            int many = list.activeItems.Count(r => r.index >= 0 && r.rootElement.resolvedStyle.display == DisplayStyle.Flex);
+            Assert.True(few < many, $"{few} rows at 60, {many} at 300");
+            Assert.Equal(10, many);
         }
 
         // [rule] A row bound hidden (no height) never reports a layout and keeps no registered height;
@@ -417,23 +425,12 @@ namespace UnityEngine.Tests
             Assert.Equal(40f, list.GetRootElementForIndex(3).layout.y);
         }
 
-        // [rule] A TreeView with dynamic height rows uses the same virtualization.
+        // [rule] A TreeView asked for dynamic height rows keeps fixed-height rows for now (it says so).
         [Fact]
-        public void TreeViewWithDynamicHeightLaysOutItsRows()
+        public void TreeViewWithDynamicHeightKeepsFixedRows()
         {
-            using var panel = NewPanel(400, 400);
             var tree = new TreeView { virtualizationMethod = CollectionVirtualizationMethod.DynamicHeight };
-            tree.style.position = Position.Absolute;
-            tree.style.width = 180;
-            tree.style.height = 150;
-            var roots = Enumerable.Range(0, 20).Select(i => new TreeViewItemData<int>(i, i)).ToList();
-            tree.SetRootItems(roots);
-            tree.makeItem = () => new Label();
-            tree.bindItem = (e, i) => e.style.height = 18 + (i % 3) * 6;
-            panel.visualTree.Add(tree);
-            Settle(panel);
-            Assert.NotEmpty(tree.activeItems);
-            Assert.Equal(0, tree.activeItems.First().index);
+            Assert.Equal("FixedHeightVirtualizationController`1", tree.virtualizationController.GetType().Name);
         }
 
         // ------------------------------------------------------------------ layout events

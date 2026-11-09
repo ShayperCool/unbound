@@ -99,7 +99,18 @@ namespace UnityEngine.UIElements
 
         public int GetTreeCount() => uaTree?.count ?? 0;
 
-        private protected override void CreateVirtualizationController() => CreateVirtualizationController<UaTreeRow>();
+        // Dynamic height rows are not supported by this tree's rows yet: they keep the fixed height,
+        // and the first such tree says so.
+        private protected override void CreateVirtualizationController()
+        {
+            if (virtualizationMethod != CollectionVirtualizationMethod.DynamicHeight)
+            {
+                CreateVirtualizationController<UaTreeRow>();
+                return;
+            }
+            Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeView.virtualizationMethod DynamicHeight (rows keep the fixed item height)");
+            m_VirtualizationController = new FixedHeightVirtualizationController<UaTreeRow>(this);
+        }
 
         public override void SetViewController(CollectionViewController controller)
         {
