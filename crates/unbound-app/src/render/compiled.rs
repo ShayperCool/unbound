@@ -5,6 +5,7 @@ use super::pipelines::{DRAW_SLOT, PipelineKey, create_pipeline};
 use crate::shaderlab::{PropertyDefault, ShaderLab};
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::sync::Arc;
+use unbound_assets::color::gamma_to_linear;
 use unbound_runtime::render_protocol::owned::{Material, PropertyValue};
 use unbound_shaders::{Compiled, Program, Scalar, Settings, ShaderCompiler, TextureDim};
 
@@ -654,16 +655,6 @@ fn inverse(m: &Mat) -> Mat {
         ];
     }
     inv.map(|v| v / det)
-}
-
-fn gamma_to_linear(c: f32) -> f32 {
-    if c <= 0.04045 {
-        c / 12.92
-    } else if c < 1.0 {
-        ((c + 0.055) / 1.055).powf(2.4)
-    } else {
-        c.powf(2.2)
-    }
 }
 
 /// Assigned material/override values already use working space. Only shader defaults

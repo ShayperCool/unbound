@@ -2,50 +2,42 @@
 //! cluster radiance, the cluster tree, the transport into the realtime lightmap texels and the
 //! bounce resampled from them. All buffers are allocated once per system; an update allocates
 //! nothing.
-use crate::data::{ENVIRONMENT_ID, System};
+use crate::data::{ABSENT_ID, ENVIRONMENT_ID, ENVIRONMENT_VALUES, System};
 use anyhow::{Result, bail};
 use std::sync::Arc;
+pub use unbound_assets::color::gamma_to_linear;
 
 /// The transport's weights: a 16-bit reference weight times an 8-bit texel weight.
 const TRANSPORT_SCALE: f32 = 1.0 / (65535.0 * 255.0);
 /// The cluster tree's 8-bit child weights.
 const TREE_SCALE: f32 = 1.0 / 255.0;
-/// The environment's values: six faces of 8x8, 4x4, 2x2 and 1x1.
-pub const ENVIRONMENT_VALUES: usize = 6 * (64 + 16 + 4 + 1);
 /// The built-in pipeline's legacy point light falloff over x = distance / range:
 /// 1 / (1 + 25 x^2), faded linearly to 0 between x^2 = 0.64 and 1.
 const LEGACY_FALLOFF_K: f32 = 25.0;
 const LEGACY_FADE_START: f32 = 0.64;
 
-/// Unity's gamma-to-linear conversion of a color channel (Mathf.GammaToLinearSpace).
-pub fn gamma_to_linear(c: f32) -> f32 {
-    if c <= 0.04045 {
-        c / 12.92
-    } else if c < 1.0 {
-        ((c + 0.055) / 1.055).powf(2.4)
-    } else if c == 1.0 {
-        1.0
-    } else {
-        c.powf(2.2)
-    }
-}
-
-/// A light's input color: its color scaled by intensity and bounce intensity, converted to
-/// linear after the scaling unless the project uses linear light intensity.
+/// A light's input color in a linear-space project: its color scaled by intensity and bounce
+/// intensity, converted to linear after the scaling unless the project uses linear light
+/// intensity. Gamma-space projects are not measured and fail.
 pub fn light_color(
     color: [f32; 3],
     intensity: f32,
     bounce: f32,
+    linear_space: bool,
     linear_intensity: bool,
-) -> [f32; 3] {
-    if linear_intensity {
+) -> Result<[f32; 3]> {
+    if !linear_space {
+        bail!("precomputed realtime GI in a gamma-space project is not supported yet");
+    }
+    Ok(if linear_intensity {
         color.map(|c| gamma_to_linear(c) * intensity * bounce)
     } else {
         color.map(|c| gamma_to_linear(c * intensity * bounce))
-    }
+    })
 }
 
-/// A realtime point light as precomputed realtime GI sees it (not shadowed).
+/// A realtime point light as precomputed realtime GI sees it in the built-in pipeline: not
+/// shadowed, with the legacy falloff (other pipelines' falloffs are not supported yet).
 #[derive(Debug, Clone, Copy)]
 pub struct PointLight {
     pub position: [f32; 3],
@@ -135,7 +127,7 @@ impl SystemSolver {
                     Source::Environment
                 } else if *id == system.hash {
                     Source::Own
-                } else if *id == [0xFF; 16] {
+                } else if *id == ABSENT_ID {
                     Source::Absent
                 } else {
                     bail!(
@@ -144,6 +136,19 @@ impl SystemSolver {
                 })
             })
             .collect::<Result<Vec<_>>>()?;
+        let values = system.input.values();
+        for segment in &system.transport.segments {
+            for &(dependency, index) in &segment.references {
+                let limit = match sources[dependency as usize] {
+                    Source::Environment => ENVIRONMENT_VALUES,
+                    Source::Own => values,
+                    Source::Absent => continue,
+                };
+                if index as usize >= limit {
+                    bail!("a transport reference to value {index} of {limit}");
+                }
+            }
+        }
         let clusters = system.input.clusters();
         let texels = (system.transport.width * system.transport.height) as usize;
         let references = system
@@ -253,7 +258,8 @@ impl SystemSolver {
         self.indirect_scale = scale;
     }
 
-    /// Starts the bounce as Unity does before the first update: the environment's first value.
+    /// Starts the bounce at the environment's first value (only converged output is compared
+    /// with the Editor, so the start is not measured).
     pub fn reset_bounce(&mut self) {
         let start = self.environment[0];
         self.bounce.fill(start);
@@ -291,12 +297,12 @@ impl SystemSolver {
         for segment in &system.transport.segments {
             let refs = segment.references.len();
             for (k, &(dependency, index)) in segment.references.iter().enumerate() {
+                // Indices were checked against the values in `new`.
                 let value = match self.sources[dependency as usize] {
-                    Source::Environment => self.environment.get(index as usize).copied(),
-                    Source::Own => self.values.get(index as usize).copied(),
-                    Source::Absent => None,
-                }
-                .unwrap_or([0.0; 3]);
+                    Source::Environment => self.environment[index as usize],
+                    Source::Own => self.values[index as usize],
+                    Source::Absent => [0.0; 3],
+                };
                 let w = segment.reference_weights[k] as f32 * TRANSPORT_SCALE;
                 self.gathered[k] = value.map(|v| v * w);
             }

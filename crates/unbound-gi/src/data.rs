@@ -22,8 +22,12 @@ const INPUT_MAGIC: u32 = 0x5749_4547;
 const TREE_MAGIC: u32 = 0x4744_4547;
 const TRANSPORT_MAGIC: u32 = 0x4753_4547;
 const BOUNCE_MAGIC: u32 = 0x4452_4547;
-/// The environment's dependency id in a transport and the id of an absent input.
+/// The environment's dependency id in a transport.
 pub const ENVIRONMENT_ID: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0xFE, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0];
+/// The dependency id of an input that is never present (its references add nothing).
+pub const ABSENT_ID: [u8; 16] = [0xFF; 16];
+/// The environment's values: six faces of 8x8, 4x4, 2x2 and 1x1.
+pub const ENVIRONMENT_VALUES: usize = 6 * (64 + 16 + 4 + 1);
 
 /// Little-endian reads with bounds checks.
 struct Reader<'a> {
@@ -153,12 +157,15 @@ pub fn read_input_samples(bytes: &[u8]) -> Result<InputSamples> {
     cluster_points.push(positions.len() as u32);
     let counts_at = tree_at + 0x10 + clusters;
     let tree_children = r.slice(counts_at, parents)?.to_vec();
-    let children: usize = tree_children.iter().map(|&c| c as usize).sum();
-    ensure!(
-        children < clusters + parents,
-        "cluster tree with {children} children for {} values",
-        clusters + parents
-    );
+    // Children are the next values in order: each parent's must come before the parent.
+    let mut children = 0usize;
+    for (p, &count) in tree_children.iter().enumerate() {
+        children += count as usize;
+        ensure!(
+            children <= clusters + p,
+            "a cluster tree parent before its children"
+        );
+    }
     let tree_weights = r.slice(counts_at + parents, children)?.to_vec();
     Ok(InputSamples {
         positions,
@@ -249,14 +256,27 @@ pub fn read_transport(bytes: &[u8]) -> Result<Transport> {
         let weights = r.slice(weights_at, texels * refs)?.to_vec();
         let xs_at = align(weights_at + texels * refs, 4);
         let ys_at = xs_at + 2 * texels;
+        let inside = |x: u16, y: u16| (x as u32) < width && (y as u32) < height;
         let texel_list = (0..texels)
-            .map(|t| Ok((r.u16(xs_at + 2 * t)?, r.u16(ys_at + 2 * t)?)))
+            .map(|t| {
+                let texel = (r.u16(xs_at + 2 * t)?, r.u16(ys_at + 2 * t)?);
+                ensure!(
+                    inside(texel.0, texel.1),
+                    "a transport texel outside {width}x{height}"
+                );
+                Ok(texel)
+            })
             .collect::<Result<Vec<_>>>()?;
         let copies_at = ys_at + 2 * texels;
         let copy_list = (0..copies)
             .map(|c| {
                 let at = |row: usize| r.u16(copies_at + 2 * (row * copies + c));
-                Ok(((at(0)?, at(1)?), (at(2)?, at(3)?)))
+                let copy = ((at(0)?, at(1)?), (at(2)?, at(3)?));
+                ensure!(
+                    inside(copy.0.0, copy.0.1) && inside(copy.1.0, copy.1.1),
+                    "a transport copy outside {width}x{height}"
+                );
+                Ok(copy)
             })
             .collect::<Result<Vec<_>>>()?;
         segments.push(Segment {
@@ -293,7 +313,12 @@ pub fn read_transport(bytes: &[u8]) -> Result<Transport> {
     let bounce = (0..total)
         .map(|k| {
             let e = at + 8 * k;
-            Ok(((b.u16(e)?, b.u16(e + 2)?), b.f32(e + 4)?))
+            let (x, y) = (b.u16(e)?, b.u16(e + 2)?);
+            ensure!(
+                (x as u32) < width && (y as u32) < height,
+                "a bounce sample outside {width}x{height}"
+            );
+            Ok(((x, y), b.f32(e + 4)?))
         })
         .collect::<Result<Vec<_>>>()?;
     Ok(Transport {
@@ -401,6 +426,11 @@ fn int(v: &Value, key: &str) -> Result<i64> {
         .with_context(|| format!("no {key}"))
 }
 
+fn count(v: &Value, key: &str) -> Result<usize> {
+    let n = int(v, key)?;
+    usize::try_from(n).with_context(|| format!("negative {key} {n}"))
+}
+
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
@@ -442,21 +472,32 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
         .collect::<Result<Vec<_>>>()?;
     let atlas_sizes = seq(mapping, "m_SystemAtlases")
         .iter()
-        .map(|a| Ok(int(a, "atlasSize")? as u32))
+        .map(|a| Ok(count(a, "atlasSize")?.min(u32::MAX as usize) as u32))
         .collect::<Result<Vec<_>>>()?;
     let mut systems = Vec::new();
     for s in seq(mapping, "m_Systems") {
         let input_hash = hash128(s.get("inputSystemHash").context("no input hash")?)?;
         let hash = hash128(s.get("radiositySystemHash").context("no system hash")?)?;
-        let first_renderer = int(&s, "rendererIndex")? as usize;
-        let renderer_count = int(&s, "rendererSize")? as usize;
-        let atlas = int(&s, "atlasIndex")? as usize;
-        if first_renderer + renderer_count > renderers.len() || atlas >= atlas_sizes.len() {
+        let first_renderer = count(&s, "rendererIndex")?;
+        let renderer_count = count(&s, "rendererSize")?;
+        let atlas = count(&s, "atlasIndex")?;
+        let offset = (count(&s, "atlasOffsetX")?, count(&s, "atlasOffsetY")?);
+        if first_renderer
+            .checked_add(renderer_count)
+            .is_none_or(|end| end > renderers.len())
+            || atlas >= atlas_sizes.len()
+        {
             bail!("a system outside the scene mapping");
         }
         let input = read_input_samples(file(&input_hash, "iws.ref")?)?;
         let transport = read_transport(file(&hash, "rsc.ref")?)?;
         let materials = read_cluster_materials(file(&input_hash, "caw")?)?;
+        let size = atlas_sizes[atlas] as usize;
+        ensure!(
+            offset.0 + transport.width as usize <= size
+                && offset.1 + transport.height as usize <= size,
+            "a system outside its {size}x{size} atlas"
+        );
         ensure!(
             transport.bounce_samples.len() == input.cluster_points.len()
                 && materials.cluster_groups.len() == input.cluster_points.len(),
@@ -467,10 +508,7 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
             first_renderer,
             renderer_count,
             atlas,
-            atlas_offset: (
-                int(&s, "atlasOffsetX")? as u32,
-                int(&s, "atlasOffsetY")? as u32,
-            ),
+            atlas_offset: (offset.0 as u32, offset.1 as u32),
             input,
             transport,
             materials,

@@ -96,7 +96,7 @@ fn converge(room: &Room, case: &str) -> (usize, usize, f32) {
     solver.set_uniform_environment([0.1, 0.12, 0.2].map(gamma_to_linear));
     solver.set_lights(&[PointLight {
         position: room.light,
-        color: light_color([1.0, 0.95, 0.85], room.intensity, room.bounce, false),
+        color: light_color([1.0, 0.95, 0.85], room.intensity, room.bounce, true, false).unwrap(),
         range: 10.0,
     }]);
     solver.set_indirect_scale(room.indirect_scale);
@@ -128,18 +128,22 @@ fn converge(room: &Room, case: &str) -> (usize, usize, f32) {
     (fails, total, relative[relative.len() / 2])
 }
 
-/// `percent`: the share of values allowed outside the comparator tolerance.
-fn check(room: &Room, case: &str, percent: usize) {
+/// `allowed`: values allowed outside the comparator tolerance; `median`: the largest median
+/// relative error (both just above what was measured: chart-corner texels and the falloff).
+fn check(room: &Room, case: &str, allowed: usize, median_limit: f32) {
     let (fails, total, median) = converge(room, case);
     eprintln!(
         "{case}: {fails} of {total} values outside the tolerance, median relative error {median}"
     );
     assert!(total > 4000, "{case}: {total} values");
     assert!(
-        fails * 100 <= total * percent,
+        fails <= allowed,
         "{case}: {fails} of {total} values outside the tolerance"
     );
-    assert!(median < 0.01, "{case}: median relative error {median}");
+    assert!(
+        median < median_limit,
+        "{case}: median relative error {median}"
+    );
 }
 
 #[test]
@@ -169,9 +173,9 @@ fn reads_the_rooms_precomputed_data() {
 
 #[test]
 fn converges_to_the_editors_lightmap() {
-    // Known residual: a few texels at chart corners (up to about 15% off, under 1% of the
-    // values) and the falloff curve within 1%.
-    check(&BASE, "room-base", 1);
+    // Known residual: a few texels at chart corners (up to about 15% off) and the falloff
+    // curve within 1%.
+    check(&BASE, "room-base", 15, 0.006);
 }
 
 #[test]
@@ -184,7 +188,8 @@ fn a_moved_brighter_light() {
             ..BASE
         },
         "room-moved",
-        1,
+        30,
+        0.006,
     );
     check(
         &Room {
@@ -193,7 +198,8 @@ fn a_moved_brighter_light() {
             ..BASE
         },
         "room-intensity",
-        1,
+        45,
+        0.006,
     );
     check(
         &Room {
@@ -203,7 +209,8 @@ fn a_moved_brighter_light() {
             ..BASE
         },
         "room-bounce",
-        1,
+        60,
+        0.006,
     );
     check(
         &Room {
@@ -213,7 +220,8 @@ fn a_moved_brighter_light() {
             ..BASE
         },
         "room-indirectscale",
-        2,
+        110,
+        0.0075,
     );
     // (The Editor's texels are 2.00 to 2.07 times those without the scale; Unbound's exactly 2.)
 }
@@ -261,6 +269,13 @@ fn malformed_data_fails_without_panicking() {
             let _ = crate::data::read_input_samples(part);
             let _ = crate::data::read_transport(part);
             let _ = crate::data::read_cluster_materials(part);
+        }
+        if f.path.ends_with(".rsc.ref") {
+            // The transport's width cut to 10 leaves texels outside it.
+            let mut other = full.clone();
+            other[80..82].copy_from_slice(&10u16.to_le_bytes());
+            let error = crate::data::read_transport(&other).unwrap_err().to_string();
+            assert!(error.contains("outside 10x52"), "{error}");
         }
         if f.path.ends_with(".iws.ref") {
             let mut other = full.clone();
