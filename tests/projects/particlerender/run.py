@@ -52,7 +52,7 @@ def engine(label):
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     env = dict(os.environ, PARTICLE_RENDER_OUT=str(out/OUT), PARTICLE_RENDER_IMAGES=str(out/IMAGES))
     command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(ROOT),
-               '--frames', '400', '--size', '320x180', '--no-watch']
+               '--frames', '600', '--size', '320x180', '--no-watch']
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     print(label, 'exit', code)

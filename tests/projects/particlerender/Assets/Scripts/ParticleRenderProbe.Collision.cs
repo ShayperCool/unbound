@@ -119,6 +119,44 @@ public partial class ParticleRenderProbe
         var c = s.collision; c.radiusScale = 0.8f; c.bounce = 0.6f; c.dampen = 0.2f; c.lifetimeLoss = 0.05f; c.quality = quality;
     }
 
+    /// <summary>The voxel cache's ray budget (<c>collide/cache/*</c>): QualitySettings.particleRaycastBudget
+    /// at 2 for a Medium and a Low system of six particles falling onto a sloped box, and a Medium
+    /// system advanced only by Simulate.</summary>
+    IEnumerator CacheControls()
+    {
+        Time.captureDeltaTime = 0.02f;
+        yield return null;
+        int budget = QualitySettings.particleRaycastBudget;
+        var controls = new List<(string key, ParticleSystem ps, Vector3 origin)>();
+        var simulated = new List<ParticleSystem>();
+        var extra = new List<GameObject>();
+        var origin = s_CollideOrigin + new Vector3(0f, 0f, 30f);
+        int slot = 0;
+        foreach (var (name, quality, simulate) in new[] { ("budget2_medium", ParticleSystemCollisionQuality.Medium, false),
+                     ("budget2_low", ParticleSystemCollisionQuality.Low, false), ("simulate_medium", ParticleSystemCollisionQuality.Medium, true) })
+        {
+            var at = origin + new Vector3(8f * slot++, 0f, 0f);
+            var ps = CollideEmitter("collide/cache/" + name, at + Vector3.up, 6, 3f, s => SlopeSettings(s, quality));
+            extra.Add(CollideBox(at + new Vector3(0f, -0.5f, 0f), new Vector3(4f, 0.2f, 4f), Quaternion.Euler(0f, 0f, 25f)));
+            controls.Add(("collide/cache/" + name, ps, at));
+            if (simulate) simulated.Add(ps);
+        }
+        foreach (var (_, ps, _) in controls)
+            if (!simulated.Contains(ps)) ps.Play();
+        foreach (var ps in simulated) ps.Simulate(0f, true, true, false);
+        QualitySettings.particleRaycastBudget = 2;
+        for (int frame = 0; frame < 40; frame++)
+        {
+            foreach (var ps in simulated) ps.Simulate(0.02f, true, false, false);
+            yield return null;
+            foreach (var (key, ps, at) in controls) RecordCollide(key + "/" + frame.ToString(CultureInfo.InvariantCulture), ps, at);
+        }
+        QualitySettings.particleRaycastBudget = budget;
+        foreach (var (_, ps, _) in controls) Done(ps);
+        foreach (var go in extra) DestroyImmediate(go);
+        Time.captureDeltaTime = 0f;
+    }
+
     IEnumerator CollideControls()
     {
         Time.captureDeltaTime = 0.02f;
