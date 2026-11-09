@@ -12,8 +12,8 @@ namespace UnityEngine.Tests
     /// NavMesh instances along the vertical axis. If this step does not find a projected point within
     /// the specified distance, then sampling is extended to surrounding NavMesh positions." Measured
     /// (tests/projects/navbaked `sample`): a point over a floor beside a nearer raised platform samples
-    /// the floor. Paths and agents take the nearer of the two instead (not separately measured: no
-    /// probe point has both within an agent's reach).
+    /// the floor. Paths and agents take the nearer of the two instead, Raycast and FindClosestEdge the
+    /// one below (measured: tests/projects/navpath nearest.sides).
     /// The level is a 20 m floor and a 1.5 m high platform from z = 1 to 5.</summary>
     [Collection("Frames")]
     public sealed class NavMeshNearestTests : IDisposable
@@ -47,11 +47,12 @@ namespace UnityEngine.Tests
         public void SamplePositionProjectsDownBeforeTakingANearerPointBeside()
         {
             FloorAndPlatform();
-            // 1.9 m over the floor, about 1.4 m from the platform's edge.
-            var from = new Vector3(0f, 2f, 0.2f);
+            // 2.3 m over the floor, about 1.45 m from the platform's edge: nearer the platform even
+            // by more than the agent climb.
+            var from = new Vector3(0f, 2.4f, 0.3f);
             Assert.True(NavMesh.SamplePosition(from, out var hit, 2.5f, NavMesh.AllAreas));
             Assert.True(hit.position.y < 0.5f, $"sampled {hit.position}");
-            Assert.Equal(0.2f, hit.position.z, 3);
+            Assert.Equal(0.3f, hit.position.z, 3);
             Assert.Equal(Vector3.Distance(from, hit.position), hit.distance, 4);
             // Within reach of nothing below: the nearest point beside, the platform's edge.
             var platform = NavMesh.SamplePosition(new Vector3(0f, 2.2f, 0.9f), out var edge, 1.2f, NavMesh.AllAreas);

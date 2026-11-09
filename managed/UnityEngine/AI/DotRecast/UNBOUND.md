@@ -16,10 +16,12 @@ Altered (marked `Unbound:` in the sources):
   near polygons the first the query visits stays. SamplePosition, Raycast and FindClosestEdge take
   the best polygon under or over the point when its point lies in the query box, else the best
   beside it; paths and agents take the one beside unless the other is nearer in height than it is
-  in a straight line (Unity 6000.0.71f1: tests/projects/navbaked and navmesh `sample`; the paths'
-  and agents' choice is not separately measured);
+  in a straight line (Unity 6000.0.71f1: tests/projects/navbaked and navmesh `sample`, navpath
+  `nearest.sides`);
 - placed tiles keep their bounding volume tree (moved with the tile), and queries walk it: its
-  node order decides which of equally near polygons is visited first, as in Unity;
+  node order decides which of equally near polygons is visited first, as in Unity (the area
+  values on boundaries match; the order is inferred from them). Carved tiles have no tree: their
+  polygons are visited in order (unmeasured);
 - A* as Unity's (`tests/projects/navcost`): a polygon's node is placed once, when the search first
   reaches the polygon, at the point of the portal from the polygon it is reached from nearest that
   polygon's node (in 3D, kept 5% of the portal's length from its ends; a portal shorter than 1 cm
