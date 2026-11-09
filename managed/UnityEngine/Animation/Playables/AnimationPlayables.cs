@@ -609,6 +609,7 @@ namespace Unbound.Runtime.Playables
             // Animator.layersAffectMassCenter, a controller layers' setting, does not change it
             // (mixer.noRootMassCenter).
             AnimStream mass = null;
+            bool goalsSet = false;
             for (int l = 0; l < node.Inputs.Count; l++)
             {
                 var input = node.Inputs[l];
@@ -618,18 +619,22 @@ namespace Unbound.Runtime.Playables
                 e.Combining++;
                 try { e.EvaluateInto(input.Node, input.SourcePort, weight * input.Weight, s); }
                 finally { e.Combining--; }
-                bool firstLayer = !any;
                 any = true;
                 if (input.Weight > 0f && s.FootIK) into.FootIK = true;
                 bool additive = l < Additive.Count && Additive[l];
                 var parts = HumanParts(l);
                 // Goals blend in one frame: the motion's when both sides have it there (the body
-                // below is the one the lower layers' goals were placed with).
-                if (firstLayer) into.GoalsInMotion = s.GoalsInMotion;
-                else if (into.GoalsInMotion != s.GoalsInMotion)
+                // below is the one the lower layers' goals were placed with). Layers without weight
+                // or goals do not decide.
+                if (input.Weight > 0f && AnimationEvaluation.AnimatesGoals(s))
                 {
-                    if (into.GoalsInMotion) AnimationEvaluation.GoalsToBody(into, anyBody ? body : default);
-                    else AnimationEvaluation.GoalsToBody(s, s.BodyMotion);
+                    if (!goalsSet) into.GoalsInMotion = s.GoalsInMotion;
+                    else if (into.GoalsInMotion != s.GoalsInMotion)
+                    {
+                        if (into.GoalsInMotion) AnimationEvaluation.GoalsToBody(into, anyBody ? body : default);
+                        else AnimationEvaluation.GoalsToBody(s, s.BodyMotion);
+                    }
+                    goalsSet = true;
                 }
                 if (!additive && s.BodyMotion.HasMotion)
                 {

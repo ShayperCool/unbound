@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Unbound.Runtime;
 using Unbound.Runtime.Humanoid;
+using Unbound.Runtime.Playables;
 using Unbound.Tests;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
@@ -140,6 +141,71 @@ namespace UnityEngine.Tests
             {
                 ProjectInfo.UnityVersion = version;
                 foreach (var o in created) Object.DestroyImmediate(o);
+            }
+        }
+
+        /// <summary>Clips' goals blend in the motion's frame; an input that animates no goal (or has no
+        /// weight) does not decide the frame, one that has its goals relative to its body does, and
+        /// the others are then taken back relative to their bodies.</summary>
+        [Fact]
+        public void OnlyInputsWithGoalsDecideTheGoalFrame()
+        {
+            var root = Rig(out _, out var avatar);
+            var forward = Clip(2f);
+            var goals = Clip(1f);
+            void Goal(string attribute, float value) => goals.m_Curves.Add(new ClipCurve
+            {
+                Binding = new CurveBinding { Path = "", Attribute = attribute, ClassId = 95 },
+                Curve = AnimationCurve.Constant(0f, 1f, value),
+            });
+            Goal("LeftFootT.x", 0.1f);
+            Goal("LeftFootT.y", -0.9f);
+            Goal("LeftFootT.z", 0.05f);
+            Goal("LeftFootQ.x", 0f);
+            Goal("LeftFootQ.y", 0f);
+            Goal("LeftFootQ.z", 0f);
+            Goal("LeftFootQ.w", 1f);
+            goals.m_Version++;
+            try
+            {
+                var bindings = new AnimationBindings(root);
+                bindings.Bind(forward);
+                bindings.Bind(goals);
+                AnimStream Stream(bool withGoals, bool inMotion)
+                {
+                    var s = AnimStream.Rent(bindings);
+                    int c = bindings.HumanChannel(HumanClipImport.GoalFirst);
+                    Assert.True(c >= 0);
+                    if (withGoals) s.Animated[c] = true;
+                    s.GoalsInMotion = inMotion;
+                    return s;
+                }
+                var inputs = new List<(AnimStream, float)>();
+                var into = AnimStream.Rent(bindings);
+                // Two clips in the motion's frame and a weighted input without goals: the motion's frame.
+                inputs.Add((Stream(true, true), 0.5f));
+                inputs.Add((Stream(true, true), 0.5f));
+                inputs.Add((Stream(false, false), 1f));
+                AnimationEvaluation.MixInto(into, inputs);
+                Assert.True(into.GoalsInMotion);
+                // A body-relative input without weight does not decide either.
+                inputs[2] = (Stream(true, false), 0f);
+                into.Reset(bindings);
+                AnimationEvaluation.MixInto(into, inputs);
+                Assert.True(into.GoalsInMotion);
+                // With weight it does: everything blends relative to the bodies.
+                inputs[2] = (Stream(true, false), 0.5f);
+                into.Reset(bindings);
+                AnimationEvaluation.MixInto(into, inputs);
+                Assert.False(into.GoalsInMotion);
+                Assert.False(inputs[0].Item1.GoalsInMotion);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(avatar);
+                Object.DestroyImmediate(forward);
+                Object.DestroyImmediate(goals);
             }
         }
     }

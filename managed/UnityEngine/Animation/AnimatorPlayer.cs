@@ -1147,13 +1147,30 @@ namespace Unbound.Runtime
             m_Animator.CaptureRootMotionPose();
         }
 
-        /// <summary>Whether a state this evaluation sampled with a weight above 0, on a layer of
-        /// weight above 0, has "Foot IK" (AnimatorState.iKOnFeet): the humanoid pose then solves
-        /// its feet onto their goals (see <see cref="Unbound.Runtime.Humanoid.HumanIK.SetIKOnFeet"/>).</summary>
+        /// <summary>
+        /// Whether the humanoid pose solves its feet onto their goals for a state's "Foot IK"
+        /// (AnimatorState.iKOnFeet, see <see cref="Unbound.Runtime.Humanoid.HumanIK.SetIKOnFeet"/>):
+        /// a state with it whose humanoid clip is the only one the evaluation samples (6000.0.71f1,
+        /// tests/projects/humanoid footIK). Blended with other humanoid clips (transitions, blend
+        /// trees, layers) the feet goals would be blended relative to the clips' bodies, which Unity
+        /// blends in the motion's frame (footIKTransition): Foot IK is then not applied, with a
+        /// diagnostic.
+        /// </summary>
         internal bool FootIK()
         {
-            foreach (var (layer, layerIndex, run, _, weight) in m_Contributions)
-                if (weight > 0f && run.Def.IKOnFeet && (layerIndex == 0 || layer.Evaluated > 0f)) return true;
+            bool asked = false;
+            int humanClips = 0;
+            foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions)
+            {
+                if (weight <= 0f || (layerIndex > 0 && layer.Evaluated <= 0f)) continue;
+                if (run.Def.IKOnFeet) asked = true;
+                if (clip.HasHumanCurves) humanClips++;
+            }
+            if (!asked) return false;
+            if (humanClips <= 1) return true;
+            Stubs.Ignored("Animator Foot IK of blended humanoid states",
+                "a state's Foot IK is not applied while other humanoid clips blend with its clip (transitions, blend trees, layers): "
+                + "their feet goals blend in another frame than Unity's (not supported yet)");
             return false;
         }
 

@@ -568,18 +568,33 @@ namespace Unbound.Runtime.Playables
             s.GoalsInMotion = false;
         }
 
-        /// <summary>Mixer inputs blend their goals in the motion's frame only when every input has
-        /// them there (<see cref="GoalsToBody"/>).</summary>
-        static void AlignGoalFrames(List<(AnimStream Stream, float Weight)> inputs)
+        /// <summary>Whether a stream animates any humanoid goal curve.</summary>
+        internal static bool AnimatesGoals(AnimStream s)
+        {
+            var b = s.Bindings;
+            for (int curve = Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst; curve < Unbound.Runtime.Humanoid.HumanClipImport.MuscleFirst; curve += 7)
+            {
+                int c = b.HumanChannel(curve);
+                if (c >= 0 && c < s.FloatCount && s.Animated[c]) return true;
+            }
+            return false;
+        }
+
+        /// <summary>Mixer inputs blend their goals in the motion's frame only when every input of
+        /// weight above 0 that animates goals has them there (<see cref="GoalsToBody"/>); inputs
+        /// without goals or weight do not decide. Returns whether the blend is in the motion's frame.</summary>
+        static bool AlignGoalFrames(List<(AnimStream Stream, float Weight)> inputs)
         {
             bool inMotion = false, relative = false;
-            foreach (var (stream, _) in inputs)
+            foreach (var (stream, weight) in inputs)
             {
+                if (weight <= 0f || !AnimatesGoals(stream)) continue;
                 if (stream.GoalsInMotion) inMotion = true;
                 else relative = true;
             }
-            if (!inMotion || !relative) return;
-            foreach (var (stream, _) in inputs) GoalsToBody(stream, stream.BodyMotion);
+            if (inMotion && relative)
+                foreach (var (stream, _) in inputs) GoalsToBody(stream, stream.BodyMotion);
+            return inMotion && !relative;
         }
 
         static bool AnyBodyMotion(List<(AnimStream Stream, float Weight)> inputs)
@@ -593,12 +608,9 @@ namespace Unbound.Runtime.Playables
         /// that animate it, completed to weight one with the default value.</summary>
         internal static void MixInto(AnimStream into, List<(AnimStream Stream, float Weight)> inputs)
         {
-            AlignGoalFrames(inputs);
+            into.GoalsInMotion = AlignGoalFrames(inputs);
             foreach (var (stream, weight) in inputs)
-            {
                 if (weight > 0f && stream.FootIK) into.FootIK = true;
-                if (stream.GoalsInMotion) into.GoalsInMotion = true;
-            }
             if (AnyBodyMotion(inputs))
             {
                 const int StackInputs = 16;
@@ -837,15 +849,11 @@ namespace Unbound.Runtime.Playables
                     else if (source != AnimationStreamSource.PreviousInputs && o.Weight > 0f) motion = RootMotionStep.Unknown;
                 }
                 KeepBound(o, s);
-                if (result.GoalsInMotion != s.GoalsInMotion)
-                {
-                    GoalsToBody(result, result.BodyMotion);
-                    GoalsToBody(s, s.BodyMotion);
-                }
+                // Outputs blend their goals relative to their bodies (several outputs are unmeasured).
+                GoalsToBody(s, s.BodyMotion);
                 BlendOver(result, s, o.Weight);
                 result.BodyMotion = HumanRootMotion.Override(result.BodyMotion, s.BodyMotion, o.Weight);
                 if (o.Weight > 0f && s.FootIK) result.FootIK = true;
-                if (s.GoalsInMotion) result.GoalsInMotion = true;
                 if (s.HasMassCenter && o.Weight >= 1f)
                 {
                     result.MassCenter ??= new float[Unbound.Runtime.Humanoid.HumanClipImport.CurveCount];
@@ -874,12 +882,9 @@ namespace Unbound.Runtime.Playables
                     if (c >= 0 && result.Animated[c]) massHuman.SetMassCenter(curve, result.MassCenter[curve]);
                 }
             }
-            if (result.GoalsInMotion)
-            {
-                // The pose takes goals relative to its body (HumanRootMotion.ApplyToPose).
-                if (result.BodyMotion.HasMotion) GoalsToMotion(result, result.BodyMotion.Body, inverse: true);
-                result.GoalsInMotion = false;
-            }
+            // The pose takes goals relative to its body (HumanRootMotion.ApplyToPose); the outputs'
+            // blend already did so, a stream written as it is (a replay) does it here.
+            GoalsToBody(result, result.BodyMotion);
             if (!(culled && rootWritten))
                 PoseWriter.WriteStream(result, onlyRoot: culled ? animator.transform : null,
                     skipRoot: preserveRoot || rootWritten ? animator.transform : null);
