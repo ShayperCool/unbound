@@ -88,12 +88,15 @@ namespace UnityEngine
                     var renderer = patch.Renderers[kind];
                     if (renderer == null) continue;
                     renderer.m_PropertyBlock = block;
+                    // As the trees: the terrain renderer's rendering layers (unmeasured).
+                    renderer.renderingLayerMask = renderingLayerMask;
                     FrameBuilder.AddMeshDraws(renderer, patch.Meshes[kind], Matrix4x4.identity, Color.white, camera, into);
                 }
             }
             foreach (var detail in m_InstancedDetails)
             {
                 if ((detail.Position - camera.Position).sqrMagnitude > squared) continue;
+                detail.Renderer.renderingLayerMask = renderingLayerMask;
                 FrameBuilder.AddMeshDraws(detail.Renderer, detail.Mesh, detail.Model, Color.white, camera, into);
             }
         }

@@ -1004,8 +1004,8 @@ fn fxc_compatible(source: &str) -> String {
 }
 
 /// Float literals with the `h` suffix (`1.0h`) written as plain float literals. FXC reads them as
-/// `half`, which is `float` on desktop, so `uint * 1.0h` multiplies as floats; glslang makes them
-/// 16-bit floats and rejects that product (URP's `PackMaterialFlags`, in Terrain Lit's passes).
+/// `half`, which is `float` on desktop, so `uint * 1.0h` multiplies as floats; glslang rejects a
+/// `uint` times such a literal (URP's `PackMaterialFlags`, in Terrain Lit's passes).
 fn half_literals(source: &str) -> String {
     let bytes = source.as_bytes();
     let mut out = String::with_capacity(source.len());

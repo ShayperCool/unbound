@@ -121,6 +121,9 @@ namespace UnityEngine
                     int level = part.Group.LevelFor(camera.Camera, camera.Position, part.Reference, part.Size);
                     if (level < 0 || (part.Levels & (1 << level)) == 0) continue;
                 }
+                // Collected under the terrain renderer's filter, the trees take its rendering
+                // layers for lighting too (unmeasured: Unbound's choice).
+                part.Renderer.renderingLayerMask = renderingLayerMask;
                 FrameBuilder.AddMeshDraws(part.Renderer, part.Mesh, part.Model, Color.white, camera, into);
             }
         }
