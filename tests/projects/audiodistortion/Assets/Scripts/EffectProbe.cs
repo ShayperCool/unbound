@@ -390,6 +390,12 @@ public class EffectProbe : MonoBehaviour
         new[] { "script_generator_gain_at", "Music:Att", "chain_script=before", "sourcechain=dist", "clipless=1", "volume=0.00032", "generator_amplitude=32" },
         new[] { "script_generator_gain_above", "Music:Att", "chain_script=before", "sourcechain=dist", "clipless=1", "volume=0.000321", "generator_amplitude=32" },
         new[] { "script_generator_gain_small_step", "Music:Att", "chain_script=before", "sourcechain=dist", "clipless=1", "volume=0.2501", "generator_amplitude=32", "step=volume" },
+        new[] { "script2d_live_bypass", "Music:Att", "music=noise:0.25", "chain_script=before", "sourcechain=dist,chorus", "step=bypass" },
+        new[] { "script3d_live_bypass_repeat", "Music:Att", "music=noise:0.25", "spatial=1", "position=3,0,4", "chain_script=before", "sourcechain=dist,chorus", "step=bypass4" },
+        new[] { "script_oneshot_live_bypass", "Music:Att", "music=noise:0.25", "chain_script=before", "sourcechain=chorus", "oneshot=1", "step=bypass" },
+        new[] { "component_live_bypass_echo", "Music:Att", "music=noise:0.25", "sourcechain=echo", "step=bypass" },
+        new[] { "component_live_bypass_chorus_low", "Music:Att", "music=noise:0.25", "sourcechain=chorus,low", "step=bypass" },
+        new[] { "script_generator_quiet_restart", "Music:Att", "chain_script=before", "sourcechain=dist", "clipless=1", "volume=0.25", "restart=12" },
     };
     public const int BlockCount = 32;
     public const int ClipFrames = BlockCount * 1024;
@@ -656,7 +662,8 @@ public class EffectProbe : MonoBehaviour
                 if (Engine) FlushEngine();
                 else yield return null;
             }
-            source.Play();
+            if (Option(key, "oneshot=", "0") == "1") { source.clip = null; source.PlayOneShot(clip); }
+            else source.Play();
             GameObject second = null;
             if (Option(key, "second=", "0") == "1") {
                 second = new GameObject("second"); var other = second.AddComponent<AudioSource>();
@@ -688,6 +695,14 @@ public class EffectProbe : MonoBehaviour
                     }
                     if (block == int.Parse(Option(key, "restart=", "-1"))) {
                         source.Stop(); source.Play();
+                        if (Engine) FlushEngine();
+                    }
+                    if ((block == 12 || block == 16 || block == 20) && Option(key, "step=", "") == "bypass4") {
+                        ToggleBypass(source, key);
+                        if (Engine) FlushEngine();
+                    }
+                    if (block == 8 && Option(key, "step=", "") == "bypass4") {
+                        ToggleBypass(source, key);
                         if (Engine) FlushEngine();
                     }
                     if (block == 16 && Option(key, "step=", "") == "bypass") {
