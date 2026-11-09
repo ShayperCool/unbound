@@ -514,18 +514,28 @@ namespace UnityEngine.Tests
             source.Play();
             Assert.False(source.m_HasAudioFrame);
             m_Backend.Frame(new AudioFramePacket { DeltaTime = 0.04 });
+            double position = m_Backend.State(source.Handle).Position;
+            Assert.True(position > 0);
+            double previousDelta = Time.s_RealDeltaTime;
             var previous = Debug.unityLogger.logHandler;
             var errors = new Errors();
             Debug.unityLogger.logHandler = errors;
             try
             {
+                Time.s_RealDeltaTime = 0;
                 Zone(0);
                 Assert.Empty(errors.Messages);
                 AudioSystem.Update();
                 Assert.Equal(AudioFilterKind.Reverb, m_Backend.LastFrame.Zone.Kind);
                 Assert.True(source.isPlaying);
+                Assert.Equal(position, m_Backend.State(source.Handle).Position);
             }
-            finally { Debug.unityLogger.logHandler = previous; Object.DestroyImmediate(clip); }
+            finally
+            {
+                Time.s_RealDeltaTime = previousDelta;
+                Debug.unityLogger.logHandler = previous;
+                Object.DestroyImmediate(clip);
+            }
         }
 
         [Fact]
