@@ -250,8 +250,27 @@ namespace Unbound.Runtime
                 }
             }
             assets.RemoveAll(entry => entry.Asset is Sprite && entry.Asset == null);
+            // A model imported with Optimize Game Objects: its hierarchy as the importer leaves it
+            // (the objects it removes are not part of the file).
+            bool optimized = false;
+            foreach (var (c, _) in components)
+                if (c is Animator animator && animator.m_OptimizeOnLoad != null)
+                {
+                    var exposed = animator.m_OptimizeOnLoad;
+                    animator.m_OptimizeOnLoad = null;
+                    HierarchyOptimizer.Optimize(animator.m_GameObject, exposed, imported: true);
+                    optimized = true;
+                }
+            if (optimized)
+            {
+                var removed = new List<long>();
+                foreach (var (id, o) in file.Objects)
+                    if (o == null) removed.Add(id);
+                foreach (var id in removed) file.Objects.Remove(id);
+                components.RemoveAll(entry => entry.Component == null);
+            }
             foreach (var (go, _) in gameObjects.Values)
-                go.m_Transform.MarkChanged();
+                if (go != null) go.m_Transform.MarkChanged();
 
             // Attachment precedes serialized fields and may precede the Transform itself.
             // Snapshot only after every local pose and parent is final, including the

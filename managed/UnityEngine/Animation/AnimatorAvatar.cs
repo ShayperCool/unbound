@@ -19,12 +19,16 @@ namespace UnityEngine
         internal HumanDescription m_Description;
         /// <summary>A humanoid avatar (its description maps human bones).</summary>
         internal bool m_Human;
-        /// <summary>The model hierarchy a model's humanoid avatar is built from.</summary>
+        /// <summary>The model hierarchy a model's avatar is built from.</summary>
         GameObject m_Root;
+        /// <summary>A model avatar's transforms in the model file's order: the order of its
+        /// skeleton (null: the hierarchy's order).</summary>
+        Transform[] m_SkeletonOrder;
         AvatarConstant m_Constant;
         bool m_Built;
         /// <summary>A model's generic avatar: valid, its hierarchy is not needed.</summary>
         bool m_ModelGeneric;
+        AvatarConstant m_GenericSkeleton;
 
         internal void SetConstant(AvatarConstant constant)
         {
@@ -50,12 +54,39 @@ namespace UnityEngine
 
         public bool isValid => m_ModelGeneric || Constant != null;
 
+        /// <summary>The avatar's skeleton (every transform of the hierarchy it was built from, its
+        /// path hash and default pose): what an Animator without its transform hierarchy animates.
+        /// A model's generic avatar builds it from its model on first use, so a model must be asked
+        /// before its hierarchy is optimized (<see cref="HierarchyOptimizer"/>). Null when invalid.</summary>
+        internal AvatarConstant Skeleton
+        {
+            get
+            {
+                if (!m_ModelGeneric) return Constant;
+                if (m_GenericSkeleton == null && m_Root != null)
+                {
+                    var none = new HumanDescription { human = Array.Empty<HumanBone>(), skeleton = Array.Empty<SkeletonBone>() };
+                    m_GenericSkeleton = AvatarBuild.Build(m_Root, none, false, false, out _, m_SkeletonOrder);
+                }
+                return m_GenericSkeleton;
+            }
+        }
+
         public bool isHuman => Constant?.IsHuman ?? false;
 
         public HumanDescription humanDescription => m_Description.Copy();
 
         void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
         {
+            var root = body.Ref("m_UnboundRoot");
+            m_Root = root.IsNull ? null : resolver.Resolve(root, typeof(GameObject)) as GameObject;
+            if (body.Get("m_UnboundSkeletonOrder") is YNode order)
+            {
+                var transforms = new List<Transform>();
+                foreach (var item in order.Seq())
+                    transforms.Add(resolver.Resolve(item.AsRef(), typeof(Transform)) as Transform);
+                m_SkeletonOrder = transforms.ToArray();
+            }
             var human = body.Get("m_UnboundHumanDescription");
             if (human == null)
             {
@@ -65,8 +96,6 @@ namespace UnityEngine
             }
             m_Description = HumanDescription.Read(human);
             m_Human = true;
-            var root = body.Ref("m_UnboundRoot");
-            m_Root = root.IsNull ? null : resolver.Resolve(root, typeof(GameObject)) as GameObject;
         }
     }
 

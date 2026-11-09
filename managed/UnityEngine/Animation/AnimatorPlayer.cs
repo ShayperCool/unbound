@@ -1590,6 +1590,7 @@ namespace Unbound.Runtime
         static bool Allowed(AvatarMask mask, Transform root, PropertyGroup group)
         {
             if (group != null && group.HumanCurve >= 0) return mask.AllowsHumanCurve(group.HumanCurve);
+            if (group?.SkeletonPath != null) return mask.Allows(group.SkeletonPath);
             if (!(group?.Target is Transform)) return true;
             var t = group.Transform;
             if (t == null || root == null) return true;

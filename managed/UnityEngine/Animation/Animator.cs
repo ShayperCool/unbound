@@ -115,13 +115,96 @@ namespace UnityEngine
             set { MainThreadCheck.Check("set_updateMode"); m_UpdateMode = value; }
         }
 
-        public bool hasTransformHierarchy
+        public bool hasTransformHierarchy => !m_NoHierarchy;
+
+        /// <summary>The Animator animates its avatar's skeleton instead of a transform hierarchy
+        /// (Optimize Game Objects, AnimatorUtility.OptimizeTransformHierarchy).</summary>
+        internal bool m_NoHierarchy;
+        Unbound.Runtime.AnimatorSkeleton m_Skeleton;
+        /// <summary>A model's Optimize Game Objects: the extra exposed paths the loader optimizes
+        /// the loaded hierarchy with (<see cref="Unbound.Runtime.HierarchyOptimizer"/>).</summary>
+        internal string[] m_OptimizeOnLoad;
+
+        /// <summary>The skeleton an Animator without its transform hierarchy animates (made on first
+        /// use, after a copy's hierarchy exists); null with a hierarchy or without a valid avatar.</summary>
+        internal Unbound.Runtime.AnimatorSkeleton Skeleton
         {
             get
             {
-                Unbound.Runtime.Stubs.Ignored("Animator.hasTransformHierarchy", "is always true (optimizeGameObjects is not honoured yet)");
-                return true;
+                if (!m_NoHierarchy) return null;
+                var avatar = m_Avatar != null ? m_Avatar.Skeleton : null;
+                if (avatar == null) return null;
+                if (m_Skeleton == null || m_Skeleton.Avatar != avatar)
+                {
+                    m_Skeleton = new Unbound.Runtime.AnimatorSkeleton(this, avatar);
+                    m_Skeleton.BindExposed();
+                }
+                return m_Skeleton;
             }
+        }
+
+        /// <summary>The bindings this Animator's own updates and its playable outputs write.</summary>
+        IEnumerable<Unbound.Runtime.AnimationBindings> OwnBindings()
+        {
+            if (m_Player != null) yield return m_Player.Bindings;
+            if (m_OutputBindings != null) yield return m_OutputBindings;
+        }
+
+        /// <summary>The bound transform properties below the root that are skeleton nodes, while the
+        /// hierarchy is whole (their path names the node).</summary>
+        internal List<(Unbound.Runtime.AnimationBindings Bindings, Unbound.Runtime.PropertyGroup Group, int Node, Unbound.Runtime.TransformProperty Property)>
+            SkeletonBindings(Unbound.Runtime.Humanoid.AvatarConstant avatar)
+        {
+            var moves = new List<(Unbound.Runtime.AnimationBindings, Unbound.Runtime.PropertyGroup, int, Unbound.Runtime.TransformProperty)>();
+            var root = transform;
+            foreach (var bindings in OwnBindings())
+                foreach (var ((target, key), group) in bindings.Index)
+                {
+                    if (!(target is Transform t) || t == root || !Unbound.Runtime.PropertyBinder.TransformPropertyOf(key, out var property)) continue;
+                    int node = avatar.NodeOfPath(Unbound.Runtime.HashedBindings.Crc32(Unbound.Runtime.HierarchyOptimizer.PathBelow(t, root)));
+                    if (node > 0) moves.Add((bindings, group, node, property));
+                }
+            return moves;
+        }
+
+        /// <summary>The hierarchy was optimized: the Animator animates <paramref name="skeleton"/>,
+        /// and the bound transform properties of its nodes move to it (channels and state kept).</summary>
+        internal void SetSkeleton(Unbound.Runtime.AnimatorSkeleton skeleton,
+            List<(Unbound.Runtime.AnimationBindings Bindings, Unbound.Runtime.PropertyGroup Group, int Node, Unbound.Runtime.TransformProperty Property)> moves)
+        {
+            m_NoHierarchy = true;
+            m_Skeleton = skeleton;
+            skeleton.BindExposed();
+            if (moves == null) return;
+            foreach (var (bindings, group, node, property) in moves)
+                bindings.Replace(group, (this, Unbound.Runtime.PropertyBinder.SkeletonKey(node, property)),
+                    new Unbound.Runtime.SkeletonGroup(skeleton, node, property));
+        }
+
+        /// <summary>The hierarchy was deoptimized: the skeleton's bound properties move back to the
+        /// transforms of their paths.</summary>
+        internal void ClearSkeleton()
+        {
+            var root = transform;
+            foreach (var bindings in OwnBindings())
+            {
+                var entries = new List<((Object, string) Key, Unbound.Runtime.PropertyGroup Group)>();
+                foreach (var entry in bindings.Index)
+                    if (entry.Value is Unbound.Runtime.SkeletonGroup) entries.Add((entry.Key, entry.Value));
+                foreach (var (_, group) in entries)
+                {
+                    var g = (Unbound.Runtime.SkeletonGroup)group;
+                    var t = root.Find(g.SkeletonPath);
+                    if (t == null)
+                    {
+                        g.Target = null;
+                        continue;
+                    }
+                    bindings.Replace(g, (t, Unbound.Runtime.PropertyBinder.TransformKey(g.Property)), Unbound.Runtime.PropertyBinder.TransformGroup(t, g.Property));
+                }
+            }
+            m_NoHierarchy = false;
+            m_Skeleton = null;
         }
 
         public float speed
@@ -453,6 +536,7 @@ namespace UnityEngine
         {
             ResetBindings();
             m_Player = null;
+            Skeleton?.BindExposed();
             EnsurePlayer();
             if (m_Match != null && m_Player != null && m_Player.Layers.Length > 0)
             {
@@ -970,6 +1054,14 @@ namespace UnityEngine
             m_ApplyRootMotion = body.Bool("m_ApplyRootMotion");
             m_KeepAnimatorStateOnDisable = body.Bool("m_KeepAnimatorStateOnDisable") || body.Bool("m_KeepAnimatorControllerStateOnDisable");
             m_WriteDefaultValuesOnDisable = body.Bool("m_WriteDefaultValuesOnDisable");
+            m_NoHierarchy = !body.Bool("m_HasTransformHierarchy", true);
+            if (body.Bool("m_UnboundOptimizeGameObjects"))
+            {
+                var paths = new List<string>();
+                if (body.Get("m_UnboundExtraExposedTransformPaths") is YNode exposed)
+                    foreach (var item in exposed.Seq()) paths.Add(item.AsString());
+                m_OptimizeOnLoad = paths.ToArray();
+            }
         }
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
@@ -983,6 +1075,7 @@ namespace UnityEngine
             m_Avatar = s.m_Avatar;
             m_KeepAnimatorStateOnDisable = s.m_KeepAnimatorStateOnDisable;
             m_WriteDefaultValuesOnDisable = s.m_WriteDefaultValuesOnDisable;
+            m_NoHierarchy = s.m_NoHierarchy;
             m_Speed = s.m_Speed;
             m_FireEvents = s.m_FireEvents;
             m_LogWarnings = s.m_LogWarnings;

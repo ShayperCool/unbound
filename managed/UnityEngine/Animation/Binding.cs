@@ -33,6 +33,10 @@ namespace Unbound.Runtime
         /// <summary>A script whose fields this writes: it gets OnDidApplyAnimationProperties.</summary>
         internal MonoBehaviour Script;
 
+        /// <summary>A skeleton node's property (<see cref="SkeletonGroup"/>): its path below the root,
+        /// which masks filter it by.</summary>
+        internal string SkeletonPath;
+
         internal bool Alive => Target != null;
 
         /// <summary>Current values into values[offset..offset+Width).</summary>
@@ -461,6 +465,34 @@ namespace Unbound.Runtime
         readonly Dictionary<(Object, string), PropertyGroup> m_Index = new Dictionary<(Object, string), PropertyGroup>();
         readonly Dictionary<AnimationClip, BoundClip> m_Clips = new Dictionary<AnimationClip, BoundClip>();
 
+        /// <summary>The bound properties by target and key.</summary>
+        internal IReadOnlyDictionary<(Object, string), PropertyGroup> Index => m_Index;
+
+        /// <summary>The skeleton of an Animator without its transform hierarchy that groups here
+        /// animate: posed after each write.</summary>
+        internal AnimatorSkeleton Skeleton;
+
+        /// <summary>Puts <paramref name="group"/> in place of <paramref name="old"/> on the same
+        /// channels (an optimized or deoptimized hierarchy's transform properties).</summary>
+        internal void Replace(PropertyGroup old, (Object, string) key, PropertyGroup group)
+        {
+            int index = Groups.IndexOf(old);
+            if (index < 0 || group.Width != old.Width || group.IsObject != old.IsObject) return;
+            group.First = old.First;
+            group.Transform = group is SkeletonGroup ? null : (key.Item1 as Component)?.transform;
+            Groups[index] = group;
+            for (int i = 0; i < group.Width; i++) FloatOwner[group.First + i] = group;
+            foreach (var entry in m_Index)
+                if (ReferenceEquals(entry.Value, old))
+                {
+                    m_Index.Remove(entry.Key);
+                    break;
+                }
+            m_Index[key] = group;
+            if (group is SkeletonGroup skeleton) Skeleton = skeleton.Skeleton;
+            ClipEpoch++;
+        }
+
         /// <summary>Changes whenever a clip is (re)bound: what <see cref="ParameterCurveGroup"/>
         /// caches which clips feed it by.</summary>
         internal int ClipEpoch;
@@ -615,7 +647,8 @@ namespace Unbound.Runtime
                     group = spec.Factory();
                     if (group == null) return -1;
                     if (group is ParameterCurveGroup parameter) parameter.Bindings = this;
-                    group.Transform ??= (spec.Target as Component)?.transform ?? (spec.Target as GameObject)?.transform;
+                    if (group is SkeletonGroup skeleton) Skeleton = skeleton.Skeleton;
+                    else group.Transform ??= (spec.Target as Component)?.transform ?? (spec.Target as GameObject)?.transform;
                     Add(group);
                     m_Index[(spec.Target, spec.Key)] = group;
                 }
@@ -673,6 +706,7 @@ namespace Unbound.Runtime
                     Debug.LogException(e);
                 }
             }
+            Skeleton?.Apply();
         }
 
         /// <summary>Whether a curve drives the Animator's own parameter (Animator float parameters
@@ -790,6 +824,11 @@ namespace Unbound.Runtime
         {
             var spec = default(Spec);
             if (root == null) return spec;
+            if (!objectValued && SkeletonNode(root, binding, out var skeleton, out int node))
+            {
+                var s = ResolveSkeleton(skeleton, node, binding.Attribute);
+                if (s.Factory != null) return s;
+            }
             if (binding.Hashed) return ResolveHashed(root, binding, objectValued, clip);
             var t = binding.Path.Length == 0 ? root.transform : root.transform.Find(binding.Path);
             if (t == null) return spec; // a missing path is not animated (Unity shows it as missing)
@@ -993,24 +1032,88 @@ namespace Unbound.Runtime
             return default;
         }
 
+        /// <summary>A transform curve's property and component.</summary>
+        static bool TransformAttribute(string attribute, out TransformProperty property, out int component)
+        {
+            property = TransformProperty.Position;
+            if (TryComponent(attribute, "m_LocalPosition", out component)) return true;
+            property = TransformProperty.Rotation;
+            if (TryComponent(attribute, "m_LocalRotation", out component)) return true;
+            property = TransformProperty.Euler;
+            if (TryComponent(attribute, "localEulerAnglesRaw", out component) || TryComponent(attribute, "localEulerAngles", out component) ||
+                TryComponent(attribute, "localEulerAnglesBaked", out component) || TryComponent(attribute, "m_LocalEulerAnglesHint", out component))
+                return true;
+            property = TransformProperty.Scale;
+            return TryComponent(attribute, "m_LocalScale", out component);
+        }
+
+        /// <summary>The binding key of a Transform's property.</summary>
+        internal static string TransformKey(TransformProperty property) => property switch
+        {
+            TransformProperty.Position => "position",
+            TransformProperty.Rotation => "rotation",
+            TransformProperty.Euler => "euler",
+            _ => "scale",
+        };
+
+        /// <summary>The property a Transform binding key names.</summary>
+        internal static bool TransformPropertyOf(string key, out TransformProperty property)
+        {
+            switch (key)
+            {
+                case "position": property = TransformProperty.Position; return true;
+                case "rotation": property = TransformProperty.Rotation; return true;
+                case "euler": property = TransformProperty.Euler; return true;
+                case "scale": property = TransformProperty.Scale; return true;
+            }
+            property = default;
+            return false;
+        }
+
+        /// <summary>The binding key of a skeleton node's property (keyed on the Animator).</summary>
+        internal static string SkeletonKey(int node, TransformProperty property) => "skeleton:" + node + ":" + TransformKey(property);
+
+        internal static PropertyGroup TransformGroup(Transform t, TransformProperty property) => property switch
+        {
+            TransformProperty.Position => new AccessorGroup(t, 3, () => t.localPosition, v => t.localPosition = v),
+            TransformProperty.Rotation => new AccessorGroup(t, 4,
+                () => { var q = t.localRotation; return new Vector4(q.x, q.y, q.z, q.w); },
+                v =>
+                {
+                    float m = Mathf.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
+                    if (m < 1e-6f) return;
+                    t.localRotation = new Quaternion(v.x / m, v.y / m, v.z / m, v.w / m);
+                }) { IsQuaternion = true },
+            TransformProperty.Euler => new AccessorGroup(t, 3, () => t.localEulerAngles, v => t.localRotation = Quaternion.Euler(v.x, v.y, v.z)),
+            _ => new AccessorGroup(t, 3, () => t.localScale, v => t.localScale = v) { IsScale = true },
+        };
+
+        /// <summary>A Transform curve of a path the root's Animator animates as a skeleton node
+        /// (an Animator without its transform hierarchy binds every such curve to its skeleton).</summary>
+        static bool SkeletonNode(GameObject root, CurveBinding binding, out AnimatorSkeleton skeleton, out int node)
+        {
+            skeleton = null;
+            node = -1;
+            if (binding.Hashed ? binding.PathHash == 0 : binding.Path.Length == 0) return false;
+            if (!(binding.Type != null ? typeof(Transform).IsAssignableFrom(binding.Type) : binding.ClassId == EngineTypes.TransformId)) return false;
+            var animator = root.GetComponent<Animator>();
+            if (animator == null || !animator.m_NoHierarchy) return false;
+            skeleton = animator.Skeleton;
+            if (skeleton == null) return false;
+            node = skeleton.NodeOfPath(binding.Hashed ? binding.PathHash : HashedBindings.Crc32(binding.Path));
+            return node > 0;
+        }
+
+        static Spec ResolveSkeleton(AnimatorSkeleton skeleton, int node, string attribute)
+        {
+            if (!TransformAttribute(attribute, out var property, out int c)) return default;
+            return Make(skeleton.Animator, SkeletonKey(node, property), c, () => new SkeletonGroup(skeleton, node, property));
+        }
+
         static Spec ResolveTransform(Transform t, string attribute)
         {
-            if (TryComponent(attribute, "m_LocalPosition", out int c))
-                return Make(t, "position", c, () => new AccessorGroup(t, 3, () => t.localPosition, v => t.localPosition = v));
-            if (TryComponent(attribute, "m_LocalRotation", out c))
-                return Make(t, "rotation", c, () => new AccessorGroup(t, 4,
-                    () => { var q = t.localRotation; return new Vector4(q.x, q.y, q.z, q.w); },
-                    v =>
-                    {
-                        float m = Mathf.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
-                        if (m < 1e-6f) return;
-                        t.localRotation = new Quaternion(v.x / m, v.y / m, v.z / m, v.w / m);
-                    }) { IsQuaternion = true });
-            if (TryComponent(attribute, "localEulerAnglesRaw", out c) || TryComponent(attribute, "localEulerAngles", out c) ||
-                TryComponent(attribute, "localEulerAnglesBaked", out c) || TryComponent(attribute, "m_LocalEulerAnglesHint", out c))
-                return Make(t, "euler", c, () => new AccessorGroup(t, 3, () => t.localEulerAngles, v => t.localRotation = Quaternion.Euler(v.x, v.y, v.z)));
-            if (TryComponent(attribute, "m_LocalScale", out c))
-                return Make(t, "scale", c, () => new AccessorGroup(t, 3, () => t.localScale, v => t.localScale = v) { IsScale = true });
+            if (TransformAttribute(attribute, out var property, out int c))
+                return Make(t, TransformKey(property), c, () => TransformGroup(t, property));
             if (t is RectTransform rt)
             {
                 if (TryComponent(attribute, "m_AnchoredPosition", out c))

@@ -200,13 +200,6 @@ namespace UnityEngine
         internal bool entry { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorTransitionInfo.entry"); return default; } }
         internal bool exit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorTransitionInfo.exit"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class AnimatorUtility
-    {
-        [global::Unbound.Stub] public static void OptimizeTransformHierarchy(global::UnityEngine.GameObject go, string[] exposedTransforms) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorUtility.OptimizeTransformHierarchy"); }
-        [global::Unbound.Stub] public static void DeoptimizeTransformHierarchy(global::UnityEngine.GameObject go) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorUtility.DeoptimizeTransformHierarchy"); }
-        [global::Unbound.Stub] public AnimatorUtility() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AnimatorUtility.ctor"); }
-    }
     public enum ArmDof
     {
         ShoulderDownUp = 0,

@@ -15,17 +15,25 @@ namespace Unbound.Runtime.Humanoid
         public static UnityEngine.Transform[] Bind(UnityEngine.Transform root, AvatarConstant c)
         {
             var skel = c.AvatarSkeleton;
-            var bound = new bool[skel.Count];
-            if (c.HumanSkeletonIndexArray.Length != 0)
-                for (int i = c.HumanSkeletonIndexArray[0]; i != -1; i = skel.Parent[i]) bound[i] = true;
-            foreach (int i in c.HumanSkeletonIndexArray)
-                if (i != -1) bound[i] = true;
+            var bound = Nodes(c);
             var map = new Dictionary<uint, UnityEngine.Transform>();
             Collect(root, "", map);
             var result = new UnityEngine.Transform[skel.Count];
             for (int i = 0; i < skel.Count; i++)
                 if (bound[i] && map.TryGetValue(skel.Id[i], out var t)) result[i] = t;
             return result;
+        }
+
+        /// <summary>The avatar nodes a human pose writes: the human skeleton's and the hips' ancestors.</summary>
+        public static bool[] Nodes(AvatarConstant c)
+        {
+            var skel = c.AvatarSkeleton;
+            var bound = new bool[skel.Count];
+            if (c.HumanSkeletonIndexArray.Length != 0)
+                for (int i = c.HumanSkeletonIndexArray[0]; i != -1; i = skel.Parent[i]) bound[i] = true;
+            foreach (int i in c.HumanSkeletonIndexArray)
+                if (i != -1) bound[i] = true;
+            return bound;
         }
 
         static void Collect(UnityEngine.Transform t, string path, Dictionary<uint, UnityEngine.Transform> map)

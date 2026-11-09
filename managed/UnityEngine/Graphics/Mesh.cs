@@ -135,6 +135,8 @@ namespace UnityEngine
             m_IndexBuffer = (int[])source.m_IndexBuffer?.Clone();
             m_BoneWeights = (BoneWeight[])source.m_BoneWeights?.Clone();
             m_Bindposes = (Matrix4x4[])source.m_Bindposes?.Clone();
+            m_BoneNameHashes = (uint[])source.m_BoneNameHashes?.Clone();
+            m_RootBoneNameHash = source.m_RootBoneNameHash;
             m_Bounds = source.m_Bounds;
             m_IndexFormat = source.m_IndexFormat;
             CopyPackedChannels(source);

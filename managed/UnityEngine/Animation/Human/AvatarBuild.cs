@@ -24,6 +24,32 @@ namespace Unbound.Runtime.Humanoid
 
         public bool IsHuman => Human != null && Human.Skeleton.Count != 0;
 
+        Dictionary<uint, int> m_NodeByPath;
+
+        /// <summary>The node of a path hash (the first of it), or −1.</summary>
+        public int NodeOfPath(uint pathHash)
+        {
+            if (m_NodeByPath == null)
+            {
+                var map = new Dictionary<uint, int>(AvatarSkeleton.Count);
+                for (int i = 0; i < AvatarSkeleton.Count; i++) map.TryAdd(AvatarSkeleton.Id[i], i);
+                m_NodeByPath = map;
+            }
+            return m_NodeByPath.TryGetValue(pathHash, out int node) ? node : -1;
+        }
+
+        /// <summary>The first node below the root whose last path name is <paramref name="name"/>, or −1.</summary>
+        public int NodeOfName(string name)
+        {
+            for (int i = 1; i < Paths.Length; i++)
+            {
+                var path = Paths[i];
+                int start = path.LastIndexOf('/') + 1;
+                if (path.Length - start == name.Length && string.CompareOrdinal(path, start, name, 0, name.Length) == 0) return i;
+            }
+            return -1;
+        }
+
         /// <summary>The human skeleton node of a `HumanBodyBones` bone (−1 when
         /// the avatar does not map it).</summary>
         public int HumanNodeOf(int monoBone)
@@ -136,8 +162,11 @@ namespace Unbound.Runtime.Humanoid
         /// <summary>Builds the avatar of <paramref name="go"/>; null with <paramref name="error"/> when
         /// the description does not fit. <paramref name="human"/>: a humanoid avatar;
         /// <paramref name="onlySkeletonNames"/>: keep only the transforms the description's skeleton
-        /// names (AvatarBuilder.BuildHumanAvatar with a skeleton).</summary>
-        public static AvatarConstant Build(GameObject go, in HumanDescription d, bool human, bool onlySkeletonNames, out string error)
+        /// names (AvatarBuilder.BuildHumanAvatar with a skeleton); <paramref name="order"/>: the
+        /// transforms in the order of the model file the importer built the avatar from (parents
+        /// first), instead of the hierarchy's.</summary>
+        public static AvatarConstant Build(GameObject go, in HumanDescription d, bool human, bool onlySkeletonNames, out string error,
+            Transform[] order = null)
         {
             error = null;
             if (human && (error = ValidateDescription(d)) != null) return null;
@@ -150,6 +179,15 @@ namespace Unbound.Runtime.Humanoid
             }
             var transforms = new List<NamedTransform>();
             AllChildren(root, "", transforms, names);
+            if (order != null && order.Length == transforms.Count && Array.IndexOf(order, null) < 0)
+            {
+                var byTransform = new Dictionary<Transform, NamedTransform>(transforms.Count);
+                foreach (var t in transforms) byTransform[t.Transform] = t;
+                var ordered = new List<NamedTransform>(transforms.Count);
+                foreach (var t in order)
+                    if (byTransform.TryGetValue(t, out var named)) ordered.Add(named);
+                if (ordered.Count == transforms.Count) transforms = ordered;
+            }
             if (transforms.Count == 0 || transforms[0].Transform != root)
             {
                 error = $"Root '{go.name}' has not been included in avatar transforms.";

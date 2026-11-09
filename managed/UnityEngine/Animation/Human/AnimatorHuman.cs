@@ -300,9 +300,29 @@ namespace Unbound.Runtime.Humanoid
             }
         }
 
-        /// <summary>The bound transforms below the root take the pose's local positions and rotations.</summary>
+        bool[] m_Nodes;
+
+        /// <summary>The bound transforms below the root take the pose's local positions and rotations
+        /// (the skeleton's nodes, for an Animator without its transform hierarchy).</summary>
         void Write()
         {
+            var skeleton = m_Animator.m_NoHierarchy ? m_Animator.Skeleton : null;
+            if (skeleton != null && skeleton.Avatar == m_Constant)
+            {
+                m_Nodes ??= AvatarBinding.Nodes(m_Constant);
+                for (int i = 1; i < m_Nodes.Length; i++)
+                {
+                    if (!m_Nodes[i]) continue;
+                    // The pose as the human gives it, its scale included (the hips carry the
+                    // avatar's scale: tests/projects/animoptimize HumanOpt).
+                    var x = m_AvatarPose.X[i];
+                    var q = Rotation(x.q);
+                    x.q = new F4(q.x, q.y, q.z, q.w);
+                    skeleton.SetLocal(i, x);
+                }
+                skeleton.Apply();
+                return;
+            }
             for (int i = 1; i < m_Bound.Length; i++)
             {
                 var t = m_Bound[i];

@@ -9,8 +9,22 @@ namespace UnityEngine
     /// the native side holds (the document names the model and the mesh's index in it).</summary>
     public sealed partial class Mesh : ISerializedAsset
     {
+        /// <summary>Per bind pose, the hash of its bone's path below the model's root, and the root
+        /// bone's (0: none): how a renderer without bones finds them in an Animator's skeleton
+        /// (Optimize Game Objects). Imported skinned meshes have them.</summary>
+        internal uint[] m_BoneNameHashes;
+        internal uint m_RootBoneNameHash;
+
         void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
         {
+            if (body.Get("m_UnboundBonePaths") is YNode bones)
+            {
+                var hashes = new System.Collections.Generic.List<uint>();
+                foreach (var path in bones.Seq()) hashes.Add(HashedBindings.Crc32(path.AsString()));
+                m_BoneNameHashes = hashes.ToArray();
+                var rootPath = body.Str("m_UnboundRootBonePath");
+                m_RootBoneNameHash = string.IsNullOrEmpty(rootPath) ? 0u : HashedBindings.Crc32(rootPath);
+            }
             var model = body.Str("m_UnboundModel");
             if (string.IsNullOrEmpty(model))
             {

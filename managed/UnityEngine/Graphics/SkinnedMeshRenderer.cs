@@ -144,7 +144,45 @@ namespace UnityEngine
         bool HasShapes => m_Mesh != null && m_Mesh.blendShapeCount > 0 && m_BlendShapeWeights.Exists(w => w != 0f);
 
         bool IsSkinned => m_Mesh != null && m_Mesh.m_BoneWeights != null && m_Mesh.m_BoneWeights.Length == m_Mesh.vertexCount
-            && m_Mesh.m_Bindposes != null && m_Bones.Length > 0;
+            && m_Mesh.m_Bindposes != null && (m_Bones.Length > 0 || SkeletonSkin() != null);
+
+        // Skinning from an Animator's skeleton (a renderer without bones below an Animator without
+        // its transform hierarchy): the mesh's bone paths as the skeleton's nodes.
+        Animator m_SkinAnimator;
+        AnimatorSkeleton m_SkinSkeleton;
+        Mesh m_SkinMesh;
+        int[] m_SkinNodes = Array.Empty<int>();
+        int m_SkinRoot;
+
+        /// <summary>The skeleton that skins this renderer: the nearest Animator's above it (itself
+        /// included) when it has no transform hierarchy and the mesh names its bones; else null.</summary>
+        AnimatorSkeleton SkeletonSkin()
+        {
+            var mesh = m_Mesh;
+            if (m_Bones.Length != 0 || mesh == null || mesh.m_BoneNameHashes == null || mesh.m_Bindposes == null
+                || mesh.m_BoneNameHashes.Length != mesh.m_Bindposes.Length) return null;
+            if (m_SkinAnimator == null || !transform.IsChildOf(m_SkinAnimator.transform))
+            {
+                m_SkinAnimator = null;
+                for (var t = transform; t != null && m_SkinAnimator == null; t = t.m_Parent)
+                    m_SkinAnimator = t.m_GameObject.GetComponent<Animator>();
+            }
+            var skeleton = m_SkinAnimator != null ? m_SkinAnimator.Skeleton : null;
+            if (skeleton == null) return null;
+            if (skeleton != m_SkinSkeleton || mesh != m_SkinMesh)
+            {
+                // The root: the mesh's root bone, else this renderer's own path below the Animator.
+                var root = m_SkinAnimator.transform;
+                m_SkinRoot = mesh.m_RootBoneNameHash != 0 ? skeleton.NodeOfPath(mesh.m_RootBoneNameHash)
+                    : transform == root ? 0 : skeleton.NodeOfPath(HashedBindings.Crc32(HierarchyOptimizer.PathBelow(transform, root)));
+                var hashes = mesh.m_BoneNameHashes;
+                if (m_SkinNodes.Length != hashes.Length) m_SkinNodes = new int[hashes.Length];
+                for (int b = 0; b < hashes.Length; b++) m_SkinNodes[b] = skeleton.NodeOfPath(hashes[b]);
+                m_SkinSkeleton = skeleton;
+                m_SkinMesh = mesh;
+            }
+            return skeleton;
+        }
 
         /// <summary>The bones a vertex takes: the renderer's quality, Auto following the quality
         /// level's skin weights (measured: tests/projects/builtinfx skin_*).</summary>
@@ -235,14 +273,27 @@ namespace UnityEngine
             var mesh = m_Mesh;
             var weights = mesh.m_BoneWeights;
             var bindposes = mesh.m_Bindposes;
-            int boneCount = Math.Min(m_Bones.Length, bindposes.Length);
+            var skeleton = m_Bones.Length == 0 ? SkeletonSkin() : null;
+            int boneCount = Math.Min(skeleton != null ? m_SkinNodes.Length : m_Bones.Length, bindposes.Length);
             if (m_Matrices.Length != boneCount) m_Matrices = new Matrix4x4[boneCount];
             var fallback = transform.localToWorldMatrix;
-            for (int b = 0; b < boneCount; b++)
+            if (skeleton != null)
             {
-                var bone = m_Bones[b];
-                m_Matrices[b] = (bone != null ? bone.localToWorldMatrix : fallback) * bindposes[b];
+                // Relative to the skin's root node, placed by this renderer's transform (which the
+                // Animator keeps at that node's pose when it is exposed).
+                var toWorld = m_SkinRoot > 0 ? fallback * skeleton.Global(m_SkinRoot).inverse : fallback;
+                for (int b = 0; b < boneCount; b++)
+                {
+                    int node = m_SkinNodes[b];
+                    m_Matrices[b] = (node >= 0 ? toWorld * skeleton.Global(node) : fallback) * bindposes[b];
+                }
             }
+            else
+                for (int b = 0; b < boneCount; b++)
+                {
+                    var bone = m_Bones[b];
+                    m_Matrices[b] = (bone != null ? bone.localToWorldMatrix : fallback) * bindposes[b];
+                }
             int maxBones = MaxBones;
             for (int i = 0; i < positions.Length; i++)
             {

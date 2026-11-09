@@ -675,7 +675,7 @@ namespace Unbound.Runtime
             for (int k = 0; k < count; k++)
             {
                 var g = groups[k];
-                if (!g.Alive || skipTransforms && ((g.Target is Transform && !ReferenceEquals(g.Target, rootDuringCull)) || g.HumanCurve >= 0)) continue;
+                if (!g.Alive || skipTransforms && ((g.Target is Transform && !ReferenceEquals(g.Target, rootDuringCull)) || g is SkeletonGroup || g.HumanCurve >= 0)) continue;
                 try
                 {
                     bool changed;
@@ -698,6 +698,7 @@ namespace Unbound.Runtime
                     Debug.LogException(e);
                 }
             }
+            b.Skeleton?.Apply();
             NotifyScripts(s.Scripts);
         }
 
