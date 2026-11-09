@@ -331,9 +331,14 @@ impl Pragmas {
                     // The main directional light, ambient from light probes or a lightmap
                     // (directional or not), and point lights lit per vertex when the renderer
                     // has them.
+                    // A renderer with a realtime lightmap alone (DYNAMICLIGHTMAP_ON) samples no
+                    // light probes; one with both lightmaps draws with both keywords.
                     p.keyword_sets.push((words(&["DIRECTIONAL"]), false));
-                    p.keyword_sets
-                        .push((words(&["LIGHTPROBE_SH", "LIGHTMAP_ON"]), false));
+                    p.keyword_sets.push((
+                        words(&["LIGHTPROBE_SH", "LIGHTMAP_ON", "DYNAMICLIGHTMAP_ON"]),
+                        false,
+                    ));
+                    p.keyword_sets.push((words(&["DYNAMICLIGHTMAP_ON"]), true));
                     p.keyword_sets
                         .push((words(&["DIRLIGHTMAP_COMBINED"]), true));
                     if !rest.iter().any(|w| w == "novertexlight") {
@@ -1668,6 +1673,26 @@ fn resolve_include(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn forward_base_lightmap_keywords_exclude_probes_only_for_lightmapped_draws() {
+        let lines = vec![preprocess::Pragma {
+            words: words(&["multi_compile_fwdbase"]),
+        }];
+        let p = Pragmas::read(&lines);
+        let select = |enabled: &[&str]| p.select(&words(enabled));
+        // No lightmap: light probes.
+        assert!(select(&[]).contains(&"LIGHTPROBE_SH".to_string()));
+        // A realtime lightmap alone: no probes.
+        let realtime = select(&["DYNAMICLIGHTMAP_ON"]);
+        assert!(realtime.contains(&"DYNAMICLIGHTMAP_ON".to_string()));
+        assert!(!realtime.contains(&"LIGHTPROBE_SH".to_string()));
+        // Both lightmaps: both keywords.
+        let both = select(&["LIGHTMAP_ON", "DYNAMICLIGHTMAP_ON"]);
+        assert!(both.contains(&"LIGHTMAP_ON".to_string()));
+        assert!(both.contains(&"DYNAMICLIGHTMAP_ON".to_string()));
+        assert!(!both.contains(&"LIGHTPROBE_SH".to_string()));
+    }
 
     #[test]
     fn global_variants_use_source_groups_and_skips() {
