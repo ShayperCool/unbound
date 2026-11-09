@@ -594,20 +594,20 @@ namespace Unbound.Runtime.Humanoid
             return new Trs(t, q, F4.One3);
         }
 
-        /// <summary>The human pose (root, muscles, goals) of a skeleton pose.
-        /// The translation DoF branches (taken with a <paramref name="tdof"/> callback on avatars with
-        /// translation DoF) are not supported and throw.</summary>
+        /// <summary>The human pose (root, muscles, goals, and translation DoF with
+        /// <paramref name="tdofBase"/> on an avatar with translation DoF) of a skeleton pose.</summary>
         /// <param name="local">Input: the skeleton pose, local.</param>
         /// <param name="pose">Output: root, goal transforms, DoF and hand DoF (other fields untouched).</param>
         /// <param name="ws4">Workspace: the input pose, global (left holding it).</param>
         /// <param name="ws5">Workspace: the retargeted pose, global.</param>
         /// <param name="ws6">Workspace: the retargeted pose, local (left holding it).</param>
         /// <param name="ws7">Workspace: per-limb globals.</param>
+        /// <param name="tdofBase">The avatar's <see cref="TDoFBase"/>, or null to leave the
+        /// translation DoF out.</param>
         internal static void RetargetFrom(Human h, SkeletonPose local, HumanPose pose, SkeletonPose ws4, SkeletonPose ws5,
-            SkeletonPose ws6, SkeletonPose ws7, object tdof)
+            SkeletonPose ws6, SkeletonPose ws7, F4[] tdofBase)
         {
-            if (tdof != null && h.HasTDoF)
-                throw new NotSupportedException("humanoid translation DoF retargeting from a skeleton pose (RetargetFromTDoF) is not supported");
+            bool tdof = tdofBase != null && h.HasTDoF;
             var s = h.Skeleton;
             var tpose = h.SkeletonPose;
             int hips = h.BoneIndex[Bone.Hips];
@@ -620,14 +620,24 @@ namespace Unbound.Runtime.Humanoid
             for (int i = 1; i < s.Count; i++)
                 if (s.AxesId[i] == -1) ws5.X[i].q = M.QMul(ws5.X[s.Parent[i]].q, tpose.X[i].q);
             Skel.ComputeLocalQ(s, ws5, ws6);
+            // With translation DoF, each limb's bones take the source's positions as the alignment
+            // reaches them (the body's root at the origin, the hips where the source has them).
+            if (tdof)
+            {
+                ws6.X[0] = Trs.Identity;
+                ws6.X[hips] = ws4.X[hips];
+                foreach (int i in TDoFTrunk) TDoFFromSource(h, i, ws4, tdofBase, pose, ws6, ws5);
+            }
 
             bool hasLeftShoulder = h.BoneIndex[Bone.LeftShoulder] != -1, hasRightShoulder = h.BoneIndex[Bone.RightShoulder] != -1;
             if (hasLeftShoulder) AlignSkeletonPose(h, ws4, pose, ws5, ws6, Bone.LeftShoulder, Bone.LeftShoulder);
             if (hasRightShoulder) AlignSkeletonPose(h, ws4, pose, ws5, ws6, Bone.RightShoulder, Bone.RightShoulder);
+            if (tdof) foreach (int i in TDoFUpperArms) TDoFFromSource(h, i, ws4, tdofBase, pose, ws6, ws5);
             AlignSkeletonPose(h, ws4, pose, ws5, ws6, Bone.LeftUpperArm, hasLeftShoulder ? Bone.LeftShoulder : Bone.LeftUpperArm);
             AlignSkeletonPose(h, ws4, pose, ws5, ws6, Bone.RightUpperArm, hasRightShoulder ? Bone.RightShoulder : Bone.RightUpperArm);
             AlignSkeletonPose(h, ws4, pose, ws5, ws6, Bone.LeftUpperLeg, Bone.LeftUpperLeg);
             AlignSkeletonPose(h, ws4, pose, ws5, ws6, Bone.RightUpperLeg, Bone.RightUpperLeg);
+            if (tdof) foreach (int i in TDoFMiddles) TDoFFromSource(h, i, ws4, tdofBase, pose, ws6, ws5);
             AlignSkeletonPose(h, ws4, pose, ws5, ws6, Bone.LeftLowerArm, Bone.LeftUpperArm);
             AlignSkeletonPose(h, ws4, pose, ws5, ws6, Bone.RightLowerArm, Bone.RightUpperArm);
             AlignSkeletonPose(h, ws4, pose, ws5, ws6, Bone.LeftLowerLeg, Bone.LeftUpperLeg);
@@ -641,6 +651,7 @@ namespace Unbound.Runtime.Humanoid
 
             Skeleton2HumanPose(h, ws6, pose);
             Human2SkeletonPose(h, pose, ws6);
+            if (tdof) foreach (int i in TDoFEnds) TDoFFromSource(h, i, ws4, tdofBase, pose, ws6, ws5);
             Skel.ComputeGlobal(s, ws6, ws5);
             Human2LimbAlign(h, ws4, ws5, ws6, Bone.LeftFoot, Bone.LeftUpperLeg);
             Human2LimbAlign(h, ws4, ws5, ws6, Bone.RightFoot, Bone.RightUpperLeg);
@@ -659,6 +670,7 @@ namespace Unbound.Runtime.Humanoid
             FixEndDoF(h, ws6, ws7, Bone.RightLowerArm, Bone.RightHand, MinAngle, 5);
             FixEndDoF(h, ws6, ws7, Bone.LeftLowerLeg, Bone.LeftFoot, MinAngle, 5);
             FixEndDoF(h, ws6, ws7, Bone.RightLowerLeg, Bone.RightFoot, MinAngle, 5);
+            if (tdof) foreach (int i in TDoFTips) TDoFFromSource(h, i, ws4, tdofBase, pose, ws6, ws5);
 
             Skeleton2HumanPose(h, ws6, pose);
             ws6.CopyFrom(tpose);
@@ -688,23 +700,76 @@ namespace Unbound.Runtime.Humanoid
         /// <param name="tpose">Input: the T-pose, local.</param>
         /// <param name="local">In/out: the pose, local (bone translations).</param>
         /// <param name="ws">Workspace: globals relative to the parent bone's parent.</param>
+        // The translation DoF the alignment of RetargetFrom reaches together: the upper legs, spine,
+        // chest, upper chest and shoulders; the upper arms; the lower legs and arms; the feet and
+        // hands; the neck, head and toes (TDoFBone order).
+        static readonly int[] TDoFTrunk = { 5, 9, 0, 1, 2, 13, 17 }, TDoFUpperArms = { 14, 18 }, TDoFMiddles = { 6, 10, 15, 19 },
+            TDoFEnds = { 7, 11, 16, 20 }, TDoFTips = { 3, 4, 8, 12 };
+
+        /// <summary>A translation DoF's skeleton node and the node of its closest existing parent
+        /// bone; false when either is missing.</summary>
+        static bool TDoFNodes(Human h, int i, out int node, out int parentNode)
+        {
+            int cur = TDoFBone[i];
+            while (true)
+            {
+                int pb = BoneParent[cur];
+                parentNode = pb < 0 ? -1 : h.BoneIndex[pb];
+                if (cur == 0) break;
+                cur = pb;
+                if (parentNode != -1) break;
+            }
+            node = h.BoneIndex[TDoFBone[i]];
+            return node != -1 && parentNode != -1;
+        }
+
+        /// <summary>A bone's offset from its closest existing parent bone, in that bone's muscle frame
+        /// (its global rotation times its axes' post rotation), divided by the parent's scale.</summary>
+        static F4 TDoFOffset(Skeleton s, SkeletonPose global, F4 position, int parentNode)
+        {
+            var p = global.X[parentNode];
+            var q = M.QNormalize(M.QMul(p.q, AxesOf(s, parentNode, "translation DoF parent").PostQ));
+            return M.QRotate(M.QConj(q), position - p.t) * M.RcpSafe(p.s);
+        }
+
+        /// <summary>Each translation DoF bone's offset (<see cref="TDoFOffset"/>) in the T-pose, which
+        /// translation DoF values are measured from.</summary>
+        /// <param name="ws">Workspace: the T-pose, global.</param>
+        internal static F4[] TDoFBase(Human h, SkeletonPose ws)
+        {
+            var s = h.Skeleton;
+            var result = new F4[Bone.TDoFCount];
+            Skel.ComputeGlobal(s, h.SkeletonPose, ws);
+            for (int i = 0; i < Bone.TDoFCount; i++)
+                if (TDoFNodes(h, i, out int node, out int parentNode)) result[i] = TDoFOffset(s, ws, ws.X[node].t, parentNode);
+            return result;
+        }
+
+        /// <summary>One translation DoF from a source pose: the bone takes the source's position in the
+        /// retargeted pose, and its value is its offset there less the T-pose's, in human scale
+        /// units (0 when the bone or its parent is missing).</summary>
+        /// <param name="source">Input: the source pose, global.</param>
+        /// <param name="local">In/out: the retargeted pose, local (the bone's position).</param>
+        /// <param name="ws">Workspace: the retargeted pose's globals up to the bone's parent.</param>
+        static void TDoFFromSource(Human h, int i, SkeletonPose source, F4[] tdofBase, HumanPose pose, SkeletonPose local, SkeletonPose ws)
+        {
+            pose.TDoF[i] = F4.Zero;
+            if (!TDoFNodes(h, i, out int node, out int parentNode)) return;
+            var s = h.Skeleton;
+            int parent = s.Parent[node];
+            Skel.ComputeGlobal(s, local, ws, parent, -1);
+            var position = source.X[node].t;
+            local.X[node].t = M.InvMulPoint(ws.X[parent], position);
+            var v = TDoFOffset(s, ws, position, parentNode) - tdofBase[i];
+            pose.TDoF[i] = new F4(v.x / h.Scale, v.y / h.Scale, v.z / h.Scale, 0f);
+        }
+
         internal static void RetargetToTDoF(Human h, HumanPose pose, SkeletonPose tpose, SkeletonPose local, SkeletonPose ws)
         {
             var s = h.Skeleton;
             for (int i = 0; i < Bone.TDoFCount; i++)
             {
-                int bone = TDoFBone[i];
-                int cur = bone, parentNode;
-                while (true)
-                {
-                    int pb = BoneParent[cur];
-                    parentNode = pb < 0 ? -1 : h.BoneIndex[pb];
-                    if (cur == 0) break;
-                    cur = pb;
-                    if (parentNode != -1) break;
-                }
-                int node = h.BoneIndex[bone];
-                if (node == -1 || parentNode == -1) continue;
+                if (!TDoFNodes(h, i, out int node, out int parentNode)) continue;
                 ws.X[s.Parent[parentNode]] = Trs.Identity;
                 local.X[node].t = tpose.X[node].t;
                 Skel.ComputeGlobal(s, local, ws, node, parentNode);
