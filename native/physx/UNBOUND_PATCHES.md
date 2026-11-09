@@ -3,7 +3,7 @@
 This is the complete source-patch inventory for the vendored PhysX 4.1.2 tree.
 [UNBOUND.md](UNBOUND.md) records its upstream revision,
 `a2c0428acab643e60618c681b501e86f7fd558cc`, and the directories retained at import.
-The local import is `9a4c8ad7`. Relative to that import, eleven SDK source/header
+The local import is `9a4c8ad7`. Relative to that import, twelve SDK source/header
 files have changes, listed below. The import's directory exclusions and the
 Unbound build/shim code outside this directory are separate from these patches.
 
@@ -25,6 +25,7 @@ identified separately where relevant.
 | Allow trigger/trigger filtering | [ScNPhaseCore.cpp](source/simulationcontroller/src/ScNPhaseCore.cpp), general `filterRbCollisionPair` overload | `9491a8bc` |
 | Run pair callbacks during interaction creation | [ScNPhaseCore.cpp](source/simulationcontroller/src/ScNPhaseCore.cpp), `Sc::NPhaseCore::createRbElementInteraction` overload taking shapes | `9491a8bc` |
 | Change trigger role without broadphase reinsertion | [ScShapeSim.cpp](source/simulationcontroller/src/ScShapeSim.cpp), `physx::Sc::ShapeSim::onFlagChange` | `9491a8bc` |
+| Refit objects moved late in a query-tree rebuild | [SqAABBPruner.cpp](source/scenequery/src/SqAABBPruner.cpp), `Sq::AABBPruner::updateObjectsAfterManualBoundsUpdates`, `Sq::AABBPruner::updateObjectsAndInflateBounds` | Q276 |
 
 The comparison against `4724b839e749590151e862695e1e31ad94447151` contains only
 the last three patches, in `ScNPhaseCore.cpp` and `ScShapeSim.cpp`. The older
@@ -246,6 +247,34 @@ symbols. They inspect IDs and flag changes; historical trace outputs belong in
 the external validation cache. They are not extra Native oracles. The
 identity-preservation explanation depends on that diagnostic observation and
 the source change, rather than a canonical JSONL field for element identity.
+
+## Refit objects moved late in a query-tree rebuild
+
+`AABBPruner::updateObjectsAfterManualBoundsUpdates` and
+`AABBPruner::updateObjectsAndInflateBounds` record a moved object for the refit
+that follows the swap to the progressively rebuilt tree (`mToRefit`) in every
+stage after the new tree's nodes exist: `BUILD_NEW_MAPPING` through
+`BUILD_FINISHED`. The original condition covered only `BUILD_NEW_MAPPING` and
+`BUILD_FULL_REFIT`. It adds no storage beyond the existing array.
+
+Measured requirement: in Unity 6000.0.71f1 a static collider (no Rigidbody)
+moved through its Transform and synced with `Physics.SyncTransforms` is found at
+its new place by later queries. In tests/projects/particlerender,
+`collide/cache/moved_{high,medium,low}` move three static boxes 1.5 units down
+(and `collide/cache/gone_*` three more 50 units down) in one frame; the Editor's
+particles bounce off the moved boxes in frame 29
+(`Reference/unity-6000.0.71f1/values.jsonl`). Before this patch Unbound's sweeps
+missed them while rays and overlaps still found them.
+
+The cause is a stale node bound, an implementation inference from the source:
+an object moved while the rebuild is in `BUILD_LAST_FRAME` (or `BUILD_FINISHED`)
+is marked for refit only in the old tree, which the following commit replaces
+with the new tree whose nodes were refit before the move. Until the next
+rebuild, a query whose bounds miss the object's old place is culled before it
+reaches the object. `PhysicsStaticMoveQueryTests` reproduces it in a local
+physics scene: a static that jumps 100 units every seventh frame while another
+static keeps the rebuilds going is missed by a sweep on some frames without the
+patch.
 
 ## Replay and maintain the inventory
 

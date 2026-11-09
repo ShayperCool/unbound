@@ -158,7 +158,9 @@ void AABBPruner::updateObjectsAfterManualBoundsUpdates(const PrunerHandle* handl
 				PX_UNUSED(found); PX_ASSERT(found);
 			}
 
-			if(mProgress==BUILD_NEW_MAPPING || mProgress==BUILD_FULL_REFIT)
+			// UNBOUND: also after the new tree's full refit (BUILD_LAST_FRAME, BUILD_FINISHED):
+			// the swapped-in tree would otherwise keep the object's bounds from before this update.
+			if(mProgress >= BUILD_NEW_MAPPING && mProgress <= BUILD_FINISHED)
 				mToRefit.pushBack(poolIndex);
 		}
 	}
@@ -195,7 +197,9 @@ void AABBPruner::updateObjectsAndInflateBounds(const PrunerHandle* handles, cons
 				PX_UNUSED(found); PX_ASSERT(found);
 			}
 
-			if(mProgress == BUILD_NEW_MAPPING || mProgress == BUILD_FULL_REFIT)
+			// UNBOUND: also after the new tree's full refit (BUILD_LAST_FRAME, BUILD_FINISHED):
+			// the swapped-in tree would otherwise keep the object's bounds from before this update.
+			if(mProgress >= BUILD_NEW_MAPPING && mProgress <= BUILD_FINISHED)
 				mToRefit.pushBack(poolIndex);
 		}
 	}
