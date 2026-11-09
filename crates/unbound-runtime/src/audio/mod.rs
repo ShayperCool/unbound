@@ -328,6 +328,20 @@ impl Engine {
     /// Starts the audio system with the project's settings; `open_device`: try the installed
     /// output device (else the virtual one).
     pub fn new(settings: ProjectAudioSettings, open_device: bool) -> Self {
+        let virtual_channels = std::env::var(VIRTUAL_CHANNELS_VARIABLE)
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            .filter(|channels| (1..=mixer::MAX_OUTPUT_CHANNELS).contains(channels))
+            .unwrap_or(VIRTUAL_CHANNELS);
+        Self::with_virtual_channels(settings, open_device, virtual_channels)
+    }
+
+    /// [`Engine::new`] with the virtual device's channel count given.
+    fn with_virtual_channels(
+        settings: ProjectAudioSettings,
+        open_device: bool,
+        virtual_channels: usize,
+    ) -> Self {
         let mut mixer = Mixer::new(MixerConfig::default());
         mixer.defer_voice_submission = true;
         let configuration = AudioConfiguration {
@@ -348,11 +362,7 @@ impl Engine {
             capturing: Arc::new(AtomicBool::new(false)),
             capture_pending: Mutex::new(0.0),
             reset_worker: Mutex::new(None),
-            virtual_channels: std::env::var(VIRTUAL_CHANNELS_VARIABLE)
-                .ok()
-                .and_then(|value| value.parse::<usize>().ok())
-                .filter(|channels| (1..=mixer::MAX_OUTPUT_CHANNELS).contains(channels))
-                .unwrap_or(VIRTUAL_CHANNELS),
+            virtual_channels,
         };
         engine
             .start(configuration, open_device)
@@ -698,86 +708,107 @@ mod tests {
                 GROUPS.fetch_add(1, Ordering::Relaxed);
             }
         }
-        let engine = Engine::new(
-            ProjectAudioSettings {
-                dsp_buffer_size: 2048,
-                ..Default::default()
-            },
-            false,
-        );
-        for iteration in 0..3 {
-            let before_filters = FILTERS.load(Ordering::Relaxed);
-            let before_groups = GROUPS.load(Ordering::Relaxed);
-            {
-                let mut mixer = engine.mixer();
-                mixer.set_callback(Some(callback));
-                mixer.listener_filter = true;
-                mixer.configure_group(serde_json::from_value(serde_json::json!({
+        // Mono and 5.1 also lend the scripts layout-sized buffers (on an eight-channel device).
+        for speaker_mode in [
+            mixer::speaker_mode::STEREO,
+            mixer::speaker_mode::MONO,
+            mixer::speaker_mode::MODE_5POINT1,
+        ] {
+            let engine = Engine::with_virtual_channels(
+                ProjectAudioSettings {
+                    dsp_buffer_size: 2048,
+                    speaker_mode,
+                    ..Default::default()
+                },
+                false,
+                mixer::MAX_OUTPUT_CHANNELS,
+            );
+            assert_eq!(engine.mixer().config.speaker_mode, speaker_mode);
+            for iteration in 0..3 {
+                let before_filters = FILTERS.load(Ordering::Relaxed);
+                let before_groups = GROUPS.load(Ordering::Relaxed);
+                {
+                    let mut mixer = engine.mixer();
+                    mixer.set_callback(Some(callback));
+                    mixer.listener_filter = true;
+                    mixer.configure_group(serde_json::from_value(serde_json::json!({
                     "handle": 4, "mixer": 4, "parent": 0, "muted": false, "bypass": false, "observe": true, "effects": []
                 })).unwrap()).unwrap();
-                mixer.add_clip(1, Clip::new(1, 48000, vec![0.125; 48000]));
-                mixer.update_source(
-                    9,
-                    SourceParams {
-                        clip: 1,
-                        group: 4,
-                        flags: protocol::source_flags::FILTER | protocol::source_flags::LOOP,
-                        ..Default::default()
-                    },
-                );
-                mixer.command(
-                    9,
-                    &AudioSourceCommand {
-                        kind: command::PLAY,
-                        ..Default::default()
-                    },
-                );
-                mixer.add_clip(
-                    2,
-                    Clip {
-                        channels: 1,
-                        rate: 48000,
-                        frames: 5000,
-                        stream: true,
-                        ..Default::default()
-                    },
-                );
-                mixer.update_source(
-                    10,
-                    SourceParams {
-                        clip: 2,
-                        group: 4,
-                        pitch: -3.0,
-                        flags: protocol::source_flags::LOOP,
-                        ..Default::default()
-                    },
-                );
-                mixer.command(
-                    10,
-                    &AudioSourceCommand {
-                        kind: command::PLAY,
-                        ..Default::default()
-                    },
-                );
-                mixer.update_source(
-                    11,
-                    SourceParams {
-                        group: 4,
-                        flags: protocol::source_flags::FILTER,
-                        ..Default::default()
-                    },
-                );
-                mixer.command(
-                    11,
-                    &AudioSourceCommand {
-                        kind: command::PLAY,
-                        ..Default::default()
-                    },
-                );
-                mixer.update_suspension();
-                if iteration == 2 {
-                    mixer.add_clip(3, Clip::new(1, 48000, vec![0.25]));
-                    for _ in 0..4 {
+                    mixer.add_clip(1, Clip::new(1, 48000, vec![0.125; 48000]));
+                    mixer.update_source(
+                        9,
+                        SourceParams {
+                            clip: 1,
+                            group: 4,
+                            flags: protocol::source_flags::FILTER | protocol::source_flags::LOOP,
+                            ..Default::default()
+                        },
+                    );
+                    mixer.command(
+                        9,
+                        &AudioSourceCommand {
+                            kind: command::PLAY,
+                            ..Default::default()
+                        },
+                    );
+                    mixer.add_clip(
+                        2,
+                        Clip {
+                            channels: 1,
+                            rate: 48000,
+                            frames: 5000,
+                            stream: true,
+                            ..Default::default()
+                        },
+                    );
+                    mixer.update_source(
+                        10,
+                        SourceParams {
+                            clip: 2,
+                            group: 4,
+                            pitch: -3.0,
+                            flags: protocol::source_flags::LOOP,
+                            ..Default::default()
+                        },
+                    );
+                    mixer.command(
+                        10,
+                        &AudioSourceCommand {
+                            kind: command::PLAY,
+                            ..Default::default()
+                        },
+                    );
+                    mixer.update_source(
+                        11,
+                        SourceParams {
+                            group: 4,
+                            flags: protocol::source_flags::FILTER,
+                            ..Default::default()
+                        },
+                    );
+                    mixer.command(
+                        11,
+                        &AudioSourceCommand {
+                            kind: command::PLAY,
+                            ..Default::default()
+                        },
+                    );
+                    mixer.update_suspension();
+                    if iteration == 2 {
+                        mixer.add_clip(3, Clip::new(1, 48000, vec![0.25]));
+                        for _ in 0..4 {
+                            mixer.command(
+                                9,
+                                &AudioSourceCommand {
+                                    kind: command::PLAY_ONE_SHOT,
+                                    clip: 3,
+                                    volume_scale: 1.0,
+                                    ..Default::default()
+                                },
+                            );
+                        }
+                        mixer.update_suspension();
+                        mixer.render(&mut [0.0; 512], 2);
                         mixer.command(
                             9,
                             &AudioSourceCommand {
@@ -787,30 +818,20 @@ mod tests {
                                 ..Default::default()
                             },
                         );
+                        mixer.update_suspension();
                     }
-                    mixer.update_suspension();
-                    mixer.render(&mut [0.0; 512], 2);
-                    mixer.command(
-                        9,
-                        &AudioSourceCommand {
-                            kind: command::PLAY_ONE_SHOT,
-                            clip: 3,
-                            volume_scale: 1.0,
-                            ..Default::default()
-                        },
-                    );
-                    mixer.update_suspension();
                 }
+                assert!(engine.capture_start());
+                assert!(engine.reset_with_capture_tail(engine.configuration(), true));
+                assert!(FILTERS.load(Ordering::Relaxed) > before_filters);
+                assert!(GROUPS.load(Ordering::Relaxed) > before_groups);
+                let worker = engine.reset_worker.lock().unwrap();
+                assert_eq!(
+                    worker.as_ref().unwrap().allocations.load(Ordering::Relaxed),
+                    0,
+                    "speaker mode {speaker_mode}"
+                );
             }
-            assert!(engine.capture_start());
-            assert!(engine.reset_with_capture_tail(engine.configuration(), true));
-            assert!(FILTERS.load(Ordering::Relaxed) > before_filters);
-            assert!(GROUPS.load(Ordering::Relaxed) > before_groups);
-            let worker = engine.reset_worker.lock().unwrap();
-            assert_eq!(
-                worker.as_ref().unwrap().allocations.load(Ordering::Relaxed),
-                0
-            );
         }
     }
 

@@ -594,6 +594,14 @@ pub struct Source {
 }
 
 impl Source {
+    /// Sizes the scripts' layout buffer on the control thread, so the first script call on
+    /// the audio thread does not allocate.
+    fn reserve_layout_scratch(&mut self, config: &MixerConfig) {
+        let samples = config.buffer_size.max(BLOCK as u32) as usize * config.output_channels();
+        self.layout_scratch
+            .reserve(samples.saturating_sub(self.layout_scratch.len()));
+    }
+
     fn filter_only(&self) -> bool {
         self.params.clip == 0 && self.params.has(source_flags::FILTER) && self.main.is_some()
     }
@@ -797,8 +805,8 @@ pub struct Mixer {
     listener_output: Ring,
     callback: Option<Callback>,
     capture_listener_batch: bool,
-    /// The LFE gap was reported once (see [`Mixer::warn_missing_lfe`]).
-    warned_lfe: bool,
+    /// The surround gap was reported once (see [`Mixer::warn_surround_approximation`]).
+    warned_surround: bool,
     /// Nothing listens (the virtual device): voices only advance, unless their samples are
     /// asked for (filters, output data).
     pub discard_output: bool,
@@ -932,7 +940,7 @@ impl Mixer {
             listener_output: Ring::new(),
             callback: None,
             capture_listener_batch: false,
-            warned_lfe: false,
+            warned_surround: false,
             discard_output: false,
             listener_output_wanted: false,
             mix: vec![0.0; BLOCK * 2],
@@ -996,6 +1004,7 @@ impl Mixer {
                 source
                     .bypass_dry
                     .resize(config.buffer_size.max(BLOCK as u32) as usize * 2, 0.0);
+                source.reserve_layout_scratch(&config);
             }
             source.chain_tail = None;
             source.filtered.clear();
@@ -1075,6 +1084,7 @@ impl Mixer {
             source
                 .bypass_dry
                 .resize(self.config.buffer_size.max(BLOCK as u32) as usize * 2, 0.0);
+            source.reserve_layout_scratch(&self.config);
         }
         if params.has(source_flags::KEEP_OUTPUT) && source.output.is_none() {
             source.output = Some(Ring::new());
@@ -1384,28 +1394,38 @@ impl Mixer {
     }
 
     /// Reports admission before a later render can change the source's voice counts.
-    /// Unity 6000.0.71f1 also feeds a mono 2D clip to LFE in 5.1 and 7.1 (tests/projects/audiopitch
-    /// `context_mode5point1_clip`); the graph carries the front pair only. Says so once.
-    fn warn_missing_lfe(&mut self, handle: u64, cmd: &AudioSourceCommand) {
-        if self.warned_lfe || !self.config.has_lfe() {
+    /// Layouts wider than stereo carry only their front pair: Unity 6000.0.71f1 also feeds a mono
+    /// 2D clip to LFE in 5.1 and 7.1 (tests/projects/audiopitch `context_mode5point1_clip`), pans
+    /// 3D sources across every speaker, and keeps the other channels source scripts write.
+    /// Says so once.
+    fn warn_surround_approximation(&mut self, handle: u64, cmd: &AudioSourceCommand) {
+        if self.warned_surround || self.config.output_channels() <= 2 {
             return;
         }
+        let Some(source) = self.sources.get(&handle) else {
+            return;
+        };
         let clip = match cmd.kind {
-            command::PLAY => self.sources.get(&handle).map_or(0, |s| s.params.clip),
+            command::PLAY => source.params.clip,
             command::PLAY_ONE_SHOT => cmd.clip,
             _ => return,
         };
-        if self.clips.get(&clip).is_some_and(|c| c.channels == 1) {
-            self.warned_lfe = true;
+        let mono_lfe =
+            self.config.has_lfe() && self.clips.get(&clip).is_some_and(|c| c.channels == 1);
+        let spatial = source.params.spatial_blend > 0.0
+            || source.params.spatial_blend_curve.iter().any(|v| *v > 0.0);
+        if mono_lfe || spatial || source.params.has(source_flags::FILTER) {
+            self.warned_surround = true;
             tracing::warn!(
-                "audio: mono clips play without their LFE channel in 5.1/7.1 output (unsupported)"
+                "audio: surround output carries only the front pair; LFE sends of mono clips, 3D \
+                 panning to the other speakers and scripts' other channels are not reproduced"
             );
         }
     }
 
     pub fn command(&mut self, handle: u64, cmd: &AudioSourceCommand) -> bool {
         self.prepare_source(handle);
-        self.warn_missing_lfe(handle, cmd);
+        self.warn_surround_approximation(handle, cmd);
         let now = self.frames;
         let rate = self.config.sample_rate;
         let callback = self.callback;

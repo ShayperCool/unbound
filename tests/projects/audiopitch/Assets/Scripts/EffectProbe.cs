@@ -128,6 +128,8 @@ public class EffectProbe : MonoBehaviour
         new[] { "context_mono_3d_stereo", "music=imp", "mode=Mono", "blend=1", "pos=2:0:1", "Music:Att" },
         new[] { "context_mono_3d_spread", "music=imp", "mode=Mono", "blend=1", "pos=2:0:1", "spread=120", "Music:Att" },
         new[] { "context_mono_3d_half", "music=imp", "mode=Mono", "mono=1", "blend=0.5", "pan=-0.5", "pos=-1:0:2", "Music:Att" },
+        new[] { "context_mono_3d_half_right", "music=imp", "mode=Mono", "mono=1", "blend=0.5", "pan=0.5", "pos=1:0:2", "Music:Att" },
+        new[] { "context_mono_3d_stereo_half", "music=imp", "mode=Mono", "blend=0.5", "pan=-0.5", "pos=2:0:1", "Music:Att" },
         new[] { "context_stereo_3d_clip", "music=imp", "mono=1", "blend=1", "pos=2:0:1", "Music:Att" },
         new[] { "context_stereo_generator", "music=generator", "Music:Att" },
         new[] { "context_mono_generator", "music=generator", "mode=Mono", "Music:Att" },

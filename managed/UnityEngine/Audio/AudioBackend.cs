@@ -538,7 +538,7 @@ namespace Unbound.Runtime
 
         internal override AudioConfiguration Configuration => m_Configuration;
         // Without the native backend there is no device: a stereo driver, as the native virtual
-        // device's default.
+        // device's default. The rule mirrors active_speaker_mode in audio/mod.rs for that driver.
         internal override AudioSpeakerMode DriverCapabilities => AudioSpeakerMode.Stereo;
         internal override AudioSpeakerMode ActiveSpeakerMode =>
             m_Configuration.speakerMode > AudioSpeakerMode.Stereo && m_Configuration.speakerMode != AudioSpeakerMode.Prologic
