@@ -50,13 +50,14 @@ overload binding in every context.
 
 The gate makes a fresh project copy, runs only Unbound, and compares every outcome exactly.
 The replay compares all 1,222 outcomes without return-value allowances. The separate
-`followups.jsonl` matrix adds 598 outcomes and checks additional Renderer, Animator and AudioSource properties
+`followups.jsonl` matrix adds 602 outcomes and checks additional Renderer, Animator and AudioSource properties
 on the main thread, Thread, Task.Run, IJob.Run and a scheduled IJob. It compares the full
 exception type and message, including binding aliases, and keeps successful thread-safe
 outcomes. Each setter runs even when its getter is forbidden.
 
 Lifecycle controls distinguish a renderer's null/empty slots and owned material copies,
-a controllerless Animator's active, disabled, inactive and reactivated states, and an
+a controllerless Animator's active, disabled, inactive and reactivated states (including
+first hierarchy activation while its component is disabled), and an
 AudioSource's pending play-on-awake state from actual, delayed, paused and stopped playback.
 A second renderer still shares the original white material after the first renderer's
 instance becomes red; both fresh clipless and already playing sources exercise Pause.

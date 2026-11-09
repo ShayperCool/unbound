@@ -110,6 +110,12 @@ public class ThreadApiFollowups : MonoBehaviour
         ai.keepAnimatorStateOnDisable = false;
         inactive.SetActive(true); ai.enabled = true;
         ai.enabled = false; inactive.SetActive(false); State("animator disabled hierarchy reset", ai);
+        var dormant = new GameObject("DormantAnimator"); dormant.SetActive(false);
+        var ad = dormant.AddComponent<Animator>(); ad.enabled = false;
+        dormant.SetActive(true); State("animator first activation disabled", ad);
+        ad.Rebind(); State("animator disabled active rebind", ad);
+        dormant.SetActive(false); dormant.SetActive(true); State("animator disabled reactivation", ad);
+        ad.enabled = true; State("animator dormant enabled", ad);
         // New sources distinguish pending play-on-awake from an already completed audio update.
         var fresh = new GameObject("FreshAudio").AddComponent<AudioSource>();
         State("audio fresh clipless", fresh);

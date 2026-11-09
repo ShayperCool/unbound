@@ -221,10 +221,14 @@ namespace UnityEngine.Tests
             {
                 var animator = go.AddComponent<Animator>();
                 Assert.False(animator.isInitialized);
+                animator.enabled = false;
                 animator.Rebind();
                 Assert.False(animator.isInitialized);
                 go.SetActive(true);
                 Assert.True(animator.isInitialized);
+                animator.Rebind();
+                Assert.True(animator.isInitialized);
+                animator.enabled = true;
                 animator.enabled = false;
                 Assert.True(animator.isInitialized);
                 go.SetActive(false);

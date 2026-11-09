@@ -22,6 +22,10 @@
 {"thread":"state","call":"animator inactive keep state","result":"False"}
 {"thread":"state","call":"animator disabled hierarchy keep state","result":"False"}
 {"thread":"state","call":"animator disabled hierarchy reset","result":"False"}
+{"thread":"state","call":"animator first activation disabled","result":"True"}
+{"thread":"state","call":"animator disabled active rebind","result":"True"}
+{"thread":"state","call":"animator disabled reactivation","result":"True"}
+{"thread":"state","call":"animator dormant enabled","result":"True"}
 {"thread":"state","call":"audio fresh clipless","result":"True"}
 {"thread":"state","call":"audio fresh paused","result":"True"}
 {"thread":"state","call":"audio fresh unpaused","result":"True"}

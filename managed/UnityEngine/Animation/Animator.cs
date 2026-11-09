@@ -318,9 +318,12 @@ namespace UnityEngine
             return player;
         }
 
+        // Initialization follows hierarchy activation, including disabled Animators
+        // (Unity 6000.0.71f1, tests/projects/threadapis).
+        internal override void OnEngineHierarchyActivated() => m_Initialized = true;
+
         internal override void OnEngineEnable()
         {
-            m_Initialized = true;
             // A humanoid's initial API root pose predates game Transform edits, and stays
             // there until evaluation (6000.0.71f1, animculling humanMotion/initial).
             if (isHuman) EnsureRootPose();

@@ -155,6 +155,9 @@ namespace UnityEngine
         /// <summary>GameObject.AddComponent added the component, after its Awake and OnEnable.</summary>
         internal virtual void OnAddedByScript() { }
 
+        /// <summary>The hierarchy became active, including components that are disabled.</summary>
+        internal virtual void OnEngineHierarchyActivated() { }
+
         /// <summary>The component became active and enabled (engine components register here).</summary>
         internal virtual void OnEngineEnable() { }
 

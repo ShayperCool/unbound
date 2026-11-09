@@ -180,7 +180,11 @@ namespace Unbound.Runtime
             foreach (var c in components)
             {
                 if (c is MonoBehaviour mb) { Gizmos.Track(mb); scripts.Add(mb); }
-                else if (!(c is Behaviour b) || b.m_Enabled) SafeEngineEnable(c);
+                else
+                {
+                    c.OnEngineHierarchyActivated();
+                    if (!(c is Behaviour b) || b.m_Enabled) SafeEngineEnable(c);
+                }
                 physics |= c is Rigidbody || c is Collider;
             }
             // Native Instantiate/activation realizes the physics components before script
