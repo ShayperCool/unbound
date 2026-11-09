@@ -128,8 +128,8 @@ public class RealtimeGIProbe : MonoBehaviour
         RenderSettings.skybox = null;
         DynamicGI.UpdateEnvironment();
 
-        // updateThreshold leaves output that depends on update timing (changes below it wait for
-        // later ones); only its default is recorded.
+        // updateThreshold above its default leaves output that depends on update timing (changes
+        // below it wait for later ones); its default is recorded, and 0 in the other scenes.
         Record("room-threshold-default", "\"updateThreshold\":" + F(DynamicGI.updateThreshold));
 
         // The point light off and the spot light on.
@@ -137,22 +137,6 @@ public class RealtimeGIProbe : MonoBehaviour
         yield return Converge();
         Capture("room-pointoff", s);
 
-        // DynamicGI.updateThreshold 0: every change updates the lightmaps again, so the indirect
-        // scale case converged from the brighter bounce state comes out at exactly twice
-        // room-intensity (at the default of 1, parts whose inputs change by less than 1% keep
-        // their earlier lighting).
-        s.point.enabled = true;
-        s.point.bounceIntensity = 3f;
-        yield return Converge();
-        DynamicGI.updateThreshold = 0f;
-        s.point.bounceIntensity = 1f;
-        DynamicGI.indirectScale = 2f;
-        yield return Converge();
-        Capture("room-threshold0", s);
-        DynamicGI.updateThreshold = 1f;
-        DynamicGI.indirectScale = indirect;
-        s.point.enabled = false;
-        yield return Converge();
         s.spot.enabled = true;
         yield return Converge();
         Capture("room-spot", s);
@@ -168,6 +152,25 @@ public class RealtimeGIProbe : MonoBehaviour
             s.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);
             yield return Converge();
             Capture(label + "-moved", s);
+
+            // DynamicGI.updateThreshold: from the same brighter bounce state, the indirect scale
+            // 2 at the default threshold of 1 (parts whose inputs change by less than 1% keep
+            // their earlier lighting) and at 0 (every part is updated until the output stops
+            // changing).
+            float sceneScale = DynamicGI.indirectScale;
+            foreach (var threshold in new[] { 1f, 0f })
+            {
+                s.point.bounceIntensity = 3f;
+                DynamicGI.indirectScale = sceneScale;
+                yield return Converge();
+                DynamicGI.updateThreshold = threshold;
+                s.point.bounceIntensity = 1f;
+                DynamicGI.indirectScale = 2f;
+                yield return Converge();
+                Capture(label + (threshold > 0f ? "-indirectscale" : "-threshold0"), s);
+            }
+            DynamicGI.updateThreshold = 1f;
+            DynamicGI.indirectScale = sceneScale;
         }
         Finish();
     }

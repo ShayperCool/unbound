@@ -282,7 +282,8 @@ fn reads_the_rooms_precomputed_data() {
 
 #[test]
 fn replays_the_probes_cases() {
-    // The probe's Room cases in their order, each converged from the one before.
+    // The probe's Room cases in their order (up to room-pointoff), each converged from the one
+    // before.
     let mut r = Replay::new();
     r.check(BASE, "room-base", 0, 0.001);
     let moved = Room {
@@ -359,23 +360,70 @@ fn replays_the_probes_cases() {
         ISOLATED,
         0.006,
     );
-    // DynamicGI.updateThreshold 0, converged from the brighter bounce state again: every part
-    // is solved again until the output stops changing.
+}
+
+#[test]
+fn a_threshold_of_zero_reaches_the_fixed_point() {
+    // room-indirectscale's history (indirect scale 2 after the brighter bounce state) at
+    // DynamicGI.updateThreshold 0 and 1 (tests/projects/realtimegi records both in RoomScaled and
+    // RoomDirectional). At 0 the output is exactly twice the scale-1 fixed point, whatever the
+    // state before; at the default of 1 parts keep some of the brighter state.
+    let lit = Room {
+        light: MOVED,
+        intensity: 4.0,
+        ..BASE
+    };
+    let run = |threshold: f32, before: Room, scale: f32| {
+        let mut r = Replay::new();
+        r.set(Room {
+            threshold,
+            ..before
+        });
+        r.converge();
+        r.set(Room {
+            threshold,
+            indirect_scale: scale,
+            ..lit
+        });
+        r.converge();
+        r.solver.encoded().to_vec()
+    };
+    let bright = Room { bounce: 3.0, ..lit };
+    let fixed = run(0.0, BASE, 1.0);
+    // Texels more than 1% brighter than twice the scale-1 fixed point (RGB9E5 rounding lets the
+    // updates stop at neighbouring values).
+    let brighter = |texels: &[u32]| {
+        texels
+            .iter()
+            .zip(&fixed)
+            .filter(|&(&a, &b)| {
+                let (a, b) = (
+                    crate::solver::decode_rgb9e5(a),
+                    crate::solver::decode_rgb9e5(b),
+                );
+                (0..3).any(|k| a[k] > 2.0 * b[k] * 1.01 + 1e-3)
+            })
+            .count()
+    };
+    let zero = brighter(&run(0.0, bright, 2.0));
+    let kept = brighter(&run(1.0, bright, 2.0));
+    eprintln!("texels kept brighter: {zero} at threshold 0, {kept} at 1");
+    assert!(zero <= 10, "{zero} texels brighter at threshold 0");
+    assert!(kept > 10 * zero.max(10), "{kept} texels kept brighter");
+}
+
+#[test]
+fn a_threshold_of_zero_converges_at_a_scale_that_rounds() {
+    // Every segment solved in every update, with drawn texels that RGB9E5 rounds after an
+    // indirect scale of 1.5 (as RoomScaled's): the output still stops changing.
+    let mut r = Replay::new();
     r.set(Room {
-        bounce: 3.0,
-        ..ambient
+        threshold: 0.0,
+        indirect_scale: 1.5,
+        light: MOVED,
+        ..BASE
     });
     r.converge();
-    r.check(
-        Room {
-            threshold: 0.0,
-            indirect_scale: 2.0,
-            ..ambient
-        },
-        "room-threshold0",
-        ISOLATED,
-        0.006,
-    );
 }
 
 #[test]

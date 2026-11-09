@@ -85,8 +85,9 @@ Room cases of tests/projects/realtimegi in its tests):
 
 So converged output depends on the state it converged from: with `DynamicGI.indirectScale` 2
 after the brighter `room-bounce` case the Editor's texels are 2.00 to 2.07 times those of
-`room-intensity`, as Unbound's are; with `updateThreshold` 0 (`room-threshold0`) every texel
-reaches the fixed point. The update is converged (`DynamicGI.isConverged`) once an update of
+`room-intensity`, as Unbound's are; from the same brighter state with `updateThreshold` 0
+(`roomscaled-threshold0` against `roomscaled-indirectscale` at 1, and the same in
+RoomDirectional) every texel reaches the fixed point. The update is converged (`DynamicGI.isConverged`) once an update of
 every system leaves its drawn texels unchanged: the bounce reads them, so nothing changes until
 the inputs do.
 
@@ -180,11 +181,14 @@ Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
 
 - Direct light: the point light falloff within about 2% of the Editor's per cluster (the
   Editor interpolates its falloff curve from a table of samples).
+- `DynamicGI.indirectScale` 0 draws black texels and so leaves the bounce at 0; a later scale
+  converges again from there (unmeasured in the Editor).
 - Isolated texels: since a segment is solved again only when its inputs change by the update
   threshold, input differences well below it decide which update last solved a segment, and so
   move a few texels (2 to 11 values of about 5000 per Room case in the engine, up to about 8%;
   one chart-edge texel by 8% also with a threshold of 0). The comparator gates the point-light
-  cases' lightmaps with at most 0.5% of their values outside the tolerance.
+  cases' lightmaps with at most 0.5% of their values outside the tolerance, each within 0.02 +
+  10%.
 
 ## Unbound plan
 

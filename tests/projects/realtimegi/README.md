@@ -45,11 +45,12 @@ panel); `room-setemissive-then-call` (another material emission change and
 blue, before and after `UpdateGIMaterials`); `room-env-nocall` and `room-env-call` (the ambient
 color changed, before and after `DynamicGI.UpdateEnvironment`); `room-sky` (a procedural skybox
 as the ambient source, with `UpdateEnvironment`), `room-sky-nocall` and `room-sky-call` (its
-exposure changed, before and after the call); `room-pointoff`; `room-threshold0` (the point
-light on with bounce intensity 3, then `DynamicGI.updateThreshold` 0 with bounce intensity 1 and
-`DynamicGI.indirectScale` 2; both restored after it); `room-spot`; `roomscaled-base`,
-`roomscaled-moved`; `roomdirectional-base`, `roomdirectional-moved`. The
-default of `DynamicGI.updateThreshold` is recorded.
+exposure changed, before and after the call); `room-pointoff`; `room-spot`; `roomscaled-base`,
+`roomscaled-moved`, then from bounce intensity 3 `roomscaled-indirectscale` (indirect scale 2,
+bounce intensity 1) and, from bounce intensity 3 again, `roomscaled-threshold0` (the same with
+`DynamicGI.updateThreshold` 0; restored after it); `roomdirectional-base`,
+`roomdirectional-moved`, `roomdirectional-indirectscale`, `roomdirectional-threshold0` (as in
+RoomScaled). The default of `DynamicGI.updateThreshold` is recorded.
 
 ## What the Editor does (this capture)
 
@@ -70,8 +71,9 @@ Observations (not documented guarantees):
   `room-intensity`. `updateThreshold` defaults to 1.
 - `DynamicGI.updateThreshold` decides converged output: at 1, parts of the lightmap whose inputs
   change by less than 1% keep their earlier values, so `room-indirectscale`, converged from the
-  brighter `room-bounce`, keeps some of it; at 0 (`room-threshold0`) every part is updated
-  until the output stops changing.
+  brighter `room-bounce`, keeps some of it; at 0 (`roomscaled-threshold0`, against
+  `roomscaled-indirectscale` from the same state) every part is updated until the output stops
+  changing.
 - Doubling the light intensity raises the texels about fourfold and `Light.bounceIntensity` 3
   about tenfold: more than proportionally, as when the light's color is scaled before its
   conversion to linear (the project does not use linear light intensity).
