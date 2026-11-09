@@ -219,6 +219,9 @@ public class PathProbe : MonoBehaviour
             ("place.moved", PlaceMoved),
             ("place.adjacent", PlaceAdjacent),
             ("place.links", PlaceLinks),
+            ("replan.vis", ReplanVisibility),
+            ("replan.topo", () => ReplanTopology(false)),
+            ("replan.topofar", () => ReplanTopology(true)),
         })
         {
             if (!name.StartsWith(Only)) continue;
@@ -1300,6 +1303,96 @@ public class PathProbe : MonoBehaviour
             Destroy(go);
             yield return null;
         }
+    }
+
+    // ------------------------------------------------------------------ re-planning while walking
+
+    /// <summary>An agent given a path (SetPath) searched without <paramref name="area"/>, which goes
+    /// the long way round, with no avoidance (the agents of a scenario pass through each other).</summary>
+    static NavMeshAgent Walker(string name, Vector3 from, Vector3 to, int area)
+    {
+        var path = new NavMeshPath();
+        NavMesh.CalculatePath(from, to, NavMesh.AllAreas & ~(1 << area), path);
+        ProbeLog.Value(name + ".given", path.corners.Length);
+        var go = new GameObject(name);
+        go.transform.position = from;
+        var agent = go.AddComponent<NavMeshAgent>();
+        agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+        agent.SetPath(path);
+        return agent;
+    }
+
+    /// <summary>Where the agents are and how their path goes, every frame up to
+    /// <paramref name="each"/>, then every tenth frame up to <paramref name="frames"/>; at frame
+    /// <paramref name="again"/> the last agent is given the path round again, from where it is.</summary>
+    IEnumerator Follow(NavMeshAgent[] agents, int each, int frames, int again = 0, int area = 0)
+    {
+        for (int f = 1; f <= frames; f++)
+        {
+            if (f == again)
+            {
+                var last = agents[agents.Length - 1];
+                var path = new NavMeshPath();
+                NavMesh.CalculatePath(last.nextPosition, last.pathEndPosition, NavMesh.AllAreas & ~(1 << area), path);
+                last.SetPath(path);
+                ProbeLog.Value(last.name + ".again", path.corners.Length);
+            }
+            yield return null;
+            if (f > each && f % 10 != 0) continue;
+            foreach (var agent in agents)
+            {
+                string key = agent.name + ".f" + f;
+                ProbeLog.Value(key + ".at", agent.nextPosition);
+                ProbeLog.Value(key + ".corners", agent.path.corners.Length);
+                ProbeLog.Value(key + ".remaining", agent.remainingDistance);
+            }
+        }
+        foreach (var agent in agents) Destroy(agent.gameObject);
+        yield return null;
+    }
+
+    /// <summary>A water strip (cost 1) with a way round its north end: agents given the path round
+    /// it, searched without water, from where the strip's corners cannot be seen in one straight
+    /// line. `vis` crosses the water (a straight way cheaper than through the next corner), `cost`
+    /// weighs water at 10 (its own area cost), `mask` may not cross water (its area mask).</summary>
+    IEnumerator ReplanVisibility()
+    {
+        ClearAgents();
+        yield return null;
+        NavMesh.SetAreaCost(Water, 1f);
+        Level(8f, new Part(0f, -2.5f, 2f, 11f, Water));
+        var from = new Vector3(-4f, 0f, -5f);
+        var to = new Vector3(4f, 0f, -5f);
+        var vis = Walker("vis", from, to, Water);
+        var cost = Walker("cost", from, to, Water);
+        cost.SetAreaCost(Water, 10f);
+        var mask = Walker("mask", from, to, Water);
+        mask.areaMask = NavMesh.AllAreas & ~(1 << Water);
+        yield return Follow(new[] { vis, cost, mask }, 10, 200);
+    }
+
+    /// <summary>A wall whose south end is closed by mud (cost 1): agents given the path round its
+    /// north end, searched without mud. `a` and `b` (both walking it) may go back through the mud,
+    /// `mask` may not cross mud, `again` is given the path round again at frame 20. With
+    /// <paramref name="strips"/>, water strips (cost 1) across the floor west of the wall cut it into
+    /// many more polygons.</summary>
+    IEnumerator ReplanTopology(bool strips)
+    {
+        ClearAgents();
+        yield return null;
+        NavMesh.SetAreaCost(Water, 1f);
+        NavMesh.SetAreaCost(Mud, 1f);
+        var parts = new List<Part> { new Part(0f, -1f, 0.6f, 8f, Blocked), new Part(0f, -6.5f, 2f, 3f, Mud) };
+        if (strips)
+            for (int i = 0; i < 6; i++) parts.Add(new Part(-6.5f + i, -2f, 0.3f, 11f, Water));
+        Level(8f, parts.ToArray());
+        var to = new Vector3(4f, 0f, -6f);
+        var a = Walker("a", new Vector3(-4.2f, 0f, -6f), to, Mud);
+        var b = Walker("b", new Vector3(-4.2f, 0f, -4f), to, Mud);
+        var mask = Walker("mask", new Vector3(-4.2f, 0f, -6f), to, Mud);
+        mask.areaMask = NavMesh.AllAreas & ~(1 << Mud);
+        var again = Walker("again", new Vector3(-4.2f, 0f, -2f), to, Mud);
+        yield return Follow(new[] { a, b, mask, again }, 50, 250, 20, Mud);
     }
 
     /// <summary>One floor built as two NavMeshes whose bounds meet at x = 0 (a tile edge), so each

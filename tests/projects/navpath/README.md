@@ -17,6 +17,7 @@ agree on the mesh (`meshN.vertices` is logged for every level to show it).
 | `link.wideoff` | a 4 m wide link whose ends lie 0.2 m off the NavMesh across the gap: a wide end does not attach (no snap across it) |
 | `link.widetile` | a 4 m wide link whose ends cross the tile edge at z = 0: paths and an agent across it on both sides of the edge |
 | `carve.shortcut` | 5.33 m tiles; an agent going round a wall's end while a carved gap opens in tiles its path does not cross: whether it turns back to take the gap (Unity: no) |
+| `replan.vis`, `replan.topo`, `replan.topofar` | agents without avoidance given a path (SetPath) searched without an area, the long way round: across a water strip (cost 1) when it costs the agent 1, 10, or its mask excludes it; back through mud closing a wall's end, one agent per update in Unity's slot order, one given the path again after 0.4 s, on a floor cut into many polygons (where, how many corners, remainingDistance each frame) |
 | `link.repath` | three agents on partial paths over inactive links that open at frame 30: autoRepath on near the gap, autoRepath off, autoRepath on far away (status and isPathStale every frame) |
 | `place.moved` | a NavMesh of 4 x 4 tiles of 5.33 m added where it was built, moved off the tile grid, moved and turned 30 and 90 degrees: SamplePosition over a grid of points, rays and paths across tiles and round two walls, an agent walking across tiles, each in the NavMesh's own frame |
 | `place.links` | a 9 m link and a 2 m wide link from a NavMesh of 5.33 m tiles to a copy of it 5 m away, moved, or moved and turned 30 degrees: paths both ways, SamplePosition at the end, an agent crossing |
@@ -64,9 +65,17 @@ Measured (Unity 6000.0.71f1, `Reference/unity-6000.0.71f1.json`):
   runtime build ends within one voxel past its bounds.
 - A NavMesh change does not replan a path: a stale partial path is searched again (autoRepath) once
   its end is the agent's next corner within its radius; with autoRepath off it stays partial and stale.
+- Walking agents shorten their path: at every update a straight shortcut (the ray from the agent to
+  its second corner, taken when that costs at least 1 and less than the way through the first
+  corner; to its only corner when it has one) replaces the corridor's start with the polygons the
+  ray crosses, up to the last the corridor holds; and once per update, the agent of all of them that
+  has waited longest (more than 0.5 s walking with more than two corridor polygons; the first in
+  slot order of equals; the wait goes on through a new path) has its corridor searched again for 8
+  iterations, used only if the search ends within them. Agents without avoidance are never pushed
+  apart (they gather no neighbours).
 
 Listed, not gated (`run.py` header): `two.p1`, a line grazing a vertex: the builders place that vertex
 about 2e-6 apart, on either side of the line; where an agent reaching a wide link at the edge of the NavMesh under its start
-crosses it (gb1.2.cur.*); where an agent walking round a wall's end goes from frame 200
-(`place.moved` *.walk.f200 to f300: Unity's re-plans a shorter way, the same for every pose); the route past a
-link's landing (`place.links` m.p.ab, r30.p.ab, r30.w.ab, m.w.ba); `carve.shortcut` (Unbound's search takes another staircase of small tiles).
+crosses it (gb1.2.cur.*); the route past a link's landing (`place.links` m.p.ab, r30.p.ab, r30.w.ab,
+m.w.ba); one remainingDistance after a shortcut (`replan.topo`); a path over thin strips with one
+corner more in Unity (`replan.topofar` given).

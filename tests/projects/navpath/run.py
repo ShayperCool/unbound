@@ -19,11 +19,6 @@ Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
   hole.shapes two.p1.*    a straight line grazing a mesh vertex that the builders place about 2e-6
                           apart, on either side of the line: Unity keeps the corner there, Unbound
                           does not.
-  carve.shortcut          measured: Unity's agent keeps going round when a carved gap opens in
-                          tiles its path does not cross; Unbound's path search over the 5.33 m
-                          tiles takes another staircase of tiles (east, then north along the
-                          wall) that crosses the gap's tile, so its agent is planned again and
-                          takes the gap (docs/COMPATIBILITY_GAPS.md, the path-cost row);
   carve.rules poly.p47, poly.p51
                           two pieces where the capsule round the box at (-3, 11) cuts a piece the
                           lying capsule left: Unity joins the fan triangle under it to the piece
@@ -31,11 +26,6 @@ Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
                           the vertex the cut piece starts at, which follows from where the built
                           NavMesh tile's polygon starts; Unity's starts at another corner in some
                           tiles (docs/COMPATIBILITY_GAPS.md, the carving row).
-  place.moved *.walk.f200 to f300
-                          an agent walking round a wall's end: Unity's takes a shorter way than its
-                          first path between frames 150 and 200 (it re-plans the start of its path while
-                          walking), Unbound's keeps its path; the same for every pose of the
-                          NavMesh (docs/COMPATIBILITY_GAPS.md, the placed NavMesh data row);
   place.links m.p.ab, r30.p.ab, r30.w.ab, m.w.ba
                           the route past a link's landing on the second NavMesh: Unity's bends at a
                           tile corner there (moved or turned alike), Unbound's runs straight; over a
@@ -45,6 +35,14 @@ Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
                           ends (z 6): Unity's reaches it 6 cm further from that end and crosses from
                           5.98 to 5.82, Unbound's straight across from where it reaches it, 5.80
                           (docs/COMPATIBILITY_GAPS.md, the link rows).
+  replan.topo again.f120.remaining
+                          after a shortcut, the walker's corridor ends with other polygons for a few
+                          frames (its position and corners match; remainingDistance 5.23 against
+                          5.32, equal again by frame 130);
+  replan.topofar a.given, mask.given
+                          NavMesh.CalculatePath over a floor cut by thin water strips: Unity's path
+                          has one more corner, at a strip's end (7 against 6; the agents then walk
+                          alike) (docs/COMPATIBILITY_GAPS.md, the path-cost row).
 """
 import argparse
 import json
@@ -62,15 +60,15 @@ PROBE = Path(__file__).resolve().parent
 REPEATS = ('native1', 'native2')
 OUTPUT = 'navpath.json'
 TOLERANCE = 1e-3
-FRAMES = 4000
+FRAMES = 5000
 # Scenario -> key prefixes of the differences that are reported but not gated ('' = all of them).
 LISTED = {
     'hole.shapes': ('two.p1.',),
     'link.wide': ('gb1.2.cur.start.z', 'gb1.2.cur.end.z', 'gb1.2.cur.at.z'),
-    'carve.shortcut': ('',),
     'carve.rules': ('poly.p47', 'poly.p51'),
-    'place.moved': tuple(f'{pose}.walk.f{frame}' for pose in ('o', 'm', 'r30', 'r90') for frame in (200, 250, 300)),
     'place.links': tuple(f'{path}.{part}' for path in ('m.p.ab', 'r30.p.ab', 'r30.w.ab', 'm.w.ba') for part in ('n', 'c')),
+    'replan.topo': ('again.f120.remaining',),
+    'replan.topofar': ('a.given', 'mask.given'),
 }
 
 
