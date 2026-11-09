@@ -573,6 +573,27 @@ namespace UnityEngine.Tests
             Assert.True(float.IsNaN(around.LayoutHeight));
         }
 
+        // [rule] Laying out a panel again rounds the cached layout of an unchanged subtree once more;
+        // a child at an infinite offset keeps its undefined size (no -Infinity).
+        [Fact]
+        public void AnInfiniteOffsetKeepsAnUndefinedSizeWhenLaidOutAgain()
+        {
+            var config = new YogaConfig { RoundEdgesToPixelGrid = true, RoundPositionsFromAbsolute = true };
+            var panel = new YogaNode(config) { Width = YogaValue.Point(800), Height = YogaValue.Point(600) };
+            var host = new YogaNode(config) { PositionType = YogaPositionType.Absolute, Width = YogaValue.Point(79), Height = YogaValue.Point(40), JustifyContent = YogaJustify.SpaceAround };
+            var child = new YogaNode(config) { PositionType = YogaPositionType.Absolute, Width = YogaValue.Point(10), Height = YogaValue.Point(2) };
+            var sibling = new YogaNode(config) { Height = YogaValue.Point(10) };
+            host.Insert(0, child);
+            panel.Insert(0, host);
+            panel.Insert(1, sibling);
+            panel.CalculateLayout();
+            Assert.True(float.IsNaN(child.LayoutHeight));
+            sibling.Height = YogaValue.Point(11);
+            panel.CalculateLayout();
+            Assert.Equal(float.PositiveInfinity, child.LayoutY);
+            Assert.True(float.IsNaN(child.LayoutHeight));
+        }
+
         // [rule] A parent sized by its content: offsets and sizes use its final padding box.
         [Fact]
         public void OffsetsUseTheFinalSizeOfAContentSizedParent()
