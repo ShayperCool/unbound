@@ -149,9 +149,16 @@ the rest of a frame, and an earlier extra frame would shift the post-processing 
 
 Their constants record `frameCount` (film grain, dithering and TAA jitter follow it).
 
+## Terrain light layers
+
+`terrain_light_layers` (after the light order): with the asset's Use Rendering Layers, two terrains
+(URP's Terrain Lit, one white layer) side by side under the scene's sun (Default) and a point light
+on Layer 1 only: the left terrain's `renderingLayerMask` is Default (lit by the sun only), the right
+one's Layer 1 (lit by the point light only).
+
 ## Light order
 
-After every scenario (or alone, with `URP_PROBE_LIGHT_ORDER=<path>`) `LightOrderProbe` writes
+After every scenario (or alone with the other late scenarios, `URP_PROBE_LATE=1`) `LightOrderProbe` writes
 `light-order.jsonl` (compared by `compare_constants.py` with `Reference/scenarios/light-order.jsonl`):
 with the scene's lights off, a camera of its own renders one small quad (`Shaders/LightOrderDump.shader`)
 under a set of named lights per case and records the culling's visible lights in order, URP's main

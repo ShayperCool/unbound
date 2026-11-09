@@ -30,18 +30,16 @@ public partial class UrpProbe : MonoBehaviour
             StartCoroutine(DeferredScenarios(pathDir));
             return;
         }
-        // URP_PROBE_LIGHT_ORDER: only light-order.jsonl (LightOrderProbe), to that path.
-        var lightOrder = Environment.GetEnvironmentVariable("URP_PROBE_LIGHT_ORDER");
-        if (!string.IsNullOrEmpty(lightOrder))
+        // URP_PROBE_DIR: every scenario into <dir>/<name>.png (and its constants, .jsonl);
+        // with URP_PROBE_LATE=1 only the last ones (LateScenarios).
+        var dir = Environment.GetEnvironmentVariable("URP_PROBE_DIR");
+        if (!string.IsNullOrEmpty(dir) && Environment.GetEnvironmentVariable("URP_PROBE_LATE") == "1")
         {
-            var pipeline = (UniversalRenderPipelineAsset)GraphicsSettings.currentRenderPipeline;
-            LightOrderProbe.Record(lightOrder, ((ScriptableRendererData[])typeof(UniversalRenderPipelineAsset).GetField("m_RendererDataList",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(pipeline))[0]);
+            Directory.CreateDirectory(dir);
+            LateScenarios(dir, (UniversalRenderPipelineAsset)GraphicsSettings.currentRenderPipeline);
             Quit();
             return;
         }
-        // URP_PROBE_DIR: every scenario into <dir>/<name>.png (and its constants, .jsonl).
-        var dir = Environment.GetEnvironmentVariable("URP_PROBE_DIR");
         if (!string.IsNullOrEmpty(dir))
         {
             Directory.CreateDirectory(dir);
@@ -435,9 +433,55 @@ public partial class UrpProbe : MonoBehaviour
         // Last: its queued draws stay for the rest of its frame, and the frame it adds would
         // shift the frame counts the post-processing scenarios record.
         yield return LightDataBlockScenario(dir);
-        // Synchronous renders of a camera of its own, after every scenario.
-        LightOrderProbe.Record(Path.Combine(dir, "light-order.jsonl"), rendererData);
+        LateScenarios(dir, asset);
         Quit();
+    }
+
+    /// <summary>The scenarios after every other one, synchronous (no frame of their own):
+    /// light-order.jsonl (a camera of its own) and terrain_light_layers.</summary>
+    void LateScenarios(string dir, UniversalRenderPipelineAsset asset)
+    {
+        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        var rendererData = ((ScriptableRendererData[])typeof(UniversalRenderPipelineAsset).GetField("m_RendererDataList", flags).GetValue(asset))[0];
+        LightOrderProbe.Record(Path.Combine(dir, "light-order.jsonl"), rendererData);
+        // Terrain.renderingLayerMask with the asset's Use Rendering Layers: a terrain on Default
+        // (the sun's layer) and one on Layer 1 only (the point light's), side by side.
+        var lightLayers = typeof(UniversalRenderPipelineAsset).GetField("m_SupportsLightLayers", flags);
+        var made = new System.Collections.Generic.List<UnityEngine.Object>();
+        Scenario(dir, "terrain_light_layers", () =>
+        {
+            lightLayers.SetValue(asset, true);
+            var layer = new TerrainLayer { diffuseTexture = Texture2D.whiteTexture, tileSize = new Vector2(1f, 1f) };
+            var material = new Material(Shader.Find("Universal Render Pipeline/Terrain/Lit"));
+            made.Add(layer);
+            made.Add(material);
+            foreach (var (x, mask) in new[] { (-2.1f, 1u), (0.1f, 2u) })
+            {
+                var data = new TerrainData { heightmapResolution = 33, size = new Vector3(2f, 0.2f, 2f) };
+                data.terrainLayers = new[] { layer };
+                var go = Terrain.CreateTerrainGameObject(data);
+                go.transform.position = new Vector3(x, 0.01f, -1.6f);
+                var terrain = go.GetComponent<Terrain>();
+                terrain.materialTemplate = material;
+                terrain.renderingLayerMask = mask;
+                made.Add(data);
+                made.Add(go);
+            }
+            var point = new GameObject("Layer 1 Point Light");
+            point.transform.position = new Vector3(0f, 0.8f, -0.8f);
+            var l = point.AddComponent<Light>();
+            l.type = LightType.Point;
+            l.color = new Color(1f, 0.4f, 0.2f);
+            l.intensity = 3f;
+            l.range = 5f;
+            point.AddComponent<UniversalAdditionalLightData>().renderingLayers = 2u;
+            made.Add(point);
+        }, () =>
+        {
+            for (int i = made.Count - 1; i >= 0; i--) DestroyImmediate(made[i]);
+            made.Clear();
+            lightLayers.SetValue(asset, false);
+        });
     }
 
     const int DumpLayer = 30;
