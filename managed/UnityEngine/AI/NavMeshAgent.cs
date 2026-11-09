@@ -1068,7 +1068,10 @@ namespace Unbound.Runtime
                 && agent.m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID
                 && FlatRemaining(agent.m_Crowd) < 0.01f;
             var moving = agent.m_Crowd;
-            Vector3? partialEnd = following && agent.pathStatus == NavMeshPathStatus.PathPartial ? NavMesh.V(moving.corridor.GetTarget()) : null;
+            // A stale partial path (a link changed) is kept to its end; other paths are planned
+            // again to the destination.
+            Vector3? partialEnd = following && agent.pathStatus == NavMeshPathStatus.PathPartial && agent.isPathStale
+                ? NavMesh.V(moving.corridor.GetTarget()) : null;
             bool completing = agent.m_LinkCompleting, landing = agent.m_LandAfterReset;
             var linkEnd = moving.animation.endPos;
             agent.m_Crowd = null;
@@ -1176,10 +1179,12 @@ namespace Unbound.Runtime
         /// <summary>The path of an agent that was following one, planned again on the rebuilt
         /// NavMesh from where the agent now stands to its destination; the agent keeps its velocity
         /// (see the note on <see cref="Rebuild"/>).</summary>
-        /// A partial path (<paramref name="partialEnd"/>: where it ended) is planned again to that
-        /// end and stays partial: Unity keeps such a path through a NavMesh change and searches it
+        /// A stale partial path (<paramref name="partialEnd"/>: where it ended) is planned again to
+        /// that end and stays partial: Unity keeps such a path through a link change and searches it
         /// again only as the agent nears its end (RepathStalePartial; measured, tests/projects/
         /// navlinks inactive: partial and stale in the frame a link opens, complete the next).
+        /// Other changes (NavMesh data, carving) are unmeasured for partial paths: planned again to
+        /// the destination, as before.
         static void PlanAgain(NavMeshAgent agent, Vector3? partialEnd = null)
         {
             var target = partialEnd ?? agent.RequestedDestination;

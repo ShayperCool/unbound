@@ -79,7 +79,6 @@ namespace UnityEngine.AI
                 {
                     Start = link.Vector3("m_Start"),
                     End = link.Vector3("m_End"),
-                    Radius = link.Float("m_Radius", 0f),
                     Type = (OffMeshLinkType)link.Int("m_LinkType", 0),
                     Area = link.Int("m_Area", 0),
                     // 0: one way (the bake's drop-down links, measured: tests/projects/navbaked);
@@ -102,7 +101,6 @@ namespace Unbound.Runtime
     internal struct BakedLink
     {
         internal Vector3 Start, End;
-        internal float Radius;
         internal OffMeshLinkType Type;
         internal int Area;
         internal bool Bidirectional;

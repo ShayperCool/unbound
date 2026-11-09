@@ -245,6 +245,24 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void WithoutAutoRepathAStalePartialPathIsKept()
+        {
+            // Documented (autoRepath): a new path is attempted when the agent reaches the end of a
+            // partial and stale path; turned off, none is (measured: navpath link.repath "off").
+            Gap(NavMesh.GetSettingsByID(0));
+            var link = Link(new Vector3(-1.7f, 0f, 0f), new Vector3(1.7f, 0f, 0f));
+            NavMesh.SetLinkActive(link, false);
+            var agent = Agent(new Vector3(-6f, 0f, 0f), new Vector3(8f, 0f, 0f));
+            agent.autoRepath = false;
+            Frame();
+            NavMesh.SetLinkActive(link, true);
+            for (int i = 0; i < 300; i++) Frame();
+            Assert.Equal(NavMeshPathStatus.PathPartial, agent.pathStatus);
+            Assert.True(agent.isPathStale);
+            Assert.True(agent.nextPosition.x < -1.4f, $"crossed to {agent.nextPosition}");
+        }
+
+        [Fact]
         public void AnAgentThatArrivedAtAPartialEndKeepsItsStalePath()
         {
             Gap(NavMesh.GetSettingsByID(0));

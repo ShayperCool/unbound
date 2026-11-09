@@ -985,9 +985,11 @@ namespace DotRecast.Detour
             return false;
         }
 
-        /// Builds internal polygons links for a tile.
-        /// Unbound: the most polygons one end of a wide connection attaches to in a tile.
+        /// Unbound: the most polygons one end of a wide connection attaches to in a tile (as many as
+        /// Unity's; an end over more is cut short, reported once).
         const int MaxWideEndPolys = 32;
+        static bool s_WarnedWideEnd;
+
 
         /// Unbound: one end of a wide connection attached to every ground polygon of
         /// <paramref name="land"/> (lying on side <paramref name="landSide"/> of the connection's
@@ -1006,6 +1008,11 @@ namespace DotRecast.Detour
             qmax.Y += climb;
             Span<long> found = stackalloc long[MaxWideEndPolys];
             int n = QueryPolygonsInTile(land, qmin, qmax, found, MaxWideEndPolys);
+            if (n == MaxWideEndPolys && !s_WarnedWideEnd)
+            {
+                s_WarnedWideEnd = true;
+                UnityEngine.Debug.LogWarning($"Unbound: a wide NavMeshLink's end lies over more than {MaxWideEndPolys} NavMesh polygons of a tile; it is attached to the first {MaxWideEndPolys}.");
+            }
             DtPoly conPoly = conTile.data.polys[con.poly];
             long landBase = GetPolyRefBase(land);
             long conRef = GetPolyRefBase(conTile) | (long)con.poly;
@@ -1053,6 +1060,7 @@ namespace DotRecast.Detour
             }
         }
 
+        /// Builds internal polygons links for a tile.
         void BaseOffMeshLinks(DtMeshTile tile)
         {
             if (tile == null)

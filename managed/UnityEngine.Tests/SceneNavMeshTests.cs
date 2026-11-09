@@ -45,7 +45,6 @@ namespace UnityEngine.Tests
             {
                 Start = new Vector3(1.4f, 1.5f, 0f),
                 End = new Vector3(3.6f, 0f, 0f),
-                Radius = 0.5f,
                 Type = OffMeshLinkType.LinkTypeDropDown,
                 Bidirectional = false,
             });
