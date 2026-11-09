@@ -2476,7 +2476,7 @@ impl UnityRenderer {
                 // black.
                 pass.seed = self.previous_screen();
                 if pass.seed.is_none() {
-                    pass.color_load = wgpu::LoadOp::Clear(wgpu::Color::BLACK);
+                    pass.color_load = wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT);
                     pass.depth_clear = Some((self.conventions.depth(1.0), 0));
                 }
             }
@@ -4357,6 +4357,15 @@ impl UnityRenderer {
         self.read_texture_impl(texture, mip, layer, rect, float, !current_attachment)
     }
 
+    /// A read of the part of `rect` inside a screen of `size` that no pass has started:
+    /// transparent black, four bytes or floats per pixel.
+    fn unstarted_screen(size: (u32, u32), rect: [i32; 4], float: bool) -> Vec<u8> {
+        let (tw, th) = (size.0 as i32, size.1 as i32);
+        let w = ((rect[0] + rect[2]).clamp(0, tw) - rect[0].clamp(0, tw)) as usize;
+        let h = ((rect[1] + rect[3]).clamp(0, th) - rect[1].clamp(0, th)) as usize;
+        vec![0; w * h * if float { 16 } else { 4 }]
+    }
+
     fn read_texture_impl(
         &mut self,
         texture: u64,
@@ -4367,11 +4376,17 @@ impl UnityRenderer {
         retained_resolve: bool,
     ) -> Option<Vec<u8>> {
         let source = if texture == 0 {
-            // Before this frame's first screen pass the screen still shows the last frame: its
-            // own slot holds an older one until that pass carries the screen forward.
-            match self.previous_screen().filter(|_| !self.screen_touched) {
-                Some(previous) => previous,
-                None => self.screens[self.screen_slot].as_ref()?.texture.clone(),
+            if self.screen_touched {
+                self.screens[self.screen_slot].as_ref()?.texture.clone()
+            } else {
+                // Before this frame's first screen pass the screen still shows the last frame:
+                // its own slot holds an older one until that pass carries the screen forward. On
+                // the first frame and after a resize it is transparent black, as that pass
+                // starts it (tests/projects/screenread).
+                match self.previous_screen() {
+                    Some(previous) => previous,
+                    None => return Some(Self::unstarted_screen(self.screen_size, rect, float)),
+                }
             }
         } else {
             let current = &self.textures.get(&texture)?.texture;
@@ -4827,6 +4842,17 @@ fn external_index_refusal(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A read of a screen no pass has started is transparent black over the part of the rect
+    /// inside the screen, four bytes or floats per pixel.
+    #[test]
+    fn unstarted_screen_reads_transparent_black_within_the_screen() {
+        let read = UnityRenderer::unstarted_screen((64, 32), [0, 0, 64, 32], false);
+        assert_eq!(read.len(), 64 * 32 * 4);
+        assert!(read.iter().all(|&b| b == 0));
+        assert_eq!(UnityRenderer::unstarted_screen((64, 32), [60, 30, 10, 10], true).len(), 4 * 2 * 16);
+        assert!(UnityRenderer::unstarted_screen((64, 32), [70, 0, 4, 4], false).is_empty());
+    }
 
     /// Copies between R8 storages repack their texels; others (RG8 with RGBA8) do not.
     #[test]
