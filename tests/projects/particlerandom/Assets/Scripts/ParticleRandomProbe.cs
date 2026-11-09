@@ -169,6 +169,40 @@ public partial class ParticleRandomProbe : MonoBehaviour
         }
     }
 
+    /// <summary>Plane collisions with random dampen, bounce and lifetime loss (distinct ranges, so
+    /// each value names its curve), two curves rising over the life, and one random curve alone:
+    /// which random value each hit takes. Nine particles at speeds 1 to 4 reach the plane over
+    /// several steps.</summary>
+    static void CollisionCurves()
+    {
+        var rise = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+        var cases = new (string, Action<ParticleSystem.CollisionModule>)[]
+        {
+            ("two", c => { c.dampen = Two(0.1f, 0.6f); c.bounce = Two(0.2f, 1f); c.lifetimeLoss = Two(0f, 0.3f); }),
+            ("curves", c => { c.dampen = new ParticleSystem.MinMaxCurve(0.6f, rise, AnimationCurve.Linear(0f, 0.5f, 1f, 1f)); c.bounce = new ParticleSystem.MinMaxCurve(1f, rise, AnimationCurve.Linear(0f, 0.4f, 1f, 1f)); c.lifetimeLoss = 0f; }),
+            ("bounceonly", c => { c.dampen = 0f; c.bounce = Two(0.2f, 1f); c.lifetimeLoss = 0f; }),
+        };
+        var plane = new GameObject("collision plane").transform;
+        plane.SetPositionAndRotation(new Vector3(0f, 0f, 0.3f), Quaternion.Euler(-90f, 0f, 0f));
+        foreach (var (name, configure) in cases)
+            foreach (uint seed in Seeds)
+            {
+                var ps = Make("collision", seed, s =>
+                {
+                    var m = s.main; m.startSpeed = Two(1f, 4f); m.startSize = 0.02f; m.startLifetime = 2f;
+                    var c = s.collision; c.enabled = true; c.type = ParticleSystemCollisionType.Planes; c.SetPlane(0, plane);
+                    configure(c);
+                }, 9);
+                for (int i = 0; i < 6; i++)
+                {
+                    ps.Simulate(Dt, true, i == 0, false);
+                    RecordParticles(Key("collision/" + name, seed, i), ps);
+                }
+                DestroyImmediate(ps.gameObject);
+            }
+        DestroyImmediate(plane.gameObject);
+    }
+
     /// <summary>A moving emitter with a custom emitter velocity (zero, and across the motion),
     /// rate over time and over distance: where its newborns are placed.</summary>
     static void MovingCustomEmitter()
@@ -386,6 +420,7 @@ public partial class ParticleRandomProbe : MonoBehaviour
         });
         ModuleOverrides();
         MovingCustomEmitter();
+        CollisionCurves();
 
         // Force over Lifetime, Inherit-free.
         Simulated("force/two", ps =>
