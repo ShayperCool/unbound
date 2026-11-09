@@ -57,6 +57,9 @@ public class RealtimeGIProbe : MonoBehaviour
         RecordBakedProbes("room-lightprobes");
 
         s.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);
+        // DynamicGI.isConverged on the frame after the change: the update has to start again.
+        yield return null;
+        Record("room-moved-next-frame", "\"converged\":" + B(DynamicGI.isConverged));
         yield return Converge();
         Capture("room-moved", s);
 

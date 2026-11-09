@@ -35,7 +35,8 @@ records, per case:
 - `<case>.png`: the main camera at 192x108.
 
 Cases: `room-base` (plus `room-lightprobes`: the baked probe count and coefficients);
-`room-moved` (the point light moved); `room-intensity` (intensity 2 to 4); `room-bounce`
+`room-moved` (the point light moved; `room-moved-next-frame`: `DynamicGI.isConverged` on the frame
+after the move, false); `room-intensity` (intensity 2 to 4); `room-bounce`
 (`Light.bounceIntensity` 3); `room-indirectscale` (`DynamicGI.indirectScale` 2, then restored;
 its default is recorded per scene); `room-emission-call` (the panel material's emission changed
 and `Renderer.UpdateGIMaterials` called); `room-setemissive` (`DynamicGI.SetEmissive` on the
