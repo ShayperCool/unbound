@@ -125,20 +125,22 @@ def compare_values(expected, actual):
     return matched, failed
 
 
-def gate(label):
+def gate(label, audit_only=False):
     out = run_root(ROOT, label)
     path = project(out)
     cli = os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI') or str(REPO/'target/release/unbound')
-    env = {**os.environ, 'UXML_BASE_API_OUT': str(out/'engine')}
-    with (out/'engine.log').open('w') as log:
-        engine = subprocess.run([str(HEAVY), '--kind', 'engine-cpu', 'timeout', '600', cli,
-            'run', '-p', str(path), '--headless', '1000', '--no-watch'], env=env,
-            stdout=log, stderr=subprocess.STDOUT).returncode
-    expected = json.loads((reference_root(ROOT)/'values.json').read_text())
-    actual = values(out/'engine') if (out/'engine/values.tsv').exists() else {}
-    matched, failed = compare_values(expected, actual)
-    for failure in failed:
-        print(json.dumps(failure))
+    engine, expected, matched, failed = 0, {}, 0, []
+    if not audit_only:
+        env = {**os.environ, 'UXML_BASE_API_OUT': str(out/'engine')}
+        with (out/'engine.log').open('w') as log:
+            engine = subprocess.run([str(HEAVY), '--kind', 'engine-cpu', 'timeout', '600', cli,
+                'run', '-p', str(path), '--headless', '1000', '--no-watch'], env=env,
+                stdout=log, stderr=subprocess.STDOUT).returncode
+        expected = json.loads((reference_root(ROOT)/'values.json').read_text())
+        actual = values(out/'engine') if (out/'engine/values.tsv').exists() else {}
+        matched, failed = compare_values(expected, actual)
+        for failure in failed:
+            print(json.dumps(failure))
     with (out/'api-check.log').open('w') as log:
         audit = subprocess.run([str(HEAVY), '--kind', 'tool', cli, 'api-check', '-p', str(path)],
             stdout=log, stderr=subprocess.STDOUT).returncode
@@ -150,7 +152,11 @@ def gate(label):
     unexpected = [issue for issue in issues if not baseline_issue(issue)]
     for issue in issues:
         print(json.dumps({'apiAudit': issue, 'knownParticlesBaseline': baseline_issue(issue)}))
-    print(f'uxmlbaseapi: {matched}/{len(expected)} records, {len(failed)} failures; engine exit {engine}, API audit {len(unexpected)} unexpected, {len(issues)-len(unexpected)} existing particle field-access errors; logs {out}')
+    if audit_only:
+        print(f'uxmlbaseapi audit: {len(unexpected)} unexpected, '
+              f'{len(issues)-len(unexpected)} existing particle field-access errors; logs {out}')
+    else:
+        print(f'uxmlbaseapi: {matched}/{len(expected)} records, {len(failed)} failures; engine exit {engine}, API audit {len(unexpected)} unexpected, {len(issues)-len(unexpected)} existing particle field-access errors; logs {out}')
     return 1 if failed or engine or unexpected else 0
 
 
@@ -159,11 +165,12 @@ def main():
     parser.add_argument('mode', choices=['record', 'publish', 'gate'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label', default='check-'+str(time.time_ns()))
+    parser.add_argument('--audit-only', action='store_true', help='gate: run the static API audit without the engine replay')
     args = parser.parse_args()
     if args.mode == 'record':
         record(args.label)
     elif args.mode == 'gate':
-        return gate(args.label)
+        return gate(args.label, audit_only=args.audit_only)
     else:
         def write(path, first):
             path.mkdir(parents=True)

@@ -1,4 +1,10 @@
 import importlib.util
+import contextlib
+import io
+import os
+import tempfile
+from types import SimpleNamespace
+from unittest import mock
 from pathlib import Path
 import unittest
 
@@ -28,6 +34,31 @@ class AuditTests(unittest.TestCase):
             self.assertFalse(probe.baseline_issue(probe.parse_api_audit(report, 1)[0]))
         issue = {'category': 'access', 'type': 'UnityEngine.ParticleSystem+MinMaxCurve', 'message': 'new error'}
         self.assertFalse(probe.baseline_issue(issue))
+
+    def test_audit_only_skips_replay_and_rejects_new_or_incomplete_diagnostics(self):
+        cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound/q199'
+        cache.mkdir(parents=True, exist_ok=True)
+        for report, code, expected in [
+            ('0 errors in 2427 hand-written types checked against Unity\n', 0, 0),
+            ('silent (1)\n  UnityEngine.Other\n    method always returns true\n'
+             '1 errors in 2427 hand-written types checked against Unity\n', 1, 1),
+            ('incomplete report\n', 0, 1),
+        ]:
+            with self.subTest(report=report), tempfile.TemporaryDirectory(dir=cache) as directory:
+                out = Path(directory)
+                def audit(command, **kwargs):
+                    self.assertIn('api-check', command)
+                    self.assertNotIn('run', command)
+                    self.assertEqual(command[1:3], ['--kind', 'tool'])
+                    kwargs['stdout'].write(report)
+                    return SimpleNamespace(returncode=code)
+                with mock.patch.object(probe, 'run_root', return_value=out), \
+                     mock.patch.object(probe, 'project', return_value=out/'project'), \
+                     mock.patch.object(probe.subprocess, 'run', side_effect=audit) as run, \
+                     mock.patch.object(probe, 'values', side_effect=AssertionError('replay was read')), \
+                     contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(probe.gate('audit-control', audit_only=True), expected)
+                self.assertEqual(run.call_count, 1)
 
     def test_zero_errors_is_a_complete_success(self):
         self.assertEqual(probe.parse_api_audit('0 errors in 2427 hand-written types checked against Unity\n', 0), [])

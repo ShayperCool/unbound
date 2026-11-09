@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Check generator unit tests and doctor's file/type/message reports, including a warm cache."""
+import argparse
 import json
 import os
 from pathlib import Path
@@ -13,14 +14,18 @@ HEAVY = Path.home()/'.cache/compat/with-heavy-job'
 
 
 def main():
-    dotnet = Path.home()/'.dotnet/dotnet'
-    if not dotnet.is_file():
-        dotnet = shutil.which('dotnet')
-    result = subprocess.run([str(HEAVY), '--kind', 'build', str(dotnet), 'test',
-                             str(REPO/'managed/Unbound.ApiTools.Tests/Unbound.ApiTools.Tests.csproj'),
-                             '-c', 'Release', '--verbosity', 'quiet'], cwd=REPO)
-    if result.returncode:
-        return result.returncode
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--doctor-only', action='store_true', help='short landing check; omit generator unit tests')
+    args = parser.parse_args()
+    if not args.doctor_only:
+        dotnet = Path.home()/'.dotnet/dotnet'
+        if not dotnet.is_file():
+            dotnet = shutil.which('dotnet')
+        result = subprocess.run([str(HEAVY), '--kind', 'test', str(dotnet), 'test',
+                                 str(REPO/'managed/Unbound.ApiTools.Tests/Unbound.ApiTools.Tests.csproj'),
+                                 '-c', 'Release', '--verbosity', 'quiet'], cwd=REPO)
+        if result.returncode:
+            return result.returncode
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     # StateMachineBehaviour.OnStateIK is sent since the animation update runs IK passes
     # (tests/projects/animcallbacks), so UnsentIK and InheritedIK are now controls that doctor

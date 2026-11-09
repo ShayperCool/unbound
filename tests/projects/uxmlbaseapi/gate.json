@@ -1,4 +1,15 @@
 {
-  "commands": ["python3 -m unittest discover -s tests/projects/uxmlbaseapi -p test_audit.py", "python3 tests/projects/uxmlbaseapi/run.py gate"],
-  "summary": "uxmlbaseapi: .*"
+  "commands": [
+    "python3 -m unittest discover -s tests/projects/uxmlbaseapi -p test_audit.py",
+    "python3 tests/projects/uxmlbaseapi/run.py gate"
+  ],
+  "summary": "uxmlbaseapi: .*",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Uxml*",
+    "managed/Unbound.ApiTools/"
+  ],
+  "fast_commands": [
+    "python3 -m unittest discover -s tests/projects/uxmlbaseapi -p test_audit.py",
+    "python3 tests/projects/uxmlbaseapi/run.py gate --audit-only"
+  ]
 }

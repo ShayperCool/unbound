@@ -3,5 +3,14 @@
     "python3 tests/projects/stubdefaults/run.py check",
     "python3 tests/projects/stubdefaults/check_tooling.py"
   ],
-  "summary": "\\d+/\\d+ records match.*"
+  "summary": "\\d+/\\d+ records match.*",
+  "engine_paths": [
+    "crates/unbound/src/doctor.rs",
+    "managed/Unbound.Compiler/MessageCoverage.cs",
+    "managed/Unbound.ApiTools/",
+    "managed/UnityEngine/Runtime/Messages.cs"
+  ],
+  "fast_commands": [
+    "python3 tests/projects/stubdefaults/check_tooling.py --doctor-only"
+  ]
 }

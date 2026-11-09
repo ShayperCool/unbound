@@ -38,7 +38,7 @@ def main():
     with settings.open('a') as stream:
         stream.write('  doctorUnknownSettings: 0\n')
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
-    command = [str(Path.home()/'.cache/compat/with-heavy-job'), '--kind', 'engine-cpu',
+    command = [str(Path.home()/'.cache/compat/with-heavy-job'), '--kind', 'tool',
                'timeout', '600', cli, 'doctor', '--all', '--json', '-p', str(project)]
     with (out/'doctor.json').open('w') as stdout, (out/'doctor.log').open('w') as stderr:
         subprocess.run(command, stdout=stdout, stderr=stderr, check=True)

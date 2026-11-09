@@ -29,6 +29,10 @@ Gate:
     projects the command names (their ProjectSettings/ProjectVersion.txt), else the default of
     tests/probe_paths.py (6000.0.71f1). Probe steps share the suite's Editor launch guard.
     Guarded probes require Linux /proc and pidfd support; unsupported platforms fail explicitly.
+Automatic checks select affected probes through their files and gate.json engine_paths, plus
+static/short fast_commands on every code landing. Each train unites its branch selections and
+runs them within one printed 600s budget, at most 300s per check. Explicit --probe commands
+retain their existing time limits. Suite recipes keep the sheriff baseline's regression policy.
 Changes that touch only Markdown/docs skip the build and tests. --full forces every step
 (all Rust crates).
 
@@ -43,6 +47,7 @@ import argparse
 import contextlib
 import datetime
 import fcntl
+import fnmatch
 import hashlib
 import json
 import mmap
@@ -56,7 +61,9 @@ import time
 import tomllib
 import xml.etree.ElementTree as ET
 
-GATE_VERSION = '5'
+GATE_VERSION = '6'
+AUTO_PROBE_BUDGET_SECONDS = 600
+AUTO_PROBE_TIMEOUT_SECONDS = 300
 STATE = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound/agents'
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 DOCS_ONLY = re.compile(r'(\.md$)|(^docs/)')
@@ -116,18 +123,165 @@ def tail(log, lines=30):
     return '\n'.join(text[-lines:])
 
 
+def suite_arguments(command):
+    """Recognize a simple suite invocation; mentioning it in another command is no coverage."""
+    try:
+        argv = shlex.split(command)
+    except ValueError:
+        return None
+    if any(token in argv for token in (';', '&&', '||', '|')):
+        return None
+    if argv and argv[0] == 'tools/agents/suite.py':
+        return argv[1:]
+    if argv and re.fullmatch(r'python(?:3(?:\.\d+)?)?', Path(argv[0]).name):
+        index = 1
+        while index < len(argv) and argv[index] in ('-u', '-B', '-I', '-E', '-s', '-S', '-q', '-O', '-OO'):
+            index += 1
+        if index < len(argv) and argv[index] == 'tools/agents/suite.py':
+            return argv[index+1:]
+    return None
+
+
+def suite_projects(command):
+    argv = suite_arguments(command) or []
+    names = set()
+    for index, token in enumerate(argv):
+        value = (argv[index+1] if token == '--only' and index+1 < len(argv) else
+                 token.split('=', 1)[1] if token.startswith('--only=') else '')
+        names.update(name for name in value.split(',') if name)
+    return names
+
+
+def automatic_probes(worktree, changed, explicit, environment=None):
+    """Select touched probe recipes and declared short checks without running any commands."""
+    from suite import gate_spec, NoRecipe, recipes, recipe_for
+    projects = worktree/'tests/projects'
+    selected, seen, tables = [], set(explicit), {}
+    explicit_suites = {name for command in explicit for name in suite_projects(command)}
+    for project in sorted(projects.iterdir()) if projects.is_dir() else []:
+        # Match suite discovery. Support projects and shared fixtures have no Reference/ and
+        # can still be checked by the worker's explicit --probe commands.
+        if not project.is_dir() or not (project/'Reference').is_dir():
+            continue
+        name = project.name
+        prefix = f'tests/projects/{name}/'
+        touched = any(path.startswith(prefix) for path in changed)
+        spec = gate_spec(project/'gate.json')
+        if isinstance(spec, NoRecipe):
+            # Invalid optional metadata cannot silently hide a dependency or fast check.
+            die(2, f'{name}: {spec.reason}')
+        spec = spec or {}
+        dependencies = spec.get('engine_paths', [])
+        affected = touched or any(
+            path == pattern.rstrip('/') or path.startswith(pattern.rstrip('/')+'/')
+            or fnmatch.fnmatchcase(path, pattern)
+            for path in changed for pattern in dependencies)
+        commands = []
+        if affected:
+            # Use suite.py so built-in recipes, summary verdicts and declared commands have
+            # exactly the same meaning in the worker gate and sheriff suite.
+            commands.append((None, 'changed files' if touched else 'engine paths'))
+        commands.extend((command, 'fast check') for command in spec.get('fast_commands', []))
+        for command, reason in commands:
+            if command is None:
+                # A full declared recipe already supplied verbatim needs no duplicate run.
+                declared = spec.get('commands', [])
+                release = probe_release(prefix, worktree, environment)
+                if release not in tables:
+                    tables[release] = recipes(release)
+                recipe = recipe_for(name, tables[release], release, projects=projects)
+                if isinstance(recipe, NoRecipe):
+                    die(2, f'{name}: {recipe.reason}')
+                if name in explicit_suites or (name not in tables[release] and declared and all(c in seen for c in declared)):
+                    continue
+                if name not in tables[release]:
+                    seen.update(declared)  # these commands are covered by the selected full recipe
+                command = shlex.join([sys.executable, 'tools/agents/suite.py', '--only', name,
+                                      '--jobs', '1', '--label',
+                                      f'land-{os.getpid()}-{time.time_ns()}-{name}'])
+            if command not in seen:
+                selected.append((name, command, reason))
+                seen.add(command)
+    return selected
+
+
+def without_suite_label(argv):
+    result, skip = [], False
+    for token in argv:
+        if skip:
+            skip = False
+        elif token == '--label':
+            skip = True
+        elif not token.startswith('--label='):
+            result.append(token)
+    return result
+
+
+def automatic_key(command, release):
+    """Unite equivalent suite checks independently of interpreter and output directory."""
+    argv = suite_arguments(command)
+    if argv is not None:
+        return ('suite', tuple(without_suite_label(argv)), release)
+    return ('command', command, release)
+
+
+def automatic_checks(worktree, changed, explicit, environment=None, *, full=False):
+    if not full and all(DOCS_ONLY.search(path) for path in changed):
+        return []
+    return [(name, command, reason, probe_release(f'tests/projects/{name}', worktree, environment))
+            for name, command, reason in automatic_probes(worktree, changed, explicit, environment)]
+
+
+def automatic_union(groups, explicit=()):
+    seen = {automatic_key(command, release) for command, release in explicit}
+    suites = {(name, release) for command, release in explicit for name in suite_projects(command)}
+    selected = []
+    for group in groups:
+        for row in group:
+            key = automatic_key(row[1], row[3])
+            covered = key[0] == 'suite' and (row[0], row[3]) in suites
+            if key not in seen and not covered:
+                selected.append(row)
+                seen.add(key)
+    return selected
+
+
+def freeze_automatic_baseline(checks):
+    """Keep a sheriff promotion during the gate from changing its automatic suite verdicts."""
+    if not any(suite_arguments(row[1]) is not None for row in checks):
+        return checks
+    source = STATE/'baseline/summary.json'
+    try:
+        data = source.read_bytes()
+    except FileNotFoundError:
+        data = b'{"probes":{}}'
+    snapshot = STATE/'baseline-captures'/(hashlib.sha256(data).hexdigest()+'.json')
+    if not snapshot.is_file():
+        atomic_json(snapshot, json.loads(data))
+    selected = []
+    for row in checks:
+        argv = suite_arguments(row[1])
+        if argv is not None and '--against' not in argv and not any(arg.startswith('--against=') for arg in argv):
+            command = shlex.join([sys.executable, 'tools/agents/suite.py', *argv,
+                                  '--against', str(snapshot)])
+            row = (row[0], command, *row[2:])
+        selected.append(row)
+    return selected
+
+
 class Gate:
     def __init__(self, worktree, base, probes, full, log, priority=False, *,
-                 changed=None, crates=None, releases=None, environment=None):
+                 changed=None, crates=None, releases=None, environment=None, automatic=None):
         self.worktree, self.base, self.probes, self.full, self.log = worktree, base, probes, full, log
         self.env = dict(os.environ if environment is None else environment)
         self.changed, self.crates, self.releases = changed, crates, releases
+        self.automatic = automatic
         self.env.pop('UNBOUND_LAND_GATE', None)
         if priority:
             self.env['UNBOUND_LAND_GATE'] = '1'
         self.probe_runtime = None
 
-    def step(self, name, command, shell=False, env=None, guard_editor=False):
+    def step(self, name, command, shell=False, env=None, guard_editor=False, timeout=None):
         if guard_editor:
             require_process_watch()
         print(f'land: {name} ...', flush=True)
@@ -142,7 +296,12 @@ class Gate:
             if guard_editor:
                 EDITOR_WATCH.add(process.pid)
             try:
-                code = process.wait()
+                code = process.wait(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                stop_tree(process)
+                process.wait()
+                out.write(f'\nland: automatic probe exceeded its {timeout:.1f}s time budget\n')
+                code = 124
             except BaseException:
                 if guard_editor:
                     stop_tree(process)
@@ -200,6 +359,9 @@ class Gate:
 
         self.prepare_probe_runtime(target)
         self.run_probes()
+        if self.automatic is None:
+            self.automatic = automatic_checks(self.worktree, changed, self.probes, full=self.full)
+        self.run_automatic_probes()
 
     def prepare_probe_runtime(self, target):
         """Freeze matching build outputs before any probe, retaining their run reference."""
@@ -221,6 +383,28 @@ class Gate:
             if self.step(f'probe {index} ({release}): {probe[:80]}', probe, shell=True,
                          env=dict(self.env, **{RELEASE_VARIABLE: release, NO_EDITOR: '1'}), guard_editor=True):
                 self.fail(f'probe {index}')
+
+    def run_automatic_probes(self):
+        """Short checks and affected recipes share one enforced wall-clock budget."""
+        print(f'land: automatic probes: {len(self.automatic)} checks, '
+              f'budget {AUTO_PROBE_BUDGET_SECONDS}s total, '
+              f'{AUTO_PROBE_TIMEOUT_SECONDS}s per check; explicit --probe commands are separate', flush=True)
+        deadline = time.monotonic() + AUTO_PROBE_BUDGET_SECONDS
+        for row in self.automatic:
+            name, command, reason = row[:3]
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                die(5, f'automatic probe budget exhausted before {name}; '
+                       'run the full recipe with --probe to validate a longer check explicitly')
+            release = row[3] if len(row) > 3 else probe_release(f'tests/projects/{name}', self.worktree)
+            argv = suite_arguments(command)
+            if argv is not None:
+                command = shlex.join([sys.executable, 'tools/agents/suite.py', *without_suite_label(argv),
+                                      '--label', f'land-{os.getpid()}-{time.time_ns()}-{name}'])
+            if self.step(f'auto {name} ({reason}, {release})', command, shell=True,
+                         env=dict(self.env, **{RELEASE_VARIABLE: release, NO_EDITOR: '1'}),
+                         guard_editor=True, timeout=min(remaining, AUTO_PROBE_TIMEOUT_SECONDS)):
+                self.fail(f'automatic probe {name}; longer checks can be supplied with --probe')
 
     def stubs(self, cli):
         """gen-stubs with the gate's build: the hand-written code must build without stubs and the
@@ -360,15 +544,20 @@ class Gate:
         return sorted(names)
 
 
-def stamp_path(tree, probes, full, root, *, base=None, changed=(), crates=(), releases=None):
+def stamp_path(tree, probes, full, root, *, base=None, changed=(), crates=(), releases=None, automatic=()):
     releases = releases if releases is not None else [probe_release(probe, root) for probe in probes]
-    values = [GATE_VERSION, tree, base, full, probes, releases, sorted(changed), sorted(crates)]
+    baseline = STATE/'baseline/summary.json'
+    baseline_hash = hashlib.sha256(baseline.read_bytes()).hexdigest() if baseline.is_file() else ''
+    checks = [automatic_key(row[1], row[3]) for row in automatic]
+    values = [GATE_VERSION, tree, base, full, probes, releases, sorted(changed), sorted(crates),
+              checks, baseline_hash, AUTO_PROBE_BUDGET_SECONDS, AUTO_PROBE_TIMEOUT_SECONDS,
+              os.environ.get(RELEASE_VARIABLE, '')]
     key = hashlib.sha256(json.dumps(values, sort_keys=True).encode()).hexdigest()
     return STATE/'gate-pass'/key
 
 
 def run_gate(worktree, base, probes, full, branch, priority=False, *, log=None, changed=None,
-             crates=None, releases=None, environment=None):
+             crates=None, releases=None, environment=None, automatic=None):
     tree = git('rev-parse', 'HEAD^{tree}', cwd=worktree)
     base = git('rev-parse', base, cwd=worktree)
     if changed is None:
@@ -377,7 +566,10 @@ def run_gate(worktree, base, probes, full, branch, priority=False, *, log=None, 
     if crates is None:
         crates = selector.touched_crates(changed)
     releases = releases if releases is not None else [probe_release(probe, worktree) for probe in probes]
-    stamp = stamp_path(tree, probes, full, worktree, base=base, changed=changed, crates=crates, releases=releases)
+    if automatic is None:
+        automatic = automatic_checks(worktree, changed, probes, full=full)
+    automatic = freeze_automatic_baseline(automatic)
+    stamp = stamp_path(tree, probes, full, worktree, base=base, changed=changed, crates=crates, releases=releases, automatic=automatic)
     runtime_record = stamp.with_suffix('.runtime.json')
     if stamp.is_file():
         record = json.loads(runtime_record.read_text()) if runtime_record.is_file() else {}
@@ -395,7 +587,7 @@ def run_gate(worktree, base, probes, full, branch, priority=False, *, log=None, 
     log = log or logs/f'{datetime.datetime.now():%Y%m%d-%H%M%S}-{safe}.log'
     print(f'land: gate for tree {tree[:12]}, log {log}', flush=True)
     gate = Gate(worktree, base, probes, full, log, priority=priority, changed=changed, crates=crates,
-                releases=releases, environment=environment)
+                releases=releases, environment=environment, automatic=automatic)
     gate.run()
     atomic_json(runtime_record, {'runtime': str(gate.probe_runtime) if gate.probe_runtime else None, 'log': str(log)})
     stamp.parent.mkdir(parents=True, exist_ok=True)

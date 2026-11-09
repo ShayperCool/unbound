@@ -1,0 +1,8 @@
+{
+  "engine_paths": [
+    "tests/projects/humanoid/",
+    "crates/unbound-assets/src/model.rs",
+    "crates/unbound-assets/src/model/",
+    "managed/UnityEngine/Animation/"
+  ]
+}

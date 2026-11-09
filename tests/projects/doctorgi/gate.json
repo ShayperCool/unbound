@@ -1,4 +1,13 @@
 {
-  "commands": ["python3 tests/projects/doctorgi/run.py gate"],
-  "summary": "doctorgi: .*"
+  "commands": [
+    "python3 tests/projects/doctorgi/run.py gate"
+  ],
+  "summary": "doctorgi: .*",
+  "engine_paths": [
+    "crates/unbound/src/doctor*.rs",
+    "tests/projects/lightingassets/"
+  ],
+  "fast_commands": [
+    "python3 tests/projects/doctorgi/run.py gate"
+  ]
 }

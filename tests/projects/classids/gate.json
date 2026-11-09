@@ -1,4 +1,15 @@
 {
-  "commands": ["python3 tests/projects/classids/run.py check", "python3 tests/projects/classids/field_coverage.py"],
- "summary": "\\d+ release classes without a reader; 0 problems"
+  "commands": [
+    "python3 tests/projects/classids/run.py check",
+    "python3 tests/projects/classids/field_coverage.py"
+  ],
+  "summary": "\\d+ release classes without a reader; 0 problems",
+  "engine_paths": [
+    "crates/unbound/src/doctor*.rs",
+    "managed/UnityEngine/Runtime/ClassCoverage.cs"
+  ],
+  "fast_commands": [
+    "python3 tests/projects/classids/run.py check",
+    "python3 tests/projects/classids/field_coverage.py"
+  ]
 }

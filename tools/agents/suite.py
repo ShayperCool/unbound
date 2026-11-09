@@ -15,7 +15,11 @@ commands are the shell commands it gives `land.py --probe`, run in order from th
 with $UNBOUND, $UNBOUND_CLI, $UNBOUND_MANAGED_DIR and $UNBOUND_PROBE_UNITY_VERSION (the release;
 a command names no other) set for it to use; each must exit 0 and admits its own heavy jobs.
 summary (optional) is a regex: the step's summary is every match in its output, else its last
-line. A probe that declares
+line. Optional engine_paths lists repository-relative files, directories or globs whose edits
+select this probe in land.py. fast_commands lists static/short checks to run on every code landing,
+without Editor captures or long engine runs. Metadata-only declarations may accompany a recipe
+already defined in this file. Automatic checks share land.py's printed time budget; explicit
+--probe commands retain their existing behavior. A probe that declares
 nothing, or declares it wrongly, is listed as "no recipe" with the reason; none is skipped
 silently. Comparators, references and tolerances are used as they are.
 
@@ -204,10 +208,8 @@ GATE_FILE = 'gate.json'
 RELEASE_NAME = re.compile(r'\b\d{4}\.\d+\.\d+[abfp]\d+\b')
 
 
-def declared(name, release):
-    """The recipe tests/projects/<name>/gate.json declares: each command a compare step with the
-    exit code as its verdict. None without the file; NoRecipe with the reason when it is wrong."""
-    path = PROJECTS/name/GATE_FILE
+def gate_spec(path):
+    """Read and validate a gate declaration, including optional landing selection metadata."""
     if not path.is_file():
         return None
     try:
@@ -216,17 +218,37 @@ def declared(name, release):
         return NoRecipe(f'{GATE_FILE} is not JSON: {error}')
     if not isinstance(spec, dict):
         return NoRecipe(f'{GATE_FILE} is not a JSON object')
-    unknown = sorted(set(spec) - {'commands', 'summary'})
+    unknown = sorted(set(spec) - {'commands', 'summary', 'engine_paths', 'fast_commands'})
     if unknown:
         return NoRecipe(f'{GATE_FILE} has unknown keys: {", ".join(unknown)}')
     commands, summary = spec.get('commands'), spec.get('summary')
-    if not (isinstance(commands, list) and commands and all(isinstance(c, str) and c.strip() for c in commands)):
+    if commands is not None and not (isinstance(commands, list) and commands and all(isinstance(c, str) and c.strip() for c in commands)):
         return NoRecipe(f'{GATE_FILE} needs "commands": a non-empty list of shell commands')
     if summary is not None:
         try:
             re.compile(summary)
         except (re.error, TypeError) as error:
             return NoRecipe(f'{GATE_FILE} "summary" is not a regex: {error}')
+    for key in ('engine_paths', 'fast_commands'):
+        entries = spec.get(key, [])
+        if not isinstance(entries, list) or not all(isinstance(v, str) and v.strip() for v in entries):
+            return NoRecipe(f'{GATE_FILE} "{key}" must be a list of non-empty strings')
+    for pattern in spec.get('engine_paths', []):
+        if pattern.startswith('/') or '..' in pattern.split('/') or '\\' in pattern:
+            return NoRecipe(f'{GATE_FILE} "engine_paths" must be repository-relative: {pattern}')
+    return spec
+
+
+def declared(name, release, projects=None):
+    """The declared commands, with exit codes as verdicts, or NoRecipe for a bad declaration."""
+    spec = gate_spec((PROJECTS if projects is None else projects)/name/GATE_FILE)
+    if spec is None or isinstance(spec, NoRecipe):
+        return spec
+    commands, summary = spec.get('commands'), spec.get('summary')
+    if commands is None and ('engine_paths' in spec or 'fast_commands' in spec):
+        return None  # selection metadata for a built-in recipe, not a second recipe
+    if not commands:
+        return NoRecipe(f'{GATE_FILE} needs "commands": a non-empty list of shell commands')
     others = sorted(set(RELEASE_NAME.findall(' '.join(commands))) - {release})
     if others:
         return NoRecipe(f'{GATE_FILE} names release {", ".join(others)}, this run is {release}: '
@@ -236,11 +258,11 @@ def declared(name, release):
             for command in commands]
 
 
-def recipe_for(name, table, release):
+def recipe_for(name, table, release, projects=None):
     """The probe's recipe here, else the one it declares, else NoRecipe with the reason."""
     if name in table:
         return table[name]
-    return declared(name, release) or NoRecipe(f'no recipe in tools/agents/suite.py and no {GATE_FILE}')
+    return declared(name, release, projects) or NoRecipe(f'no recipe in tools/agents/suite.py and no {GATE_FILE}')
 
 
 def recipes(release):

@@ -79,6 +79,7 @@ for command,expected in [
     (['bash','-c','cargo build'],'heavy'),
     (['gdb','--args','/opt/Editor/Unity','-batchmode','-nographics'],'editor-cpu'),
     (['timeout','600','/tmp/unbound','compile','-p','x'],'tool'),
+    (['timeout','600','/tmp/unbound','doctor','--all','--json','-p','x'],'tool'),
     (['dotnet','/tmp/api/ApiCheck.dll','a','b'],'tool'),
     (['python3','build-all.py'],'heavy'),
 ]:

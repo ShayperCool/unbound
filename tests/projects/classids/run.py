@@ -65,7 +65,7 @@ def check():
     (project/'Assets/legacy.unity').write_text(legacy_scene())
     (project/'Assets/legacy.unity.meta').write_text('fileFormatVersion: 2\nguid: 9b742a2ce5674784b9ee27b437d7c503\nDefaultImporter:\n  externalObjects: {}\n')
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
-    command = [str(HEAVY), '--kind', 'engine-cpu', 'timeout', '600', cli, 'doctor', '--all', '--json', '-p', str(project)]
+    command = [str(HEAVY), '--kind', 'tool', 'timeout', '600', cli, 'doctor', '--all', '--json', '-p', str(project)]
     with (out/'doctor.json').open('w') as stdout, (out/'doctor.log').open('w') as stderr:
         code = subprocess.run(command, stdout=stdout, stderr=stderr).returncode
     if code != 0:

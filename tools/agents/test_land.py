@@ -6,6 +6,7 @@ import fcntl
 import io
 import json
 import signal
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -192,7 +193,8 @@ def event(value):
 def gate(root, base, probes, full, branch, **options):
     values = {path.name: path.read_text().strip() for path in root.glob('*.txt')}
     event({'gate': values, 'probes': probes, 'crates': options['crates'],
-           'changed': options['changed'], 'priority': options['priority']})
+           'changed': options['changed'], 'priority': options['priority'],
+           'automatic': options.get('automatic', [])})
     log = options['log']
     log.write_text('fixture gate: '+json.dumps(values)+'\n')
     marker = land.STATE/'gate-running'
@@ -201,7 +203,9 @@ def gate(root, base, probes, full, branch, **options):
         deadline = time.monotonic()+10
         while (land.STATE/'pause-gate').exists() and time.monotonic()<deadline:
             time.sleep(.02)
-    if values.get('bad.txt') == 'fail' or ('probe-b' in probes and values.get('bad-probe.txt') == 'fail') or ('probe-a' in probes and (values.get('a.txt') != 'ok' or values.get('break-a.txt') == 'yes')):
+    automatic_left = any(row[0] == 'left' and 'tools/agents/suite.py' in row[1]
+                         for row in options.get('automatic', []))
+    if (automatic_left and values.get('break-left.txt') == 'yes') or values.get('bad.txt') == 'fail' or ('probe-b' in probes and values.get('bad-probe.txt') == 'fail') or ('probe-a' in probes and (values.get('a.txt') != 'ok' or values.get('break-a.txt') == 'yes')):
         raise SystemExit(5)
     return None
 land.run_gate = gate
@@ -270,6 +274,7 @@ class TrainIntegrationTests(unittest.TestCase):
             (path/'src/lib.rs').write_text('// base\n')
         reference = self.repo/'tests/projects/control/Reference'
         reference.mkdir(parents=True)
+        (reference.parent/'gate.json').write_text(json.dumps({'commands': ['true']}))
         for name in ('a', 'b'):
             (reference/(name+'.json')).write_text('{"value":0}\n')
         self.git('add', '.')
@@ -298,10 +303,12 @@ class TrainIntegrationTests(unittest.TestCase):
         return path
 
     def start(self, path, probes=(), *, crash=False, pause_lock=False, pause_leader=False,
-              crash_final=False, crash_prefix=False, crash_after_final_record=False):
+              crash_final=False, crash_prefix=False, crash_after_final_record=False, probe_release=None):
         log = self.root/(path.name+'.log')
         stream = log.open('w')
         env = dict(os.environ, UNBOUND_LAND_NO_PUSH='1')
+        if probe_release is not None:
+            env[land.RELEASE_VARIABLE] = probe_release
         settings = {'TRAIN_CRASH_AFTER_ADVANCE': crash, 'TRAIN_PAUSE_LOCK': pause_lock,
                     'TRAIN_PAUSE_LEADER': pause_leader, 'TRAIN_CRASH_FINAL': crash_final,
                     'TRAIN_CRASH_PREFIX': crash_prefix,
@@ -355,6 +362,87 @@ class TrainIntegrationTests(unittest.TestCase):
         with (self.state/'land.lock').open('a') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             yield
+
+    def test_automatic_checks_union_each_branch_even_when_later_edits_revert_a_path(self):
+        for name, crate in [('left', 'alpha'), ('right', 'beta')]:
+            project = self.repo/'tests/projects'/name
+            (project/'Reference').mkdir(parents=True)
+            (project/'Reference/control.json').write_text('{}\n')
+            (project/'gate.json').write_text(json.dumps({
+                'commands': [name+'-check'], 'engine_paths': ['crates/'+crate+'/'],
+                'fast_commands': ['shared-fast-check']}))
+        self.git('add', '.')
+        self.git('commit', '-qm', 'test(agents): automatic train fixtures')
+        first = self.branch('first', {'crates/alpha/src/lib.rs': '// edited\n'})
+        second = self.branch('second', {'crates/alpha/src/lib.rs': '// base\n',
+                                        'crates/beta/src/lib.rs': '// edited\n'}, base='first')
+        with self.hold():
+            workers = [self.start(first)]
+            self.registered(1)
+            workers.append(self.start(second))
+            self.registered(2)
+        results = self.finish(workers)
+        self.assertEqual([code for code, _ in results], [0, 0], results)
+        gates = self.gates()
+        self.assertEqual(len(gates), 1)
+        checks = gates[0]['automatic']
+        self.assertEqual(sum(row[1] == 'shared-fast-check' for row in checks), 1, gates)
+        suites = [row[0] for row in checks if 'tools/agents/suite.py' in row[1]]
+        self.assertEqual(sorted(suites), ['left', 'right'])
+        self.assertEqual(len({land.automatic_key(row[1], row[3]) for row in checks}), len(checks))
+
+    def test_failure_isolation_keeps_automatic_checks_from_the_landed_prefix(self):
+        project = self.repo/'tests/projects/left'
+        (project/'Reference').mkdir(parents=True)
+        (project/'Reference/control.json').write_text('{}\n')
+        (project/'gate.json').write_text(json.dumps({
+            'commands': ['left-check'], 'engine_paths': ['crates/alpha/']}))
+        self.git('add', '.')
+        self.git('commit', '-qm', 'test(agents): automatic prefix fixture')
+        first = self.branch('first', {'crates/alpha/src/lib.rs': '// edited\n'})
+        second = self.branch('second', {'bad.txt': 'fail\n'})
+        third = self.branch('third', {'break-left.txt': 'yes\n'})
+        with self.hold():
+            workers = []
+            for count, path in enumerate((first, second, third), 1):
+                workers.append(self.start(path))
+                self.registered(count)
+        results = self.finish(workers)
+        self.assertEqual([code for code, _ in results], [0, 5, 5], results)
+        self.assertEqual([row['branch'] for row in self.rows()], ['first'])
+        self.assertTrue(any(row[0] == 'left' for row in self.gates()[-1]['automatic']))
+
+    def test_invalid_automatic_metadata_rejects_only_its_branch(self):
+        first = self.branch('first', {'tests/projects/control/gate.json':
+                                     '{"commands":["true"],"fast_commands":false}\n'})
+        second = self.branch('second', {'good.txt': 'ok\n'})
+        with self.hold():
+            workers = [self.start(first)]
+            self.registered(1)
+            workers.append(self.start(second))
+            self.registered(2)
+        results = self.finish(workers)
+        self.assertEqual([code for code, _ in results], [2, 0], results)
+        self.assertEqual([row['branch'] for row in self.rows()], ['second'])
+
+    def test_train_preserves_each_callers_automatic_release_override(self):
+        metadata = self.repo/'tests/projects/control/gate.json'
+        metadata.write_text(json.dumps({'commands': ['true'], 'fast_commands': ['shared-fast']}))
+        self.git('add', '.')
+        self.git('commit', '-qm', 'test(agents): release control metadata')
+        first = self.branch('first', {'a.txt': 'ok\n'})
+        second = self.branch('second', {'b.txt': 'ok\n'})
+        with self.hold():
+            workers = [self.start(first, probe_release='6000.0.71f1')]
+            self.registered(1)
+            workers.append(self.start(second, probe_release='2022.3.10f1'))
+            self.registered(2)
+        results = self.finish(workers)
+        self.assertEqual([code for code, _ in results], [0, 0], results)
+        checks = self.gates()[0]['automatic']
+        self.assertEqual({row[3] for row in checks}, {'6000.0.71f1', '2022.3.10f1'})
+        self.assertEqual([row[1] for row in checks], ['shared-fast', 'shared-fast'])
+
 
     def test_all_branches_share_one_gate_and_one_push(self):
         first = self.branch('first', {'a.txt': 'ok', 'crates/alpha/src/lib.rs': '// changed\n'})
@@ -546,6 +634,221 @@ class TrainIntegrationTests(unittest.TestCase):
         self.assertEqual(len(self.gates()), 1)
         self.assertNotIn('a.txt', self.git('ls-tree', '--name-only', 'main'))
 
+
+
+class AutomaticProbeTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.gate = land.Gate(self.root, 'HEAD', [], False, self.root/'gate.log')
+
+    def probe(self, name, spec=None):
+        path = self.root/'tests/projects'/name
+        (path/'Reference').mkdir(parents=True)
+        if spec is not None:
+            (path/'gate.json').write_text(json.dumps(spec))
+
+    def select(self, changed, explicit=()):
+        return land.automatic_probes(self.root, changed, explicit)
+
+    def test_changed_files_and_declared_engine_paths_select_full_recipes(self):
+        self.probe('own', {'commands': ['own-command']})
+        self.probe('dependent', {'commands': ['dependent-command'], 'engine_paths': ['managed/Animation/', 'crates/*/src/model*.rs']})
+        self.probe('unrelated', {'commands': ['unrelated-command']})
+        for changed, names in [
+            (['tests/projects/own/Assets/Probe.cs'], ['own']),
+            (['tests/projects/own/README.md'], ['own']),
+            (['managed/Animation/Animator.cs'], ['dependent']),
+            (['crates/assets/src/model.rs'], ['dependent']),
+            (['managed/AnimationExtra/Animator.cs'], []),
+            (['README.md'], []),
+        ]:
+            with self.subTest(changed=changed):
+                selected = self.select(changed)
+                self.assertEqual([row[0] for row in selected], names)
+                for name, command, _ in selected:
+                    argv = shlex.split(command)
+                    self.assertEqual(argv[argv.index('--only') + 1], name)
+                    self.assertNotIn('--against', argv)  # retain the suite's sheriff baseline policy
+
+    def test_fast_checks_run_without_an_engine_path_match_and_are_deduplicated(self):
+        self.probe('short', {'commands': ['long-run'], 'fast_commands': ['doctor-check', 'doctor-check']})
+        selected = self.select(['crates/core/src/lib.rs'])
+        self.assertEqual(selected, [('short', 'doctor-check', 'fast check')])
+        self.assertEqual(self.select(['crates/core/src/lib.rs'], ['doctor-check']), [])
+        selected = self.select(['tests/projects/short/run.py'])
+        self.assertEqual(len(selected), 2)
+        self.assertIn('tools/agents/suite.py', selected[0][1])
+        self.assertEqual(selected[1][1], 'doctor-check')
+
+    def test_explicit_complete_declared_recipe_is_not_repeated(self):
+        self.probe('custom', {'commands': ['prepare', 'compare']})
+        self.assertEqual(self.select(['tests/projects/custom/run.py'], ['prepare', 'compare']), [])
+        self.assertEqual(len(self.select(['tests/projects/custom/run.py'], ['prepare'])), 1)
+
+    def test_suite_only_probe_and_explicit_suite_command_are_supported(self):
+        self.probe('humanfirstpose', {'engine_paths': ['tests/projects/humanoid/']})
+        paths = ['tests/projects/humanoid/Assets/Scripts/Probe.cs']
+        self.assertEqual([row[0] for row in self.select(paths)], ['humanfirstpose'])
+        explicit = ['python3 tools/agents/suite.py --only humanfirstpose --against none']
+        self.assertEqual(self.select(paths, explicit), [])
+        echoed = ['echo python3 tools/agents/suite.py --only humanfirstpose']
+        self.assertEqual([row[0] for row in self.select(paths, echoed)], ['humanfirstpose'])
+        commented = ['python3 -c \"print(1)\" tools/agents/suite.py --only humanfirstpose']
+        self.assertEqual([row[0] for row in self.select(paths, commented)], ['humanfirstpose'])
+
+    def test_invalid_metadata_fails_instead_of_omitting_checks(self):
+        for spec in [{'commands': ['true'], 'engine_paths': 'crates/'},
+                     {'commands': ['true'], 'engine_paths': ['/crates/']},
+                     {'commands': ['true'], 'engine_paths': ['../crates/']},
+                     {'commands': ['true'], 'fast_commands': [False]},
+                     {'commands': ['true'], 'fast_command': ['true']}]:
+            with self.subTest(spec=spec):
+                path = self.root/'tests/projects/bad'
+                (path/'Reference').mkdir(parents=True, exist_ok=True)
+                (path/'gate.json').write_text(json.dumps(spec))
+                with self.assertRaises(SystemExit) as error:
+                    self.select(['crates/core/src/lib.rs'])
+                self.assertEqual(error.exception.code, 2)
+
+    def test_support_projects_without_references_do_not_add_automatic_recipes(self):
+        for name in ('packages', 'query2dskinmerge'):
+            project = self.root/'tests/projects'/name
+            project.mkdir(parents=True)
+            for filename in ('README.md', 'validate.py'):
+                changed = [f'tests/projects/{name}/{filename}']
+                self.assertEqual(self.select(changed), [])
+                self.assertEqual(self.select(changed, [f'python3 tests/projects/{name}/validate.py']), [])
+        self.probe('actual', {'commands': ['true'], 'engine_paths': ['tests/projects/packages/']})
+        self.assertEqual([row[0] for row in self.select(['tests/projects/packages/Assets/Probe.cs'])], ['actual'])
+
+    def test_a_touched_probe_without_a_recipe_is_an_error(self):
+        self.probe('missingrecipe')
+        with self.assertRaises(SystemExit) as error:
+            self.select(['tests/projects/missingrecipe/run.py'])
+        self.assertEqual(error.exception.code, 2)
+
+    def test_a_failed_automatic_check_fails_the_gate(self):
+        self.gate.automatic = [('a', 'exit 1', 'fast check')]
+        self.gate.log.write_text('failing control\n')
+        with mock.patch.object(self.gate, 'step', return_value=1):
+            with self.assertRaises(SystemExit) as error:
+                self.gate.run_automatic_probes()
+        self.assertEqual(error.exception.code, 5)
+
+    def test_automatic_checks_are_guarded_released_and_budgeted(self):
+        self.gate.automatic = [('a', 'echo check', 'fast check')]
+        with mock.patch.object(self.gate, 'step', return_value=0) as step, contextlib.redirect_stdout(io.StringIO()) as out:
+            self.gate.run_automatic_probes()
+        self.assertIn(f'budget {land.AUTO_PROBE_BUDGET_SECONDS}s total', out.getvalue())
+        kwargs = step.call_args.kwargs
+        self.assertTrue(kwargs['guard_editor'])
+        self.assertEqual(kwargs['env'][land.NO_EDITOR], '1')
+        self.assertEqual(kwargs['env'][land.RELEASE_VARIABLE], land.default_release())
+        self.assertGreater(kwargs['timeout'], 0)
+        self.assertLessEqual(kwargs['timeout'], land.AUTO_PROBE_TIMEOUT_SECONDS)
+
+    def test_total_budget_exhaustion_fails_before_starting_another_check(self):
+        self.gate.automatic = [('a', 'first', 'fast check'), ('b', 'second', 'fast check')]
+        with mock.patch.object(self.gate, 'step', return_value=0) as step, mock.patch.object(land.time, 'monotonic', side_effect=[0, 0, land.AUTO_PROBE_BUDGET_SECONDS+1]):
+            with self.assertRaises(SystemExit) as error:
+                self.gate.run_automatic_probes()
+        self.assertEqual(error.exception.code, 5)
+        self.assertEqual(step.call_count, 1)
+
+    def test_timeout_stops_the_process_tree_and_reports_failure(self):
+        command = shlex.join([sys.executable, '-c', 'import time; time.sleep(30)'])
+        started = time.monotonic()
+        code = self.gate.step('bounded control', command, shell=True, guard_editor=True, timeout=0.1)
+        self.assertEqual(code, 124)
+        self.assertLess(time.monotonic() - started, 5)
+        self.assertIn('exceeded its', self.gate.log.read_text())
+
+    def test_docs_only_gate_retains_its_build_and_test_exemption(self):
+        with mock.patch.object(land, 'git', return_value='docs/ARCHITECTURE.md'), mock.patch.object(land.subprocess, 'run') as run, mock.patch.object(self.gate, 'step') as step:
+            run.return_value.returncode = 0
+            self.gate.run()
+        step.assert_not_called()
+        self.assertEqual(run.call_count, 1)  # oracle guard still runs
+
+    def test_repeated_automatic_suite_execution_uses_fresh_output_labels(self):
+        self.gate.automatic = [('sample', 'python3 tools/agents/suite.py --only sample --label recorded',
+                                'changed files', '6000.0.71f1')]
+        with mock.patch.object(self.gate, 'step', return_value=0) as step:
+            self.gate.run_automatic_probes()
+            self.gate.run_automatic_probes()
+        labels = []
+        for call in step.call_args_list:
+            argv = shlex.split(call.args[1])
+            labels.append(argv[argv.index('--label')+1])
+            self.assertEqual(argv[argv.index('--only')+1], 'sample')
+        self.assertNotIn('recorded', labels)
+        self.assertEqual(len(set(labels)), 2)
+
+    def test_train_union_deduplicates_generated_labels_and_keeps_releases(self):
+        def check(label, release):
+            return ('sample', 'python3 tools/agents/suite.py --only sample --jobs 1 --label '+label,
+                    'changed files', release)
+        a, b = check('first', '6000.0.71f1'), check('second', '6000.0.71f1')
+        b = (b[0], b[1].replace('python3', '/usr/bin/python3', 1), b[2], b[3])
+        c = check('third', '2022.3.10f1')
+        self.assertEqual(land.automatic_union([[a], [b, c]]), [a, c])
+        self.assertEqual(land.automatic_union([[a, b]], [(a[1], a[3])]), [])
+        self.assertEqual(land.automatic_union([[a, b]],
+            [('python3 tools/agents/suite.py --only sample --against none', a[3])]), [])
+        self.assertEqual(land.stamp_path('tree', [], False, self.root, automatic=[a]),
+                         land.stamp_path('tree', [], False, self.root, automatic=[b]))
+        self.assertNotEqual(land.stamp_path('tree', [], False, self.root, automatic=[a]),
+                            land.stamp_path('tree', [], False, self.root, automatic=[c]))
+
+    def test_automatic_suites_freeze_the_baseline_and_missing_baselines_still_fail(self):
+        import suite
+        state = self.root/'state'
+        source = state/'baseline/summary.json'
+        source.parent.mkdir(parents=True)
+        source.write_text('{"probes":{"sample":{"status":"fail","failures":2}}}')
+        row = ('sample', 'python3 tools/agents/suite.py --only sample --label selected',
+               'changed files', '6000.0.71f1')
+        with mock.patch.object(land, 'STATE', state):
+            first = land.freeze_automatic_baseline([row])[0]
+            argv = shlex.split(first[1])
+            saved = Path(argv[argv.index('--against')+1])
+            source.write_text('{"probes":{}}')
+            second = land.freeze_automatic_baseline([row])[0]
+            self.assertNotEqual(first[1], second[1])
+            self.assertEqual(json.loads(saved.read_text())['probes']['sample']['failures'], 2)
+            source.unlink()
+            empty = land.freeze_automatic_baseline([row])[0]
+            argv = shlex.split(empty[1])
+            previous = json.loads(Path(argv[argv.index('--against')+1]).read_text())
+            current = {'probes': {'sample': {'status': 'fail', 'failures': 1}}}
+            self.assertTrue(suite.compare_runs(current, previous)[1])
+
+    def test_full_keeps_static_checks_active_for_docs_only_changes(self):
+        self.probe('short', {'commands': ['long-run'], 'fast_commands': ['doctor-check']})
+        paths = ['docs/ARCHITECTURE.md']
+        self.assertEqual(land.automatic_checks(self.root, paths, []), [])
+        selected = land.automatic_checks(self.root, paths, [], full=True)
+        self.assertEqual([(row[0], row[1]) for row in selected], [('short', 'doctor-check')])
+
+    def test_gate_stamps_include_the_current_sheriff_baseline(self):
+        state = self.root/'state'
+        (state/'baseline').mkdir(parents=True)
+        baseline = state/'baseline/summary.json'
+        with mock.patch.object(land, 'STATE', state):
+            before = land.stamp_path('tree', [], False, self.root, base='base')
+            baseline.write_text('{"probes": {}}')
+            first = land.stamp_path('tree', [], False, self.root, base='base')
+            self.assertNotEqual(before, first)
+            baseline.write_text('{"probes": {"a": {}}}')
+            self.assertNotEqual(first, land.stamp_path('tree', [], False, self.root, base='base'))
+
+    def test_gate_stamps_include_the_changed_range_and_automatic_release(self):
+        a = land.stamp_path('tree', [], False, self.root, base='base-a')
+        self.assertNotEqual(a, land.stamp_path('tree', [], False, self.root, base='base-b'))
+        with mock.patch.dict(os.environ, {land.RELEASE_VARIABLE: '2022.3.10f1'}):
+            self.assertNotEqual(a, land.stamp_path('tree', [], False, self.root, base='base-a'))
 
 
 if __name__ == '__main__':

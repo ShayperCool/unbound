@@ -38,11 +38,13 @@ def default_release():
     return re.search(r"^DEFAULT_UNITY_VERSION = '([^']+)'", text, re.M).group(1)
 
 
-def probe_release(command, root):
+def probe_release(command, root, environment=None):
     """The release a --probe command runs for: $UNBOUND_PROBE_UNITY_VERSION when exported, else the
-    one release of the probe projects it names, else the default."""
-    if os.environ.get(RELEASE_VARIABLE):
-        return os.environ[RELEASE_VARIABLE]
+    one release of the probe projects it names, else the default. An optional environment
+    preserves the individual caller's override when a train leader selects checks."""
+    environment = os.environ if environment is None else environment
+    if environment.get(RELEASE_VARIABLE):
+        return environment[RELEASE_VARIABLE]
     releases = set()
     for name in PROBE_DIR.findall(command):
         version = root/'tests/projects'/name/'ProjectSettings/ProjectVersion.txt'

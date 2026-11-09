@@ -331,19 +331,27 @@ class LandTrain:
                 continue
             changed = self.git('diff', '--name-only', '--no-renames', tip, after, cwd=path).splitlines()
             selector = self.api.Gate(path, tip, [], False, self.log_path('selection'))
-            entry.update(before=tip, tip=after, changed=changed, crates=selector.touched_crates(changed))
+            try:
+                automatic = self.api.automatic_checks(path, changed, entry['probes'], entry.get('probe_environment', {}), full=entry['full'])
+                automatic = self.api.automatic_union([entry.get('automatic', []), automatic])
+            except (SystemExit, ValueError) as error:
+                self.reject(entry, 2, f'automatic probe selection failed: {error}')
+                continue
+            entry.update(before=tip, tip=after, changed=changed, crates=selector.touched_crates(changed),
+                         automatic=automatic)
             accepted.append(entry)
             tip = after
         return accepted
 
     @staticmethod
     def context(entry):
-        return {key: entry[key] for key in ('id', 'tip', 'probes', 'releases', 'changed', 'crates', 'full')}
+        return {key: entry[key] for key in ('id', 'tip', 'probes', 'releases', 'changed', 'crates', 'full', 'automatic')}
 
     def gate(self, entries, base, workspace, context):
         selected = [*context, *entries]
         probes = list(dict.fromkeys((command, release) for item in selected
                                    for command, release in zip(item['probes'], item['releases'])))
+        automatic = self.api.automatic_union([item.get('automatic', []) for item in selected], probes)
         changed = sorted({path for item in selected for path in item['changed']})
         crates = sorted({crate for item in selected for crate in item['crates']})
         log = self.log_path('gate-'+entries[-1]['id'][:10])
@@ -364,7 +372,7 @@ class LandTrain:
             runtime = self.api.run_gate(workspace.path, base, [item[0] for item in probes],
                                         any(item['full'] for item in selected), 'train-'+self.id[:12],
                                         priority=True, log=log, changed=changed, crates=crates,
-                                        releases=[item[1] for item in probes], environment=environment)
+                                        releases=[item[1] for item in probes], environment=environment, automatic=automatic)
             self.api.require_clean(workspace.path, 'gated worktree')
             if self.git('rev-parse', 'HEAD', cwd=workspace.path) != target:
                 raise ValueError('gated checkout acquired a different commit')
@@ -411,11 +419,20 @@ class LandTrain:
         # A stacked branch can carry another queued branch's commits even if that
         # earlier request is rejected. Keep the checks attached to those commits.
         for entry in entries:
+            changed = self.git('diff', '--name-only', '--no-renames',
+                               'main...'+entry['head'], cwd=Path(entry['worktree'])).splitlines()
+            try:
+                entry['automatic'] = self.api.automatic_checks(Path(entry['worktree']), changed, entry['probes'],
+                                                                         entry.get('probe_environment', {}), full=entry['full'])
+            except (SystemExit, ValueError):
+                entry['automatic'] = []  # Assembly reports invalid metadata against its rebased tree.
+        for entry in entries:
             ancestors = set(self.git('rev-list', 'main..'+entry['head']).splitlines())
             sources = [entry, *(item for item in entries
                                 if item['id'] != entry['id'] and item['head'] in ancestors)]
             specs = list(dict.fromkeys((command, release) for item in sources
                                       for command, release in zip(item['probes'], item['releases'])))
+            entry['automatic'] = self.api.automatic_union([item.get('automatic', []) for item in sources])
             entry.update(probes=[item[0] for item in specs], releases=[item[1] for item in specs],
                          full=any(item['full'] for item in sources))
             self.queue.update(entry['id'], probes=entry['probes'], releases=entry['releases'], full=entry['full'])
@@ -530,6 +547,7 @@ class LandTrain:
         request = {'id': uuid.uuid4().hex, 'branch': branch, 'worktree': str(worktree),
                    'repo': self.git('rev-parse', '--path-format=absolute', '--git-common-dir'),
                    'head': head, 'probes': probes, 'releases': releases, 'full': full,
+                   'probe_environment': {self.api.RELEASE_VARIABLE: os.environ.get(self.api.RELEASE_VARIABLE, '')},
                    'build_environment': {key: os.environ.get(key) for key in BUILD_ENVIRONMENT}}
         with self.queue.register(request):
             while True:

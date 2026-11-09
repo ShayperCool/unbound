@@ -465,6 +465,20 @@ class DeclaredGateTests(unittest.TestCase):
         self.assertEqual(result['checks'], {'passed': 1, 'failed': 1, 'report': 0, 'total': 2})
         self.assertEqual(result['summary'], '1/2 records match || after')
 
+    def test_metadata_only_declarations_need_a_builtin_recipe(self):
+        self.probe('metadata', {'engine_paths': ['managed/Animation/']})
+        self.assertIsInstance(suite.recipe_for('metadata', {}, '6000.0.71f1'), suite.NoRecipe)
+        explicit = [suite.Step('compare', ['true'])]
+        self.assertIs(suite.recipe_for('metadata', {'metadata': explicit}, '6000.0.71f1'), explicit)
+
+    def test_landing_metadata_is_validated_without_changing_suite_commands(self):
+        recipe = self.probe('selected', {'commands': ['echo ok'], 'engine_paths': ['managed/Animation/'],
+                                         'fast_commands': ['echo quick']})
+        self.assertEqual(len(recipe), 1)
+        self.assertEqual(self.run_recipe(recipe)['status'], 'pass')
+        self.assertIsInstance(self.probe('badpaths', {'commands': ['true'], 'engine_paths': '../outside'}), suite.NoRecipe)
+        self.assertIsInstance(self.probe('badfast', {'commands': ['true'], 'fast_commands': [False]}), suite.NoRecipe)
+
     def test_summary_regex_takes_every_match(self):
         text = ('{"tested": 9, "failed": 3, "pcm_steps": 0, "roots": ["/a"]}\n'
                 '{"tested": 8, "failed": 0, "pcm_steps": 1, "roots": ["/a"]}\nreports: /tmp/x\n') * 2

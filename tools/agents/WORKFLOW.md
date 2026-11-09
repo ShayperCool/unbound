@@ -118,6 +118,18 @@ tools/validation/README.md for why that is unsafe).
      `gen-stubs -p tests/projects/packages` (about 30 s plus a wait for a tool slot). It fails when the hand-written code
      does not build without stubs or when `managed/UnityEngine/Generated/` differs from what the
      generator writes, and restores `Generated/` afterwards. Regenerate, commit, land again.
+   - Automatic probe checks select a probe when its files or its `gate.json` `engine_paths`
+     change. Those paths are repository-relative files, directory prefixes or globs. A suite-only
+     probe may declare just this metadata. `fast_commands` declares static/short checks to run on
+     every code landing, without an Editor capture or long engine replay. Selected full recipes
+     run through the suite against the current sheriff baseline when present, preserving its
+     existing failures and regression rules. Without a baseline every check must pass.
+     Automatic checks share a printed 600 s wall-clock budget, at most 300 s each. A timeout or
+     exhausted budget fails the gate. Supply a complete declared recipe as explicit `--probe`
+     commands, or a suite `--only` command, for longer checks. Exact explicit commands are not
+     repeated. A train selects checks for each branch, then unites them by command and release
+     under the same total budget, retaining prefix checks during failure isolation. Suite output
+     labels are fresh for every execution. Docs-only changes keep their existing exemption.
    - Never force-push and never bypass the gate.
 9. Report to the orchestrator in at most 10 lines: the landed commit (or the blocker), what
    changed, the probe result, residuals, follow-ups.
