@@ -282,9 +282,10 @@ milliseconds converted with `floor(ms * rate / 1000)`. The constants are in `rev
 - **Input.** L+R (mono). Dry Level scales each original channel.
 - **Room HF.** Two identical one-poles `y = (y - x) a + x`. Their combined gain at HF Reference is
   `G = level(Room HF)`, which gives `a = ((1 - Gc) - sqrt((1 - Gc)^2 - (1 - G)^2)) / (1 - G)` with
-  `c = cos(2 pi HFRef / rate)`. The pole is limited to 0.99, which only the steepest settings
-  reach (Room HF -10000 mB at HF Reference 1000 Hz: tests/projects/audioreverb live
-  `filter_room_hf_floor` and `zone_room_hf_floor`).
+  `c = cos(2 pi HFRef / rate)`. The pole is limited to 0.99, measured at Room HF -10000 mB and
+  HF Reference 1000 Hz (tests/projects/audioreverb live `filter_room_hf_floor` and
+  `zone_room_hf_floor`). The mixer's HF Reference also goes below 1000 Hz, where milder Room HF
+  values reach the limit; that range relies on the shared kernel and is unmeasured.
 - **Room LF.** `G (s^2 + sqrt2 s + 1) / (G s^2 + sqrt(2G) s + 1)`, bilinear with the prewarp at LF
   Reference.
 - **Early reflections.**

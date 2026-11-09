@@ -316,7 +316,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void LiveBypassWithoutScriptsKeepsChangingTheRoute()
+        public void LiveBypassWithoutScriptsIsNotRefused()
         {
             var source = Source("component reconnect");
             source.gameObject.AddComponent<AudioLowPassFilter>();
