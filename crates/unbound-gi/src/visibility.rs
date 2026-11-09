@@ -165,18 +165,30 @@ impl Visibility {
         let (bits, mask) = self.bits();
         let per_direction = out.len().div_ceil(self.values_per_byte);
         out.fill(0);
+        let mut decoded = None;
         for (k, &direction) in index.iter().enumerate() {
             if weight[k] == 0 {
                 continue;
             }
             let s = direction / self.directions_per_stream;
-            let range = self
-                .streams
-                .get(s)
-                .with_context(|| format!("visibility direction {direction} not stored"))?
-                .clone();
-            stream.clear();
-            decode_runs(&self.data[range], stream)?;
+            if decoded != Some(s) {
+                let range = self
+                    .streams
+                    .get(s)
+                    .with_context(|| format!("visibility direction {direction} not stored"))?
+                    .clone();
+                stream.clear();
+                decode_runs(&self.data[range], stream)?;
+                // A stream holds whole directions of one value per cluster each.
+                ensure!(
+                    stream.len() % per_direction == 0
+                        && stream.len() / per_direction <= self.directions_per_stream,
+                    "a visibility stream of {} bytes for {} clusters",
+                    stream.len(),
+                    out.len()
+                );
+                decoded = Some(s);
+            }
             let at = (direction % self.directions_per_stream) * per_direction;
             let values = stream
                 .get(at..at + per_direction)
@@ -291,6 +303,33 @@ mod tests {
             v.visible_points([0.0, 1.0, 0.0], |_| 8, &mut stream, &mut [0; 40])
                 .is_err()
         );
+    }
+
+    #[test]
+    fn longitude_wraps_around_each_ring() {
+        let v = Visibility::read(&tiny()).unwrap();
+        // Toward +x (to the light), just either side of the longitude seam: the ring's last
+        // direction and its first.
+        for z in [1e-3f32, -1e-3] {
+            let d = [(1.0 - z * z).sqrt(), 0.0, z];
+            let (index, weight) = v.lookup(d);
+            assert_eq!(weight.iter().sum::<u32>(), WEIGHT_SCALE, "{z}");
+            for k in 0..4 {
+                assert!(index[k] < 4, "{index:?}");
+            }
+            // Each ring's two directions are one and its next, wrapping around. At the seam the
+            // first direction weighs most on both sides: from just below longitude 1 it is the
+            // next after the last, from just above 0 it is the first itself.
+            assert_eq!((index[0] + 1) % 2, index[1] % 2);
+            if z > 0.0 {
+                assert_eq!((index[0] % 2, index[1] % 2), (1, 0));
+                assert!(weight[1] > weight[0], "{weight:?}");
+            } else {
+                assert_eq!((index[0] % 2, index[1] % 2), (0, 1));
+                assert!(weight[0] > weight[1], "{weight:?}");
+            }
+            assert_eq!(index[2] / 2, 1);
+        }
     }
 
     #[test]
