@@ -226,6 +226,7 @@ public partial class HumanoidProbe
         BoneRotations();
         TranslationDoFCurves();
         FeetAndMassCenter();
+        PlayableControls();
     }
 
 }

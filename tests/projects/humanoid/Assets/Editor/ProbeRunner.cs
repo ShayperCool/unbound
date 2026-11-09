@@ -836,6 +836,28 @@ public static class ProbeRunner
             go.duration = 0f;
             Layer(noWD, b, AnimatorLayerBlendingMode.Override, 0.5f, noRoot);
         }
+        // Empty states without write defaults after a motion (HumanA's clip after an exit time of
+        // 0.3, at once and over 0.2 s; GenericMove likewise).
+        void Hold(string name, Motion motion, float duration)
+        {
+            var controller = Make(name);
+            if (controller == null) return;
+            var machine = controller.layers[0].stateMachine;
+            var first = machine.AddState("A");
+            first.motion = motion;
+            var hold = machine.AddState("Hold");
+            hold.writeDefaultValues = false;
+            machine.defaultState = first;
+            var go = first.AddTransition(hold);
+            go.hasExitTime = true;
+            go.exitTime = 0.3f;
+            go.hasFixedDuration = true;
+            go.duration = duration;
+            EditorUtility.SetDirty(controller);
+        }
+        Hold("HumanNoWDAlone", a, 0f);
+        Hold("HumanNoWDFade", a, 0.2f);
+        Hold("GenericNoWD", AssetDatabase.LoadAssetAtPath<AnimationClip>(Dir + "GenericMove.anim"), 0f);
         var ik2 = Make("HumanAIK2");
         if (ik2 != null)
         {

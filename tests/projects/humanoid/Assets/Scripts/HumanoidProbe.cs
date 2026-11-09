@@ -214,7 +214,7 @@ public partial class HumanoidProbe : MonoBehaviour
     /// and four of 0.1 s; the transforms' locals (with <paramref name="locals"/>) every
     /// <paramref name="localsEvery"/> steps.</summary>
     static void Play(string key, string rig, string controller, Action<Animator> setup = null, bool motion = false, bool locals = true,
-        Action<Animator, int> beforeStep = null, bool detail = false, int localsEvery = 1)
+        Action<Animator, int> beforeStep = null, bool detail = false, int localsEvery = 1, bool velocities = true)
     {
         var instance = Instantiate(Resources.Load<GameObject>(rig));
         var animator = instance.GetComponent<Animator>();
@@ -227,7 +227,7 @@ public partial class HumanoidProbe : MonoBehaviour
             beforeStep?.Invoke(animator, step);
             animator.Update(step == 0 ? 0f : step <= 24 ? 1f / 30f : 0.1f);
             Step(key + ".step" + step, animator, handler, locals && step % localsEvery == 0);
-            if (motion) Motion(key + ".step" + step, animator);
+            if (motion) Motion(key + ".step" + step, animator, velocities);
             if (detail) Detail(key + ".step" + step, animator);
         }
         s_IKKey = null;
@@ -236,10 +236,10 @@ public partial class HumanoidProbe : MonoBehaviour
     }
 
     /// <summary>The Animator's root motion of a step and the states and clips that made it.</summary>
-    static void Motion(string key, Animator animator)
+    static void Motion(string key, Animator animator, bool velocities = true)
     {
         Put(key + ".motion", "{\"deltaPosition\":" + V(animator.deltaPosition) + ",\"deltaRotation\":" + Q(animator.deltaRotation)
-            + ",\"velocity\":" + V(animator.velocity) + ",\"angularVelocity\":" + V(animator.angularVelocity) + "}");
+            + (velocities ? ",\"velocity\":" + V(animator.velocity) + ",\"angularVelocity\":" + V(animator.angularVelocity) : "") + "}");
         var states = new List<string>();
         for (int layer = 0; layer < animator.layerCount; layer++)
         {
