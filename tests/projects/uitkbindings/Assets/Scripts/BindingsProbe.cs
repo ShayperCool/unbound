@@ -363,8 +363,40 @@ public class BindingsProbe : MonoBehaviour
             Frames();
         });
         Record("code-changed");
+        Requests();
         LogLevels();
         Logged("viewdata", () => ViewData());
+    }
+
+    // The order GetBindingInfos lists an element's bindings in: set in a panel (before and after the
+    // update processes them), one set again, the element removed, a binding set while it is out of
+    // the panel, and added back.
+    void Requests()
+    {
+        var e = new VisualElement { name = "requests", dataSource = m_StyleSource };
+        m_Root.Add(e);
+        string Ids() => string.Join(",", e.GetBindingInfos().Select(i => i.bindingId.ToString()));
+        DataBinding Make() => new DataBinding { dataSourcePath = new PropertyPath("width"), bindingMode = BindingMode.ToTarget };
+        e.SetBinding("style.width", Make());
+        e.SetBinding("style.height", Make());
+        e.SetBinding("style.left", Make());
+        Put("requests/set", Ids());
+        Frames();
+        Put("requests/processed", Ids());
+        e.SetBinding("style.width", Make());
+        e.SetBinding("style.top", Make());
+        Put("requests/set-again", Ids());
+        Frames();
+        Put("requests/processed-again", Ids());
+        e.RemoveFromHierarchy();
+        Put("requests/removed", Ids());
+        e.SetBinding("style.right", Make());
+        Put("requests/removed-set", Ids());
+        m_Root.Add(e);
+        Put("requests/readded", Ids());
+        Frames();
+        Put("requests/readded-processed", Ids());
+        e.RemoveFromHierarchy();
     }
 
     // Binding warnings by log level: a label whose binding fails on every update (its path names no

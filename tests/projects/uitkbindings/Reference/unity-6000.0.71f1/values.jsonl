@@ -804,6 +804,14 @@
 {"k":"code-changed/code-nosuch/style.alignSelf","v":"Null Auto"}
 {"k":"code-changed/code-nosuch/resolved","v":"0 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
 {"k":"code-changed/style-source","v":"-1 -1"}
+{"k":"requests/set","v":"style.left,style.height,style.width"}
+{"k":"requests/processed","v":"style.width,style.height,style.left"}
+{"k":"requests/set-again","v":"style.top,style.width,style.height,style.left"}
+{"k":"requests/processed-again","v":"style.height,style.left,style.width,style.top"}
+{"k":"requests/removed","v":"style.height,style.left,style.width,style.top"}
+{"k":"requests/removed-set","v":"style.right,style.height,style.left,style.width,style.top"}
+{"k":"requests/readded","v":"style.right,style.height,style.left,style.width,style.top"}
+{"k":"requests/readded-processed","v":"style.top,style.width,style.left,style.height,style.right"}
 {"k":"loglevel/reset","v":"updates 2 warnings 0 others 0"}
 {"k":"loglevel/panel-All","v":"updates 2 warnings 0 others 0"}
 {"k":"loglevel/settings-All","v":"updates 2 warnings 2 others 8"}

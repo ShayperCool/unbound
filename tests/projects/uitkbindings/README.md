@@ -22,6 +22,8 @@ and resolved style of the styled elements, and the sources.
 - bindings to style properties made in code: from a float, an int, a Length, a StyleKeyword, a
   string (no conversion), a Color under the USS name, an enum, `style.width.value`, a missing style
   property, and ToSource bindings from `style.width` and `resolvedStyle.width`;
+- `requests`: the order GetBindingInfos lists an element's bindings in, before and after the panel
+  processes them, after one is set again, with the element removed, and added back;
 - `loglevel`: warnings of a binding failing on every update after `Binding.ResetPanelLogLevel`,
   `SetPanelLogLevel(All)`, and with `PanelSettings.bindingLogLevel` All, Once and None;
 - `viewdata`: a ScrollView offset, a Foldout value and a ListView selection, each element removed
