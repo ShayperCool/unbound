@@ -716,7 +716,13 @@ namespace UnityEngine.UIElements
         internal void RaiseItemParentChanged(int id, int newParentId) => RaiseItemIndexChanged(id, newParentId);
 
         /// <summary>Makes the hierarchy's visible rows the controller's items source.</summary>
-        private protected void UseVisibleRowsAsItemsSource() => SetItemsSourceWithoutNotify(m_UaHierarchy.visibleRows);
+        internal void UseVisibleRowsAsItemsSource() => SetItemsSourceWithoutNotify(m_UaHierarchy.visibleRows);
+
+        internal UaTreeHierarchy uaHierarchy => m_UaHierarchy;
+
+        internal BaseTreeView uaTreeView => baseTreeView;
+
+        internal void UaRaiseItemsSourceChanged() => RaiseItemsSourceChanged();
     }
 
     public abstract partial class TreeViewController : BaseTreeViewController
@@ -760,82 +766,27 @@ namespace UnityEngine.UIElements
     /// TreeViewItemData, each node's item data, adding and removing items.</summary>
     public partial class DefaultTreeViewController<T> : TreeViewController
     {
-        readonly Dictionary<int, TreeViewItemData<T>> m_ItemData = new Dictionary<int, TreeViewItemData<T>>();
+        readonly UaTreeItems<T> m_Items;
 
         /// <summary>Assigning root items (a list of TreeViewItemData&lt;T&gt;) sets them; another type
         /// is an error.</summary>
         public override IList itemsSource
         {
             get => base.itemsSource;
-            set
-            {
-                if (value == null) SetRootItems(null);
-                else if (value is IList<TreeViewItemData<T>> rootItems) SetRootItems(rootItems);
-                else Debug.LogError($"Type does not match this tree view controller's data type ({typeof(T)}).");
-            }
+            set => m_Items.SetItemsSource(value);
         }
 
-        /// <summary>Replaces the tree (autoExpand expands every item) and reports
-        /// itemsSourceChanged; the rows follow at the next refresh.</summary>
-        public void SetRootItems(IList<TreeViewItemData<T>> items)
-        {
-            // The same list given again (after the game changed it) is read again.
-            m_UaHierarchy.Clear();
-            m_ItemData.Clear();
-            if (items != null)
-            {
-                foreach (var item in items) AddRecursive(item, m_UaHierarchy.root);
-                if (baseTreeView != null && baseTreeView.autoExpand) m_UaHierarchy.SetAllExpanded(true);
-            }
-            UseVisibleRowsAsItemsSource();
-            RaiseItemsSourceChanged();
-        }
+        public DefaultTreeViewController() => m_Items = new UaTreeItems<T>(this);
 
-        void AddRecursive(TreeViewItemData<T> item, UaTreeNode parent)
-        {
-            var node = m_UaHierarchy.Add(item.id, parent);
-            if (node == null) return;
-            m_ItemData[item.id] = item;
-            foreach (var child in item.children) AddRecursive(child, node);
-        }
+        public void SetRootItems(IList<TreeViewItemData<T>> items) => m_Items.SetRootItems(items);
 
-        /// <summary>Adds an item (with its children) under a parent, -1 for the root, at a child index
-        /// (-1: last). An unknown parent or an id already in the tree is an error and adds nothing.</summary>
-        public virtual void AddItem(in TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree = true)
-        {
-            UaTreeNode parent = m_UaHierarchy.root;
-            if (parentId != BaseTreeView.invalidId && !m_UaHierarchy.TryGet(parentId, out parent))
-            {
-                Debug.LogError($"Unbound: tree view item {item.id} was not added: its parent id {parentId} is not in the tree");
-                return;
-            }
-            var node = m_UaHierarchy.Add(item.id, parent);
-            if (node == null) return;
-            if (parentId != BaseTreeView.invalidId && m_ItemData.TryGetValue(parentId, out var parentData)) parentData.InsertChild(item, childIndex);
-            m_ItemData[item.id] = item;
-            foreach (var child in item.children) AddRecursive(child, node);
-            if (baseTreeView.autoExpand) ExpandAncestorNodes(node);
-            if (childIndex != -1) m_UaHierarchy.MoveTo(node, parent, childIndex);
-            if (rebuildTree) baseTreeView.RefreshItems();
-        }
+        public virtual void AddItem(in TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree = true) => m_Items.AddItem(item, parentId, childIndex, rebuildTree);
 
-        public virtual TreeViewItemData<T> GetTreeViewItemDataForId(int id) => m_ItemData.TryGetValue(id, out var item) ? item : default;
+        public virtual TreeViewItemData<T> GetTreeViewItemDataForId(int id) => m_Items.GetForId(id);
 
         public virtual TreeViewItemData<T> GetTreeViewItemDataForIndex(int index) => GetTreeViewItemDataForId(GetIdForIndex(index));
 
-        public override bool TryRemoveItem(int id, bool rebuildTree = true)
-        {
-            if (!m_UaHierarchy.TryGet(id, out var node)) return false;
-            int parentId = GetParentId(id);
-            if (parentId != BaseTreeView.invalidId && m_ItemData.TryGetValue(parentId, out var parentData)) parentData.RemoveChild(id);
-            var removed = new List<int>();
-            m_UaHierarchy.AddDescendantIds(node, removed);
-            foreach (int descendant in removed) m_ItemData.Remove(descendant);
-            m_ItemData.Remove(id);
-            m_UaHierarchy.Remove(node);
-            if (rebuildTree) baseTreeView.RefreshItems();
-            return true;
-        }
+        public override bool TryRemoveItem(int id, bool rebuildTree = true) => m_Items.TryRemoveItem(id, rebuildTree);
 
         public override object GetItemForId(int id) => GetTreeViewItemDataForId(id).data;
 
@@ -844,6 +795,87 @@ namespace UnityEngine.UIElements
         public virtual T GetDataForIndex(int index) => GetTreeViewItemDataForIndex(index).data;
 
         public override object GetItemForIndex(int index) => GetDataForIndex(index);
+    }
+
+    /// <summary>The tree data of a default tree controller (single- or multi-column) of data type T:
+    /// the item data by id beside the controller's hierarchy.</summary>
+    internal sealed class UaTreeItems<T>
+    {
+        readonly BaseTreeViewController m_Controller;
+        readonly Dictionary<int, TreeViewItemData<T>> m_ItemData = new Dictionary<int, TreeViewItemData<T>>();
+
+        public UaTreeItems(BaseTreeViewController controller) => m_Controller = controller;
+
+        UaTreeHierarchy hierarchy => m_Controller.uaHierarchy;
+
+        public void SetItemsSource(IList value)
+        {
+            if (value == null) SetRootItems(null);
+            else if (value is IList<TreeViewItemData<T>> rootItems) SetRootItems(rootItems);
+            else Debug.LogError($"Type does not match this tree view controller's data type ({typeof(T)}).");
+        }
+
+        /// <summary>Replaces the tree (autoExpand expands every item) and reports
+        /// itemsSourceChanged; the rows follow at the next refresh.</summary>
+        public void SetRootItems(IList<TreeViewItemData<T>> items)
+        {
+            // The same list given again (after the game changed it) is read again.
+            hierarchy.Clear();
+            m_ItemData.Clear();
+            if (items != null)
+            {
+                foreach (var item in items) AddRecursive(item, hierarchy.root);
+                var view = m_Controller.uaTreeView;
+                if (view != null && view.autoExpand) hierarchy.SetAllExpanded(true);
+            }
+            m_Controller.UseVisibleRowsAsItemsSource();
+            m_Controller.UaRaiseItemsSourceChanged();
+        }
+
+        void AddRecursive(TreeViewItemData<T> item, UaTreeNode parent)
+        {
+            var node = hierarchy.Add(item.id, parent);
+            if (node == null) return;
+            m_ItemData[item.id] = item;
+            foreach (var child in item.children) AddRecursive(child, node);
+        }
+
+        /// <summary>Adds an item (with its children) under a parent, -1 for the root, at a child index
+        /// (-1: last). An unknown parent or an id already in the tree is an error and adds nothing.</summary>
+        public void AddItem(in TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree)
+        {
+            UaTreeNode parent = hierarchy.root;
+            if (parentId != BaseTreeView.invalidId && !hierarchy.TryGet(parentId, out parent))
+            {
+                Debug.LogError($"Unbound: tree view item {item.id} was not added: its parent id {parentId} is not in the tree");
+                return;
+            }
+            var node = hierarchy.Add(item.id, parent);
+            if (node == null) return;
+            if (parentId != BaseTreeView.invalidId && m_ItemData.TryGetValue(parentId, out var parentData)) parentData.InsertChild(item, childIndex);
+            m_ItemData[item.id] = item;
+            foreach (var child in item.children) AddRecursive(child, node);
+            var view = m_Controller.uaTreeView;
+            if (view.autoExpand) m_Controller.ExpandAncestorNodes(node);
+            if (childIndex != -1) hierarchy.MoveTo(node, parent, childIndex);
+            if (rebuildTree) view.RefreshItems();
+        }
+
+        public TreeViewItemData<T> GetForId(int id) => m_ItemData.TryGetValue(id, out var item) ? item : default;
+
+        public bool TryRemoveItem(int id, bool rebuildTree)
+        {
+            if (!hierarchy.TryGet(id, out var node)) return false;
+            int parentId = m_Controller.GetParentId(id);
+            if (parentId != BaseTreeView.invalidId && m_ItemData.TryGetValue(parentId, out var parentData)) parentData.RemoveChild(id);
+            var removed = new List<int>();
+            hierarchy.AddDescendantIds(node, removed);
+            foreach (int descendant in removed) m_ItemData.Remove(descendant);
+            m_ItemData.Remove(id);
+            hierarchy.Remove(node);
+            if (rebuildTree) m_Controller.uaTreeView.RefreshItems();
+            return true;
+        }
     }
 
     /// <summary>A tree row: a container (row direction) holding the indent, the expand toggle (with
