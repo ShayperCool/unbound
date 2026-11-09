@@ -444,19 +444,88 @@ namespace UnityEngine.Tests
             Assert.Equal(27, frames);
         }
 
+        [Fact]
+        public void ResizingAStationaryOnlyObstacleCutsItAgainWithoutCountingAsAMove()
+        {
+            var obstacle = Box(new Vector3(0f, 0.5f, 0f), Vector3.one);
+            Frame();
+            Frame();
+            Assert.True(OnNavMesh(1.2f, 0f));
+            obstacle.size = Vector3.one * 2f;
+            Frame();
+            // Never removed in between, and 2 m wide from the next frame on.
+            Assert.False(OnNavMesh(0f, 0f));
+            Frame();
+            Assert.False(OnNavMesh(0f, 0f));
+            Assert.False(OnNavMesh(1.2f, 0f));
+            // A capsule's radius likewise.
+            var capsule = Capsule(new Vector3(-6f, 1f, 0f), 0.5f, 2f, Quaternion.identity);
+            capsule.carveOnlyStationary = true;
+            Frame();
+            Frame();
+            Assert.True(OnNavMesh(-6f + 1.3f, 0f));
+            capsule.radius = 1f;
+            Frame();
+            Frame();
+            Assert.False(OnNavMesh(-6f + 1.3f, 0f));
+        }
+
+        [Fact]
+        public void ResizingAMovingStationaryOnlyObstacleLeavesItUncut()
+        {
+            var obstacle = Box(new Vector3(0f, 0.5f, 0f), Vector3.one);
+            Frame();
+            Frame();
+            obstacle.transform.position = new Vector3(2f, 0.5f, 0f);
+            Frame();
+            Frame();
+            Assert.True(OnNavMesh(2f, 0f));
+            obstacle.size = Vector3.one * 2f;
+            Frame();
+            Frame();
+            Assert.True(OnNavMesh(2f, 0f));
+        }
+
+        [Fact]
+        public void AStationaryOnlyObstacleCreepingOnAfterAMoveStaysUncut()
+        {
+            // 5 mm a frame: under a tenth of the threshold each frame, but it adds up past it.
+            var obstacle = Box(new Vector3(0f, 0.5f, 0f), Vector3.one);
+            Frame();
+            Frame();
+            var at = new Vector3(0.2f, 0.5f, 0f);
+            obstacle.transform.position = at;
+            // The move is seen in this frame and the hole removed in the next.
+            Frame();
+            for (int f = 0; f < 60; f++)
+            {
+                Frame();
+                Assert.True(OnNavMesh(at.x, 0f), $"cut at frame {f}");
+                at.x += 0.005f;
+                obstacle.transform.position = at;
+            }
+            // Standing still: cut again after more than 0.5 s.
+            for (int f = 0; f < 30; f++) Frame();
+            Assert.False(OnNavMesh(at.x, 0f));
+        }
+
         [Theory]
         [InlineData(3f, 1f, false)]    // 0.052 rad x |scale| sqrt 3 x |extents| 0.87: 0.078 < 0.1
         [InlineData(5.7f, 1f, true)]   // 0.149
         [InlineData(0f, 1.04f, false)] // 0.04 sqrt 3 x 0.87: 0.06
         [InlineData(0f, 1.08f, true)]  // 0.12
+        [InlineData(3f, 2f, true)]     // a 0.5 m box at scale 2: 0.052 x sqrt 12 x 0.87 = 0.16
         public void TurningOrScalingAStationaryOnlyObstacleCountsAsMovingPastTheThreshold(float yaw, float scale, bool moved)
         {
-            var obstacle = Box(new Vector3(0f, 0.5f, 0f), Vector3.one);
+            // Scale 2 stands for a 0.5 m box made 1 m by its scale (turned only); otherwise 1 m.
+            bool scaledUp = scale == 2f;
+            var obstacle = Box(new Vector3(0f, 0.5f, 0f), Vector3.one * (scaledUp ? 0.5f : 1f));
+            if (scaledUp) obstacle.transform.localScale = Vector3.one * 2f;
             Frame();
             Frame();
             Assert.False(OnNavMesh(0f, 0f));
             obstacle.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
-            obstacle.transform.localScale = Vector3.one * scale;
+            if (!scaledUp) obstacle.transform.localScale = Vector3.one * scale;
             Frame();
             Frame();
             Assert.Equal(moved, OnNavMesh(0f, 0f));

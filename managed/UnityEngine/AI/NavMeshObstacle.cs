@@ -23,16 +23,29 @@ namespace UnityEngine.AI
 
         public NavMeshObstacle() { }
 
-        public float height { get => m_Height; set { m_Height = Mathf.Max(0f, value); } }
-        public float radius { get => m_Radius; set { m_Radius = Mathf.Max(0f, value); } }
+        /// <summary>Its shape, centre or size was set since the last carving decision: the hole is
+        /// cut again then, without counting as a move.</summary>
+        internal bool m_ShapeChanged;
+
+        public float height { get => m_Height; set { m_Height = Mathf.Max(0f, value); m_ShapeChanged = true; } }
+        public float radius { get => m_Radius; set { m_Radius = Mathf.Max(0f, value); m_ShapeChanged = true; } }
         public Vector3 velocity { get => m_Velocity; set => m_Velocity = value; }
         public bool carving { get => m_Carving; set { m_Carving = value; } }
         public bool carveOnlyStationary { get => m_CarveOnlyStationary; set => m_CarveOnlyStationary = value; }
         public float carvingMoveThreshold { get => m_CarvingMoveThreshold; set => m_CarvingMoveThreshold = Mathf.Max(0f, value); }
         public float carvingTimeToStationary { get => m_CarvingTimeToStationary; set => m_CarvingTimeToStationary = Mathf.Max(0f, value); }
-        public NavMeshObstacleShape shape { get => m_Shape; set { m_Shape = value; } }
-        public Vector3 center { get => m_Center; set { m_Center = value; } }
-        public Vector3 size { get => m_Size; set { m_Size = Vector3.Max(value, Vector3.zero); } }
+        public NavMeshObstacleShape shape
+        {
+            get => m_Shape;
+            set
+            {
+                if (m_Shape == value) return;
+                m_Shape = value;
+                m_ShapeChanged = true;
+            }
+        }
+        public Vector3 center { get => m_Center; set { m_Center = value; m_ShapeChanged = true; } }
+        public Vector3 size { get => m_Size; set { m_Size = Vector3.Max(value, Vector3.zero); m_ShapeChanged = true; } }
 
         /// <summary>Fits the obstacle to the GameObject's mesh, as Unity does when it is added.</summary>
         internal void FitExtents()
@@ -439,6 +452,8 @@ namespace Unbound.Runtime
             float dt = Time.deltaTime;
             foreach (var obstacle in s_Obstacles)
             {
+                bool reshaped = obstacle.m_ShapeChanged;
+                obstacle.m_ShapeChanged = false;
                 if (!Carving(obstacle)) continue;
                 if (!s_Carves.TryGetValue(obstacle, out var c))
                 {
@@ -446,6 +461,14 @@ namespace Unbound.Runtime
                     c.Snapshot(obstacle);
                     s_Carves[obstacle] = c;
                     c.Schedule(FootprintOf(obstacle));
+                    continue;
+                }
+                // Reshaped: cut again as it is now (a moving stationary-only obstacle stays uncut);
+                // its transform is taken as the new reference.
+                if (reshaped)
+                {
+                    c.Snapshot(obstacle);
+                    if (!obstacle.carveOnlyStationary || !c.Moving) c.Schedule(FootprintOf(obstacle));
                     continue;
                 }
                 var t = obstacle.transform;
@@ -463,8 +486,8 @@ namespace Unbound.Runtime
                         }
                         else if (c.Target == null) c.Schedule(FootprintOf(obstacle));
                     }
-                    // Moving: still once it has moved less than a tenth of the threshold per update for
-                    // more than carvingTimeToStationary.
+                    // Moving: still once it has stayed within a tenth of the threshold of where it
+                    // was last seen moving for more than carvingTimeToStationary.
                     else if (c.HasMoved(t, Mathf.Max(threshold * StillFraction, MinMoveThreshold)))
                     {
                         c.Still = 0f;
