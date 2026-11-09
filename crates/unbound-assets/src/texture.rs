@@ -20,7 +20,7 @@ use crate::{
     meta::{boolean, float, importer, int},
     sprite::{self, SpriteDef, SpriteSettings},
 };
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use std::{path::Path, sync::OnceLock};
 use unbound_yaml::Value;
@@ -797,7 +797,8 @@ impl Importer for TextureImporter {
     //     GPU only where the target's format is not produced.
     // 20: mipless textures of multiple-of-4 sizes are compressed; Cursor textures keep their
     //     pixels; the import records why it is not stored as the target stores it.
-    const VERSION: u32 = 20;
+    // 21: Photoshop files are read by Unbound's own reader (16-bit channels round to bytes).
+    const VERSION: u32 = 21;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -1503,13 +1504,13 @@ fn decode(source: &Path, bytes: &[u8]) -> Result<Image> {
         .unwrap_or("")
         .to_ascii_lowercase();
     if bytes.starts_with(b"8BPS") || (ext == "psd" && !bytes.is_empty()) {
-        // Photoshop: Unity imports the merged (composite) image.
-        let psd = psd::Psd::from_bytes(bytes).map_err(|e| anyhow!("psd: {e}"))?;
+        // Photoshop: Unity imports the flattened image.
+        let (width, height, data) = psd::decode(bytes)?;
         return Ok(Image {
-            width: psd.width(),
-            height: psd.height(),
+            width,
+            height,
             format: TextureFormat::Rgba8,
-            data: psd.rgba(),
+            data,
         });
     }
     // The content decides (some projects have JPEGs named `.png`), the extension is the fallback.
@@ -2022,6 +2023,7 @@ mod bcn;
 pub use bcn::{BlockFormat, decode_level as decode_blocks};
 mod cubemap;
 mod mipmaps;
+mod psd;
 mod resize;
 mod specular;
 #[cfg(test)]
