@@ -32,8 +32,9 @@ namespace Unbound.Runtime
         /// Animators and of game-time and unscaled-time playable graphs, whatever their outputs,
         /// take zero elapsed time (animation samples and delivers events/movement at it:
         /// animstartup; script playables prepare and process at it: playables frames.script).
-        /// Fixed and explicit evaluations keep their supplied deltas. Other releases, DSP-clock
-        /// graphs and custom loop startup intervals are not measured.</summary>
+        /// Fixed and explicit evaluations keep their supplied deltas (unscaled-time graphs: animedges
+        /// entry.*). Other releases, DSP-clock graphs, a PlayableDirector's own clock and custom
+        /// loop startup intervals are not measured.</summary>
         internal static double AutomaticFrameDelta(double delta) =>
             s_PlayModeEntry && Compat.AnimatorStartupMeasured ? 0.0 : delta;
 

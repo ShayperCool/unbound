@@ -370,7 +370,8 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>The automatic Play-entry interval is zero for an animation output's whole
-        /// tree, the playables above its clip included (unmeasured there; the existing rule).</summary>
+        /// tree, the playables above its clip included: the frame's update gives the graph a
+        /// zero interval (tests/projects/animedges entry.*).</summary>
         [Fact]
         public void ThePlayEntryIntervalHoldsTheWholeAnimationOutputTree()
         {
@@ -380,17 +381,24 @@ namespace UnityEngine.Tests
             var plain = Above(graph, clip);
             AnimationPlayableOutput.Create(graph, "animation", animator).SetSourcePlayable(plain);
             graph.Play();
+            float delta = Time.s_DeltaTime;
+            Time.s_DeltaTime = (float)Step;
             AnimationSystem.BeginPlayMode();
             try
             {
-                Frames(graph, 1);
+                PlayableGraphData.UpdateAll();
                 Assert.Equal(0, plain.GetTime());
                 Assert.Equal(0, clip.GetTime());
+                AnimationSystem.EndPlayModeEntry();
+                PlayableGraphData.UpdateAll();
+                Assert.Equal(Step, plain.GetTime(), 6);
+                Assert.Equal(Step, clip.GetTime(), 6);
             }
-            finally { AnimationSystem.EndPlayModeEntry(); }
-            Frames(graph, 1);
-            Assert.Equal(Step, plain.GetTime(), 9);
-            Assert.Equal(Step, clip.GetTime(), 9);
+            finally
+            {
+                AnimationSystem.EndPlayModeEntry();
+                Time.s_DeltaTime = delta;
+            }
         }
 
         [Fact]
