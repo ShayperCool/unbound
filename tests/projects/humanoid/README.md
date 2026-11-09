@@ -127,11 +127,13 @@ imported without keyframe reduction.
 
 - states without a motion and without write defaults (`HumanoidPlayables.cs`, controllers from
   `ProbeRunner.Leftovers`): HumanA's clip leaving for such a state (Hold) after an exit time of 0.3
-  at once (`noWDAlone`), over 0.2 s (`noWDFade`) and at once under B on a layer without Root
-  (`noRootNoWD`), recorded like the settings plays with the root motion's deltas but not its
-  velocities, and GenericMove doing the same on a plain GameObject (`generic.noWD`). Measured: the
-  state keeps the layer's last root motion, so every update moves the root again by the layer's last
-  step in the root's frame, whatever the delta time.
+  at once (with an extra `Update(0)` before step 12, `noWDAlone`), over 0.2 s (`noWDFade`), at
+  once under B on a layer without Root (`noRootNoWD`) and at once then back to the clip after 0.5 of
+  the hold over 0.2 s (`noWDBack`), recorded like the settings plays with the root motion's deltas but
+  not its velocities, and GenericMove doing the same on a plain GameObject (`generic.noWD` with the
+  extra update, `generic.noWDBack`). Measured: the state keeps the layer's last root motion, so every
+  update, an `Update(0)` included, moves the root again by the layer's last step in the root's
+  frame, whatever the delta time, with the state's share of a transition into or out of it.
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:
