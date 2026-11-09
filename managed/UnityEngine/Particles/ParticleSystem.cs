@@ -906,6 +906,8 @@ namespace UnityEngine
             m_EmissionRandom = m_EmissionRandom,
             m_ForceRandom0 = m_ForceRandom[0], m_ForceRandom1 = m_ForceRandom[1],
             m_ForceRandom2 = m_ForceRandom[2], m_ForceRandom3 = m_ForceRandom[3],
+            m_CollisionRandom0 = m_CollisionRandom[0], m_CollisionRandom1 = m_CollisionRandom[1],
+            m_CollisionRandom2 = m_CollisionRandom[2], m_CollisionRandom3 = m_CollisionRandom[3],
             m_InitialRandom0 = m_InitialRandom[0],
             m_InitialRandom1 = m_InitialRandom[1],
             m_InitialRandom2 = m_InitialRandom[2],
@@ -936,6 +938,8 @@ namespace UnityEngine
             m_EmissionRandom = playbackState.m_EmissionRandom;
             m_ForceRandom[0] = playbackState.m_ForceRandom0; m_ForceRandom[1] = playbackState.m_ForceRandom1;
             m_ForceRandom[2] = playbackState.m_ForceRandom2; m_ForceRandom[3] = playbackState.m_ForceRandom3;
+            m_CollisionRandom[0] = playbackState.m_CollisionRandom0; m_CollisionRandom[1] = playbackState.m_CollisionRandom1;
+            m_CollisionRandom[2] = playbackState.m_CollisionRandom2; m_CollisionRandom[3] = playbackState.m_CollisionRandom3;
             m_InitialRandom[0] = playbackState.m_InitialRandom0;
             m_InitialRandom[1] = playbackState.m_InitialRandom1;
             m_InitialRandom[2] = playbackState.m_InitialRandom2;

@@ -81,6 +81,71 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
 
+        static ParticleSystem Colliding(Transform plane, Action<ParticleSystem.CollisionModule> configure) => Make(ps =>
+        {
+            var m = ps.main; m.startSpeed = 2f; m.startSize = 0.02f; m.startLifetime = 2f;
+            ps.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)6) });
+            var c = ps.collision; c.enabled = true; c.type = ParticleSystemCollisionType.Planes; c.SetPlane(0, plane);
+            configure(c);
+        });
+
+        static Transform Plane()
+        {
+            var plane = new GameObject("plane").transform;
+            plane.SetPositionAndRotation(new Vector3(0f, 0f, 0.3f), Quaternion.Euler(-90f, 0f, 0f));
+            return plane;
+        }
+
+        [Fact]
+        public void HitsOfOnePassTakeTheCollisionLanesInOrder()
+        {
+            // Six identical particles hit in the same pass: hit j bounces with the first draw of
+            // lane j mod 4 (lanes seeded with the system seed plus 367 per lane), the fifth and
+            // sixth with the lanes' second draw (a second group of four).
+            var plane = Plane();
+            var ps = Colliding(plane, c => { c.bounce = new ParticleSystem.MinMaxCurve(0.2f, 1f); c.dampen = 0f; c.lifetimeLoss = 0f; });
+            try
+            {
+                for (int i = 0; i < 8; i++) ps.Simulate(0.025f, true, i == 0, false);
+                var lanes = new Random.State[4];
+                for (int l = 0; l < 4; l++) lanes[l] = Random.State.FromSeed(unchecked((int)(12345u + 367u * (uint)l)));
+                var first = new float[4];
+                for (int l = 0; l < 4; l++) first[l] = lanes[l].NextValue();
+                var second = new float[4];
+                for (int l = 0; l < 4; l++) second[l] = lanes[l].NextValue();
+                var particles = Read(ps);
+                Assert.Equal(6, particles.Length);
+                for (int j = 0; j < 6; j++)
+                {
+                    float r = j < 4 ? first[j] : second[j - 4];
+                    Assert.Equal(-2f * (0.2f + 0.8f * r), particles[j].velocity.z, 4);
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(ps.gameObject);
+                Object.DestroyImmediate(plane.gameObject);
+            }
+        }
+
+        [Fact]
+        public void CollisionCurvesAreReadAtTheirStart()
+        {
+            // A dampen curve rising over the life reads 0 at its start: a late hit keeps its speed.
+            var plane = Plane();
+            var ps = Colliding(plane, c => { c.bounce = 1f; c.dampen = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0f, 1f, 1f)); c.lifetimeLoss = 0f; });
+            try
+            {
+                for (int i = 0; i < 8; i++) ps.Simulate(0.025f, true, i == 0, false);
+                foreach (var p in Read(ps)) Assert.Equal(-2f, p.velocity.z, 4);
+            }
+            finally
+            {
+                Object.DestroyImmediate(ps.gameObject);
+                Object.DestroyImmediate(plane.gameObject);
+            }
+        }
+
         [Fact]
         public void LifetimeByEmitterSpeedKeepsAtLeastItsFloor()
         {

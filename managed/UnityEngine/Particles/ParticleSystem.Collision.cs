@@ -77,15 +77,47 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>Collides a particle that has just moved by <paramref name="dt"/> with
-        /// <paramref name="velocity"/> (simulation space, the speed modifier applied) and bounces
-        /// it; false when the collision kills it. <paramref name="size"/> is the particle's size as
+        /// <summary>A collision found in a step, answered once the step's collision pass knows its
+        /// number of hits (see <see cref="FlushCollisions"/>).</summary>
+        struct PendingCollision
+        {
+            internal int slot;
+            internal Vector3 contact, normal, velocity, end, before, eventSize;
+            internal GameObject other;
+            internal int colliderId;
+            internal float dt, speedModifier, ageBefore;
+            internal bool existing, birthSubs, birthsInFinalStep;
+        }
+
+        PendingCollision[] m_PendingCollisions = new PendingCollision[8];
+        int m_PendingCollisionCount, m_CollisionHits;
+        float[] m_CollisionDraws = new float[12];
+        /// <summary>The slot of the particle being integrated within a collision pass, or -1 when
+        /// its collision is answered at once (a pass of its own).</summary>
+        int m_IntegrateSlot = -1;
+        /// <summary>The collision module's random lanes, seeded like the force lanes.</summary>
+        readonly Random.State[] m_CollisionRandom = new Random.State[4];
+
+        /// <summary>Whether a collision curve takes a random value (its draws decide the response).</summary>
+        bool CollisionDrawsRandom
+        {
+            get
+            {
+                var C = m_Collision;
+                return C.bounce.IsRandom || C.dampen.IsRandom || C.lifetimeLoss.IsRandom;
+            }
+        }
+
+        /// <summary>Finds where a particle that has just moved by <paramref name="dt"/> with
+        /// <paramref name="velocity"/> (simulation space, the speed modifier applied) meets a plane or
+        /// collider; false when it meets none. <paramref name="size"/> is the particle's size as
         /// the collision sees it: at the end of its previous step, or of this one for a newborn
         /// (6000.0.71f1, tests/projects/particlerender inherit/collision/*, collide/*).</summary>
-        bool Collide(ref Particle p, Vector3 size, Vector3 velocity, float age, float dt, float speedModifier, in StepContext c)
+        bool DetectCollision(ref Particle p, Vector3 size, Vector3 velocity, float dt, in StepContext c, out PendingCollision h)
         {
             var C = m_Collision;
-            if (dt < MinCollisionStep) return true;
+            h = default;
+            if (dt < MinCollisionStep) return false;
             float radius = Mathf.Max(size.x, Mathf.Max(size.y, size.z)) * (C.radiusScale * 0.5f);
             var end = p.m_Position;
             Vector3 contact, normal;
@@ -93,22 +125,132 @@ namespace UnityEngine
             int colliderId = 0;
             if (C.type == ParticleSystemCollisionType.Planes)
             {
-                if (!PlaneContact(end, velocity, radius, out contact, out normal, out other)) return true;
+                if (!PlaneContact(end, velocity, radius, out contact, out normal, out other)) return false;
             }
             else
             {
                 if (C.mode == ParticleSystemCollisionMode.Collision2D)
                 {
                     ReportUnsupported("2D world collision");
-                    return true;
+                    return false;
                 }
-                if (!WorldContact(end, velocity, radius, dt, c, out contact, out normal, out var hit)) return true;
+                if (!WorldContact(end, velocity, radius, dt, c, out contact, out normal, out var hit)) return false;
                 other = hit != null ? hit.gameObject : null;
                 colliderId = hit != null ? hit.GetInstanceID() : 0;
                 if (C.colliderForce != 0f && hit != null) ReportColliderForce(hit.attachedRigidbody);
             }
 
-            uint seed = p.m_RandomSeed;
+            h.contact = contact;
+            h.normal = normal;
+            h.other = other;
+            h.colliderId = colliderId;
+            h.velocity = velocity;
+            h.end = end;
+            h.dt = dt;
+            return true;
+        }
+
+        /// <summary>Collides a particle (see <see cref="DetectCollision"/>): true when it meets
+        /// nothing or survives the hit. Inside a collision pass whose curves take random values the
+        /// hit is queued (<paramref name="deferred"/>) and answered by <see cref="FlushCollisions"/>;
+        /// otherwise it is answered now.</summary>
+        bool Collide(ref Particle p, Vector3 size, Vector3 velocity, float dt, float speedModifier, in StepContext c, out bool deferred)
+        {
+            deferred = false;
+            if (!DetectCollision(ref p, size, velocity, dt, c, out var h)) return true;
+            h.speedModifier = speedModifier;
+            var C = m_Collision;
+            // Inside a pass only the particle of the slot being integrated queues its hit; one
+            // emitted meanwhile (a sub-emitter cycle back to this system, also into that slot of a
+            // full ring buffer) answers it at once.
+            if (m_IntegrateSlot >= 0 && System.Runtime.CompilerServices.Unsafe.AreSame(ref p, ref m_Particles[m_IntegrateSlot])
+                && (m_PendingCollisionCount == 0 || m_PendingCollisions[m_PendingCollisionCount - 1].slot != m_IntegrateSlot))
+            {
+                m_CollisionHits++;
+                if (!CollisionDrawsRandom)
+                    return RespondToCollision(ref p, h, c, CurveAtStart(C.bounce, 0f), CurveAtStart(C.dampen, 0f), CurveAtStart(C.lifetimeLoss, 0f));
+                h.slot = m_IntegrateSlot;
+                if (m_PendingCollisionCount == m_PendingCollisions.Length) System.Array.Resize(ref m_PendingCollisions, m_PendingCollisionCount * 2);
+                m_PendingCollisions[m_PendingCollisionCount++] = h;
+                deferred = true;
+                return true;
+            }
+            // A hit outside a pass is a pass of its own.
+            DrawCollisionValues(1);
+            return RespondToCollision(ref p, h, c, CurveAtStart(C.bounce, m_CollisionDraws[0]),
+                CurveAtStart(C.dampen, m_CollisionDraws[8]), CurveAtStart(C.lifetimeLoss, m_CollisionDraws[4]));
+        }
+
+        /// <summary>Completes the queued hit of the particle just integrated with what its step's
+        /// remaining modules need.</summary>
+        void CompletePendingCollision(float ageBefore, Vector3 before, bool existing, bool birthSubs, bool birthsInFinalStep, Vector3 eventSize)
+        {
+            ref var h = ref m_PendingCollisions[m_PendingCollisionCount - 1];
+            h.ageBefore = ageBefore;
+            h.before = before;
+            h.existing = existing;
+            h.birthSubs = birthSubs;
+            h.birthsInFinalStep = birthsInFinalStep;
+            h.eventSize = eventSize;
+        }
+
+        /// <summary>A collision curve read at time 0, whatever its mode (6000.0.71f1,
+        /// tests/projects/particlerandom collision/curve, collision/curves).</summary>
+        static float CurveAtStart(in ModuleCurve curve, float random) => curve.Evaluate(0f, random);
+
+        /// <summary>Draws a collision pass's random values for <paramref name="hits"/> hits into
+        /// <see cref="m_CollisionDraws"/>: for bounce, then lifetime loss, then dampen, one draw of
+        /// each of the four lanes per group of four hits, hit j taking lane j mod 4 of group j / 4
+        /// (6000.0.71f1, tests/projects/particlerandom collision/*). Returns the group count.</summary>
+        int DrawCollisionValues(int hits)
+        {
+            EnsureModuleRandom();
+            int groups = (hits + 3) >> 2;
+            int span = groups * 4;
+            if (m_CollisionDraws.Length < span * 3) m_CollisionDraws = new float[System.Math.Max(span * 3, m_CollisionDraws.Length * 2)];
+            for (int curve = 0; curve < 3; curve++)
+                for (int g = 0; g < groups; g++)
+                    for (int lane = 0; lane < 4; lane++)
+                        m_CollisionDraws[curve * span + g * 4 + lane] = m_CollisionRandom[lane].NextValue();
+            return groups;
+        }
+
+        /// <summary>Ends a collision pass: draws its random values (also when nothing waited for
+        /// them, so the generator keeps pace), answers the queued hits in order, then runs what
+        /// follows a collision in their step (triggers, Birth sub-emitters). A newborn the hit
+        /// kills is marked in <paramref name="marks"/>.</summary>
+        void FlushCollisions(in StepContext c, SlotMark[] marks = null)
+        {
+            int hits = m_CollisionHits;
+            m_CollisionHits = 0;
+            int pending = m_PendingCollisionCount;
+            m_PendingCollisionCount = 0;
+            if (hits == 0) return;
+            int span = DrawCollisionValues(hits) * 4;
+            var C = m_Collision;
+            for (int k = 0; k < pending; k++)
+            {
+                var h = m_PendingCollisions[k];
+                m_PendingCollisions[k].other = null;
+                ref var p = ref m_Particles[h.slot];
+                bool alive = RespondToCollision(ref p, h, c, CurveAtStart(C.bounce, m_CollisionDraws[k]),
+                    CurveAtStart(C.dampen, m_CollisionDraws[2 * span + k]), CurveAtStart(C.lifetimeLoss, m_CollisionDraws[span + k]));
+                if (alive && m_Trigger.enabled) alive = Trigger(ref p, h.eventSize);
+                if (!alive)
+                {
+                    if (!EndLifeInStep(ref p, h.existing) && marks != null) marks[h.slot] |= SlotMark.Dead;
+                    continue;
+                }
+                if (h.birthSubs && (p.m_AgePercent < 100f || h.birthsInFinalStep))
+                    BirthSubEmitters(ref p, h.ageBefore, p.m_StartLifetime - p.m_Lifetime, h.dt, h.before);
+            }
+        }
+
+        /// <summary>Answers a hit: bounces and dampens the particle at the contact, moves it on for
+        /// the rest of the step and takes the lifetime loss; false when the collision kills it.</summary>
+        bool RespondToCollision(ref Particle p, in PendingCollision h, in StepContext c, float bounce, float dampen, float lifetimeLoss)
+        {
+            var C = m_Collision;
             // Collision sub-emitters ("Spawns new particles when particles from the parent
             // system collide with something"; collision0/1 spawn "at the locations of the
             // collision") emit at the contact, the ParticleCollisionEvent intersection, whether
@@ -116,28 +258,26 @@ namespace UnityEngine
             // detected collision, also when the collision then kills the particle (its Death
             // sub-emitters fire as well), and what the children inherit is the particle as it
             // arrives, before the bounce, dampen and lifetime loss.
-            if (m_SubEmitters.enabled) EventSubEmitters(ParticleSystemSubEmitterType.Collision, p, contact);
-            if (C.sendCollisionMessages && other != null)
-                m_CollisionEvents.Add((other, new ParticleCollisionEvent
+            if (m_SubEmitters.enabled) EventSubEmitters(ParticleSystemSubEmitterType.Collision, p, h.contact);
+            if (C.sendCollisionMessages && h.other != null)
+                m_CollisionEvents.Add((h.other, new ParticleCollisionEvent
                 {
-                    m_Intersection = c.SimToWorld.MultiplyPoint3x4(contact),
-                    m_Normal = c.SimToWorld.MultiplyVector(normal).normalized,
-                    m_Velocity = c.SimToWorld.MultiplyVector(velocity),
-                    m_ColliderInstanceID = colliderId,
+                    m_Intersection = c.SimToWorld.MultiplyPoint3x4(h.contact),
+                    m_Normal = c.SimToWorld.MultiplyVector(h.normal).normalized,
+                    m_Velocity = c.SimToWorld.MultiplyVector(h.velocity),
+                    m_ColliderInstanceID = h.colliderId,
                 }));
-            float bounce = C.bounce.Evaluate(age, R.Value(seed, R.Collision));
-            float dampen = C.dampen.Evaluate(age, R.Value(seed, R.Collision + 1));
             // The rest of the movement, from the contact to where the step ended, and the whole
             // velocity (the particle's own and the animated part) bounce alike; the animated part
             // stays as it is, so the particle's own velocity takes the difference.
-            p.m_Position = contact + Bounce(end - contact, normal, bounce, dampen);
-            var bounced = Bounce(velocity, normal, bounce, dampen);
-            p.m_Velocity = Mathf.Abs(speedModifier) > MinSpeedModifier ? bounced / speedModifier - p.m_AnimatedVelocity : Vector3.zero;
-            p.m_AgePercent += C.lifetimeLoss.Evaluate(age, R.Value(seed, R.Collision + 2)) * 100f;
+            p.m_Position = h.contact + Bounce(h.end - h.contact, h.normal, bounce, dampen);
+            var bounced = Bounce(h.velocity, h.normal, bounce, dampen);
+            p.m_Velocity = Mathf.Abs(h.speedModifier) > MinSpeedModifier ? bounced / h.speedModifier - p.m_AnimatedVelocity : Vector3.zero;
+            p.m_AgePercent += lifetimeLoss * 100f;
             p.ExportLifetime();
             // The kill by speed takes the speed it arrived with; the killed particle still bounced
             // (6000.0.71f1, tests/projects/particletrails pp/collision/speedkill).
-            float speed2 = velocity.sqrMagnitude;
+            float speed2 = h.velocity.sqrMagnitude;
             if (speed2 < C.minKillSpeed * C.minKillSpeed || speed2 > C.maxKillSpeed * C.maxKillSpeed) return false;
             return p.m_AgePercent <= 100f;
         }

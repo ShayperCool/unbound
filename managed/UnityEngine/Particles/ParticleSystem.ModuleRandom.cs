@@ -34,6 +34,7 @@ namespace UnityEngine
         {
             internal Random.State m_EmissionRandom;
             internal Random.State m_ForceRandom0, m_ForceRandom1, m_ForceRandom2, m_ForceRandom3;
+            internal Random.State m_CollisionRandom0, m_CollisionRandom1, m_CollisionRandom2, m_CollisionRandom3;
         }
 
         Random.State m_EmissionRandom;

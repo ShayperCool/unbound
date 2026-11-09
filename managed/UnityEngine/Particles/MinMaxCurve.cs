@@ -479,6 +479,6 @@ namespace Unbound.Runtime
 
         // Salts of the per-particle random values that are not measured yet (the measured ones
         // use the modules' own salts with ParticleSystem.ModuleValue).
-        internal const uint FlipU = 21, FlipV = 22, Force = 34, Collision = 40, Light = 48;
+        internal const uint FlipU = 21, FlipV = 22, Force = 34, Light = 48;
     }
 }

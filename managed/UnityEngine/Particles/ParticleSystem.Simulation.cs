@@ -749,8 +749,12 @@ namespace UnityEngine
                     context.BirthSubs = false;
                     context.TemporaryLane = true;
                 }
+                m_IntegrateSlot = index;
                 if (!Integrate(ref m_Particles[index], age, ref context)) marks[index] |= SlotMark.Dead;
             }
+            // The newborns' collision pass.
+            m_IntegrateSlot = -1;
+            FlushCollisions(m_Context, marks);
             // Initialize complete groups before removing the births that died at once
             // (expired, or discarded by the shape texture), in ascending slot order (the
             // existing particles' four-slot order regresses particlerandom ratebatch/edge).
@@ -1581,6 +1585,7 @@ namespace UnityEngine
                     ageBefore = m_Particles[i].Age01;
                 }
                 bool agedOut = false;
+                m_IntegrateSlot = i;
                 if (!killed && Integrate(ref m_Particles[i], dt, ref m_Context, true, out agedOut)) continue;
                 marks[i] = SlotMark.Dead;
                 anyDead = true;
@@ -1598,6 +1603,9 @@ namespace UnityEngine
                     m_SlotPoints[i] = end.m_Position;
                 }
             }
+            // The step's collision pass answers its hits once all particles moved.
+            m_IntegrateSlot = -1;
+            FlushCollisions(m_Context);
             // Death sub-emitters fire while the dead leave; a cycle back to this system can
             // append particles, which RemoveDeadSlots treats as alive.
             if (anyDead) RemoveDeadSlots(0, deathSubs ? DeadSlotRemoval.DeathWithSubEmitters : DeadSlotRemoval.Death);
@@ -1608,6 +1616,18 @@ namespace UnityEngine
         /// lifetime moves a newborn not at all in its first step). <paramref name="existing"/>: the
         /// particle was alive before this update (false for a newborn being emitted).</summary>
         bool Integrate(ref Particle p, float dt, ref StepContext c, bool existing = false) => Integrate(ref p, dt, ref c, existing, out _);
+
+        /// <summary>A particle a collision or trigger kills in a step: a newborn is not added
+        /// (false); an existing one keeps its moved state at zero remaining lifetime for the next
+        /// update to remove (see Integrate).</summary>
+        static bool EndLifeInStep(ref Particle p, bool existing)
+        {
+            if (!existing) return false;
+            p.m_AgePercent = 100f;
+            p.m_Lifetime = 0f;
+            p.m_Flags |= Particle.FlagKilled;
+            return true;
+        }
 
         /// <summary>As above; <paramref name="agedOut"/>: it died because its life ran out in this
         /// step, before it moved (not in a collision).</summary>
@@ -1677,8 +1697,16 @@ namespace UnityEngine
             }
             p.m_Rotation += p.m_AngularVelocity * dt;
             if (events && !existing) eventSize = CurrentSize3D(ref p);
-            if (events && (m_Collision.enabled && !Collide(ref p, eventSize, moving * speedModifier, age, dt, speedModifier, c)
-                || m_Trigger.enabled && !Trigger(ref p, eventSize)))
+            bool deferred = false;
+            if (events && m_Collision.enabled && !Collide(ref p, eventSize, moving * speedModifier, dt, speedModifier, c, out deferred))
+                return EndLifeInStep(ref p, existing);
+            if (deferred)
+            {
+                // Its step goes on once the collision pass answers the hit (FlushCollisions).
+                CompletePendingCollision(ageBefore, before, existing, c.BirthSubs, c.BirthsInFinalStep, eventSize);
+                return true;
+            }
+            if (events && m_Trigger.enabled && !Trigger(ref p, eventSize))
             {
                 // A newborn killed while it is emitted is never added (measured: none is
                 // reported, even in a call's last step). An existing particle's life ends
@@ -1688,11 +1716,7 @@ namespace UnityEngine
                 // collisions, tests/projects/particletrails pp/collision: reported at lifetime 0
                 // with its bounced velocity, then left at rest carrying its fading trail). The
                 // rest of this update still skips it, as before.
-                if (!existing) return false;
-                p.m_AgePercent = 100f;
-                p.m_Lifetime = 0f;
-                p.m_Flags |= Particle.FlagKilled;
-                return true;
+                return EndLifeInStep(ref p, existing);
             }
 
             // A particle whose life ends exactly at the end of this step (kept at zero life until
