@@ -754,3 +754,62 @@ fn realtime_uvs_of_irregular_meshes() {
         .is_err()
     );
 }
+
+/// Unity's built-in Plane: 10 x 10 m on XZ in 10 x 10 cells, UVs 0..1 (no UV2).
+fn plane() -> (Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<[u32; 3]>) {
+    let (mut positions, mut uvs, mut triangles) = (Vec::new(), Vec::new(), Vec::new());
+    for z in 0..=10 {
+        for x in 0..=10 {
+            let (u, v) = (x as f32 / 10.0, z as f32 / 10.0);
+            positions.push([5.0 - 10.0 * u, 0.0, 5.0 - 10.0 * v]);
+            uvs.push([u, v]);
+        }
+    }
+    for z in 0..10u32 {
+        for x in 0..10u32 {
+            let i = z * 11 + x;
+            triangles.push([i, i + 11, i + 12]);
+            triangles.push([i, i + 12, i + 1]);
+        }
+    }
+    (positions, uvs, triangles)
+}
+
+#[test]
+fn realtime_uvs_of_another_scene_match_its_layout() {
+    // tests/projects/lightingassets Realtime: a plane and three boxes of other sizes, realtime
+    // resolution 2.
+    let file = probe().join("../lightingassets/Assets/Scenes/Realtime/LightingData.asset");
+    let bytes = std::fs::read(file).unwrap();
+    let serialized = unbound_assets::serialized::SerializedFile::parse(&bytes).unwrap();
+    let data = read_precomputed(&serialized.read(112000000).unwrap())
+        .unwrap()
+        .unwrap();
+    assert_eq!(data.systems.len(), 1);
+    let system = &data.systems[0];
+    assert_eq!((system.transport.width, system.transport.height), (36, 42));
+    let (positions, uvs, triangles) = plane();
+    for (k, &(object, _)) in data.renderers.iter().enumerate() {
+        let out = match object {
+            333140154 => crate::realtime_uv::realtime_uvs(&crate::realtime_uv::Input {
+                positions: &positions,
+                uvs: &uvs,
+                triangles: &triangles,
+                pixel_size: 0.5,
+                min_chart_texels: 4,
+            })
+            .unwrap(),
+            859734017 => cube_uvs([0.2, 3.0, 6.0], 0.5),
+            992040430 => cube_uvs([6.0, 3.0, 0.2], 0.5),
+            1785088137 => cube_uvs([0.6, 1.2, 0.6], 0.5),
+            other => panic!("unknown renderer {other}"),
+        };
+        crate::realtime_uv::check_layout(system, data.renderer_st[k], &out)
+            .unwrap_or_else(|e| panic!("renderer {object}: {e:#}"));
+    }
+    // The solver runs on it too.
+    let mut solver = SystemSolver::new(Arc::new(system.clone()), true).unwrap();
+    solver.set_uniform_environment([0.1; 3]);
+    solver.reset_bounce();
+    assert!(solver.update().is_finite());
+}

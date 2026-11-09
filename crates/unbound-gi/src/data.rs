@@ -298,7 +298,7 @@ pub fn read_transport(bytes: &[u8]) -> Result<Transport> {
     let clusters = b.usize(8)?;
     let total = b.usize(16)?;
     ensure!(
-        0x20 + 2 * clusters + 8 * total <= bounce.len(),
+        align(0x20 + 2 * clusters, 16) + 8 * total <= bounce.len(),
         "malformed bounce resampling"
     );
     let mut bounce_samples = Vec::with_capacity(clusters + 1);
@@ -309,7 +309,8 @@ pub fn read_transport(bytes: &[u8]) -> Result<Transport> {
     }
     bounce_samples.push(sum);
     ensure!(sum as usize == total, "bounce sample counts do not add up");
-    let at = align(0x20 + 2 * clusters, 4);
+    // The samples start 16-byte aligned after the counts.
+    let at = align(0x20 + 2 * clusters, 16);
     let bounce = (0..total)
         .map(|k| {
             let e = at + 8 * k;
