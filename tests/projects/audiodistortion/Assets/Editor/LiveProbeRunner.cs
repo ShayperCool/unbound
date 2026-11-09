@@ -40,6 +40,7 @@ public static class LiveProbeRunner
                     Parameter(mixer, unit, snapshot, "Rate", 5);
                     Parameter(mixer, unit, snapshot, "Depth", .5f);
                 }
+                foreach (var setting in c.Settings()) Parameter(mixer, unit, snapshot, setting.Key, setting.Value);
                 if (c.Parameter == "Wet" || (c.Mode == "setwet" || c.Mode.StartsWith("dry"))) Set(unit, "enableWetMix", true);
                 if ((c.Mode == "setwet" || c.Mode.StartsWith("dry"))) Parameter(mixer, unit, snapshot, "Wet", -6);
                 Parameter(mixer, unit, snapshot, c.Parameter, c.Initial);

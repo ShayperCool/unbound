@@ -1,0 +1,128 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!245 &-2755348736950059682
+AudioMixerSnapshotController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Other
+  m_AudioMixer: {fileID: 24100000}
+  m_SnapshotID: bd9388e191c1bf5f190de7a2258c3941
+  m_FloatValues:
+    ad54cfa1600ca528b83d677c202ba6b5: -100
+    f26260259cc165c94992a6a291a5f667: 20
+    805dc609b306f336caa0e35bed90ecce: 0
+  m_TransitionOverrides: {}
+--- !u!241 &24100000
+AudioMixerController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: sfxreverb_hfref20
+  m_OutputGroup: {fileID: 0}
+  m_MasterGroup: {fileID: 24300002}
+  m_Snapshots:
+  - {fileID: 24500006}
+  - {fileID: -2755348736950059682}
+  m_StartSnapshot: {fileID: 24500006}
+  m_SuspendThreshold: -80
+  m_EnableSuspend: 0
+  m_UpdateMode: 0
+  m_ExposedParameters:
+  - guid: f26260259cc165c94992a6a291a5f667
+    name: Value
+  m_AudioMixerGroupViews: []
+  m_CurrentViewIndex: 0
+  m_TargetSnapshot: {fileID: 24500006}
+--- !u!243 &24300002
+AudioMixerGroupController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Master
+  m_AudioMixer: {fileID: 24100000}
+  m_GroupID: d1fbbe7f55d4d6cf781ff0a0a49f1c48
+  m_Children: []
+  m_Volume: 89da87e27ea49e8b4b71f1dc4fcaf964
+  m_Pitch: 2ddd06dabe40c2f5d8a1bba62a3e8f1d
+  m_Send: 00000000000000000000000000000000
+  m_Effects:
+  - {fileID: 24400004}
+  - {fileID: 215454230060583825}
+  m_UserColorIndex: 0
+  m_Mute: 0
+  m_Solo: 0
+  m_BypassEffects: 0
+--- !u!244 &24400004
+AudioMixerEffectController:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_EffectID: 20a3dda7ee269e54ca37037fb9b73c1e
+  m_EffectName: Attenuation
+  m_MixLevel: b804d527c32adac7697107800aaa592f
+  m_Parameters: []
+  m_SendTarget: {fileID: 0}
+  m_EnableWetMix: 0
+  m_Bypass: 0
+--- !u!245 &24500006
+AudioMixerSnapshotController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Base
+  m_AudioMixer: {fileID: 24100000}
+  m_SnapshotID: 165f45a655609fb7b926db3f666122ca
+  m_FloatValues:
+    ad54cfa1600ca528b83d677c202ba6b5: -100
+    f26260259cc165c94992a6a291a5f667: 20
+    805dc609b306f336caa0e35bed90ecce: 0
+  m_TransitionOverrides: {}
+--- !u!244 &215454230060583825
+AudioMixerEffectController:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_EffectID: aed5a7f131cfacedb96bd869fbf22646
+  m_EffectName: SFX Reverb
+  m_MixLevel: 4dbba39a480e99022a1b95bd122633ea
+  m_Parameters:
+  - m_ParameterName: Dry Level
+    m_GUID: 8288ba2d93fc9dd3189bf1b2924f80e1
+  - m_ParameterName: Room
+    m_GUID: 805dc609b306f336caa0e35bed90ecce
+  - m_ParameterName: Room HF
+    m_GUID: ad54cfa1600ca528b83d677c202ba6b5
+  - m_ParameterName: Decay Time
+    m_GUID: 02ef043aeb04e47f79d37d68d6573288
+  - m_ParameterName: Decay HF Ratio
+    m_GUID: 7bb263c2f35d8f9a29a78f69d3df3e50
+  - m_ParameterName: Reflections
+    m_GUID: 5a5051895ba6b27f8a2b252aa49b248b
+  - m_ParameterName: Reflect Delay
+    m_GUID: acbba4884b618942db32c631330494eb
+  - m_ParameterName: Reverb
+    m_GUID: bd8200369bfb9c786b718c5f42994710
+  - m_ParameterName: Reverb Delay
+    m_GUID: 12f205365806ea9a1a1a86c1176a079b
+  - m_ParameterName: Diffusion
+    m_GUID: 95fbbbb53e65bc1829c81f8d35afe84e
+  - m_ParameterName: Density
+    m_GUID: ce0d942680eeee9bbb47b2defa754ee7
+  - m_ParameterName: HF Reference
+    m_GUID: f26260259cc165c94992a6a291a5f667
+  - m_ParameterName: Room LF
+    m_GUID: 5ad3b351f9bd7a936b178f242245b4e4
+  - m_ParameterName: LF Reference
+    m_GUID: b5e91528da6dd258fb07bd402ced5201
+  m_SendTarget: {fileID: 0}
+  m_EnableWetMix: 0
+  m_Bypass: 0

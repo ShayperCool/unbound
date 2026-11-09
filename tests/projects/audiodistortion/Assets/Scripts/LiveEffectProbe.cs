@@ -10,8 +10,17 @@ public sealed class LiveCase
 {
     public readonly string Key, Kind, Parameter, Mode;
     public readonly float Initial, Changed;
-    public LiveCase(string key, string kind, string parameter, float initial, float changed, string mode)
-    { Key = key; Kind = kind; Parameter = parameter; Initial = initial; Changed = changed; Mode = mode; }
+    /// <summary>Further fixed settings, "Name=value;Name=value".</summary>
+    public readonly string Extra;
+    public LiveCase(string key, string kind, string parameter, float initial, float changed, string mode, string extra = "")
+    { Key = key; Kind = kind; Parameter = parameter; Initial = initial; Changed = changed; Mode = mode; Extra = extra; }
+    public IEnumerable<KeyValuePair<string, float>> Settings()
+    {
+        foreach (string pair in Extra.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)) {
+            var parts = pair.Split('=');
+            yield return new KeyValuePair<string, float>(parts[0], float.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture));
+        }
+    }
     public bool Component => Mode == "source" || Mode == "mono" || Mode == "listener" || Mode == "delaydepth" || Mode == "recreate";
 }
 
@@ -116,6 +125,13 @@ public class LiveEffectProbe : MonoBehaviour
         new LiveCase("pitch_zero_edit", "Pitch Shifter", "Pitch", .75f, 1.5f, "dryedit"),
         new LiveCase("chorus_zero_hold", "Chorus", "Depth", .5f, .3f, "dryhold"),
         new LiveCase("chorus_zero_edit", "Chorus", "Depth", .5f, .3f, "dryedit"),
+        new LiveCase("sfxreverb_room_set", "SFX Reverb", "Room", -1000f, 0f, "set", "Reflections=-1000"),
+        new LiveCase("sfxreverb_decay_set", "SFX Reverb", "Decay Time", 1f, 3f, "set", "Room=0"),
+        new LiveCase("sfxreverb_reflect_delay_set", "SFX Reverb", "Reflect Delay", .02f, .1f, "set", "Room=0;Reflections=0"),
+        new LiveCase("sfxreverb_hfref50", "SFX Reverb", "HF Reference", 50f, 50f, "set", "Room=0;Room HF=-1000"),
+        new LiveCase("sfxreverb_hfref20", "SFX Reverb", "HF Reference", 20f, 20f, "set", "Room=0;Room HF=-100"),
+        new LiveCase("reverbfilter_room_source", "Reverb", "room", -1000f, 0f, "source", "reflectionsLevel=-1000"),
+        new LiveCase("reverbfilter_decay_source", "Reverb", "decayTime", 1f, 3f, "source", "room=0"),
     };
     const BindingFlags Flags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
     static bool Engine => Environment.GetEnvironmentVariable("EFFECT_PROBE_ENGINE") == "1";
@@ -163,6 +179,15 @@ public class LiveEffectProbe : MonoBehaviour
     static void SetComponent(Behaviour component, string parameter, float value)
     {
         if (component is AudioDistortionFilter dist) { dist.distortionLevel = value; return; }
+        if (component is AudioReverbFilter reverb) {
+            switch (parameter) {
+                case "room": reverb.room = value; break;
+                case "decayTime": reverb.decayTime = value; break;
+                case "reflectionsLevel": reverb.reflectionsLevel = value; break;
+                default: throw new Exception("Unknown reverb parameter " + parameter);
+            }
+            return;
+        }
         var chorus = (AudioChorusFilter)component;
         switch (parameter) {
             case "Dry mix": chorus.dryMix = value; break;
@@ -199,9 +224,14 @@ public class LiveEffectProbe : MonoBehaviour
             if (c.Component) {
                 var host = c.Mode == "listener" ? gameObject : go;
                 if (c.Kind == "Distortion") component = host.AddComponent<AudioDistortionFilter>();
+                else if (c.Kind == "Reverb") {
+                    var reverb = host.AddComponent<AudioReverbFilter>(); reverb.reverbPreset = AudioReverbPreset.User;
+                    component = reverb;
+                }
                 else {
                     component = AddChorus(host, 17.5f);
                 }
+                foreach (var setting in c.Settings()) SetComponent(component, setting.Key, setting.Value);
                 SetComponent(component, c.Parameter, c.Initial);
             }
             source.outputAudioMixerGroup = mixer.FindMatchingGroups("Master")[0]; source.volume = 1;

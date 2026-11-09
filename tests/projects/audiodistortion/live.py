@@ -38,6 +38,7 @@ SECTION_ENDS = (
     ('gain_boundary', 'dist_wet_delta_bound_high'),
     ('follower', 'chorus_depth_down_source'),
     ('delay_lifecycle', 'chorus_zero_edit'),
+    ('reverb_transitions', 'reverbfilter_decay_source'),
 )
 
 
