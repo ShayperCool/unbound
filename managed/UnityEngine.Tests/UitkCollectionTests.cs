@@ -338,6 +338,104 @@ namespace UnityEngine.Tests
             Assert.Equal(12, list.activeItems.Count());
         }
 
+        static ListView DynamicList(List<int> items, Func<int, float> height)
+        {
+            var list = new ListView { virtualizationMethod = CollectionVirtualizationMethod.DynamicHeight };
+            list.style.position = Position.Absolute;
+            list.style.width = 180;
+            list.style.height = 150;
+            list.makeItem = () => new Label();
+            list.bindItem = (e, i) =>
+            {
+                float h = height(items[i]);
+                if (h <= 0) e.style.display = DisplayStyle.None;
+                else
+                {
+                    e.style.display = DisplayStyle.Flex;
+                    e.style.height = h;
+                }
+            };
+            list.itemsSource = items;
+            return list;
+        }
+
+        static void Settle(Panel panel)
+        {
+            for (int i = 0; i < 6; i++) Layout(panel);
+        }
+
+        // [rule] Items removed while scrolled to the end, a null source and back, and a resize keep the
+        // dynamic list consistent: no exception, no more shown rows than items, rows bound only to
+        // existing items. (Where the scroll offset settles after the shrink is not measured.)
+        [Fact]
+        public void DynamicHeightSurvivesSourceChangesAndResizes()
+        {
+            using var panel = NewPanel(400, 400);
+            var items = Enumerable.Range(0, 200).ToList();
+            var list = DynamicList(items, i => 16 + (i % 5) * 8);
+            panel.visualTree.Add(list);
+            Settle(panel);
+            list.ScrollToItem(-1);
+            Settle(panel);
+            var scroll = list.Q<ScrollView>();
+            Assert.True(scroll.scrollOffset.y > 1000);
+
+            items.RemoveRange(10, items.Count - 10);
+            list.RefreshItems();
+            Settle(panel);
+            int shown = list.activeItems.Count(r => r.rootElement.resolvedStyle.display == DisplayStyle.Flex && r.index >= 0);
+            Assert.InRange(shown, 1, 10);
+            Assert.All(list.activeItems, r => Assert.True(r.index < 10));
+
+            list.itemsSource = null;
+            Settle(panel);
+            Assert.Empty(list.activeItems.Where(r => r.index >= 0));
+            list.itemsSource = items;
+            Settle(panel);
+            Assert.Equal(0, list.activeItems.First().index);
+
+            list.style.height = 60;
+            Settle(panel);
+            list.style.height = 300;
+            Settle(panel);
+            Assert.True(list.activeItems.Count() <= items.Count);
+        }
+
+        // [rule] A row bound hidden (no height) never reports a layout and keeps no registered height;
+        // the rows around it register theirs and are shown.
+        [Fact]
+        public void DynamicHeightToleratesRowsWithoutHeight()
+        {
+            using var panel = NewPanel(400, 400);
+            var items = Enumerable.Range(0, 30).ToList();
+            var list = DynamicList(items, i => i == 2 ? 0 : 20);
+            panel.visualTree.Add(list);
+            Settle(panel);
+            var controller = (DynamicHeightVirtualizationController<ReusableListViewItem>)list.virtualizationController;
+            Assert.False(controller.itemHeightCache.ContainsKey(2));
+            Assert.Equal(20f, controller.itemHeightCache[3]);
+            Assert.Equal(40f, list.GetRootElementForIndex(3).layout.y);
+        }
+
+        // [rule] A TreeView with dynamic height rows uses the same virtualization.
+        [Fact]
+        public void TreeViewWithDynamicHeightLaysOutItsRows()
+        {
+            using var panel = NewPanel(400, 400);
+            var tree = new TreeView { virtualizationMethod = CollectionVirtualizationMethod.DynamicHeight };
+            tree.style.position = Position.Absolute;
+            tree.style.width = 180;
+            tree.style.height = 150;
+            var roots = Enumerable.Range(0, 20).Select(i => new TreeViewItemData<int>(i, i)).ToList();
+            tree.SetRootItems(roots);
+            tree.makeItem = () => new Label();
+            tree.bindItem = (e, i) => e.style.height = 18 + (i % 3) * 6;
+            panel.visualTree.Add(tree);
+            Settle(panel);
+            Assert.NotEmpty(tree.activeItems);
+            Assert.Equal(0, tree.activeItems.First().index);
+        }
+
         // ------------------------------------------------------------------ layout events
 
         // [measured] fixed/new-makeitem, footer/no-footer: a parent's GeometryChangedEvent follows

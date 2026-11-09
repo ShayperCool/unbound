@@ -2015,7 +2015,8 @@ namespace UnityEngine.UIElements
             m_DragHandle?.EnableInClassList("unity-hidden", isDragGhost);
         }
 
-        // The item container's world transform follows from layout here; only the notification is needed.
+        // Unity's list rows also refresh their item container's transform here; Unbound's transforms
+        // follow layout, so the row only notifies (the override keeps a generated stub from taking it).
         protected override void OnGeometryChanged(GeometryChangedEvent evt) => base.OnGeometryChanged(evt);
     }
 
@@ -2063,6 +2064,7 @@ namespace UnityEngine.UIElements
         internal abstract void EndDrag(int dropIndex);
     }
 
+    [Serializable]
     internal partial class SerializedVirtualizationData
     {
         public Vector2 scrollOffset;

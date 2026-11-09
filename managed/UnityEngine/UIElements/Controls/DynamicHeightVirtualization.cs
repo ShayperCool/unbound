@@ -43,11 +43,15 @@ namespace UnityEngine.UIElements
             Down,
         }
 
-        // Row height assumed before any row was measured (and with no inline fixed item height).
-        const float k_DefaultItemHeight = 22f;
-        // Extra space below a row scrolled to from above, so it ends inside the viewport.
-        const float k_ScrollToItemMargin = 22f;
-        // A resize this long after the previous one fills at once instead of waiting for the scheduler.
+        // Row height assumed before any row was measured (and with no inline fixed item height): the
+        // collection view's default item height.
+        static float k_DefaultItemHeight => BaseVerticalCollectionView.s_DefaultItemHeight;
+        // Extra space below a row scrolled to from above, so it ends inside the viewport (the same
+        // default item height).
+        static float k_ScrollToItemMargin => BaseVerticalCollectionView.s_DefaultItemHeight;
+        // Real time (panel clock) after the first resize that schedules a fill, past which a further
+        // resize fills at once instead of waiting for the scheduler. With slow frames the attach
+        // order can therefore depend on time, as in Unity.
         const float k_ForceRefreshIntervalInMilliseconds = 100f;
 
         int m_HighestCachedIndex = -1;
@@ -236,7 +240,7 @@ namespace UnityEngine.UIElements
                 }
             }
 
-            long now = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+            long now = Panel.TimeSinceStartupMs();
             if (now - m_TimeSinceFillScheduledMs > k_ForceRefreshIntervalInMilliseconds && m_TimeSinceFillScheduledMs != 0 && !m_FillExecuted)
             {
                 Fill();
@@ -278,16 +282,9 @@ namespace UnityEngine.UIElements
 
         void OnDetachFromPanelEvent(DetachFromPanelEvent evt)
         {
-            if (m_ScheduledItem != null && m_ScheduledItem.isActive)
-            {
-                m_ScheduledItem.Pause();
-                m_ScheduledItem = null;
-            }
-            if (m_ScrollResetScheduledItem != null && m_ScrollResetScheduledItem.isActive)
-            {
-                m_ScrollResetScheduledItem.Pause();
-                m_ScrollResetScheduledItem = null;
-            }
+            // Paused, not dropped: ScheduleFill/ScheduleScrollDirectionReset resume the same items.
+            if (m_ScheduledItem != null && m_ScheduledItem.isActive) m_ScheduledItem.Pause();
+            if (m_ScrollResetScheduledItem != null && m_ScrollResetScheduledItem.isActive) m_ScrollResetScheduledItem.Pause();
         }
 
         protected override void OnScrollUpdate()
@@ -655,10 +652,14 @@ namespace UnityEngine.UIElements
             if (m_ItemHeightCache.TryGetValue(index, out float previous)) m_AccumulatedHeight -= previous;
             m_AccumulatedHeight += resolved;
             m_ItemHeightCache[index] = resolved;
-            if (index > m_HighestCachedIndex) m_HighestCachedIndex = index;
             bool isNew = previous == 0f;
+            bool wasHighest = index > m_HighestCachedIndex;
+            if (wasHighest) m_HighestCachedIndex = index;
             var before = GetCachedContentHeight(index - 1);
             m_ContentHeightCache[index] = new ContentHeightCacheInfo(before.sum + resolved, before.count + 1);
+            // Running sums above the row change with it; none exist above a new highest row (the
+            // usual case while scrolling down).
+            if (wasHighest) return;
             foreach (var entry in m_ItemHeightCache)
             {
                 if (entry.Key <= index) continue;
@@ -686,14 +687,25 @@ namespace UnityEngine.UIElements
             m_HighestCachedIndex = highest;
         }
 
+        /// <summary>Forgets the heights of rows past the items' end in one pass: every removed row lies
+        /// above every kept one, so the kept running sums stay as they are.</summary>
         void CleanItemHeightCache()
         {
             if (!IsIndexOutOfBounds(m_HighestCachedIndex)) return;
             m_OutOfBounds.Clear();
             foreach (int key in m_ItemHeightCache.Keys)
                 if (IsIndexOutOfBounds(key)) m_OutOfBounds.Add(key);
-            foreach (int key in m_OutOfBounds) UnregisterItemHeight(key);
+            foreach (int key in m_OutOfBounds)
+            {
+                m_AccumulatedHeight -= m_ItemHeightCache[key];
+                m_ItemHeightCache.Remove(key);
+                m_ContentHeightCache.Remove(key);
+            }
             m_OutOfBounds.Clear();
+            int highest = -1;
+            foreach (int key in m_ItemHeightCache.Keys)
+                if (key > highest) highest = key;
+            m_HighestCachedIndex = highest;
             m_MinimumItemHeight = -1f;
         }
 
