@@ -131,6 +131,84 @@ public class BakedProbe : MonoBehaviour
             Path("down", new Vector3(5f, 0.5f, 40f), new Vector3(-5f, 0f, 40f), NavMesh.AllAreas);
         });
 
+        // A NavMesh baked with Build Height Mesh: ramp, stairs and a bump. Where the queries and
+        // agents put a point in height (SamplePosition, Raycast, agents placed, warped and walking),
+        // and, as controls, path corners and the closest edge.
+        var height = SceneManager.LoadSceneAsync("Height", LoadSceneMode.Additive);
+        while (!height.isDone) yield return null;
+        yield return null;
+        Scenario("height", () =>
+        {
+            for (float x = -9.5f; x <= 8.01f; x += 0.25f)
+            {
+                bool ok = NavMesh.SamplePosition(new Vector3(x, 2f, 60.3f), out var hit, 2.5f, NavMesh.AllAreas);
+                ProbeLog.Value("s" + F(x), ok ? V(hit.position) : "none");
+            }
+            foreach (var (key, x, z) in new[] { ("bump.c", -1f, 63f), ("bump.e", -1.45f, 63.2f), ("bump.o", -1.7f, 63.2f) })
+            {
+                bool ok = NavMesh.SamplePosition(new Vector3(x, 1f, z), out var hit, 2.5f, NavMesh.AllAreas);
+                ProbeLog.Value(key, ok ? V(hit.position) : "none");
+            }
+            void Ray(string key, Vector3 from, Vector3 to)
+            {
+                bool hit = NavMesh.Raycast(from, to, out var h, NavMesh.AllAreas);
+                ProbeLog.Value(key, hit + " " + V(h.position) + " " + F(h.distance));
+            }
+            Ray("ray.stairs", new Vector3(0f, 0f, 60.5f), new Vector3(3.3f, 0.6f, 60.5f));
+            Ray("ray.stairs.wall", new Vector3(0f, 0f, 60.5f), new Vector3(3.3f, 0.6f, 62f));
+            Ray("ray.ramp", new Vector3(-10f, 0f, 59.5f), new Vector3(-5.5f, 1f, 59.5f));
+            Ray("ray.ramp.wall", new Vector3(-10f, 0f, 59.5f), new Vector3(-5.5f, 1f, 57f));
+            Path("path.stairs", new Vector3(-1f, 0f, 58f), new Vector3(7.5f, 1f, 60f), NavMesh.AllAreas);
+            Path("path.ramp", new Vector3(-10.5f, 0f, 62f), new Vector3(-4f, 1.2f, 60f), NavMesh.AllAreas);
+            bool edge = NavMesh.FindClosestEdge(new Vector3(3.5f, 0.6f, 61f), out var e, NavMesh.AllAreas);
+            ProbeLog.Value("edge", edge + " " + V(e.position) + " " + F(e.distance));
+        });
+        ProbeLog.Begin("height.agents");
+        var agents = new List<(string, NavMeshAgent)>();
+        foreach (var (key, from, to) in new[]
+        {
+            ("stairs", new Vector3(-1f, 0f, 60f), new Vector3(7.5f, 1f, 60f)),
+            ("ramp", new Vector3(-10.5f, 0f, 60.2f), new Vector3(-3f, 1.4f, 60.2f)),
+            ("bump", new Vector3(-3f, 0f, 63f), new Vector3(1f, 0f, 63f)),
+        })
+        {
+            var go = new GameObject("height." + key);
+            go.transform.position = from;
+            var agent = go.AddComponent<NavMeshAgent>();
+            agent.speed = 2f;
+            ProbeLog.Value(key + ".placed", agent.nextPosition);
+            agent.SetDestination(to);
+            agents.Add((key, agent));
+        }
+        for (int f = 1; f <= 250; f++)
+        {
+            yield return null;
+            if (f == 2)
+            {
+                foreach (var (key, agent) in agents)
+                {
+                    ProbeLog.Value(key + ".destination", agent.destination);
+                    var corners = agent.path.corners;
+                    ProbeLog.Value(key + ".corners", corners.Length);
+                    for (int i = 0; i < corners.Length; i++) ProbeLog.Value(key + ".corner" + i, corners[i]);
+                    ProbeLog.Value(key + ".steer", agent.steeringTarget);
+                }
+            }
+            if (f % 5 != 0) continue;
+            foreach (var (key, agent) in agents)
+            {
+                ProbeLog.Value(key + ".f" + f, agent.nextPosition);
+                ProbeLog.Value(key + ".f" + f + ".vy", agent.velocity.y);
+                ProbeLog.Value(key + ".f" + f + ".ty", agent.transform.position.y);
+            }
+        }
+        var stairs = agents[0].Item2;
+        stairs.Warp(new Vector3(3.3f, 0f, 60.2f));
+        ProbeLog.Value("warp.next", stairs.nextPosition);
+        yield return null;
+        ProbeLog.Value("warp.transform", stairs.transform.position);
+        foreach (var (_, agent) in agents) Destroy(agent.gameObject);
+
         File.WriteAllText(Out, ProbeLog.Json());
         Debug.Log("NavMesh baked probe written");
 #if UNITY_EDITOR
