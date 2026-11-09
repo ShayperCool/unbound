@@ -1,0 +1,1 @@
+{"commands":["python3 tests/projects/glyphraster/run.py gate"],"engine_paths":["crates/unbound-assets/src/font.rs","crates/unbound-assets/src/font_legacy.rs","crates/unbound-runtime/src/fonts.rs","managed/UnityEngine/Text/Font.cs","managed/UnityEngine/Text/FontAtlas.cs"],"summary":"[0-9]+/[0-9]+.*"}
