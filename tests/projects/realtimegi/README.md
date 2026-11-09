@@ -21,6 +21,9 @@ and a dynamic probe-lit sphere. Ambient: flat color, no skybox.
 - `Room`: non-directional, Albedo Boost 1, Indirect Intensity 1.
 - `RoomScaled`: Albedo Boost 2, Indirect Intensity 1.5.
 - `RoomDirectional`: directional realtime lightmaps.
+- `RoomSystems`: as `Room`, with the left and right walls and the panel given Lightmap Parameters
+  of their own (the defaults with System Tag 1): two systems in one atlas, each reading the
+  other's values (`run.py setup-systems` adds this scene alone).
 
 `Assets/Scripts/RealtimeGIProbe.cs` (with `REALTIME_GI_OUT` set) changes one input at a time and
 records, per case:
@@ -55,7 +58,10 @@ directional light with shadows added through the open front, at Euler angles (40
 bounce intensity 1) and, from bounce intensity 3 again, `roomscaled-threshold0` (the same with
 `DynamicGI.updateThreshold` 0; restored after it); `roomdirectional-base`,
 `roomdirectional-moved`, `roomdirectional-indirectscale`, `roomdirectional-threshold0` (as in
-RoomScaled). The default of `DynamicGI.updateThreshold` is recorded.
+RoomScaled); `roomsystems-base`, `roomsystems-moved`, `roomsystems-indirectscale`,
+`roomsystems-threshold0` (the same). A scene whose renderers use several realtime lightmap atlases
+writes `<case>-a<index>.atlas` for every atlas after the first. The default of
+`DynamicGI.updateThreshold` is recorded.
 
 ## What the Editor does (this capture)
 

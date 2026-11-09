@@ -13,6 +13,9 @@ using UnityEngine.Rendering;
 /// <item><c>Room</c>: non-directional, Albedo Boost 1, Indirect Intensity 1.</item>
 /// <item><c>RoomScaled</c>: the same with Albedo Boost 2 and Indirect Intensity 1.5.</item>
 /// <item><c>RoomDirectional</c>: directional realtime lightmaps.</item>
+/// <item><c>RoomSystems</c>: as <c>Room</c> with the left and right walls and the panel in a
+/// second system: their Lightmap Parameters are the defaults with System Tag 1
+/// (<c>-executeMethod RealtimeGISetup.CreateSystems</c> adds it alone).</item>
 /// </list>
 /// </summary>
 public static class RealtimeGISetup
@@ -24,6 +27,25 @@ public static class RealtimeGISetup
     {
         // An exception would leave a batchmode Editor waiting on a dialog: exit with an error.
         try { CreateAll(); }
+        catch (System.Exception e)
+        {
+            Debug.LogException(e);
+            EditorApplication.Exit(1);
+        }
+    }
+
+    /// <summary>Adds the <c>RoomSystems</c> scene alone, leaving the others as they are.</summary>
+    public static void CreateSystems()
+    {
+        try
+        {
+            CreateRoom("RoomSystems", LightmapsMode.NonDirectional, 1f, 1f, true);
+            var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+            scenes.Add(new EditorBuildSettingsScene($"{Scenes}/RoomSystems.unity", true));
+            EditorBuildSettings.scenes = scenes.ToArray();
+            AssetDatabase.SaveAssets();
+            EditorApplication.Exit(0);
+        }
         catch (System.Exception e)
         {
             Debug.LogException(e);
@@ -72,7 +94,7 @@ public static class RealtimeGISetup
         return renderer;
     }
 
-    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale)
+    static void CreateRoom(string name, LightmapsMode mode, float albedoBoost, float indirectScale, bool twoSystems = false)
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var camera = new GameObject("Main Camera", typeof(Camera));
@@ -103,6 +125,18 @@ public static class RealtimeGISetup
             Static(PrimitiveType.Cube, "Block", new Vector3(0.8f, 0.75f, 0.8f), new Vector3(1.2f, 1.5f, 1.2f), white),
             Static(PrimitiveType.Cube, "Panel", new Vector3(-1.2f, 0.6f, 1.6f), new Vector3(1f, 1.2f, 0.1f), emissive),
         };
+
+        if (twoSystems)
+        {
+            var tagged = new LightmapParameters { systemTag = 1 };
+            AssetDatabase.CreateAsset(tagged, $"{Settings}/{name}SystemTag1.giparams");
+            foreach (var r in new[] { lit[3], lit[4], lit[6] })
+            {
+                var so = new SerializedObject(r);
+                so.FindProperty("m_LightmapParameters").objectReferenceValue = tagged;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+        }
 
         var point = new GameObject("Point Light", typeof(Light)).GetComponent<Light>();
         point.transform.position = new Vector3(-1f, 3f, -0.5f);

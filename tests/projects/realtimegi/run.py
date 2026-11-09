@@ -2,6 +2,7 @@
 """Precomputed realtime global illumination probe.
 
     run.py setup                              # Editor: (re)make the scenes and precompute them in a copy, copy them back
+    run.py setup-systems                      # Editor: add the RoomSystems scene alone
     run.py record --label native1             # Editor capture (GPU, through the job pool)
     run.py publish native1 native2            # two identical captures become Reference/unity-<version>/
     run.py gate --label gate-1                # engine run compared with Reference/ (the land gate)
@@ -86,6 +87,31 @@ def setup(label):
     return 0
 
 
+def setup_systems(label):
+    """Runs RealtimeGISetup.CreateSystems in a copy, then copies the RoomSystems scene, its settings
+    and the build settings back (the other scenes stay as they are)."""
+    out = work(label)
+    project = out/'project'
+    copy_project(project)
+    job = editor_runner.EditorJob(project, out/'editor.log', out, ['-executeMethod', 'RealtimeGISetup.CreateSystems'],
+                                  batch=True, graphics=True, timeout=3600, label='realtimegi-'+label)
+    result = editor_runner.run(job)
+    print(editor_runner.summary(result))
+    if result.get('exit_code') != 0:
+        return 1
+    for made in MADE:
+        for path in (project/'Assets'/made).iterdir():
+            if path.name.startswith('RoomSystems'):
+                target = PROBE/'Assets'/made/path.name
+                if path.is_dir():
+                    shutil.rmtree(target, ignore_errors=True)
+                    shutil.copytree(path, target)
+                else:
+                    shutil.copy2(path, target)
+    shutil.copy2(project/'ProjectSettings'/'EditorBuildSettings.asset', PROBE/'ProjectSettings'/'EditorBuildSettings.asset')
+    return 0
+
+
 def record(label):
     out = work(label)
     project = copy_project(out/'project')
@@ -130,13 +156,15 @@ def gate(label, frames):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=['setup', 'record', 'publish', 'gate'])
+    parser.add_argument('mode', choices=['setup', 'setup-systems', 'record', 'publish', 'gate'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label', default='current')
     parser.add_argument('--frames', type=int, default=16000)
     args = parser.parse_args()
     if args.mode == 'setup':
         return setup(args.label)
+    if args.mode == 'setup-systems':
+        return setup_systems(args.label)
     if args.mode == 'record':
         return record(args.label)
     if args.mode == 'publish':

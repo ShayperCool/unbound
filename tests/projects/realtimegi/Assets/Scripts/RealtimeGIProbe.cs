@@ -165,7 +165,7 @@ public class RealtimeGIProbe : MonoBehaviour
         Capture("room-directional-noshadows", s);
         Destroy(sun.gameObject);
 
-        foreach (var name in new[] { "RoomScaled", "RoomDirectional" })
+        foreach (var name in new[] { "RoomScaled", "RoomDirectional", "RoomSystems" })
         {
             yield return Load(name);
             s = Scene();
@@ -281,23 +281,32 @@ public class RealtimeGIProbe : MonoBehaviour
         body.Append(']');
         Record(name, body.ToString());
 
-        int size = AtlasSize(s);
+        // One file per realtime lightmap atlas the renderers use: <case>.atlas for the first,
+        // <case>-a<index>.atlas for the others.
+        int atlases = 0;
+        foreach (var r in s.lit) atlases = Mathf.Max(atlases, r.realtimeLightmapIndex + 1);
+        int size = atlases > 0 ? AtlasSize(s, 0) : 0;
         if (size > 0)
         {
-            DumpAtlas(name + ".atlas", s, size, 0);
-            if (LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional)
-                DumpAtlas(name + ".dir", s, size, 1);
+            for (int atlas = 0; atlas < atlases; atlas++)
+            {
+                var file = name + (atlas > 0 ? "-a" + atlas : "");
+                int atlasSize = atlas > 0 ? AtlasSize(s, atlas) : size;
+                DumpAtlas(file + ".atlas", s, atlasSize, 0, atlas);
+                if (LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional)
+                    DumpAtlas(file + ".dir", s, atlasSize, 1, atlas);
+            }
         }
         else Record(name + "-noatlas", "\"size\":" + size);
         CaptureFrame(name + ".png");
     }
 
-    /// <summary>The realtime lightmap's width, read by the dump shader (all renderers of the
-    /// probe's scenes share one atlas); 0 when no renderer has one.</summary>
-    int AtlasSize(RealtimeGIScene s)
+    /// <summary>The width of realtime lightmap atlas <paramref name="atlas"/>, read by the dump
+    /// shader from its renderers; 0 when no renderer has one.</summary>
+    int AtlasSize(RealtimeGIScene s, int atlas)
     {
         const int Probe = 16;
-        var texture = RenderDump(s, Probe, 2, TextureFormat.RGBAFloat, RenderTextureFormat.ARGBFloat);
+        var texture = RenderDump(s, Probe, 2, TextureFormat.RGBAFloat, RenderTextureFormat.ARGBFloat, atlas);
         var pixels = texture.GetPixels();
         Destroy(texture);
         float size = 0f;
@@ -306,9 +315,9 @@ public class RealtimeGIProbe : MonoBehaviour
         return (int)size;
     }
 
-    void DumpAtlas(string file, RealtimeGIScene s, int size, int channel)
+    void DumpAtlas(string file, RealtimeGIScene s, int size, int channel, int atlas)
     {
-        var texture = RenderDump(s, size, channel, TextureFormat.RGBAHalf, RenderTextureFormat.ARGBHalf);
+        var texture = RenderDump(s, size, channel, TextureFormat.RGBAHalf, RenderTextureFormat.ARGBHalf, atlas);
         var raw = texture.GetRawTextureData();
         using (var stream = new BinaryWriter(File.Create(Path.Combine(m_Dir, file))))
         {
@@ -319,9 +328,9 @@ public class RealtimeGIProbe : MonoBehaviour
         Destroy(texture);
     }
 
-    /// <summary>Draws every lit renderer with the dump shader into a size*size target through a
+    /// <summary>Draws every lit renderer of atlas <paramref name="atlas"/> with the dump shader into a size*size target through a
     /// camera that sees the whole room, and reads it back.</summary>
-    Texture2D RenderDump(RealtimeGIScene s, int size, int channel, TextureFormat format, RenderTextureFormat targetFormat)
+    Texture2D RenderDump(RealtimeGIScene s, int size, int channel, TextureFormat format, RenderTextureFormat targetFormat, int atlas)
     {
         var target = new RenderTexture(size, size, 0, targetFormat);
         target.filterMode = FilterMode.Point;
@@ -345,7 +354,7 @@ public class RealtimeGIProbe : MonoBehaviour
         for (int i = 0; i < others.Length; i++)
         {
             visible[i] = others[i].enabled;
-            if (Array.IndexOf(s.lit, others[i]) < 0) others[i].enabled = false;
+            if (Array.IndexOf(s.lit, others[i]) < 0 || others[i].realtimeLightmapIndex != atlas) others[i].enabled = false;
         }
         for (int i = 0; i < s.lit.Length; i++)
         {
