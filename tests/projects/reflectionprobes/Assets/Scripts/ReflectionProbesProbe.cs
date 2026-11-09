@@ -262,15 +262,21 @@ public class ReflectionProbesProbe : MonoBehaviour
     }
 
     /// <summary>A glossy floor and spheres across the two probes, forward and deferred: equal
-    /// importance, B more important, no blend distance, box projection, B smaller.</summary>
+    /// importance, B more important, no blend distance, box projection, B smaller; B made more
+    /// important and rendered in the same frame and in the next (lag_same, lag_next).</summary>
     IEnumerator Frames()
     {
         RenderSettings.ambientMode = AmbientMode.Flat;
         RenderSettings.ambientLight = Color.black;
         scene.Add(Primitive(PrimitiveType.Plane, new Vector3(1f, -1f, 0f), Vector3.one, Metal(0.8f)));
         var metal = Metal(0.9f);
+        Renderer overlap = null;
         foreach (float x in new[] { -1f, 0.5f, 1f, 1.5f, 3f })
-            scene.Add(Primitive(PrimitiveType.Sphere, new Vector3(x, -0.4f, 0f), Vector3.one * 0.8f, metal));
+        {
+            var sphere = Primitive(PrimitiveType.Sphere, new Vector3(x, -0.4f, 0f), Vector3.one * 0.8f, metal);
+            scene.Add(sphere);
+            if (x == 1f) overlap = sphere.GetComponent<Renderer>();
+        }
         var light = new GameObject("light").AddComponent<Light>();
         light.type = LightType.Directional;
         light.intensity = 0.3f;
@@ -300,6 +306,16 @@ public class ReflectionProbesProbe : MonoBehaviour
             yield return null;
             Capture(camera, prefix + "_smallB");
             blue.size = new Vector3(4f, 4f, 4f);
+            // A change and a render in the same frame (lag_same), then the next frame (lag_next);
+            // the probes the sphere in both gets (GetClosestReflectionProbes) at each.
+            yield return null;
+            blue.importance = 2;
+            ListProbes("lag." + prefix + ".same", overlap);
+            Capture(camera, prefix + "_lag_same");
+            yield return null;
+            ListProbes("lag." + prefix + ".next", overlap);
+            Capture(camera, prefix + "_lag_next");
+            blue.importance = 1;
         }
         Destroy(red.gameObject);
         Destroy(blue.gameObject);

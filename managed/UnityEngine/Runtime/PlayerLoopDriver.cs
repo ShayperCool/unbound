@@ -631,6 +631,7 @@ namespace Unbound.Runtime
         {
             if (s_Input == null) return;
             Time.BeginFrame(s_Input->RealDeltaTime);
+            ReflectionProbe.BeginFrame();
             SceneManagerInternal.PreparePending();
         }
 

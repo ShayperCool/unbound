@@ -15,7 +15,9 @@ into `REFLECTION_PROBES_OUT`:
   overlapping custom probes (A over x -2..2, B over 0..4): equal importance, B half the size, no
   blend distance, B more important, and a third probe C between them.
 * **Blended frames** (`forward_*`, `deferred_*`): a glossy floor and spheres across A and B for
-  the same cases plus box projection, in Forward and Deferred Shading.
+  the same cases plus box projection, in Forward and Deferred Shading; `*_lag_same` and
+  `*_lag_next` (with `lag.*`, the sphere in both probes' GetClosestReflectionProbes): B made more
+  important, rendered in the same frame and in the next.
 * **Glossy spheres** (`glossy_realtime`, `glossy_imported`): metal spheres of smoothness 1, 0.9,
   0.75 and 0.5 in a realtime probe of coloured boxes and in a custom probe of the convolved
   `Environment64` cubemap.
@@ -57,5 +59,8 @@ probe constants of lightmapped renderers: those below are observations of this c
 * A lightmapped renderer draws with the ambient probe's constants, whatever its probe usage: the
   built-in pipeline does not zero them as URP does. (A separate capture on tests/projects/baked's
   bake, with light probes, showed the same; it is not part of this reference.)
-* Forward draws take probe changes (importance, size, box projection) from the next frame on;
-  the probe waits a frame after each change. Unbound applies them at once (an open gap).
+* Forward draws take probe changes (importance, size, box projection) from the next frame on
+  (`forward_lag_same` keeps the old importance, `forward_lag_next` the new one), while
+  `Renderer.GetClosestReflectionProbes` answers with a change at once (`lag.*`); the probe waits a
+  frame after each other change. Deferred shading's blending in `deferred_lag_*` does not depend on
+  this change.

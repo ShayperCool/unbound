@@ -124,4 +124,8 @@
 {"k":"weights.three.x4.2","v":[["B",1]]}
 {"k":"weights.three.wide","v":[["A",0.5],["B",0.5],["C",0]]}
 {"k":"weights.three.straddle","v":[["A",1]]}
+{"k":"lag.forward.same","v":[["B",1],["A",0]]}
+{"k":"lag.forward.next","v":[["B",1],["A",0]]}
+{"k":"lag.deferred.same","v":[["B",1],["A",0]]}
+{"k":"lag.deferred.next","v":[["B",1],["A",0]]}
 {"k":"complete","v":true}
