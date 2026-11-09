@@ -13,8 +13,10 @@ namespace Unbound.Runtime
     /// add to the object's spherical harmonics. The Auto light that fills the pixel lights fades
     /// by how close its importance is to its neighbours' (<see cref="Fade"/>): its pixel pass
     /// takes that share, a first vertex light (a point or spot light) or the spherical harmonics
-    /// (a directional one) the rest; the last vertex light fades the same way. Matches the Unity
-    /// 6000.0.71f1 Editor, tests/projects/builtinrp light_rank_*.
+    /// (a directional one) the rest, and the first vertex light gives up that share whichever light
+    /// it is; with four vertex lights the fourth is dropped. The last vertex light fades the same
+    /// way. Matches the Unity 6000.0.71f1 Editor, tests/projects/builtinrp light_rank_* (a shadowed
+    /// sun, a directional light filling the pixel slot, six point lights).
     /// The light textures are Unity's (measured, tests/projects/lighting): the attenuation
     /// 1 / (1 + 25 d²) fading linearly to 0 from d² = 0.64 to 1 (d is the distance over the range),
     /// and the default spot cookie 1 − smoothstep(0.66, 0.99, r) of the normalized radius.
@@ -209,7 +211,10 @@ namespace Unbound.Runtime
                 else if (l.type != LightType.Directional && into.Vertex.Count < 4) into.Vertex.Add(l);
                 else into.AddSpherical(l, 1f);
             }
-            // The place in the order whose importance fades the last vertex light.
+            // The place in the order whose importance fades the last vertex light: the pixel and
+            // vertex lights' count less one, the main light (when it reaches the object) at the
+            // order's start included (light_rank_vertex: neither the last vertex light's own place
+            // nor no fade matches).
             int lastVertex = into.Vertex.Count + into.Pixel.Count - 1;
             if (filling > 0 && Fade(filling, out float fade))
             {
@@ -229,7 +234,8 @@ namespace Unbound.Runtime
             if (lastVertex > 2 && Fade(lastVertex, out float vertexFade)) into.VertexFade = vertexFade;
         }
 
-        /// <summary>The share a light at place <paramref name="k"/> of the order keeps:
+        /// <summary>The share a light at place <paramref name="k"/> of the order keeps (a light at
+        /// the order's start, such as one outranking the main light, keeps all of it):
         /// (its importance − the next one's) / (the previous one's − the next one's), within 0..1;
         /// false at either end of the order or when the neighbours are 1000 or more apart.</summary>
         static bool Fade(int k, out float fade)
@@ -240,7 +246,8 @@ namespace Unbound.Runtime
             float gap = previous - next;
             if (!(gap < FadeGapLimit)) return false;
             float f = (s_Candidates[k].Importance - next) / (gap + FadeGapEpsilon);
-            // NaN keeps the whole light, as above 1.
+            // Infinite importances (an infinite intensity): no fade.
+            if (!float.IsFinite(f)) return false;
             fade = f < 0f ? 0f : (f <= 1f ? f : 1f);
             return true;
         }
