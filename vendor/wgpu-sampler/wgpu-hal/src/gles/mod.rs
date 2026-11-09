@@ -544,8 +544,14 @@ impl Texture {
     }
 
     /// More information can be found in issues #1614 and #1574
-    fn log_failing_target_heuristics(view_dimension: wgt::TextureViewDimension, target: u32) {
+    fn log_failing_target_heuristics(
+        view_dimension: wgt::TextureViewDimension,
+        multisampled: bool,
+        target: u32,
+    ) {
         let expected_target = match view_dimension {
+            // Unbound: multisampled textures have their own target.
+            wgt::TextureViewDimension::D2 if multisampled => glow::TEXTURE_2D_MULTISAMPLE,
             wgt::TextureViewDimension::D1 => glow::TEXTURE_2D,
             wgt::TextureViewDimension::D2 => glow::TEXTURE_2D,
             wgt::TextureViewDimension::D2Array => glow::TEXTURE_2D_ARRAY,

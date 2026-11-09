@@ -36,6 +36,7 @@ fn get_2d_target(target: u32, array_layer: u32) -> u32 {
     ];
 
     match target {
+        // Unbound: multisampled 2D textures too.
         glow::TEXTURE_2D | glow::TEXTURE_2D_MULTISAMPLE => target,
         glow::TEXTURE_CUBE_MAP => CUBEMAP_FACES[array_layer as usize],
         _ => unreachable!(),

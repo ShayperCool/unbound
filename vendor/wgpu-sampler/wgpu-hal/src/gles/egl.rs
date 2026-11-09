@@ -265,7 +265,8 @@ struct EglContextLock<'a> {
     instance: &'a Arc<EglInstance>,
     display: khronos_egl::Display,
     /// Unbound: another context the thread had current before the lock (display, draw and read
-    /// surfaces, context), made current again after it.
+    /// surfaces, context), made current again after it. EGL answers the current context of the
+    /// thread's bound client API: a desktop OpenGL context is seen where `eglBindAPI` chose it.
     previous: Option<(
         khronos_egl::Display,
         Option<khronos_egl::Surface>,

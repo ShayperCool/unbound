@@ -934,6 +934,8 @@ impl crate::Device for super::Device {
             unsafe { gl.bind_texture(target, Some(raw)) };
             //Note: this has to be done before defining the storage!
             match desc.format.sample_type(None, Some(self.shared.features)) {
+                // Unbound: multisampled textures have no filtering state.
+                _ if target == glow::TEXTURE_2D_MULTISAMPLE => {}
                 Some(
                     wgt::TextureSampleType::Float { filterable: false }
                     | wgt::TextureSampleType::Uint
@@ -1507,7 +1509,11 @@ impl crate::Device for super::Device {
                     let sampler = desc.samplers[entry.resource_index as usize];
                     super::RawBinding::Sampler(sampler.raw)
                 }
-                wgt::BindingType::Texture { view_dimension, .. } => {
+                wgt::BindingType::Texture {
+                    view_dimension,
+                    multisampled,
+                    ..
+                } => {
                     let view = desc.textures[entry.resource_index as usize].view;
                     if view.array_layers.start != 0 {
                         log::error!("Unable to create a sampled texture binding for non-zero array layer.\n{}",
@@ -1515,7 +1521,11 @@ impl crate::Device for super::Device {
                     }
                     let (raw, target) = view.inner.as_native();
 
-                    super::Texture::log_failing_target_heuristics(view_dimension, target);
+                    super::Texture::log_failing_target_heuristics(
+                        view_dimension,
+                        multisampled,
+                        target,
+                    );
 
                     super::RawBinding::Texture {
                         raw,

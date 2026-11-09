@@ -1,6 +1,6 @@
 --- a/wgpu-core/src/device/resource.rs
 +++ b/wgpu-core/src/device/resource.rs
-@@ -2250,17 +2250,17 @@
+@@ -2250,17 +2250,18 @@
      }
  
      pub fn native_sampler_lod_bias_limit(&self) -> Option<f32> {
@@ -17,6 +17,7 @@
 -        #[cfg(not(vulkan))]
 -        {
 -            None
++        // Unbound: desktop OpenGL's bias too.
 +        #[cfg(gles)]
 +        if let Some(device) = raw.downcast_ref::<hal::gles::Device>() {
 +            return device.sampler_lod_bias_limit();
@@ -62,11 +63,12 @@
              info: Self::make_info(vendor, renderer, version),
 --- a/wgpu-hal/src/gles/conv.rs
 +++ b/wgpu-hal/src/gles/conv.rs
-@@ -423,7 +423,7 @@
+@@ -423,7 +423,8 @@
  
  pub(super) fn is_layered_target(target: u32) -> bool {
      match target {
 -        glow::TEXTURE_2D | glow::TEXTURE_CUBE_MAP => false,
++        // Unbound: multisampled 2D textures too.
 +        glow::TEXTURE_2D | glow::TEXTURE_CUBE_MAP | glow::TEXTURE_2D_MULTISAMPLE => false,
          glow::TEXTURE_2D_ARRAY | glow::TEXTURE_CUBE_MAP_ARRAY | glow::TEXTURE_3D => true,
          _ => unreachable!(),
@@ -97,7 +99,16 @@
          {
              let raw = unsafe { gl.create_renderbuffer().unwrap() };
              unsafe { gl.bind_renderbuffer(glow::RENDERBUFFER, Some(raw)) };
-@@ -1138,17 +1145,95 @@
+@@ -927,6 +934,8 @@
+             unsafe { gl.bind_texture(target, Some(raw)) };
+             //Note: this has to be done before defining the storage!
+             match desc.format.sample_type(None, Some(self.shared.features)) {
++                // Unbound: multisampled textures have no filtering state.
++                _ if target == glow::TEXTURE_2D_MULTISAMPLE => {}
+                 Some(
+                     wgt::TextureSampleType::Float { filterable: false }
+                     | wgt::TextureSampleType::Uint
+@@ -1138,17 +1147,95 @@
          desc: &crate::TextureViewDescriptor,
      ) -> Result<super::TextureView, crate::DeviceError> {
          self.counters.texture_views.add(1);
@@ -196,7 +207,7 @@
          self.counters.texture_views.sub(1);
      }
  
-@@ -1213,7 +1298,10 @@
+@@ -1213,7 +1300,10 @@
              };
          }
  
@@ -208,14 +219,41 @@
  
          if let Some(compare) = desc.compare {
              unsafe {
+@@ -1419,7 +1509,11 @@
+                     let sampler = desc.samplers[entry.resource_index as usize];
+                     super::RawBinding::Sampler(sampler.raw)
+                 }
+-                wgt::BindingType::Texture { view_dimension, .. } => {
++                wgt::BindingType::Texture {
++                    view_dimension,
++                    multisampled,
++                    ..
++                } => {
+                     let view = desc.textures[entry.resource_index as usize].view;
+                     if view.array_layers.start != 0 {
+                         log::error!("Unable to create a sampled texture binding for non-zero array layer.\n{}",
+@@ -1427,7 +1521,11 @@
+                     }
+                     let (raw, target) = view.inner.as_native();
+ 
+-                    super::Texture::log_failing_target_heuristics(view_dimension, target);
++                    super::Texture::log_failing_target_heuristics(
++                        view_dimension,
++                        multisampled,
++                        target,
++                    );
+ 
+                     super::RawBinding::Texture {
+                         raw,
 --- a/wgpu-hal/src/gles/egl.rs
 +++ b/wgpu-hal/src/gles/egl.rs
-@@ -264,6 +264,14 @@
+@@ -264,6 +264,15 @@
  struct EglContextLock<'a> {
      instance: &'a Arc<EglInstance>,
      display: khronos_egl::Display,
 +    /// Unbound: another context the thread had current before the lock (display, draw and read
-+    /// surfaces, context), made current again after it.
++    /// surfaces, context), made current again after it. EGL answers the current context of the
++    /// thread's bound client API: a desktop OpenGL context is seen where `eglBindAPI` chose it.
 +    previous: Option<(
 +        khronos_egl::Display,
 +        Option<khronos_egl::Surface>,
@@ -225,7 +263,7 @@
  }
  
  /// A guard containing a lock to an [`AdapterContext`], while the GL context is kept current.
-@@ -284,7 +292,14 @@
+@@ -284,7 +293,14 @@
  impl<'a> Drop for AdapterContextLock<'a> {
      fn drop(&mut self) {
          if let Some(egl) = self.egl.take() {
@@ -241,7 +279,7 @@
                  log::error!("Failed to make EGL context current: {err:?}");
              }
          }
-@@ -323,10 +338,23 @@
+@@ -323,10 +339,23 @@
              .expect("Could not lock adapter context. This is most-likely a deadlock.");
  
          let egl = self.egl.as_ref().map(|egl| {
@@ -265,7 +303,7 @@
              }
          });
  
-@@ -469,6 +497,14 @@
+@@ -469,6 +498,14 @@
          let mut context_attributes = vec![];
          let mut gl_context_attributes = vec![];
          let mut gles_context_attributes = vec![];
@@ -280,7 +318,7 @@
          gl_context_attributes.push(khronos_egl::CONTEXT_MAJOR_VERSION);
          gl_context_attributes.push(3);
          gl_context_attributes.push(khronos_egl::CONTEXT_MINOR_VERSION);
-@@ -506,6 +542,7 @@
+@@ -506,6 +543,7 @@
          }
  
          gl_context_attributes.extend(&context_attributes);
@@ -288,7 +326,7 @@
          gles_context_attributes.extend(&context_attributes);
  
          let context = {
-@@ -590,8 +627,9 @@
+@@ -590,8 +628,9 @@
              };
  
              let result = if supports_opengl {
@@ -339,7 +377,23 @@
                      (false, 1) => glow::TEXTURE_2D,
                      (false, _) => glow::TEXTURE_2D_ARRAY,
                      (true, 6) => glow::TEXTURE_CUBE_MAP,
-@@ -587,6 +601,9 @@
+@@ -530,8 +544,14 @@
+     }
+ 
+     /// More information can be found in issues #1614 and #1574
+-    fn log_failing_target_heuristics(view_dimension: wgt::TextureViewDimension, target: u32) {
++    fn log_failing_target_heuristics(
++        view_dimension: wgt::TextureViewDimension,
++        multisampled: bool,
++        target: u32,
++    ) {
+         let expected_target = match view_dimension {
++            // Unbound: multisampled textures have their own target.
++            wgt::TextureViewDimension::D2 if multisampled => glow::TEXTURE_2D_MULTISAMPLE,
+             wgt::TextureViewDimension::D1 => glow::TEXTURE_2D,
+             wgt::TextureViewDimension::D2 => glow::TEXTURE_2D,
+             wgt::TextureViewDimension::D2Array => glow::TEXTURE_2D_ARRAY,
+@@ -587,6 +607,9 @@
      mip_levels: Range<u32>,
      array_layers: Range<u32>,
      format: wgt::TextureFormat,
@@ -351,16 +405,17 @@
  impl crate::DynTextureView for TextureView {}
 --- a/wgpu-hal/src/gles/queue.rs
 +++ b/wgpu-hal/src/gles/queue.rs
-@@ -36,7 +36,7 @@
+@@ -36,7 +36,8 @@
      ];
  
      match target {
 -        glow::TEXTURE_2D => target,
++        // Unbound: multisampled 2D textures too.
 +        glow::TEXTURE_2D | glow::TEXTURE_2D_MULTISAMPLE => target,
          glow::TEXTURE_CUBE_MAP => CUBEMAP_FACES[array_layer as usize],
          _ => unreachable!(),
      }
-@@ -157,7 +157,9 @@
+@@ -157,7 +158,9 @@
                  } else {
                      unsafe {
                          assert_eq!(view.mip_levels.len(), 1);

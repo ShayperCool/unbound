@@ -2255,6 +2255,7 @@ impl Device {
         if let Some(device) = raw.downcast_ref::<hal::vulkan::Device>() {
             return device.sampler_lod_bias_limit();
         }
+        // Unbound: desktop OpenGL's bias too.
         #[cfg(gles)]
         if let Some(device) = raw.downcast_ref::<hal::gles::Device>() {
             return device.sampler_lod_bias_limit();
