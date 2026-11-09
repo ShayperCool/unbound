@@ -105,7 +105,8 @@ imported without keyframe reduction.
   XZ with half the rotation and of Y alone, a match across a loop, a start and a target already
   passed, `InterruptMatchTarget(true/false)`, a transition interrupting a completing and a
   cancelling match, a call in a transition, without root motion, on a clip without loop time, a
-  second call, an invalid target and on HumanB), each step with the GameObject's and the target
+  second call (also changing completeMatch), an invalid target, on HumanB (also interrupted), a target
+  before the start, two layers, and on a generic Animator playing GenericMove), each step with the GameObject's and the target
   bones' world transforms, whether it is matching, the state time and the root motion;
   `SetBoneLocalRotation` in `OnAnimatorIK` (`HumanoidBoneRotation`: spine, hips, head, upper chest,
   lower arm, upper leg and a finger on HumanA and HumanB, `boneRot`, `boneRotB`; one bone per IK

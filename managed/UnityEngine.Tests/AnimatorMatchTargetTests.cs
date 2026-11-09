@@ -135,7 +135,7 @@ namespace UnityEngine.Tests
             }
             finally { Object.DestroyImmediate(root); }
         }
-    
+
 
         sealed class Warnings : ILogHandler
         {
@@ -205,11 +205,13 @@ namespace UnityEngine.Tests
             }
         }
 
-        // A generic rig has no body parts: every AvatarTarget matches the root.
+        // Native controls: tests/projects/humanoid match.genericRoot, match.genericLeftHand. A generic
+        // rig has no body parts: every target matches the root, a goal target with the goal's
+        // orientation offset.
         [Fact]
         public void BodyPartTargetsOfAGenericRigMatchTheRoot()
         {
-            Vector3 Matched(AvatarTarget target)
+            (Vector3, Quaternion) Matched(AvatarTarget target)
             {
                 var animator = Create(out var root);
                 try
@@ -218,13 +220,17 @@ namespace UnityEngine.Tests
                     Assert.True(animator.isMatchingTarget);
                     animator.Update(.3f);
                     animator.Update(.3f);
-                    return root.transform.position;
+                    return (root.transform.position, root.transform.rotation);
                 }
                 finally { Object.DestroyImmediate(root); }
             }
-            var position = Matched(AvatarTarget.Root);
+            var (position, rotation) = Matched(AvatarTarget.Root);
             Near.Equal(new Vector3(4, 0, 3), new Vector3(position.x, 0, position.z), 1e-3f);
-            Assert.Equal(position, Matched(AvatarTarget.LeftHand));
+            Assert.True(Quaternion.Angle(Quaternion.identity, rotation) < .01f);
+            Assert.Equal((position, rotation), Matched(AvatarTarget.Body));
+            var (_, hand) = Matched(AvatarTarget.LeftHand);
+            // The root turns so that it, times the left hand's goal offset (180 degrees about x+z), is the identity.
+            Assert.True(Quaternion.Angle(Quaternion.Inverse(new Quaternion(0.707107f, 0f, 0.707107f, 0f)), hand) < .01f);
         }
 
         // Native control: tests/projects/humanoid massCenter.api (an Animator without an avatar keeps it).

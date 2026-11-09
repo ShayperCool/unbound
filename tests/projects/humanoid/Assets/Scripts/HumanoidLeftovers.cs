@@ -11,12 +11,13 @@ public partial class HumanoidProbe
         { HumanBodyBones.Hips, HumanBodyBones.LeftFoot, HumanBodyBones.RightFoot, HumanBodyBones.LeftHand, HumanBodyBones.RightHand };
 
     /// <summary>The world position and rotation of the GameObject and of the bones of the match
-    /// targets (hips, feet, hands).</summary>
+    /// targets (hips, feet, hands) of a humanoid.</summary>
     static void World(string key, Animator animator)
     {
         var parts = new List<string> { "[" + V(animator.transform.position) + "," + Q(animator.transform.rotation) + "]" };
         foreach (var bone in s_PartBones)
         {
+            if (!animator.isHuman) break;
             var t = animator.GetBoneTransform(bone);
             parts.Add(t == null ? "null" : "[" + V(t.position) + "," + Q(t.rotation) + "]");
         }
@@ -25,12 +26,13 @@ public partial class HumanoidProbe
 
     /// <summary>A controller on a fresh instance with root motion applied: the steps of
     /// <see cref="Play"/>, each with the GameObject's and the target bones' world transforms, whether
-    /// it is matching, the base layer's normalized time, the root motion and what the play logged.</summary>
+    /// it is matching, the base layer's normalized time, the root motion and what the play logged. A
+    /// null rig is a plain GameObject with a generic Animator.</summary>
     static void PlayMatch(string key, string controller, Action<Animator, int> beforeStep, string rig = "HumanA", bool rootMotion = true)
     {
         s_Log.Clear();
-        var instance = Instantiate(Resources.Load<GameObject>(rig));
-        var animator = instance.GetComponent<Animator>();
+        var instance = rig != null ? Instantiate(Resources.Load<GameObject>(rig)) : new GameObject("Generic");
+        var animator = rig != null ? instance.GetComponent<Animator>() : instance.AddComponent<Animator>();
         animator.applyRootMotion = rootMotion;
         animator.runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>(controller);
         for (int step = 0; step <= 28; step++)
@@ -57,7 +59,9 @@ public partial class HumanoidProbe
     /// <summary>Target matching on HumanA's clip (1 s, looping) and others: every target, masks, a
     /// match spanning a loop, starts already passed, interruptions (by the call and by a
     /// transition), a call in a transition, without root motion, on a clip without loop time, a
-    /// second call while matching, an invalid target and on HumanB (another human scale).</summary>
+    /// second call while matching (also changing completeMatch), an invalid target, on HumanB
+    /// (another human scale), a target time before the start time, two layers, and a generic
+    /// Animator.</summary>
     static void Matches()
     {
         var all = Vector3.one;
@@ -95,6 +99,27 @@ public partial class HumanoidProbe
         }));
         Guarded("match.invalid", () => PlayMatch("match.invalid", "HumanA", MatchAt(2, (AvatarTarget)7, all, 1f, 0.2f, 0.6f)));
         Guarded("match.humanB", () => PlayMatch("match.humanB", "HumanB", MatchAt(2, AvatarTarget.LeftHand, all, 1f, 0.2f, 0.9f), rig: "HumanB"));
+        Guarded("match.interruptB", () => PlayMatch("match.interruptB", "HumanB", (animator, step) =>
+        {
+            MatchAt(2, AvatarTarget.Body, all, 1f, 0.1f, 0.8f)(animator, step);
+            if (step == 12) animator.InterruptMatchTarget(true);
+        }, rig: "HumanB"));
+        Guarded("match.wrap", () => PlayMatch("match.wrap", "HumanA", MatchAt(2, AvatarTarget.Body, all, 1f, 0.8f, 0.2f)));
+        // A second call while matching: its completeMatch decides what the transition does.
+        foreach (var (name, first) in new[] { ("match.secondCancels", true), ("match.secondCompletes", false) })
+            Guarded(name, () => PlayMatch(name, "HumanBlendTransition", (animator, step) =>
+            {
+                MatchAt(1, AvatarTarget.LeftHand, all, 1f, 0.05f, 0.9f, complete: first)(animator, step);
+                if (step == 4) animator.MatchTarget(Vector3.zero, Quaternion.identity, AvatarTarget.Body, new MatchTargetWeightMask(all, 1f), 0.1f, 0.5f, !first);
+            }));
+        // Two layers: B on an override layer of weight 0.5 above the base layer's A.
+        Guarded("match.layers", () => PlayMatch("match.layers", "HumanBlendOverride", MatchAt(2, AvatarTarget.Body, all, 1f, 0.2f, 0.6f)));
+        // A generic Animator (GenericMove, root motion applied): a body part target and the root.
+        foreach (var target in new[] { AvatarTarget.Root, AvatarTarget.LeftHand })
+        {
+            var name = "match.generic" + target;
+            Guarded(name, () => PlayMatch(name, "GenericTwoStates", MatchAt(2, target, all, 1f, 0.2f, 0.6f), rig: null));
+        }
     }
 
     /// <summary>Mode of <see cref="HumanoidBoneRotation"/>: 0 rotations in every IK pass, 1 one

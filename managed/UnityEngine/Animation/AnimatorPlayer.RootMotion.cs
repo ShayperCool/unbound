@@ -336,7 +336,8 @@ namespace Unbound.Runtime
         static bool MatchEnds(Animator.MatchState match, double to) => to > match.End;
 
         /// <summary>Target matching of a generic rig: every target is the root, which the base
-        /// layer's motion would bring from the previous time to the end of the match.</summary>
+        /// layer's motion would bring from the previous time to the end of the match (the goals with
+        /// their orientation offset).</summary>
         void MatchStep(Animator animator, Vector3 scale, int pos, int rot)
         {
             if (!MatchProgress(animator, out var match, out double from, out double to, out float share)) return;
@@ -354,33 +355,85 @@ namespace Unbound.Runtime
                 turnToEnd *= Quaternion.Slerp(Quaternion.identity, q, weight);
             }
             var rotation = animator.m_MotionRootRotation;
-            ApplyMatch(animator, match, share, animator.m_MotionRootPosition + rotation * Vector3.Scale(scale, toEnd), rotation * turnToEnd);
+            // A goal target keeps the goals' orientation offset (tests/projects/humanoid match.genericLeftHand).
+            var goalFrame = Quaternion.identity;
+            if (match.Target >= AvatarTarget.LeftFoot)
+            {
+                var o = Unbound.Runtime.Humanoid.HumanIK.GoalOrientationOffset[(int)match.Target - (int)AvatarTarget.LeftFoot];
+                goalFrame = new Quaternion(o.x, o.y, o.z, o.w);
+            }
+            ApplyMatch(animator, match, share, animator.m_MotionRootPosition + rotation * Vector3.Scale(scale, toEnd), rotation * turnToEnd * goalFrame);
             if (match.Finish || MatchEnds(match, to)) animator.m_Match = null;
         }
 
-        /// <summary>Target matching of a humanoid rig: the target body part as the base layer's clips
-        /// would place it at the end of the match, relative to their motion now (averaged by weight),
-        /// from the root after this step (tests/projects/humanoid match.*).</summary>
+        /// <summary>Target matching of a humanoid rig: the target body part as the clips would place it
+        /// at the end of the match (each clip at that normalized time) relative to their motion now,
+        /// blended as their root motion is (by weight within a layer; override layers whose mask
+        /// keeps Root lerp towards theirs by their weight), from the root after this step
+        /// (tests/projects/humanoid match.*, match.layers).</summary>
         void HumanMatchStep(Animator animator, Unbound.Runtime.Humanoid.AnimatorHuman human, Vector3 scale)
         {
-            if (!MatchProgress(animator, out var match, out double from, out double to, out float share)) return;
-            var run = Layers[0].Current;
-            // A match finishing early takes the part from the previous evaluation's pose (this
-            // evaluation's pose follows the root motion pass), its position without the human scale (tests/projects/humanoid match.interrupt: HumanA's
-            // scale of 1.0495 is the ratio of the part's offsets).
-            double start = match.Finish ? from : to;
-            double end = match.Finish ? from : match.PredictCurrentPose ? to : match.End;
+            if (!MatchProgress(animator, out var match, out _, out double to, out float share)) return;
             var t = Vector3.zero;
-            var q = new Quaternion(0f, 0f, 0f, 0f);
-            float total = 0f;
-            foreach (var (_, layerIndex, contribution, clip, weight) in m_Contributions)
+            var q = Quaternion.identity;
+            bool any = false;
+            if (match.Finish)
             {
-                if (layerIndex != 0 || contribution != run || weight <= 0f || !clip.HasHumanCurves) continue;
+                // Finishing early: the part in the previous evaluation's pose, its position without
+                // the human scale (tests/projects/humanoid match.interrupt, match.interruptB,
+                // match.transition).
+                var x = human.PreviousPosePart((int)match.Target);
+                ApplyMatch(animator, match, share, animator.m_MotionRootPosition + animator.m_DeltaPosition
+                    + animator.m_MotionRootRotation * animator.m_DeltaRotation * Vector3.Scale(scale, new Vector3(x.t.x, x.t.y, x.t.z)),
+                    animator.m_MotionRootRotation * animator.m_DeltaRotation * new Quaternion(x.q.x, x.q.y, x.q.z, x.q.w));
+                animator.m_Match = null;
+                RootVelocities(animator.m_DeltaPosition, animator.m_DeltaRotation, animator.m_MotionRootRotation, m_RootDeltaTime,
+                    out animator.m_RootVelocity, out animator.m_RootAngularVelocity);
+                return;
+            }
+            for (int i = 0; i < Layers.Length; i++)
+            {
+                var def = Layers[i].Def;
+                float layerWeight = i == 0 ? 1f : Layers[i].Evaluated;
+                if (i > 0 && (def.Additive || layerWeight <= 0f || def.Mask != null && def.Mask.MasksHumanoidParts && !def.Mask.m_HumanoidParts[0]))
+                    continue;
+                if (!LayerMatchPart(human, match, i, to, out var lt, out var lq)) continue;
+                if (!any || layerWeight >= 1f) { t = lt; q = lq; }
+                else
+                {
+                    t = Vector3.Lerp(t, lt, layerWeight);
+                    if (Quaternion.Dot(q, lq) < 0f) lq = new Quaternion(-lq.x, -lq.y, -lq.z, -lq.w);
+                    q = new Quaternion(q.x + (lq.x - q.x) * layerWeight, q.y + (lq.y - q.y) * layerWeight, q.z + (lq.z - q.z) * layerWeight,
+                        q.w + (lq.w - q.w) * layerWeight).normalized;
+                }
+                any = true;
+            }
+            var turned = animator.m_MotionRootRotation * animator.m_DeltaRotation;
+            var moved = animator.m_MotionRootPosition + animator.m_DeltaPosition;
+            ApplyMatch(animator, match, share, moved + turned * Vector3.Scale(scale, t * animator.humanScale), turned * q);
+            if (MatchEnds(match, to)) animator.m_Match = null;
+            RootVelocities(animator.m_DeltaPosition, animator.m_DeltaRotation, animator.m_MotionRootRotation, m_RootDeltaTime,
+                out animator.m_RootVelocity, out animator.m_RootAngularVelocity);
+        }
+
+        /// <summary>One layer's humanoid clips' target part (<see cref="HumanMatchStep"/>), averaged by
+        /// their weights; false without humanoid clips. Each clip goes from its own normalized time
+        /// to the match's end.</summary>
+        bool LayerMatchPart(Unbound.Runtime.Humanoid.AnimatorHuman human, Animator.MatchState match, int layer, double baseTime,
+            out Vector3 t, out Quaternion q)
+        {
+            t = Vector3.zero;
+            q = new Quaternion(0f, 0f, 0f, 0f);
+            float total = 0f;
+            foreach (var (_, layerIndex, run, clip, weight) in m_Contributions)
+            {
+                if (layerIndex != layer || weight <= 0f || !clip.HasHumanCurves) continue;
                 total += weight;
+                double end = match.PredictCurrentPose ? baseTime : match.End;
                 var input = new Unbound.Runtime.Humanoid.HumanClipMotionInput
                 {
                     Time = (float)ClipSampling.StateClipNormalized(end, clip.length),
-                    PreviousTime = (float)ClipSampling.StateClipNormalized(start, clip.length),
+                    PreviousTime = (float)ClipSampling.StateClipNormalized(run.Normalized, clip.length),
                     Speed = SpeedOf(run.Def),
                     CycleOffset = run.Def.CycleOffset + (float)MirrorShift(run.Def, clip),
                 };
@@ -390,14 +443,10 @@ namespace Unbound.Runtime
                 float w = Quaternion.Dot(q, xq) < 0f ? -weight : weight;
                 q = new Quaternion(q.x + xq.x * w, q.y + xq.y * w, q.z + xq.z * w, q.w + xq.w * w);
             }
-            if (total > 0f) t /= total;
-            q = q.w == 0f && q.x == 0f && q.y == 0f && q.z == 0f ? Quaternion.identity : q.normalized;
-            var turned = animator.m_MotionRootRotation * animator.m_DeltaRotation;
-            var moved = animator.m_MotionRootPosition + animator.m_DeltaPosition;
-            ApplyMatch(animator, match, share, moved + turned * Vector3.Scale(scale, match.Finish ? t : t * animator.humanScale), turned * q);
-            if (match.Finish || MatchEnds(match, to)) animator.m_Match = null;
-            RootVelocities(animator.m_DeltaPosition, animator.m_DeltaRotation, animator.m_MotionRootRotation, m_RootDeltaTime,
-                out animator.m_RootVelocity, out animator.m_RootAngularVelocity);
+            if (total <= 0f) return false;
+            t /= total;
+            q = q.normalized;
+            return true;
         }
 
         /// <summary>Moves the step's root motion by the share of the remaining correction: the target

@@ -1138,8 +1138,8 @@ namespace Unbound.Runtime
         /// (measured, tests/projects/humanoid: the hips stay where the layers below put them). Only
         /// set when such a layer has weight and Animator.layersAffectMassCenter is off; otherwise the
         /// whole pose places the body. Curves no placing layer animates take their defaults, the
-        /// identity body and zero muscles (measured over an empty base state and a generic clip,
-        /// tests/projects/humanoid noRootOverEmpty, noRootOverGeneric).</summary>
+        /// identity body and zero muscles (measured over an empty base state, tests/projects/humanoid
+        /// noRootOverEmpty).</summary>
         void WriteMassCenterPose(int count)
         {
             var human = m_Animator.Human;

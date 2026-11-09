@@ -636,7 +636,7 @@ namespace Unbound.Runtime.Humanoid
             {
                 if (!any)
                     Unbound.Runtime.Stubs.Ignored("Animator humanoid layer mask without Root over no humanoid clip",
-                        "a layer whose mask leaves out Root adds no body or root motion over no humanoid clip below; over generic root motion the Editor moves the root further (tests/projects/humanoid noRootOverGeneric)");
+                        "a layer whose mask leaves out Root adds no body or root motion over generic root motion below (not measured)");
                 return;
             }
             if (additive)

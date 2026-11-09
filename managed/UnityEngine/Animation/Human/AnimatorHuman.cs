@@ -104,6 +104,18 @@ namespace Unbound.Runtime.Humanoid
             return HumanRootMotion.MatchPart(motion, input, m_Previous, m_Current, clip.HumanPresent, target);
         }
 
+        /// <summary>A target body part in the previous evaluation's pose relative to its motion (the
+        /// root motion pass runs before this evaluation's pose): nothing for the root, the body, or a
+        /// goal in the API's goal frame.</summary>
+        internal Trs PreviousPosePart(int target)
+        {
+            if (target == 0) return Trs.Identity;
+            if (target == 1) return m_Pose.RootX;
+            var x = m_Pose.Goals[target - 2].X;
+            x.q = M.QNormalize(M.QMul(x.q, HumanIK.GoalOrientationOffset[target - 2]));
+            return x;
+        }
+
         /// <summary>An additive layer clip's body difference at a state's time: its body (RootX)
         /// relative to the body of its additive reference pose (the reference clip at the reference
         /// time, else the clip's first frame), reference⁻¹ · body.</summary>
