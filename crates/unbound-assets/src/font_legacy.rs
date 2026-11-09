@@ -179,11 +179,12 @@ impl LegacyFace {
     }
 }
 
-/// A rendered bitmap as 8-bit coverage, top row first. Other pixel layouts (monochrome, 2/4-bit
-/// gray, colour) go through FreeType's conversion; fewer than 256 gray levels are stretched to
-/// 0..255 as `level * (1 / (levels - 1)) * 255`, truncated.
+/// A rendered bitmap as 8-bit coverage, top row first. An 8-bit gray bitmap is taken as it is
+/// (also one that emboldening widened from fewer gray levels); other layouts (monochrome, 2/4-bit
+/// gray, colour) go through FreeType's conversion, and fewer than 256 levels are then stretched
+/// to 0..255 as `level * (1 / (levels - 1)) * 255`, truncated.
 unsafe fn coverage(library: ft::FT_Library, bitmap: &ft::FT_Bitmap) -> Option<Vec<u8>> {
-    if bitmap.pixel_mode as u32 == ft::FT_PIXEL_MODE_GRAY && bitmap.num_grays == 256 {
+    if bitmap.pixel_mode as u32 == ft::FT_PIXEL_MODE_GRAY {
         return unsafe { copy_rows(bitmap, 1.0) };
     }
     unsafe {

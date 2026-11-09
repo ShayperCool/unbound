@@ -90,10 +90,7 @@ namespace Unbound.Tests
             Assert.Same(font.material.mainTexture, font.material.mainTexture);
             Assert.Equal(TextureFormat.Alpha8, ((Texture2D)font.material.mainTexture).format);
             Assert.True(font.HasCharacter('A'));
-            // A dynamic font answers for any character above U+001F, even one its face lacks.
-            Assert.True(font.HasCharacter('☃'));
-            Assert.True(font.HasCharacter(' '));
-            Assert.False(font.HasCharacter('\u001f'));
+            Assert.False(font.HasCharacter('☃'));
         }
 
         [Fact]
@@ -469,6 +466,34 @@ namespace Unbound.Tests
             Assert.Equal(12, gen.vertexCount);
             Assert.Equal(5, gen.characterCount);
             Assert.Equal(0f, gen.characters[2].charWidth);
+        }
+    }
+
+    /// <summary>Font.HasCharacter of a dynamic font in the measured release (Unity 6000.0.71f1,
+    /// tests/projects/glyphraster) and outside it.</summary>
+    [Collection("Project release")]
+    public class FontHasCharacterReleaseTests
+    {
+        [Fact]
+        public void ADynamicFontHasEveryCharacterAboveTheControlsInTheMeasuredRelease()
+        {
+            string version = ProjectInfo.UnityVersion;
+            try
+            {
+                var font = new Font(new BoxGlyphSource(), 10, "Box");
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                Assert.True(font.HasCharacter('A'));
+                Assert.True(font.HasCharacter('\u2603'));
+                Assert.True(font.HasCharacter(' '));
+                Assert.True(font.HasCharacter('\ufffe'));
+                Assert.False(font.HasCharacter('\u001f'));
+                Assert.False(font.HasCharacter('\0'));
+                // Another release keeps asking the face.
+                ProjectInfo.UnityVersion = "6000.0.70f1";
+                Assert.False(font.HasCharacter('\u2603'));
+                Assert.True(font.HasCharacter('A'));
+            }
+            finally { ProjectInfo.UnityVersion = version; }
         }
     }
 }

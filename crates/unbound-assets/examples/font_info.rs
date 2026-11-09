@@ -12,7 +12,7 @@ fn main() -> anyhow::Result<()> {
     println!("{:?}", face.details());
     for c in chars.chars() {
         let index = face.glyph_index(c);
-        if let Some(g) = face.render_glyph(index, size, false, false) {
+        if let Some(g) = face.render_glyph(index, size) {
             println!(
                 "{c:?} #{index}: advance {} bounds {:?} bitmap {}x{} at ({}, {})",
                 g.advance, g.bounds, g.width, g.height, g.left, g.top

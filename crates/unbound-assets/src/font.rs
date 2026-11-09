@@ -29,9 +29,6 @@ pub const FONT_TEXTURE_FILE_ID: i64 = 2_800_000;
 /// The path id of the `LegacyRuntime` Font in `unity default resources`.
 pub const LEGACY_RUNTIME_PATH_ID: i64 = 10102;
 
-/// FreeType's oblique shear.
-const OBLIQUE_SHEAR: f32 = 0x0366A as f32 / 65536.0;
-
 /// The face-wide metrics, in font units.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FaceMetrics {
@@ -282,34 +279,23 @@ impl FontFace {
         pairs
     }
 
-    /// Glyph `glyph` (an index) at `size` pixels per em.
-    pub fn render_glyph(
-        &self,
-        glyph: u16,
-        size: f32,
-        bold: bool,
-        italic: bool,
-    ) -> Option<GlyphBitmap> {
+    /// Glyph `glyph` (an index) at `size` pixels per em, from its outline (TextCore's glyphs;
+    /// legacy dynamic fonts render through [`Self::render_legacy`]).
+    pub fn render_glyph(&self, glyph: u16, size: f32) -> Option<GlyphBitmap> {
         let face = self.face();
         let glyph = ttf_parser::GlyphId(glyph);
         if glyph.0 >= face.number_of_glyphs() {
             return None;
         }
         let scale = size / self.metrics.units_per_em.max(1) as f32;
-        let mut advance = face.glyph_hor_advance(glyph).unwrap_or(0) as f32 * scale;
-        let shear = if italic { OBLIQUE_SHEAR } else { 0.0 };
+        let advance = face.glyph_hor_advance(glyph).unwrap_or(0) as f32 * scale;
         let mut outline = Outline {
             scale,
-            shear: 0.0,
             segments: Vec::new(),
             start: (0.0, 0.0),
             last: (0.0, 0.0),
         };
         outline_scaled(&face, glyph, &mut outline, 0);
-        outline.shear(shear);
-        // FT_GlyphSlot_Embolden: em/24 pixels, for an empty glyph too (its advance grows).
-        let strength = if bold { size / 24.0 } else { 0.0 };
-        advance += strength;
         if outline.segments.is_empty() {
             return Some(GlyphBitmap {
                 advance,
@@ -332,8 +318,6 @@ impl FontFace {
                 y_max = y_max.max(y);
             }
         }
-        x_max += strength;
-        y_max += strength;
         let left = x_min.floor() as i32;
         let bottom = y_min.floor() as i32;
         let right = x_max.ceil() as i32;
@@ -354,9 +338,6 @@ impl FontFace {
             coverage[(y * width as u32 + x) as usize] =
                 (alpha.clamp(0.0, 1.0) * 255.0).round() as u8;
         });
-        if strength > 0.0 {
-            embolden(&mut coverage, width as usize, height as usize, strength);
-        }
         Some(GlyphBitmap {
             advance,
             left,
@@ -375,14 +356,13 @@ impl FontFace {
     /// `0.5 + d / (2 (padding + 1))` where `d` is the distance in pixels from its center to the
     /// outline, positive inside. TextMeshPro's gradient scale is `padding + 1` to match.
     pub fn render_glyph_sdf(&self, glyph: u16, size: f32, padding: i32) -> Option<GlyphBitmap> {
-        let mut bitmap = self.render_glyph(glyph, size, false, false)?;
+        let mut bitmap = self.render_glyph(glyph, size)?;
         if bitmap.coverage.is_empty() {
             return Some(bitmap);
         }
         let face = self.face();
         let mut outline = Outline {
             scale: size / self.metrics.units_per_em.max(1) as f32,
-            shear: 0.0,
             segments: Vec::new(),
             start: (0.0, 0.0),
             last: (0.0, 0.0),
@@ -447,51 +427,6 @@ fn read_metrics(face: &Face) -> FaceMetrics {
     }
 }
 
-/// Grows coverage by `strength` pixels to the right and upwards (rows are top first), like
-/// FreeType's emboldening moves the right and top edges of an outline.
-fn embolden(coverage: &mut [u8], width: usize, height: usize, strength: f32) {
-    // The bitmap was made `ceil(strength)` larger on those sides; dilate into that space.
-    let whole = strength.floor() as usize;
-    let fraction = strength - whole as f32;
-    let source = coverage.to_vec();
-    let at = |x: isize, y: isize| -> f32 {
-        if x < 0 || y < 0 || x >= width as isize || y >= height as isize {
-            0.0
-        } else {
-            source[y as usize * width + x as usize] as f32
-        }
-    };
-    // Horizontal pass: max over shifts 0..=whole, plus the fractional next shift.
-    let mut horizontal = vec![0f32; width * height];
-    for y in 0..height as isize {
-        for x in 0..width as isize {
-            let mut v = 0f32;
-            for s in 0..=whole as isize {
-                v = v.max(at(x - s, y));
-            }
-            v = v.max(at(x - whole as isize - 1, y) * fraction);
-            horizontal[y as usize * width + x as usize] = v;
-        }
-    }
-    let at_h = |x: usize, y: isize| -> f32 {
-        if y < 0 || y >= height as isize {
-            0.0
-        } else {
-            horizontal[y as usize * width + x]
-        }
-    };
-    for y in 0..height as isize {
-        for x in 0..width {
-            let mut v = 0f32;
-            for s in 0..=whole as isize {
-                v = v.max(at_h(x, y + s));
-            }
-            v = v.max(at_h(x, y + whole as isize + 1) * fraction);
-            coverage[y as usize * width + x] = v.round().min(255.0) as u8;
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 enum Segment {
     Line((f32, f32), (f32, f32)),
@@ -513,7 +448,6 @@ impl Segment {
 /// Collects a glyph outline in pixels (y up), quantized to 1/64 pixel as FreeType does.
 struct Outline {
     scale: f32,
-    shear: f32,
     segments: Vec<Segment>,
     start: (f32, f32),
     last: (f32, f32),
@@ -522,15 +456,7 @@ struct Outline {
 impl Outline {
     fn map(&self, x: f32, y: f32) -> (f32, f32) {
         let q = |v: f32| (v * 64.0).round() / 64.0;
-        let (x, y) = (q(x * self.scale), q(y * self.scale));
-        (x + y * self.shear, y)
-    }
-
-    /// Slants the outline (synthesized italic) about the baseline.
-    fn shear(&mut self, shear: f32) {
-        if shear != 0.0 {
-            self.transform(|(x, y)| (x + y * shear, y));
-        }
+        (q(x * self.scale), q(y * self.scale))
     }
 
     fn transform(&mut self, f: impl Fn((f32, f32)) -> (f32, f32)) {
@@ -562,7 +488,6 @@ fn outline_scaled(face: &Face, glyph: ttf_parser::GlyphId, out: &mut Outline, de
     for component in components {
         let mut part = Outline {
             scale: out.scale,
-            shear: 0.0,
             segments: Vec::new(),
             start: (0.0, 0.0),
             last: (0.0, 0.0),
@@ -1045,7 +970,7 @@ mod tests {
     fn sdf_encodes_distance_to_the_outline() {
         let Some(face) = system_face() else { return };
         let index = face.glyph_index('l');
-        let raster = face.render_glyph(index, 64.0, false, false).unwrap();
+        let raster = face.render_glyph(index, 64.0).unwrap();
         let padding = 5;
         let sdf = face.render_glyph_sdf(index, 64.0, padding).unwrap();
         let (w, h) = (raster.width + 2 * padding, raster.height + 2 * padding);

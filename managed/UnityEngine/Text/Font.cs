@@ -173,7 +173,7 @@ namespace UnityEngine
         /// character set looks in its characters.</summary>
         internal bool HasCharacter(int c)
         {
-            if (m_Dynamic) return c > 0x1F;
+            if (m_Dynamic && Compat.LegacyGlyphRasterMeasured) return c > 0x1F;
             if (m_Source != null) return m_Source.HasCharacter(c);
             foreach (var info in m_CharacterRects)
                 if (info.index == c) return true;

@@ -59,7 +59,7 @@ pub fn glyph_by_index(
     let glyph = u16::try_from(glyph).ok()?;
     match sdf_padding {
         Some(padding) => face.render_glyph_sdf(glyph, size, padding),
-        None => face.render_glyph(glyph, size, false, false),
+        None => face.render_glyph(glyph, size),
     }
 }
 
