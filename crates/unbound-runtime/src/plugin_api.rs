@@ -156,6 +156,14 @@ pub mod guid {
         high: 0xBAF9E57C61A811EC,
         low: 0xC5A7CC7861A811EC,
     };
+    pub const GRAPHICS_VULKAN: Guid = Guid {
+        high: 0x95355348D4EF4E11,
+        low: 0x9789313DFCFFCC87,
+    };
+    pub const GRAPHICS_VULKAN_V2: Guid = Guid {
+        high: 0x329334C09DCA4787,
+        low: 0xB347DD92A0097FFC,
+    };
 }
 
 /// Interfaces the Editor gives on OpenGL Core that Unbound does not provide: a plugin asking for
@@ -286,6 +294,12 @@ fn registry() -> std::sync::MutexGuard<'static, Registry> {
         })
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+/// Offers an interface the renderer implements (the graphics device's own, as
+/// `IUnityGraphicsVulkan` on the Vulkan device): plugins find it by its GUID.
+pub fn provide(guid: Guid, interface: usize) {
+    registry().interfaces.insert(guid, interface);
 }
 
 /// The `IUnityInterfaces` a plugin's `UnityPluginLoad` receives.

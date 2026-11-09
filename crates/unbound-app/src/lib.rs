@@ -163,6 +163,16 @@ pub fn device_starts(device: unbound_compat::GraphicsDevice) -> bool {
     render::device::starts(device)
 }
 
+/// Offers the graphics device's own plugin interfaces (`IUnityGraphicsVulkan` on Vulkan), before
+/// any plugin loads; their device handles are filled once the renderer is up.
+pub fn provide_plugin_interfaces(device: unbound_compat::GraphicsDevice) {
+    #[cfg(target_os = "linux")]
+    if device == unbound_compat::GraphicsDevice::Vulkan {
+        render::executor::provide_vulkan_plugin_interfaces();
+    }
+    let _ = device;
+}
+
 /// Runs the windowed app until the game quits or the window closes. `backend` must be the
 /// backend the driver's frames submit to.
 pub fn run(

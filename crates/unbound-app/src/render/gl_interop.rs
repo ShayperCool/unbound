@@ -91,8 +91,8 @@ pub fn with<R>(
     let device = unbound_runtime::graphics_device::get();
     if device != unbound_compat::GraphicsDevice::OpenGLCore {
         return Err(format!(
-            "native rendering plugins on the {device} device get no OpenGL context (its own \
-             plugin interface is not supported yet)"
+            "native rendering plugins on the {device} device get no OpenGL context (they use \
+             the device's own plugin interface)"
         ));
     }
     let mut slot = INTEROP

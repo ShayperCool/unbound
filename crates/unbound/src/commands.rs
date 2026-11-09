@@ -122,6 +122,7 @@ fn choose_graphics_device(
     })
     .map_err(anyhow::Error::msg)?;
     unbound_runtime::graphics_device::set(device);
+    unbound_app::provide_plugin_interfaces(device);
     tracing::info!("graphics device: {device}");
     Ok(device)
 }

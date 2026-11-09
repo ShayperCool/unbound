@@ -985,7 +985,7 @@ namespace UnityEngine.Rendering
         {
             var sourceTexture = Resolve(source, c);
             var destination = Resolve(dest, c) as RenderTexture;
-            var buffer = NativePlugins.RenderBufferPointer(destination != null ? destination.GetInstanceID() : 0, false);
+            var buffer = NativePlugins.RenderBufferPointer(destination, false);
             if (sourceTexture != null && sourceTexture is not RenderTexture)
             {
                 BindActiveOutsideCamera(c);

@@ -26,8 +26,9 @@ namespace Unbound.Runtime
         /// <summary>Marks the depth buffer of an <see cref="UnsharedPointer"/>.</summary>
         const ulong UnsharedDepth = 1UL << 47;
         /// <summary>Render buffer pointers (<c>RenderBuffer.GetNativeRenderBufferPtr</c>, a custom
-        /// blit's destination): the render texture's instance ID and the buffer's kind under this
-        /// base, distinct from every texture pointer as the Editor's are.</summary>
+        /// blit's destination): the render texture's renderer handle and the buffer's kind under
+        /// this base, distinct from every texture pointer as the Editor's are (the Vulkan device's
+        /// plugin interface finds the texture by it).</summary>
         const ulong RenderBufferBase = 0x5500_0000_0000_0000UL;
 
         static bool s_WarnedUnshared;
@@ -120,10 +121,10 @@ namespace Unbound.Runtime
             return (IntPtr)(long)(UnsharedPointer | (depth ? UnsharedDepth : 0) | handle);
         }
 
-        /// <summary>A render buffer's native pointer: stable for the render texture (0 the screen)
-        /// and the buffer's kind.</summary>
-        internal static IntPtr RenderBufferPointer(int renderTextureInstanceId, bool depth) =>
-            (IntPtr)(long)(RenderBufferBase | ((ulong)(uint)renderTextureInstanceId << 1) | (depth ? 1UL : 0UL));
+        /// <summary>A render buffer's native pointer: stable for the render texture (none: the
+        /// screen) and the buffer's kind.</summary>
+        internal static IntPtr RenderBufferPointer(RenderTexture texture, bool depth) =>
+            (IntPtr)(long)(RenderBufferBase | ((texture != null ? TextureHandles.Of(texture) : 0UL) << 1) | (depth ? 1UL : 0UL));
 
         /// <summary>The texture ID a plugin's texture update and custom blit receive: the
         /// renderer's handle (the Editor's is not the OpenGL name either).</summary>

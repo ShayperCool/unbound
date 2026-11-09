@@ -111,6 +111,41 @@ pub(super) struct PluginState {
 type RenderingEvent = extern "C" fn(i32);
 type RenderingEventAndData = extern "C" fn(i32, *mut c_void);
 
+/// Calls a rendering event or custom blit's callback (`TextureUpdate`s run their own sequence).
+pub(super) fn invoke(call: &PluginCall) {
+    match *call {
+        PluginCall::Event { callback, id } => {
+            // SAFETY: a plugin's `UnityRenderingEvent`, as GL.IssuePluginEvent and
+            // CommandBuffer.IssuePluginEvent take it (not null: checked by the caller).
+            let callback: RenderingEvent = unsafe { std::mem::transmute(callback as usize) };
+            callback(id);
+        }
+        PluginCall::EventAndData { callback, id, data } => {
+            let callback: RenderingEventAndData = unsafe { std::mem::transmute(callback as usize) };
+            callback(id, data as usize as *mut c_void);
+        }
+        PluginCall::CustomBlit {
+            callback,
+            command,
+            source,
+            destination,
+            param,
+            flags,
+        } => {
+            let callback: RenderingEventAndData = unsafe { std::mem::transmute(callback as usize) };
+            let mut params = CustomBlitParams {
+                source,
+                destination: destination as usize as *mut c_void,
+                command,
+                param,
+                flags,
+            };
+            callback(ext_event::CUSTOM_BLIT, &mut params as *mut _ as *mut c_void);
+        }
+        PluginCall::TextureUpdate { .. } => {}
+    }
+}
+
 impl UnityRenderer {
     /// The renderer GPU's UUID for the plugins' OpenGL context; why there is none otherwise.
     pub fn plugin_device(&mut self) -> Result<Option<[u8; 16]>, String> {
@@ -151,6 +186,10 @@ impl UnityRenderer {
     /// The OpenGL texture name of a texture (`depth`: its depth buffer's), 0 when it cannot be
     /// shared (logged once per texture).
     pub fn native_texture(&mut self, handle: u64, depth: bool) -> u64 {
+        #[cfg(target_os = "linux")]
+        if self.vulkan_plugins.is_some() {
+            return self.vulkan_native_texture(handle, depth);
+        }
         match self.share(handle) {
             Ok((color, depth_texture)) => {
                 if depth {
@@ -578,6 +617,25 @@ impl UnityRenderer {
             });
             return;
         }
+        #[cfg(target_os = "linux")]
+        if self.vulkan_plugins.is_some() {
+            // The Vulkan device: the plugin records into a command buffer of the renderer's
+            // (`plugins_vulkan`); texture updates upload as on every device.
+            match *call {
+                PluginCall::TextureUpdate {
+                    callback,
+                    texture,
+                    user_data,
+                    v2,
+                    format,
+                    bytes_per_pixel,
+                } => self.texture_update(callback, texture, user_data, v2, format, bytes_per_pixel),
+                _ => {
+                    self.run_plugin_vulkan(call, || invoke(call));
+                }
+            }
+            return;
+        }
         let device = self.interop_device();
         let uuid = device.as_ref().ok().copied().flatten();
         let context = device.and_then(|uuid| gl_interop::with(uuid, |_| ()));
@@ -598,17 +656,9 @@ impl UnityRenderer {
             let _ = gl_interop::with(uuid, |interop| interop.clear_errors());
         }
         match *call {
-            PluginCall::Event { callback, id } => {
-                // SAFETY: a plugin's `UnityRenderingEvent`, as GL.IssuePluginEvent and
-                // CommandBuffer.IssuePluginEvent take it (not null: checked above).
-                let callback: RenderingEvent = unsafe { std::mem::transmute(callback as usize) };
-                callback(id);
-            }
-            PluginCall::EventAndData { callback, id, data } => {
-                let callback: RenderingEventAndData =
-                    unsafe { std::mem::transmute(callback as usize) };
-                callback(id, data as usize as *mut c_void);
-            }
+            PluginCall::Event { .. }
+            | PluginCall::EventAndData { .. }
+            | PluginCall::CustomBlit { .. } => invoke(call),
             PluginCall::TextureUpdate {
                 callback,
                 texture,
@@ -617,25 +667,6 @@ impl UnityRenderer {
                 format,
                 bytes_per_pixel,
             } => self.texture_update(callback, texture, user_data, v2, format, bytes_per_pixel),
-            PluginCall::CustomBlit {
-                callback,
-                command,
-                source,
-                destination,
-                param,
-                flags,
-            } => {
-                let callback: RenderingEventAndData =
-                    unsafe { std::mem::transmute(callback as usize) };
-                let mut params = CustomBlitParams {
-                    source,
-                    destination: destination as usize as *mut c_void,
-                    command,
-                    param,
-                    flags,
-                };
-                callback(ext_event::CUSTOM_BLIT, &mut params as *mut _ as *mut c_void);
-            }
         }
         if context.is_ok() {
             self.after_plugin_callback(uuid);

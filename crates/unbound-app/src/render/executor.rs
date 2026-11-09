@@ -9,6 +9,10 @@ mod mesh_buffers;
 mod mipmaps;
 mod msaa;
 mod plugins;
+#[cfg(target_os = "linux")]
+mod plugins_vulkan;
+#[cfg(target_os = "linux")]
+pub use plugins_vulkan::provide_interfaces as provide_vulkan_plugin_interfaces;
 mod readback;
 mod warmup;
 
@@ -433,6 +437,14 @@ pub struct UnityRenderer {
     plugins: plugins::PluginState,
     /// The graphics device's projection, depth and target orientation (resolved at startup).
     conventions: DeviceConventions,
+    /// The Vulkan device's plugin interface (None: plugins see OpenGL Core's, `plugins`).
+    #[cfg(target_os = "linux")]
+    vulkan_plugins: Option<plugins_vulkan::VulkanPlugins>,
+    /// The last frame (counted from 1) whose GPU work is done: plugins' `safeFrameNumber`.
+    frames_completed: Arc<std::sync::atomic::AtomicU64>,
+    /// The current target's pass was drawing at a plugin event, or a plugin event ran inside it
+    /// (until another command): where a Vulkan plugin event that does not care runs.
+    plugin_pass_open: bool,
     fence_issued: u64,
     fence_completed: Arc<std::sync::atomic::AtomicU64>,
     device: wgpu::Device,
@@ -546,6 +558,13 @@ impl UnityRenderer {
         let defaults = resources::default_textures(&device, &queue);
         UnityRenderer {
             plugins: Default::default(),
+            #[cfg(target_os = "linux")]
+            vulkan_plugins: (unbound_runtime::graphics_device::get()
+                == unbound_compat::GraphicsDevice::Vulkan)
+                .then(|| plugins_vulkan::VulkanPlugins::new(&device, &queue))
+                .flatten(),
+            frames_completed: Default::default(),
+            plugin_pass_open: false,
             conventions,
             device,
             queue,
@@ -2391,6 +2410,9 @@ impl UnityRenderer {
         // Where the passes into the depth-only target being drawn start (this submission's).
         let mut depth_mark = 0usize;
         for command in commands {
+            if !matches!(command, Command::Plugin(_)) {
+                self.plugin_pass_open = false;
+            }
             match command {
                 Command::BeginFrame {
                     screen_width,
@@ -2457,6 +2479,9 @@ impl UnityRenderer {
                     self.copy_depth(&mut passes, depth_mark);
                     self.encode(std::mem::take(&mut passes));
                     depth_mark = 0;
+                    // Whether the current target's pass was drawing: a plugin event that does not
+                    // care where it runs runs inside it on the Vulkan device.
+                    self.plugin_pass_open |= open;
                     self.run_plugin(&call);
                     open = false;
                 }
@@ -3067,6 +3092,13 @@ impl UnityRenderer {
         self.copy_depth(&mut passes, depth_mark);
         self.encode(passes);
         if end_frame {
+            // The frame's work is submitted: when the GPU finishes it, plugins may free what
+            // they used in it.
+            let completed = self.frames_completed.clone();
+            let frame = self.frame_number;
+            self.queue.on_submitted_work_done(move || {
+                completed.fetch_max(frame, std::sync::atomic::Ordering::AcqRel);
+            });
             let slot = self.screen_slot;
             let space = self.color_space;
             let screen = self.ensure_screen(slot).view(space).0.clone();

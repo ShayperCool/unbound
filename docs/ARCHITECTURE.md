@@ -170,6 +170,20 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   backend: wgpu's OpenGL backend lacks what the renderer uses (texture views in another format,
   sampler LOD bias; an OpenGL 3.3 context); see the gap table. The suite selects the device of
   each reference set explicitly (`--force-glcore`, `--force-vulkan`).
+* **Native rendering plugins on Vulkan**: on the Vulkan device plugins get `IUnityGraphicsVulkan`
+  and `V2` (`render/executor/plugins_vulkan.rs`, tests/projects/nativegfx `vulkan.jsonl`): the
+  renderer's instance, physical device, device, queue and its family, a pipeline cache; native
+  texture pointers point at the texture's `VkImage`. A rendering callback runs where it is in the
+  stream: the work before it is submitted, the plugin records into a secondary command buffer
+  that a command buffer of the renderer's executes, submitted before the work after it, with full
+  memory barriers around it. The textures a plugin can reach are first put in a resting layout by
+  wgpu; `AccessTexture` (and its render buffer and texture ID forms) records the barrier into the
+  layout asked for and the renderer records the one back after the callback, so wgpu's tracking
+  stays right. `kUnityVulkanRenderPass_EnsureInside` (and a DontCare event while the current
+  target draws, as a camera's events) runs inside a render pass over the current target, loaded,
+  stored and resolved where it is multisampled. `safeFrameNumber` is the last frame the GPU
+  finished. Not supported (logged): intercepting Vulkan, queue access (such events are skipped),
+  swapchain configuration, resolve textures of render buffers, `Recreate` access.
 * **Native rendering plugins**: on the OpenGL Core device (`SystemInfo.graphicsDeviceType`,
   `IUnityGraphics::GetRenderer`), the Linux Editor's default, the renderer still draws with
   Vulkan (Metal on macOS; see above). Plugins written for that device call OpenGL on the main
