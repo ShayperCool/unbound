@@ -77,4 +77,4 @@ What the Editor does (measured):
   change Animator playback.
 
 Unbound matches 2949/2949 records. The reducing compression modes are compared by their bindings
-only: their keys depend on Unity's keyframe reduction, which Unbound approximates.
+only here; their keyframe reduction is measured in tests/projects/modelaxis (`Reduced` set).

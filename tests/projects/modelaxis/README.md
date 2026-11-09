@@ -121,7 +121,7 @@ Update When Offscreen off, and `BakeMesh` vertices. Normals, bones, bind poses, 
 sampled keys exist only in these sets, so the `Axis` and `Signed` references are unchanged.
 
 Two independent GPU Editor captures agree byte for byte for each set (1001, 397, 1467 and
-5127 keys), published under `Reference/unity-6000.0.71f1/pivots`, `skinned`, `rigged` and
+11839 keys), published under `Reference/unity-6000.0.71f1/pivots`, `skinned`, `rigged` and
 `reduced`. These sets bound each
 value by 1e-5 times the largest magnitude of its innermost reference vector (at least 1e-5):
 world bases of
@@ -196,11 +196,14 @@ implemented by the same rule or left as before:
 
 ### Keyframe reduction (`Reduced` set)
 
-Each control is the column rig with a Legacy clip of four keys per curve (Hips moves, Spine
-turns and scales, Head turns), under Keyframe Reduction with the default errors (`Default`),
-looser (`Loose`: 3 degrees, 2%) and tighter ones (`Tight`: 0.2 degrees, 0.1%), at 60 fps
-(`Rate60`), and the pivoted `AnimPivot` take of the Pivots set reduced. The probe samples every
-clip each 1/60 s from 0 to 1 s. The [Animation tab](https://docs.unity.com/en-us/engine/6000.0/manual/assets-and-media/asset-types/models/importing/class-animation-clip)
+Each control is the column rig with a clip of four keys per curve (Hips moves, Spine turns and
+scales, Head turns): Legacy under Keyframe Reduction with the default errors (`Default`), looser
+(`Loose`: 3 degrees, 2%), tighter (`Tight`: 0.2 degrees, 0.1%) and unequal position and scale
+errors (`Split`: 3%, 0.1%), at 60 fps (`Rate60`); Generic under Keyframe Reduction
+(`GenericReduced`) and Optimal (`GenericOptimal`); three seconds of slow straight motion where
+segments reach the 50-frame limit (`Drift`); and the pivoted `AnimPivot` take of the Pivots set
+reduced. The probe samples every clip of each model (`AnimationClip.SampleAnimation`) each
+1/60 s over its length. The [Animation tab](https://docs.unity.com/en-us/engine/6000.0/manual/assets-and-media/asset-types/models/importing/class-animation-clip)
 documents the errors (rotation as an angle in degrees, position and scale as a percentage of
 the original value, tested per axis and on the whole vector) but not which keys are tested; the
 measured rule, applied to the every-frame keys of compression Off (positions with linear,
@@ -214,6 +217,10 @@ rotations and scales with smooth slopes):
   quaternion within 0.001 of unit length; positions, scales and floats per component and in
   length within the error as a fraction of the curve's value (near-zero values aside).
 - Kept keys keep their every-frame slopes.
+- Float curves (blend shape weights) take the position error and smooth slopes
+  (tests/projects/blendshapes: its reduced clip now matches within 2e-6). Humanoid clips are
+  converted to muscle curves, which the Editor reduces; their transform curves keep every frame
+  here and the muscle curves' reduction is not reproduced.
 
 A first attempt with 0.05 degrees and 0.05% put the rotation threshold within a few single
 precision steps of a unit dot product, where keeping or dropping a key is a rounding tie

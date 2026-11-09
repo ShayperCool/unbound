@@ -254,14 +254,15 @@ PIVOTS = {
 KTIME = 46186158000
 
 
-def animation(node, prop, curves):
-    """A take of one second animating `node`'s `prop` (`Lcl Rotation`, ...): per axis
-    (0..2) linear keys spread evenly from 0 s to 1 s. Object ids from 600."""
+def animation(node, prop, curves, seconds=1):
+    """A take of `seconds` animating `node`'s `prop` (`Lcl Rotation`, ...): per axis (0..2)
+    linear keys spread evenly over the take. Object ids from 600."""
+    stop = KTIME * seconds
     objects = ['AnimationStack: 600, "AnimStack::Take 001", "" {\n Properties70: {\n'
                '  P: "LocalStart", "KTime", "Time", "",0\n'
-               f'  P: "LocalStop", "KTime", "Time", "",{KTIME}\n'
+               f'  P: "LocalStop", "KTime", "Time", "",{stop}\n'
                '  P: "ReferenceStart", "KTime", "Time", "",0\n'
-               f'  P: "ReferenceStop", "KTime", "Time", "",{KTIME}\n }}\n}}\n',
+               f'  P: "ReferenceStop", "KTime", "Time", "",{stop}\n }}\n}}\n',
                'AnimationLayer: 601, "AnimLayer::BaseLayer", "" {\n}\n']
     links = [(601, 600)]
     for i, (node_id, prop_name, axes) in enumerate(zip(node, prop, curves)):
@@ -274,7 +275,7 @@ def animation(node, prop, curves):
         for k, (axis, values) in enumerate(zip('XYZ', axes)):
             curve = curve_node + 1 + k
             # Linear interpolation (KeyAttrFlags 4) for both keys.
-            times = [KTIME * k // (len(values) - 1) for k in range(len(values))]
+            times = [stop * k // (len(values) - 1) for k in range(len(values))]
             objects.append(f'AnimationCurve: {curve}, "AnimCurve::", "" {{\n Default: {values[0]}\n'
                            ' KeyVer: 4009\n' + array('KeyTime', times) +
                            array('KeyValueFloat', [float(v) for v in values]) +
@@ -397,7 +398,7 @@ def skinned_fbx(options):
                    ''.join(f' PoseNode:  {{\n  Node: {node}\n' + array('Matrix', fbx_matrix(m), '  ') + ' }\n'
                            for node, m in pose) + '}\n')
     if 'animated' in options:
-        more, more_links = animation(*options['animated'])
+        more, more_links = animation(*options['animated'], seconds=options.get('seconds', 1))
         objects += more
         links += more_links
     return document(objects, links, animated='animated' in options, time_mode=options.get('time_mode', 6))
@@ -447,7 +448,12 @@ BEND = {'animated': ((310, 311, 311, 312),
                       ((0, 0, 20, 20), (0, 30, -15, 0), (-20, 70, 10, 40)),
                       ((1, 1.5, 0.8, 1), (1, 1, 1.3, 1), (1, 1, 1, 1)),
                       ((15, 100, 40, 40), (0, 0, 0, 25), (0, 10, 0, 0))))}
+# Three seconds of slow straight motion: reduced segments reach the 50-frame limit.
+DRIFT = {'animated': ((310, 311), ('Lcl Translation', 'Lcl Rotation'),
+                      (((0, 0.9), (1, 1.2), (0, -0.3)), ((0, 10), (0, 0), (-20, 40)))),
+         'seconds': 3}
 LEGACY_REDUCED = dict(animationType=1, animationCompression=1)
+GENERIC = dict(animationType=2, avatarSetup=0)
 REDUCED = {
     'Default': (BEND, LEGACY_REDUCED),
     'Loose': (BEND, dict(LEGACY_REDUCED, animationRotationError=3, animationPositionError=2,
@@ -457,6 +463,10 @@ REDUCED = {
     'Tight': (BEND, dict(LEGACY_REDUCED, animationRotationError=0.2, animationPositionError=0.1,
                          animationScaleError=0.1)),
     'Rate60': (dict(BEND, time_mode=3), LEGACY_REDUCED),
+    'Split': (BEND, dict(LEGACY_REDUCED, animationPositionError=3, animationScaleError=0.1)),
+    'Drift': (DRIFT, LEGACY_REDUCED),
+    'GenericReduced': (BEND, dict(GENERIC, animationCompression=1)),
+    'GenericOptimal': (BEND, dict(GENERIC, animationCompression=3)),
 }
 
 

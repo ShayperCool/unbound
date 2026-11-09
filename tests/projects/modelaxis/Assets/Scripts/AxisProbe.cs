@@ -55,21 +55,24 @@ public class AxisProbe : MonoBehaviour
                 Add(k + "/bakedVertices", L(baked.vertices, V));
                 DestroyImmediate(baked);
             }
-            // Legacy clips (Pivots, Rigged and Reduced sets): the local pose at frame-aligned
-            // times, in the Rigged set also between frames, in the Reduced set every 1/60 s.
+            // Legacy clips (Pivots and Rigged sets): the local pose at frame-aligned times, in
+            // the Rigged set also between frames. The Reduced set samples every clip of the
+            // model, Legacy or not, every 1/60 s over its length.
             var animation = instance.GetComponent<Animation>();
             var set = Environment.GetEnvironmentVariable("AXIS_SET");
-            var times = set == "Rigged" ? new[] { 0.25f, 0.5f, 0.55f, 0.95f, 1f }
-                : set == "Reduced" ? Enumerable.Range(0, 61).Select(i => i / 60f).ToArray()
-                : new[] { 0.5f, 1f };
-            if (animation != null)
-                foreach (AnimationState state in animation)
-                    foreach (var time in times)
+            var times = set == "Rigged" ? new[] { 0.25f, 0.5f, 0.55f, 0.95f, 1f } : new[] { 0.5f, 1f };
+            var clips = set == "Reduced"
+                ? Resources.LoadAll<AnimationClip>(set + "/" + model.name)
+                    .Where(c => !c.name.StartsWith("__preview__")).OrderBy(c => c.name, StringComparer.Ordinal).ToArray()
+                : animation != null ? animation.Cast<AnimationState>().Select(s => s.clip).ToArray() : new AnimationClip[0];
+            foreach (var clip in clips)
+                    foreach (var time in set == "Reduced"
+                        ? Enumerable.Range(0, Mathf.RoundToInt(clip.length * 60) + 1).Select(i => i / 60f) : times)
                     {
-                        state.clip.SampleAnimation(instance, time);
+                        clip.SampleAnimation(instance, time);
                         foreach (var t in instance.GetComponentsInChildren<Transform>(true))
                         {
-                            var k = model.name + "/" + state.clip.name + "@" + F(time) + "/" + PathOf(t, instance.transform);
+                            var k = model.name + "/" + clip.name + "@" + F(time) + "/" + PathOf(t, instance.transform);
                             Add(k + "/localPosition", V(t.localPosition));
                             Add(k + "/localScale", V(t.localScale));
                             Add(k + "/localBasis", L(new[] { Vector3.right, Vector3.up, Vector3.forward }, v => V(t.localRotation * v)));
