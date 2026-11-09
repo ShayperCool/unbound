@@ -13,14 +13,13 @@ Two classes of values:
   ABS + REL * |reference|; per atlas (.atlas/.dir) each covered texel's RGB within ABS + REL *
   |reference|; frames (.png) report the shared image measure (mean, worst and pixels over 8 of
   the per-pixel max-channel difference). The realtime lightmaps (.atlas) of the cases whose
-  inputs Unbound supports (point lights and a flat ambient color: every case but the skybox and
-  spot light ones) are gated: at most ISOLATED of their values may be outside the tolerance,
+  inputs Unbound supports (point and spot lights and a flat ambient color: every case but the
+  skybox ones) are gated: at most ISOLATED of their values may be outside the tolerance,
   each within ABS + ISOLATED_REL * |reference|, and a missing lightmap fails. With
   DynamicGI.updateThreshold a part of the lightmap is updated only when its inputs changed by
   more than the threshold, so converged texels depend on which update last solved them; input
-  differences well below the threshold (the point light falloff, within about 2% per cluster)
-  move a few isolated texels by up to about 8%. The rest of the lighting values are reported
-  (gated with --strict).
+  differences well below the threshold move a few isolated texels by up to about 10%. The rest
+  of the lighting values are reported (gated with --strict).
 
 Every failing value is written to CAPTURE/compare-details.txt; the output lists one line per
 failing case, atlas or frame.
@@ -41,7 +40,7 @@ REL = 0.05
 ISOLATED = 0.005
 ISOLATED_REL = 0.10
 # Cases whose inputs Unbound does not support yet: their lighting is reported only.
-UNSUPPORTED = ('room-sky', 'room-spot')
+UNSUPPORTED = ('room-sky',)
 
 
 def gated(case):

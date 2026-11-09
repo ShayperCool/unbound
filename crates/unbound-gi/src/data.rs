@@ -163,12 +163,14 @@ pub fn read_input_samples(bytes: &[u8]) -> Result<InputSamples> {
         let hi = [r.f32(at + 16)?, r.f32(at + 20)?, r.f32(at + 24)?];
         for _ in 0..count {
             let q = r.slice(quad, 16)?;
-            // Four points quantized to 8 bits in the cluster's box, one normal for the four.
-            let normal = [q[3], q[7], q[11]].map(|b| b as f32 * (2.0 / 255.0) - 1.0);
+            // Four points quantized to 8 bits in the cluster's box, one normal for the four:
+            // each component a byte b for b / 127 - 1 (not renormalized), so that 0, 127 and 254
+            // are exactly -1, 0 and 1.
+            let normal = [q[3], q[7], q[11]].map(|b| b as f32 * (1.0 / 127.0) - 1.0);
             for p in 0..4 {
                 let xyz = &q[4 * p..4 * p + 3];
                 positions.push(std::array::from_fn(|k| {
-                    lo[k] + xyz[k] as f32 * ((hi[k] - lo[k]) / 255.0)
+                    lo[k] + xyz[k] as f32 * ((hi[k] - lo[k]) * (1.0 / 255.0))
                 }));
                 normals.push(normal);
             }

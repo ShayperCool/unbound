@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use unbound_assets::serialized::SerializedFile;
 use unbound_gi::probes::{ProbeSetSolver, ProbeSh};
 pub use unbound_gi::realtime_uv::Input as UvInput;
-use unbound_gi::solver::{PointLight, SystemSolver, decode_rgb9e5};
+use unbound_gi::solver::{Light, SpotCone, SystemSolver, decode_rgb9e5};
 use unbound_project::assetdb::AssetDb;
 
 /// A light as the managed side passes it (`RealtimeGI.Light` in managed code).
@@ -63,8 +63,8 @@ struct Scene {
     /// Per system, its renderers' scale and offset within it.
     renderer_st: Vec<Vec<[f32; 4]>>,
     atlases: Vec<Atlas>,
-    /// Point lights of the last frame, reused.
-    points: Vec<PointLight>,
+    /// The point and spot lights of the last frame, reused.
+    solver_lights: Vec<Light>,
     lights: Vec<GiLight>,
     /// The last frame's inputs; `None` before the first frame, whose inputs all go to the
     /// solvers.
@@ -256,7 +256,7 @@ fn register(
                 systems,
                 renderer_st,
                 atlases,
-                points: Vec::new(),
+                solver_lights: Vec::new(),
                 lights: Vec::new(),
                 frame: None,
                 cursor: 0,
@@ -332,28 +332,31 @@ impl Scene {
     fn set_inputs(&mut self, frame: &GiFrame, lights: &[GiLight]) -> Result<()> {
         let lights_changed = self.lights.as_slice() != lights;
         if lights_changed {
-            self.points.clear();
+            self.solver_lights.clear();
             for light in lights {
-                match light.kind {
+                let spot = match light.kind {
                     // LightType.Point
-                    2 => self.points.push(PointLight {
-                        position: light.position,
-                        color: light.color,
-                        range: light.range,
-                    }),
-                    0 => bail!("spot lights in precomputed realtime GI are not supported yet"),
+                    2 => None,
+                    // LightType.Spot
+                    0 => Some(SpotCone::new(light.direction, light.spot_angle)),
                     1 => {
                         bail!("directional lights in precomputed realtime GI are not supported yet")
                     }
                     other => {
                         bail!("light type {other} in precomputed realtime GI is not supported")
                     }
-                }
+                };
+                self.solver_lights.push(Light {
+                    position: light.position,
+                    color: light.color,
+                    range: light.range,
+                    spot,
+                });
             }
             self.lights.clear();
             self.lights.extend_from_slice(lights);
             for system in &mut self.systems {
-                system.set_lights(&self.points);
+                system.set_lights(&self.solver_lights);
             }
         }
         let last = self.frame.replace(*frame);
@@ -738,16 +741,24 @@ mod tests {
         };
         let lights = [point([1.0, 2.0, 0.0])];
         assert!((0..500).any(|_| update(handle, &every, &lights).unwrap() & UPDATE_CONVERGED != 0));
-        // Unsupported lights fail loudly; the scene goes away with its handle.
+        // A spot light lights the scene too.
         let spot = GiLight {
             kind: 0,
+            direction: [0.0, -1.0, 0.0],
+            spot_angle: 60.0,
             ..point([0.0, 2.0, 0.0])
         };
+        assert_eq!(
+            update(handle, &frame, &[spot]).unwrap() & UPDATE_CONVERGED,
+            0
+        );
+        // Unsupported lights fail loudly; the scene goes away with its handle.
+        let directional = GiLight { kind: 1, ..spot };
         assert!(
-            update(handle, &frame, &[spot])
+            update(handle, &frame, &[directional])
                 .unwrap_err()
                 .to_string()
-                .contains("spot")
+                .contains("directional")
         );
         release(handle);
         assert!(update(handle, &frame, &[]).is_err());

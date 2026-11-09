@@ -92,14 +92,14 @@ renderers' realtime lightmap UVs, renders their meta passes and updates the syst
 The gate fails on state values (cases, realtime lightmap indices and scale/offset, lightmaps mode,
 probe count and baked coefficients, `isConverged`, API defaults, and which atlas texels the
 renderers cover) and on the realtime lightmaps of the cases whose inputs Unbound supports (every
-case but the skybox and spot light ones; at most 0.5% of their values outside the tolerance, for
+case but the skybox ones; at most 0.5% of their values outside the tolerance, for
 the isolated texels docs/REALTIME_GI.md explains), and reports the other lighting values
 (`realtimegi: 0 failing state values, 0 failing gated lighting values, N failing lighting
 values`); `compare.py --strict` gates those too. Every failing value, and every allowed isolated
 one, is written to `compare-details.txt` in the run directory. Light probes are lit by realtime GI
 (their coefficients are reported: a few small higher-band ones differ in the brightest case);
-the spot light case, the skybox cases and directional output are not supported yet (the
-lighting values of those differ).
+the skybox cases and directional output are not supported yet (the lighting values of those
+differ).
 
 ## Running
 

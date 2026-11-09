@@ -2,7 +2,7 @@
 //! cluster radiance, the cluster tree, the transport into the realtime lightmap texels and the
 //! bounce resampled from them. All buffers are allocated once per system; an update allocates
 //! nothing.
-use crate::data::{ABSENT_ID, ENVIRONMENT_ID, ENVIRONMENT_VALUES, System};
+use crate::data::{ABSENT_ID, ENVIRONMENT_ID, ENVIRONMENT_VALUES, InputSamples, System};
 use anyhow::{Result, bail};
 use std::sync::Arc;
 pub use unbound_assets::color::gamma_to_linear;
@@ -26,15 +26,81 @@ const SCALE_CHANGE: f32 = 1.0 / 8_388_608.0;
 /// `DynamicGI.updateThreshold`'s default, in percent.
 pub const DEFAULT_UPDATE_THRESHOLD: f32 = 1.0;
 
-/// A realtime point light as precomputed realtime GI sees it in the built-in pipeline: not
-/// shadowed, with the legacy falloff (other pipelines' falloffs are not supported yet).
+/// A realtime point or spot light as precomputed realtime GI sees it in the built-in pipeline:
+/// not shadowed, with the legacy distance falloff (other pipelines' falloffs are not supported
+/// yet).
 #[derive(Debug, Clone, Copy)]
-pub struct PointLight {
+pub struct Light {
     pub position: [f32; 3],
     /// Linear: the light's color times its intensity and bounce intensity (in a project without
     /// linear light intensity, scaled before the conversion to linear).
     pub color: [f32; 3],
     pub range: f32,
+    /// A spot light's cone; `None` for a point light.
+    pub spot: Option<SpotCone>,
+}
+
+/// Steps of a spot light's angular table between the cosine of half its angle and 1.
+const SPOT_STEPS: usize = 31;
+/// The inner cone a spot light's angular falloff starts at: half its angle's tangent times this
+/// (as `Light.innerSpotAngle` defaults to; the light's own inner angle is not used).
+const SPOT_INNER_TANGENT: f32 = 0.71875;
+/// Keeps a degenerate cone's divisions finite.
+const SPOT_MIN_STEP: f32 = 1e-6;
+
+/// A spot light's cone: its angular falloff is the square of the position of the cosine of the
+/// angle from the light's direction between those of the outer and inner half angles (1 inside
+/// the inner cone, 0 outside the outer one), tabulated at `SPOT_STEPS` steps from the outer
+/// cosine to 1 and read at the step at or below the point's cosine, not interpolated. Matches the
+/// Unity 6000.0.71f1 Editor, tests/projects/realtimegi (`room-spot`: the direct light per cluster
+/// within 0.6%).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SpotCone {
+    /// The light's direction times the table steps per unit of cosine.
+    axis: [f32; 3],
+    /// Table position of a cosine of 0.
+    offset: f32,
+    /// The angular falloff at each table position; 0 at position 0 (outside the cone).
+    table: [f32; SPOT_STEPS + 2],
+}
+
+impl SpotCone {
+    /// `direction`: the light's unit forward vector; `spot_angle`: `Light.spotAngle` in degrees.
+    pub fn new(direction: [f32; 3], spot_angle: f32) -> Self {
+        let pi = std::f32::consts::PI;
+        // Half of the default inner angle, in radians: atan(tan(half the angle) * 0.71875).
+        let inner = ((spot_angle * 0.5 / 360.0) * 2.0 * pi).tan() * SPOT_INNER_TANGENT;
+        let inner_degrees = inner.atan() * 2.0 * 0.5 / pi * 360.0;
+        let half_angle_cos = |degrees: f32| (0.5 * ((degrees / 360.0) * 2.0 * pi)).cos();
+        let (outer, inner) = (half_angle_cos(spot_angle), half_angle_cos(inner_degrees));
+        let step = ((1.0 - outer) / SPOT_STEPS as f32).max(SPOT_MIN_STEP);
+        let scale = 1.0 / step;
+        let inverse_width = 1.0 / (inner - outer).max(SPOT_MIN_STEP);
+        let mut table = [0.0; SPOT_STEPS + 2];
+        let mut cos = outer;
+        for v in &mut table[1..] {
+            *v = if cos < inner {
+                let t = (cos - outer) * inverse_width;
+                t * t
+            } else {
+                1.0
+            };
+            cos += step;
+        }
+        Self {
+            axis: direction.map(|v| v * scale),
+            offset: 1.0 - outer * scale,
+            table,
+        }
+    }
+
+    /// The angular falloff of a point at unit direction `to_point` from the light.
+    fn falloff(&self, to_point: [f32; 3]) -> f32 {
+        let a = &self.axis;
+        let t = a[0] * to_point[0] + a[1] * to_point[1] + a[2] * to_point[2] + self.offset;
+        // NaN (a degenerate direction) reads position 0.
+        self.table[(t.clamp(0.0, (SPOT_STEPS + 1) as f32) as usize).min(SPOT_STEPS + 1)]
+    }
 }
 
 fn legacy_falloff(x2: f32) -> f32 {
@@ -48,6 +114,46 @@ fn legacy_falloff(x2: f32) -> f32 {
         a
     }
 }
+
+/// Number of samples of a light's distance falloff.
+const FALLOFF_SAMPLES: usize = 16;
+
+/// A light's distance falloff as precomputed realtime GI evaluates it: sampled at
+/// x = distance / range where the table position t = (N - 1) / (1 + (N - 2) x^2) is a whole
+/// number, and interpolated linearly in t. The last sample (x = 0) is 1, the first two (x >= 1)
+/// are 0. Matches the Unity 6000.0.71f1 Editor, tests/projects/realtimegi (the direct light per
+/// cluster within 0.05%).
+struct FalloffTable([f32; FALLOFF_SAMPLES]);
+
+impl FalloffTable {
+    fn new(falloff: impl Fn(f32) -> f32) -> Self {
+        let n = FALLOFF_SAMPLES as f32;
+        let mut values = [0.0; FALLOFF_SAMPLES];
+        for (i, v) in values
+            .iter_mut()
+            .enumerate()
+            .take(FALLOFF_SAMPLES - 1)
+            .skip(2)
+        {
+            // x^2 at table position i.
+            *v = falloff(((n - 1.0) / i as f32 - 1.0) / (n - 2.0));
+        }
+        values[FALLOFF_SAMPLES - 1] = 1.0;
+        Self(values)
+    }
+
+    /// The falloff at `x2` = (distance / range)^2.
+    fn eval(&self, x2: f32) -> f32 {
+        let n = FALLOFF_SAMPLES as f32;
+        let t = ((n - 1.0) / (1.0 + (n - 2.0) * x2)).clamp(0.0, n - 1.0);
+        let i = (t as usize).min(FALLOFF_SAMPLES - 2);
+        let (a, b) = (self.0[i], self.0[i + 1]);
+        a + (b - a) * (t - i as f32)
+    }
+}
+
+static LEGACY_FALLOFF: std::sync::LazyLock<FalloffTable> =
+    std::sync::LazyLock::new(|| FalloffTable::new(legacy_falloff));
 
 /// RGB9E5 encoding (5-bit shared exponent, 9-bit mantissas), the realtime lightmap's format.
 pub fn encode_rgb9e5(rgb: [f32; 3]) -> u32 {
@@ -126,6 +232,42 @@ fn mean_change(new: [f32; 3], old: [f32; 3]) -> f32 {
 fn mul_add(acc: &mut [f32; 3], w: f32, v: [f32; 3]) {
     for k in 0..3 {
         acc[k] += w * v[k];
+    }
+}
+
+/// The direct light of point and spot lights on each cluster: the mean over its points of the
+/// cosine of the point's normal (as stored, not renormalized) with the direction to the light,
+/// times the light's sampled distance falloff, its angular falloff (spot lights) and its color.
+fn shade_lights(input: &InputSamples, lights: &[Light], out: &mut [[f32; 3]]) {
+    let falloff = &*LEGACY_FALLOFF;
+    for (c, out) in out.iter_mut().enumerate() {
+        let (first, end) = (
+            input.cluster_points[c] as usize,
+            input.cluster_points[c + 1] as usize,
+        );
+        let mut sum = [0.0f32; 3];
+        for p in first..end {
+            let (pos, n) = (input.positions[p], input.normals[p]);
+            for light in lights {
+                let d = [0, 1, 2].map(|k| light.position[k] - pos[k]);
+                let length2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+                if length2 <= 0.0 || light.range <= 0.0 {
+                    continue;
+                }
+                let inverse = 1.0 / length2.sqrt();
+                let cos = (n[0] * d[0] + n[1] * d[1] + n[2] * d[2]) * inverse;
+                if cos <= 0.0 {
+                    continue;
+                }
+                let mut w = cos * falloff.eval(length2 / (light.range * light.range));
+                if let Some(spot) = &light.spot {
+                    w *= spot.falloff(d.map(|v| -v * inverse));
+                }
+                mul_add(&mut sum, w, light.color);
+            }
+        }
+        let count = (end - first).max(1) as f32;
+        *out = sum.map(|v| v / count);
     }
 }
 
@@ -218,35 +360,9 @@ impl SystemSolver {
         &self.system
     }
 
-    /// The direct light of `lights` on each cluster: the mean over its points.
-    pub fn set_lights(&mut self, lights: &[PointLight]) {
-        let input = &self.system.input;
-        for (c, out) in self.direct.iter_mut().enumerate() {
-            let (first, end) = (
-                input.cluster_points[c] as usize,
-                input.cluster_points[c + 1] as usize,
-            );
-            let mut sum = [0.0f32; 3];
-            for p in first..end {
-                let (pos, n) = (input.positions[p], input.normals[p]);
-                for light in lights {
-                    let d = [0, 1, 2].map(|k| light.position[k] - pos[k]);
-                    let length2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
-                    if length2 <= 0.0 || light.range <= 0.0 {
-                        continue;
-                    }
-                    let length = length2.sqrt();
-                    let cos = (n[0] * d[0] + n[1] * d[1] + n[2] * d[2]) / length;
-                    if cos <= 0.0 {
-                        continue;
-                    }
-                    let falloff = legacy_falloff(length2 / (light.range * light.range));
-                    mul_add(&mut sum, cos * falloff, light.color);
-                }
-            }
-            let count = (end - first).max(1) as f32;
-            *out = sum.map(|v| v / count);
-        }
+    /// The direct light of `lights` on each cluster.
+    pub fn set_lights(&mut self, lights: &[Light]) {
+        shade_lights(&self.system.input, lights, &mut self.direct);
     }
 
     /// The system's albedo texture as the meta pass renders it: RGBA8, `width * height` texels
@@ -497,5 +613,128 @@ impl SystemSolver {
     /// system resolution.
     pub fn encoded(&self) -> &[u32] {
         &self.encoded
+    }
+}
+
+#[cfg(test)]
+mod falloff_tests {
+    use super::*;
+
+    #[test]
+    fn the_falloff_table_samples_and_interpolates_the_curve() {
+        let table = &*LEGACY_FALLOFF;
+        // At the sample positions the table is the curve; at x = 0 it is 1, from the range on 0.
+        for i in 2..FALLOFF_SAMPLES - 1 {
+            let x2 = (15.0 / i as f32 - 1.0) / 14.0;
+            assert!(
+                (table.eval(x2) - legacy_falloff(x2)).abs() < 1e-6,
+                "sample {i}"
+            );
+        }
+        assert_eq!(table.eval(0.0), 1.0);
+        assert_eq!(table.eval(1.0), 0.0);
+        assert_eq!(table.eval(4.0), 0.0);
+        assert_eq!(table.eval(f32::INFINITY), 0.0);
+        // Between samples it is linear in the table position, not the curve: at x = 0.5 the
+        // position is 15 / 4.5 (between samples 3 and 4).
+        let t = 15.0f32 / 4.5;
+        let (a, b) = (
+            legacy_falloff((15.0 / 3.0 - 1.0) / 14.0),
+            legacy_falloff((15.0 / 4.0 - 1.0) / 14.0),
+        );
+        let expected = a + (b - a) * (t - 3.0);
+        assert!((table.eval(0.25) - expected).abs() < 1e-6);
+        assert!((table.eval(0.25) - legacy_falloff(0.25)).abs() > 1e-4);
+    }
+
+    #[test]
+    fn a_spot_cone_steps_between_its_default_inner_and_its_outer_angle() {
+        let cone = SpotCone::new([0.0, 0.0, 1.0], 60.0);
+        let at = |degrees: f32| {
+            let r = degrees.to_radians();
+            cone.falloff([r.sin(), 0.0, r.cos()])
+        };
+        // Full inside the default inner cone (half angle atan(tan(30) * 0.71875) = 22.54
+        // degrees), nothing outside the outer one.
+        assert_eq!(at(0.0), 1.0);
+        assert_eq!(at(22.0), 1.0);
+        assert_eq!(at(30.5), 0.0);
+        assert_eq!(at(90.0), 0.0);
+        assert_eq!(at(180.0), 0.0);
+        // In between: the square of the position in cosine between the two half angles, at the
+        // table step at or below the point's cosine.
+        let (outer, inner) = (30f32.to_radians().cos(), 22.5427f32.to_radians().cos());
+        let step = (1.0 - outer) / SPOT_STEPS as f32;
+        let cos = 26f32.to_radians().cos();
+        let below = outer + ((cos - outer) / step).floor() * step;
+        let expected = ((below - outer) / (inner - outer)).powi(2);
+        assert!(
+            (at(26.0) - expected).abs() < 1e-3,
+            "{} vs {expected}",
+            at(26.0)
+        );
+        assert!((at(26.0) - ((cos - outer) / (inner - outer)).powi(2)).abs() > 1e-3);
+        let mut last = 1.0;
+        for d in 0..40 {
+            let v = at(d as f32);
+            assert!(v <= last, "not decreasing at {d}");
+            last = v;
+        }
+        // A degenerate cone or direction stays finite.
+        let point = SpotCone::new([0.0, 0.0, 1.0], 0.0);
+        assert!(point.falloff([0.0, 0.0, 1.0]).is_finite());
+        assert_eq!(cone.falloff([f32::NAN; 3]), 0.0);
+    }
+
+    #[test]
+    fn a_point_light_lights_a_cluster_by_its_normal_and_the_table() {
+        // A cluster of one quad at the origin facing +y, a light 2 above it with range 4.
+        let mut input = crate::data::InputSamples {
+            positions: vec![[0.0; 3]; 4],
+            normals: vec![[0.0, 1.0, 0.0]; 4],
+            cluster_points: vec![0, 4],
+            tree_children: vec![],
+            tree_weights: vec![],
+        };
+        let light = Light {
+            position: [0.0, 2.0, 0.0],
+            color: [1.0, 0.5, 0.25],
+            range: 4.0,
+            spot: None,
+        };
+        let direct = |input: &crate::data::InputSamples| {
+            let mut out = [[0.0f32; 3]; 1];
+            shade_lights(input, &[light], &mut out);
+            out[0]
+        };
+        let f = LEGACY_FALLOFF.eval(0.25);
+        assert_eq!(direct(&input), [f, 0.5 * f, 0.25 * f]);
+        // Facing away: nothing; at 45 degrees for half the points: their cosine.
+        input.normals = vec![[0.0, -1.0, 0.0]; 4];
+        assert_eq!(direct(&input), [0.0; 3]);
+        let h = std::f32::consts::FRAC_1_SQRT_2;
+        input.normals = vec![[0.0, 1.0, 0.0], [0.0, 1.0, 0.0], [h, h, 0.0], [h, h, 0.0]];
+        assert!((direct(&input)[0] - f * (1.0 + h) / 2.0).abs() < 1e-6);
+        // A spot light pointing down lights the cluster as the point light did; pointing
+        // sideways, not at all.
+        input.normals = vec![[0.0, 1.0, 0.0]; 4];
+        let shade = |light: Light| {
+            let mut out = [[0.0f32; 3]; 1];
+            shade_lights(&input, &[light], &mut out);
+            out[0]
+        };
+        let down = Light {
+            spot: Some(SpotCone::new([0.0, -1.0, 0.0], 30.0)),
+            ..light
+        };
+        assert_eq!(shade(down), [f, 0.5 * f, 0.25 * f]);
+        let sideways = Light {
+            spot: Some(SpotCone::new([1.0, 0.0, 0.0], 30.0)),
+            ..light
+        };
+        assert_eq!(shade(sideways), [0.0; 3]);
+        // Out of range: nothing.
+        input.positions = vec![[0.0, -3.0, 0.0]; 4];
+        assert_eq!(direct(&input), [0.0; 3]);
     }
 }

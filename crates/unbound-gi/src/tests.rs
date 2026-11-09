@@ -2,7 +2,7 @@
 //! tests/projects/realtimegi (Room scene).
 use crate::data::{Precomputed, System, read_precomputed};
 use crate::probes::ProbeSetSolver;
-use crate::solver::{PointLight, SystemSolver, gamma_to_linear};
+use crate::solver::{Light, SpotCone, SystemSolver, gamma_to_linear};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -117,6 +117,7 @@ struct Room {
     /// The flat ambient color (gamma).
     ambient: [f32; 3],
     point_light: bool,
+    spot_light: bool,
     /// DynamicGI.updateThreshold.
     threshold: f32,
 }
@@ -132,15 +133,26 @@ const BASE: Room = Room {
     left_rendered: [0.8, 0.1, 0.1],
     ambient: [0.1, 0.12, 0.2],
     point_light: true,
+    spot_light: false,
     threshold: 1.0,
 };
 const MOVED: [f32; 3] = [1.5, 2.5, -1.5];
 /// The emissive panel's renderer (scene object file ID).
 const PANEL: i64 = 1629154324;
 
+/// A rotation's forward vector (+z rotated by the quaternion x, y, z, w).
+fn forward(q: [f32; 4]) -> [f32; 3] {
+    let [x, y, z, w] = q;
+    [
+        2.0 * (x * z + w * y),
+        2.0 * (y * z - w * x),
+        1.0 - 2.0 * (x * x + y * y),
+    ]
+}
+
 /// Values allowed outside the probe comparator's tolerance per case once the light moved: a few
 /// isolated texels, since a part of the lightmap is solved again only when its inputs change by
-/// the update threshold, and the point light's direct input is within about 2% per cluster.
+/// the update threshold.
 const ISOLATED: usize = 4;
 
 /// The Room scene's system replayed through the probe's cases in order: the Editor's update
@@ -203,15 +215,31 @@ impl Replay {
         }
         self.solver
             .set_uniform_environment(room.ambient.map(gamma_to_linear));
-        let lights = [PointLight {
+        // The project has no linear light intensity: the gamma colors are scaled, then
+        // converted.
+        let point = Light {
             position: room.light,
-            // The project has no linear light intensity: the gamma color is scaled, then
-            // converted.
-            color: [1.0, 0.95, 0.85].map(|c: f32| (c * room.intensity * room.bounce).powf(2.2)),
+            color: [1.0, 0.95, 0.85]
+                .map(|c: f32| gamma_to_linear(c * room.intensity * room.bounce)),
             range: 10.0,
-        }];
-        self.solver
-            .set_lights(if room.point_light { &lights } else { &[] });
+            spot: None,
+        };
+        // The scene's spot light: intensity 3, range 9, angle 50 (its inner angle, 21.8, is not
+        // what the angular falloff uses).
+        let spot = Light {
+            position: [1.5, 3.5, -1.0],
+            color: [0.6, 0.8, 1.0].map(|c: f32| gamma_to_linear(c * 3.0)),
+            range: 9.0,
+            spot: Some(SpotCone::new(
+                forward([0.3630454, -0.2921564, 0.12101513, 0.8764691]),
+                50.0,
+            )),
+        };
+        let lights: Vec<Light> = [(room.point_light, point), (room.spot_light, spot)]
+            .into_iter()
+            .filter_map(|(on, light)| on.then_some(light))
+            .collect();
+        self.solver.set_lights(&lights);
         self.solver.set_indirect_scale(room.indirect_scale);
         self.solver.set_update_threshold(room.threshold);
         self.room = Some(room);
@@ -263,8 +291,9 @@ impl Replay {
 
     /// The light probes' coefficients compared with the Editor's in `case`: (coefficients off,
     /// the largest difference). A coefficient is off beyond the probe comparator's tolerance plus
-    /// 1% of its channel's band-0 coefficient: the direct light's residual (about 2% per
-    /// cluster) moves the small higher-band coefficients of bright probes by that much.
+    /// 1% of its channel's band-0 coefficient: in the brightest case (room-bounce) some small
+    /// higher-band coefficients differ by up to about 0.5% of band 0 (not from the direct light,
+    /// which matches).
     fn probes(&self, case: &str) -> (usize, f32) {
         let room = self.room.unwrap();
         let environment = vec![room.ambient.map(gamma_to_linear); crate::data::ENVIRONMENT_VALUES];
@@ -336,6 +365,25 @@ fn reads_the_rooms_precomputed_data() {
     assert_eq!(texels, 2160);
     assert_eq!(s.transport.bounce.len(), 3100);
     assert_eq!(s.materials.instance_renderers.len(), 7);
+    // The axis-aligned faces' normals decode to exact unit axes (bytes 0, 127 and 254), the
+    // others keep their stored length.
+    let axis = s
+        .input
+        .normals
+        .iter()
+        .filter(|n| n.iter().all(|&v| v == 0.0 || v.abs() == 1.0))
+        .count();
+    assert!(
+        axis > s.input.normals.len() / 2,
+        "{axis} axis-aligned normals"
+    );
+    assert!(
+        s.input
+            .normals
+            .iter()
+            .flatten()
+            .all(|&v| (v - v.round()).abs() > 0.004 || v == v.round())
+    );
 }
 
 #[test]
@@ -348,7 +396,7 @@ fn replays_the_probes_cases() {
         light: MOVED,
         ..BASE
     };
-    r.check(moved, "room-moved", 0, 0.006);
+    r.check(moved, "room-moved", 0, 0.001);
     // Twice as intense, then with bounce intensity 3 (scaled before the conversion to linear).
     let lit = Room {
         intensity: 4.0,
@@ -416,6 +464,18 @@ fn replays_the_probes_cases() {
         },
         "room-pointoff",
         ISOLATED,
+        0.006,
+    );
+    // The spot light alone, from room-pointoff's state (whose isolated texels stay off, with a
+    // few next to them).
+    r.check(
+        Room {
+            point_light: false,
+            spot_light: true,
+            ..ambient
+        },
+        "room-spot",
+        2 * ISOLATED,
         0.006,
     );
 }
@@ -487,8 +547,8 @@ fn a_threshold_of_zero_converges_at_a_scale_that_rounds() {
 #[test]
 fn the_update_threshold_keeps_parts_that_changed_less() {
     // Converged from a brighter and from a darker state: at the default threshold of 1% the
-    // outputs differ (parts whose inputs changed by less keep earlier lighting), at 0 they are
-    // the same fixed point.
+    // outputs differ (parts whose inputs changed by less keep earlier lighting), at 0 they reach
+    // the same fixed point (but for the drawn texels' quantization).
     let mut texels = Vec::new();
     for threshold in [1.0, 0.0] {
         let mut outputs = Vec::new();
@@ -509,8 +569,23 @@ fn the_update_threshold_keeps_parts_that_changed_less() {
         }
         texels.push(outputs);
     }
-    assert_ne!(texels[0][0], texels[0][1]);
-    assert_eq!(texels[1][0], texels[1][1]);
+    // Texels more than one 9-bit mantissa step apart (the RGB9E5 quantization of the drawn
+    // texels, which the bounce reads, leaves fixed points that close to each other).
+    let apart = |a: &[u32], b: &[u32]| {
+        a.iter()
+            .zip(b)
+            .filter(|&(&a, &b)| {
+                let (a, b) = (
+                    crate::solver::decode_rgb9e5(a),
+                    crate::solver::decode_rgb9e5(b),
+                );
+                let step = a.iter().chain(&b).fold(0f32, |m, &v| m.max(v)) / 256.0;
+                (0..3).any(|k| (a[k] - b[k]).abs() > step + 1e-6)
+            })
+            .count()
+    };
+    assert!(apart(&texels[0][0], &texels[0][1]) > 100);
+    assert_eq!(apart(&texels[1][0], &texels[1][1]), 0);
     // A threshold above the change of a part's inputs leaves it as it was.
     let mut r = Replay::new();
     r.set(BASE);
