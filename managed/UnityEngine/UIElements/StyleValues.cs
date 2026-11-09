@@ -458,35 +458,38 @@ namespace UnityEngine.UIElements
         public Angle(float value, AngleUnit unit) : this(value, (Unit)unit) { }
         Angle(float value, Unit unit) { m_Value = value; m_Unit = unit; }
 
+        // Unity's Mono evaluates these float expressions in double precision and rounds once at
+        // the end; computing them in float here would differ in the last bit (an arc from 90° to
+        // 450° would no longer span exactly 2π).
         public float ToDegrees() => m_Unit switch
         {
-            Unit.Gradian => m_Value * 360f / 400f,
-            Unit.Radian => m_Value * 180f / Mathf.PI,
-            Unit.Turn => m_Value * 360f,
+            Unit.Gradian => (float)((double)m_Value * 360.0 / 400.0),
+            Unit.Radian => (float)((double)m_Value * 180.0 / (double)Mathf.PI),
+            Unit.Turn => (float)((double)m_Value * 360.0),
             Unit.None => 0f,
             _ => m_Value,
         };
         public float ToGradians() => m_Unit switch
         {
-            Unit.Degree => m_Value * 400f / 360f,
-            Unit.Radian => m_Value * 200f / Mathf.PI,
-            Unit.Turn => m_Value * 400f,
+            Unit.Degree => (float)((double)m_Value * 400.0 / 360.0),
+            Unit.Radian => (float)((double)m_Value * 200.0 / (double)Mathf.PI),
+            Unit.Turn => (float)((double)m_Value * 400.0),
             Unit.None => 0f,
             _ => m_Value,
         };
         public float ToRadians() => m_Unit switch
         {
-            Unit.Degree => m_Value * Mathf.PI / 180f,
-            Unit.Gradian => m_Value * Mathf.PI / 200f,
-            Unit.Turn => m_Value * Mathf.PI * 2f,
+            Unit.Degree => (float)((double)m_Value * (double)Mathf.PI / 180.0),
+            Unit.Gradian => (float)((double)m_Value * (double)Mathf.PI / 200.0),
+            Unit.Turn => (float)((double)m_Value * (double)Mathf.PI * 2.0),
             Unit.None => 0f,
             _ => m_Value,
         };
         public float ToTurns() => m_Unit switch
         {
-            Unit.Degree => m_Value / 360f,
-            Unit.Gradian => m_Value / 400f,
-            Unit.Radian => m_Value / (Mathf.PI * 2f),
+            Unit.Degree => (float)((double)m_Value / 360.0),
+            Unit.Gradian => (float)((double)m_Value / 400.0),
+            Unit.Radian => (float)((double)m_Value / ((double)Mathf.PI * 2.0)),
             Unit.None => 0f,
             _ => m_Value,
         };
