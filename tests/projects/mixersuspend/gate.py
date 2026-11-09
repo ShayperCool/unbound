@@ -57,6 +57,8 @@ def main():
         unexpected += failures if name == 'suspension' else check(report, name, rate)
     subprocess.run([sys.executable, str(FIXTURE/'delivery.py'), 'gate', '--release', args.release,
                     '--runtime', str(runtime), '--work', str(work/'delivery')], check=True)
+    subprocess.run([sys.executable, str(FIXTURE/'stream_clocks.py'), 'gate', '--release', args.release,
+                    '--runtime', str(runtime), '--work', str(work/'stream-clocks')], check=True)
     print(f'AudioMixer suspension gate: {unexpected} unexplained failures; complete reports: {work}', flush=True)
     return bool(unexpected)
 
