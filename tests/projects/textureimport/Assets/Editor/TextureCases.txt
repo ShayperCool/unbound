@@ -88,4 +88,9 @@ PsdMatteOff mips=0 srgb=0 matte=0
 PsdMatteFlat mips=0 srgb=0
 PsdMatte5 mips=0 srgb=0
 PsdGrayAlpha mips=0 srgb=0
-PsdMatteNoKey mips=0 srgb=0
+PsdMatteNoKey mips=0 srgb=0 matte=none
+PsdMatteFlatOn mips=0 srgb=0 matte=1
+PsdMatte5On mips=0 srgb=0 matte=1
+PsdMatteBelowOn mips=0 srgb=0 matte=1
+PsdMatte16On mips=0 srgb=0 matte=1
+PsdGrayAlphaMarked mips=0 srgb=0 matte=1

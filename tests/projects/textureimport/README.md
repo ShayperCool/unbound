@@ -14,8 +14,9 @@ three sizes, gray and coloured sources and impulses (filter kernels). Photoshop 
 16-bit PNG show how deep channels become bytes (the byte nearest v / 257; gray reads opaque,
 whatever extra channels it has). Flattened colour over white with Photoshop's merged-transparency
 mark (a negative layer count) shows Remove Matte (`pSDRemoveMatte`, default off, also when the
-`.meta` lacks the key: PsdMatteNoKey's line is removed after `ProbeRunner.Create`), a file without
-the mark and a 5-channel file (the first extra channel is alpha).
+`.meta` lacks the key: `ProbeRunner.Create` removes PsdMatteNoKey's line), files without the
+mark, with 5 channels (the first extra channel is alpha), with colour below the white blend, with
+16 bits, and gray with alpha (read opaque).
 Every case is readable and
 stored as RGBA32, the float case as RGBAFloat (platform overrides; uncompressed default platform),
 so compression hides nothing.

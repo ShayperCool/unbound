@@ -263,7 +263,7 @@ def packbits(data):
     return bytes(out)
 
 
-def matted(w, h, seed, channels):
+def matted(w, h, seed, channels, depth=8, below=False):
     """Photoshop's flattened colour over white: alpha steps through 0, 1, 2, ..., 255 and a few
     random values; colour c is stored as c * a / 255 + 255 - a, rounded. A 5th channel (if any)
     is a spot channel of noise."""
@@ -275,9 +275,14 @@ def matted(w, h, seed, channels):
             a = (y * w + x) % 256 if (x + y) % 5 else rng.byte()
             colour = [rng.byte() for _ in range(3)]
             stored = [(c * a + 255 * (255 - a) + 127) // 255 for c in colour]
+            if below:
+                # Colour under the white blend (not what Photoshop writes).
+                stored = [rng.byte() * (255 - a) // 255 for _ in range(3)]
             texel = (stored[0], a) if channels == 2 else tuple(stored) + (a,)
             if channels == 5:
                 texel += (rng.byte(),)
+            if depth == 16:
+                texel = tuple(v * 257 + (rng.byte() & 0x7f if 0 < v < 255 else 0) for v in texel)
             row.append(texel)
         rows.append(row)
     return w, h, rows
@@ -357,6 +362,9 @@ FILE_SOURCES = {
     'Matte5': ('psd', 8, True, True),
     'MatteFlat': ('psd', 8, False, False),
     'GrayAlpha': ('psd', 8, False),
+    'GrayAlphaMarked': ('psd', 8, False, True),
+    'MatteBelow': ('psd', 8, False, True),
+    'Matte16': ('psd', 16, False, True),
     'Deep': ('psd', 16, False),
     'DeepAlphaRle': ('psd', 16, True),
     'DeepGray': ('psd', 16, False),
@@ -368,6 +376,9 @@ SOURCES.update({
     'Matte5': lambda: matted(32, 32, 26, 5),
     'MatteFlat': lambda: matted(32, 32, 25, 4),
     'GrayAlpha': lambda: matted(32, 32, 27, 2),
+    'GrayAlphaMarked': lambda: matted(32, 32, 27, 2),
+    'MatteBelow': lambda: matted(32, 32, 28, 4, below=True),
+    'Matte16': lambda: matted(32, 32, 29, 4, depth=16),
     'Deep': lambda: deep(32, 32, 21, 3),
     'DeepAlphaRle': lambda: deep(32, 32, 22, 4),
     'DeepGray': lambda: deep(32, 32, 23, 1),
@@ -473,9 +484,16 @@ CASES = {
     'PsdMatteFlat': ('MatteFlat', 'mips=0 srgb=0'),
     'PsdMatte5': ('Matte5', 'mips=0 srgb=0'),
     'PsdGrayAlpha': ('GrayAlpha', 'mips=0 srgb=0'),
-    # Its .meta has the pSDRemoveMatte line removed after ProbeRunner.Create (as in metas written
-    # before the setting existed).
-    'PsdMatteNoKey': ('Matte', 'mips=0 srgb=0'),
+    # matte=none: ProbeRunner.Create removes the pSDRemoveMatte line from its .meta (as in metas
+    # written before the setting existed).
+    'PsdMatteNoKey': ('Matte', 'mips=0 srgb=0 matte=none'),
+    # Remove Matte on: without the mark, 5 channels, colour under the white blend, 16 bits; and a
+    # marked gray file with alpha.
+    'PsdMatteFlatOn': ('MatteFlat', 'mips=0 srgb=0 matte=1'),
+    'PsdMatte5On': ('Matte5', 'mips=0 srgb=0 matte=1'),
+    'PsdMatteBelowOn': ('MatteBelow', 'mips=0 srgb=0 matte=1'),
+    'PsdMatte16On': ('Matte16', 'mips=0 srgb=0 matte=1'),
+    'PsdGrayAlphaMarked': ('GrayAlphaMarked', 'mips=0 srgb=0 matte=1'),
 }
 
 

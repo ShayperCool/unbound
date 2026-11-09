@@ -25,6 +25,12 @@ public static class ProbeRunner
             var importer = (TextureImporter)AssetImporter.GetAtPath(path);
             Apply(importer, parts.Skip(1));
             importer.SaveAndReimport();
+            // A .meta from before Remove Matte existed: the key is left out.
+            if (parts.Contains("matte=none"))
+            {
+                var meta = path + ".meta";
+                File.WriteAllLines(meta, File.ReadAllLines(meta).Where(l => !l.Contains("pSDRemoveMatte")));
+            }
         }
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var probe = new GameObject("TextureImportProbe").AddComponent<TextureImportProbe>();
@@ -113,6 +119,8 @@ public static class ProbeRunner
                     importer.heightmapScale = F(args[1]);
                     break;
                 case "flipgreen": importer.flipGreenChannel = value == "1"; break;
+                case "matte" when value == "none":
+                    break;
                 case "matte":
                 {
                     var serialized = new SerializedObject(importer);
