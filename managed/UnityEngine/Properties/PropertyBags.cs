@@ -628,7 +628,7 @@ namespace Unity.Properties.Internal
 
         /// <summary>The built-in bags register before anything is looked up (the engine does it at
         /// startup).</summary>
-        static void EnsureInitialized()
+        internal static void EnsureInitialized()
         {
             if (System.Threading.Interlocked.Exchange(ref s_Initialized, 1) == 0) PropertiesInitialization.InitializeProperties();
         }
@@ -734,6 +734,8 @@ namespace Unity.Properties.Internal
             PropertyBag.Register(new BoundsPropertyBag());
             PropertyBag.Register(new BoundsIntPropertyBag());
             PropertyBag.Register(new SystemVersionPropertyBag());
+            // UI Toolkit's built-in bags (style values and their converters), as Unity registers them at startup.
+            Unbound.UIElements.StylePropertyBags.Register();
         }
     }
 

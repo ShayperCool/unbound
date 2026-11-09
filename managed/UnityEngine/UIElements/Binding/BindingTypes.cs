@@ -447,12 +447,20 @@ namespace UnityEngine.UIElements
         static readonly ConverterGroup s_GlobalConverters = new ConverterGroup("__global_converters");
         static readonly Dictionary<string, ConverterGroup> s_Groups = new Dictionary<string, ConverterGroup>();
 
+        // The built-in converters (style values) are registered with the built-in property bags.
+        static ConverterGroups() => Unity.Properties.Internal.PropertyBagStore.EnsureInitialized();
+
         internal static ConverterGroup globalConverters => s_GlobalConverters;
 
         public static void RegisterGlobalConverter<TSource, TDestination>(TypeConverter<TSource, TDestination> converter) =>
             s_GlobalConverters.AddConverter(converter);
 
-        internal static void RegisterGlobal<TSource, TDestination>(TypeConverter<TSource, TDestination> converter) => RegisterGlobalConverter(converter);
+        /// <summary>A built-in global converter: also one of Unity.Properties' type conversions.</summary>
+        internal static void RegisterGlobal<TSource, TDestination>(TypeConverter<TSource, TDestination> converter)
+        {
+            RegisterGlobalConverter(converter);
+            TypeConversion.Register(converter);
+        }
 
         internal static void AddConverterToGroup<TSource, TDestination>(string groupId, TypeConverter<TSource, TDestination> converter)
         {
