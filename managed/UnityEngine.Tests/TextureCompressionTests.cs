@@ -34,6 +34,10 @@ namespace UnityEngine.Tests
         [InlineData(TextureFormat.BC4, 2, 2, 8)]
         [InlineData(TextureFormat.BC7, 1, 1, 16)]
         [InlineData(TextureFormat.DXT5, 20, 12, 240)]
+        [InlineData(TextureFormat.ETC_RGB4, 64, 64, 2048)]
+        [InlineData(TextureFormat.ETC2_RGB, 2, 2, 8)]
+        [InlineData(TextureFormat.ETC2_RGBA8, 20, 12, 240)]
+        [InlineData(TextureFormat.EAC_R, 4, 4, 0)]
         [InlineData(TextureFormat.RGBA32, 4, 4, 0)]
         public void BlockLevelsAreWholeBlocks(TextureFormat format, int width, int height, int bytes)
         {

@@ -81,7 +81,7 @@ namespace UnityEngine
             var block = new ReadOnlySpan<byte>(m_Store, at, size);
             int k = (y % 4) * 4 + x % 4;
             Color32 texel;
-            if (format is TextureFormat.BC6H or TextureFormat.BC7)
+            if (BlockFormats.NativeDecoded(format))
             {
                 // One block decoded as a 4x4 level.
                 var rgba = DecodeBlockRgba(block, 4, 4);
@@ -116,7 +116,7 @@ namespace UnityEngine
             if (blocks == null) return null;
             var format = m_SourceFormat.Value;
             var pixels = new Color32[m_Width * m_Height];
-            if (format is TextureFormat.BC6H or TextureFormat.BC7)
+            if (BlockFormats.NativeDecoded(format))
             {
                 var rgba = DecodeBlockRgba(new ReadOnlySpan<byte>(blocks, 0, SourceLevelSize(0)), m_Width, m_Height);
                 for (int i = 0; i < pixels.Length; i++) pixels[i] = new Color32(rgba[i * 4], rgba[i * 4 + 1], rgba[i * 4 + 2], rgba[i * 4 + 3]);
@@ -212,18 +212,33 @@ namespace UnityEngine
             if (SourceBlocks) throw new ArgumentException($"{api}: texture uses an unsupported format. (Texture '{name}')");
         }
 
-        /// <summary>Uploads a block-compressed texture's blocks.</summary>
+        /// <summary>Uploads a block-compressed texture's blocks; ETC blocks as the RGBA8 texels
+        /// they decode to (the renderer samples no ETC formats, as the Editor's desktop GPUs).</summary>
         unsafe void UploadBlocks()
         {
             var blocks = CurrentBlocks();
             m_GpuMipCount = m_SourceMips;
+            int format = BlockFormats.GpuCode(m_SourceFormat.Value, m_Linear);
+            if (format < 0)
+            {
+                var texels = new System.IO.MemoryStream();
+                int at = 0;
+                for (int mip = 0; mip < m_SourceMips; mip++)
+                {
+                    int size = SourceLevelSize(mip);
+                    texels.Write(DecodeBlockRgba(new ReadOnlySpan<byte>(blocks, at, size), MipWidth(mip), MipHeight(mip)));
+                    at += size;
+                }
+                blocks = texels.ToArray();
+                format = m_Linear ? 1 : 0;
+            }
             fixed (byte* b = blocks)
             {
                 var packet = new TexturePacket
                 {
                     Width = m_Width,
                     Height = m_Height,
-                    Format = BlockFormats.GpuCode(m_SourceFormat.Value, m_Linear),
+                    Format = format,
                     MipCount = m_SourceMips,
                     Data = b,
                     DataLength = blocks.Length,
@@ -314,7 +329,9 @@ namespace UnityEngine
 
         /// <summary>Texture2D.Compress: RGB24 (and RGB565) to DXT1, formats with alpha to DXT5, R8
         /// to BC4, RG16 to BC5, every level from its pixels (tests/projects/texturecompression
-        /// compress.*); a compressed, unreadable or not block-sized texture is left alone. The
+        /// compress.*); with the Android target active, formats with alpha to ETC2_RGBA8 and the
+        /// others to ETC2_RGB (the Editor's OpenGL device takes no EAC there: AndroidGamma
+        /// compress.*). A compressed, unreadable or not block-sized texture is left alone. The
         /// blocks are Unbound's encoder's, not the Editor's runtime compressor's, and
         /// `highQuality` (dithering) is not applied.</summary>
         void CompressToBlocks(bool highQuality)
@@ -322,25 +339,26 @@ namespace UnityEngine
             // Any compressed texture is left alone (an AssetBundle's ETC or ASTC texture too, whose
             // pixels Unbound keeps decoded), as the documentation says.
             if (m_SourceFormat != null || !m_IsReadable || m_Width % 4 != 0 || m_Height % 4 != 0) return;
+            bool etc = UnityEditor.EditorUserBuildSettingsInfo.ActiveGroup == UnityEditor.BuildTargetGroup.Android;
             TextureFormat target;
             switch (m_Format)
             {
                 case TextureFormat.RGB24:
                 case TextureFormat.RGB565:
-                    target = TextureFormat.DXT1;
+                    target = etc ? TextureFormat.ETC2_RGB : TextureFormat.DXT1;
                     break;
                 case TextureFormat.RGBA32:
                 case TextureFormat.ARGB32:
                 case TextureFormat.BGRA32:
                 case TextureFormat.RGBA4444:
                 case TextureFormat.ARGB4444:
-                    target = TextureFormat.DXT5;
+                    target = etc ? TextureFormat.ETC2_RGBA8 : TextureFormat.DXT5;
                     break;
                 case TextureFormat.R8:
-                    target = TextureFormat.BC4;
+                    target = etc ? TextureFormat.ETC2_RGB : TextureFormat.BC4;
                     break;
                 case TextureFormat.RG16:
-                    target = TextureFormat.BC5;
+                    target = etc ? TextureFormat.ETC2_RGB : TextureFormat.BC5;
                     break;
                 default:
                     Debug.LogWarning($"Unbound: Texture2D.Compress of a {m_Format} texture is not supported (unmeasured); the texture keeps its format.");
@@ -474,17 +492,26 @@ namespace Unbound.Runtime
     /// <summary>Block-compressed texture formats: 4x4 texel blocks, a level at least one block.</summary>
     internal static class BlockFormats
     {
-        /// <summary>Bytes of one block, or 0 for formats that are not BC1-BC7.</summary>
+        /// <summary>Bytes of one block, or 0 for formats that are not BC1-BC7, ETC_RGB4, ETC2_RGB
+        /// or ETC2_RGBA8.</summary>
         internal static int BlockBytes(UnityEngine.TextureFormat format) => format switch
         {
-            UnityEngine.TextureFormat.DXT1 or UnityEngine.TextureFormat.BC4 => 8,
+            UnityEngine.TextureFormat.DXT1 or UnityEngine.TextureFormat.BC4 or UnityEngine.TextureFormat.ETC_RGB4
+                or UnityEngine.TextureFormat.ETC2_RGB => 8,
             UnityEngine.TextureFormat.DXT5 or UnityEngine.TextureFormat.BC5 or UnityEngine.TextureFormat.BC6H
-                or UnityEngine.TextureFormat.BC7 => 16,
+                or UnityEngine.TextureFormat.BC7 or UnityEngine.TextureFormat.ETC2_RGBA8 => 16,
             _ => 0,
         };
 
+        /// <summary>Formats whose blocks the native side decodes (the others decode texel by texel
+        /// here).</summary>
+        internal static bool NativeDecoded(UnityEngine.TextureFormat format) => format is UnityEngine.TextureFormat.BC6H
+            or UnityEngine.TextureFormat.BC7 or UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB
+            or UnityEngine.TextureFormat.ETC2_RGBA8;
+
         /// <summary>The renderer's packet code of a block format: BC1, BC3 and BC7 colour (sampled
-        /// through an sRGB view in linear projects) or linear data; BC4, BC5 and BC6H.</summary>
+        /// through an sRGB view in linear projects) or linear data; BC4, BC5 and BC6H; -1 for ETC
+        /// (uploaded decoded).</summary>
         internal static int GpuCode(UnityEngine.TextureFormat format, bool linear) => format switch
         {
             UnityEngine.TextureFormat.DXT1 => linear ? 39 : 38,
@@ -493,6 +520,8 @@ namespace Unbound.Runtime
             UnityEngine.TextureFormat.BC4 => 42,
             UnityEngine.TextureFormat.BC5 => 43,
             UnityEngine.TextureFormat.BC6H => 44,
+            UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB
+                or UnityEngine.TextureFormat.ETC2_RGBA8 => -1,
             _ => throw new ArgumentException($"{format} is not a block format"),
         };
 
