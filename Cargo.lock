@@ -6500,6 +6500,7 @@ dependencies = [
  "bevy_winit",
  "bytemuck",
  "image",
+ "khronos-egl",
  "libloading",
  "naga",
  "rustc-hash 2.1.3",

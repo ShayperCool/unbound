@@ -38,6 +38,8 @@ x11rb = { version = "0.13", features = ["randr"] }
 # Native plugins' OpenGL context sharing the renderer's Vulkan memory (render/gl_interop.rs).
 wgpu = { version = "30", default-features = false, features = ["vulkan", "gles"] }
 ash = "0.38"
+# EGL of wgpu's OpenGL backend (its contexts and displays).
+khronos-egl = { version = "6", features = ["dynamic"] }
 libloading = "0.8"
 # Load libwayland-client when a Wayland session needs it instead of linking it, so the binary
 # also starts on X11-only and headless systems that lack the library (only adds a feature to
