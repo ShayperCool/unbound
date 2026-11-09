@@ -233,7 +233,7 @@ namespace UnityEngine.UIElements
         void UaEmit(UaVectorMesh mesh)
         {
             if (m_UaIsDetached || mesh.VertexCount == 0) return;
-            m_UaContext.uaPainter.AddVectorMesh(mesh);
+            m_UaContext.uaPainter.QueueVectorMesh(mesh);
         }
 
         /// <summary>Saves the detached painter's content (its vertices relative to the content's

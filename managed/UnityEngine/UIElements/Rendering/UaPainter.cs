@@ -68,7 +68,19 @@ namespace Unbound.UIElements
         readonly Dictionary<Texture, float> m_TextureIds = new Dictionary<Texture, float>();
         readonly List<NativeArray<Vertex>> m_VertexArrays = new List<NativeArray<Vertex>>();
         readonly List<NativeArray<ushort>> m_IndexArrays = new List<NativeArray<ushort>>();
-        readonly List<(MeshWriteData Data, Texture Texture)> m_PendingUserMeshes = new List<(MeshWriteData, Texture)>();
+        /// <summary>A generateVisualContent mesh waiting for the end of its callback: one the game
+        /// fills after Allocate (Data), or a copy of Painter2D geometry (Vector), kept in call
+        /// order.</summary>
+        struct PendingMesh
+        {
+            public MeshWriteData Data;
+            public Texture Texture;
+            public UaVectorMesh Vector;
+        }
+
+        readonly List<PendingMesh> m_PendingUserMeshes = new List<PendingMesh>();
+        readonly List<UaVectorMesh> m_VectorPool = new List<UaVectorMesh>();
+        int m_VectorPoolUsed;
         readonly MeshGenerationContext m_Context = new MeshGenerationContext();
 
         // The element being drawn.
@@ -374,13 +386,29 @@ namespace Unbound.UIElements
             m_VertexArrays.Add(vertices);
             m_IndexArrays.Add(indices);
             data.Reset(vertices, indices);
-            m_PendingUserMeshes.Add((data, texture));
+            m_PendingUserMeshes.Add(new PendingMesh { Data = data, Texture = texture });
+        }
+
+        /// <summary>Queues Painter2D geometry behind the meshes the callback allocated before it
+        /// (Unity draws a callback's meshes in call order).</summary>
+        internal void QueueVectorMesh(UaVectorMesh mesh)
+        {
+            if (m_VectorPoolUsed == m_VectorPool.Count) m_VectorPool.Add(new UaVectorMesh());
+            var copy = m_VectorPool[m_VectorPoolUsed++];
+            copy.CopyFrom(mesh);
+            m_PendingUserMeshes.Add(new PendingMesh { Vector = copy });
         }
 
         void FlushUserMeshes()
         {
-            foreach (var (data, texture) in m_PendingUserMeshes) AddUserMesh(data.m_Vertices, data.m_Indices, texture);
+            for (int i = 0; i < m_PendingUserMeshes.Count; i++)
+            {
+                var pending = m_PendingUserMeshes[i];
+                if (pending.Vector != null) AddVectorMesh(pending.Vector);
+                else AddUserMesh(pending.Data.m_Vertices, pending.Data.m_Indices, pending.Texture);
+            }
             m_PendingUserMeshes.Clear();
+            m_VectorPoolUsed = 0;
         }
 
         internal void AddUserMesh(NativeSlice<Vertex> vertices, NativeSlice<ushort> indices, Texture texture)

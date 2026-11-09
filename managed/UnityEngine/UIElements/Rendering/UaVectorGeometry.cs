@@ -34,6 +34,17 @@ namespace Unbound.UIElements
             IndexCount = 0;
         }
 
+        /// <summary>Makes this mesh a copy of <paramref name="other"/>'s vertices and indices.</summary>
+        internal void CopyFrom(UaVectorMesh other)
+        {
+            if (Vertices.Length < other.VertexCount) Vertices = new UaVectorVertex[Math.Max(other.VertexCount, Vertices.Length * 2)];
+            if (Indices.Length < other.IndexCount) Indices = new int[Math.Max(other.IndexCount, Indices.Length * 2)];
+            Array.Copy(other.Vertices, Vertices, other.VertexCount);
+            Array.Copy(other.Indices, Indices, other.IndexCount);
+            VertexCount = other.VertexCount;
+            IndexCount = other.IndexCount;
+        }
+
         internal void ClearBounds()
         {
             BoundsMin = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
@@ -126,6 +137,14 @@ namespace Unbound.UIElements
             float m = Math.Abs(a);
             if (m > TwoPi) m -= MathF.Floor(m / TwoPi) * TwoPi;
             return a < 0f ? TwoPi - m : m;
+        }
+
+        /// <summary>Clamps to [-1, 1] the way SSE's max/min do: a NaN (0/0 of a degenerate
+        /// direction) becomes -1, which Unity's acos inputs get.</summary>
+        internal static float ClampUnit(float x)
+        {
+            float m = x > -1f ? x : -1f;
+            return m < 1f ? m : 1f;
         }
 
         internal static bool Near(Vector2 a, Vector2 b) =>
