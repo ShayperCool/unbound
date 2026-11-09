@@ -120,6 +120,35 @@ class PushTests(unittest.TestCase):
             self.assertIn('cannot launch', land_push.enqueue(self.repo, self.state)['launch_error'])
         self.assertEqual(json.loads(land_push.paths(self.repo)[0].read_text())['status'], 'pending')
 
+    def test_worker_runs_outside_the_callers_unit_and_falls_back_to_a_detached_child(self):
+        # A detached child would die with a systemd-run caller; the worker gets its own unit.
+        located = land_push.paths(self.repo)
+        log = located[0].parent/'auto-push.log'
+        for which, result, unit in (('/usr/bin/systemd-run', subprocess.CompletedProcess([], 0), True),
+                                    ('/usr/bin/systemd-run', subprocess.CompletedProcess([], 1, '', 'no bus'), False),
+                                    (None, None, False)):
+            started = []
+            def run(argv, **kwargs):
+                started.append(argv)
+                return result
+            with mock.patch.object(land_push, 'paths', return_value=located), \
+                 mock.patch.object(land_push.shutil, 'which', return_value=which), \
+                 mock.patch.object(land_push.subprocess, 'run', side_effect=run), \
+                 mock.patch.object(land_push.subprocess, 'Popen') as popen:
+                self.assertIsNone(land_push.launch_worker(self.repo))
+            self.assertEqual(bool(started), which is not None)
+            if started:
+                self.assertEqual(started[0][:2], ['systemd-run', '--user'])
+                for flag in ('--collect', '--setenv=PATH', '--setenv=HOME', f'--working-directory={self.repo}'):
+                    self.assertIn(flag, started[0])
+                self.assertIn(f'--property=StandardOutput=append:{log}', started[0])
+                self.assertEqual(started[0][-2:], ['--repo', str(self.repo)])
+            if unit:
+                popen.assert_not_called()
+            else:
+                self.assertEqual(popen.call_args.args[0][-2:], ['--repo', str(self.repo)])
+                self.assertTrue(popen.call_args.kwargs['start_new_session'])
+
     def test_network_push_does_not_need_the_land_lock_and_receipts_wait_for_old_writers(self):
         land_push.enqueue(self.repo, self.state, launch=False)
         with (self.state/'land.lock').open('a') as lock:

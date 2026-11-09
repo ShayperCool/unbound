@@ -5,6 +5,7 @@ import fcntl
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import time
@@ -93,12 +94,41 @@ def enqueue(repo, state, *, launch=True, land_locked=False):
     return value
 
 
-def launch_worker(repo):
-    path, _ = paths(repo)
+def launch_unit(command, log, repo):
+    """Start the worker in its own transient systemd user unit; False when that is unavailable.
+
+    A new session is still in the caller's cgroup. Callers run as `systemd-run --user` services,
+    and stopping such a service kills every process left in it, so a plain detached child dies
+    with its caller and leaves the push pending until a later landing relaunches it."""
+    if not shutil.which('systemd-run'):
+        return False
+    unit = f'unbound-land-push-{os.getpid()}-{time.time_ns()}'
     try:
-        with (path.parent/'auto-push.log').open('a') as out:
-            subprocess.Popen([sys.executable, str(Path(__file__).resolve()), '--repo', str(repo)],
-                             stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+        result = subprocess.run(['systemd-run', '--user', '--quiet', '--collect', f'--unit={unit}',
+                                 f'--working-directory={repo}', '--setenv=PATH', '--setenv=HOME',
+                                 f'--property=StandardOutput=append:{log}',
+                                 f'--property=StandardError=append:{log}', *command],
+                                stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError) as error:
+        reason = str(error)
+    else:
+        if result.returncode == 0:
+            return True
+        reason = f'exit {result.returncode}: {result.stderr.strip()[-500:]}'
+    print(f'land: push worker unit not started, using a detached child: {reason}', file=sys.stderr)
+    return False
+
+
+def launch_worker(repo):
+    repo = Path(repo).resolve()
+    path, _ = paths(repo)
+    command = [sys.executable, str(Path(__file__).resolve()), '--repo', str(repo)]
+    log = path.parent/'auto-push.log'
+    if launch_unit(command, log, repo):
+        return None
+    try:
+        with log.open('a') as out:
+            subprocess.Popen(command, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
                              start_new_session=True, close_fds=True)
     except OSError as error:
         print(f'land: push worker could not start; queued for retry: {error}', file=sys.stderr)
