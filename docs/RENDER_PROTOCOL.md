@@ -319,6 +319,7 @@ before and after it, as on Unity's render thread) and a read back.
 29 CopyDepth    u64 source, u64 destination       // protocol 9
 30 MeshInstance u32 index                         // next Draw is this instance of a mesh-instancing call (protocols 11, 12)
 34 Plugin       u8 kind, u64 callback, fields    // a native plugin's callback (protocol 15)
+35 ScreenStandIn u64 texture                     // the screen's stand-in, 0 none (NativeApi 50)
 property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 (element bits in Draw and Global
             only, see render protocol 6) + f32x4 st, 3 int i32, 4 matrix,
             5 buffer u64, 6 array u32 components (0: consecutive values) u32 n f32[n], 7 image u64 texture i32 mip,
@@ -338,8 +339,9 @@ built-in variables and fog keywords as globals.
 
 Calls run on the GPU as they arrive, on the game's thread (`GpuBackend` → `executor.rs`): a
 submission is planned (passes per target, pipelines, uniforms, bind groups), encoded and queued at
-once, so a read back or the next frame sees its results. Every target is stored bottom-up (Unity's
-row order), so render textures sample upright with Unity's uvs; the screen is a ring of three
+once, so a read back or the next frame sees its results. Every render texture is stored bottom-up
+(Unity's row order), so it samples upright with Unity's uvs, except a screen camera's stand-in,
+stored as the screen is; the screen is a ring of three
 offscreen targets (`Rgba8Unorm` with gamma values in gamma projects, `Rgba16Float` in linear ones);
 `EndFrame` hands the frame's to the window, whose render schedule shows the latest complete one.
 Format 0 textures are sampled raw in gamma projects and through an sRGB view in linear ones;

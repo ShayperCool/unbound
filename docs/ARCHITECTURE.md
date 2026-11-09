@@ -164,7 +164,7 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   .. 0 (far), depth tests, clears, biases and comparison samplers are mirrored, render textures
   are drawn with the projection's y flipped (`_ProjectionParams.x` -1; their rows stay bottom-up,
   as Unity's texture data is) and the screen with it unflipped (its rows top-down; the window,
-  screenshots and `ReadPixels` turn them back), and the render pipelines' framebuffer inputs are
+  screenshots and `ReadPixels` turn them back), as is a screen camera's stand-in (`ScreenStandIn`), and the render pipelines' framebuffer inputs are
   read as their input attachments' textures (`_UnityFBInput<i>`). OpenGL Core is drawn by the
   OS's native wgpu backend for now (Vulkan on Linux, Metal on macOS), Vulkan by wgpu's Vulkan
   backend: wgpu's OpenGL backend lacks what the renderer uses (texture views in another format,

@@ -2319,6 +2319,16 @@ impl UnityRenderer {
 
     /// The target `SetTarget` names: the screen or a render texture.
     fn resolve_target(&mut self, color: u64, depth: u64, mip: i32, slice: i32) -> Option<Target> {
+        // Stored as the screen is when its color or its depth is the screen's stand-in; a target
+        // pairing the stand-in with another texture draws both as the stand-in is stored
+        // (unmeasured: the Editor draws a screen camera into the screen itself).
+        let stand_in = self.screen_stand_in;
+        let screen_like = stand_in != 0 && (color == stand_in || depth == stand_in);
+        if screen_like && (color != stand_in || (depth != 0 && depth != stand_in)) {
+            self.warn_once("stand-in-mixed".into(), || {
+                "a target pairs the screen camera's target with another texture: both are drawn as the screen is stored (unmeasured)".into()
+            });
+        }
         // GL.sRGBWrite off: an sRGB target is bound as the plain format it is stored in.
         let space = if self.state.no_srgb_write {
             0
@@ -2405,7 +2415,7 @@ impl UnityRenderer {
                 width: (t.width >> mip).max(1),
                 height: (t.height >> mip).max(1),
                 screen: false,
-                screen_like: color != 0 && color == self.screen_stand_in,
+                screen_like,
                 extra: Vec::new(),
                 texture: Some((t.texture.clone(), layer, mip)),
                 auto_mips: generate_mips && !t.defer_mips,

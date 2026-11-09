@@ -1495,6 +1495,8 @@ impl UnityRenderer {
     /// screen, a slice of a 3D texture, a format with no Vulkan equivalent).
     fn plugin_render_pass_target(&self) -> Option<PassTarget> {
         let target = self.state.target.as_ref()?;
+        // (A screen camera's stand-in is a render texture stored as the screen is: a plugin pass
+        // over it draws into its top-down rows as onto the screen.)
         if !target.extra.is_empty() || target.screen || target.depth_slice.is_some() {
             return None;
         }
