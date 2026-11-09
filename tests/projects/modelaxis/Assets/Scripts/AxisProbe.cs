@@ -47,17 +47,21 @@ public class AxisProbe : MonoBehaviour
                 Add(k + "/bones", L(skinned.bones, b => b == null ? "null" : Q(PathOf(b, root))));
                 Add(k + "/bindposes", L(mesh.bindposes, m => "[" + string.Join(",", Enumerable.Range(0, 16).Select(i => F(m[i]))) + "]"));
                 Add(k + "/updateWhenOffscreen", skinned.updateWhenOffscreen ? "true" : "false");
-                Add(k + "/localBounds", "[" + V(skinned.localBounds.center) + "," + V(skinned.localBounds.extents) + "]");
+                // With offscreen updates localBounds is the renderer's own update, not the import's.
+                if (!skinned.updateWhenOffscreen)
+                    Add(k + "/localBounds", "[" + V(skinned.localBounds.center) + "," + V(skinned.localBounds.extents) + "]");
                 var baked = new Mesh();
                 skinned.BakeMesh(baked);
                 Add(k + "/bakedVertices", L(baked.vertices, V));
                 DestroyImmediate(baked);
             }
-            // Legacy clips (Pivots and Rigged sets): the local pose at frame-aligned times, and
-            // in the Rigged set also between frames.
+            // Legacy clips (Pivots, Rigged and Reduced sets): the local pose at frame-aligned
+            // times, in the Rigged set also between frames, in the Reduced set every 1/60 s.
             var animation = instance.GetComponent<Animation>();
-            var times = Environment.GetEnvironmentVariable("AXIS_SET") == "Rigged"
-                ? new[] { 0.25f, 0.5f, 0.55f, 0.95f, 1f } : new[] { 0.5f, 1f };
+            var set = Environment.GetEnvironmentVariable("AXIS_SET");
+            var times = set == "Rigged" ? new[] { 0.25f, 0.5f, 0.55f, 0.95f, 1f }
+                : set == "Reduced" ? Enumerable.Range(0, 61).Select(i => i / 60f).ToArray()
+                : new[] { 0.5f, 1f };
             if (animation != null)
                 foreach (AnimationState state in animation)
                     foreach (var time in times)

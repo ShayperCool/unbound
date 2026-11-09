@@ -1,17 +1,21 @@
-"""Export the Blender-convention controls of the Pivots and Skinned sets.
+"""Export the Blender-convention controls of the Pivots, Skinned and Rigged sets.
 
-Run with `blender -b --factory-startup -P tests/projects/modelaxis/Tools/blender_models.py`,
-then `python3 tests/projects/modelaxis/Tools/make_pivots.py` for the metas. The binary FBX
-output is committed; the gate never runs Blender.
+Run with `blender -b --factory-startup -P tests/projects/modelaxis/Tools/blender_models.py`
+(append `-- <name>...` for some of them: tree, apply, rig, humanoid), then
+`python3 tests/projects/modelaxis/Tools/make_pivots.py` for the metas. The binary FBX output is
+committed; the gate never runs Blender.
 """
 import math
 import os
+import sys
 
 import bpy
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PIVOTS = os.path.join(ROOT, 'Assets', 'Resources', 'Pivots')
 SKINNED = os.path.join(ROOT, 'Assets', 'Resources', 'Skinned')
+RIGGED = os.path.join(ROOT, 'Assets', 'Resources', 'Rigged')
+HUMAN_A = os.path.join(os.path.dirname(ROOT), 'humanoid', 'Assets', 'Resources', 'HumanA.fbx')
 
 
 def reset():
@@ -80,13 +84,53 @@ def rig():
     pose['Head'].rotation_euler = (0, math.radians(-40), 0)
 
 
+# Bones of the humanoid probe's HumanA that get a box of their own.
+BOXED = ('Hips', 'Spine', 'Head', 'LeftUpperLeg', 'LeftLowerLeg', 'RightUpperLeg',
+         'RightLowerLeg', 'LeftUpperArm', 'LeftLowerArm', 'RightUpperArm', 'RightLowerArm')
+
+
+def humanoid():
+    """HumanA's skeleton and clips with a box rigidly skinned to each of its main bones."""
+    reset()
+    bpy.ops.import_scene.fbx(filepath=HUMAN_A)
+    armature = next(o for o in bpy.context.scene.objects if o.type == 'ARMATURE')
+    boxes = []
+    for name in BOXED:
+        bone = armature.data.bones.get(name)
+        if bone is None:
+            continue
+        centre = armature.matrix_world @ ((bone.head_local + bone.tail_local) * 0.5)
+        size = max(bone.length, 0.05) * 0.5
+        bpy.ops.mesh.primitive_cube_add(size=size, location=centre)
+        box = bpy.context.active_object
+        box.vertex_groups.new(name=name).add([v.index for v in box.data.vertices], 1.0, 'REPLACE')
+        boxes.append(box)
+    bpy.ops.object.select_all(action='DESELECT')
+    for box in boxes:
+        box.select_set(True)
+    bpy.context.view_layer.objects.active = boxes[0]
+    bpy.ops.object.join()
+    body = bpy.context.active_object
+    body.name = body.data.name = 'Body'
+    body.parent = armature
+    body.modifiers.new('Armature', 'ARMATURE').object = armature
+    bpy.ops.export_scene.fbx(filepath=os.path.join(RIGGED, 'HumanoidSkin.fbx'),
+                             object_types={'MESH', 'ARMATURE'}, bake_anim=True,
+                             add_leaf_bones=False)
+
+
+EXPORTS = {
+    'tree': lambda: (tree(), export(os.path.join(PIVOTS, 'BlenderTree.fbx'))),
+    'apply': lambda: (tree(), export(os.path.join(PIVOTS, 'BlenderApply.fbx'), bake_space_transform=True)),
+    'rig': lambda: (rig(), export(os.path.join(SKINNED, 'BlenderRig.fbx'))),
+    'humanoid': humanoid,
+}
+
+
 def main():
-    tree()
-    export(os.path.join(PIVOTS, 'BlenderTree.fbx'))
-    tree()
-    export(os.path.join(PIVOTS, 'BlenderApply.fbx'), bake_space_transform=True)
-    rig()
-    export(os.path.join(SKINNED, 'BlenderRig.fbx'))
+    names = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else list(EXPORTS)
+    for name in names:
+        EXPORTS[name]()
 
 
 main()

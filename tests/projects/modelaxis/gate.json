@@ -4,7 +4,8 @@
     "python3 tests/projects/modelaxis/run.py unbound --release \"$UNBOUND_PROBE_UNITY_VERSION\" --set Signed",
     "python3 tests/projects/modelaxis/run.py unbound --release \"$UNBOUND_PROBE_UNITY_VERSION\" --set Pivots",
     "python3 tests/projects/modelaxis/run.py unbound --release \"$UNBOUND_PROBE_UNITY_VERSION\" --set Skinned",
-    "python3 tests/projects/modelaxis/run.py unbound --release \"$UNBOUND_PROBE_UNITY_VERSION\" --set Rigged"
+    "python3 tests/projects/modelaxis/run.py unbound --release \"$UNBOUND_PROBE_UNITY_VERSION\" --set Rigged",
+    "python3 tests/projects/modelaxis/run.py unbound --release \"$UNBOUND_PROBE_UNITY_VERSION\" --set Reduced"
   ],
   "summary": "FBX node transforms .*"
 }

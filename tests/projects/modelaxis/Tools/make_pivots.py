@@ -12,8 +12,9 @@ convention comes from Blender itself (`blender_models.py`, committed binary outp
 The Skinned controls bind a three-bone column with mixed weights to measure the imported
 `SkinnedMeshRenderer.localBounds` and `Mesh.bounds`: bind pose equal to or different from the
 file's node pose, a mesh node away from the origin, and a bone with a pivot. The Rigged controls
-add clips that bend the column under each animation type, a zero-scale root bone, and pivots,
-offsets and a child on the skinned mesh's node.
+add clips that bend the column under each animation type (and a Humanoid model with its
+clips), a root bone with a zero scale at import or in a clip, a vertex without weights, and
+pivots, offsets and a child on the skinned mesh's node.
 """
 import math
 from pathlib import Path
@@ -255,7 +256,7 @@ KTIME = 46186158000
 
 def animation(node, prop, curves):
     """A take of one second animating `node`'s `prop` (`Lcl Rotation`, ...): per axis
-    (0..2) linear keys at 0 s and 1 s. Object ids from 600."""
+    (0..2) linear keys spread evenly from 0 s to 1 s. Object ids from 600."""
     objects = ['AnimationStack: 600, "AnimStack::Take 001", "" {\n Properties70: {\n'
                '  P: "LocalStart", "KTime", "Time", "",0\n'
                f'  P: "LocalStop", "KTime", "Time", "",{KTIME}\n'
@@ -273,11 +274,12 @@ def animation(node, prop, curves):
         for k, (axis, values) in enumerate(zip('XYZ', axes)):
             curve = curve_node + 1 + k
             # Linear interpolation (KeyAttrFlags 4) for both keys.
+            times = [KTIME * k // (len(values) - 1) for k in range(len(values))]
             objects.append(f'AnimationCurve: {curve}, "AnimCurve::", "" {{\n Default: {values[0]}\n'
-                           ' KeyVer: 4009\n' + array('KeyTime', [0, KTIME]) +
+                           ' KeyVer: 4009\n' + array('KeyTime', times) +
                            array('KeyValueFloat', [float(v) for v in values]) +
                            array('KeyAttrFlags', [4]) + array('KeyAttrDataFloat', [0, 0, 0, 0]) +
-                           array('KeyAttrRefCount', [2]) + '}\n')
+                           array('KeyAttrRefCount', [len(values)]) + '}\n')
             links.append((curve, curve_node, f'd|{axis}'))
     return objects, links
 
@@ -347,6 +349,10 @@ SKINNED = {
 
 def skinned_fbx(options):
     vertices, corners, weights = column()
+    for vertex in options.get('unweighted', ()):
+        # A vertex no cluster lists.
+        for bone in weights.values():
+            bone.pop(vertex, None)
     objects = [geometry(100, 'Column', vertices, corners)]
     mesh_props = dict({'Lcl Translation': (0, 0, 0), 'Lcl Rotation': (0, 0, 0),
                        'Lcl Scaling': (1, 1, 1)}, **options.get('mesh', {}))
@@ -397,9 +403,12 @@ def skinned_fbx(options):
     return document(objects, links, animated='animated' in options, time_mode=options.get('time_mode', 6))
 
 
+# The Root bone scales up from zero: its first frame has no inverse.
+VANISH = {'animated': ((310,), ('Lcl Scaling',), (((0, 1), (0, 1), (0, 1)),))}
 # The Rigged controls: the column rig's imported localBounds under each animation type with
 # clips that bend it (the Editor bounds Legacy models over sampled clip frames), a degenerate
-# root bone, and pivots, offsets and a child on the skinned mesh's node.
+# root bone, a vertex without weights, and pivots, offsets and a child on the skinned mesh's
+# node; a Humanoid rig with its clips (HumanoidSkin).
 # Hips moves, Spine and Head bend (linear keys at 0 s and 1 s).
 SWING = {'animated': ((310, 311, 312), ('Lcl Translation', 'Lcl Rotation', 'Lcl Rotation'),
                       (((0, 0.8), (1, 1), (0, 0.3)), ((0, 0), (0, 0), (-20, 70)), ((15, 100), (0, 0), (0, 0))))}
@@ -414,6 +423,10 @@ RIGGED = {
     'GenericSwing': (SWING, dict(animationType=2, avatarSetup=0, animationCompression=0)),
     'NoneSwing': (SWING, dict(animationType=0)),
     'GenericZeroRoot': ({'root_scale': (0, 0, 0)}, dict(animationType=2, avatarSetup=0)),
+    'LegacyRootVanish': (VANISH, dict(animationType=1, animationCompression=0)),
+    'LegacyUnweighted': (dict(SWING, unweighted=(11,)), dict(animationType=1, animationCompression=0)),
+    'GenericUnweighted': (dict(SWING, unweighted=(11,)), dict(animationType=2, avatarSetup=0, animationCompression=0)),
+    'NoneMeshRp': ({'mesh': dict(MESH_TRS, RotationPivot=(0.5, 1, 0.25))}, dict(animationType=0)),
     'MeshRp': ({'mesh': dict(MESH_TRS, RotationPivot=(0.5, 1, 0.25))}, {}),
     'MeshSp': ({'mesh': dict(MESH_TRS, ScalingPivot=(-0.5, 0.75, 0.5))}, {}),
     'MeshRpSp': ({'mesh': dict(MESH_TRS, RotationPivot=(0.5, 1, 0.25), ScalingPivot=(-0.5, 0.75, 0.5))}, {}),
@@ -423,6 +436,27 @@ RIGGED = {
     'MeshChild': ({'mesh': dict(MESH_TRS, RotationPivot=PIVOT, ScalingPivot=PIVOT), 'child': {}}, {}),
     'MeshChildMaya': ({'mesh': dict(MESH_TRS, **MAYA), 'child': {'RotationPivot': (0.5, 0, 1)}}, {}),
     'MeshChildPlain': ({'mesh': MESH_TRS, 'child': {}}, {}),
+}
+
+
+# The Reduced controls: imported clips under the reducing animation compressions, with
+# several keys per curve so that reduction keeps corners and drops straight runs.
+BEND = {'animated': ((310, 311, 311, 312),
+                     ('Lcl Translation', 'Lcl Rotation', 'Lcl Scaling', 'Lcl Rotation'),
+                     (((0, 0.8, 0.2, 0.2), (1, 1.2, 1, 1.1), (0, 0.3, -0.4, 0)),
+                      ((0, 0, 20, 20), (0, 30, -15, 0), (-20, 70, 10, 40)),
+                      ((1, 1.5, 0.8, 1), (1, 1, 1.3, 1), (1, 1, 1, 1)),
+                      ((15, 100, 40, 40), (0, 0, 0, 25), (0, 10, 0, 0))))}
+LEGACY_REDUCED = dict(animationType=1, animationCompression=1)
+REDUCED = {
+    'Default': (BEND, LEGACY_REDUCED),
+    'Loose': (BEND, dict(LEGACY_REDUCED, animationRotationError=3, animationPositionError=2,
+                         animationScaleError=2)),
+    # Errors well above single precision (a 0.05 degree threshold is within a few ulps of a
+    # unit dot product, where keep or drop is a rounding tie).
+    'Tight': (BEND, dict(LEGACY_REDUCED, animationRotationError=0.2, animationPositionError=0.1,
+                         animationScaleError=0.1)),
+    'Rate60': (dict(BEND, time_mode=3), LEGACY_REDUCED),
 }
 
 
@@ -476,6 +510,24 @@ def main():
         path.write_text(skinned_fbx(options))
         write_meta(path, 'Rigged/' + name, dict(dict(animationType=2, avatarSetup=0, normalImportMode=2,
                                                      importAnimation=1), **settings))
+    # HumanoidSkin.fbx (blender_models.py): the humanoid probe's HumanA with boxes skinned to its
+    # bones, with HumanA's settings and bone mapping; the skeleton (T-pose) comes from the file.
+    meta = Path(str(PROJECTS/'humanoid/Assets/Resources/HumanA.fbx') + '.meta').read_text()
+    meta = re.sub(r'(?m)^guid: .*', 'guid: ' + axis.guid('Rigged/HumanoidSkin'), meta)
+    meta = re.sub(r'(?m)^(    isReadable: ).*', r'\g<1>1', meta)
+    meta = re.sub(r'(?m)^(    meshOptimizationFlags: ).*', r'\g<1>0', meta)
+    meta = re.sub(r'(?ms)^    skeleton:\n.*?^    armTwist:', '    skeleton: []\n    armTwist:', meta)
+    Path(str(dest/'HumanoidSkin.fbx') + '.meta').write_text(meta)
+    dest = ROOT/'Assets/Resources/Reduced'
+    dest.mkdir(parents=True, exist_ok=True)
+    for name, (options, settings) in REDUCED.items():
+        path = dest/(name + '.fbx')
+        path.write_text(skinned_fbx(options))
+        write_meta(path, 'Reduced/' + name, dict(dict(normalImportMode=2, importAnimation=1), **settings))
+    # The pivoted legacy clip of the Pivots set, reduced.
+    top, body, leaf, options = PIVOTS['AnimPivot']
+    (dest/'AnimPivot.fbx').write_text(pivots_fbx(top, body, leaf, options))
+    write_meta(dest/'AnimPivot.fbx', 'Reduced/AnimPivot', dict(LEGACY_REDUCED, importAnimation=1))
     axis.write_missing_metas()
 
 

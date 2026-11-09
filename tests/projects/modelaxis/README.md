@@ -120,8 +120,9 @@ It records bones, root bone, bind poses, `Mesh.bounds`, `SkinnedMeshRenderer.loc
 Update When Offscreen off, and `BakeMesh` vertices. Normals, bones, bind poses, skinned and
 sampled keys exist only in these sets, so the `Axis` and `Signed` references are unchanged.
 
-Two independent GPU Editor captures agree byte for byte for each set (1001, 397 and 892 keys),
-published under `Reference/unity-6000.0.71f1/pivots`, `skinned` and `rigged`. These sets bound each
+Two independent GPU Editor captures agree byte for byte for each set (1001, 397, 1467 and
+5127 keys), published under `Reference/unity-6000.0.71f1/pivots`, `skinned`, `rigged` and
+`reduced`. These sets bound each
 value by 1e-5 times the largest magnitude of its innermost reference vector (at least 1e-5):
 world bases of
 a centimetre-scaled root reach 100, where 1e-5 is below one float32 step. This was chosen
@@ -162,9 +163,17 @@ Observed rules (one reference capture each; not documented guarantees):
   the first key in steps of 1/sampleRate summed in single precision while not past the last key
   (`LegacySwing` at 30 fps misses the 1 s frame, `LegacySwing60` reaches it), in the root bone's
   space (`LegacyRootOnly` keeps the import-pose box). Generic (`GenericSwing`) keeps the
-  import-pose box. Rig None imports the mesh without skinning under a MeshRenderer
-  (`NoneSwing`). A zero-scale root bone gives all-zero bind poses and a zero box
-  (`GenericZeroRoot`).
+  import-pose box, and so does the Humanoid rig type (`HumanoidSkin`: the humanoid probe's
+  HumanA with boxes skinned to its bones; its avatar does not configure, the Editor reports no
+  LeftFoot, so the control shows the rig type's rule, not a playing humanoid). Rig None imports
+  the mesh without skinning under a MeshRenderer and places its node like any other
+  (`NoneSwing`, `NoneMeshRp`). A bone whose rest pose (the first take's start) has a zero scale
+  on it or an ancestor gets an all-zero bind pose: a zero-scale root bone gives a zero box
+  (`GenericZeroRoot`), and a Legacy clip scaling the root bone up from zero turns Update When
+  Offscreen on (`LegacyRootVanish`; with it on, `localBounds` is the renderer's own update and
+  is not recorded: Unity answers a zero box there before any update). A vertex no cluster
+  weights skins like the others in `BakeMesh` and adds nothing to Legacy bounds
+  (`*Unweighted`; the import-pose box also skips it).
 - A skinned mesh's node with unequal pivots, a rotation or scaling offset, or children
   (`MeshRp`, `MeshSp`, `MeshRpSp`, `MeshRoff`, `MeshSoff`, `MeshMaya`, `MeshChild*`): its
   rotation and scaling pivots are dropped as in `MeshPivot`, its rotation offset is ignored, and
@@ -174,26 +183,49 @@ Observed rules (one reference capture each; not documented guarantees):
 ### Implementation scope and limits
 
 `crates/unbound-assets/src/model/pivots.rs` and `skinned_bounds.rs` implement these rules; the
-model cache format is v33. Clips of pivoted nodes take positions with the same placement at every key time of their
-translation, rotation and scale; rotation keys are not reduced, so a turning node is keyed on
-every frame. Not measured, implemented by the same rule or left as before:
+model cache format is v34. Clips of pivoted nodes take positions with the same placement at
+every frame, then the clip's keyframe reduction (`Reduced` set below). Not measured,
+implemented by the same rule or left as before:
 
-- `localBounds` of blend-shape meshes without bones, Humanoid rigs (same rule as Generic),
-  Legacy clips whose root bone pose has no inverse (Update When Offscreen is set instead),
-  vertices without bone weights (they add nothing to the import-pose box), rig None with
-  blend shapes or pivots, and which of several shared instances is "first" beyond the measured
+- `localBounds` of blend-shape meshes without bones, a configured humanoid avatar, rig None
+  with blend shapes, and which of several shared instances is "first" beyond the measured
   parent-before-child order.
 - Blend shape deltas on meshes with geometric transforms (transformed with `G`'s linear part).
 - A LODGroup's size and reference point come from mesh bounds, which now include blend shape
   frames; LOD levels with blend shapes are unmeasured.
-- Keyframe-reduced clips: a first `AnimPivotReduced` capture (compression Keyframe Reduction)
-  matched the uncompressed pose in the engine but differed in the Editor by up to 0.0005 in
-  basis vectors and 7e-5 m in position at 0.5 s, on unpivoted rotations too. That is the clip
-  reduction approximation, not pivot handling; it stays a follow-up and is not in the set.
+
+### Keyframe reduction (`Reduced` set)
+
+Each control is the column rig with a Legacy clip of four keys per curve (Hips moves, Spine
+turns and scales, Head turns), under Keyframe Reduction with the default errors (`Default`),
+looser (`Loose`: 3 degrees, 2%) and tighter ones (`Tight`: 0.2 degrees, 0.1%), at 60 fps
+(`Rate60`), and the pivoted `AnimPivot` take of the Pivots set reduced. The probe samples every
+clip each 1/60 s from 0 to 1 s. The [Animation tab](https://docs.unity.com/en-us/engine/6000.0/manual/assets-and-media/asset-types/models/importing/class-animation-clip)
+documents the errors (rotation as an angle in degrees, position and scale as a percentage of
+the original value, tested per axis and on the whole vector) but not which keys are tested; the
+measured rule, applied to the every-frame keys of compression Off (positions with linear,
+rotations and scales with smooth slopes):
+
+- A curve that the segment between its first and last keys with flat slopes holds everywhere
+  becomes those two keys. Otherwise keys are dropped from the start while the segment from the
+  last kept key to the next one, with their own slopes, holds the every-frame curve at each
+  frame, at each dropped key and halfway between, spanning fewer than 50 frames.
+- "Holds": rotations within the error in degrees (normalized dot product) with the segment's
+  quaternion within 0.001 of unit length; positions, scales and floats per component and in
+  length within the error as a fraction of the curve's value (near-zero values aside).
+- Kept keys keep their every-frame slopes.
+
+A first attempt with 0.05 degrees and 0.05% put the rotation threshold within a few single
+precision steps of a unit dot product, where keeping or dropping a key is a rounding tie
+(our captures differed by up to 0.0009 in basis vectors there); `Tight` uses errors above that.
+Legacy clips under Keyframe Reduction and Compression: the page says the compression affects
+only file size, but a capture of `Default` with it sampled rotations up to 0.6 degrees from the
+reduced keys (positions and scales equal); that rotation packing is not reproduced and warns.
 
 ```sh
 python3 tests/projects/modelaxis/Tools/make_pivots.py
 python3 tests/projects/modelaxis/run.py unbound --release "$UNBOUND_PROBE_UNITY_VERSION" --set Rigged
+python3 tests/projects/modelaxis/run.py unbound --release "$UNBOUND_PROBE_UNITY_VERSION" --set Reduced
 python3 tests/projects/modelaxis/run.py editor --release 6000.0.71f1 --set Pivots --label <fresh>
 python3 tests/projects/modelaxis/run.py unbound --release "$UNBOUND_PROBE_UNITY_VERSION" --set Pivots
 python3 tests/projects/modelaxis/run.py unbound --release "$UNBOUND_PROBE_UNITY_VERSION" --set Skinned
