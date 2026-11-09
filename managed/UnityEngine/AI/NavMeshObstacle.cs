@@ -464,7 +464,9 @@ namespace Unbound.Runtime
                     continue;
                 }
                 // Reshaped: cut again as it is now (a moving stationary-only obstacle stays uncut);
-                // its transform is taken as the new reference.
+                // its transform is taken as the new reference, so a move in the same frame does not
+                // count (measured: tests/projects/navpath carve.rules, a stationary-only box moving
+                // while its size is set every frame is cut every frame).
                 if (reshaped)
                 {
                     c.Snapshot(obstacle);

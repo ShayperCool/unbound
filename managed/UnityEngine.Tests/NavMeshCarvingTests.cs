@@ -471,6 +471,24 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SettingTheSizeEveryFrameWhileMovingCutsTheHoleWhereItIs()
+        {
+            var obstacle = Box(new Vector3(0f, 0.5f, 0f), Vector3.one);
+            Frame();
+            Frame();
+            var at = obstacle.transform.position;
+            for (int f = 0; f < 20; f++)
+            {
+                at.x += 0.2f;
+                obstacle.transform.position = at;
+                obstacle.size = Vector3.one;
+                Frame();
+                // Cut where the previous decision saw it: never counted as moving.
+                Assert.False(OnNavMesh(at.x - 0.2f, 0f), $"uncut at frame {f}");
+            }
+        }
+
+        [Fact]
         public void ResizingAMovingStationaryOnlyObstacleLeavesItUncut()
         {
             var obstacle = Box(new Vector3(0f, 0.5f, 0f), Vector3.one);
