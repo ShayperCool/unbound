@@ -154,8 +154,31 @@ public partial class ParticleRenderProbe
         }, type: ParticleSystemSubEmitterType.Death);
         // A child lifetime reaching more than four seconds before the prewarm's end (open).
         Case("birth_child6", null, s => { var m = s.main; m.startLifetime = 6f; });
+        // Longer child lifetimes: children emitted more than 5 and 10 s before the prewarm's end.
+        Case("birth_child8", null, s => { var m = s.main; m.startLifetime = 8f; });
+        Case("birth_child12", null, s => { var m = s.main; m.startLifetime = 12f; });
+        // Procedural mode (local space, no sub-emitters): bursts at and after a loop's start, a
+        // rate under gravity, random start lifetimes and sizes (with their start values below).
+        Case("proc_bursts", s =>
+        {
+            var m = s.main; m.startLifetime = 2.5f;
+            var e = s.emission; e.SetBursts(new[] { new ParticleSystem.Burst(0f, 1), new ParticleSystem.Burst(0.13f, 2), new ParticleSystem.Burst(0.5f, 1) });
+        }, sub: false);
+        Case("proc_gravity", s =>
+        {
+            var m = s.main; m.startLifetime = 1.5f; m.startSpeed = 2f; m.gravityModifier = 0.5f;
+            var e = s.emission; e.rateOverTime = 4f; e.SetBursts(new ParticleSystem.Burst[0]);
+        }, sub: false);
+        Case("proc_random", s =>
+        {
+            var m = s.main; m.startLifetime = new ParticleSystem.MinMaxCurve(1f, 2f); m.startSize = new ParticleSystem.MinMaxCurve(0.5f, 1.5f);
+            m.startRotation = new ParticleSystem.MinMaxCurve(0f, 3f);
+            var e = s.emission; e.rateOverTime = 6f; e.SetBursts(new ParticleSystem.Burst[0]);
+        }, sub: false);
+        var procRandom = systems[systems.Count - 1].Item2;
         foreach (var ps in played) ps.Play();
         foreach (var (key, ps) in systems) RecordPrewarm(key + "/start", ps);
+        RecordInherited("prewarm/proc_random/values/start", procRandom);
         for (int frame = 0; frame < 2; frame++)
         {
             yield return null;
