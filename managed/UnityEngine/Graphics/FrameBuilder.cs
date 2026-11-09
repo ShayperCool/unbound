@@ -1042,7 +1042,7 @@ namespace Unbound.Runtime
                     if (!s_RendererLights.TryGetValue(key, out var merged))
                     {
                         bool lightmapped = lightmaps && r.lightmapIndex >= 0 && r.lightmapIndex < 0xFFFE;
-                        merged = OverOwnValues(PerObjectLights(data, r.bounds, lightmapped, mainLight), item.Properties);
+                        merged = OverOwnValues(PerObjectLights(data, r.bounds, r.m_GameObject.m_Layer, lightmapped, mainLight), item.Properties);
                         if (block != null)
                             foreach (int id in s_PerObjectLightIds)
                                 if (block.m_Values.TryGetValue(id, out var value)) merged[id] = value;
@@ -1055,7 +1055,7 @@ namespace Unbound.Runtime
                     var key = (item.Properties, item.CullBounds);
                     if (!s_QueuedLights.TryGetValue(key, out var merged))
                     {
-                        merged = OverOwnValues(PerObjectLights(data, item.CullBounds, false, mainLight), item.Properties);
+                        merged = OverOwnValues(PerObjectLights(data, item.CullBounds, item.Layer, false, mainLight), item.Properties);
                         s_QueuedLights[key] = merged;
                     }
                     item.Properties = merged;
@@ -1074,43 +1074,51 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The per-object lights (unity_LightData, unity_LightIndices) of a renderer or a
-        /// Graphics.DrawMesh draw with these world bounds: the visible lights other than those
-        /// the index map drops whose range reaches the bounds, brightest at the bounds' center
-        /// first, at most 8; whether the main light lights it (unity_LightData.z). A
-        /// <paramref name="lightmapped"/> renderer (the list binds lightmaps) leaves out the
-        /// lights <see cref="InLightmap"/>.</summary>
-        static readonly List<(int Index, float Importance)> s_LightCandidates = new List<(int, float)>();
+        /// Graphics.DrawMesh draw with these world bounds on <paramref name="layer"/>: the visible
+        /// lights whose culling mask has the layer, that reach the bounds and that the index map
+        /// keeps, the most important first (<see cref="LightImportance"/>). unity_LightData.y
+        /// counts them all, unity_LightIndices holds the first 8 (measured: tests/projects/urp
+        /// light-order.jsonl, ten lights give 10); unity_LightData.z: whether the main light
+        /// lights it: there is one and its culling mask has the layer. A <paramref name="lightmapped"/> renderer (the list binds lightmaps) leaves
+        /// out the lights <see cref="InLightmap"/> (the main light too).</summary>
+        static readonly List<LightImportance.Candidate> s_LightCandidates = new List<LightImportance.Candidate>();
 
-        internal static Dictionary<int, object> PerObjectLights(CullingData data, Bounds bounds, bool lightmapped, int mainLight)
+        internal static Dictionary<int, object> PerObjectLights(CullingData data, Bounds bounds, int layer, bool lightmapped, int mainLight)
         {
             var candidates = s_LightCandidates;
             candidates.Clear();
             var map = data.LightIndexMap;
-            // A lightmapped renderer is not lit at run time by the lights baked into its lightmap.
-            float mainLit = lightmapped && mainLight >= 0 && mainLight < data.Lights.Length && InLightmap(data.Lights[mainLight].light) ? 0f : 1f;
+            // The main light lights the object unless there is none, its culling mask leaves out
+            // the layer (tests/projects/urp light-order.jsonl) or, the object lightmapped, the
+            // lightmap holds its light.
+            float mainLit = 0f;
+            if (mainLight >= 0 && mainLight < data.Lights.Length)
+            {
+                var main = data.Lights[mainLight].light;
+                if (main != null && (main.cullingMask & (1 << layer)) != 0 && !(lightmapped && InLightmap(main))) mainLit = 1f;
+            }
+            var center = bounds.center;
             for (int i = 0; i < data.Lights.Length; i++)
             {
-                int index = map != null ? (i < map.Length ? map[i] : -1) : i;
-                if (index < 0) continue;
                 var light = data.Lights[i];
-                if (lightmapped && InLightmap(light.light)) continue;
-                float importance;
-                if (light.lightType == LightType.Directional) importance = float.MaxValue;
-                else
-                {
-                    var position = (Vector3)light.localToWorldMatrix.GetColumn(3);
-                    float distance = Mathf.Sqrt(bounds.SqrDistance(position));
-                    if (distance > light.range) continue;
-                    var c = light.finalColor;
-                    float distanceToCenter = (bounds.center - position).magnitude;
-                    importance = (c.r + c.g + c.b) / (1f + 25f * (distanceToCenter / Mathf.Max(light.range, 1e-4f)) * (distanceToCenter / Mathf.Max(light.range, 1e-4f)));
-                }
-                candidates.Add((index, importance));
+                var l = light.light;
+                if (l == null || (l.cullingMask & (1 << layer)) == 0) continue;
+                if (lightmapped && InLightmap(l)) continue;
+                var matrix = light.localToWorldMatrix;
+                if (!LightImportance.Reaches(light.lightType, matrix, light.range, light.spotAngle, bounds)) continue;
+                candidates.Add(new LightImportance.Candidate(i, LightImportance.Of(l, light.lightType, matrix.GetColumn(3), light.range, center), candidates.Count));
             }
-            candidates.Sort((a, b) => b.Importance.CompareTo(a.Importance));
-            int count = Math.Min(candidates.Count, MaxPerObjectLights);
-            Span<float> indices = stackalloc float[8];
-            for (int k = 0; k < count; k++) indices[k] = candidates[k].Index;
+            LightImportance.Sort(candidates);
+            Span<float> indices = stackalloc float[MaxPerObjectLights];
+            int count = 0;
+            foreach (var candidate in candidates)
+            {
+                // The index map (the pipeline's) drops lights after the choice.
+                int index = map != null ? (candidate.Index < map.Length ? map[candidate.Index] : -1) : candidate.Index;
+                if (index < 0) continue;
+                if (count < MaxPerObjectLights) indices[count] = index;
+                count++;
+            }
             var lights = DrawPropertyPool.Copy(null);
             lights[s_LightDataId] = new Vector4(0f, count, mainLit, 0f);
             lights[s_LightIndicesId] = new[] { new Vector4(indices[0], indices[1], indices[2], indices[3]), new Vector4(indices[4], indices[5], indices[6], indices[7]) };

@@ -33,7 +33,23 @@ namespace Unbound.Runtime
         static readonly List<Light> s_Lights = new List<Light>();
         static Light s_Main;
         static Texture2D s_Attenuation, s_SpotCookie;
-        static readonly List<(Light Light, float Importance)> s_Candidates = new List<(Light, float)>();
+        /// <summary>An object's lights (their places in <see cref="s_Lights"/>, -1 the main light)
+        /// with their importance.</summary>
+        static readonly List<LightImportance.Candidate> s_Candidates = new List<LightImportance.Candidate>();
+
+        /// <summary>Adds the light (one of <see cref="s_Lights"/>) to the candidates when its
+        /// culling mask has the layer and it reaches the bounds (<see cref="LightImportance"/>).</summary>
+        static void AddCandidate(int index, Bounds bounds, int layer)
+        {
+            var l = s_Lights[index];
+            if ((l.cullingMask & (1 << layer)) == 0) return;
+            var t = l.transform;
+            var matrix = t.localToWorldMatrix;
+            if (!LightImportance.Reaches(l.type, matrix, l.range, l.spotAngle, bounds)) return;
+            s_Candidates.Add(new LightImportance.Candidate(index, LightImportance.Of(l, l.type, t.position, l.range, bounds.center), s_Candidates.Count));
+        }
+
+        static Light CandidateLight(in LightImportance.Candidate c) => c.Index < 0 ? s_Main : s_Lights[c.Index];
 
         /// <summary>The attenuation lookup, indexed by the squared distance over the range.</summary>
         internal static Texture2D Attenuation
@@ -92,7 +108,8 @@ namespace Unbound.Runtime
             {
                 if (l == null || !l.isActiveAndEnabled || l == s_Main || l.IsFullyBaked) continue;
                 if (l.type != LightType.Point && l.type != LightType.Spot && l.type != LightType.Directional) continue;
-                if (l.intensity <= 0f) continue;
+                // As the scriptable pipelines' culling (Culling.CollectVisibleLights).
+                if (l.intensity < LightImportance.MinimumVisibleIntensity || (l.cullingMask & mask) == 0) continue;
                 s_Lights.Add(l);
             }
         }
@@ -135,33 +152,20 @@ namespace Unbound.Runtime
         {
             into.Clear();
             if (s_Lights.Count == 0) return;
-            bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             s_Candidates.Clear();
-            foreach (var l in s_Lights)
-            {
-                if (l == baseLight || (l.cullingMask & (1 << layer)) == 0) continue;
-                float importance;
-                var c = l.FinalColor(linear);
-                float brightness = c.r * 0.3f + c.g * 0.59f + c.b * 0.11f;
-                if (l.type == LightType.Directional) importance = brightness * 1e6f;
-                else
-                {
-                    var position = l.transform.position;
-                    if (bounds.SqrDistance(position) > l.range * l.range) continue;
-                    float d = (bounds.center - position).magnitude / Mathf.Max(l.range, 1e-4f);
-                    importance = brightness / (1f + 25f * d * d);
-                }
-                s_Candidates.Add((l, importance));
-            }
-            s_Candidates.Sort((a, b) => b.Importance.CompareTo(a.Importance));
+            for (int i = 0; i < s_Lights.Count; i++)
+                if (s_Lights[i] != baseLight) AddCandidate(i, bounds, layer);
+            LightImportance.Sort(s_Candidates);
             int pixelBudget = Math.Max(0, QualitySettings.pixelLightCount);
-            foreach (var (l, _) in s_Candidates)
+            foreach (var c in s_Candidates)
             {
+                var l = CandidateLight(c);
                 if (l.renderMode == LightRenderMode.ForcePixel) into.Pixel.Add(l);
             }
             pixelBudget -= into.Pixel.Count;
-            foreach (var (l, _) in s_Candidates)
+            foreach (var c in s_Candidates)
             {
+                var l = CandidateLight(c);
                 if (l.renderMode == LightRenderMode.ForcePixel) continue;
                 if (l.renderMode == LightRenderMode.Auto && pixelBudget > 0)
                 {
@@ -278,24 +282,9 @@ namespace Unbound.Runtime
         {
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             s_Candidates.Clear();
-            if (s_Main != null && (s_Main.cullingMask & (1 << layer)) != 0) s_Candidates.Add((s_Main, float.MaxValue));
-            foreach (var l in s_Lights)
-            {
-                if ((l.cullingMask & (1 << layer)) == 0) continue;
-                var c = l.FinalColor(linear);
-                float brightness = c.r * 0.3f + c.g * 0.59f + c.b * 0.11f;
-                float importance;
-                if (l.type == LightType.Directional) importance = brightness * 1e6f;
-                else
-                {
-                    var position = l.transform.position;
-                    if (bounds.SqrDistance(position) > l.range * l.range) continue;
-                    float d = (bounds.center - position).magnitude / Mathf.Max(l.range, 1e-4f);
-                    importance = brightness / (1f + 25f * d * d);
-                }
-                s_Candidates.Add((l, importance));
-            }
-            s_Candidates.Sort((a, b) => b.Importance.CompareTo(a.Importance));
+            if (s_Main != null && (s_Main.cullingMask & (1 << layer)) != 0) s_Candidates.Add(new LightImportance.Candidate(-1, float.MaxValue, 0));
+            for (int i = 0; i < s_Lights.Count; i++) AddCandidate(i, bounds, layer);
+            LightImportance.Sort(s_Candidates);
             var positions = new Vector4[8];
             var colors = new Vector4[8];
             var atten = new Vector4[8];
@@ -307,7 +296,7 @@ namespace Unbound.Runtime
             }
             for (int i = 0; i < s_Candidates.Count && i < 8; i++)
             {
-                var l = s_Candidates[i].Light;
+                var l = CandidateLight(s_Candidates[i]);
                 var t = l.transform;
                 colors[i] = (Vector4)l.FinalColor(linear);
                 if (l.type == LightType.Directional)

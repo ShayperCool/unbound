@@ -95,8 +95,8 @@ namespace UnityEngine.Tests
                 data.Lights[0] = new VisibleLight(light, new Rect(0, 0, 1, 1), false, true, false);
                 try
                 {
-                    var near = FrameBuilder.PerObjectLights(data, new Bounds(Vector3.zero, Vector3.one), false, -1);
-                    var far = FrameBuilder.PerObjectLights(data, new Bounds(new Vector3(0f, 0f, 20f), Vector3.one), false, -1);
+                    var near = FrameBuilder.PerObjectLights(data, new Bounds(Vector3.zero, Vector3.one), 0, false, -1);
+                    var far = FrameBuilder.PerObjectLights(data, new Bounds(new Vector3(0f, 0f, 20f), Vector3.one), 0, false, -1);
                     int id = Shader.PropertyToID("unity_LightData");
                     Assert.Equal(1f, ((Vector4)near[id]).y);
                     Assert.Equal(0f, ((Vector4)far[id]).y);
@@ -158,11 +158,12 @@ namespace UnityEngine.Tests
                 try
                 {
                     FrameBuilder.ApplyPerObjectLights(data, items, -1, false);
-                    Assert.Equal(new Vector4(0f, 1f, 1f, 0f), (Vector4)items[0].Properties[lightData]);
+                    // No main light: unity_LightData.z 0 (tests/projects/urp light-order.jsonl).
+                    Assert.Equal(new Vector4(0f, 1f, 0f, 0f), (Vector4)items[0].Properties[lightData]);
                     Assert.Equal(new Vector4(1f, 1f, 1f, 0f), (Vector4)items[1].Properties[lightData]);
                     Assert.Same(items[1].Properties, items[2].Properties);
                     Assert.Equal(new Vector4(1f, 1f, 1f, 0f), (Vector4)items[3].Properties[lightData]);
-                    Assert.Equal(new Vector4(0f, 1f, 1f, 0f), (Vector4)items[4].Properties[lightData]);
+                    Assert.Equal(new Vector4(0f, 1f, 0f, 0f), (Vector4)items[4].Properties[lightData]);
                     Assert.Same(items[3].Properties, items[5].Properties);
                     Assert.NotSame(items[3].Properties, items[4].Properties);
                     Assert.Single(own);
@@ -209,7 +210,7 @@ namespace UnityEngine.Tests
                     Assert.NotSame(shared, items[0].Material);
                     FrameBuilder.ApplyPerObjectLights(data, items, -1, false);
                     Assert.Equal(Vector4.zero, (Vector4)items[0].Properties[lightData]);
-                    Assert.Equal(new Vector4(0f, 1f, 1f, 0f), (Vector4)items[1].Properties[lightData]);
+                    Assert.Equal(new Vector4(0f, 1f, 0f, 0f), (Vector4)items[1].Properties[lightData]);
                 }
                 finally { data.Dispose(); }
             }

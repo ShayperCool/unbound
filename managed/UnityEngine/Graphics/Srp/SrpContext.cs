@@ -935,21 +935,8 @@ namespace Unbound.Runtime
             }
             Unbound.Runtime.Immediate.TakeCameraDraws(camera);
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
-            var lights = new List<Light>();
-            // The camera's culling mask leaves lights alone (measured: the URP probe's camera_stack,
-            // an overlay camera that sees one layer is lit by a light on another).
-            // Lights baked alone are not visible lights (they light through lightmaps and probes).
-            // Local lights outside the frustum are not visible (measured: ShadowCasterCulling).
-            foreach (var l in Light.s_Enabled)
-                if (l && l.isActiveAndEnabled && !l.IsFullyBaked && ShadowCasterCulling.LightVisible(l, ref parameters)) lights.Add(l);
-            lights.Sort((a, b) =>
-            {
-                int directional = (b.type == LightType.Directional).CompareTo(a.type == LightType.Directional);
-                if (directional != 0) return directional;
-                return (b.intensity * b.color.grayscale).CompareTo(a.intensity * a.color.grayscale);
-            });
-            int max = parameters.maximumVisibleLights > 0 ? parameters.maximumVisibleLights : lights.Count;
-            if (lights.Count > max) lights.RemoveRange(max, lights.Count - max);
+            var lights = s_VisibleLights;
+            CollectVisibleLights(ref parameters, lights);
             data.Lights = new NativeArray<VisibleLight>(lights.Count, Allocator.Persistent);
             for (int i = 0; i < lights.Count; i++)
             {
@@ -983,6 +970,58 @@ namespace Unbound.Runtime
             s_Results[id] = data;
             return id;
         }
+
+        static readonly List<Light> s_VisibleLights = new List<Light>();
+        static readonly List<(Light Light, float Distance, int Order)> s_LocalLights = new List<(Light, float, int)>();
+        /// <summary>The nearest first; equal distances in the enabling order.</summary>
+        static readonly Comparison<(Light Light, float Distance, int Order)> s_NearestFirst = (a, b) =>
+        {
+            int c = a.Distance.CompareTo(b.Distance);
+            return c != 0 ? c : a.Order.CompareTo(b.Order);
+        };
+
+        /// <summary>
+        /// The visible lights: the enabled realtime lights of at least 0.001 intensity whose culling
+        /// mask shares a layer with the culling's and that reach the view; directional ones first
+        /// (their order among themselves is unspecified: brightest first here), then the spot
+        /// lights, then the point lights. With a maximum (maximumVisibleLights ≥ 0) the local
+        /// lights nearest the culling origin are kept, as many as the directional ones leave, and
+        /// each kind is in that order, the nearest first. Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/urp light-order.jsonl (visible_order, visible_limit, culling_mask).
+        /// </summary>
+        static void CollectVisibleLights(ref ScriptableCullingParameters parameters, List<Light> lights)
+        {
+            lights.Clear();
+            var local = s_LocalLights;
+            local.Clear();
+            var origin = parameters.origin;
+            // The light's own layer does not matter (measured: the URP probe's camera_stack, an
+            // overlay camera that sees one layer is lit by a light on another); its culling mask does.
+            // Lights baked alone are not visible lights (they light through lightmaps and probes).
+            // Local lights outside the frustum are not visible (measured: ShadowCasterCulling).
+            foreach (var l in Light.s_Enabled)
+            {
+                if (!l || !l.isActiveAndEnabled || l.IsFullyBaked || l.intensity < Unbound.Runtime.LightImportance.MinimumVisibleIntensity) continue;
+                if ((l.cullingMask & (int)parameters.cullingMask) == 0 || !ShadowCasterCulling.LightVisible(l, ref parameters)) continue;
+                if (l.type == LightType.Directional) lights.Add(l);
+                else local.Add((l, (l.transform.position - origin).sqrMagnitude, local.Count));
+            }
+            lights.Sort(s_BrightestFirst);
+            int max = parameters.maximumVisibleLights;
+            if (max >= 0)
+            {
+                if (lights.Count > max) lights.RemoveRange(max, lights.Count - max);
+                local.Sort(s_NearestFirst);
+                int keep = Math.Max(0, max - lights.Count);
+                if (local.Count > keep) local.RemoveRange(keep, local.Count - keep);
+            }
+            foreach (var (l, _, _) in local) if (l.type == LightType.Spot) lights.Add(l);
+            foreach (var (l, _, _) in local) if (l.type == LightType.Point) lights.Add(l);
+            foreach (var (l, _, _) in local) if (l.type != LightType.Spot && l.type != LightType.Point) lights.Add(l);
+            local.Clear();
+        }
+
+        static readonly Comparison<Light> s_BrightestFirst = (a, b) => (b.intensity * b.color.grayscale).CompareTo(a.intensity * a.color.grayscale);
 
         /// <summary>Whether bounds touch the inside of every culling plane (planes face inwards).</summary>
         static bool InsidePlanes(ref ScriptableCullingParameters parameters, Bounds bounds)
