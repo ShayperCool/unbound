@@ -101,7 +101,7 @@ class RuntimeSnapshotTests(unittest.TestCase):
                        for i in range(8)]
             paths = [future.result(timeout=30) for future in futures]
         self.assertEqual(len(set(paths)), 1)
-        self.assertEqual(len(list((self.cache/'snapshots').iterdir())), 1)
+        self.assertEqual(len([p for p in (self.cache/'snapshots').iterdir() if not p.name.startswith('.')]), 1)
         self.assertEqual(list((self.cache/'snapshots').glob('.tmp-*')), [])
         self.assertEqual(len(list((self.cache/'references').iterdir())), 8)
 
@@ -276,6 +276,104 @@ class RuntimeSnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'refusing to change'):
             self.snapshot()
         self.assertEqual((first/'unbound').read_bytes(), b'#!/bin/sh\nexit 0\n')
+
+    def test_managed_content_is_hardlinked_between_snapshots_but_not_to_builds(self):
+        first = self.snapshot()
+        self.cli.write_bytes(b'next cli')
+        second = self.snapshot('next')
+        self.assertNotEqual(first.resolve(), second.resolve())
+        a, b = first/'managed/Unbound.Host.dll', second/'managed/Unbound.Host.dll'
+        self.assertEqual(a.stat().st_ino, b.stat().st_ino)
+        self.assertNotEqual(a.stat().st_ino, (self.managed/'Unbound.Host.dll').stat().st_ino)
+        (self.managed/'Unbound.Host.dll').write_bytes(b'new managed')
+        third = self.snapshot('third')
+        self.assertNotEqual(a.stat().st_ino, (third/'managed/Unbound.Host.dll').stat().st_ino)
+        self.assertEqual(a.read_bytes(), b'host')
+
+    def test_task_release_keeps_other_tasks_and_promoted_runs(self):
+        with mock.patch.object(runtime, 'task_owner', return_value={'worktree': str(self.root), 'branch': 'task'}):
+            first = self.snapshot()
+        self.cli.write_bytes(b'other task')
+        with mock.patch.object(runtime, 'task_owner', return_value={'worktree': str(self.root), 'branch': 'other'}):
+            other = self.snapshot('other')
+        promoted = runtime.retain(first, self.root/'baseline/runtime', cache=self.cache)
+        runtime.release_task(self.root, 'task', cache=self.cache)
+        runtime.cleanup(cache=self.cache, days=0)
+        self.assertFalse(first.is_symlink())
+        self.assertTrue(promoted.exists() and other.exists())
+
+    def test_pending_release_waits_for_live_owner_and_active_engine(self):
+        with mock.patch.object(runtime, 'task_owner', return_value={
+                'worktree': str(self.root), 'branch': 'task', 'pid': 123, 'start': '456'}):
+            first = self.snapshot()
+        snapshot = first.resolve()
+        runtime.release_task(self.root, 'task', cache=self.cache)
+        with mock.patch.object(runtime, 'process_start', return_value='456'):
+            runtime.cleanup(cache=self.cache, days=0)
+        self.assertTrue(first.exists())
+        with mock.patch.object(runtime, 'process_start', return_value=None), \
+             mock.patch.object(runtime, 'active_snapshots', return_value={snapshot.name}):
+            runtime.cleanup(cache=self.cache, days=0)
+        self.assertTrue(first.exists())
+        with mock.patch.object(runtime, 'process_start', return_value='different-start'):
+            self.assertIn(snapshot.name, runtime.cleanup(cache=self.cache, days=0))
+        self.assertFalse(first.is_symlink())
+
+    def test_legacy_baseline_and_read_only_snapshot_collection(self):
+        first = self.snapshot()
+        snapshot = first.resolve()
+        baseline = self.cache.parent/'agents/baseline'
+        baseline.mkdir(parents=True)
+        (baseline/'summary.json').write_text(json.dumps({'cli': str(first/'unbound')}))
+        runtime.release_reference(first, cache=self.cache)
+        os.utime(snapshot, (0, 0))
+        self.assertEqual(runtime.cleanup(cache=self.cache, days=0), [])
+        self.assertTrue(first.is_symlink())
+        (baseline/'summary.json').unlink()
+        self.assertEqual(runtime.cleanup(cache=self.cache, days=0), [snapshot.name])
+        self.assertFalse(snapshot.exists())
+        self.assertEqual(list((self.cache/'snapshots/.managed-blobs').iterdir()), [])
+
+    def test_actual_live_process_keeps_a_released_snapshot(self):
+        first = self.snapshot()
+        snapshot = first.resolve()
+        child = subprocess.Popen(['python3', '-c', 'import time;time.sleep(60)'],
+                                 env=dict(os.environ, UNBOUND_RUNTIME=str(first)))
+        try:
+            runtime.release_reference(first, cache=self.cache)
+            self.assertIn(snapshot.name, runtime.active_snapshots(self.cache))
+            self.assertEqual(runtime.cleanup(cache=self.cache, days=0), [])
+            self.assertTrue(first.exists())
+        finally:
+            child.terminate()
+            child.wait(timeout=5)
+        self.assertIn(snapshot.name, runtime.cleanup(cache=self.cache, days=0))
+
+    def test_promoting_a_completed_suite_restores_its_reference_and_retains_older_promotions(self):
+        import suite
+        first = self.snapshot()
+        snapshot = first.resolve()
+        runtime.release_reference(first, cache=self.cache)
+        runtime.cleanup(cache=self.cache, days=14)
+        self.assertFalse(first.is_symlink())
+        agents = self.root/'agents'
+        summary = agents/'suite/first/summary.json'
+        summary.parent.mkdir(parents=True)
+        summary.write_text(json.dumps({'work': str(first.parent), 'runtime_snapshot': str(snapshot)}))
+        with mock.patch.object(suite, 'AGENTS', agents), mock.patch.dict(os.environ, UNBOUND_RUNTIME_CACHE=str(self.cache)):
+            suite.promote(summary)
+            self.assertEqual((agents/'baseline/runtime').resolve(), snapshot)
+            self.cli.write_bytes(b'another release')
+            second = self.snapshot('next')
+            next_summary = agents/'suite/second/summary.json'
+            next_summary.parent.mkdir()
+            next_summary.write_text(json.dumps({'work': str(second.parent)}))
+            suite.promote(next_summary)
+            runtime.release_reference(second, cache=self.cache)
+            runtime.cleanup(cache=self.cache, days=0)
+        self.assertTrue(snapshot.exists())
+        self.assertTrue((summary.parent/'runtime').exists())
+        self.assertEqual((agents/'baseline/runtime').resolve(), (next_summary.parent/'runtime').resolve())
 
 
 if __name__ == '__main__':

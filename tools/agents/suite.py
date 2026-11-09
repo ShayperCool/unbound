@@ -94,7 +94,8 @@ DRIVER_TIMEOUT = 5400
 TOOL_TIMEOUT = 1800
 from probe_runtime import (NO_EDITOR, EDITOR_EXIT, EDITOR_MARK, EDITOR_WATCH, Tree,
                            stop_tree, require_process_watch, default_release, probe_release)
-from runtime_snapshot import snapshot_runtime, managed_for as snapshot_managed_for
+from runtime_snapshot import (snapshot_runtime, managed_for as snapshot_managed_for,
+                              retain, release_reference, cleanup, task_owner)
 
 
 class Step:
@@ -1106,6 +1107,13 @@ def default_cli():
 def promote(summary):
     baseline = AGENTS/'baseline'
     baseline.mkdir(parents=True, exist_ok=True)
+    value = json.loads(summary.read_text())
+    reference = Path(value['work'])/'runtime' if value.get('work') else None
+    if (reference is None or not reference.exists()) and value.get('runtime_snapshot'):
+        reference = Path(value['runtime_snapshot'])
+    if reference is not None and reference.exists():
+        retain(reference, summary.parent/'runtime')
+        retain(reference, baseline/'runtime', replace=True)
     shutil.copyfile(summary, baseline/'summary.json')
     print(f'suite: baseline is now {summary}')
 
@@ -1315,7 +1323,8 @@ def main():
               for status in ('pass', 'fail', 'report', 'no recipe')}
     summary = {'label': label, 'release': next(iter(set(releases.values()))) if len(set(releases.values())) == 1 else None,
                'releases': releases, 'only': args.only, 'commit': commit, 'cli': str(cli), 'managed': str(managed),
-               'work': str(work_root), 'started': datetime.datetime.fromtimestamp(started).isoformat(timespec='seconds'),
+               'work': str(work_root), 'runtime_snapshot': str(runtime.resolve()),
+               'started': datetime.datetime.fromtimestamp(started).isoformat(timespec='seconds'),
                'seconds': round(time.time() - started), 'counts': counts,
                'probes': {name: results[name] for name in sorted(results)}}
     (summary_dir/'summary.json').write_text(json.dumps(summary, indent=2)+'\n')
@@ -1337,6 +1346,12 @@ def main():
             print('  ' + line)
     if args.update_baseline:
         promote(summary_dir/'summary.json')
+    if task_owner()['branch'] in ('', 'main'):
+        release_reference(runtime)
+    try:
+        cleanup(days=1/24, repo=REPO)
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        print(f'suite: runtime cleanup deferred: {error}', file=sys.stderr)
     return 1 if regressed else 0
 
 

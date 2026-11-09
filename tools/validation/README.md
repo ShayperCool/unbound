@@ -353,7 +353,7 @@ python3 tools/agents/runtime_snapshot.py create --cli "$UNBOUND" \
 To reclaim snapshots after deleting obsolete run directories or their runtime references:
 
 ```bash
-python3 tools/agents/runtime_snapshot.py cleanup --days 14
+python3 tools/agents/runtime_snapshot.py cleanup --days 0.041667
 ```
 
 Cleanup holds the same lock as reference publication. It removes snapshots older than the
@@ -361,3 +361,21 @@ retention period only when no retained run reference or current-main gate pin us
 The landing gate pins its successful main snapshot, including across documentation-only
 landings. Abandoned staging directories are collected after the same interval only when their
 publisher process has exited. Manifests and probe results are never deleted by this command.
+
+Runtime references record their owning worktree, branch and publisher process. Landing a task,
+reassigning its slot, or reaping its checkout retires its links. Live publishers and engine
+processes defer removal. Landings and completed sheriff suites collect unreferenced snapshots
+older than one hour. A promoted suite keeps an independent runtime link, as does the current
+baseline; promoting a completed run can restore its link while its recorded snapshot exists.
+Legacy baseline summaries and current-main pins also protect their snapshots. A collector makes
+read-only snapshot directories writable for removal, while their files stay read-only.
+Managed files with identical contents and executable modes share immutable hardlinks between
+new snapshots. Mutable build outputs remain separate. Unused managed blobs are collected.
+For an obsolete manual run with no task owner, request retirement explicitly:
+
+```bash
+python3 tools/agents/runtime_snapshot.py release <run>/runtime
+python3 tools/agents/runtime_snapshot.py cleanup --days 0.041667
+```
+
+Release requests preserve promoted references and defer removal while a run is live.

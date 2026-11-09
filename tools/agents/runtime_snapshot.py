@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import uuid
@@ -91,7 +92,22 @@ def remove_snapshot(path):
     shutil.rmtree(path)
 
 
-def register(snapshot, destination, cache):
+def process_start(pid):
+    try:
+        return Path(f'/proc/{pid}/stat').read_text().rsplit(')', 1)[1].split()[19]
+    except (OSError, IndexError):
+        return None
+
+
+def task_owner():
+    def git(*args):
+        return subprocess.run(['git', *args], capture_output=True, text=True, timeout=2).stdout.strip()
+    return {'worktree': git('rev-parse', '--show-toplevel'),
+            'branch': git('symbolic-ref', '--quiet', '--short', 'HEAD'),
+            'pid': os.getpid(), 'start': process_start(os.getpid())}
+
+
+def register(snapshot, destination, cache, *, retained=False):
     """Called under the cache lock, so cleanup cannot race reference publication."""
     destination = Path(os.path.abspath(destination))
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -108,8 +124,93 @@ def register(snapshot, destination, cache):
         finally:
             temporary.unlink(missing_ok=True)
     key = hashlib.sha256(os.fsencode(destination)).hexdigest()
-    atomic_json(cache/'references'/key, {'path': str(destination), 'snapshot': snapshot.name})
+    atomic_json(cache/'references'/key, {'path': str(destination), 'snapshot': snapshot.name,
+                                       'owner': task_owner(), 'retained': retained})
     return destination
+
+
+def active_snapshots(cache):
+    """Also protect manual engine runs whose short-lived capture process exited."""
+    found = set()
+    snapshots = (cache/'snapshots').resolve()
+    for process in Path('/proc').glob('[0-9]*'):
+        try:
+            if process.stat().st_uid != os.getuid():
+                continue
+            paths = [os.readlink(process/'exe')]
+            for variable in (process/'environ').read_bytes().split(b'\0'):
+                if variable.startswith((b'UNBOUND_RUNTIME=', b'UNBOUND_CLI=', b'UNBOUND=')):
+                    paths.append(os.fsdecode(variable.split(b'=', 1)[1]))
+            for value in paths:
+                path = Path(value).resolve()
+                if snapshots in path.parents:
+                    found.add(path.relative_to(snapshots).parts[0])
+        except (OSError, ValueError):
+            continue
+    return found
+
+
+def release_task(worktree, branch=None, *, cache=None):
+    """Retire only this completed task's links, retaining live and promoted runs."""
+    cache = Path(cache or cache_root()).resolve()
+    with cache_lock(cache):
+        for path in (cache/'references').glob('*'):
+            if path.name.endswith('.tmp'):
+                continue
+            record = json.loads(path.read_text())
+            owner = record.get('owner', {})
+            if owner.get('worktree') == str(Path(worktree).resolve()) and (
+                    branch is None or owner.get('branch') == branch):
+                record['release_requested'] = True
+                atomic_json(path, record)
+
+
+def release_reference(destination, *, cache=None):
+    cache = Path(cache or cache_root()).resolve()
+    key = hashlib.sha256(os.fsencode(Path(os.path.abspath(destination)))).hexdigest()
+    with cache_lock(cache):
+        path = cache/'references'/key
+        if path.is_file():
+            record = json.loads(path.read_text())
+            record['release_requested'] = True
+            atomic_json(path, record)
+
+
+def finish_task(worktree, branch=None, *, repo=None):
+    try:
+        release_task(worktree, branch)
+        return cleanup(days=1/24, repo=repo)
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        print(f'runtime cleanup deferred: {error}', file=sys.stderr)
+        return []
+
+
+def retain(runtime, destination, *, cache=None, replace=False):
+    cache = Path(cache or cache_root()).resolve()
+    snapshot = Path(runtime).resolve()
+    if snapshot.parent != (cache/'snapshots').resolve():
+        raise ValueError(f'not a shared snapshot: {snapshot}')
+    with cache_lock(cache):
+        if replace and Path(destination).is_symlink():
+            Path(destination).unlink()
+        return register(snapshot, destination, cache, retained=True)
+
+
+def dedupe_managed(staging, hashes, modes, storage):
+    blobs = storage/'.managed-blobs'
+    blobs.mkdir(exist_ok=True)
+    for name, expected in hashes.items():
+        if not name.startswith('managed/'):
+            continue
+        blob = blobs/(expected+f'-{modes[name]:o}')
+        target = staging/name
+        if blob.exists():
+            if blob.is_symlink() or not blob.is_file() or digest(blob) != expected or blob.stat().st_mode & 0o777 != modes[name]:
+                raise ValueError(f'invalid managed blob: {blob}')
+            target.unlink()
+            os.link(blob, target)
+        else:
+            os.link(target, blob)
 
 
 def validate_snapshot(snapshot, hashes, modes):
@@ -172,6 +273,11 @@ def snapshot_runtime(cli, managed, destination, *, expected=None, cache=None):
         with cache_lock(cache):
             snapshot.parent.mkdir(parents=True, exist_ok=True)
             if not snapshot.exists():
+                for directory, _, _ in os.walk(staging):
+                    os.chmod(directory, 0o700)
+                dedupe_managed(staging, hashes, modes, staging_root)
+                for directory, _, _ in os.walk(staging, topdown=False):
+                    os.chmod(directory, 0o555)
                 os.rename(staging, snapshot)
             else:
                 validate_snapshot(snapshot, hashes, modes)
@@ -204,7 +310,7 @@ def pin_main(runtime, repo, tree, *, previous_tree=None, cache=None):
         atomic_json(pin, {'git_dir': common, 'tree': tree, 'snapshot': snapshot.name})
 
 
-def cleanup(*, days=14, cache=None, now=None):
+def cleanup(*, days=14, cache=None, now=None, repo=None):
     """Remove old, unreferenced snapshots; retained run links and current main pins protect them."""
     if days < 0:
         raise ValueError('days must be nonnegative')
@@ -212,6 +318,28 @@ def cleanup(*, days=14, cache=None, now=None):
     cutoff = (time.time() if now is None else now)-days*86400
     removed, protected = [], set()
     with cache_lock(cache):
+        active = active_snapshots(cache)
+        protected.update(active)
+        # Upgrade protection for baselines written before retained references existed.
+        agents = {cache.parent/'agents', Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound/agents'}
+        for root in agents:
+            summary = root/'baseline/summary.json'
+            if summary.is_file():
+                value = json.loads(summary.read_text())
+                for candidate in [value.get('cli', ''), value.get('runtime_snapshot', ''),
+                                  str(Path(value.get('work', ''))/'runtime')]:
+                    target = Path(candidate).resolve()
+                    storage = (cache/'snapshots').resolve()
+                    if storage in target.parents:
+                        protected.add(target.relative_to(storage).parts[0])
+        landed_links = set()
+        for root in agents:
+            landed = root/'landed.jsonl'
+            if landed.is_file():
+                for line in landed.read_text().splitlines():
+                    log = json.loads(line).get('log')
+                    if log:
+                        landed_links.add(str(Path(log).with_suffix('.runtime')))
         # A killed writer can leave a private JSON temporary behind. No writer holds
         # this lock now, so these are never live reference records.
         for directory in ('references', 'pins'):
@@ -220,6 +348,26 @@ def cleanup(*, days=14, cache=None, now=None):
         for path in (cache/'references').glob('*'):
             record = json.loads(path.read_text())
             reference = Path(record['path'])
+            owner = record.get('owner', {})
+            pid = owner.get('pid')
+            live = pid != os.getpid() and owner.get('start') is not None and process_start(pid) == owner['start']
+            if str(reference) in landed_links:
+                record['release_requested'] = True
+            if repo and reference.name == 'runtime' and reference.parent.parent.name == 'suite':
+                for root in agents:
+                    summary = root/'suite'/reference.parent.name/'summary.json'
+                    if summary.is_file():
+                        commit = json.loads(summary.read_text()).get('commit')
+                        if commit and subprocess.run(['git', '-C', str(repo), 'merge-base', '--is-ancestor', commit, 'main'],
+                                                     capture_output=True, timeout=2).returncode == 0:
+                            record['release_requested'] = True
+            if owner.get('start') and owner.get('branch') in ('', 'main') and not live:
+                record['release_requested'] = True
+            if record.get('release_requested') and not record.get('retained') and not live and record['snapshot'] not in protected:
+                if reference.is_symlink() and reference.resolve() == (cache/'snapshots'/record['snapshot']).resolve():
+                    reference.unlink()
+                path.unlink()
+                continue
             if reference.is_symlink() and reference.resolve() == (cache/'snapshots'/record['snapshot']).resolve():
                 protected.add(record['snapshot'])
             else:
@@ -249,6 +397,9 @@ def cleanup(*, days=14, cache=None, now=None):
             if snapshot.name not in protected and snapshot.stat().st_mtime < cutoff:
                 remove_snapshot(snapshot)
                 removed.append(snapshot.name)
+        for blob in (cache/'snapshots/.managed-blobs').glob('*'):
+            if blob.is_file() and blob.stat().st_nlink == 1:
+                blob.unlink()
     return removed
 
 
@@ -263,12 +414,16 @@ def main():
     create.add_argument('--manifest', type=Path)
     gc = sub.add_parser('cleanup')
     gc.add_argument('--days', type=float, default=14)
+    release = sub.add_parser('release')
+    release.add_argument('destination', type=Path)
     args = parser.parse_args()
     if args.command == 'create':
         expected = json.loads(args.manifest.read_text()) if args.manifest else None
         runtime = snapshot_runtime(args.cli, args.managed or managed_for(args.cli, prefer_environment=False), args.destination,
                                    expected=expected, cache=args.cache)
         print(runtime)
+    elif args.command == 'release':
+        release_reference(args.destination, cache=args.cache)
     else:
         print(json.dumps({'removed': cleanup(days=args.days, cache=args.cache)}))
 
