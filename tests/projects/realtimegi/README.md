@@ -45,7 +45,11 @@ panel); `room-setemissive-then-call` (another material emission change and
 blue, before and after `UpdateGIMaterials`); `room-env-nocall` and `room-env-call` (the ambient
 color changed, before and after `DynamicGI.UpdateEnvironment`); `room-sky` (a procedural skybox
 as the ambient source, with `UpdateEnvironment`), `room-sky-nocall` and `room-sky-call` (its
-exposure changed, before and after the call); `room-pointoff`; `room-spot`; `roomscaled-base`,
+exposure changed, before and after the call); `room-pointoff`; `room-spot`; `room-spot-behind`
+(the spot light moved to light the block from its side: the right wall behind the block is in its
+shadow); `room-directional` and `room-directional-turned` (the spot light off, a realtime
+directional light with shadows added through the open front, at Euler angles (40, 25) and (57,
+-33)); `roomscaled-base`,
 `roomscaled-moved`, then from bounce intensity 3 `roomscaled-indirectscale` (indirect scale 2,
 bounce intensity 1) and, from bounce intensity 3 again, `roomscaled-threshold0` (the same with
 `DynamicGI.updateThreshold` 0; restored after it); `roomdirectional-base`,
@@ -66,6 +70,8 @@ Observations (not documented guarantees):
 
 - Light probes precomputed for realtime GI only: `LightProbes.count` is the number of probes and
   `bakedProbes` is empty.
+- Point and spot lights light realtime GI without their shadows (`room-spot-behind`: the wall
+  behind the block is lit); a directional light's realtime GI is shadowed (`room-directional*`).
 - `DynamicGI.indirectScale` starts as the scene's Lighting Settings Indirect Intensity (1, and 1.5
   in `RoomScaled`); 2 makes the realtime lightmap texels 2.00 to 2.07 times those of
   `room-intensity`. `updateThreshold` defaults to 1.

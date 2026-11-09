@@ -141,6 +141,33 @@ public class RealtimeGIProbe : MonoBehaviour
         yield return Converge();
         Capture("room-spot", s);
 
+        // The spot light from the left at the block's side: the right wall behind the block is
+        // in its shadow, so it is lit only if the realtime GI input ignores the light's shadows.
+        s.spot.transform.SetPositionAndRotation(new Vector3(-1.5f, 1f, 0.8f), Quaternion.Euler(0f, 90f, 0f));
+        s.spot.spotAngle = 60f;
+        yield return Converge();
+        Capture("room-spot-behind", s);
+        s.spot.enabled = false;
+
+        // A realtime directional light through the open front, with shadows, at two directions
+        // between those the precomputed visibility holds: the block and the ceiling shade parts
+        // of the room.
+        var sun = new GameObject("Sun").AddComponent<Light>();
+        sun.type = LightType.Directional;
+#if UNITY_EDITOR
+        sun.lightmapBakeType = LightmapBakeType.Realtime;
+#endif
+        sun.shadows = LightShadows.Hard;
+        sun.color = new Color(1f, 0.95f, 0.8f);
+        sun.intensity = 1.2f;
+        sun.transform.rotation = Quaternion.Euler(40f, 25f, 0f);
+        yield return Converge();
+        Capture("room-directional", s);
+        sun.transform.rotation = Quaternion.Euler(57f, -33f, 0f);
+        yield return Converge();
+        Capture("room-directional-turned", s);
+        Destroy(sun.gameObject);
+
         foreach (var name in new[] { "RoomScaled", "RoomDirectional" })
         {
             yield return Load(name);
