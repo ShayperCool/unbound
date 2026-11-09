@@ -1,0 +1,59 @@
+SmoothNormal compression=normal
+SmoothNormalQ0 compression=normal quality=0
+SmoothNormalQ100 compression=normal quality=100
+SmoothHigh compression=high
+SmoothHighQ0 compression=high quality=0
+SmoothHighQ100 compression=high quality=100
+SmoothLow compression=low
+SmoothLinear compression=normal srgb=0
+SmoothNoMips compression=normal mips=0
+SmoothUnreadable compression=normal readable=0
+NoiseNormal compression=normal
+NoiseNormalQ0 compression=normal quality=0
+NoiseNormalQ100 compression=normal quality=100
+NoiseHigh compression=high
+NoiseHighQ100 compression=high quality=100
+NoiseLow compression=low
+NoiseAlphaNone compression=normal alpha=none
+CutoutNormal compression=normal
+SoftNormal compression=normal
+SoftHigh compression=high
+FlatNormal compression=normal
+FlatOpaque compression=normal alpha=none
+HeightRed type=single channel=red compression=normal
+HeightRedQ0 type=single channel=red compression=normal quality=0
+HeightRedHigh type=single channel=red compression=high
+HeightAlpha type=single channel=alpha compression=normal
+NormalsNormal type=normal compression=normal
+NormalsHigh type=normal compression=high
+NormalsLow type=normal compression=low
+HdrNormal compression=normal
+HdrHigh compression=high
+HdrNormalQ0 compression=normal quality=0
+OddNormal compression=normal npot=none
+NpotNormal compression=normal npot=none
+NpotOpaqueNormal compression=normal npot=none
+NpotDXT5 format=DXT5 npot=none
+TinyNormal compression=normal
+WideNormal compression=normal
+HdrLow compression=low
+SmoothDXT1 format=DXT1
+NoiseDXT1 format=DXT1
+NoiseDXT5 format=DXT5
+NoiseDXT5Q0 format=DXT5 quality=0
+NoiseDXT5Q100 format=DXT5 quality=100
+HeightBC4 format=BC4
+NormalsBC5 format=BC5 srgb=0
+SmoothBC7 format=BC7
+NoiseBC7 format=BC7
+NoiseBC7Q0 format=BC7 quality=0
+NoiseBC7Q100 format=BC7 quality=100
+HdrBC6H format=BC6H
+SmoothDXT1Crunched format=DXT1Crunched
+OddDXT5 format=DXT5 npot=none
+NoiseRGBA32 format=RGBA32
+NoiseUnreadable format=RGBA32 readable=0
+SmoothRGB24 format=RGB24
+HeightR8 format=R8 srgb=0
+NormalsRG16 format=RG16 srgb=0
+OddRGBA32 format=RGBA32 npot=none mips=0

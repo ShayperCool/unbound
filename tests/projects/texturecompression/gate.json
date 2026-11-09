@@ -1,0 +1,6 @@
+{
+  "commands": [
+    "python3 tests/projects/texturecompression/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\" --label gate-$(date +%s%N)"
+  ],
+  "summary": "[0-9]+/[0-9]+ values match, [0-9]+ failing, [0-9]+ residuals"
+}

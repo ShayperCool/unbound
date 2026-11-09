@@ -1,0 +1,38 @@
+{
+  "Gamma": {
+    "compress.*": "Texture2D.Compress is not implemented yet: the texture keeps its uncompressed format (follow-up)",
+    "copy.*": "compressed Texture2Ds made by code are not implemented yet, so Graphics.CopyTexture between them is not either (follow-up)",
+    "load.*": "compressed Texture2Ds made by code and LoadRawTextureData of blocks are not implemented yet (follow-up)",
+    "new.*": "compressed Texture2Ds made by code are not implemented yet: they keep RGBA pixels, accept any size and have no 0xCD blocks (follow-up)",
+    "tex.SmoothDXT1Crunched.*": "crunched formats are not produced: the import keeps uncompressed RGBA32 pixels (follow-up)",
+    "tex.HeightR8.*": "explicit uncompressed formats other than the automatic ones report RGBA32 (pre-existing; follow-up)",
+    "tex.NormalsRG16.*": "explicit uncompressed formats other than the automatic ones report RGBA32 (pre-existing; follow-up)",
+    "tex.SmoothRGB24.*": "explicit uncompressed formats other than the automatic ones report RGBA32 (pre-existing; follow-up)",
+    "tex.Hdr*": "BC6H: Unbound's own encoder (ISPC texture compressor) makes these blocks: the format, sizes and layout are the Editor's, the blocks and their texels are not; the CPU keeps the float pixels before compression",
+    "tex.HeightRed*": "BC4: Unbound's own encoder (ISPC texture compressor) makes these blocks: the format, sizes and layout are the Editor's, the blocks and their texels are not",
+    "tex.HeightBC4.*": "BC4: Unbound's own encoder (ISPC texture compressor) makes these blocks: the format, sizes and layout are the Editor's, the blocks and their texels are not",
+    "tex.NormalsBC5.*": "BC5: Unbound's own encoder (ISPC texture compressor) makes these blocks: the format, sizes and layout are the Editor's, the blocks and their texels are not",
+    "tex.*BC7*": "BC7: Unbound's own encoder (ISPC texture compressor) makes these blocks: the format, sizes and layout are the Editor's, the blocks and their texels are not (the Editor's default BC7 compressor is bc7e)",
+    "tex.*High*": "BC7: Unbound's own encoder (ISPC texture compressor) makes these blocks: the format, sizes and layout are the Editor's, the blocks and their texels are not (the Editor's default BC7 compressor is bc7e)",
+    "tex.WideNormal.raw": "the 2x1 level of a 64x16 texture: Unbound's source texels of that level differ from the Editor's (its blocks then do); follow-up in mip generation",
+    "tex.WideNormal.pixels5": "the 2x1 level of a 64x16 texture: Unbound's source texels of that level differ from the Editor's (its blocks then do); follow-up in mip generation"
+  },
+  "Linear": {
+    "compress.*": "Texture2D.Compress is not implemented yet: the texture keeps its uncompressed format (follow-up)",
+    "copy.*": "compressed Texture2Ds made by code are not implemented yet, so Graphics.CopyTexture between them is not either (follow-up)",
+    "load.*": "compressed Texture2Ds made by code and LoadRawTextureData of blocks are not implemented yet (follow-up)",
+    "new.*": "compressed Texture2Ds made by code are not implemented yet: they keep RGBA pixels, accept any size and have no 0xCD blocks (follow-up)",
+    "tex.SmoothDXT1Crunched.*": "crunched formats are not produced: the import keeps uncompressed RGBA32 pixels (follow-up)",
+    "tex.HeightR8.*": "explicit uncompressed formats other than the automatic ones report RGBA32 (pre-existing; follow-up)",
+    "tex.NormalsRG16.*": "explicit uncompressed formats other than the automatic ones report RGBA32 (pre-existing; follow-up)",
+    "tex.SmoothRGB24.*": "explicit uncompressed formats other than the automatic ones report RGBA32 (pre-existing; follow-up)",
+    "tex.Hdr*": "BC6H: Unbound's own encoder (ISPC texture compressor) makes these blocks: the format, sizes and layout are the Editor's, the blocks and their texels are not; the CPU keeps the float pixels before compression",
+    "tex.HeightRed*": "BC4: Unbound's own encoder (ISPC texture compressor) makes these blocks: the format, sizes and layout are the Editor's, the blocks and their texels are not",
+    "tex.HeightBC4.*": "BC4: Unbound's own encoder (ISPC texture compressor) makes these blocks: the format, sizes and layout are the Editor's, the blocks and their texels are not",
+    "tex.NormalsBC5.*": "BC5: Unbound's own encoder (ISPC texture compressor) makes these blocks: the format, sizes and layout are the Editor's, the blocks and their texels are not",
+    "tex.*BC7*": "BC7: Unbound's own encoder (ISPC texture compressor) makes these blocks: the format, sizes and layout are the Editor's, the blocks and their texels are not (the Editor's default BC7 compressor is bc7e)",
+    "tex.*High*": "BC7: Unbound's own encoder (ISPC texture compressor) makes these blocks: the format, sizes and layout are the Editor's, the blocks and their texels are not (the Editor's default BC7 compressor is bc7e)",
+    "tex.WideNormal.raw": "the 2x1 level of a 64x16 texture: Unbound's source texels of that level differ from the Editor's (its blocks then do); follow-up in mip generation",
+    "tex.WideNormal.pixels5": "the 2x1 level of a 64x16 texture: Unbound's source texels of that level differ from the Editor's (its blocks then do); follow-up in mip generation"
+  }
+}
