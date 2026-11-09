@@ -1598,6 +1598,7 @@ namespace UnityEngine
             if (m_Count >= m_Main.maxParticles)
             {
                 if (m_Main.ringBufferMode == ParticleSystemRingBufferMode.Disabled || m_Count == 0) return -1;
+                if (StartsInBatches) ReportUnsupported("ring buffer replacement by sub-emitter births (the oldest particle is replaced; Unity's ring order is not matched)");
                 int oldest = 0;
                 float oldestAge = float.NegativeInfinity;
                 for (int i = 0; i < m_Count; i++)
