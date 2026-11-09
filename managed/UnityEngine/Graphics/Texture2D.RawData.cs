@@ -9,7 +9,7 @@ namespace UnityEngine
         /// used by <see cref="GetPixelData{T}"/>. Elements that do not fit at the end are omitted.</summary>
         public unsafe NativeArray<T> GetRawTextureData<T>() where T : struct
         {
-            RequireReadable();
+            RequireReadable(pixels: !SourceBlocks);
             EnterStore();
             var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>(
                 (void*)m_StorePin.AddrOfPinnedObject(), m_Store.Length / UnsafeUtility.SizeOf<T>(), Allocator.None);

@@ -667,6 +667,33 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let rgba = unbound_assets::texture::decode_blocks(format, &blocks, r.width, r.height);
             Ok(json!({ "rgba": crate::models::base64(&rgba) }).to_string())
         }
+        "texture-compress-blocks" => {
+            // One RGBA8 level (rows as stored) block-compressed to Unity's TextureFormat
+            // `format` (Texture2D.Compress).
+            #[derive(Deserialize)]
+            struct Request {
+                format: i32,
+                width: u32,
+                height: u32,
+                data: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let format = unbound_assets::texture::BlockFormat::from_unity_format(r.format)
+                .filter(|f| *f != unbound_assets::texture::BlockFormat::Bc6h)
+                .with_context(|| {
+                    format!("texture format {} is not an 8-bit block format", r.format)
+                })?;
+            let rgba = crate::fonts::decode_base64(&r.data).context("data is not base64")?;
+            anyhow::ensure!(
+                rgba.len() >= r.width as usize * r.height as usize * 4,
+                "texture-compress-blocks: {} bytes for a {}x{} level",
+                rgba.len(),
+                r.width,
+                r.height
+            );
+            let blocks = unbound_assets::texture::compress_level(format, &rgba, r.width, r.height);
+            Ok(json!({ "blocks": crate::models::base64(&blocks) }).to_string())
+        }
         "texture-layers" => {
             // An imported texture's images: slices of an array, depth of a volume, cube faces.
             #[derive(Deserialize)]
@@ -1213,6 +1240,13 @@ fn single_channel_texels(
         Some(GpuChannel::Red) => {
             for p in data.chunks_exact_mut(4) {
                 p[1] = 0;
+                p[2] = 0;
+                p[3] = 255;
+            }
+            (format, data)
+        }
+        Some(GpuChannel::RedGreen) => {
+            for p in data.chunks_exact_mut(4) {
                 p[2] = 0;
                 p[3] = 255;
             }

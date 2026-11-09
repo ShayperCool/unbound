@@ -543,6 +543,13 @@ namespace UnityEngine
         {
             if (src == null) throw new ArgumentNullException(nameof(src));
             if (dst == null) throw new ArgumentNullException(nameof(dst));
+            if (src is Texture2D b1 && dst is Texture2D b2
+                && (BlockFormats.BlockBytes(b1.format) > 0 || BlockFormats.BlockBytes(b2.format) > 0))
+            {
+                Texture2D.CopyBlocks(b1, 0, 0, 0, -1, -1, b2, 0, 0, 0,
+                    () => GfxStream.CopyTexture(TextureHandles.Of(src), 0, 0, new RectInt(-1, -1, -1, -1), TextureHandles.Of(dst), 0, 0, 0, 0), allLevels: true);
+                return;
+            }
             if (src.dimension != TextureDimension.Tex3D && dst.dimension != TextureDimension.Tex3D)
             {
                 CopyTexture(src, 0, 0, -1, -1, -1, -1, dst, 0, 0, 0, 0);
@@ -568,6 +575,13 @@ namespace UnityEngine
         {
             if (src == null) throw new ArgumentNullException(nameof(src));
             if (dst == null) throw new ArgumentNullException(nameof(dst));
+            if (src is Texture2D b1 && dst is Texture2D b2
+                && (BlockFormats.BlockBytes(b1.format) > 0 || BlockFormats.BlockBytes(b2.format) > 0))
+            {
+                Texture2D.CopyBlocks(b1, srcMip, srcX, srcY, srcWidth, srcHeight, b2, dstMip, dstX, dstY,
+                    () => GfxStream.CopyTexture(TextureHandles.Of(src), srcElement, srcMip, new RectInt(srcX, srcY, srcWidth, srcHeight), TextureHandles.Of(dst), dstElement, dstMip, dstX, dstY));
+                return;
+            }
             if (src is Texture2D s2 && dst is Texture2D d2 && srcMip == 0 && dstMip == 0)
             {
                 int w = srcWidth < 0 ? s2.width : srcWidth, h = srcHeight < 0 ? s2.height : srcHeight;

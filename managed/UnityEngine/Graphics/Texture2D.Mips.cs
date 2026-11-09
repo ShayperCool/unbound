@@ -196,7 +196,7 @@ namespace UnityEngine
             if (m_Width == 0 || !m_IsReadable) throw LayeredTextures.NotReadable("Texture2D.GetPixels", name);
             RequireReadable(true);
             CheckMip(miplevel);
-            return BlockTiled(GetPixels(0, 0, MipWidth(miplevel), MipHeight(miplevel), miplevel), miplevel);
+            return BlockPadded(GetPixels(0, 0, MipWidth(miplevel), MipHeight(miplevel), miplevel), miplevel);
         }
         /// <summary>Level zero with each stored byte as b / 255 (the Color32 conversion), for engine
         /// paths that are not GetPixels.</summary>
@@ -234,7 +234,7 @@ namespace UnityEngine
             var result = new Color32[MipWidth(miplevel) * MipHeight(miplevel)];
             for (int i = 0; i < result.Length; i++)
                 result[i] = m_Hdr != null ? Texture2DTexels.Pixel32(m_Format, FloatCell(miplevel, i)) : Texture2DTexels.Pixel32(m_Format, Cell(miplevel, i));
-            return BlockTiled(result, miplevel);
+            return BlockPadded(result, miplevel);
         }
 
         public void SetPixels(Color[] colors) => SetPixels(colors, 0);
@@ -360,7 +360,7 @@ namespace UnityEngine
 
         public void LoadRawTextureData(byte[] data)
         {
-            RequireReadable();
+            RequireReadable(pixels: !SourceBlocks);
             if (data == null) throw new ArgumentNullException(nameof(data));
             if (SourceBlocks)
             {
@@ -381,11 +381,25 @@ namespace UnityEngine
         }
         public void SetPixelData<T>(T[] data, int mipLevel, int sourceDataStartIndex = 0) where T : struct
         {
-            RequireReadable();
+            RequireReadable(pixels: !SourceBlocks);
             CheckMip(mipLevel);
             if (data == null) throw new ArgumentNullException(nameof(data));
             if (sourceDataStartIndex < 0 || sourceDataStartIndex > data.Length) throw new ArgumentOutOfRangeException(nameof(sourceDataStartIndex));
-            var bytes = MemoryMarshal.AsBytes(new ReadOnlySpan<T>(data, sourceDataStartIndex, data.Length - sourceDataStartIndex));
+            SetPixelBytes(MemoryMarshal.AsBytes(new ReadOnlySpan<T>(data, sourceDataStartIndex, data.Length - sourceDataStartIndex)), mipLevel);
+        }
+
+        public void SetPixelData<T>(Unity.Collections.NativeArray<T> data, int mipLevel, int sourceDataStartIndex = 0) where T : struct
+        {
+            RequireReadable(pixels: !SourceBlocks);
+            CheckMip(mipLevel);
+            if (!data.IsCreated) throw new ArgumentException("SetPixelData: the data array is not created.");
+            if (sourceDataStartIndex < 0 || sourceDataStartIndex > data.Length) throw new ArgumentOutOfRangeException(nameof(sourceDataStartIndex));
+            SetPixelBytes(MemoryMarshal.AsBytes(data.AsReadOnlySpan().Slice(sourceDataStartIndex)), mipLevel);
+        }
+
+        /// <summary>SetPixelData's bytes for one level, in the texture's format.</summary>
+        void SetPixelBytes(ReadOnlySpan<byte> bytes, int mipLevel)
+        {
             if (SourceBlocks)
             {
                 SetBlockLevel(bytes, mipLevel);

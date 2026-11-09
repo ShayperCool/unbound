@@ -103,6 +103,11 @@ namespace UnityEngine
             m_SourceRaw = null;
             m_BlockCellHashes = null;
             m_AssetGuid = null;
+            if (BlockFormats.BlockBytes(format) > 0)
+            {
+                InitBlocks(format);
+                return;
+            }
             // A new texture is grey (205,205,205,205) until written, as in Unity.
             if (Texture2DTexels.FloatStored(format))
             {
@@ -195,7 +200,10 @@ namespace UnityEngine
             }
         }
 
-        void RequireReadable(bool pixelArray = false)
+        /// <summary>Throws unless the texture is readable; makes its pixel cells available unless
+        /// `pixels` is false (raw-data calls of a compressed texture made by code need its blocks
+        /// alone).</summary>
+        void RequireReadable(bool pixelArray = false, bool pixels = true)
         {
             if (!m_IsReadable)
             {
@@ -209,6 +217,12 @@ namespace UnityEngine
             if (pixelArray) RefreshBlockCells();
             if (m_Pixels == null && m_Hdr == null)
             {
+                // A compressed texture made by code decodes its blocks when its pixels are read.
+                if (SourceBlocks && m_AssetGuid == null)
+                {
+                    if (pixels) DecodeAllBlocks();
+                    return;
+                }
                 if (m_IsReadable && m_AssetGuid != null) FetchImportedPixels();
                 if (m_Pixels == null && m_Hdr == null)
                     throw new UnityException($"Texture '{name}' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings.");
@@ -357,7 +371,7 @@ namespace UnityEngine
         [Obsolete("Texture2D.Resize(int, int, TextureFormat, bool) has been deprecated because it actually reinitializes the texture. Use Texture2D.Reinitialize(int, int, TextureFormat, bool) instead (UnityUpgradable) -> Reinitialize([*] System.Int32, [*] System.Int32, UnityEngine.TextureFormat, [*] System.Boolean)", false)]
         public bool Resize(int width, int height, TextureFormat format, bool hasMipMap) => Reinitialize(width, height, format, hasMipMap);
 
-        public void Compress(bool highQuality) => Stubs.Ignored("Texture2D.Compress", "is not done: the texture keeps its uncompressed format");
+        public void Compress(bool highQuality) => CompressToBlocks(highQuality);
 
         /// <summary>Copies a rectangle of the active render target (the screen when none) into the
         /// texture's CPU pixels at (destX, destY), after everything drawn so far.</summary>
@@ -504,7 +518,7 @@ namespace UnityEngine
         /// <summary>The renderer handle, uploading pending pixels first.</summary>
         internal ulong EnsureUploaded()
         {
-            if (m_NativeHandle == 0 && (m_Pixels != null || m_Raw != null || m_Hdr != null)) m_PixelsDirty = true;
+            if (m_NativeHandle == 0 && (m_Pixels != null || m_Raw != null || m_Hdr != null || SourceBlocks)) m_PixelsDirty = true;
             if (m_PixelsDirty) Upload();
             return m_NativeHandle;
         }
@@ -895,6 +909,8 @@ namespace Unbound.Runtime
         {
             (int)UnityEngine.TextureFormat.Alpha8 => UnityEngine.TextureFormat.Alpha8,
             (int)UnityEngine.TextureFormat.R8 => UnityEngine.TextureFormat.R8,
+            (int)UnityEngine.TextureFormat.RG16 => UnityEngine.TextureFormat.RG16,
+            (int)UnityEngine.TextureFormat.RGBA32 => UnityEngine.TextureFormat.RGBA32,
             (int)UnityEngine.TextureFormat.RGB24 => UnityEngine.TextureFormat.RGB24,
             _ => info.Format switch
             {

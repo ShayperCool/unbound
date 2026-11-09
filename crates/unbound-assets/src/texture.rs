@@ -648,6 +648,7 @@ pub mod unity_format {
     pub const ALPHA8: i32 = 1;
     pub const RGB24: i32 = 3;
     pub const RGBA32: i32 = 4;
+    pub const RG16: i32 = 62;
     pub const R8: i32 = 63;
 }
 
@@ -658,6 +659,8 @@ pub enum GpuChannel {
     Alpha,
     /// R8 or BC4: samples (r, 0, 0, 1).
     Red,
+    /// RG16: samples (r, g, 0, 1).
+    RedGreen,
 }
 
 impl ImportedTexture {
@@ -679,6 +682,9 @@ impl ImportedTexture {
             return Some(blocks.format.unity_format());
         }
         let s = &self.settings;
+        if let Some(format) = self.explicit_byte_format() {
+            return Some(format);
+        }
         if self.format != TextureFormat::Rgba8 || s.format_alpha.is_some() {
             return None;
         }
@@ -707,6 +713,12 @@ impl ImportedTexture {
     /// unmeasured and keep their alpha in every channel). None for other textures and explicit
     /// formats.
     pub fn gpu_channel(&self) -> Option<GpuChannel> {
+        match self.explicit_byte_format() {
+            Some(unity_format::ALPHA8) => return Some(GpuChannel::Alpha),
+            Some(unity_format::R8) => return Some(GpuChannel::Red),
+            Some(unity_format::RG16) => return Some(GpuChannel::RedGreen),
+            _ => {}
+        }
         let s = &self.settings;
         if self.format != TextureFormat::Rgba8 || s.format_alpha.is_some() {
             return None;
@@ -721,6 +733,25 @@ impl ImportedTexture {
             }
             _ => None,
         }
+    }
+
+    /// The format of an 8-bit import whose build target names an uncompressed byte format
+    /// explicitly (TextureImporterFormat Alpha8, RGB24, RGBA32, RG16 and R8 are the TextureFormat
+    /// of the same value: tests/projects/texturecompression HeightR8, NormalsRG16, SmoothRGB24,
+    /// NoiseRGBA32).
+    fn explicit_byte_format(&self) -> Option<i32> {
+        let format = self.settings.explicit_format? as i32;
+        (self.format == TextureFormat::Rgba8
+            && self.uncompressed
+            && matches!(
+                format,
+                unity_format::ALPHA8
+                    | unity_format::RGB24
+                    | unity_format::RGBA32
+                    | unity_format::RG16
+                    | unity_format::R8
+            ))
+        .then_some(format)
     }
 
     /// The sprite with `file_id`.
@@ -2026,7 +2057,7 @@ fn srgb_to_linear_table() -> &'static [f32; 256] {
 }
 
 mod bcn;
-pub use bcn::{BlockFormat, decode_level as decode_blocks};
+pub use bcn::{BlockFormat, compress_level, decode_level as decode_blocks};
 mod cubemap;
 mod mipmaps;
 mod psd;

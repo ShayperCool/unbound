@@ -1079,7 +1079,13 @@ fn automatic_uncompressed_formats_are_reported() {
         Some(26)
     );
     assert_eq!(report(&opaque, "  textureType: 4\n"), None);
-    assert_eq!(report(&opaque, "  textureFormat: 4\n"), None);
+    // Explicit byte formats report themselves (tests/projects/texturecompression HeightR8,
+    // NormalsRG16, SmoothRGB24, NoiseRGBA32); others keep Unbound's answer.
+    assert_eq!(report(&opaque, "  textureFormat: 4\n"), Some(unity_format::RGBA32));
+    assert_eq!(report(&clear, "  textureFormat: 3\n"), Some(unity_format::RGB24));
+    assert_eq!(report(&opaque, "  textureFormat: 63\n"), Some(unity_format::R8));
+    assert_eq!(report(&opaque, "  textureFormat: 62\n"), Some(unity_format::RG16));
+    assert_eq!(report(&opaque, "  textureFormat: 5\n"), None);
 }
 
 /// The channel the GPU samples of a one-channel import (tests/projects/urp

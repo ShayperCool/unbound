@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Unbound.Runtime;
 using Xunit;
 using Object = UnityEngine.Object;
@@ -90,6 +91,47 @@ namespace UnityEngine.Tests
             Assert.Equal(Color.white, texture.GetPixel(1, 1));
             Assert.Equal(new Color(0, 0, 0, 0), texture.GetPixel(2, 1));
             Object.DestroyImmediate(texture);
+        }
+
+        /// <summary>Compressed textures made by code (tests/projects/texturecompression new.*):
+        /// block-sized sides only, blocks of 205 until written.</summary>
+        [Fact]
+        public void CompressedTexturesMadeByCodeHoldBlocksOf205()
+        {
+            var e = Assert.Throws<UnityException>(() => new Texture2D(30, 18, TextureFormat.DXT1, false));
+            Assert.Equal("Failed to create texture because of invalid parameters.", e.Message);
+            var texture = new Texture2D(20, 12, TextureFormat.DXT5, true) { hideFlags = HideFlags.HideAndDontSave };
+            Assert.Equal(TextureFormat.DXT5, texture.format);
+            Assert.Equal(5, texture.mipmapCount);
+            var raw = texture.GetRawTextureData();
+            // 20x12, 10x6, 5x3, 2x1, 1x1: 15, 6, 2, 1 and 1 blocks of 16 bytes.
+            Assert.Equal((15 + 6 + 2 + 1 + 1) * 16, raw.Length);
+            Assert.All(raw, b => Assert.Equal(205, b));
+            Assert.Equal(new[] { 240, 96, 32, 16, 16 }, Enumerable.Range(0, 5).Select(m => texture.GetPixelData<byte>(m).Length));
+            var shortData = Assert.Throws<UnityException>(() => texture.LoadRawTextureData(new byte[raw.Length - 1]));
+            Assert.Equal("LoadRawTextureData: not enough data provided (will result in overread).", shortData.Message);
+            Object.DestroyImmediate(texture);
+        }
+
+        /// <summary>CopyTexture copies whole levels of blocks between formats with the same block
+        /// size and nothing between DXT1 and DXT5 (tests/projects/texturecompression copy.*).</summary>
+        [Fact]
+        public void CopyTextureCopiesBlocksOfTheSameSize()
+        {
+            var dxt5 = new Texture2D(8, 8, TextureFormat.DXT5, true) { hideFlags = HideFlags.HideAndDontSave };
+            var bc7 = new Texture2D(8, 8, TextureFormat.BC7, true) { hideFlags = HideFlags.HideAndDontSave };
+            var dxt1 = new Texture2D(8, 8, TextureFormat.DXT1, true) { hideFlags = HideFlags.HideAndDontSave };
+            var blocks = Enumerable.Range(0, dxt5.GetRawTextureData().Length).Select(i => (byte)i).ToArray();
+            // Written through a view (no decoding needed).
+            var view = dxt5.GetRawTextureData<byte>();
+            for (int i = 0; i < blocks.Length; i++) view[i] = blocks[i];
+            Graphics.CopyTexture(dxt5, bc7);
+            Assert.Equal(blocks, bc7.GetRawTextureData());
+            Graphics.CopyTexture(dxt5, dxt1);
+            Assert.All(dxt1.GetRawTextureData(), b => Assert.Equal(205, b));
+            Object.DestroyImmediate(dxt5);
+            Object.DestroyImmediate(bc7);
+            Object.DestroyImmediate(dxt1);
         }
 
         [Fact]

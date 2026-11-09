@@ -252,9 +252,9 @@ pub fn decode_level(format: BlockFormat, blocks: &[u8], width: u32, height: u32)
     for (i, block) in blocks.chunks_exact(size).enumerate() {
         let (bx, by) = (i % bw, i / bw);
         match format {
-            BlockFormat::Bc1 => decode_colour(block, &mut texels, false),
+            BlockFormat::Bc1 => decode_colour(block, &mut texels),
             BlockFormat::Bc3 => {
-                decode_colour(&block[8..], &mut texels, true);
+                decode_colour(&block[8..], &mut texels);
                 decode_steps(&block[..8], &mut texels, 3);
             }
             BlockFormat::Bc4 => {
@@ -302,8 +302,10 @@ fn expand565(c: u16) -> [u32; 3] {
     ]
 }
 
-/// A colour block; `four` forces four colours (a BC3 block's colour half).
-fn decode_colour(block: &[u8], texels: &mut [[u8; 4]; 16], four: bool) {
+/// A colour block. A BC3 block's colour half follows the same rule, three colours and black
+/// when c0 <= c1 (its alpha comes from the alpha half), as the Editor's GetPixels32 reads it
+/// (tests/projects/texturecompression new.DXT5, bytes of 205).
+fn decode_colour(block: &[u8], texels: &mut [[u8; 4]; 16]) {
     let c0 = u16::from_le_bytes([block[0], block[1]]);
     let c1 = u16::from_le_bytes([block[2], block[3]]);
     let (a, b) = (expand565(c0), expand565(c1));
@@ -311,7 +313,7 @@ fn decode_colour(block: &[u8], texels: &mut [[u8; 4]; 16], four: bool) {
         let m = |k: usize| ((a[k] * wa + b[k] * wb) / d) as u8;
         [m(0), m(1), m(2), 255]
     };
-    let palette = if four || c0 > c1 {
+    let palette = if c0 > c1 {
         [mix(1, 0, 1), mix(0, 1, 1), mix(2, 1, 3), mix(1, 2, 3)]
     } else {
         [mix(1, 0, 1), mix(0, 1, 1), mix(1, 1, 2), [0, 0, 0, 0]]

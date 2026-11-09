@@ -146,6 +146,8 @@ namespace UnityEngine
             CheckStoreWrite();
             data.Slice(0, size).CopyTo(new Span<byte>(blocks, at, size));
             EnsureBlockCells();
+            // Cells not made yet (a texture made by code) are decoded when first read.
+            if (m_Pixels == null && m_Hdr == null) return;
             DecodeBlockLevel(new ReadOnlySpan<byte>(blocks, at, size), mip);
             if (m_BlockCellHashes != null) m_BlockCellHashes[mip] = Fnv1a(new ReadOnlySpan<byte>(blocks, at, size));
         }
@@ -167,6 +169,7 @@ namespace UnityEngine
             CheckStoreWrite();
             data.Slice(0, total).CopyTo(blocks);
             EnsureBlockCells();
+            if (m_Pixels == null && m_Hdr == null) return;
             int at = 0;
             for (int mip = 0; mip < m_SourceMips; mip++)
             {
@@ -209,20 +212,215 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>A whole level's pixels as GetPixels and GetPixels32 answer them: a compressed
-        /// texture's level smaller than a block is the whole decoded block, the level repeated as
-        /// tiles (the Unity 6000.0.71f1 Editor, tests/projects/texturecompression pixels5 and
-        /// pixels6 of 2x2 and 1x1 levels).</summary>
-        T[] BlockTiled<T>(T[] level, int mip)
+        /// <summary>A whole level's pixels as GetPixels and GetPixels32 answer them: a side of a
+        /// compressed texture's level shorter than a block reads the whole block, 4 texels (the
+        /// Unity 6000.0.71f1 Editor, tests/projects/texturecompression: 2x2 and 1x1 levels read 4x4,
+        /// a 5x3 level 5x4; an import's padding is the level repeated as tiles, new.* bytes of 205
+        /// decode to whatever they hold).</summary>
+        Color32[] BlockPadded(Color32[] level, int mip) =>
+            BlockPadded(level, mip, c => c);
+
+        Color[] BlockPadded(Color[] level, int mip) =>
+            BlockPadded(level, mip, c => Texture2DTexels.FloatStored(m_Format)
+                ? new Color(c.r / 255f, c.g / 255f, c.b / 255f, c.a / 255f)
+                : Texture2DTexels.Pixel(m_Format, c));
+
+        T[] BlockPadded<T>(T[] level, int mip, Func<Color32, T> read)
         {
             int w = MipWidth(mip), h = MipHeight(mip);
             if (!SourceBlocks || (w >= 4 && h >= 4)) return level;
+            var blocks = CurrentBlocks();
+            if (blocks == null) return level;
+            // The decoded blocks, then the read size: sides below 4 grow to 4.
             int bw = (w + 3) / 4 * 4, bh = (h + 3) / 4 * 4;
-            var tiled = new T[bw * bh];
-            for (int y = 0; y < bh; y++)
-                for (int x = 0; x < bw; x++)
-                    tiled[y * bw + x] = level[(y % h) * w + x % w];
-            return tiled;
+            int rw = Math.Max(w, 4), rh = Math.Max(h, 4);
+            int at = 0;
+            for (int m = 0; m < mip; m++) at += SourceLevelSize(m);
+            var json = Native.Call("texture-decode-blocks", JsonSerializer.Serialize(new
+            {
+                format = (int)m_SourceFormat.Value,
+                width = bw,
+                height = bh,
+                data = Convert.ToBase64String(blocks, at, SourceLevelSize(mip)),
+            }));
+            using var doc = JsonDocument.Parse(json);
+            var rgba = Convert.FromBase64String(doc.RootElement.GetProperty("rgba").GetString());
+            var padded = new T[rw * rh];
+            for (int y = 0; y < rh; y++)
+                for (int x = 0; x < rw; x++)
+                {
+                    int i = (y * bw + x) * 4;
+                    padded[y * rw + x] = read(new Color32(rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3]));
+                }
+            return padded;
+        }
+
+        /// <summary>A block-compressed texture made by code: its sides must be multiples of the
+        /// block (30x18 DXT1 is refused, 20x12 DXT5 made, tests/projects/texturecompression
+        /// new.*), its blocks are bytes of 205 until written (what the Editor's new textures hold)
+        /// and its pixels what they decode to.</summary>
+        void InitBlocks(TextureFormat format)
+        {
+            if (m_Width % 4 != 0 || m_Height % 4 != 0)
+                throw new UnityException("Failed to create texture because of invalid parameters.");
+            m_SourceFormat = format;
+            m_SourceMips = m_MipCount;
+            m_Format = format == TextureFormat.BC6H ? TextureFormat.RGBAHalf : TextureFormat.RGBA32;
+            int total = 0;
+            for (int mip = 0; mip < m_MipCount; mip++) total += SourceLevelSize(mip);
+            m_SourceRaw = new byte[total];
+            Array.Fill(m_SourceRaw, (byte)205);
+            m_Pixels = null;
+            m_Hdr = null;
+            m_PixelsDirty = true;
+        }
+
+        /// <summary>Decodes every level of a block-compressed texture made by code into its cells.</summary>
+        void DecodeAllBlocks()
+        {
+            var blocks = CurrentBlocks();
+            int at = 0;
+            for (int mip = 0; mip < m_SourceMips; mip++)
+            {
+                int size = SourceLevelSize(mip);
+                DecodeBlockLevel(new ReadOnlySpan<byte>(blocks, at, size), mip);
+                at += size;
+            }
+            if (m_BlockCellHashes != null) HashBlockCells(blocks);
+        }
+
+        /// <summary>Texture2D.Compress: RGB24 (and RGB565) to DXT1, formats with alpha to DXT5, R8
+        /// to BC4, RG16 to BC5, every level from its pixels (tests/projects/texturecompression
+        /// compress.*); a compressed, unreadable or not block-sized texture is left alone. The
+        /// blocks are Unbound's encoder's, not the Editor's runtime compressor's, and
+        /// `highQuality` (dithering) is not applied.</summary>
+        void CompressToBlocks(bool highQuality)
+        {
+            if (SourceBlocks || !m_IsReadable || m_Width % 4 != 0 || m_Height % 4 != 0) return;
+            TextureFormat target;
+            switch (m_Format)
+            {
+                case TextureFormat.RGB24:
+                case TextureFormat.RGB565:
+                    target = TextureFormat.DXT1;
+                    break;
+                case TextureFormat.RGBA32:
+                case TextureFormat.ARGB32:
+                case TextureFormat.BGRA32:
+                case TextureFormat.RGBA4444:
+                case TextureFormat.ARGB4444:
+                    target = TextureFormat.DXT5;
+                    break;
+                case TextureFormat.R8:
+                    target = TextureFormat.BC4;
+                    break;
+                case TextureFormat.RG16:
+                    target = TextureFormat.BC5;
+                    break;
+                default:
+                    Debug.LogWarning($"Unbound: Texture2D.Compress of a {m_Format} texture is not supported (unmeasured); the texture keeps its format.");
+                    return;
+            }
+            Stubs.Ignored("Texture2D.Compress blocks", "compresses with Unbound's encoder: the blocks differ slightly from the Editor's and highQuality dithering is not applied");
+            RequireReadable();
+            LeaveStore();
+            int total = 0;
+            for (int mip = 0; mip < m_MipCount; mip++)
+                total += BlockFormats.LevelSize(target, MipWidth(mip), MipHeight(mip));
+            var blocks = new byte[total];
+            int at = 0;
+            for (int mip = 0; mip < m_MipCount; mip++)
+            {
+                int w = MipWidth(mip), h = MipHeight(mip);
+                var rgba = new byte[w * h * 4];
+                for (int i = 0; i < w * h; i++)
+                {
+                    var cell = Cell(mip, i);
+                    rgba[i * 4] = cell.r;
+                    rgba[i * 4 + 1] = cell.g;
+                    rgba[i * 4 + 2] = cell.b;
+                    rgba[i * 4 + 3] = cell.a;
+                }
+                var json = Native.Call("texture-compress-blocks", JsonSerializer.Serialize(new
+                {
+                    format = (int)target,
+                    width = w,
+                    height = h,
+                    data = Convert.ToBase64String(rgba),
+                }));
+                using var doc = JsonDocument.Parse(json);
+                var level = Convert.FromBase64String(doc.RootElement.GetProperty("blocks").GetString());
+                level.CopyTo(blocks, at);
+                at += level.Length;
+            }
+            m_SourceFormat = target;
+            m_SourceMips = m_MipCount;
+            m_SourceRaw = blocks;
+            m_Format = TextureFormat.RGBA32;
+            m_Raw = null;
+            m_MipPixels = null;
+            m_BlockCellHashes = null;
+            DecodeAllBlocks();
+            m_PixelsDirty = true;
+            Upload();
+        }
+
+        /// <summary>Graphics.CopyTexture where either texture is block-compressed (tests/projects/
+        /// texturecompression copy.*): the formats must have the same block size (DXT5 and BC7 do,
+        /// DXT1 and DXT5 or a compressed and an uncompressed one do not: nothing is copied). A whole
+        /// texture or level copies the blocks, also to the CPU when both keep blocks (from an
+        /// unreadable import too); a region copies on the GPU alone and must lie on block
+        /// boundaries (else nothing is copied).</summary>
+        internal static void CopyBlocks(Texture2D src, int srcMip, int srcX, int srcY, int srcWidth, int srcHeight,
+            Texture2D dst, int dstMip, int dstX, int dstY, Action gpuCopy, bool allLevels = false)
+        {
+            int size = src.SourceBlocks ? BlockFormats.BlockBytes(src.m_SourceFormat.Value) : 0;
+            if (size == 0 || !dst.SourceBlocks || BlockFormats.BlockBytes(dst.m_SourceFormat.Value) != size)
+            {
+                Debug.LogWarning($"Unbound: Graphics.CopyTexture between {src.format} and {dst.format} copies nothing (their blocks differ).");
+                return;
+            }
+            if (!src.ValidMip(srcMip) || !dst.ValidMip(dstMip)) return;
+            if (srcWidth >= 0)
+            {
+                // A region: block-aligned, GPU only (same formats only on Unbound's renderer).
+                bool aligned = srcX % 4 == 0 && srcY % 4 == 0 && srcWidth % 4 == 0 && srcHeight % 4 == 0 && dstX % 4 == 0 && dstY % 4 == 0;
+                if (!aligned) return;
+                if (src.m_SourceFormat == dst.m_SourceFormat) gpuCopy();
+                else Debug.LogWarning($"Unbound: Graphics.CopyTexture of a region from {src.format} to {dst.format} is not copied (different block formats).");
+                return;
+            }
+            var from = src.CurrentBlocks();
+            var to = dst.CurrentBlocks();
+            if (from == null || to == null)
+            {
+                if (src.m_SourceFormat == dst.m_SourceFormat) gpuCopy();
+                return;
+            }
+            // A whole texture: every level both have.
+            int levels = allLevels ? Math.Min(src.m_SourceMips, dst.m_SourceMips) : 1;
+            bool copied = false;
+            for (int i = 0; i < levels; i++)
+            {
+                int sm = srcMip + i, dm = dstMip + i;
+                if (src.MipWidth(sm) != dst.MipWidth(dm) || src.MipHeight(sm) != dst.MipHeight(dm)) break;
+                int fromAt = 0, toAt = 0;
+                for (int m = 0; m < sm; m++) fromAt += src.SourceLevelSize(m);
+                for (int m = 0; m < dm; m++) toAt += dst.SourceLevelSize(m);
+                int bytes = src.SourceLevelSize(sm);
+                dst.CheckStoreWrite();
+                Buffer.BlockCopy(from, fromAt, to, toAt, bytes);
+                if (dst.m_Pixels != null || dst.m_Hdr != null)
+                {
+                    dst.DecodeBlockLevel(new ReadOnlySpan<byte>(to, toAt, bytes), dm);
+                    if (dst.m_BlockCellHashes != null) dst.m_BlockCellHashes[dm] = Fnv1a(new ReadOnlySpan<byte>(to, toAt, bytes));
+                }
+                copied = true;
+            }
+            if (!copied) return;
+            // The renderer's copy follows the blocks.
+            dst.m_PixelsDirty = true;
+            dst.Upload();
         }
 
         /// <summary>Bytes of a source level of a block-compressed texture.</summary>
@@ -260,17 +458,18 @@ namespace Unbound.Runtime
 
         /// <summary>Texel `k` (row-major in the 4x4 block) of a DXT1, DXT5, BC4 or BC5 block, as
         /// the importer's decoding (and the Editor's GetPixels32) reads it: colours interpolate with
-        /// truncating thirds (a half in DXT1's three-colour mode, whose fourth entry is
-        /// transparent black), alpha, red and green steps round to nearest.</summary>
+        /// truncating thirds (a half in three-colour mode, c0 <= c1, whose fourth entry is
+        /// transparent black; DXT5 too, its alpha from the alpha half), alpha, red and green steps
+        /// round to nearest.</summary>
         internal static UnityEngine.Color32 DecodeTexel(UnityEngine.TextureFormat format, ReadOnlySpan<byte> block, int k)
         {
             switch (format)
             {
                 case UnityEngine.TextureFormat.DXT1:
-                    return Colour(block, k, false);
+                    return Colour(block, k);
                 case UnityEngine.TextureFormat.DXT5:
                 {
-                    var c = Colour(block.Slice(8), k, true);
+                    var c = Colour(block.Slice(8), k);
                     c.a = Step(block, k);
                     return c;
                 }
@@ -283,16 +482,16 @@ namespace Unbound.Runtime
             }
         }
 
-        static UnityEngine.Color32 Colour(ReadOnlySpan<byte> block, int k, bool four)
+        static UnityEngine.Color32 Colour(ReadOnlySpan<byte> block, int k)
         {
             int c0 = block[0] | block[1] << 8, c1 = block[2] | block[3] << 8;
             int index = (int)((uint)(block[4] | block[5] << 8 | block[6] << 16 | block[7] << 24) >> (2 * k)) & 3;
-            if (index == 3 && !four && c0 <= c1) return new UnityEngine.Color32(0, 0, 0, 0);
+            if (index == 3 && c0 <= c1) return new UnityEngine.Color32(0, 0, 0, 0);
             (int wa, int wb, int d) = index switch
             {
                 0 => (1, 0, 1),
                 1 => (0, 1, 1),
-                2 when four || c0 > c1 => (2, 1, 3),
+                2 when c0 > c1 => (2, 1, 3),
                 2 => (1, 1, 2),
                 _ => (1, 2, 3),
             };
