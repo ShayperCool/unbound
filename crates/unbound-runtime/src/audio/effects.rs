@@ -5,7 +5,7 @@ use super::chorus::{Chorus, ChorusSpec};
 use super::compressor::{Compressor, CompressorSpec};
 use super::duck::{Duck, DuckSpec};
 use super::flange::{Flange, FlangeSpec};
-use super::mixer::MixerConfig;
+use super::mixer::{MixerConfig, speaker_mode};
 use super::modulated_delay::MAX_HISTORY_BYTES;
 use super::normalize::{Normalize, NormalizeSpec};
 use super::pitch::{PitchShifter, PitchSpec};
@@ -152,7 +152,14 @@ impl EffectKind {
 /// Mono, Stereo, Quad, Surround, Mode5point1 and Mode7point1. Prologic stays unmeasured.
 const PITCH_RATES: [u32; 2] = [48000, 44100];
 const PITCH_BUFFERS: [u32; 4] = [256, 512, 1024, 2048];
-const PITCH_SPEAKER_MODES: [i32; 6] = [1, 2, 3, 4, 5, 6];
+const PITCH_SPEAKER_MODES: [i32; 6] = [
+    speaker_mode::MONO,
+    speaker_mode::STEREO,
+    speaker_mode::QUAD,
+    speaker_mode::SURROUND,
+    speaker_mode::MODE_5POINT1,
+    speaker_mode::MODE_7POINT1,
+];
 
 /// The output covered by Normalize and static-wet captures (Unity 6000.0.71f1 Linux Editor,
 /// tests/projects/audionormalize and tests/projects/audiopitch): these rates, DSP buffers of

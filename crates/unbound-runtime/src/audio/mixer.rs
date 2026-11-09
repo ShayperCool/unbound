@@ -696,21 +696,35 @@ pub struct MixerConfig {
     pub doppler_factor: f32,
 }
 
+/// `AudioSpeakerMode` values.
+pub mod speaker_mode {
+    pub const MONO: i32 = 1;
+    pub const STEREO: i32 = 2;
+    pub const QUAD: i32 = 3;
+    pub const SURROUND: i32 = 4;
+    pub const MODE_5POINT1: i32 = 5;
+    pub const MODE_7POINT1: i32 = 6;
+    pub const PROLOGIC: i32 = 7;
+}
+
 impl MixerConfig {
     /// Whether the layout has an LFE channel (`Mode5point1`, `Mode7point1`).
     fn has_lfe(&self) -> bool {
-        matches!(self.speaker_mode, 5 | 6)
+        matches!(
+            self.speaker_mode,
+            speaker_mode::MODE_5POINT1 | speaker_mode::MODE_7POINT1
+        )
     }
     /// Output channels of `speaker_mode` (`AudioSpeakerMode`), in AudioRenderer and
     /// `OnAudioFilterRead` order: Mono 1, Quad 4, Surround 5, Mode5point1 6, Mode7point1 8;
     /// Stereo and Prologic (an encoded stereo pair) 2.
     pub fn output_channels(&self) -> usize {
         match self.speaker_mode {
-            1 => 1,
-            3 => 4,
-            4 => 5,
-            5 => 6,
-            6 => 8,
+            speaker_mode::MONO => 1,
+            speaker_mode::QUAD => 4,
+            speaker_mode::SURROUND => 5,
+            speaker_mode::MODE_5POINT1 => 6,
+            speaker_mode::MODE_7POINT1 => 8,
             _ => 2,
         }
     }
@@ -1666,7 +1680,7 @@ impl Mixer {
             self.render_capture_block(block);
         }
         self.discard_output = discarded;
-        let mono = self.config.speaker_mode == MONO_SPEAKER_MODE;
+        let mono = self.config.speaker_mode == speaker_mode::MONO;
         let mut samples = vec![0.0; frames * channels];
         spread(&stereo, &mut samples, mono);
         for value in &mut samples {
@@ -1824,7 +1838,7 @@ impl Mixer {
         while done < frames {
             let n = (frames - done).min(BLOCK);
             self.render_block(n);
-            let mono = self.config.speaker_mode == MONO_SPEAKER_MODE;
+            let mono = self.config.speaker_mode == speaker_mode::MONO;
             spread(
                 &self.mix[..n * 2],
                 &mut out[done * channels..(done + n) * channels],
@@ -1993,7 +2007,7 @@ impl Mixer {
                         .iter()
                         .all(|value| *value <= 0.0))
                 .then_some(source.params.pan_stereo),
-                mono_output: config.speaker_mode == MONO_SPEAKER_MODE,
+                mono_output: config.speaker_mode == speaker_mode::MONO,
             };
             let dsp_frames = config.buffer_size.max(1) as u64;
             source.completion_frontier = (t0 + n as u64).div_ceil(dsp_frames) * dsp_frames;
@@ -2607,9 +2621,6 @@ fn render_source_voices(
     });
     finished_at
 }
-
-/// `AudioSpeakerMode.Mono`.
-const MONO_SPEAKER_MODE: i32 = 1;
 
 /// Writes the stereo graph's frames into interleaved frames of `out.len() / (stereo.len() / 2)`
 /// channels: the front pair, then silent channels; a mono output (or a one-channel buffer)
@@ -4658,8 +4669,8 @@ mod tests {
         assert_eq!(mixer.config, before);
         assert_eq!(mixer.group_nodes[&3].effects.len(), 1);
     }
-    /// `AudioSpeakerMode.Prologic`, an unmeasured layout for every layout-limited effect.
-    const PROLOGIC: i32 = 7;
+    /// An unmeasured layout for every layout-limited effect.
+    const PROLOGIC: i32 = speaker_mode::PROLOGIC;
     #[test]
     fn pitch_rejects_unmeasured_contexts_and_preserves_state_on_rejection() {
         let mut mixer = Mixer::new(MixerConfig::default());

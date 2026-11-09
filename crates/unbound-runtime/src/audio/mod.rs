@@ -288,9 +288,6 @@ pub struct Engine {
     reset_worker: Mutex<Option<ResetWorker>>,
 }
 
-/// `AudioSpeakerMode.Stereo`.
-const STEREO_SPEAKER_MODE: i32 = 2;
-
 /// The layout the mixer runs for a requested speaker mode. A device with fewer channels than the
 /// layout runs stereo DSP while `AudioSettings.GetConfiguration` keeps the request (Unity
 /// 6000.0.71f1 with Quad, Surround, 5.1 and 7.1 requests on a two-channel device,
@@ -301,7 +298,7 @@ fn active_speaker_mode(requested: i32, device_channels: Option<usize>) -> i32 {
         ..MixerConfig::default()
     };
     match device_channels {
-        Some(channels) if layout.output_channels() > channels => STEREO_SPEAKER_MODE,
+        Some(channels) if layout.output_channels() > channels => mixer::speaker_mode::STEREO,
         _ => requested,
     }
 }
