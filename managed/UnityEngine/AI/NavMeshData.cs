@@ -77,10 +77,10 @@ namespace UnityEngine.AI
             bool warned = false;
             foreach (var link in body.Get("m_OffMeshLinks")?.Seq() ?? Array.Empty<YNode>())
             {
-                // 0: one way, from start to end. The bake writes it for its drop-down and
-                // jump-across links alike (a gap is crossed both ways by two links, one from each
-                // side; measured: tests/projects/navbaked `paths` and `jump`). Other values are
-                // not written by the bake: read as both ways, unmeasured.
+                // 0: one way, from start to end (measured on the bake's drop-down links:
+                // tests/projects/navbaked `paths`). The bake writes 0 for its jump-across links
+                // too, one from each side of a gap (navbaked's Jump scene; `jump` crosses it both
+                // ways). Other values are not written by the bake: read as both ways, unmeasured.
                 int direction = link.Int("m_LinkDirection", 0);
                 if (direction != 0 && !warned)
                 {

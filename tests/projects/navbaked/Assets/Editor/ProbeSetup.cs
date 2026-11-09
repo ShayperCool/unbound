@@ -6,15 +6,15 @@ using UnityEngine.AI;
 
 /// <summary>
 /// <c>Unity -batchmode -quit -projectPath tests/projects/navbaked -executeMethod ProbeSetup.Create</c>:
-/// makes the probe's two scenes and bakes each one's NavMesh the legacy way
+/// makes the probe's three scenes and bakes each one's NavMesh the legacy way
 /// (UnityEditor.AI.NavMeshBuilder.BuildNavMesh, as the Navigation window does), which writes
 /// <c>Assets/Scenes/&lt;Scene&gt;/NavMesh.asset</c> and references it from the scene's
 /// NavMeshSettings. Baked: a ground with a Mud strip (area 4), a 0.3 m step, a 1.5 m platform
 /// reached by a one-way OffMeshLink and left by the bake's generated drop links, an agent and the
 /// probe. Second (loaded additively by the probe): a ground 2 m beyond the first one's, an agent.
-/// <c>-executeMethod ProbeSetup.CreateJump</c> makes only the third scene, Jump (loaded additively
-/// last): grounds 2 m apart, level and with the far one 0.5 m higher, baked with a 3 m jump
-/// distance so the bake generates jump-across links.
+/// Jump (loaded additively last; <c>ProbeSetup.CreateJump</c> makes only this one): grounds 2 m
+/// apart, level and with the far one 0.5 m higher, baked with a 3 m jump distance so the bake
+/// generates jump-across links.
 /// </summary>
 public static class ProbeSetup
 {
@@ -22,10 +22,17 @@ public static class ProbeSetup
     {
         Make("Assets/Scenes/Baked.unity", true);
         Make("Assets/Scenes/Second.unity", false);
+        CreateJump();
+    }
+
+    /// <summary>The probe's scenes, in the build settings (the probe loads Second and Jump by name).</summary>
+    static void ListScenes()
+    {
         EditorBuildSettings.scenes = new[]
         {
             new EditorBuildSettingsScene("Assets/Scenes/Baked.unity", true),
             new EditorBuildSettingsScene("Assets/Scenes/Second.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Jump.unity", true),
         };
         AssetDatabase.SaveAssets();
     }
@@ -45,13 +52,7 @@ public static class ProbeSetup
         EditorSceneManager.SaveScene(scene, path);
         UnityEditor.AI.NavMeshBuilder.BuildNavMesh();
         EditorSceneManager.SaveScene(scene, path);
-        EditorBuildSettings.scenes = new[]
-        {
-            new EditorBuildSettingsScene("Assets/Scenes/Baked.unity", true),
-            new EditorBuildSettingsScene("Assets/Scenes/Second.unity", true),
-            new EditorBuildSettingsScene(path, true),
-        };
-        AssetDatabase.SaveAssets();
+        ListScenes();
     }
 
     static GameObject Box(string name, Vector3 center, Vector3 size, int area, bool generateLinks)
