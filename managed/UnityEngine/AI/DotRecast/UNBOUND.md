@@ -132,4 +132,6 @@ Altered (marked `Unbound:` in the sources):
   the corridor from its farthest polygon the visited ones hold (the last copy of it), also when
   that is the first visited polygon; the Detour flags that switched these off are gone;
 - an agent without avoidance gathers no neighbours (agents or obstacles), so it is never pushed out
-  of overlaps (Unity's: navpath `replan.*`).
+  of overlaps and walks through obstacles (Unity's: navpath `replan.*`, `replan.none`).
+- the engine's `remainingDistance` sums the corners found again from where the agent stands (after
+  its step), not those it steered by (Unity's: navpath `replan.topo`).
