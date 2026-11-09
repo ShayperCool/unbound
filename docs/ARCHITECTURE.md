@@ -182,11 +182,14 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   records the ones back after the callback, so wgpu's tracking stays right.
   `kUnityVulkanRenderPass_EnsureInside` (and a DontCare event while the current target draws, as
   a camera's events) runs inside a render pass over the current render texture target, loaded,
-  stored and resolved where it is multisampled. `EnsureOutsideRenderPass`/`EnsureInsideRenderPass`
-  end and begin it again, and a barrier for an access inside it is recorded between two passes
-  (the callback stays inside, as the Editor answers); each change starts a new command buffer, as
-  the interface's recording state is invalidated then. `safeFrameNumber` is the last frame the
-  GPU finished; command buffers, passes and the buffers accessed are kept until then. Not
+  stored and resolved where it is multisampled; render passes and framebuffers are cached, so a
+  plugin sees the same pass frame after frame (its pipelines stay valid). `EnsureOutsideRenderPass`
+  /`EnsureInsideRenderPass` end and begin it again, and a barrier for an access inside it is
+  recorded between two passes (the callback stays inside, as the Editor answers); each change
+  starts a new command buffer, as the interface's recording state is invalidated then. After an
+  EnsureOutside event the next DontCare event runs outside, as in the Editor. Only the textures a
+  callback accesses (and the pass's attachments) are put in resting layouts. `safeFrameNumber` is
+  the last frame the GPU finished; command buffers and the buffers accessed are kept until then. Not
   supported (logged): intercepting Vulkan functions, queue access (such events are skipped),
   swapchain configuration, `Recreate` access, a render pass over the screen or several colors
   (EnsureInside events are skipped there); initialization is intercepted too late for every

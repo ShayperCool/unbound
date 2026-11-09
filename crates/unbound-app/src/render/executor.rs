@@ -3096,9 +3096,13 @@ impl UnityRenderer {
         self.copy_depth(&mut passes, depth_mark);
         self.encode(passes);
         #[cfg(target_os = "linux")]
-        if end_frame && self.vulkan_plugins.is_some() {
-            // The frame's work is submitted: when the GPU finishes it, plugins may free what
-            // they used in it.
+        if end_frame && let Some(plugins) = self.vulkan_plugins.as_mut() {
+            // What plugins used in frames the GPU finished is freed; when it finishes this one,
+            // what they used in it may be.
+            plugins.free_retired(
+                self.frames_completed
+                    .load(std::sync::atomic::Ordering::Acquire),
+            );
             let completed = self.frames_completed.clone();
             let frame = self.frame_number;
             self.queue.on_submitted_work_done(move || {

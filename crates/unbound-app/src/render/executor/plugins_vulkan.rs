@@ -233,6 +233,8 @@ struct ImageEntry {
     samples: vk::SampleCountFlags,
     layers: i32,
     mips: i32,
+    /// Its wgpu texture among the callback's (put in its resting layout when accessed).
+    texture: usize,
 }
 
 /// A texture's images: the texture itself, a render target's multisampled color (its color
@@ -252,7 +254,8 @@ struct Tracked {
     resting: vk::ImageLayout,
 }
 
-/// A plugin render pass over the current target, made when a callback first records inside it.
+/// A plugin render pass over the current target (both cached by the renderer: the handles stay
+/// the same while the target does).
 #[derive(Clone, Copy)]
 struct PluginPass {
     render_pass: vk::RenderPass,
@@ -264,10 +267,10 @@ struct PluginPass {
 struct Scope {
     device: ash::Device,
     pool: vk::CommandPool,
-    /// The current target's attachments (None: no target a render pass can begin on) and the
-    /// pass over them once made.
-    target: Option<PassTarget>,
+    /// The pass over the current target (None: no target a render pass can begin on) and the
+    /// target's images.
     pass: Option<PluginPass>,
+    attachments: Vec<vk::Image>,
     /// The secondary command buffers recorded so far, in order, and whether each is recorded
     /// inside the plugin pass (the last one is recording).
     segments: Vec<(vk::CommandBuffer, bool)>,
@@ -279,8 +282,10 @@ struct Scope {
     buffers: HashMap<u64, (vk::Buffer, u64, vk::BufferUsageFlags)>,
     /// The layouts of subresources accessed, by (image, mip, layer).
     layouts: HashMap<(vk::Image, u32, u32), Tracked>,
-    /// Buffers accessed (kept alive until the GPU finished the callback's frame).
+    /// Buffers accessed (kept alive until the GPU finished the callback's frame) and textures
+    /// (by index; put in their resting layouts before the callback's commands).
     accessed_buffers: Vec<u64>,
+    accessed_textures: Vec<usize>,
 }
 
 impl Scope {
@@ -300,16 +305,17 @@ impl Scope {
             return true;
         }
         let pass = if inside {
-            let Some(pass) = self.plugin_pass() else {
+            let Some(pass) = self.pass else {
                 return false;
             };
             // The attachments are used in their resting layouts.
-            let attachments = self
-                .target
-                .as_ref()
-                .map(|t| t.images.clone())
-                .unwrap_or_default();
-            self.restore(Some(&attachments));
+            let attachments = std::mem::take(&mut self.attachments);
+            if self.restore(Some(&attachments)) {
+                warn_locked(
+                    "a layout asked for an attachment of the render pass a callback goes back into (it is the attachment's again)",
+                );
+            }
+            self.attachments = attachments;
             Some(pass)
         } else {
             None
@@ -326,20 +332,11 @@ impl Scope {
         true
     }
 
-    /// The pass over the current target, made the first time it is needed.
-    fn plugin_pass(&mut self) -> Option<PluginPass> {
-        if self.pass.is_none() {
-            // SAFETY: the views live while the callback runs (the renderer's target).
-            self.pass = unsafe { create_render_pass(&self.device, self.target.as_ref()?) };
-        }
-        self.pass
-    }
-
     /// Moves the accessed subresources of `images` (None: of every image) back to their resting
-    /// layouts (recorded outside the pass).
-    fn restore(&mut self, images: Option<&[vk::Image]>) {
+    /// layouts (recorded outside the pass). Whether any was moved.
+    fn restore(&mut self, images: Option<&[vk::Image]>) -> bool {
         let Some((commands, false)) = self.current() else {
-            return;
+            return false;
         };
         let mut barriers = Vec::new();
         for (&(image, mip, layer), tracked) in &mut self.layouts {
@@ -354,20 +351,22 @@ impl Scope {
                 tracked.current = tracked.resting;
             }
         }
-        if !barriers.is_empty() {
-            // SAFETY: a command buffer in the recording state outside a render pass.
-            unsafe {
-                self.device.cmd_pipeline_barrier(
-                    commands,
-                    vk::PipelineStageFlags::ALL_COMMANDS,
-                    vk::PipelineStageFlags::ALL_COMMANDS,
-                    vk::DependencyFlags::empty(),
-                    &[],
-                    &[],
-                    &barriers,
-                )
-            };
+        if barriers.is_empty() {
+            return false;
         }
+        // SAFETY: a command buffer in the recording state outside a render pass.
+        unsafe {
+            self.device.cmd_pipeline_barrier(
+                commands,
+                vk::PipelineStageFlags::ALL_COMMANDS,
+                vk::PipelineStageFlags::ALL_COMMANDS,
+                vk::DependencyFlags::empty(),
+                &[],
+                &[],
+                &barriers,
+            )
+        };
+        true
     }
 
     /// Records `record`'s commands outside the pass: inside it, the pass is ended for them and
@@ -501,10 +500,9 @@ impl Scope {
         Finished {
             segments: self.segments,
             // A pass made holds its attachments' views.
-            pass: self
-                .pass
-                .map(|pass| (pass, self.target.map(|t| t.views).unwrap_or_default())),
+            pass: self.pass,
             accessed_buffers: self.accessed_buffers,
+            accessed_textures: self.accessed_textures,
         }
     }
 }
@@ -512,8 +510,9 @@ impl Scope {
 /// What a callback recorded (see [`Scope::finish`]).
 struct Finished {
     segments: Vec<(vk::CommandBuffer, bool)>,
-    pass: Option<(PluginPass, Vec<wgpu::TextureView>)>,
+    pass: Option<PluginPass>,
     accessed_buffers: Vec<u64>,
+    accessed_textures: Vec<usize>,
 }
 
 fn subresources(
@@ -579,6 +578,9 @@ fn with_state<R>(f: impl FnOnce(&mut State) -> R) -> R {
         let mut guard = STATE.lock().unwrap_or_else(|p| p.into_inner());
         let state = guard.get_or_insert_with(State::default);
         let result = f(state);
+        for what in PENDING.with(|p| std::mem::take(&mut *p.borrow_mut())) {
+            state.warn(what);
+        }
         (result, std::mem::take(&mut state.to_warn))
     };
     for what in warnings {
@@ -592,6 +594,17 @@ fn with_state<R>(f: impl FnOnce(&mut State) -> R) -> R {
 
 fn unsupported(what: &'static str) {
     with_state(|s| s.warn(what));
+}
+
+/// [`unsupported`] from code that runs under the state's lock (the scope's methods): logged
+/// when the lock is released.
+fn warn_locked(what: &'static str) {
+    PENDING.with(|p| p.borrow_mut().push(what));
+}
+
+thread_local! {
+    static PENDING: std::cell::RefCell<Vec<&'static str>> =
+        const { std::cell::RefCell::new(Vec::new()) };
 }
 
 /// The device exists before any plugin loads, preloaded ones too: too late, the interface's own
@@ -691,6 +704,9 @@ fn access_image(
         let Some(entry) = find(scope) else {
             return false;
         };
+        if !scope.accessed_textures.contains(&entry.texture) {
+            scope.accessed_textures.push(entry.texture);
+        }
         match mode {
             ACCESS_OBSERVE_ONLY => {}
             ACCESS_PIPELINE_BARRIER => {
@@ -913,18 +929,43 @@ fn render_buffer(pointer: u64) -> (u64, bool) {
 pub(super) struct VulkanPlugins {
     device: ash::Device,
     pool: vk::CommandPool,
+    pipeline_cache: vk::PipelineCache,
     /// Native texture pointers: the image of each (handle, depth buffer) lives here.
     slots: HashMap<(u64, bool), Box<vk::Image>>,
-    /// What callbacks submitted, freed once the GPU finished their frame.
+    /// Plugin render passes, kept for the renderer's lifetime: a plugin may keep pipelines made
+    /// for one, as Unity's own render passes stay.
+    passes: HashMap<PassKey, vk::RenderPass>,
+    /// Framebuffers over render texture targets, by the target's (color, depth) handles.
+    framebuffers: HashMap<(u64, u64), CachedFramebuffer>,
+    /// What callbacks submitted (and framebuffers replaced), freed once the GPU finished their
+    /// frame.
     retired: Vec<Retired>,
 }
 
-/// A callback's command buffers, render pass and the buffers it accessed, by the frame that
-/// submitted them.
+/// What identifies a plugin render pass: its attachments' formats and samples.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct PassKey {
+    color: vk::Format,
+    samples: vk::SampleCountFlags,
+    depth: Option<vk::Format>,
+    resolve: bool,
+}
+
+/// A framebuffer over a target's views, which it holds (their handles cannot be reused while it
+/// lives), and the last frame that used it.
+struct CachedFramebuffer {
+    framebuffer: vk::Framebuffer,
+    raw: Vec<vk::ImageView>,
+    extent: vk::Extent2D,
+    _views: Vec<wgpu::TextureView>,
+    last_used: u64,
+}
+
+/// Command buffers, framebuffers and buffers in use by the GPU until `frame` is finished.
 struct Retired {
     frame: u64,
     commands: Vec<vk::CommandBuffer>,
-    pass: Option<(PluginPass, Vec<wgpu::TextureView>)>,
+    framebuffers: Vec<CachedFramebuffer>,
     _buffers: Vec<wgpu::Buffer>,
 }
 
@@ -947,12 +988,12 @@ impl VulkanPlugins {
         }
         .ok()?;
         // Plugins build pipelines with it, as with the Editor's (which it serializes).
-        let cache =
+        let pipeline_cache =
             unsafe { raw.create_pipeline_cache(&vk::PipelineCacheCreateInfo::default(), None) }
                 .unwrap_or_default();
         let entry = shared.entry();
         let instance = UnityVulkanInstance {
-            pipeline_cache: cache,
+            pipeline_cache,
             instance: shared.raw_instance().handle(),
             physical_device: hal.raw_physical_device(),
             device: raw.handle(),
@@ -965,81 +1006,199 @@ impl VulkanPlugins {
         Some(Self {
             device: raw,
             pool,
+            pipeline_cache,
             slots: HashMap::new(),
+            passes: HashMap::new(),
+            framebuffers: HashMap::new(),
             retired: Vec::new(),
         })
     }
 
-    /// A released texture's native pointers stop naming an image.
+    /// A released texture's native pointers stop naming an image, and framebuffers over it go
+    /// once the GPU is done with them.
     pub fn release(&mut self, handle: u64) {
         self.slots.remove(&(handle, false));
         self.slots.remove(&(handle, true));
+        let released: Vec<(u64, u64)> = self
+            .framebuffers
+            .keys()
+            .filter(|(color, depth)| *color == handle || *depth == handle)
+            .copied()
+            .collect();
+        for key in released {
+            if let Some(framebuffer) = self.framebuffers.remove(&key) {
+                self.retire_framebuffer(framebuffer);
+            }
+        }
+    }
+
+    fn retire_framebuffer(&mut self, framebuffer: CachedFramebuffer) {
+        self.retired.push(Retired {
+            frame: framebuffer.last_used,
+            commands: Vec::new(),
+            framebuffers: vec![framebuffer],
+            _buffers: Vec::new(),
+        });
+    }
+
+    /// The render pass and framebuffer over the target whose textures are `handles` (made once
+    /// for each; a framebuffer is made again when the target's views change). None when Vulkan
+    /// refuses them.
+    fn plugin_pass(
+        &mut self,
+        target: &PassTarget,
+        handles: (u64, u64),
+        frame: u64,
+    ) -> Option<PluginPass> {
+        let key = PassKey {
+            color: target.color_format,
+            samples: target.samples,
+            depth: target.depth.map(|(_, format)| format),
+            resolve: target.resolve.is_some(),
+        };
+        let render_pass = match self.passes.get(&key) {
+            Some(&pass) => pass,
+            None => {
+                // SAFETY: a valid description on the renderer's device.
+                let pass = unsafe { create_render_pass(&self.device, key) }?;
+                self.passes.insert(key, pass);
+                pass
+            }
+        };
+        let raw = target.raw_views();
+        let current = self
+            .framebuffers
+            .get(&handles)
+            .is_some_and(|f| f.raw == raw && f.extent == target.extent);
+        if !current {
+            if let Some(stale) = self.framebuffers.remove(&handles) {
+                self.retire_framebuffer(stale);
+            }
+            // SAFETY: the views live while the cache entry holds them.
+            let framebuffer = unsafe {
+                self.device.create_framebuffer(
+                    &vk::FramebufferCreateInfo::default()
+                        .render_pass(render_pass)
+                        .attachments(&raw)
+                        .width(target.extent.width)
+                        .height(target.extent.height)
+                        .layers(1),
+                    None,
+                )
+            }
+            .ok()?;
+            self.framebuffers.insert(
+                handles,
+                CachedFramebuffer {
+                    framebuffer,
+                    raw,
+                    extent: target.extent,
+                    _views: target.views.clone(),
+                    last_used: frame,
+                },
+            );
+        }
+        let cached = self.framebuffers.get_mut(&handles)?;
+        cached.last_used = frame;
+        Some(PluginPass {
+            render_pass,
+            framebuffer: cached.framebuffer,
+            extent: target.extent,
+        })
     }
 
     /// Frees what callbacks of frames the GPU finished used.
-    fn free_retired(&mut self, completed: u64) {
+    pub fn free_retired(&mut self, completed: u64) {
         let device = &self.device;
         let pool = self.pool;
         self.retired.retain(|retired| {
             if retired.frame > completed {
                 return true;
             }
-            // SAFETY: the GPU finished the frame that submitted them.
+            // SAFETY: the GPU finished the frame that last used them.
             unsafe {
-                device.free_command_buffers(pool, &retired.commands);
-                if let Some((pass, _)) = &retired.pass {
-                    device.destroy_framebuffer(pass.framebuffer, None);
-                    device.destroy_render_pass(pass.render_pass, None);
+                if !retired.commands.is_empty() {
+                    device.free_command_buffers(pool, &retired.commands);
+                }
+                for framebuffer in &retired.framebuffers {
+                    device.destroy_framebuffer(framebuffer.framebuffer, None);
                 }
             }
             false
         });
     }
-}
 
-/// The resting state a texture is put in for a callback and the Vulkan layout it means
-/// (wgpu-hal's layouts for those uses).
-fn resting(texture: &wgpu::Texture, depth: bool) -> (wgpu::TextureUses, vk::ImageLayout) {
-    let usage = texture.usage();
-    if usage.contains(wgpu::TextureUsages::RENDER_ATTACHMENT) {
-        if depth {
-            (
-                wgpu::TextureUses::DEPTH_STENCIL_WRITE,
-                vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            )
-        } else {
-            (
-                wgpu::TextureUses::COLOR_TARGET,
-                vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
-            )
-        }
-    } else if usage.contains(wgpu::TextureUsages::TEXTURE_BINDING) {
-        (
-            wgpu::TextureUses::RESOURCE,
-            vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-        )
-    } else {
-        (
-            wgpu::TextureUses::COPY_DST,
-            vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-        )
+    fn retire(&mut self, frame: u64, finished: &Finished, buffers: Vec<wgpu::Buffer>) {
+        self.retired.push(Retired {
+            frame,
+            commands: finished.segments.iter().map(|&(c, _)| c).collect(),
+            framebuffers: Vec::new(),
+            _buffers: buffers,
+        });
     }
 }
 
-/// What a plugin learns of a wgpu texture (its raw image and description), and the texture with
-/// the state it rests in during the callback.
+impl Drop for VulkanPlugins {
+    fn drop(&mut self) {
+        with_state(|s| s.instance = UnityVulkanInstance::default());
+        // SAFETY: once the device is idle nothing uses them; command buffers go with the pool.
+        unsafe {
+            let _ = self.device.device_wait_idle();
+            for retired in self.retired.drain(..) {
+                for framebuffer in retired.framebuffers {
+                    self.device
+                        .destroy_framebuffer(framebuffer.framebuffer, None);
+                }
+            }
+            for (_, framebuffer) in self.framebuffers.drain() {
+                self.device
+                    .destroy_framebuffer(framebuffer.framebuffer, None);
+            }
+            for (_, pass) in self.passes.drain() {
+                self.device.destroy_render_pass(pass, None);
+            }
+            self.device.destroy_command_pool(self.pool, None);
+            self.device
+                .destroy_pipeline_cache(self.pipeline_cache, None);
+        }
+    }
+}
+
+/// The state a texture rests in during a callback, and the Vulkan layout wgpu-hal gives it.
+fn resting(texture: &wgpu::Texture) -> (wgpu::TextureUses, vk::ImageLayout) {
+    let format = texture.format();
+    let usage = texture.usage();
+    let uses = if usage.contains(wgpu::TextureUsages::RENDER_ATTACHMENT) {
+        if format.is_depth_stencil_format() {
+            wgpu::TextureUses::DEPTH_STENCIL_WRITE
+        } else {
+            wgpu::TextureUses::COLOR_TARGET
+        }
+    } else if usage.contains(wgpu::TextureUsages::TEXTURE_BINDING) {
+        wgpu::TextureUses::RESOURCE
+    } else {
+        wgpu::TextureUses::COPY_DST
+    };
+    (
+        uses,
+        wgpu::hal::vulkan::conv::derive_image_layout(uses, format),
+    )
+}
+
+/// What a plugin learns of a wgpu texture (its raw image and description; `format` is the one
+/// the renderer uses it in, sRGB where it is viewed so), and the texture among the callback's
+/// `candidates` (put in its resting layout if the plugin accesses it).
 fn image_entry(
     adapter: &wgpu::Adapter,
     texture: &wgpu::Texture,
-    transitions: &mut Vec<(wgpu::Texture, wgpu::TextureUses)>,
+    format: wgpu::TextureFormat,
+    candidates: &mut Vec<(wgpu::Texture, wgpu::TextureUses)>,
 ) -> Option<ImageEntry> {
-    let format = texture.format();
-    let depth = format.is_depth_stencil_format();
-    // SAFETY: the raw handle is only read, while the texture lives (the scope's).
-    let raw = unsafe { texture.as_hal::<Vulkan>() }?;
-    let image = unsafe { raw.raw_handle() };
-    let (uses, resting_layout) = resting(texture, depth);
-    transitions.push((texture.clone(), uses));
+    let depth = texture.format().is_depth_stencil_format();
+    // SAFETY: the raw handle is only read, while the texture lives (the candidates hold it).
+    let image = unsafe { texture.as_hal::<Vulkan>().map(|raw| raw.raw_handle()) }?;
+    let (uses, resting_layout) = resting(texture);
+    candidates.push((texture.clone(), uses));
     let usage = texture.usage();
     let mut flags = vk::ImageUsageFlags::empty();
     for (wgpu_usage, vk_usage) in [
@@ -1073,7 +1232,7 @@ fn image_entry(
     }
     let aspect = if !depth {
         vk::ImageAspectFlags::COLOR
-    } else if format.has_stencil_aspect() {
+    } else if texture.format().has_stencil_aspect() {
         vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL
     } else {
         vk::ImageAspectFlags::DEPTH
@@ -1107,6 +1266,7 @@ fn image_entry(
             size.depth_or_array_layers as i32
         },
         mips: texture.mip_level_count() as i32,
+        texture: candidates.len() - 1,
     })
 }
 
@@ -1148,22 +1308,9 @@ impl UnityRenderer {
             return;
         }
         let target = self.plugin_render_pass_target();
-        // Inside a render pass when the event asks for one; a DontCare event stays where the
-        // stream is: inside the current target's pass while it draws (a camera's events),
-        // outside elsewhere (nativegfx `plugin.dontcare.*`).
-        let inside = match config.render_pass_precondition {
-            ENSURE_INSIDE => {
-                if target.is_none() {
-                    unsupported(
-                        "kUnityVulkanRenderPass_EnsureInside events without a render texture target (a single color, not the screen): they are skipped",
-                    );
-                    return;
-                }
-                true
-            }
-            DONT_CARE => self.plugin_pass_open && target.is_some(),
-            _ => false,
-        };
+        // The frame being recorded (the renderer counts a frame when its rendering begins).
+        let frame = self.frame_number + 1;
+        let handles = self.target_handles;
         let Some(plugins) = self.vulkan_plugins.as_mut() else {
             invoke();
             return;
@@ -1172,9 +1319,36 @@ impl UnityRenderer {
             .frames_completed
             .load(std::sync::atomic::Ordering::Acquire);
         plugins.free_retired(completed);
-        // What the plugin can reach, put in resting layouts first: textures it has pointers
-        // of, render textures (render buffer pointers, texture IDs) and the current target.
-        let mut transitions: Vec<(wgpu::Texture, wgpu::TextureUses)> = Vec::new();
+        let pass = target
+            .as_ref()
+            .and_then(|t| plugins.plugin_pass(t, handles, frame));
+        // Inside a render pass when the event asks for one; a DontCare event stays where the
+        // stream is: inside the current target's pass while it draws (a camera's events),
+        // outside elsewhere (nativegfx `plugin.dontcare.*`).
+        let inside = match config.render_pass_precondition {
+            ENSURE_INSIDE => {
+                if pass.is_none() {
+                    unsupported(
+                        "kUnityVulkanRenderPass_EnsureInside events without a render texture target (a single color, not the screen): they are skipped",
+                    );
+                    return;
+                }
+                true
+            }
+            DONT_CARE => {
+                if self.plugin_pass_open && pass.is_none() {
+                    unsupported(
+                        "a render pass for DontCare events while the screen or several colors are drawn (they run outside one)",
+                    );
+                }
+                self.plugin_pass_open && pass.is_some()
+            }
+            _ => false,
+        };
+        // What the plugin can reach: textures it has pointers of, render textures (render
+        // buffer pointers, texture IDs). Those it accesses are put in resting layouts first.
+        let color_space = self.color_space;
+        let mut candidates: Vec<(wgpu::Texture, wgpu::TextureUses)> = Vec::new();
         let mut by_pointer = HashMap::new();
         let mut by_handle = HashMap::new();
         for (&handle, gpu) in &self.textures {
@@ -1183,17 +1357,18 @@ impl UnityRenderer {
             if !pointed && !gpu.render_target {
                 continue;
             }
-            let Some(texture) = image_entry(&self.adapter, &gpu.texture, &mut transitions) else {
+            let format = gpu.target_format(color_space);
+            let Some(texture) = image_entry(&self.adapter, &gpu.texture, format, &mut candidates)
+            else {
                 continue;
             };
-            let msaa = gpu
-                .msaa
-                .as_ref()
-                .and_then(|(view, _)| image_entry(&self.adapter, view.texture(), &mut transitions));
+            let msaa = gpu.msaa.as_ref().and_then(|(view, _)| {
+                image_entry(&self.adapter, view.texture(), format, &mut candidates)
+            });
             let depth = gpu
                 .depth_texture
                 .as_ref()
-                .and_then(|d| image_entry(&self.adapter, d, &mut transitions));
+                .and_then(|d| image_entry(&self.adapter, d, d.format(), &mut candidates));
             for (is_depth, entry) in [(false, Some(texture)), (true, depth)] {
                 if let (Some(entry), Some(slot)) =
                     (entry, plugins.slots.get_mut(&(handle, is_depth)))
@@ -1211,12 +1386,6 @@ impl UnityRenderer {
                 },
             );
         }
-        if let Some(target) = &target {
-            for texture in &target.textures {
-                let depth = texture.format().is_depth_stencil_format();
-                transitions.push((texture.clone(), resting(texture, depth).0));
-            }
-        }
         let buffers = self
             .buffers
             .iter()
@@ -1233,23 +1402,23 @@ impl UnityRenderer {
         let mut scope = Scope {
             device: plugins.device.clone(),
             pool: plugins.pool,
-            target,
-            pass: None,
+            pass,
+            attachments: target
+                .as_ref()
+                .map(|t| t.images.clone())
+                .unwrap_or_default(),
             segments: Vec::new(),
-            // The frame being recorded (the renderer counts a frame when its rendering begins).
-            frame: self.frame_number + 1,
+            frame,
             safe: completed,
             by_pointer,
             by_handle,
             buffers,
             layouts: HashMap::new(),
             accessed_buffers: Vec::new(),
+            accessed_textures: Vec::new(),
         };
         if !scope.enter(inside) {
             tracing::error!("Unbound: no command buffer for a Vulkan plugin callback");
-            let frame = scope.frame;
-            let finished = scope.finish();
-            plugins.retire(frame, finished, Vec::new());
             return;
         }
         with_state(|s| s.scope = Some(scope));
@@ -1257,25 +1426,38 @@ impl UnityRenderer {
         let Some(scope) = with_state(|s| s.scope.take()) else {
             return;
         };
-        let frame = scope.frame;
         let finished = scope.finish();
         // The resting layouts (wgpu's encoding), then the plugin's commands (raw encoding: an
         // encoder cannot mix the two), submitted together in that order.
-        let mut transition = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("unbound vulkan plugin layouts"),
-            });
-        transition.transition_resources(
-            std::iter::empty(),
-            transitions
-                .iter()
-                .map(|(texture, state)| wgpu::TextureTransition {
-                    texture,
-                    selector: None,
-                    state: *state,
-                }),
-        );
+        let mut transitions: Vec<(wgpu::Texture, wgpu::TextureUses)> = finished
+            .accessed_textures
+            .iter()
+            .map(|&i| candidates[i].clone())
+            .collect();
+        if finished.segments.iter().any(|&(_, inside)| inside)
+            && let Some(target) = &target
+        {
+            transitions.extend(target.textures.iter().map(|t| (t.clone(), resting(t).0)));
+        }
+        let mut commands = Vec::with_capacity(2);
+        if !transitions.is_empty() {
+            let mut transition =
+                self.device
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("unbound vulkan plugin layouts"),
+                    });
+            transition.transition_resources(
+                std::iter::empty(),
+                transitions
+                    .iter()
+                    .map(|(texture, state)| wgpu::TextureTransition {
+                        texture,
+                        selector: None,
+                        state: *state,
+                    }),
+            );
+            commands.push(transition.finish());
+        }
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -1284,7 +1466,7 @@ impl UnityRenderer {
         let device = plugins.device.clone();
         // SAFETY: the raw primary command buffer is recorded only inside this closure, in the
         // encoder's recording state; the command buffers and pass it executes outlive the
-        // submission (retired below).
+        // submission (retired below, the pass cached).
         unsafe {
             encoder.as_hal_mut::<Vulkan, _, _>(|hal| {
                 if let Some(hal) = hal {
@@ -1292,26 +1474,28 @@ impl UnityRenderer {
                 }
             })
         };
-        self.queue.submit([transition.finish(), encoder.finish()]);
+        commands.push(encoder.finish());
+        self.queue.submit(commands);
         let kept = finished
             .accessed_buffers
             .iter()
             .filter_map(|handle| self.buffers.get(handle).map(|b| b.buffer.clone()))
             .collect();
         if let Some(plugins) = self.vulkan_plugins.as_mut() {
-            plugins.retire(frame, finished, kept);
+            plugins.retire(frame, &finished, kept);
         }
-        // The stream's pass goes on after an event that ran inside it (the interface resumes
-        // a pass a callback ended).
+        // An event that ran inside a pass leaves it open for the next event; one that ran
+        // outside it (configured so) leaves it ended: a DontCare event after it runs outside
+        // (nativegfx `plugin.dontcare.camera.2`).
         self.plugin_pass_open = inside;
     }
 
     /// The current target's color (multisampled where it is) and its depth as a plugin render
     /// pass's attachments; None for a target Unbound cannot begin one on (several colors, the
-    /// screen, a format with no Vulkan equivalent).
+    /// screen, a slice of a 3D texture, a format with no Vulkan equivalent).
     fn plugin_render_pass_target(&self) -> Option<PassTarget> {
         let target = self.state.target.as_ref()?;
-        if !target.extra.is_empty() || target.screen {
+        if !target.extra.is_empty() || target.screen || target.depth_slice.is_some() {
             return None;
         }
         // SAFETY: raw handles only read, while the target's views live (the renderer's).
@@ -1336,42 +1520,28 @@ impl UnityRenderer {
             )),
             None => None,
         };
+        let views: Vec<&wgpu::TextureView> = std::iter::once(&target.color)
+            .chain(depth.map(|(_, _, d)| d))
+            .chain(resolve.map(|(_, r)| r))
+            .collect();
         Some(PassTarget {
             color,
             samples: vk::SampleCountFlags::from_raw(target.samples),
             color_format,
             depth: depth.map(|(raw, format, _)| (raw, format)),
             resolve: resolve.map(|(raw, _)| raw),
-            textures: std::iter::once(target.color.texture().clone())
-                .chain(depth.map(|(_, _, d)| d.texture().clone()))
-                .chain(resolve.map(|(_, r)| r.texture().clone()))
+            textures: views.iter().map(|v| v.texture().clone()).collect(),
+            // SAFETY: raw handles only read.
+            images: views
+                .iter()
+                .filter_map(|v| unsafe { v.texture().as_hal::<Vulkan>().map(|r| r.raw_handle()) })
                 .collect(),
-            images: std::iter::once(target.color.texture())
-                .chain(depth.map(|(_, _, d)| d.texture()))
-                .chain(resolve.map(|(_, r)| r.texture()))
-                // SAFETY: raw handles only read.
-                .filter_map(|t| unsafe { t.as_hal::<Vulkan>().map(|r| r.raw_handle()) })
-                .collect(),
-            views: std::iter::once(target.color.clone())
-                .chain(depth.map(|(_, _, d)| d.clone()))
-                .chain(resolve.map(|(_, r)| r.clone()))
-                .collect(),
+            views: views.into_iter().cloned().collect(),
             extent: vk::Extent2D {
                 width: target.width,
                 height: target.height,
             },
         })
-    }
-}
-
-impl VulkanPlugins {
-    fn retire(&mut self, frame: u64, finished: Finished, buffers: Vec<wgpu::Buffer>) {
-        self.retired.push(Retired {
-            frame,
-            commands: finished.segments.iter().map(|&(c, _)| c).collect(),
-            pass: finished.pass,
-            _buffers: buffers,
-        });
     }
 }
 
@@ -1382,7 +1552,7 @@ unsafe fn execute(device: &ash::Device, primary: vk::CommandBuffer, finished: &F
     let mut open = false;
     for &(commands, inside) in &finished.segments {
         unsafe {
-            match (inside, open, finished.pass.as_ref().map(|p| p.0)) {
+            match (inside, open, finished.pass) {
                 (true, false, Some(pass)) => {
                     begin_render_pass(device, primary, pass);
                     open = true;
@@ -1415,20 +1585,30 @@ struct PassTarget {
     extent: vk::Extent2D,
     /// The single-sample view a multisampled color resolves into.
     resolve: Option<vk::ImageView>,
-    /// The attachments' textures (put in their resting layouts first), images, and views (kept
-    /// until the GPU finished the pass).
+    /// The attachments' textures (put in their resting layouts first), images, and views (held
+    /// by the framebuffer made over them).
     textures: Vec<wgpu::Texture>,
     images: Vec<vk::Image>,
     views: Vec<wgpu::TextureView>,
 }
 
-/// A render pass over the target (attachments loaded and stored, in their resting layouts)
-/// whose contents are secondary command buffers, and its framebuffer.
-unsafe fn create_render_pass(device: &ash::Device, target: &PassTarget) -> Option<PluginPass> {
+impl PassTarget {
+    /// The framebuffer's attachments: color, depth, resolve.
+    fn raw_views(&self) -> Vec<vk::ImageView> {
+        std::iter::once(self.color)
+            .chain(self.depth.map(|(view, _)| view))
+            .chain(self.resolve)
+            .collect()
+    }
+}
+
+/// A render pass over a target as `key` describes it (attachments loaded and stored, in their
+/// resting layouts) whose contents are secondary command buffers.
+unsafe fn create_render_pass(device: &ash::Device, key: PassKey) -> Option<vk::RenderPass> {
     let mut attachments = vec![
         vk::AttachmentDescription::default()
-            .format(target.color_format)
-            .samples(target.samples)
+            .format(key.color)
+            .samples(key.samples)
             .load_op(vk::AttachmentLoadOp::LOAD)
             .store_op(vk::AttachmentStoreOp::STORE)
             .stencil_load_op(vk::AttachmentLoadOp::DONT_CARE)
@@ -1436,12 +1616,11 @@ unsafe fn create_render_pass(device: &ash::Device, target: &PassTarget) -> Optio
             .initial_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
             .final_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL),
     ];
-    let mut views = vec![target.color];
-    if let Some((view, format)) = target.depth {
+    if let Some(format) = key.depth {
         attachments.push(
             vk::AttachmentDescription::default()
                 .format(format)
-                .samples(target.samples)
+                .samples(key.samples)
                 .load_op(vk::AttachmentLoadOp::LOAD)
                 .store_op(vk::AttachmentStoreOp::STORE)
                 .stencil_load_op(vk::AttachmentLoadOp::LOAD)
@@ -1449,7 +1628,6 @@ unsafe fn create_render_pass(device: &ash::Device, target: &PassTarget) -> Optio
                 .initial_layout(vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
                 .final_layout(vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL),
         );
-        views.push(view);
     }
     let color_ref = [vk::AttachmentReference {
         attachment: 0,
@@ -1460,13 +1638,13 @@ unsafe fn create_render_pass(device: &ash::Device, target: &PassTarget) -> Optio
         layout: vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
     let resolve_ref = [vk::AttachmentReference {
-        attachment: views.len() as u32,
+        attachment: attachments.len() as u32,
         layout: vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
     }];
-    if let Some(view) = target.resolve {
+    if key.resolve {
         attachments.push(
             vk::AttachmentDescription::default()
-                .format(target.color_format)
+                .format(key.color)
                 .samples(vk::SampleCountFlags::TYPE_1)
                 .load_op(vk::AttachmentLoadOp::DONT_CARE)
                 .store_op(vk::AttachmentStoreOp::STORE)
@@ -1475,15 +1653,14 @@ unsafe fn create_render_pass(device: &ash::Device, target: &PassTarget) -> Optio
                 .initial_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
                 .final_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL),
         );
-        views.push(view);
     }
     let mut subpass = vk::SubpassDescription::default()
         .pipeline_bind_point(vk::PipelineBindPoint::GRAPHICS)
         .color_attachments(&color_ref);
-    if target.resolve.is_some() {
+    if key.resolve {
         subpass = subpass.resolve_attachments(&resolve_ref);
     }
-    if target.depth.is_some() {
+    if key.depth.is_some() {
         subpass = subpass.depth_stencil_attachment(&depth_ref);
     }
     // Everything before, then the pass; the pass, then everything after.
@@ -1508,7 +1685,7 @@ unsafe fn create_render_pass(device: &ash::Device, target: &PassTarget) -> Optio
         },
     ];
     let subpasses = [subpass];
-    let render_pass = unsafe {
+    unsafe {
         device.create_render_pass(
             &vk::RenderPassCreateInfo::default()
                 .attachments(&attachments)
@@ -1517,28 +1694,7 @@ unsafe fn create_render_pass(device: &ash::Device, target: &PassTarget) -> Optio
             None,
         )
     }
-    .ok()?;
-    match unsafe {
-        device.create_framebuffer(
-            &vk::FramebufferCreateInfo::default()
-                .render_pass(render_pass)
-                .attachments(&views)
-                .width(target.extent.width)
-                .height(target.extent.height)
-                .layers(1),
-            None,
-        )
-    } {
-        Ok(framebuffer) => Some(PluginPass {
-            render_pass,
-            framebuffer,
-            extent: target.extent,
-        }),
-        Err(_) => {
-            unsafe { device.destroy_render_pass(render_pass, None) };
-            None
-        }
-    }
+    .ok()
 }
 
 unsafe fn begin_render_pass(device: &ash::Device, primary: vk::CommandBuffer, pass: PluginPass) {
