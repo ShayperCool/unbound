@@ -19,7 +19,8 @@ textureimport probe's images); `ProbeRunner.Create` applies them in the Editor.
   import, DXT1 to DXT5, DXT5 to BC7, DXT1 to RGBA32), `Reinitialize` of a compressed texture,
   writes to a compressed import, and explicit RGB24/R8 imports of a coloured, transparent source;
 - R8, RG16 and Alpha8 `Texture2D`s made by code, linear and sRGB: format, raw data, pixels and
-  the GPU's samples, from `LoadRawTextureData` (with mips) and from `SetPixels32`.
+  the GPU's samples, from `LoadRawTextureData` (with mips) and from `SetPixels32`; `CopyTexture`
+  from a linear R8/RG16 texture into an sRGB one, back, and from a render texture of the format.
 
 Each control records what it threw and the errors it logged.
 
@@ -54,6 +55,9 @@ Observations of this release, its Standalone target and the Editor's OpenGL Core
 - R8 and RG16 made by code are R8_UNorm and R8G8_UNorm in the Gamma project, sRGB or not; in the
   Linear project sRGB ones are R8_SRGB and R8G8_SRGB and the GPU decodes their red (and green)
   from sRGB; R8G8_SRGB samples blue 1, R8G8_UNorm blue 0. Alpha8 samples (0, 0, 0, a) either way.
+  `CopyTexture` between R8_UNorm and R8_SRGB textures (or an R8 render texture) copies the raw data
+  and the GPU's texels; between R8G8_UNorm and R8G8_SRGB it copies the raw data, but the
+  destination's GPU texels stay as they were.
 
 ## Documented (Unity 6000.0 Scripting API)
 

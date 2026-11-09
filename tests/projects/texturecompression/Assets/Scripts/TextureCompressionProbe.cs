@@ -393,5 +393,42 @@ public class TextureCompressionProbe : MonoBehaviour
                     Destroy(cells);
                 });
             }
+        // Graphics.CopyTexture between linear and sRGB R8 and RG16 textures, and from a render
+        // texture of the format into an sRGB texture: raw data and the GPU's samples afterwards.
+        foreach (var format in new[] { TextureFormat.R8, TextureFormat.RG16 })
+        {
+            var key = "channels.copy." + format;
+            Section(key, () =>
+            {
+                Texture2D Made(bool linear, int seed)
+                {
+                    var t = new Texture2D(8, 8, format, false, linear);
+                    var raw = new byte[t.GetRawTextureData().Length];
+                    for (int i = 0; i < raw.Length; i++) raw[i] = (byte)(i * 41 + seed);
+                    t.LoadRawTextureData(raw);
+                    t.Apply(false);
+                    return t;
+                }
+                void Copied(string name, Texture source, Texture2D destination)
+                {
+                    Run(key + "." + name, () => Graphics.CopyTexture(source, destination));
+                    Run(key + "." + name + ".raw", () => Add(key + "." + name + ".raw", Bytes(destination.GetRawTextureData())));
+                    Run(key + "." + name + ".gpu", () => Add(key + "." + name + ".gpu", Gpu(destination)));
+                }
+                var linear = Made(true, 3);
+                var srgb = Made(false, 90);
+                Copied("tosrgb", linear, srgb);
+                var linear2 = Made(true, 17);
+                var srgb2 = Made(false, 200);
+                Copied("tolinear", srgb2, linear2);
+                var rt = new RenderTexture(8, 8, 0, format == TextureFormat.R8 ? RenderTextureFormat.R8 : RenderTextureFormat.RG16, RenderTextureReadWrite.Linear);
+                rt.Create();
+                Graphics.Blit(linear2, rt);
+                var srgb3 = Made(false, 55);
+                Copied("fromrt", rt, srgb3);
+                rt.Release();
+                foreach (var t in new[] { linear, srgb, linear2, srgb2, srgb3 }) Destroy(t);
+            });
+        }
     }
 }
