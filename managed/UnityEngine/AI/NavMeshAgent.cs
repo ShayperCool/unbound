@@ -430,8 +430,12 @@ namespace UnityEngine.AI
         /// followed while a new one is pending (measured).</summary>
         public Vector3 pathEndPosition => FollowingPath ? NavMesh.V(m_Crowd.corridor.GetTarget()) : m_NextPosition;
 
-        /// <summary>The distance left along the corners the agent sees; unknown (infinity) while
-        /// the path's end is beyond them (measured).</summary>
+        static readonly DtStraightPath[] s_RemainingCorners = new DtStraightPath[DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS];
+
+        /// <summary>The distance left along the corners the agent sees from where it stands now
+        /// (found again from its corridor, also after this frame's step passed one: Unity's,
+        /// tests/projects/navpath `replan.topo`); unknown (infinity) while the path's end is beyond
+        /// them (measured).</summary>
         public float remainingDistance
         {
             get
@@ -442,14 +446,21 @@ namespace UnityEngine.AI
                 // On a link the path's end is beyond the corners the agent sees (measured:
                 // tests/projects/navlinks, every frame on a link).
                 if (isOnOffMeshLink) return float.PositiveInfinity;
-                if (m_Crowd.ncorners == 0) return 0f;
-                if ((m_Crowd.corners[m_Crowd.ncorners - 1].flags & DtStraightPathFlags.DT_STRAIGHTPATH_END) == 0) return float.PositiveInfinity;
+                var corners = s_RemainingCorners;
+                int count = m_Crowd.ncorners;
+                var crowd = AgentSystem.CrowdOf(m_Surface);
+                if (crowd != null && m_Crowd.state == DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING)
+                    count = m_Crowd.corridor.FindCorners(corners, corners.Length, crowd.GetNavMeshQuery(), crowd.GetFilter(0));
+                else
+                    Array.Copy(m_Crowd.corners, corners, count);
+                if (count == 0) return 0f;
+                if ((corners[count - 1].flags & DtStraightPathFlags.DT_STRAIGHTPATH_END) == 0) return float.PositiveInfinity;
                 float d = 0f;
                 var p = m_Crowd.npos;
-                for (int i = 0; i < m_Crowd.ncorners; i++)
+                for (int i = 0; i < count; i++)
                 {
-                    d += RcVec3f.Distance(p, m_Crowd.corners[i].pos);
-                    p = m_Crowd.corners[i].pos;
+                    d += RcVec3f.Distance(p, corners[i].pos);
+                    p = corners[i].pos;
                 }
                 return d;
             }

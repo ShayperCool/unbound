@@ -137,6 +137,28 @@ namespace UnityEngine.Tests
             Assert.True(dear.nextPosition.z > 1f, $"dear at {dear.nextPosition}");
         }
 
+        /// <summary>remainingDistance is the length along the corners from where the agent stands,
+        /// also in the update whose step passes a corner (the corners it steered by still hold
+        /// that corner then).</summary>
+        [Fact]
+        public void TheRemainingDistanceFollowsTheCornersFromWhereTheAgentStands()
+        {
+            var agent = Walker(new Vector3(-4f, 0f, -5f), new Vector3(4f, 0f, -5f));
+            agent.SetAreaCost(Water, 10f);
+            int passed = 0, last = agent.path.corners.Length;
+            for (int i = 0; i < 300 && agent.hasPath; i++)
+            {
+                AgentSystem.Step();
+                var corners = agent.path.corners;
+                float along = 0f;
+                for (int c = 1; c < corners.Length; c++) along += Vector3.Distance(corners[c - 1], corners[c]);
+                Assert.Equal(along, agent.remainingDistance, 3);
+                if (corners.Length < last) passed++;
+                last = corners.Length;
+            }
+            Assert.True(passed >= 2, $"{passed} corners passed");
+        }
+
         /// <summary>Slots: an agent takes the slot freed last; of agents that waited as long for a
         /// corridor search, the one in the lower slot is searched in one update, the other in the
         /// next.</summary>
