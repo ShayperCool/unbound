@@ -33,6 +33,10 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 x11rb = { version = "0.13", features = ["randr"] }
+# Load libwayland-client when a Wayland session needs it instead of linking it, so the binary
+# also starts on X11-only and headless systems that lack the library (only adds a feature to
+# bevy's winit).
+winit = { version = "0.30", default-features = false, features = ["wayland-dlopen"] }
 
 [dev-dependencies]
 naga = { version = "30", features = ["wgsl-in"] }
