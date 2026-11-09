@@ -22,10 +22,6 @@ TOLERANCE = 1e-3
 OPEN = {
     'animated': 'animated reordering (ListViewReorderMode.Animated)',
     'animated-steps': 'animated reordering (ListViewReorderMode.Animated)',
-    'columns': 'MultiColumnListView',
-    'columns-steps': 'MultiColumnListView',
-    'column-tree': 'MultiColumnTreeView',
-    'column-tree-steps': 'MultiColumnTreeView',
 }
 
 

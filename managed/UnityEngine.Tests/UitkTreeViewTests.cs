@@ -953,19 +953,11 @@ namespace UnityEngine.Tests
 
         // ------------------------------------------------------------------ out of scope stays loud
 
-        // Guard (not a red/green control): MultiColumnTreeView and MultiColumnListView stay generated
-        // stubs, which warn when used; the tree's drag and drop controller refuses drags and says so
-        // when reordering is asked for.
-        // Expected to pass on bc93e0fc and on this head alike.
+        // Guard (not a red/green control): the tree's drag and drop controller refuses drags and says
+        // so when reordering is asked for.
         [Fact]
-        public void MultiColumnAndReorderingStayStubs()
+        public void TreeReorderingIsRefused()
         {
-            var stub = typeof(Unbound.StubAttribute);
-            Assert.True(typeof(MultiColumnTreeView).IsDefined(stub, false));
-            Assert.True(typeof(MultiColumnListView).IsDefined(stub, false));
-            Assert.True(typeof(MultiColumnTreeView).GetConstructor(Type.EmptyTypes).IsDefined(stub, false));
-            Assert.True(typeof(MultiColumnListView).GetConstructor(Type.EmptyTypes).IsDefined(stub, false));
-            var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
             var tree = new TreeView();
             Assert.IsType<UaUnsupportedReorderController>(tree.dragger.dragAndDropController);
             Assert.False(tree.dragger.dragAndDropController.CanStartDrag(new[] { 0 }));

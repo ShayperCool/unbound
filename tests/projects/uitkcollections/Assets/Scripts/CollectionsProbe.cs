@@ -607,7 +607,36 @@ public static class CollectionsProbe
         Step("columns", "add-column", () => view.columns.Add(MakeColumn("cols:", "extra", "Extra", 50, false, i => "x" + i)), State);
         Step("columns", "remove-column", () => view.columns.Remove(view.columns["extra"]), State);
         Step("columns", "refreshitems", () => view.RefreshItems(), State);
+        // Sorting: rows ordered through the columns' comparisons (sortingMode Default), header clicks
+        // (again: the other direction; Ctrl adds a column, Shift removes one), then turned off.
+        Step("columns", "sort-value-desc", () =>
+        {
+            view.columnSortingChanged += () => Log.Add("cols:columnSortingChanged");
+            view.columns["name"].comparison = (a, b) => string.CompareOrdinal((string)view.itemsSource[a], (string)view.itemsSource[b]);
+            view.columns["value"].comparison = (a, b) => a.CompareTo(b);
+            view.columns["flag"].comparison = (a, b) => (a % 2).CompareTo(b % 2);
+            view.sortingMode = ColumnSortingMode.Default;
+            view.sortColumnDescriptions.Add(new SortColumnDescription("value", SortDirection.Descending));
+        }, State);
+        Step("columns", "click-header-name", () => Click(HeaderCenter(view, "name")), State);
+        Step("columns", "click-header-name-again", () => Click(HeaderCenter(view, "name")), State);
+        Step("columns", "ctrl-click-header-flag", () => Click(HeaderCenter(view, "flag"), EventModifiers.Control), State);
+        Step("columns", "shift-click-header-name", () => Click(HeaderCenter(view, "name"), EventModifiers.Shift), State);
+        Step("columns", "sort-off", () => { view.sortColumnDescriptions.Clear(); view.sortingMode = ColumnSortingMode.None; }, State);
+        // Resizing: the handle after the value column dragged 20 points right, then widths restored.
+        Step("columns", "drag-resize-value", () =>
+        {
+            var from = HandleCenter(view, 1);
+            Drag(from, from + new Vector2(20, 0), 4);
+        }, State);
+        Step("columns", "restore-widths", () => { view.columns["value"].width = 60; view.columns["flag"].width = 70; }, State);
     }
+
+    static Vector2 HeaderCenter(BaseVerticalCollectionView view, string column) =>
+        view.Q(column, "unity-multi-column-header__column").worldBound.center;
+
+    static Vector2 HandleCenter(BaseVerticalCollectionView view, int index) =>
+        view.Query(className: "unity-multi-column-header__column-resize-handle__drag-area").AtIndex(index).worldBound.center;
 
     // ---- MultiColumnTreeView ----
 
@@ -631,6 +660,15 @@ public static class CollectionsProbe
         Step("column-tree", "expand-all", () => view.ExpandAll(), State);
         Step("column-tree", "click-row-1", () => Click(RowCenter(view, 1)), State);
         Step("column-tree", "collapse-all", () => view.CollapseAll(), State);
+        // Sorting a tree orders items among their siblings.
+        Step("column-tree", "sort-id-desc", () =>
+        {
+            view.ExpandAll();
+            view.columns["id"].comparison = (a, b) => view.GetIdForIndex(a).CompareTo(view.GetIdForIndex(b));
+            view.sortingMode = ColumnSortingMode.Default;
+            view.sortColumnDescriptions.Add(new SortColumnDescription("id", SortDirection.Descending));
+        }, State);
+        Step("column-tree", "sort-off", () => { view.sortColumnDescriptions.Clear(); view.sortingMode = ColumnSortingMode.None; view.CollapseAll(); }, State);
     }
 
     // ---- absolute children in a padded, bordered parent ----
