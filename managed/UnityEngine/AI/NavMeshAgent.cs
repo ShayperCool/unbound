@@ -244,7 +244,7 @@ namespace UnityEngine.AI
             var target = position - Vector3.up * m_BaseOffset;
             if (!m_Crowd.corridor.MovePosition(NavMesh.V(target), m_Surface.Query, Filter)) return false;
             m_Crowd.npos = m_Crowd.corridor.GetPos();
-            m_NextPosition = NavMesh.V(m_Crowd.npos);
+            m_NextPosition = AgentSystem.Reported(this);
             return true;
         }
 
@@ -1283,6 +1283,8 @@ namespace Unbound.Runtime
             }
             var crowd = CrowdOf(surface);
             agent.m_Surface = surface;
+            // On a height mesh, the agent stands at its height (tests/projects/navbaked `height.agents`).
+            NavWorld.AdjustHeight(surface, polyRef, ref point);
             agent.m_Crowd = crowd.AddAgent(NavMesh.V(point), Params(agent));
             agent.m_NextPosition = point;
             agent.SetOnNavMesh(true);
@@ -1525,7 +1527,7 @@ namespace Unbound.Runtime
                 else if (agent.m_StepWalking && agent.m_Crowd.animation.polyRef != 0) ReachLink(agent);
                 if (agent.m_Crowd.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH) agent.m_LinkId = 0;
                 var previous = agent.m_NextPosition;
-                agent.m_NextPosition = NavMesh.V(agent.m_Crowd.npos);
+                agent.m_NextPosition = Reported(agent);
                 // The step over the frame, pushes out of other agents included (measured).
                 agent.m_Velocity = (agent.m_NextPosition - previous) / dt;
                 StopAtDestination(agent, dt, NavMesh.V(previous));
@@ -1628,6 +1630,19 @@ namespace Unbound.Runtime
                 && agent.m_Surface.Query.ClosestPointOnPoly(poly, ag.npos, out landing, out _).Succeeded();
         }
 
+        /// <summary>A walking agent stands at the height of the height mesh under it, if any: its
+        /// position moves there (it steers from there in the next update; tests/projects/navbaked
+        /// `height.agents`).</summary>
+        internal static Vector3 Reported(NavMeshAgent agent)
+        {
+            var ag = agent.m_Crowd;
+            var p = NavMesh.V(ag.npos);
+            if (NavWorld.HasHeightMeshes && ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH
+                && NavWorld.AdjustHeight(agent.m_Surface, ag.corridor.GetFirstPoly(), ref p))
+                ag.npos = NavMesh.V(p);
+            return p;
+        }
+
         /// <summary>The end of the path (measured): within the stopping distance an agent stops;
         /// within 0.01 its path no longer counts as one (hasPath is false) while it closes in;
         /// a step that would pass the end lands on it and the agent stands.</summary>
@@ -1664,9 +1679,9 @@ namespace Unbound.Runtime
                 ag.nvel = RcVec3f.Zero;
                 ag.pvel = RcVec3f.Zero;
                 agent.m_Velocity = Vector3.zero;
-                agent.m_NextPosition = NavMesh.V(last.pos);
                 CrowdOf(agent.m_Surface)?.ResetMoveTarget(ag);
                 ag.corridor.Reset(ag.corridor.GetFirstPoly(), ag.npos);
+                agent.m_NextPosition = Reported(agent);
                 ag.ncorners = 0;
                 ag.hasSteer = false;
                 agent.SetArrived(true);

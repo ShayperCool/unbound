@@ -98,6 +98,8 @@ namespace UnityEngine.AI
             hit.position = new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity);
             hit.distance = float.PositiveInfinity;
             bool found = false;
+            NavWorld.Surface bestSurface = null;
+            long bestRef = 0;
             foreach (var surface in NavWorld.Surfaces)
             {
                 if (agentTypeID >= 0 && surface.AgentTypeID != agentTypeID) continue;
@@ -111,6 +113,15 @@ namespace UnityEngine.AI
                 hit.normal = Vector3.zero;
                 hit.hit = true;
                 found = true;
+                bestSurface = surface;
+                bestRef = polyRef;
+            }
+            // On a height mesh, the point takes its height (its distance stays the one to the
+            // NavMesh: measured, tests/projects/navbaked `height`).
+            if (found)
+            {
+                var position = hit.position;
+                if (NavWorld.AdjustHeight(bestSurface, bestRef, ref position)) hit.position = position;
             }
             return found;
         }
@@ -148,6 +159,9 @@ namespace UnityEngine.AI
             // polygon's strict inside, so the closest point of the polygon gives it then).
             if (surface.Query.GetPolyHeight(lastRef, V(end), out float h).Succeeded()) end.y = h;
             else if (surface.Query.ClosestPointOnPoly(lastRef, V(end), out var onPoly, out _).Succeeded()) end.y = onPoly.Y;
+            // On a height mesh, the end takes its height, and the distance is measured to it
+            // (tests/projects/navbaked `height`).
+            NavWorld.AdjustHeight(surface, lastRef, ref end);
             hit.position = end;
             hit.normal = blocked ? V(normal) : Vector3.zero;
             // Measured from the position asked for, not the start on the NavMesh.

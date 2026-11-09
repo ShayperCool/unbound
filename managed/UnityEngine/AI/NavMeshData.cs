@@ -22,6 +22,9 @@ namespace UnityEngine.AI
         /// <summary>The off-mesh links the Editor's bake generated (drop-downs, jumps across), in the
         /// data's own space: they come and go with each instance of the data.</summary>
         internal readonly List<BakedLink> m_Links = new List<BakedLink>();
+        /// <summary>The baked height meshes (Build Height Mesh), in the data's own space: points on the
+        /// NavMesh take their height from them (NavWorld.AdjustHeight).</summary>
+        internal readonly List<NavMeshHeightMesh> m_HeightMeshes = new List<NavMeshHeightMesh>();
         /// <summary>Bumped when the tiles change (instances of the data rebuild their world).</summary>
         internal int m_Version;
 
@@ -47,7 +50,7 @@ namespace UnityEngine.AI
             set => m_Rotation = value;
         }
 
-        internal bool hasHeightMeshData => false;
+        internal bool hasHeightMeshData => m_HeightMeshes.Count > 0;
 
         internal NavMeshBuildSettings buildSettings => m_Settings;
 
@@ -96,8 +99,14 @@ namespace UnityEngine.AI
                     Bidirectional = direction != 0,
                 });
             }
-            if (body.Get("m_HeightMeshes")?.Seq() is IEnumerable<YNode> heights && heights.GetEnumerator().MoveNext())
-                Debug.LogWarning($"Unbound: NavMeshData '{m_Name}' has a baked height mesh, which is not supported yet: agents stand on the NavMesh's polygons instead.");
+            m_HeightMeshes.Clear();
+            foreach (var mesh in body.Get("m_HeightMeshes")?.Seq() ?? Array.Empty<YNode>())
+            {
+                if (NavMeshHeightMesh.Read(mesh) is NavMeshHeightMesh height) m_HeightMeshes.Add(height);
+                else Debug.LogWarning($"Unbound: NavMeshData '{m_Name}' has a height mesh whose triangles could not be read; it is left out.");
+            }
+            if (body.Get("m_Heightmaps")?.Count > 0)
+                Debug.LogWarning($"Unbound: NavMeshData '{m_Name}' has terrain heightmaps in its height mesh, which are not supported yet: agents stand on the NavMesh's polygons over terrains.");
             m_Version++;
         }
     }

@@ -292,8 +292,15 @@ namespace Unbound.Runtime
                 }
         }
 
+        static bool s_WarnedHeightMesh;
+
         internal static void Build(NavMeshData data, NavMeshBuildSettings settings, List<NavMeshBuildSource> sources, Bounds localBounds)
         {
+            if (settings.buildHeightMesh && !s_WarnedHeightMesh)
+            {
+                s_WarnedHeightMesh = true;
+                Debug.LogWarning("Unbound: NavMeshBuilder does not build height meshes at run time yet (buildHeightMesh): agents stand on the NavMesh's polygons; baked height meshes are used.");
+            }
             var dataToWorld = Matrix4x4.TRS(data.position, data.rotation, Vector3.one);
             var g = Gather(sources, dataToWorld.inverse);
             data.m_Settings = settings;

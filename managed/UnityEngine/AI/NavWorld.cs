@@ -49,7 +49,7 @@ namespace Unbound.Runtime
             /// <summary>Off-mesh connection polygons by link id.</summary>
             internal readonly Dictionary<long, int> LinkOfPoly = new Dictionary<long, int>();
             /// <summary>The data instance each tile came from, by tile index.</summary>
-            internal readonly Dictionary<int, int> DataOfTile = new Dictionary<int, int>();
+            internal readonly Dictionary<int, DataInstance> DataOfTile = new Dictionary<int, DataInstance>();
             /// <summary>Every tile in the mesh: where it came from and where it lies.</summary>
             internal readonly List<PlacedTile> Tiles = new List<PlacedTile>();
         }
@@ -87,7 +87,34 @@ namespace Unbound.Runtime
 
         /// <summary>The id of the data instance a polygon of the surface came from; 0 for none.</summary>
         internal static int DataOfPoly(Surface surface, long polyRef) =>
-            surface != null && polyRef != 0 && surface.DataOfTile.TryGetValue(DtDetour.DecodePolyIdTile(polyRef), out int id) ? id : 0;
+            surface != null && polyRef != 0 && surface.DataOfTile.TryGetValue(DtDetour.DecodePolyIdTile(polyRef), out var instance) ? instance.Id : 0;
+
+        /// <summary>Whether any data in the NavMesh has a height mesh (AdjustHeight has work to do).</summary>
+        internal static bool HasHeightMeshes { get; private set; }
+
+        /// <summary>A point on the NavMesh, on polygon <paramref name="polyRef"/>, moved in height onto
+        /// the height mesh of the data the polygon came from, when it has one and a triangle of it lies
+        /// within the build's voxel size of the point along x and z, below the point plus the agent
+        /// climb: the highest such (Unity 6000.0.71f1: tests/projects/navbaked `height`, `height.agents`).
+        /// False, and the point unchanged, otherwise.</summary>
+        internal static bool AdjustHeight(Surface surface, long polyRef, ref Vector3 point)
+        {
+            if (!HasHeightMeshes || surface == null || polyRef == 0
+                || !surface.DataOfTile.TryGetValue(DtDetour.DecodePolyIdTile(polyRef), out var instance)) return false;
+            var data = instance.Data;
+            if (data == null || data.m_HeightMeshes.Count == 0) return false;
+            bool moved = !DtSurface.IsIdentity(instance.Position.x, instance.Position.y, instance.Position.z, instance.Rotation);
+            var local = moved ? Quaternion.Inverse(instance.Rotation) * (point - instance.Position) : point;
+            var settings = data.m_Settings;
+            float reach = Mathf.Max(settings.voxelSize, NavMeshHeightMesh.MinReach);
+            float top = local.y + settings.agentClimb;
+            float best = float.NegativeInfinity;
+            foreach (var mesh in data.m_HeightMeshes) mesh.Highest(local.x, local.z, reach, top, ref best);
+            if (float.IsNegativeInfinity(best)) return false;
+            local.y = best;
+            point = moved ? instance.Position + instance.Rotation * local : local;
+            return true;
+        }
 
         internal static IReadOnlyList<DataInstance> Data => s_Data;
         internal static IReadOnlyList<LinkInstance> Links => s_Links;
@@ -180,8 +207,10 @@ namespace Unbound.Runtime
             s_Dirty = false;
             Version++;
             s_Surfaces.Clear();
+            HasHeightMeshes = false;
             foreach (var instance in s_Data)
             {
+                if (instance.Data != null && instance.Data.m_HeightMeshes.Count > 0) HasHeightMeshes = true;
                 if (instance.Data == null) continue;
                 int agentType = instance.Data.m_Settings.agentTypeID;
                 if (!s_Surfaces.TryGetValue(agentType, out var surface))
@@ -221,7 +250,7 @@ namespace Unbound.Runtime
                     placed.header.layer = layer;
                     surface.Mesh.AddTile(placed, 0, 0, out long tileRef);
                     if (tileRef == 0) continue;
-                    surface.DataOfTile[DtDetour.DecodePolyIdTile(tileRef)] = instance.Id;
+                    surface.DataOfTile[DtDetour.DecodePolyIdTile(tileRef)] = instance;
                     surface.Tiles.Add(new PlacedTile
                     {
                         Instance = instance, Index = index, Ref = tileRef, Surface = meshSurface,
@@ -331,7 +360,7 @@ namespace Unbound.Runtime
                         return;
                     }
                     var added = surface.Mesh.GetTileByRef(tileRef);
-                    surface.DataOfTile[DtDetour.DecodePolyIdTile(tileRef)] = placed.Instance.Id;
+                    surface.DataOfTile[DtDetour.DecodePolyIdTile(tileRef)] = placed.Instance;
                     MapLinks(surface, added, true);
                 }
             }
