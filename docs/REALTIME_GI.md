@@ -11,7 +11,8 @@ and runs the update below; for the probe's Room scene with point lights, flat am
 renderer albedo/emission it reproduces the Editor's converged realtime lightmaps (median
 relative error under 0.6%; the engine does not run it yet). The engine still draws no realtime
 GI: it warns once per scene (`Graphics/Lightmapping.cs`), and `unbound doctor` lists the affected
-scenes.
+scenes. Drawing needs each renderer's realtime lightmap UVs, which the project does not hold
+(see [Realtime lightmap UVs](#realtime-lightmap-uvs)).
 
 ## Documented contract (6000.0)
 
@@ -41,7 +42,7 @@ a payload: a Unity bundle of per-system files named by the system's hash.
 | `.rsc.{ref,sse,neo}` | transport: per output segment, the referenced input values (dependency, index, 16-bit weight), an 8-bit weight per (texel, reference), the texel coordinates; the bounce resampling (per cluster, texels and weights); per-texel chart data |
 | `.caw` | which albedo/emission texels form each cluster |
 | `.rgb` | the system's albedo texture as precomputed (8-bit, system resolution) |
-| `.ecm` | chart mask at system resolution |
+| `.ecm` | chart mask at system resolution: per texel, the chart it belongs to (charts occupy whole 4x4 texel blocks) |
 | `.vis` | precomputed visibility used for directional lights |
 | `.pos`, `.rpc.{ref,sse,neo}` | light probe positions and their transport |
 
@@ -59,7 +60,7 @@ Room cases of tests/projects/realtimegi in its tests):
    (the probe's point light has shadows enabled). The falloff is the curve itself; the
    Editor's matches it within about 1%.
 2. **Cluster radiance**: `albedo^2 * (direct + bounce) + emission`, with albedo the cluster's
-   8-bit gamma-space albedo (the material's meta pass output) and emission linear.
+   8-bit gamma-space albedo and emission linear (see [Material inputs](#material-inputs)).
 3. **Cluster tree**: each parent value is the 8-bit-weighted (/255) sum of its children.
 4. **Output texel** irradiance: the weighted sum over the referenced cluster, tree and
    environment values, clamped at 0, stored as RGB9E5 in the atlas; `DynamicGI.indirectScale`
@@ -79,6 +80,43 @@ contract: `indirectScale` starts as the scene's Indirect Intensity; an albedo ch
 skybox. Not measurable as a reference, since the result depends on update timing: a material
 emission change without `UpdateGIMaterials`, and `updateThreshold` above its default of 1.
 
+## Material inputs
+
+Each system takes its albedo and emission from two textures at system resolution in which its
+renderers' meta passes (`LightMode` `Meta`, Unity's own shaders) are drawn at their realtime
+lightmap UVs. Unbound's model of how they are made and read (`crates/unbound-gi`; not yet
+confirmed by a capture, since the engine cannot draw at realtime lightmap UVs yet):
+
+- Each renderer is drawn with `unity_LightmapST` and `unity_DynamicLightmapST` set to its scale
+  and offset within the system (the scene mapping's `dynamicLightmapSTInSystem`),
+  `unity_MetaVertexControl` (0, 1, 0, 0), `unity_MetaFragmentControl` (1, 0, 0, 0) for albedo and
+  (0, 1, 0, 0) for emission, `unity_OneOverOutputBoost` 1 / Albedo Boost, `unity_MaxOutputValue`
+  0.97 and `unity_UseLinearSpace`, into a target cleared to black (emission alpha 1) under an
+  orthographic projection of [0, 1]^2; then again as wireframe, so that texels the triangles
+  only touch are written too. Albedo goes into 8-bit sRGB texels in a linear project; emission
+  into half floats, and only for materials whose `globalIlluminationFlags` have RealtimeEmissive
+  without EmissiveIsBlack.
+- The cluster material data (`.caw`) lists, per cluster, groups of points of one renderer, each
+  with texel samples whose integer weights add up to the group's point count. A cluster's albedo
+  is the square root of the weighted mean of its samples' squared bytes (the square standing in
+  for the gamma curve), kept as 8 bits; its emission the weighted mean of its texels, kept as a
+  half float. `DynamicGI.SetEmissive` gives a renderer one emission for all its points instead of
+  its texels; a later material update does not replace it (measured: `room-setemissive-then-call`).
+
+## Realtime lightmap UVs
+
+Renderers draw realtime GI at their own realtime lightmap UVs, which are not the mesh's UV2 scaled
+by `realtimeLightmapScaleOffset`: the precompute repacks each mesh's charts. In the probe's Room,
+the floor's 6 m faces become charts of 13x13 texels in 14x14 blocks and its 0.1 m thin faces 3x3
+in 4x4 blocks, although all faces of the cube's UV2 are the same size: each chart is scaled to
+its own world area at the realtime resolution, kept at least the minimum chart size, padded and
+packed; with Preserve UVs off the charts themselves are generated. The Editor keeps these UVs in
+its GI cache, not in the project (a player build stores them in
+`MeshRenderer.enlightenVertexStream`). The LightingData asset holds only where each renderer's UV
+space lies in its system and the system's chart mask, so Unbound must compute the realtime
+lightmap UVs itself before it can render the meta passes or draw the realtime lightmaps: that is
+the first part of phase 3.
+
 ## Unbound plan
 
 - Phase 2, runtime over Unity's precomputed data: read the payload and scene mapping into a
@@ -89,7 +127,7 @@ emission change without `UpdateGIMaterials`, and `updateThreshold` above its def
   from the material's own meta pass rendered at the realtime lightmap UVs. Unmeasured inputs
   (directional output, spot/area/directional light details, skybox/gradient environments,
   transparency) fail loudly until a probe case covers them.
-- Phase 3, Unbound's own precompute from scene geometry (charts, clusters, transport, bounce
-  resampling, probe transport) for projects without precomputed data or with changed scenes,
+- Phase 3, Unbound's own precompute from scene geometry (realtime lightmap UVs, charts, clusters,
+  transport, bounce resampling, probe transport) for projects without precomputed data or with changed scenes,
   cached under `Library/Unbound/` by content hash and format version, compared with the Editor's
   precompute through the same probe.
