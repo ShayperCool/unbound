@@ -26,7 +26,7 @@ impl ParameterRamp {
         if target == 1.0 {
             *self = Self::new(1.0);
             1.0
-        } else if self.position == 0 && (target - self.value).abs() <= MIN_GAIN_CHANGE {
+        } else if self.position == 0 && (target - self.value).abs() < MIN_GAIN_CHANGE {
             self.value
         } else {
             let value = self.next(target, frames);
@@ -64,6 +64,24 @@ impl ParameterRamp {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn gain_changes_at_the_floor_are_applied_and_changes_below_it_are_retained() {
+        // Unity 6000.0.71f1, audiodistortion generator gain boundary controls.
+        for target in [0.000319, 0.00032, 0.000321] {
+            let mut gain = ParameterRamp::new(0.0);
+            assert_eq!(gain.gain(target, 64), 0.0);
+            if target < 0.00032 {
+                assert!((0..128).all(|_| gain.gain(target, 64) == 0.0));
+            } else {
+                assert!(gain.gain(target, 64) > 0.0);
+                for _ in 0..63 {
+                    gain.gain(target, 64);
+                }
+                assert_eq!(gain.gain(target, 64), target);
+            }
+        }
+    }
 
     #[test]
     fn gain_reaches_endpoint_and_repeated_targets_preserve_accumulation() {

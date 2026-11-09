@@ -1,15 +1,15 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!244 &-1605833358013605706
+--- !u!244 &-3229158418030559313
 AudioMixerEffectController:
   m_ObjectHideFlags: 3
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: 
-  m_EffectID: 4e883ed935407c043bff49a097ea0ac2
+  m_EffectID: 0b91d47d3db0513dea2481b2adc6769c
   m_EffectName: Attenuation
-  m_MixLevel: 1a7a58daedbc815d9afdcd87da566215
+  m_MixLevel: fdc6856745ab86d05a48c84e2952f761
   m_Parameters: []
   m_SendTarget: {fileID: 0}
   m_EnableWetMix: 0
@@ -41,11 +41,11 @@ AudioMixerGroupController:
   m_PrefabAsset: {fileID: 0}
   m_Name: Master
   m_AudioMixer: {fileID: 24100000}
-  m_GroupID: c9b8d1cb1b3c3be6c81c3a6735381597
+  m_GroupID: 3b9dc3ac113a0fb8ab1c12b31d41d2fb
   m_Children:
-  - {fileID: 3264789232263226803}
-  m_Volume: e86a0492c564e19d29359d1b12517644
-  m_Pitch: 5ffbf38680838334eb0b00832c462b44
+  - {fileID: 3824590375338391898}
+  m_Volume: 6c3b0f39282661d9b8c4f08a7ce435f7
+  m_Pitch: 86cab296db1d7074286aeb594c7ee707
   m_Send: 00000000000000000000000000000000
   m_Effects:
   - {fileID: 24400004}
@@ -60,9 +60,9 @@ AudioMixerEffectController:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: 
-  m_EffectID: 6bbb7e1daf12d9357bce72e65410469b
+  m_EffectID: f4d42044b46f1fd318fc91d51234edad
   m_EffectName: Attenuation
-  m_MixLevel: 4d722b5596e4a9fe9b14d8eb4411a772
+  m_MixLevel: 00500ec8979f11e3dbc57edab25c8058
   m_Parameters: []
   m_SendTarget: {fileID: 0}
   m_EnableWetMix: 0
@@ -75,10 +75,10 @@ AudioMixerSnapshotController:
   m_PrefabAsset: {fileID: 0}
   m_Name: Snapshot
   m_AudioMixer: {fileID: 24100000}
-  m_SnapshotID: 8fe1233e1fde6eedd9df0ba0e7d37bdf
+  m_SnapshotID: f881c490ee2f728b3a150bf23e8e25ce
   m_FloatValues: {}
   m_TransitionOverrides: {}
---- !u!243 &3264789232263226803
+--- !u!243 &3824590375338391898
 AudioMixerGroupController:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -86,13 +86,13 @@ AudioMixerGroupController:
   m_PrefabAsset: {fileID: 0}
   m_Name: Music
   m_AudioMixer: {fileID: 24100000}
-  m_GroupID: 041ebae40baa4e75cbe18fd9212abb65
+  m_GroupID: 340a76a453af76ace8c35c8380905bb2
   m_Children: []
-  m_Volume: 468eb074f1b78c534aa8c98675e1cb3e
-  m_Pitch: c828cebfd6e0a8d829a79c10ad294820
+  m_Volume: 581d7ac567e34e9a88042d8b313ecab3
+  m_Pitch: a1635e95ed4aa71d9be608bf1aeb867a
   m_Send: 00000000000000000000000000000000
   m_Effects:
-  - {fileID: -1605833358013605706}
+  - {fileID: -3229158418030559313}
   m_UserColorIndex: 0
   m_Mute: 0
   m_Solo: 0

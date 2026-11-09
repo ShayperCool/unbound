@@ -384,6 +384,12 @@ public class EffectProbe : MonoBehaviour
         new[] { "script_generator_quiet_bypass", "Music:Att", "chain_script=before", "sourcechain=dist,chorus", "clipless=1", "volume=0.25", "bypass=1" },
         new[] { "script3d_generator_quiet_control", "Music:Att", "chain_script=before", "sourcechain=dist", "clipless=1", "volume=0.25", "spatial=1", "blend=0.5", "position=3,0,4" },
         new[] { "script3d_generator_quiet_live", "Music:Att", "chain_script=before", "sourcechain=chorus,dist", "clipless=1", "volume=0.25", "spatial=1", "blend=0.5", "position=3,0,4", "step=bypass" },
+        new[] { "script_generator_tiny_control", "Music:Att", "chain_script=before", "sourcechain=dist", "clipless=1", "volume=0.0001", "generator_amplitude=32" },
+        new[] { "script_generator_tiny_bypass", "Music:Att", "chain_script=before", "sourcechain=dist", "clipless=1", "volume=0.0001", "generator_amplitude=32", "bypass=1" },
+        new[] { "script_generator_gain_below", "Music:Att", "chain_script=before", "sourcechain=dist", "clipless=1", "volume=0.000319", "generator_amplitude=32" },
+        new[] { "script_generator_gain_at", "Music:Att", "chain_script=before", "sourcechain=dist", "clipless=1", "volume=0.00032", "generator_amplitude=32" },
+        new[] { "script_generator_gain_above", "Music:Att", "chain_script=before", "sourcechain=dist", "clipless=1", "volume=0.000321", "generator_amplitude=32" },
+        new[] { "script_generator_gain_small_step", "Music:Att", "chain_script=before", "sourcechain=dist", "clipless=1", "volume=0.2501", "generator_amplitude=32", "step=volume" },
     };
     public const int BlockCount = 32;
     public const int ClipFrames = BlockCount * 1024;
@@ -578,8 +584,10 @@ public class EffectProbe : MonoBehaviour
             if (Option(key, "chain_script=", "") == "before") go.AddComponent<AffineSignal>();
             var sourceComponents = Components(go, Option(key, "sourcechain=", ""), echoDelay);
             if (Option(key, "chain_script=", "") == "after") go.AddComponent<AffineSignal>();
-            if (go.GetComponent<AffineSignal>() is AffineSignal signal)
+            if (go.GetComponent<AffineSignal>() is AffineSignal signal) {
                 signal.Pattern = Option(key, "generator_pattern=", "0") == "1";
+                signal.OutputScale = Number(Option(key, "generator_amplitude=", "1"));
+            }
             if (Option(key, "echo_delay=", "") != "") {
                 var echo = go.GetComponent<AudioEchoFilter>(); if (!echo) echo = gameObject.GetComponent<AudioEchoFilter>();
                 records.Add("\""+key+".echoDelay\":"+echo.delay.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
@@ -663,6 +671,8 @@ public class EffectProbe : MonoBehaviour
                 if (Engine) FlushEngine();
                 for (int block = 0; block < BlockCount; block++) {
                     if (block == 8 && Option(key, "step=", "") != "") {
+                        if (Option(key, "step=", "") == "volume" && Option(key, "clipless=", "0") == "1")
+                            records.Add("\""+key+".volumeBefore\":"+source.volume.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
                         switch (Option(key, "step=", "")) {
                             case "distance": go.transform.position = new Vector3(0, 0, 10); break;
                             case "blend": source.spatialBlend = 0.25f; break;
@@ -672,6 +682,8 @@ public class EffectProbe : MonoBehaviour
                             case "volume": source.volume = 0.25f; break;
                             case "bypass": ToggleBypass(source, key); break;
                         }
+                        if (Option(key, "step=", "") == "volume" && Option(key, "clipless=", "0") == "1")
+                            records.Add("\""+key+".volumeAfter\":"+source.volume.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
                         if (Engine) FlushEngine();
                     }
                     if (block == int.Parse(Option(key, "restart=", "-1"))) {
