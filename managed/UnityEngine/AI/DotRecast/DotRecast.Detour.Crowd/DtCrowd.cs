@@ -94,11 +94,6 @@ namespace DotRecast.Detour.Crowd
     @see dtObstacleAvoidanceParams, dtCrowd::setObstacleAvoidanceParams(),
          dtCrowd::getObstacleAvoidanceParams()
 
-    @var dtCrowdAgentParams::pathOptimizationRange
-    @par
-
-    Unbound: not used (Unity's agents shortcut their corridor at any range).
-
     @see dtPathCorridor::optimizePathVisibility()
 
     @var dtCrowdAgentParams::separationWeight

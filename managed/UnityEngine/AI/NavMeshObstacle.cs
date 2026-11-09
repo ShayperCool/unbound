@@ -691,7 +691,6 @@ namespace Unbound.Runtime
                     height = c.Height,
                     maxAcceleration = 0f,
                     maxSpeed = 0f,
-                    pathOptimizationRange = 0f,
                     separationWeight = 0f,
                     updateFlags = 0,
                     obstacleAvoidanceType = 0,

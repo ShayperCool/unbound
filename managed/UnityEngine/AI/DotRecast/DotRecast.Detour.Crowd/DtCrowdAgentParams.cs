@@ -32,8 +32,6 @@ namespace DotRecast.Detour.Crowd
         /// for neighbours and edges (for a stopped agent Unbound's choice, unmeasured).
         public float reachSpeed;
 
-        public float pathOptimizationRange; // < The path visibility optimization range. [Limit: > 0]
-
         /// How aggresive the agent manager should be at avoiding collisions with this agent. [Limit: >= 0]
         public float separationWeight;
 

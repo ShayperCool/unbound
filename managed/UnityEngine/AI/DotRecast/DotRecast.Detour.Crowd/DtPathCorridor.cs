@@ -174,18 +174,24 @@ namespace DotRecast.Detour.Crowd
             return ncorners;
         }
 
-        /// Unbound: the nearest a corner may be for the agent to shortcut towards it (Unity's: 1 cm,
-        /// in 3D).
+        // Unbound: Unity's constants of the corridor optimizations. Measured through their effect
+        // (tests/projects/navpath `replan.*`): the cost comparison (water at 1 and 10), that a
+        // search on a floor of many polygons is not used (8 iterations), a corner found again from
+        // where the agent stands. Not separately measured: the 1 cm nearest corner, the least
+        // cost of 1, the 32 polygons a shortcut ray keeps, the 8 polygons a search keeps, and that
+        // a shortcut has no range limit (the probes' corners are at most about 13 m away).
+
+        /// Unbound: the nearest a corner may be for the agent to shortcut towards it (1 cm, in 3D).
         private const float MinShortcutDistanceSqr = 1e-4f;
 
         /// Unbound: the least cost of the straight way to the second corner that the agent shortcuts
-        /// towards (Unity's).
+        /// towards.
         private const float MinShortcutCost = 1f;
 
-        /// Unbound: the most polygons a shortcut ray takes into the corridor (Unity's).
+        /// Unbound: the most polygons a shortcut ray takes into the corridor.
         private const int MaxShortcutPolys = 32;
 
-        /// Unbound: the most polygons a topology search puts at the start of the corridor (Unity's).
+        /// Unbound: the most polygons a topology search puts at the start of the corridor.
         public const int MaxTopologyPolys = 8;
 
         /// Unbound: Unity's agents shortcut their corridor at every update, once they have found its
@@ -193,7 +199,8 @@ namespace DotRecast.Detour.Crowd
         /// with one corner, towards it; with more, towards the second, when the straight way to it
         /// costs at least <see cref="MinShortcutCost"/> and less than the way through the first. When
         /// the ray from the agent reaches the point, the polygons it crosses replace the corridor's
-        /// start up to the last of them the corridor holds. The corners are not found again.
+        /// start up to the last of them the corridor holds. The corners are not found again. No range
+        /// limit (Detour's pathOptimizationRange is not used).
         ///  @param[in]		corners		The corners found this update.
         ///  @param[in]		ncorners	Their number.
         ///  @param[in]		navquery	The query object used to build the corridor.
