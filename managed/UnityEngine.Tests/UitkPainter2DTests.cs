@@ -4,580 +4,337 @@ using Unbound.UIElements;
 using UnityEngine.UIElements;
 using Xunit;
 
-// UI Toolkit Painter2D through MeshGenerationContext.painter2D. Each test names its source:
-//   [doc]    the Unity 6000.0 Scripting API text of Painter2D, its members, FillRule, LineJoin,
-//            LineCap, ArcDirection and MeshGenerationContext.painter2D (installed doc XML of
-//            6000.0.71f1), applied as plain geometry (a filled shape covers its area, a stroke of
-//            width w reaches w/2 from its path, ClosePath adds a straight line, the two fill rules);
-//   [choice] Unbound's choice where those pages say nothing: flattening tolerance (0.05 local
-//            units), join and cap geometry (HTML canvas shapes), "clockwise" as clockwise on screen
-//            (angles grow clockwise in UI Toolkit's y-down space). These check Unbound's
-//            implementation, not Unity behaviour.
-// Only geometry is asserted (covered area, bounds, point coverage, vertex colours), never pixels.
-// No reference capture covers Painter2D; nothing here is a measured Unity value.
-// Red base: 85fcc53e, where Painter2D and MeshGenerationContext.painter2D are generated stubs: the
-// getter answers null, so each drawing callback throws NullReferenceException (caught and logged
-// by the panel painter) and the element draws nothing; the first assertion that geometry exists
-// fails. Detached painter properties answer their defaults there. The file uses only members that
-// exist on that base, so it is expected to compile there (unexecuted).
+// UI Toolkit Painter2D. Expected values come from the Unity 6000.0.71f1 Editor
+// (tests/projects/uitkpainter, Reference/unity-6000.0.71f1/painter.jsonl: detached painters saved
+// with SaveToVectorImage, positions relative to the content's bounds). Controls outside the probe's
+// exact setup check the same rules with other widths, shapes and fill rules; each documented rule
+// (miter limit, fill rule, Fill closing sub-paths) gets a pair of inputs where it changes the result.
 
 namespace UnityEngine.Tests
 {
     public class UitkPainter2DTests
     {
-        // Painter2D.UaFlatteningTolerance (Unbound's choice), restated so the file compiles on the
-        // red base.
-        const float Tolerance = 0.05f;
+        static readonly Color Red = new Color(0.9f, 0.2f, 0.1f, 1f);
+        static readonly Color Blue = new Color(0.2f, 0.4f, 0.9f, 1f);
 
-        sealed class Drawn
+        sealed class Saved
         {
-            public readonly List<Vector2> Positions = new List<Vector2>();
-            public readonly List<Color32> Colors = new List<Color32>();
-            public readonly List<int> Indices = new List<int>();
-            public int RetainedContentIndices;
-
-            public float Area()
-            {
-                double area = 0;
-                for (int i = 0; i + 2 < Indices.Count; i += 3)
-                {
-                    var a = Positions[Indices[i]];
-                    var b = Positions[Indices[i + 1]];
-                    var c = Positions[Indices[i + 2]];
-                    area += Math.Abs((b.x - a.x) * (double)(c.y - a.y) - (c.x - a.x) * (double)(b.y - a.y)) * 0.5;
-                }
-                return (float)area;
-            }
-
-            public Rect Bounds()
-            {
-                float x0 = float.MaxValue, y0 = float.MaxValue, x1 = float.MinValue, y1 = float.MinValue;
-                foreach (int i in Indices)
-                {
-                    var p = Positions[i];
-                    x0 = Math.Min(x0, p.x);
-                    y0 = Math.Min(y0, p.y);
-                    x1 = Math.Max(x1, p.x);
-                    y1 = Math.Max(y1, p.y);
-                }
-                return Rect.MinMaxRect(x0, y0, x1, y1);
-            }
-
-            public bool Covers(Vector2 p)
-            {
-                for (int i = 0; i + 2 < Indices.Count; i += 3)
-                {
-                    var a = Positions[Indices[i]];
-                    var b = Positions[Indices[i + 1]];
-                    var c = Positions[Indices[i + 2]];
-                    float d1 = Cross(b - a, p - a), d2 = Cross(c - b, p - b), d3 = Cross(a - c, p - c);
-                    bool neg = d1 < -1e-4f || d2 < -1e-4f || d3 < -1e-4f;
-                    bool pos = d1 > 1e-4f || d2 > 1e-4f || d3 > 1e-4f;
-                    if (!(neg && pos)) return true;
-                }
-                return false;
-            }
+            public VectorImageVertex[] Vertices;
+            public ushort[] Indices;
+            public Vector2 Size;
         }
 
-        static float Cross(Vector2 a, Vector2 b) => a.x * b.y - a.y * b.x;
-
-        /// <summary>Paints a 400×400 panel holding one absolutely positioned element whose
-        /// generateVisualContent is <paramref name="draw"/>, and returns the panel's geometry (in
-        /// panel space; the element's local space when it sits at the origin).</summary>
-        static Drawn Paint(Action<MeshGenerationContext> draw, float left = 0f, float top = 0f, float width = 200f, float height = 200f)
+        static Saved Save(Action<Painter2D> draw)
         {
-            using var panel = new Panel(null, ContextType.Player, EventDispatcher.CreateDefault(), null);
-            var root = panel.visualTree;
-            root.style.width = 400;
-            root.style.height = 400;
-            var element = new VisualElement();
-            element.style.position = Position.Absolute;
-            element.style.left = left;
-            element.style.top = top;
-            element.style.width = width;
-            element.style.height = height;
-            element.generateVisualContent = draw;
-            root.Add(element);
-            panel.ApplyStyles();
-            panel.ValidateLayout();
-            var painter = new UaPainter();
-            painter.Paint(panel, 400f);
-            var drawn = new Drawn();
-            foreach (var p in painter.Positions) drawn.Positions.Add(new Vector2(p.x, p.y));
-            drawn.Colors.AddRange(painter.Colors);
-            drawn.Indices.AddRange(painter.Indices);
-            drawn.RetainedContentIndices = element.uaGeometry != null ? element.uaGeometry.Content.Indices.Count : 0;
-            return drawn;
+            using var p = new Painter2D();
+            draw(p);
+            var image = ScriptableObject.CreateInstance<VectorImage>();
+            Assert.True(p.SaveToVectorImage(image));
+            return new Saved { Vertices = image.vertices, Indices = image.indices, Size = image.size };
         }
 
-        static void Near(float expected, float actual, float tolerance) =>
+        static void Near(float expected, float actual, float tolerance = 2e-4f) =>
             Assert.True(Math.Abs(expected - actual) <= tolerance, $"expected {expected} ± {tolerance}, got {actual}");
 
-        static void Within(float min, float actual, float max) =>
-            Assert.True(actual >= min && actual <= max, $"expected {actual} in [{min}, {max}]");
-
-        static void AssertBounds(Rect expected, Rect actual, float tolerance)
+        static void NearVertex(Saved s, int i, float x, float y, float cx, float cy, float cz, float cw)
         {
-            Near(expected.xMin, actual.xMin, tolerance);
-            Near(expected.yMin, actual.yMin, tolerance);
-            Near(expected.xMax, actual.xMax, tolerance);
-            Near(expected.yMax, actual.yMax, tolerance);
+            var v = s.Vertices[i];
+            Near(x, v.position.x);
+            Near(y, v.position.y);
+            Near(cx, v.circle.x);
+            Near(cy, v.circle.y);
+            Near(cz, v.circle.z);
+            Near(cw, v.circle.w);
         }
 
-        static void Polygon(Painter2D p, params Vector2[] points)
+        static void Zigzag(Painter2D p)
         {
-            p.MoveTo(points[0]);
-            for (int i = 1; i < points.Length; i++) p.LineTo(points[i]);
-            p.ClosePath();
+            p.MoveTo(new Vector2(8, 60)); p.LineTo(new Vector2(40, 10)); p.LineTo(new Vector2(48, 62));
         }
 
-        // ------------------------------------------------------------------ fills
-
-        // [doc] Fill fills the currently defined path: a closed triangle covers its area and no more.
-        // Red on 85fcc53e: no geometry (Assert.NotEmpty fails).
-        [Fact]
-        public void FilledTriangleCoversItsAreaWithinItsVertexBounds()
+        static Action<Painter2D> Stroke(float width, LineJoin join, LineCap cap, Action<Painter2D> path, float miter = -1f) => p =>
         {
-            var d = Paint(mgc =>
-            {
-                var p = mgc.painter2D;
-                p.fillColor = Color.white;
-                p.BeginPath();
-                Polygon(p, new Vector2(10, 10), new Vector2(110, 10), new Vector2(10, 110));
-                p.Fill();
-            });
-            Assert.NotEmpty(d.Indices);
-            Near(5000f, d.Area(), 0.05f);
-            AssertBounds(Rect.MinMaxRect(10, 10, 110, 110), d.Bounds(), 1e-3f);
-            Assert.True(d.Covers(new Vector2(30, 30)));
-            Assert.False(d.Covers(new Vector2(80, 80)));
-        }
+            p.lineWidth = width; p.lineJoin = join; p.lineCap = cap; p.strokeColor = Red;
+            if (miter >= 0f) p.miterLimit = miter;
+            p.BeginPath(); path(p); p.Stroke();
+        };
 
-        // [doc] A filled rectangle covers exactly its rectangle.
-        // Red on 85fcc53e: no geometry (Assert.NotEmpty fails).
-        [Fact]
-        public void FilledRectangleCoversItsAreaWithinItsBounds()
+        static Action<Painter2D> Fill(FillRule rule, Action<Painter2D> path) => p =>
         {
-            var d = Paint(mgc =>
-            {
-                var p = mgc.painter2D;
-                p.BeginPath();
-                Polygon(p, new Vector2(20, 30), new Vector2(120, 30), new Vector2(120, 80), new Vector2(20, 80));
-                p.Fill(FillRule.NonZero);
-            });
-            Assert.NotEmpty(d.Indices);
-            Near(5000f, d.Area(), 0.05f);
-            AssertBounds(Rect.MinMaxRect(20, 30, 120, 80), d.Bounds(), 1e-3f);
-            Assert.True(d.Covers(new Vector2(70, 55)));
-            Assert.False(d.Covers(new Vector2(130, 55)));
-        }
+            p.fillColor = Blue; p.BeginPath(); path(p); p.Fill(rule);
+        };
 
-        // [doc] FillRule: "non-zero" and "odd-even" winding rules. A pentagram drawn as one
-        // self-intersecting sub-path winds twice around its inner pentagon: non-zero fills it,
-        // odd-even leaves it empty; both fill the points.
-        // Red on 85fcc53e: no geometry (Assert.NotEmpty fails).
-        [Fact]
-        public void SelfIntersectingStarFillsItsCenterOnlyWithNonZero()
+        static void Rect(Painter2D p, float x0, float y0, float x1, float y1)
         {
-            var center = new Vector2(100, 100);
-            const float R = 80f;
-            var star = new Vector2[5];
-            for (int k = 0; k < 5; k++)
-            {
-                float a = (-90f + 144f * k) * Mathf.Deg2Rad;
-                star[k] = center + R * new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-            }
-            Drawn Star(FillRule rule) => Paint(mgc =>
-            {
-                var p = mgc.painter2D;
-                p.BeginPath();
-                Polygon(p, star);
-                p.Fill(rule);
-            });
-            var nonZero = Star(FillRule.NonZero);
-            var oddEven = Star(FillRule.OddEven);
-            Assert.NotEmpty(nonZero.Indices);
-            Assert.NotEmpty(oddEven.Indices);
-            Assert.True(nonZero.Covers(center));
-            Assert.False(oddEven.Covers(center));
-            var tip = new Vector2(100, 40);
-            Assert.True(nonZero.Covers(tip));
-            Assert.True(oddEven.Covers(tip));
-            // The difference is the inner pentagon: radius R·cos72°/cos36°, area 5/2·r²·sin72°.
-            float r = R * Mathf.Cos(72f * Mathf.Deg2Rad) / Mathf.Cos(36f * Mathf.Deg2Rad);
-            float pentagon = 2.5f * r * r * Mathf.Sin(72f * Mathf.Deg2Rad);
-            Near(pentagon, nonZero.Area() - oddEven.Area(), 0.5f);
-        }
-
-        // [doc] The fill rules over two sub-paths: an inner square drawn the other way round cuts a
-        // hole with non-zero; drawn the same way it is filled with non-zero and a hole with odd-even.
-        // Red on 85fcc53e: no geometry (Assert.NotEmpty fails).
-        [Fact]
-        public void NestedSubPathsFollowTheFillRule()
-        {
-            Drawn Squares(bool innerReversed, FillRule rule) => Paint(mgc =>
-            {
-                var p = mgc.painter2D;
-                p.BeginPath();
-                Polygon(p, new Vector2(20, 20), new Vector2(180, 20), new Vector2(180, 180), new Vector2(20, 180));
-                if (innerReversed) Polygon(p, new Vector2(60, 60), new Vector2(60, 140), new Vector2(140, 140), new Vector2(140, 60));
-                else Polygon(p, new Vector2(60, 60), new Vector2(140, 60), new Vector2(140, 140), new Vector2(60, 140));
-                p.Fill(rule);
-            });
-            var reversedNonZero = Squares(true, FillRule.NonZero);
-            var sameNonZero = Squares(false, FillRule.NonZero);
-            var sameOddEven = Squares(false, FillRule.OddEven);
-            Assert.NotEmpty(reversedNonZero.Indices);
-            Near(19200f, reversedNonZero.Area(), 0.1f);
-            Near(25600f, sameNonZero.Area(), 0.1f);
-            Near(19200f, sameOddEven.Area(), 0.1f);
-            Assert.False(reversedNonZero.Covers(new Vector2(100, 100)));
-            Assert.True(sameNonZero.Covers(new Vector2(100, 100)));
-            Assert.False(sameOddEven.Covers(new Vector2(100, 100)));
+            p.MoveTo(new Vector2(x0, y0)); p.LineTo(new Vector2(x1, y0)); p.LineTo(new Vector2(x1, y1)); p.LineTo(new Vector2(x0, y1)); p.ClosePath();
         }
 
         // ------------------------------------------------------------------ strokes
 
-        // [doc] lineWidth is the width of stroked paths; LineCap.Butt "terminates the path with no
-        // tip": a butt line reaches w/2 to each side and stops at its ends.
-        // Red on 85fcc53e: no geometry (Assert.NotEmpty fails).
-        [Theory]
-        [InlineData(2f)]
-        [InlineData(10f)]
-        public void StrokeWidthSetsTheBoundsOfAButtLine(float width)
-        {
-            var d = Paint(mgc =>
-            {
-                var p = mgc.painter2D;
-                p.lineWidth = width;
-                p.lineCap = LineCap.Butt;
-                p.BeginPath();
-                p.MoveTo(new Vector2(20, 100));
-                p.LineTo(new Vector2(180, 100));
-                p.Stroke();
-            });
-            Assert.NotEmpty(d.Indices);
-            AssertBounds(Rect.MinMaxRect(20, 100 - width / 2, 180, 100 + width / 2), d.Bounds(), 1e-3f);
-            Near(160f * width, d.Area(), 0.05f);
-        }
-
-        // [doc] LineCap.Round "terminates the path with a round tip": the line reaches w/2 past its
-        // ends. [choice] The tip is a half disk, as a regular polygon inscribed in it within the
-        // flattening tolerance.
-        // Red on 85fcc53e: no geometry (Assert.NotEmpty fails).
+        // Editor: stroke-line-butt. Center, side A, side B at each end, extruded by half the width
+        // plus the 2-unit margin; the sides' circles band the coverage to the line's width.
         [Fact]
-        public void RoundCapsExtendTheLineByHalfTheWidth()
+        public void StraightStrokeMatchesTheEditor()
         {
-            var d = Paint(mgc =>
-            {
-                var p = mgc.painter2D;
-                p.lineWidth = 10f;
-                p.lineCap = LineCap.Round;
-                p.BeginPath();
-                p.MoveTo(new Vector2(20, 100));
-                p.LineTo(new Vector2(180, 100));
-                p.Stroke();
-            });
-            Assert.NotEmpty(d.Indices);
-            AssertBounds(Rect.MinMaxRect(15, 95, 185, 105), d.Bounds(), 1e-3f);
-            float exact = 1600f + Mathf.PI * 25f;
-            Within(exact - 2f * Mathf.PI * 5f * Tolerance - 0.05f, d.Area(), exact + 0.05f);
+            var s = Save(Stroke(8, LineJoin.Miter, LineCap.Butt, p => { p.MoveTo(new Vector2(10, 12)); p.LineTo(new Vector2(70, 50)); }));
+            Near(64.28041f, s.Size.x);
+            Near(44.7585526f, s.Size.y);
+            Assert.Equal(new ushort[] { 3, 0, 5, 5, 0, 2, 3, 1, 0, 3, 4, 1 }, s.Indices);
+            NearVertex(s, 0, 2.14020824f, 3.37927628f, 0, 0.6f, 0, 3);
+            NearVertex(s, 1, -1.07010412f, 8.448191f, 0, 0, 0, 0);
+            NearVertex(s, 2, 5.35052f, -1.68963814f, 0, 1.2f, 0, 6);
+            NearVertex(s, 5, 65.35052f, 36.31036f, 0, 1.2f, 0, 6);
+            Assert.Equal(new Color32(230, 51, 26, 255), s.Vertices[0].tint);
+            Assert.Equal(1, s.Vertices[0].flags.b);
         }
 
-        // [doc] LineJoin: Miter joins with a sharp corner, Bevel with a beveled corner, Round with a
-        // round corner. [choice] Their shapes (HTML canvas): for an L of width 10 the two segment
-        // rectangles cover 775, the miter adds the 5×5 outer square, the bevel half of it, the round
-        // join a quarter disk. Each corner is drawn once (no overlap counted twice).
-        // Red on 85fcc53e: no geometry (Assert.NotEmpty fails).
-        [Theory]
-        [InlineData(LineJoin.Miter)]
-        [InlineData(LineJoin.Bevel)]
-        [InlineData(LineJoin.Round)]
-        public void LineJoinsShapeTheOuterCorner(LineJoin join)
-        {
-            var d = Paint(mgc =>
-            {
-                var p = mgc.painter2D;
-                p.lineWidth = 10f;
-                p.lineJoin = join;
-                p.BeginPath();
-                p.MoveTo(new Vector2(10, 10));
-                p.LineTo(new Vector2(50, 10));
-                p.LineTo(new Vector2(50, 50));
-                p.Stroke();
-            });
-            Assert.NotEmpty(d.Indices);
-            AssertBounds(Rect.MinMaxRect(10, 5, 55, 50), d.Bounds(), 1e-3f);
-            switch (join)
-            {
-                case LineJoin.Miter:
-                    Near(800f, d.Area(), 0.05f);
-                    Assert.True(d.Covers(new Vector2(54.5f, 5.5f)));
-                    break;
-                case LineJoin.Bevel:
-                    Near(787.5f, d.Area(), 0.05f);
-                    Assert.False(d.Covers(new Vector2(54.5f, 5.5f)));
-                    Assert.True(d.Covers(new Vector2(51f, 9f)));
-                    break;
-                default:
-                    float exact = 775f + Mathf.PI * 25f / 4f;
-                    Within(exact - Mathf.PI / 2f * 5f * Tolerance - 0.05f, d.Area(), exact + 0.05f);
-                    Assert.False(d.Covers(new Vector2(54.5f, 5.5f)));
-                    Assert.True(d.Covers(new Vector2(53f, 7f)));
-                    break;
-            }
-        }
-
-        // [doc] miterLimit: "the limit on the ratio of the miter length to the stroke width before
-        // converting the miter to a bevel". A right angle's ratio is √2: a limit of 1.2 bevels it,
-        // 1.5 keeps the miter.
-        // Red on 85fcc53e: no geometry (Assert.NotEmpty fails).
-        [Theory]
-        [InlineData(1.2f, 787.5f)]
-        [InlineData(1.5f, 800f)]
-        public void MiterLimitTurnsAMiterIntoABevel(float limit, float area)
-        {
-            var d = Paint(mgc =>
-            {
-                var p = mgc.painter2D;
-                p.lineWidth = 10f;
-                p.lineJoin = LineJoin.Miter;
-                p.miterLimit = limit;
-                p.BeginPath();
-                p.MoveTo(new Vector2(10, 10));
-                p.LineTo(new Vector2(50, 10));
-                p.LineTo(new Vector2(50, 50));
-                p.Stroke();
-            });
-            Assert.NotEmpty(d.Indices);
-            Near(area, d.Area(), 0.05f);
-        }
-
-        // [doc] ClosePath "closes the current sub-path with a straight line": a closed square's
-        // stroke has a fourth side. [choice] Miter joins at every corner, the start too.
-        // Red on 85fcc53e: no geometry (Assert.NotEmpty fails).
-        [Theory]
-        [InlineData(false, 1920f)]
-        [InlineData(true, 2560f)]
-        public void ClosePathAddsTheClosingSide(bool close, float area)
-        {
-            var d = Paint(mgc =>
-            {
-                var p = mgc.painter2D;
-                p.lineWidth = 4f;
-                p.lineJoin = LineJoin.Miter;
-                p.BeginPath();
-                p.MoveTo(new Vector2(20, 20));
-                p.LineTo(new Vector2(180, 20));
-                p.LineTo(new Vector2(180, 180));
-                p.LineTo(new Vector2(20, 180));
-                if (close) p.ClosePath();
-                p.Stroke();
-            });
-            Assert.NotEmpty(d.Indices);
-            Assert.Equal(close, d.Covers(new Vector2(20, 100)));
-            Near(area, d.Area(), 0.05f);
-        }
-
-        // [choice] The fill/stroke trapezoids grow with the path's edges and crossings, not with
-        // their square: a 250-point chart-like polyline (lineWidth 2, Miter joins, Butt caps)
-        // stays within 64 vertices per point (16000; Unbound's model of the sweep gives 5336), and
-        // every segment's midpoint is covered.
-        // Red on 11f00ae4 (slabs across the whole plane at every vertex and crossing height): the
-        // same model gives 209508 vertices, so the bound fails. Red on 85fcc53e: no geometry
-        // (Assert.NotEmpty fails).
+        // Control: another width on a vertical line: sides at width/2 + 2, circles (0, (w+4)/(w+2),
+        // 0, (w+4)/2) on side B, bounds of the line widened by half the width only.
         [Fact]
-        public void LongStrokedPolylineStaysLinearInSize()
+        public void StrokeExtrusionFollowsTheWidth()
         {
-            const int N = 250;
-            var points = new Vector2[N];
-            for (int i = 0; i < N; i++)
-                points[i] = new Vector2(10f + 380f * i / (N - 1), 200f + 120f * Mathf.Sin(i * 0.37f) + 40f * Mathf.Sin(i * 1.9f));
-            var d = Paint(mgc =>
-            {
-                var p = mgc.painter2D;
-                p.lineWidth = 2f;
-                p.BeginPath();
-                p.MoveTo(points[0]);
-                for (int i = 1; i < N; i++) p.LineTo(points[i]);
-                p.Stroke();
-            }, width: 400f, height: 400f);
-            Assert.NotEmpty(d.Indices);
-            Assert.True(d.Positions.Count <= 64 * N, $"{d.Positions.Count} vertices for {N} points");
-            for (int i = 0; i + 1 < N; i++)
-                Assert.True(d.Covers((points[i] + points[i + 1]) * 0.5f), $"segment {i} midpoint");
+            var s = Save(Stroke(3, LineJoin.Miter, LineCap.Butt, p => { p.MoveTo(new Vector2(20, 10)); p.LineTo(new Vector2(20, 90)); }));
+            Assert.Equal(6, s.Vertices.Length);
+            Near(3f, s.Size.x);
+            Near(80f, s.Size.y);
+            float center = s.Vertices[0].position.x;
+            Near(3.5f, Math.Abs(s.Vertices[1].position.x - center));
+            Near(3.5f, Math.Abs(s.Vertices[2].position.x - center));
+            Near(7f / 5f, s.Vertices[2].circle.y);
+            Near(3.5f, s.Vertices[2].circle.w);
         }
 
-        // ------------------------------------------------------------------ arcs and curves
-
-        // [doc] Arc adds an arc around a center from a start to an end angle in an ArcDirection.
-        // [choice] Clockwise is clockwise on screen (angles grow clockwise in UI Toolkit's y-down
-        // space): a pie from 0° to 90° is the lower-right quarter clockwise, the other three
-        // quarters counter-clockwise. The arc is inscribed within the flattening tolerance.
-        // Red on 85fcc53e: no geometry (Assert.NotEmpty fails).
-        [Theory]
-        [InlineData(ArcDirection.Clockwise)]
-        [InlineData(ArcDirection.CounterClockwise)]
-        public void ArcsGoBothWays(ArcDirection direction)
-        {
-            var center = new Vector2(100, 100);
-            var d = Paint(mgc =>
-            {
-                var p = mgc.painter2D;
-                p.BeginPath();
-                p.MoveTo(center);
-                p.Arc(center, 40f, Angle.Degrees(0f), Angle.Degrees(90f), direction);
-                p.ClosePath();
-                p.Fill();
-            });
-            Assert.NotEmpty(d.Indices);
-            bool cw = direction == ArcDirection.Clockwise;
-            float quarters = cw ? 1f : 3f;
-            float exact = quarters * Mathf.PI * 1600f / 4f;
-            float arcLength = quarters * Mathf.PI * 40f / 2f;
-            Within(exact - arcLength * Tolerance - 0.05f, d.Area(), exact + 0.05f);
-            AssertBounds(cw ? Rect.MinMaxRect(100, 100, 140, 140) : Rect.MinMaxRect(60, 60, 140, 140), d.Bounds(), 1e-3f);
-            Assert.Equal(cw, d.Covers(new Vector2(120, 120)));
-            Assert.Equal(!cw, d.Covers(new Vector2(80, 80)));
-        }
-
-        // [choice] BezierCurveTo and QuadraticCurveTo become polylines within the flattening
-        // tolerance: every vertex of the filled region (curve closed by its chord) lies within the
-        // tolerance of the true curve or on the chord, and the covered area is within
-        // tolerance × curve length of the exact area.
-        // Red on 85fcc53e: no geometry (Assert.NotEmpty fails).
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public void BezierFlatteningStaysWithinTheTolerance(bool cubic)
-        {
-            var p0 = new Vector2(20, 150);
-            var c1 = new Vector2(40, 20);
-            var c2 = new Vector2(160, 20);
-            var q = new Vector2(100, 10);
-            var p3 = new Vector2(180, 150);
-            Vector2 Curve(float t)
-            {
-                float u = 1f - t;
-                return cubic
-                    ? u * u * u * p0 + 3f * u * u * t * c1 + 3f * u * t * t * c2 + t * t * t * p3
-                    : u * u * p0 + 2f * u * t * q + t * t * p3;
-            }
-            var d = Paint(mgc =>
-            {
-                var p = mgc.painter2D;
-                p.BeginPath();
-                p.MoveTo(p0);
-                if (cubic) p.BezierCurveTo(c1, c2, p3);
-                else p.QuadraticCurveTo(q, p3);
-                p.ClosePath();
-                p.Fill();
-            });
-            Assert.NotEmpty(d.Indices);
-
-            const int Dense = 20000;
-            var dense = new Vector2[Dense + 1];
-            for (int i = 0; i <= Dense; i++) dense[i] = Curve(i / (float)Dense);
-            double exactArea = 0, length = 0;
-            for (int i = 0; i < Dense; i++)
-            {
-                exactArea += Cross(dense[i], dense[i + 1]);
-                length += (dense[i + 1] - dense[i]).magnitude;
-            }
-            exactArea += Cross(dense[Dense], dense[0]);
-            exactArea = Math.Abs(exactArea) * 0.5;
-
-            foreach (int i in d.Indices)
-            {
-                var v = d.Positions[i];
-                float best = DistanceToSegment(v, p3, p0);
-                for (int k = 0; k < Dense && best > Tolerance; k++) best = Math.Min(best, DistanceToSegment(v, dense[k], dense[k + 1]));
-                Assert.True(best <= Tolerance + 1e-3f, $"vertex {v} is {best} from the curve");
-            }
-            Within((float)(exactArea - length * Tolerance) - 0.5f, d.Area(), (float)(exactArea + length * Tolerance) + 0.5f);
-        }
-
-        static float DistanceToSegment(Vector2 p, Vector2 a, Vector2 b)
-        {
-            var ab = b - a;
-            float t = ab.sqrMagnitude > 0f ? Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude) : 0f;
-            return (a + ab * t - p).magnitude;
-        }
-
-        // ------------------------------------------------------------------ the element's mesh
-
-        // [doc] MeshGenerationContext.painter2D is "the vector painter object used to issue drawing
-        // commands" of generateVisualContent: what it fills is the element's content, in its local
-        // space (moved with the element), and the same painter answers within one callback.
-        // Red on 85fcc53e: painter2D answers null (Assert.NotNull fails).
+        // Scripting API: miterLimit limits the ratio of the miter length to the stroke width before
+        // the miter becomes a bevel. Same corner, default limit (miter, Editor
+        // stroke-miter-limit-default) and limit 2 (bevel, stroke-miter-limit-2).
         [Fact]
-        public void Painter2DDrawsIntoTheElementsContent()
+        public void MiterLimitTurnsTheSameCornerIntoABevel()
         {
-            Painter2D first = null, second = null;
-            var d = Paint(mgc =>
-            {
-                first = mgc.painter2D;
-                second = mgc.painter2D;
-                var p = mgc.painter2D;
-                p.BeginPath();
-                Polygon(p, new Vector2(0, 0), new Vector2(100, 0), new Vector2(100, 50), new Vector2(0, 50));
-                p.Fill();
-            }, left: 30f, top: 40f, width: 100f, height: 50f);
-            Assert.NotNull(first);
-            Assert.Same(first, second);
-            Assert.NotEmpty(d.Indices);
-            Assert.True(d.RetainedContentIndices > 0);
-            AssertBounds(Rect.MinMaxRect(30, 40, 130, 90), d.Bounds(), 1e-3f);
-            Near(5000f, d.Area(), 0.05f);
+            var miter = Save(Stroke(6, LineJoin.Miter, LineCap.Butt, Zigzag));
+            var bevel = Save(Stroke(6, LineJoin.Miter, LineCap.Butt, Zigzag, 2));
+            Assert.Equal(18, miter.Vertices.Length);
+            Assert.Equal(18, bevel.Vertices.Length);
+            NearVertex(miter, 14, 37.4547958f, -5.54019356f, -1.40378571f, -0.8984229f, UaVector.UnusedArc, UaVector.UnusedArc);
+            NearVertex(miter, 16, 39.46867f, 7.550003f, 1.64728546f, -0.2534288f, UaVector.UnusedArc, UaVector.UnusedArc);
+            NearVertex(bevel, 13, 30.3154564f, -1.07810783f, 0, 1.66666675f, UaVector.UnusedArc, UaVector.UnusedArc);
+            NearVertex(bevel, 14, 35.1596222f, -1.37626076f, 0, 2.88754463f, UaVector.UnusedArc, UaVector.UnusedArc);
+            Near(60.7664642f, miter.Size.y);
+            Near(54.0733337f, bevel.Size.y);
         }
 
-        // [doc] fillColor is "the color used for fill paths when using Fill", strokeColor "the color
-        // of draw paths when using Stroke": each shape's vertices carry its colour.
-        // Red on 85fcc53e: no geometry (Assert.NotEmpty fails).
+        // Editor: stroke-arc-full-roundcap. A whole circle starts at angle 0 whatever its start angle
+        // (90° here) and has no caps; 90° to 450° spans exactly 2π as Mono computes the angles.
         [Fact]
-        public void FillAndStrokeUseTheirColours()
+        public void WholeCircleStartsAtZeroWithoutCaps()
         {
-            var fill = new Color(1f, 0f, 0f, 1f);
-            var stroke = new Color(0f, 0f, 1f, 0.5f);
-            var d = Paint(mgc =>
-            {
-                var p = mgc.painter2D;
-                p.fillColor = fill;
-                p.strokeColor = stroke;
-                p.lineWidth = 4f;
-                p.BeginPath();
-                Polygon(p, new Vector2(10, 10), new Vector2(60, 10), new Vector2(60, 60), new Vector2(10, 60));
-                p.Fill();
-                p.BeginPath();
-                p.MoveTo(new Vector2(100, 100));
-                p.LineTo(new Vector2(180, 100));
-                p.Stroke();
-            });
-            Assert.NotEmpty(d.Indices);
-            Color32 fill32 = fill, stroke32 = stroke;
-            bool sawFill = false, sawStroke = false;
-            foreach (int i in d.Indices)
-            {
-                var c = d.Colors[i];
-                var v = d.Positions[i];
-                if (c.Equals(fill32))
-                {
-                    sawFill = true;
-                    Assert.True(v.x >= 10f - 1e-3f && v.x <= 60f + 1e-3f && v.y >= 10f - 1e-3f && v.y <= 60f + 1e-3f);
-                }
-                else
-                {
-                    Assert.Equal(stroke32, c);
-                    sawStroke = true;
-                    Assert.True(v.x >= 100f - 1e-3f && v.x <= 180f + 1e-3f && v.y >= 98f - 1e-3f && v.y <= 102f + 1e-3f);
-                }
-            }
-            Assert.True(sawFill);
-            Assert.True(sawStroke);
+            var s = Save(Stroke(6, LineJoin.Miter, LineCap.Round, p => p.Arc(new Vector2(40, 36), 26, 90, 450)));
+            Assert.Equal(28, s.Vertices.Length);
+            Assert.Equal(78, s.Indices.Length);
+            Near(58f, s.Size.x);
+            NearVertex(s, 0, 62.6f, 29f, 1.1586207f, 0f, 1.4608696f, 0f);
+            Assert.Equal(6.2831855f, Angle.Degrees(450).ToRadians() - Angle.Degrees(90).ToRadians());
         }
 
-        // [doc] The painter's properties keep what is set (Scripting API get/set properties).
-        // Red on 85fcc53e: the stub getters answer defaults (the first Assert.Equal fails).
+        // Editor: stroke-quadratic-closed. ClosePath returns to the point the sub-path's first
+        // segment recorded; a QuadraticCurveTo records the origin, so the closing line ends there.
+        [Fact]
+        public void ClosedQuadraticPathClosesToTheOrigin()
+        {
+            var open = Save(Stroke(3, LineJoin.Miter, LineCap.Butt, p => { p.MoveTo(new Vector2(8, 60)); p.QuadraticCurveTo(new Vector2(40, -20), new Vector2(72, 60)); }));
+            var closed = Save(Stroke(3, LineJoin.Miter, LineCap.Butt, p => { p.MoveTo(new Vector2(8, 60)); p.QuadraticCurveTo(new Vector2(40, -20), new Vector2(72, 60)); p.ClosePath(); }));
+            Assert.Equal(50, closed.Vertices.Length);
+            Near(76.49903f, closed.Size.x);
+            Near(66.05386f, closed.Size.y);
+            Assert.True(open.Size.y < 50f);
+            var cubic = Save(Stroke(3, LineJoin.Miter, LineCap.Butt, p => { p.MoveTo(new Vector2(8, 60)); p.BezierCurveTo(new Vector2(29, 7), new Vector2(51, 7), new Vector2(72, 60)); p.ClosePath(); }));
+            Assert.True(cubic.Size.y < 60f, $"a cubic closes to its start, got {cubic.Size}");
+        }
+
+        // ------------------------------------------------------------------ fills
+
+        // Editor: fill-triangle and fill-open. Fill closes every sub-path, but only a drawn closing
+        // side is anti-aliased: the closed triangle has three faded edges (21 vertices), the open one
+        // two (14).
+        [Fact]
+        public void OnlyDrawnSidesAreAntiAliased()
+        {
+            var closed = Save(Fill(FillRule.NonZero, p => { p.MoveTo(new Vector2(10, 60)); p.LineTo(new Vector2(40, 8)); p.LineTo(new Vector2(70, 60)); p.ClosePath(); }));
+            var open = Save(Fill(FillRule.NonZero, p => { p.MoveTo(new Vector2(10, 60)); p.LineTo(new Vector2(40, 8)); p.LineTo(new Vector2(70, 60)); }));
+            Assert.Equal(21, closed.Vertices.Length);
+            Assert.Equal(14, open.Vertices.Length);
+            NearVertex(closed, 2, 30f, 34.6666679f, 0, 0, UaVector.UnusedArc, UaVector.UnusedArc);
+            NearVertex(closed, 5, 60f, 54f, 1, 2, UaVector.UnusedArc, UaVector.UnusedArc);
+        }
+
+        // Scripting API: the fill rule decides what nested sub-paths cover. Same-winding square
+        // inside a square: NonZero fills the hole (84 vertices), OddEven leaves it (56).
+        [Fact]
+        public void FillRuleDecidesTheHole()
+        {
+            Action<Painter2D> holes = p => { Rect(p, 8, 8, 72, 64); Rect(p, 24, 20, 56, 52); };
+            Assert.Equal(84, Save(Fill(FillRule.NonZero, holes)).Vertices.Length);
+            Assert.Equal(56, Save(Fill(FillRule.OddEven, holes)).Vertices.Length);
+        }
+
+        // Editor: fill-star-nonzero, fill-bowtie. Triangles with two corners at the same boundary
+        // point (every triangle at a pentagram's crossings) are dropped; a bowtie keeps its two
+        // triangles, anti-aliased on their drawn sides only.
+        [Fact]
+        public void SelfIntersectingFillsDropTrianglesAtCrossings()
+        {
+            Action<Painter2D> star = p =>
+            {
+                p.MoveTo(new Vector2(40, 6)); p.LineTo(new Vector2(57.625f, 60.25f)); p.LineTo(new Vector2(11.5f, 26.75f));
+                p.LineTo(new Vector2(68.5f, 26.75f)); p.LineTo(new Vector2(22.375f, 60.25f)); p.ClosePath();
+            };
+            Assert.Empty(Save(Fill(FillRule.NonZero, star)).Vertices);
+            Assert.Empty(Save(Fill(FillRule.OddEven, star)).Vertices);
+            var bowtie = Save(Fill(FillRule.NonZero, p => { p.MoveTo(new Vector2(8, 8)); p.LineTo(new Vector2(72, 64)); p.LineTo(new Vector2(72, 8)); p.LineTo(new Vector2(8, 64)); p.ClosePath(); }));
+            Assert.Equal(14, bowtie.Vertices.Length);
+            NearVertex(bowtie, 2, 32f, 28f, 0, 0, UaVector.UnusedArc, UaVector.UnusedArc);
+        }
+
+        // Editor: fill-circle. A circle fills 8 arc pieces of 45°: plain interior triangles (no arc
+        // flag, zero circle) and, beyond each chord, a quad covered inside the circle (circle =
+        // offset / radius).
+        [Fact]
+        public void CircleFillsAreChordsPlusArcQuads()
+        {
+            var s = Save(Fill(FillRule.NonZero, p => p.Arc(new Vector2(40, 36), 26, 0, 360)));
+            Near(52f, s.Size.x);
+            Assert.Equal(50, s.Vertices.Length);
+            Assert.Equal(16 * 2, Array.FindAll(s.Vertices, v => v.flags.b == 1).Length);
+            Assert.Contains(s.Vertices, v => v.flags.b == 0 && v.circle == Vector4.zero);
+            foreach (var v in s.Vertices)
+            {
+                if (v.flags.b == 0) continue;
+                var offset = new Vector2(v.position.x - 26f, v.position.y - 26f) / 26f;
+                Near(offset.x, v.circle.x, 1e-4f);
+                Near(offset.y, v.circle.y, 1e-4f);
+            }
+        }
+
+        // ------------------------------------------------------------------ the painter's API
+
+        sealed class Logs : ILogHandler
+        {
+            public readonly List<string> Lines = new List<string>();
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
+                Lines.Add(args == null || args.Length == 0 ? format : string.Format(format, args));
+            public void LogException(Exception exception, Object context) => Lines.Add(exception.Message);
+        }
+
+        // Editor: detached-without-beginpath. Drawing before BeginPath draws nothing; the report
+        // reaches the log callbacks, not the game's ILogHandler.
+        [Fact]
+        public void DrawingBeforeBeginPathIsReportedNatively()
+        {
+            var handler = Debug.unityLogger.logHandler;
+            var logs = new Logs();
+            var received = new List<string>();
+            Application.LogCallback callback = (message, trace, type) => received.Add(message);
+            Debug.unityLogger.logHandler = logs;
+            Application.logMessageReceived += callback;
+            try
+            {
+                var s = Save(p => { p.MoveTo(new Vector2(0, 0)); p.LineTo(new Vector2(10, 10)); p.Stroke(); p.Fill(); });
+                Assert.Empty(s.Vertices);
+                Assert.True(float.IsNegativeInfinity(s.Size.x));
+            }
+            finally
+            {
+                Application.logMessageReceived -= callback;
+                Debug.unityLogger.logHandler = handler;
+            }
+            Assert.Empty(logs.Lines);
+            Assert.Equal(new[] { "Calling MoveTo() before BeginPath()", "Calling LineTo() before BeginPath()", "Calling Stroke() before BeginPath()" }, received);
+        }
+
+        // Editor: detached-clear-resets. Clear empties the content and resets the state and the path
+        // (BeginPath is needed again).
+        [Fact]
+        public void ClearResetsTheDetachedPainter()
+        {
+            using var p = new Painter2D();
+            p.lineWidth = 5; p.lineJoin = LineJoin.Round; p.miterLimit = 3;
+            p.BeginPath(); p.MoveTo(new Vector2(0, 0)); p.LineTo(new Vector2(10, 10)); p.Stroke();
+            p.Clear();
+            Assert.Equal(1f, p.lineWidth);
+            Assert.Equal(LineJoin.Miter, p.lineJoin);
+            Assert.Equal(10f, p.miterLimit);
+            Assert.Equal(Color.black, p.strokeColor);
+            var image = ScriptableObject.CreateInstance<VectorImage>();
+            p.LineTo(new Vector2(20, 20));
+            p.Stroke();
+            p.SaveToVectorImage(image);
+            Assert.Empty(image.vertices);
+        }
+
+        static UaPainter Paint(Action<MeshGenerationContext> a, Action<MeshGenerationContext> b)
+        {
+            using var panel = new Panel(null, ContextType.Player, EventDispatcher.CreateDefault(), null);
+            var root = panel.visualTree;
+            root.style.width = 200;
+            root.style.height = 200;
+            foreach (var draw in new[] { a, b })
+            {
+                var element = new VisualElement();
+                element.style.position = Position.Absolute;
+                element.style.width = 100;
+                element.style.height = 100;
+                element.generateVisualContent = draw;
+                root.Add(element);
+            }
+            panel.ApplyStyles();
+            panel.ValidateLayout();
+            var painter = new UaPainter();
+            painter.Paint(panel, 200f);
+            return painter;
+        }
+
+        // Editor: attached-0..2, attached-outside-callback, attached-save-and-clear. The context's
+        // painter starts each element reset; outside a callback it refuses (with Unity's message);
+        // Clear and SaveToVectorImage belong to detached painters.
+        [Fact]
+        public void TheContextPainterIsResetPerElementAndOnlyDrawsInCallbacks()
+        {
+            float widthInSecond = 0f;
+            Painter2D captured = null;
+            var painter = Paint(mgc =>
+            {
+                var p = mgc.painter2D;
+                captured = p;
+                p.lineWidth = 7;
+                p.BeginPath(); p.MoveTo(new Vector2(0, 0)); p.LineTo(new Vector2(50, 0)); p.Stroke();
+            }, mgc =>
+            {
+                widthInSecond = mgc.painter2D.lineWidth;
+                mgc.painter2D.MoveTo(new Vector2(0, 0));
+            });
+            Assert.Equal(1f, widthInSecond);
+            // The stroke reached the panel with its arc data (flags.z = 1/255, circles in uv6).
+            Assert.Contains(painter.Uvs[3], f => f.z > 0f);
+            var handler = Debug.unityLogger.logHandler;
+            var logs = new Logs();
+            Debug.unityLogger.logHandler = logs;
+            try
+            {
+                captured.BeginPath();
+                captured.Clear();
+                Assert.False(captured.SaveToVectorImage(ScriptableObject.CreateInstance<VectorImage>()));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = handler;
+            }
+            Assert.Equal(new[]
+            {
+                "Cannot issue vector graphics commands outside of generateVisualContent callback",
+                "Clear() cannot be called on a Painter2D associated with a MeshGenerationContext. You should create your own instance of Painter2D instead.",
+                "SaveToVectorImage cannot be called on a Painter2D associated with a MeshGenerationContext. You should create your own instance of Painter2D instead.",
+            }, logs.Lines);
+        }
+
         [Fact]
         public void PropertiesKeepTheirValues()
         {
@@ -594,6 +351,34 @@ namespace UnityEngine.Tests
             Assert.Equal(LineJoin.Round, p.lineJoin);
             Assert.Equal(LineCap.Round, p.lineCap);
             Assert.Equal(4f, p.miterLimit);
+        }
+
+        // Tessellating the same path again allocates nothing once the buffers are warm.
+        [Fact]
+        public void RepeatedTessellationDoesNotAllocate()
+        {
+            var path = new UaVectorPath();
+            path.MoveTo(new Vector2(8, 60));
+            path.BezierCurveTo(new Vector2(20, -10), new Vector2(60, 90), new Vector2(72, 10));
+            path.LineTo(new Vector2(72, 60));
+            path.Arc(new Vector2(40, 60), 20, 0, MathF.PI, ArcDirection.Clockwise);
+            path.ClosePath();
+            var style = new UaVectorStyle { LineWidth = 4, StrokeColor = Red, FillColor = Blue, Join = LineJoin.Round, Cap = LineCap.Round, MiterLimit = 10 };
+            var stroke = new UaVectorStroke();
+            var fill = new UaVectorFill();
+            var mesh = new UaVectorMesh();
+            for (int i = 0; i < 3; i++)
+            {
+                mesh.Clear();
+                stroke.Stroke(path, style, mesh);
+                fill.Fill(path, Blue, FillRule.NonZero, mesh);
+            }
+            Assert.True(mesh.VertexCount > 0);
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            mesh.Clear();
+            stroke.Stroke(path, style, mesh);
+            fill.Fill(path, Blue, FillRule.NonZero, mesh);
+            Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
         }
     }
 }

@@ -42,12 +42,29 @@ namespace UnityEngine.UIElements
 {
     public sealed partial class VectorImage : ScriptableObject
     {
+        internal int version;
+        internal Texture2D atlas;
+        /// <summary>The image's geometry (Painter2D.SaveToVectorImage writes it): UIR vertices
+        /// relative to the image's top-left corner, and triangle indices.</summary>
+        internal VectorImageVertex[] vertices;
+        internal ushort[] indices;
         /// <summary>The image's size in points (its vector geometry is drawn scaled to the element).</summary>
         internal Vector2 size;
 
         public float width => size.x;
 
         public float height => size.y;
+    }
+
+    [Serializable]
+    internal partial struct VectorImageVertex
+    {
+        public Vector3 position;
+        public Color32 tint;
+        public Vector2 uv;
+        public uint settingIndex;
+        public Color32 flags;
+        public Vector4 circle;
     }
 
     public partial class IMGUIContainer : VisualElement, IDisposable

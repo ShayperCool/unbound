@@ -3893,13 +3893,8 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.UIR.DetachedAllocator m_DetachedAllocator;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.SafeHandleAccess m_Handle;
-        [global::Unbound.Stub] internal void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Painter2D.Reset"); }
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.MeshWriteData Allocate(int vertexCount, int indexCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Painter2D.Allocate"); return default; }
         [global::Unbound.Stub] internal void ScheduleJobs(global::UnityEngine.UIElements.MeshGenerationContext mgc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Painter2D.ScheduleJobs"); }
-        [global::Unbound.Stub] public bool SaveToVectorImage(global::UnityEngine.UIElements.VectorImage vectorImage) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Painter2D.SaveToVectorImage"); return default; }
-        internal bool isDetached { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Painter2D.isDetached"); return default; } }
-        public global::UnityEngine.Gradient strokeGradient { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Painter2D.strokeGradient"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Painter2D.strokeGradient"); } }
-        internal static bool isPainterActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Painter2D.isPainterActive"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Painter2D.isPainterActive"); } }
     }
     unsafe partial class Panel
     {
@@ -6834,22 +6829,7 @@ namespace UnityEngine.UIElements
     }
     unsafe partial class VectorImage
     {
-        [global::Unbound.Stub] internal int version;
-        [global::Unbound.Stub] internal global::UnityEngine.Texture2D atlas;
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.VectorImageVertex[] vertices;
-        [global::Unbound.Stub] internal ushort[] indices;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.GradientSettings[] settings;
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial struct VectorImageVertex
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 position;
-        [global::Unbound.Stub] public global::UnityEngine.Color32 tint;
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 uv;
-        [global::Unbound.Stub] public uint settingIndex;
-        [global::Unbound.Stub] public global::UnityEngine.Color32 flags;
-        [global::Unbound.Stub] public global::UnityEngine.Vector4 circle;
     }
     internal unsafe delegate void VersionChangedDelegate(global::UnityEngine.UIElements.VisualManager manager, in global::UnityEngine.UIElements.VisualNodeHandle handle, global::UnityEngine.UIElements.VersionChangeType type);
     unsafe partial class VerticalVirtualizationController<T>

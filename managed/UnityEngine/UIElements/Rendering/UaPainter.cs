@@ -219,6 +219,7 @@ namespace Unbound.UIElements
             m_Context.uaElement = ve;
             // Callbacks may draw children through other elements' matrices; keep this element's.
             var matrix = m_Matrix;
+            Painter2D.isPainterActive = true;
             try
             {
                 ve.generateVisualContent(m_Context);
@@ -227,6 +228,7 @@ namespace Unbound.UIElements
             {
                 Debug.LogException(e);
             }
+            Painter2D.isPainterActive = false;
             m_Matrix = matrix;
             m_Identity = matrix.isIdentity;
             FlushUserMeshes();
@@ -386,13 +388,31 @@ namespace Unbound.UIElements
             float id = Begin(texture);
             byte type = texture != null ? VertTexture : VertSolid;
             int first = VertexCount;
+            var unused = new Vector4(UnusedArc, UnusedArc, UnusedArc, UnusedArc);
             for (int i = 0; i < vertices.Length; i++)
             {
                 var v = vertices[i];
-                var uv = v.uv;
-                Vertex(new Vector2(v.position.x, v.position.y), v.tint, uv, type, id, new Vector4(UnusedArc, UnusedArc, UnusedArc, UnusedArc), false);
+                // UIR evaluates a vertex's circles when its flags ask for it (flags.b, set by
+                // Painter2D geometry; vertices built by game code leave it 0).
+                bool arc = v.flags.b != 0;
+                Vertex(new Vector2(v.position.x, v.position.y), v.tint, v.uv, type, id, arc ? v.circle : unused, arc);
             }
             for (int i = 0; i < indices.Length; i++) Index(first + indices[i]);
+        }
+
+        /// <summary>Adds Painter2D geometry (solid, with its arc anti-aliasing data), in the
+        /// element's local space.</summary>
+        internal void AddVectorMesh(UaVectorMesh mesh)
+        {
+            float id = Begin(null);
+            int first = VertexCount;
+            var unused = new Vector4(UnusedArc, UnusedArc, UnusedArc, UnusedArc);
+            for (int i = 0; i < mesh.VertexCount; i++)
+            {
+                ref var v = ref mesh.Vertices[i];
+                Vertex(v.position, v.tint, Vector2.zero, VertSolid, id, v.arc ? v.circle : unused, v.arc);
+            }
+            for (int i = 0; i < mesh.IndexCount; i++) Index(first + mesh.Indices[i]);
         }
 
         // ------------------------------------------------------------------ text

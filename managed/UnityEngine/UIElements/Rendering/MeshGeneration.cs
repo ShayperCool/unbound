@@ -92,15 +92,15 @@ namespace UnityEngine.UIElements
         internal MeshGenerationContext() { }
 
         /// <summary>The element whose content is being generated. Setting it starts that element's
-        /// generateVisualContent call, which gets the painter with an empty path and its default
-        /// state (Unbound's choice, unmeasured).</summary>
+        /// generateVisualContent call, which gets the painter reset (an empty path, the default
+        /// state, no path begun), as Unity resets it after each element.</summary>
         internal VisualElement uaElement
         {
             get => m_UaElement;
             set
             {
                 m_UaElement = value;
-                m_UaPainter2D?.UaResetForElement();
+                m_UaPainter2D?.Reset();
             }
         }
 
