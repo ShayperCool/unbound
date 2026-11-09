@@ -106,6 +106,67 @@ fn ask_compute(provider: &Provider, file: &Path) -> Value {
 }
 
 #[test]
+fn opaque_choices_keep_their_reason_and_retry_state() {
+    let opaque = pass_json("Opaque", &[], Err(Unknown::fixed("unreadable choices")));
+    assert!(opaque["keyword_sets"].is_null());
+    assert_eq!(opaque["keyword_sets_reason"], "unreadable choices");
+    assert_eq!(opaque["keyword_sets_transient"], false);
+    let retry = pass_json(
+        "Retry",
+        &[],
+        Err(Unknown::transient("includes unavailable")),
+    );
+    assert!(retry["keyword_sets"].is_null());
+    assert_eq!(retry["keyword_sets_transient"], true);
+    let empty = pass_json("Empty", &[], Ok(Vec::new()));
+    assert_eq!(empty["keyword_sets"], json!([]));
+    assert_eq!(empty["keyword_sets_reason"], "");
+    assert_eq!(empty["keyword_sets_transient"], false);
+}
+
+#[test]
+fn opaque_and_known_empty_source_passes_are_distinct() {
+    let scratch = Scratch::new("decl-opaque-choices");
+    scratch.write("CGIncludes/UnityCG.cginc", "// stand-in\n");
+    scratch.write(
+        "Assets/Opaque.shader",
+        r#"Shader "Tests/OpaqueChoices" {
+        SubShader {
+            Pass { GLSLPROGRAM
+                void main() { }
+                ENDGLSL }
+            Pass { HLSLPROGRAM
+                #pragma vertex vert
+                #pragma fragment frag
+                float4 vert(float4 p : POSITION) : SV_POSITION { return p; }
+                float4 frag() : SV_Target { return 1; }
+                ENDHLSL }
+        }
+    }"#,
+    );
+    let provider = Provider::new(inputs(
+        &scratch,
+        scratch.0.join("CGIncludes"),
+        scratch.0.join("no-install"),
+        MEASURED,
+        Arc::new(AtomicUsize::new(0)),
+        Arc::new(AtomicBool::new(false)),
+    ));
+    let answer = ask(&provider, "Tests/OpaqueChoices");
+    assert_eq!(answer["subshaders_known"], true);
+    let passes = &answer["subshaders"][0]["passes"];
+    assert!(passes[0]["keyword_sets"].is_null());
+    assert!(
+        !passes[0]["keyword_sets_reason"]
+            .as_str()
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(passes[1]["keyword_sets"], json!([]));
+    assert_eq!(passes[1]["keyword_sets_reason"], "");
+}
+
+#[test]
 fn variant_choices_follow_each_resolved_pass_program() {
     let scratch = Scratch::new("decl-variant-choices");
     scratch.write("CGIncludes/UnityCG.cginc", "// stand-in\n");
@@ -971,7 +1032,7 @@ fn unresolved_builtin_use_passes_are_unknown_not_tagless() {
     assert_eq!(resolved["subshaders_known"], true, "{resolved}");
     assert_eq!(
         resolved["subshaders"][0]["passes"][1],
-        json!({ "name": "Picking", "tags": [["LIGHTMODE", "Picking"]] })
+        json!({ "name": "Picking", "tags": [["LIGHTMODE", "Picking"]], "keyword_sets": null, "keyword_sets_reason": "serialized built-in variant choices are not read", "keyword_sets_transient": false })
     );
 
     let unresolved = ask(&provider, "Tests/Unresolved");

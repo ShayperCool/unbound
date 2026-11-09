@@ -26,6 +26,9 @@
 //! hosts, serialized built-ins, surface/fixed-function programs). Light-pass shorthand lists
 //! currently carry membership only, as singleton sets; their combination restrictions are not
 //! established by this reply. Project choices use the profile's keyword rules, like the space.
+//! Replies also carry `keyword_sets_reason` (empty when known) and `keyword_sets_transient`
+//! (retry an unavailable input). These fields are optional for older hosts. A per-pass transient
+//! makes the managed answer retryable even when the root's other parts are known.
 //!
 //! `lod` and `restricted` are optional: an older host omits them, and the managed side then
 //! keeps the renderer's pass list for `Shader.passCount` (the behaviour before they were sent).

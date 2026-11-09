@@ -37,6 +37,8 @@ namespace Unbound.Runtime
             internal readonly List<Dictionary<string, string>> Passes = new List<Dictionary<string, string>>();
             /// <summary>Each pass's variant choices, null when the host cannot read them.</summary>
             internal readonly List<string[][]> KeywordSets = new List<string[][]>();
+            /// <summary>Each pass's reason for unknown choices, empty when known.</summary>
+            internal readonly List<string> KeywordSetReasons = new List<string>();
             /// <summary>Its <c>LOD</c> (0: none); null when the host does not send it (an older
             /// host): Shader.passCount then keeps the renderer's pass list.</summary>
             internal int? Lod;
@@ -191,6 +193,13 @@ namespace Unbound.Runtime
                             sets = list.ToArray();
                         }
                         s.KeywordSets.Add(sets);
+                        string why = sets == null ? "variant choices not supplied by this host" : "";
+                        if (pass.TryGetProperty("keyword_sets_reason", out var choiceReason)
+                            && choiceReason.ValueKind == JsonValueKind.String)
+                            why = choiceReason.GetString() ?? why;
+                        s.KeywordSetReasons.Add(why);
+                        d.Transient |= pass.TryGetProperty("keyword_sets_transient", out var retry)
+                            && retry.ValueKind == JsonValueKind.True;
                     }
                     d.SubShaders.Add(s);
                 }

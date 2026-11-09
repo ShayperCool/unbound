@@ -213,7 +213,7 @@ def unbound(work, release):
     out.mkdir(parents=True)
     env = dict(os.environ, **{VARIABLE: str(out)})
     with (out/'unbound.log').open('w') as log:
-        result = subprocess.run([str(LAUNCHER), 'timeout', '900', cli, 'run', '-p', str(project),
+        result = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '900', cli, 'run', '-p', str(project),
                                  '--no-watch', '--frames', '30', '--size', '64x32'],
                                 env=env, stdout=log, stderr=subprocess.STDOUT)
     print('unbound exit', result.returncode, out)

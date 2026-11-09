@@ -343,6 +343,37 @@ namespace UnityEngine.Tests
             Assert.Equal(calls, m_Calls);
         }
 
+        [Fact]
+        public void OpaquePassChoicesRetainReasonsAndRetryWithoutHidingKnownEmptyChoices()
+        {
+            var shader = Forms();
+            string passes = "[{\"tags\":[],\"passes\":["
+                + "{\"tags\":[],\"keyword_sets\":null,\"keyword_sets_reason\":\"includes unavailable\",\"keyword_sets_transient\":true},"
+                + "{\"tags\":[],\"keyword_sets\":[],\"keyword_sets_reason\":\"\",\"keyword_sets_transient\":false},"
+                + "{\"tags\":[]}]}]";
+            m_Shaders[shader.name] = Answer(WithStereo(), passes);
+            var answer = ShaderDeclarations.Of(shader);
+            Assert.True(answer.Transient);
+            Assert.Null(answer.SubShaders[0].KeywordSets[0]);
+            Assert.Equal("includes unavailable", answer.SubShaders[0].KeywordSetReasons[0]);
+            Assert.Empty(answer.SubShaders[0].KeywordSets[1]);
+            Assert.Equal("", answer.SubShaders[0].KeywordSetReasons[1]);
+            Assert.Null(answer.SubShaders[0].KeywordSets[2]);
+            Assert.Equal("variant choices not supplied by this host", answer.SubShaders[0].KeywordSetReasons[2]);
+            int calls = m_Calls;
+            Assert.Same(answer, ShaderDeclarations.Of(shader));
+            Assert.Equal(calls, m_Calls);
+            m_Shaders[shader.name] = Answer(WithStereo(), "[{\"tags\":[],\"passes\":[{\"tags\":[],\"keyword_sets\":[]}]}]");
+            ShaderDeclarations.s_FrameForTests = 2;
+            var recovered = ShaderDeclarations.Of(shader);
+            Assert.False(recovered.Transient);
+            Assert.Empty(recovered.SubShaders[0].KeywordSets[0]);
+            Assert.Equal(calls + 1, m_Calls);
+            ShaderDeclarations.s_FrameForTests = 3;
+            Assert.Same(recovered, ShaderDeclarations.Of(shader));
+            Assert.Equal(calls + 1, m_Calls);
+        }
+
         /// <summary>A transient answer is name-based meanwhile, asked again at most once a frame, and
         /// replaced by the known one when the host has it.</summary>
         [Fact]

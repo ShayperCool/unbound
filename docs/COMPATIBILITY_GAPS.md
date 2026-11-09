@@ -580,7 +580,7 @@ ScriptedImporters, UnityWebRequest core (multipart, certificates, timeouts, file
 Deferred by decision (see ROADMAP): VFX Graph, XR, LOD cross-fades, Terrain leftovers, console
 codecs.
 
-Q64 follow-up: nontrivial instance multipliers on CPU-expanded mesh instances fail explicitly until GPU mesh data replay can supply every logical instance. `cmdbuffers` records two distinct transforms/colors and raw IDs at multipliers 0, 1, 2, 3; procedural multiplier support is separate.
+Q64/Q221 follow-up: nontrivial instance multipliers on CPU-expanded mesh instances fail explicitly until GPU mesh data replay can supply every logical instance. This requires a general GPU batch representation for matrices and instance properties; repeating expanded CPU draws would select the wrong logical data. `cmdbuffers` records two distinct transforms/colors and raw IDs at multipliers 0, 1, 2, 3; procedural multiplier support is separate.
 
 
 Q274: compute shaders keep predefined sampler states on the measured 6000.0.71f1 OpenGL Core
@@ -588,3 +588,5 @@ device (`tests/projects/renderapi` `computeSamplers.*`). Texture-named samplers 
 the texture's filter and wrap settings, including `volumeCompute.*.point`; the graphics-program
 inline sampler observation does not apply to compute kernels. The URP `upscale_stp` comparison
 is retained by `tests/projects/renderapi/stp.py`.
+
+Q221 shader-declarations replies preserve a reason and retry flag for opaque per-pass variant choices, including serialized built-ins and generated surface passes. A known empty choice list remains distinct from an unreadable one; managed caching retries transient per-pass inputs and accepts replies from older hosts. Provider and managed metadata tests cover these transport guarantees.

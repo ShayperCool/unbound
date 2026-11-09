@@ -82,6 +82,20 @@ impl Unknown {
     }
 }
 
+/// A known empty choice list and opaque choices remain distinct in every provider reply.
+fn pass_json(
+    name: &str,
+    tags: &[(String, String)],
+    choices: Result<Vec<Vec<String>>, Unknown>,
+) -> Value {
+    let (sets, reason, transient) = match choices {
+        Ok(sets) => (Some(sets), String::new(), false),
+        Err(unknown) => (None, unknown.reason, unknown.transient),
+    };
+    json!({"name": name, "tags": tags_json(tags), "keyword_sets": sets,
+        "keyword_sets_reason": reason, "keyword_sets_transient": transient})
+}
+
 /// The resource files' sizes and modification times when they were read: a change reads them
 /// again (their cache entry is keyed by their bytes).
 type Stamp = Vec<(u64, Option<std::time::SystemTime>)>;
@@ -245,7 +259,8 @@ fn builtin_subshaders(builtin: &Builtin) -> Result<Vec<Value>, Unknown> {
         .map(|sub| {
             json!({
                 "tags": tags_json(&sub.tags),
-                "passes": sub.passes.iter().map(|p| json!({ "name": p.name, "tags": tags_json(&p.tags) })).collect::<Vec<_>>(),
+                "passes": sub.passes.iter().map(|p| pass_json(&p.name, &p.tags,
+                    Err(Unknown::fixed("serialized built-in variant choices are not read")))).collect::<Vec<_>>(),
                 "lod": sub.lod,
                 // The serialized form does not say which devices a SubShader runs on; a built-in
                 // SubShader is taken as one the device runs, as the renderer does.
@@ -787,8 +802,11 @@ impl State {
                             &surface_options(&program.code),
                         ) {
                             let tags = one_tag("LightMode", generated.light_mode);
-                            passes
-                                .push(json!({ "name": generated.name, "tags": tags_json(&tags) }));
+                            passes.push(pass_json(
+                                generated.name,
+                                &tags,
+                                Err(Unknown::fixed("surface variant choices are not read")),
+                            ));
                         }
                     }
                     continue;
@@ -800,10 +818,8 @@ impl State {
                 } else {
                     (pass.name.clone(), canonical_tags(pass.own_tags.iter()))
                 };
-                let keyword_sets = self.pass_variant_sets(inputs, pass).ok();
-                passes.push(
-                    json!({ "name": name, "tags": tags_json(&tags), "keyword_sets": keyword_sets }),
-                );
+                let choices = self.pass_variant_sets(inputs, pass);
+                passes.push(pass_json(&name, &tags, choices));
             }
             out.push(json!({
                 "tags": tags_json(&canonical_tags(sub.tags.iter())),
