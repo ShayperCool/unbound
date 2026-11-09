@@ -175,11 +175,20 @@ namespace Unbound.UIElements
             Vector2 us = UaVector.Normalized(start - c), ue = UaVector.Normalized(end - c);
             if (!(UaVector.Epsilon < Math.Abs(step)))
             {
-                // No sweep (an arc-to of radius 0): nothing is drawn and the segments around it
-                // are not joined (measured, stroke-arcto-radius-zero). A sweepless arc whose ends
-                // differ is unmeasured; it is treated the same.
-                m_Starts[index] = default;
-                m_Ends[index] = default;
+                // Too little sweep for a ring: nothing is drawn. Ends apart join and cap along the
+                // chord; ends that meet (an arc-to of radius 0, measured: stroke-arcto-radius-zero)
+                // neither join nor cap.
+                var chord = end - start;
+                float length = UaVector.Length(chord);
+                if (UaVector.Epsilon > length)
+                {
+                    m_Starts[index] = default;
+                    m_Ends[index] = default;
+                    return;
+                }
+                var dir = new Vector2(chord.x / length, chord.y / length);
+                m_Starts[index] = new UaSegmentEnd { P0 = start, P1 = end, Dir = dir, Arc = true, Color = m_Style.StrokeColor, Valid = true };
+                m_Ends[index] = m_Starts[index];
                 return;
             }
             {

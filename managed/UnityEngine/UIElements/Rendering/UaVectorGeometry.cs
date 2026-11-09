@@ -139,8 +139,8 @@ namespace Unbound.UIElements
             return a < 0f ? TwoPi - m : m;
         }
 
-        /// <summary>Clamps to [-1, 1] the way SSE's max/min do: a NaN (0/0 of a degenerate
-        /// direction) becomes -1, which Unity's acos inputs get.</summary>
+        /// <summary>Clamps to [-1, 1]; a NaN (0/0 of a degenerate direction) becomes -1, matching the
+        /// Unity 6000.0.71f1 Editor (tests/projects/uitkpainter stroke-arcto-radius-zero).</summary>
         internal static float ClampUnit(float x)
         {
             float m = x > -1f ? x : -1f;
