@@ -332,13 +332,16 @@ class LandTrain:
             changed = self.git('diff', '--name-only', '--no-renames', tip, after, cwd=path).splitlines()
             selector = self.api.Gate(path, tip, [], False, self.log_path('selection'))
             try:
-                automatic = self.api.automatic_checks(path, changed, entry['probes'], entry.get('probe_environment', {}), full=entry['full'])
+                automatic = self.api.automatic_checks(path, self.commit_paths(entry['head']),
+                                                       entry['probes'], entry.get('probe_environment', {}),
+                                                       full=entry['full'])
                 automatic = self.api.automatic_union([entry.get('automatic', []), automatic])
             except (SystemExit, ValueError) as error:
                 self.reject(entry, 2, f'automatic probe selection failed: {error}')
                 continue
             entry.update(before=tip, tip=after, changed=changed, crates=selector.touched_crates(changed),
                          automatic=automatic)
+            self.save_automatic(entry, entries)
             accepted.append(entry)
             tip = after
         return accepted
@@ -415,29 +418,39 @@ class LandTrain:
             print(f'land: main advanced, but its runtime pin could not be saved: {error}', file=sys.stderr)
         return [*context, *extra]
 
-    def inherit_probes(self, entries):
+    def commit_paths(self, head):
+        # Preserve paths changed and later restored within a stacked branch.
+        paths = self.git('log', '--format=', '--name-only', '--no-renames', '-m', '-z',
+                         'main..'+head).split('\0')
+        return sorted(set(filter(None, paths)))
+
+    def save_automatic(self, entry, entries):
+        self.queue.update(entry['id'], automatic=entry['automatic'])
+        for child in entries:
+            if child['id'] != entry['id'] and entry['head'] in self.lineage.get(child['id'], ()):
+                child['automatic'] = self.api.automatic_union(
+                    [child.get('automatic', []), entry['automatic']])
+                self.queue.update(child['id'], automatic=child['automatic'])
+
+    def inherit_probes(self, entries, workspace):
         # A stacked branch can carry another queued branch's commits even if that
         # earlier request is rejected. Keep the checks attached to those commits.
+        self.lineage = {}
         for entry in entries:
             if 'automatic' in entry:
                 continue
-            # Older callers have no captured selection. Read their metadata only
-            # while their original checkout still matches the captured clean head.
-            if not self.valid(entry):
-                entry['automatic'] = []
-                continue
-            changed = self.git('diff', '--name-only', '--no-renames',
-                               'main...'+entry['head'], cwd=Path(entry['worktree'])).splitlines()
+            # Legacy requests have no captured selection. Read their committed
+            # snapshot in our checkout, leaving even a dirty caller untouched.
+            workspace.checkout(entry['head'])
             try:
                 entry['automatic'] = self.api.automatic_checks(
-                    Path(entry['worktree']), changed, entry['probes'],
+                    workspace.path, self.commit_paths(entry['head']), entry['probes'],
                     entry.get('probe_environment', {}), full=entry['full'])
-                if not self.valid(entry):
-                    entry['automatic'] = []
             except (SystemExit, ValueError):
-                entry['automatic'] = []  # Assembly reports invalid rebased metadata.
+                entry['automatic'] = []  # Rebased metadata is validated during assembly.
         for entry in entries:
             ancestors = set(self.git('rev-list', 'main..'+entry['head']).splitlines())
+            self.lineage[entry['id']] = ancestors
             sources = [entry, *(item for item in entries
                                 if item['id'] != entry['id'] and item['head'] in ancestors)]
             specs = list(dict.fromkeys((command, release) for item in sources
@@ -478,17 +491,17 @@ class LandTrain:
                    if item['repo'] == self.repo and not item.get('result') and self.queue.live(item)]
         if not pending:
             return
-        self.inherit_probes(pending)
         base = self.git('rev-parse', 'main')
         context = {item['id']: item for entry in pending for item in entry.get('context', [])
                    if self.ancestor(item['tip'], base)}
         context = list(context.values())
-        original = pending[0]['worktree'] if len(pending) == 1 else None
+        original = (pending[0]['worktree'] if len(pending) == 1 and 'automatic' in pending[0] else None)
         workspace = Workspace(self, self.repo, base, original)
         if not original:
             workspace.create()
         print(f'land: train {self.id[:12]}: {len(pending)} queued branches', flush=True)
         try:
+            self.inherit_probes(pending, workspace)
             while pending:
                 base = self.git('rev-parse', 'main')
                 entries = self.assemble(pending, base, workspace)
@@ -562,7 +575,7 @@ class LandTrain:
         except ValueError as error:
             self.api.die(2, str(error))
         probe_environment = {self.api.RELEASE_VARIABLE: os.environ.get(self.api.RELEASE_VARIABLE, '')}
-        changed = self.git('diff', '--name-only', '--no-renames', 'main...'+head).splitlines()
+        changed = self.commit_paths(head)
         automatic = self.api.automatic_checks(self.worktree, changed, probes, probe_environment, full=full)
         self.api.require_clean(self.worktree, 'this worktree')
         if self.git('rev-parse', 'HEAD') != head:

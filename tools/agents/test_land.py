@@ -205,7 +205,8 @@ def gate(root, base, probes, full, branch, **options):
             time.sleep(.02)
     automatic_left = any(row[0] == 'left' and 'tools/agents/suite.py' in row[1]
                          for row in options.get('automatic', []))
-    if (automatic_left and values.get('break-left.txt') == 'yes') or values.get('bad.txt') == 'fail' or ('probe-b' in probes and values.get('bad-probe.txt') == 'fail') or ('probe-a' in probes and (values.get('a.txt') != 'ok' or values.get('break-a.txt') == 'yes')):
+    inherited_fast = any(row[1] == 'retained-fast' for row in options.get('automatic', []))
+    if (inherited_fast and values.get('break-inherited.txt') == 'yes') or (automatic_left and values.get('break-left.txt') == 'yes') or values.get('bad.txt') == 'fail' or ('probe-b' in probes and values.get('bad-probe.txt') == 'fail') or ('probe-a' in probes and (values.get('a.txt') != 'ok' or values.get('break-a.txt') == 'yes')):
         raise SystemExit(5)
     return None
 if os.environ.get('TRAIN_LEGACY_REQUEST'):
@@ -531,6 +532,62 @@ class TrainIntegrationTests(unittest.TestCase):
         results = self.finish([owner, peer])
         self.assertEqual([code for code, _ in results], [0, 0], results)
         self.assertEqual([row[1] for row in self.gates()[0]['automatic']], ['legacy-fast'])
+
+    def test_rebased_selections_are_saved_before_gate_and_survive_handoff(self):
+        project = self.repo/'tests/projects/left'
+        (project/'Reference').mkdir(parents=True)
+        (project/'Reference/control.json').write_text('{}\n')
+        (project/'gate.json').write_text(json.dumps({'commands': ['left-check']}))
+        self.git('add', '.')
+        self.git('commit', '-qm', 'test(agents): late dependency control')
+        first = self.branch('first', {'a.txt': 'wrong\n', 'crates/alpha/src/lib.rs': '// edited\n'})
+        second = self.branch('second', {'a.txt': 'ok\n', 'crates/alpha/src/lib.rs': '// base\n',
+                                       'break-left.txt': 'yes\n'}, base='first')
+        (self.state/'pause-leader').write_text('pause')
+        (self.state/'pause-lock').write_text('pause')
+        (self.state/'pause-gate').write_text('pause')
+        with self.hold():
+            owner = self.start(first, ['probe-a'], pause_leader=True)
+            self.registered(1)
+            peer = self.start(second, pause_lock=True)
+            self.registered(2)
+            (project/'gate.json').write_text(json.dumps({'commands': ['left-check'],
+                                                        'engine_paths': ['crates/alpha/']}))
+            self.git('add', '.')
+            self.git('commit', '-qm', 'test(agents): dependency added while queued')
+        self.wait_for(lambda: (self.state/'leader-running').exists(), 'leader did not start')
+        (self.state/'pause-lock').unlink()
+        (self.state/'pause-leader').unlink()
+        self.wait_for(lambda: (self.state/'gate-running').exists(), 'gate did not start')
+        records = json.loads((self.state/'land-queue.json').read_text())['entries']
+        self.assertTrue(all(any(row[0] == 'left' for row in entry['automatic']) for entry in records))
+        (self.state/'pause-gate').unlink()
+        results = self.finish([owner, peer])
+        self.assertEqual([code for code, _ in results], [5, 5], results)
+        self.assertEqual(self.rows(), [])
+        self.assertTrue(any(row[0] == 'left' for row in self.gates()[-1]['automatic']))
+
+    def test_dirty_legacy_ancestor_reads_committed_metadata_and_keeps_inherited_fast_check(self):
+        metadata_path = 'tests/projects/control/gate.json'
+        original = (self.repo/metadata_path).read_text()
+        first = self.branch('first', {metadata_path: json.dumps({
+            'commands': ['true'], 'fast_commands': ['retained-fast']})})
+        second = self.branch('second', {metadata_path: original, 'break-inherited.txt': 'yes\n'}, base='first')
+        (self.state/'pause-leader').write_text('pause')
+        owner = self.start(first, legacy=True, pause_leader=True)
+        self.wait_for(lambda: (self.state/'leader-running').exists(), 'leader did not start')
+        peer = self.start(second)
+        self.registered(2)
+        edited = first/metadata_path
+        edited.write_text(json.dumps({'commands': ['true'], 'fast_commands': ['uncommitted-only']}))
+        (self.state/'pause-leader').unlink()
+        results = self.finish([owner, peer])
+        self.assertEqual([code for code, _ in results], [2, 5], results)
+        self.assertEqual(self.rows(), [])
+        checks = self.gates()[-1]['automatic']
+        self.assertIn('retained-fast', [row[1] for row in checks])
+        self.assertNotIn('uncommitted-only', [row[1] for row in checks])
+        self.assertIn('uncommitted-only', edited.read_text())
 
     def test_all_branches_share_one_gate_and_one_push(self):
         first = self.branch('first', {'a.txt': 'ok', 'crates/alpha/src/lib.rs': '// changed\n'})
