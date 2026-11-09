@@ -52,20 +52,38 @@ def paths(repo):
     return common/'land-push.json', common/'land-push.lock'
 
 
+def successful_target(value):
+    current = value.get('status') == 'pushed'
+    target = value.get('target') if current else value.get('pushed_target')
+    if not target:
+        return None
+    return {'status': 'pushed', 'target': target,
+            'remote': value.get('remote') if current else value.get('pushed_remote'),
+            'attempts': value.get('attempts', 1) if current else value.get('pushed_attempts', 1), 'error': None}
+
+
 def enqueue(repo, state, *, launch=True, land_locked=False):
     path, lock_path = paths(repo)
     remote = 'origin' if git(repo, 'remote', 'get-url', 'origin', check=False).returncode == 0 else ''
     status = 'pending' if remote and not os.environ.get('UNBOUND_LAND_NO_PUSH') else 'disabled'
-    head = git(repo, 'rev-parse', 'main').stdout.strip()
     # Enqueue uses its own short lock; a network attempt never holds this lock.
     with path.with_suffix('.queue.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        head = git(repo, 'rev-parse', 'main').stdout.strip()
         previous = json.loads(path.read_text()) if path.exists() else {}
+        confirmed = successful_target(previous)
         value = dict(previous, target=head, remote=remote, status=status, state=str(state), repo=str(repo))
+        if confirmed:
+            value.update(pushed_target=confirmed['target'], pushed_remote=confirmed['remote'],
+                         pushed_attempts=confirmed['attempts'])
         atomic_json(path, value)
     def pending(rows):
         for row in rows:
-            if row.get('push', {}).get('status') != 'pushed' and git(repo, 'merge-base', '--is-ancestor', row['new'], head, check=False).returncode == 0:
+            if row.get('push', {}).get('status') == 'pushed':
+                continue
+            if confirmed and git(repo, 'merge-base', '--is-ancestor', row['new'], confirmed['target'], check=False).returncode == 0:
+                row['push'] = dict(confirmed)
+            elif git(repo, 'merge-base', '--is-ancestor', row['new'], head, check=False).returncode == 0:
                 row['push'] = {'status': status, 'target': head, 'remote': remote}
     receipts(state, pending, serialize_land=not land_locked)
     if launch and status == 'pending':
@@ -100,6 +118,11 @@ def deliver(repo, *, attempts=3, delay=time.sleep):
             with path.with_suffix('.queue.lock').open('a') as lock:
                 fcntl.flock(lock, fcntl.LOCK_EX)
                 value = json.loads(path.read_text())
+            if attempt == 0:
+                confirmed = successful_target(value)
+                if confirmed:
+                    updates.append((dict(value, remote=confirmed['remote']), confirmed['target'],
+                                    True, None, confirmed['attempts']))
             if value['status'] in ('pushed', 'disabled'):
                 break
             target = value['target']
@@ -112,7 +135,11 @@ def deliver(repo, *, attempts=3, delay=time.sleep):
             with path.with_suffix('.queue.lock').open('a') as lock:
                 fcntl.flock(lock, fcntl.LOCK_EX)
                 latest = json.loads(path.read_text())
+                if success:
+                    latest.update(pushed_target=target, pushed_remote=value['remote'], pushed_attempts=attempt+1)
                 if latest['target'] != target:
+                    if success:
+                        atomic_json(path, latest)
                     restart = True
                     continue
                 latest.update(status='pushed' if success else 'failed', attempts=attempt+1,

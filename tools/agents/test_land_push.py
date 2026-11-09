@@ -215,6 +215,55 @@ class PushTests(unittest.TestCase):
         self.assertTrue(all(row['push']['status'] == 'pushed' for row in self.rows()))
         self.assertEqual(subprocess.check_output(['git', '--git-dir', str(self.remote), 'rev-parse', 'main'], text=True).strip(), added[-1])
 
+    def interrupt_confirmation(self):
+        land_push.enqueue(self.repo, self.state, launch=False)
+        with mock.patch.object(land_push, 'receipts', side_effect=RuntimeError('interrupted confirmation')):
+            with self.assertRaisesRegex(RuntimeError, 'interrupted confirmation'):
+                land_push.deliver(self.repo)
+        self.assertEqual(json.loads(land_push.paths(self.repo)[0].read_text())['status'], 'pushed')
+        self.assertEqual(self.rows()[0]['push']['status'], 'pending')
+
+    def test_retry_replays_receipts_after_remote_success_before_journal(self):
+        self.interrupt_confirmation()
+        original = land_push.git
+        def no_network(repo, *args, **kwargs):
+            self.assertNotEqual(args[0], 'push')
+            return original(repo, *args, **kwargs)
+        with mock.patch.object(land_push, 'git', side_effect=no_network):
+            land_push.deliver(self.repo)
+        self.assertEqual(self.rows()[0]['push']['status'], 'pushed')
+
+    def test_next_failed_target_does_not_erase_confirmed_delivery(self):
+        self.interrupt_confirmation()
+        self.add('later train')
+        hook = self.remote/'hooks/pre-receive'
+        hook.write_text('#!/bin/sh\nexit 1\n')
+        hook.chmod(0o755)
+        land_push.enqueue(self.repo, self.state, launch=False)
+        self.assertEqual([row['push']['status'] for row in self.rows()], ['pushed', 'pending'])
+        land_push.deliver(self.repo, attempts=1)
+        self.assertEqual([row['push']['status'] for row in self.rows()], ['pushed', 'failed'])
+
+    def test_coalesced_success_survives_interruption_before_the_next_attempt(self):
+        land_push.enqueue(self.repo, self.state, launch=False)
+        original = land_push.git
+        pushes = []
+        def interrupted(repo, *args, **kwargs):
+            if args[0] == 'push':
+                if pushes:
+                    raise RuntimeError('interrupted next attempt')
+                pushes.append(True)
+                result = original(repo, *args, **kwargs)
+                self.add('coalesced train')
+                land_push.enqueue(self.repo, self.state, launch=False)
+                return result
+            return original(repo, *args, **kwargs)
+        with mock.patch.object(land_push, 'git', side_effect=interrupted):
+            with self.assertRaisesRegex(RuntimeError, 'interrupted next attempt'):
+                land_push.deliver(self.repo)
+        land_push.enqueue(self.repo, self.state, launch=False)
+        self.assertEqual([row['push']['status'] for row in self.rows()], ['pushed', 'pending'])
+
 
 if __name__ == '__main__':
     unittest.main()
