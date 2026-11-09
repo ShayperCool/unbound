@@ -26,7 +26,11 @@ namespace UnityEngine.Pool
         void IDisposable.Dispose() => m_Pool.Release(m_ToReturn);
     }
 
-    /// <summary>A stack-based pool with create/get/release/destroy callbacks.</summary>
+    /// <summary>A stack-based pool with create/get/release/destroy callbacks. The most recently
+    /// released object waits in its own slot: the next Get returns it first, a further Release
+    /// pushes onto the stack behind it, and Clear destroys the stack bottom to top, then that slot.
+    /// The order matches the Unity 6000.0.71f1 Editor (tests/projects/uitkcollections, the order
+    /// in which a list view's rebuild destroys its rows).</summary>
     public partial class ObjectPool<T> : IDisposable, IObjectPool<T> where T : class
     {
         internal readonly List<T> m_List;
@@ -36,10 +40,11 @@ namespace UnityEngine.Pool
         readonly Action<T> m_ActionOnDestroy;
         readonly int m_MaxSize;
         internal bool m_CollectionCheck;
+        T m_FreshlyReleased;
 
         public int CountAll { get; private set; }
         public int CountActive => CountAll - CountInactive;
-        public int CountInactive => m_List.Count;
+        public int CountInactive => m_List.Count + (m_FreshlyReleased != null ? 1 : 0);
 
         public ObjectPool(Func<T> createFunc, Action<T> actionOnGet = null, Action<T> actionOnRelease = null, Action<T> actionOnDestroy = null, bool collectionCheck = true, int defaultCapacity = 10, int maxSize = 10000)
         {
@@ -57,7 +62,12 @@ namespace UnityEngine.Pool
         public T Get()
         {
             T element;
-            if (m_List.Count == 0)
+            if (m_FreshlyReleased != null)
+            {
+                element = m_FreshlyReleased;
+                m_FreshlyReleased = null;
+            }
+            else if (m_List.Count == 0)
             {
                 element = m_CreateFunc();
                 CountAll++;
@@ -76,9 +86,14 @@ namespace UnityEngine.Pool
 
         public void Release(T element)
         {
-            if (m_CollectionCheck && m_List.Count > 0 && m_List.Contains(element))
+            if (m_CollectionCheck && (element == m_FreshlyReleased || (m_List.Count > 0 && m_List.Contains(element))))
                 throw new InvalidOperationException("Trying to release an object that has already been released to the pool.");
             m_ActionOnRelease?.Invoke(element);
+            if (m_FreshlyReleased == null)
+            {
+                m_FreshlyReleased = element;
+                return;
+            }
             if (CountInactive < m_MaxSize) m_List.Add(element);
             else
             {
@@ -90,7 +105,11 @@ namespace UnityEngine.Pool
         public void Clear()
         {
             if (m_ActionOnDestroy != null)
+            {
                 foreach (var item in m_List) m_ActionOnDestroy(item);
+                if (m_FreshlyReleased != null) m_ActionOnDestroy(m_FreshlyReleased);
+            }
+            m_FreshlyReleased = null;
             m_List.Clear();
             CountAll = 0;
         }
