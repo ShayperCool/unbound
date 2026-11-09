@@ -797,8 +797,9 @@ namespace Unbound.Runtime
         /// the same static-wet layout (MEASURED_LAYOUT in audio/effects.rs).</summary>
         internal void RequireMeasuredOutput()
         {
+            // The layout the mixer runs, which a narrower device lowers below the request.
             var config = AudioSettings.GetConfiguration();
-            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || config.dspBufferSize != 1024 || config.speakerMode != AudioSpeakerMode.Stereo)
+            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || config.dspBufferSize != 1024 || AudioBackend.Current.ActiveSpeakerMode != AudioSpeakerMode.Stereo)
                 throw new NotSupportedException("AudioMixer " + m_EffectName + " is measured only at 48000/44100 Hz with 1024-frame stereo output");
         }
         // Native 6000.0.71f1 keeps exposed values verbatim but clamps the DSP amount.
@@ -824,7 +825,7 @@ namespace Unbound.Runtime
             // The DSP takes the whole channel count of the clamped value (maxch_raw_* controls).
             int maxChannels = (int)Mathf.Clamp(v[3], PitchShifterMinimums[3], PitchShifterMaximums[3]);
             var config = AudioSettings.GetConfiguration();
-            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || Array.IndexOf(PitchShifterSpeakerModes, config.speakerMode) < 0
+            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || Array.IndexOf(PitchShifterSpeakerModes, AudioBackend.Current.ActiveSpeakerMode) < 0
                 || (config.dspBufferSize != 256 && config.dspBufferSize != 512 && config.dspBufferSize != 1024 && config.dspBufferSize != 2048))
                 throw new NotSupportedException("AudioMixer Pitch Shifter is measured only at 48000/44100 Hz with 256/512/1024/2048-frame mono, stereo, quad, 5.0, 5.1 or 7.1 output");
             return new { pitch = Mathf.Clamp(v[0], 0.5f, 2f), fft_size = fftSize, max_channels = maxChannels };

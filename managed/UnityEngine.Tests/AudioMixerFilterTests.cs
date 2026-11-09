@@ -930,7 +930,7 @@ namespace UnityEngine.Tests
             var prologic = measured; prologic.speakerMode = AudioSpeakerMode.Prologic;
             var rate = measured; rate.sampleRate = 22050;
             var buffer = measured; buffer.dspBufferSize = 4096;
-            foreach (var config in pitch ? new[] { prologic, rate, buffer } : new[] { mono, quad, prologic, rate, buffer })
+            foreach (var config in pitch ? new[] { prologic, rate, buffer } : new[] { mono, prologic, rate, buffer })
             {
                 Assert.True(AudioSettings.Reset(config));
                 var error = Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
@@ -953,6 +953,29 @@ namespace UnityEngine.Tests
             var other = measured; other.sampleRate = 44100;
             Assert.True(AudioSettings.Reset(other));
             group.DspConfiguration();
+            // A stereo device runs a quad request in stereo, the measured layout; the
+            // configuration keeps the request.
+            Assert.True(AudioSettings.Reset(quad));
+            Assert.Equal(AudioSpeakerMode.Quad, AudioSettings.GetConfiguration().speakerMode);
+            Assert.Equal(AudioSpeakerMode.Stereo, AudioBackend.Current.ActiveSpeakerMode);
+            group.DspConfiguration();
+        }
+
+        [Fact]
+        public void TheVirtualDeviceIsAStereoDriver()
+        {
+            var measured = AudioSettings.GetConfiguration();
+            Assert.Equal(AudioSpeakerMode.Stereo, AudioSettings.driverCapabilities);
+            foreach (var (requested, active) in new[] {
+                (AudioSpeakerMode.Mono, AudioSpeakerMode.Mono), (AudioSpeakerMode.Stereo, AudioSpeakerMode.Stereo),
+                (AudioSpeakerMode.Mode7point1, AudioSpeakerMode.Stereo), (AudioSpeakerMode.Prologic, AudioSpeakerMode.Prologic) })
+            {
+                var config = measured; config.speakerMode = requested;
+                Assert.True(AudioSettings.Reset(config));
+                Assert.Equal(requested, AudioSettings.GetConfiguration().speakerMode);
+                Assert.Equal(active, AudioBackend.Current.ActiveSpeakerMode);
+            }
+            Assert.True(AudioSettings.Reset(measured));
         }
 
         [Theory]

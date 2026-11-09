@@ -579,6 +579,8 @@ pub struct Source {
     filter_started: bool,
     filter_paused: bool,
     filtered: Vec<f32>,
+    /// The scripts' buffer in the output layout's channel count (see [`call_in_layout`]).
+    layout_scratch: Vec<f32>,
     bypass_dry: Vec<f32>,
     filtered_offset: usize,
     component_playback: bool,
@@ -636,8 +638,18 @@ struct GeneratorState {
 }
 
 impl GeneratorState {
-    fn render(&mut self, handle: u64, out: &mut [f32], frames: usize, callback: Option<Callback>) {
-        let length = frames * 2;
+    /// Fills stereo `out` from DSP buffers of `frames` frames generated in the output layout's
+    /// `channels` (Unity 6000.0.71f1 passes the layout's channel count to a clipless source's
+    /// `OnAudioFilterRead`, tests/projects/audiopitch `context_*_generator`).
+    fn render(
+        &mut self,
+        handle: u64,
+        out: &mut [f32],
+        frames: usize,
+        channels: usize,
+        callback: Option<Callback>,
+    ) {
+        let length = frames * channels;
         let fill = |buffer: &mut Vec<f32>| {
             buffer.resize(length, 0.0);
             buffer.fill(0.0);
@@ -647,7 +659,7 @@ impl GeneratorState {
                     handle,
                     buffer.as_mut_ptr(),
                     frames as i32,
-                    2,
+                    channels as i32,
                     0,
                 );
             }
@@ -663,11 +675,13 @@ impl GeneratorState {
             if self.offset == 0 {
                 fill(&mut self.next);
             }
-            let count = (out.len() - written).min(length - self.offset);
-            out[written..written + count]
-                .copy_from_slice(&self.current[self.offset..self.offset + count]);
-            written += count;
-            self.offset += count;
+            let count = ((out.len() - written) / 2).min((length - self.offset) / channels);
+            fold(
+                &self.current[self.offset..self.offset + count * channels],
+                &mut out[written..written + count * 2],
+            );
+            written += count * 2;
+            self.offset += count * channels;
             if self.offset == length {
                 std::mem::swap(&mut self.current, &mut self.next);
                 self.offset = 0;
@@ -778,6 +792,8 @@ pub struct Mixer {
     zone_input: Vec<f32>,
     /// Unrouted sources with `bypassListenerEffects`, added after `listener_chain`.
     listener_bypass: Vec<f32>,
+    /// The listener scripts' block in the output layout's channel count.
+    listener_layout: Vec<f32>,
     listener_output: Ring,
     callback: Option<Callback>,
     capture_listener_batch: bool,
@@ -912,6 +928,7 @@ impl Mixer {
             zone_rejected: None,
             zone_input: vec![0.0; BLOCK * 2],
             listener_bypass: vec![0.0; BLOCK * 2],
+            listener_layout: Vec::with_capacity(BLOCK * MAX_OUTPUT_CHANNELS),
             listener_output: Ring::new(),
             callback: None,
             capture_listener_batch: false,
@@ -1672,17 +1689,15 @@ impl Mixer {
         self.discard_output = false;
         // Native AudioRenderer advances and writes whole DSP buffers; any partial suffix is left
         // untouched in the caller's NativeArray, including buffers shorter than one DSP block.
-        let mut stereo = vec![0.0; frames * 2];
+        let mut samples = vec![0.0; frames * channels];
         // Preserve the internal DSP chunks and their arithmetic. Native capture delivers the
         // listener at the configured DSP-buffer boundary, as the submission profile records.
         // This renders no extra samples and leaves partial caller buffers untouched.
-        for block in stereo.chunks_mut(buffer * 2) {
+        for block in samples.chunks_mut(buffer * channels) {
             self.render_capture_block(block);
         }
         self.discard_output = discarded;
         let mono = self.config.speaker_mode == speaker_mode::MONO;
-        let mut samples = vec![0.0; frames * channels];
-        spread(&stereo, &mut samples, mono);
         for value in &mut samples {
             *value = capture::pcm16(*value);
         }
@@ -1730,20 +1745,31 @@ impl Mixer {
         prepare(samples)?;
         prepare(frames.min(BLOCK) * 2)?;
         prepare((frames % BLOCK) * 2)?;
+        // Scripts receive the output layout's channels (see `call_in_layout`).
+        let channels = self.config.output_channels();
+        if channels != 2 {
+            prepare(frames * channels)?;
+            prepare(frames.min(BLOCK) * channels)?;
+            prepare((frames % BLOCK) * channels)?;
+        }
         for source in self.sources.values_mut() {
             if source.params.has(source_flags::FILTER) {
                 source
                     .filtered
                     .try_reserve(samples.saturating_sub(source.filtered.len()))?;
+                let layout = frames * channels;
+                source
+                    .layout_scratch
+                    .try_reserve(layout.saturating_sub(source.layout_scratch.len()))?;
                 if source.filter_only() {
                     source
                         .generator
                         .current
-                        .try_reserve(samples.saturating_sub(source.generator.current.len()))?;
+                        .try_reserve(layout.saturating_sub(source.generator.current.len()))?;
                     source
                         .generator
                         .next
-                        .try_reserve(samples.saturating_sub(source.generator.next.len()))?;
+                        .try_reserve(layout.saturating_sub(source.generator.next.len()))?;
                 }
             }
             source.completed_shots.try_reserve(source.one_shots.len())?;
@@ -1809,10 +1835,12 @@ impl Mixer {
         }
     }
 
-    /// Processes one complete offline output block, including the listener's borrowed buffer.
+    /// Processes one complete offline output block in the output layout's channels, including
+    /// the listener's borrowed buffer: its scripts see, and may write, every channel.
     pub fn render_capture_block(&mut self, block: &mut [f32]) {
+        let channels = self.config.output_channels();
         self.capture_listener_batch = true;
-        self.render(block, 2);
+        self.render(block, channels);
         if self.listener_filter
             && self.has_listener
             && let Some(cb) = self.callback
@@ -1821,12 +1849,17 @@ impl Mixer {
                 callback::LISTENER_FILTER,
                 0,
                 block.as_mut_ptr(),
-                (block.len() / 2) as i32,
-                2,
+                (block.len() / channels) as i32,
+                channels as i32,
                 0,
             );
         }
-        self.listener_output.push(block);
+        // The output ring keeps the stereo lanes; the mixing buffer is free between blocks.
+        for chunk in block.chunks(BLOCK * channels) {
+            let frames = chunk.len() / channels;
+            fold(chunk, &mut self.mix[..frames * 2]);
+            self.listener_output.push(&self.mix[..frames * 2]);
+        }
         self.capture_listener_batch = false;
     }
 
@@ -1997,17 +2030,21 @@ impl Mixer {
             let buffer = &mut source_buffer[..n * 2];
             buffer.fill(0.0);
             let looping = flags & source_flags::LOOP != 0;
-            let gains = VoiceGains {
-                target: s.matrix.map(|g| g * volume),
-                mono_target: s.mono_matrix.map(|m| m.map(|g| g * volume)),
-                mono_pan: (source.params.spatial_blend <= 0.0
-                    && source
-                        .params
-                        .spatial_blend_curve
-                        .iter()
-                        .all(|value| *value <= 0.0))
-                .then_some(source.params.pan_stereo),
-                mono_output: config.speaker_mode == speaker_mode::MONO,
+            let layout = config.output_channels();
+            let gains = if config.speaker_mode == speaker_mode::MONO {
+                VoiceGains::mono_output(&s.mono_output, volume)
+            } else {
+                VoiceGains {
+                    target: s.matrix.map(|g| g * volume),
+                    mono_target: s.mono_matrix.map(|m| m.map(|g| g * volume)),
+                    mono_pan: (source.params.spatial_blend <= 0.0
+                        && source
+                            .params
+                            .spatial_blend_curve
+                            .iter()
+                            .all(|value| *value <= 0.0))
+                    .then_some(source.params.pan_stereo),
+                }
             };
             let dsp_frames = config.buffer_size.max(1) as u64;
             source.completion_frontier = (t0 + n as u64).div_ceil(dsp_frames) * dsp_frames;
@@ -2033,6 +2070,7 @@ impl Mixer {
                         handle,
                         buffer,
                         config.buffer_size.max(1) as usize,
+                        layout,
                         callback,
                     );
                     if flags & source_flags::SPATIAL_STEREO != 0 {
@@ -2129,13 +2167,13 @@ impl Mixer {
                                 bypass && !separate_return,
                             );
                             if let Some(cb) = callback {
-                                cb(
+                                call_in_layout(
+                                    cb,
                                     callback::SOURCE_FILTER,
                                     handle,
-                                    input.as_mut_ptr(),
-                                    (length / 2) as i32,
-                                    2,
-                                    0,
+                                    &mut input,
+                                    layout,
+                                    &mut source.layout_scratch,
                                 );
                             }
                             source.chain.process(
@@ -2359,13 +2397,13 @@ impl Mixer {
             && has_listener
             && let Some(cb) = callback
         {
-            cb(
+            call_in_layout(
+                cb,
                 callback::LISTENER_FILTER,
                 0,
-                self.mix.as_mut_ptr(),
-                n as i32,
-                2,
-                0,
+                &mut self.mix[..n * 2],
+                config.output_channels(),
+                &mut self.listener_layout,
             );
         }
         if !self.capture_listener_batch {
@@ -2648,10 +2686,55 @@ fn spread(stereo: &[f32], out: &mut [f32], mono: bool) {
         }
     }
 }
-/// The gain of each front channel when a stereo signal enters a mono output: the measured value
-/// is exactly this constant, not 1/sqrt(2) (Unity 6000.0.71f1, tests/projects/audiopitch
-/// `context_mono_*` controls).
-const STEREO_TO_MONO: f32 = 0.707;
+/// The most channels of any output layout (`Mode7point1`).
+pub(crate) const MAX_OUTPUT_CHANNELS: usize = 8;
+
+/// The inverse of [`spread`]: frames of `layout.len() / (stereo.len() / 2)` channels back onto
+/// the two graph lanes. A mono layout feeds both lanes; wider layouts keep the front pair (the
+/// graph carries no other channel).
+fn fold(layout: &[f32], stereo: &mut [f32]) {
+    let frames = stereo.len() / 2;
+    if frames == 0 {
+        return;
+    }
+    let channels = layout.len() / frames;
+    for (frame, pair) in layout
+        .chunks_exact(channels)
+        .zip(stereo.chunks_exact_mut(2))
+    {
+        pair[0] = frame[0];
+        pair[1] = if channels == 1 { frame[0] } else { frame[1] };
+    }
+}
+
+/// Calls an `OnAudioFilterRead` callback on stereo lanes with the output layout's `channels`,
+/// as Unity 6000.0.71f1 does for source and listener scripts (tests/projects/audiopitch
+/// `context_*_generator` and `context_*_listener`). `scratch` is sized once per layout.
+fn call_in_layout(
+    cb: Callback,
+    kind: i32,
+    handle: u64,
+    stereo: &mut [f32],
+    channels: usize,
+    scratch: &mut Vec<f32>,
+) {
+    let frames = stereo.len() / 2;
+    if channels == 2 {
+        cb(kind, handle, stereo.as_mut_ptr(), frames as i32, 2, 0);
+        return;
+    }
+    scratch.resize(frames * channels, 0.0);
+    spread(stereo, scratch, channels == 1);
+    cb(
+        kind,
+        handle,
+        scratch.as_mut_ptr(),
+        frames as i32,
+        channels as i32,
+        0,
+    );
+    fold(scratch, stereo);
+}
 
 /// A source's output gains for this block, before each voice picks its clip's matrix.
 #[derive(Clone, Copy)]
@@ -2662,11 +2745,21 @@ struct VoiceGains {
     mono_target: Option<[f32; 4]>,
     /// A 2D source's pan, applied with the equal-power law to mono clips without `mono_target`.
     mono_pan: Option<f32>,
-    /// A mono output: the group graph carries the mono signal on both lanes.
-    mono_output: bool,
 }
 
 impl VoiceGains {
+    /// A mono output: every voice enters the graph already mono, on both lanes, so
+    /// channel-symmetric effects (such as the Pitch Shifter) process it as Unity processes its
+    /// single channel and the final `(left + right) / 2` returns it unchanged.
+    fn mono_output(gains: &spatial::MonoGains, volume: f32) -> Self {
+        let [left, right] = gains.stereo.map(|g| g * volume);
+        let mono = gains.mono * volume;
+        Self {
+            target: [left, right, left, right],
+            mono_target: Some([mono, 0.0, mono, 0.0]),
+            mono_pan: None,
+        }
+    }
     /// The matrix of a clip with `channels` channels (a mono clip feeds both inputs).
     fn matrix(&self, channels: usize) -> [f32; 4] {
         let mono = channels == 1;
@@ -2692,31 +2785,7 @@ impl VoiceGains {
                 target[channel * 2 + 1] *= scale;
             }
         }
-        if self.mono_output {
-            target = collapse_to_mono(target, mono);
-        }
         target
-    }
-}
-
-/// Mono output (Unity 6000.0.71f1, tests/projects/audiopitch `context_mono_*`): a stereo clip
-/// enters as `0.707·(left + right)` of its panned stereo pair, pan included. A mono clip keeps
-/// the length of its stereo gain pair, which is independent of the 2D pan. Both lanes of the
-/// stereo graph then carry the same mono signal, so channel-symmetric effects (such as the
-/// Pitch Shifter) process it once per lane as Unity processes its single channel, and the
-/// final `(left + right) / 2` downmix returns it unchanged. 3D sources follow the same rule
-/// (unmeasured in mono).
-fn collapse_to_mono(matrix: [f32; 4], mono_clip: bool) -> [f32; 4] {
-    let [ll, lr, rl, rr] = matrix;
-    if mono_clip {
-        let left = ll + lr;
-        let right = rl + rr;
-        let gain = (left * left + right * right).sqrt();
-        [gain, 0.0, gain, 0.0]
-    } else {
-        let left = STEREO_TO_MONO * (ll + rl);
-        let right = STEREO_TO_MONO * (lr + rr);
-        [left, right, left, right]
     }
 }
 
@@ -3719,6 +3788,79 @@ mod tests {
             dsp.group_nodes[&3].last_active,
             remote.group_nodes[&3].last_active
         );
+    }
+
+    #[test]
+    fn scripts_receive_the_output_layout_channels() {
+        use std::cell::Cell;
+        thread_local! {
+            static GENERATED: Cell<i32> = const { Cell::new(0) };
+            static HEARD: Cell<i32> = const { Cell::new(0) };
+        }
+        // A clipless generator writes 0.25/-0.125 on its first two channels; the listener
+        // writes 0.125 into channel 4 when the layout has one.
+        extern "C" fn script(
+            kind: i32,
+            _: u64,
+            data: *mut f32,
+            frames: i32,
+            channels: i32,
+            _: i64,
+        ) {
+            let data =
+                unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+            let channels = channels as usize;
+            if kind == callback::SOURCE_FILTER {
+                GENERATED.with(|c| c.set(channels as i32));
+                for frame in data.chunks_exact_mut(channels) {
+                    frame[0] += 0.25;
+                    if channels > 1 {
+                        frame[1] -= 0.125;
+                    }
+                }
+            } else if kind == callback::LISTENER_FILTER {
+                HEARD.with(|c| c.set(channels as i32));
+                if channels > 4 {
+                    for frame in data.chunks_exact_mut(channels) {
+                        frame[4] += 0.125;
+                    }
+                }
+            }
+        }
+        for (mode, channels, front) in [
+            (speaker_mode::MONO, 1, vec![0.25]),
+            (speaker_mode::STEREO, 2, vec![0.25, -0.125]),
+            (speaker_mode::MODE_5POINT1, 6, vec![0.25, -0.125]),
+        ] {
+            let mut m = Mixer::new(MixerConfig {
+                speaker_mode: mode,
+                ..MixerConfig::default()
+            });
+            m.set_callback(Some(script));
+            m.listener_filter = true;
+            source_with(&mut m, 7, 0, |p| p.flags = source_flags::FILTER);
+            play(&mut m, 7, command::PLAY, 0.0);
+            let output = m.capture(4096 * channels, Vec::new()).unwrap();
+            assert_eq!(GENERATED.with(Cell::get), channels as i32, "mode {mode}");
+            assert_eq!(HEARD.with(Cell::get), channels as i32, "mode {mode}");
+            let last = &output.samples[output.samples.len() - channels..];
+            let mut expected = vec![0.0; channels];
+            expected[..front.len()].copy_from_slice(&front);
+            if channels > 4 {
+                expected[4] = 0.125;
+            }
+            let expected: Vec<f32> = expected.into_iter().map(capture::pcm16).collect();
+            assert_eq!(last, &expected[..], "mode {mode}");
+        }
+    }
+
+    #[test]
+    fn fold_returns_layout_frames_to_the_two_lanes() {
+        let mut stereo = [0.0; 4];
+        fold(&[0.5, -0.25], &mut stereo);
+        assert_eq!(stereo, [0.5, 0.5, -0.25, -0.25]);
+        fold(&[0.5, -0.25, 1.0, 1.0, 0.125, 0.25, 1.0, 1.0], &mut stereo);
+        assert_eq!(stereo, [0.5, -0.25, 0.125, 0.25]);
     }
 
     #[test]

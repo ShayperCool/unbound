@@ -48,7 +48,7 @@ namespace UnityEngine
 
         public static event AudioConfigurationChangeHandler OnAudioConfigurationChanged;
 
-        public static AudioSpeakerMode driverCapabilities => AudioSpeakerMode.Stereo;
+        public static AudioSpeakerMode driverCapabilities => AudioBackend.Current.DriverCapabilities;
 
         public static AudioSpeakerMode speakerMode
         {

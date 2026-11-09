@@ -286,20 +286,38 @@ pub struct Engine {
     capturing: Arc<AtomicBool>,
     capture_pending: Mutex<f64>,
     reset_worker: Mutex<Option<ResetWorker>>,
+    /// The output channels the virtual device stands for (see [`VIRTUAL_CHANNELS_VARIABLE`]).
+    virtual_channels: usize,
 }
 
-/// The layout the mixer runs for a requested speaker mode. A device with fewer channels than the
-/// layout runs stereo DSP while `AudioSettings.GetConfiguration` keeps the request (Unity
-/// 6000.0.71f1 with Quad, Surround, 5.1 and 7.1 requests on a two-channel device,
-/// tests/projects/audiopitch capture notes); the Manual only says the device may override it.
-fn active_speaker_mode(requested: i32, device_channels: Option<usize>) -> i32 {
-    let layout = MixerConfig {
-        speaker_mode: requested,
-        ..MixerConfig::default()
-    };
-    match device_channels {
-        Some(channels) if layout.output_channels() > channels => mixer::speaker_mode::STEREO,
-        _ => requested,
+/// Overrides the channel count of the virtual device that runs without an output device.
+pub const VIRTUAL_CHANNELS_VARIABLE: &str = "UNBOUND_AUDIO_DEVICE_CHANNELS";
+/// The virtual device's default: a stereo device, the usual output.
+const VIRTUAL_CHANNELS: usize = 2;
+
+/// `AudioSettings.driverCapabilities` of a device with `channels` output channels (Unity
+/// 6000.0.71f1, tests/projects/audiopitch `device_*`): 4 channels report Quad, 6 report 5.1,
+/// 8 report 7.1, every other count Stereo.
+pub fn driver_capabilities(channels: usize) -> i32 {
+    use mixer::speaker_mode::*;
+    match channels {
+        4 => QUAD,
+        6 => MODE_5POINT1,
+        8 => MODE_7POINT1,
+        _ => STEREO,
+    }
+}
+
+/// The layout the mixer runs for a requested speaker mode on a device of `device_channels`: a
+/// request above the driver's capabilities runs at the capabilities, Prologic always runs, and
+/// `AudioSettings.GetConfiguration` keeps the request (tests/projects/audiopitch `device_*`).
+/// The Manual says only that the device may override a requested mode.
+fn active_speaker_mode(requested: i32, device_channels: usize) -> i32 {
+    let capabilities = driver_capabilities(device_channels);
+    if requested != mixer::speaker_mode::PROLOGIC && capabilities < requested {
+        capabilities
+    } else {
+        requested
     }
 }
 
@@ -330,6 +348,11 @@ impl Engine {
             capturing: Arc::new(AtomicBool::new(false)),
             capture_pending: Mutex::new(0.0),
             reset_worker: Mutex::new(None),
+            virtual_channels: std::env::var(VIRTUAL_CHANNELS_VARIABLE)
+                .ok()
+                .and_then(|value| value.parse::<usize>().ok())
+                .filter(|channels| (1..=mixer::MAX_OUTPUT_CHANNELS).contains(channels))
+                .unwrap_or(VIRTUAL_CHANNELS),
         };
         engine
             .start(configuration, open_device)
@@ -342,13 +365,14 @@ impl Engine {
     }
 
     /// The mixer configuration for `requested` on a device of `device_channels` (None: the
-    /// virtual device, which plays every layout).
+    /// virtual device).
     fn mixer_config(
         &self,
         requested: AudioConfiguration,
         rate: u32,
         device_channels: Option<usize>,
     ) -> MixerConfig {
+        let device_channels = device_channels.unwrap_or(self.virtual_channels);
         MixerConfig {
             sample_rate: rate,
             buffer_size: requested.dsp_buffer_size.max(64),
@@ -414,6 +438,15 @@ impl Engine {
         Ok(())
     }
 
+    /// The output channels of the open device, else of the virtual device.
+    pub fn device_channels(&self) -> usize {
+        self.device
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map_or(self.virtual_channels, |d| d.channels())
+    }
+
     pub fn has_device(&self) -> bool {
         self.device.lock().unwrap().is_some()
     }
@@ -449,7 +482,10 @@ impl Engine {
             return false;
         }
         let tail = if finish_capture_buffer && self.capturing.load(Ordering::Acquire) {
-            let samples = self.mixer().config.buffer_size.max(1) as usize * 2;
+            let samples = {
+                let mixer = self.mixer();
+                mixer.config.buffer_size.max(1) as usize * mixer.config.output_channels()
+            };
             if samples > capture::MAX_SAMPLES {
                 tracing::warn!(
                     "audio reset rejected: closing capture buffer exceeds the supported allocation limit"
@@ -927,20 +963,36 @@ mod tests {
     }
 
     #[test]
-    fn layouts_wider_than_the_device_run_stereo() {
-        // (requested AudioSpeakerMode, device channels) -> mode the mixer runs.
-        for (requested, device, active) in [
-            (5, Some(2), 2),
-            (6, Some(2), 2),
-            (3, Some(2), 2),
-            (1, Some(2), 1),
-            (2, Some(2), 2),
-            (6, Some(8), 6),
-            (5, Some(8), 5),
-            (6, None, 6),
-            (1, None, 1),
+    fn requests_above_the_driver_capabilities_run_at_them() {
+        use mixer::speaker_mode::*;
+        let modes = [
+            MONO,
+            STEREO,
+            QUAD,
+            SURROUND,
+            MODE_5POINT1,
+            MODE_7POINT1,
+            PROLOGIC,
+        ];
+        // Device channels -> (capabilities, active layout per requested mode), as recorded.
+        for (device, capabilities, active) in [
+            (1, STEREO, [1, 2, 2, 2, 2, 2, 7]),
+            (2, STEREO, [1, 2, 2, 2, 2, 2, 7]),
+            (3, STEREO, [1, 2, 2, 2, 2, 2, 7]),
+            (4, QUAD, [1, 2, 3, 3, 3, 3, 7]),
+            (5, STEREO, [1, 2, 2, 2, 2, 2, 7]),
+            (6, MODE_5POINT1, [1, 2, 3, 4, 5, 5, 7]),
+            (7, STEREO, [1, 2, 2, 2, 2, 2, 7]),
+            (8, MODE_7POINT1, [1, 2, 3, 4, 5, 6, 7]),
         ] {
-            assert_eq!(active_speaker_mode(requested, device), active);
+            assert_eq!(driver_capabilities(device), capabilities);
+            for (requested, active) in modes.into_iter().zip(active) {
+                assert_eq!(
+                    active_speaker_mode(requested, device),
+                    active,
+                    "{device} {requested}"
+                );
+            }
         }
     }
 

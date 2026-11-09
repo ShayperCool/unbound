@@ -834,6 +834,10 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 "project": s.audio.settings,
                 "configuration": s.audio.configuration(),
                 "device": s.audio.has_device(),
+                // `driverCapabilities` and the layout the mixer runs, which a device narrower
+                // than the request lowers while the configuration keeps the request.
+                "driverCapabilities": crate::audio::driver_capabilities(s.audio.device_channels()),
+                "activeSpeakerMode": s.audio.mixer().config.speaker_mode,
             })
             .to_string())
         }

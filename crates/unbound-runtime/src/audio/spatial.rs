@@ -187,8 +187,45 @@ pub struct Spatialized {
     pub matrix: [f32; 4],
     /// A mono clip has one input channel, including when spread creates two directions.
     pub mono_matrix: Option<[f32; 4]>,
+    /// The gains into a mono output (`AudioSpeakerMode.Mono`), see [`MonoGains`].
+    pub mono_output: MonoGains,
     pub pitch: f32,
     pub audibility: f32,
+}
+
+/// Gains into a mono output, Unity 6000.0.71f1 (tests/projects/audiopitch `context_mono_*`).
+/// The 2D part mixes the panned speaker levels down to the one speaker: a stereo clip's channels
+/// at [`STEREO_TO_MONO`] times their pan gain, a mono clip at the length of its two pan gains
+/// (pan-independent). The 3D part puts every direction on that speaker at unity, so spread has
+/// no effect. Spatial blend mixes the speaker levels of both parts; attenuation blends apart.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MonoGains {
+    /// A stereo clip's left and right channel.
+    pub stereo: [f32; 2],
+    /// A mono clip.
+    pub mono: f32,
+}
+
+/// The level of each channel of a stereo signal mixed down to a mono speaker: exactly this
+/// constant, not 1/sqrt(2) (Unity 6000.0.71f1, tests/projects/audiopitch `context_mono_plain`).
+pub const STEREO_TO_MONO: f32 = 0.707;
+
+impl MonoGains {
+    /// `pan`: `panStereo`; `blend`: spatial blend; `volume`: the blended attenuation.
+    fn new(pan: f32, blend: f32, volume: f32) -> Self {
+        let flat = 1.0 - blend;
+        let [l2, r2] = balance(pan);
+        let pan = pan.clamp(-1.0, 1.0);
+        let left = flat * ((1.0 - pan) * 0.5).sqrt() + blend;
+        let right = flat * ((1.0 + pan) * 0.5).sqrt();
+        Self {
+            stereo: [
+                (flat * (STEREO_TO_MONO * l2) + blend) * volume,
+                (flat * (STEREO_TO_MONO * r2) + blend) * volume,
+            ],
+            mono: (left * left + right * right).sqrt() * volume,
+        }
+    }
 }
 
 impl Default for Spatialized {
@@ -196,6 +233,7 @@ impl Default for Spatialized {
         Self {
             matrix: [1.0, 0.0, 0.0, 1.0],
             mono_matrix: None,
+            mono_output: MonoGains::new(0.0, 0.0, 1.0),
             pitch: 1.0,
             audibility: 1.0,
         }
@@ -253,6 +291,7 @@ fn spatialize_impl(
     if blend <= 0.0 {
         return Spatialized {
             matrix: [l2, 0.0, 0.0, r2],
+            mono_output: MonoGains::new(s.pan_stereo, 0.0, 1.0),
             mono_matrix: measured.then(|| {
                 let pan = s.pan_stereo.clamp(-1.0, 1.0);
                 [
@@ -372,11 +411,13 @@ fn spatialize_impl(
         ];
         mono_matrix = None;
     }
+    let volume = flat + blend * gain;
     Spatialized {
         matrix,
         mono_matrix,
+        mono_output: MonoGains::new(s.pan_stereo, blend, volume),
         pitch,
-        audibility: flat + blend * gain,
+        audibility: volume,
     }
 }
 
@@ -648,5 +689,27 @@ mod tests {
         assert_eq!(sample_table(&[0.0, 1.0], 0.25), 0.25);
         assert_eq!(sample_table(&[0.0, 1.0], 2.0), 1.0);
         assert_eq!(sample_table(&[3.0], 0.7), 3.0);
+    }
+
+    #[test]
+    fn mono_output_gains_blend_speaker_levels_before_the_downmix() {
+        // 2D: stereo clips at 0.707 times their pan gains, mono clips at full level.
+        let flat = MonoGains::new(-0.5, 0.0, 1.0);
+        assert_eq!(flat.stereo, [STEREO_TO_MONO, STEREO_TO_MONO * 0.5]);
+        assert_eq!(flat.mono, 1.0);
+        // Full 3D: unity per channel, so only the attenuation remains.
+        let full = MonoGains::new(0.5, 1.0, 0.25);
+        assert_eq!(full.stereo, [0.25, 0.25]);
+        assert_eq!(full.mono, 0.25);
+        // Half blend, pan -0.5 (tests/projects/audiopitch `context_mono_3d_half`): the levels
+        // (0.933, 0.25) mix down to 0.9659, times the blended attenuation.
+        let gain = 1.0 / 5f32.sqrt();
+        let volume = 0.5 + 0.5 * gain;
+        let half = MonoGains::new(-0.5, 0.5, volume);
+        assert!(
+            (half.mono - 0.965_925_8 * volume).abs() < 1e-6,
+            "{}",
+            half.mono
+        );
     }
 }

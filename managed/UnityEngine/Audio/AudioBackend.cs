@@ -65,6 +65,11 @@ namespace Unbound.Runtime
         internal abstract bool OutputData(ulong handle, int channel, Span<float> data, int window);
         internal abstract ProjectAudioSettings ProjectSettings { get; }
         internal abstract AudioConfiguration Configuration { get; }
+        /// <summary>The output device's speaker capability (<c>AudioSettings.driverCapabilities</c>).</summary>
+        internal abstract AudioSpeakerMode DriverCapabilities { get; }
+        /// <summary>The layout the mixer runs: the requested mode, lowered to the driver's
+        /// capabilities (Prologic excepted). <see cref="Configuration"/> keeps the request.</summary>
+        internal abstract AudioSpeakerMode ActiveSpeakerMode { get; }
         internal abstract bool Reset(AudioConfiguration configuration);
         internal abstract void InstallCallback();
     }
@@ -79,6 +84,8 @@ namespace Unbound.Runtime
             public ProjectAudioSettings Project { get; set; }
             public ConfigurationJson Configuration { get; set; }
             public bool Device { get; set; }
+            public int DriverCapabilities { get; set; }
+            public int ActiveSpeakerMode { get; set; }
         }
 
         sealed class ConfigurationJson
@@ -189,6 +196,9 @@ namespace Unbound.Runtime
                 };
             }
         }
+
+        internal override AudioSpeakerMode DriverCapabilities => (AudioSpeakerMode)Query().DriverCapabilities;
+        internal override AudioSpeakerMode ActiveSpeakerMode => (AudioSpeakerMode)Query().ActiveSpeakerMode;
 
         internal override bool Reset(AudioConfiguration configuration)
         {
@@ -527,6 +537,12 @@ namespace Unbound.Runtime
         internal override ProjectAudioSettings ProjectSettings => Project;
 
         internal override AudioConfiguration Configuration => m_Configuration;
+        // Without the native backend there is no device: a stereo driver, as the native virtual
+        // device's default.
+        internal override AudioSpeakerMode DriverCapabilities => AudioSpeakerMode.Stereo;
+        internal override AudioSpeakerMode ActiveSpeakerMode =>
+            m_Configuration.speakerMode > AudioSpeakerMode.Stereo && m_Configuration.speakerMode != AudioSpeakerMode.Prologic
+                ? AudioSpeakerMode.Stereo : m_Configuration.speakerMode;
 
         internal override bool Reset(AudioConfiguration configuration)
         {
