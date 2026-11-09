@@ -409,8 +409,17 @@ pub fn read_cluster_materials(bytes: &[u8], width: u32, height: u32) -> Result<C
             sum += *weight as u32;
             next += 1;
         }
+        ensure!(
+            sum == points as u32,
+            "material sample weights of {sum} for {points} points"
+        );
     }
     group_samples.push(next as u32);
+    ensure!(
+        next == samples.len(),
+        "{} material samples, {next} of them in groups",
+        samples.len()
+    );
     Ok(ClusterMaterials {
         instance_renderers,
         cluster_groups,

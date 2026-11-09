@@ -82,6 +82,12 @@ struct Room {
     intensity: f32,
     bounce: f32,
     indirect_scale: f32,
+    /// The panel material's emission color (HDR, in the material's gamma space).
+    panel_emission: [f32; 3],
+    /// What DynamicGI.SetEmissive gave the panel (linear), if anything.
+    panel_set_emissive: Option<[f32; 3]>,
+    /// The left wall's color.
+    left: [f32; 3],
 }
 
 const BASE: Room = Room {
@@ -89,8 +95,13 @@ const BASE: Room = Room {
     intensity: 2.0,
     bounce: 1.0,
     indirect_scale: 1.0,
+    panel_emission: [2.0, 1.0, 0.2], // (1, 0.5, 0.1) * 2
+    panel_set_emissive: None,
+    left: [0.8, 0.1, 0.1],
 };
 const MOVED: [f32; 3] = [1.5, 2.5, -1.5];
+/// The emissive panel's renderer (scene object file ID).
+const PANEL: i64 = 1629154324;
 
 /// Converges the Room scene's system under `room` and compares it with the reference `case`:
 /// (values outside the probe comparator's tolerance, values compared, median relative error).
@@ -103,17 +114,21 @@ fn converge(room: &Room, case: &str) -> (usize, usize, f32) {
         [..system.renderer_count]
         .iter()
         .map(|&(object, _)| match object {
-            1629154324 => ([0.2, 0.2, 0.2], [2.0, 1.0, 0.2]), // Panel, emission (1, 0.5, 0.1) * 2
-            308039783 => ([0.8, 0.1, 0.1], [0.0; 3]),         // Left
-            1583214537 => ([0.1, 0.8, 0.1], [0.0; 3]),        // Right
+            PANEL => ([0.2, 0.2, 0.2], room.panel_emission),
+            308039783 => (room.left, [0.0; 3]),        // Left
+            1583214537 => ([0.1, 0.8, 0.1], [0.0; 3]), // Right
             973394265 | 152063223 | 605051979 | 948094850 => (white, [0.0; 3]),
             other => panic!("unknown renderer {other}"),
         })
         .collect();
     let (albedo, emission) = material_textures(&system, &colors);
-    let mut solver = SystemSolver::new(system).unwrap();
+    let panel = renderer_of(&data, PANEL);
+    let mut solver = SystemSolver::new(system, true).unwrap();
     solver.set_albedo(&albedo).unwrap();
     solver.set_emission(&emission).unwrap();
+    if let Some(color) = room.panel_set_emissive {
+        solver.set_renderer_emission(panel, color).unwrap();
+    }
     solver.set_uniform_environment([0.1, 0.12, 0.2].map(gamma_to_linear));
     solver.set_lights(&[PointLight {
         position: room.light,
@@ -335,7 +350,7 @@ fn clusters_of(system: &System, renderer: usize) -> Vec<usize> {
 }
 
 #[test]
-fn cluster_albedo_is_the_root_mean_square_of_its_samples() {
+fn cluster_albedo_follows_the_root_mean_square_model() {
     let data = room_data();
     let system = Arc::new(data.systems[0].clone());
     let t = &system.transport;
@@ -351,7 +366,7 @@ fn cluster_albedo_is_the_root_mean_square_of_its_samples() {
         };
         texel.copy_from_slice(&[v, v, v, 255]);
     }
-    let mut solver = SystemSolver::new(system.clone()).unwrap();
+    let mut solver = SystemSolver::new(system.clone(), true).unwrap();
     solver.set_albedo(&albedo).unwrap();
     let m = &system.materials;
     for c in 0..system.input.clusters() {
@@ -385,10 +400,10 @@ fn cluster_albedo_is_the_root_mean_square_of_its_samples() {
 }
 
 #[test]
-fn set_emissive_overrides_a_renderers_texels_until_cleared() {
+fn set_emissive_keeps_a_renderers_color_over_later_textures() {
     let data = room_data();
     let system = Arc::new(data.systems[0].clone());
-    let panel = renderer_of(&data, 1629154324);
+    let panel = renderer_of(&data, PANEL);
     let block = renderer_of(&data, 152063223);
     let texels = (system.transport.width * system.transport.height) as usize;
     let uniform = |rgb: [f32; 3]| {
@@ -396,7 +411,7 @@ fn set_emissive_overrides_a_renderers_texels_until_cleared() {
             .flat_map(|_| [rgb[0], rgb[1], rgb[2], 1.0])
             .collect::<Vec<f32>>()
     };
-    let mut solver = SystemSolver::new(system.clone()).unwrap();
+    let mut solver = SystemSolver::new(system.clone(), true).unwrap();
     solver.set_emission(&uniform([0.5, 0.25, 0.125])).unwrap();
     let panel_clusters = clusters_of(&system, panel);
     let block_clusters = clusters_of(&system, block);
@@ -405,9 +420,11 @@ fn set_emissive_overrides_a_renderers_texels_until_cleared() {
         assert_eq!(solver.cluster_materials().1[c], [0.5, 0.25, 0.125]);
     }
     solver
-        .set_renderer_emission(panel, Some([0.0, 3.0, 3.0]))
+        .set_renderer_emission(panel, [0.0, 3.0, 3.0])
         .unwrap();
-    // A material change after it (the texture rendered again) keeps the renderer's own color.
+    // A material change after it (the texture rendered again) keeps the renderer's own color
+    // (measured for the renderer itself); other renderers take the new texture (Unbound's
+    // model: the probe changes the panel alone).
     solver.set_emission(&uniform([1.0, 0.0, 1.0])).unwrap();
     for &c in &panel_clusters {
         assert_eq!(solver.cluster_materials().1[c], [0.0, 3.0, 3.0]);
@@ -415,21 +432,66 @@ fn set_emissive_overrides_a_renderers_texels_until_cleared() {
     for &c in &block_clusters {
         assert_eq!(solver.cluster_materials().1[c], [1.0, 0.0, 1.0]);
     }
-    solver.set_renderer_emission(panel, None).unwrap();
-    for &c in &panel_clusters {
-        assert_eq!(solver.cluster_materials().1[c], [1.0, 0.0, 1.0]);
-    }
     // Emission is kept as a half float.
     solver.set_emission(&uniform([0.1, 1e9, -1.0])).unwrap();
     let e = solver.cluster_materials().1[block_clusters[0]];
     assert_eq!(e, [half::f16::from_f32(0.1).to_f32(), 65504.0, 0.0]);
-    assert!(solver.set_renderer_emission(99, None).is_err());
+    assert!(solver.set_renderer_emission(99, [0.0; 3]).is_err());
+}
+
+#[test]
+fn gamma_space_projects_fail() {
+    let data = room_data();
+    let error = SystemSolver::new(Arc::new(data.systems[0].clone()), false)
+        .err()
+        .unwrap()
+        .to_string();
+    assert!(error.contains("gamma-space"), "{error}");
 }
 
 #[test]
 fn material_textures_of_another_size_fail() {
     let data = room_data();
-    let mut solver = SystemSolver::new(Arc::new(data.systems[0].clone())).unwrap();
+    let mut solver = SystemSolver::new(Arc::new(data.systems[0].clone()), true).unwrap();
     assert!(solver.set_albedo(&[0u8; 16]).is_err());
     assert!(solver.set_emission(&[0f32; 16]).is_err());
+}
+
+#[test]
+fn material_changes_match_the_editor() {
+    // The light moved and twice as intense, as in the probe from room-intensity on.
+    let lit = Room {
+        light: MOVED,
+        intensity: 4.0,
+        ..BASE
+    };
+    // The panel's material emission changed and its texture rendered again.
+    let call = Room {
+        panel_emission: [0.4, 2.0, 0.4], // (0.2, 1, 0.2) * 2
+        ..lit
+    };
+    check(&call, "room-emission-call", 45, 0.006);
+    // DynamicGI.SetEmissive(panel, (0, 1, 1) * 3): the color is taken to linear as a material
+    // color is (raw, 948 of 5070 values are outside the tolerance).
+    let set = Room {
+        panel_set_emissive: Some([0.0, 3.0, 3.0].map(gamma_to_linear)),
+        ..call
+    };
+    check(&set, "room-setemissive", 45, 0.006);
+    // A material emission change rendered after it does not replace it.
+    let then = Room {
+        panel_emission: [3.0, 0.0, 3.0],
+        ..set
+    };
+    check(&then, "room-setemissive-then-call", 45, 0.006);
+    // The left wall turned blue and its texture rendered again (UpdateGIMaterials).
+    check(
+        &Room {
+            left: [0.1, 0.1, 0.8],
+            ..then
+        },
+        "room-albedo-call",
+        45,
+        0.006,
+    );
 }

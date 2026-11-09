@@ -82,6 +82,8 @@ pub struct SystemSolver {
     /// The emission texture (linear, system resolution) and the renderers' own emissions.
     emission_texels: Vec<[f32; 3]>,
     renderer_emission: Vec<Option<[f32; 3]>>,
+    /// The clusters' emission is computed from the two above before the next update.
+    emission_dirty: bool,
     bounce: Vec<[f32; 3]>,
     values: Vec<[f32; 3]>,
     environment: Vec<[f32; 3]>,
@@ -100,8 +102,12 @@ fn mul_add(acc: &mut [f32; 3], w: f32, v: [f32; 3]) {
 }
 
 impl SystemSolver {
-    /// Fails for transports that reference other systems (not supported yet).
-    pub fn new(system: Arc<System>) -> Result<Self> {
+    /// `linear_space`: the project's color space is linear (gamma-space projects are not measured
+    /// and fail). Fails for transports that reference other systems (not supported yet).
+    pub fn new(system: Arc<System>, linear_space: bool) -> Result<Self> {
+        if !linear_space {
+            bail!("precomputed realtime GI in a gamma-space project is not supported yet");
+        }
         let sources = system
             .transport
             .dependencies
@@ -157,6 +163,7 @@ impl SystemSolver {
             emission: vec![[0.0; 3]; clusters],
             emission_texels: vec![[0.0; 3]; texels],
             renderer_emission: vec![None; system.renderer_count],
+            emission_dirty: false,
             bounce: vec![[0.0; 3]; clusters],
             values: vec![[0.0; 3]; system.input.values()],
             environment: vec![[0.0; 3]; ENVIRONMENT_VALUES],
@@ -253,28 +260,29 @@ impl SystemSolver {
         for (texel, v) in self.emission_texels.iter_mut().zip(rgba.chunks_exact(4)) {
             *texel = [v[0], v[1], v[2]];
         }
-        self.update_emission();
+        self.emission_dirty = true;
         Ok(())
     }
 
-    /// DynamicGI.SetEmissive: the emission (linear) of renderer `renderer` of the system for
-    /// all its points instead of its texels (None: its texels again).
-    pub fn set_renderer_emission(
-        &mut self,
-        renderer: usize,
-        color: Option<[f32; 3]>,
-    ) -> Result<()> {
+    /// DynamicGI.SetEmissive: renderer `renderer` of the system emits `color` (linear) for all its
+    /// points instead of its texels, also after later emission textures (measured:
+    /// tests/projects/realtimegi room-setemissive-then-call). The clusters are computed once
+    /// before the next update, however many renderers change.
+    pub fn set_renderer_emission(&mut self, renderer: usize, color: [f32; 3]) -> Result<()> {
         let Some(slot) = self.renderer_emission.get_mut(renderer) else {
             bail!("renderer {renderer} of {}", self.renderer_emission.len());
         };
-        *slot = color;
-        self.update_emission();
+        *slot = Some(color);
+        self.emission_dirty = true;
         Ok(())
     }
 
     /// Each cluster's emission: the weighted mean of its samples' texels (a renderer with an
     /// emission of its own counts it for all its points), kept as a half float.
     fn update_emission(&mut self) {
+        if !std::mem::take(&mut self.emission_dirty) {
+            return;
+        }
         let m = &self.system.materials;
         let width = self.system.transport.width as usize;
         for c in 0..self.emission.len() {
@@ -326,6 +334,7 @@ impl SystemSolver {
     /// One update: radiance from the current direct light and bounce, the transport into the
     /// texels and the next bounce. Returns the largest change of a bounce value.
     pub fn update(&mut self) -> f32 {
+        self.update_emission();
         let system = &*self.system;
         let clusters = self.direct.len();
         for c in 0..clusters {
@@ -403,7 +412,8 @@ impl SystemSolver {
     }
 
     /// Per cluster, the albedo it is lit with (the square of its 8-bit albedo) and its emission.
-    pub fn cluster_materials(&self) -> (&[[f32; 3]], &[[f32; 3]]) {
+    pub fn cluster_materials(&mut self) -> (&[[f32; 3]], &[[f32; 3]]) {
+        self.update_emission();
         (&self.albedo2, &self.emission)
     }
 
