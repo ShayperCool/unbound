@@ -25,11 +25,13 @@ namespace UnityEngine.Tests
         readonly float m_MaximumParticleDeltaTime = Time.s_MaximumParticleDeltaTime;
         readonly int m_FrameCount = Time.s_FrameCount;
         readonly string m_Version = ProjectInfo.UnityVersion;
+        readonly Vector3 m_Gravity = Physics.gravity;
         readonly List<Object> m_Objects = new List<Object>();
 
         public ParticlePrewarmSubEmitterTests()
         {
             ProjectInfo.UnityVersion = "6000.0.71f1";
+            Physics.gravity = new Vector3(0f, -9.81f, 0f);
             Time.s_DeltaTime = Dt;
             Time.s_UnscaledDeltaTime = Dt;
             Time.s_InFixedTimeStep = false;
@@ -41,6 +43,7 @@ namespace UnityEngine.Tests
             foreach (var o in m_Objects) Object.DestroyImmediate(o);
             ParticleSystemManager.EndUpdateAll();
             ProjectInfo.UnityVersion = m_Version;
+            Physics.gravity = m_Gravity;
             Time.s_DeltaTime = m_DeltaTime;
             Time.s_UnscaledDeltaTime = m_UnscaledDeltaTime;
             Time.s_InFixedTimeStep = m_InFixedTimeStep;
