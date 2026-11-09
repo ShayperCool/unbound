@@ -369,22 +369,9 @@ records now match. [Stop](https://docs.unity3d.com/6000.0/Documentation/ScriptRe
 documents stopping emission or clearing particles; the precise subsequent Simulate
 history here is measured. Existing playback, stop callback and clear controls remain gates.
 
-P8 has **1171/1204 strict positional matches**, **33 verified permutation residuals**
-and **zero functional failures**. The 33 residual keys in Unity 6000.0.71f1 are:
-
-- `birthlife/batch/nothing/child/1` through `/19`, plus `/end/20` and `/end/21`;
-- `birthlife/batch/lifetime/child/1` through `/10`;
-- `birthlife/cohorts/lifetime/child/15` and `birthlife/stop/lifetime/child/15`.
-
-Each differs only in buffer slots. Counts, complete seed identity multiplicity and
-all 33 per-particle fields agree at the unchanged tolerances. Classification refuses
-missing, extra, duplicate or lost identities and any field mismatch. Strict positional
-failures, every failing index and both full raw records remain printed separately.
-No ordering rule or engine sort is added. The measured per-seed trajectories, inherited
-start lifetime, expiry call and callback effects agree; the existing P6/P7 clock and
-history controls retain their results. This does not promise an order to scripts that
-index particles by buffer slot. Four classifier regression tests reject changed fields,
-counts, duplicate/lost/extra particles and contexts outside these exact keys.
+P8 has **1204/1204 strict positional matches**: the Birth lifetime records that differed
+only in buffer slots match since each sub-emitter emission starts as its own four-slot batch
+(see `EmitFromParent`), as tests/projects/particlemeshshape texture/clip/deathsub measures.
 
 The combined result is **4496/4704 strict record matches**, **208 classified residuals**
 and **zero unexpected differences**. The old 3308-key window remains 3133 strict
@@ -434,5 +421,5 @@ call loses one more child in Unity; Unity keeps a dead particle whose trail stil
 the buffer at zero lifetime, and a newborn moved into its freed slot moves differently.
 How MinMaxCurve values are stored and returned is measured separately in
 tests/projects/particlecurves. The rate batch's own expiry compaction stays ascending: the four-slot
-order regresses `ratebatch/edge`. The 31 remaining `birthlife/batch` permutations are not
-explained by either order.
+order regresses `ratebatch/edge`. The `birthlife/batch` permutations came from sub-emitter
+emissions not starting as batches.

@@ -85,8 +85,8 @@ Everything below is measured in this release, not documented.
   0.25 s, 0.5 s, 1.25 s; the last of ten Burst Spread lanes) snap to the neighbouring step.
 - `warning-timing` (6): Unity logs the invalid-mesh warning and the mixed-primitive assertion when
   the mesh is set, which the probe counts for the scenario before; Unbound logs them while emitting.
-- `subemitter-batch` (6): Unity starts each sub-emitter emission as its own batch; Unbound starts
-  sub-emitter births one by one (child order, clipped count). Open.
+- `subemitter-batch` (2): sub-emitter emissions start as their own four-slot batches in both, but of
+  the clipped Death children (`subbirths`) Unity keeps 22 and Unbound 24. Open.
 
 Unmeasured: the Sprite and SpriteRenderer shapes' texture mapping (reported as not simulated),
 imported non-readable meshes, other releases.

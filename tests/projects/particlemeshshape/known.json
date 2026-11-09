@@ -1,56 +1,52 @@
 {
-  "loop-edge-colour": {
-    "reason": "Edge Loop with Single Material submesh 1: in some particles one colour channel differs by 1/255, where the place along the edge (from the emission time) falls differently by a float tie; positions and directions match.",
-    "keys": [
-      "loop/edge/tris/1/color"
-    ]
-  },
-  "spread-boundary": {
-    "reason": "Loop modes with spread 0.25 and Burst Spread with spread 0.3: particles whose place lands exactly on a spread step (born at 0.25 s, 0.5 s or 1.25 s; the last of ten burst lanes) snap to the neighbouring step in Unbound, a float tie of the emission time or the step quotient; every other particle matches.",
-    "keys": [
-      "loop/edge/1/0.25/0",
-      "loop/edge/1/0.25/1",
-      "loop/edge/1/0.25/2",
-      "loop/edge/1/0.25/3",
-      "pingpong/edge/1/0.25/0",
-      "pingpong/edge/1/0.25/1",
-      "pingpong/edge/1/0.25/2",
-      "pingpong/edge/1/0.25/3",
-      "spread/circle/20/0",
-      "spread/circle/20/1",
-      "spread/circle/20/2",
-      "spread/circle/20/3",
-      "spread/edge/20/0",
-      "spread/edge/20/1",
-      "spread/edge/20/2",
-      "spread/edge/20/3",
-      "spread/mesh/20/0",
-      "spread/mesh/20/1",
-      "spread/mesh/20/2",
-      "spread/mesh/20/3",
-      "spread/circle/burst"
-    ]
-  },
-  "warning-timing": {
-    "reason": "Unity logs the invalid-mesh warning and the mixed-primitive assertion when the system gets the mesh, which the probe counts for the scenario before; Unbound logs them while emitting. The same messages, attributed one scenario apart.",
-    "keys": [
-      "messages/lines/vertex",
-      "messages/lines/edge",
-      "messages/lines/triangle",
-      "messages/topology/mixed1/triangle",
-      "messages/topology/quads/triangle",
-      "messages/topology/strip/triangle"
-    ]
-  },
-  "subemitter-batch": {
-    "reason": "Sub-emitter births with the shape texture: Unity starts each sub-emitter emission as its own four-slot batch (the order after an unaligned count, and the count lowered by every discarded lane, padding included); Unbound starts them one by one, so the children's order (deathsub, from the second burst on; counts match) and the clipped count (subbirths: 22 kept in Unity, 32 in Unbound) differ. Open follow-up.",
-    "keys": [
-      "texture/clip/deathsub/0/child",
-      "texture/clip/deathsub/0/child/color",
-      "texture/clip/deathsub/1/child",
-      "texture/clip/deathsub/1/child/color",
-      "texture/clip/subbirths/1/child",
-      "texture/clip/subbirths/1/child/color"
-    ]
-  }
+ "loop-edge-colour": {
+  "reason": "Edge Loop with Single Material submesh 1: in some particles one colour channel differs by 1/255, where the place along the edge (from the emission time) falls differently by a float tie; positions and directions match.",
+  "keys": [
+   "loop/edge/tris/1/color"
+  ]
+ },
+ "spread-boundary": {
+  "reason": "Loop modes with spread 0.25 and Burst Spread with spread 0.3: particles whose place lands exactly on a spread step (born at 0.25 s, 0.5 s or 1.25 s; the last of ten burst lanes) snap to the neighbouring step in Unbound, a float tie of the emission time or the step quotient; every other particle matches.",
+  "keys": [
+   "loop/edge/1/0.25/0",
+   "loop/edge/1/0.25/1",
+   "loop/edge/1/0.25/2",
+   "loop/edge/1/0.25/3",
+   "pingpong/edge/1/0.25/0",
+   "pingpong/edge/1/0.25/1",
+   "pingpong/edge/1/0.25/2",
+   "pingpong/edge/1/0.25/3",
+   "spread/circle/20/0",
+   "spread/circle/20/1",
+   "spread/circle/20/2",
+   "spread/circle/20/3",
+   "spread/edge/20/0",
+   "spread/edge/20/1",
+   "spread/edge/20/2",
+   "spread/edge/20/3",
+   "spread/mesh/20/0",
+   "spread/mesh/20/1",
+   "spread/mesh/20/2",
+   "spread/mesh/20/3",
+   "spread/circle/burst"
+  ]
+ },
+ "warning-timing": {
+  "reason": "Unity logs the invalid-mesh warning and the mixed-primitive assertion when the system gets the mesh, which the probe counts for the scenario before; Unbound logs them while emitting. The same messages, attributed one scenario apart.",
+  "keys": [
+   "messages/lines/vertex",
+   "messages/lines/edge",
+   "messages/lines/triangle",
+   "messages/topology/mixed1/triangle",
+   "messages/topology/quads/triangle",
+   "messages/topology/strip/triangle"
+  ]
+ },
+ "subemitter-batch": {
+  "reason": "Death sub-emitter births with the shape texture discarding half the child's lanes (subbirths): each emission starts as its own four-slot batch in both, but Unity keeps 22 children after the second update and Unbound 24 (32 before the batches); the deathsub order matches. Open follow-up.",
+  "keys": [
+   "texture/clip/subbirths/1/child",
+   "texture/clip/subbirths/1/child/color"
+  ]
+ }
 }

@@ -73,37 +73,6 @@ def retained_emit_prefix(key, reference, candidate):
 
 
 
-def retained_birth_lifetime_permutation(key, reference, candidate):
-    # Exactly 33 measured 6000.0.71f1 records retain an unspecified buffer
-    # permutation. Positional failures remain printed below. This classification
-    # checks all fields and refuses duplicate identities rather than collapsing them.
-    keys = {f'birthlife/batch/nothing/child/{step}'
-            for step in [*map(str, range(1, 20)), 'end/20', 'end/21']}
-    keys.update(f'birthlife/batch/lifetime/child/{step}' for step in range(1, 11))
-    keys.update({'birthlife/cohorts/lifetime/child/15', 'birthlife/stop/lifetime/child/15'})
-    if key not in keys or reference[0] != candidate[0]:
-        return False
-    count = reference[0]
-    if len(reference) != 1 + count * PARTICLE_FIELDS or len(candidate) != len(reference):
-        return False
-    def particles(values):
-        return [values[i:i + PARTICLE_FIELDS] for i in range(1, len(values), PARTICLE_FIELDS)]
-    expected, actual = particles(reference), particles(candidate)
-    expected_ids = [tuple(p[:2]) for p in expected]
-    actual_ids = [tuple(p[:2]) for p in actual]
-    from collections import Counter
-    if Counter(expected_ids) != Counter(actual_ids):
-        return False
-    # The measured histories have unique seeds. A future duplicate must fail
-    # classification, even if a dictionary could otherwise hide a lost particle.
-    if len(set(expected_ids)) != count:
-        return False
-    by_id = dict(zip(actual_ids, actual))
-    return all(near(key, 1 + field, x, y)
-               for seed, particle in zip(expected_ids, expected)
-               for field, (x, y) in enumerate(zip(particle, by_id[seed])))
-
-
 def main():
     a, b = map(read, sys.argv[1:3])
     keys = sorted(a.keys() | b.keys())
@@ -118,11 +87,8 @@ def main():
         if not failures:
             continue
         emit_prefix = retained_emit_prefix(key, ra, rb)
-        birth_lifetime = retained_birth_lifetime_permutation(key, ra, rb)
         reasons = {i: ('scripted Emit newborn prefix permutation; all fields agree by seed'
-                       if emit_prefix and i >= 1 + 9 * PARTICLE_FIELDS else
-                       'Birth lifetime buffer permutation; multiplicity and all fields agree by seed'
-                       if birth_lifetime and i >= 1 else residual(key, i, ra[i], rb[i]))
+                       if emit_prefix and i >= 1 + 9 * PARTICLE_FIELDS else residual(key, i, ra[i], rb[i]))
                    for i in failures}
         if all(reasons.values()):
             known.append(key)
@@ -134,7 +100,7 @@ def main():
     lifetime_bad = [key for key in bad if key.startswith('birthlife/')]
     lifetime_known = [key for key in known if key.startswith('birthlife/')]
     print(f'Birth lifetime: {len(lifetime_keys) - len(lifetime_bad) - len(lifetime_known)}/{len(lifetime_keys)} '
-          f'strict positional records match; {len(lifetime_known)} verified permutation residual(s); '
+          f'strict positional records match; {len(lifetime_known)} known residual(s); '
           f'{len(lifetime_bad)} functional failure(s)')
     groups = {}
     for key in bad:
