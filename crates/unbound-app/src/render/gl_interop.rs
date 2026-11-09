@@ -66,8 +66,25 @@ pub use linux::Interop;
 /// up, on the first GPU that can import memory); its failure is kept and reported once.
 static INTEROP: std::sync::Mutex<Option<Result<Interop, String>>> = std::sync::Mutex::new(None);
 
-/// Runs `work` with the plugins' context current on this thread. `device_uuid`: the renderer's
-/// GPU, which the context must draw on.
+thread_local! {
+    /// This thread runs the renderer (the game's): the context stays current on it, so that a
+    /// plugin's OpenGL calls from scripts outside callbacks find it too, as in the Editor.
+    static RENDER_THREAD: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// [`with`] on the renderer's thread, which keeps the context current afterwards.
+pub fn on_render_thread<R>(
+    device_uuid: Option<[u8; 16]>,
+    work: impl FnOnce(&mut Interop) -> R,
+) -> Result<R, String> {
+    RENDER_THREAD.with(|render| render.set(true));
+    with(device_uuid, work)
+}
+
+/// Runs `work` with the plugins' context current on this thread; on another thread than the
+/// renderer's (a plugin first called from a worker) it is released afterwards, since a context
+/// is current on one thread at a time. `device_uuid`: the renderer's GPU, which the context must
+/// draw on.
 pub fn with<R>(
     device_uuid: Option<[u8; 16]>,
     work: impl FnOnce(&mut Interop) -> R,
@@ -95,7 +112,11 @@ pub fn with<R>(
     if !interop.make_current() {
         return Err("the plugins' OpenGL context cannot be made current on this thread".into());
     }
-    Ok(work(interop))
+    let result = work(interop);
+    if !RENDER_THREAD.with(|render| render.get()) {
+        interop.release_current();
+    }
+    Ok(result)
 }
 
 /// No interop: [`Interop::create`] fails with the reason.
@@ -112,6 +133,9 @@ impl Interop {
         match *self {}
     }
     pub fn make_current(&self) -> bool {
+        match *self {}
+    }
+    pub fn release_current(&self) {
         match *self {}
     }
     pub fn version(&self) -> String {
@@ -154,7 +178,7 @@ impl Interop {
 mod linux {
     use super::GlTexture;
     use std::ffi::{CStr, c_char, c_void};
-    use std::os::fd::{IntoRawFd, OwnedFd};
+    use std::os::fd::{FromRawFd, IntoRawFd, OwnedFd};
 
     type EglDisplay = *mut c_void;
     type EglContext = *mut c_void;
@@ -528,6 +552,12 @@ mod linux {
             unsafe { (self.egl.MakeCurrent)(self.display, none, none, self.context) != 0 }
         }
 
+        /// Leaves this thread without the context (another thread may make it current).
+        pub fn release_current(&self) {
+            let none = std::ptr::null_mut();
+            unsafe { (self.egl.MakeCurrent)(self.display, none, none, none) };
+        }
+
         /// The OpenGL version string (for the log).
         pub fn version(&self) -> String {
             let version = unsafe { (self.gl.GetString)(0x1F02) };
@@ -564,12 +594,22 @@ mod linux {
             unsafe {
                 (gl.CreateMemoryObjectsEXT)(1, &mut memory);
                 (gl.MemoryObjectParameterivEXT)(memory, GL_DEDICATED_MEMORY_OBJECT_EXT, &1);
-                (gl.ImportMemoryFdEXT)(
-                    memory,
-                    size,
-                    GL_HANDLE_TYPE_OPAQUE_FD_EXT,
-                    fd.into_raw_fd(),
-                );
+                let raw = fd.into_raw_fd();
+                (gl.ImportMemoryFdEXT)(memory, size, GL_HANDLE_TYPE_OPAQUE_FD_EXT, raw);
+                // OpenGL owns the descriptor only once the import succeeded.
+                let refused = self.clear_errors();
+                if !refused.is_empty() {
+                    drop(OwnedFd::from_raw_fd(raw));
+                    (gl.DeleteMemoryObjectsEXT)(1, &memory);
+                    return Err(format!(
+                        "OpenGL cannot import the renderer's memory: {}",
+                        refused
+                            .iter()
+                            .map(|e| super::error_text(*e))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ));
+                }
                 (gl.CreateTextures)(GL_TEXTURE_2D, 1, &mut name);
                 (gl.TextureParameteri)(name, GL_TEXTURE_TILING_EXT, GL_OPTIMAL_TILING_EXT as i32);
                 (gl.TextureStorageMem2DEXT)(

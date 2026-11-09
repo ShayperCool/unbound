@@ -622,11 +622,13 @@ impl UnityRenderer {
                 self.compute_bindings.release_sampler(&gpu.texture);
             }
             if *previous != gpu.texture {
-                self.compute_bindings.release_texture(previous);
-                self.mipmaps.release(previous);
-                self.pending_mips.remove(previous);
-                self.release_resolve_history(previous);
                 self.plugin_texture_replaced(handle, &gpu.texture);
+                if !self.storage_held(previous) {
+                    self.compute_bindings.release_texture(previous);
+                    self.mipmaps.release(previous);
+                    self.pending_mips.remove(previous);
+                    self.release_resolve_history(previous);
+                }
             }
         }
         if gpu.render_target && !resources::is_integer(gpu.texture.format()) {
@@ -768,14 +770,17 @@ impl UnityRenderer {
                 self.install_texture(handle, gpu, previous, &texture);
             }
             Upload::ReleaseTexture(handle) => {
-                self.release_plugin_texture(handle);
                 self.generation += 1;
-                if let Some(texture) = self.textures.remove(&handle) {
+                // Before the plugins forget it: an external texture's storage stays its source's.
+                if let Some(texture) = self.textures.remove(&handle)
+                    && !self.storage_held(&texture.texture)
+                {
                     self.compute_bindings.release_texture(&texture.texture);
                     self.mipmaps.release(&texture.texture);
                     self.pending_mips.remove(&texture.texture);
                     self.release_resolve_history(&texture.texture);
                 }
+                self.release_plugin_texture(handle);
                 self.texture_mip_biases.remove(&handle);
                 self.bit_views.retain(|(h, _), _| *h != handle);
                 self.depth_main_groups.retain(|(h, _), _| *h != handle);

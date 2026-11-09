@@ -839,8 +839,10 @@ extern "C" fn plugin_load(load: *const c_void) {
     // plugin headers fix: `void UnityPluginLoad(IUnityInterfaces*)`.
     let load: extern "C" fn(*const plugin_api::IUnityInterfaces) =
         unsafe { std::mem::transmute(load) };
-    state::backend().plugin_context();
-    load(plugin_api::interfaces());
+    // Its log messages reach scripts once the context is released.
+    plugin_api::while_rendering(|| {
+        state::backend().with_plugin_context(&mut || load(plugin_api::interfaces()))
+    });
 }
 
 extern "C" fn plugin_set_log(sink: Option<extern "C" fn(i32, *const u8, i32)>) {
@@ -848,8 +850,7 @@ extern "C" fn plugin_set_log(sink: Option<extern "C" fn(i32, *const u8, i32)>) {
 }
 
 extern "C" fn plugin_shutdown() {
-    state::backend().plugin_context();
-    plugin_api::shutdown();
+    plugin_api::while_rendering(|| state::backend().with_plugin_context(&mut plugin_api::shutdown));
 }
 
 extern "C" fn native_texture(texture: u64, depth: i32) -> u64 {

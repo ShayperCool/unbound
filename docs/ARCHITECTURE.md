@@ -162,9 +162,10 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   texture it is a copy made again after every callback. Chosen over drawing everything with
   wgpu's OpenGL backend (a different renderer for every project) and over copying textures through
   the CPU around every callback. Synchronization is by waiting (no semaphores): rendering callbacks
-  are rare, and image layouts are not handed over, which the measured NVIDIA driver does not need.
-  macOS has no such interop: plugin callbacks are skipped with an error there, texture updates
-  still run, and native pointers are not OpenGL names.
+  are rare, and image layouts are not handed over, which the measured NVIDIA driver does not need;
+  on other GPUs the interop is refused (logged) until layouts are handed over. macOS has no such
+  interop either: plugin callbacks are skipped with an error there, texture updates still run, and
+  native pointers are not OpenGL names.
 * **Shaders**: every shader draws with its own code; there are no hand-written ports. A material's
   shader is the project's `.shader` (Assets, packages), else Unity's built-in one, compiled from
   the release's `builtin_shaders` sources (MIT; downloaded once into the global cache,

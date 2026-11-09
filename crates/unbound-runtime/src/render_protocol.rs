@@ -730,10 +730,10 @@ pub trait RenderBackend: Send + Sync {
     fn shader_warmup(&self, _request: ShaderWarmupRequest) -> Result<String, String> {
         Err("no renderer".into())
     }
-    /// Makes the native plugins' OpenGL context current on this thread (the game's: it runs
-    /// the rendering callbacks); false when there is none.
-    fn plugin_context(&self) -> bool {
-        false
+    /// Runs `work` (a plugin's load or device events) with the native plugins' OpenGL context
+    /// current on this thread, without it when there is none.
+    fn with_plugin_context(&self, work: &mut dyn FnMut()) {
+        work()
     }
     /// The OpenGL texture name native plugins see for a texture (`depth`: its depth buffer),
     /// sharing its memory with the renderer; 0 when it cannot be shared.

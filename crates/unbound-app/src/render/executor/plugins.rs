@@ -13,7 +13,7 @@
 use super::{UnityRenderer, clamp_viewport, depth_owner};
 use crate::render::gl_interop::{self, GlTexture};
 use crate::render::resources::{self, GpuTexture};
-use rustc_hash::FxHashMap as HashMap;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::ffi::c_void;
 use unbound_runtime::plugin_api;
 use unbound_runtime::render_commands::PluginCall;
@@ -79,12 +79,29 @@ struct External {
     height: u32,
 }
 
+/// The renderer's GPU as the interop sees it, looked up once.
+struct Device {
+    /// `VkPhysicalDeviceIDProperties::deviceUUID`: the OpenGL context must be on this GPU.
+    uuid: Option<[u8; 16]>,
+    /// Why the interop is not used on this GPU (None: it is).
+    refused: Option<String>,
+    /// Depth24PlusStencil8 is stored as D24S8 (else D32S8), as wgpu-hal decides.
+    d24s8: bool,
+}
+
+/// The PCI vendor of the GPUs the interop was measured on (NVIDIA).
+const MEASURED_VENDOR: u32 = 0x10DE;
+
 #[derive(Default)]
 pub(super) struct PluginState {
     shared: HashMap<u64, Shared>,
     externals: HashMap<u64, External>,
-    /// The renderer GPU's UUID (`VkPhysicalDeviceIDProperties`), looked up once.
-    device_uuid: Option<Option<[u8; 16]>>,
+    /// Textures that could not be shared, with the storage that was refused and why (not tried
+    /// again until the storage changes).
+    refused: HashMap<u64, (wgpu::Texture, String)>,
+    /// Textures showing another texture's storage (`CreateExternalTexture` of its pointer).
+    pub aliases: HashSet<u64>,
+    device: Option<Device>,
     /// The current target's mip and slice (`SetTarget`).
     pub target: (i32, i32),
 }
@@ -95,19 +112,40 @@ type RenderingEvent = extern "C" fn(i32);
 type RenderingEventAndData = extern "C" fn(i32, *mut c_void);
 
 impl UnityRenderer {
-    /// Makes the plugins' OpenGL context current (made at the first need, on the renderer's GPU).
-    pub fn plugin_context(&mut self) -> bool {
-        let uuid = self.device_uuid();
-        gl_interop::with(uuid, |_| ()).is_ok()
+    /// The renderer GPU's UUID for the plugins' OpenGL context; why there is none otherwise.
+    pub fn plugin_device(&mut self) -> Result<Option<[u8; 16]>, String> {
+        self.interop_device()
     }
 
-    fn device_uuid(&mut self) -> Option<[u8; 16]> {
-        if let Some(uuid) = self.plugins.device_uuid {
-            return uuid;
+    /// The renderer GPU's UUID when plugins share its textures; why not otherwise. The interop
+    /// hands no image layouts between Vulkan and OpenGL (it waits for each side instead), which
+    /// the measured NVIDIA driver does not need; other drivers may keep layout-dependent
+    /// compression, so they are refused rather than risk wrong texels.
+    fn interop_device(&mut self) -> Result<Option<[u8; 16]>, String> {
+        let device = self.plugins.device.get_or_insert_with(|| {
+            let (uuid, vendor, d24s8) = vulkan::device_info(&self.device);
+            let refused = (vendor != Some(MEASURED_VENDOR)).then(|| {
+                "native plugins share textures with the renderer on NVIDIA GPUs only (measured \
+                 there; other drivers may need image layouts handed over)"
+                    .to_string()
+            });
+            if let Some(reason) = &refused {
+                tracing::error!("{reason}");
+            }
+            Device {
+                uuid,
+                refused,
+                d24s8,
+            }
+        });
+        match &device.refused {
+            Some(reason) => Err(reason.clone()),
+            None => Ok(device.uuid),
         }
-        let uuid = vulkan::device_uuid(&self.device);
-        self.plugins.device_uuid = Some(uuid);
-        uuid
+    }
+
+    fn d24s8(&self) -> bool {
+        self.plugins.device.as_ref().is_none_or(|d| d.d24s8)
     }
 
     /// The OpenGL texture name of a texture (`depth`: its depth buffer's), 0 when it cannot be
@@ -133,8 +171,8 @@ impl UnityRenderer {
     /// The texture's OpenGL textures, sharing its memory: the texture is moved into memory
     /// OpenGL can import the first time (its texels copied), and again after its storage changed.
     fn share(&mut self, handle: u64) -> Result<(GlTexture, Option<GlTexture>), String> {
-        let uuid = self.device_uuid();
-        gl_interop::with(uuid, |_| ())?;
+        let uuid = self.interop_device()?;
+        gl_interop::on_render_thread(uuid, |_| ())?;
         let gpu = self
             .textures
             .get(&handle)
@@ -144,13 +182,39 @@ impl UnityRenderer {
         {
             return Ok((shared.color, shared.depth));
         }
+        if let Some((texture, reason)) = self.plugins.refused.get(&handle)
+            && *texture == gpu.texture
+        {
+            return Err(reason.clone());
+        }
+        match self.share_storage(handle, uuid) {
+            Ok(shared) => Ok(shared),
+            Err(reason) => {
+                if let Some(gpu) = self.textures.get(&handle) {
+                    self.plugins
+                        .refused
+                        .insert(handle, (gpu.texture.clone(), reason.clone()));
+                }
+                Err(reason)
+            }
+        }
+    }
+
+    /// [`Self::share`] for storage not shared yet.
+    fn share_storage(
+        &mut self,
+        handle: u64,
+        uuid: Option<[u8; 16]>,
+    ) -> Result<(GlTexture, Option<GlTexture>), String> {
+        let d24s8 = self.d24s8();
+        let gpu = &self.textures[&handle];
         if let Some(stale) = self.plugins.shared.remove(&handle) {
             delete_shared(uuid, stale);
         }
         if gpu.samples > 1 || gpu.layers > 1 || gpu.volume || gpu.cube || gpu.cube_array {
             return Err("only single-sample 2D textures are shared".into());
         }
-        let color_format = gl_format(gpu.texture.format(), gpu.format, self.color_space)
+        let color_format = gl_format(gpu.texture.format(), gpu.format, self.color_space, d24s8)
             .ok_or_else(|| {
                 format!(
                     "its format {:?} has no OpenGL counterpart",
@@ -158,7 +222,7 @@ impl UnityRenderer {
                 )
             })?;
         let depth_format = match &gpu.depth_texture {
-            Some(depth) => Some(gl_format(depth.format(), -1, 0).ok_or_else(|| {
+            Some(depth) => Some(gl_format(depth.format(), -1, 0, d24s8).ok_or_else(|| {
                 format!(
                     "its depth format {:?} has no OpenGL counterpart",
                     depth.format()
@@ -197,12 +261,16 @@ impl UnityRenderer {
         let sampler = replacement.sampler_key;
         let (width, height, levels) =
             (replacement.width, replacement.height, replacement.mip_count);
+        let depth_levels = replacement
+            .depth_texture
+            .as_ref()
+            .map_or(1, |d| d.mip_level_count());
         let texture = replacement.texture.clone();
         let previous = Some((old.texture.clone(), old.sampler_key));
         self.install_texture(handle, replacement, previous, &packet);
         self.refresh_target(handle);
         let mut memories = exported.into_iter();
-        let imported = gl_interop::with(uuid, |interop| -> Result<_, String> {
+        let imported = gl_interop::on_render_thread(uuid, |interop| -> Result<_, String> {
             let wrap = [sampler.wrap_u, sampler.wrap_v];
             let memory = memories.next().ok_or("the color memory was not exported")?;
             let color = interop.import(
@@ -222,7 +290,7 @@ impl UnityRenderer {
                         memory.size,
                         width,
                         height,
-                        1,
+                        depth_levels,
                         format,
                         0,
                         [1, 1],
@@ -306,6 +374,12 @@ impl UnityRenderer {
         self.queue.submit([encoder.finish()]);
     }
 
+    /// Whether a texture still holds this storage (an external texture showing another's, or
+    /// the one it shows): what refers to the storage stays while one does.
+    pub(super) fn storage_held(&self, texture: &wgpu::Texture) -> bool {
+        !self.plugins.aliases.is_empty() && self.textures.values().any(|t| t.texture == *texture)
+    }
+
     /// A texture's storage changed to `texture`: what plugins saw of the old one goes.
     pub(super) fn plugin_texture_replaced(&mut self, handle: u64, texture: &wgpu::Texture) {
         if self
@@ -315,18 +389,20 @@ impl UnityRenderer {
             .is_some_and(|shared| shared.texture != *texture)
         {
             let stale = self.plugins.shared.remove(&handle).expect("checked");
-            delete_shared(self.plugins.device_uuid.flatten(), stale);
+            delete_shared(self.plugins.device.as_ref().and_then(|d| d.uuid), stale);
         }
     }
 
     /// A texture was released: its OpenGL textures go (a plugin's own texture stays its own).
     pub(super) fn release_plugin_texture(&mut self, handle: u64) {
-        let uuid = self.plugins.device_uuid.flatten();
+        let uuid = self.plugins.device.as_ref().and_then(|d| d.uuid);
+        self.plugins.refused.remove(&handle);
+        self.plugins.aliases.remove(&handle);
         if let Some(shared) = self.plugins.shared.remove(&handle) {
             delete_shared(uuid, shared);
         }
         if let Some(external) = self.plugins.externals.remove(&handle) {
-            let _ = gl_interop::with(uuid, |interop| interop.delete(external.mirror));
+            let _ = gl_interop::on_render_thread(uuid, |interop| interop.delete(external.mirror));
         }
     }
 
@@ -351,11 +427,17 @@ impl UnityRenderer {
         height: u32,
         srgb: bool,
     ) -> Result<(), String> {
-        let uuid = self.device_uuid();
-        gl_interop::with(uuid, |_| ())?;
+        let uuid = self.interop_device()?;
+        gl_interop::on_render_thread(uuid, |_| ())?;
         let name =
             u32::try_from(native).map_err(|_| format!("{native} is not an OpenGL texture name"))?;
+        // What plugins saw of the texture goes; while it showed another's storage it stays an
+        // alias until that storage is replaced below.
+        let was_alias = self.plugins.aliases.contains(&handle);
         self.release_plugin_texture(handle);
+        if was_alias {
+            self.plugins.aliases.insert(handle);
+        }
         let device = self.device.clone();
         // Another texture's name: the same storage.
         let source = self
@@ -365,7 +447,16 @@ impl UnityRenderer {
             .find(|(_, shared)| shared.color.name == name)
             .map(|(&source, shared)| (source, shared.texture.clone()));
         if let Some((source, texture)) = source {
-            let packet = descriptor(&self.textures[&source]);
+            // A sampled texture over the source's storage: none of its target state (depth,
+            // multisampling, automatic mips), which stays the source's.
+            let packet = owned::Texture {
+                render_target: false,
+                random_write: false,
+                auto_generate_mips: false,
+                defer_mips: false,
+                depth_bits: 0,
+                ..descriptor(&self.textures[&source])
+            };
             self.generation += 1;
             let gpu = resources::upload_texture_with(
                 &device,
@@ -377,8 +468,9 @@ impl UnityRenderer {
             );
             let previous = self
                 .textures
-                .get(&handle)
+                .remove(&handle)
                 .map(|old| (old.texture.clone(), old.sampler_key));
+            self.plugins.aliases.insert(handle);
             self.install_texture(handle, gpu, previous, &packet);
             return Ok(());
         }
@@ -421,9 +513,14 @@ impl UnityRenderer {
             (None, Some(memory)) => memory,
             (failure, _) => return Err(failure.unwrap_or_else(|| "nothing was exported".into())),
         };
-        let format = gl_format(gpu.texture.format(), packet.format, self.color_space)
-            .ok_or("the mirror's format has no OpenGL counterpart")?;
-        let mirror = gl_interop::with(uuid, |interop| -> Result<GlTexture, String> {
+        let format = gl_format(
+            gpu.texture.format(),
+            packet.format,
+            self.color_space,
+            self.d24s8(),
+        )
+        .ok_or("the mirror's format has no OpenGL counterpart")?;
+        let mirror = gl_interop::on_render_thread(uuid, |interop| -> Result<GlTexture, String> {
             if !interop.is_texture(name) {
                 return Err(format!(
                     "{name} is not an OpenGL texture of the plugins' context"
@@ -449,9 +546,10 @@ impl UnityRenderer {
         })??;
         let previous = self
             .textures
-            .get(&handle)
+            .remove(&handle)
             .map(|old| (old.texture.clone(), old.sampler_key));
         self.install_texture(handle, gpu, previous, &packet);
+        self.plugins.aliases.remove(&handle);
         self.plugins.externals.insert(
             handle,
             External {
@@ -466,8 +564,21 @@ impl UnityRenderer {
 
     /// Runs a plugin's callback (`Command::Plugin`): the work before it has been submitted.
     pub(super) fn run_plugin(&mut self, call: &PluginCall) {
-        let uuid = self.device_uuid();
-        let context = gl_interop::with(uuid, |_| ());
+        let callback = match *call {
+            PluginCall::Event { callback, .. }
+            | PluginCall::EventAndData { callback, .. }
+            | PluginCall::TextureUpdate { callback, .. }
+            | PluginCall::CustomBlit { callback, .. } => callback,
+        };
+        if callback == 0 {
+            self.warn_once("plugin-null".into(), || {
+                "a native plugin call without a callback (null) is skipped".into()
+            });
+            return;
+        }
+        let device = self.interop_device();
+        let uuid = device.as_ref().ok().copied().flatten();
+        let context = device.and_then(|uuid| gl_interop::on_render_thread(uuid, |_| ()));
         if let (Err(reason), false) = (&context, matches!(call, PluginCall::TextureUpdate { .. })) {
             let reason = reason.clone();
             self.warn_once("plugin-context".into(), || {
@@ -482,12 +593,12 @@ impl UnityRenderer {
         }
         if context.is_ok() {
             self.bind_plugin_target(uuid);
-            let _ = gl_interop::with(uuid, |interop| interop.clear_errors());
+            let _ = gl_interop::on_render_thread(uuid, |interop| interop.clear_errors());
         }
         match *call {
             PluginCall::Event { callback, id } => {
                 // SAFETY: a plugin's `UnityRenderingEvent`, as GL.IssuePluginEvent and
-                // CommandBuffer.IssuePluginEvent take it; the managed side refused null.
+                // CommandBuffer.IssuePluginEvent take it (not null: checked above).
                 let callback: RenderingEvent = unsafe { std::mem::transmute(callback as usize) };
                 callback(id);
             }
@@ -538,7 +649,7 @@ impl UnityRenderer {
             .values()
             .map(|e| (e.source, e.mirror.name, e.width, e.height))
             .collect();
-        let errors = gl_interop::with(uuid, |interop| {
+        let errors = gl_interop::on_render_thread(uuid, |interop| {
             interop.finish();
             let errors = interop.clear_errors();
             for &(source, mirror, width, height) in &externals {
@@ -598,7 +709,7 @@ impl UnityRenderer {
         };
         let v = clamp_viewport(self.state.viewport, width, height);
         let viewport = [v[0] as i32, v[1] as i32, v[2] as i32, v[3] as i32];
-        let _ = gl_interop::with(uuid, |interop| match bound {
+        let _ = gl_interop::on_render_thread(uuid, |interop| match bound {
             Some((color, depth)) => interop.bind_target(
                 Some((color, mip.max(0) as u32)),
                 depth.map(|d| (d, true)),
@@ -682,6 +793,16 @@ impl UnityRenderer {
         if data.is_null() {
             return;
         }
+        if !update_writable(texture.format()) {
+            let format = texture.format();
+            self.warn_once(format!("plugin-update-format{format:?}"), || {
+                format!(
+                    "a plugin texture update of a texture stored as {format:?} is not supported \
+                     (8-bit RGBA only): its data is not written"
+                )
+            });
+            return;
+        }
         let length = (width * height * bytes_per_pixel) as usize;
         // SAFETY: the plugin's data for the texture's first level, in the format and size the
         // begin event announced; it stays valid until the end event.
@@ -725,6 +846,15 @@ impl UnityRenderer {
     }
 }
 
+/// Whether a plugin's texture update can be written into storage of this format (8-bit RGBA;
+/// a compressed import's blocks are refused).
+fn update_writable(format: wgpu::TextureFormat) -> bool {
+    matches!(
+        format,
+        wgpu::TextureFormat::Rgba8Unorm | wgpu::TextureFormat::Rgba8UnormSrgb
+    )
+}
+
 /// The texture ID a texture update gives the plugin: the renderer's handle (the managed side's
 /// `NativePlugins.TextureId`).
 fn plugin_texture_id(handle: u64) -> u32 {
@@ -733,7 +863,7 @@ fn plugin_texture_id(handle: u64) -> u32 {
 
 /// Deletes a shared texture's OpenGL textures.
 fn delete_shared(uuid: Option<[u8; 16]>, shared: Shared) {
-    let _ = gl_interop::with(uuid, |interop| {
+    let _ = gl_interop::on_render_thread(uuid, |interop| {
         interop.delete(shared.color);
         if let Some(depth) = shared.depth {
             interop.delete(depth);
@@ -768,7 +898,12 @@ fn descriptor(gpu: &GpuTexture) -> owned::Texture {
 /// The OpenGL internal format of a renderer format, as Unity's OpenGL Core device stores the
 /// texture: sRGB color textures (`format` 0) in a Linear color space project are
 /// `GL_SRGB8_ALPHA8`, render textures `GL_RGBA8` (tests/projects/nativegfx `name ...`).
-fn gl_format(texture: wgpu::TextureFormat, format: i32, color_space: i32) -> Option<u32> {
+fn gl_format(
+    texture: wgpu::TextureFormat,
+    format: i32,
+    color_space: i32,
+    d24s8: bool,
+) -> Option<u32> {
     use gl_interop::format as gl;
     use wgpu::TextureFormat as F;
     Some(match texture {
@@ -789,13 +924,8 @@ fn gl_format(texture: wgpu::TextureFormat, format: i32, color_space: i32) -> Opt
         F::Rgb10a2Unorm => gl::RGB10_A2,
         F::Rg11b10Ufloat => gl::R11F_G11F_B10F,
         F::Depth32Float => gl::DEPTH_COMPONENT32F,
-        F::Depth24PlusStencil8 => {
-            if vulkan::depth24_stencil8() {
-                gl::DEPTH24_STENCIL8
-            } else {
-                gl::DEPTH32F_STENCIL8
-            }
-        }
+        F::Depth24PlusStencil8 if d24s8 => gl::DEPTH24_STENCIL8,
+        F::Depth24PlusStencil8 => gl::DEPTH32F_STENCIL8,
         _ => return None,
     })
 }
@@ -806,7 +936,6 @@ mod vulkan {
     //! (`VK_KHR_external_memory_fd`), made as wgpu-hal makes them and given to wgpu.
     use ash::vk;
     use std::os::fd::{FromRawFd, OwnedFd};
-    use std::sync::atomic::{AtomicU8, Ordering};
     use wgpu::hal::{api::Vulkan, vulkan as hal};
 
     /// Exported memory: its descriptor (OpenGL takes it) and size.
@@ -815,23 +944,30 @@ mod vulkan {
         pub size: u64,
     }
 
-    /// Whether the device stores Depth24PlusStencil8 as D24S8 (else D32S8), as wgpu-hal decides;
-    /// 0 unknown, 1 yes, 2 no.
-    static D24S8: AtomicU8 = AtomicU8::new(0);
-
-    pub fn depth24_stencil8() -> bool {
-        D24S8.load(Ordering::Relaxed) != 2
-    }
-
-    pub fn device_uuid(device: &wgpu::Device) -> Option<[u8; 16]> {
-        let hal = unsafe { device.as_hal::<Vulkan>() }?;
+    /// The GPU's UUID and PCI vendor, and whether it stores Depth24PlusStencil8 as D24S8.
+    pub fn device_info(device: &wgpu::Device) -> (Option<[u8; 16]>, Option<u32>, bool) {
+        let Some(hal) = (unsafe { device.as_hal::<Vulkan>() }) else {
+            return (None, None, true);
+        };
         let instance = hal.shared_instance().raw_instance();
+        let physical = hal.raw_physical_device();
         let mut id = vk::PhysicalDeviceIDProperties::default();
         let mut properties = vk::PhysicalDeviceProperties2::default().push_next(&mut id);
-        unsafe {
-            instance.get_physical_device_properties2(hal.raw_physical_device(), &mut properties)
+        unsafe { instance.get_physical_device_properties2(physical, &mut properties) };
+        let vendor = properties.properties.vendor_id;
+        let uuid = id.device_uuid;
+        (Some(uuid), Some(vendor), d24s8(instance, physical))
+    }
+
+    /// wgpu-hal's choice for Depth24PlusStencil8: D24S8 where it can be sampled and drawn into.
+    fn d24s8(instance: &ash::Instance, physical: vk::PhysicalDevice) -> bool {
+        let properties = unsafe {
+            instance.get_physical_device_format_properties(physical, vk::Format::D24_UNORM_S8_UINT)
         };
-        Some(id.device_uuid)
+        properties.optimal_tiling_features.contains(
+            vk::FormatFeatureFlags::SAMPLED_IMAGE
+                | vk::FormatFeatureFlags::DEPTH_STENCIL_ATTACHMENT,
+        )
     }
 
     fn vk_format(
@@ -857,25 +993,8 @@ mod vulkan {
             F::Rgb10a2Unorm => vk::Format::A2B10G10R10_UNORM_PACK32,
             F::Rg11b10Ufloat => vk::Format::B10G11R11_UFLOAT_PACK32,
             F::Depth32Float => vk::Format::D32_SFLOAT,
-            F::Depth24PlusStencil8 => {
-                // wgpu-hal's choice: D24S8 where it can be sampled and drawn into.
-                let properties = unsafe {
-                    instance.get_physical_device_format_properties(
-                        physical,
-                        vk::Format::D24_UNORM_S8_UINT,
-                    )
-                };
-                let d24 = properties.optimal_tiling_features.contains(
-                    vk::FormatFeatureFlags::SAMPLED_IMAGE
-                        | vk::FormatFeatureFlags::DEPTH_STENCIL_ATTACHMENT,
-                );
-                D24S8.store(if d24 { 1 } else { 2 }, Ordering::Relaxed);
-                if d24 {
-                    vk::Format::D24_UNORM_S8_UINT
-                } else {
-                    vk::Format::D32_SFLOAT_S8_UINT
-                }
-            }
+            F::Depth24PlusStencil8 if d24s8(instance, physical) => vk::Format::D24_UNORM_S8_UINT,
+            F::Depth24PlusStencil8 => vk::Format::D32_SFLOAT_S8_UINT,
             _ => return None,
         })
     }
@@ -927,7 +1046,15 @@ mod vulkan {
         };
         let mut external = vk::ExternalMemoryImageCreateInfo::default()
             .handle_types(vk::ExternalMemoryHandleTypeFlags::OPAQUE_FD);
-        let info = vk::ImageCreateInfo::default()
+        // The formats the renderer views it in, listed as wgpu-hal lists them (with its own).
+        let mut view_formats = desc
+            .view_formats
+            .iter()
+            .filter_map(|f| vk_format(*f, instance, physical))
+            .collect::<Vec<_>>();
+        view_formats.push(format);
+        let mut format_list = vk::ImageFormatListCreateInfo::default().view_formats(&view_formats);
+        let mut info = vk::ImageCreateInfo::default()
             .flags(flags)
             .image_type(vk::ImageType::TYPE_2D)
             .format(format)
@@ -944,6 +1071,9 @@ mod vulkan {
             .sharing_mode(vk::SharingMode::EXCLUSIVE)
             .initial_layout(vk::ImageLayout::UNDEFINED)
             .push_next(&mut external);
+        if !desc.view_formats.is_empty() {
+            info = info.push_next(&mut format_list);
+        }
         let image = unsafe { raw.create_image(&info, None) }
             .map_err(|e| format!("an exportable image cannot be made: {e}"))?;
         let requirements = unsafe { raw.get_image_memory_requirements(image) };
@@ -1038,12 +1168,8 @@ mod vulkan {
         pub size: u64,
     }
 
-    pub fn depth24_stencil8() -> bool {
-        true
-    }
-
-    pub fn device_uuid(_: &wgpu::Device) -> Option<[u8; 16]> {
-        None
+    pub fn device_info(_: &wgpu::Device) -> (Option<[u8; 16]>, Option<u32>, bool) {
+        (None, None, true)
     }
 
     pub fn exported_texture(
@@ -1051,5 +1177,56 @@ mod vulkan {
         _: &wgpu::TextureDescriptor,
     ) -> Result<(wgpu::Texture, Exported), String> {
         Err("textures are shared with native plugins on Linux only".into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::render::gl_interop::format as gl;
+    use wgpu::TextureFormat as F;
+
+    #[test]
+    fn texture_updates_write_only_8_bit_rgba_storage() {
+        assert!(update_writable(F::Rgba8Unorm));
+        assert!(update_writable(F::Rgba8UnormSrgb));
+        // A compressed import whose managed format is RGBA32: its blocks are not overwritten.
+        assert!(!update_writable(F::Bc7RgbaUnorm));
+        assert!(!update_writable(F::Bc7RgbaUnormSrgb));
+        assert!(!update_writable(F::Rgba16Float));
+    }
+
+    #[test]
+    fn opengl_formats_follow_the_devices_storage() {
+        // sRGB color textures are sRGB on the device in a Linear project only.
+        assert_eq!(gl_format(F::Rgba8Unorm, 0, 1, true), Some(gl::SRGB8_ALPHA8));
+        assert_eq!(gl_format(F::Rgba8Unorm, 0, 0, true), Some(gl::RGBA8));
+        assert_eq!(gl_format(F::Rgba8Unorm, 1, 1, true), Some(gl::RGBA8));
+        // Depth as wgpu-hal stores it on this device.
+        assert_eq!(
+            gl_format(F::Depth24PlusStencil8, -1, 0, true),
+            Some(gl::DEPTH24_STENCIL8)
+        );
+        assert_eq!(
+            gl_format(F::Depth24PlusStencil8, -1, 0, false),
+            Some(gl::DEPTH32F_STENCIL8)
+        );
+        // Nothing to import as: refused.
+        assert_eq!(gl_format(F::Bc7RgbaUnorm, 7, 0, true), None);
+        assert_eq!(gl_format(F::Bgra8Unorm, 1, 0, true), None);
+    }
+
+    #[test]
+    fn plugin_parameter_blocks_have_the_headers_layout() {
+        // UnityRenderingExtTextureUpdateParamsV1/V2 and UnityRenderingExtCustomBlitParams on a
+        // 64-bit target: the data pointer first, V2's texture ID pointer-sized after it.
+        assert_eq!(size_of::<TextureUpdateV1>(), 32);
+        assert_eq!(std::mem::offset_of!(TextureUpdateV1, texture_id), 12);
+        assert_eq!(size_of::<TextureUpdateV2>(), 40);
+        assert_eq!(std::mem::offset_of!(TextureUpdateV2, user_data), 16);
+        assert_eq!(std::mem::offset_of!(TextureUpdateV2, bytes_per_pixel), 32);
+        assert_eq!(size_of::<CustomBlitParams>(), 32);
+        assert_eq!(std::mem::offset_of!(CustomBlitParams, destination), 8);
+        assert_eq!(std::mem::offset_of!(CustomBlitParams, command), 16);
     }
 }
