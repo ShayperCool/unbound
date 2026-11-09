@@ -36,7 +36,11 @@ namespace UnityEngine
                 for (int i = 0; i < set.Positions.Length; i++)
                     occlusion.Add(i < set.Occlusion.Length ? set.Occlusion[i] : Vector4.one);
             }
-            // A combination with any baked set reports every probe (zeros for realtime-only sets): unmeasured.
+            // A combination with any baked set reports every probe, zeros for realtime-only sets
+            // (unmeasured; Unbound does not light realtime-only probes yet).
+            if (sets.Exists(x => x.Baked) && sets.Exists(x => !x.Baked))
+                Unbound.Runtime.Stubs.Ignored("LightProbes",
+                    "of scenes precomputed for realtime GI only join baked probes with zero lighting");
             var result = new ProbeSet { Positions = positions.ToArray(), Probes = probes.ToArray(), Occlusion = occlusion.ToArray(), Baked = sets.Exists(x => x.Baked) };
             Build(result);
             return result;

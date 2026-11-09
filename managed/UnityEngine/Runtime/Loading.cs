@@ -596,6 +596,7 @@ namespace Unbound.Runtime
                 {
                     var settings = references.Settings;
                     scene.LightingSettings = settings.IsNull || resolver == null ? null : resolver.Resolve(settings, typeof(LightingSettings)) as LightingSettings;
+                    if (first) DynamicGI.SceneLoaded(scene.LightingSettings);
                 }
             }
             Loaded?.Invoke(doc);

@@ -16,6 +16,21 @@ namespace UnityEngine
     {
         const int EnvironmentSize = 64;
 
+        static float s_IndirectScale = 1f;
+
+        /// <summary>Starts as the loaded scene's Lighting Settings Indirect Intensity (1 without
+        /// settings): measured, tests/projects/realtimegi (1 and 1.5). In the Editor it scales the
+        /// realtime lightmaps (2 doubles them; its effect on baked lightmaps is unmeasured), which
+        /// Unbound does not draw yet.</summary>
+        public static float indirectScale
+        {
+            get => s_IndirectScale;
+            set => s_IndirectScale = value;
+        }
+
+        /// <summary>A scene loaded alone (not additively) with <paramref name="settings"/>.</summary>
+        internal static void SceneLoaded(LightingSettings settings) => s_IndirectScale = settings != null ? settings.indirectScale : 1f;
+
         public static void UpdateEnvironment()
         {
             var sh = SkyboxProbe();

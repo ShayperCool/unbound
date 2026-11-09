@@ -51,8 +51,8 @@ namespace Unbound.Tests
         {
             // Precomputed for realtime GI only, the lighting data has positions and cells but no
             // coefficients: count is the number of probes and bakedProbes is empty
-            // (tests/projects/realtimegi); interpolation reads zeros. Setting baked probes
-            // makes them baked.
+            // (tests/projects/realtimegi). Unbound does not light them yet, so interpolation gives
+            // nothing and callers keep the ambient probe. Setting baked probes makes them baked.
             const string json = @"{
                 ""positions"": [0,0,0, 1,0,0, 0,1,0, 0,0,1],
                 ""coefficients"": [],
@@ -66,12 +66,16 @@ namespace Unbound.Tests
             Assert.Empty(probes.coefficients);
 #pragma warning restore 618
             Assert.Equal(4, probes.m_Set.Probes.Length);
-            Assert.Equal(0f, probes.m_Set.Probes[2][0, 0]);
+            int cell = -1;
+            Assert.False(probes.m_Set.Evaluate(new Vector3(0.1f, 0.1f, 0.1f), ref cell, out _, out _));
+            Assert.False(probes.m_Set.Interpolate(new Vector3(0.1f, 0.1f, 0.1f), ref cell, out _));
             var lit = new SphericalHarmonicsL2[4];
             lit[1][0, 0] = 0.5f;
             probes.bakedProbes = lit;
             Assert.Equal(4, probes.bakedProbes.Length);
             Assert.Equal(0.5f, probes.bakedProbes[1][0, 0]);
+            Assert.True(probes.m_Set.Interpolate(new Vector3(1f, 0f, 0f), ref cell, out var sh));
+            Assert.Equal(0.5f, sh[0, 0]);
             // A copy keeps whether the probes are baked.
             Assert.Equal(4, probes.m_Set.Snapshot().Probes.Length);
             Assert.True(probes.m_Set.Snapshot().Baked);

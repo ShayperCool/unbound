@@ -28,8 +28,9 @@ namespace UnityEngine
         internal Vector3[] Positions = Array.Empty<Vector3>();
         internal SphericalHarmonicsL2[] Probes = Array.Empty<SphericalHarmonicsL2>();
         /// <summary>Whether the probes hold baked coefficients. Probes precomputed for realtime GI
-        /// only have none: LightProbes.bakedProbes is empty while count is the number of probes, and
-        /// <see cref="Probes"/> holds zeros (tests/projects/realtimegi).</summary>
+        /// only have none: LightProbes.bakedProbes is empty while count is the number of probes
+        /// (tests/projects/realtimegi), <see cref="Probes"/> holds zeros and interpolation gives
+        /// nothing (<see cref="Evaluate"/>).</summary>
         internal bool Baked = true;
         /// <summary>Per probe, the occlusion of the mixed lights by shadow mask channel.</summary>
         internal Vector4[] Occlusion = Array.Empty<Vector4>();
@@ -57,13 +58,15 @@ namespace UnityEngine
         /// <paramref name="cell"/> (any index out of range starts at the first) and becomes the
         /// new hint. Outside the probes' hull, or without probes, there is none: the hint
         /// becomes -1 and false is returned (measured: tests/projects/lightprobes, queries outside
-        /// the hull give the ambient probe, occlusion 1 and index -1).
+        /// the hull give the ambient probe, occlusion 1 and index -1). Probes without baked
+        /// lighting (precomputed for realtime GI only) give none either: Unbound does not compute
+        /// their realtime lighting yet, so callers keep the ambient probe.
         /// </summary>
         internal bool Evaluate(Vector3 p, ref int cell, out SphericalHarmonicsL2 sh, out Vector4 occlusion)
         {
             sh = default;
             occlusion = Vector4.one;
-            if (Probes.Length == 0)
+            if (Probes.Length == 0 || !Baked)
             {
                 cell = -1;
                 return false;
@@ -91,11 +94,12 @@ namespace UnityEngine
 
         /// <summary>The probes blended at <paramref name="p"/> as a renderer gets them, walking the
         /// cells from <paramref name="cell"/> (a renderer's last cell) toward it, outer cells
-        /// extrapolating along the hull rays; false without probes.</summary>
+        /// extrapolating along the hull rays; false without probes or without baked lighting
+        /// (see <see cref="Evaluate"/>).</summary>
         internal bool Interpolate(Vector3 p, ref int cell, out SphericalHarmonicsL2 sh)
         {
             sh = default;
-            if (Probes.Length == 0) return false;
+            if (Probes.Length == 0 || !Baked) return false;
             if (Cells.Length == 0)
             {
                 sh = Probes[Nearest(p)];

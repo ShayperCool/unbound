@@ -213,11 +213,16 @@ pub fn read_lighting_data(
             }
         })
         .collect();
+    // The precomputed realtime GI payload (a bundle of per-system data; empty without it).
+    let realtime_gi = object
+        .get("m_EnlightenData")
+        .and_then(Value::as_str)
+        .is_some_and(|bytes| !bytes.is_empty());
     let probes = match object.get("m_LightProbes").and_then(ptr) {
         Some(ObjectPtr {
             guid: None,
             path_id,
-        }) => Some(read_light_probes(&file.read(path_id)?)?),
+        }) => Some(read_light_probes(&file.read(path_id)?, realtime_gi)?),
         Some(_) => anyhow::bail!("the lighting data's light probes are in another file"),
         None => None,
     };
@@ -266,8 +271,9 @@ fn four<T: std::str::FromStr + Default + Copy + From<i8>>(v: &Value, key: &str) 
     Ok(out)
 }
 
-/// A LightProbes object's probes and tetrahedralization.
-fn read_light_probes(object: &Value) -> Result<LightProbeData> {
+/// A LightProbes object's probes and tetrahedralization; `realtime_gi`: the lighting data holds
+/// precomputed realtime GI, whose probes may have no baked coefficients.
+fn read_light_probes(object: &Value, realtime_gi: bool) -> Result<LightProbeData> {
     let data = object.get("m_Data").context("light probes without data")?;
     let xyz = |v: &Value| vector(v, ["x", "y", "z"]).context("a malformed vector");
     let positions = seq(data, "m_Positions")
@@ -280,7 +286,8 @@ fn read_light_probes(object: &Value) -> Result<LightProbeData> {
         .collect::<Result<Vec<_>>>()?;
     // Probes precomputed for realtime GI only have positions and no baked coefficients
     // (LightProbes.bakedProbes is empty: tests/projects/realtimegi).
-    if !coefficients.is_empty() && coefficients.len() != positions.len() {
+    let realtime_only = realtime_gi && coefficients.is_empty();
+    if !realtime_only && coefficients.len() != positions.len() {
         anyhow::bail!(
             "{} light probe positions but {} baked probes",
             positions.len(),
@@ -462,7 +469,6 @@ mod tests {
         );
     }
 
-    /// tests/projects/lightprobes' Main bake (6000.0.71f1, Shadowmask): its probes' occlusion.
     #[test]
     fn realtime_only_probes_have_no_baked_coefficients() {
         // Precomputed for realtime GI only: the probes have positions and cells but no baked
@@ -474,10 +480,7 @@ mod tests {
             .import(&file, &bytes, &Value::Null)
             .unwrap();
         let probes = data.probes.unwrap();
-        assert_eq!(
-            (probes.positions.len(), probes.coefficients.len()),
-            (9, 0)
-        );
+        assert_eq!((probes.positions.len(), probes.coefficients.len()), (9, 0));
         assert!(!probes.tetrahedra.is_empty());
         assert_eq!(data.renderers.len(), 7);
         assert!(
@@ -487,6 +490,24 @@ mod tests {
         );
     }
 
+    #[test]
+    fn probes_without_coefficients_fail_without_realtime_gi() {
+        // The same probes read as if the lighting data held no precomputed realtime GI: missing
+        // baked coefficients are an error, as before.
+        let file = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/realtimegi/Assets/Scenes/Room/LightingData.asset");
+        let bytes = std::fs::read(&file).unwrap();
+        let serialized = crate::serialized::SerializedFile::parse(&bytes).unwrap();
+        let probes = serialized.read(25800002).unwrap();
+        assert!(read_light_probes(&probes, true).is_ok());
+        let error = read_light_probes(&probes, false).unwrap_err().to_string();
+        assert!(
+            error.contains("9 light probe positions but 0 baked probes"),
+            "{error}"
+        );
+    }
+
+    /// tests/projects/lightprobes' Main bake (6000.0.71f1, Shadowmask): its probes' occlusion.
     #[test]
     fn a_shadowmask_bakes_probe_occlusion() {
         let file = Path::new(env!("CARGO_MANIFEST_DIR"))
