@@ -234,8 +234,6 @@ namespace UnityEngine
                 var c = m_Curves[k];
                 int i = c.Binding.ClassId == AnimatorClassId && c.Curve != null ? HumanClipImport.CurveIndex(c.Binding.Attribute) : -1;
                 if (i < 0) continue;
-                if (i >= HumanClipImport.TDoFFirst)
-                    throw new NotSupportedException($"AnimationClip '{name}': mirrored humanoid clips with translation DoF curves are not supported");
                 if (i >= HumanClipImport.GoalFirst && i < HumanClipImport.MuscleFirst && (i - HumanClipImport.GoalFirst) % 7 >= 3)
                     goalRotations[(i - HumanClipImport.GoalFirst) / 7]++;
                 int j = HumanClipImport.MirrorCurve[i];

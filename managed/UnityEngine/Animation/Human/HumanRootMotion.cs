@@ -455,7 +455,7 @@ namespace Unbound.Runtime.Humanoid
         /// the time's fraction of the cycle of <see cref="HumanClipMotion.LoopBlendX"/> in its own
         /// frame, body · (u t, normalize(u q.xyz, q.w)) as generic loop pose turns rotations
         /// (measured, tests/projects/humanoid).</summary>
-        static Trs LoopBlend(HumanClipMotion clip, in Trs body, float time)
+        internal static Trs LoopBlend(HumanClipMotion clip, in Trs body, float time)
         {
             if (!clip.Settings.LoopBlend || !clip.LoopTime || !(clip.StopTime > clip.StartTime)) return body;
             float u = (time - clip.StartTime) / (clip.StopTime - clip.StartTime);

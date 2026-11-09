@@ -125,7 +125,8 @@ namespace Unbound.Runtime
             m_HasMonoMove = MoveCallbacks.Any(animator);
             m_HasStateMove = AnyStateMove();
             // Humanoid clips move the root through their body (muscle) curves.
-            if (animator.Human is { } human && HumanRootMotion(animator, human)) return;
+            var human = animator.Human;
+            if (human != null && HumanRootMotion(animator, human)) return;
             if (!animator.m_ApplyRootMotion && !m_HasMonoMove && !m_HasStateMove) return;
             var t = animator.transform;
             int pos = Bindings.ChannelOf(t, "position"), rot = Bindings.ChannelOf(t, "rotation");
@@ -142,9 +143,17 @@ namespace Unbound.Runtime
             // Root motion scales in its own frame before applying the current world rotation.
             // TransformVector would apply a nonuniform parent's scale after the root's rotation.
             var scale = RootMotionScale(t);
+            // A humanoid Animator moves by its human scale, and its pivot is the moved root
+            // (Unity 6000.0.71f1, tests/projects/humanoid noRootOverGeneric).
+            if (human != null) delta *= animator.humanScale;
             animator.m_DeltaPosition = animator.m_MotionRootRotation * Vector3.Scale(scale, delta);
             animator.m_DeltaRotation = turn;
             MatchStep(animator, scale, pos, rot);
+            if (human != null)
+            {
+                var moved = animator.m_MotionRootPosition + animator.m_DeltaPosition;
+                human.PivotPosition = new Unbound.Runtime.Humanoid.F4(moved.x, moved.y, moved.z, 0f);
+            }
             RootVelocities(animator.m_DeltaPosition, animator.m_DeltaRotation, animator.m_MotionRootRotation, m_RootDeltaTime,
                 out animator.m_RootVelocity, out animator.m_RootAngularVelocity);
         }

@@ -122,17 +122,17 @@ namespace Unbound.Runtime.Humanoid
         /// time, else the clip's first frame), reference⁻¹ · body.</summary>
         internal Trs AdditiveBodyDifference(AnimationClip clip, HumanClipMotion motion, in HumanClipMotionInput input)
         {
-            if (motion.Settings.LoopBlend && motion.LoopTime)
-                Unbound.Runtime.Stubs.Ignored("Animator additive humanoid clip with loop pose",
-                    "an additive layer's humanoid clip with loop pose adds its body without the loop pose (not measured)");
             float time = HumanRootMotion.ClipTime(motion, input.Time, input.Speed, input.CycleOffset, out float cycle);
             clip.SampleHuman(time, m_Current);
             var body = HumanRootMotion.ReadRoot(m_Current, clip.HumanPresent);
-            if (motion.LoopTime && cycle != 0f && motion.HasRootCurves)
+            if (motion.HasRootCurves)
             {
-                // A looping clip's body goes on with its motion across whole cycles.
+                // The body relative to its motion takes the clip's loop pose; a looping clip's body
+                // goes on with its motion across whole cycles (tests/projects/humanoid additiveLoopPose).
                 var x = HumanRootMotion.MotionX(motion, body.t, body.q, motion.HeightFromFeet ? HumanRootMotion.FeetY(m_Current, clip.HumanPresent, body) : 0f);
-                body = M.Mul(HumanRootMotion.CycleX(x, motion.MotionStartX, motion.MotionStopX, (int)cycle), M.InvMul(x, body));
+                var relative = HumanRootMotion.LoopBlend(motion, M.InvMul(x, body), time);
+                if (motion.LoopTime && cycle != 0f) x = HumanRootMotion.CycleX(x, motion.MotionStartX, motion.MotionStopX, (int)cycle);
+                body = M.Mul(x, relative);
             }
             bool referenced = clip.m_HasAdditiveReferencePose && clip.m_AdditiveReferencePoseClip != null;
             var source = referenced ? clip.m_AdditiveReferencePoseClip : clip;

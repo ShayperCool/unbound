@@ -145,7 +145,8 @@ namespace Unbound.Runtime.Humanoid
         /// goal's rotation is mirrored as the API gives it (the stored rotation times the goal's
         /// orientation offset, <see cref="HumanIK.GetGoalRotation"/>): stored, (x, −y, −z, w) times
         /// a constant, the feet's (z, w, x, y) and the hands' (−y, −x, w, z) of the other side
-        /// (measured, tests/projects/humanoid; translation DoF are not mirrored).</summary>
+        /// (measured, tests/projects/humanoid). Translation DoF swap sides with their x negated
+        /// (tests/projects/humanoid tdof.TDoFMirror).</summary>
         public static readonly int[] MirrorCurve = BuildMirror();
 
         static int[] BuildMirror()
@@ -176,6 +177,15 @@ namespace Unbound.Runtime.Humanoid
                     else negate = n.Contains("Left-Right");
                 }
                 else if (i >= LeftHandFirst && i < TDoFFirst) j = i < RightHandFirst ? i + 20 : i - 20;
+                else if (i >= TDoFFirst)
+                {
+                    // TDoFBones order: the body and head (0-4), the left leg (5-8), the right leg
+                    // (9-12), the left arm (13-16), the right arm (17-20).
+                    int t = (i - TDoFFirst) / 3, axis = (i - TDoFFirst) % 3;
+                    int other = t < 5 ? t : t < 9 || t >= 13 && t < 17 ? t + 4 : t - 4;
+                    j = TDoFFirst + 3 * other + axis;
+                    negate = axis == 0;
+                }
                 m[i] = negate ? ~j : j;
             }
             return m;
