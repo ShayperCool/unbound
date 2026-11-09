@@ -213,7 +213,7 @@ namespace UnityEngine
         }
 
         /// <summary>Uploads a block-compressed texture's blocks; ETC blocks as the RGBA8 texels
-        /// they decode to (the renderer samples no ETC formats, as the Editor's desktop GPUs).</summary>
+        /// they decode to (Unbound's renderer samples no ETC formats).</summary>
         unsafe void UploadBlocks()
         {
             var blocks = CurrentBlocks();
@@ -336,33 +336,14 @@ namespace UnityEngine
         /// `highQuality` (dithering) is not applied.</summary>
         void CompressToBlocks(bool highQuality)
         {
-            // Any compressed texture is left alone (an AssetBundle's ETC or ASTC texture too, whose
-            // pixels Unbound keeps decoded), as the documentation says.
+            // Any compressed texture is left alone (an AssetBundle's ETC or ASTC texture too), as
+            // the documentation says.
             if (m_SourceFormat != null || !m_IsReadable || m_Width % 4 != 0 || m_Height % 4 != 0) return;
             bool etc = UnityEditor.EditorUserBuildSettingsInfo.ActiveGroup == UnityEditor.BuildTargetGroup.Android;
-            TextureFormat target;
-            switch (m_Format)
+            if (BlockFormats.CompressTarget(m_Format, etc) is not TextureFormat target)
             {
-                case TextureFormat.RGB24:
-                case TextureFormat.RGB565:
-                    target = etc ? TextureFormat.ETC2_RGB : TextureFormat.DXT1;
-                    break;
-                case TextureFormat.RGBA32:
-                case TextureFormat.ARGB32:
-                case TextureFormat.BGRA32:
-                case TextureFormat.RGBA4444:
-                case TextureFormat.ARGB4444:
-                    target = etc ? TextureFormat.ETC2_RGBA8 : TextureFormat.DXT5;
-                    break;
-                case TextureFormat.R8:
-                    target = etc ? TextureFormat.ETC2_RGB : TextureFormat.BC4;
-                    break;
-                case TextureFormat.RG16:
-                    target = etc ? TextureFormat.ETC2_RGB : TextureFormat.BC5;
-                    break;
-                default:
-                    Debug.LogWarning($"Unbound: Texture2D.Compress of a {m_Format} texture is not supported (unmeasured); the texture keeps its format.");
-                    return;
+                Debug.LogWarning($"Unbound: Texture2D.Compress of a {m_Format} texture is not supported (unmeasured); the texture keeps its format.");
+                return;
             }
             Stubs.Ignored("Texture2D.Compress blocks", "compresses with Unbound's encoder: the blocks differ slightly from the Editor's and highQuality dithering is not applied");
             RequireReadable();
@@ -501,6 +482,22 @@ namespace Unbound.Runtime
             UnityEngine.TextureFormat.DXT5 or UnityEngine.TextureFormat.BC5 or UnityEngine.TextureFormat.BC6H
                 or UnityEngine.TextureFormat.BC7 or UnityEngine.TextureFormat.ETC2_RGBA8 => 16,
             _ => 0,
+        };
+
+        /// <summary>The format Texture2D.Compress gives a texture of `format`: RGB24 and RGB565
+        /// DXT1, formats with alpha DXT5, R8 BC4, RG16 BC5; with `etc` (the Android target active)
+        /// ETC2_RGBA8 for formats with alpha and ETC2_RGB for the others. Null for formats it
+        /// does not take (unmeasured).</summary>
+        internal static UnityEngine.TextureFormat? CompressTarget(UnityEngine.TextureFormat format, bool etc) => format switch
+        {
+            UnityEngine.TextureFormat.RGB24 or UnityEngine.TextureFormat.RGB565 =>
+                etc ? UnityEngine.TextureFormat.ETC2_RGB : UnityEngine.TextureFormat.DXT1,
+            UnityEngine.TextureFormat.RGBA32 or UnityEngine.TextureFormat.ARGB32 or UnityEngine.TextureFormat.BGRA32
+                or UnityEngine.TextureFormat.RGBA4444 or UnityEngine.TextureFormat.ARGB4444 =>
+                etc ? UnityEngine.TextureFormat.ETC2_RGBA8 : UnityEngine.TextureFormat.DXT5,
+            UnityEngine.TextureFormat.R8 => etc ? UnityEngine.TextureFormat.ETC2_RGB : UnityEngine.TextureFormat.BC4,
+            UnityEngine.TextureFormat.RG16 => etc ? UnityEngine.TextureFormat.ETC2_RGB : UnityEngine.TextureFormat.BC5,
+            _ => null,
         };
 
         /// <summary>Formats whose blocks the native side decodes (the others decode texel by texel

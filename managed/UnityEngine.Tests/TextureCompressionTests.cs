@@ -163,6 +163,39 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(texture);
         }
 
+        /// <summary>ETC formats keep their blocks like BC ones, decode natively and go to the
+        /// renderer decoded (it samples no ETC).</summary>
+        [Theory]
+        [InlineData(TextureFormat.ETC_RGB4, 8)]
+        [InlineData(TextureFormat.ETC2_RGB, 8)]
+        [InlineData(TextureFormat.ETC2_RGBA8, 16)]
+        public void EtcFormatsAreBlockFormats(TextureFormat format, int blockBytes)
+        {
+            Assert.Equal(blockBytes, BlockFormats.BlockBytes(format));
+            Assert.True(BlockFormats.NativeDecoded(format));
+            Assert.Equal(-1, BlockFormats.GpuCode(format, false));
+            Assert.False(BlockFormats.NativeDecoded(TextureFormat.DXT1));
+        }
+
+        /// <summary>Texture2D.Compress's format: DXT/BC on Standalone; with the Android target
+        /// active ETC2_RGBA8 for formats with alpha and ETC2_RGB otherwise
+        /// (tests/projects/texturecompression AndroidGamma compress.*).</summary>
+        [Theory]
+        [InlineData(TextureFormat.RGBA32, false, TextureFormat.DXT5)]
+        [InlineData(TextureFormat.RGB24, false, TextureFormat.DXT1)]
+        [InlineData(TextureFormat.R8, false, TextureFormat.BC4)]
+        [InlineData(TextureFormat.RG16, false, TextureFormat.BC5)]
+        [InlineData(TextureFormat.RGBA32, true, TextureFormat.ETC2_RGBA8)]
+        [InlineData(TextureFormat.ARGB4444, true, TextureFormat.ETC2_RGBA8)]
+        [InlineData(TextureFormat.RGB24, true, TextureFormat.ETC2_RGB)]
+        [InlineData(TextureFormat.R8, true, TextureFormat.ETC2_RGB)]
+        [InlineData(TextureFormat.RG16, true, TextureFormat.ETC2_RGB)]
+        public void CompressTargetsFollowTheBuildTarget(TextureFormat format, bool android, TextureFormat want)
+        {
+            Assert.Equal(want, BlockFormats.CompressTarget(format, android));
+            Assert.Null(BlockFormats.CompressTarget(TextureFormat.RHalf, android));
+        }
+
         /// <summary>Reinitialize to sides a block format cannot have changes nothing
         /// (tests/projects/texturecompression reinit.*): it returns false.</summary>
         [Fact]
