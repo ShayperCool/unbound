@@ -139,6 +139,9 @@ class Workspace:
 
     def close(self):
         if not self.original and self.path is not None:
+            from runtime_snapshot import finish_task
+            finish_task(self.path, repo=self.repo)
+        if not self.original and self.path is not None:
             try:
                 self.train.api.require_clean(self.path, 'integration worktree')
                 head = self.train.git('rev-parse', 'HEAD', cwd=self.path)
@@ -197,23 +200,25 @@ class LandTrain:
     def record(self, entry, result):
         path = self.api.STATE/'landed.jsonl'
         # Prepared records make recovery idempotent if a leader exits after advancing main.
-        known = {}
-        if path.exists():
-            for line in path.read_text().splitlines():
-                row = json.loads(line)
-                known[row.get('request_id')] = row
-        if entry['id'] not in known:
-            row = {'time': f'{datetime.datetime.now():%F %T}', 'branch': entry['branch'],
-                   'old': result['old'], 'new': result['new'], 'commits': result['commits'],
-                   'worktree': entry['worktree'], 'request_id': entry['id'],
-                   'train_id': result['train_id'], 'log': result.get('log')}
-            with path.open('a') as stream:
-                stream.write(json.dumps(row)+'\n')
-                stream.flush()
-                os.fsync(stream.fileno())
-        else:
-            row = known[entry['id']]
-            result = dict(result, **{key: row[key] for key in ('old', 'new', 'commits', 'train_id', 'log')})
+        from land_push import journal
+        with journal(self.api.STATE):
+            known = {}
+            if path.exists():
+                for line in path.read_text().splitlines():
+                    row = json.loads(line)
+                    known[row.get('request_id')] = row
+            if entry['id'] not in known:
+                row = {'time': f'{datetime.datetime.now():%F %T}', 'branch': entry['branch'],
+                       'old': result['old'], 'new': result['new'], 'commits': result['commits'],
+                       'worktree': entry['worktree'], 'request_id': entry['id'],
+                       'train_id': result['train_id'], 'log': result.get('log')}
+                with path.open('a') as stream:
+                    stream.write(json.dumps(row)+'\n')
+                    stream.flush()
+                    os.fsync(stream.fileno())
+            else:
+                row = known[entry['id']]
+                result = dict(result, **{key: row[key] for key in ('old', 'new', 'commits', 'train_id', 'log')})
         self.queue.update(entry['id'], result=result)
 
     def publications(self):
@@ -254,7 +259,16 @@ class LandTrain:
             return
         # The intent survives both completed caller results and an interrupted push.
         # Replaying a push after a crash is safe; a healthy train launches it once.
-        self.api.push_main(main_checkout)
+        if self.api.push_main(main_checkout) is False:
+            return
+        from runtime_snapshot import release_task, cleanup
+        try:
+            for train_id, request_id in delivered:
+                item = trains[train_id]['entries'][request_id]['entry']
+                release_task(item['worktree'], item['branch'])
+            cleanup(days=1/24, repo=self.repo)
+        except (OSError, ValueError) as error:
+            print(f'land: runtime cleanup deferred: {error}', file=sys.stderr)
         for train_id, request_id in delivered:
             del trains[train_id]['entries'][request_id]
             if not trains[train_id]['entries']:

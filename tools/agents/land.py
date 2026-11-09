@@ -686,18 +686,13 @@ def land_lock(branch):
 
 
 def push_main(main_checkout):
-    remote = git('config', '--get', 'branch.main.remote', cwd=main_checkout, check=False)
-    if not remote or os.environ.get('UNBOUND_LAND_NO_PUSH'):
-        return
-    log = Path(git('rev-parse', '--git-common-dir', cwd=main_checkout))
-    if not log.is_absolute():
-        log = Path(main_checkout)/log
-    with open(log/'auto-push.log', 'a') as out:
-        out.write(f'[{datetime.datetime.now():%F %T}] main -> {remote}/main (land)\n')
-        out.flush()
-        subprocess.Popen(['git', 'push', '--quiet', remote, 'main:refs/heads/main'], cwd=main_checkout,
-                         stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                         start_new_session=True)
+    from land_push import enqueue
+    try:
+        return enqueue(Path(main_checkout), STATE)
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        # The publication outbox remains intact for a later caller to retry.
+        print(f'land: push could not be queued; local main retained: {error}', file=sys.stderr)
+        return False
 
 
 def main():

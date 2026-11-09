@@ -184,6 +184,7 @@ from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 import land, land_train
 land.STATE = Path(sys.argv[2])
+os.environ['UNBOUND_RUNTIME_CACHE'] = str(land.STATE/'runtimes')
 land.integration_root = lambda: land.STATE/'integration'
 land_train.POLL_SECONDS = .02
 events = Path(sys.argv[3])
@@ -226,7 +227,8 @@ if os.environ.get('TRAIN_LEGACY_REQUEST'):
     land_train.Queue.register = legacy_register
 land.run_gate = gate
 land.pin_main = lambda *args, **kwargs: None
-land.push_main = lambda *args: event({'push': True})
+if not os.environ.get('TRAIN_REAL_PUSH'):
+    land.push_main = lambda *args: event({'push': True})
 if os.environ.get('TRAIN_CRASH_AFTER_ADVANCE'):
     def crash(*args, **kwargs):
         os._exit(73)
@@ -319,10 +321,14 @@ class TrainIntegrationTests(unittest.TestCase):
         return path
 
     def start(self, path, probes=(), *, crash=False, pause_lock=False, pause_leader=False,
-              crash_final=False, crash_prefix=False, crash_after_final_record=False, probe_release=None, legacy=False):
+              crash_final=False, crash_prefix=False, crash_after_final_record=False, probe_release=None, legacy=False,
+              real_push=False):
         log = self.root/(path.name+'.log')
         stream = log.open('w')
         env = dict(os.environ, UNBOUND_LAND_NO_PUSH='1')
+        if real_push:
+            env.pop('UNBOUND_LAND_NO_PUSH', None)
+            env['TRAIN_REAL_PUSH'] = '1'
         if probe_release is not None:
             env[land.RELEASE_VARIABLE] = probe_release
         settings = {'TRAIN_LEGACY_REQUEST': legacy, 'TRAIN_CRASH_AFTER_ADVANCE': crash, 'TRAIN_PAUSE_LOCK': pause_lock,
@@ -660,6 +666,38 @@ class TrainIntegrationTests(unittest.TestCase):
             head = self.git('rev-parse', 'HEAD', cwd=path)
             self.git('merge-base', '--is-ancestor', head, 'main')
             self.assertEqual(self.git('status', '--porcelain', cwd=path), '')
+
+    def test_real_train_push_updates_all_receipts_and_retires_completed_task_runtime(self):
+        import runtime_snapshot
+        remote = self.root/'origin'
+        subprocess.run(['git', 'init', '-q', '--bare', str(remote)], check=True)
+        self.git('remote', 'add', 'origin', str(remote))
+        first = self.branch('first', {'a.txt': 'ok'})
+        second = self.branch('second', {'b.txt': 'ok'})
+        third = self.branch('third', {'c.txt': 'ok'})
+        cli = self.root/'fake-cli'
+        cli.write_text('#!/bin/sh\nexit 0\n')
+        cli.chmod(0o755)
+        managed = self.root/'managed'
+        managed.mkdir()
+        (managed/'Unbound.Host.dll').write_bytes(b'fixture')
+        with mock.patch.object(runtime_snapshot, 'task_owner', return_value={'worktree': str(first), 'branch': 'first'}):
+            reference = runtime_snapshot.snapshot_runtime(cli, managed, self.state/'completed/runtime', cache=self.state/'runtimes')
+        snapshot = reference.resolve()
+        os.utime(snapshot, (0, 0))
+        with self.hold():
+            workers = []
+            for count, path in enumerate((first, second, third), 1):
+                workers.append(self.start(path, real_push=True))
+                self.registered(count)
+        results = self.finish(workers)
+        self.assertEqual([code for code, _ in results], [0, 0, 0], results)
+        self.wait_for(lambda: len(self.rows()) == 3 and all(row.get('push', {}).get('status') == 'pushed' for row in self.rows()),
+                      'push receipt did not complete')
+        self.assertEqual(subprocess.check_output(['git', '--git-dir', str(remote), 'rev-parse', 'main'], text=True).strip(),
+                         self.git('rev-parse', 'main'))
+        self.assertFalse(reference.is_symlink())
+        self.assertFalse(snapshot.exists())
 
     def test_failed_middle_branch_does_not_block_independent_later_branch(self):
         paths = [self.branch('first', {'a.txt': 'ok'}),

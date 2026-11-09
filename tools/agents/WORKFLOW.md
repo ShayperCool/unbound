@@ -11,7 +11,7 @@ Machine-local state lives in `~/.cache/unbound/agents/` (not in Git):
 | `QUEUE.md` | the orchestrator's task queue |
 | `landed.jsonl` | one line per landed branch, including its train ID and gate log |
 | `land-queue.json` | queued callers, requested probes, and recoverable results |
-| `land-publications.json` | durable publication receipts, retained until the push is launched |
+| `land-publications.json` | durable publication receipts, retained until the push is queued |
 | `logs/` | gate logs |
 | `suite/<label>/` | `summary.json` of each `tools/agents/suite.py` run |
 | `baseline/` | the sheriff's last full-suite results (a promoted `summary.json`) |
@@ -60,7 +60,11 @@ tools/validation/README.md for why that is unsafe).
   commit gets a `reaped-worktree/<commit>` branch before removal. It keeps dirty and recently
   active worktrees, slots, the main checkout, worktrees with tracked paths hidden by index
   flags, and worktrees that a symlink under the run caches points into. Clear hidden-path flags
-  only after preserving any work. Reaping prints the count kept with unmerged commits.
+  only after preserving any work. Reaping prints the count kept with unmerged commits. Link discovery uses an incremental index of
+  directory listings, revalidating directory identity and change times on every walk. The walk
+  has a 60 s limit; an incomplete scan saves progress and refuses to delete worktrees. Retry
+  reap to finish indexing a large historical cache. Completed task runtime links are retired
+  when landing, reassigning a slot, or reaping its checkout.
 
 ## Worker
 
@@ -260,3 +264,21 @@ spend Editor captures or research just to close such a residual.
 - Run every build, Editor and engine through `tools/build.py` or `~/.cache/compat/with-heavy-job`;
   never nest the launcher around a driver that already uses it.
 - Keep long outputs in log files and print only summaries; context fills up quickly.
+
+## Main push delivery
+
+A passing train advances local `main` before enqueueing one normal push to `origin/main`.
+Landing returns without waiting for the network. The common Git directory holds `land-push.json`
+and `auto-push.log`; `landed.jsonl` records each branch's push state as `pending`, `pushed`,
+`failed` or `disabled`. A successful local landing does not imply that its push completed.
+The background worker makes at most three attempts per batch, with a 30 s network timeout.
+Newer trains coalesce into the latest target. Rejected pushes leave both main refs unchanged;
+there is no force push, reset or implicit pull. Failed intent survives process exits and is
+retried by the next landing, or manually with:
+
+```bash
+python3 tools/agents/land_push.py --repo <main-checkout>
+```
+
+`UNBOUND_LAND_NO_PUSH` keeps its existing opt-out. Network attempts never hold the land lock.
+Receipt updates briefly share that lock so older coordinators' journal appends remain safe.
