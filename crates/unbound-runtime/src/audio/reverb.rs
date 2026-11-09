@@ -108,6 +108,8 @@ pub struct SfxReverb {
     previous: Coefficients,
     pending: Coefficients,
     configured: bool,
+    /// Set at a DSP-buffer boundary when the pending parameters differ from the previous ones.
+    transitioning: bool,
     buffer_size: usize,
     buffer_position: usize,
     input: Vec<f32>,
@@ -139,6 +141,7 @@ impl SfxReverb {
             previous: Coefficients::default(),
             pending: Coefficients::default(),
             configured: false,
+            transitioning: false,
             buffer_size: buffer_size.max(1) as usize,
             buffer_position: 0,
             input: ring(input)?,
@@ -184,6 +187,7 @@ impl SfxReverb {
         self.c.damping.fill(INITIAL_LINE_POLE);
         self.c.decay.fill(INITIAL_FEEDBACK_GAIN);
         self.previous = self.c;
+        self.transitioning = false;
         self.pending = self.c;
     }
 
@@ -207,6 +211,7 @@ impl SfxReverb {
         self.buffer_position = 0;
         self.c = self.pending;
         self.previous = self.c;
+        self.transitioning = false;
     }
 
     /// The first parameters apply at once; later ones take effect at the next DSP-buffer
@@ -297,6 +302,7 @@ impl SfxReverb {
         if !self.configured {
             self.c = c;
             self.previous = self.c;
+            self.transitioning = false;
             self.configured = true;
         }
     }
@@ -308,6 +314,7 @@ impl SfxReverb {
         self.tune(p);
         self.c = self.pending;
         self.previous = self.c;
+        self.transitioning = false;
     }
 
     fn input_at(&self, delay: usize) -> f32 {
@@ -334,10 +341,15 @@ impl SfxReverb {
             if self.buffer_position == 0 {
                 self.previous = self.c;
                 self.c = self.pending;
+                self.transitioning = self.previous != self.c;
             }
             let phase = self.buffer_position;
             let size = self.buffer_size;
-            let c = self.previous.at(self.c, phase, size);
+            let c = if self.transitioning {
+                self.previous.at(self.c, phase, size)
+            } else {
+                self.c
+            };
 
             let mut mono = stereo[0] + stereo[1];
             if c.hf != 0.0 {
