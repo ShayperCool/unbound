@@ -165,6 +165,11 @@ impl UnityRenderer {
             stencil_ref = apply_override(&mut state, stencil_ref, o);
         }
         state.wireframe = self.state.wireframe;
+        // The device's depth direction: tests and offsets mirrored on reversed Z.
+        if self.conventions.reversed_z {
+            state.ztest = super::mirror_compare(state.ztest);
+            state.offset = state.offset.map(|o| -o);
+        }
         if self.state.invert_culling != mirrored {
             state.cull = match state.cull {
                 1 => 2,

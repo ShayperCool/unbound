@@ -57,7 +57,15 @@ pub struct DrawValues<'a, 'buffers> {
     pub gizmo_draw: bool,
     pub color: [f32; 4],
     pub view: [f32; 16],
+    /// The projection as Unity's API has it (OpenGL's convention).
     pub proj: [f32; 16],
+    /// The projection the device draws with (`GL.GetGPUProjectionMatrix` for the target):
+    /// `UNITY_MATRIX_P` and `UNITY_MATRIX_VP`.
+    pub gpu_proj: [f32; 16],
+    /// The projection is flipped for the target (`_ProjectionParams.x` -1).
+    pub flipped: bool,
+    /// The device's depth is reversed (`_ZBufferParams`).
+    pub reversed_z: bool,
     /// The camera's matrices (its last setup): the camera built-ins read them, not the current
     /// ones a blit or command buffer set.
     pub camera_view: [f32; 16],
@@ -733,6 +741,7 @@ enum Builtin {
     MatrixInvV,
     MatrixVP,
     Projection,
+    CameraProjection,
     InvProjection,
     WorldToCamera,
     CameraToWorld,
@@ -765,7 +774,8 @@ impl Source {
             "unity_MatrixV" => MatrixV,
             "unity_MatrixInvV" => MatrixInvV,
             "unity_MatrixVP" => MatrixVP,
-            "glstate_matrix_projection" | "unity_CameraProjection" => Projection,
+            "glstate_matrix_projection" => Projection,
+            "unity_CameraProjection" => CameraProjection,
             "unity_CameraInvProjection" => InvProjection,
             "unity_WorldToCamera" => WorldToCamera,
             "unity_CameraToWorld" => CameraToWorld,
@@ -872,8 +882,10 @@ fn builtin_value(which: Builtin, name: &str, v: &DrawValues, textures: &[String]
         }),
         MatrixV => mat(v.view),
         MatrixInvV => mat(view_inverse()),
-        MatrixVP => mat(mul(&v.proj, &v.view)),
-        Projection => mat(v.proj),
+        MatrixVP => mat(mul(&v.gpu_proj, &v.view)),
+        Projection => mat(v.gpu_proj),
+        // The camera's own projection and its inverse stay in the API's convention.
+        CameraProjection => mat(v.proj),
         InvProjection => mat(inverse(&v.proj)),
         WorldToCamera => mat(mul(&flip_z, &v.camera_view)),
         CameraToWorld => mat(inverse(&mul(&flip_z, &v.camera_view))),
@@ -894,7 +906,7 @@ fn builtin_value(which: Builtin, name: &str, v: &DrawValues, textures: &[String]
         }
         ProjectionParams => {
             let (near, far, _) = clip_planes(&v.camera_proj);
-            vec([1.0, near, far, 1.0 / far])
+            vec([if v.flipped { -1.0 } else { 1.0 }, near, far, 1.0 / far])
         }
         ScreenParams => {
             let [w, h] = v.screen;
@@ -902,8 +914,12 @@ fn builtin_value(which: Builtin, name: &str, v: &DrawValues, textures: &[String]
         }
         ZBufferParams => {
             let (near, far, _) = clip_planes(&v.camera_proj);
-            let x = 1.0 - far / near;
-            let y = far / near;
+            // Reversed depth: x = -1 + far/near, y = 1 (Unity's built-in shader variables).
+            let (x, y) = if v.reversed_z {
+                (far / near - 1.0, 1.0)
+            } else {
+                (1.0 - far / near, far / near)
+            };
             vec([x, y, x / far, y / far])
         }
         OrthoParams => {
@@ -1583,6 +1599,9 @@ mod tests {
                 model,
                 view: model,
                 proj: model,
+                gpu_proj: model,
+                flipped: false,
+                reversed_z: false,
                 camera_view: model,
                 camera_proj: model,
                 screen: [960.0, 540.0],
@@ -1714,6 +1733,9 @@ mod tests {
             model,
             view: model,
             proj: model,
+            gpu_proj: model,
+            flipped: false,
+            reversed_z: false,
             camera_view: model,
             camera_proj: model,
             screen: [960.0, 540.0],

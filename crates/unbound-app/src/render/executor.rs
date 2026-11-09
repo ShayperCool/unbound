@@ -14,6 +14,7 @@ mod warmup;
 
 use super::{
     compiled,
+    device::{DeviceConventions, mirror_compare},
     pipelines::{ClearKey, DEPTH_FORMAT, DRAW_SLOT, PipelineKey, Pipelines},
     resources::{self, GpuMesh, GpuTexture, SamplerKey},
 };
@@ -110,6 +111,8 @@ const RANDOM_WRITE_TARGET: &str = "<RandomWriteTarget>";
 pub struct Presented {
     pub color: wgpu::TextureView,
     pub color_space: i32,
+    /// The screen's rows are stored top-down (see `DeviceConventions::top_down`).
+    pub top_down: bool,
     /// Changes with every frame (bind groups compare it).
     pub frame: u64,
     /// Which target of the ring it is.
@@ -427,6 +430,8 @@ struct State {
 pub struct UnityRenderer {
     /// Native plugins' shared textures and callbacks (`plugins`).
     plugins: plugins::PluginState,
+    /// The graphics device's projection, depth and target orientation (resolved at startup).
+    conventions: DeviceConventions,
     fence_issued: u64,
     fence_completed: Arc<std::sync::atomic::AtomicU64>,
     device: wgpu::Device,
@@ -534,11 +539,13 @@ impl UnityRenderer {
         compiled: compiled::CompiledPrograms,
         presented: Arc<Mutex<Option<Presented>>>,
         center_anisotropic_lod: bool,
+        conventions: DeviceConventions,
     ) -> Self {
         let pipelines = Pipelines::new(&device);
         let defaults = resources::default_textures(&device, &queue);
         UnityRenderer {
             plugins: Default::default(),
+            conventions,
             device,
             queue,
             resolver,
@@ -907,14 +914,15 @@ impl UnityRenderer {
 
     fn sampler(&mut self, key: SamplerKey) -> wgpu::Sampler {
         let device = &self.device;
+        let reversed_z = self.conventions.reversed_z;
         // Bias can change continuously. Bind groups own these samplers; keeping every bias
         // in this renderer cache would prevent their release. HAL deduplicates live samplers.
         if key.lod_bias_bits != 0 {
-            return resources::create_sampler(device, key);
+            return resources::create_sampler(device, key, reversed_z);
         }
         self.samplers
             .entry(key)
-            .or_insert_with(|| resources::create_sampler(device, key))
+            .or_insert_with(|| resources::create_sampler(device, key, reversed_z))
             .clone()
     }
 
@@ -2003,6 +2011,8 @@ impl UnityRenderer {
             return view.clone();
         }
         let layers = if cube { 6 } else { 1 };
+        // Cleared to the far depth of the device.
+        let far = self.conventions.depth(1.0);
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("unbound default depth"),
             size: wgpu::Extent3d {
@@ -2033,7 +2043,7 @@ impl UnityRenderer {
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                     view: &face,
                     depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(1.0),
+                        load: wgpu::LoadOp::Clear(far),
                         store: wgpu::StoreOp::Store,
                     }),
                     stencil_ops: None,
@@ -2344,7 +2354,7 @@ impl UnityRenderer {
                 pass.seed = self.previous_screen();
                 if pass.seed.is_none() {
                     pass.color_load = wgpu::LoadOp::Clear(wgpu::Color::BLACK);
-                    pass.depth_clear = Some((1.0, 0));
+                    pass.depth_clear = Some((self.conventions.depth(1.0), 0));
                 }
             }
             self.screen_touched = true;
@@ -2457,7 +2467,7 @@ impl UnityRenderer {
                         let mut pass = self.new_pass(target);
                         pass.seed = None;
                         pass.color_load = wgpu::LoadOp::Clear(wgpu::Color::BLACK);
-                        pass.depth_clear = Some((1.0, 0));
+                        pass.depth_clear = Some((self.conventions.depth(1.0), 0));
                         passes.push(Op::Pass(pass));
                     }
                     open = false;
@@ -2590,7 +2600,15 @@ impl UnityRenderer {
                     }
                 }
                 Command::PassTags(tags) => self.pass_tags = tags,
-                Command::DepthBias { bias, slope } => self.state.depth_bias = [bias, slope],
+                Command::DepthBias { bias, slope } => {
+                    // Toward the far plane in the device's depth direction.
+                    let sign = if self.conventions.reversed_z {
+                        -1.0
+                    } else {
+                        1.0
+                    };
+                    self.state.depth_bias = [bias * sign, slope * sign];
+                }
                 Command::StateOverride(o) => self.state.state_override = o,
                 Command::ColorSpace(space) => self.color_space = space.clamp(0, 1),
                 Command::Anisotropy {
@@ -2682,7 +2700,7 @@ impl UnityRenderer {
                             });
                         }
                         if clear_depth {
-                            pass.depth_clear = Some((depth, stencil));
+                            pass.depth_clear = Some((self.conventions.depth(depth), stencil));
                         }
                     } else if integer && (clear_color || clear_depth) {
                         self.warn_once(format!("int-clear{:?}", target.format), || {
@@ -2700,8 +2718,10 @@ impl UnityRenderer {
                                 clear_depth,
                             },
                         );
+                        // The clear draws at the far depth of the device.
                         let offset = self.push_uniform(DrawUniform {
                             color,
+                            misc: [self.conventions.depth(1.0), 0.0, 0.0, 0.0],
                             ..Zeroable::zeroed()
                         });
                         last_pass(&mut passes)
@@ -3049,6 +3069,7 @@ impl UnityRenderer {
             *self.presented.lock().unwrap() = Some(Presented {
                 color: screen,
                 color_space: self.color_space,
+                top_down: self.conventions.top_down(true),
                 frame: self.frame_number,
                 slot,
             });
@@ -3152,6 +3173,12 @@ impl UnityRenderer {
             return planned;
         }
         let (view, projection) = (self.state.view, self.state.projection);
+        // The projection as the device draws with it into this target (Unity's GPU projection:
+        // flipped into render textures where UV starts at the top, depth in its range).
+        let flipped = self.conventions.flips(target.screen);
+        let gpu_projection = self.conventions.gpu_projection(&projection, flipped);
+        // Rows stored top-down turn the winding (as a mirrored transform does).
+        let top_down = self.conventions.top_down(target.screen);
         // The passes drawn: the forward ones (a renderer's), every one, or one by index.
         let forward = resolved.passes.len();
         let passes: Vec<(usize, &crate::materials::ResolvedPass)> = match draw.pass {
@@ -3245,7 +3272,7 @@ impl UnityRenderer {
         let offset = self.push_uniform(DrawUniform {
             model: draw.model,
             view,
-            proj: projection,
+            proj: gpu_projection,
             color: draw.color,
             screen,
             misc: [time, space as f32, if alpha_only { 1.0 } else { 0.0 }, 0.0],
@@ -3318,8 +3345,11 @@ impl UnityRenderer {
             } else {
                 (pass.state, pass.stencil_ref)
             };
-            (state, stencil_ref) =
-                self.draw_state(state, stencil_ref, determinant3(&draw.model) < 0.0);
+            (state, stencil_ref) = self.draw_state(
+                state,
+                stencil_ref,
+                (determinant3(&draw.model) < 0.0) != top_down,
+            );
             let key = PipelineKey {
                 state,
                 topology: sub.topology,
@@ -3433,6 +3463,9 @@ impl UnityRenderer {
                 model: draw.model,
                 view,
                 proj: projection,
+                gpu_proj: gpu_projection,
+                flipped,
+                reversed_z: self.conventions.reversed_z,
                 camera_view,
                 camera_proj,
                 screen: [tw as f32, th as f32],
@@ -4047,6 +4080,34 @@ impl UnityRenderer {
                 multiview_mask: None,
             });
             let mut current_viewport = None;
+            // Viewports and scissors are bottom-up (Unity's); a target stored top-down counts its
+            // rows from the top.
+            let target_height = pass.target.height;
+            let top_down = self.conventions.top_down(pass.target.screen);
+            let stored = |[x, y, w, h]: [f32; 4]| {
+                [
+                    x,
+                    if top_down {
+                        target_height as f32 - y - h
+                    } else {
+                        y
+                    },
+                    w,
+                    h,
+                ]
+            };
+            let stored_rect = |[x, y, w, h]: [u32; 4]| {
+                [
+                    x,
+                    if top_down {
+                        target_height.saturating_sub(y + h)
+                    } else {
+                        y
+                    },
+                    w,
+                    h,
+                ]
+            };
             for item in &pass.items {
                 let viewport = match item {
                     PassItem::Clear(_, _, v) => {
@@ -4058,13 +4119,17 @@ impl UnityRenderer {
                     continue;
                 }
                 if current_viewport != Some(viewport) {
-                    let [x, y, w, h] = viewport;
+                    let [x, y, w, h] = stored(viewport);
                     rp.set_viewport(x, y, w, h, 0.0, 1.0);
                     current_viewport = Some(viewport);
                 }
                 match item {
                     PassItem::Clear(pipeline, offset, _) => {
-                        let s = clamp_rect(viewport, pass.target.width, pass.target.height);
+                        let s = stored_rect(clamp_rect(
+                            viewport,
+                            pass.target.width,
+                            pass.target.height,
+                        ));
                         rp.set_pipeline(pipeline);
                         rp.set_bind_group(0, &draw_bg, &[*offset]);
                         rp.set_stencil_reference(0);
@@ -4089,7 +4154,8 @@ impl UnityRenderer {
                         }
                         rp.set_index_buffer(d.index.slice(..), d.index_format);
                         rp.set_stencil_reference(d.stencil_ref);
-                        rp.set_scissor_rect(d.scissor[0], d.scissor[1], d.scissor[2], d.scissor[3]);
+                        let s = stored_rect(d.scissor);
+                        rp.set_scissor_rect(s[0], s[1], s[2], s[3]);
                         match &d.indirect {
                             Some((args, offset, true)) => rp.draw_indexed_indirect(args, *offset),
                             Some((args, offset, false)) => rp.draw_indirect(args, *offset),
@@ -4192,6 +4258,10 @@ impl UnityRenderer {
         if w == 0 || h == 0 {
             return Some(Vec::new());
         }
+        // A screen stored top-down is read from its last rows up, so rows still come bottom
+        // first.
+        let top_down = texture == 0 && self.conventions.top_down(true);
+        let y0 = if top_down { th - y1 } else { y0 };
         let texel = format.block_copy_size(None)?;
         let row = (w * texel).next_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
         self.read_gpu_data(
@@ -4227,6 +4297,7 @@ impl UnityRenderer {
             |data| {
                 let mut out = Vec::with_capacity((w * h) as usize * if float { 16 } else { 4 });
                 for r in 0..h as usize {
+                    let r = if top_down { h as usize - 1 - r } else { r };
                     let line = &data[r * row as usize..r * row as usize + (w * texel) as usize];
                     match format {
                         wgpu::TextureFormat::R32Float

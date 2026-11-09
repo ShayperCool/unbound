@@ -263,7 +263,9 @@ impl SamplerKey {
     }
 }
 
-pub fn create_sampler(device: &wgpu::Device, key: SamplerKey) -> wgpu::Sampler {
+/// A sampler of the key's state. A comparison compares in the device's depth direction: Unity
+/// mirrors the (shadow) compare function with a reversed depth buffer.
+pub fn create_sampler(device: &wgpu::Device, key: SamplerKey, reversed_z: bool) -> wgpu::Sampler {
     let wrap = |w: i32| match w {
         1 => wgpu::AddressMode::ClampToEdge,
         2 | 3 => wgpu::AddressMode::MirrorRepeat,
@@ -298,7 +300,11 @@ pub fn create_sampler(device: &wgpu::Device, key: SamplerKey) -> wgpu::Sampler {
         min_filter: mag,
         mipmap_filter: mip,
         anisotropy_clamp: aniso,
-        compare: compare_function(key.compare),
+        compare: compare_function(if reversed_z {
+            i32::from(super::device::mirror_compare(key.compare as u8))
+        } else {
+            key.compare
+        }),
         ..Default::default()
     };
     let bias = f32::from_bits(key.lod_bias_bits);

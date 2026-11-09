@@ -1,9 +1,11 @@
-// Presents the frame's bottom-up intermediate target on the window's (top-down) output texture,
-// converting from the project's color space to what the output expects.
+// Presents the frame's intermediate target (bottom-up, or top-down on devices whose UV starts at
+// the top) on the window's (top-down) output texture, converting from the project's color space
+// to what the output expects.
 
 struct Params {
     // x: 1 when the intermediate holds gamma values (gamma projects),
-    // y: 1 when the output is an sRGB format (the hardware encodes on write).
+    // y: 1 when the output is an sRGB format (the hardware encodes on write),
+    // z: 1 when the intermediate's rows are stored top-down.
     mode: vec4<f32>,
 }
 
@@ -21,8 +23,8 @@ fn vs_blit(@builtin(vertex_index) i: u32) -> Out {
     var o: Out;
     let uv = vec2<f32>(f32((i << 1u) & 2u), f32(i & 2u));
     o.clip = vec4<f32>(uv * 2.0 - 1.0, 0.0, 1.0);
-    // Output row 0 is the top; the source's top is its last row.
-    o.uv = vec2<f32>(uv.x, uv.y);
+    // Output row 0 is the top; a bottom-up source's top is its last row.
+    o.uv = vec2<f32>(uv.x, select(uv.y, 1.0 - uv.y, params.mode.z > 0.5));
     return o;
 }
 

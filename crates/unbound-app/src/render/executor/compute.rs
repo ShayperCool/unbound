@@ -164,6 +164,7 @@ impl BindingCache {
         bindings: &[(u32, Bound)],
         properties: &[(String, PropertyValue)],
         globals: &[(String, PropertyValue)],
+        reversed_z: bool,
     ) -> wgpu::BindGroup {
         let groups = self.groups.entry(gpu.layout.clone()).or_default();
         if !groups.contains_key(bindings) {
@@ -203,9 +204,9 @@ impl BindingCache {
             let samplers: Vec<_> = bindings
                 .iter()
                 .filter_map(|(_, binding)| match binding {
-                    Bound::Sampler(_, key) => {
-                        Some(super::super::resources::create_sampler(device, *key))
-                    }
+                    Bound::Sampler(_, key) => Some(super::super::resources::create_sampler(
+                        device, *key, reversed_z,
+                    )),
                     _ => None,
                 })
                 .collect();
@@ -1306,6 +1307,7 @@ fn main() {
                 &bound,
                 &d.properties,
                 &self.globals,
+                self.conventions.reversed_z,
             );
             let indirect = match d.indirect {
                 None => None,

@@ -1,7 +1,8 @@
-//! The OpenGL context native rendering plugins draw with. Unbound reports OpenGL Core
-//! (`SystemInfo.graphicsDeviceType`, `IUnityGraphics::GetRenderer`), as the Linux Editor does, so
+//! The OpenGL context native rendering plugins draw with on the OpenGL Core device
+//! (`SystemInfo.graphicsDeviceType`, `IUnityGraphics::GetRenderer`), the Linux Editor's default:
 //! plugins call OpenGL on the main thread with a context current and use OpenGL texture names
-//! from `Texture.GetNativeTexturePtr`. The renderer draws with Vulkan: this module makes an
+//! from `Texture.GetNativeTexturePtr`. The renderer draws that device with Vulkan (see
+//! `render::device::backends`): this module makes an
 //! OpenGL 4.5 core context on the renderer's GPU (EGL, no window surface) and imports the
 //! memory of the renderer's textures into OpenGL textures (`GL_EXT_memory_object_fd`), so both
 //! see the same texels. The renderer finishes its work before a callback and OpenGL finishes the
@@ -87,6 +88,13 @@ pub fn with<R>(
     device_uuid: Option<[u8; 16]>,
     work: impl FnOnce(&mut Interop) -> R,
 ) -> Result<R, String> {
+    let device = unbound_runtime::graphics_device::get();
+    if device != unbound_compat::GraphicsDevice::OpenGLCore {
+        return Err(format!(
+            "native rendering plugins on the {device} device get no OpenGL context (its own \
+             plugin interface is not supported yet)"
+        ));
+    }
     let mut slot = INTEROP
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
