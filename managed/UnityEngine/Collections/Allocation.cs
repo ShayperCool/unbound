@@ -48,10 +48,17 @@ namespace Unbound.Runtime
         {
             if (memory == null) return;
             if (allocator <= Allocator.None) throw new ArgumentException("Allocator must be Temp, TempJob or Persistent", nameof(allocator));
+            // Temp memory stays its scope's until the scope ends: freeing it early does nothing
+            // (com.unity.collections Allocator overview: the main thread's Temp allocator is
+            // deallocated in its entirety at the end of the frame, a job's at the end of the job;
+            // "you don't need to manually deallocate Temp allocations, and doing so does
+            // nothing"). A render graph reads a renderer list's Temp tag arrays after the
+            // pipeline disposed them. Another thread's scope never ends: freed now.
             if (allocator == Allocator.Temp)
             {
                 // Temp memory of an ended scope is gone already.
-                if (!s_TempOwners.TryRemove((IntPtr)memory, out var scope)) return;
+                if (!s_TempOwners.TryGetValue((IntPtr)memory, out var scope) || scope.Ends) return;
+                if (!s_TempOwners.TryRemove((IntPtr)memory, out _)) return;
                 scope.RemoveAllocation((IntPtr)memory);
             }
             else

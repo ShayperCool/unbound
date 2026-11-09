@@ -7,6 +7,23 @@ namespace UnityEngine.Tests
 {
     public unsafe class NativeArrayTests
     {
+        /// <summary>Temp memory is its scope's until the scope ends: disposing a Temp array does
+        /// not free it (com.unity.collections Allocator overview), so what was written stays.</summary>
+        [Fact]
+        public void DisposingTempMemoryLeavesItToItsScope()
+        {
+            var array = new NativeArray<int>(4, Allocator.Temp);
+            array[2] = 42;
+            int* memory = (int*)NativeArrayUnsafeUtility.GetUnsafeBufferPointerWithoutChecks(array);
+            array.Dispose();
+            Assert.False(array.IsCreated);
+            Assert.Equal(42, memory[2]);
+            // Other allocators free at once (their pointers are not read again).
+            var persistent = new NativeArray<int>(4, Allocator.Persistent);
+            persistent.Dispose();
+            Assert.False(persistent.IsCreated);
+        }
+
         [Fact]
         public void ElementsLiveInNativeMemorySharedWithItsPointer()
         {

@@ -282,6 +282,17 @@ namespace Unbound.Runtime
             readonly List<AtomicSafetyHandle> m_Handles = new List<AtomicSafetyHandle>();
             readonly HashSet<IntPtr> m_Allocations = new HashSet<IntPtr>();
 
+            /// <summary>Whether the scope ends (the main thread's frame, a job): its memory waits
+            /// for that; another thread's never ends, so its memory is freed when disposed.</summary>
+            internal readonly bool Ends;
+
+            internal TempScope(bool ends = true) => Ends = ends;
+
+            public void RemoveAllocation(IntPtr memory)
+            {
+                lock (m_Allocations) m_Allocations.Remove(memory);
+            }
+
             public AtomicSafetyHandle NewHandle()
             {
                 var handle = Create(temp: true);
@@ -294,10 +305,6 @@ namespace Unbound.Runtime
                 lock (m_Allocations) m_Allocations.Add(memory);
             }
 
-            public void RemoveAllocation(IntPtr memory)
-            {
-                lock (m_Allocations) m_Allocations.Remove(memory);
-            }
 
             /// <summary>Invalidates the scope's temp handles and frees its temp memory.</summary>
             public void End()
@@ -340,7 +347,7 @@ namespace Unbound.Runtime
                 var job = Jobs.JobSystem.CurrentTempScope;
                 if (job != null) return job;
                 if (PlayerLoopDriver.IsMainThread) return s_MainScope;
-                return t_ThreadScope ??= new TempScope();
+                return t_ThreadScope ??= new TempScope(ends: false);
             }
         }
 
