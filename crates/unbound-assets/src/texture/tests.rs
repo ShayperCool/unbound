@@ -181,7 +181,10 @@ fn imports_bottom_up_with_mips() {
             [0, 0, 255, 255]
         }
     });
-    let meta = unbound_yaml::parse_value("TextureImporter:\n  nPOTScale: 0\n").unwrap();
+    let meta = unbound_yaml::parse_value(
+        "TextureImporter:\n  nPOTScale: 0\n  textureCompression: 0\n",
+    )
+    .unwrap();
     let tex = TextureImporter::default()
         .import(Path::new("Assets/a.png"), &bytes, &meta)
         .unwrap();
@@ -277,8 +280,10 @@ fn decodes_color_mapped_tga() {
     ]);
     tga.extend_from_slice(&[0x81, 0]); // run of 2 × red
     tga.extend_from_slice(&[0x01, 2, 1]); // raw: blue, green
-    let meta =
-        unbound_yaml::parse_value("TextureImporter:\n  mipmaps:\n    enableMipMap: 0\n").unwrap();
+    let meta = unbound_yaml::parse_value(
+        "TextureImporter:\n  textureCompression: 0\n  mipmaps:\n    enableMipMap: 0\n",
+    )
+    .unwrap();
     let tex = TextureImporter::default()
         .import(Path::new("c.tga"), &tga, &meta)
         .unwrap();
@@ -489,6 +494,8 @@ fn a_baked_reflection_imports_as_a_convolved_cubemap() {
     }
 }
 
+/// A target whose compressed formats Unbound does not produce (Android: ETC2, ASTC) keeps the
+/// pixels and gives the GPU BC7 blocks.
 #[test]
 fn compressed_mips_decode_close_to_the_pixels() {
     // A gradient with alpha, 8x8: mips 8, 4, 2 (padded), 1 (padded).
@@ -497,12 +504,14 @@ fn compressed_mips_decode_close_to_the_pixels() {
     });
     let meta = unbound_yaml::parse_value("TextureImporter:\n  nPOTScale: 0\n").unwrap();
     let importer = TextureImporter {
+        build_target: "Android".into(),
         compress: true,
         ..TextureImporter::default()
     };
     let tex = importer
         .import(Path::new("Assets/g.png"), &bytes, &meta)
         .unwrap();
+    assert!(tex.blocks.is_none());
     let bc7 = tex.bc7.as_ref().expect("an 8x8 RGBA8 texture compresses");
     assert_eq!(bc7.len(), tex.mips.len());
     assert_eq!(bc7[0].len(), 4 * 16);
@@ -552,8 +561,9 @@ fn hdr_colour_is_gamma_encoded_in_a_gamma_project() {
             image::ImageFormat::OpenExr,
         )
         .unwrap();
+    // Uncompressed (RGBAHalf): BC6H would read alpha 1.
     let meta = unbound_yaml::parse_value(
-        "TextureImporter:\n  mipmaps:\n    sRGBTexture: 1\n  nPOTScale: 0\n",
+        "TextureImporter:\n  mipmaps:\n    sRGBTexture: 1\n  nPOTScale: 0\n  textureCompression: 0\n",
     )
     .unwrap();
     let texel = |gamma: bool, x: usize| {
@@ -643,16 +653,24 @@ fn single_cell_arrays_and_volumes_are_not_block_compressed() {
         assert_eq!(texture.layers, 1);
         assert!(texture.bc7.is_none(), "shape {shape}");
     }
-    // The same image as a 2D texture is still compressed.
+    // The same image as a 2D texture is stored as the Standalone target's DXT1.
     let meta = unbound_yaml::parse_value(
         "TextureImporter:\n  textureShape: 1\n  sRGBTexture: 1\n  platformSettings:\n  - buildTarget: DefaultTexturePlatform\n    textureFormat: -1\n    textureCompression: 1\n",
     )
     .unwrap();
     let texture = importer.import(Path::new("Cell.png"), &png, &meta).unwrap();
-    assert!(texture.bc7.is_some());
+    assert_eq!(texture.blocks.map(|b| b.format), Some(BlockFormat::Bc1));
+    assert!(texture.bc7.is_none());
 }
 
+/// Imports through the pixel pipeline: uncompressed unless `meta` sets a compression.
 fn import_with(meta: &str, bytes: &[u8], xyz: bool) -> ImportedTexture {
+    let meta = if meta.contains("textureCompression") {
+        meta.to_string()
+    } else {
+        meta.replacen("TextureImporter:\n", "TextureImporter:\n  textureCompression: 0\n", 1)
+    };
+    let meta = meta.as_str();
     TextureImporter {
         normal_maps_xyz: xyz,
         ..TextureImporter::default()
@@ -1044,16 +1062,18 @@ fn automatic_uncompressed_formats_are_reported() {
         report(&opaque, &format!("{uncompressed}  textureType: 1\n")),
         None
     );
-    // Compressed (the default) and explicit formats are not reported, but for a Single Channel
-    // Alpha texture, which stays Alpha8.
-    assert_eq!(report(&opaque, ""), None);
+    // Compressed (the default): the block format; a Single Channel Alpha texture stays Alpha8;
+    // explicit uncompressed formats and unmeasured compressed cases keep Unbound's answer.
+    assert_eq!(report(&opaque, ""), Some(10));
+    assert_eq!(report(&clear, ""), Some(12));
+    assert_eq!(report(&opaque, "  textureCompression: 2\n"), Some(25));
     assert_eq!(
         report(&opaque, "  textureType: 10\n  singleChannelComponent: 0\n"),
         Some(unity_format::ALPHA8)
     );
     assert_eq!(
         report(&opaque, "  textureType: 10\n  singleChannelComponent: 1\n"),
-        None
+        Some(26)
     );
     assert_eq!(report(&opaque, "  textureType: 4\n"), None);
     assert_eq!(report(&opaque, "  textureFormat: 4\n"), None);
@@ -1095,6 +1115,11 @@ fn one_channel_imports_keep_their_channel_on_the_gpu() {
         ));
         assert_eq!(red.gpu_channel(), Some(GpuChannel::Red), "{compression:?}");
         assert!(red.bc7.is_none());
+        // Compressed: BC4, one channel on the GPU too.
+        assert_eq!(
+            red.blocks.as_ref().map(|b| b.format),
+            (compression.is_empty()).then_some(BlockFormat::Bc4)
+        );
         assert!(
             !red.srgb,
             "a Single Channel texture marked sRGB stays linear"
@@ -1107,7 +1132,11 @@ fn one_channel_imports_keep_their_channel_on_the_gpu() {
     assert!(compressed_cookie.bc7.is_some());
     let default = import("  textureType: 0\n");
     assert_eq!(default.gpu_channel(), None);
-    assert!(default.bc7.is_some());
+    assert_eq!(
+        default.blocks.as_ref().map(|b| b.format),
+        Some(BlockFormat::Bc3)
+    );
+    assert!(default.bc7.is_none());
     assert!(default.srgb);
     // An explicit format keeps the texture's RGBA and its sRGB setting (unmeasured).
     let explicit = import("  textureType: 10\n  singleChannelComponent: 1\n  textureFormat: 4\n");
