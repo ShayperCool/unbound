@@ -272,7 +272,8 @@ namespace Unbound.Runtime.Humanoid
             var ws7 = new SkeletonPose(hn);
             // One pose for every sample: the retargeting writes every value the curves read.
             var pose = new HumanPose();
-            // An avatar with translation DoF also writes their curves (tests/projects/humanoid tdof.playTOnA).
+            // An avatar with translation DoF also writes their curves (the bones' placement is
+            // recorded by tests/projects/humanoid tdof.playTOnA; the curve values are not recorded).
             int first = RootFirst, end = h.HasTDoF ? CurveCount : HumanEnd;
             var tdofBase = h.HasTDoF ? HumanOps.TDoFBase(h, ws5) : null;
             var values = new float[CurveCount][];
