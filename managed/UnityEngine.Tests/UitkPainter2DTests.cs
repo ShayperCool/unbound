@@ -214,6 +214,46 @@ namespace UnityEngine.Tests
             }
         }
 
+        // Editor: stroke-arcto-radius-zero, fill-arcto-radius-zero. An arc-to of radius 0 draws no
+        // arc and leaves the segments around it unjoined; the fill is the square of its lines.
+        [Fact]
+        public void ArcToOfRadiusZeroDrawsNoArc()
+        {
+            Action<Painter2D> path = p => { p.MoveTo(new Vector2(10, 10)); p.ArcTo(new Vector2(60, 10), new Vector2(60, 60), 0); p.LineTo(new Vector2(60, 60)); p.LineTo(new Vector2(10, 60)); };
+            var stroke = Save(Stroke(4, LineJoin.Miter, LineCap.Butt, path));
+            Assert.Equal(24, stroke.Vertices.Length);
+            Assert.All(stroke.Vertices, v => Assert.True(float.IsFinite(v.position.x) && float.IsFinite(v.circle.x)));
+            var fill = Save(Fill(FillRule.NonZero, p => { path(p); p.ClosePath(); }));
+            Assert.Equal(28, fill.Vertices.Length);
+            Near(50f, fill.Size.x);
+        }
+
+        // Editor: fill-plus. Two crossing rectangles: the triangles at their crossings are dropped
+        // too (28 vertices: the four arms' faded edges).
+        [Fact]
+        public void CrossingSubPathsDropTheirCrossingTriangles()
+        {
+            var s = Save(Fill(FillRule.NonZero, p => { Rect(p, 10, 26, 70, 46); Rect(p, 30, 6, 50, 66); }));
+            Assert.Equal(28, s.Vertices.Length);
+            Near(60f, s.Size.x);
+        }
+
+        // Control: a scribble with thousands of crossings fills in time proportional to its size.
+        [Fact]
+        public void ScribbleFillsWithManyCrossings()
+        {
+            var random = new System.Random(7);
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            var s = Save(Fill(FillRule.OddEven, p =>
+            {
+                p.MoveTo(new Vector2(0, 0));
+                for (int i = 0; i < 600; i++) p.LineTo(new Vector2(random.Next(0, 4000) / 8f, random.Next(0, 4000) / 8f));
+                p.ClosePath();
+            }));
+            Assert.True(watch.Elapsed.TotalSeconds < 10, $"took {watch.Elapsed}");
+            Assert.NotNull(s.Vertices);
+        }
+
         // ------------------------------------------------------------------ the painter's API
 
         sealed class Logs : ILogHandler
@@ -351,6 +391,36 @@ namespace UnityEngine.Tests
             Assert.Equal(LineJoin.Round, p.lineJoin);
             Assert.Equal(LineCap.Round, p.lineCap);
             Assert.Equal(4f, p.miterLimit);
+        }
+
+        // Editor: allocate-stroke-order (panel image). A callback's meshes are drawn in call order:
+        // an allocated quad, a painter stroke, another allocated quad.
+        [Fact]
+        public void CallbackMeshesKeepCallOrder()
+        {
+            var painter = Paint(mgc =>
+            {
+                Quad(mgc, new Color32(40, 160, 60, 255), 0f);
+                var p = mgc.painter2D;
+                p.strokeColor = Red; p.BeginPath(); p.MoveTo(new Vector2(0, 15)); p.LineTo(new Vector2(80, 15)); p.Stroke();
+                Quad(mgc, new Color32(40, 60, 200, 255), 50f);
+            }, mgc => { });
+            var colors = painter.Colors;
+            int green = colors.FindIndex(c => c.Equals(new Color32(40, 160, 60, 255)));
+            int red = colors.FindIndex(c => c.Equals((Color32)Red));
+            int blue = colors.FindIndex(c => c.Equals(new Color32(40, 60, 200, 255)));
+            Assert.True(green >= 0 && red > green && blue > red, $"green {green}, red {red}, blue {blue}");
+        }
+
+        static void Quad(MeshGenerationContext ctx, Color32 c, float x)
+        {
+            var mesh = ctx.Allocate(4, 6);
+            mesh.SetNextVertex(new Vertex { position = new Vector3(x, 0, Vertex.nearZ), tint = c });
+            mesh.SetNextVertex(new Vertex { position = new Vector3(x + 20, 0, Vertex.nearZ), tint = c });
+            mesh.SetNextVertex(new Vertex { position = new Vector3(x + 20, 30, Vertex.nearZ), tint = c });
+            mesh.SetNextVertex(new Vertex { position = new Vector3(x, 30, Vertex.nearZ), tint = c });
+            mesh.SetNextIndex(0); mesh.SetNextIndex(1); mesh.SetNextIndex(2);
+            mesh.SetNextIndex(0); mesh.SetNextIndex(2); mesh.SetNextIndex(3);
         }
 
         // Tessellating the same path again allocates nothing once the buffers are warm.

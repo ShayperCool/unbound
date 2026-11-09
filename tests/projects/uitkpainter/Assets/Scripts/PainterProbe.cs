@@ -130,6 +130,12 @@ public static class PainterProbe
         new Case { name = "stroke-nan", draw = Stroke(4, LineJoin.Miter, LineCap.Butt, p => { p.MoveTo(new Vector2(8, 60)); p.LineTo(new Vector2(float.NaN, 20)); p.LineTo(new Vector2(40, 10)); p.LineTo(new Vector2(72, 60)); }) },
         new Case { name = "stroke-arcto-collinear", draw = Stroke(4, LineJoin.Round, LineCap.Butt, p => { p.MoveTo(new Vector2(8, 36)); p.ArcTo(new Vector2(40, 36), new Vector2(72, 36), 10); p.LineTo(new Vector2(72, 60)); }) },
         new Case { name = "stroke-tiny-arc", draw = Stroke(4, LineJoin.Miter, LineCap.Butt, p => { p.MoveTo(new Vector2(8, 36)); p.Arc(new Vector2(40, 36), 0.0005f, 0, 180); p.LineTo(new Vector2(72, 20)); }) },
+        new Case { name = "stroke-arcto-radius-zero", draw = Stroke(4, LineJoin.Miter, LineCap.Butt, p => { p.MoveTo(new Vector2(10, 10)); p.ArcTo(new Vector2(60, 10), new Vector2(60, 60), 0); p.LineTo(new Vector2(60, 60)); p.LineTo(new Vector2(10, 60)); }) },
+        new Case { name = "fill-arcto-radius-zero", draw = Fill(FillRule.NonZero, p => { p.MoveTo(new Vector2(10, 10)); p.ArcTo(new Vector2(60, 10), new Vector2(60, 60), 0); p.LineTo(new Vector2(60, 60)); p.LineTo(new Vector2(10, 60)); p.ClosePath(); }) },
+        new Case { name = "fill-plus", draw = Fill(FillRule.NonZero, p => { Rect(p, 10, 26, 70, 46, false); Rect(p, 30, 6, 50, 66, false); }) },
+        new Case { name = "stroke-closepath-twice", draw = Stroke(5, LineJoin.Round, LineCap.Butt, p => { p.MoveTo(new Vector2(12, 12)); p.LineTo(new Vector2(60, 12)); p.LineTo(new Vector2(36, 50)); p.ClosePath(); p.ClosePath(); }) },
+        new Case { name = "stroke-close-after-return", draw = Stroke(5, LineJoin.Miter, LineCap.Round, p => { p.MoveTo(new Vector2(12, 12)); p.LineTo(new Vector2(60, 12)); p.LineTo(new Vector2(36, 50)); p.LineTo(new Vector2(12, 12)); p.ClosePath(); }) },
+        new Case { name = "stroke-arc-width-diameter", draw = Stroke(20, LineJoin.Miter, LineCap.Butt, p => p.Arc(new Vector2(40, 36), 10, 0, 200)) },
         new Case { name = "fill-two-contours-oddeven", draw = Fill(FillRule.OddEven, p => { p.Arc(new Vector2(30, 36), 22, 0, 360); p.MoveTo(new Vector2(70, 36)); p.Arc(new Vector2(50, 36), 20, 0, 360); }) },
     };
 
@@ -271,7 +277,7 @@ public static class PainterProbe
             var e = new VisualElement { name = c.name };
             e.style.position = Position.Absolute;
             e.style.left = 8 + (i % 9) * 88 + 0.3f * (i % 2);
-            e.style.top = 8 + (i / 9) * 80;
+            e.style.top = 8 + (i / 9) * 74;
             e.style.width = 80; e.style.height = 72;
             int index = i;
             e.generateVisualContent += ctx => {
@@ -289,6 +295,21 @@ public static class PainterProbe
             };
             root.Add(e);
         }
+        {
+            // Call order on the panel: an allocated quad, a painter stroke across it, then another
+            // allocated quad over part of the stroke.
+            var e = new VisualElement { name = "allocate-stroke-order" };
+            e.style.position = Position.Absolute;
+            e.style.left = 8 + 8 * 88; e.style.top = 8 + 7 * 74;
+            e.style.width = 80; e.style.height = 30;
+            e.generateVisualContent += ctx => {
+                Quad(ctx, new UnityEngine.Rect(4, 4, 40, 22), new Color32(40, 160, 60, 255));
+                var p = ctx.painter2D;
+                p.strokeColor = Red; p.lineWidth = 6; p.BeginPath(); p.MoveTo(new Vector2(2, 15)); p.LineTo(new Vector2(78, 15)); p.Stroke();
+                Quad(ctx, new UnityEngine.Rect(50, 2, 20, 26), new Color32(40, 60, 200, 255));
+            };
+            root.Add(e);
+        }
         foreach (float scale in new[] { 1f, 1.25f })
         {
             document.panelSettings.scale = scale;
@@ -303,6 +324,17 @@ public static class PainterProbe
         Api(sb, logs, "attached-save-and-clear", () => { captured.Clear(); return captured.SaveToVectorImage(ScriptableObject.CreateInstance<VectorImage>()) ? "true" : "false"; });
         Debug.unityLogger.logHandler = logs.Inner;
         File.WriteAllText(Path.Combine(Output, "painter.jsonl"), sb.ToString());
+    }
+
+    static void Quad(MeshGenerationContext ctx, UnityEngine.Rect r, Color32 c)
+    {
+        var mesh = ctx.Allocate(4, 6);
+        mesh.SetNextVertex(new Vertex { position = new Vector3(r.xMin, r.yMin, Vertex.nearZ), tint = c });
+        mesh.SetNextVertex(new Vertex { position = new Vector3(r.xMax, r.yMin, Vertex.nearZ), tint = c });
+        mesh.SetNextVertex(new Vertex { position = new Vector3(r.xMax, r.yMax, Vertex.nearZ), tint = c });
+        mesh.SetNextVertex(new Vertex { position = new Vector3(r.xMin, r.yMax, Vertex.nearZ), tint = c });
+        mesh.SetNextIndex(0); mesh.SetNextIndex(1); mesh.SetNextIndex(2);
+        mesh.SetNextIndex(0); mesh.SetNextIndex(2); mesh.SetNextIndex(3);
     }
 
     static void Update()

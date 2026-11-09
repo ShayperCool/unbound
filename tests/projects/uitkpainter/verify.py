@@ -6,13 +6,14 @@
 Meshes (detached painters, SaveToVectorImage): vertex positions and circle data within 2e-4
 (relative above 1),
 tints, arc flags and indices exactly, sizes within 2e-4. Fills bounded by arcs or curves
-(ORDER_FREE) are compared as the set of their anti-aliased vertices (the faded edges' interior
-apexes left out) plus the area of their plain interior triangles: libtess2 breaks ties between
+(ORDER_FREE) are compared as the set of their anti-aliased vertices (position, circle, tint, uv
+and flags; the faded edges' interior apexes left out) plus the area of their plain interior triangles: libtess2 breaks ties between
 co-circular points by the last bits of their coordinates, so the interior triangulation, a faded
 edge's apex, a strip's diagonal and the emission order may differ while every anti-aliased edge
 and the covered area agree. Every other line (painter state, API calls and their log messages) must
-be equal. Images (the same cases drawn on a runtime panel at scale 1 and 1.25) are measured, not
-judged: mean and worst channel difference and pixels over 8, one line per image.
+be equal. Images (the same cases drawn on a runtime panel at scale 1 and 1.25, including a cell
+that mixes allocated meshes and a painter stroke) print their mean and worst channel difference
+and pixels over 8, and fail beyond the recorded residuals (IMAGE_LIMITS).
 """
 import argparse
 import json
@@ -25,6 +26,11 @@ import zlib
 ROOT = Path(__file__).resolve().parent
 TOLERANCE = 2e-4
 AREA_TOLERANCE = 1e-2
+# The recorded image residuals (docs/COMPATIBILITY_GAPS.md, Known insignificant residuals): mean,
+# worst channel difference and pixels over 8 may not exceed them. Scale 1: one pixel of
+# fill-arc-closed-nomove; scale 1.25: two pixels of fill-rounded-rect and the panel background's
+# 9/255 pattern on the outermost row and column.
+IMAGE_LIMITS = {'painter-1.png': (0.02, 11, 1), 'painter-1.25.png': (0.02, 95, 32)}
 ORDER_FREE = {
     'fill-circle', 'fill-pie', 'fill-pie-ccw', 'fill-pie-small', 'fill-rounded-rect', 'fill-bezier',
     'fill-quadratic', 'fill-bezier-inflection', 'fill-arc-closed-nomove', 'fill-two-contours-oddeven',
@@ -52,6 +58,8 @@ def close(a, b):
     """Within TOLERANCE, relative to the magnitude above 1 (circle coordinates grow without
     bound where a curve's radius approaches half the line width)."""
     a, b = f32(a), f32(b)
+    if math.isnan(a) or math.isnan(b):
+        return math.isnan(a) and math.isnan(b)
     if not (math.isfinite(a) and math.isfinite(b)):
         return a == b
     return abs(a - b) <= TOLERANCE * max(1.0, abs(a))
@@ -71,14 +79,15 @@ def shapes(r):
         for x in tri:
             if x[12] == 0 and x[13] == 0 and f32(x[14]) == f32(-9999.9):
                 continue
-            p = tuple(f32(c) for c in (x[0], x[1], x[12], x[13], x[14], x[15]))
+            p = tuple(f32(c) for c in (x[0], x[1], x[12], x[13], x[14], x[15])) + tuple(x[2:12])
             if not any(same_point(p, q) for q in points):
                 points.append(p)
     return points, area
 
 
 def same_point(a, b):
-    return all(close(x, y) for x, y in zip(a, b))
+    """Positions and circles within the tolerance; tint, uv and flags equal."""
+    return all(close(x, y) for x, y in zip(a[:6], b[:6])) and a[6:] == b[6:]
 
 
 def unmatched(reference, candidate):
@@ -200,7 +209,7 @@ def main():
         if x != y:
             failures += 1
             print(f'line {i}: {json.dumps(y)} vs {json.dumps(x)}')
-    checks = len(ref_meshes.keys() | meshes.keys()) + max(len(ref_other), len(other))
+    checks = len(ref_meshes.keys() | meshes.keys()) + max(len(ref_other), len(other)) + len(IMAGE_LIMITS)
     for image in ('painter-1.png', 'painter-1.25.png'):
         r, c = reference / image, a.candidate / image
         if not r.is_file() or not c.is_file():
@@ -214,6 +223,10 @@ def main():
             continue
         mean, worst, over = result
         print(f'{image}: mean {mean:.2f}, worst {worst}, over 8: {over}')
+        limit = IMAGE_LIMITS[image]
+        if mean > limit[0] or worst > limit[1] or over > limit[2]:
+            print(f'{image}: beyond the recorded residuals (mean {limit[0]}, worst {limit[1]}, over 8: {limit[2]})')
+            failures += 1
     print(f'{checks - failures}/{checks} painter checks match')
     sys.exit(1 if failures else 0)
 
