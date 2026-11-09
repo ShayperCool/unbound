@@ -608,6 +608,9 @@ namespace DotRecast.Detour
         }
 
         /// Queries polygons within a tile.
+        /// Queries polygons within a tile.
+        /// Unbound: the box (<paramref name="qmin"/>, <paramref name="qmax"/>) is in the frame of
+        /// the tile's surface (DtSurface; the world for a tile of none).
         protected void QueryPolygonsInTile<TQuery>(DtMeshTile tile, RcVec3f qmin, RcVec3f qmax, IDtQueryFilter filter, ref TQuery query)
             where TQuery : struct, IDtPolyQuery
         {
@@ -620,8 +623,8 @@ namespace DotRecast.Detour
             {
                 int nodeIndex = 0;
                 int end = tile.data.header.bvNodeCount;
-                var tbmin = tile.data.header.bmin;
-                var tbmax = tile.data.header.bmax;
+                var tbmin = tile.data.FrameBmin;
+                var tbmax = tile.data.FrameBmax;
                 float qfac = tile.data.header.bvQuantFactor;
 
                 // Calculate quantized box
@@ -686,6 +689,7 @@ namespace DotRecast.Detour
                 RcVec3f bmin = new RcVec3f();
                 RcVec3f bmax = new RcVec3f();
                 long @base = m_nav.GetPolyRefBase(tile);
+                var verts = tile.data.FrameVerts;
                 for (int i = 0; i < tile.data.header.polyCount; ++i)
                 {
                     DtPoly p = tile.data.polys[i];
@@ -704,13 +708,13 @@ namespace DotRecast.Detour
 
                     // Calc polygon bounds.
                     int v = p.verts[0] * 3;
-                    bmin = tile.data.verts.ToVec3(v);
-                    bmax = tile.data.verts.ToVec3(v);
+                    bmin = verts.ToVec3(v);
+                    bmax = verts.ToVec3(v);
                     for (int j = 1; j < p.vertCount; ++j)
                     {
                         v = p.verts[j] * 3;
-                        bmin = RcVec3f.Min(bmin, tile.data.verts.ToVec3(v));
-                        bmax = RcVec3f.Max(bmax, tile.data.verts.ToVec3(v));
+                        bmin = RcVec3f.Min(bmin, verts.ToVec3(v));
+                        bmax = RcVec3f.Max(bmax, verts.ToVec3(v));
                     }
 
                     if (DtUtils.OverlapBounds(qmin, qmax, bmin, bmax))
@@ -798,7 +802,33 @@ namespace DotRecast.Detour
             RcVec3f bmin = RcVec3f.Subtract(center, halfExtents);
             RcVec3f bmax = RcVec3f.Add(center, halfExtents);
 
-            // Find tiles the query touches.
+            // Unbound: as Unity looks them up, surface by surface in the order of their ids: the
+            // part of the box over a surface's tiles, turned into the surface's frame, finds the
+            // tiles of its grid there (along x, then z) and their polygons there. A tile lying over
+            // several cells of the world, or turned, is found wherever the box meets it (Unity
+            // 6000.0.71f1: tests/projects/navpath `place.moved`).
+            var surfaces = m_nav.Surfaces;
+            for (int s = 0; s < surfaces.Count; ++s)
+            {
+                var surface = surfaces[s];
+                if (!surface.QueryBox(bmin, bmax, out var lmin, out var lmax))
+                    continue;
+                int x0 = surface.CellX(lmin.X), x1 = surface.CellX(lmax.X);
+                int y0 = surface.CellY(lmin.Z), y1 = surface.CellY(lmax.Z);
+                for (int x = x0; x <= x1; ++x)
+                {
+                    for (int y = y0; y <= y1; ++y)
+                    {
+                        for (var tile = surface.TileAt(x, y); tile != null; tile = tile.surfaceNext)
+                            QueryPolygonsInTile(tile, lmin, lmax, filter, ref query);
+                    }
+                }
+            }
+
+            if (m_nav.PlainTileCount == 0)
+                return DtStatus.DT_SUCCESS;
+
+            // Tiles of no surface: by their x, y in the mesh's grid.
             m_nav.CalcTileLoc(bmin, out var minx, out var miny);
             m_nav.CalcTileLoc(bmax, out var maxx, out var maxy);
 
@@ -813,7 +843,8 @@ namespace DotRecast.Detour
                     for (int j = 0; j < nneis; ++j)
                     {
                         var nei = m_nav.GetTile(neis[j]);
-                        QueryPolygonsInTile(nei, bmin, bmax, filter, ref query);
+                        if (nei.data.surface == null)
+                            QueryPolygonsInTile(nei, bmin, bmax, filter, ref query);
                     }
                 }
             }
@@ -2272,15 +2303,17 @@ namespace DotRecast.Detour
             const float s = 1.0f / 255.0f;
             int left = poly.verts[link.edge] * 3;
             int right = poly.verts[(link.edge + 1) % poly.vertCount] * 3;
-            // The axis along the border: z for x borders (sides 0 and 4), x for z borders (2 and 6).
+            // The axis along the border: z for x borders (sides 0 and 4), x for z borders (2 and 6),
+            // in the frame of the tile's surface (where tile borders run along x and z).
             int axis = link.side == 0 || link.side == 4 ? 2 : link.side == 2 || link.side == 6 ? 0 : -1;
             if (axis < 0)
             {
                 return false;
             }
 
-            float lmin = tile.data.verts[left + axis] + (tile.data.verts[right + axis] - tile.data.verts[left + axis]) * (link.bmin * s);
-            float lmax = tile.data.verts[left + axis] + (tile.data.verts[right + axis] - tile.data.verts[left + axis]) * (link.bmax * s);
+            var verts = tile.data.FrameVerts;
+            float lmin = verts[left + axis] + (verts[right + axis] - verts[left + axis]) * (link.bmin * s);
+            float lmax = verts[left + axis] + (verts[right + axis] - verts[left + axis]) * (link.bmax * s);
             if (lmin > lmax)
             {
                 (lmin, lmax) = (lmax, lmin);
@@ -2418,18 +2451,33 @@ namespace DotRecast.Detour
             Span<RcVec3f> verts = stackalloc RcVec3f[m_nav.GetMaxVertsPerPoly() + 1];
             int n = 0;
 
-            curPos = startPos;
-            RcVec3f dir = RcVec3f.Subtract(endPos, startPos);
-            hit.hitNormal = RcVec3f.Zero;
-
-            DtStatus status = DtStatus.DT_SUCCESS;
-
             DtMeshTile prevTile, tile, nextTile;
             DtPoly prevPoly, poly, nextPoly;
 
             // The API input has been checked already, skip checking internal data.
             long curRef = startRef;
             m_nav.GetTileAndPolyByRefUnsafe(curRef, out tile, out poly);
+
+            // Unbound: the ray is cast in the frame of the start polygon's surface, as Unity casts
+            // it (ground polygons connect only within a surface, so the ray stays in it): a moved or
+            // turned NavMesh stops it where it would where it was built, and its tile borders run
+            // along x and z there (LinkContainsCrossing).
+            DtSurface frame = tile.data.surface;
+            if (frame != null && frame.moved)
+            {
+                startPos = frame.ToLocal(startPos);
+                endPos = frame.ToLocal(endPos);
+            }
+            else
+            {
+                frame = null;
+            }
+
+            curPos = startPos;
+            RcVec3f dir = RcVec3f.Subtract(endPos, startPos);
+            hit.hitNormal = RcVec3f.Zero;
+
+            DtStatus status = DtStatus.DT_SUCCESS;
             nextTile = prevTile = tile;
             nextPoly = prevPoly = poly;
             if (prevRef != 0)
@@ -2443,9 +2491,10 @@ namespace DotRecast.Detour
 
                 // Collect vertices.
                 int nv = 0;
+                var tileVerts = tile.data.FrameVerts;
                 for (int i = 0; i < poly.vertCount; ++i)
                 {
-                    verts[nv] = tile.data.verts.ToVec3(poly.verts[i] * 3);
+                    verts[nv] = tileVerts.ToVec3(poly.verts[i] * 3);
                     nv++;
                 }
 
@@ -2562,6 +2611,10 @@ namespace DotRecast.Detour
                     // Unbound: the edge's z extent (the port subtracted the start's x).
                     float dz = verts[b].Z - verts[a].Z;
                     hit.hitNormal = RcVec3f.Normalize(new RcVec3f(dz, 0, -dx));
+                    if (frame != null)
+                    {
+                        hit.hitNormal = frame.ToWorldDirection(hit.hitNormal);
+                    }
 
                     hit.pathCount = n;
                     return status;

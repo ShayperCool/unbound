@@ -34,6 +34,8 @@ namespace DotRecast.Detour
 
         public int flags; //< Tile flags. (See: #dtTileFlags)
         public DtMeshTile next; //< The next free tile, or the next tile in the spatial grid.
+        /// Unbound: the next tile at the same place of the tile's surface grid (DtSurface).
+        public DtMeshTile surfaceNext;
 
         public DtMeshTile(int index)
         {

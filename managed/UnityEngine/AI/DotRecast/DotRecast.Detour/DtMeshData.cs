@@ -18,6 +18,8 @@ freely, subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+using DotRecast.Core.Numerics;
+
 namespace DotRecast.Detour
 {
     internal class DtMeshData
@@ -39,5 +41,22 @@ namespace DotRecast.Detour
         public DtBVNode[] bvTree;
 
         public DtOffMeshConnection[] offMeshCons; //< The tile off-mesh connections. [Size: dtMeshHeader::offMeshConCount]
+
+        /// Unbound: the surface (NavMesh data instance) the tile belongs to, null for none (the tile
+        /// is then found and connected by its x, y alone), and its place in the surface's own grid.
+        public DtSurface surface;
+        public int surfaceX, surfaceY;
+
+        /// Unbound: for a tile of a moved or turned surface, its vertices in the surface's frame
+        /// (the polygons' vertices; null when the surface is not moved: they are its vertices) and
+        /// the tile's bounds there, which the bounding volume tree is quantized in. Tile lookups,
+        /// polygon bounds and the connections between tiles use the surface's frame.
+        public float[] localVerts;
+        public RcVec3f localBmin, localBmax;
+
+        /// Unbound: the vertices in the frame of the tile's surface (the world when not moved).
+        public float[] FrameVerts => localVerts ?? verts;
+        public RcVec3f FrameBmin => localVerts != null ? localBmin : header.bmin;
+        public RcVec3f FrameBmax => localVerts != null ? localBmax : header.bmax;
     }
 }

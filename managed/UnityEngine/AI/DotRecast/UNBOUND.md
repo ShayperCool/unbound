@@ -18,10 +18,18 @@ Altered (marked `Unbound:` in the sources):
   beside it; paths and agents take the one beside unless the other is nearer in height than it is
   in a straight line (Unity 6000.0.71f1: tests/projects/navbaked and navmesh `sample`, navpath
   `nearest.sides`);
-- placed tiles keep their bounding volume tree (moved with the tile), and queries walk it: its
+- placed tiles keep their bounding volume tree (in their surface's frame), and queries walk it: its
   node order decides which of equally near polygons is visited first, as in Unity (the area
   values on boundaries match; the order is inferred from them). Carved tiles have no tree: their
   polygons are visited in order (unmeasured);
+- each NavMesh data instance is a surface (`DtSurface`) with its own tile grid and pose; its tiles
+  keep their places in the grid of the data as built: queries (`DtNavMeshQuery.QueryPolygons`) take
+  the part of their box over a surface's tiles, turned into the surface's frame, and walk the tiles
+  there (surfaces in order of their ids, tiles along x, then z), each tile's bounding volume tree and
+  polygon bounds in that frame (`DtMeshData.localVerts`); ground polygons connect only to tiles of
+  their own surface, by their sides in its frame (`DtNavMesh.AddTile`); `Raycast` is cast in the
+  frame of the start polygon's surface (Unity 6000.0.71f1: tests/projects/navpath `place.moved`,
+  `place.adjacent`); off-mesh connections still attach by the mesh's world tile grid;
 - A* as Unity's (`tests/projects/navcost`): a polygon's node is placed once, when the search first
   reaches the polygon, at the point of the portal from the polygon it is reached from nearest that
   polygon's node (in 3D, kept 5% of the portal's length from its ends; a portal shorter than 1 cm

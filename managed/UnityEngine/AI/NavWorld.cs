@@ -62,6 +62,8 @@ namespace Unbound.Runtime
             internal int Index;
             /// <summary>Its reference in the mesh (a new one when it is cut again).</summary>
             internal long Ref;
+            /// <summary>The surface (in its mesh) of the data instance it came from.</summary>
+            internal DtSurface Surface;
             internal float MinX, MaxX, MinZ, MaxZ;
         }
 
@@ -198,10 +200,17 @@ namespace Unbound.Runtime
                     surface.Mesh.Init(param, DtDetour.DT_VERTS_PER_POLYGON);
                     s_Surfaces[agentType] = surface;
                 }
+                // Each data instance is a surface of its own: its tiles keep their places in its
+                // grid, and its ground polygons connect only among themselves.
+                var dataSettings = instance.Data.m_Settings;
+                float dataTile = dataSettings.EffectiveTileSize * dataSettings.EffectiveVoxelSize;
+                var meshSurface = new DtSurface(instance.Id, new RcVec3f(instance.Position.x, instance.Position.y, instance.Position.z), instance.Rotation, dataTile, dataTile);
+                surface.Mesh.AddSurface(meshSurface);
                 for (int index = 0; index < instance.Data.m_Tiles.Count; index++)
                 {
                     var tile = instance.Data.m_Tiles[index];
                     var placed = NavMeshCarving.Carve(Place(tile, instance.Position, instance.Rotation), instance.Data.m_Settings, ObstacleSystem.Holes);
+                    Attach(placed, meshSurface, tile.header);
                     AddLinks(surface, placed);
                     // Tiles of different data at the same place go on further layers.
                     surface.Mesh.CalcTileLoc(Center(placed.header), out int tx, out int ty);
@@ -215,7 +224,7 @@ namespace Unbound.Runtime
                     surface.DataOfTile[DtDetour.DecodePolyIdTile(tileRef)] = instance.Id;
                     surface.Tiles.Add(new PlacedTile
                     {
-                        Instance = instance, Index = index, Ref = tileRef,
+                        Instance = instance, Index = index, Ref = tileRef, Surface = meshSurface,
                         MinX = placed.header.bmin.X, MaxX = placed.header.bmax.X, MinZ = placed.header.bmin.Z, MaxZ = placed.header.bmax.Z,
                     });
                 }
@@ -300,8 +309,10 @@ namespace Unbound.Runtime
                     if (!Reaches(placed, holes)) continue;
                     var old = surface.Mesh.GetTileByRef(placed.Ref);
                     if (old?.data == null) continue;
-                    var tile = NavMeshCarving.Carve(Place(placed.Instance.Data.m_Tiles[placed.Index], placed.Instance.Position, placed.Instance.Rotation),
+                    var source = placed.Instance.Data.m_Tiles[placed.Index];
+                    var tile = NavMeshCarving.Carve(Place(source, placed.Instance.Position, placed.Instance.Rotation),
                         settings, ObstacleSystem.Holes);
+                    Attach(tile, placed.Surface, source.header);
                     AddLinks(surface, tile);
                     tile.header.x = old.data.header.x;
                     tile.header.y = old.data.header.y;
@@ -364,15 +375,16 @@ namespace Unbound.Runtime
             }
             // Queries walk the tile's bounding volume tree (its node order decides which of equally
             // near polygons a query finds first, as in Unity: tests/projects/navmesh and navbaked
-            // `sample` on area boundaries).
+            // `sample` on area boundaries), in the frame of its data as built: queries turn their
+            // box into it (DtSurface).
             bool hasTree = tile.bvTree != null && tile.header.bvNodeCount > 0;
             copy.header.bvNodeCount = hasTree ? tile.header.bvNodeCount : 0;
+            if (hasTree) copy.bvTree = tile.bvTree;
             bool identity = position == Vector3.zero && rotation == Quaternion.identity;
-            if (identity)
-            {
-                if (hasTree) copy.bvTree = tile.bvTree;
-                return copy;
-            }
+            if (identity) return copy;
+            copy.localVerts = tile.verts;
+            copy.localBmin = tile.header.bmin;
+            copy.localBmax = tile.header.bmax;
             void Move(float[] v)
             {
                 for (int i = 0; i + 2 < v.Length; i += 3)
@@ -397,42 +409,17 @@ namespace Unbound.Runtime
             }
             copy.header.bmin = new RcVec3f(min.x, min.y, min.z);
             copy.header.bmax = new RcVec3f(max.x, max.y, max.z);
-            if (hasTree) copy.bvTree = MoveTree(tile, copy.header, position, rotation);
             return copy;
         }
 
-        /// <summary>The tile's bounding volume tree moved with it: each node, in the same order, bounds
-        /// its box moved into the world (in the moved tile's quantized coordinates).</summary>
-        static DtBVNode[] MoveTree(DtMeshData tile, DtMeshHeader moved, Vector3 position, Quaternion rotation)
+        /// <summary>A placed (and maybe cut) tile joins its data instance's surface at the place
+        /// its source tile has in the data's grid. A tile cut by carving has its own vertices; their
+        /// copy in the surface's frame is made when it is added (DtNavMesh.AddTile).</summary>
+        static void Attach(DtMeshData placed, DtSurface surface, DtMeshHeader source)
         {
-            var h = tile.header;
-            float q = h.bvQuantFactor;
-            var nodes = new DtBVNode[h.bvNodeCount];
-            for (int n = 0; n < nodes.Length; n++)
-            {
-                var src = tile.bvTree[n];
-                var min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
-                var max = -min;
-                for (int c = 0; c < 8; c++)
-                {
-                    var local = new Vector3(
-                        h.bmin.X + ((c & 1) != 0 ? src.bmax.X : src.bmin.X) / q,
-                        h.bmin.Y + ((c & 2) != 0 ? src.bmax.Y : src.bmin.Y) / q,
-                        h.bmin.Z + ((c & 4) != 0 ? src.bmax.Z : src.bmin.Z) / q);
-                    var p = position + rotation * local;
-                    min = Vector3.Min(min, p);
-                    max = Vector3.Max(max, p);
-                }
-                int Low(float v, float origin) => Math.Clamp((int)MathF.Floor((v - origin) * q), 0, 0xffff);
-                int High(float v, float origin) => Math.Clamp((int)MathF.Ceiling((v - origin) * q), 0, 0xffff);
-                nodes[n] = new DtBVNode
-                {
-                    bmin = new RcVec3i(Low(min.x, moved.bmin.X), Low(min.y, moved.bmin.Y), Low(min.z, moved.bmin.Z)),
-                    bmax = new RcVec3i(High(max.x, moved.bmin.X), High(max.y, moved.bmin.Y), High(max.z, moved.bmin.Z)),
-                    i = src.i,
-                };
-            }
-            return nodes;
+            placed.surface = surface;
+            placed.surfaceX = source.x;
+            placed.surfaceY = source.y;
         }
 
         static DtMeshHeader Copy(DtMeshHeader h) => new DtMeshHeader

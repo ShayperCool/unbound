@@ -47,6 +47,26 @@ namespace DotRecast.Detour
         /** The maximum number of vertices per navigation polygon. */
         private int m_maxVertPerPoly;
 
+        /// Unbound: the surfaces (NavMesh data instances), in order of their ids, and how many
+        /// tiles belong to none.
+        private readonly List<DtSurface> m_surfaces = new List<DtSurface>();
+        private int m_plainTiles;
+
+        /// Unbound: the surfaces, in order of their ids (the order queries visit them in).
+        public IReadOnlyList<DtSurface> Surfaces => m_surfaces;
+
+        /// Unbound: how many tiles belong to no surface (found by the tile grid of x, y alone).
+        public int PlainTileCount => m_plainTiles;
+
+        /// Unbound: adds a surface; its tiles are added with <see cref="AddTile"/>
+        /// (<see cref="DtMeshData.surface"/>).
+        public void AddSurface(DtSurface surface)
+        {
+            int i = m_surfaces.Count;
+            while (i > 0 && m_surfaces[i - 1].id > surface.id) i--;
+            m_surfaces.Insert(i, surface);
+        }
+
         public DtStatus Init(in DtNavMeshParams param, int maxVertsPerPoly)
         {
             m_params = param;
@@ -261,12 +281,15 @@ namespace DotRecast.Detour
         /// Queries polygons within a tile.
         private int QueryPolygonsInTile(DtMeshTile tile, RcVec3f qmin, RcVec3f qmax, Span<long> polys, int maxPolys)
         {
+            // Unbound: the world box turned into the frame of the tile's surface.
+            if (tile.data.surface != null)
+                tile.data.surface.ToLocalBox(qmin, qmax, out qmin, out qmax);
             if (tile.data.bvTree != null)
             {
                 int nodeIndex = 0;
                 int end = tile.data.header.bvNodeCount;
-                var tbmin = tile.data.header.bmin;
-                var tbmax = tile.data.header.bmax;
+                var tbmin = tile.data.FrameBmin;
+                var tbmax = tile.data.FrameBmax;
                 float qfac = tile.data.header.bvQuantFactor;
                 // Calculate quantized box
                 RcVec3i bmin;
@@ -322,6 +345,7 @@ namespace DotRecast.Detour
                 RcVec3f bmax = new RcVec3f();
                 int n = 0;
                 long @base = GetPolyRefBase(tile);
+                var verts = tile.data.FrameVerts;
                 for (int i = 0; i < tile.data.header.polyCount; ++i)
                 {
                     DtPoly p = tile.data.polys[i];
@@ -333,13 +357,13 @@ namespace DotRecast.Detour
 
                     // Calc polygon bounds.
                     int v = p.verts[0] * 3;
-                    bmin = tile.data.verts.ToVec3(v);
-                    bmax = tile.data.verts.ToVec3(v);
+                    bmin = verts.ToVec3(v);
+                    bmax = verts.ToVec3(v);
                     for (int j = 1; j < p.vertCount; ++j)
                     {
                         v = p.verts[j] * 3;
-                        bmin = RcVec3f.Min(bmin, tile.data.verts.ToVec3(v));
-                        bmax = RcVec3f.Max(bmax, tile.data.verts.ToVec3(v));
+                        bmin = RcVec3f.Min(bmin, verts.ToVec3(v));
+                        bmax = RcVec3f.Max(bmax, verts.ToVec3(v));
                     }
 
                     if (DtUtils.OverlapBounds(qmin, qmax, bmin, bmax))
@@ -454,9 +478,22 @@ namespace DotRecast.Detour
             tile.next = m_posLookup[h];
             m_posLookup[h] = tile;
 
+            // Unbound: and into its surface's own grid.
+            DtSurface surface = data.surface;
+            if (surface != null)
+            {
+                if (surface.moved && data.localVerts == null)
+                    surface.SetLocalVerts(data);
+            }
+            else
+            {
+                m_plainTiles++;
+            }
+
 
             // Patch header pointers.
             tile.data = data;
+            surface?.Add(tile);
             tile.links = new DtLink[data.header.maxLinkCount];
             for (int i = 0; i < tile.links.Length; ++i)
             {
@@ -490,6 +527,19 @@ namespace DotRecast.Detour
             int nneis;
 
             // Connect with layers in current tile.
+            // Unbound: ground polygons connect with the tiles of their surface, found in its grid
+            // (in the surface's frame); off-mesh connections with the tiles around in the world.
+            if (surface != null)
+            {
+                for (var other = surface.TileAt(data.surfaceX, data.surfaceY); other != null; other = other.surfaceNext)
+                {
+                    if (other == tile)
+                        continue;
+                    ConnectExtLinks(tile, other, -1);
+                    ConnectExtLinks(other, tile, -1);
+                }
+            }
+
             nneis = GetTilesAt(header.x, header.y, neis, MAX_NEIS);
             for (int j = 0; j < nneis; ++j)
             {
@@ -498,8 +548,12 @@ namespace DotRecast.Detour
                     continue;
                 }
 
-                ConnectExtLinks(tile, neis[j], -1);
-                ConnectExtLinks(neis[j], tile, -1);
+                if (surface == null && neis[j].data.surface == null)
+                {
+                    ConnectExtLinks(tile, neis[j], -1);
+                    ConnectExtLinks(neis[j], tile, -1);
+                }
+
                 ConnectExtOffMeshLinks(tile, neis[j], -1);
                 ConnectExtOffMeshLinks(neis[j], tile, -1);
             }
@@ -507,11 +561,25 @@ namespace DotRecast.Detour
             // Connect with neighbour tiles.
             for (int i = 0; i < 8; ++i)
             {
+                if (surface != null)
+                {
+                    SideOffset(i, out int dx, out int dy);
+                    for (var other = surface.TileAt(data.surfaceX + dx, data.surfaceY + dy); other != null; other = other.surfaceNext)
+                    {
+                        ConnectExtLinks(tile, other, i);
+                        ConnectExtLinks(other, tile, DtUtils.OppositeTile(i));
+                    }
+                }
+
                 nneis = GetNeighbourTilesAt(header.x, header.y, i, neis, MAX_NEIS);
                 for (int j = 0; j < nneis; ++j)
                 {
-                    ConnectExtLinks(tile, neis[j], i);
-                    ConnectExtLinks(neis[j], tile, DtUtils.OppositeTile(i));
+                    if (surface == null && neis[j].data.surface == null)
+                    {
+                        ConnectExtLinks(tile, neis[j], i);
+                        ConnectExtLinks(neis[j], tile, DtUtils.OppositeTile(i));
+                    }
+
                     ConnectExtOffMeshLinks(tile, neis[j], i);
                     ConnectExtOffMeshLinks(neis[j], tile, DtUtils.OppositeTile(i));
                 }
@@ -590,6 +658,25 @@ namespace DotRecast.Detour
                 {
                     UnconnectLinks(neis[j], tile);
                 }
+            }
+
+            // Unbound: and from the tiles of its surface around it (in the surface's grid).
+            DtSurface surface = tile.data.surface;
+            if (surface != null)
+            {
+                surface.Remove(tile);
+                for (int i = -1; i < 8; ++i)
+                {
+                    int dx = 0, dy = 0;
+                    if (i >= 0)
+                        SideOffset(i, out dx, out dy);
+                    for (var other = surface.TileAt(tile.data.surfaceX + dx, tile.data.surfaceY + dy); other != null; other = other.surfaceNext)
+                        UnconnectLinks(other, tile);
+                }
+            }
+            else
+            {
+                m_plainTiles--;
             }
 
             // Reset tile.
@@ -706,6 +793,8 @@ namespace DotRecast.Detour
             }
 
             var connectPolys = new List<DtConnectPoly>();
+            // Unbound: in the frame of the tiles' surface (the world for tiles of none).
+            var verts = tile.data.FrameVerts;
 
             // Connect border links.
             for (int i = 0; i < tile.data.header.polyCount; ++i)
@@ -733,7 +822,7 @@ namespace DotRecast.Detour
                     // Create new links
                     int va = poly.verts[j] * 3;
                     int vb = poly.verts[(j + 1) % nv] * 3;
-                    int nnei = FindConnectingPolys(tile.data.verts, va, vb, target, DtUtils.OppositeTile(dir), ref connectPolys);
+                    int nnei = FindConnectingPolys(verts, va, vb, target, DtUtils.OppositeTile(dir), ref connectPolys);
                     foreach (var connectPoly in connectPolys)
                     {
                         int idx = AllocLink(tile);
@@ -750,10 +839,10 @@ namespace DotRecast.Detour
                             // Compress portal limits to a byte value.
                             if (dir == 0 || dir == 4)
                             {
-                                float tmin = (connectPoly.tmin - tile.data.verts[va + 2])
-                                             / (tile.data.verts[vb + 2] - tile.data.verts[va + 2]);
-                                float tmax = (connectPoly.tmax - tile.data.verts[va + 2])
-                                             / (tile.data.verts[vb + 2] - tile.data.verts[va + 2]);
+                                float tmin = (connectPoly.tmin - verts[va + 2])
+                                             / (verts[vb + 2] - verts[va + 2]);
+                                float tmax = (connectPoly.tmax - verts[va + 2])
+                                             / (verts[vb + 2] - verts[va + 2]);
                                 if (tmin > tmax)
                                 {
                                     float temp = tmin;
@@ -766,10 +855,10 @@ namespace DotRecast.Detour
                             }
                             else if (dir == 2 || dir == 6)
                             {
-                                float tmin = (connectPoly.tmin - tile.data.verts[va])
-                                             / (tile.data.verts[vb] - tile.data.verts[va]);
-                                float tmax = (connectPoly.tmax - tile.data.verts[va])
-                                             / (tile.data.verts[vb] - tile.data.verts[va]);
+                                float tmin = (connectPoly.tmin - verts[va])
+                                             / (verts[vb] - verts[va]);
+                                float tmax = (connectPoly.tmax - verts[va])
+                                             / (verts[vb] - verts[va]);
                                 if (tmin > tmax)
                                 {
                                     float temp = tmin;
@@ -909,6 +998,7 @@ namespace DotRecast.Detour
             int m = DT_EXT_LINK | side;
             int n = 0;
             long @base = GetPolyRefBase(tile);
+            var tverts = tile.data.FrameVerts;
 
             for (int i = 0; i < tile.data.header.polyCount; ++i)
             {
@@ -924,7 +1014,7 @@ namespace DotRecast.Detour
 
                     int vc = poly.verts[j] * 3;
                     int vd = poly.verts[(j + 1) % nv] * 3;
-                    float bpos = GetSlabCoord(tile.data.verts, vc, side);
+                    float bpos = GetSlabCoord(tverts, vc, side);
                     // Segments are not close enough.
                     if (MathF.Abs(apos - bpos) > 0.01f)
                     {
@@ -932,7 +1022,7 @@ namespace DotRecast.Detour
                     }
 
                     // Check if the segments touch.
-                    CalcSlabEndPoints(tile.data.verts, vc, vd, ref bmin, ref bmax, side);
+                    CalcSlabEndPoints(tverts, vc, vd, ref bmin, ref bmax, side);
 
                     if (!OverlapSlabs(amin, amax, bmin, bmax, 0.01f, tile.data.header.walkableClimb))
                     {
@@ -1490,40 +1580,15 @@ namespace DotRecast.Detour
         /// Returns neighbour tile based on side.
         private int GetNeighbourTilesAt(int x, int y, int side, DtMeshTile[] tiles, int maxTiles)
         {
-            int nx = x, ny = y;
-            switch (side)
-            {
-                case 0:
-                    nx++;
-                    break;
-                case 1:
-                    nx++;
-                    ny++;
-                    break;
-                case 2:
-                    ny++;
-                    break;
-                case 3:
-                    nx--;
-                    ny++;
-                    break;
-                case 4:
-                    nx--;
-                    break;
-                case 5:
-                    nx--;
-                    ny--;
-                    break;
-                case 6:
-                    ny--;
-                    break;
-                case 7:
-                    nx++;
-                    ny--;
-                    break;
-            }
+            SideOffset(side, out int dx, out int dy);
+            return GetTilesAt(x + dx, y + dy, tiles, maxTiles);
+        }
 
-            return GetTilesAt(nx, ny, tiles, maxTiles);
+        /// The step from a tile to its neighbour on a side (0: +x, then counter-clockwise to 7).
+        private static void SideOffset(int side, out int dx, out int dy)
+        {
+            dx = side == 0 || side == 1 || side == 7 ? 1 : side >= 3 && side <= 5 ? -1 : 0;
+            dy = side >= 1 && side <= 3 ? 1 : side >= 5 ? -1 : 0;
         }
 
         /// Returns neighbour tile based on side.
