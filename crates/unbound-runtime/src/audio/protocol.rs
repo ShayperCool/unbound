@@ -48,6 +48,8 @@ pub mod source_flags {
     /// With [`COMPONENTS_INACTIVE`]: the last unit in Inspector order stays active after a
     /// chain reconnection and processes the silence above it.
     pub const LAST_COMPONENT_ACTIVE: u32 = 1 << 16;
+    /// Component parameter changes use the measured effect transitions.
+    pub const EFFECT_TRANSITIONS: u32 = 1 << 17;
 }
 
 /// An AudioSource's parameters, sent when they change and once per frame (its transform).
@@ -220,6 +222,8 @@ pub mod frame_flags {
     pub const LISTENER_FILTER: i32 = 1 << 2;
     /// Compatibility-selected zone initialization and parameter transitions.
     pub const ZONE_STARTUP: i32 = 1 << 3;
+    /// Listener component parameter changes use the measured effect transitions.
+    pub const EFFECT_TRANSITIONS: i32 = 1 << 4;
 }
 
 /// Sent once per frame from `PostLateUpdate.UpdateAudio`.

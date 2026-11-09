@@ -335,11 +335,15 @@ impl FilterChain {
         filters: &[AudioFilterDescriptor],
         rate: u32,
         buffer: u32,
+        transitions: bool,
     ) -> anyhow::Result<()> {
         let mut old = std::mem::take(&mut self.filters);
         let mut chain = Vec::with_capacity(filters.len());
         for d in filters {
-            let spec = effect_spec(d);
+            let spec = EffectSpec {
+                effect_transitions_measured: transitions,
+                ..effect_spec(d)
+            };
             let effect = match old.iter().position(|f| f.id == d.id && f.kind == d.kind) {
                 Some(index) => {
                     let mut effect = old.remove(index).effect;
@@ -1137,11 +1141,12 @@ impl Mixer {
             {
                 tracing::error!("AudioSource {handle}: filter components rejected: {error:#}");
                 params.filters = source.params.filters.clone();
-            } else if let Err(error) =
-                source
-                    .chain
-                    .apply(&params.filters, rate, self.config.buffer_size)
-            {
+            } else if let Err(error) = source.chain.apply(
+                &params.filters,
+                rate,
+                self.config.buffer_size,
+                params.has(source_flags::EFFECT_TRANSITIONS),
+            ) {
                 tracing::error!("AudioSource {handle}: filter components dropped: {error:#}");
                 params.filters = Vec::new();
             }
@@ -1151,7 +1156,11 @@ impl Mixer {
 
     /// The listener's components from the frame packet: an unchanged list keeps the chain and
     /// its state; a refused one (reported once) runs none.
-    pub fn update_listener_filters(&mut self, filters: anyhow::Result<Vec<AudioFilterDescriptor>>) {
+    pub fn update_listener_filters(
+        &mut self,
+        filters: anyhow::Result<Vec<AudioFilterDescriptor>>,
+        transitions: bool,
+    ) {
         let filters = match filters {
             Ok(filters) => filters,
             Err(error) => {
@@ -1172,7 +1181,7 @@ impl Mixer {
         if let Err(error) =
             FilterChain::validate(&filters, rate, self.config.buffer_size).and_then(|()| {
                 self.listener_chain
-                    .apply(&filters, rate, self.config.buffer_size)
+                    .apply(&filters, rate, self.config.buffer_size, transitions)
             })
         {
             tracing::error!("AudioListener filter components dropped: {error:#}");
@@ -5908,7 +5917,7 @@ mod tests {
         let listen = |bypass: u32| {
             let mut m = Mixer::new(MixerConfig::default());
             m.add_clip(1, impulse_clip(300));
-            m.update_listener_filters(Ok(vec![component(5, filter_kind::REVERB, 0)]));
+            m.update_listener_filters(Ok(vec![component(5, filter_kind::REVERB, 0)]), false);
             source_with(&mut m, 7, 1, |p| {
                 p.flags = bypass;
             });
@@ -5928,7 +5937,7 @@ mod tests {
         );
         assert_eq!(listen(source_flags::BYPASS_EFFECTS), listen(0));
         let mut m = Mixer::new(MixerConfig::default());
-        m.update_listener_filters(Err(anyhow::anyhow!("refused")));
+        m.update_listener_filters(Err(anyhow::anyhow!("refused")), false);
         assert!(m.listener_chain.filters.is_empty());
     }
 

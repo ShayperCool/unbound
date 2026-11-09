@@ -39,6 +39,7 @@ namespace Unbound.Runtime
         internal const uint ListenerSnapshot = 1 << 14;
         internal const uint ComponentsInactive = 1 << 15;
         internal const uint LastComponentActive = 1 << 16;
+        internal const uint EffectTransitions = 1 << 17;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -179,6 +180,7 @@ namespace Unbound.Runtime
         internal const int Paused = 1 << 1;
         internal const int ListenerFilter = 1 << 2;
         internal const int ZoneStartup = 1 << 3;
+        internal const int EffectTransitions = 1 << 4;
     }
 
     [StructLayout(LayoutKind.Sequential)]

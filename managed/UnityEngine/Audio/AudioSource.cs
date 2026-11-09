@@ -780,6 +780,8 @@ namespace UnityEngine
             if (Compat.AudioSpatialStereoMeasured) flags |= AudioSourceFlags.ListenerSnapshot;
             if (Compat.AudioZoneVoiceSendMeasured) flags |= AudioSourceFlags.ZoneVoiceSend;
             if (m_HasFilter && isActiveAndEnabled) flags |= AudioSourceFlags.Filter;
+            // Component parameter changes share the measured mixer effect transitions.
+            if (Compat.MixerEffectTransitionsMeasured) flags |= AudioSourceFlags.EffectTransitions;
             var packet = new AudioSourcePacket
             {
                 Clip = clip != null ? clip.m_Handle : 0,

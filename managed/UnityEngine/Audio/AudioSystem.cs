@@ -503,6 +503,7 @@ namespace Unbound.Runtime
                 frame.ListenerForward = pose.Forward;
                 frame.ListenerUp = pose.Up;
                 frame.ListenerVelocity = listener.m_Velocity;
+                if (Compat.MixerEffectTransitionsMeasured) frame.Flags |= AudioFrameFlags.EffectTransitions;
                 frame.Flags |= AudioFrameFlags.HasListener;
                 bool scripts = AudioFilters.Update(AudioFilters.ListenerKey, listener.m_GameObject);
                 if (scripts) frame.Flags |= AudioFrameFlags.ListenerFilter;

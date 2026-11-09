@@ -216,9 +216,10 @@ over a DSP buffer. Destroying the last initialized zone releases the return. A n
 return fades its send from each already playing voice over 64 frames. The frame packet
 selects this initialization and transition mechanism through `Compat.AudioZoneStartupMeasured`
 (NativeApi 43); other profiles keep immediate parameter application. Mixer SFX Reverb
-and `AudioReverbFilter` live parameter changes also stay immediate: their transition is
-unmeasured. All 141 original cases, including the five formerly rejected activation
-controls, are required.
+and `AudioReverbFilter` live parameter changes use the same one-buffer crossfade
+(`Compat.MixerEffectTransitionsMeasured`, tests/projects/audiodistortion live
+`sfxreverb_*_set` and `reverbfilter_*_source`). All 141 original cases, including the
+five formerly rejected activation controls, are required.
 
 ## Measured spatial playback
 
@@ -284,8 +285,8 @@ milliseconds converted with `floor(ms * rate / 1000)`. The constants are in `rev
   `G = level(Room HF)`, which gives `a = ((1 - Gc) - sqrt((1 - Gc)^2 - (1 - G)^2)) / (1 - G)` with
   `c = cos(2 pi HFRef / rate)`. The pole is limited to 0.99, measured at Room HF -10000 mB and
   HF Reference 1000 Hz (tests/projects/audioreverb live `filter_room_hf_floor` and
-  `zone_room_hf_floor`). The mixer's HF Reference also goes below 1000 Hz, where milder Room HF
-  values reach the limit; that range relies on the shared kernel and is unmeasured.
+  `zone_room_hf_floor`), and on the mixer at HF Reference 50 Hz with Room HF -1000 mB
+  (tests/projects/audiodistortion live `sfxreverb_hfref50`).
 - **Room LF.** `G (s^2 + sqrt2 s + 1) / (G s^2 + sqrt(2G) s + 1)`, bilinear with the prewarp at LF
   Reference.
 - **Early reflections.**
@@ -327,9 +328,9 @@ milliseconds converted with `floor(ms * rate / 1000)`. The constants are in `rev
   which is not modelled (a residual).
 - Parameter changes take effect at once, keeping the histories. Smoothing while a tail runs and
   timed snapshot transitions are unmeasured.
-- Measured only for stereo output at 48000 and 44100 Hz. HF Reference was measured at 1000, 4000
-  and 5000 Hz. The Room HF formula clamps `cos` at 0.9999 like the DMO reference, so values below
-  about 108 Hz at 48 kHz rely on an unmeasured guard.
+- Measured only for stereo output at 48000 and 44100 Hz. HF Reference was measured at 20, 50,
+  1000, 4000 and 5000 Hz. The Room HF formula uses `cos` as is; only its discriminant is limited
+  at zero (`sfxreverb_hfref20`).
 - A Wet level above 0 dB (for example through an exposed parameter) fails loudly as unmeasured.
 - Wet mixing on other effects and the other mixer effects still fail loudly or remain stubs.
 

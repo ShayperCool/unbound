@@ -825,7 +825,13 @@ impl Effect {
                 Some(reverb) if reverb.configuration() == (rate, buffer.max(1)) => reverb,
                 slot => slot.insert(Box::new(SfxReverb::new(rate, buffer)?)),
             };
-            reverb.tune_immediate(sfx);
+            // Measured parameter changes crossfade through one DSP buffer, as on zones
+            // (tests/projects/audiodistortion live sfxreverb/reverbfilter controls).
+            if spec.effect_transitions_measured {
+                reverb.tune(sfx);
+            } else {
+                reverb.tune_immediate(sfx);
+            }
         }
         if kind == Some(EffectKind::Send) && spec.send_level != self.spec.send_level {
             self.send_from = self.gain;
@@ -1232,12 +1238,10 @@ mod tests {
     }
 
     #[test]
-    fn group_sfx_reverb_live_changes_apply_at_once_inside_a_dsp_buffer() {
-        // The DSP-buffer crossfade is measured only on the zone return; mixer and filter
-        // SFX Reverb live changes keep immediate application.
-        let spec = |dry: f32| {
+    fn sfx_reverb_live_changes_wait_for_the_next_dsp_buffer_where_measured() {
+        let spec = |dry: f32, measured: bool| {
             serde_json::from_value::<EffectSpec>(serde_json::json!({
-                "id": "reverb", "kind": "SFX Reverb",
+                "id": "reverb", "kind": "SFX Reverb", "effectTransitionsMeasured": measured,
                 "sfx": {
                     "dryLevel": dry, "room": -10000.0, "roomHf": 0.0, "decayTime": 1.0,
                     "decayHfRatio": 0.5, "reflections": -10000.0, "reflectDelay": 0.02,
@@ -1247,17 +1251,26 @@ mod tests {
             }))
             .unwrap()
         };
-        let mut effect = Effect::new(spec(0.0), 48000, 1024).unwrap();
-        let mut before = vec![0.25; 2 * 100];
-        effect.process(&mut before, false);
-        effect.update(spec(-600.0), 48000, 1024).unwrap();
-        let mut after = vec![0.25; 2];
-        effect.process(&mut after, false);
-        let ratio = after[0] / before[199];
-        assert!(
-            (ratio - 10f32.powf(-600.0 / 2000.0)).abs() < 1e-6,
-            "{ratio}"
-        );
+        let quieter = 10f32.powf(-600.0 / 2000.0);
+        for measured in [false, true] {
+            let mut effect = Effect::new(spec(0.0, measured), 48000, 1024).unwrap();
+            let mut before = vec![0.25; 2 * 100];
+            effect.process(&mut before, false);
+            effect.update(spec(-600.0, measured), 48000, 1024).unwrap();
+            // The rest of this DSP buffer, then the transition buffer.
+            let mut rest = vec![0.25; 2 * (924 + 1024)];
+            effect.process(&mut rest, false);
+            let ratio = |frame: usize| rest[2 * frame] / before[0];
+            if measured {
+                // Changes wait for the next DSP buffer, where they transition (Unity
+                // 6000.0.71f1, tests/projects/audiodistortion live sfxreverb_*_set).
+                assert!((0..924).all(|frame| ratio(frame) == 1.0));
+                assert!((ratio(924 + 1023) - quieter).abs() < 1e-6);
+            } else {
+                // Unmeasured profiles keep immediate application.
+                assert!((ratio(0) - quieter).abs() < 1e-6);
+            }
+        }
     }
 
     #[test]

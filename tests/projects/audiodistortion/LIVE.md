@@ -7,12 +7,12 @@ Component controls include AudioDistortionFilter and AudioChorusFilter on source
 mono input clips and listeners. The listener controls retain the upstream Master
 sink as well as the processed device output.
 
-The canonical profile contains 97 cases and six independent sessions per rate, declared by
+The canonical profile contains 104 cases and seven independent sessions per rate, declared by
 `live.sections()`. Each session begins with a fresh Editor or engine process.
 The device output includes preceding mixers' tails inside that session, so the
 same session boundaries are part of both recording and replay. The merged
 capture records these case lists in `sessions`; every earlier sample is retained.
-The two repeats agree exactly across 9,535,685 checked values per rate. Separate
+The two repeats agree exactly across 10,223,827 checked values per rate. Separate
 public parameter/time traces of the timed Pitch control agree across another 96
 fields per rate; `parameter_trace.py` checks them exactly during engine replay.
 
@@ -23,6 +23,13 @@ parameter has an exposed-setter and timed-snapshot control. Static-wet controls
 also change a kernel parameter while the wet wrapper is active. Wet changes cover
 all five effects, zero, unity, gain above unity, the lower audibility boundary and
 small gain deltas on either side of the gain-change boundary.
+
+The `reverb_transitions` session adds mixer SFX Reverb Room, Decay Time and Reflect
+Delay setter changes, two static mixer controls at HF Reference 50 and 20 Hz that reach
+the Room HF pole limit, and AudioReverbFilter room and decayTime setter changes. Each
+change waits for the next DSP buffer and crossfades gains, delays and filters through
+it, as zones do. Dry Level changes are not covered by these controls; they apply at
+that buffer.
 
 | Basis | Contract or observation |
 | --- | --- |
