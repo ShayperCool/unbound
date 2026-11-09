@@ -36,6 +36,11 @@ pub struct DeviceConventions {
     pub reversed_z: bool,
     /// Clip depth from 0 to w: the GPU projection maps [-1, 1] there.
     pub clip_depth_zero_to_one: bool,
+    /// The sample a multisampled depth buffer's resolved copy reads, as the Editor's device
+    /// resolves depth (measured at 2 samples, tests/projects/rtdepth `fmt.msaa2.depth.*`, in
+    /// Vulkan's standard positions): OpenGL Core the one a quarter pixel left of the center
+    /// (sample 1), Vulkan sample 0.
+    pub depth_resolve_sample: u32,
 }
 
 impl DeviceConventions {
@@ -45,6 +50,10 @@ impl DeviceConventions {
             screen_top_down: c.uv_starts_at_top,
             reversed_z: c.reversed_z,
             clip_depth_zero_to_one: c.clip_depth_zero_to_one,
+            depth_resolve_sample: match device {
+                GraphicsDevice::OpenGLCore => 1,
+                GraphicsDevice::Vulkan | GraphicsDevice::Metal => 0,
+            },
         }
     }
 }

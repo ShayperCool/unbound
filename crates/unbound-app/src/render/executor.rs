@@ -234,7 +234,8 @@ struct DepthCopy {
 enum CopyKind {
     /// A depth buffer into floats.
     Depth,
-    /// A multisampled depth buffer's sample [`DEPTH_MSAA_SAMPLE`] into floats.
+    /// A multisampled depth buffer's sample `DeviceConventions::depth_resolve_sample` into
+    /// floats.
     DepthMultisampled,
     /// Floats as unsigned integer bits.
     UintBits,
@@ -1808,7 +1809,10 @@ impl UnityRenderer {
                 .replace("texture_depth_2d", "texture_depth_multisampled_2d")
                 .replace(
                     "vec2<i32>(p.xy), 0)",
-                    &format!("vec2<i32>(p.xy), {DEPTH_MSAA_SAMPLE})"),
+                    &format!(
+                        "vec2<i32>(p.xy), {})",
+                        self.conventions.depth_resolve_sample
+                    ),
                 ),
             CopyKind::UintBits => BITS_COPY_WGSL.replace("SCALAR", "u32"),
             CopyKind::SintBits => BITS_COPY_WGSL.replace("SCALAR", "i32"),
@@ -4406,10 +4410,6 @@ fn depth_owner(color: u64, depth: u64) -> Option<u64> {
     }
 }
 
-/// The sample a multisampled depth buffer's copy reads: the one a quarter pixel left of the
-/// center at 2 samples (Vulkan's standard positions), where Unity's resolved depth reads
-/// (measured: tests/projects/rtdepth fmt.msaa2.depth.*).
-const DEPTH_MSAA_SAMPLE: u32 = 1;
 
 /// Copies a float texture's values into an integer texture of its size as their bits, texel for
 /// texel (`SCALAR`: `u32` or `i32`).
