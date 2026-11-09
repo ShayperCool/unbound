@@ -118,34 +118,5 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(go);
             }
         }
-
-        [Fact]
-        public void UnmeasuredReleaseRetainsExistingReversalBisector()
-        {
-            string previous = ProjectInfo.UnityVersion;
-            var go = new GameObject("line");
-            var camera = new GameObject("camera").AddComponent<Camera>();
-            var mesh = new Mesh();
-            try
-            {
-                ProjectInfo.UnityVersion = "6000.0.72f1";
-                var line = go.AddComponent<LineRenderer>();
-                line.widthMultiplier = 0.4f;
-                line.positionCount = 3;
-                float a = 179f * Mathf.Deg2Rad;
-                line.SetPositions(new[] { Vector3.left, Vector3.zero, new Vector3(Mathf.Cos(a), Mathf.Sin(a), 0) });
-                camera.transform.position = new Vector3(0, 0, -10);
-                line.BakeMesh(mesh, camera);
-                // Preservation check only, not an oracle for this unmeasured release.
-                Assert.InRange(mesh.vertices[2].magnitude, 0.59999f, 0.60001f);
-            }
-            finally
-            {
-                ProjectInfo.UnityVersion = previous;
-                Object.DestroyImmediate(mesh);
-                Object.DestroyImmediate(camera.gameObject);
-                Object.DestroyImmediate(go);
-            }
-        }
     }
 }

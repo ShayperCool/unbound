@@ -31,7 +31,6 @@ namespace Unbound.Tests
                 Assert.Equal(measured ? 2 : 0, Compat.GraphicsFenceFrames);
                 Assert.Equal(measured, Compat.ZeroIndexedInstancesDrawOne);
                 Assert.Equal(measured, Compat.SkyAmbientWithoutLightColor);
-                Assert.Equal(measured, Compat.LineOpenStripJoinsMeasured);
                 Assert.Equal(measured, Compat.ShaderKeywordsMeasured);
                 Assert.Equal(measured, Compat.SingleSubpassClearFillsOutputs);
                 Assert.Equal(measured ? new Vector4(511, 1023, 65536, 0) : Vector4.zero, Compat.MeshInstanceBatchLimits);

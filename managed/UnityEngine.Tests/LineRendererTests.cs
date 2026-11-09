@@ -143,7 +143,10 @@ namespace UnityEngine.Tests
                     1f, 1f, 0f, 0.812061476f, 1f, 0.0684040287f, 0.935650551f, 1.15f, 0.115581782f,
                     1.12358908f, 1.15f, 0.0471777538f, 1.18793852f, 1f, -0.0684040287f,
                 };
-                var rendered = meshes[camera].vertices;
+                // A drawn strip's mesh is streamed: its arrays keep a capacity, the strip is the
+                // streamed count.
+                var drawn = meshes[camera];
+                var rendered = new System.ArraySegment<Vector3>(drawn.m_Vertices, 0, drawn.m_StreamVertexCount).ToArray();
                 Assert.Equal(expected.Length / 3, rendered.Length);
                 for (int i = 0; i < rendered.Length; i++)
                     for (int axis = 0; axis < 3; axis++)
@@ -650,56 +653,6 @@ namespace UnityEngine.Tests
             }
             Assert.Equal(0, trail.positionCount);
             Object.DestroyImmediate(go);
-        }
-
-        /// <summary>A loop's zero-length segments take the next non-zero segment's direction around
-        /// the loop, as the per-segment forward scan did, for every zero pattern up to nine segments
-        /// (runs at the start, the end and across the wrap, and all zero).</summary>
-        [Fact]
-        public void LoopZeroRunsTakeTheNextNonZeroDirectionAsTheScanDid()
-        {
-            const System.Reflection.BindingFlags Private = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
-            var strip = new LineStrip();
-            var dirField = typeof(LineStrip).GetField("m_Dir", Private);
-            var zeroField = typeof(LineStrip).GetField("m_Zero", Private);
-            var effectiveField = typeof(LineStrip).GetField("m_Effective", Private);
-            var loopDirections = typeof(LineStrip).GetMethod("LoopDirections", Private);
-            Assert.NotNull(dirField);
-            Assert.NotNull(zeroField);
-            Assert.NotNull(effectiveField);
-            Assert.NotNull(loopDirections);
-            for (int segments = 1; segments <= 9; segments++)
-            {
-                for (int mask = 0; mask < 1 << segments; mask++)
-                {
-                    // Scratch arrays are grown, not trimmed: keep stale entries past the segments.
-                    var dir = new Vector3[segments + 2];
-                    var zero = new bool[segments + 2];
-                    var effective = new Vector3[segments + 2];
-                    for (int j = 0; j < dir.Length; j++)
-                    {
-                        dir[j] = new Vector3(j + 1, 0.5f * j, -j);
-                        effective[j] = new Vector3(-99f, -99f, -99f);
-                    }
-                    for (int j = 0; j < segments; j++) zero[j] = (mask & (1 << j)) != 0;
-                    var expected = new Vector3[segments];
-                    for (int j = 0; j < segments; j++)
-                    {
-                        expected[j] = dir[j];
-                        if (!zero[j]) continue;
-                        for (int k = 1; k < segments; k++)
-                        {
-                            int at = (j + k) % segments;
-                            if (!zero[at]) { expected[j] = dir[at]; break; }
-                        }
-                    }
-                    dirField.SetValue(strip, dir);
-                    zeroField.SetValue(strip, zero);
-                    effectiveField.SetValue(strip, effective);
-                    loopDirections.Invoke(strip, new object[] { segments });
-                    for (int j = 0; j < segments; j++) Assert.Equal(expected[j], effective[j]);
-                }
-            }
         }
 
         [Fact]

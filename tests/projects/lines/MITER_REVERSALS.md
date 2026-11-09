@@ -33,14 +33,13 @@ and add 112 byte-identical records in `miterchain.values.jsonl`.
 
 Observed reach scales distinguish the segment two points back, or the first
 segment at the first joint, from either adjacent lengths or their minimum.
-For the measured positive-width open strips, the reconstruction limits the
-intersection magnitude to the local half width times
-`clamp(0.75 * earlierSegmentLength / widestSampledHalfWidth, 1, 3)`.
-The tapered controls retain the same dimensionless scale as their constant-width
-counterparts. Lighting tangents follow the un-eased outgoing side even without
-corner vertices. These are measured 6000.0.71f1 details; the compatibility switch
-retains earlier behavior for other releases. Exact reversing loops and negative
-widths are excluded from this change.
+For the measured positive-width open strips, the miter is limited to the local half width times
+`clamp(3 * earlierSegmentLength / (2 * widestWidth), 1, 3)`, where the widest width is the
+largest width curve key times the multiplier. The tapered controls retain the same
+dimensionless scale as their constant-width counterparts. Lighting tangents follow the
+segment's side even without corner vertices. One strip builder now covers these controls,
+negative widths and loops alike (docs/COMPATIBILITY_GAPS.md, LineRenderer/TrailRenderer
+geometry); other releases are unmeasured and use it too.
 
 ## Reference publication
 

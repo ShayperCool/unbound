@@ -289,12 +289,6 @@ namespace Unbound.Runtime
         /// (docs/COMPATIBILITY_GAPS.md). Other releases project the sky as drawn.</summary>
         internal static bool SkyAmbientWithoutLightColor => RenderingMeasured;
 
-        /// <summary>LineRenderer's open-strip joins of positive width as measured by the lines
-        /// probe on 6000.0.71f1 (miterrev.*, miterchain.*): near-reversal intersections, the
-        /// reach limit from the segment two points back and the un-eased lighting tangent. Other
-        /// releases keep the general miter rules.</summary>
-        internal static bool LineOpenStripJoinsMeasured => RenderingMeasured;
-
         /// <summary>The automatic Animator update split over two player-loop leaves (state machines,
         /// events and movement in DirectorUpdateAnimationBegin; pose writes and IK passes, layer by
         /// layer over all Animators, in DirectorUpdateAnimationEnd; the fixed-step leaves likewise),
