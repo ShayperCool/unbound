@@ -708,6 +708,10 @@ namespace Unbound.Runtime
         static readonly float[] PitchShifterDefaults = { 1f, 1024f, 4f, 0f };
         static readonly float[] PitchShifterMinimums = { 0.5f, 256f, 1f, 0f };
         static readonly float[] PitchShifterMaximums = { 2f, 4096f, 32f, 16f };
+        /// <summary>The output layouts of the Pitch Shifter captures (6000.0.71f1, tests/projects/audiopitch);
+        /// Prologic is unmeasured. The native mixer checks the same set (PITCH_SPEAKER_MODES).</summary>
+        static readonly AudioSpeakerMode[] PitchShifterSpeakerModes = { AudioSpeakerMode.Mono, AudioSpeakerMode.Stereo,
+            AudioSpeakerMode.Quad, AudioSpeakerMode.Surround, AudioSpeakerMode.Mode5point1, AudioSpeakerMode.Mode7point1 };
         internal const string Normalize = "Normalize";
         internal static readonly string[] NormalizeParameters = { "Fade in time", "Lowest volume", "Maximum amp" };
         static readonly float[] NormalizeDefaults = { 5000f, 0.1f, 20f };
@@ -815,15 +819,15 @@ namespace Unbound.Runtime
                 v[i] = Parameter(PitchShifterParameters[i]) is string guid ? mixer.Value(guid) : PitchShifterDefaults[i];
                 if (!float.IsFinite(v[i])) throw new NotSupportedException("AudioMixer Pitch Shifter " + PitchShifterParameters[i] + " must be finite");
             }
-            if (v[3] != 0f)
-                throw new NotSupportedException("AudioMixer Pitch Shifter requires measured Max channels=0");
             int fftSize = 256;
             while (fftSize < v[1] && fftSize < 4096) fftSize *= 2;
+            // The DSP takes the whole channel count of the clamped value (maxch_raw_* controls).
+            int maxChannels = (int)Mathf.Clamp(v[3], PitchShifterMinimums[3], PitchShifterMaximums[3]);
             var config = AudioSettings.GetConfiguration();
-            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || config.speakerMode != AudioSpeakerMode.Stereo
+            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || Array.IndexOf(PitchShifterSpeakerModes, config.speakerMode) < 0
                 || (config.dspBufferSize != 256 && config.dspBufferSize != 512 && config.dspBufferSize != 1024 && config.dspBufferSize != 2048))
-                throw new NotSupportedException("AudioMixer Pitch Shifter is measured only at 48000/44100 Hz with 256/512/1024/2048-frame stereo output");
-            return new { pitch = Mathf.Clamp(v[0], 0.5f, 2f), fft_size = fftSize };
+                throw new NotSupportedException("AudioMixer Pitch Shifter is measured only at 48000/44100 Hz with 256/512/1024/2048-frame mono, stereo, quad, 5.0, 5.1 or 7.1 output");
+            return new { pitch = Mathf.Clamp(v[0], 0.5f, 2f), fft_size = fftSize, max_channels = maxChannels };
         }
         internal object NormalizeConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {

@@ -133,7 +133,7 @@ impl EffectKind {
         matches!(self, Self::LowpassSimple | Self::HighpassSimple)
     }
     /// Kinds with explicit output-context checks. Normalize uses [`MEASURED_LAYOUT`];
-    /// Pitch Shifter also covers the standard smaller/larger stereo DSP buffers.
+    /// Pitch Shifter also covers other DSP buffers and output layouts (`PITCH_SPEAKER_MODES`).
     pub(crate) fn layout_limited(self) -> bool {
         Self::LAYOUT_LIMITED.contains(&self)
     }
@@ -146,6 +146,13 @@ impl EffectKind {
     ];
     pub(crate) const LAYOUT_LIMITED: [Self; 2] = [Self::PitchShifter, Self::Normalize];
 }
+
+/// The output contexts of the Pitch Shifter captures (Unity 6000.0.71f1 Linux Editor,
+/// tests/projects/audiopitch): output rates, DSP buffer lengths and `AudioSpeakerMode` values
+/// Mono, Stereo, Quad, Surround, Mode5point1 and Mode7point1. Prologic stays unmeasured.
+const PITCH_RATES: [u32; 2] = [48000, 44100];
+const PITCH_BUFFERS: [u32; 4] = [256, 512, 1024, 2048];
+const PITCH_SPEAKER_MODES: [i32; 6] = [1, 2, 3, 4, 5, 6];
 
 /// The output covered by Normalize and static-wet captures (Unity 6000.0.71f1 Linux Editor,
 /// tests/projects/audionormalize and tests/projects/audiopitch): these rates, DSP buffers of
@@ -429,10 +436,10 @@ impl EffectSpec {
         );
         if kind == EffectKind::PitchShifter {
             anyhow::ensure!(
-                [48000, 44100].contains(&config.sample_rate)
-                    && [256, 512, 1024, 2048].contains(&config.buffer_size)
-                    && config.speaker_mode == 2,
-                "AudioMixer Pitch Shifter is measured only at 48000/44100 Hz with 256/512/1024/2048-frame stereo output"
+                PITCH_RATES.contains(&config.sample_rate)
+                    && PITCH_BUFFERS.contains(&config.buffer_size)
+                    && PITCH_SPEAKER_MODES.contains(&config.speaker_mode),
+                "AudioMixer Pitch Shifter is measured only at 48000/44100 Hz with 256/512/1024/2048-frame mono, stereo, quad, 5.0, 5.1 or 7.1 output"
             );
         }
         if (kind.layout_limited() && kind != EffectKind::PitchShifter)
@@ -720,6 +727,8 @@ pub struct Effect {
     send_from: f32,
     send_frames: u32,
     buffer: u32,
+    /// Channels of the output layout the group carries (see [`Effect::set_layout`]).
+    layout: usize,
 }
 impl Effect {
     pub fn new(spec: EffectSpec, rate: u32, buffer: u32) -> anyhow::Result<Self> {
@@ -753,6 +762,7 @@ impl Effect {
             }),
             dry_ramp: ParameterRamp::new((1.0 - spec.mix_level.unwrap_or(1.0)).max(-1.0)),
             buffer: buffer.max(1),
+            layout: 2,
             gain: if spec.kind == EffectKind::Send.name() {
                 spec.send_level
             } else {
@@ -790,6 +800,7 @@ impl Effect {
         }
         if let (Some(pitch), Some(parameters)) = (&mut self.pitch, &spec.pitch_shifter) {
             // Parameter side effects apply even when a zero-wet slot pauses audio processing.
+            pitch.set_channel_limit(self.layout, parameters.max_channels);
             pitch.set_pitch(parameters.pitch);
         }
         if self.buffer != buffer.max(1)
@@ -824,6 +835,14 @@ impl Effect {
         self.spec = spec;
         self.tune();
         Ok(())
+    }
+    /// Sets the output layout's channel count. Group effects learn it when they are created;
+    /// a layout change (`AudioSettings.Reset`) recreates every group effect.
+    pub(crate) fn set_layout(&mut self, channels: usize) {
+        self.layout = channels;
+        if let (Some(pitch), Some(parameters)) = (&mut self.pitch, &self.spec.pitch_shifter) {
+            pitch.set_channel_limit(channels, parameters.max_channels);
+        }
     }
     /// Forgets the histories and the parameter ramp, leaving the effect as [`Effect::new`] makes
     /// it at the current rate. The Echo buffer keeps its allocation (zeroed).
@@ -1049,7 +1068,7 @@ impl Effect {
                 }
                 EffectKind::PitchShifter => {
                     if let (Some(pitch), Some(spec)) = (&mut self.pitch, &self.spec.pitch_shifter) {
-                        pitch.process(samples, spec, rate);
+                        pitch.process(samples, spec, rate, self.layout);
                     }
                 }
                 EffectKind::Normalize => {
@@ -1110,7 +1129,8 @@ pub struct GroupNode {
     pub energy: f64,
 }
 impl GroupNode {
-    pub fn update(&mut self, spec: GroupSpec, rate: u32, buffer: u32) -> anyhow::Result<()> {
+    pub fn update(&mut self, spec: GroupSpec, config: &MixerConfig) -> anyhow::Result<()> {
+        let (rate, buffer) = (config.sample_rate, config.buffer_size);
         for effect in &spec.effects {
             effect.validate(rate, buffer)?;
         }
@@ -1127,7 +1147,9 @@ impl GroupNode {
                     effect.update(s.clone(), rate, buffer)?;
                     Ok(effect)
                 } else {
-                    Effect::new(s.clone(), rate, buffer)
+                    let mut effect = Effect::new(s.clone(), rate, buffer)?;
+                    effect.set_layout(config.output_channels());
+                    Ok(effect)
                 }
             })
             .collect::<anyhow::Result<_>>()?;

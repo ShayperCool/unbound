@@ -871,9 +871,14 @@ namespace UnityEngine.Tests
                     Assert.Equal(pair.Item2, payload.RootElement.GetProperty("effects")[0].GetProperty("pitchShifter").GetProperty("fft_size").GetInt32());
                     Assert.True(mixer.GetFloat("FFT size", out float raw)); Assert.Equal(pair.Item1, raw);
                 }
-                mixer.SetFloat("Max channels", 1f);
-                Assert.Contains("Max channels=0", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
-                mixer.SetFloat("Max channels", 0f);
+                // Max channels keeps its raw value; the DSP takes the clamped whole channel count.
+                foreach (var pair in new[] { (1f, 1), (1.5f, 1), (2.5f, 2), (16f, 16), (17f, 16), (-1f, 0), (0f, 0) })
+                {
+                    mixer.SetFloat("Max channels", pair.Item1);
+                    Assert.True(mixer.GetFloat("Max channels", out float raw)); Assert.Equal(pair.Item1, raw);
+                    using var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration()));
+                    Assert.Equal(pair.Item2, payload.RootElement.GetProperty("effects")[0].GetProperty("pitchShifter").GetProperty("max_channels").GetInt32());
+                }
                 mixer.SetFloat("Pitch", float.NaN);
                 Assert.Contains("finite", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
                 mixer.SetFloat("Pitch", 1f); effect.m_EnableWetMix = true;
@@ -912,24 +917,33 @@ namespace UnityEngine.Tests
         [Theory]
         [InlineData("Normalize")]
         [InlineData("Pitch Shifter")]
-        public void LayoutLimitedEffectsFailOnMonoAndOtherUnmeasuredOutputs(string name)
+        public void LayoutLimitedEffectsFailOnUnmeasuredOutputs(string name)
         {
             var (mixer, group, effect) = Fixture();
             UseEffect(mixer, effect, name, name == "Normalize" ? AudioMixerEffectController.NormalizeParameters : AudioMixerEffectController.PitchShifterParameters);
             var measured = AudioSettings.GetConfiguration();
             Assert.Equal(AudioSpeakerMode.Stereo, measured.speakerMode);
             group.DspConfiguration();
+            bool pitch = name == "Pitch Shifter";
             var mono = measured; mono.speakerMode = AudioSpeakerMode.Mono;
             var quad = measured; quad.speakerMode = AudioSpeakerMode.Quad;
+            var prologic = measured; prologic.speakerMode = AudioSpeakerMode.Prologic;
             var rate = measured; rate.sampleRate = 22050;
             var buffer = measured; buffer.dspBufferSize = 4096;
-            foreach (var config in new[] { mono, quad, rate, buffer })
+            foreach (var config in pitch ? new[] { prologic, rate, buffer } : new[] { mono, quad, prologic, rate, buffer })
             {
                 Assert.True(AudioSettings.Reset(config));
                 var error = Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
-                Assert.Contains(name == "Pitch Shifter" ? "measured only at 48000/44100 Hz with 256/512/1024/2048-frame stereo output" : "measured only at 48000/44100 Hz with 1024-frame stereo output", error.Message);
+                Assert.Contains(pitch ? "measured only at 48000/44100 Hz with 256/512/1024/2048-frame mono, stereo, quad, 5.0, 5.1 or 7.1 output" : "measured only at 48000/44100 Hz with 1024-frame stereo output", error.Message);
                 effect.m_Bypass = true; group.DspConfiguration(); effect.m_Bypass = false;
             }
+            if (pitch)
+                foreach (var mode in new[] { AudioSpeakerMode.Mono, AudioSpeakerMode.Quad, AudioSpeakerMode.Surround, AudioSpeakerMode.Mode5point1, AudioSpeakerMode.Mode7point1 })
+                {
+                    var layout = measured; layout.speakerMode = mode; layout.dspBufferSize = 512;
+                    Assert.True(AudioSettings.Reset(layout));
+                    group.DspConfiguration();
+                }
             foreach (int frames in name == "Pitch Shifter" ? new[] { 256, 512, 1024, 2048 } : new[] { 1024 })
             {
                 var supported = measured; supported.dspBufferSize = frames;

@@ -825,9 +825,10 @@ residuals are retained unchanged.
 `crates/unbound-runtime/src/audio/pitch.rs`, selected by `Compat.MixerPitchShifterMeasured`.
 It shares the quarter-wave cosine table (`wavetable.rs`) with Chorus and Flange, and the measured
 static-wet output layout check (`MEASURED_LAYOUT` in `effects.rs`, `RequireMeasuredOutput` on the
-managed side) with Normalize. Without slot wet mixing, Pitch Shifter also accepts stereo
-256/512/2048-frame DSP buffers at 48000/44100 Hz.
-NativeApi 40 adds FFT size to the existing group JSON. It adds no source filter component.
+managed side) with Normalize. Without slot wet mixing, Pitch Shifter also accepts
+256/512/2048-frame DSP buffers and mono, quad, 5.0, 5.1 and 7.1 output at 48000/44100 Hz.
+NativeApi 40 adds FFT size to the existing group JSON and 42 the DSP value of Max channels. It
+adds no source filter component.
 
 The documented contract, Editor parameter queries, measured state and kernel inferences are
 separated in [the probe cause table](../tests/projects/audiopitch/README.md). That table links
@@ -846,11 +847,34 @@ single-precision radix-4/2 transform follows Ooura fft4g's arithmetic order and 
 quarter-wave lookup for twiddles and synthesis. This describes the measured implementation;
 the Manual does not guarantee it for other releases.
 
+Max channels is a channel limit: the clamped whole value (0..16), or the output layout's channel
+count when it is 0. A group carrying more channels than the limit passes its input through
+unchanged; a change of the processed count restarts the histories, an unchanged count keeps them.
+In mono output the effect processes the single mono channel (see Output layouts below); in quad,
+5.0, 5.1 and 7.1 it processes the front pair the engine graph carries, the other channels being
+silent for stereo sources. The Manual documents only the range and default of Max channels; the
+rest is the measured release's behavior, recorded in the probe cause table.
+
 Static slot Wet follows the shared rule below; live Pitch and wet changes are covered below. Active unmeasured releases,
-nonzero channel-limit settings, output rates and buffers outside the measured set, and mono/surround layouts fail clearly. Mono PCM is recorded separately for the channel-aware graph follow-up. The surround requests fall back to stereo on the capture device; their getter and active DSP channel counts are recorded without claiming surround parity. `unbound doctor`
+Prologic output, and output rates and buffers outside the measured set fail clearly. `unbound doctor`
 lists these Pitch Shifter limits in the effect-class detail. No prior DSP kernel or ClearFloat
 ownership behavior changes. The optional `audiopitch/regressions.py` runs the unchanged
 Distortion, Chorus, Flange, Normalize and ClearFloat probes with one private runtime snapshot.
+
+# Output layouts
+
+`AudioSpeakerMode` names the channel count of each layout; the device may override a request, so
+the probes read the actual configuration back. The engine mixes every layout in a two-lane graph
+and writes the front pair, other channels silent (`spread` in `mixer.rs`). Measured in Unity
+6000.0.71f1 by tests/projects/audiopitch layout controls:
+
+| Basis | Behavior |
+| --- | --- |
+| Measured mono | Each voice enters the graph already mono, before source components and group effects: a stereo clip as `0.707·L + 0.707·R` of its panned stereo pair, a mono clip with the length of its stereo pan gains (pan-independent in 2D). Both lanes carry that signal, so channel-symmetric effects behave as Unity's one-channel graph and the final `(L+R)/2` returns it. Engine: `VoiceGains` and `collapse_to_mono` in `mixer.rs`. |
+| Measured quad/5.0/5.1/7.1 | Stereo 2D clips reach FL/FR exactly as in stereo; every other channel is silent. |
+| Gap | In 5.1 and 7.1 a mono 2D clip also feeds LFE at unity gain; the engine graph has no LFE lane (follow-up). 3D sources in mono and surround, and channel-asymmetric effects in mono (Chorus/Flange modulation, reverbs), are unmeasured; listener `OnAudioFilterRead` still receives the two graph lanes. |
+
+AudioRenderer buffers and group sinks hold the layout's channel count in every layout.
 
 # Static effect-slot wet mixing
 

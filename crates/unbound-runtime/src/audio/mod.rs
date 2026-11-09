@@ -523,14 +523,10 @@ impl Engine {
             return Ok(capture::Output::default());
         }
         let mut mixer = self.mixer();
-        anyhow::ensure!(
-            mixer.config.speaker_mode == 2,
-            "AudioRenderer currently supports stereo output"
-        );
         let output = mixer.capture(length, sinks)?;
         let mut pending = self.capture_pending.lock().unwrap();
         *pending = (*pending + mixer.config.sample_rate as f64 * delta_time as f64).max(0.0)
-            - (length / 2) as f64;
+            - (length / mixer.config.output_channels()) as f64;
         self.clock.store(&mixer);
         Ok(output)
     }

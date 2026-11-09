@@ -1,6 +1,7 @@
 //! Unity 6000.0.71f1 Pitch Shifter profile. See tests/projects/audiopitch.
 //! The output layouts it is measured for are checked by the mixer
-//! ([`super::effects::EffectKind::layout_limited`]).
+//! ([`super::effects::EffectKind::layout_limited`]). The kernel runs each channel
+//! independently; the engine's group graph carries the front pair of every layout.
 use super::wavetable;
 use serde::Deserialize;
 use std::f32::consts::{PI, TAU};
@@ -10,6 +11,9 @@ pub struct PitchSpec {
     pub pitch: f32,
     #[serde(default = "default_fft_size")]
     pub fft_size: usize,
+    /// The DSP value of `Max channels` (0: the output layout's channel count).
+    #[serde(default)]
+    pub max_channels: u32,
 }
 impl PitchSpec {
     pub fn validate(&self) -> anyhow::Result<()> {
@@ -20,6 +24,10 @@ impl PitchSpec {
         anyhow::ensure!(
             matches!(self.fft_size, 256 | 512 | 1024 | 2048 | 4096),
             "AudioMixer Pitch Shifter has invalid FFT size"
+        );
+        anyhow::ensure!(
+            self.max_channels <= MAX_CHANNEL_LIMIT,
+            "AudioMixer Pitch Shifter has invalid Max channels"
         );
         Ok(())
     }
@@ -32,6 +40,8 @@ fn default_fft_size() -> usize {
 const OVERLAP: usize = 4;
 // Window-table spacing measured by the FFT-size controls in tests/projects/audiopitch.
 const WINDOW_INTERVALS: usize = 1024;
+/// The largest `Max channels` value, from the effect's parameter range (0..16).
+pub const MAX_CHANNEL_LIMIT: u32 = 16;
 struct Channel {
     input: Vec<f32>,
     output: Vec<f32>,
@@ -71,6 +81,10 @@ impl Channel {
 }
 pub struct PitchShifter {
     channels: Vec<Channel>,
+    /// How many channels the effect processes: `Max channels`, or the layout's count when that
+    /// is zero. A group carrying more channels passes through unchanged (Unity 6000.0.71f1,
+    /// tests/projects/audiopitch `maxch_*` and layout controls).
+    limit: usize,
     fft_size: usize,
     pitch: f32,
     window: Vec<f32>,
@@ -83,6 +97,7 @@ impl PitchShifter {
     pub fn new(n: usize, channels: usize) -> Self {
         let mut result = Self {
             channels: (0..channels).map(|_| Channel::new(n)).collect(),
+            limit: channels,
             fft_size: 0,
             pitch: 1.0,
             window: Vec::new(),
@@ -163,6 +178,20 @@ impl PitchShifter {
             state.clear(latency);
         }
     }
+    /// Applies the channel limit for an output layout of `layout` channels. A changed count
+    /// restarts every history, as a reallocation would; an unchanged one keeps them (the
+    /// `maxch_live_*` controls).
+    pub(crate) fn set_channel_limit(&mut self, layout: usize, max_channels: u32) {
+        let limit = if max_channels == 0 {
+            layout
+        } else {
+            max_channels as usize
+        };
+        if limit != self.limit {
+            self.clear();
+            self.limit = limit;
+        }
+    }
     pub(crate) fn set_pitch(&mut self, pitch: f32) {
         if self.pitch != pitch {
             // Live ratios restart phase tracking while keeping the FIFO and overlap audio.
@@ -174,7 +203,13 @@ impl PitchShifter {
             self.pitch = pitch;
         }
     }
-    pub fn process(&mut self, samples: &mut [f32], spec: &PitchSpec, rate: u32) {
+    /// Processes interleaved `samples` of a group carrying `layout` channels.
+    pub fn process(&mut self, samples: &mut [f32], spec: &PitchSpec, rate: u32, layout: usize) {
+        if layout > self.limit {
+            // More input channels than the effect handles: the input passes unchanged and
+            // the histories stay as they are.
+            return;
+        }
         self.set_pitch(spec.pitch);
         let n = self.fft_size;
         let hop = n / OVERLAP;
@@ -388,6 +423,7 @@ mod tests {
                 let spec = PitchSpec {
                     pitch: 1.375,
                     fft_size: n,
+                    max_channels: 0,
                 };
                 let signal: Vec<f32> = (0..(n * 3 + 37) * channels)
                     .map(|i| {
@@ -402,9 +438,9 @@ mod tests {
                 let mut split = signal.clone();
                 let mut effect = PitchShifter::new(n, channels);
                 let mut chunked = PitchShifter::new(n, channels);
-                effect.process(&mut whole, &spec, 48000);
+                effect.process(&mut whole, &spec, 48000, channels);
                 for part in split.chunks_mut(37 * channels) {
-                    chunked.process(part, &spec, 48000);
+                    chunked.process(part, &spec, 48000, channels);
                 }
                 assert_eq!(whole, split, "FFT {n}, channels {channels}");
                 assert!(whole.iter().any(|v| v.abs() > 0.01));
@@ -415,7 +451,7 @@ mod tests {
                 );
                 effect.clear();
                 let mut reset = signal;
-                effect.process(&mut reset, &spec, 48000);
+                effect.process(&mut reset, &spec, 48000, channels);
                 assert_eq!(whole, reset);
             }
         }
@@ -429,17 +465,18 @@ mod tests {
         let parameters = PitchSpec {
             pitch: 0.75,
             fft_size: 1024,
+            max_channels: 0,
         };
         let mut edited = PitchShifter::new(1024, 2);
         let mut held = PitchShifter::new(1024, 2);
-        edited.process(&mut signal.clone(), &parameters, 44100);
-        held.process(&mut signal.clone(), &parameters, 44100);
+        edited.process(&mut signal.clone(), &parameters, 44100, 2);
+        held.process(&mut signal.clone(), &parameters, 44100, 2);
         edited.set_pitch(1.5);
         edited.set_pitch(parameters.pitch);
         let mut a = signal.clone();
         let mut b = signal;
-        edited.process(&mut a, &parameters, 44100);
-        held.process(&mut b, &parameters, 44100);
+        edited.process(&mut a, &parameters, 44100, 2);
+        held.process(&mut b, &parameters, 44100, 2);
         // Already queued output survives the two edits; newly synthesized audio changes.
         let hop = parameters.fft_size / OVERLAP;
         assert_eq!(&a[..hop * 2], &b[..hop * 2]);
@@ -457,12 +494,13 @@ mod tests {
             let parameters = PitchSpec {
                 pitch,
                 fft_size: 1024,
+                max_channels: 0,
             };
             let mut a = input.clone();
             let mut b = input.clone();
-            whole.process(&mut a, &parameters, 44100);
+            whole.process(&mut a, &parameters, 44100, 2);
             for part in b.chunks_mut(14) {
-                chunks.process(part, &parameters, 44100);
+                chunks.process(part, &parameters, 44100, 2);
             }
             assert_eq!(a, b);
             assert!(a.iter().any(|v| v.abs() > 1e-3));
@@ -474,22 +512,23 @@ mod tests {
         let spec = PitchSpec {
             pitch: 0.75,
             fft_size: 1024,
+            max_channels: 0,
         };
         let signal: Vec<f32> = (0..16384)
             .map(|i| if i % 1531 == 0 { 0.5 } else { 0.0 })
             .collect();
         let mut whole = signal.clone();
         let mut effect = PitchShifter::new(1024, 2);
-        effect.process(&mut whole, &spec, 44100);
+        effect.process(&mut whole, &spec, 44100, 2);
         let mut split = signal.clone();
         let mut effect = PitchShifter::new(1024, 2);
         for chunk in split.chunks_mut(480 * 2) {
-            effect.process(chunk, &spec, 44100);
+            effect.process(chunk, &spec, 44100, 2);
         }
         assert_eq!(whole, split);
         effect.clear();
         let mut reset = signal;
-        effect.process(&mut reset, &spec, 44100);
+        effect.process(&mut reset, &spec, 44100, 2);
         assert_eq!(whole, reset);
     }
     #[test]
@@ -501,8 +540,10 @@ mod tests {
             &PitchSpec {
                 pitch: 1.0,
                 fft_size: 1024,
+                max_channels: 0,
             },
             48000,
+            2,
         );
         assert_eq!(samples[2048 * 2], 0.0);
         assert_eq!(samples[3072 * 2], 0.12646484);
@@ -512,5 +553,76 @@ mod tests {
                 .enumerate()
                 .all(|(i, x)| i % 2 == 0 || *x == 0.0)
         );
+    }
+
+    fn noise(frames: usize) -> Vec<f32> {
+        (0..frames * 2)
+            .map(|i| ((i * 37) % 997) as f32 / 2048.0 - 0.25)
+            .collect()
+    }
+    fn spec(max_channels: u32) -> PitchSpec {
+        PitchSpec {
+            pitch: 0.75,
+            fft_size: 1024,
+            max_channels,
+        }
+    }
+    fn run(effect: &mut PitchShifter, input: &[f32], spec: &PitchSpec, layout: usize) -> Vec<f32> {
+        let mut output = input.to_vec();
+        effect.process(&mut output, spec, 48000, layout);
+        output
+    }
+
+    #[test]
+    fn channel_limits_below_the_layout_pass_the_input_through() {
+        let input = noise(4096);
+        let mut reference = PitchShifter::new(1024, 2);
+        reference.set_channel_limit(2, 0);
+        let shifted = run(&mut reference, &input, &spec(0), 2);
+        assert_ne!(shifted, input);
+        // Stereo groups: limits 0, 2 and anything larger process; 1 passes through.
+        for (layout, limit, processes) in [
+            (2, 1, false),
+            (2, 2, true),
+            (2, 16, true),
+            (1, 1, true),
+            (6, 2, false),
+            (6, 6, true),
+            (8, 6, false),
+            (8, 0, true),
+        ] {
+            let mut effect = PitchShifter::new(1024, 2);
+            effect.set_channel_limit(layout, limit);
+            let output = run(&mut effect, &input, &spec(limit), layout);
+            if processes {
+                assert_eq!(output, shifted, "layout {layout}, limit {limit}");
+            } else {
+                assert_eq!(output, input, "layout {layout}, limit {limit}");
+            }
+        }
+    }
+
+    #[test]
+    fn changing_the_processed_channel_count_restarts_the_histories() {
+        let input = noise(4096);
+        let mut fresh = PitchShifter::new(1024, 2);
+        fresh.set_channel_limit(2, 0);
+        let fresh_output = run(&mut fresh, &input, &spec(0), 2);
+        for (limit, restarts) in [(2, false), (4, true), (16, true)] {
+            let mut effect = PitchShifter::new(1024, 2);
+            effect.set_channel_limit(2, 0);
+            run(&mut effect, &input, &spec(0), 2);
+            effect.set_channel_limit(2, limit);
+            let output = run(&mut effect, &input, &spec(limit), 2);
+            assert_eq!(output == fresh_output, restarts, "limit {limit}");
+        }
+        // A bypassing limit leaves the histories untouched until the count changes again.
+        let mut effect = PitchShifter::new(1024, 2);
+        effect.set_channel_limit(2, 0);
+        run(&mut effect, &input, &spec(0), 2);
+        effect.set_channel_limit(2, 1);
+        assert_eq!(run(&mut effect, &input, &spec(1), 2), input);
+        effect.set_channel_limit(2, 0);
+        assert_eq!(run(&mut effect, &input, &spec(0), 2), fresh_output);
     }
 }
