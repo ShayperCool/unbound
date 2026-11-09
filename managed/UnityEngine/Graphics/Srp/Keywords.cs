@@ -255,7 +255,7 @@ namespace UnityEngine.Rendering
             {
                 m_SubPasses = s;
                 m_SubPass = 0;
-                Unbound.Runtime.RenderPasses.Begin(a, depthAttachmentIndex, s, width, height);
+                Unbound.Runtime.RenderPasses.Begin(a, depthAttachmentIndex, s, width, height, samples);
             });
             m_OwnedArrays.Add(a);
             m_OwnedSubPasses.Add(s);

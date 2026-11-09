@@ -809,13 +809,13 @@ namespace UnityEngine.Rendering
         public void DrawShadows(ref ShadowDrawingSettings settings) => RendererLists.Draw(RendererLists.Shadows(settings));
 
         public void BeginRenderPass(int width, int height, int volumeDepth, int samples, NativeArray<AttachmentDescriptor> attachments, [Internal.DefaultValue("-1")] int depthAttachmentIndex = -1) =>
-            RenderPasses.Begin(attachments, depthAttachmentIndex, width, height);
+            RenderPasses.Begin(attachments, depthAttachmentIndex, width, height, samples);
 
         public void BeginRenderPass(int width, int height, int samples, NativeArray<AttachmentDescriptor> attachments, [Internal.DefaultValue("-1")] int depthAttachmentIndex = -1) =>
-            RenderPasses.Begin(attachments, depthAttachmentIndex, width, height);
+            RenderPasses.Begin(attachments, depthAttachmentIndex, width, height, samples);
 
-        public void BeginSubPass(NativeArray<int> colors, NativeArray<int> inputs, bool isDepthReadOnly, bool isStencilReadOnly) => RenderPasses.SubPass(colors.AsReadOnlySpan());
-        public void BeginSubPass(NativeArray<int> colors, NativeArray<int> inputs, [Internal.DefaultValue("false")] bool isDepthStencilReadOnly = false) => RenderPasses.SubPass(colors.AsReadOnlySpan());
+        public void BeginSubPass(NativeArray<int> colors, NativeArray<int> inputs, bool isDepthReadOnly, bool isStencilReadOnly) => RenderPasses.SubPass(colors.AsReadOnlySpan(), inputs.AsReadOnlySpan());
+        public void BeginSubPass(NativeArray<int> colors, NativeArray<int> inputs, [Internal.DefaultValue("false")] bool isDepthStencilReadOnly = false) => RenderPasses.SubPass(colors.AsReadOnlySpan(), inputs.AsReadOnlySpan());
         public void BeginSubPass(NativeArray<int> colors, bool isDepthReadOnly, bool isStencilReadOnly) => RenderPasses.SubPass(colors.AsReadOnlySpan());
         public void BeginSubPass(NativeArray<int> colors, [Internal.DefaultValue("false")] bool isDepthStencilReadOnly = false) => RenderPasses.SubPass(colors.AsReadOnlySpan());
         [Unbound.EditorFaithful("no-op is equivalent: the next BeginSubPass or EndRenderPass sets the targets")]
@@ -1166,15 +1166,29 @@ namespace Unbound.Runtime
     /// <summary>Render passes (BeginRenderPass/subpasses): each subpass draws into its color
     /// outputs (several at once: the fragment program's outputs in order) and the depth
     /// attachment, each attachment cleared as its load action says the first time a subpass
-    /// uses it.</summary>
+    /// uses it. Its inputs are read as textures: input i is the global `_UnityFBInput{i}`,
+    /// which programs read framebuffer input i from (their own fallback where the device has no
+    /// subpass inputs; the shader compiler's on devices that do).</summary>
     internal static class RenderPasses
     {
         static AttachmentDescriptor[] s_Attachments = new AttachmentDescriptor[AttachmentIndexArray.MaxAttachments + 1];
+        /// <summary>Per attachment, the temporary texture of one without a target (see <see cref="Target"/>).</summary>
+        static RenderTexture[] s_Transient = new RenderTexture[AttachmentIndexArray.MaxAttachments + 1];
+        static int s_Width, s_Height, s_Samples = 1;
         static int s_AttachmentCount;
         static int s_Depth = -1;
         /// <summary>The attachments cleared so far in this pass, one bit per index.</summary>
         static ulong s_Cleared;
         static readonly int[] s_Colors = new int[AttachmentIndexArray.MaxAttachments];
+        static readonly int[] s_Inputs = new int[AttachmentIndexArray.MaxAttachments];
+        static readonly string[] s_InputNames = InputNames();
+
+        static string[] InputNames()
+        {
+            var names = new string[AttachmentIndexArray.MaxAttachments];
+            for (int i = 0; i < names.Length; i++) names[i] = "_UnityFBInput" + i;
+            return names;
+        }
         /// <summary>The context attachments resolve in (reused by every subpass).</summary>
         static readonly CommandBuffer.Context s_Context = new CommandBuffer.Context();
         /// <summary>The attachment index of each bound output of the current subpass.</summary>
@@ -1189,35 +1203,77 @@ namespace Unbound.Runtime
             return handles;
         }
 
-        internal static void Begin(NativeArray<AttachmentDescriptor> attachments, int depthAttachmentIndex, int width, int height)
+        internal static void Begin(NativeArray<AttachmentDescriptor> attachments, int depthAttachmentIndex, int width, int height, int samples)
         {
-            if (s_Attachments.Length < attachments.Length) s_Attachments = new AttachmentDescriptor[attachments.Length];
+            ReleaseTransient();
+            if (s_Attachments.Length < attachments.Length)
+            {
+                s_Attachments = new AttachmentDescriptor[attachments.Length];
+                s_Transient = new RenderTexture[attachments.Length];
+            }
             for (int i = 0; i < attachments.Length; i++) s_Attachments[i] = attachments[i];
             s_AttachmentCount = attachments.Length;
             s_Depth = depthAttachmentIndex;
             s_Cleared = 0;
+            s_Width = width;
+            s_Height = height;
+            s_Samples = Math.Max(samples, 1);
         }
 
-        internal static void Begin(NativeArray<AttachmentDescriptor> attachments, int depthAttachmentIndex, NativeArray<SubPassDescriptor> subPasses, int width, int height)
+        internal static void Begin(NativeArray<AttachmentDescriptor> attachments, int depthAttachmentIndex, NativeArray<SubPassDescriptor> subPasses, int width, int height, int samples)
         {
-            Begin(attachments, depthAttachmentIndex, width, height);
-            if (subPasses.IsCreated && subPasses.Length > 0) SubPass(subPasses[0].colorOutputs);
+            Begin(attachments, depthAttachmentIndex, width, height, samples);
+            if (subPasses.IsCreated && subPasses.Length > 0) SubPass(subPasses[0].colorOutputs, subPasses[0].inputs);
         }
 
         internal static void Next(NativeArray<SubPassDescriptor> subPasses, ref int index)
         {
             index++;
-            if (subPasses.IsCreated && index < subPasses.Length) SubPass(subPasses[index].colorOutputs);
+            if (subPasses.IsCreated && index < subPasses.Length) SubPass(subPasses[index].colorOutputs, subPasses[index].inputs);
         }
 
-        static void SubPass(in AttachmentIndexArray colors)
+        static void SubPass(in AttachmentIndexArray colors, in AttachmentIndexArray inputs)
         {
             int count = Math.Min(colors.Length, s_Colors.Length);
             for (int i = 0; i < count; i++) s_Colors[i] = colors[i];
-            SubPass(new ReadOnlySpan<int>(s_Colors, 0, count));
+            int inputCount = Math.Min(inputs.Length, s_Inputs.Length);
+            for (int i = 0; i < inputCount; i++) s_Inputs[i] = inputs[i];
+            SubPass(new ReadOnlySpan<int>(s_Colors, 0, count), new ReadOnlySpan<int>(s_Inputs, 0, inputCount));
         }
 
         static bool Valid(int index) => index >= 0 && index < s_AttachmentCount;
+
+        /// <summary>An attachment's texture: its target, else (an attachment without one, which
+        /// lives only inside the pass, as the render graph leaves the G-buffer when its subpasses
+        /// read it as inputs) a temporary texture of its format and the pass's size, kept until the
+        /// pass ends.</summary>
+        static Texture Target(int index, CommandBuffer.Context context)
+        {
+            var target = s_Attachments[index].loadStoreTarget;
+            if (target.Type != BuiltinRenderTextureType.None)
+                return CommandBuffer.Resolve(target, context);
+            if (s_Transient[index] == null)
+            {
+                var format = s_Attachments[index].graphicsFormat;
+                bool depth = UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsDepthStencilFormat(format);
+                var none = UnityEngine.Experimental.Rendering.GraphicsFormat.None;
+                var desc = new RenderTextureDescriptor(s_Width, s_Height, depth ? none : format, depth ? format : none)
+                {
+                    msaaSamples = s_Samples,
+                };
+                s_Transient[index] = RenderTexture.GetTemporary(desc);
+            }
+            return s_Transient[index];
+        }
+
+        static void ReleaseTransient()
+        {
+            for (int i = 0; i < s_Transient.Length; i++)
+            {
+                if (s_Transient[i] != null) RenderTexture.ReleaseTemporary(s_Transient[i]);
+                s_Transient[i] = null;
+            }
+        }
 
         /// <summary>Whether the attachment clears now: its load action is Clear and no subpass of
         /// this pass used it yet.</summary>
@@ -1230,12 +1286,17 @@ namespace Unbound.Runtime
             return true;
         }
 
-        internal static void SubPass(ReadOnlySpan<int> colors)
+        internal static void SubPass(ReadOnlySpan<int> colors) => SubPass(colors, ReadOnlySpan<int>.Empty);
+
+        internal static void SubPass(ReadOnlySpan<int> colors, ReadOnlySpan<int> inputs)
         {
             var context = s_Context;
             context.Camera = ScriptableRenderContext.CurrentCamera;
             context.CameraTarget = context.Camera != null ? context.Camera.targetTexture : null;
-            ulong depth = Valid(s_Depth) ? TextureHandles.Of(CommandBuffer.Resolve(s_Attachments[s_Depth].loadStoreTarget, context)) : GfxStream.NoTexture;
+            ulong depth = Valid(s_Depth) ? TextureHandles.Of(Target(s_Depth, context)) : GfxStream.NoTexture;
+            for (int i = 0; i < inputs.Length && i < s_InputNames.Length; i++)
+                if (Valid(inputs[i]))
+                    GfxStream.GlobalTexture(s_InputNames[i], TextureHandles.Of(Target(inputs[i], context)));
             int outputs = 0;
             Texture first = null;
             foreach (int index in colors)
@@ -1246,7 +1307,7 @@ namespace Unbound.Runtime
             foreach (int index in colors)
             {
                 if (!Valid(index) || n >= outputs) continue;
-                var texture = CommandBuffer.Resolve(s_Attachments[index].loadStoreTarget, context);
+                var texture = Target(index, context);
                 first ??= texture;
                 if (ClearsNow(index))
                 {
@@ -1269,7 +1330,7 @@ namespace Unbound.Runtime
             if (outputs == 0 && Valid(s_Depth))
             {
                 // A depth-only pass draws into the depth attachment's own texture.
-                first = CommandBuffer.Resolve(s_Attachments[s_Depth].loadStoreTarget, context);
+                first = Target(s_Depth, context);
                 RenderTexture.SetActiveQuietly(first as RenderTexture);
                 GfxStream.SetTarget(depth, 0);
             }
@@ -1285,6 +1346,7 @@ namespace Unbound.Runtime
 
         internal static void End()
         {
+            ReleaseTransient();
             s_AttachmentCount = 0;
             s_Depth = -1;
         }
