@@ -74,6 +74,11 @@ Systems built in code; each record is one JSON line `{"key", "value": [numbers]}
   `collide/trigger/size`: a Trigger module killing fast-shrinking particles on Enter.
   `collide/cache/*` (`CacheControls`): QualitySettings.particleRaycastBudget at 2 for a Medium and a
   Low system over the sloped box, and a Medium system advanced only by Simulate.
+  `MovedColliderControls`: static sloped boxes moved by their Transforms after frame 8, at High,
+  Medium and Low quality: 1.5 down, still in the particles' way (`collide/cache/moved_*`), or 50
+  down, out of it, under slower particles whose Low planes were already cached (`collide/cache/gone_*`);
+  and `collide/planes/scaled_far`, a Local system scaled (2, 1, 0.5) with a plane turned about z and
+  far from both the system and the world origin.
 - `catchup/*` (`ParticleRenderProbe.Catchup.cs`): one restarting Simulate call of 4.5, 5.5, 7, 10.5
   or 13 s on a parent carrying a long-lived Birth child: every child's age, position and seed.
 

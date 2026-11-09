@@ -157,6 +157,70 @@ public partial class ParticleRenderProbe
         Time.captureDeltaTime = 0f;
     }
 
+    /// <summary>A box that moves away after planes are cached (<c>collide/cache/moved_*</c>: High,
+    /// Medium and Low systems of six particles; the box drops by 1.5 units at frame 8, before they
+    /// reach it), and Planes collisions of a system scaled (2, 1, 0.5) with a plane whose position
+    /// lies far along it (<c>collide/planes/scaled_far</c>); slower particles over a raised box
+    /// moved far away at frame 8, after planes in their own voxel row are cached
+    /// (<c>collide/cache/gone_*</c>).</summary>
+    IEnumerator MovedColliderControls()
+    {
+        Time.captureDeltaTime = 0.02f;
+        yield return null;
+        var controls = new List<(string key, ParticleSystem ps, Vector3 origin)>();
+        var boxes = new List<GameObject>();
+        var gone = new List<GameObject>();
+        var extra = new List<GameObject>();
+        var origin = s_CollideOrigin + new Vector3(0f, 0f, 60f);
+        int slot = 0;
+        foreach (var (name, quality) in new[] { ("moved_high", ParticleSystemCollisionQuality.High), ("moved_medium", ParticleSystemCollisionQuality.Medium),
+                     ("moved_low", ParticleSystemCollisionQuality.Low) })
+        {
+            var at = origin + new Vector3(8f * slot++, 0f, 0f);
+            controls.Add(("collide/cache/" + name, CollideEmitter("collide/cache/" + name, at + Vector3.up, 6, 3f, s => SlopeSettings(s, quality)), at));
+            boxes.Add(CollideBox(at + new Vector3(0f, -0.5f, 0f), new Vector3(4f, 0.2f, 4f), Quaternion.Euler(0f, 0f, 25f)));
+        }
+        // Slower particles over a raised box, which then goes far away: they cross where it was
+        // inside the voxel row their planes were cached for (collide/cache/gone_*).
+        foreach (var (name, quality) in new[] { ("gone_high", ParticleSystemCollisionQuality.High), ("gone_medium", ParticleSystemCollisionQuality.Medium),
+                     ("gone_low", ParticleSystemCollisionQuality.Low) })
+        {
+            var at = origin + new Vector3(8f * slot++, 0f, 0f);
+            controls.Add(("collide/cache/" + name, CollideEmitter("collide/cache/" + name, at + Vector3.up, 6, 1f, s => SlopeSettings(s, quality)), at));
+            var box = CollideBox(at + new Vector3(0f, 0.2f, 0f), new Vector3(4f, 0.2f, 4f), Quaternion.Euler(0f, 0f, 25f));
+            gone.Add(box);
+        }
+        {
+            var at = origin + new Vector3(8f * slot++, 0f, 0f);
+            var plane = CollidePlane(at + new Vector3(30f, -0.5f, -20f), Quaternion.Euler(0f, 0f, 15f));
+            extra.Add(plane.gameObject);
+            var ps = CollideEmitter("collide/planes/scaled_far", at + Vector3.up, 6, 3f, s =>
+            {
+                var m = s.main; m.simulationSpace = ParticleSystemSimulationSpace.Local;
+                var c = s.collision; c.type = ParticleSystemCollisionType.Planes; c.AddPlane(plane);
+            });
+            ps.transform.localScale = new Vector3(2f, 1f, 0.5f);
+            controls.Add(("collide/planes/scaled_far", ps, at));
+        }
+        foreach (var (_, ps, _) in controls) ps.Play();
+        for (int frame = 0; frame < 40; frame++)
+        {
+            if (frame == 8)
+            {
+                foreach (var box in boxes) box.transform.position += new Vector3(0f, -1.5f, 0f);
+                foreach (var box in gone) box.transform.position += new Vector3(0f, -50f, 0f);
+                Physics.SyncTransforms();
+            }
+            yield return null;
+            foreach (var (key, ps, at) in controls) RecordCollide(key + "/" + frame.ToString(CultureInfo.InvariantCulture), ps, at);
+        }
+        foreach (var (_, ps, _) in controls) Done(ps);
+        foreach (var go in boxes) DestroyImmediate(go);
+        foreach (var go in gone) DestroyImmediate(go);
+        foreach (var go in extra) DestroyImmediate(go);
+        Time.captureDeltaTime = 0f;
+    }
+
     IEnumerator CollideControls()
     {
         Time.captureDeltaTime = 0.02f;

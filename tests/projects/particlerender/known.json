@@ -175,5 +175,35 @@
    "collide/cache/budget2_medium/38",
    "collide/cache/budget2_medium/39"
   ]
+ },
+ "collision-cache-moved-collider": {
+  "reason": "A Low system whose collider goes away after its planes are cached (collide/cache/gone_low): in the Editor one particle, alone in its voxel column, does not meet the plane its query found before the collider left, while the other particles still bounce off theirs; Unbound's cache keeps that plane and bounces the particle in frame 15. Why the Editor's particle passes it is unresolved. High and Medium (collide/cache/gone_high, gone_medium), static colliders moved within reach (collide/cache/moved_*) and every other frame match.",
+  "keys": [
+   "collide/cache/gone_low/15",
+   "collide/cache/gone_low/16",
+   "collide/cache/gone_low/17",
+   "collide/cache/gone_low/18",
+   "collide/cache/gone_low/19",
+   "collide/cache/gone_low/20",
+   "collide/cache/gone_low/21",
+   "collide/cache/gone_low/22",
+   "collide/cache/gone_low/23",
+   "collide/cache/gone_low/24",
+   "collide/cache/gone_low/25",
+   "collide/cache/gone_low/26",
+   "collide/cache/gone_low/27",
+   "collide/cache/gone_low/28",
+   "collide/cache/gone_low/29",
+   "collide/cache/gone_low/30",
+   "collide/cache/gone_low/31",
+   "collide/cache/gone_low/32",
+   "collide/cache/gone_low/33",
+   "collide/cache/gone_low/34",
+   "collide/cache/gone_low/35",
+   "collide/cache/gone_low/36",
+   "collide/cache/gone_low/37",
+   "collide/cache/gone_low/38",
+   "collide/cache/gone_low/39"
+  ]
  }
 }
