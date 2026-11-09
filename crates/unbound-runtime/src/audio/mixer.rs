@@ -659,12 +659,23 @@ pub struct Source {
 }
 
 impl Source {
-    /// Sizes the scripts' layout buffer on the control thread, so passing a script the layout's
-    /// channels does not allocate on the audio thread.
-    fn reserve_layout_scratch(&mut self, config: &MixerConfig) {
-        let samples = config.buffer_size.max(BLOCK as u32) as usize * config.output_channels();
-        self.layout_scratch
-            .reserve(samples.saturating_sub(self.layout_scratch.len()));
+    /// Sizes the scripts' and components' buffers for `config` on the control thread, so the
+    /// first render after Play, Stop or a configuration change does not allocate: the scripts'
+    /// layout buffer and queue, the generator's two buffers and the extra pairs' buffers.
+    fn reserve_buffers(&mut self, config: &MixerConfig) {
+        let channels = config.output_channels();
+        let reserve = |buffer: &mut Vec<f32>, samples: usize| {
+            buffer.reserve(samples.saturating_sub(buffer.len()));
+        };
+        let frames = config.buffer_size.max(1) as usize;
+        reserve(
+            &mut self.layout_scratch,
+            config.buffer_size.max(BLOCK as u32) as usize * channels,
+        );
+        reserve(&mut self.filtered, frames * 2);
+        reserve(&mut self.generator.current, frames * channels);
+        reserve(&mut self.generator.next, frames * channels);
+        self.reserve_lanes(config);
     }
 
     /// Sizes the extra pairs' script and bypass buffers for `config` on the control thread.
@@ -843,6 +854,14 @@ struct GeneratorState {
 }
 
 impl GeneratorState {
+    /// An empty queue that keeps `previous`'s buffers, so the next fill reuses them.
+    fn restarted(mut previous: Self) -> Self {
+        previous.current.clear();
+        previous.next.clear();
+        previous.offset = 0;
+        previous
+    }
+
     /// Fills stereo `out` from DSP buffers of `frames` frames generated in the output layout's
     /// `channels` (Unity 6000.0.71f1 passes the layout's channel count to a clipless source's
     /// `OnAudioFilterRead`, tests/projects/audiopitch `context_*_generator`).
@@ -1217,13 +1236,13 @@ impl Mixer {
             source.completed_shots.clear();
             source.completed_main = None;
             source.pending_position = 0.0;
-            source.generator = GeneratorState::default();
+            source.generator = GeneratorState::restarted(std::mem::take(&mut source.generator));
             source.generator_gain = None;
             if !source.bypass_dry.is_empty() {
                 source
                     .bypass_dry
                     .resize(config.buffer_size.max(BLOCK as u32) as usize * 2, 0.0);
-                source.reserve_layout_scratch(&config);
+                source.reserve_buffers(&config);
             }
             source.chain_tail = None;
             source.filtered.clear();
@@ -1240,9 +1259,6 @@ impl Mixer {
                 config.extra_pairs(),
                 &config,
             )?;
-            if !source.bypass_dry.is_empty() {
-                source.reserve_lanes(&config);
-            }
         }
         Ok(())
     }
@@ -1313,8 +1329,7 @@ impl Mixer {
             source
                 .bypass_dry
                 .resize(self.config.buffer_size.max(BLOCK as u32) as usize * 2, 0.0);
-            source.reserve_layout_scratch(&self.config);
-            source.reserve_lanes(&self.config);
+            source.reserve_buffers(&self.config);
         }
         if params.has(source_flags::KEEP_OUTPUT) && source.output.is_none() {
             source.output = Some(Ring::new());
@@ -1718,7 +1733,8 @@ impl Mixer {
                 source.completed_main = None;
                 let clip_handle = source.params.clip;
                 if clip_handle == 0 && source.params.has(source_flags::FILTER) {
-                    source.generator = GeneratorState::default();
+                    source.generator =
+                        GeneratorState::restarted(std::mem::take(&mut source.generator));
                     // Native clipless generators ignore both scheduled boundaries.
                     let mut voice = Voice::new(0, 0.0, now, 1.0);
                     voice.submitted = !deferred;
@@ -1763,7 +1779,7 @@ impl Mixer {
                 source.completed_shots.clear();
                 source.completed_main = None;
                 source.pending_position = 0.0;
-                source.generator = GeneratorState::default();
+                source.generator = GeneratorState::restarted(std::mem::take(&mut source.generator));
                 source.filtered.clear();
                 source.filtered_offset = 0;
                 source.filter_started = false;
@@ -4497,6 +4513,52 @@ mod tests {
         assert_eq!([sink[2], sink[4], sink[5]], [0.0; 3]);
         let device = &output.samples[length - 6..];
         assert_eq!(device[3], capture::pcm16(0.25));
+    }
+
+    #[test]
+    fn first_script_renders_after_play_allocate_nothing() {
+        extern "C" fn script(
+            kind: i32,
+            _: u64,
+            data: *mut f32,
+            frames: i32,
+            channels: i32,
+            _: i64,
+        ) {
+            if kind == callback::SOURCE_FILTER {
+                let data =
+                    unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+                data.iter_mut().for_each(|v| *v += 0.125);
+            }
+        }
+        for mode in [
+            speaker_mode::STEREO,
+            speaker_mode::MONO,
+            speaker_mode::MODE_5POINT1,
+        ] {
+            let mut m = Mixer::new(MixerConfig {
+                speaker_mode: mode,
+                ..MixerConfig::default()
+            });
+            m.set_callback(Some(script));
+            m.add_clip(1, Clip::new(2, 48000, vec![0.25; 8192 * 2]));
+            // A clipless generator and a clip source with a script.
+            source_with(&mut m, 7, 0, |p| p.flags = source_flags::FILTER);
+            source_with(&mut m, 8, 1, |p| p.flags = source_flags::FILTER);
+            let channels = m.config.output_channels();
+            let mut out = vec![0.0; 2048 * channels];
+            for round in 0..2 {
+                play(&mut m, 7, command::PLAY, 0.0);
+                play(&mut m, 8, command::PLAY, 0.0);
+                crate::audio::tests::allocations::start();
+                m.render(&mut out, channels);
+                let allocations = crate::audio::tests::allocations::finish();
+                assert_eq!(allocations, 0, "mode {mode}, round {round}");
+                assert!(out.iter().any(|v| *v != 0.0));
+                play(&mut m, 7, command::STOP, 0.0);
+                play(&mut m, 8, command::STOP, 0.0);
+            }
+        }
     }
 
     #[test]
