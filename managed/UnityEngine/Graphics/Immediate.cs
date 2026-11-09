@@ -718,9 +718,11 @@ namespace UnityEngine
             set => Immediate.ModelView = value;
         }
 
-        /// <summary>Unbound's renderer takes OpenGL-convention projections (it maps depth itself), so
-        /// the GPU projection is the projection.</summary>
-        public static Matrix4x4 GetGPUProjectionMatrix(Matrix4x4 proj, bool renderIntoTexture) => proj;
+        /// <summary>The projection as the run's device draws with it (OpenGL Core: the projection;
+        /// Vulkan: reversed depth from 0 to 1, y flipped into render textures). Unbound's renderer
+        /// takes the API's projections and applies the same itself.</summary>
+        public static Matrix4x4 GetGPUProjectionMatrix(Matrix4x4 proj, bool renderIntoTexture) =>
+            Unbound.Runtime.GraphicsDeviceProfile.Current.GpuProjection(proj, renderIntoTexture);
 
         public static void Clear(bool clearDepth, bool clearColor, Color backgroundColor, [Internal.DefaultValue("1.0f")] float depth)
         {

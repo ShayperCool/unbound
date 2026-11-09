@@ -13,13 +13,13 @@ namespace UnityEngine.Rendering
     {
         BatchRendererGroup() { }
 
-        // The Editor's answers on its OpenGL Core device (measured: CapsProbe).
-        public static BatchBufferTarget BufferTarget => BatchBufferTarget.ConstantBuffer;
+        // The Editor's answers on the run's device (measured on both: CapsProbe).
+        public static BatchBufferTarget BufferTarget => Unbound.Runtime.GraphicsDeviceProfile.Current.BatchBufferTarget;
 
         [Unbound.EditorFaithful("the Editor's OpenGLCore answer (measured: tests/projects/urp CapsProbe)")]
         public static int GetConstantBufferMaxWindowSize() => 16384;
 
-        [Unbound.EditorFaithful("the Editor's OpenGLCore answer (measured: tests/projects/urp CapsProbe)")]
-        public static int GetConstantBufferOffsetAlignment() => 256;
+        [Unbound.EditorFaithful("the device's answer (measured on both: tests/projects/urp CapsProbe)")]
+        public static int GetConstantBufferOffsetAlignment() => Unbound.Runtime.GraphicsDeviceProfile.Current.ConstantBufferOffsetAlignment;
     }
 }

@@ -145,7 +145,9 @@ namespace UnityEngine.Experimental.Rendering
             if (minimumDepthBits <= 0 && minimumStencilBits <= 0) return GraphicsFormat.None;
             if (minimumDepthBits <= 0) return GraphicsFormat.S8_UInt;
             if (minimumDepthBits <= 16 && minimumStencilBits <= 0) return GraphicsFormat.D16_UNorm;
-            if (minimumDepthBits <= 24) return minimumStencilBits > 0 || minimumDepthBits > 16 ? GraphicsFormat.D24_UNorm_S8_UInt : GraphicsFormat.D16_UNorm;
+            // 24 bits are the device's default depth-stencil (D24S8 on OpenGL Core, D32S8 on
+            // Vulkan: tests/projects/urp CapsProbe RenderTextureDescriptor.depthStencilFormat).
+            if (minimumDepthBits <= 24) return minimumStencilBits > 0 || minimumDepthBits > 16 ? Unbound.Runtime.GraphicsDeviceProfile.Current.DefaultDepthStencil : GraphicsFormat.D16_UNorm;
             if (minimumDepthBits <= 32) return minimumStencilBits > 0 ? GraphicsFormat.D32_SFloat_S8_UInt : GraphicsFormat.D32_SFloat;
             // No format has more depth: the default depth-stencil format (measured: 40 bits give
             // D24_UNorm_S8_UInt, tests/projects/rtdepth api.forBits.40).
@@ -157,7 +159,7 @@ namespace UnityEngine.Experimental.Rendering
         {
             <= 0 => GraphicsFormat.None,
             <= 16 => GraphicsFormat.D16_UNorm,
-            <= 24 => GraphicsFormat.D24_UNorm_S8_UInt,
+            <= 24 => Unbound.Runtime.GraphicsDeviceProfile.Current.DefaultDepthStencil,
             _ => GraphicsFormat.D32_SFloat_S8_UInt,
         };
 

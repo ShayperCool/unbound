@@ -1,53 +1,80 @@
 #!/usr/bin/env python3
 """Writes managed/UnityEngine/Platform/GraphicsCaps.Generated.cs from the Editor's recorded caps
-(Reference/caps-<version>.jsonl, CapsProbe.Record): per GraphicsFormat the GraphicsFormatUsage mask
-the device supports and its compatible formats for rendering, sampling, blending and random writes.
+(CapsProbe.Record) on each graphics device: per GraphicsFormat the GraphicsFormatUsage mask the
+device supports and its compatible formats for rendering, sampling, blending and random writes.
 
-    python3 tests/projects/urp/caps_table.py tests/projects/urp/Reference/caps-6000.0.71f1.jsonl
+    python3 tests/projects/urp/caps_table.py \\
+        OpenGLCore=tests/projects/urp/Reference/caps-6000.0.71f1.jsonl \\
+        Vulkan=tests/projects/urp/Reference/unity-6000.0.71f1/caps-vulkan.jsonl
 """
 import json
 import sys
 
-values = {}
-for line in open(sys.argv[1]):
-    entry = json.loads(line)
-    values[entry["key"]] = entry["value"]
 
-formats = sorted(int(k.split(".")[1]) for k in values if k.startswith("usages."))
-size = max(formats) + 1
+def read(path):
+    values = {}
+    for line in open(path):
+        entry = json.loads(line)
+        values[entry["key"]] = entry["value"]
+    return values
 
 
-def table(prefix):
+def table(values, prefix, size):
     row = [0] * size
-    for f in formats:
-        row[f] = int(values[f"{prefix}{f}"])
+    for key, value in values.items():
+        if key.startswith(prefix):
+            row[int(key[len(prefix):])] = int(value)
     return row
 
 
 def emit(name, kind, row):
     lines = []
     for i in range(0, len(row), 16):
-        lines.append("            " + ", ".join(str(v) for v in row[i:i + 16]) + ",")
-    return f"        internal static readonly {kind}[] {name} =\n        {{\n" + "\n".join(lines) + "\n        };\n"
+        lines.append("                " + ", ".join(str(v) for v in row[i:i + 16]) + ",")
+    return f"            {name}: new {kind}[]\n            {{\n" + "\n".join(lines) + "\n            }"
 
+
+devices = [arg.split("=", 1) for arg in sys.argv[1:]]
+recorded = [(name, read(path)) for name, path in devices]
+size = 1 + max(int(k.split(".")[1]) for _, values in recorded for k in values if k.startswith("usages."))
 
 out = [
-    "// Generated from the Unity Editor's graphics device answers (OpenGLCore on Linux), recorded by",
+    "// Generated from the Unity Editor's graphics device answers on Linux, recorded by",
     "// tests/projects/urp/Assets/Editor/CapsProbe.cs. Do not edit by hand; regenerate with",
-    f"//   python3 tests/projects/urp/caps_table.py {sys.argv[1]}",
+    "//   python3 tests/projects/urp/caps_table.py " + " ".join(f"{n}={p}" for n, p in devices),
     "namespace Unbound.Runtime",
     "{",
     "    internal static class GraphicsCapsTable",
     "    {",
-    "        /// <summary>By GraphicsFormat value: the GraphicsFormatUsage flags supported.</summary>",
-    emit("Usages", "long", table("usages.")),
-    "        /// <summary>By GraphicsFormat value: SystemInfo.GetCompatibleFormat for each usage.</summary>",
-    emit("CompatibleRender", "int", table("compatible.render.")),
-    emit("CompatibleSample", "int", table("compatible.sample.")),
-    emit("CompatibleBlend", "int", table("compatible.blend.")),
-    emit("CompatibleLoadStore", "int", table("compatible.loadstore.")),
-    "    }",
-    "}",
+    "        /// <summary>One device's format table, by GraphicsFormat value: the GraphicsFormatUsage",
+    "        /// flags supported, and SystemInfo.GetCompatibleFormat for each usage.</summary>",
+    "        internal sealed class Device",
+    "        {",
+    "            internal readonly long[] Usages;",
+    "            internal readonly int[] CompatibleRender, CompatibleSample, CompatibleBlend, CompatibleLoadStore;",
     "",
+    "            internal Device(long[] usages, int[] compatibleRender, int[] compatibleSample, int[] compatibleBlend, int[] compatibleLoadStore)",
+    "            {",
+    "                Usages = usages;",
+    "                CompatibleRender = compatibleRender;",
+    "                CompatibleSample = compatibleSample;",
+    "                CompatibleBlend = compatibleBlend;",
+    "                CompatibleLoadStore = compatibleLoadStore;",
+    "            }",
+    "        }",
 ]
+for name, values in recorded:
+    out += [
+        "",
+        f"        /// <summary>The Editor's {values['graphicsDeviceType']} device.</summary>",
+        f"        internal static readonly Device {name} = new Device(",
+        ",\n".join([
+            emit("usages", "long", table(values, "usages.", size)),
+            emit("compatibleRender", "int", table(values, "compatible.render.", size)),
+            emit("compatibleSample", "int", table(values, "compatible.sample.", size)),
+            emit("compatibleBlend", "int", table(values, "compatible.blend.", size)),
+            emit("compatibleLoadStore", "int", table(values, "compatible.loadstore.", size)),
+        ]) + ");",
+    ]
+out += ["    }", "}", ""]
 open("managed/UnityEngine/Platform/GraphicsCaps.Generated.cs", "w").write("\n".join(out))

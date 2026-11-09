@@ -22,15 +22,15 @@ namespace Unbound.Runtime
             internal int VendorId, DeviceId, MemoryMb;
         }
 
-        static readonly Lazy<Gpu> s_Gpu = new Lazy<Gpu>(ReadGpu);
         static readonly Lazy<Dictionary<string, string>> s_Cpu = new Lazy<Dictionary<string, string>>(ReadCpu);
 
-        /// <summary>The GPU's identity, null when no OpenGL device could be read.</summary>
+        /// <summary>The GPU's identity as the run's graphics device reads it, null when it could
+        /// not be read.</summary>
         internal static Gpu Graphics
         {
             get
             {
-                if (OperatingSystem.IsLinux()) return s_Gpu.Value;
+                if (OperatingSystem.IsLinux()) return GraphicsDeviceProfile.Current.Identity;
                 Stubs.Ignored("SystemInfo graphics device", "is not read on this OS yet: the device name, vendor, version, ids and memory answer placeholders");
                 return null;
             }
@@ -112,7 +112,8 @@ namespace Unbound.Runtime
             internal IntPtr Display, Draw, Read, Context;
         }
 
-        static unsafe Gpu ReadGpu()
+        /// <summary>The OpenGL Core device's identity (read once, by its profile).</summary>
+        internal static unsafe Gpu ReadOpenGl()
         {
             try
             {

@@ -6,8 +6,10 @@ using UnityEngine.Rendering;
 
 namespace UnityEngine
 {
-    /// <summary>The device as the Editor reports it on this machine: the Linux Editor's OpenGLCore
-/// device (shaders compile for SHADER_API_GLCORE), within what Unbound's renderer does.</summary>
+    /// <summary>The device as the Editor reports it on this machine, within what Unbound's
+    /// renderer does: the run's graphics device (Unbound.Runtime.GraphicsDeviceProfile, chosen at
+    /// startup as the Editor chooses it; the Linux Editor's default is OpenGL Core). Answers the
+    /// devices share are measured on both (tests/projects/urp CapsProbe).</summary>
     public sealed partial class SystemInfo
     {
         public const string unsupportedIdentifier = "n/a";
@@ -47,6 +49,7 @@ namespace UnityEngine
         });
 
         static Unbound.Runtime.MachineIdentity.Gpu Gpu => Unbound.Runtime.MachineIdentity.Graphics;
+        static Unbound.Runtime.GraphicsDeviceProfile Device => Unbound.Runtime.GraphicsDeviceProfile.Current;
 
         /// <summary>The Linux Editor on a machine without a battery answers -1 and Full; a
         /// battery's own state (Linux laptops, macOS) is not read yet.</summary>
@@ -122,16 +125,16 @@ namespace UnityEngine
         public static bool supportsVibration => false;
         [Unbound.EditorFaithful("the Editor plays audio")]
         public static bool supportsAudio => true;
-        // The GPU as the Editor's OpenGL device names it (Unbound.Runtime.MachineIdentity).
+        // The GPU as the Editor's device names it (Unbound.Runtime.MachineIdentity).
         public static int graphicsMemorySize => Gpu?.MemoryMb ?? 0;
         public static string graphicsDeviceName => Gpu?.Name ?? "Unbound wgpu";
         public static string graphicsDeviceVendor => Gpu?.Vendor ?? "Unbound";
         public static int graphicsDeviceID => Gpu?.DeviceId ?? 0;
         public static int graphicsDeviceVendorID => Gpu?.VendorId ?? 0;
-        public static GraphicsDeviceType graphicsDeviceType { get { MainThreadCheck.Check("GetGraphicsDeviceType"); return GraphicsDeviceType.OpenGLCore; } }
-        [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
-        public static bool graphicsUVStartsAtTop => false;
-        public static string graphicsDeviceVersion => Gpu?.Version ?? "OpenGL 4.5.0 (Unbound)";
+        public static GraphicsDeviceType graphicsDeviceType { get { MainThreadCheck.Check("GetGraphicsDeviceType"); return Device.Type; } }
+        [Unbound.EditorFaithful("measured on both devices: tests/projects/urp CapsProbe")]
+        public static bool graphicsUVStartsAtTop => Device.UVStartsAtTop;
+        public static string graphicsDeviceVersion => Gpu?.Version ?? (Device.Type == GraphicsDeviceType.Vulkan ? "Vulkan 1.1.0 (Unbound)" : "OpenGL 4.5.0 (Unbound)");
         [Unbound.EditorFaithful("the Editor's OpenGLCore 4.5 device is shader level 5.0")]
         public static int graphicsShaderLevel => 50;
         [Unbound.EditorFaithful("measured renderingThreadingMode is Direct (tests/projects/urp CapsProbe): no render thread")]
@@ -169,7 +172,7 @@ namespace UnityEngine
         public static bool supportsRayTracingShaders => false;
         [Unbound.EditorFaithful("The renderer exposes no ray tracing device, matching the measured OpenGL Core device.")]
         public static bool supportsInlineRayTracing => false;
-        [Unbound.EditorFaithful("No XR device or foveated rendering is exposed, matching cmdbuffers device.*.")]
+        [Unbound.EditorFaithful("No XR device or foveated rendering is exposed, matching cmdbuffers device.* (the Vulkan Editor answers FoveationImage, which Unbound's renderer does not do)")]
         public static UnityEngine.Rendering.FoveatedRenderingCaps foveatedRenderingCaps => UnityEngine.Rendering.FoveatedRenderingCaps.None;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static bool supportsHardwareQuadTopology => false;
@@ -183,8 +186,8 @@ namespace UnityEngine
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static int supportsMultisampledTextures => 1;
         public static int supportsTextureWrapMirrorOnce { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsTextureWrapMirrorOnce", "is claimed, but MirrorOnce samples as Mirror"); return 1; } }
-        [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
-        public static bool usesReversedZBuffer => false;
+        [Unbound.EditorFaithful("measured on both devices: tests/projects/urp CapsProbe")]
+        public static bool usesReversedZBuffer => Device.ReversedZ;
         [Unbound.EditorFaithful("the Editor caps texture sizes at 16384")]
         public static int maxTextureSize => 16384;
         [Unbound.EditorFaithful("the Editor caps texture sizes at 16384")]
@@ -193,8 +196,8 @@ namespace UnityEngine
         public static NPOTSupport npotSupport => NPOTSupport.Full;
         [Unbound.EditorFaithful("readbacks complete (see AsyncReadbacks), as on the Editor's OpenGLCore device")]
         public static bool supportsAsyncGPUReadback => true;
-        [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
-        public static bool usesLoadStoreActions => false;
+        [Unbound.EditorFaithful("measured on both devices: tests/projects/urp CapsProbe")]
+        public static bool usesLoadStoreActions => Device.UsesLoadStoreActions;
 
         /// <summary>From the Editor's format table (sampling the format's linear GraphicsFormat), as
         /// <see cref="IsFormatSupported(GraphicsFormat, GraphicsFormatUsage)"/> answers; crunched
@@ -242,8 +245,9 @@ namespace UnityEngine
         public static bool IsFormatSupported(GraphicsFormat format, GraphicsFormatUsage usage)
         {
             int i = (int)format;
-            if (i <= 0 || i >= Unbound.Runtime.GraphicsCapsTable.Usages.Length) return false;
-            return (Unbound.Runtime.GraphicsCapsTable.Usages[i] & (long)usage) == (long)usage;
+            var usages = Device.Caps.Usages;
+            if (i <= 0 || i >= usages.Length) return false;
+            return (usages[i] & (long)usage) == (long)usage;
         }
 
         [Obsolete("Use overload with a GraphicsFormatUsage parameter instead")]
@@ -253,12 +257,13 @@ namespace UnityEngine
         {
             if (IsFormatSupported(format, usage)) return format;
             int i = (int)format;
+            var caps = Device.Caps;
             int[] table = usage switch
             {
-                GraphicsFormatUsage.Render => Unbound.Runtime.GraphicsCapsTable.CompatibleRender,
-                GraphicsFormatUsage.Blend => Unbound.Runtime.GraphicsCapsTable.CompatibleBlend,
-                GraphicsFormatUsage.LoadStore => Unbound.Runtime.GraphicsCapsTable.CompatibleLoadStore,
-                _ => Unbound.Runtime.GraphicsCapsTable.CompatibleSample,
+                GraphicsFormatUsage.Render => caps.CompatibleRender,
+                GraphicsFormatUsage.Blend => caps.CompatibleBlend,
+                GraphicsFormatUsage.LoadStore => caps.CompatibleLoadStore,
+                _ => caps.CompatibleSample,
             };
             return i > 0 && i < table.Length ? (GraphicsFormat)table[i] : GraphicsFormat.None;
         }
@@ -270,7 +275,7 @@ namespace UnityEngine
         {
             DefaultFormat.LDR => QualitySettings.activeColorSpace == ColorSpace.Linear ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm,
             DefaultFormat.HDR => GraphicsFormat.R16G16B16A16_SFloat,
-            DefaultFormat.DepthStencil => GraphicsFormat.D24_UNorm_S8_UInt,
+            DefaultFormat.DepthStencil => Device.DefaultDepthStencil,
             DefaultFormat.Shadow => GraphicsFormat.D16_UNorm,
             DefaultFormat.Video => GraphicsFormat.YUV2,
             _ => GraphicsFormat.None,
@@ -283,12 +288,12 @@ namespace UnityEngine
 
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static bool supportsMultisampleResolveDepth => true;
-        [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
-        public static bool supportsMultisampleResolveStencil => false;
+        [Unbound.EditorFaithful("measured on both devices: tests/projects/urp CapsProbe")]
+        public static bool supportsMultisampleResolveStencil => Device.SupportsMultisampleResolveStencil;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static bool supportsStoreAndResolveAction => true;
-        [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
-        public static bool supportsMultisampleAutoResolve => false;
+        [Unbound.EditorFaithful("measured on both devices: tests/projects/urp CapsProbe")]
+        public static bool supportsMultisampleAutoResolve => Device.SupportsMultisampleAutoResolve;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static bool supportsMultisampledBackBuffer => false;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
@@ -297,15 +302,16 @@ namespace UnityEngine
         public static bool supportsDepthFetchInRenderPass => true;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static bool supportsSetConstantBuffer => true;
-        [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
-        public static int constantBufferOffsetAlignment => 256;
+        [Unbound.EditorFaithful("measured on both devices: tests/projects/urp CapsProbe")]
+        public static int constantBufferOffsetAlignment => Device.ConstantBufferOffsetAlignment;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static int maxConstantBufferSize => 65536;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static int supportedRandomWriteTargetCount => 8;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static bool supportsAsyncCompute => false;
-        public static RenderingThreadingMode renderingThreadingMode => RenderingThreadingMode.Direct;
+        [Unbound.EditorFaithful("measured on both devices: tests/projects/urp CapsProbe")]
+        public static RenderingThreadingMode renderingThreadingMode => Device.ThreadingMode;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static bool hasMipMaxLevel => true;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]

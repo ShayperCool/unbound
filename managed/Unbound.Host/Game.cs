@@ -15,6 +15,8 @@ public sealed class GameConfig
 {
     public string ProjectPath { get; set; } = "";
     public string UnityVersion { get; set; } = "";
+    /// <summary>The graphics device the host chose (GraphicsDeviceType's name).</summary>
+    public string GraphicsDevice { get; set; } = "";
     public List<string> Features { get; set; } = new();
     public string ProductName { get; set; } = "";
     public string CompanyName { get; set; } = "";
@@ -279,6 +281,7 @@ public static unsafe class Game
             p.Description, p.Category, p.Type, p.Keywords.ToArray(), p.IsDirectDependency)));
         ProjectInfo.AssetsPath = System.IO.Path.Combine(c.ProjectPath, "Assets");
         ProjectInfo.UnityVersion = c.UnityVersion;
+        Unbound.Runtime.GraphicsDeviceProfile.Select(c.GraphicsDevice);
         ProjectInfo.Features.Clear();
         foreach (var feature in c.Features) ProjectInfo.Features.Add(feature);
         ProjectInfo.ProductName = c.ProductName;
