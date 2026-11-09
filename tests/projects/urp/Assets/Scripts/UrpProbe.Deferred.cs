@@ -142,18 +142,47 @@ public partial class UrpProbe
             sun.shadows = LightShadows.None;
             sun.transform.rotation = sunRotation;
         });
+        // A Lit transparent sphere (Deferred draws transparent objects forward).
+        Material glass = null;
+        GameObject pane = null;
+        void addGlass(Vector3 position, float size)
+        {
+            pane = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            DestroyImmediate(pane.GetComponent<Collider>());
+            pane.name = "Glass";
+            pane.transform.position = position;
+            pane.transform.localScale = Vector3.one * size;
+            glass = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            glass.SetFloat("_Surface", 1f);
+            glass.SetFloat("_Blend", 0f);
+            glass.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+            glass.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+            glass.SetFloat("_ZWrite", 0f);
+            glass.SetFloat("_Smoothness", 0.9f);
+            glass.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            glass.renderQueue = (int)RenderQueue.Transparent;
+            glass.SetColor("_BaseColor", new Color(0.2f, 0.9f, 0.6f, 0.4f));
+            pane.GetComponent<MeshRenderer>().sharedMaterial = glass;
+        }
+        void removeGlass()
+        {
+            DestroyImmediate(pane);
+            DestroyImmediate(glass);
+        }
         // Twelve point lights over the ground: more than Forward's per-object limit (the
-        // asset's 4).
+        // asset's 4); the Manual gives Deferred no limit for opaque objects, a limit for
+        // transparent ones: a transparent sphere inside the ring, reached by most of the lights.
         Both("many_lights", () =>
         {
             addSpheres();
+            addGlass(new Vector3(0.2f, 0.6f, -0.3f), 1.1f);
             for (int i = 0; i < 12; i++)
             {
                 float a = i * Mathf.PI * 2f / 12f;
                 AddLight(LightType.Point, new Vector3(Mathf.Cos(a) * 2.2f, 0.6f, Mathf.Sin(a) * 1.8f), Quaternion.identity,
                     Color.HSVToRGB(i / 12f, 0.8f, 1f), 1.5f, 2.5f);
             }
-        }, () => { removeSpheres(); clearLights(); });
+        }, () => { removeSpheres(); clearLights(); removeGlass(); });
         // Light layers (the asset's Use Rendering Layers; the project defines Layer 1 and 2):
         // the point light lights Layer 1 only, the cube and the ground are on Default only, the
         // spheres on both; the spot light lights Default.
@@ -181,28 +210,8 @@ public partial class UrpProbe
         Both("accurate_normals", () => { addSpheres(); pointAndSpot(); rendererData.accurateGbufferNormals = true; },
             () => { removeSpheres(); clearLights(); rendererData.accurateGbufferNormals = false; });
         // Lit transparent objects (forward after the deferred lighting) in front of the scene.
-        Material glass = null;
-        GameObject pane = null;
-        Both("transparent", () =>
-        {
-            addSpheres();
-            pointAndSpot();
-            pane = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            DestroyImmediate(pane.GetComponent<Collider>());
-            pane.transform.position = new Vector3(-0.4f, 0.8f, -1.6f);
-            pane.transform.localScale = new Vector3(1.4f, 1.4f, 1.4f);
-            glass = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            glass.SetFloat("_Surface", 1f);
-            glass.SetFloat("_Blend", 0f);
-            glass.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
-            glass.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
-            glass.SetFloat("_ZWrite", 0f);
-            glass.SetFloat("_Smoothness", 0.9f);
-            glass.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            glass.renderQueue = (int)RenderQueue.Transparent;
-            glass.SetColor("_BaseColor", new Color(0.2f, 0.9f, 0.6f, 0.4f));
-            pane.GetComponent<MeshRenderer>().sharedMaterial = glass;
-        }, () => { removeSpheres(); clearLights(); DestroyImmediate(pane); DestroyImmediate(glass); });
+        Both("transparent", () => { addSpheres(); pointAndSpot(); addGlass(new Vector3(-0.4f, 0.8f, -1.6f), 1.4f); },
+            () => { removeSpheres(); clearLights(); removeGlass(); });
         // MSAA: the asset's 4 samples and a 4-sample target (Deferred renders without it).
         Both("msaa", () => { addSpheres(); pointAndSpot(); asset.msaaSampleCount = 4; s_Antialiasing = 4; },
             () => { removeSpheres(); clearLights(); asset.msaaSampleCount = 1; s_Antialiasing = 1; });
