@@ -141,6 +141,25 @@ namespace UnityEngine
         /// (<see cref="Unbound.Runtime.Humanoid.HumanClipImport.BodyPart"/>).</summary>
         internal bool AllowsHumanCurve(int curve) => m_HumanoidParts[Unbound.Runtime.Humanoid.HumanClipImport.BodyPart(curve)];
 
+        /// <summary>Whether the mask lets a layer animate a bound channel group: humanoid curves
+        /// follow the body parts; Transform properties the transform paths below
+        /// <paramref name="root"/>; other components' properties are animated whatever the mask says
+        /// about their object.</summary>
+        internal bool AllowsGroup(Transform root, Unbound.Runtime.PropertyGroup group)
+        {
+            if (group != null && group.HumanCurve >= 0) return AllowsHumanCurve(group.HumanCurve);
+            if (group?.SkeletonPath != null) return Allows(group.SkeletonPath);
+            if (!(group?.Target is Transform)) return true;
+            var t = group.Transform;
+            if (t == null || root == null) return true;
+            var parts = new System.Collections.Generic.List<string>();
+            for (var p = t; p != null && p != root; p = p.m_Parent) parts.Insert(0, p.m_GameObject.m_Name);
+            return Allows(string.Join("/", parts));
+        }
+
+        /// <summary>Whether the mask filters anything: transform entries or humanoid body parts.</summary>
+        internal bool Filters => m_Elements.Count > 0 || MasksHumanoidParts;
+
         /// <summary>`m_Mask`: the body parts as hex-encoded little-endian 32-bit flags.</summary>
         internal void ReadHumanoidMask(string hex)
         {

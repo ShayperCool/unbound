@@ -1142,8 +1142,19 @@ namespace Unbound.Runtime
         {
             if (!Attached) return;
             WriteMassCenterPose(count);
+            if (FootIK() && m_Animator.Human is { } human) human.FootIK = true;
             m_Animator.ApplyHumanPose();
             m_Animator.CaptureRootMotionPose();
+        }
+
+        /// <summary>Whether a state this evaluation sampled with a weight above 0, on a layer of
+        /// weight above 0, has "Foot IK" (AnimatorState.iKOnFeet): the humanoid pose then solves
+        /// its feet onto their goals (see <see cref="Unbound.Runtime.Humanoid.HumanIK.SetIKOnFeet"/>).</summary>
+        internal bool FootIK()
+        {
+            foreach (var (layer, layerIndex, run, _, weight) in m_Contributions)
+                if (weight > 0f && run.Def.IKOnFeet && (layerIndex == 0 || layer.Evaluated > 0f)) return true;
+            return false;
         }
 
         LayerPose[] m_MassCenterLayers = Array.Empty<LayerPose>();
@@ -1606,32 +1617,17 @@ namespace Unbound.Runtime
         (bool[], bool[]) LayerMask(int index)
         {
             var mask = Layers[index].Def.Mask;
-            if (mask == null || (mask.m_Elements.Count == 0 && !mask.MasksHumanoidParts)) return (null, null);
+            if (mask == null || !mask.Filters) return (null, null);
             var cached = m_LayerMasks[index];
             if (cached.Floats != null && cached.FloatCount == Bindings.FloatCount && cached.Objects.Length == Bindings.ObjectCount)
                 return (cached.Floats, cached.Objects);
             var floats = new bool[Bindings.FloatCount];
             var objects = new bool[Bindings.ObjectCount];
             var root = Bindings.Root != null ? Bindings.Root.transform : null;
-            for (int c = 0; c < floats.Length; c++) floats[c] = Allowed(mask, root, Bindings.FloatOwner[c]);
-            for (int c = 0; c < objects.Length; c++) objects[c] = Allowed(mask, root, Bindings.ObjectOwner[c]);
+            for (int c = 0; c < floats.Length; c++) floats[c] = mask.AllowsGroup(root, Bindings.FloatOwner[c]);
+            for (int c = 0; c < objects.Length; c++) objects[c] = mask.AllowsGroup(root, Bindings.ObjectOwner[c]);
             m_LayerMasks[index] = (floats, objects, Bindings.FloatCount);
             return (floats, objects);
-        }
-
-        /// <summary>A transform mask masks Transform properties only: other components' properties
-        /// are animated whatever the mask says about their object. Humanoid curves follow the mask's
-        /// body parts.</summary>
-        static bool Allowed(AvatarMask mask, Transform root, PropertyGroup group)
-        {
-            if (group != null && group.HumanCurve >= 0) return mask.AllowsHumanCurve(group.HumanCurve);
-            if (group?.SkeletonPath != null) return mask.Allows(group.SkeletonPath);
-            if (!(group?.Target is Transform)) return true;
-            var t = group.Transform;
-            if (t == null || root == null) return true;
-            var parts = new List<string>();
-            for (var p = t; p != null && p != root; p = p.m_Parent) parts.Insert(0, p.m_GameObject.m_Name);
-            return mask.Allows(string.Join("/", parts));
         }
 
         // ------------------------------------------------------------------ events and callbacks

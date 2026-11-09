@@ -33,6 +33,19 @@ namespace Unbound.Runtime.Playables
         /// <summary>The humanoid body relative to its clip's motion, including bake/loop settings.
         /// Supported humanoid clip and mixer outputs use this sample for root movement.</summary>
         internal HumanRootMotionSample BodyMotion;
+        /// <summary>Whether the pose asks for Foot IK on a humanoid (an
+        /// AnimationClipPlayable's applyFootIK, a controller state's Foot IK): mixers and outputs
+        /// pass it on when any input of weight above 0 asks for it.</summary>
+        internal bool FootIK;
+        /// <summary>Whether the stream's humanoid goal channels hold the goals in the motion's frame
+        /// (the clip's body applied, <see cref="AnimationEvaluation.GoalsToMotion"/>): mixers and
+        /// layers blend them there.</summary>
+        internal bool GoalsInMotion;
+        /// <summary>The humanoid pose that places the body (curve-indexed human values), when a
+        /// layer whose mask leaves out Root changed the animated one (see
+        /// <see cref="LayerMixerKind"/>); null otherwise.</summary>
+        internal float[] MassCenter;
+        internal bool HasMassCenter;
 
         static readonly Stack<AnimStream> s_Free = new Stack<AnimStream>();
 
@@ -57,6 +70,9 @@ namespace Unbound.Runtime.Playables
             Bindings = b;
             Motion = RootMotionStep.Unknown;
             BodyMotion = default;
+            FootIK = false;
+            GoalsInMotion = false;
+            HasMassCenter = false;
             FloatCount = b.FloatCount;
             ObjectCount = b.ObjectCount;
             if (Values.Length < FloatCount)
@@ -78,6 +94,14 @@ namespace Unbound.Runtime.Playables
         internal void CopyFrom(AnimStream o)
         {
             BodyMotion = o.BodyMotion;
+            FootIK = o.FootIK;
+            GoalsInMotion = o.GoalsInMotion;
+            HasMassCenter = o.HasMassCenter;
+            if (o.HasMassCenter)
+            {
+                MassCenter ??= new float[Unbound.Runtime.Humanoid.HumanClipImport.CurveCount];
+                Array.Copy(o.MassCenter, MassCenter, MassCenter.Length);
+            }
             Array.Copy(o.Values, Values, FloatCount);
             Array.Copy(o.Animated, Animated, FloatCount);
             Array.Copy(o.Objects, Objects, ObjectCount);
@@ -405,12 +429,27 @@ namespace Unbound.Runtime.Playables
 
         // ------------------------------------------------------------------ channel math
 
+        /// <summary>A quaternion's first channel: a quaternion property, or a humanoid rotation
+        /// (the body's RootQ, a goal's) bound as four consecutive curves, which humanoid poses
+        /// blend as rotations too (normalized lerp in the same hemisphere).</summary>
         static bool IsQuaternionStart(AnimationBindings b, int c, out int width)
         {
             var g = c < b.FloatOwner.Length ? b.FloatOwner[c] : null;
             width = 1;
-            if (g == null || !g.IsQuaternion || g.First != c) return false;
+            if (g == null || g.First != c) return false;
+            if (!g.IsQuaternion && !HumanRotationStart(b, c, g.HumanCurve)) return false;
             width = 4;
+            return true;
+        }
+
+        static bool HumanRotationStart(AnimationBindings b, int c, int curve)
+        {
+            const int RootQ = Unbound.Runtime.Humanoid.HumanClipImport.RootFirst + 3;
+            const int GoalFirst = Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst, MuscleFirst = Unbound.Runtime.Humanoid.HumanClipImport.MuscleFirst;
+            if (curve != RootQ && (curve < GoalFirst || curve >= MuscleFirst || (curve - GoalFirst) % 7 != 3)) return false;
+            if (c + 3 >= b.FloatCount || c + 3 >= b.FloatOwner.Length) return false;
+            for (int k = 1; k < 4; k++)
+                if (b.FloatOwner[c + k]?.HumanCurve != curve + k) return false;
             return true;
         }
 
@@ -489,6 +528,35 @@ namespace Unbound.Runtime.Playables
             to[c] = ax / m; to[c + 1] = ay / m; to[c + 2] = az / m; to[c + 3] = aw / m;
         }
 
+        /// <summary>
+        /// A humanoid stream's goal channels between the body's frame and the motion's: a clip
+        /// samples its goals relative to its body; blending takes them in the motion's frame, with
+        /// each clip's body (relative to its motion) applied (6000.0.71f1, tests/projects/humanoid
+        /// mixer.*: two clips blended under Foot IK solve the feet onto the motion-frame blend; the
+        /// same blend without Foot IK matches either way). <paramref name="inverse"/> takes them
+        /// back relative to <paramref name="body"/>, the blended body.
+        /// </summary>
+        internal static void GoalsToMotion(AnimStream s, in Unbound.Runtime.Humanoid.Trs body, bool inverse)
+        {
+            var b = s.Bindings;
+            for (int g = 0; g < 4; g++)
+            {
+                int curve = Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst + 7 * g;
+                int t = b.HumanChannel(curve), q = b.HumanChannel(curve + 3);
+                if (t < 0 || q < 0 || !s.Animated[t] || !s.Animated[q]) continue;
+                int tx = b.HumanChannel(curve + 1), tz = b.HumanChannel(curve + 2);
+                int qy = b.HumanChannel(curve + 4), qz = b.HumanChannel(curve + 5), qw = b.HumanChannel(curve + 6);
+                if (tx < 0 || tz < 0 || qy < 0 || qz < 0 || qw < 0) continue;
+                var goal = new Unbound.Runtime.Humanoid.Trs(
+                    new Unbound.Runtime.Humanoid.F4(s.Values[t], s.Values[tx], s.Values[tz], 0f),
+                    Unbound.Runtime.Humanoid.M.QNormalize(new Unbound.Runtime.Humanoid.F4(s.Values[q], s.Values[qy], s.Values[qz], s.Values[qw])),
+                    Unbound.Runtime.Humanoid.F4.One3);
+                var x = inverse ? Unbound.Runtime.Humanoid.M.InvMul(body, goal) : Unbound.Runtime.Humanoid.M.Mul(body, goal);
+                s.Values[t] = x.t.x; s.Values[tx] = x.t.y; s.Values[tz] = x.t.z;
+                s.Values[q] = x.q.x; s.Values[qy] = x.q.y; s.Values[qz] = x.q.z; s.Values[qw] = x.q.w;
+            }
+        }
+
         static bool AnyBodyMotion(List<(AnimStream Stream, float Weight)> inputs)
         {
             foreach (var (stream, _) in inputs)
@@ -500,6 +568,11 @@ namespace Unbound.Runtime.Playables
         /// that animate it, completed to weight one with the default value.</summary>
         internal static void MixInto(AnimStream into, List<(AnimStream Stream, float Weight)> inputs)
         {
+            foreach (var (stream, weight) in inputs)
+            {
+                if (weight > 0f && stream.FootIK) into.FootIK = true;
+                if (stream.GoalsInMotion) into.GoalsInMotion = true;
+            }
             if (AnyBodyMotion(inputs))
             {
                 const int StackInputs = 16;
@@ -740,6 +813,14 @@ namespace Unbound.Runtime.Playables
                 KeepBound(o, s);
                 BlendOver(result, s, o.Weight);
                 result.BodyMotion = HumanRootMotion.Override(result.BodyMotion, s.BodyMotion, o.Weight);
+                if (o.Weight > 0f && s.FootIK) result.FootIK = true;
+                if (s.GoalsInMotion) result.GoalsInMotion = true;
+                if (s.HasMassCenter && o.Weight >= 1f)
+                {
+                    result.MassCenter ??= new float[Unbound.Runtime.Humanoid.HumanClipImport.CurveCount];
+                    Array.Copy(s.MassCenter, result.MassCenter, result.MassCenter.Length);
+                    result.HasMassCenter = true;
+                }
                 AnimStream.Return(s);
             }
             return result;
@@ -752,6 +833,22 @@ namespace Unbound.Runtime.Playables
             bool rootWritten = false)
         {
             if (result.BodyMotion.HasMotion) animator.Human?.SetPoseMotion(result.BodyMotion);
+            if (result.FootIK && animator.Human is { } footHuman) footHuman.FootIK = true;
+            if (result.HasMassCenter && animator.Human is { } massHuman)
+            {
+                var b = result.Bindings;
+                for (int curve = 0; curve < Unbound.Runtime.Humanoid.HumanClipImport.CurveCount; curve++)
+                {
+                    int c = b.HumanChannel(curve);
+                    if (c >= 0 && result.Animated[c]) massHuman.SetMassCenter(curve, result.MassCenter[curve]);
+                }
+            }
+            if (result.GoalsInMotion)
+            {
+                // The pose takes goals relative to its body (HumanRootMotion.ApplyToPose).
+                if (result.BodyMotion.HasMotion) GoalsToMotion(result, result.BodyMotion.Body, inverse: true);
+                result.GoalsInMotion = false;
+            }
             if (!(culled && rootWritten))
                 PoseWriter.WriteStream(result, onlyRoot: culled ? animator.transform : null,
                     skipRoot: preserveRoot || rootWritten ? animator.transform : null);
@@ -762,7 +859,7 @@ namespace Unbound.Runtime.Playables
         internal AnimStream PreviousInputs;
 
 
-        /// <summary>One humanoid clip, or one mixer tree of humanoid clips
+        /// <summary>One humanoid clip, or one mixer or layer mixer tree of humanoid clips
         /// (<see cref="MixerKind.HumanMotionTree"/>), through a single full-weight default-values
         /// output without an attached controller, uses the humanoid sampler. Mixer composition is
         /// measured on 6000.0.71f1 only (<see cref="Compat.HumanPlayableMixerMotionMeasured"/>).
@@ -780,7 +877,7 @@ namespace Unbound.Runtime.Playables
                     && (o.Engine as AnimationOutputState)?.StreamSource == AnimationStreamSource.DefaultValues)
                 {
                     if (HumanMotionClip(o.Source)) return RootMotionMode.Human;
-                    if (Compat.HumanPlayableMixerMotionMeasured && !o.Source.HasConnectedOutput() && MixerKind.HumanMotionTree(o.Source))
+                    if (!o.Source.HasConnectedOutput() && MixerKind.HumanMotionTree(o.Source))
                         return RootMotionMode.Human;
                 }
             }
@@ -788,9 +885,9 @@ namespace Unbound.Runtime.Playables
                 Stubs.Ignored(outputs.Count == 1 && outputs[0].Output.Source?.Kind is MixerKind
                     ? "Animator root motion of unsupported humanoid mixer output"
                     : "Animator root motion of composed playable graph outputs on humanoid avatars",
-                    "is not applied: one full-weight output of a nonmirrored humanoid clip, or on measured 6000.0.71f1 of a mixer tree of such clips "
+                    "is not applied: one full-weight output of a nonmirrored humanoid clip, or on measured 6000.0.71f1 of a mixer or layer mixer tree of such clips "
                     + "with complete RootQ curves and input weights that are not infinite, is supported, without a playing controller, shared nodes or loop overrides; "
-                    + "layer mixers, controller playables, animation jobs, fractional or multiple outputs remain unsupported");
+                    + "controller playables, animation jobs, fractional or multiple outputs remain unsupported");
             return RootMotionMode.Unsupported;
         }
 
@@ -808,6 +905,7 @@ namespace Unbound.Runtime.Playables
             // The public pivot stays zero while no root motion is requested (6000.0.71f1,
             // animculling humanMixerMotion and humanMixerShape); the feet memory still steps.
             if (!requested) animator.Human.PivotPosition = default;
+            animator.Human.PivotHidden = !requested;
             animator.m_DeltaPosition = requested ? new Vector3(motion.DeltaPosition.x, motion.DeltaPosition.y, motion.DeltaPosition.z) : Vector3.zero;
             animator.m_DeltaRotation = requested ? new Quaternion(motion.DeltaRotation.x, motion.DeltaRotation.y, motion.DeltaRotation.z, motion.DeltaRotation.w) : Quaternion.identity;
             animator.m_RootVelocity = requested ? new Vector3(motion.Velocity.x, motion.Velocity.y, motion.Velocity.z) : Vector3.zero;

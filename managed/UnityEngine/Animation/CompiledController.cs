@@ -182,6 +182,7 @@ namespace Unbound.Runtime
                 state.Speed = s.Float("m_Speed", 1f);
                 state.CycleOffset = s.Float("m_CycleOffset");
                 state.WriteDefaults = s.Bool("m_WriteDefaultValues", true);
+                state.IKOnFeet = s.Bool("m_IKOnFeet");
                 state.Mirror = s.Bool("m_Mirror");
                 state.Tag = ctx.Name(U(s, "m_TagID")) ?? "";
                 state.SpeedParameter = Parameter(ctx, U(s, "m_SpeedParamID"));

@@ -147,6 +147,7 @@ namespace Unbound.Runtime
                         CycleOffset = s.CycleOffset,
                         Mirror = s.Mirror,
                         WriteDefaults = s.WriteDefaults,
+                        IKOnFeet = s.IKOnFeet,
                         Motion = s.Motion,
                         SpeedParameter = m_Graph.ParameterIndex(s.SpeedParameter),
                         CycleOffsetParameter = m_Graph.ParameterIndex(s.CycleOffsetParameter),
@@ -289,6 +290,8 @@ namespace Unbound.Runtime
         internal bool Mirror;
         internal int MirrorParameter = -1;
         internal bool WriteDefaults = true;
+        /// <summary>AnimatorState.iKOnFeet ("Foot IK").</summary>
+        internal bool IKOnFeet;
         internal Motion Motion;
         internal int SpeedParameter = -1;
         internal int CycleOffsetParameter = -1;

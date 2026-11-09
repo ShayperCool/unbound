@@ -303,6 +303,12 @@ namespace Unbound.Runtime
         /// 6000.0.71f1. Other releases keep the unsupported diagnostic.</summary>
         internal static bool HumanPlayableMixerMotionMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Humanoid root motion and bodies composed by AnimationLayerMixerPlayables over
+        /// humanoid clips and mixers (override layers by weight through their masks' body parts,
+        /// additive layers leaving the motion), measured by tests/projects/humanoid mixer.* on exactly
+        /// 6000.0.71f1. Other releases keep the unsupported diagnostic.</summary>
+        internal static bool HumanPlayableLayerMixerMotionMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>After skipped updates, a visibility return replays the last event intervals of
         /// clips that a mixer or layer mixer combined (at any depth), but not of a clip that is the
         /// output's source or is reached only through passthrough playables (6000.0.71f1,

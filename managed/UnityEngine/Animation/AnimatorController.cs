@@ -427,6 +427,7 @@ namespace Unbound.Runtime
         internal readonly List<ControllerTransitionAsset> Transitions = new List<ControllerTransitionAsset>();
         internal readonly List<StateMachineBehaviour> Behaviours = new List<StateMachineBehaviour>();
         internal bool WriteDefaults = true;
+        internal bool IKOnFeet;
         internal bool Mirror;
         internal Motion Motion;
         internal string Tag = "";
@@ -443,6 +444,7 @@ namespace Unbound.Runtime
             foreach (var b in body.Get("m_StateMachineBehaviours")?.Seq() ?? Array.Empty<YNode>())
                 if (RuntimeAnimatorController.Resolve<StateMachineBehaviour>(resolver, b.AsRef()) is StateMachineBehaviour smb) Behaviours.Add(smb);
             WriteDefaults = body.Bool("m_WriteDefaultValues", true);
+            IKOnFeet = body.Bool("m_IKOnFeet");
             Mirror = body.Bool("m_Mirror");
             var motion = body.Ref("m_Motion");
             Motion = RuntimeAnimatorController.Resolve<Motion>(resolver, motion);

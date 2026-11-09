@@ -40,6 +40,11 @@ namespace Unbound.Runtime.Humanoid
         /// <summary>A muscle curve's value when nothing animates it: 0, a rotation's w 1.</summary>
         internal static float DefaultValue(int curve) => curve < HumanClipImport.MuscleFirst && curve % 7 == 6 ? 1f : 0f;
 
+        /// <summary>Set by the pose's writer when the evaluation asks for Foot IK (an
+        /// AnimationClipPlayable's applyFootIK, a state's Foot IK); the next <see cref="ApplyPose"/>
+        /// applies and clears it.</summary>
+        internal bool FootIK;
+
         internal void Set(int curve, float value)
         {
             m_Values[curve] = value;
@@ -73,7 +78,11 @@ namespace Unbound.Runtime.Humanoid
         readonly float[] m_Previous = new float[HumanClipImport.CurveCount];
         readonly float[] m_Current = new float[HumanClipImport.CurveCount];
         internal F4 PivotPosition;
-        internal float PivotWeight => m_Memory.PivotWeight;
+        internal float PivotWeight => PivotHidden ? 0.5f : m_Memory.PivotWeight;
+        /// <summary>Set by a playable output's motion while no root motion is requested: the public
+        /// pivot weight then reads 0.5 (its position zero) while the feet memory still steps
+        /// (6000.0.71f1, tests/projects/humanoid mixer.none).</summary>
+        internal bool PivotHidden;
 
         internal void ClearMotion() => m_HasSample = false;
 
@@ -150,6 +159,7 @@ namespace Unbound.Runtime.Humanoid
         /// body relative to the motion for this update's pose.</summary>
         internal void ApplyMotion(in HumanRootMotionSample sample, float deltaTime, out AnimatorRootMotion result)
         {
+            PivotHidden = false;
             m_Sample = sample;
             m_HasSample = true;
             HumanRootMotion.ApplyToAnimator(m_Sample, AvatarX(), deltaTime, m_Constant.Human.Scale, 1f, m_Memory, out result);
@@ -158,7 +168,11 @@ namespace Unbound.Runtime.Humanoid
         }
 
         /// <summary>An update in which no humanoid clip plays (<see cref="HumanRootMotion.Idle"/>).</summary>
-        internal void IdleMotion(float deltaTime) => PivotPosition = HumanRootMotion.Idle(m_Memory, AvatarX(), deltaTime);
+        internal void IdleMotion(float deltaTime)
+        {
+            PivotHidden = false;
+            PivotPosition = HumanRootMotion.Idle(m_Memory, AvatarX(), deltaTime);
+        }
 
         /// <summary>A re-blended sample replaces the retained one (mixer weights changed while
         /// culled): the feet pivot is placed between its feet again, with the pivot weight kept
@@ -211,6 +225,8 @@ namespace Unbound.Runtime.Humanoid
         internal int ApplyPose(Unbound.Runtime.AnimatorPlayer player, bool playableIK)
         {
             m_IKLayers = 0;
+            bool footIK = FootIK;
+            FootIK = false;
             if (!m_Dirty) return 0;
             m_Dirty = false;
             var human = m_Constant.Human;
@@ -226,6 +242,15 @@ namespace Unbound.Runtime.Humanoid
             }
             HumanIK.Retarget(human, m_Base, m_Pose, !massCenter, AvatarX(), Output, m_W0, m_W1, true);
             HasOutput = true;
+            // Foot IK: after the retarget step, the feet goals take full weight, left foot first,
+            // and the solve below moves the legs onto them. Animator.stabilizeFeet is not
+            // supported (its setter reports it), so it is off here.
+            if (footIK)
+            {
+                var avatarX = AvatarX();
+                HumanIK.SetIKOnFeet(true, human, Output, avatarX, false, m_Memory.FirstEvaluation);
+                HumanIK.SetIKOnFeet(false, human, Output, avatarX, false, m_Memory.FirstEvaluation);
+            }
             HumanIK.EvaluateIK(human, Output, m_W0, m_W1, m_W2, true, out _, out _);
             HumanIK.EvaluateEnd(m_Constant, AvatarX(), m_W0, m_W1, m_W2, m_AvatarPose);
             Write();

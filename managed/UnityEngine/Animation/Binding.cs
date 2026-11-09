@@ -462,6 +462,22 @@ namespace Unbound.Runtime
         internal Object[] ObjectDefaults = new Object[4];
         internal PropertyGroup[] FloatOwner = new PropertyGroup[16];
         internal PropertyGroup[] ObjectOwner = new PropertyGroup[4];
+        int[] m_HumanChannels;
+        int m_HumanChannelsFor = -1;
+
+        /// <summary>The float channel a humanoid curve is bound to (-1 when it is not bound).</summary>
+        internal int HumanChannel(int curve)
+        {
+            if (m_HumanChannelsFor != FloatCount)
+            {
+                m_HumanChannels ??= new int[Unbound.Runtime.Humanoid.HumanClipImport.CurveCount];
+                Array.Fill(m_HumanChannels, -1);
+                foreach (var g in Groups)
+                    if (g.HumanCurve >= 0 && g.HumanCurve < m_HumanChannels.Length && g.First < FloatCount) m_HumanChannels[g.HumanCurve] = g.First;
+                m_HumanChannelsFor = FloatCount;
+            }
+            return curve >= 0 && curve < m_HumanChannels.Length ? m_HumanChannels[curve] : -1;
+        }
         readonly Dictionary<(Object, string), PropertyGroup> m_Index = new Dictionary<(Object, string), PropertyGroup>();
         readonly Dictionary<AnimationClip, BoundClip> m_Clips = new Dictionary<AnimationClip, BoundClip>();
 

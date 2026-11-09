@@ -82,6 +82,7 @@ namespace Unbound.Runtime.Playables
         {
             if (Clip == null || Clip.m_Legacy) return;
             if (!e.ReferencePose && weight > 0f && ApplyPlayableIK) e.PlayableIK = true;
+            if (!e.ReferencePose && weight > 0f && ApplyFootIK) into.FootIK = true;
             var bound = e.Bindings.Bind(Clip);
             if (!e.ReferencePose && e.Animator.Human is { } human && Clip.HasHumanCurves && Clip.length > 0f)
             {
@@ -120,6 +121,11 @@ namespace Unbound.Runtime.Playables
             }
             // Under root motion playables the root starts where the clip's first frame is removed.
             if (e.RootMotion && RemoveStartOffset) RemoveStart(e, bound, into);
+            if (!e.ReferencePose && into.BodyMotion.HasMotion)
+            {
+                AnimationEvaluation.GoalsToMotion(into, into.BodyMotion.Body, inverse: false);
+                into.GoalsInMotion = true;
+            }
             int m = Math.Min(into.ObjectCount, e.Bindings.ObjectCount);
             for (int c = 0; c < m; c++)
             {
@@ -316,22 +322,25 @@ namespace Unbound.Runtime.Playables
         internal static float InputWeight(float weight) => weight > 0f ? weight : 0f;
 
         /// <summary>Whether a mixer and its inputs compose humanoid root motion through the
-        /// humanoid sampler: every connected input is a humanoid motion clip or such a mixer,
+        /// humanoid sampler: every connected input is a humanoid motion clip or such a mixer (a
+        /// mixer on measured releases, <see cref="Compat.HumanPlayableMixerMotionMeasured"/>, a layer
+        /// mixer, <see cref="Compat.HumanPlayableLayerMixerMotionMeasured"/>),
         /// is reached through port 0 and feeds only this mixer, at a weight that is not infinite
         /// (any sum: <see cref="HumanRootMotion.Blend"/> sums the inputs unnormalized). Clips
         /// under a mixer need all four RootQ curves, because the blended body is written back to
         /// those bindings (sparse body rotations are a separate gap).</summary>
         internal static bool HumanMotionTree(PlayableNode node, int depth = 0)
         {
-            if (node == null || node.Destroyed || depth > MaxHumanTreeDepth || node.Kind is not MixerKind
-                || node.Traversal != PlayableTraversalMode.Mix) return false;
+            if (node == null || node.Destroyed || depth > MaxHumanTreeDepth || node.Traversal != PlayableTraversalMode.Mix) return false;
+            if (node.Kind is MixerKind ? !Compat.HumanPlayableMixerMotionMeasured
+                : node.Kind is not LayerMixerKind || !Compat.HumanPlayableLayerMixerMotionMeasured) return false;
             int connected = 0;
             foreach (var input in node.Inputs)
             {
                 if (input.Node == null) continue;
                 connected++;
                 if (float.IsInfinity(input.Weight) || input.SourcePort != 0 || ConsumerCount(input.Node) != 1) return false;
-                if (input.Node.Kind is MixerKind)
+                if (input.Node.Kind is MixerKind or LayerMixerKind)
                 {
                     if (!HumanMotionTree(input.Node, depth + 1)) return false;
                     continue;
@@ -493,27 +502,48 @@ namespace Unbound.Runtime.Playables
             while (Additive.Count <= layer) Additive.Add(false);
         }
 
+        /// <summary>The channels a layer's mask lets it animate (null: all), by the same rule as an
+        /// Animator controller layer's (<see cref="AvatarMask.AllowsGroup"/>): humanoid curves by
+        /// body part (AnimationLayerMixerPlayable.SetLayerMaskFromAvatarMask).</summary>
         bool[] MaskChannels(AnimationEvaluation e, int layer)
         {
             var mask = layer < Masks.Count ? Masks[layer] : null;
-            if (mask != null && mask.MasksHumanoidParts && e.Animator != null && e.Animator.isHuman)
-                Stubs.Ignored("AnimationLayerMixerPlayable humanoid avatar masks",
-                    "a layer mixer's avatar mask does not filter humanoid curves by body part (Animator controller layers do)");
-            if (mask == null || mask.m_Elements.Count == 0) return null;
+            if (mask == null || !mask.Filters) return null;
             if (m_MaskCache.TryGetValue(layer, out var cached) && cached.Mask == mask && cached.Count == e.Bindings.FloatCount) return cached.Channels;
             var b = e.Bindings;
             var channels = new bool[b.FloatCount];
             var root = b.Root != null ? b.Root.transform : null;
-            for (int c = 0; c < channels.Length; c++)
-            {
-                var t = b.FloatOwner[c]?.Transform;
-                if (t == null || root == null) { channels[c] = true; continue; }
-                var parts = new List<string>();
-                for (var p = t; p != null && p != root; p = p.m_Parent) parts.Insert(0, p.m_GameObject.m_Name);
-                channels[c] = mask.Allows(string.Join("/", parts));
-            }
+            for (int c = 0; c < channels.Length; c++) channels[c] = mask.AllowsGroup(root, b.FloatOwner[c]);
             m_MaskCache[layer] = (mask, b.FloatCount, channels);
             return channels;
+        }
+
+        readonly Dictionary<int, (bool[] Source, int Count, bool[] Channels)> m_AdditiveCache = new Dictionary<int, (bool[], int, bool[])>();
+
+        /// <summary>An additive layer's channels: its mask's, without the humanoid goal curves.</summary>
+        bool[] AdditiveChannels(AnimationEvaluation e, int layer, bool[] mask)
+        {
+            var b = e.Bindings;
+            if (b.HumanChannel(Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst) < 0 && b.HumanChannel(Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst + 7) < 0
+                && b.HumanChannel(Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst + 14) < 0 && b.HumanChannel(Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst + 21) < 0)
+                return mask;
+            if (m_AdditiveCache.TryGetValue(layer, out var cached) && cached.Source == mask && cached.Count == b.FloatCount) return cached.Channels;
+            var channels = new bool[b.FloatCount];
+            for (int c = 0; c < channels.Length; c++) channels[c] = mask == null || mask[c];
+            for (int curve = Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst; curve < Unbound.Runtime.Humanoid.HumanClipImport.MuscleFirst; curve++)
+            {
+                int c = b.HumanChannel(curve);
+                if (c >= 0 && c < channels.Length) channels[c] = false;
+            }
+            m_AdditiveCache[layer] = (mask, b.FloatCount, channels);
+            return channels;
+        }
+
+        /// <summary>A layer's humanoid body parts its mask lets through (null: all).</summary>
+        bool[] HumanParts(int layer)
+        {
+            var mask = layer < Masks.Count ? Masks[layer] : null;
+            return mask != null && mask.MasksHumanoidParts ? mask.m_HumanoidParts : null;
         }
 
         /// <summary>Whether a layer's mask lets it animate the Animator's own transform (the root
@@ -567,6 +597,16 @@ namespace Unbound.Runtime.Playables
         {
             var motion = RootMotionStep.Zero;
             bool any = false, rootAnimated = false;
+            // Humanoid body motion: override layers combine their inputs' samples as Animator
+            // controller layers do (by layer weight, through their masks' body parts); additive
+            // layers add their body difference through their body curves (HumanRootMotion.ApplyToPose).
+            var body = default(Unbound.Runtime.Humanoid.HumanRootMotionSample);
+            bool anyBody = false;
+            Span<Unbound.Runtime.Humanoid.HumanRootMotionSample> layerBody = stackalloc Unbound.Runtime.Humanoid.HumanRootMotionSample[1];
+            Span<float> layerBodyWeight = stackalloc float[] { 1f };
+            // The pose that places the body: the layers whose mask keeps Root, as an Animator
+            // controller's layers (6000.0.71f1, tests/projects/humanoid mixer.upper, mixer.noRoot).
+            AnimStream mass = null;
             for (int l = 0; l < node.Inputs.Count; l++)
             {
                 var input = node.Inputs[l];
@@ -577,7 +617,16 @@ namespace Unbound.Runtime.Playables
                 try { e.EvaluateInto(input.Node, input.SourcePort, weight * input.Weight, s); }
                 finally { e.Combining--; }
                 any = true;
+                if (input.Weight > 0f && s.FootIK) into.FootIK = true;
+                if (s.GoalsInMotion) into.GoalsInMotion = true;
                 bool additive = l < Additive.Count && Additive[l];
+                var parts = HumanParts(l);
+                if (!additive && s.BodyMotion.HasMotion)
+                {
+                    layerBody[0] = s.BodyMotion;
+                    Unbound.Runtime.Humanoid.HumanRootMotion.CombineLayer(ref body, ref anyBody, layerBody,
+                        ReadOnlySpan<Unbound.Runtime.Humanoid.Trs>.Empty, layerBodyWeight, false, input.Weight, parts);
+                }
                 // A layer that does not animate the root is skipped like a masked-out one.
                 if (e.MotionMode != RootMotionMode.Unsupported && MaskAllowsRoot(e, l) && !s.Motion.RootUnanimated)
                 {
@@ -585,6 +634,12 @@ namespace Unbound.Runtime.Playables
                     rootAnimated = true;
                 }
                 var mask = MaskChannels(e, l);
+                bool keepsRoot = parts == null || parts[0];
+                if (!keepsRoot && mass == null && e.Animator != null && e.Animator.isHuman && input.Weight > 0f)
+                {
+                    mass = AnimStream.Rent(e.Bindings);
+                    mass.CopyFrom(into);
+                }
                 if (additive)
                 {
                     bool was = e.ReferencePose;
@@ -592,10 +647,18 @@ namespace Unbound.Runtime.Playables
                     var reference = AnimStream.Rent(e.Bindings);
                     e.EvaluateInto(input.Node, input.SourcePort, 0f, reference);
                     e.ReferencePose = was;
-                    AnimationEvaluation.AddOver(into, s, reference, input.Weight, mask);
+                    // Additive humanoid layers leave the IK goals alone (6000.0.71f1, tests/projects/humanoid
+                    // mixer.additiveNoRoot: its feet goals keep the layers' below under Foot IK).
+                    var additiveMask = AdditiveChannels(e, l, mask);
+                    AnimationEvaluation.AddOver(into, s, reference, input.Weight, additiveMask);
+                    if (mass != null && keepsRoot) AnimationEvaluation.AddOver(mass, s, reference, input.Weight, additiveMask);
                     AnimStream.Return(reference);
                 }
-                else AnimationEvaluation.BlendOver(into, s, input.Weight, mask);
+                else
+                {
+                    AnimationEvaluation.BlendOver(into, s, input.Weight, mask);
+                    if (mass != null && keepsRoot) AnimationEvaluation.BlendOver(mass, s, input.Weight, mask);
+                }
                 AnimStream.Return(s);
             }
             // Without a connected layer the motion is unknown, as for an empty mixer (Unbound's choice).
@@ -605,6 +668,19 @@ namespace Unbound.Runtime.Playables
             {
                 if (any && motion.Known) motion.RootUnanimated = !rootAnimated;
                 into.Motion = any ? motion : RootMotionStep.Unknown;
+            }
+            if (anyBody) into.BodyMotion = body;
+            if (mass != null)
+            {
+                into.MassCenter ??= new float[Unbound.Runtime.Humanoid.HumanClipImport.CurveCount];
+                var b = e.Bindings;
+                for (int curve = 0; curve < into.MassCenter.Length; curve++)
+                {
+                    int c = b.HumanChannel(curve);
+                    into.MassCenter[curve] = c >= 0 ? mass.Values[c] : 0f;
+                }
+                into.HasMassCenter = true;
+                AnimStream.Return(mass);
             }
         }
     }
@@ -659,6 +735,7 @@ namespace Unbound.Runtime.Playables
             var player = EnsurePlayer(e.Animator);
             if (player == null || player.Bindings != e.Bindings || e.ReferencePose) return;
             player.EvaluateInto(into.Values, into.Animated, into.Objects, into.ObjectAnimated);
+            if (player.FootIK()) into.FootIK = true;
             // Its parameter curves drive its own float parameters from its own layers, before the
             // graph mixes this pose with anything (see PlayableParameters.Sample).
             PlayableParameters.Sample(player, e.Animator);
@@ -940,9 +1017,10 @@ namespace UnityEngine.Animations
             if (mask == null) throw new ArgumentNullException(nameof(mask));
             var k = Kind;
             k.Ensure((int)layerIndex);
-            // The mask is copied, as Unity does.
+            // The mask is copied, as Unity does: its transforms and its humanoid body parts.
             var copy = new AvatarMask();
             copy.m_Elements.AddRange(mask.m_Elements);
+            Array.Copy(mask.m_HumanoidParts, copy.m_HumanoidParts, copy.m_HumanoidParts.Length);
             k.Masks[(int)layerIndex] = copy;
         }
     }
