@@ -1,0 +1,9 @@
+{
+ "Interfaces the Editor gives on OpenGL Core that Unbound does not provide (null, named in the engine log): follow-up": [
+  "interface.IUnityProfilerCallbacks",
+  "interface.IUnityProfilerCallbacksV2",
+  "interface.IUnityEventQueue",
+  "interface.IUnityGraphicsVulkan",
+  "interface.IUnityGraphicsVulkanV2"
+ ]
+}

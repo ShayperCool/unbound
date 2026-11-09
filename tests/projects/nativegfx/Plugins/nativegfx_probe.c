@@ -499,10 +499,8 @@ static void on_texture_update(int event, void* data)
                p->format, p->width, p->height, p->bpp, p->texData != NULL, thread_name(), gl_current(), target);
         if (event == UpdateBeginV1) {
             for (unsigned i = 0; i < p->width * p->height && i < 256; i++) {
-                s_update_texels[i * 4 + 0] = (unsigned char)(i * 16);
-                s_update_texels[i * 4 + 1] = (unsigned char)(255 - i * 16);
-                s_update_texels[i * 4 + 2] = (unsigned char)p->userData;
-                s_update_texels[i * 4 + 3] = 255;
+                unsigned char texel[4] = {(unsigned char)(i * 16), (unsigned char)(255 - i * 16), (unsigned char)p->userData, 255};
+                memcpy(s_update_texels + i * p->bpp, texel, p->bpp < 4 ? p->bpp : 4);
             }
             p->texData = s_update_texels;
         }
@@ -514,10 +512,8 @@ static void on_texture_update(int event, void* data)
                p->format, p->width, p->height, p->bpp, p->texData != NULL, thread_name(), gl_current(), target);
         if (event == UpdateBeginV2) {
             for (unsigned i = 0; i < p->width * p->height && i < 256; i++) {
-                s_update_texels[i * 4 + 0] = (unsigned char)(255 - i * 16);
-                s_update_texels[i * 4 + 1] = (unsigned char)p->userData;
-                s_update_texels[i * 4 + 2] = (unsigned char)(i * 16);
-                s_update_texels[i * 4 + 3] = 255;
+                unsigned char texel[4] = {(unsigned char)(255 - i * 16), (unsigned char)p->userData, (unsigned char)(i * 16), 255};
+                memcpy(s_update_texels + i * p->bpp, texel, p->bpp < 4 ? p->bpp : 4);
             }
             p->texData = s_update_texels;
         }

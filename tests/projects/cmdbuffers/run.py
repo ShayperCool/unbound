@@ -125,25 +125,11 @@ def verify(candidate, safe_append_skip=False):
                     ['Exception: NotSupportedException: Unbound: instance multipliers on CPU-expanded mesh instances are not supported.']
                     or act.get(key + '.pixels') != ref.get('device.stereo.1.pixels')):
                 return code or 1
-    plugin_message = ('NotSupportedException: Unbound: native rendering plugin callbacks require '
-                      'graphics-device interop, which is not supported.')
-    plugins = ['device.plugin.blit.callback', 'device.plugin.texture.callback',
-               'device.plugin.texture1.callback', 'device.plugin.texture2.callback']
-    for key in plugins:
-        if key + '.record.ok' not in ref:
-            continue
-        expected.update({key + '.record.ok', key + '.record.error', key + '.events'})
-        if key != plugins[0]:
-            expected.add(key + '.texture')
-        if (act.get(key + '.record.error') != plugin_message or key + '.record.ok' in act
-                or act.get(key + '.events') != []
-                or act.get(key + '.texture') != ['000000ff' * 4]):
-            return code or 1
     if (differences == expected
             and act.get('uav.append.nocounter') == [0xAAAA0000] * 48
             and 'uav.append.nocounter.log' not in act
             and warning in (candidate.parent/'engine.log').read_text()):
-        print('gate: safe Append skip, explicit unsupported stereo clipping and plugin interop verified; raw differences remain above')
+        print('gate: safe Append skip and explicit unsupported stereo clipping verified; raw differences remain above')
         return 0
     return code or 1
 

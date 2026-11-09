@@ -344,6 +344,17 @@ public class NativeGfxProbe : MonoBehaviour
         Execute("update2", cmd => cmd.IssuePluginCustomTextureUpdateV2(textureUpdate, updated, 13));
         Value("update2.pixels", Pixels(updated, 4, 4));
         Value("update.cpu", Q(ColorUtility.ToHtmlStringRGBA(updated.GetPixel(1, 1))));
+        // The format and bytes per pixel of an sRGB and a three-channel texture.
+        var srgb = Keep(new Texture2D(4, 4, TextureFormat.RGBA32, false, false) { name = "updated.srgb", filterMode = FilterMode.Point });
+        srgb.SetPixels32(Enumerable.Repeat(new Color32(0, 0, 0, 255), 16).ToArray());
+        srgb.Apply();
+        Execute("update.srgb", cmd => cmd.IssuePluginCustomTextureUpdateV2(textureUpdate, srgb, 14));
+        Value("update.srgb.pixels", Pixels(srgb, 4, 4));
+        var rgb = Keep(new Texture2D(4, 4, TextureFormat.RGB24, false, true) { name = "updated.rgb", filterMode = FilterMode.Point });
+        rgb.SetPixels32(Enumerable.Repeat(new Color32(0, 0, 0, 255), 16).ToArray());
+        rgb.Apply();
+        Execute("update.rgb", cmd => cmd.IssuePluginCustomTextureUpdateV2(textureUpdate, rgb, 15));
+        Value("update.rgb.pixels", Pixels(rgb, 4, 4));
     }
 
     void CustomBlit()

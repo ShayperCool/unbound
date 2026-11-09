@@ -19,11 +19,6 @@ class SafeAppendGateTests(unittest.TestCase):
                          'Unbound: side-by-side stereo clipping without an XR device is not supported.')
         mono = next(row['v'] for row in self.rows if row['k'] == 'device.stereo.0.pixels')
         next(row for row in self.rows if row['k'] == 'device.stereo.1.pixels')['v'] = mono
-        for kind in ['blit', 'texture', 'texture1', 'texture2']:
-            key = 'device.plugin.' + kind + '.callback'
-            self.unsupported(key, 'Unbound: native rendering plugin callbacks require graphics-device interop, which is not supported.')
-            next(row for row in self.rows if row['k'] == key + '.events')['v'] = []
-            next(row for row in self.rows if row['k'] == key + '.texture')['v'] = ['000000ff' * 4]
         blank = next(row['v'] for row in self.rows if row['k'] == 'device.stereo.1.pixels')
         # The stereo candidate above is mono; mesh failures leave the cleared target instead.
         blank = ['0' * len(blank[0])]
@@ -60,8 +55,9 @@ class SafeAppendGateTests(unittest.TestCase):
         (self.out/'engine.log').write_text('')
         self.assertNotEqual(self.verify(), 0)
 
-    def test_ignored_plugin_callback_still_fails(self):
-        self.rows = [row for row in self.rows if row['k'] != 'device.plugin.texture2.callback.record.error']
+    def test_plugin_callback_difference_fails(self):
+        # Plugin callbacks run since native plugin support: their events compare exactly.
+        next(row for row in self.rows if row['k'] == 'device.plugin.texture2.callback.events')['v'] = []
         self.assertNotEqual(self.verify(), 0)
 
     def test_mesh_multiplier_silently_ignored_still_fails(self):
