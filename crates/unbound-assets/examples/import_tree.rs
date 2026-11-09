@@ -74,6 +74,13 @@ fn main() -> Result<()> {
         ),
     };
 
+    // The project's compression settings, when `dir` is a project's Assets folder.
+    let project = match dir.parent() {
+        Some(root) if dir.file_name().is_some_and(|n| n == "Assets") => {
+            unbound_assets::texture::ProjectCompression::read(root)
+        }
+        _ => Default::default(),
+    };
     let streaming = dir.join("StreamingAssets");
     let mut files = Vec::new();
     let mut skipped_streaming = 0;
@@ -105,7 +112,7 @@ fn main() -> Result<()> {
     for pass in ["first pass", "second pass (fresh cache instance)"] {
         let cache = AssetCache::new(&cache_dir);
         let start = Instant::now();
-        let stats = run(&cache, &files, &target);
+        let stats = run(&cache, &files, &target, &project);
         cache.save()?;
         let elapsed = start.elapsed();
         println!("\n== {pass}: {:.2?}", elapsed);
@@ -147,12 +154,18 @@ fn relative(dir: &Path, path: &Path) -> String {
     path.strip_prefix(dir).unwrap_or(path).display().to_string()
 }
 
-fn run(cache: &AssetCache, files: &[(AssetKind, PathBuf)], target: &str) -> Stats {
+fn run(
+    cache: &AssetCache,
+    files: &[(AssetKind, PathBuf)],
+    target: &str,
+    project: &unbound_assets::texture::ProjectCompression,
+) -> Stats {
     let textures = TextureImporter {
         build_target: target.to_string(),
         compress: true,
         gamma: false,
         normal_maps_xyz: target == "Android",
+        project: project.clone(),
     };
     let audio = AudioImporter {
         build_target: target.to_string(),

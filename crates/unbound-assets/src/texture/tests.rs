@@ -493,15 +493,18 @@ fn a_baked_reflection_imports_as_a_convolved_cubemap() {
     }
 }
 
-/// A target whose compressed formats Unbound does not produce (Android: ETC2, ASTC) keeps the
-/// pixels and gives the GPU BC7 blocks.
+/// A target format Unbound does not produce (Android's ASTC) keeps the pixels and gives the GPU
+/// BC7 blocks.
 #[test]
 fn compressed_mips_decode_close_to_the_pixels() {
     // A gradient with alpha, 8x8: mips 8, 4, 2 (padded), 1 (padded).
     let bytes = png(8, 8, |x, y| {
         [(x * 8) as u8, (y * 8) as u8, 128, (255 - x * 4) as u8]
     });
-    let meta = unbound_yaml::parse_value("TextureImporter:\n  nPOTScale: 0\n").unwrap();
+    let meta = unbound_yaml::parse_value(
+        "TextureImporter:\n  nPOTScale: 0\n  platformSettings:\n  - buildTarget: Android\n    overridden: 1\n    textureFormat: 50\n",
+    )
+    .unwrap();
     let importer = TextureImporter {
         build_target: "Android".into(),
         compress: true,
@@ -624,6 +627,7 @@ fn a_target_that_keeps_the_pixels_is_not_block_compressed() {
         compress: true,
         gamma: false,
         normal_maps_xyz: true,
+        project: ProjectCompression::default(),
     };
     let rgba32 = unbound_yaml::parse_value(&rgba32).unwrap();
     let texture = importer
@@ -642,6 +646,7 @@ fn single_cell_arrays_and_volumes_are_not_block_compressed() {
         compress: true,
         gamma: false,
         normal_maps_xyz: false,
+        project: ProjectCompression::default(),
     };
     for shape in [4, 8] {
         let meta = unbound_yaml::parse_value(&format!(
@@ -1184,4 +1189,191 @@ fn baked_lightmaps_keep_their_alpha() {
     assert_eq!(alpha(11), 0);
     assert_eq!(alpha(6), 0);
     assert_eq!(alpha(0), 255);
+}
+
+/// Android imports take the project's default compression format (ETC: ETC_RGB4, or ETC2_RGBA8
+/// with transparency; ETC2: ETC2_RGB), normal maps are opaque, explicit ETC formats are kept, and
+/// what the blocks decode to is what scripts read (Unity 6000.0.71f1,
+/// tests/projects/texturecompression Android profiles).
+#[test]
+fn android_imports_are_etc_compressed() {
+    let opaque = png(8, 8, |x, y| [(x * 8) as u8, (y * 8) as u8, 90, 255]);
+    let transparent = png(8, 8, |x, y| {
+        [(x * 8) as u8, (y * 8) as u8, 90, (x * 20) as u8]
+    });
+    let import_in = |bytes: &[u8], meta: &str, project: ProjectCompression, gamma: bool| {
+        let importer = TextureImporter {
+            build_target: "Android".into(),
+            compress: true,
+            normal_maps_xyz: true,
+            gamma,
+            project,
+            ..TextureImporter::default()
+        };
+        importer
+            .import(
+                Path::new("Assets/t.png"),
+                bytes,
+                &unbound_yaml::parse_value(meta).unwrap(),
+            )
+            .unwrap()
+    };
+    let import = |bytes: &[u8], meta: &str, project| import_in(bytes, meta, project, true);
+    let plain = "TextureImporter:\n  nPOTScale: 0\n";
+    let etc2 = ProjectCompression {
+        default_formats: vec![("Android".into(), 2)],
+        ..ProjectCompression::default()
+    };
+    let cases = [
+        (
+            &opaque,
+            plain.to_string(),
+            ProjectCompression::default(),
+            BlockFormat::Etc1,
+        ),
+        (
+            &transparent,
+            plain.to_string(),
+            ProjectCompression::default(),
+            BlockFormat::Etc2Rgba8,
+        ),
+        (
+            &opaque,
+            plain.to_string(),
+            etc2.clone(),
+            BlockFormat::Etc2Rgb,
+        ),
+        (
+            &transparent,
+            plain.to_string(),
+            etc2,
+            BlockFormat::Etc2Rgba8,
+        ),
+        // A normal map with alpha is opaque.
+        (
+            &transparent,
+            format!("{plain}  textureType: 1\n"),
+            ProjectCompression::default(),
+            BlockFormat::Etc1,
+        ),
+        // An explicit ETC2_RGB of a transparent image.
+        (
+            &transparent,
+            format!(
+                "{plain}  platformSettings:\n  - buildTarget: Android\n    overridden: 1\n    textureFormat: 45\n"
+            ),
+            ProjectCompression::default(),
+            BlockFormat::Etc2Rgb,
+        ),
+    ];
+    for (bytes, meta, project, want) in cases {
+        let tex = import(bytes, &meta, project);
+        let blocks = tex
+            .blocks
+            .as_ref()
+            .unwrap_or_else(|| panic!("{meta}: not compressed"));
+        assert_eq!(blocks.format, want, "{meta}");
+        assert_eq!(tex.reported_format(), Some(want.unity_format()));
+        // Unbound's own encoder: the Editor's format and sizes, slightly different texels.
+        assert!(tex.approximation.is_some());
+        assert!(tex.bc7.is_none());
+        for (mip, level) in tex.mips.iter().zip(&blocks.mips) {
+            assert_eq!(level.len(), want.level_size(mip.width, mip.height));
+            assert_eq!(mip.data, decode_blocks(want, level, mip.width, mip.height));
+        }
+        // The decoded texels stay close to the source.
+        let src = image::load_from_memory(bytes).unwrap().flipv().to_rgba8();
+        for (got, want_px) in tex.mips[0].data.chunks(4).zip(src.as_raw().chunks(4)) {
+            for c in 0..3 {
+                assert!(
+                    (i32::from(got[c]) - i32::from(want_px[c])).abs() <= 24,
+                    "{got:?} vs {want_px:?}"
+                );
+            }
+        }
+    }
+    // Single Channel red (EAC) and HDR stay unproduced; a sprite with a non-multiple-of-4 mipped
+    // size stays uncompressed.
+    let red = import(
+        &opaque,
+        &format!("{plain}  textureType: 10\n  singleChannelComponent: 1\n"),
+        ProjectCompression::default(),
+    );
+    assert!(red.blocks.is_none() && red.approximation.is_some());
+    let odd = png(6, 6, |_, _| [1, 2, 3, 255]);
+    let odd = import(&odd, plain, ProjectCompression::default());
+    assert!(odd.blocks.is_none() && odd.uncompressed);
+    // An explicit ETC_RGB4 needs power-of-two sides even without mips (20x12: uncompressed,
+    // RGB24 with its alpha dropped), ETC2 does not; an automatic one there is unmeasured.
+    let npot = png(20, 12, |x, y| {
+        [x as u8 * 9, y as u8 * 9, 40, (x * 10) as u8]
+    });
+    let no_mips = format!("{plain}  mipmaps:\n    enableMipMap: 0\n");
+    let etc1 =
+        "  platformSettings:\n  - buildTarget: Android\n    overridden: 1\n    textureFormat: 34\n";
+    let explicit = import(
+        &npot,
+        &format!("{no_mips}{etc1}"),
+        ProjectCompression::default(),
+    );
+    assert!(explicit.blocks.is_none() && explicit.uncompressed);
+    assert_eq!(explicit.reported_format(), Some(unity_format::RGB24));
+    assert!(explicit.mips[0].data.chunks(4).all(|t| t[3] == 255));
+    let opaque_npot = png(20, 12, |x, y| [x as u8 * 9, y as u8 * 9, 40, 255]);
+    let automatic = import(&opaque_npot, &no_mips, ProjectCompression::default());
+    assert!(automatic.blocks.is_none() && automatic.approximation.is_some());
+    // Split Alpha Channel is not produced: the import keeps its pixels.
+    let split = import(
+        &transparent,
+        &format!("{plain}{etc1}    allowsAlphaSplitting: 1\n"),
+        ProjectCompression::default(),
+    );
+    assert!(split.blocks.is_none() && split.approximation.is_some());
+    assert!(split.mips[0].data.chunks(4).any(|t| t[3] < 255));
+    // A linear project stores sRGB-flagged ETC1 as ETC2_RGB (normal maps too, whose flag stays
+    // on), linear-flagged textures stay ETC1.
+    let linear = |meta: &str, bytes: &[u8]| {
+        import_in(bytes, meta, ProjectCompression::default(), false)
+            .blocks
+            .map(|b| b.format)
+    };
+    assert_eq!(linear(&no_mips, &opaque_npot), Some(BlockFormat::Etc2Rgb));
+    assert_eq!(linear(plain, &opaque), Some(BlockFormat::Etc2Rgb));
+    assert_eq!(
+        linear(&format!("{plain}  textureType: 1\n"), &opaque),
+        Some(BlockFormat::Etc2Rgb)
+    );
+    assert_eq!(
+        linear(&format!("{plain}  mipmaps:\n    sRGBTexture: 0\n"), &opaque),
+        Some(BlockFormat::Etc1)
+    );
+}
+
+/// EAC alpha blocks: a flat block is exact, a gradient stays close, and the blocks decode as
+/// ETC2 RGBA8 alpha.
+#[test]
+fn eac_alpha_blocks_decode_close_to_the_alpha() {
+    use super::etc::encode_alpha;
+    for alpha in [
+        [7u8; 16],
+        [
+            0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255,
+        ],
+        std::array::from_fn(|i| (i * 16) as u8),
+        std::array::from_fn(|i| 100 + (i % 4) as u8 * 3),
+    ] {
+        let mut block = [0u8; 16];
+        block[..8].copy_from_slice(&encode_alpha(&alpha));
+        let mut texels = [0u32; 16];
+        texture2ddecoder::decode_etc2_rgba8_block(&block, &mut texels);
+        let worst = texels
+            .iter()
+            .zip(alpha)
+            .map(|(t, a)| (i32::from(t.to_le_bytes()[3]) - i32::from(a)).abs())
+            .max()
+            .unwrap();
+        let flat = alpha.iter().all(|&a| a == alpha[0]);
+        // Eight levels over the block's range: at most about half a step off.
+        assert!(worst <= if flat { 0 } else { 18 }, "{alpha:?}: {worst}");
+    }
 }

@@ -149,6 +149,9 @@ pub struct TextureSettings {
     pub single_channel_component: i32,
     /// Colour data is sRGB (`sRGBTexture`, formerly `!linearTexture`). Normal maps never are.
     pub srgb: bool,
+    /// The `.meta`'s own sRGB flag, which normal maps keep (on) too.
+    #[serde(default)]
+    pub srgb_flag: bool,
     /// Set by the importer in a gamma-space project: HDR colour is stored gamma-encoded.
     #[serde(default)]
     pub gamma_hdr: bool,
@@ -215,6 +218,9 @@ pub struct TextureSettings {
     /// `crunchedCompression` of the build target.
     #[serde(default)]
     pub crunched: bool,
+    /// Android's "Split Alpha Channel" (`allowsAlphaSplitting`) of the build target.
+    #[serde(default)]
+    pub split_alpha: bool,
     /// `pSDRemoveMatte`: take Photoshop's white matte out of a flattened image with transparency.
     #[serde(default)]
     pub remove_matte: bool,
@@ -223,6 +229,7 @@ pub struct TextureSettings {
 fn one_by_one() -> (u32, u32) {
     (1, 1)
 }
+
 
 impl Default for TextureSettings {
     fn default() -> Self {
@@ -243,10 +250,11 @@ impl TextureSettings {
             8 => TextureShape::Texture3D,
             _ => TextureShape::Texture2D,
         };
-        let srgb = match boolean(imp, "mipmaps.sRGBTexture") {
+        let srgb_flag = match boolean(imp, "mipmaps.sRGBTexture") {
             Some(srgb) => srgb,
             None => !boolean(imp, "mipmaps.linearTexture").unwrap_or(false),
-        } && texture_type != TextureType::NormalMap
+        };
+        let srgb = srgb_flag && texture_type != TextureType::NormalMap
             // A cookie is one (alpha) channel, which no sRGB decode applies to; a Single Channel
             // texture of an automatic format stays linear even when marked sRGB (R8_UNorm in the
             // Unity 6000.0.71f1 Editor, tests/projects/urp texture-samples.jsonl SingleRedSrgb;
@@ -281,6 +289,9 @@ impl TextureSettings {
         let crunched = entry
             .and_then(|e| boolean(e, "crunchedCompression"))
             .or_else(|| boolean(imp, "crunchedCompression"))
+            .unwrap_or(false);
+        let split_alpha = entry
+            .and_then(|e| boolean(e, "allowsAlphaSplitting"))
             .unwrap_or(false);
         let format_alpha = platform_format(imp, build_target).map(format_has_alpha);
         let normal_map = texture_type == TextureType::NormalMap;
@@ -327,6 +338,7 @@ impl TextureSettings {
             shape,
             single_channel_component: int(imp, "singleChannelComponent").unwrap_or(0) as i32,
             srgb,
+            srgb_flag,
             gamma_hdr: false,
             normal_maps_xyz: false,
             alpha_source,
@@ -374,6 +386,7 @@ impl TextureSettings {
             explicit_format: platform_format(imp, build_target),
             compression,
             crunched,
+            split_alpha,
             remove_matte: boolean(imp, "pSDRemoveMatte").unwrap_or(false),
         }
     }
@@ -542,24 +555,102 @@ pub enum Storage {
     Unsupported(String),
 }
 
-/// How the Standalone target of the Unity 6000.0.71f1 Editor stores an import
+/// The project settings that choose a build target's compressed formats.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ProjectCompression {
+    /// Each build target's default texture compression format (`TextureCompressionFormat`:
+    /// 1 ETC, 2 ETC2, 3 ASTC, 5 DXTC, ...): the first of ProjectSettings'
+    /// `m_BuildTargetDefaultTextureCompressionFormat` entry for it.
+    pub default_formats: Vec<(String, i32)>,
+}
+
+/// `TextureCompressionFormat.ETC`.
+const COMPRESSION_ETC: i32 = 1;
+/// `TextureCompressionFormat.ETC2`.
+const COMPRESSION_ETC2: i32 = 2;
+
+impl ProjectCompression {
+    /// Reads `ProjectSettings/ProjectSettings.asset` of a project (no entries when missing).
+    pub fn read(project: &Path) -> Self {
+        let mut out = Self::default();
+        let player = std::fs::read_to_string(project.join("ProjectSettings/ProjectSettings.asset"))
+            .ok()
+            .and_then(|text| unbound_yaml::parse_documents(&text).ok())
+            .and_then(|docs| docs.into_iter().next().map(|d| d.body));
+        for entry in player
+            .as_ref()
+            .and_then(|p| p.get("m_BuildTargetDefaultTextureCompressionFormat"))
+            .and_then(Value::as_seq)
+            .unwrap_or_default()
+        {
+            let target = entry.get("m_BuildTarget").and_then(Value::as_str);
+            // `m_Formats`: little-endian 32-bit values in hex, the first the default; older
+            // projects keep one `m_Format`.
+            let first = entry
+                .get("m_Formats")
+                .and_then(Value::as_str)
+                .and_then(|hex| hex.get(..8))
+                .and_then(|hex| u32::from_str_radix(hex, 16).ok())
+                .map(|v| v.swap_bytes() as i32)
+                .or_else(|| entry.get("m_Format").and_then(Value::as_i64).map(|v| v as i32));
+            if let (Some(target), Some(first)) = (target, first) {
+                out.default_formats.push((target.to_string(), first));
+            }
+        }
+        out
+    }
+
+    /// The build target's default compression format (Android: ETC when unset, as an empty
+    /// list imports in the Unity 6000.0.71f1 Editor).
+    fn default_format(&self, build_target: &str) -> Option<i32> {
+        self.default_formats
+            .iter()
+            .find(|(t, _)| t == build_target)
+            .map(|(_, f)| *f)
+            .or((build_target == "Android").then_some(COMPRESSION_ETC))
+    }
+
+    /// What of the settings imports for `build_target` depend on (part of the cache key).
+    fn key(&self, build_target: &str) -> String {
+        format!("compression{:?}", self.default_format(build_target))
+    }
+}
+
+/// How the Unity 6000.0.71f1 Editor stores an import on the Standalone and Android targets
 /// (tests/projects/texturecompression): only 2D textures whose sides are multiples of 4 are
-/// compressed, and with mipmaps only when they are also powers of two (20x12 and 30x18 with mips
-/// and 2x2 stay uncompressed, automatic or an explicit DXT5; 64x16, and 20x12 without mips, are
-/// compressed). An explicit
-/// DXT1, DXT5, BC4, BC5, BC6H or BC7 is taken as it is. An automatic format with compression
-/// on is BC6H for HDR data, BC4 for a Single Channel texture's red (its alpha stays Alpha8),
-/// BC7 at High Quality and otherwise DXT1, or DXT5 when a texel is not opaque (a normal map:
-/// DXT5 at Normal and Low Quality, BC7 at High; Sprite and GUI textures as Default ones).
-/// Compressor quality does not change the DXT and BC4 blocks. Other targets, crunch, cubemaps,
-/// arrays, volumes and the other texture types are unmeasured.
-pub fn storage(texture: &ImportedTexture, build_target: &str) -> Storage {
+/// compressed, and with mipmaps only when they are also powers of two (20x12 and 30x18 with
+/// mips and 2x2 stay uncompressed, automatic or explicit; 64x16, and 20x12 without mips, are
+/// compressed). An explicit DXT1, DXT5, BC4, BC5, BC6H or BC7 (Standalone) or ETC_RGB4,
+/// ETC2_RGB or ETC2_RGBA8 (Android) is taken as it is.
+///
+/// Standalone's automatic format with compression on is BC6H for HDR data, BC4 for a Single
+/// Channel texture's red (its alpha stays Alpha8), BC7 at High Quality and otherwise DXT1, or
+/// DXT5 when a texel is not opaque (a normal map: DXT5 at Normal and Low Quality, BC7 at High;
+/// Sprite and GUI textures as Default ones). Compressor quality does not change the DXT and
+/// BC4 blocks.
+///
+/// Android's automatic format follows the project's default compression format at every
+/// compression level: ETC gives ETC_RGB4, or ETC2_RGBA8 when a texel is not opaque; ETC2 gives
+/// ETC2_RGB or ETC2_RGBA8; normal maps (stored XYZ) are opaque; a Single Channel texture's
+/// alpha stays Alpha8. ETC_RGB4, automatic or explicit, is ETC2_RGB in a linear project when
+/// the `.meta`'s sRGB flag is on (normal maps too, whose flag stays on); an explicit one stays
+/// uncompressed unless both sides are powers of two (20x12 without mips: RGB24 in Gamma,
+/// ETC2_RGB in Linear). Other targets and default formats, automatic ETC_RGB4 at sizes that are
+/// not powers of two, Split Alpha Channel, crunch, HDR on Android, EAC, ASTC, cubemaps, arrays,
+/// volumes and the other texture types are unmeasured.
+pub fn storage(
+    texture: &ImportedTexture,
+    build_target: &str,
+    project: &ProjectCompression,
+    gamma: bool,
+) -> Storage {
     let s = &texture.settings;
     let unsupported = |why: &str| Storage::Unsupported(why.to_string());
     let hdr = texture.format == TextureFormat::Rgba32F;
     if s.uncompressed && s.explicit_format.is_none() {
         return Storage::Uncompressed;
     }
+    let android = build_target == "Android";
     let format = match s.explicit_format {
         Some(10) => BlockFormat::Bc1,
         Some(12) => BlockFormat::Bc3,
@@ -567,16 +658,42 @@ pub fn storage(texture: &ImportedTexture, build_target: &str) -> Storage {
         Some(27) => BlockFormat::Bc5,
         Some(24) => BlockFormat::Bc6h,
         Some(25) => BlockFormat::Bc7,
+        Some(34) => BlockFormat::Etc1,
+        Some(45) => BlockFormat::Etc2Rgb,
+        Some(47) => BlockFormat::Etc2Rgba8,
         Some(28 | 29 | 64 | 65) => return unsupported("crunched formats"),
         Some(_) if s.uncompressed => return Storage::Uncompressed,
         Some(f) => return unsupported(&format!("TextureImporterFormat {f}")),
         None if s.crunched => return unsupported("crunched formats"),
+        None if android && hdr => return unsupported("HDR textures of the Android target"),
         None if hdr => BlockFormat::Bc6h,
         None => match s.texture_type {
             TextureType::SingleChannel if s.single_channel_component == 0 => {
                 return Storage::Uncompressed;
             }
+            TextureType::SingleChannel if android => {
+                return unsupported("EAC textures of the Android target");
+            }
             TextureType::SingleChannel => BlockFormat::Bc4,
+            TextureType::Default
+            | TextureType::NormalMap
+            | TextureType::Sprite
+            | TextureType::Gui
+                if android =>
+            {
+                let alpha = texture.has_alpha && s.texture_type != TextureType::NormalMap;
+                match project.default_format(build_target) {
+                    Some(COMPRESSION_ETC) if alpha => BlockFormat::Etc2Rgba8,
+                    Some(COMPRESSION_ETC) => BlockFormat::Etc1,
+                    Some(COMPRESSION_ETC2) if alpha => BlockFormat::Etc2Rgba8,
+                    Some(COMPRESSION_ETC2) => BlockFormat::Etc2Rgb,
+                    f => {
+                        return unsupported(&format!(
+                            "the Android target's default compression format {f:?}"
+                        ));
+                    }
+                }
+            }
             TextureType::Default
             | TextureType::NormalMap
             | TextureType::Sprite
@@ -592,8 +709,13 @@ pub fn storage(texture: &ImportedTexture, build_target: &str) -> Storage {
             other => return unsupported(&format!("automatic compression of {other:?} textures")),
         },
     };
-    if build_target != "Standalone" {
-        return unsupported(&format!("the {build_target} target's compressed formats"));
+    let measured = match build_target {
+        "Standalone" => !format.is_etc(),
+        "Android" => format.is_etc(),
+        _ => false,
+    };
+    if !measured {
+        return unsupported(&format!("{format:?} textures of the {build_target} target"));
     }
     if s.shape != TextureShape::Texture2D || texture.layers != 1 {
         return unsupported(&format!("compressed {:?} textures", s.shape));
@@ -601,9 +723,30 @@ pub fn storage(texture: &ImportedTexture, build_target: &str) -> Storage {
     if (format == BlockFormat::Bc6h) != hdr {
         return unsupported(&format!("{format:?} from {:?} data", texture.format));
     }
+    if format == BlockFormat::Etc1 && s.split_alpha {
+        return unsupported("ETC_RGB4 textures with Split Alpha Channel");
+    }
+    // ETC1 has no sRGB variant: a linear project stores sRGB-flagged textures as ETC2.
+    let format = if format == BlockFormat::Etc1 && !gamma && s.srgb_flag {
+        BlockFormat::Etc2Rgb
+    } else {
+        format
+    };
+
     let mipmapped = texture.mip_count() > 1;
-    let compressible = |side: u32| side % 4 == 0 && (side.is_power_of_two() || !mipmapped);
+    let pot = format == BlockFormat::Etc1 || mipmapped;
+    let compressible = |side: u32| side % 4 == 0 && (side.is_power_of_two() || !pot);
     if !compressible(texture.width) || !compressible(texture.height) {
+        // An automatic ETC_RGB4 at mipless multiple-of-4 sizes that are not powers of two is
+        // unmeasured (only the explicit one is).
+        if format == BlockFormat::Etc1
+            && s.explicit_format.is_none()
+            && !mipmapped
+            && texture.width % 4 == 0
+            && texture.height % 4 == 0
+        {
+            return unsupported("automatic ETC_RGB4 textures whose sides are not powers of two");
+        }
         return Storage::Uncompressed;
     }
     Storage::Blocks(format)
@@ -688,6 +831,9 @@ impl ImportedTexture {
         if let Some(format) = self.explicit_byte_format() {
             return Some(format);
         }
+        if self.opaque_fallback() {
+            return Some(unity_format::RGB24);
+        }
         if self.format != TextureFormat::Rgba8 || s.format_alpha.is_some() {
             return None;
         }
@@ -737,6 +883,19 @@ impl ImportedTexture {
             }
             _ => None,
         }
+    }
+
+    /// An 8-bit import stored uncompressed although its build target names an ETC format
+    /// without alpha (a size the format does not take); other block formats are unmeasured.
+    fn opaque_fallback(&self) -> bool {
+        self.format == TextureFormat::Rgba8
+            && self.uncompressed
+            && self.settings.format_alpha == Some(false)
+            && self
+                .settings
+                .explicit_format
+                .and_then(|f| BlockFormat::from_unity_format(f as i32))
+                .is_some_and(BlockFormat::is_etc)
     }
 
     /// The format of an 8-bit import whose build target names an uncompressed byte format
@@ -808,6 +967,8 @@ pub struct TextureImporter {
     /// The build target encodes normal maps XYZ (its shaders define `UNITY_NO_DXT5nm`), not
     /// DXT5nm.
     pub normal_maps_xyz: bool,
+    /// The project's settings for the target's compressed formats.
+    pub project: ProjectCompression,
 }
 
 impl Default for TextureImporter {
@@ -817,6 +978,7 @@ impl Default for TextureImporter {
             compress: false,
             gamma: false,
             normal_maps_xyz: false,
+            project: ProjectCompression::default(),
         }
     }
 }
@@ -838,15 +1000,29 @@ impl Importer for TextureImporter {
     //     pixels; the import records why it is not stored as the target stores it.
     // 21: Photoshop files are read by Unbound's own reader (16-bit channels round to bytes).
     // 22: Photoshop gray reads opaque, Remove Matte applies.
-    const VERSION: u32 = 22;
+    // 23: Android imports are ETC1/ETC2-compressed in the Editor's formats (`blocks`).
+    const VERSION: u32 = 23;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
         settings.gamma_hdr = self.gamma;
         settings.normal_maps_xyz = self.normal_maps_xyz;
         let mut texture = import_texture(source, bytes, meta, settings)?;
-        match storage(&texture, &self.build_target) {
-            Storage::Uncompressed => texture.uncompressed = true,
+        match storage(&texture, &self.build_target, &self.project, self.gamma) {
+            Storage::Uncompressed => {
+                texture.uncompressed = true;
+                // An explicit compressed format without alpha that the size keeps uncompressed
+                // stores RGB24: opaque texels (Unity 6000.0.71f1, tests/projects/
+                // texturecompression NpotNoMips, ETC_RGB4 at 20x12 on Android in Gamma).
+                if texture.opaque_fallback() {
+                    for mip in &mut texture.mips {
+                        for texel in mip.data.chunks_exact_mut(4) {
+                            texel[3] = 255;
+                        }
+                    }
+                    texture.has_alpha = false;
+                }
+            }
             Storage::Blocks(format) => compress_blocks(&mut texture, format),
             Storage::Unsupported(why) => {
                 texture.approximation = Some(format!(
@@ -864,12 +1040,13 @@ impl Importer for TextureImporter {
     fn options_key(&self) -> String {
         // Resized textures depend on the Editor's job worker count, which follows the machine.
         format!(
-            "{}{}{}{}+workers{}",
+            "{}{}{}{}+workers{}+{}",
             self.build_target,
             if self.compress { "+bc7" } else { "" },
             if self.gamma { "+gamma" } else { "" },
             if self.normal_maps_xyz { "+xyz" } else { "" },
-            resize::job_workers()
+            resize::job_workers(),
+            self.project.key(&self.build_target)
         )
     }
 }
@@ -2061,6 +2238,7 @@ fn srgb_to_linear_table() -> &'static [f32; 256] {
 }
 
 mod bcn;
+pub mod etc;
 pub use bcn::{BlockFormat, compress_level, decode_level as decode_blocks, decode_level_as_gpu};
 mod cubemap;
 mod mipmaps;

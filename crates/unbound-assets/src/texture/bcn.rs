@@ -28,6 +28,12 @@ pub enum BlockFormat {
     Bc6h,
     /// RGBA, 16 bytes a block.
     Bc7,
+    /// ETC1 (`ETC_RGB4`): opaque colour, 8 bytes a block.
+    Etc1,
+    /// ETC2 RGB: opaque colour, 8 bytes a block.
+    Etc2Rgb,
+    /// ETC2 RGBA8: an EAC alpha block and an ETC2 colour block, 16 bytes.
+    Etc2Rgba8,
 }
 
 impl BlockFormat {
@@ -40,6 +46,9 @@ impl BlockFormat {
             27 => Self::Bc5,
             24 => Self::Bc6h,
             25 => Self::Bc7,
+            34 => Self::Etc1,
+            45 => Self::Etc2Rgb,
+            47 => Self::Etc2Rgba8,
             _ => return None,
         })
     }
@@ -53,12 +62,15 @@ impl BlockFormat {
             Self::Bc5 => 27,
             Self::Bc6h => 24,
             Self::Bc7 => 25,
+            Self::Etc1 => 34,
+            Self::Etc2Rgb => 45,
+            Self::Etc2Rgba8 => 47,
         }
     }
 
     pub fn block_bytes(self) -> usize {
         match self {
-            Self::Bc1 | Self::Bc4 => 8,
+            Self::Bc1 | Self::Bc4 | Self::Etc1 | Self::Etc2Rgb => 8,
             _ => 16,
         }
     }
@@ -71,6 +83,17 @@ impl BlockFormat {
     /// Whether the blocks are this crate's own encoding rather than the Editor's.
     pub fn approximates_editor(self) -> bool {
         !matches!(self, Self::Bc1 | Self::Bc3)
+    }
+
+    /// Whether GPUs with BC formats sample the blocks; ETC blocks upload as what they decode
+    /// to (desktop GPUs have no ETC sampling).
+    pub fn is_bc(self) -> bool {
+        !self.is_etc()
+    }
+
+    /// ETC1 or ETC2.
+    pub fn is_etc(self) -> bool {
+        matches!(self, Self::Etc1 | Self::Etc2Rgb | Self::Etc2Rgba8)
     }
 }
 
@@ -97,6 +120,9 @@ pub fn compress_level(format: BlockFormat, rgba: &[u8], width: u32, height: u32)
     let (w, h) = (width.max(1) as usize, height.max(1) as usize);
     let (bw, bh) = (w.div_ceil(4), h.div_ceil(4));
     match format {
+        BlockFormat::Etc1 | BlockFormat::Etc2Rgb | BlockFormat::Etc2Rgba8 => {
+            super::etc::compress_level(rgba, width, height, format == BlockFormat::Etc2Rgba8)
+        }
         BlockFormat::Bc1 | BlockFormat::Bc3 => {
             let size = format.block_bytes();
             let mut out = vec![0u8; bw * bh * size];
@@ -276,12 +302,22 @@ fn decode(format: BlockFormat, blocks: &[u8], width: u32, height: u32, gpu: bool
                 decode_steps(&block[..8], &mut texels, 0);
                 decode_steps(&block[8..], &mut texels, 1);
             }
-            BlockFormat::Bc7 | BlockFormat::Bc6h => {
+            BlockFormat::Bc7
+            | BlockFormat::Bc6h
+            | BlockFormat::Etc1
+            | BlockFormat::Etc2Rgb
+            | BlockFormat::Etc2Rgba8 => {
                 let mut image = [0u32; 16];
-                if format == BlockFormat::Bc7 {
-                    texture2ddecoder::decode_bc7_block(block, &mut image);
-                } else {
-                    texture2ddecoder::decode_bc6_block(block, &mut image, false);
+                match format {
+                    BlockFormat::Bc7 => texture2ddecoder::decode_bc7_block(block, &mut image),
+                    BlockFormat::Bc6h => {
+                        texture2ddecoder::decode_bc6_block(block, &mut image, false)
+                    }
+                    // ETC1 blocks are ETC2 blocks without the overflowing modes.
+                    BlockFormat::Etc1 | BlockFormat::Etc2Rgb => {
+                        texture2ddecoder::decode_etc2_rgb_block(block, &mut image)
+                    }
+                    _ => texture2ddecoder::decode_etc2_rgba8_block(block, &mut image),
                 }
                 for (t, p) in texels.iter_mut().zip(image) {
                     let [b, g, r, a] = p.to_le_bytes();
