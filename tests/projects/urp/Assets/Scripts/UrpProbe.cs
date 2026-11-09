@@ -22,6 +22,14 @@ public partial class UrpProbe : MonoBehaviour
     // Synchronous: the Editor in batch mode never reaches the end of a frame.
     void Start()
     {
+        // URP_PROBE_DEFERRED_DIR: the rendering path scenarios (UrpProbe.Deferred) instead.
+        var pathDir = Environment.GetEnvironmentVariable("URP_PROBE_DEFERRED_DIR");
+        if (!string.IsNullOrEmpty(pathDir))
+        {
+            Directory.CreateDirectory(pathDir);
+            StartCoroutine(DeferredScenarios(pathDir));
+            return;
+        }
         // URP_PROBE_DIR: every scenario into <dir>/<name>.png (and its constants, .jsonl).
         var dir = Environment.GetEnvironmentVariable("URP_PROBE_DIR");
         if (!string.IsNullOrEmpty(dir))
@@ -532,6 +540,7 @@ public partial class UrpProbe : MonoBehaviour
     {
         setup();
         Record(Path.Combine(dir, name + ".png"), Path.Combine(dir, name + ".jsonl"));
+        s_AfterRecord?.Invoke(name);
         teardown();
     }
 
