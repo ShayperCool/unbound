@@ -480,6 +480,69 @@ pub struct NodeCurves {
     pub positions: Vec<Key<3>>,
     pub rotations: Vec<Key<4>>,
     pub scales: Vec<Key<3>>,
+    /// Per key of `positions`, `rotations` and `scales`, its slopes where the import sets them
+    /// (keyframe-reduced clips keep each key's slopes from the every-frame curve; their rotation
+    /// keys are already continuous); empty: derived from the keys (see the accessors).
+    #[serde(default)]
+    pub position_slopes: curves::Slopes<3>,
+    #[serde(default)]
+    pub rotation_slopes: curves::Slopes<4>,
+    #[serde(default)]
+    pub scale_slopes: curves::Slopes<3>,
+}
+
+impl NodeCurves {
+    /// A node's curves with slopes derived from their keys.
+    pub fn new(
+        path: String,
+        positions: Vec<Key<3>>,
+        rotations: Vec<Key<4>>,
+        scales: Vec<Key<3>>,
+    ) -> Self {
+        Self {
+            path,
+            positions,
+            rotations,
+            scales,
+            position_slopes: Vec::new(),
+            rotation_slopes: Vec::new(),
+            scale_slopes: Vec::new(),
+        }
+    }
+
+    /// The position keys' slopes (derived: linear, see [`ModelClip::smooth`]).
+    pub fn positions_slopes(&self) -> curves::Slopes<3> {
+        explicit_or(&self.position_slopes, &self.positions, false)
+    }
+
+    /// The scale keys' slopes (derived: smooth when the clip is).
+    pub fn scales_slopes(&self, smooth: bool) -> curves::Slopes<3> {
+        explicit_or(&self.scale_slopes, &self.scales, smooth)
+    }
+
+    /// The rotation keys as the clip stores them, each in the previous one's hemisphere, and
+    /// their slopes (derived: smooth when the clip is).
+    pub fn rotation_track(&self, smooth: bool) -> (Vec<Key<4>>, curves::Slopes<4>) {
+        if self.rotation_slopes.len() == self.rotations.len() && !self.rotations.is_empty() {
+            return (self.rotations.clone(), self.rotation_slopes.clone());
+        }
+        let keys = curves::continuous_rotations(&self.rotations);
+        let slopes = curves::key_slopes(&keys, smooth);
+        (keys, slopes)
+    }
+}
+
+/// `explicit` when it has a slope pair per key, else the keys' derived slopes.
+fn explicit_or<const N: usize>(
+    explicit: &curves::Slopes<N>,
+    keys: &[Key<N>],
+    smooth: bool,
+) -> curves::Slopes<N> {
+    if explicit.len() == keys.len() && !keys.is_empty() {
+        explicit.clone()
+    } else {
+        curves::key_slopes(keys, smooth)
+    }
 }
 
 /// An animated float of a component in a clip (a blend shape's weight: `blendShape.<name>` on
@@ -490,6 +553,16 @@ pub struct FloatCurve {
     pub attribute: String,
     pub class_id: i32,
     pub keys: Vec<Key<1>>,
+    /// Per key, its slopes where the import sets them (keyframe reduction); empty: linear.
+    #[serde(default)]
+    pub slopes: curves::Slopes<1>,
+}
+
+impl FloatCurve {
+    /// The keys' slopes (derived: linear).
+    pub fn key_slopes(&self) -> curves::Slopes<1> {
+        explicit_or(&self.slopes, &self.keys, false)
+    }
 }
 
 /// An AnimationClip sub-asset: one take of the file, or a range of it from the meta's
@@ -702,7 +775,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 33;
+    const VERSION: u32 = 34;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1148,7 +1221,9 @@ impl<'a> Builder<'a> {
         let index = self.model.nodes.len() as u32;
         self.node_index.insert(node.element.element_id, index);
         self.sources.push(node);
-        let placement = pivots::Placement::of(node);
+        // Rig type None imports no skinning, so a skinned mesh's node is placed like any other
+        // (measured: tests/projects/modelaxis Rigged NoneMeshRp).
+        let placement = pivots::Placement::of(node, self.settings.animation_type != 0);
         self.pivots.push(placement);
         let parent_offset = parent.map_or(pivots::ZERO, |p| self.pivots[p as usize].offset());
         self.model.nodes.push(ModelNode {
@@ -1265,9 +1340,14 @@ impl<'a> Builder<'a> {
             }
         }
         // Compression Off keeps a key on every frame from the clip's first one, with smooth
-        // tangents; the reducing modes are approximated by the baker's (nearly lossless) key
-        // reduction with linear tangents.
+        // tangents; the reducing modes reduce those keys (measured: tests/projects/modelclips,
+        // modelaxis Reduced).
         let every_frame = animation_compression_off(imp);
+        // Humanoid clips become muscle curves converted from these transform curves; the
+        // Editor reduces the muscle curves, not the transforms, so they keep every frame here
+        // (their muscle curves' reduction is not reproduced).
+        let reduction = (!every_frame && self.settings.animation_type != 3)
+            .then(|| Reduction::read(imp, fps));
         // The root node of a generic avatar (`motionNodeName`): its motion relative to the model's
         // root becomes the clips' MotionT/MotionQ curves on the Animator, which root motion uses
         // (measured, tests/projects/modelroot). Without an avatar there is none. Humanoid clips
@@ -1292,6 +1372,16 @@ impl<'a> Builder<'a> {
             });
         let mut clips = Vec::new();
         let mut warnings = Vec::new();
+        // Legacy clips with Keyframe Reduction and Compression also store their rotation
+        // curves packed, which loses more than the reduction (measured: up to 0.6 degrees in
+        // tests/projects/modelaxis); the reduced keys are imported unpacked.
+        if self.settings.animation_type == 1
+            && int(imp, "animations.animationCompression") == Some(2)
+        {
+            warnings.push(
+                "legacy rotation curve compression (Keyframe Reduction and Compression) is not reproduced: rotations keep the reduced keys (not supported)".into(),
+            );
+        }
         let preview_ranges = takes.iter().map(|take| {
             let name = take.stack.element.name.to_string();
             let mut range = ClipRange::take(&name, take.begin * fps, take.end * fps);
@@ -1366,94 +1456,37 @@ impl<'a> Builder<'a> {
                 if channels == [false; 3] {
                     continue;
                 }
-                if every_frame {
-                    let (mut positions, mut rotations, mut scales) =
-                        (Vec::new(), Vec::new(), Vec::new());
-                    for time in frame_times(start, end, fps) {
-                        let t = ufbx::evaluate_transform(&stack.anim, source, time);
-                        let time = (time - start) as f32;
-                        positions.push(Key {
-                            time,
-                            value: self.position(self.placed(index, &t)),
-                        });
-                        rotations.push(Key {
-                            time,
-                            value: [
-                                t.rotation.x as f32,
-                                -t.rotation.y as f32,
-                                -t.rotation.z as f32,
-                                t.rotation.w as f32,
-                            ],
-                        });
-                        scales.push(Key {
-                            time,
-                            value: [t.scale.x as f32, t.scale.y as f32, t.scale.z as f32],
-                        });
-                    }
-                    curves.push(NodeCurves {
-                        path,
-                        positions: only(channels[0], positions),
-                        rotations: only(channels[1], rotations),
-                        scales: only(channels[2], scales),
+                // Every frame of the range; a pivoted node's position follows its rotation and
+                // scale too, so it is evaluated as placed.
+                let (mut positions, mut rotations, mut scales) =
+                    (Vec::new(), Vec::new(), Vec::new());
+                for time in frame_times(start, end, fps) {
+                    let t = ufbx::evaluate_transform(&stack.anim, source, time);
+                    let time = (time - start) as f32;
+                    positions.push(Key {
+                        time,
+                        value: self.position(self.placed(index, &t)),
                     });
-                    continue;
-                }
-                let positions: Vec<Key<3>> = if self.pivoted(index) {
-                    // The position depends on rotation and scale too: evaluated at every key
-                    // time of the three. The baker does not reduce rotation keys, so a turning
-                    // node is keyed on every frame (checked by the AnimPivot unit test).
-                    let source = self.sources[index as usize];
-                    let mut times: Vec<f64> = (node.translation_keys.iter().map(|k| k.time))
-                        .chain(node.rotation_keys.iter().map(|k| k.time))
-                        .chain(node.scale_keys.iter().map(|k| k.time))
-                        .collect();
-                    times.sort_by(f64::total_cmp);
-                    times.dedup();
-                    times
-                        .into_iter()
-                        .map(|time| Key {
-                            time: time as f32,
-                            value: self.position(self.placed(
-                                index,
-                                &ufbx::evaluate_transform(&stack.anim, source, time),
-                            )),
-                        })
-                        .collect()
-                } else {
-                    node.translation_keys
-                        .iter()
-                        .map(|k| Key {
-                            time: k.time as f32,
-                            value: self.position(k.value),
-                        })
-                        .collect()
-                };
-                let rotations: Vec<Key<4>> = node
-                    .rotation_keys
-                    .iter()
-                    .map(|k| Key {
-                        time: k.time as f32,
+                    rotations.push(Key {
+                        time,
                         value: [
-                            k.value.x as f32,
-                            -k.value.y as f32,
-                            -k.value.z as f32,
-                            k.value.w as f32,
+                            t.rotation.x as f32,
+                            -t.rotation.y as f32,
+                            -t.rotation.z as f32,
+                            t.rotation.w as f32,
                         ],
-                    })
-                    .collect();
-                let scales: Vec<Key<3>> = node
-                    .scale_keys
-                    .iter()
-                    .map(|k| Key {
-                        time: k.time as f32,
-                        value: [k.value.x as f32, k.value.y as f32, k.value.z as f32],
-                    })
-                    .collect();
-                curves.push(NodeCurves {
-                    path,
-                    positions: only(channels[0], clip_range(&positions, start, end, lerp_key)),
-                    rotations: only(channels[1], clip_range(&rotations, start, end, slerp_key)),
-                    scales: only(channels[2], clip_range(&scales, start, end, lerp_key)),
+                    });
+                    scales.push(Key {
+                        time,
+                        value: [t.scale.x as f32, t.scale.y as f32, t.scale.z as f32],
+                    });
+                }
+                let positions = only(channels[0], positions);
+                let rotations = only(channels[1], rotations);
+                let scales = only(channels[2], scales);
+                curves.push(match &reduction {
+                    None => NodeCurves::new(path, positions, rotations, scales),
+                    Some(reduction) => reduction.node(path, &positions, &rotations, &scales),
                 });
             }
             curves.sort_by(|a, b| a.path.cmp(&b.path));
@@ -1467,33 +1500,25 @@ impl<'a> Builder<'a> {
                     if prop.name.to_string() != "DeformPercent" {
                         continue;
                     }
-                    let keys: Vec<Key<1>> = prop
-                        .keys
-                        .iter()
-                        .map(|k| Key {
-                            time: k.time as f32,
-                            value: [k.value.x as f32],
+                    let source = &scene.elements[element.element_id as usize];
+                    let keys: Vec<Key<1>> = frame_times(start, end, fps)
+                        .into_iter()
+                        .map(|time| Key {
+                            time: (time - start) as f32,
+                            value: [ufbx::evaluate_prop_flags(
+                                &stack.anim,
+                                source,
+                                "DeformPercent",
+                                time,
+                                0,
+                            )
+                            .value_vec4
+                            .x as f32],
                         })
                         .collect();
-                    let keys = if every_frame {
-                        let source = &scene.elements[element.element_id as usize];
-                        frame_times(start, end, fps)
-                            .into_iter()
-                            .map(|time| Key {
-                                time: (time - start) as f32,
-                                value: [ufbx::evaluate_prop_flags(
-                                    &stack.anim,
-                                    source,
-                                    "DeformPercent",
-                                    time,
-                                    0,
-                                )
-                                .value_vec4
-                                .x as f32],
-                            })
-                            .collect()
-                    } else {
-                        clip_range(&keys, start, end, lerp_key)
+                    let (keys, slopes) = match &reduction {
+                        None => (keys, Vec::new()),
+                        Some(reduction) => reduction.float(&keys),
                     };
                     for (path, name) in targets {
                         floats.push(FloatCurve {
@@ -1501,6 +1526,7 @@ impl<'a> Builder<'a> {
                             attribute: format!("blendShape.{name}"),
                             class_id: class::SKINNED_MESH_RENDERER,
                             keys: keys.clone(),
+                            slopes: slopes.clone(),
                         });
                     }
                 }
@@ -1677,6 +1703,7 @@ impl<'a> Builder<'a> {
             attribute,
             class_id: class::ANIMATOR,
             keys,
+            slopes: Vec::new(),
         };
         let [px, py, pz] = position;
         let [qx, qy, qz, qw] = rotation;
@@ -2533,14 +2560,18 @@ impl<'a> Builder<'a> {
             );
         }
         if let Some(skin) = skin {
-            // A bone whose import pose is singular (a zero scale on it or an ancestor) gets an
-            // all-zero bind pose (measured: tests/projects/modelaxis Rigged GenericZeroRoot).
+            // A bone whose rest pose is singular (a zero scale on it or an ancestor, also from
+            // a clip's first frame) gets an all-zero bind pose (measured: tests/projects/modelaxis
+            // Rigged GenericZeroRoot, LegacyRootVanish).
             out.bind_poses = skin
                 .clusters
                 .iter()
-                .map(|c| match &c.bone_node {
-                    Some(bone) if skinned_bounds::is_singular(&bone.node_to_world) => [0.0; 16],
-                    _ => self.matrix(&offset.bind(&c.geometry_to_bone)),
+                .map(|c| {
+                    let bone = c.bone_node.as_ref();
+                    match bone.and_then(|b| self.node_index.get(&b.element.element_id)) {
+                        Some(&b) if self.singular_rest_pose(b) => [0.0; 16],
+                        _ => self.matrix(&offset.bind(&c.geometry_to_bone)),
+                    }
                 })
                 .collect();
         }
@@ -2842,6 +2873,20 @@ impl<'a> Builder<'a> {
     }
 
     /// An affine ufbx matrix in Unity's space (mirrored on X, translation scaled), column-major.
+    /// The node's rest-pose world matrix has no inverse: a scale component of it or an ancestor
+    /// is zero (a hierarchy of translations, rotations and scales is singular only so).
+    fn singular_rest_pose(&self, index: u32) -> bool {
+        let mut at = Some(index);
+        while let Some(i) = at {
+            let node = &self.model.nodes[i as usize];
+            if node.scale.iter().any(|&s| f64::from(s).abs() < f64::MIN_POSITIVE) {
+                return true;
+            }
+            at = node.parent;
+        }
+        false
+    }
+
     fn matrix(&self, m: &ufbx::Matrix) -> [f32; 16] {
         let s = self.scale as f64;
         // F·M·F with F = diag(-1, 1, 1): entries mixing x with y/z change sign.
@@ -3059,57 +3104,6 @@ pub fn mask_keeps(paths: &[(String, f32)], path: &str) -> bool {
     paths.is_empty() || paths.iter().any(|(p, w)| p == path && *w > 0.5)
 }
 
-/// The keys of `[start, end]` (seconds on the take), from `start`: keys exactly at both ends,
-/// interpolated where the take has none (a range starting or ending between frames).
-fn clip_range<const N: usize>(
-    keys: &[Key<N>],
-    start: f64,
-    end: f64,
-    interpolate: fn(&Key<N>, &Key<N>, f32) -> [f32; N],
-) -> Vec<Key<N>> {
-    const EPSILON: f64 = 1e-6;
-    let at = |time: f64| -> Option<[f32; N]> {
-        let t = time as f32;
-        let after = keys.iter().position(|k| k.time >= t)?;
-        if after == 0 || keys[after].time == t {
-            return Some(keys[after].value);
-        }
-        let (a, b) = (&keys[after - 1], &keys[after]);
-        Some(interpolate(a, b, (t - a.time) / (b.time - a.time)))
-    };
-    let mut out = Vec::new();
-    let inside = |k: &&Key<N>| {
-        let t = k.time as f64;
-        t >= start - EPSILON && t <= end + EPSILON
-    };
-    if keys
-        .first()
-        .is_some_and(|k| (k.time as f64) < start - EPSILON)
-        && !keys
-            .iter()
-            .any(|k| ((k.time as f64) - start).abs() <= EPSILON)
-        && let Some(value) = at(start)
-    {
-        out.push(Key { time: 0.0, value });
-    }
-    out.extend(keys.iter().filter(inside).map(|k| Key {
-        time: (k.time as f64 - start) as f32,
-        value: k.value,
-    }));
-    if keys.last().is_some_and(|k| (k.time as f64) > end + EPSILON)
-        && !keys
-            .iter()
-            .any(|k| ((k.time as f64) - end).abs() <= EPSILON)
-        && let Some(value) = at(end)
-    {
-        out.push(Key {
-            time: (end - start) as f32,
-            value,
-        });
-    }
-    out
-}
-
 /// A take as its clips use it: the span from [`take_span`], ending at the span's end or at the
 /// last key of the curves that overlap it, whichever is earlier.
 #[derive(Clone, Copy)]
@@ -3225,30 +3219,6 @@ fn frame_times(start: f64, end: f64, fps: f64) -> Vec<f64> {
         times.push(end);
     }
     times
-}
-
-fn lerp_key<const N: usize>(a: &Key<N>, b: &Key<N>, t: f32) -> [f32; N] {
-    std::array::from_fn(|i| a.value[i] + (b.value[i] - a.value[i]) * t)
-}
-
-/// Spherical interpolation between two rotation keys, as ufbx evaluates baked rotations.
-fn slerp_key(a: &Key<4>, b: &Key<4>, t: f32) -> [f32; 4] {
-    let (p, mut q) = (a.value, b.value);
-    let mut dot: f32 = (0..4).map(|i| p[i] * q[i]).sum();
-    if dot < 0.0 {
-        q = q.map(|v| -v);
-        dot = -dot;
-    }
-    let (wa, wb) = if dot > 0.9995 {
-        (1.0 - t, t)
-    } else {
-        let theta = dot.min(1.0).acos();
-        let s = theta.sin();
-        (((1.0 - t) * theta).sin() / s, (t * theta).sin() / s)
-    };
-    let r: [f32; 4] = std::array::from_fn(|i| wa * p[i] + wb * q[i]);
-    let m = r.iter().map(|v| v * v).sum::<f32>().sqrt();
-    r.map(|v| v / m)
 }
 
 /// The level of a node named `<name>_LOD<n>`.
@@ -3485,6 +3455,79 @@ fn animated_channels(stack: &ufbx::AnimStack, node: &ufbx::Node) -> [bool; 3] {
 /// The keys of an animated channel, none for a channel the take leaves alone.
 fn only<T>(animated: bool, keys: Vec<T>) -> Vec<T> {
     if animated { keys } else { Vec::new() }
+}
+
+/// The keyframe reduction of the reducing animation compressions (Keyframe Reduction, Keyframe
+/// Reduction and Compression, Optimal): the meta's errors applied to every-frame curves by
+/// [`curves::reduce`], positions with linear and rotations, scales and floats with smooth
+/// slopes (measured: tests/projects/modelaxis Reduced, tests/projects/blendshapes clip).
+struct Reduction {
+    /// One frame, seconds.
+    step: f32,
+    /// Degrees.
+    rotation: f32,
+    /// Fractions (the meta's percentages / 100); float curves take the position error.
+    position: f32,
+    scale: f32,
+}
+
+impl Reduction {
+    /// The meta's errors default to 0.5 (degrees, percent).
+    fn read(imp: &Value, fps: f64) -> Self {
+        let error = |key| float(imp, key).unwrap_or(0.5) as f32;
+        Self {
+            step: 1.0 / fps as f32,
+            rotation: error("animations.animationRotationError"),
+            position: error("animations.animationPositionError") / 100.0,
+            scale: error("animations.animationScaleError") / 100.0,
+        }
+    }
+
+    fn node(
+        &self,
+        path: String,
+        positions: &[Key<3>],
+        rotations: &[Key<4>],
+        scales: &[Key<3>],
+    ) -> NodeCurves {
+        let (positions, position_slopes) = curves::reduce(
+            positions,
+            &curves::key_slopes(positions, false),
+            self.step,
+            curves::vector_within(self.position),
+        );
+        let rotations = curves::continuous_rotations(rotations);
+        let (rotations, rotation_slopes) = curves::reduce(
+            &rotations,
+            &curves::key_slopes(&rotations, true),
+            self.step,
+            curves::rotation_within(self.rotation),
+        );
+        let (scales, scale_slopes) = curves::reduce(
+            scales,
+            &curves::key_slopes(scales, true),
+            self.step,
+            curves::vector_within(self.scale),
+        );
+        NodeCurves {
+            path,
+            positions,
+            rotations,
+            scales,
+            position_slopes,
+            rotation_slopes,
+            scale_slopes,
+        }
+    }
+
+    fn float(&self, keys: &[Key<1>]) -> (Vec<Key<1>>, curves::Slopes<1>) {
+        curves::reduce(
+            keys,
+            &curves::key_slopes(keys, true),
+            self.step,
+            curves::float_within(self.position),
+        )
+    }
 }
 
 fn animation_compression_off(imp: &Value) -> bool {

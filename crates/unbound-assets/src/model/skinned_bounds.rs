@@ -115,7 +115,7 @@ fn determinant(m: &ufbx::Matrix) -> f64 {
 }
 
 /// The matrix has no inverse (a zero scale, or not finite).
-pub(super) fn is_singular(m: &ufbx::Matrix) -> bool {
+fn is_singular(m: &ufbx::Matrix) -> bool {
     let det = determinant(m);
     !det.is_finite() || det.abs() < f64::MIN_POSITIVE
 }
@@ -341,15 +341,15 @@ fn sample_clip(
         if curve.positions.is_empty() && curve.rotations.is_empty() && curve.scales.is_empty() {
             continue;
         }
-        let rotations = curves::continuous_rotations(&curve.rotations);
+        let (rotations, rotation_slopes) = curve.rotation_track(clip.smooth);
         tracks.insert(
             index as usize,
             NodeTrack {
-                position_slopes: curves::key_slopes(&curve.positions, false),
+                position_slopes: curve.positions_slopes(),
                 positions: curve.positions.clone(),
-                rotation_slopes: curves::key_slopes(&rotations, clip.smooth),
+                rotation_slopes,
                 rotations,
-                scale_slopes: curves::key_slopes(&curve.scales, clip.smooth),
+                scale_slopes: curve.scales_slopes(clip.smooth),
                 scales: curve.scales.clone(),
             },
         );
@@ -379,6 +379,7 @@ fn sample_clip(
     }
     let step = 1.0f32 / clip.sample_rate;
     let mut world = vec![identity(); nodes.len()];
+    let mut skin = Vec::new();
     let mut time = start;
     loop {
         for (i, node) in nodes.iter().enumerate() {
@@ -408,34 +409,41 @@ fn sample_clip(
                 *update_when_offscreen = true;
                 continue;
             }
-            skinned_vertices_into(renderer, mesh, &world, &ufbx::matrix_invert(root), bounds);
+            let to_root = ufbx::matrix_invert(root);
+            skinned_vertices_into(renderer, mesh, &world, &to_root, &mut skin, bounds);
         }
-        time += step;
-        if !(time <= end) {
+        let next = time + step;
+        // Past the last key; or a time so large the step no longer advances it.
+        if !(next <= end) || next <= time {
             break;
         }
+        time = next;
     }
 }
 
-/// Adds the mesh's vertices skinned by the bones' `world` matrices, in the root's space.
+/// Adds the mesh's vertices skinned by the bones' `world` matrices, in the root's space (a
+/// vertex without weights at the root's origin). `skin`: scratch for the skinning matrices.
 fn skinned_vertices_into(
     renderer: &ModelRenderer,
     mesh: &ModelMesh,
     world: &[ufbx::Matrix],
     to_root: &ufbx::Matrix,
+    skin: &mut Vec<ufbx::Matrix>,
     out: &mut Box3,
 ) {
-    let skin: Vec<ufbx::Matrix> = renderer
-        .bones
-        .iter()
-        .zip(&mesh.bind_poses)
-        .map(|(&bone, bind)| {
-            ufbx::matrix_mul(
-                &ufbx::matrix_mul(to_root, &world[bone as usize]),
-                &bind_matrix(bind),
-            )
-        })
-        .collect();
+    skin.clear();
+    skin.extend(
+        renderer
+            .bones
+            .iter()
+            .zip(&mesh.bind_poses)
+            .map(|(&bone, bind)| {
+                ufbx::matrix_mul(
+                    &ufbx::matrix_mul(to_root, &world[bone as usize]),
+                    &bind_matrix(bind),
+                )
+            }),
+    );
     for (p, weight) in mesh.positions.iter().zip(&mesh.bone_weights) {
         let p = vec3(*p);
         let mut skinned = pivots::ZERO;
@@ -443,6 +451,9 @@ fn skinned_vertices_into(
             let Some(m) = skin.get(weight.bones[k] as usize) else {
                 continue;
             };
+            if weight.weights[k] == 0.0 {
+                continue;
+            }
             let w = f64::from(weight.weights[k]);
             let q = ufbx::transform_position(m, p);
             skinned.x += q.x * w;
@@ -609,12 +620,12 @@ mod tests {
             loop_time: false,
             loop_blend: false,
             cycle_offset: 0.0,
-            curves: vec![NodeCurves {
-                path: "Root/Arm".into(),
-                positions: vec![key(0.0, 1.0), key(1.0, 3.0)],
-                rotations: Vec::new(),
-                scales: Vec::new(),
-            }],
+            curves: vec![NodeCurves::new(
+                "Root/Arm".into(),
+                vec![key(0.0, 1.0), key(1.0, 3.0)],
+                Vec::new(),
+                Vec::new(),
+            )],
             floats: Vec::new(),
             events: Vec::new(),
             parameters: Vec::new(),

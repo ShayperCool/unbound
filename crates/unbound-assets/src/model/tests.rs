@@ -405,19 +405,6 @@ fn clip_frames_start_and_end_off_the_take_frames() {
 }
 
 #[test]
-fn clip_ranges_interpolate_their_ends() {
-    let keys: Vec<Key<1>> = (0..5)
-        .map(|i| Key {
-            time: i as f32,
-            value: [i as f32 * 2.0],
-        })
-        .collect();
-    let out = clip_range(&keys, 0.5, 2.5, lerp_key);
-    let pairs: Vec<(f32, f32)> = out.iter().map(|k| (k.time, k.value[0])).collect();
-    assert_eq!(pairs, vec![(0.0, 1.0), (0.5, 2.0), (1.5, 4.0), (2.0, 5.0)]);
-}
-
-#[test]
 fn reads_clip_masks_curves_and_references() {
     let item = meta(
         r#"name: Walk

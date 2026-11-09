@@ -82,14 +82,16 @@ pub(super) enum Placement {
 }
 
 impl Placement {
-    pub fn of(node: &ufbx::Node) -> Self {
+    /// `skinning`: the rig imports skinning (its animation type is not None).
+    pub fn of(node: &ufbx::Node, skinning: bool) -> Self {
         if node.is_root {
             return Self::At(ZERO);
         }
-        let skinned = node
-            .mesh
-            .as_ref()
-            .is_some_and(|m| m.skin_deformers.iter().any(|s| !s.clusters.is_empty()));
+        let skinned = skinning
+            && node
+                .mesh
+                .as_ref()
+                .is_some_and(|m| m.skin_deformers.iter().any(|s| !s.clusters.is_empty()));
         if skinned {
             return Self::WithoutPivots {
                 rotation_pivot: vec3_prop(node, "RotationPivot"),
@@ -552,30 +554,24 @@ mod tests {
     }
 
     #[test]
-    fn reduced_clips_keep_pivoted_positions_on_every_frame() {
+    fn reduced_clips_keep_pivoted_positions_within_the_position_error() {
         // A pivoted node's position follows its rotation along an arc. The keyframe-reduced
-        // import, interpolated as clips are, gives the uncompressed (measured) position at every
-        // frame, not a chord between sparse keys.
+        // import, evaluated with its kept slopes, stays within the meta's position error (0.5%)
+        // of the uncompressed position at every frame, with fewer keys.
         let curve = |m: &ImportedModel| {
             let clip = m.clips.iter().find(|c| !c.preview).unwrap();
             let body = clip.curves.iter().find(|c| c.path == "Body").unwrap();
-            body.positions.clone()
+            (body.positions.clone(), body.positions_slopes())
         };
-        let (exact, reduced) = (curve(&anim_pivot(0)), curve(&anim_pivot(1)));
-        assert!(exact.len() > 20, "{exact:?}");
+        let ((exact, _), (reduced, slopes)) = (curve(&anim_pivot(0)), curve(&anim_pivot(1)));
+        assert!(
+            exact.len() > 20 && reduced.len() < exact.len(),
+            "{reduced:?}"
+        );
+        let within = super::super::curves::vector_within(0.005);
         for e in &exact {
-            let after = reduced
-                .iter()
-                .position(|k| k.time >= e.time - 1e-6)
-                .unwrap();
-            let value = if after == 0 || (reduced[after].time - e.time).abs() < 1e-6 {
-                reduced[after].value
-            } else {
-                let (a, b) = (&reduced[after - 1], &reduced[after]);
-                let t = (e.time - a.time) / (b.time - a.time);
-                std::array::from_fn(|i| a.value[i] + (b.value[i] - a.value[i]) * t)
-            };
-            assert!(near(value, e.value), "{e:?} {value:?}");
+            let value = super::super::curves::evaluate(&reduced, &slopes, e.time);
+            assert!(within(&e.value, &value), "{e:?} {value:?}");
         }
     }
 }

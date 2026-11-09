@@ -159,7 +159,12 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
         }) {
             body.push((
                 "m_UnboundBonePaths",
-                Value::Seq(skin.bones.iter().map(|&b| scalar(node_path(model, b))).collect()),
+                Value::Seq(
+                    skin.bones
+                        .iter()
+                        .map(|&b| scalar(node_path(model, b)))
+                        .collect(),
+                ),
             ));
             if let Some(root) = skin.root_bone {
                 body.push(("m_UnboundRootBonePath", scalar(node_path(model, root))));
@@ -747,13 +752,13 @@ fn clip_document(clip: &ModelClip, mask: Option<&[(String, f32)]>) -> Document {
     fn curve<const N: usize>(
         path: &str,
         keys: &[Key<N>],
+        slopes: curves::Slopes<N>,
         names: &[&'static str; N],
-        smooth: bool,
     ) -> Value {
         let third = [1.0 / 3.0; N];
         let frames = keys
             .iter()
-            .zip(curves::key_slopes(keys, smooth))
+            .zip(slopes)
             .map(|(key, (incoming, outgoing))| {
                 map(vec![
                     ("serializedVersion", scalar(3)),
@@ -792,14 +797,24 @@ fn clip_document(clip: &ModelClip, mask: Option<&[(String, f32)]>) -> Document {
             continue;
         }
         if !node.positions.is_empty() {
-            positions.push(curve(&node.path, &node.positions, &XYZ, false));
+            positions.push(curve(
+                &node.path,
+                &node.positions,
+                node.positions_slopes(),
+                &XYZ,
+            ));
         }
         if !node.rotations.is_empty() {
-            let keys = curves::continuous_rotations(&node.rotations);
-            rotations.push(curve(&node.path, &keys, &XYZW, clip.smooth));
+            let (keys, slopes) = node.rotation_track(clip.smooth);
+            rotations.push(curve(&node.path, &keys, slopes, &XYZW));
         }
         if !node.scales.is_empty() {
-            scales.push(curve(&node.path, &node.scales, &XYZ, clip.smooth));
+            scales.push(curve(
+                &node.path,
+                &node.scales,
+                node.scales_slopes(clip.smooth),
+                &XYZ,
+            ));
         }
     }
     let float_curve = |curve: Value, attribute: &str, class_id: i32| {
@@ -817,7 +832,7 @@ fn clip_document(clip: &ModelClip, mask: Option<&[(String, f32)]>) -> Document {
         .iter()
         .map(|f| {
             float_curve(
-                curve(&f.path, &f.keys, &[""], false),
+                curve(&f.path, &f.keys, f.key_slopes(), &[""]),
                 &f.attribute,
                 f.class_id,
             )
