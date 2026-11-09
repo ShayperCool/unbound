@@ -763,7 +763,7 @@ namespace Unbound.Runtime
                     if (!renderer) continue;
                     var casting = renderer.shadowCastingMode;
                     if (shadows.HasValue ? casting == ShadowCastingMode.Off : casting == ShadowCastingMode.ShadowsOnly) continue;
-                    if ((filtering.layerMask & (1 << renderer.gameObject.layer)) == 0) continue;
+                    if ((filtering.layerMask & (1 << renderer.m_GameObject.m_Layer)) == 0) continue;
                     if ((filtering.renderingLayerMask & renderer.renderingLayerMask) == 0) continue;
                     if (filtering.excludeMotionVectorObjects && renderer.motionVectorGenerationMode == MotionVectorGenerationMode.Object) continue;
                     if (!allLayers)
@@ -806,17 +806,15 @@ namespace Unbound.Runtime
                 KeepObjectMotion(s_Items);
                 if (s_PlayerLoopPipeline) s_MotionRendered = true;
             }
-            s_Items.RemoveAll(item =>
-            {
-                if (OutsideList(item.Material, item.Queue, range, s_PassTagScratch)) return true;
-                var info = ShaderPassInfo.Of(item.Material.shader);
-                if (info == null) return false;
-                // An override draws the eligible object even if its own matching passes are disabled,
-                // and so does an object that moved its motion vector pass.
-                return drawing.overrideMaterial == null && drawing.overrideShader == null && item.Material.HasDisabledPasses
-                    && TaggedPasses(item.Material, info, s_PassTagScratch).Count == 0 && !(motion && MovingObject(item));
-            });
-            SortRendererList(s_Items, sorting.criteria);
+            // The list's draws by their places in s_Items (the draws stay where they were
+            // collected): those it keeps, in collection order, then sorted.
+            var items = CollectionsMarshal.AsSpan(s_Items);
+            if (s_Order.Length < items.Length) s_Order = new int[Math.Max(items.Length, s_Order.Length * 2)];
+            int count = 0;
+            for (int i = 0; i < items.Length; i++)
+                if (!LeftOut(items[i], range, drawing, motion)) s_Order[count++] = i;
+            var order = s_Order.AsSpan(0, count);
+            SortRendererList(s_Items, order, sorting.criteria);
 
             var overrideMaterial = drawing.overrideMaterial;
             if (overrideMaterial != null && drawing.overrideShader != null)
@@ -830,18 +828,20 @@ namespace Unbound.Runtime
             // Per-object lights: the additional lights reaching each renderer, as the pipeline's
             // light index map numbers them.
             if ((drawing.perObjectData & (PerObjectData.LightData | PerObjectData.LightIndices)) != 0)
-                ApplyPerObjectLights(data, s_Items, drawing.mainLightIndex, (drawing.perObjectData & PerObjectData.Lightmaps) != 0);
-            if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
+                ApplyPerObjectLights(data, s_Items, order, drawing.mainLightIndex, (drawing.perObjectData & PerObjectData.Lightmaps) != 0);
+            if (s_MaterialHandles.Length < count) Array.Resize(ref s_MaterialHandles, Math.Max(count, s_MaterialHandles.Length * 2));
             ulong overrideHandle = overrideMaterial != null ? overrideMaterial.Sync() : 0;
-            for (int i = 0; i < s_Items.Count; i++)
+            for (int i = 0; i < count; i++)
                 s_MaterialHandles[i] = overrideMaterial != null ? overrideHandle
-                    : overrideShader != null ? ReplacementMaterial(s_Items[i].Material, overrideShader).Sync()
-                    : s_Items[i].Material.Sync();
+                    : overrideShader != null ? ReplacementMaterial(s_Items[order[i]].Material, overrideShader).Sync()
+                    : s_Items[order[i]].Material.Sync();
             bool lightmaps = (drawing.perObjectData & PerObjectData.Lightmaps) != 0;
             bool probes = (drawing.perObjectData & PerObjectData.LightProbe) != 0;
-            for (int i = 0; i < s_Items.Count; i++)
+            for (int i = 0; i < count; i++)
             {
-                var item = s_Items[i];
+                // By reference: the draws emitted below may add to s_Items (nothing does), so the
+                // place is looked up for each draw.
+                ref readonly var item = ref CollectionsMarshal.AsSpan(s_Items)[order[i]];
                 if (overrideMaterial == null && overrideShader == null && item.Material.HasDisabledPasses && ShaderPassInfo.Of(item.Material.shader) is ShaderPassInfo info)
                 {
                     bool moving = motion && MovingObject(item);
@@ -858,6 +858,21 @@ namespace Unbound.Runtime
         }
 
         static readonly List<int> s_TaggedScratch = new List<int>();
+
+        /// <summary>The places in <see cref="s_Items"/> of a renderer list's draws, in order.</summary>
+        static int[] s_Order = new int[64];
+
+        /// <summary>Whether a renderer list leaves a collected draw out: outside its queues or
+        /// LightModes, or with every matching pass disabled by the material (an override draws the
+        /// eligible object even so, and so does an object that moved its motion vector pass).</summary>
+        static bool LeftOut(in DrawItem item, RenderQueueRange range, in DrawingSettings drawing, bool motion)
+        {
+            if (OutsideList(item.Material, item.Queue, range, s_PassTagScratch)) return true;
+            var info = ShaderPassInfo.Of(item.Material.shader);
+            if (info == null) return false;
+            return drawing.overrideMaterial == null && drawing.overrideShader == null && item.Material.HasDisabledPasses
+                && TaggedPasses(item.Material, info, s_PassTagScratch).Count == 0 && !(motion && MovingObject(item));
+        }
 
         /// <summary>The passes a renderer list draws of a material: per LightMode of the list in
         /// order, the first pass with it, unless the material disables that LightMode (and
@@ -1005,11 +1020,19 @@ namespace Unbound.Runtime
         /// </summary>
         internal static void ApplyPerObjectLights(CullingData data, List<DrawItem> items, int mainLight, bool lightmaps)
         {
+            var all = new int[items.Count];
+            for (int i = 0; i < all.Length; i++) all[i] = i;
+            ApplyPerObjectLights(data, items, all, mainLight, lightmaps);
+        }
+
+        /// <summary>The same for the draws at <paramref name="order"/>'s places, in that order.</summary>
+        internal static void ApplyPerObjectLights(CullingData data, List<DrawItem> items, ReadOnlySpan<int> order, int mainLight, bool lightmaps)
+        {
             s_RendererLights.Clear();
             s_QueuedLights.Clear();
-            for (int i = 0; i < items.Count; i++)
+            foreach (int i in order)
             {
-                var item = items[i];
+                ref var item = ref CollectionsMarshal.AsSpan(items)[i];
                 if (item.Renderer != null)
                 {
                     var r = item.Renderer;
@@ -1037,8 +1060,6 @@ namespace Unbound.Runtime
                     }
                     item.Properties = merged;
                 }
-                else continue;
-                items[i] = item;
             }
             s_RendererLights.Clear();
             s_QueuedLights.Clear();
@@ -1112,55 +1133,67 @@ namespace Unbound.Runtime
                 && baking.mixedLightingMode == MixedLightingMode.Subtractive;
         }
 
-        /// <summary>A renderer list's order: by sorting layer and order, by queue, then back to
-        /// front or (quantized) front to back as the criteria say.</summary>
-        static void SortRendererList(List<DrawItem> items, SortingCriteria criteria)
+        /// <summary>A renderer list's order, as places in <paramref name="items"/>: by sorting
+        /// layer and order, by queue, then back to front or (quantized) front to back as the
+        /// criteria say.</summary>
+        internal static void SortRendererList(List<DrawItem> items, Span<int> order, SortingCriteria criteria)
         {
             if (criteria == SortingCriteria.None) return;
+            // The places are sorted with the comparison the draws themselves would be sorted
+            // with, by the same algorithm: the same order, ties included.
+            s_SortItems = items;
+            s_SortCriteria = criteria;
+            try { order.Sort(s_CompareAt); }
+            finally { s_SortItems = null; }
+        }
+
+        static List<DrawItem> s_SortItems;
+        static SortingCriteria s_SortCriteria;
+        static readonly Comparison<int> s_CompareAt = (a, b) =>
+        {
+            var items = CollectionsMarshal.AsSpan(s_SortItems);
+            return CompareForList(items[a], items[b], s_SortCriteria);
+        };
+
+        /// <summary>A renderer list's comparison of two draws for its sorting criteria.</summary>
+        internal static int CompareForList(in DrawItem a, in DrawItem b, SortingCriteria criteria)
+        {
             bool layer = (criteria & SortingCriteria.SortingLayer) != 0;
             bool queue = (criteria & SortingCriteria.RenderQueue) != 0;
             bool backToFront = (criteria & SortingCriteria.BackToFront) != 0;
-            bool frontToBack = (criteria & SortingCriteria.QuantizedFrontToBack) != 0;
             // Renderer priority (lower first) only where the list asks for it: the built-in
             // pipeline ignores it (measured: tests/projects/builtinrp sort_priority_*).
             bool priority = (criteria & SortingCriteria.RendererPriority) != 0;
-            if (backToFront && layer && queue && !priority)
+            if (backToFront && layer && queue && !priority) return CompareTransparent(a, b);
+            int c;
+            if (layer)
             {
-                items.Sort((a, b) => CompareTransparent(a, b));
-                return;
+                c = a.SortingLayer.CompareTo(b.SortingLayer);
+                if (c != 0) return c;
+                c = a.SortingOrder.CompareTo(b.SortingOrder);
+                if (c != 0) return c;
             }
-            items.Sort((a, b) =>
+            if (priority)
             {
-                int c;
-                if (layer)
-                {
-                    c = a.SortingLayer.CompareTo(b.SortingLayer);
-                    if (c != 0) return c;
-                    c = a.SortingOrder.CompareTo(b.SortingOrder);
-                    if (c != 0) return c;
-                }
-                if (priority)
-                {
-                    c = (a.Renderer != null ? a.Renderer.rendererPriority : 0).CompareTo(b.Renderer != null ? b.Renderer.rendererPriority : 0);
-                    if (c != 0) return c;
-                }
-                if (queue)
-                {
-                    c = a.Queue.CompareTo(b.Queue);
-                    if (c != 0) return c;
-                }
-                if (backToFront)
-                {
-                    c = b.Distance.CompareTo(a.Distance);
-                    if (c != 0) return c;
-                }
-                else if (frontToBack)
-                {
-                    c = a.Distance.CompareTo(b.Distance);
-                    if (c != 0) return c;
-                }
-                return a.Sequence.CompareTo(b.Sequence);
-            });
+                c = (a.Renderer != null ? a.Renderer.rendererPriority : 0).CompareTo(b.Renderer != null ? b.Renderer.rendererPriority : 0);
+                if (c != 0) return c;
+            }
+            if (queue)
+            {
+                c = a.Queue.CompareTo(b.Queue);
+                if (c != 0) return c;
+            }
+            if (backToFront)
+            {
+                c = b.Distance.CompareTo(a.Distance);
+                if (c != 0) return c;
+            }
+            else if ((criteria & SortingCriteria.QuantizedFrontToBack) != 0)
+            {
+                c = a.Distance.CompareTo(b.Distance);
+                if (c != 0) return c;
+            }
+            return a.Sequence.CompareTo(b.Sequence);
         }
 
         /// <summary>Culling-group callbacks can change renderer visibility. Read the camera and
