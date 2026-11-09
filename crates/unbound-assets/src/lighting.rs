@@ -67,7 +67,8 @@ pub struct LightOutput {
 }
 
 /// Baked light probes: positions, their SphericalHarmonicsL2 coefficients (27 each, red then
-/// green then blue) and the tetrahedralization that interpolates them.
+/// green then blue; none for probes precomputed for realtime GI only) and the
+/// tetrahedralization that interpolates them.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LightProbeData {
     pub positions: Vec<[f32; 3]>,
@@ -277,7 +278,9 @@ fn read_light_probes(object: &Value) -> Result<LightProbeData> {
         .iter()
         .map(|v| sh27(v).context("a probe with fewer than 27 coefficients"))
         .collect::<Result<Vec<_>>>()?;
-    if coefficients.len() != positions.len() {
+    // Probes precomputed for realtime GI only have positions and no baked coefficients
+    // (LightProbes.bakedProbes is empty: tests/projects/realtimegi).
+    if !coefficients.is_empty() && coefficients.len() != positions.len() {
         anyhow::bail!(
             "{} light probe positions but {} baked probes",
             positions.len(),
@@ -348,7 +351,7 @@ pub struct BuiltinLightingImporter {
 impl Importer for BuiltinLightingImporter {
     type Output = LightingData;
     const KIND: &'static str = "builtin-lighting";
-    const VERSION: u32 = 6;
+    const VERSION: u32 = 7;
 
     fn import(&self, _source: &Path, bytes: &[u8], _meta: &Value) -> Result<LightingData> {
         let file = crate::serialized::SerializedFile::parse(bytes)?;
@@ -460,6 +463,30 @@ mod tests {
     }
 
     /// tests/projects/lightprobes' Main bake (6000.0.71f1, Shadowmask): its probes' occlusion.
+    #[test]
+    fn realtime_only_probes_have_no_baked_coefficients() {
+        // Precomputed for realtime GI only: the probes have positions and cells but no baked
+        // coefficients; the renderers have realtime lightmap indices and no baked ones.
+        let file = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/realtimegi/Assets/Scenes/Room/LightingData.asset");
+        let bytes = std::fs::read(&file).unwrap();
+        let data = BuiltinLightingImporter { path_id: 112000000 }
+            .import(&file, &bytes, &Value::Null)
+            .unwrap();
+        let probes = data.probes.unwrap();
+        assert_eq!(
+            (probes.positions.len(), probes.coefficients.len()),
+            (9, 0)
+        );
+        assert!(!probes.tetrahedra.is_empty());
+        assert_eq!(data.renderers.len(), 7);
+        assert!(
+            data.renderers
+                .iter()
+                .all(|r| r.lightmap_index == 0xFFFF && r.lightmap_index_dynamic == 0)
+        );
+    }
+
     #[test]
     fn a_shadowmask_bakes_probe_occlusion() {
         let file = Path::new(env!("CARGO_MANIFEST_DIR"))

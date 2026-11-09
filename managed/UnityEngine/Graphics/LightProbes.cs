@@ -27,6 +27,10 @@ namespace UnityEngine
 
         internal Vector3[] Positions = Array.Empty<Vector3>();
         internal SphericalHarmonicsL2[] Probes = Array.Empty<SphericalHarmonicsL2>();
+        /// <summary>Whether the probes hold baked coefficients. Probes precomputed for realtime GI
+        /// only have none: LightProbes.bakedProbes is empty while count is the number of probes, and
+        /// <see cref="Probes"/> holds zeros (tests/projects/realtimegi).</summary>
+        internal bool Baked = true;
         /// <summary>Per probe, the occlusion of the mixed lights by shadow mask channel.</summary>
         internal Vector4[] Occlusion = Array.Empty<Vector4>();
         internal Cell[] Cells = Array.Empty<Cell>();
@@ -39,6 +43,7 @@ namespace UnityEngine
         {
             Positions = Positions,
             Probes = (SphericalHarmonicsL2[])Probes.Clone(),
+            Baked = Baked,
             Occlusion = Occlusion,
             Cells = Cells,
             HullRays = HullRays,
@@ -277,10 +282,12 @@ namespace UnityEngine
             set.Positions = new Vector3[count];
             set.Probes = new SphericalHarmonicsL2[count];
             set.Occlusion = new Vector4[count];
+            set.Baked = coefficients.Length > 0;
             for (int i = 0; i < count; i++)
             {
                 set.Positions[i] = new Vector3(positions[3 * i], positions[3 * i + 1], positions[3 * i + 2]);
-                for (int k = 0; k < 27; k++) set.Probes[i][k / 9, k % 9] = coefficients[27 * i + k];
+                if (set.Baked)
+                    for (int k = 0; k < 27; k++) set.Probes[i][k / 9, k % 9] = coefficients[27 * i + k];
                 set.Occlusion[i] = Vector4.one;
             }
             if (json.TryGetProperty("occlusion", out var occlusion))
@@ -369,7 +376,7 @@ namespace UnityEngine
 
         public SphericalHarmonicsL2[] bakedProbes
         {
-            get => (SphericalHarmonicsL2[])m_Set.Probes.Clone();
+            get => m_Set.Baked ? (SphericalHarmonicsL2[])m_Set.Probes.Clone() : Array.Empty<SphericalHarmonicsL2>();
             set
             {
                 if (value == null || value.Length != m_Set.Positions.Length)
@@ -378,6 +385,7 @@ namespace UnityEngine
                     return;
                 }
                 m_Set.Probes = (SphericalHarmonicsL2[])value.Clone();
+                m_Set.Baked = true;
             }
         }
 
@@ -386,7 +394,7 @@ namespace UnityEngine
         {
             get
             {
-                var probes = m_Set.Probes;
+                var probes = bakedProbes;
                 var flat = new float[probes.Length * 27];
                 for (int i = 0; i < probes.Length; i++)
                     for (int k = 0; k < 27; k++) flat[i * 27 + k] = probes[i][k / 9, k % 9];
@@ -403,6 +411,7 @@ namespace UnityEngine
                 for (int i = 0; i < probes.Length; i++)
                     for (int k = 0; k < 27; k++) probes[i][k / 9, k % 9] = value[i * 27 + k];
                 m_Set.Probes = probes;
+                m_Set.Baked = true;
             }
         }
 

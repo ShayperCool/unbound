@@ -47,6 +47,37 @@ namespace Unbound.Tests
         });
 
         [Fact]
+        public void RealtimeOnlyProbesHaveNoBakedProbes()
+        {
+            // Precomputed for realtime GI only, the lighting data has positions and cells but no
+            // coefficients: count is the number of probes and bakedProbes is empty
+            // (tests/projects/realtimegi); interpolation reads zeros. Setting baked probes
+            // makes them baked.
+            const string json = @"{
+                ""positions"": [0,0,0, 1,0,0, 0,1,0, 0,0,1],
+                ""coefficients"": [],
+                ""hullRays"": [],
+                ""tetrahedra"": []
+            }";
+            var probes = LightProbes.FromJson(JsonDocument.Parse(json).RootElement);
+            Assert.Equal(4, probes.count);
+            Assert.Empty(probes.bakedProbes);
+#pragma warning disable 618
+            Assert.Empty(probes.coefficients);
+#pragma warning restore 618
+            Assert.Equal(4, probes.m_Set.Probes.Length);
+            Assert.Equal(0f, probes.m_Set.Probes[2][0, 0]);
+            var lit = new SphericalHarmonicsL2[4];
+            lit[1][0, 0] = 0.5f;
+            probes.bakedProbes = lit;
+            Assert.Equal(4, probes.bakedProbes.Length);
+            Assert.Equal(0.5f, probes.bakedProbes[1][0, 0]);
+            // A copy keeps whether the probes are baked.
+            Assert.Equal(4, probes.m_Set.Snapshot().Probes.Length);
+            Assert.True(probes.m_Set.Snapshot().Baked);
+        }
+
+        [Fact]
         public void BakesWithUnusedNaNValuesLoad()
         {
             // The Editor's bakes hold NaN where a value is unused (the hull ray of a probe off the

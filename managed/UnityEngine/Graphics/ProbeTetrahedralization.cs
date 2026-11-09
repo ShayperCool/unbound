@@ -36,7 +36,8 @@ namespace UnityEngine
                 for (int i = 0; i < set.Positions.Length; i++)
                     occlusion.Add(i < set.Occlusion.Length ? set.Occlusion[i] : Vector4.one);
             }
-            var result = new ProbeSet { Positions = positions.ToArray(), Probes = probes.ToArray(), Occlusion = occlusion.ToArray() };
+            // A combination with any baked set reports every probe (zeros for realtime-only sets): unmeasured.
+            var result = new ProbeSet { Positions = positions.ToArray(), Probes = probes.ToArray(), Occlusion = occlusion.ToArray(), Baked = sets.Exists(x => x.Baked) };
             Build(result);
             return result;
         }
