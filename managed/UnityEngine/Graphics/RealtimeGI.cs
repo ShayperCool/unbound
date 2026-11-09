@@ -497,29 +497,18 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>The built-in Lightmap Parameters asset scenes use by default ("Default-Medium",
-        /// unity_builtin_extra): the only parameters the realtime lightmap UVs are measured with.</summary>
-        const long DefaultParametersFileId = 15204;
-        const string BuiltinExtraGuid = "0000000000000000f000000000000000";
-
-        static bool DefaultParameters(ObjectRef parameters) =>
-            parameters.IsNull || (parameters.FileId == DefaultParametersFileId && parameters.Guid == BuiltinExtraGuid);
-
         /// <summary>Each renderer of the system gets its realtime lightmap UVs as its
         /// <see cref="MeshRenderer.enlightenVertexStream"/> (made natively, checked against the
-        /// system's precomputed layout). Returns why they could not be made, or null.</summary>
+        /// system's precomputed layout: Lightmap Parameters that change the charts, such as their
+        /// resolution, fail that check). Returns why they could not be made, or null.</summary>
         static unsafe string RealtimeUVs(GIScene scene, int index, GISystem system, LightingSettings settings)
         {
             float resolution = settings != null ? settings.indirectResolution : 2f;
-            if (settings != null && !DefaultParameters(settings.LightmapParametersRef))
-                return "the scene's Lightmap Parameters are not the default ones (unmeasured for realtime lightmap UVs)";
             for (int r = 0; r < system.Renderers.Length; r++)
             {
                 if (!(system.Renderers[r] is MeshRenderer renderer)) return $"its renderer {r} is missing or not a MeshRenderer (unsupported)";
                 if (!renderer.m_PreserveUVs)
                     return $"'{renderer.name}' has Preserve UVs off: its realtime lightmap UVs need the precompute's automatic charts, which Unbound does not make yet";
-                if (!DefaultParameters(renderer.m_LightmapParameters))
-                    return $"'{renderer.name}' has its own Lightmap Parameters (unmeasured for realtime lightmap UVs)";
                 var mesh = renderer.GetComponent<MeshFilter>()?.sharedMesh;
                 if (mesh == null) return $"'{renderer.name}' has no mesh";
                 for (int sub = 0; sub < mesh.subMeshCount; sub++)

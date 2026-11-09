@@ -34,7 +34,7 @@ impl ProbeSetSolver {
                     Source::Environment
                 } else if *id == ABSENT_ID {
                     Source::Absent
-                } else if let Some(s) = systems.iter().position(|s| s.system().hash == *id) {
+                } else if let Some(s) = systems.iter().position(|s| s.system().input_hash == *id) {
                     Source::System(s)
                 } else {
                     bail!("light probes lit by a precomputed realtime GI system of another scene are not supported yet")

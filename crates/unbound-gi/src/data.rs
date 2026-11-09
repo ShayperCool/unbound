@@ -474,6 +474,9 @@ pub fn read_chart_mask(bytes: &[u8], width: u32, height: u32) -> Result<Vec<u32>
 #[derive(Debug, Clone)]
 pub struct System {
     pub hash: [u8; 16],
+    /// The hash of its input samples: what transports and probe sets name it by as a dependency
+    /// (the system's own hash when a scene has one system; tests/projects/realtimegi RoomSystems).
+    pub input_hash: [u8; 16],
     /// Its renderers: a range of [`Precomputed::renderers`].
     pub first_renderer: usize,
     pub renderer_count: usize,
@@ -641,7 +644,10 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
         bundle
             .file(&path)
             .map(|f| f.data.as_slice())
-            .with_context(|| format!("no {path} in the precomputed realtime GI payload"))
+            .with_context(|| {
+                let names: Vec<&str> = bundle.files.iter().map(|f| f.path.as_str()).collect();
+                format!("no {path} in the precomputed realtime GI payload ({names:?})")
+            })
     };
     let mapping = lighting_data
         .get("m_EnlightenSceneMapping")
@@ -699,13 +705,17 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
         {
             bail!("a system outside the scene mapping");
         }
-        let input = read_input_samples(file(&input_hash, "iws.ref")?)?;
+        // A system's files are named by its hash; when the precompute shares an input
+        // workspace's hash (a scene of one system), that one too (tests/projects/realtimegi
+        // RoomSystems names them by the system's hash alone).
+        let system_file =
+            |ext: &str| file(&hash, ext).or_else(|e| file(&input_hash, ext).map_err(|_| e));
+        let input = read_input_samples(system_file("iws.ref")?)?;
         let transport = read_transport(file(&hash, "rsc.ref")?)?;
         let materials =
-            read_cluster_materials(file(&input_hash, "caw")?, transport.width, transport.height)?;
-        let chart_mask =
-            read_chart_mask(file(&input_hash, "ecm")?, transport.width, transport.height)?;
-        let visibility = file(&input_hash, "vis")
+            read_cluster_materials(system_file("caw")?, transport.width, transport.height)?;
+        let chart_mask = read_chart_mask(system_file("ecm")?, transport.width, transport.height)?;
+        let visibility = system_file("vis")
             .and_then(crate::visibility::Visibility::read)
             .map_err(|e| format!("{e:#}"));
         let size = atlas_sizes[atlas] as usize;
@@ -721,6 +731,7 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
         );
         systems.push(System {
             hash,
+            input_hash,
             first_renderer,
             renderer_count,
             atlas,

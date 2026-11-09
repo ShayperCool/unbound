@@ -17,7 +17,7 @@ renderers take light probes again; area lights are baked only), skybox and gradi
 environment light), light probes that also have baked lighting (also given by a script: realtime
 GI then stops lighting them) or whose probe set cannot be read or placed (they light nothing; the
 lightmaps are drawn), light probes of a scene that are not the current ones (additive loads),
-directional realtime lightmaps, systems that reference other systems, gamma-space
+directional realtime lightmaps, systems that reference another scene's systems, gamma-space
 projects and linear light intensity.
 
 ## Documented contract (6000.0)
@@ -40,7 +40,11 @@ projects and linear light intensity.
 The scene's LightingData asset lists, per renderer, `lightmapIndexDynamic` and
 `lightmapSTDynamic` (the realtime lightmap atlas and the renderer's place in it), a scene
 mapping (renderers per system, each system's atlas and offset, the atlas sizes, probe sets), and
-a payload: a Unity bundle of per-system files named by the system's hash.
+a payload: a Unity bundle of per-system files named by the system's hash (`radiositySystemHash`).
+A transport or probe set names the systems it reads by their `inputSystemHash`; in a scene of one
+system both hashes are the same, in a scene of several (tests/projects/realtimegi `RoomSystems`)
+they differ, and each system's transport references the others' cluster and tree values as well
+as its own.
 
 | File | Content |
 |---|---|
@@ -179,8 +183,10 @@ result in its GI cache, not in the project (a player build stores it in
 `MeshRenderer.enlightenVertexStream`); the LightingData asset holds only where each renderer's UV
 space lies in its system and the system's chart mask. Unbound makes them itself
 (`crates/unbound-gi/src/realtime_uv.rs`, cached in `Library/Unbound/RealtimeUVs` by a hash of
-the inputs and a format version), for renderers with Preserve UVs, the scene's default Lightmap
-Parameters and triangle meshes:
+the inputs and a format version), for renderers with Preserve UVs and triangle meshes, whatever
+their Lightmap Parameters (parameters that change the charts, such as their resolution, fail the
+layout check below; `RoomSystems` gives three renderers parameters of their own with System Tag
+1):
 
 - Charts: the triangles of the lightmap UVs (UV2, else UV1) that share a vertex, or a vertex
   position and UV; in the order of their first triangle.
@@ -209,7 +215,8 @@ realtime lightmap UVs and renders their meta passes into each system's material 
 and after `Renderer.UpdateGIMaterials`. In PostLateUpdate.EnlightenRuntimeUpdate it passes the
 frame's lights (realtime, and mixed ones without baked GI, with bounce intensity) and environment
 to the native update (`crates/unbound-runtime/src/realtime_gi.rs`): one update of every system in
-synchronous mode, else of as many as fit in 2 ms (at least one), without allocating; the scene
+synchronous mode, else of as many as fit in 2 ms (at least one), each system in turn reading the
+other systems' values of their last updates, without allocating; the scene
 is converged once an update of every system left its drawn texels unchanged. Changed atlases are
 uploaded as RGBA half floats; renderers draw them as `unity_DynamicLightmap` with their realtime
 scale and offset and `DYNAMICLIGHTMAP_ON`, and take no light probes. The light probes'
@@ -236,7 +243,7 @@ Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
 ## Unbound plan
 
 - Phase 2, runtime over Unity's precomputed data (above): next, skybox and
-  gradient environments, directional output, several systems; unmeasured inputs fail loudly
+  gradient environments, directional output; unmeasured inputs fail loudly
   until a probe case covers them.
 - Phase 3, Unbound's own precompute from scene geometry (automatic charts for Preserve UVs off,
   system packing, clusters, transport, bounce resampling, probe transport) for projects without precomputed data or with

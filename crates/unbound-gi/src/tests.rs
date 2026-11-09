@@ -655,7 +655,7 @@ fn reads_the_rooms_light_probe_transport() {
     assert_eq!(
         set.dependencies,
         vec![
-            data.systems[0].hash,
+            data.systems[0].input_hash,
             crate::data::ENVIRONMENT_ID,
             crate::data::ABSENT_ID
         ]
@@ -1201,4 +1201,139 @@ fn realtime_uvs_of_another_scene_match_its_layout() {
     assert_eq!(solver.update(), system.transport.segments.len());
     assert!((0..100).any(|_| solver.update() == 0));
     assert!(solver.encoded().iter().any(|&t| t != 0));
+}
+
+/// Per scene renderer object file id, its GameObject's name (from the scene's text YAML).
+fn renderer_names(scene: &str) -> std::collections::HashMap<i64, String> {
+    let text =
+        std::fs::read_to_string(probe().join(format!("Assets/Scenes/{scene}.unity"))).unwrap();
+    let mut owners = std::collections::HashMap::new();
+    let mut names = std::collections::HashMap::new();
+    for doc in text.split("--- !u!").skip(1) {
+        let header = doc.lines().next().unwrap();
+        let (class, id) = header.split_once(" &").unwrap();
+        let id: i64 = id.split_whitespace().next().unwrap().parse().unwrap();
+        let field = |key: &str| {
+            doc.lines()
+                .find_map(|l| l.trim().strip_prefix(key))
+                .map(str::trim)
+        };
+        match class {
+            "1" => {
+                names.insert(id, field("m_Name:").unwrap().to_string());
+            }
+            "23" => {
+                let owner = field("m_GameObject: {fileID:").unwrap();
+                owners.insert(
+                    id,
+                    owner.trim_end_matches('}').trim().parse::<i64>().unwrap(),
+                );
+            }
+            _ => {}
+        }
+    }
+    owners
+        .into_iter()
+        .map(|(renderer, go)| (renderer, names[&go].clone()))
+        .collect()
+}
+
+#[test]
+fn a_scene_of_two_systems_converges_as_the_editors() {
+    // RoomSystems: the Room with the left and right walls and the panel in a second system
+    // (System Tag 1), each system's transport referencing the other's values.
+    let file = probe().join("Assets/Scenes/RoomSystems/LightingData.asset");
+    let bytes = std::fs::read(file).unwrap();
+    let serialized = unbound_assets::serialized::SerializedFile::parse(&bytes).unwrap();
+    let data = read_precomputed(&serialized.read(112000000).unwrap())
+        .unwrap()
+        .unwrap();
+    assert_eq!(data.systems.len(), 2);
+    for (k, s) in data.systems.iter().enumerate() {
+        let other = data.systems[1 - k].input_hash;
+        assert!(
+            s.transport.dependencies.contains(&other),
+            "system {k} does not reference the other"
+        );
+    }
+    let names = renderer_names("RoomSystems");
+    let scene: Vec<Arc<System>> = data.systems.iter().cloned().map(Arc::new).collect();
+    let mut solvers: Vec<SystemSolver> = scene
+        .iter()
+        .map(|s| SystemSolver::new_in_scene(s.clone(), true, &scene).unwrap())
+        .collect();
+    let white = [0.8, 0.8, 0.8];
+    for (solver, system) in solvers.iter_mut().zip(&scene) {
+        let colors: Vec<([f32; 3], [f32; 3])> = data.renderers[system.first_renderer..]
+            [..system.renderer_count]
+            .iter()
+            .map(|(object, _)| match names[object].as_str() {
+                "Panel" => ([0.2, 0.2, 0.2], BASE.panel_emission),
+                "Left" => (BASE.left, [0.0; 3]),
+                "Right" => ([0.1, 0.8, 0.1], [0.0; 3]),
+                _ => (white, [0.0; 3]),
+            })
+            .collect();
+        let (albedo, emission) = material_textures(system, &colors);
+        solver.set_albedo(&albedo).unwrap();
+        solver.set_emission(&emission).unwrap();
+        solver.set_uniform_environment(BASE.ambient.map(gamma_to_linear));
+        solver
+            .set_lights(&[Light {
+                color: [1.0, 0.95, 0.85].map(|c: f32| gamma_to_linear(c * 2.0)),
+                kind: LightKind::Point {
+                    position: BASE.light,
+                    range: 10.0,
+                },
+            }])
+            .unwrap();
+    }
+    let mut last: Vec<Vec<u32>> = solvers.iter().map(|s| s.encoded().to_vec()).collect();
+    let mut converged = false;
+    for _ in 0..1000 {
+        for k in 0..solvers.len() {
+            crate::solver::update_in(&mut solvers, k);
+        }
+        let now: Vec<Vec<u32>> = solvers.iter().map(|s| s.encoded().to_vec()).collect();
+        if now == last {
+            converged = true;
+            break;
+        }
+        last = now;
+    }
+    assert!(converged);
+    let (width, texels) = reference("roomsystems-base");
+    let (mut fails, mut total) = (0, 0);
+    for (solver, system) in solvers.iter().zip(&scene) {
+        let t = &system.transport;
+        let (ox, oy) = (
+            system.atlas_offset.0 as usize,
+            system.atlas_offset.1 as usize,
+        );
+        for y in 0..t.height as usize {
+            for x in 0..t.width as usize {
+                let r = texels[(oy + y) * width + ox + x];
+                if r[3] <= 0.0 {
+                    continue;
+                }
+                let got = crate::solver::decode_rgb9e5(solver.encoded()[y * t.width as usize + x]);
+                for k in 0..3 {
+                    total += 1;
+                    if (got[k] - r[k]).abs() > 0.02 + 0.05 * r[k].abs() {
+                        fails += 1;
+                        eprintln!(
+                            "  ({},{}) channel {k}: {} vs {}",
+                            ox + x,
+                            oy + y,
+                            got[k],
+                            r[k]
+                        );
+                    }
+                }
+            }
+        }
+    }
+    eprintln!("roomsystems-base: {fails} of {total} values outside the tolerance");
+    assert!(total > 4000, "{total} values");
+    assert!(fails <= ISOLATED, "{fails} values outside the tolerance");
 }

@@ -198,8 +198,14 @@ pub fn decode_rgb9e5(v: u32) -> [f32; 3] {
 enum Source {
     Environment,
     Own,
+    /// Another system of the scene (its index among them).
+    System(usize),
     Absent,
 }
+
+/// The input values of the scene's other systems a system's update reads: their cluster, tree and
+/// constant values of their last update and how much each changed in it.
+type OtherValues<'a> = &'a dyn Fn(usize) -> (&'a [[f32; 3]], &'a [f32]);
 
 /// One system's state between updates.
 pub struct SystemSolver {
@@ -340,10 +346,40 @@ fn shade_lights(
     Ok(())
 }
 
+/// Updates system `index` of a scene's `systems` ([`SystemSolver::new_in_scene`]), reading the
+/// other systems' values of their last updates. Returns the number of segments solved.
+pub fn update_in(systems: &mut [SystemSolver], index: usize) -> usize {
+    let (before, rest) = systems.split_at_mut(index);
+    let (system, after) = rest
+        .split_first_mut()
+        .expect("a system index within the scene");
+    let others = |other: usize| -> (&[[f32; 3]], &[f32]) {
+        let s = if other < index {
+            &before[other]
+        } else {
+            &after[other - index - 1]
+        };
+        (&s.values, &s.changes)
+    };
+    system.update_with(&others)
+}
+
 impl SystemSolver {
     /// `linear_space`: the project's color space is linear (gamma-space projects are not measured
     /// and fail). Fails for transports that reference other systems (not supported yet).
     pub fn new(system: Arc<System>, linear_space: bool) -> Result<Self> {
+        let scene = [system.clone()];
+        Self::new_in_scene(system, linear_space, &scene)
+    }
+
+    /// A system of a scene whose systems are `scene` (in order; it is one of them): its
+    /// transport may reference the others' values. A reference to a system not among them
+    /// (another scene's) fails.
+    pub fn new_in_scene(
+        system: Arc<System>,
+        linear_space: bool,
+        scene: &[Arc<System>],
+    ) -> Result<Self> {
         if !linear_space {
             bail!("precomputed realtime GI in a gamma-space project is not supported yet");
         }
@@ -354,13 +390,15 @@ impl SystemSolver {
             .map(|id| {
                 Ok(if *id == ENVIRONMENT_ID {
                     Source::Environment
-                } else if *id == system.hash {
+                } else if *id == system.input_hash {
                     Source::Own
                 } else if *id == ABSENT_ID {
                     Source::Absent
+                } else if let Some(other) = scene.iter().position(|s| s.input_hash == *id) {
+                    Source::System(other)
                 } else {
                     bail!(
-                        "precomputed realtime GI that references other systems is not supported yet"
+                        "precomputed realtime GI that references a system of another scene is not supported yet"
                     )
                 })
             })
@@ -379,6 +417,7 @@ impl SystemSolver {
                 let limit = match sources[dependency as usize] {
                     Source::Environment => ENVIRONMENT_VALUES,
                     Source::Own => values,
+                    Source::System(other) => scene[other].input.values(),
                     Source::Absent => continue,
                 };
                 if index as usize >= limit {
@@ -579,6 +618,15 @@ impl SystemSolver {
     /// whose inputs changed enough, and the next bounce. Returns the number of segments solved:
     /// 0 when the output is converged.
     pub fn update(&mut self) -> usize {
+        debug_assert!(
+            !self.sources.iter().any(|s| matches!(s, Source::System(_))),
+            "a system that references others updates with update_in"
+        );
+        self.update_with(&|_| (&[], &[]))
+    }
+
+    /// The update of a system whose transport reads the other systems' values (`others`).
+    fn update_with(&mut self, others: OtherValues) -> usize {
         self.update_emission();
         let system = &*self.system;
         let clusters = self.direct.len();
@@ -630,6 +678,10 @@ impl SystemSolver {
                         self.environment_changes[index as usize],
                     ),
                     Source::Own => (self.values[index as usize], self.changes[index as usize]),
+                    Source::System(other) => {
+                        let (values, changes) = others(other);
+                        (values[index as usize], changes[index as usize])
+                    }
                     Source::Absent => ([0.0; 3], 0.0),
                 };
                 let w = segment.reference_weights[k] as f32 * TRANSPORT_SCALE;

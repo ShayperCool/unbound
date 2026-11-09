@@ -344,9 +344,6 @@ namespace UnityEngine
 
         Object Instantiation.ICloneable.CloneObject() => new LightingSettings { m_State = m_State };
 
-        /// <summary>The scene's default Lightmap Parameters asset reference (null without one).</summary>
-        internal Unbound.Runtime.ObjectRef LightmapParametersRef => m_State.LightmapParameters;
-
         public enum Lightmapper
         {
             [Obsolete("Use Lightmapper.ProgressiveCPU instead. (UnityUpgradable) -> UnityEngine.LightingSettings/Lightmapper.ProgressiveCPU")] Enlighten = 0,

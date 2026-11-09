@@ -202,10 +202,11 @@ fn register(
         .iter()
         .map(|s| data.renderer_st[s.first_renderer..s.first_renderer + s.renderer_count].to_vec())
         .collect();
-    let systems = data
-        .systems
-        .into_iter()
-        .map(|s| SystemSolver::new(Arc::new(s), linear_space))
+    let scene: Vec<Arc<unbound_gi::data::System>> =
+        data.systems.into_iter().map(Arc::new).collect();
+    let systems = scene
+        .iter()
+        .map(|s| SystemSolver::new_in_scene(s.clone(), linear_space, &scene))
         .collect::<Result<Vec<_>>>()?;
     // Each probe set lights the LightProbes range of its hash; one without a range, or of
     // another size, lights nothing (reported).
@@ -411,8 +412,8 @@ impl Scene {
         {
             let index = self.cursor % count;
             self.cursor = (index + 1) % count;
-            let system = &mut self.systems[index];
-            system.update();
+            unbound_gi::solver::update_in(&mut self.systems, index);
+            let system = &self.systems[index];
             let atlas = &mut self.atlases[system.system().atlas];
             let drawn = copy_into(system, atlas);
             self.changed |= drawn;
