@@ -113,6 +113,13 @@ public static class ProbeRunner
                     importer.heightmapScale = F(args[1]);
                     break;
                 case "flipgreen": importer.flipGreenChannel = value == "1"; break;
+                case "matte":
+                {
+                    var serialized = new SerializedObject(importer);
+                    serialized.FindProperty("m_PSDRemoveMatte").boolValue = value == "1";
+                    serialized.ApplyModifiedPropertiesWithoutUndo();
+                    break;
+                }
                 case "maxsize": break;
                 case "format": break;
                 default: throw new ArgumentException("unknown texture case setting " + setting);

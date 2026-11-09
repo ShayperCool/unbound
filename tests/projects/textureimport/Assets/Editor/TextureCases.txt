@@ -82,3 +82,10 @@ Psd16RgbaRle
 Psd16Gray srgb=0
 Psd8RgbaRle
 Png16Rgba
+PsdMatte mips=0 srgb=0
+PsdMatteOn mips=0 srgb=0 matte=1
+PsdMatteOff mips=0 srgb=0 matte=0
+PsdMatteFlat mips=0 srgb=0
+PsdMatte5 mips=0 srgb=0
+PsdGrayAlpha mips=0 srgb=0
+PsdMatteNoKey mips=0 srgb=0

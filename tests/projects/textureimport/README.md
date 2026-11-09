@@ -11,7 +11,11 @@ Mitchell and Bilinear resize algorithms (also soft 512x512 and 600x360 images an
 downscaled to 128 and 256 rows), and normal maps: plain, with Kaiser mips, flipped green
 and fading, and made from grayscale with the standard and Sobel filters at eleven height scales,
 three sizes, gray and coloured sources and impulses (filter kernels). Photoshop files (16-bit raw RGB, 16-bit PackBits RGBA, 16-bit gray, 8-bit PackBits RGBA) and a
-16-bit PNG show how deep channels become bytes (the byte nearest v / 257, gray as (g, g, g, a)).
+16-bit PNG show how deep channels become bytes (the byte nearest v / 257; gray reads opaque,
+whatever extra channels it has). Flattened colour over white with Photoshop's merged-transparency
+mark (a negative layer count) shows Remove Matte (`pSDRemoveMatte`, default off, also when the
+`.meta` lacks the key: PsdMatteNoKey's line is removed after `ProbeRunner.Create`), a file without
+the mark and a 5-channel file (the first extra channel is alpha).
 Every case is readable and
 stored as RGBA32, the float case as RGBAFloat (platform overrides; uncompressed default platform),
 so compression hides nothing.

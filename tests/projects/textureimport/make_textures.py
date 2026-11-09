@@ -263,11 +263,33 @@ def packbits(data):
     return bytes(out)
 
 
-def psd(path, width, height, pixels, depth, rle):
-    """A flattened Photoshop file (no layers): pixels rows top-down of channel tuples (1 gray,
-    3 RGB, 4 RGBA), 8- or 16-bit, raw or PackBits-compressed planar channels."""
+def matted(w, h, seed, channels):
+    """Photoshop's flattened colour over white: alpha steps through 0, 1, 2, ..., 255 and a few
+    random values; colour c is stored as c * a / 255 + 255 - a, rounded. A 5th channel (if any)
+    is a spot channel of noise."""
+    rng = Lcg(seed)
+    rows = []
+    for y in range(h):
+        row = []
+        for x in range(w):
+            a = (y * w + x) % 256 if (x + y) % 5 else rng.byte()
+            colour = [rng.byte() for _ in range(3)]
+            stored = [(c * a + 255 * (255 - a) + 127) // 255 for c in colour]
+            texel = (stored[0], a) if channels == 2 else tuple(stored) + (a,)
+            if channels == 5:
+                texel += (rng.byte(),)
+            row.append(texel)
+        rows.append(row)
+    return w, h, rows
+
+
+def psd(path, width, height, pixels, depth, rle, merged_alpha=False):
+    """A flattened Photoshop file: pixels rows top-down of channel tuples (1 or 2 gray and alpha,
+    3 RGB, 4 RGBA, 5 RGBA and a spot channel), 8- or 16-bit, raw or PackBits-compressed planar
+    channels. Without layers, or with `merged_alpha` one empty layer and a negative layer count
+    (Photoshop's mark that the first extra channel is the flattened image's transparency)."""
     channels = len(pixels[0][0])
-    mode = 1 if channels == 1 else 3
+    mode = 1 if channels <= 2 else 3
     header = (b'8BPS' + struct.pack('>H', 1) + b'\0' * 6
               + struct.pack('>HIIHH', channels, height, width, depth, mode))
     planes = []
@@ -282,7 +304,17 @@ def psd(path, width, height, pixels, depth, rle):
         data = struct.pack('>H', 1) + b''.join(struct.pack('>H', len(p)) for p in packed) + b''.join(packed)
     else:
         data = struct.pack('>H', 0) + b''.join(planes)
-    path.write_bytes(header + struct.pack('>III', 0, 0, 0) + data)
+    layers = b''
+    if merged_alpha:
+        # One empty layer (0x0, four channels of 2 bytes: their compression code only).
+        record = (struct.pack('>iiiiH', 0, 0, 0, 0, 4)
+                  + b''.join(struct.pack('>hI', c, 2) for c in (-1, 0, 1, 2))
+                  + b'8BIMnorm' + bytes([255, 0, 0, 0])
+                  + struct.pack('>I', 12) + struct.pack('>II', 0, 0) + b'\0\0\0\0')
+        info = struct.pack('>h', -1) + record + b'\0\0' * 4
+        info += b'\0' * (len(info) % 2)
+        layers = struct.pack('>I', len(info)) + info + struct.pack('>I', 0)
+    path.write_bytes(header + struct.pack('>II', 0, 0) + struct.pack('>I', len(layers)) + layers + data)
 
 
 def png16(path, width, height, pixels):
@@ -321,6 +353,10 @@ SOURCES = {
 FLOAT_SOURCES = {'SoftHdr'}
 # Sources written as other files: (writer, arguments after the image).
 FILE_SOURCES = {
+    'Matte': ('psd', 8, True, True),
+    'Matte5': ('psd', 8, True, True),
+    'MatteFlat': ('psd', 8, False, False),
+    'GrayAlpha': ('psd', 8, False),
     'Deep': ('psd', 16, False),
     'DeepAlphaRle': ('psd', 16, True),
     'DeepGray': ('psd', 16, False),
@@ -328,6 +364,10 @@ FILE_SOURCES = {
     'Deep16Png': ('png16',),
 }
 SOURCES.update({
+    'Matte': lambda: matted(32, 32, 25, 4),
+    'Matte5': lambda: matted(32, 32, 26, 5),
+    'MatteFlat': lambda: matted(32, 32, 25, 4),
+    'GrayAlpha': lambda: matted(32, 32, 27, 2),
     'Deep': lambda: deep(32, 32, 21, 3),
     'DeepAlphaRle': lambda: deep(32, 32, 22, 4),
     'DeepGray': lambda: deep(32, 32, 23, 1),
@@ -425,6 +465,17 @@ CASES = {
     'Psd16Gray': ('DeepGray', 'srgb=0'),
     'Psd8RgbaRle': ('PsdRle', ''),
     'Png16Rgba': ('Deep16Png', ''),
+    # Flattened colour over white with a merged-transparency mark (default, Remove Matte on and
+    # off), the same without the mark, 5 channels (the 5th a spot channel) and gray with alpha.
+    'PsdMatte': ('Matte', 'mips=0 srgb=0'),
+    'PsdMatteOn': ('Matte', 'mips=0 srgb=0 matte=1'),
+    'PsdMatteOff': ('Matte', 'mips=0 srgb=0 matte=0'),
+    'PsdMatteFlat': ('MatteFlat', 'mips=0 srgb=0'),
+    'PsdMatte5': ('Matte5', 'mips=0 srgb=0'),
+    'PsdGrayAlpha': ('GrayAlpha', 'mips=0 srgb=0'),
+    # Its .meta has the pSDRemoveMatte line removed after ProbeRunner.Create (as in metas written
+    # before the setting existed).
+    'PsdMatteNoKey': ('Matte', 'mips=0 srgb=0'),
 }
 
 
