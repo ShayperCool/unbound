@@ -197,7 +197,11 @@ namespace UnityEngine
                     {
                         first ??= sm.Topology;
                         if (first != sm.Topology) MixedTopology = true;
-                        if (sm.Topology == MeshTopology.Lines || sm.Topology == MeshTopology.LineStrip) Segments = true;
+                        // Edge and Vertex sample every entry as a segment when the submeshes
+                        // sampled hold lines; a triangle submesh picked alone keeps the triangle
+                        // rules beside a lines submesh (tests/projects/particlemeshshape
+                        // topology/mixed0, mixed1).
+                        if ((subMesh < 0 || s == subMesh) && (sm.Topology == MeshTopology.Lines || sm.Topology == MeshTopology.LineStrip)) Segments = true;
                     }
                     if (subMesh >= 0 && s != subMesh) continue;
                     count += Primitives(sm.Topology, sm.Indices.Length);
@@ -329,6 +333,13 @@ namespace UnityEngine
                 case ParticleSystemShapeType.Mesh:
                     topologyMesh = S.mesh;
                     return S.mesh;
+                // The sprite's geometry in the shape's own frame: a SpriteRenderer's transform and
+                // flip do not apply (6000.0.71f1, tests/projects/particlemeshshape sprite/renderer/*).
+                case ParticleSystemShapeType.Sprite:
+                case ParticleSystemShapeType.SpriteRenderer:
+                    var sprite = S.shapeType == ParticleSystemShapeType.Sprite ? S.sprite : S.spriteRenderer != null ? S.spriteRenderer.sprite : null;
+                    topologyMesh = sprite != null ? sprite.ParticleShapeMesh() : null;
+                    return topologyMesh;
                 case ParticleSystemShapeType.MeshRenderer:
                     if (S.meshRenderer != null)
                     {

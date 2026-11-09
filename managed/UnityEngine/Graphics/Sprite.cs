@@ -25,6 +25,8 @@ namespace UnityEngine
         /// <summary>OverrideGeometry replaced the mesh: the bounds follow its vertices.</summary>
         bool m_GeometryOverridden;
         internal Mesh m_Mesh;
+        /// <summary>The geometry the particle Shape module samples (see ParticleShapeMesh).</summary>
+        Mesh m_ShapeMesh;
         /// <summary>The secondary textures (an imported sprite's are loaded when first asked for).</summary>
         SecondarySpriteTexture[] m_SecondaryTextures;
         (string Name, string Guid)[] m_SecondaryGuids;
@@ -282,6 +284,7 @@ namespace UnityEngine
             m_Triangles = (ushort[])triangles.Clone();
             m_GeometryOverridden = true;
             m_Mesh = null;
+            m_ShapeMesh = null;
         }
 
         /// <summary>The normal and tangent a sprite renderer gives every vertex: towards the camera,
@@ -314,6 +317,25 @@ namespace UnityEngine
             for (int i = 0; i < tris.Length; i++) tris[i] = m_Triangles[i];
             mesh.triangles = tris;
             m_Mesh = mesh;
+            return mesh;
+        }
+
+        /// <summary>The sprite's geometry as the particle Shape module's Sprite and SpriteRenderer
+        /// shapes sample it: its vertices in units from the pivot, its UVs as channel 0, no normals
+        /// (particles leave along +z) and no colours (6000.0.71f1,
+        /// tests/projects/particlemeshshape sprite/*).</summary>
+        internal Mesh ParticleShapeMesh()
+        {
+            if (m_ShapeMesh != null) return m_ShapeMesh;
+            var mesh = new Mesh { name = "Sprite shape " + m_Name };
+            var positions = new Vector3[m_Vertices.Length];
+            for (int i = 0; i < positions.Length; i++) positions[i] = m_Vertices[i];
+            mesh.vertices = positions;
+            mesh.uv = m_UV;
+            var tris = new int[m_Triangles.Length];
+            for (int i = 0; i < tris.Length; i++) tris[i] = m_Triangles[i];
+            mesh.triangles = tris;
+            m_ShapeMesh = mesh;
             return mesh;
         }
     }

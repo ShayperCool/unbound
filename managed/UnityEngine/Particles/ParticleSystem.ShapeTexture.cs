@@ -43,7 +43,6 @@ namespace UnityEngine
         /// the particle.</summary>
         bool m_ShapeTextureDiscarded;
         bool m_ShapeTextureUnbatchedClipReported;
-        bool m_ShapeTextureUnsupportedReported;
 
         enum ShapeUv : byte { None, Set, Missing }
 
@@ -130,6 +129,8 @@ namespace UnityEngine
                 case ParticleSystemShapeType.Mesh:
                 case ParticleSystemShapeType.MeshRenderer:
                 case ParticleSystemShapeType.SkinnedMeshRenderer:
+                case ParticleSystemShapeType.Sprite:
+                case ParticleSystemShapeType.SpriteRenderer:
                     return true;
                 default:
                     return false;
@@ -176,18 +177,8 @@ namespace UnityEngine
             var S = m_Shape;
             var texture = S.texture;
             if (!S.enabled || texture == null) return true;
-            if (!ShapeTextureMapped(S.shapeType))
-            {
-                // The obsolete shell types leave the colour as it is (measured); the sprite
-                // shapes' mapping is not measured.
-                bool sprite = S.shapeType == ParticleSystemShapeType.Sprite || S.shapeType == ParticleSystemShapeType.SpriteRenderer;
-                if (sprite && !m_ShapeTextureUnsupportedReported)
-                {
-                    m_ShapeTextureUnsupportedReported = true;
-                    ReportUnsupported("shape texture on a " + S.shapeType + " shape (its texture mapping is not measured)");
-                }
-                return true;
-            }
+            // The obsolete shell types leave the colour as it is (measured).
+            if (!ShapeTextureMapped(S.shapeType)) return true;
             if (m_ShapeUvState == ShapeUv.Missing) return false;
             if (m_ShapeUvState != ShapeUv.Set) return true;
             if (!ReferenceEquals(texture, m_ShapeTextureKey))

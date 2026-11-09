@@ -687,6 +687,16 @@ public class MeshShapeProbe : MonoBehaviour
         foreach (var (name, mesh) in meshes)
             foreach (var t in s_Types)
                 Run($"topology/{name}/{T(t)}", Make("v", ParticleSystemShapeType.Mesh, t, mesh, 12));
+        // Its triangle submesh alone (Single Material 0): whether the lines beside it still make
+        // Edge and Vertex sample its triangle as segments.
+        foreach (var t in s_Types)
+        {
+            var ps = Make("w", ParticleSystemShapeType.Mesh, t, meshes[4].Item2, 12);
+            var s = ps.shape;
+            s.useMeshMaterialIndex = true;
+            s.meshMaterialIndex = 0;
+            Run($"topology/mixed0/{T(t)}", ps);
+        }
         // The mixed mesh's lines submesh alone (Single Material).
         foreach (var t in s_Types)
         {
@@ -788,6 +798,45 @@ public class MeshShapeProbe : MonoBehaviour
 
     void Start() => StartCoroutine(Probe());
 
+    /// <summary>The Sprite and SpriteRenderer shapes (<c>sprite/*</c>): a full-rect sprite cut from
+    /// the coordinate texture (rect 64, 32, 128 x 96, pivot 0.25, 0.75, 32 pixels per unit) for
+    /// each mesh type, with the coordinate texture as the shape texture and without it, a missing
+    /// UV channel, and a SpriteRenderer moved, turned and scaled, also flipped in x.</summary>
+    static void SpriteScenarios()
+    {
+        var coords = CoordTexture();
+        var sprite = Sprite.Create(coords, new Rect(64f, 32f, 128f, 96f), new Vector2(0.25f, 0.75f), 32f, 0, SpriteMeshType.FullRect);
+        ParticleSystem Shaped(ParticleSystemShapeType type, ParticleSystemMeshShapeType meshType, Texture2D texture)
+        {
+            var ps = Make("sprite", type, meshType, null);
+            var s = ps.shape;
+            if (type == ParticleSystemShapeType.Sprite) s.sprite = sprite;
+            s.texture = texture;
+            return ps;
+        }
+        foreach (var t in s_Types)
+        {
+            Run("sprite/texture/" + T(t), Shaped(ParticleSystemShapeType.Sprite, t, coords));
+            Run("sprite/plain/" + T(t), Shaped(ParticleSystemShapeType.Sprite, t, null));
+        }
+        var missing = Shaped(ParticleSystemShapeType.Sprite, ParticleSystemMeshShapeType.Triangle, coords);
+        var sm = missing.shape; sm.textureUVChannel = 1;
+        Run("sprite/uvchannel/1", missing);
+        foreach (bool flip in new[] { false, true })
+        {
+            var holder = new GameObject("sprite renderer");
+            holder.transform.SetPositionAndRotation(new Vector3(2f, 1f, -0.5f), Quaternion.Euler(10f, 20f, 30f));
+            holder.transform.localScale = new Vector3(2f, 0.5f, 1f);
+            var renderer = holder.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.flipX = flip;
+            var ps = Shaped(ParticleSystemShapeType.SpriteRenderer, ParticleSystemMeshShapeType.Triangle, coords);
+            var s = ps.shape; s.spriteRenderer = renderer;
+            Run("sprite/renderer/" + (flip ? "flipx" : "plain"), ps);
+            Destroy(holder);
+        }
+    }
+
     System.Collections.IEnumerator Probe()
     {
         yield return null;
@@ -801,6 +850,7 @@ public class MeshShapeProbe : MonoBehaviour
             LineScenarios();
             SpreadScenarios();
             ObsoleteShapes();
+            SpriteScenarios();
         }
         catch (Exception e)
         {

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using Xunit;
 
@@ -307,6 +308,30 @@ namespace UnityEngine.Tests
                     Assert.InRange(Mathf.Abs(p.position.z - 5f), 0f, 1e-5f);
                     Assert.True(InTriangle(p.position, s_Vertices[3], s_Vertices[4], s_Vertices[5], out _), $"{p.position} is outside submesh 1");
                 }
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void ATriangleSubmeshPickedBesideLinesKeepsTheTriangleVertexRule()
+        {
+            // Single Material 0 of a triangle submesh beside a lines submesh: Vertex picks all three
+            // corners, as for a mesh of triangles only (the segment rule would never pick the
+            // third); tests/projects/particlemeshshape topology/mixed0.
+            var mesh = new Mesh { vertices = new[] { new Vector3(0f, 0f, 0f), new Vector3(2f, 0f, 0f), new Vector3(2f, 1f, 0f), new Vector3(0f, 1f, 0f) } };
+            mesh.subMeshCount = 2;
+            mesh.SetIndices(new[] { 0, 1, 2 }, MeshTopology.Triangles, 0);
+            mesh.SetIndices(new[] { 2, 3, 3, 0 }, MeshTopology.Lines, 1);
+            var ps = Make(mesh, ParticleSystemMeshShapeType.Vertex);
+            try
+            {
+                var shape = ps.shape;
+                shape.useMeshMaterialIndex = true;
+                shape.meshMaterialIndex = 0;
+                ps.Emit(60);
+                var corners = new HashSet<Vector3>();
+                foreach (var p in Read(ps)) corners.Add(p.position);
+                Assert.Equal(new HashSet<Vector3> { mesh.vertices[0], mesh.vertices[1], mesh.vertices[2] }, corners);
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
         }

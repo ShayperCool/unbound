@@ -1503,10 +1503,13 @@ namespace UnityEngine
                 case ParticleSystemShapeType.Mesh:
                 case ParticleSystemShapeType.MeshRenderer:
                 case ParticleSystemShapeType.SkinnedMeshRenderer:
+                case ParticleSystemShapeType.Sprite:
+                case ParticleSystemShapeType.SpriteRenderer:
                     SampleMeshShape(out pos, out dir);
                     break;
                 default:
-                    SampleSpriteShape(out pos, out dir);
+                    pos = Vector3.zero;
+                    dir = Vector3.forward;
                     break;
             }
 
@@ -1576,23 +1579,6 @@ namespace UnityEngine
         }
 
         static float Frac(float x) => x - Mathf.Floor(x);
-
-        /// <summary>Sprite and SpriteRenderer shapes: a point of the sprite's rectangle; a unit box
-        /// without a sprite.</summary>
-        void SampleSpriteShape(out Vector3 pos, out Vector3 dir)
-        {
-            var S = m_Shape;
-            Sprite sprite = S.shapeType == ParticleSystemShapeType.SpriteRenderer && S.spriteRenderer != null ? S.spriteRenderer.sprite : S.sprite;
-            if (sprite != null)
-            {
-                var b = sprite.bounds;
-                pos = new Vector3(Mathf.Lerp(b.min.x, b.max.x, ShapeValue()), Mathf.Lerp(b.min.y, b.max.y, ShapeValue()), 0f);
-                dir = Vector3.forward;
-                return;
-            }
-            pos = new Vector3(ShapeValue() - 0.5f, ShapeValue() - 0.5f, ShapeValue() - 0.5f);
-            dir = Vector3.forward;
-        }
 
         // Height precedes azimuth in the shared shape stream (ShapeModifierDirection draws
         // them the other way round).

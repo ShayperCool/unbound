@@ -640,5 +640,68 @@ namespace UnityEngine.Tests
             }
             finally { Object.DestroyImmediate(go); }
         }
+
+        [Theory]
+        [InlineData(ParticleSystemShapeType.Sprite)]
+        [InlineData(ParticleSystemShapeType.SpriteRenderer)]
+        public void ASpriteShapeEmitsFromTheSpriteGeometryAndReadsItsUVs(ParticleSystemShapeType type)
+        {
+            // A full-rect sprite of texels 2..5 x 1..4 of an 8x8 texture, pivot at its centre,
+            // 1 pixel per unit: every particle lies in its 4x4 rect around the pivot, leaves along
+            // +z and reads the texel under it (tests/projects/particlemeshshape sprite/*); a
+            // SpriteRenderer's transform does not move the particles.
+            var texture = Coords(8);
+            var sprite = Sprite.Create(texture, new Rect(2f, 1f, 4f, 4f), new Vector2(0.5f, 0.5f), 1f, 0, SpriteMeshType.FullRect);
+            var ps = Make(type, texture);
+            var holder = new GameObject("sprite renderer");
+            try
+            {
+                var main = ps.main; main.startSpeed = 1f;
+                var shape = ps.shape;
+                if (type == ParticleSystemShapeType.Sprite) shape.sprite = sprite;
+                else
+                {
+                    holder.transform.SetPositionAndRotation(new Vector3(5f, 0f, 0f), Quaternion.Euler(0f, 0f, 45f));
+                    var renderer = holder.AddComponent<SpriteRenderer>();
+                    renderer.sprite = sprite;
+                    shape.spriteRenderer = renderer;
+                }
+                ps.Emit(200);
+                var particles = Read(ps);
+                Assert.Equal(200, particles.Length);
+                Assert.Empty(m_Logs);
+                foreach (var p in particles)
+                {
+                    Assert.InRange(p.position.x, -2f, 2f);
+                    Assert.InRange(p.position.y, -2f, 2f);
+                    Assert.Equal(Vector3.forward, p.velocity);
+                    int tx = Mathf.Min((int)((p.position.x + 4f) * 0.9999f), 7), ty = Mathf.Min((int)((p.position.y + 3f) * 0.9999f), 7);
+                    Assert.Equal(tx * 32, p.startColor.r);
+                    Assert.Equal(ty * 32, p.startColor.g);
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(ps.gameObject);
+                Object.DestroyImmediate(holder);
+            }
+        }
+
+        [Fact]
+        public void ASpriteShapeWithAMissingUVChannelDiscardsEveryParticle()
+        {
+            var texture = Coords(8);
+            var ps = Make(ParticleSystemShapeType.Sprite, texture);
+            try
+            {
+                var shape = ps.shape;
+                shape.sprite = Sprite.Create(texture, new Rect(0f, 0f, 8f, 8f), new Vector2(0.5f, 0.5f), 8f, 0, SpriteMeshType.FullRect);
+                shape.textureUVChannel = 1;
+                ps.Emit(20);
+                ps.Simulate(0.02f, false, false);
+                Assert.Equal(0, ps.particleCount);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
     }
 }
