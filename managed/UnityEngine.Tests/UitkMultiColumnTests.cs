@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.UIElements;
 using UnityEngine.UIElements.Internal;
+using Unbound.UIElements;
 using Xunit;
 
 // MultiColumnListView, MultiColumnTreeView and their column layout. The probe
@@ -58,6 +60,8 @@ namespace UnityEngine.Tests
             Assert.Equal(Column.kDefaultMinWidth, columns["name"].desiredWidth);
         }
 
+        // The layout's own arithmetic for one header width after another (the probe's grow steps
+        // record the Editor's widths as the header is laid out).
         [Fact]
         public void GrowModeKeepsPreferredWidthsUntilTheHeaderGrows()
         {
@@ -154,11 +158,15 @@ namespace UnityEngine.Tests
             var header = f.View.viewController.header;
             Assert.Equal("1", header.columnDataMap[f.View.columns["flag"]].control.sortOrderLabel);
             Assert.Equal("2", header.columnDataMap[f.View.columns["value"]].control.sortOrderLabel);
-            // Sorting off: source order again, and no description is matched.
+            // Sorting turned off matches no description but keeps the last order (as the Editor does,
+            // tests/projects/uitkcollections, columns mode-none-only).
             f.View.sortingMode = ColumnSortingMode.None;
             Layout(f.Panel);
             Assert.Equal(3, changes);
             Assert.Empty(f.View.sortedColumns);
+            f.View.RefreshItems();
+            Layout(f.Panel);
+            Assert.Equal("name18", f.FirstCellText(0));
         }
 
         [Fact]
@@ -170,6 +178,61 @@ namespace UnityEngine.Tests
             Layout(f.Panel);
             Assert.Single(f.View.sortedColumns);
             Assert.Equal("name0", f.FirstCellText(0));
+        }
+
+        [Fact]
+        public void StretchableColumnsLaidOutAtZeroWidthShareTheRest()
+        {
+            var columns = new Columns();
+            columns.Add(new Column { name = "a", stretchable = true, minWidth = 0 });
+            columns.Add(new Column { name = "b", stretchable = true, minWidth = 0 });
+            var layout = new ColumnLayout(columns);
+            layout.DoLayout(0);
+            columns.Add(new Column { name = "c", stretchable = true, minWidth = 0 });
+            layout.DoLayout(90);
+            Assert.All(columns.visibleColumns, c => Assert.False(float.IsNaN(c.desiredWidth)));
+            Assert.Equal(90f, columns.visibleColumns.Sum(c => c.desiredWidth), 3);
+        }
+
+        [Fact]
+        public void ADisposedLayoutNoLongerFollowsItsColumns()
+        {
+            var columns = ThreeColumns();
+            var layout = new ColumnLayout(columns);
+            layout.DoLayout(256);
+            int requests = 0;
+            layout.layoutRequested += () => requests++;
+            layout.Dispose();
+            columns["value"].visible = false;
+            columns.Add(new Column { name = "extra", width = 30 });
+            Assert.Equal(0, requests);
+            Assert.False(layout.isDirty);
+        }
+
+        [Fact]
+        public void UxmlColumnObjectsAreReportedAndSkipped()
+        {
+            var asset = ScriptableObject.CreateInstance<VisualTreeAsset>();
+            asset.name = "UitkMultiColumnProbe";
+            UxmlImporter.Import("Assets/UI/UitkMultiColumnProbe.uxml",
+                "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\"><ui:MultiColumnListView name=\"m\"><ui:Columns><ui:Column name=\"a\" /></ui:Columns></ui:MultiColumnListView></ui:UXML>", asset);
+            var root = new VisualElement();
+            asset.CloneTree(root);
+            var view = root.Q<MultiColumnListView>("m");
+            Assert.NotNull(view);
+            Assert.Equal(0, view.columns.Count);
+            Assert.Contains(Unbound.Runtime.Stubs.HitReport(), h => h.Key.StartsWith("UXML object <Columns>", StringComparison.Ordinal));
+        }
+
+        [Fact]
+        public void TreeDataOfAnotherTypeIsAnError()
+        {
+            var panel = NewPanel();
+            var view = NewTree(panel);
+            var error = Assert.Throws<ArgumentException>(() => view.GetItemDataForIndex<int>(0));
+            Assert.Contains("differs from data source (System.String)", error.Message);
+            Assert.Throws<ArgumentException>(() => view.AddItem(new TreeViewItemData<int>(9, 9)));
+            Assert.Throws<ArgumentException>(() => view.GetSelectedItems<int>().ToList());
         }
 
         static MultiColumnTreeView NewTree(Panel panel)

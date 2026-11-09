@@ -269,12 +269,26 @@ namespace Unbound.UIElements
             foreach (var sheet in node.StyleSheets) element.styleSheets.Add(sheet);
         }
 
+        static string FullName(UxmlNode node)
+        {
+            if (node.Type.Contains(".")) return node.Type;
+            string ns = node.Namespace ?? "";
+            return string.IsNullOrEmpty(ns) ? node.Type : ns + "." + node.Type;
+        }
+
         internal static Type ResolveType(UxmlNode node)
         {
-            string ns = node.Namespace ?? "";
-            string full = string.IsNullOrEmpty(ns) ? node.Type : ns + "." + node.Type;
-            if (node.Type.Contains(".")) full = node.Type;
+            string full = FullName(node);
             if (s_Types.TryGetValue(full, out var cached)) return cached;
+            Type found = FindType(full);
+            if (found != null && !typeof(VisualElement).IsAssignableFrom(found)) found = null;
+            s_Types[full] = found;
+            return found;
+        }
+
+        // A type by its full name, in the engine or any loaded assembly.
+        static Type FindType(string full)
+        {
             Type found = typeof(VisualElement).Assembly.GetType(full);
             if (found == null)
             {
@@ -291,8 +305,6 @@ namespace Unbound.UIElements
                     if (found != null) break;
                 }
             }
-            if (found != null && !typeof(VisualElement).IsAssignableFrom(found)) found = null;
-            s_Types[full] = found;
             return found;
         }
 
@@ -364,6 +376,13 @@ namespace Unbound.UIElements
             else
             {
                 source = Resolve(node, out type, out var factories, out var hint);
+                if (source == ElementSource.Unknown && FindType(FullName(node)) is Type objectType && !typeof(VisualElement).IsAssignableFrom(objectType))
+                {
+                    // UXML objects (a multi-column view's <Columns> and <SortColumnDescriptions>,
+                    // <Bindings>) describe their parent's data, not elements: not read yet.
+                    Unbound.Runtime.Stubs.NotImplemented($"UXML object <{node.Type}> ({objectType.FullName}): its parent is created without it");
+                    return null;
+                }
                 if (source == ElementSource.Unknown)
                 {
                     Debug.LogError($"Element '{(string.IsNullOrEmpty(node.Namespace) ? "" : node.Namespace + ".")}{node.Type}' has no registered factory method."

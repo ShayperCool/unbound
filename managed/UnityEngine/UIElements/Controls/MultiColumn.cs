@@ -433,7 +433,7 @@ namespace UnityEngine.UIElements
     /// <summary>Widths of the visible columns for a header width: fixed and percentage columns take
     /// their width within their limits, stretchable ones share what is left; a change of header
     /// width is distributed over the stretchable columns, then the others, within their limits.</summary>
-    internal partial class ColumnLayout
+    internal partial class ColumnLayout : IDisposable
     {
         readonly List<Column> m_StretchableColumns = new List<Column>();
         readonly List<Column> m_FixedColumns = new List<Column>();
@@ -503,8 +503,25 @@ namespace UnityEngine.UIElements
             for (int i = 0; i < columns.Count; i++) OnColumnAdded(columns[i], i);
             columns.columnAdded += OnColumnAdded;
             columns.columnRemoved += OnColumnRemoved;
-            columns.columnReordered += (column, from, to) => Dirty();
+            columns.columnReordered += OnColumnReordered;
         }
+
+        /// <summary>Detaches the layout from its columns (a header that is disposed no longer lays
+        /// them out).</summary>
+        public void Dispose()
+        {
+            m_Columns.columnAdded -= OnColumnAdded;
+            m_Columns.columnRemoved -= OnColumnRemoved;
+            m_Columns.columnReordered -= OnColumnReordered;
+            for (int i = 0; i < m_Columns.Count; i++)
+            {
+                m_Columns[i].changed -= OnColumnChanged;
+                m_Columns[i].resized -= OnColumnResized;
+            }
+            layoutRequested = null;
+        }
+
+        void OnColumnReordered(Column column, int from, int to) => Dirty();
 
         public void Dirty()
         {
@@ -585,8 +602,9 @@ namespace UnityEngine.UIElements
             float sizedStretchableWidth = 0f;
             m_NewStretchable.Clear();
             m_SizedStretchable.Clear();
-            foreach (var column in m_Columns)
+            for (int c = 0; c < m_Columns.Count; c++)
             {
+                var column = m_Columns[c];
                 if (!column.visible) continue;
                 float min = column.GetMinWidth(m_LayoutWidth);
                 float max = column.GetMaxWidth(m_LayoutWidth);
@@ -635,7 +653,9 @@ namespace UnityEngine.UIElements
                 foreach (var column in m_SizedStretchable)
                 {
                     float current = GetDesiredWidth(column);
-                    column.desiredWidth = Mathf.Clamp(remaining * (current / sizedStretchableWidth), column.GetMinWidth(m_LayoutWidth), column.GetMaxWidth(m_LayoutWidth));
+                    // Columns all laid out at zero width share what remains equally.
+                    float share = sizedStretchableWidth > 0f ? remaining * (current / sizedStretchableWidth) : remaining / count;
+                    column.desiredWidth = Mathf.Clamp(share, column.GetMinWidth(m_LayoutWidth), column.GetMaxWidth(m_LayoutWidth));
                     remaining = Math.Max(0f, remaining - column.desiredWidth);
                     sizedStretchableWidth -= current;
                     count--;
@@ -1233,8 +1253,10 @@ namespace UnityEngine.UIElements
                 }
             }
             int result = 0;
-            foreach (var sorted in header.sortedColumns)
+            var sortedColumns = header.sortedColumnReadonly;
+            for (int i = 0; i < sortedColumns.Count; i++)
             {
+                var sorted = sortedColumns[i];
                 result = sorted.column.comparison?.Invoke(a, b) ?? 0;
                 if (result == 0) continue;
                 if (sorted.direction == SortDirection.Descending) result = -result;
@@ -1276,47 +1298,83 @@ namespace UnityEngine.UIElements
         }
     }
 
+    /// <summary>What a multi-column list or tree view keeps across view controllers: its columns,
+    /// sort descriptions, sorted columns and sorting mode, applied to the column controller of its
+    /// current view controller, whose sorting changes it reports.</summary>
+    internal sealed class UaMultiColumnViewState
+    {
+        MultiColumnController m_Controller;
+        readonly Action m_RaiseSortingChanged;
+
+        public Columns columns;
+        public ColumnSortingMode sortingMode;
+        public SortColumnDescriptions sortDescriptions = new SortColumnDescriptions();
+        public readonly List<SortColumnDescription> sortedColumns = new List<SortColumnDescription>();
+
+        public event Action sortingChanged;
+
+        public UaMultiColumnViewState() => m_RaiseSortingChanged = RaiseSortingChanged;
+
+        void RaiseSortingChanged() => sortingChanged?.Invoke();
+
+        public void SetSortingMode(ColumnSortingMode value)
+        {
+            if (sortingMode == value) return;
+            sortingMode = value;
+            if (m_Controller != null) m_Controller.sortingMode = value;
+        }
+
+        /// <summary>New descriptions go to the header (and are reported); null clears the current ones.</summary>
+        public void SetSortDescriptions(SortColumnDescriptions value)
+        {
+            if (value == null)
+            {
+                sortDescriptions.Clear();
+                return;
+            }
+            sortDescriptions = value;
+            if (m_Controller == null) return;
+            m_Controller.header.sortDescriptions = value;
+            RaiseSortingChanged();
+        }
+
+        public void Attach(MultiColumnController controller)
+        {
+            if (m_Controller != null) m_Controller.columnSortingChanged -= m_RaiseSortingChanged;
+            m_Controller = controller;
+            if (controller == null) return;
+            controller.sortingMode = sortingMode;
+            controller.columnSortingChanged += m_RaiseSortingChanged;
+        }
+    }
+
     public partial class MultiColumnListView : BaseListView
     {
-        Columns m_Columns;
-        ColumnSortingMode m_SortingMode;
-        SortColumnDescriptions m_SortColumnDescriptions = new SortColumnDescriptions();
-        readonly List<SortColumnDescription> m_SortedColumns = new List<SortColumnDescription>();
+        readonly UaMultiColumnViewState m_State = new UaMultiColumnViewState();
 
         public new MultiColumnListViewController viewController => base.viewController as MultiColumnListViewController;
 
-        public IEnumerable<SortColumnDescription> sortedColumns => m_SortedColumns;
+        public IEnumerable<SortColumnDescription> sortedColumns => m_State.sortedColumns;
 
         public Columns columns
         {
-            get => m_Columns;
+            get => m_State.columns;
             private set
             {
                 if (value == null)
                 {
-                    m_Columns.Clear();
+                    m_State.columns.Clear();
                     return;
                 }
-                m_Columns = value;
-                if (m_Columns.Count > 0) GetOrCreateViewController();
+                m_State.columns = value;
+                if (value.Count > 0) GetOrCreateViewController();
             }
         }
 
         public SortColumnDescriptions sortColumnDescriptions
         {
-            get => m_SortColumnDescriptions;
-            private set
-            {
-                if (value == null)
-                {
-                    m_SortColumnDescriptions.Clear();
-                    return;
-                }
-                m_SortColumnDescriptions = value;
-                if (viewController == null) return;
-                viewController.columnController.header.sortDescriptions = value;
-                columnSortingChanged?.Invoke();
-            }
+            get => m_State.sortDescriptions;
+            private set => m_State.SetSortDescriptions(value);
         }
 
         public bool sortingEnabled
@@ -1327,16 +1385,15 @@ namespace UnityEngine.UIElements
 
         public ColumnSortingMode sortingMode
         {
-            get => m_SortingMode;
-            set
-            {
-                if (m_SortingMode == value) return;
-                m_SortingMode = value;
-                if (viewController != null) viewController.columnController.sortingMode = value;
-            }
+            get => m_State.sortingMode;
+            set => m_State.SetSortingMode(value);
         }
 
-        public event Action columnSortingChanged;
+        public event Action columnSortingChanged
+        {
+            add => m_State.sortingChanged += value;
+            remove => m_State.sortingChanged -= value;
+        }
 
         public MultiColumnListView() : this(new Columns()) { }
 
@@ -1347,20 +1404,15 @@ namespace UnityEngine.UIElements
         }
 
         protected override CollectionViewController CreateViewController() =>
-            new MultiColumnListViewController(columns, sortColumnDescriptions, m_SortedColumns);
+            new MultiColumnListViewController(columns, sortColumnDescriptions, m_State.sortedColumns);
 
         public override void SetViewController(CollectionViewController controller)
         {
-            if (viewController != null) viewController.columnController.columnSortingChanged -= RaiseColumnSortingChanged;
             base.SetViewController(controller);
-            if (viewController == null) return;
-            viewController.columnController.sortingMode = m_SortingMode;
-            viewController.columnController.columnSortingChanged += RaiseColumnSortingChanged;
+            m_State.Attach(viewController?.columnController);
         }
 
         private protected override void CreateVirtualizationController() => CreateVirtualizationController<ReusableMultiColumnListViewItem>();
-
-        void RaiseColumnSortingChanged() => columnSortingChanged?.Invoke();
     }
 
     public partial class MultiColumnListViewController : BaseListViewController
@@ -1468,45 +1520,31 @@ namespace UnityEngine.UIElements
 
     public partial class MultiColumnTreeView : BaseTreeView
     {
-        Columns m_Columns;
-        ColumnSortingMode m_SortingMode;
-        SortColumnDescriptions m_SortColumnDescriptions = new SortColumnDescriptions();
-        readonly List<SortColumnDescription> m_SortedColumns = new List<SortColumnDescription>();
+        readonly UaMultiColumnViewState m_State = new UaMultiColumnViewState();
 
         public new MultiColumnTreeViewController viewController => base.viewController as MultiColumnTreeViewController;
 
-        public IEnumerable<SortColumnDescription> sortedColumns => m_SortedColumns;
+        public IEnumerable<SortColumnDescription> sortedColumns => m_State.sortedColumns;
 
         public Columns columns
         {
-            get => m_Columns;
+            get => m_State.columns;
             private set
             {
                 if (value == null)
                 {
-                    m_Columns.Clear();
+                    m_State.columns.Clear();
                     return;
                 }
-                m_Columns = value;
-                if (m_Columns.Count > 0) GetOrCreateViewController();
+                m_State.columns = value;
+                if (value.Count > 0) GetOrCreateViewController();
             }
         }
 
         public SortColumnDescriptions sortColumnDescriptions
         {
-            get => m_SortColumnDescriptions;
-            private set
-            {
-                if (value == null)
-                {
-                    m_SortColumnDescriptions.Clear();
-                    return;
-                }
-                m_SortColumnDescriptions = value;
-                if (viewController == null) return;
-                viewController.columnController.header.sortDescriptions = value;
-                columnSortingChanged?.Invoke();
-            }
+            get => m_State.sortDescriptions;
+            private set => m_State.SetSortDescriptions(value);
         }
 
         public bool sortingEnabled
@@ -1517,16 +1555,15 @@ namespace UnityEngine.UIElements
 
         public ColumnSortingMode sortingMode
         {
-            get => m_SortingMode;
-            set
-            {
-                if (m_SortingMode == value) return;
-                m_SortingMode = value;
-                if (viewController != null) viewController.columnController.sortingMode = value;
-            }
+            get => m_State.sortingMode;
+            set => m_State.SetSortingMode(value);
         }
 
-        public event Action columnSortingChanged;
+        public event Action columnSortingChanged
+        {
+            add => m_State.sortingChanged += value;
+            remove => m_State.sortingChanged -= value;
+        }
 
         public MultiColumnTreeView() : this(new Columns()) { }
 
@@ -1536,69 +1573,32 @@ namespace UnityEngine.UIElements
             this.columns = columns ?? new Columns();
         }
 
-        internal override void SetRootItemsInternal<T>(IList<TreeViewItemData<T>> rootItems)
-        {
-            if (!(base.viewController is DefaultMultiColumnTreeViewController<T> controller))
-            {
-                controller = new DefaultMultiColumnTreeViewController<T>(columns, m_SortColumnDescriptions, m_SortedColumns);
-                SetViewController(controller);
-            }
-            controller.SetRootItems(rootItems);
-        }
+        internal override void SetRootItemsInternal<T>(IList<TreeViewItemData<T>> rootItems) =>
+            TreeViewHelpers<T, DefaultMultiColumnTreeViewController<T>>.SetRootItems(this, rootItems,
+                () => new DefaultMultiColumnTreeViewController<T>(columns, m_State.sortDescriptions, m_State.sortedColumns));
 
-        DefaultMultiColumnTreeViewController<T> ControllerOf<T>() => base.viewController as DefaultMultiColumnTreeViewController<T>;
+        private protected override IEnumerable<TreeViewItemData<T>> GetSelectedItemsInternal<T>() =>
+            TreeViewHelpers<T, DefaultMultiColumnTreeViewController<T>>.GetSelectedItems(this);
 
-        private protected override IEnumerable<TreeViewItemData<T>> GetSelectedItemsInternal<T>()
-        {
-            var controller = ControllerOf<T>() ?? throw new ArgumentException("GetSelectedItems<T>() only works when using the default controller. Use your controller along with the selectedIndices enumerable instead.");
-            var items = new List<TreeViewItemData<T>>();
-            foreach (int index in selectedIndices) items.Add(controller.GetTreeViewItemDataForIndex(index));
-            return items;
-        }
+        private protected override T GetItemDataForIndexInternal<T>(int index) =>
+            TreeViewHelpers<T, DefaultMultiColumnTreeViewController<T>>.GetItemDataForIndex(this, index);
 
-        private protected override T GetItemDataForIndexInternal<T>(int index)
-        {
-            var controller = ControllerOf<T>();
-            if (controller != null) return controller.GetDataForIndex(index);
-            object item = base.viewController?.GetItemForIndex(index);
-            if (item is T typed) return typed;
-            throw new ArgumentException($"Type parameter ({typeof(T)}) differs from data source ({item?.GetType()}) and is not recognized by the controller.");
-        }
+        private protected override T GetItemDataForIdInternal<T>(int id) =>
+            TreeViewHelpers<T, DefaultMultiColumnTreeViewController<T>>.GetItemDataForId(this, id);
 
-        private protected override T GetItemDataForIdInternal<T>(int id)
-        {
-            var controller = ControllerOf<T>();
-            if (controller != null) return controller.GetDataForId(id);
-            object item = base.viewController?.GetItemForIndex(base.viewController.GetIndexForId(id));
-            if (item is T typed) return typed;
-            throw new ArgumentException($"Type parameter ({typeof(T)}) differs from data source ({item?.GetType()}) and is not recognized by the controller.");
-        }
-
-        private protected override void AddItemInternal<T>(TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree)
-        {
-            if (!(base.viewController is DefaultMultiColumnTreeViewController<T> controller))
-            {
-                controller = new DefaultMultiColumnTreeViewController<T>(columns, m_SortColumnDescriptions, m_SortedColumns);
-                SetViewController(controller);
-            }
-            controller.AddItem(item, parentId, childIndex, rebuildTree);
-        }
+        private protected override void AddItemInternal<T>(TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree) =>
+            TreeViewHelpers<T, DefaultMultiColumnTreeViewController<T>>.AddItem(this, item, parentId, childIndex, rebuildTree);
 
         protected override CollectionViewController CreateViewController() =>
-            new DefaultMultiColumnTreeViewController<object>(columns, sortColumnDescriptions, m_SortedColumns);
+            new DefaultMultiColumnTreeViewController<object>(columns, sortColumnDescriptions, m_State.sortedColumns);
 
         public override void SetViewController(CollectionViewController controller)
         {
-            if (viewController != null) viewController.columnController.columnSortingChanged -= RaiseColumnSortingChanged;
             base.SetViewController(controller);
-            if (viewController == null) return;
-            viewController.columnController.sortingMode = m_SortingMode;
-            viewController.columnController.columnSortingChanged += RaiseColumnSortingChanged;
+            m_State.Attach(viewController?.columnController);
         }
 
         private protected override void CreateVirtualizationController() => CreateVirtualizationController<ReusableMultiColumnTreeViewItem>();
-
-        void RaiseColumnSortingChanged() => columnSortingChanged?.Invoke();
     }
 
     public abstract partial class MultiColumnTreeViewController : BaseTreeViewController
@@ -1651,7 +1651,7 @@ namespace UnityEngine.UIElements
 
     /// <summary>The default multi-column tree controller of data type T (the same tree data as
     /// DefaultTreeViewController&lt;T&gt;).</summary>
-    public partial class DefaultMultiColumnTreeViewController<T> : MultiColumnTreeViewController
+    public partial class DefaultMultiColumnTreeViewController<T> : MultiColumnTreeViewController, IDefaultTreeViewController<T>
     {
         readonly UaTreeItems<T> m_Items;
 
@@ -1917,9 +1917,11 @@ namespace UnityEngine.UIElements.Internal
         {
             if (type == ColumnDataType.Visibility)
             {
+                // Adding or removing the header column updates the controls.
                 if (column.visible) OnColumnAdded(column);
                 else OnColumnRemoved(column);
                 ApplyColumnSorting();
+                return;
             }
             UpdateColumnControls();
         }
@@ -2030,7 +2032,7 @@ namespace UnityEngine.UIElements.Internal
                 data.control.RemoveFromClassList(MultiColumnHeaderColumn.sortedDescendingUssClassName);
             }
             int sortedCount = 0;
-            foreach (var sorted in sortedColumns)
+            foreach (var sorted in m_SortedColumns)
             {
                 if (sorted.column == null || !columnDataMap.TryGetValue(sorted.column, out var data)) continue;
                 sortedCount++;
@@ -2040,7 +2042,7 @@ namespace UnityEngine.UIElements.Internal
             if (sortedCount <= 1) return;
             // Several sorted columns show their order.
             int order = 0;
-            foreach (var sorted in sortedColumns)
+            foreach (var sorted in m_SortedColumns)
                 if (sorted.column != null && columnDataMap.TryGetValue(sorted.column, out var data)) data.control.sortOrderLabel = (++order).ToString();
         }
 
@@ -2066,6 +2068,7 @@ namespace UnityEngine.UIElements.Internal
         {
             sortDescriptions.changed -= UpdateSortedColumns;
             columnLayout.layoutRequested -= ScheduleDoLayout;
+            columnLayout.Dispose();
             columns.columnAdded -= OnColumnAdded;
             columns.columnRemoved -= OnColumnRemoved;
             columns.columnChanged -= OnColumnChanged;

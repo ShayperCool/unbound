@@ -2206,15 +2206,6 @@ namespace UnityEngine.UIElements
     {
         void OnVisualElementChange(global::UnityEngine.UIElements.VisualElement element, global::UnityEngine.UIElements.VersionChangeType changeType);
     }
-    internal unsafe partial interface IDefaultTreeViewController<T>
-    {
-        void SetRootItems(global::System.Collections.Generic.IList<global::UnityEngine.UIElements.TreeViewItemData<T>> items);
-        void AddItem(in global::UnityEngine.UIElements.TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree = true);
-        global::UnityEngine.UIElements.TreeViewItemData<T> GetTreeViewItemDataForId(int id);
-        global::UnityEngine.UIElements.TreeViewItemData<T> GetTreeViewItemDataForIndex(int index);
-        T GetDataForId(int id);
-        T GetDataForIndex(int index);
-    }
     internal unsafe partial interface IDelayedField
     {
         bool isDelayed { get; }
@@ -5128,15 +5119,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeView.UxmlTraits.Init"); }
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeView.UxmlTraits.ctor"); }
         }
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class TreeViewHelpers<T, TDefaultController> where TDefaultController : global::UnityEngine.UIElements.BaseTreeViewController, global::UnityEngine.UIElements.IDefaultTreeViewController<T>
-    {
-        [global::Unbound.Stub] internal static void SetRootItems(global::UnityEngine.UIElements.BaseTreeView treeView, global::System.Collections.Generic.IList<global::UnityEngine.UIElements.TreeViewItemData<T>> rootItems, global::System.Func<TDefaultController> createController) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewHelpers<T, TDefaultController>.SetRootItems"); }
-        [global::Unbound.Stub] internal static global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.TreeViewItemData<T>> GetSelectedItems(global::UnityEngine.UIElements.BaseTreeView treeView) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewHelpers<T, TDefaultController>.GetSelectedItems"); return global::System.Array.Empty<global::UnityEngine.UIElements.TreeViewItemData<T>>(); }
-        [global::Unbound.Stub] internal static T GetItemDataForIndex(global::UnityEngine.UIElements.BaseTreeView treeView, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewHelpers<T, TDefaultController>.GetItemDataForIndex"); return default; }
-        [global::Unbound.Stub] internal static T GetItemDataForId(global::UnityEngine.UIElements.BaseTreeView treeView, int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewHelpers<T, TDefaultController>.GetItemDataForId"); return default; }
-        [global::Unbound.Stub] internal static void AddItem(global::UnityEngine.UIElements.BaseTreeView treeView, global::UnityEngine.UIElements.TreeViewItemData<T> item, int parentId = -1, int childIndex = -1, bool rebuildTree = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewHelpers<T, TDefaultController>.AddItem"); }
     }
     unsafe readonly partial struct TreeViewItemData<T>
     {

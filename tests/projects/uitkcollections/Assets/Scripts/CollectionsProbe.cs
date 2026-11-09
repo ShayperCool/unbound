@@ -630,6 +630,41 @@ public static class CollectionsProbe
             Drag(from, from + new Vector2(20, 0), 4);
         }, State);
         Step("columns", "restore-widths", () => { view.columns["value"].width = 60; view.columns["flag"].width = 70; }, State);
+        // Changing only the sorting mode after a sort, then Custom sorting (the game orders the rows).
+        Step("columns", "sort-again", () =>
+        {
+            view.sortingMode = ColumnSortingMode.Default;
+            view.sortColumnDescriptions.Add(new SortColumnDescription("value", SortDirection.Descending));
+        }, State);
+        Step("columns", "mode-none-only", () => view.sortingMode = ColumnSortingMode.None, State);
+        Step("columns", "mode-none-refresh", () => view.RefreshItems(), State);
+        Step("columns", "mode-default-again", () => view.sortingMode = ColumnSortingMode.Default, State);
+        Step("columns", "mode-custom", () => view.sortingMode = ColumnSortingMode.Custom, State);
+        Step("columns", "mode-custom-refresh", () => view.RefreshItems(), State);
+        Step("columns", "sort-cleanup", () =>
+        {
+            view.sortingMode = ColumnSortingMode.Default;
+            view.sortColumnDescriptions.Clear();
+            view.sortingMode = ColumnSortingMode.None;
+            view.RefreshItems();
+        }, State);
+        // Grow mode on a separate view: columns keep their widths, then grow with the header.
+        MultiColumnListView grow = null;
+        Step("columns", "grow-attach", () =>
+        {
+            var items = new List<string> { "a", "b", "c" };
+            var growColumns = new UnityEngine.UIElements.Columns { stretchMode = UnityEngine.UIElements.Columns.StretchMode.Grow };
+            growColumns.Add(MakeColumn("grow:", "name", "Name", 80, true, i => items[i]));
+            growColumns.Add(MakeColumn("grow:", "value", "Value", 60, false, i => i.ToString(Inv)));
+            growColumns.Add(MakeColumn("grow:", "flag", "Flag", 40, false, i => "f"));
+            grow = new MultiColumnListView(growColumns) { name = "grow", fixedItemHeight = 20, itemsSource = items };
+            Place(grow, 500, 300, 280, 100);
+            view.parent.Add(grow);
+        }, () => ColumnsState(grow));
+        Step("columns", "grow-wider", () => grow.style.width = 340, () => ColumnsState(grow));
+        Step("columns", "grow-narrower", () => grow.style.width = 200, () => ColumnsState(grow));
+        Step("columns", "grow-wider-again", () => grow.style.width = 300, () => ColumnsState(grow));
+        Step("columns", "grow-remove", () => grow.RemoveFromHierarchy(), () => "null");
     }
 
     static Vector2 HeaderCenter(BaseVerticalCollectionView view, string column) =>
@@ -669,6 +704,44 @@ public static class CollectionsProbe
             view.sortColumnDescriptions.Add(new SortColumnDescription("id", SortDirection.Descending));
         }, State);
         Step("column-tree", "sort-off", () => { view.sortColumnDescriptions.Clear(); view.sortingMode = ColumnSortingMode.None; view.CollapseAll(); }, State);
+        // A sorted tree of uneven shape (one child collapsed): which row shows which indent and toggle.
+        string Shape() => "{\"columns\":" + ColumnsState(view) + ",\"tree\":" + TreeState(view) + ",\"shape\":" + TreeRowShape(view) + "}";
+        Step("column-tree", "uneven-expand", () => { view.ExpandAll(); view.CollapseItem(1); }, Shape);
+        Step("column-tree", "uneven-sort", () =>
+        {
+            view.sortingMode = ColumnSortingMode.Default;
+            view.sortColumnDescriptions.Add(new SortColumnDescription("id", SortDirection.Descending));
+        }, Shape);
+        Step("column-tree", "uneven-sorted-expand", () => view.ExpandItem(1), Shape);
+        Step("column-tree", "uneven-off", () => { view.sortColumnDescriptions.Clear(); view.sortingMode = ColumnSortingMode.None; view.CollapseAll(); }, Shape);
+        // The primary column (the one holding the toggle) named, then back to the first visible one.
+        Step("column-tree", "primary-id", () => view.columns.primaryColumnName = "id", Shape);
+        Step("column-tree", "primary-default", () => view.columns.primaryColumnName = null, Shape);
+    }
+
+    static string FirstClass(VisualElement e)
+    {
+        foreach (var c in e.GetClasses()) return c;
+        return null;
+    }
+
+    // Per visible row of a tree: its first cell text, indent width, and toggle visible/value.
+    static string TreeRowShape(BaseTreeView view)
+    {
+        var sb = new StringBuilder("[");
+        for (int i = 0; i < view.viewController.itemsSource.Count; i++)
+        {
+            var root = view.GetRootElementForIndex(i);
+            if (root == null) continue;
+            if (sb.Length > 1) sb.Append(',');
+            var indent = root.Q("unity-tree-view__item-indent");
+            var toggle = root.Q<Toggle>();
+            var label = root.Q<Label>();
+            sb.Append('[').Append(i).Append(',').Append(Str(label?.text)).Append(',').Append(F(indent == null ? -1f : indent.layout.width))
+              .Append(',').Append(toggle == null ? "null" : (toggle.visible ? "true" : "false")).Append(',').Append(toggle == null ? "null" : (toggle.value ? "true" : "false"))
+              .Append(',').Append(toggle == null || toggle.parent == null ? "null" : Str(FirstClass(toggle.parent))).Append(']');
+        }
+        return sb.Append(']').ToString();
     }
 
     // ---- absolute children in a padded, bordered parent ----

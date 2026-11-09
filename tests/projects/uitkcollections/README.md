@@ -18,8 +18,10 @@ Stages the `uitk` fixture in a fresh cache directory and replaces its interactio
   ExpandAll, CollapseAll, selection by id, navigation right/left, new root items;
 - `columns` and `column-tree`: MultiColumnListView and MultiColumnTreeView: scrolling, column
   visibility and width, a click, columns added and removed, sorting (sortingMode Default with a
-  sort description, header clicks plain, again, with Ctrl and with Shift; a tree sorted among
-  siblings), a resize handle dragged and the widths restored;
+  sort description, header clicks plain, again, with Ctrl and with Shift; only the sorting mode
+  changed to None and Custom; a tree of uneven shape sorted among siblings, with each row's indent
+  and toggle), a resize handle dragged and the widths restored, a Grow-mode view resized, and the
+  primary column named;
 - `tabs`: a TabView of three tabs (the last closeable): header presses, selectedTabIndex, the
   close button, a tab added later, activeTab, removing the active tab.
 - `absolute`: one absolutely positioned child per case in a padded, bordered parent (a tab

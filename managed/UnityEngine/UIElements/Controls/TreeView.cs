@@ -335,62 +335,100 @@ namespace UnityEngine.UIElements
 
         protected override CollectionViewController CreateViewController() => new DefaultTreeViewController<object>();
 
-        internal override void SetRootItemsInternal<T>(IList<TreeViewItemData<T>> rootItems)
+        internal override void SetRootItemsInternal<T>(IList<TreeViewItemData<T>> rootItems) =>
+            TreeViewHelpers<T, DefaultTreeViewController<T>>.SetRootItems(this, rootItems, () => new DefaultTreeViewController<T>());
+
+        private protected override IEnumerable<TreeViewItemData<T>> GetSelectedItemsInternal<T>() =>
+            TreeViewHelpers<T, DefaultTreeViewController<T>>.GetSelectedItems(this);
+
+        private protected override T GetItemDataForIndexInternal<T>(int index) =>
+            TreeViewHelpers<T, DefaultTreeViewController<T>>.GetItemDataForIndex(this, index);
+
+        private protected override T GetItemDataForIdInternal<T>(int id) =>
+            TreeViewHelpers<T, DefaultTreeViewController<T>>.GetItemDataForId(this, id);
+
+        private protected override void AddItemInternal<T>(TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree) =>
+            TreeViewHelpers<T, DefaultTreeViewController<T>>.AddItem(this, item, parentId, childIndex, rebuildTree);
+    }
+
+    /// <summary>A default tree controller of data type T (single- or multi-column).</summary>
+    internal partial interface IDefaultTreeViewController<T>
+    {
+        void SetRootItems(IList<TreeViewItemData<T>> items);
+        void AddItem(in TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree = true);
+        TreeViewItemData<T> GetTreeViewItemDataForId(int id);
+        TreeViewItemData<T> GetTreeViewItemDataForIndex(int index);
+        T GetDataForId(int id);
+        T GetDataForIndex(int index);
+    }
+
+    /// <summary>The typed data access of tree views through their default controller: a controller of
+    /// another data type is an error, another controller answers through GetItemForIndex.</summary>
+    internal static partial class TreeViewHelpers<T, TDefaultController> where TDefaultController : BaseTreeViewController, IDefaultTreeViewController<T>
+    {
+        internal static void SetRootItems(BaseTreeView treeView, IList<TreeViewItemData<T>> rootItems, Func<TDefaultController> createController)
         {
-            if (!(base.viewController is DefaultTreeViewController<T> controller))
+            if (treeView.viewController is TDefaultController controller)
             {
-                controller = new DefaultTreeViewController<T>();
-                SetViewController(controller);
+                controller.SetRootItems(rootItems);
+                return;
             }
-            controller.SetRootItems(rootItems);
+            var created = createController();
+            treeView.SetViewController(created);
+            created.SetRootItems(rootItems);
         }
 
-        DefaultTreeViewController<T> ControllerOf<T>()
+        internal static IEnumerable<TreeViewItemData<T>> GetSelectedItems(BaseTreeView treeView)
         {
-            var controller = base.viewController;
-            if (controller is DefaultTreeViewController<T> typed) return typed;
-            var type = controller?.GetType();
-            if (type != null && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(DefaultTreeViewController<>))
-                throw new ArgumentException($"Type parameter ({typeof(T)}) differs from data source ({type.GetGenericArguments()[0]}) and is not recognized by the controller.");
-            return null;
-        }
-
-        private protected override IEnumerable<TreeViewItemData<T>> GetSelectedItemsInternal<T>()
-        {
-            var controller = ControllerOf<T>();
-            if (controller == null) throw new ArgumentException("GetSelectedItems<T>() only works when using the default controller. Use your controller along with the selectedIndices enumerable instead.");
-            var items = new List<TreeViewItemData<T>>();
-            foreach (int index in selectedIndices) items.Add(controller.GetTreeViewItemDataForIndex(index));
-            return items;
-        }
-
-        private protected override T GetItemDataForIndexInternal<T>(int index)
-        {
-            var controller = ControllerOf<T>();
-            if (controller != null) return controller.GetDataForIndex(index);
-            object item = base.viewController?.GetItemForIndex(index);
-            if (item is T typed) return typed;
-            throw new ArgumentException($"Type parameter ({typeof(T)}) differs from data source ({item?.GetType()}) and is not recognized by the controller.");
-        }
-
-        private protected override T GetItemDataForIdInternal<T>(int id)
-        {
-            var controller = ControllerOf<T>();
-            if (controller != null) return controller.GetDataForId(id);
-            object item = base.viewController?.GetItemForIndex(base.viewController.GetIndexForId(id));
-            if (item is T typed) return typed;
-            throw new ArgumentException($"Type parameter ({typeof(T)}) differs from data source ({item?.GetType()}) and is not recognized by the controller.");
-        }
-
-        private protected override void AddItemInternal<T>(TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree)
-        {
-            if (!(base.viewController is DefaultTreeViewController<T> controller))
+            if (treeView.viewController is TDefaultController controller)
             {
-                controller = new DefaultTreeViewController<T>();
-                SetViewController(controller);
+                foreach (int index in treeView.selectedIndices) yield return controller.GetTreeViewItemDataForIndex(index);
+                yield break;
             }
-            controller.AddItem(item, parentId, childIndex, rebuildTree);
+            if (IsDefaultOfOtherType(treeView))
+                throw new ArgumentException($"Type parameter ({typeof(T)}) differs from data source ({DataTypeOf(treeView)}) and is not recognized by the controller.");
+            throw new ArgumentException("GetSelectedItems<T>() only works when using the default controller. Use your controller along with the selectedIndices enumerable instead.");
         }
+
+        internal static T GetItemDataForIndex(BaseTreeView treeView, int index)
+        {
+            if (treeView.viewController is TDefaultController controller) return controller.GetDataForIndex(index);
+            return Typed(treeView, treeView.viewController?.GetItemForIndex(index));
+        }
+
+        internal static T GetItemDataForId(BaseTreeView treeView, int id)
+        {
+            if (treeView.viewController is TDefaultController controller) return controller.GetDataForId(id);
+            var other = treeView.viewController;
+            return Typed(treeView, other?.GetItemForIndex(other.GetIndexForId(id)));
+        }
+
+        internal static void AddItem(BaseTreeView treeView, TreeViewItemData<T> item, int parentId = -1, int childIndex = -1, bool rebuildTree = true)
+        {
+            if (treeView.viewController is TDefaultController controller)
+            {
+                controller.AddItem(in item, parentId, childIndex, rebuildTree);
+                return;
+            }
+            throw new ArgumentException($"Type parameter ({typeof(T)}) differs from data source ({(IsDefaultOfOtherType(treeView) ? DataTypeOf(treeView) : null)})and is not recognized by the controller.");
+        }
+
+        // An item of exactly T; otherwise the error names the item's type, or a default controller's.
+        static T Typed(BaseTreeView treeView, object item)
+        {
+            var type = item?.GetType();
+            if (type == typeof(T)) return (T)item;
+            if (type == null && IsDefaultOfOtherType(treeView)) type = DataTypeOf(treeView);
+            throw new ArgumentException($"Type parameter ({typeof(T)}) differs from data source ({type}) and is not recognized by the controller.");
+        }
+
+        static bool IsDefaultOfOtherType(BaseTreeView treeView)
+        {
+            var type = treeView.viewController?.GetType();
+            return type != null && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(TDefaultController).GetGenericTypeDefinition();
+        }
+
+        static Type DataTypeOf(BaseTreeView treeView) => treeView.viewController?.GetType().GetGenericArguments()[0];
     }
 
     /// <summary>Item structure provided to a TreeView using the default implementation: an id, its
@@ -764,7 +802,7 @@ namespace UnityEngine.UIElements
 
     /// <summary>The default tree controller of data type T: the hierarchy built from
     /// TreeViewItemData, each node's item data, adding and removing items.</summary>
-    public partial class DefaultTreeViewController<T> : TreeViewController
+    public partial class DefaultTreeViewController<T> : TreeViewController, IDefaultTreeViewController<T>
     {
         readonly UaTreeItems<T> m_Items;
 
