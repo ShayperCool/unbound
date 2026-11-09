@@ -124,9 +124,12 @@ namespace UnityEngine.AI
             var surface = NavWorld.Get(agentTypeID);
             if (!Nearest(surface, sourcePosition, AgentExtents(agentTypeID), filter, out var startRef, out var start))
             {
-                hit.position = sourcePosition;
-                hit.hit = true;
-                return true;
+                // No polygon the filter allows near the source: no hit, at no position and distance
+                // (measured, tests/projects/navpath ray.area: a start off the NavMesh and one on an
+                // area the mask excludes).
+                hit.position = new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity);
+                hit.distance = float.PositiveInfinity;
+                return false;
             }
             var ray = new DtRaycastHit { path = s_RayPath, maxPath = MaxPath };
             surface.Query.Raycast(startRef, V(start), V(targetPosition), filter, 0, ref ray, 0);

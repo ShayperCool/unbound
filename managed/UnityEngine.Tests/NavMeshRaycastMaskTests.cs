@@ -57,5 +57,27 @@ namespace UnityEngine.Tests
             Assert.False(NavMesh.Raycast(new Vector3(27f, 0f, 27f), new Vector3(27f, 0f, 30f), out hit, NavMesh.AllAreas));
             Assert.Equal(1 << Mud, hit.mask);
         }
+
+        /// <summary>Measured (tests/projects/navpath ray.area): a source with no polygon the mask
+        /// allows near it, off the NavMesh or inside an excluded area wider than the query box, is
+        /// no hit, at an infinite position and distance with no area. Control: the same ray with
+        /// the area allowed starts and is clear.</summary>
+        [Fact]
+        public void ARayFromNoAllowedPolygonIsNoHit()
+        {
+            MudLevel();
+            var inf = new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity);
+            // Far off the NavMesh.
+            Assert.False(NavMesh.Raycast(new Vector3(30f, 0f, 50f), new Vector3(30f, 0f, 30f), out var hit, NavMesh.AllAreas));
+            Assert.False(hit.hit);
+            Assert.Equal(inf, hit.position);
+            Assert.Equal(float.PositiveInfinity, hit.distance);
+            Assert.Equal(0, hit.mask);
+            // Only Mud allowed, starting on the walkable ground well away from it.
+            Assert.False(NavMesh.Raycast(new Vector3(27f, 0f, 26f), new Vector3(27f, 0f, 34f), out hit, 1 << Mud));
+            Assert.Equal(inf, hit.position);
+            Assert.False(NavMesh.Raycast(new Vector3(27f, 0f, 26f), new Vector3(27f, 0f, 27f), out hit, NavMesh.AllAreas));
+            Assert.Equal(27f, hit.position.z, 3);
+        }
     }
 }
