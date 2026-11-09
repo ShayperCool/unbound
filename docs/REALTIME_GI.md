@@ -41,8 +41,8 @@ a payload: a Unity bundle of per-system files named by the system's hash.
 | `.iws.{ref,sse,neo}` | input samples: clusters (bounding box, number of four-point groups), points quantized to 8 bits in their cluster's box with one 8-bit normal per group; the cluster tree (child count per parent, 8-bit child weights); per-cluster centroid and normal |
 | `.rsc.{ref,sse,neo}` | transport: per output segment, the referenced input values (dependency, index, 16-bit weight), an 8-bit weight per (texel, reference), the texel coordinates; the bounce resampling (per cluster, texels and weights); per-texel chart data |
 | `.caw` | which albedo/emission texels form each cluster |
-| `.rgb` | the system's albedo texture as precomputed (8-bit, system resolution) |
-| `.ecm` | chart mask at system resolution: per texel, the chart it belongs to (charts occupy whole 4x4 texel blocks) |
+| `.rgb` | an 8-bit RGBX texture at system resolution (not the albedo the update uses) |
+| `.ecm` | chart mask at system resolution: per texel, the chart it belongs to (each chart a rectangle of even width and height) |
 | `.vis` | precomputed visibility used for directional lights |
 | `.pos`, `.rpc.{ref,sse,neo}` | light probe positions and their transport |
 
@@ -101,14 +101,18 @@ confirmed by a capture, since the engine cannot draw at realtime lightmap UVs ye
   is the square root of the weighted mean of its samples' squared bytes (the square standing in
   for the gamma curve), kept as 8 bits; its emission the weighted mean of its texels, kept as a
   half float. `DynamicGI.SetEmissive` gives a renderer one emission for all its points instead of
-  its texels; a later material update does not replace it (measured: `room-setemissive-then-call`).
+  its texels, its color taken to linear as a material color is; a later material update does not
+  replace it (measured: `room-setemissive`, `room-setemissive-then-call`; that other renderers'
+  emission still follows their materials is Unbound's model, the probe changes the panel alone).
+  With these rules and each renderer's color in all its texels, the converged `room-emission-call`,
+  `room-setemissive*` and `room-albedo-call` lightmaps match as the other Room cases do.
 
 ## Realtime lightmap UVs
 
 Renderers draw realtime GI at their own realtime lightmap UVs, which are not the mesh's UV2 scaled
 by `realtimeLightmapScaleOffset`: the precompute repacks each mesh's charts. In the probe's Room,
-the floor's 6 m faces become charts of 13x13 texels in 14x14 blocks and its 0.1 m thin faces 3x3
-in 4x4 blocks, although all faces of the cube's UV2 are the same size: each chart is scaled to
+the floor's 6 m faces cover 13x13 texels of 14x14 chart rectangles and its 0.1 m thin faces 3x3
+of 4x4 ones, although all faces of the cube's UV2 are the same size: each chart is scaled to
 its own world area at the realtime resolution, kept at least the minimum chart size, padded and
 packed; with Preserve UVs off the charts themselves are generated. The Editor keeps these UVs in
 its GI cache, not in the project (a player build stores them in
