@@ -164,7 +164,8 @@ namespace UnityEngine
                 || mesh.m_BoneNameHashes.Length != mesh.m_Bindposes.Length) return null;
             if (m_SkinAnimator == null || !transform.IsChildOf(m_SkinAnimator.transform))
             {
-                // Without an Animator above, looked for again once a frame.
+                // Without an Animator above, looked for again once a frame (a renderer moved under
+                // an optimized Animator skins from it from the next frame).
                 if (m_SkinMissFrame == Time.s_FrameCount) return null;
                 m_SkinAnimator = null;
                 for (var t = transform; t != null && m_SkinAnimator == null; t = t.m_Parent)

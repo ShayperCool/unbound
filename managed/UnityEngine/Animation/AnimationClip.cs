@@ -410,9 +410,9 @@ namespace UnityEngine
         /// <para>Unbound's choice (unmeasured): the rotations realigned are the clip's quaternion
         /// rotation curves (four marked curves from a clip file's rotation curves) and the
         /// m_LocalRotation.x, .y, .z, .w curves of one Transform (SetCurve's localRotation); Euler
-        /// angle curves and float curves on the Animator are kept as they are. A negated key's in
-        /// and out tangents are negated with it (its weights are kept), so the curve keeps its shape
-        /// about the key. Legacy and non-legacy clips are treated alike. The clip's curves are
+        /// angle curves and float curves on the Animator are kept as they are. A negated key's finite
+        /// in and out tangents are negated with it (its weights and infinite tangents are kept), so
+        /// the curve keeps its shape about the key and a stepped segment holds the same key. Legacy and non-legacy clips are treated alike. The clip's curves are
         /// replaced only when a key is negated, which also redoes the clip's bindings; clips made
         /// from it before (Animation.AddClip with frames) keep their keys.</para>
         /// <para>A rotation whose four curves do not have their keys at the same times, or that is a
