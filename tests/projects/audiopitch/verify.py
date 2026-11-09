@@ -1,10 +1,20 @@
 """Reject incomplete or nonfinite Pitch Shifter captures."""
 import math
-from common import blocks, SUFFIXES, cases, header, samples
+from common import blocks, SUFFIXES, cases, devices, header, samples
+MODES = ('Mono', 'Stereo', 'Quad', 'Surround', 'Mode5point1', 'Mode7point1', 'Prologic')
+
+
 def verify(root, release, rate, contexts=False, selected=None):
     meta = header(root)
     assert meta['release'] == release and meta['rate'] == rate
     for case in selected if selected is not None else cases(contexts):
+        if case.startswith('device_'):
+            # Metadata only: every requested layout's getter, caps and active channels.
+            for mode in MODES:
+                for field in ('getter', 'caps', 'channels'):
+                    assert isinstance(meta[f'{case}.{mode}.{field}'], int), (case, mode, field)
+                assert meta[f'{case}.{mode}.channels'] > 0, (case, mode)
+            continue
         for suffix in SUFFIXES:
             record = meta[case+suffix]
             size = meta.get(case+'.buffer', 1024)

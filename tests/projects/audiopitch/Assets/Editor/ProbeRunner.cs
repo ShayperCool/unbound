@@ -26,7 +26,7 @@ public static class ProbeRunner
                     + " default=" + definition.GetType().GetField("defaultValue").GetValue(definition));
         Directory.CreateDirectory("Assets/Resources");
         foreach (string key in Array.ConvertAll(EffectProbe.Cases, row => row[0]))
-            if (EffectProbe.Option(key, "asset=", key) == key) Build(key);
+            if (EffectProbe.Option(key, "asset=", key) == key && !key.StartsWith("device_")) Build(key);
         AssetDatabase.SaveAssets();
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         new GameObject("EffectProbe").AddComponent<EffectProbe>(); Directory.CreateDirectory("Assets/Scenes");

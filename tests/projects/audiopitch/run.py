@@ -20,7 +20,7 @@ import sys
 
 fixture = Path(__file__).resolve().parent
 sys.path.insert(0, str(fixture))
-from common import cases
+from common import cases, devices
 sys.path.insert(0, str(fixture.parents[1]))
 from probe_paths import shared_runtime
 p = argparse.ArgumentParser()
@@ -68,8 +68,20 @@ for rate in a.rate or (48000, 44100):
     # Output layouts run in their own session, as the Editor recorded them.
     layouts = work/f'engine-{rate}-layouts'
     if run('engine.py', '--native-project', project, '--runtime', runtime, '--cases', ','.join(cases(True)),
-           '--work', layouts): raise SystemExit(f'engine {rate} layouts failed')
-    for profile, root, suffix in (('all', candidate, ''), ('layouts', layouts/'capture', '-layouts')):
+           '--device-channels', 8, '--work', layouts): raise SystemExit(f'engine {rate} layouts failed')
+    compared = [('all', candidate, ''), ('layouts', layouts/'capture', '-layouts')]
+    if rate == 48000:
+        # Each device control on a virtual device of its channel count, as the Editor recorded.
+        merged = {}
+        for key, channels in devices():
+            part = work/f'engine-{rate}-{key}'
+            if run('engine.py', '--native-project', project, '--runtime', runtime, '--cases', key,
+                   '--device-channels', channels, '--work', part): raise SystemExit(f'engine {key} failed')
+            merged.update(json.loads((part/'capture/capture.json').read_text()))
+        (work/f'engine-{rate}-devices').mkdir()
+        (work/f'engine-{rate}-devices/capture.json').write_text(json.dumps(merged, indent=2)+'\n')
+        compared.append(('devices', work/f'engine-{rate}-devices', '-devices'))
+    for profile, root, suffix in compared:
         run('compare.py', '--profile', profile, '--candidate', root, '--report', work/f'strict-{rate}{suffix}.jsonl.gz')
         failed |= bool(run('compare.py', '--profile', profile, '--pcm-steps', '1', '--residuals', '--candidate', root,
                            '--report', work/f'gate-{rate}{suffix}.jsonl.gz'))

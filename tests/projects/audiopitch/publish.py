@@ -5,7 +5,7 @@ import gzip
 import json
 from pathlib import Path
 import shutil
-from common import FIXTURE, header, samples
+from common import FIXTURE, devices, header, samples
 from verify import verify
 
 p = argparse.ArgumentParser()
@@ -14,16 +14,19 @@ p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--capture', type=Path, required=True)
 p.add_argument('--extend', action='store_true', help='Add cases only; every existing metadata value and sample must remain identical')
 p.add_argument('--repeat', type=Path, required=True, help='Independent capture that must match every metadata value and raw sample')
-p.add_argument('--contexts', action='store_true', help='Publish the separately measured output layouts awaiting graph support')
+p.add_argument('--contexts', action='store_true', help='Publish the output layout controls (Reference/.../layouts)')
+p.add_argument('--devices', action='store_true', help='Publish the device controls (Reference/.../devices, metadata only)')
 a = p.parse_args()
-verify(a.capture, a.release, a.rate, contexts=a.contexts)
-verify(a.repeat, a.release, a.rate, contexts=a.contexts)
+selected = [key for key, _ in devices()] if a.devices else None
+verify(a.capture, a.release, a.rate, contexts=a.contexts, selected=selected)
+verify(a.repeat, a.release, a.rate, contexts=a.contexts, selected=selected)
 assert header(a.capture) == header(a.repeat), 'independent capture metadata differs'
 for key, record in header(a.capture).items():
     if isinstance(record, dict) and 'file' in record:
         assert samples(a.capture, record).tobytes() == samples(a.repeat, header(a.repeat)[key]).tobytes(), 'independent capture differs: '+key
 target = FIXTURE/'Reference'/('unity-'+a.release)
 if a.contexts: target = target/'layouts'
+if a.devices: target = target/'devices'
 target = target/('rate-'+str(a.rate))
 if target.exists():
     assert a.extend, 'reference already exists; --extend may only add identical controls'
@@ -38,6 +41,6 @@ shutil.copy2(a.capture/'capture.json', target/'capture.json')
 for f in sorted(a.capture.glob('*.f32')):
     if not (target/(f.name+'.gz')).exists():
         with gzip.GzipFile(target/(f.name+'.gz'), 'wb', mtime=0) as out: out.write(f.read_bytes())
-verify(target, a.release, a.rate, contexts=a.contexts)
+verify(target, a.release, a.rate, contexts=a.contexts, selected=selected)
 assert header(target) == header(a.capture)
 print('Published', target)

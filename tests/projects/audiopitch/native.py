@@ -13,7 +13,9 @@ p.add_argument('--work', type=Path, required=True)
 p.add_argument('--editor', type=Path)
 p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--buffer', type=int, choices=(256, 512, 1024, 2048), default=1024)
-p.add_argument('--cases', help='Comma-separated subset, for diagnostics only')
+p.add_argument('--cases', help='Comma-separated subset of one set, for diagnostics and part sessions')
+p.add_argument('--set', choices=('all', 'layouts', 'devices'), default='all',
+               help='all: stereo, buffer and layout controls (plus device controls at 48000 Hz)')
 a = p.parse_args()
 fixture = Path(__file__).resolve().parent
 if (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0] != 'm_EditorVersion: '+a.release:
@@ -27,7 +29,7 @@ import sys
 sys.path.insert(0, str(fixture.parents[1]))
 from editor_runner import EditorJob, run
 import time
-from common import cases, header
+from common import cases, devices, header
 
 
 def capture(work, cases, env=None):
@@ -41,8 +43,8 @@ def capture(work, cases, env=None):
     if result['exit_code'] != 0: raise SystemExit('Editor capture failed: '+str(result))
 
 
-def surround_server(root):
-    """A private PulseAudio server whose default sink has eight 7.1 channels.
+def surround_server(root, channels=8):
+    """A private PulseAudio server whose default sink has `channels` channels (eight: 7.1).
 
     The output device bounds the active DSP layout: on a two-channel default device, Quad,
     Surround, 5.1 and 7.1 requests keep the requested configuration getter value but run stereo
@@ -54,8 +56,9 @@ def surround_server(root):
     socket = root/'native'
     (root/'server.pa').write_text(
         f'load-module module-native-protocol-unix socket={socket} auth-anonymous=1\n'
-        f'load-module module-null-sink sink_name=surround rate={a.rate} channels=8 '
-        'channel_map=front-left,front-right,front-center,lfe,rear-left,rear-right,side-left,side-right\n'
+        f'load-module module-null-sink sink_name=surround rate={a.rate} channels={channels} '
+        + ('channel_map=front-left,front-right,front-center,lfe,rear-left,rear-right,side-left,side-right'
+           if channels == 8 else '') + '\n'
         'set-default-sink surround\n')
     env = dict(os.environ, HOME=str(root), PULSE_RUNTIME_PATH=str(root), PULSE_STATE_PATH=str(root))
     server = subprocess.Popen([binary, '-n', '-F', str(root/'server.pa'), '--daemonize=no', '--exit-idle-time=-1',
@@ -70,18 +73,51 @@ def surround_server(root):
     return server, 'unix:'+str(socket)
 
 
+def kind(key):
+    return 'device' if key.startswith('device_') else 'layout' if key.startswith('context_') else 'stereo'
+
+
+def part(work, selected):
+    """One session of one set: layouts against an eight-channel device, a device control against
+    a device of its own channel count, stereo controls on the session's default device."""
+    if kind(selected[0]) == 'stereo':
+        capture(work, selected)
+        return
+    channels = dict(devices()).get(selected[0], 8)
+    server, address = surround_server(work/'pulse', channels)
+    try: capture(work, selected, dict(PULSE_SERVER=address))
+    finally: server.terminate(); server.wait()
+
+
+def record_devices(work):
+    """Every device control in its own session, merged into WORK/capture (48000 Hz only)."""
+    merged = {}
+    for key, _ in devices():
+        subprocess.run([sys.executable, str(fixture/'native.py'), '--release', a.release, '--rate', str(a.rate),
+                        '--work', str(work/key), '--cases', key, '--editor', str(editor)], check=True)
+        for name, value in header(work/key/'capture').items():
+            assert merged.get(name, value) == value, name
+            merged[name] = value
+    (work/'capture').mkdir()
+    (work/'capture'/'capture.json').write_text(json.dumps(merged, indent=2)+'\n')
+
+
+from verify import verify
 if a.cases:
     selected = a.cases.split(',')
-    if any(key.startswith('context_') for key in selected) and any(not key.startswith('context_') for key in selected):
-        p.error('select layout and stereo controls separately')
-    if selected[0].startswith('context_'):
-        server, address = surround_server(a.work/'pulse')
-        try: capture(a.work, selected, dict(PULSE_SERVER=address))
-        finally: server.terminate(); server.wait()
-    else:
-        capture(a.work, selected)
-    from verify import verify
-    verify(a.work/'capture', a.release, a.rate, contexts=selected[0].startswith('context_'), selected=selected)
+    if len({kind(key) for key in selected}) != 1 or (kind(selected[0]) == 'device' and len(selected) != 1):
+        p.error('select controls of one set (one device control per session)')
+    part(a.work, selected)
+    verify(a.work/'capture', a.release, a.rate, contexts=kind(selected[0]) == 'layout', selected=selected)
+    raise SystemExit
+if a.set == 'devices':
+    if a.rate != 48000: p.error('device controls are recorded at 48000 Hz')
+    record_devices(a.work)
+    verify(a.work/'capture', a.release, a.rate, selected=[key for key, _ in devices()])
+    raise SystemExit
+if a.set == 'layouts':
+    part(a.work, cases(True))
+    verify(a.work/'capture', a.release, a.rate, contexts=True)
     raise SystemExit
 capture(a.work, [key for key in cases() if not key.startswith('buffer_')])
 output = a.work/'capture'
@@ -104,6 +140,7 @@ layouts = a.work/'layouts'
 subprocess.run([sys.executable, str(fixture/'native.py'), '--release', a.release, '--rate', str(a.rate),
                 '--work', str(layouts), '--cases', ','.join(cases(True)), '--editor', str(editor)], check=True)
 (a.work/'contexts').symlink_to(layouts/'capture', target_is_directory=True)
-from verify import verify
 verify(output, a.release, a.rate)
 verify(a.work/'contexts', a.release, a.rate, contexts=True)
+if a.rate == 48000:
+    record_devices(a.work/'devices')

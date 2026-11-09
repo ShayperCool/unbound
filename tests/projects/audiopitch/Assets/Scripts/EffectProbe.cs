@@ -124,10 +124,24 @@ public class EffectProbe : MonoBehaviour
         new[] { "context_mode5point1_max6", "music=noise:0.25", "mode=Mode5point1", "set:Max channels=6", "Music.Shift.Pitch=0.75" },
         new[] { "context_mode7point1_clip", "music=imp", "mode=Mode7point1", "mono=1", "Music:Att" },
         new[] { "context_mode7point1_max6", "music=noise:0.25", "mode=Mode7point1", "set:Max channels=6", "Music.Shift.Pitch=0.75" },
+        new[] { "context_mono_3d_clip", "music=imp", "mode=Mono", "mono=1", "blend=1", "pos=2:0:1", "Music:Att" },
+        new[] { "context_mono_3d_stereo", "music=imp", "mode=Mono", "blend=1", "pos=2:0:1", "Music:Att" },
+        new[] { "context_mono_3d_spread", "music=imp", "mode=Mono", "blend=1", "pos=2:0:1", "spread=120", "Music:Att" },
+        new[] { "context_mono_3d_half", "music=imp", "mode=Mono", "mono=1", "blend=0.5", "pan=-0.5", "pos=-1:0:2", "Music:Att" },
+        new[] { "context_stereo_3d_clip", "music=imp", "mono=1", "blend=1", "pos=2:0:1", "Music:Att" },
+        new[] { "context_stereo_generator", "music=generator", "Music:Att" },
+        new[] { "context_mono_generator", "music=generator", "mode=Mono", "Music:Att" },
+        new[] { "context_mode5point1_generator", "music=generator", "mode=Mode5point1", "Music:Att" },
+        new[] { "context_mono_listener", "music=imp", "mode=Mono", "listener=0.125:0", "Music:Att" },
+        new[] { "context_mode5point1_listener", "music=imp", "mode=Mode5point1", "listener=0.125:4", "Music:Att" },
         new[] { "context_quad", "music=noise:0.25", "mode=Quad", "Music.Shift.Pitch=0.75" },
         new[] { "context_surround", "music=noise:0.25", "mode=Surround", "Music.Shift.Pitch=0.75" },
         new[] { "context_mode5point1", "music=noise:0.25", "mode=Mode5point1", "Music.Shift.Pitch=0.75" },
         new[] { "context_mode7point1", "music=noise:0.25", "mode=Mode7point1", "Music.Shift.Pitch=0.75" },
+        // Device controls: one Editor session per output device channel count, metadata only.
+        new[] { "device_1", "device=1" }, new[] { "device_2", "device=2" }, new[] { "device_3", "device=3" },
+        new[] { "device_4", "device=4" }, new[] { "device_5", "device=5" }, new[] { "device_6", "device=6" },
+        new[] { "device_7", "device=7" }, new[] { "device_8", "device=8" },
     };
     static int BlockCount, ClipFrames;
     public static string[] Selected()
@@ -244,6 +258,32 @@ public class EffectProbe : MonoBehaviour
         void Save() => File.WriteAllText(Path.Combine(output, "capture.json"), "{" + string.Join(",", records) + "}\n");
         Save();
         foreach (string key in Selected()) {
+            if (key.StartsWith("device_")) {
+                // Each requested layout on this session's device: the getter, the driver's caps
+                // and the channel count the listener callback actually receives.
+                foreach (AudioSpeakerMode mode in new[] { AudioSpeakerMode.Mono, AudioSpeakerMode.Stereo, AudioSpeakerMode.Quad,
+                    AudioSpeakerMode.Surround, AudioSpeakerMode.Mode5point1, AudioSpeakerMode.Mode7point1, AudioSpeakerMode.Prologic }) {
+                    AudioRenderer.Stop();
+                    config.speakerMode = mode;
+                    if (!AudioSettings.Reset(config)) throw new Exception("device reset failed");
+                    if (!Engine) yield return null;
+                    if (!AudioRenderer.Start()) throw new Exception("device restart failed");
+                    OutputLayoutProbe.Channels = 0;
+                    var probe = gameObject.AddComponent<OutputLayoutProbe>();
+                    var warmup = new NativeArray<float>(config.dspBufferSize * 8, Allocator.Persistent);
+                    for (int attempt = 0; attempt < 16 && OutputLayoutProbe.Channels == 0; attempt++) {
+                        if (!Engine) yield return null; else FlushEngine();
+                        if (!AudioRenderer.Render(warmup)) throw new Exception("device preflight render failed");
+                    }
+                    warmup.Dispose(); DestroyImmediate(probe);
+                    string prefix = "\""+key+"."+mode+".";
+                    records.Add(prefix+"getter\":"+(int)AudioSettings.GetConfiguration().speakerMode);
+                    records.Add(prefix+"caps\":"+(int)AudioSettings.driverCapabilities);
+                    records.Add(prefix+"channels\":"+OutputLayoutProbe.Channels);
+                }
+                Save();
+                continue;
+            }
             int requestedBuffer = int.Parse(Option(key, "buffer=", "1024"));
             var requestedMode = (AudioSpeakerMode)Enum.Parse(typeof(AudioSpeakerMode), Option(key, "mode=", "Stereo"));
             if (config.dspBufferSize != requestedBuffer || config.speakerMode != requestedMode) {
@@ -315,19 +355,38 @@ public class EffectProbe : MonoBehaviour
                 records.Add("\""+key+".wetvalue\":"+value.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
             }
             var go = new GameObject(key);
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            var position = Option(key, "pos=", "0:0:0").Split(':');
+            go.transform.position = new Vector3(float.Parse(position[0], inv), float.Parse(position[1], inv), float.Parse(position[2], inv));
             var source = go.AddComponent<AudioSource>();
             source.bypassEffects = Option(key, "bypass=", "0") == "1";
             source.bypassListenerEffects = Option(key, "listener_bypass=", "0") == "1";
             source.outputAudioMixerGroup = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Music");
             if (!source.outputAudioMixerGroup) throw new Exception("Missing group Music");
-            source.spatialBlend = 0; source.volume = 1;
-            source.panStereo = float.Parse(Option(key, "pan=", "0"), System.Globalization.CultureInfo.InvariantCulture);
-            int channels = Option(key, "mono=", "0") == "1" ? 1 : 2;
-            var clip = AudioClip.Create(key, ClipFrames, channels, rate, false);
-            var data = Signal(Option(key, "music=", "dc:0.5"), rate);
-            if (channels == 1) { var mono = new float[ClipFrames]; for (int f = 0; f < ClipFrames; f++) mono[f] = data[2*f]; data = mono; }
-            if (!clip.SetData(data, 0)) throw new Exception("SetData failed");
-            source.clip = clip; source.Play();
+            source.spatialBlend = float.Parse(Option(key, "blend=", "0"), inv); source.volume = 1;
+            source.spread = float.Parse(Option(key, "spread=", "0"), inv);
+            source.panStereo = float.Parse(Option(key, "pan=", "0"), inv);
+            var listenerWrite = Option(key, "listener=", "");
+            OutputLayoutProbe.WriteChannel = -1;
+            if (listenerWrite != "") {
+                // A listener filter writes a constant into one output channel.
+                OutputLayoutProbe.WriteValue = float.Parse(listenerWrite.Split(':')[0], inv);
+                OutputLayoutProbe.WriteChannel = int.Parse(listenerWrite.Split(':')[1], inv);
+                if (layoutProbe == null) layoutProbe = gameObject.AddComponent<OutputLayoutProbe>();
+            }
+            AudioClip clip = null;
+            if (Option(key, "music=", "") == "generator") {
+                ProbeGenerator.Channels = 0;
+                go.AddComponent<ProbeGenerator>();
+            } else {
+                int channels = Option(key, "mono=", "0") == "1" ? 1 : 2;
+                clip = AudioClip.Create(key, ClipFrames, channels, rate, false);
+                var data = Signal(Option(key, "music=", "dc:0.5"), rate);
+                if (channels == 1) { var mono = new float[ClipFrames]; for (int f = 0; f < ClipFrames; f++) mono[f] = data[2*f]; data = mono; }
+                if (!clip.SetData(data, 0)) throw new Exception("SetData failed");
+                source.clip = clip;
+            }
+            source.Play();
             var sink = new NativeArray<float>(actualBuffer * outputChannels, Allocator.Persistent); sinks.Add(sink);
             var buffer = new NativeArray<float>(actualBuffer * outputChannels, Allocator.Persistent);
             var master = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Master");
@@ -349,11 +408,14 @@ public class EffectProbe : MonoBehaviour
                     if (Engine) FlushEngine();
                 }
             }
+            if (Option(key, "music=", "") == "generator") records.Add("\""+key+".generator_channels\":"+ProbeGenerator.Channels);
+            if (listenerWrite != "") records.Add("\""+key+".listener_channels\":"+OutputLayoutProbe.Channels);
             foreach (string suffix in new[] { "", ".master" })
                 records.Add("\""+key+suffix+"\":{\"file\":\""+key+suffix+".f32\",\"frames\":"+(BlockCount*actualBuffer)+",\"channels\":"+outputChannels+"}");
             Save(); buffer.Dispose();
+            OutputLayoutProbe.WriteChannel = -1;
             if (layoutProbe != null) DestroyImmediate(layoutProbe);
-            source.Stop(); DestroyImmediate(go); DestroyImmediate(clip);
+            source.Stop(); DestroyImmediate(go); if (clip) DestroyImmediate(clip);
             var silence = new NativeArray<float>(actualBuffer * outputChannels, Allocator.Persistent);
             for (int drain = 0; drain < 8; drain++) {
                 if (!Engine) yield return null; else FlushEngine();
@@ -368,5 +430,23 @@ public class EffectProbe : MonoBehaviour
 public class OutputLayoutProbe : MonoBehaviour
 {
     public static volatile int Channels;
-    void OnAudioFilterRead(float[] data, int channels) { Channels = channels; }
+    public static volatile int WriteChannel = -1;
+    public static float WriteValue;
+    void OnAudioFilterRead(float[] data, int channels)
+    {
+        Channels = channels;
+        if (WriteChannel >= 0 && WriteChannel < channels)
+            for (int i = WriteChannel; i < data.Length; i += channels) data[i] += WriteValue;
+    }
+}
+
+/// <summary>A clipless source's generator: constants on the first two channels.</summary>
+public class ProbeGenerator : MonoBehaviour
+{
+    public static volatile int Channels;
+    void OnAudioFilterRead(float[] data, int channels)
+    {
+        Channels = channels;
+        for (int i = 0; i < data.Length; i += channels) { data[i] += 0.25f; if (channels > 1) data[i + 1] -= 0.125f; }
+    }
 }

@@ -15,6 +15,8 @@ p.add_argument('--runtime', type=Path, required=True, help='Directory containing
 p.add_argument('--work', type=Path, required=True)
 p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--cases', help='Selected controls for independent output-context sessions')
+p.add_argument('--device-channels', type=int, default=2,
+               help='Output channels of the engine virtual device, as the Editor capture device had')
 a = p.parse_args()
 fixture = Path(__file__).resolve().parent
 if (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0] != 'm_EditorVersion: '+a.release:
@@ -33,6 +35,7 @@ hashes = {str(f.relative_to(a.runtime)): hashlib.sha256(f.read_bytes()).hexdiges
 env = dict(os.environ, EFFECT_PROBE_OUT=str(output), EFFECT_PROBE_RATE=str(a.rate), EFFECT_PROBE_ENGINE='1',
            UNBOUND_MANAGED_DIR=str(a.runtime/'managed'), LD_LIBRARY_PATH=str(a.runtime/'managed'))
 if a.cases: env['EFFECT_PROBE_CASES'] = a.cases
+env['UNBOUND_AUDIO_DEVICE_CHANNELS'] = str(a.device_channels)
 with (a.work/'engine.log').open('w') as log:
     result = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT)
 (a.work/'exit.json').write_text(json.dumps({'returncode': result.returncode})+'\n')

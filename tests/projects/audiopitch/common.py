@@ -24,10 +24,19 @@ UNSUPPORTED = {
 }
 
 
-def cases(contexts=False):
+def all_cases():
     source = (FIXTURE/'Assets/Scripts/EffectProbe.cs').read_text()
     body = source.split('Cases = {', 1)[1].split('};', 1)[0]
-    return [key for key in re.findall(r'new\[\] \{ "([a-z0-9_]+)"', body) if key.startswith('context_') == contexts]
+    return re.findall(r'new\[\] \{ "([a-z0-9_]+)"', body)
+
+
+def cases(contexts=False):
+    return [key for key in all_cases() if not key.startswith('device_') and key.startswith('context_') == contexts]
+
+
+def devices():
+    """Device controls: (key, output channels of its private device), recorded at 48000 Hz only."""
+    return [(key, int(key.split('_')[1])) for key in all_cases() if key.startswith('device_')]
 
 
 def profile(name, rate):
@@ -35,6 +44,7 @@ def profile(name, rate):
     keys = cases()
     if name == 'all': return dict.fromkeys(keys)
     if name == 'layouts': return dict.fromkeys(cases(True))
+    if name == 'devices': return dict.fromkeys(key for key, _ in devices())
     raise ValueError(name)
 
 

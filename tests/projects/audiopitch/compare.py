@@ -106,7 +106,7 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--release', required=True)
     p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
-    p.add_argument('--profile', choices=('all', 'layouts'), default='all')
+    p.add_argument('--profile', choices=('all', 'layouts', 'devices'), default='all')
     p.add_argument('--reference', type=Path, help='Override only for independent Native agreement')
     p.add_argument('--candidate', type=Path, required=True)
     p.add_argument('--before', type=Path)
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     a = p.parse_args()
     if not a.report.name.endswith('.jsonl.gz'): p.error('report must end in .jsonl.gz')
     published = FIXTURE/'Reference'/('unity-'+a.release)
-    reference = a.reference or (published/'layouts' if a.profile == 'layouts' else published)/('rate-'+str(a.rate))
+    reference = a.reference or (published/a.profile if a.profile != 'all' else published)/('rate-'+str(a.rate))
     assert header(reference)['release'] == a.release and header(reference)['rate'] == a.rate
     raise SystemExit(bool(compare(reference, a.candidate, a.report, profile(a.profile, a.rate), a.exact, a.before, a.pcm_steps, a.residuals,
                                  tuple(UNSUPPORTED) if a.residuals else ())))
