@@ -1750,7 +1750,7 @@ mod tests {
     /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 46);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 47);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

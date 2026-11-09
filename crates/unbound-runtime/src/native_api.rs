@@ -52,7 +52,8 @@ use std::ffi::c_void;
 /// 45: precomputed realtime GI (`gi_update`, `gi_read_atlas`, `gi_set_material`,
 /// `gi_set_emissive`, `gi_realtime_uvs`).
 /// 46: driver capabilities and the active speaker mode in the audio settings reply.
-pub const NATIVE_API_VERSION: u32 = 46;
+/// 47: source filter component activation flags and the component reset command.
+pub const NATIVE_API_VERSION: u32 = 47;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

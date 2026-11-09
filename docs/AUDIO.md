@@ -180,7 +180,7 @@ The extension preserves every pre-existing reference value and tolerance.
 | Documented, Unity 6000.0 | [AudioEchoFilter.delay](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioEchoFilter-delay.html) and the [Echo Filter Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioEchoFilter.html) describe a float delay, 10..5000 ms, without specifying conversion. |
 | Measured in this release/context | Echo component setters/getters store unsigned whole milliseconds: 17/17.1/17.5/17.9 all read 17, 18 reads 18, 10.125 reads 10, 1.25 reads 1, -1.25 reads 4294967296 as float, and 5000.75 reads 5000. The DSP minimum is 1 ms; the shared Echo core then applies its existing eight-frame conversion. `Compat.AudioComponentEchoDelayMeasured` selects this mapping for both source and listener, including the same source mono/noise/impulse controls. Other releases retain the prior float setter and 10 ms minimum until measured. |
 | Compatibility | `Compat.AudioListenerChainMeasured` selects listener support and packet routing on 6000.0.71f1. Other releases retain their previous reverb-only listener support and unmeasured bypass routing. No DSP kernel or audio-thread allocation is added. |
-| Still unmeasured | Listener components interleaved with OnAudioFilterRead scripts and listeners sharing their GameObject with an AudioSource fail clearly. Live Distortion/Chorus parameter changes are measured below; bypass transitions and wider output layouts remain unmeasured. |
+| Still unmeasured | Listener components interleaved with OnAudioFilterRead scripts and listeners sharing their GameObject with an AudioSource fail clearly. Live Distortion/Chorus parameter changes are measured below; source bypass transitions are measured by the scripted spatial controls; listener bypass transitions and wider output layouts remain unmeasured. |
 
 # 3D component placement
 
@@ -199,7 +199,7 @@ Decoded interpolation weights the neighboring samples separately before adding
 them. This operation order also prevents a small input difference from crossing
 the Chorus history's quantization boundary.
 
-Static spatial Distortion/Chorus with source OnAudioFilterRead is measured by [the scripted spatial controls](../tests/projects/audiodistortion/SCRIPT_MEASUREMENT.md). Live clipped-chain bypass reconnection remains explicitly unsupported and doctor-listed; all five full reconnection comparisons remain visible.
+Static spatial Distortion/Chorus with source OnAudioFilterRead is measured by [the scripted spatial controls](../tests/projects/audiodistortion/SCRIPT_MEASUREMENT.md). Live bypass changes reconnect the source chain as measured by the same profile: inactive components hold their state and silence the units above them, and the first change after a clip starts playing restarts the components with the last unit left active (`Compat.AudioComponentActivationMeasured`; see that page).
 
 Zone sends receive each voice's spatial output before its source components.
 A naturally ending voice omits its entire final DSP buffer from the zone send;

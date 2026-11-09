@@ -851,11 +851,26 @@ impl Effect {
             pitch.set_channel_limit(channels, parameters.max_channels);
         }
     }
+
+    /// A reconnected source component restarts empty like [`Effect::reset`], except that the
+    /// Chorus sweep span continues and the resonant lowpass keeps its state: that unit has no
+    /// restart of its own. Unity 6000.0.71f1, tests/projects/audiodistortion live bypass
+    /// controls.
+    pub fn restart(&mut self) {
+        self.clear_state(true);
+    }
+
     /// Forgets the histories and the parameter ramp, leaving the effect as [`Effect::new`] makes
     /// it at the current rate. The Echo buffer keeps its allocation (zeroed).
     pub fn reset(&mut self) {
+        self.clear_state(false);
+    }
+
+    fn clear_state(&mut self, restart: bool) {
         self.stages = Default::default();
-        self.lowpass = Default::default();
+        if !restart {
+            self.lowpass = Default::default();
+        }
         self.echo.history.fill([0; 2]);
         self.echo.position = 0;
         if let Some(reverb) = &mut self.reverb {
@@ -864,7 +879,11 @@ impl Effect {
         self.duck = Duck::default();
         self.compressor = Compressor::default();
         if let Some(chorus) = &mut self.chorus {
-            chorus.clear();
+            if restart {
+                chorus.restart();
+            } else {
+                chorus.clear();
+            }
         }
         if let Some(flange) = &mut self.flange {
             flange.clear();
@@ -885,8 +904,10 @@ impl Effect {
             0.0
         });
         self.dry_ramp = ParameterRamp::new((1.0 - self.spec.mix_level.unwrap_or(1.0)).max(-1.0));
-        self.cutoff = 5000.0;
-        self.resonance = 1.0;
+        if !restart {
+            self.cutoff = 5000.0;
+            self.resonance = 1.0;
+        }
         self.gain = if self.kind == Some(EffectKind::Send) {
             self.spec.send_level
         } else {

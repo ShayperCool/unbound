@@ -42,6 +42,12 @@ pub mod source_flags {
     pub const ZONE_VOICE_SEND: u32 = 1 << 13;
     /// Listener poses and relative velocity cached at the source's selected sample phase.
     pub const LISTENER_SNAPSHOT: u32 = 1 << 14;
+    /// A live bypass deactivated the filter components (with [`BYPASS_EFFECTS`]): they hold
+    /// their state and silence every unit above them; scripts below them still run.
+    pub const COMPONENTS_INACTIVE: u32 = 1 << 15;
+    /// With [`COMPONENTS_INACTIVE`]: the last unit in Inspector order stays active after a
+    /// chain reconnection and processes the silence above it.
+    pub const LAST_COMPONENT_ACTIVE: u32 = 1 << 16;
 }
 
 /// An AudioSource's parameters, sent when they change and once per frame (its transform).
@@ -168,6 +174,8 @@ pub mod command {
     pub const SET_SCHEDULED_END: i32 = 8;
     /// Stop the main voice only (the clip changed).
     pub const STOP_MAIN: i32 = 9;
+    /// The source's filter chain reconnects: every component restarts empty.
+    pub const RESET_COMPONENTS: i32 = 10;
 }
 
 #[repr(C)]
@@ -341,11 +349,11 @@ mod tests {
     /// The source packet's filter descriptors were added at NativeApi 16; 20 adds the reverb
     /// kind and parameters, 21 the frame packet's reverb zone, 23 Distortion kind 5, 24 Chorus kind 6. Versions 25, 26 and 27 add mixer Flange, Normalize and Pitch Shifter, 28 render protocol 12, 29 input frame versions, 30 a decoded-resampling flag and 31 the imported texture's reported format, without changing these layouts.
     /// Version 32 adds mesh colors, 33 component tail timing, 34 the instance multiplier, 35 deferred render-target mips, 36 the source-loop listener poses 37 the downloaded audio decoder 38 prepared audio callback buffers and 39 retained MSAA resolves.
-    /// Version 40 adds parameterised mixer Pitch Shifter FFT size, 41 native rendering plugins and 42 legacy glyph bearings, without changing audio layouts; 43 adds the zone startup frame flag and 44 Pitch Shifter Max channels 45 precomputed realtime GI and 46 the driver capabilities reply.
+    /// Version 40 adds parameterised mixer Pitch Shifter FFT size, 41 native rendering plugins and 42 legacy glyph bearings, without changing audio layouts; 43 adds the zone startup frame flag and 44 Pitch Shifter Max channels 45 precomputed realtime GI and 46 the driver capabilities reply and 47 the component activation flags and reset command.
     /// The managed side pins the same version and refuses every other version.
     #[test]
-    fn the_filter_descriptor_layout_is_native_api_46() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 46);
+    fn the_filter_descriptor_layout_is_native_api_47() {
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 47);
         assert_eq!(
             [
                 filter_kind::LOWPASS,

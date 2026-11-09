@@ -64,6 +64,11 @@ impl Chorus {
     pub fn configuration(&self) -> (u32, u32) {
         self.line.configuration()
     }
+    /// Restarts history and sweep phase as a reconnected unit; the span keeps slewing from its
+    /// current value. Unity 6000.0.71f1, tests/projects/audiodistortion live bypass controls.
+    pub fn restart(&mut self) {
+        self.line.restart();
+    }
     /// Clears history and sweep, rebuilding the span from retained controls on next use.
     pub fn clear(&mut self) {
         self.line.clear();

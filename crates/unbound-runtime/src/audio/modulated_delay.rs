@@ -86,11 +86,17 @@ impl ModulatedDelay {
     }
 
     pub(crate) fn clear(&mut self) {
+        self.restart();
+        self.span = 0.0;
+    }
+
+    /// Clears the history and restarts the write position and sweep phase; the current span
+    /// continues from where it was.
+    pub(crate) fn restart(&mut self) {
         self.history.fill([0; 2]);
         self.position = 0;
         self.offset = 0;
         self.phase = 0.0;
-        self.span = 0.0;
     }
 
     fn wrap(&self, value: f32) -> f32 {
@@ -193,6 +199,28 @@ mod tests {
 
     fn reach(rate: u32) -> usize {
         rate as usize / 10
+    }
+
+    #[test]
+    fn restart_clears_history_position_and_phase_but_keeps_the_span() {
+        let mut line = ModulatedDelay::new("Chorus", 48000, 1024, reach).unwrap();
+        let mut samples = vec![0.25; 2 * 3000];
+        line.process(
+            &mut samples,
+            210.0,
+            5.0,
+            Taps::Quadrature,
+            0.25,
+            [0.75, 0.375],
+        );
+        let span = line.span;
+        assert!(span > 0.0 && span < 210.0);
+        line.restart();
+        assert_eq!(line.span, span);
+        assert_eq!((line.position, line.offset, line.phase), (0, 0, 0.0));
+        assert!(line.history.iter().all(|frame| *frame == [0, 0]));
+        line.clear();
+        assert_eq!(line.span, 0.0);
     }
 
     #[test]

@@ -370,6 +370,28 @@ impl FilterChain {
         }
     }
 
+    fn has_stage(&self, stage: i32) -> bool {
+        self.filters.iter().any(|filter| filter.stage == stage)
+    }
+
+    /// Runs only the last component of `stage` (every one with `None`) on `samples`.
+    fn process_last(&mut self, samples: &mut [f32], stage: Option<i32>) {
+        if let Some(filter) = self
+            .filters
+            .iter_mut()
+            .rev()
+            .find(|filter| stage.is_none_or(|s| filter.stage == s))
+        {
+            filter.effect.process(samples, false);
+            self.primed = true;
+        }
+    }
+
+    /// The chain reconnected: each component restarts empty (see [`Effect::restart`]).
+    fn restart(&mut self) {
+        self.filters.iter_mut().for_each(|f| f.effect.restart());
+    }
+
     /// Clears every history (the source stopped or went idle); the components stay.
     fn reset(&mut self) {
         if self.primed {
@@ -621,6 +643,21 @@ impl Source {
                 stereo[0] *= value;
                 stereo[1] *= value;
             }
+        }
+    }
+
+    /// Active components of a bypassed source process silence; their output (tails of earlier
+    /// input) joins the dry route.
+    fn run_bypassed_components(&mut self, samples: &mut [f32], stage: Option<i32>, last: bool) {
+        let silence = &mut self.bypass_dry[..samples.len()];
+        silence.fill(0.0);
+        if last {
+            self.chain.process_last(silence, stage);
+        } else {
+            self.chain.process(silence, stage, false);
+        }
+        for (sample, wet) in samples.iter_mut().zip(silence.iter()) {
+            *sample += *wet;
         }
     }
 
@@ -1516,10 +1553,15 @@ impl Mixer {
                 source.filter_started = false;
                 source.filter_paused = false;
                 source.played = true;
-                // Unbound's choice (unmeasured): Stop cuts the components' tails.
-                source.chain.reset();
+                // A generator played again ramps its source gain up from silence. Unity
+                // 6000.0.71f1, tests/projects/audiodistortion script_generator_quiet_restart.
+                source.generator_gain = None;
+                // Components keep their state through Stop; an idle source resets them when it
+                // next renders unless Play follows in the same update. Unity 6000.0.71f1,
+                // tests/projects/audiodistortion script3d_live_bypass_restart.
                 source.chain_tail = None;
             }
+            command::RESET_COMPONENTS => source.chain.restart(),
             command::STOP_MAIN => {
                 source.completed_main = None;
                 source.main = None;
@@ -2073,6 +2115,10 @@ impl Mixer {
             // filters". A paused or not yet submitted source does not advance its components.
             let bypass = flags & source_flags::BYPASS_EFFECTS != 0;
             let separate_return = bypass && flags & source_flags::SPATIAL_STEREO != 0;
+            // Inactive components hold their state and silence every unit above them.
+            // Unity 6000.0.71f1, tests/projects/audiodistortion live bypass controls.
+            let inactive = separate_return && flags & source_flags::COMPONENTS_INACTIVE != 0;
+            let last_active = inactive && flags & source_flags::LAST_COMPONENT_ACTIVE != 0;
             let voices_running = source
                 .main
                 .as_ref()
@@ -2127,16 +2173,23 @@ impl Mixer {
                 );
                 // Components below the generating script (none may sit above it). Unbound's
                 // choice (unmeasured): they also process the source's one-shots.
-                if voices_running {
-                    source
-                        .chain
-                        .process(buffer, Some(filter_stage::AFTER_SCRIPTS), bypass);
-                }
                 if separate_return {
                     for (sample, dry) in buffer.iter_mut().zip(&dry) {
                         *sample += *dry;
                     }
                     source.bypass_dry = dry;
+                    // The generated audio is on the dry route; active components run on silence.
+                    if voices_running && (!inactive || last_active) {
+                        source.run_bypassed_components(
+                            buffer,
+                            Some(filter_stage::AFTER_SCRIPTS),
+                            last_active,
+                        );
+                    }
+                } else if voices_running {
+                    source
+                        .chain
+                        .process(buffer, Some(filter_stage::AFTER_SCRIPTS), bypass);
                 }
             } else if filter {
                 if source
@@ -2180,13 +2233,26 @@ impl Mixer {
                                 source.begin_bypass(&mut input);
                             }
                             // The Inspector order is the processing order: components above
-                            // the scripts, the scripts, then the components below them.
-                            source.chain.process(
-                                &mut input,
-                                Some(filter_stage::BEFORE_SCRIPTS),
-                                bypass && !separate_return,
-                            );
-                            if let Some(cb) = callback {
+                            // the scripts, the scripts, then the components below them. With
+                            // inactive components, scripts run (on silence) only below them.
+                            // A last component that stays active runs on what reaches it: the
+                            // scripts' output when it is their only follower, else silence.
+                            let after = source
+                                .chain
+                                .filters
+                                .iter()
+                                .filter(|f| f.stage == filter_stage::AFTER_SCRIPTS);
+                            let after_count = after.count();
+                            let below_inactive =
+                                inactive && after_count > 0 && !(last_active && after_count == 1);
+                            if !inactive {
+                                source.chain.process(
+                                    &mut input,
+                                    Some(filter_stage::BEFORE_SCRIPTS),
+                                    bypass && !separate_return,
+                                );
+                            }
+                            if let Some(cb) = callback.filter(|_| !below_inactive) {
                                 call_in_layout(
                                     cb,
                                     callback::SOURCE_FILTER,
@@ -2196,11 +2262,20 @@ impl Mixer {
                                     &mut source.layout_scratch,
                                 );
                             }
-                            source.chain.process(
-                                &mut input,
-                                Some(filter_stage::AFTER_SCRIPTS),
-                                bypass && !separate_return,
-                            );
+                            if !inactive {
+                                source.chain.process(
+                                    &mut input,
+                                    Some(filter_stage::AFTER_SCRIPTS),
+                                    bypass && !separate_return,
+                                );
+                            } else if last_active && after_count > 0 {
+                                if after_count > 1 {
+                                    input.fill(0.0);
+                                }
+                                source
+                                    .chain
+                                    .process_last(&mut input, Some(filter_stage::AFTER_SCRIPTS));
+                            }
                             if separate_return {
                                 source.end_bypass(&mut input);
                             }
@@ -2255,7 +2330,11 @@ impl Mixer {
                 // Unbound's choice (unmeasured): components see the source's voices after its
                 // volume, mute and panning, the signal OnAudioFilterRead receives here.
                 if voices_running || tail {
-                    source.chain.process(buffer, None, bypass);
+                    if !separate_return {
+                        source.chain.process(buffer, None, bypass);
+                    } else if !inactive || last_active {
+                        source.run_bypassed_components(buffer, None, last_active);
+                    }
                 }
                 if let Some(end) = source.chain_tail.filter(|_| tail) {
                     let keep = (end.saturating_sub(t0) as usize).min(n);
@@ -5526,10 +5605,12 @@ mod tests {
         play(&mut m, 7, command::PLAY, 0.0);
         m.render(&mut out, 2);
         assert_eq!(out, first);
-        // Stop inside the clip, then play again.
+        // Stop inside the clip; the idle source restarts its components before it plays again.
+        // (Stop and Play in one update keep them: stop_and_play_in_one_update_keep_...)
         play(&mut m, 7, command::PLAY, 0.0);
         m.render(&mut out[..512 * 2], 2);
         play(&mut m, 7, command::STOP, 0.0);
+        m.render(&mut out[..64 * 2], 2);
         play(&mut m, 7, command::PLAY, 0.0);
         m.render(&mut out, 2);
         assert_eq!(out, first);
@@ -6124,6 +6205,94 @@ mod tests {
         let mut larger = vec![0.0; 2 * 8192];
         mixer.render(&mut larger, 2);
         assert!(larger.iter().any(|sample| *sample != 0.0));
+    }
+
+    #[test]
+    fn inactive_components_silence_units_above_them_and_a_last_active_one_runs_on_silence() {
+        use std::cell::Cell;
+        thread_local! { static CALLS: Cell<u32> = const { Cell::new(0) }; }
+        extern "C" fn script(
+            kind: i32,
+            _: u64,
+            data: *mut f32,
+            frames: i32,
+            channels: i32,
+            _: i64,
+        ) {
+            if kind != callback::SOURCE_FILTER {
+                return;
+            }
+            CALLS.with(|calls| calls.set(calls.get() + 1));
+            unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) }
+                .fill(0.03125);
+        }
+        let filters = [AudioFilterDescriptor {
+            cutoff: 0.4,
+            ..component(1, filter_kind::DISTORTION, filter_stage::AFTER_SCRIPTS)
+        }];
+        let dry = render_source(&[], 0, stereo_tone(8192), 2048);
+        let render = |extra: u32| {
+            CALLS.with(|calls| calls.set(0));
+            let mut mixer = Mixer::new(MixerConfig::default());
+            mixer.add_clip(1, stereo_tone(8192));
+            mixer.set_callback(Some(script));
+            source_with(&mut mixer, 7, 1, |p| {
+                p.flags = source_flags::FILTER
+                    | source_flags::BYPASS_EFFECTS
+                    | source_flags::SPATIAL_STEREO
+                    | source_flags::COMPONENTS_INACTIVE
+                    | extra;
+                p.filters = filters.to_vec();
+            });
+            play(&mut mixer, 7, command::PLAY, 0.0);
+            let mut output = vec![0.0; dry.len()];
+            mixer.render(&mut output, 2);
+            (output, CALLS.with(Cell::get))
+        };
+        // The inactive component below the script silences it: only the dry voice remains.
+        let (output, calls) = render(0);
+        assert_eq!(calls, 0);
+        assert_eq!(output, dry);
+        // A last component left active reads the script, which runs on silence.
+        let (output, calls) = render(source_flags::LAST_COMPONENT_ACTIVE);
+        assert!(calls > 0);
+        let generated = through(&vec![0.03125; output.len()], &filters, 48000);
+        for ((actual, dry), generated) in output.iter().zip(&dry).zip(generated) {
+            assert_eq!(*actual, dry + generated);
+        }
+    }
+
+    #[test]
+    fn stop_and_play_in_one_update_keep_component_histories() {
+        let echo = [AudioFilterDescriptor {
+            delay: 30.0,
+            ..component(1, filter_kind::ECHO, filter_stage::BEFORE_SCRIPTS)
+        }];
+        let render = |restart: bool| {
+            let mut mixer = Mixer::new(MixerConfig::default());
+            mixer.add_clip(1, impulse_clip(4096));
+            source_with(&mut mixer, 7, 1, |p| p.filters = echo.to_vec());
+            play(&mut mixer, 7, command::PLAY, 0.0);
+            let mut first = vec![0.0; 2 * 1024];
+            mixer.render(&mut first, 2);
+            if restart {
+                play(&mut mixer, 7, command::STOP, 0.0);
+                play(&mut mixer, 7, command::PLAY, 0.0);
+            }
+            let mut second = vec![0.0; 2 * 1024];
+            mixer.render(&mut second, 2);
+            (first, second)
+        };
+        let (first, _) = render(false);
+        let (_, restarted) = render(true);
+        // The restarted voice is the same impulse, now joined by the echo of the first one.
+        assert!(
+            restarted
+                .iter()
+                .zip(&first)
+                .any(|(restarted, fresh)| (restarted - fresh).abs() > 1e-6)
+        );
+        assert_eq!(restarted[..2], first[..2]);
     }
 
     #[test]

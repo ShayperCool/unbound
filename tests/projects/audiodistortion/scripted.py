@@ -5,27 +5,14 @@ import sys
 FIXTURE = Path(__file__).resolve().parent
 sys.path.insert(0, str(FIXTURE.parents[1]))
 from audio_pcm_profile import main
-# Complete raw reports retain these unresolved live reconnection controls. The four
-# scripted clip cases must explicitly refuse the setter; component-only reconnection
-# retains its earlier implementation and is a separate recorded follow-up.
-SCRIPT_RECONNECT = frozenset({
-    'script3d_live_bypass', 'script3d_live_bypass_initial',
-    'script3d_live_bypass_after', 'script3d_live_bypass_restart',
-})
-COMPONENT_RECONNECT = 'script3d_live_bypass_component'
 
 
 def accept(reference, candidate, report, keys, log):
     from compare import compare
-    supported = {key: value for key, value in keys.items()
-                 if key not in SCRIPT_RECONNECT and key != COMPONENT_RECONNECT}
-    failed = compare(reference, candidate, report, supported, pcm_steps=1)
-    diagnostics = log.read_text()
-    for key in SCRIPT_RECONNECT:
-        assert diagnostics.count('Unsupported live bypass '+key+': ') == 2, key
-    for key in supported:
-        assert 'Unsupported live bypass '+key+': ' not in diagnostics, key
-    print('Scripted spatial chains:', len(supported), 'supported controls; complete reconnection differences retained')
+    failed = compare(reference, candidate, report, keys, pcm_steps=1)
+    # Live bypass changes reconnect the filter chain; none may be refused.
+    assert 'Unsupported live bypass ' not in log.read_text()
+    print('Scripted spatial chains:', len(keys), 'controls, including live bypass reconnection')
     return failed
 
 

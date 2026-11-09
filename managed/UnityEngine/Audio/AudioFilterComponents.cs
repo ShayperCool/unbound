@@ -437,18 +437,39 @@ namespace Unbound.Runtime
         internal static NotSupportedException CustomCutoffCurve() =>
             new NotSupportedException("AudioLowPassFilter.customCutoffCurve is not supported by Unbound: the cutoff does not follow a distance curve");
 
-        // Static bypass of a scripted clip source is measured: the voice stays dry and the
-        // scripts receive silence. Reconnecting the voice to its scripts during playback also
-        // changes callback input ownership and effect histories, which remains unsupported for
-        // every scripted clip chain, whatever its spatial blend or components. A change before
-        // the voice reaches an audio frame (Awake/Start, playOnAwake) is a static bypass.
-        internal static void ValidateLiveBypass(AudioSource source)
+        // Unity 6000.0.71f1, tests/projects/audiodistortion live bypass controls: a changed list
+        // of filter components and scripts reconnects the chain; the reconnection completes at
+        // the next audio update and activates every component, overriding bypass changes made
+        // before it. A bypassEffects/bypassListenerEffects or component enable change sets the
+        // components' activation from bypassEffects. The first such change after a clip starts
+        // playing also reconnects the chain: every component restarts empty and the last unit
+        // in Inspector order stays active, processing silence while the source is bypassed.
+        static void UpdateActivation(AudioSource source, ulong identity, ulong enabled)
         {
-            if (!Compat.AudioSpatialStereoMeasured || source.clip == null || source.m_GameObject == null
-                || !source.m_HasAudioFrame || (!source.m_Paused && !source.isPlaying)) return;
-            foreach (var component in source.m_GameObject.m_Components)
-                if (AudioFilters.IsFilterScript(component))
-                    throw new NotSupportedException("Unbound: changing bypassEffects during playback of an AudioSource clip with OnAudioFilterRead scripts is not supported; stop the source before reconnecting its filters");
+            bool change = source.m_ActivationPending || enabled != source.m_FilterEnabled;
+            if (identity != source.m_FilterIdentity)
+            {
+                source.m_FilterIdentity = identity;
+                source.m_ReconnectionPending = true;
+            }
+            if (source.m_ReconnectionPending)
+            {
+                source.m_ComponentsInactive = false;
+                source.m_LastComponentActive = false;
+            }
+            else if (change)
+            {
+                source.m_ComponentsInactive = source.m_BypassEffects;
+                source.m_LastComponentActive = false;
+                if (Compat.AudioComponentActivationMeasured && source.m_ReconnectOnChange && source.m_HasAudioFrame)
+                {
+                    source.m_ReconnectOnChange = false;
+                    source.m_LastComponentActive = true;
+                    source.m_ResetComponents = true;
+                }
+            }
+            source.m_FilterEnabled = enabled;
+            source.m_ActivationPending = false;
         }
 
         static bool IsFilterComponent(Component c) => c is AudioLowPassFilter || c is AudioHighPassFilter || c is AudioEchoFilter || c is AudioReverbFilter || c is AudioDistortionFilter || c is AudioChorusFilter;
@@ -516,17 +537,22 @@ namespace Unbound.Runtime
             bool scripts = false, below = false;
             bool spatial = !source.bypassEffects && source.UsesSpatialBlend;
             string error = null;
+            ulong identity = 0, enabled = 0;
             foreach (var c in go.m_Components)
             {
                 if (AudioFilters.IsFilterScript(c))
                 {
+                    identity = unchecked(identity * 1000003 + (ulong)(long)c.GetInstanceID());
                     if (below) error ??= "a filter component between two OnAudioFilterRead scripts is not supported";
                     scripts = true;
                     continue;
                 }
                 if (!IsFilterComponent(c)) continue;
                 var behaviour = (Behaviour)c;
-                if (behaviour.m_Destroyed || !behaviour.isActiveAndEnabled) continue;
+                if (behaviour.m_Destroyed) continue;
+                identity = unchecked(identity * 1000003 + (ulong)(long)c.GetInstanceID());
+                enabled = unchecked(enabled * 2 + (behaviour.isActiveAndEnabled ? 1ul : 0ul));
+                if (!behaviour.isActiveAndEnabled) continue;
                 bool ok = Describe(c, out var d);
                 if (!ok) continue;
                 if (Unmeasured(c) is string unmeasured) error ??= unmeasured;
@@ -547,6 +573,7 @@ namespace Unbound.Runtime
                 if (table == null || table.Length == count) Array.Resize(ref table, Math.Max(4, count * 2));
                 table[count++] = d;
             }
+            UpdateActivation(source, identity, enabled);
             source.ReportFilterChain(error);
             return error == null ? count : 0;
         }

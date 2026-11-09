@@ -349,6 +349,9 @@ namespace Unbound.Runtime
         /// <summary>Why packets' filter descriptors were refused (tests).</summary>
         internal readonly List<string> FilterRejections = new List<string>();
 
+        /// <summary>Filter chain reconnections requested of this backend (tests).</summary>
+        internal int ComponentResets;
+
         /// <summary>A source's last packet, with its pointers cleared (tests).</summary>
         internal AudioSourcePacket ParamsOf(ulong handle) =>
             m_Sources.TryGetValue(handle, out var source) ? source.Params : default;
@@ -446,6 +449,9 @@ namespace Unbound.Runtime
                     break;
                 case AudioCommandKind.SetScheduledEnd:
                     if (source.Main != null) source.Main.EndAt = FrameOf(command.Time);
+                    break;
+                case AudioCommandKind.ResetComponents:
+                    ComponentResets++;
                     break;
                 default: return false;
             }

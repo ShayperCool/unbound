@@ -114,13 +114,13 @@ namespace UnityEngine.Tests
         static ulong Id(Component c) => unchecked((ulong)(long)c.GetInstanceID());
 
         [Fact]
-        public void PacketAndDescriptorLayoutsUnchangedInNativeApi43()
+        public void PacketAndDescriptorLayoutsUnchangedInNativeApi47()
         {
             // Added at 16; 20 adds reverb parameters, 21 the frame zone; 22 adds render commands,
             // 23 adds Distortion, 24 adds Chorus, 25-27 mixer effects, 28 render protocol 12, 29
             // frame input versions, 30 the decoded-resampling flag and 31 the imported texture
-            // format, 32 mesh colors, 33 component tail timing, 34 the instance multiplier, 35 deferred render-target mips, 36 source-loop listener poses 37 the downloaded audio decoder 38 prepared callback buffers and 39 retained MSAA resolves and 40 parameterised mixer Pitch Shifter FFT size, 41 native rendering plugins, 42 legacy glyph bearings, 43 the zone startup frame flag, 44 Pitch Shifter Max channels, 45 realtime GI, 46 driver capabilities.
-            Assert.Equal(46u, NativeApi.CurrentVersion);
+            // format, 32 mesh colors, 33 component tail timing, 34 the instance multiplier, 35 deferred render-target mips, 36 source-loop listener poses 37 the downloaded audio decoder 38 prepared callback buffers and 39 retained MSAA resolves and 40 parameterised mixer Pitch Shifter FFT size, 41 native rendering plugins, 42 legacy glyph bearings, 43 the zone startup frame flag, 44 Pitch Shifter Max channels, 45 realtime GI, 46 driver capabilities, 47 component activation flags.
+            Assert.Equal(47u, NativeApi.CurrentVersion);
             var frame = default(AudioFramePacket);
             byte* f = (byte*)&frame;
             Assert.Equal((64, 72, 80, 176), ((int)((byte*)&frame.FilterCount - f), (int)((byte*)&frame.Filters - f),
@@ -293,52 +293,95 @@ namespace UnityEngine.Tests
             Assert.Single(Collected(source));
         }
 
-        [Theory]
-        [InlineData(false, true, true)]
-        [InlineData(true, true, true)]
-        [InlineData(false, false, false)]
-        [InlineData(true, false, false)]
-        public void LiveScriptedBypassRefusesReconnectionAndKeepsTheCurrentRoute(bool initiallyBypassed, bool spatial, bool chorus)
+        uint Flags(AudioSource source)
         {
-            var source = Source("scripted reconnect");
-            if (spatial) source.spatialBlend = 1;
-            source.gameObject.AddComponent<FilterScript>();
-            if (chorus) source.gameObject.AddComponent<AudioChorusFilter>();
-            source.clip = AudioClip.Create("input", 8192, 1, 48000, false);
-            source.bypassEffects = initiallyBypassed;
-            source.Play();
-            Assert.True(source.isPlaying);
-            // Before the first audio frame the voice has no route yet: a static bypass.
-            source.bypassEffects = !initiallyBypassed;
-            source.bypassEffects = initiallyBypassed;
             UpdateWithoutAdvancing();
-            Assert.True(source.isPlaying);
-            Assert.Throws<NotSupportedException>(() => source.bypassEffects = !initiallyBypassed);
-            Assert.Equal(initiallyBypassed, source.bypassEffects);
-            Assert.True(source.isPlaying);
-            source.bypassEffects = initiallyBypassed; // A no-op never reconnects the chain.
-            source.Stop();
-            source.bypassEffects = !initiallyBypassed;
-            Assert.Equal(!initiallyBypassed, source.bypassEffects);
-            source.clip = null;
-            source.Play(); // A clipless generator keeps its measured live bypass path.
-            source.bypassEffects = initiallyBypassed;
-            Assert.Equal(initiallyBypassed, source.bypassEffects);
+            return m_Backend.ParamsOf(source.Handle).Flags;
+        }
+
+        const uint Inactive = AudioSourceFlags.ComponentsInactive;
+        const uint LastActive = AudioSourceFlags.LastComponentActive;
+
+        [Theory]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public void FirstLiveBypassChangeAfterPlayReconnectsTheChain(bool script, bool spatial)
+        {
+            var source = Source("reconnect");
+            if (spatial) source.spatialBlend = 1;
+            if (script) source.gameObject.AddComponent<FilterScript>();
+            source.gameObject.AddComponent<AudioDistortionFilter>();
+            source.gameObject.AddComponent<AudioChorusFilter>();
+            source.clip = AudioClip.Create("input", 48000, 1, 48000, false);
+            source.Play();
+            Assert.Equal(0u, Flags(source) & (Inactive | LastActive));
+            source.bypassEffects = true;
+            // The first change after Play restarts every component; the last one stays active.
+            Assert.Equal(Inactive | LastActive, Flags(source) & (Inactive | LastActive));
+            Assert.Equal(1, m_Backend.ComponentResets);
+            source.bypassEffects = false;
+            Assert.Equal(0u, Flags(source) & (Inactive | LastActive));
+            source.bypassEffects = true;
+            // Later changes only deactivate the components.
+            Assert.Equal(Inactive, Flags(source) & (Inactive | LastActive));
+            Assert.Equal(1, m_Backend.ComponentResets);
+            Assert.Empty(m_Errors);
         }
 
         [Fact]
-        public void LiveBypassWithoutScriptsIsNotRefused()
+        public void StaticBypassKeepsComponentsActiveUntilStopAndPlay()
         {
-            var source = Source("component reconnect");
+            var source = Source("static bypass");
+            source.gameObject.AddComponent<AudioEchoFilter>();
+            source.clip = AudioClip.Create("input", 48000, 1, 48000, false);
+            source.bypassEffects = true;
+            source.Play();
+            Assert.Equal(0u, Flags(source) & Inactive);
+            // After a Stop, Play restores activation from bypassEffects without a reconnection.
+            source.Stop();
+            source.Play();
+            Assert.Equal(Inactive, Flags(source) & (Inactive | LastActive));
+            Assert.Equal(0, m_Backend.ComponentResets);
+            // A changed filter list reconnects and activates every component.
             source.gameObject.AddComponent<AudioLowPassFilter>();
-            source.clip = AudioClip.Create("input", 8192, 1, 48000, false);
+            Assert.Equal(0u, Flags(source) & Inactive);
+        }
+
+        [Fact]
+        public void BypassInThePlayFrameAndClipless()
+        {
+            var source = Source("clipless");
+            source.gameObject.AddComponent<FilterScript>();
+            source.gameObject.AddComponent<AudioChorusFilter>();
             source.Play();
             UpdateWithoutAdvancing();
-            Assert.True(source.isPlaying);
             source.bypassEffects = true;
-            Assert.True(source.bypassEffects);
-            source.bypassEffects = false;
-            Assert.False(source.bypassEffects);
+            // A clipless generator's Play does not prepare a reconnection.
+            Assert.Equal(Inactive, Flags(source) & (Inactive | LastActive));
+            Assert.Equal(0, m_Backend.ComponentResets);
+            var clip = Source("before first frame");
+            clip.gameObject.AddComponent<AudioChorusFilter>();
+            clip.clip = AudioClip.Create("input", 48000, 1, 48000, false);
+            clip.Play();
+            clip.bypassEffects = true;
+            // The chain connected by Play completes at the audio update: a static bypass.
+            Assert.Equal(0u, Flags(clip) & (Inactive | LastActive));
+            Assert.Equal(0, m_Backend.ComponentResets);
+        }
+
+        [Fact]
+        public void OtherReleasesKeepTheBypassFlagOnly()
+        {
+            ProjectInfo.UnityVersion = "2022.3.10f1";
+            var source = Source("legacy");
+            source.gameObject.AddComponent<AudioLowPassFilter>();
+            source.clip = AudioClip.Create("input", 48000, 1, 48000, false);
+            source.Play();
+            UpdateWithoutAdvancing();
+            source.bypassEffects = true;
+            Assert.Equal(AudioSourceFlags.BypassEffects, Flags(source) & (AudioSourceFlags.BypassEffects | Inactive | LastActive));
+            Assert.Equal(0, m_Backend.ComponentResets);
         }
 
         [Fact]

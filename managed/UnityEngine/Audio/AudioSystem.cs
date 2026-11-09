@@ -461,6 +461,7 @@ namespace Unbound.Runtime
                     bool hasFilter = AudioFilters.Update(source.Handle, source.m_GameObject);
                     source.m_HasFilter = hasFilter;
                     source.Flush(always: true);
+                    source.m_ReconnectionPending = false;
                     if (source.m_Handle != 0 && !source.m_Paused)
                     {
                         var state = backend.State(source.m_Handle);

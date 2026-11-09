@@ -57,6 +57,17 @@ namespace UnityEngine
         internal bool m_CurvesDirty = true;
         internal bool m_KeepOutput;
         internal bool m_HasFilter;
+        // Filter component activation (Compat.AudioComponentActivationMeasured), see
+        // AudioFilterChain.UpdateActivation and docs/AUDIO.md.
+        internal bool m_ComponentsInactive;
+        internal bool m_LastComponentActive;
+        internal bool m_ActivationPending;
+        internal bool m_ReconnectOnChange;
+        internal bool m_EffectsStopped;
+        internal bool m_ResetComponents;
+        internal bool m_ReconnectionPending;
+        internal ulong m_FilterIdentity;
+        internal ulong m_FilterEnabled;
         internal bool m_HasAudioFrame;
         internal double m_PlaybackDspTime;
         internal Vector3 m_LastPosition;
@@ -269,7 +280,7 @@ namespace UnityEngine
             set
             {
                 MainThreadCheck.Check("set_bypassEffects");
-                if (value != m_BypassEffects) AudioFilterChain.ValidateLiveBypass(this);
+                if (value != m_BypassEffects) m_ActivationPending = true;
                 m_BypassEffects = value; m_Dirty = true;
             }
         }
@@ -277,7 +288,12 @@ namespace UnityEngine
         public bool bypassListenerEffects
         {
             get { MainThreadCheck.Check("get_bypassListenerEffects"); return m_BypassListenerEffects; }
-            set { MainThreadCheck.Check("set_bypassListenerEffects"); m_BypassListenerEffects = value; m_Dirty = true; }
+            set
+            {
+                MainThreadCheck.Check("set_bypassListenerEffects");
+                if (value != m_BypassListenerEffects) m_ActivationPending = true;
+                m_BypassListenerEffects = value; m_Dirty = true;
+            }
         }
 
         public bool bypassReverbZones
@@ -439,6 +455,15 @@ namespace UnityEngine
             }
             if (m_Clip != null && (m_Clip.channels == 0 || m_Clip.samples == 0)) return;
             m_Paused = false;
+            // Playing a clip makes the next bypass change reconnect the filter chain; after a
+            // Stop, Play restores the components' activation from bypassEffects.
+            m_ReconnectOnChange = m_Clip != null;
+            if (m_EffectsStopped)
+            {
+                m_EffectsStopped = false;
+                m_ComponentsInactive = m_BypassEffects;
+                m_LastComponentActive = false;
+            }
             ResetPlaybackHistoryIfIdle();
             m_Clip?.EnsureLoaded();
             PreparePlaybackMotion();
@@ -505,6 +530,8 @@ namespace UnityEngine
             }
             clip.EnsureLoaded();
             if (ResetPlaybackHistoryIfIdle()) PreparePlaybackMotion();
+            // A one-shot also makes the next bypass change reconnect the filter chain.
+            m_ReconnectOnChange = true;
             Flush();
             if (Command(new AudioSourceCommand { Kind = AudioCommandKind.PlayOneShot, Clip = clip.m_Handle, VolumeScale = volumeScale }))
                 clip.ClaimStreamBuffer(this, main: false);
@@ -537,6 +564,7 @@ namespace UnityEngine
             m_PendingPlayOnAwake = false;
             m_HasAudioFrame = false;
             m_Paused = false;
+            m_EffectsStopped = true;
             ReleaseStreamBuffers();
             if (m_Handle == 0) return;
             if (Trace.AudioOn) Trace.Audio($"Stop '{m_Clip?.m_Name}' on '{m_GameObject?.m_Name}'");
@@ -779,6 +807,11 @@ namespace UnityEngine
             // A clipless source with OnAudioFilterRead plays its first script as the clip.
             bool generator = packet.Clip == 0 && (flags & AudioSourceFlags.Filter) != 0;
             int filterCount = AudioFilterChain.Collect(this, generator, ref m_FilterTable);
+            if (Compat.AudioComponentActivationMeasured && m_BypassEffects && m_ComponentsInactive)
+            {
+                packet.Flags |= AudioSourceFlags.ComponentsInactive;
+                if (m_LastComponentActive) packet.Flags |= AudioSourceFlags.LastComponentActive;
+            }
             unsafe
             {
                 fixed (float* rolloff = m_RolloffTable)
@@ -793,6 +826,11 @@ namespace UnityEngine
                     packet.Filters = filterCount > 0 ? filters : null;
                     AudioBackend.Current.UpdateSource(handle, ref packet);
                 }
+            }
+            if (m_ResetComponents)
+            {
+                m_ResetComponents = false;
+                AudioBackend.Current.Command(handle, new AudioSourceCommand { Kind = AudioCommandKind.ResetComponents });
             }
         }
 

@@ -37,6 +37,8 @@ namespace Unbound.Runtime
         internal const uint SpatialStereo = 1 << 12;
         internal const uint ZoneVoiceSend = 1 << 13;
         internal const uint ListenerSnapshot = 1 << 14;
+        internal const uint ComponentsInactive = 1 << 15;
+        internal const uint LastComponentActive = 1 << 16;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -137,6 +139,7 @@ namespace Unbound.Runtime
         internal const int SetScheduledStart = 7;
         internal const int SetScheduledEnd = 8;
         internal const int StopMain = 9;
+        internal const int ResetComponents = 10;
     }
 
     [StructLayout(LayoutKind.Sequential)]
