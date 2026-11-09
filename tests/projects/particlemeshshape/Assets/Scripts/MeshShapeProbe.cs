@@ -531,6 +531,50 @@ public class MeshShapeProbe : MonoBehaviour
             RecordParticles(key, ps);
             Destroy(ps.gameObject);
         }
+        // Clipping outside Emit(count): Emit with EmitParams (then one step), a ring buffer, the
+        // births of a Death sub-emitter, and Death sub-emitters of clipped births.
+        {
+            var ps = Textured("tx", ParticleSystemShapeType.Rectangle, coords, null, ParticleSystemMeshShapeType.Triangle, 0);
+            var s = ps.shape; s.textureClipThreshold = 0.5f;
+            s_Flags.Add(("texture/clip/emitparams", 0));
+            ps.Simulate(0f, true, true, true);
+            ps.Emit(new ParticleSystem.EmitParams(), 10);
+            RecordParticles("texture/clip/emitparams/0", ps);
+            ps.Simulate(0.02f, true, false, true);
+            RecordParticles("texture/clip/emitparams/1", ps);
+            Destroy(ps.gameObject);
+        }
+        {
+            var ps = Textured("tx", ParticleSystemShapeType.Rectangle, coords, null, ParticleSystemMeshShapeType.Triangle, 0);
+            var m = ps.main; m.maxParticles = 12; m.ringBufferMode = ParticleSystemRingBufferMode.LoopUntilReplaced;
+            s_Flags.Add(("texture/clip/ring", 0));
+            ps.Simulate(0f, true, true, true);
+            ps.Emit(10);
+            var s = ps.shape; s.textureClipThreshold = 0.5f;
+            ps.Emit(10);
+            RecordParticles("texture/clip/ring", ps);
+            Destroy(ps.gameObject);
+        }
+        foreach (var (label, parentClip, childClip) in new[] { ("deathsub", 0.5f, 0f), ("subbirths", 0f, 0.5f) })
+        {
+            var parent = Textured("tx", ParticleSystemShapeType.Rectangle, coords, null, ParticleSystemMeshShapeType.Triangle, 10);
+            var pm = parent.main; pm.startLifetime = 0.03f;
+            var ps0 = parent.shape; ps0.textureClipThreshold = parentClip;
+            var child = Textured("child", ParticleSystemShapeType.Rectangle, coords, null, ParticleSystemMeshShapeType.Triangle, 6);
+            child.transform.SetParent(parent.transform, false);
+            var cs = child.shape; cs.textureClipThreshold = childClip;
+            var subs = parent.subEmitters; subs.enabled = true;
+            subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            string key = "texture/clip/" + label;
+            s_Flags.Add((key, 0));
+            parent.Simulate(0.02f, true, true, true);
+            RecordParticles(key + "/0", parent);
+            RecordParticles(key + "/0/child", child);
+            parent.Simulate(0.04f, true, false, true);
+            RecordParticles(key + "/1", parent);
+            RecordParticles(key + "/1/child", child);
+            Destroy(parent.gameObject);
+        }
 
         // Colour and alpha switches, a start colour, a gradient start colour.
         foreach (var (colour, alpha) in new[] { (false, true), (true, false), (false, false) })
