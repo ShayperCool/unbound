@@ -53,6 +53,52 @@ namespace Unbound.Tests
         }
 
         [Theory]
+        [InlineData("6000.0.71f1", TextureDimension.Tex2D, 1)]
+        [InlineData("6000.0.71f1", TextureDimension.Tex3D, 3)]
+        [InlineData("6000.0.70f1", TextureDimension.Tex2D, 3)]
+        public void AllocatedMipCountDistinguishesMultisampledAndVolumeResources(string version, TextureDimension dimension, int expected)
+        {
+            var previous = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = version;
+            var texture = new RenderTexture(new RenderTextureDescriptor(4, 4, RenderTextureFormat.ARGB32, 0)
+            { dimension = dimension, volumeDepth = dimension == TextureDimension.Tex3D ? 4 : 1, msaaSamples = 4, useMipMap = true });
+            try
+            {
+                Assert.Equal(3, texture.mipmapCount);
+                Assert.True(texture.Create());
+                Assert.Equal(expected, texture.mipmapCount);
+                texture.Release();
+                Assert.Equal(expected, texture.mipmapCount);
+            }
+            finally { Object.DestroyImmediate(texture); ProjectInfo.UnityVersion = previous; }
+        }
+
+        [Fact]
+        public void MipMetadataKeepsTheAllocatedCountUntilDimensionsOrMipSettingsChange()
+        {
+            var previous = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            var texture = new RenderTexture(new RenderTextureDescriptor(4, 4, RenderTextureFormat.ARGB32, 0)
+            { msaaSamples = 4, useMipMap = true });
+            try
+            {
+                texture.Create(); texture.Release(); texture.antiAliasing = 1;
+                Assert.Equal(1, texture.mipmapCount);
+                texture.Create(); Assert.Equal(3, texture.mipmapCount);
+                texture.Release(); texture.antiAliasing = 4;
+                texture.Create(); texture.Release(); texture.useMipMap = false; texture.useMipMap = true;
+                Assert.Equal(3, texture.mipmapCount);
+                texture.Create(); texture.Release(); texture.width = 8;
+                Assert.Equal(4, texture.mipmapCount);
+                texture.Create(); texture.Release(); texture.height = 16;
+                Assert.Equal(5, texture.mipmapCount);
+                texture.Create(); texture.Release(); var descriptor = texture.descriptor; descriptor.width = 32; texture.descriptor = descriptor;
+                Assert.Equal(6, texture.mipmapCount);
+            }
+            finally { Object.DestroyImmediate(texture); ProjectInfo.UnityVersion = previous; }
+        }
+
+        [Theory]
         [InlineData(TextureDimension.Tex2D, 1, -1, 3)]
         [InlineData(TextureDimension.Tex3D, 1, -1, 3)]
         [InlineData(TextureDimension.Tex3D, 8, -1, 3)]

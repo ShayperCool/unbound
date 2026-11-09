@@ -7,6 +7,8 @@ mod compute;
 mod mesh_buffers;
 #[path = "mipmaps.rs"]
 mod mipmaps;
+mod msaa;
+mod readback;
 mod warmup;
 
 use super::{
@@ -393,6 +395,9 @@ pub struct UnityRenderer {
     pipelines: Pipelines,
     mipmaps: mipmaps::Mipmaps,
     pending_mips: HashMap<wgpu::Texture, wgpu::TextureFormat>,
+    resolve_history: HashMap<wgpu::Texture, msaa::ResolveHistory>,
+    resolve_targets: msaa::ResolveTargets,
+    readback: readback::Staging,
     framebuffer_dirty: bool,
     meshes: HashMap<u64, GpuMesh>,
     mesh_buffers: HashMap<(u64, u8), mesh_buffers::Binding>,
@@ -501,6 +506,9 @@ impl UnityRenderer {
             fence_completed: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             mipmaps: Default::default(),
             pending_mips: Default::default(),
+            resolve_history: Default::default(),
+            resolve_targets: Default::default(),
+            readback: Default::default(),
             framebuffer_dirty: true,
             meshes: HashMap::default(),
             mesh_buffers: HashMap::default(),
@@ -726,6 +734,7 @@ impl UnityRenderer {
                     self.compute_bindings.release_texture(&previous);
                     self.mipmaps.release(&previous);
                     self.pending_mips.remove(&previous);
+                    self.release_resolve_history(&previous);
                 }
                 if gpu.render_target && !resources::is_integer(gpu.texture.format()) {
                     self.mipmaps
@@ -735,6 +744,7 @@ impl UnityRenderer {
                             .prepare(&device, &gpu.texture, gpu.target_format(1));
                     }
                 }
+                self.prepare_resolve_history(&gpu, texture.retain_resolve);
                 self.textures.insert(handle, gpu);
             }
             Upload::ReleaseTexture(handle) => {
@@ -743,6 +753,7 @@ impl UnityRenderer {
                     self.compute_bindings.release_texture(&texture.texture);
                     self.mipmaps.release(&texture.texture);
                     self.pending_mips.remove(&texture.texture);
+                    self.release_resolve_history(&texture.texture);
                 }
                 self.texture_mip_biases.remove(&handle);
                 self.bit_views.retain(|(h, _), _| *h != handle);
@@ -2293,12 +2304,19 @@ impl UnityRenderer {
                     self.screen_slot = (self.screen_slot + 1) % self.screens.len();
                     self.screen_touched = false;
                     self.frame_number += 1;
+                    self.readback.frame(self.frame_number);
                     self.compute_bindings.frame(self.frame_number);
                     self.state.target = None;
                     self.target_handles = (0, 0);
                     self.depth_target = None;
                     self.state.depth_bias = [0.0; 2];
                     self.state.state_override = None;
+                    open = false;
+                }
+                Command::ResolveTexture { texture } => {
+                    if let Some(copies) = self.resolve_msaa(texture) {
+                        passes.extend(copies.map(Op::Copy));
+                    }
                     open = false;
                 }
                 Command::GenerateMips { texture } => {
@@ -2327,6 +2345,7 @@ impl UnityRenderer {
                     self.depth_target = None;
                     if !self.screen_touched {
                         // Nothing drew on the screen: it shows black.
+                        self.switch_msaa_targets(Default::default(), &mut passes);
                         let target = self.screen_target(self.color_space);
                         let mut pass = self.new_pass(target);
                         pass.seed = None;
@@ -2386,6 +2405,8 @@ impl UnityRenderer {
                         let target = self.state.target.as_mut().unwrap();
                         target.extra = further;
                     }
+                    let next = self.msaa_targets(self.state.target.as_ref());
+                    self.switch_msaa_targets(next, &mut passes);
                     if let Some(t) = &self.state.target {
                         self.state.viewport = [0.0, 0.0, t.width as f32, t.height as f32];
                     }
@@ -2511,6 +2532,8 @@ impl UnityRenderer {
                     let Some(target) = self.state.target.clone() else {
                         continue;
                     };
+                    let next = self.msaa_targets(Some(&target));
+                    self.switch_msaa_targets(next, &mut passes);
                     self.prepare_framebuffer(&mut passes);
                     if !open {
                         let pass = self.new_pass(target.clone());
@@ -2518,6 +2541,9 @@ impl UnityRenderer {
                         open = true;
                     }
                     let clear_color = flags & commands::clear::COLOR != 0;
+                    if clear_color {
+                        self.mark_msaa_written(&target);
+                    }
                     let clear_depth =
                         flags & (commands::clear::DEPTH | commands::clear::STENCIL) != 0;
                     let viewport = self.state.viewport;
@@ -2588,6 +2614,8 @@ impl UnityRenderer {
                         });
                         continue;
                     };
+                    let next = self.msaa_targets(Some(&target));
+                    self.switch_msaa_targets(next, &mut passes);
                     self.prepare_framebuffer(&mut passes);
                     if !open {
                         let pass = self.new_pass(target.clone());
@@ -2724,6 +2752,7 @@ impl UnityRenderer {
                                     passes.push(Op::Pass(pass));
                                     open = true;
                                 }
+                                self.mark_msaa_written(&target);
                                 draws += 1;
                                 let writes = self
                                     .compiled
@@ -3233,10 +3262,10 @@ impl UnityRenderer {
             };
             // The copies of textures it draws into and the conversions this pass reads run right
             // before it, after the grabs before it.
-            for copy in std::mem::take(&mut self.pre_copies) {
+            for copy in self.pre_copies.drain(..) {
                 planned.push(Planned::Grab(copy));
             }
-            for copy in std::mem::take(&mut self.pre_draw) {
+            for copy in self.pre_draw.drain(..) {
                 planned.push(Planned::Convert(copy));
             }
             let Ok(buffers_bg) =
@@ -3420,6 +3449,7 @@ impl UnityRenderer {
                 random_write: false,
                 auto_generate_mips: false,
                 defer_mips: false,
+                retain_resolve: false,
                 samples: 1,
                 depth_bits: 0,
                 layers: 1,
@@ -3883,7 +3913,7 @@ impl UnityRenderer {
     /// The pixels of a rectangle of a texture (0: this frame's screen) after everything queued:
     /// RGBA rows bottom first, 4 bytes per pixel, or 4 `f32`s when `float`.
     pub fn read_pixels(&mut self, texture: u64, rect: [i32; 4], float: bool) -> Option<Vec<u8>> {
-        self.read_texture(texture, 0, 0, rect, float)
+        self.read_texture_impl(texture, 0, 0, rect, float, false)
     }
 
     /// As [`Self::read_pixels`], from a mip level of a layer (an array slice, a cube face or a
@@ -3896,6 +3926,18 @@ impl UnityRenderer {
         rect: [i32; 4],
         float: bool,
     ) -> Option<Vec<u8>> {
+        self.read_texture_impl(texture, mip, layer, rect, float, true)
+    }
+
+    fn read_texture_impl(
+        &mut self,
+        texture: u64,
+        mip: u32,
+        layer: u32,
+        rect: [i32; 4],
+        float: bool,
+        retained_resolve: bool,
+    ) -> Option<Vec<u8>> {
         let source = if texture == 0 {
             // Before this frame's first screen pass the screen still shows the last frame: its
             // own slot holds an older one until that pass carries the screen forward.
@@ -3904,7 +3946,15 @@ impl UnityRenderer {
                 None => self.screens[self.screen_slot].as_ref()?.texture.clone(),
             }
         } else {
-            self.textures.get(&texture)?.texture.clone()
+            let current = &self.textures.get(&texture)?.texture;
+            if retained_resolve {
+                self.resolve_history
+                    .get(current)
+                    .map_or(current, |history| &history.texture)
+                    .clone()
+            } else {
+                current.clone()
+            }
         };
         if mip >= source.mip_level_count() {
             return None;
@@ -3929,136 +3979,120 @@ impl UnityRenderer {
         }
         let texel = format.block_copy_size(None)?;
         let row = (w * texel).next_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
-        let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("unbound read pixels"),
-            size: row as u64 * h as u64,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("unbound read pixels"),
-            });
-        encoder.copy_texture_to_buffer(
-            wgpu::TexelCopyTextureInfo {
-                texture: &source,
-                mip_level: mip,
-                origin: wgpu::Origin3d {
-                    x: x0 as u32,
-                    y: y0 as u32,
-                    z: layer,
-                },
-                aspect: wgpu::TextureAspect::All,
+        self.read_gpu_data(
+            row as u64 * h as u64,
+            "unbound read pixels",
+            |encoder, staging| {
+                encoder.copy_texture_to_buffer(
+                    wgpu::TexelCopyTextureInfo {
+                        texture: &source,
+                        mip_level: mip,
+                        origin: wgpu::Origin3d {
+                            x: x0 as u32,
+                            y: y0 as u32,
+                            z: layer,
+                        },
+                        aspect: wgpu::TextureAspect::All,
+                    },
+                    wgpu::TexelCopyBufferInfo {
+                        buffer: staging,
+                        layout: wgpu::TexelCopyBufferLayout {
+                            offset: 0,
+                            bytes_per_row: Some(row),
+                            rows_per_image: Some(h),
+                        },
+                    },
+                    wgpu::Extent3d {
+                        width: w,
+                        height: h,
+                        depth_or_array_layers: 1,
+                    },
+                );
             },
-            wgpu::TexelCopyBufferInfo {
-                buffer: &buffer,
-                layout: wgpu::TexelCopyBufferLayout {
-                    offset: 0,
-                    bytes_per_row: Some(row),
-                    rows_per_image: Some(h),
-                },
-            },
-            wgpu::Extent3d {
-                width: w,
-                height: h,
-                depth_or_array_layers: 1,
-            },
-        );
-        let index = self.queue.submit([encoder.finish()]);
-        let slice = buffer.slice(..);
-        slice.map_async(wgpu::MapMode::Read, |_| {});
-        if let Err(e) = self.device.poll(wgpu::PollType::Wait {
-            submission_index: Some(index),
-            timeout: None,
-        }) {
-            tracing::warn!("reading pixels back from the GPU failed: {e}");
-            return None;
-        }
-        let data = match slice.get_mapped_range() {
-            Ok(data) => data,
-            Err(e) => {
-                tracing::warn!("reading pixels back from the GPU failed: {e}");
-                return None;
-            }
-        };
-        let mut out = Vec::with_capacity((w * h) as usize * if float { 16 } else { 4 });
-        for r in 0..h as usize {
-            let line = &data[r * row as usize..r * row as usize + (w * texel) as usize];
-            match format {
-                wgpu::TextureFormat::R32Float
-                | wgpu::TextureFormat::Rg32Float
-                | wgpu::TextureFormat::Rgba32Float
-                | wgpu::TextureFormat::R16Float
-                | wgpu::TextureFormat::Rg16Float
-                | wgpu::TextureFormat::Rgba16Float => {
-                    let half = matches!(
-                        format,
-                        wgpu::TextureFormat::R16Float
-                            | wgpu::TextureFormat::Rg16Float
-                            | wgpu::TextureFormat::Rgba16Float
-                    );
-                    for pixel in line.chunks_exact(texel as usize) {
-                        let mut rgba = [0.0f32, 0.0, 0.0, 1.0];
-                        for (i, bytes) in pixel.chunks_exact(if half { 2 } else { 4 }).enumerate() {
-                            rgba[i] = if half {
-                                resources::f16_to_f32(u16::from_le_bytes(bytes.try_into().unwrap()))
-                            } else {
-                                f32::from_le_bytes(bytes.try_into().unwrap())
-                            };
+            |data| {
+                let mut out = Vec::with_capacity((w * h) as usize * if float { 16 } else { 4 });
+                for r in 0..h as usize {
+                    let line = &data[r * row as usize..r * row as usize + (w * texel) as usize];
+                    match format {
+                        wgpu::TextureFormat::R32Float
+                        | wgpu::TextureFormat::Rg32Float
+                        | wgpu::TextureFormat::Rgba32Float
+                        | wgpu::TextureFormat::R16Float
+                        | wgpu::TextureFormat::Rg16Float
+                        | wgpu::TextureFormat::Rgba16Float => {
+                            let half = matches!(
+                                format,
+                                wgpu::TextureFormat::R16Float
+                                    | wgpu::TextureFormat::Rg16Float
+                                    | wgpu::TextureFormat::Rgba16Float
+                            );
+                            for pixel in line.chunks_exact(texel as usize) {
+                                let mut rgba = [0.0f32, 0.0, 0.0, 1.0];
+                                for (i, bytes) in
+                                    pixel.chunks_exact(if half { 2 } else { 4 }).enumerate()
+                                {
+                                    rgba[i] = if half {
+                                        resources::f16_to_f32(u16::from_le_bytes(
+                                            bytes.try_into().unwrap(),
+                                        ))
+                                    } else {
+                                        f32::from_le_bytes(bytes.try_into().unwrap())
+                                    };
+                                }
+                                for v in rgba {
+                                    if float {
+                                        out.extend_from_slice(&v.to_le_bytes());
+                                    } else {
+                                        out.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
+                                    }
+                                }
+                            }
                         }
-                        for v in rgba {
-                            if float {
-                                out.extend_from_slice(&v.to_le_bytes());
-                            } else {
-                                out.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
+                        wgpu::TextureFormat::R16Unorm
+                        | wgpu::TextureFormat::Rg16Unorm
+                        | wgpu::TextureFormat::Rgba16Unorm
+                        | wgpu::TextureFormat::Rgb10a2Unorm
+                        | wgpu::TextureFormat::R8Snorm
+                        | wgpu::TextureFormat::Rg8Snorm
+                        | wgpu::TextureFormat::Rgba8Snorm => {
+                            for pixel in line.chunks_exact(texel as usize) {
+                                let rgba = resources::norm_texel_to_f32(format, pixel)?;
+                                for v in rgba {
+                                    if float {
+                                        out.extend_from_slice(&v.to_le_bytes());
+                                    } else {
+                                        // Negative (signed) values read as 0.
+                                        out.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
+                                    }
+                                }
+                            }
+                        }
+                        wgpu::TextureFormat::Rg11b10Ufloat => {
+                            for c in line.as_chunks::<4>().0 {
+                                let [r, g, b] = resources::rg11b10_to_f32(u32::from_le_bytes(*c));
+                                for v in [r, g, b, 1.0] {
+                                    if float {
+                                        out.extend_from_slice(&v.to_le_bytes());
+                                    } else {
+                                        out.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
+                                    }
+                                }
+                            }
+                        }
+                        _ => {
+                            for &b in line {
+                                if float {
+                                    out.extend_from_slice(&(b as f32 / 255.0).to_le_bytes());
+                                } else {
+                                    out.push(b);
+                                }
                             }
                         }
                     }
                 }
-                wgpu::TextureFormat::R16Unorm
-                | wgpu::TextureFormat::Rg16Unorm
-                | wgpu::TextureFormat::Rgba16Unorm
-                | wgpu::TextureFormat::Rgb10a2Unorm
-                | wgpu::TextureFormat::R8Snorm
-                | wgpu::TextureFormat::Rg8Snorm
-                | wgpu::TextureFormat::Rgba8Snorm => {
-                    for pixel in line.chunks_exact(texel as usize) {
-                        let rgba = resources::norm_texel_to_f32(format, pixel)?;
-                        for v in rgba {
-                            if float {
-                                out.extend_from_slice(&v.to_le_bytes());
-                            } else {
-                                // Negative (signed) values read as 0.
-                                out.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
-                            }
-                        }
-                    }
-                }
-                wgpu::TextureFormat::Rg11b10Ufloat => {
-                    for c in line.as_chunks::<4>().0 {
-                        let [r, g, b] = resources::rg11b10_to_f32(u32::from_le_bytes(*c));
-                        for v in [r, g, b, 1.0] {
-                            if float {
-                                out.extend_from_slice(&v.to_le_bytes());
-                            } else {
-                                out.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
-                            }
-                        }
-                    }
-                }
-                _ => {
-                    for &b in line {
-                        if float {
-                            out.extend_from_slice(&(b as f32 / 255.0).to_le_bytes());
-                        } else {
-                            out.push(b);
-                        }
-                    }
-                }
-            }
-        }
-        Some(out)
+                Some(out)
+            },
+        )
     }
 }
 

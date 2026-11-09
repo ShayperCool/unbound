@@ -12,6 +12,7 @@ namespace UnityEngine
     {
         RenderTextureDescriptor m_Descriptor;
         bool m_Created;
+        int? m_AllocatedMipCount;
         /// <summary>Released at least once: the profiler counts a smaller header from then on.</summary>
         internal bool m_EverReleased;
         /// <summary>In the temporary pool and released (<see cref="ReleaseTemporary"/>).</summary>
@@ -82,8 +83,8 @@ namespace UnityEngine
         /// <summary>The mips: the full chain (or the descriptor's count) when it has mipmaps.</summary>
         internal override int MipmapCount()
         {
-            if (!m_Descriptor.useMipMap) return 1;
-            return MipLevels(m_Descriptor);
+            if (Compat.RenderingMeasured && m_AllocatedMipCount.HasValue) return m_AllocatedMipCount.Value;
+            return m_Descriptor.useMipMap ? MipLevels(m_Descriptor) : 1;
         }
 
         public RenderTexture(int width, int height, int depth) : this(width, height, depth, RenderTextureFormat.Default) { }
@@ -140,8 +141,8 @@ namespace UnityEngine
                 Debug.LogError("Setting a property of a RenderTexture that is already created is not supported; release it first.");
         }
 
-        public override int width { get => m_Descriptor.width; set { Change(); m_Descriptor.width = value; m_Width = value; } }
-        public override int height { get => m_Descriptor.height; set { Change(); m_Descriptor.height = value; m_Height = value; } }
+        public override int width { get => m_Descriptor.width; set { Change(); m_Descriptor.width = value; m_Width = value; if (!m_Created) m_AllocatedMipCount = null; } }
+        public override int height { get => m_Descriptor.height; set { Change(); m_Descriptor.height = value; m_Height = value; if (!m_Created) m_AllocatedMipCount = null; } }
         public int depth { get => m_Descriptor.depthBufferBits; set { Change(); m_Descriptor.depthBufferBits = value; } }
         /// <summary>The color format; a depth-only target is Depth, or Shadowmap when it compares
         /// (measured).</summary>
@@ -150,7 +151,7 @@ namespace UnityEngine
         internal override GraphicsFormat GraphicsFormatOf() => m_Descriptor.graphicsFormat;
         public GraphicsFormat depthStencilFormat { get => m_Descriptor.depthStencilFormat; set { Change(); m_Descriptor.depthStencilFormat = value; } }
         public GraphicsFormat stencilFormat { get => m_Descriptor.stencilFormat; set { Change(); m_Descriptor.stencilFormat = value; } }
-        public bool useMipMap { get => m_Descriptor.useMipMap; set { Change(); m_Descriptor.useMipMap = value; } }
+        public bool useMipMap { get => m_Descriptor.useMipMap; set { Change(); m_Descriptor.useMipMap = value; if (!m_Created) m_AllocatedMipCount = null; } }
         public bool autoGenerateMips { get => m_Descriptor.autoGenerateMips; set { Change(); m_Descriptor.autoGenerateMips = value; } }
         public int antiAliasing { get => m_Descriptor.msaaSamples; set { Change(); m_Descriptor.msaaSamples = value; } }
         public bool bindTextureMS { get => m_Descriptor.bindMS; set { Change(); m_Descriptor.bindMS = value; } }
@@ -174,6 +175,7 @@ namespace UnityEngine
                 m_Descriptor = value;
                 m_Width = value.width;
                 m_Height = value.height;
+                if (!m_Created) m_AllocatedMipCount = null;
             }
         }
 
@@ -245,8 +247,12 @@ namespace UnityEngine
             GfxStream.GenerateMips(EnsureCreated());
         }
 
-        // Native passes resolve their MSAA attachment before later work can read it.
-        public void ResolveAntiAliasedSurface() => GfxStream.Flush();
+        public void ResolveAntiAliasedSurface()
+        {
+            if (Compat.RenderingMeasured && antiAliasing > 1 && IsCreated())
+                GfxStream.ResolveTexture(EnsureCreated());
+            GfxStream.Flush();
+        }
 
         public void ResolveAntiAliasedSurface(RenderTexture target)
         {
@@ -316,7 +322,7 @@ namespace UnityEngine
         };
 
         // Texture packet flag: process automatic mip updates at attachment transitions.
-        const int DeferredMipUpdates = 8;
+        const int DeferredMipUpdates = 8, RetainedMsaaResolve = 16;
 
         internal unsafe ulong EnsureCreated()
         {
@@ -331,24 +337,28 @@ namespace UnityEngine
             var dimension = m_Descriptor.dimension;
             int layers = GpuLayers;
             int depthBits = GraphicsFormatUtility.GetDepthBits(m_Descriptor.depthStencilFormat);
+            int mipCount = !m_Descriptor.useMipMap ? 1 : MipLevels(m_Descriptor);
+            if (Compat.RenderingMeasured && dimension != TextureDimension.Tex3D && m_Descriptor.msaaSamples > 1)
+                mipCount = 1;
             var packet = new TexturePacket
             {
                 Width = Math.Max(1, m_Descriptor.width),
                 Height = Math.Max(1, m_Descriptor.height),
                 Format = PacketFormat(),
-                MipCount = MipmapCount(),
+                MipCount = mipCount,
                 FilterMode = (int)filterMode,
                 WrapU = (int)wrapModeU,
                 WrapV = (int)wrapModeV,
                 WrapW = (int)wrapModeW,
                 AnisoLevel = anisoLevel,
                 // 1: drawn into; 2: written by kernels (a storage binding).
-                RenderTarget = 1 | (Compat.RenderingMeasured ? DeferredMipUpdates : 0) | (m_Descriptor.enableRandomWrite ? 2 : 0) | (m_Descriptor.useMipMap && m_Descriptor.autoGenerateMips ? 4 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),
+                RenderTarget = 1 | (Compat.RenderingMeasured ? DeferredMipUpdates | RetainedMsaaResolve : 0) | (m_Descriptor.enableRandomWrite ? 2 : 0) | (m_Descriptor.useMipMap && m_Descriptor.autoGenerateMips ? 4 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),
                 DepthBits = depthBits,
                 Layers = layers,
                 Dimension = dimension == TextureDimension.Tex3D || layers > 1 ? (int)dimension : 0,
             };
             UploadTexture(&packet);
+            m_AllocatedMipCount = Compat.RenderingMeasured ? mipCount : null;
             m_Created = true;
             return m_NativeHandle;
         }

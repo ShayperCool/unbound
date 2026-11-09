@@ -208,6 +208,59 @@ public static class TexFormatsProbe
         // Once sampled (which resolves it), the readback again.
         Try(key + ".msaa.sampled", () => Sampled(msaa, false));
         ReadBack(key + ".msaa.sampled", msaa);
+        // A second write must not replace the last resolved image until a resolve is requested.
+        s_Mat.SetVector("_Color", new Color(.2f, .4f, .6f, .8f));
+        Graphics.Blit(null, msaa, s_Mat, 0);
+        Read(key + ".msaa.history.redraw", msaa);
+        msaa.ResolveAntiAliasedSurface();
+        ReadBack(key + ".msaa.history.explicit", msaa);
+        s_Mat.SetVector("_Color", Color.red);
+        Graphics.Blit(null, msaa, s_Mat, 0);
+        ReadBack(key + ".msaa.history.unsampled", msaa);
+        Try(key + ".msaa.history.sample", () => Sampled(msaa, false));
+        ReadBack(key + ".msaa.history.afterSample", msaa);
+        var destinationDescriptor = msaa.descriptor;
+        destinationDescriptor.msaaSamples = 1;
+        var destination = Target(destinationDescriptor);
+        destination.Create();
+        s_Mat.SetVector("_Color", Color.blue);
+        Graphics.Blit(null, msaa, s_Mat, 0);
+        // Bind a source to a pass that does not read it.
+        Graphics.Blit(msaa, destination, s_Mat, 0);
+        ReadBack(key + ".msaa.history.ignoredSource", msaa);
+        s_Mat.SetVector("_Color", Color.green);
+        Graphics.Blit(null, msaa, s_Mat, 0);
+        msaa.ResolveAntiAliasedSurface(destination);
+        ReadBack(key + ".msaa.history.destinationSource", msaa);
+        Read(key + ".msaa.history.destination", destination);
+        Try(key + ".msaa.history.destinationSample", () => Sampled(msaa, false));
+        ReadBack(key + ".msaa.history.afterDestinationSample", msaa);
+        s_Mat.SetVector("_Color", Color.yellow);
+        Graphics.Blit(null, msaa, s_Mat, 0);
+        int loadMsaa = s_Kernels.FindKernel("ReadNorm");
+        s_Kernels.SetTexture(loadMsaa, "_Source", msaa);
+        ReadBack(key + ".msaa.history.computeBound", msaa);
+        using (var pixels = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 2, 16))
+        {
+            s_Kernels.SetBuffer(loadMsaa, "_Sampled", pixels);
+            s_Kernels.Dispatch(loadMsaa, 1, 1, 1);
+            var colors = new Color[2]; pixels.GetData(colors);
+            Value(key + ".msaa.history.computeLoad", Json(Bits(colors[0]) + ";" + Bits(colors[1])));
+        }
+        ReadBack(key + ".msaa.history.computeDispatched", msaa);
+        ReadPixels(key + ".msaa.history.computeCurrent", msaa);
+        RenderTexture.active = destination;
+        ReadBack(key + ".msaa.history.targetBound", msaa);
+        GL.Clear(false, true, Color.magenta);
+        ReadBack(key + ".msaa.history.targetCleared", msaa);
+        s_Mat.SetVector("_Color", Color.cyan);
+        Graphics.Blit(null, msaa, s_Mat, 0);
+        s_Mat.SetTexture("_MainTex", null);
+        Graphics.Blit(null, destination, s_Mat, 0);
+        ReadBack(key + ".msaa.history.otherDraw", msaa);
+
+
+
     }
 
     // ------------------------------------------------------------------ integer render textures
@@ -418,6 +471,62 @@ public static class TexFormatsProbe
         Try(key + ".async", () => Readback(AsyncGPUReadback.Request(t)));
     }
 
+    static void MsaaMips()
+    {
+        var d = new RenderTextureDescriptor(4, 4, RenderTextureFormat.ARGB32, 0)
+        { msaaSamples = 4, useMipMap = true, autoGenerateMips = true };
+        var source = Target(d);
+        Value("rt.msaaMips.beforeCreate", source.mipmapCount.ToString(CultureInfo.InvariantCulture));
+        Value("rt.msaaMips.create", B2(source.Create()));
+        Value("rt.msaaMips.metadata", "[" + source.antiAliasing + "," + B2(source.useMipMap) + "," + source.mipmapCount + "]");
+        var destination = Own(new RenderTexture(4, 4, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear));
+        destination.Create();
+        void ReadMip(string step)
+        {
+            Try("rt.msaaMips." + step + ".async", () => Readback(AsyncGPUReadback.Request(source, 1)));
+            Try("rt.msaaMips." + step + ".asyncfloat", () => Readback(AsyncGPUReadback.Request(source, 1, TextureFormat.RGBAFloat)));
+        }
+        s_Mat.SetVector("_Color", Color.red); Graphics.Blit(null, source, s_Mat, 0);
+        RenderTexture.active = destination; GL.Clear(false, true, Color.clear);
+        ReadMip("red");
+        s_Mat.SetVector("_Color", Color.green); Graphics.Blit(null, source, s_Mat, 0);
+        ReadMip("beforeSwitch");
+        RenderTexture.active = destination; ReadMip("afterSwitch");
+        GL.Clear(false, true, Color.clear); ReadMip("afterClear");
+        s_Mat.SetVector("_Color", Color.blue); Graphics.Blit(null, source, s_Mat, 0);
+        source.ResolveAntiAliasedSurface(); ReadMip("explicit");
+        source.Release(); Value("rt.msaaMips.afterRelease", source.mipmapCount.ToString(CultureInfo.InvariantCulture));
+        source.antiAliasing = 1; Value("rt.msaaMips.afterSamplesChange", source.mipmapCount.ToString(CultureInfo.InvariantCulture));
+        source.Create(); Value("rt.msaaMips.singleRecreate", source.mipmapCount.ToString(CultureInfo.InvariantCulture));
+        source.Release(); Value("rt.msaaMips.singleRelease", source.mipmapCount.ToString(CultureInfo.InvariantCulture));
+        source.useMipMap = false; source.useMipMap = true;
+        Value("rt.msaaMips.flagReset", source.mipmapCount.ToString(CultureInfo.InvariantCulture));
+        foreach (var dimension in new[] { TextureDimension.Tex2D, TextureDimension.Tex3D })
+        {
+            d.dimension = dimension; d.volumeDepth = dimension == TextureDimension.Tex3D ? 4 : 1;
+            var control = Target(d);
+            string key = "rt.msaaMips.control." + dimension;
+            Value(key + ".before", control.mipmapCount.ToString(CultureInfo.InvariantCulture));
+            Value(key + ".create", B2(control.Create()));
+            Value(key + ".after", control.mipmapCount.ToString(CultureInfo.InvariantCulture));
+            Value(key + ".descriptor", control.descriptor.mipCount.ToString(CultureInfo.InvariantCulture));
+            if (dimension == TextureDimension.Tex2D)
+            {
+                control.Release(); control.useMipMap = false; control.useMipMap = true;
+                Value(key + ".flagReset", control.mipmapCount.ToString(CultureInfo.InvariantCulture));
+                control.Create(); Value(key + ".recreated", control.mipmapCount.ToString(CultureInfo.InvariantCulture));
+                control.Release(); control.width = 8;
+                Value(key + ".widthReset", control.mipmapCount.ToString(CultureInfo.InvariantCulture));
+                control.Create(); control.Release(); control.height = 16;
+                Value(key + ".heightReset", control.mipmapCount.ToString(CultureInfo.InvariantCulture));
+                control.Create(); control.Release(); var resized = control.descriptor; resized.width = 32; control.descriptor = resized;
+                Value(key + ".descriptorReset", control.mipmapCount.ToString(CultureInfo.InvariantCulture));
+            }
+
+        }
+
+    }
+
     public static void Record()
     {
         Rows.Clear();
@@ -435,6 +544,7 @@ public static class TexFormatsProbe
                          RenderTextureFormat.ARGB64, RenderTextureFormat.ARGB2101010 })
                 if (Runs("rt." + format)) NormTarget("rt." + format, format);
             foreach (var c in IntTargets) if (Runs("rt." + c.Key)) IntTarget(c);
+            if (Runs("rt.msaaMips")) MsaaMips();
             foreach (var format in new[] { RenderTextureFormat.ARGB32, RenderTextureFormat.ARGBFloat })
                 if (Runs("feedback." + format)) Feedback("feedback." + format, format);
             foreach (var format in new[] { TextureFormat.R16, TextureFormat.RG32, TextureFormat.RGBA64 })

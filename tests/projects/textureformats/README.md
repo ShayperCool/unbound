@@ -34,8 +34,16 @@ These are observations of this release and device, not documented guarantees:
 - A Texture2D in A2B10G10R10 or an integer format is refused ("Texture creation failed ... not
   supported for Sample usage"); the object is destroyed (`== null`). Texture2D RG32/RGBA64 keep
   16-bit texels: `GetPixel` reads (r, g, 1, 1) for RG32, `SetPixel` rounds half up.
-- `AsyncGPUReadback` of a 4x MSAA target reads its last resolve: drawn into but not sampled since,
-  it reads as zeros; once sampled, the drawn texels.
+- `AsyncGPUReadback` of a 4x MSAA target reads its retained resolve. Leaving its color
+  attachment updates that image, including `RenderTexture.active = other` without a draw.
+  `ResolveAntiAliasedSurface()` updates it while the source stays bound; resolving into a
+  separate destination leaves the source's retained image unchanged. `ReadPixels` reads the
+  current pixels, while compute `Texture2D.Load` reads the retained image. The history controls
+  write different colors before every operation, so stale and current images are distinct.
+- An allocated 2D MSAA target has one mip even with `useMipMap = true`. Its reported mip count
+  survives release and changing the requested sample count. After release, changing its width, height, descriptor or
+  mip settings recomputes it; recreation reports the new allocation. The 3D control retains three levels because volume targets are not
+  physically multisampled. Descriptor `mipCount` remains the requested value.
 - `GL.Clear` on an integer target stores the clear color's float bits, clamped to the channel's
   range (3.0 in R32_SInt reads 0x40400000, in R8_SInt 127).
 - A draw whose material samples the target it draws into (`Graphics.Blit(rt, rt, ...)`, or another
@@ -59,7 +67,25 @@ and compares every value exactly with `compare.py`, which prints every missing, 
 key. `residuals.json` lists the differences recorded as open: each still has to differ.
 `TEXTURE_FORMATS_PROBE_ONLY=<prefix,...>` limits a run to cases (`rt.ARGB64`, `tex.RG32`, ...).
 
-## Open in Unbound
+## Retained resolves and deferred differences
 
-- The MSAA readback values in `residuals.json`: Unbound resolves a multisampled target at the end
-  of every pass, so its readback reads the drawn texels.
+Q55 closes the eight earlier MSAA readback differences. The 6000.0.71f1 OpenGL Core
+reference has 705 values, with every previous value preserved. The two
+`rt.ARGB64.msaa.history.{targetBound,targetCleared}.asyncfloat` rows retain a one-ULP blue
+component difference, Editor `0x3c808080` versus backend `0x3c808081`, about 1.86e-9.
+These are Deferred; raw values remain in the strict report and `residuals.json`.
+
+The [Unity 6000.0 ResolveAntiAliasedSurface API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture.ResolveAntiAliasedSurface.html)
+forces a resolve, into the source when no destination is supplied. Its source/destination
+controls use different images. The [antiAliasing API](https://docs.unity3d.com/cn/6000.0/ScriptReference/RenderTexture-antiAliasing.html)
+describes resolving when switching targets; the target-bound, target-cleared and unrelated-draw
+controls distinguish the switch from a shader reading the source. The retained readback and
+compute observations are device-specific measurements, not a documented ordering promise.
+The [AsyncGPUReadback API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.AsyncGPUReadback.html)
+describes asynchronous transfer; captures complete their requests before examining the data.
+
+Compat.RenderingMeasured selects retained resolves and allocated mip metadata for the measured
+release. Unmeasured releases retain the earlier current-image readback and descriptor-only mip
+metadata until recorded. Retained textures and views are created with their targets and retired
+on replacement/release. Texture and buffer downloads share reusable staging storage, released
+after an idle interval; returned CPU data stays owned by each request.

@@ -39,7 +39,8 @@ use crate::{
 /// 36: source-loop listener pose snapshots for spatial audio.
 /// 37: `audio_decode_clip` (downloaded audio files).
 /// 38: prepared callback buffers for closing captured audio output.
-pub const NATIVE_API_VERSION: u32 = 38;
+/// 39: retained MSAA resolve images, explicit resolves and current-attachment read flags.
+pub const NATIVE_API_VERSION: u32 = 39;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]

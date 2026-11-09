@@ -28,3 +28,9 @@ RWTexture2D<uint4> _UInt;
 { _Int[id.xy] = PICK(id, int4(asint(0x80000000u), 2147483647, -3, 70000), int4(1, -2, 3, -4)); }
 [numthreads(2, 1, 1)] void WriteUInt32(uint3 id : SV_DispatchThreadID)
 { _UInt[id.xy] = PICK(id, uint4(0xFFFFFFFFu, 0, 0x80000000u, 123456), uint4(1, 2, 3, 4)); }
+
+#pragma kernel ReadNorm
+Texture2D<float4> _Source;
+RWStructuredBuffer<float4> _Sampled;
+[numthreads(2, 1, 1)] void ReadNorm(uint3 id : SV_DispatchThreadID)
+{ _Sampled[id.x] = _Source.Load(int3(id.xy, 0)); }

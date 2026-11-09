@@ -786,32 +786,19 @@ fn main() {
         if end <= start {
             return Some(Vec::new());
         }
-        let staging = self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("unbound read buffer"),
-            size: end - start,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("unbound read buffer"),
-            });
-        encoder.copy_buffer_to_buffer(&b.buffer, start, &staging, 0, end - start);
-        let index = self.queue.submit([encoder.finish()]);
-        let slice = staging.slice(..);
-        slice.map_async(wgpu::MapMode::Read, |_| {});
-        if let Err(e) = self.device.poll(wgpu::PollType::Wait {
-            submission_index: Some(index),
-            timeout: None,
-        }) {
-            tracing::warn!("reading a buffer back from the GPU failed: {e}");
-            return None;
-        }
-        let data = slice.get_mapped_range().ok()?;
-        let skip = (offset - start) as usize;
-        let take = (size as usize).min(data.len().saturating_sub(skip));
-        Some(data[skip..skip + take].to_vec())
+        let source = b.buffer.clone();
+        self.read_gpu_data(
+            end - start,
+            "unbound read buffer",
+            |encoder, staging| {
+                encoder.copy_buffer_to_buffer(&source, start, staging, 0, end - start)
+            },
+            |data| {
+                let skip = (offset - start) as usize;
+                let take = (size as usize).min(data.len().saturating_sub(skip));
+                Some(data[skip..skip + take].to_vec())
+            },
+        )
     }
 
     /// Marker callbacks track GPU completion without retaining one allocation per fence.
@@ -1201,7 +1188,7 @@ fn main() {
                         {
                             (
                                 Some(texture.texture.clone()),
-                                texture.view_for(space).clone(),
+                                self.compute_texture_view(texture, space),
                             )
                         } else {
                             if handle != 0 && (wanted.is_some() || has.is_some()) {

@@ -26,7 +26,9 @@ namespace Unbound.Runtime
             // Render protocol 9 (NativeApi 19).
             CopyDepthOp = 29,
             // Render protocol 11 (NativeApi 22); its element meaning from protocol 12 (NativeApi 28).
-            MeshInstanceOp = 30, MeshBuffersOp = 31, InstanceMultiplierOp = 32;
+            MeshInstanceOp = 30, MeshBuffersOp = 31, InstanceMultiplierOp = 32,
+            // NativeApi 37.
+            ResolveTextureOp = 33;
 
         /// <summary>The sizes of a DrawIndices index: 16-bit, and 32-bit from render protocol 10.</summary>
         internal const byte DrawIndexSize = 2, DrawIndex32Size = 4;
@@ -914,6 +916,12 @@ namespace Unbound.Runtime
                         break;
                 }
             }
+        }
+
+        internal static void ResolveTexture(ulong texture)
+        {
+            U8(ResolveTextureOp);
+            U64(texture);
         }
 
         internal static void GenerateMips(ulong texture)

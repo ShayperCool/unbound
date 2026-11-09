@@ -384,6 +384,8 @@ pub mod owned {
         pub auto_generate_mips: bool,
         /// Automatic mip visibility follows attachment transitions.
         pub defer_mips: bool,
+        /// Readback and compute retain the preceding published MSAA resolve.
+        pub retain_resolve: bool,
         /// A render target's MSAA samples (1: none).
         pub samples: u32,
         pub depth_bits: i32,
@@ -412,6 +414,7 @@ pub mod owned {
                 random_write: p.render_target & 2 != 0,
                 auto_generate_mips: p.render_target & 4 != 0,
                 defer_mips: p.render_target & 8 != 0,
+                retain_resolve: p.render_target & 16 != 0,
                 // Bits 8..15: the MSAA sample count.
                 samples: ((p.render_target >> 8) & 0xff).max(1) as u32,
                 depth_bits: p.depth_bits,

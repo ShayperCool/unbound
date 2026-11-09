@@ -82,7 +82,7 @@ def editor(work, release):
         fresh_output(out)
         jobs.append(EditorJob(project, out/'editor.log', out, args=['-executeMethod', 'TexFormatsRunner.Record'],
                               batch=True, graphics=True, env={'TEXTURE_FORMATS_PROBE_OUT': str(out/OUTPUT)},
-                              timeout=900, progress_files=[out/OUTPUT], progress_timeout=600,
+                              timeout=900, shutdown_grace=120, progress_files=[out/OUTPUT], progress_timeout=600,
                               label='textureformats-'+repeat))
     results = run_parallel(jobs)
     for result in results:
@@ -92,12 +92,37 @@ def editor(work, release):
     return int(any(r['exit_code'] != 0 or r.get('forced_exit') for r in results))
 
 
-def publish(work):
+def publish(work, append=False):
     def write(target, first):
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(first/OUTPUT, target)
+        if append:
+            old = target.read_bytes().splitlines(keepends=True)
+            captured = (first/OUTPUT).read_bytes().splitlines(keepends=True)
+            previous = {json.loads(row)['k']: row for row in old}
+            current = {json.loads(row)['k']: row for row in captured}
+            if not all(current.get(key) == row for key, row in previous.items()):
+                raise SystemExit('an existing reference record changed or is missing')
+            if json.loads(old[-1]) != {'k': 'complete', 'v': True}:
+                raise SystemExit('existing reference is incomplete')
+            extra = [row for row in captured if json.loads(row)['k'] not in previous]
+            if not extra:
+                raise SystemExit('no new reference records')
+            target.write_bytes(b''.join(old[:-1] + extra + old[-1:]))
+        else:
+            shutil.copyfile(first/OUTPUT, target)
         print('published', target)
-    return publish_repeats([work/r for r in REPEATS], reference_file(PROBE, 'jsonl'), lambda d: [OUTPUT], write,
+    target = reference_file(PROBE, 'jsonl')
+    if append:
+        # The repeat validator refuses overwriting a reference. Validate into a private candidate,
+        # then append only new keys while keeping every earlier record byte for byte.
+        candidate = work/'append-candidate.jsonl'
+        code = publish_repeats([work/r for r in REPEATS], candidate, lambda d: [OUTPUT],
+                              lambda path, first: shutil.copyfile(first/OUTPUT, path),
+                              complete=[capture_problem], gpu=True)
+        if code: return code
+        write(target, work/REPEATS[0])
+        return 0
+    return publish_repeats([work/r for r in REPEATS], target, lambda d: [OUTPUT], write,
                            complete=[capture_problem], gpu=True)
 
 
@@ -138,6 +163,7 @@ def main():
     parser.add_argument('--cases', choices=('supported', 'all'), default='supported', help='verify: which cases')
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
+    parser.add_argument('--append', action='store_true', help='publish: append new keys, preserving every existing record')
     args = parser.parse_args()
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
@@ -149,7 +175,7 @@ def main():
         return unbound(work, args.release, os.environ.get('TEXTURE_FORMATS_PROBE_ONLY'))
     if args.mode == 'verify':
         return verify(work, args.release, args.cases)
-    return publish(work)
+    return publish(work, args.append)
 
 
 if __name__ == '__main__':

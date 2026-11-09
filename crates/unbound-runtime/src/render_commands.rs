@@ -138,6 +138,10 @@ pub const TAGGED_PASSES: i32 = -3;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
+    /// Publish a multisampled target for later readback and compute reads.
+    ResolveTexture {
+        texture: u64,
+    },
     /// Filter the lower mip levels of a render target.
     GenerateMips {
         texture: u64,
@@ -327,6 +331,8 @@ mod op {
     pub const COPY_DEPTH: u8 = 29;
     pub const MESH_INSTANCE: u8 = 30;
     pub const INSTANCE_MULTIPLIER: u8 = 32;
+    // NativeApi 37.
+    pub const RESOLVE_TEXTURE: u8 = 33;
     pub const MESH_BUFFERS: u8 = 31;
 }
 
@@ -773,6 +779,9 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                     properties,
                 }))
             }
+            op::RESOLVE_TEXTURE => Command::ResolveTexture {
+                texture: r.texture("ResolveTexture")?,
+            },
             op::GENERATE_MIPS => Command::GenerateMips {
                 texture: r.texture("GenerateMips")?,
             },
@@ -1112,6 +1121,10 @@ impl Writer {
                     self.property(name, value);
                 }
             }
+            Command::ResolveTexture { texture } => {
+                self.bytes.push(op::RESOLVE_TEXTURE);
+                self.u64(*texture);
+            }
             Command::GenerateMips { texture } => {
                 self.bytes.push(op::GENERATE_MIPS);
                 self.u64(*texture);
@@ -1175,6 +1188,7 @@ mod tests {
     #[test]
     fn round_trip() {
         let commands = vec![
+            Command::ResolveTexture { texture: 42 },
             Command::GenerateMips { texture: 42 },
             Command::BeginFrame {
                 screen_width: 960,
@@ -1384,6 +1398,7 @@ mod tests {
         assert!(encode(set_target(depth, 0)).is_err());
         assert!(encode(set_target(7, depth)).is_err());
         assert!(encode(Command::GenerateMips { texture: depth }).is_err());
+        assert!(encode(Command::ResolveTexture { texture: depth }).is_err());
         let dispatch = |h| {
             Command::Dispatch(Box::new(Dispatch {
                 file: "k.compute".into(),
@@ -1557,7 +1572,7 @@ mod tests {
     /// reported format; 35 adds deferred render-target mips, 36 listener pose snapshots and 37 the downloaded audio decoder.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 38);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 39);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();
