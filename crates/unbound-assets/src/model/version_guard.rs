@@ -3,17 +3,28 @@
 //! The model cache serves an entry only while `ModelImporter::VERSION` is unchanged, so a commit
 //! that changes import output without bumping it would let caches serve stale meshes. This test
 //! imports every committed probe model with its `.meta` and compares a fingerprint of each
-//! output with `import_fingerprints.txt`, recorded under the VERSION named on its first line.
+//! output with `import_fingerprints.txt`, keyed by the source, `.meta` and dependency content
+//! under the VERSION named on its first line.
 //!
-//! - Output of a recorded model changed: bump `ModelImporter::VERSION`, then rewrite the file
+//! - Output changed for the same recorded inputs: bump `ModelImporter::VERSION`, then rewrite the file
 //!   with `UNBOUND_BLESS=1 cargo test -p unbound-assets version_guard`.
-//! - A probe model was added or removed: bless as well; that needs no bump. Blessing refuses
-//!   to record a changed output under the VERSION it was recorded with.
+//! - Probe inputs changed, or a model was added or removed: bless as well; that needs no bump.
+//!   Blessing refuses to record changed output for unchanged inputs under the same VERSION.
 use super::*;
 use serde::ser::{self, Serialize};
 use std::collections::BTreeMap;
 
-/// The recorded fingerprints: `version <N>`, then `<blake3> <path under tests/projects>` lines.
+/// Each line after `version <N>` is JSON: `[probe path, input content, output hash]`.
+/// Input content retains dependency provenance as well as its hashes: changing discovery
+/// cannot disguise an output change as an edit of an authored file.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+struct InputContent {
+    source: String,
+    meta: Option<String>,
+    dependencies: Vec<(String, Option<String>)>,
+}
+
+type Fingerprints = BTreeMap<(String, InputContent), String>;
 const MANIFEST: &str = "src/model/import_fingerprints.txt";
 
 /// Floats are hashed on a 2^-10 grid: output changes are visible far above it, while one-ulp
@@ -270,8 +281,55 @@ impl ser::SerializeMap for &mut Fingerprint<'_> {
     }
 }
 
-/// Each probe model's path under `tests/projects` with the fingerprint of its import output.
-fn fingerprints(root: &Path) -> BTreeMap<String, String> {
+/// Content read by the importer, excluding its implementation and cache version. Paths are
+/// relative to the probes' root so a checkout move does not look like an input edit.
+fn file_fingerprint(path: &Path) -> Option<String> {
+    match std::fs::read(path) {
+        Ok(bytes) => Some(blake3::hash(&bytes).to_hex().to_string()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Err(error) => panic!("{}: {error}", path.display()),
+    }
+}
+
+fn input_fingerprint(
+    root: &Path,
+    source: &Path,
+    bytes: &[u8],
+    meta: Option<&[u8]>,
+) -> InputContent {
+    let dependencies = ModelImporter::default()
+        .dependencies(source)
+        .unwrap()
+        .into_iter()
+        .map(|path| {
+            let name = path
+                .strip_prefix(root)
+                .unwrap_or(&path)
+                .to_string_lossy()
+                .replace('\\', "/");
+            (name, file_fingerprint(&path))
+        })
+        .collect();
+    InputContent {
+        source: blake3::hash(bytes).to_hex().to_string(),
+        meta: meta.map(|bytes| blake3::hash(bytes).to_hex().to_string()),
+        dependencies,
+    }
+}
+
+impl InputContent {
+    fn authored_files_unchanged(&self, root: &Path, actual: &Self) -> bool {
+        self.source == actual.source
+            && self.meta == actual.meta
+            && self
+                .dependencies
+                .iter()
+                .all(|(path, hash)| file_fingerprint(&root.join(path)) == *hash)
+    }
+}
+
+/// Each probe model's (path, input content) with the fingerprint of its import output.
+fn fingerprints(root: &Path) -> Fingerprints {
     let mut sources = Vec::new();
     for project in PROJECTS {
         models(&root.join(project).join("Assets"), &mut sources);
@@ -291,10 +349,19 @@ fn fingerprints(root: &Path) -> BTreeMap<String, String> {
                 .replace('\\', "/");
             let mut meta_path = source.clone().into_os_string();
             meta_path.push(".meta");
-            let meta = std::fs::read_to_string(&meta_path)
-                .map(|text| unbound_yaml::parse_value(&text).unwrap())
+            let meta_bytes = match std::fs::read(&meta_path) {
+                Ok(bytes) => Some(bytes),
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+                Err(error) => panic!("{name}.meta: {error}"),
+            };
+            let meta = meta_bytes
+                .as_ref()
+                .map(|bytes| {
+                    unbound_yaml::parse_value(std::str::from_utf8(bytes).unwrap()).unwrap()
+                })
                 .unwrap_or(Value::Null);
             let bytes = std::fs::read(source).unwrap();
+            let input = input_fingerprint(root, source, &bytes, meta_bytes.as_deref());
             let mut hasher = blake3::Hasher::new();
             let root = root.to_string_lossy();
             match ModelImporter::default().import(source, &bytes, &meta) {
@@ -306,12 +373,12 @@ fn fingerprints(root: &Path) -> BTreeMap<String, String> {
                     .serialize(&mut Fingerprint(&mut hasher, &root))
                     .unwrap_or_else(|e| panic!("{name}: {e}")),
             }
-            (name, hasher.finalize().to_hex().to_string())
+            ((name, input), hasher.finalize().to_hex().to_string())
         })
         .collect()
 }
 
-fn parse_manifest(text: &str) -> (u32, BTreeMap<String, String>) {
+fn parse_manifest(text: &str) -> (u32, Fingerprints) {
     let mut lines = text.lines();
     let version = lines
         .next()
@@ -321,11 +388,168 @@ fn parse_manifest(text: &str) -> (u32, BTreeMap<String, String>) {
     let rows = lines
         .filter(|l| !l.trim().is_empty())
         .map(|l| {
-            let (hash, path) = l.split_once(' ').expect("`<hash> <path>` rows");
-            (path.to_owned(), hash.to_owned())
+            let (path, input, output): (String, InputContent, String) = serde_json::from_str(l)
+                .expect("JSON [probe path, input content, output hash] rows");
+            ((path, input), output)
         })
         .collect();
     (version, rows)
+}
+
+fn manifest_text(version: u32, rows: &Fingerprints) -> String {
+    let mut text = format!("version {version}\n");
+    for ((path, input), output) in rows {
+        text += &serde_json::to_string(&(path, input, output)).unwrap();
+        text.push('\n');
+    }
+    text
+}
+
+/// Compare authored content using the recorded dependency paths, independently of what
+/// today's importer discovers. A new selection rule still requires a bump when the
+/// previously recorded files have not changed and the result differs.
+fn changed_outputs<'a>(
+    recorded_version: u32,
+    version: u32,
+    recorded: &Fingerprints,
+    actual: &'a Fingerprints,
+    root: &Path,
+) -> Vec<&'a str> {
+    if recorded_version != version {
+        return Vec::new();
+    }
+    let prior: BTreeMap<_, _> = recorded
+        .iter()
+        .map(|((path, input), output)| (path.as_str(), (input, output)))
+        .collect();
+    actual
+        .iter()
+        .filter(|((path, input), output)| {
+            prior
+                .get(path.as_str())
+                .is_some_and(|(before, old_output)| {
+                    *old_output != *output && before.authored_files_unchanged(root, input)
+                })
+        })
+        .map(|((path, _), _)| path.as_str())
+        .collect()
+}
+
+#[test]
+fn input_edits_allow_recording_but_output_changes_require_a_version_bump() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects");
+    let source = root.join("modelclips/Assets/Resources/Rig.fbx");
+    let bytes = std::fs::read(&source).unwrap();
+    let meta = std::fs::read(source.with_extension("fbx.meta")).unwrap();
+    let input = input_fingerprint(&root, &source, &bytes, Some(&meta));
+    let original = BTreeMap::from([(("Rig.fbx".into(), input.clone()), "output one".into())]);
+    let changed = BTreeMap::from([(("Rig.fbx".into(), input.clone()), "output two".into())]);
+    assert_eq!(
+        changed_outputs(26, 26, &original, &changed, &root),
+        ["Rig.fbx"]
+    );
+    assert!(changed_outputs(26, 27, &original, &changed, &root).is_empty());
+    assert!(changed_outputs(26, 26, &original, &original, &root).is_empty());
+    let mut edited_meta = meta.clone();
+    edited_meta.extend_from_slice(b"\n# added clip settings\n");
+    let meta_input = input_fingerprint(&root, &source, &bytes, Some(&edited_meta));
+    let asset_input = input_fingerprint(&root, &source, b"changed asset", Some(&meta));
+    for edited_input in [meta_input, asset_input] {
+        assert_ne!(input, edited_input);
+        let edited = BTreeMap::from([(("Rig.fbx".into(), edited_input), "output two".into())]);
+        assert!(changed_outputs(26, 26, &original, &edited, &root).is_empty());
+    }
+    assert_ne!(
+        input_fingerprint(&root, &source, &bytes, None),
+        input_fingerprint(&root, &source, &bytes, Some(b""))
+    );
+}
+
+#[test]
+fn dependency_edits_and_checkout_moves_change_only_the_relevant_input_keys() {
+    let cache = std::env::var_os("XDG_CACHE_HOME")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from(std::env::var_os("HOME").unwrap()).join(".cache")
+        });
+    let root = cache
+        .join("unbound/q199")
+        .join(format!("input-control-{}", std::process::id()));
+    let bytes = b"mtllib color.mtl\nv 0 0 0\n";
+    let mut originals = Vec::new();
+    for checkout in ["one", "two"] {
+        let project = root.join(checkout);
+        std::fs::create_dir_all(&project).unwrap();
+        let source = project.join("Shape.obj");
+        std::fs::write(&source, bytes).unwrap();
+        let absent = input_fingerprint(&project, &source, bytes, None);
+        std::fs::write(project.join("color.mtl"), b"newmtl Paint\nKd 1 0 0\n").unwrap();
+        let original = input_fingerprint(&project, &source, bytes, None);
+        assert_ne!(absent, original);
+        std::fs::write(project.join("color.mtl"), b"newmtl Paint\nKd 0 1 0\n").unwrap();
+        assert_ne!(original, input_fingerprint(&project, &source, bytes, None));
+        originals.push(original);
+    }
+    assert_eq!(originals[0], originals[1]);
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn dependency_discovery_changes_do_not_masquerade_as_authored_edits() {
+    let root = std::path::PathBuf::from(std::env::var_os("XDG_CACHE_HOME").unwrap_or_else(|| {
+        std::path::PathBuf::from(std::env::var_os("HOME").unwrap())
+            .join(".cache")
+            .into_os_string()
+    }))
+    .join("unbound/q199")
+    .join(format!("discovery-control-{}", std::process::id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let source = root.join("Shape.obj");
+    let bytes = b"mtllib color.mtl\nv 0 0 0\n";
+    std::fs::write(&source, bytes).unwrap();
+    std::fs::write(root.join("color.mtl"), b"newmtl Paint\nKd 1 0 0\n").unwrap();
+    std::fs::write(root.join("other.mtl"), b"newmtl Other\nKd 0 0 1\n").unwrap();
+    let input = input_fingerprint(&root, &source, bytes, None);
+    let original = BTreeMap::from([(("Shape.obj".into(), input.clone()), "old output".into())]);
+    for dependencies in [
+        vec![],
+        vec![(
+            "other.mtl".into(),
+            file_fingerprint(&root.join("other.mtl")),
+        )],
+    ] {
+        let mut discovered = input.clone();
+        discovered.dependencies = dependencies;
+        assert_ne!(input, discovered);
+        let changed = BTreeMap::from([(("Shape.obj".into(), discovered), "new output".into())]);
+        assert_eq!(
+            changed_outputs(30, 30, &original, &changed, &root),
+            ["Shape.obj"]
+        );
+        assert!(changed_outputs(30, 31, &original, &changed, &root).is_empty());
+    }
+    std::fs::write(root.join("color.mtl"), b"newmtl Paint\nKd 0 1 0\n").unwrap();
+    let edited = input_fingerprint(&root, &source, bytes, None);
+    let changed = BTreeMap::from([(("Shape.obj".into(), edited), "new output".into())]);
+    assert!(changed_outputs(30, 30, &original, &changed, &root).is_empty());
+    std::fs::remove_file(root.join("color.mtl")).unwrap();
+    let missing = input_fingerprint(&root, &source, bytes, None);
+    let changed = BTreeMap::from([(("Shape.obj".into(), missing), "missing output".into())]);
+    assert!(changed_outputs(30, 30, &original, &changed, &root).is_empty());
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn manifest_round_trips_paths_with_spaces() {
+    let input = InputContent {
+        source: "source hash".into(),
+        meta: None,
+        dependencies: vec![],
+    };
+    let expected = BTreeMap::from([(("model/Assets/A model.fbx".into(), input), "output".into())]);
+    let (version, rows) = parse_manifest(&manifest_text(26, &expected));
+    assert_eq!(version, 26);
+    assert_eq!(rows, expected);
 }
 
 #[test]
@@ -339,16 +563,9 @@ fn import_output_changes_bump_the_model_cache_version() {
         recorded_version <= version,
         "{MANIFEST} names VERSION {recorded_version}, newer than ModelImporter::VERSION {version}"
     );
-    let actual = fingerprints(&crate_dir.join("../../tests/projects"));
-    let changed: Vec<&str> = if recorded_version == version {
-        actual
-            .iter()
-            .filter(|(path, hash)| recorded.get(*path).is_some_and(|r| r != *hash))
-            .map(|(path, _)| path.as_str())
-            .collect()
-    } else {
-        Vec::new()
-    };
+    let root = crate_dir.join("../../tests/projects");
+    let actual = fingerprints(&root);
+    let changed = changed_outputs(recorded_version, version, &recorded, &actual, &root);
     assert!(
         changed.is_empty(),
         "the model import output changed under VERSION {version}, so caches would serve stale \
@@ -359,11 +576,7 @@ fn import_output_changes_bump_the_model_cache_version() {
         return;
     }
     if std::env::var_os("UNBOUND_BLESS").is_some() {
-        let mut text = format!("version {version}\n");
-        for (path, hash) in &actual {
-            text += &format!("{hash} {path}\n");
-        }
-        std::fs::write(&manifest_path, text).unwrap();
+        std::fs::write(&manifest_path, manifest_text(version, &actual)).unwrap();
         return;
     }
     let added: Vec<_> = actual
