@@ -370,6 +370,20 @@ public class EffectProbe : MonoBehaviour
         new[] { "script3d_live_bypass_component", "Music:Att", "music=noise:0.25", "spatial=1", "position=3,0,4", "sourcechain=dist,chorus", "step=bypass" },
         new[] { "script_generator_live_bypass", "Music:Att", "chain_script=before", "sourcechain=", "clipless=1", "step=bypass" },
         new[] { "script3d_live_bypass_restart", "Music:Att", "music=noise:0.25", "spatial=1", "position=3,0,4", "chain_script=before", "sourcechain=dist,chorus", "step=bypass", "restart=12" },
+        new[] { "script_generator_dist_control", "Music:Att", "chain_script=before", "sourcechain=dist", "clipless=1" },
+        new[] { "script_generator_dist_bypass", "Music:Att", "chain_script=before", "sourcechain=dist", "clipless=1", "bypass=1" },
+        new[] { "script_generator_dist_live", "Music:Att", "chain_script=before", "sourcechain=dist", "clipless=1", "step=bypass" },
+        new[] { "script_generator_chorus_control", "Music:Att", "chain_script=before", "sourcechain=chorus", "clipless=1", "generator_pattern=1" },
+        new[] { "script_generator_chorus_bypass", "Music:Att", "chain_script=before", "sourcechain=chorus", "clipless=1", "generator_pattern=1", "bypass=1" },
+        new[] { "script_generator_chorus_live", "Music:Att", "chain_script=before", "sourcechain=chorus", "clipless=1", "generator_pattern=1", "step=bypass" },
+        new[] { "script_generator_dist_chorus_control", "Music:Att", "chain_script=before", "sourcechain=dist,chorus", "clipless=1" },
+        new[] { "script_generator_dist_chorus_bypass", "Music:Att", "chain_script=before", "sourcechain=dist,chorus", "clipless=1", "bypass=1" },
+        new[] { "script_generator_dist_chorus_live", "Music:Att", "chain_script=before", "sourcechain=dist,chorus", "clipless=1", "step=bypass" },
+        new[] { "script3d_generator_live_bypass", "Music:Att", "chain_script=before", "sourcechain=chorus,dist", "clipless=1", "step=bypass", "spatial=1", "position=3,0,4" },
+        new[] { "script_generator_quiet_control", "Music:Att", "chain_script=before", "sourcechain=dist,chorus", "clipless=1", "volume=0.25" },
+        new[] { "script_generator_quiet_bypass", "Music:Att", "chain_script=before", "sourcechain=dist,chorus", "clipless=1", "volume=0.25", "bypass=1" },
+        new[] { "script3d_generator_quiet_control", "Music:Att", "chain_script=before", "sourcechain=dist", "clipless=1", "volume=0.25", "spatial=1", "blend=0.5", "position=3,0,4" },
+        new[] { "script3d_generator_quiet_live", "Music:Att", "chain_script=before", "sourcechain=chorus,dist", "clipless=1", "volume=0.25", "spatial=1", "blend=0.5", "position=3,0,4", "step=bypass" },
     };
     public const int BlockCount = 32;
     public const int ClipFrames = BlockCount * 1024;
@@ -564,6 +578,8 @@ public class EffectProbe : MonoBehaviour
             if (Option(key, "chain_script=", "") == "before") go.AddComponent<AffineSignal>();
             var sourceComponents = Components(go, Option(key, "sourcechain=", ""), echoDelay);
             if (Option(key, "chain_script=", "") == "after") go.AddComponent<AffineSignal>();
+            if (go.GetComponent<AffineSignal>() is AffineSignal signal)
+                signal.Pattern = Option(key, "generator_pattern=", "0") == "1";
             if (Option(key, "echo_delay=", "") != "") {
                 var echo = go.GetComponent<AudioEchoFilter>(); if (!echo) echo = gameObject.GetComponent<AudioEchoFilter>();
                 records.Add("\""+key+".echoDelay\":"+echo.delay.ToString("R", System.Globalization.CultureInfo.InvariantCulture));

@@ -570,6 +570,7 @@ pub struct Source {
     is_virtual: bool,
     output: Option<Ring>,
     generator: GeneratorState,
+    generator_gain: Option<ParameterRamp>,
     played: bool,
     // Processing survives natural voice completion; explicit Stop tears it down.
     filter_started: bool,
@@ -595,6 +596,19 @@ impl Source {
     fn begin_bypass(&mut self, samples: &mut [f32]) {
         self.bypass_dry[..samples.len()].copy_from_slice(samples);
         samples.fill(0.0);
+    }
+
+    fn scale_generator(&mut self, samples: &mut [f32], target: f32) {
+        let gain = self
+            .generator_gain
+            .get_or_insert_with(|| ParameterRamp::new(0.0));
+        for stereo in samples.chunks_exact_mut(2) {
+            let value = gain.gain(target, VOICE_GAIN_RAMP_FRAMES);
+            if value != 1.0 {
+                stereo[0] *= value;
+                stereo[1] *= value;
+            }
+        }
     }
 
     fn end_bypass(&self, samples: &mut [f32]) {
@@ -920,6 +934,7 @@ impl Mixer {
             source.completed_main = None;
             source.pending_position = 0.0;
             source.generator = GeneratorState::default();
+            source.generator_gain = None;
             source.chain_tail = None;
             source.filtered.clear();
             source.filtered_offset = 0;
@@ -1956,6 +1971,11 @@ impl Mixer {
                         config.buffer_size.max(1) as usize,
                         callback,
                     );
+                    if flags & source_flags::SPATIAL_STEREO != 0 {
+                        // Generated channels retain their channel positions; source volume and
+                        // distance gain precede the downstream components.
+                        source.scale_generator(buffer, volume * s.audibility);
+                    }
                 }
                 let mut dry = if separate_return {
                     std::mem::take(&mut source.bypass_dry)
@@ -1988,11 +2008,9 @@ impl Mixer {
                 // Components below the generating script (none may sit above it). Unbound's
                 // choice (unmeasured): they also process the source's one-shots.
                 if voices_running {
-                    source.chain.process(
-                        buffer,
-                        Some(filter_stage::AFTER_SCRIPTS),
-                        bypass && !separate_return,
-                    );
+                    source
+                        .chain
+                        .process(buffer, Some(filter_stage::AFTER_SCRIPTS), bypass);
                 }
                 if separate_return {
                     for (sample, dry) in buffer.iter_mut().zip(&dry) {
@@ -5540,6 +5558,51 @@ mod tests {
         assert_eq!(gains[63], 0.5);
         // A source's own live bypass changes the same connection instead of replacing it.
         assert_eq!(state.connection_gain(0.0, 2, true), 0.5);
+    }
+
+    #[test]
+    fn bypassed_generator_gain_is_independent_of_device_period_and_skips_components() {
+        extern "C" fn generate(
+            kind: i32,
+            _: u64,
+            data: *mut f32,
+            frames: i32,
+            channels: i32,
+            _: i64,
+        ) {
+            if kind == callback::SOURCE_FILTER {
+                unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) }
+                    .fill(0.125);
+            }
+        }
+        let render = |period: usize| {
+            let mut mixer = Mixer::new(MixerConfig::default());
+            mixer.set_callback(Some(generate));
+            source_with(&mut mixer, 7, 0, |p| {
+                p.flags = source_flags::FILTER
+                    | source_flags::SPATIAL_STEREO
+                    | source_flags::BYPASS_EFFECTS;
+                p.volume = 0.25;
+                p.filters = vec![component(
+                    1,
+                    filter_kind::DISTORTION,
+                    filter_stage::AFTER_SCRIPTS,
+                )];
+            });
+            play(&mut mixer, 7, command::PLAY, 0.0);
+            let mut out = vec![0.0; 2048 * 2];
+            for chunk in out.chunks_mut(period * 2) {
+                mixer.render(chunk, 2);
+            }
+            out
+        };
+        let expected = render(1024);
+        assert_eq!(expected[0], 0.0);
+        assert_eq!(expected[2], 0.125 * 0.25 / 64.0);
+        assert!(expected[64 * 2..].iter().all(|sample| *sample == 0.03125));
+        for period in [74, 255, 257, 1300] {
+            assert_eq!(render(period), expected);
+        }
     }
 
     #[test]
