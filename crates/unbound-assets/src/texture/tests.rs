@@ -1276,7 +1276,8 @@ fn android_imports_are_etc_compressed() {
         assert_eq!(tex.reported_format(), Some(want.unity_format()));
         // Unbound's own encoder: the Editor's format and sizes, slightly different texels.
         assert!(tex.approximation.is_some());
-        assert!(tex.bc7.is_none());
+        // The GPU gets BC7 blocks of the decoded texels.
+        assert_eq!(tex.bc7.as_ref().map(Vec::len), Some(tex.mips.len()));
         for (mip, level) in tex.mips.iter().zip(&blocks.mips) {
             assert_eq!(level.len(), want.level_size(mip.width, mip.height));
             assert_eq!(mip.data, decode_blocks(want, level, mip.width, mip.height));
@@ -1376,4 +1377,42 @@ fn eac_alpha_blocks_decode_close_to_the_alpha() {
         // Eight levels over the block's range: at most about half a step off.
         assert!(worst <= if flat { 0 } else { 18 }, "{alpha:?}: {worst}");
     }
+}
+
+/// The default compression format of each build target: the first little-endian value of
+/// `m_Formats`, an older project's `m_Format`, Android's ETC when the project names none.
+#[test]
+fn project_compression_reads_each_targets_default() {
+    let dir = std::env::temp_dir().join(format!("unbound-compression-{}", std::process::id()));
+    std::fs::create_dir_all(dir.join("ProjectSettings")).unwrap();
+    std::fs::write(
+        dir.join("ProjectSettings/ProjectSettings.asset"),
+        "%YAML 1.1\n--- !u!129 &1\nPlayerSettings:\n  m_BuildTargetDefaultTextureCompressionFormat:\n  - serializedVersion: 3\n    m_BuildTarget: Android\n    m_Formats: 030000000200000001000000\n  - serializedVersion: 2\n    m_BuildTarget: iOS\n    m_Format: 2\n",
+    )
+    .unwrap();
+    let project = ProjectCompression::read(&dir);
+    assert_eq!(
+        project.default_formats,
+        [("Android".to_string(), 3), ("iOS".to_string(), 2)]
+    );
+    assert_eq!(project.default_format("Android"), Some(3));
+    let missing = ProjectCompression::read(&dir.join("none"));
+    assert_eq!(missing.default_format("Android"), Some(1));
+    assert_eq!(missing.default_format("Standalone"), None);
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+/// ETC blocks decode as the ETC2 specification says: an ETC2 RGBA8 block whose EAC alpha is 200
+/// (table 13, multiplier 1, index 4: modifier 0) and whose ETC1 colour is (136, 68, 34) with
+/// table 0 and index 0 (+2) reads (138, 70, 36, 200); its colour half alone as ETC_RGB4 reads
+/// the same colour, opaque.
+#[test]
+fn etc_blocks_decode_as_the_specification() {
+    let block = [
+        0xc8, 0x1d, 0x92, 0x49, 0x24, 0x92, 0x49, 0x24, 0x88, 0x44, 0x22, 0, 0, 0, 0, 0,
+    ];
+    let rgba = decode_blocks(BlockFormat::Etc2Rgba8, &block, 4, 4);
+    assert!(rgba.chunks(4).all(|t| t == [138, 70, 36, 200]), "{rgba:?}");
+    let rgb = decode_blocks(BlockFormat::Etc1, &block[8..], 4, 4);
+    assert!(rgb.chunks(4).all(|t| t == [138, 70, 36, 255]), "{rgb:?}");
 }

@@ -230,7 +230,6 @@ fn one_by_one() -> (u32, u32) {
     (1, 1)
 }
 
-
 impl Default for TextureSettings {
     fn default() -> Self {
         Self::read(&Value::Null, "Standalone")
@@ -592,7 +591,12 @@ impl ProjectCompression {
                 .and_then(|hex| hex.get(..8))
                 .and_then(|hex| u32::from_str_radix(hex, 16).ok())
                 .map(|v| v.swap_bytes() as i32)
-                .or_else(|| entry.get("m_Format").and_then(Value::as_i64).map(|v| v as i32));
+                .or_else(|| {
+                    entry
+                        .get("m_Format")
+                        .and_then(Value::as_i64)
+                        .map(|v| v as i32)
+                });
             if let (Some(target), Some(first)) = (target, first) {
                 out.default_formats.push((target.to_string(), first));
             }
@@ -1023,7 +1027,14 @@ impl Importer for TextureImporter {
                     texture.has_alpha = false;
                 }
             }
-            Storage::Blocks(format) => compress_blocks(&mut texture, format),
+            Storage::Blocks(format) => {
+                compress_blocks(&mut texture, format);
+                // Unbound's renderer samples no ETC: a GPU with BC formats gets BC7 blocks of
+                // what the ETC blocks decode to (4x smaller than RGBA8).
+                if format.is_etc() && self.compress {
+                    texture.bc7 = compress_bc7(&texture);
+                }
+            }
             Storage::Unsupported(why) => {
                 texture.approximation = Some(format!(
                     "{why} are not produced: such textures keep their pixels uncompressed (their \

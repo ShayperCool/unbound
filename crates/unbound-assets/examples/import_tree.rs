@@ -74,13 +74,17 @@ fn main() -> Result<()> {
         ),
     };
 
-    // The project's compression settings, when `dir` is a project's Assets folder.
-    let project = match dir.parent() {
-        Some(root) if dir.file_name().is_some_and(|n| n == "Assets") => {
-            unbound_assets::texture::ProjectCompression::read(root)
-        }
-        _ => Default::default(),
-    };
+    // The project's compression settings and colour space, when `dir` is a project's Assets
+    // folder (else a linear project with default settings).
+    let root = dir
+        .parent()
+        .filter(|_| dir.file_name().is_some_and(|n| n == "Assets"));
+    let project = root
+        .map(unbound_assets::texture::ProjectCompression::read)
+        .unwrap_or_default();
+    let gamma = root
+        .and_then(|r| std::fs::read_to_string(r.join("ProjectSettings/ProjectSettings.asset")).ok())
+        .is_some_and(|text| !text.contains("m_ActiveColorSpace: 1"));
     let streaming = dir.join("StreamingAssets");
     let mut files = Vec::new();
     let mut skipped_streaming = 0;
@@ -112,7 +116,7 @@ fn main() -> Result<()> {
     for pass in ["first pass", "second pass (fresh cache instance)"] {
         let cache = AssetCache::new(&cache_dir);
         let start = Instant::now();
-        let stats = run(&cache, &files, &target, &project);
+        let stats = run(&cache, &files, &target, &project, gamma);
         cache.save()?;
         let elapsed = start.elapsed();
         println!("\n== {pass}: {:.2?}", elapsed);
@@ -159,11 +163,12 @@ fn run(
     files: &[(AssetKind, PathBuf)],
     target: &str,
     project: &unbound_assets::texture::ProjectCompression,
+    gamma: bool,
 ) -> Stats {
     let textures = TextureImporter {
         build_target: target.to_string(),
         compress: true,
-        gamma: false,
+        gamma,
         normal_maps_xyz: target == "Android",
         project: project.clone(),
     };

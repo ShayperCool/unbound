@@ -85,8 +85,8 @@ impl BlockFormat {
         !matches!(self, Self::Bc1 | Self::Bc3)
     }
 
-    /// Whether GPUs with BC formats sample the blocks; ETC blocks upload as what they decode
-    /// to (desktop GPUs have no ETC sampling).
+    /// Whether GPUs with BC formats sample the blocks; Unbound's renderer samples no ETC, so ETC
+    /// blocks go up as BC7 blocks or pixels of what they decode to.
     pub fn is_bc(self) -> bool {
         !self.is_etc()
     }

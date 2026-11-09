@@ -1333,7 +1333,7 @@ fn block_code(format: unbound_assets::texture::BlockFormat, srgb: bool) -> i32 {
         B::Bc4 => texture_format::BC4,
         B::Bc5 => texture_format::BC5,
         B::Bc6h => texture_format::BC6H,
-        B::Etc1 | B::Etc2Rgb | B::Etc2Rgba8 => unreachable!("ETC blocks upload decoded"),
+        B::Etc1 | B::Etc2Rgb | B::Etc2Rgba8 => unreachable!("ETC blocks upload as BC7 or pixels"),
     }
 }
 
@@ -1398,8 +1398,8 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     // pixels.
     let gpu_bc = GPU_BC.load(std::sync::atomic::Ordering::Relaxed);
     // The import's BC blocks always go up (the renderer decodes them where the device has no BC
-    // formats; textures may import before the device exists). ETC blocks go up as what they
-    // decode to (the import's pixels), as on the Editor's desktop GPUs.
+    // formats; textures may import before the device exists). The renderer samples no ETC:
+    // ETC imports go up as BC7 blocks of what they decode to, else as those pixels.
     let blocks = texture.blocks.take().filter(|b| b.format.is_bc());
     let (gpu_format, data) = match (blocks, texture.bc7.take()) {
         (Some(blocks), _) => (
