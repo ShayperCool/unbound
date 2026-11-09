@@ -9,6 +9,9 @@ records, in Play mode:
   in-tangent −∞, `L` a linear control. Sampled at 0, 0.25, 0.49, 0.51, 0.99 and 1 s by an Animator
   playing it through a controller (`Animator.Update`), by a manually evaluated
   AnimationClipPlayable, and as the curves themselves (`AnimationCurve.Evaluate`).
+* `entry.*`: script-playable graphs created and played before the first scene loads, in game time
+  and in unscaled time: their time after the first frame's update, and whether the second frame
+  advanced it.
 * `play.*`: `AnimatorControllerPlayable.Play("B")` on a two-state controller (A holds `A.x` between
   1 and 2, B between 10 and 11) issued before its graph's first evaluation: a manual graph (with and
   without a normalized time, before connecting the output), after a first evaluation, a game-time
@@ -30,5 +33,7 @@ What the Editor does (measured):
 - A segment with a +∞ tangent at either end holds the first key's value; otherwise one with a −∞
   tangent holds the second key's value, from the segment's first key on (`B`, `C` read 3 at 0 s,
   `E` reads 2 from 0 s). The Animator, the clip playable and the curve agree.
+- Graphs playing at Play entry, in game and in unscaled time, take a zero interval in the first
+  frame's update (time 0), then advance.
 - `AnimatorControllerPlayable.Play` issued before the graph's first evaluation takes effect in that
   evaluation, in every variant, as `Animator.Play` before the first update does.

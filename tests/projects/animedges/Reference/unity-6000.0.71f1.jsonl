@@ -26,6 +26,10 @@
 {"k":"play.manualAfterFirst.1","v":{"x":10.1,"B":true,"t":0.1}}
 {"k":"play.animator.0","v":{"x":10,"B":true,"t":0}}
 {"k":"play.animator.1","v":{"x":10.1,"B":true,"t":0.1}}
+{"k":"entry.GameTime.0","v":0}
+{"k":"entry.UnscaledGameTime.0","v":0}
+{"k":"entry.GameTime.1","v":true}
+{"k":"entry.UnscaledGameTime.1","v":true}
 {"k":"play.gameTime.0","v":{"xInB":true,"B":true}}
 {"k":"play.gameTime.1","v":{"xInB":true,"B":true}}
 {"k":"play.gameTime.2","v":{"xInB":true,"B":true}}

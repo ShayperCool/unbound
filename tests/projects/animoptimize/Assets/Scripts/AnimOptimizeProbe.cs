@@ -244,6 +244,12 @@ public class AnimOptimizeProbe : MonoBehaviour
         AnimatorUtility.OptimizeTransformHierarchy(go, new[] { "Rig/Nope", "Rig/Hips/Leg" });
         Record("rt.missing", Hierarchy(go));
         Object.DestroyImmediate(go);
+        // The skin's root bone exposed by its name rather than its path.
+        go = Spawn("Rig", out animator);
+        AnimatorUtility.OptimizeTransformHierarchy(go, new[] { "Hips" });
+        Record("rt.rootByName", Hierarchy(go));
+        Record("rt.rootByName.facts", Facts(go));
+        Object.DestroyImmediate(go);
         go = new GameObject("Plain");
         new GameObject("Child").transform.SetParent(go.transform, false);
         AnimatorUtility.OptimizeTransformHierarchy(go, new string[0]);

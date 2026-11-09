@@ -24,7 +24,7 @@ vertices in world space (sorted: the vertex order is the importer's). Four model
 to (3, 4, 5) and turned 30° (with world positions). Runtime controls start from the unoptimized
 rig with objects added under bones (an empty chain under `Hand`, a collider under `Leg`), from
 optimized models, and from objects without an Animator: optimize with and without exposed paths,
-optimize twice, a missing exposed path, deoptimize (from optimized and unoptimized hierarchies)
+optimize twice, a missing exposed path, the skin's root bone exposed by name, deoptimize (from optimized and unoptimized hierarchies)
 and play on. Every log message is recorded in order.
 
 The assets are committed. To make them again, regenerate the rig and let a disposable Editor

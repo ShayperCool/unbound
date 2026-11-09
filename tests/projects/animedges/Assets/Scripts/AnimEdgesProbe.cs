@@ -24,6 +24,12 @@ public class AnimEdgesProbe : MonoBehaviour
     static int s_Log;
 
     static readonly string[] Paths = { "A", "B", "C", "D", "E", "L" };
+    static readonly List<(DirectorUpdateMode Mode, PlayableGraph Graph, Playable Playable)> s_Entry =
+        new List<(DirectorUpdateMode, PlayableGraph, Playable)>();
+
+    sealed class Idle : PlayableBehaviour
+    {
+    }
     static readonly float[] Steps = { 0f, .25f, .24f, .02f, .48f, .01f };
 
     static string F(float f) => f.ToString("R", CultureInfo.InvariantCulture);
@@ -38,6 +44,16 @@ public class AnimEdgesProbe : MonoBehaviour
         if (Environment.GetEnvironmentVariable("ANIM_EDGES_OUT") == null) return;
         Application.runInBackground = true;
         DontDestroyOnLoad(new GameObject("AnimEdgesProbe").AddComponent<AnimEdgesProbe>().gameObject);
+        // Script graphs playing from Play entry, in game and in unscaled time.
+        foreach (var mode in new[] { DirectorUpdateMode.GameTime, DirectorUpdateMode.UnscaledGameTime })
+        {
+            var graph = PlayableGraph.Create("entry" + mode);
+            graph.SetTimeUpdateMode(mode);
+            var playable = ScriptPlayable<Idle>.Create(graph);
+            ScriptPlayableOutput.Create(graph, "out").SetSourcePlayable(playable);
+            graph.Play();
+            s_Entry.Add((mode, graph, playable));
+        }
         Application.logMessageReceived += (message, stack, kind) =>
         {
             if (stack.Contains("UnityEditor.")) return;
@@ -203,6 +219,14 @@ public class AnimEdgesProbe : MonoBehaviour
 
     void LateUpdate()
     {
+        // The entry graphs' time after the first frame's update (exact), and whether the second
+        // frame advanced it (its interval varies).
+        if (m_Frame == 0 || m_Frame == 1)
+            foreach (var (mode, _, playable) in s_Entry)
+                Record("entry." + mode + "." + m_Frame,
+                    m_Frame == 0 ? F((float)playable.GetTime()) : (playable.GetTime() > 0.0 ? "true" : "false"));
+        if (m_Frame == 1)
+            foreach (var (_, graph, _) in s_Entry) graph.Destroy();
         if (Finished || m_Frame < 1 || m_Frame > 3) return;
         var info = m_GameController.GetCurrentAnimatorStateInfo(0);
         // B's clip holds A.x between 10 and 11 (A's between 1 and 2); the frame intervals vary.
