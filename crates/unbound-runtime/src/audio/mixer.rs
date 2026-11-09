@@ -488,6 +488,8 @@ struct Voice {
     fade_matrix: [f32; 4],
     stream: Option<StreamState>,
     zone_send: ZoneSendState,
+    /// Set after the first rendered frame; gain changes do not make a voice new again.
+    rendered: bool,
 }
 
 impl Voice {
@@ -507,6 +509,7 @@ impl Voice {
             fade_matrix: [0.0; 4],
             stream: None,
             zone_send: ZoneSendState::default(),
+            rendered: false,
         }
     }
 
@@ -2744,11 +2747,10 @@ fn render_voice(
             if let Some(send) = zone_send.as_deref_mut() {
                 // Zone send changes use the same 64-frame connection ramp as voice gains.
                 // Unity 6000.0.71f1, tests/projects/audioreverb live bypass controls.
-                let gain = voice.zone_send.connection_gain(
-                    send.gain,
-                    send.return_id,
-                    voice.fade_frames > 0,
-                );
+                let gain =
+                    voice
+                        .zone_send
+                        .connection_gain(send.gain, send.return_id, voice.rendered);
                 if voice.zone_send.include {
                     send.samples[f * 2] += left * gain;
                     send.samples[f * 2 + 1] += right * gain;
@@ -2756,6 +2758,7 @@ fn render_voice(
             }
         }
         voice.advance_fade(measured_matrix);
+        voice.rendered = true;
         if let Some(stream) = &mut voice.stream {
             voice.position += step.abs();
             stream.trim(voice.position, clip.channels);
@@ -5563,6 +5566,39 @@ mod tests {
         assert_eq!(gains[63], 0.5);
         // A source's own live bypass changes the same connection instead of replacing it.
         assert_eq!(state.connection_gain(0.0, 2, true), 0.5);
+    }
+
+    #[test]
+    fn a_new_return_fades_in_for_a_playing_voice_whose_gain_changes_in_the_same_block() {
+        let zone = |id| {
+            let mut zone = component(id, filter_kind::REVERB, 0);
+            // Dry level 0 mB and no room: the return outputs exactly its send.
+            zone.reverb[0] = 0.0;
+            zone.reverb[1] = -10000.0;
+            zone
+        };
+        let mut m = Mixer::new(MixerConfig::default());
+        m.add_clip(1, stereo_tone(48000));
+        m.update_zone(&zone(1), false);
+        let source = |m: &mut Mixer, volume| {
+            source_with(m, 7, 1, |p| {
+                p.flags = source_flags::ZONE_VOICE_SEND | source_flags::SPATIAL_STEREO;
+                p.reverb_zone_mix = 1.0;
+                p.volume = volume;
+            })
+        };
+        source(&mut m, 1.0);
+        play(&mut m, 7, command::PLAY, 0.0);
+        let mut out = vec![0.0; 2 * 1024];
+        m.render(&mut out, 2);
+        assert!(m.zone_input.iter().any(|sample| *sample != 0.0));
+        // The voice's own gain changes while a new return connects it.
+        source(&mut m, 0.5);
+        m.update_zone(&zone(2), false);
+        let mut block = vec![0.0; 2 * BLOCK];
+        m.render(&mut block, 2);
+        assert_eq!(m.zone_input[..2], [0.0, 0.0]);
+        assert!(m.zone_input[2 * 64..].iter().any(|sample| *sample != 0.0));
     }
 
     #[test]
