@@ -827,7 +827,7 @@ It shares the quarter-wave cosine table (`wavetable.rs`) with Chorus and Flange,
 static-wet output layout check (`MEASURED_LAYOUT` in `effects.rs`, `RequireMeasuredOutput` on the
 managed side) with Normalize. Without slot wet mixing, Pitch Shifter also accepts
 256/512/2048-frame DSP buffers and mono, quad, 5.0, 5.1 and 7.1 output at 48000/44100 Hz.
-NativeApi 40 adds FFT size to the existing group JSON and 42 the DSP value of Max channels. It
+NativeApi 40 adds FFT size to the existing group JSON and 44 the DSP value of Max channels. It
 adds no source filter component.
 
 The documented contract, Editor parameter queries, measured state and kernel inferences are

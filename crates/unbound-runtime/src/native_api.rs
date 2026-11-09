@@ -47,7 +47,8 @@ use std::ffi::c_void;
 /// interface, native texture pointers and external textures).
 /// 42: legacy glyph floating-point bearings and explicit rendering modes.
 /// 43: compatibility-selected zone initialization and parameter transitions.
-pub const NATIVE_API_VERSION: u32 = 43;
+/// 44: mixer Pitch Shifter Max channels.
+pub const NATIVE_API_VERSION: u32 = 44;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
