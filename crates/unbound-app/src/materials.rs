@@ -552,7 +552,8 @@ fn render_state(props: &Props, pass: &PassInfo) -> (RenderState, u32) {
     if let Some(v) = &s.color_mask {
         state.color_mask = color_mask(v, props);
     }
-    // Targets with their own states keep the pass's for the rest.
+    // Targets with their own states keep the pass's for the rest; a target's own state wins
+    // over the unindexed one whatever their order (unmeasured).
     if s.target_blends.iter().any(Option::is_some)
         || s.target_color_masks.iter().any(Option::is_some)
     {
@@ -598,7 +599,8 @@ fn render_state(props: &Props, pass: &PassInfo) -> (RenderState, u32) {
                 .map(|v| props.number(v, 255.0) as u32 as u8)
                 .unwrap_or(255)
         };
-        // A face's own setting, else both faces' (Always, Keep by default).
+        // A face's own setting, else both faces' (Always, Keep by default); the face's own wins
+        // whatever their order (unmeasured).
         let both = [&st.comp, &st.pass, &st.fail, &st.zfail];
         let face = |own: &[Option<Value>; 4]| -> [u8; 4] {
             std::array::from_fn(|i| match own[i].as_ref().or(both[i].as_ref()) {

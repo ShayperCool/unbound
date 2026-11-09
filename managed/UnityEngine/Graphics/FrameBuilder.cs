@@ -845,24 +845,30 @@ namespace Unbound.Runtime
                 // By reference: the draws emitted below may add to s_Items (nothing does), so the
                 // place is looked up for each draw.
                 ref readonly var item = ref CollectionsMarshal.AsSpan(s_Items)[order[i]];
-                if (tagged != null)
-                {
-                    int next = tagged.IndexFor(item.Material, pass >= 0 ? pass : -1);
-                    if (next != block)
-                    {
-                        GfxStream.StateOverride(tagged.Block(next));
-                        block = next;
-                    }
-                }
+                // The drawn material: an override's, else the renderer's.
+                var drawn = overrideMaterial ?? (overrideShader != null ? null : item.Material);
                 if (overrideMaterial == null && overrideShader == null && item.Material.HasDisabledPasses && ShaderPassInfo.Of(item.Material.shader) is ShaderPassInfo info)
                 {
                     bool moving = motion && MovingObject(item);
                     foreach (var p in TaggedPasses(item.Material, info, s_PassTagScratch, includeDisabled: moving))
                     {
+                        if (tagged != null) SelectTaggedState(tagged, item.Material, p, ref block);
                         if (motion) NextDrawMotion(item);
                         EmitDraw(item, s_MaterialHandles[i], p, lightmaps, probes, srp: true);
                     }
                     continue;
+                }
+                if (tagged != null)
+                {
+                    // A pass tag is the drawn pass's: the list's first LightMode the material has
+                    // where the renderer picks it (several drawn passes share the first's block).
+                    int drawnPass = pass;
+                    if (tagged.PassTag && pass < 0 && ShaderPassInfo.Of(item.Material.shader) is ShaderPassInfo tags)
+                    {
+                        var passes = TaggedPasses(item.Material, tags, s_PassTagScratch, includeDisabled: true);
+                        drawnPass = passes.Count > 0 ? passes[0] : -1;
+                    }
+                    SelectTaggedState(tagged, drawn ?? ReplacementMaterial(item.Material, overrideShader), drawnPass, ref block);
                 }
                 if (motion) NextDrawMotion(item);
                 EmitDraw(item, s_MaterialHandles[i], pass, lightmaps, probes, srp: true);
@@ -871,6 +877,15 @@ namespace Unbound.Runtime
         }
 
         static readonly List<int> s_TaggedScratch = new List<int>();
+
+        /// <summary>Switches a renderer list's per-tag state block when the next draw's differs.</summary>
+        static void SelectTaggedState(RendererLists.TaggedStates tagged, Material material, int pass, ref int block)
+        {
+            int next = tagged.IndexFor(material, pass);
+            if (next == block) return;
+            GfxStream.StateOverride(tagged.Block(next));
+            block = next;
+        }
 
         /// <summary>The places in <see cref="s_Items"/> of a renderer list's draws, in order.</summary>
         static int[] s_Order = new int[64];

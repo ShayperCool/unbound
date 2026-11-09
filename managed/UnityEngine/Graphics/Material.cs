@@ -680,6 +680,16 @@ namespace UnityEngine
 
         public string GetTag(string tag, bool searchFallbacks) => GetTag(tag, searchFallbacks, "");
 
+        /// <summary>A tag of the SubShader the renderer draws (an override tag first), null
+        /// without it: what renderer lists match their per-tag state blocks by, read without the
+        /// public query's bookkeeping.</summary>
+        internal string DrawnSubShaderTag(string tag)
+        {
+            if (m_Tags.TryGetValue(tag, out var value)) return value;
+            var info = m_Shader != null ? Unbound.Runtime.ShaderPassInfo.Of(m_Shader) : null;
+            return info != null && info.DrawnShader == m_Shader.name && info.Tags.TryGetValue(tag, out var drawn) ? drawn : null;
+        }
+
         /// <summary>Activates a pass for GL drawing and Graphics.DrawMeshNow.</summary>
         public bool SetPass(int pass)
         {

@@ -1106,22 +1106,23 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A renderer list's state blocks by tag value (RendererListParams.tagName,
-        /// tagValues, stateBlocks): a material whose SubShader tag (or, with isPassTagName, the
-        /// drawn pass's tag) has one of the values draws with that value's block; any other, or
-        /// none, with the block of the empty tag value, else with no override (as URP's G-buffer
-        /// pass gives each material type its stencil bits).</summary>
+        /// tagValues, stateBlocks): as the DrawRenderers documentation gives it, a draw takes the
+        /// block of the first value that is its tag's (its SubShader's tag, or with isPassTagName
+        /// its drawn pass's), the default (empty) value matching any draw. A draw no value
+        /// matches has no override (inferred: unmeasured).</summary>
         internal sealed class TaggedStates
         {
             readonly string m_Tag;
-            readonly bool m_PassTag;
+            readonly ShaderTagId m_TagId;
             readonly string[] m_Values;
             readonly RenderStateBlock[] m_Blocks;
-            readonly int m_Fallback = -1;
+            internal readonly bool PassTag;
 
             internal TaggedStates(ShaderTagId tag, bool passTag, ShaderTagId[] values, RenderStateBlock[] blocks)
             {
                 m_Tag = tag.name;
-                m_PassTag = passTag;
+                m_TagId = tag;
+                PassTag = passTag;
                 int n = Math.Min(values.Length, blocks.Length);
                 m_Values = new string[n];
                 m_Blocks = new RenderStateBlock[n];
@@ -1129,21 +1130,27 @@ namespace Unbound.Runtime
                 {
                     m_Values[i] = values[i].name ?? "";
                     m_Blocks[i] = blocks[i];
-                    if (m_Values[i].Length == 0 && m_Fallback < 0) m_Fallback = i;
                 }
             }
 
-            /// <summary>The block index for a draw of <paramref name="material"/> with its pass
-            /// <paramref name="pass"/> (-1 when unknown), -1 for no override.</summary>
+            /// <summary>The index of the first of <paramref name="values"/> that is
+            /// <paramref name="value"/> or empty (any draw's); -1 for none.</summary>
+            internal static int Match(string value, string[] values)
+            {
+                for (int i = 0; i < values.Length; i++)
+                    if (values[i].Length == 0 || values[i] == value) return i;
+                return -1;
+            }
+
+            /// <summary>The block index for a draw of <paramref name="material"/> (the drawn one:
+            /// an override material where the list has one) with its pass <paramref name="pass"/>
+            /// (-1 when unknown, which only a pass tag needs), -1 for no override.</summary>
             internal int IndexFor(Material material, int pass)
             {
-                string value = m_PassTag
-                    ? (pass >= 0 && material.shader != null ? material.shader.FindPassTagValue(pass, new ShaderTagId(m_Tag)).name : "")
-                    : material.GetTag(m_Tag, false, "");
-                if (!string.IsNullOrEmpty(value))
-                    for (int i = 0; i < m_Values.Length; i++)
-                        if (m_Values[i] == value) return i;
-                return m_Fallback;
+                string value = PassTag
+                    ? (pass >= 0 && material.shader != null ? material.shader.FindPassTagValue(pass, m_TagId).name ?? "" : "")
+                    : material.DrawnSubShaderTag(m_Tag) ?? "";
+                return Match(value, m_Values);
             }
 
             internal RenderStateBlock? Block(int index) =>

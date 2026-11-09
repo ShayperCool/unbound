@@ -4730,7 +4730,7 @@ fn apply_override(
     if o.mask & state_mask::STENCIL == 0 {
         return stencil_ref;
     }
-    // One stencil state serves both faces (front's).
+    // Front faces, then back faces (the block's own).
     state.stencil = o.stencil_enabled.then(|| crate::materials::StencilState {
         comp: o.stencil[0],
         pass: o.stencil[1],
