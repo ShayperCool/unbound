@@ -4320,12 +4320,15 @@ mod tests {
         let mut mixer = Mixer::new(MixerConfig::default());
         let mut spec = filter_group(3, 0, "Pitch Shifter");
         assert!(mixer.configure_group(spec.clone()).is_err());
-        spec.effects[0].pitch_shifter = Some(super::super::pitch::PitchSpec { pitch: 0.75 });
+        spec.effects[0].pitch_shifter = Some(super::super::pitch::PitchSpec {
+            pitch: 0.75,
+            fft_size: 1024,
+        });
         mixer.configure_group(spec.clone()).unwrap();
         let before = mixer.config;
         for config in [
             MixerConfig {
-                buffer_size: 512,
+                buffer_size: 4096,
                 ..before
             },
             MixerConfig {
@@ -4385,6 +4388,18 @@ mod tests {
                 ..measured
             },
             MixerConfig {
+                speaker_mode: 4,
+                ..measured
+            },
+            MixerConfig {
+                speaker_mode: 5,
+                ..measured
+            },
+            MixerConfig {
+                speaker_mode: 6,
+                ..measured
+            },
+            MixerConfig {
                 sample_rate: 22050,
                 ..measured
             },
@@ -4400,8 +4415,14 @@ mod tests {
                 lowest: 0.1,
                 maximum: 20.0,
             });
-            spec.effects[0].pitch_shifter = Some(super::super::pitch::PitchSpec { pitch: 0.75 });
-            for config in unmeasured {
+            spec.effects[0].pitch_shifter = Some(super::super::pitch::PitchSpec {
+                pitch: 0.75,
+                fft_size: 1024,
+            });
+            for config in unmeasured
+                .into_iter()
+                .filter(|c| kind != "Pitch Shifter" || c.buffer_size != 512)
+            {
                 let mut mixer = Mixer::new(config);
                 let error = mixer.configure_group(spec.clone()).unwrap_err().to_string();
                 assert!(
@@ -4422,7 +4443,10 @@ mod tests {
                 })
                 .unwrap();
             let before = mixer.config;
-            for config in unmeasured {
+            for config in unmeasured
+                .into_iter()
+                .filter(|c| kind != "Pitch Shifter" || c.buffer_size != 512)
+            {
                 assert!(
                     mixer
                         .reconfigure(config)

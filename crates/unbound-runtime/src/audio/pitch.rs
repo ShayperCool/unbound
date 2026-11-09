@@ -1,4 +1,4 @@
-//! Unity 6000.0.71f1 default Pitch Shifter profile. See tests/projects/audiopitch.
+//! Unity 6000.0.71f1 Pitch Shifter profile. See tests/projects/audiopitch.
 //! The output layouts it is measured for are checked by the mixer
 //! ([`super::effects::EffectKind::layout_limited`]).
 use super::wavetable;
@@ -8,6 +8,8 @@ use std::f32::consts::{PI, TAU};
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct PitchSpec {
     pub pitch: f32,
+    #[serde(default = "default_fft_size")]
+    pub fft_size: usize,
 }
 impl PitchSpec {
     pub fn validate(&self) -> anyhow::Result<()> {
@@ -15,12 +17,21 @@ impl PitchSpec {
             self.pitch.is_finite() && (0.5..=2.0).contains(&self.pitch),
             "AudioMixer Pitch Shifter has invalid Pitch"
         );
+        anyhow::ensure!(
+            matches!(self.fft_size, 256 | 512 | 1024 | 2048 | 4096),
+            "AudioMixer Pitch Shifter has invalid FFT size"
+        );
         Ok(())
     }
 }
-const N: usize = 1024;
-const HOP: usize = 256;
-const LATENCY: usize = N - HOP;
+fn default_fft_size() -> usize {
+    1024
+}
+// Unity 6000.0.71f1 uses four windows regardless of the exposed Overlap value.
+// tests/projects/audiopitch overlap controls cover the parameter range.
+const OVERLAP: usize = 4;
+// Window-table spacing measured by the FFT-size controls in tests/projects/audiopitch.
+const WINDOW_INTERVALS: usize = 1024;
 struct Channel {
     input: Vec<f32>,
     output: Vec<f32>,
@@ -29,21 +40,23 @@ struct Channel {
     phase: Vec<f32>,
     position: usize,
 }
-impl Default for Channel {
-    fn default() -> Self {
+impl Channel {
+    fn new(n: usize) -> Self {
+        let hop = n / OVERLAP;
+        let latency = n - hop;
         Self {
-            input: vec![0.0; N],
-            output: vec![0.0; HOP],
-            overlap: vec![0.0; N],
-            last: vec![0.0; N / 2 + 1],
-            phase: vec![0.0; N / 2 + 1],
-            position: LATENCY,
+            input: vec![0.0; n],
+            output: vec![0.0; hop],
+            overlap: vec![0.0; n],
+            last: vec![0.0; n / 2 + 1],
+            phase: vec![0.0; n / 2 + 1],
+            position: latency,
         }
     }
 }
 impl Channel {
-    /// The state [`Channel::default`] makes, keeping the allocations.
-    fn clear(&mut self) {
+    /// Reset the FIFO and phase history, keeping the allocations.
+    fn clear(&mut self, latency: usize) {
         for buffer in [
             &mut self.input,
             &mut self.output,
@@ -53,11 +66,12 @@ impl Channel {
         ] {
             buffer.fill(0.0);
         }
-        self.position = LATENCY;
+        self.position = latency;
     }
 }
 pub struct PitchShifter {
-    channels: [Channel; 2],
+    channels: Vec<Channel>,
+    fft_size: usize,
     pitch: f32,
     window: Vec<f32>,
     twiddle: Vec<f32>,
@@ -66,40 +80,88 @@ pub struct PitchShifter {
     frequencies: Vec<f32>,
 }
 impl PitchShifter {
-    pub fn new() -> Self {
+    pub fn new(n: usize, channels: usize) -> Self {
+        let mut result = Self {
+            channels: (0..channels).map(|_| Channel::new(n)).collect(),
+            fft_size: 0,
+            pitch: 1.0,
+            window: Vec::new(),
+            twiddle: Vec::new(),
+            work: Vec::new(),
+            magnitudes: Vec::new(),
+            frequencies: Vec::new(),
+        };
+        result.prepare(n);
+        result
+    }
+    fn prepare(&mut self, n: usize) {
+        if self.fft_size == n {
+            return;
+        }
         // cos(pi / 4), the table's middle entry.
         let diagonal = wavetable::table()[wavetable::QUARTER / 2];
-        let mut twiddle = vec![0.0; N / 2];
+        let mut twiddle = vec![0.0; n / 2];
         twiddle[0] = 1.0;
-        twiddle[N / 4] = diagonal;
-        twiddle[N / 4 + 1] = diagonal;
-        for j in (2..N / 4).step_by(2) {
-            let turns = j as f32 / (2 * N) as f32;
+        twiddle[n / 4] = diagonal;
+        twiddle[n / 4 + 1] = diagonal;
+        for j in (2..n / 4).step_by(2) {
+            let turns = j as f32 / (2 * n) as f32;
             let c = wavetable::cosine(turns);
             let s = wavetable::cosine(turns - 0.25);
             twiddle[j] = c;
             twiddle[j + 1] = s;
-            twiddle[N / 2 - j] = s;
-            twiddle[N / 2 - j + 1] = c;
+            twiddle[n / 2 - j] = s;
+            twiddle[n / 2 - j + 1] = c;
         }
         reverse(&mut twiddle);
-        Self {
-            channels: Default::default(),
-            pitch: 1.0,
-            window: (0..N)
-                .map(|i| {
-                    ((0.5 - 0.5 * (std::f64::consts::TAU * i as f64 / N as f64).cos()) as f32)
-                        / 32.0
-                })
-                .collect(),
-            twiddle,
-            work: vec![0.0; 2 * N],
-            magnitudes: vec![0.0; N / 2 + 1],
-            frequencies: vec![0.0; N / 2 + 1],
-        }
+        self.fft_size = n;
+        self.twiddle = twiddle;
+        self.window = (0..n)
+            .map(|i| {
+                // A reflected 1024-point Hann curve, linearly interpolated at larger FFT sizes.
+                // Scale both analysis and synthesis by sqrt(FFT size).
+                let x = (i * WINDOW_INTERVALS) as f32 / n as f32;
+                let descending = x > (WINDOW_INTERVALS / 2) as f32;
+                let position = if descending {
+                    WINDOW_INTERVALS as f32 - x
+                } else {
+                    x
+                };
+                let index = position as usize;
+                let hann = |j: usize| {
+                    (0.5 - 0.5 * (std::f64::consts::TAU * j as f64 / WINDOW_INTERVALS as f64).cos())
+                        as f32
+                };
+                let a = hann(index);
+                // Fractional positions keep their positive remainder on the descending half;
+                // the adjacent table entry follows that half's backward direction.
+                let next = if descending {
+                    index.checked_sub(1)
+                } else {
+                    Some(index + 1)
+                };
+                let value = if position == index as f32 {
+                    a
+                } else if let Some(next) = next {
+                    a + (hann(next) - a) * (position - index as f32)
+                } else {
+                    a
+                };
+                value / (n as f32).sqrt()
+            })
+            .collect();
+        self.work.resize(2 * n, 0.0);
+        self.magnitudes.resize(n / 2 + 1, 0.0);
+        self.frequencies.resize(n / 2 + 1, 0.0);
+    }
+    pub fn fft_size(&self) -> usize {
+        self.fft_size
     }
     pub fn clear(&mut self) {
-        self.channels.iter_mut().for_each(Channel::clear);
+        let latency = self.fft_size - self.fft_size / OVERLAP;
+        for state in &mut self.channels {
+            state.clear(latency);
+        }
     }
     pub(crate) fn set_pitch(&mut self, pitch: f32) {
         if self.pitch != pitch {
@@ -114,26 +176,30 @@ impl PitchShifter {
     }
     pub fn process(&mut self, samples: &mut [f32], spec: &PitchSpec, rate: u32) {
         self.set_pitch(spec.pitch);
-        let bin = rate as f32 / N as f32;
-        let expected = HOP as f32 * TAU / N as f32;
-        let deviation = bin * 4.0 / TAU;
+        let n = self.fft_size;
+        let hop = n / OVERLAP;
+        let latency = n - hop;
+        let channels = self.channels.len();
+        let bin = rate as f32 / n as f32;
+        let expected = hop as f32 * TAU / n as f32;
+        let deviation = bin * OVERLAP as f32 / TAU;
         for (channel, state) in self.channels.iter_mut().enumerate() {
-            for frame in samples.chunks_exact_mut(2) {
+            for frame in samples.chunks_exact_mut(channels) {
                 state.input[state.position] = frame[channel];
-                frame[channel] = state.output[state.position - LATENCY];
+                frame[channel] = state.output[state.position - latency];
                 state.position += 1;
-                if state.position < N {
+                if state.position < n {
                     continue;
                 }
-                state.position = LATENCY;
-                for i in 0..N {
+                state.position = latency;
+                for i in 0..n {
                     self.work[2 * i] = state.input[i] * self.window[i];
                     self.work[2 * i + 1] = 0.0;
                 }
                 transform(&mut self.work, &self.twiddle, true);
                 self.magnitudes.fill(0.0);
                 self.frequencies.fill(0.0);
-                for k in 0..=N / 2 {
+                for k in 0..=n / 2 {
                     let re = self.work[2 * k];
                     let im = self.work[2 * k + 1];
                     let phase = if im == 0.0 {
@@ -151,15 +217,15 @@ impl PitchShifter {
                     delta -= q as f32 * PI;
                     let frequency = k as f32 * bin + delta * deviation;
                     let index = (k as f32 * spec.pitch + 0.5) as usize;
-                    if index <= N / 2 {
+                    if index <= n / 2 {
                         self.magnitudes[index] += magnitude;
                         self.frequencies[index] = frequency * spec.pitch;
                     }
                 }
                 self.work.fill(0.0);
-                for k in 0..=N / 2 {
-                    let delta =
-                        (self.frequencies[k] / bin - k as f32) * (TAU / 4.0) + k as f32 * expected;
+                for k in 0..=n / 2 {
+                    let delta = (self.frequencies[k] / bin - k as f32) * (TAU / OVERLAP as f32)
+                        + k as f32 * expected;
                     state.phase[k] += delta;
                     if state.phase[k] > PI || state.phase[k] < -PI {
                         state.phase[k] += (state.phase[k] * (1.0 / TAU)) as i32 as f32 * -TAU;
@@ -169,13 +235,13 @@ impl PitchShifter {
                     self.work[2 * k + 1] = self.magnitudes[k] * wavetable::cosine(turns - 0.25);
                 }
                 transform(&mut self.work, &self.twiddle, false);
-                for i in 0..N {
+                for i in 0..n {
                     state.overlap[i] += self.window[i] * self.work[2 * i];
                 }
-                state.output.copy_from_slice(&state.overlap[..HOP]);
-                state.overlap.copy_within(HOP..N, 0);
-                state.overlap[LATENCY..].fill(0.0);
-                state.input.copy_within(HOP..N, 0);
+                state.output[..hop].copy_from_slice(&state.overlap[..hop]);
+                state.overlap.copy_within(hop..n, 0);
+                state.overlap[latency..n].fill(0.0);
+                state.input.copy_within(hop..n, 0);
             }
         }
     }
@@ -316,13 +382,56 @@ fn final_negative(a: &mut [f32], j: usize, l: usize) {
 mod tests {
     use super::*;
     #[test]
+    fn fft_sizes_keep_channels_independent_and_ignore_render_chunk_boundaries() {
+        for n in [256, 512, 1024, 2048, 4096] {
+            for channels in [1, 2, 4, 6, 8] {
+                let spec = PitchSpec {
+                    pitch: 1.375,
+                    fft_size: n,
+                };
+                let signal: Vec<f32> = (0..(n * 3 + 37) * channels)
+                    .map(|i| {
+                        if i % channels == 0 {
+                            ((i * 37) % 997) as f32 / 2048.0 - 0.25
+                        } else {
+                            0.0
+                        }
+                    })
+                    .collect();
+                let mut whole = signal.clone();
+                let mut split = signal.clone();
+                let mut effect = PitchShifter::new(n, channels);
+                let mut chunked = PitchShifter::new(n, channels);
+                effect.process(&mut whole, &spec, 48000);
+                for part in split.chunks_mut(37 * channels) {
+                    chunked.process(part, &spec, 48000);
+                }
+                assert_eq!(whole, split, "FFT {n}, channels {channels}");
+                assert!(whole.iter().any(|v| v.abs() > 0.01));
+                assert!(
+                    whole
+                        .chunks_exact(channels)
+                        .all(|f| f[1..].iter().all(|v| *v == 0.0))
+                );
+                effect.clear();
+                let mut reset = signal;
+                effect.process(&mut reset, &spec, 48000);
+                assert_eq!(whole, reset);
+            }
+        }
+    }
+
+    #[test]
     fn submitted_ratios_restart_phase_even_without_processing_between_edits() {
         let signal: Vec<f32> = (0..4096)
             .map(|i| ((i * 37) % 997) as f32 / 2048.0 - 0.25)
             .collect();
-        let parameters = PitchSpec { pitch: 0.75 };
-        let mut edited = PitchShifter::new();
-        let mut held = PitchShifter::new();
+        let parameters = PitchSpec {
+            pitch: 0.75,
+            fft_size: 1024,
+        };
+        let mut edited = PitchShifter::new(1024, 2);
+        let mut held = PitchShifter::new(1024, 2);
         edited.process(&mut signal.clone(), &parameters, 44100);
         held.process(&mut signal.clone(), &parameters, 44100);
         edited.set_pitch(1.5);
@@ -332,8 +441,9 @@ mod tests {
         edited.process(&mut a, &parameters, 44100);
         held.process(&mut b, &parameters, 44100);
         // Already queued output survives the two edits; newly synthesized audio changes.
-        assert_eq!(&a[..HOP * 2], &b[..HOP * 2]);
-        assert_ne!(&a[HOP * 2..], &b[HOP * 2..]);
+        let hop = parameters.fft_size / OVERLAP;
+        assert_eq!(&a[..hop * 2], &b[..hop * 2]);
+        assert_ne!(&a[hop * 2..], &b[hop * 2..]);
     }
 
     #[test]
@@ -341,10 +451,13 @@ mod tests {
         let input: Vec<f32> = (0..2200)
             .map(|i| ((i * 37) % 997) as f32 / 2048.0 - 0.25)
             .collect();
-        let mut whole = PitchShifter::new();
-        let mut chunks = PitchShifter::new();
+        let mut whole = PitchShifter::new(1024, 2);
+        let mut chunks = PitchShifter::new(1024, 2);
         for pitch in [0.75, 1.5, 0.625, 1.0] {
-            let parameters = PitchSpec { pitch };
+            let parameters = PitchSpec {
+                pitch,
+                fft_size: 1024,
+            };
             let mut a = input.clone();
             let mut b = input.clone();
             whole.process(&mut a, &parameters, 44100);
@@ -358,15 +471,18 @@ mod tests {
 
     #[test]
     fn reset_and_packet_boundaries_preserve_native_phase_history() {
-        let spec = PitchSpec { pitch: 0.75 };
+        let spec = PitchSpec {
+            pitch: 0.75,
+            fft_size: 1024,
+        };
         let signal: Vec<f32> = (0..16384)
             .map(|i| if i % 1531 == 0 { 0.5 } else { 0.0 })
             .collect();
         let mut whole = signal.clone();
-        let mut effect = PitchShifter::new();
+        let mut effect = PitchShifter::new(1024, 2);
         effect.process(&mut whole, &spec, 44100);
         let mut split = signal.clone();
-        let mut effect = PitchShifter::new();
+        let mut effect = PitchShifter::new(1024, 2);
         for chunk in split.chunks_mut(480 * 2) {
             effect.process(chunk, &spec, 44100);
         }
@@ -380,7 +496,14 @@ mod tests {
     fn native_unity_pitch_has_a_delayed_nonidentity_impulse() {
         let mut samples = vec![0.0; 8192];
         samples[2048 * 2] = 0.5;
-        PitchShifter::new().process(&mut samples, &PitchSpec { pitch: 1.0 }, 48000);
+        PitchShifter::new(1024, 2).process(
+            &mut samples,
+            &PitchSpec {
+                pitch: 1.0,
+                fft_size: 1024,
+            },
+            48000,
+        );
         assert_eq!(samples[2048 * 2], 0.0);
         assert_eq!(samples[3072 * 2], 0.12646484);
         assert!(

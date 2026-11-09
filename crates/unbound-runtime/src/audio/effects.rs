@@ -132,8 +132,8 @@ impl EffectKind {
     fn simple_filter(self) -> bool {
         matches!(self, Self::LowpassSimple | Self::HighpassSimple)
     }
-    /// Kinds measured only on [`MEASURED_LAYOUT`] output, whose settings, placement and bypass
-    /// are also unmeasured to change once the group renders.
+    /// Kinds with explicit output-context checks. Normalize uses [`MEASURED_LAYOUT`];
+    /// Pitch Shifter also covers the standard smaller/larger stereo DSP buffers.
     pub(crate) fn layout_limited(self) -> bool {
         Self::LAYOUT_LIMITED.contains(&self)
     }
@@ -147,7 +147,7 @@ impl EffectKind {
     pub(crate) const LAYOUT_LIMITED: [Self; 2] = [Self::PitchShifter, Self::Normalize];
 }
 
-/// The output the Normalize and Pitch Shifter captures cover (Unity 6000.0.71f1 Linux Editor,
+/// The output covered by Normalize and static-wet captures (Unity 6000.0.71f1 Linux Editor,
 /// tests/projects/audionormalize and tests/projects/audiopitch): these rates, DSP buffers of
 /// this many frames and the stereo speaker mode. Other layouts fail rather than run unmeasured.
 pub(crate) const MEASURED_LAYOUT: MeasuredLayout = MeasuredLayout {
@@ -427,7 +427,15 @@ impl EffectSpec {
             self.id,
             self.cutoff
         );
-        if kind.layout_limited()
+        if kind == EffectKind::PitchShifter {
+            anyhow::ensure!(
+                [48000, 44100].contains(&config.sample_rate)
+                    && [256, 512, 1024, 2048].contains(&config.buffer_size)
+                    && config.speaker_mode == 2,
+                "AudioMixer Pitch Shifter is measured only at 48000/44100 Hz with 256/512/1024/2048-frame stereo output"
+            );
+        }
+        if (kind.layout_limited() && kind != EffectKind::PitchShifter)
             || (self.mix_level.is_some() && kind.wet_policy().is_some_and(|p| p.static_only))
         {
             MEASURED_LAYOUT.ensure(&self.kind, config)?;
@@ -771,8 +779,14 @@ impl Effect {
         {
             self.flange = Some(Flange::new(rate, buffer)?);
         }
-        if spec.pitch_shifter.is_some() && self.pitch.is_none() {
-            self.pitch = Some(PitchShifter::new());
+        if let Some(parameters) = &spec.pitch_shifter {
+            if self
+                .pitch
+                .as_ref()
+                .is_none_or(|p| p.fft_size() != parameters.fft_size)
+            {
+                self.pitch = Some(PitchShifter::new(parameters.fft_size, 2));
+            }
         }
         if let (Some(pitch), Some(parameters)) = (&mut self.pitch, &spec.pitch_shifter) {
             // Parameter side effects apply even when a zero-wet slot pauses audio processing.

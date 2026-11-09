@@ -775,10 +775,9 @@ namespace Unbound.Runtime
         {
             if (!measured) throw new NotSupportedException("AudioMixer " + m_EffectName + " is measured only for Unity 6000.0.71f1");
         }
-        /// <summary>The output the Normalize and Pitch Shifter captures cover (6000.0.71f1 Linux
-        /// Editor, tests/projects/audionormalize, tests/projects/audiopitch); other rates, DSP buffer
-        /// sizes and speaker modes are unmeasured and fail. The native mixer checks the same
-        /// layout (MEASURED_LAYOUT in crates/unbound-runtime/src/audio/effects.rs).</summary>
+        /// <summary>The output covered by Normalize and static slot wet mixing (6000.0.71f1 Linux
+        /// Editor, tests/projects/audionormalize, tests/projects/audiopitch). The native mixer checks
+        /// the same static-wet layout (MEASURED_LAYOUT in audio/effects.rs).</summary>
         internal void RequireMeasuredOutput()
         {
             var config = AudioSettings.GetConfiguration();
@@ -803,10 +802,15 @@ namespace Unbound.Runtime
                 v[i] = Parameter(PitchShifterParameters[i]) is string guid ? mixer.Value(guid) : PitchShifterDefaults[i];
                 if (!float.IsFinite(v[i])) throw new NotSupportedException("AudioMixer Pitch Shifter " + PitchShifterParameters[i] + " must be finite");
             }
-            if (v[1] != 1024f || v[2] != 4f || v[3] != 0f)
-                throw new NotSupportedException("AudioMixer Pitch Shifter requires measured defaults FFT size=1024, Overlap=4, Max channels=0");
-            RequireMeasuredOutput();
-            return new { pitch = Mathf.Clamp(v[0], 0.5f, 2f) };
+            if (v[3] != 0f)
+                throw new NotSupportedException("AudioMixer Pitch Shifter requires measured Max channels=0");
+            int fftSize = 256;
+            while (fftSize < v[1] && fftSize < 4096) fftSize *= 2;
+            var config = AudioSettings.GetConfiguration();
+            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || config.speakerMode != AudioSpeakerMode.Stereo
+                || (config.dspBufferSize != 256 && config.dspBufferSize != 512 && config.dspBufferSize != 1024 && config.dspBufferSize != 2048))
+                throw new NotSupportedException("AudioMixer Pitch Shifter is measured only at 48000/44100 Hz with 256/512/1024/2048-frame stereo output");
+            return new { pitch = Mathf.Clamp(v[0], 0.5f, 2f), fft_size = fftSize };
         }
         internal object NormalizeConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {

@@ -30,12 +30,12 @@ step of 1/32768 and no added Master-float slack. RESIDUALS is empty. Reports
 preserve every missing, extra and failing value; no sample limits apply.
 All captures, diagnostic candidates and reports remain under the cache.
 
-Certification: both independent Native repeats agree exactly across 3,932,347
-values per rate. The engine strict and separate gate comparisons each pass all
-3,932,347 at 48000 and 44100 Hz, with zero raw float/PCM failures. An additional
-exact comparison also passes every value at both rates. There are no added
-residuals. `regressions.py --release 6000.0.71f1` runs the unchanged prior DSP
-and ClearFloat comparators with one runtime snapshot to limit disk duplication.
+Certification: both independent Editor repeats agree exactly across 11,403,885
+stereo values per rate. Engine strict and separate gate comparisons each pass all
+11,403,885 at 48000 and 44100 Hz, with zero raw float/PCM failures. There are no
+added residuals. The separately recorded mono/fallback-layout pairs agree exactly
+across 589,876 values per rate. `regressions.py --release 6000.0.71f1` runs the
+unchanged prior DSP and ClearFloat comparators with one runtime snapshot.
 
 Static effect-slot Wet is now covered by the additional `slot_wet_*` cases. See the
 [shared contract, measured equation, controls and limits](../../../docs/AUDIO.md#static-effect-slot-wet-mixing).
@@ -51,7 +51,7 @@ Existing reference metadata, PCM and comparison tolerances are unchanged.
 | Documented FFT controls | The [6000.0 Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioPitchShifterEffect.html) gives FFT size 256..4096 and Overlap 1..32. It describes larger overlap as smoother and more expensive. The captures below measure this particular release rather than extending that description into an exact DSP guarantee. |
 | Measured FFT rule | `fft_*` impulse, noise and shifted-tone controls cover 256, 512, 1024, 2048 and 4096. Intermediate exposed values select the next larger power of two, with endpoints clamped to 256..4096. GetFloat retains the raw value. The hop is FFT size / 4 and FIFO latency is FFT size minus the hop. The window is a reflected 1024-point Hann curve, interpolated with a backward adjacent entry on the descending half at larger FFT sizes and divided by sqrt(FFT size) for analysis and synthesis. |
 | Measured overlap | Values 0, 1, 2, 3, 3.5, 5, 8, 16, 32 and 33 retain their exposed value and reproduce the default-overlap PCM. Effective overlap stays four in these controls. `overlap_live` checks a change after nonzero phase and FIFO history exist. |
-| Measured live FFT | `fft_live_up` and `fft_live_down` change FFT size after nonzero audio has filled the old histories. They exercise retaining FIFO positions, overlap and phase history when the selected size changes. Buffers are allocated once on configuration changes; processing reuses them. |
+| Measured live FFT | `fft_live_up` and `fft_live_down` change FFT size after nonzero audio has filled the old histories. They exercise clearing FIFO, overlap and phase history when the selected size changes. Buffers are allocated once on configuration changes; processing reuses them. |
 | Documented output settings | [AudioSettings](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSettings.html) and [Reset](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSettings.Reset.html) allow configuration changes but do not guarantee the exact requested settings. [GetDSPBufferSize](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSettings.GetDSPBufferSize.html) reports the processing block length. Each context control changes the previous configuration, reads back the actual rate/mode/buffer, and captures with those dimensions. |
 | Measured stereo buffers | `buffer_256`, `buffer_512`, the original 1024-frame controls, and `buffer_2048` cover the four standard DSP buffer lengths. The added controls combine FFT 2048 with Pitch 1.5, including a hop larger than the smallest output buffer. The kernel keeps state across render boundaries. |
 | Follow-up: mono graph | `context_mono` records an active one-channel DSP callback and mono PCM. Its canonical PCM lives under `Reference/unity-6000.0.71f1/layouts/rate-RATE`. The current engine group graph and AudioRenderer sink path carry two channels. Supporting mono correctly requires routing and channel conversion before nonlinear group effects, with matching group/device capture dimensions. Mono remains explicitly rejected by Pitch Shifter configuration and is covered by the guard test. |

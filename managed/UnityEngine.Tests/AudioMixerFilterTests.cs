@@ -840,12 +840,17 @@ namespace UnityEngine.Tests
                     using var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration()));
                     Assert.Equal(Mathf.Clamp(raw, 0.5f, 2f), payload.RootElement.GetProperty("effects")[0].GetProperty("pitchShifter").GetProperty("pitch").GetSingle());
                 }
-                foreach (var pair in new[] { ("FFT size", 2048f, 1024f), ("Overlap", 8f, 4f), ("Max channels", 1f, 0f) })
+                foreach (var pair in new[] { (255f, 256), (256.5f, 512), (512.5f, 1024), (1024.5f, 2048), (2048.5f, 4096), (4097f, 4096) })
                 {
-                    mixer.SetFloat(pair.Item1, pair.Item2);
-                    Assert.Contains("requires measured defaults", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
-                    mixer.SetFloat(pair.Item1, pair.Item3);
+                    mixer.SetFloat("FFT size", pair.Item1);
+                    mixer.SetFloat("Overlap", 3.5f);
+                    using var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration()));
+                    Assert.Equal(pair.Item2, payload.RootElement.GetProperty("effects")[0].GetProperty("pitchShifter").GetProperty("fft_size").GetInt32());
+                    Assert.True(mixer.GetFloat("FFT size", out float raw)); Assert.Equal(pair.Item1, raw);
                 }
+                mixer.SetFloat("Max channels", 1f);
+                Assert.Contains("Max channels=0", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+                mixer.SetFloat("Max channels", 0f);
                 mixer.SetFloat("Pitch", float.NaN);
                 Assert.Contains("finite", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
                 mixer.SetFloat("Pitch", 1f); effect.m_EnableWetMix = true;
@@ -894,13 +899,19 @@ namespace UnityEngine.Tests
             var mono = measured; mono.speakerMode = AudioSpeakerMode.Mono;
             var quad = measured; quad.speakerMode = AudioSpeakerMode.Quad;
             var rate = measured; rate.sampleRate = 22050;
-            var buffer = measured; buffer.dspBufferSize = 256;
+            var buffer = measured; buffer.dspBufferSize = 4096;
             foreach (var config in new[] { mono, quad, rate, buffer })
             {
                 Assert.True(AudioSettings.Reset(config));
                 var error = Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
-                Assert.Contains("measured only at 48000/44100 Hz with 1024-frame stereo output", error.Message);
+                Assert.Contains(name == "Pitch Shifter" ? "measured only at 48000/44100 Hz with 256/512/1024/2048-frame stereo output" : "measured only at 48000/44100 Hz with 1024-frame stereo output", error.Message);
                 effect.m_Bypass = true; group.DspConfiguration(); effect.m_Bypass = false;
+            }
+            foreach (int frames in name == "Pitch Shifter" ? new[] { 256, 512, 1024, 2048 } : new[] { 1024 })
+            {
+                var supported = measured; supported.dspBufferSize = frames;
+                Assert.True(AudioSettings.Reset(supported));
+                group.DspConfiguration();
             }
             var other = measured; other.sampleRate = 44100;
             Assert.True(AudioSettings.Reset(other));
