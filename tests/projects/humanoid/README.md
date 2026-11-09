@@ -112,11 +112,14 @@ imported without keyframe reduction.
   `SetBoneLocalRotation` in `OnAnimatorIK` (`HumanoidBoneRotation`: spine, hips, head, upper chest,
   lower arm, upper leg and a finger on HumanA and HumanB, `boneRot`, `boneRotB`; one bone per IK
   layer of `HumanAIK2`, `boneRotLayers`; called outside the IK pass, `boneRotOutside`), with the
-  transforms' locals every fourth step; `TDoFMuscles.anim` (translation DoF curves) on HumanA with an
-  avatar with translation DoF built at run time and with its own (`tdof.TDoFMuscles`); clips based
-  upon the feet without foot goal curves and with the left foot's only (`feetNoGoals`,
-  `feetLeftGoal`); B under `MaskNoRoot` over an empty base state (`noRootOverEmpty`); and
-  `layersAffectMassCenter` (`massCenter.api`, and on with layers without Root, `massCenter.*`).
+  transforms' locals every fourth step; `TDoFMuscles.anim` (translation DoF curves) and its mirrored
+  copy `TDoFMirror.anim` on HumanA with an avatar with translation DoF built at run time and with its
+  own (`tdof.TDoFMuscles`, `tdof.TDoFMirror`); clips based upon the feet without foot goal curves and
+  with the left foot's only (`feetNoGoals`, `feetLeftGoal`); B under `MaskNoRoot` over an empty base
+  state and over `GenericMove` (`noRootOverEmpty`, `noRootOverGeneric`); loop pose on an additive
+  layer's clip (`LoopMuscles` and HumanA's `LoopPose` clip over A, `additiveLoopPose`,
+  `additiveLoopPoseModel`); and `layersAffectMassCenter` (`massCenter.api`, and on with layers
+  without Root, `massCenter.*`).
   HumanT (`make_models.py`: HumanA with bone translations, imported with translation DoF) and the
   other assets `Leftovers` makes are not played yet.
 

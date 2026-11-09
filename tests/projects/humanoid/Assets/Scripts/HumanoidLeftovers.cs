@@ -159,22 +159,32 @@ public partial class HumanoidProbe
         return avatar;
     }
 
-    /// <summary>Translation DoF curves: TDoFMuscles.anim (muscles and translation DoF curves) on
-    /// HumanA with an avatar with translation DoF (built at run time) and with its own (without).</summary>
+    /// <summary>Translation DoF curves: TDoFMuscles.anim (muscles and translation DoF curves) and
+    /// TDoFMirror.anim (the same, mirrored) on HumanA with an avatar with translation DoF (built at
+    /// run time) and with its own (without).</summary>
     static void TranslationDoFCurves()
     {
-        Guarded("anim.TDoFMuscles", () => Clip("anim.TDoFMuscles", Resources.Load<AnimationClip>("TDoFMuscles")));
-        Guarded("tdof.TDoFMuscles", () => Play("tdof.TDoFMuscles", "HumanA", "HumanTDoFMuscles", animator => animator.avatar = TDoFAvatar(animator.gameObject),
-            motion: true, localsEvery: 4));
-        Guarded("tdof.TDoFMuscles.noTDoF", () => Play("tdof.TDoFMuscles.noTDoF", "HumanA", "HumanTDoFMuscles", motion: true, localsEvery: 4));
+        foreach (var name in new[] { "TDoFMuscles", "TDoFMirror" })
+        {
+            Guarded("anim." + name, () => Clip("anim." + name, Resources.Load<AnimationClip>(name)));
+            Guarded("tdof." + name, () => Play("tdof." + name, "HumanA", "Human" + name, animator => animator.avatar = TDoFAvatar(animator.gameObject),
+                motion: true, localsEvery: 4));
+            Guarded("tdof." + name + ".noTDoF", () => Play("tdof." + name + ".noTDoF", "HumanA", "Human" + name, motion: true, localsEvery: 4));
+        }
     }
 
     /// <summary>Feet without foot goal curves (height from feet), a layer without Root over an empty
-    /// base state, and layersAffectMassCenter (the API, and layers without Root that then place the
-    /// body).</summary>
+    /// base state and over a generic clip, layersAffectMassCenter (the API, and layers without Root
+    /// that then place the body), and loop pose on an additive layer's clip (LoopMuscles and
+    /// HumanA's LoopPose clip).</summary>
     static void FeetAndMassCenter()
     {
-        foreach (var name in new[] { "FeetNoGoals", "FeetLeftGoal", "NoRootOverEmpty" })
+        foreach (var name in new[] { "AdditiveLoopPose", "AdditiveLoopPoseModel" })
+        {
+            var key = char.ToLowerInvariant(name[0]) + name.Substring(1);
+            Guarded(key, () => Play(key, "HumanA", "Human" + name, locals: false));
+        }
+        foreach (var name in new[] { "FeetNoGoals", "FeetLeftGoal", "NoRootOverEmpty", "NoRootOverGeneric" })
         {
             var key = char.ToLowerInvariant(name[0]) + name.Substring(1);
             Guarded(key, () => Play(key, "HumanA", "Human" + name, motion: true, locals: false));
