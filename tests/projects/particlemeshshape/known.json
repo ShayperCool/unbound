@@ -43,15 +43,14 @@
     ]
   },
   "subemitter-batch": {
-    "reason": "Sub-emitter births with the shape texture: Unity starts each sub-emitter emission as its own four-slot batch (the order after an unaligned count, and the count lowered by every discarded lane, padding included); Unbound starts them one by one, so the children's order (deathsub from the second burst on, deathexpire; counts match) and the clipped count (subbirths: 22 kept in Unity, 32 in Unbound) differ. Open follow-up.",
+    "reason": "Sub-emitter births with the shape texture: Unity starts each sub-emitter emission as its own four-slot batch (the order after an unaligned count, and the count lowered by every discarded lane, padding included); Unbound starts them one by one, so the children's order (deathsub, from the second burst on; counts match) and the clipped count (subbirths: 22 kept in Unity, 32 in Unbound) differ. Open follow-up.",
     "keys": [
       "texture/clip/deathsub/0/child",
       "texture/clip/deathsub/0/child/color",
       "texture/clip/deathsub/1/child",
       "texture/clip/deathsub/1/child/color",
       "texture/clip/subbirths/1/child",
-      "texture/clip/subbirths/1/child/color",
-      "texture/clip/deathexpire/0/child"
+      "texture/clip/subbirths/1/child/color"
     ]
   },
   "ring-batch": {
@@ -62,7 +61,7 @@
     ]
   },
   "death-at-birth-position": {
-    "reason": "Death children of newborns a collision kills in their first step (deathcollide): the counts match (10), but Unity emits them 0.3 behind the emitter along the particles' path, Unbound where the collision left the particle. Open follow-up (the event position of a death at birth).",
+    "reason": "Death children of newborns a collision kills in their first step (deathcollide): the counts and order match (10), but Unity emits them 0.3 behind the emitter along the particles' path, Unbound at the birth position (z 0). Open follow-up (the event position of a death at birth).",
     "keys": [
       "texture/clip/deathcollide/0/child"
     ]

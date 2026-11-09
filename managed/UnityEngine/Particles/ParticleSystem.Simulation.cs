@@ -726,7 +726,10 @@ namespace UnityEngine
                 }
                 if (j >= count)
                 {
-                    age = simulate ? m_StepRateDt * 1e-6f : 0f;
+                    // Unused lanes take the age of the batch's last request: a burst's (they can
+                    // expire at their start, tests/projects/particlemeshshape texture/clip/deathexpire),
+                    // a rate birth's minimum (particlerandom ratebatch/*).
+                    age = !simulate ? 0f : request.rate ? m_StepRateDt * 1e-6f : request.preAge;
                     birthTime = m_Time;
                     m_SpeedNt = Mathf.Clamp01((birthTime - age) / duration);
                 }
