@@ -24,7 +24,12 @@ class Entry:
 
 
 class DirectoryIndex:
-    def __init__(self, base, *, seconds=120):
+    # Bounded batches amortize executor and SQL overhead across directory checks.
+    batch_size = 512
+    io_chunk = 32
+    io_workers = 16
+
+    def __init__(self, base, *, seconds=300):
         key = hashlib.sha256(os.fsencode(base)).hexdigest()
         path = base.parent/'.unbound-link-index'/key
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -36,7 +41,7 @@ class DirectoryIndex:
         self.cached = {}
         self.reused = self.scanned = 0
         self.seen = set()
-        self.pool = concurrent.futures.ThreadPoolExecutor(max_workers=16)
+        self.pool = concurrent.futures.ThreadPoolExecutor(max_workers=self.io_workers)
         self.prepared = {}
 
     def stat_many(self, paths):
@@ -50,7 +55,10 @@ class DirectoryIndex:
                 return path.stat()
             except OSError as error:
                 return error
-        infos = list(self.pool.map(inspect, paths))
+        def inspect_group(group):
+            return [inspect(path) for path in group]
+        groups = [paths[start:start+self.io_chunk] for start in range(0, len(paths), self.io_chunk)]
+        infos = [info for group in self.pool.map(inspect_group, groups) for info in group]
         tasks = {}
         for path, info in zip(paths, infos):
             if isinstance(info, OSError):
@@ -65,7 +73,12 @@ class DirectoryIndex:
                 return self.read(path, stamp), None
             except OSError as error:
                 return None, error
-        self.prepared = dict(zip(tasks, self.pool.map(listing, tasks.values())))
+        def listing_group(group):
+            return [listing(item) for item in group]
+        items = list(tasks.values())
+        groups = [items[start:start+self.io_chunk] for start in range(0, len(items), self.io_chunk)]
+        values = [value for group in self.pool.map(listing_group, groups) for value in group]
+        self.prepared = dict(zip(tasks, values))
         return infos
 
     @staticmethod

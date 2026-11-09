@@ -224,8 +224,8 @@ def _symlink_targets(base, checkouts, index):
     excluded_roots = {resolve(base/name) for name in excluded}
     pending, visited = [base], set()
     while pending:
-        batch = pending[-64:]
-        del pending[-64:]
+        batch = pending[-index.batch_size:]
+        del pending[-index.batch_size:]
         for directory, info in zip(batch, index.stat_many(batch)):
             # Descents into a checkout meet its root; links into a subdirectory were
             # already recorded by resolve(). Avoid rebuilding every ancestor per node.
@@ -260,7 +260,7 @@ def _symlink_targets(base, checkouts, index):
     return found
 
 
-def symlink_targets(base, checkouts=(), *, seconds=120):
+def symlink_targets(base, checkouts=(), *, seconds=300):
     from run_cache_index import DirectoryIndex
     import sqlite3
     index = None
