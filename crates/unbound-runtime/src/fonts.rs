@@ -5,6 +5,7 @@ use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use serde_json::{Value as Json, json};
 use std::{
+    collections::HashMap,
     path::{Path, PathBuf},
     sync::{Arc, Mutex, OnceLock, RwLock},
 };
@@ -111,7 +112,34 @@ pub fn kerning(handle: u64, firsts: Option<&[u16]>, seconds: Option<&[u16]>) -> 
 /// A glyph of a face at `size` pixels per em; `style` is Unity's `FontStyle` (1 bold, 2 italic).
 pub fn glyph(handle: u64, codepoint: u32, size: f32, style: i32) -> Option<GlyphBitmap> {
     let c = char::from_u32(codepoint)?;
-    face(handle)?.render(c, size, style & 1 != 0, style & 2 != 0)
+    let original = face(handle)?;
+    let selected = if style & 3 != 0 {
+        static STYLED: OnceLock<Mutex<HashMap<(u64, i32), u64>>> = OnceLock::new();
+        let mut styled = STYLED.get_or_init(Default::default).lock().unwrap();
+        *styled.entry((handle, style & 3)).or_insert_with(|| {
+            find_styled_os_font(&original.metrics().family, style & 3)
+                .and_then(|(path, index)| load_file(&path, index).ok())
+                .unwrap_or(handle)
+        })
+    } else {
+        handle
+    };
+    face(selected)?.render_legacy(c, size, style & 1 != 0, style & 2 != 0, (style >> 8) & 3)
+}
+
+fn find_styled_os_font(family: &str, style: i32) -> Option<(PathBuf, u32)> {
+    os_fonts()
+        .iter()
+        .find(|font| {
+            if !font.family.eq_ignore_ascii_case(family) {
+                return false;
+            }
+            let name = font.style.to_ascii_lowercase();
+            let bold = name.contains("bold");
+            let italic = name.contains("italic") || name.contains("oblique");
+            i32::from(bold) | (i32::from(italic) << 1) == style
+        })
+        .map(|font| (font.path.clone(), font.index))
 }
 
 #[derive(Deserialize, Default)]
@@ -123,6 +151,10 @@ pub struct OpenRequest {
     pub file: Option<String>,
     /// A built-in font: `LegacyRuntime`.
     pub builtin: Option<String>,
+    /// Preferred OS families for system-backed legacy glyphs. Face metrics and TextCore keep
+    /// the extracted resource face.
+    #[serde(default)]
+    pub legacy_fallback_names: Vec<String>,
     /// OS font family names, in order of preference.
     #[serde(default)]
     pub names: Vec<String>,
@@ -177,6 +209,13 @@ pub fn open(request: &OpenRequest, unity_data: &Path) -> Result<Json> {
         found = false;
         builtin_face(unity_data)?
     };
+    let legacy_handle = if request.builtin.is_some() && !request.legacy_fallback_names.is_empty() {
+        find_os_font(&request.legacy_fallback_names)
+            .map(|(path, index)| load_file(&path, index))
+            .transpose()?
+    } else {
+        None
+    };
     let m = face(handle).context("no such face")?.metrics().clone();
     tracing::debug!(
         "font {handle}: {} {} from {}",
@@ -186,6 +225,7 @@ pub fn open(request: &OpenRequest, unity_data: &Path) -> Result<Json> {
     );
     let mut info = json!({
         "handle": handle,
+        "legacyHandle": legacy_handle,
         "unitsPerEm": m.units_per_em,
         "ascender": m.ascender,
         "descender": m.descender,

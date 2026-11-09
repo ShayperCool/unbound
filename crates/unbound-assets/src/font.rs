@@ -2,12 +2,8 @@
 //! `TrueTypeFontImporter` settings of a `.meta`, and the font data of Unity's built-in
 //! `LegacyRuntime.ttf`, which lives inside a player's `unity default resources`.
 //!
-//! Metrics follow FreeType's conventions for an unhinted face ("Smooth" rendering mode, Unity's
-//! default): the pixel size is the em size, a glyph's bitmap covers its control box rounded out to
-//! whole pixels (`left`/`top` are FreeType's `bitmap_left`/`bitmap_top`), and the advance is the
-//! scaled `hmtx` advance. Synthetic bold and italic follow `FT_GlyphSlot_Embolden` (the outline
-//! grows by em/24 to the right and upwards, and so does the advance) and `FT_GlyphSlot_Oblique`
-//! (a 0x0366A/0x10000 shear).
+//! Legacy dynamic glyphs use the bundled FreeType backend with explicit importer rendering
+//! modes. Glyph-index rendering and distance fields retain their outline path for TextCore.
 use crate::{
     Importer,
     meta::{importer, int},
@@ -15,7 +11,10 @@ use crate::{
 use ab_glyph_rasterizer::{Rasterizer, point};
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::{
+    path::Path,
+    sync::{Arc, Mutex, OnceLock},
+};
 use ttf_parser::{Face, OutlineBuilder};
 use unbound_yaml::{Guid, Value};
 
@@ -73,6 +72,8 @@ pub struct GlyphBitmap {
     pub left: i32,
     /// Pixels from the baseline up to the bitmap's top edge.
     pub top: i32,
+    /// Baseline shift after bitmap synthesis, separate from the outline control box.
+    pub top_offset: f32,
     pub width: i32,
     pub height: i32,
     /// The outline's control box in pixels, `(x_min, y_min, x_max, y_max)` relative to the pen on
@@ -83,7 +84,8 @@ pub struct GlyphBitmap {
 
 /// A loaded face: the font file's bytes and the face index in it.
 pub struct FontFace {
-    data: Vec<u8>,
+    data: Arc<[u8]>,
+    legacy: OnceLock<Mutex<Option<crate::font_legacy::LegacyFace>>>,
     index: u32,
     metrics: FaceMetrics,
 }
@@ -95,7 +97,8 @@ impl FontFace {
             read_metrics(&face)
         };
         Ok(Self {
-            data,
+            data: data.into(),
+            legacy: OnceLock::new(),
             index,
             metrics,
         })
@@ -119,8 +122,29 @@ impl FontFace {
 
     /// The glyph of `c` at `size` pixels per em; `None` when the font lacks it.
     pub fn render(&self, c: char, size: f32, bold: bool, italic: bool) -> Option<GlyphBitmap> {
-        let glyph = self.face().glyph_index(c).filter(|g| g.0 != 0)?;
-        self.render_glyph(glyph.0, size, bold, italic)
+        self.render_legacy(c, size, bold, italic, 0)
+    }
+
+    /// Legacy dynamic-font rendering mode: smooth, hinted smooth, hinted raster, or OS default.
+    pub fn render_legacy(
+        &self,
+        c: char,
+        size: f32,
+        bold: bool,
+        italic: bool,
+        mode: i32,
+    ) -> Option<GlyphBitmap> {
+        let backend = self.legacy.get_or_init(|| {
+            let face = crate::font_legacy::LegacyFace::new(self.data.clone(), self.index)
+                .map_err(|error| tracing::warn!("{error:#}"))
+                .ok();
+            Mutex::new(face)
+        });
+        backend
+            .lock()
+            .unwrap()
+            .as_mut()?
+            .render(c, size, bold, italic, mode)
     }
 
     /// The glyph index of `c`; 0 (the missing glyph) when the font lacks it.
@@ -281,6 +305,7 @@ impl FontFace {
                 advance,
                 left: 0,
                 top: 0,
+                top_offset: 0.0,
                 width: 0,
                 height: 0,
                 bounds: (0.0, 0.0, 0.0, 0.0),
@@ -326,6 +351,7 @@ impl FontFace {
             advance,
             left,
             top,
+            top_offset: 0.0,
             width,
             height,
             bounds: (x_min, y_min, x_max, y_max),
@@ -890,7 +916,7 @@ pub struct BuiltinFontImporter {
 impl Importer for BuiltinFontImporter {
     type Output = BuiltinFont;
     const KIND: &'static str = "builtin-fonts";
-    const VERSION: u32 = 1;
+    const VERSION: u32 = 2;
 
     fn import(&self, _source: &Path, bytes: &[u8], _meta: &Value) -> Result<BuiltinFont> {
         Ok(BuiltinFont {
@@ -997,9 +1023,9 @@ mod tests {
         let Some(face) = system_face() else { return };
         let regular = face.render('l', 48.0, false, false).unwrap();
         let bold = face.render('l', 48.0, true, false).unwrap();
-        assert!((bold.advance - regular.advance - 2.0).abs() < 1e-3);
-        assert_eq!(bold.width, regular.width + 2);
-        assert_eq!(bold.top, regular.top + 2);
+        assert_eq!(bold.advance, regular.advance);
+        assert_eq!(bold.width, regular.width + 1);
+        assert_eq!(bold.top as f32 + bold.top_offset, regular.top as f32 + 1.0);
         let italic = face.render('l', 48.0, false, true).unwrap();
         assert_eq!(italic.advance, regular.advance);
         assert!(italic.width > regular.width + 5);
@@ -1053,7 +1079,9 @@ mod tests {
         };
         let Some(bytes) = unbound_project::install::playback_engines(&data)
             .iter()
-            .find_map(|dir| std::fs::read(dir.join("AndroidPlayer/Data/Resources/unity default resources")).ok())
+            .find_map(|dir| {
+                std::fs::read(dir.join("AndroidPlayer/Data/Resources/unity default resources")).ok()
+            })
         else {
             return;
         };

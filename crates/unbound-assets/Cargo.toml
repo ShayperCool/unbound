@@ -30,6 +30,7 @@ bevy_mikktspace = "1"
 # Fonts
 ttf-parser = "0.25"
 ab_glyph_rasterizer = "0.1"
+freetype-sys = { version = "=0.23.0", features = ["bundled"] }
 # The Editor's job worker count (online processors), which resized textures depend on.
 libc = "0.2"
 # Cache

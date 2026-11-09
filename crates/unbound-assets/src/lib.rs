@@ -21,6 +21,7 @@ pub mod bundle_cache;
 pub mod cache;
 pub mod color;
 pub mod font;
+mod font_legacy;
 pub mod fsb5;
 pub mod image_io;
 pub mod lighting;

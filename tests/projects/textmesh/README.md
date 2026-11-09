@@ -34,11 +34,8 @@ python3 tests/projects/textmesh/run.py publish native-a native-b  # identical re
 python3 tests/projects/textmesh/run.py gate                       # engine vs Reference/
 ```
 
-Numbers compare with an absolute tolerance of 1e-4. `residuals.json` lists the keys that still
-differ, all from the shared legacy glyph rasterizer (UI Text uses it too): some bitmaps are a
-pixel taller or narrower in Unity (cap heights, `l`, `W`), Unity stores some glyphs rotated in its
-texture, and the space advances 3 pixels at 13 px in Unity and 4 in the engine (tabs and trailing
-spaces follow). The layout itself matches where the glyph metrics agree (bounds of text without
-spaces, the custom-font cases, line steps, anchors, alignment); the tab-stop rule is derived from the
-tab cases (their keys are residuals through the space advance) and tested in
-`managed/UnityEngine.Tests/TextMeshTests.cs`. The images are printed as measurements.
+Numbers compare with an absolute tolerance of 1e-4. `residuals.json` preserves two raw differences:
+Unity rotates `W` in its atlas, so its UV dimensions and obsolete `CharacterInfo.uv` rectangle
+differ. Metrics, glyph coverage, advances, geometry, tab stops, anchors and alignment match.
+`tests/projects/glyphraster` separately compares oriented alpha bytes across fonts, sizes and
+styles. The images are printed as measurements; atlas packing parity remains open.

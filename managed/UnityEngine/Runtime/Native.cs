@@ -13,13 +13,13 @@ namespace Unbound.Runtime
         internal long Length;
     }
 
-    /// <summary>A rasterized glyph in pixels (FreeType's bitmap_left, bitmap_top and size).</summary>
+    /// <summary>A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.</summary>
     [StructLayout(LayoutKind.Sequential)]
     internal struct GlyphInfo
     {
         internal float Advance;
         internal int Left;
-        internal int Top;
+        internal float Top;
         internal int Width;
         internal int Height;
     }

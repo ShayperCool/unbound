@@ -29,7 +29,7 @@ namespace Unbound.Runtime
     {
         internal float Advance;
         internal int Left;
-        internal int Top;
+        internal float Top;
         internal int Width;
         internal int Height;
         internal byte[] Coverage;
@@ -54,6 +54,7 @@ namespace Unbound.Runtime
         sealed class OpenJson
         {
             public ulong Handle { get; set; }
+            public ulong? LegacyHandle { get; set; }
             public int UnitsPerEm { get; set; }
             public int Ascender { get; set; }
             public int Descender { get; set; }
@@ -69,6 +70,8 @@ namespace Unbound.Runtime
         static readonly JsonSerializerOptions s_Json = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
         readonly ulong m_Handle;
+        ulong m_LegacyHandle;
+        ulong LegacyHandle => m_LegacyHandle != 0 ? m_LegacyHandle : m_Handle;
         readonly Dictionary<int, bool> m_Has = new Dictionary<int, bool>();
         /// <summary>The TrueTypeFontImporter settings of a project font.</summary>
         internal FontSettingsJson Settings;
@@ -95,6 +98,7 @@ namespace Unbound.Runtime
             }
             return new NativeGlyphSource(info.Handle)
             {
+                m_LegacyHandle = info.LegacyHandle ?? info.Handle,
                 UnitsPerEm = info.UnitsPerEm,
                 Ascender = info.Ascender,
                 Descender = info.Descender,
@@ -137,6 +141,14 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Ordered system-family fallback for legacy dynamic glyphs, measured by
+        /// glyphraster on 6000.0.71f1. Resource face metrics remain independent.</summary>
+        internal static readonly string[] LegacyFallbackNames = {
+            "Arial", "Arial Unicode MS", "Helvetica Neue", "Microsoft Sans Serif", "Microsoft YaHei",
+            "Malgun Gothic", "Gulim", "MS Gothic", "Nirmala UI", "FreeSans", "Droid Sans", "DejaVu Sans",
+            "Liberation Sans", "WenQuanYi Micro Hei"
+        };
+
         static GlyphSource s_OsFallback;
         static bool s_OsFallbackOpened;
 
@@ -162,7 +174,7 @@ namespace Unbound.Runtime
             if (m_Has.TryGetValue(codepoint, out var has)) return has;
             try
             {
-                has = Native.Call("font-has-character", JsonSerializer.Serialize(new { handle = m_Handle, codepoint })) == "true";
+                has = Native.Call("font-has-character", JsonSerializer.Serialize(new { handle = LegacyHandle, codepoint })) == "true";
             }
             catch (Exception)
             {
@@ -174,7 +186,7 @@ namespace Unbound.Runtime
         internal override bool Render(int codepoint, int size, FontStyle style, out RenderedGlyph glyph)
         {
             glyph = default;
-            if (!Native.FontGlyph(m_Handle, (uint)codepoint, size, (int)style, out var info, out var coverage)) return false;
+            if (!Native.FontGlyph(LegacyHandle, (uint)codepoint, size, (int)style | ((Settings?.RenderingMode ?? 0) << 8), out var info, out var coverage)) return false;
             m_Has[codepoint] = true;
             glyph = new RenderedGlyph
             {
@@ -251,7 +263,7 @@ namespace Unbound.Runtime
         /// <summary>The advance layout uses: rounded when the font rounds advances.</summary>
         internal float Advance;
         internal int Left;
-        internal int Top;
+        internal float Top;
         internal int Width;
         internal int Height;
         internal byte[] Coverage;
@@ -555,7 +567,8 @@ namespace Unbound.Runtime
             get
             {
                 if (s_LegacyRuntime != null) return s_LegacyRuntime;
-                var source = NativeGlyphSource.Open(new { builtin = "LegacyRuntime" });
+                var source = NativeGlyphSource.Open(new { builtin = "LegacyRuntime",
+                    legacyFallbackNames = Compat.LegacyGlyphRasterMeasured ? NativeGlyphSource.LegacyFallbackNames : Array.Empty<string>() });
                 if (source == null && !s_Failed)
                 {
                     s_Failed = true;

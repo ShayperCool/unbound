@@ -45,15 +45,16 @@ use std::ffi::c_void;
 /// 40: parameterised mixer Pitch Shifter FFT size.
 /// 41: native rendering plugins (render protocol 15's `Plugin` command, opcode 34; the plugin
 /// interface, native texture pointers and external textures).
-pub const NATIVE_API_VERSION: u32 = 41;
+/// 42: legacy glyph floating-point bearings and explicit rendering modes.
+pub const NATIVE_API_VERSION: u32 = 42;
 
-/// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
+/// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GlyphInfo {
     pub advance: f32,
     pub left: i32,
-    pub top: i32,
+    pub top: f32,
     pub width: i32,
     pub height: i32,
 }
@@ -427,7 +428,7 @@ extern "C" fn font_glyph(
         *info = GlyphInfo {
             advance: glyph.advance,
             left: glyph.left,
-            top: glyph.top,
+            top: glyph.top as f32 + glyph.top_offset,
             width: glyph.width,
             height: glyph.height,
         };
