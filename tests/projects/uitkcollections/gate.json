@@ -1,0 +1,6 @@
+{
+  "commands": [
+    "python3 tests/projects/uitkcollections/run.py gate --release $UNBOUND_PROBE_UNITY_VERSION"
+  ],
+  "summary": "[0-9]+/[0-9]+ collection checks match"
+}
