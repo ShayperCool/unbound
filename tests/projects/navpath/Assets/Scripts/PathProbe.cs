@@ -209,6 +209,8 @@ public class PathProbe : MonoBehaviour
             ("sync.updatePosition", SyncUpdatePosition),
             ("link.snap", LinkSnap),
             ("link.wide", LinkWide),
+            ("link.wideoff", LinkWideOff),
+            ("link.repath", LinkRepath),
         })
         {
             if (!name.StartsWith(Only)) continue;
@@ -921,5 +923,52 @@ public class PathProbe : MonoBehaviour
         }
         NavMesh.RemoveLink(a);
         NavMesh.RemoveLink(b);
+    }
+
+    /// <summary>A 4 m wide link whose ends lie 0.2 m off the NavMesh across the gap (inside it), and
+    /// a path over the gap: whether a wide end attaches to the NavMesh near it.</summary>
+    IEnumerator LinkWideOff()
+    {
+        Gap(0);
+        LogMesh();
+        var link = Link(new Vector3(-1.3f, 0f, 0f), new Vector3(1.467f, 0f, 0f), 0, 4f);
+        yield return Frames(1);
+        Path("off", new Vector3(-8f, 0f, 0.5f), new Vector3(8f, 0f, 0.5f));
+        NavMesh.RemoveLink(link);
+    }
+
+    /// <summary>A stale partial path searched again (autoRepath): three agents walk to the gap,
+    /// each over its own inactive link; at frame 30 the links open. "near" (autoRepath on) and
+    /// "off" (autoRepath off) start 4.5 m from the gap, "far" 10.5 m; each frame logs the path's
+    /// status and isPathStale.</summary>
+    IEnumerator LinkRepath()
+    {
+        Gap(0);
+        LogMesh();
+        var lanes = new[] { ("near", -8f, true, -6f), ("off", 0f, false, -6f), ("far", 8f, true, -12f) };
+        var links = new List<NavMeshLinkInstance>();
+        var agents = new List<(string, NavMeshAgent)>();
+        foreach (var (name, z, repath, x) in lanes)
+        {
+            var link = Link(new Vector3(-1.7f, 0f, z), new Vector3(1.9f, 0f, z));
+            NavMesh.SetLinkActive(link, false);
+            links.Add(link);
+            var go = new GameObject(name);
+            go.transform.position = new Vector3(x, 0f, z);
+            var agent = go.AddComponent<NavMeshAgent>();
+            agent.autoRepath = repath;
+            agent.SetDestination(new Vector3(8f, 0f, z));
+            agents.Add((name, agent));
+        }
+        for (int f = 1; f <= 160; f++)
+        {
+            if (f == 30)
+                foreach (var link in links) NavMesh.SetLinkActive(link, true);
+            yield return null;
+            foreach (var (name, agent) in agents)
+                ProbeLog.Value(name + ".f" + f, agent.pathStatus + " " + agent.isPathStale);
+        }
+        foreach (var (_, agent) in agents) Destroy(agent.gameObject);
+        foreach (var link in links) NavMesh.RemoveLink(link);
     }
 }

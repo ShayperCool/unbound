@@ -14,6 +14,8 @@ agree on the mesh (`meshN.vertices` is logged for every level to show it).
 | `snap.enable`, `snap.warp`, `snap.destination`, `snap.reach`, `snap.reachtype` | where the agent's transform is right after `AddComponent`, activation, `enabled`, `Instantiate`, `Warp` and `SetDestination`, in the update and LateUpdate of the next frames, and how far from the NavMesh an agent is still placed |
 | `link.snap` | links over a 2 m gap whose ends lie either side of the agent radius (0.5 m, and 2 m for a second agent type) across and either side of the climb above: which connect (paths over them or round by another link) |
 | `link.wide` | 4 m wide links: paths straight across at several lateral offsets (also beyond the width), one whose start lies partly off the NavMesh; agents crossing them one at a time (nextOffMeshLinkData, currentOffMeshLinkData, where they end) |
+| `link.wideoff` | a 4 m wide link whose ends lie 0.2 m off the NavMesh across the gap: a wide end does not attach (no snap across it) |
+| `link.repath` | three agents on partial paths over inactive links that open at frame 30: autoRepath on near the gap, autoRepath off, autoRepath on far away (status and isPathStale every frame) |
 | `sync.updatePosition` | `updatePosition` turned off while the transform (in Update or LateUpdate), `nextPosition` or a walking agent moves, then on again (and a move right after); transforms moved by script with it on, in Update and LateUpdate: the transform and `nextPosition` right after, in LateUpdate and in the next frames |
 
     python3 tests/projects/navpath/run.py editor  --label L              # two Editor captures
@@ -49,9 +51,12 @@ Measured (Unity 6000.0.71f1, `Reference/unity-6000.0.71f1.json`):
   routes round the hole follow those pieces.
 
 - A link's end attaches within the agent type's radius across and its climb in height. A wide link's
-  ends are segments: paths cross it straight at their offset, held to the part of each end over the
-  NavMesh; an agent's next link is crossed from where its path reaches the link.
+  ends are segments attached only to the polygons they cross (no snap): paths cross it straight at
+  their offset, held to the part of each end over the NavMesh; an agent's next link is reported from
+  where its path reaches the link.
+- A NavMesh change does not replan a path: a stale partial path is searched again (autoRepath) once
+  its end is the agent's next corner within its radius; with autoRepath off it stays partial and stale.
 
 Listed, not gated (`run.py` header): `two.p1`, a line grazing a vertex: the builders place that vertex
 about 2e-6 apart, on either side of the line; `link.wide` a3 (a path leaving a wide link beyond its
-width) and the agents' crossing points over a wide link (ga*, gb*).
+width) and where the agents walking to a wide link reach and cross it (ga*, gb*, the keys listed).

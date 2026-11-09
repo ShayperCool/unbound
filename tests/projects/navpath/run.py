@@ -19,11 +19,12 @@ Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
   hole.shapes two.p1.*    a straight line grazing a mesh vertex that the builders place about 2e-6
                           apart, on either side of the line: Unity keeps the corner there, Unbound
                           does not.
-  link.wide a3.*          a path leaving a wide link beyond its width turns at the far end of the
+  link.wide a3.c2.z       a path leaving a wide link beyond its width turns at the far end of the
                           link's end in Unity, at the near end in Unbound;
-  link.wide ga*, gb*      agents crossing a wide link: Unity's agents steer to a crossing point a
-                          little aside from where they walk (and cross from there), Unbound's
-                          cross where they walk (docs/COMPATIBILITY_GAPS.md, the link rows).
+  link.wide ga*, gb*      agents walking to a wide link: their path's crossing point (next.*) is
+  (the keys listed)       Unity's within about 1 cm, but Unbound's agents drift up to 0.4 m further
+                          aside before they reach the link, so they cross (cur.*) and end (end.*)
+                          elsewhere (docs/COMPATIBILITY_GAPS.md, the link rows).
 """
 import argparse
 import json
@@ -45,7 +46,8 @@ FRAMES = 1500
 # Scenario -> key prefixes of the differences that are reported but not gated ('' = all of them).
 LISTED = {
     'hole.shapes': ('two.p1.',),
-    'link.wide': ('a3.', 'ga1.2.', 'ga3.', 'gb1.2.'),
+    'link.wide': ('a3.c2.z', 'ga1.2.next.start.z', 'ga1.2.next.end.z', 'ga1.2.cur.', 'ga1.2.end.',
+                  'ga3.cur.at.', 'ga3.end.', 'gb1.2.cur.start.z', 'gb1.2.cur.end.z', 'gb1.2.cur.at.z'),
 }
 
 
