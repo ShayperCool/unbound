@@ -24,6 +24,8 @@ namespace Unbound.Runtime.Humanoid
 
         internal AvatarConstant Constant => m_Constant;
 
+        internal Animator Animator => m_Animator;
+
         internal AnimatorHuman(Animator animator, AvatarConstant constant)
         {
             m_Animator = animator;
@@ -203,6 +205,53 @@ namespace Unbound.Runtime.Humanoid
             HumanRootMotion.ProjectMotion(motion.Delta, AvatarX(), deltaTime, m_Constant.Human.Scale,
                 m_Memory.Pivot, out result);
             PivotPosition = result.PivotPosition;
+        }
+
+        readonly HumanRootMotionMemory m_StreamMemory = new HumanRootMotionMemory();
+        readonly System.Collections.Generic.Stack<Unbound.Runtime.Playables.HumanStreamPose> m_StreamPoses =
+            new System.Collections.Generic.Stack<Unbound.Runtime.Playables.HumanStreamPose>();
+
+        /// <summary>A human stream pose for an animation job (one per open human stream, reused).</summary>
+        internal Unbound.Runtime.Playables.HumanStreamPose RentStreamPose() =>
+            m_StreamPoses.Count > 0 ? m_StreamPoses.Pop() : new Unbound.Runtime.Playables.HumanStreamPose(m_Constant);
+
+        internal void ReturnStreamPose(Unbound.Runtime.Playables.HumanStreamPose pose)
+        {
+            if (pose.Constant == m_Constant) m_StreamPoses.Push(pose);
+        }
+
+        /// <summary>The avatar root's world transform as an animation job's human stream sees it: an
+        /// evaluation whose humanoid root motion moves the root by the built-in root motion has
+        /// moved it already (the root motion pass runs before the jobs' animation pass; measured,
+        /// 6000.0.71f1 tests/projects/humanoid stream.*); otherwise where it is. Root motion that a
+        /// script (OnAnimatorMove), a Rigidbody or a CharacterController applies is not known yet:
+        /// the root before it, with a warning.</summary>
+        internal Trs StreamRoot(bool humanMotion, in HumanRootMotionSample sample, float deltaTime)
+        {
+            var root = AvatarX();
+            if (!humanMotion) return root;
+            var animator = m_Animator;
+            bool hasMove = MoveCallbacks.Any(animator);
+            if (!animator.m_ApplyRootMotion && !hasMove) return root;
+            if (hasMove || animator.GetComponent<Rigidbody>() != null || animator.GetComponent<CharacterController>() != null)
+            {
+                Unbound.Runtime.Stubs.Ignored("AnimationHumanStream root with scripted or physics root motion",
+                    "reads and writes world values in the avatar root's frame before this update's root motion when OnAnimatorMove, a Rigidbody or a CharacterController applies it (not measured)");
+                return root;
+            }
+            PredictMotion(sample, deltaTime, out var result);
+            return new Trs(result.Root.t, result.Root.q, root.s);
+        }
+
+        /// <summary>This update's root motion step of a sample (<see cref="ApplyMotion"/>) without
+        /// stepping the feet pivot memory.</summary>
+        internal void PredictMotion(in HumanRootMotionSample sample, float deltaTime, out AnimatorRootMotion result)
+        {
+            m_StreamMemory.Pivot = m_Memory.Pivot;
+            m_StreamMemory.PivotWeight = m_Memory.PivotWeight;
+            m_StreamMemory.FirstEvaluation = m_Memory.FirstEvaluation;
+            HumanRootMotion.ApplyToAnimator(sample.HasMotion ? sample : HumanRootMotion.NoMotion, AvatarX(), deltaTime, m_Constant.Human.Scale, 1f,
+                m_StreamMemory, out result);
         }
 
         /// <summary>A human bone's local rotation in the IK step's skeleton pose (relative to its

@@ -70,12 +70,15 @@ namespace Unbound.Runtime.Playables
         internal int Id;
         /// <summary>The stream's root motion (AnimationStream.velocity, rootMotionPosition, ...).</summary>
         internal StreamMotion Motion = StreamMotion.None;
+        /// <summary>The evaluation the stream belongs to.</summary>
+        internal AnimationEvaluation Evaluation;
+        Unbound.Runtime.Playables.HumanStreamPose m_Human;
 
         static readonly List<StreamContext> s_Active = new List<StreamContext> { null };
 
-        internal static StreamContext Open(AnimStream stream, AnimatorHandles handles)
+        internal static StreamContext Open(AnimStream stream, AnimatorHandles handles, AnimationEvaluation evaluation = null)
         {
-            var c = new StreamContext { Stream = stream, Handles = handles, Id = s_Active.Count };
+            var c = new StreamContext { Stream = stream, Handles = handles, Id = s_Active.Count, Evaluation = evaluation };
             s_Active.Add(c);
             return c;
         }
@@ -83,11 +86,53 @@ namespace Unbound.Runtime.Playables
         internal static void Close(StreamContext c)
         {
             foreach (var (input, _) in c.Inputs) Close(input);
+            c.CloseHuman();
             if (c.Id > 0 && c.Id < s_Active.Count && s_Active[c.Id] == c) s_Active[c.Id] = null;
             while (s_Active.Count > 1 && s_Active[s_Active.Count - 1] == null) s_Active.RemoveAt(s_Active.Count - 1);
         }
 
         internal static StreamContext Get(int id) => id > 0 && id < s_Active.Count ? s_Active[id] : null;
+
+        /// <summary>The stream's human pose (AnimationStream.AsHuman), opened on first use.</summary>
+        internal Unbound.Runtime.Playables.HumanStreamPose HumanPose()
+        {
+            if (m_Human != null) return m_Human;
+            using var engine = MainThreadCheck.Engine();
+            var human = Handles.Animator?.Human ?? throw new InvalidOperationException("Cannot create an AnimationHumanStream for a generic rig.");
+            if (Stream.HasMassCenter)
+                Stubs.Ignored("AnimationHumanStream under a layer without Root",
+                    "reads and writes the animated pose; the pose that places the body (layers whose mask keeps Root) is not part of it (not measured)");
+            bool humanMotion = Evaluation != null && Evaluation.MotionMode == RootMotionMode.Human;
+            var root = human.StreamRoot(humanMotion, Stream.BodyMotion, Stream.DeltaTime);
+            m_Human = human.RentStreamPose();
+            m_Human.Load(Stream, root);
+            return m_Human;
+        }
+
+        /// <summary>The end of a job: a human pose it opened goes back into the stream.</summary>
+        void CloseHuman()
+        {
+            var pose = m_Human;
+            if (pose == null) return;
+            m_Human = null;
+            pose.Store();
+            Handles.Animator?.Human?.ReturnStreamPose(pose);
+        }
+
+        /// <summary>A foot's velocity in the update's humanoid root motion: how far its goal moved
+        /// during the step, per second (zero for a zero delta time or without body motion).</summary>
+        internal Vector3 FootVelocity(bool left)
+        {
+            using var engine = MainThreadCheck.Engine();
+            float dt = Stream.DeltaTime;
+            var sample = Stream.BodyMotion;
+            var animator = Handles.Animator;
+            // Without root motion requested the stream reports no motion (measured,
+            // tests/projects/humanoid stream.readNoMotion).
+            if (dt == 0f || !sample.HasMotion || animator == null || !(animator.m_ApplyRootMotion || MoveCallbacks.Any(animator))) return Vector3.zero;
+            var slip = (left ? sample.LeftFootSlip : sample.RightFootSlip).t;
+            return new Vector3(slip.x / dt, slip.y / dt, slip.z / dt);
+        }
 
         internal UnityEngine.Animations.AnimationStream ToStream() =>
             new UnityEngine.Animations.AnimationStream { m_AnimatorBindingsVersion = Handles.Id, m_Context = Id };
@@ -250,6 +295,8 @@ namespace Unbound.Runtime.Playables
                 case JobKind job:
                     return job.Motion;
                 default:
+                    if (e.MotionMode == RootMotionMode.Human && stream.BodyMotion.HasMotion && e.Animator?.Human is { } human)
+                        return Human(human, stream.BodyMotion, deltaTime);
                     if (!stream.Motion.Known || e.Animator == null) return None;
                     stream.Motion.ToStream(e.Animator, deltaTime, out var from, out var fromRotation, out var linear, out var turn);
                     return new StreamMotion
@@ -258,6 +305,28 @@ namespace Unbound.Runtime.Playables
                         StartPosition = from, StartRotation = fromRotation,
                     };
             }
+        }
+
+        /// <summary>A humanoid stream's motion: the update's root motion step (after the feet pivot
+        /// correction, as the Animator applies it; none without root motion requested) per second, in the avatar root's frame and the
+        /// clip's units (not scaled by the human scale), its rotation as an angular velocity (6000.0.71f1, tests/projects/humanoid stream.*). Where the root motion
+        /// pose starts is not measured: the avatar's origin.</summary>
+        static StreamMotion Human(Unbound.Runtime.Humanoid.AnimatorHuman human, in Unbound.Runtime.Humanoid.HumanRootMotionSample sample, float deltaTime)
+        {
+            using var engine = MainThreadCheck.Engine();
+            var animator = human.Animator;
+            if (deltaTime == 0f || !(animator.m_ApplyRootMotion || MoveCallbacks.Any(animator)))
+                return new StreamMotion { Computed = true, StartRotation = Quaternion.identity };
+            human.PredictMotion(sample, deltaTime, out var step);
+            var t = step.Delta.t;
+            var w = Unbound.Runtime.Humanoid.HumanRootMotion.AngularVelocityOf(step.Delta.q, deltaTime);
+            return new StreamMotion
+            {
+                Computed = true,
+                Velocity = new Vector3(t.x / deltaTime, t.y / deltaTime, t.z / deltaTime),
+                AngularVelocity = new Vector3(w.x, w.y, w.z),
+                StartRotation = Quaternion.identity,
+            };
         }
 
         /// <summary>The same motion values (what a job can change).</summary>
@@ -271,6 +340,13 @@ namespace Unbound.Runtime.Playables
     {
         internal object Job;
         internal bool ProcessInputs = true;
+
+        /// <summary>A job on a humanoid Animator may read and write its whole human pose
+        /// (AnimationStream.AsHuman): every humanoid curve gets a channel.</summary>
+        internal override void Bind(AnimationEvaluation e, PlayableNode node)
+        {
+            if (e.Animator != null && e.Animator.isHuman) e.Bindings.BindHumanCurves();
+        }
         /// <summary>The motion its stream ended with in its last evaluation (a job above reads it).</summary>
         internal StreamMotion Motion = StreamMotion.None;
 
@@ -279,7 +355,7 @@ namespace Unbound.Runtime.Playables
             into.JobRan = true;
             if (e.ReferencePose) return;
             var handles = AnimatorHandles.Of(e.Animator);
-            var context = StreamContext.Open(into, handles);
+            var context = StreamContext.Open(into, handles, e);
             var entry = StreamMotion.None;
             bool ran = false;
             try
@@ -297,7 +373,7 @@ namespace Unbound.Runtime.Playables
                     }
                     if (!ProcessInputs) continue;
                     var s = e.Evaluate(input.Node, input.SourcePort, weight * input.Weight);
-                    var inputContext = StreamContext.Open(s, handles);
+                    var inputContext = StreamContext.Open(s, handles, e);
                     inputContext.Motion = StreamMotion.Of(e, input.Node, s);
                     context.Inputs.Add((inputContext, input.Weight));
                     into.Inputs.Add((s, input.Weight));

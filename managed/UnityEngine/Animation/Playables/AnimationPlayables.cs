@@ -381,7 +381,7 @@ namespace Unbound.Runtime.Playables
             return hash;
         }
 
-        static int ConsumerCount(PlayableNode node)
+        internal static int ConsumerCount(PlayableNode node)
         {
             int consumers = 0;
             foreach (var output in node.Outputs)

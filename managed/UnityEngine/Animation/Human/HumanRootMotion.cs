@@ -813,6 +813,8 @@ namespace Unbound.Runtime.Humanoid
 
         /// <summary>A rotation step's angular velocity: its axis times its angle, per second (0 for
         /// no rotation).</summary>
+        internal static F4 AngularVelocityOf(F4 dq, float deltaTime) => AngularVelocity(dq, deltaTime);
+
         static F4 AngularVelocity(F4 dq, float deltaTime)
         {
             var q = M.QNormalize(dq);

@@ -50,6 +50,12 @@ namespace Unbound.Runtime.Playables
         /// it: an output that wrote no humanoid curve poses the avatar by default only when its
         /// pose comes from clips alone (the measured case).</summary>
         internal bool ClipSampled, JobRan;
+        /// <summary>The IK values (goal weights, hints, look-at) an animation job left in the
+        /// stream's human pose, for the jobs above it.</summary>
+        internal readonly Unbound.Runtime.Playables.StreamHumanIK HumanIK = new Unbound.Runtime.Playables.StreamHumanIK();
+        /// <summary>The playable whose evaluation the stream holds (it keeps what the stream's
+        /// buffer keeps between evaluations).</summary>
+        internal AnimationKind Owner;
 
         static readonly Stack<AnimStream> s_Free = new Stack<AnimStream>();
 
@@ -78,6 +84,8 @@ namespace Unbound.Runtime.Playables
             GoalsInMotion = false;
             HasMassCenter = false;
             ClipSampled = JobRan = false;
+            HumanIK.Clear();
+            Owner = null;
             FloatCount = b.FloatCount;
             ObjectCount = b.ObjectCount;
             if (Values.Length < FloatCount)
@@ -271,6 +279,10 @@ namespace Unbound.Runtime.Playables
     {
         internal override bool AnimatorClock => true;
 
+        /// <summary>The IK values a job left in the human pose of the stream this playable's
+        /// evaluation holds (see <see cref="HumanStreamPose"/>); null until a job set any.</summary>
+        internal StreamHumanIK PersistentHumanIK;
+
         /// <summary>Fills <paramref name="into"/> (reset to defaults) with the playable's pose.
         /// <paramref name="weight"/> is its effective weight in the output (clip events need one).</summary>
         internal abstract void Evaluate(AnimationEvaluation e, PlayableNode node, int viaPort, float weight, AnimStream into);
@@ -360,6 +372,7 @@ namespace Unbound.Runtime.Playables
         {
             var s = AnimStream.Rent(Bindings);
             s.DeltaTime = DeltaTime;
+            s.Owner = n?.Kind as AnimationKind;
             EvaluateInto(n, viaPort, weight, s, depth);
             return s;
         }
@@ -930,11 +943,14 @@ namespace Unbound.Runtime.Playables
                 if (!o.Destroyed && o.Weight == 1f
                     && (o.Engine as AnimationOutputState)?.StreamSource == AnimationStreamSource.DefaultValues)
                 {
-                    if (HumanMotionClip(o.Source)) return RootMotionMode.Human;
+                    // Animation jobs pass their input's humanoid motion on (6000.0.71f1,
+                    // tests/projects/humanoid stream.*).
+                    var source = BelowJobs(o.Source);
+                    if (HumanMotionClip(source)) return RootMotionMode.Human;
                     // Generic root curves alone move a humanoid as a generic Animator's, by its
                     // human scale (6000.0.71f1, tests/projects/humanoid genericOnHuman.graph).
-                    if (GenericClipTree(o.Source)) return requested ? RootMotionMode.Compute : RootMotionMode.Zero;
-                    if (!o.Source.HasConnectedOutput() && MixerKind.HumanMotionTree(o.Source))
+                    if (source == o.Source && GenericClipTree(o.Source)) return requested ? RootMotionMode.Compute : RootMotionMode.Zero;
+                    if (!o.Source.HasConnectedOutput() && MixerKind.HumanMotionTree(source))
                         return RootMotionMode.Human;
                 }
             }
@@ -947,6 +963,19 @@ namespace Unbound.Runtime.Playables
                     + "is supported, without a playing controller, shared nodes or loop overrides; "
                     + "controller playables, animation jobs, fractional or multiple outputs remain unsupported");
             return RootMotionMode.Unsupported;
+        }
+
+        /// <summary>The node below a chain of animation jobs that pass their first input on whole
+        /// (input weight 1; the node itself when it is not such a job).</summary>
+        static PlayableNode BelowJobs(PlayableNode node)
+        {
+            for (int depth = 0; depth < 64 && node != null && !node.Destroyed && node.Kind is JobKind { ProcessInputs: true }; depth++)
+            {
+                if (node.Inputs.Count == 0 || node.Inputs[0].Node == null || node.Inputs[0].Weight != 1f || node.Inputs[0].SourcePort != 0
+                    || MixerKind.ConsumerCount(node.Inputs[0].Node) != 1) return null;
+                node = node.Inputs[0].Node;
+            }
+            return node;
         }
 
         /// <summary>Whether a tree is only clips without humanoid curves, mixers and layer mixers.</summary>

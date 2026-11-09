@@ -37,7 +37,6 @@ public static class StubDefaults
         ["UnityEngine.ReflectionProbe.maxBakedCubemapResolution"] = "2048",
         // The Editor shows no splash screen.
         ["UnityEngine.Rendering.SplashScreen.isFinished"] = "true",
-        ["UnityEngine.Animations.MuscleHandle.muscleHandleCount"] = "95",
         ["UnityEngine.QualitySettings.maxQueuedFrames"] = new("2", "value"),
         ["UnityEngine.Graphics.activeTier"] = new("global::UnityEngine.Rendering.GraphicsTier.Tier3", "value"),
         ["UnityEngine.Accessibility.AccessibilitySettings.fontScale"] = "1f",

@@ -14,6 +14,9 @@ namespace Unbound.Runtime.Humanoid
         // The end bone of each goal (left foot, right foot, left hand, right hand).
         static readonly int[] GoalBone = { Bone.LeftFoot, Bone.RightFoot, Bone.LeftHand, Bone.RightHand };
 
+        /// <summary>A goal's end bone (the foot or hand).</summary>
+        internal static int GoalBoneOf(int goal) => GoalBone[goal];
+
         // The bone each translation DoF moves.
         static readonly int[] TDoFBone = HumanClipImport.TDoFBones;
 

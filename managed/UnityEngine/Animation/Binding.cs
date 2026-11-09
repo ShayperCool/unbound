@@ -631,6 +631,19 @@ namespace Unbound.Runtime
         /// multi-channel properties; -1 when the property cannot be animated.</summary>
         internal int BindChannel(CurveBinding binding, bool objectValued) => BindCurve(binding, objectValued, null);
 
+        bool m_HumanCurvesBound;
+
+        /// <summary>Binds every humanoid curve of the root's Animator (body, goals, muscles,
+        /// translation DoF) once.</summary>
+        internal void BindHumanCurves()
+        {
+            if (m_HumanCurvesBound) return;
+            m_HumanCurvesBound = true;
+            var names = Unbound.Runtime.Humanoid.HumanClipImport.CurveNames;
+            for (int c = Unbound.Runtime.Humanoid.HumanClipImport.RootFirst; c < names.Length; c++)
+                BindChannel(CurveBinding.ForType("", names[c], typeof(Animator)), false);
+        }
+
         List<int> m_QuaternionStarts = new List<int>();
         int m_QuaternionGroupsSeen;
 
