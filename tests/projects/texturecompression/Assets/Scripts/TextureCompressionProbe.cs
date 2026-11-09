@@ -358,7 +358,7 @@ public class TextureCompressionProbe : MonoBehaviour
             var t = new Texture2D(64, 64, TextureFormat.DXT1, true);
             Run("reinit.same", () => t.Reinitialize(32, 32));
             Add("reinit.same.info", t.width + "x" + t.height + " mips " + t.mipmapCount + " " + t.format);
-            Run("reinit.odd", () => t.Reinitialize(30, 18, TextureFormat.DXT1, false));
+            Run("reinit.odd", () => Add("reinit.odd.result", t.Reinitialize(30, 18, TextureFormat.DXT1, false).ToString()));
             Add("reinit.odd.info", t.width + "x" + t.height + " mips " + t.mipmapCount + " " + t.format);
             Destroy(t);
         });
@@ -368,5 +368,30 @@ public class TextureCompressionProbe : MonoBehaviour
             Run("load.rgba32.short", () => t.LoadRawTextureData(new byte[64 * 64 * 4 - 4]));
             Destroy(t);
         });
+        // One- and two-channel textures made by code, linear and sRGB: what the GPU samples, from
+        // raw data (with mips) and from SetPixels32 (without).
+        foreach (var format in new[] { TextureFormat.R8, TextureFormat.RG16, TextureFormat.Alpha8 })
+            foreach (var linear in new[] { true, false })
+            {
+                var key = "channels." + format + (linear ? ".linear" : ".srgb");
+                Section(key, () =>
+                {
+                    var t = new Texture2D(8, 8, format, true, linear);
+                    var raw = new byte[t.GetRawTextureData().Length];
+                    for (int i = 0; i < raw.Length; i++) raw[i] = (byte)(i * 37 + 11);
+                    t.LoadRawTextureData(raw);
+                    t.Apply(false);
+                    Describe(key, t);
+                    Destroy(t);
+                    var cells = new Texture2D(8, 8, format, false, linear);
+                    var colors = new Color32[64];
+                    for (int i = 0; i < colors.Length; i++)
+                        colors[i] = new Color32((byte)(i * 29 + 3), (byte)(i * 53 + 7), (byte)(i * 11 + 5), (byte)(i * 17 + 1));
+                    cells.SetPixels32(colors);
+                    cells.Apply(false);
+                    Run(key + ".cells.gpu", () => Add(key + ".cells.gpu", Gpu(cells)));
+                    Destroy(cells);
+                });
+            }
     }
 }

@@ -17,7 +17,9 @@ textureimport probe's images); `ProbeRunner.Create` applies them in the Editor.
   `Graphics.CopyTexture` between compressed textures (whole, a block-aligned region, an unaligned
   region, one mip, from an unreadable texture, into an unreadable texture, into a readable
   import, DXT1 to DXT5, DXT5 to BC7, DXT1 to RGBA32), `Reinitialize` of a compressed texture,
-  writes to a compressed import, and explicit RGB24/R8 imports of a coloured, transparent source.
+  writes to a compressed import, and explicit RGB24/R8 imports of a coloured, transparent source;
+- R8, RG16 and Alpha8 `Texture2D`s made by code, linear and sRGB: format, raw data, pixels and
+  the GPU's samples, from `LoadRawTextureData` (with mips) and from `SetPixels32`.
 
 Each control records what it threw and the errors it logged.
 
@@ -49,6 +51,9 @@ Observations of this release, its Standalone target and the Editor's OpenGL Core
 - `GetPixels32` decodes colour with truncating thirds and alpha/red/green steps rounded to
   nearest; BC4 reads (r, 0, 0, 1), BC5 (r, g, 0, 1).
 - `new Texture2D(30, 18, DXT1)` throws "Failed to create texture because of invalid parameters."
+- R8 and RG16 made by code are R8_UNorm and R8G8_UNorm in the Gamma project, sRGB or not; in the
+  Linear project sRGB ones are R8_SRGB and R8G8_SRGB and the GPU decodes their red (and green)
+  from sRGB; R8G8_SRGB samples blue 1, R8G8_UNorm blue 0. Alpha8 samples (0, 0, 0, a) either way.
 
 ## Documented (Unity 6000.0 Scripting API)
 
