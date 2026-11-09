@@ -6,6 +6,7 @@
                                  job system at N workers (`-job-worker-count`; not publishable)
     run.py publish [--label L]   checks the two captures agree, copies them to Reference/
     run.py unbound [--label L]   Unbound captures per color space (UNBOUND_CLI: the binary)
+    run.py gate [--label L]      Unbound captures compared with Reference/ (every byte exact)
 
 Every capture runs on a fresh copy of the probe's Assets/Packages/ProjectSettings in the
 validation cache, with ProjectSettings switched to the profile's color space; nothing is written
@@ -121,9 +122,17 @@ def unbound(work):
     return code
 
 
+def gate(work):
+    code = unbound(work)
+    for space in profiles():
+        code |= subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference_root(PROBE)/f'{space}.jsonl'),
+                                str(work/'unbound'/f'{space}.jsonl')]).returncode
+    return code
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=('editor', 'publish', 'unbound'))
+    parser.add_argument('mode', choices=('editor', 'publish', 'unbound', 'gate'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
     parser.add_argument('--job-worker-count', type=int, help='editor: one capture with N job workers')
@@ -136,7 +145,7 @@ def main():
         if args.mode != 'editor':
             parser.error('--job-worker-count is only for editor captures')
         return editor(work, args.job_worker_count)
-    return {'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
+    return {'editor': editor, 'publish': publish, 'unbound': unbound, 'gate': gate}[args.mode](work)
 
 
 if __name__ == '__main__':
