@@ -1265,6 +1265,185 @@
     "frames": 32768,
     "channels": 2
   },
+  "maxch_1.set": true,
+  "maxch_1.get": true,
+  "maxch_1.value": 1,
+  "maxch_1.mixer_Pitch": 0.75,
+  "maxch_1.mixer_FFT size": 1024,
+  "maxch_1.mixer_Overlap": 4,
+  "maxch_1.mixer_Max channels": 1,
+  "maxch_1": {
+    "file": "maxch_1.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_1.master": {
+    "file": "maxch_1.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_2.set": true,
+  "maxch_2.get": true,
+  "maxch_2.value": 2,
+  "maxch_2.mixer_Pitch": 0.75,
+  "maxch_2.mixer_FFT size": 1024,
+  "maxch_2.mixer_Overlap": 4,
+  "maxch_2.mixer_Max channels": 2,
+  "maxch_2": {
+    "file": "maxch_2.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_2.master": {
+    "file": "maxch_2.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_16.set": true,
+  "maxch_16.get": true,
+  "maxch_16.value": 16,
+  "maxch_16.mixer_Pitch": 0.75,
+  "maxch_16.mixer_FFT size": 1024,
+  "maxch_16.mixer_Overlap": 4,
+  "maxch_16.mixer_Max channels": 16,
+  "maxch_16": {
+    "file": "maxch_16.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_16.master": {
+    "file": "maxch_16.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_raw_1_5.set": true,
+  "maxch_raw_1_5.get": true,
+  "maxch_raw_1_5.value": 1.5,
+  "maxch_raw_1_5.mixer_Pitch": 0.75,
+  "maxch_raw_1_5.mixer_FFT size": 1024,
+  "maxch_raw_1_5.mixer_Overlap": 4,
+  "maxch_raw_1_5.mixer_Max channels": 1.5,
+  "maxch_raw_1_5": {
+    "file": "maxch_raw_1_5.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_raw_1_5.master": {
+    "file": "maxch_raw_1_5.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_raw_2_5.set": true,
+  "maxch_raw_2_5.get": true,
+  "maxch_raw_2_5.value": 2.5,
+  "maxch_raw_2_5.mixer_Pitch": 0.75,
+  "maxch_raw_2_5.mixer_FFT size": 1024,
+  "maxch_raw_2_5.mixer_Overlap": 4,
+  "maxch_raw_2_5.mixer_Max channels": 2.5,
+  "maxch_raw_2_5": {
+    "file": "maxch_raw_2_5.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_raw_2_5.master": {
+    "file": "maxch_raw_2_5.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_raw_neg.set": true,
+  "maxch_raw_neg.get": true,
+  "maxch_raw_neg.value": -1,
+  "maxch_raw_neg.mixer_Pitch": 0.75,
+  "maxch_raw_neg.mixer_FFT size": 1024,
+  "maxch_raw_neg.mixer_Overlap": 4,
+  "maxch_raw_neg.mixer_Max channels": -1,
+  "maxch_raw_neg": {
+    "file": "maxch_raw_neg.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_raw_neg.master": {
+    "file": "maxch_raw_neg.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_raw_17.set": true,
+  "maxch_raw_17.get": true,
+  "maxch_raw_17.value": 17,
+  "maxch_raw_17.mixer_Pitch": 0.75,
+  "maxch_raw_17.mixer_FFT size": 1024,
+  "maxch_raw_17.mixer_Overlap": 4,
+  "maxch_raw_17.mixer_Max channels": 17,
+  "maxch_raw_17": {
+    "file": "maxch_raw_17.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_raw_17.master": {
+    "file": "maxch_raw_17.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_live_same.mixer_Pitch": 0.75,
+  "maxch_live_same.mixer_FFT size": 1024,
+  "maxch_live_same.mixer_Overlap": 4,
+  "maxch_live_same.mixer_Max channels": 0,
+  "maxch_live_same.live_set": true,
+  "maxch_live_same": {
+    "file": "maxch_live_same.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_live_same.master": {
+    "file": "maxch_live_same.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_live_grow.mixer_Pitch": 0.75,
+  "maxch_live_grow.mixer_FFT size": 1024,
+  "maxch_live_grow.mixer_Overlap": 4,
+  "maxch_live_grow.mixer_Max channels": 0,
+  "maxch_live_grow.live_set": true,
+  "maxch_live_grow": {
+    "file": "maxch_live_grow.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_live_grow.master": {
+    "file": "maxch_live_grow.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_live_bypass.mixer_Pitch": 0.75,
+  "maxch_live_bypass.mixer_FFT size": 1024,
+  "maxch_live_bypass.mixer_Overlap": 4,
+  "maxch_live_bypass.mixer_Max channels": 0,
+  "maxch_live_bypass.live_set": true,
+  "maxch_live_bypass": {
+    "file": "maxch_live_bypass.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_live_bypass.master": {
+    "file": "maxch_live_bypass.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_live_resume.mixer_Pitch": 0.75,
+  "maxch_live_resume.mixer_FFT size": 1024,
+  "maxch_live_resume.mixer_Overlap": 4,
+  "maxch_live_resume.mixer_Max channels": 0,
+  "maxch_live_resume.live_set": true,
+  "maxch_live_resume": {
+    "file": "maxch_live_resume.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "maxch_live_resume.master": {
+    "file": "maxch_live_resume.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
   "buffer_256.buffer": 256,
   "buffer_256.mode": 2,
   "buffer_256.rate": 44100,

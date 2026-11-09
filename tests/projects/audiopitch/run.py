@@ -65,8 +65,13 @@ for rate in a.rate or (48000, 44100):
             if isinstance(value, dict) and 'file' in value:
                 shutil.copy2(part/'capture'/value['file'], candidate/value['file'])
     (candidate/'capture.json').write_text(json.dumps(merged, indent=2)+'\n')
-    run('compare.py', '--profile', 'all', '--candidate', candidate, '--report', work/f'strict-{rate}.jsonl.gz')
-    failed |= bool(run('compare.py', '--profile', 'all', '--pcm-steps', '1', '--residuals', '--candidate', candidate,
-                       '--report', work/f'gate-{rate}.jsonl.gz'))
+    # Output layouts run in their own session, as the Editor recorded them.
+    layouts = work/f'engine-{rate}-layouts'
+    if run('engine.py', '--native-project', project, '--runtime', runtime, '--cases', ','.join(cases(True)),
+           '--work', layouts): raise SystemExit(f'engine {rate} layouts failed')
+    for profile, root, suffix in (('all', candidate, ''), ('layouts', layouts/'capture', '-layouts')):
+        run('compare.py', '--profile', profile, '--candidate', root, '--report', work/f'strict-{rate}{suffix}.jsonl.gz')
+        failed |= bool(run('compare.py', '--profile', profile, '--pcm-steps', '1', '--residuals', '--candidate', root,
+                           '--report', work/f'gate-{rate}{suffix}.jsonl.gz'))
 print('reports:', work)
 raise SystemExit(failed)

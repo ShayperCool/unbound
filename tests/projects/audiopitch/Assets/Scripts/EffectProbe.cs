@@ -96,7 +96,34 @@ public class EffectProbe : MonoBehaviour
         new[] { "buffer_256", "music=noise:0.25", "buffer=256", "blocks=128", "Music.Shift.FFT size=2048", "Music.Shift.Pitch=1.5" },
         new[] { "buffer_512", "music=noise:0.25", "buffer=512", "blocks=64", "Music.Shift.FFT size=2048", "Music.Shift.Pitch=1.5" },
         new[] { "buffer_2048", "music=noise:0.25", "buffer=2048", "blocks=16", "Music.Shift.FFT size=2048", "Music.Shift.Pitch=1.5" },
+        new[] { "maxch_1", "music=noise:0.25", "set:Max channels=1", "Music.Shift.Pitch=0.75" },
+        new[] { "maxch_2", "music=noise:0.25", "set:Max channels=2", "Music.Shift.Pitch=0.75" },
+        new[] { "maxch_16", "music=noise:0.25", "set:Max channels=16", "Music.Shift.Pitch=0.75" },
+        new[] { "maxch_raw_1_5", "music=noise:0.25", "set:Max channels=1.5", "Music.Shift.Pitch=0.75" },
+        new[] { "maxch_raw_2_5", "music=noise:0.25", "set:Max channels=2.5", "Music.Shift.Pitch=0.75" },
+        new[] { "maxch_raw_neg", "music=noise:0.25", "set:Max channels=-1", "Music.Shift.Pitch=0.75" },
+        new[] { "maxch_raw_17", "music=noise:0.25", "set:Max channels=17", "Music.Shift.Pitch=0.75" },
+        new[] { "maxch_live_same", "music=noise:0.25", "Music.Shift.Pitch=0.75", "live:8:Max channels=2" },
+        new[] { "maxch_live_grow", "music=noise:0.25", "Music.Shift.Pitch=0.75", "live:8:Max channels=4" },
+        new[] { "maxch_live_bypass", "music=noise:0.25", "Music.Shift.Pitch=0.75", "live:8:Max channels=1", "live:16:Max channels=0" },
+        new[] { "maxch_live_resume", "music=noise:0.25", "Music.Shift.Pitch=0.75", "live:4:Max channels=1", "live:12:Max channels=0" },
         new[] { "context_mono", "music=noise:0.25", "mode=Mono", "Music.Shift.Pitch=0.75" },
+        new[] { "context_mono_plain", "music=imp", "mode=Mono", "Music:Att" },
+        new[] { "context_mono_clip", "music=imp", "mode=Mono", "mono=1", "Music:Att" },
+        new[] { "context_mono_pan", "music=imp", "mode=Mono", "pan=-0.5", "Music:Att" },
+        new[] { "context_mono_clip_pan", "music=imp", "mode=Mono", "mono=1", "pan=-0.5", "Music:Att" },
+        new[] { "context_mono_clip_shift", "music=noise:0.25", "mode=Mono", "mono=1", "Music.Shift.Pitch=1.5" },
+        new[] { "context_mono_max1", "music=noise:0.25", "mode=Mono", "set:Max channels=1", "Music.Shift.Pitch=0.75" },
+        new[] { "context_mono_live", "music=noise:0.25", "mode=Mono", "Music.Shift.Pitch=0.75", "live:8:Max channels=2" },
+        new[] { "context_quad_clip", "music=imp", "mode=Quad", "mono=1", "Music:Att" },
+        new[] { "context_surround_clip", "music=imp", "mode=Surround", "mono=1", "Music:Att" },
+        new[] { "context_mode5point1_clip", "music=imp", "mode=Mode5point1", "mono=1", "Music:Att" },
+        new[] { "context_mode5point1_clip_pan", "music=imp", "mode=Mode5point1", "mono=1", "pan=-0.5", "Music:Att" },
+        new[] { "context_mode5point1_pan", "music=imp", "mode=Mode5point1", "pan=-0.5", "Music:Att" },
+        new[] { "context_mode5point1_max2", "music=noise:0.25", "mode=Mode5point1", "set:Max channels=2", "Music.Shift.Pitch=0.75" },
+        new[] { "context_mode5point1_max6", "music=noise:0.25", "mode=Mode5point1", "set:Max channels=6", "Music.Shift.Pitch=0.75" },
+        new[] { "context_mode7point1_clip", "music=imp", "mode=Mode7point1", "mono=1", "Music:Att" },
+        new[] { "context_mode7point1_max6", "music=noise:0.25", "mode=Mode7point1", "set:Max channels=6", "Music.Shift.Pitch=0.75" },
         new[] { "context_quad", "music=noise:0.25", "mode=Quad", "Music.Shift.Pitch=0.75" },
         new[] { "context_surround", "music=noise:0.25", "mode=Surround", "Music.Shift.Pitch=0.75" },
         new[] { "context_mode5point1", "music=noise:0.25", "mode=Mode5point1", "Music.Shift.Pitch=0.75" },
@@ -107,7 +134,7 @@ public class EffectProbe : MonoBehaviour
     {
         var only = Environment.GetEnvironmentVariable("EFFECT_PROBE_CASES");
         var keys = new List<string>();
-        foreach (var c in Cases) if ((!Engine || !c[0].StartsWith("context_")) && (string.IsNullOrEmpty(only) || Array.IndexOf(only.Split(','), c[0]) >= 0)) keys.Add(c[0]);
+        foreach (var c in Cases) if ((string.IsNullOrEmpty(only) || Array.IndexOf(only.Split(','), c[0]) >= 0)) keys.Add(c[0]);
         return keys.ToArray();
     }
     public static string[] Tokens(string key) => Array.Find(Cases, c => c[0] == key);
@@ -240,9 +267,13 @@ public class EffectProbe : MonoBehaviour
                 layoutProbe = gameObject.AddComponent<OutputLayoutProbe>();
                 // A configuration getter may retain the request when the output driver falls back.
                 // Measure the active DSP layout before choosing the capture buffer dimensions.
+                // The listener callback can start a few frames after a reset; this precedes the
+                // case's mixer and source, so the number of warm buffers does not reach the capture.
                 var warm = new NativeArray<float>(actualBuffer * 8, Allocator.Persistent);
-                yield return null;
-                if (!AudioRenderer.Render(warm)) throw new Exception("layout preflight render failed");
+                for (int attempt = 0; attempt < 16 && OutputLayoutProbe.Channels == 0; attempt++) {
+                    yield return null;
+                    if (!AudioRenderer.Render(warm)) throw new Exception("layout preflight render failed");
+                }
                 warm.Dispose();
                 if (OutputLayoutProbe.Channels == 0) throw new Exception("missing layout callback");
                 outputChannels = OutputLayoutProbe.Channels;
@@ -251,7 +282,8 @@ public class EffectProbe : MonoBehaviour
                 records.Add("\""+key+".buffer\":"+actualBuffer);
                 records.Add("\""+key+".mode\":"+(int)actual.speakerMode);
                 records.Add("\""+key+".rate\":"+actual.sampleRate);
-                if (layoutProbe != null) records.Add("\""+key+".render_channels\":"+outputChannels);
+                // The engine's configured layout is its active layout; the Editor's is measured above.
+                if (key.StartsWith("context_")) records.Add("\""+key+".render_channels\":"+outputChannels);
             }
             BlockCount = int.Parse(Option(key, "blocks=", "32")); ClipFrames = int.Parse(Option(key, "clip=", (BlockCount * actualBuffer).ToString()));
             Debug.Log("Effect case " + key);
@@ -289,6 +321,7 @@ public class EffectProbe : MonoBehaviour
             source.outputAudioMixerGroup = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Music");
             if (!source.outputAudioMixerGroup) throw new Exception("Missing group Music");
             source.spatialBlend = 0; source.volume = 1;
+            source.panStereo = float.Parse(Option(key, "pan=", "0"), System.Globalization.CultureInfo.InvariantCulture);
             int channels = Option(key, "mono=", "0") == "1" ? 1 : 2;
             var clip = AudioClip.Create(key, ClipFrames, channels, rate, false);
             var data = Signal(Option(key, "music=", "dc:0.5"), rate);

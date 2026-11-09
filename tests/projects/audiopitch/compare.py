@@ -6,7 +6,7 @@ import json
 import math
 from pathlib import Path
 import struct
-from common import FIXTURE, RESIDUALS, SUFFIXES, header, profile, samples
+from common import FIXTURE, RESIDUALS, SUFFIXES, UNSUPPORTED, header, profile, samples
 
 ATOL = 2e-5
 RTOL = 2e-4
@@ -30,9 +30,10 @@ def safe(value):
     return repr(value) if isinstance(value, float) and not math.isfinite(value) else value
 
 
-def compare(reference, candidate, report, keys, exact=False, before=None, pcm_steps=0, residuals=False):
+def compare(reference, candidate, report, keys, exact=False, before=None, pcm_steps=0, residuals=False, skipped=()):
     roots = [reference, candidate] if before is None else [reference, before, candidate]
-    manifests = [header(root) for root in roots]
+    manifests = [{k: v for k, v in header(root).items() if k.split('.')[0] not in skipped} for root in roots]
+    keys = {k: v for k, v in keys.items() if k not in skipped}
     limits = {k+s: frames for k, frames in keys.items() for s in SUFFIXES}
     fields = ['release', 'rate'] + list(limits)
     fields += sorted({f for m in manifests for f in m if f not in fields})
@@ -87,6 +88,7 @@ def compare(reference, candidate, report, keys, exact=False, before=None, pcm_st
         result = dict(tested=tested, failed=failed, exact=exact, atol=0 if exact else ATOL,
                       rtol=0 if exact else RTOL, pcm_steps=pcm_steps,
                       residual_atol=RESIDUALS if residuals else {},
+                      unsupported={case: UNSUPPORTED[case] for case in sorted(skipped)},
                       frame_limits={k: v for k, v in keys.items() if v is not None},
                       failing_values_by_case=by_case,
                       roots=list(map(str, roots)), counts=counts)
@@ -109,9 +111,11 @@ if __name__ == '__main__':
     p.add_argument('--pcm-steps', type=int, choices=(0, 1), default=0,
                    help='Admit one 1/32768 step of device PCM (never master floats)')
     p.add_argument('--residuals', action='store_true',
-                   help='Admit the recorded RESIDUALS bounds of common.py (gate only)')
+                   help='Admit the recorded RESIDUALS bounds and leave out the named UNSUPPORTED controls of common.py (gate only)')
     a = p.parse_args()
     if not a.report.name.endswith('.jsonl.gz'): p.error('report must end in .jsonl.gz')
-    reference = a.reference or FIXTURE/'Reference'/('unity-'+a.release)/('rate-'+str(a.rate))
+    published = FIXTURE/'Reference'/('unity-'+a.release)
+    reference = a.reference or (published/'layouts' if a.profile == 'layouts' else published)/('rate-'+str(a.rate))
     assert header(reference)['release'] == a.release and header(reference)['rate'] == a.rate
-    raise SystemExit(bool(compare(reference, a.candidate, a.report, profile(a.profile, a.rate), a.exact, a.before, a.pcm_steps, a.residuals)))
+    raise SystemExit(bool(compare(reference, a.candidate, a.report, profile(a.profile, a.rate), a.exact, a.before, a.pcm_steps, a.residuals,
+                                 tuple(UNSUPPORTED) if a.residuals else ())))
