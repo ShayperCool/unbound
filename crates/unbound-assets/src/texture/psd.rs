@@ -32,7 +32,11 @@ impl<'a> Reader<'a> {
 
     /// Skips a section that starts with its length (4 bytes; 8 in a PSB when `wide`).
     fn skip_section(&mut self, wide: bool) -> Result<()> {
-        let len = if wide { self.u64()? } else { u64::from(self.u32()?) };
+        let len = if wide {
+            self.u64()?
+        } else {
+            u64::from(self.u32()?)
+        };
         self.take(usize::try_from(len).context("psd: section too large")?)?;
         Ok(())
     }
@@ -48,7 +52,11 @@ fn unpack_bits(packed: &[u8], len: usize, out: &mut Vec<u8>) -> Result<()> {
         match n {
             0..=127 => {
                 let count = n as usize + 1;
-                out.extend_from_slice(packed.get(i..i + count).context("psd: truncated PackBits row")?);
+                out.extend_from_slice(
+                    packed
+                        .get(i..i + count)
+                        .context("psd: truncated PackBits row")?,
+                );
                 i += count;
             }
             -127..=-1 => {
@@ -70,7 +78,10 @@ pub(super) fn decode(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>)> {
     let mut r = Reader { data: bytes, at: 0 };
     ensure!(r.take(4)? == b"8BPS", "psd: not a Photoshop file");
     let version = r.u16()?;
-    ensure!(version == 1 || version == 2, "psd: unknown version {version}");
+    ensure!(
+        version == 1 || version == 2,
+        "psd: unknown version {version}"
+    );
     let wide = version == 2;
     r.take(6)?;
     let channels = usize::from(r.u16()?);
@@ -107,7 +118,11 @@ pub(super) fn decode(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>)> {
             let rows = h * channels;
             let mut lengths = Vec::with_capacity(rows);
             for _ in 0..rows {
-                lengths.push(if wide { r.u32()? as usize } else { usize::from(r.u16()?) });
+                lengths.push(if wide {
+                    r.u32()? as usize
+                } else {
+                    usize::from(r.u16()?)
+                });
             }
             let mut out = Vec::with_capacity(plane * used);
             for &len in &lengths[..h * used] {
@@ -128,7 +143,11 @@ pub(super) fn decode(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>)> {
     };
     let mut rgba = Vec::with_capacity(w * h * 4);
     for texel in 0..w * h {
-        let alpha = if used > colour { value(colour, texel) } else { 255 };
+        let alpha = if used > colour {
+            value(colour, texel)
+        } else {
+            255
+        };
         if colour == 1 {
             let g = value(0, texel);
             rgba.extend_from_slice(&[g, g, g, alpha]);
@@ -143,7 +162,14 @@ pub(super) fn decode(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>)> {
 mod tests {
     use super::*;
 
-    fn file(channels: u16, depth: u16, mode: u16, rle: bool, planes: &[Vec<u8>], w: u32) -> Vec<u8> {
+    fn file(
+        channels: u16,
+        depth: u16,
+        mode: u16,
+        rle: bool,
+        planes: &[Vec<u8>],
+        w: u32,
+    ) -> Vec<u8> {
         let h = (planes[0].len() / (w as usize * usize::from(depth / 8))) as u32;
         let mut out = b"8BPS".to_vec();
         out.extend_from_slice(&1u16.to_be_bytes());
@@ -199,7 +225,12 @@ mod tests {
         let alpha = vec![255, 0, 128, 7];
         let (_, h, rgba) = decode(&file(2, 8, 1, true, &[gray, alpha], 2)).unwrap();
         assert_eq!(h, 2);
-        assert_eq!(rgba, [10, 10, 10, 255, 20, 20, 20, 0, 30, 30, 30, 128, 40, 40, 40, 7]);
+        assert_eq!(
+            rgba,
+            [
+                10, 10, 10, 255, 20, 20, 20, 0, 30, 30, 30, 128, 40, 40, 40, 7
+            ]
+        );
     }
 
     #[test]
@@ -214,7 +245,12 @@ mod tests {
     #[test]
     fn unsupported_files_fail_with_a_reason() {
         let cmyk = file(4, 8, 4, false, &vec![vec![0; 4]; 4], 2);
-        assert!(decode(&cmyk).unwrap_err().to_string().contains("colour mode 4"));
+        assert!(
+            decode(&cmyk)
+                .unwrap_err()
+                .to_string()
+                .contains("colour mode 4")
+        );
         let deep = file(3, 32, 3, false, &vec![vec![0; 8]; 3], 2);
         assert!(decode(&deep).unwrap_err().to_string().contains("32-bit"));
         assert!(decode(&cmyk[..30]).is_err());
