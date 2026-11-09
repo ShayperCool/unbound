@@ -52,6 +52,10 @@ namespace UnityEngine.Tests
                 b.transform.position += new Vector3(5f, 0f, 0f);
                 Assert.Equal(start, b.Drawn.Bounds);
                 Assert.NotEqual(start, b.bounds);
+                // A render pipeline's culled probe data keeps it too.
+                var visible = new VisibleReflectionProbe(b);
+                Assert.Equal(start, visible.bounds);
+                Assert.Equal(start.center - b.center, (Vector3)visible.localToWorldMatrix.GetColumn(3));
                 // Disabled and enabled again during the frame: its live placement.
                 b.enabled = false;
                 b.enabled = true;
