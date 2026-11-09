@@ -460,6 +460,19 @@ fn drive(
         ime_version: unbound_runtime::ime::version(),
     };
     let keep_going = driver.inner.frame(&input);
+    // The presentation follows the game's vertical sync setting.
+    if let Some(vsync) = unbound_runtime::presentation::vsync()
+        && let Ok(mut window) = windows.single_mut()
+    {
+        let mode = if vsync {
+            PresentMode::AutoVsync
+        } else {
+            PresentMode::AutoNoVsync
+        };
+        if window.present_mode != mode {
+            window.present_mode = mode;
+        }
+    }
     if let Ok((entity, mut options)) = cursors.single_mut() {
         if let Some(mut cursor) = unbound_runtime::cursor::changed(&mut driver.cursor_seen) {
             let warp = cursor.warp.take();

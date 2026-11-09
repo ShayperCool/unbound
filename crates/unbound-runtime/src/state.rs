@@ -370,6 +370,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             Ok("{}".into())
         }
         "cursor" => crate::cursor::set(request),
+        "vsync" => crate::presentation::set(request),
         "display-info" => crate::display::query(request),
         "gamepads-poll" => {
             #[derive(serde::Deserialize)]

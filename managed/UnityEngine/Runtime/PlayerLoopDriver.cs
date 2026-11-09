@@ -529,8 +529,25 @@ namespace Unbound.Runtime
 
         /// <summary>Unity's frame rate cap: without vertical sync (<c>vSyncCount</c> 0) a frame
         /// lasts at least <c>1 / targetFrameRate</c>; the wait is at the end of the frame.</summary>
+        /// <summary>The vertical sync last asked of the window: 0 off, 1 on, -1 not yet.</summary>
+        static int s_PresentedVSync = -1;
+
+        /// <summary>The window's vertical sync for <paramref name="vSyncCount"/>, when it differs
+        /// from the one last asked (<paramref name="presented"/>, updated): frames wait for the
+        /// vertical sync only while vSyncCount is above 0 (Unity 6000.0 QualitySettings.vSyncCount:
+        /// with 0, rendering is not synchronized; the count's divisor is paced here).</summary>
+        internal static string VSyncRequest(ref int presented, int vSyncCount)
+        {
+            int vsync = vSyncCount != 0 ? 1 : 0;
+            if (vsync == presented) return null;
+            presented = vsync;
+            return vsync == 1 ? "1" : "0";
+        }
+
         static void Pace()
         {
+            if (VSyncRequest(ref s_PresentedVSync, QualitySettings.vSyncCount) is string vsync)
+                Native.Call("vsync", vsync);
             int target = Application.targetFrameRate;
             double now = s_FrameClock.Elapsed.TotalSeconds;
             double period = FramePeriod(target, QualitySettings.vSyncCount);
