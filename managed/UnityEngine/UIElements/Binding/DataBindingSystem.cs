@@ -33,6 +33,7 @@ namespace UnityEngine.UIElements
             public DataSourceContext cachedContext;
             public PropertyPath cachedBindingPath;
             public int contextVersion = -1;
+            public bool removed;
         }
 
         sealed class SourceInfo
@@ -109,6 +110,12 @@ namespace UnityEngine.UIElements
             foreach (var source in m_Sources.Keys)
                 if (source is INotifyBindablePropertyChanged notifying) notifying.propertyChanged -= m_SourceHandler;
             m_Sources.Clear();
+            foreach (var entry in m_PerElement)
+                foreach (var data in entry.Value)
+                {
+                    data.removed = true;
+                    data.binding.OnDeactivated(new BindingActivationContext(entry.Key, data.id));
+                }
             m_PerElement.Clear();
             m_Ordered.Clear();
             m_ChangesFromUI.Clear();
@@ -141,6 +148,7 @@ namespace UnityEngine.UIElements
                 var data = list[i];
                 list.RemoveAt(i);
                 data.version++;
+                data.removed = true;
                 data.binding.OnDeactivated(new BindingActivationContext(element, id));
                 break;
             }
@@ -169,6 +177,7 @@ namespace UnityEngine.UIElements
                 var data = list[i];
                 list.RemoveAt(i);
                 data.version++;
+                data.removed = true;
                 data.binding.OnDeactivated(new BindingActivationContext(element, data.id));
             }
             Forget(element, list);
@@ -230,11 +239,25 @@ namespace UnityEngine.UIElements
             if (source != null && m_Sources.TryGetValue(source, out var info) && info.hasVersion)
             {
                 if (!(source is IDataSourceViewHashProvider viewHash)) return (true, info.lastVersion + 1);
-                long hash = viewHash.GetViewHashCode();
+                long hash = ViewHash(viewHash);
                 return hash == info.lastVersion ? (false, hash) : (true, hash);
             }
-            if (source is IDataSourceViewHashProvider provider) return (true, provider.GetViewHashCode());
+            if (source is IDataSourceViewHashProvider provider) return (true, ViewHash(provider));
             return (source != null, 0);
+        }
+
+        // A game's view hash; one that throws is logged and counts as a change.
+        static long ViewHash(IDataSourceViewHashProvider provider)
+        {
+            try
+            {
+                return provider.GetViewHashCode();
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return long.MinValue;
+            }
         }
 
         // ---- update ----
@@ -246,6 +269,23 @@ namespace UnityEngine.UIElements
                 if (m_Sources.Count > 0) PruneSources();
                 return;
             }
+            try
+            {
+                UpdateBindings();
+            }
+            finally
+            {
+                m_VersionChanges.Clear();
+                m_TrackedThisUpdate.Clear();
+                m_RanUpdate.Clear();
+                m_KnownSources.Clear();
+                m_Scratch.Clear();
+                PruneSources();
+            }
+        }
+
+        void UpdateBindings()
+        {
             ProcessChangesFromUI(m_RanUpdate);
             if (m_OrderDirty) RefreshOrder();
             for (int e = 0; e < m_Ordered.Count; e++)
@@ -258,7 +298,7 @@ namespace UnityEngine.UIElements
                 for (int i = 0; i < m_Scratch.Count; i++)
                 {
                     var data = m_Scratch[i];
-                    if (data.binding == null || !list.Contains(data)) continue;
+                    if (data.removed) continue;
                     var binding = data.binding;
                     var context = CachedContext(data);
                     object source = context.dataSource;
@@ -295,12 +335,6 @@ namespace UnityEngine.UIElements
             ProcessChangesFromUI(m_RanUpdate);
             foreach (var source in m_KnownSources)
                 if (m_Sources.TryGetValue(source, out var info)) info.changes.Clear();
-            m_VersionChanges.Clear();
-            m_TrackedThisUpdate.Clear();
-            m_RanUpdate.Clear();
-            m_KnownSources.Clear();
-            m_Scratch.Clear();
-            PruneSources();
         }
 
         /// <summary>A binding's update; an exception from game code (a custom binding, converter or
@@ -313,8 +347,9 @@ namespace UnityEngine.UIElements
             }
             catch (Exception e)
             {
+                // Logged once here; the result carries no message, so it is not logged again.
                 Debug.LogException(e);
-                return new BindingResult(BindingStatus.Failure, e.Message);
+                return new BindingResult(BindingStatus.Failure);
             }
         }
 
@@ -389,9 +424,16 @@ namespace UnityEngine.UIElements
             var previous = data.hasContext ? data.lastContext : default;
             data.lastContext = context;
             data.hasContext = true;
-            data.binding.OnDataSourceChanged(new DataSourceContextChanged(data.element, data.id, previous, context));
             // A binding whose source or path changed updates (as when it is new).
             data.binding.MarkDirty();
+            try
+            {
+                data.binding.OnDataSourceChanged(new DataSourceContextChanged(data.element, data.id, previous, context));
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
         }
 
         /// <summary>The binding's own data source (with its path), else the element's hierarchical

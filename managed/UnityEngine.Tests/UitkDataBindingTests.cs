@@ -123,6 +123,66 @@ namespace UnityEngine.Tests
             Assert.Equal("other", whenDirty.text);
         }
 
+        sealed class Throwing : CustomBinding
+        {
+            protected internal override BindingResult Update(in BindingContext context) => throw new InvalidOperationException("boom");
+        }
+
+        // [rule] Unbound's choice: game code that throws in a binding fails that binding only.
+        [Fact]
+        public void AThrowingBindingDoesNotStopTheOthers()
+        {
+            var panel = NewPanel();
+            var bad = new Label();
+            bad.SetBinding("text", new Throwing());
+            var good = new Label { dataSource = new Source() };
+            good.SetBinding("text", new DataBinding { dataSourcePath = new PropertyPath("message") });
+            panel.visualTree.Add(bad);
+            panel.visualTree.Add(good);
+            var logs = new List<string>();
+            Application.LogCallback handler = (m, t, type) => logs.Add(type + " " + m);
+            Application.logMessageReceived += handler;
+            try
+            {
+                Update(panel);
+            }
+            finally
+            {
+                Application.logMessageReceived -= handler;
+            }
+            Assert.Equal("hi", good.text);
+            Assert.True(bad.TryGetLastBindingToUIResult("text", out var result));
+            Assert.Equal(BindingStatus.Failure, result.status);
+            Assert.Single(logs, l => l.Contains("boom"));
+        }
+
+        // [rule] Resolved contexts follow later changes: an ancestor's data source, reparenting under
+        // another ancestor, and the binding's own path.
+        [Fact]
+        public void ContextsFollowSourcePathAndParentChanges()
+        {
+            var panel = NewPanel();
+            var first = new VisualElement { dataSource = new Source() };
+            var second = new VisualElement { dataSource = new Source { message = "second" } };
+            var label = new Label();
+            var binding = new DataBinding { dataSourcePath = new PropertyPath("message") };
+            label.SetBinding("text", binding);
+            first.Add(label);
+            panel.visualTree.Add(first);
+            panel.visualTree.Add(second);
+            Update(panel);
+            Assert.Equal("hi", label.text);
+            first.dataSource = new Source { message = "replaced" };
+            Update(panel);
+            Assert.Equal("replaced", label.text);
+            second.Add(label);
+            Update(panel);
+            Assert.Equal("second", label.text);
+            binding.dataSourcePath = new PropertyPath("inner.value");
+            Update(panel);
+            Assert.Equal("inner", label.text);
+        }
+
         [Fact]
         public void ToTargetOnceUpdatesOnceUntilMarkedDirty()
         {

@@ -135,7 +135,18 @@ namespace UnityEngine.UIElements
             s_RepaintScratch.Clear();
             s_RepaintScratch.AddRange(GetSortedPlayerPanels());
             foreach (var p in s_RepaintScratch)
-                if (p is BaseRuntimePanel runtime && !runtime.disposed && (!onlyOffscreen || runtime.targetTexture != null)) runtime.Repaint(Event.current);
+            {
+                if (!(p is BaseRuntimePanel runtime) || runtime.disposed || (onlyOffscreen && runtime.targetTexture == null)) continue;
+                try
+                {
+                    runtime.Repaint(Event.current);
+                }
+                catch (Exception e)
+                {
+                    // One panel's failure does not keep the others from repainting.
+                    Debug.LogException(e);
+                }
+            }
             s_RepaintScratch.Clear();
         }
 
