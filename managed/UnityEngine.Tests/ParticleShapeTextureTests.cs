@@ -291,6 +291,28 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void EmitWithEmitParamsAfterAnUnalignedCountLaysOutLikeABatch()
+        {
+            uint[] Seeds()
+            {
+                var ps = Make(ParticleSystemShapeType.Rectangle, null);
+                try
+                {
+                    ps.Emit(6);
+                    ps.Emit(new ParticleSystem.EmitParams { startLifetime = 3f }, 4);
+                    return Array.ConvertAll(Read(ps), p => p.randomSeed);
+                }
+                finally { Object.DestroyImmediate(ps.gameObject); }
+            }
+            var batch = Seeds();
+            ProjectInfo.UnityVersion = "2022.3.0f1";
+            var sequential = Seeds();
+            Assert.Equal(sequential[..6], batch[..6]);
+            Assert.Equal(sequential[8..10], batch[6..8]);
+            Assert.Equal(sequential[6..8], batch[8..10]);
+        }
+
+        [Fact]
         public void ARingBufferPastItsMaximumPausesAtItOrLoopsUpToTwice()
         {
             // PauseUntilReplaced keeps the maximum, the new particles taking the ring's next slots;

@@ -792,10 +792,7 @@ namespace UnityEngine
             int prefix = Math.Min(count, aligned - start);
             for (int i = 0; i < prefix; i++)
             {
-                int source = aligned + count - prefix + i;
-                m_Particles[start + i] = m_Particles[source];
-                for (int stream = 0; stream < 2; stream++)
-                    if (m_Custom[stream] != null) m_Custom[stream][start + i] = m_Custom[stream][source];
+                MoveSlot(start + i, aligned + count - prefix + i);
             }
             m_Count = start + count;
             NoteMostParticles();
@@ -804,7 +801,7 @@ namespace UnityEngine
                 int origin = i < aligned ? count - prefix + i - start : i - aligned;
                 StartTrail(ref m_Particles[i], simulate ? m_SlotPoints[aligned + origin] : null);
             }
-            if (ringMode != ParticleSystemRingBufferMode.Disabled) WrapRingBuffer(start, ringMode, deathSubs);
+            if (ringMode != ParticleSystemRingBufferMode.Disabled) WrapRingBuffer(start, ringMode);
             m_Newborn = false;
             m_SpeedNt = -1f;
         }
@@ -812,12 +809,13 @@ namespace UnityEngine
         /// <summary>The ring's next slot: where the next particle past the maximum goes.</summary>
         int m_RingIndex;
 
-        /// <summary>A ring buffer holding more than its maximum after a start batch (6000.0.71f1,
-        /// tests/projects/particlerandom ring/*): PauseUntilReplaced copies each particle past the
-        /// maximum into the ring's next slot, whose particle dies, and keeps the maximum;
-        /// LoopUntilReplaced swaps each new particle with the ring's next slot and keeps them all
-        /// (up to twice the maximum).</summary>
-        void WrapRingBuffer(int start, ParticleSystemRingBufferMode mode, bool deathSubs)
+        /// <summary>A ring buffer holding more than its maximum after an emission (6000.0.71f1,
+        /// tests/projects/particlerandom ring/*: a start batch, Emit with EmitParams):
+        /// PauseUntilReplaced copies each particle past the maximum into the ring's next slot,
+        /// whose particle leaves without firing Death sub-emitters (its trail ends), and keeps the
+        /// maximum; LoopUntilReplaced swaps each new particle with the ring's next slot and keeps
+        /// them all, up to twice the maximum (a full buffer then takes no new particle).</summary>
+        void WrapRingBuffer(int start, ParticleSystemRingBufferMode mode)
         {
             int max = m_Main.maxParticles;
             if (m_Count <= max || max <= 0) return;
@@ -826,13 +824,7 @@ namespace UnityEngine
             {
                 for (int i = max; i < m_Count; i++)
                 {
-                    ref var replaced = ref m_Particles[m_RingIndex];
-                    if (deathSubs)
-                    {
-                        var dying = replaced;
-                        TriggerSubEmitters(ParticleSystemSubEmitterType.Death, ref dying);
-                    }
-                    EndTrail(ref replaced);
+                    EndTrail(ref m_Particles[m_RingIndex]);
                     MoveSlot(m_RingIndex, i);
                     m_RingIndex = (m_RingIndex + 1) % max;
                 }
@@ -844,6 +836,34 @@ namespace UnityEngine
                 SwapSlots(i, m_RingIndex);
                 m_RingIndex = (m_RingIndex + 1) % max;
             }
+        }
+
+        /// <summary>A new slot past the live particles of a ring buffer that takes up to twice its
+        /// maximum before <see cref="WrapRingBuffer"/>; -1 when full.</summary>
+        int AppendRingSlot()
+        {
+            if (m_Count >= m_Main.maxParticles * 2) return -1;
+            Reserve(m_Count + 1);
+            ClearCustom(m_Count);
+            int slot = m_Count++;
+            NoteMostParticles();
+            return slot;
+        }
+
+        /// <summary>Rotates slots [start, start + count) right by <paramref name="shift"/> (at most
+        /// count): the last <paramref name="shift"/> particles come first.</summary>
+        void RotateSlotsRight(int start, int count, int shift)
+        {
+            shift = Math.Min(shift, count);
+            if (shift <= 0 || shift == count) return;
+            ReverseSlots(start, count);
+            ReverseSlots(start, shift);
+            ReverseSlots(start + shift, count - shift);
+        }
+
+        void ReverseSlots(int start, int count)
+        {
+            for (int i = start, j = start + count - 1; i < j; i++, j--) SwapSlots(i, j);
         }
 
         void MoveSlot(int to, int from)
@@ -1043,9 +1063,11 @@ namespace UnityEngine
             // The lowest slot a discarded newborn took: in a ring buffer a newborn can reuse an old
             // particle's slot below the live count.
             int firstDiscarded = int.MaxValue;
+            var ring = StartsInBatches ? m_Main.ringBufferMode : ParticleSystemRingBufferMode.Disabled;
+            int ringStart = m_Count;
             for (int k = 0; k < count; k++)
             {
-                int index = Allocate();
+                int index = ring != ParticleSystemRingBufferMode.Disabled ? AppendRingSlot() : Allocate();
                 if (index < 0) break;
                 int si = spreadIndex >= 0 ? spreadIndex : k;
                 int sn = spreadIndex >= 0 ? spreadCount : count;
@@ -1084,6 +1106,11 @@ namespace UnityEngine
                 if ((m_Particles[i].m_Flags & Particle.FlagShapeDiscarded) != 0) RemoveAt(i);
                 else i++;
             }
+            // Emit with EmitParams lays its particles out as a start batch: after an unaligned count
+            // its last ones fill the slots before the next multiple of four (6000.0.71f1,
+            // tests/projects/particlerandom ring/*/emitparams).
+            if (StartsInBatches && hasOverrides) RotateSlotsRight(ringStart, m_Count - ringStart, ((ringStart + 3) & ~3) - ringStart);
+            if (ring != ParticleSystemRingBufferMode.Disabled) WrapRingBuffer(ringStart, ring);
             m_Newborn = false;
         }
 
@@ -1706,7 +1733,10 @@ namespace UnityEngine
                 p.m_AgePercent = Mathf.Min(p.m_AgePercent + p.m_InvStartLifetime * (dt * 100f), 100.00000762939453f);
             p.ExportLifetime();
             var ring = m_Main.ringBufferMode;
-            if (ring == ParticleSystemRingBufferMode.LoopUntilReplaced && p.m_StartLifetime > 0f)
+            // Only the ring's own slots loop; a particle in the overflow past the maximum (after a
+            // start batch) ends its life (6000.0.71f1, tests/projects/particlerandom ring/loop/short).
+            if (ring == ParticleSystemRingBufferMode.LoopUntilReplaced && p.m_StartLifetime > 0f
+                && (m_IntegrateSlot < 0 || m_IntegrateSlot < m_Main.maxParticles))
             {
                 var range = m_Main.ringBufferLoopRange;
                 float start = Mathf.Clamp01(Mathf.Min(range.x, range.y)), end = Mathf.Clamp01(Mathf.Max(range.x, range.y));

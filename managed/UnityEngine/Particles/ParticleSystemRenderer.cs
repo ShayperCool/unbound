@@ -1339,9 +1339,9 @@ namespace UnityEngine
             /// billboard's (<see cref="QuadFrame"/>) from the first two corners' offsets from the
             /// particle, the pivot included, so a stretched quad's normal is shorter than one.
             /// Measured with rotated and scaled emitters for each scaling mode and simulation space
-            /// (freenorm/transform/*); there, with a y scale other than 1, the Editor turns a quad
-            /// whose velocity points partly along the view by another stretch angle, unresolved
-            /// (known.json freeform-stretching). Unmeasured: a pivot on a scaled emitter; a
+            /// (freenorm/transform/*); the stretch angle is <see cref="StretchAngle"/>'s (a bake in the
+            /// emitter's frame of a rotated non-uniformly scaled emitter differs: known.json
+            /// freeform-stretching). Unmeasured: a pivot on a scaled emitter; a
             /// normalDirection other than 1 (not applied: every corner takes the flat normal). A particle at rest has no
             /// stretch direction: the Editor's bake gives it NaN corners (drawn as nothing) and +Z
             /// as normal, which Unbound keeps for bakes and collapses onto the particle for
