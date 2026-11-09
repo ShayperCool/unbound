@@ -100,6 +100,22 @@ namespace UnityEngine.Tests
             Assert.Equal(0.3f, Height(mesh, 0.5f, 0f, 0f, 0.6f), 5);
         }
 
+        /// <summary>Imperfect data: indices past the vertices or no triangles leave the mesh out;
+        /// a tree whose leaves reach past the triangles is not used; missing bounds are the
+        /// vertices' own.</summary>
+        [Fact]
+        public void ImperfectHeightMeshesAreLeftOutOrRepaired()
+        {
+            const string tri = "m_Vertices:\n- {x: 0, y: 0.2, z: 0}\n- {x: 0, y: 0.2, z: 2}\n- {x: 2, y: 0.2, z: 0}\n";
+            Assert.Null(NavMeshHeightMesh.Read(TestYaml.Parse(tri + "m_Indices:\n- 0\n- 1\n- 3\n")));
+            Assert.Null(NavMeshHeightMesh.Read(TestYaml.Parse(tri + "m_Indices: []\n")));
+            var noBounds = NavMeshHeightMesh.Read(TestYaml.Parse(tri + "m_Indices:\n- 0\n- 1\n- 2\n"));
+            Assert.Equal(0.2f, Height(noBounds, 0.5f, 0f, 0.5f), 5);
+            var badTree = NavMeshHeightMesh.Read(TestYaml.Parse(tri + "m_Indices:\n- 0\n- 1\n- 2\n"
+                + "m_Nodes:\n- min: {x: 0, y: 0, z: 0}\n  max: {x: 2, y: 1, z: 2}\n  i: 0\n  n: 4\n"));
+            Assert.Equal(0.2f, Height(badTree, 0.5f, 0f, 0.5f), 5);
+        }
+
         static NavMeshData Floor()
         {
             var sources = new List<NavMeshBuildSource>

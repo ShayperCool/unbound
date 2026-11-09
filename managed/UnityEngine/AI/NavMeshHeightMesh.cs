@@ -76,8 +76,27 @@ namespace Unbound.Runtime
             foreach (var n in nodes)
                 if (n.First >= 0 && (n.First + n.Count) * 3 > indices.Count) { nodes.Clear(); break; }
             var bounds = node.Get("m_Bounds");
-            return new NavMeshHeightMesh(vertices.ToArray(), indices.ToArray(), nodes.ToArray(),
-                bounds?.Vector3("m_Center") ?? Vector3.zero, bounds?.Vector3("m_Extent") ?? Vector3.zero);
+            Vector3 center, extent;
+            if (bounds != null && !bounds.IsNull)
+            {
+                center = bounds.Vector3("m_Center");
+                extent = bounds.Vector3("m_Extent");
+            }
+            else
+            {
+                // No bounds written: those of its vertices.
+                var min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+                var max = -min;
+                for (int v = 0; v + 2 < vertices.Count; v += 3)
+                {
+                    var p = new Vector3(vertices[v], vertices[v + 1], vertices[v + 2]);
+                    min = Vector3.Min(min, p);
+                    max = Vector3.Max(max, p);
+                }
+                center = (min + max) * 0.5f;
+                extent = (max - min) * 0.5f;
+            }
+            return new NavMeshHeightMesh(vertices.ToArray(), indices.ToArray(), nodes.ToArray(), center, extent);
         }
 
         /// <summary>Raises <paramref name="best"/> to the highest part, lower than <paramref name="top"/>,

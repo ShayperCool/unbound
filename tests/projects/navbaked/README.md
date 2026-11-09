@@ -41,5 +41,5 @@ and the queries over the height mesh (`height`); `raycast`, `agent`, `height.age
 listed, not gated (their residuals: docs/COMPATIBILITY_GAPS.md, the legacy-baked NavMesh and
 asynchronous operation rows).
 
-The reference `Reference/unity-6000.0.71f1.json` holds 2290 values, SHA-256
-`9a4695e121a932a2be659b454562827e81f74383acfc0d9af95ee599608bf755`.
+The reference `Reference/unity-6000.0.71f1.json` holds 2302 values, SHA-256
+`529288ab8ae396a427df458714036cec5ffef78f0da0db166d7d234475b371d2`.

@@ -463,7 +463,7 @@ namespace UnityEngine.AI
             var corridor = m_Crowd.corridor.GetPath();
             int count = m_Crowd.corridor.GetPathCount();
             var straight = new DtStraightPath[256];
-            m_Surface.Query.FindStraightPath(m_Crowd.npos, m_Crowd.corridor.GetTarget(), corridor, count, straight, out int n, straight.Length, 0);
+            m_Surface.Query.FindStraightPath(PathStart(), m_Crowd.corridor.GetTarget(), corridor, count, straight, out int n, straight.Length, 0);
             var corners = new Vector3[n];
             for (int i = 0; i < n; i++) corners[i] = NavMesh.V(straight[i].pos);
             // On a link the path goes on from the link's own end (measured: tests/projects/navlinks).
@@ -530,6 +530,11 @@ namespace UnityEngine.AI
         public bool CalculatePath(Vector3 targetPosition, NavMeshPath path) =>
             NavMesh.CalculatePath(m_NextPosition, targetPosition, Filter, m_AgentTypeID, path);
 
+        /// <summary>Where the agent's path starts: its place on the NavMesh (its corridor's position),
+        /// also over a height mesh, where the agent stands at the mesh's height (measured:
+        /// tests/projects/navbaked `height.agents` corner0); on a link, where it is.</summary>
+        RcVec3f PathStart() => isOnOffMeshLink ? m_Crowd.npos : m_Crowd.corridor.GetPos();
+
         public bool SamplePathPosition(int areaMask, float maxDistance, out NavMeshHit hit)
         {
             hit = default;
@@ -538,7 +543,7 @@ namespace UnityEngine.AI
             var corridor = m_Crowd.corridor.GetPath();
             int count = m_Crowd.corridor.GetPathCount();
             var straight = new DtStraightPath[256];
-            m_Surface.Query.FindStraightPath(m_Crowd.npos, m_Crowd.corridor.GetTarget(), corridor, count, straight, out int n, straight.Length, 0);
+            m_Surface.Query.FindStraightPath(PathStart(), m_Crowd.corridor.GetTarget(), corridor, count, straight, out int n, straight.Length, 0);
             float travelled = 0f;
             for (int i = 0; i + 1 < n; i++)
             {

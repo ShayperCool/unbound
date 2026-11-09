@@ -142,12 +142,12 @@ public class BakedProbe : MonoBehaviour
             for (float x = -9.5f; x <= 8.01f; x += 0.25f)
             {
                 bool ok = NavMesh.SamplePosition(new Vector3(x, 2f, 60.3f), out var hit, 2.5f, NavMesh.AllAreas);
-                ProbeLog.Value("s" + F(x), ok ? V(hit.position) : "none");
+                ProbeLog.Value("s" + F(x), ok ? V(hit.position) + " " + F(hit.distance) : "none");
             }
             foreach (var (key, x, z) in new[] { ("bump.c", -1f, 63f), ("bump.e", -1.45f, 63.2f), ("bump.o", -1.7f, 63.2f) })
             {
                 bool ok = NavMesh.SamplePosition(new Vector3(x, 1f, z), out var hit, 2.5f, NavMesh.AllAreas);
-                ProbeLog.Value(key, ok ? V(hit.position) : "none");
+                ProbeLog.Value(key, ok ? V(hit.position) + " " + F(hit.distance) : "none");
             }
             void Ray(string key, Vector3 from, Vector3 to)
             {
@@ -207,6 +207,14 @@ public class BakedProbe : MonoBehaviour
         ProbeLog.Value("warp.next", stairs.nextPosition);
         yield return null;
         ProbeLog.Value("warp.transform", stairs.transform.position);
+        // Moved by script along the NavMesh: nextPosition set onto the next stair, Move down a stair.
+        stairs.nextPosition = new Vector3(4.1f, 0f, 60.4f);
+        ProbeLog.Value("set.next", stairs.nextPosition);
+        ProbeLog.Value("set.transform", stairs.transform.position);
+        stairs.Move(new Vector3(-0.8f, 0f, 0f));
+        ProbeLog.Value("move.next", stairs.nextPosition);
+        yield return null;
+        ProbeLog.Value("move.transform", stairs.transform.position);
         foreach (var (_, agent) in agents) Destroy(agent.gameObject);
 
         File.WriteAllText(Out, ProbeLog.Json());
