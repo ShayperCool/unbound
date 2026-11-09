@@ -714,7 +714,7 @@ namespace UnityEngine
             float duration = Mathf.Max(m_Main.duration, 0.0001f);
             int requestIndex = 0, requestStart = 0;
             m_Newborn = true;
-            BeginRayPass(aligned, aligned + lanes);
+            if (simulate) BeginRayPass(aligned, aligned + lanes);
             for (int j = 0; j < lanes; j++)
             {
                 while (requestIndex + 1 < m_EmissionRequests.Count && j >= requestStart + m_EmissionRequests[requestIndex].count)

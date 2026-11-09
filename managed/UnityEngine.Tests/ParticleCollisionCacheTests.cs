@@ -51,9 +51,10 @@ namespace UnityEngine.Tests
             Time.s_FrameCount++;
         }
 
-        /// <summary>A box whose top is at y 0 and a system 0.5 above it dropping one particle
-        /// (radius 0.1) at 5 units/s, which reaches the box in its fourth frame.</summary>
-        ParticleSystem Dropping(ParticleSystemCollisionQuality quality)
+        /// <summary>A box whose top is at y 0 and a system <paramref name="height"/> above it
+        /// dropping one particle (radius 0.1) at <paramref name="speed"/> (by default 0.5 above at
+        /// 5 units/s, reaching the box in its fourth frame).</summary>
+        ParticleSystem Dropping(ParticleSystemCollisionQuality quality, float height = 0.5f, float speed = 5f)
         {
             var box = new GameObject("box").AddComponent<BoxCollider>();
             box.size = new Vector3(4f, 2f, 4f);
@@ -63,10 +64,10 @@ namespace UnityEngine.Tests
             var go = new GameObject("particles");
             m_Objects.Add(go);
             go.SetActive(false);
-            go.transform.SetPositionAndRotation(new Vector3(0f, 0.5f, 0f), Quaternion.Euler(90f, 0f, 0f));
+            go.transform.SetPositionAndRotation(new Vector3(0f, height, 0f), Quaternion.Euler(90f, 0f, 0f));
             var ps = go.AddComponent<ParticleSystem>();
             ps.useAutoRandomSeed = false;
-            var main = ps.main; main.playOnAwake = false; main.loop = false; main.startLifetime = 5f; main.startSpeed = 5f; main.startSize = 0.2f;
+            var main = ps.main; main.playOnAwake = false; main.loop = false; main.startLifetime = 5f; main.startSpeed = speed; main.startSize = 0.2f;
             main.simulationSpace = ParticleSystemSimulationSpace.World; main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
             var shape = ps.shape; shape.enabled = false;
             var emission = ps.emission; emission.rateOverTime = 0f; emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
@@ -103,6 +104,31 @@ namespace UnityEngine.Tests
             ps.Play();
             for (int frame = 0; frame < 6; frame++) Frame();
             Assert.True(Only(ps).velocity.y < 0f);
+        }
+
+        [Theory]
+        [InlineData(ParticleSystemCollisionQuality.Medium, false)]
+        [InlineData(ParticleSystemCollisionQuality.Low, true)]
+        public void OnlyALowSystemMeetsThePlaneOfAColliderThatLeft(ParticleSystemCollisionQuality quality, bool bounces)
+        {
+            // The cache is meant for static colliders (6000.0 Manual). The particle starts 1.5
+            // above the box at 3.2 units/s; Low's first query (its fifth frame) finds the box, which
+            // then goes far away. Low meets the cached plane in its 22nd frame (between queries);
+            // Medium queries every frame and goes through (tests/projects/particlerender
+            // collide/cache/gone_*).
+            var ps = Dropping(quality, height: 1.5f, speed: 3.2f);
+            var box = m_Objects[0] as GameObject;
+            ps.Play();
+            for (int frame = 0; frame < 5; frame++) Frame();
+            box.transform.position = new Vector3(0f, -50f, 0f);
+            Physics.SyncTransforms();
+            bool bounced = false;
+            for (int frame = 5; frame < 40 && !bounced; frame++)
+            {
+                Frame();
+                bounced = Only(ps).velocity.y > 0f;
+            }
+            Assert.Equal(bounces, bounced);
         }
 
         [Fact]

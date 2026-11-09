@@ -112,15 +112,15 @@ namespace UnityEngine
             m_Rays = (System.Math.Max(0, m_Rays - (windowEnd - offset)) + 3) & ~3;
         }
 
-        /// <summary>Whether the particle of <paramref name="slot"/> queries (a particle outside a
-        /// pass is a pass of its own).</summary>
+        /// <summary>Whether the particle of <paramref name="slot"/> queries. A particle collided
+        /// outside a pass (no slot) queries while the update has queries left and uses one up,
+        /// leaving the rolling offset of the passes alone (Unbound's choice; unmeasured).</summary>
         bool QueriesInPass(int slot)
         {
             if (slot >= 0) return slot >= m_RayWindowStart && slot < m_RayWindowEnd;
-            bool queries = m_Rays > 0;
-            m_RayOffset += m_Rays;
-            m_Rays = (System.Math.Max(0, m_Rays - (queries ? 1 : 0)) + 3) & ~3;
-            return queries;
+            if (m_Rays <= 0) return false;
+            m_Rays--;
+            return true;
         }
 
         static VoxelKey KeyOf(Vector3 position, Vector3 direction, float voxel)
@@ -172,7 +172,7 @@ namespace UnityEngine
 
         /// <summary>Whether a particle's cache lookup waits for the end of its collision pass: one
         /// before the pass's querying window reads the planes the window finds in the same pass.</summary>
-        bool DefersCacheLookup(int slot) => UsesCollisionCache && slot >= 0 && slot < m_RayWindowStart;
+        bool DefersCacheLookup(int slot) => UsesCollisionCache && slot >= 0 && slot < m_RayWindowStart && m_RayWindowEnd > m_RayWindowStart;
 
         /// <summary>The lookup of a hit queued by <see cref="DefersCacheLookup"/>, at the end of its
         /// pass: fills the contact; false when it meets no cached plane.</summary>
@@ -184,6 +184,7 @@ namespace UnityEngine
             if (!CrossesPlane(plane, h.end, h.velocity, h.dt, out h.contact, out h.normal, out var collider)) return false;
             h.other = collider != null ? collider.gameObject : null;
             h.colliderId = collider != null ? collider.GetInstanceID() : 0;
+            if (m_Collision.colliderForce != 0f && collider != null) ReportColliderForce(collider.attachedRigidbody);
             return true;
         }
 
