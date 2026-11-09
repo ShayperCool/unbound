@@ -16,9 +16,6 @@ text exactly). The exit status is the number of scenarios with a difference that
 NAVPATH_PROBE_ONLY) to scenarios whose name starts with it.
 
 Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
-  carve.sides, carve.mud  how a carved hole splits and merges the tile's polygons (`polyX.*`), and the
-                          routes round it that follow from those polygons (a.b, b.b, c.c, c1.5c.a,
-                          c3c.a); the other carve values are gated;
   hole.shapes two.p1.*    a straight line grazing a mesh vertex that the builders place about 2e-6
                           apart, on either side of the line: Unity keeps the corner there, Unbound
                           does not.
@@ -42,8 +39,6 @@ TOLERANCE = 1e-3
 FRAMES = 400
 # Scenario -> key prefixes of the differences that are reported but not gated ('' = all of them).
 LISTED = {
-    'carve.sides': ('poly', 'a.b.', 'b.b.', 'c.c.'),
-    'carve.mud': ('poly', 'c1.5c.a.', 'c3c.a.'),
     'hole.shapes': ('two.p1.',),
 }
 

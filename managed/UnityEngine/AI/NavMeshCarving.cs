@@ -11,18 +11,19 @@ namespace Unbound.Runtime
     /// Cuts carving obstacles' holes into NavMesh tiles: each ground polygon a hole reaches is
     /// replaced by convex polygons covering what is left of it.
     /// </summary>
-    // Measured (tests/projects/navmesh, Reference/unity-6000.0.71f1.json, carve.carver and
-    // carve.parked): the hole is the box's outline on the ground grown by the agent type's radius
-    // with sharp corners (a turned box included), and the polygons left keep their vertices; new
-    // vertices appear only where the hole's outline crosses a polygon's edge and at the hole's
-    // corners inside a polygon.
+    // Measured (tests/projects/navmesh carve.carver and carve.parked, tests/projects/navpath
+    // carve.sides and carve.mud, Unity 6000.0.71f1): the hole is the box's outline on the ground
+    // grown by the agent type's radius with sharp corners (a turned box included). The polygons a
+    // hole reaches are taken in groups connected inside the tile; each group's hole is the convex
+    // hull of what the hole covers of it, and each polygon of the group is cut by that hull's edges
+    // into triangles merged in order into convex pieces (HullsOf, CutGroup); polygons the hole
+    // misses keep their vertices.
     // Unbound's choices (unmeasured): a box's outline is the convex hull of its eight corners seen
     // from above; a capsule's is a 16-sided polygon around its circle; a polygon is carved when the
     // obstacle's height span overlaps the polygon's from agentClimb under it to agentHeight above
-    // it; a crossing point's height is taken along the polygon's edge and a hole corner's from the
-    // polygon's detail mesh; carved polygons (and those split to stay within six vertices) get a
-    // flat detail mesh over their vertices; holes overlapping in one polygon are cut one after
-    // the other.
+    // it; a cut piece's new vertices take the height of the polygon's detail mesh; carved
+    // polygons get the source's detail triangles cut to them; holes overlapping in one polygon are
+    // cut one after the other.
     internal static class NavMeshCarving
     {
         /// <summary>An obstacle's outline on the ground (counterclockwise in x, z) and height span.</summary>
@@ -34,8 +35,6 @@ namespace Unbound.Runtime
         }
 
         const float Eps = 1e-5f;
-        /// <summary>A hole could not be cut into a polygon (reported once per run).</summary>
-        static bool s_WarnedUncut;
         const int MaxVerts = DtDetour.DT_VERTS_PER_POLYGON;
         internal const int CapsuleSides = 16;
 
@@ -138,6 +137,35 @@ namespace Unbound.Runtime
             }
             if (holes.Count == 0) return tile;
 
+            // Distances within this count as zero, and points within it are one vertex.
+            float eps = settings.EffectiveVoxelSize * WeldPerVoxel;
+            // Every hole's group hulls come from the tile as built; they are then cut one after
+            // the other, each into the pieces left of its polygons.
+            var hulls = new List<GroupHull>();
+            foreach (var hole in holes) hulls.AddRange(HullsOf(tile, hole, settings, eps));
+            if (hulls.Count == 0) return tile;
+            var work = new List<Piece>(h.polyCount);
+            var offMeshPolys = new List<int>();
+            for (int pi = 0; pi < h.polyCount; pi++)
+            {
+                var poly = tile.polys[pi];
+                if (poly.GetPolyType() == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION)
+                {
+                    offMeshPolys.Add(pi);
+                    continue;
+                }
+                var points = new List<Vector3>(poly.vertCount);
+                for (int k = 0; k < poly.vertCount; k++)
+                {
+                    int vi = poly.verts[k] * 3;
+                    points.Add(new Vector3(tile.verts[vi], tile.verts[vi + 1], tile.verts[vi + 2]));
+                }
+                work.Add(new Piece { Points = points, Source = pi, Unchanged = true });
+            }
+            bool carved = false;
+            foreach (var hull in hulls) carved |= CutGroup(work, hull, eps);
+            if (!carved) return tile;
+
             var verts = new List<Vector3>();
             // One vertex per place: the same x and z, within a climb in height (NavMeshes of
             // several levels keep their levels apart).
@@ -153,128 +181,577 @@ namespace Unbound.Runtime
                 return verts.Count - 1;
             }
             for (int i = 0; i < h.vertCount; i++) Vertex(new Vector3(tile.verts[i * 3], tile.verts[i * 3 + 1], tile.verts[i * 3 + 2]));
+            // A cut piece's point within eps of a vertex already placed is that vertex.
+            var weld = new Dictionary<(int, int, int), List<int>>();
+            float cell = eps > 0f ? eps : 1e-5f;
+            (int, int, int) Cell(Vector3 p) => (Mathf.FloorToInt(p.x / cell), Mathf.FloorToInt(p.y / cell), Mathf.FloorToInt(p.z / cell));
+            int Weld(Vector3 p)
+            {
+                var c = Cell(p);
+                int best = -1;
+                float bestDistance = eps * eps;
+                for (int dx = -1; dx <= 1; dx++)
+                for (int dy = -1; dy <= 1; dy++)
+                for (int dz = -1; dz <= 1; dz++)
+                {
+                    if (!weld.TryGetValue((c.Item1 + dx, c.Item2 + dy, c.Item3 + dz), out var list)) continue;
+                    foreach (int i in list)
+                    {
+                        float distance = (verts[i] - p).sqrMagnitude;
+                        if (distance < bestDistance) { bestDistance = distance; best = i; }
+                    }
+                }
+                if (best >= 0) return best;
+                int v = Vertex(p);
+                if (!weld.TryGetValue(c, out var at)) weld[c] = at = new List<int>();
+                if (!at.Contains(v)) at.Add(v);
+                return v;
+            }
+            for (int i = 0; i < verts.Count; i++)
+            {
+                var c = Cell(verts[i]);
+                if (!weld.TryGetValue(c, out var at)) weld[c] = at = new List<int>();
+                at.Add(i);
+            }
 
-            var output = new List<OutPoly>();
-            var offMesh = new List<(int Poly, int[] Verts)>();
+            var output = new List<OutPoly>(work.Count);
             var added = new HashSet<int>();
-            bool carved = false;
-            for (int pi = 0; pi < h.polyCount; pi++)
+            // The polygon whose detail surface gives a new vertex its height: the source of the
+            // last cut piece using it.
+            var heightFrom = new Dictionary<int, int>();
+            foreach (var piece in work)
+            {
+                var list = new List<int>(piece.Points.Count);
+                foreach (var p in piece.Points)
+                {
+                    int v = piece.Unchanged ? Vertex(p) : Weld(p);
+                    if (list.Count == 0 || list[list.Count - 1] != v) list.Add(v);
+                }
+                if (list.Count > 1 && list[0] == list[list.Count - 1]) list.RemoveAt(list.Count - 1);
+                if (!piece.Unchanged)
+                {
+                    if (list.Count < 3 || DegenerateArea(list, verts, eps)) continue;
+                    foreach (int v in list)
+                    {
+                        added.Add(v);
+                        if (v >= h.vertCount) heightFrom[v] = piece.Source;
+                    }
+                }
+                output.Add(new OutPoly { Verts = list, Source = piece.Source, Unchanged = piece.Unchanged });
+            }
+            foreach (var (v, source) in heightFrom)
+            {
+                var p = verts[v];
+                verts[v] = new Vector3(p.x, DetailHeight(tile, tile.polys[source], p.x, p.z, p.y), p.z);
+            }
+            var offMesh = new List<(int Poly, int[] Verts)>(offMeshPolys.Count);
+            foreach (int pi in offMeshPolys)
             {
                 var poly = tile.polys[pi];
-                if (poly.GetPolyType() == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION)
-                {
-                    var ends = new int[poly.vertCount];
-                    for (int k = 0; k < ends.Length; k++)
-                    {
-                        int vi = poly.verts[k] * 3;
-                        ends[k] = Vertex(new Vector3(tile.verts[vi], tile.verts[vi + 1], tile.verts[vi + 2]));
-                    }
-                    offMesh.Add((pi, ends));
-                    continue;
-                }
-                var own = new List<int>();
-                for (int k = 0; k < poly.vertCount; k++)
+                var ends = new int[poly.vertCount];
+                for (int k = 0; k < ends.Length; k++)
                 {
                     int vi = poly.verts[k] * 3;
-                    own.Add(Vertex(new Vector3(tile.verts[vi], tile.verts[vi + 1], tile.verts[vi + 2])));
+                    ends[k] = Vertex(new Vector3(tile.verts[vi], tile.verts[vi + 1], tile.verts[vi + 2]));
                 }
-                var pieces = CarvePoly(tile, poly, settings, holes);
-                if (pieces == null)
-                {
-                    output.Add(new OutPoly { Verts = own, Source = pi, Unchanged = true });
-                    continue;
-                }
-                carved = true;
-                foreach (var piece in pieces)
-                {
-                    var list = new List<int>();
-                    foreach (var p in piece)
-                    {
-                        int v = Vertex(p);
-                        if (list.Count == 0 || list[list.Count - 1] != v) list.Add(v);
-                        added.Add(v);
-                    }
-                    if (list.Count > 1 && list[0] == list[list.Count - 1]) list.RemoveAt(list.Count - 1);
-                    if (list.Count >= 3) output.Add(new OutPoly { Verts = list, Source = pi });
-                }
+                offMesh.Add((pi, ends));
             }
-            if (!carved) return tile;
 
             FixTJunctions(output, verts, added, climb);
             output = SplitLarge(output, verts);
-            return Build(tile, output, offMesh, verts);
+            return Build(tile, output, offMesh, verts, eps);
         }
 
-        /// <summary>The polygon's pieces left by the holes (in the polygon's winding), or null when
-        /// no hole cuts it.</summary>
-        static List<List<Vector3>> CarvePoly(DtMeshData tile, DtPoly poly, NavMeshBuildSettings settings, List<Hole> holes)
+        /// <summary>Distances within a voxel size over this count as zero when cutting holes, and
+        /// points that near are one vertex.</summary>
+        const float WeldPerVoxel = 1f / 64f;
+
+        /// <summary>A clockwise piece with no area: twice its area at most 1% of eps times its
+        /// longest edge.</summary>
+        static bool DegenerateArea(List<int> vs, List<Vector3> verts, float eps)
         {
-            float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue, minY = float.MaxValue, maxY = float.MinValue;
-            var points = new List<Vector3>();
-            for (int k = 0; k < poly.vertCount; k++)
+            float area = 0f, longest = 0f;
+            var a = verts[vs[0]];
+            for (int k = 1; k + 1 < vs.Count; k++)
             {
-                int vi = poly.verts[k] * 3;
-                var p = new Vector3(tile.verts[vi], tile.verts[vi + 1], tile.verts[vi + 2]);
-                points.Add(p);
-                minX = Mathf.Min(minX, p.x); maxX = Mathf.Max(maxX, p.x);
-                minZ = Mathf.Min(minZ, p.z); maxZ = Mathf.Max(maxZ, p.z);
-                minY = Mathf.Min(minY, p.y); maxY = Mathf.Max(maxY, p.y);
+                var b = verts[vs[k]];
+                var c = verts[vs[k + 1]];
+                area += Turn(a, b, c);
+                longest = Mathf.Max(longest, Mathf.Max((b - a).sqrMagnitude, (c - b).sqrMagnitude));
             }
-            bool reversed = Area(points) < 0f;
-            if (reversed) points.Reverse();
-            List<List<Vector3>> pieces = null;
-            foreach (var hole in holes)
+            longest = Mathf.Max(longest, (verts[vs[vs.Count - 1]] - a).sqrMagnitude);
+            float tol = eps * MergeMinTurn;
+            return area <= 0f || area * area <= tol * tol * longest;
+        }
+
+        // ------------------------------------------------------------------ holes per polygon group
+
+        /// <summary>A plane through a hole's edge, vertical, its normal (x, z) pointing out of the
+        /// hole: a point's distance is positive outside.</summary>
+        readonly struct EdgePlane
+        {
+            internal readonly float X, Z, W;
+            internal EdgePlane(float x, float z, float w) { X = x; Z = z; W = w; }
+            internal float Distance(Vector3 p) => p.z * Z + p.x * X + W;
+        }
+
+        /// <summary>The hole as cut into one group of connected polygons: the planes of its edges
+        /// and the polygons (by their place in the tile) it is cut into.</summary>
+        sealed class GroupHull
+        {
+            internal List<EdgePlane> Planes;
+            internal HashSet<int> Sources;
+        }
+
+        /// <summary>A polygon of the tile being cut: its vertices (clockwise seen from above, as
+        /// the tile's) and the tile polygon it came from.</summary>
+        sealed class Piece
+        {
+            internal List<Vector3> Points;
+            internal int Source;
+            internal bool Unchanged;
+        }
+
+        /// <summary>The hole's hulls in the tile: the ground polygons it reaches, joined into groups
+        /// of polygons connected by their edges; each group's hull is the convex hull (from above)
+        /// of what the hole covers of its polygons.</summary>
+        static List<GroupHull> HullsOf(DtMeshData tile, Hole hole, NavMeshBuildSettings settings, float eps)
+        {
+            var h = tile.header;
+            var reached = new byte[h.polyCount];
+            bool any = false;
+            for (int pi = 0; pi < h.polyCount; pi++)
             {
-                if (hole.MaxX <= minX || hole.MinX >= maxX || hole.MaxZ <= minZ || hole.MinZ >= maxZ) continue;
+                var poly = tile.polys[pi];
+                if (poly.GetPolyType() == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION) continue;
+                float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue, minY = float.MaxValue, maxY = float.MinValue;
+                for (int k = 0; k < poly.vertCount; k++)
+                {
+                    int vi = poly.verts[k] * 3;
+                    minX = Mathf.Min(minX, tile.verts[vi]); maxX = Mathf.Max(maxX, tile.verts[vi]);
+                    minY = Mathf.Min(minY, tile.verts[vi + 1]); maxY = Mathf.Max(maxY, tile.verts[vi + 1]);
+                    minZ = Mathf.Min(minZ, tile.verts[vi + 2]); maxZ = Mathf.Max(maxZ, tile.verts[vi + 2]);
+                }
+                if (hole.MaxX < minX || hole.MinX > maxX || hole.MaxZ < minZ || hole.MinZ > maxZ) continue;
                 if (hole.Top < minY - settings.agentClimb || hole.Bottom > maxY + settings.agentHeight) continue;
-                var current = pieces ?? new List<List<Vector3>> { points };
-                var next = new List<List<Vector3>>();
-                bool cut = false;
-                foreach (var piece in current)
-                {
-                    var left = Subtract(piece, hole.Outline, (x, z) => DetailHeight(tile, poly, x, z));
-                    if (left == null) next.Add(piece);
-                    else
-                    {
-                        cut = true;
-                        next.AddRange(left);
-                    }
-                }
-                if (cut) pieces = next;
+                reached[pi] = 1;
+                any = true;
             }
-            if (pieces != null && reversed)
-                foreach (var piece in pieces) piece.Reverse();
-            return pieces;
-        }
+            var hulls = new List<GroupHull>();
+            if (!any) return hulls;
 
-        /// <summary>The height of the polygon's detail mesh at (x, z); its vertices' mean height
-        /// outside it.</summary>
-        static float DetailHeight(DtMeshData tile, DtPoly poly, float x, float z)
-        {
-            var pos = new RcVec3f(x, 0f, z);
-            if (tile.detailMeshes != null && poly.index < tile.detailMeshes.Length)
+            var stack = new List<int>();
+            var points = new List<Vector2>();
+            var clipped = new List<Vector2>();
+            var scratch = new List<Vector2>();
+            for (int seed = 0; seed < h.polyCount; seed++)
             {
-                var pd = tile.detailMeshes[poly.index];
-                Span<RcVec3f> v = stackalloc RcVec3f[3];
-                for (int j = 0; j < pd.triCount; j++)
+                if (reached[seed] != 1) continue;
+                // The group: the reached polygons connected to the seed inside the tile.
+                var group = new HashSet<int>();
+                stack.Clear();
+                stack.Add(seed);
+                reached[seed] = 2;
+                while (stack.Count > 0)
                 {
-                    int t = (pd.triBase + j) * 4;
-                    for (int k = 0; k < 3; k++)
+                    int pi = stack[stack.Count - 1];
+                    stack.RemoveAt(stack.Count - 1);
+                    group.Add(pi);
+                    var poly = tile.polys[pi];
+                    for (int k = 0; k < poly.vertCount; k++)
                     {
-                        int i = tile.detailTris[t + k];
-                        int at = i < poly.vertCount ? poly.verts[i] * 3 : (pd.vertBase + i - poly.vertCount) * 3;
-                        var src = i < poly.vertCount ? tile.verts : tile.detailVerts;
-                        v[k] = new RcVec3f(src[at], src[at + 1], src[at + 2]);
+                        int nei = poly.neis[k];
+                        if (nei == 0 || (nei & DtDetour.DT_EXT_LINK) != 0 || reached[nei - 1] != 1) continue;
+                        reached[nei - 1] = 2;
+                        stack.Add(nei - 1);
                     }
-                    if (DtUtils.ClosestHeightPointTriangle(pos, v[0], v[1], v[2], out float height)) return height;
                 }
+                // What the hole covers of each polygon; polygons it does not cover leave the group.
+                points.Clear();
+                var cut = new HashSet<int>();
+                foreach (int pi in group)
+                {
+                    var poly = tile.polys[pi];
+                    clipped.Clear();
+                    for (int k = 0; k < poly.vertCount; k++)
+                    {
+                        int vi = poly.verts[k] * 3;
+                        clipped.Add(new Vector2(tile.verts[vi], tile.verts[vi + 2]));
+                    }
+                    ClipToConvex(clipped, hole.Outline, scratch);
+                    if (clipped.Count == 0) continue;
+                    cut.Add(pi);
+                    points.AddRange(clipped);
+                }
+                var hull = ConvexHull(points);
+                // Hull points nearly in line are dropped, unless the hull reaches the tile's side.
+                if (Mathf.Min(Sq(hull.min.x - h.bmin.X), Sq(hull.min.y - h.bmin.Z), Sq(hull.max.x - h.bmax.X), Sq(hull.max.y - h.bmax.Z)) >= HullTileSideSq)
+                    SimplifyHull(hull.points, eps);
+                if (hull.points.Count < 3) continue;
+                var planes = new List<EdgePlane>(hull.points.Count);
+                for (int k = 1; k <= hull.points.Count; k++)
+                {
+                    var a = hull.points[k - 1];
+                    var d = hull.points[k % hull.points.Count] - a;
+                    float length = d.magnitude;
+                    if (length <= Vector2.kEpsilon) continue;
+                    d /= length;
+                    // The hull is clockwise seen from above: (-dz, dx) points out of it.
+                    planes.Add(new EdgePlane(-d.y, d.x, -(a.y * d.x + -d.y * a.x + 0f)));
+                }
+                hulls.Add(new GroupHull { Planes = planes, Sources = cut });
             }
-            float sum = 0f;
-            for (int k = 0; k < poly.vertCount; k++) sum += tile.verts[poly.verts[k] * 3 + 1];
-            return sum / Mathf.Max(1, poly.vertCount);
+            return hulls;
         }
 
-        // ------------------------------------------------------------------ one polygon minus one hole
+        /// <summary>A hull reaching within 1 cm of the tile's side keeps its points nearly in line.</summary>
+        const float HullTileSideSq = 1e-4f;
+
+        static float Sq(float x) => x * x;
+
+        /// <summary>The convex polygon (x, z) cut to the convex counterclockwise outline, in place
+        /// (empty when they do not meet).</summary>
+        static void ClipToConvex(List<Vector2> poly, Vector2[] outline, List<Vector2> scratch)
+        {
+            for (int e = 0; e < outline.Length && poly.Count > 0; e++)
+            {
+                var a = outline[e];
+                var b = outline[(e + 1) % outline.Length];
+                scratch.Clear();
+                for (int k = 0; k < poly.Count; k++)
+                {
+                    var p = poly[k];
+                    var q = poly[(k + 1) % poly.Count];
+                    float dp = Cross(a, b, p), dq = Cross(a, b, q);
+                    if (dp >= 0f) scratch.Add(p);
+                    if ((dp >= 0f) != (dq >= 0f)) scratch.Add(p + (q - p) * (dp / (dp - dq)));
+                }
+                poly.Clear();
+                poly.AddRange(scratch);
+            }
+        }
+
+        /// <summary>The convex hull of the points, clockwise seen from above (x right, z up), from
+        /// the point of least x (then z); points in line are left out. Also its bounds.</summary>
+        static (List<Vector2> points, Vector2 min, Vector2 max) ConvexHull(List<Vector2> points)
+        {
+            points.Sort((a, b) => a.x != b.x ? a.x.CompareTo(b.x) : a.y.CompareTo(b.y));
+            var hull = new List<Vector2>(points.Count + 1);
+            // A point stays when the chain turns right at the last one.
+            bool Right(Vector2 a, Vector2 b, Vector2 p) => (p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x) > 0f;
+            foreach (var p in points)
+            {
+                while (hull.Count > 1 && !Right(hull[hull.Count - 2], hull[hull.Count - 1], p)) hull.RemoveAt(hull.Count - 1);
+                hull.Add(p);
+            }
+            int lower = hull.Count + 1;
+            for (int k = points.Count - 2; k >= 0; k--)
+            {
+                while (hull.Count >= lower && !Right(hull[hull.Count - 2], hull[hull.Count - 1], points[k])) hull.RemoveAt(hull.Count - 1);
+                hull.Add(points[k]);
+            }
+            if (hull.Count > 0) hull.RemoveAt(hull.Count - 1);
+            var min = new Vector2(float.MaxValue, float.MaxValue);
+            var max = new Vector2(float.MinValue, float.MinValue);
+            foreach (var p in hull)
+            {
+                min = Vector2.Min(min, p);
+                max = Vector2.Max(max, p);
+            }
+            return (hull, min, max);
+        }
+
+        /// <summary>Hull points within <paramref name="tolerance"/> of the segment between their
+        /// neighbours are removed.</summary>
+        static void SimplifyHull(List<Vector2> hull, float tolerance)
+        {
+            int i = 0;
+            while (hull.Count > 2 && i < hull.Count)
+            {
+                var a = hull[(i + hull.Count - 1) % hull.Count];
+                var p = hull[i] - a;
+                var d = hull[(i + 1) % hull.Count] - a;
+                float len2 = d.sqrMagnitude;
+                var off = p;
+                if (len2 != 0f)
+                {
+                    float t = Mathf.Clamp01(Vector2.Dot(p, d) / len2);
+                    off = d * t - p;
+                }
+                if (off.sqrMagnitude < tolerance * tolerance) hull.RemoveAt(i);
+                else i++;
+            }
+        }
+
+        // ------------------------------------------------------------------ cutting
+
+        /// <summary>Cuts the group's hull out of each of its polygons: what the hull covers of the
+        /// polygon is found by clipping it with the hull's planes; the rest is covered with
+        /// triangles (one per hull edge inside the polygon, to the polygon's vertex farthest
+        /// outside that edge, and fans from the hull's corners over the polygon's vertices
+        /// between), which are merged in order into convex polygons of at most six vertices. The
+        /// pieces replace the polygon: the polygons kept move to the front (each cut one's place
+        /// taken by the first polygon), the pieces follow. True when a polygon was cut.</summary>
+        static bool CutGroup(List<Piece> work, GroupHull hull, float eps)
+        {
+            int count = work.Count;
+            int removed = 0;
+            bool changed = false;
+            var inner = new List<Vector3>();
+            var next = new List<Vector3>();
+            var codes = new List<byte>();
+            var nextCodes = new List<byte>();
+            for (int i = 0; i < count; i++)
+            {
+                var piece = work[i];
+                if (!hull.Sources.Contains(piece.Source)) continue;
+                inner.Clear();
+                inner.AddRange(piece.Points);
+                codes.Clear();
+                for (int k = 0; k < inner.Count; k++) codes.Add((byte)k);
+                bool outside = false;
+                for (int k = 0; k < hull.Planes.Count && k < MaxHullPlanes; k++)
+                {
+                    int r = Split(eps, inner, codes, hull.Planes[k], k, next, nextCodes);
+                    if (r > 0) { outside = true; break; }
+                    if (r == 0)
+                    {
+                        (inner, next) = (next, inner);
+                        (codes, nextCodes) = (nextCodes, codes);
+                    }
+                }
+                if (outside || inner.Count == 0) continue;
+                var triangles = Remainder(eps, piece.Points, inner, codes, hull.Planes);
+                MergeInOrder(triangles);
+                foreach (var t in triangles) work.Add(new Piece { Points = t, Source = piece.Source });
+                work[i] = work[removed];
+                removed++;
+                changed = true;
+            }
+            if (removed > 0) work.RemoveRange(0, removed);
+            return changed;
+        }
+
+        /// <summary>A vertex's code says which edge ends at it: the polygon's edge ending at vertex
+        /// <c>code</c>, or (with the high bit) the hull's plane <c>code &amp; 0x7f</c>.</summary>
+        const byte PlaneCode = 0x80;
+        const int MaxHullPlanes = 0x7f;
+
+        /// <summary>The convex polygon clipped to the inside of the plane (distances within
+        /// <paramref name="eps"/> count as on it) into <paramref name="output"/>: 0 clipped, 1
+        /// wholly outside, -1 wholly inside (left as it is).</summary>
+        static int Split(float eps, List<Vector3> poly, List<byte> codes, EdgePlane plane, int planeIndex, List<Vector3> output, List<byte> outCodes)
+        {
+            int n = poly.Count;
+            Span<float> d = n <= 64 ? stackalloc float[n] : new float[n];
+            float max = float.MinValue, min = float.MaxValue;
+            for (int k = 0; k < n; k++)
+            {
+                float x = plane.Distance(poly[k]);
+                if (Mathf.Abs(x) < eps) x = 0f;
+                d[k] = x;
+                max = Mathf.Max(max, x);
+                min = Mathf.Min(min, x);
+            }
+            if (!(max > 0f)) return -1;
+            if (min > 0f) return 1;
+            output.Clear();
+            outCodes?.Clear();
+            byte own = (byte)(PlaneCode | planeIndex);
+            for (int k = 0, prev = n - 1; k < n; prev = k++)
+            {
+                float dp = d[prev], dc = d[k];
+                var a = poly[prev];
+                var b = poly[k];
+                if (dp > 0f && dc < 0f)
+                {
+                    float t = -dc / (dp - dc), s = 1f - t;
+                    output.Add(new Vector3(a.x * t + b.x * s, a.y * t + b.y * s, a.z * t + b.z * s));
+                    outCodes?.Add(own);
+                }
+                else if (dp < 0f && dc > 0f)
+                {
+                    float t = -dp / (dc - dp), s = 1f - t;
+                    output.Add(new Vector3(a.x * s + b.x * t, a.y * s + b.y * t, a.z * s + b.z * t));
+                    outCodes?.Add(codes[k]);
+                }
+                if (dc <= 0f)
+                {
+                    output.Add(b);
+                    outCodes?.Add(dp > 0f && dc == 0f ? own : codes[k]);
+                }
+            }
+            return 0;
+        }
+
+        static bool Degenerate(Vector3 a, Vector3 b, Vector3 c) => Vector3.Cross(b - a, c - a).sqrMagnitude == 0f;
+
+        /// <summary>The polygon minus the inner polygon (what the hull covers of it) as triangles.</summary>
+        static List<List<Vector3>> Remainder(float eps, List<Vector3> poly, List<Vector3> inner, List<byte> codes, List<EdgePlane> planes)
+        {
+            int n = poly.Count, m = inner.Count;
+            var used = new bool[n];
+            foreach (byte c in codes)
+                if ((c & PlaneCode) == 0) used[c] = true;
+            var triangles = new List<List<Vector3>>();
+            void Add(Vector3 a, Vector3 b, Vector3 c) => triangles.Add(new List<Vector3>(3) { a, b, c });
+            if (m == 1)
+            {
+                for (int i = 0; i < n; i++)
+                    if (!used[i] && !Degenerate(inner[0], poly[i], poly[(i + 1) % n])) Add(inner[0], poly[i], poly[(i + 1) % n]);
+                return triangles;
+            }
+            // The polygon vertex each hull edge (ending at inner vertex k) is joined to.
+            var toEdgeEnd = new int[m];
+            var toEdgeStart = new int[m];
+            for (int k = 0; k < m; k++) toEdgeEnd[k] = toEdgeStart[k] = -1;
+            for (int k = 0, prev = m - 1; k < m; prev = k++)
+            {
+                if ((codes[k] & PlaneCode) == 0) continue;
+                var plane = planes[codes[k] & ~PlaneCode];
+                float best = eps;
+                int farthest = -1;
+                for (int j = 0; j < n; j++)
+                {
+                    float x = plane.Distance(poly[j]);
+                    if (best < x) { best = x; farthest = j; }
+                }
+                if (farthest < 0) continue;
+                toEdgeEnd[k] = farthest;
+                toEdgeStart[prev] = farthest;
+                if (!Degenerate(inner[k], inner[prev], poly[farthest])) Add(inner[k], inner[prev], poly[farthest]);
+            }
+            // Fans from each inner vertex over the polygon's vertices between its two edges' ones.
+            for (int k = 0; k < m; k++)
+            {
+                int from = toEdgeEnd[k], to = toEdgeStart[k];
+                if (from != -1 && from != to)
+                {
+                    for (int j = from; ;)
+                    {
+                        int after = (j + 1) % n;
+                        if (used[after] || Degenerate(inner[k], poly[j], poly[after])) break;
+                        Add(inner[k], poly[j], poly[after]);
+                        used[after] = true;
+                        j = after;
+                        if (to == after) break;
+                    }
+                }
+                if (to != -1 && to != from)
+                {
+                    for (int j = to; ;)
+                    {
+                        if (used[j]) break;
+                        int before = (j + n - 1) % n;
+                        if (Degenerate(inner[k], poly[before], poly[j])) break;
+                        Add(inner[k], poly[before], poly[j]);
+                        used[j] = true;
+                        j = before;
+                        if (from == before) break;
+                    }
+                }
+            }
+            return triangles;
+        }
+
+        /// <summary>The smallest turn (twice the area) of a detail triangle kept when a source
+        /// polygon's detail triangles are cut to a piece.</summary>
+        const float DetailMinTurn = 1e-6f;
+
+        /// <summary>The smallest turn a merged polygon keeps at each vertex: twice the area of the
+        /// triangle a vertex makes with its neighbours, in square metres.</summary>
+        const float MergeMinTurn = 0.01f;
+
+        /// <summary>Each polygon in order takes in the later ones (last first) it can be merged
+        /// with into a convex polygon of at most six vertices.</summary>
+        static void MergeInOrder(List<List<Vector3>> polys)
+        {
+            for (int i = 0; i < polys.Count; i++)
+            {
+                var current = polys[i];
+                for (int j = polys.Count - 1; j > i; j--)
+                {
+                    var merged = MergePair(current, polys[j]);
+                    if (merged == null) continue;
+                    current = merged;
+                    polys.RemoveAt(j);
+                }
+                polys[i] = current;
+            }
+        }
+
+        /// <summary>Two clockwise polygons joined along the first edge of <paramref name="a"/>
+        /// that <paramref name="b"/> has the other way round, when the result is convex (every
+        /// vertex turning by more than <see cref="MergeMinTurn"/>) and has at most six vertices;
+        /// else null.</summary>
+        static List<Vector3> MergePair(List<Vector3> a, List<Vector3> b)
+        {
+            int na = a.Count, nb = b.Count;
+            if (na < 3 || nb < 3 || na + nb - 2 > MaxVerts) return null;
+            for (int i = 0; i < na; i++)
+            {
+                int i1 = (i + 1) % na;
+                for (int j = 0; j < nb; j++)
+                {
+                    int j1 = (j + 1) % nb;
+                    if (!Same(a[i], b[j1]) || !Same(a[i1], b[j])) continue;
+                    // Convex where the joined edge's ends meet the other polygon's edges.
+                    if (!(Turn(a[(i + na - 1) % na], a[i], b[(j1 + 1) % nb]) > 0f)) return null;
+                    if (!(Turn(a[i1], a[(i1 + 1) % na], b[(j + nb - 1) % nb]) > 0f)) return null;
+                    var merged = new List<Vector3>(na + nb - 2);
+                    for (int k = i1; k != i; k = (k + 1) % na) merged.Add(a[k]);
+                    for (int k = j1; k != j; k = (k + 1) % nb) merged.Add(b[k]);
+                    for (int k = 0; k < merged.Count; k++)
+                        if (!(Turn(merged[(k + merged.Count - 1) % merged.Count], merged[k], merged[(k + 1) % merged.Count]) > MergeMinTurn)) return null;
+                    return merged;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>How far a clockwise outline turns at <paramref name="at"/> between
+        /// <paramref name="before"/> and <paramref name="after"/> (twice the triangle's area,
+        /// positive for a convex corner).</summary>
+        static float Turn(Vector3 before, Vector3 at, Vector3 after) =>
+            (after.x - before.x) * (at.z - before.z) - (after.z - before.z) * (at.x - before.x);
+
+        static bool Same(Vector3 a, Vector3 b) => a.x == b.x && a.y == b.y && a.z == b.z;
+
+        /// <summary>The height of the polygon's detail mesh at (x, z): of a detail triangle under
+        /// it, else at the nearest point of the triangles' edges; <paramref name="fallback"/>
+        /// without a detail mesh.</summary>
+        static float DetailHeight(DtMeshData tile, DtPoly poly, float x, float z, float fallback)
+        {
+            if (tile.detailMeshes == null || poly.index >= tile.detailMeshes.Length) return fallback;
+            var pos = new RcVec3f(x, 0f, z);
+            var pd = tile.detailMeshes[poly.index];
+            Span<RcVec3f> v = stackalloc RcVec3f[3];
+            float nearest = float.MaxValue, height = fallback;
+            for (int j = 0; j < pd.triCount; j++)
+            {
+                int t = (pd.triBase + j) * 4;
+                for (int k = 0; k < 3; k++)
+                {
+                    int i = tile.detailTris[t + k];
+                    int at = i < poly.vertCount ? poly.verts[i] * 3 : (pd.vertBase + i - poly.vertCount) * 3;
+                    var src = i < poly.vertCount ? tile.verts : tile.detailVerts;
+                    v[k] = new RcVec3f(src[at], src[at + 1], src[at + 2]);
+                }
+                if (DtUtils.ClosestHeightPointTriangle(pos, v[0], v[1], v[2], out float h)) return h;
+                for (int k = 0; k < 3; k++)
+                {
+                    var a = v[k];
+                    var b = v[(k + 1) % 3];
+                    float d = DtUtils.DistancePtSegSqr2D(pos, a, b, out float s);
+                    if (d < nearest)
+                    {
+                        nearest = d;
+                        height = a.Y + (b.Y - a.Y) * s;
+                    }
+                }
+            }
+            return height;
+        }
 
         /// <summary>Twice the signed area in x, z (positive counterclockwise).</summary>
         static float Area(List<Vector3> p)
@@ -288,389 +765,7 @@ namespace Unbound.Runtime
         static float Cross(Vector3 a, Vector3 b, Vector3 c) => (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x);
         static Vector2 Flat(Vector3 p) => new Vector2(p.x, p.z);
 
-        /// <summary>-1 inside the convex counterclockwise polygon, 0 on its edge, 1 outside.</summary>
-        static int Side(Vector2[] poly, Vector2 p)
-        {
-            bool onEdge = false;
-            for (int i = 0, j = poly.Length - 1; i < poly.Length; j = i++)
-            {
-                var e = poly[i] - poly[j];
-                float c = Cross(poly[j], poly[i], p);
-                float tol = Eps * Mathf.Max(1f, e.magnitude);
-                if (c < -tol) return 1;
-                if (c <= tol) onEdge = true;
-            }
-            return onEdge ? 0 : -1;
-        }
-
-        static Vector2[] Flat(List<Vector3> poly)
-        {
-            var r = new Vector2[poly.Count];
-            for (int i = 0; i < r.Length; i++) r[i] = Flat(poly[i]);
-            return r;
-        }
-
-        /// <summary>Whether two convex counterclockwise polygons overlap with some area.</summary>
-        static bool Overlap(Vector2[] a, Vector2[] b) => !Separated(a, b) && !Separated(b, a);
-
-        static bool Separated(Vector2[] a, Vector2[] b)
-        {
-            for (int i = 0, j = a.Length - 1; i < a.Length; j = i++)
-            {
-                float tol = Eps * Mathf.Max(1f, (a[i] - a[j]).magnitude);
-                bool allOut = true;
-                foreach (var p in b)
-                    if (Cross(a[j], a[i], p) > tol) { allOut = false; break; }
-                if (allOut) return true;
-            }
-            return false;
-        }
-
-        sealed class Segment
-        {
-            internal Vector3 From, To;
-            internal bool Used;
-        }
-
-        /// <summary>The counterclockwise convex polygon minus the counterclockwise convex hole as
-        /// convex counterclockwise polygons of at most six vertices, or null when the hole does not
-        /// cut it.</summary>
-        static List<List<Vector3>> Subtract(List<Vector3> poly, Vector2[] hole, Func<float, float, float> heightAt)
-        {
-            var flat = Flat(poly);
-            if (!Overlap(flat, hole)) return null;
-            bool inside = true;
-            foreach (var p in flat)
-                if (Side(hole, p) > 0) { inside = false; break; }
-            if (inside) return new List<List<Vector3>>();
-
-            int n = poly.Count, m = hole.Length;
-            // Crossings of each polygon edge with each hole edge, computed once (the same point for
-            // both edges and, by its canonical order, for the neighbouring polygon's edge).
-            var polyCuts = new List<(float T, Vector3 P)>[n];
-            var holeCuts = new List<(float T, Vector3 P)>[m];
-            for (int i = 0; i < n; i++) polyCuts[i] = new List<(float, Vector3)>();
-            for (int j = 0; j < m; j++) holeCuts[j] = new List<(float, Vector3)>();
-            var holePoints = new Vector3[m];
-            for (int j = 0; j < m; j++) holePoints[j] = new Vector3(hole[j].x, heightAt(hole[j].x, hole[j].y), hole[j].y);
-            for (int i = 0; i < n; i++)
-            {
-                var a = poly[i];
-                var b = poly[(i + 1) % n];
-                for (int j = 0; j < m; j++)
-                {
-                    var c = hole[j];
-                    var d = hole[(j + 1) % m];
-                    Intersect(a, b, c, d, polyCuts[i], holeCuts[j], holePoints[j], holePoints[(j + 1) % m]);
-                }
-            }
-
-            var segments = new List<Segment>();
-            bool polyEdgeDropped = false;
-            for (int i = 0; i < n; i++)
-            {
-                var a = poly[i];
-                var b = poly[(i + 1) % n];
-                var cuts = polyCuts[i];
-                cuts.Add((0f, a));
-                cuts.Add((1f, b));
-                cuts.Sort((x, y) => x.T.CompareTo(y.T));
-                for (int k = 0; k + 1 < cuts.Count; k++)
-                {
-                    var p = cuts[k].P;
-                    var q = cuts[k + 1].P;
-                    if (SamePlace(p, q)) continue;
-                    var mid = (Flat(p) + Flat(q)) * 0.5f;
-                    int side = Side(hole, mid);
-                    // On the hole's edge: kept where the hole lies outside the polygon there (the
-                    // edges run opposite ways).
-                    bool keep = side > 0 || (side == 0 && !SameDirection(hole, mid, Flat(q) - Flat(p)));
-                    if (keep) segments.Add(new Segment { From = p, To = q });
-                    else polyEdgeDropped = true;
-                }
-            }
-            bool holeEdgeKept = false;
-            for (int j = 0; j < m; j++)
-            {
-                var cuts = holeCuts[j];
-                cuts.Add((0f, holePoints[j]));
-                cuts.Add((1f, holePoints[(j + 1) % m]));
-                cuts.Sort((x, y) => x.T.CompareTo(y.T));
-                for (int k = 0; k + 1 < cuts.Count; k++)
-                {
-                    var p = cuts[k].P;
-                    var q = cuts[k + 1].P;
-                    if (SamePlace(p, q)) continue;
-                    var mid = (Flat(p) + Flat(q)) * 0.5f;
-                    if (Side(flat, mid) < 0)
-                    {
-                        // The hole's edge, reversed, bounds what is left.
-                        segments.Add(new Segment { From = q, To = p });
-                        holeEdgeKept = true;
-                    }
-                }
-            }
-            if (!holeEdgeKept && !polyEdgeDropped) return null;
-
-            var loops = Link(segments);
-            var outers = new List<List<Vector3>>();
-            var inners = new List<List<Vector3>>();
-            foreach (var loop in loops)
-            {
-                if (loop.Count < 3) continue;
-                float area = Area(loop);
-                if (area > Eps) outers.Add(loop);
-                else if (area < -Eps) inners.Add(loop);
-            }
-            var result = new List<List<Vector3>>();
-            foreach (var outer in outers)
-            {
-                var ring = outer;
-                // A hole wholly inside the polygon: joined to it by a bridge.
-                foreach (var inner in inners)
-                    if (Side(Flat(outer), Flat(inner[0])) < 0) ring = Bridge(ring, inner);
-                var triangles = Triangulate(ring);
-                if (triangles == null)
-                {
-                    if (s_WarnedUncut) return null;
-                    s_WarnedUncut = true;
-                    Debug.LogWarning("Unbound: a NavMeshObstacle's carved hole could not be cut into a NavMesh polygon; the polygon is left whole.");
-                    return null;
-                }
-                result.AddRange(Merge(triangles));
-            }
-            return result;
-        }
-
-        static bool SamePlace(Vector3 a, Vector3 b) => a.x == b.x && a.z == b.z;
-
         static bool Near(Vector3 a, Vector3 b) => Mathf.Abs(a.x - b.x) <= Eps && Mathf.Abs(a.z - b.z) <= Eps;
-
-        /// <summary>Whether the hole's edge through <paramref name="mid"/> runs the way of
-        /// <paramref name="direction"/>.</summary>
-        static bool SameDirection(Vector2[] hole, Vector2 mid, Vector2 direction)
-        {
-            for (int i = 0, j = hole.Length - 1; i < hole.Length; j = i++)
-            {
-                var e = hole[i] - hole[j];
-                if (Mathf.Abs(Cross(hole[j], hole[i], mid)) <= Eps * Mathf.Max(1f, e.magnitude))
-                    return Vector2.Dot(e, direction) > 0f;
-            }
-            return false;
-        }
-
-        /// <summary>Where the polygon edge a-b and the hole edge c-d meet (crossings, touches and the
-        /// ends of an overlap), added to both edges' cut lists by their parameter.</summary>
-        static void Intersect(Vector3 a, Vector3 b, Vector2 c, Vector2 d, List<(float, Vector3)> onPoly, List<(float, Vector3)> onHole,
-            Vector3 cPoint, Vector3 dPoint)
-        {
-            var pa = Flat(a);
-            var pb = Flat(b);
-            var r = pb - pa;
-            var s = d - c;
-            float rr = r.sqrMagnitude, ss = s.sqrMagnitude;
-            if (rr <= 0f || ss <= 0f) return;
-            float denom = r.x * s.y - r.y * s.x;
-            float lenR = Mathf.Sqrt(rr), lenS = Mathf.Sqrt(ss);
-            if (Mathf.Abs(denom) <= Eps * lenR * lenS)
-            {
-                // Parallel: only a collinear overlap matters; its ends cut both edges.
-                if (Mathf.Abs(Cross(pa, pb, c)) > Eps * lenR) return;
-                void End(Vector2 p, Vector3 point, bool onHoleEnd)
-                {
-                    float t = Vector2.Dot(p - pa, r) / rr;
-                    float u = Vector2.Dot(p - c, s) / ss;
-                    if (t <= Eps || t >= 1f - Eps || u < -Eps || u > 1f + Eps) return;
-                    onPoly.Add((t, onHoleEnd ? point : Lerp(a, b, t)));
-                    if (!onHoleEnd) onHole.Add((u, point));
-                }
-                End(c, cPoint, true);
-                End(d, dPoint, true);
-                End(pa, a, false);
-                End(pb, b, false);
-                return;
-            }
-            // Canonical order (the same point from both polygons sharing the edge).
-            bool swap = pa.x > pb.x || (pa.x == pb.x && pa.y > pb.y);
-            var e0 = swap ? b : a;
-            var e1 = swap ? a : b;
-            var q0 = Flat(e0);
-            var q = Flat(e1) - q0;
-            float den = q.x * s.y - q.y * s.x;
-            float tc = ((c.x - q0.x) * s.y - (c.y - q0.y) * s.x) / den;
-            float uc = ((c.x - q0.x) * q.y - (c.y - q0.y) * q.x) / den;
-            float tolT = Eps / lenR, tolU = Eps / lenS;
-            if (tc < -tolT || tc > 1f + tolT || uc < -tolU || uc > 1f + tolU) return;
-            float t0 = swap ? 1f - tc : tc;
-            Vector3 point;
-            // At a polygon vertex, or at a hole corner: that point itself.
-            if (t0 <= tolT) point = a;
-            else if (t0 >= 1f - tolT) point = b;
-            else if (uc <= tolU) point = new Vector3(c.x, Lerp(e0, e1, tc).y, c.y);
-            else if (uc >= 1f - tolU) point = new Vector3(d.x, Lerp(e0, e1, tc).y, d.y);
-            else point = Lerp(e0, e1, tc);
-            if (t0 > tolT && t0 < 1f - tolT) onPoly.Add((t0, point));
-            if (uc > tolU && uc < 1f - tolU) onHole.Add((uc, point));
-        }
-
-        static Vector3 Lerp(Vector3 a, Vector3 b, float t) => new Vector3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
-
-        /// <summary>The kept segments joined end to start into closed loops.</summary>
-        static List<List<Vector3>> Link(List<Segment> segments)
-        {
-            var loops = new List<List<Vector3>>();
-            foreach (var first in segments)
-            {
-                if (first.Used) continue;
-                var loop = new List<Vector3>();
-                var current = first;
-                while (current != null && !current.Used)
-                {
-                    current.Used = true;
-                    loop.Add(current.From);
-                    Segment next = null;
-                    foreach (var s in segments)
-                        if (!s.Used && SamePlace(s.From, current.To)) { next = s; break; }
-                    if (next == null)
-                        foreach (var s in segments)
-                            if (!s.Used && Near(s.From, current.To)) { next = s; break; }
-                    current = next;
-                }
-                loops.Add(loop);
-            }
-            return loops;
-        }
-
-        /// <summary>The outer ring joined to a clockwise inner ring by a bridge from the inner
-        /// ring's first vertex to the nearest outer vertex it can see past the inner ring.</summary>
-        static List<Vector3> Bridge(List<Vector3> outer, List<Vector3> inner)
-        {
-            var v = inner[0];
-            var next = inner[1];
-            var prev = inner[inner.Count - 1];
-            int best = -1;
-            float bestDistance = float.MaxValue;
-            for (int i = 0; i < outer.Count; i++)
-            {
-                var w = outer[i];
-                // The inner ring runs clockwise: the hole's inside is to the right of v->next.
-                bool intoHole = Cross(v, next, w) < 0f && Cross(prev, v, w) < 0f;
-                if (intoHole) continue;
-                float distance = (Flat(w) - Flat(v)).sqrMagnitude;
-                if (distance < bestDistance)
-                {
-                    bestDistance = distance;
-                    best = i;
-                }
-            }
-            if (best < 0) best = 0;
-            var ring = new List<Vector3>();
-            for (int i = 0; i <= outer.Count; i++) ring.Add(outer[(best + i) % outer.Count]);
-            for (int i = 0; i <= inner.Count; i++) ring.Add(inner[i % inner.Count]);
-            return ring;
-        }
-
-        /// <summary>Ear clipping of a counterclockwise ring (bridges allowed); null when no ear is
-        /// found.</summary>
-        static List<List<Vector3>> Triangulate(List<Vector3> ring)
-        {
-            var pts = new List<Vector3>(ring);
-            var triangles = new List<List<Vector3>>();
-            int guard = pts.Count * pts.Count + 8;
-            while (pts.Count > 3 && guard-- > 0)
-            {
-                int ear = -1;
-                float bestTurn = float.MinValue;
-                for (int i = 0; i < pts.Count; i++)
-                {
-                    var a = pts[(i + pts.Count - 1) % pts.Count];
-                    var b = pts[i];
-                    var c = pts[(i + 1) % pts.Count];
-                    float turn = Cross(a, b, c);
-                    if (turn <= Eps * Eps) continue;
-                    bool empty = true;
-                    for (int k = 0; k < pts.Count && empty; k++)
-                    {
-                        var p = pts[k];
-                        if (SamePlace(p, a) || SamePlace(p, b) || SamePlace(p, c)) continue;
-                        if (Cross(a, b, p) >= 0f && Cross(b, c, p) >= 0f && Cross(c, a, p) >= 0f) empty = false;
-                    }
-                    if (!empty) continue;
-                    // Recast's order: the ear with the shortest new diagonal.
-                    float score = -(Flat(c) - Flat(a)).sqrMagnitude;
-                    if (score > bestTurn)
-                    {
-                        bestTurn = score;
-                        ear = i;
-                    }
-                }
-                if (ear < 0)
-                {
-                    // Only degenerate (collinear or repeated) vertices left: drop one.
-                    int drop = -1;
-                    for (int i = 0; i < pts.Count && drop < 0; i++)
-                    {
-                        var a = pts[(i + pts.Count - 1) % pts.Count];
-                        var c = pts[(i + 1) % pts.Count];
-                        if (Mathf.Abs(Cross(a, pts[i], c)) <= Eps * Eps || SamePlace(a, pts[i])) drop = i;
-                    }
-                    if (drop < 0) return null;
-                    pts.RemoveAt(drop);
-                    continue;
-                }
-                triangles.Add(new List<Vector3> { pts[(ear + pts.Count - 1) % pts.Count], pts[ear], pts[(ear + 1) % pts.Count] });
-                pts.RemoveAt(ear);
-            }
-            if (pts.Count == 3 && Cross(pts[0], pts[1], pts[2]) > Eps * Eps) triangles.Add(pts);
-            return triangles;
-        }
-
-        /// <summary>Triangles merged into convex polygons of at most six vertices, longest shared
-        /// edge first (as Recast merges its polygons).</summary>
-        static List<List<Vector3>> Merge(List<List<Vector3>> polys)
-        {
-            while (true)
-            {
-                int bestA = -1, bestB = -1, bestEa = 0, bestEb = 0;
-                float bestLength = -1f;
-                for (int i = 0; i < polys.Count; i++)
-                for (int j = i + 1; j < polys.Count; j++)
-                {
-                    var a = polys[i];
-                    var b = polys[j];
-                    if (a.Count + b.Count - 2 > MaxVerts) continue;
-                    for (int ea = 0; ea < a.Count; ea++)
-                    {
-                        var u = a[ea];
-                        var v = a[(ea + 1) % a.Count];
-                        for (int eb = 0; eb < b.Count; eb++)
-                        {
-                            if (!SamePlace(b[eb], v) || !SamePlace(b[(eb + 1) % b.Count], u)) continue;
-                            // Convex at both ends of the removed edge.
-                            var beforeU = a[(ea + a.Count - 1) % a.Count];
-                            var afterU = b[(eb + 2) % b.Count];
-                            var beforeV = b[(eb + b.Count - 1) % b.Count];
-                            var afterV = a[(ea + 2) % a.Count];
-                            if (Cross(beforeU, u, afterU) <= Eps * Eps || Cross(beforeV, v, afterV) <= Eps * Eps) continue;
-                            float length = (Flat(u) - Flat(v)).sqrMagnitude;
-                            if (length > bestLength)
-                            {
-                                bestLength = length;
-                                bestA = i; bestB = j; bestEa = ea; bestEb = eb;
-                            }
-                        }
-                    }
-                }
-                if (bestA < 0) return polys;
-                var pa = polys[bestA];
-                var pb = polys[bestB];
-                var merged = new List<Vector3>();
-                for (int k = 0; k < pa.Count; k++) merged.Add(pa[(bestEa + 1 + k) % pa.Count]);
-                for (int k = 0; k < pb.Count - 2; k++) merged.Add(pb[(bestEb + 2 + k) % pb.Count]);
-                polys[bestA] = merged;
-                polys.RemoveAt(bestB);
-            }
-        }
 
         // ------------------------------------------------------------------ the new tile
 
@@ -765,7 +860,7 @@ namespace Unbound.Runtime
             return result;
         }
 
-        static DtMeshData Build(DtMeshData tile, List<OutPoly> polys, List<(int Poly, int[] Verts)> offMesh, List<Vector3> verts)
+        static DtMeshData Build(DtMeshData tile, List<OutPoly> polys, List<(int Poly, int[] Verts)> offMesh, List<Vector3> verts, float eps)
         {
             var h = tile.header;
             int groundCount = polys.Count;
@@ -824,7 +919,7 @@ namespace Unbound.Runtime
                     }
                     details[i] = new DtPolyDetail(vertBase, triBase, (byte)pd.vertCount, (byte)pd.triCount);
                 }
-                else if (ClipDetail(tile, src, vs, verts, detailVerts, detailTris, out int extra, out int tris))
+                else if (ClipDetail(tile, src, vs, verts, eps, detailVerts, detailTris, out int extra, out int tris))
                     details[i] = new DtPolyDetail(vertBase, triBase, (byte)extra, (byte)tris);
                 else
                 {
@@ -894,7 +989,7 @@ namespace Unbound.Runtime
         /// <summary>The source polygon's detail triangles cut to the new polygon, appended as its
         /// detail mesh (its vertices first, then the cut points): the surface keeps the source's
         /// heights. False when nothing is left (or more than a detail mesh holds).</summary>
-        static bool ClipDetail(DtMeshData tile, DtPoly src, List<int> vs, List<Vector3> verts, List<float> detailVerts, List<int> detailTris,
+        static bool ClipDetail(DtMeshData tile, DtPoly src, List<int> vs, List<Vector3> verts, float eps, List<float> detailVerts, List<int> detailTris,
             out int extraCount, out int triCount)
         {
             extraCount = 0;
@@ -915,7 +1010,8 @@ namespace Unbound.Runtime
                 extra.Add(p);
                 return poly.Count + extra.Count - 1;
             }
-            var piece = new List<Vector3>(3);
+            var piece = new List<Vector3>(8);
+            var cut = new List<Vector3>(8);
             for (int j = 0; j < pd.triCount; j++)
             {
                 int t = (pd.triBase + j) * 4;
@@ -927,41 +1023,39 @@ namespace Unbound.Runtime
                     var from = idx < src.vertCount ? tile.verts : tile.detailVerts;
                     piece.Add(new Vector3(from[at], from[at + 1], from[at + 2]));
                 }
-                // Sutherland-Hodgman against each edge of the convex polygon.
+                // Clipped by the planes of the polygon's edges in order, as the holes are cut, so
+                // each clipped triangle starts where Unity's does.
                 for (int e = 0; e < poly.Count && piece.Count >= 3; e++)
                 {
                     var a = poly[e];
-                    var b = poly[(e + 1) % poly.Count];
-                    var cut = new List<Vector3>(piece.Count + 1);
-                    for (int k = 0; k < piece.Count; k++)
-                    {
-                        var p = piece[k];
-                        var q = piece[(k + 1) % piece.Count];
-                        float dp = Cross(a, b, p) * (ccw ? 1f : -1f), dq = Cross(a, b, q) * (ccw ? 1f : -1f);
-                        if (dp >= 0f) cut.Add(p);
-                        if ((dp >= 0f) != (dq >= 0f)) cut.Add(Lerp(p, q, dp / (dp - dq)));
-                    }
-                    piece = cut;
+                    var d = Flat(poly[(e + 1) % poly.Count]) - Flat(a);
+                    float length = d.magnitude;
+                    if (length <= Vector2.kEpsilon) continue;
+                    d /= length;
+                    if (ccw) d = -d;
+                    var plane = new EdgePlane(-d.y, d.x, -(a.z * d.x + -d.y * a.x + 0f));
+                    int r = Split(eps, piece, null, plane, 0, cut, null);
+                    if (r > 0) { piece.Clear(); break; }
+                    if (r == 0) (piece, cut) = (cut, piece);
                 }
                 if (piece.Count < 3) continue;
-                var ids = new List<int>();
-                foreach (var p in piece)
+                // Fanned from the first point; triangles with (almost) no area or a repeated
+                // vertex are left out.
+                int first = Index(piece[0]), previous = Index(piece[1]);
+                for (int k = 2; k < piece.Count; k++)
                 {
-                    int id = Index(p);
-                    if (ids.Count == 0 || (ids[ids.Count - 1] != id && ids[0] != id)) ids.Add(id);
-                }
-                for (int k = 1; k + 1 < ids.Count; k++)
-                {
-                    var a = Point(ids[0]);
-                    var b = Point(ids[k]);
-                    var c = Point(ids[k + 1]);
-                    if (Mathf.Abs(Cross(a, b, c)) <= Eps * Eps) continue;
-                    int flags = 0;
-                    int[] tri = { ids[0], ids[k], ids[k + 1] };
-                    for (int edge = 0; edge < 3; edge++)
-                        if (OnBoundary(Point(tri[edge]), Point(tri[(edge + 1) % 3]))) flags |= DtDetailTriEdgeFlags.DT_DETAIL_EDGE_BOUNDARY << (edge * 2);
-                    tris.AddRange(tri);
-                    tris.Add(flags);
+                    int current = Index(piece[k]);
+                    float turn = Turn(piece[0], piece[k - 1], piece[k]) * (ccw ? -1f : 1f);
+                    if (turn >= DetailMinTurn && current != first && first != previous && previous != current)
+                    {
+                        int flags = 0;
+                        int[] tri = { first, previous, current };
+                        for (int edge = 0; edge < 3; edge++)
+                            if (OnBoundary(Point(tri[edge]), Point(tri[(edge + 1) % 3]))) flags |= DtDetailTriEdgeFlags.DT_DETAIL_EDGE_BOUNDARY << (edge * 2);
+                        tris.AddRange(tri);
+                        tris.Add(flags);
+                    }
+                    previous = current;
                 }
             }
             Vector3 Point(int id) => id < poly.Count ? poly[id] : extra[id - poly.Count];

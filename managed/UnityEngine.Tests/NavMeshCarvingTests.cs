@@ -193,6 +193,96 @@ namespace UnityEngine.Tests
             Assert.Equal(m_Area, Area(), 3);
         }
 
+        /// <summary>The NavMesh's polygons (a fan of CalculateTriangulation's triangles is one
+        /// polygon), each as its vertices (x,z) in order from the smallest, sorted.</summary>
+        static string[] Polygons()
+        {
+            var t = NavMesh.CalculateTriangulation();
+            var result = new List<string>();
+            var current = new List<int>();
+            void Flush()
+            {
+                if (current.Count == 0) return;
+                var names = new List<string>();
+                foreach (int i in current)
+                    names.Add(Name(t.vertices[i].x) + "," + Name(t.vertices[i].z));
+                int first = 0;
+                for (int i = 1; i < names.Count; i++) if (string.CompareOrdinal(names[i], names[first]) < 0) first = i;
+                var rotated = new List<string>();
+                for (int i = 0; i < names.Count; i++) rotated.Add(names[(first + i) % names.Count]);
+                result.Add(string.Join(" ", rotated));
+                current.Clear();
+            }
+            for (int i = 0; i + 2 < t.indices.Length; i += 3)
+            {
+                int a = t.indices[i], b = t.indices[i + 1], c = t.indices[i + 2];
+                if (current.Count > 0 && current[0] == a && current[current.Count - 1] == b)
+                {
+                    current.Add(c);
+                    continue;
+                }
+                Flush();
+                current.Add(a);
+                current.Add(b);
+                current.Add(c);
+            }
+            Flush();
+            result.Sort(string.CompareOrdinal);
+            return result.ToArray();
+        }
+
+        static string Name(float v)
+        {
+            var s = v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+            return s == "-0" ? "0" : s;
+        }
+
+        [Fact]
+        public void ACutPolygonIsSplitAlongTheHolesEdgesToItsFarthestCorners()
+        {
+            // As Unity splits it (tests/projects/navpath carve.sides): every hole edge inside the
+            // polygon makes a triangle with the polygon's corner farthest outside it, the corners
+            // between are fanned from the hole's corners, and the triangles merge in order: here
+            // three quads in each of the two tiles (x > 0) the hole reaches.
+            Box(new Vector3(2f, 0.5f, 0.5f), new Vector3(1f, 1f, 2f));
+            Frame();
+            Frame();
+            Assert.Equal(new[]
+            {
+                "-9.333,-4.333 -9.333,0 0,0 0,-4.333",
+                "-9.333,0 -9.333,4.5 0,4.5 0,0",
+                "0,-4.333 0,0 1,0 1,-1",
+                "0,-4.333 1,-1 3,-1 9.5,-4.333",
+                "0,0 0,4.5 1,2 1,0",
+                "0,4.5 9.5,4.5 3,2 1,2",
+                "3,-1 3,0 9.5,0 9.5,-4.333",
+                "3,0 3,2 9.5,4.5 9.5,0",
+            }, Polygons());
+            Assert.Equal(m_Area - 6f, Area(), 3);
+        }
+
+        [Fact]
+        public void AHoleThatOnlyTouchesTheNavMeshCutsNothing()
+        {
+            var before = Polygons();
+            // Grown by the radius, the outline ends on the platform's edge (z = 4.5).
+            Box(new Vector3(0f, 0.5f, 5.5f), Vector3.one);
+            Frame();
+            Frame();
+            Assert.Equal(before, Polygons());
+            Assert.Equal(m_Area, Area(), 3);
+        }
+
+        [Fact]
+        public void AHoleOverTheWholePolygonRemovesIt()
+        {
+            Box(new Vector3(0f, 0.5f, 0f), new Vector3(30f, 1f, 20f));
+            Frame();
+            Frame();
+            Assert.Empty(Polygons());
+            Assert.False(NavMesh.SamplePosition(Vector3.zero, out _, 20f, NavMesh.AllAreas));
+        }
+
         // ------------------------------------------------------------------ when
 
         [Fact]

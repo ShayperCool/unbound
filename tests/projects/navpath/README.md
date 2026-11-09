@@ -40,6 +40,11 @@ Measured (Unity 6000.0.71f1, `Reference/unity-6000.0.71f1.json`):
   after turning it on does; turning it off takes in a script move made before. A transform moved by script
   with `updatePosition` on, in Update or LateUpdate, goes onto the NavMesh at the next frame's AI update.
 
-Listed, not gated (`run.py` header): the carved tiles' polygon splits (Unity's pieces are fewer and
-shaped differently; its triangles are the same as Recast's ear clipping but not merged by longest
-shared edge) and `two.p1`, a line grazing a vertex: the builders place that vertex about 2e-6 apart, on either side of the line.
+- A carved hole is cut per group of connected polygons of a tile: the group's hole is the convex hull
+  of what the hole covers of it; each polygon is cut by the hull's edges into triangles (each edge
+  inside the polygon with the polygon's corner farthest outside it, fans from the hull's corners over
+  the corners between), merged in order into convex pieces of at most six vertices (`polyX.*`), and the
+  routes round the hole follow those pieces.
+
+Listed, not gated (`run.py` header): `two.p1`, a line grazing a vertex: the builders place that vertex
+about 2e-6 apart, on either side of the line.
