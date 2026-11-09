@@ -29,7 +29,9 @@ The canonical reference is `Reference/unity-6000.0.71f1/delivery-rate-48000`.
 An authored project captured with the same complete result supplies the gate.
 The implementation processes the closing offline buffer through the shared
 capture path before clearing voices and generated clip data. It uses the old
-configuration and preserves the buffer-sized listener delivery. The release
+configuration and preserves the buffer-sized listener delivery. A reusable worker
+processes this closing buffer off the main thread and finishes before notification.
+The release
 selection is `Compat.AudioResetCaptureTailMeasured`. A reset rejected by resource
 validation processes no buffer and preserves the capture state.
 
@@ -54,3 +56,12 @@ varying with scheduling. Those captures remain whole outside Git. Neither is use
 to establish a universal callback count or a callback/Render ordering guarantee.
 The asynchronous restart phase difference is deferred; extended realtime device
 handoff remains outside this control's certification.
+
+
+[The thread-context control](Diagnostics/reset-threads-v1/README.md) records both
+source and listener channels and the off-main-thread reset callback, with explicit
+Render as the main-thread control. Its complete Native pair agrees on 18438 values
+but contains three closing buffers. A later basic recording also contains three.
+This makes real-device queued-period delivery an explicit follow-up; the original
+single-buffer oracle is not replaced and the implementation does not claim an
+exact universal callback count.

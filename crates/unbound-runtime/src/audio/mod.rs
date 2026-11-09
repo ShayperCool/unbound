@@ -181,6 +181,63 @@ impl Clock {
     }
 }
 
+/// A reusable execution thread for the captured output that closes during reset.
+/// Buffers are allocated and retired by the caller; the render uses the mixer's scratch storage.
+struct ResetWorker {
+    sender: Option<std::sync::mpsc::SyncSender<Vec<f32>>>,
+    finished: std::sync::mpsc::Receiver<Vec<f32>>,
+    thread: Option<std::thread::JoinHandle<()>>,
+}
+
+impl ResetWorker {
+    fn new(mixer: Arc<Mutex<Mixer>>, clock: Arc<Clock>) -> std::io::Result<Self> {
+        let (sender, receiver) = std::sync::mpsc::sync_channel::<Vec<f32>>(0);
+        let (finished, completion) = std::sync::mpsc::sync_channel(0);
+        let thread = std::thread::Builder::new()
+            .name("unbound-audio-reset".into())
+            .spawn(move || {
+                while let Ok(mut buffer) = receiver.recv() {
+                    {
+                        let mut mixer = mixer.lock().unwrap_or_else(|e| e.into_inner());
+                        mixer.render_capture_block(&mut buffer);
+                        clock.store(&mixer);
+                    }
+                    if finished.send(buffer).is_err() {
+                        break;
+                    }
+                }
+            })?;
+        Ok(Self {
+            sender: Some(sender),
+            finished: completion,
+            thread: Some(thread),
+        })
+    }
+
+    fn render(&self, buffer: Vec<f32>) -> Result<()> {
+        self.sender
+            .as_ref()
+            .unwrap()
+            .send(buffer)
+            .map_err(|_| anyhow::anyhow!("audio reset worker stopped before processing"))?;
+        // Return ownership to the caller so the audio thread does not retire the buffer.
+        let _buffer = self
+            .finished
+            .recv()
+            .map_err(|_| anyhow::anyhow!("audio reset worker stopped during processing"))?;
+        Ok(())
+    }
+}
+
+impl Drop for ResetWorker {
+    fn drop(&mut self) {
+        self.sender.take();
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
+    }
+}
+
 /// The audio system of the running game.
 pub struct Engine {
     mixer: Arc<Mutex<Mixer>>,
@@ -193,6 +250,7 @@ pub struct Engine {
     warned: AtomicBool,
     capturing: Arc<AtomicBool>,
     capture_pending: Mutex<f64>,
+    reset_worker: Mutex<Option<ResetWorker>>,
 }
 
 /// The virtual device's rate when the project leaves it to the device.
@@ -221,6 +279,7 @@ impl Engine {
             warned: AtomicBool::new(false),
             capturing: Arc::new(AtomicBool::new(false)),
             capture_pending: Mutex::new(0.0),
+            reset_worker: Mutex::new(None),
         };
         engine
             .start(configuration, open_device)
@@ -348,15 +407,27 @@ impl Engine {
         } else {
             None
         };
-        let had_device = self.device.lock().unwrap().take().is_some();
-        if let Some(mut buffer) = tail {
-            let mut mixer = self.mixer();
-            // The closing output processes its current buffer before sources are reset and
-            // before OnAudioConfigurationChanged. Keep the old rate, graph and callback data.
-            // Unity 6000.0.71f1, tests/projects/mixersuspend reset delivery control.
-            mixer.render_capture_block(&mut buffer);
-            self.clock.store(&mixer);
+        if let Some(buffer) = tail {
+            // Finish the old output on an audio thread before configuration notification.
+            // Unity 6000.0.71f1, tests/projects/mixersuspend reset delivery controls.
+            let mut worker = self.reset_worker.lock().unwrap();
+            if worker.is_none() {
+                match ResetWorker::new(self.mixer.clone(), self.clock.clone()) {
+                    Ok(created) => *worker = Some(created),
+                    Err(error) => {
+                        tracing::warn!(
+                            "audio reset rejected: cannot start closing output thread: {error}"
+                        );
+                        return false;
+                    }
+                }
+            }
+            if let Err(error) = worker.as_ref().unwrap().render(buffer) {
+                tracing::warn!("audio reset failed: {error:#}");
+                return false;
+            }
         }
+        let had_device = self.device.lock().unwrap().take().is_some();
         let open = had_device || OPENER.read().unwrap().is_some();
         if let Err(error) = self.start(configuration, open) {
             tracing::warn!("audio reset failed: {error:#}");
@@ -646,10 +717,17 @@ mod tests {
 
     #[test]
     fn reset_finishes_the_captured_old_buffer_before_reconfiguring() {
+        static CALLER: Mutex<Option<std::thread::ThreadId>> = Mutex::new(None);
+        static SAME_THREAD: AtomicBool = AtomicBool::new(true);
+        *CALLER.lock().unwrap() = Some(std::thread::current().id());
         static FRAMES: AtomicU32 = AtomicU32::new(0);
         static SAMPLE: AtomicU32 = AtomicU32::new(0);
         extern "C" fn callback(kind: i32, _: u64, data: *mut f32, frames: i32, _: i32, _: i64) {
             if kind == protocol::callback::LISTENER_FILTER {
+                SAME_THREAD.store(
+                    *CALLER.lock().unwrap() == Some(std::thread::current().id()),
+                    Ordering::Relaxed,
+                );
                 FRAMES.fetch_add(frames as u32, Ordering::Relaxed);
                 // SAFETY: the mixer lends the complete output buffer for this callback.
                 SAMPLE.store(
@@ -695,6 +773,7 @@ mod tests {
             ..engine.configuration()
         };
         assert!(engine.reset_with_capture_tail(configuration, true));
+        assert!(!SAME_THREAD.load(Ordering::Relaxed));
         assert_eq!(FRAMES.load(Ordering::Relaxed), 100);
         assert_eq!(f32::from_bits(SAMPLE.load(Ordering::Relaxed)), 0.125);
         assert_eq!(engine.dsp_time(), 0.1);
