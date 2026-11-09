@@ -79,6 +79,8 @@ namespace UnityEngine.UIElements
         readonly EventHandler<BindablePropertyChangedEventArgs> m_SourceHandler;
         // The binding whose UI update must not be reported back as a UI change.
         BindingData m_Ignored;
+        // Elements with bindings set since the last update (their requests).
+        readonly HashSet<VisualElement> m_Requests = new HashSet<VisualElement>();
 
         internal BindingLogLevel? logLevel;
 
@@ -119,6 +121,7 @@ namespace UnityEngine.UIElements
             m_PerElement.Clear();
             m_Ordered.Clear();
             m_ChangesFromUI.Clear();
+            m_Requests.Clear();
         }
 
         // ---- registration ----
@@ -126,6 +129,10 @@ namespace UnityEngine.UIElements
         /// <summary>Registers a binding of an element in this panel (replacing the one for its id).</summary>
         public void Register(VisualElement element, in BindingId id, Binding binding)
         {
+            m_Requests.Add(element);
+            // A binding without a property is not registered: the element reports it when the
+            // update processes its requests.
+            if (((PropertyPath)id).IsEmpty) return;
             Unregister(element, id);
             if (!m_PerElement.TryGetValue(element, out var list))
             {
@@ -264,6 +271,7 @@ namespace UnityEngine.UIElements
 
         public void Update()
         {
+            if (m_Requests.Count > 0) ProcessRequests();
             if (m_PerElement.Count == 0 && m_ChangesFromUI.Count == 0)
             {
                 if (m_Sources.Count > 0) PruneSources();
@@ -283,6 +291,19 @@ namespace UnityEngine.UIElements
                 PruneSources();
             }
         }
+
+        void ProcessRequests()
+        {
+            string panelName = null;
+            foreach (var element in m_Requests)
+            {
+                if (element.elementPanel != m_Panel) continue;
+                element.UaProcessBindingRequests(panelName ??= PanelName);
+            }
+            m_Requests.Clear();
+        }
+
+        string PanelName => (m_Panel as Panel)?.name ?? m_Panel.visualTree.name;
 
         void UpdateBindings()
         {
@@ -513,8 +534,7 @@ namespace UnityEngine.UIElements
         void Log(in BindingResult result)
         {
             if (string.IsNullOrWhiteSpace(result.message)) return;
-            string panelName = (m_Panel as Panel)?.name ?? m_Panel.visualTree.name;
-            Debug.LogWarning(result.message + " (" + panelName + ")");
+            Debug.LogWarning(result.message + " (" + PanelName + ")");
         }
 
         void RefreshOrder()
@@ -604,7 +624,7 @@ namespace UnityEngine.UIElements
             UaPathVisitor.Release(visitor);
             if (!visited) return new BindingResult(BindingStatus.Failure, VisitError(code, context));
             if (visitCode != VisitReturnCode.Ok)
-                return new BindingResult(BindingStatus.Failure, $"[UI Toolkit] Could not retrieve the value at path '<b>{path}</b>': " + CodeText(visitCode));
+                return new BindingResult(BindingStatus.Failure, ExtractValueError(visitCode, container, path));
             return result;
         }
 
@@ -613,12 +633,26 @@ namespace UnityEngine.UIElements
         static string VisitError(VisitReturnCode code, in BindingContext context) =>
             $"[UI Toolkit] Could not bind target of type '<b>{context.targetElement.GetType().Name}</b>' at path '<b>{context.bindingId}</b>': " + CodeText(code);
 
+        // Unity 6000.0.71f1 (tests/projects/uitkbindings, bad-path): a path that does not lead to a
+        // value names the visited container's type.
+        static string ExtractValueError(VisitReturnCode code, object container, in PropertyPath path)
+        {
+            string text = $"[UI Toolkit] Could not retrieve the value at path '<b>{path}</b>' for source of type '<b>{container?.GetType().Name}</b>': ";
+            switch (code)
+            {
+                case VisitReturnCode.InvalidContainerType: return text + "the source cannot be a primitive, a string or an enum.";
+                case VisitReturnCode.MissingPropertyBag: return text + "the source is missing a property bag.";
+                case VisitReturnCode.InvalidPath: return text + "the path from the source to the target is either invalid or contains a null value.";
+                default: return text + CodeText(code);
+            }
+        }
+
         static string CodeText(VisitReturnCode code)
         {
             switch (code)
             {
                 case VisitReturnCode.NullContainer: return "the data source is null.";
-                case VisitReturnCode.InvalidContainerType: return "the data source must be a struct or a class type.";
+                case VisitReturnCode.InvalidContainerType: return "the data source cannot be a primitive, a string or an enum.";
                 case VisitReturnCode.MissingPropertyBag: return "the data source is missing a property bag.";
                 case VisitReturnCode.InvalidPath: return "the path from the data source to the target is either invalid or contains a null value.";
                 case VisitReturnCode.InvalidCast: return "the value could not be converted.";
@@ -737,8 +771,11 @@ namespace UnityEngine.UIElements
 
         object m_DataSource;
         PropertyPath m_DataSourcePath;
-        // The bindings set on the element, in the order they were set.
+        // The bindings set on the element, in the order they were set (a binding set again moves to
+        // the end). The first m_UaProcessed were processed by the panel's last binding update; the
+        // others are requests not processed yet (always the newer ones).
         List<(BindingId id, Binding binding)> m_UaBindings;
+        int m_UaProcessed;
 
         /// <summary>The data source of this element and its descendants without their own.</summary>
         [CreateProperty]
@@ -775,17 +812,37 @@ namespace UnityEngine.UIElements
         {
             m_UaBindings ??= new List<(BindingId, Binding)>();
             int existing = IndexOfBinding(bindingId);
+            if (existing >= 0) RemoveBindingAt(existing);
             if (binding == null)
             {
-                if (existing < 0) return;
-                m_UaBindings.RemoveAt(existing);
-                elementPanel?.uaDataBinding.Unregister(this, bindingId);
+                if (existing >= 0) elementPanel?.uaDataBinding.Unregister(this, bindingId);
                 return;
             }
             binding.property = bindingId;
-            if (existing >= 0) m_UaBindings[existing] = (bindingId, binding);
-            else m_UaBindings.Add((bindingId, binding));
+            m_UaBindings.Add((bindingId, binding));
             elementPanel?.uaDataBinding.Register(this, bindingId, binding);
+        }
+
+        void RemoveBindingAt(int index)
+        {
+            m_UaBindings.RemoveAt(index);
+            if (index < m_UaProcessed) m_UaProcessed--;
+        }
+
+        /// <summary>The panel's binding update reached this element's requests: a binding without a
+        /// property is reported and dropped (as Unity 6000.0.71f1 does, tests/projects/uitkbindings),
+        /// the others count as processed.</summary>
+        internal void UaProcessBindingRequests(string panelName)
+        {
+            if (m_UaBindings == null) return;
+            for (int i = m_UaBindings.Count - 1; i >= m_UaProcessed; i--)
+            {
+                if (!((PropertyPath)m_UaBindings[i].id).IsEmpty) continue;
+                RemoveBindingAt(i);
+                Debug.LogError("[UI Toolkit] Trying to set a binding on `" + (string.IsNullOrWhiteSpace(name) ? "<no name>" : name) + " ("
+                    + TypeUtility.GetTypeDisplayName(GetType()) + ")` without setting the \"property\" attribute is not supported (" + panelName + ").");
+            }
+            m_UaProcessed = m_UaBindings.Count;
         }
 
         int IndexOfBinding(in BindingId id)
@@ -805,10 +862,14 @@ namespace UnityEngine.UIElements
             return index >= 0;
         }
 
+        /// <summary>The bindings not processed yet, newest first, then the processed ones in the order
+        /// they were processed (Unity 6000.0.71f1 Editor, tests/projects/uitkbindings).</summary>
         public IEnumerable<BindingInfo> GetBindingInfos()
         {
             if (m_UaBindings == null) yield break;
-            for (int i = 0; i < m_UaBindings.Count; i++)
+            for (int i = m_UaBindings.Count - 1; i >= m_UaProcessed; i--)
+                yield return new BindingInfo(this, m_UaBindings[i].id, m_UaBindings[i].binding);
+            for (int i = 0; i < m_UaProcessed && i < m_UaBindings.Count; i++)
                 yield return new BindingInfo(this, m_UaBindings[i].id, m_UaBindings[i].binding);
         }
 
@@ -820,6 +881,7 @@ namespace UnityEngine.UIElements
         {
             if (m_UaBindings == null || m_UaBindings.Count == 0) return;
             m_UaBindings.Clear();
+            m_UaProcessed = 0;
             elementPanel?.uaDataBinding.UnregisterAll(this);
         }
 
@@ -880,6 +942,8 @@ namespace UnityEngine.UIElements
         void UaUnregisterBindings()
         {
             if (m_UaBindings == null || m_UaBindings.Count == 0 || elementPanel == null) return;
+            // Out of a panel, the bindings are requests again.
+            m_UaProcessed = 0;
             elementPanel.uaDataBinding.UnregisterAll(this, true);
         }
     }

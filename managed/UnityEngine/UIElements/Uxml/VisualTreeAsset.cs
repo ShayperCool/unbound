@@ -74,6 +74,7 @@ namespace UnityEngine.UIElements
             UxmlBuilder.ApplyClassesAndSheets(m_UaRoot, target);
             foreach (var child in m_UaRoot.Children)
             {
+                if (UxmlBuilder.IsBindings(child)) continue;
                 var element = UxmlBuilder.Create(this, child, target as TemplateContainer, target);
                 if (element == null) continue;
                 element.visualTreeAssetSource = this;
@@ -252,6 +253,11 @@ namespace Unbound.UIElements
                 if (local == "AttributeOverrides") continue;
                 var childNode = new UxmlNode { Namespace = element.NamespaceURI, Type = local };
                 Locate(childNode, positions, ref next);
+                // Measured (Unity 6000.0.71f1, tests/projects/uitkbindings): a tag in <Bindings> that
+                // names no UXML object type is reported by the importer, and only that binding is
+                // dropped.
+                if (UxmlBuilder.IsBindings(node) && !UxmlBuilder.IsUxmlObjectTag(childNode))
+                    Debug.LogError($" ({childNode.Line},{childNode.Column}): Semantic - Uxml object has an invalid child element: {element.Name}");
                 if (local == "Instance") childNode.TemplateName = element.GetAttribute("template");
                 ReadChildren(asset, assetPath, element, childNode, errors, positions, ref next);
                 node.Children.Add(childNode);
@@ -293,7 +299,7 @@ namespace Unbound.UIElements
 
         /// <summary>The UXML object type a tag names (a class with UXML serialized data, or marked
         /// [UxmlObject], that is not an element), else null.</summary>
-        static Type UxmlObjectType(UxmlNode node)
+        internal static Type UxmlObjectType(UxmlNode node)
         {
             string full = FullName(node);
             if (s_ObjectTypes.TryGetValue(full, out var cached)) return cached;
@@ -311,6 +317,20 @@ namespace Unbound.UIElements
             foreach (var data in type.CustomAttributes)
                 if (data.AttributeType.Name == name) return true;
             return false;
+        }
+
+        /// <summary>An element's `<Bindings>` child: the bindings declared on the element (Unity's
+        /// UI Builder writes the tag without a namespace).</summary>
+        internal static bool IsBindings(UxmlNode node) => node.Type == "Bindings" && string.IsNullOrEmpty(node.Namespace) && node.TemplateName == null;
+
+        /// <summary>Whether a tag names a UXML object type (a binding, a column, ...).</summary>
+        internal static bool IsUxmlObjectTag(UxmlNode node) => BindingType(node) != null || UxmlObjectType(node) != null;
+
+        /// <summary>The Binding type a tag names, else null.</summary>
+        internal static Type BindingType(UxmlNode node)
+        {
+            var type = FindType(FullName(node));
+            return type != null && typeof(Binding).IsAssignableFrom(type) ? type : null;
         }
 
         // A type by its full name, in the engine or any loaded assembly.
@@ -447,6 +467,11 @@ namespace Unbound.UIElements
             }
             foreach (var child in node.Children)
             {
+                if (IsBindings(child))
+                {
+                    UxmlBindings.Apply(asset, element, child);
+                    continue;
+                }
                 var childElement = Create(asset, child, target, cloneTarget);
                 if (childElement == null) continue;
                 childElement.visualTreeAssetSource = asset;
@@ -573,7 +598,7 @@ namespace Unbound.UIElements
         /// <summary>Attributes the builder itself reads (classes, inline style, template content).</summary>
         static bool IsStructural(string name) => name == "class" || name == "style" || name == "content-container" || name == "template";
 
-        static string Describe(VisualTreeAsset asset, UxmlNode node) =>
+        internal static string Describe(VisualTreeAsset asset, UxmlNode node) =>
             $"{(string.IsNullOrEmpty(asset?.m_UaAssetPath) ? asset?.name : asset.m_UaAssetPath)}: <{QualifiedName(node)}>";
 
         /// <summary>The attributes of a [UxmlElement]: its [UxmlAttribute] members (by name or obsolete
@@ -598,43 +623,50 @@ namespace Unbound.UIElements
                     continue;
                 }
                 if (member.Problem != null) continue;
-                object value;
-                if (typeof(Object).IsAssignableFrom(member.ValueType) && UxmlTypeIndex.ConverterFor(member.ValueType) == null)
-                {
-                    if (!TryReadObjectReference(element, a.Key, a.Value, member.ValueType, member.Info.Name, asset, node, out var referenced)) continue;
-                    value = referenced;
-                }
-                else if (UxmlAttributeValues.IsUnreadBackground(member.ValueType))
-                {
-                    // Measured (Unity 6000.0.71f1, tests/projects/uxmlattributes): a Background or
-                    // List<Background> member is not read from UXML without a game converter (it
-                    // keeps its value whatever the reference), and its url is not checked.
-                    continue;
-                }
-                else if (member.ValueType == typeof(Type))
-                {
-                    value = UxmlAttributeValues.ReadTypeReference(node, a.Key, a.Value,
-                        member.Info.GetCustomAttribute<UxmlTypeReferenceAttribute>(false)?.baseType);
-                }
-                else if (!UxmlAttributeValues.TryReadLenient(a.Value, member.ValueType, member.Info, asset, out value, out var error))
-                {
-                    Debug.LogError($"{Describe(asset, node)} attribute '{a.Key}': {error}; '{member.Info.Name}' keeps its value.");
-                    continue;
-                }
-                try
-                {
-                    member.Set(element, value);
-                }
-                catch (TargetInvocationException e)
-                {
-                    Debug.LogException(e.InnerException ?? e);
-                }
-                catch (ArgumentException e)
-                {
-                    Debug.LogError($"{Describe(asset, node)} attribute '{a.Key}': {e.Message}");
-                }
+                ApplyMember(asset, node, element, member, a.Key, a.Value);
             }
             ApplyEnumFieldAttributes(asset, node, element, enumAttributes);
+        }
+
+        /// <summary>One [UxmlAttribute] member of a custom control or UXML object read from its
+        /// attribute text and set on <paramref name="target"/>.</summary>
+        internal static void ApplyMember(VisualTreeAsset asset, UxmlNode node, object target, UxmlMember member, string key, string text)
+        {
+            object value;
+            if (typeof(Object).IsAssignableFrom(member.ValueType) && UxmlTypeIndex.ConverterFor(member.ValueType) == null)
+            {
+                if (!TryReadObjectReference(target as VisualElement, key, text, member.ValueType, member.Info.Name, asset, node, out var referenced)) return;
+                value = referenced;
+            }
+            else if (UxmlAttributeValues.IsUnreadBackground(member.ValueType))
+            {
+                // Measured (Unity 6000.0.71f1, tests/projects/uxmlattributes): a Background or
+                // List<Background> member is not read from UXML without a game converter (it
+                // keeps its value whatever the reference), and its url is not checked.
+                return;
+            }
+            else if (member.ValueType == typeof(Type))
+            {
+                value = UxmlAttributeValues.ReadTypeReference(node, key, text,
+                    member.Info.GetCustomAttribute<UxmlTypeReferenceAttribute>(false)?.baseType);
+            }
+            else if (!UxmlAttributeValues.TryReadLenient(text, member.ValueType, member.Info, asset, out value, out var error))
+            {
+                Debug.LogError($"{Describe(asset, node)} attribute '{key}': {error}; '{member.Info.Name}' keeps its value.");
+                return;
+            }
+            try
+            {
+                member.Set(target, value);
+            }
+            catch (TargetInvocationException e)
+            {
+                Debug.LogException(e.InnerException ?? e);
+            }
+            catch (ArgumentException e)
+            {
+                Debug.LogError($"{Describe(asset, node)} attribute '{key}': {e.Message}");
+            }
         }
 
         static string PreferredName(UxmlNode node, UxmlMember member)
@@ -766,7 +798,19 @@ namespace Unbound.UIElements
                 case "usage-hints":
                     return;
             }
-            if (name.StartsWith("data-source", StringComparison.Ordinal)) return;
+            switch (name)
+            {
+                case "data-source":
+                    if (TryReadObjectReference(element, name, value, typeof(Object), nameof(VisualElement.dataSource), asset, node, out var source))
+                        element.dataSource = source;
+                    return;
+                case "data-source-path":
+                    element.dataSourcePath = new PropertyPath(value);
+                    return;
+                case "data-source-type":
+                    element.dataSourceType = UxmlAttributeValues.ReadTypeReference(node, name, value, typeof(object));
+                    return;
+            }
             var property = FindProperty(element.GetType(), name, engineDeclaredOnly);
             if (property == null)
             {
@@ -848,7 +892,7 @@ namespace Unbound.UIElements
         // or unresolved url logs the importer's warnings and gives null; an object of another type
         // fails on assignment (the ArgumentException is logged) and the member keeps its value.
         // Unbound's choice: a file the asset database cannot load logs ONE error, value kept.
-        static bool TryReadObjectReference(VisualElement element, string attribute, string text, Type type, string memberName, VisualTreeAsset asset, UxmlNode node, out Object result)
+        internal static bool TryReadObjectReference(VisualElement element, string attribute, string text, Type type, string memberName, VisualTreeAsset asset, UxmlNode node, out Object result)
         {
             switch (UxmlAttributeValues.ResolveReference(text, type, asset, out result, out var failure))
             {
