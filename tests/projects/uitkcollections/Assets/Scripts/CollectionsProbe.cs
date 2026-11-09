@@ -550,6 +550,13 @@ public static class CollectionsProbe
         Step("tree", "nav-right-2", () => Navigate(NavigationMoveEvent.Direction.Right), State);
         Step("tree", "nav-left", () => Navigate(NavigationMoveEvent.Direction.Left), State);
         Step("tree", "nav-left-2", () => Navigate(NavigationMoveEvent.Direction.Left), State);
+        // Selection by id of items with children (collapsed, under a collapsed parent), and adding to it.
+        Step("tree", "collapse-all-again", () => tree.CollapseAll(), State);
+        Step("tree", "select-id-parent-10", () => tree.SetSelectionById(10), State);
+        Step("tree", "select-id-child-14", () => tree.SetSelectionById(14), State);
+        Step("tree", "add-to-selection-id-17", () => { tree.selectionType = SelectionType.Multiple; tree.AddToSelectionById(17); }, State);
+        Step("tree", "select-without-notify-id-21", () => tree.SetSelectionByIdWithoutNotify(new[] { 21 }), State);
+        Step("tree", "expand-leaf-2", () => tree.ExpandItem(2), State);
         Step("tree", "set-root-items", () => { tree.SetRootItems(TreeItems(2, 2, 0)); tree.Rebuild(); }, State);
     }
 
