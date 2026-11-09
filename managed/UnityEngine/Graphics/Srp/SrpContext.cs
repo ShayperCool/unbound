@@ -1203,7 +1203,7 @@ namespace Unbound.Runtime
             return handles;
         }
 
-        internal static void Begin(NativeArray<AttachmentDescriptor> attachments, int depthAttachmentIndex, int width, int height, int samples)
+        internal static void Begin(NativeArray<AttachmentDescriptor> attachments, int depthAttachmentIndex, int width, int height, int samples = 1)
         {
             ReleaseTransient();
             if (s_Attachments.Length < attachments.Length)

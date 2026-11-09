@@ -170,6 +170,44 @@ namespace UnityEngine.Tests
             Assert.Equal(TextureHandles.Of(m_Depth), state.Color);
         }
 
+        /// <summary>An attachment without a target (the render graph's G-buffer between subpasses)
+        /// draws into a texture of its own for the pass, which a later subpass reads as its
+        /// input: input i is the global `_UnityFBInput{i}`.</summary>
+        [Fact]
+        public void ATargetlessAttachmentKeepsATextureThroughThePassAndIsReadAsInput()
+        {
+            using var attachments = Attachments();
+            var gbuffer = new AttachmentDescriptor(UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_SFloat);
+            var withGBuffer = new NativeArray<AttachmentDescriptor>(5, Allocator.Temp);
+            for (int i = 0; i < 4; i++) withGBuffer[i] = attachments[i];
+            withGBuffer[4] = gbuffer;
+            int start = (int)s_Length.GetValue(null);
+            RenderPasses.Begin(withGBuffer, 3, 8, 8);
+            RenderPasses.SubPass(new[] { 0, 4 });
+            var colors = GfxStream.Current.Colors;
+            Assert.Equal(TextureHandles.Of(m_A), colors[0]);
+            ulong transient = colors[1];
+            Assert.NotEqual(0UL, transient);
+            Assert.DoesNotContain(transient, new[] { TextureHandles.Of(m_A), TextureHandles.Of(m_B), TextureHandles.Of(m_C), TextureHandles.Of(m_Depth) });
+            // The next subpass reads it as input 0 and draws into B.
+            RenderPasses.SubPass(new[] { 1 }, new[] { 4 });
+            Assert.Equal(TextureHandles.Of(m_B), GfxStream.Current.Color);
+            var bytes = GfxStream.Recorded.Slice(start).ToArray();
+            var name = System.Text.Encoding.UTF8.GetBytes("_UnityFBInput0");
+            int at = IndexOf(bytes, name);
+            Assert.True(at >= 0, "the input is bound by name");
+            Assert.True(IndexOf(bytes, BitConverter.GetBytes(transient), at + name.Length) >= 0, "the input is the attachment's texture");
+            RenderPasses.End();
+            withGBuffer.Dispose();
+        }
+
+        static int IndexOf(byte[] haystack, byte[] needle, int from = 0)
+        {
+            for (int i = from; i + needle.Length <= haystack.Length; i++)
+                if (haystack.AsSpan(i, needle.Length).SequenceEqual(needle)) return i;
+            return -1;
+        }
+
         /// <summary>Outputs outside the pass's attachments are left out (the others still bind).</summary>
         [Fact]
         public void OutputsOutsideTheAttachmentsAreLeftOut()
