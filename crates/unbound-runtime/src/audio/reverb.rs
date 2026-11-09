@@ -224,10 +224,12 @@ impl SfxReverb {
         };
         let room = p.room.clamp(-10000.0, 0.0);
         // Room HF: two identical one-poles; their combined gain at HF Reference is the Room HF level.
+        // The cosine is used as is down to the 20 Hz reference; only the discriminant is limited
+        // at zero (tests/projects/audiodistortion live sfxreverb_hfref20).
         let g = level(p.room_hf.clamp(-10000.0, 0.0));
         let w = 2.0 * std::f32::consts::PI * p.hf_reference.clamp(20.0, 20000.0) / rate;
         if g < 1.0 {
-            let k = 1.0 - g * w.cos().min(0.9999);
+            let k = 1.0 - g * w.cos();
             c.hf = (k - (k * k - (1.0 - g) * (1.0 - g)).max(0.0).sqrt()) / (1.0 - g);
             c.hf = c.hf.clamp(0.0, 0.99);
         }
@@ -463,6 +465,20 @@ mod tests {
     use super::*;
     use crate::audio::effects::{Effect, EffectSpec};
 
+    #[test]
+    fn room_hf_at_the_lowest_references_reaches_the_pole_limit() {
+        // Unity 6000.0.71f1, tests/projects/audiodistortion live sfxreverb_hfref20/50: the
+        // cosine is not limited, so very low references give the steepest allowed pole.
+        for (room_hf, reference) in [(-100.0, 20.0), (-1000.0, 50.0)] {
+            let mut reverb = SfxReverb::new(48000, 1024).unwrap();
+            reverb.tune(&spec(&[("room_hf", room_hf), ("hf_reference", reference)]));
+            assert_eq!(reverb.c.hf, 0.99, "{room_hf} {reference}");
+        }
+        let mut reverb = SfxReverb::new(48000, 1024).unwrap();
+        reverb.tune(&spec(&[("room_hf", -1200.0), ("hf_reference", 5000.0)]));
+        assert!(reverb.c.hf > 0.0 && reverb.c.hf < 0.99);
+    }
+
     fn spec(overrides: &[(&str, f32)]) -> SfxReverbSpec {
         let mut p = SfxReverbSpec {
             dry_level: 0.0,
@@ -489,6 +505,8 @@ mod tests {
                 "decay" => &mut p.decay_time,
                 "ratio" => &mut p.decay_hf_ratio,
                 "diffusion" => &mut p.diffusion,
+                "room_hf" => &mut p.room_hf,
+                "hf_reference" => &mut p.hf_reference,
                 _ => panic!("{name}"),
             };
             *field = *value;
