@@ -282,7 +282,9 @@ milliseconds converted with `floor(ms * rate / 1000)`. The constants are in `rev
 - **Input.** L+R (mono). Dry Level scales each original channel.
 - **Room HF.** Two identical one-poles `y = (y - x) a + x`. Their combined gain at HF Reference is
   `G = level(Room HF)`, which gives `a = ((1 - Gc) - sqrt((1 - Gc)^2 - (1 - G)^2)) / (1 - G)` with
-  `c = cos(2 pi HFRef / rate)`.
+  `c = cos(2 pi HFRef / rate)`. The pole is limited to 0.99, which only the steepest settings
+  reach (Room HF -10000 mB at HF Reference 1000 Hz: tests/projects/audioreverb live
+  `filter_room_hf_floor` and `zone_room_hf_floor`).
 - **Room LF.** `G (s^2 + sqrt2 s + 1) / (G s^2 + sqrt(2G) s + 1)`, bilinear with the prewarp at LF
   Reference.
 - **Early reflections.**
@@ -307,7 +309,8 @@ milliseconds converted with `floor(ms * rate / 1000)`. The constants are in `rev
     `pi/4 * Diffusion/100`, follow a separate `cos(angle)^3` normalization gain.
   - **Output.** Transformed line `u` reaches channel `(u-1) mod 2` after output tap
     `(u-1) mod 8`. Tap delays start at 1.5 ms times output rate, multiply by 1.47
-    in float32, then round to whole frames and subtract one.
+    in float32, then round to whole frames and subtract one. Only 48000 and 44100 Hz are
+    measured; other rates follow the same formula unconfirmed.
   - **Gain.** `sqrt(mean_k(1 - c1_k^2) / 8) * level(Room + Reverb)`.
 - **Wet mixing.** SFX Reverb follows the [shared static Wet rule](#static-effect-slot-wet-mixing)
   through 0 dB. The measured release uses the -70 dB processed-output boundary, passes exactly

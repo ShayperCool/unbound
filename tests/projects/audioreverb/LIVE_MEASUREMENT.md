@@ -1,12 +1,14 @@
 # Live zone controls
 
 Unity 6000.0.71f1, Linux Editor, stereo 48000/44100 Hz, 1024-frame DSP buffers.
-Two independent Editor repeats agree exactly on all 884,765 records per rate.
-The nine controls retain every sample of 24 complete buffers, both device PCM
+Two independent Editor repeats agree exactly on all 1,081,379 records per rate.
+The eleven controls retain every sample of 24 complete buffers, both device PCM
 and the dry master sink. They cross mono/stereo clips with zone enable/disable,
 GameObject activation, source bypassReverbZones and zone destruction/recreation.
 A Cave preset control also switches from a flat high-frequency response during the
 transition, checking that input history remains current before the next change.
+Two static controls, an AudioReverbFilter and a User zone with Room HF -10000 mB at
+HF Reference 1000 Hz, reach the 0.99 limit of the Room HF input pole.
 The original 141-case reference is unchanged and all five formerly rejected
 activation controls are now required by its gate.
 

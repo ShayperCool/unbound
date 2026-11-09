@@ -189,6 +189,9 @@ public partial class AudioReverbProbe : MonoBehaviour
         new[] { "zone_live_destroy_mono0", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=destroy" },
         new[] { "zone_live_destroy_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=destroy", "mono" },
         new[] { "zone_live_cave", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=toggle", "Z:reverbPreset=Cave" },
+        // Room HF at its floor and the lowest HF reference: the steepest input high-cut pole.
+        new[] { "filter_room_hf_floor", "filter", "F:reverbPreset=User", "F:room=0", "F:roomHF=-10000", "F:hfReference=1000", "F:reverbLevel=0", "F:reflectionsLevel=-10000" },
+        new[] { "zone_room_hf_floor", "zone=0", "Z:reverbPreset=User", "Z:room=0", "Z:reverb=0", "Z:reflections=-10000", "Z:roomHF=-10000", "Z:HFReference=1000" },
     };
     public static string[] Selected()
     {
