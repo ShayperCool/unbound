@@ -863,10 +863,16 @@ namespace Unbound.Runtime
                     // A pass tag is the drawn pass's: the list's first LightMode the material has
                     // where the renderer picks it (several drawn passes share the first's block).
                     int drawnPass = pass;
-                    if (tagged.PassTag && pass < 0 && ShaderPassInfo.Of(item.Material.shader) is ShaderPassInfo tags)
+                    if (tagged.PassTag && pass < 0)
                     {
-                        var passes = TaggedPasses(item.Material, tags, s_PassTagScratch, includeDisabled: true);
-                        drawnPass = passes.Count > 0 ? passes[0] : -1;
+                        // An override material's pass is its own (a negative index: no pass tag).
+                        drawnPass = -1;
+                        if (overrideMaterial == null && ShaderPassInfo.Of(item.Material.shader) is ShaderPassInfo tags)
+                        {
+                            var passes = TaggedPasses(item.Material, tags, s_PassTagScratch, includeDisabled: true);
+                            if (passes.Count > 0) drawnPass = passes[0];
+                            if (passes.Count > 1) WarnSharedPassTagOnce();
+                        }
                     }
                     SelectTaggedState(tagged, drawn ?? ReplacementMaterial(item.Material, overrideShader), drawnPass, ref block);
                 }
@@ -877,6 +883,17 @@ namespace Unbound.Runtime
         }
 
         static readonly List<int> s_TaggedScratch = new List<int>();
+
+        static bool s_WarnedSharedPassTag;
+
+        /// <summary>Several passes of one material drawn by a pass-tag list take its first pass's
+        /// state block (they are drawn together).</summary>
+        static void WarnSharedPassTagOnce()
+        {
+            if (s_WarnedSharedPassTag) return;
+            s_WarnedSharedPassTag = true;
+            Debug.LogWarning("Unbound: a renderer list with per-pass-tag state blocks draws several passes of a material: they all take the first pass's block.");
+        }
 
         /// <summary>Switches a renderer list's per-tag state block when the next draw's differs.</summary>
         static void SelectTaggedState(RendererLists.TaggedStates tagged, Material material, int pass, ref int block)
