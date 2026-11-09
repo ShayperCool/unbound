@@ -39,7 +39,8 @@ a `Stop`, `Play` restores activation from `bypassEffects`; components keep their
 state through `Stop` followed by `Play`. A clipless generator's `Play` does not
 reconnect. A changed list of filter components or scripts activates every component.
 `bypassListenerEffects` and component enable changes during playback are unmeasured;
-they leave the activation unchanged.
+they do not change activation, though a disabled component leaves the chain and so can
+change which unit is last.
 `Compat.AudioComponentActivationMeasured` selects this; other releases keep
 components frozen on the bypass flag. A Stop/Play of a quiet generator restarts its
 64-frame source gain ramp from silence.

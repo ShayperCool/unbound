@@ -444,7 +444,8 @@ namespace Unbound.Runtime
         // such change after a clip starts playing also reconnects the chain: every component
         // restarts empty and the last unit in Inspector order stays active, processing silence
         // while the source is bypassed. bypassListenerEffects and component enable changes
-        // during playback are unmeasured and leave the activation as it is.
+        // during playback are unmeasured and do not change activation; a disabled component
+        // leaves the chain, so the unit that is last can change (also unmeasured).
         static void UpdateActivation(AudioSource source, ulong identity)
         {
             bool change = source.m_ActivationPending;

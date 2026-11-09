@@ -342,6 +342,13 @@ namespace UnityEngine.Tests
             echo.enabled = false;
             Assert.Equal(0u, Flags(source) & (Inactive | LastActive));
             Assert.Equal(0, m_Backend.ComponentResets);
+            echo.enabled = true;
+            source.bypassEffects = true;
+            Assert.Equal(Inactive | LastActive, Flags(source) & (Inactive | LastActive));
+            // Neither the listener bypass nor an enable change reconnects again.
+            source.bypassListenerEffects = false;
+            Assert.Equal(Inactive | LastActive, Flags(source) & (Inactive | LastActive));
+            Assert.Equal(1, m_Backend.ComponentResets);
         }
 
         [Fact]
