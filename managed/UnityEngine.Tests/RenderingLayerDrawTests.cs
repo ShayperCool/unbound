@@ -13,13 +13,16 @@ namespace UnityEngine.Tests
     public sealed class RenderingLayerDrawTests
     {
         static readonly int s_Id = Shader.PropertyToID("unity_RenderingLayer");
+        /// <summary>A property of the draw's own (property ids follow the order names are first
+        /// used in, so a literal id could be unity_RenderingLayer's).</summary>
+        static readonly int s_Own = Shader.PropertyToID("_RenderingLayerDrawTestsOwn");
 
         static int Bits(Dictionary<int, object> properties) => BitConverter.SingleToInt32Bits(((Vector4)properties[s_Id]).x);
 
         [Fact]
         public void ADrawOnOtherLayersCarriesItsMask()
         {
-            var own = new Dictionary<int, object> { [7] = 2f };
+            var own = new Dictionary<int, object> { [s_Own] = 2f };
             // Default layer only, or no mask: the draw's properties stay as they are.
             Assert.Same(own, FrameBuilder.WithRenderingLayer(1u, own));
             Assert.Null(FrameBuilder.WithRenderingLayer(1u, null));
@@ -28,7 +31,7 @@ namespace UnityEngine.Tests
             {
                 var drawn = FrameBuilder.WithRenderingLayer(1u | 4u, own);
                 Assert.NotSame(own, drawn);
-                Assert.Equal(2f, drawn[7]);
+                Assert.Equal(2f, drawn[s_Own]);
                 Assert.Equal(5, Bits(drawn));
                 Assert.False(own.ContainsKey(s_Id));
                 // Every bit passes through unchanged: the high bit, Everything (a NaN's bits) and
