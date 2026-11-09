@@ -6,7 +6,7 @@ exclude = ["vendor/wgpu-sampler/wgpu", "vendor/wgpu-sampler/wgpu-core", "vendor/
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-license = "MIT OR Apache-2.0"
+license = "MIT"
 
 [workspace.dependencies]
 tikv-jemallocator = "0.6"
