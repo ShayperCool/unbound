@@ -187,6 +187,22 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>An agent brakes by the distance to its path's end in 3D: an end above it is
+        /// farther than its horizontal distance (navbaked `height.agents`, up a ramp and stairs).</summary>
+        [Fact]
+        public void TheBrakingDistanceToTheEndIsMeasuredIn3D()
+        {
+            var ag = new DotRecast.Detour.Crowd.DtCrowdAgent(0);
+            ag.npos = new RcVec3f(0f, 0f, 0f);
+            ag.corners[0] = new DtStraightPath(new RcVec3f(0.3f, 0.4f, 0f), DtStraightPathFlags.DT_STRAIGHTPATH_END, 0);
+            ag.ncorners = 1;
+            Assert.Equal(0.5f, ag.GetDistanceToGoal(1f), 5);
+            Assert.Equal(0.4f, ag.GetDistanceToGoal(0.4f), 5);
+            // Not the end of the path: the range.
+            ag.corners[0] = new DtStraightPath(new RcVec3f(0.3f, 0.4f, 0f), 0, 0);
+            Assert.Equal(1f, ag.GetDistanceToGoal(1f), 5);
+        }
+
         /// <summary>Slots: an agent takes the slot freed last; of agents that waited as long for a
         /// corridor search, the one in the lower slot is searched in one update, the other in the
         /// next.</summary>

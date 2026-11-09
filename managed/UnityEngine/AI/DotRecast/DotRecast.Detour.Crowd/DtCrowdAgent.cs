@@ -175,8 +175,10 @@ namespace DotRecast.Detour.Crowd
                 return range;
 
             bool endOfPath = ((corners[ncorners - 1].flags & DtStraightPathFlags.DT_STRAIGHTPATH_END) != 0) ? true : false;
+            // Unbound: in 3D, as Unity's agents brake (an end above or below the agent is farther:
+            // tests/projects/navbaked `height.agents`, up a ramp and stairs).
             if (endOfPath)
-                return Math.Min(RcVec.Dist2D(npos, corners[ncorners - 1].pos), range);
+                return Math.Min(RcVec3f.Distance(npos, corners[ncorners - 1].pos), range);
 
             return range;
         }
