@@ -301,7 +301,17 @@ struct AdapterShared {
     /// Cached here so it doesn't need to be queried every time texture format capabilities are requested.
     /// (this has been shown to be a significant enough overhead)
     max_msaa_samples: i32,
+
+    /// Unbound: `glTextureView` (OpenGL 4.3), when the context has it: views of another format,
+    /// dimension, level or layer range are textures of their own.
+    texture_view: Option<TextureViewFn>,
+    /// Unbound: `GL_MAX_TEXTURE_LOD_BIAS` on desktop OpenGL (sampler LOD bias), else `None`.
+    max_lod_bias: Option<f32>,
 }
+
+/// Unbound: `glTextureView(texture, target, origtexture, internalformat, minlevel, numlevels,
+/// minlayer, numlayers)`.
+type TextureViewFn = unsafe extern "system" fn(u32, u32, u32, u32, u32, u32, u32, u32);
 
 impl fmt::Debug for AdapterShared {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -316,6 +326,8 @@ impl fmt::Debug for AdapterShared {
             next_shader_id,
             program_cache: _,
             es,
+            texture_view: _,
+            max_lod_bias: _,
             max_msaa_samples,
         } = self;
         f.debug_struct("AdapterShared")
@@ -519,6 +531,8 @@ impl Texture {
             wgt::TextureDimension::D2 => {
                 // HACK: detect a cube map; forces cube compatible textures to be cube textures
                 match (desc.is_cube_compatible(), desc.size.depth_or_array_layers) {
+                    // Unbound: multisampled textures (their storage needs this target).
+                    (false, 1) if desc.sample_count > 1 => glow::TEXTURE_2D_MULTISAMPLE,
                     (false, 1) => glow::TEXTURE_2D,
                     (false, _) => glow::TEXTURE_2D_ARRAY,
                     (true, 6) => glow::TEXTURE_CUBE_MAP,
@@ -587,6 +601,9 @@ pub struct TextureView {
     mip_levels: Range<u32>,
     array_layers: Range<u32>,
     format: wgt::TextureFormat,
+    /// Unbound: `inner` is a `glTextureView` texture this view owns (its levels and layers count
+    /// from the view's first).
+    owned: bool,
 }
 
 impl crate::DynTextureView for TextureView {}

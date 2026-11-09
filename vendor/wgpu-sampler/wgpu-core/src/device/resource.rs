@@ -2250,17 +2250,17 @@ impl Device {
     }
 
     pub fn native_sampler_lod_bias_limit(&self) -> Option<f32> {
+        let raw = self.raw().as_any();
         #[cfg(vulkan)]
-        {
-            self.raw()
-                .as_any()
-                .downcast_ref::<hal::vulkan::Device>()
-                .and_then(|device| device.sampler_lod_bias_limit())
+        if let Some(device) = raw.downcast_ref::<hal::vulkan::Device>() {
+            return device.sampler_lod_bias_limit();
         }
-        #[cfg(not(vulkan))]
-        {
-            None
+        #[cfg(gles)]
+        if let Some(device) = raw.downcast_ref::<hal::gles::Device>() {
+            return device.sampler_lod_bias_limit();
         }
+        let _ = raw;
+        None
     }
 
     pub fn create_sampler(

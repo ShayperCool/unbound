@@ -4,6 +4,8 @@
 pub mod compiled;
 pub mod device;
 pub mod executor;
+#[cfg(all(test, target_os = "linux"))]
+mod gl_backend_tests;
 pub mod gl_interop;
 pub mod pipelines;
 pub mod resources;

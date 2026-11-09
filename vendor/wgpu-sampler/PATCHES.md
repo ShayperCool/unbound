@@ -10,8 +10,8 @@ The SHA-256 values below identify the published `.crate` archives and are checke
 | wgpu-core | `14c018fce9b6270aa203c2fdd56f3cce996713534bd757e4ea58c8560b121f14` |
 | wgpu-hal | `b6b7fb58561a792bc237628ba0792e332de418fefe145f13b5ed8201e6d52f58` |
 
-`native-lod-bias.patch` contains every source change relative to those archives.
-`reproduce.py --output <fresh-cache-directory>` recreates the three patched source trees.
+`native-lod-bias.patch` and then `gl-device.patch` contain every source change relative to those
+archives. `reproduce.py --output <fresh-cache-directory>` recreates the three patched source trees.
 An optional `--archive-dir` supplies previously downloaded archives. The script does not
 read the Cargo registry or depend on machine-specific paths. No dependency version changes
 are required; Cargo's patch entries replace only these three packages.
@@ -31,8 +31,8 @@ are required; Cargo's patch entries replace only these three packages.
   No foreign handle is imported, borrowed, cast, or destroyed separately.
 - `hal::vulkan::Device::sampler_lod_bias_limit()` returns the cached physical limit, or `None`
   on portability-subset devices because this backend does not enable `samplerMipLodBias`.
-  Other native backends reject nonzero bias or the native filter opt-in with
-  `UnsupportedLodBias`. There is no shader approximation. The engine keeps its prior
+  Other native backends than Vulkan and desktop OpenGL (`gl-device.patch`, below) reject nonzero
+  bias or the native filter opt-in with `UnsupportedLodBias`. There is no shader approximation. The engine keeps its prior
   zero-bias filtering policy when this native extension is unavailable.
 
 NativeApi12, render-command protocol5, texture packet layouts and PhysX shim9 are unchanged.
@@ -71,3 +71,21 @@ permit independent mip selection and anisotropy for normalized coordinates.
 The renderer does not permanently cache every nonzero float bias. Cached bind groups own
 those sampler references, and the existing HAL cache deduplicates live creation descriptors.
 This allows obsolete bias states to reach the ordinary destruction path.
+
+## OpenGL device (`gl-device.patch`)
+
+Unity's OpenGL Core device draws with wgpu's OpenGL backend (EGL). Each change below is marked
+`Unbound:` in the source. "Measured" is what a Unity 6000.0.71f1 Editor capture or a GL query on
+the measured machine (NVIDIA, driver 580) showed; the rest is what the OpenGL specification
+requires. `crates/unbound-app/src/render/gl_backend_tests.rs` checks each change on a real
+OpenGL device (skipped without one).
+
+| File / function | Change | Why |
+| --- | --- | --- |
+| `wgpu-hal/src/gles/egl.rs` `Inner::create` | A 4.5 core context is requested first, then the 3.3 one as before. | The OpenGL Core Editor's device is a 4.5 context (measured: tests/projects/urp CapsProbe `graphicsDeviceVersion` "OpenGL 4.5.0 NVIDIA"); the measured driver gives a 3.3 request exactly 3.3, without compute shaders, which the renderer needs (compute shaders, indirect validation). |
+| `wgpu-hal/src/gles/adapter.rs` `Adapter::expose` | Loads `glTextureView` (OpenGL 4.3 or `GL_ARB_texture_view`, immutable storage) and reports `VIEW_FORMATS` only then; reads `GL_MAX_TEXTURE_LOD_BIAS` on desktop OpenGL. | Unity samples and renders textures through sRGB and linear views of one storage (sRGB render textures, `RenderTextureReadWrite`), samples single layers and faces, and biases samplers (`Texture.mipMapBias`). |
+| `wgpu-hal/src/gles/device.rs` `create_texture_view`, `destroy_texture_view`; `mod.rs` `TextureView` | A view of another format, dimension, level range or layer range is its own OpenGL texture (`glTextureView`, levels and layers counted from the view's first; depth/stencil views keep the texture's format, their aspect still chosen when bound); the view owns and deletes it. Views equal to the whole texture stay the texture, as before. | Without it the backend ignored a view's format (sRGB views drew linear), could not sample a layer other than 0, and shared one base/max level between views of one texture. |
+| `wgpu-hal/src/gles/device.rs` `create_texture` | A texture with view formats is never a renderbuffer. | A renderbuffer has no views. |
+| `wgpu-hal/src/gles/mod.rs` `Texture::get_info_from_desc`, `conv.rs` `is_layered_target`, `queue.rs` `get_2d_target`, `set_attachment` | A multisampled 2D texture is a `GL_TEXTURE_2D_MULTISAMPLE` texture and is attached as one. | `glTexStorage2DMultisample` refuses `GL_TEXTURE_2D` (measured: `GL_INVALID_ENUM`, then incomplete framebuffers), and the attachment path used the OpenGL ES render-to-texture extension. Unity's multisampled render textures with a sampled depth (camera MSAA, `bindTextureMS`) need it. |
+| `wgpu-hal/src/gles/device.rs` `create_sampler`, `Device::sampler_lod_bias_limit`; `wgpu-core/src/device/resource.rs` `native_sampler_lod_bias_limit` | The native sampler LOD bias (above) on desktop OpenGL: `GL_TEXTURE_LOD_BIAS`, bounded by `GL_MAX_TEXTURE_LOD_BIAS`. | `Texture.mipMapBias` on the OpenGL Core device (tests/projects/samplerbias). |
+| `wgpu-hal/src/gles/egl.rs` `AdapterContext::lock`, `AdapterContextLock::drop` | Another EGL context the thread had current before the lock is made current again after it (before: none). | Native plugins call OpenGL from scripts with their context current on the game thread, which also drives the renderer (tests/projects/nativegfx). |

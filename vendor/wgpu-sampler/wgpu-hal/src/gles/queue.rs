@@ -36,7 +36,7 @@ fn get_2d_target(target: u32, array_layer: u32) -> u32 {
     ];
 
     match target {
-        glow::TEXTURE_2D => target,
+        glow::TEXTURE_2D | glow::TEXTURE_2D_MULTISAMPLE => target,
         glow::TEXTURE_CUBE_MAP => CUBEMAP_FACES[array_layer as usize],
         _ => unreachable!(),
     }
@@ -157,7 +157,9 @@ impl super::Queue {
                 } else {
                     unsafe {
                         assert_eq!(view.mip_levels.len(), 1);
-                        if sample_count != 1 {
+                        // Unbound: a multisampled texture is attached as it is; the extension
+                        // renders multisampled into a single-sampled one.
+                        if sample_count != 1 && target != glow::TEXTURE_2D_MULTISAMPLE {
                             gl.framebuffer_texture_2d_multisample(
                                 fbo_target,
                                 attachment,

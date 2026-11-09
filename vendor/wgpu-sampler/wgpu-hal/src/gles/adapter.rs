@@ -684,6 +684,22 @@ impl super::Adapter {
             super::PrivateCapabilities::TEXTURE_STORAGE,
             supported((3, 0), (4, 2)),
         );
+        // Unbound: views of another format, dimension, level or layer range as textures of their
+        // own over the texture's immutable storage (`glTextureView`, desktop OpenGL 4.3).
+        #[cfg(not(any(windows, webgl)))]
+        let texture_view = (private_caps.contains(super::PrivateCapabilities::TEXTURE_STORAGE)
+            && (full_ver.is_some_and(|v| v >= (4, 3))
+                || extensions.contains("GL_ARB_texture_view")))
+        .then(|| context.egl_instance()?.get_proc_address("glTextureView"))
+        .flatten()
+        .map(|f| unsafe { core::mem::transmute::<extern "system" fn(), super::TextureViewFn>(f) });
+        #[cfg(any(windows, webgl))]
+        let texture_view: Option<super::TextureViewFn> = None;
+        downlevel_flags.set(wgt::DownlevelFlags::VIEW_FORMATS, texture_view.is_some());
+        // Unbound: sampler LOD bias, desktop OpenGL only (`GL_TEXTURE_LOD_BIAS`).
+        let max_lod_bias = full_ver
+            .is_some()
+            .then(|| unsafe { gl.get_parameter_f32(glow::MAX_TEXTURE_LOD_BIAS) });
         let is_mali = renderer.to_lowercase().contains("mali");
         let debug_fns_enabled = match backend_options.debug_fns {
             wgt::GlDebugFns::Auto => gl.supports_debug() && !is_mali,
@@ -958,6 +974,8 @@ impl super::Adapter {
                     program_cache: Default::default(),
                     es: es_ver.is_some(),
                     max_msaa_samples: max_samples,
+                    texture_view,
+                    max_lod_bias,
                 }),
             },
             info: Self::make_info(vendor, renderer, version),

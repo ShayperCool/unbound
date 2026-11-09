@@ -123,6 +123,11 @@ impl CompilationContext<'_> {
 }
 
 impl super::Device {
+    /// Unbound: the sampler LOD bias range (`GL_MAX_TEXTURE_LOD_BIAS`), desktop OpenGL only.
+    pub fn sampler_lod_bias_limit(&self) -> Option<f32> {
+        self.shared.max_lod_bias
+    }
+
     /// # Safety
     ///
     /// - `name` must be created respecting `desc`
@@ -879,9 +884,11 @@ impl crate::Device for super::Device {
             | wgt::TextureUses::TRANSIENT;
         let format_desc = self.shared.describe_texture_format(desc.format);
 
+        // Unbound: a texture with view formats is a texture (views of renderbuffers do not exist).
         let inner = if render_usage.contains(desc.usage)
             && desc.dimension == wgt::TextureDimension::D2
             && desc.size.depth_or_array_layers == 1
+            && desc.view_formats.is_empty()
         {
             let raw = unsafe { gl.create_renderbuffer().unwrap() };
             unsafe { gl.bind_renderbuffer(glow::RENDERBUFFER, Some(raw)) };
@@ -1138,17 +1145,95 @@ impl crate::Device for super::Device {
         desc: &crate::TextureViewDescriptor,
     ) -> Result<super::TextureView, crate::DeviceError> {
         self.counters.texture_views.add(1);
+        let mip_levels = desc.range.mip_range(texture.mip_level_count);
+        let array_layers = desc.range.layer_range(texture.array_layer_count);
+        // Unbound: a view of another format, dimension, level or layer range is a texture of its
+        // own (`glTextureView`) where the context has them; its levels and layers count from 0.
+        if let (Some(texture_view), super::TextureInner::Texture { raw, target }) =
+            (self.shared.texture_view, &texture.inner)
+        {
+            let multisampled = matches!(
+                *target,
+                glow::TEXTURE_2D_MULTISAMPLE | glow::TEXTURE_2D_MULTISAMPLE_ARRAY
+            );
+            let view_target = match (desc.dimension, multisampled) {
+                (wgt::TextureViewDimension::D1 | wgt::TextureViewDimension::D2, true) => {
+                    glow::TEXTURE_2D_MULTISAMPLE
+                }
+                (wgt::TextureViewDimension::D2Array, true) => glow::TEXTURE_2D_MULTISAMPLE_ARRAY,
+                (wgt::TextureViewDimension::D1 | wgt::TextureViewDimension::D2, false) => {
+                    glow::TEXTURE_2D
+                }
+                (wgt::TextureViewDimension::D2Array, false) => glow::TEXTURE_2D_ARRAY,
+                (wgt::TextureViewDimension::Cube, _) => glow::TEXTURE_CUBE_MAP,
+                (wgt::TextureViewDimension::CubeArray, _) => glow::TEXTURE_CUBE_MAP_ARRAY,
+                (wgt::TextureViewDimension::D3, _) => glow::TEXTURE_3D,
+            };
+            let whole = mip_levels == (0..texture.mip_level_count)
+                && array_layers == (0..texture.array_layer_count);
+            // Depth and stencil views keep the texture's format (their aspect is chosen when
+            // bound).
+            let format = if texture.format.is_depth_stencil_format() {
+                texture.format
+            } else {
+                desc.format
+            };
+            let distinct = format != texture.format || view_target != *target || !whole;
+            // A 3D texture has no views of another dimension (its slices are attached by layer).
+            if distinct && (*target != glow::TEXTURE_3D || view_target == glow::TEXTURE_3D) {
+                let gl = &self.shared.context.lock();
+                let view = unsafe { gl.create_texture() }.map_err(|_| crate::DeviceError::Lost)?;
+                unsafe {
+                    texture_view(
+                        view.0.get(),
+                        view_target,
+                        raw.0.get(),
+                        self.shared.describe_texture_format(format).internal,
+                        mip_levels.start,
+                        mip_levels.len() as u32,
+                        array_layers.start,
+                        array_layers.len() as u32,
+                    )
+                };
+                #[cfg(native)]
+                if let Some(label) = desc.label {
+                    if self
+                        .shared
+                        .private_caps
+                        .contains(PrivateCapabilities::DEBUG_FNS)
+                    {
+                        unsafe { gl.object_label(glow::TEXTURE, view.0.get(), Some(label)) };
+                    }
+                }
+                return Ok(super::TextureView {
+                    inner: super::TextureInner::Texture {
+                        raw: view,
+                        target: view_target,
+                    },
+                    aspects: crate::FormatAspects::new(texture.format, desc.range.aspect),
+                    mip_levels: 0..mip_levels.len() as u32,
+                    array_layers: 0..array_layers.len() as u32,
+                    format: desc.format,
+                    owned: true,
+                });
+            }
+        }
         Ok(super::TextureView {
             //TODO: use `conv::map_view_dimension(desc.dimension)`?
             inner: texture.inner.clone(),
             aspects: crate::FormatAspects::new(texture.format, desc.range.aspect),
-            mip_levels: desc.range.mip_range(texture.mip_level_count),
-            array_layers: desc.range.layer_range(texture.array_layer_count),
+            mip_levels,
+            array_layers,
             format: texture.format,
+            owned: false,
         })
     }
 
-    unsafe fn destroy_texture_view(&self, _view: super::TextureView) {
+    unsafe fn destroy_texture_view(&self, view: super::TextureView) {
+        if let (true, super::TextureInner::Texture { raw, .. }) = (view.owned, view.inner) {
+            let gl = &self.shared.context.lock();
+            unsafe { gl.delete_texture(raw) };
+        }
         self.counters.texture_views.sub(1);
     }
 
@@ -1213,7 +1298,10 @@ impl crate::Device for super::Device {
             };
         }
 
-        //set_param_float(glow::TEXTURE_LOD_BIAS, info.lod_bias.0);
+        // Unbound: the native LOD bias, validated by Core against `sampler_lod_bias_limit`.
+        if desc.lod_bias != 0.0 {
+            unsafe { gl.sampler_parameter_f32(raw, glow::TEXTURE_LOD_BIAS, desc.lod_bias) };
+        }
 
         if let Some(compare) = desc.compare {
             unsafe {

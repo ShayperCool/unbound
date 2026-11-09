@@ -264,6 +264,14 @@ impl Drop for AdapterContext {
 struct EglContextLock<'a> {
     instance: &'a Arc<EglInstance>,
     display: khronos_egl::Display,
+    /// Unbound: another context the thread had current before the lock (display, draw and read
+    /// surfaces, context), made current again after it.
+    previous: Option<(
+        khronos_egl::Display,
+        Option<khronos_egl::Surface>,
+        Option<khronos_egl::Surface>,
+        khronos_egl::Context,
+    )>,
 }
 
 /// A guard containing a lock to an [`AdapterContext`], while the GL context is kept current.
@@ -284,7 +292,14 @@ impl<'a> core::ops::Deref for AdapterContextLock<'a> {
 impl<'a> Drop for AdapterContextLock<'a> {
     fn drop(&mut self) {
         if let Some(egl) = self.egl.take() {
-            if let Err(err) = egl.instance.make_current(egl.display, None, None, None) {
+            let result = match egl.previous {
+                Some((display, draw, read, context)) => {
+                    egl.instance
+                        .make_current(display, draw, read, Some(context))
+                }
+                None => egl.instance.make_current(egl.display, None, None, None),
+            };
+            if let Err(err) = result {
                 log::error!("Failed to make EGL context current: {err:?}");
             }
         }
@@ -323,10 +338,23 @@ impl AdapterContext {
             .expect("Could not lock adapter context. This is most-likely a deadlock.");
 
         let egl = self.egl.as_ref().map(|egl| {
+            let previous = egl
+                .instance
+                .get_current_context()
+                .filter(|&context| context != egl.raw)
+                .and_then(|context| {
+                    Some((
+                        egl.instance.get_current_display()?,
+                        egl.instance.get_current_surface(khronos_egl::DRAW),
+                        egl.instance.get_current_surface(khronos_egl::READ),
+                        context,
+                    ))
+                });
             egl.make_current();
             EglContextLock {
                 instance: &egl.instance,
                 display: egl.display,
+                previous,
             }
         });
 
@@ -469,6 +497,14 @@ impl Inner {
         let mut context_attributes = vec![];
         let mut gl_context_attributes = vec![];
         let mut gles_context_attributes = vec![];
+        // Unbound: a 4.5 core context first (compute shaders, texture views), as Unity's OpenGL
+        // Core device opens; 3.3 when the driver has no 4.5.
+        let mut gl45_context_attributes = vec![
+            khronos_egl::CONTEXT_MAJOR_VERSION,
+            4,
+            khronos_egl::CONTEXT_MINOR_VERSION,
+            5,
+        ];
         gl_context_attributes.push(khronos_egl::CONTEXT_MAJOR_VERSION);
         gl_context_attributes.push(3);
         gl_context_attributes.push(khronos_egl::CONTEXT_MINOR_VERSION);
@@ -506,6 +542,7 @@ impl Inner {
         }
 
         gl_context_attributes.extend(&context_attributes);
+        gl45_context_attributes.extend(&context_attributes);
         gles_context_attributes.extend(&context_attributes);
 
         let context = {
@@ -590,8 +627,9 @@ impl Inner {
             };
 
             let result = if supports_opengl {
-                create_context(khronos_egl::OPENGL_API, &gl_context_attributes).or_else(
-                    |gl_error| {
+                create_context(khronos_egl::OPENGL_API, &gl45_context_attributes)
+                    .or_else(|_| create_context(khronos_egl::OPENGL_API, &gl_context_attributes))
+                    .or_else(|gl_error| {
                         log::debug!("Failed to create desktop OpenGL context: {gl_error}, falling back to OpenGL ES");
                         create_context(khronos_egl::OPENGL_ES_API, &gles_context_attributes)
                     },

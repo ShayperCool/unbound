@@ -1,0 +1,373 @@
+--- a/wgpu-core/src/device/resource.rs
++++ b/wgpu-core/src/device/resource.rs
+@@ -2250,17 +2250,17 @@
+     }
+ 
+     pub fn native_sampler_lod_bias_limit(&self) -> Option<f32> {
++        let raw = self.raw().as_any();
+         #[cfg(vulkan)]
+-        {
+-            self.raw()
+-                .as_any()
+-                .downcast_ref::<hal::vulkan::Device>()
+-                .and_then(|device| device.sampler_lod_bias_limit())
++        if let Some(device) = raw.downcast_ref::<hal::vulkan::Device>() {
++            return device.sampler_lod_bias_limit();
+         }
+-        #[cfg(not(vulkan))]
+-        {
+-            None
++        #[cfg(gles)]
++        if let Some(device) = raw.downcast_ref::<hal::gles::Device>() {
++            return device.sampler_lod_bias_limit();
+         }
++        let _ = raw;
++        None
+     }
+ 
+     pub fn create_sampler(
+--- a/wgpu-hal/src/gles/adapter.rs
++++ b/wgpu-hal/src/gles/adapter.rs
+@@ -684,6 +684,22 @@
+             super::PrivateCapabilities::TEXTURE_STORAGE,
+             supported((3, 0), (4, 2)),
+         );
++        // Unbound: views of another format, dimension, level or layer range as textures of their
++        // own over the texture's immutable storage (`glTextureView`, desktop OpenGL 4.3).
++        #[cfg(not(any(windows, webgl)))]
++        let texture_view = (private_caps.contains(super::PrivateCapabilities::TEXTURE_STORAGE)
++            && (full_ver.is_some_and(|v| v >= (4, 3))
++                || extensions.contains("GL_ARB_texture_view")))
++        .then(|| context.egl_instance()?.get_proc_address("glTextureView"))
++        .flatten()
++        .map(|f| unsafe { core::mem::transmute::<extern "system" fn(), super::TextureViewFn>(f) });
++        #[cfg(any(windows, webgl))]
++        let texture_view: Option<super::TextureViewFn> = None;
++        downlevel_flags.set(wgt::DownlevelFlags::VIEW_FORMATS, texture_view.is_some());
++        // Unbound: sampler LOD bias, desktop OpenGL only (`GL_TEXTURE_LOD_BIAS`).
++        let max_lod_bias = full_ver
++            .is_some()
++            .then(|| unsafe { gl.get_parameter_f32(glow::MAX_TEXTURE_LOD_BIAS) });
+         let is_mali = renderer.to_lowercase().contains("mali");
+         let debug_fns_enabled = match backend_options.debug_fns {
+             wgt::GlDebugFns::Auto => gl.supports_debug() && !is_mali,
+@@ -958,6 +974,8 @@
+                     program_cache: Default::default(),
+                     es: es_ver.is_some(),
+                     max_msaa_samples: max_samples,
++                    texture_view,
++                    max_lod_bias,
+                 }),
+             },
+             info: Self::make_info(vendor, renderer, version),
+--- a/wgpu-hal/src/gles/conv.rs
++++ b/wgpu-hal/src/gles/conv.rs
+@@ -423,7 +423,7 @@
+ 
+ pub(super) fn is_layered_target(target: u32) -> bool {
+     match target {
+-        glow::TEXTURE_2D | glow::TEXTURE_CUBE_MAP => false,
++        glow::TEXTURE_2D | glow::TEXTURE_CUBE_MAP | glow::TEXTURE_2D_MULTISAMPLE => false,
+         glow::TEXTURE_2D_ARRAY | glow::TEXTURE_CUBE_MAP_ARRAY | glow::TEXTURE_3D => true,
+         _ => unreachable!(),
+     }
+--- a/wgpu-hal/src/gles/device.rs
++++ b/wgpu-hal/src/gles/device.rs
+@@ -123,6 +123,11 @@
+ }
+ 
+ impl super::Device {
++    /// Unbound: the sampler LOD bias range (`GL_MAX_TEXTURE_LOD_BIAS`), desktop OpenGL only.
++    pub fn sampler_lod_bias_limit(&self) -> Option<f32> {
++        self.shared.max_lod_bias
++    }
++
+     /// # Safety
+     ///
+     /// - `name` must be created respecting `desc`
+@@ -879,9 +884,11 @@
+             | wgt::TextureUses::TRANSIENT;
+         let format_desc = self.shared.describe_texture_format(desc.format);
+ 
++        // Unbound: a texture with view formats is a texture (views of renderbuffers do not exist).
+         let inner = if render_usage.contains(desc.usage)
+             && desc.dimension == wgt::TextureDimension::D2
+             && desc.size.depth_or_array_layers == 1
++            && desc.view_formats.is_empty()
+         {
+             let raw = unsafe { gl.create_renderbuffer().unwrap() };
+             unsafe { gl.bind_renderbuffer(glow::RENDERBUFFER, Some(raw)) };
+@@ -1138,17 +1145,95 @@
+         desc: &crate::TextureViewDescriptor,
+     ) -> Result<super::TextureView, crate::DeviceError> {
+         self.counters.texture_views.add(1);
++        let mip_levels = desc.range.mip_range(texture.mip_level_count);
++        let array_layers = desc.range.layer_range(texture.array_layer_count);
++        // Unbound: a view of another format, dimension, level or layer range is a texture of its
++        // own (`glTextureView`) where the context has them; its levels and layers count from 0.
++        if let (Some(texture_view), super::TextureInner::Texture { raw, target }) =
++            (self.shared.texture_view, &texture.inner)
++        {
++            let multisampled = matches!(
++                *target,
++                glow::TEXTURE_2D_MULTISAMPLE | glow::TEXTURE_2D_MULTISAMPLE_ARRAY
++            );
++            let view_target = match (desc.dimension, multisampled) {
++                (wgt::TextureViewDimension::D1 | wgt::TextureViewDimension::D2, true) => {
++                    glow::TEXTURE_2D_MULTISAMPLE
++                }
++                (wgt::TextureViewDimension::D2Array, true) => glow::TEXTURE_2D_MULTISAMPLE_ARRAY,
++                (wgt::TextureViewDimension::D1 | wgt::TextureViewDimension::D2, false) => {
++                    glow::TEXTURE_2D
++                }
++                (wgt::TextureViewDimension::D2Array, false) => glow::TEXTURE_2D_ARRAY,
++                (wgt::TextureViewDimension::Cube, _) => glow::TEXTURE_CUBE_MAP,
++                (wgt::TextureViewDimension::CubeArray, _) => glow::TEXTURE_CUBE_MAP_ARRAY,
++                (wgt::TextureViewDimension::D3, _) => glow::TEXTURE_3D,
++            };
++            let whole = mip_levels == (0..texture.mip_level_count)
++                && array_layers == (0..texture.array_layer_count);
++            // Depth and stencil views keep the texture's format (their aspect is chosen when
++            // bound).
++            let format = if texture.format.is_depth_stencil_format() {
++                texture.format
++            } else {
++                desc.format
++            };
++            let distinct = format != texture.format || view_target != *target || !whole;
++            // A 3D texture has no views of another dimension (its slices are attached by layer).
++            if distinct && (*target != glow::TEXTURE_3D || view_target == glow::TEXTURE_3D) {
++                let gl = &self.shared.context.lock();
++                let view = unsafe { gl.create_texture() }.map_err(|_| crate::DeviceError::Lost)?;
++                unsafe {
++                    texture_view(
++                        view.0.get(),
++                        view_target,
++                        raw.0.get(),
++                        self.shared.describe_texture_format(format).internal,
++                        mip_levels.start,
++                        mip_levels.len() as u32,
++                        array_layers.start,
++                        array_layers.len() as u32,
++                    )
++                };
++                #[cfg(native)]
++                if let Some(label) = desc.label {
++                    if self
++                        .shared
++                        .private_caps
++                        .contains(PrivateCapabilities::DEBUG_FNS)
++                    {
++                        unsafe { gl.object_label(glow::TEXTURE, view.0.get(), Some(label)) };
++                    }
++                }
++                return Ok(super::TextureView {
++                    inner: super::TextureInner::Texture {
++                        raw: view,
++                        target: view_target,
++                    },
++                    aspects: crate::FormatAspects::new(texture.format, desc.range.aspect),
++                    mip_levels: 0..mip_levels.len() as u32,
++                    array_layers: 0..array_layers.len() as u32,
++                    format: desc.format,
++                    owned: true,
++                });
++            }
++        }
+         Ok(super::TextureView {
+             //TODO: use `conv::map_view_dimension(desc.dimension)`?
+             inner: texture.inner.clone(),
+             aspects: crate::FormatAspects::new(texture.format, desc.range.aspect),
+-            mip_levels: desc.range.mip_range(texture.mip_level_count),
+-            array_layers: desc.range.layer_range(texture.array_layer_count),
++            mip_levels,
++            array_layers,
+             format: texture.format,
++            owned: false,
+         })
+     }
+ 
+-    unsafe fn destroy_texture_view(&self, _view: super::TextureView) {
++    unsafe fn destroy_texture_view(&self, view: super::TextureView) {
++        if let (true, super::TextureInner::Texture { raw, .. }) = (view.owned, view.inner) {
++            let gl = &self.shared.context.lock();
++            unsafe { gl.delete_texture(raw) };
++        }
+         self.counters.texture_views.sub(1);
+     }
+ 
+@@ -1213,7 +1298,10 @@
+             };
+         }
+ 
+-        //set_param_float(glow::TEXTURE_LOD_BIAS, info.lod_bias.0);
++        // Unbound: the native LOD bias, validated by Core against `sampler_lod_bias_limit`.
++        if desc.lod_bias != 0.0 {
++            unsafe { gl.sampler_parameter_f32(raw, glow::TEXTURE_LOD_BIAS, desc.lod_bias) };
++        }
+ 
+         if let Some(compare) = desc.compare {
+             unsafe {
+--- a/wgpu-hal/src/gles/egl.rs
++++ b/wgpu-hal/src/gles/egl.rs
+@@ -264,6 +264,14 @@
+ struct EglContextLock<'a> {
+     instance: &'a Arc<EglInstance>,
+     display: khronos_egl::Display,
++    /// Unbound: another context the thread had current before the lock (display, draw and read
++    /// surfaces, context), made current again after it.
++    previous: Option<(
++        khronos_egl::Display,
++        Option<khronos_egl::Surface>,
++        Option<khronos_egl::Surface>,
++        khronos_egl::Context,
++    )>,
+ }
+ 
+ /// A guard containing a lock to an [`AdapterContext`], while the GL context is kept current.
+@@ -284,7 +292,14 @@
+ impl<'a> Drop for AdapterContextLock<'a> {
+     fn drop(&mut self) {
+         if let Some(egl) = self.egl.take() {
+-            if let Err(err) = egl.instance.make_current(egl.display, None, None, None) {
++            let result = match egl.previous {
++                Some((display, draw, read, context)) => {
++                    egl.instance
++                        .make_current(display, draw, read, Some(context))
++                }
++                None => egl.instance.make_current(egl.display, None, None, None),
++            };
++            if let Err(err) = result {
+                 log::error!("Failed to make EGL context current: {err:?}");
+             }
+         }
+@@ -323,10 +338,23 @@
+             .expect("Could not lock adapter context. This is most-likely a deadlock.");
+ 
+         let egl = self.egl.as_ref().map(|egl| {
++            let previous = egl
++                .instance
++                .get_current_context()
++                .filter(|&context| context != egl.raw)
++                .and_then(|context| {
++                    Some((
++                        egl.instance.get_current_display()?,
++                        egl.instance.get_current_surface(khronos_egl::DRAW),
++                        egl.instance.get_current_surface(khronos_egl::READ),
++                        context,
++                    ))
++                });
+             egl.make_current();
+             EglContextLock {
+                 instance: &egl.instance,
+                 display: egl.display,
++                previous,
+             }
+         });
+ 
+@@ -469,6 +497,14 @@
+         let mut context_attributes = vec![];
+         let mut gl_context_attributes = vec![];
+         let mut gles_context_attributes = vec![];
++        // Unbound: a 4.5 core context first (compute shaders, texture views), as Unity's OpenGL
++        // Core device opens; 3.3 when the driver has no 4.5.
++        let mut gl45_context_attributes = vec![
++            khronos_egl::CONTEXT_MAJOR_VERSION,
++            4,
++            khronos_egl::CONTEXT_MINOR_VERSION,
++            5,
++        ];
+         gl_context_attributes.push(khronos_egl::CONTEXT_MAJOR_VERSION);
+         gl_context_attributes.push(3);
+         gl_context_attributes.push(khronos_egl::CONTEXT_MINOR_VERSION);
+@@ -506,6 +542,7 @@
+         }
+ 
+         gl_context_attributes.extend(&context_attributes);
++        gl45_context_attributes.extend(&context_attributes);
+         gles_context_attributes.extend(&context_attributes);
+ 
+         let context = {
+@@ -590,8 +627,9 @@
+             };
+ 
+             let result = if supports_opengl {
+-                create_context(khronos_egl::OPENGL_API, &gl_context_attributes).or_else(
+-                    |gl_error| {
++                create_context(khronos_egl::OPENGL_API, &gl45_context_attributes)
++                    .or_else(|_| create_context(khronos_egl::OPENGL_API, &gl_context_attributes))
++                    .or_else(|gl_error| {
+                         log::debug!("Failed to create desktop OpenGL context: {gl_error}, falling back to OpenGL ES");
+                         create_context(khronos_egl::OPENGL_ES_API, &gles_context_attributes)
+                     },
+--- a/wgpu-hal/src/gles/mod.rs
++++ b/wgpu-hal/src/gles/mod.rs
+@@ -301,8 +301,18 @@
+     /// Cached here so it doesn't need to be queried every time texture format capabilities are requested.
+     /// (this has been shown to be a significant enough overhead)
+     max_msaa_samples: i32,
++
++    /// Unbound: `glTextureView` (OpenGL 4.3), when the context has it: views of another format,
++    /// dimension, level or layer range are textures of their own.
++    texture_view: Option<TextureViewFn>,
++    /// Unbound: `GL_MAX_TEXTURE_LOD_BIAS` on desktop OpenGL (sampler LOD bias), else `None`.
++    max_lod_bias: Option<f32>,
+ }
+ 
++/// Unbound: `glTextureView(texture, target, origtexture, internalformat, minlevel, numlevels,
++/// minlayer, numlayers)`.
++type TextureViewFn = unsafe extern "system" fn(u32, u32, u32, u32, u32, u32, u32, u32);
++
+ impl fmt::Debug for AdapterShared {
+     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+         let Self {
+@@ -316,6 +326,8 @@
+             next_shader_id,
+             program_cache: _,
+             es,
++            texture_view: _,
++            max_lod_bias: _,
+             max_msaa_samples,
+         } = self;
+         f.debug_struct("AdapterShared")
+@@ -519,6 +531,8 @@
+             wgt::TextureDimension::D2 => {
+                 // HACK: detect a cube map; forces cube compatible textures to be cube textures
+                 match (desc.is_cube_compatible(), desc.size.depth_or_array_layers) {
++                    // Unbound: multisampled textures (their storage needs this target).
++                    (false, 1) if desc.sample_count > 1 => glow::TEXTURE_2D_MULTISAMPLE,
+                     (false, 1) => glow::TEXTURE_2D,
+                     (false, _) => glow::TEXTURE_2D_ARRAY,
+                     (true, 6) => glow::TEXTURE_CUBE_MAP,
+@@ -587,6 +601,9 @@
+     mip_levels: Range<u32>,
+     array_layers: Range<u32>,
+     format: wgt::TextureFormat,
++    /// Unbound: `inner` is a `glTextureView` texture this view owns (its levels and layers count
++    /// from the view's first).
++    owned: bool,
+ }
+ 
+ impl crate::DynTextureView for TextureView {}
+--- a/wgpu-hal/src/gles/queue.rs
++++ b/wgpu-hal/src/gles/queue.rs
+@@ -36,7 +36,7 @@
+     ];
+ 
+     match target {
+-        glow::TEXTURE_2D => target,
++        glow::TEXTURE_2D | glow::TEXTURE_2D_MULTISAMPLE => target,
+         glow::TEXTURE_CUBE_MAP => CUBEMAP_FACES[array_layer as usize],
+         _ => unreachable!(),
+     }
+@@ -157,7 +157,9 @@
+                 } else {
+                     unsafe {
+                         assert_eq!(view.mip_levels.len(), 1);
+-                        if sample_count != 1 {
++                        // Unbound: a multisampled texture is attached as it is; the extension
++                        // renders multisampled into a single-sampled one.
++                        if sample_count != 1 && target != glow::TEXTURE_2D_MULTISAMPLE {
+                             gl.framebuffer_texture_2d_multisample(
+                                 fbo_target,
+                                 attachment,

@@ -36,7 +36,7 @@ unbound-assets.workspace = true
 [target.'cfg(target_os = "linux")'.dependencies]
 x11rb = { version = "0.13", features = ["randr"] }
 # Native plugins' OpenGL context sharing the renderer's Vulkan memory (render/gl_interop.rs).
-wgpu = { version = "30", default-features = false, features = ["vulkan"] }
+wgpu = { version = "30", default-features = false, features = ["vulkan", "gles"] }
 ash = "0.38"
 libloading = "0.8"
 # Load libwayland-client when a Wayland session needs it instead of linking it, so the binary
