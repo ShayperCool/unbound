@@ -136,6 +136,37 @@ public class EffectProbe : MonoBehaviour
         new[] { "context_mode5point1_generator", "music=generator", "mode=Mode5point1", "Music:Att" },
         new[] { "context_mono_listener", "music=imp", "mode=Mono", "listener=0.125:0", "Music:Att" },
         new[] { "context_mode5point1_listener", "music=imp", "mode=Mode5point1", "listener=0.125:4", "Music:Att" },
+        new[] { "context_quad_3d_a30", "music=imp", "mode=Quad", "mono=1", "blend=1", "pos=1:0:1.732", "Music:Att" },
+        new[] { "context_quad_3d_a100", "music=imp", "mode=Quad", "mono=1", "blend=1", "pos=1.97:0:-0.347", "Music:Att" },
+        new[] { "context_quad_3d_a160", "music=imp", "mode=Quad", "mono=1", "blend=1", "pos=0.684:0:-1.879", "Music:Att" },
+        new[] { "context_quad_3d_a300", "music=imp", "mode=Quad", "mono=1", "blend=1", "pos=-1.732:0:1", "Music:Att" },
+        new[] { "context_quad_3d_stereo", "music=imp", "mode=Quad", "blend=1", "pos=1:0:1.732", "Music:Att" },
+        new[] { "context_surround_3d_a30", "music=imp", "mode=Surround", "mono=1", "blend=1", "pos=1:0:1.732", "Music:Att" },
+        new[] { "context_surround_3d_a100", "music=imp", "mode=Surround", "mono=1", "blend=1", "pos=1.97:0:-0.347", "Music:Att" },
+        new[] { "context_surround_3d_a160", "music=imp", "mode=Surround", "mono=1", "blend=1", "pos=0.684:0:-1.879", "Music:Att" },
+        new[] { "context_surround_3d_a300", "music=imp", "mode=Surround", "mono=1", "blend=1", "pos=-1.732:0:1", "Music:Att" },
+        new[] { "context_surround_3d_stereo", "music=imp", "mode=Surround", "blend=1", "pos=1:0:1.732", "Music:Att" },
+        new[] { "context_mode5point1_3d_a30", "music=imp", "mode=Mode5point1", "mono=1", "blend=1", "pos=1:0:1.732", "Music:Att" },
+        new[] { "context_mode5point1_3d_a100", "music=imp", "mode=Mode5point1", "mono=1", "blend=1", "pos=1.97:0:-0.347", "Music:Att" },
+        new[] { "context_mode5point1_3d_a160", "music=imp", "mode=Mode5point1", "mono=1", "blend=1", "pos=0.684:0:-1.879", "Music:Att" },
+        new[] { "context_mode5point1_3d_a300", "music=imp", "mode=Mode5point1", "mono=1", "blend=1", "pos=-1.732:0:1", "Music:Att" },
+        new[] { "context_mode5point1_3d_stereo", "music=imp", "mode=Mode5point1", "blend=1", "pos=1:0:1.732", "Music:Att" },
+        new[] { "context_mode7point1_3d_a30", "music=imp", "mode=Mode7point1", "mono=1", "blend=1", "pos=1:0:1.732", "Music:Att" },
+        new[] { "context_mode7point1_3d_a100", "music=imp", "mode=Mode7point1", "mono=1", "blend=1", "pos=1.97:0:-0.347", "Music:Att" },
+        new[] { "context_mode7point1_3d_a160", "music=imp", "mode=Mode7point1", "mono=1", "blend=1", "pos=0.684:0:-1.879", "Music:Att" },
+        new[] { "context_mode7point1_3d_a300", "music=imp", "mode=Mode7point1", "mono=1", "blend=1", "pos=-1.732:0:1", "Music:Att" },
+        new[] { "context_mode7point1_3d_stereo", "music=imp", "mode=Mode7point1", "blend=1", "pos=1:0:1.732", "Music:Att" },
+        new[] { "context_mode5point1_3d_spread", "music=imp", "mode=Mode5point1", "mono=1", "blend=1", "spread=90", "pos=1.97:0:-0.347", "Music:Att" },
+        new[] { "context_mode7point1_3d_spread", "music=imp", "mode=Mode7point1", "blend=1", "spread=60", "pos=-1.732:0:1", "Music:Att" },
+        new[] { "context_mode5point1_3d_half", "music=imp", "mode=Mode5point1", "mono=1", "blend=0.5", "pan=-0.5", "pos=1.97:0:-0.347", "Music:Att" },
+        new[] { "context_mode5point1_3d_stereo_half", "music=imp", "mode=Mode5point1", "blend=0.5", "pan=0.5", "pos=0.684:0:-1.879", "Music:Att" },
+        new[] { "context_mode7point1_3d_elevated", "music=imp", "mode=Mode7point1", "mono=1", "blend=1", "pos=1:1.5:1", "Music:Att" },
+        new[] { "context_mode5point1_clip_shift", "music=noise:0.25", "mode=Mode5point1", "mono=1", "Music.Shift.Pitch=0.75" },
+        new[] { "context_mode5point1_3d_shift", "music=noise:0.25", "mode=Mode5point1", "mono=1", "blend=1", "pos=0.684:0:-1.879", "Music.Shift.Pitch=1.5" },
+        new[] { "context_mode5point1_generator_all", "music=generator", "gen=all", "mode=Mode5point1", "Music:Att" },
+        new[] { "context_mode7point1_generator_all", "music=generator", "gen=all", "mode=Mode7point1", "Music:Att" },
+        new[] { "context_mode5point1_script", "music=imp", "mode=Mode5point1", "mono=1", "script=0.125:4", "Music:Att" },
+        new[] { "context_mode7point1_listener", "music=imp", "mode=Mode7point1", "listener=0.125:6", "Music:Att" },
         new[] { "context_quad", "music=noise:0.25", "mode=Quad", "Music.Shift.Pitch=0.75" },
         new[] { "context_surround", "music=noise:0.25", "mode=Surround", "Music.Shift.Pitch=0.75" },
         new[] { "context_mode5point1", "music=noise:0.25", "mode=Mode5point1", "Music.Shift.Pitch=0.75" },
@@ -379,6 +410,7 @@ public class EffectProbe : MonoBehaviour
             AudioClip clip = null;
             if (Option(key, "music=", "") == "generator") {
                 ProbeGenerator.Channels = 0;
+                ProbeGenerator.AllChannels = Option(key, "gen=", "") == "all";
                 go.AddComponent<ProbeGenerator>();
             } else {
                 int channels = Option(key, "mono=", "0") == "1" ? 1 : 2;
@@ -387,6 +419,13 @@ public class EffectProbe : MonoBehaviour
                 if (channels == 1) { var mono = new float[ClipFrames]; for (int f = 0; f < ClipFrames; f++) mono[f] = data[2*f]; data = mono; }
                 if (!clip.SetData(data, 0)) throw new Exception("SetData failed");
                 source.clip = clip;
+                var script = Option(key, "script=", "");
+                if (script != "") {
+                    // A clip source's script adds a constant to one channel.
+                    ProbeScript.WriteValue = float.Parse(script.Split(':')[0], inv);
+                    ProbeScript.WriteChannel = int.Parse(script.Split(':')[1], inv);
+                    go.AddComponent<ProbeScript>();
+                }
             }
             source.Play();
             var sink = new NativeArray<float>(actualBuffer * outputChannels, Allocator.Persistent); sinks.Add(sink);
@@ -442,13 +481,31 @@ public class OutputLayoutProbe : MonoBehaviour
     }
 }
 
-/// <summary>A clipless source's generator: constants on the first two channels.</summary>
+/// <summary>A clipless source's generator: constants on the first two channels, or a distinct
+/// constant on every channel.</summary>
 public class ProbeGenerator : MonoBehaviour
 {
     public static volatile int Channels;
+    public static volatile bool AllChannels;
     void OnAudioFilterRead(float[] data, int channels)
     {
         Channels = channels;
-        for (int i = 0; i < data.Length; i += channels) { data[i] += 0.25f; if (channels > 1) data[i + 1] -= 0.125f; }
+        for (int i = 0; i < data.Length; i += channels)
+        {
+            if (AllChannels) { for (int c = 0; c < channels; c++) data[i + c] += 0.0625f * (c + 1); continue; }
+            data[i] += 0.25f; if (channels > 1) data[i + 1] -= 0.125f;
+        }
+    }
+}
+
+/// <summary>A clip source's script: adds a constant to one channel.</summary>
+public class ProbeScript : MonoBehaviour
+{
+    public static volatile int WriteChannel;
+    public static float WriteValue;
+    void OnAudioFilterRead(float[] data, int channels)
+    {
+        if (WriteChannel < channels)
+            for (int i = WriteChannel; i < data.Length; i += channels) data[i] += WriteValue;
     }
 }

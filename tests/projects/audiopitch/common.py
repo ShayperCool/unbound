@@ -13,15 +13,6 @@ def blocks(case):
     return int(value[1]) if value else 32
 SUFFIXES = ('', '.master')
 RESIDUALS = {}
-# Recorded channels the engine does not produce yet, as (channel index, reason). The strict
-# report compares them as recorded; the gate expects exactly that channel's absence (silence)
-# and compares every other value of the control as usual.
-LFE = 3
-UNSUPPORTED = {
-    case: (LFE, 'mono 2D clips also feed the LFE channel at unity gain in 5.1/7.1; the engine '
-                'graph carries only the front pair (follow-up)')
-    for case in ('context_mode5point1_clip', 'context_mode5point1_clip_pan', 'context_mode7point1_clip')
-}
 
 
 def all_cases():
