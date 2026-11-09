@@ -154,11 +154,12 @@ namespace UnityEngine.Tests
             Assert.Contains(walker.m_Crowd, Neighbours(behind));
         }
 
-        /// <summary>An agent without avoidance avoids nobody but is still pushed out of overlaps
-        /// (AI Navigation 2.0 manual, Quality None: "collisions resolve"); a stopped agent still sees
-        /// its neighbours.</summary>
+        /// <summary>An agent without avoidance gathers no neighbours: it avoids nobody and is not
+        /// pushed out of overlaps, while an agent with avoidance still meets it and is pushed
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/navpath `replan.*`); a stopped agent
+        /// still sees its neighbours.</summary>
         [Fact]
-        public void AgentsWithoutAvoidanceOrStoppedStillMeetTheirNeighbours()
+        public void AgentsWithoutAvoidanceMeetNobodyAndStoppedAgentsStillDo()
         {
             var plain = Agent(new Vector3(0f, 0f, 0f), null);
             plain.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
@@ -168,8 +169,10 @@ namespace UnityEngine.Tests
             var near = Agent(new Vector3(-1.8f, 0f, 2f), null);
             for (int i = 0; i < 10; i++) AgentSystem.Step();
 
-            Assert.Contains(other.m_Crowd, Neighbours(plain));
-            Assert.True(plain.nextPosition.x < -0.05f, $"pushed to {plain.nextPosition}");
+            Assert.Empty(Neighbours(plain));
+            Assert.InRange(plain.nextPosition.x, -1e-4f, 1e-4f);
+            Assert.Contains(plain.m_Crowd, Neighbours(other));
+            Assert.True(other.nextPosition.x > 0.35f, $"pushed to {other.nextPosition}");
             Assert.Equal(0f, plain.desiredVelocity.magnitude, 4);
             Assert.Contains(near.m_Crowd, Neighbours(stopped));
         }

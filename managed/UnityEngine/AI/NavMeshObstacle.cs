@@ -263,11 +263,13 @@ namespace Unbound.Runtime
     //   within the square of some walking agent's neighbour reach, with an overlapping height span
     //   (C6). When an agent's candidates still exceed that with obstacle circles among them, it is
     //   reported once per run.
-    // C8: agents keep apart from obstacle circles and are pushed out of them, including agents with
-    //   NoObstacleAvoidance. Documented support: AI Navigation 2.0 Manual, NavMesh Agent component
+    // C8: agents keep apart from obstacle circles and are pushed out of them; agents with
+    //   NoObstacleAvoidance gather no neighbours, obstacle circles included, so they are not (as
+    //   Unity's do not gather agents: tests/projects/navpath `replan.*`), although the AI Navigation
+    //   2.0 Manual, NavMesh Agent component
     //   (https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/NavMeshAgent.html),
-    //   Quality None: "collisions resolve, but other agents and obstacles are not actively
-    //   avoided"; Manual, NavMesh Obstacle
+    //   Quality None, says "collisions resolve, but other agents and obstacles are not actively
+    //   avoided". Documented support: Manual, NavMesh Obstacle
     //   (https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/AboutObstacles.html):
     //   "NavMesh Agents try to avoid collisions with the NavMesh Obstacle, and when close, they
     //   collide with the NavMesh Obstacle." How far and how fast a collision resolves is unmeasured.
