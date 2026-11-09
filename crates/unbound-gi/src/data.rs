@@ -575,8 +575,10 @@ pub fn read_probe_set(hash: [u8; 16], bytes: &[u8]) -> Result<ProbeSet> {
 #[derive(Debug, Clone)]
 pub struct Precomputed {
     pub systems: Vec<System>,
-    /// The light probe sets lit by the systems.
+    /// The light probe sets lit by the systems, and why the others could not be read (they
+    /// light nothing; the lightmaps are unaffected).
     pub probe_sets: Vec<ProbeSet>,
+    pub probe_errors: Vec<String>,
     /// Realtime lightmap atlas sizes.
     pub atlas_sizes: Vec<u32>,
     /// The scene mapping's renderers (scene object id, prefab id) in mapping order.
@@ -721,17 +723,21 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
             chart_mask,
         });
     }
-    let probe_sets = seq(mapping, "m_Probesets")
-        .iter()
-        .map(|h| {
-            let hash = hash128(h)?;
+    let (mut probe_sets, mut probe_errors) = (Vec::new(), Vec::new());
+    for h in seq(mapping, "m_Probesets") {
+        let set = hash128(&h).and_then(|hash| {
             read_probe_set(hash, file(&hash, "rpc.ref")?)
                 .with_context(|| format!("light probe set {}", hex(&hash)))
-        })
-        .collect::<Result<Vec<_>>>()?;
+        });
+        match set {
+            Ok(set) => probe_sets.push(set),
+            Err(e) => probe_errors.push(format!("{e:#}")),
+        }
+    }
     Ok(Some(Precomputed {
         systems,
         probe_sets,
+        probe_errors,
         atlas_sizes,
         renderers,
         renderer_st,

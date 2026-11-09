@@ -601,6 +601,9 @@ namespace UnityEngine
         /// a caller kept or the current combined set.</summary>
         internal static void SceneForgotten(int scene) => s_Own.Remove(scene);
 
+        /// <summary>The probes object of loaded scene <paramref name="scene"/>, or null.</summary>
+        internal static LightProbes OwnOf(int scene) => s_Own.TryGetValue(scene, out var own) ? own : null;
+
         /// <summary>
         /// A SceneManager Single load replaces the loaded scenes, once the first of them has
         /// destroyed its objects and before its sceneUnloaded (SceneManagerInternal.UnloadForSingleLoad):

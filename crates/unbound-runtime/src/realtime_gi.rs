@@ -49,6 +49,8 @@ pub struct GiFrame {
 /// `update`'s result bits.
 pub const UPDATE_CHANGED: i32 = 1;
 pub const UPDATE_CONVERGED: i32 = 2;
+/// The light probes changed (read them with [`read_probes`]).
+pub const UPDATE_PROBES: i32 = 4;
 
 struct Atlas {
     size: u32,
@@ -113,7 +115,13 @@ pub fn load(
     let Some(data) = unbound_gi::data::read_precomputed(&object)? else {
         return Ok(Json::Null);
     };
-    let ranges = light_probe_ranges(&serialized, &object)?;
+    // Light probes that cannot be placed light nothing; the lightmaps are unaffected.
+    let (ranges, error) = match light_probe_ranges(&serialized, &object) {
+        Ok(ranges) => (ranges, None),
+        Err(e) => (Vec::new(), Some(format!("{e:#}"))),
+    };
+    let mut data = data;
+    data.probe_errors.extend(error);
     register(data, linear_space, &ranges)
 }
 
@@ -203,7 +211,7 @@ fn register(
     // another size, lights nothing (reported).
     let mut probe_sets = Vec::new();
     let mut probe_count = 0;
-    let mut probe_error = None;
+    let mut probe_error = data.probe_errors.first().cloned();
     for set in data.probe_sets {
         let range = ranges.iter().find(|r| r.0 == set.hash);
         let result = match range {
@@ -400,6 +408,7 @@ impl Scene {
             done += 1;
         }
         // The probes follow every update: they read the input values, which change with each.
+        // (Their solve is not counted in the budget: it is linear in their references.)
         for (set, offset) in &self.probe_sets {
             let end = offset + set.probe_set().probes.len();
             set.solve(
@@ -409,9 +418,14 @@ impl Scene {
                 &mut self.probes[*offset..end],
             );
         }
-        self.changed |= !self.probe_sets.is_empty();
+        let probes = if self.probe_sets.is_empty() {
+            0
+        } else {
+            UPDATE_PROBES
+        };
         let changed = std::mem::take(&mut self.changed);
-        (if changed { UPDATE_CHANGED } else { 0 })
+        probes
+            | (if changed { UPDATE_CHANGED } else { 0 })
             | if self.stable >= count {
                 UPDATE_CONVERGED
             } else {
@@ -785,6 +799,19 @@ mod tests {
                 .as_str()
                 .unwrap()
                 .contains("do not list")
+        );
+        release(reply["handle"].as_u64().unwrap());
+        // A probe set that could not be read is reported; the lightmaps are unaffected.
+        let (mut data, ranges) = room_with_probes();
+        data.probe_sets.clear();
+        data.probe_errors
+            .push("a light probe set of another version".into());
+        let reply = register(data, true, &ranges).unwrap();
+        assert_eq!(reply["systems"].as_array().unwrap().len(), 1);
+        assert_eq!(reply["probes"]["count"], json!(0));
+        assert_eq!(
+            reply["probes"]["error"],
+            json!("a light probe set of another version")
         );
         release(reply["handle"].as_u64().unwrap());
     }

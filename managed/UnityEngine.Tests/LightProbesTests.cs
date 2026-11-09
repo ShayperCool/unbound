@@ -66,8 +66,9 @@ namespace Unbound.Tests
         {
             // Precomputed for realtime GI only, the lighting data has positions and cells but no
             // coefficients: count is the number of probes and bakedProbes is empty
-            // (tests/projects/realtimegi). Unbound does not light them yet, so interpolation gives
-            // nothing and callers keep the ambient probe. Setting baked probes makes them baked.
+            // (tests/projects/realtimegi). Until precomputed realtime GI lights them, interpolation
+            // gives nothing and callers keep the ambient probe; lit, they interpolate its
+            // coefficients and bakedProbes stays empty. Setting baked probes makes them baked.
             const string json = @"{
                 ""positions"": [0,0,0, 1,0,0, 0,1,0, 0,0,1],
                 ""coefficients"": [],
@@ -84,6 +85,14 @@ namespace Unbound.Tests
             int cell = -1;
             Assert.False(probes.m_Set.Evaluate(new Vector3(0.1f, 0.1f, 0.1f), ref cell, out _, out _));
             Assert.False(probes.m_Set.Interpolate(new Vector3(0.1f, 0.1f, 0.1f), ref cell, out _));
+            probes.m_Set.Probes[2][1, 0] = 0.25f;
+            probes.m_Set.Realtime = true;
+            Assert.True(probes.m_Set.Interpolate(new Vector3(0f, 1f, 0f), ref cell, out var realtime));
+            Assert.Equal(0.25f, realtime[1, 0]);
+            Assert.Empty(probes.bakedProbes);
+            Assert.True(probes.m_Set.Snapshot().Realtime);
+            probes.m_Set.Realtime = false;
+            Assert.False(probes.m_Set.Interpolate(new Vector3(0f, 1f, 0f), ref cell, out _));
             var lit = new SphericalHarmonicsL2[4];
             lit[1][0, 0] = 0.5f;
             probes.bakedProbes = lit;

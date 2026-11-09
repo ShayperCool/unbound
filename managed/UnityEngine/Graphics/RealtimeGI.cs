@@ -48,7 +48,7 @@ namespace UnityEngine
     /// </summary>
     internal static class RealtimeGI
     {
-        const int UpdateChanged = 1, UpdateConverged = 2;
+        const int UpdateChanged = 1, UpdateConverged = 2, UpdateProbes = 4;
 
         /// <summary>Time per frame the systems may take outside synchronous mode. Unity updates
         /// them on worker threads (unmeasured share); Unbound updates at least one system per frame
@@ -79,8 +79,8 @@ namespace UnityEngine
             internal Texture2D[] Atlases;
             internal float AlbedoBoost = 1f;
             internal bool Converged, Failed;
-            /// <summary>The scene's light probes its probe sets light (the scene's own set), and
-            /// the probes' coefficients as read back.</summary>
+            /// <summary>The scene's own light probes its probe sets light, and the probes'
+            /// coefficients as read back.</summary>
             internal ProbeSet Probes;
             internal float[] ProbeCoefficients = Array.Empty<float>();
         }
@@ -268,6 +268,12 @@ namespace UnityEngine
         static void Unbind(GIScene scene)
         {
             scene.Failed = true;
+            // Its light probes light nothing again (the ambient probe).
+            if (scene.Probes != null)
+            {
+                scene.Probes.Realtime = false;
+                scene.Probes = null;
+            }
             foreach (var system in scene.Systems)
             {
                 foreach (var renderer in system.Renderers)
@@ -352,6 +358,7 @@ namespace UnityEngine
                 }
                 scene.Converged = (result & UpdateConverged) != 0;
                 if ((result & UpdateChanged) != 0) Upload(scene);
+                if ((result & UpdateProbes) != 0) UploadProbes(scene);
             }
         }
 
@@ -397,7 +404,7 @@ namespace UnityEngine
             int count = reply.GetProperty("count").GetInt32();
             if (reply.TryGetProperty("error", out var error) && error.ValueKind == JsonValueKind.String)
                 Warn("probes:" + file.Path, $"{file.Path}: light probes are not lit by its precomputed realtime GI: {error.GetString()}");
-            if (count == 0 || LightmapSettings.lightProbes is not LightProbes probes) return;
+            if (count == 0 || LightProbes.OwnOf(scene.Scene) is not LightProbes probes) return;
             var set = probes.m_Self;
             if (set.Baked && set.Probes.Length > 0)
             {
@@ -413,10 +420,20 @@ namespace UnityEngine
             scene.ProbeCoefficients = new float[27 * set.Positions.Length];
         }
 
-        static unsafe void Upload(GIScene scene)
+        /// <summary>The light probes' coefficients after an update. Probes whose coefficients
+        /// game code has set since (LightProbes.bakedProbes) keep them: realtime GI stops
+        /// lighting them, with a warning (unmeasured).</summary>
+        static unsafe void UploadProbes(GIScene scene)
         {
             if (scene.Probes is ProbeSet set)
             {
+                if (set.Baked)
+                {
+                    Warn("probes-assigned", "light probes given baked coefficients by a script keep them: precomputed realtime GI no longer lights them (unmeasured).");
+                    set.Realtime = false;
+                    scene.Probes = null;
+                    return;
+                }
                 int read;
                 fixed (float* coefficients = scene.ProbeCoefficients)
                     read = Native.Api.GiReadProbes(scene.Handle, coefficients, scene.ProbeCoefficients.Length);
@@ -430,6 +447,10 @@ namespace UnityEngine
                     set.Realtime = true;
                 }
             }
+        }
+
+        static unsafe void Upload(GIScene scene)
+        {
             for (int a = 0; a < scene.Atlases.Length; a++)
             {
                 var atlas = scene.Atlases[a];
