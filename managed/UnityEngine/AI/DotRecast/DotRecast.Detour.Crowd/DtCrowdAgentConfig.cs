@@ -4,8 +4,6 @@ namespace DotRecast.Detour.Crowd
     {
         public int expandOptions = 1;
         public bool anticipateTurns = true;
-        public bool optimizeVis = true;
-        public bool optimizeTopo = true;
         public bool obstacleAvoidance = true;
         public int obstacleAvoidanceType = 3;
         public bool separation;
@@ -17,16 +15,6 @@ namespace DotRecast.Detour.Crowd
             if (anticipateTurns)
             {
                 updateFlags |= DtCrowdAgentUpdateFlags.DT_CROWD_ANTICIPATE_TURNS;
-            }
-
-            if (optimizeVis)
-            {
-                updateFlags |= DtCrowdAgentUpdateFlags.DT_CROWD_OPTIMIZE_VIS;
-            }
-
-            if (optimizeTopo)
-            {
-                updateFlags |= DtCrowdAgentUpdateFlags.DT_CROWD_OPTIMIZE_TOPO;
             }
 
             if (obstacleAvoidance)

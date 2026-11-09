@@ -40,6 +40,8 @@ namespace UnityEngine.AI
 
         // Runtime state.
         internal DtCrowdAgent m_Crowd;
+        /// <summary>The agent's place in Unity's crowd (see AgentSystem.TakeSlot); -1: none.</summary>
+        internal int m_CrowdSlot = -1;
         internal NavWorld.Surface m_Surface;
         internal Vector3 m_NextPosition;
         /// <summary>The destination requested, mapped onto the NavMesh (what paths are searched to).</summary>
@@ -202,6 +204,22 @@ namespace UnityEngine.AI
         }
 
         internal AreaFilter Filter => AreaFilter.Of(m_AreaMask, m_AreaCosts);
+
+        AreaFilter m_CrowdFilter;
+
+        /// <summary>The agent's area mask and costs as they are now, for its crowd agent (one filter
+        /// kept per agent and brought up to date).</summary>
+        internal AreaFilter CrowdFilter
+        {
+            get
+            {
+                NavMeshAreas.Ensure();
+                m_CrowdFilter ??= new AreaFilter();
+                m_CrowdFilter.Mask = m_AreaMask;
+                m_CrowdFilter.Costs = m_AreaCosts ?? NavMeshAreas.Costs;
+                return m_CrowdFilter;
+            }
+        }
 
         void ApplyParams()
         {
@@ -900,6 +918,28 @@ namespace Unbound.Runtime
             s_PathRequests.Remove(agent);
             s_Restarted.Remove(agent);
             Detach(agent);
+            FreeSlot(agent);
+        }
+
+        static readonly Stack<int> s_FreeSlots = new Stack<int>();
+        static int s_SlotCount;
+
+        /// <summary>Unity's crowd keeps its agents in slots and updates them in slot order: an agent
+        /// that joins takes the slot freed last, else the next new one; it keeps it until it is
+        /// disabled. Matches the Unity 6000.0.71f1 Editor, tests/projects/navpath `replan.topo`
+        /// (which of the agents waiting as long has its corridor searched first). Unbound's
+        /// choice (unmeasured): an agent placed again (Warp, a NavMesh change) keeps its slot; one
+        /// enabled off the NavMesh takes a slot when it is first placed.</summary>
+        static void TakeSlot(NavMeshAgent agent)
+        {
+            if (agent.m_CrowdSlot < 0) agent.m_CrowdSlot = s_FreeSlots.Count > 0 ? s_FreeSlots.Pop() : s_SlotCount++;
+        }
+
+        static void FreeSlot(NavMeshAgent agent)
+        {
+            if (agent.m_CrowdSlot < 0) return;
+            s_FreeSlots.Push(agent.m_CrowdSlot);
+            agent.m_CrowdSlot = -1;
         }
 
         static void Detach(NavMeshAgent agent)
@@ -927,7 +967,8 @@ namespace Unbound.Runtime
             SyncWorld();
             if (!s_Crowds.TryGetValue(surface, out var crowd))
             {
-                var config = new DtCrowdConfig(4f);
+                // Unity's topology search: 8 iterations (DtPathCorridor.OptimizePathTopology).
+                var config = new DtCrowdConfig(4f) { maxTopologyOptimizationIterations = 8 };
                 crowd = new DtCrowd(config, surface.Mesh, i => AreaFilter.Of(-1));
                 crowd.tryEnterConnection = polyRef => TryEnterLink(surface, polyRef);
                 ConfigureAvoidance(crowd);
@@ -971,11 +1012,11 @@ namespace Unbound.Runtime
                 maxAcceleration = agent.acceleration,
                 maxSpeed = agent.isStopped ? 0f : agent.speed,
                 reachSpeed = agent.speed,
-                pathOptimizationRange = agent.radius * 30f,
                 separationWeight = 1.4f,
                 updateFlags = flags,
                 obstacleAvoidanceType = Math.Max(0, (int)agent.obstacleAvoidanceType - 1),
                 queryFilterType = 0,
+                filter = agent.CrowdFilter,
                 userData = agent,
                 avoidancePriority = agent.avoidancePriority,
             };
@@ -1088,6 +1129,7 @@ namespace Unbound.Runtime
                 return;
             }
             Place(agent, agent.m_NextPosition);
+            if (agent.m_Crowd != null) agent.m_Crowd.topologyOptTime = moving.topologyOptTime;
             // Landing after ResetPath from over a gap: placed where it lands.
             if (agent.m_Crowd == null && landing)
             {
@@ -1226,6 +1268,7 @@ namespace Unbound.Runtime
             if (!NavMesh.Nearest(surface, NavMesh.V(oldAnim.endPos), NavMesh.AgentExtents(agent.agentTypeID), agent.Filter, out _, out var landing))
                 return false;
             var ag = CrowdOf(surface).AddAgent(NavMesh.V(landing), Params(agent));
+            ag.topologyOptTime = old.topologyOptTime;
             ag.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH;
             ag.npos = old.npos;
             ag.vel = old.vel;
@@ -1277,6 +1320,8 @@ namespace Unbound.Runtime
 
         internal static bool Place(NavMeshAgent agent, Vector3 position)
         {
+            // Unity's crowd agent stays when it is moved: its wait for a topology search goes on.
+            float topologyTime = agent.m_Crowd?.topologyOptTime ?? 0f;
             Detach(agent);
             agent.WorldVersion = NavWorld.Changes;
             var surface = NavWorld.Get(agent.agentTypeID);
@@ -1291,6 +1336,8 @@ namespace Unbound.Runtime
             // On a height mesh, the agent stands at its height (tests/projects/navbaked `height.agents`).
             NavWorld.AdjustHeight(surface, polyRef, ref point);
             agent.m_Crowd = crowd.AddAgent(NavMesh.V(point), Params(agent));
+            agent.m_Crowd.topologyOptTime = topologyTime;
+            TakeSlot(agent);
             agent.m_NextPosition = point;
             agent.SetOnNavMesh(true);
             // The transform stays until the agent's next early update (measured).
@@ -1525,11 +1572,12 @@ namespace Unbound.Runtime
                 if (agent.isOnOffMeshLink && agent.m_LinkId != 0) s_OccupiedLinks.Add(agent.m_LinkId);
             }
             SizeGrids(dt);
+            var topology = TopologyAgent(dt);
             foreach (var pair in s_Crowds)
             {
                 // The enabled NavMeshObstacles, as they stand now, are among what the agents avoid.
                 ObstacleSystem.Feed(pair.Value);
-                pair.Value.Update(dt, null);
+                pair.Value.Update(dt, null, topology != null && topology.m_Surface == pair.Key ? topology.m_Crowd : null);
             }
             foreach (var agent in s_Agents)
             {
@@ -1547,6 +1595,28 @@ namespace Unbound.Runtime
                 if (agent.updatePosition && !agent.m_NextPosition.Equals(previous)) WriteTransform(agent);
                 if (agent.updateRotation) Rotate(agent, dt);
             }
+        }
+
+        /// <summary>The agent whose corridor is searched again in this update, of all the crowds'
+        /// agents (one per update, as Unity's single crowd does; see DtCrowd.WaitForTopology); null:
+        /// none.</summary>
+        static NavMeshAgent TopologyAgent(float dt)
+        {
+            NavMeshAgent best = null;
+            float longest = 0f;
+            foreach (var agent in s_Agents)
+            {
+                var ag = agent.m_Crowd;
+                if (ag == null || !s_Crowds.TryGetValue(agent.m_Surface, out var crowd) || !DtCrowd.WaitForTopology(ag, dt)) continue;
+                if (ag.topologyOptTime <= crowd.Config().topologyOptimizationTimeThreshold) continue;
+                // The first in slot order of those that waited longest.
+                if (best == null || ag.topologyOptTime > longest || (ag.topologyOptTime == longest && agent.m_CrowdSlot < best.m_CrowdSlot))
+                {
+                    best = agent;
+                    longest = ag.topologyOptTime;
+                }
+            }
+            return best;
         }
 
         /// <summary>Before the crowd steps: a walking agent may reach a link (marked by the link

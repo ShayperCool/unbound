@@ -174,92 +174,107 @@ namespace DotRecast.Detour.Crowd
             return ncorners;
         }
 
-        /**
-        @par
+        /// Unbound: the nearest a corner may be for the agent to shortcut towards it (Unity's: 1 cm,
+        /// in 3D).
+        private const float MinShortcutDistanceSqr = 1e-4f;
 
-        Inaccurate locomotion or dynamic obstacle avoidance can force the argent position significantly outside the
-        original corridor. Over time this can result in the formation of a non-optimal corridor. Non-optimal paths can
-        also form near the corners of tiles.
+        /// Unbound: the least cost of the straight way to the second corner that the agent shortcuts
+        /// towards (Unity's).
+        private const float MinShortcutCost = 1f;
 
-        This function uses an efficient local visibility search to try to optimize the corridor
-        between the current position and @p next.
+        /// Unbound: the most polygons a shortcut ray takes into the corridor (Unity's).
+        private const int MaxShortcutPolys = 32;
 
-        The corridor will change only if @p next is visible from the current position and moving directly toward the point
-        is better than following the existing path.
+        /// Unbound: the most polygons a topology search puts at the start of the corridor (Unity's).
+        public const int MaxTopologyPolys = 8;
 
-        The more inaccurate the agent movement, the more beneficial this function becomes. Simply adjust the frequency
-        of the call to match the needs to the agent.
-
-        This function is not suitable for long distance searches.
-        */
-        /// Attempts to optimize the path if the specified point is visible from the current position.
-        ///  @param[in]		next					The point to search toward. [(x, y, z])
-        ///  @param[in]		pathOptimizationRange	The maximum range to search. [Limit: > 0]
-        ///  @param[in]		navquery				The query object used to build the corridor.
-        ///  @param[in]		filter					The filter to apply to the operation.	
-        public void OptimizePathVisibility(RcVec3f next, float pathOptimizationRange, DtNavMeshQuery navquery, IDtQueryFilter filter)
+        /// Unbound: Unity's agents shortcut their corridor at every update, once they have found its
+        /// corners (matches the Unity 6000.0.71f1 Editor, tests/projects/navpath `place.moved` walk):
+        /// with one corner, towards it; with more, towards the second, when the straight way to it
+        /// costs at least <see cref="MinShortcutCost"/> and less than the way through the first. When
+        /// the ray from the agent reaches the point, the polygons it crosses replace the corridor's
+        /// start up to the last of them the corridor holds. The corners are not found again.
+        ///  @param[in]		corners		The corners found this update.
+        ///  @param[in]		ncorners	Their number.
+        ///  @param[in]		navquery	The query object used to build the corridor.
+        ///  @param[in]		filter		The agent's filter (its area mask and costs).
+        public void OptimizePathVisibility(ReadOnlySpan<DtStraightPath> corners, int ncorners, DtNavMeshQuery navquery, IDtQueryFilter filter)
         {
-            // Clamp the ray to max distance.
-            float dist = RcVec.Dist2D(m_pos, next);
-
-            // If too close to the goal, do not try to optimize.
-            if (dist < 0.01f)
+            if (ncorners == 0 || m_npath == 0)
             {
                 return;
             }
 
-            // Overshoot a little. This helps to optimize open fields in tiled meshes.
-            dist = Math.Min(dist + 0.01f, pathOptimizationRange);
-
-            // Adjust ray length.
-            var delta = RcVec3f.Subtract(next, m_pos);
-            RcVec3f goal = RcVec.Mad(m_pos, delta, pathOptimizationRange / dist);
-
-            const int MAX_RES = 32;
-            Span<long> res = stackalloc long[MAX_RES];
-            int nres = 0;
-            var status = navquery.Raycast(m_path[0], m_pos, goal, filter, out var t, out var norm, res, out nres, MAX_RES);
-            if (status.Succeeded())
+            RcVec3f target = corners[ncorners == 1 ? 0 : 1].pos;
+            if (RcVec3f.DistanceSquared(m_pos, target) < MinShortcutDistanceSqr)
             {
-                if (nres > 1 && t > 0.99f)
+                return;
+            }
+
+            if (ncorners > 1)
+            {
+                float direct = StraightCost(navquery, m_path[0], m_pos, target, filter);
+                if (direct < MinShortcutCost)
                 {
-                    m_npath = DtPathUtils.MergeCorridorStartShortcut(m_path, m_npath, m_maxPath, res, nres);
+                    return;
                 }
+
+                float around = StraightCost(navquery, m_path[0], m_pos, corners[0].pos, filter)
+                               + StraightCost(navquery, corners[0].refs, corners[0].pos, target, filter);
+                if (direct >= around)
+                {
+                    return;
+                }
+            }
+
+            Span<long> res = stackalloc long[MaxShortcutPolys];
+            var status = navquery.Raycast(m_path[0], m_pos, target, filter, out var t, out var _, res, out var nres, MaxShortcutPolys);
+            if (status.Succeeded() && nres > 1 && t > 0.99f)
+            {
+                m_npath = DtPathUtils.MergeCorridorStartShortcut(m_path, m_npath, m_maxPath, res, nres);
             }
         }
 
-        /**
-        @par
+        /// Unbound: the cost of the straight ray from <paramref name="from"/> towards
+        /// <paramref name="to"/> over the NavMesh, up to where it stops (zero when it cannot be cast).
+        private static float StraightCost(DtNavMeshQuery navquery, long startRef, RcVec3f from, RcVec3f to, IDtQueryFilter filter)
+        {
+            var hit = new DtRaycastHit();
+            var status = navquery.Raycast(startRef, from, to, filter, DtRaycastOptions.UNBOUND_RAYCAST_STRAIGHT_COSTS, ref hit, 0);
+            return status.Succeeded() ? hit.pathCost : 0f;
+        }
 
-        Inaccurate locomotion or dynamic obstacle avoidance can force the agent position significantly outside the
-        original corridor. Over time this can result in the formation of a non-optimal corridor. This function will use a
-        local area path search to try to re-optimize the corridor.
-
-        The more inaccurate the agent movement, the more beneficial this function becomes. Simply adjust the frequency of
-        the call to match the needs to the agent.
-        */
-        /// Attempts to optimize the path using a local area search. (Partial replanning.) 
-        ///  @param[in]		navquery	The query object used to build the corridor.
-        ///  @param[in]		filter		The filter to apply to the operation.	
+        /// Unbound: Unity's re-search of the corridor's start (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/navpath `place.moved` walk): a path search from the corridor's first polygon
+        /// to its last, given <paramref name="maxIterations"/> iterations, which is used only when it
+        /// ends within them (it reached the last polygon or ran out of polygons); its way to the
+        /// farthest corridor polygon it reached (its first <see cref="MaxTopologyPolys"/> polygons)
+        /// then replaces the corridor's start.
+        ///  @param[in]		navquery		The query object used to build the corridor.
+        ///  @param[in]		filter			The agent's filter (its area mask and costs).
+        ///  @param[in]		maxIterations	The search's iterations.
+        /// @return True when the corridor's start was searched again.
         public bool OptimizePathTopology(DtNavMeshQuery navquery, IDtQueryFilter filter, int maxIterations)
         {
             if (m_npath < 3)
             {
                 return false;
             }
-            
-            const int MAX_ITER = 32;
-            const int MAX_RES = 32;
 
-            RcDebug.Unused(MAX_ITER); // warning CS0219
-            
-            Span<long> res = stackalloc long[MAX_RES];
-            int nres = 0;
-            
-            navquery.InitSlicedFindPath(m_path[0], m_path[^1], m_pos, m_target, filter, 0);
-            navquery.UpdateSlicedFindPath(maxIterations, out var _);
-            var status = navquery.FinalizeSlicedFindPathPartial(m_path, m_npath, res, out nres, MAX_RES);
+            var status = navquery.InitSlicedFindPath(m_path[0], m_path[m_npath - 1], m_pos, m_target, filter, 0);
+            if (status.Failed())
+            {
+                return false;
+            }
 
+            status = navquery.UpdateSlicedFindPath(maxIterations, out var _);
+            if (!status.Succeeded())
+            {
+                return false;
+            }
+
+            Span<long> res = stackalloc long[MaxTopologyPolys];
+            status = navquery.FinalizeSlicedFindPathPartial(m_path, m_npath, res, out var nres, MaxTopologyPolys);
             if (status.Succeeded() && nres > 0)
             {
                 m_npath = DtPathUtils.MergeCorridorStartShortcut(m_path, m_npath, m_maxPath, res, nres);

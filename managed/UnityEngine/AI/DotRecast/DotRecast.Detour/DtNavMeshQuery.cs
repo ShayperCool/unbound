@@ -1345,20 +1345,22 @@ namespace DotRecast.Detour
             else
             {
                 // Find furthest existing node that was visited.
+                // Unbound: reached from another polygon (the search's start does not count), and
+                // with none the query fails (Unity's).
                 DtNode prev = null;
                 DtNode node = null;
                 for (int i = existingSize-1; i >= 0; --i)
                 {
                     node = m_nodePool.FindNode(existing[i]);
-                    if (null != node)
+                    if (null != node && node.pidx != 0)
                         break;
+                    node = null;
                 }
 		
                 if (null == node)
                 {
-                    m_query.status |= DtStatus.DT_PARTIAL_RESULT;
-                    RcDebug.Assert(null != m_query.lastBestNode);
-                    node = m_query.lastBestNode;
+                    m_query = new DtQueryData();
+                    return DtStatus.DT_FAILURE;
                 }
 		
                 // Reverse the path.

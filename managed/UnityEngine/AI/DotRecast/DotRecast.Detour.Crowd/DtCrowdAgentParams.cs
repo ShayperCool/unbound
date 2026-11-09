@@ -48,6 +48,10 @@ namespace DotRecast.Detour.Crowd
         /// The index of the query filter used by this agent.
         public int queryFilterType;
 
+        /// Unbound: the agent's own filter (its area mask and costs), with which it optimizes its
+        /// corridor; null: the crowd's filter of #queryFilterType.
+        public IDtQueryFilter filter;
+
         /// User defined data attached to the agent.
         public object userData;
 

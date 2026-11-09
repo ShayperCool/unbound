@@ -97,9 +97,7 @@ namespace DotRecast.Detour.Crowd
     @var dtCrowdAgentParams::pathOptimizationRange
     @par
 
-    Only applicable if #updateFlags includes the #DT_CROWD_OPTIMIZE_VIS flag.
-
-    This value is often based on the agent radius. E.g. radius * 30
+    Unbound: not used (Unity's agents shortcut their corridor at any range).
 
     @see dtPathCorridor::optimizePathVisibility()
 
@@ -137,9 +135,8 @@ namespace DotRecast.Detour.Crowd
         private DtNavMesh _navMesh;
         private readonly DtCrowdTelemetry _telemetry = new DtCrowdTelemetry();
 
-        // Reused per-update scratch queues, see UpdateMoveRequest / UpdateTopologyOptimization.
+        // Reused per-update scratch queue, see UpdateMoveRequest.
         private readonly List<DtCrowdAgent> _moveRequestQueue = new List<DtCrowdAgent>();
-        private readonly List<DtCrowdAgent> _topologyOptQueue = new List<DtCrowdAgent>();
 
         public DtCrowd(DtCrowdConfig config, DtNavMesh nav) : this(config, nav, i => new DtQueryDefaultFilter())
         {
@@ -410,7 +407,9 @@ namespace DotRecast.Detour.Crowd
             return _config;
         }
 
-        public DtCrowdTelemetry Update(float dt, DtCrowdAgentDebugInfo debug)
+        /// Unbound: <paramref name="topologyAgent"/>, an agent of this crowd or null, is the one
+        /// whose corridor is searched again in this update (see WaitForTopology).
+        public DtCrowdTelemetry Update(float dt, DtCrowdAgentDebugInfo debug, DtCrowdAgent topologyAgent = null)
         {
             _velocitySampleCount = 0;
 
@@ -425,7 +424,10 @@ namespace DotRecast.Detour.Crowd
             UpdateMoveRequest(agents, dt);
 
             // Optimize path topology.
-            UpdateTopologyOptimization(agents, dt);
+            if (topologyAgent != null)
+            {
+                OptimizeTopology(topologyAgent);
+            }
 
             // Unbound: Unity's agents take the step towards the last plan before steering and
             // planning anew, and steer and plan with the velocity they move at this update (measured);
@@ -842,48 +844,35 @@ namespace DotRecast.Detour.Crowd
             }
         }
 
-        private void UpdateTopologyOptimization(IList<DtCrowdAgent> agents, float dt)
+        /// Unbound: Unity searches the corridor of one agent again per update, of all its agents: the
+        /// one that has waited longest (the first of equals), once its wait is more than
+        /// DtCrowdConfig.topologyOptimizationTimeThreshold. An agent waits while it walks with more
+        /// than two polygons in its corridor; its wait grows by each update's time and starts again
+        /// from zero when its corridor is searched, or when it joins a crowd (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/navpath `place.moved` walk). Returns whether the agent
+        /// waits in this update.
+        public static bool WaitForTopology(DtCrowdAgent ag, float dt)
+        {
+            if (ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING || ag.corridor.GetPathCount() <= 2)
+            {
+                return false;
+            }
+
+            ag.topologyOptTime += dt;
+            return true;
+        }
+
+        private void OptimizeTopology(DtCrowdAgent ag)
         {
             using var timer = _telemetry.ScopedTimer(DtCrowdTimerLabel.UpdateTopologyOptimization);
+            ag.corridor.OptimizePathTopology(_navQuery, FilterOf(ag), _config.maxTopologyOptimizationIterations);
+            ag.topologyOptTime = 0;
+        }
 
-            // Longest-waiting agent goes first. The queue is filled completely
-            // before it is drained, so a single sort beats a priority queue here.
-            List<DtCrowdAgent> queue = _topologyOptQueue;
-            queue.Clear();
-
-            for (var i = 0; i < agents.Count; i++)
-            {
-                var ag = agents[i];
-                if (ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING)
-                {
-                    continue;
-                }
-
-                if (ag.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_NONE
-                    || ag.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VELOCITY)
-                {
-                    continue;
-                }
-
-                if ((ag.option.updateFlags & DtCrowdAgentUpdateFlags.DT_CROWD_OPTIMIZE_TOPO) == 0)
-                {
-                    continue;
-                }
-
-                ag.topologyOptTime += dt;
-                if (ag.topologyOptTime >= _config.topologyOptimizationTimeThreshold)
-                {
-                    queue.Add(ag);
-                }
-            }
-
-            queue.Sort((a1, a2) => a2.topologyOptTime.CompareTo(a1.topologyOptTime));
-            for (var i = 0; i < queue.Count; i++)
-            {
-                DtCrowdAgent ag = queue[i];
-                ag.corridor.OptimizePathTopology(_navQuery, _filters[ag.option.queryFilterType], _config.maxTopologyOptimizationIterations);
-                ag.topologyOptTime = 0;
-            }
+        /// Unbound: the filter an agent optimizes its corridor with: its own, else its query filter type's.
+        private IDtQueryFilter FilterOf(DtCrowdAgent ag)
+        {
+            return ag.option.filter ?? _filters[ag.option.queryFilterType];
         }
 
         private void BuildProximityGrid(IList<DtCrowdAgent> agents)
@@ -1133,29 +1122,13 @@ namespace DotRecast.Detour.Crowd
                 ag.ncorners = ag.corridor.FindCorners(ag.corners, DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS, _navQuery, _filters[ag.option.queryFilterType]);
                 ag.KeepSteer();
 
-                // Check to see if the corner after the next corner is directly visible,
-                // and short cut to there.
-                if ((ag.option.updateFlags & DtCrowdAgentUpdateFlags.DT_CROWD_OPTIMIZE_VIS) != 0 && ag.ncorners > 0)
+                // Unbound: Unity's agents shortcut their corridor at every update (see
+                // DtPathCorridor.OptimizePathVisibility).
+                ag.corridor.OptimizePathVisibility(ag.corners, ag.ncorners, _navQuery, FilterOf(ag));
+                if (debugAgent == ag)
                 {
-                    RcVec3f target = ag.corners[Math.Min(1, ag.ncorners - 1)].pos;
-                    ag.corridor.OptimizePathVisibility(target, ag.option.pathOptimizationRange, _navQuery,
-                        _filters[ag.option.queryFilterType]);
-
-                    // Copy data for debug purposes.
-                    if (debugAgent == ag)
-                    {
-                        debug.optStart = ag.corridor.GetPos();
-                        debug.optEnd = target;
-                    }
-                }
-                else
-                {
-                    // Copy data for debug purposes.
-                    if (debugAgent == ag)
-                    {
-                        debug.optStart = RcVec3f.Zero;
-                        debug.optEnd = RcVec3f.Zero;
-                    }
+                    debug.optStart = ag.corridor.GetPos();
+                    debug.optEnd = ag.ncorners > 0 ? ag.corners[Math.Min(1, ag.ncorners - 1)].pos : RcVec3f.Zero;
                 }
             }
         }

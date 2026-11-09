@@ -239,33 +239,30 @@ namespace DotRecast.Detour
             return ppos+count;
         }
 
+        /// Unbound: Unity's merge: the corridor polygon farthest along that the visited polygons
+        /// hold (the last of them that is), and the visited polygons before it replace the
+        /// corridor's polygons before it (none when it is the first visited polygon).
         public static int MergeCorridorStartShortcut(Span<long> path, int npath, int maxPath, Span<long> visited, int nvisited)
         {
             int furthestPath = -1;
             int furthestVisited = -1;
 
             // Find furthest common polygon.
-            for (int i = npath - 1; i >= 0; --i)
+            for (int i = npath - 1; i >= 0 && furthestPath < 0; --i)
             {
-                bool found = false;
                 for (int j = nvisited - 1; j >= 0; --j)
                 {
                     if (path[i] == visited[j])
                     {
                         furthestPath = i;
                         furthestVisited = j;
-                        found = true;
+                        break;
                     }
-                }
-
-                if (found)
-                {
-                    break;
                 }
             }
 
             // If no intersection found just return current path.
-            if (furthestPath == -1 || furthestVisited <= 0)
+            if (furthestPath == -1)
             {
                 return npath;
             }
@@ -274,14 +271,11 @@ namespace DotRecast.Detour
             
             // Adjust beginning of the buffer to include the visited.
             int req = furthestVisited;
-            if (req <= 0)
-                return npath;
-	
             int orig = furthestPath;
             int size = Math.Max(0, npath-orig);
             if (req+size > maxPath)
                 size = maxPath-req;
-            if (0 != size)
+            if (0 != size && orig != req)
                 RcSpans.Move(path, orig, req, size);
 	
             // Store visited
