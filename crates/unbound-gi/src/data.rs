@@ -705,15 +705,14 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
         {
             bail!("a system outside the scene mapping");
         }
-        // A system's files are named by its hash (not its input hash: tests/projects/realtimegi
+        // A system's files are named by its hash, not its input hash (tests/projects/realtimegi
         // RoomSystems).
-        let system_file = |ext: &str| file(&hash, ext);
-        let input = read_input_samples(system_file("iws.ref")?)?;
+        let input = read_input_samples(file(&hash, "iws.ref")?)?;
         let transport = read_transport(file(&hash, "rsc.ref")?)?;
         let materials =
-            read_cluster_materials(system_file("caw")?, transport.width, transport.height)?;
-        let chart_mask = read_chart_mask(system_file("ecm")?, transport.width, transport.height)?;
-        let visibility = system_file("vis")
+            read_cluster_materials(file(&hash, "caw")?, transport.width, transport.height)?;
+        let chart_mask = read_chart_mask(file(&hash, "ecm")?, transport.width, transport.height)?;
+        let visibility = file(&hash, "vis")
             .and_then(crate::visibility::Visibility::read)
             .map_err(|e| format!("{e:#}"));
         let size = atlas_sizes[atlas] as usize;
