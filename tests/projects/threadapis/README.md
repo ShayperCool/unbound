@@ -80,6 +80,9 @@ Contracts checked against Unity 6000.0 documentation:
   actual and delayed playback report playing, Pause reports false for a playing voice. The
   fresh clipless pending state is recorded separately; Pause before its audio update leaves it true.
 
+Direct `run.py unbound --followups --out FILE` captures use the same private-project fixture
+and fail if the engine leaves a missing or incomplete capture. Existing captures are preserved.
+
 Record and publish the supplementary reference from two identical GPU Editor captures:
 ```sh
 python3 tests/projects/threadapis/run.py editor --repeat followups1 --followups

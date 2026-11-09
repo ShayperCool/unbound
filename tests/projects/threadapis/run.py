@@ -4,12 +4,13 @@
     run.py editor --repeat native1|native2   one batchmode GPU Editor capture
     run.py publish                           both repeats complete and byte-identical: copies one
                                              to Reference/unity-<release>.jsonl
-    run.py unbound --out FILE [--cli PATH]   an Unbound capture ($UNBOUND or `unbound`)
+    run.py unbound --out FILE [--cli PATH]   a private-project Unbound capture ($UNBOUND or `unbound`)
 
 The release is $UNBOUND_PROBE_UNITY_VERSION (default 6000.0.71f1). Editor captures run on fresh
 project copies under $XDG_CACHE_HOME/unbound/validation/runs/threadapis/<repeat>; nothing is
 written here except by `publish`. Editors go through tests/editor_runner.py (each takes its own
-GPU lease; do not wrap this driver in with-heavy-job).
+GPU lease; do not wrap this driver in with-heavy-job). --followups selects the supplementary
+matrix in either capture mode. Engine captures require a new output path and a completion marker.
 """
 import argparse
 import os
@@ -17,10 +18,12 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import uuid
 
 PROBE = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROBE.parents[1]))
-from probe_paths import reference_file, reference_root, run_root, unity_version  # noqa: E402
+from probe_paths import reference_file, reference_root, run_root  # noqa: E402
+from value_probe import assemble
 from editor_runner import EditorJob, jsonl_complete, publish as publish_reference, run, summary  # noqa: E402
 
 REPEATS = ('native1', 'native2')
@@ -40,6 +43,13 @@ def add_human_fixture(project):
         shutil.copyfile(source/name, target/name)
 
 
+def prepare_project(out, followups=False):
+    project = assemble(PROBE, out)
+    if followups:
+        add_human_fixture(project)
+    return project
+
+
 def capture_environment(out, followups=False):
     env = {key: value for key, value in os.environ.items()
            if key not in ('THREAD_APIS_OUT', 'THREAD_FOLLOWUP_OUT')}
@@ -51,12 +61,7 @@ def editor(repeat, followups=False):
     out = work(repeat)
     if out.exists():
         sys.exit(f'refusing to overwrite capture: {out}')
-    project = out/'project'
-    for part in ('Assets', 'Packages', 'ProjectSettings'):
-        shutil.copytree(PROBE/part, project/part)
-    (project/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+unity_version()+'\n')
-    if followups:
-        add_human_fixture(project)
+    project = prepare_project(out, followups)
     job = EditorJob(project, out/'editor.log', out, ['-executeMethod', 'ProbeRunner.Record'], batch=True,
                     env=capture_environment(out/OUT, followups), timeout=900, label='threadapis-'+repeat)
     result = run(job)
@@ -84,11 +89,23 @@ def publish_raycast(repeats):
 
 
 def unbound(out, cli, followups=False):
+    out = Path(out).resolve()
+    if out.exists():
+        print(f'refusing to overwrite capture: {out}', file=sys.stderr)
+        return 1
+    project = prepare_project(work('unbound-'+uuid.uuid4().hex), followups)
     cli = cli or os.environ.get('UNBOUND') or 'unbound'
-    command = [cli, 'run', '-p', str(PROBE), '--headless', '30', '--no-watch']
+    command = [cli, 'run', '-p', str(project), '--headless', '30', '--no-watch']
     if LAUNCHER.exists():
         command = [str(LAUNCHER), '--kind', 'engine-cpu', *command]
-    return subprocess.call(command, env=capture_environment(Path(out).resolve(), followups))
+    code = subprocess.call(command, env=capture_environment(out, followups))
+    if code:
+        return code
+    problem = jsonl_complete(out.name, {'complete': True})(out.parent)
+    if problem:
+        print(f'threadapis: {problem}', file=sys.stderr)
+        return 1
+    return 0
 
 
 def main():

@@ -669,6 +669,46 @@ class StubGateTests(unittest.TestCase):
 
 
 class PartialRecipeTests(unittest.TestCase):
+    def test_direct_thread_captures_stage_fixtures_and_require_completion(self):
+        spec = importlib.util.spec_from_file_location('thread_direct', suite.PROJECTS/'threadapis/run.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for index, (followups, content, engine_exit, expected) in enumerate([
+                (False, '{"complete":true}\n', 0, 0),
+                (True, '{"complete":true}\n', 0, 0),
+                (True, None, 0, 1),
+                (True, '{"thread":"state","call":"partial","result":"ok"}\n', 0, 1),
+                (True, '{broken', 0, 1),
+                (True, '{"complete":true}\n{"complete":true}\n', 0, 1),
+                (True, '{"complete":true}\n', 7, 7),
+            ]):
+                with self.subTest(followups=followups, content=content, engine_exit=engine_exit):
+                    output = root/(str(index)+'.jsonl')
+                    def engine(argv, env):
+                        project = Path(argv[argv.index('-p')+1])
+                        self.assertNotEqual(project, module.PROBE)
+                        self.assertEqual((project/'Assets/Resources/HumanA.fbx').exists(), followups)
+                        self.assertEqual((project/'Assets/Resources/HumanA.fbx.meta').exists(), followups)
+                        variable = 'THREAD_FOLLOWUP_OUT' if followups else 'THREAD_APIS_OUT'
+                        self.assertEqual(env[variable], str(output))
+                        self.assertNotIn('THREAD_APIS_OUT' if followups else 'THREAD_FOLLOWUP_OUT', env)
+                        if content is not None:
+                            output.write_text(content)
+                        return engine_exit
+                    with unittest.mock.patch.object(module, 'work', return_value=root/('run'+str(index))), \
+                         unittest.mock.patch.object(module, 'LAUNCHER', root/'absent'), \
+                         unittest.mock.patch.object(module.subprocess, 'call', side_effect=engine), \
+                         contextlib.redirect_stderr(io.StringIO()):
+                        self.assertEqual(module.unbound(output, '/fake/unbound', followups), expected)
+            existing = root/'existing.jsonl'
+            existing.write_text('original')
+            with unittest.mock.patch.object(module.subprocess, 'call') as call, contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(module.unbound(existing, '/fake/unbound', True), 1)
+                call.assert_not_called()
+                self.assertEqual(existing.read_text(), 'original')
+
     def test_thread_human_fixture_is_copied_unchanged_and_declares_its_dependency(self):
         spec = importlib.util.spec_from_file_location('thread_driver', suite.PROJECTS/'threadapis/run.py')
         module = importlib.util.module_from_spec(spec)
