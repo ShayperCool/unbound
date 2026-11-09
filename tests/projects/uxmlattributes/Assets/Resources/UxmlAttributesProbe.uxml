@@ -57,4 +57,14 @@
     <ui:ListView name="listTemplateMissing" item-template="/Assets/UI/Missing.uxml" />
     <ui:ListView name="listTemplateWrongType" item-template="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" />
     <ui:TreeView name="treeTemplate" item-template="project://database/Assets/UI/Child.uxml?fileID=9197481963319205126&amp;guid=8d4f5b6c7e804b9203b4c5d6e7f8091a&amp;type=3#Child" />
+    <probe:PresetIconButton name="presetIconNone" />
+    <probe:PresetIconButton name="presetIconMissing" icon-image="/Assets/UI/Missing.png" />
+    <probe:PresetIconButton name="presetIconWrongType" icon-image="project://database/Assets/UI/Probe.uss?fileID=7433441132597879392&amp;guid=7c3e4a5b6d7f4a8192a3b4c5d6e7f809&amp;type=3#Probe" />
+    <probe:PresetIconButton name="presetIconEmpty" icon-image="" />
+    <probe:PresetRefProbe name="presetRefNone" />
+    <probe:PresetRefProbe name="presetRefMissing" my-background="/Assets/UI/Missing.png" my-texture="/Assets/UI/Missing.png" my-backgrounds="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" />
+    <probe:PresetRefProbe name="presetRefWrongType" my-background="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" my-texture="project://database/Assets/UI/Probe.uss?fileID=7433441132597879392&amp;guid=7c3e4a5b6d7f4a8192a3b4c5d6e7f809&amp;type=3#Probe" />
+    <probe:PresetTemplateList name="presetListNone" />
+    <probe:PresetTemplateList name="presetListMissing" item-template="/Assets/UI/Missing.uxml" />
+    <probe:PresetTemplateList name="presetListWrongType" item-template="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" />
 </ui:UXML>

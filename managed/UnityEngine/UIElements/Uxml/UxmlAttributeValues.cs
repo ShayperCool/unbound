@@ -368,6 +368,16 @@ namespace Unbound.UIElements
             return b.ToString();
         }
 
+        /// <summary>Whether a [UxmlAttribute] member of <paramref name="type"/> is left unread: a
+        /// Background, or a list of them, without a game converter (measured, Unity 6000.0.71f1,
+        /// tests/projects/uxmlattributes).</summary>
+        internal static bool IsUnreadBackground(Type type)
+        {
+            if (UxmlTypeIndex.ConverterFor(type) != null) return false;
+            if (type == typeof(Background)) return true;
+            return IsList(type, out var element) && element == typeof(Background) && UxmlTypeIndex.ConverterFor(element) == null;
+        }
+
         static bool IsList(Type type, out Type element)
         {
             element = null;
@@ -393,7 +403,7 @@ namespace Unbound.UIElements
         internal static string Problem(Type type, string elementName, string memberName)
         {
             if (UxmlTypeIndex.ConverterFor(type) != null) return null;
-            if (s_Scalars.Contains(type) || type.IsEnum || typeof(Object).IsAssignableFrom(type) || UxmlImageReferences.Reads(type)) return null;
+            if (s_Scalars.Contains(type) || type.IsEnum || typeof(Object).IsAssignableFrom(type) || type == typeof(Background)) return null;
             if (NotReadYet(type))
                 return $"[UxmlElement] '{elementName}' has a [UxmlAttribute] '{memberName}' of type '{type.Name}', which Unbound does not read from UXML yet.";
             if (IsList(type, out var element))
@@ -500,10 +510,14 @@ namespace Unbound.UIElements
                 else result = new BoundsInt(v[0], v[1], v[2], v[3], v[4], v[5]);
                 return true;
             }
-            // Background values: asset references read as images (VisualTreeAsset.cs); objects
-            // (textures too) resolve as object members do.
+            // A Background value: the object the url names, made into a Background as `icon-image`
+            // is (VisualTreeAsset.ApplyImageAttribute); objects resolve as object members do.
             if (type == typeof(Background))
-                return UxmlImageReferences.TryRead(text, type, document, out result, out error);
+            {
+                if (!TryReadAsset(text, typeof(Object), document, out var image, out error)) return false;
+                result = Background.FromObject((Object)image);
+                return true;
+            }
             if (typeof(Object).IsAssignableFrom(type))
                 return TryReadAsset(text, type, document, out result, out error);
             if (IsList(type, out var element) && !IsList(element, out _))

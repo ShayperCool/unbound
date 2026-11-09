@@ -604,11 +604,11 @@ namespace Unbound.UIElements
                     if (!TryReadObjectReference(element, a.Key, a.Value, member.ValueType, member.Info.Name, asset, node, out var referenced)) continue;
                     value = referenced;
                 }
-                else if (member.ValueType == typeof(Background) && UxmlTypeIndex.ConverterFor(member.ValueType) == null)
+                else if (UxmlAttributeValues.IsUnreadBackground(member.ValueType))
                 {
-                    // Measured (Unity 6000.0.71f1, tests/projects/uxmlattributes): a Background
-                    // member is not read from UXML without a game converter (a texture or sprite
-                    // reference leaves it empty), and its url is not checked (no warnings).
+                    // Measured (Unity 6000.0.71f1, tests/projects/uxmlattributes): a Background or
+                    // List<Background> member is not read from UXML without a game converter (it
+                    // keeps its value whatever the reference), and its url is not checked.
                     continue;
                 }
                 else if (member.ValueType == typeof(Type))
@@ -796,33 +796,22 @@ namespace Unbound.UIElements
         // An engine element's Background property (Button.iconImage and Tab.iconImage, the only ones
         // Unbound's elements declare) read from an asset reference. Documented (6000.0 Manual "Button"
         // and "Tab", attribute `icon-image` of type Object: "The Texture, Sprite, or VectorImage that
-        // will represent an icon within a Button element" / "Sets the icon for the Tab's header",
-        // written as icon-image="/path/to/image-file.png"). Measured (Unity 6000.0.71f1,
-        // tests/projects/uxmlattributes): textures and sprites by project url or path; an empty or
-        // unresolved url logs the importer's warnings and keeps the value; an asset of a class a
-        // Background cannot take (a style sheet, a UXML document) is ignored silently. Unbound's
-        // choices (unmeasured): the value is converted as UxmlImageReferences reads it; an ambiguous or
-        // unloadable reference logs ONE error naming the document, the element and the attribute.
+        // will represent an icon within a Button element" / "Sets the icon for the Tab's header";
+        // Background.FromTexture2D, FromRenderTexture, FromSprite and FromVectorImage). Measured (Unity
+        // 6000.0.71f1, tests/projects/uxmlattributes, on Button and a Button subclass with a preset
+        // icon): the url names an object as an Object member's does (project url, path or relative;
+        // a texture file's main asset is its texture, a fileID picks its sprite), and the property is
+        // always replaced by the Background made from it: an empty or unresolved url logs the
+        // importer's warnings and clears the icon, an object no Background can show (a style sheet, a
+        // UXML document) clears it silently. Unbound's choices: other texture types (Cubemap, ...)
+        // follow the same rule (cleared silently); a file the asset database cannot load logs ONE
+        // error and keeps the value.
         static void ApplyImageAttribute(VisualElement element, PropertyInfo property, string name, string value, VisualTreeAsset asset, UxmlNode node)
         {
-            // An empty or unresolved url warns as Unity's importer does and leaves the image as it
-            // is (measured, tests/projects/uxmlattributes).
-            var found = UxmlAttributeValues.ResolveReference(value, typeof(Object), asset, out var referenced);
-            if (found == UxmlAttributeValues.Reference.Empty || found == UxmlAttributeValues.Reference.Missing)
-            {
-                UxmlAttributeValues.ReportUrl(node, name, value, asset);
-                return;
-            }
-            // An asset no Background can show is ignored without a message (measured).
-            if (referenced != null && !(referenced is Texture || referenced is Sprite || referenced is VectorImage)) return;
-            if (!UxmlImageReferences.TryRead(value, typeof(Background), asset, out var image, out var error))
-            {
-                Debug.LogError($"{Where(element, asset, node)} attribute '{name}': {error}; '{property.Name}' keeps its value.");
-                return;
-            }
+            if (!TryReadObjectReference(element, name, value, typeof(Object), property.Name, asset, node, out var referenced)) return;
             try
             {
-                property.SetValue(element, image);
+                property.SetValue(element, Background.FromObject(referenced));
             }
             catch (TargetInvocationException e)
             {
@@ -996,136 +985,6 @@ namespace Unbound.UIElements
                 return false;
             }
             return false;
-        }
-    }
-
-    // Documented (6000.0): Button and Tab `icon-image` take a Texture, Sprite or VectorImage asset
-    // (the Button Manual's text also names a Render Texture); Background.GetSelectedImage "can be of a
-    // type of Texture, Sprite, RenderTexture or VectorImage" and Background.FromTexture2D,
-    // FromRenderTexture, FromSprite and FromVectorImage create one; UxmlAttributeAttribute: "Unity
-    // objects can also be UxmlAttributes and will contain a reference to the asset file"; the Manual
-    // "Define UXML attributes for built-in types" writes a Texture2D as
-    // my-texture="project://database/Assets/MyTexture.png".
-    // Unbound's choices (unmeasured; the pages do not describe them):
-    //   - references are resolved by the asset urls of USS and UXML (AssetPaths.LoadAsset:
-    //     `project://database/...?fileID=..&guid=..#name`, `/Assets/...`, or relative to the document);
-    //     a reference to a file without a fileID or a #name means the file's main asset (an image
-    //     file's texture);
-    //   - a Background is made by the factory of the asset's type; a Texture2D, RenderTexture, Sprite or
-    //     VectorImage only, never another texture type (Cubemap, Texture3D, ...) nor an image derived
-    //     from the asset (no sprite's texture, no texture's sprite);
-    //   - (a [UxmlAttribute] of a Texture type is an object member: UxmlAttributeValues.ResolveReference,
-    //     measured);
-    //   - an empty value is no image (an empty Background);
-    //   - each of these is an error the caller reports once, the value kept: no asset at the
-    //     reference, an asset of another class, a texture type a Background cannot show, and a #name
-    //     (without a fileID that resolves) naming more than one asset the value could take. For
-    //     `icon-image` the caller first handles what is measured (tests/projects/uxmlattributes):
-    //     missing and empty urls warn as the importer does, an asset no Background can show is
-    //     ignored silently.
-    /// <summary>UXML asset references read as images: Background values (Button and Tab `icon-image`,
-    /// Background list items and legacy attribute descriptions). A [UxmlAttribute] Background member
-    /// is not read from UXML (measured); Texture members resolve as other object members do.</summary>
-    internal static class UxmlImageReferences
-    {
-        const string BackgroundTypes = "Texture2D, RenderTexture, Sprite or VectorImage";
-
-        /// <summary>Whether values of <paramref name="type"/> are read here.</summary>
-        internal static bool Reads(Type type) => type == typeof(Background) || typeof(Texture).IsAssignableFrom(type);
-
-        static bool IsBackgroundImage(UnityEngine.Object o) => o is Texture2D || o is RenderTexture || o is Sprite || o is VectorImage;
-
-        /// <summary>Reads <paramref name="text"/>, an asset reference of <paramref name="document"/>, as
-        /// a value of <paramref name="type"/> (Background, or Texture or a subclass).</summary>
-        internal static bool TryRead(string text, Type type, VisualTreeAsset document, out object result, out string error)
-        {
-            bool background = type == typeof(Background);
-            result = background ? (object)default(Background) : null;
-            error = null;
-            if (string.IsNullOrWhiteSpace(text)) return true;
-            var url = text.Trim();
-            var referrer = document?.m_UaAssetPath;
-            Func<UnityEngine.Object, bool> accepts = background ? IsBackgroundImage : (o => type.IsInstanceOfType(o));
-            var expected = background ? BackgroundTypes : type.Name;
-            var ambiguous = Ambiguous(referrer, url, accepts);
-            if (ambiguous != null)
-            {
-                error = $"'{url}' names more than one asset that could be a {expected} ({ambiguous}); give the reference the fileID of one";
-                return false;
-            }
-            UnityEngine.Object asset;
-            try
-            {
-                asset = AssetPaths.LoadAsset(referrer, url, background ? null : type);
-                // What the reference names when it is no asset of the type: only to report it.
-                if (asset == null && !background) asset = AssetPaths.LoadAsset(referrer, url, null);
-            }
-            catch (Exception e)
-            {
-                error = $"the asset at '{url}' could not be loaded ({e.GetType().Name}: {e.Message})";
-                return false;
-            }
-            if (asset == null)
-            {
-                error = $"no {(background ? "" : type.Name + " ")}asset at '{url}'";
-                return false;
-            }
-            if (!accepts(asset))
-            {
-                error = background && asset is Texture
-                    ? $"the asset at '{url}' is a {asset.GetType().Name}, a texture type a Background cannot show (a {BackgroundTypes})"
-                    : $"the asset at '{url}' is a {asset.GetType().Name}, not a {expected}";
-                return false;
-            }
-            if (!background)
-            {
-                result = asset;
-                return true;
-            }
-            result = asset switch
-            {
-                Texture2D texture => Background.FromTexture2D(texture),
-                RenderTexture renderTexture => Background.FromRenderTexture(renderTexture),
-                Sprite sprite => Background.FromSprite(sprite),
-                _ => Background.FromVectorImage((VectorImage)asset),
-            };
-            return true;
-        }
-
-        /// <summary>The types of the assets a reference's #name names when it names more than one that
-        /// <paramref name="accepts"/> takes and no fileID of it resolves; otherwise null.</summary>
-        static string Ambiguous(string referrer, string url, Func<UnityEngine.Object, bool> accepts)
-        {
-            var path = AssetPaths.Resolve(referrer, url, out var guid, out var fileId, out var subAsset);
-            if (string.IsNullOrEmpty(subAsset)) return null;
-            try
-            {
-                if (guid != null && fileId != 0 && global::Unbound.Runtime.AssetDatabaseRuntime.Load(guid, fileId, null) != null) return null;
-                // The file the resolver looks the name up in: the path's, else the reference's guid.
-                string fileGuid = null;
-                if (!string.IsNullOrEmpty(path))
-                {
-                    try
-                    {
-                        fileGuid = global::Unbound.Runtime.AssetDatabaseRuntime.InfoByPath(path)?.Guid;
-                    }
-                    catch (Exception)
-                    {
-                        fileGuid = null;
-                    }
-                }
-                if (string.IsNullOrEmpty(fileGuid)) fileGuid = guid;
-                if (string.IsNullOrEmpty(fileGuid)) return null;
-                var matches = new List<string>();
-                foreach (var o in global::Unbound.Runtime.AssetDatabaseRuntime.LoadAll(fileGuid))
-                    if (o != null && o.name == subAsset && accepts(o)) matches.Add(o.GetType().Name);
-                return matches.Count > 1 ? string.Join(", ", matches) : null;
-            }
-            catch (Exception)
-            {
-                // The resolver reports what it cannot load.
-                return null;
-            }
         }
     }
 

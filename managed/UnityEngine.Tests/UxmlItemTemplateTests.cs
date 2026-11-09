@@ -320,13 +320,42 @@ namespace UnityEngine.Tests
             }
         }
 
+        // [measured] presetListMissing, presetListWrongType, presetListNone: on a list whose template
+        // is set before the attributes are read, an unresolved reference clears the template, one of
+        // another class keeps it (the assignment fails), and no attribute leaves it.
+        [Fact]
+        public void APresetTemplateIsClearedByAMissingReferenceAndKeptOnAnotherClass()
+        {
+            var sheet = ScriptableObject.CreateInstance<StyleSheet>();
+            sheet.name = "Row";
+            sheet.IsPersistentAsset = true;
+            var file = new LoadedFile { Guid = SheetGuid, Path = "Assets/UI/Rows/Row.uss", MainObject = sheet };
+            file.Objects[SheetId] = sheet;
+            AssetDatabaseRuntime.AddLoaded(file);
+            try
+            {
+                var (root, _) = Clone(
+                    "<ItemTemplateProbes.PresetTemplateList item-template=\"Rows/Missing.uxml\" />"
+                    + $"<ItemTemplateProbes.PresetTemplateList item-template=\"{Ref("Assets/UI/Rows/Row.uss", SheetGuid, SheetId, "Row")}\" />"
+                    + "<ItemTemplateProbes.PresetTemplateList />");
+                Assert.Null(Assert.IsType<PresetTemplateList>(root[0]).itemTemplate);
+                Assert.Same(PresetTemplateList.Preset, Assert.IsType<PresetTemplateList>(root[1]).itemTemplate);
+                Assert.Same(PresetTemplateList.Preset, Assert.IsType<PresetTemplateList>(root[2]).itemTemplate);
+            }
+            finally
+            {
+                AssetDatabaseRuntime.Invalidate(SheetGuid);
+                Object.DestroyImmediate(sheet, true);
+            }
+        }
+
         // ------------------------------------------------------------------ TreeView
 
         // [doc] TreeView.itemTemplate: "A UXML template that constructs each recycled and rebound
         // element within the tree. This template is designed to replace the makeItem definition."
         // [doc] 6000.0 Manual "TreeView": UXML attribute `item-template` of type UIElements.VisualTreeAsset.
-        // [measured] treeTemplate: it is read as on <ListView> (the same reader and diagnostics), on the property
-        // TreeView declares.
+        // [measured] treeTemplate: it is read as on <ListView>, on the property TreeView declares
+        // (the diagnostics as measured on ListView).
         // Red at 7e4d5b9c (this file overlaid; every member it uses exists there): the builder cannot
         // convert the text to a VisualTreeAsset and drops it silently; Assert.Same(row.Template,
         // view.itemTemplate) fails (null).
@@ -421,5 +450,20 @@ namespace ItemTemplateProbes
     [UxmlElement]
     public partial class TemplatedListProbe : ListView
     {
+    }
+
+    [UxmlElement]
+    public partial class PresetTemplateList : ListView
+    {
+        internal static readonly VisualTreeAsset Preset = CreatePreset();
+
+        static VisualTreeAsset CreatePreset()
+        {
+            var template = ScriptableObject.CreateInstance<VisualTreeAsset>();
+            template.name = "Preset";
+            return template;
+        }
+
+        public PresetTemplateList() => itemTemplate = Preset;
     }
 }

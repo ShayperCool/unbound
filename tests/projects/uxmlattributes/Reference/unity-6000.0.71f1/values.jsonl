@@ -1,5 +1,5 @@
 {"k":"asset","v":"UxmlAttributesProbe"}
-{"k":"rootChildren","v":"58"}
+{"k":"rootChildren","v":"68"}
 {"k":"element/defaults/class","v":"UxmlAttributesProbes.TypedProbe"}
 {"k":"element/defaults/aliased","v":"\"initial\""}
 {"k":"element/defaults/myBool","v":"False"}
@@ -935,5 +935,31 @@
 {"k":"element/listTemplateWrongType/itemTemplate","v":"null"}
 {"k":"element/treeTemplate/class","v":"UnityEngine.UIElements.TreeView"}
 {"k":"element/treeTemplate/itemTemplate","v":"VisualTreeAsset:Child"}
-{"k":"logs","v":["Error: Type: Invalid type \"System.String\". Type must derive from UnityEngine.UIElements.VisualElement.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.Font'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.Sprite'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.StyleSheet'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.VisualTreeAsset'.","Exception: ArgumentException: Object of type 'UnityEngine.UIElements.StyleSheet' cannot be converted to type 'UnityEngine.Texture2D'.","Exception: TypeLoadException: Could not load type 'No.Such.Type' from assembly 'Nowhere'.","Warning:  (30,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (46,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (51,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.ttf","Warning:  (52,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (57,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uxml","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uss","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : Invalid asset path hint \"Assets/UI/Missing.png\" for referenced asset GUID \"0123456789abcdef0123456789abcdef\"","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : project://database/Assets/UI/Missing.png?fileID=2800000&guid=0123456789abcdef0123456789abcdef&type=3#Missing"]}
+{"k":"element/presetIconNone/class","v":"UxmlAttributesProbes.PresetIconButton"}
+{"k":"element/presetIconNone/iconImage","v":"texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null"}
+{"k":"element/presetIconMissing/class","v":"UxmlAttributesProbes.PresetIconButton"}
+{"k":"element/presetIconMissing/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"element/presetIconWrongType/class","v":"UxmlAttributesProbes.PresetIconButton"}
+{"k":"element/presetIconWrongType/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"element/presetIconEmpty/class","v":"UxmlAttributesProbes.PresetIconButton"}
+{"k":"element/presetIconEmpty/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"element/presetRefNone/class","v":"UxmlAttributesProbes.PresetRefProbe"}
+{"k":"element/presetRefNone/myBackground","v":"texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null"}
+{"k":"element/presetRefNone/myBackgrounds","v":"null"}
+{"k":"element/presetRefNone/myTexture","v":"Texture2D:Preset"}
+{"k":"element/presetRefMissing/class","v":"UxmlAttributesProbes.PresetRefProbe"}
+{"k":"element/presetRefMissing/myBackground","v":"texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null"}
+{"k":"element/presetRefMissing/myBackgrounds","v":"null"}
+{"k":"element/presetRefMissing/myTexture","v":"null"}
+{"k":"element/presetRefWrongType/class","v":"UxmlAttributesProbes.PresetRefProbe"}
+{"k":"element/presetRefWrongType/myBackground","v":"texture=Texture2D:Preset sprite=null renderTexture=null vectorImage=null"}
+{"k":"element/presetRefWrongType/myBackgrounds","v":"null"}
+{"k":"element/presetRefWrongType/myTexture","v":"Texture2D:Preset"}
+{"k":"element/presetListNone/class","v":"UxmlAttributesProbes.PresetTemplateList"}
+{"k":"element/presetListNone/itemTemplate","v":"VisualTreeAsset:Preset"}
+{"k":"element/presetListMissing/class","v":"UxmlAttributesProbes.PresetTemplateList"}
+{"k":"element/presetListMissing/itemTemplate","v":"null"}
+{"k":"element/presetListWrongType/class","v":"UxmlAttributesProbes.PresetTemplateList"}
+{"k":"element/presetListWrongType/itemTemplate","v":"VisualTreeAsset:Preset"}
+{"k":"logs","v":["Error: Type: Invalid type \"System.String\". Type must derive from UnityEngine.UIElements.VisualElement.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.Font'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.Sprite'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.StyleSheet'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.VisualTreeAsset'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.VisualTreeAsset'.","Exception: ArgumentException: Object of type 'UnityEngine.UIElements.StyleSheet' cannot be converted to type 'UnityEngine.Texture2D'.","Exception: ArgumentException: Object of type 'UnityEngine.UIElements.StyleSheet' cannot be converted to type 'UnityEngine.Texture2D'.","Exception: TypeLoadException: Could not load type 'No.Such.Type' from assembly 'Nowhere'.","Warning:  (30,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (46,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (51,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.ttf","Warning:  (52,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (57,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uxml","Warning:  (61,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (63,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (65,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (68,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uxml","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uss","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : Invalid asset path hint \"Assets/UI/Missing.png\" for referenced asset GUID \"0123456789abcdef0123456789abcdef\"","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : project://database/Assets/UI/Missing.png?fileID=2800000&guid=0123456789abcdef0123456789abcdef&type=3#Missing"]}
 {"k":"complete","v":true}

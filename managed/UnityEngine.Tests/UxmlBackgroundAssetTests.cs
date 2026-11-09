@@ -19,11 +19,13 @@ using Object = UnityEngine.Object;
 //            UxmlAttributeAttribute ("Unity objects can also be UxmlAttributes and will contain a
 //            reference to the asset file"), and the Manual "Define UXML attributes for built-in types"
 //            (my-texture="project://database/Assets/MyTexture.png");
-//   [choice] Unbound's choice where the pages say nothing: which asset a reference without a fileID
-//            names, the asset types a Background takes, how a failure is reported (ONE error naming
-//            the document, the element and the attribute; the value kept), and a #name naming
-//            several candidates. These check Unbound's implementation, not Unity behaviour.
-// No reference capture covers UXML images; nothing here is a measured Unity value.
+//   [measured] the uxmlattributes probe (tests/projects/uxmlattributes, Unity 6000.0.71f1):
+//            icon-image always replaces the icon with the Background made from the object the url
+//            names (an empty or unresolved url warns and clears it, an object no Background can
+//            show clears it silently); a [UxmlAttribute] Background or List<Background> member is
+//            not read and its url not checked; Texture members resolve as object members do;
+//   [choice] Unbound's choice where neither says anything (other texture types, a #name naming
+//            several assets). These check Unbound's implementation, not Unity behaviour.
 //
 // Red base: 7718c50e (this file overlaid; it compiles there, every member it uses exists there).
 // Each red is the named runtime assertion, not a compile failure.
@@ -218,18 +220,18 @@ namespace UnityEngine.Tests
 
         // ------------------------------------------------------------------ diagnostics
 
-        // Measured (tests/projects/uxmlattributes): a reference that resolves to nothing logs the
-        // importer's warnings (for a guid: its path hint, then the url) at the element's position,
-        // once however often the document is cloned; the icon the element already has stays (here
-        // one its constructor set, in a game [UxmlElement] subclass whose icon-image is Button's own).
+        // [measured] presetIconMissing: a reference that resolves to nothing logs the importer's
+        // warnings (for a guid: its path hint, then the url) at the element's position, once however
+        // often the document is cloned, and clears the icon the element already had (here one its
+        // constructor set, in a game [UxmlElement] subclass whose icon-image is Button's own).
         [Fact]
-        public void MissingReferenceWarnsOnceAndKeepsTheIcon()
+        public void MissingReferenceWarnsOnceAndClearsTheIcon()
         {
             var url = Ref("Assets/UI/Icons/Missing.png", MissingGuid, TextureId, "Missing");
             VisualElement root = null;
             VisualTreeAsset asset = null;
             var logs = LoggedAll(() => (root, asset) = Clone($"<UxmlImageProbes.PresetIconButton icon-image=\"{url}\" />"));
-            Assert.Same(PresetIconButton.Preset, Assert.IsType<PresetIconButton>(root[0]).iconImage.texture);
+            Assert.True(Assert.IsType<PresetIconButton>(root[0]).iconImage.IsEmpty());
             Assert.Equal(2, logs.Count);
             Assert.All(logs, l => Assert.StartsWith("Warning:  (1,45): Semantic - The specified URI does not exist in the current project : ", l));
             Assert.Empty(LoggedAll(() => asset.CloneTree(new VisualElement())));
@@ -247,75 +249,77 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "Warning:  (1,57): Semantic - The specified URI does not exist in the current project : Assets/UI/Screens/Icons/Missing.png" }, logs);
         }
 
-        // [measured] tests/projects/uxmlattributes iconWrongType, iconTemplate: an icon-image naming an
-        // asset of another class (a style sheet) is ignored without a log; the icon is kept.
+        // [measured] presetIconWrongType, iconTemplate: an icon-image naming an asset no Background can
+        // show (a style sheet) clears the icon without a log. Control: without the attribute the
+        // preset icon stays (presetIconNone).
         [Fact]
-        public void WrongClassIsIgnoredAndKeepsTheIcon()
+        public void WrongClassClearsTheIconSilently()
         {
             var sheet = ScriptableObject.CreateInstance<StyleSheet>();
             sheet.name = "Theme";
             using var file = OneAssetFile(SheetGuid, "Assets/UI/Theme.uss", sheet, 7433441132597879392);
             List<string> logs = null;
             VisualElement root = null;
-            logs = Logged(() => root = Clone(
-                $"<UxmlImageProbes.PresetIconButton icon-image=\"{Ref("Assets/UI/Theme.uss", SheetGuid, 7433441132597879392, "Theme")}\" />").Root);
-            Assert.Same(PresetIconButton.Preset, Assert.IsType<PresetIconButton>(root[0]).iconImage.texture);
+            logs = LoggedAll(() => root = Clone(
+                $"<UxmlImageProbes.PresetIconButton icon-image=\"{Ref("Assets/UI/Theme.uss", SheetGuid, 7433441132597879392, "Theme")}\" />"
+                + "<UxmlImageProbes.PresetIconButton />").Root);
+            Assert.True(Assert.IsType<PresetIconButton>(root[0]).iconImage.IsEmpty());
+            Assert.Same(PresetIconButton.Preset, Assert.IsType<PresetIconButton>(root[1]).iconImage.texture);
             Assert.Empty(logs);
         }
 
         // [doc] A Background holds a Texture2D (texture), RenderTexture, Sprite or VectorImage.
-        // [choice] Another texture type (a Cubemap) is not converted to any of them: ONE error.
-        // Red at 7718c50e: nothing is logged; Assert.Single(logs) fails (empty).
+        // [choice] Another texture type (a Cubemap) follows the measured rule for objects no
+        // Background can show: the icon is cleared without a log.
         [Fact]
-        public void UnsupportedTextureTypeLogsOneError()
+        public void OtherTextureTypesClearTheIconSilently()
         {
             var cube = new Cubemap(2, TextureFormat.RGBA32, false) { name = "Sky" };
             using var file = OneAssetFile(CubeGuid, "Assets/UI/Sky.cubemap", cube, 8900000);
             List<string> logs = null;
             VisualElement root = null;
-            logs = Logged(() => root = Clone($"<ui:Button icon-image=\"{Ref("Assets/UI/Sky.cubemap", CubeGuid, 8900000, "Sky")}\" />").Root);
-            Assert.True(Assert.IsType<Button>(root[0]).iconImage.IsEmpty());
-            var error = Assert.Single(logs);
-            Assert.Contains("is a Cubemap, a texture type a Background cannot show", error);
+            logs = LoggedAll(() => root = Clone($"<UxmlImageProbes.PresetIconButton icon-image=\"{Ref("Assets/UI/Sky.cubemap", CubeGuid, 8900000, "Sky")}\" />").Root);
+            Assert.True(Assert.IsType<PresetIconButton>(root[0]).iconImage.IsEmpty());
+            Assert.Empty(logs);
         }
 
         // [choice] A #name without a fileID that names both the texture and the sprite of an image
-        // file is ambiguous: ONE error, no icon is picked.
-        // Red at 7718c50e: nothing is logged; Assert.Single(logs) fails (empty).
+        // file names the first of them in the file, as for object members: the texture, its main
+        // asset; nothing is logged.
         [Fact]
-        public void AmbiguousNameLogsOneError()
+        public void AmbiguousNameTakesTheFirstNamedAsset()
         {
             using var icon = new IconFile();
             List<string> logs = null;
             VisualElement root = null;
-            logs = Logged(() => root = Clone($"<ui:Button icon-image=\"project://database/Assets/UI/Icons/Icon.png?guid={IconGuid}#Icon\" />").Root);
-            Assert.True(Assert.IsType<Button>(root[0]).iconImage.IsEmpty());
-            var error = Assert.Single(logs);
-            Assert.Contains("names more than one asset", error);
-            Assert.Contains("Texture2D", error);
-            Assert.Contains("Sprite", error);
+            logs = LoggedAll(() => root = Clone($"<ui:Button icon-image=\"project://database/Assets/UI/Icons/Icon.png?guid={IconGuid}#Icon\" />").Root);
+            Assert.Same(icon.Texture, Assert.IsType<Button>(root[0]).iconImage.texture);
+            Assert.Empty(logs);
         }
 
         // ------------------------------------------------------------------ [UxmlAttribute] members
 
-        // [measured] tests/projects/uxmlattributes bgTexture, bgSprite: a [UxmlAttribute] of type
-        // Background (no game converter) is not read from UXML: a texture or sprite reference leaves
-        // the member as it was (empty in the probe, the initializer here), without a log.
+        // [measured] bgTexture, bgSprite, presetRefWrongType, presetRefMissing: a [UxmlAttribute] of
+        // type Background or List<Background> (no game converter) is not read from UXML: a texture
+        // or sprite reference leaves the member as it was (here its initializer), without a log.
         [Fact]
         public void DeclaredBackgroundAttributesAreNotRead()
         {
             using var icon = new IconFile();
             List<string> logs = null;
             VisualElement root = null;
-            logs = Logged(() => root = Clone(
-                $"<UxmlImageProbes.BadgeProbe badge=\"{Ref("Assets/UI/Icons/Icon.png", IconGuid, TextureId, "Icon")}\" />"
-                + $"<UxmlImageProbes.BadgeProbe badge=\"../Icons/Icon.png?fileID={SpriteId}&amp;guid={IconGuid}&amp;type=3#Icon\" />").Root);
+            var texture = Ref("Assets/UI/Icons/Icon.png", IconGuid, TextureId, "Icon");
+            logs = LoggedAll(() => root = Clone(
+                $"<UxmlImageProbes.BadgeProbe badge=\"{texture}\" />"
+                + $"<UxmlImageProbes.BadgeProbe badge=\"../Icons/Icon.png?fileID={SpriteId}&amp;guid={IconGuid}&amp;type=3#Icon\" />"
+                + $"<UxmlImageProbes.BadgeListProbe badges=\"{texture}\" />").Root);
             Assert.Same(PresetIconButton.Preset, Assert.IsType<BadgeProbe>(root[0]).badge.texture);
             Assert.Same(PresetIconButton.Preset, Assert.IsType<BadgeProbe>(root[1]).badge.texture);
+            Assert.Null(Assert.IsType<BadgeListProbe>(root[2]).badges);
             Assert.Empty(logs);
         }
 
-        // [measured] tests/projects/uxmlattributes bgMissing, bgEmpty: a declared Background's url is
+        // [measured] bgMissing, bgEmpty, presetRefMissing: a declared Background's url is
         // not checked: a missing reference logs nothing.
         [Fact]
         public void DeclaredBackgroundAttributeUrlsAreNotChecked()
@@ -385,7 +389,7 @@ namespace UnityEngine.Tests
         }
 
         // [choice] UXML EnumField `type` and `value` are applied as before, an empty icon-image is no
-        // icon without an error, and an attribute Unbound cannot convert that is not an asset
+        // icon without an error (the importer's warning is not this document's), and an attribute Unbound cannot convert that is not an asset
         // reference (MinMaxSlider low-limit="not-a-number") stays silent, the property unchanged.
         // Guard, not red: 7718c50e behaves the same. Red recipe: a mutation logging every failed
         // TryConvert in ApplyAttribute makes Assert.Empty(logs) fail.
@@ -428,6 +432,12 @@ namespace UxmlImageProbes
     public partial class BadgeProbe : VisualElement
     {
         [UxmlAttribute] public Background badge = Background.FromTexture2D(PresetIconButton.Preset);
+    }
+
+    [UxmlElement]
+    public partial class BadgeListProbe : VisualElement
+    {
+        [UxmlAttribute] public List<Background> badges;
     }
 
     [UxmlElement]

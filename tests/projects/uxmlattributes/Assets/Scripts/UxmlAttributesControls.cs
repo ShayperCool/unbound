@@ -106,4 +106,56 @@ namespace UxmlAttributesProbes
         [UxmlAttribute] public Background myBackground { get; set; }
         [UxmlAttribute] public Font myFont { get; set; }
     }
+
+    /// <summary>Values the preset controls start with, to tell "kept" from "cleared".</summary>
+    static class ProbePresets
+    {
+        static Texture2D s_Texture;
+        static VisualTreeAsset s_Template;
+
+        public static Texture2D Texture
+        {
+            get
+            {
+                if (s_Texture == null) s_Texture = new Texture2D(1, 1) { name = "Preset" };
+                return s_Texture;
+            }
+        }
+
+        public static VisualTreeAsset Template
+        {
+            get
+            {
+                if (s_Template == null)
+                {
+                    s_Template = ScriptableObject.CreateInstance<VisualTreeAsset>();
+                    s_Template.name = "Preset";
+                }
+                return s_Template;
+            }
+        }
+    }
+
+    /// <summary>A Button whose icon is set before its UXML attributes are read.</summary>
+    [UxmlElement]
+    public partial class PresetIconButton : Button
+    {
+        public PresetIconButton() { iconImage = Background.FromTexture2D(ProbePresets.Texture); }
+    }
+
+    /// <summary>Asset reference members with initial values, and a list of Backgrounds.</summary>
+    [UxmlElement]
+    public partial class PresetRefProbe : VisualElement
+    {
+        [UxmlAttribute] public Background myBackground { get; set; } = Background.FromTexture2D(ProbePresets.Texture);
+        [UxmlAttribute] public List<Background> myBackgrounds { get; set; }
+        [UxmlAttribute] public Texture2D myTexture { get; set; } = ProbePresets.Texture;
+    }
+
+    /// <summary>A ListView whose item template is set before its UXML attributes are read.</summary>
+    [UxmlElement]
+    public partial class PresetTemplateList : ListView
+    {
+        public PresetTemplateList() { itemTemplate = ProbePresets.Template; }
+    }
 }
