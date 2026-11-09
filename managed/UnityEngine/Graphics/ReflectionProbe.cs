@@ -203,23 +203,30 @@ namespace UnityEngine
         /// when it reflects the default reflection (the frame's globals). <paramref name="srp"/>:
         /// laid out as a render pipeline's draws get it (<see cref="ApplySrp"/>).</summary>
         internal static Dictionary<int, object> Apply(Renderer renderer, Dictionary<int, object> properties, bool srp = false) =>
-            renderer == null ? properties : Apply(renderer.bounds, renderer.reflectionProbeUsage, properties, srp);
+            renderer == null ? properties
+                : Apply(renderer.bounds, renderer.reflectionProbeUsage, properties, srp, renderer.m_ReflectionBoxes ??= new BoxedVectors(2 * SlotVectors));
 
-        /// <summary>The same for bounds and a probe usage (a Graphics.DrawMesh draw's).</summary>
-        internal static Dictionary<int, object> Apply(Bounds bounds, ReflectionProbeUsage usage, Dictionary<int, object> properties, bool srp = false)
+        /// <summary>The vectors of a slot: decode values, box min and max, position.</summary>
+        const int SlotVectors = 4;
+
+        /// <summary>The same for bounds and a probe usage (a Graphics.DrawMesh draw's).
+        /// <paramref name="boxes"/>: the renderer's boxed vectors (both slots), kept while they
+        /// stay the same.</summary>
+        internal static Dictionary<int, object> Apply(Bounds bounds, ReflectionProbeUsage usage, Dictionary<int, object> properties, bool srp = false,
+            BoxedVectors boxes = null)
         {
             if (s_Enabled.Count == 0) return properties;
             // A render pipeline blends by its own setting: Simple samples two probes as well.
             Closest(bounds, srp && usage == ReflectionProbeUsage.Simple ? ReflectionProbeUsage.BlendProbes : usage, s_Blend);
             if (s_Blend.Count == 0) return properties;
             properties = DrawPropertyPool.Copy(properties);
-            if (srp) return ApplySrp(properties);
+            if (srp) return ApplySrp(properties, boxes);
             var first = s_Blend[0].probe;
             var second = s_Blend.Count > 1 ? s_Blend[1].probe : null;
             bool blend = usage != ReflectionProbeUsage.Simple && second != null;
-            Set(properties, first, s_Cube0, s_Hdr0, s_Min0, s_Max0, s_Pos0, blend ? s_Blend[0].weight : 1f, renderer: bounds);
-            if (blend) Set(properties, second, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1, 0f, renderer: bounds);
-            else Set(properties, first, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1, 0f, renderer: bounds);
+            Set(properties, boxes, 0, first, s_Cube0, s_Hdr0, s_Min0, s_Max0, s_Pos0, blend ? s_Blend[0].weight : 1f, renderer: bounds);
+            if (blend) Set(properties, boxes, SlotVectors, second, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1, 0f, renderer: bounds);
+            else Set(properties, boxes, SlotVectors, first, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1, 0f, renderer: bounds);
             return properties;
         }
 
@@ -231,29 +238,29 @@ namespace UnityEngine
         /// important probe dominate). Without a second probe the second slot is the default
         /// reflection over an unbounded box (BoxMin.w 1, BoxMax.w 0).
         /// </summary>
-        static Dictionary<int, object> ApplySrp(Dictionary<int, object> properties)
+        static Dictionary<int, object> ApplySrp(Dictionary<int, object> properties, BoxedVectors boxes)
         {
             var first = s_Blend[0];
-            Set(properties, first.probe, s_Cube0, s_Hdr0, s_Min0, s_Max0, s_Pos0, first.weight, first.probe.m_BlendDistance);
+            Set(properties, boxes, 0, first.probe, s_Cube0, s_Hdr0, s_Min0, s_Max0, s_Pos0, first.weight, first.probe.m_BlendDistance);
             if (s_Blend.Count > 1)
             {
                 var second = s_Blend[1].probe;
                 float sign = Math.Sign(first.probe.m_Importance - second.m_Importance);
-                Set(properties, second, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1, sign, second.m_BlendDistance);
+                Set(properties, boxes, SlotVectors, second, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1, sign, second.m_BlendDistance);
             }
-            else SetUnbounded(properties, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1, 1f);
+            else SetUnbounded(properties, boxes, SlotVectors, s_Cube1, s_Hdr1, s_Min1, s_Max1, s_Pos1, 1f);
             return properties;
         }
 
         /// <summary>A slot holding the default reflection over an unbounded box (what a render
         /// pipeline's draws get without a probe; <paramref name="weight"/> is BoxMin.w).</summary>
-        static void SetUnbounded(Dictionary<int, object> properties, int cube, int hdr, int min, int max, int position, float weight)
+        static void SetUnbounded(Dictionary<int, object> properties, BoxedVectors boxes, int slot, int cube, int hdr, int min, int max, int position, float weight)
         {
             properties[cube] = defaultTexture ?? Black;
-            properties[hdr] = DefaultDecode;
-            properties[min] = new Vector4(float.NegativeInfinity, float.NegativeInfinity, float.NegativeInfinity, weight);
-            properties[max] = new Vector4(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity, 0f);
-            properties[position] = Vector4.zero;
+            properties[hdr] = BoxedVectors.Of(boxes, slot, DefaultDecode);
+            properties[min] = BoxedVectors.Of(boxes, slot + 1, new Vector4(float.NegativeInfinity, float.NegativeInfinity, float.NegativeInfinity, weight));
+            properties[max] = BoxedVectors.Of(boxes, slot + 2, new Vector4(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity, 0f));
+            properties[position] = BoxedVectors.Of(boxes, slot + 3, Vector4.zero);
         }
 
         /// <summary>The default reflection's decode values with the lighting settings' reflection
@@ -271,18 +278,18 @@ namespace UnityEngine
         /// <summary>A probe's slot. With <paramref name="renderer"/> (the built-in pipeline's
         /// draws), a box-projected probe's box also holds the renderer's bounds (measured:
         /// tests/projects/reflectionprobes forward_box, a floor larger than the probes).</summary>
-        static void Set(Dictionary<int, object> properties, ReflectionProbe probe, int cube, int hdr, int min, int max, int position, float weight, float maxW = 0f,
-            Bounds? renderer = null)
+        static void Set(Dictionary<int, object> properties, BoxedVectors boxes, int slot, ReflectionProbe probe, int cube, int hdr, int min, int max, int position,
+            float weight, float maxW = 0f, Bounds? renderer = null)
         {
             var box = probe.bounds;
             if (renderer is Bounds drawn && probe.m_BoxProjection) box.Encapsulate(drawn);
             bool pending = probe.m_Mode == ReflectionProbeMode.Custom && probe.m_CustomFrame >= Time.frameCount;
             properties[cube] = pending ? Black : probe.texture ?? Black;
-            properties[hdr] = probe.textureHDRDecodeValues;
-            properties[min] = new Vector4(box.min.x, box.min.y, box.min.z, weight);
-            properties[max] = new Vector4(box.max.x, box.max.y, box.max.z, maxW);
+            properties[hdr] = BoxedVectors.Of(boxes, slot, probe.textureHDRDecodeValues);
+            properties[min] = BoxedVectors.Of(boxes, slot + 1, new Vector4(box.min.x, box.min.y, box.min.z, weight));
+            properties[max] = BoxedVectors.Of(boxes, slot + 2, new Vector4(box.max.x, box.max.y, box.max.z, maxW));
             var p = probe.transform.position;
-            properties[position] = new Vector4(p.x, p.y, p.z, probe.m_BoxProjection ? 1f : 0f);
+            properties[position] = BoxedVectors.Of(boxes, slot + 3, new Vector4(p.x, p.y, p.z, probe.m_BoxProjection ? 1f : 0f));
         }
 
         internal override void OnEngineEnable()

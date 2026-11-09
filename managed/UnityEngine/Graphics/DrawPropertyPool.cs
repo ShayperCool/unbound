@@ -66,6 +66,10 @@ namespace Unbound.Runtime
             m_Boxes = new object[count];
         }
 
+        /// <summary>A value as a draw property: kept boxed in <paramref name="boxes"/>, boxed
+        /// anew without them.</summary>
+        internal static object Of(BoxedVectors boxes, int slot, UnityEngine.Vector4 value) => boxes != null ? boxes.Box(slot, value) : value;
+
         internal object Box(int slot, UnityEngine.Vector4 value)
         {
             var box = m_Boxes[slot];

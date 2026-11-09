@@ -360,16 +360,14 @@ namespace UnityEngine
                 properties = DrawPropertyPool.Copy(properties);
             // A renderer keeps its constants boxed while they stay the same.
             var boxes = owner != null ? owner.m_ProbeBoxes ??= new BoxedVectors(s_ShIds.Length) : null;
-            properties[s_ShIds[0]] = Boxed(boxes, 0, ar);
-            properties[s_ShIds[1]] = Boxed(boxes, 1, ag);
-            properties[s_ShIds[2]] = Boxed(boxes, 2, ab);
-            properties[s_ShIds[3]] = Boxed(boxes, 3, br);
-            properties[s_ShIds[4]] = Boxed(boxes, 4, bg);
-            properties[s_ShIds[5]] = Boxed(boxes, 5, bb);
-            properties[s_ShIds[6]] = Boxed(boxes, 6, c);
+            properties[s_ShIds[0]] = BoxedVectors.Of(boxes, 0, ar);
+            properties[s_ShIds[1]] = BoxedVectors.Of(boxes, 1, ag);
+            properties[s_ShIds[2]] = BoxedVectors.Of(boxes, 2, ab);
+            properties[s_ShIds[3]] = BoxedVectors.Of(boxes, 3, br);
+            properties[s_ShIds[4]] = BoxedVectors.Of(boxes, 4, bg);
+            properties[s_ShIds[5]] = BoxedVectors.Of(boxes, 5, bb);
+            properties[s_ShIds[6]] = BoxedVectors.Of(boxes, 6, c);
             return properties;
         }
-
-        static object Boxed(BoxedVectors boxes, int slot, Vector4 value) => boxes != null ? boxes.Box(slot, value) : value;
     }
 }

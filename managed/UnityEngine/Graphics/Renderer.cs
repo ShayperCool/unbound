@@ -122,6 +122,8 @@ namespace UnityEngine
         internal int m_ProbeCell = -1;
         /// <summary>The probe constants its draws were last given, boxed (see <see cref="BoxedVectors"/>).</summary>
         internal BoxedVectors m_ProbeBoxes;
+        /// <summary>The reflection probe vectors its draws were last given, boxed.</summary>
+        internal BoxedVectors m_ReflectionBoxes;
         public GameObject lightProbeProxyVolumeOverride { get; set; }
         public Matrix4x4 localToWorldMatrix => transform.localToWorldMatrix;
         public Matrix4x4 worldToLocalMatrix => transform.worldToLocalMatrix;
