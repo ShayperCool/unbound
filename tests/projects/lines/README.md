@@ -124,6 +124,18 @@ python3 tests/projects/lines/miter_reference.py --release 6000.0.71f1 --label LA
   --receipt ~/.cache/unbound/lines-space-receipt.json
 ```
 
+## Edge and object-matrix controls
+
+`edge.values.jsonl` (11 records, `Assets/Scripts/EdgeControls.cs`, after the build-space
+controls) and two images: TransformZ line and trail segments along the frame's z axis (the
+Editor writes NaN vertices for the joints beside them and picks the corner side by the turn's
+sign bit), gradient keys 0.5 and 0.500005 in one 1/65535 step evaluated around them (Blend and
+PerceptualBlend), and a local-space line on a moved, turned, scaled transform and a moved trail
+drawn with `LineProbe/ObjectMatrix`, which writes the draw's object translation and x scale: both
+are drawn with an identity object matrix. Published with `miter_reference.py --edge` from the pair
+`q22-edge-1` (both exit 0 on the NVIDIA GeForce RTX 4060, byte-identical, every existing record
+and image reproduced).
+
 ## Offline geometry attribution
 
 `attribute_geometry.py` reads the saved combined raw union, image arrays and a

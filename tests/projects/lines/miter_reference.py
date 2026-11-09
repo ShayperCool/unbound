@@ -44,10 +44,17 @@ for name in ('beyond', 'zigzag', 'closed', 'tie', 'two', 'one'):
     SPACE_KEYS += [f'simplify.{name}.inputs', f'simplify.{name}.positions']
 SPACE_KEYS += [f'simplify.utility.{name}' for name in ('indices', 'points', 'indices2', 'points2')]
 
-# The control files beside the canonical reference, in publication order: each extends the
-# capture after the previous ones and is published only once those exist.
-SETS = {'reversal': (FILE, KEYS, IMAGE), 'chain': (CHAIN_FILE, CHAIN_KEYS, None),
-        'space': (SPACE_FILE, SPACE_KEYS, None)}
+EDGE_FILE = 'edge.values.jsonl'
+EDGE_IMAGES = ('img.objectMatrix.local.rgba', 'img.objectMatrix.trail.rgba')
+EDGE_KEYS = [f'edge.{name}.{part}' for name in ('line.zParallel.c0', 'line.zParallel.c2', 'trail.zParallel')
+             for part in ('inputs', 'mesh')]
+EDGE_KEYS += ['edge.gradient.closeKeys.Blend', 'edge.gradient.closeKeys.PerceptualBlend',
+              'line.objectMatrix.local', 'img.objectMatrix.local.pixels', 'img.objectMatrix.trail.pixels']
+
+# The control files beside the canonical reference, in publication order, with their images:
+# each extends the capture after the previous ones and is published only once those exist.
+SETS = {'reversal': (FILE, KEYS, (IMAGE,)), 'chain': (CHAIN_FILE, CHAIN_KEYS, ()),
+        'space': (SPACE_FILE, SPACE_KEYS, ()), 'edge': (EDGE_FILE, EDGE_KEYS, EDGE_IMAGES)}
 ORDER = list(SETS)
 
 
@@ -70,9 +77,9 @@ def publish(release, label, receipt, chains=False, extension=None):
     run = layout.run
     target = run.reference_root(run.PROBE)
     name = extension or ('chain' if chains else 'reversal')
-    file, keys, image = SETS[name]
+    file, keys, images = SETS[name]
     receipt = layout.cache_artifact_path(receipt.resolve())
-    if (target/file).exists() or (image and (target/(image+'.gz')).exists()):
+    if (target/file).exists() or any((target/(image+'.gz')).exists() for image in images):
         raise SystemExit(f'{name} reference already exists')
     repeats = [run.run_root(run.PROBE, label)/r for r in run.REPEATS]
     for repeat in repeats:
@@ -104,7 +111,7 @@ def publish(release, label, receipt, chains=False, extension=None):
     if not layout.known_order_delta(order, captured_order):
         raise SystemExit('old records moved beyond the known completion move')
     old_images = sorted(p.name.removesuffix('.gz') for p in target.glob('*.rgba.gz'))
-    if run.images(repeats[0]) != sorted(old_images + ([image] if image else [])):
+    if run.images(repeats[0]) != sorted(old_images + list(images)):
         raise SystemExit('unexpected capture images')
     for name in old_images:
         if gzip.decompress((target/(name+'.gz')).read_bytes()) != (repeats[0]/name).read_bytes():
@@ -112,7 +119,7 @@ def publish(release, label, receipt, chains=False, extension=None):
     data = b''.join(captured[k] for k in keys)
     before = layout.tree(target)
     layout.create_exclusive(target/file, data)
-    if image:
+    for image in images:
         layout.create_exclusive(target/(image+'.gz'), gzip.compress((repeats[0]/image).read_bytes(), mtime=0))
     after = layout.tree(target)
     assert {k: after[k] for k in before} == before
@@ -130,6 +137,7 @@ if __name__ == '__main__':
     parser.add_argument('--receipt', required=True, type=Path)
     parser.add_argument('--chains', action='store_true', help='publish the later reach-history controls')
     parser.add_argument('--space', action='store_true', help='publish the build-space and Simplify controls')
+    parser.add_argument('--edge', action='store_true', help='publish the edge and object-matrix controls')
     args = parser.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
-    publish(args.release, args.label, args.receipt, args.chains, 'space' if args.space else None)
+    publish(args.release, args.label, args.receipt, args.chains, 'space' if args.space else 'edge' if args.edge else None)

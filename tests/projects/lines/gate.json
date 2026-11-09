@@ -5,6 +5,8 @@
  "summary": "lines gate: .*",
  "engine_paths": [
   "managed/UnityEngine/Graphics/LineRenderers.cs",
-  "managed/UnityEngine/Graphics/LineBuilder.cs"
+  "managed/UnityEngine/Graphics/LineBuilder.cs",
+  "managed/UnityEngine/Math/Gradient.cs",
+  "managed/UnityEngine/Graphics/Mesh.cs"
  ]
 }
