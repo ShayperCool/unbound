@@ -500,6 +500,8 @@ pub struct UnityRenderer {
     target_handles: (u64, u64),
     /// Integer-texel slots' defaults (zeros): signed, unsigned.
     integer_defaults: [Option<wgpu::TextureView>; 2],
+    /// [`Self::integer_array_default`]'s, by (signed, Linear color space).
+    integer_array_defaults: HashMap<(bool, bool), wgpu::TextureView>,
     samplers: HashMap<SamplerKey, wgpu::Sampler>,
     materials: HashMap<u64, GpuMaterial>,
     buffers: HashMap<u64, compute::GpuBuffer>,
@@ -603,6 +605,7 @@ impl UnityRenderer {
             depth_reads: Vec::new(),
             target_handles: (0, 0),
             integer_defaults: [None, None],
+            integer_array_defaults: HashMap::default(),
             samplers: HashMap::default(),
             materials: HashMap::default(),
             buffers: HashMap::default(),
@@ -1450,10 +1453,19 @@ impl UnityRenderer {
                 continue;
             }
             let name = &program.textures[k];
-            // Integer slots read 2D textures only (their default is a 2D texture of zeros): any
-            // other slot shape skips the draw, bound or not, as does a layered texture or a
-            // depth element.
             let texture = self.textures.get(h);
+            // An array slot with nothing bound reads Unity's default array texture's bits.
+            if *dim == unbound_shaders::TextureDim::D2Array
+                && texture.is_none()
+                && !handle::split(raw[k]).1
+            {
+                let signed = slot.sample == SampleKind::Sint;
+                integer_views.push(Some(self.integer_array_default(signed, space)));
+                continue;
+            }
+            // Integer slots read 2D textures otherwise (their default is a 2D texture of zeros):
+            // any other slot shape skips the draw, bound or not, as does a layered texture or a
+            // depth element.
             if !is_2d(*dim)
                 || handle::split(raw[k]).1
                 || texture.is_some_and(|t| t.layers > 1 || t.volume)
@@ -1783,6 +1795,66 @@ impl UnityRenderer {
         }
         self.depth_reads.push((handle, true));
         Some(view)
+    }
+
+    /// What an integer-texel array slot with nothing bound reads: the bits of Unity's default
+    /// array texture, one gray texel (128 of 255, its color decoded from sRGB in a Linear color
+    /// space project) as a float texture is read as bits; zeros outside it (measured on OpenGL
+    /// Core and Vulkan: tests/projects/rtdepth controls ctl.uintArray).
+    fn integer_array_default(&mut self, signed: bool, space: i32) -> wgpu::TextureView {
+        /// The default array texture's gray (measured: ctl.uintArray's alpha).
+        const GRAY: f32 = 128.0 / 255.0;
+        let key = (signed, space == 1);
+        if let Some(view) = self.integer_array_defaults.get(&key) {
+            return view.clone();
+        }
+        let color = if key.1 {
+            ((GRAY + 0.055) / 1.055).powf(2.4)
+        } else {
+            GRAY
+        };
+        let texel: Vec<u8> = [color, color, color, GRAY]
+            .iter()
+            .flat_map(|c| c.to_bits().to_le_bytes())
+            .collect();
+        let texture = self.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("unbound integer array default"),
+            size: wgpu::Extent3d {
+                width: 1,
+                height: 1,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: if signed {
+                wgpu::TextureFormat::Rgba32Sint
+            } else {
+                wgpu::TextureFormat::Rgba32Uint
+            },
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        self.queue.write_texture(
+            texture.as_image_copy(),
+            &texel,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(16),
+                rows_per_image: Some(1),
+            },
+            wgpu::Extent3d {
+                width: 1,
+                height: 1,
+                depth_or_array_layers: 1,
+            },
+        );
+        let view = texture.create_view(&wgpu::TextureViewDescriptor {
+            dimension: Some(wgpu::TextureViewDimension::D2Array),
+            ..Default::default()
+        });
+        self.integer_array_defaults.insert(key, view.clone());
+        view
     }
 
     /// Zeros for an integer-texel slot (signed or unsigned).
