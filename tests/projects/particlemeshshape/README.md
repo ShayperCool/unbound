@@ -87,7 +87,6 @@ Everything below is measured in this release, not documented.
   the mesh is set, which the probe counts for the scenario before; Unbound logs them while emitting.
 - `subemitter-batch` (6): Unity starts each sub-emitter emission as its own batch; Unbound starts
   sub-emitter births one by one (child order, clipped count). Open.
-- `ring-batch` (2): a ring buffer's start batch with clipping (Unity 13 particles, Unbound 9). Open.
 
 Unmeasured: the Sprite and SpriteRenderer shapes' texture mapping (reported as not simulated),
 imported non-readable meshes, other releases.

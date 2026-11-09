@@ -450,8 +450,8 @@ namespace UnityEngine
         bool m_RateBatchEmitted, m_UseRateBatch;
 
         /// <summary>New particles start as one batch of four-slot groups (a step's rate and
-        /// burst births, an Emit call); measured for 6000.0.71f1 without a ring buffer.</summary>
-        bool StartsInBatches => Compat.ParticleRateBatchesMeasured && m_Main.ringBufferMode == ParticleSystemRingBufferMode.Disabled;
+        /// burst births, an Emit call); measured for 6000.0.71f1, with and without a ring buffer.</summary>
+        bool StartsInBatches => Compat.ParticleRateBatchesMeasured;
 
         /// <summary>The age percent of a particle the shape texture discards: just past its life,
         /// so the next update removes it (6000.0.71f1).</summary>
@@ -697,7 +697,10 @@ namespace UnityEngine
             int requested = 0;
             foreach (var request in m_EmissionRequests) requested = checked(requested + request.count);
             int start = m_Count;
-            int count = Math.Min(requested, Math.Max(0, m_Main.maxParticles - start));
+            var ringMode = m_Main.ringBufferMode;
+            // A ring buffer's batch may fill twice the maximum before the ring takes the excess.
+            int capacity = ringMode == ParticleSystemRingBufferMode.Disabled ? m_Main.maxParticles : checked(m_Main.maxParticles * 2);
+            int count = Math.Min(requested, Math.Max(0, capacity - start));
             if (count <= 0) return;
             int aligned = checked((start + 3) & ~3);
             int lanes = checked((count + 3) & ~3);
@@ -801,8 +804,61 @@ namespace UnityEngine
                 int origin = i < aligned ? count - prefix + i - start : i - aligned;
                 StartTrail(ref m_Particles[i], simulate ? m_SlotPoints[aligned + origin] : null);
             }
+            if (ringMode != ParticleSystemRingBufferMode.Disabled) WrapRingBuffer(start, ringMode, deathSubs);
             m_Newborn = false;
             m_SpeedNt = -1f;
+        }
+
+        /// <summary>The ring's next slot: where the next particle past the maximum goes.</summary>
+        int m_RingIndex;
+
+        /// <summary>A ring buffer holding more than its maximum after a start batch (6000.0.71f1,
+        /// tests/projects/particlerandom ring/*): PauseUntilReplaced copies each particle past the
+        /// maximum into the ring's next slot, whose particle dies, and keeps the maximum;
+        /// LoopUntilReplaced swaps each new particle with the ring's next slot and keeps them all
+        /// (up to twice the maximum).</summary>
+        void WrapRingBuffer(int start, ParticleSystemRingBufferMode mode, bool deathSubs)
+        {
+            int max = m_Main.maxParticles;
+            if (m_Count <= max || max <= 0) return;
+            if (m_RingIndex >= max) m_RingIndex = 0;
+            if (mode == ParticleSystemRingBufferMode.PauseUntilReplaced)
+            {
+                for (int i = max; i < m_Count; i++)
+                {
+                    ref var replaced = ref m_Particles[m_RingIndex];
+                    if (deathSubs)
+                    {
+                        var dying = replaced;
+                        TriggerSubEmitters(ParticleSystemSubEmitterType.Death, ref dying);
+                    }
+                    EndTrail(ref replaced);
+                    MoveSlot(m_RingIndex, i);
+                    m_RingIndex = (m_RingIndex + 1) % max;
+                }
+                m_Count = max;
+                return;
+            }
+            for (int i = start; i < m_Count; i++)
+            {
+                SwapSlots(i, m_RingIndex);
+                m_RingIndex = (m_RingIndex + 1) % max;
+            }
+        }
+
+        void MoveSlot(int to, int from)
+        {
+            m_Particles[to] = m_Particles[from];
+            for (int stream = 0; stream < 2; stream++)
+                if (m_Custom[stream] != null) m_Custom[stream][to] = m_Custom[stream][from];
+        }
+
+        void SwapSlots(int a, int b)
+        {
+            if (a == b) return;
+            (m_Particles[a], m_Particles[b]) = (m_Particles[b], m_Particles[a]);
+            for (int stream = 0; stream < 2; stream++)
+                if (m_Custom[stream] != null) (m_Custom[stream][a], m_Custom[stream][b]) = (m_Custom[stream][b], m_Custom[stream][a]);
         }
 
         /// <summary>Where a step's playback time span lies relative to the loop end: inside one loop,

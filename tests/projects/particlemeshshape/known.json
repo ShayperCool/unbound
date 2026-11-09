@@ -52,12 +52,5 @@
       "texture/clip/subbirths/1/child",
       "texture/clip/subbirths/1/child/color"
     ]
-  },
-  "ring-batch": {
-    "reason": "A ring buffer (maxParticles 12, LoopUntilReplaced) emitting ten clipped particles after ten: Unity holds 13 particles afterwards, Unbound 9; its start batch in a ring buffer is not modelled (warned once). Open follow-up.",
-    "keys": [
-      "texture/clip/ring",
-      "texture/clip/ring/color"
-    ]
   }
 }

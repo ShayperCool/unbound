@@ -296,6 +296,7 @@ namespace UnityEngine
                 foreach (var ps in ClearedSystems(withChildren))
                 {
                     ps.m_Count = 0;
+                    ps.m_RingIndex = 0;
                     ps.ClearTrails();
                     // Linked-only systems receive Clear's playback transition, but
                     // selected systems retain StopSelf's callback eligibility.
@@ -315,6 +316,7 @@ namespace UnityEngine
             foreach (var ps in ClearedSystems(withChildren))
             {
                 ps.m_Count = 0;
+                ps.m_RingIndex = 0;
                 ps.ClearTrails();
                 if (ps.m_StopEmitting) ps.m_IsPlaying = false;
             }
@@ -375,6 +377,7 @@ namespace UnityEngine
                 foreach (var ps in systems)
                 {
                     ps.m_Count = 0;
+                    ps.m_RingIndex = 0;
                     ps.ClearTrails();
                     ps.m_IsPlaying = false;
                     ps.m_StopEmitting = false;
@@ -1265,6 +1268,7 @@ namespace UnityEngine
                 bool wasPlaying = m_IsPlaying;
                 bool hadPlayback = wasPlaying || m_IsPaused || m_StopEmitting;
                 m_Count = 0;
+                m_RingIndex = 0;
                 ClearTrails();
                 m_IsPlaying = false;
                 m_IsPaused = false;
@@ -1358,6 +1362,7 @@ namespace UnityEngine
             ParticleSystemManager.Remove(this);
             // Deactivating a system kills its particles and stops it (without its stop action).
             m_Count = 0;
+            m_RingIndex = 0;
             ClearTrails();
             m_IsPlaying = false;
             m_IsPaused = false;

@@ -261,20 +261,21 @@ namespace UnityEngine.Tests
                 shape.textureClipThreshold = 0.5f;
                 for (int i = 0; i < 4; i++) ps.Emit(8);
                 var particles = Read(ps);
-                Assert.InRange(particles.Length, 1, 4);
+                Assert.InRange(particles.Length, 1, 8);
                 foreach (var p in particles) Assert.True(p.startColor.a >= 128, "a discarded newborn stayed in a reused slot");
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
 
         [Fact]
-        public void ClippingOutsideAStartBatchWarnsOnce()
+        public void ClippingInARingBufferStartsABatchWithoutAWarning()
         {
             var ps = Make(ParticleSystemShapeType.Rectangle, Coords(4));
             try
             {
                 var main = ps.main;
-                main.ringBufferMode = ParticleSystemRingBufferMode.LoopUntilReplaced; // the per-particle path
+                main.maxParticles = 12;
+                main.ringBufferMode = ParticleSystemRingBufferMode.LoopUntilReplaced;
                 var emission = ps.emission;
                 emission.enabled = true;
                 emission.rateOverTime = 100f;
@@ -282,9 +283,39 @@ namespace UnityEngine.Tests
                 shape.textureClipThreshold = 0.5f;
                 ps.Simulate(0.2f, true, true, true);
                 ps.Emit(7);
-                Assert.Single(m_Logs, l => l.Contains("shape texture clipping outside a start batch"));
+                Assert.Empty(m_Logs);
+                Assert.InRange(ps.particleCount, 1, 24);
+                foreach (var p in Read(ps)) Assert.True(p.startColor.a >= 128);
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void ARingBufferPastItsMaximumPausesAtItOrLoopsUpToTwice()
+        {
+            // PauseUntilReplaced keeps the maximum, the new particles taking the ring's next slots;
+            // LoopUntilReplaced swaps them into those slots and keeps the old ones, up to twice the
+            // maximum (6000.0.71f1, tests/projects/particlerandom ring/*).
+            int Count(ParticleSystemRingBufferMode mode, out uint[] seeds)
+            {
+                var ps = Make(ParticleSystemShapeType.Rectangle, null);
+                try
+                {
+                    var main = ps.main; main.maxParticles = 12; main.ringBufferMode = mode;
+                    ps.Emit(10);
+                    var first = Array.ConvertAll(Read(ps), p => p.randomSeed);
+                    ps.Emit(10);
+                    seeds = Array.ConvertAll(Read(ps), p => p.randomSeed);
+                    Assert.Equal(first[8..10], mode == ParticleSystemRingBufferMode.PauseUntilReplaced ? seeds[8..10] : seeds[18..20]);
+                    ps.Emit(10);
+                    return ps.particleCount;
+                }
+                finally { Object.DestroyImmediate(ps.gameObject); }
+            }
+            Assert.Equal(12, Count(ParticleSystemRingBufferMode.PauseUntilReplaced, out var pause));
+            Assert.Equal(12, pause.Length);
+            Assert.Equal(24, Count(ParticleSystemRingBufferMode.LoopUntilReplaced, out var loop));
+            Assert.Equal(20, loop.Length);
         }
 
         [Fact]
@@ -384,21 +415,21 @@ namespace UnityEngine.Tests
         public void AnEmitAfterAnUnalignedCountFillsTheGapWithItsLastParticles()
         {
             // The batch starts at the next multiple of four; its last particles move down into the
-            // free slots before it (the ring buffer's per-particle path keeps emission order).
-            uint[] Seeds(ParticleSystemRingBufferMode mode)
+            // free slots before it (the unmeasured releases' per-particle path keeps emission order).
+            uint[] Seeds()
             {
                 var ps = Make(ParticleSystemShapeType.Rectangle, null);
                 try
                 {
-                    var main = ps.main; main.ringBufferMode = mode;
                     ps.Emit(5);
                     ps.Emit(10);
                     return Array.ConvertAll(Read(ps), p => p.randomSeed);
                 }
                 finally { Object.DestroyImmediate(ps.gameObject); }
             }
-            var batch = Seeds(ParticleSystemRingBufferMode.Disabled);
-            var sequential = Seeds(ParticleSystemRingBufferMode.LoopUntilReplaced);
+            var batch = Seeds();
+            ProjectInfo.UnityVersion = "2022.3.0f1";
+            var sequential = Seeds();
             Assert.Equal(15, batch.Length);
             Assert.Equal(sequential[..5], batch[..5]);
             Assert.Equal(sequential[12..15], batch[5..8]);
