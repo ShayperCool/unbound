@@ -14,7 +14,7 @@ from editor_runner import EditorJob, run, summary, result_problem
 from probe_paths import shared_runtime
 
 
-def main(fixture, name, prefix, script, array, blocks):
+def main(fixture, name, prefix, script, array, blocks, acceptance=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode', choices=('native', 'engine', 'publish', 'gate'))
     parser.add_argument('--release', required=True)
@@ -116,7 +116,10 @@ def main(fixture, name, prefix, script, array, blocks):
             child = work/f'engine-{rate}'
             capture('engine', child, work/'authored', runtime, rate)
             compare(reference(rate), child/'capture', work/f'strict-{rate}.jsonl.gz', keys)
-            failed += compare(reference(rate), child/'capture', work/f'gate-{rate}.jsonl.gz', keys, pcm_steps=1)
+            if acceptance is None:
+                failed += compare(reference(rate), child/'capture', work/f'gate-{rate}.jsonl.gz', keys, pcm_steps=1)
+            else:
+                failed += acceptance(reference(rate), child/'capture', work/f'gate-{rate}.jsonl.gz', keys, child/'engine.log')
             diagnostics = (child/'engine.log').read_text()
             assert 'are not applied' not in diagnostics and 'activating zones during playback is not supported' not in diagnostics
         return bool(failed)

@@ -267,7 +267,7 @@ namespace UnityEngine.Tests
         [InlineData(false, true)]
         [InlineData(true, false)]
         [InlineData(true, true)]
-        public void SpatialComponentsKeepRejectingUnmeasuredSourceScripts(bool chorus, bool scriptFirst)
+        public void SpatialComponentsRetainInspectorPlacementAroundSourceScripts(bool chorus, bool scriptFirst)
         {
             var source = Source("scripted-spatial");
             source.spatialBlend = 1;
@@ -275,11 +275,38 @@ namespace UnityEngine.Tests
             if (chorus) source.gameObject.AddComponent<AudioChorusFilter>();
             else source.gameObject.AddComponent<AudioDistortionFilter>();
             if (!scriptFirst) script = source.gameObject.AddComponent<FilterScript>();
-            Assert.Empty(Collected(source));
-            Assert.Empty(Collected(source));
-            Assert.Single(Errors("3D Distortion or Chorus combined with OnAudioFilterRead"));
+            var descriptor = Assert.Single(Collected(source));
+            Assert.Equal(scriptFirst ? AudioFilterStage.AfterScripts : AudioFilterStage.BeforeScripts, descriptor.Stage);
+            Assert.Single(Collected(source));
+            Assert.Empty(Errors("AudioSource on 'scripted-spatial'"));
             script.enabled = false;
             Assert.Single(Collected(source));
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void LiveScriptedSpatialBypassRefusesReconnectionAndKeepsTheCurrentRoute(bool initiallyBypassed)
+        {
+            var source = Source("scripted reconnect");
+            source.spatialBlend = 1;
+            source.gameObject.AddComponent<FilterScript>();
+            source.gameObject.AddComponent<AudioChorusFilter>();
+            source.clip = AudioClip.Create("input", 8192, 1, 48000, false);
+            source.bypassEffects = initiallyBypassed;
+            source.Play();
+            Assert.True(source.isPlaying);
+            Assert.Throws<NotSupportedException>(() => source.bypassEffects = !initiallyBypassed);
+            Assert.Equal(initiallyBypassed, source.bypassEffects);
+            Assert.True(source.isPlaying);
+            source.bypassEffects = initiallyBypassed; // A no-op never reconnects the chain.
+            source.Stop();
+            source.bypassEffects = !initiallyBypassed;
+            Assert.Equal(!initiallyBypassed, source.bypassEffects);
+            source.clip = null;
+            source.Play(); // A clipless generator keeps its measured live bypass path.
+            source.bypassEffects = initiallyBypassed;
+            Assert.Equal(initiallyBypassed, source.bypassEffects);
         }
 
         [Fact]

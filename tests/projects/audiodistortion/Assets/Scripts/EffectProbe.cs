@@ -340,6 +340,37 @@ public class EffectProbe : MonoBehaviour
         new[] { "spatial_dry_wrap_spread", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=40,0,0", "max=20", "rolloff=custom", "curve=flat", "pan=0.3", "wrap=Spread", "warm=1" },
         new[] { "spatial_dry_wrap_reverbzonemix", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=40,0,0", "max=20", "rolloff=custom", "curve=flat", "pan=0.3", "wrap=ReverbZoneMix", "warm=1", "zone=1", "frames=65536" },
     };
+    public static readonly string[][] ScriptCases = {
+        new[] { "script3d_dist_before_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "sourcechain=dist", "chain_script=before" },
+        new[] { "script3d_dist_after_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "sourcechain=dist", "chain_script=after" },
+        new[] { "script3d_chorus_before_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "sourcechain=chorus", "chain_script=before" },
+        new[] { "script3d_chorus_after_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "sourcechain=chorus", "chain_script=after" },
+        new[] { "script3d_dist_chorus_before_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "sourcechain=dist,chorus", "chain_script=before" },
+        new[] { "script3d_dist_chorus_after_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "sourcechain=dist,chorus", "chain_script=after" },
+        new[] { "script3d_chorus_dist_before_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "sourcechain=chorus,dist", "chain_script=before" },
+        new[] { "script3d_chorus_dist_after_mono0", "Music:Att", "music=noise:0.25", "mono=0", "spatial=1", "position=3,0,4", "sourcechain=chorus,dist", "chain_script=after" },
+        new[] { "script3d_dist_before_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "sourcechain=dist", "chain_script=before" },
+        new[] { "script3d_dist_after_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "sourcechain=dist", "chain_script=after" },
+        new[] { "script3d_chorus_before_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "sourcechain=chorus", "chain_script=before" },
+        new[] { "script3d_chorus_after_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "sourcechain=chorus", "chain_script=after" },
+        new[] { "script3d_dist_chorus_before_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "sourcechain=dist,chorus", "chain_script=before" },
+        new[] { "script3d_dist_chorus_after_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "sourcechain=dist,chorus", "chain_script=after" },
+        new[] { "script3d_chorus_dist_before_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "sourcechain=chorus,dist", "chain_script=before" },
+        new[] { "script3d_chorus_dist_after_mono1", "Music:Att", "music=noise:0.25", "mono=1", "spatial=1", "position=3,0,4", "sourcechain=chorus,dist", "chain_script=after" },
+        new[] { "script3d_dry", "Music:Att", "music=noise:0.25", "spatial=1", "position=3,0,4", "chain_script=before", "sourcechain=" },
+        new[] { "script3d_blend", "Music:Att", "music=noise:0.25", "spatial=1", "position=3,0,4", "chain_script=before", "sourcechain=dist,chorus", "blend=0.5" },
+        new[] { "script3d_quiet", "Music:Att", "music=noise:0.25", "spatial=1", "position=3,0,4", "chain_script=before", "sourcechain=chorus,dist", "volume=0.25" },
+        new[] { "script3d_bypass", "Music:Att", "music=noise:0.25", "spatial=1", "position=3,0,4", "chain_script=before", "sourcechain=dist,chorus", "bypass=1" },
+        new[] { "script3d_live_bypass", "Music:Att", "music=noise:0.25", "spatial=1", "position=3,0,4", "chain_script=before", "sourcechain=dist,chorus", "step=bypass" },
+        new[] { "script2d_bypass", "Music:Att", "music=noise:0.25", "chain_script=before", "sourcechain=dist,chorus", "bypass=1" },
+        new[] { "script_generator_bypass", "Music:Att", "chain_script=before", "sourcechain=", "bypass=1", "clipless=1" },
+        new[] { "script_generator_control", "Music:Att", "chain_script=before", "sourcechain=", "clipless=1" },
+        new[] { "script3d_live_bypass_initial", "Music:Att", "music=noise:0.25", "spatial=1", "position=3,0,4", "chain_script=before", "sourcechain=dist,chorus", "bypass=1", "step=bypass" },
+        new[] { "script3d_live_bypass_after", "Music:Att", "music=noise:0.25", "spatial=1", "position=3,0,4", "chain_script=after", "sourcechain=dist,chorus", "step=bypass" },
+        new[] { "script3d_live_bypass_component", "Music:Att", "music=noise:0.25", "spatial=1", "position=3,0,4", "sourcechain=dist,chorus", "step=bypass" },
+        new[] { "script_generator_live_bypass", "Music:Att", "chain_script=before", "sourcechain=", "clipless=1", "step=bypass" },
+        new[] { "script3d_live_bypass_restart", "Music:Att", "music=noise:0.25", "spatial=1", "position=3,0,4", "chain_script=before", "sourcechain=dist,chorus", "step=bypass", "restart=12" },
+    };
     public const int BlockCount = 32;
     public const int ClipFrames = BlockCount * 1024;
     public static string[] Selected()
@@ -347,12 +378,12 @@ public class EffectProbe : MonoBehaviour
         var only = Environment.GetEnvironmentVariable("EFFECT_PROBE_CASES");
         var keys = new List<string>();
         string profile = Environment.GetEnvironmentVariable("EFFECT_PROBE_PROFILE") ?? "static";
-        var cases = profile.StartsWith("spatial") ? SpatialCases : Cases;
+        var cases = profile == "spatial-script" ? ScriptCases : profile.StartsWith("spatial") ? SpatialCases : Cases;
         if (profile.StartsWith("spatial-factor")) cases = Array.FindAll(cases, row => row[0].StartsWith("spatial_dry_velocity_"));
         foreach (var c in cases) if (string.IsNullOrEmpty(only) || Array.IndexOf(only.Split(','), c[0]) >= 0) keys.Add(c[0]);
         return keys.ToArray();
     }
-    public static string[] Tokens(string key) => Array.Find(Cases, c => c[0] == key) ?? Array.Find(SpatialCases, c => c[0] == key);
+    public static string[] Tokens(string key) => Array.Find(Cases, c => c[0] == key) ?? Array.Find(SpatialCases, c => c[0] == key) ?? Array.Find(ScriptCases, c => c[0] == key);
     public static string Option(string key, string name, string fallback)
     {
         foreach (var token in Tokens(key)) if (token.StartsWith(name)) return token.Substring(name.Length);
@@ -462,6 +493,14 @@ public class EffectProbe : MonoBehaviour
         return components;
     }
     static float Number(string text) => float.Parse(text, System.Globalization.CultureInfo.InvariantCulture);
+    static void ToggleBypass(AudioSource source, string key)
+    {
+        try { source.bypassEffects = !source.bypassEffects; }
+        catch (NotSupportedException error) {
+            if (!Engine) throw;
+            Debug.Log("Unsupported live bypass " + key + ": " + error.Message);
+        }
+    }
     System.Collections.IEnumerator Capture()
     {
         if (m_Captured) yield break;
@@ -522,12 +561,14 @@ public class EffectProbe : MonoBehaviour
             source.outputAudioMixerGroup = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Music");
             if (!source.outputAudioMixerGroup) throw new Exception("Missing group Music");
             if (Option(key, "route=", "mixer") == "none") source.outputAudioMixerGroup = null;
+            if (Option(key, "chain_script=", "") == "before") go.AddComponent<AffineSignal>();
             var sourceComponents = Components(go, Option(key, "sourcechain=", ""), echoDelay);
+            if (Option(key, "chain_script=", "") == "after") go.AddComponent<AffineSignal>();
             if (Option(key, "echo_delay=", "") != "") {
                 var echo = go.GetComponent<AudioEchoFilter>(); if (!echo) echo = gameObject.GetComponent<AudioEchoFilter>();
                 records.Add("\""+key+".echoDelay\":"+echo.delay.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
             }
-            source.spatialBlend = Number(Option(key, "blend=", Option(key, "spatial=", "0"))); source.volume = 1;
+            source.spatialBlend = Number(Option(key, "blend=", Option(key, "spatial=", "0"))); source.volume = Number(Option(key, "volume=", "1"));
             source.pitch = Number(Option(key, "pitch=", "1"));
             source.dopplerLevel = Number(Option(key, "doppler=", "1"));
             transform.position = Vector3.zero;
@@ -586,7 +627,7 @@ public class EffectProbe : MonoBehaviour
             if (channels == 1) { var mono = new float[ClipFrames]; for (int f = 0; f < ClipFrames; f++) mono[f] = data[2*f]; data = mono; }
             if (clipFrames != ClipFrames) Array.Resize(ref data, clipFrames * channels);
             if (!clip.SetData(data, 0)) throw new Exception("SetData failed");
-            source.clip = clip;
+            source.clip = Option(key, "clipless=", "0") == "1" ? null : clip;
             if (Option(key, "listenermove=", "0") == "1" || Option(key, "warm=", "0") == "1") {
                 if (Engine) FlushEngine();
                 else yield return null;
@@ -613,7 +654,16 @@ public class EffectProbe : MonoBehaviour
                             case "spread": source.spread = 90; break;
                             case "listener": transform.position = new Vector3(3, 0, 1); break;
                             case "volume": source.volume = 0.25f; break;
+                            case "bypass": ToggleBypass(source, key); break;
                         }
+                        if (Engine) FlushEngine();
+                    }
+                    if (block == int.Parse(Option(key, "restart=", "-1"))) {
+                        source.Stop(); source.Play();
+                        if (Engine) FlushEngine();
+                    }
+                    if (block == 16 && Option(key, "step=", "") == "bypass") {
+                        ToggleBypass(source, key);
                         if (Engine) FlushEngine();
                     }
                     if (Option(key, "move=", "0") == "1") {

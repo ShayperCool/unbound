@@ -25,7 +25,7 @@ public static class ProbeRunner
                     + " max=" + definition.GetType().GetField("maxRange").GetValue(definition)
                     + " default=" + definition.GetType().GetField("defaultValue").GetValue(definition));
         Directory.CreateDirectory("Assets/Resources");
-        foreach (var cases in new[] { EffectProbe.Cases, EffectProbe.SpatialCases })
+        foreach (var cases in new[] { EffectProbe.Cases, EffectProbe.SpatialCases, EffectProbe.ScriptCases })
             foreach (var row in cases) Build(row[0]);
         var prefab = new GameObject("Serialized");
         prefab.AddComponent<AudioSource>();

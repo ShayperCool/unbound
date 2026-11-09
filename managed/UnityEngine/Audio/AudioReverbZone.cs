@@ -200,7 +200,7 @@ namespace UnityEngine
 
         internal override void OnEngineDisable() => AudioSystem.Remove(this);
 
-        internal override void OnEngineDestroy() => AudioSystem.Remove(this);
+        internal override void OnEngineDestroy() => AudioSystem.Forget(this);
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {

@@ -266,7 +266,12 @@ namespace UnityEngine
         public bool bypassEffects
         {
             get { MainThreadCheck.Check("get_bypassEffects"); return m_BypassEffects; }
-            set { MainThreadCheck.Check("set_bypassEffects"); m_BypassEffects = value; m_Dirty = true; }
+            set
+            {
+                MainThreadCheck.Check("set_bypassEffects");
+                if (value != m_BypassEffects) AudioFilterChain.ValidateLiveBypass(this);
+                m_BypassEffects = value; m_Dirty = true;
+            }
         }
 
         public bool bypassListenerEffects

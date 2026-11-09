@@ -1,27 +1,5 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!244 &-324914506057425251
-AudioMixerEffectController:
-  m_ObjectHideFlags: 3
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_EffectID: 7d6368fdef90c0fc5919d4f38a95178f
-  m_EffectName: Pitch Shifter
-  m_MixLevel: ff8ffa61d204349b9afa1dae2471f189
-  m_Parameters:
-  - m_ParameterName: Pitch
-    m_GUID: ebc6e11f8981ff2598954353a6df1f55
-  - m_ParameterName: FFT size
-    m_GUID: 6f018875749f91dfcbf067a65f5b6b0b
-  - m_ParameterName: Overlap
-    m_GUID: 5bc0ea7a6ca0f459cbaf89f47e7f48a4
-  - m_ParameterName: Max channels
-    m_GUID: 6a1989d99e1ac60728afba8ff311df59
-  m_SendTarget: {fileID: 0}
-  m_EnableWetMix: 1
-  m_Bypass: 0
 --- !u!241 &24100000
 AudioMixerController:
   m_ObjectHideFlags: 0
@@ -33,15 +11,15 @@ AudioMixerController:
   m_MasterGroup: {fileID: 24300002}
   m_Snapshots:
   - {fileID: 24500006}
-  - {fileID: 5550737967820630740}
+  - {fileID: 6619451601869454673}
   m_StartSnapshot: {fileID: 24500006}
   m_SuspendThreshold: -80
   m_EnableSuspend: 0
   m_UpdateMode: 0
   m_ExposedParameters:
-  - guid: ebc6e11f8981ff2598954353a6df1f55
+  - guid: b8cd56115b5ac56f299611c9a78f46b2
     name: Value
-  - guid: ff8ffa61d204349b9afa1dae2471f189
+  - guid: 801009e37bd133f799d3fc31a20134fa
     name: WetControl
   m_AudioMixerGroupViews: []
   m_CurrentViewIndex: 0
@@ -54,14 +32,14 @@ AudioMixerGroupController:
   m_PrefabAsset: {fileID: 0}
   m_Name: Master
   m_AudioMixer: {fileID: 24100000}
-  m_GroupID: 87797f10a415b73998366503fe881131
+  m_GroupID: db4d0f19ffbf25e65884725fa851b87e
   m_Children: []
-  m_Volume: 2a190eea5347857ecbd05946177ac5bf
-  m_Pitch: 9345b9153eb76457a926079ba2d3907a
+  m_Volume: af069c0ff10fdb90d80f316c08a8b897
+  m_Pitch: bfbfef2c3b6d52422addbed759781185
   m_Send: 00000000000000000000000000000000
   m_Effects:
   - {fileID: 24400004}
-  - {fileID: -324914506057425251}
+  - {fileID: 2804311827539822510}
   m_UserColorIndex: 0
   m_Mute: 0
   m_Solo: 0
@@ -73,9 +51,9 @@ AudioMixerEffectController:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: 
-  m_EffectID: e6f88bc2970776a6d9daf305d9a213eb
+  m_EffectID: f4e850d621d5f976e8e9eb4432497409
   m_EffectName: Attenuation
-  m_MixLevel: ac10a1658c75fa705a3435aa0b1f10d9
+  m_MixLevel: 2970171d367ab9c409e056cf33b7f205
   m_Parameters: []
   m_SendTarget: {fileID: 0}
   m_EnableWetMix: 0
@@ -88,12 +66,34 @@ AudioMixerSnapshotController:
   m_PrefabAsset: {fileID: 0}
   m_Name: Base
   m_AudioMixer: {fileID: 24100000}
-  m_SnapshotID: b87a39b1622aff667bb8186562c7f94c
+  m_SnapshotID: 33bab3908c5ba08979d3bcc4e1126176
   m_FloatValues:
-    ff8ffa61d204349b9afa1dae2471f189: -6
-    ebc6e11f8981ff2598954353a6df1f55: 0.75
+    b8cd56115b5ac56f299611c9a78f46b2: 0.75
+    801009e37bd133f799d3fc31a20134fa: -6
   m_TransitionOverrides: {}
---- !u!245 &5550737967820630740
+--- !u!244 &2804311827539822510
+AudioMixerEffectController:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_EffectID: a063d7e34995e2337b70fa41557ba89e
+  m_EffectName: Pitch Shifter
+  m_MixLevel: 801009e37bd133f799d3fc31a20134fa
+  m_Parameters:
+  - m_ParameterName: Pitch
+    m_GUID: b8cd56115b5ac56f299611c9a78f46b2
+  - m_ParameterName: FFT size
+    m_GUID: 918fad41a3688b706a222f01aefa95c1
+  - m_ParameterName: Overlap
+    m_GUID: 846808fd4d24acc19b4bcad995e7b5c4
+  - m_ParameterName: Max channels
+    m_GUID: c5302379c8f20a9ddb3435128f85d66b
+  m_SendTarget: {fileID: 0}
+  m_EnableWetMix: 1
+  m_Bypass: 0
+--- !u!245 &6619451601869454673
 AudioMixerSnapshotController:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -101,8 +101,8 @@ AudioMixerSnapshotController:
   m_PrefabAsset: {fileID: 0}
   m_Name: Other
   m_AudioMixer: {fileID: 24100000}
-  m_SnapshotID: 787b1bcc11427c9d18eab1e74dc32130
+  m_SnapshotID: a858241b16006496f9ce7b2d9e4c1ce0
   m_FloatValues:
-    ff8ffa61d204349b9afa1dae2471f189: -6
-    ebc6e11f8981ff2598954353a6df1f55: 1.5
+    b8cd56115b5ac56f299611c9a78f46b2: 1.5
+    801009e37bd133f799d3fc31a20134fa: -6
   m_TransitionOverrides: {}

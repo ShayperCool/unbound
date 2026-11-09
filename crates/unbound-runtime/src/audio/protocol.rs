@@ -231,8 +231,9 @@ pub struct AudioFramePacket {
     /// Valid during the call only: the mixer copies them before it returns.
     pub filters: *const AudioFilterDescriptor,
     /// The reverb zones' blended SFX Reverb at the listener (NativeApi 21): kind
-    /// [`filter_kind::REVERB`] while an `AudioReverbZone` is enabled, 0 otherwise. `id` changes
-    /// whenever zones appear after none were enabled; the zone reverb then starts empty.
+    /// [`filter_kind::REVERB`] while initialized zone objects retain a shared return, 0 otherwise.
+    /// Disabling every zone supplies inactive parameters while keeping its histories. A new `id`
+    /// starts an empty return after the last initialized zone object was destroyed.
     pub zone: AudioFilterDescriptor,
 }
 

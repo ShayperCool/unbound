@@ -76,5 +76,6 @@ curve value (0.8), rather than holding the final value (0.2). The reverb case
 uses a long clip to isolate curve evaluation from source completion. All prior
 oracle samples remain unchanged.
 
-Spatial Distortion/Chorus combined with source OnAudioFilterRead scripts remains
-unmeasured and rejected; doctor lists that placement.
+Static spatial Distortion/Chorus combined with source OnAudioFilterRead scripts is
+measured in [SCRIPT_MEASUREMENT.md](SCRIPT_MEASUREMENT.md). Live scripted clip
+reconnection remains unsupported and doctor-listed; its full raw comparisons remain visible.

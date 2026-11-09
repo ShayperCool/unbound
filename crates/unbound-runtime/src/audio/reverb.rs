@@ -1,11 +1,37 @@
 //! The AudioMixer SFX Reverb effect of Unity 6000.0.71f1, identified from Native impulse
 //! responses at 48000 and 44100 Hz (tests/projects/mixerreverb). The input is summed to mono and
-//! passes the Room HF and Room LF filters. Early reflections are four taps per channel through two
-//! allpasses. The late reverb is a ring of eight damped lines that feeds back through a
+//! passes the Room HF and Room LF filters. Early reflections pass two allpasses, then four taps
+//! per channel. The late reverb is a ring of eight damped lines that feeds back through a
 //! three-stage rotation butterfly whose angle follows Diffusion; the butterfly also fans each
 //! line out to eight output taps alternating between the channels. The line damping uses the
 //! DMO-style I3DL2 coefficients (as in OpenMPT's BSD-licensed `I3DL2Reverb.cpp`).
 use serde::Deserialize;
+
+// Parameter and tap changes crossfade through one complete DSP buffer. Equal endpoints
+// retain their exact arithmetic. Unity 6000.0.71f1, tests/projects/audioreverb live controls.
+fn blend(from: f32, to: f32, phase: usize, size: usize) -> f32 {
+    if from == to {
+        to
+    } else {
+        (from * (size - phase) as f32 + to * phase as f32) / size as f32
+    }
+}
+
+impl Coefficients {
+    fn at(self, target: Self, phase: usize, size: usize) -> Self {
+        let value = |from, to| blend(from, to, phase, size);
+        let mut c = target;
+        c.hf = value(self.hf, target.hf);
+        c.early_gain = value(self.early_gain, target.early_gain);
+        c.late_gain = value(self.late_gain, target.late_gain);
+        c.rotation.0 = value(self.rotation.0, target.rotation.0);
+        c.rotation.1 = value(self.rotation.1, target.rotation.1);
+        for i in 0..8 {
+            c.damping[i] = value(self.damping[i], target.damping[i]);
+        }
+        c
+    }
+}
 
 /// Parameters in the Editor's units (mB, seconds, percent, Hz), clamped to the Editor ranges.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -32,14 +58,12 @@ pub struct SfxReverbSpec {
 const EARLY_MS: [[f32; 4]; 2] = [[0.0, 7.926, 20.075, 50.781], [4.984, 12.616, 31.932, 80.76]];
 const EARLY_ALLPASS_MS: [f32; 2] = [5.885, 7.676];
 const EARLY_ALLPASS_GAIN: f32 = 0.63;
-// The late lines read the input at the delay sum D = Reflect Delay + Reverb Delay: line 0 at
-// floor(D * rate) frames, line k > 0 at floor((D + 18.7 ms * 1.29^(k - 1)) * rate) frames, all in
-// float32, each plus frames(1.488 ms) - 1. The truncation after the tap sum is measured where D
-// is not a whole number of frames (the zone_11 case of tests/projects/audioreverb: lines 2 and 4).
-const LINE0_MS: f32 = 1.488;
+// Late input taps use the sum of Reflect Delay and Reverb Delay before truncation.
+// Output delays are a separate geometric series; their histories stay separate on retuning.
 const LATE_TAP_S: f32 = 0.0187;
 const LATE_TAP_RATIO: f32 = 1.29;
-const FAN_OUT_MS: [f32; 8] = [0.0, 0.717, 1.759, 3.279, 5.515, 8.805, 13.648, 20.76];
+const OUTPUT_TAP_SECONDS: f32 = 0.0015;
+const OUTPUT_TAP_RATIO: f32 = 1.47;
 /// The nominal length of line k is 61 ms * 1.32^k at Density 100.
 const LINE_MS: f32 = 61.0;
 const LINE_RATIO: f32 = 1.32;
@@ -60,7 +84,7 @@ fn ring(len: usize) -> anyhow::Result<Vec<f32>> {
     Ok(v)
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy, PartialEq)]
 struct Coefficients {
     dry: f32,
     hf: f32,
@@ -81,11 +105,17 @@ struct Coefficients {
 pub struct SfxReverb {
     rate: u32,
     c: Coefficients,
+    previous: Coefficients,
+    pending: Coefficients,
+    configured: bool,
+    buffer_size: usize,
+    buffer_position: usize,
     input: Vec<f32>,
+    early_output: Vec<f32>,
     lines: Vec<f32>,
     line_len: usize,
-    allpass: [[Vec<f32>; 2]; 2],
-    allpass_pos: [[usize; 2]; 2],
+    allpass: [Vec<f32>; 2],
+    allpass_pos: [usize; 2],
     pos: usize,
     hf: [f32; 2],
     lf: [f32; 4],
@@ -93,14 +123,10 @@ pub struct SfxReverb {
 }
 
 impl SfxReverb {
-    pub fn new(rate: u32) -> anyhow::Result<Self> {
+    pub fn new(rate: u32, buffer_size: u32) -> anyhow::Result<Self> {
         // The longest input read is the late network at maximal Reflect and Reverb Delay.
-        let input = frames(
-            400.0 + LATE_TAP_S * 1000.0 * LATE_TAP_RATIO.powi(6) + LINE0_MS,
-            rate,
-        ) + 3;
+        let input = frames(400.0 + LATE_TAP_S * 1000.0 * LATE_TAP_RATIO.powi(6), rate) + 3;
         let line_len = (LINE_MS * LINE_RATIO.powi(7) * rate as f32 / 1000.0).round() as usize + 2;
-        let line_len = line_len.max(frames(FAN_OUT_MS[7], rate) + 1);
         let bytes = (input + 8 * line_len) * std::mem::size_of::<f32>();
         anyhow::ensure!(
             bytes <= MAX_HISTORY_BYTES,
@@ -110,11 +136,17 @@ impl SfxReverb {
         Ok(Self {
             rate,
             c: Coefficients::default(),
+            previous: Coefficients::default(),
+            pending: Coefficients::default(),
+            configured: false,
+            buffer_size: buffer_size.max(1) as usize,
+            buffer_position: 0,
             input: ring(input)?,
+            early_output: ring(frames(EARLY_MS[1][3], rate) + 1)?,
             lines: ring(8 * line_len)?,
             line_len,
-            allpass: [[allpass(0)?, allpass(1)?], [allpass(0)?, allpass(1)?]],
-            allpass_pos: [[0; 2]; 2],
+            allpass: [allpass(0)?, allpass(1)?],
+            allpass_pos: [0; 2],
             pos: 0,
             hf: [0.0; 2],
             lf: [0.0; 4],
@@ -122,22 +154,59 @@ impl SfxReverb {
         })
     }
 
-    pub fn rate(&self) -> u32 {
-        self.rate
+    /// Starts an empty shared zone return before its first active parameter update.
+    /// Existing source and mixer effects keep their ordinary initial parameter application.
+    pub fn initialize_zone_return(&mut self) {
+        self.tune(&SfxReverbSpec {
+            dry_level: -10000.0,
+            room: -10000.0,
+            room_hf: 0.0,
+            decay_time: 1.0,
+            decay_hf_ratio: 0.5,
+            reflections: -10000.0,
+            reflect_delay: 0.04,
+            reverb: 0.0,
+            reverb_delay: 0.02,
+            diffusion: 100.0,
+            density: 100.0,
+            hf_reference: 5000.0,
+            room_lf: 0.0,
+            lf_reference: 250.0,
+        });
+        // Measured startup values, tests/projects/audioreverb lifecycle controls.
+        const INITIAL_INPUT_POLE: f32 = 0.02;
+        const INITIAL_LINE_POLE: f32 = 0.6;
+        const INITIAL_FEEDBACK_GAIN: f32 = 0.32;
+        self.c.hf = INITIAL_INPUT_POLE;
+        self.c.early_gain = 0.0;
+        self.c.late_gain = 0.0;
+        self.c.rotation = (1.0, 1.0);
+        self.c.damping.fill(INITIAL_LINE_POLE);
+        self.c.decay.fill(INITIAL_FEEDBACK_GAIN);
+        self.previous = self.c;
+        self.pending = self.c;
+    }
+
+    pub fn configuration(&self) -> (u32, u32) {
+        (self.rate, self.buffer_size as u32)
     }
 
     /// Forgets every history; coefficients stay.
     pub fn clear(&mut self) {
         self.input.fill(0.0);
+        self.early_output.fill(0.0);
         self.lines.fill(0.0);
-        for line in self.allpass.iter_mut().flatten() {
+        for line in self.allpass.iter_mut() {
             line.fill(0.0);
         }
-        self.allpass_pos = [[0; 2]; 2];
+        self.allpass_pos = [0; 2];
         self.pos = 0;
         self.hf = [0.0; 2];
         self.lf = [0.0; 4];
         self.damped = [0.0; 8];
+        self.buffer_position = 0;
+        self.c = self.pending;
+        self.previous = self.c;
     }
 
     pub fn tune(&mut self, p: &SfxReverbSpec) {
@@ -153,6 +222,7 @@ impl SfxReverb {
         if g < 1.0 {
             let k = 1.0 - g * w.cos().min(0.9999);
             c.hf = (k - (k * k - (1.0 - g) * (1.0 - g)).max(0.0).sqrt()) / (1.0 - g);
+            c.hf = c.hf.clamp(0.0, 0.99);
         }
         // Room LF: G (s^2 + sqrt2 s + 1) / (G s^2 + sqrt(2G) s + 1), bilinear at LF Reference.
         let g = level(p.room_lf.clamp(-10000.0, 0.0));
@@ -183,11 +253,10 @@ impl SfxReverb {
         c.early_gain = std::f32::consts::FRAC_1_SQRT_2
             * 0.5
             * level(room + p.reflections.clamp(-10000.0, 1000.0));
-        // Measured onsets (above): 0.007 s + 0.011 s puts lines 0 and 1 at 933 and 1831 frames at
-        // 48 kHz.
+        // Input and output delays retain their separate histories during parameter changes.
+        // Their sum gives the measured static onsets at both output rates.
         let reverb_delay = p.reverb_delay.clamp(0.0, 0.1);
         let late_delay = reflect + reverb_delay;
-        let line_offset = frames(LINE0_MS, self.rate) - 1;
         let mut tap = LATE_TAP_S;
         let density = p.density.clamp(0.0, 100.0) / 100.0;
         let scale = 0.1 + 0.9 * density * density * density;
@@ -197,14 +266,14 @@ impl SfxReverb {
         let mut energy = 0.0;
         for k in 0..8 {
             let m = LINE_MS * rate / 1000.0 * scale * LINE_RATIO.powi(k as i32);
-            c.late[k] = line_offset
-                + if k == 0 {
-                    ((late_delay * rate) as usize).max(1)
-                } else {
-                    let frames = ((late_delay + tap) * rate) as usize;
-                    tap *= LATE_TAP_RATIO;
-                    frames
-                };
+            c.late[k] = if k == 0 {
+                ((late_delay * rate) as usize).max(1)
+            } else {
+                let frames = ((late_delay + tap) * rate) as usize;
+                tap *= LATE_TAP_RATIO;
+                frames
+            };
+            c.late[k] = c.late[k].saturating_sub(1);
             c.feedback[k] = (m.round() as usize).saturating_sub(1).max(1);
             let c1 = 10f32.powf(m / rate * -60.0 / decay / 20.0);
             c.decay[k] = c1;
@@ -214,9 +283,20 @@ impl SfxReverb {
         c.late_gain =
             (energy / 8.0).sqrt() / 8f32.sqrt() * level(room + p.reverb.clamp(-10000.0, 2000.0));
         let angle = std::f32::consts::FRAC_PI_4 * p.diffusion.clamp(0.0, 100.0) / 100.0;
-        c.rotation = (angle.cos(), angle.sin());
-        c.fan_out = FAN_OUT_MS.map(|ms| frames(ms, self.rate));
-        self.c = c;
+        // A three-stage butterfly uses its tangent and a separate normalization gain.
+        // Both values follow the DSP-buffer transition.
+        c.rotation = (angle.tan(), (angle.cos() as f64).powi(3) as f32);
+        let mut output_delay = OUTPUT_TAP_SECONDS * rate;
+        for delay in &mut c.fan_out {
+            *delay = ((output_delay as f64 + 0.5) as usize).saturating_sub(1);
+            output_delay *= OUTPUT_TAP_RATIO;
+        }
+        self.pending = c;
+        if !self.configured {
+            self.c = c;
+            self.previous = self.c;
+            self.configured = true;
+        }
     }
 
     fn input_at(&self, delay: usize) -> f32 {
@@ -229,15 +309,32 @@ impl SfxReverb {
         self.lines[line * n + (self.pos % n + n - delay) % n]
     }
 
+    fn input_tap(&self, old: usize, new: usize, phase: usize, size: usize) -> f32 {
+        if old == new {
+            self.input_at(new)
+        } else {
+            blend(self.input_at(old), self.input_at(new), phase, size)
+        }
+    }
+
     /// Processes interleaved stereo in place: dry level plus early and late reverb.
     pub fn process(&mut self, samples: &mut [f32]) {
-        let c = &self.c;
         for stereo in samples.chunks_exact_mut(2) {
+            if self.buffer_position == 0 {
+                self.previous = self.c;
+                self.c = self.pending;
+            }
+            let phase = self.buffer_position;
+            let size = self.buffer_size;
+            let c = self.previous.at(self.c, phase, size);
+
             let mut mono = stereo[0] + stereo[1];
             if c.hf != 0.0 {
                 self.hf[0] = (self.hf[0] - mono) * c.hf + mono;
                 self.hf[1] = (self.hf[1] - self.hf[0]) * c.hf + self.hf[0];
                 mono = self.hf[1];
+            } else {
+                self.hf.fill(mono);
             }
             if c.lf {
                 let [x1, x2, y1, y2] = self.lf;
@@ -250,31 +347,50 @@ impl SfxReverb {
             let n = self.input.len();
             self.input[self.pos % n] = mono;
             let mut out = [0.0f32; 2];
+            let mut x = self.input_tap(self.previous.early[0][0], c.early[0][0], phase, size)
+                * c.early_gain;
+            for (line, pos) in self.allpass.iter_mut().zip(&mut self.allpass_pos) {
+                let delayed = line[*pos];
+                let v = x + EARLY_ALLPASS_GAIN * delayed;
+                x = delayed - EARLY_ALLPASS_GAIN * v;
+                line[*pos] = v;
+                *pos = (*pos + 1) % line.len();
+            }
+            let early_len = self.early_output.len();
+            self.early_output[self.pos % early_len] = x;
             for (ch, taps) in c.early.iter().enumerate() {
-                let mut x: f32 = taps.iter().map(|&d| self.input_at(d)).sum();
-                for (line, pos) in self.allpass[ch].iter_mut().zip(&mut self.allpass_pos[ch]) {
-                    let delayed = line[*pos];
-                    let v = x + EARLY_ALLPASS_GAIN * delayed;
-                    x = delayed - EARLY_ALLPASS_GAIN * v;
-                    line[*pos] = v;
-                    *pos = (*pos + 1) % line.len();
+                for delay in taps {
+                    let offset = delay - c.early[0][0];
+                    out[ch] += self.early_output[(self.pos + early_len - offset) % early_len];
                 }
-                out[ch] = c.early_gain * x;
             }
             let mut y = [0.0f32; 8];
             for (k, y) in y.iter_mut().enumerate() {
-                let v = self.input_at(c.late[k])
-                    + c.decay[k] * self.line_at((k + 1) % 8, c.feedback[k]);
+                let input = self.input_tap(self.previous.late[k], c.late[k], phase, size);
+                let line = (k + 1) % 8;
+                let feedback = if self.previous.feedback[k] == c.feedback[k]
+                    && self.previous.decay[k] == c.decay[k]
+                {
+                    c.decay[k] * self.line_at(line, c.feedback[k])
+                } else {
+                    blend(
+                        self.previous.decay[k] * self.line_at(line, self.previous.feedback[k]),
+                        c.decay[k] * self.line_at(line, c.feedback[k]),
+                        phase,
+                        size,
+                    )
+                };
+                let v = (input * c.late_gain + feedback) * c.rotation.1;
                 self.damped[k] = (self.damped[k] - v) * c.damping[k] + v;
                 *y = self.damped[k];
             }
-            // Y_u = sum_k prod_bits r(k_bit, u_bit) s_k, r = [[cos, -sin], [sin, cos]].
-            let (cos, sin) = c.rotation;
+            // Rotate the eight feedback lines through three unnormalized butterfly stages.
+            let (rotation, _) = c.rotation;
             for bit in [1, 2, 4] {
                 for i in (0..8).filter(|i| i & bit == 0) {
                     let (a, b) = (y[i], y[i | bit]);
-                    y[i] = cos * a + sin * b;
-                    y[i | bit] = cos * b - sin * a;
+                    y[i] = a + rotation * b;
+                    y[i | bit] = b - rotation * a;
                 }
             }
             let len = self.line_len;
@@ -287,9 +403,13 @@ impl SfxReverb {
                 late[j % 2] += self.line_at((j + 1) % 8, delay);
             }
             for ch in 0..2 {
-                stereo[ch] = c.dry * stereo[ch] + out[ch] + c.late_gain * late[ch];
+                stereo[ch] = c.dry * stereo[ch] + out[ch] + late[ch];
             }
             self.pos = self.pos.wrapping_add(1);
+            self.buffer_position += 1;
+            if self.buffer_position == self.buffer_size {
+                self.buffer_position = 0;
+            }
         }
     }
 }
@@ -355,7 +475,7 @@ mod tests {
 
     /// Response to a unit left impulse at frame 0.
     fn impulse(rate: u32, p: &SfxReverbSpec, frames: usize) -> Vec<f32> {
-        let mut reverb = SfxReverb::new(rate).unwrap();
+        let mut reverb = SfxReverb::new(rate, 1024).unwrap();
         reverb.tune(p);
         let mut x = vec![0.0; frames * 2];
         x[0] = 1.0;
@@ -447,18 +567,82 @@ mod tests {
             ),
         ];
         for (rate, reflect, delay, late) in cases {
-            let mut reverb = SfxReverb::new(rate).unwrap();
+            let mut reverb = SfxReverb::new(rate, 1024).unwrap();
             let mut p = spec(&[]);
             p.reflect_delay = reflect;
             p.reverb_delay = delay;
             reverb.tune(&p);
-            assert_eq!(reverb.c.late, late, "{rate} {reflect} {delay}");
+            assert_eq!(
+                reverb.c.late.map(|tap| tap + reverb.c.fan_out[0]),
+                late,
+                "{rate} {reflect} {delay}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_flat_room_hf_keeps_current_input_memory_for_the_next_parameter_transition() {
+        let mut parameters = spec(&[]);
+        parameters.room_hf = -1000.0;
+        let mut reverb = SfxReverb::new(48000, 32).unwrap();
+        reverb.tune(&parameters);
+        reverb.process(&mut vec![0.25; 128]);
+        parameters.room_hf = 0.0;
+        reverb.tune(&parameters);
+        reverb.process(&mut vec![0.5; 128]);
+        reverb.process(&mut vec![0.125; 128]);
+        assert_eq!(reverb.hf, [0.25, 0.25]);
+        parameters.room_hf = -1000.0;
+        reverb.tune(&parameters);
+        reverb.process(&mut [0.0; 4]);
+        assert_eq!(reverb.hf, [0.0, 0.0]);
+    }
+
+    #[test]
+    fn parameter_transitions_keep_histories_and_dsp_coordinates_across_device_periods() {
+        for (rate, buffer) in [(48000, 1024), (32000, 256)] {
+            let mut active = spec(&[("room", -1000.0), ("reflections", -2602.0)]);
+            let off = spec(&[
+                ("room", -10000.0),
+                ("reflections", -10000.0),
+                ("diffusion", 0.0),
+                ("decay", 0.1),
+            ]);
+            let mut whole = SfxReverb::new(rate, buffer).unwrap();
+            let mut split = SfxReverb::new(rate, buffer).unwrap();
+            whole.tune(&active);
+            split.tune(&active);
+            let input: Vec<f32> = (0..buffer as usize * 16 * 2)
+                .map(|i| ((i * 37 % 997) as f32 - 498.0) / 2048.0)
+                .collect();
+            for (block, input) in input.chunks(buffer as usize * 2).enumerate() {
+                if block == 8 {
+                    whole.tune(&off);
+                    split.tune(&off);
+                }
+                if block == 12 {
+                    active.reflect_delay = 0.0;
+                    active.density = 23.0;
+                    whole.tune(&active);
+                    split.tune(&active);
+                }
+                let mut a = input.to_vec();
+                let mut b = a.clone();
+                whole.process(&mut a);
+                for period in b.chunks_mut(74) {
+                    split.process(period);
+                }
+                assert_eq!(a, b, "{rate} {buffer} block {block}");
+                if block == 9 {
+                    assert!(a.iter().zip(input).any(|(a, b)| (a - b).abs() > 0.0001));
+                }
+            }
         }
     }
 
     #[test]
     fn dry_level_and_wet_mixing_follow_the_measured_slot() {
-        let mut reverb = SfxReverb::new(48000).unwrap();
+        let mut reverb = SfxReverb::new(48000, 1024).unwrap();
         reverb.tune(&spec(&[("dry", -600.0)]));
         let mut x = vec![0.25, -0.125];
         reverb.process(&mut x);

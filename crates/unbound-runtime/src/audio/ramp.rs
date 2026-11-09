@@ -1,6 +1,7 @@
 //! Accumulated linear parameter ramps. Mixer attenuation retains its DSP-buffer cadence;
 //! effect-slot gains use the same arithmetic over their shorter measured transition.
 
+#[derive(Debug)]
 pub(crate) struct ParameterRamp {
     pub(crate) value: f32,
     target: f32,

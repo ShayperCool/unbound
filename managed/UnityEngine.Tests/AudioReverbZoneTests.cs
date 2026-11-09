@@ -63,7 +63,7 @@ namespace UnityEngine.Tests
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void MidPlaybackZoneActivationFailsClearlyAndCanRecoverAfterStopping(bool reactivate)
+        public void MidPlaybackZoneActivationUsesTheCurrentReturn(bool reactivate)
         {
             var errors = new Errors();
             var previous = Debug.unityLogger.logHandler;
@@ -81,15 +81,14 @@ namespace UnityEngine.Tests
                 if (reactivate) zone.enabled = true;
                 else zone = Zone(0);
                 AudioSystem.Update();
-                Assert.Single(errors.Messages);
-                Assert.Contains("activating zones during playback is not supported", errors.Messages[0]);
-                Assert.Equal(0, m_Backend.LastFrame.Zone.Kind);
+                Assert.Empty(errors.Messages);
+                Assert.Equal(AudioFilterKind.Reverb, m_Backend.LastFrame.Zone.Kind);
                 Assert.True(source.isPlaying);
                 source.Stop();
                 zone.enabled = false; zone.enabled = true;
                 AudioSystem.Update();
                 Assert.Equal(AudioFilterKind.Reverb, m_Backend.LastFrame.Zone.Kind);
-                Assert.Single(errors.Messages);
+                Assert.Empty(errors.Messages);
             }
             finally
             {
@@ -102,7 +101,7 @@ namespace UnityEngine.Tests
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void PausedVoicesStillRejectZoneActivationAndRemainRejectedAfterUnPause(bool oneShot)
+        public void PausedVoicesRetainZonesWhenAnotherZoneActivates(bool oneShot)
         {
             var errors = new Errors();
             var previous = Debug.unityLogger.logHandler;
@@ -126,14 +125,13 @@ namespace UnityEngine.Tests
                 else Assert.Equal(AudioVoiceState.Paused, retained.Main);
                 Zone(0);
                 AudioSystem.Update();
-                Assert.Single(errors.Messages);
-                Assert.Contains("activating zones during playback is not supported", errors.Messages[0]);
-                Assert.Equal(0, m_Backend.LastFrame.Zone.Kind);
+                Assert.Empty(errors.Messages);
+                Assert.Equal(AudioFilterKind.Reverb, m_Backend.LastFrame.Zone.Kind);
                 source.UnPause();
                 AudioSystem.Update();
                 Assert.True(source.isPlaying);
-                Assert.Equal(0, m_Backend.LastFrame.Zone.Kind);
-                Assert.Single(errors.Messages);
+                Assert.Equal(AudioFilterKind.Reverb, m_Backend.LastFrame.Zone.Kind);
+                Assert.Empty(errors.Messages);
             }
             finally
             {
@@ -174,10 +172,9 @@ namespace UnityEngine.Tests
                 Assert.Equal(started, source.m_PlaybackDspTime);
                 if (!initialOneShot) Assert.Equal(before.Position, m_Backend.State(source.Handle).Position);
                 Zone(0);
-                Assert.Single(errors.Messages);
-                Assert.Contains("activating zones during playback is not supported", errors.Messages[0]);
+                Assert.Empty(errors.Messages);
                 AudioSystem.Update();
-                Assert.Equal(0, m_Backend.LastFrame.Zone.Kind);
+                Assert.Equal(AudioFilterKind.Reverb, m_Backend.LastFrame.Zone.Kind);
             }
             finally
             {
@@ -318,7 +315,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void TheFramePacketCarriesTheZoneAndRestartsItAfterTheLastZoneWent()
+        public void DisabledZonesKeepTheReturnUntilTheirObjectsAreDestroyed()
         {
             AudioSystem.Update();
             Assert.Equal(0, m_Backend.LastFrame.Zone.Kind);
@@ -333,12 +330,45 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(zone.gameObject);
             second.enabled = false;
             AudioSystem.Update();
-            Assert.Equal(0, m_Backend.LastFrame.Zone.Kind);
+            Assert.Equal(AudioFilterKind.Reverb, m_Backend.LastFrame.Zone.Kind);
+            Assert.Equal(first.Id, m_Backend.LastFrame.Zone.Id);
+            Assert.Equal(-9999f, m_Backend.LastFrame.Zone.Reverb[1]);
             second.enabled = true;
             AudioSystem.Update();
-            Assert.Equal(AudioFilterKind.Reverb, m_Backend.LastFrame.Zone.Kind);
+            Assert.Equal(first.Id, m_Backend.LastFrame.Zone.Id);
+            Object.DestroyImmediate(second.gameObject);
+            AudioSystem.Update();
+            Assert.Equal(0, m_Backend.LastFrame.Zone.Kind);
+            Zone(0);
+            AudioSystem.Update();
             Assert.NotEqual(first.Id, m_Backend.LastFrame.Zone.Id);
-            Assert.Equal(-9999f, m_Backend.LastFrame.Zone.Reverb[1]);
+        }
+
+        [Fact]
+        public void APlayingSourceReceivesANewReturnAfterTheLastZoneWasDestroyed()
+        {
+            var host = new GameObject("return owner"); m_Objects.Add(host);
+            var source = host.AddComponent<AudioSource>();
+            var clip = AudioClip.Create("input", 32768, 1, 48000, false);
+            try
+            {
+                source.clip = clip;
+                source.Play();
+                AudioSystem.Update();
+                Assert.Equal(0, m_Backend.LastFrame.Zone.Kind);
+                var zone = Zone(0);
+                AudioSystem.Update();
+                var initial = m_Backend.LastFrame.Zone;
+                Assert.Equal(AudioFilterKind.Reverb, initial.Kind);
+                Object.DestroyImmediate(zone.gameObject);
+                AudioSystem.Update();
+                Assert.Equal(0, m_Backend.LastFrame.Zone.Kind);
+                Zone(0);
+                AudioSystem.Update();
+                Assert.NotEqual(initial.Id, m_Backend.LastFrame.Zone.Id);
+                Assert.Equal(-999f, m_Backend.LastFrame.Zone.Reverb[1]);
+            }
+            finally { Object.DestroyImmediate(clip); }
         }
 
         [Fact]
@@ -460,7 +490,7 @@ namespace UnityEngine.Tests
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void ZoneActivationAfterDirectBackendRenderingStillReportsTheUnsupportedTransition(bool anotherZoneIsActive)
+        public void ZoneActivationAfterDirectBackendRenderingKeepsPlayback(bool anotherZoneIsActive)
         {
             if (anotherZoneIsActive) Zone(0);
             var host = new GameObject("rendered-source"); m_Objects.Add(host);
@@ -476,7 +506,10 @@ namespace UnityEngine.Tests
             try
             {
                 Zone(0);
-                Assert.Contains(errors.Messages, message => message.Contains("activating zones during playback is not supported"));
+                Assert.Empty(errors.Messages);
+                AudioSystem.Update();
+                Assert.Equal(AudioFilterKind.Reverb, m_Backend.LastFrame.Zone.Kind);
+                Assert.True(source.isPlaying);
             }
             finally { Debug.unityLogger.logHandler = previous; Object.DestroyImmediate(clip); }
         }

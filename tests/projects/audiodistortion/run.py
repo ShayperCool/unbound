@@ -62,5 +62,7 @@ for rate in a.rate or (48000, 44100):
         from spatial import factor_gate
         try: factor_gate(destination/'capture', work/f'{name}-{rate}.jsonl.gz', a.release, rate, name)
         except AssertionError: failed = True
+failed |= bool(subprocess.run([sys.executable, str(fixture/'scripted.py'), 'gate', '--release', a.release,
+                               '--runtime', str(runtime), '--work', str(work/'scripted')]).returncode)
 print('reports:', work)
 raise SystemExit(failed)

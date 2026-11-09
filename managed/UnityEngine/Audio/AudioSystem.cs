@@ -30,9 +30,10 @@ namespace Unbound.Runtime
     {
         static AudioFilterDescriptor[] s_ListenerFilters;
         static readonly List<AudioReverbZone> s_Zones = new List<AudioReverbZone>();
-        // Counts the times zones appeared after none were enabled: the zone reverb then starts empty.
+        // Disabled zones keep the shared return alive until their objects are destroyed.
+        static readonly List<AudioReverbZone> s_InitializedZones = new List<AudioReverbZone>();
+        // A new shared return starts when no initialized zone objects remain.
         static ulong s_ZoneGeneration;
-        static bool s_ZoneActivationRejected;
         // The first zone retains these processing defaults until the corresponding value
         // changes. Later activations use the requested values (tests/projects/audioreverb).
         struct InitialZoneParameter
@@ -56,8 +57,9 @@ namespace Unbound.Runtime
 
         static void ResetZoneInitialization()
         {
-            s_ZoneGeneration = s_Zones.Count > 0 ? 1ul : 0ul;
-            s_ZoneActivationRejected = false;
+            s_InitializedZones.Clear();
+            s_InitializedZones.AddRange(s_Zones);
+            s_ZoneGeneration = s_InitializedZones.Count > 0 ? 1ul : 0ul;
             s_InitialReflectionsDelay = new InitialZoneParameter(InitialZoneReflectionsDelay, 0.007f);
             s_InitialReverbLevel = new InitialZoneParameter(InitialZoneReverbLevel, 200f);
             s_InitialReverbDelay = new InitialZoneParameter(InitialZoneReverbDelay, 0.011f);
@@ -142,34 +144,21 @@ namespace Unbound.Runtime
         internal static void Add(AudioReverbZone zone)
         {
             if (s_Zones.Contains(zone)) return;
-            if (s_Zones.Count == 0)
+            if (!s_InitializedZones.Contains(zone))
             {
-                s_ZoneGeneration++;
-                s_ZoneActivationRejected = false;
+                if (s_InitializedZones.Count == 0) s_ZoneGeneration++;
+                s_InitializedZones.Add(zone);
             }
-            if (Compat.AudioZoneStartupMeasured && !s_ZoneActivationRejected)
-                s_ZoneActivationRejected = RejectZoneActivationDuringPlayback(zone);
             s_Zones.Add(zone);
         }
 
-        static bool RejectZoneActivationDuringPlayback(AudioReverbZone zone)
-        {
-            var backend = AudioBackend.Current;
-            double dspTime = backend.DspTime;
-            foreach (var source in s_Sources)
-            {
-                if (source == null) continue;
-                if (source.HasRetainedVoices && (source.m_HasAudioFrame || dspTime > source.m_PlaybackDspTime))
-                {
-                    Debug.LogError("Unbound: AudioReverbZone on '" + zone.gameObject.name
-                        + "': activating zones during playback is not supported; stop the sources and disable all zones before reactivating them. The zone return is silent.", zone);
-                    return true;
-                }
-            }
-            return false;
-        }
-
         internal static void Remove(AudioReverbZone zone) => s_Zones.Remove(zone);
+
+        internal static void Forget(AudioReverbZone zone)
+        {
+            s_Zones.Remove(zone);
+            s_InitializedZones.Remove(zone);
+        }
 
         internal static void Add(AudioMixer mixer)
         {
@@ -533,7 +522,7 @@ namespace Unbound.Runtime
             s_WarnedListeners = Math.Max(1, listeners);
 
             s_Zones.RemoveAll(z => z == null);
-            if (s_Zones.Count > 0 && !s_ZoneActivationRejected)
+            if (s_Zones.Count > 0 || (Compat.AudioZoneStartupMeasured && s_InitializedZones.Count > 0))
             {
                 frame.Zone.Kind = AudioFilterKind.Reverb;
                 frame.Zone.Id = s_ZoneGeneration;

@@ -179,11 +179,22 @@ public partial class AudioReverbProbe : MonoBehaviour
         "reverbPreset", "minDistance", "maxDistance", "room", "roomHF", "roomLF", "decayTime", "decayHFRatio",
         "reflections", "reflectionsDelay", "reverb", "reverbDelay", "HFReference", "LFReference", "diffusion", "density"
     };
+    public static readonly string[][] LiveCases = {
+        new[] { "zone_live_toggle_mono0", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=toggle" },
+        new[] { "zone_live_active_mono0", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=active" },
+        new[] { "zone_live_bypass_mono0", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=bypass" },
+        new[] { "zone_live_toggle_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=toggle", "mono" },
+        new[] { "zone_live_active_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=active", "mono" },
+        new[] { "zone_live_bypass_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=bypass", "mono" },
+        new[] { "zone_live_destroy_mono0", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=destroy" },
+        new[] { "zone_live_destroy_mono1", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=destroy", "mono" },
+        new[] { "zone_live_cave", "zone=0", "position=5", "S:spatialBlend=1", "S:rolloffMode=Linear", "S:minDistance=1", "S:maxDistance=20", "noise", "frames=32768", "routed", "lifecycle=toggle", "Z:reverbPreset=Cave" },
+    };
     public static string[] Selected()
     {
         var only = Environment.GetEnvironmentVariable("AUDIOREVERB_PROBE_CASES");
         var keys = new List<string>();
-        foreach (var c in Cases) if (string.IsNullOrEmpty(only) || Array.IndexOf(only.Split(','), c[0]) >= 0) keys.Add(c[0]);
+        foreach (var c in Environment.GetEnvironmentVariable("AUDIOREVERB_PROBE_PROFILE") == "live" ? LiveCases : Cases) if (string.IsNullOrEmpty(only) || Array.IndexOf(only.Split(','), c[0]) >= 0) keys.Add(c[0]);
         return keys.ToArray();
     }
     public const int Blocks = 24;
@@ -349,7 +360,7 @@ public partial class AudioReverbProbe : MonoBehaviour
                 using (var warm = new NativeArray<float>(2048, Allocator.Persistent))
                     if (!AudioRenderer.Render(warm)) throw new Exception("Case clock warmup failed");
             }
-            var tokens = Array.Find(Cases, c => c[0] == key);
+            var tokens = Array.Find(Cases, c => c[0] == key) ?? Array.Find(LiveCases, c => c[0] == key);
             int channels = Array.IndexOf(tokens, "mono") >= 0 ? 1 : 2;
             int frames = ClipFrames;
             foreach (string token in tokens) if (token.StartsWith("frames=")) frames = int.Parse(token.Substring(7), CultureInfo.InvariantCulture);
@@ -464,6 +475,18 @@ public partial class AudioReverbProbe : MonoBehaviour
                             records.Add("\"" + key + ".pausedPlaying\":" + (source.isPlaying ? "true" : "false"));
                         }
                         if (Engine && lifecycle != "") FlushEngine();
+                    }
+                    if ((block == 8 || block == 16) && (lifecycle == "toggle" || lifecycle == "active" || lifecycle == "bypass")) {
+                        bool enabled = block == 16;
+                        if (lifecycle == "toggle") zones[0].enabled = enabled;
+                        if (lifecycle == "active") zones[0].gameObject.SetActive(enabled);
+                        if (lifecycle == "bypass") source.bypassReverbZones = !enabled;
+                        if (Engine) FlushEngine();
+                    }
+                    if (lifecycle == "destroy" && (block == 8 || block == 16)) {
+                        if (block == 8) { DestroyImmediate(zones[0].gameObject); zones.Clear(); }
+                        else zones.Add(new GameObject(key + ".replacement").AddComponent<AudioReverbZone>());
+                        if (Engine) FlushEngine();
                     }
                     if (block == 10 && lifecycle == "pauseactivate") {
                         var added = new GameObject(key + ".pausedzone").AddComponent<AudioReverbZone>();

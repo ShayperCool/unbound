@@ -15,6 +15,7 @@ use super::{
         AudioSourceState, Callback, MAX_SOURCE_FILTERS, callback, command, filter_kind,
         filter_stage, source_flags, voice_state,
     },
+    ramp::ParameterRamp,
     reverb::{SfxReverb, SfxReverbSpec},
     spatial::{self, Listener, SourceSpatial},
 };
@@ -573,6 +574,7 @@ pub struct Source {
     filter_started: bool,
     filter_paused: bool,
     filtered: Vec<f32>,
+    bypass_dry: Vec<f32>,
     filtered_offset: usize,
     component_playback: bool,
     completed_shots: Vec<u64>,
@@ -587,6 +589,17 @@ pub struct Source {
 impl Source {
     fn filter_only(&self) -> bool {
         self.params.clip == 0 && self.params.has(source_flags::FILTER) && self.main.is_some()
+    }
+
+    fn begin_bypass(&mut self, samples: &mut [f32]) {
+        self.bypass_dry[..samples.len()].copy_from_slice(samples);
+        samples.fill(0.0);
+    }
+
+    fn end_bypass(&self, samples: &mut [f32]) {
+        for (sample, dry) in samples.iter_mut().zip(&self.bypass_dry) {
+            *sample += *dry;
+        }
     }
 
     fn active(&self) -> bool {
@@ -980,6 +993,11 @@ impl Mixer {
         self.prepare_source(handle);
         let rate = self.config.sample_rate;
         let source = self.sources.entry(handle).or_default();
+        if params.has(source_flags::FILTER) || !params.filters.is_empty() {
+            source
+                .bypass_dry
+                .resize(self.config.buffer_size.max(BLOCK as u32) as usize * 2, 0.0);
+        }
         if params.has(source_flags::KEEP_OUTPUT) && source.output.is_none() {
             source.output = Some(Ring::new());
         }
@@ -1060,7 +1078,7 @@ impl Mixer {
         let rate = self.config.sample_rate;
         if let Some(zone) = &mut self.zone
             && zone.id == d.id
-            && zone.reverb.rate() == rate
+            && zone.reverb.configuration() == (rate, self.config.buffer_size.max(1))
         {
             if zone.spec != spec {
                 zone.reverb.tune(&spec);
@@ -1068,8 +1086,9 @@ impl Mixer {
             }
             return;
         }
-        self.zone = match SfxReverb::new(rate) {
+        self.zone = match SfxReverb::new(rate, self.config.buffer_size) {
             Ok(mut reverb) => {
+                reverb.initialize_zone_return();
                 reverb.tune(&spec);
                 Some(ZoneReverb {
                     id: d.id,
@@ -1829,6 +1848,7 @@ impl Mixer {
             self.listener_bypass[..n * 2].fill(0.0);
         }
         let zone_on = self.zone.is_some() && need_mix;
+        let zone_id = self.zone.as_ref().map_or(0, |zone| zone.id);
         if zone_on {
             self.zone_input[..n * 2].fill(0.0);
         }
@@ -1907,6 +1927,7 @@ impl Mixer {
             // `AudioSource.bypassEffects`: "Applied from filter components or global listener
             // filters". A paused or not yet submitted source does not advance its components.
             let bypass = flags & source_flags::BYPASS_EFFECTS != 0;
+            let separate_return = bypass && flags & source_flags::SPATIAL_STEREO != 0;
             let voices_running = source
                 .main
                 .as_ref()
@@ -1927,10 +1948,22 @@ impl Mixer {
                         callback,
                     );
                 }
+                let mut dry = if separate_return {
+                    std::mem::take(&mut source.bypass_dry)
+                } else {
+                    Vec::new()
+                };
+                if separate_return {
+                    dry[..n * 2].fill(0.0);
+                }
                 let _ = render_source_voices(
                     source,
                     clips,
-                    buffer,
+                    if separate_return {
+                        &mut dry[..n * 2]
+                    } else {
+                        buffer
+                    },
                     n,
                     t0,
                     pitch,
@@ -1946,9 +1979,17 @@ impl Mixer {
                 // Components below the generating script (none may sit above it). Unbound's
                 // choice (unmeasured): they also process the source's one-shots.
                 if voices_running {
-                    source
-                        .chain
-                        .process(buffer, Some(filter_stage::AFTER_SCRIPTS), bypass);
+                    source.chain.process(
+                        buffer,
+                        Some(filter_stage::AFTER_SCRIPTS),
+                        bypass && !separate_return,
+                    );
+                }
+                if separate_return {
+                    for (sample, dry) in buffer.iter_mut().zip(&dry) {
+                        *sample += *dry;
+                    }
+                    source.bypass_dry = dry;
                 }
             } else if filter {
                 if source
@@ -1987,12 +2028,18 @@ impl Mixer {
                                     None,
                                 );
                             }
+                            // Bypass keeps the voice on its dry route and supplies silence to
+                            // the separate script return. A clipless script remains a generator.
+                            // Unity 6000.0.71f1, tests/projects/audiodistortion scripted controls.
+                            if separate_return {
+                                source.begin_bypass(&mut input);
+                            }
                             // The Inspector order is the processing order: components above
                             // the scripts, the scripts, then the components below them.
                             source.chain.process(
                                 &mut input,
                                 Some(filter_stage::BEFORE_SCRIPTS),
-                                bypass,
+                                bypass && !separate_return,
                             );
                             if let Some(cb) = callback {
                                 cb(
@@ -2007,8 +2054,11 @@ impl Mixer {
                             source.chain.process(
                                 &mut input,
                                 Some(filter_stage::AFTER_SCRIPTS),
-                                bypass,
+                                bypass && !separate_return,
                             );
+                            if separate_return {
+                                source.end_bypass(&mut input);
+                            }
                             source.filtered = input;
                             source.filtered_offset = 0;
                         }
@@ -2023,13 +2073,12 @@ impl Mixer {
                 }
             } else {
                 let mut zone_send = ZoneSend {
+                    return_id: zone_id,
                     samples: &mut zone_input[..n * 2],
                     gain: source.params.reverb_zone_mix,
                     buffer_size: dsp_frames,
                 };
-                let measured_send = zone_on
-                    && source.params.reverb_zone_mix > 0.0
-                    && flags & source_flags::ZONE_VOICE_SEND != 0;
+                let measured_send = zone_on && flags & source_flags::ZONE_VOICE_SEND != 0;
                 let finished_at = render_source_voices(
                     source,
                     clips,
@@ -2348,10 +2397,26 @@ struct ZoneSendState {
     looping: bool,
     step: f64,
     include: bool,
+    gain: Option<ParameterRamp>,
+    return_id: Option<u64>,
+}
+
+impl ZoneSendState {
+    fn connection_gain(&mut self, gain: f32, return_id: u64, already_playing: bool) -> f32 {
+        if self.return_id != Some(return_id) {
+            self.return_id = Some(return_id);
+            self.gain = Some(ParameterRamp::new(if already_playing { 0.0 } else { gain }));
+        }
+        self.gain
+            .as_mut()
+            .expect("prepared zone connection")
+            .next(gain, VOICE_GAIN_RAMP_FRAMES)
+    }
 }
 
 /// Reused zone input receives each decoded voice before source components.
 struct ZoneSend<'a> {
+    return_id: u64,
     samples: &'a mut [f32],
     gain: f32,
     buffer_size: u64,
@@ -2644,11 +2709,18 @@ fn render_voice(
             let right = (m[2] * l + m[3] * r) * v;
             out[f * 2] += left;
             out[f * 2 + 1] += right;
-            if voice.zone_send.include
-                && let Some(send) = zone_send.as_deref_mut()
-            {
-                send.samples[f * 2] += left * send.gain;
-                send.samples[f * 2 + 1] += right * send.gain;
+            if let Some(send) = zone_send.as_deref_mut() {
+                // Zone send changes use the same 64-frame connection ramp as voice gains.
+                // Unity 6000.0.71f1, tests/projects/audioreverb live bypass controls.
+                let gain = voice.zone_send.connection_gain(
+                    send.gain,
+                    send.return_id,
+                    voice.fade_frames > 0,
+                );
+                if voice.zone_send.include {
+                    send.samples[f * 2] += left * gain;
+                    send.samples[f * 2 + 1] += right * gain;
+                }
             }
         }
         voice.advance_fade(measured_matrix);
@@ -5425,6 +5497,66 @@ mod tests {
         let (out, below) = run(Some(filter_stage::AFTER_SCRIPTS));
         assert_eq!(below.input, plain.input);
         assert_eq!(out, through(&below.emitted, &highpass, 48000)[..out.len()]);
+    }
+
+    #[test]
+    fn a_return_connected_to_an_existing_voice_fades_in_without_restarting_its_clock() {
+        let mut state = ZoneSendState::default();
+        assert_eq!(state.connection_gain(0.5, 1, false), 0.5);
+        // A new return reconnects this running voice; its gain starts at silence.
+        assert_eq!(state.connection_gain(0.5, 2, true), 0.0);
+        let gains: Vec<_> = (0..64)
+            .map(|_| state.connection_gain(0.5, 2, true))
+            .collect();
+        assert!(gains[0] > 0.0 && gains[31] > 0.2 && gains[31] < 0.3);
+        assert_eq!(gains[63], 0.5);
+        // A source's own live bypass changes the same connection instead of replacing it.
+        assert_eq!(state.connection_gain(0.0, 2, true), 0.5);
+    }
+
+    #[test]
+    fn a_bypassed_scripted_clip_keeps_dry_audio_and_a_separate_generated_return() {
+        use std::cell::Cell;
+        thread_local! { static SILENT: Cell<bool> = const { Cell::new(true) }; }
+        extern "C" fn script(
+            kind: i32,
+            _: u64,
+            data: *mut f32,
+            frames: i32,
+            channels: i32,
+            _: i64,
+        ) {
+            if kind != callback::SOURCE_FILTER {
+                return;
+            }
+            let samples =
+                unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+            SILENT.with(|silent| silent.set(silent.get() && samples.iter().all(|x| *x == 0.0)));
+            for sample in samples {
+                *sample = 0.03125;
+            }
+        }
+        let filters = [AudioFilterDescriptor {
+            cutoff: 0.4,
+            ..component(1, filter_kind::DISTORTION, filter_stage::AFTER_SCRIPTS)
+        }];
+        let dry = render_source(&[], 0, stereo_tone(8192), 2048);
+        let mut mixer = Mixer::new(MixerConfig::default());
+        mixer.add_clip(1, stereo_tone(8192));
+        mixer.set_callback(Some(script));
+        source_with(&mut mixer, 7, 1, |p| {
+            p.flags =
+                source_flags::FILTER | source_flags::BYPASS_EFFECTS | source_flags::SPATIAL_STEREO;
+            p.filters = filters.to_vec();
+        });
+        play(&mut mixer, 7, command::PLAY, 0.0);
+        let mut output = vec![0.0; dry.len()];
+        mixer.render(&mut output, 2);
+        let generated = through(&vec![0.03125; output.len()], &filters, 48000);
+        assert!(SILENT.with(Cell::get));
+        for ((actual, dry), generated) in output.iter().zip(dry).zip(generated) {
+            assert_eq!(*actual, dry + generated);
+        }
     }
 
     #[test]

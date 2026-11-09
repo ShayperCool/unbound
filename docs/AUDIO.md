@@ -199,7 +199,7 @@ Decoded interpolation weights the neighboring samples separately before adding
 them. This operation order also prevents a small input difference from crossing
 the Chorus history's quantization boundary.
 
-Spatial Distortion/Chorus combined with source OnAudioFilterRead scripts remains unsupported and is listed by doctor.
+Static spatial Distortion/Chorus with source OnAudioFilterRead is measured by [the scripted spatial controls](../tests/projects/audiodistortion/SCRIPT_MEASUREMENT.md). Live clipped-chain bypass reconnection remains explicitly unsupported and doctor-listed; all five full reconnection comparisons remain visible.
 
 Zone sends receive each voice's spatial output before its source components.
 A naturally ending voice omits its entire final DSP buffer from the zone send;
@@ -208,15 +208,13 @@ while the zone return continues its prior history. Device periods that split a
 DSP buffer use the same completion decision, cached once per voice and buffer.
 `Compat.AudioZoneVoiceSendMeasured` selects this behavior.
 
-Cold zone activation, warm activation and source completion pass. Creating or
-reactivating zones during existing playback remains unsupported: it requires the
-reverb parameter transition while histories run. That context reports an error,
-keeps the dry source audible and silences the unsupported zone return. It is
-listed by `unbound doctor`. The five activation lifecycle controls retain their full
-Native differences in the strict report; a separate gate requires the diagnostic,
-checks every dry Master float against Native, and checks device PCM against the
-unchanged dry output. Stop the sources and disable all zones before reactivating them to use the measured
-startup path.
+Cold/warm activation, source completion and activation during existing playback pass.
+The [live zone controls](../tests/projects/audioreverb/LIVE_MEASUREMENT.md) retain every
+sample of enable/disable, GameObject activation, source bypass and destroy/recreate
+at both rates. Disabled zones keep their return histories while parameters crossfade
+over a DSP buffer. Destroying the last initialized zone releases the return. A new
+return fades its send from each already playing voice over 64 frames. All 141 original
+cases, including the five formerly rejected activation controls, are required.
 
 ## Measured spatial playback
 
@@ -235,8 +233,8 @@ DSP buffers. They are not promises for other releases or output layouts.
 | Measured | A source's own Rigidbody supplies linearVelocity; sources without one and listeners use transform delta times reciprocal clock duration. Auto selects the fixed loop with a Rigidbody on the object or a parent; Fixed always selects it, Dynamic selects the frame loop. Parent-body sources use their transform delta, not the parent's linearVelocity. The fixed node samples before script FixedUpdate and physics and submits its packets immediately. Starting playback resets the transform sample while retaining a source body's selected-loop velocity. The public fixed-step getter round-trips through the existing clock conversion (`Compat.FixedClockTicksMeasured`), which changes the 44.1 kHz body motion. The 40 audioreverb player-loop controls cover both endpoints, own/parent bodies, transform motion and opposing fixed/dynamic body writes and off-axis listener motion at both rates. Each source caches the listener pose and relative velocity at its selected loop. Fixed sources retain the earlier listener pose for panning; distance curves, attenuation and Doppler use the newer listener position. Frame sources use the latest sampled pose throughout. Doppler projects source-minus-listener velocity along their offset before normalizing. The factor is `max(1e-6, (340-scale*radialSpeed)/340)`, then blended with 1 by spatialBlend. The audiodistortion controls additionally cover source levels 0/1/2, project factors 0/1/2 and extreme velocities. |
 | Measured | Decoded playback computes a single-precision frequency, capped at 1 MHz, before converting to a source-frame step and accumulating phase in double precision. Interpolation computes `first*(1-fraction)+second*fraction`. Non-looping interpolation reads the first frame for lookahead past the last frame, then stops. Non-integer pitch, differing clip/output rates, an unrouted control and extreme velocities distinguish these operations. |
 | Implementation | `Compat.AudioSpatialStereoMeasured` selects these mechanisms. Each voice chooses its clip's mono/stereo matrix, including one-shots. Curves use cached packet storage. Spatial state and voice-priority storage are reused on the audio thread; priority selection partitions rather than sorting every source. Other releases retain the previous approximate spatial path until measured. |
-| Documented, Unity 6000.0 | [Pause](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.Pause.html) pauses playback; [isPlaying](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-isPlaying.html) returns false while paused. [UnPause](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.UnPause.html) resumes the retained playback, as does Play on a paused source. The added pause controls render four paused buffers and then resume a nonzero source with UnPause or Play, recording the state change and the resumed sample sequence after the cursor has advanced. Zone activation while such voices are retained remains explicitly unsupported. |
-| Measured startup | `Compat.AudioZoneStartupMeasured` selects the initial zone state. The first Generic zone uses processing delays of 0.02/0.04 seconds and reverb level 0 until the requested values change. Later activations use their requested values. A selected zone preset supplies the sound parameters; scalar setters retain values for User without changing the selected preset's sound. Reassigning the same preset preserves those stored scalar values. The additional first-zone controls cover Generic, Cave, User and individual overrides. Mid-playback activation still fails clearly as described above. |
+| Documented, Unity 6000.0 | [Pause](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.Pause.html) pauses playback; [isPlaying](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-isPlaying.html) returns false while paused. [UnPause](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.UnPause.html) resumes the retained playback, as does Play on a paused source. The added pause controls render four paused buffers and then resume a nonzero source with UnPause or Play, recording the state change and the resumed sample sequence after the cursor has advanced. Zone activation while such voices are retained is covered by the original pause/activate PCM control. |
+| Measured startup | `Compat.AudioZoneStartupMeasured` selects the initial zone state. The first Generic zone uses processing delays of 0.02/0.04 seconds and reverb level 0 until the requested values change. Later activations use their requested values. A selected zone preset supplies the sound parameters; scalar setters retain values for User without changing the selected preset's sound. Reassigning the same preset preserves those stored scalar values. The additional first-zone controls cover Generic, Cave, User and individual overrides. Mid-playback activation now preserves histories and applies the measured parameter transitions. |
 
 # AudioMixer: SFX Reverb
 
@@ -284,29 +282,28 @@ milliseconds converted with `floor(ms * rate / 1000)`. The constants are in `rev
 - **Room LF.** `G (s^2 + sqrt2 s + 1) / (G s^2 + sqrt(2G) s + 1)`, bilinear with the prewarp at LF
   Reference.
 - **Early reflections.**
-  - Four taps per channel at `max(floor(f32 ReflectDelay * rate) - 1, 0)` plus fixed offsets.
-  - The taps pass two allpasses (5.885 and 7.676 ms, g 0.63).
-  - Gain `level(Room + Reflections) / (2 sqrt2)`.
+  - The input tap is `max(floor(f32 ReflectDelay * rate) - 1, 0)`.
+  - Gain `level(Room + Reflections) / (2 sqrt2)` precedes two shared allpasses
+    (5.885 and 7.676 ms, g 0.63), then four fixed output taps per channel.
   - Reverb Delay, Density, Diffusion and Decay Time do not change them.
 - **Late reverb.**
   - **Lines.** Eight lines `k` with nominal length `m_k = 61 ms * rate * f * 1.32^k`, where
     `f = 0.1 + 0.9 (Density/100)^3`. Each line is fed the input at its own tap, all in float32
     with `D = ReflectDelay + ReverbDelay`: line 0 at `max(floor(D * rate), 1)`, line `k > 0` at
-    `floor((D + 18.7 ms * 1.29^(k-1)) * rate)` frames, each plus `frames(1.488 ms) - 1` (70 at 48
-    kHz, 64 at 44.1 kHz). Adding the tap before truncating matters when `D * rate` is fractional:
-    a reverb zone heard at weight 0.8 (691.2 frames at 48 kHz) puts lines 2 and 4 one frame later
-    than truncating `D * rate` first (tests/projects/audioreverb). Every mixerreverb and reverb
-    filter onset is unchanged.
+    `floor((D + 18.7 ms * 1.29^(k-1)) * rate)` frames, each minus one. The common
+    output delay stays after the feedback network, so changing parameters does not move
+    that output history into the input history. The combined static onset is unchanged.
   - **Feedback.** Line `k` also receives `c1_k` times its successor's transformed output, delayed
     by `round(m_k) - 1`.
   - **Damping.** Each line has a one-pole with the DMO I3DL2 coefficients: `c1 = 10^(-3 m / (rate
     T))`, and `c2` from Decay HF Ratio at HF Reference. A ratio above 1 acts as 1, and `c2` is
     clamped to 0.99, also when `c1^(2 - 2/ratio)` overflows float32 (short decays with a low
     ratio: the PaddedCell preset).
-  - **Butterfly.** The transform has three stages of `[[cos, -sin], [sin, cos]]` with angle
-    `pi/4 * Diffusion/100`.
-  - **Output.** Transformed output `u` reaches channel `(u-1) mod 2` after the fan-out offset
-    `(u-1) mod 8`.
+  - **Butterfly.** Three stages of `[[1, tan], [-tan, 1]]`, with angle
+    `pi/4 * Diffusion/100`, follow a separate `cos(angle)^3` normalization gain.
+  - **Output.** Transformed line `u` reaches channel `(u-1) mod 2` after output tap
+    `(u-1) mod 8`. Tap delays start at 1.5 ms times output rate, multiply by 1.47
+    in float32, then round to whole frames and subtract one.
   - **Gain.** `sqrt(mean_k(1 - c1_k^2) / 8) * level(Room + Reverb)`.
 - **Wet mixing.** SFX Reverb follows the [shared static Wet rule](#static-effect-slot-wet-mixing)
   through 0 dB. The measured release uses the -70 dB processed-output boundary, passes exactly
@@ -424,8 +421,9 @@ the Manual (*Audio Reverb Filter*, *Audio Reverb Zone*):
   describes the listener's zone influence; [reverbZoneMix](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-reverbZoneMix.html)
   describes the source send and permits 1..1.1 for a near-field boost. Neither specifies its
   whole-mB quantization or first-activation timing. Added lifecycle controls extend this
-  to cold/warm activation, Stop, natural completion and overlapping voices. Mid-playback
-  activation remains explicitly unsupported; its strict comparison and refusal gate remain visible.
+  to cold/warm activation, Stop, natural completion and overlapping voices. The additional
+  live controls cover mid-playback activation, disabling and replacement; all original
+  activation PCM is required by the gate.
 - Still unmeasured: listener components processing zone reverb, disable/re-enable within one
   frame, parameter changes while a tail runs, other output
   layouts, sample rates and releases.
@@ -548,10 +546,12 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
   scaled time and paused scaled time. Snapshot parameters advance once per game update in their
   stored units; the existing Send gain ramp and persistent detector then process each DSP block.
   Both independent Editor captures agree bit for bit at 48000 and 44100 Hz. Exposed overrides
-  retain ownership, and ClearFloat can release one into a supported transition. UnscaledTime
-  sidechain transitions still fail before scheduling or changing updateMode.
-  UnscaledTime follows wall time even under captureDeltaTime, so a repeatable reference clock
-  remains a follow-up. Parameters held by overrides and unrelated snapshot changes remain usable.
+  retain ownership, and ClearFloat can release one into a transition. The additional
+  [UnscaledTime profile](../tests/projects/mixerduck/UNSCALED_MEASUREMENT.md) certifies complete
+  PCM through paused, half-speed and double-speed game clocks using relative durations.
+  It also covers mode switching, nonlinear curves, weighted selection, same-target duration
+  changes and clearing an applied override during a transition. The older absolute wall-time
+  diagnostic remains unchanged and unclaimed.
   The Ratio 10-to-0.2 boundary capture retains the rounded GetFloat result 0.199999809 and
   continues rendering. Snapshot-owned Duck parameters therefore admit rounding within one float
   step at the larger absolute Editor range bound; the DSP receives the stored value. Script

@@ -437,6 +437,18 @@ namespace Unbound.Runtime
         internal static NotSupportedException CustomCutoffCurve() =>
             new NotSupportedException("AudioLowPassFilter.customCutoffCurve is not supported by Unbound: the cutoff does not follow a distance curve");
 
+        // Static scripted spatial chains are measured. Reconnecting one during playback also
+        // changes callback input ownership and effect histories, which remains unsupported.
+        internal static void ValidateLiveBypass(AudioSource source)
+        {
+            if (!Compat.AudioSpatialStereoMeasured || source.clip == null || !source.m_HasFilter
+                || !source.UsesSpatialBlend || (!source.m_Paused && !source.isPlaying)) return;
+            foreach (var component in source.m_GameObject.m_Components)
+                if ((component is AudioDistortionFilter || component is AudioChorusFilter)
+                    && component is Behaviour effect && effect.isActiveAndEnabled)
+                    throw new NotSupportedException("Unbound: changing bypassEffects during playback of a scripted 3D Distortion/Chorus chain is not supported; stop the source before reconnecting its filters");
+        }
+
         static bool IsFilterComponent(Component c) => c is AudioLowPassFilter || c is AudioHighPassFilter || c is AudioEchoFilter || c is AudioReverbFilter || c is AudioDistortionFilter || c is AudioChorusFilter;
 
         /// <summary>Why a component's DSP does not run on the project's release: the kernels it
@@ -499,7 +511,7 @@ namespace Unbound.Runtime
             var go = source.m_GameObject;
             if (go == null) return 0;
             int count = 0;
-            bool scripts = false, below = false, spatialComponents = false;
+            bool scripts = false, below = false;
             bool spatial = !source.bypassEffects && source.UsesSpatialBlend;
             string error = null;
             foreach (var c in go.m_Components)
@@ -518,7 +530,6 @@ namespace Unbound.Runtime
                 if (Unmeasured(c) is string unmeasured) error ??= unmeasured;
                 if (spatial && (c is AudioDistortionFilter || c is AudioChorusFilter))
                 {
-                    spatialComponents = true;
                     if (!Compat.AudioSpatialStereoMeasured)
                         error ??= c is AudioDistortionFilter ? SpatialDistortionError : SpatialChorusError;
                 }
@@ -534,8 +545,6 @@ namespace Unbound.Runtime
                 if (table == null || table.Length == count) Array.Resize(ref table, Math.Max(4, count * 2));
                 table[count++] = d;
             }
-            if (spatialComponents && scripts)
-                error ??= "3D Distortion or Chorus combined with OnAudioFilterRead is not supported";
             source.ReportFilterChain(error);
             return error == null ? count : 0;
         }

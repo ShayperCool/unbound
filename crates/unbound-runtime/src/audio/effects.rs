@@ -804,8 +804,8 @@ impl Effect {
         }
         if let Some(sfx) = &spec.sfx {
             let reverb = match &mut self.reverb {
-                Some(reverb) if reverb.rate() == rate => reverb,
-                slot => slot.insert(Box::new(SfxReverb::new(rate)?)),
+                Some(reverb) if reverb.configuration() == (rate, buffer.max(1)) => reverb,
+                slot => slot.insert(Box::new(SfxReverb::new(rate, buffer)?)),
             };
             reverb.tune(sfx);
         }

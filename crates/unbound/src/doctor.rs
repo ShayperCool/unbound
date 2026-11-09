@@ -24,9 +24,8 @@ const RENDERING_LIMITATIONS: &[&str] = &[
 
 const AUDIO_LIMITATIONS: &[&str] = &[
     "3D AudioDistortionFilter and AudioChorusFilter are measured only on Unity 6000.0.71f1; other releases reject these placements.",
-    "3D AudioDistortionFilter or AudioChorusFilter combined with source OnAudioFilterRead scripts is not supported.",
+    "Changing bypassEffects while a scripted 3D Distortion/Chorus clip chain is playing is not supported; stop the source before reconnecting its filters.",
     "AudioListener filter components interleaved with OnAudioFilterRead scripts, or sharing their GameObject with an AudioSource, are not supported.",
-    "Activating or reactivating AudioReverbZones during playback is not supported; stop the sources and disable all zones before reactivating them. The unsupported zone return is silent.",
 ];
 
 /// The keys whose referenced object turns an ignored scene settings class into an unread one

@@ -28,7 +28,7 @@ on that case's entire timing-dependent output. It has no canonical reference and
 is not a source of accepted samples for this experiment. Its complete captures,
 comparisons and original private projects remain outside Git. The current experiment
 adds active parameter controls and measures instant UnscaledTime separately; timed
-UnscaledTime PCM remains unclaimed. No original suspension oracle or tolerance changes.
+UnscaledTime PCM in that experiment remains unclaimed. A separate relative-duration control now certifies it in [mixerduck/UNSCALED_MEASUREMENT.md](../mixerduck/UNSCALED_MEASUREMENT.md). No original suspension oracle or tolerance changes.
 
 Record twice with fresh directories before publishing:
 

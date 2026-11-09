@@ -1,15 +1,15 @@
 {
- "command": "python3 tests/projects/audioreverb/native.py --release 6000.0.71f1 --rate 48000 --work ~/.cache/unbound/q217-retained-native-48000-a",
+ "command": "python3 tests/projects/audioreverb/native.py --release 6000.0.71f1 --rate 48000 --work \"$work/native\"",
  "files": {
   "Assets/Editor.meta": "6e6c8e2299311a6e5da35ca99f29257fc26130c4e11bd755ce9fc61805160509",
   "Assets/Editor/ProbeRunner.cs.meta": "51fd5658455389bf8f9f41066001c6275cf9842ce9be9360b2024fce48924098",
   "Assets/Resources.meta": "0dbcfc20424d87e4c129948d7d7594795481a347bc50adb7384b5cda4ece77f9",
-  "Assets/Resources/Probe.mixer": "8a81c6aba18ff89b34e1e03dbc188b40716304b3fedbeb826576bf0fe545557a",
+  "Assets/Resources/Probe.mixer": "dce260c9bd19ccd6a06558d43eaa00a9039fef04d3b0b6ea6d53d4b497ea6116",
   "Assets/Resources/Probe.mixer.meta": "843faf127ae88e9a1e1ec0cef4d5ffb1e1820eef7236af183b1575982c4d2458",
   "Assets/Resources/Serialized.prefab": "cb271d50a88932425917cc67eef23ecca1648a445c7cf96553481d1d5f65f024",
   "Assets/Resources/Serialized.prefab.meta": "8cfd80919b8e01d9d627ae658a5a8d0ba3b3486fb061cee998e2532e10c12b1d",
   "Assets/Scenes.meta": "e00fc8e0fc8c21164d46241c446a8769cef69ebab9368a3b49a49740e3e46cdd",
-  "Assets/Scenes/Probe.unity": "6930b21dd1884be72fdb2d522f1faa3dfe03b1bed2bcdc7286b851e0021b96ef",
+  "Assets/Scenes/Probe.unity": "f7f52ceeaf27acc3ccdf1b1f9f5190a9d206e964698df63c328785d02dfe4a52",
   "Assets/Scenes/Probe.unity.meta": "b3568608a240422bdfcf3a93a5bd62b939bf8c65a11ce789d5ca129832e486d0",
   "Assets/Scripts.meta": "3b3d622a3a4c7c80e1bd1c55f9b4ae069c988a3761e422e083caca346167f731",
   "Assets/Scripts/AudioReverbProbe.cs.meta": "65c4f8411fe0e3ca363ad41fc8cd0ad8d559d0a182cdbd5b3a8ab50d6d92245d",
@@ -39,7 +39,7 @@
   "Assets/Editor/ProbeRunner.cs": "211c00c3610c3cc12ccb5191506f386aa0b31f2bb9ec59a02977cb457f933aba",
   "Assets/Scripts/AudioMotionDriver.cs": "790e33522ddda89ef5a140956c1a005e0cf13815cf61da8b2753bb8978d0253d",
   "Assets/Scripts/AudioMotionDriver.cs.meta": "6bb9c9ec389698fb86071bd8315f416f489463837d82621805f6e1d3909e7c02",
-  "Assets/Scripts/AudioReverbProbe.cs": "55ac43658008ced6fe0137d78607b7b7cdcd1d6df414d99640817c4c692e50ee",
+  "Assets/Scripts/AudioReverbProbe.cs": "05bf087b6d4d094bc02deb9e784067e3904a3e3a2e43a5bff754728cd585749b",
   "Packages/manifest.json": "8f18966585790f5958f193b4a1bbb412fa1294b70972bbfabd7d3b9ba91cf030",
   "ProjectSettings/ProjectVersion.txt": "03282bc6dd30504666a9e67cce65afe9bac94643abcc8f1e62ddf9cf75017c6a",
   "tests/projects/audioreverb/native.py": "8fc0d33f1ba3943b77202b87d289f185f4af63240ce481559719184a99a41599"
