@@ -4,6 +4,7 @@
 Collects the license texts of everything the archive ships besides Unbound's own code:
 
   - the vendored native libraries under native/ (PhysX, NvCloth, libvorbis, libtess2, ...);
+  - third-party code ported into managed/ and crates/ (Box2D, DotRecast, Yoga, ...);
   - the Rust crates linked into the `unbound` binary (normal dependencies only, for the build's
     target platform), including the C/C++ libraries that -sys crates compile in;
   - the NuGet packages copied into managed/ (from the managed build's project.assets.json).
@@ -89,6 +90,49 @@ def native_section():
     return section
 
 
+# Third-party code translated into Unbound's own sources whose notice is a comment in the file:
+# (component, file, the comment's first line, MIT copyright holder or None). The comment paragraph
+# starting there is quoted; for MIT-licensed code the MIT License text follows with that holder.
+IN_FILE_NOTICES = [
+    ('Yoga 1.9.0 (C# port)', 'managed/UnityEngine/UIElements/Layout/Yoga.cs',
+     '// Yoga is Copyright', 'Facebook, Inc. and its affiliates (2014-present)'),
+    ('Ooura FFT (fft4g, Rust port)', 'crates/unbound-runtime/src/audio/pitch.rs',
+     '// Copyright Takuya OOURA', None),
+]
+
+
+def mit_license(holder):
+    text = read_text(ROOT / 'LICENSE')
+    return re.sub(r'^Copyright \(c\) .*$', f'Copyright (c) {holder}', text, count=1, flags=re.M)
+
+
+def ported_section():
+    section = Section('Ported source code',
+                      'Third-party code translated into `managed/` (compiled into '
+                      '`UnityEngine.CoreModule.dll`) or `crates/` (linked into `bin/unbound`).')
+    tracked = subprocess.run(['git', 'ls-files', 'managed', 'crates'], check=True,
+                             capture_output=True, text=True, cwd=ROOT).stdout.splitlines()
+    by_directory = {}
+    for path in tracked:
+        if LICENSE_NAME.match(Path(path).name) and Path(path).suffix.lower() not in NOT_TEXT:
+            by_directory.setdefault(str(Path(path).parent), []).append(ROOT / path)
+    for directory, files in sorted(by_directory.items()):
+        section.add(directory, None, [read_text(f) for f in sorted(files)])
+    for name, path, first, mit_holder in IN_FILE_NOTICES:
+        lines = (ROOT / path).read_text().splitlines()
+        start = next((i for i, line in enumerate(lines) if line.startswith(first)), None)
+        if start is None:
+            sys.exit(f'notices: the {name} notice ("{first}") is no longer in {path}')
+        end = start
+        while end < len(lines) and lines[end].startswith('//') and lines[end].strip() != '//':
+            end += 1
+        notice = '\n'.join(lines[start:end])
+        if mit_holder is not None:
+            notice += '\n\n' + mit_license(mit_holder)
+        section.add(name, path, [notice])
+    return section
+
+
 def host_triple():
     out = subprocess.run(['rustc', '-vV'], check=True, capture_output=True, text=True,
                          cwd=ROOT).stdout
@@ -168,7 +212,7 @@ def main():
     parser.add_argument('--triple', help='Rust target triple (default: the host)')
     parser.add_argument('--out', type=Path, required=True)
     args = parser.parse_args()
-    sections = [native_section(), rust_section(args.triple or host_triple()),
+    sections = [native_section(), ported_section(), rust_section(args.triple or host_triple()),
                 nuget_section()]
     header = ('# Third-party notices\n\nUnbound itself is licensed under the MIT License '
               '(`LICENSE`). This archive also contains the following third-party software, '
