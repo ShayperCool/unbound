@@ -136,6 +136,23 @@ public class RealtimeGIProbe : MonoBehaviour
         s.point.enabled = false;
         yield return Converge();
         Capture("room-pointoff", s);
+
+        // DynamicGI.updateThreshold 0: every change updates the lightmaps again, so the indirect
+        // scale case converged from the brighter bounce state comes out at exactly twice
+        // room-intensity (at the default of 1, parts whose inputs change by less than 1% keep
+        // their earlier lighting).
+        s.point.enabled = true;
+        s.point.bounceIntensity = 3f;
+        yield return Converge();
+        DynamicGI.updateThreshold = 0f;
+        s.point.bounceIntensity = 1f;
+        DynamicGI.indirectScale = 2f;
+        yield return Converge();
+        Capture("room-threshold0", s);
+        DynamicGI.updateThreshold = 1f;
+        DynamicGI.indirectScale = indirect;
+        s.point.enabled = false;
+        yield return Converge();
         s.spot.enabled = true;
         yield return Converge();
         Capture("room-spot", s);
