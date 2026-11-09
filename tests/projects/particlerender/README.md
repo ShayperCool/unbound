@@ -125,8 +125,11 @@ Everything below is measured in this release, not documented.
   step apart.
 - `bake-scratch-memory`: a texture passed in shows the Editor's scratch memory past the data; so do
   mesh particles' indices textures past their index pairs and with PerParticle.
-- `freeform-stretching`: with rotateWithStretchDirection on an emitter whose y scale is not 1, a
-  particle moving partly along the view turns by another, unresolved stretch angle.
+- `freeform-stretching` (3): with rotateWithStretchDirection, baked in the emitter's frame (no
+  BakePosition/BakeRotationAndScale) from a rotated emitter scaled (1.5, 0.5, 2), the particle moving
+  along the emitter's y turns by another angle; its world-space bake matches. The stretch angle is
+  the cosine of the stretch's angle to the camera's up times the emitter's y scale, limited to
+  [-1, 1] (every freenorm/transform/* bake).
 - `stretched-normals`: side-view normals differ by up to 1e-3, the normal of a collapsed particle in
   a sorted system, and BakeRotationAndScale with a rotated non-uniformly scaled emitter.
 - `prewarm-procedural`: a system in procedural mode is prewarmed without the stepped simulation

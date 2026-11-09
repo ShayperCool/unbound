@@ -1361,8 +1361,7 @@ namespace UnityEngine
                 var right = Vector3.Cross(view.Up, toCamera).normalized;
                 var up = Vector3.Cross(toCamera, right);
                 float angle = rotation;
-                if (r.m_RotateWithStretchDirection)
-                    angle += Mathf.Atan2(Vector3.Dot(stretchVelocity, up), Vector3.Dot(stretchVelocity, right));
+                if (r.m_RotateWithStretchDirection) angle += StretchAngle(stretchVelocity, right, up, emitterScale.y);
                 float cos = Mathf.Cos(angle), sin = Mathf.Sin(angle);
                 var direction = stretchVelocity / stretchVelocity.magnitude;
                 float length = size.y * Mathf.Abs(emitterScale.x) * r.m_LengthScale + speed * r.m_VelocityScale;
@@ -1381,6 +1380,21 @@ namespace UnityEngine
                 QuadFrame(o0, o1, out var normal, out var tangent);
                 AddStretchedCorners(position + o0, position + o1, position + o2, position + o3, normal, color, uv,
                     new Vector4(tangent.x, tangent.y, tangent.z, -1f));
+            }
+
+            /// <summary>The angle a freeform quad turns by with rotateWithStretchDirection: the
+            /// stretch's angle from the camera's right in the camera plane, taken from the cosine
+            /// of its angle to the camera's up times the emitter's y scale, limited to [-1, 1]
+            /// (6000.0.71f1, tests/projects/particlerender freenorm/transform/*: with a y scale of
+            /// 1 the plain angle; with 2 a stretch leaning less than 60 degrees from up turns
+            /// straight up). No stretch in the camera plane: 0.</summary>
+            static float StretchAngle(Vector3 stretch, Vector3 right, Vector3 up, float scaleY)
+            {
+                float x = Vector3.Dot(stretch, right), y = Vector3.Dot(stretch, up);
+                float length = Mathf.Sqrt(x * x + y * y);
+                if (!(length > 0f)) return 0f;
+                float fromUp = Mathf.Acos(Mathf.Clamp(y / length * scaleY, -1f, 1f));
+                return x < 0f ? Mathf.PI * 0.5f + fromUp : Mathf.PI * 0.5f - fromUp;
             }
 
             /// <summary>The width min/maxParticleSize allow a stretched billboard: as a fraction of
