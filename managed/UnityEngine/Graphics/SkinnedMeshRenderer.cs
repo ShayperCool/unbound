@@ -153,6 +153,7 @@ namespace UnityEngine
         Mesh m_SkinMesh;
         int[] m_SkinNodes = Array.Empty<int>();
         int m_SkinRoot;
+        int m_SkinMissFrame = -1;
 
         /// <summary>The skeleton that skins this renderer: the nearest Animator's above it (itself
         /// included) when it has no transform hierarchy and the mesh names its bones; else null.</summary>
@@ -163,9 +164,16 @@ namespace UnityEngine
                 || mesh.m_BoneNameHashes.Length != mesh.m_Bindposes.Length) return null;
             if (m_SkinAnimator == null || !transform.IsChildOf(m_SkinAnimator.transform))
             {
+                // Without an Animator above, looked for again once a frame.
+                if (m_SkinMissFrame == Time.s_FrameCount) return null;
                 m_SkinAnimator = null;
                 for (var t = transform; t != null && m_SkinAnimator == null; t = t.m_Parent)
                     m_SkinAnimator = t.m_GameObject.GetComponent<Animator>();
+                if (m_SkinAnimator == null)
+                {
+                    m_SkinMissFrame = Time.s_FrameCount;
+                    return null;
+                }
             }
             var skeleton = m_SkinAnimator != null ? m_SkinAnimator.Skeleton : null;
             if (skeleton == null) return null;

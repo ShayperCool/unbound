@@ -231,6 +231,41 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A copy of an optimized instance is optimized too and skins from its own skeleton.</summary>
+        [Fact]
+        public void ACopyOfAnOptimizedInstanceAnimatesItsOwnSkeleton()
+        {
+            var clip = Clip();
+            var original = Rig(out var animator, out _);
+            AnimatorUtility.OptimizeTransformHierarchy(original, new[] { "Rig/Hips/Spine/Hand" });
+            var copy = Object.Instantiate(original);
+            var copyAnimator = copy.GetComponent<Animator>();
+            var copySkin = copy.GetComponentInChildren<SkinnedMeshRenderer>();
+            var plain = Rig(out var plainAnimator, out var plainSkin);
+            var graph = Play(copyAnimator, clip);
+            var plainGraph = Play(plainAnimator, clip);
+            try
+            {
+                Assert.False(copyAnimator.hasTransformHierarchy);
+                Assert.Equal(new[] { "Body", "Hand" }, Children(copy.transform));
+                Assert.Empty(copySkin.bones);
+                graph.Evaluate(0.5f);
+                plainGraph.Evaluate(0.5f);
+                var expected = WorldSkin(plainSkin);
+                var actual = WorldSkin(copySkin);
+                for (int i = 0; i < expected.Length; i++) Near(expected[i], actual[i]);
+                Near(plain.transform.Find("Rig/Hips/Spine/Hand").position, copy.transform.Find("Hand").position);
+            }
+            finally
+            {
+                graph.Destroy();
+                plainGraph.Destroy();
+                Object.DestroyImmediate(original);
+                Object.DestroyImmediate(copy);
+                Object.DestroyImmediate(plain);
+            }
+        }
+
         [Fact]
         public void PlayingAnOptimizedRigAllocatesNothing()
         {
