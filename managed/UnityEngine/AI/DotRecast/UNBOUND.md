@@ -115,3 +115,21 @@ Altered (marked `Unbound:` in the sources):
 - `DtNavMeshQuery.Raycast` records the polygon beyond the hit edge that the filter excludes
   (`DtRaycastHit.blockedRef`; it finds the link holding the crossing before applying the filter),
   which `NavMesh.Raycast` reports as `NavMeshHit.mask`.
+- `DtNavMeshQuery.Raycast` goes on when its polygon list is full (reported as
+  `DT_BUFFER_TOO_SMALL`), records the last polygon it crossed (`DtRaycastHit.lastRef`), and with
+  `UNBOUND_RAYCAST_STRAIGHT_COSTS` weighs the straight ray: each polygon's part of it, up to where
+  it stops, times its cost per metre (Unity's);
+- agents shorten their corridor as Unity's (`tests/projects/navpath` `replan.*`, `place.moved`
+  walk): at every update, after finding their corners, a shortcut towards the only corner or
+  towards the second when its straight way costs at least 1 and less than the way through the
+  first (`DtPathCorridor.OptimizePathVisibility`, with the agent's own filter,
+  `DtCrowdAgentParams.filter`; no range limit); once per update, for one agent of all crowds (the
+  longest wait over 0.5 s while walking with more than two corridor polygons, the first in
+  Unity's slot order of equals: `DtCrowd.WaitForTopology`, the engine's `TopologyAgent`), a path
+  search of the corridor for 8 iterations used only when it ends within them
+  (`OptimizePathTopology`); `FinalizeSlicedFindPathPartial` takes the farthest corridor polygon
+  the search reached from another polygon (none: failure), and `MergeCorridorStartShortcut` keeps
+  the corridor from its farthest polygon the visited ones hold (the last copy of it), also when
+  that is the first visited polygon; the Detour flags that switched these off are gone;
+- an agent without avoidance gathers no neighbours (agents or obstacles), so it is never pushed out
+  of overlaps (Unity's: navpath `replan.*`).
