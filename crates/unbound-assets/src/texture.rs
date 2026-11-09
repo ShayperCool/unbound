@@ -215,6 +215,9 @@ pub struct TextureSettings {
     /// `crunchedCompression` of the build target.
     #[serde(default)]
     pub crunched: bool,
+    /// `pSDRemoveMatte`: take Photoshop's white matte out of a flattened image with transparency.
+    #[serde(default)]
+    pub remove_matte: bool,
 }
 
 fn one_by_one() -> (u32, u32) {
@@ -371,6 +374,7 @@ impl TextureSettings {
             explicit_format: platform_format(imp, build_target),
             compression,
             crunched,
+            remove_matte: boolean(imp, "pSDRemoveMatte").unwrap_or(false),
         }
     }
 
@@ -798,7 +802,8 @@ impl Importer for TextureImporter {
     // 20: mipless textures of multiple-of-4 sizes are compressed; Cursor textures keep their
     //     pixels; the import records why it is not stored as the target stores it.
     // 21: Photoshop files are read by Unbound's own reader (16-bit channels round to bytes).
-    const VERSION: u32 = 21;
+    // 22: Photoshop gray reads opaque, Remove Matte applies.
+    const VERSION: u32 = 22;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -903,7 +908,7 @@ pub fn import_texture(
     meta: &Value,
     settings: TextureSettings,
 ) -> Result<ImportedTexture> {
-    let mut image = decode(source, bytes).context("decoding")?;
+    let mut image = decode(source, bytes, settings.remove_matte).context("decoding")?;
     let (original_width, original_height) = (image.width, image.height);
     // HDR colour in a gamma project is gamma-encoded: a 2D texture's per level after resizing and
     // filtering (measured with tests/projects/textureimport), a cubemap's here before its faces
@@ -1497,7 +1502,8 @@ struct Image {
     data: Vec<u8>,
 }
 
-fn decode(source: &Path, bytes: &[u8]) -> Result<Image> {
+/// Decodes an image file; `remove_matte` applies to Photoshop files ([`psd::decode`]).
+fn decode(source: &Path, bytes: &[u8], remove_matte: bool) -> Result<Image> {
     let ext = source
         .extension()
         .and_then(|e| e.to_str())
@@ -1505,7 +1511,7 @@ fn decode(source: &Path, bytes: &[u8]) -> Result<Image> {
         .to_ascii_lowercase();
     if bytes.starts_with(b"8BPS") || (ext == "psd" && !bytes.is_empty()) {
         // Photoshop: Unity imports the flattened image.
-        let (width, height, data) = psd::decode(bytes)?;
+        let (width, height, data) = psd::decode(bytes, remove_matte)?;
         return Ok(Image {
             width,
             height,

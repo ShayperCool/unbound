@@ -1,7 +1,8 @@
 //! Photoshop files (PSD, and PSB with its wider lengths): the flattened image a file stores after
 //! its layers, which is what Unity imports. Grayscale and RGB, 8 and 16 bits per channel, raw or
 //! PackBits-compressed. A 16-bit channel v becomes the byte nearest v / 257 and a gray texel
-//! (g, g, g, alpha), as in the Unity 6000.0.71f1 Editor (tests/projects/textureimport Psd16*).
+//! (g, g, g, 1), as in the Unity 6000.0.71f1 Editor (tests/projects/textureimport Psd16*,
+//! PsdGrayAlpha*).
 use anyhow::{Context, Result, bail, ensure};
 
 /// A cursor over big-endian file data.
@@ -73,8 +74,16 @@ fn unpack_bits(packed: &[u8], len: usize, out: &mut Vec<u8>) -> Result<()> {
     Ok(())
 }
 
-/// The flattened image as RGBA8 rows top-down: (width, height, texels).
-pub(super) fn decode(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>)> {
+/// The largest side of a PSD and of a PSB (the file format's limits).
+const MAX_SIDE: [u32; 2] = [30_000, 300_000];
+/// The most channels a file may have.
+const MAX_CHANNELS: usize = 56;
+
+/// The flattened image as RGBA8 rows top-down: (width, height, texels). With `remove_matte`
+/// (`TextureImporter`'s Remove Matte) the white Photoshop blends into the flattened colour of a
+/// file whose first extra channel is the flattened transparency (a negative layer count) is taken
+/// out again.
+pub(super) fn decode(bytes: &[u8], remove_matte: bool) -> Result<(u32, u32, Vec<u8>)> {
     let mut r = Reader { data: bytes, at: 0 };
     ensure!(r.take(4)? == b"8BPS", "psd: not a Photoshop file");
     let version = r.u16()?;
@@ -89,10 +98,27 @@ pub(super) fn decode(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>)> {
     let width = r.u32()?;
     let depth = r.u16()?;
     let mode = r.u16()?;
-    // Color mode data, image resources, layers and masks: the flattened image follows them.
+    let max_side = MAX_SIDE[usize::from(wide)];
+    ensure!(
+        (1..=max_side).contains(&width) && (1..=max_side).contains(&height),
+        "psd: invalid size {width}x{height}"
+    );
+    ensure!(
+        (1..=MAX_CHANNELS).contains(&channels),
+        "psd: invalid channel count {channels}"
+    );
+    // Color mode data, image resources, then layers and masks, whose layer count is negative
+    // when the first extra channel holds the flattened image's transparency.
     r.skip_section(false)?;
     r.skip_section(false)?;
-    r.skip_section(wide)?;
+    let layers_len = if wide { r.u64()? } else { u64::from(r.u32()?) };
+    let layers_at = r.at;
+    let merged_alpha = layers_len >= if wide { 10 } else { 6 } && {
+        let layer_info_len = if wide { r.u64()? } else { u64::from(r.u32()?) };
+        layer_info_len >= 2 && (r.u16()? as i16) < 0
+    };
+    r.at = layers_at;
+    r.take(usize::try_from(layers_len).context("psd: section too large")?)?;
     let colour = match (mode, channels) {
         (1, 1..) => 1,
         (3, 3..) => 3,
@@ -106,56 +132,78 @@ pub(super) fn decode(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>)> {
         _ => bail!("psd: {depth}-bit channels are not supported (8 and 16 bits are)"),
     };
     let (w, h) = (width as usize, height as usize);
-    ensure!(w > 0 && h > 0, "psd: empty image");
     let row = w * sample;
     let plane = row * h;
-    // Only the colour channels and the first extra one (alpha) are read.
-    let used = (colour + 1).min(channels);
+    // RGB reads its colour and the first extra channel as alpha (whatever it holds); grayscale
+    // reads its gray alone, opaque (the Unity 6000.0.71f1 Editor, tests/projects/textureimport
+    // PsdMatte5, PsdGrayAlpha).
+    let used = if colour == 3 { channels.min(4) } else { 1 };
     let compression = r.u16()?;
+    let total = plane.checked_mul(used).context("psd: image too large")?;
     let planes: Vec<u8> = match compression {
-        0 => r.take(plane * used)?.to_vec(),
+        0 => r.take(total)?.to_vec(),
         1 => {
-            let rows = h * channels;
-            let mut lengths = Vec::with_capacity(rows);
-            for _ in 0..rows {
-                lengths.push(if wide {
+            // Row lengths of every channel; only those of the channels read are kept.
+            let mut lengths = Vec::with_capacity(h * used);
+            for i in 0..h * channels {
+                let len = if wide {
                     r.u32()? as usize
                 } else {
                     usize::from(r.u16()?)
-                });
+                };
+                if i < h * used {
+                    lengths.push(len);
+                }
             }
-            let mut out = Vec::with_capacity(plane * used);
-            for &len in &lengths[..h * used] {
+            let mut out = Vec::with_capacity(total.min(bytes.len().saturating_mul(128)));
+            for &len in &lengths {
                 unpack_bits(r.take(len)?, row, &mut out)?;
             }
             out
         }
         _ => bail!("psd: image data compression {compression} is not supported"),
     };
-    let value = |channel: usize, texel: usize| -> u8 {
+    let max = if sample == 1 { 255 } else { 65535 };
+    let value = |channel: usize, texel: usize| -> u32 {
         let at = channel * plane + texel * sample;
         if sample == 1 {
-            planes[at]
+            u32::from(planes[at])
         } else {
-            let v = u32::from(u16::from_be_bytes([planes[at], planes[at + 1]]));
+            u32::from(u16::from_be_bytes([planes[at], planes[at + 1]]))
+        }
+    };
+    let unmatte = remove_matte && merged_alpha && used == 4;
+    // A 16-bit channel becomes the byte nearest v / 257 (tests/projects/textureimport Psd16*).
+    let narrow = |v: u32| {
+        if sample == 1 {
+            v as u8
+        } else {
             ((v + 128) / 257) as u8
         }
     };
     let mut rgba = Vec::with_capacity(w * h * 4);
     for texel in 0..w * h {
-        let alpha = if used > colour {
-            value(colour, texel)
-        } else {
-            255
-        };
-        if colour == 1 {
-            let g = value(0, texel);
-            rgba.extend_from_slice(&[g, g, g, alpha]);
-        } else {
-            rgba.extend_from_slice(&[value(0, texel), value(1, texel), value(2, texel), alpha]);
+        let alpha = if used == 4 { value(3, texel) } else { max };
+        let mut c = [0u32; 3];
+        for (k, v) in c.iter_mut().enumerate() {
+            *v = value(if colour == 1 { 0 } else { k }, texel);
         }
+        if unmatte && alpha != 0 && alpha != max {
+            c = c.map(|v| remove_white(v, alpha, max));
+        }
+        rgba.extend_from_slice(&[narrow(c[0]), narrow(c[1]), narrow(c[2]), narrow(alpha)]);
     }
     Ok((width, height, rgba))
+}
+
+/// A channel of colour blended over white at `alpha` (both of `max` steps) back to the colour:
+/// v / a + max (1 - 1 / a), a = alpha / max, in single precision, truncated and kept as its low
+/// bits (matches the Unity 6000.0.71f1 Editor, tests/projects/textureimport PsdMatteOn).
+fn remove_white(v: u32, alpha: u32, max: u32) -> u32 {
+    let max_f = max as f32;
+    let inverse = 1.0 / (alpha as f32 / max_f);
+    let white = (1.0 - inverse) * max_f;
+    (((v as f32 * inverse + white) as i32) as u32) & max
 }
 
 #[cfg(test)]
@@ -207,6 +255,10 @@ mod tests {
         out
     }
 
+    fn decode_plain(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>)> {
+        decode(bytes, false)
+    }
+
     #[test]
     fn sixteen_bit_channels_round_to_the_nearest_byte() {
         // 0x807f / 257 = 127.9 -> 128; 0x8080 -> 128.0 -> 128; 0x7f80 = 32640 -> 127.0 -> 127;
@@ -214,23 +266,97 @@ mod tests {
         let r = vec![0x80, 0x7f, 0x80, 0x80];
         let g = vec![0x7f, 0x80, 0x00, 0xff];
         let b = vec![0xff, 0xff, 0x00, 0x00];
-        let (w, h, rgba) = decode(&file(3, 16, 3, false, &[r, g, b], 2)).unwrap();
+        let (w, h, rgba) = decode_plain(&file(3, 16, 3, false, &[r, g, b], 2)).unwrap();
         assert_eq!((w, h), (2, 1));
         assert_eq!(rgba, [128, 127, 255, 255, 128, 1, 0, 255]);
     }
 
     #[test]
-    fn gray_and_alpha_planes_with_packbits() {
+    fn gray_reads_opaque_and_ignores_extra_channels() {
         let gray = vec![10, 20, 30, 40];
         let alpha = vec![255, 0, 128, 7];
-        let (_, h, rgba) = decode(&file(2, 8, 1, true, &[gray, alpha], 2)).unwrap();
+        let (_, h, rgba) = decode_plain(&file(2, 8, 1, true, &[gray, alpha], 2)).unwrap();
         assert_eq!(h, 2);
         assert_eq!(
             rgba,
             [
-                10, 10, 10, 255, 20, 20, 20, 0, 30, 30, 30, 128, 40, 40, 40, 7
+                10, 10, 10, 255, 20, 20, 20, 255, 30, 30, 30, 255, 40, 40, 40, 255
             ]
         );
+    }
+
+    /// `file` with a layer section whose layer count is `count`.
+    fn with_layer_count(mut bytes: Vec<u8>, count: i16) -> Vec<u8> {
+        // The layer section (4 bytes of 9) starts after the header (26) and two empty sections.
+        let at = 26 + 8;
+        let section = [&[0u8, 0, 0, 6][..], &[0, 0, 0, 2], &count.to_be_bytes()].concat();
+        bytes.splice(at..at + 8, section);
+        bytes
+    }
+
+    #[test]
+    fn remove_matte_needs_the_setting_and_the_merged_transparency_mark() {
+        // Colour 200 at alpha 128 over white: 200 * 255 / 128 + 255 * (1 - 255 / 128) = 145.4.
+        let planes = vec![vec![200, 7], vec![200, 7], vec![200, 7], vec![128, 255]];
+        let flat = file(4, 8, 3, false, &planes, 2);
+        let marked = with_layer_count(flat.clone(), -1);
+        let texel = |bytes: &[u8], matte| decode(bytes, matte).unwrap().2[..4].to_vec();
+        assert_eq!(texel(&marked, true), [145, 145, 145, 128]);
+        assert_eq!(texel(&marked, false), [200, 200, 200, 128]);
+        assert_eq!(texel(&flat, true), [200, 200, 200, 128]);
+        assert_eq!(
+            texel(&with_layer_count(flat, 1), true),
+            [200, 200, 200, 128]
+        );
+        // Opaque texels keep their colour.
+        assert_eq!(decode(&marked, true).unwrap().2[4..], [7, 7, 7, 255]);
+        // Below the white, the result keeps its low bits (as the Editor's does).
+        // 10 * 1.992 - 252.99 = -233.07: -233 keeps its low byte, 23.
+        assert_eq!(remove_white(10, 128, 255), 23);
+    }
+
+    #[test]
+    fn psb_files_have_wide_lengths() {
+        // Version 2: an 8-byte layer section length, 4-byte PackBits row lengths.
+        let mut out = b"8BPS".to_vec();
+        out.extend_from_slice(&2u16.to_be_bytes());
+        out.extend_from_slice(&[0; 6]);
+        out.extend_from_slice(&3u16.to_be_bytes());
+        out.extend_from_slice(&1u32.to_be_bytes());
+        out.extend_from_slice(&2u32.to_be_bytes());
+        out.extend_from_slice(&8u16.to_be_bytes());
+        out.extend_from_slice(&3u16.to_be_bytes());
+        out.extend_from_slice(&[0; 8]);
+        out.extend_from_slice(&0u64.to_be_bytes());
+        out.extend_from_slice(&1u16.to_be_bytes());
+        for _ in 0..3 {
+            out.extend_from_slice(&3u32.to_be_bytes());
+        }
+        for v in [1u8, 2, 3] {
+            out.extend_from_slice(&[1, v, v]);
+        }
+        let (w, h, rgba) = decode_plain(&out).unwrap();
+        assert_eq!((w, h), (2, 1));
+        assert_eq!(rgba, [1, 2, 3, 255, 1, 2, 3, 255]);
+    }
+
+    #[test]
+    fn sizes_past_the_format_limits_fail_before_reading() {
+        let mut huge = file(4, 16, 3, false, &vec![vec![0; 4]; 4], 1);
+        huge[14..18].copy_from_slice(&0x8000_0000u32.to_be_bytes());
+        huge[18..22].copy_from_slice(&0x8000_0000u32.to_be_bytes());
+        assert!(
+            decode_plain(&huge)
+                .unwrap_err()
+                .to_string()
+                .contains("invalid size")
+        );
+        let mut tall = file(4, 8, 3, true, &vec![vec![0; 2]; 4], 2);
+        tall[14..18].copy_from_slice(&u32::MAX.to_be_bytes());
+        assert!(decode_plain(&tall).is_err());
+        let mut channels = file(3, 8, 3, false, &vec![vec![0; 2]; 3], 2);
+        channels[12..14].copy_from_slice(&57u16.to_be_bytes());
+        assert!(decode_plain(&channels).is_err());
     }
 
     #[test]
@@ -246,13 +372,18 @@ mod tests {
     fn unsupported_files_fail_with_a_reason() {
         let cmyk = file(4, 8, 4, false, &vec![vec![0; 4]; 4], 2);
         assert!(
-            decode(&cmyk)
+            decode_plain(&cmyk)
                 .unwrap_err()
                 .to_string()
                 .contains("colour mode 4")
         );
         let deep = file(3, 32, 3, false, &vec![vec![0; 8]; 3], 2);
-        assert!(decode(&deep).unwrap_err().to_string().contains("32-bit"));
-        assert!(decode(&cmyk[..30]).is_err());
+        assert!(
+            decode_plain(&deep)
+                .unwrap_err()
+                .to_string()
+                .contains("32-bit")
+        );
+        assert!(decode_plain(&cmyk[..30]).is_err());
     }
 }
