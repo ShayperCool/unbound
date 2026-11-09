@@ -211,6 +211,9 @@ public class PathProbe : MonoBehaviour
             ("link.wide", LinkWide),
             ("link.wideoff", LinkWideOff),
             ("link.repath", LinkRepath),
+            ("link.widetile", LinkWideTile),
+            ("link.slope", LinkSlope),
+            ("carve.shortcut", CarveShortcut),
         })
         {
             if (!name.StartsWith(Only)) continue;
@@ -986,5 +989,93 @@ public class PathProbe : MonoBehaviour
         }
         foreach (var (_, agent) in agents) Destroy(agent.gameObject);
         foreach (var link in links) NavMesh.RemoveLink(link);
+    }
+
+    /// <summary>A 4 m wide link over the gap whose ends cross the NavMesh's tile edge at z = 0 (its
+    /// middle at z = 0.3): paths across it either side of the edge, and an agent crossing it below
+    /// the edge.</summary>
+    IEnumerator LinkWideTile()
+    {
+        ClearAgents();
+        yield return null;
+        Gap(0);
+        LogMesh();
+        var link = Link(new Vector3(-1.7f, 0f, 0.3f), new Vector3(1.7f, 0f, 0.3f), 0, 4f);
+        yield return Frames(1);
+        foreach (float z in new[] { 1.5f, -1.2f })
+            Path("t" + Name(z), new Vector3(-8f, 0f, z), new Vector3(8f, 0f, z));
+        var go = new GameObject("tile");
+        go.transform.position = new Vector3(-6f, 0f, -1.2f);
+        var agent = go.AddComponent<NavMeshAgent>();
+        agent.SetDestination(new Vector3(6f, 0f, -1.2f));
+        yield return Frames(2);
+        var next = agent.nextOffMeshLinkData;
+        ProbeLog.Value("agent.next.valid", next.valid);
+        ProbeLog.Value("agent.next.start", next.startPos);
+        ProbeLog.Value("agent.next.end", next.endPos);
+        yield return Frames(200);
+        ProbeLog.Value("agent.end", agent.nextPosition);
+        Destroy(go);
+        NavMesh.RemoveLink(link);
+    }
+
+    /// <summary>Whether an agent takes a shortcut that opens away from its path: 5.33 m tiles; a
+    /// wall at x = 0 from z = -14 to 9 with a gap at z = -9.5 to -7 that a carving box closes; an
+    /// agent from (-12, -12) to (12, -12) goes round the wall's north end. At frame 60 the box is
+    /// disabled (the gap opens in tiles its path does not cross); every 10 frames the agent's
+    /// position, corners and remaining distance.</summary>
+    IEnumerator CarveShortcut()
+    {
+        ClearAgents();
+        yield return null;
+        var settings = NavMesh.GetSettingsByID(0);
+        settings.overrideTileSize = true;
+        settings.tileSize = 32;
+        var sources = new List<NavMeshBuildSource>
+        {
+            Source(new Vector3(Off.x, -0.05f, Off.y), new Vector3(28f, 0.1f, 28f), 0, 0f),
+            Source(new Vector3(Off.x, 0.5f, -11.75f + Off.y), new Vector3(1f, 1f, 4.5f), Blocked, 0f),
+            Source(new Vector3(Off.x, 0.5f, 1f + Off.y), new Vector3(1f, 1f, 16f), Blocked, 0f),
+        };
+        NavMesh.AddNavMeshData(NavMeshBuilder.BuildNavMeshData(settings, sources, new Bounds(Vector3.zero, new Vector3(32f, 10f, 32f)), Vector3.zero, Quaternion.identity));
+        var carver = Carver(Off.x, -8.25f + Off.y, new Vector3(1f, 1f, 3f));
+        yield return Frames(4);
+        var go = new GameObject("walker");
+        go.transform.position = new Vector3(-12f, 0f, -12f);
+        var agent = go.AddComponent<NavMeshAgent>();
+        agent.SetDestination(new Vector3(12f, 0f, -12f));
+        for (int f = 1; f <= 260; f++)
+        {
+            if (f == 60) carver.enabled = false;
+            yield return null;
+            if (f % 10 != 0) continue;
+            ProbeLog.Value("f" + f + ".at", agent.nextPosition);
+            ProbeLog.Value("f" + f + ".corners", agent.path.corners.Length);
+            ProbeLog.Value("f" + f + ".stale", agent.isPathStale);
+            ProbeLog.Value("f" + f + ".remaining", agent.remainingDistance);
+        }
+        Destroy(go);
+        Destroy(carver.gameObject);
+    }
+
+    /// <summary>A 4 m wide link from the floor (y = 0) up to a platform 1.5 m higher across a 2 m
+    /// gap, crossed by oblique paths: where a path's crossing points onto and off the link lie when
+    /// the path climbs as it crosses.</summary>
+    IEnumerator LinkSlope()
+    {
+        ClearAgents();
+        yield return null;
+        var sources = new List<NavMeshBuildSource>
+        {
+            Source(new Vector3(-7.5f + Off.x, -0.05f, Off.y), new Vector3(13f, 0.1f, 28f), 0, 0f),
+            Source(new Vector3(7.5f + Off.x, 0.75f, Off.y), new Vector3(13f, 1.5f, 28f), 0, 0f),
+        };
+        NavMesh.AddNavMeshData(NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(0), sources, new Bounds(Vector3.zero, new Vector3(32f, 10f, 32f)), Vector3.zero, Quaternion.identity));
+        LogMesh();
+        var link = Link(new Vector3(-1.7f, 0f, 0.4f), new Vector3(1.9f, 1.5f, 0.4f), 0, 4f);
+        yield return Frames(1);
+        Path("up", new Vector3(-8f, 0f, -1.8f), new Vector3(8f, 1.5f, 1.9f));
+        Path("down", new Vector3(8f, 1.5f, -1.2f), new Vector3(-8f, 0f, 1.9f));
+        NavMesh.RemoveLink(link);
     }
 }

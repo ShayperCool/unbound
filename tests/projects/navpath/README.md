@@ -15,6 +15,8 @@ agree on the mesh (`meshN.vertices` is logged for every level to show it).
 | `link.snap` | links over a 2 m gap whose ends lie either side of the agent radius (0.5 m, and 2 m for a second agent type) across and either side of the climb above: which connect (paths over them or round by another link) |
 | `link.wide` | 4 m wide links: paths straight across at several lateral offsets (also beyond the width), one whose start lies partly off the NavMesh; agents crossing them one at a time (nextOffMeshLinkData, currentOffMeshLinkData, where they end) |
 | `link.wideoff` | a 4 m wide link whose ends lie 0.2 m off the NavMesh across the gap: a wide end does not attach (no snap across it) |
+| `link.widetile` | a 4 m wide link whose ends cross the tile edge at z = 0: paths and an agent across it on both sides of the edge |
+| `carve.shortcut` | 5.33 m tiles; an agent going round a wall's end while a carved gap opens in tiles its path does not cross: whether it turns back to take the gap (Unity: no) |
 | `link.repath` | three agents on partial paths over inactive links that open at frame 30: autoRepath on near the gap, autoRepath off, autoRepath on far away (status and isPathStale every frame) |
 | `sync.updatePosition` | `updatePosition` turned off while the transform (in Update or LateUpdate), `nextPosition` or a walking agent moves, then on again (and a move right after); transforms moved by script with it on, in Update and LateUpdate: the transform and `nextPosition` right after, in LateUpdate and in the next frames |
 
@@ -58,6 +60,5 @@ Measured (Unity 6000.0.71f1, `Reference/unity-6000.0.71f1.json`):
   its end is the agent's next corner within its radius; with autoRepath off it stays partial and stale.
 
 Listed, not gated (`run.py` header): `two.p1`, a line grazing a vertex: the builders place that vertex
-about 2e-6 apart, on either side of the line; `link.wide` a3 (a path leaving a wide link beyond its
-width) and where an agent reaching a wide link at the edge of the NavMesh under its start crosses it
-(gb1.2.cur.*).
+about 2e-6 apart, on either side of the line; where an agent reaching a wide link at the edge of the NavMesh under its start
+crosses it (gb1.2.cur.*); `carve.shortcut` (Unbound's search takes another staircase of small tiles).

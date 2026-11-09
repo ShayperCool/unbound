@@ -19,8 +19,11 @@ Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
   hole.shapes two.p1.*    a straight line grazing a mesh vertex that the builders place about 2e-6
                           apart, on either side of the line: Unity keeps the corner there, Unbound
                           does not.
-  link.wide a3.c2.z       a path leaving a wide link beyond its width turns at the far end of the
-                          link's end in Unity, at the near end in Unbound;
+  carve.shortcut          measured: Unity's agent keeps going round when a carved gap opens in
+                          tiles its path does not cross; Unbound's path search over the 5.33 m
+                          tiles takes another staircase of tiles (east, then north along the
+                          wall) that crosses the gap's tile, so its agent is planned again and
+                          takes the gap (docs/COMPATIBILITY_GAPS.md, the path-cost row);
   link.wide gb1.2.cur.*   an agent reaching a wide link where the NavMesh under the link's start
                           ends (z 6): Unity's reaches it 6 cm further from that end and crosses from
                           5.98 to 5.82, Unbound's straight across from where it reaches it, 5.80
@@ -46,7 +49,8 @@ FRAMES = 1500
 # Scenario -> key prefixes of the differences that are reported but not gated ('' = all of them).
 LISTED = {
     'hole.shapes': ('two.p1.',),
-    'link.wide': ('a3.c2.z', 'gb1.2.cur.start.z', 'gb1.2.cur.end.z', 'gb1.2.cur.at.z'),
+    'link.wide': ('gb1.2.cur.start.z', 'gb1.2.cur.end.z', 'gb1.2.cur.at.z'),
+    'carve.shortcut': ('',),
 }
 
 
