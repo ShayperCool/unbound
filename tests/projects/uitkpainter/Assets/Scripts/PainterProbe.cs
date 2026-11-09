@@ -136,6 +136,7 @@ public static class PainterProbe
         new Case { name = "stroke-closepath-twice", draw = Stroke(5, LineJoin.Round, LineCap.Butt, p => { p.MoveTo(new Vector2(12, 12)); p.LineTo(new Vector2(60, 12)); p.LineTo(new Vector2(36, 50)); p.ClosePath(); p.ClosePath(); }) },
         new Case { name = "stroke-close-after-return", draw = Stroke(5, LineJoin.Miter, LineCap.Round, p => { p.MoveTo(new Vector2(12, 12)); p.LineTo(new Vector2(60, 12)); p.LineTo(new Vector2(36, 50)); p.LineTo(new Vector2(12, 12)); p.ClosePath(); }) },
         new Case { name = "stroke-arc-width-diameter", draw = Stroke(20, LineJoin.Miter, LineCap.Butt, p => p.Arc(new Vector2(40, 36), 10, 0, 200)) },
+        new Case { name = "stroke-arc-tiny-roundcap", draw = Stroke(6, LineJoin.Round, LineCap.Round, p => { p.MoveTo(new Vector2(10, 40)); p.LineTo(new Vector2(40, 40)); p.Arc(new Vector2(40, 0), 40, 90, 89.9f, ArcDirection.CounterClockwise); p.LineTo(new Vector2(60, 60)); }) },
         new Case { name = "fill-two-contours-oddeven", draw = Fill(FillRule.OddEven, p => { p.Arc(new Vector2(30, 36), 22, 0, 360); p.MoveTo(new Vector2(70, 36)); p.Arc(new Vector2(50, 36), 20, 0, 360); }) },
     };
 
@@ -307,6 +308,18 @@ public static class PainterProbe
                 var p = ctx.painter2D;
                 p.strokeColor = Red; p.lineWidth = 6; p.BeginPath(); p.MoveTo(new Vector2(2, 15)); p.LineTo(new Vector2(78, 15)); p.Stroke();
                 Quad(ctx, new UnityEngine.Rect(50, 2, 20, 26), new Color32(40, 60, 200, 255));
+                // DrawMesh joins the same order: a painter stroke, then a drawn quad over it.
+                p.strokeColor = Blue; p.lineWidth = 4; p.BeginPath(); p.MoveTo(new Vector2(20, 26)); p.LineTo(new Vector2(78, 26)); p.Stroke();
+                var vertices = new Unity.Collections.NativeArray<Vertex>(4, Unity.Collections.Allocator.Temp);
+                var indices = new Unity.Collections.NativeArray<ushort>(6, Unity.Collections.Allocator.Temp);
+                var c = new Color32(220, 200, 40, 255);
+                vertices[0] = new Vertex { position = new Vector3(30, 20, Vertex.nearZ), tint = c };
+                vertices[1] = new Vertex { position = new Vector3(40, 20, Vertex.nearZ), tint = c };
+                vertices[2] = new Vertex { position = new Vector3(40, 30, Vertex.nearZ), tint = c };
+                vertices[3] = new Vertex { position = new Vector3(30, 30, Vertex.nearZ), tint = c };
+                ushort[] quad = { 0, 1, 2, 0, 2, 3 };
+                for (int i = 0; i < 6; i++) indices[i] = quad[i];
+                ctx.DrawMesh(vertices, indices);
             };
             root.Add(e);
         }

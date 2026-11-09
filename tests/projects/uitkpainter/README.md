@@ -1,15 +1,15 @@
 # UI Toolkit Painter2D
 
 Stages the `uitk` fixture in a fresh cache directory and replaces its interaction run with
-`Assets/Scripts/PainterProbe.cs`: 66 Painter2D cases, one mechanism each (line widths, joins,
+`Assets/Scripts/PainterProbe.cs`: 67 Painter2D cases, one mechanism each (line widths, joins,
 miter limit, caps, closed and open paths, arcs both ways, ArcTo, cubic and quadratic curves,
 fills under both rules, holes, self-intersections, arcs and curves in fills) plus controls of
 measured path rules (closing a quadratic path, Arc and ClosePath without MoveTo, round caps on a
 whole circle, path reuse after Stroke, a single-piece arc fill, a stroke wider than its curve's
 radius, a width equal to an arc's diameter, zero width, transparent and NaN input, collinear ArcTo,
-ArcTo of radius 0, a tiny arc, crossing sub-paths, ClosePath twice and after returning to the
-start). One more panel cell draws an allocated quad, a painter stroke and another allocated quad
-in one callback (call order).
+ArcTo of radius 0, a tiny arc, a 0.1° arc with round caps, crossing sub-paths, ClosePath twice and after returning to the
+start). One more panel cell draws allocated quads, painter strokes and a DrawMesh quad in one
+callback (call order).
 
 Each case is drawn twice:
 

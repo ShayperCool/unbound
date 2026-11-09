@@ -238,20 +238,39 @@ namespace UnityEngine.Tests
             Near(60f, s.Size.x);
         }
 
-        // Control: a scribble with thousands of crossings fills in time proportional to its size.
+        // Control: two combs of 100 teeth crossing each other (40000 crossings) fill in about a
+        // second, most of it libtess2's; matching each crossing against every vertex took ten.
         [Fact]
-        public void ScribbleFillsWithManyCrossings()
+        public void FillsWithManyCrossingsStayFast()
         {
-            var random = new System.Random(7);
+            const int Teeth = 100;
             var watch = System.Diagnostics.Stopwatch.StartNew();
             var s = Save(Fill(FillRule.OddEven, p =>
             {
                 p.MoveTo(new Vector2(0, 0));
-                for (int i = 0; i < 600; i++) p.LineTo(new Vector2(random.Next(0, 4000) / 8f, random.Next(0, 4000) / 8f));
+                for (int i = 0; i < Teeth; i++)
+                {
+                    p.LineTo(new Vector2(i * 4 + 1, 0)); p.LineTo(new Vector2(i * 4 + 1, 900)); p.LineTo(new Vector2(i * 4 + 3, 900)); p.LineTo(new Vector2(i * 4 + 3, 0));
+                }
+                p.ClosePath();
+                p.MoveTo(new Vector2(-10, -10));
+                for (int i = 0; i < Teeth; i++)
+                {
+                    p.LineTo(new Vector2(-10, i * 4 + 1)); p.LineTo(new Vector2(900, i * 4 + 1)); p.LineTo(new Vector2(900, i * 4 + 3)); p.LineTo(new Vector2(-10, i * 4 + 3));
+                }
                 p.ClosePath();
             }));
-            Assert.True(watch.Elapsed.TotalSeconds < 10, $"took {watch.Elapsed}");
-            Assert.NotNull(s.Vertices);
+            Assert.True(watch.Elapsed.TotalSeconds < 5, $"took {watch.Elapsed}");
+            Assert.NotEmpty(s.Vertices);
+        }
+
+        // Control: a short real arc (0.1°, ends 0.07 apart) draws no ring but still gets its round
+        // caps, along its chord.
+        [Fact]
+        public void TinyArcsStillCap()
+        {
+            var s = Save(Stroke(6, LineJoin.Miter, LineCap.Round, p => p.Arc(new Vector2(40, 40), 40, -90, -89.9f)));
+            Assert.Equal(10, s.Vertices.Length);
         }
 
         // ------------------------------------------------------------------ the painter's API
@@ -421,6 +440,32 @@ namespace UnityEngine.Tests
             mesh.SetNextVertex(new Vertex { position = new Vector3(x, 30, Vertex.nearZ), tint = c });
             mesh.SetNextIndex(0); mesh.SetNextIndex(1); mesh.SetNextIndex(2);
             mesh.SetNextIndex(0); mesh.SetNextIndex(2); mesh.SetNextIndex(3);
+        }
+
+        // DrawMesh joins the same order: a painter stroke, then a drawn quad over it.
+        [Fact]
+        public void DrawMeshKeepsCallOrder()
+        {
+            var vertices = new Unity.Collections.NativeArray<Vertex>(4, Unity.Collections.Allocator.Temp);
+            var indices = new Unity.Collections.NativeArray<ushort>(6, Unity.Collections.Allocator.Temp);
+            var blue = new Color32(40, 60, 200, 255);
+            vertices[0] = new Vertex { position = new Vector3(50, 0, Vertex.nearZ), tint = blue };
+            vertices[1] = new Vertex { position = new Vector3(70, 0, Vertex.nearZ), tint = blue };
+            vertices[2] = new Vertex { position = new Vector3(70, 30, Vertex.nearZ), tint = blue };
+            vertices[3] = new Vertex { position = new Vector3(50, 30, Vertex.nearZ), tint = blue };
+            ushort[] quad = { 0, 1, 2, 0, 2, 3 };
+            for (int i = 0; i < 6; i++) indices[i] = quad[i];
+            var painter = Paint(mgc =>
+            {
+                var p = mgc.painter2D;
+                p.strokeColor = Red; p.BeginPath(); p.MoveTo(new Vector2(0, 15)); p.LineTo(new Vector2(80, 15)); p.Stroke();
+                mgc.DrawMesh(vertices, indices);
+            }, mgc => { });
+            vertices.Dispose();
+            indices.Dispose();
+            int red = painter.Colors.FindIndex(c => c.Equals((Color32)Red));
+            int drawn = painter.Colors.FindIndex(c => c.Equals(blue));
+            Assert.True(red >= 0 && drawn > red, $"red {red}, drawn {drawn}");
         }
 
         // Tessellating the same path again allocates nothing once the buffers are warm.
