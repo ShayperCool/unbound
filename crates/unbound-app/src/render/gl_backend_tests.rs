@@ -509,7 +509,7 @@ fn a_context_current_before_the_backend_works_is_current_after() {
     };
     egl.make_current(display, None, None, Some(ours)).unwrap();
     // Any backend call takes its context and gives the thread's back.
-    device.create_buffer(&wgpu::BufferDescriptor {
+    let _buffer = device.create_buffer(&wgpu::BufferDescriptor {
         label: None,
         size: 16,
         usage: wgpu::BufferUsages::UNIFORM,
