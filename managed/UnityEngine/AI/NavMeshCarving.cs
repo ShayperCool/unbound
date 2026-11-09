@@ -95,6 +95,29 @@ namespace Unbound.Runtime
 
         // ------------------------------------------------------------------ tiles
 
+        /// <summary>The footprint's hole: its outline grown by the agent radius, with its bounds.</summary>
+        static Hole HoleOf(Footprint f, float radius)
+        {
+            var outline = Grow(f.Outline, radius);
+            var hole = new Hole { Outline = outline, Bottom = f.Bottom, Top = f.Top, MinX = float.MaxValue, MinZ = float.MaxValue, MaxX = float.MinValue, MaxZ = float.MinValue };
+            foreach (var p in outline)
+            {
+                hole.MinX = Mathf.Min(hole.MinX, p.x);
+                hole.MaxX = Mathf.Max(hole.MaxX, p.x);
+                hole.MinZ = Mathf.Min(hole.MinZ, p.y);
+                hole.MaxZ = Mathf.Max(hole.MaxZ, p.y);
+            }
+            return hole;
+        }
+
+        /// <summary>Whether the footprint's hole for agents of <paramref name="radius"/> can reach
+        /// the area (x, z bounds, edges included).</summary>
+        internal static bool Reaches(Footprint f, float radius, float minX, float maxX, float minZ, float maxZ)
+        {
+            var hole = HoleOf(f, radius);
+            return hole.MaxX >= minX && hole.MinX <= maxX && hole.MaxZ >= minZ && hole.MinZ <= maxZ;
+        }
+
         sealed class Hole
         {
             internal Vector2[] Outline;
@@ -123,15 +146,7 @@ namespace Unbound.Runtime
             var holes = new List<Hole>();
             foreach (var f in footprints)
             {
-                var outline = Grow(f.Outline, settings.agentRadius);
-                var hole = new Hole { Outline = outline, Bottom = f.Bottom, Top = f.Top, MinX = float.MaxValue, MinZ = float.MaxValue, MaxX = float.MinValue, MaxZ = float.MinValue };
-                foreach (var p in outline)
-                {
-                    hole.MinX = Mathf.Min(hole.MinX, p.x);
-                    hole.MaxX = Mathf.Max(hole.MaxX, p.x);
-                    hole.MinZ = Mathf.Min(hole.MinZ, p.y);
-                    hole.MaxZ = Mathf.Max(hole.MaxZ, p.y);
-                }
+                var hole = HoleOf(f, settings.agentRadius);
                 if (hole.MaxX <= h.bmin.X || hole.MinX >= h.bmax.X || hole.MaxZ <= h.bmin.Z || hole.MinZ >= h.bmax.Z) continue;
                 holes.Add(hole);
             }
@@ -659,7 +674,9 @@ namespace Unbound.Runtime
         const float DetailMinTurn = 1e-6f;
 
         /// <summary>The smallest turn a merged polygon keeps at each vertex: twice the area of the
-        /// triangle a vertex makes with its neighbours, in square metres.</summary>
+        /// triangle a vertex makes with its neighbours, an absolute 0.01 m² whatever the voxel size
+        /// (Unity's margin: merges as the Unity 6000.0.71f1 Editor does, tests/projects/navpath
+        /// carve.sides and carve.mud).</summary>
         const float MergeMinTurn = 0.01f;
 
         /// <summary>Each polygon in order takes in the later ones (last first) it can be merged

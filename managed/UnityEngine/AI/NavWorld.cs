@@ -302,32 +302,30 @@ namespace Unbound.Runtime
                     tile.header.layer = old.data.header.layer;
                     MapLinks(surface, old, false);
                     surface.Mesh.RemoveTile(placed.Ref);
+                    replaced = true;
                     surface.Mesh.AddTile(tile, 0, 0, out long tileRef);
                     placed.Ref = tileRef;
-                    if (tileRef == 0) continue;
+                    if (tileRef == 0)
+                    {
+                        // Not added back (no room): the whole NavMesh is built again instead.
+                        TileVersion++;
+                        s_Dirty = true;
+                        Refresh();
+                        return;
+                    }
                     var added = surface.Mesh.GetTileByRef(tileRef);
                     surface.DataOfTile[DtDetour.DecodePolyIdTile(tileRef)] = placed.Instance.Id;
                     MapLinks(surface, added, true);
-                    replaced = true;
                 }
             }
             if (replaced) TileVersion++;
         }
 
-        /// <summary>A hole grown by the agent radius (and a centimetre) overlaps the tile.</summary>
+        /// <summary>A changed hole, grown by the agent radius as it is cut, reaches the tile.</summary>
         static bool Reaches(PlacedTile tile, IReadOnlyList<NavMeshCarving.Footprint> holes, float radius)
         {
-            float grow = radius + 0.01f;
             foreach (var hole in holes)
-            {
-                float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue;
-                foreach (var p in hole.Outline)
-                {
-                    minX = Mathf.Min(minX, p.x); maxX = Mathf.Max(maxX, p.x);
-                    minZ = Mathf.Min(minZ, p.y); maxZ = Mathf.Max(maxZ, p.y);
-                }
-                if (maxX + grow >= tile.MinX && minX - grow <= tile.MaxX && maxZ + grow >= tile.MinZ && minZ - grow <= tile.MaxZ) return true;
-            }
+                if (NavMeshCarving.Reaches(hole, radius, tile.MinX, tile.MaxX, tile.MinZ, tile.MaxZ)) return true;
             return false;
         }
 

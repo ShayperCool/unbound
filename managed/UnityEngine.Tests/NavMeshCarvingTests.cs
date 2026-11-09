@@ -404,6 +404,28 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ATurnedBoxsCornerAcrossATileEdgeIsCutAndRemovedThereToo()
+        {
+            // Turned 45 degrees at x = 1.3, the box's outline ends at x = 0.59, but grown by the
+            // radius with sharp corners it reaches x = -0.11: into the tiles of x < 0. Cut and
+            // removed tile by tile, the NavMesh must be what a whole rebuild makes.
+            var before = Polygons();
+            var obstacle = Box(new Vector3(1.3f, 0.5f, -2f), Vector3.one, 45f, onlyStationary: false);
+            Frame();
+            Frame();
+            var cut = Polygons();
+            Assert.False(OnNavMesh(-0.05f, -2f));
+            NavWorld.MarkDirty();
+            NavWorld.RefreshNow();
+            Assert.Equal(Polygons(), cut);
+            obstacle.carving = false;
+            Frame();
+            Frame();
+            Assert.True(OnNavMesh(-0.05f, -2f));
+            Assert.Equal(before, Polygons());
+        }
+
+        [Fact]
         public void AHoleCutElsewhereLetsAnArrivingAgentFinish()
         {
             // The rebuild after a cut must not stop an agent in its last centimetre (hasPath

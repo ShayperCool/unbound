@@ -961,7 +961,7 @@ namespace Unbound.Runtime
         static void RejoinTouched()
         {
             s_TileVersion = NavWorld.TileVersion;
-            for (int i = s_Agents.Count - 1; i >= 0; i--)
+            for (int i = 0; i < s_Agents.Count; i++)
             {
                 var agent = s_Agents[i];
                 if (agent.m_Crowd == null) continue;
@@ -984,7 +984,7 @@ namespace Unbound.Runtime
             int count = ag.corridor.GetPathCount();
             for (int i = 0; i < count; i++)
                 if (!mesh.IsValidPolyRef(path[i])) return true;
-            return ag.state == DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH && !mesh.IsValidPolyRef(ag.animation.polyRef);
+            return ag.state == DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH && ag.animation.polyRef != 0 && !mesh.IsValidPolyRef(ag.animation.polyRef);
         }
 
         /// <summary>The agent placed again on the NavMesh after its polygons changed.</summary>
