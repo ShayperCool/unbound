@@ -360,15 +360,15 @@ pub fn create_pipeline(
     let depth_stencil = key.depth.then(|| {
         let stencil = match s.stencil {
             Some(st) => {
-                let face = wgpu::StencilFaceState {
-                    compare: compare(st.comp),
-                    fail_op: stencil_op(st.fail),
-                    depth_fail_op: stencil_op(st.zfail),
-                    pass_op: stencil_op(st.pass),
+                let face = |[comp, pass, fail, zfail]: [u8; 4]| wgpu::StencilFaceState {
+                    compare: compare(comp),
+                    fail_op: stencil_op(fail),
+                    depth_fail_op: stencil_op(zfail),
+                    pass_op: stencil_op(pass),
                 };
                 wgpu::StencilState {
-                    front: face,
-                    back: face,
+                    front: face([st.comp, st.pass, st.fail, st.zfail]),
+                    back: face(st.back),
                     read_mask: st.read_mask as u32,
                     write_mask: st.write_mask as u32,
                 }

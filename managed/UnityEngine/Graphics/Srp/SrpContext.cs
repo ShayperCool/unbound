@@ -1067,12 +1067,14 @@ namespace Unbound.Runtime
             internal Kind Kind;
             internal RendererListParams Params;
             internal RenderStateBlock? StateBlock;
+            /// <summary>Per-tag state blocks (<see cref="RendererListParams.tagValues"/>): a draw
+            /// takes the block of its material's tag value, else of the empty tag; null without.</summary>
+            internal TaggedStates Tagged;
             internal Camera Camera;
             internal ShadowDrawingSettings ShadowSettings;
         }
 
         static readonly List<Entry> s_Lists = new List<Entry>();
-        static bool s_WarnedStateBlock;
 
         static RendererList Add(Entry entry)
         {
@@ -1090,9 +1092,62 @@ namespace Unbound.Runtime
         internal static RendererList Create(RendererListParams p, RenderStateBlock? stateBlock = null)
         {
             if (p == RendererListParams.Invalid) return RendererList.nullRendererList;
+            TaggedStates tagged = null;
             if (!stateBlock.HasValue && p.stateBlocks.HasValue && p.stateBlocks.Value.IsCreated && p.stateBlocks.Value.Length > 0)
-                stateBlock = p.stateBlocks.Value[0];
-            return Add(new Entry { Kind = Kind.Renderers, Params = p, StateBlock = stateBlock });
+            {
+                // Without tag values the first block is every draw's; with them, each draw takes
+                // the block of its tag (the arrays may be disposed once the list is made).
+                if (p.tagValues.HasValue && p.tagValues.Value.IsCreated && p.tagName != ShaderTagId.none)
+                    tagged = new TaggedStates(p.tagName, p.isPassTagName, p.tagValues.Value.ToArray(), p.stateBlocks.Value.ToArray());
+                else
+                    stateBlock = p.stateBlocks.Value[0];
+            }
+            return Add(new Entry { Kind = Kind.Renderers, Params = p, StateBlock = stateBlock, Tagged = tagged });
+        }
+
+        /// <summary>A renderer list's state blocks by tag value (RendererListParams.tagName,
+        /// tagValues, stateBlocks): a material whose SubShader tag (or, with isPassTagName, the
+        /// drawn pass's tag) has one of the values draws with that value's block; any other, or
+        /// none, with the block of the empty tag value, else with no override (as URP's G-buffer
+        /// pass gives each material type its stencil bits).</summary>
+        internal sealed class TaggedStates
+        {
+            readonly string m_Tag;
+            readonly bool m_PassTag;
+            readonly string[] m_Values;
+            readonly RenderStateBlock[] m_Blocks;
+            readonly int m_Fallback = -1;
+
+            internal TaggedStates(ShaderTagId tag, bool passTag, ShaderTagId[] values, RenderStateBlock[] blocks)
+            {
+                m_Tag = tag.name;
+                m_PassTag = passTag;
+                int n = Math.Min(values.Length, blocks.Length);
+                m_Values = new string[n];
+                m_Blocks = new RenderStateBlock[n];
+                for (int i = 0; i < n; i++)
+                {
+                    m_Values[i] = values[i].name ?? "";
+                    m_Blocks[i] = blocks[i];
+                    if (m_Values[i].Length == 0 && m_Fallback < 0) m_Fallback = i;
+                }
+            }
+
+            /// <summary>The block index for a draw of <paramref name="material"/> with its pass
+            /// <paramref name="pass"/> (-1 when unknown), -1 for no override.</summary>
+            internal int IndexFor(Material material, int pass)
+            {
+                string value = m_PassTag
+                    ? (pass >= 0 && material.shader != null ? material.shader.FindPassTagValue(pass, new ShaderTagId(m_Tag)).name : "")
+                    : material.GetTag(m_Tag, false, "");
+                if (!string.IsNullOrEmpty(value))
+                    for (int i = 0; i < m_Values.Length; i++)
+                        if (m_Values[i] == value) return i;
+                return m_Fallback;
+            }
+
+            internal RenderStateBlock? Block(int index) =>
+                index >= 0 && m_Blocks[index].mask != RenderStateMask.Nothing ? m_Blocks[index] : null;
         }
 
         internal static RendererListStatus Status(RendererList list)
@@ -1144,22 +1199,11 @@ namespace Unbound.Runtime
             var data = e.Params.cullingResults.Data;
             if (data == null || data.Camera == null) return;
             var block = e.StateBlock.HasValue && e.StateBlock.Value.mask != RenderStateMask.Nothing ? e.StateBlock : null;
-            if (block.HasValue)
-            {
-                var s = block.Value.stencilState;
-                if ((block.Value.mask & RenderStateMask.Stencil) != 0 && !s_WarnedStateBlock
-                    && (s.compareFunctionFront != s.compareFunctionBack || s.passOperationFront != s.passOperationBack
-                        || s.failOperationFront != s.failOperationBack || s.zFailOperationFront != s.zFailOperationBack))
-                {
-                    s_WarnedStateBlock = true;
-                    Debug.LogWarning("Unbound: a RenderStateBlock's back-face stencil differs from its front's; both faces use the front's.");
-                }
-                GfxStream.StateOverride(block);
-            }
+            if (block.HasValue) GfxStream.StateOverride(block);
             var drawing = e.Params.drawSettings;
             var filtering = e.Params.filteringSettings;
             var passNames = drawing.PassNames();
-            FrameBuilder.DrawRendererList(data, drawing, filtering, passNames);
+            FrameBuilder.DrawRendererList(data, drawing, filtering, passNames, tagged: e.Tagged);
             if (block.HasValue) GfxStream.StateOverride(null);
         }
     }

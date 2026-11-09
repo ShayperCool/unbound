@@ -4738,6 +4738,7 @@ fn apply_override(
         zfail: o.stencil[3],
         read_mask: o.stencil_read_mask,
         write_mask: o.stencil_write_mask,
+        back: [o.stencil[4], o.stencil[5], o.stencil[6], o.stencil[7]],
     });
     o.stencil_ref as u32
 }

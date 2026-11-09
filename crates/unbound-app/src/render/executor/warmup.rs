@@ -176,6 +176,8 @@ impl UnityRenderer {
                 2 => 1,
                 c => c,
             };
+            // The faces as drawn are the other way round: so are their stencil settings.
+            state.stencil = state.stencil.map(crate::materials::StencilState::swapped);
         }
         (state, stencil_ref)
     }

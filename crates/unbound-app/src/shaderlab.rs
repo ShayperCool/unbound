@@ -311,10 +311,14 @@ pub enum PropertyDefault {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Stencil {
     pub reference: Option<Value>,
+    /// Both faces' (`Comp`, `Pass`, `Fail`, `ZFail`).
     pub comp: Option<Value>,
     pub pass: Option<Value>,
     pub fail: Option<Value>,
     pub zfail: Option<Value>,
+    /// One face's own (`CompFront`, ... and `CompBack`, ...): `[comp, pass, fail, zfail]`.
+    pub front: [Option<Value>; 4],
+    pub back: [Option<Value>; 4],
     pub read_mask: Option<Value>,
     pub write_mask: Option<Value>,
 }
@@ -1400,10 +1404,18 @@ impl Parser<'_> {
                             let v = self.value();
                             match w.as_str() {
                                 "Ref" => s.reference = v,
-                                "Comp" | "CompFront" => s.comp = v,
-                                "Pass" | "PassFront" => s.pass = v,
-                                "Fail" | "FailFront" => s.fail = v,
-                                "ZFail" | "ZFailFront" => s.zfail = v,
+                                "Comp" => s.comp = v,
+                                "Pass" => s.pass = v,
+                                "Fail" => s.fail = v,
+                                "ZFail" => s.zfail = v,
+                                "CompFront" => s.front[0] = v,
+                                "PassFront" => s.front[1] = v,
+                                "FailFront" => s.front[2] = v,
+                                "ZFailFront" => s.front[3] = v,
+                                "CompBack" => s.back[0] = v,
+                                "PassBack" => s.back[1] = v,
+                                "FailBack" => s.back[2] = v,
+                                "ZFailBack" => s.back[3] = v,
                                 "ReadMask" => s.read_mask = v,
                                 "WriteMask" => s.write_mask = v,
                                 _ => {}

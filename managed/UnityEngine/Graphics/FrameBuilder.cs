@@ -734,7 +734,8 @@ namespace Unbound.Runtime
         /// </summary>
         /// <param name="shadows">A shadow caster list: renderers that cast shadows (with
         /// ShadowsOnly ones), else renderers drawn normally (without ShadowsOnly ones).</param>
-        internal static void DrawRendererList(CullingData data, DrawingSettings drawing, FilteringSettings filtering, List<ShaderTagId> passNames, ShadowObjectsFilter? shadows = null)
+        internal static void DrawRendererList(CullingData data, DrawingSettings drawing, FilteringSettings filtering, List<ShaderTagId> passNames, ShadowObjectsFilter? shadows = null,
+            RendererLists.TaggedStates tagged = null)
         {
             // The draws' merged properties live until the list is written.
             using var pooled = DrawPropertyPool.Begin();
@@ -837,11 +838,22 @@ namespace Unbound.Runtime
                     : s_Items[order[i]].Material.Sync();
             bool lightmaps = (drawing.perObjectData & PerObjectData.Lightmaps) != 0;
             bool probes = (drawing.perObjectData & PerObjectData.LightProbe) != 0;
+            // Per-tag state blocks: switched between draws as their materials' tags change.
+            int block = -1;
             for (int i = 0; i < count; i++)
             {
                 // By reference: the draws emitted below may add to s_Items (nothing does), so the
                 // place is looked up for each draw.
                 ref readonly var item = ref CollectionsMarshal.AsSpan(s_Items)[order[i]];
+                if (tagged != null)
+                {
+                    int next = tagged.IndexFor(item.Material, pass >= 0 ? pass : -1);
+                    if (next != block)
+                    {
+                        GfxStream.StateOverride(tagged.Block(next));
+                        block = next;
+                    }
+                }
                 if (overrideMaterial == null && overrideShader == null && item.Material.HasDisabledPasses && ShaderPassInfo.Of(item.Material.shader) is ShaderPassInfo info)
                 {
                     bool moving = motion && MovingObject(item);
@@ -855,6 +867,7 @@ namespace Unbound.Runtime
                 if (motion) NextDrawMotion(item);
                 EmitDraw(item, s_MaterialHandles[i], pass, lightmaps, probes, srp: true);
             }
+            if (block >= 0) GfxStream.StateOverride(null);
         }
 
         static readonly List<int> s_TaggedScratch = new List<int>();

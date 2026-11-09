@@ -26,12 +26,29 @@ pub const ERROR_SHADER_NAME: &str = "Hidden/InternalErrorShader";
 /// `StencilOp`, `ColorWriteMask` bits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct StencilState {
+    /// Front faces' compare and operations.
     pub comp: u8,
     pub pass: u8,
     pub fail: u8,
     pub zfail: u8,
     pub read_mask: u8,
     pub write_mask: u8,
+    /// Back faces' `[comp, pass, fail, zfail]`.
+    pub back: [u8; 4],
+}
+
+impl StencilState {
+    /// The faces swapped (a mirrored draw's front faces are its back faces as drawn).
+    pub fn swapped(self) -> Self {
+        StencilState {
+            comp: self.back[0],
+            pass: self.back[1],
+            fail: self.back[2],
+            zfail: self.back[3],
+            back: [self.comp, self.pass, self.fail, self.zfail],
+            ..self
+        }
+    }
 }
 
 /// A render target's own blending and write mask (`Blend N ...`, `ColorMask mask N`).
@@ -576,23 +593,34 @@ fn render_state(props: &Props, pass: &PassInfo) -> (RenderState, u32) {
     }
     let mut stencil_ref = 0;
     if let Some(st) = &s.stencil {
-        let comp = st.comp.as_ref().map(|v| compare(v, props, 8)).unwrap_or(8);
-        let op = |v: &Option<Value>| v.as_ref().map(|v| stencil_op(v, props, 0)).unwrap_or(0);
         let mask = |v: &Option<Value>| {
             v.as_ref()
                 .map(|v| props.number(v, 255.0) as u32 as u8)
                 .unwrap_or(255)
         };
+        // A face's own setting, else both faces' (Always, Keep by default).
+        let both = [&st.comp, &st.pass, &st.fail, &st.zfail];
+        let face = |own: &[Option<Value>; 4]| -> [u8; 4] {
+            std::array::from_fn(|i| match own[i].as_ref().or(both[i].as_ref()) {
+                Some(v) if i == 0 => compare(v, props, 8),
+                Some(v) => stencil_op(v, props, 0),
+                None if i == 0 => 8,
+                None => 0,
+            })
+        };
+        let [comp, pass, fail, zfail] = face(&st.front);
         let stencil = StencilState {
             comp,
-            pass: op(&st.pass),
-            fail: op(&st.fail),
-            zfail: op(&st.zfail),
+            pass,
+            fail,
+            zfail,
             read_mask: mask(&st.read_mask),
             write_mask: mask(&st.write_mask),
+            back: face(&st.back),
         };
-        // Always/Keep everywhere is no stencil test.
-        if !(stencil.comp == 8 && stencil.pass == 0 && stencil.fail == 0 && stencil.zfail == 0) {
+        // Always/Keep everywhere, on both faces, is no stencil test.
+        let idle = |f: [u8; 4]| f == [8, 0, 0, 0];
+        if !(idle([comp, pass, fail, zfail]) && idle(stencil.back)) {
             state.stencil = Some(stencil);
         }
         stencil_ref = st
@@ -794,6 +822,38 @@ SubShader {
         // Without an index the mask is every target's.
         let p = &r.resolve(&material("Probe/Plain", vec![])).passes[0];
         assert_eq!((p.state.color_mask, p.state.targets), (0, None));
+    }
+
+    /// `Comp`/`Pass` are both faces'; `CompBack`/`PassBack` (as URP's deferred SimpleLit light
+    /// passes write them) a back face's own, the front then testing nothing; a mirrored draw's
+    /// faces swap.
+    #[test]
+    fn stencil_faces_take_their_own_settings() {
+        let faces = r#"Shader "Probe/Faces" {
+SubShader {
+    Pass { Stencil { Ref 80 ReadMask 112 CompBack Equal PassBack Zero } }
+    Pass { Stencil { Ref 48 Comp Equal Pass Zero CompFront Always } }
+}}"#;
+        let mut r = Resolver::new(index(&[faces]));
+        let m = r.resolve(&material("Probe/Faces", vec![]));
+        let back_only = m.passes[0].state.stencil.expect("a back-face test");
+        assert_eq!(
+            [
+                back_only.comp,
+                back_only.pass,
+                back_only.fail,
+                back_only.zfail
+            ],
+            [8, 0, 0, 0]
+        );
+        assert_eq!(back_only.back, [3, 1, 0, 0]);
+        assert_eq!((back_only.read_mask, m.passes[0].stencil_ref), (112, 80));
+        let both = m.passes[1].state.stencil.expect("a test");
+        assert_eq!([both.comp, both.pass], [8, 1]);
+        assert_eq!(both.back, [3, 1, 0, 0]);
+        let mirrored = back_only.swapped();
+        assert_eq!([mirrored.comp, mirrored.pass], [3, 1]);
+        assert_eq!(mirrored.back, [8, 0, 0, 0]);
     }
 
     #[test]
