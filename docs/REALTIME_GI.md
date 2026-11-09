@@ -7,13 +7,13 @@ environment, updated at runtime from data precomputed in the Editor. This page r
 data holds, how the runtime update behaves (documented, then measured against the Unity
 6000.0.71f1 Editor in [tests/projects/realtimegi](../tests/projects/realtimegi)), and how Unbound
 implements it. Status: the engine draws precomputed realtime GI for scenes whose renderers have
-Preserve UVs, lit by point and spot lights and a flat ambient color, in the built-in pipeline (URP
-binds the same inputs; unmeasured there). For tests/projects/realtimegi every renderer covers the
-same realtime lightmap texels as in the Editor and the lightmaps of the point and spot light cases
-match within the comparator's tolerance but for a few isolated texels (see [Residuals](#residuals)); `unbound doctor` lists scenes with realtime GI, which is
+Preserve UVs, lit by point, spot and directional lights and a flat ambient color, in the built-in
+pipeline (URP binds the same inputs; unmeasured there). For tests/projects/realtimegi every
+renderer covers the same realtime lightmap texels as in the Editor and the lightmaps of the light
+cases match within the comparator's tolerance but for a few isolated texels (see [Residuals](#residuals)); `unbound doctor` lists scenes with realtime GI, which is
 drawn only in part. Not supported yet, each with a warning: Preserve UVs off (automatic charts),
-directional lights (the scene's realtime GI is then not drawn: its renderers take light probes
-again), skybox and gradient environments (no
+light types other than point, spot and directional (the scene's realtime GI is then not drawn: its
+renderers take light probes again; area lights are baked only), skybox and gradient environments (no
 environment light), light probes that also have baked lighting (also given by a script: realtime
 GI then stops lighting them) or whose probe set cannot be read or placed (they light nothing; the
 lightmaps are drawn), light probes of a scene that are not the current ones (additive loads),
@@ -49,7 +49,7 @@ a payload: a Unity bundle of per-system files named by the system's hash.
 | `.caw` | which albedo/emission texels form each cluster |
 | `.rgb` | an 8-bit RGBX texture at system resolution (not the albedo the update uses) |
 | `.ecm` | chart mask at system resolution: per texel, the chart it belongs to (each chart a rectangle of even width and height) |
-| `.vis` | precomputed visibility used for directional lights |
+| `.vis` | precomputed visibility of directional lights: directions on up to 128 rings of latitude around +y (first direction and count per ring), and per direction and cluster the share of its points that see the sky that way, quantized to 1, 2, 4 or 8 bits, stored for groups of directions, each group run-length encoded (a byte n < 0x80 copies n bytes, 0x80 + n repeats the next byte n times) |
 | `.pos`, `.rpc.{ref,sse,neo}` | light probe positions and their transport |
 
 `ref`, `sse` and `neo` hold the same data laid out for different CPUs; Unbound reads `ref`.
@@ -73,8 +73,14 @@ Room cases of tests/projects/realtimegi in its tests):
    inner angle of 21.8 against this rule's 37.1); s is tabulated at 31 equal steps of the cosine
    from the outer one to 1 and read at the step at or below the point's cosine, without
    interpolation. Point and spot lights are not shadowed in this input (the probe's lights have
-   shadows enabled). The Editor's direct light per cluster matches this within 0.05% (point) and
-   0.6% (spot).
+   shadows enabled; `room-spot-behind` lights the wall behind the block). A directional light
+   lights a cluster's first n points in their stored order, the others are in its shadow: n is the
+   cluster's point count times its precomputed visibility toward the light, rounded down, read at
+   the four stored directions around the light's (latitude t = acos(y) * (rings - 1) / pi between
+   two rings, longitude atan2(z, -x) / 2 pi + 1/2 times each ring's count between two of its
+   directions, wrapping around), weighted bilinearly with byte weights that add up to 255. The
+   Editor's direct light per cluster matches this within 0.05% (point) and 0.6% (spot); the
+   directional cases' lightmaps match as the others do.
 2. **Cluster radiance**: `albedo^2 * (direct + bounce) + emission`, with albedo the cluster's
    8-bit gamma-space albedo and emission linear (see [Material inputs](#material-inputs)).
 3. **Cluster tree**: each parent value is the 8-bit-weighted (/255) sum of its children.
@@ -218,16 +224,17 @@ Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
   converges again from there (unmeasured in the Editor).
 - Isolated texels: since a segment is solved again only when its inputs change by the update
   threshold, input differences well below it decide which update last solved a segment, and so
-  move a few texels (2 to 11 values of about 5000 per case in the engine, up to about 8%; 6
-  values also in `roomscaled-threshold0`, where no part keeps earlier lighting, so the direct
-  light residual alone moves some chart-edge texels). The comparator gates the point-light
-  cases' lightmaps with at most 0.5% of their values outside the tolerance, each within 0.02 +
-  10%.
+  move a few texels (2 to 6 values of about 5000 per case in the engine, up to about 10%; 4
+  values also in `roomscaled-threshold0`, where no part keeps earlier lighting: cause open). The
+  comparator gates the light cases' lightmaps with at most 0.5% of their values outside the
+  tolerance, each within 0.02 + 10%.
+- Light probes: in the RoomScaled cases one coefficient of one probe is about 15% below the
+  Editor's (about 0.05), whatever the case; in `room-bounce`, a few small higher-band
+  coefficients differ by up to about 0.5% of band 0 (causes open).
 
 ## Unbound plan
 
-- Phase 2, runtime over Unity's precomputed data (above): next, directional lights (with the
-  precomputed visibility), skybox and
+- Phase 2, runtime over Unity's precomputed data (above): next, skybox and
   gradient environments, directional output, several systems; unmeasured inputs fail loudly
   until a probe case covers them.
 - Phase 3, Unbound's own precompute from scene geometry (automatic charts for Preserve UVs off,

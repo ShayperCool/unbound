@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use unbound_assets::serialized::SerializedFile;
 use unbound_gi::probes::{ProbeSetSolver, ProbeSh};
 pub use unbound_gi::realtime_uv::Input as UvInput;
-use unbound_gi::solver::{Light, SpotCone, SystemSolver, decode_rgb9e5};
+use unbound_gi::solver::{Light, LightKind, SpotCone, SystemSolver, decode_rgb9e5};
 use unbound_project::assetdb::AssetDb;
 
 /// A light as the managed side passes it (`RealtimeGI.Light` in managed code).
@@ -63,7 +63,7 @@ struct Scene {
     /// Per system, its renderers' scale and offset within it.
     renderer_st: Vec<Vec<[f32; 4]>>,
     atlases: Vec<Atlas>,
-    /// The point and spot lights of the last frame, reused.
+    /// The lights of the last frame as the solvers take them, reused.
     solver_lights: Vec<Light>,
     lights: Vec<GiLight>,
     /// The last frame's inputs; `None` before the first frame, whose inputs all go to the
@@ -334,30 +334,36 @@ impl Scene {
         if lights_changed {
             self.solver_lights.clear();
             for light in lights {
-                let spot = match light.kind {
+                let kind = match light.kind {
                     // LightType.Point
-                    2 => None,
+                    2 => LightKind::Point {
+                        position: light.position,
+                        range: light.range,
+                    },
                     // LightType.Spot
-                    0 => Some(SpotCone::new(light.direction, light.spot_angle)),
-                    1 => {
-                        bail!("directional lights in precomputed realtime GI are not supported yet")
-                    }
+                    0 => LightKind::Spot {
+                        position: light.position,
+                        range: light.range,
+                        cone: SpotCone::new(light.direction, light.spot_angle),
+                    },
+                    // LightType.Directional
+                    1 => LightKind::Directional {
+                        to_light: light.direction.map(|v| -v),
+                    },
                     other => {
                         bail!("light type {other} in precomputed realtime GI is not supported")
                     }
                 };
                 self.solver_lights.push(Light {
-                    position: light.position,
                     color: light.color,
-                    range: light.range,
-                    spot,
+                    kind,
                 });
+            }
+            for system in &mut self.systems {
+                system.set_lights(&self.solver_lights)?;
             }
             self.lights.clear();
             self.lights.extend_from_slice(lights);
-            for system in &mut self.systems {
-                system.set_lights(&self.solver_lights);
-            }
         }
         let last = self.frame.replace(*frame);
         let differs = |f: fn(&GiFrame) -> [f32; 3]| last.is_none_or(|l| f(&l) != f(frame));
@@ -752,13 +758,23 @@ mod tests {
             update(handle, &frame, &[spot]).unwrap() & UPDATE_CONVERGED,
             0
         );
+        // A directional light too (shadowed by the system's precomputed visibility).
+        let directional = GiLight {
+            kind: 1,
+            direction: [0.3, -0.8, 0.5],
+            ..spot
+        };
+        assert_eq!(
+            update(handle, &frame, &[directional]).unwrap() & UPDATE_CONVERGED,
+            0
+        );
         // Unsupported lights fail loudly; the scene goes away with its handle.
-        let directional = GiLight { kind: 1, ..spot };
+        let area = GiLight { kind: 3, ..spot };
         assert!(
-            update(handle, &frame, &[directional])
+            update(handle, &frame, &[area])
                 .unwrap_err()
                 .to_string()
-                .contains("directional")
+                .contains("light type 3")
         );
         release(handle);
         assert!(update(handle, &frame, &[]).is_err());

@@ -484,6 +484,9 @@ pub struct System {
     pub materials: ClusterMaterials,
     /// The chart each texel belongs to ([`read_chart_mask`]).
     pub chart_mask: Vec<u32>,
+    /// The precomputed visibility directional lights read, or why it could not be read (then
+    /// only directional lights fail).
+    pub visibility: std::result::Result<crate::visibility::Visibility, String>,
 }
 
 /// A light probe set's transport: per probe, the input values it references (dependency and
@@ -702,6 +705,9 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
             read_cluster_materials(file(&input_hash, "caw")?, transport.width, transport.height)?;
         let chart_mask =
             read_chart_mask(file(&input_hash, "ecm")?, transport.width, transport.height)?;
+        let visibility = file(&input_hash, "vis")
+            .and_then(crate::visibility::Visibility::read)
+            .map_err(|e| format!("{e:#}"));
         let size = atlas_sizes[atlas] as usize;
         ensure!(
             offset.0 + transport.width as usize <= size
@@ -723,6 +729,7 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
             transport,
             materials,
             chart_mask,
+            visibility,
         });
     }
     let (mut probe_sets, mut probe_errors) = (Vec::new(), Vec::new());

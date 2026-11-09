@@ -3,6 +3,7 @@
 //! bounce resampled from them. All buffers are allocated once per system; an update allocates
 //! nothing.
 use crate::data::{ABSENT_ID, ENVIRONMENT_ID, ENVIRONMENT_VALUES, InputSamples, System};
+use crate::visibility::Visibility;
 use anyhow::{Result, bail};
 use std::sync::Arc;
 pub use unbound_assets::color::gamma_to_linear;
@@ -26,18 +27,29 @@ const SCALE_CHANGE: f32 = 1.0 / 8_388_608.0;
 /// `DynamicGI.updateThreshold`'s default, in percent.
 pub const DEFAULT_UPDATE_THRESHOLD: f32 = 1.0;
 
-/// A realtime point or spot light as precomputed realtime GI sees it in the built-in pipeline:
-/// not shadowed, with the legacy distance falloff (other pipelines' falloffs are not supported
-/// yet).
+/// A realtime light as precomputed realtime GI sees it in the built-in pipeline.
 #[derive(Debug, Clone, Copy)]
 pub struct Light {
-    pub position: [f32; 3],
     /// Linear: the light's color times its intensity and bounce intensity (in a project without
     /// linear light intensity, scaled before the conversion to linear).
     pub color: [f32; 3],
-    pub range: f32,
-    /// A spot light's cone; `None` for a point light.
-    pub spot: Option<SpotCone>,
+    pub kind: LightKind,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum LightKind {
+    /// Not shadowed, with the legacy distance falloff (other pipelines' falloffs are not
+    /// supported yet).
+    Point { position: [f32; 3], range: f32 },
+    /// As a point light, within its cone.
+    Spot {
+        position: [f32; 3],
+        range: f32,
+        cone: SpotCone,
+    },
+    /// Shadowed by the system's precomputed visibility: `to_light` is the unit direction toward
+    /// the light (its forward vector negated).
+    Directional { to_light: [f32; 3] },
 }
 
 /// Steps of a spot light's angular table between the cosine of half its angle and 1.
@@ -194,6 +206,10 @@ pub struct SystemSolver {
     system: Arc<System>,
     sources: Vec<Source>,
     direct: Vec<[f32; 3]>,
+    /// Scratch space of directional lights: visible points per cluster, a decoded visibility
+    /// stream.
+    visible: Vec<u32>,
+    stream: Vec<u8>,
     albedo2: Vec<[f32; 3]>,
     emission: Vec<[f32; 3]>,
     /// The emission texture (linear, system resolution) and the renderers' own emissions.
@@ -236,23 +252,45 @@ fn mul_add(acc: &mut [f32; 3], w: f32, v: [f32; 3]) {
     }
 }
 
-/// The direct light of point and spot lights on each cluster: the mean over its points of the
-/// cosine of the point's normal (as stored, not renormalized) with the direction to the light,
-/// times the light's sampled distance falloff, its angular falloff (spot lights) and its color.
-fn shade_lights(input: &InputSamples, lights: &[Light], out: &mut [[f32; 3]]) {
+/// The direct light of `lights` on each cluster: the mean over its points of the cosine of the
+/// point's normal (as stored, not renormalized) with the direction to the light, times the
+/// light's color and, for point and spot lights, its sampled distance falloff and angular
+/// falloff (spot lights). A directional light lights only the points of a cluster its precomputed
+/// visibility counts as seeing it, the first ones in order (`visible` and `stream` are scratch
+/// space of a value per cluster).
+fn shade_lights(
+    input: &InputSamples,
+    visibility: &std::result::Result<Visibility, String>,
+    lights: &[Light],
+    visible: &mut [u32],
+    stream: &mut Vec<u8>,
+    out: &mut [[f32; 3]],
+) -> Result<()> {
     let falloff = &*LEGACY_FALLOFF;
-    for (c, out) in out.iter_mut().enumerate() {
-        let (first, end) = (
+    let points = |c: usize| {
+        (
             input.cluster_points[c] as usize,
             input.cluster_points[c + 1] as usize,
-        );
+        )
+    };
+    for (c, out) in out.iter_mut().enumerate() {
+        let (first, end) = points(c);
         let mut sum = [0.0f32; 3];
         for p in first..end {
             let (pos, n) = (input.positions[p], input.normals[p]);
             for light in lights {
-                let d = [0, 1, 2].map(|k| light.position[k] - pos[k]);
+                let (position, range, cone) = match &light.kind {
+                    LightKind::Point { position, range } => (position, *range, None),
+                    LightKind::Spot {
+                        position,
+                        range,
+                        cone,
+                    } => (position, *range, Some(cone)),
+                    LightKind::Directional { .. } => continue,
+                };
+                let d = [0, 1, 2].map(|k| position[k] - pos[k]);
                 let length2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
-                if length2 <= 0.0 || light.range <= 0.0 {
+                if length2 <= 0.0 || range <= 0.0 {
                     continue;
                 }
                 let inverse = 1.0 / length2.sqrt();
@@ -260,16 +298,46 @@ fn shade_lights(input: &InputSamples, lights: &[Light], out: &mut [[f32; 3]]) {
                 if cos <= 0.0 {
                     continue;
                 }
-                let mut w = cos * falloff.eval(length2 / (light.range * light.range));
-                if let Some(spot) = &light.spot {
-                    w *= spot.falloff(d.map(|v| -v * inverse));
+                let mut w = cos * falloff.eval(length2 / (range * range));
+                if let Some(cone) = cone {
+                    w *= cone.falloff(d.map(|v| -v * inverse));
                 }
                 mul_add(&mut sum, w, light.color);
             }
         }
-        let count = (end - first).max(1) as f32;
-        *out = sum.map(|v| v / count);
+        *out = sum;
     }
+    for light in lights {
+        let LightKind::Directional { to_light: l } = light.kind else {
+            continue;
+        };
+        let visibility = visibility.as_ref().map_err(|e| {
+            anyhow::anyhow!("a directional light without precomputed visibility: {e}")
+        })?;
+        visibility.visible_points(
+            l,
+            |c| {
+                let (first, end) = points(c);
+                (end - first) as u32
+            },
+            stream,
+            visible,
+        )?;
+        for (c, out) in out.iter_mut().enumerate() {
+            let (first, end) = points(c);
+            let mut w = 0.0;
+            for n in &input.normals[first..(first + visible[c] as usize).min(end)] {
+                w += (n[0] * l[0] + n[1] * l[1] + n[2] * l[2]).max(0.0);
+            }
+            mul_add(out, w, light.color);
+        }
+    }
+    for (c, out) in out.iter_mut().enumerate() {
+        let (first, end) = points(c);
+        let count = (end - first).max(1) as f32;
+        *out = out.map(|v| v / count);
+    }
+    Ok(())
 }
 
 impl SystemSolver {
@@ -330,6 +398,8 @@ impl SystemSolver {
         Ok(Self {
             sources,
             direct: vec![[0.0; 3]; clusters],
+            visible: vec![0; clusters],
+            stream: Vec::new(),
             albedo2: vec![[0.0; 3]; clusters],
             emission: vec![[0.0; 3]; clusters],
             emission_texels: vec![[0.0; 3]; texels],
@@ -361,9 +431,17 @@ impl SystemSolver {
         &self.system
     }
 
-    /// The direct light of `lights` on each cluster.
-    pub fn set_lights(&mut self, lights: &[Light]) {
-        shade_lights(&self.system.input, lights, &mut self.direct);
+    /// The direct light of `lights` on each cluster. Fails for a directional light when the
+    /// system's precomputed visibility could not be read.
+    pub fn set_lights(&mut self, lights: &[Light]) -> Result<()> {
+        shade_lights(
+            &self.system.input,
+            &self.system.visibility,
+            lights,
+            &mut self.visible,
+            &mut self.stream,
+            &mut self.direct,
+        )
     }
 
     /// The system's albedo texture as the meta pass renders it: RGBA8, `width * height` texels
@@ -687,6 +765,14 @@ mod falloff_tests {
         assert_eq!(cone.falloff([f32::NAN; 3]), 0.0);
     }
 
+    /// The direct light of `lights` on one cluster of `input` without precomputed visibility.
+    fn shade(input: &crate::data::InputSamples, lights: &[Light]) -> Result<[f32; 3]> {
+        let mut out = [[0.0f32; 3]; 1];
+        let none = Err("none".to_string());
+        shade_lights(input, &none, lights, &mut [0], &mut Vec::new(), &mut out)?;
+        Ok(out[0])
+    }
+
     #[test]
     fn a_point_light_lights_a_cluster_by_its_normal_and_the_table() {
         // A cluster of one quad at the origin facing +y, a light 2 above it with range 4.
@@ -697,17 +783,15 @@ mod falloff_tests {
             tree_children: vec![],
             tree_weights: vec![],
         };
-        let light = Light {
-            position: [0.0, 2.0, 0.0],
+        let at = |kind| Light {
             color: [1.0, 0.5, 0.25],
+            kind,
+        };
+        let point = at(LightKind::Point {
+            position: [0.0, 2.0, 0.0],
             range: 4.0,
-            spot: None,
-        };
-        let direct = |input: &crate::data::InputSamples| {
-            let mut out = [[0.0f32; 3]; 1];
-            shade_lights(input, &[light], &mut out);
-            out[0]
-        };
+        });
+        let direct = |input: &crate::data::InputSamples| shade(input, &[point]).unwrap();
         let f = LEGACY_FALLOFF.eval(0.25);
         assert_eq!(direct(&input), [f, 0.5 * f, 0.25 * f]);
         // Facing away: nothing; at 45 degrees for half the points: their cosine.
@@ -719,23 +803,26 @@ mod falloff_tests {
         // A spot light pointing down lights the cluster as the point light did; pointing
         // sideways, not at all.
         input.normals = vec![[0.0, 1.0, 0.0]; 4];
-        let shade = |light: Light| {
-            let mut out = [[0.0f32; 3]; 1];
-            shade_lights(&input, &[light], &mut out);
-            out[0]
+        let spot = |direction| {
+            at(LightKind::Spot {
+                position: [0.0, 2.0, 0.0],
+                range: 4.0,
+                cone: SpotCone::new(direction, 30.0),
+            })
         };
-        let down = Light {
-            spot: Some(SpotCone::new([0.0, -1.0, 0.0], 30.0)),
-            ..light
-        };
-        assert_eq!(shade(down), [f, 0.5 * f, 0.25 * f]);
-        let sideways = Light {
-            spot: Some(SpotCone::new([1.0, 0.0, 0.0], 30.0)),
-            ..light
-        };
-        assert_eq!(shade(sideways), [0.0; 3]);
+        assert_eq!(
+            shade(&input, &[spot([0.0, -1.0, 0.0])]).unwrap(),
+            [f, 0.5 * f, 0.25 * f]
+        );
+        assert_eq!(shade(&input, &[spot([1.0, 0.0, 0.0])]).unwrap(), [0.0; 3]);
         // Out of range: nothing.
         input.positions = vec![[0.0, -3.0, 0.0]; 4];
         assert_eq!(direct(&input), [0.0; 3]);
+        // A directional light needs the precomputed visibility.
+        let sun = at(LightKind::Directional {
+            to_light: [0.0, 1.0, 0.0],
+        });
+        let error = shade(&input, &[sun]).unwrap_err().to_string();
+        assert!(error.contains("visibility"), "{error}");
     }
 }

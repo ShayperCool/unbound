@@ -2,7 +2,7 @@
 //! tests/projects/realtimegi (Room scene).
 use crate::data::{Precomputed, System, read_precomputed};
 use crate::probes::ProbeSetSolver;
-use crate::solver::{Light, SpotCone, SystemSolver, gamma_to_linear};
+use crate::solver::{Light, LightKind, SpotCone, SystemSolver, gamma_to_linear};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -117,7 +117,10 @@ struct Room {
     /// The flat ambient color (gamma).
     ambient: [f32; 3],
     point_light: bool,
-    spot_light: bool,
+    /// The spot light (intensity 3, range 9) at a position, direction and angle.
+    spot: Option<([f32; 3], [f32; 3], f32)>,
+    /// A directional light (color (1, 0.95, 0.8), intensity 1.2) at Euler angles x and y.
+    sun: Option<(f32, f32)>,
     /// DynamicGI.updateThreshold.
     threshold: f32,
 }
@@ -133,12 +136,17 @@ const BASE: Room = Room {
     left_rendered: [0.8, 0.1, 0.1],
     ambient: [0.1, 0.12, 0.2],
     point_light: true,
-    spot_light: false,
+    spot: None,
+    sun: None,
     threshold: 1.0,
 };
 const MOVED: [f32; 3] = [1.5, 2.5, -1.5];
 /// The emissive panel's renderer (scene object file ID).
 const PANEL: i64 = 1629154324;
+
+/// The scene's spot light position and rotation (x, y, z, w).
+const SPOT_AT: [f32; 3] = [1.5, 3.5, -1.0];
+const SPOT_ROTATION: [f32; 4] = [0.3630454, -0.2921564, 0.12101513, 0.8764691];
 
 /// A rotation's forward vector (+z rotated by the quaternion x, y, z, w).
 fn forward(q: [f32; 4]) -> [f32; 3] {
@@ -217,29 +225,39 @@ impl Replay {
             .set_uniform_environment(room.ambient.map(gamma_to_linear));
         // The project has no linear light intensity: the gamma colors are scaled, then
         // converted.
-        let point = Light {
-            position: room.light,
-            color: [1.0, 0.95, 0.85]
-                .map(|c: f32| gamma_to_linear(c * room.intensity * room.bounce)),
-            range: 10.0,
-            spot: None,
-        };
-        // The scene's spot light: intensity 3, range 9, angle 50 (its inner angle, 21.8, is not
-        // what the angular falloff uses).
-        let spot = Light {
-            position: [1.5, 3.5, -1.0],
-            color: [0.6, 0.8, 1.0].map(|c: f32| gamma_to_linear(c * 3.0)),
-            range: 9.0,
-            spot: Some(SpotCone::new(
-                forward([0.3630454, -0.2921564, 0.12101513, 0.8764691]),
-                50.0,
-            )),
-        };
-        let lights: Vec<Light> = [(room.point_light, point), (room.spot_light, spot)]
-            .into_iter()
-            .filter_map(|(on, light)| on.then_some(light))
-            .collect();
-        self.solver.set_lights(&lights);
+        let mut lights = Vec::new();
+        if room.point_light {
+            lights.push(Light {
+                color: [1.0, 0.95, 0.85]
+                    .map(|c: f32| gamma_to_linear(c * room.intensity * room.bounce)),
+                kind: LightKind::Point {
+                    position: room.light,
+                    range: 10.0,
+                },
+            });
+        }
+        // The scene's spot light (its inner angle, 21.8, is not what the angular falloff uses).
+        if let Some((position, direction, angle)) = room.spot {
+            lights.push(Light {
+                color: [0.6, 0.8, 1.0].map(|c: f32| gamma_to_linear(c * 3.0)),
+                kind: LightKind::Spot {
+                    position,
+                    range: 9.0,
+                    cone: SpotCone::new(direction, angle),
+                },
+            });
+        }
+        if let Some((x, y)) = room.sun {
+            let (x, y) = (x.to_radians(), y.to_radians());
+            let forward = [y.sin() * x.cos(), -x.sin(), y.cos() * x.cos()];
+            lights.push(Light {
+                color: [1.0, 0.95, 0.8].map(|c: f32| gamma_to_linear(c * 1.2)),
+                kind: LightKind::Directional {
+                    to_light: forward.map(|v| -v),
+                },
+            });
+        }
+        self.solver.set_lights(&lights).unwrap();
         self.solver.set_indirect_scale(room.indirect_scale);
         self.solver.set_update_threshold(room.threshold);
         self.room = Some(room);
@@ -471,10 +489,35 @@ fn replays_the_probes_cases() {
     r.check(
         Room {
             point_light: false,
-            spot_light: true,
+            spot: Some((SPOT_AT, forward(SPOT_ROTATION), 50.0)),
             ..ambient
         },
         "room-spot",
+        2 * ISOLATED,
+        0.006,
+    );
+    // The spot light at the block's side: the right wall behind the block, in its shadow, is
+    // lit too (the realtime GI input has no shadows of spot lights).
+    let behind = Room {
+        point_light: false,
+        spot: Some(([-1.5, 1.0, 0.8], [1.0, 0.0, 0.0], 60.0)),
+        ..ambient
+    };
+    r.check(behind, "room-spot-behind", 2 * ISOLATED, 0.006);
+    // A directional light through the open front, shadowed by the precomputed visibility, at
+    // two directions between stored ones.
+    let sun = Room {
+        spot: None,
+        sun: Some((40.0, 25.0)),
+        ..behind
+    };
+    r.check(sun, "room-directional", 2 * ISOLATED, 0.006);
+    r.check(
+        Room {
+            sun: Some((57.0, -33.0)),
+            ..sun
+        },
+        "room-directional-turned",
         2 * ISOLATED,
         0.006,
     );
