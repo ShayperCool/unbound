@@ -376,6 +376,8 @@ namespace UnityEngine.Tests
             }
             Assert.Equal(0, Children(0f));
             Assert.InRange(Children(0.5f), 1, 10);
+            // A threshold of 1 discards all twelve lanes: only the ten while the count lasts fire.
+            Assert.Equal(10, Children(1f));
         }
 
         [Fact]
