@@ -832,8 +832,10 @@ public class BuiltinProbe : MonoBehaviour
 
     /// <summary>Which of an object's lights the one pixel light slot (pixelLightCount 1) takes:
     /// an extra directional light without shadows against a closer, brighter point light
-    /// (light_rank_directional), and a gray and a red point light at one place
-    /// (light_rank_color: the colours' luminance as set, 0.5 against 0.3; linear, 0.21 against 0.3).</summary>
+    /// (light_rank_directional, light_rank_shadowed_sun under a shadowed sun), a gray and a red
+    /// point light at one place (light_rank_color: the colours' luminance as set, 0.5 against 0.3;
+    /// linear, 0.21 against 0.3), a second directional light taking the slot
+    /// (light_rank_directional_fill) and six point lights (light_rank_vertex).</summary>
     void LightRanking()
     {
         int pixelLights = QualitySettings.pixelLightCount;
@@ -852,6 +854,44 @@ public class BuiltinProbe : MonoBehaviour
         Point(new Vector3(0f, 1.2f, -0.6f), Color.red, 4f, 1f);
         camera = MakeCamera();
         Capture(camera, "light_rank_color");
+        Clear();
+
+        // The same as light_rank_directional under a sun casting hard shadows (it ranks sixteen
+        // times higher, so the point light keeps less of its pixel pass).
+        Stage(Standard(Color.white));
+        var sun = Directional(new Vector3(50f, -30f, 0f), Color.white, 0.5f);
+        sun.shadows = LightShadows.Hard;
+        Directional(new Vector3(40f, 150f, 0f), new Color(0.2f, 0.4f, 1f), 0.3f);
+        Point(new Vector3(0f, 1f, -0.5f), new Color(1f, 0.3f, 0.2f), 4f, 1.5f);
+        camera = MakeCamera();
+        Capture(camera, "light_rank_shadowed_sun");
+        Clear();
+
+        // A second directional light that outranks the point light takes the pixel slot (its
+        // rest goes to the harmonics); the point light is the vertex light.
+        Stage(Standard(Color.white));
+        RenderSettings.sun = Directional(new Vector3(50f, -30f, 0f), Color.white, 0.5f);
+        Directional(new Vector3(40f, 150f, 0f), new Color(0.4f, 0.6f, 1f), 0.8f);
+        Point(new Vector3(0f, 1f, -0.5f), new Color(1f, 0.3f, 0.2f), 4f, 0.6f);
+        camera = MakeCamera();
+        Capture(camera, "light_rank_directional_fill");
+        RenderSettings.sun = null;
+        Clear();
+
+        // Six point lights of different colours and brightness with one pixel light: the
+        // pixel light's fade, four vertex lights (the last one fading) and the rest in the
+        // harmonics.
+        Stage(Standard(Color.white));
+        Directional(new Vector3(50f, -30f, 0f), Color.white, 0.3f);
+        var colors = new[] { new Color(1f, 0.2f, 0.2f), new Color(0.2f, 1f, 0.2f), new Color(0.2f, 0.3f, 1f),
+            new Color(1f, 1f, 0.2f), new Color(0.2f, 1f, 1f), new Color(1f, 0.2f, 1f) };
+        for (int i = 0; i < colors.Length; i++)
+        {
+            float a = i * Mathf.PI * 2f / colors.Length;
+            Point(new Vector3(Mathf.Cos(a) * 1.4f, 0.8f + 0.1f * i, Mathf.Sin(a) * 1.2f), colors[i], 3f + 0.3f * i, 0.6f + 0.25f * i);
+        }
+        camera = MakeCamera();
+        Capture(camera, "light_rank_vertex");
         Clear();
         QualitySettings.pixelLightCount = pixelLights;
     }
