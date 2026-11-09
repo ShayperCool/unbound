@@ -215,6 +215,7 @@ public class PathProbe : MonoBehaviour
             ("link.slope", LinkSlope),
             ("carve.shortcut", CarveShortcut),
             ("carve.rules", CarveRules),
+            ("nearest.sides", NearestSides),
         })
         {
             if (!name.StartsWith(Only)) continue;
@@ -1185,5 +1186,47 @@ public class PathProbe : MonoBehaviour
         }
         foreach (var go in made) Destroy(go);
         yield return Frames(2);
+    }
+
+    static string P(Vector3 v) => Name(v.x) + "," + Name(v.y) + "," + Name(v.z);
+
+    /// <summary>Which NavMesh a query starts from at a point over a floor and just before the edge of
+    /// a platform 1.5 m over it (two NavMeshes: the floor runs on under the platform): 1 m up (the
+    /// platform is nearer than the floor, but not by the agent climb) and 1.9 m up (the platform is
+    /// nearer by more than the climb). SamplePosition, both ends of a path, a raycast towards the
+    /// open floor and the closest edge.</summary>
+    IEnumerator NearestSides()
+    {
+        ClearAgents();
+        yield return null;
+        var settings = NavMesh.GetSettingsByID(0);
+        var bounds = new Bounds(Vector3.zero, new Vector3(16f, 10f, 16f));
+        var floor = new List<NavMeshBuildSource> { Source(new Vector3(Off.x, -0.05f, Off.y), new Vector3(12f, 0.1f, 12f), 0, 0f) };
+        var platform = new List<NavMeshBuildSource> { Source(new Vector3(Off.x, 0.75f, 3f + Off.y), new Vector3(6f, 1.5f, 4f), 0, 0f) };
+        NavMesh.AddNavMeshData(NavMeshBuilder.BuildNavMeshData(settings, floor, bounds, Vector3.zero, Quaternion.identity));
+        NavMesh.AddNavMeshData(NavMeshBuilder.BuildNavMeshData(settings, platform, bounds, Vector3.zero, Quaternion.identity));
+        yield return Frames(2);
+        // The platform's edge facing the floor's middle.
+        bool onEdge = NavMesh.SamplePosition(new Vector3(0f, 1.6f, 0.5f), out var edgeHit, 1.5f, NavMesh.AllAreas);
+        ProbeLog.Value("edge", onEdge ? P(edgeHit.position) : "none");
+        float edge = onEdge ? edgeHit.position.z : 1.5f;
+        var away = new Vector3(0f, 0f, -4f);
+        foreach (float y in new[] { 1f, 1.9f })
+        foreach (float back in new[] { 0.2f, 0.3f, 0.4f })
+        foreach (float x in new[] { 0f, 1.1f })
+        {
+            var at = new Vector3(x, y, edge - back);
+            string key = "y" + Name(y) + ".b" + Name(back) + ".x" + Name(x);
+            ProbeLog.Value(key + ".sample", NavMesh.SamplePosition(at, out var hit, 2.5f, NavMesh.AllAreas) ? P(hit.position) : "none");
+            var path = new NavMeshPath();
+            NavMesh.CalculatePath(at, away, NavMesh.AllAreas, path);
+            ProbeLog.Value(key + ".from", path.status + " " + (path.corners.Length > 0 ? P(path.corners[0]) : "-"));
+            var back2 = new NavMeshPath();
+            NavMesh.CalculatePath(away, at, NavMesh.AllAreas, back2);
+            ProbeLog.Value(key + ".to", back2.status + " " + (back2.corners.Length > 0 ? P(back2.corners[back2.corners.Length - 1]) : "-"));
+            bool blocked = NavMesh.Raycast(at, at + new Vector3(0f, 0f, -3f), out var ray, NavMesh.AllAreas);
+            ProbeLog.Value(key + ".ray", blocked + " " + P(ray.position));
+            ProbeLog.Value(key + ".closestEdge", NavMesh.FindClosestEdge(at, out var closest, NavMesh.AllAreas) ? P(closest.position) : "none");
+        }
     }
 }
