@@ -135,5 +135,111 @@ namespace UnityEngine.Tests
             }
             finally { Object.DestroyImmediate(root); }
         }
+    
+
+        sealed class Warnings : ILogHandler
+        {
+            internal readonly System.Collections.Generic.List<string> Messages = new System.Collections.Generic.List<string>();
+            public void LogException(System.Exception exception, Object context) => Messages.Add(exception.Message);
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
+                Messages.Add(logType + ": " + string.Format(format, args));
+        }
+
+        static void Loop(Animator animator)
+        {
+            var clip = animator.runtimeAnimatorController.animationClips[0];
+            clip.m_LoopTime = true;
+            clip.m_Version++;
+        }
+
+        // Native controls: tests/projects/humanoid match.pastTarget (looping) and match.once (not looping).
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ATargetAlreadyPassedMovesToTheNextLoopOrIsIgnored(bool loops)
+        {
+            var animator = Create(out var root);
+            try
+            {
+                if (loops) Loop(animator);
+                animator.Update(.7f);
+                animator.MatchTarget(new Vector3(10, 0, 0), Quaternion.identity, AvatarTarget.Root,
+                    new MatchTargetWeightMask(Vector3.one, 1), .1f, .5f);
+                Assert.Equal(loops, animator.isMatchingTarget);
+                if (!loops) return;
+                animator.Update(.5f);
+                Assert.True(animator.isMatchingTarget);
+                animator.Update(.3f);
+                Assert.True(animator.isMatchingTarget);
+                Near.Equal(new Vector3(10, 0, 0), new Vector3(root.transform.position.x, 0, root.transform.position.z), 1e-3f);
+                animator.Update(.1f);
+                Assert.False(animator.isMatchingTarget);
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
+        // Native controls: tests/projects/humanoid match.inTransition and match.invalid.
+        [Fact]
+        public void CallsInATransitionOrWithAnInvalidTargetOnlyWarn()
+        {
+            var animator = Create(out var root);
+            var previous = Debug.unityLogger.logHandler;
+            var warnings = new Warnings();
+            try
+            {
+                Debug.unityLogger.logHandler = warnings;
+                animator.MatchTarget(Vector3.one, Quaternion.identity, (AvatarTarget)7, new MatchTargetWeightMask(Vector3.one, 1), .1f, .9f);
+                Assert.False(animator.isMatchingTarget);
+                animator.CrossFade("Empty", .5f);
+                animator.Update(.1f);
+                Assert.True(animator.IsInTransition(0));
+                animator.MatchTarget(Vector3.one, Quaternion.identity, AvatarTarget.Root, new MatchTargetWeightMask(Vector3.one, 1), .1f, .9f);
+                Assert.False(animator.isMatchingTarget);
+                Assert.Equal(new[] { "Warning: Invalid Target Index", "Warning: Calling Animator.MatchTarget while in transition does not have any effect." },
+                    warnings.Messages);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        // A generic rig has no body parts: every AvatarTarget matches the root.
+        [Fact]
+        public void BodyPartTargetsOfAGenericRigMatchTheRoot()
+        {
+            Vector3 Matched(AvatarTarget target)
+            {
+                var animator = Create(out var root);
+                try
+                {
+                    animator.MatchTarget(new Vector3(4, 0, 3), Quaternion.identity, target, new MatchTargetWeightMask(Vector3.one, 1), .1f, .6f);
+                    Assert.True(animator.isMatchingTarget);
+                    animator.Update(.3f);
+                    animator.Update(.3f);
+                    return root.transform.position;
+                }
+                finally { Object.DestroyImmediate(root); }
+            }
+            var position = Matched(AvatarTarget.Root);
+            Near.Equal(new Vector3(4, 0, 3), new Vector3(position.x, 0, position.z), 1e-3f);
+            Assert.Equal(position, Matched(AvatarTarget.LeftHand));
+        }
+
+        // Native control: tests/projects/humanoid massCenter.api (an Animator without an avatar keeps it).
+        [Fact]
+        public void LayersAffectMassCenterIsKeptWithoutAnAvatar()
+        {
+            var animator = new GameObject("Plain").AddComponent<Animator>();
+            try
+            {
+                Assert.False(animator.layersAffectMassCenter);
+                animator.layersAffectMassCenter = true;
+                Assert.True(animator.layersAffectMassCenter);
+                animator.SetBoneLocalRotation(HumanBodyBones.Spine, Quaternion.identity);
+            }
+            finally { Object.DestroyImmediate(animator.gameObject); }
+        }
     }
 }

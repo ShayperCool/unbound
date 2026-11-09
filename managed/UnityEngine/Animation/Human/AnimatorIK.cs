@@ -135,6 +135,21 @@ namespace UnityEngine
             if (IKPose is { } p && Goal((int)hint)) HumanIK.SetHintWeightPosition(p, HumanIK.GoalOfHint((int)hint), value);
         }
 
+        /// <summary>Replaces a human bone's local rotation (relative to its parent human bone) in the IK
+        /// pass's skeleton pose: the goals' solve and the twist distribution that follow start from it
+        /// (Unity 6000.0.71f1, tests/projects/humanoid boneRot*). Bones the avatar does not map are
+        /// ignored.</summary>
+        public void SetBoneLocalRotation(HumanBodyBones humanBoneId, Quaternion rotation)
+        {
+            CheckIfInIKPass();
+            Human?.SetBoneLocalRotation((int)humanBoneId, AvatarBuild.Q(rotation));
+        }
+
+        /// <summary>Whether the layers above the base layer place the body (its mass center) even when
+        /// their avatar masks leave out Root (Unity 6000.0.71f1, tests/projects/humanoid
+        /// massCenter.*; also kept on an Animator without an avatar).</summary>
+        public bool layersAffectMassCenter { get; set; }
+
         public void SetLookAtPosition(Vector3 lookAtPosition)
         {
             CheckIfInIKPass();

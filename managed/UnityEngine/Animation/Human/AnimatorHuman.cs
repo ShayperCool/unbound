@@ -95,6 +95,15 @@ namespace Unbound.Runtime.Humanoid
             HumanRootMotion.Evaluate(motion, input, m_Previous, m_Current, clip.HumanPresent, out sample);
         }
 
+        /// <summary>A target body part of a clip at <c>input.Time</c> relative to the clip's motion at
+        /// <c>input.PreviousTime</c> (<see cref="HumanRootMotion.MatchPart"/>).</summary>
+        internal Trs MatchPart(AnimationClip clip, HumanClipMotion motion, in HumanClipMotionInput input, int target)
+        {
+            clip.SampleHuman(HumanRootMotion.ClipTime(motion, input.PreviousTime, input.Speed, input.CycleOffset, out _), m_Previous);
+            clip.SampleHuman(HumanRootMotion.ClipTime(motion, input.Time, input.Speed, input.CycleOffset, out _), m_Current);
+            return HumanRootMotion.MatchPart(motion, input, m_Previous, m_Current, clip.HumanPresent, target);
+        }
+
         /// <summary>An additive layer clip's body difference at a state's time: its body (RootX)
         /// relative to the body of its additive reference pose (the reference clip at the reference
         /// time, else the clip's first frame), reference⁻¹ · body.</summary>
@@ -155,6 +164,14 @@ namespace Unbound.Runtime.Humanoid
             HumanRootMotion.ProjectMotion(motion.Delta, AvatarX(), deltaTime, m_Constant.Human.Scale,
                 m_Memory.Pivot, out result);
             PivotPosition = result.PivotPosition;
+        }
+
+        /// <summary>A human bone's local rotation in the IK step's skeleton pose (relative to its
+        /// parent human bone), which the next IK solve and the twist distribution start from.</summary>
+        internal void SetBoneLocalRotation(int monoBone, F4 rotation)
+        {
+            int node = m_Constant.HumanNodeOf(monoBone);
+            if (node >= 0) m_W0.X[node].q = rotation;
         }
 
         /// <summary>Set while OnAnimatorIK runs (the IK API is meant for it).</summary>

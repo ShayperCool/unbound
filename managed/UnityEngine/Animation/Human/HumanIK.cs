@@ -34,7 +34,7 @@ namespace Unbound.Runtime.Humanoid
         static readonly int[] GoalMid = { Bone.LeftLowerLeg, Bone.RightLowerLeg, Bone.LeftLowerArm, Bone.RightLowerArm };
 
         // Per goal: the rotation from the end bone's muscle frame to the API's goal rotation.
-        static readonly F4[] GoalOrientationOffset =
+        internal static readonly F4[] GoalOrientationOffset =
         {
             new F4(0.5f, -0.5f, 0.5f, 0.5f),
             new F4(0.5f, -0.5f, 0.5f, 0.5f),

@@ -81,9 +81,8 @@ namespace Unbound.Runtime.Humanoid
             var values = new float[HumanClipImport.CurveCount];
 
             m.HeightFromFeet = settings.HeightFromFeet && !settings.KeepOriginalPositionY;
-            if (m.HeightFromFeet && !(present[HumanClipImport.GoalFirst + 1] && present[HumanClipImport.GoalFirst + 8]))
-                Unbound.Runtime.Stubs.Ignored("AnimationClip humanoid height from feet without foot goals",
-                    "a humanoid clip based upon the feet without foot goal curves takes the body's height (not measured)");
+            // A foot without goal curves counts at the body's height (tests/projects/humanoid
+            // feetNoGoals, feetLeftGoal).
             sample(start, values);
             m.StartRootX = HumanRootMotion.ReadRoot(values, present);
             float startFeet = HumanRootMotion.FeetY(values, present, m.StartRootX);
@@ -418,6 +417,39 @@ namespace Unbound.Runtime.Humanoid
             }
         }
 
+        /// <summary>Where a target body part of a clip is at one time relative to the clip's motion at
+        /// another (target matching): (motion at <c>input.PreviousTime</c>)⁻¹ · (motion at
+        /// <c>input.Time</c>, across the cycles a loop wraps) · part, the part being nothing for the
+        /// root (target 0), the body relative to its motion (1) or a goal there (2..5: the feet, then
+        /// the hands), its rotation in the API's goal frame, positions in clip units
+        /// (tests/projects/humanoid match.*).</summary>
+        /// <param name="from">The clip's values at <c>input.PreviousTime</c>.</param>
+        /// <param name="to">The clip's values at <c>input.Time</c>.</param>
+        public static Trs MatchPart(HumanClipMotion clip, in HumanClipMotionInput input, float[] from, float[] to, bool[] present, int target)
+        {
+            ClipTime(clip, input.PreviousTime, input.Speed, input.CycleOffset, out float fromCycle);
+            float toTime = ClipTime(clip, input.Time, input.Speed, input.CycleOffset, out float toCycle);
+            var root = ReadRoot(to, present);
+            var motion = Trs.Identity;
+            var body = root;
+            if (clip.HasRootCurves)
+            {
+                var start = ReadRoot(from, present);
+                var startX = MotionX(clip, start.t, start.q, clip.HeightFromFeet ? FeetY(from, present, start) : 0f);
+                var endX = MotionX(clip, root.t, root.q, clip.HeightFromFeet ? FeetY(to, present, root) : 0f);
+                var conj = M.QConj(endX.q);
+                body = LoopBlend(clip, new Trs(M.QRotate(conj, root.t - endX.t), M.QMul(conj, root.q), F4.One3), toTime);
+                if (clip.LoopTime) endX = CycleX(endX, clip.MotionStartX, clip.MotionStopX, (int)(toCycle - fromCycle));
+                motion = M.InvMul(startX, endX);
+            }
+            if (target == 0) return motion;
+            if (target == 1) return M.Mul(motion, body);
+            int goal = target - 2;
+            var x = M.Mul(body, ReadGoal(to, present, goal));
+            x.q = M.QNormalize(M.QMul(x.q, HumanIK.GoalOrientationOffset[goal]));
+            return M.Mul(motion, x);
+        }
+
         /// <summary>A body relative to the motion at a clip time with the clip's loop pose (with loop
         /// time, as generic loop pose): moved by
         /// the time's fraction of the cycle of <see cref="HumanClipMotion.LoopBlendX"/> in its own
@@ -604,7 +636,7 @@ namespace Unbound.Runtime.Humanoid
             {
                 if (!any)
                     Unbound.Runtime.Stubs.Ignored("Animator humanoid layer mask without Root over no humanoid clip",
-                        "a layer whose mask leaves out Root adds no body or root motion over no humanoid clip below (not measured)");
+                        "a layer whose mask leaves out Root adds no body or root motion over no humanoid clip below; over generic root motion the Editor moves the root further (tests/projects/humanoid noRootOverGeneric)");
                 return;
             }
             if (additive)

@@ -297,35 +297,50 @@ namespace Unbound.Runtime
 
         static float ClipTime(AnimationClip clip, double normalized, bool loop) => ClipSampling.ClipTime(clip, normalized, loop);
 
-        internal bool CompletedNonLoopingBaseState(StateRun run) =>
-            run.Normalized >= 1.0 && MotionOf(Layers[0].Def, run.Def) is AnimationClip clip
-            && !Controller.MapClip(clip).isLooping;
+        /// <summary>Whether the base layer state's motion loops (AnimatorStateInfo.loop).</summary>
+        internal bool BaseStateLoops(StateRun run) => MotionLoops(MotionOf(Layers[0].Def, run.Def));
 
-        /// <summary>Target matching: once the base layer's state reaches the match's start, each
-        /// evaluation moves the root by its motion plus the part of the remaining correction the
-        /// step covers, (min(t, end) − t₀) / (end − t₀), the correction being the target less where
-        /// the motion alone would bring the root by the end; rotations by the normalized lerp
-        /// towards it. The step past the end completes the match.</summary>
-        void MatchStep(Animator animator, Vector3 scale, int pos, int rot)
+        /// <summary>The match's step this evaluation: whether the base layer's state is past the
+        /// match's start, its previous and current normalized times, and the share of the remaining
+        /// correction the step covers, (min(t, end) − t₀) / (end − t₀) (1 when finishing). A
+        /// transition or another state interrupts the match: it finishes now or is cancelled as
+        /// MatchTarget's completeMatch asked. A step that reaches the end completes the match.</summary>
+        bool MatchProgress(Animator animator, out Animator.MatchState match, out double from, out double to, out float share)
         {
-            var match = animator.m_Match;
+            match = animator.m_Match;
+            from = to = 0.0;
+            share = 0f;
             var run = Layers.Length > 0 ? Layers[0].Current : null;
-            if (match == null || run == null) return;
+            if (match == null || run == null) return false;
             if (match.Player != this || match.Run != run || Layers[0].Transition != null)
             {
-                if (!match.CompleteOnInterruption) { animator.m_Match = null; return; }
+                if (!match.CompleteOnInterruption) { animator.m_Match = null; return false; }
                 match.Finish = true;
                 match.Player = this;
                 match.Run = run;
             }
-            double from = run.MotionPrevious ?? run.Previous, to = run.Normalized;
-            if (to < match.Start) return;
+            from = run.MotionPrevious ?? run.Previous;
+            to = run.Normalized;
+            if (to < match.Start) return false;
             if (match.End <= from)
             {
-                if (match.Finish || to > match.End) animator.m_Match = null;
-                return;
+                if (match.Finish || MatchEnds(match, to)) animator.m_Match = null;
+                return false;
             }
-            double f = match.Finish ? 1.0 : (Math.Min(to, match.End) - from) / (match.End - from);
+            share = match.Finish ? 1f : (float)((Math.Min(to, match.End) - from) / (match.End - from));
+            return true;
+        }
+
+        /// <summary>The match is complete once the state's time passes its end
+        /// (tests/projects/modelroot matchReview.timing, tests/projects/humanoid match.onceLate).</summary>
+        static bool MatchEnds(Animator.MatchState match, double to) => to > match.End;
+
+        /// <summary>Target matching of a generic rig: every target is the root, which the base
+        /// layer's motion would bring from the previous time to the end of the match.</summary>
+        void MatchStep(Animator animator, Vector3 scale, int pos, int rot)
+        {
+            if (!MatchProgress(animator, out var match, out double from, out double to, out float share)) return;
+            var run = Layers[0].Current;
             // Where the base layer's motion would bring the root by the end of the match.
             var toEnd = Vector3.zero;
             var turnToEnd = Quaternion.identity;
@@ -338,19 +353,68 @@ namespace Unbound.Runtime
                 toEnd += d * weight;
                 turnToEnd *= Quaternion.Slerp(Quaternion.identity, q, weight);
             }
-            var position = animator.m_MotionRootPosition;
             var rotation = animator.m_MotionRootRotation;
-            var predicted = position + rotation * Vector3.Scale(scale, toEnd);
+            ApplyMatch(animator, match, share, animator.m_MotionRootPosition + rotation * Vector3.Scale(scale, toEnd), rotation * turnToEnd);
+            if (match.Finish || MatchEnds(match, to)) animator.m_Match = null;
+        }
+
+        /// <summary>Target matching of a humanoid rig: the target body part as the base layer's clips
+        /// would place it at the end of the match, relative to their motion now (averaged by weight),
+        /// from the root after this step (tests/projects/humanoid match.*).</summary>
+        void HumanMatchStep(Animator animator, Unbound.Runtime.Humanoid.AnimatorHuman human, Vector3 scale)
+        {
+            if (!MatchProgress(animator, out var match, out double from, out double to, out float share)) return;
+            var run = Layers[0].Current;
+            // A match finishing early takes the part from the previous evaluation's pose (this
+            // evaluation's pose follows the root motion pass), its position without the human scale (tests/projects/humanoid match.interrupt: HumanA's
+            // scale of 1.0495 is the ratio of the part's offsets).
+            double start = match.Finish ? from : to;
+            double end = match.Finish ? from : match.PredictCurrentPose ? to : match.End;
+            var t = Vector3.zero;
+            var q = new Quaternion(0f, 0f, 0f, 0f);
+            float total = 0f;
+            foreach (var (_, layerIndex, contribution, clip, weight) in m_Contributions)
+            {
+                if (layerIndex != 0 || contribution != run || weight <= 0f || !clip.HasHumanCurves) continue;
+                total += weight;
+                var input = new Unbound.Runtime.Humanoid.HumanClipMotionInput
+                {
+                    Time = (float)ClipSampling.StateClipNormalized(end, clip.length),
+                    PreviousTime = (float)ClipSampling.StateClipNormalized(start, clip.length),
+                    Speed = SpeedOf(run.Def),
+                    CycleOffset = run.Def.CycleOffset + (float)MirrorShift(run.Def, clip),
+                };
+                var x = human.MatchPart(clip, clip.HumanClipMotion, input, (int)match.Target);
+                t += new Vector3(x.t.x, x.t.y, x.t.z) * weight;
+                var xq = new Quaternion(x.q.x, x.q.y, x.q.z, x.q.w);
+                float w = Quaternion.Dot(q, xq) < 0f ? -weight : weight;
+                q = new Quaternion(q.x + xq.x * w, q.y + xq.y * w, q.z + xq.z * w, q.w + xq.w * w);
+            }
+            if (total > 0f) t /= total;
+            q = q.w == 0f && q.x == 0f && q.y == 0f && q.z == 0f ? Quaternion.identity : q.normalized;
+            var turned = animator.m_MotionRootRotation * animator.m_DeltaRotation;
+            var moved = animator.m_MotionRootPosition + animator.m_DeltaPosition;
+            ApplyMatch(animator, match, share, moved + turned * Vector3.Scale(scale, match.Finish ? t : t * animator.humanScale), turned * q);
+            if (match.Finish || MatchEnds(match, to)) animator.m_Match = null;
+            RootVelocities(animator.m_DeltaPosition, animator.m_DeltaRotation, animator.m_MotionRootRotation, m_RootDeltaTime,
+                out animator.m_RootVelocity, out animator.m_RootAngularVelocity);
+        }
+
+        /// <summary>Moves the step's root motion by the share of the remaining correction: the target
+        /// position less where the target part would end without it, masked per axis in the root's
+        /// frame after the step, and the normalized lerp from the identity towards the remaining turn
+        /// by the share times the rotation weight.</summary>
+        static void ApplyMatch(Animator animator, Animator.MatchState match, float share, Vector3 predicted, Quaternion predictedRotation)
+        {
+            var rotation = animator.m_MotionRootRotation;
             var turned = rotation * animator.m_DeltaRotation;
             var rootCorrection = Quaternion.Inverse(turned) * (match.Position - predicted);
-            var correction = turned * Vector3.Scale(rootCorrection, match.Mask.positionXYZWeight) * (float)f;
-            animator.m_DeltaPosition += correction;
-            var remaining = match.Rotation * Quaternion.Inverse(rotation * turnToEnd);
-            float g = (float)f * Mathf.Clamp01(match.Mask.rotationWeight);
+            animator.m_DeltaPosition += turned * Vector3.Scale(rootCorrection, match.Mask.positionXYZWeight) * share;
+            var remaining = match.Rotation * Quaternion.Inverse(predictedRotation);
+            float g = share * Mathf.Clamp01(match.Mask.rotationWeight);
             if (Quaternion.Dot(remaining, Quaternion.identity) < 0f) remaining = new Quaternion(-remaining.x, -remaining.y, -remaining.z, -remaining.w);
             var part = new Quaternion(remaining.x * g, remaining.y * g, remaining.z * g, 1f - g + remaining.w * g).normalized;
             animator.m_DeltaRotation = (Quaternion.Inverse(rotation) * (part * turned)).normalized;
-            if (match.Finish || to > match.End) animator.m_Match = null;
         }
 
         /// <summary>A clip's root movement from one time to another, in its root frame at the first.</summary>
@@ -456,6 +520,7 @@ namespace Unbound.Runtime
             animator.m_DeltaRotation = new Quaternion(rm.DeltaRotation.x, rm.DeltaRotation.y, rm.DeltaRotation.z, rm.DeltaRotation.w);
             animator.m_RootVelocity = new Vector3(rm.Velocity.x, rm.Velocity.y, rm.Velocity.z);
             animator.m_RootAngularVelocity = new Vector3(rm.AngularVelocity.x, rm.AngularVelocity.y, rm.AngularVelocity.z);
+            if (animator.m_Match != null) HumanMatchStep(animator, human, RootMotionScale(animator.transform));
             return true;
         }
     }

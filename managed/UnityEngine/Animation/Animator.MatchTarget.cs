@@ -3,9 +3,11 @@ using Unbound.Runtime;
 
 namespace UnityEngine
 {
-    /// <summary>Target matching of a generic rig's root (AvatarTarget.Root): while the base
-    /// layer's state runs from the start to the target normalized time, root motion is corrected
-    /// so that the root ends at the target (measured, tests/projects/modelroot).</summary>
+    /// <summary>Target matching: while the base layer's state runs from the start to the target
+    /// normalized time, root motion is corrected so that the target body part ends at the match
+    /// position and rotation (Unity 6000.0.71f1, tests/projects/modelroot for generic rigs,
+    /// tests/projects/humanoid match.* for every AvatarTarget on humanoid rigs; on a generic rig
+    /// every target matches the root).</summary>
     public partial class Animator
     {
         internal sealed class MatchState
@@ -13,6 +15,7 @@ namespace UnityEngine
             internal Vector3 Position;
             internal Quaternion Rotation;
             internal MatchTargetWeightMask Mask;
+            internal AvatarTarget Target;
             internal AnimatorPlayer Player;
             internal StateRun Run;
             internal bool CompleteOnInterruption, Finish, PredictCurrentPose;
@@ -31,29 +34,50 @@ namespace UnityEngine
             float targetNormalizedTime) =>
             MatchTarget(matchPosition, matchRotation, targetBodyPart, weightMask, startNormalizedTime, targetNormalizedTime, true);
 
-        /// <summary>Queues one generic root match at a time. A start already passed in the
-        /// current loop begins at the state's current time (tests/projects/modelroot).</summary>
+        /// <summary>Queues one match at a time; a call while matching only changes what an
+        /// interruption does. In the current loop of the state, a start already passed begins at the
+        /// state's current time and a target already passed moves both times to the next loop; a
+        /// state that does not loop ignores a target before its start. A call in a transition or with
+        /// a target outside AvatarTarget does nothing but warn (tests/projects/humanoid match.*,
+        /// tests/projects/modelroot).</summary>
         public void MatchTarget(Vector3 matchPosition, Quaternion matchRotation, AvatarTarget targetBodyPart, MatchTargetWeightMask weightMask, float startNormalizedTime,
             float targetNormalizedTime, bool completeMatch)
         {
+            if (m_Match != null) m_Match.CompleteOnInterruption = completeMatch;
+            if ((uint)targetBodyPart > (uint)AvatarTarget.RightHand)
+            {
+                if (logWarnings) Debug.LogWarning("Invalid Target Index");
+                return;
+            }
             if (m_Match != null) return;
-            if (targetBodyPart != AvatarTarget.Root)
-            {
-                Unbound.Runtime.Stubs.Ignored("Animator.MatchTarget", "matches only AvatarTarget.Root (generic rigs); body parts need humanoid avatars");
-                return;
-            }
-            if (isHuman)
-            {
-                Unbound.Runtime.Stubs.Ignored("Animator.MatchTarget", "target matching on humanoid avatars is not supported yet");
-                return;
-            }
             var p = EnsurePlayer();
             var run = p != null && p.Layers.Length > 0 ? p.Layers[0].Current : null;
             if (run == null) return;
-            if (p.CompletedNonLoopingBaseState(run)) return;
-            double now = run.Normalized, loop = Math.Floor(now);
-            double start = Math.Max(now, loop + startNormalizedTime), end = loop + targetNormalizedTime;
-            m_Match = new MatchState { Position = matchPosition, Rotation = matchRotation, Mask = weightMask,
+            if (p.Layers[0].Transition != null)
+            {
+                if (logWarnings) Debug.LogWarning("Calling Animator.MatchTarget while in transition does not have any effect.");
+                return;
+            }
+            double now = run.Normalized, loop = Math.Floor(now), within = now - loop;
+            double start, end;
+            if (within <= startNormalizedTime)
+            {
+                start = loop + startNormalizedTime;
+                end = loop + targetNormalizedTime;
+            }
+            else if (targetNormalizedTime <= within)
+            {
+                start = loop + 1.0 + startNormalizedTime;
+                end = loop + 1.0 + targetNormalizedTime;
+            }
+            else
+            {
+                start = now;
+                end = loop + targetNormalizedTime;
+            }
+            if (targetNormalizedTime < start && !p.BaseStateLoops(run)) return;
+            if (end < start) end += 1.0;
+            m_Match = new MatchState { Position = matchPosition, Rotation = matchRotation, Mask = weightMask, Target = targetBodyPart,
                 Start = start, End = end, Player = p, Run = run, CompleteOnInterruption = completeMatch };
         }
 

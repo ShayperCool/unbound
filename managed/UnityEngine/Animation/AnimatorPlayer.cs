@@ -1136,13 +1136,14 @@ namespace Unbound.Runtime
         /// <summary>A humanoid Animator's mass center pose, which places the body (hips) before the
         /// muscles of every layer apply: the layers whose avatar mask leaves out Root do not take part
         /// (measured, tests/projects/humanoid: the hips stay where the layers below put them). Only
-        /// set when such a layer has weight; otherwise the whole pose places the body. Curves only
-        /// excluded layers animate keep the animated pose's values, and states without write defaults
-        /// keep the animated values (not measured).</summary>
+        /// set when such a layer has weight and Animator.layersAffectMassCenter is off; otherwise the
+        /// whole pose places the body. Curves no placing layer animates take their defaults, the
+        /// identity body and zero muscles (measured over an empty base state and a generic clip,
+        /// tests/projects/humanoid noRootOverEmpty, noRootOverGeneric).</summary>
         void WriteMassCenterPose(int count)
         {
             var human = m_Animator.Human;
-            if (human == null) return;
+            if (human == null || m_Animator.layersAffectMassCenter) return;
             bool any = false;
             for (int i = 1; i < count && !any; i++)
                 any = m_LayerPoses[i].Weight > 0f && !PlacesBody(i);
@@ -1163,7 +1164,7 @@ namespace Unbound.Runtime
             for (int c = 0; c < n; c++)
             {
                 var owner = Bindings.FloatOwner[c];
-                m_MassCenterValues[c] = owner != null && owner.HumanCurve >= 0 ? human.Value(owner.HumanCurve) : 0f;
+                m_MassCenterValues[c] = owner != null && owner.HumanCurve >= 0 ? Bindings.Defaults[c] : 0f;
             }
             PoseWriter.CombineLayers(Bindings, m_MassCenterLayers, k, m_MassCenterValues, null, overDefaults: true, humanBodyInRootMotion: true);
             for (int c = 0; c < n; c++)
