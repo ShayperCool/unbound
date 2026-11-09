@@ -1,0 +1,817 @@
+{"k":"doc/NoProperty/children","v":"no-property,after-no-property"}
+{"k":"doc/NoProperty/no-property/bindings","v":"=DataBinding trigger=OnSourceChanged path=message mode=ToTarget source=null sourceType=null"}
+{"k":"doc/NoProperty/after-no-property/bindings","v":""}
+{"k":"doc/NotBinding/children","v":"not-binding,after-not-binding"}
+{"k":"doc/NotBinding/not-binding/bindings","v":"text=DataBinding trigger=OnSourceChanged path=message mode=ToTarget source=null sourceType=null"}
+{"k":"doc/NotBinding/after-not-binding/bindings","v":""}
+{"k":"doc/UnknownType/children","v":"unknown-type,after-unknown-type"}
+{"k":"doc/UnknownType/unknown-type/bindings","v":"text=DataBinding trigger=OnSourceChanged path=message mode=ToTarget source=null sourceType=null"}
+{"k":"doc/UnknownType/after-unknown-type/bindings","v":""}
+{"k":"describe/box/source","v":"BindData:BindData path= type=BindData"}
+{"k":"describe/box/bindings","v":""}
+{"k":"describe/to-target/source","v":"null path= type=null"}
+{"k":"describe/to-target/bindings","v":"text=DataBinding trigger=OnSourceChanged path=message mode=ToTarget source=null sourceType=null"}
+{"k":"describe/default-mode/source","v":"null path= type=null"}
+{"k":"describe/default-mode/bindings","v":"text=DataBinding trigger=OnSourceChanged path=message mode=TwoWay source=null sourceType=null"}
+{"k":"describe/inner-parent/source","v":"null path=inner type=null"}
+{"k":"describe/inner-parent/bindings","v":""}
+{"k":"describe/hier/source","v":"null path= type=null"}
+{"k":"describe/hier/bindings","v":"text=DataBinding trigger=OnSourceChanged path=value mode=ToTarget source=null sourceType=null"}
+{"k":"describe/once/source","v":"null path= type=null"}
+{"k":"describe/once/bindings","v":"text=DataBinding trigger=OnSourceChanged path=message mode=ToTargetOnce source=null sourceType=null"}
+{"k":"describe/dirty/source","v":"null path= type=null"}
+{"k":"describe/dirty/bindings","v":"text=DataBinding trigger=WhenDirty path=message mode=ToTarget source=null sourceType=null"}
+{"k":"describe/every/source","v":"null path= type=null"}
+{"k":"describe/every/bindings","v":"text=DataBinding trigger=EveryUpdate path=message mode=ToTarget source=null sourceType=null"}
+{"k":"describe/own-source/source","v":"null path= type=null"}
+{"k":"describe/own-source/bindings","v":"text=DataBinding trigger=OnSourceChanged path=message mode=ToTarget source=BindData:BindOther sourceType=BindData"}
+{"k":"describe/conv/source","v":"null path= type=null"}
+{"k":"describe/conv/bindings","v":"text=DataBinding trigger=OnSourceChanged path=count mode=ToTarget source=null sourceType=null"}
+{"k":"describe/conv-order/source","v":"null path= type=null"}
+{"k":"describe/conv-order/bindings","v":"text=DataBinding trigger=OnSourceChanged path=count mode=ToTarget source=null sourceType=null"}
+{"k":"describe/conv-late/source","v":"null path= type=null"}
+{"k":"describe/conv-late/bindings","v":"text=DataBinding trigger=OnSourceChanged path=count mode=ToTarget source=null sourceType=null"}
+{"k":"describe/two-way/source","v":"null path= type=null"}
+{"k":"describe/two-way/bindings","v":"value=DataBinding trigger=OnSourceChanged path=inner.value mode=TwoWay source=null sourceType=null"}
+{"k":"describe/to-source/source","v":"null path= type=null"}
+{"k":"describe/to-source/bindings","v":"value=DataBinding trigger=OnSourceChanged path=count mode=ToSource source=null sourceType=null"}
+{"k":"describe/slider/source","v":"null path= type=null"}
+{"k":"describe/slider/bindings","v":"value=DataBinding trigger=OnSourceChanged path=width mode=TwoWay source=null sourceType=null"}
+{"k":"describe/styled/source","v":"null path= type=null"}
+{"k":"describe/styled/bindings","v":"style.border-left-width=DataBinding trigger=OnSourceChanged path=count mode=ToTarget source=null sourceType=null ; style.display=DataBinding trigger=OnSourceChanged path=display mode=ToTarget source=null sourceType=null ; style.opacity=DataBinding trigger=OnSourceChanged path=opacity mode=ToTarget source=null sourceType=null ; style.backgroundColor=DataBinding trigger=OnSourceChanged path=color mode=ToTarget source=null sourceType=null ; style.height=DataBinding trigger=OnSourceChanged path=count mode=ToTarget source=null sourceType=null ; style.width=DataBinding trigger=OnSourceChanged path=width mode=ToTarget source=null sourceType=null"}
+{"k":"describe/custom/source","v":"null path= type=null"}
+{"k":"describe/custom/bindings","v":"text=ProbeCustomBinding trigger=EveryUpdate prefix=P:"}
+{"k":"describe/bad-path/source","v":"null path= type=null"}
+{"k":"describe/bad-path/bindings","v":"text=DataBinding trigger=OnSourceChanged path=nosuchfield mode=ToTarget source=null sourceType=null"}
+{"k":"describe/bad-target/source","v":"null path= type=null"}
+{"k":"describe/bad-target/bindings","v":"nosuchproperty=DataBinding trigger=OnSourceChanged path=message mode=ToTarget source=null sourceType=null"}
+{"k":"describe/two-same/source","v":"null path= type=null"}
+{"k":"describe/two-same/bindings","v":"text=DataBinding trigger=OnSourceChanged path=count mode=ToTarget source=null sourceType=null"}
+{"k":"describe/child-after-bindings/source","v":"null path= type=null"}
+{"k":"describe/child-after-bindings/bindings","v":"text=DataBinding trigger=OnSourceChanged path=message mode=ToTarget source=null sourceType=null"}
+{"k":"describe/nested-child/source","v":"null path= type=null"}
+{"k":"describe/nested-child/bindings","v":""}
+{"k":"initial/box/bindings","v":""}
+{"k":"initial/to-target/text","v":"asset"}
+{"k":"initial/to-target/bindings","v":"text"}
+{"k":"initial/to-target/result/text","v":"ui=Success | source=none"}
+{"k":"initial/default-mode/text","v":"asset"}
+{"k":"initial/default-mode/bindings","v":"text"}
+{"k":"initial/default-mode/result/text","v":"ui=Success | source=none"}
+{"k":"initial/inner-parent/bindings","v":""}
+{"k":"initial/hier/text","v":"inner"}
+{"k":"initial/hier/bindings","v":"text"}
+{"k":"initial/hier/result/text","v":"ui=Success | source=none"}
+{"k":"initial/once/text","v":"asset"}
+{"k":"initial/once/bindings","v":"text"}
+{"k":"initial/once/result/text","v":"ui=Success | source=none"}
+{"k":"initial/dirty/text","v":"asset"}
+{"k":"initial/dirty/bindings","v":"text"}
+{"k":"initial/dirty/result/text","v":"ui=Success | source=none"}
+{"k":"initial/every/text","v":"asset"}
+{"k":"initial/every/bindings","v":"text"}
+{"k":"initial/every/result/text","v":"ui=Success | source=none"}
+{"k":"initial/own-source/text","v":"other"}
+{"k":"initial/own-source/bindings","v":"text"}
+{"k":"initial/own-source/result/text","v":"ui=Success | source=none"}
+{"k":"initial/conv/text","v":"n=4"}
+{"k":"initial/conv/bindings","v":"text"}
+{"k":"initial/conv/result/text","v":"ui=Success | source=none"}
+{"k":"initial/conv-order/text","v":"#4"}
+{"k":"initial/conv-order/bindings","v":"text"}
+{"k":"initial/conv-order/result/text","v":"ui=Success | source=none"}
+{"k":"initial/conv-late/text","v":"4"}
+{"k":"initial/conv-late/bindings","v":"text"}
+{"k":"initial/conv-late/result/text","v":"ui=Success | source=none"}
+{"k":"initial/two-way/value","v":"inner"}
+{"k":"initial/two-way/bindings","v":"value"}
+{"k":"initial/two-way/result/value","v":"ui=Success | source=none"}
+{"k":"initial/to-source/value","v":"initial"}
+{"k":"initial/to-source/bindings","v":"value"}
+{"k":"initial/to-source/result/value","v":"ui=none | source=none"}
+{"k":"initial/slider/value","v":"40"}
+{"k":"initial/slider/bindings","v":"value"}
+{"k":"initial/slider/result/value","v":"ui=Success | source=none"}
+{"k":"initial/styled/bindings","v":"style.width,style.height,style.backgroundColor,style.opacity,style.display,style.border-left-width"}
+{"k":"initial/styled/result/style.width","v":"ui=Success | source=none"}
+{"k":"initial/styled/result/style.height","v":"ui=Success | source=none"}
+{"k":"initial/styled/result/style.backgroundColor","v":"ui=Success | source=none"}
+{"k":"initial/styled/result/style.opacity","v":"ui=Success | source=none"}
+{"k":"initial/styled/result/style.display","v":"ui=Success | source=none"}
+{"k":"initial/styled/result/style.border-left-width","v":"ui=Success | source=none"}
+{"k":"initial/custom/text","v":"P:asset path="}
+{"k":"initial/custom/bindings","v":"text"}
+{"k":"initial/custom/result/text","v":"ui=Success | source=none"}
+{"k":"initial/bad-path/text","v":"initial"}
+{"k":"initial/bad-path/bindings","v":"text"}
+{"k":"initial/bad-path/result/text","v":"ui=Failure [UI Toolkit] Could not retrieve the value at path '<b>nosuchfield</b>' for source of type '<b>BindData</b>': the path from the source to the target is either invalid or contains a null value. | source=none"}
+{"k":"initial/bad-target/text","v":"initial"}
+{"k":"initial/bad-target/bindings","v":"nosuchproperty"}
+{"k":"initial/bad-target/result/nosuchproperty","v":"ui=Failure [UI Toolkit] Could not set value for target of type '<b>Label</b>' at path '<b>nosuchproperty</b>': the path is either invalid or contains a null value. | source=none"}
+{"k":"initial/two-same/text","v":"4"}
+{"k":"initial/two-same/bindings","v":"text"}
+{"k":"initial/two-same/result/text","v":"ui=Success | source=none"}
+{"k":"initial/child-after-bindings/text","v":"asset"}
+{"k":"initial/child-after-bindings/bindings","v":"text"}
+{"k":"initial/child-after-bindings/result/text","v":"ui=Success | source=none"}
+{"k":"initial/nested-child/text","v":"nested"}
+{"k":"initial/nested-child/bindings","v":""}
+{"k":"initial/styled/style.width","v":"Undefined 40 Pixel"}
+{"k":"initial/styled/style.height","v":"Undefined 4 Pixel"}
+{"k":"initial/styled/style.backgroundColor","v":"Undefined 1,0,0,1"}
+{"k":"initial/styled/style.opacity","v":"Undefined 0.5"}
+{"k":"initial/styled/style.display","v":"Undefined Flex"}
+{"k":"initial/styled/style.borderLeftWidth","v":"Undefined 4"}
+{"k":"initial/styled/style.alignSelf","v":"Null Auto"}
+{"k":"initial/styled/resolved","v":"40 x 4 opacity 0.5 display Flex color 1,0,0,1 border 4"}
+{"k":"initial/data","v":"asset 4 40 inner"}
+{"k":"initial/other","v":"other 9"}
+{"k":"doc/NoProperty/no-property/text","v":"initial"}
+{"k":"doc/NoProperty/after-no-property/text","v":"after"}
+{"k":"doc/NotBinding/not-binding/text","v":"asset"}
+{"k":"doc/NotBinding/after-not-binding/text","v":"after"}
+{"k":"doc/UnknownType/unknown-type/text","v":"asset"}
+{"k":"doc/UnknownType/after-unknown-type/text","v":"after"}
+{"k":"changed/box/bindings","v":""}
+{"k":"changed/to-target/text","v":"changed"}
+{"k":"changed/to-target/bindings","v":"text"}
+{"k":"changed/to-target/result/text","v":"ui=Success | source=none"}
+{"k":"changed/default-mode/text","v":"changed"}
+{"k":"changed/default-mode/bindings","v":"text"}
+{"k":"changed/default-mode/result/text","v":"ui=Success | source=none"}
+{"k":"changed/inner-parent/bindings","v":""}
+{"k":"changed/hier/text","v":"inner2"}
+{"k":"changed/hier/bindings","v":"text"}
+{"k":"changed/hier/result/text","v":"ui=Success | source=none"}
+{"k":"changed/once/text","v":"asset"}
+{"k":"changed/once/bindings","v":"text"}
+{"k":"changed/once/result/text","v":"ui=Success | source=none"}
+{"k":"changed/dirty/text","v":"asset"}
+{"k":"changed/dirty/bindings","v":"text"}
+{"k":"changed/dirty/result/text","v":"ui=Success | source=none"}
+{"k":"changed/every/text","v":"changed"}
+{"k":"changed/every/bindings","v":"text"}
+{"k":"changed/every/result/text","v":"ui=Success | source=none"}
+{"k":"changed/own-source/text","v":"other2"}
+{"k":"changed/own-source/bindings","v":"text"}
+{"k":"changed/own-source/result/text","v":"ui=Success | source=none"}
+{"k":"changed/conv/text","v":"n=12"}
+{"k":"changed/conv/bindings","v":"text"}
+{"k":"changed/conv/result/text","v":"ui=Success | source=none"}
+{"k":"changed/conv-order/text","v":"#12"}
+{"k":"changed/conv-order/bindings","v":"text"}
+{"k":"changed/conv-order/result/text","v":"ui=Success | source=none"}
+{"k":"changed/conv-late/text","v":"12"}
+{"k":"changed/conv-late/bindings","v":"text"}
+{"k":"changed/conv-late/result/text","v":"ui=Success | source=none"}
+{"k":"changed/two-way/value","v":"inner2"}
+{"k":"changed/two-way/bindings","v":"value"}
+{"k":"changed/two-way/result/value","v":"ui=Success | source=none"}
+{"k":"changed/to-source/value","v":"initial"}
+{"k":"changed/to-source/bindings","v":"value"}
+{"k":"changed/to-source/result/value","v":"ui=none | source=none"}
+{"k":"changed/slider/value","v":"55"}
+{"k":"changed/slider/bindings","v":"value"}
+{"k":"changed/slider/result/value","v":"ui=Success | source=none"}
+{"k":"changed/styled/bindings","v":"style.width,style.height,style.backgroundColor,style.opacity,style.display,style.border-left-width"}
+{"k":"changed/styled/result/style.width","v":"ui=Success | source=none"}
+{"k":"changed/styled/result/style.height","v":"ui=Success | source=none"}
+{"k":"changed/styled/result/style.backgroundColor","v":"ui=Success | source=none"}
+{"k":"changed/styled/result/style.opacity","v":"ui=Success | source=none"}
+{"k":"changed/styled/result/style.display","v":"ui=Success | source=none"}
+{"k":"changed/styled/result/style.border-left-width","v":"ui=Success | source=none"}
+{"k":"changed/custom/text","v":"P:changed path="}
+{"k":"changed/custom/bindings","v":"text"}
+{"k":"changed/custom/result/text","v":"ui=Success | source=none"}
+{"k":"changed/bad-path/text","v":"initial"}
+{"k":"changed/bad-path/bindings","v":"text"}
+{"k":"changed/bad-path/result/text","v":"ui=Failure [UI Toolkit] Could not retrieve the value at path '<b>nosuchfield</b>' for source of type '<b>BindData</b>': the path from the source to the target is either invalid or contains a null value. | source=none"}
+{"k":"changed/bad-target/text","v":"initial"}
+{"k":"changed/bad-target/bindings","v":"nosuchproperty"}
+{"k":"changed/bad-target/result/nosuchproperty","v":"ui=Failure [UI Toolkit] Could not set value for target of type '<b>Label</b>' at path '<b>nosuchproperty</b>': the path is either invalid or contains a null value. | source=none"}
+{"k":"changed/two-same/text","v":"12"}
+{"k":"changed/two-same/bindings","v":"text"}
+{"k":"changed/two-same/result/text","v":"ui=Success | source=none"}
+{"k":"changed/child-after-bindings/text","v":"changed"}
+{"k":"changed/child-after-bindings/bindings","v":"text"}
+{"k":"changed/child-after-bindings/result/text","v":"ui=Success | source=none"}
+{"k":"changed/nested-child/text","v":"nested"}
+{"k":"changed/nested-child/bindings","v":""}
+{"k":"changed/styled/style.width","v":"Undefined 55 Pixel"}
+{"k":"changed/styled/style.height","v":"Undefined 12 Pixel"}
+{"k":"changed/styled/style.backgroundColor","v":"Undefined 0,1,0,1"}
+{"k":"changed/styled/style.opacity","v":"Undefined 0.25"}
+{"k":"changed/styled/style.display","v":"Undefined Flex"}
+{"k":"changed/styled/style.borderLeftWidth","v":"Undefined 12"}
+{"k":"changed/styled/style.alignSelf","v":"Null Auto"}
+{"k":"changed/styled/resolved","v":"55 x 12 opacity 0.25 display Flex color 0,1,0,1 border 12"}
+{"k":"changed/data","v":"changed 12 55 inner2"}
+{"k":"changed/other","v":"other2 9"}
+{"k":"marked/box/bindings","v":""}
+{"k":"marked/to-target/text","v":"changed"}
+{"k":"marked/to-target/bindings","v":"text"}
+{"k":"marked/to-target/result/text","v":"ui=Success | source=none"}
+{"k":"marked/default-mode/text","v":"changed"}
+{"k":"marked/default-mode/bindings","v":"text"}
+{"k":"marked/default-mode/result/text","v":"ui=Success | source=none"}
+{"k":"marked/inner-parent/bindings","v":""}
+{"k":"marked/hier/text","v":"inner2"}
+{"k":"marked/hier/bindings","v":"text"}
+{"k":"marked/hier/result/text","v":"ui=Success | source=none"}
+{"k":"marked/once/text","v":"changed"}
+{"k":"marked/once/bindings","v":"text"}
+{"k":"marked/once/result/text","v":"ui=Success | source=none"}
+{"k":"marked/dirty/text","v":"changed"}
+{"k":"marked/dirty/bindings","v":"text"}
+{"k":"marked/dirty/result/text","v":"ui=Success | source=none"}
+{"k":"marked/every/text","v":"changed"}
+{"k":"marked/every/bindings","v":"text"}
+{"k":"marked/every/result/text","v":"ui=Success | source=none"}
+{"k":"marked/own-source/text","v":"other2"}
+{"k":"marked/own-source/bindings","v":"text"}
+{"k":"marked/own-source/result/text","v":"ui=Success | source=none"}
+{"k":"marked/conv/text","v":"n=12"}
+{"k":"marked/conv/bindings","v":"text"}
+{"k":"marked/conv/result/text","v":"ui=Success | source=none"}
+{"k":"marked/conv-order/text","v":"#12"}
+{"k":"marked/conv-order/bindings","v":"text"}
+{"k":"marked/conv-order/result/text","v":"ui=Success | source=none"}
+{"k":"marked/conv-late/text","v":"12"}
+{"k":"marked/conv-late/bindings","v":"text"}
+{"k":"marked/conv-late/result/text","v":"ui=Success | source=none"}
+{"k":"marked/two-way/value","v":"inner2"}
+{"k":"marked/two-way/bindings","v":"value"}
+{"k":"marked/two-way/result/value","v":"ui=Success | source=none"}
+{"k":"marked/to-source/value","v":"initial"}
+{"k":"marked/to-source/bindings","v":"value"}
+{"k":"marked/to-source/result/value","v":"ui=none | source=none"}
+{"k":"marked/slider/value","v":"55"}
+{"k":"marked/slider/bindings","v":"value"}
+{"k":"marked/slider/result/value","v":"ui=Success | source=none"}
+{"k":"marked/styled/bindings","v":"style.width,style.height,style.backgroundColor,style.opacity,style.display,style.border-left-width"}
+{"k":"marked/styled/result/style.width","v":"ui=Success | source=none"}
+{"k":"marked/styled/result/style.height","v":"ui=Success | source=none"}
+{"k":"marked/styled/result/style.backgroundColor","v":"ui=Success | source=none"}
+{"k":"marked/styled/result/style.opacity","v":"ui=Success | source=none"}
+{"k":"marked/styled/result/style.display","v":"ui=Success | source=none"}
+{"k":"marked/styled/result/style.border-left-width","v":"ui=Success | source=none"}
+{"k":"marked/custom/text","v":"P:changed path="}
+{"k":"marked/custom/bindings","v":"text"}
+{"k":"marked/custom/result/text","v":"ui=Success | source=none"}
+{"k":"marked/bad-path/text","v":"initial"}
+{"k":"marked/bad-path/bindings","v":"text"}
+{"k":"marked/bad-path/result/text","v":"ui=Failure [UI Toolkit] Could not retrieve the value at path '<b>nosuchfield</b>' for source of type '<b>BindData</b>': the path from the source to the target is either invalid or contains a null value. | source=none"}
+{"k":"marked/bad-target/text","v":"initial"}
+{"k":"marked/bad-target/bindings","v":"nosuchproperty"}
+{"k":"marked/bad-target/result/nosuchproperty","v":"ui=Failure [UI Toolkit] Could not set value for target of type '<b>Label</b>' at path '<b>nosuchproperty</b>': the path is either invalid or contains a null value. | source=none"}
+{"k":"marked/two-same/text","v":"12"}
+{"k":"marked/two-same/bindings","v":"text"}
+{"k":"marked/two-same/result/text","v":"ui=Success | source=none"}
+{"k":"marked/child-after-bindings/text","v":"changed"}
+{"k":"marked/child-after-bindings/bindings","v":"text"}
+{"k":"marked/child-after-bindings/result/text","v":"ui=Success | source=none"}
+{"k":"marked/nested-child/text","v":"nested"}
+{"k":"marked/nested-child/bindings","v":""}
+{"k":"marked/styled/style.width","v":"Undefined 55 Pixel"}
+{"k":"marked/styled/style.height","v":"Undefined 12 Pixel"}
+{"k":"marked/styled/style.backgroundColor","v":"Undefined 0,1,0,1"}
+{"k":"marked/styled/style.opacity","v":"Undefined 0.25"}
+{"k":"marked/styled/style.display","v":"Undefined Flex"}
+{"k":"marked/styled/style.borderLeftWidth","v":"Undefined 12"}
+{"k":"marked/styled/style.alignSelf","v":"Null Auto"}
+{"k":"marked/styled/resolved","v":"55 x 12 opacity 0.25 display Flex color 0,1,0,1 border 12"}
+{"k":"marked/data","v":"changed 12 55 inner2"}
+{"k":"marked/other","v":"other2 9"}
+{"k":"ui/box/bindings","v":""}
+{"k":"ui/to-target/text","v":"changed"}
+{"k":"ui/to-target/bindings","v":"text"}
+{"k":"ui/to-target/result/text","v":"ui=Success | source=none"}
+{"k":"ui/default-mode/text","v":"changed"}
+{"k":"ui/default-mode/bindings","v":"text"}
+{"k":"ui/default-mode/result/text","v":"ui=Success | source=none"}
+{"k":"ui/inner-parent/bindings","v":""}
+{"k":"ui/hier/text","v":"typed"}
+{"k":"ui/hier/bindings","v":"text"}
+{"k":"ui/hier/result/text","v":"ui=Success | source=none"}
+{"k":"ui/once/text","v":"changed"}
+{"k":"ui/once/bindings","v":"text"}
+{"k":"ui/once/result/text","v":"ui=Success | source=none"}
+{"k":"ui/dirty/text","v":"changed"}
+{"k":"ui/dirty/bindings","v":"text"}
+{"k":"ui/dirty/result/text","v":"ui=Success | source=none"}
+{"k":"ui/every/text","v":"changed"}
+{"k":"ui/every/bindings","v":"text"}
+{"k":"ui/every/result/text","v":"ui=Success | source=none"}
+{"k":"ui/own-source/text","v":"other2"}
+{"k":"ui/own-source/bindings","v":"text"}
+{"k":"ui/own-source/result/text","v":"ui=Success | source=none"}
+{"k":"ui/conv/text","v":"n=6"}
+{"k":"ui/conv/bindings","v":"text"}
+{"k":"ui/conv/result/text","v":"ui=Success | source=none"}
+{"k":"ui/conv-order/text","v":"#6"}
+{"k":"ui/conv-order/bindings","v":"text"}
+{"k":"ui/conv-order/result/text","v":"ui=Success | source=none"}
+{"k":"ui/conv-late/text","v":"6"}
+{"k":"ui/conv-late/bindings","v":"text"}
+{"k":"ui/conv-late/result/text","v":"ui=Success | source=none"}
+{"k":"ui/two-way/value","v":"typed"}
+{"k":"ui/two-way/bindings","v":"value"}
+{"k":"ui/two-way/result/value","v":"ui=Success | source=Success"}
+{"k":"ui/to-source/value","v":"6"}
+{"k":"ui/to-source/bindings","v":"value"}
+{"k":"ui/to-source/result/value","v":"ui=Success | source=Success"}
+{"k":"ui/slider/value","v":"12.5"}
+{"k":"ui/slider/bindings","v":"value"}
+{"k":"ui/slider/result/value","v":"ui=Success | source=Success"}
+{"k":"ui/styled/bindings","v":"style.width,style.height,style.backgroundColor,style.opacity,style.display,style.border-left-width"}
+{"k":"ui/styled/result/style.width","v":"ui=Success | source=none"}
+{"k":"ui/styled/result/style.height","v":"ui=Success | source=none"}
+{"k":"ui/styled/result/style.backgroundColor","v":"ui=Success | source=none"}
+{"k":"ui/styled/result/style.opacity","v":"ui=Success | source=none"}
+{"k":"ui/styled/result/style.display","v":"ui=Success | source=none"}
+{"k":"ui/styled/result/style.border-left-width","v":"ui=Success | source=none"}
+{"k":"ui/custom/text","v":"P:changed path="}
+{"k":"ui/custom/bindings","v":"text"}
+{"k":"ui/custom/result/text","v":"ui=Success | source=none"}
+{"k":"ui/bad-path/text","v":"initial"}
+{"k":"ui/bad-path/bindings","v":"text"}
+{"k":"ui/bad-path/result/text","v":"ui=Failure [UI Toolkit] Could not retrieve the value at path '<b>nosuchfield</b>' for source of type '<b>BindData</b>': the path from the source to the target is either invalid or contains a null value. | source=none"}
+{"k":"ui/bad-target/text","v":"initial"}
+{"k":"ui/bad-target/bindings","v":"nosuchproperty"}
+{"k":"ui/bad-target/result/nosuchproperty","v":"ui=Failure [UI Toolkit] Could not set value for target of type '<b>Label</b>' at path '<b>nosuchproperty</b>': the path is either invalid or contains a null value. | source=none"}
+{"k":"ui/two-same/text","v":"6"}
+{"k":"ui/two-same/bindings","v":"text"}
+{"k":"ui/two-same/result/text","v":"ui=Success | source=none"}
+{"k":"ui/child-after-bindings/text","v":"changed"}
+{"k":"ui/child-after-bindings/bindings","v":"text"}
+{"k":"ui/child-after-bindings/result/text","v":"ui=Success | source=none"}
+{"k":"ui/nested-child/text","v":"nested"}
+{"k":"ui/nested-child/bindings","v":""}
+{"k":"ui/styled/style.width","v":"Undefined 12.5 Pixel"}
+{"k":"ui/styled/style.height","v":"Undefined 6 Pixel"}
+{"k":"ui/styled/style.backgroundColor","v":"Undefined 0,1,0,1"}
+{"k":"ui/styled/style.opacity","v":"Undefined 0.25"}
+{"k":"ui/styled/style.display","v":"Undefined Flex"}
+{"k":"ui/styled/style.borderLeftWidth","v":"Undefined 6"}
+{"k":"ui/styled/style.alignSelf","v":"Null Auto"}
+{"k":"ui/styled/resolved","v":"13 x 6 opacity 0.25 display Flex color 0,1,0,1 border 6"}
+{"k":"ui/data","v":"changed 6 12.5 typed"}
+{"k":"ui/other","v":"other2 9"}
+{"k":"hidden/box/bindings","v":""}
+{"k":"hidden/to-target/text","v":"changed"}
+{"k":"hidden/to-target/bindings","v":"text"}
+{"k":"hidden/to-target/result/text","v":"ui=Success | source=none"}
+{"k":"hidden/default-mode/text","v":"changed"}
+{"k":"hidden/default-mode/bindings","v":"text"}
+{"k":"hidden/default-mode/result/text","v":"ui=Success | source=none"}
+{"k":"hidden/inner-parent/bindings","v":""}
+{"k":"hidden/hier/text","v":"typed"}
+{"k":"hidden/hier/bindings","v":"text"}
+{"k":"hidden/hier/result/text","v":"ui=Success | source=none"}
+{"k":"hidden/once/text","v":"changed"}
+{"k":"hidden/once/bindings","v":"text"}
+{"k":"hidden/once/result/text","v":"ui=Success | source=none"}
+{"k":"hidden/dirty/text","v":"changed"}
+{"k":"hidden/dirty/bindings","v":"text"}
+{"k":"hidden/dirty/result/text","v":"ui=Success | source=none"}
+{"k":"hidden/every/text","v":"changed"}
+{"k":"hidden/every/bindings","v":"text"}
+{"k":"hidden/every/result/text","v":"ui=Success | source=none"}
+{"k":"hidden/own-source/text","v":"other2"}
+{"k":"hidden/own-source/bindings","v":"text"}
+{"k":"hidden/own-source/result/text","v":"ui=Success | source=none"}
+{"k":"hidden/conv/text","v":"n=6"}
+{"k":"hidden/conv/bindings","v":"text"}
+{"k":"hidden/conv/result/text","v":"ui=Success | source=none"}
+{"k":"hidden/conv-order/text","v":"#6"}
+{"k":"hidden/conv-order/bindings","v":"text"}
+{"k":"hidden/conv-order/result/text","v":"ui=Success | source=none"}
+{"k":"hidden/conv-late/text","v":"6"}
+{"k":"hidden/conv-late/bindings","v":"text"}
+{"k":"hidden/conv-late/result/text","v":"ui=Success | source=none"}
+{"k":"hidden/two-way/value","v":"typed"}
+{"k":"hidden/two-way/bindings","v":"value"}
+{"k":"hidden/two-way/result/value","v":"ui=Success | source=Success"}
+{"k":"hidden/to-source/value","v":"6"}
+{"k":"hidden/to-source/bindings","v":"value"}
+{"k":"hidden/to-source/result/value","v":"ui=Success | source=Success"}
+{"k":"hidden/slider/value","v":"12.5"}
+{"k":"hidden/slider/bindings","v":"value"}
+{"k":"hidden/slider/result/value","v":"ui=Success | source=Success"}
+{"k":"hidden/styled/bindings","v":"style.width,style.height,style.backgroundColor,style.opacity,style.display,style.border-left-width"}
+{"k":"hidden/styled/result/style.width","v":"ui=Success | source=none"}
+{"k":"hidden/styled/result/style.height","v":"ui=Success | source=none"}
+{"k":"hidden/styled/result/style.backgroundColor","v":"ui=Success | source=none"}
+{"k":"hidden/styled/result/style.opacity","v":"ui=Success | source=none"}
+{"k":"hidden/styled/result/style.display","v":"ui=Success | source=none"}
+{"k":"hidden/styled/result/style.border-left-width","v":"ui=Success | source=none"}
+{"k":"hidden/custom/text","v":"P:changed path="}
+{"k":"hidden/custom/bindings","v":"text"}
+{"k":"hidden/custom/result/text","v":"ui=Success | source=none"}
+{"k":"hidden/bad-path/text","v":"initial"}
+{"k":"hidden/bad-path/bindings","v":"text"}
+{"k":"hidden/bad-path/result/text","v":"ui=Failure [UI Toolkit] Could not retrieve the value at path '<b>nosuchfield</b>' for source of type '<b>BindData</b>': the path from the source to the target is either invalid or contains a null value. | source=none"}
+{"k":"hidden/bad-target/text","v":"initial"}
+{"k":"hidden/bad-target/bindings","v":"nosuchproperty"}
+{"k":"hidden/bad-target/result/nosuchproperty","v":"ui=Failure [UI Toolkit] Could not set value for target of type '<b>Label</b>' at path '<b>nosuchproperty</b>': the path is either invalid or contains a null value. | source=none"}
+{"k":"hidden/two-same/text","v":"6"}
+{"k":"hidden/two-same/bindings","v":"text"}
+{"k":"hidden/two-same/result/text","v":"ui=Success | source=none"}
+{"k":"hidden/child-after-bindings/text","v":"changed"}
+{"k":"hidden/child-after-bindings/bindings","v":"text"}
+{"k":"hidden/child-after-bindings/result/text","v":"ui=Success | source=none"}
+{"k":"hidden/nested-child/text","v":"nested"}
+{"k":"hidden/nested-child/bindings","v":""}
+{"k":"hidden/styled/style.width","v":"Undefined 12.5 Pixel"}
+{"k":"hidden/styled/style.height","v":"Undefined 6 Pixel"}
+{"k":"hidden/styled/style.backgroundColor","v":"Undefined 0,1,0,1"}
+{"k":"hidden/styled/style.opacity","v":"Undefined 0.25"}
+{"k":"hidden/styled/style.display","v":"Undefined None"}
+{"k":"hidden/styled/style.borderLeftWidth","v":"Undefined 6"}
+{"k":"hidden/styled/style.alignSelf","v":"Null Auto"}
+{"k":"hidden/styled/resolved","v":"0 x 0 opacity 0.25 display None color 0,1,0,1 border 0"}
+{"k":"hidden/data","v":"changed 6 12.5 typed"}
+{"k":"hidden/other","v":"other2 9"}
+{"k":"code/box/bindings","v":""}
+{"k":"code/to-target/text","v":"changed"}
+{"k":"code/to-target/bindings","v":"text"}
+{"k":"code/to-target/result/text","v":"ui=Success | source=none"}
+{"k":"code/default-mode/text","v":"changed"}
+{"k":"code/default-mode/bindings","v":"text"}
+{"k":"code/default-mode/result/text","v":"ui=Success | source=none"}
+{"k":"code/inner-parent/bindings","v":""}
+{"k":"code/hier/text","v":"typed"}
+{"k":"code/hier/bindings","v":"text"}
+{"k":"code/hier/result/text","v":"ui=Success | source=none"}
+{"k":"code/once/text","v":"changed"}
+{"k":"code/once/bindings","v":"text"}
+{"k":"code/once/result/text","v":"ui=Success | source=none"}
+{"k":"code/dirty/text","v":"changed"}
+{"k":"code/dirty/bindings","v":"text"}
+{"k":"code/dirty/result/text","v":"ui=Success | source=none"}
+{"k":"code/every/text","v":"changed"}
+{"k":"code/every/bindings","v":"text"}
+{"k":"code/every/result/text","v":"ui=Success | source=none"}
+{"k":"code/own-source/text","v":"other2"}
+{"k":"code/own-source/bindings","v":"text"}
+{"k":"code/own-source/result/text","v":"ui=Success | source=none"}
+{"k":"code/conv/text","v":"n=6"}
+{"k":"code/conv/bindings","v":"text"}
+{"k":"code/conv/result/text","v":"ui=Success | source=none"}
+{"k":"code/conv-order/text","v":"#6"}
+{"k":"code/conv-order/bindings","v":"text"}
+{"k":"code/conv-order/result/text","v":"ui=Success | source=none"}
+{"k":"code/conv-late/text","v":"6"}
+{"k":"code/conv-late/bindings","v":"text"}
+{"k":"code/conv-late/result/text","v":"ui=Success | source=none"}
+{"k":"code/two-way/value","v":"typed"}
+{"k":"code/two-way/bindings","v":"value"}
+{"k":"code/two-way/result/value","v":"ui=Success | source=Success"}
+{"k":"code/to-source/value","v":"6"}
+{"k":"code/to-source/bindings","v":"value"}
+{"k":"code/to-source/result/value","v":"ui=Success | source=Success"}
+{"k":"code/slider/value","v":"12.5"}
+{"k":"code/slider/bindings","v":"value"}
+{"k":"code/slider/result/value","v":"ui=Success | source=Success"}
+{"k":"code/styled/bindings","v":"style.width,style.height,style.backgroundColor,style.opacity,style.display,style.border-left-width"}
+{"k":"code/styled/result/style.width","v":"ui=Success | source=none"}
+{"k":"code/styled/result/style.height","v":"ui=Success | source=none"}
+{"k":"code/styled/result/style.backgroundColor","v":"ui=Success | source=none"}
+{"k":"code/styled/result/style.opacity","v":"ui=Success | source=none"}
+{"k":"code/styled/result/style.display","v":"ui=Success | source=none"}
+{"k":"code/styled/result/style.border-left-width","v":"ui=Success | source=none"}
+{"k":"code/custom/text","v":"P:changed path="}
+{"k":"code/custom/bindings","v":"text"}
+{"k":"code/custom/result/text","v":"ui=Success | source=none"}
+{"k":"code/bad-path/text","v":"initial"}
+{"k":"code/bad-path/bindings","v":"text"}
+{"k":"code/bad-path/result/text","v":"ui=Failure [UI Toolkit] Could not retrieve the value at path '<b>nosuchfield</b>' for source of type '<b>BindData</b>': the path from the source to the target is either invalid or contains a null value. | source=none"}
+{"k":"code/bad-target/text","v":"initial"}
+{"k":"code/bad-target/bindings","v":"nosuchproperty"}
+{"k":"code/bad-target/result/nosuchproperty","v":"ui=Failure [UI Toolkit] Could not set value for target of type '<b>Label</b>' at path '<b>nosuchproperty</b>': the path is either invalid or contains a null value. | source=none"}
+{"k":"code/two-same/text","v":"6"}
+{"k":"code/two-same/bindings","v":"text"}
+{"k":"code/two-same/result/text","v":"ui=Success | source=none"}
+{"k":"code/child-after-bindings/text","v":"changed"}
+{"k":"code/child-after-bindings/bindings","v":"text"}
+{"k":"code/child-after-bindings/result/text","v":"ui=Success | source=none"}
+{"k":"code/nested-child/text","v":"nested"}
+{"k":"code/nested-child/bindings","v":""}
+{"k":"code/styled/style.width","v":"Undefined 12.5 Pixel"}
+{"k":"code/styled/style.height","v":"Undefined 6 Pixel"}
+{"k":"code/styled/style.backgroundColor","v":"Undefined 0,1,0,1"}
+{"k":"code/styled/style.opacity","v":"Undefined 0.25"}
+{"k":"code/styled/style.display","v":"Undefined None"}
+{"k":"code/styled/style.borderLeftWidth","v":"Undefined 6"}
+{"k":"code/styled/style.alignSelf","v":"Null Auto"}
+{"k":"code/styled/resolved","v":"0 x 0 opacity 0.25 display None color 0,1,0,1 border 0"}
+{"k":"code/data","v":"changed 6 12.5 typed"}
+{"k":"code/other","v":"other2 9"}
+{"k":"code/code-width/bindings","v":"style.width"}
+{"k":"code/code-width/result/style.width","v":"ui=Success | source=none"}
+{"k":"code/code-width/style.width","v":"Undefined 30 Pixel"}
+{"k":"code/code-width/style.height","v":"Undefined 10 Pixel"}
+{"k":"code/code-width/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code/code-width/style.opacity","v":"Null 0"}
+{"k":"code/code-width/style.display","v":"Null Flex"}
+{"k":"code/code-width/style.borderLeftWidth","v":"Null 0"}
+{"k":"code/code-width/style.alignSelf","v":"Null Auto"}
+{"k":"code/code-width/resolved","v":"30 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code/code-length/bindings","v":"style.width"}
+{"k":"code/code-length/result/style.width","v":"ui=Success | source=none"}
+{"k":"code/code-length/style.width","v":"Undefined 50 Percent"}
+{"k":"code/code-length/style.height","v":"Undefined 10 Pixel"}
+{"k":"code/code-length/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code/code-length/style.opacity","v":"Null 0"}
+{"k":"code/code-length/style.display","v":"Null Flex"}
+{"k":"code/code-length/style.borderLeftWidth","v":"Null 0"}
+{"k":"code/code-length/style.alignSelf","v":"Null Auto"}
+{"k":"code/code-length/resolved","v":"400 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code/code-keyword/bindings","v":"style.width"}
+{"k":"code/code-keyword/result/style.width","v":"ui=Success | source=none"}
+{"k":"code/code-keyword/style.width","v":"Auto 0 2"}
+{"k":"code/code-keyword/style.height","v":"Undefined 10 Pixel"}
+{"k":"code/code-keyword/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code/code-keyword/style.opacity","v":"Null 0"}
+{"k":"code/code-keyword/style.display","v":"Null Flex"}
+{"k":"code/code-keyword/style.borderLeftWidth","v":"Null 0"}
+{"k":"code/code-keyword/style.alignSelf","v":"Null Auto"}
+{"k":"code/code-keyword/resolved","v":"0 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code/code-string/bindings","v":"style.width"}
+{"k":"code/code-string/result/style.width","v":"ui=Failure [UI Toolkit] Could not set value for target of type '<b>VisualElement</b>' at path '<b>style.width</b>': could not convert from type '<b>String</b>' to type '<b>StyleLength</b>'. | source=none"}
+{"k":"code/code-string/style.width","v":"Null 0 Pixel"}
+{"k":"code/code-string/style.height","v":"Undefined 10 Pixel"}
+{"k":"code/code-string/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code/code-string/style.opacity","v":"Null 0"}
+{"k":"code/code-string/style.display","v":"Null Flex"}
+{"k":"code/code-string/style.borderLeftWidth","v":"Null 0"}
+{"k":"code/code-string/style.alignSelf","v":"Null Auto"}
+{"k":"code/code-string/resolved","v":"0 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code/code-uss/bindings","v":"style.background-color"}
+{"k":"code/code-uss/result/style.background-color","v":"ui=Success | source=none"}
+{"k":"code/code-uss/style.width","v":"Null 0 Pixel"}
+{"k":"code/code-uss/style.height","v":"Undefined 10 Pixel"}
+{"k":"code/code-uss/style.backgroundColor","v":"Undefined 0,0,1,1"}
+{"k":"code/code-uss/style.opacity","v":"Null 0"}
+{"k":"code/code-uss/style.display","v":"Null Flex"}
+{"k":"code/code-uss/style.borderLeftWidth","v":"Null 0"}
+{"k":"code/code-uss/style.alignSelf","v":"Null Auto"}
+{"k":"code/code-uss/resolved","v":"0 x 10 opacity 1 display Flex color 0,0,1,1 border 0"}
+{"k":"code/code-enum/bindings","v":"style.alignSelf"}
+{"k":"code/code-enum/result/style.alignSelf","v":"ui=Success | source=none"}
+{"k":"code/code-enum/style.width","v":"Null 0 Pixel"}
+{"k":"code/code-enum/style.height","v":"Undefined 10 Pixel"}
+{"k":"code/code-enum/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code/code-enum/style.opacity","v":"Null 0"}
+{"k":"code/code-enum/style.display","v":"Null Flex"}
+{"k":"code/code-enum/style.borderLeftWidth","v":"Null 0"}
+{"k":"code/code-enum/style.alignSelf","v":"Undefined Center"}
+{"k":"code/code-enum/resolved","v":"0 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code/code-count/bindings","v":"style.height"}
+{"k":"code/code-count/result/style.height","v":"ui=Success | source=none"}
+{"k":"code/code-count/style.width","v":"Null 0 Pixel"}
+{"k":"code/code-count/style.height","v":"Undefined 7 Pixel"}
+{"k":"code/code-count/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code/code-count/style.opacity","v":"Null 0"}
+{"k":"code/code-count/style.display","v":"Null Flex"}
+{"k":"code/code-count/style.borderLeftWidth","v":"Null 0"}
+{"k":"code/code-count/style.alignSelf","v":"Null Auto"}
+{"k":"code/code-count/resolved","v":"0 x 7 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code/code-tosource/bindings","v":"style.width"}
+{"k":"code/code-tosource/result/style.width","v":"ui=none | source=none"}
+{"k":"code/code-tosource/style.width","v":"Undefined 33 Pixel"}
+{"k":"code/code-tosource/style.height","v":"Undefined 10 Pixel"}
+{"k":"code/code-tosource/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code/code-tosource/style.opacity","v":"Null 0"}
+{"k":"code/code-tosource/style.display","v":"Null Flex"}
+{"k":"code/code-tosource/style.borderLeftWidth","v":"Null 0"}
+{"k":"code/code-tosource/style.alignSelf","v":"Null Auto"}
+{"k":"code/code-tosource/resolved","v":"33 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code/code-resolved/bindings","v":"resolvedStyle.width"}
+{"k":"code/code-resolved/result/resolvedStyle.width","v":"ui=none | source=none"}
+{"k":"code/code-resolved/style.width","v":"Undefined 21 Pixel"}
+{"k":"code/code-resolved/style.height","v":"Undefined 10 Pixel"}
+{"k":"code/code-resolved/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code/code-resolved/style.opacity","v":"Null 0"}
+{"k":"code/code-resolved/style.display","v":"Null Flex"}
+{"k":"code/code-resolved/style.borderLeftWidth","v":"Null 0"}
+{"k":"code/code-resolved/style.alignSelf","v":"Null Auto"}
+{"k":"code/code-resolved/resolved","v":"21 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code/code-sub/bindings","v":"style.width.value"}
+{"k":"code/code-sub/result/style.width.value","v":"ui=Success | source=none"}
+{"k":"code/code-sub/style.width","v":"Undefined 50 Percent"}
+{"k":"code/code-sub/style.height","v":"Undefined 10 Pixel"}
+{"k":"code/code-sub/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code/code-sub/style.opacity","v":"Null 0"}
+{"k":"code/code-sub/style.display","v":"Null Flex"}
+{"k":"code/code-sub/style.borderLeftWidth","v":"Null 0"}
+{"k":"code/code-sub/style.alignSelf","v":"Null Auto"}
+{"k":"code/code-sub/resolved","v":"400 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code/code-nosuch/bindings","v":"style.nosuch"}
+{"k":"code/code-nosuch/result/style.nosuch","v":"ui=Failure [UI Toolkit] Could not set value for target of type '<b>VisualElement</b>' at path '<b>style.nosuch</b>': the path is either invalid or contains a null value. | source=none"}
+{"k":"code/code-nosuch/style.width","v":"Null 0 Pixel"}
+{"k":"code/code-nosuch/style.height","v":"Undefined 10 Pixel"}
+{"k":"code/code-nosuch/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code/code-nosuch/style.opacity","v":"Null 0"}
+{"k":"code/code-nosuch/style.display","v":"Null Flex"}
+{"k":"code/code-nosuch/style.borderLeftWidth","v":"Null 0"}
+{"k":"code/code-nosuch/style.alignSelf","v":"Null Auto"}
+{"k":"code/code-nosuch/resolved","v":"0 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code/style-source","v":"-1 -1"}
+{"k":"code-changed/box/bindings","v":""}
+{"k":"code-changed/to-target/text","v":"changed"}
+{"k":"code-changed/to-target/bindings","v":"text"}
+{"k":"code-changed/to-target/result/text","v":"ui=Success | source=none"}
+{"k":"code-changed/default-mode/text","v":"changed"}
+{"k":"code-changed/default-mode/bindings","v":"text"}
+{"k":"code-changed/default-mode/result/text","v":"ui=Success | source=none"}
+{"k":"code-changed/inner-parent/bindings","v":""}
+{"k":"code-changed/hier/text","v":"typed"}
+{"k":"code-changed/hier/bindings","v":"text"}
+{"k":"code-changed/hier/result/text","v":"ui=Success | source=none"}
+{"k":"code-changed/once/text","v":"changed"}
+{"k":"code-changed/once/bindings","v":"text"}
+{"k":"code-changed/once/result/text","v":"ui=Success | source=none"}
+{"k":"code-changed/dirty/text","v":"changed"}
+{"k":"code-changed/dirty/bindings","v":"text"}
+{"k":"code-changed/dirty/result/text","v":"ui=Success | source=none"}
+{"k":"code-changed/every/text","v":"changed"}
+{"k":"code-changed/every/bindings","v":"text"}
+{"k":"code-changed/every/result/text","v":"ui=Success | source=none"}
+{"k":"code-changed/own-source/text","v":"other2"}
+{"k":"code-changed/own-source/bindings","v":"text"}
+{"k":"code-changed/own-source/result/text","v":"ui=Success | source=none"}
+{"k":"code-changed/conv/text","v":"n=6"}
+{"k":"code-changed/conv/bindings","v":"text"}
+{"k":"code-changed/conv/result/text","v":"ui=Success | source=none"}
+{"k":"code-changed/conv-order/text","v":"#6"}
+{"k":"code-changed/conv-order/bindings","v":"text"}
+{"k":"code-changed/conv-order/result/text","v":"ui=Success | source=none"}
+{"k":"code-changed/conv-late/text","v":"6"}
+{"k":"code-changed/conv-late/bindings","v":"text"}
+{"k":"code-changed/conv-late/result/text","v":"ui=Success | source=none"}
+{"k":"code-changed/two-way/value","v":"typed"}
+{"k":"code-changed/two-way/bindings","v":"value"}
+{"k":"code-changed/two-way/result/value","v":"ui=Success | source=Success"}
+{"k":"code-changed/to-source/value","v":"6"}
+{"k":"code-changed/to-source/bindings","v":"value"}
+{"k":"code-changed/to-source/result/value","v":"ui=Success | source=Success"}
+{"k":"code-changed/slider/value","v":"12.5"}
+{"k":"code-changed/slider/bindings","v":"value"}
+{"k":"code-changed/slider/result/value","v":"ui=Success | source=Success"}
+{"k":"code-changed/styled/bindings","v":"style.width,style.height,style.backgroundColor,style.opacity,style.display,style.border-left-width"}
+{"k":"code-changed/styled/result/style.width","v":"ui=Success | source=none"}
+{"k":"code-changed/styled/result/style.height","v":"ui=Success | source=none"}
+{"k":"code-changed/styled/result/style.backgroundColor","v":"ui=Success | source=none"}
+{"k":"code-changed/styled/result/style.opacity","v":"ui=Success | source=none"}
+{"k":"code-changed/styled/result/style.display","v":"ui=Success | source=none"}
+{"k":"code-changed/styled/result/style.border-left-width","v":"ui=Success | source=none"}
+{"k":"code-changed/custom/text","v":"P:changed path="}
+{"k":"code-changed/custom/bindings","v":"text"}
+{"k":"code-changed/custom/result/text","v":"ui=Success | source=none"}
+{"k":"code-changed/bad-path/text","v":"initial"}
+{"k":"code-changed/bad-path/bindings","v":"text"}
+{"k":"code-changed/bad-path/result/text","v":"ui=Failure [UI Toolkit] Could not retrieve the value at path '<b>nosuchfield</b>' for source of type '<b>BindData</b>': the path from the source to the target is either invalid or contains a null value. | source=none"}
+{"k":"code-changed/bad-target/text","v":"initial"}
+{"k":"code-changed/bad-target/bindings","v":"nosuchproperty"}
+{"k":"code-changed/bad-target/result/nosuchproperty","v":"ui=Failure [UI Toolkit] Could not set value for target of type '<b>Label</b>' at path '<b>nosuchproperty</b>': the path is either invalid or contains a null value. | source=none"}
+{"k":"code-changed/two-same/text","v":"6"}
+{"k":"code-changed/two-same/bindings","v":"text"}
+{"k":"code-changed/two-same/result/text","v":"ui=Success | source=none"}
+{"k":"code-changed/child-after-bindings/text","v":"changed"}
+{"k":"code-changed/child-after-bindings/bindings","v":"text"}
+{"k":"code-changed/child-after-bindings/result/text","v":"ui=Success | source=none"}
+{"k":"code-changed/nested-child/text","v":"nested"}
+{"k":"code-changed/nested-child/bindings","v":""}
+{"k":"code-changed/styled/style.width","v":"Undefined 12.5 Pixel"}
+{"k":"code-changed/styled/style.height","v":"Undefined 6 Pixel"}
+{"k":"code-changed/styled/style.backgroundColor","v":"Undefined 0,1,0,1"}
+{"k":"code-changed/styled/style.opacity","v":"Undefined 0.25"}
+{"k":"code-changed/styled/style.display","v":"Undefined None"}
+{"k":"code-changed/styled/style.borderLeftWidth","v":"Undefined 6"}
+{"k":"code-changed/styled/style.alignSelf","v":"Null Auto"}
+{"k":"code-changed/styled/resolved","v":"0 x 0 opacity 0.25 display None color 0,1,0,1 border 0"}
+{"k":"code-changed/data","v":"changed 6 12.5 typed"}
+{"k":"code-changed/other","v":"other2 9"}
+{"k":"code-changed/code-width/bindings","v":"style.width"}
+{"k":"code-changed/code-width/result/style.width","v":"ui=Success | source=none"}
+{"k":"code-changed/code-width/style.width","v":"Undefined 45 Pixel"}
+{"k":"code-changed/code-width/style.height","v":"Undefined 10 Pixel"}
+{"k":"code-changed/code-width/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code-changed/code-width/style.opacity","v":"Null 0"}
+{"k":"code-changed/code-width/style.display","v":"Null Flex"}
+{"k":"code-changed/code-width/style.borderLeftWidth","v":"Null 0"}
+{"k":"code-changed/code-width/style.alignSelf","v":"Null Auto"}
+{"k":"code-changed/code-width/resolved","v":"45 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code-changed/code-length/bindings","v":"style.width"}
+{"k":"code-changed/code-length/result/style.width","v":"ui=Success | source=none"}
+{"k":"code-changed/code-length/style.width","v":"Undefined 25 Pixel"}
+{"k":"code-changed/code-length/style.height","v":"Undefined 10 Pixel"}
+{"k":"code-changed/code-length/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code-changed/code-length/style.opacity","v":"Null 0"}
+{"k":"code-changed/code-length/style.display","v":"Null Flex"}
+{"k":"code-changed/code-length/style.borderLeftWidth","v":"Null 0"}
+{"k":"code-changed/code-length/style.alignSelf","v":"Null Auto"}
+{"k":"code-changed/code-length/resolved","v":"25 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code-changed/code-keyword/bindings","v":"style.width"}
+{"k":"code-changed/code-keyword/result/style.width","v":"ui=Success | source=none"}
+{"k":"code-changed/code-keyword/style.width","v":"Initial 0 Pixel"}
+{"k":"code-changed/code-keyword/style.height","v":"Undefined 10 Pixel"}
+{"k":"code-changed/code-keyword/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code-changed/code-keyword/style.opacity","v":"Null 0"}
+{"k":"code-changed/code-keyword/style.display","v":"Null Flex"}
+{"k":"code-changed/code-keyword/style.borderLeftWidth","v":"Null 0"}
+{"k":"code-changed/code-keyword/style.alignSelf","v":"Null Auto"}
+{"k":"code-changed/code-keyword/resolved","v":"0 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code-changed/code-string/bindings","v":"style.width"}
+{"k":"code-changed/code-string/result/style.width","v":"ui=Failure [UI Toolkit] Could not set value for target of type '<b>VisualElement</b>' at path '<b>style.width</b>': could not convert from type '<b>String</b>' to type '<b>StyleLength</b>'. | source=none"}
+{"k":"code-changed/code-string/style.width","v":"Null 0 Pixel"}
+{"k":"code-changed/code-string/style.height","v":"Undefined 10 Pixel"}
+{"k":"code-changed/code-string/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code-changed/code-string/style.opacity","v":"Null 0"}
+{"k":"code-changed/code-string/style.display","v":"Null Flex"}
+{"k":"code-changed/code-string/style.borderLeftWidth","v":"Null 0"}
+{"k":"code-changed/code-string/style.alignSelf","v":"Null Auto"}
+{"k":"code-changed/code-string/resolved","v":"0 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code-changed/code-uss/bindings","v":"style.background-color"}
+{"k":"code-changed/code-uss/result/style.background-color","v":"ui=Success | source=none"}
+{"k":"code-changed/code-uss/style.width","v":"Null 0 Pixel"}
+{"k":"code-changed/code-uss/style.height","v":"Undefined 10 Pixel"}
+{"k":"code-changed/code-uss/style.backgroundColor","v":"Undefined 0.5,0.25,1,1"}
+{"k":"code-changed/code-uss/style.opacity","v":"Null 0"}
+{"k":"code-changed/code-uss/style.display","v":"Null Flex"}
+{"k":"code-changed/code-uss/style.borderLeftWidth","v":"Null 0"}
+{"k":"code-changed/code-uss/style.alignSelf","v":"Null Auto"}
+{"k":"code-changed/code-uss/resolved","v":"0 x 10 opacity 1 display Flex color 0.5,0.25,1,1 border 0"}
+{"k":"code-changed/code-enum/bindings","v":"style.alignSelf"}
+{"k":"code-changed/code-enum/result/style.alignSelf","v":"ui=Success | source=none"}
+{"k":"code-changed/code-enum/style.width","v":"Null 0 Pixel"}
+{"k":"code-changed/code-enum/style.height","v":"Undefined 10 Pixel"}
+{"k":"code-changed/code-enum/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code-changed/code-enum/style.opacity","v":"Null 0"}
+{"k":"code-changed/code-enum/style.display","v":"Null Flex"}
+{"k":"code-changed/code-enum/style.borderLeftWidth","v":"Null 0"}
+{"k":"code-changed/code-enum/style.alignSelf","v":"Undefined FlexEnd"}
+{"k":"code-changed/code-enum/resolved","v":"0 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code-changed/code-count/bindings","v":"style.height"}
+{"k":"code-changed/code-count/result/style.height","v":"ui=Success | source=none"}
+{"k":"code-changed/code-count/style.width","v":"Null 0 Pixel"}
+{"k":"code-changed/code-count/style.height","v":"Undefined 3 Pixel"}
+{"k":"code-changed/code-count/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code-changed/code-count/style.opacity","v":"Null 0"}
+{"k":"code-changed/code-count/style.display","v":"Null Flex"}
+{"k":"code-changed/code-count/style.borderLeftWidth","v":"Null 0"}
+{"k":"code-changed/code-count/style.alignSelf","v":"Null Auto"}
+{"k":"code-changed/code-count/resolved","v":"0 x 3 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code-changed/code-tosource/bindings","v":"style.width"}
+{"k":"code-changed/code-tosource/result/style.width","v":"ui=none | source=none"}
+{"k":"code-changed/code-tosource/style.width","v":"Undefined 44 Pixel"}
+{"k":"code-changed/code-tosource/style.height","v":"Undefined 10 Pixel"}
+{"k":"code-changed/code-tosource/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code-changed/code-tosource/style.opacity","v":"Null 0"}
+{"k":"code-changed/code-tosource/style.display","v":"Null Flex"}
+{"k":"code-changed/code-tosource/style.borderLeftWidth","v":"Null 0"}
+{"k":"code-changed/code-tosource/style.alignSelf","v":"Null Auto"}
+{"k":"code-changed/code-tosource/resolved","v":"44 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code-changed/code-resolved/bindings","v":"resolvedStyle.width"}
+{"k":"code-changed/code-resolved/result/resolvedStyle.width","v":"ui=none | source=none"}
+{"k":"code-changed/code-resolved/style.width","v":"Undefined 31 Pixel"}
+{"k":"code-changed/code-resolved/style.height","v":"Undefined 10 Pixel"}
+{"k":"code-changed/code-resolved/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code-changed/code-resolved/style.opacity","v":"Null 0"}
+{"k":"code-changed/code-resolved/style.display","v":"Null Flex"}
+{"k":"code-changed/code-resolved/style.borderLeftWidth","v":"Null 0"}
+{"k":"code-changed/code-resolved/style.alignSelf","v":"Null Auto"}
+{"k":"code-changed/code-resolved/resolved","v":"31 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code-changed/code-sub/bindings","v":"style.width.value"}
+{"k":"code-changed/code-sub/result/style.width.value","v":"ui=Success | source=none"}
+{"k":"code-changed/code-sub/style.width","v":"Undefined 25 Pixel"}
+{"k":"code-changed/code-sub/style.height","v":"Undefined 10 Pixel"}
+{"k":"code-changed/code-sub/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code-changed/code-sub/style.opacity","v":"Null 0"}
+{"k":"code-changed/code-sub/style.display","v":"Null Flex"}
+{"k":"code-changed/code-sub/style.borderLeftWidth","v":"Null 0"}
+{"k":"code-changed/code-sub/style.alignSelf","v":"Null Auto"}
+{"k":"code-changed/code-sub/resolved","v":"25 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code-changed/code-nosuch/bindings","v":"style.nosuch"}
+{"k":"code-changed/code-nosuch/result/style.nosuch","v":"ui=Failure [UI Toolkit] Could not set value for target of type '<b>VisualElement</b>' at path '<b>style.nosuch</b>': the path is either invalid or contains a null value. | source=none"}
+{"k":"code-changed/code-nosuch/style.width","v":"Null 0 Pixel"}
+{"k":"code-changed/code-nosuch/style.height","v":"Undefined 10 Pixel"}
+{"k":"code-changed/code-nosuch/style.backgroundColor","v":"Null 0,0,0,0"}
+{"k":"code-changed/code-nosuch/style.opacity","v":"Null 0"}
+{"k":"code-changed/code-nosuch/style.display","v":"Null Flex"}
+{"k":"code-changed/code-nosuch/style.borderLeftWidth","v":"Null 0"}
+{"k":"code-changed/code-nosuch/style.alignSelf","v":"Null Auto"}
+{"k":"code-changed/code-nosuch/resolved","v":"0 x 10 opacity 1 display Flex color 0,0,0,0 border 0"}
+{"k":"code-changed/style-source","v":"-1 -1"}
+{"k":"loglevel/reset","v":"updates 2 warnings 0 others 0"}
+{"k":"loglevel/panel-All","v":"updates 2 warnings 0 others 0"}
+{"k":"loglevel/settings-All","v":"updates 2 warnings 2 others 8"}
+{"k":"loglevel/settings-Once","v":"updates 2 warnings 0 others 0"}
+{"k":"loglevel/settings-None","v":"updates 2 warnings 0 others 0"}
+{"k":"viewdata/contextType","v":"Player"}
+{"k":"viewdata/changed","v":"120 False 2"}
+{"k":"viewdata/recreated","v":"0 True -1"}
+{"k":"viewdata/readded","v":"120 False 2"}
+{"k":"logs","v":["Error:  (4,14): Semantic - Uxml object has an invalid child element: NoSuchBinding","Error: [UI Toolkit] Trying to set a binding on `no-property (Label)` without setting the \"property\" attribute is not supported (ProbePanelSettings)."]}
+{"k":"complete","v":true}

@@ -1,0 +1,108 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="box" data-source="project://database/Assets/Resources/BindData.asset?fileID=11400000&amp;guid=5900a41168044a06bf9c2a9e702c15af&amp;type=2#BindData" data-source-type="BindData, Assembly-CSharp">
+        <ui:Label name="to-target" text="initial">
+            <Bindings>
+                <ui:DataBinding property="text" data-source-path="message" binding-mode="ToTarget" />
+            </Bindings>
+        </ui:Label>
+        <ui:Label name="default-mode" text="initial">
+            <Bindings>
+                <ui:DataBinding property="text" data-source-path="message" />
+            </Bindings>
+        </ui:Label>
+        <ui:VisualElement name="inner-parent" data-source-path="inner">
+            <ui:Label name="hier" text="initial">
+                <Bindings>
+                    <ui:DataBinding property="text" data-source-path="value" binding-mode="ToTarget" />
+                </Bindings>
+            </ui:Label>
+        </ui:VisualElement>
+        <ui:Label name="once" text="initial">
+            <Bindings>
+                <ui:DataBinding property="text" data-source-path="message" binding-mode="ToTargetOnce" />
+            </Bindings>
+        </ui:Label>
+        <ui:Label name="dirty" text="initial">
+            <Bindings>
+                <ui:DataBinding property="text" data-source-path="message" binding-mode="ToTarget" update-trigger="WhenDirty" />
+            </Bindings>
+        </ui:Label>
+        <ui:Label name="every" text="initial">
+            <Bindings>
+                <ui:DataBinding property="text" data-source-path="message" binding-mode="ToTarget" update-trigger="EveryUpdate" />
+            </Bindings>
+        </ui:Label>
+        <ui:Label name="own-source" text="initial">
+            <Bindings>
+                <ui:DataBinding property="text" data-source-path="message" binding-mode="ToTarget" data-source="project://database/Assets/Resources/BindOther.asset?fileID=11400000&amp;guid=41cd20590af64fd89e5dce2500a676f7&amp;type=2#BindOther" data-source-type="BindData, Assembly-CSharp" />
+            </Bindings>
+        </ui:Label>
+        <ui:Label name="conv" text="initial">
+            <Bindings>
+                <ui:DataBinding property="text" data-source-path="count" binding-mode="ToTarget" source-to-ui-converters="probe-count" />
+            </Bindings>
+        </ui:Label>
+        <ui:Label name="conv-order" text="initial">
+            <Bindings>
+                <ui:DataBinding property="text" data-source-path="count" binding-mode="ToTarget" source-to-ui-converters="probe-missing, probe-count ,probe-hash" />
+            </Bindings>
+        </ui:Label>
+        <ui:Label name="conv-late" text="initial">
+            <Bindings>
+                <ui:DataBinding property="text" data-source-path="count" binding-mode="ToTarget" source-to-ui-converters="probe-late" />
+            </Bindings>
+        </ui:Label>
+        <ui:TextField name="two-way" value="initial">
+            <Bindings>
+                <ui:DataBinding property="value" data-source-path="inner.value" binding-mode="TwoWay" />
+            </Bindings>
+        </ui:TextField>
+        <ui:TextField name="to-source" value="initial">
+            <Bindings>
+                <ui:DataBinding property="value" data-source-path="count" binding-mode="ToSource" ui-to-source-converters="probe-length" />
+            </Bindings>
+        </ui:TextField>
+        <ui:Slider name="slider" low-value="0" high-value="100">
+            <Bindings>
+                <ui:DataBinding property="value" data-source-path="width" />
+            </Bindings>
+        </ui:Slider>
+        <ui:VisualElement name="styled">
+            <Bindings>
+                <ui:DataBinding property="style.width" data-source-path="width" binding-mode="ToTarget" />
+                <ui:DataBinding property="style.height" data-source-path="count" binding-mode="ToTarget" />
+                <ui:DataBinding property="style.backgroundColor" data-source-path="color" binding-mode="ToTarget" />
+                <ui:DataBinding property="style.opacity" data-source-path="opacity" binding-mode="ToTarget" />
+                <ui:DataBinding property="style.display" data-source-path="display" binding-mode="ToTarget" />
+                <ui:DataBinding property="style.border-left-width" data-source-path="count" binding-mode="ToTarget" />
+            </Bindings>
+        </ui:VisualElement>
+        <ui:Label name="custom" text="initial">
+            <Bindings>
+                <ProbeCustomBinding property="text" prefix="P:" update-trigger="EveryUpdate" />
+            </Bindings>
+        </ui:Label>
+        <ui:Label name="bad-path" text="initial">
+            <Bindings>
+                <ui:DataBinding property="text" data-source-path="nosuchfield" binding-mode="ToTarget" />
+            </Bindings>
+        </ui:Label>
+        <ui:Label name="bad-target" text="initial">
+            <Bindings>
+                <ui:DataBinding property="nosuchproperty" data-source-path="message" binding-mode="ToTarget" />
+            </Bindings>
+        </ui:Label>
+        <ui:Label name="two-same" text="initial">
+            <Bindings>
+                <ui:DataBinding property="text" data-source-path="message" binding-mode="ToTarget" />
+                <ui:DataBinding property="text" data-source-path="count" binding-mode="ToTarget" />
+            </Bindings>
+        </ui:Label>
+        <ui:Label name="child-after-bindings" text="initial">
+            <Bindings>
+                <ui:DataBinding property="text" data-source-path="message" binding-mode="ToTarget" />
+            </Bindings>
+            <ui:Label name="nested-child" text="nested" />
+        </ui:Label>
+    </ui:VisualElement>
+</ui:UXML>

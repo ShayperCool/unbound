@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Label name="unknown-type" text="initial">
+        <Bindings>
+            <NoSuchBinding property="text" />
+            <ui:DataBinding property="text" data-source-path="message" binding-mode="ToTarget" />
+        </Bindings>
+    </ui:Label>
+    <ui:Label name="after-unknown-type" text="after" />
+</ui:UXML>

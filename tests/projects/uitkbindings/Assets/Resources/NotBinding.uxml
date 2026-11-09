@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Label name="not-binding" text="initial">
+        <Bindings>
+            <ui:Column name="col" title="c" />
+            <ui:DataBinding property="text" data-source-path="message" binding-mode="ToTarget" />
+        </Bindings>
+    </ui:Label>
+    <ui:Label name="after-not-binding" text="after" />
+</ui:UXML>

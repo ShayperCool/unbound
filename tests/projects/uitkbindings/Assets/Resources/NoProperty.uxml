@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Label name="no-property" text="initial">
+        <Bindings>
+            <ui:DataBinding data-source-path="message" binding-mode="ToTarget" />
+        </Bindings>
+    </ui:Label>
+    <ui:Label name="after-no-property" text="after" />
+</ui:UXML>
