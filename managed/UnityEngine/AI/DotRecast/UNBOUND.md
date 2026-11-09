@@ -46,7 +46,8 @@ Altered (marked `Unbound:` in the sources):
 - crowd agents as Unity's (`tests/projects/avoidance`): each update first steps the velocity
   towards the previous update's plan (`DtCrowdAgent.pvel`; a braking agent's speed follows it at
   once), then steers with that velocity in 3D (a corner above slows them in the plane) and plans;
-  they brake once the end is nearer than two radii scaled by their speed over full speed, losing
+  they brake once the end is nearer (in 3D, from where they stand, on a height mesh too:
+  tests/projects/navbaked `height.agents`) than two radii scaled by their speed over full speed, losing
   v²/2d per second, steer to the end however close, and land on it when a step reaches it; they
   reach an off-mesh link from where the update's step took them and begin to cross it in that
   update (`tests/projects/navlinks`); `DtCrowdAgent.NextVelocity` gives the next step's velocity
