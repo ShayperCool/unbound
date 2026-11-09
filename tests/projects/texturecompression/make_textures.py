@@ -133,6 +133,11 @@ CASES = {
     # Uncompressed sources for the runtime controls (Compress, CopyTexture, LoadRawTextureData).
     'NoiseRGBA32': ('Noise', 'format=RGBA32'),
     'NoiseUnreadable': ('Noise', 'format=RGBA32 readable=0'),
+    # Writes to a compressed import, its copies, and more sizes and texture types.
+    'SmoothWrite': ('Smooth', 'compression=normal'),
+    'NpotNoMips': ('Npot', 'compression=normal npot=none mips=0'),
+    'SmoothSprite': ('Smooth', 'type=sprite compression=normal'),
+    'NoiseGui': ('Noise', 'type=gui compression=normal'),
     'SmoothRGB24': ('Smooth', 'format=RGB24'),
     'HeightR8': ('Height', 'format=R8 srgb=0'),
     'NormalsRG16': ('Normals', 'format=RG16 srgb=0'),

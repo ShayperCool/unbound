@@ -296,5 +296,33 @@ public class TextureCompressionProbe : MonoBehaviour
             Describe(key, dst);
             Destroy(dst);
         });
+
+        // A copy of a compressed import.
+        Section("clone", () =>
+        {
+            var copy = Instantiate(smooth);
+            Describe("clone", copy);
+            Destroy(copy);
+        });
+
+        // Writes to a compressed import: the pixel setters, then its blocks through a view.
+        Section("write", () =>
+        {
+            var t = Find("SmoothWrite");
+            Run("write.setpixel", () => t.SetPixel(0, 0, Color.red));
+            Run("write.setpixels", () => t.SetPixels(new Color[64 * 64]));
+            Run("write.setpixels32", () => t.SetPixels32(new Color32[64 * 64]));
+            Run("write.setpixeldata", () => t.SetPixelData(new byte[2048], 0));
+            Add("write.raw", Bytes(t.GetRawTextureData()));
+            Add("write.pixel", Floats(t.GetPixel(0, 0)));
+            var view = t.GetPixelData<byte>(0);
+            // Block 0 becomes black: both endpoints 0, every index 0.
+            Run("write.view", () => { for (int i = 0; i < 8; i++) view[i] = 0; });
+            Add("write.view.raw", Bytes(t.GetRawTextureData().Take(16).ToArray()));
+            Add("write.view.pixel", Floats(t.GetPixel(0, 0)));
+            Run("write.view.apply", () => t.Apply(false));
+            Add("write.view.applied.pixel", Floats(t.GetPixel(0, 0)));
+            Run("write.view.gpu", () => Add("write.view.gpu", Gpu(t)));
+        });
     }
 }

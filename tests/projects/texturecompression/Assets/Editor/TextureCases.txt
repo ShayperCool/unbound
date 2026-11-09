@@ -53,6 +53,10 @@ SmoothDXT1Crunched format=DXT1Crunched
 OddDXT5 format=DXT5 npot=none
 NoiseRGBA32 format=RGBA32
 NoiseUnreadable format=RGBA32 readable=0
+SmoothWrite compression=normal
+NpotNoMips compression=normal npot=none mips=0
+SmoothSprite type=sprite compression=normal
+NoiseGui type=gui compression=normal
 SmoothRGB24 format=RGB24
 HeightR8 format=R8 srgb=0
 NormalsRG16 format=RG16 srgb=0

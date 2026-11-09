@@ -50,6 +50,8 @@ public static class ProbeRunner
         }
         importer.textureType = Get("type") == "normal" ? TextureImporterType.NormalMap
             : Get("type") == "single" ? TextureImporterType.SingleChannel
+            : Get("type") == "sprite" ? TextureImporterType.Sprite
+            : Get("type") == "gui" ? TextureImporterType.GUI
             : TextureImporterType.Default;
         if (Get("channel") != null)
         {
