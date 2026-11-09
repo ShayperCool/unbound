@@ -1931,7 +1931,7 @@ impl UnityRenderer {
         let source = match kind {
             CopyKind::Depth => DEPTH_COPY_WGSL.to_string(),
             CopyKind::DepthMultisampled => DEPTH_COPY_WGSL
-                .replace("texture_depth_2d", "texture_depth_multisampled_2d")
+                .replace("texture_2d<f32>", "texture_multisampled_2d<f32>")
                 .replace(
                     "vec2<i32>(p.xy), 0)",
                     &format!(
@@ -1945,7 +1945,7 @@ impl UnityRenderer {
         };
         let (sample_type, target_format) = match kind {
             CopyKind::Depth | CopyKind::DepthMultisampled => (
-                wgpu::TextureSampleType::Depth,
+                wgpu::TextureSampleType::Float { filterable: false },
                 resources::depth_copy_format(device),
             ),
             CopyKind::UintBits => (
@@ -2072,7 +2072,7 @@ impl UnityRenderer {
         let source = if per_sample {
             DEPTH_BLIT_PER_SAMPLE_WGSL.to_string()
         } else if multisampled {
-            DEPTH_BLIT_WGSL.replace("texture_depth_2d", "texture_depth_multisampled_2d")
+            DEPTH_BLIT_WGSL.replace("texture_2d<f32>", "texture_multisampled_2d<f32>")
         } else {
             DEPTH_BLIT_WGSL.to_string()
         };
@@ -2087,7 +2087,7 @@ impl UnityRenderer {
                 binding: 0,
                 visibility: wgpu::ShaderStages::FRAGMENT,
                 ty: wgpu::BindingType::Texture {
-                    sample_type: wgpu::TextureSampleType::Depth,
+                    sample_type: wgpu::TextureSampleType::Float { filterable: false },
                     view_dimension: wgpu::TextureViewDimension::D2,
                     multisampled,
                 },
@@ -3936,8 +3936,16 @@ impl UnityRenderer {
         // Regions are bottom-up (Unity's); a screen stored top-down (or its stand-in) counts its
         // rows from the top. The texels are copied as stored, as the device copies its screen.
         let top_down = self.conventions.top_down(true);
-        let y = if top_down && self.stored_as_screen(source) { sh - y - h } else { y };
-        let dy = if top_down && self.stored_as_screen(destination) { dh - dy - h } else { dy };
+        let y = if top_down && self.stored_as_screen(source) {
+            sh - y - h
+        } else {
+            y
+        };
+        let dy = if top_down && self.stored_as_screen(destination) {
+            dh - dy - h
+        } else {
+            dy
+        };
         self.mark_resolve_copied(&destination_attachment);
         let channels = channel_kind.map(|kind| ChannelCopy {
             source: src.create_view(&wgpu::TextureViewDescriptor {
@@ -4605,7 +4613,6 @@ fn depth_owner(color: u64, depth: u64) -> Option<u64> {
     }
 }
 
-
 /// Copies a float texture's values into an integer texture of its size as their bits, texel for
 /// texel (`SCALAR`: `u32` or `i32`).
 /// Copies 8-bit normalized texels into a texture of their level's size in another channel count
@@ -4641,9 +4648,12 @@ fn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<SCALAR> {
 }
 "#;
 
+// The depth shaders read depth through a float texture binding (an unfilterable-float view of a
+// depth texture, its depth in x): every backend can load from it, OpenGL's GLSL included.
+
 /// Copies a depth buffer into a float color texture of its size, texel for texel.
 const DEPTH_COPY_WGSL: &str = r#"
-@group(0) @binding(0) var depth: texture_depth_2d;
+@group(0) @binding(0) var depth: texture_2d<f32>;
 
 @vertex
 fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
@@ -4653,13 +4663,13 @@ fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
 
 @fragment
 fn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
-    return vec4<f32>(textureLoad(depth, vec2<i32>(p.xy), 0), 0.0, 0.0, 1.0);
+    return vec4<f32>(textureLoad(depth, vec2<i32>(p.xy), 0).x, 0.0, 0.0, 1.0);
 }
 "#;
 
 /// `CopyDepth` from one sample: the source's only (or first) one into every destination sample.
 const DEPTH_BLIT_WGSL: &str = r#"
-@group(0) @binding(0) var depth: texture_depth_2d;
+@group(0) @binding(0) var depth: texture_2d<f32>;
 
 @vertex
 fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
@@ -4669,13 +4679,13 @@ fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
 
 @fragment
 fn fs(@builtin(position) p: vec4<f32>) -> @builtin(frag_depth) f32 {
-    return textureLoad(depth, vec2<i32>(p.xy), 0);
+    return textureLoad(depth, vec2<i32>(p.xy), 0).x;
 }
 "#;
 
 /// `CopyDepth` between equal sample counts: each sample from the source's of its index.
 const DEPTH_BLIT_PER_SAMPLE_WGSL: &str = r#"
-@group(0) @binding(0) var depth: texture_depth_multisampled_2d;
+@group(0) @binding(0) var depth: texture_multisampled_2d<f32>;
 
 @vertex
 fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
@@ -4685,7 +4695,7 @@ fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
 
 @fragment
 fn fs(@builtin(position) p: vec4<f32>, @builtin(sample_index) s: u32) -> @builtin(frag_depth) f32 {
-    return textureLoad(depth, vec2<i32>(p.xy), i32(s));
+    return textureLoad(depth, vec2<i32>(p.xy), i32(s)).x;
 }
 "#;
 
@@ -4886,7 +4896,10 @@ mod tests {
         let read = UnityRenderer::unstarted_screen((64, 32), [0, 0, 64, 32], false);
         assert_eq!(read.len(), 64 * 32 * 4);
         assert!(read.iter().all(|&b| b == 0));
-        assert_eq!(UnityRenderer::unstarted_screen((64, 32), [60, 30, 10, 10], true).len(), 4 * 2 * 16);
+        assert_eq!(
+            UnityRenderer::unstarted_screen((64, 32), [60, 30, 10, 10], true).len(),
+            4 * 2 * 16
+        );
         assert!(UnityRenderer::unstarted_screen((64, 32), [70, 0, 4, 4], false).is_empty());
     }
 
