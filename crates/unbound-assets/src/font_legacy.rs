@@ -179,10 +179,11 @@ impl LegacyFace {
     }
 }
 
-/// A rendered bitmap as 8-bit coverage, top row first. An 8-bit gray bitmap is taken as it is
-/// (also one that emboldening widened from fewer gray levels); other layouts (monochrome, 2/4-bit
-/// gray, colour) go through FreeType's conversion, and fewer than 256 levels are then stretched
-/// to 0..255 as `level * (1 / (levels - 1)) * 255`, truncated.
+/// A rendered bitmap as 8-bit coverage, top row first. An 8-bit gray bitmap is taken as it is;
+/// other layouts (monochrome, 2/4-bit gray, colour) go through FreeType's conversion, and fewer
+/// than 256 levels are then stretched to 0..255 as `level * (1 / (levels - 1)) * 255`, truncated.
+/// Unmeasured: synthetic bold on an embedded 2/4-bit strike leaves an 8-bit bitmap with its few
+/// levels, which is taken unstretched (no probe font has such strikes).
 unsafe fn coverage(library: ft::FT_Library, bitmap: &ft::FT_Bitmap) -> Option<Vec<u8>> {
     if bitmap.pixel_mode as u32 == ft::FT_PIXEL_MODE_GRAY {
         return unsafe { copy_rows(bitmap, 1.0) };
