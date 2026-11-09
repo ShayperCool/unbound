@@ -45,9 +45,11 @@ panel); `room-setemissive-then-call` (another material emission change and
 blue, before and after `UpdateGIMaterials`); `room-env-nocall` and `room-env-call` (the ambient
 color changed, before and after `DynamicGI.UpdateEnvironment`); `room-sky` (a procedural skybox
 as the ambient source, with `UpdateEnvironment`), `room-sky-nocall` and `room-sky-call` (its
-exposure changed, before and after the call); `room-pointoff`; `room-spot`; `roomscaled-base`,
-`roomscaled-moved`; `roomdirectional-base`, `roomdirectional-moved`. The default of
-`DynamicGI.updateThreshold` is recorded.
+exposure changed, before and after the call); `room-pointoff`; `room-threshold0` (the point
+light on with bounce intensity 3, then `DynamicGI.updateThreshold` 0 with bounce intensity 1 and
+`DynamicGI.indirectScale` 2; both restored after it); `room-spot`; `roomscaled-base`,
+`roomscaled-moved`; `roomdirectional-base`, `roomdirectional-moved`. The
+default of `DynamicGI.updateThreshold` is recorded.
 
 ## What the Editor does (this capture)
 
@@ -64,7 +66,12 @@ Observations (not documented guarantees):
 - Light probes precomputed for realtime GI only: `LightProbes.count` is the number of probes and
   `bakedProbes` is empty.
 - `DynamicGI.indirectScale` starts as the scene's Lighting Settings Indirect Intensity (1, and 1.5
-  in `RoomScaled`); 2 doubles the realtime lightmap texels. `updateThreshold` defaults to 1.
+  in `RoomScaled`); 2 makes the realtime lightmap texels 2.00 to 2.07 times those of
+  `room-intensity`. `updateThreshold` defaults to 1.
+- `DynamicGI.updateThreshold` decides converged output: at 1, parts of the lightmap whose inputs
+  change by less than 1% keep their earlier values, so `room-indirectscale`, converged from the
+  brighter `room-bounce`, keeps some of it; at 0 (`room-threshold0`) every part is updated
+  until the output stops changing.
 - Doubling the light intensity raises the texels about fourfold and `Light.bounceIntensity` 3
   about tenfold: more than proportionally, as when the light's color is scaled before its
   conversion to linear (the project does not use linear light intensity).
@@ -82,11 +89,14 @@ Unbound draws precomputed realtime GI for these scenes (docs/REALTIME_GI.md): it
 renderers' realtime lightmap UVs, renders their meta passes and updates the systems each frame.
 The gate fails on state values (cases, realtime lightmap indices and scale/offset, lightmaps mode,
 probe count and baked coefficients, `isConverged`, API defaults, and which atlas texels the
-renderers cover), which match, and reports lighting values (`realtimegi: 0 failing state values,
-N failing lighting values`); `compare.py --strict` gates those too. Every failing value is written
-to `compare-details.txt` in the run directory. The atlases of the point-light cases match but for
-the residuals listed in docs/REALTIME_GI.md; light probes, the spot light case and the skybox
-cases are not supported yet (the lighting values of those differ).
+renderers cover) and on the realtime lightmaps of the cases whose inputs Unbound supports (every
+case but the skybox and spot light ones; at most 0.5% of their values outside the tolerance, for
+the isolated texels docs/REALTIME_GI.md explains), and reports the other lighting values
+(`realtimegi: 0 failing state values, 0 failing gated lighting values, N failing lighting
+values`); `compare.py --strict` gates those too. Every failing value, and every allowed isolated
+one, is written to `compare-details.txt` in the run directory. Light probes, the spot light case,
+the skybox cases and directional output are not supported yet (the lighting values of those
+differ).
 
 ## Running
 

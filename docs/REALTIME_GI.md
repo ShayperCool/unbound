@@ -9,8 +9,8 @@ data holds, how the runtime update behaves (documented, then measured against th
 implements it. Status: the engine draws precomputed realtime GI for scenes whose renderers have
 Preserve UVs, lit by point lights and a flat ambient color, in the built-in pipeline (URP binds the
 same inputs; unmeasured there). For tests/projects/realtimegi every renderer covers the same
-realtime lightmap texels as in the Editor and most texels match within the comparator's
-tolerance (see [Residuals](#residuals)); `unbound doctor` lists scenes with realtime GI, which is
+realtime lightmap texels as in the Editor and the lightmaps of the point-light cases match within
+the comparator's tolerance but for a few isolated texels (see [Residuals](#residuals)); `unbound doctor` lists scenes with realtime GI, which is
 drawn only in part. Not supported yet, each with a warning: Preserve UVs off (automatic charts),
 spot and directional lights (the scene's realtime GI is then not drawn: its renderers take light
 probes again), skybox and gradient environments (no
@@ -66,17 +66,35 @@ Room cases of tests/projects/realtimegi in its tests):
    8-bit gamma-space albedo and emission linear (see [Material inputs](#material-inputs)).
 3. **Cluster tree**: each parent value is the 8-bit-weighted (/255) sum of its children.
 4. **Output texel** irradiance: the weighted sum over the referenced cluster, tree and
-   environment values, clamped at 0, stored as RGB9E5 in the atlas; `DynamicGI.indirectScale`
-   scales the drawn texels (the Editor's come out 2.00 to 2.07 times brighter with 2, Unbound's
-   exactly 2: the extra is unexplained).
-5. **Bounce**: each cluster's next bounce input is a weighted sum of output texels.
+   environment values, clamped at 0, times `DynamicGI.indirectScale`, stored as RGB9E5 in the
+   atlas.
+5. **Bounce**: the precomputed bounce resampling lists, per cluster, weighted output texels; the
+   cluster's next bounce input is the drawn value of its first one alone, divided by
+   `DynamicGI.indirectScale` (with the weighted sum, clusters on slab edges, whose later samples
+   lie on thin faces that only see the environment, get 5 to 30% less bounce than in the Editor).
 6. **Environment**: six 8x8 faces and their coarser levels (510 values); a flat ambient color
    gives its linear value everywhere.
+7. **Update threshold**: the output texels are solved in segments (groups of texels with the
+   values they reference). Each value carries how much it changed in this update (the mean of its
+   channels' absolute changes; tree values the weighted sum of their children's). A segment adds
+   up the weighted changes of its references since it was last solved and is solved again only
+   when that sum reaches `DynamicGI.updateThreshold` percent of the mean of its weighted
+   references' channels (plus 1e-4/127); otherwise its texels keep their earlier values. The
+   first update and a change of the indirect scale solve every segment; a threshold of 0 solves
+   every segment in every update.
+
+So converged output depends on the state it converged from: with `DynamicGI.indirectScale` 2
+after the brighter `room-bounce` case the Editor's texels are 2.00 to 2.07 times those of
+`room-intensity`, as Unbound's are; with `updateThreshold` 0 (`room-threshold0`) every texel
+reaches the fixed point. The update is converged (`DynamicGI.isConverged`) once an update of
+every system leaves its drawn texels unchanged: the bounce reads them, so nothing changes until
+the inputs do.
 
 Measured in the probe: the update runs over several frames on worker threads (bounces converge
 frame by frame), so the first frames after a change are not reproducible between runs even with
-`synchronousMode`; the probe compares converged output. Also measured, beyond the documented
-contract: `indirectScale` starts as the scene's Indirect Intensity; an albedo change waits for
+`synchronousMode`; the probe compares converged output, and Unbound replays the probe's cases in
+order (`crates/unbound-gi` tests) since each converges from the one before. Also measured, beyond
+the documented contract: `indirectScale` starts as the scene's Indirect Intensity; an albedo change waits for
 `UpdateGIMaterials`; after `SetEmissive` a material emission change is ignored even after
 `UpdateGIMaterials`; realtime GI picks up ambient color and skybox exposure changes without
 `UpdateEnvironment`, while the call is what updates `RenderSettings.ambientProbe` for the
@@ -150,27 +168,23 @@ realtime lightmap UVs and renders their meta passes into each system's material 
 and after `Renderer.UpdateGIMaterials`. In PostLateUpdate.EnlightenRuntimeUpdate it passes the
 frame's lights (realtime, and mixed ones without baked GI, with bounce intensity) and environment
 to the native update (`crates/unbound-runtime/src/realtime_gi.rs`): one update of every system in
-synchronous mode, else of as many as fit in 2 ms (at least one), without allocating; a system is
-converged after two updates of all systems whose drawn texels did not change (or whose bounce
-changed by less than one RGB9E5 step of its largest value). Changed atlases are uploaded as RGBA
-half floats; renderers draw them as `unity_DynamicLightmap` with their realtime scale and offset
-and `DYNAMICLIGHTMAP_ON`, and take no light probes. `DynamicGI.isConverged`, `synchronousMode`,
-`SetEmissive` and `indirectScale` act on it.
+synchronous mode, else of as many as fit in 2 ms (at least one), without allocating; the scene
+is converged once an update of every system left its drawn texels unchanged. Changed atlases are
+uploaded as RGBA half floats; renderers draw them as `unity_DynamicLightmap` with their realtime
+scale and offset and `DYNAMICLIGHTMAP_ON`, and take no light probes. `DynamicGI.isConverged`,
+`synchronousMode`, `SetEmissive`, `indirectScale` and `updateThreshold` act on it.
 
 ## Residuals
 
 Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
 
-- Texels at chart corners and edges where geometry meets (6 to 56 of about 5000 values per Room
-  case, up to about 20%): the transport and the cluster inputs match the Editor's (albedo exactly,
-  direct light within 2.3%), but the Editor's bounce for clusters on slab edges, which also sample
-  texels of thin faces that only see the environment, is larger than the weighted sum of the
-  output texels the precomputed bounce samples give (5 to 30% for some clusters). The rule is not
-  found yet.
-- `DynamicGI.indirectScale` 2: the Editor's texels are 2.00 to 2.07 times those at 1, Unbound's
-  exactly 2 (94 values off). Letting the bounce read the scaled texels gives too much (2.2 times):
-  only part of the scale reaches the bounce.
-- Direct light: the point light falloff within 2.3% of the Editor's per cluster.
+- Direct light: the point light falloff within about 2% of the Editor's per cluster (the
+  Editor interpolates its falloff curve from a table of samples).
+- Isolated texels: since a segment is solved again only when its inputs change by the update
+  threshold, input differences well below it decide which update last solved a segment, and so
+  move a few texels (2 to 11 values of about 5000 per Room case in the engine, up to about 8%;
+  one chart-edge texel by 8% also with a threshold of 0). The comparator gates the point-light
+  cases' lightmaps with at most 0.5% of their values outside the tolerance.
 
 ## Unbound plan
 

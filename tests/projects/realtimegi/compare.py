@@ -9,10 +9,17 @@ Two classes of values:
   each renderer's realtime lightmap index and scale/offset, the lightmaps mode, the light probe
   count and baked coefficients, DynamicGI.isConverged, the recorded API defaults and which atlas
   texels renderers cover (their realtime lightmap UVs).
-- Lighting, a report until Unbound draws precomputed realtime GI (gated with --strict): light
-  probe SH (each sample point, 27 coefficients) and the ambient probe within ABS + REL *
-  |reference|; per atlas (.atlas/.dir) each covered texel's RGB within ABS + REL * |reference|; frames (.png) report the shared image measure (mean,
-  worst and pixels over 8 of the per-pixel max-channel difference).
+- Lighting: light probe SH (each sample point, 27 coefficients) and the ambient probe within
+  ABS + REL * |reference|; per atlas (.atlas/.dir) each covered texel's RGB within ABS + REL *
+  |reference|; frames (.png) report the shared image measure (mean, worst and pixels over 8 of
+  the per-pixel max-channel difference). The realtime lightmaps (.atlas) of the cases whose
+  inputs Unbound supports (point lights and a flat ambient color: every case but the skybox and
+  spot light ones) are gated: at most ISOLATED of their values may be outside the tolerance. With
+  DynamicGI.updateThreshold a part of the lightmap is updated only when its inputs changed by
+  more than the threshold, so converged texels depend on which update last solved them; input
+  differences well below the threshold (the point light falloff, within about 2% per cluster)
+  move a few isolated texels by up to about 8%. The rest of the lighting values are reported
+  (gated with --strict).
 
 Every failing value is written to CAPTURE/compare-details.txt; the output lists one line per
 failing case, atlas or frame.
@@ -28,6 +35,10 @@ from value_probe import image_difference  # noqa: E402
 
 ABS = 0.02
 REL = 0.05
+# Gated realtime lightmaps: the share of their compared values allowed outside the tolerance.
+ISOLATED = 0.005
+# Cases whose inputs Unbound does not support yet: their lighting is reported only.
+UNSUPPORTED = ('room-sky', 'room-spot')
 STATE_KEYS = ('converged', 'indirectScale', 'updateThreshold', 'size', 'lightmapsMode')
 
 
@@ -54,10 +65,10 @@ def close(a, b):
 
 class Result:
     def __init__(self):
-        self.state, self.lighting, self.details, self.lines = [], [], [], []
+        self.state, self.gated, self.lighting, self.details, self.lines = [], [], [], [], []
 
     def fail(self, kind, summary, details=()):
-        (self.state if kind == 'state' else self.lighting).append(summary)
+        {'state': self.state, 'gated': self.gated}.get(kind, self.lighting).append(summary)
         self.details.append(summary)
         self.details.extend('  ' + d for d in details)
 
@@ -120,6 +131,7 @@ def compare_atlas(name, ref_path, cap_path, result):
         return
     coverage, bad = [], []
     total = worst = 0.0
+    compared = 0
     for t in range(rw * rh):
         ra, ca = rv[4 * t + 3] > 0, cv[4 * t + 3] > 0
         if ra != ca:
@@ -127,6 +139,7 @@ def compare_atlas(name, ref_path, cap_path, result):
             continue
         if not ra:
             continue
+        compared += 3
         for k in range(3):
             a, b = cv[4 * t + k], rv[4 * t + k]
             d = abs(a - b)
@@ -139,8 +152,15 @@ def compare_atlas(name, ref_path, cap_path, result):
     if coverage:
         # Which texels renderers cover (their realtime lightmap UVs) matches: gated.
         result.fail('state', f'{name}: coverage differs at {len(coverage)} texels', coverage)
-    if bad:
-        result.fail('lighting', f'{name}: {len(bad)} texel values off (max |d| {worst:.5f})', bad)
+    gated = name.endswith('.atlas') and not name.startswith(UNSUPPORTED)
+    if gated and len(bad) <= ISOLATED * compared:
+        if bad:
+            result.details.append(f'{name}: {len(bad)} isolated texel values off (allowed '
+                                  f'{int(ISOLATED * compared)})')
+            result.details.extend('  ' + d for d in bad)
+    elif bad:
+        result.fail('gated' if gated else 'lighting',
+                    f'{name}: {len(bad)} texel values off (max |d| {worst:.5f})', bad)
 
 
 def main():
@@ -173,11 +193,14 @@ def main():
         print(line)
     for failure in result.state:
         print('FAIL state', failure)
+    for failure in result.gated:
+        print('FAIL gated lighting', failure)
     for failure in result.lighting:
         print('FAIL lighting', failure)
-    print(f'realtimegi: {len(result.state)} failing state values, {len(result.lighting)} failing lighting '
-          f'values' + ('' if args.strict else ' (lighting reported)') + f'; details {cap}/compare-details.txt')
-    return 1 if result.state or (result.lighting and args.strict) else 0
+    print(f'realtimegi: {len(result.state)} failing state values, {len(result.gated)} failing gated '
+          f'lighting values, {len(result.lighting)} failing lighting values'
+          + ('' if args.strict else ' (reported)') + f'; details {cap}/compare-details.txt')
+    return 1 if result.state or result.gated or (result.lighting and args.strict) else 0
 
 
 if __name__ == '__main__':
