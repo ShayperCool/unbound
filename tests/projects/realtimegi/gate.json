@@ -1,0 +1,6 @@
+{
+  "commands": [
+    "python3 tests/projects/realtimegi/run.py gate --label gate-$(date +%s%N)"
+  ],
+  "summary": "realtimegi: \\d+ failing.*"
+}
