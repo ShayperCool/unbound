@@ -62,13 +62,52 @@ public class EffectProbe : MonoBehaviour
         new[] { "slot_wet_dc_processed", "music=dc0" },
         new[] { "slot_wet_startup_zero", "music=dc0", "Music.Shift.Wet=-80" },
         new[] { "slot_wet_before_zero", "music=dc0", "Music:Shift,Att", "Music.Volume=-12", "Music.Shift.Wet=-80" },
+        new[] { "fft_256_imp", "music=imp", "Music.Shift.FFT size=256", "Music.Shift.Pitch=1" },
+        new[] { "fft_256_noise", "music=noise:0.25", "Music.Shift.FFT size=256", "Music.Shift.Pitch=0.75" },
+        new[] { "fft_256_tone", "music=tone:0.25:997", "Music.Shift.FFT size=256", "Music.Shift.Pitch=1.5" },
+        new[] { "fft_512_imp", "music=imp", "Music.Shift.FFT size=512", "Music.Shift.Pitch=1" },
+        new[] { "fft_512_noise", "music=noise:0.25", "Music.Shift.FFT size=512", "Music.Shift.Pitch=0.75" },
+        new[] { "fft_512_tone", "music=tone:0.25:997", "Music.Shift.FFT size=512", "Music.Shift.Pitch=1.5" },
+        new[] { "fft_2048_imp", "music=imp", "Music.Shift.FFT size=2048", "Music.Shift.Pitch=1" },
+        new[] { "fft_2048_noise", "music=noise:0.25", "Music.Shift.FFT size=2048", "Music.Shift.Pitch=0.75" },
+        new[] { "fft_2048_tone", "music=tone:0.25:997", "Music.Shift.FFT size=2048", "Music.Shift.Pitch=1.5" },
+        new[] { "fft_4096_imp", "music=imp", "Music.Shift.FFT size=4096", "Music.Shift.Pitch=1" },
+        new[] { "fft_4096_noise", "music=noise:0.25", "Music.Shift.FFT size=4096", "Music.Shift.Pitch=0.75" },
+        new[] { "fft_4096_tone", "music=tone:0.25:997", "Music.Shift.FFT size=4096", "Music.Shift.Pitch=1.5" },
+        new[] { "fft_raw_255", "music=noise:0.25", "set:FFT size=255", "Music.Shift.Pitch=0.75" },
+        new[] { "fft_raw_256_5", "music=noise:0.25", "set:FFT size=256.5", "Music.Shift.Pitch=0.75" },
+        new[] { "fft_raw_512_5", "music=noise:0.25", "set:FFT size=512.5", "Music.Shift.Pitch=0.75" },
+        new[] { "fft_raw_1024_5", "music=noise:0.25", "set:FFT size=1024.5", "Music.Shift.Pitch=0.75" },
+        new[] { "fft_raw_2048_5", "music=noise:0.25", "set:FFT size=2048.5", "Music.Shift.Pitch=0.75" },
+        new[] { "fft_raw_4097", "music=noise:0.25", "set:FFT size=4097", "Music.Shift.Pitch=0.75" },
+        new[] { "overlap_1", "music=noise:0.25", "set:Overlap=1", "Music.Shift.Pitch=0.75" },
+        new[] { "overlap_2", "music=noise:0.25", "set:Overlap=2", "Music.Shift.Pitch=0.75" },
+        new[] { "overlap_3", "music=noise:0.25", "set:Overlap=3", "Music.Shift.Pitch=0.75" },
+        new[] { "overlap_5", "music=noise:0.25", "set:Overlap=5", "Music.Shift.Pitch=0.75" },
+        new[] { "overlap_8", "music=noise:0.25", "set:Overlap=8", "Music.Shift.Pitch=0.75" },
+        new[] { "overlap_16", "music=noise:0.25", "set:Overlap=16", "Music.Shift.Pitch=0.75" },
+        new[] { "overlap_32", "music=noise:0.25", "set:Overlap=32", "Music.Shift.Pitch=0.75" },
+        new[] { "overlap_3_5", "music=noise:0.25", "set:Overlap=3.5", "Music.Shift.Pitch=0.75" },
+        new[] { "overlap_0", "music=noise:0.25", "set:Overlap=0", "Music.Shift.Pitch=0.75" },
+        new[] { "overlap_33", "music=noise:0.25", "set:Overlap=33", "Music.Shift.Pitch=0.75" },
+        new[] { "fft_live_up", "music=noise:0.25", "Music.Shift.Pitch=0.75", "live:8:FFT size=2048" },
+        new[] { "fft_live_down", "music=noise:0.25", "Music.Shift.Pitch=1.5", "Music.Shift.FFT size=4096", "live:9:FFT size=256" },
+        new[] { "overlap_live", "music=noise:0.25", "Music.Shift.Pitch=0.75", "live:8:Overlap=32" },
+        new[] { "buffer_256", "music=noise:0.25", "buffer=256", "blocks=128", "Music.Shift.FFT size=2048", "Music.Shift.Pitch=1.5" },
+        new[] { "buffer_512", "music=noise:0.25", "buffer=512", "blocks=64", "Music.Shift.FFT size=2048", "Music.Shift.Pitch=1.5" },
+        new[] { "buffer_2048", "music=noise:0.25", "buffer=2048", "blocks=16", "Music.Shift.FFT size=2048", "Music.Shift.Pitch=1.5" },
+        new[] { "context_mono", "music=noise:0.25", "mode=Mono", "Music.Shift.Pitch=0.75" },
+        new[] { "context_quad", "music=noise:0.25", "mode=Quad", "Music.Shift.Pitch=0.75" },
+        new[] { "context_surround", "music=noise:0.25", "mode=Surround", "Music.Shift.Pitch=0.75" },
+        new[] { "context_mode5point1", "music=noise:0.25", "mode=Mode5point1", "Music.Shift.Pitch=0.75" },
+        new[] { "context_mode7point1", "music=noise:0.25", "mode=Mode7point1", "Music.Shift.Pitch=0.75" },
     };
     static int BlockCount, ClipFrames;
     public static string[] Selected()
     {
         var only = Environment.GetEnvironmentVariable("EFFECT_PROBE_CASES");
         var keys = new List<string>();
-        foreach (var c in Cases) if (string.IsNullOrEmpty(only) || Array.IndexOf(only.Split(','), c[0]) >= 0) keys.Add(c[0]);
+        foreach (var c in Cases) if ((!Engine || !c[0].StartsWith("context_")) && (string.IsNullOrEmpty(only) || Array.IndexOf(only.Split(','), c[0]) >= 0)) keys.Add(c[0]);
         return keys.ToArray();
     }
     public static string[] Tokens(string key) => Array.Find(Cases, c => c[0] == key);
@@ -165,8 +204,9 @@ public class EffectProbe : MonoBehaviour
         m_Captured = true;
         var config = AudioSettings.GetConfiguration();
         config.sampleRate = int.Parse(Environment.GetEnvironmentVariable("EFFECT_PROBE_RATE"));
-        config.speakerMode = AudioSpeakerMode.Stereo; config.dspBufferSize = 1024;
+        config.speakerMode = AudioSpeakerMode.Stereo; config.dspBufferSize = int.Parse(Environment.GetEnvironmentVariable("EFFECT_PROBE_BUFFER") ?? "1024");
         if (!AudioSettings.Reset(config)) throw new Exception("AudioSettings.Reset failed");
+        if (!Engine) yield return null;
         Time.captureDeltaTime = 1024f / config.sampleRate;
         int rate = AudioSettings.outputSampleRate;
         string output = Environment.GetEnvironmentVariable("EFFECT_PROBE_OUT"); Directory.CreateDirectory(output);
@@ -177,11 +217,48 @@ public class EffectProbe : MonoBehaviour
         void Save() => File.WriteAllText(Path.Combine(output, "capture.json"), "{" + string.Join(",", records) + "}\n");
         Save();
         foreach (string key in Selected()) {
-            BlockCount = int.Parse(Option(key, "blocks=", "32")); ClipFrames = int.Parse(Option(key, "clip=", (BlockCount * 1024).ToString()));
+            int requestedBuffer = int.Parse(Option(key, "buffer=", "1024"));
+            var requestedMode = (AudioSpeakerMode)Enum.Parse(typeof(AudioSpeakerMode), Option(key, "mode=", "Stereo"));
+            if (config.dspBufferSize != requestedBuffer || config.speakerMode != requestedMode) {
+                AudioRenderer.Stop();
+                config.dspBufferSize = requestedBuffer; config.speakerMode = requestedMode;
+                if (!AudioSettings.Reset(config)) throw new Exception("context reset failed");
+                if (!Engine) yield return null;
+                if (!AudioRenderer.Start()) throw new Exception("context restart failed");
+            }
+            var actual = AudioSettings.GetConfiguration();
+            AudioSettings.GetDSPBufferSize(out int actualBuffer, out int buffers);
+            int outputChannels = actual.speakerMode == AudioSpeakerMode.Mono ? 1
+                : actual.speakerMode == AudioSpeakerMode.Quad ? 4
+                : actual.speakerMode == AudioSpeakerMode.Surround ? 5
+                : actual.speakerMode == AudioSpeakerMode.Mode5point1 ? 6
+                : actual.speakerMode == AudioSpeakerMode.Mode7point1 ? 8 : 2;
+            Time.captureDeltaTime = (float)actualBuffer / actual.sampleRate;
+            OutputLayoutProbe layoutProbe = null;
+            if (!Engine && key.StartsWith("context_")) {
+                OutputLayoutProbe.Channels = 0;
+                layoutProbe = gameObject.AddComponent<OutputLayoutProbe>();
+                // A configuration getter may retain the request when the output driver falls back.
+                // Measure the active DSP layout before choosing the capture buffer dimensions.
+                var warm = new NativeArray<float>(actualBuffer * 8, Allocator.Persistent);
+                yield return null;
+                if (!AudioRenderer.Render(warm)) throw new Exception("layout preflight render failed");
+                warm.Dispose();
+                if (OutputLayoutProbe.Channels == 0) throw new Exception("missing layout callback");
+                outputChannels = OutputLayoutProbe.Channels;
+            }
+            if (key.StartsWith("context_") || key.StartsWith("buffer_")) {
+                records.Add("\""+key+".buffer\":"+actualBuffer);
+                records.Add("\""+key+".mode\":"+(int)actual.speakerMode);
+                records.Add("\""+key+".rate\":"+actual.sampleRate);
+                if (layoutProbe != null) records.Add("\""+key+".render_channels\":"+outputChannels);
+            }
+            BlockCount = int.Parse(Option(key, "blocks=", "32")); ClipFrames = int.Parse(Option(key, "clip=", (BlockCount * actualBuffer).ToString()));
             Debug.Log("Effect case " + key);
             if (Option(key, "reset=", "0") == "1") {
                 AudioRenderer.Stop();
                 if (!AudioSettings.Reset(config)) throw new Exception("case reset failed");
+                if (!Engine) yield return null;
                 if (!AudioRenderer.Start()) throw new Exception("case restart failed");
             }
             var mixer = Resources.Load<AudioMixer>(Option(key, "asset=", key)); if (!mixer) throw new Exception("Missing mixer " + key);
@@ -218,14 +295,20 @@ public class EffectProbe : MonoBehaviour
             if (channels == 1) { var mono = new float[ClipFrames]; for (int f = 0; f < ClipFrames; f++) mono[f] = data[2*f]; data = mono; }
             if (!clip.SetData(data, 0)) throw new Exception("SetData failed");
             source.clip = clip; source.Play();
-            var sink = new NativeArray<float>(2048, Allocator.Persistent); sinks.Add(sink);
-            var buffer = new NativeArray<float>(2048, Allocator.Persistent);
+            var sink = new NativeArray<float>(actualBuffer * outputChannels, Allocator.Persistent); sinks.Add(sink);
+            var buffer = new NativeArray<float>(actualBuffer * outputChannels, Allocator.Persistent);
             var master = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Master");
             var addSink = typeof(AudioRenderer).GetMethod("AddMixerGroupSink", Flags);
             using (var masterWriter = new BinaryWriter(File.Create(Path.Combine(output, key+".master.f32"))))
             using (var writer = new BinaryWriter(File.Create(Path.Combine(output, key+".f32")))) {
                 if (Engine) FlushEngine();
                 for (int block = 0; block < BlockCount; block++) {
+                    foreach (var token in Tokens(key)) if (token.StartsWith("live:"+block+":")) {
+                        var pair = token.Substring(token.IndexOf(':', 5)+1).Split('=');
+                        bool ok = mixer.SetFloat(pair[0], float.Parse(pair[1], System.Globalization.CultureInfo.InvariantCulture));
+                        records.Add("\""+key+".live_set\":"+(ok ? "true" : "false"));
+                        if (Engine) FlushEngine();
+                    }
                     if (!Engine) yield return null;
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false })) throw new Exception("AddMixerGroupSink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("AudioRenderer.Render failed");
@@ -234,10 +317,11 @@ public class EffectProbe : MonoBehaviour
                 }
             }
             foreach (string suffix in new[] { "", ".master" })
-                records.Add("\""+key+suffix+"\":{\"file\":\""+key+suffix+".f32\",\"frames\":"+(BlockCount*1024)+",\"channels\":2}");
+                records.Add("\""+key+suffix+"\":{\"file\":\""+key+suffix+".f32\",\"frames\":"+(BlockCount*actualBuffer)+",\"channels\":"+outputChannels+"}");
             Save(); buffer.Dispose();
+            if (layoutProbe != null) DestroyImmediate(layoutProbe);
             source.Stop(); DestroyImmediate(go); DestroyImmediate(clip);
-            var silence = new NativeArray<float>(2048, Allocator.Persistent);
+            var silence = new NativeArray<float>(actualBuffer * outputChannels, Allocator.Persistent);
             for (int drain = 0; drain < 8; drain++) {
                 if (!Engine) yield return null; else FlushEngine();
                 if (!AudioRenderer.Render(silence)) throw new Exception("drain render failed");
@@ -246,4 +330,10 @@ public class EffectProbe : MonoBehaviour
         }
         AudioRenderer.Stop(); foreach (var sink in sinks) sink.Dispose(); Save(); Exit(0);
     }
+}
+
+public class OutputLayoutProbe : MonoBehaviour
+{
+    public static volatile int Channels;
+    void OnAudioFilterRead(float[] data, int channels) { Channels = channels; }
 }

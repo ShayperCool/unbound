@@ -12,12 +12,15 @@ instead, as the reference capture did; when the fixture changes, record such a p
 import argparse
 import datetime
 import os
+import json
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 
 fixture = Path(__file__).resolve().parent
+sys.path.insert(0, str(fixture))
+from common import cases
 sys.path.insert(0, str(fixture.parents[1]))
 from probe_paths import shared_runtime
 p = argparse.ArgumentParser()
@@ -42,9 +45,26 @@ for rate in a.rate or (48000, 44100):
                                                 '--rate', str(rate), *map(str, args)]).returncode
     if a.native and run('native.py', '--work', work/f'native-{rate}'): raise SystemExit(f'Native {rate} failed')
     project = work/f'native-{rate}/project' if a.native else work/'authored'
-    if run('engine.py', '--native-project', project, '--runtime', runtime,
+    # Other previously loaded effect slots can have narrower output coverage. Capture each
+    # buffer control in a fresh engine session, using the same authored inputs and runtime.
+    primary = [key for key in cases() if not key.startswith('buffer_')]
+    if run('engine.py', '--native-project', project, '--runtime', runtime, '--cases', ','.join(primary),
            '--work', work/f'engine-{rate}'): raise SystemExit(f'engine {rate} failed')
     candidate = work/f'engine-{rate}/capture'
+    merged = json.loads((candidate/'capture.json').read_text())
+    for key in (key for key in cases() if key.startswith('buffer_')):
+        part = work/f'engine-{rate}-{key}'
+        if run('engine.py', '--native-project', project, '--runtime', runtime, '--cases', key,
+               '--work', part): raise SystemExit(f'engine {rate} {key} failed')
+        data = json.loads((part/'capture/capture.json').read_text())
+        assert all(merged[k] == data[k] for k in ('release', 'rate'))
+        for name, value in data.items():
+            if name in ('release', 'rate'): continue
+            assert name not in merged, name
+            merged[name] = value
+            if isinstance(value, dict) and 'file' in value:
+                shutil.copy2(part/'capture'/value['file'], candidate/value['file'])
+    (candidate/'capture.json').write_text(json.dumps(merged, indent=2)+'\n')
     run('compare.py', '--profile', 'all', '--candidate', candidate, '--report', work/f'strict-{rate}.jsonl.gz')
     failed |= bool(run('compare.py', '--profile', 'all', '--pcm-steps', '1', '--residuals', '--candidate', candidate,
                        '--report', work/f'gate-{rate}.jsonl.gz'))

@@ -1,1 +1,1319 @@
-{"release": "6000.0.71f1", "rate": 44100, "plain": {"file": "plain.f32", "frames": 32768, "channels": 2}, "plain.master": {"file": "plain.master.f32", "frames": 32768, "channels": 2}, "default_imp.mixer_Pitch": 1, "default_imp.mixer_FFT size": 1024, "default_imp.mixer_Overlap": 4, "default_imp.mixer_Max channels": 0, "default_imp": {"file": "default_imp.f32", "frames": 32768, "channels": 2}, "default_imp.master": {"file": "default_imp.master.f32", "frames": 32768, "channels": 2}, "default_silence.mixer_Pitch": 1, "default_silence.mixer_FFT size": 1024, "default_silence.mixer_Overlap": 4, "default_silence.mixer_Max channels": 0, "default_silence": {"file": "default_silence.f32", "frames": 32768, "channels": 2}, "default_silence.master": {"file": "default_silence.master.f32", "frames": 32768, "channels": 2}, "default_noise.mixer_Pitch": 1, "default_noise.mixer_FFT size": 1024, "default_noise.mixer_Overlap": 4, "default_noise.mixer_Max channels": 0, "default_noise": {"file": "default_noise.f32", "frames": 32768, "channels": 2}, "default_noise.master": {"file": "default_noise.master.f32", "frames": 32768, "channels": 2}, "explicit_defaults.mixer_Pitch": 1, "explicit_defaults.mixer_FFT size": 1024, "explicit_defaults.mixer_Overlap": 4, "explicit_defaults.mixer_Max channels": 0, "explicit_defaults": {"file": "explicit_defaults.f32", "frames": 32768, "channels": 2}, "explicit_defaults.master": {"file": "explicit_defaults.master.f32", "frames": 32768, "channels": 2}, "down_imp.mixer_Pitch": 0.5, "down_imp.mixer_FFT size": 1024, "down_imp.mixer_Overlap": 4, "down_imp.mixer_Max channels": 0, "down_imp": {"file": "down_imp.f32", "frames": 32768, "channels": 2}, "down_imp.master": {"file": "down_imp.master.f32", "frames": 32768, "channels": 2}, "down_noise.mixer_Pitch": 0.5, "down_noise.mixer_FFT size": 1024, "down_noise.mixer_Overlap": 4, "down_noise.mixer_Max channels": 0, "down_noise": {"file": "down_noise.f32", "frames": 32768, "channels": 2}, "down_noise.master": {"file": "down_noise.master.f32", "frames": 32768, "channels": 2}, "down_tone.mixer_Pitch": 0.5, "down_tone.mixer_FFT size": 1024, "down_tone.mixer_Overlap": 4, "down_tone.mixer_Max channels": 0, "down_tone": {"file": "down_tone.f32", "frames": 32768, "channels": 2}, "down_tone.master": {"file": "down_tone.master.f32", "frames": 32768, "channels": 2}, "down_dc.mixer_Pitch": 0.5, "down_dc.mixer_FFT size": 1024, "down_dc.mixer_Overlap": 4, "down_dc.mixer_Max channels": 0, "down_dc": {"file": "down_dc.f32", "frames": 32768, "channels": 2}, "down_dc.master": {"file": "down_dc.master.f32", "frames": 32768, "channels": 2}, "up_imp.mixer_Pitch": 2, "up_imp.mixer_FFT size": 1024, "up_imp.mixer_Overlap": 4, "up_imp.mixer_Max channels": 0, "up_imp": {"file": "up_imp.f32", "frames": 32768, "channels": 2}, "up_imp.master": {"file": "up_imp.master.f32", "frames": 32768, "channels": 2}, "up_noise.mixer_Pitch": 2, "up_noise.mixer_FFT size": 1024, "up_noise.mixer_Overlap": 4, "up_noise.mixer_Max channels": 0, "up_noise": {"file": "up_noise.f32", "frames": 32768, "channels": 2}, "up_noise.master": {"file": "up_noise.master.f32", "frames": 32768, "channels": 2}, "up_tone.mixer_Pitch": 2, "up_tone.mixer_FFT size": 1024, "up_tone.mixer_Overlap": 4, "up_tone.mixer_Max channels": 0, "up_tone": {"file": "up_tone.f32", "frames": 32768, "channels": 2}, "up_tone.master": {"file": "up_tone.master.f32", "frames": 32768, "channels": 2}, "up_dc.mixer_Pitch": 2, "up_dc.mixer_FFT size": 1024, "up_dc.mixer_Overlap": 4, "up_dc.mixer_Max channels": 0, "up_dc": {"file": "up_dc.f32", "frames": 32768, "channels": 2}, "up_dc.master": {"file": "up_dc.master.f32", "frames": 32768, "channels": 2}, "lower_imp.mixer_Pitch": 0.75, "lower_imp.mixer_FFT size": 1024, "lower_imp.mixer_Overlap": 4, "lower_imp.mixer_Max channels": 0, "lower_imp": {"file": "lower_imp.f32", "frames": 32768, "channels": 2}, "lower_imp.master": {"file": "lower_imp.master.f32", "frames": 32768, "channels": 2}, "lower_noise.mixer_Pitch": 0.75, "lower_noise.mixer_FFT size": 1024, "lower_noise.mixer_Overlap": 4, "lower_noise.mixer_Max channels": 0, "lower_noise": {"file": "lower_noise.f32", "frames": 32768, "channels": 2}, "lower_noise.master": {"file": "lower_noise.master.f32", "frames": 32768, "channels": 2}, "lower_tone.mixer_Pitch": 0.75, "lower_tone.mixer_FFT size": 1024, "lower_tone.mixer_Overlap": 4, "lower_tone.mixer_Max channels": 0, "lower_tone": {"file": "lower_tone.f32", "frames": 32768, "channels": 2}, "lower_tone.master": {"file": "lower_tone.master.f32", "frames": 32768, "channels": 2}, "lower_dc.mixer_Pitch": 0.75, "lower_dc.mixer_FFT size": 1024, "lower_dc.mixer_Overlap": 4, "lower_dc.mixer_Max channels": 0, "lower_dc": {"file": "lower_dc.f32", "frames": 32768, "channels": 2}, "lower_dc.master": {"file": "lower_dc.master.f32", "frames": 32768, "channels": 2}, "higher_imp.mixer_Pitch": 1.5, "higher_imp.mixer_FFT size": 1024, "higher_imp.mixer_Overlap": 4, "higher_imp.mixer_Max channels": 0, "higher_imp": {"file": "higher_imp.f32", "frames": 32768, "channels": 2}, "higher_imp.master": {"file": "higher_imp.master.f32", "frames": 32768, "channels": 2}, "higher_noise.mixer_Pitch": 1.5, "higher_noise.mixer_FFT size": 1024, "higher_noise.mixer_Overlap": 4, "higher_noise.mixer_Max channels": 0, "higher_noise": {"file": "higher_noise.f32", "frames": 32768, "channels": 2}, "higher_noise.master": {"file": "higher_noise.master.f32", "frames": 32768, "channels": 2}, "higher_tone.mixer_Pitch": 1.5, "higher_tone.mixer_FFT size": 1024, "higher_tone.mixer_Overlap": 4, "higher_tone.mixer_Max channels": 0, "higher_tone": {"file": "higher_tone.f32", "frames": 32768, "channels": 2}, "higher_tone.master": {"file": "higher_tone.master.f32", "frames": 32768, "channels": 2}, "higher_dc.mixer_Pitch": 1.5, "higher_dc.mixer_FFT size": 1024, "higher_dc.mixer_Overlap": 4, "higher_dc.mixer_Max channels": 0, "higher_dc": {"file": "higher_dc.f32", "frames": 32768, "channels": 2}, "higher_dc.master": {"file": "higher_dc.master.f32", "frames": 32768, "channels": 2}, "group_bypass.mixer_Pitch": 1, "group_bypass.mixer_FFT size": 1024, "group_bypass.mixer_Overlap": 4, "group_bypass.mixer_Max channels": 0, "group_bypass": {"file": "group_bypass.f32", "frames": 32768, "channels": 2}, "group_bypass.master": {"file": "group_bypass.master.f32", "frames": 32768, "channels": 2}, "slot_bypass.mixer_Pitch": 1, "slot_bypass.mixer_FFT size": 1024, "slot_bypass.mixer_Overlap": 4, "slot_bypass.mixer_Max channels": 0, "slot_bypass": {"file": "slot_bypass.f32", "frames": 32768, "channels": 2}, "slot_bypass.master": {"file": "slot_bypass.master.f32", "frames": 32768, "channels": 2}, "source_bypass.mixer_Pitch": 1, "source_bypass.mixer_FFT size": 1024, "source_bypass.mixer_Overlap": 4, "source_bypass.mixer_Max channels": 0, "source_bypass": {"file": "source_bypass.f32", "frames": 32768, "channels": 2}, "source_bypass.master": {"file": "source_bypass.master.f32", "frames": 32768, "channels": 2}, "end_imp.mixer_Pitch": 0.75, "end_imp.mixer_FFT size": 1024, "end_imp.mixer_Overlap": 4, "end_imp.mixer_Max channels": 0, "end_imp": {"file": "end_imp.f32", "frames": 32768, "channels": 2}, "end_imp.master": {"file": "end_imp.master.f32", "frames": 32768, "channels": 2}, "end_tone.mixer_Pitch": 1.5, "end_tone.mixer_FFT size": 1024, "end_tone.mixer_Overlap": 4, "end_tone.mixer_Max channels": 0, "end_tone": {"file": "end_tone.f32", "frames": 32768, "channels": 2}, "end_tone.master": {"file": "end_tone.master.f32", "frames": 32768, "channels": 2}, "reset_noise.mixer_Pitch": 1, "reset_noise.mixer_FFT size": 1024, "reset_noise.mixer_Overlap": 4, "reset_noise.mixer_Max channels": 0, "reset_noise": {"file": "reset_noise.f32", "frames": 32768, "channels": 2}, "reset_noise.master": {"file": "reset_noise.master.f32", "frames": 32768, "channels": 2}, "invalid_pitch_low.set": true, "invalid_pitch_low.get": true, "invalid_pitch_low.value": -1, "invalid_pitch_low.mixer_Pitch": -1, "invalid_pitch_low.mixer_FFT size": 1024, "invalid_pitch_low.mixer_Overlap": 4, "invalid_pitch_low.mixer_Max channels": 0, "invalid_pitch_low": {"file": "invalid_pitch_low.f32", "frames": 32768, "channels": 2}, "invalid_pitch_low.master": {"file": "invalid_pitch_low.master.f32", "frames": 32768, "channels": 2}, "invalid_pitch_high.set": true, "invalid_pitch_high.get": true, "invalid_pitch_high.value": 3, "invalid_pitch_high.mixer_Pitch": 3, "invalid_pitch_high.mixer_FFT size": 1024, "invalid_pitch_high.mixer_Overlap": 4, "invalid_pitch_high.mixer_Max channels": 0, "invalid_pitch_high": {"file": "invalid_pitch_high.f32", "frames": 32768, "channels": 2}, "invalid_pitch_high.master": {"file": "invalid_pitch_high.master.f32", "frames": 32768, "channels": 2}, "absent_missing.set": false, "absent_missing.get": false, "absent_missing.value": 0, "absent_missing.mixer_Pitch": 1, "absent_missing.mixer_FFT size": 1024, "absent_missing.mixer_Overlap": 4, "absent_missing.mixer_Max channels": 0, "absent_missing": {"file": "absent_missing.f32", "frames": 32768, "channels": 2}, "absent_missing.master": {"file": "absent_missing.master.f32", "frames": 32768, "channels": 2}, "slot_wet_zero.mixer_Pitch": 1, "slot_wet_zero.mixer_FFT size": 1024, "slot_wet_zero.mixer_Overlap": 4, "slot_wet_zero.mixer_Max channels": 0, "slot_wet_zero.wetget": true, "slot_wet_zero.wetvalue": -80, "slot_wet_zero": {"file": "slot_wet_zero.f32", "frames": 32768, "channels": 2}, "slot_wet_zero.master": {"file": "slot_wet_zero.master.f32", "frames": 32768, "channels": 2}, "slot_wet_quarter.mixer_Pitch": 1, "slot_wet_quarter.mixer_FFT size": 1024, "slot_wet_quarter.mixer_Overlap": 4, "slot_wet_quarter.mixer_Max channels": 0, "slot_wet_quarter.wetget": true, "slot_wet_quarter.wetvalue": -12, "slot_wet_quarter": {"file": "slot_wet_quarter.f32", "frames": 32768, "channels": 2}, "slot_wet_quarter.master": {"file": "slot_wet_quarter.master.f32", "frames": 32768, "channels": 2}, "slot_wet_half.mixer_Pitch": 1, "slot_wet_half.mixer_FFT size": 1024, "slot_wet_half.mixer_Overlap": 4, "slot_wet_half.mixer_Max channels": 0, "slot_wet_half.wetget": true, "slot_wet_half.wetvalue": -6, "slot_wet_half": {"file": "slot_wet_half.f32", "frames": 32768, "channels": 2}, "slot_wet_half.master": {"file": "slot_wet_half.master.f32", "frames": 32768, "channels": 2}, "slot_wet_threequarter.mixer_Pitch": 1, "slot_wet_threequarter.mixer_FFT size": 1024, "slot_wet_threequarter.mixer_Overlap": 4, "slot_wet_threequarter.mixer_Max channels": 0, "slot_wet_threequarter.wetget": true, "slot_wet_threequarter.wetvalue": -2.5, "slot_wet_threequarter": {"file": "slot_wet_threequarter.f32", "frames": 32768, "channels": 2}, "slot_wet_threequarter.master": {"file": "slot_wet_threequarter.master.f32", "frames": 32768, "channels": 2}, "slot_wet_full.mixer_Pitch": 1, "slot_wet_full.mixer_FFT size": 1024, "slot_wet_full.mixer_Overlap": 4, "slot_wet_full.mixer_Max channels": 0, "slot_wet_full.wetget": true, "slot_wet_full.wetvalue": 0, "slot_wet_full": {"file": "slot_wet_full.f32", "frames": 32768, "channels": 2}, "slot_wet_full.master": {"file": "slot_wet_full.master.f32", "frames": 32768, "channels": 2}, "slot_wet_above.mixer_Pitch": 1, "slot_wet_above.mixer_FFT size": 1024, "slot_wet_above.mixer_Overlap": 4, "slot_wet_above.mixer_Max channels": 0, "slot_wet_above.wetget": true, "slot_wet_above.wetvalue": 6, "slot_wet_above": {"file": "slot_wet_above.f32", "frames": 32768, "channels": 2}, "slot_wet_above.master": {"file": "slot_wet_above.master.f32", "frames": 32768, "channels": 2}, "slot_wet_quiet.mixer_Pitch": 1, "slot_wet_quiet.mixer_FFT size": 1024, "slot_wet_quiet.mixer_Overlap": 4, "slot_wet_quiet.mixer_Max channels": 0, "slot_wet_quiet.wetget": true, "slot_wet_quiet.wetvalue": -70, "slot_wet_quiet": {"file": "slot_wet_quiet.f32", "frames": 32768, "channels": 2}, "slot_wet_quiet.master": {"file": "slot_wet_quiet.master.f32", "frames": 32768, "channels": 2}, "slot_wet_audible.mixer_Pitch": 1, "slot_wet_audible.mixer_FFT size": 1024, "slot_wet_audible.mixer_Overlap": 4, "slot_wet_audible.mixer_Max channels": 0, "slot_wet_audible.wetget": true, "slot_wet_audible.wetvalue": -68, "slot_wet_audible": {"file": "slot_wet_audible.f32", "frames": 32768, "channels": 2}, "slot_wet_audible.master": {"file": "slot_wet_audible.master.f32", "frames": 32768, "channels": 2}, "slot_wet_set.mixer_Pitch": 1, "slot_wet_set.mixer_FFT size": 1024, "slot_wet_set.mixer_Overlap": 4, "slot_wet_set.mixer_Max channels": 0, "slot_wet_set.wetset": true, "slot_wet_set.wetget": true, "slot_wet_set.wetvalue": -6, "slot_wet_set": {"file": "slot_wet_set.f32", "frames": 32768, "channels": 2}, "slot_wet_set.master": {"file": "slot_wet_set.master.f32", "frames": 32768, "channels": 2}, "slot_wet_set_above.mixer_Pitch": 1, "slot_wet_set_above.mixer_FFT size": 1024, "slot_wet_set_above.mixer_Overlap": 4, "slot_wet_set_above.mixer_Max channels": 0, "slot_wet_set_above.wetset": true, "slot_wet_set_above.wetget": true, "slot_wet_set_above.wetvalue": 6, "slot_wet_set_above": {"file": "slot_wet_set_above.f32", "frames": 32768, "channels": 2}, "slot_wet_set_above.master": {"file": "slot_wet_set_above.master.f32", "frames": 32768, "channels": 2}, "slot_wet_startup.mixer_Pitch": 1, "slot_wet_startup.mixer_FFT size": 1024, "slot_wet_startup.mixer_Overlap": 4, "slot_wet_startup.mixer_Max channels": 0, "slot_wet_startup.wetget": true, "slot_wet_startup.wetvalue": -6, "slot_wet_startup": {"file": "slot_wet_startup.f32", "frames": 32768, "channels": 2}, "slot_wet_startup.master": {"file": "slot_wet_startup.master.f32", "frames": 32768, "channels": 2}, "slot_wet_before.mixer_Pitch": 1, "slot_wet_before.mixer_FFT size": 1024, "slot_wet_before.mixer_Overlap": 4, "slot_wet_before.mixer_Max channels": 0, "slot_wet_before.wetget": true, "slot_wet_before.wetvalue": -6, "slot_wet_before": {"file": "slot_wet_before.f32", "frames": 32768, "channels": 2}, "slot_wet_before.master": {"file": "slot_wet_before.master.f32", "frames": 32768, "channels": 2}, "slot_wet_bypass.mixer_Pitch": 1, "slot_wet_bypass.mixer_FFT size": 1024, "slot_wet_bypass.mixer_Overlap": 4, "slot_wet_bypass.mixer_Max channels": 0, "slot_wet_bypass.wetget": true, "slot_wet_bypass.wetvalue": -6, "slot_wet_bypass": {"file": "slot_wet_bypass.f32", "frames": 32768, "channels": 2}, "slot_wet_bypass.master": {"file": "slot_wet_bypass.master.f32", "frames": 32768, "channels": 2}, "slot_wet_dry": {"file": "slot_wet_dry.f32", "frames": 32768, "channels": 2}, "slot_wet_dry.master": {"file": "slot_wet_dry.master.f32", "frames": 32768, "channels": 2}, "slot_wet_processed.mixer_Pitch": 1, "slot_wet_processed.mixer_FFT size": 1024, "slot_wet_processed.mixer_Overlap": 4, "slot_wet_processed.mixer_Max channels": 0, "slot_wet_processed": {"file": "slot_wet_processed.f32", "frames": 32768, "channels": 2}, "slot_wet_processed.master": {"file": "slot_wet_processed.master.f32", "frames": 32768, "channels": 2}, "slot_wet_boostlimit.mixer_Pitch": 1, "slot_wet_boostlimit.mixer_FFT size": 1024, "slot_wet_boostlimit.mixer_Overlap": 4, "slot_wet_boostlimit.mixer_Max channels": 0, "slot_wet_boostlimit.wetget": true, "slot_wet_boostlimit.wetvalue": 20, "slot_wet_boostlimit": {"file": "slot_wet_boostlimit.f32", "frames": 32768, "channels": 2}, "slot_wet_boostlimit.master": {"file": "slot_wet_boostlimit.master.f32", "frames": 32768, "channels": 2}, "slot_wet_boostclamp.mixer_Pitch": 1, "slot_wet_boostclamp.mixer_FFT size": 1024, "slot_wet_boostclamp.mixer_Overlap": 4, "slot_wet_boostclamp.mixer_Max channels": 0, "slot_wet_boostclamp.wetget": true, "slot_wet_boostclamp.wetvalue": 30, "slot_wet_boostclamp": {"file": "slot_wet_boostclamp.f32", "frames": 32768, "channels": 2}, "slot_wet_boostclamp.master": {"file": "slot_wet_boostclamp.master.f32", "frames": 32768, "channels": 2}, "slot_wet_threshold.mixer_Pitch": 1, "slot_wet_threshold.mixer_FFT size": 1024, "slot_wet_threshold.mixer_Overlap": 4, "slot_wet_threshold.mixer_Max channels": 0, "slot_wet_threshold.wetget": true, "slot_wet_threshold.wetvalue": -69, "slot_wet_threshold": {"file": "slot_wet_threshold.f32", "frames": 32768, "channels": 2}, "slot_wet_threshold.master": {"file": "slot_wet_threshold.master.f32", "frames": 32768, "channels": 2}, "slot_wet_thresholdlower.mixer_Pitch": 1, "slot_wet_thresholdlower.mixer_FFT size": 1024, "slot_wet_thresholdlower.mixer_Overlap": 4, "slot_wet_thresholdlower.mixer_Max channels": 0, "slot_wet_thresholdlower.wetget": true, "slot_wet_thresholdlower.wetvalue": -69.9, "slot_wet_thresholdlower": {"file": "slot_wet_thresholdlower.f32", "frames": 32768, "channels": 2}, "slot_wet_thresholdlower.master": {"file": "slot_wet_thresholdlower.master.f32", "frames": 32768, "channels": 2}, "slot_wet_dc_dry": {"file": "slot_wet_dc_dry.f32", "frames": 32768, "channels": 2}, "slot_wet_dc_dry.master": {"file": "slot_wet_dc_dry.master.f32", "frames": 32768, "channels": 2}, "slot_wet_dc_processed.mixer_Pitch": 1, "slot_wet_dc_processed.mixer_FFT size": 1024, "slot_wet_dc_processed.mixer_Overlap": 4, "slot_wet_dc_processed.mixer_Max channels": 0, "slot_wet_dc_processed": {"file": "slot_wet_dc_processed.f32", "frames": 32768, "channels": 2}, "slot_wet_dc_processed.master": {"file": "slot_wet_dc_processed.master.f32", "frames": 32768, "channels": 2}, "slot_wet_startup_zero.mixer_Pitch": 1, "slot_wet_startup_zero.mixer_FFT size": 1024, "slot_wet_startup_zero.mixer_Overlap": 4, "slot_wet_startup_zero.mixer_Max channels": 0, "slot_wet_startup_zero.wetget": true, "slot_wet_startup_zero.wetvalue": -80, "slot_wet_startup_zero": {"file": "slot_wet_startup_zero.f32", "frames": 32768, "channels": 2}, "slot_wet_startup_zero.master": {"file": "slot_wet_startup_zero.master.f32", "frames": 32768, "channels": 2}, "slot_wet_before_zero.mixer_Pitch": 1, "slot_wet_before_zero.mixer_FFT size": 1024, "slot_wet_before_zero.mixer_Overlap": 4, "slot_wet_before_zero.mixer_Max channels": 0, "slot_wet_before_zero.wetget": true, "slot_wet_before_zero.wetvalue": -80, "slot_wet_before_zero": {"file": "slot_wet_before_zero.f32", "frames": 32768, "channels": 2}, "slot_wet_before_zero.master": {"file": "slot_wet_before_zero.master.f32", "frames": 32768, "channels": 2}}
+{
+  "release": "6000.0.71f1",
+  "rate": 44100,
+  "plain": {
+    "file": "plain.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "plain.master": {
+    "file": "plain.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "default_imp.mixer_Pitch": 1,
+  "default_imp.mixer_FFT size": 1024,
+  "default_imp.mixer_Overlap": 4,
+  "default_imp.mixer_Max channels": 0,
+  "default_imp": {
+    "file": "default_imp.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "default_imp.master": {
+    "file": "default_imp.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "default_silence.mixer_Pitch": 1,
+  "default_silence.mixer_FFT size": 1024,
+  "default_silence.mixer_Overlap": 4,
+  "default_silence.mixer_Max channels": 0,
+  "default_silence": {
+    "file": "default_silence.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "default_silence.master": {
+    "file": "default_silence.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "default_noise.mixer_Pitch": 1,
+  "default_noise.mixer_FFT size": 1024,
+  "default_noise.mixer_Overlap": 4,
+  "default_noise.mixer_Max channels": 0,
+  "default_noise": {
+    "file": "default_noise.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "default_noise.master": {
+    "file": "default_noise.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "explicit_defaults.mixer_Pitch": 1,
+  "explicit_defaults.mixer_FFT size": 1024,
+  "explicit_defaults.mixer_Overlap": 4,
+  "explicit_defaults.mixer_Max channels": 0,
+  "explicit_defaults": {
+    "file": "explicit_defaults.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "explicit_defaults.master": {
+    "file": "explicit_defaults.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "down_imp.mixer_Pitch": 0.5,
+  "down_imp.mixer_FFT size": 1024,
+  "down_imp.mixer_Overlap": 4,
+  "down_imp.mixer_Max channels": 0,
+  "down_imp": {
+    "file": "down_imp.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "down_imp.master": {
+    "file": "down_imp.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "down_noise.mixer_Pitch": 0.5,
+  "down_noise.mixer_FFT size": 1024,
+  "down_noise.mixer_Overlap": 4,
+  "down_noise.mixer_Max channels": 0,
+  "down_noise": {
+    "file": "down_noise.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "down_noise.master": {
+    "file": "down_noise.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "down_tone.mixer_Pitch": 0.5,
+  "down_tone.mixer_FFT size": 1024,
+  "down_tone.mixer_Overlap": 4,
+  "down_tone.mixer_Max channels": 0,
+  "down_tone": {
+    "file": "down_tone.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "down_tone.master": {
+    "file": "down_tone.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "down_dc.mixer_Pitch": 0.5,
+  "down_dc.mixer_FFT size": 1024,
+  "down_dc.mixer_Overlap": 4,
+  "down_dc.mixer_Max channels": 0,
+  "down_dc": {
+    "file": "down_dc.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "down_dc.master": {
+    "file": "down_dc.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "up_imp.mixer_Pitch": 2,
+  "up_imp.mixer_FFT size": 1024,
+  "up_imp.mixer_Overlap": 4,
+  "up_imp.mixer_Max channels": 0,
+  "up_imp": {
+    "file": "up_imp.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "up_imp.master": {
+    "file": "up_imp.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "up_noise.mixer_Pitch": 2,
+  "up_noise.mixer_FFT size": 1024,
+  "up_noise.mixer_Overlap": 4,
+  "up_noise.mixer_Max channels": 0,
+  "up_noise": {
+    "file": "up_noise.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "up_noise.master": {
+    "file": "up_noise.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "up_tone.mixer_Pitch": 2,
+  "up_tone.mixer_FFT size": 1024,
+  "up_tone.mixer_Overlap": 4,
+  "up_tone.mixer_Max channels": 0,
+  "up_tone": {
+    "file": "up_tone.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "up_tone.master": {
+    "file": "up_tone.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "up_dc.mixer_Pitch": 2,
+  "up_dc.mixer_FFT size": 1024,
+  "up_dc.mixer_Overlap": 4,
+  "up_dc.mixer_Max channels": 0,
+  "up_dc": {
+    "file": "up_dc.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "up_dc.master": {
+    "file": "up_dc.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "lower_imp.mixer_Pitch": 0.75,
+  "lower_imp.mixer_FFT size": 1024,
+  "lower_imp.mixer_Overlap": 4,
+  "lower_imp.mixer_Max channels": 0,
+  "lower_imp": {
+    "file": "lower_imp.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "lower_imp.master": {
+    "file": "lower_imp.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "lower_noise.mixer_Pitch": 0.75,
+  "lower_noise.mixer_FFT size": 1024,
+  "lower_noise.mixer_Overlap": 4,
+  "lower_noise.mixer_Max channels": 0,
+  "lower_noise": {
+    "file": "lower_noise.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "lower_noise.master": {
+    "file": "lower_noise.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "lower_tone.mixer_Pitch": 0.75,
+  "lower_tone.mixer_FFT size": 1024,
+  "lower_tone.mixer_Overlap": 4,
+  "lower_tone.mixer_Max channels": 0,
+  "lower_tone": {
+    "file": "lower_tone.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "lower_tone.master": {
+    "file": "lower_tone.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "lower_dc.mixer_Pitch": 0.75,
+  "lower_dc.mixer_FFT size": 1024,
+  "lower_dc.mixer_Overlap": 4,
+  "lower_dc.mixer_Max channels": 0,
+  "lower_dc": {
+    "file": "lower_dc.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "lower_dc.master": {
+    "file": "lower_dc.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "higher_imp.mixer_Pitch": 1.5,
+  "higher_imp.mixer_FFT size": 1024,
+  "higher_imp.mixer_Overlap": 4,
+  "higher_imp.mixer_Max channels": 0,
+  "higher_imp": {
+    "file": "higher_imp.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "higher_imp.master": {
+    "file": "higher_imp.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "higher_noise.mixer_Pitch": 1.5,
+  "higher_noise.mixer_FFT size": 1024,
+  "higher_noise.mixer_Overlap": 4,
+  "higher_noise.mixer_Max channels": 0,
+  "higher_noise": {
+    "file": "higher_noise.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "higher_noise.master": {
+    "file": "higher_noise.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "higher_tone.mixer_Pitch": 1.5,
+  "higher_tone.mixer_FFT size": 1024,
+  "higher_tone.mixer_Overlap": 4,
+  "higher_tone.mixer_Max channels": 0,
+  "higher_tone": {
+    "file": "higher_tone.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "higher_tone.master": {
+    "file": "higher_tone.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "higher_dc.mixer_Pitch": 1.5,
+  "higher_dc.mixer_FFT size": 1024,
+  "higher_dc.mixer_Overlap": 4,
+  "higher_dc.mixer_Max channels": 0,
+  "higher_dc": {
+    "file": "higher_dc.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "higher_dc.master": {
+    "file": "higher_dc.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "group_bypass.mixer_Pitch": 1,
+  "group_bypass.mixer_FFT size": 1024,
+  "group_bypass.mixer_Overlap": 4,
+  "group_bypass.mixer_Max channels": 0,
+  "group_bypass": {
+    "file": "group_bypass.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "group_bypass.master": {
+    "file": "group_bypass.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_bypass.mixer_Pitch": 1,
+  "slot_bypass.mixer_FFT size": 1024,
+  "slot_bypass.mixer_Overlap": 4,
+  "slot_bypass.mixer_Max channels": 0,
+  "slot_bypass": {
+    "file": "slot_bypass.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_bypass.master": {
+    "file": "slot_bypass.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "source_bypass.mixer_Pitch": 1,
+  "source_bypass.mixer_FFT size": 1024,
+  "source_bypass.mixer_Overlap": 4,
+  "source_bypass.mixer_Max channels": 0,
+  "source_bypass": {
+    "file": "source_bypass.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "source_bypass.master": {
+    "file": "source_bypass.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "end_imp.mixer_Pitch": 0.75,
+  "end_imp.mixer_FFT size": 1024,
+  "end_imp.mixer_Overlap": 4,
+  "end_imp.mixer_Max channels": 0,
+  "end_imp": {
+    "file": "end_imp.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "end_imp.master": {
+    "file": "end_imp.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "end_tone.mixer_Pitch": 1.5,
+  "end_tone.mixer_FFT size": 1024,
+  "end_tone.mixer_Overlap": 4,
+  "end_tone.mixer_Max channels": 0,
+  "end_tone": {
+    "file": "end_tone.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "end_tone.master": {
+    "file": "end_tone.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "reset_noise.mixer_Pitch": 1,
+  "reset_noise.mixer_FFT size": 1024,
+  "reset_noise.mixer_Overlap": 4,
+  "reset_noise.mixer_Max channels": 0,
+  "reset_noise": {
+    "file": "reset_noise.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "reset_noise.master": {
+    "file": "reset_noise.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "invalid_pitch_low.set": true,
+  "invalid_pitch_low.get": true,
+  "invalid_pitch_low.value": -1,
+  "invalid_pitch_low.mixer_Pitch": -1,
+  "invalid_pitch_low.mixer_FFT size": 1024,
+  "invalid_pitch_low.mixer_Overlap": 4,
+  "invalid_pitch_low.mixer_Max channels": 0,
+  "invalid_pitch_low": {
+    "file": "invalid_pitch_low.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "invalid_pitch_low.master": {
+    "file": "invalid_pitch_low.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "invalid_pitch_high.set": true,
+  "invalid_pitch_high.get": true,
+  "invalid_pitch_high.value": 3,
+  "invalid_pitch_high.mixer_Pitch": 3,
+  "invalid_pitch_high.mixer_FFT size": 1024,
+  "invalid_pitch_high.mixer_Overlap": 4,
+  "invalid_pitch_high.mixer_Max channels": 0,
+  "invalid_pitch_high": {
+    "file": "invalid_pitch_high.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "invalid_pitch_high.master": {
+    "file": "invalid_pitch_high.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "absent_missing.set": false,
+  "absent_missing.get": false,
+  "absent_missing.value": 0,
+  "absent_missing.mixer_Pitch": 1,
+  "absent_missing.mixer_FFT size": 1024,
+  "absent_missing.mixer_Overlap": 4,
+  "absent_missing.mixer_Max channels": 0,
+  "absent_missing": {
+    "file": "absent_missing.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "absent_missing.master": {
+    "file": "absent_missing.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_zero.mixer_Pitch": 1,
+  "slot_wet_zero.mixer_FFT size": 1024,
+  "slot_wet_zero.mixer_Overlap": 4,
+  "slot_wet_zero.mixer_Max channels": 0,
+  "slot_wet_zero.wetget": true,
+  "slot_wet_zero.wetvalue": -80,
+  "slot_wet_zero": {
+    "file": "slot_wet_zero.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_zero.master": {
+    "file": "slot_wet_zero.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_quarter.mixer_Pitch": 1,
+  "slot_wet_quarter.mixer_FFT size": 1024,
+  "slot_wet_quarter.mixer_Overlap": 4,
+  "slot_wet_quarter.mixer_Max channels": 0,
+  "slot_wet_quarter.wetget": true,
+  "slot_wet_quarter.wetvalue": -12,
+  "slot_wet_quarter": {
+    "file": "slot_wet_quarter.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_quarter.master": {
+    "file": "slot_wet_quarter.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_half.mixer_Pitch": 1,
+  "slot_wet_half.mixer_FFT size": 1024,
+  "slot_wet_half.mixer_Overlap": 4,
+  "slot_wet_half.mixer_Max channels": 0,
+  "slot_wet_half.wetget": true,
+  "slot_wet_half.wetvalue": -6,
+  "slot_wet_half": {
+    "file": "slot_wet_half.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_half.master": {
+    "file": "slot_wet_half.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_threequarter.mixer_Pitch": 1,
+  "slot_wet_threequarter.mixer_FFT size": 1024,
+  "slot_wet_threequarter.mixer_Overlap": 4,
+  "slot_wet_threequarter.mixer_Max channels": 0,
+  "slot_wet_threequarter.wetget": true,
+  "slot_wet_threequarter.wetvalue": -2.5,
+  "slot_wet_threequarter": {
+    "file": "slot_wet_threequarter.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_threequarter.master": {
+    "file": "slot_wet_threequarter.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_full.mixer_Pitch": 1,
+  "slot_wet_full.mixer_FFT size": 1024,
+  "slot_wet_full.mixer_Overlap": 4,
+  "slot_wet_full.mixer_Max channels": 0,
+  "slot_wet_full.wetget": true,
+  "slot_wet_full.wetvalue": 0,
+  "slot_wet_full": {
+    "file": "slot_wet_full.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_full.master": {
+    "file": "slot_wet_full.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_above.mixer_Pitch": 1,
+  "slot_wet_above.mixer_FFT size": 1024,
+  "slot_wet_above.mixer_Overlap": 4,
+  "slot_wet_above.mixer_Max channels": 0,
+  "slot_wet_above.wetget": true,
+  "slot_wet_above.wetvalue": 6,
+  "slot_wet_above": {
+    "file": "slot_wet_above.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_above.master": {
+    "file": "slot_wet_above.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_quiet.mixer_Pitch": 1,
+  "slot_wet_quiet.mixer_FFT size": 1024,
+  "slot_wet_quiet.mixer_Overlap": 4,
+  "slot_wet_quiet.mixer_Max channels": 0,
+  "slot_wet_quiet.wetget": true,
+  "slot_wet_quiet.wetvalue": -70,
+  "slot_wet_quiet": {
+    "file": "slot_wet_quiet.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_quiet.master": {
+    "file": "slot_wet_quiet.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_audible.mixer_Pitch": 1,
+  "slot_wet_audible.mixer_FFT size": 1024,
+  "slot_wet_audible.mixer_Overlap": 4,
+  "slot_wet_audible.mixer_Max channels": 0,
+  "slot_wet_audible.wetget": true,
+  "slot_wet_audible.wetvalue": -68,
+  "slot_wet_audible": {
+    "file": "slot_wet_audible.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_audible.master": {
+    "file": "slot_wet_audible.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_set.mixer_Pitch": 1,
+  "slot_wet_set.mixer_FFT size": 1024,
+  "slot_wet_set.mixer_Overlap": 4,
+  "slot_wet_set.mixer_Max channels": 0,
+  "slot_wet_set.wetset": true,
+  "slot_wet_set.wetget": true,
+  "slot_wet_set.wetvalue": -6,
+  "slot_wet_set": {
+    "file": "slot_wet_set.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_set.master": {
+    "file": "slot_wet_set.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_set_above.mixer_Pitch": 1,
+  "slot_wet_set_above.mixer_FFT size": 1024,
+  "slot_wet_set_above.mixer_Overlap": 4,
+  "slot_wet_set_above.mixer_Max channels": 0,
+  "slot_wet_set_above.wetset": true,
+  "slot_wet_set_above.wetget": true,
+  "slot_wet_set_above.wetvalue": 6,
+  "slot_wet_set_above": {
+    "file": "slot_wet_set_above.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_set_above.master": {
+    "file": "slot_wet_set_above.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_startup.mixer_Pitch": 1,
+  "slot_wet_startup.mixer_FFT size": 1024,
+  "slot_wet_startup.mixer_Overlap": 4,
+  "slot_wet_startup.mixer_Max channels": 0,
+  "slot_wet_startup.wetget": true,
+  "slot_wet_startup.wetvalue": -6,
+  "slot_wet_startup": {
+    "file": "slot_wet_startup.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_startup.master": {
+    "file": "slot_wet_startup.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_before.mixer_Pitch": 1,
+  "slot_wet_before.mixer_FFT size": 1024,
+  "slot_wet_before.mixer_Overlap": 4,
+  "slot_wet_before.mixer_Max channels": 0,
+  "slot_wet_before.wetget": true,
+  "slot_wet_before.wetvalue": -6,
+  "slot_wet_before": {
+    "file": "slot_wet_before.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_before.master": {
+    "file": "slot_wet_before.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_bypass.mixer_Pitch": 1,
+  "slot_wet_bypass.mixer_FFT size": 1024,
+  "slot_wet_bypass.mixer_Overlap": 4,
+  "slot_wet_bypass.mixer_Max channels": 0,
+  "slot_wet_bypass.wetget": true,
+  "slot_wet_bypass.wetvalue": -6,
+  "slot_wet_bypass": {
+    "file": "slot_wet_bypass.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_bypass.master": {
+    "file": "slot_wet_bypass.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_dry": {
+    "file": "slot_wet_dry.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_dry.master": {
+    "file": "slot_wet_dry.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_processed.mixer_Pitch": 1,
+  "slot_wet_processed.mixer_FFT size": 1024,
+  "slot_wet_processed.mixer_Overlap": 4,
+  "slot_wet_processed.mixer_Max channels": 0,
+  "slot_wet_processed": {
+    "file": "slot_wet_processed.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_processed.master": {
+    "file": "slot_wet_processed.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_boostlimit.mixer_Pitch": 1,
+  "slot_wet_boostlimit.mixer_FFT size": 1024,
+  "slot_wet_boostlimit.mixer_Overlap": 4,
+  "slot_wet_boostlimit.mixer_Max channels": 0,
+  "slot_wet_boostlimit.wetget": true,
+  "slot_wet_boostlimit.wetvalue": 20,
+  "slot_wet_boostlimit": {
+    "file": "slot_wet_boostlimit.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_boostlimit.master": {
+    "file": "slot_wet_boostlimit.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_boostclamp.mixer_Pitch": 1,
+  "slot_wet_boostclamp.mixer_FFT size": 1024,
+  "slot_wet_boostclamp.mixer_Overlap": 4,
+  "slot_wet_boostclamp.mixer_Max channels": 0,
+  "slot_wet_boostclamp.wetget": true,
+  "slot_wet_boostclamp.wetvalue": 30,
+  "slot_wet_boostclamp": {
+    "file": "slot_wet_boostclamp.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_boostclamp.master": {
+    "file": "slot_wet_boostclamp.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_threshold.mixer_Pitch": 1,
+  "slot_wet_threshold.mixer_FFT size": 1024,
+  "slot_wet_threshold.mixer_Overlap": 4,
+  "slot_wet_threshold.mixer_Max channels": 0,
+  "slot_wet_threshold.wetget": true,
+  "slot_wet_threshold.wetvalue": -69,
+  "slot_wet_threshold": {
+    "file": "slot_wet_threshold.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_threshold.master": {
+    "file": "slot_wet_threshold.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_thresholdlower.mixer_Pitch": 1,
+  "slot_wet_thresholdlower.mixer_FFT size": 1024,
+  "slot_wet_thresholdlower.mixer_Overlap": 4,
+  "slot_wet_thresholdlower.mixer_Max channels": 0,
+  "slot_wet_thresholdlower.wetget": true,
+  "slot_wet_thresholdlower.wetvalue": -69.9,
+  "slot_wet_thresholdlower": {
+    "file": "slot_wet_thresholdlower.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_thresholdlower.master": {
+    "file": "slot_wet_thresholdlower.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_dc_dry": {
+    "file": "slot_wet_dc_dry.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_dc_dry.master": {
+    "file": "slot_wet_dc_dry.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_dc_processed.mixer_Pitch": 1,
+  "slot_wet_dc_processed.mixer_FFT size": 1024,
+  "slot_wet_dc_processed.mixer_Overlap": 4,
+  "slot_wet_dc_processed.mixer_Max channels": 0,
+  "slot_wet_dc_processed": {
+    "file": "slot_wet_dc_processed.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_dc_processed.master": {
+    "file": "slot_wet_dc_processed.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_startup_zero.mixer_Pitch": 1,
+  "slot_wet_startup_zero.mixer_FFT size": 1024,
+  "slot_wet_startup_zero.mixer_Overlap": 4,
+  "slot_wet_startup_zero.mixer_Max channels": 0,
+  "slot_wet_startup_zero.wetget": true,
+  "slot_wet_startup_zero.wetvalue": -80,
+  "slot_wet_startup_zero": {
+    "file": "slot_wet_startup_zero.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_startup_zero.master": {
+    "file": "slot_wet_startup_zero.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_before_zero.mixer_Pitch": 1,
+  "slot_wet_before_zero.mixer_FFT size": 1024,
+  "slot_wet_before_zero.mixer_Overlap": 4,
+  "slot_wet_before_zero.mixer_Max channels": 0,
+  "slot_wet_before_zero.wetget": true,
+  "slot_wet_before_zero.wetvalue": -80,
+  "slot_wet_before_zero": {
+    "file": "slot_wet_before_zero.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "slot_wet_before_zero.master": {
+    "file": "slot_wet_before_zero.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_256_imp.mixer_Pitch": 1,
+  "fft_256_imp.mixer_FFT size": 256,
+  "fft_256_imp.mixer_Overlap": 4,
+  "fft_256_imp.mixer_Max channels": 0,
+  "fft_256_imp": {
+    "file": "fft_256_imp.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_256_imp.master": {
+    "file": "fft_256_imp.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_256_noise.mixer_Pitch": 0.75,
+  "fft_256_noise.mixer_FFT size": 256,
+  "fft_256_noise.mixer_Overlap": 4,
+  "fft_256_noise.mixer_Max channels": 0,
+  "fft_256_noise": {
+    "file": "fft_256_noise.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_256_noise.master": {
+    "file": "fft_256_noise.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_256_tone.mixer_Pitch": 1.5,
+  "fft_256_tone.mixer_FFT size": 256,
+  "fft_256_tone.mixer_Overlap": 4,
+  "fft_256_tone.mixer_Max channels": 0,
+  "fft_256_tone": {
+    "file": "fft_256_tone.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_256_tone.master": {
+    "file": "fft_256_tone.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_512_imp.mixer_Pitch": 1,
+  "fft_512_imp.mixer_FFT size": 512,
+  "fft_512_imp.mixer_Overlap": 4,
+  "fft_512_imp.mixer_Max channels": 0,
+  "fft_512_imp": {
+    "file": "fft_512_imp.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_512_imp.master": {
+    "file": "fft_512_imp.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_512_noise.mixer_Pitch": 0.75,
+  "fft_512_noise.mixer_FFT size": 512,
+  "fft_512_noise.mixer_Overlap": 4,
+  "fft_512_noise.mixer_Max channels": 0,
+  "fft_512_noise": {
+    "file": "fft_512_noise.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_512_noise.master": {
+    "file": "fft_512_noise.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_512_tone.mixer_Pitch": 1.5,
+  "fft_512_tone.mixer_FFT size": 512,
+  "fft_512_tone.mixer_Overlap": 4,
+  "fft_512_tone.mixer_Max channels": 0,
+  "fft_512_tone": {
+    "file": "fft_512_tone.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_512_tone.master": {
+    "file": "fft_512_tone.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_2048_imp.mixer_Pitch": 1,
+  "fft_2048_imp.mixer_FFT size": 2048,
+  "fft_2048_imp.mixer_Overlap": 4,
+  "fft_2048_imp.mixer_Max channels": 0,
+  "fft_2048_imp": {
+    "file": "fft_2048_imp.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_2048_imp.master": {
+    "file": "fft_2048_imp.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_2048_noise.mixer_Pitch": 0.75,
+  "fft_2048_noise.mixer_FFT size": 2048,
+  "fft_2048_noise.mixer_Overlap": 4,
+  "fft_2048_noise.mixer_Max channels": 0,
+  "fft_2048_noise": {
+    "file": "fft_2048_noise.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_2048_noise.master": {
+    "file": "fft_2048_noise.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_2048_tone.mixer_Pitch": 1.5,
+  "fft_2048_tone.mixer_FFT size": 2048,
+  "fft_2048_tone.mixer_Overlap": 4,
+  "fft_2048_tone.mixer_Max channels": 0,
+  "fft_2048_tone": {
+    "file": "fft_2048_tone.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_2048_tone.master": {
+    "file": "fft_2048_tone.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_4096_imp.mixer_Pitch": 1,
+  "fft_4096_imp.mixer_FFT size": 4096,
+  "fft_4096_imp.mixer_Overlap": 4,
+  "fft_4096_imp.mixer_Max channels": 0,
+  "fft_4096_imp": {
+    "file": "fft_4096_imp.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_4096_imp.master": {
+    "file": "fft_4096_imp.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_4096_noise.mixer_Pitch": 0.75,
+  "fft_4096_noise.mixer_FFT size": 4096,
+  "fft_4096_noise.mixer_Overlap": 4,
+  "fft_4096_noise.mixer_Max channels": 0,
+  "fft_4096_noise": {
+    "file": "fft_4096_noise.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_4096_noise.master": {
+    "file": "fft_4096_noise.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_4096_tone.mixer_Pitch": 1.5,
+  "fft_4096_tone.mixer_FFT size": 4096,
+  "fft_4096_tone.mixer_Overlap": 4,
+  "fft_4096_tone.mixer_Max channels": 0,
+  "fft_4096_tone": {
+    "file": "fft_4096_tone.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_4096_tone.master": {
+    "file": "fft_4096_tone.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_raw_255.set": true,
+  "fft_raw_255.get": true,
+  "fft_raw_255.value": 255,
+  "fft_raw_255.mixer_Pitch": 0.75,
+  "fft_raw_255.mixer_FFT size": 255,
+  "fft_raw_255.mixer_Overlap": 4,
+  "fft_raw_255.mixer_Max channels": 0,
+  "fft_raw_255": {
+    "file": "fft_raw_255.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_raw_255.master": {
+    "file": "fft_raw_255.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_raw_256_5.set": true,
+  "fft_raw_256_5.get": true,
+  "fft_raw_256_5.value": 256.5,
+  "fft_raw_256_5.mixer_Pitch": 0.75,
+  "fft_raw_256_5.mixer_FFT size": 256.5,
+  "fft_raw_256_5.mixer_Overlap": 4,
+  "fft_raw_256_5.mixer_Max channels": 0,
+  "fft_raw_256_5": {
+    "file": "fft_raw_256_5.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_raw_256_5.master": {
+    "file": "fft_raw_256_5.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_raw_512_5.set": true,
+  "fft_raw_512_5.get": true,
+  "fft_raw_512_5.value": 512.5,
+  "fft_raw_512_5.mixer_Pitch": 0.75,
+  "fft_raw_512_5.mixer_FFT size": 512.5,
+  "fft_raw_512_5.mixer_Overlap": 4,
+  "fft_raw_512_5.mixer_Max channels": 0,
+  "fft_raw_512_5": {
+    "file": "fft_raw_512_5.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_raw_512_5.master": {
+    "file": "fft_raw_512_5.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_raw_1024_5.set": true,
+  "fft_raw_1024_5.get": true,
+  "fft_raw_1024_5.value": 1024.5,
+  "fft_raw_1024_5.mixer_Pitch": 0.75,
+  "fft_raw_1024_5.mixer_FFT size": 1024.5,
+  "fft_raw_1024_5.mixer_Overlap": 4,
+  "fft_raw_1024_5.mixer_Max channels": 0,
+  "fft_raw_1024_5": {
+    "file": "fft_raw_1024_5.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_raw_1024_5.master": {
+    "file": "fft_raw_1024_5.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_raw_2048_5.set": true,
+  "fft_raw_2048_5.get": true,
+  "fft_raw_2048_5.value": 2048.5,
+  "fft_raw_2048_5.mixer_Pitch": 0.75,
+  "fft_raw_2048_5.mixer_FFT size": 2048.5,
+  "fft_raw_2048_5.mixer_Overlap": 4,
+  "fft_raw_2048_5.mixer_Max channels": 0,
+  "fft_raw_2048_5": {
+    "file": "fft_raw_2048_5.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_raw_2048_5.master": {
+    "file": "fft_raw_2048_5.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_raw_4097.set": true,
+  "fft_raw_4097.get": true,
+  "fft_raw_4097.value": 4097,
+  "fft_raw_4097.mixer_Pitch": 0.75,
+  "fft_raw_4097.mixer_FFT size": 4097,
+  "fft_raw_4097.mixer_Overlap": 4,
+  "fft_raw_4097.mixer_Max channels": 0,
+  "fft_raw_4097": {
+    "file": "fft_raw_4097.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_raw_4097.master": {
+    "file": "fft_raw_4097.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_1.set": true,
+  "overlap_1.get": true,
+  "overlap_1.value": 1,
+  "overlap_1.mixer_Pitch": 0.75,
+  "overlap_1.mixer_FFT size": 1024,
+  "overlap_1.mixer_Overlap": 1,
+  "overlap_1.mixer_Max channels": 0,
+  "overlap_1": {
+    "file": "overlap_1.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_1.master": {
+    "file": "overlap_1.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_2.set": true,
+  "overlap_2.get": true,
+  "overlap_2.value": 2,
+  "overlap_2.mixer_Pitch": 0.75,
+  "overlap_2.mixer_FFT size": 1024,
+  "overlap_2.mixer_Overlap": 2,
+  "overlap_2.mixer_Max channels": 0,
+  "overlap_2": {
+    "file": "overlap_2.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_2.master": {
+    "file": "overlap_2.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_3.set": true,
+  "overlap_3.get": true,
+  "overlap_3.value": 3,
+  "overlap_3.mixer_Pitch": 0.75,
+  "overlap_3.mixer_FFT size": 1024,
+  "overlap_3.mixer_Overlap": 3,
+  "overlap_3.mixer_Max channels": 0,
+  "overlap_3": {
+    "file": "overlap_3.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_3.master": {
+    "file": "overlap_3.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_5.set": true,
+  "overlap_5.get": true,
+  "overlap_5.value": 5,
+  "overlap_5.mixer_Pitch": 0.75,
+  "overlap_5.mixer_FFT size": 1024,
+  "overlap_5.mixer_Overlap": 5,
+  "overlap_5.mixer_Max channels": 0,
+  "overlap_5": {
+    "file": "overlap_5.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_5.master": {
+    "file": "overlap_5.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_8.set": true,
+  "overlap_8.get": true,
+  "overlap_8.value": 8,
+  "overlap_8.mixer_Pitch": 0.75,
+  "overlap_8.mixer_FFT size": 1024,
+  "overlap_8.mixer_Overlap": 8,
+  "overlap_8.mixer_Max channels": 0,
+  "overlap_8": {
+    "file": "overlap_8.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_8.master": {
+    "file": "overlap_8.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_16.set": true,
+  "overlap_16.get": true,
+  "overlap_16.value": 16,
+  "overlap_16.mixer_Pitch": 0.75,
+  "overlap_16.mixer_FFT size": 1024,
+  "overlap_16.mixer_Overlap": 16,
+  "overlap_16.mixer_Max channels": 0,
+  "overlap_16": {
+    "file": "overlap_16.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_16.master": {
+    "file": "overlap_16.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_32.set": true,
+  "overlap_32.get": true,
+  "overlap_32.value": 32,
+  "overlap_32.mixer_Pitch": 0.75,
+  "overlap_32.mixer_FFT size": 1024,
+  "overlap_32.mixer_Overlap": 32,
+  "overlap_32.mixer_Max channels": 0,
+  "overlap_32": {
+    "file": "overlap_32.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_32.master": {
+    "file": "overlap_32.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_3_5.set": true,
+  "overlap_3_5.get": true,
+  "overlap_3_5.value": 3.5,
+  "overlap_3_5.mixer_Pitch": 0.75,
+  "overlap_3_5.mixer_FFT size": 1024,
+  "overlap_3_5.mixer_Overlap": 3.5,
+  "overlap_3_5.mixer_Max channels": 0,
+  "overlap_3_5": {
+    "file": "overlap_3_5.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_3_5.master": {
+    "file": "overlap_3_5.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_0.set": true,
+  "overlap_0.get": true,
+  "overlap_0.value": 0,
+  "overlap_0.mixer_Pitch": 0.75,
+  "overlap_0.mixer_FFT size": 1024,
+  "overlap_0.mixer_Overlap": 0,
+  "overlap_0.mixer_Max channels": 0,
+  "overlap_0": {
+    "file": "overlap_0.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_0.master": {
+    "file": "overlap_0.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_33.set": true,
+  "overlap_33.get": true,
+  "overlap_33.value": 33,
+  "overlap_33.mixer_Pitch": 0.75,
+  "overlap_33.mixer_FFT size": 1024,
+  "overlap_33.mixer_Overlap": 33,
+  "overlap_33.mixer_Max channels": 0,
+  "overlap_33": {
+    "file": "overlap_33.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_33.master": {
+    "file": "overlap_33.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_live_up.mixer_Pitch": 0.75,
+  "fft_live_up.mixer_FFT size": 1024,
+  "fft_live_up.mixer_Overlap": 4,
+  "fft_live_up.mixer_Max channels": 0,
+  "fft_live_up.live_set": true,
+  "fft_live_up": {
+    "file": "fft_live_up.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_live_up.master": {
+    "file": "fft_live_up.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_live_down.mixer_Pitch": 1.5,
+  "fft_live_down.mixer_FFT size": 4096,
+  "fft_live_down.mixer_Overlap": 4,
+  "fft_live_down.mixer_Max channels": 0,
+  "fft_live_down.live_set": true,
+  "fft_live_down": {
+    "file": "fft_live_down.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "fft_live_down.master": {
+    "file": "fft_live_down.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_live.mixer_Pitch": 0.75,
+  "overlap_live.mixer_FFT size": 1024,
+  "overlap_live.mixer_Overlap": 4,
+  "overlap_live.mixer_Max channels": 0,
+  "overlap_live.live_set": true,
+  "overlap_live": {
+    "file": "overlap_live.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "overlap_live.master": {
+    "file": "overlap_live.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "buffer_256.buffer": 256,
+  "buffer_256.mode": 2,
+  "buffer_256.rate": 44100,
+  "buffer_256.mixer_Pitch": 1.5,
+  "buffer_256.mixer_FFT size": 2048,
+  "buffer_256.mixer_Overlap": 4,
+  "buffer_256.mixer_Max channels": 0,
+  "buffer_256": {
+    "file": "buffer_256.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "buffer_256.master": {
+    "file": "buffer_256.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "buffer_512.buffer": 512,
+  "buffer_512.mode": 2,
+  "buffer_512.rate": 44100,
+  "buffer_512.mixer_Pitch": 1.5,
+  "buffer_512.mixer_FFT size": 2048,
+  "buffer_512.mixer_Overlap": 4,
+  "buffer_512.mixer_Max channels": 0,
+  "buffer_512": {
+    "file": "buffer_512.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "buffer_512.master": {
+    "file": "buffer_512.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "buffer_2048.buffer": 2048,
+  "buffer_2048.mode": 2,
+  "buffer_2048.rate": 44100,
+  "buffer_2048.mixer_Pitch": 1.5,
+  "buffer_2048.mixer_FFT size": 2048,
+  "buffer_2048.mixer_Overlap": 4,
+  "buffer_2048.mixer_Max channels": 0,
+  "buffer_2048": {
+    "file": "buffer_2048.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "buffer_2048.master": {
+    "file": "buffer_2048.master.f32",
+    "frames": 32768,
+    "channels": 2
+  }
+}

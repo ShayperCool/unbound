@@ -14,6 +14,7 @@ p.add_argument('--native-project', type=Path, required=True, help='Private mixer
 p.add_argument('--runtime', type=Path, required=True, help='Directory containing matching unbound and managed/')
 p.add_argument('--work', type=Path, required=True)
 p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
+p.add_argument('--cases', help='Selected controls for independent output-context sessions')
 a = p.parse_args()
 fixture = Path(__file__).resolve().parent
 if (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0] != 'm_EditorVersion: '+a.release:
@@ -31,9 +32,10 @@ hashes = {str(f.relative_to(a.runtime)): hashlib.sha256(f.read_bytes()).hexdiges
 (a.work/'command.json').write_text(json.dumps(command, indent=2)+'\n')
 env = dict(os.environ, EFFECT_PROBE_OUT=str(output), EFFECT_PROBE_RATE=str(a.rate), EFFECT_PROBE_ENGINE='1',
            UNBOUND_MANAGED_DIR=str(a.runtime/'managed'), LD_LIBRARY_PATH=str(a.runtime/'managed'))
+if a.cases: env['EFFECT_PROBE_CASES'] = a.cases
 with (a.work/'engine.log').open('w') as log:
     result = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT)
 (a.work/'exit.json').write_text(json.dumps({'returncode': result.returncode})+'\n')
 if result.returncode: raise SystemExit(result.returncode)
 from verify import verify
-verify(output, a.release, a.rate)
+verify(output, a.release, a.rate, selected=a.cases.split(',') if a.cases else None)

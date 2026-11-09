@@ -1,0 +1,94 @@
+{
+  "release": "6000.0.71f1",
+  "rate": 48000,
+  "context_mono.buffer": 1024,
+  "context_mono.mode": 1,
+  "context_mono.rate": 48000,
+  "context_mono.render_channels": 1,
+  "context_mono.mixer_Pitch": 0.75,
+  "context_mono.mixer_FFT size": 1024,
+  "context_mono.mixer_Overlap": 4,
+  "context_mono.mixer_Max channels": 0,
+  "context_mono": {
+    "file": "context_mono.f32",
+    "frames": 32768,
+    "channels": 1
+  },
+  "context_mono.master": {
+    "file": "context_mono.master.f32",
+    "frames": 32768,
+    "channels": 1
+  },
+  "context_quad.buffer": 1024,
+  "context_quad.mode": 3,
+  "context_quad.rate": 48000,
+  "context_quad.render_channels": 2,
+  "context_quad.mixer_Pitch": 0.75,
+  "context_quad.mixer_FFT size": 1024,
+  "context_quad.mixer_Overlap": 4,
+  "context_quad.mixer_Max channels": 0,
+  "context_quad": {
+    "file": "context_quad.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_quad.master": {
+    "file": "context_quad.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_surround.buffer": 1024,
+  "context_surround.mode": 4,
+  "context_surround.rate": 48000,
+  "context_surround.render_channels": 2,
+  "context_surround.mixer_Pitch": 0.75,
+  "context_surround.mixer_FFT size": 1024,
+  "context_surround.mixer_Overlap": 4,
+  "context_surround.mixer_Max channels": 0,
+  "context_surround": {
+    "file": "context_surround.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_surround.master": {
+    "file": "context_surround.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_mode5point1.buffer": 1024,
+  "context_mode5point1.mode": 5,
+  "context_mode5point1.rate": 48000,
+  "context_mode5point1.render_channels": 2,
+  "context_mode5point1.mixer_Pitch": 0.75,
+  "context_mode5point1.mixer_FFT size": 1024,
+  "context_mode5point1.mixer_Overlap": 4,
+  "context_mode5point1.mixer_Max channels": 0,
+  "context_mode5point1": {
+    "file": "context_mode5point1.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_mode5point1.master": {
+    "file": "context_mode5point1.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_mode7point1.buffer": 1024,
+  "context_mode7point1.mode": 6,
+  "context_mode7point1.rate": 48000,
+  "context_mode7point1.render_channels": 2,
+  "context_mode7point1.mixer_Pitch": 0.75,
+  "context_mode7point1.mixer_FFT size": 1024,
+  "context_mode7point1.mixer_Overlap": 4,
+  "context_mode7point1.mixer_Max channels": 0,
+  "context_mode7point1": {
+    "file": "context_mode7point1.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_mode7point1.master": {
+    "file": "context_mode7point1.master.f32",
+    "frames": 32768,
+    "channels": 2
+  }
+}

@@ -15,16 +15,17 @@ SUFFIXES = ('', '.master')
 RESIDUALS = {}
 
 
-def cases():
+def cases(contexts=False):
     source = (FIXTURE/'Assets/Scripts/EffectProbe.cs').read_text()
     body = source.split('Cases = {', 1)[1].split('};', 1)[0]
-    return re.findall(r'new\[\] \{ "([a-z0-9_]+)"', body)
+    return [key for key in re.findall(r'new\[\] \{ "([a-z0-9_]+)"', body) if key.startswith('context_') == contexts]
 
 
 def profile(name, rate):
     """Maps each selected case to the number of frames compared (None: all)."""
     keys = cases()
     if name == 'all': return dict.fromkeys(keys)
+    if name == 'layouts': return dict.fromkeys(cases(True))
     raise ValueError(name)
 
 
@@ -41,3 +42,16 @@ def samples(root, meta):
         if raw.exists(): values.frombytes(raw.read_bytes())
         elif packed.exists(): values.frombytes(gzip.decompress(packed.read_bytes()))
     return values
+
+
+def split_contexts(root):
+    """Keep the measured multichannel controls separate until the mixer graph supports them."""
+    meta = header(root)
+    context = {key: value for key, value in meta.items() if key in ('release', 'rate') or key.startswith('context_')}
+    target = root.parent/'contexts'
+    target.mkdir(exist_ok=False)
+    for key, value in context.items():
+        if isinstance(value, dict) and 'file' in value:
+            (root/value['file']).rename(target/value['file'])
+    (target/'capture.json').write_text(json.dumps(context, indent=2)+'\n')
+    (root/'capture.json').write_text(json.dumps({key: value for key, value in meta.items() if not key.startswith('context_')}, indent=2)+'\n')
