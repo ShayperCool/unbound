@@ -264,7 +264,9 @@ namespace UnityEngine
                 UpdateParticles(dt);
                 // A stopped system (one that played, then stopped or ran out of particles) keeps
                 // its clock running without emitting (6000.0.71f1, tests/projects/subemitters
-                // death/*/parent: Simulate after the emitted particles died).
+                // death/*/parent: Simulate after the emitted particles died). In played frames,
+                // where a stopped system still updates for its trails or particles a script set,
+                // the clock runs too (Unbound's choice, unmeasured).
                 if ((m_IsPlaying || m_StopEmitting) && !m_BirthDelayClock)
                     AdvanceEmission(dt, distance);
                 if (m_TrailList.Count > 0) UpdateTrails();
@@ -2100,7 +2102,9 @@ namespace UnityEngine
         /// child's (see <see cref="CatchUp"/>), the child having advanced its own particles before
         /// (6000.0.71f1, tests/projects/subemitters death/*, timing/*: ages 0.1, 0.06, 0.04 and
         /// 0.02 s for deaths in the four 0.025 s steps of a 0.1 s call, 0.1, 0.07, 0.05 and 0.02 s
-        /// with a fixed timestep of 0.01; Collision and Trigger children follow it, unmeasured).
+        /// with a fixed timestep of 0.01; event/collision/*, event/trigger/*: the same ages).
+        /// Unlike a Birth emission, none is skipped when that time reaches the child's start
+        /// lifetime: such children are made and die in the catch-up (unmeasured for these types).
         /// None outside Simulate.</summary>
         float EventCatchup => m_SimulatingBirths ? m_BirthCallRemaining : -1f;
 

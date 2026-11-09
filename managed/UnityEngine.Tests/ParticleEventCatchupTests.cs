@@ -137,6 +137,37 @@ namespace UnityEngine.Tests
             Assert.Equal(0.0135f, particles[0].position.y, 4);
         }
 
+        [Fact]
+        public void APrewarmsCollisionChildrenTurnToTheBouncedTravel()
+        {
+            // A prewarmed parent turned to emit downwards bounces off a plane; its Collision
+            // children (unrotated against it, so their own +Z points down too) leave along the
+            // bounced travel, upwards, as in Simulate and played frames.
+            var parent = Make("parent", null);
+            m_Parent = parent.gameObject;
+            parent.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            var pm = parent.main; pm.prewarm = true; pm.duration = 1f; pm.startSpeed = 2f; pm.startSize = 0.01f;
+            var pe = parent.emission; pe.rateOverTime = 10f;
+            var plane = new GameObject("plane").transform;
+            plane.SetParent(parent.transform, false);
+            plane.position = new Vector3(0f, -0.5f, 0f);
+            plane.rotation = Quaternion.identity;
+            var c = parent.collision; c.enabled = true; c.type = ParticleSystemCollisionType.Planes; c.AddPlane(plane);
+            c.bounce = 1f; c.dampen = 0f; c.lifetimeLoss = 0f;
+            var child = Make("child", parent.transform);
+            var cm = child.main; cm.simulationSpace = ParticleSystemSimulationSpace.World; cm.startLifetime = 5f;
+            child.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+            var subs = parent.subEmitters; subs.enabled = true;
+            subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Collision, ParticleSystemSubEmitterProperties.InheritNothing);
+            parent.gameObject.SetActive(true);
+            child.gameObject.SetActive(true);
+            parent.Play();
+            var particles = new ParticleSystem.Particle[64];
+            int n = child.GetParticles(particles);
+            Assert.True(n > 0);
+            Assert.All(particles.Take(n), p => Assert.True(p.velocity.y > 0.9f, p.velocity.ToString("F3")));
+        }
+
         sealed class FloatNear : System.Collections.Generic.IEqualityComparer<float>
         {
             readonly float m_Tolerance;

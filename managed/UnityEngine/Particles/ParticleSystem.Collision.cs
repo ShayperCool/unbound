@@ -462,7 +462,7 @@ namespace UnityEngine
                     // tests/projects/particlerender birthstart/events02).
                     if (m_Prewarming)
                     {
-                        if (PrewarmKeeps(child)) child.EmitFromParent(this, ref at, e.properties, count, 0f);
+                        if (PrewarmKeeps(child)) child.EmitFromParent(this, ref at, e.properties, count, 0f, eventEmission: true);
                     }
                     else if (ParticleSystemManager.Updating)
                         ParticleSystemManager.HoldEventEmission(new ParticleSystemManager.EventEmission
