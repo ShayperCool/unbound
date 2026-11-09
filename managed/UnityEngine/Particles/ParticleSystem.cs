@@ -663,11 +663,31 @@ namespace UnityEngine
                 m_SlotPoints = new Vector3[m_SlotMarks.Length];
             }
             else Array.Clear(m_SlotMarks, 0, count);
+            m_MarkedFrom = 0;
             m_MarkedSlots = count;
             return m_SlotMarks;
         }
 
-        SlotMark MarkOf(int index) => index < m_MarkedSlots ? m_SlotMarks[index] : 0;
+        /// <summary>Marks for the slots from <paramref name="from"/> to <paramref name="count"/>
+        /// only (a batch appended to the buffer): the slots before read unmarked, without clearing
+        /// them each time.</summary>
+        SlotMark[] SlotMarksFrom(int from, int count)
+        {
+            if (m_SlotMarks.Length < count)
+            {
+                m_SlotMarks = new SlotMark[Math.Max(count, m_SlotMarks.Length * 2)];
+                m_SlotPoints = new Vector3[m_SlotMarks.Length];
+            }
+            else Array.Clear(m_SlotMarks, from, count - from);
+            m_MarkedFrom = from;
+            m_MarkedSlots = count;
+            return m_SlotMarks;
+        }
+
+        /// <summary>The first slot the current marks cover.</summary>
+        int m_MarkedFrom;
+
+        SlotMark MarkOf(int index) => index >= m_MarkedFrom && index < m_MarkedSlots ? m_SlotMarks[index] : 0;
 
         /// <summary>Removes the slots marked dead from <paramref name="from"/> (a multiple of four)
         /// on. Unity 6000.0.71f1 compacts in four-slot groups aligned to the buffer: it collects

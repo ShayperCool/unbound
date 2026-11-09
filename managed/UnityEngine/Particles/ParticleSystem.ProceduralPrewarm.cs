@@ -19,29 +19,38 @@ namespace UnityEngine
         /// <summary>Intervals the trajectory of a procedurally prewarmed particle is integrated
         /// over: exact for constant rates (a linear integrand), close for module curves.</summary>
         const int ProceduralIntervals = 64;
-        /// <summary>How long before the loop's end a procedural prewarm's clock stops: a few float
-        /// steps of a loop's clock, far below anything a record resolves.</summary>
+        /// <summary>How long before the loop's end a procedural prewarm's clock stops: at least
+        /// this, and a few float steps of a long loop's clock (<see cref="ProceduralEndMarginScale"/>
+        /// of its duration), far below anything a record resolves.</summary>
         const float ProceduralEndMargin = 1e-5f;
+        const float ProceduralEndMarginScale = 1e-6f;
 
         /// <summary>Whether a prewarm runs in procedural mode.</summary>
         bool PrewarmsProcedurally => Compat.ParticlePrewarmMeasured && !m_ProceduralLost && ProceduralSettings();
 
         void ProceduralPrewarm(float span, float duration)
         {
+            // The particles are those its emission makes: any still there from an earlier
+            // playback go (the stepped prewarm runs them out over the span too; Unbound's choice
+            // for longer-lived ones, unmeasured). A procedural system has no trails or
+            // sub-emitters to hand them to.
+            m_Count = 0;
+            m_RingIndex = 0;
             float step = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
+            float margin = Mathf.Max(ProceduralEndMargin, duration * ProceduralEndMarginScale);
             m_Prewarming = true;
             m_ProceduralPrewarm = true;
             try
             {
                 float remaining = span;
-                for (int guard = 0; remaining > step + ProceduralEndMargin && guard < 1000000; guard++)
+                for (int guard = 0; remaining > step + margin && guard < 1000000; guard++)
                 {
                     Step(step, 0f);
                     remaining -= step;
                 }
                 // The last step stops just before the loop's end, so a birth due there comes with
                 // the next update (as do its random draws).
-                float last = Mathf.Min(remaining, duration - m_Time) - ProceduralEndMargin;
+                float last = Mathf.Min(remaining, duration - m_Time) - margin;
                 if (last > 0f) Step(last, 0f);
             }
             finally

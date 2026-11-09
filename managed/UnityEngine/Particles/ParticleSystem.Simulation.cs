@@ -795,6 +795,10 @@ namespace UnityEngine
             m_SpeedNt = -1f;
         }
 
+        /// <summary>Marks a sub-emitter child the catch-up of its emission ended, until its batch
+        /// is settled (no live particle's age reaches it).</summary>
+        const float CaughtUpDead = float.PositiveInfinity;
+
         /// <summary>Settles a batch of new particles laid out from <paramref name="aligned"/> (the
         /// first multiple of four at or after <paramref name="start"/>, the live count before it) in
         /// four-slot groups: each lane marked dead, used or padding, lowers
@@ -2393,7 +2397,7 @@ namespace UnityEngine
                 Reserve(checked(aligned + lanes));
                 m_Count = aligned + lanes;
                 for (int i = aligned; i < m_Count; i++) ClearCustom(i);
-                marks = SlotMarks(m_Count);
+                marks = SlotMarksFrom(aligned, m_Count);
             }
             for (int k = 0; k < lanes; k++)
             {
@@ -2458,6 +2462,7 @@ namespace UnityEngine
                     laneContext.TemporaryLane = true;
                 }
                 bool alive = Integrate(ref p, particleAge, ref laneContext);
+                bool caughtUpDead = false;
                 if (alive && birthCatchup >= 0f && !prewarm && !padding)
                 {
                     // Approximation (unmeasured, open): every catch-up step reuses the
@@ -2471,10 +2476,14 @@ namespace UnityEngine
                         remaining -= step;
                         if (!Integrate(ref p, step, ref context)) { alive = false; break; }
                     }
+                    caughtUpDead = !alive;
                 }
                 if (batched)
                 {
-                    if (!alive) marks[index] |= SlotMark.Dead;
+                    // A child the catch-up ends leaves once the batch is settled, outside its count
+                    // and without Death sub-emitters (unmeasured; as before the batches).
+                    if (caughtUpDead) p.m_AgePercent = CaughtUpDead;
+                    else if (!alive) marks[index] |= SlotMark.Dead;
                 }
                 else if (alive) StartTrail(ref p);
                 else RemoveAt(index);
@@ -2482,7 +2491,11 @@ namespace UnityEngine
             if (!batched) return;
             bool deathSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Death);
             SettleBatch(start, aligned, ref used, deathSubs);
-            for (int i = start; i < m_Count; i++) StartTrail(ref m_Particles[i]);
+            for (int i = start; i < m_Count;)
+            {
+                if (m_Particles[i].m_AgePercent == CaughtUpDead) RemoveAt(i);
+                else StartTrail(ref m_Particles[i++]);
+            }
             NoteMostParticles();
         }
 

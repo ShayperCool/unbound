@@ -1,8 +1,5 @@
 """Guard identity classification without changing the strict comparison or its tolerances."""
-import copy
-import json
 import unittest
-from pathlib import Path
 
 import compare
 

@@ -65,6 +65,42 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ChildrenTheCatchUpEndsLeaveWithoutDisplacingTheirBatch()
+        {
+            // A long Simulate call: a parent particle moving at 1 unit/s along z carries a Birth
+            // child of random lifetimes (0.5 to 3 s) at rest. Every child left lies where the
+            // parent was when it was born: z = 5 - age, within a step.
+            var child = Make(c =>
+            {
+                var m = c.main; m.startLifetime = new ParticleSystem.MinMaxCurve(0.5f, 3f);
+                m.simulationSpace = ParticleSystemSimulationSpace.World; m.maxParticles = 1000;
+                var e = c.emission; e.rateOverTime = 100f;
+            });
+            var parent = Make(p =>
+            {
+                var m = p.main; m.startSpeed = 1f; m.simulationSpace = ParticleSystemSimulationSpace.World;
+                p.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+                var subs = p.subEmitters; subs.enabled = true;
+                subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing);
+            });
+            child.transform.SetParent(parent.transform, false);
+            try
+            {
+                parent.Simulate(5f, true, true, true);
+                var particles = new ParticleSystem.Particle[child.particleCount];
+                int n = child.GetParticles(particles);
+                Assert.True(n > 50, $"{n} children");
+                foreach (var p in particles.Take(n))
+                {
+                    float age = p.startLifetime - p.remainingLifetime;
+                    Assert.True(p.remainingLifetime > 0f, $"spent child at z {p.position.z}");
+                    Assert.True(Mathf.Abs(p.position.z - (5f - age)) < 0.05f, $"z {p.position.z}, age {age}");
+                }
+            }
+            finally { Object.DestroyImmediate(parent.gameObject); }
+        }
+
+        [Fact]
         public void AnEmissionAfterAnUnalignedCountFillsTheGapWithItsLastParticles()
         {
             var alone = ChildSeedsAfterTrigger(0);

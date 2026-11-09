@@ -181,6 +181,24 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AProceduralPrewarmAfterStopEmittingStartsFromItsOwnEmission()
+        {
+            // Particles left from the first playback do not join the second prewarm.
+            var ps = Parent(p =>
+            {
+                var m = p.main; m.startLifetime = 2f;
+                var e = p.emission; e.rateOverTime = 2f; e.SetBursts(new ParticleSystem.Burst[0]);
+            });
+            ps.Play();
+            var first = Ages(ps);
+            Frame();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+            ps.Play();
+            Assert.Equal(first, Ages(ps));
+            Assert.All(Particles(ps), p => Assert.True(p.position.z - kFar.z <= 2f + 1e-3f));
+        }
+
+        [Fact]
         public void AProceduralPrewarmMovesUnderGravityOverTheWholeAgeAndASteppedOneDoesNot()
         {
             // Rate 4, start speed 2 along z, gravity × 0.5: a particle aged 0.25 s is at
