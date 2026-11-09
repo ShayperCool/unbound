@@ -547,7 +547,11 @@ namespace UnityEngine.Rendering
         /// <summary>A blit: the destination identifier's texture (its mip, face and slice are not
         /// used), the slices drawn into and read (by the default copy of an array) as the
         /// Editor's (measured, tests/projects/droppedparams slice.cmd.*). A default copy of an array
-        /// without slices given reads 0.5 in every channel, alpha too (slice.cmd.copy.array).</summary>
+        /// without slices given reads 0.5 in every channel, alpha too (slice.cmd.copy.array). The
+        /// default copy of a screen camera's target copies the screen as the device stores it: on a
+        /// device storing it top-down the texture holds the image upside down (measured on Vulkan:
+        /// tests/projects/rtdepth vulkan target.screen.*.blit{Cam,Active}.out; with a material,
+        /// unmeasured, the image is read upright).</summary>
         void BlitCommand(RenderTargetIdentifier? source, Texture sourceTexture, RenderTargetIdentifier dest, Material mat, int pass, Vector2 scale, Vector2 offset,
             int sourceSlice = -1, int destSlice = 0) => Add(c =>
         {
@@ -555,7 +559,12 @@ namespace UnityEngine.Rendering
             var properties = new Dictionary<int, object>();
             if (mat == null && sourceSlice < 0 && Immediate.ArraySlices(texture) > 0) texture = Immediate.HalfGray;
             if (texture != null) properties[s_MainTex] = texture;
-            if (scale != Vector2.one || offset != Vector2.zero) properties[s_MainTexST] = new Vector4(scale.x, scale.y, offset.x, offset.y);
+            var (scaleY, offsetY) = (scale.y, offset.y);
+            if (mat == null && texture != null && texture == RenderTexture.ScreenStandIn
+                && Unbound.Runtime.GraphicsDeviceProfile.Current.ScreenTopDown)
+                (scaleY, offsetY) = (-scaleY, 1f - offsetY);
+            if (scale.x != 1f || scaleY != 1f || offset.x != 0f || offsetY != 0f)
+                properties[s_MainTexST] = new Vector4(scale.x, scaleY, offset.x, offsetY);
             var target = Resolve(dest, c);
             if (mat == null && Immediate.BlitArraySlice(texture, target, Math.Max(0, sourceSlice), destSlice, scale, offset))
             {

@@ -475,16 +475,11 @@ def recipes(release):
     for name in ('appfacts', 'customrt', 'flares', 'gpubuffers', 'lines', 'rtdepth'):
         R[name] = guarded(folder)
     # rtdepth on the Vulkan device too (screen and render texture orientation, reversed depth).
-    # The six target.screen.*.blit{Active,Cam}.out images (blits from a screen camera's stand-in,
-    # docs/COMPATIBILITY_GAPS.md graphics devices) are open: compared and reported, not failing.
     if (PROJECTS/'rtdepth/Reference'/f'unity-{release}'/'vulkan').is_dir():
-        open_images = ','.join(f'target.screen.{r}.{e}.{c}.out' for r, e in
-                               (('ldr', 'AfterForwardOpaque'), ('ldr', 'AfterEverything'), ('hdr', 'AfterEverything'))
-                               for c in ('blitActive', 'blitCam'))
         R['rtdepth'] += [driver('run.py', 'unbound', '--release', '{release}', '--label', '{label}-vulkan',
                                 '--device', 'vulkan', env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'}),
                          py('compare.py', '{probe}/Reference/unity-{release}/vulkan', '{runs}-vulkan/unbound',
-                            '--report', '{work}/report-vulkan.json', '--open', open_images)]
+                            '--report', '{work}/report-vulkan.json')]
     # Keep the full strict verdict, including the disjoint cap/reversal controls.
     R['lines'] = guarded(lambda runs: [*folder(runs), '--mode', 'miter'])
     R['assetclones'] = guarded(lambda runs: ['{probe}/Reference/unity-{release}/Main.jsonl', f'{runs}/values.jsonl',
