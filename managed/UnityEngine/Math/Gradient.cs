@@ -163,14 +163,15 @@ namespace UnityEngine
             }
             else
             {
+                float step = Step(time, KeyStep(keys[0].time), KeyStep(keys[last].time));
                 int i = 1;
-                while (keys[i].time < time)
+                while (i < last && KeyStep(keys[i].time) < step)
                     i++;
                 k0 = keys[i - 1];
                 k1 = keys[i];
                 if (m_Mode == GradientMode.Fixed)
                     return k1.color;
-                t = Fraction(time, k0.time, k1.time);
+                t = Fraction(step, k0.time, k1.time);
             }
             // PerceptualBlend goes through Oklab also at and beyond the end keys (6000.0.71f1,
             // tests/projects/particlecurves gradient/struct/perceptual); Blend and Fixed return the
@@ -191,23 +192,29 @@ namespace UnityEngine
             if (time >= keys[last].time)
                 return keys[last].alpha;
 
+            float step = Step(time, KeyStep(keys[0].time), KeyStep(keys[last].time));
             int i = 1;
-            while (keys[i].time < time)
+            while (i < last && KeyStep(keys[i].time) < step)
                 i++;
             GradientAlphaKey k0 = keys[i - 1], k1 = keys[i];
             if (m_Mode == GradientMode.Fixed)
                 return k1.alpha;
-            return k0.alpha + (k1.alpha - k0.alpha) * Fraction(time, k0.time, k1.time);
+            return k0.alpha + (k1.alpha - k0.alpha) * Fraction(step, k0.time, k1.time);
         }
 
-        /// <summary>How far <paramref name="time"/> is from one key to the next. Key times are
-        /// kept in steps of 1/65535 and the time is measured in those steps (matches the Unity
-        /// 6000.0.71f1 Editor, tests/projects/lines line.color.PerceptualBlend); keys at the same
-        /// step give the later key.</summary>
-        static float Fraction(float time, float from, float to)
+        // Key times are kept in steps of 1/65535 and a time is looked up in those steps: the
+        // segment is the first key at or after the time's step, also when two keys share a step
+        // (matches the Unity 6000.0.71f1 Editor, tests/projects/particlecurves gradient/particles/*
+        // and tests/projects/lines edge.gradient.closeKeys.*).
+
+        /// <summary>The time in key steps, within the first and last keys' steps.</summary>
+        static float Step(float time, float first, float last) => Math.Min(Math.Max(time * KeySteps, first), last);
+
+        /// <summary>How far <paramref name="step"/> is from one key to the next, at most 1.</summary>
+        static float Fraction(float step, float from, float to)
         {
             float a = KeyStep(from), b = KeyStep(to);
-            return Math.Min((time * KeySteps - a) / Math.Max(b - a, MinKeySpan), 1f);
+            return Math.Min((step - a) / Math.Max(b - a, MinKeySpan), 1f);
         }
 
         const float KeySteps = 65535f;

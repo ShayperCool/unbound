@@ -223,5 +223,26 @@ namespace Unbound.Tests
             other.mode = GradientMode.Fixed;
             Assert.False(RedToBlue().Equals(other));
         }
+
+        /// <summary>Key times are 1/65535 steps: keys 0.5 and 0.500005 share one, so times up to
+        /// the step after it blend towards the earlier key and later times start from the later
+        /// one (Editor values, tests/projects/lines edge.gradient.closeKeys.Blend).</summary>
+        [Theory]
+        [InlineData(0.5f, 1.52587891E-05f, 0.999984741f, 0f, 0.2000122f)]
+        [InlineData(0.500002f, 1.12056732E-05f, 0.9999888f, 0f, 0.200008929f)]
+        [InlineData(0.500006f, 3.21865082E-06f, 0.9999968f, 0f, 0.200002551f)]
+        [InlineData(0.50001f, 4.768517E-06f, 4.768517E-06f, 1f, 0.899998069f)]
+        [InlineData(0.7f, 0.399990857f, 0.399990857f, 1f, 0.740003645f)]
+        public void GradientKeysInOneStepAsTheEditorEvaluatesThem(float time, float r, float g, float b, float a)
+        {
+            var gradient = new Gradient();
+            gradient.SetKeys(new[] { new GradientColorKey(Color.red, 0f), new GradientColorKey(Color.green, 0.5f), new GradientColorKey(Color.blue, 0.500005f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.2f, 0.5f), new GradientAlphaKey(0.9f, 0.500005f), new GradientAlphaKey(0.5f, 1f) });
+            var c = gradient.Evaluate(time);
+            Assert.InRange(c.r, r - 1e-6f, r + 1e-6f);
+            Assert.InRange(c.g, g - 1e-6f, g + 1e-6f);
+            Assert.InRange(c.b, b - 1e-6f, b + 1e-6f);
+            Assert.InRange(c.a, a - 1e-6f, a + 1e-6f);
+        }
     }
 }
