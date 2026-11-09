@@ -319,6 +319,9 @@ pub struct Stencil {
     pub write_mask: Option<Value>,
 }
 
+/// The render targets a pass can write (ShaderLab's target indices 0 to 7).
+pub const MAX_TARGETS: usize = 8;
+
 /// Render states as written; `None` keeps the enclosing (or Unity's default) state.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct States {
@@ -329,6 +332,10 @@ pub struct States {
     pub ztest: Option<Value>,
     pub cull: Option<Value>,
     pub color_mask: Option<Value>,
+    /// `ColorMask mask N` and `Blend N ...`: render target N's own states; the unindexed
+    /// `ColorMask` and `Blend` are every target's.
+    pub target_color_masks: [Option<Value>; MAX_TARGETS],
+    pub target_blends: [Option<Vec<Value>>; MAX_TARGETS],
     pub stencil: Option<Stencil>,
     /// `Offset factor, units`.
     pub offset: Option<[Value; 2]>,
@@ -371,6 +378,16 @@ impl States {
             ztest: other.ztest.clone().or_else(|| self.ztest.clone()),
             cull: other.cull.clone().or_else(|| self.cull.clone()),
             color_mask: other.color_mask.clone().or_else(|| self.color_mask.clone()),
+            target_color_masks: std::array::from_fn(|i| {
+                other.target_color_masks[i]
+                    .clone()
+                    .or_else(|| self.target_color_masks[i].clone())
+            }),
+            target_blends: std::array::from_fn(|i| {
+                other.target_blends[i]
+                    .clone()
+                    .or_else(|| self.target_blends[i].clone())
+            }),
             stencil: other.stencil.clone().or_else(|| self.stencil.clone()),
             offset: other.offset.clone().or_else(|| self.offset.clone()),
             alpha_to_mask: other
@@ -1300,12 +1317,14 @@ impl Parser<'_> {
             }
             "Blend" => {
                 // An optional render target index comes first: `Blend 1 One Zero`.
-                if let Some(Token::Num(_)) = self.peek()
+                let mut target = None;
+                if let Some(&Token::Num(n)) = self.peek()
                     && matches!(
                         self.t.get(self.i + 1),
                         Some(Token::Word(_) | Token::Prop(_))
                     )
                 {
+                    target = Some(n as usize);
                     self.i += 1;
                 }
                 let mut values = Vec::new();
@@ -1321,7 +1340,11 @@ impl Parser<'_> {
                         }
                     }
                 }
-                states.blend = Some(values);
+                match target {
+                    Some(t) if t < MAX_TARGETS => states.target_blends[t] = Some(values),
+                    Some(_) => {}
+                    None => states.blend = Some(values),
+                }
             }
             "BlendOp" => {
                 let mut values = Vec::new();
@@ -1352,12 +1375,17 @@ impl Parser<'_> {
                 }
             }
             "ColorMask" => {
-                states.color_mask = self.value();
-                // Optional render target index.
-                if let Some(Token::Num(_)) = self.peek()
-                    && matches!(states.color_mask, Some(Value::Word(_) | Value::Prop(_)))
-                {
+                let mask = self.value();
+                // An optional render target index follows: `ColorMask 0 1`, `ColorMask RGB 2`.
+                let mut target = None;
+                if let Some(&Token::Num(n)) = self.peek() {
+                    target = Some(n as usize);
                     self.i += 1;
+                }
+                match target {
+                    Some(t) if t < MAX_TARGETS => states.target_color_masks[t] = mask,
+                    Some(_) => {}
+                    None => states.color_mask = mask,
                 }
             }
             "Stencil" => {

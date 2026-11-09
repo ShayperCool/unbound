@@ -321,31 +321,42 @@ pub fn create_pipeline(
     outputs: u8,
 ) -> wgpu::RenderPipeline {
     let s = key.state;
-    let blend = s.blend.map(|[src, dst, src_a, dst_a]| wgpu::BlendState {
-        color: wgpu::BlendComponent {
-            src_factor: blend_factor(src),
-            dst_factor: blend_factor(dst),
-            operation: blend_op(s.blend_op[0]),
-        },
-        alpha: wgpu::BlendComponent {
-            src_factor: blend_factor(src_a),
-            dst_factor: blend_factor(dst_a),
-            operation: blend_op(s.blend_op[1]),
-        },
-    });
-    // Min/Max ignore the factors, which wgpu requires to be One.
-    let blend = blend.map(|mut b| {
-        for c in [&mut b.color, &mut b.alpha] {
-            if matches!(
-                c.operation,
-                wgpu::BlendOperation::Min | wgpu::BlendOperation::Max
-            ) {
-                c.src_factor = wgpu::BlendFactor::One;
-                c.dst_factor = wgpu::BlendFactor::One;
+    let blend_of = |blend: Option<[u8; 4]>| -> Option<wgpu::BlendState> {
+        let blend = blend.map(|[src, dst, src_a, dst_a]| wgpu::BlendState {
+            color: wgpu::BlendComponent {
+                src_factor: blend_factor(src),
+                dst_factor: blend_factor(dst),
+                operation: blend_op(s.blend_op[0]),
+            },
+            alpha: wgpu::BlendComponent {
+                src_factor: blend_factor(src_a),
+                dst_factor: blend_factor(dst_a),
+                operation: blend_op(s.blend_op[1]),
+            },
+        });
+        // Min/Max ignore the factors, which wgpu requires to be One.
+        let blend = blend.map(|mut b| {
+            for c in [&mut b.color, &mut b.alpha] {
+                if matches!(
+                    c.operation,
+                    wgpu::BlendOperation::Min | wgpu::BlendOperation::Max
+                ) {
+                    c.src_factor = wgpu::BlendFactor::One;
+                    c.dst_factor = wgpu::BlendFactor::One;
+                }
             }
-        }
-        b
-    });
+            b
+        });
+        blend
+    };
+    // Each color target's blending and write mask (a pass may give targets their own).
+    let target = |i: usize| match s.targets {
+        Some(targets) => (
+            blend_of(targets[i].blend),
+            color_writes(targets[i].color_mask),
+        ),
+        None => (blend_of(s.blend), color_writes(s.color_mask)),
+    };
     let depth_stencil = key.depth.then(|| {
         let stencil = match s.stencil {
             Some(st) => {
@@ -436,18 +447,22 @@ pub fn create_pipeline(
             // Further colors take the outputs after the first; one the program does not write
             // keeps its pixels (a write mask of nothing, as WebGPU requires).
             // Integer targets do not blend (OpenGL ignores blending for them).
-            targets: &std::iter::once(Some(wgpu::ColorTargetState {
-                format: key.format,
-                blend: blend.filter(|_| !super::resources::is_integer(key.format)),
-                write_mask: color_writes(s.color_mask),
-            }))
+            targets: &std::iter::once({
+                let (blend, write_mask) = target(0);
+                Some(wgpu::ColorTargetState {
+                    format: key.format,
+                    blend: blend.filter(|_| !super::resources::is_integer(key.format)),
+                    write_mask,
+                })
+            })
             .chain(key.extra.iter().flatten().enumerate().map(|(i, &format)| {
                 let written = outputs & (1 << (i + 1)) != 0;
+                let (blend, write_mask) = target((i + 1).min(crate::shaderlab::MAX_TARGETS - 1));
                 Some(wgpu::ColorTargetState {
                     format,
                     blend: blend.filter(|_| written && !super::resources::is_integer(format)),
                     write_mask: if written {
-                        color_writes(s.color_mask)
+                        write_mask
                     } else {
                         wgpu::ColorWrites::empty()
                     },

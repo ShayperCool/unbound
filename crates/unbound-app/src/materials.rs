@@ -34,6 +34,13 @@ pub struct StencilState {
     pub write_mask: u8,
 }
 
+/// A render target's own blending and write mask (`Blend N ...`, `ColorMask mask N`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TargetState {
+    pub blend: Option<[u8; 4]>,
+    pub color_mask: u8,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RenderState {
     /// `[src, dst, src_alpha, dst_alpha]` (`BlendMode`); `None` = Blend Off.
@@ -46,6 +53,9 @@ pub struct RenderState {
     pub gui_ztest: bool,
     pub cull: u8,
     pub color_mask: u8,
+    /// Each render target's states where a pass gives any target its own (None: every target
+    /// has `blend` and `color_mask`).
+    pub targets: Option<[TargetState; crate::shaderlab::MAX_TARGETS]>,
     pub stencil: Option<StencilState>,
     /// `Offset factor, units`, as integers (factor is rounded; units are what Unity's are).
     pub offset: [i32; 2],
@@ -67,6 +77,7 @@ impl Default for RenderState {
             gui_ztest: false,
             cull: 2,
             color_mask: 15,
+            targets: None,
             stencil: None,
             offset: [0, 0],
             alpha_to_mask: false,
@@ -451,29 +462,49 @@ fn stencil_op(v: &Value, props: &Props, default: u8) -> u8 {
     }
 }
 
+/// `Blend src dst [, src_alpha dst_alpha]` (None: Off, or One Zero, which is no blending).
+fn blend_state(values: &[Value], props: &Props) -> Option<[u8; 4]> {
+    let off = matches!(values.first(), Some(Value::Word(w)) if w.eq_ignore_ascii_case("off"))
+        || values.len() < 2;
+    if off {
+        return None;
+    }
+    let src = blend_factor(&values[0], props, 1);
+    let dst = blend_factor(&values[1], props, 0);
+    let (src_a, dst_a) = if values.len() >= 4 {
+        (
+            blend_factor(&values[2], props, 1),
+            blend_factor(&values[3], props, 0),
+        )
+    } else {
+        (src, dst)
+    };
+    (!(src == 1 && dst == 0 && src_a == 1 && dst_a == 0)).then_some([src, dst, src_a, dst_a])
+}
+
+/// `ColorMask`: RGBA bits 8, 4, 2, 1 (0: nothing written).
+fn color_mask(v: &Value, props: &Props) -> u8 {
+    match v {
+        Value::Num(n) => *n as u8 & 15,
+        Value::Word(w) => w.chars().fold(0, |m, c| {
+            m | match c.to_ascii_uppercase() {
+                'R' => 8,
+                'G' => 4,
+                'B' => 2,
+                'A' => 1,
+                _ => 0,
+            }
+        }),
+        other => props.number(other, 15.0) as u8 & 15,
+    }
+}
+
 /// A pass's render state and stencil reference under a material's properties.
 fn render_state(props: &Props, pass: &PassInfo) -> (RenderState, u32) {
     let s = &pass.states;
     let mut state = RenderState::default();
     if let Some(values) = &s.blend {
-        let off = matches!(values.first(), Some(Value::Word(w)) if w.eq_ignore_ascii_case("off"))
-            || values.len() < 2;
-        if !off {
-            let src = blend_factor(&values[0], props, 1);
-            let dst = blend_factor(&values[1], props, 0);
-            let (src_a, dst_a) = if values.len() >= 4 {
-                (
-                    blend_factor(&values[2], props, 1),
-                    blend_factor(&values[3], props, 0),
-                )
-            } else {
-                (src, dst)
-            };
-            // Blend One Zero is no blending.
-            if !(src == 1 && dst == 0 && src_a == 1 && dst_a == 0) {
-                state.blend = Some([src, dst, src_a, dst_a]);
-            }
-        }
+        state.blend = blend_state(values, props);
     }
     if let Some(ops) = &s.blend_op {
         let color = ops.first().map(|v| blend_op(v, props)).unwrap_or(0);
@@ -502,19 +533,28 @@ fn render_state(props: &Props, pass: &PassInfo) -> (RenderState, u32) {
         };
     }
     if let Some(v) = &s.color_mask {
-        state.color_mask = match v {
-            Value::Num(n) => *n as u8 & 15,
-            Value::Word(w) => w.chars().fold(0, |m, c| {
-                m | match c.to_ascii_uppercase() {
-                    'R' => 8,
-                    'G' => 4,
-                    'B' => 2,
-                    'A' => 1,
-                    _ => 0,
-                }
-            }),
-            other => props.number(other, 15.0) as u8 & 15,
-        };
+        state.color_mask = color_mask(v, props);
+    }
+    // Targets with their own states keep the pass's for the rest.
+    if s.target_blends.iter().any(Option::is_some)
+        || s.target_color_masks.iter().any(Option::is_some)
+    {
+        let mut targets = [TargetState {
+            blend: state.blend,
+            color_mask: state.color_mask,
+        }; crate::shaderlab::MAX_TARGETS];
+        for (target, (blend, mask)) in targets
+            .iter_mut()
+            .zip(s.target_blends.iter().zip(&s.target_color_masks))
+        {
+            if let Some(values) = blend {
+                target.blend = blend_state(values, props);
+            }
+            if let Some(v) = mask {
+                target.color_mask = color_mask(v, props);
+            }
+        }
+        state.targets = Some(targets);
     }
     if let Some([factor, units]) = &s.offset {
         state.offset = [
@@ -621,11 +661,13 @@ mod tests {
         }
     }
 
+    /// The shaders in a scan directory of their own (tests run in parallel).
     fn index(shaders: &[&str]) -> ShaderIndex {
+        static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let dir = std::env::temp_dir().join(format!(
             "unbound-materials-{}-{}",
             std::process::id(),
-            shaders.len()
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         ));
         let _ = std::fs::create_dir_all(&dir);
         for (i, text) in shaders.iter().enumerate() {
@@ -698,7 +740,6 @@ SubShader {
         ENDCG
     }
 }}"#;
-        // Three shaders: a scan directory of its own (the others use one and two).
         let other = r#"Shader "Probe/Other" { SubShader { Pass { } } }"#;
         let mut r = Resolver::new(index(&[halo, UI, other]));
         let m = r.resolve(&material("Probe/LowerCase", vec![]));
@@ -709,6 +750,50 @@ SubShader {
         );
         assert!(!p.state.zwrite);
         assert_eq!(p.state.blend, Some([4, 1, 4, 1]));
+    }
+
+    /// Indexed `ColorMask`/`Blend` lines are their render target's own (as the Decal Shader
+    /// Graph's DBuffer passes write them); the unindexed ones stay every other target's.
+    #[test]
+    fn render_targets_take_their_own_masks_and_blends() {
+        let decal = r#"Shader "Probe/Targets" {
+SubShader {
+    Pass {
+        Blend SrcAlpha OneMinusSrcAlpha
+        Blend 1 One One
+        ColorMask RGBA
+        ColorMask 0 1
+        ColorMask RGB 2
+        CGPROGRAM
+        #pragma vertex vert
+        ENDCG
+    }
+}}"#;
+        let plain = r#"Shader "Probe/Plain" { SubShader { Pass { ColorMask 0 } } }"#;
+        let other = r#"Shader "Probe/Other" { SubShader { Pass { } } }"#;
+        let mut r = Resolver::new(index(&[decal, plain, other]));
+        let p = &r.resolve(&material("Probe/Targets", vec![])).passes[0];
+        assert_eq!(
+            (p.state.blend, p.state.color_mask),
+            (Some([5, 10, 5, 10]), 15)
+        );
+        let targets = p.state.targets.expect("targets of their own");
+        assert_eq!(
+            (targets[0].blend, targets[0].color_mask),
+            (Some([5, 10, 5, 10]), 15)
+        );
+        assert_eq!(
+            (targets[1].blend, targets[1].color_mask),
+            (Some([1, 1, 1, 1]), 0)
+        );
+        assert_eq!(
+            (targets[2].blend, targets[2].color_mask),
+            (Some([5, 10, 5, 10]), 14)
+        );
+        assert_eq!(targets[3].color_mask, 15);
+        // Without an index the mask is every target's.
+        let p = &r.resolve(&material("Probe/Plain", vec![])).passes[0];
+        assert_eq!((p.state.color_mask, p.state.targets), (0, None));
     }
 
     #[test]

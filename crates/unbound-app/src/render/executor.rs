@@ -4712,6 +4712,8 @@ fn apply_override(
         };
         state.blend_op = [op, op_alpha];
         state.color_mask = write_mask;
+        // A render state block's blend state is every target's.
+        state.targets = None;
     }
     if o.mask & state_mask::RASTER != 0 {
         state.cull = o.cull;
