@@ -318,6 +318,8 @@ namespace UnityEngine.UIElements
                     duringLayoutPhase = false;
                 }
                 UpdateSubTree(root, true);
+                // Marks made by this pass's geometry callbacks belong to the next pass.
+                m_LayoutGeneration++;
                 foreach (var (oldRect, newRect, element) in m_ChangeEvents)
                 {
                     using (var e = GeometryChangedEvent.GetPooled(oldRect, newRect))

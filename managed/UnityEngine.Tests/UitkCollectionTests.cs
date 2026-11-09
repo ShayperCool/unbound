@@ -435,6 +435,28 @@ namespace UnityEngine.Tests
             Assert.True(float.IsNaN(around.LayoutHeight));
         }
 
+        // [rule] A parent sized by its content: offsets and sizes use its final padding box.
+        [Fact]
+        public void OffsetsUseTheFinalSizeOfAContentSizedParent()
+        {
+            var config = new YogaConfig();
+            var row = new YogaNode(config) { Width = YogaValue.Point(200), Height = YogaValue.Point(100), FlexDirection = YogaFlexDirection.Row, AlignItems = YogaAlign.FlexStart };
+            var column = new YogaNode(config) { Width = YogaValue.Point(50) };
+            var content = new YogaNode(config) { Height = YogaValue.Point(20) };
+            var top = new YogaNode(config) { PositionType = YogaPositionType.Absolute, Width = YogaValue.Point(4), Height = YogaValue.Point(2) };
+            top.SetPosition(YogaEdge.Top, YogaValue.Percent(50));
+            var bottom = new YogaNode(config) { PositionType = YogaPositionType.Absolute, Width = YogaValue.Point(4), Height = YogaValue.Point(2) };
+            bottom.SetPosition(YogaEdge.Bottom, YogaValue.Percent(50));
+            column.Insert(0, content);
+            column.Insert(1, top);
+            column.Insert(2, bottom);
+            row.Insert(0, column);
+            row.CalculateLayout();
+            Assert.Equal(20f, column.LayoutHeight);
+            Assert.Equal(10f, top.LayoutY);
+            Assert.Equal(8f, bottom.LayoutY);
+        }
+
         [Fact]
         public void StaticPositionFollowsTheAxisDirection()
         {

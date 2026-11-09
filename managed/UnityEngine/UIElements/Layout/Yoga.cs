@@ -1565,6 +1565,15 @@ namespace Unbound.UIElements.Layout
             LayoutNodeInternal(child, childWidth, childHeight, direction, YogaMeasureMode.Exactly,
                 YogaMeasureMode.Exactly, containingWidth, containingHeight, true, config);
 
+            // A leading offset places the child from the parent's border edge, as a percentage of the
+            // same padding box its size uses, plus its margin of the content width.
+            if (child.IsLeadingPositionDefined(mainAxis))
+                child.layout.Position[(int)Leading[(int)mainAxis]] = Unwrap(child.GetLeadingPosition(mainAxis, isMainAxisRow ? containingWidth : containingHeight))
+                    + node.GetLeadingBorder(mainAxis) + Unwrap(child.GetLeadingMargin(mainAxis, width));
+            if (child.IsLeadingPositionDefined(crossAxis))
+                child.layout.Position[(int)Leading[(int)crossAxis]] = Unwrap(child.GetLeadingPosition(crossAxis, isMainAxisRow ? containingHeight : containingWidth))
+                    + node.GetLeadingBorder(crossAxis) + Unwrap(child.GetLeadingMargin(crossAxis, width));
+
             if (child.IsTrailingPosDefined(mainAxis) && !child.IsLeadingPositionDefined(mainAxis))
             {
                 child.layout.Position[(int)Leading[(int)mainAxis]] =
@@ -1610,11 +1619,6 @@ namespace Unbound.UIElements.Layout
                     - child.layout.MeasuredDimensions[Dim[(int)crossAxis]];
             }
         }
-
-        /// <summary>The parent's padding box on an axis, from its content size: what percentage
-        /// offsets of its absolute children resolve against.</summary>
-        static float PaddingBoxSize(YogaNode node, YogaFlexDirection axis, float innerSize, float ownerWidth) =>
-            innerSize + Unwrap(node.GetLeadingPadding(axis, ownerWidth)) + Unwrap(node.GetTrailingPadding(axis, ownerWidth));
 
         static void WithMeasureFuncSetMeasuredDimensions(YogaNode node, float availableWidth, float availableHeight,
             YogaMeasureMode widthMeasureMode, YogaMeasureMode heightMeasureMode, float ownerWidth, float ownerHeight)
@@ -2212,15 +2216,7 @@ namespace Unbound.UIElements.Layout
                     continue;
                 if (childStyle.PositionType == YogaPositionType.Absolute && child.IsLeadingPositionDefined(mainAxis))
                 {
-                    if (performLayout)
-                    {
-                        // An absolute child with a leading offset is placed at that offset (a percentage
-                        // of the parent's padding box) from the border edge, plus its margin.
-                        child.layout.Position[(int)Pos[(int)mainAxis]] =
-                            Unwrap(child.GetLeadingPosition(mainAxis, PaddingBoxSize(node, mainAxis, availableInnerMainDim, ownerWidth)))
-                            + node.GetLeadingBorder(mainAxis)
-                            + Unwrap(child.GetLeadingMargin(mainAxis, availableInnerWidth));
-                    }
+                    // Placed from its offset in the absolute step, once the parent's size is final.
                 }
                 else
                 {
@@ -2498,17 +2494,9 @@ namespace Unbound.UIElements.Layout
                             continue;
                         if (child.style.PositionType == YogaPositionType.Absolute)
                         {
-                            // An absolute child with a leading offset is placed from it (a percentage of
-                            // the parent's padding box); without one it starts at the content edge.
-                            bool isChildLeadingPosDefined = child.IsLeadingPositionDefined(crossAxis);
-                            if (isChildLeadingPosDefined)
-                            {
-                                child.layout.Position[(int)Pos[(int)crossAxis]] =
-                                    Unwrap(child.GetLeadingPosition(crossAxis, PaddingBoxSize(node, crossAxis, availableInnerCrossDim, ownerWidth)))
-                                    + node.GetLeadingBorder(crossAxis)
-                                    + Unwrap(child.GetLeadingMargin(crossAxis, availableInnerWidth));
-                            }
-                            if (!isChildLeadingPosDefined || IsUndefined(child.layout.Position[(int)Pos[(int)crossAxis]]))
+                            // Without a leading offset an absolute child starts at the content edge; with
+                            // one it is placed in the absolute step, once the parent's size is final.
+                            if (!child.IsLeadingPositionDefined(crossAxis))
                             {
                                 child.layout.Position[(int)Pos[(int)crossAxis]] =
                                     node.GetLeadingBorder(crossAxis)
