@@ -59,4 +59,5 @@ Measured (Unity 6000.0.71f1, `Reference/unity-6000.0.71f1.json`):
 
 Listed, not gated (`run.py` header): `two.p1`, a line grazing a vertex: the builders place that vertex
 about 2e-6 apart, on either side of the line; `link.wide` a3 (a path leaving a wide link beyond its
-width) and where the agents walking to a wide link reach and cross it (ga*, gb*, the keys listed).
+width) and where an agent reaching a wide link at the edge of the NavMesh under its start crosses it
+(gb1.2.cur.*).

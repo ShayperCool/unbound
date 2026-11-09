@@ -21,10 +21,10 @@ Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
                           does not.
   link.wide a3.c2.z       a path leaving a wide link beyond its width turns at the far end of the
                           link's end in Unity, at the near end in Unbound;
-  link.wide ga*, gb*      agents walking to a wide link: their path's crossing point (next.*) is
-  (the keys listed)       Unity's within about 1 cm, but Unbound's agents drift up to 0.4 m further
-                          aside before they reach the link, so they cross (cur.*) and end (end.*)
-                          elsewhere (docs/COMPATIBILITY_GAPS.md, the link rows).
+  link.wide gb1.2.cur.*   an agent reaching a wide link where the NavMesh under the link's start
+                          ends (z 6): Unity's reaches it 6 cm further from that end and crosses from
+                          5.98 to 5.82, Unbound's straight across from where it reaches it, 5.80
+                          (docs/COMPATIBILITY_GAPS.md, the link rows).
 """
 import argparse
 import json
@@ -46,8 +46,7 @@ FRAMES = 1500
 # Scenario -> key prefixes of the differences that are reported but not gated ('' = all of them).
 LISTED = {
     'hole.shapes': ('two.p1.',),
-    'link.wide': ('a3.c2.z', 'ga1.2.next.start.z', 'ga1.2.next.end.z', 'ga1.2.cur.', 'ga1.2.end.',
-                  'ga3.cur.at.', 'ga3.end.', 'gb1.2.cur.start.z', 'gb1.2.cur.end.z', 'gb1.2.cur.at.z'),
+    'link.wide': ('a3.c2.z', 'gb1.2.cur.start.z', 'gb1.2.cur.end.z', 'gb1.2.cur.at.z'),
 }
 
 

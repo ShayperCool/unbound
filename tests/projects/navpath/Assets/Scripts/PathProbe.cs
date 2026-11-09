@@ -816,6 +816,14 @@ public class PathProbe : MonoBehaviour
 
     // ------------------------------------------------------------------ links over a gap
 
+    /// <summary>The agents earlier scenarios left standing, gone before a link scenario (so its
+    /// agents avoid no one).</summary>
+    static void ClearAgents()
+    {
+        foreach (var agent in FindObjectsByType<NavMeshAgent>(FindObjectsSortMode.None))
+            DestroyImmediate(agent.gameObject);
+    }
+
     /// <summary>The floor (agent type 0, and the big type) cut by a 2 m strip at x = 0 that only
     /// links cross, plus any further parts.</summary>
     static void Gap(int agentType, params Part[] parts)
@@ -864,6 +872,8 @@ public class PathProbe : MonoBehaviour
     /// and above the floor either side of the climb (0.75 m), each crossed by a path.</summary>
     IEnumerator LinkSnap()
     {
+        ClearAgents();
+        yield return null;
         Gap(0);
         Gap(BigType);
         LogMesh();
@@ -890,6 +900,8 @@ public class PathProbe : MonoBehaviour
     /// the NavMesh.</summary>
     IEnumerator LinkWide()
     {
+        ClearAgents();
+        yield return null;
         Gap(0, new Part(-2.6f, 11f, 3f, 9f, Blocked));
         LogMesh();
         var a = Link(new Vector3(-1.7f, 0f, -6f), new Vector3(1.7f, 0f, -6f), 0, 4f);
@@ -929,6 +941,8 @@ public class PathProbe : MonoBehaviour
     /// a path over the gap: whether a wide end attaches to the NavMesh near it.</summary>
     IEnumerator LinkWideOff()
     {
+        ClearAgents();
+        yield return null;
         Gap(0);
         LogMesh();
         var link = Link(new Vector3(-1.3f, 0f, 0f), new Vector3(1.467f, 0f, 0f), 0, 4f);
@@ -943,6 +957,8 @@ public class PathProbe : MonoBehaviour
     /// status and isPathStale.</summary>
     IEnumerator LinkRepath()
     {
+        ClearAgents();
+        yield return null;
         Gap(0);
         LogMesh();
         var lanes = new[] { ("near", -8f, true, -6f), ("off", 0f, false, -6f), ("far", 8f, true, -12f) };
