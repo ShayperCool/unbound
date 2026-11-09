@@ -332,7 +332,7 @@ mod op {
     pub const COPY_DEPTH: u8 = 29;
     pub const MESH_INSTANCE: u8 = 30;
     pub const INSTANCE_MULTIPLIER: u8 = 32;
-    // NativeApi 37.
+    // NativeApi 39.
     pub const RESOLVE_TEXTURE: u8 = 33;
     pub const MESH_BUFFERS: u8 = 31;
 }
