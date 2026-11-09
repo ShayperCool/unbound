@@ -17,16 +17,16 @@ NoiseLow compression=low
 NoiseAlphaNone compression=normal alpha=none
 CutoutNormal compression=normal
 SoftNormal compression=normal
-SoftHigh compression=high
-FlatNormal compression=normal
+SoftHigh compression=high android=ETC2_RGBA8
+FlatNormal compression=normal android=ETC2_RGB4
 FlatOpaque compression=normal alpha=none
 HeightRed type=single channel=red compression=normal
 HeightRedQ0 type=single channel=red compression=normal quality=0
 HeightRedHigh type=single channel=red compression=high
 HeightAlpha type=single channel=alpha compression=normal
 NormalsNormal type=normal compression=normal
-NormalsHigh type=normal compression=high
-NormalsLow type=normal compression=low
+NormalsHigh type=normal compression=high android=ETC2_RGB4
+NormalsLow type=normal compression=low android=ETC_RGB4
 HdrNormal compression=normal
 HdrHigh compression=high
 HdrNormalQ0 compression=normal quality=0
@@ -37,25 +37,25 @@ NpotDXT5 format=DXT5 npot=none
 TinyNormal compression=normal
 WideNormal compression=normal
 HdrLow compression=low
-SmoothDXT1 format=DXT1
-NoiseDXT1 format=DXT1
-NoiseDXT5 format=DXT5
-NoiseDXT5Q0 format=DXT5 quality=0
-NoiseDXT5Q100 format=DXT5 quality=100
-HeightBC4 format=BC4
-NormalsBC5 format=BC5 srgb=0
-SmoothBC7 format=BC7
-NoiseBC7 format=BC7
-NoiseBC7Q0 format=BC7 quality=0
-NoiseBC7Q100 format=BC7 quality=100
-HdrBC6H format=BC6H
-SmoothDXT1Crunched format=DXT1Crunched
-OddDXT5 format=DXT5 npot=none
+SmoothDXT1 format=DXT1 android=ETC_RGB4
+NoiseDXT1 format=DXT1 android=ETC2_RGB4
+NoiseDXT5 format=DXT5 android=ETC2_RGBA8
+NoiseDXT5Q0 format=DXT5 quality=0 android=ETC2_RGBA8
+NoiseDXT5Q100 format=DXT5 quality=100 android=ETC2_RGBA8
+HeightBC4 format=BC4 android=EAC_R
+NormalsBC5 format=BC5 srgb=0 android=EAC_RG
+SmoothBC7 format=BC7 android=ETC2_RGB4_PUNCHTHROUGH_ALPHA
+NoiseBC7 format=BC7 android=ASTC_6x6
+NoiseBC7Q0 format=BC7 quality=0 android=ASTC_4x4
+NoiseBC7Q100 format=BC7 quality=100 android=ASTC_8x8
+HdrBC6H format=BC6H android=ASTC_HDR_6x6
+SmoothDXT1Crunched format=DXT1Crunched android=ETC_RGB4Crunched
+OddDXT5 format=DXT5 npot=none android=ETC2_RGBA8
 NoiseRGBA32 format=RGBA32
 NoiseUnreadable format=RGBA32 readable=0
 SmoothWrite compression=normal
-NpotNoMips compression=normal npot=none mips=0
-SmoothSprite type=sprite compression=normal
+NpotNoMips compression=normal npot=none mips=0 android=ETC_RGB4
+SmoothSprite type=sprite compression=normal android=ETC2_RGB4
 NoiseGui type=gui compression=normal
 NoiseRGB24 format=RGB24
 NoiseR8 format=R8 srgb=0

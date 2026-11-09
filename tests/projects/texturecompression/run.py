@@ -10,9 +10,11 @@
     run.py gate --release R --label L      Unbound captures compared with Reference/
 
 Every capture runs on a fresh copy of the probe's Assets/Packages/ProjectSettings in the
-validation cache, with ProjectSettings switched to the profile's color space. Profiles: Gamma and
-Linear on the Standalone target. Editors run through the shared heavy-job launcher, on the GPU (a
-private Xvfb and VirtualGL).
+validation cache, with ProjectSettings switched to the profile's color space and Android default
+texture compression format. Profiles: Gamma and Linear on the Standalone target; AndroidGamma and
+AndroidLinear on the Android target (default compression format unset: ETC), AndroidETC2 (Gamma,
+ETC2). Editors run through the shared heavy-job launcher, on the GPU (a private Xvfb and
+VirtualGL).
 """
 import argparse
 import filecmp
@@ -27,7 +29,14 @@ from probe_paths import editor_path, reference_root, run_root
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
-PROFILES = {'Gamma': 0, 'Linear': 1}
+# Profile: (m_ActiveColorSpace, build target, Android's default TextureCompressionFormat or None).
+PROFILES = {
+    'Gamma': (0, 'Standalone', None),
+    'Linear': (1, 'Standalone', None),
+    'AndroidGamma': (0, 'Android', None),
+    'AndroidLinear': (1, 'Android', None),
+    'AndroidETC2': (0, 'Android', 2),
+}
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 
 
@@ -36,10 +45,18 @@ def copy_project(dest, profile):
         sys.exit(f'refusing to overwrite project: {dest}')
     for part in ('Assets', 'Packages', 'ProjectSettings'):
         shutil.copytree(PROBE/part, dest/part)
+    space, _, android_format = PROFILES[profile]
     settings = dest/'ProjectSettings/ProjectSettings.asset'
     text = settings.read_text()
     assert 'm_ActiveColorSpace: 0' in text
-    settings.write_text(text.replace('m_ActiveColorSpace: 0', f'm_ActiveColorSpace: {PROFILES[profile]}'))
+    text = text.replace('m_ActiveColorSpace: 0', f'm_ActiveColorSpace: {space}')
+    if android_format is not None:
+        empty = '  m_BuildTargetDefaultTextureCompressionFormat: []\n'
+        assert empty in text
+        text = text.replace(empty, '  m_BuildTargetDefaultTextureCompressionFormat:\n'
+                            '  - serializedVersion: 3\n    m_BuildTarget: Android\n'
+                            f'    m_Formats: {android_format:02x}000000\n')
+    settings.write_text(text)
     (dest/'ProjectSettings/ProjectVersion.txt').write_text(
         'm_EditorVersion: '+os.environ['UNBOUND_PROBE_UNITY_VERSION']+'\n')
     return dest
@@ -55,9 +72,9 @@ def display():
     sys.exit('no free X display')
 
 
-def editor_command(project, method, log, extra=()):
+def editor_command(project, method, log, extra=(), target='Standalone'):
     return [str(LAUNCHER), '--kind', 'editor-gpu', 'timeout', '-s', 'KILL', '900', 'vglrun', '-d', 'egl',
-            str(editor_path()), '-batchmode', '-buildTarget', 'Standalone', '-projectPath', str(project),
+            str(editor_path()), '-batchmode', '-buildTarget', target, '-projectPath', str(project),
             '-executeMethod', method, *extra, '-logFile', str(log)]
 
 
@@ -86,7 +103,8 @@ def editor(work):
                 if out.exists():
                     sys.exit(f'refusing to overwrite capture: {out}')
                 env = dict(os.environ, DISPLAY=name, TEXTURE_COMPRESSION_PROBE_OUT=str(out))
-                jobs.append(subprocess.Popen(editor_command(project, 'ProbeRunner.Record', work/repeat/f'{profile}.log'),
+                jobs.append(subprocess.Popen(editor_command(project, 'ProbeRunner.Record', work/repeat/f'{profile}.log',
+                                                            target=PROFILES[profile][1]),
                                              env=env))
         codes = [job.wait() for job in jobs]
         print('editor exits', codes)
@@ -122,7 +140,7 @@ def unbound(work):
         env = dict(os.environ, TEXTURE_COMPRESSION_PROBE_OUT=str(out))
         with (work/'unbound'/f'{profile}.log').open('w') as log:
             result = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(project),
-                                     '--target', 'Standalone', '--no-watch', '--frames', '10', '--size', '64x64'],
+                                     '--target', PROFILES[profile][1], '--no-watch', '--frames', '10', '--size', '64x64'],
                                     env=env, stdout=log, stderr=subprocess.STDOUT)
         print(profile, 'unbound exit', result.returncode)
         code |= result.returncode

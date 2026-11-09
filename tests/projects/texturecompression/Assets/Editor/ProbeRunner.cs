@@ -45,7 +45,7 @@ public static class ProbeRunner
         foreach (var setting in settings)
         {
             var key = setting.Split('=')[0];
-            if (!new[] { "compression", "quality", "format", "type", "channel", "srgb", "mips", "readable", "alpha", "npot" }.Contains(key))
+            if (!new[] { "compression", "quality", "format", "type", "channel", "srgb", "mips", "readable", "alpha", "npot", "android" }.Contains(key))
                 throw new ArgumentException("unknown texture case setting " + setting);
         }
         importer.textureType = Get("type") == "normal" ? TextureImporterType.NormalMap
@@ -91,6 +91,23 @@ public static class ProbeRunner
         else
         {
             importer.ClearPlatformTextureSettings("Standalone");
+        }
+        var android = Get("android");
+        if (android != null)
+        {
+            importer.SetPlatformTextureSettings(new TextureImporterPlatformSettings
+            {
+                name = "Android",
+                overridden = true,
+                maxTextureSize = 2048,
+                format = (TextureImporterFormat)Enum.Parse(typeof(TextureImporterFormat), android),
+                compressionQuality = quality,
+                textureCompression = TextureImporterCompression.Compressed,
+            });
+        }
+        else
+        {
+            importer.ClearPlatformTextureSettings("Android");
         }
     }
 

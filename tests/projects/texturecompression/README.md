@@ -1,6 +1,8 @@
 # Texture compression
 
-What block-compressed textures give a game on the Standalone target, Gamma and Linear projects.
+What block-compressed textures give a game on the Standalone target (Gamma and Linear projects)
+and the Android target (Gamma and Linear projects with the default compression format unset, and
+a Gamma project whose Android default is ETC2).
 `make_textures.py` writes the sources and the importer cases (one setting per case, the
 textureimport probe's images); `ProbeRunner.Create` applies them in the Editor.
 `Assets/Scripts/TextureCompressionProbe.cs` records:
@@ -58,6 +60,24 @@ Observations of this release, its Standalone target and the Editor's OpenGL Core
   `CopyTexture` between R8_UNorm and R8_SRGB textures (or an R8 render texture) copies the raw data
   and the GPU's texels; between R8G8_UNorm and R8G8_SRGB it copies the raw data, but the
   destination's GPU texels stay as they were.
+
+## Measured on the Android target (6000.0.71f1, both repeats identical)
+
+The same images with an Android override where a case names `android=` (its quality applies):
+
+- Automatic formats at every compression level follow the project's default compression
+  format: unset (ETC) gives ETC_RGB4 for opaque textures and ETC2_RGBA8 with transparent texels;
+  ETC2 gives ETC2_RGB and ETC2_RGBA8. Normal maps are opaque; a Single Channel texture's red is
+  EAC_R and its alpha Alpha8; HDR textures are ETC2_RGBA8.
+- ETC_RGB4 needs power-of-two sides even without mips (20x12: RGB24 uncompressed, alpha dropped,
+  while ETC2 compresses it); in the Linear project an sRGB-flagged ETC_RGB4 (normal maps too,
+  whose flag stays on) is ETC2_RGB, a linear-flagged one stays ETC_RGB4.
+- Compressor quality Fast (0), Normal (50) and Best (100) select the project's Fast, Normal and
+  Best ETC compressors (EditorSettings; etcpak, ETCPACK Fast and Etc2Comp Best by default), whose
+  blocks differ.
+- `Texture2D.Compress` gives ETC2_RGBA8 for formats with alpha and ETC2_RGB otherwise (R8 and RG16
+  too, on this OpenGL device).
+- `SystemInfo.SupportsTextureFormat` is true for ETC and EAC formats, false for ASTC.
 
 ## Documented (Unity 6000.0 Scripting API)
 

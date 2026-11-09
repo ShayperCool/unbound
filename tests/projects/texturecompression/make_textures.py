@@ -5,7 +5,9 @@
 
 Every case is one PNG (or EXR) in Assets/Textures and one line of Assets/Editor/TextureCases.txt:
 `<name> key=value ...`. `ProbeRunner.Create` applies the settings to each importer in the Editor
-(which writes the .meta files) and builds the scene. The image writers and fields are the
+(which writes the .meta files) and builds the scene. `format=` is a Standalone override,
+`android=` an Android override (both at the case's `quality`); neither changes the other
+target's import. The image writers and fields are the
 textureimport probe's.
 
 Source images (written top row first as PNG stores them):
@@ -95,16 +97,16 @@ CASES = {
     'NoiseAlphaNone': ('Noise', 'compression=normal alpha=none'),
     'CutoutNormal': ('Cutout', 'compression=normal'),
     'SoftNormal': ('Soft', 'compression=normal'),
-    'SoftHigh': ('Soft', 'compression=high'),
-    'FlatNormal': ('Flat', 'compression=normal'),
+    'SoftHigh': ('Soft', 'compression=high android=ETC2_RGBA8'),
+    'FlatNormal': ('Flat', 'compression=normal android=ETC2_RGB4'),
     'FlatOpaque': ('Flat', 'compression=normal alpha=none'),
     'HeightRed': ('Height', 'type=single channel=red compression=normal'),
     'HeightRedQ0': ('Height', 'type=single channel=red compression=normal quality=0'),
     'HeightRedHigh': ('Height', 'type=single channel=red compression=high'),
     'HeightAlpha': ('Height', 'type=single channel=alpha compression=normal'),
     'NormalsNormal': ('Normals', 'type=normal compression=normal'),
-    'NormalsHigh': ('Normals', 'type=normal compression=high'),
-    'NormalsLow': ('Normals', 'type=normal compression=low'),
+    'NormalsHigh': ('Normals', 'type=normal compression=high android=ETC2_RGB4'),
+    'NormalsLow': ('Normals', 'type=normal compression=low android=ETC_RGB4'),
     'HdrNormal': ('Hdr', 'compression=normal'),
     'HdrHigh': ('Hdr', 'compression=high'),
     'HdrNormalQ0': ('Hdr', 'compression=normal quality=0'),
@@ -116,27 +118,27 @@ CASES = {
     'WideNormal': ('Wide', 'compression=normal'),
     'HdrLow': ('Hdr', 'compression=low'),
     # Explicit formats (a Standalone override).
-    'SmoothDXT1': ('Smooth', 'format=DXT1'),
-    'NoiseDXT1': ('Noise', 'format=DXT1'),
-    'NoiseDXT5': ('Noise', 'format=DXT5'),
-    'NoiseDXT5Q0': ('Noise', 'format=DXT5 quality=0'),
-    'NoiseDXT5Q100': ('Noise', 'format=DXT5 quality=100'),
-    'HeightBC4': ('Height', 'format=BC4'),
-    'NormalsBC5': ('Normals', 'format=BC5 srgb=0'),
-    'SmoothBC7': ('Smooth', 'format=BC7'),
-    'NoiseBC7': ('Noise', 'format=BC7'),
-    'NoiseBC7Q0': ('Noise', 'format=BC7 quality=0'),
-    'NoiseBC7Q100': ('Noise', 'format=BC7 quality=100'),
-    'HdrBC6H': ('Hdr', 'format=BC6H'),
-    'SmoothDXT1Crunched': ('Smooth', 'format=DXT1Crunched'),
-    'OddDXT5': ('Odd', 'format=DXT5 npot=none'),
+    'SmoothDXT1': ('Smooth', 'format=DXT1 android=ETC_RGB4'),
+    'NoiseDXT1': ('Noise', 'format=DXT1 android=ETC2_RGB4'),
+    'NoiseDXT5': ('Noise', 'format=DXT5 android=ETC2_RGBA8'),
+    'NoiseDXT5Q0': ('Noise', 'format=DXT5 quality=0 android=ETC2_RGBA8'),
+    'NoiseDXT5Q100': ('Noise', 'format=DXT5 quality=100 android=ETC2_RGBA8'),
+    'HeightBC4': ('Height', 'format=BC4 android=EAC_R'),
+    'NormalsBC5': ('Normals', 'format=BC5 srgb=0 android=EAC_RG'),
+    'SmoothBC7': ('Smooth', 'format=BC7 android=ETC2_RGB4_PUNCHTHROUGH_ALPHA'),
+    'NoiseBC7': ('Noise', 'format=BC7 android=ASTC_6x6'),
+    'NoiseBC7Q0': ('Noise', 'format=BC7 quality=0 android=ASTC_4x4'),
+    'NoiseBC7Q100': ('Noise', 'format=BC7 quality=100 android=ASTC_8x8'),
+    'HdrBC6H': ('Hdr', 'format=BC6H android=ASTC_HDR_6x6'),
+    'SmoothDXT1Crunched': ('Smooth', 'format=DXT1Crunched android=ETC_RGB4Crunched'),
+    'OddDXT5': ('Odd', 'format=DXT5 npot=none android=ETC2_RGBA8'),
     # Uncompressed sources for the runtime controls (Compress, CopyTexture, LoadRawTextureData).
     'NoiseRGBA32': ('Noise', 'format=RGBA32'),
     'NoiseUnreadable': ('Noise', 'format=RGBA32 readable=0'),
     # Writes to a compressed import, its copies, and more sizes and texture types.
     'SmoothWrite': ('Smooth', 'compression=normal'),
-    'NpotNoMips': ('Npot', 'compression=normal npot=none mips=0'),
-    'SmoothSprite': ('Smooth', 'type=sprite compression=normal'),
+    'NpotNoMips': ('Npot', 'compression=normal npot=none mips=0 android=ETC_RGB4'),
+    'SmoothSprite': ('Smooth', 'type=sprite compression=normal android=ETC2_RGB4'),
     'NoiseGui': ('Noise', 'type=gui compression=normal'),
     # Explicit byte formats of a coloured, transparent source; a compressed copy destination.
     'NoiseRGB24': ('Noise', 'format=RGB24'),
