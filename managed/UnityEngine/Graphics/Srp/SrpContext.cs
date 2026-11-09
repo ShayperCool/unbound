@@ -996,11 +996,11 @@ namespace Unbound.Runtime
             return true;
         }
 
+        static readonly Stack<CullingData> s_Free = new Stack<CullingData>();
+
         /// <summary>Frees the frame's culling results (each frame's end). Renderers no culling
         /// and no shadow caster list took become invisible early in the next frame
         /// (<see cref="Renderer.NotifyInvisible"/>).</summary>
-        static readonly Stack<CullingData> s_Free = new Stack<CullingData>();
-
         internal static void EndFrame()
         {
             foreach (var data in s_Results.Values)

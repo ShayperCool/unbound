@@ -416,6 +416,31 @@ namespace Unbound.Tests
             }
         }
 
+        /// <summary>A text laid out from Font.textureRebuilt while another generation grows the
+        /// font's texture (uGUI regenerates its texts so): both come out as they would alone.</summary>
+        [Fact]
+        public void AGenerationInsideAnotherKeepsBothLayouts()
+        {
+            var font = BoxFont();
+            var settings = Settings(font, new Vector2(2000, 200));
+            settings.fontSize = 100;
+            font.RequestCharactersInTexture("ABCDEFGHIJKL", 100);
+            var inner = new TextGenerator();
+            void OnRebuilt(Font f) => inner.Populate("AB", settings);
+            Font.textureRebuilt += OnRebuilt;
+            var outer = new TextGenerator();
+            try { outer.Populate("MNOPQRSTUVWX", settings); }
+            finally { Font.textureRebuilt -= OnRebuilt; }
+            Assert.Equal(8, inner.vertexCount);
+            var innerAlone = new TextGenerator();
+            innerAlone.Populate("AB", settings);
+            var outerAlone = new TextGenerator();
+            outerAlone.Populate("MNOPQRSTUVWX", settings);
+            Assert.Equal(innerAlone.verts.Select(v => (v.position, v.uv0)), inner.verts.Select(v => (v.position, v.uv0)));
+            Assert.Equal(outerAlone.verts.Select(v => (v.position, v.uv0)), outer.verts.Select(v => (v.position, v.uv0)));
+            Assert.Equal(48, outer.vertexCount);
+        }
+
         [Fact]
         public void MissingCharactersTakeNoRoom()
         {
