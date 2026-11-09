@@ -15,6 +15,13 @@ const TREE_SCALE: f32 = 1.0 / 255.0;
 /// 1 / (1 + 25 x^2), faded linearly to 0 between x^2 = 0.64 and 1.
 const LEGACY_FALLOFF_K: f32 = 25.0;
 const LEGACY_FADE_START: f32 = 0.64;
+/// A segment is solved again when the change of its inputs since its last solve, relative to
+/// their current brightness plus this, reaches `DynamicGI.updateThreshold` (a percentage).
+const CHANGE_EPSILON: f32 = 1e-4 / 127.0;
+/// An indirect scale change by more than this solves every segment again.
+const SCALE_CHANGE: f32 = 1.0 / 8_388_608.0;
+/// `DynamicGI.updateThreshold`'s default, in percent.
+pub const DEFAULT_UPDATE_THRESHOLD: f32 = 1.0;
 
 /// A realtime point light as precomputed realtime GI sees it in the built-in pipeline: not
 /// shadowed, with the legacy falloff (other pipelines' falloffs are not supported yet).
@@ -85,15 +92,32 @@ pub struct SystemSolver {
     /// The clusters' emission is computed from the two above before the next update.
     emission_dirty: bool,
     bounce: Vec<[f32; 3]>,
+    /// The cluster, tree and constant values of the last update, and how much each changed in
+    /// it: the mean of its channels' absolute changes.
     values: Vec<[f32; 3]>,
+    changes: Vec<f32>,
     environment: Vec<[f32; 3]>,
+    /// The environment the last update used, and the change of each value in it.
+    environment_used: Vec<[f32; 3]>,
+    environment_changes: Vec<f32>,
     gathered: Vec<[f32; 3]>,
-    /// Output texels (system resolution, row-major): drawn (RGB9E5, indirect scale applied) and
-    /// as the bounce reads them (decoded, unscaled).
+    /// Per segment, the weighted change of its inputs since it was last solved (negative right
+    /// after a solve).
+    pending: Vec<f32>,
+    /// Every segment is solved in the next update (the first one, or the scale changed).
+    solve_all: bool,
+    /// `DynamicGI.updateThreshold` as a fraction.
+    threshold: f32,
+    /// Output texels (system resolution, row-major) as drawn: RGB9E5, indirect scale applied.
     encoded: Vec<u32>,
-    output: Vec<[f32; 3]>,
     indirect_scale: f32,
-    largest_bounce: f32,
+    /// The scale the drawn texels were solved with.
+    solved_scale: f32,
+}
+
+/// The mean of the channels' absolute changes from `old` to `new`.
+fn mean_change(new: [f32; 3], old: [f32; 3]) -> f32 {
+    ((new[0] - old[0]).abs() + (new[1] - old[1]).abs() + (new[2] - old[2]).abs()) / 3.0
 }
 
 fn mul_add(acc: &mut [f32; 3], w: f32, v: [f32; 3]) {
@@ -166,13 +190,18 @@ impl SystemSolver {
             renderer_emission: vec![None; system.renderer_count],
             emission_dirty: false,
             bounce: vec![[0.0; 3]; clusters],
-            values: vec![[0.0; 3]; system.input.values()],
+            values: vec![[0.0; 3]; values],
+            changes: vec![0.0; values],
             environment: vec![[0.0; 3]; ENVIRONMENT_VALUES],
+            environment_used: vec![[0.0; 3]; ENVIRONMENT_VALUES],
+            environment_changes: vec![0.0; ENVIRONMENT_VALUES],
             gathered: vec![[0.0; 3]; references],
+            pending: vec![-1.0; system.transport.segments.len()],
+            solve_all: true,
+            threshold: DEFAULT_UPDATE_THRESHOLD / 100.0,
             encoded: vec![0; texels],
-            output: vec![[0.0; 3]; texels],
             indirect_scale: 1.0,
-            largest_bounce: 0.0,
+            solved_scale: 1.0,
             system,
         })
     }
@@ -325,107 +354,124 @@ impl SystemSolver {
         self.environment.fill(rgb);
     }
 
-    /// DynamicGI.indirectScale: scales the texels drawn; the bounce reads the unscaled ones.
-    /// (The Editor's texels come out 2.00 to 2.07 times brighter with 2: the small extra is
-    /// unexplained.)
+    /// DynamicGI.indirectScale: scales the texels drawn; the bounce reads them divided by it
+    /// again. A change solves every segment in the next update.
     pub fn set_indirect_scale(&mut self, scale: f32) {
         self.indirect_scale = scale;
     }
 
-    /// Starts the bounce at the environment's first value (only converged output is compared
-    /// with the Editor, so the start is not measured).
-    pub fn reset_bounce(&mut self) {
-        let start = self.environment[0];
-        self.bounce.fill(start);
+    /// DynamicGI.updateThreshold, in percent: how much the inputs of a segment have to change,
+    /// relative to their brightness, before it is solved again.
+    pub fn set_update_threshold(&mut self, percent: f32) {
+        self.threshold = percent / 100.0;
     }
 
-    /// One update: radiance from the current direct light and bounce, the transport into the
-    /// texels and the next bounce. Returns the largest change of a bounce value.
-    pub fn update(&mut self) -> f32 {
+    /// One update (matches the Unity 6000.0.71f1 Editor, tests/projects/realtimegi): radiance
+    /// from the current direct light and bounce, the transport into the texels of the segments
+    /// whose inputs changed enough, and the next bounce. Returns the number of segments solved:
+    /// 0 when the output is converged.
+    pub fn update(&mut self) -> usize {
         self.update_emission();
         let system = &*self.system;
         let clusters = self.direct.len();
         for c in 0..clusters {
-            self.values[c] = [0, 1, 2].map(|k| {
+            let value = [0, 1, 2].map(|k| {
                 self.albedo2[c][k] * (self.direct[c][k] + self.bounce[c][k]) + self.emission[c][k]
             });
+            self.changes[c] = mean_change(value, self.values[c]);
+            self.values[c] = value;
         }
         let mut child = 0;
-        let mut weight = 0;
         for (p, &count) in system.input.tree_children.iter().enumerate() {
-            let mut sum = [0.0f32; 3];
+            let (mut sum, mut change) = ([0.0f32; 3], 0.0f32);
             for _ in 0..count {
-                mul_add(
-                    &mut sum,
-                    system.input.tree_weights[weight] as f32 * TREE_SCALE,
-                    self.values[child],
-                );
+                let w = system.input.tree_weights[child] as f32 * TREE_SCALE;
+                mul_add(&mut sum, w, self.values[child]);
+                change += w * self.changes[child];
                 child += 1;
-                weight += 1;
             }
             self.values[clusters + p] = sum;
+            self.changes[clusters + p] = change;
         }
         let last = self.values.len() - 1;
         self.values[last] = [0.0; 3];
+        self.changes[last] = 0.0;
+        for ((used, change), &now) in self
+            .environment_used
+            .iter_mut()
+            .zip(&mut self.environment_changes)
+            .zip(&self.environment)
+        {
+            *change = mean_change(now, *used);
+            *used = now;
+        }
 
+        let solve_all = std::mem::take(&mut self.solve_all)
+            || (self.indirect_scale - self.solved_scale).abs() > SCALE_CHANGE;
+        self.solved_scale = self.indirect_scale;
         let width = system.transport.width as usize;
-        for segment in &system.transport.segments {
+        let mut solved = 0;
+        for (segment, pending) in system.transport.segments.iter().zip(&mut self.pending) {
             let refs = segment.references.len();
+            let (mut brightness, mut change) = ([0.0f32; 3], 0.0f32);
             for (k, &(dependency, index)) in segment.references.iter().enumerate() {
                 // Indices were checked against the values in `new`.
-                let value = match self.sources[dependency as usize] {
-                    Source::Environment => self.environment[index as usize],
-                    Source::Own => self.values[index as usize],
-                    Source::Absent => [0.0; 3],
+                let (value, delta) = match self.sources[dependency as usize] {
+                    Source::Environment => (
+                        self.environment[index as usize],
+                        self.environment_changes[index as usize],
+                    ),
+                    Source::Own => (self.values[index as usize], self.changes[index as usize]),
+                    Source::Absent => ([0.0; 3], 0.0),
                 };
                 let w = segment.reference_weights[k] as f32 * TRANSPORT_SCALE;
                 self.gathered[k] = value.map(|v| v * w);
+                mul_add(&mut brightness, 1.0, self.gathered[k]);
+                change += w * delta;
             }
+            if !solve_all {
+                *pending = pending.max(0.0) + change;
+                let mean = (brightness[0] + brightness[1] + brightness[2]) / 3.0;
+                if *pending / (mean + CHANGE_EPSILON) < self.threshold {
+                    continue;
+                }
+            }
+            *pending = -1.0;
+            solved += 1;
             for (t, &(x, y)) in segment.texels.iter().enumerate() {
                 let row = &segment.weights[t * refs..(t + 1) * refs];
                 let mut sum = [0.0f32; 3];
                 for (k, &w) in row.iter().enumerate() {
                     mul_add(&mut sum, w as f32, self.gathered[k]);
                 }
-                let texel = y as usize * width + x as usize;
-                let sum = sum.map(|v| v.max(0.0));
-                self.output[texel] = decode_rgb9e5(encode_rgb9e5(sum));
-                self.encoded[texel] = encode_rgb9e5(sum.map(|v| v * self.indirect_scale));
+                self.encoded[y as usize * width + x as usize] =
+                    encode_rgb9e5(sum.map(|v| v.max(0.0) * self.indirect_scale));
             }
             for &((dx, dy), (sx, sy)) in &segment.copies {
-                let (d, s) = (
-                    dy as usize * width + dx as usize,
-                    sy as usize * width + sx as usize,
-                );
-                self.encoded[d] = self.encoded[s];
-                self.output[d] = self.output[s];
+                self.encoded[dy as usize * width + dx as usize] =
+                    self.encoded[sy as usize * width + sx as usize];
             }
         }
 
+        // Each cluster's bounce is the drawn texel of its first resampling sample, divided by
+        // the indirect scale (the precomputed data lists more weighted samples per cluster;
+        // the Editor reads only the first).
         let transport = &system.transport;
-        let mut change = 0.0f32;
-        let mut largest = 0.0f32;
+        let scale = if self.indirect_scale != 0.0 {
+            self.indirect_scale
+        } else {
+            1.0
+        };
         for c in 0..clusters {
-            let mut sum = [0.0f32; 3];
-            let samples = &transport.bounce
-                [transport.bounce_samples[c] as usize..transport.bounce_samples[c + 1] as usize];
-            for &((x, y), w) in samples {
-                mul_add(&mut sum, w, self.output[y as usize * width + x as usize]);
-            }
-            for k in 0..3 {
-                change = change.max((sum[k] - self.bounce[c][k]).abs());
-                largest = largest.max(sum[k]);
-            }
-            self.bounce[c] = sum;
+            let first = transport.bounce_samples[c] as usize;
+            self.bounce[c] = if first < transport.bounce_samples[c + 1] as usize {
+                let ((x, y), _) = transport.bounce[first];
+                decode_rgb9e5(self.encoded[y as usize * width + x as usize]).map(|v| v / scale)
+            } else {
+                [0.0; 3]
+            };
         }
-        self.largest_bounce = largest;
-        change
-    }
-
-    /// The largest bounce value after the last update: the bounce reads the drawn format's
-    /// quantized texels, so updates can keep changing values by about one step of that format.
-    pub fn largest_bounce(&self) -> f32 {
-        self.largest_bounce
+        solved
     }
 
     /// Per cluster, the albedo it is lit with (the square of its 8-bit albedo) and its emission.
@@ -438,10 +484,5 @@ impl SystemSolver {
     /// system resolution.
     pub fn encoded(&self) -> &[u32] {
         &self.encoded
-    }
-
-    /// The texels before the indirect scale, decoded.
-    pub fn output(&self) -> &[[f32; 3]] {
-        &self.output
     }
 }

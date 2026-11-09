@@ -77,6 +77,7 @@ fn material_textures(system: &System, colors: &[([f32; 3], [f32; 3])]) -> (Vec<u
     (albedo, emission)
 }
 
+#[derive(Clone, Copy)]
 struct Room {
     light: [f32; 3],
     intensity: f32,
@@ -86,8 +87,15 @@ struct Room {
     panel_emission: [f32; 3],
     /// What DynamicGI.SetEmissive gave the panel (linear), if anything.
     panel_set_emissive: Option<[f32; 3]>,
-    /// The left wall's color.
+    /// The left wall's color, and the one its albedo texture was last rendered with
+    /// (Renderer.UpdateGIMaterials).
     left: [f32; 3],
+    left_rendered: [f32; 3],
+    /// The flat ambient color (gamma).
+    ambient: [f32; 3],
+    point_light: bool,
+    /// DynamicGI.updateThreshold.
+    threshold: f32,
 }
 
 const BASE: Room = Room {
@@ -98,89 +106,148 @@ const BASE: Room = Room {
     panel_emission: [2.0, 1.0, 0.2], // (1, 0.5, 0.1) * 2
     panel_set_emissive: None,
     left: [0.8, 0.1, 0.1],
+    left_rendered: [0.8, 0.1, 0.1],
+    ambient: [0.1, 0.12, 0.2],
+    point_light: true,
+    threshold: 1.0,
 };
 const MOVED: [f32; 3] = [1.5, 2.5, -1.5];
 /// The emissive panel's renderer (scene object file ID).
 const PANEL: i64 = 1629154324;
 
-/// Converges the Room scene's system under `room` and compares it with the reference `case`:
-/// (values outside the probe comparator's tolerance, values compared, median relative error).
-fn converge(room: &Room, case: &str) -> (usize, usize, f32) {
-    let data = room_data();
-    let system = Arc::new(data.systems[0].clone());
-    // The scene mapping's renderers (the Room scene's renderer file IDs) and their materials.
-    let white = [0.8, 0.8, 0.8];
-    let colors: Vec<([f32; 3], [f32; 3])> = data.renderers[system.first_renderer..]
-        [..system.renderer_count]
-        .iter()
-        .map(|&(object, _)| match object {
-            PANEL => ([0.2, 0.2, 0.2], room.panel_emission),
-            308039783 => (room.left, [0.0; 3]),        // Left
-            1583214537 => ([0.1, 0.8, 0.1], [0.0; 3]), // Right
-            973394265 | 152063223 | 605051979 | 948094850 => (white, [0.0; 3]),
-            other => panic!("unknown renderer {other}"),
-        })
-        .collect();
-    let (albedo, emission) = material_textures(&system, &colors);
-    let panel = renderer_of(&data, PANEL);
-    let mut solver = SystemSolver::new(system, true).unwrap();
-    solver.set_albedo(&albedo).unwrap();
-    solver.set_emission(&emission).unwrap();
-    if let Some(color) = room.panel_set_emissive {
-        solver.set_renderer_emission(panel, color).unwrap();
-    }
-    solver.set_uniform_environment([0.1, 0.12, 0.2].map(gamma_to_linear));
-    solver.set_lights(&[PointLight {
-        position: room.light,
-        // The project has no linear light intensity: the gamma color is scaled, then converted.
-        color: [1.0, 0.95, 0.85].map(|c: f32| gamma_to_linear(c * room.intensity * room.bounce)),
-        range: 10.0,
-    }]);
-    solver.set_indirect_scale(room.indirect_scale);
-    solver.reset_bounce();
-    for _ in 0..1000 {
-        if solver.update() < 1e-7 {
-            break;
-        }
-    }
-    let (width, texels) = reference(case);
-    let t = &solver.system().transport;
-    let (mut fails, mut total, mut relative) = (0, 0, Vec::new());
-    for y in 0..t.height as usize {
-        for x in 0..t.width as usize {
-            let r = texels[y * width + x];
-            if r[3] <= 0.0 {
-                continue;
-            }
-            let got = crate::solver::decode_rgb9e5(solver.encoded()[y * t.width as usize + x]);
-            for k in 0..3 {
-                let d = (got[k] - r[k]).abs();
-                total += 1;
-                fails += (d > 0.02 + 0.05 * r[k].abs()) as usize;
-                relative.push(d / r[k].abs().max(1e-3));
-            }
-        }
-    }
-    relative.sort_by(f32::total_cmp);
-    (fails, total, relative[relative.len() / 2])
+/// Values allowed outside the probe comparator's tolerance per case once the light moved: a few
+/// isolated texels, since a part of the lightmap is solved again only when its inputs change by
+/// the update threshold, and the point light's direct input is within about 2% per cluster.
+const ISOLATED: usize = 4;
+
+/// The Room scene's system replayed through the probe's cases in order: the Editor's update
+/// solves a segment again only when its inputs changed by `DynamicGI.updateThreshold`, so a
+/// converged lightmap depends on the state it converged from.
+struct Replay {
+    data: Precomputed,
+    solver: SystemSolver,
+    room: Option<Room>,
 }
 
-/// `allowed`: values allowed outside the comparator tolerance; `median`: the largest median
-/// relative error (both just above what was measured: chart-corner texels and the falloff).
-fn check(room: &Room, case: &str, allowed: usize, median_limit: f32) {
-    let (fails, total, median) = converge(room, case);
-    eprintln!(
-        "{case}: {fails} of {total} values outside the tolerance, median relative error {median}"
-    );
-    assert!(total > 4000, "{case}: {total} values");
-    assert!(
-        fails <= allowed,
-        "{case}: {fails} of {total} values outside the tolerance"
-    );
-    assert!(
-        median < median_limit,
-        "{case}: median relative error {median}"
-    );
+impl Replay {
+    fn new() -> Self {
+        let data = room_data();
+        let solver = SystemSolver::new(Arc::new(data.systems[0].clone()), true).unwrap();
+        Self {
+            data,
+            solver,
+            room: None,
+        }
+    }
+
+    /// Sets the inputs of `room` that differ from the last ones.
+    fn set(&mut self, room: Room) {
+        let old = self.room.take();
+        let changed = |f: &dyn Fn(&Room) -> bool| old.as_ref().is_none_or(|o| !f(o));
+        let system = &self.data.systems[0];
+        // The scene mapping's renderers (the Room scene's renderer file IDs) and their materials.
+        if changed(&|o| {
+            o.panel_emission == room.panel_emission && o.left_rendered == room.left_rendered
+        }) {
+            let white = [0.8, 0.8, 0.8];
+            let colors: Vec<([f32; 3], [f32; 3])> = self.data.renderers[system.first_renderer..]
+                [..system.renderer_count]
+                .iter()
+                .map(|&(object, _)| match object {
+                    PANEL => ([0.2, 0.2, 0.2], room.panel_emission),
+                    308039783 => (room.left_rendered, [0.0; 3]), // Left
+                    1583214537 => ([0.1, 0.8, 0.1], [0.0; 3]),   // Right
+                    973394265 | 152063223 | 605051979 | 948094850 => (white, [0.0; 3]),
+                    other => panic!("unknown renderer {other}"),
+                })
+                .collect();
+            let (albedo, emission) = material_textures(system, &colors);
+            self.solver.set_albedo(&albedo).unwrap();
+            self.solver.set_emission(&emission).unwrap();
+        }
+        if let Some(color) = room.panel_set_emissive
+            && changed(&|o| o.panel_set_emissive == room.panel_set_emissive)
+        {
+            let panel = renderer_of(&self.data, PANEL);
+            self.solver.set_renderer_emission(panel, color).unwrap();
+        }
+        self.solver
+            .set_uniform_environment(room.ambient.map(gamma_to_linear));
+        let lights = [PointLight {
+            position: room.light,
+            // The project has no linear light intensity: the gamma color is scaled, then
+            // converted.
+            color: [1.0, 0.95, 0.85].map(|c: f32| (c * room.intensity * room.bounce).powf(2.2)),
+            range: 10.0,
+        }];
+        self.solver
+            .set_lights(if room.point_light { &lights } else { &[] });
+        self.solver.set_indirect_scale(room.indirect_scale);
+        self.solver.set_update_threshold(room.threshold);
+        self.room = Some(room);
+    }
+
+    /// Updates until the drawn texels stop changing (as the engine decides convergence).
+    fn converge(&mut self) {
+        let mut last = self.solver.encoded().to_vec();
+        for _ in 0..1000 {
+            self.solver.update();
+            if self.solver.encoded() == &last[..] {
+                return;
+            }
+            last.copy_from_slice(self.solver.encoded());
+        }
+        panic!("no convergence in 1000 updates");
+    }
+
+    /// Sets `room`, converges and compares with the reference `case`: (values outside the probe
+    /// comparator's tolerance, values compared, median relative error).
+    fn case(&mut self, room: Room, case: &str) -> (usize, usize, f32) {
+        self.set(room);
+        self.converge();
+        let (width, texels) = reference(case);
+        let t = &self.solver.system().transport;
+        let (mut fails, mut total, mut relative) = (0, 0, Vec::new());
+        for y in 0..t.height as usize {
+            for x in 0..t.width as usize {
+                let r = texels[y * width + x];
+                if r[3] <= 0.0 {
+                    continue;
+                }
+                let got =
+                    crate::solver::decode_rgb9e5(self.solver.encoded()[y * t.width as usize + x]);
+                for k in 0..3 {
+                    let d = (got[k] - r[k]).abs();
+                    total += 1;
+                    if d > 0.02 + 0.05 * r[k].abs() {
+                        fails += 1;
+                        eprintln!("  {case} ({x},{y}) channel {k}: {} vs {}", got[k], r[k]);
+                    }
+                    relative.push(d / r[k].abs().max(1e-3));
+                }
+            }
+        }
+        relative.sort_by(f32::total_cmp);
+        (fails, total, relative[relative.len() / 2])
+    }
+
+    /// `allowed`: values allowed outside the comparator tolerance; `median_limit`: the largest
+    /// median relative error.
+    fn check(&mut self, room: Room, case: &str, allowed: usize, median_limit: f32) {
+        let (fails, total, median) = self.case(room, case);
+        eprintln!(
+            "{case}: {fails} of {total} values outside the tolerance, median relative error {median}"
+        );
+        assert!(total > 4000, "{case}: {total} values");
+        assert!(
+            fails <= allowed,
+            "{case}: {fails} of {total} values outside the tolerance"
+        );
+        assert!(
+            median < median_limit,
+            "{case}: median relative error {median}"
+        );
+    }
 }
 
 #[test]
@@ -214,58 +281,142 @@ fn reads_the_rooms_precomputed_data() {
 }
 
 #[test]
-fn converges_to_the_editors_lightmap() {
-    // Known residual: a few texels at chart corners (up to about 15% off) and the falloff
-    // curve within 1%.
-    check(&BASE, "room-base", 15, 0.006);
+fn replays_the_probes_cases() {
+    // The probe's Room cases in their order, each converged from the one before.
+    let mut r = Replay::new();
+    r.check(BASE, "room-base", 0, 0.001);
+    let moved = Room {
+        light: MOVED,
+        ..BASE
+    };
+    r.check(moved, "room-moved", 0, 0.006);
+    // Twice as intense, then with bounce intensity 3 (scaled before the conversion to linear).
+    let lit = Room {
+        intensity: 4.0,
+        ..moved
+    };
+    r.check(lit, "room-intensity", ISOLATED, 0.006);
+    r.check(Room { bounce: 3.0, ..lit }, "room-bounce", ISOLATED, 0.006);
+    // DynamicGI.indirectScale 2, converged from the brighter room-bounce state: the Editor's
+    // texels are 2.00 to 2.07 times room-intensity's, as segments stop being solved once their
+    // inputs change by less than the update threshold.
+    r.check(
+        Room {
+            indirect_scale: 2.0,
+            ..lit
+        },
+        "room-indirectscale",
+        ISOLATED,
+        0.006,
+    );
+    r.set(lit);
+    r.converge();
+    // The panel's material emission changed and its texture rendered again.
+    let call = Room {
+        panel_emission: [0.4, 2.0, 0.4], // (0.2, 1, 0.2) * 2
+        ..lit
+    };
+    r.check(call, "room-emission-call", ISOLATED, 0.006);
+    // DynamicGI.SetEmissive(panel, (0, 1, 1) * 3): the color is taken to linear as a material
+    // color is.
+    let set = Room {
+        panel_set_emissive: Some([0.0, 3.0, 3.0].map(gamma_to_linear)),
+        ..call
+    };
+    r.check(set, "room-setemissive", ISOLATED, 0.006);
+    // A material emission change rendered after it does not replace it.
+    let then = Room {
+        panel_emission: [3.0, 0.0, 3.0],
+        ..set
+    };
+    r.check(then, "room-setemissive-then-call", ISOLATED, 0.006);
+    // The left wall turned blue: no change until its texture is rendered again
+    // (UpdateGIMaterials).
+    let blue = Room {
+        left: [0.1, 0.1, 0.8],
+        ..then
+    };
+    r.check(blue, "room-albedo-nocall", ISOLATED, 0.006);
+    let blue = Room {
+        left_rendered: blue.left,
+        ..blue
+    };
+    r.check(blue, "room-albedo-call", ISOLATED, 0.006);
+    // The ambient color changed (DynamicGI.UpdateEnvironment changes nothing more).
+    let ambient = Room {
+        ambient: [0.6, 0.5, 0.2],
+        ..blue
+    };
+    r.check(ambient, "room-env-nocall", ISOLATED, 0.006);
+    r.check(ambient, "room-env-call", ISOLATED, 0.006);
+    // (The skybox cases are not supported yet; the probe returns to the same flat ambient.)
+    r.check(
+        Room {
+            point_light: false,
+            ..ambient
+        },
+        "room-pointoff",
+        ISOLATED,
+        0.006,
+    );
+    // DynamicGI.updateThreshold 0, converged from the brighter bounce state again: every part
+    // is solved again until the output stops changing.
+    r.set(Room {
+        bounce: 3.0,
+        ..ambient
+    });
+    r.converge();
+    r.check(
+        Room {
+            threshold: 0.0,
+            indirect_scale: 2.0,
+            ..ambient
+        },
+        "room-threshold0",
+        ISOLATED,
+        0.006,
+    );
 }
 
 #[test]
-fn a_moved_brighter_light() {
-    // Controls outside the base setup: the light moved, then twice as intense, then with bounce
-    // intensity 3 (scaled before the conversion to linear), then DynamicGI.indirectScale 2.
-    check(
-        &Room {
-            light: MOVED,
-            ..BASE
-        },
-        "room-moved",
-        30,
-        0.006,
-    );
-    check(
-        &Room {
-            light: MOVED,
-            intensity: 4.0,
-            ..BASE
-        },
-        "room-intensity",
-        45,
-        0.006,
-    );
-    check(
-        &Room {
-            light: MOVED,
-            intensity: 4.0,
-            bounce: 3.0,
-            ..BASE
-        },
-        "room-bounce",
-        60,
-        0.006,
-    );
-    check(
-        &Room {
-            light: MOVED,
-            intensity: 4.0,
-            indirect_scale: 2.0,
-            ..BASE
-        },
-        "room-indirectscale",
-        110,
-        0.0075,
-    );
-    // (The Editor's texels are 2.00 to 2.07 times those without the scale; Unbound's exactly 2.)
+fn the_update_threshold_keeps_parts_that_changed_less() {
+    // Converged from a brighter and from a darker state: at the default threshold of 1% the
+    // outputs differ (parts whose inputs changed by less keep earlier lighting), at 0 they are
+    // the same fixed point.
+    let mut texels = Vec::new();
+    for threshold in [1.0, 0.0] {
+        let mut outputs = Vec::new();
+        for start in [1.0, 3.0] {
+            let mut r = Replay::new();
+            r.set(Room {
+                bounce: start,
+                ..BASE
+            });
+            r.converge();
+            r.set(Room {
+                bounce: 2.0,
+                threshold,
+                ..BASE
+            });
+            r.converge();
+            outputs.push(r.solver.encoded().to_vec());
+        }
+        texels.push(outputs);
+    }
+    assert_ne!(texels[0][0], texels[0][1]);
+    assert_eq!(texels[1][0], texels[1][1]);
+    // A threshold above the change of a part's inputs leaves it as it was.
+    let mut r = Replay::new();
+    r.set(BASE);
+    r.converge();
+    let before = r.solver.encoded().to_vec();
+    r.set(Room {
+        intensity: 2.02,
+        threshold: 50.0,
+        ..BASE
+    });
+    assert_eq!(r.solver.update(), 0);
+    assert_eq!(r.solver.encoded(), &before[..]);
 }
 
 #[test]
@@ -460,45 +611,6 @@ fn material_textures_of_another_size_fail() {
     let mut solver = SystemSolver::new(Arc::new(data.systems[0].clone()), true).unwrap();
     assert!(solver.set_albedo(&[0u8; 16]).is_err());
     assert!(solver.set_emission(&[0f32; 16]).is_err());
-}
-
-#[test]
-fn material_changes_match_the_editor() {
-    // The light moved and twice as intense, as in the probe from room-intensity on.
-    let lit = Room {
-        light: MOVED,
-        intensity: 4.0,
-        ..BASE
-    };
-    // The panel's material emission changed and its texture rendered again.
-    let call = Room {
-        panel_emission: [0.4, 2.0, 0.4], // (0.2, 1, 0.2) * 2
-        ..lit
-    };
-    check(&call, "room-emission-call", 45, 0.006);
-    // DynamicGI.SetEmissive(panel, (0, 1, 1) * 3): the color is taken to linear as a material
-    // color is (raw, 948 of 5070 values are outside the tolerance).
-    let set = Room {
-        panel_set_emissive: Some([0.0, 3.0, 3.0].map(gamma_to_linear)),
-        ..call
-    };
-    check(&set, "room-setemissive", 45, 0.006);
-    // A material emission change rendered after it does not replace it.
-    let then = Room {
-        panel_emission: [3.0, 0.0, 3.0],
-        ..set
-    };
-    check(&then, "room-setemissive-then-call", 45, 0.006);
-    // The left wall turned blue and its texture rendered again (UpdateGIMaterials).
-    check(
-        &Room {
-            left: [0.1, 0.1, 0.8],
-            ..then
-        },
-        "room-albedo-call",
-        45,
-        0.006,
-    );
 }
 
 /// Unity's built-in Cube: positions, lightmap UVs (UV2) and triangles.
@@ -824,6 +936,8 @@ fn realtime_uvs_of_another_scene_match_its_layout() {
     // The solver runs on it too.
     let mut solver = SystemSolver::new(Arc::new(system.clone()), true).unwrap();
     solver.set_uniform_environment([0.1; 3]);
-    solver.reset_bounce();
-    assert!(solver.update().is_finite());
+    // The first update solves every segment; the updates then stop solving.
+    assert_eq!(solver.update(), system.transport.segments.len());
+    assert!((0..100).any(|_| solver.update() == 0));
+    assert!(solver.encoded().iter().any(|&t| t != 0));
 }

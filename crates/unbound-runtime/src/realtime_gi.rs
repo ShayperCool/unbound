@@ -41,18 +41,13 @@ pub struct GiFrame {
     pub synchronous: i32,
     /// The time this frame may spend updating systems, in milliseconds (at least one is updated).
     pub budget_ms: f32,
+    /// DynamicGI.updateThreshold, in percent.
+    pub update_threshold: f32,
 }
 
 /// `update`'s result bits.
 pub const UPDATE_CHANGED: i32 = 1;
 pub const UPDATE_CONVERGED: i32 = 2;
-
-/// Updates in a row without a change of the drawn texels after which a scene is converged.
-const STABLE_UPDATES: u32 = 2;
-/// A system update whose bounce changes by less than this part of its largest bounce value counts
-/// as stable even when drawn texels still change: the bounce reads the drawn RGB9E5 texels, whose
-/// 9-bit mantissas can keep a value flipping by one step.
-const SETTLED_CHANGE: f32 = 1.0 / 512.0;
 
 struct Atlas {
     size: u32,
@@ -71,10 +66,10 @@ struct Scene {
     frame: GiFrame,
     /// The next system to update when the budget does not allow all.
     cursor: usize,
-    /// Updates of every system since the drawn texels last changed.
-    stable: u32,
-    /// Systems updated since `stable` was last counted.
-    updated: usize,
+    /// Systems updated in a row without a change of their drawn texels: the scene is converged
+    /// once every system has had such an update (the bounce reads the drawn texels, so nothing
+    /// changes after it until the inputs do).
+    stable: usize,
     changed: bool,
 }
 
@@ -164,7 +159,6 @@ fn register(data: unbound_gi::data::Precomputed, linear_space: bool) -> Result<J
                 frame: GiFrame::default(),
                 cursor: 0,
                 stable: 0,
-                updated: 0,
                 changed: true,
             },
         );
@@ -223,7 +217,6 @@ impl Scene {
     /// Inputs changed: the systems update until converged again.
     fn restart(&mut self) {
         self.stable = 0;
-        self.updated = 0;
     }
 
     fn set_inputs(&mut self, frame: &GiFrame, lights: &[GiLight]) -> Result<()> {
@@ -265,8 +258,15 @@ impl Scene {
             }
             self.changed = true;
         }
+        let threshold_changed = self.frame.update_threshold != frame.update_threshold;
+        if threshold_changed {
+            for system in &mut self.systems {
+                system.set_update_threshold(frame.update_threshold);
+            }
+        }
         if lights_changed
             || environment_changed
+            || threshold_changed
             || self.frame.indirect_scale != frame.indirect_scale
         {
             self.restart();
@@ -279,36 +279,30 @@ impl Scene {
     /// changed ones into their atlases.
     fn update(&mut self) -> i32 {
         let count = self.systems.len();
-        if count == 0 || self.stable >= STABLE_UPDATES {
+        if count == 0 || self.stable >= count {
             let changed = std::mem::take(&mut self.changed);
             return UPDATE_CONVERGED | if changed { UPDATE_CHANGED } else { 0 };
         }
         let start = std::time::Instant::now();
         let budget = std::time::Duration::from_secs_f32(self.frame.budget_ms.max(0.0) / 1000.0);
         let mut done = 0;
-        while done < count && (done == 0 || self.frame.synchronous != 0 || start.elapsed() < budget)
+        while done < count
+            && self.stable < count
+            && (done == 0 || self.frame.synchronous != 0 || start.elapsed() < budget)
         {
             let index = self.cursor % count;
             self.cursor = (index + 1) % count;
             let system = &mut self.systems[index];
-            let change = system.update();
+            system.update();
             let atlas = &mut self.atlases[system.system().atlas];
             let drawn = copy_into(system, atlas);
             self.changed |= drawn;
-            if drawn && change > SETTLED_CHANGE * system.largest_bounce() {
-                self.stable = 0;
-                self.updated = 0;
-            }
+            self.stable = if drawn { 0 } else { self.stable + 1 };
             done += 1;
-            self.updated += 1;
-            if self.updated >= count {
-                self.updated = 0;
-                self.stable += 1;
-            }
         }
         let changed = std::mem::take(&mut self.changed);
         (if changed { UPDATE_CHANGED } else { 0 })
-            | if self.stable >= STABLE_UPDATES {
+            | if self.stable >= count {
                 UPDATE_CONVERGED
             } else {
                 0
@@ -544,6 +538,7 @@ mod tests {
             environment: [0.01, 0.01, 0.02],
             synchronous: 1,
             budget_ms: 2.0,
+            update_threshold: 1.0,
         };
         let lights = [point([0.0, 2.0, 0.0])];
         let mut frames = 0;
@@ -580,6 +575,14 @@ mod tests {
             update(handle, &scaled, &[point([1.0, 2.0, 0.0])]).unwrap() & UPDATE_CHANGED,
             0
         );
+        // DynamicGI.updateThreshold 0 solves every part again in each update: the output still
+        // converges (the drawn texels stop changing).
+        let every = GiFrame {
+            update_threshold: 0.0,
+            ..scaled
+        };
+        let lights = [point([1.0, 2.0, 0.0])];
+        assert!((0..500).any(|_| update(handle, &every, &lights).unwrap() & UPDATE_CONVERGED != 0));
         // Unsupported lights fail loudly; the scene goes away with its handle.
         let spot = GiLight {
             kind: 0,

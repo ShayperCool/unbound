@@ -28,7 +28,6 @@ public static class StubDefaults
     {
         // Measured in a scene without realtime GI; indirectScale is the scene's Indirect
         // Intensity, not a constant.
-        ["UnityEngine.DynamicGI.updateThreshold"] = new("1f", "value"),
         ["UnityEngine.DynamicGI.materialUpdateTimeSlice"] = new("8", "global::System.Math.Max(0, value)"),
         // The Editor rejects modes other than Enabled, including undefined enum values.
         ["UnityEngine.Scripting.GarbageCollector.GCMode"] = new("global::UnityEngine.Scripting.GarbageCollector.Mode.Enabled",

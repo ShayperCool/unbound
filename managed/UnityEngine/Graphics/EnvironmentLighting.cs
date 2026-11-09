@@ -34,6 +34,12 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>How much, in percent, the inputs of a part of a realtime lightmap have to change,
+        /// relative to their brightness, before precomputed realtime GI updates it again
+        /// (default 1). Converged lighting depends on it: matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/realtimegi.</summary>
+        public static float updateThreshold { get; set; } = 1f;
+
         /// <summary>Whether precomputed realtime GI has settled after the last change of its
         /// inputs (true without any).</summary>
         public static bool isConverged => RealtimeGI.IsConverged;

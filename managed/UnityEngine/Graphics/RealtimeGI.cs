@@ -30,6 +30,7 @@ namespace Unbound.Runtime
         internal float EnvironmentR, EnvironmentG, EnvironmentB;
         internal int Synchronous;
         internal float BudgetMs;
+        internal float UpdateThreshold;
     }
 }
 
@@ -320,6 +321,7 @@ namespace UnityEngine
                 IndirectScale = DynamicGI.indirectScale,
                 Synchronous = Synchronous ? 1 : 0,
                 BudgetMs = FrameBudgetMs,
+                UpdateThreshold = DynamicGI.updateThreshold,
             };
             var environment = Environment();
             frame.EnvironmentR = environment.r;
