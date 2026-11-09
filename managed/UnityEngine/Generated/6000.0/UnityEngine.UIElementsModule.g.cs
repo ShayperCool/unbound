@@ -238,19 +238,10 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId onAddProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId allowRemoveProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId onRemoveProperty;
-        [global::Unbound.Stub] internal void SetupArraySizeField() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.SetupArraySizeField"); }
-        [global::Unbound.Stub] internal void UpdateArraySizeField() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.UpdateArraySizeField"); }
         [global::Unbound.Stub] internal void SetOverMaxMultiEditLimit(bool isOverLimit, int maxMultiEditCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.SetOverMaxMultiEditLimit"); }
-        [global::Unbound.Stub] internal override global::UnityEngine.UIElements.ListViewDragger CreateDragger() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.CreateDragger"); return default; }
-        [global::Unbound.Stub] internal override global::UnityEngine.UIElements.ICollectionDragAndDropController CreateDragAndDropController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.CreateDragAndDropController"); return default; }
-        public global::System.Func<global::UnityEngine.UIElements.VisualElement> makeHeader { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.makeHeader"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.makeHeader"); } }
-        public global::System.Func<global::UnityEngine.UIElements.VisualElement> makeFooter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.makeFooter"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.makeFooter"); } }
-        internal global::UnityEngine.UIElements.Foldout headerFoldout { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.headerFoldout"); return default; } }
         public global::UnityEngine.UIElements.BindingSourceSelectionMode bindingSourceSelectionMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.bindingSourceSelectionMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.bindingSourceSelectionMode"); } }
         internal bool autoAssignSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.autoAssignSource"); return default; } }
         internal global::UnityEngine.UIElements.TextField arraySizeField { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.arraySizeField"); return default; } }
-        internal global::UnityEngine.UIElements.VisualElement footer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.footer"); return default; } }
-        internal event global::System.Action reorderModeChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.reorderModeChanged"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseVerticalCollectionView.UxmlSerializedData
@@ -290,23 +281,6 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId choicesProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId textProperty;
-    }
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class BaseReorderableDragAndDropController : global::UnityEngine.UIElements.ICollectionDragAndDropController, global::UnityEngine.UIElements.IDragAndDropController<global::UnityEngine.UIElements.IListDragAndDropArgs>, global::UnityEngine.UIElements.IReorderable
-    {
-        [global::Unbound.Stub] protected readonly global::UnityEngine.UIElements.BaseVerticalCollectionView m_View;
-        [global::Unbound.Stub] protected global::System.Collections.Generic.List<int> m_SortedSelectedIds;
-        [global::Unbound.Stub] public global::System.Collections.Generic.IEnumerable<int> GetSortedSelectedIds() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseReorderableDragAndDropController.GetSortedSelectedIds"); return global::System.Array.Empty<int>(); }
-        [global::Unbound.Stub] protected BaseReorderableDragAndDropController(global::UnityEngine.UIElements.BaseVerticalCollectionView view) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseReorderableDragAndDropController.ctor"); }
-        [global::Unbound.Stub] public virtual bool CanStartDrag(global::System.Collections.Generic.IEnumerable<int> itemIds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseReorderableDragAndDropController.CanStartDrag"); return default; }
-        [global::Unbound.Stub] public virtual bool CanDrop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseReorderableDragAndDropController.CanDrop"); return default; }
-        [global::Unbound.Stub] public virtual global::UnityEngine.UIElements.StartDragArgs SetupDragAndDrop(global::System.Collections.Generic.IEnumerable<int> itemIds, bool skipText = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseReorderableDragAndDropController.SetupDragAndDrop"); return default; }
-        [global::Unbound.Stub] protected virtual int CompareId(int id1, int id2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseReorderableDragAndDropController.CompareId"); return default; }
-        public abstract global::UnityEngine.UIElements.DragVisualMode HandleDragAndDrop(global::UnityEngine.UIElements.IListDragAndDropArgs args);
-        [global::Unbound.Stub] public virtual void OnDrop(global::UnityEngine.UIElements.IListDragAndDropArgs args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseReorderableDragAndDropController.OnDrop"); }
-        [global::Unbound.Stub] public virtual void DragCleanup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseReorderableDragAndDropController.DragCleanup"); }
-        [global::Unbound.Stub] public virtual void HandleAutoExpand(global::UnityEngine.UIElements.ReusableCollectionItem item, global::UnityEngine.Vector2 pointerPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseReorderableDragAndDropController.HandleAutoExpand"); }
-        public virtual bool enableReordering { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseReorderableDragAndDropController.enableReordering"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseReorderableDragAndDropController.enableReordering"); } }
     }
     unsafe partial class BaseRuntimePanel
     {
@@ -356,7 +330,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId autoExpandProperty;
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.CustomStyleProperty<float> s_TreeViewIndentProperty;
         [global::Unbound.Stub] internal static readonly int invalidId;
-        [global::Unbound.Stub] internal override global::UnityEngine.UIElements.ICollectionDragAndDropController CreateDragAndDropController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.CreateDragAndDropController"); return default; }
         [global::Unbound.Stub] public void AddItem<T>(global::UnityEngine.UIElements.TreeViewItemData<T> item, int parentId = -1, int childIndex = -1, bool rebuildTree = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.AddItem"); }
         [global::Unbound.Stub] private protected virtual void AddItemInternal<T>(global::UnityEngine.UIElements.TreeViewItemData<T> item, int parentId, int childIndex, bool rebuildTree) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.AddItemInternal"); }
         [global::Unbound.Stub] public bool TryRemoveItem(int id, bool rebuildTree = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.TryRemoveItem"); return default; }
@@ -446,23 +419,9 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId virtualizationMethodProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId fixedItemHeightProperty;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.SerializedVirtualizationData serializedVirtualizationData;
-        [global::Unbound.Stub] internal bool HasCanStartDrag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.HasCanStartDrag"); return default; }
-        [global::Unbound.Stub] internal bool RaiseCanStartDrag(global::UnityEngine.UIElements.ReusableCollectionItem item, global::System.Collections.Generic.IEnumerable<int> ids) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.RaiseCanStartDrag"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.StartDragArgs RaiseSetupDragAndDrop(global::UnityEngine.UIElements.ReusableCollectionItem item, global::System.Collections.Generic.IEnumerable<int> ids, global::UnityEngine.UIElements.StartDragArgs args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.RaiseSetupDragAndDrop"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.DragVisualMode RaiseHandleDragAndDrop(global::UnityEngine.Vector2 pointerPosition, global::UnityEngine.UIElements.DragAndDropArgs dragAndDropArgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.RaiseHandleDragAndDrop"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.DragVisualMode RaiseDrop(global::UnityEngine.Vector2 pointerPosition, global::UnityEngine.UIElements.DragAndDropArgs dragAndDropArgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.RaiseDrop"); return default; }
-        [global::Unbound.Stub] internal virtual global::UnityEngine.UIElements.ListViewDragger CreateDragger() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.CreateDragger"); return default; }
-        [global::Unbound.Stub] internal void InitializeDragAndDropController(bool enableReordering) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.InitializeDragAndDropController"); }
-        [global::Unbound.Stub] internal virtual global::UnityEngine.UIElements.ICollectionDragAndDropController CreateDragAndDropController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.CreateDragAndDropController"); return default; }
-        [global::Unbound.Stub] internal void SetDragAndDropController(global::UnityEngine.UIElements.ICollectionDragAndDropController dragAndDropController) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.SetDragAndDropController"); }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.OnViewDataReady"); }
         [global::Unbound.Stub] void global::UnityEngine.ISerializationCallbackReceiver.OnBeforeSerialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.OnBeforeSerialize"); }
         [global::Unbound.Stub] void global::UnityEngine.ISerializationCallbackReceiver.OnAfterDeserialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.OnAfterDeserialize"); }
-        internal global::UnityEngine.UIElements.ListViewDragger dragger { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.dragger"); return default; } }
-        public event global::System.Func<global::UnityEngine.UIElements.CanStartDragArgs, bool> canStartDrag { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.canStartDrag"); } [global::Unbound.Stub] remove { } }
-        public event global::System.Func<global::UnityEngine.UIElements.SetupDragAndDropArgs, global::UnityEngine.UIElements.StartDragArgs> setupDragAndDrop { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.setupDragAndDrop"); } [global::Unbound.Stub] remove { } }
-        public event global::System.Func<global::UnityEngine.UIElements.HandleDragAndDropArgs, global::UnityEngine.UIElements.DragVisualMode> dragAndDropUpdate { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.dragAndDropUpdate"); } [global::Unbound.Stub] remove { } }
-        public event global::System.Func<global::UnityEngine.UIElements.HandleDragAndDropArgs, global::UnityEngine.UIElements.DragVisualMode> handleDrop { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.handleDrop"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.BindableElement.UxmlSerializedData
@@ -865,14 +824,6 @@ namespace UnityEngine.UIElements
         internal const string ExecuteDefaultActionAtTargetName = "ExecuteDefaultActionAtTarget";
         [global::Unbound.Stub] internal void RegisterCallback<TEventType>(global::UnityEngine.UIElements.EventCallback<TEventType> callback, global::UnityEngine.UIElements.InvokePolicy invokePolicy, global::UnityEngine.UIElements.TrickleDown useTrickleDown = (global::UnityEngine.UIElements.TrickleDown)0) where TEventType : global::UnityEngine.UIElements.EventBase<TEventType>, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.RegisterCallback"); }
         [global::Unbound.Stub] protected void NotifyPropertyChanged(in global::UnityEngine.UIElements.BindingId property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CallbackEventHandler.NotifyPropertyChanged"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct CanStartDragArgs
-    {
-        [global::Unbound.Stub] public readonly global::UnityEngine.UIElements.VisualElement draggedElement;
-        [global::Unbound.Stub] public readonly int id;
-        [global::Unbound.Stub] public readonly global::System.Collections.Generic.IEnumerable<int> selectedIds;
-        [global::Unbound.Stub] internal CanStartDragArgs(global::UnityEngine.UIElements.VisualElement draggedElement, int id, global::System.Collections.Generic.IEnumerable<int> selectedIds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CanStartDragArgs.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ChunkAllocatingArray<T>
@@ -1554,22 +1505,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static bool InterceptEvent(global::UnityEngine.UIElements.EventBase evt, global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DebuggerEventDispatchUtilities.InterceptEvent"); return default; }
         [global::Unbound.Stub] public static void PostDispatch(global::UnityEngine.UIElements.EventBase evt, global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DebuggerEventDispatchUtilities.PostDispatch"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class DefaultDragAndDropClient : global::UnityEngine.UIElements.DragAndDropData, global::UnityEngine.UIElements.IDragAndDrop
-    {
-        [global::Unbound.Stub] public override object GetGenericData(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultDragAndDropClient.GetGenericData"); return default; }
-        [global::Unbound.Stub] public override void SetGenericData(string key, object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultDragAndDropClient.SetGenericData"); }
-        [global::Unbound.Stub] public void StartDrag(global::UnityEngine.UIElements.StartDragArgs args, global::UnityEngine.Vector3 pointerPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultDragAndDropClient.StartDrag"); }
-        [global::Unbound.Stub] public void UpdateDrag(global::UnityEngine.Vector3 pointerPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultDragAndDropClient.UpdateDrag"); }
-        [global::Unbound.Stub] public void AcceptDrag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultDragAndDropClient.AcceptDrag"); }
-        [global::Unbound.Stub] public void SetVisualMode(global::UnityEngine.UIElements.DragVisualMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultDragAndDropClient.SetVisualMode"); }
-        [global::Unbound.Stub] public void DragCleanup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultDragAndDropClient.DragCleanup"); }
-        [global::Unbound.Stub] public DefaultDragAndDropClient() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultDragAndDropClient.ctor"); }
-        public override global::UnityEngine.UIElements.DragVisualMode visualMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultDragAndDropClient.visualMode"); return default; } }
-        public override object source { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultDragAndDropClient.source"); return default; } }
-        public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.Object> unityObjectReferences { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultDragAndDropClient.unityObjectReferences"); return global::System.Array.Empty<global::UnityEngine.Object>(); } }
-        public global::UnityEngine.UIElements.DragAndDropData data { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultDragAndDropClient.data"); return default; } }
-    }
     unsafe partial class DefaultEventSystem
     {
         [global::Unbound.Stub] internal static global::System.Func<bool> IsEditorRemoteConnected;
@@ -1691,44 +1626,13 @@ namespace UnityEngine.UIElements
         }
     }
     [global::Unbound.Stub]
-    internal unsafe partial struct DragAndDropArgs : global::UnityEngine.UIElements.IListDragAndDropArgs
-    {
-        public object target { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropArgs.target"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropArgs.target"); } }
-        public int insertAtIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropArgs.insertAtIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropArgs.insertAtIndex"); } }
-        public int parentId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropArgs.parentId"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropArgs.parentId"); } }
-        public int childIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropArgs.childIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropArgs.childIndex"); } }
-        public global::UnityEngine.UIElements.DragAndDropPosition dragAndDropPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropArgs.dragAndDropPosition"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropArgs.dragAndDropPosition"); } }
-        public global::UnityEngine.UIElements.DragAndDropData dragAndDropData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropArgs.dragAndDropData"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropArgs.dragAndDropData"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class DragAndDropData : global::UnityEngine.UIElements.IDragAndDropData
-    {
-        internal const string dragSourceKey = "__unity-drag-and-drop__source-view";
-        public abstract object GetGenericData(string key);
-        object global::UnityEngine.UIElements.IDragAndDropData.userData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropData.userData"); return default; } }
-        public abstract void SetGenericData(string key, object data);
-        [global::Unbound.Stub] protected DragAndDropData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropData.ctor"); }
-        public abstract object source { get; }
-        public abstract global::UnityEngine.UIElements.DragVisualMode visualMode { get; }
-        public abstract global::System.Collections.Generic.IEnumerable<global::UnityEngine.Object> unityObjectReferences { get; }
-        public virtual string[] paths { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropData.paths"); return global::System.Array.Empty<string>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropData.paths"); } }
-    }
-    [global::Unbound.Stub]
     public unsafe abstract partial class DragAndDropEventBase<T> : global::UnityEngine.UIElements.MouseEventBase<T>, global::UnityEngine.UIElements.IDragAndDropEvent where T : global::UnityEngine.UIElements.DragAndDropEventBase<T>, new()
     {
         [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropEventBase<T>.Init"); }
         [global::Unbound.Stub] protected DragAndDropEventBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropEventBase<T>.ctor"); }
     }
-    public enum DragAndDropPosition
+    unsafe static partial class DragAndDropUtility
     {
-        OverItem = 0,
-        BetweenItems = 1,
-        OutsideItems = 2,
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class DragAndDropUtility
-    {
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.IDragAndDrop GetDragAndDrop(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropUtility.GetDragAndDrop"); return default; }
         [global::Unbound.Stub] internal static void RegisterMakeClientFunc(global::System.Func<global::UnityEngine.UIElements.IDragAndDrop> makeClient) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropUtility.RegisterMakeClientFunc"); }
     }
     [global::Unbound.Stub]
@@ -1737,29 +1641,9 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragEnterEvent.Init"); }
         [global::Unbound.Stub] public DragEnterEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragEnterEvent.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class DragEventsProcessor
+    unsafe partial class DragEventsProcessor
     {
-        [global::Unbound.Stub] protected readonly global::UnityEngine.UIElements.VisualElement m_Target;
-        [global::Unbound.Stub] internal DragEventsProcessor(global::UnityEngine.UIElements.VisualElement target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragEventsProcessor.ctor"); }
-        [global::Unbound.Stub] internal void UnregisterCallbacksFromTarget(bool unregisterPanelEvents = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragEventsProcessor.UnregisterCallbacksFromTarget"); }
-        protected abstract bool CanStartDrag(global::UnityEngine.Vector3 pointerPosition);
-        protected internal abstract global::UnityEngine.UIElements.StartDragArgs StartDrag(global::UnityEngine.Vector3 pointerPosition);
-        protected internal abstract void UpdateDrag(global::UnityEngine.Vector3 pointerPosition);
-        protected internal abstract void OnDrop(global::UnityEngine.Vector3 pointerPosition);
-        protected abstract void ClearDragAndDropUI(bool dragCancelled);
-        [global::Unbound.Stub] internal void OnPointerUpEvent(global::UnityEngine.UIElements.PointerUpEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragEventsProcessor.OnPointerUpEvent"); }
-        internal bool isRegistered { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragEventsProcessor.isRegistered"); return default; } }
-        internal global::UnityEngine.UIElements.DragEventsProcessor.DragState dragState { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragEventsProcessor.dragState"); return default; } }
-        protected virtual bool supportsDragEvents { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragEventsProcessor.supportsDragEvents"); return default; } }
-        protected global::UnityEngine.UIElements.IDragAndDrop dragAndDrop { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragEventsProcessor.dragAndDrop"); return default; } }
         internal virtual bool isEditorContext { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragEventsProcessor.isEditorContext"); return default; } }
-        internal enum DragState
-        {
-            None = 0,
-            CanStartDrag = 1,
-            Dragging = 2,
-        }
     }
     [global::Unbound.Stub]
     public unsafe partial class DragExitedEvent : global::UnityEngine.UIElements.DragAndDropEventBase<global::UnityEngine.UIElements.DragExitedEvent>
@@ -1787,13 +1671,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.DragUpdatedEvent GetPooled(global::UnityEngine.UIElements.PointerMoveEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragUpdatedEvent.GetPooled"); return default; }
         [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragUpdatedEvent.PostDispatch"); }
         [global::Unbound.Stub] public DragUpdatedEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragUpdatedEvent.ctor"); }
-    }
-    public enum DragVisualMode
-    {
-        None = 0,
-        Copy = 1,
-        Move = 2,
-        Rejected = 3,
     }
     unsafe partial class DropdownField
     {
@@ -2416,18 +2293,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.IGroupManager GetGroupManager(this global::UnityEngine.UIElements.IGroupBox groupBox) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBoxUtility.GetGroupManager"); return default; }
     }
     [global::Unbound.Stub]
-    public unsafe readonly partial struct HandleDragAndDropArgs
-    {
-        [global::Unbound.Stub] internal HandleDragAndDropArgs(global::UnityEngine.Vector2 position, global::UnityEngine.UIElements.DragAndDropArgs dragAndDropArgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HandleDragAndDropArgs.ctor"); }
-        public global::UnityEngine.Vector2 position { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HandleDragAndDropArgs.position"); return default; } }
-        public object target { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HandleDragAndDropArgs.target"); return default; } }
-        public int insertAtIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HandleDragAndDropArgs.insertAtIndex"); return default; } }
-        public int parentId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HandleDragAndDropArgs.parentId"); return default; } }
-        public int childIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HandleDragAndDropArgs.childIndex"); return default; } }
-        public global::UnityEngine.UIElements.DragAndDropPosition dropPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HandleDragAndDropArgs.dropPosition"); return default; } }
-        public global::UnityEngine.UIElements.DragAndDropData dragAndDropData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HandleDragAndDropArgs.dragAndDropData"); return default; } }
-    }
-    [global::Unbound.Stub]
     public unsafe partial class Hash128Field : global::UnityEngine.UIElements.TextInputBaseField<global::UnityEngine.Hash128>
     {
         [global::Unbound.Stub] public static readonly string ussClassName;
@@ -2532,9 +2397,6 @@ namespace UnityEngine.UIElements
         void Bind(global::UnityEngine.UIElements.VisualElement element);
         void Release();
     }
-    internal unsafe partial interface ICollectionDragAndDropController : global::UnityEngine.UIElements.IDragAndDropController<global::UnityEngine.UIElements.IListDragAndDropArgs>, global::UnityEngine.UIElements.IReorderable
-    {
-    }
     public unsafe partial interface ICommandEvent
     {
         string commandName { get; }
@@ -2569,33 +2431,6 @@ namespace UnityEngine.UIElements
     internal unsafe partial interface IDelayedField
     {
         bool isDelayed { get; }
-    }
-    internal unsafe partial interface IDragAndDrop
-    {
-        void StartDrag(global::UnityEngine.UIElements.StartDragArgs args, global::UnityEngine.Vector3 pointerPosition);
-        void UpdateDrag(global::UnityEngine.Vector3 pointerPosition);
-        void AcceptDrag();
-        void DragCleanup();
-        void SetVisualMode(global::UnityEngine.UIElements.DragVisualMode visualMode);
-        global::UnityEngine.UIElements.DragAndDropData data { get; }
-    }
-    internal unsafe partial interface IDragAndDropController<in TArgs>
-    {
-        bool CanStartDrag(global::System.Collections.Generic.IEnumerable<int> itemIds);
-        [global::Unbound.Stub] bool CanDrop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IDragAndDropController<TArgs>.CanDrop"); return default; }
-        global::UnityEngine.UIElements.StartDragArgs SetupDragAndDrop(global::System.Collections.Generic.IEnumerable<int> itemIds, bool skipText = false);
-        global::UnityEngine.UIElements.DragVisualMode HandleDragAndDrop(TArgs args);
-        void OnDrop(TArgs args);
-        [global::Unbound.Stub] void DragCleanup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IDragAndDropController<TArgs>.DragCleanup"); }
-        [global::Unbound.Stub] void HandleAutoExpand(global::UnityEngine.UIElements.ReusableCollectionItem item, global::UnityEngine.Vector2 pointerPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IDragAndDropController<TArgs>.HandleAutoExpand"); }
-        [global::Unbound.Stub] global::System.Collections.Generic.IEnumerable<int> GetSortedSelectedIds() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IDragAndDropController<TArgs>.GetSortedSelectedIds"); return global::System.Array.Empty<int>(); }
-    }
-    internal unsafe partial interface IDragAndDropData
-    {
-        object GetGenericData(string key);
-        object userData { get; }
-        global::System.Collections.Generic.IEnumerable<global::UnityEngine.Object> unityObjectReferences { get; }
-        string[] paths { get; set; }
     }
     public unsafe partial interface IDragAndDropEvent
     {
@@ -2640,15 +2475,6 @@ namespace UnityEngine.UIElements
         void OnOptionSelectionChanged(global::UnityEngine.UIElements.IGroupBoxOption selectedOption);
         void RegisterOption(global::UnityEngine.UIElements.IGroupBoxOption option);
         void UnregisterOption(global::UnityEngine.UIElements.IGroupBoxOption option);
-    }
-    internal unsafe partial interface IListDragAndDropArgs
-    {
-        object target { get; }
-        int insertAtIndex { get; }
-        int parentId { get; }
-        int childIndex { get; }
-        global::UnityEngine.UIElements.DragAndDropData dragAndDropData { get; }
-        global::UnityEngine.UIElements.DragAndDropPosition dragAndDropPosition { get; }
     }
     internal unsafe partial interface ILiveReloadAssetTracker<T> where T : global::UnityEngine.ScriptableObject
     {
@@ -2788,10 +2614,6 @@ namespace UnityEngine.UIElements
     {
         string label { get; }
         global::UnityEngine.UIElements.Label labelElement { get; }
-    }
-    internal unsafe partial interface IReorderable
-    {
-        bool enableReordering { get; set; }
     }
     public unsafe partial interface IRuntimePanel : global::UnityEngine.UIElements.IPanel, global::System.IDisposable
     {
@@ -3370,36 +3192,6 @@ namespace UnityEngine.UIElements
         }
     }
     [global::Unbound.Stub]
-    internal unsafe partial class ListViewDragger : global::UnityEngine.UIElements.DragEventsProcessor
-    {
-        [global::Unbound.Stub] public ListViewDragger(global::UnityEngine.UIElements.BaseVerticalCollectionView listView) : base(default(global::UnityEngine.UIElements.VisualElement)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.ctor"); }
-        [global::Unbound.Stub] protected override bool CanStartDrag(global::UnityEngine.Vector3 pointerPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.CanStartDrag"); return default; }
-        [global::Unbound.Stub] protected internal override global::UnityEngine.UIElements.StartDragArgs StartDrag(global::UnityEngine.Vector3 pointerPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.StartDrag"); return default; }
-        [global::Unbound.Stub] protected internal override void UpdateDrag(global::UnityEngine.Vector3 pointerPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.UpdateDrag"); }
-        [global::Unbound.Stub] protected internal override void OnDrop(global::UnityEngine.Vector3 pointerPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.OnDrop"); }
-        [global::Unbound.Stub] internal void HandleDragAndScroll(global::UnityEngine.Vector2 pointerPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.HandleDragAndScroll"); }
-        [global::Unbound.Stub] protected virtual bool TryGetDragPosition(global::UnityEngine.Vector2 pointerPosition, ref global::UnityEngine.UIElements.ListViewDragger.DragPosition dragPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.TryGetDragPosition"); return default; }
-        [global::Unbound.Stub] protected global::UnityEngine.UIElements.DragAndDropArgs MakeDragAndDropArgs(global::UnityEngine.UIElements.ListViewDragger.DragPosition dragPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.MakeDragAndDropArgs"); return default; }
-        [global::Unbound.Stub] protected override void ClearDragAndDropUI(bool dragCancelled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.ClearDragAndDropUI"); }
-        [global::Unbound.Stub] protected global::UnityEngine.UIElements.ReusableCollectionItem GetRecycledItem(global::UnityEngine.Vector3 pointerPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.GetRecycledItem"); return default; }
-        protected global::UnityEngine.UIElements.BaseVerticalCollectionView targetView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.targetView"); return default; } }
-        protected global::UnityEngine.UIElements.ScrollView targetScrollView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.targetScrollView"); return default; } }
-        public global::UnityEngine.UIElements.ICollectionDragAndDropController dragAndDropController { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.dragAndDropController"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.dragAndDropController"); } }
-        internal bool enabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.enabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.enabled"); } }
-        [global::Unbound.Stub]
-        internal unsafe partial struct DragPosition : global::System.IEquatable<global::UnityEngine.UIElements.ListViewDragger.DragPosition>
-        {
-            [global::Unbound.Stub] public int insertAtIndex;
-            [global::Unbound.Stub] public int parentId;
-            [global::Unbound.Stub] public int childIndex;
-            [global::Unbound.Stub] public global::UnityEngine.UIElements.ReusableCollectionItem recycledItem;
-            [global::Unbound.Stub] public global::UnityEngine.UIElements.DragAndDropPosition dropPosition;
-            [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.ListViewDragger.DragPosition other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.DragPosition.Equals"); return default; }
-            [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.DragPosition.Equals"); return default; }
-            [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDragger.DragPosition.GetHashCode"); return default; }
-        }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class ListViewDraggerAnimated : global::UnityEngine.UIElements.ListViewDragger
     {
         [global::Unbound.Stub] public ListViewDraggerAnimated(global::UnityEngine.UIElements.BaseVerticalCollectionView listView) : base(default(global::UnityEngine.UIElements.BaseVerticalCollectionView)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDraggerAnimated.ctor"); }
@@ -3411,20 +3203,6 @@ namespace UnityEngine.UIElements
         public bool isDragging { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDraggerAnimated.isDragging"); return default; } }
         public global::UnityEngine.UIElements.ReusableCollectionItem draggedItem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDraggerAnimated.draggedItem"); return default; } }
         protected override bool supportsDragEvents { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDraggerAnimated.supportsDragEvents"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class ListViewDraggerExtension
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.ReusableCollectionItem GetRecycledItemFromId(this global::UnityEngine.UIElements.BaseVerticalCollectionView listView, int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDraggerExtension.GetRecycledItemFromId"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.ReusableCollectionItem GetRecycledItemFromIndex(this global::UnityEngine.UIElements.BaseVerticalCollectionView listView, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewDraggerExtension.GetRecycledItemFromIndex"); return default; }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class ListViewReorderableDragAndDropController : global::UnityEngine.UIElements.BaseReorderableDragAndDropController
-    {
-        [global::Unbound.Stub] protected readonly global::UnityEngine.UIElements.BaseListView m_ListView;
-        [global::Unbound.Stub] public ListViewReorderableDragAndDropController(global::UnityEngine.UIElements.BaseListView view) : base(default(global::UnityEngine.UIElements.BaseVerticalCollectionView)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewReorderableDragAndDropController.ctor"); }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.DragVisualMode HandleDragAndDrop(global::UnityEngine.UIElements.IListDragAndDropArgs args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewReorderableDragAndDropController.HandleDragAndDrop"); return default; }
-        [global::Unbound.Stub] public override void OnDrop(global::UnityEngine.UIElements.IListDragAndDropArgs args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListViewReorderableDragAndDropController.OnDrop"); }
     }
     [global::System.Flags]
     internal enum LiveReloadTrackers
@@ -4432,9 +4210,6 @@ namespace UnityEngine.UIElements
     }
     unsafe partial class ReusableListViewItem
     {
-        [global::Unbound.Stub] protected void UpdateHierarchy(global::UnityEngine.UIElements.VisualElement root, global::UnityEngine.UIElements.VisualElement item, bool usesAnimatedDragger) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableListViewItem.UpdateHierarchy"); }
-        [global::Unbound.Stub] public void UpdateDragHandle(bool needsDragHandle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableListViewItem.UpdateDragHandle"); }
-        [global::Unbound.Stub] public void SetDragHandleEnabled(bool enabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableListViewItem.SetDragHandleEnabled"); }
         [global::Unbound.Stub] protected override void OnGeometryChanged(global::UnityEngine.UIElements.GeometryChangedEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableListViewItem.OnGeometryChanged"); }
     }
     [global::Unbound.Stub]
@@ -4631,14 +4406,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public SetValueVisitor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SetValueVisitor<TSrcValue>.ctor"); }
         public global::UnityEngine.UIElements.ConverterGroup group { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SetValueVisitor<TSrcValue>.group"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SetValueVisitor<TSrcValue>.group"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct SetupDragAndDropArgs
-    {
-        [global::Unbound.Stub] public readonly global::UnityEngine.UIElements.VisualElement draggedElement;
-        [global::Unbound.Stub] public readonly global::System.Collections.Generic.IEnumerable<int> selectedIds;
-        [global::Unbound.Stub] public readonly global::UnityEngine.UIElements.StartDragArgs startDragArgs;
-        [global::Unbound.Stub] internal SetupDragAndDropArgs(global::UnityEngine.UIElements.VisualElement draggedElement, global::System.Collections.Generic.IEnumerable<int> selectedIds, global::UnityEngine.UIElements.StartDragArgs startDragArgs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SetupDragAndDropArgs.ctor"); }
-    }
     unsafe partial class Slider
     {
         [global::Unbound.Stub] public override void ApplyInputDeviceDelta(global::UnityEngine.Vector3 delta, global::UnityEngine.UIElements.DeltaSpeed speed, float startValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.ApplyInputDeviceDelta"); }
@@ -4813,19 +4580,9 @@ namespace UnityEngine.UIElements
         public float horizontal { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Spacing.horizontal"); return default; } }
         public float vertical { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Spacing.vertical"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct StartDragArgs
+    unsafe partial struct StartDragArgs
     {
-        [global::Unbound.Stub] public StartDragArgs(string title, global::UnityEngine.UIElements.DragVisualMode visualMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StartDragArgs.ctor"); }
         [global::Unbound.Stub] internal StartDragArgs(string title, object target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StartDragArgs.ctor"); }
-        [global::Unbound.Stub] public void SetGenericData(string key, object data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StartDragArgs.SetGenericData"); }
-        [global::Unbound.Stub] public void SetUnityObjectReferences(global::System.Collections.Generic.IEnumerable<global::UnityEngine.Object> references) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StartDragArgs.SetUnityObjectReferences"); }
-        [global::Unbound.Stub] public void SetPaths(string[] paths) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StartDragArgs.SetPaths"); }
-        public string title { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StartDragArgs.title"); return default; } }
-        public global::UnityEngine.UIElements.DragVisualMode visualMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StartDragArgs.visualMode"); return default; } }
-        internal global::System.Collections.Hashtable genericData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StartDragArgs.genericData"); return new global::System.Collections.Hashtable(); } }
-        internal global::System.Collections.Generic.IEnumerable<global::UnityEngine.Object> unityObjectReferences { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StartDragArgs.unityObjectReferences"); return global::System.Array.Empty<global::UnityEngine.Object>(); } }
-        internal string[] assetPaths { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.StartDragArgs.assetPaths"); return global::System.Array.Empty<string>(); } }
     }
     internal unsafe partial interface StopRecordingInterface
     {
@@ -5071,8 +4828,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId labelProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId iconImageProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId closeableProperty;
-        internal global::UnityEngine.UIElements.TabDragger dragger { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Tab.dragger"); return default; } }
-        internal int index { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Tab.index"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Tab.index"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
@@ -5097,30 +4852,10 @@ namespace UnityEngine.UIElements
         }
     }
     [global::Unbound.Stub]
-    internal unsafe partial class TabDragLocationPreview : global::UnityEngine.UIElements.VisualElement
-    {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string visualUssClassName;
-        [global::Unbound.Stub] public static readonly string verticalUssClassName;
-        [global::Unbound.Stub] public static readonly string horizontalUssClassName;
-        [global::Unbound.Stub] public TabDragLocationPreview() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabDragLocationPreview.ctor"); }
-        internal global::UnityEngine.UIElements.VisualElement preview { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabDragLocationPreview.preview"); return default; } }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class TabDragPreview : global::UnityEngine.UIElements.VisualElement
     {
         [global::Unbound.Stub] public static readonly string ussClassName;
         [global::Unbound.Stub] public TabDragPreview() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabDragPreview.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class TabDragger : global::UnityEngine.UIElements.PointerManipulator
-    {
-        [global::Unbound.Stub] public TabDragger() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabDragger.ctor"); }
-        [global::Unbound.Stub] protected override void RegisterCallbacksOnTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabDragger.RegisterCallbacksOnTarget"); }
-        [global::Unbound.Stub] protected override void UnregisterCallbacksFromTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabDragger.UnregisterCallbacksFromTarget"); }
-        internal bool active { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabDragger.active"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabDragger.active"); } }
-        internal bool isVertical { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabDragger.isVertical"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabDragger.isVertical"); } }
-        internal bool moving { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabDragger.moving"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class TabLayout
@@ -7067,7 +6802,6 @@ namespace UnityEngine.UIElements
         internal global::UnityEngine.Rect worldClip { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.worldClip"); return default; } }
         internal global::UnityEngine.Rect worldClipMinusGroup { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.worldClipMinusGroup"); return default; } }
         internal bool worldClipIsInfinite { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.worldClipIsInfinite"); return default; } }
-        internal bool boundingBoxDirtiedSinceLastLayoutPass { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.boundingBoxDirtiedSinceLastLayoutPass"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.boundingBoxDirtiedSinceLastLayoutPass"); } }
         internal global::System.Collections.Generic.List<string> classList { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.classList"); return new global::System.Collections.Generic.List<string>(); } }
         internal ref global::UnityEngine.UIElements.Layout.LayoutNode layoutNode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.layoutNode"); return ref global::Unbound.Runtime.Stubs.Ref<global::UnityEngine.UIElements.Layout.LayoutNode>(); } }
         internal ref global::UnityEngine.UIElements.ComputedStyle computedStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.computedStyle"); return ref global::Unbound.Runtime.Stubs.Ref<global::UnityEngine.UIElements.ComputedStyle>(); } }

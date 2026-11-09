@@ -841,8 +841,9 @@ namespace UnityEngine.Tests
 
         // ------------------------------------------------------------------ out of scope stays loud
 
-        // Guard (not a red/green control): MultiColumnTreeView, MultiColumnListView, the tree's drag and
-        // drop controller, AddItem and TryRemoveItem stay generated stubs, which warn when used.
+        // Guard (not a red/green control): MultiColumnTreeView, MultiColumnListView, AddItem and
+        // TryRemoveItem stay generated stubs, which warn when used; the tree's drag and drop controller
+        // refuses drags and says so when reordering is asked for.
         // Expected to pass on bc93e0fc and on this head alike.
         [Fact]
         public void MultiColumnAndReorderingStayStubs()
@@ -853,7 +854,9 @@ namespace UnityEngine.Tests
             Assert.True(typeof(MultiColumnTreeView).GetConstructor(Type.EmptyTypes).IsDefined(stub, false));
             Assert.True(typeof(MultiColumnListView).GetConstructor(Type.EmptyTypes).IsDefined(stub, false));
             var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
-            Assert.True(typeof(BaseTreeView).GetMethod("CreateDragAndDropController", flags).IsDefined(stub, false));
+            var tree = new TreeView();
+            Assert.IsType<UaUnsupportedReorderController>(tree.dragger.dragAndDropController);
+            Assert.False(tree.dragger.dragAndDropController.CanStartDrag(new[] { 0 }));
             Assert.True(typeof(BaseTreeView).GetMethod("AddItem", flags).IsDefined(stub, false));
             Assert.True(typeof(BaseTreeView).GetMethod("TryRemoveItem", flags).IsDefined(stub, false));
         }

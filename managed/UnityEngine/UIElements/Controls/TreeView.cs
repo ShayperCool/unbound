@@ -71,6 +71,9 @@ namespace UnityEngine.UIElements
 
         UaTreeModel uaTree => (base.viewController as IUaTreeController)?.tree;
 
+        // Tree reordering by dragging is not implemented: asking for it says so once.
+        internal override ICollectionDragAndDropController CreateDragAndDropController() => new UaUnsupportedReorderController(this, "TreeView");
+
         public BaseTreeView() : this((int)ItemHeightUnset) { }
 
         public BaseTreeView(int itemHeight) : base(null, itemHeight)

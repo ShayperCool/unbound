@@ -1,0 +1,916 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+
+// Drag and drop of collection view items (reordering a ListView by dragging its rows) on runtime
+// panels, where the drag runs on pointer events: a left press on a row arms it, a move of 10 points
+// (squared distance 100) starts the drag with the pressed row (selected first) or the selection,
+// moves show the drop position (a hover bar between rows, a hover class over a row) and scroll near
+// the view's edges, and the release drops the items there.
+// Documented (Unity 6000.0 Scripting API): BaseVerticalCollectionView.canStartDrag,
+// setupDragAndDrop, dragAndDropUpdate and handleDrop with their argument types, DragVisualMode,
+// DragAndDropPosition, StartDragArgs; reorderable "allows the user to reorder items by dragging".
+// Matches the Unity 6000.0.71f1 Editor, tests/projects/uitkcollections (reorder section: dragged
+// rows, moved items, itemIndexChanged per moved item, the selection after a drop, a short move that
+// stays a click). Editor-context panels use the same pointer path (the Editor's own drag events are
+// not used); animated reordering (ListViewReorderMode.Animated) is not implemented and says so.
+namespace UnityEngine.UIElements
+{
+    public enum DragVisualMode
+    {
+        None,
+        Copy,
+        Move,
+        Rejected,
+    }
+
+    public enum DragAndDropPosition
+    {
+        OverItem,
+        BetweenItems,
+        OutsideItems,
+    }
+
+    internal partial interface IDragAndDropData
+    {
+        object userData { get; }
+        IEnumerable<Object> unityObjectReferences { get; }
+        string[] paths { get; set; }
+        object GetGenericData(string key);
+    }
+
+    public abstract partial class DragAndDropData : IDragAndDropData
+    {
+        internal const string dragSourceKey = "__unity-drag-and-drop__source-view";
+
+        object IDragAndDropData.userData => GetGenericData(dragSourceKey);
+
+        public abstract object source { get; }
+
+        public abstract DragVisualMode visualMode { get; }
+
+        public abstract IEnumerable<Object> unityObjectReferences { get; }
+
+        public virtual string[] paths { get; set; }
+
+        public abstract object GetGenericData(string key);
+
+        public abstract void SetGenericData(string key, object data);
+    }
+
+    public partial struct StartDragArgs
+    {
+        public string title { get; }
+
+        public DragVisualMode visualMode { get; }
+
+        internal Hashtable genericData { get; private set; }
+
+        internal IEnumerable<Object> unityObjectReferences { get; private set; }
+
+        internal string[] assetPaths { get; private set; }
+
+        public StartDragArgs(string title, DragVisualMode visualMode)
+        {
+            this.title = title;
+            this.visualMode = visualMode;
+            genericData = null;
+            assetPaths = null;
+            unityObjectReferences = null;
+        }
+
+        public void SetGenericData(string key, object data)
+        {
+            genericData ??= new Hashtable();
+            genericData[key] = data;
+        }
+
+        public void SetUnityObjectReferences(IEnumerable<Object> references) => unityObjectReferences = references;
+
+        public void SetPaths(string[] paths) => assetPaths = paths;
+    }
+
+    public readonly partial struct CanStartDragArgs
+    {
+        public readonly VisualElement draggedElement;
+        public readonly int id;
+        public readonly IEnumerable<int> selectedIds;
+
+        internal CanStartDragArgs(VisualElement draggedElement, int id, IEnumerable<int> selectedIds)
+        {
+            this.draggedElement = draggedElement;
+            this.id = id;
+            this.selectedIds = selectedIds;
+        }
+    }
+
+    public readonly partial struct SetupDragAndDropArgs
+    {
+        public readonly VisualElement draggedElement;
+        public readonly IEnumerable<int> selectedIds;
+        public readonly StartDragArgs startDragArgs;
+
+        internal SetupDragAndDropArgs(VisualElement draggedElement, IEnumerable<int> selectedIds, StartDragArgs startDragArgs)
+        {
+            this.draggedElement = draggedElement;
+            this.selectedIds = selectedIds;
+            this.startDragArgs = startDragArgs;
+        }
+    }
+
+    public readonly partial struct HandleDragAndDropArgs
+    {
+        readonly DragAndDropArgs m_DragAndDropArgs;
+
+        public Vector2 position { get; }
+
+        public object target => m_DragAndDropArgs.target;
+
+        public int insertAtIndex => m_DragAndDropArgs.insertAtIndex;
+
+        public int parentId => m_DragAndDropArgs.parentId;
+
+        public int childIndex => m_DragAndDropArgs.childIndex;
+
+        public DragAndDropPosition dropPosition => m_DragAndDropArgs.dragAndDropPosition;
+
+        public DragAndDropData dragAndDropData => m_DragAndDropArgs.dragAndDropData;
+
+        internal HandleDragAndDropArgs(Vector2 position, DragAndDropArgs dragAndDropArgs)
+        {
+            this.position = position;
+            m_DragAndDropArgs = dragAndDropArgs;
+        }
+    }
+
+    internal partial interface IListDragAndDropArgs
+    {
+        object target { get; }
+        int insertAtIndex { get; }
+        int parentId { get; }
+        int childIndex { get; }
+        DragAndDropData dragAndDropData { get; }
+        DragAndDropPosition dragAndDropPosition { get; }
+    }
+
+    internal partial struct DragAndDropArgs : IListDragAndDropArgs
+    {
+        public object target { get; set; }
+        public int insertAtIndex { get; set; }
+        public int parentId { get; set; }
+        public int childIndex { get; set; }
+        public DragAndDropPosition dragAndDropPosition { get; set; }
+        public DragAndDropData dragAndDropData { get; set; }
+    }
+
+    internal partial interface IReorderable
+    {
+        bool enableReordering { get; set; }
+    }
+
+    internal partial interface IDragAndDropController<in TArgs>
+    {
+        bool CanStartDrag(IEnumerable<int> itemIds);
+
+        bool CanDrop() => true;
+
+        StartDragArgs SetupDragAndDrop(IEnumerable<int> itemIds, bool skipText = false);
+
+        DragVisualMode HandleDragAndDrop(TArgs args);
+
+        void OnDrop(TArgs args);
+
+        void DragCleanup() { }
+
+        void HandleAutoExpand(ReusableCollectionItem item, Vector2 pointerPosition) { }
+
+        IEnumerable<int> GetSortedSelectedIds() => Array.Empty<int>();
+    }
+
+    internal partial interface ICollectionDragAndDropController : IDragAndDropController<IListDragAndDropArgs>, IReorderable
+    {
+    }
+
+    /// <summary>Remembers the dragged ids (sorted) and the drag title: the first dragged row's label,
+    /// "Item {id}" without one, "&lt;Multiple&gt;" for several.</summary>
+    internal abstract partial class BaseReorderableDragAndDropController : ICollectionDragAndDropController
+    {
+        protected readonly BaseVerticalCollectionView m_View;
+        protected List<int> m_SortedSelectedIds = new List<int>();
+
+        public virtual bool enableReordering { get; set; } = true;
+
+        public IEnumerable<int> GetSortedSelectedIds() => m_SortedSelectedIds;
+
+        protected BaseReorderableDragAndDropController(BaseVerticalCollectionView view) => m_View = view;
+
+        [Unbound.EditorFaithful("Unity's base implementation")]
+        public virtual bool CanStartDrag(IEnumerable<int> itemIds) => true;
+
+        [Unbound.EditorFaithful("Unity's base implementation")]
+        public virtual bool CanDrop() => true;
+
+        public virtual StartDragArgs SetupDragAndDrop(IEnumerable<int> itemIds, bool skipText = false)
+        {
+            m_SortedSelectedIds.Clear();
+            string title = string.Empty;
+            if (itemIds != null)
+            {
+                foreach (int id in itemIds)
+                {
+                    m_SortedSelectedIds.Add(id);
+                    if (skipText) continue;
+                    if (string.IsNullOrEmpty(title))
+                    {
+                        var label = m_View.GetRecycledItemFromId(id)?.rootElement.Q<Label>();
+                        title = label != null ? label.text : $"Item {id}";
+                    }
+                    else
+                    {
+                        title = "<Multiple>";
+                        skipText = true;
+                    }
+                }
+            }
+            m_SortedSelectedIds.Sort(CompareId);
+            return m_View.reorderable ? new StartDragArgs(title, DragVisualMode.Move) : new StartDragArgs(string.Empty, DragVisualMode.Rejected);
+        }
+
+        protected virtual int CompareId(int id1, int id2) => id1.CompareTo(id2);
+
+        public abstract DragVisualMode HandleDragAndDrop(IListDragAndDropArgs args);
+
+        [Unbound.EditorFaithful("Unity's base implementation")]
+        public virtual void OnDrop(IListDragAndDropArgs args) { }
+
+        [Unbound.EditorFaithful("Unity's base implementation")]
+        public virtual void DragCleanup() { }
+
+        [Unbound.EditorFaithful("Unity's base implementation")]
+        public virtual void HandleAutoExpand(ReusableCollectionItem item, Vector2 pointerPosition) { }
+    }
+
+    /// <summary>Drops a list view's own items between rows: each dragged item moves (last to first)
+    /// so the dragged block lands at the insert index in its sorted order; the moved items are then
+    /// selected without notification (or the selection is cleared without a selection type).</summary>
+    internal partial class ListViewReorderableDragAndDropController : BaseReorderableDragAndDropController
+    {
+        protected readonly BaseListView m_ListView;
+
+        public ListViewReorderableDragAndDropController(BaseListView view) : base(view) => m_ListView = view;
+
+        public override DragVisualMode HandleDragAndDrop(IListDragAndDropArgs args)
+        {
+            if (args.dragAndDropPosition == DragAndDropPosition.OverItem || !CanDrop()) return DragVisualMode.Rejected;
+            return args.dragAndDropData.source == m_ListView ? DragVisualMode.Move : DragVisualMode.Rejected;
+        }
+
+        public override void OnDrop(IListDragAndDropArgs args)
+        {
+            base.OnDrop(args);
+            if (!m_ListView.reorderable) return;
+            int insertAt = args.insertAtIndex;
+            int movedFromBefore = 0;
+            int movedFromAfter = 0;
+            for (int i = m_SortedSelectedIds.Count - 1; i >= 0; i--)
+            {
+                int index = m_View.viewController.GetIndexForId(m_SortedSelectedIds[i]);
+                if (index < 0) continue;
+                int destination = insertAt - movedFromBefore;
+                if (index >= insertAt)
+                {
+                    // Items after the insert point shift down by the ones already moved before them.
+                    index += movedFromAfter;
+                    movedFromAfter++;
+                }
+                else if (index < destination)
+                {
+                    movedFromBefore++;
+                    destination--;
+                }
+                m_ListView.viewController.Move(index, destination);
+            }
+            if (m_ListView.selectionType != SelectionType.None)
+            {
+                var selection = new List<int>(m_SortedSelectedIds.Count);
+                for (int i = 0; i < m_SortedSelectedIds.Count; i++) selection.Add(insertAt - movedFromBefore + i);
+                m_ListView.SetSelectionWithoutNotify(selection);
+            }
+            else
+            {
+                m_ListView.ClearSelection();
+            }
+        }
+    }
+
+    /// <summary>A collection view type without a reorder implementation: dragging is refused, and
+    /// asking for reordering says so once.</summary>
+    internal sealed partial class UaUnsupportedReorderController : BaseReorderableDragAndDropController
+    {
+        readonly string m_What;
+        bool m_Enabled;
+
+        public UaUnsupportedReorderController(BaseVerticalCollectionView view, string what) : base(view) => m_What = what;
+
+        public override bool enableReordering
+        {
+            get => m_Enabled;
+            set
+            {
+                if (value && !m_Enabled) Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements." + m_What + " reordering by dragging");
+                m_Enabled = value;
+            }
+        }
+
+        public override bool CanStartDrag(IEnumerable<int> itemIds) => false;
+
+        public override DragVisualMode HandleDragAndDrop(IListDragAndDropArgs args) => DragVisualMode.Rejected;
+    }
+
+    internal partial interface IDragAndDrop
+    {
+        DragAndDropData data { get; }
+        void StartDrag(StartDragArgs args, Vector3 pointerPosition);
+        void UpdateDrag(Vector3 pointerPosition);
+        void AcceptDrag();
+        void DragCleanup();
+        void SetVisualMode(DragVisualMode visualMode);
+    }
+
+    internal static partial class DragAndDropUtility
+    {
+        static IDragAndDrop s_DragAndDropEditor;
+        static IDragAndDrop s_DragAndDropPlayMode;
+
+        /// <summary>One drag-and-drop client for runtime panels and one for Editor panels.</summary>
+        internal static IDragAndDrop GetDragAndDrop(IPanel panel) =>
+            panel?.contextType == ContextType.Player
+                ? s_DragAndDropPlayMode ??= new DefaultDragAndDropClient()
+                : s_DragAndDropEditor ??= new DefaultDragAndDropClient();
+    }
+
+    /// <summary>The drag state of a panel: generic data (the source view), the visual mode and a
+    /// label with the drag title that follows the pointer at the panel's root.</summary>
+    internal partial class DefaultDragAndDropClient : DragAndDropData, IDragAndDrop
+    {
+        readonly Hashtable m_GenericData = new Hashtable();
+        Label m_DraggedInfoLabel;
+        DragVisualMode m_VisualMode;
+        IEnumerable<Object> m_UnityObjectReferences;
+
+        public override DragVisualMode visualMode => m_VisualMode;
+
+        public override object source => GetGenericData(dragSourceKey);
+
+        public override IEnumerable<Object> unityObjectReferences => m_UnityObjectReferences;
+
+        public DragAndDropData data => this;
+
+        public override object GetGenericData(string key) => m_GenericData.ContainsKey(key) ? m_GenericData[key] : null;
+
+        public override void SetGenericData(string key, object value) => m_GenericData[key] = value;
+
+        public void StartDrag(StartDragArgs args, Vector3 pointerPosition)
+        {
+            if (args.unityObjectReferences != null) m_UnityObjectReferences = new List<Object>(args.unityObjectReferences).ToArray();
+            paths = args.assetPaths;
+            m_VisualMode = args.visualMode;
+            if (args.genericData != null)
+                foreach (DictionaryEntry entry in args.genericData) m_GenericData[(string)entry.Key] = entry.Value;
+            if (string.IsNullOrWhiteSpace(args.title)) return;
+            var root = (source as VisualElement)?.panel?.visualTree;
+            if (root == null) return;
+            if (m_DraggedInfoLabel == null)
+            {
+                m_DraggedInfoLabel = new Label { pickingMode = PickingMode.Ignore };
+                m_DraggedInfoLabel.style.position = Position.Absolute;
+            }
+            m_DraggedInfoLabel.text = args.title;
+            m_DraggedInfoLabel.style.top = pointerPosition.y;
+            m_DraggedInfoLabel.style.left = pointerPosition.x;
+            root.Add(m_DraggedInfoLabel);
+        }
+
+        public void UpdateDrag(Vector3 pointerPosition)
+        {
+            if (m_DraggedInfoLabel == null) return;
+            m_DraggedInfoLabel.style.top = pointerPosition.y;
+            m_DraggedInfoLabel.style.left = pointerPosition.x;
+        }
+
+        [Unbound.EditorFaithful("Unity's runtime client accepts a drop without further work")]
+        public void AcceptDrag() { }
+
+        public void SetVisualMode(DragVisualMode mode) => m_VisualMode = mode;
+
+        public void DragCleanup()
+        {
+            paths = null;
+            m_UnityObjectReferences = null;
+            m_GenericData.Clear();
+            SetVisualMode(DragVisualMode.None);
+            m_DraggedInfoLabel?.RemoveFromHierarchy();
+        }
+    }
+
+    /// <summary>Turns pointer events on a target into a drag: press (armed when the subclass allows
+    /// a drag from there), a move of more than <see cref="k_StartDragSqrDistance"/> (squared) or a
+    /// pointer leaving the target starts it and captures the pointer, moves update it (on the view
+    /// under the pointer when it is another collection view), the release drops.</summary>
+    internal abstract partial class DragEventsProcessor
+    {
+        internal enum DragState
+        {
+            None,
+            CanStartDrag,
+            Dragging,
+        }
+
+        // Squared pointer travel that turns a press into a drag (10 points).
+        const float k_StartDragSqrDistance = 100f;
+
+        bool m_IsRegistered;
+        DragState m_DragState;
+        Vector3 m_Start;
+        bool m_PendingPerformDrag;
+        protected readonly VisualElement m_Target;
+
+        internal bool isRegistered => m_IsRegistered;
+
+        internal DragState dragState => m_DragState;
+
+        [Unbound.EditorFaithful("Unity's base implementation")]
+        protected virtual bool supportsDragEvents => true;
+
+        protected IDragAndDrop dragAndDrop => DragAndDropUtility.GetDragAndDrop(m_Target.panel);
+
+        readonly EventCallback<AttachToPanelEvent> m_OnAttach;
+        readonly EventCallback<DetachFromPanelEvent> m_OnDetach;
+
+        internal DragEventsProcessor(VisualElement target)
+        {
+            m_Target = target;
+            m_OnAttach = _ => RegisterCallbacksFromTarget();
+            m_OnDetach = _ => UnregisterCallbacksFromTarget();
+            m_Target.RegisterCallback(m_OnAttach);
+            m_Target.RegisterCallback(m_OnDetach);
+            RegisterCallbacksFromTarget();
+        }
+
+        void RegisterCallbacksFromTarget()
+        {
+            if (m_IsRegistered) return;
+            m_IsRegistered = true;
+            m_Target.RegisterCallback<PointerDownEvent>(OnPointerDownEvent);
+            m_Target.RegisterCallback<PointerUpEvent>(OnPointerUpEvent, TrickleDown.TrickleDown);
+            m_Target.RegisterCallback<PointerLeaveEvent>(OnPointerLeaveEvent);
+            m_Target.RegisterCallback<PointerMoveEvent>(OnPointerMoveEvent);
+            m_Target.RegisterCallback<PointerCancelEvent>(OnPointerCancelEvent);
+            m_Target.RegisterCallback<PointerCaptureOutEvent>(OnPointerCapturedOut);
+            m_Target.RegisterCallback<PointerOutEvent>(OnPointerOutEvent);
+            m_Target.RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
+        }
+
+        internal void UnregisterCallbacksFromTarget(bool unregisterPanelEvents = false)
+        {
+            m_IsRegistered = false;
+            m_Target.UnregisterCallback<PointerDownEvent>(OnPointerDownEvent);
+            m_Target.UnregisterCallback<PointerUpEvent>(OnPointerUpEvent, TrickleDown.TrickleDown);
+            m_Target.UnregisterCallback<PointerLeaveEvent>(OnPointerLeaveEvent);
+            m_Target.UnregisterCallback<PointerMoveEvent>(OnPointerMoveEvent);
+            m_Target.UnregisterCallback<PointerCancelEvent>(OnPointerCancelEvent);
+            m_Target.UnregisterCallback<PointerCaptureOutEvent>(OnPointerCapturedOut);
+            m_Target.UnregisterCallback<PointerOutEvent>(OnPointerOutEvent);
+            m_Target.UnregisterCallback<GeometryChangedEvent>(OnGeometryChanged);
+            if (!unregisterPanelEvents) return;
+            m_Target.UnregisterCallback(m_OnAttach);
+            m_Target.UnregisterCallback(m_OnDetach);
+        }
+
+        protected abstract bool CanStartDrag(Vector3 pointerPosition);
+
+        protected internal abstract StartDragArgs StartDrag(Vector3 pointerPosition);
+
+        protected internal abstract void UpdateDrag(Vector3 pointerPosition);
+
+        protected internal abstract void OnDrop(Vector3 pointerPosition);
+
+        protected abstract void ClearDragAndDropUI(bool dragCancelled);
+
+        void OnPointerDownEvent(PointerDownEvent evt)
+        {
+            if (evt.button != 0)
+            {
+                m_DragState = DragState.None;
+            }
+            else if (CanStartDrag(evt.position))
+            {
+                m_DragState = DragState.CanStartDrag;
+                m_Start = evt.position;
+            }
+        }
+
+        void OnPointerOutEvent(PointerOutEvent evt)
+        {
+            if (m_DragState != DragState.CanStartDrag || (m_Start - evt.position).sqrMagnitude <= 0f) return;
+            m_PendingPerformDrag = true;
+            evt.StopPropagation();
+        }
+
+        internal void OnPointerUpEvent(PointerUpEvent evt)
+        {
+            if (m_DragState == DragState.Dragging)
+            {
+                var dropTarget = GetDropTarget(evt.position) ?? this;
+                dropTarget.UpdateDrag(evt.position);
+                dropTarget.OnDrop(evt.position);
+                dropTarget.ClearDragAndDropUI(false);
+                evt.StopPropagation();
+            }
+            m_Target.ReleasePointer(evt.pointerId);
+            ClearDragAndDropUI(m_DragState == DragState.Dragging);
+            dragAndDrop.DragCleanup();
+            m_DragState = DragState.None;
+            m_PendingPerformDrag = false;
+        }
+
+        void OnPointerLeaveEvent(PointerLeaveEvent evt) => ClearDragAndDropUI(false);
+
+        void OnPointerCancelEvent(PointerCancelEvent evt) => CancelDragAndDrop(evt.pointerId);
+
+        void OnPointerCapturedOut(PointerCaptureOutEvent evt) => CancelDragAndDrop();
+
+        void OnGeometryChanged(GeometryChangedEvent evt)
+        {
+            if (m_Target.resolvedStyle.display == DisplayStyle.None) CancelDragAndDrop();
+        }
+
+        void CancelDragAndDrop(int releaseCapturePointerId = -1)
+        {
+            if (m_DragState == DragState.None && !m_PendingPerformDrag) return;
+            ClearDragAndDropUI(true);
+            if (releaseCapturePointerId != -1) m_Target.ReleasePointer(releaseCapturePointerId);
+            ClearDragAndDropUI(m_DragState == DragState.Dragging);
+            dragAndDrop.DragCleanup();
+            m_DragState = DragState.None;
+            m_PendingPerformDrag = false;
+        }
+
+        void OnPointerMoveEvent(PointerMoveEvent evt)
+        {
+            if (evt.isHandledByDraggable) return;
+            if (m_DragState == DragState.Dragging)
+            {
+                (GetDropTarget(evt.position) ?? this).UpdateDrag(evt.position);
+                m_PendingPerformDrag = false;
+                return;
+            }
+            if (m_DragState != DragState.CanStartDrag) return;
+            if ((m_Start - evt.position).sqrMagnitude < k_StartDragSqrDistance && !m_PendingPerformDrag) return;
+            var args = StartDrag(m_Start);
+            if (args.visualMode == DragVisualMode.Rejected)
+            {
+                m_DragState = DragState.None;
+                return;
+            }
+            if (supportsDragEvents) dragAndDrop.StartDrag(args, evt.position);
+            m_DragState = DragState.Dragging;
+            m_Target.CapturePointer(evt.pointerId);
+            evt.isHandledByDraggable = true;
+            m_PendingPerformDrag = false;
+            evt.StopPropagation();
+        }
+
+        /// <summary>This processor while the pointer is over its target, else the drag processor of
+        /// the collection view under the pointer, if any.</summary>
+        DragEventsProcessor GetDropTarget(Vector2 position)
+        {
+            if (m_Target.worldBound.Contains(position)) return this;
+            if (!supportsDragEvents) return null;
+            return m_Target.panel?.Pick(position)?.GetFirstOfType<BaseVerticalCollectionView>()?.dragger;
+        }
+    }
+
+    internal static partial class ListViewDraggerExtension
+    {
+        public static ReusableCollectionItem GetRecycledItemFromId(this BaseVerticalCollectionView listView, int id)
+        {
+            foreach (var item in listView.activeItems)
+                if (item.id == id) return item;
+            return null;
+        }
+
+        public static ReusableCollectionItem GetRecycledItemFromIndex(this BaseVerticalCollectionView listView, int index)
+        {
+            foreach (var item in listView.activeItems)
+                if (item.index == index) return item;
+            return null;
+        }
+    }
+
+    /// <summary>Drags the rows of a collection view: the drop position comes from the row under the
+    /// pointer (between rows within 5 points of a row's top or bottom edge, over the row otherwise;
+    /// after the last row when below the content), the hover bar marks it, and the view scrolls by 20
+    /// points while the pointer is within 5 points of its top or bottom edge.</summary>
+    internal partial class ListViewDragger : DragEventsProcessor
+    {
+        internal partial struct DragPosition : IEquatable<DragPosition>
+        {
+            public int insertAtIndex;
+            public int parentId;
+            public int childIndex;
+            public ReusableCollectionItem recycledItem;
+            public DragAndDropPosition dropPosition;
+
+            public bool Equals(DragPosition other) =>
+                insertAtIndex == other.insertAtIndex && parentId == other.parentId && childIndex == other.childIndex &&
+                Equals(recycledItem, other.recycledItem) && dropPosition == other.dropPosition;
+
+            public override bool Equals(object obj) => obj is DragPosition other && Equals(other);
+
+            public override int GetHashCode() => HashCode.Combine(insertAtIndex, parentId, childIndex, recycledItem, dropPosition);
+        }
+
+        // Pointer distance from the view's top or bottom edge that scrolls it while dragging.
+        const int k_AutoScrollAreaSize = 5;
+        // Pointer distance from a row's top or bottom edge that drops between rows.
+        const int k_BetweenElementsAreaSize = 5;
+        // Scroll step per drag update in the auto-scroll area.
+        const int k_PanSpeed = 20;
+        // Height of the hover bar kept inside the viewport.
+        const int k_DragHoverBarHeight = 2;
+
+        DragPosition m_LastDragPosition;
+        VisualElement m_DragHoverBar;
+        bool m_Enabled = true;
+
+        protected BaseVerticalCollectionView targetView => m_Target as BaseVerticalCollectionView;
+
+        protected ScrollView targetScrollView => targetView.scrollView;
+
+        public ICollectionDragAndDropController dragAndDropController { get; set; }
+
+        internal bool enabled
+        {
+            get => m_Enabled;
+            set
+            {
+                m_Enabled = value;
+                if (!(targetView is BaseListView)) return;
+                foreach (var item in targetView.activeItems)
+                    (item as ReusableListViewItem)?.SetDragHandleEnabled(value);
+            }
+        }
+
+        public ListViewDragger(BaseVerticalCollectionView listView) : base(listView) { }
+
+        protected override bool CanStartDrag(Vector3 pointerPosition)
+        {
+            if (dragAndDropController == null) return false;
+            if (!targetScrollView.contentContainer.worldBound.Contains(pointerPosition)) return false;
+            var item = GetRecycledItem(pointerPosition);
+            bool anySelected = HasAny(targetView.selectedIds);
+            if (item != null && targetView.HasCanStartDrag())
+                return targetView.RaiseCanStartDrag(item, anySelected ? targetView.selectedIds : new[] { item.id });
+            if (anySelected) return dragAndDropController.CanStartDrag(targetView.selectedIds);
+            return item != null && dragAndDropController.CanStartDrag(new[] { item.id });
+        }
+
+        static bool HasAny(IEnumerable<int> values)
+        {
+            foreach (var _ in values) return true;
+            return false;
+        }
+
+        protected internal override StartDragArgs StartDrag(Vector3 pointerPosition)
+        {
+            var item = GetRecycledItem(pointerPosition);
+            IEnumerable<int> ids;
+            if (item != null)
+            {
+                if (targetView.selectionType == SelectionType.None)
+                {
+                    ids = new[] { item.index };
+                }
+                else
+                {
+                    if (!Contains(targetView.selectedIndices, item.index)) targetView.SetSelection(item.index);
+                    ids = targetView.selectedIds;
+                }
+            }
+            else
+            {
+                ids = HasAny(targetView.selectedIds) ? targetView.selectedIds : Array.Empty<int>();
+            }
+            var args = dragAndDropController.SetupDragAndDrop(ids);
+            args = targetView.RaiseSetupDragAndDrop(item, dragAndDropController.GetSortedSelectedIds(), args);
+            args.SetGenericData(DragAndDropData.dragSourceKey, targetView);
+            return args;
+        }
+
+        static bool Contains(IEnumerable<int> values, int value)
+        {
+            foreach (int v in values)
+                if (v == value) return true;
+            return false;
+        }
+
+        protected internal override void UpdateDrag(Vector3 pointerPosition)
+        {
+            var position = default(DragPosition);
+            var mode = GetVisualMode(pointerPosition, ref position);
+            if (mode == DragVisualMode.Rejected)
+            {
+                ClearDragAndDropUI(false);
+            }
+            else
+            {
+                HandleDragAndScroll(pointerPosition);
+                var item = GetRecycledItem(pointerPosition);
+                if (item != null) dragAndDropController.HandleAutoExpand(item, pointerPosition);
+                ApplyDragAndDropUI(position);
+            }
+            dragAndDrop.SetVisualMode(mode);
+            dragAndDrop.UpdateDrag(pointerPosition);
+        }
+
+        DragVisualMode GetVisualMode(Vector3 pointerPosition, ref DragPosition position)
+        {
+            if (dragAndDropController == null) return DragVisualMode.Rejected;
+            bool found = TryGetDragPosition(pointerPosition, ref position);
+            var args = MakeDragAndDropArgs(position);
+            var mode = targetView.RaiseHandleDragAndDrop(pointerPosition, args);
+            if (mode != DragVisualMode.None) return mode;
+            return found ? dragAndDropController.HandleDragAndDrop(args) : DragVisualMode.Rejected;
+        }
+
+        protected internal override void OnDrop(Vector3 pointerPosition)
+        {
+            var position = default(DragPosition);
+            if (!TryGetDragPosition(pointerPosition, ref position)) return;
+            var args = MakeDragAndDropArgs(position);
+            switch (targetView.RaiseDrop(pointerPosition, args))
+            {
+                case DragVisualMode.Rejected:
+                    dragAndDropController.DragCleanup();
+                    break;
+                case DragVisualMode.None:
+                    if (IsDraggingDisabled()) break;
+                    if (dragAndDropController.HandleDragAndDrop(args) != DragVisualMode.Rejected)
+                    {
+                        dragAndDropController.OnDrop(args);
+                        dragAndDrop.AcceptDrag();
+                    }
+                    else
+                    {
+                        dragAndDropController.DragCleanup();
+                    }
+                    break;
+                default:
+                    dragAndDrop.AcceptDrag();
+                    break;
+            }
+        }
+
+        internal void HandleDragAndScroll(Vector2 pointerPosition)
+        {
+            var bounds = targetScrollView.worldBound;
+            bool up = pointerPosition.y < bounds.yMin + k_AutoScrollAreaSize;
+            bool down = pointerPosition.y > bounds.yMax - k_AutoScrollAreaSize;
+            if (!up && !down) return;
+            var offset = targetScrollView.scrollOffset + (up ? Vector2.down : Vector2.up) * k_PanSpeed;
+            float max = Mathf.Max(0f, targetScrollView.contentContainer.worldBound.height - targetScrollView.contentViewport.worldBound.height);
+            offset.y = Mathf.Clamp(offset.y, 0f, max);
+            targetScrollView.scrollOffset = offset;
+        }
+
+        void ApplyDragAndDropUI(DragPosition position)
+        {
+            if (m_LastDragPosition.Equals(position) || IsDraggingDisabled()) return;
+            if (m_DragHoverBar == null)
+            {
+                m_DragHoverBar = new VisualElement { pickingMode = PickingMode.Ignore };
+                m_DragHoverBar.AddToClassList(BaseVerticalCollectionView.dragHoverBarUssClassName);
+                m_DragHoverBar.style.width = targetView.localBound.width;
+                m_DragHoverBar.style.visibility = Visibility.Hidden;
+                targetView.RegisterCallback<GeometryChangedEvent>(_ => m_DragHoverBar.style.width = targetView.localBound.width);
+                targetScrollView.contentViewport.Add(m_DragHoverBar);
+            }
+            ClearDragAndDropUI(false);
+            m_LastDragPosition = position;
+            switch (position.dropPosition)
+            {
+                case DragAndDropPosition.OverItem:
+                    position.recycledItem.rootElement.AddToClassList(BaseVerticalCollectionView.itemDragHoverUssClassName);
+                    break;
+                case DragAndDropPosition.BetweenItems:
+                    if (position.insertAtIndex == 0)
+                    {
+                        PlaceHoverBarAt(0f);
+                        break;
+                    }
+                    PlaceHoverBarAtElement(targetView.GetRecycledItemFromIndex(position.insertAtIndex - 1) ?? targetView.GetRecycledItemFromIndex(position.insertAtIndex));
+                    break;
+                case DragAndDropPosition.OutsideItems:
+                    var last = targetView.GetRecycledItemFromIndex(targetView.itemsSource.Count - 1);
+                    if (last != null) PlaceHoverBarAtElement(last);
+                    else PlaceHoverBarAt(0f);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(position.dropPosition), position.dropPosition, "Unsupported dropPosition value");
+            }
+        }
+
+        protected virtual bool TryGetDragPosition(Vector2 pointerPosition, ref DragPosition position)
+        {
+            var item = GetRecycledItem(pointerPosition);
+            if (item == null)
+            {
+                if (!targetView.worldBound.Contains(pointerPosition)) return false;
+                position.dropPosition = DragAndDropPosition.OutsideItems;
+                position.insertAtIndex = pointerPosition.y >= targetScrollView.contentContainer.worldBound.yMax ? targetView.itemsSource.Count : 0;
+                ClearTreePosition(ref position);
+                return true;
+            }
+            var bounds = item.rootElement.worldBound;
+            if (bounds.yMax - pointerPosition.y < k_BetweenElementsAreaSize)
+            {
+                position.insertAtIndex = item.index + 1;
+                position.dropPosition = DragAndDropPosition.BetweenItems;
+            }
+            else if (pointerPosition.y - bounds.yMin > k_BetweenElementsAreaSize)
+            {
+                // Over a row: bring it fully into view first, and look again if that scrolled.
+                var before = targetScrollView.scrollOffset;
+                targetView.ScrollToItem(item.index);
+                var after = targetScrollView.scrollOffset;
+                if (!Mathf.Approximately(before.x, after.x) || !Mathf.Approximately(before.y, after.y))
+                    return TryGetDragPosition(pointerPosition, ref position);
+                position.recycledItem = item;
+                position.insertAtIndex = item.index;
+                position.dropPosition = DragAndDropPosition.OverItem;
+            }
+            else
+            {
+                position.insertAtIndex = item.index;
+                position.dropPosition = DragAndDropPosition.BetweenItems;
+            }
+            ClearTreePosition(ref position);
+            return true;
+        }
+
+        // Tree positions (parent and child index) are not used by list reordering.
+        static void ClearTreePosition(ref DragPosition position)
+        {
+            position.parentId = -1;
+            position.childIndex = -1;
+        }
+
+        protected DragAndDropArgs MakeDragAndDropArgs(DragPosition position)
+        {
+            object target = null;
+            if (position.recycledItem != null) target = targetView.viewController.GetItemForIndex(position.recycledItem.index);
+            return new DragAndDropArgs
+            {
+                target = target,
+                insertAtIndex = position.insertAtIndex,
+                parentId = position.parentId,
+                childIndex = position.childIndex,
+                dragAndDropPosition = position.dropPosition,
+                dragAndDropData = DragAndDropUtility.GetDragAndDrop(m_Target.panel).data,
+            };
+        }
+
+        void PlaceHoverBarAtElement(ReusableCollectionItem item)
+        {
+            var viewport = targetScrollView.contentViewport;
+            PlaceHoverBarAt(Mathf.Min(viewport.WorldToLocal(item.rootElement.worldBound).yMax, viewport.localBound.yMax - k_DragHoverBarHeight));
+        }
+
+        void PlaceHoverBarAt(float top)
+        {
+            m_DragHoverBar.style.top = top;
+            m_DragHoverBar.style.visibility = Visibility.Visible;
+            m_DragHoverBar.style.marginLeft = 0f;
+            m_DragHoverBar.style.width = targetView.localBound.width;
+        }
+
+        protected override void ClearDragAndDropUI(bool dragCancelled)
+        {
+            if (dragCancelled) dragAndDropController.DragCleanup();
+            m_LastDragPosition = default;
+            foreach (var item in targetView.activeItems)
+                item.rootElement.RemoveFromClassList(BaseVerticalCollectionView.itemDragHoverUssClassName);
+            if (m_DragHoverBar != null) m_DragHoverBar.style.visibility = Visibility.Hidden;
+        }
+
+        protected ReusableCollectionItem GetRecycledItem(Vector3 pointerPosition)
+        {
+            foreach (var item in targetView.activeItems)
+                if (item.rootElement.worldBound.Contains(pointerPosition)) return item;
+            return null;
+        }
+
+        bool IsDraggingDisabled() => targetView == dragAndDrop.data.source && !enabled;
+    }
+}

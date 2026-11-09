@@ -220,19 +220,69 @@ namespace UnityEngine.UIElements
             set => m_ScrollView.EnableInClassList(borderUssClassName, value);
         }
 
+        /// <summary>Whether rows can be reordered by dragging (the drag controller's switch); a change
+        /// rebuilds the view.</summary>
         public bool reorderable
         {
-            get => m_Reorderable;
+            get => m_Dragger?.dragAndDropController?.enableReordering == true;
             set
             {
-                if (m_Reorderable == value) return;
-                if (value) Debug.LogError("Unbound: reordering list views by dragging is not supported yet");
-                m_Reorderable = value;
+                var controller = m_Dragger?.dragAndDropController;
+                if (controller == null || controller.enableReordering == value) return;
+                controller.enableReordering = value;
                 Rebuild();
             }
         }
 
-        bool m_Reorderable;
+        ListViewDragger m_Dragger;
+
+        internal ListViewDragger dragger => m_Dragger;
+
+        public event Func<CanStartDragArgs, bool> canStartDrag;
+
+        public event Func<SetupDragAndDropArgs, StartDragArgs> setupDragAndDrop;
+
+        public event Func<HandleDragAndDropArgs, DragVisualMode> dragAndDropUpdate;
+
+        public event Func<HandleDragAndDropArgs, DragVisualMode> handleDrop;
+
+        internal bool HasCanStartDrag() => canStartDrag != null;
+
+        internal bool RaiseCanStartDrag(ReusableCollectionItem item, IEnumerable<int> ids) =>
+            canStartDrag?.Invoke(new CanStartDragArgs(item?.rootElement, item?.id ?? -1, ids)) ?? true;
+
+        internal StartDragArgs RaiseSetupDragAndDrop(ReusableCollectionItem item, IEnumerable<int> ids, StartDragArgs args) =>
+            setupDragAndDrop?.Invoke(new SetupDragAndDropArgs(item?.rootElement, ids, args)) ?? args;
+
+        internal DragVisualMode RaiseHandleDragAndDrop(Vector2 pointerPosition, DragAndDropArgs args) =>
+            dragAndDropUpdate?.Invoke(new HandleDragAndDropArgs(pointerPosition, args)) ?? DragVisualMode.None;
+
+        internal DragVisualMode RaiseDrop(Vector2 pointerPosition, DragAndDropArgs args) =>
+            handleDrop?.Invoke(new HandleDragAndDropArgs(pointerPosition, args)) ?? DragVisualMode.None;
+
+        internal virtual ListViewDragger CreateDragger() => new ListViewDragger(this);
+
+        internal abstract ICollectionDragAndDropController CreateDragAndDropController();
+
+        /// <summary>Replaces the dragger and its drop controller (a new reorder mode needs another dragger).</summary>
+        internal void InitializeDragAndDropController(bool enableReordering)
+        {
+            if (m_Dragger != null)
+            {
+                m_Dragger.UnregisterCallbacksFromTarget(true);
+                m_Dragger.dragAndDropController = null;
+                m_Dragger = null;
+            }
+            m_Dragger = CreateDragger();
+            m_Dragger.dragAndDropController = CreateDragAndDropController();
+            if (m_Dragger.dragAndDropController != null) m_Dragger.dragAndDropController.enableReordering = enableReordering;
+        }
+
+        internal void SetDragAndDropController(ICollectionDragAndDropController dragAndDropController)
+        {
+            m_Dragger ??= CreateDragger();
+            m_Dragger.dragAndDropController = dragAndDropController;
+        }
 
         public bool horizontalScrollingEnabled
         {
@@ -399,6 +449,7 @@ namespace UnityEngine.UIElements
             delegatesFocus = true;
             m_ItemIndexChangedCallback = OnItemIndexChanged;
             m_ItemsSourceChangedCallback = OnItemsSourceChanged;
+            InitializeDragAndDropController(false);
         }
 
         public BaseVerticalCollectionView(IList itemsSource, float itemHeight = -1f) : this()
@@ -907,15 +958,27 @@ namespace UnityEngine.UIElements
         public static readonly string footerAddButtonName = ussClassName + "__add-button";
         public static readonly string footerRemoveButtonName = ussClassName + "__remove-button";
         static readonly string k_EmptyListStr = "List is empty";
+        static readonly string k_SizeFieldLabel = "Size";
 
         bool m_ShowBoundCollectionSize = true;
         bool m_ShowFoldoutHeader;
         string m_HeaderTitle;
         bool m_ShowAddRemoveFooter;
         Label m_ListViewLabel;
+        Foldout m_Foldout;
+        TextField m_ArraySizeField;
+        VisualElement m_Footer;
+        Button m_AddButton;
+        Button m_RemoveButton;
         VisualElement m_NoneElement;
         Func<VisualElement> m_MakeNoneElement;
+        Func<VisualElement> m_MakeHeader;
+        Func<VisualElement> m_MakeFooter;
+        VisualElement m_DrawnHeader;
+        VisualElement m_DrawnFooter;
         ListViewReorderMode m_ReorderMode;
+        bool m_AllowAdd = true;
+        bool m_AllowRemove = true;
         Action<IEnumerable<int>> m_ItemAddedCallback;
         Action<IEnumerable<int>> m_ItemRemovedCallback;
         Action m_ItemsSourceSizeChangedCallback;
@@ -923,43 +986,172 @@ namespace UnityEngine.UIElements
         public bool showBoundCollectionSize
         {
             get => m_ShowBoundCollectionSize;
-            set => m_ShowBoundCollectionSize = value;
+            set
+            {
+                if (m_ShowBoundCollectionSize == value) return;
+                m_ShowBoundCollectionSize = value;
+                SetupArraySizeField();
+            }
         }
 
+        /// <summary>A foldout titled <see cref="headerTitle"/> around the scroll view (and the footer),
+        /// with the size field beside its toggle.</summary>
         public bool showFoldoutHeader
         {
             get => m_ShowFoldoutHeader;
             set
             {
-                if (m_ShowFoldoutHeader == value) return;
                 m_ShowFoldoutHeader = value;
-                if (value) Debug.LogError("Unbound: list view foldout headers are not supported yet");
+                if (m_MakeHeader != null) return;
+                EnableInClassList(listViewWithHeaderUssClassName, value);
+                if (value)
+                {
+                    AddFoldout();
+                }
+                else if (m_Foldout != null)
+                {
+                    m_DrawnFooter?.RemoveFromHierarchy();
+                    RemoveFoldout();
+                }
+                SetupArraySizeField();
+                UpdateListViewLabel();
+                if (m_MakeFooter == null)
+                {
+                    if (showAddRemoveFooter) EnableFooter(true);
+                }
+                else if (value)
+                {
+                    m_DrawnFooter?.RemoveFromHierarchy();
+                    m_Foldout?.contentContainer.Add(m_DrawnFooter);
+                }
+                else
+                {
+                    hierarchy.Add(m_DrawnFooter);
+                    m_DrawnFooter.BringToFront();
+                }
             }
         }
 
         public string headerTitle
         {
             get => m_HeaderTitle;
-            set => m_HeaderTitle = value;
-        }
-
-        public bool showAddRemoveFooter
-        {
-            get => m_ShowAddRemoveFooter;
             set
             {
-                if (m_ShowAddRemoveFooter == value) return;
-                m_ShowAddRemoveFooter = value;
-                if (value) Debug.LogError("Unbound: list view add/remove footers are not supported yet");
+                m_HeaderTitle = value;
+                if (m_Foldout != null) m_Foldout.text = value;
             }
         }
 
+        /// <summary>A game header replaces the foldout header.</summary>
+        public Func<VisualElement> makeHeader
+        {
+            get => m_MakeHeader;
+            set
+            {
+                if (value == m_MakeHeader) return;
+                RemoveFoldout();
+                m_MakeHeader = value;
+                if (value != null)
+                {
+                    SetupArraySizeField();
+                    m_DrawnHeader = value();
+                    m_DrawnHeader.tabIndex = 1;
+                    hierarchy.Add(m_DrawnHeader);
+                    m_DrawnHeader.SendToBack();
+                }
+                else
+                {
+                    m_DrawnHeader?.RemoveFromHierarchy();
+                    m_DrawnHeader = null;
+                    if (showFoldoutHeader)
+                    {
+                        AddFoldout();
+                        SetupArraySizeField();
+                        UpdateListViewLabel();
+                    }
+                }
+                if (m_DrawnFooter != null)
+                {
+                    if (m_Foldout != null)
+                    {
+                        m_DrawnFooter.RemoveFromHierarchy();
+                        m_Foldout.contentContainer.hierarchy.Add(m_DrawnFooter);
+                    }
+                    else
+                    {
+                        hierarchy.Add(m_DrawnFooter);
+                        m_DrawnFooter.BringToFront();
+                    }
+                }
+                else
+                {
+                    EnableFooter(m_ShowAddRemoveFooter);
+                }
+            }
+        }
+
+        /// <summary>A game footer replaces the add/remove footer.</summary>
+        public Func<VisualElement> makeFooter
+        {
+            get => m_MakeFooter;
+            set
+            {
+                if (value == m_MakeFooter) return;
+                m_MakeFooter = value;
+                if (value != null)
+                {
+                    m_Footer?.RemoveFromHierarchy();
+                    m_Footer = null;
+                    m_DrawnFooter = value();
+                    if (m_Foldout != null) m_Foldout.contentContainer.Add(m_DrawnFooter);
+                    else
+                    {
+                        hierarchy.Add(m_DrawnFooter);
+                        m_DrawnFooter.BringToFront();
+                    }
+                    EnableInClassList(listViewWithFooterUssClassName, true);
+                    scrollView.EnableInClassList(scrollViewWithFooterUssClassName, true);
+                }
+                else
+                {
+                    m_DrawnFooter?.RemoveFromHierarchy();
+                    m_DrawnFooter = null;
+                    EnableFooter(m_ShowAddRemoveFooter);
+                }
+            }
+        }
+
+        /// <summary>A footer with "+" and "-" buttons that add an item and remove the selection (or the
+        /// last item).</summary>
+        public bool showAddRemoveFooter
+        {
+            get => m_Footer != null;
+            set
+            {
+                m_ShowAddRemoveFooter = value;
+                if (m_MakeFooter == null) EnableFooter(value);
+                if (value) m_ArraySizeField?.AddToClassList(arraySizeFieldWithFooterUssClassName);
+            }
+        }
+
+        internal Foldout headerFoldout => m_Foldout;
+
+        internal VisualElement footer => m_Footer ?? m_DrawnFooter;
+
         public new BaseListViewController viewController => base.viewController as BaseListViewController;
 
+        /// <summary>A new mode replaces the dragger (keeping whether reordering is on) and rebuilds.</summary>
         public ListViewReorderMode reorderMode
         {
             get => m_ReorderMode;
-            set => m_ReorderMode = value;
+            set
+            {
+                if (value == m_ReorderMode) return;
+                m_ReorderMode = value;
+                InitializeDragAndDropController(reorderable);
+                reorderModeChanged?.Invoke();
+                Rebuild();
+            }
         }
 
         public Func<VisualElement> makeNoneElement
@@ -974,21 +1166,214 @@ namespace UnityEngine.UIElements
             }
         }
 
-        public bool allowAdd { get; set; } = true;
+        public bool allowAdd
+        {
+            get => m_AllowAdd;
+            set
+            {
+                if (value == m_AllowAdd) return;
+                m_AllowAdd = value;
+                m_AddButton?.SetEnabled(value);
+            }
+        }
 
-        public Action<BaseListView, Button> overridingAddButtonBehavior { get; set; }
+        /// <summary>Replaces what "+" does; setting it (as onAdd and onRemove) refreshes the rows.</summary>
+        public Action<BaseListView, Button> overridingAddButtonBehavior
+        {
+            get => m_OverridingAddButtonBehavior;
+            set
+            {
+                if (value == m_OverridingAddButtonBehavior) return;
+                m_OverridingAddButtonBehavior = value;
+                RefreshItems();
+            }
+        }
 
-        public Action<BaseListView> onAdd { get; set; }
+        public Action<BaseListView> onAdd
+        {
+            get => m_OnAdd;
+            set
+            {
+                if (value == m_OnAdd) return;
+                m_OnAdd = value;
+                RefreshItems();
+            }
+        }
 
-        public bool allowRemove { get; set; } = true;
+        public bool allowRemove
+        {
+            get => m_AllowRemove;
+            set
+            {
+                if (value == m_AllowRemove) return;
+                m_AllowRemove = value;
+                UpdateRemoveButton();
+            }
+        }
 
-        public Action<BaseListView> onRemove { get; set; }
+        public Action<BaseListView> onRemove
+        {
+            get => m_OnRemove;
+            set
+            {
+                if (value == m_OnRemove) return;
+                m_OnRemove = value;
+                RefreshItems();
+            }
+        }
+
+        Action<BaseListView, Button> m_OverridingAddButtonBehavior;
+        Action<BaseListView> m_OnAdd;
+        Action<BaseListView> m_OnRemove;
 
         public event Action<IEnumerable<int>> itemsAdded;
 
         public event Action<IEnumerable<int>> itemsRemoved;
 
         internal event Action itemsSourceSizeChanged;
+
+        internal event Action reorderModeChanged;
+
+        void AddFoldout()
+        {
+            if (m_Foldout != null) return;
+            m_Foldout = new Foldout { name = foldoutHeaderUssClassName, text = m_HeaderTitle };
+            m_Foldout.toggle.tabIndex = 10;
+            m_Foldout.AddToClassList(foldoutHeaderUssClassName);
+            hierarchy.Add(m_Foldout);
+            m_Foldout.Add(scrollView);
+        }
+
+        void RemoveFoldout()
+        {
+            m_Foldout?.RemoveFromHierarchy();
+            m_Foldout = null;
+            hierarchy.Add(scrollView);
+        }
+
+        /// <summary>The size field shows the item count: beside the foldout toggle with a header, else
+        /// first in the list labelled "Size" (only for bound collections, which Unbound does not
+        /// have). Editing it adds or removes items at the end.</summary>
+        internal void SetupArraySizeField()
+        {
+            if (!showBoundCollectionSize || !showFoldoutHeader || m_DrawnHeader != null)
+            {
+                m_ArraySizeField?.RemoveFromHierarchy();
+                return;
+            }
+            if (m_ArraySizeField == null)
+            {
+                m_ArraySizeField = new TextField { name = arraySizeFieldUssClassName, tabIndex = 20 };
+                m_ArraySizeField.AddToClassList(arraySizeFieldUssClassName);
+                m_ArraySizeField.RegisterValueChangedCallback(OnArraySizeFieldChanged);
+                m_ArraySizeField.isDelayed = true;
+                m_ArraySizeField.focusable = true;
+            }
+            m_ArraySizeField.EnableInClassList(arraySizeFieldWithFooterUssClassName, showAddRemoveFooter);
+            m_ArraySizeField.EnableInClassList(arraySizeFieldWithHeaderUssClassName, showFoldoutHeader);
+            m_ArraySizeField.label = string.Empty;
+            hierarchy.Add(m_ArraySizeField);
+            UpdateArraySizeField();
+        }
+
+        void EnableFooter(bool enabled)
+        {
+            EnableInClassList(listViewWithFooterUssClassName, enabled);
+            scrollView.EnableInClassList(scrollViewWithFooterUssClassName, enabled);
+            if (!enabled)
+            {
+                m_RemoveButton?.RemoveFromHierarchy();
+                m_AddButton?.RemoveFromHierarchy();
+                m_Footer?.RemoveFromHierarchy();
+                m_RemoveButton = null;
+                m_AddButton = null;
+                m_Footer = null;
+                return;
+            }
+            if (m_Footer == null)
+            {
+                m_Footer = new VisualElement { name = footerUssClassName };
+                m_Footer.AddToClassList(footerUssClassName);
+                m_AddButton = new Button(OnAddClicked) { name = footerAddButtonName, text = "+" };
+                m_AddButton.SetEnabled(allowAdd);
+                m_Footer.Add(m_AddButton);
+                m_RemoveButton = new Button(OnRemoveClicked) { name = footerRemoveButtonName, text = "-" };
+                m_Footer.Add(m_RemoveButton);
+                UpdateRemoveButton();
+            }
+            if (m_Foldout != null) m_Foldout.contentContainer.Add(m_Footer);
+            else hierarchy.Add(m_Footer);
+        }
+
+        void OnArraySizeFieldChanged(ChangeEvent<string> evt)
+        {
+            if (m_ArraySizeField.showMixedValue && BaseField<string>.mixedValueString == evt.newValue) return;
+            if (!int.TryParse(evt.newValue, out int size) || size < 0)
+            {
+                m_ArraySizeField.SetValueWithoutNotify(evt.previousValue);
+                return;
+            }
+            int count = viewController.GetItemsCount();
+            if (count == 0 && size == viewController.GetItemsMinCount()) return;
+            if (size > count) viewController.AddItems(size - count);
+            else if (size < count) viewController.RemoveItems(count - size);
+            else if (size == 0) viewController.ClearItems();
+            UpdateListViewLabel();
+        }
+
+        void UpdateRemoveButton() => m_RemoveButton?.SetEnabled(allowRemove && viewController != null && viewController.GetItemsCount() > 0);
+
+        internal void UpdateArraySizeField()
+        {
+            if (!HasValidDataAndBindings() || m_ArraySizeField == null) return;
+            if (!m_ArraySizeField.showMixedValue) m_ArraySizeField.SetValueWithoutNotify(viewController.GetItemsMinCount().ToString());
+            footer?.SetEnabled(true);
+        }
+
+        /// <summary>"+": the override, else onAdd, else one new item; when the count changed, the new
+        /// last item is selected and scrolled to.</summary>
+        void OnAddClicked()
+        {
+            int countBefore = itemsSource?.Count ?? 0;
+            if (overridingAddButtonBehavior != null) overridingAddButtonBehavior(this, m_AddButton);
+            else if (onAdd != null) onAdd(this);
+            else (GetOrCreateViewController() as BaseListViewController)?.AddItems(1);
+            if (itemsSource != null && countBefore != itemsSource.Count)
+            {
+                OnItemsSourceSizeChanged();
+                SetSelection(itemsSource.Count - 1);
+                ScrollToItem(-1);
+            }
+            if (HasValidDataAndBindings() && m_ArraySizeField != null) m_ArraySizeField.showMixedValue = false;
+        }
+
+        /// <summary>"-": onRemove, else the selected items (then no selection), else the last item.</summary>
+        void OnRemoveClicked()
+        {
+            if (onRemove != null)
+            {
+                onRemove(this);
+            }
+            else if (hasSelection)
+            {
+                viewController.RemoveItems(new List<int>(selectedIndices));
+                ClearSelection();
+            }
+            else if (itemsSource != null && itemsSource.Count > 0)
+            {
+                viewController.RemoveItem(itemsSource.Count - 1);
+            }
+            if (HasValidDataAndBindings() && m_ArraySizeField != null) m_ArraySizeField.showMixedValue = false;
+        }
+
+        bool hasSelection
+        {
+            get
+            {
+                foreach (var _ in selectedIndices) return true;
+                return false;
+            }
+        }
 
         /// <summary>An empty list shows "List is empty" (or the none element) in its viewport.</summary>
         internal void UpdateListViewLabel()
@@ -1058,15 +1443,24 @@ namespace UnityEngine.UIElements
         {
             AddToClassList(ussClassName);
             pickingMode = PickingMode.Ignore;
-            allowAdd = true;
-            allowRemove = true;
         }
 
         private protected override void PostRefresh()
         {
+            UpdateArraySizeField();
+            UpdateRemoveButton();
             UpdateListViewLabel();
             base.PostRefresh();
         }
+
+        internal override ListViewDragger CreateDragger()
+        {
+            if (m_ReorderMode == ListViewReorderMode.Animated)
+                Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.reorderMode Animated (dragging uses the simple mode)");
+            return new ListViewDragger(this);
+        }
+
+        internal override ICollectionDragAndDropController CreateDragAndDropController() => new ListViewReorderableDragAndDropController(this);
 
         private protected override bool HandleItemNavigation(bool moveIn, bool altPressed) => false;
     }
@@ -1274,7 +1668,7 @@ namespace UnityEngine.UIElements
         internal override void InvokeMakeItem(ReusableCollectionItem reusableItem)
         {
             if (!(reusableItem is ReusableListViewItem listItem)) return;
-            listItem.Init(MakeItem(), false);
+            listItem.Init(MakeItem(), baseListView.reorderable && baseListView.reorderMode == ListViewReorderMode.Animated);
             PostInitRegistration(listItem);
         }
 
@@ -1293,7 +1687,13 @@ namespace UnityEngine.UIElements
 
         internal override void SetBindingContext(ReusableCollectionItem reusableItem, int index) => base.SetBindingContext(reusableItem, index);
 
-        internal override void InvokeBindItem(ReusableCollectionItem reusableItem, int index) => base.InvokeBindItem(reusableItem, index);
+        /// <summary>Animated reordering shows the drag handle on rows that need one.</summary>
+        internal override void InvokeBindItem(ReusableCollectionItem reusableItem, int index)
+        {
+            if (reusableItem is ReusableListViewItem listItem)
+                listItem.UpdateDragHandle(baseListView.reorderable && baseListView.reorderMode == ListViewReorderMode.Animated && NeedsDragHandle(index));
+            base.InvokeBindItem(reusableItem, index);
+        }
 
         [Unbound.EditorFaithful("Unity's base implementation")]
         public virtual bool NeedsDragHandle(int index) => true;
@@ -1512,16 +1912,72 @@ namespace UnityEngine.UIElements
         }
     }
 
+    /// <summary>A list row. With animated reordering the row is wrapped in a container holding a drag
+    /// handle (two bars) and an item container around the made element.</summary>
     internal partial class ReusableListViewItem : ReusableCollectionItem
     {
-        public override VisualElement rootElement => bindableElement;
+        static readonly string k_SortingDisablesReorderingTooltip = "Reordering is disabled when the collection is being sorted.";
 
-        public override void SetDragGhost(bool dragGhost) => base.SetDragGhost(dragGhost);
+        VisualElement m_Container;
+        VisualElement m_DragHandle;
+        VisualElement m_ItemContainer;
+
+        public override VisualElement rootElement => m_Container ?? bindableElement;
 
         public void Init(VisualElement item, bool usesAnimatedDragger)
         {
             base.Init(item);
-            if (usesAnimatedDragger) Debug.LogError("Unbound: animated list view reordering is not supported yet");
+            UpdateHierarchy(new VisualElement { name = BaseListView.reorderableItemUssClassName }, bindableElement, usesAnimatedDragger);
+        }
+
+        protected void UpdateHierarchy(VisualElement root, VisualElement item, bool usesAnimatedDragger)
+        {
+            if (!usesAnimatedDragger)
+            {
+                if (m_Container == null) return;
+                m_Container.RemoveFromHierarchy();
+                m_Container = null;
+                return;
+            }
+            if (m_Container != null) return;
+            m_Container = root;
+            m_Container.AddToClassList(BaseListView.reorderableItemUssClassName);
+            m_DragHandle = Named(BaseListView.reorderableItemHandleUssClassName);
+            m_DragHandle.Add(Named(BaseListView.reorderableItemHandleBarUssClassName));
+            m_DragHandle.Add(Named(BaseListView.reorderableItemHandleBarUssClassName));
+            m_ItemContainer = Named(BaseListView.reorderableItemContainerUssClassName);
+            m_ItemContainer.Add(item);
+            m_Container.Add(m_DragHandle);
+            m_Container.Add(m_ItemContainer);
+        }
+
+        static VisualElement Named(string className)
+        {
+            var e = new VisualElement { name = className };
+            e.AddToClassList(className);
+            return e;
+        }
+
+        public void UpdateDragHandle(bool needsDragHandle)
+        {
+            if (needsDragHandle)
+            {
+                if (m_DragHandle.parent != null) return;
+                rootElement.Insert(0, m_DragHandle);
+                rootElement.AddToClassList(BaseListView.reorderableItemUssClassName);
+            }
+            else if (m_DragHandle?.parent != null)
+            {
+                m_DragHandle.RemoveFromHierarchy();
+                rootElement.RemoveFromClassList(BaseListView.reorderableItemUssClassName);
+            }
+        }
+
+        public void SetDragHandleEnabled(bool enabled)
+        {
+            if (m_DragHandle == null) return;
+            m_DragHandle.SetEnabled(enabled);
+            m_DragHandle.tooltip = enabled ? null : k_SortingDisablesReorderingTooltip;
         }
 
         public override void PreAttachElement()
@@ -1534,6 +1990,12 @@ namespace UnityEngine.UIElements
         {
             base.DetachElement();
             rootElement.RemoveFromClassList(BaseListView.itemUssClassName);
+        }
+
+        public override void SetDragGhost(bool dragGhost)
+        {
+            base.SetDragGhost(dragGhost);
+            m_DragHandle?.EnableInClassList("unity-hidden", isDragGhost);
         }
     }
 
@@ -1579,7 +2041,9 @@ namespace UnityEngine.UIElements
     /// first visible one, in content container order.</summary>
     internal abstract partial class VerticalVirtualizationController<T> : CollectionVirtualizationController where T : ReusableCollectionItem, new()
     {
-        readonly Stack<T> m_Pool = new Stack<T>();
+        // Released items are detached; Clear destroys them (the pool's order is the order of the
+        // destroyItem callbacks on a rebuild).
+        readonly UnityEngine.Pool.ObjectPool<T> m_Pool = new UnityEngine.Pool.ObjectPool<T>(() => new T(), null, i => i.DetachElement(), i => i.DestroyElement());
         protected BaseVerticalCollectionView m_CollectionView;
         protected const int k_ExtraVisibleItems = 2;
         protected List<T> m_ActiveItems;
@@ -1655,7 +2119,7 @@ namespace UnityEngine.UIElements
                 if (rebuild)
                 {
                     if (valid && item.index != -1) m_CollectionView.viewController.InvokeUnbindItem(item, item.index);
-                    Release(item);
+                    m_Pool.Release(item);
                 }
                 else if (m_CollectionView.itemsSource != null && index >= 0 && index < itemsCount)
                 {
@@ -1669,7 +2133,7 @@ namespace UnityEngine.UIElements
                 }
             }
             if (!rebuild) return;
-            while (m_Pool.Count > 0) m_Pool.Pop().DestroyElement();
+            m_Pool.Clear();
             m_ActiveItems.Clear();
             m_ScrollView.Clear();
         }
@@ -1678,12 +2142,6 @@ namespace UnityEngine.UIElements
         {
             if (!m_CollectionView.HasValidDataAndBindings()) return;
             foreach (var item in m_ActiveItems) m_CollectionView.viewController.InvokeUnbindItem(item, item.index);
-        }
-
-        void Release(T item)
-        {
-            item.DetachElement();
-            m_Pool.Push(item);
         }
 
         /// <summary>Binds a recycled item to an index and moves it to its place among the active items.</summary>
@@ -1817,7 +2275,7 @@ namespace UnityEngine.UIElements
 
         internal virtual T GetOrMakeItemAtIndex(int activeItemIndex = -1, int scrollViewIndex = -1)
         {
-            var item = m_Pool.Count > 0 ? m_Pool.Pop() : new T();
+            var item = m_Pool.Get();
             if (item.rootElement == null)
             {
                 m_CollectionView.viewController.InvokeMakeItem(item);
@@ -1835,7 +2293,7 @@ namespace UnityEngine.UIElements
         {
             var item = m_ActiveItems[activeItemsIndex];
             if (item.index != -1) m_CollectionView.viewController.InvokeUnbindItem(item, item.index);
-            Release(item);
+            m_Pool.Release(item);
             m_ActiveItems.Remove(item);
         }
 
