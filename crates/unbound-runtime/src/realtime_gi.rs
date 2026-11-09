@@ -370,7 +370,8 @@ pub fn read_atlas(handle: u64, atlas: usize, out: &mut [u16]) -> Result<usize> {
 }
 
 /// Format version of the realtime lightmap UV cache entries (`realtime_uvs`).
-const UV_CACHE_VERSION: u32 = 1;
+/// 2: the chart rectangles are stored, and only layouts that passed the check.
+const UV_CACHE_VERSION: u32 = 2;
 
 /// Renderer `renderer` of system `system`'s realtime lightmap UVs
 /// (`unbound_gi::realtime_uv`), checked against the system's precomputed layout and cached under
@@ -405,16 +406,13 @@ pub fn realtime_uvs(
         .project_root
         .join("Library/Unbound/RealtimeUVs")
         .join(format!("{}.bin", key.finalize().to_hex()));
-    let output = match read_cached(&path, input.positions.len()) {
+    let cached = read_cached(&path, input.positions.len());
+    let fresh = cached.is_none();
+    let output = match cached {
         Some(output) => output,
-        None => {
-            let output = unbound_gi::realtime_uv::realtime_uvs(input)?;
-            if let Err(e) = write_cached(&path, &output) {
-                tracing::debug!("caching realtime lightmap UVs in {}: {e:#}", path.display());
-            }
-            output
-        }
+        None => unbound_gi::realtime_uv::realtime_uvs(input)?,
     };
+    // A cached layout is checked again (with its charts) against this scene's data.
     with_scene(handle, |scene| {
         let solver = scene
             .systems
@@ -427,6 +425,10 @@ pub fn realtime_uvs(
             .with_context(|| format!("no renderer {renderer} in system {system}"))?;
         unbound_gi::realtime_uv::check_layout(solver.system(), st, &output)
     })?;
+    // Only a layout that passed the check is cached.
+    if fresh && let Err(e) = write_cached(&path, &output) {
+        tracing::debug!("caching realtime lightmap UVs in {}: {e:#}", path.display());
+    }
     for (o, uv) in out.chunks_exact_mut(2).zip(&output.uvs) {
         o.copy_from_slice(uv);
     }
@@ -438,7 +440,8 @@ fn bytes_of<T: Copy>(items: &[T]) -> &[u8] {
     unsafe { std::slice::from_raw_parts(items.as_ptr() as *const u8, std::mem::size_of_val(items)) }
 }
 
-/// A cache entry: width, height, vertex count, then the UVs (little-endian).
+/// A cache entry: width, height, vertex count, chart count, the UVs, then the chart rectangles
+/// (little-endian 32-bit words).
 fn read_cached(path: &Path, vertices: usize) -> Option<unbound_gi::realtime_uv::Output> {
     let bytes = std::fs::read(path).ok()?;
     let word = |k: usize| -> Option<u32> {
@@ -446,34 +449,48 @@ fn read_cached(path: &Path, vertices: usize) -> Option<unbound_gi::realtime_uv::
             bytes.get(4 * k..4 * k + 4)?.try_into().ok()?,
         ))
     };
-    let (width, height, count) = (word(0)?, word(1)?, word(2)? as usize);
-    if count != vertices || bytes.len() != 12 + 8 * count {
+    let (width, height) = (word(0)?, word(1)?);
+    let (count, charts) = (word(2)? as usize, word(3)? as usize);
+    if count != vertices || bytes.len() != 4 * (4 + 2 * count + 4 * charts) {
         return None;
     }
     let uvs = (0..count)
         .map(|v| {
             Some([
-                f32::from_bits(word(3 + 2 * v)?),
                 f32::from_bits(word(4 + 2 * v)?),
+                f32::from_bits(word(5 + 2 * v)?),
             ])
+        })
+        .collect::<Option<Vec<_>>>()?;
+    let at = 4 + 2 * count;
+    let charts = (0..charts)
+        .map(|c| {
+            let w = |k: usize| word(at + 4 * c + k);
+            Some([w(0)?, w(1)?, w(2)?, w(3)?])
         })
         .collect::<Option<Vec<_>>>()?;
     Some(unbound_gi::realtime_uv::Output {
         width,
         height,
         uvs,
-        charts: Vec::new(),
+        charts,
     })
 }
 
 fn write_cached(path: &Path, output: &unbound_gi::realtime_uv::Output) -> Result<()> {
-    let mut bytes = Vec::with_capacity(12 + 8 * output.uvs.len());
-    for v in [output.width, output.height, output.uvs.len() as u32] {
+    let mut bytes = Vec::with_capacity(4 * (4 + 2 * output.uvs.len() + 4 * output.charts.len()));
+    let header = [
+        output.width,
+        output.height,
+        output.uvs.len() as u32,
+        output.charts.len() as u32,
+    ];
+    let words = header
+        .into_iter()
+        .chain(output.uvs.iter().flat_map(|uv| uv.map(f32::to_bits)))
+        .chain(output.charts.iter().flatten().copied());
+    for v in words {
         bytes.extend_from_slice(&v.to_le_bytes());
-    }
-    for uv in &output.uvs {
-        bytes.extend_from_slice(&uv[0].to_le_bytes());
-        bytes.extend_from_slice(&uv[1].to_le_bytes());
     }
     let dir = path.parent().context("no cache folder")?;
     std::fs::create_dir_all(dir)?;
@@ -586,7 +603,7 @@ mod tests {
             width: 8,
             height: 12,
             uvs: vec![[0.25, 0.5], [0.75, 1.0]],
-            charts: Vec::new(),
+            charts: vec![[0, 0, 4, 4], [4, 0, 4, 12]],
         };
         write_cached(&path, &output).unwrap();
         assert_eq!(read_cached(&path, 2), Some(output));

@@ -64,6 +64,8 @@ namespace UnityEngine
             internal Renderer[] Renderers;
             internal Vector4[] ScaleOffsets;
             internal bool MaterialsDirty = true;
+            /// <summary>The realtime lightmap UV meshes made for its renderers.</summary>
+            internal readonly List<Mesh> Streams = new List<Mesh>();
             /// <summary>Its realtime lightmap UVs could not be made: not drawn, not updated.</summary>
             internal bool Failed;
         }
@@ -82,6 +84,7 @@ namespace UnityEngine
         static readonly Dictionary<Renderer, (GIScene Scene, int System, int Index)> s_Renderers =
             new Dictionary<Renderer, (GIScene, int, int)>();
         static GiLight[] s_Lights = new GiLight[8];
+        static readonly List<Renderer> s_Released = new List<Renderer>();
         static ushort[] s_Texels = Array.Empty<ushort>();
         static readonly HashSet<string> s_Warned = new HashSet<string>(StringComparer.Ordinal);
         static bool s_Registered;
@@ -177,6 +180,9 @@ namespace UnityEngine
                 {
                     Warn("uvs:" + failure, $"{file.Path}: a system of its precomputed realtime GI is not drawn: {failure}");
                     system.Failed = true;
+                    foreach (var renderer in system.Renderers)
+                        if (renderer is MeshRenderer mesh) mesh.enlightenVertexStream = null;
+                    DestroyStreams(system);
                 }
                 else
                 {
@@ -187,6 +193,10 @@ namespace UnityEngine
             }
             loaded.Systems = systems.ToArray();
             s_Scenes.Add(loaded);
+            if (LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional)
+                Warn("directional:" + file.Path, $"{file.Path}: directional realtime lightmaps are not supported yet: its precomputed realtime GI is drawn without directionality.");
+            if (LightmapSettings.lightProbes is LightProbes probes && probes.count > 0)
+                Warn("probes:" + file.Path, $"{file.Path}: light probes lit by precomputed realtime GI are not supported yet: probe-lit objects keep the ambient light.");
             if (!s_Registered)
             {
                 s_Registered = true;
@@ -209,18 +219,12 @@ namespace UnityEngine
         {
             var scene = s_Scenes[index];
             s_Scenes.RemoveAt(index);
-            foreach (var system in scene.Systems)
-                foreach (var renderer in system.Renderers)
-                    if (renderer != null)
-                    {
-                        s_Renderers.Remove(renderer);
-                        renderer.m_RealtimeLightmap = null;
-                        if (renderer is MeshRenderer mesh && mesh.enlightenVertexStream != null)
-                        {
-                            Object.DestroyImmediate(mesh.enlightenVertexStream);
-                            mesh.enlightenVertexStream = null;
-                        }
-                    }
+            Unbind(scene);
+            // Renderers of an unloaded scene are destroyed already: their entries go by scene.
+            s_Released.Clear();
+            foreach (var pair in s_Renderers)
+                if (pair.Value.Scene == scene) s_Released.Add(pair.Key);
+            foreach (var renderer in s_Released) s_Renderers.Remove(renderer);
             foreach (var atlas in scene.Atlases) Object.DestroyImmediate(atlas);
             if (Native.IsReady) Native.Call("realtime-gi-release", JsonSerializer.Serialize(new { handle = scene.Handle }));
         }
@@ -251,8 +255,31 @@ namespace UnityEngine
             string message;
             try { message = error.Length > 0 ? System.Text.Encoding.UTF8.GetString(error.Data, (int)error.Length) : "unknown error"; }
             finally { Native.Free(error); }
-            Warn(message, $"precomputed realtime GI stops updating: {message}");
+            Warn(message, $"precomputed realtime GI is not drawn: {message}");
+            Unbind(scene);
+        }
+
+        /// <summary>A scene whose realtime GI cannot go on: its renderers draw as without it
+        /// (light probes, no realtime lightmap).</summary>
+        static void Unbind(GIScene scene)
+        {
             scene.Failed = true;
+            foreach (var system in scene.Systems)
+            {
+                foreach (var renderer in system.Renderers)
+                    if (renderer != null)
+                    {
+                        renderer.m_RealtimeLightmap = null;
+                        if (renderer is MeshRenderer mesh) mesh.enlightenVertexStream = null;
+                    }
+                DestroyStreams(system);
+            }
+        }
+
+        static void DestroyStreams(GISystem system)
+        {
+            foreach (var stream in system.Streams) Object.DestroyImmediate(stream);
+            system.Streams.Clear();
         }
 
         static readonly List<Light> s_FrameLights = new List<Light>();
@@ -340,11 +367,18 @@ namespace UnityEngine
 
         /// <summary>The environment's linear radiance: the flat ambient color (other ambient modes
         /// are not supported yet: they light nothing, with a warning).</summary>
+        static AmbientMode s_WarnedAmbient = (AmbientMode)(-1);
+
         static Color Environment()
         {
-            if (RenderSettings.ambientMode == AmbientMode.Flat) return RenderSettings.ambientLight.linear;
-            Warn("environment:" + RenderSettings.ambientMode,
-                $"precomputed realtime GI takes only a flat ambient color as its environment yet; with ambient mode {RenderSettings.ambientMode} the environment adds no realtime indirect light.");
+            var mode = RenderSettings.ambientMode;
+            if (mode == AmbientMode.Flat) return RenderSettings.ambientLight.linear;
+            if (mode != s_WarnedAmbient)
+            {
+                s_WarnedAmbient = mode;
+                Warn("environment:" + mode,
+                    $"precomputed realtime GI takes only a flat ambient color as its environment yet; with ambient mode {mode} the environment adds no realtime indirect light.");
+            }
             return Color.black;
         }
 
@@ -431,6 +465,7 @@ namespace UnityEngine
                 stream.vertices = vertices;
                 stream.SetUVs(2, realtime);
                 renderer.enlightenVertexStream = stream;
+                system.Streams.Add(stream);
             }
             return null;
         }
@@ -458,8 +493,8 @@ namespace UnityEngine
                 var emissionBytes = Native.ReadPixels(emission.EnsureCreated(), 0, 0, system.Width, system.Height, true);
                 if (albedoBytes == null || emissionBytes == null)
                 {
-                    Warn("headless", "precomputed realtime GI needs a GPU for its materials' meta passes: its realtime lightmaps stay black.");
-                    scene.Failed = true;
+                    Warn("headless", "precomputed realtime GI needs a GPU for its materials' meta passes: it is not drawn.");
+                    Unbind(scene);
                     return;
                 }
                 NativeBuffer error;

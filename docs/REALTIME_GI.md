@@ -86,8 +86,10 @@ emission change without `UpdateGIMaterials`, and `updateThreshold` above its def
 
 Each system takes its albedo and emission from two textures at system resolution in which its
 renderers' meta passes (`LightMode` `Meta`, Unity's own shaders) are drawn at their realtime
-lightmap UVs. Unbound's model of how they are made and read (`crates/unbound-gi`; not yet
-confirmed by a capture, since the engine cannot draw at realtime lightmap UVs yet):
+lightmap UVs. Unbound's model of how they are made and read (`Graphics/RealtimeGI.cs`,
+`crates/unbound-gi`); with it the engine's atlases for tests/projects/realtimegi match the
+Editor's but for the residuals below, which do not come from the materials (the clusters' albedo
+equals the Editor's):
 
 - Each renderer is drawn with `unity_LightmapST` and `unity_DynamicLightmapST` set to its scale
   and offset within the system (the scene mapping's `dynamicLightmapSTInSystem`),

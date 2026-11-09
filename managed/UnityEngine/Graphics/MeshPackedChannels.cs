@@ -66,6 +66,16 @@ namespace UnityEngine
             return mask;
         }
 
+        /// <summary>One UV channel of <paramref name="source"/> over this mesh's (same vertex
+        /// count); its attribute bit, or 0 when the source has no such channel.</summary>
+        internal uint OverrideUVChannel(Mesh source, int channel)
+        {
+            if (source.m_UVs[channel] == null || source.m_UVs[channel].Length != vertexCount) return 0;
+            m_UVs[channel] = source.m_UVs[channel]; m_UVDimensions[channel] = source.m_UVDimensions[channel];
+            CopyPackedChannelFrom(source, VertexAttribute.TexCoord0 + channel);
+            return 1u << (int)(VertexAttribute.TexCoord0 + channel);
+        }
+
         internal void CopyPackedChannelFrom(Mesh source, VertexAttribute attribute)
         {
             var channel = source.m_PackedChannels?[(int)attribute];

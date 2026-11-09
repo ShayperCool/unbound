@@ -679,6 +679,8 @@ namespace UnityEngine
         public int subMeshStartIndex => 0;
         Mesh m_StreamedMesh;
         (Mesh, int, Mesh, int, Mesh, int) m_StreamedKey;
+        /// <summary>The UV channel realtime lightmap UVs are drawn from (TEXCOORD2).</summary>
+        const int RealtimeUVChannel = 2;
 
         /// <summary>The mesh with the additional vertex streams' channels over its own, and the
         /// realtime lightmap UVs of <see cref="enlightenVertexStream"/> over those.</summary>
@@ -697,12 +699,11 @@ namespace UnityEngine
                     m_StreamedMesh = new Mesh { hideFlags = HideFlags.HideAndDontSave };
             m_StreamedMesh.CopyGeometryFrom(mesh);
             m_StreamedMesh.name = mesh.name;
-            uint overridden = 0;
-            if (streams != null) overridden |= m_StreamedMesh.OverrideVertexChannels(streams);
-            // The realtime lightmap UVs are CPU channels (RealtimeGI makes them).
-            if (realtime != null) overridden |= m_StreamedMesh.OverrideVertexChannels(realtime);
+            uint overridden = streams != null ? m_StreamedMesh.OverrideVertexChannels(streams) : 0;
+            // The realtime lightmap UVs (TEXCOORD2) alone, from this mesh's own CPU channel.
+            uint realtimeUVs = realtime != null ? m_StreamedMesh.OverrideUVChannel(realtime, RealtimeUVChannel) : 0;
             m_StreamedMesh.ShareDrawIndices(mesh);
-            m_StreamedMesh.ShareVertexSources(mesh, streams ?? realtime, overridden);
+            m_StreamedMesh.ShareVertexSources(mesh, streams, overridden & ~realtimeUVs, realtimeUVs);
             m_StreamedMesh.m_Dirty = true;
             m_StreamedKey = key;
             return m_StreamedMesh;

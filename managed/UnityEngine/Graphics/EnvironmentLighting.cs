@@ -52,6 +52,9 @@ namespace UnityEngine
         /// change does not replace it, even with UpdateGIMaterials.</summary>
         public static void SetEmissive(Renderer renderer, Color color) => RealtimeGI.SetEmissive(renderer, color);
 
+        [Obsolete("DynamicGI.UpdateMaterials(Renderer) is deprecated; instead, use extension method from RendererExtensions: 'renderer.UpdateGIMaterials()' (UnityUpgradable).")]
+        public static void UpdateMaterials(Renderer renderer) => RealtimeGI.MaterialsChanged(renderer);
+
         /// <summary>A scene loaded alone (not additively) with <paramref name="settings"/>; additive
         /// loads keep the value, and a scene without Lighting Settings gives 1 (both unmeasured).</summary>
         internal static void SceneLoaded(LightingSettings settings) =>

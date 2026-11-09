@@ -163,9 +163,11 @@ namespace UnityEngine
             SetGraphicsSource(1,source,0,true);
         }
 
-        internal void ShareVertexSources(Mesh source, Mesh overrides, uint overriddenAttributes)
+        /// <summary><paramref name="ownAttributes"/>: attributes neither source gives (this
+        /// mesh's own CPU channels).</summary>
+        internal void ShareVertexSources(Mesh source, Mesh overrides, uint overriddenAttributes, uint ownAttributes = 0)
         {
-            SetGraphicsSource(2,source,~overriddenAttributes,false);
+            SetGraphicsSource(2,source,~(overriddenAttributes|ownAttributes),false);
             SetGraphicsSource(3,overrides,overriddenAttributes,false);
         }
 

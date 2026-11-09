@@ -208,7 +208,7 @@ impl Chart {
 
 /// Builds a chart: scaled to its world area, snapped to whole blocks, moved to its mask's origin
 /// and rasterized into the mask (each triangle grown by the border, every cell it touches).
-fn build_chart(input: &Input, triangles: Vec<usize>) -> Chart {
+fn build_chart(input: &Input, triangles: Vec<usize>) -> Result<Chart> {
     let block = BLOCK_TEXELS as f64;
     let (mut world, mut uv_area) = (0.0f64, 0.0f64);
     let (mut lo, mut hi) = ([f64::MAX; 2], [f64::MIN; 2]);
@@ -246,6 +246,13 @@ fn build_chart(input: &Input, triangles: Vec<usize>) -> Chart {
         let blocks = (extent + border + CHART_BORDER_MARGIN)
             .ceil()
             .max(min_blocks);
+        // Checked before its mask is made: a sliver of UV area on a large face would ask for a
+        // huge one.
+        ensure!(
+            blocks <= (MAX_TEXELS / BLOCK_TEXELS) as f64,
+            "a chart of {} texels, more than {MAX_TEXELS}",
+            blocks * block
+        );
         scale[k] = if extent > 0.0 {
             per_uv * ((blocks - border - CHART_BORDER_MARGIN) / extent)
         } else {
@@ -304,7 +311,7 @@ fn build_chart(input: &Input, triangles: Vec<usize>) -> Chart {
             }
         }
     }
-    chart
+    Ok(chart)
 }
 
 /// The two-skyline packing heuristic: each column's lowest free cell and each row's leftmost
@@ -572,7 +579,7 @@ pub fn realtime_uvs(input: &Input) -> Result<Output> {
     let charts: Vec<Chart> = charts(input)
         .into_iter()
         .map(|t| build_chart(input, t))
-        .collect();
+        .collect::<Result<_>>()?;
     let masks: Vec<&Mask> = charts.iter().map(|c| &c.mask).collect();
     let (positions, width, height) = pack(&masks)?;
     let mut uvs = vec![[0.0f32; 2]; input.positions.len()];

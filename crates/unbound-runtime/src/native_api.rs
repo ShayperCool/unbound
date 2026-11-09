@@ -202,7 +202,7 @@ pub struct NativeApi {
     /// show the named native texture (`Texture2D.CreateExternalTexture`,
     /// `UpdateExternalTexture`); 0 on success, else the buffer holds the reason.
     pub external_texture: extern "C" fn(u64, u64, i32, i32, i32, *mut NativeBuffer) -> i32,
-    // Version 42: precomputed realtime GI (`realtime_gi`; loaded with the `realtime-gi-load`
+    // Version 43: precomputed realtime GI (`realtime_gi`; loaded with the `realtime-gi-load`
     // control call).
     /// (scene, frame, lights, count, out error): one frame's update; `realtime_gi::UPDATE_*`
     /// bits, or -1 with the reason in the buffer.
@@ -310,6 +310,7 @@ extern "C" fn gi_update(
     error: *mut NativeBuffer,
 ) -> i32 {
     reported(error, || {
+        anyhow::ensure!(!frame.is_null(), "no frame");
         let frame = unsafe { &*frame };
         let lights = if lights.is_null() || count <= 0 {
             &[][..]
