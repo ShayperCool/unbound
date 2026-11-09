@@ -14,7 +14,8 @@ Two classes of values:
   |reference|; frames (.png) report the shared image measure (mean, worst and pixels over 8 of
   the per-pixel max-channel difference). The realtime lightmaps (.atlas) of the cases whose
   inputs Unbound supports (point lights and a flat ambient color: every case but the skybox and
-  spot light ones) are gated: at most ISOLATED of their values may be outside the tolerance. With
+  spot light ones) are gated: at most ISOLATED of their values may be outside the tolerance,
+  each within ABS + ISOLATED_REL * |reference|, and a missing lightmap fails. With
   DynamicGI.updateThreshold a part of the lightmap is updated only when its inputs changed by
   more than the threshold, so converged texels depend on which update last solved them; input
   differences well below the threshold (the point light falloff, within about 2% per cluster)
@@ -35,10 +36,17 @@ from value_probe import image_difference  # noqa: E402
 
 ABS = 0.02
 REL = 0.05
-# Gated realtime lightmaps: the share of their compared values allowed outside the tolerance.
+# Gated realtime lightmaps: the share of their compared values allowed outside the tolerance,
+# and how far those may be off.
 ISOLATED = 0.005
+ISOLATED_REL = 0.10
 # Cases whose inputs Unbound does not support yet: their lighting is reported only.
 UNSUPPORTED = ('room-sky', 'room-spot')
+
+
+def gated(case):
+    """Whether the realtime lightmap of `case` is gated."""
+    return not case.startswith(UNSUPPORTED)
 STATE_KEYS = ('converged', 'indirectScale', 'updateThreshold', 'size', 'lightmapsMode')
 
 
@@ -75,8 +83,11 @@ class Result:
 
 def compare_values(ref, cap, result):
     for name in sorted(set(cap) - set(ref)):
-        # `<case>-noatlas`: the capture found no realtime lightmap to read (a lighting difference).
-        kind = 'lighting' if name.endswith('-noatlas') else 'state'
+        # `<case>-noatlas`: the capture found no realtime lightmap to read (a lighting difference,
+        # gated where the case's lightmap is).
+        kind = 'state'
+        if name.endswith('-noatlas'):
+            kind = 'gated' if gated(name[:-len('-noatlas')]) else 'lighting'
         result.fail(kind, f'{name}: extra case', [json.dumps(cap[name])[:2000]])
     for name, r in ref.items():
         c = cap.get(name)
@@ -121,17 +132,18 @@ def compare_values(ref, cap, result):
 
 
 def compare_atlas(name, ref_path, cap_path, result):
+    gate = name.endswith('.atlas') and gated(name)
     if not cap_path.is_file():
-        result.fail('lighting', f'{name}: missing')
+        result.fail('gated' if gate else 'lighting', f'{name}: missing')
         return
     rw, rh, rv = atlas(ref_path)
     cw, ch, cv = atlas(cap_path)
     if (rw, rh) != (cw, ch):
-        result.fail('lighting', f'{name}: size {cw}x{ch} != {rw}x{rh}')
+        result.fail('gated' if gate else 'lighting', f'{name}: size {cw}x{ch} != {rw}x{rh}')
         return
     coverage, bad = [], []
     total = worst = 0.0
-    compared = 0
+    compared = far = 0
     for t in range(rw * rh):
         ra, ca = rv[4 * t + 3] > 0, cv[4 * t + 3] > 0
         if ra != ca:
@@ -147,19 +159,19 @@ def compare_atlas(name, ref_path, cap_path, result):
             worst = max(worst, d)
             if not close(a, b):
                 bad.append(f'texel ({t % rw},{t // rw}) channel {k}: {a!r} vs {b!r}')
+                far += d > ABS + ISOLATED_REL * abs(b)
     result.lines.append(f'{name}: coverage differs at {len(coverage)} texels, {len(bad)} values off, '
                         f'mean |d| {total / max(1, rw * rh):.5f}, max |d| {worst:.5f}')
     if coverage:
         # Which texels renderers cover (their realtime lightmap UVs) matches: gated.
         result.fail('state', f'{name}: coverage differs at {len(coverage)} texels', coverage)
-    gated = name.endswith('.atlas') and not name.startswith(UNSUPPORTED)
-    if gated and len(bad) <= ISOLATED * compared:
+    if gate and not far and len(bad) <= ISOLATED * compared:
         if bad:
             result.details.append(f'{name}: {len(bad)} isolated texel values off (allowed '
                                   f'{int(ISOLATED * compared)})')
             result.details.extend('  ' + d for d in bad)
     elif bad:
-        result.fail('gated' if gated else 'lighting',
+        result.fail('gated' if gate else 'lighting',
                     f'{name}: {len(bad)} texel values off (max |d| {worst:.5f})', bad)
 
 
