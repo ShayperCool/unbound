@@ -1,70 +1,31 @@
 using System;
 using System.Collections.Generic;
 
-// TabView and Tab, from the Unity 6000.0 Manual pages "TabView" and "Tab" (UI Toolkit control
-// reference, with their UXML attribute and USS class tables), the Scripting API pages of both types
-// and of TabView.activeTab, selectedTabIndex, activeTabChanged, ReorderTab, contentContainer and
-// Tab.closing, selected, and the installed 6000.0 doc XML. Documented:
-//   - a TabView "groups a one or more Tab elements"; it "allows a group of tabs to interact between
-//     each other by hiding the inactive tabs and displaying the active one", and can re-order them;
-//   - tabs are added with TabView.Add (Manual C# example) or as <Tab> children of <TabView> (UXML
-//     example); the content of a Tab is added with Tab.Add, into its content container;
-//   - "A Tab has a header that can respond to pointer and mouse events. The header can hold an icon,
-//     a label, or both";
-//   - activeTab: "Setting a valid tab will also deselect the previous active tab before setting the
-//     newly assigned tab to active"; selectedTabIndex is the active tab's index, and "Setting a valid
-//     index will set the Tab at the given index to active";
-//   - activeTabChanged "receives two tabs, the first being the previously selected tab and the second
-//     being the newly selected tab"; Tab.selected "is called when a tab has been selected";
-//   - closeable: "a close icon appears on the Tab. If a user selects the close icon, the Tab closes";
-//     closing "is called before a tab is closed. Return true if the tab can be closed ... all of them
-//     will be executed synchronously but only the last value will be taken into account"; closed "is
-//     called when a tab has been closed"; tabClosed passes "the tab that was closed" and "the index of
-//     the tab that was closed";
-//   - reorderable "adds dragging support to tabs"; ReorderTab "Moves the tab from the specified index
-//     to a new index"; tabReordered passes the source and destination indices;
-//   - USS class names from the pages' USS class tables; TabView.headerContainerClassName (described
-//     as "USS class name for the header container", value not in the Manual table) is the selector of
-//     Unity's shipped default theme, read as data. The Manual's USS example styles
-//     `.unity-tab__header:checked > .unity-tab__header-underline`: the active tab's header is :checked
-//     and the underline is a direct child of the header.
-// Unbound's choices (unmeasured; the pages say nothing):
-//   - element structure: a TabView holds a header container then its content container; a Tab holds
-//     its header then its content container. Inside a TabView, each tab's header moves into the
-//     TabView's header container (in tab order) and the Tab element stays in the content container;
-//     a Tab outside a TabView keeps its header. The header holds, in order, the drag handle (two bars,
-//     only in a reorderable TabView), the icon Image, the label, the underline and the close button
-//     (only when closeable). The close button is a plain VisualElement;
-//   - the icon Image is always present (with the --empty class when there is no icon, --standalone
-//     when the label is empty); the label has the --empty class when it is null or empty;
-//   - closeableUssClassName, reorderableUssClassName and draggingUssClassName go on the tab's header;
-//   - inactive tabs are hidden with an inline `display: none` on the Tab element, the active one has
-//     no inline display; a tab leaving a TabView gets its header back, without the inline display;
-//   - the first tab added to a TabView without an active tab becomes active, with the events of a
-//     selection; elements that are not Tabs stay in the content container and are not tabs;
-//   - a click (ClickEvent) on a header selects its tab; a click on the close button closes it and
-//     does not select it;
-//   - selection sends Tab.selected (new tab) then activeTabChanged (previous, new); setting the active
-//     tab again, a tab outside this TabView, null or an index out of range changes nothing and sends
-//     nothing;
-//   - with no closing handler a tab can be closed; closing removes the tab from its parent, then sends
-//     Tab.closed, then TabView.tabClosed (tab, its former index). Closing (or removing) the active tab
-//     activates the tab now at its index, else the one before it, else none, sending selected (if
-//     any) and activeTabChanged (closed tab, new tab or null) before closed. Only a tab still in the
-//     content container counts, so Clear() sends a single activeTabChanged (active tab, null) and no
-//     selected. Removing a tab from the hierarchy by code sends no closing/closed/tabClosed;
-//   - ReorderTab with an index out of range, or from == to, changes nothing and sends nothing; it
-//     keeps the active tab and sends tabReordered (from, to) after moving the tab, its header and its
-//     element; the tab ends at index `to`;
-//   - GetTab/GetTabHeader throw ArgumentOutOfRangeException for an index out of range;
-//   - pointer dragging (reorderable only): a primary-button press on a header, then a move of more
-//     than 5 pixels starts a drag (the header captures the pointer and gets the dragging class); while
-//     dragging, the tab moves to the index given by how many other headers' horizontal centers lie
-//     before the pointer, through ReorderTab; releasing the pointer ends the drag and makes the
-//     dragged tab active. There is no drag preview element, and the vertical layout is not supported
-//     (no public 6000.0 API selects it);
-//   - view data: tab order and selection are not persisted (the Manual describes persistence for
-//     Editor UI; Unbound behaves as a runtime panel). Keyboard navigation between tabs is not added.
+// TabView and Tab. Documented (Unity 6000.0 Manual "TabView"/"Tab" and their Scripting API pages):
+// a TabView groups Tab elements and shows the active one; activeTab "will also deselect the previous
+// active tab"; activeTabChanged receives (previous, new); selectedTabIndex is the active tab's
+// index; closeable tabs get a close icon; closing "is called before a tab is closed ... only the last
+// value will be taken into account"; tabClosed passes the tab and its index; ReorderTab moves a tab;
+// the USS class tables.
+// Matches the Unity 6000.0.71f1 Editor, tests/projects/uitkcollections (tabs section):
+//   - structure and names: a TabView holds its header container and content container, each named
+//     after its USS class; a Tab holds its header (image, label, underline, then the close button
+//     when closeable, the drag handle first when reorderable) and its content container; inside a
+//     TabView the headers live in the header container in tab order;
+//   - the active tab and its header carry the :checked pseudo state (the theme shows only the
+//     checked tab); the first tab added becomes active;
+//   - a pointer press on a header sends Tab.selected, even for the active tab; the TabView then
+//     makes it active (activeTabChanged only on a change). Setting activeTab or selectedTabIndex in
+//     code sends activeTabChanged only, not selected;
+//   - a pointer press on the close button asks closing (the last handler's answer counts), removes
+//     the tab, then sends closed and tabClosed (tab, its last index); the press is not a selection;
+//   - removing the active tab activates the first remaining tab;
+//   - activeTab = null with tabs present throws NullReferenceException, a tab outside the TabView
+//     throws; GetTab/GetTabHeader return null out of range; selectedTabIndex out of range is ignored.
+// Tab dragging (reorderable): a left press on a tab's drag handle starts tracking; a move of more
+// than 5 points along the header row starts the drag, activating the tab under the press point;
+// releasing moves it before or after the header whose half the pointer is over (ReorderTab), Escape
+// or a lost capture cancels. Follows the same rules; not measured by a capture.
 namespace UnityEngine.UIElements
 {
     public partial class TabView : VisualElement
@@ -79,9 +40,11 @@ namespace UnityEngine.UIElements
         readonly VisualElement m_ContentContainer;
         readonly List<Tab> m_Tabs = new List<Tab>();
         readonly List<VisualElement> m_TabHeaders = new List<VisualElement>();
+        readonly Action<Tab> m_OnTabSelected;
+        readonly Action<Tab> m_OnTabClosed;
         Tab m_ActiveTab;
         bool m_Reorderable;
-        bool m_Moving;
+        bool m_Reordering;
 
         public event Action<Tab, Tab> activeTabChanged;
         public event Action<int, int> tabReordered;
@@ -100,18 +63,25 @@ namespace UnityEngine.UIElements
             get => m_ActiveTab;
             set
             {
-                if (value == null || value == m_ActiveTab || !m_Tabs.Contains(value)) return;
-                Activate(value);
+                if (value == null && m_Tabs.Count > 0)
+                    throw new NullReferenceException("Active tab cannot be null when there are available tabs.");
+                if (m_Tabs.IndexOf(value) == -1)
+                    throw new Exception("The tab to be set as active does not exist in this TabView.");
+                if (value == m_ActiveTab) return;
+                var previous = m_ActiveTab;
+                previous?.SetInactive();
+                m_ActiveTab = value;
+                m_ActiveTab?.SetActive();
+                activeTabChanged?.Invoke(previous, value);
             }
         }
 
         public int selectedTabIndex
         {
-            get => m_ActiveTab == null ? -1 : m_Tabs.IndexOf(m_ActiveTab);
+            get => m_ActiveTab == null || m_Tabs.Count == 0 ? -1 : m_Tabs.IndexOf(m_ActiveTab);
             set
             {
-                if (value < 0 || value >= m_Tabs.Count) return;
-                activeTab = m_Tabs[value];
+                if (value >= 0 && value < m_Tabs.Count) activeTab = m_Tabs[value];
             }
         }
 
@@ -130,123 +100,82 @@ namespace UnityEngine.UIElements
         public TabView()
         {
             AddToClassList(ussClassName);
-            m_HeaderContainer = new VisualElement();
+            m_HeaderContainer = new VisualElement { name = headerContainerClassName };
             m_HeaderContainer.AddToClassList(headerContainerClassName);
             hierarchy.Add(m_HeaderContainer);
-            m_ContentContainer = new VisualElement();
+            m_ContentContainer = new VisualElement { name = contentContainerUssClassName };
             m_ContentContainer.AddToClassList(contentContainerUssClassName);
             hierarchy.Add(m_ContentContainer);
+            m_OnTabSelected = tab => activeTab = tab;
+            m_OnTabClosed = tab => tabClosed?.Invoke(tab, tab.index);
             m_ContentContainer.elementAdded += OnElementAdded;
             m_ContentContainer.elementRemoved += OnElementRemoved;
         }
 
-        public Tab GetTab(int index)
-        {
-            if (index < 0 || index >= m_Tabs.Count) throw new ArgumentOutOfRangeException(nameof(index));
-            return m_Tabs[index];
-        }
+        public Tab GetTab(int index) => index < 0 || index >= m_Tabs.Count ? null : m_Tabs[index];
 
-        public VisualElement GetTabHeader(int index)
-        {
-            if (index < 0 || index >= m_TabHeaders.Count) throw new ArgumentOutOfRangeException(nameof(index));
-            return m_TabHeaders[index];
-        }
+        public VisualElement GetTabHeader(int index) => index < 0 || index >= m_Tabs.Count ? null : m_TabHeaders[index];
 
         public void ReorderTab(int from, int to)
         {
-            int count = m_Tabs.Count;
-            if (from < 0 || from >= count || to < 0 || to >= count || from == to) return;
-            var tab = m_Tabs[from];
             var tabHeader = m_TabHeaders[from];
-            m_Tabs.RemoveAt(from);
-            m_TabHeaders.RemoveAt(from);
-            m_Tabs.Insert(to, tab);
-            m_TabHeaders.Insert(to, tabHeader);
-            m_Moving = true;
+            var tab = m_Tabs[from];
+            if (!tabHeader.visible || !m_Reorderable || from == to) return;
+            m_Reordering = true;
             try
             {
-                m_HeaderContainer.hierarchy.Insert(to, tabHeader);
-                tab.RemoveFromHierarchy();
-                int at = to + 1 < m_Tabs.Count
-                    ? m_ContentContainer.hierarchy.IndexOf(m_Tabs[to + 1])
-                    : m_ContentContainer.hierarchy.IndexOf(m_Tabs[to - 1]) + 1;
-                m_ContentContainer.hierarchy.Insert(at, tab);
+                m_TabHeaders.RemoveAt(from);
+                m_TabHeaders.Insert(to, tabHeader);
+                m_Tabs.RemoveAt(from);
+                m_Tabs.Insert(to, tab);
+                m_HeaderContainer.Insert(to, tabHeader);
+                Insert(to, tab);
             }
             finally
             {
-                m_Moving = false;
+                m_Reordering = false;
             }
+            UpdateIndexes();
             tabReordered?.Invoke(from, to);
         }
 
-        void Activate(Tab tab)
+        void UpdateIndexes()
         {
-            var previous = m_ActiveTab;
-            previous?.SetInactive();
-            m_ActiveTab = tab;
-            if (tab != null)
-            {
-                tab.SetActive();
-                tab.NotifySelected();
-            }
-            activeTabChanged?.Invoke(previous, tab);
+            for (int i = 0; i < m_Tabs.Count; i++) m_Tabs[i].index = i;
         }
 
         void OnElementAdded(VisualElement child, int index)
         {
-            if (m_Moving || !(child is Tab tab)) return;
-            int tabIndex = 0;
-            for (int i = 0; i < index && i < m_ContentContainer.hierarchy.childCount; i++)
-                if (m_ContentContainer.hierarchy[i] is Tab) tabIndex++;
-            m_Tabs.Insert(tabIndex, tab);
-            m_TabHeaders.Insert(tabIndex, tab.tabHeader);
-            tab.AttachTo(this);
-            m_HeaderContainer.hierarchy.Insert(tabIndex, tab.tabHeader);
-            tab.EnableTabDragHandles(m_Reorderable);
-            tab.SetInactive();
-            if (m_ActiveTab == null) Activate(tab);
+            if (m_Reordering || !(child is Tab tab)) return;
+            var tabHeader = tab.tabHeader;
+            if (tabHeader != null)
+            {
+                m_HeaderContainer.Insert(index, tabHeader);
+                m_TabHeaders.Insert(index, tabHeader);
+                m_Tabs.Insert(index, tab);
+                tab.EnableTabDragHandles(m_Reorderable);
+                tab.closed += m_OnTabClosed;
+            }
+            tab.selected += m_OnTabSelected;
+            UpdateIndexes();
+            if (m_ActiveTab == null) activeTab = tab;
         }
 
         void OnElementRemoved(VisualElement child)
         {
-            if (m_Moving || !(child is Tab tab)) return;
-            int index = m_Tabs.IndexOf(tab);
-            if (index < 0) return;
-            m_Tabs.RemoveAt(index);
-            m_TabHeaders.RemoveAt(index);
-            tab.DetachFrom(this);
-            if (tab != m_ActiveTab) return;
-            m_ActiveTab = null;
-            // Only a tab still in the content container can become active: Clear() empties it before
-            // it reports each removed child, so the tabs listed after this one are already gone.
-            Tab next = index < m_Tabs.Count && InContent(m_Tabs[index]) ? m_Tabs[index]
-                : index > 0 && InContent(m_Tabs[index - 1]) ? m_Tabs[index - 1]
-                : null;
-            if (next != null)
-            {
-                m_ActiveTab = next;
-                next.SetActive();
-                next.NotifySelected();
-            }
-            activeTabChanged?.Invoke(tab, next);
-        }
-
-        bool InContent(Tab tab) => m_ContentContainer.hierarchy.IndexOf(tab) >= 0;
-
-        internal void NotifyTabClosed(Tab tab, int index) => tabClosed?.Invoke(tab, index);
-
-        /// <summary>Moves a dragged tab to the index the pointer's horizontal position gives.</summary>
-        internal void DragTo(Tab tab, float pointerX)
-        {
-            int from = m_Tabs.IndexOf(tab);
-            if (from < 0) return;
-            int to = 0;
-            for (int i = 0; i < m_TabHeaders.Count; i++)
-            {
-                if (i == from) continue;
-                if (m_TabHeaders[i].worldBound.center.x < pointerX) to++;
-            }
-            ReorderTab(from, to);
+            if (m_Reordering || !(child is Tab tab)) return;
+            var tabHeader = tab.tabHeader;
+            m_HeaderContainer.Remove(tabHeader);
+            m_TabHeaders.Remove(tabHeader);
+            m_Tabs.Remove(tab);
+            // The tab keeps its closed/selected subscriptions: closing removes the tab before it
+            // sends closed, and tabClosed still follows (Unity 6000.0.71f1 Editor, close-tab-2).
+            tab.EnableTabDragHandles(false);
+            tab.hierarchy.Insert(0, tabHeader);
+            tab.SetInactive();
+            UpdateIndexes();
+            if (m_ActiveTab == tab && m_Tabs.Count > 0) activeTab = m_Tabs[0];
+            else if (m_Tabs.Count == 0) m_ActiveTab = null;
         }
     }
 
@@ -263,27 +192,20 @@ namespace UnityEngine.UIElements
         public static readonly string contentUssClassName = ussClassName + "__content-container";
         public static readonly string draggingUssClassName = ussClassName + "--dragging";
         public static readonly string reorderableUssClassName = ussClassName + "__reorderable";
-        public static readonly string reorderableItemHandleUssClassName = ussClassName + "__reorderable-handle";
-        public static readonly string reorderableItemHandleBarUssClassName = ussClassName + "__reorderable-handle-bar";
+        public static readonly string reorderableItemHandleUssClassName = reorderableUssClassName + "-handle";
+        public static readonly string reorderableItemHandleBarUssClassName = reorderableItemHandleUssClassName + "-bar";
         public static readonly string closeableUssClassName = tabHeaderUssClassName + "__closeable";
         public static readonly string closeButtonUssClassName = ussClassName + "__close-button";
 
-        const float k_DragThreshold = 5f;
-
         readonly VisualElement m_TabHeader;
-        readonly Image m_HeaderImage;
-        readonly Label m_HeaderLabel;
-        readonly VisualElement m_Underline;
+        readonly Image m_TabHeaderImage;
+        readonly Label m_TabHeaderLabel;
         readonly VisualElement m_ContentContainer;
-        VisualElement m_DragHandle;
-        VisualElement m_CloseButton;
-        TabView m_TabView;
+        readonly VisualElement m_DragHandle;
+        readonly VisualElement m_CloseButton;
         string m_Label;
         Background m_IconImage;
         bool m_Closeable;
-        int m_DragPointerId = -1;
-        Vector2 m_DragStart;
-        bool m_Dragging;
 
         public event Action<Tab> selected;
         public event Func<bool> closing;
@@ -291,7 +213,12 @@ namespace UnityEngine.UIElements
 
         public VisualElement tabHeader => m_TabHeader;
 
-        internal Label headerLabel => m_HeaderLabel;
+        internal Label headerLabel => m_TabHeaderLabel;
+
+        internal TabDragger dragger { get; }
+
+        /// <summary>The tab's index in its TabView, kept by the TabView.</summary>
+        internal int index { get; set; }
 
         public override VisualElement contentContainer => m_ContentContainer;
 
@@ -300,9 +227,11 @@ namespace UnityEngine.UIElements
             get => m_Label;
             set
             {
+                if (string.CompareOrdinal(value, m_Label) == 0) return;
+                m_TabHeaderLabel.text = value;
+                m_TabHeaderLabel.EnableInClassList(tabHeaderEmptyLabeUssClassName, string.IsNullOrEmpty(value));
+                m_TabHeaderImage.EnableInClassList(tabHeaderStandaloneImageUssClassName, string.IsNullOrEmpty(value));
                 m_Label = value;
-                m_HeaderLabel.text = value ?? string.Empty;
-                UpdateHeaderClasses();
             }
         }
 
@@ -311,15 +240,23 @@ namespace UnityEngine.UIElements
             get => m_IconImage;
             set
             {
+                if (value == m_IconImage) return;
                 m_IconImage = value;
-                m_HeaderImage.image = null;
-                m_HeaderImage.sprite = null;
-                m_HeaderImage.vectorImage = null;
-                if (value.texture != null) m_HeaderImage.image = value.texture;
-                else if (value.sprite != null) m_HeaderImage.sprite = value.sprite;
-                else if (value.renderTexture != null) m_HeaderImage.image = value.renderTexture;
-                else if (value.vectorImage != null) m_HeaderImage.vectorImage = value.vectorImage;
-                UpdateHeaderClasses();
+                m_TabHeaderImage.image = null;
+                m_TabHeaderImage.sprite = null;
+                m_TabHeaderImage.vectorImage = null;
+                if (value.IsEmpty())
+                {
+                    m_TabHeaderImage.AddToClassList(tabHeaderEmptyImageUssClassName);
+                    m_TabHeaderImage.RemoveFromClassList(tabHeaderStandaloneImageUssClassName);
+                    return;
+                }
+                if (value.texture != null) m_TabHeaderImage.image = value.texture;
+                else if (value.sprite != null) m_TabHeaderImage.sprite = value.sprite;
+                else if (value.renderTexture != null) m_TabHeaderImage.image = value.renderTexture;
+                else m_TabHeaderImage.vectorImage = value.vectorImage;
+                m_TabHeaderImage.RemoveFromClassList(tabHeaderEmptyImageUssClassName);
+                m_TabHeaderImage.EnableInClassList(tabHeaderStandaloneImageUssClassName, string.IsNullOrEmpty(m_Label));
             }
         }
 
@@ -330,6 +267,7 @@ namespace UnityEngine.UIElements
             {
                 if (m_Closeable == value) return;
                 m_Closeable = value;
+                m_TabHeader.EnableInClassList(closeableUssClassName, value);
                 EnableTabCloseButton(value);
             }
         }
@@ -343,178 +281,350 @@ namespace UnityEngine.UIElements
         public Tab(string label, Background iconImage)
         {
             AddToClassList(ussClassName);
-            m_TabHeader = new VisualElement();
-            m_TabHeader.AddToClassList(tabHeaderUssClassName);
-            m_HeaderImage = new Image();
-            m_HeaderImage.AddToClassList(tabHeaderImageUssClassName);
-            m_TabHeader.hierarchy.Add(m_HeaderImage);
-            m_HeaderLabel = new Label();
-            m_HeaderLabel.AddToClassList(tabHeaderLabelUssClassName);
-            m_TabHeader.hierarchy.Add(m_HeaderLabel);
-            m_Underline = new VisualElement();
-            m_Underline.AddToClassList(tabHeaderUnderlineUssClassName);
-            m_TabHeader.hierarchy.Add(m_Underline);
+            m_TabHeader = Named(tabHeaderUssClassName);
+            m_DragHandle = Named(reorderableItemHandleUssClassName);
+            var leftBar = Named(reorderableItemHandleBarUssClassName);
+            leftBar.AddToClassList(reorderableItemHandleBarUssClassName + "--left");
+            m_DragHandle.Add(leftBar);
+            m_DragHandle.Add(Named(reorderableItemHandleBarUssClassName));
+            m_TabHeaderImage = new Image { name = tabHeaderImageUssClassName };
+            m_TabHeaderImage.AddToClassList(tabHeaderImageUssClassName);
+            m_TabHeaderImage.AddToClassList(tabHeaderEmptyImageUssClassName);
+            m_TabHeader.Add(m_TabHeaderImage);
+            m_TabHeaderLabel = new Label { name = tabHeaderLabelUssClassName };
+            m_TabHeaderLabel.AddToClassList(tabHeaderLabelUssClassName);
+            m_TabHeader.Add(m_TabHeaderLabel);
+            m_TabHeader.RegisterCallback<PointerDownEvent>(OnTabClicked);
+            m_TabHeader.Add(Named(tabHeaderUnderlineUssClassName));
+            m_CloseButton = Named(closeButtonUssClassName);
+            m_CloseButton.RegisterCallback<PointerDownEvent>(OnCloseButtonClicked);
             hierarchy.Add(m_TabHeader);
-            m_ContentContainer = new VisualElement();
-            m_ContentContainer.AddToClassList(contentUssClassName);
+            m_ContentContainer = Named(contentUssClassName);
+            m_ContentContainer.userData = m_TabHeader;
             hierarchy.Add(m_ContentContainer);
-
-            m_TabHeader.RegisterCallback<ClickEvent>(OnHeaderClick);
-            m_TabHeader.RegisterCallback<PointerDownEvent>(OnHeaderPointerDown);
-            m_TabHeader.RegisterCallback<PointerMoveEvent>(OnHeaderPointerMove);
-            m_TabHeader.RegisterCallback<PointerUpEvent>(OnHeaderPointerUp);
-            m_TabHeader.RegisterCallback<PointerCaptureOutEvent>(OnHeaderPointerCaptureOut);
-
             this.label = label;
             this.iconImage = iconImage;
+            m_DragHandle.AddManipulator(dragger = new TabDragger());
         }
 
-        void UpdateHeaderClasses()
+        static VisualElement Named(string className)
         {
-            bool noLabel = string.IsNullOrEmpty(m_Label);
-            m_HeaderLabel.EnableInClassList(tabHeaderEmptyLabeUssClassName, noLabel);
-            m_HeaderImage.EnableInClassList(tabHeaderEmptyImageUssClassName, m_IconImage.IsEmpty());
-            m_HeaderImage.EnableInClassList(tabHeaderStandaloneImageUssClassName, noLabel);
+            var e = new VisualElement { name = className };
+            e.AddToClassList(className);
+            return e;
         }
 
         internal void EnableTabDragHandles(bool enable)
         {
-            m_TabHeader.EnableInClassList(reorderableUssClassName, enable);
-            if (enable)
-            {
-                if (m_DragHandle != null) return;
-                m_DragHandle = new VisualElement { pickingMode = PickingMode.Ignore };
-                m_DragHandle.AddToClassList(reorderableItemHandleUssClassName);
-                for (int i = 0; i < 2; i++)
-                {
-                    var bar = new VisualElement { pickingMode = PickingMode.Ignore };
-                    bar.AddToClassList(reorderableItemHandleBarUssClassName);
-                    m_DragHandle.hierarchy.Add(bar);
-                }
-                m_TabHeader.hierarchy.Insert(0, m_DragHandle);
-                return;
-            }
-            EndDrag(false);
-            m_DragHandle?.RemoveFromHierarchy();
-            m_DragHandle = null;
+            if (enable) m_TabHeader.Insert(0, m_DragHandle);
+            else if (m_TabHeader.Contains(m_DragHandle)) m_TabHeader.Remove(m_DragHandle);
         }
 
         internal void EnableTabCloseButton(bool enable)
         {
-            m_TabHeader.EnableInClassList(closeableUssClassName, enable);
-            if (enable)
-            {
-                if (m_CloseButton != null) return;
-                m_CloseButton = new VisualElement();
-                m_CloseButton.AddToClassList(closeButtonUssClassName);
-                m_CloseButton.RegisterCallback<ClickEvent>(OnCloseButtonClick);
-                m_TabHeader.hierarchy.Add(m_CloseButton);
-                return;
-            }
-            m_CloseButton?.RemoveFromHierarchy();
-            m_CloseButton = null;
+            if (enable) m_TabHeader.Add(m_CloseButton);
+            else if (m_TabHeader.Contains(m_CloseButton)) m_TabHeader.Remove(m_CloseButton);
         }
 
         internal void SetActive()
         {
             m_TabHeader.pseudoStates |= PseudoStates.Checked;
-            if (m_TabView != null) style.display = StyleKeyword.Null;
+            pseudoStates |= PseudoStates.Checked;
         }
 
         internal void SetInactive()
         {
             m_TabHeader.pseudoStates &= ~PseudoStates.Checked;
-            if (m_TabView != null) style.display = DisplayStyle.None;
+            pseudoStates &= ~PseudoStates.Checked;
         }
 
-        internal void NotifySelected() => selected?.Invoke(this);
+        void OnTabClicked(PointerDownEvent evt) => selected?.Invoke(this);
 
-        internal void AttachTo(TabView view) => m_TabView = view;
-
-        internal void DetachFrom(TabView view)
+        void OnCloseButtonClicked(PointerDownEvent evt)
         {
-            if (m_TabView != view) return;
-            EndDrag(false);
-            m_TabView = null;
-            EnableTabDragHandles(false);
-            m_TabHeader.pseudoStates &= ~PseudoStates.Checked;
-            style.display = StyleKeyword.Null;
-            hierarchy.Insert(0, m_TabHeader);
-        }
-
-        /// <summary>Asks the closing handlers (the last answer counts; none means yes), then removes
-        /// the tab and sends closed and, inside a TabView, tabClosed.</summary>
-        internal bool TryClose()
-        {
+            // Every closing handler runs; the delegate's result is the last one's answer.
             var handlers = closing;
-            if (handlers != null)
+            if (handlers == null || handlers())
             {
-                bool allow = true;
-                foreach (Func<bool> handler in handlers.GetInvocationList()) allow = handler();
-                if (!allow) return false;
+                RemoveFromHierarchy();
+                closed?.Invoke(this);
             }
-            var view = m_TabView;
-            int index = view != null ? view.tabs.IndexOf(this) : -1;
-            RemoveFromHierarchy();
-            closed?.Invoke(this);
-            view?.NotifyTabClosed(this, index);
-            return true;
-        }
-
-        void OnCloseButtonClick(ClickEvent evt)
-        {
             evt.StopPropagation();
-            TryClose();
         }
+    }
 
-        void OnHeaderClick(ClickEvent evt)
-        {
-            if (m_TabView != null) m_TabView.activeTab = this;
-        }
+    /// <summary>Drags a tab of a reorderable TabView by its drag handle along the header row.</summary>
+    internal partial class TabDragger : PointerManipulator
+    {
+        // Distance along the header row before a press becomes a drag.
+        const float k_StartDragDistance = 5f;
 
-        void OnHeaderPointerDown(PointerDownEvent evt)
-        {
-            if (m_TabView == null || !m_TabView.reorderable || evt.button != 0 || m_DragPointerId >= 0) return;
-            if (m_CloseButton != null && evt.target is VisualElement target && (target == m_CloseButton || m_CloseButton.Contains(target))) return;
-            m_DragPointerId = evt.pointerId;
-            m_DragStart = evt.position;
-            m_Dragging = false;
-        }
+        float m_StartPos;
+        float m_LastPos;
+        bool m_Moving;
+        bool m_Cancelled;
+        VisualElement m_Header;
+        TabView m_TabView;
+        VisualElement m_PreviewElement;
+        TabDragLocationPreview m_LocationPreviewElement;
+        VisualElement m_TabToMove;
+        float m_TabToMovePos;
+        VisualElement m_DestinationTab;
+        bool m_MoveBeforeDestination;
+        int m_DraggingPointerId = PointerId.invalidPointerId;
 
-        void OnHeaderPointerMove(PointerMoveEvent evt)
+        internal bool active { get; set; }
+
+        internal bool isVertical { get; set; }
+
+        internal bool moving
         {
-            if (evt.pointerId != m_DragPointerId || m_TabView == null) return;
-            if (!m_Dragging)
+            get => m_Moving;
+            private set
             {
-                if (((Vector2)evt.position - m_DragStart).magnitude <= k_DragThreshold) return;
-                m_Dragging = true;
-                m_TabHeader.AddToClassList(draggingUssClassName);
-                m_TabHeader.CapturePointer(m_DragPointerId);
+                if (m_Moving == value) return;
+                m_Moving = value;
+                m_TabToMove.EnableInClassList(Tab.draggingUssClassName, value);
             }
-            m_TabView.DragTo(this, evt.position.x);
         }
 
-        void OnHeaderPointerUp(PointerUpEvent evt)
+        public TabDragger()
         {
-            if (evt.pointerId != m_DragPointerId) return;
-            EndDrag(true);
+            activators.Add(new ManipulatorActivationFilter { button = MouseButton.LeftMouse });
         }
 
-        void OnHeaderPointerCaptureOut(PointerCaptureOutEvent evt)
+        protected override void RegisterCallbacksOnTarget()
         {
-            if (m_Dragging) EndDrag(true);
+            target.RegisterCallback<PointerDownEvent>(OnPointerDown, TrickleDown.TrickleDown);
+            target.RegisterCallback<PointerMoveEvent>(OnPointerMove);
+            target.RegisterCallback<PointerUpEvent>(OnPointerUp, TrickleDown.TrickleDown);
+            target.RegisterCallback<PointerCancelEvent>(OnPointerCancel);
+            target.RegisterCallback<PointerCaptureOutEvent>(OnPointerCaptureOut);
+            target.RegisterCallback<KeyDownEvent>(OnKeyDown);
         }
 
-        void EndDrag(bool select)
+        protected override void UnregisterCallbacksFromTarget()
         {
-            int pointerId = m_DragPointerId;
-            bool dragged = m_Dragging;
-            m_DragPointerId = -1;
-            m_Dragging = false;
-            if (!dragged) return;
-            m_TabHeader.RemoveFromClassList(draggingUssClassName);
-            if (m_TabHeader.HasPointerCapture(pointerId)) m_TabHeader.ReleasePointer(pointerId);
-            if (select && m_TabView != null) m_TabView.activeTab = this;
+            target.UnregisterCallback<PointerDownEvent>(OnPointerDown, TrickleDown.TrickleDown);
+            target.UnregisterCallback<PointerMoveEvent>(OnPointerMove);
+            target.UnregisterCallback<PointerUpEvent>(OnPointerUp, TrickleDown.TrickleDown);
+            target.UnregisterCallback<PointerCancelEvent>(OnPointerCancel);
+            target.UnregisterCallback<PointerCaptureOutEvent>(OnPointerCaptureOut);
+            target.UnregisterCallback<KeyDownEvent>(OnKeyDown);
+        }
+
+        void OnPointerDown(PointerDownEvent evt)
+        {
+            if (!CanStartManipulation(evt)) return;
+            if (active) evt.StopImmediatePropagation();
+            else ProcessDownEvent(evt, evt.localPosition, evt.pointerId);
+        }
+
+        void OnPointerMove(PointerMoveEvent evt)
+        {
+            if (active) ProcessMoveEvent(evt, evt.localPosition);
+        }
+
+        void OnPointerUp(PointerUpEvent evt)
+        {
+            if (active && CanStopManipulation(evt)) ProcessUpEvent(evt, evt.pointerId);
+        }
+
+        void OnPointerCancel(PointerCancelEvent evt)
+        {
+            if (active && CanStopManipulation(evt)) ProcessCancelEvent(evt.pointerId);
+        }
+
+        void OnPointerCaptureOut(PointerCaptureOutEvent evt)
+        {
+            if (active) ProcessCancelEvent(evt.pointerId);
+        }
+
+        void ProcessCancelEvent(int pointerId)
+        {
+            active = false;
+            target.ReleasePointer(pointerId);
+            if (moving) EndDragMove(true);
+        }
+
+        void OnKeyDown(KeyDownEvent e)
+        {
+            if (e.keyCode != KeyCode.Escape || !moving) return;
+            active = false;
+            if (m_DraggingPointerId != PointerId.invalidPointerId) target.ReleasePointer(m_DraggingPointerId);
+            EndDragMove(true);
+            e.StopPropagation();
+        }
+
+        void ProcessDownEvent(EventBase evt, Vector2 localPosition, int pointerId)
+        {
+            var current = evt.currentTarget as VisualElement;
+            var tabView = current?.GetFirstAncestorOfType<TabView>();
+            if (tabView == null || !tabView.reorderable) return;
+            target.CapturePointer(pointerId);
+            m_DraggingPointerId = pointerId;
+            m_TabView = tabView;
+            m_Header = tabView.header;
+            isVertical = m_Header.resolvedStyle.flexDirection == FlexDirection.Column;
+            var inHeader = current.ChangeCoordinatesTo(m_Header, localPosition);
+            m_Cancelled = false;
+            m_StartPos = isVertical ? inHeader.y : inHeader.x;
+            active = true;
+            evt.StopPropagation();
+        }
+
+        void ProcessMoveEvent(EventBase evt, Vector2 localPosition)
+        {
+            if (m_Cancelled) return;
+            var inHeader = ((VisualElement)evt.currentTarget).ChangeCoordinatesTo(m_Header, localPosition);
+            float pos = isVertical ? inHeader.y : inHeader.x;
+            if (!moving && Mathf.Abs(m_StartPos - pos) > k_StartDragDistance) BeginDragMove(m_StartPos);
+            if (moving)
+            {
+                m_LastPos = pos;
+                UpdateMoveLocation();
+            }
+            evt.StopPropagation();
+        }
+
+        void ProcessUpEvent(EventBase evt, int pointerId)
+        {
+            active = false;
+            target.ReleasePointer(pointerId);
+            EndDragMove(false);
+            evt.StopPropagation();
+        }
+
+        float Extent(VisualElement e) => isVertical ? e.boundingBox.height : e.boundingBox.width;
+
+        // The offset of a header along the row: the extents of the headers before it.
+        float Offset(VisualElement tabHeader)
+        {
+            if (tabHeader == null || !tabHeader.visible) return float.NaN;
+            float offset = 0;
+            var headers = m_TabView.tabHeaders;
+            int index = headers.IndexOf(tabHeader);
+            for (int i = 0; i < index; i++)
+            {
+                float extent = Extent(headers[i]);
+                if (!float.IsNaN(extent)) offset += extent;
+            }
+            return offset;
+        }
+
+        void BeginDragMove(float pos)
+        {
+            // The tab under the press point moves (the first one when the press is before them all).
+            var headers = m_TabView.tabHeaders;
+            m_TabToMove = headers[0];
+            float end = 0;
+            foreach (var header in headers)
+            {
+                end += Extent(header);
+                if (end > pos)
+                {
+                    m_TabToMove = header;
+                    break;
+                }
+            }
+            moving = true;
+            m_LastPos = pos;
+            m_PreviewElement = new VisualElement { pickingMode = PickingMode.Ignore };
+            m_PreviewElement.AddToClassList(TabView.ussClassName + "__drag-preview");
+            m_LocationPreviewElement = new TabDragLocationPreview();
+            m_LocationPreviewElement.AddToClassList(isVertical ? TabDragLocationPreview.verticalUssClassName : TabDragLocationPreview.horizontalUssClassName);
+            m_Header.hierarchy.Add(m_PreviewElement);
+            m_Header.Add(m_LocationPreviewElement);
+            m_TabView.activeTab = m_TabView.tabs[headers.IndexOf(m_TabToMove)];
+            m_TabToMovePos = Offset(m_TabToMove);
+            UpdateMoveLocation();
+        }
+
+        void UpdateMoveLocation()
+        {
+            // The destination is the header the pointer is over; before it when over its first half.
+            float end = 0;
+            m_DestinationTab = null;
+            m_MoveBeforeDestination = false;
+            foreach (var header in m_TabView.tabHeaders)
+            {
+                m_DestinationTab = header;
+                float extent = Extent(header);
+                float middle = end + extent / 2f;
+                end += extent;
+                if (end > m_LastPos)
+                {
+                    m_MoveBeforeDestination = m_LastPos < middle;
+                    break;
+                }
+            }
+            UpdatePreviewPosition();
+        }
+
+        void UpdatePreviewPosition()
+        {
+            float start = m_TabToMovePos + m_LastPos - m_StartPos;
+            float width = m_TabToMove.boundingBox.width;
+            float destination = Offset(m_DestinationTab);
+            float after = m_MoveBeforeDestination || m_DestinationTab == null ? 0f : Extent(m_DestinationTab);
+            if (isVertical)
+            {
+                m_PreviewElement.style.top = start;
+                m_PreviewElement.style.height = m_TabToMove.boundingBox.height;
+                m_PreviewElement.style.width = width;
+                if (m_DestinationTab != null)
+                {
+                    m_LocationPreviewElement.preview.style.width = width;
+                    m_LocationPreviewElement.style.top = destination + after;
+                }
+            }
+            else
+            {
+                m_PreviewElement.style.left = start;
+                m_PreviewElement.style.width = width;
+                if (m_DestinationTab != null) m_LocationPreviewElement.style.left = destination + after;
+            }
+        }
+
+        void EndDragMove(bool cancelled)
+        {
+            if (!moving || m_Cancelled) return;
+            m_Cancelled = cancelled;
+            if (!cancelled)
+            {
+                var headers = m_TabView.tabHeaders;
+                int from = headers.IndexOf(m_TabToMove);
+                int to = headers.IndexOf(m_DestinationTab);
+                if (!m_MoveBeforeDestination) to++;
+                if (from < to) to--;
+                if (from != to) m_TabView.ReorderTab(from, to);
+            }
+            m_PreviewElement?.RemoveFromHierarchy();
+            m_PreviewElement = null;
+            m_LocationPreviewElement?.RemoveFromHierarchy();
+            m_LocationPreviewElement = null;
+            moving = false;
+            m_TabToMove = null;
+        }
+    }
+
+    /// <summary>The marker of where a dragged tab will land.</summary>
+    internal partial class TabDragLocationPreview : VisualElement
+    {
+        public static readonly string ussClassName = TabView.ussClassName + "__drag-location-preview";
+        public static readonly string visualUssClassName = ussClassName + "__visual";
+        public static readonly string verticalUssClassName = ussClassName + "__vertical";
+        public static readonly string horizontalUssClassName = ussClassName + "__horizontal";
+
+        internal VisualElement preview { get; }
+
+        public TabDragLocationPreview()
+        {
+            AddToClassList(ussClassName);
+            pickingMode = PickingMode.Ignore;
+            preview = new VisualElement { pickingMode = PickingMode.Ignore };
+            preview.AddToClassList(visualUssClassName);
+            Add(preview);
         }
     }
 }
