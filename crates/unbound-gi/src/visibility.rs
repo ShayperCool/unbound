@@ -164,6 +164,9 @@ impl Visibility {
         let (index, weight) = self.lookup(d);
         let (bits, mask) = self.bits();
         let per_direction = out.len().div_ceil(self.values_per_byte);
+        if per_direction == 0 {
+            return Ok(());
+        }
         out.fill(0);
         let mut decoded = None;
         for (k, &direction) in index.iter().enumerate() {
@@ -242,7 +245,7 @@ mod tests {
         assert!(decode_runs(&[0x85], &mut Vec::new()).is_err());
     }
 
-    /// Two rings of two directions (+y side, -y side), 4 clusters at 2 bits, one stream of 4
+    /// Two rings, of one direction (+y) and of three (-y side), 4 clusters at 2 bits, one stream of 4
     /// directions: direction d gives cluster c the value (c + d) % 4.
     fn tiny() -> Vec<u8> {
         let mut b = vec![0u8; START + 0x240];
@@ -257,7 +260,7 @@ mod tests {
         put(0x30, 1);
         put(0x34, 4);
         put(0x38, 2);
-        for (r, (first, n)) in [(0u16, 2u16), (2, 2)].into_iter().enumerate() {
+        for (r, (first, n)) in [(0u16, 1u16), (1, 3)].into_iter().enumerate() {
             b[START + 0x40 + 2 * r..][..2].copy_from_slice(&first.to_le_bytes());
             b[START + 0x140 + 2 * r..][..2].copy_from_slice(&n.to_le_bytes());
         }
@@ -308,28 +311,26 @@ mod tests {
     #[test]
     fn longitude_wraps_around_each_ring() {
         let v = Visibility::read(&tiny()).unwrap();
-        // Toward +x (to the light), just either side of the longitude seam: the ring's last
-        // direction and its first.
+        // Horizontal toward +x (to the light), just either side of the longitude seam: halfway
+        // between the pole and the ring of three directions (1, 2, 3).
         for z in [1e-3f32, -1e-3] {
             let d = [(1.0 - z * z).sqrt(), 0.0, z];
             let (index, weight) = v.lookup(d);
             assert_eq!(weight.iter().sum::<u32>(), WEIGHT_SCALE, "{z}");
-            for k in 0..4 {
-                assert!(index[k] < 4, "{index:?}");
-            }
-            // Each ring's two directions are one and its next, wrapping around. At the seam the
-            // first direction weighs most on both sides: from just below longitude 1 it is the
-            // next after the last, from just above 0 it is the first itself.
-            assert_eq!((index[0] + 1) % 2, index[1] % 2);
+            assert_eq!(index[..2], [0, 0]);
+            // Just below longitude 1: the last direction and, wrapping around, the first, which
+            // weighs most; just above 0: the first, weighing most, and the second.
             if z > 0.0 {
-                assert_eq!((index[0] % 2, index[1] % 2), (1, 0));
-                assert!(weight[1] > weight[0], "{weight:?}");
+                assert_eq!(index[2..], [3, 1]);
+                assert!(weight[3] > weight[2], "{weight:?}");
             } else {
-                assert_eq!((index[0] % 2, index[1] % 2), (0, 1));
-                assert!(weight[0] > weight[1], "{weight:?}");
+                assert_eq!(index[2..], [1, 2]);
+                assert!(weight[2] > weight[3], "{weight:?}");
             }
-            assert_eq!(index[2] / 2, 1);
         }
+        // A system without clusters reads nothing.
+        v.visible_points([0.0, 1.0, 0.0], |_| 0, &mut Vec::new(), &mut [])
+            .unwrap();
     }
 
     #[test]
