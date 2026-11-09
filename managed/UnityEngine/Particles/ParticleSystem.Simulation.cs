@@ -795,10 +795,6 @@ namespace UnityEngine
             m_SpeedNt = -1f;
         }
 
-        /// <summary>Marks a sub-emitter child the catch-up of its emission ended, until its batch
-        /// is settled (no live particle's age reaches it).</summary>
-        const float CaughtUpDead = float.PositiveInfinity;
-
         /// <summary>Settles a batch of new particles laid out from <paramref name="aligned"/> (the
         /// first multiple of four at or after <paramref name="start"/>, the live count before it) in
         /// four-slot groups: each lane marked dead, used or padding, lowers
@@ -2388,6 +2384,9 @@ namespace UnityEngine
             bool batched = StartsInBatches && m_Main.ringBufferMode == ParticleSystemRingBufferMode.Disabled;
             int start = m_Count, aligned = start, lanes = count, used = count;
             SlotMark[] marks = null;
+            // A Death cycle can bring an emission into this system while an outer pass over its
+            // buffer holds marks: they are kept for it.
+            int outerMarkedFrom = m_MarkedFrom, outerMarkedSlots = m_MarkedSlots;
             if (batched)
             {
                 used = Math.Min(count, Math.Max(0, m_Main.maxParticles - start));
@@ -2462,41 +2461,47 @@ namespace UnityEngine
                     laneContext.TemporaryLane = true;
                 }
                 bool alive = Integrate(ref p, particleAge, ref laneContext);
-                bool caughtUpDead = false;
-                if (alive && birthCatchup >= 0f && !prewarm && !padding)
-                {
-                    // Approximation (unmeasured, open): every catch-up step reuses the
-                    // context made once for this emission, so system-time curves (gravity
-                    // modifier, system-time module curves) and the emitter's transform stay
-                    // those of the emission instead of following each catch-up step.
-                    float remaining = birthCatchup;
-                    float step = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
-                    for (int guard = 0; remaining >= step && guard < 100000; guard++)
-                    {
-                        remaining -= step;
-                        if (!Integrate(ref p, step, ref context)) { alive = false; break; }
-                    }
-                    caughtUpDead = !alive;
-                }
                 if (batched)
                 {
-                    // A child the catch-up ends leaves once the batch is settled, outside its count
-                    // and without Death sub-emitters (unmeasured; as before the batches).
-                    if (caughtUpDead) p.m_AgePercent = CaughtUpDead;
-                    else if (!alive) marks[index] |= SlotMark.Dead;
+                    if (!alive) marks[index] |= SlotMark.Dead;
                 }
-                else if (alive) StartTrail(ref p);
+                else if (alive && CatchUp(ref p, birthCatchup, prewarm, ref context)) StartTrail(ref p);
                 else RemoveAt(index);
             }
             if (!batched) return;
             bool deathSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Death);
             SettleBatch(start, aligned, ref used, deathSubs);
+            m_MarkedFrom = outerMarkedFrom;
+            m_MarkedSlots = outerMarkedSlots;
+            // The batch's particles are caught up once it is settled, whichever lanes stayed; one
+            // the catch-up ends leaves outside the batch's count, without Death sub-emitters
+            // (unmeasured; as before the batches).
             for (int i = start; i < m_Count;)
             {
-                if (m_Particles[i].m_AgePercent == CaughtUpDead) RemoveAt(i);
-                else StartTrail(ref m_Particles[i++]);
+                BeginModuleSample(i - start, m_Particles[i].m_RandomSeed);
+                if (CatchUp(ref m_Particles[i], birthCatchup, prewarm, ref context)) StartTrail(ref m_Particles[i++]);
+                else RemoveAt(i);
             }
             NoteMostParticles();
+        }
+
+        /// <summary>Advances a Birth child of a Simulate call over the call time left after its
+        /// step (<paramref name="birthCatchup"/>, none below zero or in a prewarm) in steps of
+        /// Time.fixedDeltaTime; false when it dies.
+        /// Approximation (unmeasured, open): every catch-up step reuses the context made once for
+        /// the emission, so system-time curves (gravity modifier, system-time module curves) and
+        /// the emitter's transform stay those of the emission.</summary>
+        bool CatchUp(ref Particle p, float birthCatchup, bool prewarm, ref StepContext context)
+        {
+            if (birthCatchup < 0f || prewarm) return true;
+            float remaining = birthCatchup;
+            float step = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
+            for (int guard = 0; remaining >= step && guard < 100000; guard++)
+            {
+                remaining -= step;
+                if (!Integrate(ref p, step, ref context)) return false;
+            }
+            return true;
         }
 
         // ------------------------------------------------------------------ current values

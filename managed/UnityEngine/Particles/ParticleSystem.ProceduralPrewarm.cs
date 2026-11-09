@@ -34,8 +34,7 @@ namespace UnityEngine
             // playback go (the stepped prewarm runs them out over the span too; Unbound's choice
             // for longer-lived ones, unmeasured). A procedural system has no trails or
             // sub-emitters to hand them to.
-            m_Count = 0;
-            m_RingIndex = 0;
+            ClearParticles();
             float step = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
             float margin = Mathf.Max(ProceduralEndMargin, duration * ProceduralEndMarginScale);
             m_Prewarming = true;

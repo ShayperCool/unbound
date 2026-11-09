@@ -64,17 +64,20 @@ namespace UnityEngine.Tests
             }
         }
 
-        [Fact]
-        public void ChildrenTheCatchUpEndsLeaveWithoutDisplacingTheirBatch()
+        [Theory]
+        [InlineData(0.5f, 3f, 100f)]
+        [InlineData(0.001f, 1f, 500f)]
+        public void ChildrenTheCatchUpEndsLeaveWithoutDisplacingTheirBatch(float shortest, float longest, float rate)
         {
             // A long Simulate call: a parent particle moving at 1 unit/s along z carries a Birth
-            // child of random lifetimes (0.5 to 3 s) at rest. Every child left lies where the
-            // parent was when it was born: z = 5 - age, within a step.
+            // child of random lifetimes at rest (some dying at birth, some in the catch-up).
+            // Every child left lies where the parent was when it was born: z = 5 - age, within a
+            // step, whichever lanes of its batch stayed.
             var child = Make(c =>
             {
-                var m = c.main; m.startLifetime = new ParticleSystem.MinMaxCurve(0.5f, 3f);
-                m.simulationSpace = ParticleSystemSimulationSpace.World; m.maxParticles = 1000;
-                var e = c.emission; e.rateOverTime = 100f;
+                var m = c.main; m.startLifetime = new ParticleSystem.MinMaxCurve(shortest, longest);
+                m.simulationSpace = ParticleSystemSimulationSpace.World; m.maxParticles = 5000;
+                var e = c.emission; e.rateOverTime = rate;
             });
             var parent = Make(p =>
             {
@@ -98,6 +101,48 @@ namespace UnityEngine.Tests
                 }
             }
             finally { Object.DestroyImmediate(parent.gameObject); }
+        }
+
+        [Fact]
+        public void ADeathCycleBackIntoASystemKeepsTheOuterPassDeaths()
+        {
+            // A's dying particles emit into B, whose dying particles emit back into A while A's
+            // own deaths are still being removed: no spent particle of A stays behind.
+            var a = Make(s =>
+            {
+                var m = s.main; m.startLifetime = new ParticleSystem.MinMaxCurve(0.05f, 1f); m.maxParticles = 5000;
+                // Its burst is what B's Death sub-emitter emits back into it.
+                s.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)3) });
+            });
+            var b = Make(s =>
+            {
+                var m = s.main; m.maxParticles = 5000;
+                s.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)2) });
+            });
+            var aSubs = a.subEmitters; aSubs.enabled = true;
+            aSubs.AddSubEmitter(b, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritLifetime);
+            var bSubs = b.subEmitters; bSubs.enabled = true;
+            bSubs.AddSubEmitter(a, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            try
+            {
+                a.Simulate(0f, false, true, false);
+                a.Emit(40);
+                var buffer = new ParticleSystem.Particle[5000];
+                int spent = 0;
+                for (int call = 0; call < 30; call++)
+                {
+                    a.Simulate(0.03f, false, false, false);
+                    int n = a.GetParticles(buffer);
+                    for (int i = 0; i < n; i++)
+                        if (buffer[i].remainingLifetime <= 0f) spent++;
+                }
+                Assert.Equal(0, spent);
+            }
+            finally
+            {
+                Object.DestroyImmediate(a.gameObject);
+                Object.DestroyImmediate(b.gameObject);
+            }
         }
 
         [Fact]

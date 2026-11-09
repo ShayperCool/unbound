@@ -295,9 +295,7 @@ namespace UnityEngine
             if (stopBehavior == ParticleSystemStopBehavior.StopEmittingAndClear)
                 foreach (var ps in ClearedSystems(withChildren))
                 {
-                    ps.m_Count = 0;
-                    ps.m_RingIndex = 0;
-                    ps.ClearTrails();
+                    ps.ClearParticles();
                     // Linked-only systems receive Clear's playback transition, but
                     // selected systems retain StopSelf's callback eligibility.
                     if (ps.m_StopEmitting && !systems.Contains(ps)) ps.m_IsPlaying = false;
@@ -315,9 +313,7 @@ namespace UnityEngine
             ParticleSystemManager.Sync();
             foreach (var ps in ClearedSystems(withChildren))
             {
-                ps.m_Count = 0;
-                ps.m_RingIndex = 0;
-                ps.ClearTrails();
+                ps.ClearParticles();
                 if (ps.m_StopEmitting) ps.m_IsPlaying = false;
             }
         }
@@ -376,9 +372,7 @@ namespace UnityEngine
             if (restart)
                 foreach (var ps in systems)
                 {
-                    ps.m_Count = 0;
-                    ps.m_RingIndex = 0;
-                    ps.ClearTrails();
+                    ps.ClearParticles();
                     ps.m_IsPlaying = false;
                     ps.m_StopEmitting = false;
                     ps.m_FixedRemainder = 0f;
@@ -655,6 +649,14 @@ namespace UnityEngine
         int m_MarkedSlots;
 
         /// <summary>The cleared marks for slots [0, <paramref name="count"/>).</summary>
+        /// <summary>Empties the buffer: no particles, the ring restarted, no trails.</summary>
+        internal void ClearParticles()
+        {
+            m_Count = 0;
+            m_RingIndex = 0;
+            ClearTrails();
+        }
+
         SlotMark[] SlotMarks(int count)
         {
             if (m_SlotMarks.Length < count)
@@ -673,12 +675,13 @@ namespace UnityEngine
         /// them each time.</summary>
         SlotMark[] SlotMarksFrom(int from, int count)
         {
+            // An outer pass over this buffer may still hold its marks and points below: kept.
             if (m_SlotMarks.Length < count)
             {
-                m_SlotMarks = new SlotMark[Math.Max(count, m_SlotMarks.Length * 2)];
-                m_SlotPoints = new Vector3[m_SlotMarks.Length];
+                Array.Resize(ref m_SlotMarks, Math.Max(count, m_SlotMarks.Length * 2));
+                Array.Resize(ref m_SlotPoints, m_SlotMarks.Length);
             }
-            else Array.Clear(m_SlotMarks, from, count - from);
+            Array.Clear(m_SlotMarks, from, count - from);
             m_MarkedFrom = from;
             m_MarkedSlots = count;
             return m_SlotMarks;
@@ -1294,9 +1297,7 @@ namespace UnityEngine
             {
                 bool wasPlaying = m_IsPlaying;
                 bool hadPlayback = wasPlaying || m_IsPaused || m_StopEmitting;
-                m_Count = 0;
-                m_RingIndex = 0;
-                ClearTrails();
+                ClearParticles();
                 m_IsPlaying = false;
                 m_IsPaused = false;
                 // A later non-restarting Simulate must advance the stopped clock,
@@ -1388,9 +1389,7 @@ namespace UnityEngine
             m_Registered = false;
             ParticleSystemManager.Remove(this);
             // Deactivating a system kills its particles and stops it (without its stop action).
-            m_Count = 0;
-            m_RingIndex = 0;
-            ClearTrails();
+            ClearParticles();
             m_IsPlaying = false;
             m_IsPaused = false;
             m_StopEmitting = false;
