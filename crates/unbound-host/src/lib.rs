@@ -52,14 +52,16 @@ pub fn dotnet_root() -> Result<PathBuf> {
         .context("no .NET installation found; install the .NET SDK or set DOTNET_ROOT")
 }
 
-/// Where the managed engine was built: `UNBOUND_MANAGED_DIR`, `managed/` beside the executable,
-/// or the workspace's `target/managed`.
+/// Where the managed engine was built: `UNBOUND_MANAGED_DIR`, `managed/` beside the executable or
+/// one level up (a release archive's `bin/`), or the workspace's `target/managed`.
 pub fn managed_dir() -> Result<PathBuf> {
     if let Some(dir) = std::env::var_os("UNBOUND_MANAGED_DIR") {
         return Ok(dir.into());
     }
     let mut candidates = Vec::new();
-    if let Ok(exe) = std::env::current_exe()
+    // Through a symlink (an installation linked into ~/.local/bin), the real executable's
+    // directory: macOS reports the path the program was started by.
+    if let Ok(exe) = std::env::current_exe().and_then(|exe| exe.canonicalize())
         && let Some(dir) = exe.parent()
     {
         candidates.push(dir.join("managed"));
