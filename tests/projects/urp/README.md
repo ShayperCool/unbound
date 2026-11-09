@@ -159,3 +159,47 @@ skinnedMotionVectors on or off (the project deforms meshes on the CPU; set to GP
 Editor recorded the same bend, not committed); its object motion follows its root bone's position
 and rotation, neither the renderer's transform nor the root bone's scale. URP's C# runs in Mono's double precision (0.7
 scales the target to 223x125), which Unbound does not (see docs/COMPATIBILITY_GAPS.md).
+
+## Rendering path scenarios
+
+With `URP_PROBE_DEFERRED_DIR` (a run of its own; `UrpProbe.Deferred.cs`) the probe records each
+scene with the Universal Renderer's Forward and Deferred modes (`<name>_forward`,
+`<name>_deferred`) and `modes.jsonl`: per recording the device, `renderingModeActual` and the
+path's global keywords. Scenes: `opaque` (Lit metal, Lit dielectric and Simple Lit spheres beside
+the Lit cube and the Unlit sphere), `lights` (a point and a spot light), `shadows` (main, spot and
+point light shadows), `many_lights` (twelve point lights, more than Forward's per-object limit of
+4), `light_layers` (the asset's Use Rendering Layers: the point light on Layer 1 lights the
+spheres, not the cube or the ground), `accurate_normals` (the renderer's Accurate G-buffer
+normals), `transparent` (a Lit transparent sphere), `msaa` (4 samples), from the feature
+scenarios' closer camera `ssao`, `decal_screen_space`, `decal_dbuffer`, `decal_layers` and
+`decal_dbuffer_layers` (Decal Layers: only the cube shares the projector's Layer 2), and the
+baked scenes' `lightmap_shadowmask`, `lightmap_distance_shadowmask`, `lightmap_subtractive`.
+`ProjectSettings/TagManager.asset` defines rendering layers Layer 1 and Layer 2: URP masks light
+and decal layers with the project's defined rendering layers, so with Default alone a light or
+projector on another layer lights or decals nothing.
+
+The 6000.0 Manual (Choose a rendering path in URP) documents that Unity falls back to a
+different rendering path on a device that does not support the selected one (it does not say
+which), that Deferred has no MSAA and no limit on the realtime lights per opaque object. URP's C#
+does not render Deferred on OpenGL devices; measured here, the fallback is Forward. So the
+references are recorded on two devices, two identical recordings each (the `_TimeParameters`
+constants differ):
+
+- `Reference/unity-6000.0.71f1/paths-opengl`: the Editor's OpenGL Core device on the GPU, as
+  every other reference here (the `ProbeRunner.Record` recipe above). Each Deferred request
+  renders Forward, pixel for pixel the Forward recording. Unbound's device is this one: the suite
+  compares Unbound's run with this set.
+- `Reference/unity-6000.0.71f1/paths-vulkan`: the same Editor with `-force-vulkan` on the GPU (a
+  Vulkan 1.1 device on the RTX 4060; batch mode needs no presentable display), where
+  `renderingModeActual` is Deferred.
+
+Device against path: the Forward recordings of both devices are identical except the decal
+scenarios that need DBuffer or Decal Layers, which the OpenGL device refuses (DBuffer draws
+nothing; Decal Layers are not enabled, so the decal lands on everything). On Vulkan, Deferred
+against Forward differs in `many_lights` (Deferred lights each pixel with all twelve lights,
+Forward with each object's 4), `msaa` (Deferred renders without MSAA), the screen space decals
+(`decal_screen_space`, `decal_layers`: Deferred draws them into the G-buffer, before lighting) and
+elsewhere by at most a mean of 0.2 (G-buffer quantization). Unbound has no Vulkan device, so the
+Deferred recordings have no Unbound counterpart (docs/COMPATIBILITY_GAPS.md).
+
+    URP_PROBE_DEFERRED_DIR=/tmp/paths unbound run -p tests/projects/urp --no-watch --frames 200 --size 320x180

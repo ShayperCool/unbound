@@ -340,6 +340,15 @@ def recipes(release):
                        '{work}/out/texture-formats.jsonl'))
     R['urp'].append(py('compare_constants.py', ref('scenarios/texture-samples.jsonl'),
                        '{work}/out/texture-samples.jsonl'))
+    # The rendering path scenarios (a run of their own) against the Editor's OpenGL Core device,
+    # which Unbound's device is; paths-vulkan (URP's Deferred path) has no Unbound counterpart.
+    paths = PROJECTS/'urp/Reference'/f'unity-{release}'/'paths-opengl'
+    if paths.is_dir():
+        R['urp'].append(run('--no-watch', '--frames', '200', '--size', '320x180',
+                            env={'URP_PROBE_DEFERRED_DIR': '{work}/paths'}))
+        R['urp'] += [py('urp/compare.py', str(png), '{work}/paths/'+png.name, verdict='none')
+                     for png in sorted(paths.glob('*.png'))]
+        R['urp'].append(py('compare_constants.py', str(paths/'modes.jsonl'), '{work}/paths/modes.jsonl'))
     R['terrain'] = classic('TERRAIN_PROBE_OUT', 'out', ['--frames', '300', '--size', '320x180', '--no-watch'], images=True)
     R['lod'] = classic('LOD_PROBE_OUT', 'out', ['--frames', '20000', '--size', '320x180', '--no-watch'])
     R['assetbundles'] = classic('BUNDLE_PROBE_OUT', 'out', ['--frames', '600', '--size', '320x180', '--no-watch'],
