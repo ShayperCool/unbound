@@ -87,6 +87,16 @@ namespace UnityEngine.Tests
             void OnAudioFilterRead(float[] data, int channels) { }
         }
 
+        // One audio frame without advancing the virtual device clock, so short clips keep
+        // playing however long the previous frame took.
+        static void UpdateWithoutAdvancing()
+        {
+            double previous = Time.s_RealDeltaTime;
+            Time.s_RealDeltaTime = 0;
+            try { AudioSystem.Update(); }
+            finally { Time.s_RealDeltaTime = previous; }
+        }
+
         AudioSource Source(string name)
         {
             var go = new GameObject(name);
@@ -301,7 +311,8 @@ namespace UnityEngine.Tests
             // Before the first audio frame the voice has no route yet: a static bypass.
             source.bypassEffects = !initiallyBypassed;
             source.bypassEffects = initiallyBypassed;
-            AudioSystem.Update();
+            UpdateWithoutAdvancing();
+            Assert.True(source.isPlaying);
             Assert.Throws<NotSupportedException>(() => source.bypassEffects = !initiallyBypassed);
             Assert.Equal(initiallyBypassed, source.bypassEffects);
             Assert.True(source.isPlaying);
@@ -322,7 +333,8 @@ namespace UnityEngine.Tests
             source.gameObject.AddComponent<AudioLowPassFilter>();
             source.clip = AudioClip.Create("input", 8192, 1, 48000, false);
             source.Play();
-            AudioSystem.Update();
+            UpdateWithoutAdvancing();
+            Assert.True(source.isPlaying);
             source.bypassEffects = true;
             Assert.True(source.bypassEffects);
             source.bypassEffects = false;
