@@ -333,18 +333,7 @@ namespace Unbound.UIElements
         {
             m_Shapes.Clear();
             var map = m_TessIndices;
-            // A vertex libtess2 made at a crossing takes the point it coincides with, if any.
-            for (int j = 0; j < vertexCount; j++)
-            {
-                if (map[j] >= 0) continue;
-                var v = TessVertex(j);
-                for (int k = 0; k < vertexCount; k++)
-                {
-                    if (k == j || map[k] < 0 || !UaVector.Near(v, TessVertex(k))) continue;
-                    map[j] = map[k];
-                    break;
-                }
-            }
+            RemapCrossings(vertexCount);
             var tris = m_TessTriangles;
             for (int t = 0; t < triangleCount; t++)
             {
@@ -395,6 +384,53 @@ namespace Unbound.UIElements
                 if (m_Matched.Count == 0) m_Shapes.Add(new Shape { Kind = ShapePlain, E0 = pa, E1 = pb, Apex = pc });
             }
         }
+
+        /// <summary>A vertex libtess2 made at a crossing takes the point of the first vertex (in
+        /// output order, crossings already given one included) within 0.001 of it, if any. Vertices
+        /// are found through a grid of 0.001 cells, so the cost stays linear.</summary>
+        void RemapCrossings(int vertexCount)
+        {
+            var map = m_TessIndices;
+            bool any = false;
+            for (int j = 0; j < vertexCount && !any; j++) any = map[j] < 0;
+            if (!any) return;
+            m_Grid.Clear();
+            if (m_GridNext.Length < vertexCount) m_GridNext = new int[vertexCount * 2];
+            for (int k = vertexCount - 1; k >= 0; k--)
+                if (map[k] >= 0) GridInsert(k);
+            for (int j = 0; j < vertexCount; j++)
+            {
+                if (map[j] >= 0) continue;
+                var v = TessVertex(j);
+                long cx = Cell(v.x), cy = Cell(v.y);
+                int best = -1;
+                for (long dx = -1; dx <= 1; dx++)
+                for (long dy = -1; dy <= 1; dy++)
+                {
+                    if (!m_Grid.TryGetValue(Key(cx + dx, cy + dy), out int k)) continue;
+                    for (; k >= 0; k = m_GridNext[k])
+                        if (k != j && (best < 0 || k < best) && UaVector.Near(v, TessVertex(k))) best = k;
+                }
+                if (best < 0) continue;
+                map[j] = map[best];
+                GridInsert(j);
+            }
+        }
+
+        static long Cell(float v) => (long)Math.Floor(v / (double)UaVector.Epsilon);
+
+        static long Key(long x, long y) => (x << 32) ^ (y & 0xffffffffL);
+
+        void GridInsert(int k)
+        {
+            var v = TessVertex(k);
+            long key = Key(Cell(v.x), Cell(v.y));
+            m_GridNext[k] = m_Grid.TryGetValue(key, out int head) ? head : -1;
+            m_Grid[key] = k;
+        }
+
+        readonly Dictionary<long, int> m_Grid = new Dictionary<long, int>();
+        int[] m_GridNext = new int[64];
 
         int PieceOf(int u, int w)
         {
