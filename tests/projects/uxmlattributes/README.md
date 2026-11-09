@@ -12,8 +12,8 @@ char, UxmlTypeReference Type, List<int>, List<string>, Texture2D, Sprite, StyleS
 VisualTreeAsset, Object), custom and obsolete names, a derived control, a custom element name, a
 control with only the legacy UxmlFactory/UxmlTraits, one with both, a control with Background and
 Font members, Button `icon-image` and ListView/TreeView `item-template`, and preset controls (a
-Button with an icon, a ListView with a template, Background, List<Background> and Texture2D members
-with initial values) that tell a kept value from a cleared one.
+Button with an icon, a ListView with a template, Background and Texture2D members with initial
+values, and a List<Background> member) that tell a kept value from a cleared one.
 Values: valid ones, project urls with guid and fileID, absolute, relative and guid-less paths,
 references to another sub-asset or another type, missing assets, empty values, malformed numbers,
 booleans, enums, colours (short hex, names, rgb()), vectors and list items, unknown types.

@@ -389,8 +389,9 @@ namespace UnityEngine.Tests
         }
 
         // [choice] UXML EnumField `type` and `value` are applied as before, an empty icon-image is no
-        // icon without an error (the importer's warning is not this document's), and an attribute Unbound cannot convert that is not an asset
-        // reference (MinMaxSlider low-limit="not-a-number") stays silent, the property unchanged.
+        // icon without an error (the importer's warning is not this document's), and an attribute
+        // Unbound cannot convert that is not an asset reference (MinMaxSlider
+        // low-limit="not-a-number") stays silent, the property unchanged.
         // Guard, not red: 7718c50e behaves the same. Red recipe: a mutation logging every failed
         // TryConvert in ApplyAttribute makes Assert.Empty(logs) fail.
         [Fact]

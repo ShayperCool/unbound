@@ -42,8 +42,8 @@ using Object = UnityEngine.Object;
 // Unbound's choices: the text forms of vectors, rects and bounds (comma-separated components),
 // arrays read like lists, items not trimmed. Length, Gradient, AnimationCurve and
 // ToggleButtonGroupState values are not read yet and fail loudly; a game converter's failure is
-// reported. Measured: Background members (without a game converter) are not read from UXML at
-// all, their urls not checked.
+// reported. Measured: Background and List<Background> members (without a game converter) are
+// not read from UXML at all, their urls not checked (Background arrays follow, unmeasured).
 
 namespace Unbound.UIElements
 {
@@ -510,14 +510,8 @@ namespace Unbound.UIElements
                 else result = new BoundsInt(v[0], v[1], v[2], v[3], v[4], v[5]);
                 return true;
             }
-            // A Background value: the object the url names, made into a Background as `icon-image`
-            // is (VisualTreeAsset.ApplyImageAttribute); objects resolve as object members do.
-            if (type == typeof(Background))
-            {
-                if (!TryReadAsset(text, typeof(Object), document, out var image, out error)) return false;
-                result = Background.FromObject((Object)image);
-                return true;
-            }
+            // (Background members are not read: IsUnreadBackground; `icon-image` is read by
+            // VisualTreeAsset.ApplyImageAttribute.)
             if (typeof(Object).IsAssignableFrom(type))
                 return TryReadAsset(text, type, document, out result, out error);
             if (IsList(type, out var element) && !IsList(element, out _))
@@ -556,7 +550,7 @@ namespace Unbound.UIElements
 
         /// <summary>A [UxmlAttribute] value as Unity converts it: <see cref="TryRead"/>'s, else, for
         /// the measured types, the type's default (white for a colour), item by item for a list.
-        /// False with an error for other types, game converters and image references.</summary>
+        /// False with an error for other types and game converters.</summary>
         internal static bool TryReadLenient(string text, Type type, MemberInfo member, VisualTreeAsset document, out object result, out string error)
         {
             error = null;
