@@ -299,6 +299,9 @@ class LandTrain:
     def assemble(self, entries, base, workspace):
         accepted, tip = [], base
         for entry in entries:
+            if entry.get('automatic_error'):
+                self.reject(entry, 2, 'automatic probe coverage could not be recovered: '+entry['automatic_error'])
+                continue
             if not self.valid(entry):
                 continue
             path = Path(entry['worktree']) if workspace.original else workspace.path
@@ -446,8 +449,9 @@ class LandTrain:
                 entry['automatic'] = self.api.automatic_checks(
                     workspace.path, self.commit_paths(entry['head']), entry['probes'],
                     entry.get('probe_environment', {}), full=entry['full'])
-            except (SystemExit, ValueError):
-                entry['automatic'] = []  # Rebased metadata is validated during assembly.
+            except (SystemExit, ValueError) as error:
+                entry['automatic'] = []
+                entry['automatic_error'] = f"{entry['branch']}: {error}"
         for entry in entries:
             ancestors = set(self.git('rev-list', 'main..'+entry['head']).splitlines())
             self.lineage[entry['id']] = ancestors
@@ -456,10 +460,14 @@ class LandTrain:
             specs = list(dict.fromkeys((command, release) for item in sources
                                       for command, release in zip(item['probes'], item['releases'])))
             entry['automatic'] = self.api.automatic_union([item.get('automatic', []) for item in sources])
+            errors = [item['automatic_error'] for item in sources if item.get('automatic_error')]
+            if errors:
+                entry['automatic_error'] = errors[0]
             entry.update(probes=[item[0] for item in specs], releases=[item[1] for item in specs],
                          full=any(item['full'] for item in sources))
             self.queue.update(entry['id'], probes=entry['probes'], releases=entry['releases'],
-                              full=entry['full'], automatic=entry['automatic'])
+                              full=entry['full'], automatic=entry['automatic'],
+                              automatic_error=entry.get('automatic_error'))
 
     def lead(self):
         self.id = uuid.uuid4().hex

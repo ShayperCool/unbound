@@ -210,6 +210,11 @@ def gate(root, base, probes, full, branch, **options):
         raise SystemExit(5)
     return None
 if os.environ.get('TRAIN_LEGACY_REQUEST'):
+    original_selection = land.automatic_checks
+    def legacy_selection(*args, **kwargs):
+        land.automatic_checks = original_selection
+        return []
+    land.automatic_checks = legacy_selection
     original_register = land_train.Queue.register
     @contextlib.contextmanager
     def legacy_register(self, entry):
@@ -366,6 +371,8 @@ class TrainIntegrationTests(unittest.TestCase):
         return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
 
     def gates(self):
+        if not self.events.exists():
+            return []
         return [json.loads(line) for line in self.events.read_text().splitlines() if '"gate"' in line]
 
     @contextlib.contextmanager
@@ -588,6 +595,43 @@ class TrainIntegrationTests(unittest.TestCase):
         self.assertIn('retained-fast', [row[1] for row in checks])
         self.assertNotIn('uncommitted-only', [row[1] for row in checks])
         self.assertIn('uncommitted-only', edited.read_text())
+
+    def legacy_metadata_repair(self, malformed):
+        other = self.repo/'tests/projects/other'
+        (other/'Reference').mkdir(parents=True)
+        (other/'Reference/control.json').write_text('{}\n')
+        valid = json.dumps({'commands': ['true']})
+        (other/'gate.json').write_text(valid)
+        self.git('add', '.')
+        self.git('commit', '-qm', 'test(agents): legacy metadata repair control')
+        metadata = 'tests/projects/control/gate.json'
+        original = (self.repo/metadata).read_text()
+        other_path = 'tests/projects/other/gate.json'
+        first = self.branch('first', {metadata: json.dumps({
+            'commands': ['true'], 'fast_commands': ['retained-fast']}),
+            other_path: '{broken' if malformed else valid, 'a.txt': 'ok\n'})
+        second = self.branch('second', {metadata: original, other_path: valid,
+                                       'break-inherited.txt': 'yes\n'}, base='first')
+        (self.state/'pause-leader').write_text('pause')
+        owner = self.start(first, legacy=True, pause_leader=True)
+        self.wait_for(lambda: (self.state/'leader-running').exists(), 'leader did not start')
+        peer = self.start(second)
+        self.registered(2)
+        (self.state/'pause-leader').unlink()
+        return self.finish([owner, peer])
+
+    def test_legacy_metadata_selection_failure_rejects_stacked_peer(self):
+        results = self.legacy_metadata_repair(malformed=True)
+        self.assertEqual([code for code, _ in results], [2, 2], results)
+        self.assertEqual(self.rows(), [])
+        self.assertEqual(self.gates(), [])
+        self.assertIn('coverage could not be recovered', results[1][1])
+
+    def test_legacy_valid_metadata_preserves_fast_check_in_stacked_peer(self):
+        results = self.legacy_metadata_repair(malformed=False)
+        self.assertEqual([code for code, _ in results], [0, 5], results)
+        self.assertEqual([row['branch'] for row in self.rows()], ['first'])
+        self.assertIn('retained-fast', [row[1] for row in self.gates()[-1]['automatic']])
 
     def test_all_branches_share_one_gate_and_one_push(self):
         first = self.branch('first', {'a.txt': 'ok', 'crates/alpha/src/lib.rs': '// changed\n'})
