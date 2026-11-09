@@ -63,7 +63,9 @@ struct Scene {
     /// Point lights of the last frame, reused.
     points: Vec<PointLight>,
     lights: Vec<GiLight>,
-    frame: GiFrame,
+    /// The last frame's inputs; `None` before the first frame, whose inputs all go to the
+    /// solvers.
+    frame: Option<GiFrame>,
     /// The next system to update when the budget does not allow all.
     cursor: usize,
     /// Systems updated in a row without a change of their drawn texels: the scene is converged
@@ -156,7 +158,7 @@ fn register(data: unbound_gi::data::Precomputed, linear_space: bool) -> Result<J
                 atlases,
                 points: Vec::new(),
                 lights: Vec::new(),
-                frame: GiFrame::default(),
+                frame: None,
                 cursor: 0,
                 stable: 0,
                 changed: true,
@@ -246,32 +248,30 @@ impl Scene {
                 system.set_lights(&self.points);
             }
         }
-        let environment_changed = self.frame.environment != frame.environment;
+        let last = self.frame.replace(*frame);
+        let differs = |f: fn(&GiFrame) -> [f32; 3]| last.is_none_or(|l| f(&l) != f(frame));
+        let environment_changed = differs(|f| f.environment);
         if environment_changed {
             for system in &mut self.systems {
                 system.set_uniform_environment(frame.environment);
             }
         }
-        if self.frame.indirect_scale != frame.indirect_scale {
+        let scale_changed = differs(|f| [f.indirect_scale; 3]);
+        if scale_changed {
             for system in &mut self.systems {
                 system.set_indirect_scale(frame.indirect_scale);
             }
             self.changed = true;
         }
-        let threshold_changed = self.frame.update_threshold != frame.update_threshold;
+        let threshold_changed = differs(|f| [f.update_threshold; 3]);
         if threshold_changed {
             for system in &mut self.systems {
                 system.set_update_threshold(frame.update_threshold);
             }
         }
-        if lights_changed
-            || environment_changed
-            || threshold_changed
-            || self.frame.indirect_scale != frame.indirect_scale
-        {
+        if lights_changed || environment_changed || threshold_changed || scale_changed {
             self.restart();
         }
-        self.frame = *frame;
         Ok(())
     }
 
@@ -283,12 +283,13 @@ impl Scene {
             let changed = std::mem::take(&mut self.changed);
             return UPDATE_CONVERGED | if changed { UPDATE_CHANGED } else { 0 };
         }
+        let frame = self.frame.unwrap_or_default();
         let start = std::time::Instant::now();
-        let budget = std::time::Duration::from_secs_f32(self.frame.budget_ms.max(0.0) / 1000.0);
+        let budget = std::time::Duration::from_secs_f32(frame.budget_ms.max(0.0) / 1000.0);
         let mut done = 0;
         while done < count
             && self.stable < count
-            && (done == 0 || self.frame.synchronous != 0 || start.elapsed() < budget)
+            && (done == 0 || frame.synchronous != 0 || start.elapsed() < budget)
         {
             let index = self.cursor % count;
             self.cursor = (index + 1) % count;
@@ -596,6 +597,39 @@ mod tests {
         );
         release(handle);
         assert!(update(handle, &frame, &[]).is_err());
+    }
+
+    #[test]
+    fn the_first_frame_sets_every_input() {
+        // DynamicGI.indirectScale 0 and updateThreshold 0 from a scene's first frame on (the
+        // solvers start at 1 and 1%): the drawn texels are black, and the threshold reaches
+        // the solvers.
+        let handle = register(room(), true).unwrap()["handle"].as_u64().unwrap();
+        set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
+        let frame = GiFrame {
+            indirect_scale: 0.0,
+            environment: [0.01, 0.01, 0.02],
+            synchronous: 1,
+            budget_ms: 2.0,
+            update_threshold: 0.0,
+        };
+        let lights = [point([0.0, 2.0, 0.0])];
+        for _ in 0..3 {
+            update(handle, &frame, &lights).unwrap();
+        }
+        let mut texels = vec![0u16; 4 * 64 * 64];
+        read_atlas(handle, 0, &mut texels).unwrap();
+        assert!(texels.chunks_exact(4).all(|t| {
+            t[..3]
+                .iter()
+                .all(|&h| half::f16::from_bits(h).to_f32() == 0.0)
+        }));
+        with_scene(handle, |scene| {
+            assert!(scene.systems.iter().all(|s| s.update_threshold() == 0.0));
+            Ok(())
+        })
+        .unwrap();
+        release(handle);
     }
 
     #[test]

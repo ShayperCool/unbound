@@ -16,9 +16,12 @@ const TREE_SCALE: f32 = 1.0 / 255.0;
 const LEGACY_FALLOFF_K: f32 = 25.0;
 const LEGACY_FADE_START: f32 = 0.64;
 /// A segment is solved again when the change of its inputs since its last solve, relative to
-/// their current brightness plus this, reaches `DynamicGI.updateThreshold` (a percentage).
+/// their current brightness plus this, reaches `DynamicGI.updateThreshold` (a percentage); the
+/// small term keeps black segments from dividing by zero. Both constants match the Unity
+/// 6000.0.71f1 Editor, tests/projects/realtimegi.
 const CHANGE_EPSILON: f32 = 1e-4 / 127.0;
-/// An indirect scale change by more than this solves every segment again.
+/// An indirect scale change by more than this (2^-23, about one float step at 1) solves every
+/// segment again.
 const SCALE_CHANGE: f32 = 1.0 / 8_388_608.0;
 /// `DynamicGI.updateThreshold`'s default, in percent.
 pub const DEFAULT_UPDATE_THRESHOLD: f32 = 1.0;
@@ -364,6 +367,11 @@ impl SystemSolver {
     /// relative to their brightness, before it is solved again.
     pub fn set_update_threshold(&mut self, percent: f32) {
         self.threshold = percent / 100.0;
+    }
+
+    /// DynamicGI.updateThreshold, in percent.
+    pub fn update_threshold(&self) -> f32 {
+        self.threshold * 100.0
     }
 
     /// One update (matches the Unity 6000.0.71f1 Editor, tests/projects/realtimegi): radiance
