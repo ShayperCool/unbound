@@ -1043,7 +1043,9 @@ namespace Unbound.UIElements.Layout
 
         public static float FromPublic(float value) => float.IsNaN(value) ? Undefined : value;
 
-        public static float ToPublic(float value) => IsUndefined(value) ? float.NaN : value;
+        /// <summary>The finite undefined sentinel reads as NaN; an infinite result (a justify offset
+        /// divided by zero items) stays infinite, as Unity's layout reports it.</summary>
+        public static float ToPublic(float value) => !float.IsInfinity(value) && IsUndefined(value) ? float.NaN : value;
 
         public static float ToPublic(YogaFloatOptional value) => value.IsUndefined ? float.NaN : value.Value;
 
@@ -1483,15 +1485,16 @@ namespace Unbound.UIElements.Layout
             var childWidthMeasureMode = YogaMeasureMode.Undefined;
             var childHeightMeasureMode = YogaMeasureMode.Undefined;
 
-            float marginRow = Unwrap(child.GetMarginForAxis(YogaFlexDirection.Row, width));
-            float marginColumn = Unwrap(child.GetMarginForAxis(YogaFlexDirection.Column, width));
-            // Percentage sizes and offsets of an absolute child resolve against the parent's padding
-            // box; its margins against the parent's content width (Unity 6000.0.71f1 Editor,
-            // tests/projects/uitkcollections: a tab header's underline spans its padded header).
+            // An absolute child is sized against its parent's padding box: percentage sizes, min/max,
+            // offsets and the margins taken from its size. (Its position adds margins resolved
+            // against the content width, in the placement steps.) Unity 6000.0.71f1 Editor,
+            // tests/projects/uitkcollections, absolute section and a tab header's underline.
             float containingWidth = node.layout.MeasuredDimensions[DimWidth]
                 - node.GetLeadingBorder(YogaFlexDirection.Row) - node.GetTrailingBorder(YogaFlexDirection.Row);
             float containingHeight = node.layout.MeasuredDimensions[DimHeight]
                 - node.GetLeadingBorder(YogaFlexDirection.Column) - node.GetTrailingBorder(YogaFlexDirection.Column);
+            float marginRow = Unwrap(child.GetMarginForAxis(YogaFlexDirection.Row, containingWidth));
+            float marginColumn = Unwrap(child.GetMarginForAxis(YogaFlexDirection.Column, containingWidth));
 
             if (IsStyleDimDefined(child, YogaFlexDirection.Row, width))
             {
@@ -1554,22 +1557,13 @@ namespace Unbound.UIElements.Layout
                 }
 
                 LayoutNodeInternal(child, childWidth, childHeight, direction, childWidthMeasureMode,
-                    childHeightMeasureMode, width, height, false, config);
-                childWidth = child.layout.MeasuredDimensions[DimWidth]
-                    + Unwrap(child.GetMarginForAxis(YogaFlexDirection.Row, width));
-                childHeight = child.layout.MeasuredDimensions[DimHeight]
-                    + Unwrap(child.GetMarginForAxis(YogaFlexDirection.Column, width));
+                    childHeightMeasureMode, containingWidth, containingHeight, false, config);
+                childWidth = child.layout.MeasuredDimensions[DimWidth] + marginRow;
+                childHeight = child.layout.MeasuredDimensions[DimHeight] + marginColumn;
             }
 
-            // The child's own margins resolve against the parent's content width here too.
             LayoutNodeInternal(child, childWidth, childHeight, direction, YogaMeasureMode.Exactly,
-                YogaMeasureMode.Exactly, width, height, true, config);
-
-            // Offsets place the child from the parent's border edge (percentages of its padding box).
-            if (child.IsLeadingPositionDefined(mainAxis))
-                child.layout.Position[(int)Leading[(int)mainAxis]] = OffsetPosition(node, child, mainAxis, isMainAxisRow ? containingWidth : containingHeight, width);
-            if (child.IsLeadingPositionDefined(crossAxis))
-                child.layout.Position[(int)Leading[(int)crossAxis]] = OffsetPosition(node, child, crossAxis, isMainAxisRow ? containingHeight : containingWidth, width);
+                YogaMeasureMode.Exactly, containingWidth, containingHeight, true, config);
 
             if (child.IsTrailingPosDefined(mainAxis) && !child.IsLeadingPositionDefined(mainAxis))
             {
@@ -1591,11 +1585,6 @@ namespace Unbound.UIElements.Layout
                 child.layout.Position[(int)Leading[(int)mainAxis]] =
                     node.layout.MeasuredDimensions[Dim[(int)mainAxis]]
                     - child.layout.MeasuredDimensions[Dim[(int)mainAxis]];
-            }
-            else if (!child.IsLeadingPositionDefined(mainAxis))
-            {
-                // Without offsets the child starts at the parent's content edge (border and padding).
-                child.layout.Position[(int)Leading[(int)mainAxis]] = StaticPosition(node, child, mainAxis, width);
             }
 
             if (child.IsTrailingPosDefined(crossAxis) && !child.IsLeadingPositionDefined(crossAxis))
@@ -1620,20 +1609,12 @@ namespace Unbound.UIElements.Layout
                     node.layout.MeasuredDimensions[Dim[(int)crossAxis]]
                     - child.layout.MeasuredDimensions[Dim[(int)crossAxis]];
             }
-            else if (!child.IsLeadingPositionDefined(crossAxis))
-            {
-                child.layout.Position[(int)Leading[(int)crossAxis]] = StaticPosition(node, child, crossAxis, width);
-            }
         }
 
-        static float OffsetPosition(YogaNode node, YogaNode child, YogaFlexDirection axis, float containingSize, float width) =>
-            Unwrap(child.GetLeadingPosition(axis, containingSize)) + node.GetLeadingBorder(axis) + Unwrap(child.GetLeadingMargin(axis, width));
-
-        /// <summary>Where an absolute child without offsets starts on an axis: the parent's leading
-        /// border and padding plus the child's leading margin (on a reversed axis, its trailing edge,
-        /// which the trailing-position step mirrors).</summary>
-        static float StaticPosition(YogaNode node, YogaNode child, YogaFlexDirection axis, float width) =>
-            node.GetLeadingBorder(axis) + Unwrap(node.GetLeadingPadding(axis, width)) + Unwrap(child.GetLeadingMargin(axis, width));
+        /// <summary>The parent's padding box on an axis, from its content size: what percentage
+        /// offsets of its absolute children resolve against.</summary>
+        static float PaddingBoxSize(YogaNode node, YogaFlexDirection axis, float innerSize, float ownerWidth) =>
+            innerSize + Unwrap(node.GetLeadingPadding(axis, ownerWidth)) + Unwrap(node.GetTrailingPadding(axis, ownerWidth));
 
         static void WithMeasureFuncSetMeasuredDimensions(YogaNode node, float availableWidth, float availableHeight,
             YogaMeasureMode widthMeasureMode, YogaMeasureMode heightMeasureMode, float ownerWidth, float ownerHeight)
@@ -2233,10 +2214,10 @@ namespace Unbound.UIElements.Layout
                 {
                     if (performLayout)
                     {
-                        // An absolute child with a leading offset is placed at that offset (plus border
-                        // and margin).
+                        // An absolute child with a leading offset is placed at that offset (a percentage
+                        // of the parent's padding box) from the border edge, plus its margin.
                         child.layout.Position[(int)Pos[(int)mainAxis]] =
-                            Unwrap(child.GetLeadingPosition(mainAxis, availableInnerMainDim))
+                            Unwrap(child.GetLeadingPosition(mainAxis, PaddingBoxSize(node, mainAxis, availableInnerMainDim, ownerWidth)))
                             + node.GetLeadingBorder(mainAxis)
                             + Unwrap(child.GetLeadingMargin(mainAxis, availableInnerWidth));
                     }
@@ -2279,8 +2260,12 @@ namespace Unbound.UIElements.Layout
                     }
                     else if (performLayout)
                     {
+                        // Without offsets an absolute child starts at the content edge (border and
+                        // padding) plus the line's justify offset and its margin; centered and
+                        // end-justified children are placed again in the absolute step.
                         child.layout.Position[(int)Pos[(int)mainAxis]] =
-                            childLayout.Position[(int)Pos[(int)mainAxis]] + node.GetLeadingBorder(mainAxis) + leadingMainDim;
+                            childLayout.Position[(int)Pos[(int)mainAxis]] + node.GetLeadingBorder(mainAxis)
+                            + Unwrap(node.GetLeadingPadding(mainAxis, ownerWidth)) + leadingMainDim;
                     }
                 }
             }
@@ -2513,20 +2498,21 @@ namespace Unbound.UIElements.Layout
                             continue;
                         if (child.style.PositionType == YogaPositionType.Absolute)
                         {
-                            // An absolute child with offsets is placed from them.
+                            // An absolute child with a leading offset is placed from it (a percentage of
+                            // the parent's padding box); without one it starts at the content edge.
                             bool isChildLeadingPosDefined = child.IsLeadingPositionDefined(crossAxis);
                             if (isChildLeadingPosDefined)
                             {
                                 child.layout.Position[(int)Pos[(int)crossAxis]] =
-                                    Unwrap(child.GetLeadingPosition(crossAxis, availableInnerCrossDim))
+                                    Unwrap(child.GetLeadingPosition(crossAxis, PaddingBoxSize(node, crossAxis, availableInnerCrossDim, ownerWidth)))
                                     + node.GetLeadingBorder(crossAxis)
                                     + Unwrap(child.GetLeadingMargin(crossAxis, availableInnerWidth));
                             }
-                            // Without a leading offset, or with an undefined result, use the border and margin.
                             if (!isChildLeadingPosDefined || IsUndefined(child.layout.Position[(int)Pos[(int)crossAxis]]))
                             {
                                 child.layout.Position[(int)Pos[(int)crossAxis]] =
                                     node.GetLeadingBorder(crossAxis)
+                                    + Unwrap(node.GetLeadingPadding(crossAxis, ownerWidth))
                                     + Unwrap(child.GetLeadingMargin(crossAxis, availableInnerWidth));
                             }
                         }
@@ -2880,6 +2866,9 @@ namespace Unbound.UIElements.Layout
         public static float RoundValueToPixelGrid(double value, double pointScaleFactor, bool forceCeil, bool forceFloor)
         {
             double scaledValue = value * pointScaleFactor;
+            // An infinite value stays infinite (an absolute child placed by a justify offset divided by
+            // zero items: Unity 6000.0.71f1 Editor, tests/projects/uitkcollections absolute section).
+            if (double.IsInfinity(scaledValue)) return (float)value;
             // floor(scaledValue) == scaledValue - fractial, negative values included.
             double fractial = scaledValue % 1.0;
             if (fractial < 0) ++fractial;
