@@ -161,13 +161,15 @@ def cmd_prepare(args, repo):
         if work:
             git('reset', '--hard', cwd=path)
             git('clean', '-fd', cwd=path)  # untracked, not ignored: caches stay
+        from runtime_snapshot import finish_task
+        finish_task(path, repo=repo)
         git('switch', '-C', args.branch, args.base, cwd=path)
     print(f'{path.name} is on {args.branch} from {args.base}: cd {path}')
     print(f'build target: {build.default_target(path, build.build_root())}')
     return 0
 
 
-def symlink_targets(base, checkouts=()):
+def _symlink_targets(base, checkouts, index):
     """Run-cache links at any depth, including caches stored behind directory aliases."""
     found = set()
     base = base.absolute()
@@ -176,8 +178,14 @@ def symlink_targets(base, checkouts=()):
     # cache would scan every private target on each reap.
     excluded = {'builds', 'editors', 'tools'}
 
+    prefixes = {}
+
     def inside(path, roots):
-        return any(parent in roots for parent in (path, *path.parents))
+        key = frozenset(roots)
+        if key not in prefixes:
+            prefixes[key] = tuple((str(root), str(root).rstrip(os.sep)+os.sep) for root in roots)
+        value = str(path)
+        return any(value == root or value.startswith(prefix) for root, prefix in prefixes[key])
 
     def unreadable(error):
         if error.errno in (errno.ENOENT, errno.ENOTDIR, errno.ELOOP):
@@ -217,7 +225,9 @@ def symlink_targets(base, checkouts=()):
     pending, visited = [base], set()
     while pending:
         directory = pending.pop()
-        if inside(directory, checkouts):
+        # Descents into a checkout meet its root; links into a subdirectory were
+        # already recorded by resolve(). Avoid rebuilding every ancestor per node.
+        if directory in checkouts or (directory == base and inside(base, checkouts)):
             found.add(directory)
         try:
             info = directory.stat()
@@ -225,27 +235,40 @@ def symlink_targets(base, checkouts=()):
             if identity in visited:
                 continue
             visited.add(identity)
-            with os.scandir(directory) as entries:
-                for entry in entries:
-                    if directory == base and entry.name in excluded:
-                        continue
-                    try:
-                        if entry.is_symlink():
-                            target = resolve(Path(entry.path))
-                            found.add(target)
-                            if inside(target, excluded_roots):
-                                continue
-                            if stat.S_ISDIR(entry.stat().st_mode):
-                                if target.parent == target:
-                                    raise SystemExit(f'cannot scan filesystem root through run-cache alias {entry.path}')
-                                pending.append(target)
-                        elif entry.is_dir(follow_symlinks=False):
-                            pending.append(Path(entry.path))
-                    except OSError as error:
-                        unreadable(error)
+            for entry in index.entries(directory, info):
+                if directory == base and entry.name in excluded:
+                    continue
+                try:
+                    if entry.is_symlink():
+                        target = resolve(Path(entry.path))
+                        found.add(target)
+                        if inside(target, excluded_roots):
+                            continue
+                        if stat.S_ISDIR(entry.stat().st_mode):
+                            if target.parent == target:
+                                raise SystemExit(f'cannot scan filesystem root through run-cache alias {entry.path}')
+                            pending.append(target)
+                    elif entry.is_dir(follow_symlinks=False):
+                        pending.append(Path(entry.path))
+                except OSError as error:
+                    unreadable(error)
         except OSError as error:
             unreadable(error)
     return found
+
+
+def symlink_targets(base, checkouts=()):
+    from run_cache_index import DirectoryIndex
+    import sqlite3
+    index = None
+    try:
+        index = DirectoryIndex(base.absolute())
+        return _symlink_targets(base, checkouts, index)
+    except (OSError, sqlite3.Error, ValueError) as error:
+        raise SystemExit(f'cannot inspect run-cache links: {error}; refusing to reap worktrees')
+    finally:
+        if index is not None:
+            index.close()
 
 
 def run_cache(env=os.environ):
@@ -295,6 +318,8 @@ def cmd_reap(args, repo):
         print(f'{"would remove" if args.dry_run else "remove"} {path} ({branch or "detached"})'
               f'{" and " + str(target) if target.exists() else ""}')
         if not args.dry_run:
+            from runtime_snapshot import finish_task
+            finish_task(path, repo=repo)
             git('worktree', 'remove', str(path), cwd=repo)
             if target.exists():
                 shutil.rmtree(target)

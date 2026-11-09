@@ -84,6 +84,31 @@ class SlotTests(unittest.TestCase):
         self.assertEqual(self.git('branch', '--show-current', cwd=path), 't3/task-a')
         self.assertTrue((path/'cache'/'warm.bin').exists())
 
+    def test_reap_retires_only_the_removed_worktrees_runtime(self):
+        import runtime_snapshot as runtime
+        base = Path(self.temp.name).resolve()
+        path = base/'finished'
+        self.git('worktree', 'add', '-q', '-b', 't3/finished', str(path), 'main')
+        self.make_old(path)
+        cli = base/'cli'
+        cli.write_text('#!/bin/sh\nexit 0\n')
+        cli.chmod(0o755)
+        managed = base/'managed'
+        managed.mkdir()
+        (managed/'Unbound.Host.dll').write_bytes(b'fixture')
+        cache = base/'runtime-cache'
+        with mock.patch.dict(os.environ, UNBOUND_RUNTIME_CACHE=str(cache)):
+            with mock.patch.object(runtime, 'task_owner', return_value={'worktree': str(path), 'branch': 't3/finished'}):
+                reference = runtime.snapshot_runtime(cli, managed, base/'run/runtime')
+            snapshot = reference.resolve()
+            os.utime(snapshot, (0, 0))
+            self.run_slot('reap', '--dry-run')
+            self.assertTrue(reference.exists())
+            self.run_slot('reap')
+        self.assertFalse(path.exists())
+        self.assertFalse(reference.is_symlink())
+        self.assertFalse(snapshot.exists())
+
     def test_prepare_refuses_leftover_work_unless_discarded(self):
         self.run_slot('create', '--count', '1')
         path = self.slot_path(1)
