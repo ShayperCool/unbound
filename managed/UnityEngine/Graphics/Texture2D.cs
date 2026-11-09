@@ -449,10 +449,43 @@ namespace UnityEngine
 
         public Rect[] PackTextures(Texture2D[] textures, int padding) => PackTextures(textures, padding, 2048, false);
 
-        public static Texture2D CreateExternalTexture(int width, int height, TextureFormat format, bool mipChain, bool linear, IntPtr nativeTex) =>
-            new Texture2D(width, height, format, mipChain, linear);
+        /// <summary>The native texture an external texture shows (CreateExternalTexture,
+        /// UpdateExternalTexture); zero for other textures. Its texels are the native texture's:
+        /// nothing is uploaded from here.</summary>
+        IntPtr m_ExternalTexture;
 
-        public void UpdateExternalTexture(IntPtr nativeTex) => Stubs.Ignored("Texture2D.UpdateExternalTexture", "is not supported: native textures are not shared with the renderer");
+        /// <summary>A texture showing a native texture: one a plugin made, or another texture's
+        /// <see cref="Texture.GetNativeTexturePtr"/> (the same texels). Matches the Unity
+        /// 6000.0.71f1 Editor (tests/projects/nativegfx external.*).</summary>
+        public static Texture2D CreateExternalTexture(int width, int height, TextureFormat format, bool mipChain, bool linear, IntPtr nativeTex)
+        {
+            if (nativeTex == IntPtr.Zero) throw new ArgumentException("nativeTex can not be null");
+            var texture = new Texture2D(width, height, format, mipChain, linear);
+            texture.UpdateExternalTexture(nativeTex);
+            return texture;
+        }
+
+        public unsafe void UpdateExternalTexture(IntPtr nativeTex)
+        {
+            if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
+            m_ExternalTexture = nativeTex;
+            m_PixelsDirty = false;
+            if (!Native.IsReady) return;
+            GfxStream.Flush();
+            bool srgb = !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear;
+            var error = new NativeBuffer();
+            if (Native.Api.ExternalTexture(m_NativeHandle, (ulong)nativeTex, width, height, srgb ? 1 : 0, &error) != 0)
+            {
+                var reason = error.Length == 0 ? "unknown error" : System.Text.Encoding.UTF8.GetString(error.Data, (int)error.Length);
+                Native.Free(error);
+                Debug.LogError($"Unbound: the external texture {nativeTex} cannot be shown: {reason}");
+                return;
+            }
+            EmitSamplingProperties();
+        }
+
+        internal override IntPtr NativePointer() =>
+            m_ExternalTexture != IntPtr.Zero ? m_ExternalTexture : NativePlugins.TexturePointer(EnsureUploaded(), false);
 
         internal override void OnSamplerChanged() => EmitSamplingProperties();
 
@@ -478,6 +511,12 @@ namespace UnityEngine
 
         unsafe void Upload()
         {
+            if (m_ExternalTexture != IntPtr.Zero)
+            {
+                // The native texture holds the texels.
+                m_PixelsDirty = false;
+                return;
+            }
             if (SourceBlocks && CurrentBlocks() != null)
             {
                 // A block-compressed texture uploads its blocks (also those written by scripts).

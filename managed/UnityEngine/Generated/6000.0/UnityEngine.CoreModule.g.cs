@@ -1251,7 +1251,6 @@ namespace UnityEngine
     unsafe partial class GL
     {
         [global::Unbound.Stub] internal static void Vertices(global::UnityEngine.Vector3* v, global::UnityEngine.Vector3* coords, global::UnityEngine.Vector4* colors, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GL.Vertices"); }
-        [global::System.Obsolete("IssuePluginEvent(eventID) is deprecated. Use IssuePluginEvent(callback, eventID) instead.")] [global::Unbound.Stub] public static void IssuePluginEvent(int eventID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GL.IssuePluginEvent"); }
         [global::System.Obsolete("SetRevertBackfacing(revertBackFaces) is deprecated. Use invertCulling property instead. (UnityUpgradable) -> invertCulling")] [global::Unbound.Stub] public static void SetRevertBackfacing(bool revertBackFaces) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GL.SetRevertBackfacing"); }
     }
     unsafe partial class GameObject
@@ -2008,7 +2007,6 @@ namespace UnityEngine
     unsafe partial class RenderTexture
     {
         [global::Unbound.Stub] internal void SetShadowSamplingMode(global::UnityEngine.Rendering.ShadowSamplingMode samplingMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RenderTexture.SetShadowSamplingMode"); }
-        [global::Unbound.Stub] public global::System.IntPtr GetNativeDepthBufferPtr() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RenderTexture.GetNativeDepthBufferPtr"); return default; }
         [global::Unbound.Stub] public void ConvertToEquirect(global::UnityEngine.RenderTexture equirect, global::UnityEngine.Camera.MonoOrStereoscopicEye eye = (global::UnityEngine.Camera.MonoOrStereoscopicEye)2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RenderTexture.ConvertToEquirect"); }
         [global::Unbound.Stub] internal void SetSRGBReadWrite(bool srgb) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RenderTexture.SetSRGBReadWrite"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Experimental.Rendering.GraphicsFormat GetDepthStencilFormatLegacy(int depthBits, global::UnityEngine.Experimental.Rendering.GraphicsFormat colorFormat) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RenderTexture.GetDepthStencilFormatLegacy"); return default; }
@@ -5017,7 +5015,6 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
         [global::Unbound.Stub] public void SetComputeParamsFromMaterial(global::UnityEngine.ComputeShader computeShader, int kernelIndex, global::UnityEngine.Material material) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.SetComputeParamsFromMaterial"); }
         [global::Unbound.Stub] public void ResolveAntiAliasedSurface(global::UnityEngine.RenderTexture rt, global::UnityEngine.RenderTexture target = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.ResolveAntiAliasedSurface"); }
-        [global::Unbound.Stub] public void IssuePluginEventAndDataWithFlags(global::System.IntPtr callback, int eventID, global::UnityEngine.Rendering.CustomMarkerCallbackFlags flags, global::System.IntPtr data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.IssuePluginEventAndDataWithFlags"); }
         [global::Unbound.Stub] public void ProcessVTFeedback(global::UnityEngine.Rendering.RenderTargetIdentifier rt, global::System.IntPtr resolver, int slice, int x, int width, int y, int height, int mip) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.ProcessVTFeedback"); }
         [global::System.Obsolete("CommandBuffer.CreateGPUFence has been deprecated. Use CreateGraphicsFence instead (UnityUpgradable) -> CreateAsyncGraphicsFence(*)")] [global::Unbound.Stub] public global::UnityEngine.Rendering.GPUFence CreateGPUFence(global::UnityEngine.Rendering.SynchronisationStage stage) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.CreateGPUFence"); return default; }
         [global::System.Obsolete("CommandBuffer.CreateGPUFence has been deprecated. Use CreateGraphicsFence instead (UnityUpgradable) -> CreateAsyncGraphicsFence()")] [global::Unbound.Stub] public global::UnityEngine.Rendering.GPUFence CreateGPUFence() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.CreateGPUFence"); return default; }
@@ -5072,12 +5069,6 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] public float cascadeBlendCullingFactor;
         [global::Unbound.Stub] public float nearPlane;
         [global::Unbound.Stub] public global::UnityEngine.Matrix4x4 cullingMatrix;
-    }
-    [global::System.Flags]
-    public enum CustomMarkerCallbackFlags
-    {
-        CustomMarkerCallbackDefault = 0,
-        CustomMarkerCallbackForceInvalidateStateTracking = 4,
     }
     internal enum DefaultMaterialType
     {

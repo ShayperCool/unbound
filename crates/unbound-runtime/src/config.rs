@@ -198,6 +198,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
     .join(company)
     .join(product);
     let persistent = options.persistent_data_path.clone().unwrap_or(persistent);
+    let native_plugins = project.native_plugin_libraries();
 
     let mut config = json!({
         // The game sees the project through its view (its working directory, see view.rs).
@@ -244,7 +245,8 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "preloadedAssets": settings.preloaded_assets.iter().map(|(guid, file_id)| json!({ "guid": guid.to_string(), "fileId": file_id })).collect::<Vec<_>>(),
         "editorScenes": settings.build_scenes.iter().map(|s| json!({ "path": s.path, "guid": s.guid.to_string(), "enabled": s.enabled })).collect::<Vec<_>>(),
         "configObjects": settings.config_objects.iter().map(|(name, (guid, file_id))| (name.clone(), json!({ "guid": guid.to_string(), "fileId": file_id }))).collect::<serde_json::Map<String, Json>>(),
-        "nativePlugins": project.native_plugins().iter().map(|p| crate::view::to_view(project, p)).collect::<Vec<_>>(),
+        "nativePlugins": native_plugins.iter().map(|(p, _)| crate::view::to_view(project, p)).collect::<Vec<_>>(),
+        "preloadedNativePlugins": native_plugins.iter().filter(|(_, preloaded)| *preloaded).map(|(p, _)| crate::view::to_view(project, p)).collect::<Vec<_>>(),
         "workingDirectory": crate::view::build(project)?,
         "packages": crate::view::package_infos(project),
         "unityDataPath": project.install.data,

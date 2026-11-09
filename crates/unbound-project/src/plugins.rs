@@ -91,6 +91,21 @@ pub fn native_editor_plugin(file: &Path) -> bool {
     native_editor_plugin_from_meta(file, &meta)
 }
 
+/// Whether a native plugin's importer loads it on startup ("Load on startup", `isPreloaded`):
+/// the Editor loads it before Play mode, before any script calls it.
+pub fn native_plugin_preloaded(file: &Path) -> bool {
+    let Ok(meta) = std::fs::read_to_string(format!("{}.meta", file.display())) else {
+        return false;
+    };
+    let Ok(meta) = unbound_yaml::parse_value(&meta) else {
+        return false;
+    };
+    meta.get("PluginImporter")
+        .and_then(|importer| importer.get("isPreloaded"))
+        .and_then(|value| value.as_i64().or_else(|| value.as_str()?.parse().ok()))
+        .is_some_and(|value| value != 0)
+}
+
 /// The native plugin's actual platform reader, without opening the metadata again.
 pub fn native_editor_plugin_from_meta(file: &Path, meta: &Value) -> bool {
     let importer = meta.get("PluginImporter").cloned().unwrap_or_default();

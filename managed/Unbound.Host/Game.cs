@@ -75,6 +75,7 @@ public sealed class GameConfig
     public List<PackageConfig> Packages { get; set; } = new();
     /// <summary>Native libraries the Editor would load here (P/Invoke targets of game code).</summary>
     public List<string> NativePlugins { get; set; } = new();
+    public List<string> PreloadedNativePlugins { get; set; } = new();
     /// <summary>EditorBuildSettings' scene list, disabled scenes included.</summary>
     public List<EditorSceneConfig> EditorScenes { get; set; } = new();
     /// <summary>EditorBuildSettings' config objects: name → asset reference.</summary>
@@ -291,6 +292,7 @@ public static unsafe class Game
         DisabledModules.Configure(c.DisabledModules);
         GameDomain.FrameworkDir = c.FrameworkDir;
         GameDomain.NativePlugins = c.NativePlugins;
+        GameDomain.PreloadedNativePlugins = c.PreloadedNativePlugins;
         UnityEditor.PlayerSettings.s_PreloadedRefs = c.PreloadedAssets.Select(p => (p.Guid, p.FileId)).ToList();
         UnityEditor.EditorBuildSettings.Configure(
             c.EditorScenes.Select(s => new UnityEditor.EditorBuildSettingsScene(s.Path, s.Enabled) { guid = new UnityEditor.GUID(s.Guid) }),

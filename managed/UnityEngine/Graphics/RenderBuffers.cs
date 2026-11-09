@@ -36,7 +36,7 @@ namespace UnityEngine
 
         internal RenderBufferStoreAction GetStoreAction() => storeAction;
 
-        public IntPtr GetNativeRenderBufferPtr() => m_BufferPtr;
+        public IntPtr GetNativeRenderBufferPtr() => NativePlugins.RenderBufferPointer(m_RenderTextureInstanceID, IsDepth);
 
         /// <summary>The renderer's handle of the texture the buffer belongs to (0: the screen).</summary>
         internal ulong Handle

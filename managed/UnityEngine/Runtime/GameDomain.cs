@@ -46,6 +46,8 @@ namespace Unbound.Runtime
         internal static string FrameworkDir;
         /// <summary>The project's native libraries the Editor would load here.</summary>
         internal static IReadOnlyList<string> NativePlugins = Array.Empty<string>();
+        /// <summary>The native plugins whose importer loads them on startup.</summary>
+        internal static IReadOnlyList<string> PreloadedNativePlugins = Array.Empty<string>();
         /// <summary>Applied to every game assembly's image, with its portable PDB when it has one,
         /// before it loads (set by the host): the image and the PDB that goes with it.</summary>
         internal static Func<byte[], byte[], (byte[] Image, byte[] Symbols)> ImageFilter;
@@ -413,7 +415,11 @@ namespace Unbound.Runtime
                 var wanted = NativeName(unmanagedDllName);
                 foreach (var path in NativePlugins)
                     if (NativeName(Path.GetFileName(path)) == wanted)
-                        return LoadUnmanagedDllFromPath(path);
+                    {
+                        var library = LoadUnmanagedDllFromPath(path);
+                        Unbound.Runtime.NativePlugins.Loaded(library);
+                        return library;
+                    }
                 return IntPtr.Zero;
             }
 

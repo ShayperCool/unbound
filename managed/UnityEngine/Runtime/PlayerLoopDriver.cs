@@ -389,6 +389,8 @@ namespace Unbound.Runtime
         {
             AnimationSystem.BeginPlayMode();
             s_MainThreadId = Thread.CurrentThread.ManagedThreadId;
+            // The Editor loads them before entering Play mode.
+            Unbound.Runtime.NativePlugins.Preload(GameDomain.PreloadedNativePlugins);
             SynchronizationContext.SetSynchronizationContext(MainThreadContext.Instance);
             FrameBuilder.EnsureRegistered();
             AssetImporters.EnsureRegistered();
@@ -653,6 +655,7 @@ namespace Unbound.Runtime
             Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
             Application.Internal_Quitting();
             PlayerPrefs.SaveOnQuit();
+            Unbound.Runtime.NativePlugins.Shutdown();
         }
     }
 

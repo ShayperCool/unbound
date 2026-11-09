@@ -137,7 +137,6 @@ namespace UnityEngine.Rendering
         internal int ColorClears => m_ColorClears;
         internal int OtherClears => m_OtherClears;
         internal int GlobalFloats => m_GlobalFloats;
-        static bool s_WarnedPluginEvent;
 
         public CommandBuffer() { }
 
@@ -946,13 +945,86 @@ namespace UnityEngine.Rendering
         [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
         public void EndSample(string name) { }
 
-        public void IssuePluginEvent(IntPtr callback, int eventID) => Add(c =>
+        public void IssuePluginEvent(IntPtr callback, int eventID)
         {
-            if (s_WarnedPluginEvent) return;
-            s_WarnedPluginEvent = true;
-            Debug.LogWarning("Unbound: native rendering plugin events (CommandBuffer.IssuePluginEvent) are not supported.");
+            if (callback == IntPtr.Zero) throw new ArgumentException("Null callback specified.");
+            Add(c =>
+            {
+                BindActiveOutsideCamera(c);
+                GfxStream.PluginEvent(callback, eventID);
+            });
+        }
+
+        public void IssuePluginEventAndData(IntPtr callback, int eventID, IntPtr data)
+        {
+            if (callback == IntPtr.Zero) throw new ArgumentException("Null callback specified.");
+            Add(c =>
+            {
+                BindActiveOutsideCamera(c);
+                GfxStream.PluginEventAndData(callback, eventID, data);
+            });
+        }
+
+        /// <summary>A plugin callback of a buffer executed outside a camera
+        /// (Graphics.ExecuteCommandBuffer) finds the active render texture bound, as the device's
+        /// target is there (the buffer's SetRenderTarget commands set it).</summary>
+        static void BindActiveOutsideCamera(Context c)
+        {
+            if (c.Camera == null) Immediate.EnsureActiveTarget();
+        }
+
+        /// <summary>The flags configure Vulkan's render pass handling around the callback; on the
+        /// OpenGL Core device Unbound reports they change nothing.</summary>
+        public void IssuePluginEventAndDataWithFlags(IntPtr callback, int eventID, CustomMarkerCallbackFlags flags, IntPtr data) =>
+            IssuePluginEventAndData(callback, eventID, data);
+
+        /// <summary>The plugin's blit into <paramref name="dest"/>, bound as the target. A source that
+        /// is not a render texture is refused when it runs, as in the Editor: an error, source 0
+        /// and the destination not bound (tests/projects/nativegfx blit.*).</summary>
+        public void IssuePluginCustomBlit(IntPtr callback, uint command, RenderTargetIdentifier source, RenderTargetIdentifier dest, uint commandParam, uint commandFlags) => Add(c =>
+        {
+            var sourceTexture = Resolve(source, c);
+            var destination = Resolve(dest, c) as RenderTexture;
+            var buffer = NativePlugins.RenderBufferPointer(destination != null ? destination.GetInstanceID() : 0, false);
+            if (sourceTexture != null && sourceTexture is not RenderTexture)
+            {
+                BindActiveOutsideCamera(c);
+                Debug.LogError($"PPtr cast failed when dereferencing! Casting from {sourceTexture.GetType().Name} to RenderTexture!");
+                GfxStream.PluginCustomBlit(callback, command, 0, buffer, commandParam, commandFlags);
+                return;
+            }
+            var previous = GfxStream.Current;
+            var previousActive = RenderTexture.active;
+            ulong handle = TextureHandles.Of(destination);
+            RenderTexture.SetActiveQuietly(destination);
+            GfxStream.SetTarget(handle, 0, 0, 0, GfxStream.LayersOf(destination));
+            GfxStream.PluginCustomBlit(callback, command, NativePlugins.TextureId(TextureHandles.Of(sourceTexture)), buffer, commandParam, commandFlags);
+            RenderTexture.SetActiveQuietly(previousActive);
+            GfxStream.Restore(previous);
         });
 
-        public void IssuePluginEventAndData(IntPtr callback, int eventID, IntPtr data) => IssuePluginEvent(callback, eventID);
+#pragma warning disable 618
+        public void IssuePluginCustomTextureUpdate(IntPtr callback, Texture targetTexture, uint userData) => TextureUpdate(callback, targetTexture, userData, false);
+        public void IssuePluginCustomTextureUpdateV1(IntPtr callback, Texture targetTexture, uint userData) => TextureUpdate(callback, targetTexture, userData, false);
+#pragma warning restore 618
+        public void IssuePluginCustomTextureUpdateV2(IntPtr callback, Texture targetTexture, uint userData) => TextureUpdate(callback, targetTexture, userData, true);
+
+        /// <summary>The plugin's begin and end events around the upload of the data it gives into
+        /// the texture's first level (V1: events 7 and 8, V2: 9 and 10); the CPU copy keeps its
+        /// texels (tests/projects/nativegfx update.*).</summary>
+        void TextureUpdate(IntPtr callback, Texture targetTexture, uint userData, bool v2)
+        {
+            if (targetTexture is not Texture2D texture)
+                throw new NotSupportedException($"Unbound: plugin texture updates of a {targetTexture?.GetType().Name ?? "null"} texture are not supported (Texture2D only).");
+            // Its texels are an sRGB format on the device in a Linear project only.
+            bool srgb = texture.isDataSRGB && QualitySettings.activeColorSpace == ColorSpace.Linear;
+            if (!NativePlugins.UpdateFormat(texture.format, srgb, out var format, out var bytesPerPixel))
+                throw new NotSupportedException($"Unbound: plugin texture updates of a {texture.format} texture are not supported.");
+            Add(c =>
+            {
+                BindActiveOutsideCamera(c);
+                GfxStream.PluginTextureUpdate(callback, TextureHandles.Of(texture), userData, v2, format, bytesPerPixel);
+            });
+        }
     }
 }

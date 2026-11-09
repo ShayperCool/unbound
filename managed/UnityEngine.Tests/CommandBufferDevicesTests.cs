@@ -66,18 +66,5 @@ namespace Unbound.Tests
                 commands.SetRayTracingConstantBufferParam(shader, 0, (ComputeBuffer)null, 0, 16)).ParamName);
             UnityEngine.Object.DestroyImmediate(shader);
         }
-
-        [Fact]
-        public void RenderingPluginsFailClearlyUntilDeviceInteropExists()
-        {
-            using var commands = new CommandBuffer();
-            foreach (Action call in new Action[] {
-                () => commands.IssuePluginCustomBlit(IntPtr.Zero, 0, default, default, 0, 0),
-                () => commands.IssuePluginCustomTextureUpdate(IntPtr.Zero, null, 0),
-                () => commands.IssuePluginCustomTextureUpdateV1(IntPtr.Zero, null, 0),
-                () => commands.IssuePluginCustomTextureUpdateV2(IntPtr.Zero, null, 0),
-            }) Assert.Equal("Unbound: native rendering plugin callbacks require graphics-device interop, which is not supported.",
-                Assert.Throws<NotSupportedException>(call).Message);
-        }
     }
 }

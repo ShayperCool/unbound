@@ -192,6 +192,15 @@ impl Project {
     /// The native libraries the Editor would load on this machine (`.so`; `.bundle`, `.dylib` on
     /// macOS), by file: a bundle directory by its executable.
     pub fn native_plugins(&self) -> Vec<PathBuf> {
+        self.native_plugin_libraries()
+            .into_iter()
+            .map(|(library, _)| library)
+            .collect()
+    }
+
+    /// [`Self::native_plugins`] with whether each one's importer loads it on startup
+    /// (`isPreloaded`).
+    pub fn native_plugin_libraries(&self) -> Vec<(PathBuf, bool)> {
         let mut out = Vec::new();
         for root in self.asset_roots() {
             let mut walker = walkdir::WalkDir::new(root.dir)
@@ -217,7 +226,7 @@ impl Project {
                 if plugins::native_editor_plugin(path)
                     && let Some(library) = plugins::native_library_file(path)
                 {
-                    out.push(library);
+                    out.push((library, plugins::native_plugin_preloaded(path)));
                 }
             }
         }

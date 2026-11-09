@@ -6,6 +6,8 @@ namespace UnityEngine.Rendering
     public enum CameraLateLatchMatrixType { View, InverseView, ViewProjection, InverseViewProjection }
     [Flags]
     public enum FoveatedRenderingCaps { None = 0, FoveationImage = 1, NonUniformRaster = 2, ModeChangeOnlyBeforeRenderTargetSet = 4 }
+    [Flags]
+    public enum CustomMarkerCallbackFlags { CustomMarkerCallbackDefault = 0, CustomMarkerCallbackForceInvalidateStateTracking = 4 }
 
     public partial class CommandBuffer
     {
@@ -81,15 +83,6 @@ namespace UnityEngine.Rendering
         public void SetGlobalRayTracingAccelerationStructure(string name, global::UnityEngine.Rendering.RayTracingAccelerationStructure accelerationStructure) {  }
         [Unbound.EditorFaithful("No ray tracing device: measured ignored for null and non-null structures by cmdbuffers device.ray.* on Unity 6000.0.71f1 OpenGL Core.")]
         public void SetGlobalRayTracingAccelerationStructure(int nameID, global::UnityEngine.Rendering.RayTracingAccelerationStructure accelerationStructure) {  }
-        static void RequirePluginInterop() => throw new NotSupportedException("Unbound: native rendering plugin callbacks require graphics-device interop, which is not supported.");
-        [Unbound.Stub]
-        public void IssuePluginCustomBlit(IntPtr callback, uint command, RenderTargetIdentifier source, RenderTargetIdentifier dest, uint commandParam, uint commandFlags) => RequirePluginInterop();
-        [Unbound.Stub]
-        public void IssuePluginCustomTextureUpdate(IntPtr callback, Texture targetTexture, uint userData) => RequirePluginInterop();
-        [Unbound.Stub]
-        public void IssuePluginCustomTextureUpdateV1(IntPtr callback, Texture targetTexture, uint userData) => RequirePluginInterop();
-        [Unbound.Stub]
-        public void IssuePluginCustomTextureUpdateV2(IntPtr callback, Texture targetTexture, uint userData) => RequirePluginInterop();
     }
 
     public sealed partial class RayTracingAccelerationStructure : IDisposable

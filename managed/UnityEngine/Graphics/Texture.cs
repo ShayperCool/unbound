@@ -105,7 +105,11 @@ namespace UnityEngine
             m_MipMapBias = mipBias;
         }
 
-        public IntPtr GetNativeTexturePtr() => (IntPtr)(long)m_NativeHandle;
+        /// <summary>The OpenGL texture name native plugins see (Unbound reports OpenGL Core),
+        /// sharing the renderer's memory (<see cref="NativePlugins.TexturePointer"/>).</summary>
+        public IntPtr GetNativeTexturePtr() => NativePointer();
+
+        internal virtual IntPtr NativePointer() => NativePlugins.TexturePointer(TextureHandles.Of(this), false);
 
         public void IncrementUpdateCount() => updateCount++;
 

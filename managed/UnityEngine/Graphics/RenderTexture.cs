@@ -227,6 +227,18 @@ namespace UnityEngine
 
         public bool IsCreated() => m_Created;
 
+        /// <summary>Zero until the texture is created (the call does not create it), as in the
+        /// Unity 6000.0.71f1 Editor (tests/projects/nativegfx ptr.rt.*).</summary>
+        internal override IntPtr NativePointer() => m_Created ? NativePlugins.TexturePointer(m_NativeHandle, false) : IntPtr.Zero;
+
+        /// <summary>The depth buffer's OpenGL texture; a texture without depth gives its color
+        /// texture, as in the Editor (tests/projects/nativegfx ptr.rt.nodepth.*).</summary>
+        public IntPtr GetNativeDepthBufferPtr()
+        {
+            if (!m_Created) return IntPtr.Zero;
+            return depth > 0 ? NativePlugins.TexturePointer(m_NativeHandle, true) : NativePointer();
+        }
+
         [Unbound.EditorFaithful("no-op is equivalent: after a discard the contents are undefined, so keeping them is allowed")]
         public void DiscardContents() { }
 

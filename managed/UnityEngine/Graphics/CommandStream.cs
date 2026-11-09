@@ -28,7 +28,13 @@ namespace Unbound.Runtime
             // Render protocol 11 (NativeApi 22); its element meaning from protocol 12 (NativeApi 28).
             MeshInstanceOp = 30, MeshBuffersOp = 31, InstanceMultiplierOp = 32,
             // NativeApi 39.
-            ResolveTextureOp = 33;
+            ResolveTextureOp = 33,
+            // NativeApi 40.
+            PluginOp = 34;
+
+        /// <summary>The kinds of <see cref="PluginOp"/> (render_commands.rs's PluginCall).</summary>
+        const byte PluginEventKind = 0, PluginEventAndDataKind = 1, PluginTextureUpdateV1Kind = 2,
+            PluginTextureUpdateV2Kind = 3, PluginCustomBlitKind = 4;
 
         /// <summary>The sizes of a DrawIndices index: 16-bit, and 32-bit from render protocol 10.</summary>
         internal const byte DrawIndexSize = 2, DrawIndex32Size = 4;
@@ -923,6 +929,64 @@ namespace Unbound.Runtime
             U8(ResolveTextureOp);
             U64(texture);
             U64(destination);
+        }
+
+        /// <summary>A native plugin's rendering callback, run in stream order. The stream is handed
+        /// over at once: the callback has run when the call that issued it returns, as in the
+        /// Editor, whose callbacks run on the main thread (tests/projects/nativegfx).</summary>
+        /// <remarks>Without the native side (tests) the commands stay recorded.</remarks>
+        internal static void PluginEvent(IntPtr callback, int eventId)
+        {
+            U8(PluginOp);
+            U8(PluginEventKind);
+            U64((ulong)callback);
+            I32(eventId);
+            HandOver();
+        }
+
+        /// <inheritdoc cref="PluginEvent"/>
+        internal static void PluginEventAndData(IntPtr callback, int eventId, IntPtr data)
+        {
+            U8(PluginOp);
+            U8(PluginEventAndDataKind);
+            U64((ulong)callback);
+            I32(eventId);
+            U64((ulong)data);
+            HandOver();
+        }
+
+        /// <summary>A plugin's texture update: begin and end events around the upload of the
+        /// plugin's data into the texture's first level.</summary>
+        internal static void PluginTextureUpdate(IntPtr callback, ulong texture, uint userData, bool v2, uint format, uint bytesPerPixel)
+        {
+            U8(PluginOp);
+            U8(v2 ? PluginTextureUpdateV2Kind : PluginTextureUpdateV1Kind);
+            U64((ulong)callback);
+            U64(texture);
+            U32(userData);
+            U32(format);
+            U32(bytesPerPixel);
+            HandOver();
+        }
+
+        /// <summary>A plugin's custom blit into the current target.</summary>
+        internal static void PluginCustomBlit(IntPtr callback, uint command, uint source, IntPtr destination, uint param, uint flags)
+        {
+            U8(PluginOp);
+            U8(PluginCustomBlitKind);
+            U64((ulong)callback);
+            U32(command);
+            U32(source);
+            U64((ulong)destination);
+            U32(param);
+            U32(flags);
+            HandOver();
+        }
+
+        /// <summary>Hands the commands to the renderer now, when there is one.</summary>
+        static void HandOver()
+        {
+            if (Native.IsReady) Flush();
         }
 
         internal static void GenerateMips(ulong texture)

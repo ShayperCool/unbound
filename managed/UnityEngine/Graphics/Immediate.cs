@@ -654,7 +654,19 @@ namespace UnityEngine
         public static void RenderTargetBarrier() { }
         [Unbound.EditorFaithful("no-op is equivalent: no native plugin shares the renderer's cached state")]
         public static void InvalidateState() { }
-        public static void IssuePluginEvent(IntPtr callback, int eventID) => Stubs.Ignored("GL.IssuePluginEvent", "is not supported: native rendering plugin events are not called");
+        /// <summary>A native plugin's rendering callback, in order with the rendering around it
+        /// (<see cref="GfxStream.PluginEvent"/>).</summary>
+        public static void IssuePluginEvent(IntPtr callback, int eventID)
+        {
+            if (callback == IntPtr.Zero) throw new ArgumentException("Null callback specified.", "callback");
+            // Like every GL call, it finds the active render texture bound.
+            Immediate.EnsureActiveTarget();
+            GfxStream.PluginEvent(callback, eventID);
+        }
+
+        /// <summary>Every loaded plugin's <c>UnityRenderEvent</c> export.</summary>
+        [Obsolete("IssuePluginEvent(eventID) is deprecated. Use IssuePluginEvent(callback, eventID) instead.")]
+        public static void IssuePluginEvent(int eventID) => NativePlugins.IssueLegacyEvent(eventID);
 
         public static void PushMatrix() => Immediate.MatrixStack.Push((Immediate.Projection, Immediate.ModelView));
         public static void PopMatrix()
