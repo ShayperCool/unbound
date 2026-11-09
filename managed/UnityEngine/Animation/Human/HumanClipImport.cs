@@ -90,7 +90,9 @@ namespace Unbound.Runtime.Humanoid
         static readonly string[] FingerNames = { "Thumb", "Index", "Middle", "Ring", "Little" };
         static readonly string[] FingerDoFNames = { "1 Stretched", "Spread", "2 Stretched", "3 Stretched" };
         static readonly int[] GoalBones = { Bone.LeftFoot, Bone.RightFoot, Bone.LeftHand, Bone.RightHand };
-        static readonly int[] TDoFBones = { 7, 8, 9, 10, 11, 1, 3, 5, 20, 2, 4, 6, 21, 12, 14, 16, 18, 13, 15, 17, 19 };
+        /// <summary>The bone of each translation DoF: the spine to the head, the left leg, the right
+        /// leg, the left arm (shoulder to hand), the right arm.</summary>
+        internal static readonly int[] TDoFBones = { 7, 8, 9, 10, 11, 1, 3, 5, 20, 2, 4, 6, 21, 12, 14, 16, 18, 13, 15, 17, 19 };
 
         /// <summary>Per body muscle: its bone and the axis (0 x, 1 y, 2 z) of the bone's limits.</summary>
         static readonly int[] MuscleBone =
@@ -270,7 +272,7 @@ namespace Unbound.Runtime.Humanoid
             var ws7 = new SkeletonPose(hn);
             // One pose for every sample: the retargeting writes every value the curves read.
             var pose = new HumanPose();
-            // An avatar with translation DoF also writes their curves (tests/projects/humanoid tdof.playT).
+            // An avatar with translation DoF also writes their curves (tests/projects/humanoid tdof.playTOnA).
             int first = RootFirst, end = h.HasTDoF ? CurveCount : HumanEnd;
             var tdofBase = h.HasTDoF ? HumanOps.TDoFBase(h, ws5) : null;
             var values = new float[CurveCount][];

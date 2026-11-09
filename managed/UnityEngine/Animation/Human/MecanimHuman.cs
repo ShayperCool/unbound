@@ -15,7 +15,7 @@ namespace Unbound.Runtime.Humanoid
         static readonly int[] GoalBone = { Bone.LeftFoot, Bone.RightFoot, Bone.LeftHand, Bone.RightHand };
 
         // The bone each translation DoF moves.
-        static readonly int[] TDoFBone = { 7, 8, 9, 10, 11, 1, 3, 5, 20, 2, 4, 6, 21, 12, 14, 16, 18, 13, 15, 17, 19 };
+        static readonly int[] TDoFBone = HumanClipImport.TDoFBones;
 
         // Each human bone's parent bone.
         static readonly int[] BoneParent = { -1, 0, 0, 1, 2, 3, 4, 0, 7, 8, 9, 10, 9, 9, 12, 13, 14, 15, 16, 17, 5, 6, 11, 11, 11 };
@@ -695,11 +695,6 @@ namespace Unbound.Runtime.Humanoid
             pose.RootX.t = root.t / scale;
         }
 
-        /// <summary>Applies the translation DoFs: each bone moves from its
-        /// T-pose position, in the frame of its closest existing parent bone, by TDoF * scale.</summary>
-        /// <param name="tpose">Input: the T-pose, local.</param>
-        /// <param name="local">In/out: the pose, local (bone translations).</param>
-        /// <param name="ws">Workspace: globals relative to the parent bone's parent.</param>
         // The translation DoF the alignment of RetargetFrom reaches together: the upper legs, spine,
         // chest, upper chest and shoulders; the upper arms; the lower legs and arms; the feet and
         // hands; the neck, head and toes (TDoFBone order).
@@ -764,6 +759,11 @@ namespace Unbound.Runtime.Humanoid
             pose.TDoF[i] = new F4(v.x / h.Scale, v.y / h.Scale, v.z / h.Scale, 0f);
         }
 
+        /// <summary>Applies the translation DoFs: each bone moves from its
+        /// T-pose position, in the frame of its closest existing parent bone, by TDoF * scale.</summary>
+        /// <param name="tpose">Input: the T-pose, local.</param>
+        /// <param name="local">In/out: the pose, local (bone translations).</param>
+        /// <param name="ws">Workspace: globals relative to the parent bone's parent.</param>
         internal static void RetargetToTDoF(Human h, HumanPose pose, SkeletonPose tpose, SkeletonPose local, SkeletonPose ws)
         {
             var s = h.Skeleton;
