@@ -32,6 +32,9 @@ namespace Unbound.Runtime
 
         static bool s_WarnedUnshared;
 
+        /// <summary>The rendering extension entry points (IUnityRenderingExtensions.h).</summary>
+        static readonly string[] s_RenderingExtensions = { "UnityRenderingExtEvent", "UnityRenderingExtQuery" };
+
         /// <summary>A native library was loaded (by its first call or by preloading): its
         /// <c>UnityPluginLoad</c> runs once.</summary>
         internal static void Loaded(IntPtr library)
@@ -42,6 +45,9 @@ namespace Unbound.Runtime
                 if (s_Loaded.Contains(library)) return;
                 s_Loaded.Add(library);
             }
+            foreach (var extension in s_RenderingExtensions)
+                if (NativeLibrary.TryGetExport(library, extension, out _))
+                    Native.Log(2, $"a native plugin exports {extension}, which Unbound does not call (rendering extension events are not supported)");
             if (!NativeLibrary.TryGetExport(library, "UnityPluginLoad", out var load)) return;
             EnsureLogSink();
             Native.Api.PluginLoad((void*)load);

@@ -304,6 +304,8 @@ public class NativeGfxProbe : MonoBehaviour
             External();
             TextureUpdates();
             CustomBlit();
+            Order();
+            AliasRenderTexture();
             Execute("describe", cmd => cmd.IssuePluginEvent(render, eventBase + 4));
             // A GL error the callback leaves is reported after it.
             Execute("glerror", cmd => cmd.IssuePluginEvent(render, eventBase + 6));
@@ -331,6 +333,71 @@ public class NativeGfxProbe : MonoBehaviour
         Value("external.alias.pixels", Pixels(alias, 8, 8));
         NativeGfx_SetName(5, external.GetNativeTexturePtr());
         NativeGfx_SetName(7, first);
+    }
+
+    static Mesh Quad(float x0, float y0, float x1, float y1)
+    {
+        var mesh = new Mesh();
+        mesh.vertices = new[] { new Vector3(x0, y0, 0), new Vector3(x1, y0, 0), new Vector3(x1, y1, 0), new Vector3(x0, y1, 0) };
+        mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+        return mesh;
+    }
+
+    Material Flat(Color color)
+    {
+        var material = Keep(new Material(Shader.Find("Hidden/Internal-Colored")));
+        material.SetColor("_Color", color);
+        material.SetInt("_Cull", 0);
+        material.SetInt("_ZTest", 8);
+        material.SetInt("_ZWrite", 0);
+        return material;
+    }
+
+    /// <summary>A callback between two draws of one executed buffer: it draws over the first
+    /// and under the second (the bottom half red, then the plugin's blue column, then the top
+    /// half green).</summary>
+    void Order()
+    {
+        var order = Keep(new RenderTexture(16, 16, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { name = "order" });
+        order.Create();
+        NativeGfx_SetName(10, order.GetNativeTexturePtr());
+        var below = Keep(Quad(-1, -1, 0, 1));
+        var above = Keep(Quad(-1, 0, 1, 1));
+        Execute("order", cmd =>
+        {
+            cmd.SetRenderTarget(order);
+            cmd.ClearRenderTarget(true, true, Color.black);
+            cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
+            cmd.DrawMesh(below, Matrix4x4.identity, Flat(Color.red));
+            cmd.IssuePluginEvent(render, eventBase + 7);
+            cmd.DrawMesh(above, Matrix4x4.identity, Flat(Color.green));
+        });
+        // The active render texture after a buffer that set its own target.
+        Value("order.active", Q(RenderTexture.active == null ? "null" : RenderTexture.active.name));
+        Value("order.pixels", RenderTargetPixels(order));
+    }
+
+    /// <summary>An external texture over a render texture with depth and mips: it shows the
+    /// texture; destroying it leaves the render texture working (its mips are generated
+    /// after).</summary>
+    void AliasRenderTexture()
+    {
+        var source = Keep(new RenderTexture(8, 8, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
+            { name = "aliased", useMipMap = true, autoGenerateMips = false, filterMode = FilterMode.Point });
+        source.Create();
+        var previous = RenderTexture.active;
+        RenderTexture.active = source;
+        GL.Clear(true, true, new Color(1, 0, 1, 1));
+        RenderTexture.active = previous;
+        var pointer = source.GetNativeTexturePtr();
+        NativeGfx_SetName(11, pointer);
+        var alias = Texture2D.CreateExternalTexture(8, 8, TextureFormat.RGBA32, false, true, pointer);
+        alias.filterMode = FilterMode.Point;
+        Value("external.rt.ptr", B(alias.GetNativeTexturePtr() == pointer));
+        Value("external.rt.pixels", Pixels(alias, 8, 8));
+        DestroyImmediate(alias);
+        source.GenerateMips();
+        Value("external.rt.after", Pixels(source, 8, 8));
     }
 
     void TextureUpdates()

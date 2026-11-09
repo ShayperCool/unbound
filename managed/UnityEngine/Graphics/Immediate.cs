@@ -442,10 +442,15 @@ namespace UnityEngine
             Immediate.Blit(source, RenderTexture.ActiveTarget, mat, pass, Vector2.one, Vector2.zero);
         public static void Blit(Texture source, Material mat) => Blit(source, mat, -1);
 
+        /// <summary>Runs the buffer now; the active render texture is the one before it, whatever
+        /// targets the buffer set, as in the Unity 6000.0.71f1 Editor (tests/projects/nativegfx
+        /// order.active).</summary>
         public static void ExecuteCommandBuffer(CommandBuffer buffer)
         {
             if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+            var active = RenderTexture.ActiveTarget;
             buffer.Execute(null);
+            RenderTexture.SetActiveQuietly(active);
         }
 
         public static void DrawMeshNow(Mesh mesh, Vector3 position, Quaternion rotation, int materialIndex) =>

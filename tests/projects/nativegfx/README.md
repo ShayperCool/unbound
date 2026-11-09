@@ -36,7 +36,11 @@ Recorded:
   buffer pointers are neither of these.
 * **External textures** (`external.*`): `Texture2D.CreateExternalTexture` and
   `UpdateExternalTexture` with textures the plugin made, and with another texture's pointer
-  (the same texture).
+  (the same texture), also a render texture with depth and mips, which works on after the
+  external texture is destroyed.
+* **Order** (`order.pixels`, `order.active`): a callback between two draws of an executed buffer
+  draws over the first and under the second; after the buffer, the active render texture is the
+  one before it.
 * **Errors** (`execute.glerror.logs`): a GL error a callback leaves is logged as an assertion.
 * **Shutdown** (`plugin.exit`, `plugin.preloaded`, `plugin.prefixed`): the device's Shutdown event
   twice at exit, no `UnityPluginUnload`; a plugin whose importer has "Load on startup"

@@ -225,10 +225,11 @@ static IUnityGraphics* s_graphics;
 static IUnityLog* s_unity_log;
 static int s_event_base = -1;
 /// Native pointers the scripts hand over (see `kNameLabels`).
-#define NAME_COUNT 10
+#define NAME_COUNT 12
 static uintptr_t s_names[NAME_COUNT];
 static const char* kNameLabels[NAME_COUNT] = {"camera", "blit", "written", "updated", "rtdepth",
-                                              "external", "plain", "created", "nodepth", "blitsource"};
+                                              "external", "plain", "created", "nodepth", "blitsource",
+                                              "order", "aliased"};
 static uintptr_t s_render_buffers[4];
 static GLuint s_created[2];
 
@@ -272,7 +273,7 @@ EXPORT void UnityPluginLoad(IUnityInterfaces* interfaces)
     if (s_graphics) {
         record("renderer=%d", s_graphics->GetRenderer());
         s_event_base = s_graphics->ReserveEventIDRange(4);
-        int next = s_graphics->ReserveEventIDRange(3);
+        int next = s_graphics->ReserveEventIDRange(4);
         record("reserve base=%d next=%d", s_event_base, next);
         s_graphics->RegisterDeviceEventCallback(on_device_event);
     }
@@ -454,7 +455,8 @@ static void describe_name(const char* label, uintptr_t name)
 /// Events relative to the reserved base: 0 fills a rectangle of the bound target red, 1 writes
 /// the texture named "written", 2 creates the plugin's first texture, 3 its second, 4 describes
 /// the named textures, 5 fills another rectangle of the bound target yellow, 6 leaves a GL error
-/// (GL_INVALID_ENUM) for Unity's check after the callback.
+/// (GL_INVALID_ENUM) for Unity's check after the callback, 7 fills a column of the bound target
+/// blue (between two draws of an executed buffer).
 static void on_render_event(int id)
 {
     char target[160];
@@ -467,6 +469,7 @@ static void on_render_event(int id)
     case 2: if (!s_created[0]) s_created[0] = create_texture(10); break;
     case 3: if (!s_created[1]) s_created[1] = create_texture(130); break;
     case 5: fill_bound(40, 4, 8, 8, 1.0f, 1.0f, 0.0f); break;
+    case 7: fill_bound(4, 0, 8, 16, 0.0f, 0.0f, 1.0f); break;
     case 4:
         for (int i = 0; i < NAME_COUNT; i++)
             if (s_names[i]) describe_name(kNameLabels[i], s_names[i]);
