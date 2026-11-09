@@ -9,7 +9,7 @@ import time
 PROBE = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROBE.parents[1]))
 from probe_paths import reference_file, reference_root, run_root  # noqa: E402
-from run import capture_environment
+from run import capture_environment, add_human_fixture
 from value_probe import assemble, LAUNCHER  # noqa: E402
 
 
@@ -28,6 +28,7 @@ def main():
         return 1
     code = subprocess.call([sys.executable, str(PROBE/'compare.py'), str(reference_file(PROBE, 'jsonl')), str(capture)])
     extra = subprocess.call([sys.executable, str(PROBE/'compare.py'), str(reference_root(PROBE)/'raycast.jsonl'), str(out/'raycast.jsonl')])
+    add_human_fixture(project)
     followup = out/'followups.jsonl'
     with (out/'followups.log').open('w') as log:
         result = subprocess.call([str(LAUNCHER), '--kind', 'engine-cpu', 'timeout', '600', cli, 'run',

@@ -536,7 +536,7 @@ namespace UnityEngine.Animations
             {
                 CheckIsValid();
                 var animator = Context.Handles.Animator;
-                return animator != null && animator.isHuman;
+                return animator != null && animator.IsHuman;
             }
         }
 

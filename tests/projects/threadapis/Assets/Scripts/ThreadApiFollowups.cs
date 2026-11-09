@@ -6,6 +6,8 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Unity.Jobs;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 using UnityEngine;
 
 /// <summary>Lifecycle controls and property access in distinct execution contexts.</summary>
@@ -57,6 +59,33 @@ public class ThreadApiFollowups : MonoBehaviour
         Properties(audio, AudioProperties);
     }
     struct Job : IJob { public void Execute() => Matrix(); }
+    struct StreamJob : IAnimationJob
+    {
+        public TransformStreamHandle Handle;
+        static void Check(AnimationStream stream, string phase)
+        {
+            Row(phase + " stream human", stream.isHumanStream);
+            try { Row(phase + " public animator human", animator.isHuman); }
+            catch (Exception e) { Outcome(phase + " public animator human", e); }
+        }
+        public void ProcessRootMotion(AnimationStream stream) => Check(stream, "root");
+        public void ProcessAnimation(AnimationStream stream) => Check(stream, "animation");
+    }
+
+    static void StreamControl(string name)
+    {
+        context = name;
+        var child = new GameObject("BoundChild"); child.transform.SetParent(animator.transform, false);
+        var graph = PlayableGraph.Create("Stream access control");
+        graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+        var playable = AnimationScriptPlayable.Create(graph, new StreamJob
+        {
+            Handle = animator.BindStreamTransform(child.transform)
+        });
+        var output = AnimationPlayableOutput.Create(graph, "Stream", animator);
+        output.SetSourcePlayable(playable); graph.Play(); graph.Evaluate(0.02f); graph.Destroy();
+    }
+
     static void Remember(object target, string names)
     {
         foreach (string name in names.Split(' '))
@@ -150,6 +179,11 @@ public class ThreadApiFollowups : MonoBehaviour
         context = "Task"; Task.Run((Action)Matrix).Wait();
         context = "IJob.Run"; new Job().Run();
         context = "IJob.Schedule"; new Job().Schedule().Complete();
+        StreamControl("generic animation");
+        var human = Instantiate(Resources.Load<GameObject>("HumanA"));
+        animator = human.GetComponent<Animator>();
+        context = "state"; Row("human animator ready", animator != null && animator.isHuman);
+        StreamControl("human animation");
         Rows.Add("{\"complete\":true}");
         var output = Environment.GetEnvironmentVariable("THREAD_FOLLOWUP_OUT");
         Directory.CreateDirectory(Path.GetDirectoryName(output)); File.WriteAllLines(output, Rows);

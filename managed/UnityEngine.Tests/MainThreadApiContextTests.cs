@@ -94,7 +94,8 @@ namespace UnityEngine.Tests
         }
 
         static Exception s_RootFailure, s_AnimationFailure;
-        static bool s_Executing;
+        static bool s_Executing, s_RootStreamChecked, s_AnimationStreamChecked;
+        static bool s_RootHumanStream, s_AnimationHumanStream;
         static Vector3 s_StreamPosition, s_ScenePosition;
 
         struct ContextJob : IAnimationJob
@@ -103,10 +104,14 @@ namespace UnityEngine.Tests
             public TransformSceneHandle Scene;
             public void ProcessRootMotion(AnimationStream stream)
             {
+                s_RootHumanStream = stream.isHumanStream;
+                s_RootStreamChecked = true;
                 try { _ = Time.time; } catch (Exception e) { s_RootFailure = e; }
             }
             public void ProcessAnimation(AnimationStream stream)
             {
+                s_AnimationHumanStream = stream.isHumanStream;
+                s_AnimationStreamChecked = true;
                 s_Executing = JobsUtility.IsExecutingJob;
                 try { Physics.Raycast(Vector3.zero, Vector3.up, 1); } catch (Exception e) { s_AnimationFailure = e; }
                 s_StreamPosition = Stream.GetLocalPosition(stream);
@@ -126,7 +131,7 @@ namespace UnityEngine.Tests
             try
             {
                 s_RootFailure = s_AnimationFailure = null;
-                s_Executing = false;
+                s_Executing = s_RootStreamChecked = s_AnimationStreamChecked = false;
                 var playable = AnimationScriptPlayable.Create(graph, new ContextJob
                 {
                     Stream = animator.BindStreamTransform(child.transform),
@@ -138,6 +143,9 @@ namespace UnityEngine.Tests
                 graph.Play();
                 graph.Evaluate(0.02f);
                 Assert.True(s_Executing);
+                Assert.True(s_RootStreamChecked && s_AnimationStreamChecked);
+                Assert.False(s_RootHumanStream);
+                Assert.False(s_AnimationHumanStream);
                 Assert.IsType<UnityException>(s_RootFailure);
                 Assert.IsType<UnityException>(s_AnimationFailure);
                 Assert.True(float.IsFinite(s_StreamPosition.x) && float.IsFinite(s_StreamPosition.y) && float.IsFinite(s_StreamPosition.z));

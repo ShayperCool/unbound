@@ -669,6 +669,20 @@ class StubGateTests(unittest.TestCase):
 
 
 class PartialRecipeTests(unittest.TestCase):
+    def test_thread_human_fixture_is_copied_unchanged_and_declares_its_dependency(self):
+        spec = importlib.util.spec_from_file_location('thread_driver', suite.PROJECTS/'threadapis/run.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        declaration = json.loads((suite.PROJECTS/'threadapis/gate.json').read_text())
+        with tempfile.TemporaryDirectory() as temp:
+            project = Path(temp)
+            (project/'Assets/Resources').mkdir(parents=True)
+            module.add_human_fixture(project)
+            for name in ('HumanA.fbx', 'HumanA.fbx.meta'):
+                source = suite.PROJECTS/'humanoid/Assets/Resources'/name
+                self.assertEqual((project/'Assets/Resources'/name).read_bytes(), source.read_bytes())
+                self.assertIn(str(source.relative_to(suite.REPO)), declaration['engine_paths'])
+
     def test_thread_capture_rejects_duplicate_observations_and_trailing_data(self):
         spec = importlib.util.spec_from_file_location('thread_compare', suite.PROJECTS/'threadapis/compare.py')
         module = importlib.util.module_from_spec(spec)

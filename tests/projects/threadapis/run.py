@@ -32,6 +32,14 @@ def work(repeat):
     return run_root(PROBE, repeat)
 
 
+def add_human_fixture(project):
+    """Reuse the humanoid probe's model; keep authored assets and shared fixture bytes unchanged."""
+    source = PROBE.parent/'humanoid/Assets/Resources'
+    target = project/'Assets/Resources'
+    for name in ('HumanA.fbx', 'HumanA.fbx.meta'):
+        shutil.copyfile(source/name, target/name)
+
+
 def capture_environment(out, followups=False):
     env = {key: value for key, value in os.environ.items()
            if key not in ('THREAD_APIS_OUT', 'THREAD_FOLLOWUP_OUT')}
@@ -47,6 +55,8 @@ def editor(repeat, followups=False):
     for part in ('Assets', 'Packages', 'ProjectSettings'):
         shutil.copytree(PROBE/part, project/part)
     (project/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+unity_version()+'\n')
+    if followups:
+        add_human_fixture(project)
     job = EditorJob(project, out/'editor.log', out, ['-executeMethod', 'ProbeRunner.Record'], batch=True,
                     env=capture_environment(out/OUT, followups), timeout=900, label='threadapis-'+repeat)
     result = run(job)

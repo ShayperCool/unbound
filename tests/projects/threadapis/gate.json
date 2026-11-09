@@ -1,1 +1,11 @@
-{"commands":["python3 tests/projects/threadapis/gate.py"],"summary":"[0-9]+/[0-9]+ match, [0-9]+ differences"}
+{
+  "commands": [
+    "python3 tests/projects/threadapis/gate.py"
+  ],
+  "summary": "[0-9]+/[0-9]+ match, [0-9]+ differences",
+  "engine_paths": [
+    "managed/UnityEngine/",
+    "tests/projects/humanoid/Assets/Resources/HumanA.fbx",
+    "tests/projects/humanoid/Assets/Resources/HumanA.fbx.meta"
+  ]
+}

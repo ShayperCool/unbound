@@ -179,8 +179,10 @@ namespace UnityEngine
         /// <summary>Whether a transform is a bone of the avatar: generic Animators have none.</summary>
         internal bool IsBoneTransform(Transform transform) => false;
 
+        internal bool IsHuman => m_Avatar != null && m_Avatar.isHuman;
+
         public bool isHuman
-        { get { MainThreadCheck.Check("get_isHuman"); return m_Avatar != null && m_Avatar.isHuman; } }
+        { get { MainThreadCheck.Check("get_isHuman"); return IsHuman; } }
 
         public bool isOptimizable
         { get { MainThreadCheck.Check("get_isOptimizable"); return m_Avatar != null && m_Avatar.isValid; } }
