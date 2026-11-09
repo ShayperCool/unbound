@@ -310,6 +310,8 @@ public class TextureCompressionProbe : MonoBehaviour
         {
             var t = Find("SmoothWrite");
             Run("write.setpixel", () => t.SetPixel(0, 0, Color.red));
+            Add("write.setpixel.raw", Bytes(t.GetRawTextureData().Take(16).ToArray()));
+            Add("write.setpixel.pixel", Floats(t.GetPixel(0, 0)));
             Run("write.setpixels", () => t.SetPixels(new Color[64 * 64]));
             Run("write.setpixels32", () => t.SetPixels32(new Color32[64 * 64]));
             Run("write.setpixeldata", () => t.SetPixelData(new byte[2048], 0));
@@ -323,6 +325,21 @@ public class TextureCompressionProbe : MonoBehaviour
             Run("write.view.apply", () => t.Apply(false));
             Add("write.view.applied.pixel", Floats(t.GetPixel(0, 0)));
             Run("write.view.gpu", () => Add("write.view.gpu", Gpu(t)));
+            // Level 1's first block (not zeroed) becomes white: colour 0 = 0xFFFF, every index 0.
+            var level1 = t.GetPixelData<byte>(1);
+            Run("write.view1", () => { level1[0] = 0xFF; level1[1] = 0xFF; for (int i = 4; i < 8; i++) level1[i] = 0; });
+            Add("write.view1.pixel", Floats(t.GetPixel(1, 2, 1)));
+            Add("write.view1.pixels", Pixels32(t.GetPixels32(1)));
+            Add("write.view1.raw", Bytes(t.GetRawTextureData().Skip(2048).Take(16).ToArray()));
+            var copy = Instantiate(t);
+            Add("write.view1.copy", Bytes(copy.GetRawTextureData().Skip(2048).Take(16).ToArray()));
+            Destroy(copy);
+        });
+        Section("load.rgba32", () =>
+        {
+            var t = Copy(Find("NoiseRGBA32"), false);
+            Run("load.rgba32.short", () => t.LoadRawTextureData(new byte[64 * 64 * 4 - 4]));
+            Destroy(t);
         });
     }
 }
