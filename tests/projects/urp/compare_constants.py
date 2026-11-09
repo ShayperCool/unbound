@@ -2,12 +2,13 @@
 """Compares the per-object constants the URP probe dumps (per-object-constants.jsonl: what each
 renderer of the baked scenes draws with, read back from a float target) with Unity's. Exits 1 on
 any missing, extra or differing value; every one is listed. Also compares texture-formats.jsonl
-(names compare exactly).
+(names compare exactly) and the rendering path scenarios' modes.jsonl.
 
     python3 tests/projects/urp/compare_constants.py \\
         tests/projects/urp/Reference/scenarios/per-object-constants.jsonl /tmp/urp/per-object-constants.jsonl
 
 Values agree within 2e-3 relative (Unbound's float targets hold half floats); infinities exactly.
+Strings and booleans (modes.jsonl of the rendering path scenarios) compare exactly.
 """
 import json
 import math
@@ -39,7 +40,7 @@ def main():
         if actual is None:
             print(f'missing  {key}')
             differences += 1
-        elif isinstance(expected, str) or isinstance(actual, str):
+        elif not isinstance(expected, list) or not isinstance(actual, list):
             if actual != expected:
                 print(f'differs  {key}: unity {expected} unbound {actual}')
                 differences += 1
