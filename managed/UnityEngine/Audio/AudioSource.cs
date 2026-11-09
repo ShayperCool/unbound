@@ -105,13 +105,13 @@ namespace UnityEngine
         public float time
         {
             get
-            {
+            { MainThreadCheck.Check("get_time");
                 var clip = m_Clip;
                 if (clip == null || clip.m_Frequency <= 0) return 0f;
                 return (float)(State("get_time").Position / clip.m_Frequency);
             }
             set
-            {
+            { MainThreadCheck.Check("set_time");
                 var clip = m_Clip;
                 if (clip == null || clip.m_Frequency <= 0) return;
                 Seek((double)value * clip.m_Frequency, "set_time");
@@ -151,9 +151,9 @@ namespace UnityEngine
 
         public AudioResource resource
         {
-            get => m_Clip;
+            get { MainThreadCheck.Check("get_resource"); return m_Clip; }
             set
-            {
+            { MainThreadCheck.Check("set_resource");
                 if (value == null || value is AudioClip)
                     clip = (AudioClip)value;
                 else
@@ -163,27 +163,30 @@ namespace UnityEngine
 
         public AudioMixerGroup outputAudioMixerGroup
         {
-            get => m_OutputGroup;
-            set { m_OutputGroup = value; m_Dirty = true; }
+            get { MainThreadCheck.Check("get_outputAudioMixerGroup"); return m_OutputGroup; }
+            set { MainThreadCheck.Check("set_outputAudioMixerGroup"); m_OutputGroup = value; m_Dirty = true; }
         }
 
         public GamepadSpeakerOutputType gamepadSpeakerOutputType
         {
-            get => m_GamepadSpeakerOutputType;
-            set => m_GamepadSpeakerOutputType = value;
+            get { MainThreadCheck.Check("get_gamepadSpeakerOutputType"); return m_GamepadSpeakerOutputType; }
+            set { MainThreadCheck.Check("set_gamepadSpeakerOutputType"); m_GamepadSpeakerOutputType = value; }
         }
+
+        internal bool m_PendingPlayOnAwake;
 
         public bool isPlaying
         {
             get
             { MainThreadCheck.Check("get_isPlaying");
+                if (m_PendingPlayOnAwake) return true;
                 if (m_Handle == 0 || m_Paused) return false;
                 var state = State("get_isPlaying");
                 return state.Main == AudioVoiceState.Playing || state.Main == AudioVoiceState.Scheduled || state.OneShots > 0;
             }
         }
 
-        public bool isVirtual => m_Handle != 0 && State("get_isVirtual").IsVirtual != 0;
+        public bool isVirtual { get { MainThreadCheck.Check("get_isVirtual"); return m_Handle != 0 && State("get_isVirtual").IsVirtual != 0; } }
 
         public bool loop
         {
@@ -193,8 +196,8 @@ namespace UnityEngine
 
         public bool ignoreListenerVolume
         {
-            get => m_IgnoreListenerVolume;
-            set { m_IgnoreListenerVolume = value; m_Dirty = true; }
+            get { MainThreadCheck.Check("get_ignoreListenerVolume"); return m_IgnoreListenerVolume; }
+            set { MainThreadCheck.Check("set_ignoreListenerVolume"); m_IgnoreListenerVolume = value; m_Dirty = true; }
         }
 
         public bool playOnAwake
@@ -205,20 +208,20 @@ namespace UnityEngine
 
         public bool ignoreListenerPause
         {
-            get => m_IgnoreListenerPause;
-            set { m_IgnoreListenerPause = value; m_Dirty = true; }
+            get { MainThreadCheck.Check("get_ignoreListenerPause"); return m_IgnoreListenerPause; }
+            set { MainThreadCheck.Check("set_ignoreListenerPause"); m_IgnoreListenerPause = value; m_Dirty = true; }
         }
 
         public AudioVelocityUpdateMode velocityUpdateMode
         {
-            get => m_VelocityUpdateMode;
-            set => m_VelocityUpdateMode = value;
+            get { MainThreadCheck.Check("get_velocityUpdateMode"); return m_VelocityUpdateMode; }
+            set { MainThreadCheck.Check("set_velocityUpdateMode"); m_VelocityUpdateMode = value; }
         }
 
         public float panStereo
         {
-            get => m_PanStereo;
-            set { m_PanStereo = Mathf.Clamp(value, -1f, 1f); m_Dirty = true; }
+            get { MainThreadCheck.Check("get_panStereo"); return m_PanStereo; }
+            set { MainThreadCheck.Check("set_panStereo"); m_PanStereo = Mathf.Clamp(value, -1f, 1f); m_Dirty = true; }
         }
 
         public float spatialBlend
@@ -244,57 +247,57 @@ namespace UnityEngine
 
         public bool spatialize
         {
-            get => m_Spatialize;
-            set { m_Spatialize = value; m_Dirty = true; }
+            get { MainThreadCheck.Check("get_spatialize"); return m_Spatialize; }
+            set { MainThreadCheck.Check("set_spatialize"); m_Spatialize = value; m_Dirty = true; }
         }
 
         public bool spatializePostEffects
         {
-            get => m_SpatializePostEffects;
-            set => m_SpatializePostEffects = value;
+            get { MainThreadCheck.Check("get_spatializePostEffects"); return m_SpatializePostEffects; }
+            set { MainThreadCheck.Check("set_spatializePostEffects"); m_SpatializePostEffects = value; }
         }
 
         public float reverbZoneMix
         {
-            get => ConstantOf(m_ReverbZoneMixCurve);
-            set => SetConstant(ref m_ReverbZoneMixCurve, Mathf.Clamp(value, 0f, 1.1f));
+            get { MainThreadCheck.Check("get_reverbZoneMix"); return ConstantOf(m_ReverbZoneMixCurve); }
+            set { MainThreadCheck.Check("set_reverbZoneMix"); SetConstant(ref m_ReverbZoneMixCurve, Mathf.Clamp(value, 0f, 1.1f)); }
         }
 
         public bool bypassEffects
         {
-            get => m_BypassEffects;
-            set { m_BypassEffects = value; m_Dirty = true; }
+            get { MainThreadCheck.Check("get_bypassEffects"); return m_BypassEffects; }
+            set { MainThreadCheck.Check("set_bypassEffects"); m_BypassEffects = value; m_Dirty = true; }
         }
 
         public bool bypassListenerEffects
         {
-            get => m_BypassListenerEffects;
-            set { m_BypassListenerEffects = value; m_Dirty = true; }
+            get { MainThreadCheck.Check("get_bypassListenerEffects"); return m_BypassListenerEffects; }
+            set { MainThreadCheck.Check("set_bypassListenerEffects"); m_BypassListenerEffects = value; m_Dirty = true; }
         }
 
         public bool bypassReverbZones
         {
-            get => m_BypassReverbZones;
-            set { m_BypassReverbZones = value; m_Dirty = true; }
+            get { MainThreadCheck.Check("get_bypassReverbZones"); return m_BypassReverbZones; }
+            set { MainThreadCheck.Check("set_bypassReverbZones"); m_BypassReverbZones = value; m_Dirty = true; }
         }
 
         public float dopplerLevel
         {
-            get => m_DopplerLevel;
-            set { m_DopplerLevel = Mathf.Clamp(value, 0f, 5f); m_Dirty = true; }
+            get { MainThreadCheck.Check("get_dopplerLevel"); return m_DopplerLevel; }
+            set { MainThreadCheck.Check("set_dopplerLevel"); m_DopplerLevel = Mathf.Clamp(value, 0f, 5f); m_Dirty = true; }
         }
 
         /// <summary>Degrees, 0 to 360 (the spread curve holds it normalized).</summary>
         public float spread
         {
-            get => ConstantOf(m_SpreadCurve) * 360f;
-            set => SetConstant(ref m_SpreadCurve, Mathf.Clamp(value, 0f, 360f) / 360f);
+            get { MainThreadCheck.Check("get_spread"); return ConstantOf(m_SpreadCurve) * 360f; }
+            set { MainThreadCheck.Check("set_spread"); SetConstant(ref m_SpreadCurve, Mathf.Clamp(value, 0f, 360f) / 360f); }
         }
 
         public int priority
         {
-            get => m_Priority;
-            set { m_Priority = Mathf.Clamp(value, 0, 256); m_Dirty = true; }
+            get { MainThreadCheck.Check("get_priority"); return m_Priority; }
+            set { MainThreadCheck.Check("set_priority"); m_Priority = Mathf.Clamp(value, 0, 256); m_Dirty = true; }
         }
 
         public bool mute
@@ -305,20 +308,20 @@ namespace UnityEngine
 
         public float minDistance
         {
-            get => m_MinDistance;
-            set { m_MinDistance = Mathf.Max(0f, value); m_Dirty = true; }
+            get { MainThreadCheck.Check("get_minDistance"); return m_MinDistance; }
+            set { MainThreadCheck.Check("set_minDistance"); m_MinDistance = Mathf.Max(0f, value); m_Dirty = true; }
         }
 
         public float maxDistance
         {
-            get => m_MaxDistance;
-            set { m_MaxDistance = Mathf.Max(0f, value); m_Dirty = true; }
+            get { MainThreadCheck.Check("get_maxDistance"); return m_MaxDistance; }
+            set { MainThreadCheck.Check("set_maxDistance"); m_MaxDistance = Mathf.Max(0f, value); m_Dirty = true; }
         }
 
         public AudioRolloffMode rolloffMode
         {
-            get => m_RolloffMode;
-            set { m_RolloffMode = value; m_Dirty = true; m_CurvesDirty = true; }
+            get { MainThreadCheck.Check("get_rolloffMode"); return m_RolloffMode; }
+            set { MainThreadCheck.Check("set_rolloffMode"); m_RolloffMode = value; m_Dirty = true; m_CurvesDirty = true; }
         }
 
         static float ConstantOf(AnimationCurve curve) => curve.length > 0 ? curve[0].value : 0f;
@@ -423,6 +426,7 @@ namespace UnityEngine
         {
             AudioSystem.CheckMainThread(api == "Play" ? "PlayHelper" : "Play");
             ThrowIfDestroyed();
+            if (m_Clip != null) m_PendingPlayOnAwake = false;
             if (!isActiveAndEnabled)
             {
                 Debug.LogWarning("Can not play a disabled audio source", this);
@@ -525,6 +529,7 @@ namespace UnityEngine
 
         internal void StopInternal()
         {
+            m_PendingPlayOnAwake = false;
             m_HasAudioFrame = false;
             m_Paused = false;
             ReleaseStreamBuffers();
@@ -846,6 +851,7 @@ namespace UnityEngine
 
         internal override void OnEngineEnable()
         {
+            m_PendingPlayOnAwake = Compat.MainThreadContextsMeasured && m_PlayOnAwake && m_Clip == null;
             m_HasAudioFrame = false;
             AudioSystem.Add(this);
             m_HasLastPosition = false;
@@ -856,6 +862,7 @@ namespace UnityEngine
 
         internal override void OnEngineDisable()
         {
+            m_PendingPlayOnAwake = false;
             AudioSystem.Remove(this);
             if (m_Handle != 0 && AudioSystem.IsCallerAllowed()) StopInternal();
         }

@@ -156,15 +156,15 @@ namespace UnityEngine
 
         public Avatar avatar
         {
-            get => m_Avatar;
-            set => m_Avatar = value;
+            get { MainThreadCheck.Check("get_avatar"); return m_Avatar; }
+            set { MainThreadCheck.Check("set_avatar"); m_Avatar = value; }
         }
 
         /// <summary>Whether animation outputs of playable graphs target this Animator.</summary>
         public bool hasBoundPlayables
         {
             get
-            {
+            { MainThreadCheck.Check("get_hasBoundPlayables");
                 var outputs = AnimationOutputs.Of(this);
                 if (outputs == null) return false;
                 foreach (var o in outputs)
@@ -179,16 +179,19 @@ namespace UnityEngine
         /// <summary>Whether a transform is a bone of the avatar: generic Animators have none.</summary>
         internal bool IsBoneTransform(Transform transform) => false;
 
-        public bool isHuman => m_Avatar != null && m_Avatar.isHuman;
+        public bool isHuman
+        { get { MainThreadCheck.Check("get_isHuman"); return m_Avatar != null && m_Avatar.isHuman; } }
 
-        public bool isOptimizable => m_Avatar != null && m_Avatar.isValid;
+        public bool isOptimizable
+        { get { MainThreadCheck.Check("get_isOptimizable"); return m_Avatar != null && m_Avatar.isValid; } }
 
         /// <summary>The avatar's human scale (the T-pose's center of mass height), 1 without a human.</summary>
-        public float humanScale => AvatarConstant is { IsHuman: true } c ? c.Human.Scale : 1f;
+        public float humanScale
+        { get { MainThreadCheck.Check("get_humanScale"); return AvatarConstant is { IsHuman: true } c ? c.Human.Scale : 1f; } }
 
-        public float leftFeetBottomHeight => FootHeight(true);
+        public float leftFeetBottomHeight { get { MainThreadCheck.Check("get_leftFeetBottomHeight"); return FootHeight(true); } }
 
-        public float rightFeetBottomHeight => FootHeight(false);
+        public float rightFeetBottomHeight { get { MainThreadCheck.Check("get_rightFeetBottomHeight"); return FootHeight(false); } }
 
         /// <summary>The length of the foot's muscle axes (its T-pose height).</summary>
         float FootHeight(bool left)

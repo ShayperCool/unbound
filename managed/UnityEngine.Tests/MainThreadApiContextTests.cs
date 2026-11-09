@@ -148,6 +148,121 @@ namespace UnityEngine.Tests
             finally { graph.Destroy(); Object.DestroyImmediate(go); }
         }
 
+        sealed class DefaultMaterialPipeline : UnityEngine.Rendering.RenderPipelineAsset
+        {
+            internal Material Material;
+            public override Material defaultMaterial => Material;
+            protected override UnityEngine.Rendering.RenderPipeline CreatePipeline() => null;
+        }
+
+        [Fact]
+        public void NullMaterialSlotsUseOwnedCopiesOfThePipelineDefault()
+        {
+            var previous = UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline;
+            var quality = QualitySettings.renderPipeline;
+            var pipeline = ScriptableObject.CreateInstance<DefaultMaterialPipeline>();
+            var shader = Shader.Create("Default material control", 2000);
+            var material = new Material(shader) { name = "Pipeline default" };
+            pipeline.Material = material;
+            var go = new GameObject("Material controls");
+            try
+            {
+                QualitySettings.renderPipeline = null;
+                UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline = pipeline;
+                var renderer = go.AddComponent<MeshRenderer>();
+                var other = go.AddComponent<MeshRenderer>();
+                Assert.Null(renderer.sharedMaterial);
+                Assert.NotSame(material, renderer.material);
+                Assert.Equal("Pipeline default (Instance)", renderer.material.name);
+                Assert.Same(renderer.material, renderer.sharedMaterial);
+                Assert.NotSame(renderer.material, other.material);
+                renderer.sharedMaterials = Array.Empty<Material>();
+                Assert.Empty(renderer.materials);
+                Assert.NotNull(renderer.material);
+                Assert.Single(renderer.sharedMaterials);
+            }
+            finally
+            {
+                UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline = previous;
+                QualitySettings.renderPipeline = quality;
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(material);
+                Object.DestroyImmediate(shader);
+                Object.DestroyImmediate(pipeline);
+            }
+        }
+
+        [Fact]
+        public void FollowupBindingsRejectWorkerAccessBeforeChangingState()
+        {
+            var go = new GameObject("Guard controls");
+            try
+            {
+                var renderer = go.AddComponent<MeshRenderer>();
+                var animator = go.AddComponent<Animator>();
+                var audio = go.AddComponent<AudioSource>();
+                Assert.IsType<UnityException>(OnWorker(() => renderer.forceRenderingOff = true));
+                Assert.False(renderer.forceRenderingOff);
+                Assert.StartsWith("GetLightmapIndex can only", OnWorker(() => _ = renderer.lightmapIndex).Message);
+                Assert.IsType<UnityException>(OnWorker(() => animator.fireEvents = false));
+                Assert.True(animator.fireEvents);
+                Assert.IsType<UnityException>(OnWorker(() => audio.priority = 1));
+                Assert.Equal(128, audio.priority);
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
+
+        [Fact]
+        public void ControllerlessInitializationFollowsHierarchyActivation()
+        {
+            var go = new GameObject("Initialization controls");
+            go.SetActive(false);
+            try
+            {
+                var animator = go.AddComponent<Animator>();
+                Assert.False(animator.isInitialized);
+                animator.Rebind();
+                Assert.False(animator.isInitialized);
+                go.SetActive(true);
+                Assert.True(animator.isInitialized);
+                animator.enabled = false;
+                Assert.True(animator.isInitialized);
+                go.SetActive(false);
+                Assert.False(animator.isInitialized);
+                animator.enabled = true;
+                go.SetActive(true);
+                animator.keepAnimatorStateOnDisable = true;
+                go.SetActive(false);
+                Assert.False(animator.isInitialized);
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
+
+        [Fact]
+        public void CheckedFollowupPropertiesDoNotAllocate()
+        {
+            var go = new GameObject("Followup getter controls");
+            try
+            {
+                var renderer = go.AddComponent<MeshRenderer>();
+                var animator = go.AddComponent<Animator>();
+                var audio = go.AddComponent<AudioSource>();
+                int sum = 0;
+                for (int i = 0; i < 10000; i++)
+                    sum += renderer.rendererPriority + audio.priority + (animator.fireEvents ? 1 : 0);
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                var start = System.Diagnostics.Stopwatch.GetTimestamp();
+                for (int i = 0; i < 1000000; i++)
+                    sum += renderer.rendererPriority + audio.priority + (animator.fireEvents ? 1 : 0);
+                var ticks = System.Diagnostics.Stopwatch.GetTimestamp() - start;
+                long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+                Assert.Equal(0, allocated);
+                Assert.Equal(1010000 * 129, sum);
+                Console.WriteLine("Checked followup getter: " + (ticks * 1e9 / System.Diagnostics.Stopwatch.Frequency / 3000000) + " ns, " + allocated + " bytes");
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
+
         [Fact]
         public void SuccessfulCheckedPropertyReadsDoNotAllocate()
         {

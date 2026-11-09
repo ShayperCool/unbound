@@ -42,7 +42,7 @@ namespace Unbound.Runtime
             var pipeline = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline;
             var replacement = pipeline != null ? pipeline.defaultMaterial : null;
             if (replacement == null) return;
-            var builtin = BuiltinShaders.Resolve(BuiltinShaders.ExtraGuid, DefaultMaterialFileId) as Material;
+            var builtin = BuiltinShaders.Resolve(BuiltinShaders.ExtraGuid, BuiltinShaders.DefaultMaterialFileId) as Material;
             if (builtin == null) return;
             foreach (var obj in file.Objects.Values)
             {
@@ -51,8 +51,6 @@ namespace Unbound.Runtime
                     if (ReferenceEquals(renderer.m_Materials[i], builtin)) renderer.m_Materials[i] = replacement;
             }
         }
-
-        const long DefaultMaterialFileId = 10303;
 
         static MaterialDescription Read(YNode import, IReferenceResolver resolver, string name)
         {

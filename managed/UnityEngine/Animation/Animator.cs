@@ -22,6 +22,7 @@ namespace UnityEngine
         internal bool m_FireEvents = true;
         internal bool m_LogWarnings = true;
         internal AnimatorPlayer m_Player;
+        bool m_Initialized;
         bool m_Registered;
         /// <summary>Bindings of an Animator animated by playable outputs alone (no controller).</summary>
         AnimationBindings m_OutputBindings;
@@ -46,7 +47,7 @@ namespace UnityEngine
         public UnityEngine.Playables.PlayableGraph playableGraph
         {
             get
-            {
+            { MainThreadCheck.Check("GetCurrentGraph");
                 var player = EnsurePlayer();
                 if (player == null) return default;
                 if (m_ControllerGraph == null || m_ControllerGraph.Destroyed || m_ControllerGraph.ControllerPlayer != player)
@@ -88,13 +89,13 @@ namespace UnityEngine
         public bool hasRootMotion
         {
             get
-            {
+            { MainThreadCheck.Check("get_hasRootMotion");
                 Unbound.Runtime.Stubs.Ignored("Animator.hasRootMotion", "is always false (the avatar root motion node is not read yet)");
                 return false;
             }
         }
 
-        public bool isInitialized { get { MainThreadCheck.Check("get_isInitialized"); return m_Player != null; } }
+        public bool isInitialized { get { MainThreadCheck.Check("get_isInitialized"); return Compat.MainThreadContextsMeasured ? m_Initialized : m_Player != null; } }
 
         public bool applyRootMotion
         {
@@ -105,8 +106,8 @@ namespace UnityEngine
         [Obsolete("Animator.animatePhysics has been deprecated. Use Animator.updateMode instead.")]
         public bool animatePhysics
         {
-            get => m_UpdateMode == AnimatorUpdateMode.Fixed;
-            set => m_UpdateMode = value ? AnimatorUpdateMode.Fixed : AnimatorUpdateMode.Normal;
+            get { MainThreadCheck.Check("get_animatePhysics"); return m_UpdateMode == AnimatorUpdateMode.Fixed; }
+            set { MainThreadCheck.Check("set_animatePhysics"); m_UpdateMode = value ? AnimatorUpdateMode.Fixed : AnimatorUpdateMode.Normal; }
         }
 
         public AnimatorUpdateMode updateMode
@@ -115,7 +116,8 @@ namespace UnityEngine
             set { MainThreadCheck.Check("set_updateMode"); m_UpdateMode = value; }
         }
 
-        public bool hasTransformHierarchy => !m_NoHierarchy;
+        public bool hasTransformHierarchy
+        { get { MainThreadCheck.Check("get_hasTransformHierarchy"); return !m_NoHierarchy; } }
 
         /// <summary>The Animator animates its avatar's skeleton instead of a transform hierarchy
         /// (Optimize Game Objects, AnimatorUtility.OptimizeTransformHierarchy).</summary>
@@ -237,36 +239,36 @@ namespace UnityEngine
 
         public bool logWarnings
         {
-            get => m_LogWarnings;
-            set => m_LogWarnings = value;
+            get { MainThreadCheck.Check("get_logWarnings"); return m_LogWarnings; }
+            set { MainThreadCheck.Check("set_logWarnings"); m_LogWarnings = value; }
         }
 
         public bool fireEvents
         {
-            get => m_FireEvents;
-            set => m_FireEvents = value;
+            get { MainThreadCheck.Check("get_fireEvents"); return m_FireEvents; }
+            set { MainThreadCheck.Check("set_fireEvents"); m_FireEvents = value; }
         }
 
         [Obsolete("keepAnimatorControllerStateOnDisable is obsolete. Use keepAnimatorStateOnDisable instead (UnityUpgradable) -> keepAnimatorStateOnDisable", false)]
         public bool keepAnimatorControllerStateOnDisable
         {
-            get => m_KeepAnimatorStateOnDisable;
-            set => m_KeepAnimatorStateOnDisable = value;
+            get { MainThreadCheck.Check("get_keepAnimatorStateOnDisable"); return m_KeepAnimatorStateOnDisable; }
+            set { MainThreadCheck.Check("set_keepAnimatorStateOnDisable"); m_KeepAnimatorStateOnDisable = value; }
         }
 
         public bool keepAnimatorStateOnDisable
         {
-            get => m_KeepAnimatorStateOnDisable;
-            set => m_KeepAnimatorStateOnDisable = value;
+            get { MainThreadCheck.Check("get_keepAnimatorStateOnDisable"); return m_KeepAnimatorStateOnDisable; }
+            set { MainThreadCheck.Check("set_keepAnimatorStateOnDisable"); m_KeepAnimatorStateOnDisable = value; }
         }
 
         public bool writeDefaultValuesOnDisable
         {
-            get => m_WriteDefaultValuesOnDisable;
-            set => m_WriteDefaultValuesOnDisable = value;
+            get { MainThreadCheck.Check("get_writeDefaultValuesOnDisable"); return m_WriteDefaultValuesOnDisable; }
+            set { MainThreadCheck.Check("set_writeDefaultValuesOnDisable"); m_WriteDefaultValuesOnDisable = value; }
         }
 
-        public Transform avatarRoot => m_GameObject != null ? m_GameObject.m_Transform : null;
+        public Transform avatarRoot { get { MainThreadCheck.Check("get_avatarRoot"); return m_GameObject != null ? m_GameObject.m_Transform : null; } }
 
         /// <summary>The root motion of the last update, in world space (see AnimatorPlayer.ApplyRootMotion).</summary>
         internal Vector3 m_DeltaPosition;
@@ -278,13 +280,14 @@ namespace UnityEngine
 
 
         /// <summary>How much the feet pivot follows the left foot (humanoids; 0.5 otherwise).</summary>
-        public float pivotWeight => m_Human != null ? m_Human.PivotWeight : 0.5f;
+        public float pivotWeight
+        { get { MainThreadCheck.Check("get_pivotWeight"); return m_Human != null ? m_Human.PivotWeight : 0.5f; } }
 
         /// <summary>The feet pivot point in world space (humanoids; zero otherwise).</summary>
         public Vector3 pivotPosition
         {
             get
-            {
+            { MainThreadCheck.Check("get_pivotPosition");
                 if (m_Human == null) return Vector3.zero;
                 var p = m_Human.PivotPosition;
                 return new Vector3(p.x, p.y, p.z);
@@ -317,6 +320,7 @@ namespace UnityEngine
 
         internal override void OnEngineEnable()
         {
+            m_Initialized = true;
             // A humanoid's initial API root pose predates game Transform edits, and stays
             // there until evaluation (6000.0.71f1, animculling humanMotion/initial).
             if (isHuman) EnsureRootPose();
@@ -330,6 +334,7 @@ namespace UnityEngine
 
         internal override void OnEngineDisable()
         {
+            if (!m_GameObject.activeInHierarchy) m_Initialized = false;
             Unbound.Runtime.Playables.AnimationOutputs.ForgetCulled(this);
             if (m_Registered)
             {
@@ -363,6 +368,7 @@ namespace UnityEngine
         internal void DisabledHierarchyDeactivated()
         {
             if (Compat.AnimatorStartupMeasured && !m_KeepAnimatorStateOnDisable) m_Player = null;
+            m_Initialized = false;
         }
 
         /// <summary>
@@ -774,7 +780,8 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ layers
 
-        public int layerCount => EnsurePlayer()?.Layers.Length ?? 0;
+        public int layerCount
+        { get { MainThreadCheck.Check("get_layerCount"); return EnsurePlayer()?.Layers.Length ?? 0; } }
 
         bool ValidLayer(AnimatorPlayer player, int layerIndex)
         {

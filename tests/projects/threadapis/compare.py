@@ -4,12 +4,11 @@
     compare.py REFERENCE CAPTURE
 
 Every (thread kind, call) of either file is listed when it is missing, extra or has another
-outcome; the outcome texts (exception type and full message) are compared exactly. Reports every difference. Only the exact return-value pairs in residuals.json are known
-subsystem follow-ups; all other differences and missing completion markers exit 1.
+outcome; the outcome texts (exception type and full message) are compared exactly.
+Every difference and missing completion marker exits 1.
 """
 import json
 import sys
-from pathlib import Path
 
 
 def load(path):
@@ -18,34 +17,34 @@ def load(path):
         for line in handle:
             if not line.strip():
                 continue
+            if complete:
+                raise ValueError('records after completion marker')
             row = json.loads(line)
-            if row.get('complete'):
+            if row == {'complete': True}:
                 complete = True
                 continue
-            rows[(row['thread'], row['call'])] = row['result']
+            key = (row['thread'], row['call'])
+            if key in rows:
+                raise ValueError(f'duplicate observation {key}')
+            rows[key] = row['result']
     return rows, complete
 
 
 def main():
     if len(sys.argv) != 3:
         sys.exit(__doc__)
-    reference, _ = load(sys.argv[1])
+    reference, reference_complete = load(sys.argv[1])
+    if not reference_complete:
+        raise ValueError('reference has no completion marker')
     capture, complete = load(sys.argv[2])
-    residuals = {(r['thread'], r['call']): r for r in json.loads(
-        Path(__file__).with_name('residuals.json').read_text())}
-    failures, known = 0, 0
+    failures = 0
     for key in reference:
         if key not in capture:
             print(f'missing {key[0]} {key[1]}: expected {reference[key]!r}')
             failures += 1
         elif capture[key] != reference[key]:
             print(f'differs {key[0]} {key[1]}:\n  unity   {reference[key]!r}\n  unbound {capture[key]!r}')
-            residual = residuals.get(key)
-            if residual and reference[key] == residual['unity'] and capture[key] == residual['unbound']:
-                print('  known residual:', residual['reason'])
-                known += 1
-            else:
-                failures += 1
+            failures += 1
     for key in capture:
         if key not in reference:
             print(f'extra {key[0]} {key[1]}: {capture[key]!r}')
@@ -54,7 +53,7 @@ def main():
         print('capture has no completion marker')
         failures += 1
     matching = sum(1 for key in reference if capture.get(key) == reference[key])
-    print(f'{matching}/{len(reference)} match, {failures} failures, {known} known residuals')
+    print(f'{matching}/{len(reference)} match, {failures} differences')
     return 1 if failures else 0
 
 

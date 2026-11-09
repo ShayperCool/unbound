@@ -626,6 +626,8 @@ namespace Unbound.Runtime
 
         static readonly Dictionary<string, UnityEngine.Shader> s_Shaders = new Dictionary<string, UnityEngine.Shader>();
 
+        internal const long DefaultMaterialFileId = 10303;
+
         internal const string ExtraGuid = "0000000000000000f000000000000000";
         internal const string DefaultGuid = "0000000000000000e000000000000000";
 

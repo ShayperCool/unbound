@@ -51,7 +51,11 @@ public class ThreadApiProbe : MonoBehaviour
     static int s_MainThread;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Create() => new GameObject("ThreadApiProbe").AddComponent<ThreadApiProbe>();
+    static void Create()
+    {
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("THREAD_FOLLOWUP_OUT")))
+            new GameObject("ThreadApiProbe").AddComponent<ThreadApiProbe>();
+    }
 
     struct CallsJob : IJob
     {

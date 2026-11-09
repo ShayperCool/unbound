@@ -49,12 +49,35 @@ A separate nine-outcome `raycast.jsonl` control records the exact single-hit lay
 overload binding in every context.
 
 The gate makes a fresh project copy, runs only Unbound, and compares every outcome exactly.
-The current replay matches 1,213/1,222 outcomes. Nine existing successful return-value differences
-remain visible and are matched only against their exact pairs in `residuals.json`: an empty
-Renderer material slot, a controllerless Animator's initialization flag, and a clipless
-AudioSource's initial playing flag, each in main/contact contexts. These are rendering,
-animation and audio follow-ups; their thread permission outcomes match. No exception or message
-difference is admitted by this list. The pre-change replay retains the same nine differences.
+The replay compares all 1,222 outcomes without return-value allowances. The separate
+`followups.jsonl` matrix adds 598 outcomes and checks additional Renderer, Animator and AudioSource properties
+on the main thread, Thread, Task.Run, IJob.Run and a scheduled IJob. It compares the full
+exception type and message, including binding aliases, and keeps successful thread-safe
+outcomes. Each setter runs even when its getter is forbidden.
+
+Lifecycle controls distinguish a renderer's null/empty slots and owned material copies,
+a controllerless Animator's active, disabled, inactive and reactivated states, and an
+AudioSource's pending play-on-awake state from actual, delayed, paused and stopped playback.
+A second renderer still shares the original white material after the first renderer's
+instance becomes red; both fresh clipless and already playing sources exercise Pause.
+
+Contracts checked against Unity 6000.0 documentation:
+- [Renderer.material](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer-material.html):
+  instantiation isolates material mutations; the two-renderer color control changes only one.
+- [Animator.isInitialized](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-isInitialized.html):
+  reports initialization; inactive Rebind and activation are recorded separately. Controllerless
+  keep-state controls measure the release's initialization flag, independently of controller state.
+- [AudioSource.isPlaying](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-isPlaying.html):
+  actual and delayed playback report playing, Pause reports false for a playing voice. The
+  fresh clipless pending state is recorded separately; Pause before its audio update leaves it true.
+
+Record and publish the supplementary reference from two identical GPU Editor captures:
+```sh
+python3 tests/projects/threadapis/run.py editor --repeat followups1 --followups
+python3 tests/projects/threadapis/run.py editor --repeat followups2 --followups
+python3 tests/projects/threadapis/run.py publish-followups followups1 followups2
+```
+
 Managed MainThreadApiContextTests additionally check scope restoration after constructor failure,
 creation callbacks, animation callbacks and handles, and zero allocations in successful checked
 property reads. The task's microbenchmark measures 10 million property reads and central checks;

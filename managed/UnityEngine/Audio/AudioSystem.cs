@@ -463,6 +463,7 @@ namespace Unbound.Runtime
             for (int i = 0; i < n; i++)
             {
                 var source = s_Snapshot[i];
+                if (source != null) source.m_PendingPlayOnAwake = false;
                 s_Snapshot[i] = null;
                 if (source == null || source.m_GameObject == null) continue;
                 try

@@ -81,18 +81,57 @@ namespace UnityEngine
         }
 
         public bool isVisible { get { MainThreadCheck.Check("get_isVisible"); return m_IsVisible; } }
-        public bool forceRenderingOff { get; set; }
-        public ShadowCastingMode shadowCastingMode { get => m_CastShadows; set => m_CastShadows = value; }
-        public bool receiveShadows { get => m_ReceiveShadows; set => m_ReceiveShadows = value; }
-        public bool staticShadowCaster { get; set; }
-        public MotionVectorGenerationMode motionVectorGenerationMode { get; set; } = MotionVectorGenerationMode.Object;
-        public LightProbeUsage lightProbeUsage { get; set; } = LightProbeUsage.BlendProbes;
-        public ReflectionProbeUsage reflectionProbeUsage { get; set; } = ReflectionProbeUsage.BlendProbes;
-        public uint renderingLayerMask { get => m_RenderingLayerMask; set => m_RenderingLayerMask = value; }
-        public int rendererPriority { get; set; }
-        public bool allowOcclusionWhenDynamic { get; set; } = true;
+        bool m_ForceRenderingOff;
+        public bool forceRenderingOff
+        {
+            get { MainThreadCheck.Check("get_forceRenderingOff"); return m_ForceRenderingOff; }
+            set { MainThreadCheck.Check("set_forceRenderingOff"); m_ForceRenderingOff = value; }
+        }
+        public ShadowCastingMode shadowCastingMode
+        { get { MainThreadCheck.Check("get_shadowCastingMode"); return m_CastShadows; } set { MainThreadCheck.Check("set_shadowCastingMode"); m_CastShadows = value; } }
+        public bool receiveShadows
+        { get { MainThreadCheck.Check("get_receiveShadows"); return m_ReceiveShadows; } set { MainThreadCheck.Check("set_receiveShadows"); m_ReceiveShadows = value; } }
+        bool m_StaticShadowCaster;
+        public bool staticShadowCaster
+        {
+            get { MainThreadCheck.Check("GetIsStaticShadowCaster"); return m_StaticShadowCaster; }
+            set { MainThreadCheck.Check("SetIsStaticShadowCaster"); m_StaticShadowCaster = value; }
+        }
+        MotionVectorGenerationMode m_MotionVectorGenerationMode = MotionVectorGenerationMode.Object;
+        public MotionVectorGenerationMode motionVectorGenerationMode
+        {
+            get { MainThreadCheck.Check("get_motionVectorGenerationMode"); return m_MotionVectorGenerationMode; }
+            set { MainThreadCheck.Check("set_motionVectorGenerationMode"); m_MotionVectorGenerationMode = value; }
+        }
+        LightProbeUsage m_LightProbeUsage = LightProbeUsage.BlendProbes;
+        public LightProbeUsage lightProbeUsage
+        {
+            get { MainThreadCheck.Check("get_lightProbeUsage"); return m_LightProbeUsage; }
+            set { MainThreadCheck.Check("set_lightProbeUsage"); m_LightProbeUsage = value; }
+        }
+        ReflectionProbeUsage m_ReflectionProbeUsage = ReflectionProbeUsage.BlendProbes;
+        public ReflectionProbeUsage reflectionProbeUsage
+        {
+            get { MainThreadCheck.Check("get_reflectionProbeUsage"); return m_ReflectionProbeUsage; }
+            set { MainThreadCheck.Check("set_reflectionProbeUsage"); m_ReflectionProbeUsage = value; }
+        }
+        public uint renderingLayerMask
+        { get { MainThreadCheck.Check("get_renderingLayerMask"); return m_RenderingLayerMask; } set { MainThreadCheck.Check("set_renderingLayerMask"); m_RenderingLayerMask = value; } }
+        int m_RendererPriority;
+        public int rendererPriority
+        {
+            get { MainThreadCheck.Check("get_rendererPriority"); return m_RendererPriority; }
+            set { MainThreadCheck.Check("set_rendererPriority"); m_RendererPriority = value; }
+        }
+        bool m_AllowOcclusionWhenDynamic = true;
+        public bool allowOcclusionWhenDynamic
+        {
+            get { MainThreadCheck.Check("get_allowOcclusionWhenDynamic"); return m_AllowOcclusionWhenDynamic; }
+            set { MainThreadCheck.Check("set_allowOcclusionWhenDynamic"); m_AllowOcclusionWhenDynamic = value; }
+        }
         /// <summary>Whether StaticBatchingUtility combined the renderer.</summary>
-        public bool isPartOfStaticBatch => m_StaticBatched;
+        public bool isPartOfStaticBatch
+        { get { MainThreadCheck.Check("get_isPartOfStaticBatch"); return m_StaticBatched; } }
 
         /// <summary>Static batching: the renderer's matrix at the time it was combined, relative to
         /// the batch root (which may still move it; null: the world).</summary>
@@ -113,20 +152,52 @@ namespace UnityEngine
                 return m_StaticBatchRoot != null ? m_StaticBatchRoot.localToWorldMatrix * m_StaticBatchLocal : m_StaticBatchLocal;
             }
         }
-        public int lightmapIndex { get; set; } = -1;
-        public int realtimeLightmapIndex { get; set; } = -1;
-        public Vector4 lightmapScaleOffset { get; set; } = new Vector4(1, 1, 0, 0);
-        public Vector4 realtimeLightmapScaleOffset { get; set; } = new Vector4(1, 1, 0, 0);
-        public Transform probeAnchor { get; set; }
+        int m_LightmapIndex = -1;
+        public int lightmapIndex
+        {
+            get { MainThreadCheck.Check("GetLightmapIndex"); return m_LightmapIndex; }
+            set { MainThreadCheck.Check("SetLightmapIndex"); m_LightmapIndex = value; }
+        }
+        int m_RealtimeLightmapIndex = -1;
+        public int realtimeLightmapIndex
+        {
+            get { MainThreadCheck.Check("GetLightmapIndex"); return m_RealtimeLightmapIndex; }
+            set { MainThreadCheck.Check("SetLightmapIndex"); m_RealtimeLightmapIndex = value; }
+        }
+        Vector4 m_LightmapScaleOffset = new Vector4(1, 1, 0, 0);
+        public Vector4 lightmapScaleOffset
+        {
+            get { MainThreadCheck.Check("GetLightmapST"); return m_LightmapScaleOffset; }
+            set { MainThreadCheck.Check("SetStaticLightmapST"); m_LightmapScaleOffset = value; }
+        }
+        Vector4 m_RealtimeLightmapScaleOffset = new Vector4(1, 1, 0, 0);
+        public Vector4 realtimeLightmapScaleOffset
+        {
+            get { MainThreadCheck.Check("GetLightmapST"); return m_RealtimeLightmapScaleOffset; }
+            set { MainThreadCheck.Check("SetLightmapST"); m_RealtimeLightmapScaleOffset = value; }
+        }
+        Transform m_ProbeAnchor;
+        public Transform probeAnchor
+        {
+            get { MainThreadCheck.Check("get_probeAnchor"); return m_ProbeAnchor; }
+            set { MainThreadCheck.Check("set_probeAnchor"); m_ProbeAnchor = value; }
+        }
         /// <summary>The light probe cell the renderer was last in (where the next lookup starts).</summary>
         internal int m_ProbeCell = -1;
         /// <summary>The probe constants its draws were last given, boxed (see <see cref="BoxedVectors"/>).</summary>
         internal BoxedVectors m_ProbeBoxes;
         /// <summary>The reflection probe vectors its draws were last given, boxed.</summary>
         internal BoxedVectors m_ReflectionBoxes;
-        public GameObject lightProbeProxyVolumeOverride { get; set; }
-        public Matrix4x4 localToWorldMatrix => transform.localToWorldMatrix;
-        public Matrix4x4 worldToLocalMatrix => transform.worldToLocalMatrix;
+        GameObject m_LightProbeProxyVolumeOverride;
+        public GameObject lightProbeProxyVolumeOverride
+        {
+            get { MainThreadCheck.Check("get_lightProbeProxyVolumeOverride"); return m_LightProbeProxyVolumeOverride; }
+            set { MainThreadCheck.Check("set_lightProbeProxyVolumeOverride"); m_LightProbeProxyVolumeOverride = value; }
+        }
+        public Matrix4x4 localToWorldMatrix
+        { get { MainThreadCheck.Check("get_localToWorldMatrix"); return transform.localToWorldMatrix; } }
+        public Matrix4x4 worldToLocalMatrix
+        { get { MainThreadCheck.Check("get_worldToLocalMatrix"); return transform.worldToLocalMatrix; } }
 
         public int sortingLayerID
         {
@@ -136,8 +207,8 @@ namespace UnityEngine
 
         public string sortingLayerName
         {
-            get => SortingLayer.IDToName(m_SortingLayerID);
-            set => m_SortingLayerID = SortingLayer.NameToID(value);
+            get { MainThreadCheck.Check("get_sortingLayerName"); return SortingLayer.IDToName(m_SortingLayerID); }
+            set { MainThreadCheck.Check("set_sortingLayerName"); m_SortingLayerID = SortingLayer.NameToID(value); }
         }
 
         public int sortingOrder
@@ -172,7 +243,7 @@ namespace UnityEngine
         {
             get
             { MainThreadCheck.Check("IsPersistent");
-                if (m_Materials.Length == 0) return null;
+                if (m_Materials.Length == 0) m_Materials = new Material[1];
                 m_Materials[0] = Own(m_Materials[0]);
                 return m_Materials[0];
             }
@@ -191,6 +262,12 @@ namespace UnityEngine
 
         Material Own(Material shared)
         {
+            if (shared == null)
+            {
+                var pipeline = GraphicsSettings.currentRenderPipeline;
+                shared = pipeline != null ? pipeline.defaultMaterial : null;
+                shared ??= BuiltinShaders.Resolve(BuiltinShaders.ExtraGuid, BuiltinShaders.DefaultMaterialFileId) as Material;
+            }
             if (shared == null || m_OwnedMaterials.Contains(shared)) return shared;
             var instance = new Material(shared) { name = shared.name + " (Instance)" };
             m_OwnedMaterials.Add(instance);
@@ -327,8 +404,8 @@ namespace UnityEngine
 
         public Bounds localBounds
         {
-            get => m_LocalBoundsOverride ?? GetLocalBounds();
-            set => SetLocalBounds(value);
+            get { MainThreadCheck.Check("get_localBounds"); return m_LocalBoundsOverride ?? GetLocalBounds(); }
+            set { MainThreadCheck.Check("set_localBounds"); SetLocalBounds(value); }
         }
 
         internal virtual void SetLocalBounds(Bounds value) => m_LocalBoundsOverride = value;

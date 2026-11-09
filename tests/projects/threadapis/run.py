@@ -32,7 +32,14 @@ def work(repeat):
     return run_root(PROBE, repeat)
 
 
-def editor(repeat):
+def capture_environment(out, followups=False):
+    env = {key: value for key, value in os.environ.items()
+           if key not in ('THREAD_APIS_OUT', 'THREAD_FOLLOWUP_OUT')}
+    env['THREAD_FOLLOWUP_OUT' if followups else 'THREAD_APIS_OUT'] = str(out)
+    return env
+
+
+def editor(repeat, followups=False):
     out = work(repeat)
     if out.exists():
         sys.exit(f'refusing to overwrite capture: {out}')
@@ -41,7 +48,7 @@ def editor(repeat):
         shutil.copytree(PROBE/part, project/part)
     (project/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+unity_version()+'\n')
     job = EditorJob(project, out/'editor.log', out, ['-executeMethod', 'ProbeRunner.Record'], batch=True,
-                    env={'THREAD_APIS_OUT': str(out/OUT)}, timeout=900, label='threadapis-'+repeat)
+                    env=capture_environment(out/OUT, followups), timeout=900, label='threadapis-'+repeat)
     result = run(job)
     print(summary(result))
     return int(result.get('exit_code') != 0 or bool(result.get('forced_exit')))
@@ -66,18 +73,19 @@ def publish_raycast(repeats):
                              complete=[jsonl_complete('raycast.jsonl', {'complete': True})], gpu=True)
 
 
-def unbound(out, cli):
+def unbound(out, cli, followups=False):
     cli = cli or os.environ.get('UNBOUND') or 'unbound'
     command = [cli, 'run', '-p', str(PROBE), '--headless', '30', '--no-watch']
     if LAUNCHER.exists():
         command = [str(LAUNCHER), '--kind', 'engine-cpu', *command]
-    return subprocess.call(command, env={**os.environ, 'THREAD_APIS_OUT': str(Path(out).resolve())})
+    return subprocess.call(command, env=capture_environment(Path(out).resolve(), followups))
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('command', choices=('editor', 'publish', 'publish-raycast', 'unbound'))
+    parser.add_argument('command', choices=('editor', 'publish', 'publish-raycast', 'publish-followups', 'unbound'))
     parser.add_argument('--repeat')
+    parser.add_argument('--followups', action='store_true')
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--out')
     parser.add_argument('--cli')
@@ -85,14 +93,20 @@ def main():
     if args.command == 'editor':
         if not args.repeat:
             parser.error('editor needs --repeat')
-        return editor(args.repeat)
+        return editor(args.repeat, args.followups)
     if args.command == 'publish':
         return publish(tuple(args.labels) or REPEATS)
+    if args.command == 'publish-followups':
+        def write(target, first):
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(first/OUT, target)
+        return publish_reference([work(r) for r in args.labels], reference_root(PROBE)/'followups.jsonl',
+                                 lambda _: [OUT], write, complete=[jsonl_complete(OUT, {'complete': True})], gpu=True)
     if args.command == 'publish-raycast':
         return publish_raycast(tuple(args.labels))
     if not args.out:
         parser.error('unbound needs --out')
-    return unbound(args.out, args.cli)
+    return unbound(args.out, args.cli, args.followups)
 
 
 if __name__ == '__main__':

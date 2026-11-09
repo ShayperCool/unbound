@@ -669,6 +669,22 @@ class StubGateTests(unittest.TestCase):
 
 
 class PartialRecipeTests(unittest.TestCase):
+    def test_thread_capture_rejects_duplicate_observations_and_trailing_data(self):
+        spec = importlib.util.spec_from_file_location('thread_compare', suite.PROJECTS/'threadapis/compare.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        row = '{"thread":"main","call":"get","result":"ok"}\n'
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)/'capture.jsonl'
+            for content in [row+row+'{"complete":true}\n', row+'{"complete":true}\n'+row]:
+                path.write_text(content)
+                with self.assertRaises(ValueError):
+                    module.load(path)
+            path.write_text(row+'{"complete":true}\n')
+            values, complete = module.load(path)
+            self.assertTrue(complete)
+            self.assertEqual(values, {('main', 'get'): 'ok'})
+
     def test_color_variants_have_independent_settings_outputs_and_comparisons(self):
         table = suite.recipes('6000.0.71f1')
         for name, variants in [('uicolors', ('Linear', 'Gamma')),
