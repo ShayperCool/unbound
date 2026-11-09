@@ -1226,20 +1226,24 @@ pub fn import_audio(handle: u64, guid: &str) -> Result<crate::audio::protocol::A
 
 /// The GPU texels of an imported RGBA8 texture that keeps one channel
 /// ([`ImportedTexture::gpu_channel`](unbound_assets::texture::ImportedTexture::gpu_channel)):
-/// alpha alone (the renderer's Alpha8, sampled (0, 0, 0, a)), red alone and red and green
-/// ([`texture_format::R8_UNORM`], [`texture_format::RG8_UNORM`]: (r, 0, 0, 1), (r, g, 0, 1)),
-/// opaque RGB as (r, g, b, 1). Red and red-green textures `srgb_sampled` (sRGB in a linear
-/// project; in a gamma project they are R8_UNorm and R8G8_UNorm) keep four channels, as R8_SRGB
-/// and R8G8_SRGB sample: (r, 0, 0, 1) and (r, g, 1, 1) (the Unity 6000.0.71f1 Editor,
-/// tests/projects/texturecompression channels.*); the device has no one- or two-channel sRGB
-/// formats. Other textures keep `format` and their data.
+/// alpha alone (the renderer's Alpha8, sampled (0, 0, 0, a)), opaque RGB as (r, g, b, 1), red
+/// and red-green ones in one and two channels ([`texture_format::R8_UNORM`],
+/// [`texture_format::RG8_UNORM`]: (r, 0, 0, 1), (r, g, 0, 1)) where they report R8 or RG16 and
+/// are not `srgb_sampled` (sRGB in a linear project; in a gamma project they are R8_UNorm and
+/// R8G8_UNorm), as the managed side uploads such textures (copies between them need one
+/// storage). Others keep four channels, as R8_SRGB and R8G8_SRGB sample: (r, 0, 0, 1) and
+/// (r, g, 1, 1) (the Unity 6000.0.71f1 Editor, tests/projects/texturecompression channels.*);
+/// the device has no one- or two-channel sRGB formats. Other textures keep `format` and their
+/// data.
 fn single_channel_texels(
     channel: Option<unbound_assets::texture::GpuChannel>,
+    reported: Option<i32>,
     format: i32,
     srgb_sampled: bool,
     mut data: Vec<u8>,
 ) -> (i32, Vec<u8>) {
     use unbound_assets::texture::GpuChannel;
+    use unbound_assets::texture::unity_format::{R8, RG16};
     let keep = |data: &[u8], channels: usize| -> Vec<u8> {
         data.chunks_exact(4)
             .flat_map(|p| p[..channels].iter().copied())
@@ -1250,8 +1254,12 @@ fn single_channel_texels(
             texture_format::ALPHA8,
             data.chunks_exact(4).map(|p| p[3]).collect(),
         ),
-        Some(GpuChannel::Red) if !srgb_sampled => (texture_format::R8_UNORM, keep(&data, 1)),
-        Some(GpuChannel::RedGreen) if !srgb_sampled => (texture_format::RG8_UNORM, keep(&data, 2)),
+        Some(GpuChannel::Red) if !srgb_sampled && reported == Some(R8) => {
+            (texture_format::R8_UNORM, keep(&data, 1))
+        }
+        Some(GpuChannel::RedGreen) if !srgb_sampled && reported == Some(RG16) => {
+            (texture_format::RG8_UNORM, keep(&data, 2))
+        }
         Some(GpuChannel::Red) => {
             for p in data.chunks_exact_mut(4) {
                 p[1] = 0;
@@ -1262,7 +1270,7 @@ fn single_channel_texels(
         }
         Some(GpuChannel::RedGreen) => {
             for p in data.chunks_exact_mut(4) {
-                p[2] = 255;
+                p[2] = if srgb_sampled { 255 } else { 0 };
                 p[3] = 255;
             }
             (format, data)
@@ -1378,7 +1386,13 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
                 data.extend_from_slice(&mip.data);
             }
             let srgb_sampled = format == texture_format::SRGB_RGBA8 && !importer.gamma;
-            single_channel_texels(texture.gpu_channel(), format, srgb_sampled, data)
+            single_channel_texels(
+                texture.gpu_channel(),
+                texture.reported_format(),
+                format,
+                srgb_sampled,
+                data,
+            )
         }
     };
     let wrap = |w: unbound_assets::texture::WrapMode| w as i32;
@@ -1499,43 +1513,50 @@ mod tests {
     fn one_channel_imports_sample_their_channel() {
         use texture_format::{ALPHA8, LINEAR_RGBA8, R8_UNORM, RG8_UNORM, SRGB_RGBA8};
         use unbound_assets::texture::GpuChannel;
+        use unbound_assets::texture::unity_format::{R8, RG16, RGB24};
         let texels = vec![10, 20, 30, 40, 50, 60, 70, 80];
-        let up =
-            |channel, format, srgb| single_channel_texels(channel, format, srgb, texels.clone());
+        let up = |channel, reported, format, srgb| {
+            single_channel_texels(channel, reported, format, srgb, texels.clone())
+        };
+        let (red, red_green) = (Some(GpuChannel::Red), Some(GpuChannel::RedGreen));
         assert_eq!(
-            up(Some(GpuChannel::Alpha), LINEAR_RGBA8, false),
+            up(Some(GpuChannel::Alpha), None, LINEAR_RGBA8, false),
             (ALPHA8, vec![40, 80])
         );
         assert_eq!(
-            up(Some(GpuChannel::Alpha), SRGB_RGBA8, true),
-            (ALPHA8, vec![40, 80])
-        );
-        assert_eq!(
-            up(Some(GpuChannel::Red), LINEAR_RGBA8, false),
+            up(red, Some(R8), LINEAR_RGBA8, false),
             (R8_UNORM, vec![10, 50])
         );
         // An sRGB texture in a gamma project samples its bytes as they are.
         assert_eq!(
-            up(Some(GpuChannel::Red), SRGB_RGBA8, false),
+            up(red, Some(R8), SRGB_RGBA8, false),
             (R8_UNORM, vec![10, 50])
         );
         assert_eq!(
-            up(Some(GpuChannel::Red), SRGB_RGBA8, true),
+            up(red, Some(R8), SRGB_RGBA8, true),
             (SRGB_RGBA8, vec![10, 0, 0, 255, 50, 0, 0, 255])
         );
+        // Red kept by a texture reporting another format (scripts upload it as that) stays RGBA.
         assert_eq!(
-            up(Some(GpuChannel::RedGreen), LINEAR_RGBA8, false),
+            up(red, None, LINEAR_RGBA8, false),
+            (LINEAR_RGBA8, vec![10, 0, 0, 255, 50, 0, 0, 255])
+        );
+        assert_eq!(
+            up(red_green, Some(RG16), LINEAR_RGBA8, false),
             (RG8_UNORM, vec![10, 20, 50, 60])
         );
         assert_eq!(
-            up(Some(GpuChannel::RedGreen), SRGB_RGBA8, true),
+            up(red_green, Some(RG16), SRGB_RGBA8, true),
             (SRGB_RGBA8, vec![10, 20, 255, 255, 50, 60, 255, 255])
         );
         assert_eq!(
-            up(Some(GpuChannel::Opaque), SRGB_RGBA8, true),
+            up(Some(GpuChannel::Opaque), Some(RGB24), SRGB_RGBA8, true),
             (SRGB_RGBA8, vec![10, 20, 30, 255, 50, 60, 70, 255])
         );
-        assert_eq!(up(None, SRGB_RGBA8, true), (SRGB_RGBA8, texels.clone()));
+        assert_eq!(
+            up(None, None, SRGB_RGBA8, true),
+            (SRGB_RGBA8, texels.clone())
+        );
     }
 
     #[test]

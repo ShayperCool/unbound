@@ -235,15 +235,20 @@ namespace UnityEngine
         }
 
         /// <summary>To the renderer: RGBA bytes (single channels sampled as (r, 0, 0, 1) and
-        /// (0, 0, 0, a)), or floats for HDR formats.</summary>
+        /// (0, 0, 0, a)), R8 and RG16 in one and two channels as Texture2D's
+        /// (<see cref="PixelFormats.GpuChannelFormat"/>), or floats for HDR formats.</summary>
         internal unsafe void Upload(ulong handle, bool linear, FilterMode filter, TextureWrapMode wrapU, TextureWrapMode wrapV, TextureWrapMode wrapW, int aniso,
             TextureDimension? dimension = null)
         {
             bool hdr = Hdr;
+            int channels = hdr ? -1 : PixelFormats.GpuChannelFormat(Format, linear);
+            int code = hdr ? PixelFormats.GpuFloatFormat(Format) : channels >= 0 ? channels : linear ? 1 : 0;
+            int texelBytes = hdr ? 16 : PixelFormats.GpuTexelBytes(code);
+            bool blueOne = PixelFormats.SamplesBlueOne(Format, code);
             int texels = 0;
             for (int image = 0; image < Images; image++)
                 for (int mip = 0; mip < Mips; mip++) texels += Size(mip);
-            var data = new byte[texels * (hdr ? 16 : 4)];
+            var data = new byte[texels * texelBytes];
             int at = 0;
             for (int image = 0; image < Images; image++)
                 for (int mip = 0; mip < Mips; mip++)
@@ -263,11 +268,10 @@ namespace UnityEngine
                     {
                         var level = new Color32[Size(mip)];
                         PixelFormats.Decode(Format, Level(image, mip), level);
-                        foreach (var b in level)
-                        {
-                            data[at] = b.r; data[at + 1] = b.g; data[at + 2] = b.b; data[at + 3] = b.a;
-                            at += 4;
-                        }
+                        if (blueOne)
+                            for (int i = 0; i < level.Length; i++) level[i].b = 255;
+                        PixelFormats.GpuTexels(code, level, new Span<byte>(data, at, level.Length * texelBytes));
+                        at += level.Length * texelBytes;
                     }
                 }
             fixed (byte* p = data)
@@ -276,7 +280,7 @@ namespace UnityEngine
                 {
                     Width = Width,
                     Height = Height,
-                    Format = hdr ? PixelFormats.GpuFloatFormat(Format) : linear ? 1 : 0,
+                    Format = code,
                     MipCount = Mips,
                     Data = p,
                     DataLength = data.Length,

@@ -2605,6 +2605,7 @@ impl UnityRenderer {
                     if clear_color {
                         self.mark_msaa_written(&target);
                     }
+                    let color = resources::unorm8_clear(target.format, color);
                     let clear_depth =
                         flags & (commands::clear::DEPTH | commands::clear::STENCIL) != 0;
                     let viewport = self.state.viewport;
@@ -3484,6 +3485,8 @@ impl UnityRenderer {
             wgpu::TextureFormat::R8Snorm => texture_format::R8_SNORM,
             wgpu::TextureFormat::Rg8Snorm => texture_format::RG8_SNORM,
             wgpu::TextureFormat::Rgba8Snorm => texture_format::RGBA8_SNORM,
+            wgpu::TextureFormat::R8Unorm => texture_format::R8_UNORM,
+            wgpu::TextureFormat::Rg8Unorm => texture_format::RG8_UNORM,
             f => resources::integer_code(f).unwrap_or(0),
         };
         let next = handle::PLAIN_MAX - self.grabs.len() as u64;

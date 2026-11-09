@@ -511,6 +511,8 @@ pub struct NormFormatCaps {
     pub r8snorm: Option<wgpu::TextureFormatFeatures>,
     pub rg8snorm: Option<wgpu::TextureFormatFeatures>,
     pub rgba8snorm: Option<wgpu::TextureFormatFeatures>,
+    pub r8: Option<wgpu::TextureFormatFeatures>,
+    pub rg8: Option<wgpu::TextureFormatFeatures>,
     /// The [`INTEGER_FORMATS`] kernels may read and write (bit `i` for the `i`th).
     pub integer_storage: u32,
 }
@@ -560,6 +562,20 @@ pub fn is_integer(format: wgpu::TextureFormat) -> bool {
     )
 }
 
+/// A clear color for a one- or two-channel 8-bit normalized target: each channel at its nearest
+/// step, halves down (0.5 stores 127 and 0.25 stores 64, as the Editor's R8G8_UNorm does,
+/// tests/projects/renderapi `volumeReadback.*.RG16`, and as Unbound's RGBA8 targets do; this
+/// device's R8 and RG8 clears round halves up). Other formats keep the color.
+pub fn unorm8_clear(format: wgpu::TextureFormat, color: [f32; 4]) -> [f32; 4] {
+    if !matches!(
+        format,
+        wgpu::TextureFormat::R8Unorm | wgpu::TextureFormat::Rg8Unorm
+    ) {
+        return color;
+    }
+    color.map(|v| (v.clamp(0.0, 1.0) * 255.0 - 0.5).ceil().max(0.0) / 255.0)
+}
+
 /// A clear color as an integer target stores it: each channel's float bits as a signed or
 /// unsigned integer, clamped to the channel's range (measured on the Editor's OpenGLCore device:
 /// 3.0 clears R32_SInt to 0x40400000 and R8_SInt to 127, tests/projects/textureformats
@@ -599,6 +615,8 @@ impl NormFormatCaps {
         r8snorm: None,
         rg8snorm: None,
         rgba8snorm: None,
+        r8: None,
+        rg8: None,
         integer_storage: 0,
     };
 
@@ -621,6 +639,8 @@ impl NormFormatCaps {
             r8snorm: Some(features(wgpu::TextureFormat::R8Snorm)),
             rg8snorm: Some(features(wgpu::TextureFormat::Rg8Snorm)),
             rgba8snorm: Some(features(wgpu::TextureFormat::Rgba8Snorm)),
+            r8: Some(features(wgpu::TextureFormat::R8Unorm)),
+            rg8: Some(features(wgpu::TextureFormat::Rg8Unorm)),
             integer_storage: INTEGER_FORMATS
                 .iter()
                 .enumerate()
@@ -671,9 +691,11 @@ pub fn norm_format(
         texture_format::R8_SNORM => (F::R8Snorm, caps.r8snorm),
         texture_format::RG8_SNORM => (F::Rg8Snorm, caps.rg8snorm),
         texture_format::RGBA8_SNORM => (F::Rgba8Snorm, caps.rgba8snorm),
+        texture_format::R8_UNORM => (F::R8Unorm, caps.r8),
+        texture_format::RG8_UNORM => (F::Rg8Unorm, caps.rg8),
         _ => {
             return Err(format!(
-                "format code {code} is not a normalized 16-bit, 10-10-10-2 or signed normalized 8-bit code"
+                "format code {code} is not a normalized 16-bit, 10-10-10-2, signed normalized 8-bit or one- or two-channel 8-bit code"
             ));
         }
     };
@@ -768,7 +790,9 @@ pub fn texture_storage(
         4 if packed && !t.random_write => stored(wgpu::TextureFormat::Rg11b10Ufloat, 4),
         4 => stored(wgpu::TextureFormat::Rgba16Float, 8),
         texture_format::RG16_UNORM..=texture_format::R16_UNORM
-        | texture_format::R8_SNORM..=texture_format::RGBA8_SNORM => {
+        | texture_format::R8_SNORM..=texture_format::RGBA8_SNORM
+        | texture_format::R8_UNORM
+        | texture_format::RG8_UNORM => {
             // Where the device cannot keep them, linear RGBA8: what they were before they had
             // codes of their own.
             match norm_format(t.format, caps, t.render_target, t.random_write, samples) {
@@ -794,8 +818,6 @@ pub fn texture_storage(
                 }
             }
         }
-        texture_format::R8_UNORM => stored(wgpu::TextureFormat::R8Unorm, 1),
-        texture_format::RG8_UNORM => stored(wgpu::TextureFormat::Rg8Unorm, 2),
         _ if compressed.is_some() => stored(compressed.unwrap(), 0),
         _ => stored(wgpu::TextureFormat::Rgba8Unorm, 4),
     }
@@ -1361,6 +1383,17 @@ pub fn upload_texture_with(
                         converted = src.iter().flat_map(|&a| [0, 0, 0, a]).collect::<Vec<u8>>();
                         &converted
                     }
+                    // Kept as RGBA8 where the device has no R8/RG8 storage for this use.
+                    texture_format::R8_UNORM | texture_format::RG8_UNORM
+                        if format == wgpu::TextureFormat::Rgba8Unorm =>
+                    {
+                        let n = texture_format::byte_texel(t.format);
+                        converted = src
+                            .chunks_exact(n)
+                            .flat_map(|p| [p[0], if n == 2 { p[1] } else { 0 }, 0, 255])
+                            .collect::<Vec<u8>>();
+                        &converted
+                    }
                     // Normalized integers from floats, in the format the texture is stored in.
                     texture_format::RG16_UNORM..=texture_format::R16_UNORM
                     | texture_format::R8_SNORM..=texture_format::RGBA8_SNORM => {
@@ -1609,6 +1642,8 @@ mod tests {
             r8snorm: full(),
             rg8snorm: full(),
             rgba8snorm: full(),
+            r8: full(),
+            rg8: full(),
             integer_storage: (1 << 18) - 1,
         }
     }
@@ -1726,6 +1761,19 @@ mod tests {
             assert_eq!((s.format, s.bytes_per_pixel), (format, bytes));
             assert!(s.fallback.is_none());
             assert_eq!(texture_format::byte_texel(code), bytes as usize);
+            // Render textures of the format share it (copies between them and textures).
+            assert_eq!(stored(code, true, false, 4, &full_caps()).format, format);
+            let none = NormFormatCaps {
+                r8: None,
+                rg8: None,
+                ..full_caps()
+            };
+            let s = stored(code, false, false, 1, &none);
+            assert_eq!(
+                (s.format, s.bytes_per_pixel),
+                (wgpu::TextureFormat::Rgba8Unorm, 4)
+            );
+            assert!(matches!(s.fallback, Some(FormatFallback::Unsupported(_))));
         }
     }
 
@@ -1753,6 +1801,8 @@ mod tests {
             r8snorm: full(),
             rg8snorm: full(),
             rgba8snorm: full(),
+            r8: full(),
+            rg8: full(),
             integer_storage: 0,
         };
         for code in [13, 14, 16] {
@@ -1794,6 +1844,8 @@ mod tests {
             r8snorm: guaranteed(F::R8Snorm, Features::empty()),
             rg8snorm: guaranteed(F::Rg8Snorm, Features::empty()),
             rgba8snorm: guaranteed(F::Rgba8Snorm, Features::empty()),
+            r8: full(),
+            rg8: full(),
             integer_storage: 0,
         };
         for code in [13, 14, 16] {
@@ -1856,6 +1908,8 @@ mod tests {
                 r8snorm: features,
                 rg8snorm: features,
                 rgba8snorm: features,
+                r8: full(),
+                rg8: full(),
                 integer_storage: 0,
             };
             for code in [13, 14, 15, 16] {
@@ -1878,6 +1932,8 @@ mod tests {
             r8snorm: full(),
             rg8snorm: full(),
             rgba8snorm: full(),
+            r8: full(),
+            rg8: full(),
             integer_storage: 0,
         };
         for code in [13, 14, 16] {
@@ -1899,6 +1955,8 @@ mod tests {
             r8snorm: full(),
             rg8snorm: full(),
             rgba8snorm: full(),
+            r8: full(),
+            rg8: full(),
             integer_storage: 0,
         };
         for code in [13, 14, 16] {
@@ -2058,5 +2116,11 @@ mod tests {
         assert_eq!((c.g, c.b), (0xc000_0000u32 as f64, 0x447a_2000 as f64));
         assert_eq!(integer_clear(F::Rgba8Uint, color).a, 255.0);
         assert_eq!(integer_clear(F::Rgba8Unorm, color), color);
+        let half = [0.25, 0.5, 2.0, -1.0];
+        assert_eq!(unorm8_clear(F::Rgba8Unorm, half), half);
+        assert_eq!(
+            unorm8_clear(F::Rg8Unorm, half),
+            [64.0 / 255.0, 127.0 / 255.0, 1.0, 0.0]
+        );
     }
 }

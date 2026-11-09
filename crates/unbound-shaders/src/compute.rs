@@ -232,6 +232,7 @@ fn storage_format(name: &str) -> Option<naga::StorageFormat> {
     use naga::StorageFormat as F;
     Some(match name {
         "R8Unorm" => F::R8Unorm,
+        "Rg8Unorm" => F::Rg8Unorm,
         "R16Unorm" => F::R16Unorm,
         "R16Float" => F::R16Float,
         "R32Float" => F::R32Float,

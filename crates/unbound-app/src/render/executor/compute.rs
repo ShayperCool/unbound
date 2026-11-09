@@ -324,6 +324,7 @@ fn storage_format_name(format: wgpu::TextureFormat) -> Option<&'static str> {
     use wgpu::TextureFormat as F;
     Some(match format.remove_srgb_suffix() {
         F::R8Unorm => "R8Unorm",
+        F::Rg8Unorm => "Rg8Unorm",
         F::R16Unorm => "R16Unorm",
         F::R16Float => "R16Float",
         F::R32Float => "R32Float",
@@ -365,6 +366,7 @@ fn wgpu_storage_format(name: &str) -> wgpu::TextureFormat {
     use wgpu::TextureFormat as F;
     match name {
         "R8Unorm" => F::R8Unorm,
+        "Rg8Unorm" => F::Rg8Unorm,
         "R16Unorm" => F::R16Unorm,
         "R16Float" => F::R16Float,
         "R32Float" => F::R32Float,
@@ -1499,6 +1501,7 @@ mod tests {
         // Every named format binds as itself.
         for format in [
             F::R8Unorm,
+            F::Rg8Unorm,
             F::R16Float,
             F::R32Float,
             F::R32Uint,

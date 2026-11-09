@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using Unbound.Runtime;
 using UnityEngine.Experimental.Rendering;
@@ -596,6 +597,7 @@ namespace UnityEngine
             m_Raw = null;
             m_MipPixels = null;
             m_MipHdr = null;
+            m_GpuTexels = null;
         }
 
         /// <summary>RGBA float wire data; the renderer stores the declared component format.</summary>
@@ -630,7 +632,7 @@ namespace UnityEngine
         {
             m_GpuMipCount = m_MipCount;
             int format = GpuByteFormat();
-            if (m_Format != TextureFormat.RGBA32 && GpuTexelBytes(format) == 4)
+            if (m_Format != TextureFormat.RGBA32 && PixelFormats.GpuTexelBytes(format) == 4)
             {
                 DecodeRaw();
                 if (m_Hdr != null) UploadHdr();
@@ -658,60 +660,35 @@ namespace UnityEngine
             UploadTexture(&packet);
         }
 
-        /// <summary>The renderer's format code for 8-bit texels: Alpha8 alone (sampled (0, 0, 0,
-        /// a)), R8 and RG16 in one and two channels (sampled (r, 0, 0, 1) and (r, g, 0, 1)) unless
-        /// sampled through an sRGB view (R8_SRGB and R8G8_SRGB: an sRGB texture in a linear
-        /// project; in a gamma project they are R8_UNorm and R8G8_UNorm), which the device has no
-        /// one- or two-channel formats for; other formats as RGBA8 (the Unity 6000.0.71f1 Editor,
-        /// tests/projects/texturecompression channels.*).</summary>
+        /// <summary>The renderer's format code for 8-bit texels: Alpha8 alone, R8 and RG16 in one
+        /// and two channels unless sampled through an sRGB view
+        /// (<see cref="PixelFormats.GpuChannelFormat"/>), other formats as RGBA8.</summary>
         internal int GpuByteFormat()
         {
-            bool srgbSampled = !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear;
-            return m_Format switch
-            {
-                TextureFormat.Alpha8 => GpuAlpha8,
-                TextureFormat.R8 when !srgbSampled => GpuR8,
-                TextureFormat.RG16 when !srgbSampled => GpuRG8,
-                _ => m_Linear ? 1 : 0,
-            };
+            if (m_Format == TextureFormat.Alpha8) return PixelFormats.GpuAlpha8;
+            int channels = PixelFormats.GpuChannelFormat(m_Format, m_Linear);
+            return channels >= 0 ? channels : m_Linear ? 1 : 0;
         }
 
-        // The renderer's 8-bit format codes with fewer than four channels.
-        const int GpuAlpha8 = 3, GpuR8 = 45, GpuRG8 = 46;
-
-        /// <summary>Bytes per texel of a <see cref="GpuByteFormat"/> code's upload data.</summary>
-        static int GpuTexelBytes(int format) => format switch
-        {
-            GpuAlpha8 or GpuR8 => 1,
-            GpuRG8 => 2,
-            _ => 4,
-        };
+        /// <summary>The one- and two-channel upload texels of the last <see cref="UploadPixels"/>.</summary>
+        byte[] m_GpuTexels;
 
         unsafe void UploadPixels()
         {
             m_GpuMipCount = m_MipCount;
             var pixels = UploadByteChain();
             int format = GpuByteFormat();
-            int bytes = GpuTexelBytes(format);
+            int bytes = PixelFormats.GpuTexelBytes(format);
             if (bytes < 4)
             {
-                // The cells hold what the GPU samples: (0, 0, 0, a), (r, 0, 0, 1), (r, g, 0, 1).
-                var texels = new byte[pixels.Length * bytes];
-                if (format == GpuAlpha8)
-                    for (int i = 0; i < pixels.Length; i++) texels[i] = pixels[i].a;
-                else
-                    for (int i = 0; i < pixels.Length; i++)
-                    {
-                        texels[i * bytes] = pixels[i].r;
-                        if (bytes == 2) texels[i * 2 + 1] = pixels[i].g;
-                    }
-                fixed (byte* t = texels) UploadByteTexels(format, t, texels.Length);
+                // Reused across uploads (textures applied every frame).
+                if (m_GpuTexels?.Length != pixels.Length * bytes) m_GpuTexels = new byte[pixels.Length * bytes];
+                PixelFormats.GpuTexels(format, pixels, m_GpuTexels);
+                fixed (byte* t = m_GpuTexels) UploadByteTexels(format, t, m_GpuTexels.Length);
                 return;
             }
-            if (m_Format == TextureFormat.RG16)
+            if (PixelFormats.SamplesBlueOne(m_Format, format))
             {
-                // Sampled through an sRGB view (R8G8_SRGB): blue samples one (the Unity
-                // 6000.0.71f1 Editor, tests/projects/texturecompression channels.RG16.srgb).
                 if (ReferenceEquals(pixels, m_Pixels)) pixels = (Color32[])pixels.Clone();
                 for (int i = 0; i < pixels.Length; i++) pixels[i].b = 255;
             }
@@ -964,8 +941,69 @@ namespace Unbound.Runtime
         internal const int GpuRG16UNorm = 13, GpuRGBA16UNorm = 14, GpuRGB10A2UNorm = 15, GpuR16UNorm = 16,
             GpuR8SNorm = 35, GpuRG8SNorm = 36, GpuRGBA8SNorm = 37;
 
-        /// <summary>The packet format of a normalized 16-bit, 10-10-10-2 or signed normalized 8-bit
-        /// graphics format, or -1. Textures and render textures of one format share it (copies
+        /// <summary>Packet formats of 8-bit texels with fewer than four channels: Alpha8 (one
+        /// byte, sampled (0, 0, 0, a); the renderer keeps it as RGBA8), R8_UNorm and R8G8_UNorm
+        /// (one and two bytes, sampled (r, 0, 0, 1) and (r, g, 0, 1); kept in their channels where
+        /// the device can, else as linear RGBA8 with a warning).</summary>
+        internal const int GpuAlpha8 = 3, GpuR8UNorm = 45, GpuRG8UNorm = 46;
+
+        /// <summary>The packet format of R8 and RG16 texels sampled without sRGB decoding (linear
+        /// ones, and sRGB ones in a gamma project: R8_UNorm and R8G8_UNorm there), or -1. R8_SRGB
+        /// and R8G8_SRGB (sRGB in a linear project) stay RGBA8 sampled through an sRGB view: the
+        /// device has no one- or two-channel sRGB formats (the Unity 6000.0.71f1 Editor,
+        /// tests/projects/texturecompression channels.*).</summary>
+        internal static int GpuChannelFormat(UnityEngine.TextureFormat format, bool linear)
+        {
+            if (!linear && UnityEngine.QualitySettings.activeColorSpace == UnityEngine.ColorSpace.Linear) return -1;
+            return format switch
+            {
+                UnityEngine.TextureFormat.R8 => GpuR8UNorm,
+                UnityEngine.TextureFormat.RG16 => GpuRG8UNorm,
+                _ => -1,
+            };
+        }
+
+        /// <summary>Whether texels of `format` uploaded as `packet` (RGBA8) sample blue one: RG16
+        /// sampled through an sRGB view, as R8G8_SRGB samples (the Unity 6000.0.71f1 Editor,
+        /// tests/projects/texturecompression channels.RG16.srgb).</summary>
+        internal static bool SamplesBlueOne(UnityEngine.TextureFormat format, int packet) =>
+            format == UnityEngine.TextureFormat.RG16 && packet == 0;
+
+        /// <summary>Bytes per texel of an 8-bit packet format's upload data.</summary>
+        internal static int GpuTexelBytes(int format) => format switch
+        {
+            GpuAlpha8 or GpuR8UNorm => 1,
+            GpuRG8UNorm => 2,
+            _ => 4,
+        };
+
+        /// <summary>The upload texels of an 8-bit packet format from cells that hold what the GPU
+        /// samples ((0, 0, 0, a), (r, 0, 0, 1), (r, g, 0, 1)): alpha, red, red and green.</summary>
+        internal static void GpuTexels(int format, ReadOnlySpan<UnityEngine.Color32> cells, Span<byte> into)
+        {
+            switch (format)
+            {
+                case GpuAlpha8:
+                    for (int i = 0; i < cells.Length; i++) into[i] = cells[i].a;
+                    break;
+                case GpuR8UNorm:
+                    for (int i = 0; i < cells.Length; i++) into[i] = cells[i].r;
+                    break;
+                case GpuRG8UNorm:
+                    for (int i = 0; i < cells.Length; i++)
+                    {
+                        into[i * 2] = cells[i].r;
+                        into[i * 2 + 1] = cells[i].g;
+                    }
+                    break;
+                default:
+                    MemoryMarshal.AsBytes(cells).CopyTo(into);
+                    break;
+            }
+        }
+
+        /// <summary>The packet format of a normalized 16-bit, 10-10-10-2, signed normalized 8-bit or
+        /// one- or two-channel normalized 8-bit graphics format, or -1. Textures and render textures of one format share it (copies
         /// between them need it).</summary>
         internal static int GpuNormFormat(UnityEngine.Experimental.Rendering.GraphicsFormat format) => format switch
         {
@@ -976,6 +1014,8 @@ namespace Unbound.Runtime
             UnityEngine.Experimental.Rendering.GraphicsFormat.R8_SNorm => GpuR8SNorm,
             UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8_SNorm => GpuRG8SNorm,
             UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_SNorm => GpuRGBA8SNorm,
+            UnityEngine.Experimental.Rendering.GraphicsFormat.R8_UNorm => GpuR8UNorm,
+            UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8_UNorm => GpuRG8UNorm,
             _ => -1,
         };
 

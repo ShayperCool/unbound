@@ -200,6 +200,18 @@ namespace UnityEngine.Tests
             bool gamma = QualitySettings.activeColorSpace == ColorSpace.Gamma;
             Assert.Equal(gamma ? 45 : 0, Code(TextureFormat.R8, false));
             Assert.Equal(gamma ? 46 : 0, Code(TextureFormat.RG16, false));
+            // Render textures of the same formats share the storage, so copies between them work.
+            foreach (var (format, code) in new[] { (RenderTextureFormat.R8, 45), (RenderTextureFormat.RG16, 46) })
+            {
+                var rt = new RenderTexture(4, 4, 0, format) { hideFlags = HideFlags.HideAndDontSave };
+                Assert.Equal(code, rt.PacketFormat());
+                Object.DestroyImmediate(rt);
+            }
+            Assert.Equal(45, PixelFormats.GpuChannelFormat(TextureFormat.R8, true));
+            Assert.Equal(-1, PixelFormats.GpuChannelFormat(TextureFormat.Alpha8, true));
+            var texels = new byte[4];
+            PixelFormats.GpuTexels(46, new[] { new Color32(1, 2, 0, 255), new Color32(3, 4, 0, 255) }, texels);
+            Assert.Equal(new byte[] { 1, 2, 3, 4 }, texels);
         }
 
         /// <summary>The engine's own reads of an unreadable compressed texture (particle shapes,

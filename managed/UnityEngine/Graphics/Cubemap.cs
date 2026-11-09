@@ -320,12 +320,24 @@ namespace UnityEngine
         bool IsHdr => m_Format is TextureFormat.RGBAHalf or TextureFormat.RGBAFloat or TextureFormat.RGB9e5Float or TextureFormat.BC6H
             or TextureFormat.RHalf or TextureFormat.RGHalf or TextureFormat.RFloat or TextureFormat.RGFloat;
 
+        /// <summary>The renderer's format: floats for HDR formats, R8 and RG16 in one and two
+        /// channels as Texture2D's (<see cref="PixelFormats.GpuChannelFormat"/>), else RGBA8.</summary>
+        int PacketFormat()
+        {
+            if (IsHdr) return PixelFormats.GpuFloatFormat(m_Format);
+            int channels = PixelFormats.GpuChannelFormat(m_Format, m_Linear);
+            return channels >= 0 ? channels : m_Linear ? 1 : 0;
+        }
+
         unsafe void Upload()
         {
             bool hdr = IsHdr;
+            int packet = PacketFormat();
+            int texelBytes = hdr ? 16 : PixelFormats.GpuTexelBytes(packet);
+            bool blueOne = PixelFormats.SamplesBlueOne(m_Format, packet);
             int pixels = 0;
             for (int m = 0; m < m_MipCount; m++) { int s = Math.Max(1, m_Width >> m); pixels += s * s; }
-            var data = new byte[pixels * 6 * (hdr ? 16 : 4)];
+            var data = new byte[pixels * 6 * texelBytes];
             int at = 0;
             for (int f = 0; f < 6; f++)
                 for (int m = 0; m < m_MipCount; m++)
@@ -347,8 +359,9 @@ namespace UnityEngine
                         else
                         {
                             Color32 b = c;
-                            data[at] = b.r; data[at + 1] = b.g; data[at + 2] = b.b; data[at + 3] = b.a;
-                            at += 4;
+                            if (blueOne) b.b = 255;
+                            PixelFormats.GpuTexels(packet, new ReadOnlySpan<Color32>(in b), new Span<byte>(data, at, texelBytes));
+                            at += texelBytes;
                         }
                     }
                 }
@@ -364,7 +377,7 @@ namespace UnityEngine
                 {
                     Width = m_Width,
                     Height = m_Height,
-                    Format = IsHdr ? PixelFormats.GpuFloatFormat(m_Format) : m_Linear ? 1 : 0,
+                    Format = PacketFormat(),
                     MipCount = m_MipCount,
                     Data = p,
                     DataLength = data?.Length ?? 0,
