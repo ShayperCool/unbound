@@ -99,6 +99,32 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "first", "enabled", "late" }, s_Calls);
         }
 
+        /// <summary>The results of a frame's culling serve a later frame's emptied: a culling after
+        /// the frame ends sees only what it culls.</summary>
+        [Fact]
+        public void ALaterFramesCullingStartsEmpty()
+        {
+            var cube = Cube("seen", Vector3.zero, script: false);
+            var cameraObject = new GameObject("camera");
+            m_Objects.Add(cameraObject);
+            var camera = cameraObject.AddComponent<Camera>();
+            camera.transform.position = new Vector3(0, 0, -10);
+            camera.cullingMask = 1 << Layer;
+            try
+            {
+                Assert.True(camera.TryGetCullingParameters(out var parameters));
+                var first = Culling.Get(Culling.Cull(ref parameters));
+                Assert.Contains(cube.GetComponent<Renderer>(), first.Visible);
+                Culling.EndFrame();
+                cube.SetActive(false);
+                var second = Culling.Get(Culling.Cull(ref parameters));
+                Assert.Empty(second.Visible);
+                Assert.Empty(second.Renderers);
+                Assert.Same(camera, second.Camera);
+            }
+            finally { Culling.EndFrame(); }
+        }
+
         /// <summary>A script that culls a camera from OnWillRenderObject (a reflection camera)
         /// gets the nested pass's messages; the outer pass still tells the objects after it.</summary>
         [Fact]

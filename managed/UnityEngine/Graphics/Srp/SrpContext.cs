@@ -862,6 +862,24 @@ namespace Unbound.Runtime
             if (OffscreenVertexLights.IsCreated) OffscreenVertexLights.Dispose();
             if (Probes.IsCreated) Probes.Dispose();
         }
+
+        /// <summary>Disposed and emptied, as a new one, for a later culling to fill (its lists keep
+        /// their capacity).</summary>
+        internal void Reset()
+        {
+            Dispose();
+            Camera = null;
+            Parameters = default;
+            Renderers.Clear();
+            Visible.Clear();
+            Queued.Clear();
+            QueuedVisible.Clear();
+            Lights = default;
+            OffscreenVertexLights = default;
+            Probes = default;
+            LightIndexMap = null;
+            ProbeIndexMap = null;
+        }
     }
 
     /// <summary>Culling: the renderers a camera's mask sees and the enabled lights that reach the
@@ -876,7 +894,11 @@ namespace Unbound.Runtime
         internal static IntPtr Cull(ref ScriptableCullingParameters parameters)
         {
             var camera = ObjectRegistry.FindById(parameters.m_CameraInstanceId) as Camera;
-            var data = new CullingData { Camera = camera, Parameters = parameters };
+            // Results live until the frame ends (they are found only by their id), then serve
+            // later cullings.
+            var data = s_Free.Count > 0 ? s_Free.Pop() : new CullingData();
+            data.Camera = camera;
+            data.Parameters = parameters;
             uint mask = parameters.cullingMask;
             // As in the built-in pipeline's culling (not measured in a scriptable pipeline).
             CullingGroup.EvaluateForCamera(camera);
@@ -977,9 +999,15 @@ namespace Unbound.Runtime
         /// <summary>Frees the frame's culling results (each frame's end). Renderers no culling
         /// and no shadow caster list took become invisible early in the next frame
         /// (<see cref="Renderer.NotifyInvisible"/>).</summary>
+        static readonly Stack<CullingData> s_Free = new Stack<CullingData>();
+
         internal static void EndFrame()
         {
-            foreach (var data in s_Results.Values) data.Dispose();
+            foreach (var data in s_Results.Values)
+            {
+                data.Reset();
+                s_Free.Push(data);
+            }
             s_Results.Clear();
             RendererLists.EndFrame();
         }
