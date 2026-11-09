@@ -321,10 +321,11 @@ namespace UnityEngine
             if (turn < -Mathf.PI) turn += 2f * Mathf.PI;
             if (turn > Mathf.PI) turn -= 2f * Mathf.PI;
             var p = m_Points[i];
-            // The inner side: the opposite of the turn's sign, mirrored behind the camera. Only the
-            // sign bit counts: -0 and the NaN of a side without direction (a TransformZ segment along
-            // the frame's z axis) turn like a negative turn (tests/projects/lines edge.*.zParallel).
-            float inner = float.IsNegative(turn) ? 1f : -1f;
+            // The inner side: the opposite of the turn's sign, mirrored behind the camera. -0 and the
+            // NaN of a side without direction (a TransformZ segment along the frame's z axis) turn
+            // like a negative turn, whatever sign the platform gives that NaN (tests/projects/lines
+            // edge.*.zParallel).
+            float inner = float.IsNegative(turn) || float.IsNaN(turn) ? 1f : -1f;
             if (p.z > 0f) inner = -inner;
             var miter = m_Miter[i - 1];
             var center = new Vector2(p.x + miter.x * inner * half, p.y + miter.y * inner * half);
