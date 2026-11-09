@@ -171,7 +171,7 @@ colour as set (0.3 r + 0.59 g + 0.11 b) times the intensity, a local light's div
 plus 1000 for Important and minus 1000 for Not Important; `unity_LightData.y` counts every light that
 reaches the object (10 for ten lights; `unity_LightIndices` holds the first eight) and `.z` is 0 without
 a main light or when its culling mask leaves out the object's layer. A spot light reaches only what its
-cone touches. Visible lights need an intensity of at least 0.001 and a culling mask that shares a layer
+spot touches (pointing away or beside the quad, it does not). Visible lights need an intensity of at least 0.001 and a culling mask that shares a layer
 with the camera's; the local ones come spot lights first, then point lights, each the nearest to the
 camera first, and with URP's limit (33 here) the nearest stay. The directional lights' order among
 themselves is not recorded (it is not sorted).

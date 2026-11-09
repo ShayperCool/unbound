@@ -19,7 +19,8 @@ using UnityEngine.Rendering.Universal;
 /// <item><c>unity_LightData</c> and <c>object</c>: the quad's per-object lights, in order (named by
 /// their additional light position or direction).</item>
 /// </list>
-/// The cases: per-object order by colour (luminance of the light's colour times its intensity),
+/// The cases: per-object order by colour (luminance of the light's colour as set, colour
+/// temperature aside, times its intensity),
 /// by distance and range, by render mode (Important first, Not Important last), additional
 /// directional lights (shadows weigh), more lights than eight with a main light, the light's
 /// culling mask and intensity, spot lights that reach the object's bounds only with their cone,
@@ -153,6 +154,15 @@ public class LightOrderProbe : ScriptableRendererFeature
             camera.cullingMask = 1 << DumpLayer;
         }
 
+        // The colour as set, not the colour the light gives shaders: a white light at 1000 K
+        // (orange as drawn, URP using colour temperatures) against a 0.7 gray one, equally far.
+        Case("color_temperature", center, () =>
+        {
+            var warm = Add("Warm1000K", LightType.Point, center + Around(0), Color.white, 1f, 5f);
+            warm.useColorTemperature = true;
+            warm.colorTemperature = 1000f;
+            Add("Gray07", LightType.Point, center + Around(1), new Color(0.7f, 0.7f, 0.7f), 1f, 5f);
+        });
         // Equal distance and intensity: the colour's luminance (0.3 r + 0.59 g + 0.11 b) ranks
         // them, not its sum; ten lights, eight per object.
         Case("luminance", center, () =>

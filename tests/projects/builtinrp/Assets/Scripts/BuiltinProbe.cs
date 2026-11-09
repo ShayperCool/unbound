@@ -828,6 +828,34 @@ public class BuiltinProbe : MonoBehaviour
         Clear();
     }
 
+    // ------------------------------------------------------------------ light ranking
+
+    /// <summary>Which of an object's lights the one pixel light slot (pixelLightCount 1) takes:
+    /// an extra directional light without shadows against a closer, brighter point light
+    /// (light_rank_directional), and a gray and a red point light at one place
+    /// (light_rank_color: the colours' luminance as set, 0.5 against 0.3; linear, 0.21 against 0.3).</summary>
+    void LightRanking()
+    {
+        int pixelLights = QualitySettings.pixelLightCount;
+        QualitySettings.pixelLightCount = 1;
+        Stage(Standard(Color.white));
+        Directional(new Vector3(50f, -30f, 0f), Color.white, 0.5f);
+        Directional(new Vector3(40f, 150f, 0f), new Color(0.2f, 0.4f, 1f), 0.3f);
+        Point(new Vector3(0f, 1f, -0.5f), new Color(1f, 0.3f, 0.2f), 4f, 1.5f);
+        var camera = MakeCamera();
+        Capture(camera, "light_rank_directional");
+        Clear();
+
+        Stage(Standard(Color.white));
+        Directional(new Vector3(50f, -30f, 0f), Color.white, 0.3f);
+        Point(new Vector3(0f, 1.2f, -0.6f), new Color(0.5f, 0.5f, 0.5f), 4f, 1f);
+        Point(new Vector3(0f, 1.2f, -0.6f), Color.red, 4f, 1f);
+        camera = MakeCamera();
+        Capture(camera, "light_rank_color");
+        Clear();
+        QualitySettings.pixelLightCount = pixelLights;
+    }
+
     // ------------------------------------------------------------------ shader LOD
 
     void ShaderLod()
@@ -941,6 +969,7 @@ public class BuiltinProbe : MonoBehaviour
             PropertyBlocks();
             DrawMeshes();
             MainLight();
+            LightRanking();
             ShaderLod();
             yield return Motion();
             yield return MotionAuto();

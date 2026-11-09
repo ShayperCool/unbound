@@ -24,7 +24,11 @@ transparents along a custom axis, (0, 1, 0)):
   from script, sprite sort points, renderer priority), **render texture assets** (`rt.*`, `rt_asset`:
   a camera rendering into one), **per-material property blocks** (`property_blocks`, `blocks.*`),
   **Graphics.DrawMesh** lighting and shadows (`draw_mesh`), the **main light**'s culling mask and
-  cookie (`main_light_*`), **SubShader LODs** (`lod.*`).
+  cookie (`main_light_*`), **light ranking** with one pixel light (`light_rank_directional`: an extra
+directional light without shadows against a closer, brighter point light, which takes the pixel slot
+and fades into a vertex light by how near its rank is to its neighbours'; `light_rank_color`: a gray
+and a red point light at one place, ranked by the colour as set, not linearized),
+**SubShader LODs** (`lod.*`).
 
 `ProbeRunner.Create` made the scene and the assets in `Assets/Resources` (the Editor wrote them).
 

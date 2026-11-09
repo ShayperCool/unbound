@@ -1,3 +1,7 @@
+{"key":"color_temperature visible","value":"Warm1000K,Gray07"}
+{"key":"color_temperature main","value":"(none)"}
+{"key":"color_temperature unity_LightData","value":[0,2,0,0]}
+{"key":"color_temperature object","value":"Warm1000K,Gray07"}
 {"key":"luminance visible","value":"Red,Green,Blue,Yellow,Cyan,Magenta,White,Gray,Violet,DarkGreen"}
 {"key":"luminance main","value":"(none)"}
 {"key":"luminance unity_LightData","value":[0,10,0,0]}

@@ -30,6 +30,6 @@ light command buffer at `AfterScreenspaceMask`. `shadow_shadows_only`: a `Shadow
 its shadow and is not drawn; `shadow_two_sided`: of two quads turned away from the sun, only the
 `TwoSided` one shades the ground.
 
-What still differs: `five_points` (which of five lights becomes the vertex light of the large
-ground plane), `textures_spot` and the spot cone's edge in `spot`/`shadow_spot` (the default spot
+`five_points` follows the forward lights' ranking and fades (tests/projects/builtinrp
+`light_rank_*`). What still differs: `textures_spot` and the spot cone's edge in `spot`/`shadow_spot` (the default spot
 cookie is a fitted curve, within 2/255 on average).
