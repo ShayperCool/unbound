@@ -9,6 +9,7 @@ first two parts, e.g. `HumanA.handler`); exits non-zero on any difference.
 import collections
 import json
 import math
+import os
 import sys
 
 TOLERANCE = 2e-4
@@ -54,13 +55,29 @@ def section(key):
     return '.'.join(key.split('.')[:2])
 
 
+def read_known(path):
+    """Known differences (known.json): per class a reason and the exact '<key> <field>' entries.
+    Listed differences are printed with their class and not counted; an entry that matches again
+    is printed as NOW MATCHES."""
+    if not os.path.isfile(path):
+        return {}
+    known = {}
+    with open(path) as handle:
+        for name, entry in json.load(handle).items():
+            for key in entry['keys']:
+                known[key] = name
+    return known
+
+
 def main():
     argv = sys.argv[1:]
     quiet = '-q' in argv
     summary = argv[argv.index('--json') + 1] if '--json' in argv else None
     sections = [argv[i + 1] for i, a in enumerate(argv) if a == '--section']
-    args = [a for i, a in enumerate(argv) if not a.startswith('-') and (i == 0 or argv[i - 1] not in ('--json', '--section'))]
+    args = [a for i, a in enumerate(argv) if not a.startswith('-') and (i == 0 or argv[i - 1] not in ('--json', '--section', '--known'))]
     reference, actual = load(args[0]), load(args[1])
+    known_path = argv[argv.index('--known') + 1] if '--known' in argv else os.path.join(os.path.dirname(os.path.abspath(__file__)), 'known.json')
+    known = read_known(known_path)
     keys = sorted(reference.keys() | actual.keys())
     if sections:
         keys = [k for k in keys if any(k.startswith(s) for s in sections)]
@@ -86,16 +103,24 @@ def main():
                 lines.append(f'{key} {field}: Unity {a[field]}, Unbound {b[field]}')
             else:
                 s[0] += 1
+    listed = [line for line in lines if line.split(': Unity')[0] in known]
+    lines = [line for line in lines if line.split(': Unity')[0] not in known]
+    seen = {line.split(': Unity')[0] for line in listed}
     if not quiet:
         print('\n'.join(lines))
+        for line in listed:
+            print(f'known {known[line.split(": Unity")[0]]}: {line}')
+    for entry in sorted(set(known) - seen):
+        if not sections or any(entry.startswith(s) for s in sections):
+            print(f'NOW MATCHES {known[entry]}: {entry}')
     for name, (ok, total) in stats.items():
         print(f'{name}: {ok}/{total}')
     ok = sum(s[0] for s in stats.values())
     total = sum(s[1] for s in stats.values())
-    print(f'humanoid: {ok}/{total} values match, {len(lines)} differences')
+    print(f'humanoid: {ok}/{total} values match, {len(lines)} differences, {len(listed)} known')
     if summary:
         with open(summary, 'w') as handle:
-            json.dump({'values': total, 'matching_values': ok, 'sections': stats, 'differences': lines}, handle, indent=1)
+            json.dump({'values': total, 'matching_values': ok, 'sections': stats, 'differences': lines, 'known': listed}, handle, indent=1)
     return int(bool(lines))
 
 
