@@ -872,6 +872,15 @@ public static class ProbeRunner
         Hold("HumanNoWDBack", a, 0f, back: true);
         Hold("GenericNoWD", move, 0f);
         Hold("GenericNoWDBack", move, 0f, back: true);
+        // HumanA's clip on a state with Foot IK.
+        var footIK = Make("HumanFootIK");
+        if (footIK != null)
+        {
+            var state = footIK.layers[0].stateMachine.AddState("A");
+            state.motion = a;
+            state.iKOnFeet = true;
+            EditorUtility.SetDirty(footIK);
+        }
         var ik2 = Make("HumanAIK2");
         if (ik2 != null)
         {

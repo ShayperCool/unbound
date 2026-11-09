@@ -135,6 +135,18 @@ imported without keyframe reduction.
   update, an `Update(0)` included, moves the root again by the layer's last step in the root's
   frame, whatever the delta time, with the state's share of a transition into or out of it.
 
+- Foot IK and layer mixers (`HumanoidPlayables.cs`, HumanFootIK from `ProbeRunner.Leftovers`): HumanA's
+  clip on a state with Foot IK (`footIK`); in PlayableGraphs on HumanA (manual updates, root motion
+  applied unless said, recorded like the settings plays with the root motion's deltas and
+  velocities): HumanA's clip alone (`mixer.clip`, also without applyFootIK, `mixer.clipNoFootIK`),
+  HumanB's alone (`mixer.clipB`), a layer mixer with HumanA's clip alone (`mixer.one`), HumanB's clip
+  above it on an override layer of weight 0, 1 and 0.5 (`mixer.weight0`, `mixer.weight1`,
+  `mixer.noneMotion`; without root motion `mixer.none`; without Foot IK `mixer.noIK`), both in an
+  AnimationMixerPlayable at 0.5 (`mixer.plain`), B through the masks Upper, NoRoot and NoFootIK (0.5,
+  `mixer.upper`, `mixer.noRoot`, `mixer.noFootIK`) and additive (0.6) through Upper and NoRoot
+  (`mixer.additiveUpper`, `mixer.additiveNoRoot`). Measured: see docs/COMPATIBILITY_GAPS.md (humanoid
+  row, layer mixers and Foot IK).
+
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:
 
