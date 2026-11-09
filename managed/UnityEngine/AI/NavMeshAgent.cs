@@ -759,6 +759,7 @@ namespace Unbound.Runtime
         static readonly List<NavMeshAgent> s_PathRequests = new List<NavMeshAgent>();
         static readonly Dictionary<NavWorld.Surface, DtCrowd> s_Crowds = new Dictionary<NavWorld.Surface, DtCrowd>();
         static int s_CrowdVersion = -1;
+        static int s_TileVersion = -1;
         static bool s_Registered;
 
         static void EnsureRegistered()
@@ -780,7 +781,7 @@ namespace Unbound.Runtime
         internal static void SyncTransforms()
         {
             // A NavMesh changed before (this frame's carving) places its agents again first.
-            if (s_CrowdVersion != NavWorld.Version) Rebuild();
+            SyncWorld();
             foreach (var agent in s_Agents)
             {
                 if (agent.m_Crowd == null || !agent.updatePosition) continue;
@@ -855,7 +856,7 @@ namespace Unbound.Runtime
         internal static DtCrowd CrowdOf(NavWorld.Surface surface)
         {
             if (surface == null) return null;
-            if (s_CrowdVersion != NavWorld.Version) Rebuild();
+            SyncWorld();
             if (!s_Crowds.TryGetValue(surface, out var crowd))
             {
                 var config = new DtCrowdConfig(4f);
@@ -937,86 +938,131 @@ namespace Unbound.Runtime
         // is taken in when Unbound next refreshes its NavMesh (a NavMesh query or an agent
         // placement), which can be later than the change. An agent on an off-mesh link, or
         // completing one, rejoins as before.
+        /// <summary>The agents follow NavMesh changes: a rebuild places every agent again, tiles
+        /// cut again in place only the agents that used them.</summary>
+        static void SyncWorld()
+        {
+            if (s_CrowdVersion != NavWorld.Version) Rebuild();
+            else if (s_TileVersion != NavWorld.TileVersion) RejoinTouched();
+        }
+
         static void Rebuild()
         {
             s_CrowdVersion = NavWorld.Version;
+            s_TileVersion = NavWorld.TileVersion;
             s_Crowds.Clear();
-            foreach (var agent in s_Agents.ToArray())
+            foreach (var agent in s_Agents.ToArray()) Rejoin(agent);
+        }
+
+        /// <summary>Tiles cut again in place (carving, NavWorld.HolesChanged): only the agents
+        /// whose corridor, link or polygon lay in a replaced tile rejoin, as after a rebuild; a
+        /// request under way starts again (its search may hold the old polygons). The others keep
+        /// their corridors.</summary>
+        static void RejoinTouched()
+        {
+            s_TileVersion = NavWorld.TileVersion;
+            for (int i = s_Agents.Count - 1; i >= 0; i--)
             {
-                // An agent still being placed (the first of a new NavMesh) is placed by its caller.
+                var agent = s_Agents[i];
                 if (agent.m_Crowd == null) continue;
-                var destination = agent.HasDestination ? agent.RequestedDestination : (Vector3?)null;
-                var old = agent.isOnOffMeshLink ? agent.m_Crowd : null;
-                bool onLink = old != null || agent.m_LinkCompleting;
-                bool following = !onLink && destination.HasValue && agent.FollowingPath;
-                // Within its last centimetre (hasPath already false) and still moving to the end; an
-                // agent stopped within its stoppingDistance stays stopped.
-                bool finishing = !onLink && destination.HasValue && !following && !agent.pathPending
-                    && agent.m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID
-                    && FlatRemaining(agent.m_Crowd) < 0.01f;
-                var moving = agent.m_Crowd;
-                bool completing = agent.m_LinkCompleting, landing = agent.m_LandAfterReset;
-                var linkEnd = moving.animation.endPos;
-                agent.m_Crowd = null;
-                agent.m_Surface = null;
-                if (old != null && RejoinOnLink(agent, old))
+                if (Touched(agent))
                 {
-                    if (agent.pathPending) RestartRequest(agent);
-                    else if (destination.HasValue) PlanFromLinkEnd(agent);
-                    continue;
+                    if (agent.m_Surface != null && s_Crowds.TryGetValue(agent.m_Surface, out var crowd)) crowd.RemoveAgent(agent.m_Crowd);
+                    Rejoin(agent);
                 }
-                Place(agent, agent.m_NextPosition);
-                // Landing after ResetPath from over a gap: placed where it lands.
-                if (agent.m_Crowd == null && landing)
-                {
-                    var surface = NavWorld.Get(agent.agentTypeID);
-                    if (NavMesh.Nearest(surface, NavMesh.V(linkEnd), NavMesh.AgentExtents(agent.agentTypeID), agent.Filter, out var poly, out _)
-                        && surface.Query.ClosestPointOnPoly(poly, moving.npos, out var landed, out _).Succeeded())
-                        Place(agent, NavMesh.V(landed));
-                }
-                if (onLink)
-                {
-                    // A link being left still lands at the next update (see LeaveLink).
-                    if (completing && agent.m_Crowd != null)
-                    {
-                        agent.m_LinkCompleting = true;
-                        agent.m_LandAfterReset = landing;
-                        agent.m_Crowd.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH;
-                        agent.m_Crowd.animation.endPos = linkEnd;
-                        KeepMotion(agent.m_Crowd, moving, false);
-                    }
-                    if (destination.HasValue && agent.m_Crowd != null)
-                    {
-                        // A request under way starts again; an agent landing after ResetPath gets its
-                        // path at the next update, from where it lands; one completing its link goes on
-                        // from the link's end; one whose link is gone from where it stands.
-                        if (agent.pathPending) RestartRequest(agent);
-                        else if (landing)
-                        {
-                            agent.SetPathPending(true);
-                            RequestPath(agent);
-                        }
-                        else if (completing) PlanFromLinkEnd(agent);
-                        else PlanAgain(agent);
-                    }
-                    continue;
-                }
-                if (agent.m_Crowd == null)
-                {
-                    // Off the new NavMesh no path can be computed.
-                    agent.SetPathPending(false);
-                    continue;
-                }
-                // It moves on as it moved (also an agent sliding to a stop without a path: measured,
-                // tests/projects/navlinks resetmid through a link toggle).
-                KeepMotion(agent.m_Crowd, moving, following || finishing);
+                else if (agent.pathPending && s_Searches.ContainsKey(agent)) RestartRequest(agent);
+            }
+        }
+
+        /// <summary>The agent used a polygon of a tile that is gone.</summary>
+        static bool Touched(NavMeshAgent agent)
+        {
+            var mesh = agent.m_Surface?.Mesh;
+            if (mesh == null) return true;
+            var ag = agent.m_Crowd;
+            var path = ag.corridor.GetPath();
+            int count = ag.corridor.GetPathCount();
+            for (int i = 0; i < count; i++)
+                if (!mesh.IsValidPolyRef(path[i])) return true;
+            return ag.state == DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH && !mesh.IsValidPolyRef(ag.animation.polyRef);
+        }
+
+        /// <summary>The agent placed again on the NavMesh after its polygons changed.</summary>
+        static void Rejoin(NavMeshAgent agent)
+        {
+            // An agent still being placed (the first of a new NavMesh) is placed by its caller.
+            if (agent.m_Crowd == null) return;
+            var destination = agent.HasDestination ? agent.RequestedDestination : (Vector3?)null;
+            var old = agent.isOnOffMeshLink ? agent.m_Crowd : null;
+            bool onLink = old != null || agent.m_LinkCompleting;
+            bool following = !onLink && destination.HasValue && agent.FollowingPath;
+            // Within its last centimetre (hasPath already false) and still moving to the end; an
+            // agent stopped within its stoppingDistance stays stopped.
+            bool finishing = !onLink && destination.HasValue && !following && !agent.pathPending
+                && agent.m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID
+                && FlatRemaining(agent.m_Crowd) < 0.01f;
+            var moving = agent.m_Crowd;
+            bool completing = agent.m_LinkCompleting, landing = agent.m_LandAfterReset;
+            var linkEnd = moving.animation.endPos;
+            agent.m_Crowd = null;
+            agent.m_Surface = null;
+            if (old != null && RejoinOnLink(agent, old))
+            {
                 if (agent.pathPending) RestartRequest(agent);
-                else if (following) PlanAgain(agent);
-                else if (finishing)
+                else if (destination.HasValue) PlanFromLinkEnd(agent);
+                return;
+            }
+            Place(agent, agent.m_NextPosition);
+            // Landing after ResetPath from over a gap: placed where it lands.
+            if (agent.m_Crowd == null && landing)
+            {
+                var surface = NavWorld.Get(agent.agentTypeID);
+                if (NavMesh.Nearest(surface, NavMesh.V(linkEnd), NavMesh.AgentExtents(agent.agentTypeID), agent.Filter, out var poly, out _)
+                    && surface.Query.ClosestPointOnPoly(poly, moving.npos, out var landed, out _).Succeeded())
+                    Place(agent, NavMesh.V(landed));
+            }
+            if (onLink)
+            {
+                // A link being left still lands at the next update (see LeaveLink).
+                if (completing && agent.m_Crowd != null)
                 {
-                    PlanAgain(agent);
-                    agent.SetArrived(true);
+                    agent.m_LinkCompleting = true;
+                    agent.m_LandAfterReset = landing;
+                    agent.m_Crowd.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH;
+                    agent.m_Crowd.animation.endPos = linkEnd;
+                    KeepMotion(agent.m_Crowd, moving, false);
                 }
+                if (destination.HasValue && agent.m_Crowd != null)
+                {
+                    // A request under way starts again; an agent landing after ResetPath gets its
+                    // path at the next update, from where it lands; one completing its link goes on
+                    // from the link's end; one whose link is gone from where it stands.
+                    if (agent.pathPending) RestartRequest(agent);
+                    else if (landing)
+                    {
+                        agent.SetPathPending(true);
+                        RequestPath(agent);
+                    }
+                    else if (completing) PlanFromLinkEnd(agent);
+                    else PlanAgain(agent);
+                }
+                return;
+            }
+            if (agent.m_Crowd == null)
+            {
+                // Off the new NavMesh no path can be computed.
+                agent.SetPathPending(false);
+                return;
+            }
+            // It moves on as it moved (also an agent sliding to a stop without a path: measured,
+            // tests/projects/navlinks resetmid through a link toggle).
+            KeepMotion(agent.m_Crowd, moving, following || finishing);
+            if (agent.pathPending) RestartRequest(agent);
+            else if (following) PlanAgain(agent);
+            else if (finishing)
+            {
+                PlanAgain(agent);
+                agent.SetArrived(true);
             }
         }
 
@@ -1111,7 +1157,7 @@ namespace Unbound.Runtime
             anim.polyRef = 0;
             agent.m_Crowd = ag;
             agent.m_Surface = surface;
-            agent.WorldVersion = NavWorld.Version;
+            agent.WorldVersion = NavWorld.Changes;
             agent.SetOnNavMesh(true);
             return true;
         }
@@ -1136,8 +1182,8 @@ namespace Unbound.Runtime
         /// follows such a move at once).</summary>
         internal static void Sync(NavMeshAgent agent)
         {
-            if (s_CrowdVersion != NavWorld.Version) Rebuild();
-            if (agent.m_Crowd == null && s_Agents.Contains(agent) && agent.WorldVersion != NavWorld.Version)
+            SyncWorld();
+            if (agent.m_Crowd == null && s_Agents.Contains(agent) && agent.WorldVersion != NavWorld.Changes)
                 Place(agent, agent.transform.position - Vector3.up * agent.baseOffset);
             FollowTransform(agent);
         }
@@ -1145,7 +1191,7 @@ namespace Unbound.Runtime
         internal static bool Place(NavMeshAgent agent, Vector3 position)
         {
             Detach(agent);
-            agent.WorldVersion = NavWorld.Version;
+            agent.WorldVersion = NavWorld.Changes;
             var surface = NavWorld.Get(agent.agentTypeID);
             if (!NavMesh.Nearest(surface, position, NavMesh.AgentReach(agent.radius), agent.Filter, out var polyRef, out var point))
             {
@@ -1219,7 +1265,7 @@ namespace Unbound.Runtime
         /// frame's A* iteration budget; a request the budget does not finish goes on next frame.</summary>
         static void ProcessRequests()
         {
-            if (s_CrowdVersion != NavWorld.Version) Rebuild();
+            SyncWorld();
             int budget = NavMesh.pathfindingIterationsPerFrame;
             while (s_PathRequests.Count > 0 && budget > 0)
             {
@@ -1354,7 +1400,7 @@ namespace Unbound.Runtime
         {
             if (s_Agents.Count == 0) return;
             NavMesh.onPreUpdate?.Invoke();
-            if (s_CrowdVersion != NavWorld.Version) Rebuild();
+            SyncWorld();
             float dt = Time.deltaTime;
             foreach (var agent in s_Agents)
             {

@@ -289,18 +289,18 @@ namespace UnityEngine.Tests
         public void TheHoleTakesEffectAtTheSecondCarvingUpdate()
         {
             var obstacle = Box(Vector3.zero, Vector3.one);
-            int version = NavWorld.Version;
+            int version = NavWorld.Changes;
             ObstacleSystem.UpdateCarving();
             Assert.True(OnNavMesh(0f, 0f));
             ObstacleSystem.UpdateCarving();
             Assert.False(OnNavMesh(0f, 0f));
-            Assert.NotEqual(version, NavWorld.Version);
+            Assert.NotEqual(version, NavWorld.Changes);
             // Unchanged: no further NavMesh change.
-            version = NavWorld.Version;
+            version = NavWorld.Changes;
             Frame();
             Frame();
             Assert.False(OnNavMesh(0f, 0f));
-            Assert.Equal(version, NavWorld.Version);
+            Assert.Equal(version, NavWorld.Changes);
             // Carving off: gone after two updates again.
             obstacle.carving = false;
             Frame();
@@ -371,6 +371,39 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ACutReplacesOnlyTheTilesTheHoleReachesAndTheirAgentsPaths()
+        {
+            // The platform is four tiles (x and z either side of 0); the hole lies in the one of
+            // x < 0, z > 0. The walker's path stays in the tiles of x > 0, the crosser's crosses
+            // the hole's tile.
+            var walker = Walker(new Vector3(2f, 0f, -3f), new Vector3(8f, 0f, -3f));
+            var crosser = Walker(new Vector3(-8f, 0f, 3f), new Vector3(-1f, 0f, 3f));
+            Box(new Vector3(-5f, 0.5f, 3f), Vector3.one);
+            // The hole is decided now and cut at the next carving update.
+            Frame();
+            var surface = NavWorld.Get(0);
+            var refs = new List<long>();
+            foreach (var placed in surface.Tiles) refs.Add(placed.Ref);
+            var walking = walker.m_Crowd;
+            var crossing = crosser.m_Crowd;
+            int version = NavWorld.Version;
+            Frame();
+            Assert.False(OnNavMesh(-5f, 3f));
+            Assert.Equal(version, NavWorld.Version);
+            int changed = 0;
+            for (int i = 0; i < refs.Count; i++)
+                if (surface.Tiles[i].Ref != refs[i]) changed++;
+            Assert.Equal(1, changed);
+            // The walker keeps its corridor; the crosser rejoins with a path round the hole.
+            Assert.Same(walking, walker.m_Crowd);
+            Assert.NotSame(crossing, crosser.m_Crowd);
+            Assert.True(crosser.hasPath);
+            for (int i = 0; i < 400 && (walker.hasPath || crosser.hasPath); i++) Frame();
+            Assert.True((crosser.nextPosition - new Vector3(-1f, crosser.nextPosition.y, 3f)).magnitude < 0.05f, $"crosser at {crosser.nextPosition}");
+            Assert.True((walker.nextPosition - new Vector3(8f, walker.nextPosition.y, -3f)).magnitude < 0.05f, $"walker at {walker.nextPosition}");
+        }
+
+        [Fact]
         public void AHoleCutElsewhereLetsAnArrivingAgentFinish()
         {
             // The rebuild after a cut must not stop an agent in its last centimetre (hasPath
@@ -389,9 +422,9 @@ namespace UnityEngine.Tests
                 finishing = !agent.hasPath && new Vector2(p.x - goal.x, p.z - goal.z).magnitude > 1e-4f;
             }
             Assert.True(finishing, "no frame within the last centimetre");
-            int version = NavWorld.Version;
+            int version = NavWorld.Changes;
             Frame();
-            Assert.NotEqual(version, NavWorld.Version);
+            Assert.NotEqual(version, NavWorld.Changes);
             Assert.False(OnNavMesh(-8f, 3f));
             for (int i = 0; i < 20; i++) Frame();
             var end = agent.nextPosition;
@@ -432,7 +465,7 @@ namespace UnityEngine.Tests
                 Frame();
                 Frame();
                 var agent = Walker(new Vector3(-8f, 0f, -3f), new Vector3(8f, 0f, -3f));
-                int version = NavWorld.Version;
+                int version = NavWorld.Changes;
                 int frames = 0;
                 float x = -8f;
                 while (agent.pathPending && frames < 300)
@@ -443,7 +476,7 @@ namespace UnityEngine.Tests
                     frames++;
                 }
                 Assert.False(agent.pathPending, $"still pending after {frames} frames");
-                Assert.True(NavWorld.Version - version >= frames - 1, "the NavMesh did not change every frame");
+                Assert.True(NavWorld.Changes - version >= frames - 1, "the NavMesh did not change every frame");
                 Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
             }
             finally

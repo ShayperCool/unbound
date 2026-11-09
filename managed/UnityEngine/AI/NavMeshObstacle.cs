@@ -308,6 +308,8 @@ namespace Unbound.Runtime
         static readonly Dictionary<NavMeshObstacle, Carve> s_Carves = new Dictionary<NavMeshObstacle, Carve>(ReferenceEqualityComparer.Instance);
         static readonly List<NavMeshCarving.Footprint> s_Holes = new List<NavMeshCarving.Footprint>();
         static readonly List<NavMeshObstacle> s_Gone = new List<NavMeshObstacle>();
+        /// <summary>The holes added or removed by this carving update (reused).</summary>
+        static readonly List<NavMeshCarving.Footprint> s_Changed = new List<NavMeshCarving.Footprint>();
 
         /// <summary>The holes in the NavMesh now.</summary>
         internal static IReadOnlyList<NavMeshCarving.Footprint> Holes => s_Holes;
@@ -345,28 +347,32 @@ namespace Unbound.Runtime
         internal static void UpdateCarving()
         {
             if (s_Carves.Count == 0 && s_Obstacles.Count == 0) return;
-            bool changed = false;
+            s_Changed.Clear();
             s_Gone.Clear();
             foreach (var pair in s_Carves)
             {
                 var c = pair.Value;
                 if (c.Pending)
                 {
-                    changed |= !ReferenceEquals(c.Applied, c.Next);
+                    if (!ReferenceEquals(c.Applied, c.Next))
+                    {
+                        if (c.Applied != null) s_Changed.Add(c.Applied);
+                        if (c.Next != null) s_Changed.Add(c.Next);
+                    }
                     c.Applied = c.Next;
                     c.Pending = false;
                 }
                 if (c.Applied == null && !Carving(pair.Key)) s_Gone.Add(pair.Key);
             }
             foreach (var gone in s_Gone) s_Carves.Remove(gone);
-            if (changed)
+            if (s_Changed.Count > 0)
             {
                 s_Holes.Clear();
                 foreach (var c in s_Carves.Values)
                     if (c.Applied != null) s_Holes.Add(c.Applied);
-                // Cut now, so the agents replan in this frame's update (measured).
-                NavWorld.MarkDirty();
-                NavWorld.RefreshNow();
+                // Cut now, only the tiles the changed holes reach, so the agents replan in this
+                // frame's update (measured).
+                NavWorld.HolesChanged(s_Changed);
             }
 
             float now = Time.time;

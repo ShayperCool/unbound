@@ -11,7 +11,8 @@ namespace Unbound.Runtime
     /// <summary>
     /// The NavMesh world: the NavMeshData instances and links added to it, and per agent type a
     /// Detour mesh holding their tiles (in world space) with a query object. The meshes are rebuilt
-    /// whenever data or links come and go; polygon references are only valid until then.
+    /// whenever data or links come and go; polygon references are only valid until then. A carving
+    /// change replaces only the tiles it reaches (their polygon references change, the others' stay).
     /// </summary>
     internal static class NavWorld
     {
@@ -51,6 +52,19 @@ namespace Unbound.Runtime
             internal readonly Dictionary<long, int> LinkOfPoly = new Dictionary<long, int>();
             /// <summary>The data instance each tile came from, by tile index.</summary>
             internal readonly Dictionary<int, int> DataOfTile = new Dictionary<int, int>();
+            /// <summary>Every tile in the mesh: where it came from and where it lies.</summary>
+            internal readonly List<PlacedTile> Tiles = new List<PlacedTile>();
+        }
+
+        /// <summary>A data instance's tile as placed in a surface's mesh.</summary>
+        internal sealed class PlacedTile
+        {
+            internal DataInstance Instance;
+            /// <summary>Its index in the data's tiles.</summary>
+            internal int Index;
+            /// <summary>Its reference in the mesh (a new one when it is cut again).</summary>
+            internal long Ref;
+            internal float MinX, MaxX, MinZ, MaxZ;
         }
 
         static readonly List<DataInstance> s_Data = new List<DataInstance>();
@@ -60,6 +74,11 @@ namespace Unbound.Runtime
         static bool s_Dirty;
         /// <summary>Bumped on every rebuild (agents re-find their polygons).</summary>
         internal static int Version;
+        /// <summary>Bumped when tiles are cut again in place (carving): the polygons of those tiles
+        /// are new, every other polygon reference stays valid.</summary>
+        internal static int TileVersion;
+        /// <summary>Changes on every change of the meshes (a rebuild or tiles cut again).</summary>
+        internal static int Changes => Version + TileVersion;
         /// <summary>Bumped by the NavMesh changes that make every agent's path stale
         /// (NavMeshAgent.isPathStale): area costs changed, links enabled, disabled or activated.</summary>
         internal static int PathStaleVersion;
@@ -181,8 +200,9 @@ namespace Unbound.Runtime
                     surface.Mesh.Init(param, DtDetour.DT_VERTS_PER_POLYGON);
                     s_Surfaces[agentType] = surface;
                 }
-                foreach (var tile in instance.Data.m_Tiles)
+                for (int index = 0; index < instance.Data.m_Tiles.Count; index++)
                 {
+                    var tile = instance.Data.m_Tiles[index];
                     var placed = NavMeshCarving.Carve(Place(tile, instance.Position, instance.Rotation), instance.Data.m_Settings, ObstacleSystem.Holes);
                     AddLinks(surface, placed);
                     // Tiles of different data at the same place go on further layers.
@@ -193,7 +213,13 @@ namespace Unbound.Runtime
                     while (surface.Mesh.GetTileRefAt(tx, ty, layer) != 0) layer++;
                     placed.header.layer = layer;
                     surface.Mesh.AddTile(placed, 0, 0, out long tileRef);
-                    if (tileRef != 0) surface.DataOfTile[DtDetour.DecodePolyIdTile(tileRef)] = instance.Id;
+                    if (tileRef == 0) continue;
+                    surface.DataOfTile[DtDetour.DecodePolyIdTile(tileRef)] = instance.Id;
+                    surface.Tiles.Add(new PlacedTile
+                    {
+                        Instance = instance, Index = index, Ref = tileRef,
+                        MinX = placed.header.bmin.X, MaxX = placed.header.bmax.X, MinZ = placed.header.bmin.Z, MaxZ = placed.header.bmax.Z,
+                    });
                 }
             }
             foreach (var surface in s_Surfaces.Values)
@@ -231,15 +257,78 @@ namespace Unbound.Runtime
                 for (int i = 0; i < surface.Mesh.GetMaxTiles(); i++)
                 {
                     var tile = surface.Mesh.GetTile(i);
-                    if (tile?.data == null) continue;
-                    long baseRef = surface.Mesh.GetPolyRefBase(tile);
-                    for (int c = 0; c < tile.data.header.offMeshConCount; c++)
-                    {
-                        var con = tile.data.offMeshCons[c];
-                        surface.LinkOfPoly[baseRef | (long)con.poly] = con.userId;
-                    }
+                    if (tile?.data != null) MapLinks(surface, tile, true);
                 }
             }
+        }
+
+        /// <summary>The tile's off-mesh connection polygons entered in (or removed from) the
+        /// surface's links by polygon.</summary>
+        static void MapLinks(Surface surface, DtMeshTile tile, bool add)
+        {
+            long baseRef = surface.Mesh.GetPolyRefBase(tile);
+            for (int c = 0; c < tile.data.header.offMeshConCount; c++)
+            {
+                var con = tile.data.offMeshCons[c];
+                if (add) surface.LinkOfPoly[baseRef | (long)con.poly] = con.userId;
+                else surface.LinkOfPoly.Remove(baseRef | (long)con.poly);
+            }
+        }
+
+        /// <summary>Carving holes changed: the tiles the changed holes (their outlines before and
+        /// after) reach are cut again and replaced in their meshes, the others are kept with their
+        /// polygon references. A NavMesh waiting for a rebuild is rebuilt whole instead.</summary>
+        internal static void HolesChanged(IReadOnlyList<NavMeshCarving.Footprint> changed)
+        {
+            if (s_Dirty)
+            {
+                Refresh();
+                return;
+            }
+            bool replaced = false;
+            foreach (var surface in s_Surfaces.Values)
+            {
+                foreach (var placed in surface.Tiles)
+                {
+                    var settings = placed.Instance.Data.m_Settings;
+                    if (!Reaches(placed, changed, settings.agentRadius)) continue;
+                    var old = surface.Mesh.GetTileByRef(placed.Ref);
+                    if (old?.data == null) continue;
+                    var tile = NavMeshCarving.Carve(Place(placed.Instance.Data.m_Tiles[placed.Index], placed.Instance.Position, placed.Instance.Rotation),
+                        settings, ObstacleSystem.Holes);
+                    AddLinks(surface, tile);
+                    tile.header.x = old.data.header.x;
+                    tile.header.y = old.data.header.y;
+                    tile.header.layer = old.data.header.layer;
+                    MapLinks(surface, old, false);
+                    surface.Mesh.RemoveTile(placed.Ref);
+                    surface.Mesh.AddTile(tile, 0, 0, out long tileRef);
+                    placed.Ref = tileRef;
+                    if (tileRef == 0) continue;
+                    var added = surface.Mesh.GetTileByRef(tileRef);
+                    surface.DataOfTile[DtDetour.DecodePolyIdTile(tileRef)] = placed.Instance.Id;
+                    MapLinks(surface, added, true);
+                    replaced = true;
+                }
+            }
+            if (replaced) TileVersion++;
+        }
+
+        /// <summary>A hole grown by the agent radius (and a centimetre) overlaps the tile.</summary>
+        static bool Reaches(PlacedTile tile, IReadOnlyList<NavMeshCarving.Footprint> holes, float radius)
+        {
+            float grow = radius + 0.01f;
+            foreach (var hole in holes)
+            {
+                float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue;
+                foreach (var p in hole.Outline)
+                {
+                    minX = Mathf.Min(minX, p.x); maxX = Mathf.Max(maxX, p.x);
+                    minZ = Mathf.Min(minZ, p.y); maxZ = Mathf.Max(maxZ, p.y);
+                }
+                if (maxX + grow >= tile.MinX && minX - grow <= tile.MaxX && maxZ + grow >= tile.MinZ && minZ - grow <= tile.MaxZ) return true;
+            }
+            return false;
         }
 
         static RcVec3f Center(DtMeshHeader h) => new RcVec3f((h.bmin.X + h.bmax.X) * 0.5f, (h.bmin.Y + h.bmax.Y) * 0.5f, (h.bmin.Z + h.bmax.Z) * 0.5f);
