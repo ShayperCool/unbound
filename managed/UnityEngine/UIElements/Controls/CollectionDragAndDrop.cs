@@ -914,3 +914,179 @@ namespace UnityEngine.UIElements
         bool IsDraggingDisabled() => targetView == dragAndDrop.data.source && !enabled;
     }
 }
+
+namespace UnityEngine.UIElements
+{
+    using UnityEngine.UIElements.Experimental;
+
+    /// <summary>Animated reordering: the dragged row is lifted out of the list (absolutely placed
+    /// under the pointer), the row it would drop before opens a gap of the dragged row's height
+    /// (its top padding animated over 500 ms), and dropping moves the item to the gap. Matches the
+    /// Unity 6000.0.71f1 Editor, tests/projects/uitkcollections (animated section).</summary>
+    internal partial class ListViewDraggerAnimated : ListViewDragger
+    {
+        // Duration of a row's gap opening or closing.
+        const int k_GapAnimationMs = 500;
+
+        int m_DragStartIndex;
+        int m_CurrentIndex;
+        float m_SelectionHeight;
+        float m_LocalOffsetOnStart;
+        Vector3 m_CurrentPointerPosition;
+        ReusableCollectionItem m_Item;
+        ReusableCollectionItem m_OffsetItem;
+
+        public bool isDragging { get; private set; }
+
+        public ReusableCollectionItem draggedItem => m_Item;
+
+        [Unbound.EditorFaithful("Unity's: the animated drag follows pointer events only")]
+        protected override bool supportsDragEvents => false;
+
+        public ListViewDraggerAnimated(BaseVerticalCollectionView listView) : base(listView) { }
+
+        protected internal override StartDragArgs StartDrag(Vector3 pointerPosition)
+        {
+            if (!enabled) return base.StartDrag(pointerPosition);
+            targetView.ClearSelection();
+            var item = GetRecycledItem(pointerPosition);
+            if (item == null) return new StartDragArgs(string.Empty, DragVisualMode.Rejected);
+            if (targetView.selectionType != SelectionType.None) targetView.SetSelection(item.index);
+            isDragging = true;
+            m_Item = item;
+            targetView.virtualizationController.StartDragItem(m_Item);
+            var root = m_Item.rootElement;
+            float y = root.layout.y;
+            m_SelectionHeight = root.layout.height;
+            root.style.position = Position.Absolute;
+            root.style.height = root.layout.height;
+            root.style.width = root.layout.width;
+            root.style.top = y;
+            m_DragStartIndex = m_Item.index;
+            m_CurrentIndex = m_DragStartIndex;
+            m_CurrentPointerPosition = pointerPosition;
+            m_LocalOffsetOnStart = targetScrollView.contentContainer.WorldToLocal(pointerPosition).y - y;
+            var next = targetView.GetRecycledItemFromIndex(m_CurrentIndex + 1);
+            if (next != null)
+            {
+                m_OffsetItem = next;
+                Animate(m_OffsetItem, m_SelectionHeight);
+                m_OffsetItem.rootElement.style.paddingTop = m_SelectionHeight;
+                if (targetView.virtualizationMethod == CollectionVirtualizationMethod.FixedHeight)
+                    m_OffsetItem.rootElement.style.height = targetView.fixedItemHeight + m_SelectionHeight;
+            }
+            return dragAndDropController.SetupDragAndDrop(new[] { m_Item.index }, true);
+        }
+
+        /// <summary>The dragged row follows the pointer within the content; the first row whose top
+        /// half it passes opens the gap (none: the end of the list).</summary>
+        protected internal override void UpdateDrag(Vector3 pointerPosition)
+        {
+            if (!enabled)
+            {
+                base.UpdateDrag(pointerPosition);
+                return;
+            }
+            if (m_Item == null) return;
+            HandleDragAndScroll(pointerPosition);
+            m_CurrentPointerPosition = pointerPosition;
+            var local = targetScrollView.contentContainer.WorldToLocal(m_CurrentPointerPosition);
+            var layout = m_Item.rootElement.layout;
+            float contentHeight = targetScrollView.contentContainer.layout.height;
+            layout.y = Mathf.Clamp(local.y - m_LocalOffsetOnStart, 0f, contentHeight - m_SelectionHeight);
+            float top = targetScrollView.contentContainer.resolvedStyle.paddingTop;
+            m_CurrentIndex = -1;
+            foreach (var active in targetView.activeItems)
+            {
+                if (active.index < 0 || (active.rootElement.style.display == DisplayStyle.None && !active.isDragGhost)) continue;
+                if (active.index == m_Item.index && active.index < targetView.itemsSource.Count - 1)
+                {
+                    float nextHeight = targetView.virtualizationController.GetExpectedItemHeight(active.index + 1);
+                    if (!Mathf.Approximately(layout.y + nextHeight, contentHeight) && layout.y <= top + nextHeight * 0.5f)
+                        m_CurrentIndex = active.index;
+                    continue;
+                }
+                float height = targetView.virtualizationController.GetExpectedItemHeight(active.index);
+                if (layout.y <= top + height * 0.5f)
+                {
+                    if (m_CurrentIndex == -1) m_CurrentIndex = active.index;
+                    if (m_OffsetItem != active)
+                    {
+                        Animate(m_OffsetItem, 0f);
+                        Animate(active, m_SelectionHeight);
+                        m_OffsetItem = active;
+                    }
+                    break;
+                }
+                top += height;
+            }
+            if (m_CurrentIndex == -1)
+            {
+                m_CurrentIndex = targetView.itemsSource.Count;
+                Animate(m_OffsetItem, 0f);
+                m_OffsetItem = null;
+            }
+            m_Item.rootElement.layout = layout;
+            m_Item.rootElement.BringToFront();
+        }
+
+        /// <summary>Animates a row's top padding (and, for fixed-height rows, its height) to open or
+        /// close a gap, unless it is already going there.</summary>
+        void Animate(ReusableCollectionItem element, float paddingTop)
+        {
+            if (element == null) return;
+            var animator = element.animator;
+            if (animator != null)
+            {
+                if (animator.isRunning && animator.to.paddingTop == paddingTop) return;
+                if (!animator.isRunning && element.rootElement.style.paddingTop == paddingTop) return;
+            }
+            animator?.Stop();
+            animator?.Recycle();
+            var to = new StyleValues { paddingTop = paddingTop };
+            if (targetView.virtualizationMethod == CollectionVirtualizationMethod.FixedHeight)
+                to.height = targetView.ResolveItemHeight() + paddingTop;
+            element.animator = element.rootElement.experimental.animation.Start(to, k_GapAnimationMs);
+            element.animator.KeepAlive();
+        }
+
+        protected internal override void OnDrop(Vector3 pointerPosition)
+        {
+            if (!enabled)
+            {
+                base.OnDrop(pointerPosition);
+                return;
+            }
+            if (m_Item == null) return;
+            isDragging = false;
+            m_Item.rootElement.ClearManualLayout();
+            targetView.virtualizationController.EndDrag(m_CurrentIndex);
+            if (m_OffsetItem != null)
+            {
+                m_OffsetItem.animator?.Stop();
+                m_OffsetItem.animator?.Recycle();
+                m_OffsetItem.animator = null;
+                m_OffsetItem.rootElement.style.paddingTop = 0f;
+                if (targetView.virtualizationMethod == CollectionVirtualizationMethod.FixedHeight)
+                    m_OffsetItem.rootElement.style.height = targetView.ResolveItemHeight();
+            }
+            var position = new DragPosition { recycledItem = m_Item, insertAtIndex = m_CurrentIndex, dropPosition = DragAndDropPosition.BetweenItems };
+            var args = MakeDragAndDropArgs(position);
+            dragAndDropController.OnDrop(args);
+            dragAndDrop.AcceptDrag();
+            m_Item = null;
+            m_OffsetItem = null;
+        }
+
+        [Unbound.EditorFaithful("Unity's: the lifted row is the drag feedback")]
+        protected override void ClearDragAndDropUI(bool dragCancelled) { }
+
+        protected override bool TryGetDragPosition(Vector2 pointerPosition, ref DragPosition dragPosition)
+        {
+            dragPosition.recycledItem = m_Item;
+            dragPosition.insertAtIndex = m_CurrentIndex;
+            dragPosition.dropPosition = DragAndDropPosition.BetweenItems;
+            return true;
+        }
+    }
+}

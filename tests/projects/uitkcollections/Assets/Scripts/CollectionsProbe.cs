@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text;
 using UnityEngine;
 using UnityEngine.UIElements;
+using UnityEngine.UIElements.Experimental;
 
 // Collection controls on a runtime panel: ListView (fixed and dynamic height, reordering, header and
 // footer), TreeView, MultiColumnListView, MultiColumnTreeView and TabView. Each step records the
@@ -250,6 +251,7 @@ public static class CollectionsProbe
         Section("column-tree-steps", () => ColumnTreeSteps(columnTree));
         Section("tabs-steps", () => TabsSteps(tabs));
         Section("absolute", () => AbsoluteChildren(root));
+        Section("animations", () => Animations(root));
 
         // The animated list's rows move in real time; hidden for the final image.
         if (animated != null) { animated.style.visibility = Visibility.Hidden; Update(); }
@@ -390,13 +392,21 @@ public static class CollectionsProbe
             var handle = row?.Q(className: BaseListView.reorderableItemHandleUssClassName);
             return handle != null && handle.resolvedStyle.display != DisplayStyle.None ? handle.worldBound.center : RowCenter(list, index);
         }
-        Step(tag, "drag-1-to-5", () => { var a = Grip(1); var b = RowCenter(list, 5) + new Vector2(0, 6); Drag(a, b, 6); }, State);
-        Step(tag, "drag-6-to-0", () => { var a = Grip(6); var b = RowCenter(list, 0) + new Vector2(0, -6); Drag(a, b, 6); }, State);
-        Step(tag, "drag-2-in-place", () => { var a = Grip(2); Drag(a, a + new Vector2(0, 12), 3); }, State);
-        Step(tag, "small-move-no-drag", () => { var a = Grip(3); Drag(a, a + new Vector2(0, 2), 2); }, State);
+        // Animated rows open and close their gaps over 500 ms: each drag starts once they have
+        // settled, so where the pointer lands does not depend on the machine's speed.
+        void Settle()
+        {
+            if (list.reorderMode != ListViewReorderMode.Animated) return;
+            System.Threading.Thread.Sleep(600);
+            Update();
+        }
+        Step(tag, "drag-1-to-5", () => { Settle(); var a = Grip(1); var b = RowCenter(list, 5) + new Vector2(0, 6); Drag(a, b, 6); }, State);
+        Step(tag, "drag-6-to-0", () => { Settle(); var a = Grip(6); var b = RowCenter(list, 0) + new Vector2(0, -6); Drag(a, b, 6); }, State);
+        Step(tag, "drag-2-in-place", () => { Settle(); var a = Grip(2); Drag(a, a + new Vector2(0, 12), 3); }, State);
+        Step(tag, "small-move-no-drag", () => { Settle(); var a = Grip(3); Drag(a, a + new Vector2(0, 2), 2); }, State);
         Step(tag, "select-3-4", () => list.SetSelection(new[] { 3, 4 }), State);
-        Step(tag, "drag-selection-to-9", () => { var a = Grip(3); var b = RowCenter(list, 9) + new Vector2(0, 6); Drag(a, b, 8); }, State);
-        Step(tag, "drag-to-end", () => { int first = 0; while (list.GetRootElementForIndex(first) == null) first++; var a = Grip(first); var bottom = list.Q<ScrollView>().contentViewport.worldBound; Drag(a, new Vector2(a.x, bottom.yMax - 2), 10); }, State);
+        Step(tag, "drag-selection-to-9", () => { Settle(); var a = Grip(3); var b = RowCenter(list, 9) + new Vector2(0, 6); Drag(a, b, 8); }, State);
+        Step(tag, "drag-to-end", () => { Settle(); int first = 0; while (list.GetRootElementForIndex(first) == null) first++; var a = Grip(first); var bottom = list.Q<ScrollView>().contentViewport.worldBound; Drag(a, new Vector2(a.x, bottom.yMax - 2), 10); }, State);
     }
 
     // ---- ListView header and footer ----
@@ -749,6 +759,67 @@ public static class CollectionsProbe
     // One absolutely positioned child per case (a tab header's underline is one), in a parent with
     // borders and padding: its layout rect for insets, percentage sizes, offsets, margins, min/max,
     // no offsets under each justify/align/direction. Each parent is removed after its line.
+    // ---- transition animations (experimental.animation) ----
+
+    // Animations of 1 ms with a pause before the panel update, so each completes on its first tick:
+    // values, completion callbacks, recycling, KeepAlive, StyleValues read from the element, and
+    // animations started on an element outside a panel.
+    static void Animations(VisualElement root)
+    {
+        var box = new VisualElement { name = "anim-box" };
+        Place(box, 8, 560, 40, 20);
+        root.Add(box);
+        void Wait() => System.Threading.Thread.Sleep(5);
+        string Value(string tag, object v) => tag + " " + (v is float f ? F(f) : v.ToString());
+        ValueAnimation<float> plain = null;
+        Step("animations", "float-1ms", () =>
+        {
+            plain = box.experimental.animation.Start(0f, 100f, 1, (e, v) => Log.Add(Value("float", v)));
+            plain.OnCompleted(() => Log.Add("float completed"));
+            Log.Add("started running=" + plain.isRunning + " duration=" + plain.durationMs + " auto=" + plain.autoRecycle);
+            Wait();
+        }, () => Str("running=" + plain.isRunning));
+        Step("animations", "recycled-start", () =>
+        {
+            try { plain.Start(); Log.Add("restarted"); }
+            catch (Exception e) { Log.Add(e.GetType().Name + ": " + e.Message); }
+        }, () => "null");
+        ValueAnimation<float> kept = null;
+        Step("animations", "keepalive", () =>
+        {
+            kept = box.experimental.animation.Start(10f, 20f, 0, (e, v) => Log.Add(Value("kept", v))).KeepAlive();
+            kept.OnCompleted(() => Log.Add("kept completed"));
+            Log.Add("duration=" + kept.durationMs + " auto=" + kept.autoRecycle);
+            Wait();
+        }, () => Str("running=" + kept.isRunning));
+        Step("animations", "keepalive-restart", () => { kept.Start(); Wait(); }, () => Str("running=" + kept.isRunning));
+        Step("animations", "keepalive-recycle", () => { kept.Recycle(); try { kept.Stop(); } catch (Exception e) { Log.Add(e.GetType().Name); } }, () => "null");
+        Step("animations", "style-values", () =>
+        {
+            box.style.paddingTop = 4;
+            Update();
+            var to = new StyleValues { paddingTop = 20, opacity = 0.5f };
+            var anim = box.experimental.animation.Start(to, 1);
+            anim.OnCompleted(() => Log.Add("style completed"));
+            Wait();
+        }, () => Str("paddingTop=" + box.style.paddingTop + " opacity=" + box.style.opacity + " resolved=" + F(box.resolvedStyle.paddingTop)));
+        Step("animations", "flexshrink-sets-grow", () =>
+        {
+            var values = new StyleValues { flexShrink = 3 };
+            Log.Add("grow=" + F(values.flexGrow) + " shrink=" + F(values.flexShrink));
+        }, () => "null");
+        var detached = new VisualElement { name = "anim-detached" };
+        ValueAnimation<float> outside = null;
+        Step("animations", "outside-panel", () =>
+        {
+            outside = detached.experimental.animation.Start(1f, 2f, 1, (e, v) => Log.Add(Value("outside", v)));
+            outside.OnCompleted(() => Log.Add("outside completed"));
+            Wait();
+        }, () => Str("running=" + outside.isRunning));
+        Step("animations", "outside-added", () => { box.Add(detached); Wait(); }, () => Str("running=" + outside.isRunning));
+        Step("animations", "cleanup", () => box.RemoveFromHierarchy(), () => "null");
+    }
+
     static void AbsoluteChildren(VisualElement root)
     {
         var cases = new (string name, Action<VisualElement, VisualElement> setup)[] {

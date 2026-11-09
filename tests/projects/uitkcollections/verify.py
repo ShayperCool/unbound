@@ -18,11 +18,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parent
 TOLERANCE = 1e-3
-# Sections not implemented yet; reported with their counts, not gated.
-OPEN = {
-    'animated': 'animated reordering (ListViewReorderMode.Animated)',
-    'animated-steps': 'animated reordering (ListViewReorderMode.Animated)',
-}
+# Sections reported with their counts, not gated (none at present).
+OPEN = {}
 
 
 def load(path):

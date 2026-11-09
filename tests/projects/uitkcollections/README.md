@@ -8,7 +8,9 @@ Stages the `uitk` fixture in a fresh cache directory and replaces its interactio
   changes, clicks (with Ctrl and Shift, double click), navigation and keys, the selection API,
   selection types, a new items source, a new makeItem, a null source, detaching and attaching;
 - `reorder` and `animated`: reorderable ListViews (simple and animated mode) dragged by pointer:
-  one row down and up, a move short of a drag, a selection of two rows, a drag to the end;
+  one row down and up, a move short of a drag, a selection of two rows, a drag to the end (in
+  animated mode each drag starts once the rows' 500 ms gap animations have settled, so where the
+  pointer lands does not depend on the machine's speed);
 - `footer`: a ListView with the foldout header, size field and add/remove footer: "+", "-" with
   and without a selection, a size typed in the field, collapsing the header, onAdd/onRemove,
   removing the footer and header, an empty source;
@@ -26,7 +28,11 @@ Stages the `uitk` fixture in a fresh cache directory and replaces its interactio
   close button, a tab added later, activeTab, removing the active tab.
 - `absolute`: one absolutely positioned child per case in a padded, bordered parent (a tab
   header's underline is such a child): insets, percentage width/height/offsets/margins/min/max,
-  no offsets under each justify-content, align-items and direction.
+  no offsets under each justify-content, align-items and direction;
+- `animations`: transition animations (`experimental.animation`) of 1 ms with a pause before the
+  panel update, so each completes on its first tick: values, completion callbacks, recycling,
+  KeepAlive, StyleValues read from the element, the flexShrink setter, an animation started on an
+  element outside a panel.
 
 Every step records the item callbacks it caused (makeItem/bindItem/unbindItem/destroyItem, with
 the element: elements are numbered per control), the events the controls raised, and the state:
@@ -47,5 +53,5 @@ python3 tests/projects/uitkcollections/verify.py --release 6000.0.71f1 --candida
 
 The gate (`gate.json`) runs `run.py gate`: the engine capture into a fresh cache run, then
 `verify.py`, which compares every line (numbers within 1e-3) and prints image measurements.
-Sections listed in its `OPEN` table are reported with their counts but not gated until they are
-implemented. The published reference is one of two byte-identical Editor recordings.
+Sections listed in its `OPEN` table (none at present) are reported with their counts but not
+gated. The published reference is one of two byte-identical Editor recordings.

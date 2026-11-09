@@ -60,6 +60,25 @@ namespace UnityEngine.UIElements
             }
         }
 
+        /// <summary>Back to the laid-out position and size: the inline position, margins, offsets and
+        /// size the manual layout set are cleared.</summary>
+        internal void ClearManualLayout()
+        {
+            m_LayoutManual = false;
+            var s = style;
+            s.position = StyleKeyword.Null;
+            s.marginLeft = StyleKeyword.Null;
+            s.marginRight = StyleKeyword.Null;
+            s.marginBottom = StyleKeyword.Null;
+            s.marginTop = StyleKeyword.Null;
+            s.left = StyleKeyword.Null;
+            s.top = StyleKeyword.Null;
+            s.right = StyleKeyword.Null;
+            s.bottom = StyleKeyword.Null;
+            s.width = StyleKeyword.Null;
+            s.height = StyleKeyword.Null;
+        }
+
         internal Rect rect
         {
             get

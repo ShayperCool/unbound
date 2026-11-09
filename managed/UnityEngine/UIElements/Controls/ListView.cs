@@ -1456,12 +1456,8 @@ namespace UnityEngine.UIElements
             base.PostRefresh();
         }
 
-        internal override ListViewDragger CreateDragger()
-        {
-            if (m_ReorderMode == ListViewReorderMode.Animated)
-                Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.reorderMode Animated (dragging uses the simple mode)");
-            return new ListViewDragger(this);
-        }
+        internal override ListViewDragger CreateDragger() =>
+            m_ReorderMode == ListViewReorderMode.Animated ? new ListViewDraggerAnimated(this) : new ListViewDragger(this);
 
         internal override ICollectionDragAndDropController CreateDragAndDropController() => new ListViewReorderableDragAndDropController(this);
 
@@ -1871,6 +1867,10 @@ namespace UnityEngine.UIElements
 
         internal bool isDragGhost { get; private set; }
 
+        /// <summary>The row's running padding animation while another row is dragged over it
+        /// (animated reordering).</summary>
+        public Experimental.ValueAnimation<Experimental.StyleValues> animator { get; set; }
+
         internal event Action<ReusableCollectionItem> onDestroy;
 
         /// <summary>Sent when the attached element's geometry changes (dynamic height rows measure
@@ -2198,6 +2198,17 @@ namespace UnityEngine.UIElements
         /// <summary>Binds a recycled item to an index and moves it to its place among the active items.</summary>
         protected void Setup(T recycledItem, int newIndex)
         {
+            // The row standing in for the item an animated drag holds keeps that item's index as a
+            // ghost (shown empty), unbound.
+            if (GetDraggedIndex() == newIndex)
+            {
+                if (recycledItem.index != -1) m_CollectionView.viewController.InvokeUnbindItem(recycledItem, recycledItem.index);
+                recycledItem.SetDragGhost(true);
+                recycledItem.index = m_DraggedItem.index;
+                recycledItem.rootElement.style.display = DisplayStyle.Flex;
+                m_CollectionView.viewController.SetBindingContext(recycledItem, recycledItem.index);
+                return;
+            }
             if (recycledItem.isDragGhost) recycledItem.SetDragGhost(false);
             if (newIndex >= itemsCount)
             {
@@ -2396,8 +2407,7 @@ namespace UnityEngine.UIElements
             m_DraggedItem = null;
         }
 
-        /// <summary>The index of the item an animated drag holds, -1 without one (animated reordering
-        /// is not implemented: there is never one).</summary>
+        /// <summary>The index of the item an animated drag holds, -1 without one.</summary>
         protected int GetDraggedIndex() => m_DraggedItem?.index ?? -1;
 
         [Unbound.EditorFaithful("Unity's base implementation")]
@@ -2561,6 +2571,16 @@ namespace UnityEngine.UIElements
             var item = base.GetOrMakeItemAtIndex(activeItemIndex, scrollViewIndex);
             item.rootElement.style.height = resolvedItemHeight;
             return item;
+        }
+
+        /// <summary>The dropped row gets the fixed height back; a row dragged up from above the
+        /// visible rows scrolls the view up one row.</summary>
+        internal override void EndDrag(int dropIndex)
+        {
+            m_DraggedItem.rootElement.style.height = resolvedItemHeight;
+            if (firstVisibleIndex > m_DraggedItem.index)
+                m_ScrollView.verticalScroller.value = m_ScrollView.scrollOffset.y - resolvedItemHeight;
+            base.EndDrag(dropIndex);
         }
     }
 }
