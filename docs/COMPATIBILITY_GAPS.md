@@ -173,8 +173,9 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       Global Shader.WarmupAllShaders uses the same GPU preparation for every loaded shader's
       source variants, across SubShaders and fallbacks, without changing collection progress
       (`lightingassets all`, Q219). Source groups are enumerated lazily with excluded variants
-      omitted; later attachment/layout/state changes can still require driver work, as documented
-      for Vulkan/Metal/DX12. Unreadable source programs fail explicitly.
+      omitted. Mixed float/signed/unsigned programs prepare during startup too; incompatible
+      attachment types defer only their pipelines. Later attachment/layout/state changes can still
+      require driver work, as documented for Vulkan/Metal/DX12. Unreadable source programs fail explicitly.
 - [ ] `SystemInfo` answers follow what the renderer does.
 - [ ] `api-gaps` noise: trivial attributes (`JetBrains.Annotations.*`, `ResourcePathAttribute`,
       `CategoryInfoAttribute`, `ShaderKeywordFilter.*`) implemented, so the coverage line counts

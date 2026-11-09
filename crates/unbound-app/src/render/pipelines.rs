@@ -550,8 +550,53 @@ pub fn takes_output(format: wgpu::TextureFormat, kind: OutputKind) -> bool {
     kind == wanted
 }
 
+/// The first attached color whose scalar type cannot consume its fragment output.
+pub fn output_mismatch(
+    first: wgpu::TextureFormat,
+    extra: &[Option<wgpu::TextureFormat>; 7],
+    kinds: [Option<OutputKind>; 8],
+) -> Option<(usize, OutputKind, wgpu::TextureFormat)> {
+    std::iter::once(Some(first))
+        .chain(extra.iter().copied())
+        .zip(kinds)
+        .enumerate()
+        .find_map(|(location, (format, kind))| match (format, kind) {
+            (Some(format), Some(kind)) if !takes_output(format, kind) => {
+                Some((location, kind, format))
+            }
+            _ => None,
+        })
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn target_compatibility_preserves_integer_signedness_and_mrt_locations() {
+        use super::{OutputKind as K, output_mismatch};
+        use wgpu::TextureFormat as F;
+        let mut kinds = [None; 8];
+        kinds[0] = Some(K::Uint);
+        kinds[2] = Some(K::Sint);
+        let mut extra = [None; 7];
+        extra[1] = Some(F::Rgba32Sint);
+        assert_eq!(output_mismatch(F::Rgba32Uint, &extra, kinds), None);
+        assert_eq!(
+            output_mismatch(F::Rgba8Unorm, &extra, kinds),
+            Some((0, K::Uint, F::Rgba8Unorm))
+        );
+        extra[1] = Some(F::Rgba32Uint);
+        assert_eq!(
+            output_mismatch(F::Rgba32Uint, &extra, kinds),
+            Some((2, K::Sint, F::Rgba32Uint))
+        );
+        kinds[0] = Some(K::Float);
+        assert_eq!(
+            output_mismatch(F::Rgba32Sint, &[None; 7], kinds),
+            Some((0, K::Float, F::Rgba32Sint))
+        );
+        assert_eq!(output_mismatch(F::Rgba32Sint, &[None; 7], [None; 8]), None);
+    }
+
     #[test]
     fn finds_the_outputs_a_program_writes() {
         assert_eq!(

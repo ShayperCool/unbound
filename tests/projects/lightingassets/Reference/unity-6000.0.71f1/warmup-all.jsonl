@@ -13,4 +13,13 @@
 {"case":"warmup-cold","step":"draw global fallback 1","pixels":"cccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ff"}
 {"case":"warmup-cold","step":"all repeat call","result":"ok"}
 {"case":"warmup-cold","step":"global repeat","mode":"all","result":null,"state":{"name":"","shaders":1,"variants":5,"warmed":0,"isWarmedUp":false}}
+{"case":"warmup-cold","step":"startup mixed global call","result":"ok"}
+{"case":"warmup-cold","step":"mixed float draw","pixels":"20609fff20609fff20609fff20609fff20609fff20609fff20609fff20609fff20609fff20609fff20609fff20609fff20609fff20609fff20609fff20609fff"}
+{"case":"warmup-cold","step":"all unsigned target call","result":"ok"}
+{"case":"warmup-cold","step":"collection unsigned target call","result":"ok"}
+{"case":"warmup-cold","step":"mixed unsigned draw","values":[1,1,1,1]}
+{"case":"warmup-cold","step":"all signed target call","result":"ok"}
+{"case":"warmup-cold","step":"mixed signed draw","values":[0,1,0,1]}
+{"case":"warmup-cold","step":"mixed exact unsigned","values":[7,11,13,17]}
+{"case":"warmup-cold","step":"mixed exact signed","values":[-7,11,-13,17]}
 {"case":"end"}

@@ -105,6 +105,15 @@ impl UnityRenderer {
                                 errored,
                             )
                         };
+                        // Program preparation does not require this attachment configuration.
+                        // As with other later target changes, an incompatible scalar type can
+                        // require a pipeline on the first draw into the appropriate target.
+                        if !self
+                            .compiled
+                            .accepts_target(id, target.format, &target.extra_formats())
+                        {
+                            continue;
+                        }
                         for topology in [
                             resources::Topology::Triangles,
                             resources::Topology::Lines,

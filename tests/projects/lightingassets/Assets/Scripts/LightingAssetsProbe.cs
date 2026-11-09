@@ -29,6 +29,7 @@ public partial class LightingAssetsProbe : MonoBehaviour
     {
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LIGHTING_ASSETS_OUT"))) return;
         if (Environment.GetEnvironmentVariable("SHADER_WARMUP_MODE") == "startup") PrepareStartupWarmup();
+        if (Environment.GetEnvironmentVariable("SHADER_WARMUP_MODE") == "all") PrepareStartupGlobalWarmup();
         var go = new GameObject("LightingAssetsProbe");
         DontDestroyOnLoad(go);
         go.AddComponent<LightingAssetsProbe>();

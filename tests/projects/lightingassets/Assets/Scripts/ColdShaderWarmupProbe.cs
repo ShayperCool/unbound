@@ -7,6 +7,14 @@ using UnityEngine.Rendering;
 
 public partial class LightingAssetsProbe
 {
+    static Shader s_MixedWarmupShader;
+    static string s_StartupGlobalWarmup;
+    static void PrepareStartupGlobalWarmup()
+    {
+        s_MixedWarmupShader = Resources.Load<Shader>("WarmupMixed");
+        s_StartupGlobalWarmup = Try(() => { Shader.WarmupAllShaders(); return "\"ok\""; });
+    }
+
     static ShaderVariantCollection s_StartupWarmup;
     static RenderTexture s_StartupWarmupTarget;
     static readonly string[][] s_WarmupKeywords = { new string[0], new[] { "WARM_RED" }, new[] { "WARM_BLUE" }, new[] { "WARM_RED", "WARM_BLUE" } };
@@ -66,6 +74,7 @@ public partial class LightingAssetsProbe
 
     IEnumerator RecordColdShaderWarmup(string mode)
     {
+        var startupMixed = mode == "all" ? GpuWarmupStats(s_MixedWarmupShader) : null;
         var shader = Resources.Load<Shader>("WarmupFresh");
         var globalRoot = mode == "all" ? Resources.Load<Shader>("WarmupFallbackRoot") : null;
         var fallbackBefore = mode == "all" ? GpuWarmupStats("Probe/WarmupFallback/Base") : null;
@@ -204,6 +213,7 @@ public partial class LightingAssetsProbe
             if (warm != null && (repeated.programs != warm.programs || repeated.pipelines != warm.pipelines))
                 throw new InvalidOperationException("repeated warmup prepared new pipelines");
         }
+        if (mode == "all") RecordMixedShaderWarmup(target, mesh, startupMixed);
         RenderTexture.active = previous;
         DestroyImmediate(collection);
         DestroyImmediate(material);
@@ -211,4 +221,82 @@ public partial class LightingAssetsProbe
         DestroyImmediate(target);
         yield break;
     }
+    void RecordMixedShaderWarmup(RenderTexture floating, Mesh mesh, WarmupStats startup)
+    {
+        Record("warmup-cold", "\"step\":\"startup mixed global call\",\"result\":" + s_StartupGlobalWarmup);
+        if (startup != null) Debug.Log("WARMUP_MIXED_STARTUP " + startup.programs + " " + startup.pipelines);
+        var mixed = s_MixedWarmupShader;
+        var material = new Material(mixed);
+        var sampled = new RenderTexture(2, 1, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+        sampled.Create();
+        var exact = new string[2];
+        void Draw(RenderTexture target, int pass)
+        {
+            using (var cmd = new CommandBuffer())
+            {
+                cmd.SetRenderTarget(target);
+                cmd.SetViewport(new Rect(0, 0, target.width, target.height));
+                cmd.DrawMesh(mesh, Matrix4x4.identity, material, 0, pass);
+                Graphics.ExecuteCommandBuffer(cmd);
+            }
+        }
+        void Proof(string phase, WarmupStats before, WarmupStats warm)
+        {
+            var after = GpuWarmupStats(mixed);
+            if (before != null && warm != null && after != null)
+                Debug.Log("WARMUP_MIXED_PROOF " + phase + " " + before.programs + " " + before.pipelines + " "
+                    + warm.programs + " " + warm.pipelines + " " + after.programs + " " + after.pipelines);
+        }
+        var initial = GpuWarmupStats(mixed);
+        Draw(floating, 0);
+        Record("warmup-cold", "\"step\":\"mixed float draw\",\"pixels\":" + S(WarmupPixels(floating)));
+        Proof("float", initial, initial);
+        foreach (bool signed in new[] { false, true })
+        {
+            var descriptor = new RenderTextureDescriptor(2, 1) {
+                graphicsFormat = signed ? UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32B32A32_SInt
+                                        : UnityEngine.Experimental.Rendering.GraphicsFormat.R32G32B32A32_UInt,
+                depthBufferBits = 24, msaaSamples = 1
+            };
+            var integer = new RenderTexture(descriptor); integer.Create();
+            Graphics.SetRenderTarget(integer);
+            string kind = signed ? "signed" : "unsigned";
+            var before = GpuWarmupStats(mixed);
+            Record("warmup-cold", "\"step\":" + S("all " + kind + " target call") + ",\"result\":"
+                + Try(() => { Shader.WarmupAllShaders(); return "\"ok\""; }));
+            if (!signed)
+            {
+                var collection = new ShaderVariantCollection();
+                collection.Add(new ShaderVariantCollection.ShaderVariant(mixed, PassType.Normal));
+                Record("warmup-cold", "\"step\":\"collection unsigned target call\",\"result\":"
+                    + Try(() => { collection.WarmUp(); return "\"ok\""; }));
+                DestroyImmediate(collection);
+            }
+            var warm = GpuWarmupStats(mixed);
+            Draw(integer, signed ? 2 : 1);
+            material.SetTexture(signed ? "_SignedTex" : "_UnsignedTex", integer);
+            Draw(floating, signed ? 4 : 3);
+            var read = AsyncGPUReadback.Request(floating, 0, TextureFormat.RGBAFloat); read.WaitForCompletion();
+            if (read.hasError) throw new InvalidOperationException("mixed sampled readback failed");
+            var values = new StringBuilder("[");
+            var data = read.GetData<float>();
+            for (int i = 0; i < 4; i++) { if (i > 0) values.Append(','); values.Append(F(data[i])); }
+            values.Append(']');
+            Record("warmup-cold", "\"step\":" + S("mixed " + kind + " draw") + ",\"values\":" + values);
+            Proof(kind, before, warm);
+            Draw(sampled, signed ? 4 : 3);
+            var precise = AsyncGPUReadback.Request(sampled, 0, TextureFormat.RGBAFloat); precise.WaitForCompletion();
+            if (precise.hasError) throw new InvalidOperationException("mixed float32 readback failed");
+            var numbers = precise.GetData<float>();
+            exact[signed ? 1 : 0] = "[" + F(numbers[0]) + "," + F(numbers[1]) + "," + F(numbers[2]) + "," + F(numbers[3]) + "]";
+            material.SetTexture(signed ? "_SignedTex" : "_UnsignedTex", null);
+            Graphics.SetRenderTarget(floating);
+            DestroyImmediate(integer);
+        }
+        Record("warmup-cold", "\"step\":\"mixed exact unsigned\",\"values\":" + exact[0]);
+        Record("warmup-cold", "\"step\":\"mixed exact signed\",\"values\":" + exact[1]);
+        DestroyImmediate(sampled);
+        DestroyImmediate(material);
+    }
+
 }

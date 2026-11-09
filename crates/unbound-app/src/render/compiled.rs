@@ -386,6 +386,22 @@ impl CompiledPrograms {
         self.programs[id as usize].buffer_layout.as_ref()
     }
 
+    /// Programs can prepare before their typed render targets are bound. Target-specific
+    /// pipelines wait until a compatible attachment configuration is available.
+    pub fn accepts_target(
+        &self,
+        id: u32,
+        first: wgpu::TextureFormat,
+        extra: &[Option<wgpu::TextureFormat>; 7],
+    ) -> bool {
+        super::pipelines::output_mismatch(
+            first,
+            extra,
+            super::pipelines::fragment_output_kinds(&self.programs[id as usize].program.fragment),
+        )
+        .is_none()
+    }
+
     pub fn pipeline(
         &mut self,
         device: &wgpu::Device,
@@ -398,15 +414,12 @@ impl CompiledPrograms {
         }
         // Each output a target takes must be of its scalar type (an integer target integers).
         let kinds = super::pipelines::fragment_output_kinds(&gpu.program.fragment);
-        let formats = std::iter::once(Some(key.format)).chain(key.extra.iter().copied());
-        for (location, (format, kind)) in formats.zip(kinds).enumerate() {
-            if let (Some(format), Some(kind)) = (format, kind)
-                && !super::pipelines::takes_output(format, kind)
-            {
-                return Err(format!(
-                    "its output {location} ({kind:?}) cannot be written into a {format:?} target"
-                ));
-            }
+        if let Some((location, kind, format)) =
+            super::pipelines::output_mismatch(key.format, &key.extra, kinds)
+        {
+            return Err(format!(
+                "its output {location} ({kind:?}) cannot be written into a {format:?} target"
+            ));
         }
         let pipeline = create_pipeline(
             device,

@@ -46,11 +46,18 @@ def publish(run, labels, mode):
     if json.loads(old[-1]) != run.END or new[:len(old)-1] != old[:-1]:
         raise SystemExit('global warmup capture changed an existing reference row')
     extra = [json.loads(line) for line in new[len(old)-1:-1]]
-    if {row.get('step') for row in extra} != {
-            'draw unlisted instancing combination', 'draw lower LOD', 'draw global fallback 0', 'draw global fallback 1', 'all repeat call', 'global repeat'} or len(extra) != 6:
-        raise SystemExit('global warmup append must contain exactly the six new controls')
+    extensions = [
+        {'draw unlisted instancing combination', 'draw lower LOD', 'draw global fallback 0',
+         'draw global fallback 1', 'all repeat call', 'global repeat'},
+        {'startup mixed global call', 'mixed float draw', 'all unsigned target call',
+         'collection unsigned target call', 'mixed unsigned draw', 'all signed target call', 'mixed signed draw'},
+        {'mixed exact unsigned', 'mixed exact signed'},
+    ]
+    steps = {row.get('step') for row in extra}
+    if steps not in extensions or len(extra) != len(steps):
+        raise SystemExit('global warmup append must contain one complete new control section')
     target.write_text('\n'.join(new)+'\n')
-    print('appended six global warmup controls; every old row preserved')
+    print(f'appended {len(extra)} global warmup controls; every old row preserved')
     return 0
 
 
@@ -108,6 +115,15 @@ def compare(reference, candidate, log, mode):
         for proof in inherited:
             first_p, first_l, warm_p, warm_l, last_p, last_l = map(int, proof)
             valid &= warm_p > first_p and warm_l > first_l and (warm_p, warm_l) == (last_p, last_l)
+    if mode == 'all':
+        startup = re.findall(r'WARMUP_MIXED_STARTUP (\d+) (\d+)', log)
+        valid &= len(startup) == 1 and all(int(p) > 0 and int(l) > 0 for p, l in startup)
+        mixed = re.findall(r'WARMUP_MIXED_PROOF (float|unsigned|signed) (\d+) (\d+) (\d+) (\d+) (\d+) (\d+)', log)
+        valid &= len(mixed) == 3 and {p[0] for p in mixed} == {'float', 'unsigned', 'signed'}
+        for phase, *counts in mixed:
+            first_p, first_l, warm_p, warm_l, last_p, last_l = map(int, counts)
+            valid &= first_p == warm_p == last_p and warm_p > 0 and warm_l == last_l and warm_l > 0
+            valid &= first_l == warm_l if phase == 'float' else first_l < warm_l
     if mode == 'fallback':
         own = re.findall(r'WARMUP_FALLBACK_OWN (\d+) (\d+) (\d+) (\d+)', log)
         valid &= len(own) == 1
