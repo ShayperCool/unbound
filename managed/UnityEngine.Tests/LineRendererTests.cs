@@ -698,7 +698,7 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>A drawn strip's mesh keeps its arrays from frame to frame while they are big
-        /// enough: drawing allocates no geometry.</summary>
+        /// enough, and drawing it again allocates nothing.</summary>
         [Fact]
         public void DrawnStripReusesItsMeshArrays()
         {
@@ -725,7 +725,12 @@ namespace UnityEngine.Tests
                 var arrays = new object[] { mesh.m_Vertices, mesh.m_Normals, mesh.m_Tangents, mesh.m_Colors, mesh.m_UVs[0], mesh.m_SubMeshes[0].Indices };
                 int vertices = mesh.m_StreamVertexCount;
                 line.SetPosition(3, new Vector3(2, -1));
+                draws.Clear();
                 line.CollectDraws(context, draws);
+                draws.Clear();
+                long before = System.GC.GetAllocatedBytesForCurrentThread();
+                line.CollectDraws(context, draws);
+                Assert.Equal(0, System.GC.GetAllocatedBytesForCurrentThread() - before);
                 Assert.Equal(vertices, mesh.m_StreamVertexCount);
                 var again = new object[] { mesh.m_Vertices, mesh.m_Normals, mesh.m_Tangents, mesh.m_Colors, mesh.m_UVs[0], mesh.m_SubMeshes[0].Indices };
                 for (int i = 0; i < arrays.Length; i++) Assert.Same(arrays[i], again[i]);

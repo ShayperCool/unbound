@@ -14,8 +14,6 @@ namespace UnityEngine
     {
         internal Matrix4x4 ToBuild;
         internal Matrix4x4 FromBuild;
-        /// <summary>The distance along the build space's z axis each point moves per unit of its width.</summary>
-        internal float ShadowBias;
         /// <summary>Subtracted from the travelled distance of LineTextureMode.Static.</summary>
         internal float StaticOffset;
 
@@ -154,8 +152,8 @@ namespace UnityEngine
             }
 
             float widest = 0f;
-            var keys = p.WidthCurve.keys;
-            for (int k = 0; k < keys.Length; k++) widest = Math.Max(widest, keys[k].value);
+            var curve = p.WidthCurve;
+            for (int k = 0; k < curve.length; k++) widest = Math.Max(widest, curve[k].value);
             widest *= p.WidthMultiplier;
             float total = Sides(widest, p.Alignment == LineAlignment.TransformZ);
             Miters();
@@ -191,7 +189,6 @@ namespace UnityEngine
                 m_U = t * uScale;
                 m_Color = VertexColor(p.ColorGradient.Evaluate(sample), linear);
                 float width = p.WidthCurve.Evaluate(sample) * p.WidthMultiplier * (widths != null ? widths[i - first] : 1f);
-                m_Points[i].z += width * space.ShadowBias;
                 Point(i, 0.5f * width);
             }
             return true;
@@ -324,8 +321,10 @@ namespace UnityEngine
             if (turn < -Mathf.PI) turn += 2f * Mathf.PI;
             if (turn > Mathf.PI) turn -= 2f * Mathf.PI;
             var p = m_Points[i];
-            // The inner side: the opposite of the turn, mirrored behind the camera.
-            float inner = turn < 0f || (turn == 0f && float.IsNegative(turn)) ? 1f : -1f;
+            // The inner side: the opposite of the turn's sign, mirrored behind the camera. Only the
+            // sign bit counts: -0 and the NaN of a side without direction (a TransformZ segment along
+            // the frame's z axis) turn like a negative turn (tests/projects/lines edge.*.zParallel).
+            float inner = float.IsNegative(turn) ? 1f : -1f;
             if (p.z > 0f) inner = -inner;
             var miter = m_Miter[i - 1];
             var center = new Vector2(p.x + miter.x * inner * half, p.y + miter.y * inner * half);
