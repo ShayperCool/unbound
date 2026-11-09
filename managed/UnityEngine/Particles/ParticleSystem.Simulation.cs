@@ -781,6 +781,28 @@ namespace UnityEngine
             // sub-emitters (6000.0.71f1, tests/projects/particlemeshshape texture/clip/deathsub:
             // six discarded lanes of a ten-particle burst emit six Death bursts).
             bool deathSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Death);
+            int prefix = SettleBatch(start, aligned, ref count, deathSubs);
+            for (int i = start; i < m_Count; i++)
+            {
+                int origin = i < aligned ? count - prefix + i - start : i - aligned;
+                StartTrail(ref m_Particles[i], simulate ? m_SlotPoints[aligned + origin] : null);
+            }
+            // Particles a step's births replace fire their Death sub-emitters; those an Emit call
+            // replaces do not (6000.0.71f1, tests/projects/particlerandom ring/pause/ratedeath, deathsub).
+            if (ringMode != ParticleSystemRingBufferMode.Disabled) WrapRingBuffer(start, ringMode, simulate && deathSubs);
+            NoteMostParticles();
+            m_Newborn = false;
+            m_SpeedNt = -1f;
+        }
+
+        /// <summary>Settles a batch of new particles laid out from <paramref name="aligned"/> (the
+        /// first multiple of four at or after <paramref name="start"/>, the live count before it) in
+        /// four-slot groups: each lane marked dead, used or padding, lowers
+        /// <paramref name="count"/> until it reaches zero (firing the Death sub-emitters while it
+        /// does) and leaves; the batch's first particles then fill the gap before
+        /// <paramref name="aligned"/> from its end. Returns how many moved there.</summary>
+        int SettleBatch(int start, int aligned, ref int count, bool deathSubs)
+        {
             for (int i = aligned; i < m_Count;)
             {
                 if ((MarkOf(i) & SlotMark.Dead) == 0) { i++; continue; }
@@ -801,17 +823,7 @@ namespace UnityEngine
                 MoveSlot(start + i, aligned + count - prefix + i);
             }
             m_Count = start + count;
-            for (int i = start; i < m_Count; i++)
-            {
-                int origin = i < aligned ? count - prefix + i - start : i - aligned;
-                StartTrail(ref m_Particles[i], simulate ? m_SlotPoints[aligned + origin] : null);
-            }
-            // Particles a step's births replace fire their Death sub-emitters; those an Emit call
-            // replaces do not (6000.0.71f1, tests/projects/particlerandom ring/pause/ratedeath, deathsub).
-            if (ringMode != ParticleSystemRingBufferMode.Disabled) WrapRingBuffer(start, ringMode, simulate && deathSubs);
-            NoteMostParticles();
-            m_Newborn = false;
-            m_SpeedNt = -1f;
+            return prefix;
         }
 
         /// <summary>The ring's next slot: where the next particle past the maximum goes.</summary>
@@ -2365,27 +2377,55 @@ namespace UnityEngine
             EmitParams none = default;
             var context = MakeContext();
             int requestIndex = 0, requestStart = 0;
-            for (int k = 0; k < count; k++)
+            // Each emission starts as its own batch of four-slot groups: from the first multiple
+            // of four, padded to a multiple of four, settled like a step's births (6000.0.71f1,
+            // tests/projects/particlemeshshape texture/clip/deathsub, subbirths). A ring buffer
+            // keeps adding one particle after another (unmeasured).
+            bool batched = StartsInBatches && m_Main.ringBufferMode == ParticleSystemRingBufferMode.Disabled;
+            int start = m_Count, aligned = start, lanes = count, used = count;
+            SlotMark[] marks = null;
+            if (batched)
             {
-                int index = Allocate();
+                used = Math.Min(count, Math.Max(0, m_Main.maxParticles - start));
+                if (used <= 0) return;
+                aligned = checked((start + 3) & ~3);
+                lanes = checked((used + 3) & ~3);
+                Reserve(checked(aligned + lanes));
+                m_Count = aligned + lanes;
+                for (int i = aligned; i < m_Count; i++) ClearCustom(i);
+                marks = SlotMarks(m_Count);
+            }
+            for (int k = 0; k < lanes; k++)
+            {
+                int index = batched ? aligned + k : Allocate();
                 if (index < 0) return;
                 ref var p = ref m_Particles[index];
-                var birthOrigin = origin + parentSystem.SimulationToWorld().MultiplyVector(birthVelocity) * (birthSpacing * k);
-                float particleAge = Mathf.Max(0f, preAge - birthSpacing * k);
+                // A padding lane takes the last particle's age and place.
+                bool padding = k >= used;
+                int lane = padding ? used - 1 : k;
+                var birthOrigin = origin + parentSystem.SimulationToWorld().MultiplyVector(birthVelocity) * (birthSpacing * lane);
+                float particleAge = Mathf.Max(0f, preAge - birthSpacing * lane);
                 if (birthRequests != null)
                 {
-                    while (requestIndex + 1 < birthRequests.Count && k >= requestStart + birthRequests[requestIndex].count)
+                    while (requestIndex + 1 < birthRequests.Count && lane >= requestStart + birthRequests[requestIndex].count)
                         requestStart += birthRequests[requestIndex++].count;
                     var request = birthRequests[requestIndex];
-                    int local = k - requestStart;
+                    int local = lane - requestStart;
                     particleAge = Mathf.Max(0f, request.age - request.spacing * local);
                     birthOrigin = parentSystem.SimulationToWorld().MultiplyPoint3x4(request.position + request.velocity * (request.spacing * local));
                 }
-                if (!InitParticle(ref p, emitter, startNt, false, ref none, k, count, birthOrigin,
-                    k, count, (properties & ParticleSystemSubEmitterProperties.InheritRotation) != 0 ? parent.m_AxisOfRotation : null, frame))
+                m_ShapeSampleDiscarded = padding;
+                bool initialized = InitParticle(ref p, emitter, startNt, false, ref none, k, count, birthOrigin,
+                    k, count, (properties & ParticleSystemSubEmitterProperties.InheritRotation) != 0 ? parent.m_AxisOfRotation : null, frame);
+                m_ShapeSampleDiscarded = false;
+                if (!initialized)
                 {
-                    if (m_ShapeTextureDiscarded) ReportUnbatchedTextureClip();
-                    RemoveAt(index);
+                    if (batched) marks[index] |= SlotMark.Dead;
+                    else
+                    {
+                        if (m_ShapeTextureDiscarded) ReportUnbatchedTextureClip();
+                        RemoveAt(index);
+                    }
                     continue;
                 }
                 p.m_ParentRandomSeed = parent.m_RandomSeed;
@@ -2403,38 +2443,47 @@ namespace UnityEngine
                     p.m_AgePercent = 0f;
                     if (p.m_Lifetime <= 0f)
                     {
-                        if (keepSpent)
-                        {
-                            p.m_Lifetime = 0f;
-                            StartTrail(ref p);
-                        }
+                        if (keepSpent) p.m_Lifetime = 0f;
+                        else if (batched) marks[index] |= SlotMark.Dead;
                         else RemoveAt(index);
+                        if (!batched && keepSpent) StartTrail(ref p);
                         continue;
                     }
                 }
                 BeginModuleSample(k, p.m_RandomSeed);
-                if (!Integrate(ref p, particleAge, ref context)) RemoveAt(index);
-                else
+                var laneContext = context;
+                if (padding)
                 {
-                    bool alive = true;
-                    if (birthCatchup >= 0f && !prewarm)
-                    {
-                        // Approximation (unmeasured, open): every catch-up step reuses the
-                        // context made once for this emission, so system-time curves (gravity
-                        // modifier, system-time module curves) and the emitter's transform stay
-                        // those of the emission instead of following each catch-up step.
-                        float remaining = birthCatchup;
-                        float step = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
-                        for (int guard = 0; remaining >= step && guard < 100000; guard++)
-                        {
-                            remaining -= step;
-                            if (!Integrate(ref p, step, ref context)) { alive = false; break; }
-                        }
-                    }
-                    if (alive) StartTrail(ref p);
-                    else RemoveAt(index);
+                    laneContext.BirthSubs = false;
+                    laneContext.TemporaryLane = true;
                 }
+                bool alive = Integrate(ref p, particleAge, ref laneContext);
+                if (alive && birthCatchup >= 0f && !prewarm && !padding)
+                {
+                    // Approximation (unmeasured, open): every catch-up step reuses the
+                    // context made once for this emission, so system-time curves (gravity
+                    // modifier, system-time module curves) and the emitter's transform stay
+                    // those of the emission instead of following each catch-up step.
+                    float remaining = birthCatchup;
+                    float step = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
+                    for (int guard = 0; remaining >= step && guard < 100000; guard++)
+                    {
+                        remaining -= step;
+                        if (!Integrate(ref p, step, ref context)) { alive = false; break; }
+                    }
+                }
+                if (batched)
+                {
+                    if (!alive) marks[index] |= SlotMark.Dead;
+                }
+                else if (alive) StartTrail(ref p);
+                else RemoveAt(index);
             }
+            if (!batched) return;
+            bool deathSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Death);
+            SettleBatch(start, aligned, ref used, deathSubs);
+            for (int i = start; i < m_Count; i++) StartTrail(ref m_Particles[i]);
+            NoteMostParticles();
         }
 
         // ------------------------------------------------------------------ current values
