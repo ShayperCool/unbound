@@ -57,6 +57,16 @@ class IndexTests(unittest.TestCase):
             index.close()
         self.assertEqual(slot.symlink_targets(self.base), set())
 
+    def test_checkout_membership_preserves_nested_roots_and_path_boundaries(self):
+        parent, nested, unrelated = [self.root/name for name in ('a', 'a/child', 'a-extra')]
+        roots = [parent, nested, unrelated]
+        self.assertEqual(slot.referenced_checkouts({nested/'Assets/file'}, roots), {parent, nested})
+        self.assertEqual(slot.referenced_checkouts({unrelated}, roots), {unrelated})
+
+    def test_root_spelling_follows_the_host_path_resolution(self):
+        (self.deep/'link').symlink_to('/'+str(self.target))
+        self.assertIn(self.target.resolve(), slot.symlink_targets(self.base))
+
     @unittest.skipIf(os.geteuid() == 0, 'root bypasses directory permissions')
     def test_cached_directory_becoming_unreadable_fails_closed(self):
         slot.symlink_targets(self.base)

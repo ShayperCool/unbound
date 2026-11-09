@@ -201,7 +201,7 @@ def _symlink_targets(base, checkouts, index):
         if path in resolving:
             return path  # a cyclic link cannot be traversed, but its targets are retained
         if path.parent == path:
-            return path
+            return Path(os.path.realpath(path))
         resolving.add(path)
         parent = resolve(path.parent)
         candidate = parent.parent if path.name == '..' else parent/path.name
@@ -280,6 +280,22 @@ def run_cache(env=os.environ):
     return Path(env.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound'
 
 
+def referenced_checkouts(links, checkouts):
+    """Build membership once instead of walking every link's parents per checkout."""
+    roots = {str(path): path for path in checkouts}
+    found = set()
+    for link in links:
+        value = str(link)
+        while value:
+            if value in roots:
+                found.add(roots[value])
+            parent = os.path.dirname(value)
+            if parent == value:
+                break
+            value = parent
+    return found
+
+
 def cmd_index(args, repo):
     started = time.monotonic()
     print(f'index run-cache references: budget {args.seconds}s', flush=True)
@@ -311,8 +327,9 @@ def cmd_reap(args, repo):
             reason = 'has tracked paths hidden by index flags'
         else:
             if linked is None:
-                linked = symlink_targets(run_cache(), checkouts=[entry[0] for entry in entries])
-            if any(link == path or path in link.parents for link in linked):
+                roots = [entry[0] for entry in entries]
+                linked = referenced_checkouts(symlink_targets(run_cache(), checkouts=roots), roots)
+            if path in linked:
                 reason = 'a symlink under the run caches points into it'
         if reason:
             kept_unmerged += bool(unmerged_commits(path, repo))
