@@ -169,6 +169,32 @@ public partial class ParticleRandomProbe : MonoBehaviour
         }
     }
 
+    /// <summary>A ring buffer of 12 in both modes filled past its capacity: Emit calls and a
+    /// step between them, and rate emission over several steps (which particles stay, in which
+    /// slots, and how many).</summary>
+    static void RingBuffers()
+    {
+        foreach (var mode in new[] { ParticleSystemRingBufferMode.PauseUntilReplaced, ParticleSystemRingBufferMode.LoopUntilReplaced })
+        {
+            string name = mode == ParticleSystemRingBufferMode.PauseUntilReplaced ? "pause" : "loop";
+            foreach (uint seed in Seeds)
+            {
+                var ps = Make("ring", seed, s => { var m = s.main; m.maxParticles = 12; m.ringBufferMode = mode; }, 0);
+                ps.Simulate(0f, true, true, false);
+                ps.Emit(10); RecordParticles(Key("ring/" + name + "/emit", seed, 0), ps);
+                ps.Emit(10); RecordParticles(Key("ring/" + name + "/emit", seed, 1), ps);
+                ps.Simulate(Dt, true, false, false); RecordParticles(Key("ring/" + name + "/emit", seed, 2), ps);
+                ps.Emit(7); RecordParticles(Key("ring/" + name + "/emit", seed, 3), ps);
+                DestroyImmediate(ps.gameObject);
+            }
+            Simulated("ring/" + name + "/rate", ps =>
+            {
+                var m = ps.main; m.maxParticles = 12; m.ringBufferMode = mode;
+                var e = ps.emission; e.rateOverTime = 100f;
+            }, 5, 0);
+        }
+    }
+
     /// <summary>Plane collisions with random dampen, bounce and lifetime loss (distinct ranges, so
     /// each value names its curve), two curves rising over the life, and one random curve alone:
     /// which random value each hit takes. Nine particles at speeds 1 to 4 reach the plane over
@@ -422,6 +448,7 @@ public partial class ParticleRandomProbe : MonoBehaviour
         ModuleOverrides();
         MovingCustomEmitter();
         CollisionCurves();
+        RingBuffers();
 
         // Force over Lifetime, Inherit-free.
         Simulated("force/two", ps =>
