@@ -426,6 +426,30 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void APartialPathOpenedByRemovedCarvingGoesOnToTheDestination()
+        {
+            // A wall carved across the platform: the agent gets a partial path. Carving (no link
+            // change) does not make the path stale, so when the wall's hole goes the agent's path is
+            // planned again to its destination (Unbound's choice, unmeasured), not kept to the old end.
+            var wall = Box(new Vector3(0f, 0.5f, 0f), new Vector3(0.5f, 1f, 12f), 0f, onlyStationary: false);
+            Frame();
+            Frame();
+            var agent = Walker(new Vector3(-8f, 0f, 0f), new Vector3(8f, 0f, 0f));
+            Frame();
+            Assert.Equal(NavMeshPathStatus.PathPartial, agent.pathStatus);
+            Assert.False(agent.isPathStale);
+            // The obstacle goes (carving off alone would leave it to be avoided).
+            wall.enabled = false;
+            Frame();
+            Frame();
+            Frame();
+            Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
+            for (int i = 0; i < 400; i++) Frame();
+            Assert.True((agent.nextPosition - new Vector3(8f, agent.nextPosition.y, 0f)).magnitude < 0.05f, $"at {agent.nextPosition}");
+            Assert.True((agent.nextPosition - new Vector3(8f, agent.nextPosition.y, 0f)).magnitude < 0.05f, $"at {agent.nextPosition}");
+        }
+
+        [Fact]
         public void AHoleCutElsewhereLetsAnArrivingAgentFinish()
         {
             // The rebuild after a cut must not stop an agent in its last centimetre (hasPath

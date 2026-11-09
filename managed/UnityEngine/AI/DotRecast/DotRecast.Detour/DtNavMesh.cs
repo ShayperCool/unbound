@@ -988,8 +988,10 @@ namespace DotRecast.Detour
         /// Unbound: the most polygons one end of a wide connection attaches to in a tile (as many as
         /// Unity's; an end over more is cut short, reported once).
         const int MaxWideEndPolys = 32;
+        /// Unbound: the polygons whose bounds a wide end's bounds overlap, looked through for those
+        /// it crosses.
+        const int MaxWideEndCandidates = 256;
         static bool s_WarnedWideEnd;
-
 
         /// Unbound: one end of a wide connection attached to every ground polygon of
         /// <paramref name="land"/> (lying on side <paramref name="landSide"/> of the connection's
@@ -1006,13 +1008,9 @@ namespace DotRecast.Detour
             var qmax = RcVec3f.Max(a, b);
             qmin.Y -= climb;
             qmax.Y += climb;
-            Span<long> found = stackalloc long[MaxWideEndPolys];
-            int n = QueryPolygonsInTile(land, qmin, qmax, found, MaxWideEndPolys);
-            if (n == MaxWideEndPolys && !s_WarnedWideEnd)
-            {
-                s_WarnedWideEnd = true;
-                UnityEngine.Debug.LogWarning($"Unbound: a wide NavMeshLink's end lies over more than {MaxWideEndPolys} NavMesh polygons of a tile; it is attached to the first {MaxWideEndPolys}.");
-            }
+            Span<long> found = stackalloc long[MaxWideEndCandidates];
+            int n = QueryPolygonsInTile(land, qmin, qmax, found, MaxWideEndCandidates);
+            int attached = 0;
             DtPoly conPoly = conTile.data.polys[con.poly];
             long landBase = GetPolyRefBase(land);
             long conRef = GetPolyRefBase(conTile) | (long)con.poly;
@@ -1031,6 +1029,15 @@ namespace DotRecast.Detour
                 byte bmax = (byte)(int)(Math.Clamp(tmax, 0f, 1f) * 255f);
                 if (bmin >= bmax)
                     continue;
+                if (attached++ == MaxWideEndPolys)
+                {
+                    if (!s_WarnedWideEnd)
+                    {
+                        s_WarnedWideEnd = true;
+                        UnityEngine.Debug.LogWarning($"Unbound: a wide NavMeshLink's end crosses more than {MaxWideEndPolys} NavMesh polygons of a tile; it is attached to the first {MaxWideEndPolys}.");
+                    }
+                    return;
+                }
 
                 int idx = AllocLink(conTile);
                 if (idx == DT_NULL_LINK)
