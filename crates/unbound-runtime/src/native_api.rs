@@ -38,7 +38,8 @@ use crate::{
 /// 35: texture packet flag for deferred automatic mip visibility.
 /// 36: source-loop listener pose snapshots for spatial audio.
 /// 37: `audio_decode_clip` (downloaded audio files).
-pub const NATIVE_API_VERSION: u32 = 37;
+/// 38: prepared callback buffers for closing captured audio output.
+pub const NATIVE_API_VERSION: u32 = 38;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]
