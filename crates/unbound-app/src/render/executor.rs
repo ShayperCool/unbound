@@ -2324,7 +2324,8 @@ impl UnityRenderer {
         // (unmeasured: the Editor draws a screen camera into the screen itself).
         let stand_in = self.screen_stand_in;
         let screen_like = stand_in != 0 && (color == stand_in || depth == stand_in);
-        if screen_like && (color != stand_in || (depth != 0 && depth != stand_in)) {
+        let other_depth = depth != 0 && depth != commands::NO_TEXTURE && depth != stand_in;
+        if screen_like && (color != stand_in || other_depth) {
             self.warn_once("stand-in-mixed".into(), || {
                 "a target pairs the screen camera's target with another texture: both are drawn as the screen is stored (unmeasured)".into()
             });
@@ -2644,6 +2645,13 @@ impl UnityRenderer {
                     self.target_handles = (color, depth);
                     self.plugins.target = (mip, slice);
                     self.state.target = self.resolve_target(color, depth, mip, slice);
+                    // Further colors are drawn as the first is stored.
+                    let stand_in = self.screen_stand_in;
+                    if stand_in != 0 && color != stand_in && extra.contains(&stand_in) {
+                        self.warn_once("stand-in-extra".into(), || {
+                            "the screen camera's target is a further color of a target: it is drawn as the first color is stored (unmeasured)".into()
+                        });
+                    }
                     let size = self
                         .state
                         .target
