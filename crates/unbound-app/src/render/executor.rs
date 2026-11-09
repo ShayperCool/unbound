@@ -4006,8 +4006,9 @@ impl UnityRenderer {
             return None;
         }
         let format = source.format();
-        // Integer texels have no colors to read (ReadPixels refuses those targets).
-        if resources::is_integer(format) {
+        // Integer texels have no colors to read (ReadPixels refuses those targets); blocks are
+        // no texels.
+        if resources::is_integer(format) || format.is_compressed() {
             return None;
         }
         let (tw, th) = (level.width as i32, level.height as i32);

@@ -1,6 +1,8 @@
 //! What the native side knows while a game runs: the project, its asset database and loaded
 //! documents. The managed engine reaches it through the native API.
-use crate::render_protocol::{ImportedTextureInfo, NullBackend, RenderBackend, handle, owned};
+use crate::render_protocol::{
+    ImportedTextureInfo, NullBackend, RenderBackend, handle, owned, texture_format,
+};
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use serde_json::json;
@@ -628,6 +630,23 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             };
             Ok(json!({ "width": mip.width, "height": mip.height, "format": format, "rgba": crate::models::base64(&mip.data) }).to_string())
         }
+        "texture-raw" => {
+            // An imported block-compressed texture's mip chain as stored (none for others).
+            #[derive(Deserialize)]
+            struct Request {
+                guid: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let guid = Guid::parse(&r.guid).context("bad guid")?;
+            let asset = s.db.by_guid(guid).context("no such asset")?;
+            let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
+            let texture = s
+                .imports
+                .get_or_import(&texture_importer(s), &asset.file, &meta)?;
+            let blocks = texture.blocks.as_ref().context("the texture is not block-compressed")?;
+            let raw = crate::models::base64(&concat(&blocks.mips));
+            Ok(json!({ "format": blocks.format.unity_format(), "raw": raw }).to_string())
+        }
         "texture-layers" => {
             // An imported texture's images: slices of an array, depth of a volume, cube faces.
             #[derive(Deserialize)]
@@ -1036,21 +1055,22 @@ fn project_in_gamma_space(project: &Project) -> bool {
     space == 0
 }
 
-/// The active build target group (`Android`, `Standalone`, ...): the import overrides that apply.
-/// Whether the GPU samples BC7 (set once the render device exists): imported textures then
-/// upload compressed.
-static GPU_BC7: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+/// Whether the GPU samples BC1-BC7 textures (set once the render device exists): imported
+/// textures then upload their blocks, else what the blocks decode to.
+static GPU_BC: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
-/// The render device can sample BC-compressed textures: import textures compressed too.
+/// The render device can sample BC-compressed textures (`UNBOUND_NO_TEXTURE_COMPRESSION` turns
+/// that off): imports upload their blocks, and textures whose target format Unbound does not
+/// produce are given BC7 blocks for the GPU.
 pub fn set_gpu_bc7(supported: bool) {
     let compress = supported && std::env::var_os("UNBOUND_NO_TEXTURE_COMPRESSION").is_none();
-    GPU_BC7.store(compress, std::sync::atomic::Ordering::Relaxed);
+    GPU_BC.store(compress, std::sync::atomic::Ordering::Relaxed);
 }
 
-/// The texture importer for the active build target, compressing when the GPU samples BC7.
+/// The texture importer for the active build target; BC7 for the GPU when it samples BC.
 fn texture_importer(s: &RuntimeState) -> TextureImporter {
     TextureImporter {
-        compress: GPU_BC7.load(std::sync::atomic::Ordering::Relaxed),
+        compress: GPU_BC.load(std::sync::atomic::Ordering::Relaxed),
         ..s.texture_importer.read().unwrap().clone()
     }
 }
@@ -1182,6 +1202,29 @@ fn single_channel_texels(
     }
 }
 
+/// Mip levels' blocks one after another.
+fn concat<B: AsRef<[u8]>>(levels: &[B]) -> Vec<u8> {
+    let mut data = Vec::with_capacity(levels.iter().map(|b| b.as_ref().len()).sum());
+    for level in levels {
+        data.extend_from_slice(level.as_ref());
+    }
+    data
+}
+
+/// The renderer's code for an import's block format.
+fn block_code(format: unbound_assets::texture::BlockFormat, srgb: bool) -> i32 {
+    use unbound_assets::texture::BlockFormat as B;
+    let colour = |color: i32, data: i32| if srgb { color } else { data };
+    match format {
+        B::Bc1 => colour(texture_format::BC1_COLOR, texture_format::BC1_DATA),
+        B::Bc3 => colour(texture_format::BC3_COLOR, texture_format::BC3_DATA),
+        B::Bc7 => colour(texture_format::BC7_COLOR, texture_format::BC7_DATA),
+        B::Bc4 => texture_format::BC4,
+        B::Bc5 => texture_format::BC5,
+        B::Bc6h => texture_format::BC6H,
+    }
+}
+
 /// Imports an asset texture (through the import cache) into a renderer handle.
 pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     let s = state();
@@ -1228,15 +1271,14 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             }
         }
     }
-    // BC7 blocks when the GPU samples them (format 7 sRGB-capable, 8 linear), else RGBA8.
-    let (gpu_format, data) = match texture.bc7.take() {
-        Some(blocks) if GPU_BC7.load(std::sync::atomic::Ordering::Relaxed) => {
-            let mut data = Vec::with_capacity(blocks.iter().map(|b| b.len()).sum());
-            for b in &blocks {
-                data.extend_from_slice(b);
-            }
-            (format + 7, data)
-        }
+    // The import's blocks, else BC7 blocks made for the GPU when it samples them, else the
+    // pixels.
+    let gpu_bc = GPU_BC.load(std::sync::atomic::Ordering::Relaxed);
+    // The import's blocks always go up (the renderer decodes them where the device has no BC
+    // formats; textures may import before the device exists).
+    let (gpu_format, data) = match (texture.blocks.take(), texture.bc7.take()) {
+        (Some(blocks), _) => (block_code(blocks.format, texture.srgb), concat(&blocks.mips)),
+        (None, Some(blocks)) if gpu_bc => (format + texture_format::BC7_COLOR, concat(&blocks)),
         _ => {
             // Mip 0 keeps its buffer; the smaller levels are appended to it.
             let total: usize = texture.mips.iter().map(|m| m.data.len()).sum();

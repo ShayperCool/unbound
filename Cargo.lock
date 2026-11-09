@@ -6439,6 +6439,7 @@ dependencies = [
  "naga",
  "rustc-hash 2.1.3",
  "serde_json",
+ "texture2ddecoder",
  "tracing",
  "tracing-subscriber",
  "unbound-remote",

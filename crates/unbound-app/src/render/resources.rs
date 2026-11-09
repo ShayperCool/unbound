@@ -743,9 +743,7 @@ pub fn texture_storage(
     packed: bool,
     caps: &NormFormatCaps,
 ) -> TextureStorage {
-    // Imported textures may come BC7-compressed (7: colour, sampled through an sRGB view in a
-    // linear project like 0; 8: linear data like 1).
-    let compressed = matches!(t.format, 7 | 8) && !t.render_target;
+    let compressed = block_format(t.format).filter(|_| !t.render_target);
     let stored = |format: wgpu::TextureFormat, bytes_per_pixel: u32| TextureStorage {
         format,
         bytes_per_pixel,
@@ -796,9 +794,76 @@ pub fn texture_storage(
                 }
             }
         }
-        _ if compressed => stored(wgpu::TextureFormat::Bc7RgbaUnorm, 0),
+        _ if compressed.is_some() => stored(compressed.unwrap(), 0),
         _ => stored(wgpu::TextureFormat::Rgba8Unorm, 4),
     }
+}
+
+/// A block-compressed packet as RGBA8 (colour codes sampled through an sRGB view in linear
+/// projects, the others linear; BC6H clamped to 0..1, with a warning).
+fn decode_blocks(t: &owned::Texture) -> owned::Texture {
+    use texture2ddecoder as d;
+    let decode: fn(&[u8], usize, usize, &mut [u32]) -> Result<(), &'static str> = match t.format {
+        texture_format::BC1_COLOR | texture_format::BC1_DATA => d::decode_bc1,
+        texture_format::BC3_COLOR | texture_format::BC3_DATA => d::decode_bc3,
+        texture_format::BC4 => d::decode_bc4,
+        texture_format::BC5 => d::decode_bc5,
+        texture_format::BC6H => d::decode_bc6_unsigned,
+        _ => d::decode_bc7,
+    };
+    report_fallback(
+        t.format,
+        &FormatFallback::Unsupported(
+            "the device has no BC formats: the blocks are decoded".to_string(),
+        ),
+    );
+    let block_bytes = block_format(t.format)
+        .and_then(|f| f.block_copy_size(None))
+        .unwrap_or(16) as usize;
+    let (width, height) = (t.width.max(1) as usize, t.height.max(1) as usize);
+    let mut data = Vec::new();
+    let mut offset = 0;
+    for level in 0..t.mip_count.max(1) as u32 {
+        let (w, h) = ((width >> level).max(1), (height >> level).max(1));
+        let len = w.div_ceil(4) * h.div_ceil(4) * block_bytes;
+        let Some(blocks) = t.data.get(offset..offset + len) else {
+            break;
+        };
+        offset += len;
+        let mut image = vec![0u32; w * h];
+        if decode(blocks, w, h, &mut image).is_err() {
+            break;
+        }
+        // The decoder's texels are B, G, R, A in memory.
+        for p in image {
+            let [b, g, r, a] = p.to_le_bytes();
+            data.extend_from_slice(&[r, g, b, a]);
+        }
+    }
+    owned::Texture {
+        format: if texture_format::block_color(t.format) {
+            texture_format::SRGB_RGBA8
+        } else {
+            texture_format::LINEAR_RGBA8
+        },
+        data,
+        ..t.clone()
+    }
+}
+
+/// The GPU format of a block-compressed packet code (linear; a colour code samples through
+/// [`wgpu::TextureFormat::add_srgb_suffix`]).
+pub fn block_format(code: i32) -> Option<wgpu::TextureFormat> {
+    use wgpu::TextureFormat as F;
+    Some(match code {
+        texture_format::BC7_COLOR | texture_format::BC7_DATA => F::Bc7RgbaUnorm,
+        texture_format::BC1_COLOR | texture_format::BC1_DATA => F::Bc1RgbaUnorm,
+        texture_format::BC3_COLOR | texture_format::BC3_DATA => F::Bc3RgbaUnorm,
+        texture_format::BC4 => F::Bc4RUnorm,
+        texture_format::BC5 => F::Bc5RgUnorm,
+        texture_format::BC6H => F::Bc6hRgbUfloat,
+        _ => return None,
+    })
 }
 
 /// Logs a texture's format fallback, once per code and reason.
@@ -922,16 +987,31 @@ pub fn upload_texture(
     t: &owned::Texture,
     generation: u64,
 ) -> GpuTexture {
-    // A packet without pixels only changes the sampler state: a compressed texture (uploaded as
-    // BC7 by the import, while the managed side knows it as RGBA8) keeps its format and blocks.
+    // A packet without pixels only changes the sampler state: a block-compressed import (whose
+    // managed side knows it by its pixels' format) keeps its format and blocks.
     let keep_compressed;
+    let decoded;
     let t = match &existing {
-        Some(e) if t.data.is_empty() && matches!(e.format, 7 | 8) && t.format == e.format - 7 => {
+        Some(e)
+            if t.data.is_empty()
+                && texture_format::block_compressed(e.format)
+                && !texture_format::block_compressed(t.format) =>
+        {
             keep_compressed = owned::Texture {
                 format: e.format,
                 ..t.clone()
             };
             &keep_compressed
+        }
+        // A device without BC formats takes what the blocks decode to, as Unity does.
+        _ if block_format(t.format).is_some()
+            && !t.render_target
+            && !device
+                .features()
+                .contains(wgpu::Features::TEXTURE_COMPRESSION_BC) =>
+        {
+            decoded = decode_blocks(t);
+            &decoded
         }
         _ => t,
     };
@@ -969,18 +1049,17 @@ pub fn upload_texture(
     let packed = device
         .features()
         .contains(wgpu::Features::RG11B10UFLOAT_RENDERABLE);
-    // Imported textures may come BC7-compressed (see `texture_storage`).
-    let compressed = matches!(t.format, 7 | 8) && !render_target;
+    // Imported textures may come block-compressed (see `texture_storage`).
+    let compressed = block_format(t.format).filter(|_| !render_target);
     let storage = texture_storage(t, samples, packed, &norm_format_caps());
     if let Some(fallback) = &storage.fallback {
         report_fallback(t.format, fallback);
     }
     let (format, bytes_per_pixel) = (storage.format, storage.bytes_per_pixel);
-    let color = t.format == 0 || t.format == 7;
-    let srgb_format = if compressed {
-        wgpu::TextureFormat::Bc7RgbaUnormSrgb
-    } else {
-        wgpu::TextureFormat::Rgba8UnormSrgb
+    let color = t.format == 0 || texture_format::block_color(t.format);
+    let srgb_format = match compressed {
+        Some(format) => format.add_srgb_suffix(),
+        None => wgpu::TextureFormat::Rgba8UnormSrgb,
     };
     let sampler_key = SamplerKey {
         filter: t.filter_mode,
@@ -1203,13 +1282,14 @@ pub fn upload_texture(
     gpu.auto_generate_mips = t.auto_generate_mips;
     gpu.defer_mips = t.defer_mips;
 
-    if !t.data.is_empty() && compressed {
-        // BC7: 16 bytes per 4x4 block; levels below 4 pixels are a whole (padded) block.
+    if let (false, Some(block)) = (t.data.is_empty(), compressed) {
+        // Whole 4x4 blocks; levels below 4 pixels are a whole (padded) block.
+        let block_bytes = block.block_copy_size(None).unwrap_or(16);
         let mut offset = 0usize;
         for level in 0..mip_count {
             let bw = (width >> level).max(1).div_ceil(4);
             let bh = (height >> level).max(1).div_ceil(4);
-            let len = (bw * bh * 16) as usize;
+            let len = (bw * bh * block_bytes) as usize;
             if offset + len > t.data.len() {
                 tracing::warn!(
                     "compressed texture data is shorter than its {mip_count} mip levels"
@@ -1226,7 +1306,7 @@ pub fn upload_texture(
                 &t.data[offset..offset + len],
                 wgpu::TexelCopyBufferLayout {
                     offset: 0,
-                    bytes_per_row: Some(bw * 16),
+                    bytes_per_row: Some(bw * block_bytes),
                     rows_per_image: Some(bh),
                 },
                 wgpu::Extent3d {
@@ -1587,9 +1667,44 @@ mod tests {
         }
     }
 
+    /// Block-compressed imports keep their format (render targets never are), and a device
+    /// without BC formats gets what the blocks decode to.
+    #[test]
+    fn block_codes_are_stored_compressed_or_decoded() {
+        use wgpu::TextureFormat as F;
+        for (code, format) in [
+            (texture_format::BC1_COLOR, F::Bc1RgbaUnorm),
+            (texture_format::BC3_DATA, F::Bc3RgbaUnorm),
+            (texture_format::BC4, F::Bc4RUnorm),
+            (texture_format::BC5, F::Bc5RgUnorm),
+            (texture_format::BC6H, F::Bc6hRgbUfloat),
+            (texture_format::BC7_COLOR, F::Bc7RgbaUnorm),
+        ] {
+            let s = stored(code, false, false, 1, &full_caps());
+            assert_eq!((s.format, s.fallback), (format, None), "code {code}");
+        }
+        // One BC1 block: c0 = white, c1 = black, every texel index 1 (c1), as a 2x2 level.
+        let t = owned::Texture {
+            width: 2,
+            height: 2,
+            format: texture_format::BC1_COLOR,
+            mip_count: 1,
+            data: vec![0xff, 0xff, 0, 0, 0x55, 0x55, 0x55, 0x55],
+            ..owned::Texture::default()
+        };
+        let decoded = decode_blocks(&t);
+        assert_eq!(decoded.format, texture_format::SRGB_RGBA8);
+        assert_eq!(decoded.data, [0, 0, 0, 255].repeat(4));
+        let bc4 = decode_blocks(&owned::Texture {
+            format: texture_format::BC4,
+            ..t
+        });
+        assert_eq!(bc4.format, texture_format::LINEAR_RGBA8);
+    }
+
     #[test]
     fn unknown_codes_are_rejected() {
-        for code in [-1, 38, 99, i32::MAX] {
+        for code in [-1, 45, 99, i32::MAX] {
             let s = stored(code, true, false, 1, &full_caps());
             assert_eq!(s.format, wgpu::TextureFormat::Rgba8Unorm);
             assert!(

@@ -185,6 +185,27 @@ pub mod texture_format {
     /// Four signed normalized 8-bit channels (Unity's `R8G8B8A8_SNorm`: what URP's depth-normals
     /// prepass draws into); data: four f32 per texel.
     pub const RGBA8_SNORM: i32 = 37;
+    /// Block-compressed imports, from native producers only (data: the mip chain's blocks,
+    /// levels below a block padded to a whole block). BC1 colour (sampled through an sRGB view
+    /// in linear projects, like 0) and linear data; BC3 the same; BC4 (r, 0, 0, 1), BC5
+    /// (r, g, 0, 1) and unsigned BC6H are linear.
+    pub const BC1_COLOR: i32 = 38;
+    pub const BC1_DATA: i32 = 39;
+    pub const BC3_COLOR: i32 = 40;
+    pub const BC3_DATA: i32 = 41;
+    pub const BC4: i32 = 42;
+    pub const BC5: i32 = 43;
+    pub const BC6H: i32 = 44;
+
+    /// Whether a code is block-compressed.
+    pub const fn block_compressed(code: i32) -> bool {
+        matches!(code, BC7_COLOR | BC7_DATA | BC1_COLOR..=BC6H)
+    }
+
+    /// Whether a block-compressed code is sampled through an sRGB view in linear projects.
+    pub const fn block_color(code: i32) -> bool {
+        matches!(code, BC7_COLOR | BC1_COLOR | BC3_COLOR)
+    }
 
     /// The integer code of `channels` (1, 2 or 4) channels of `bits` (8, 16 or 32) each, signed
     /// or unsigned (Unity's R/RG/RGBA 8/16/32 SInt/UInt): 17 + (channel index × 3 + bit index)
@@ -206,7 +227,7 @@ pub mod texture_format {
     /// The packet's code, or why the renderer cannot take it: codes outside the table are
     /// rejected rather than drawn as some other format.
     pub fn validate(code: i32) -> Result<i32, String> {
-        if (SRGB_RGBA8..=RGBA8_SNORM).contains(&code) {
+        if (SRGB_RGBA8..=BC6H).contains(&code) {
             Ok(code)
         } else {
             Err(format!(
@@ -758,13 +779,15 @@ mod tests {
             (13, 14, 15, 16)
         );
         assert_eq!((R8_SNORM, RG8_SNORM, RGBA8_SNORM), (35, 36, 37));
-        for code in 0..=RGBA8_SNORM {
+        for code in 0..=BC6H {
             assert_eq!(validate(code), Ok(code));
         }
+        assert!((BC1_COLOR..=BC6H).all(block_compressed) && block_compressed(BC7_DATA));
+        assert!(!block_compressed(RGBA8_SNORM) && !block_compressed(SRGB_RGBA8));
         // The integer codes follow the normalized ones, without upload data.
         assert_eq!((integer(1, 8, false), integer(4, 32, true)), (17, 34));
         assert!((INTEGER_FIRST..=INTEGER_LAST).all(|c| !float_data(c)));
-        for code in [-1, 38, 39, i32::MAX, i32::MIN] {
+        for code in [-1, 45, 46, i32::MAX, i32::MIN] {
             assert!(validate(code).is_err(), "{code} is accepted");
         }
         for code in [
