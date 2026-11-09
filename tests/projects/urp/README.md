@@ -165,10 +165,12 @@ scales the target to 223x125), which Unbound does not (see docs/COMPATIBILITY_GA
 With `URP_PROBE_DEFERRED_DIR` (a run of its own; `UrpProbe.Deferred.cs`) the probe records each
 scene with the Universal Renderer's Forward and Deferred modes (`<name>_forward`,
 `<name>_deferred`) and `modes.jsonl`: per recording the device, `renderingModeActual` and the
-path's global keywords. Scenes: `opaque` (Lit metal, Lit dielectric and Simple Lit spheres beside
+state of the path's global keywords after the frame (URP clears some of them, such as
+`_GBUFFER_NORMALS_OCT` and `_SCREEN_SPACE_OCCLUSION`, at the end of the camera's render, and leaves
+others, such as `_RENDER_PASS_ENABLED`, to the next one). Scenes: `opaque` (Lit metal, Lit dielectric and Simple Lit spheres beside
 the Lit cube and the Unlit sphere), `lights` (a point and a spot light), `shadows` (main, spot and
 point light shadows), `many_lights` (twelve point lights, more than Forward's per-object limit of
-4), `light_layers` (the asset's Use Rendering Layers: the point light on Layer 1 lights the
+4, around a Lit transparent sphere), `light_layers` (the asset's Use Rendering Layers: the point light on Layer 1 lights the
 spheres, not the cube or the ground), `accurate_normals` (the renderer's Accurate G-buffer
 normals), `transparent` (a Lit transparent sphere), `msaa` (4 samples), from the feature
 scenarios' closer camera `ssao`, `decal_screen_space`, `decal_dbuffer`, `decal_layers` and
@@ -193,13 +195,17 @@ constants differ):
   Vulkan 1.1 device on the RTX 4060; batch mode needs no presentable display), where
   `renderingModeActual` is Deferred.
 
-Device against path: the Forward recordings of both devices are identical except the decal
-scenarios that need DBuffer or Decal Layers, which the OpenGL device refuses (DBuffer draws
-nothing; Decal Layers are not enabled, so the decal lands on everything). On Vulkan, Deferred
+Without `-force-vulkan` the Editor on the same GPU-backed display picks OpenGL Core (not
+committed). Device against path: the Forward recordings of both devices are identical except the
+decal scenarios that need DBuffer or Decal Layers, which the OpenGL device refuses (DBuffer draws
+nothing; Decal Layers are not enabled, so the decal lands on everything), and
+`decal_screen_space`, 217 pixels on the decal's edges, 79 of them over 8. On Vulkan, Deferred
 against Forward differs in `many_lights` (Deferred lights each pixel with all twelve lights,
-Forward with each object's 4), `msaa` (Deferred renders without MSAA), the screen space decals
+Forward with each object's 4; the transparent sphere, drawn forward in both, gets the same
+lights), `msaa` (Deferred renders without MSAA), the screen space decals
 (`decal_screen_space`, `decal_layers`: Deferred draws them into the G-buffer, before lighting) and
-elsewhere by at most a mean of 0.2 (G-buffer quantization). Unbound has no Vulkan device, so the
+elsewhere by at most a mean of 0.2 (not investigated; the G-buffer's 8-bit channels are a
+hypothesis). Unbound has no Vulkan device, so the
 Deferred recordings have no Unbound counterpart (docs/COMPATIBILITY_GAPS.md).
 
     URP_PROBE_DEFERRED_DIR=/tmp/paths unbound run -p tests/projects/urp --no-watch --frames 200 --size 320x180
