@@ -5,7 +5,8 @@ pixels read back from the font texture. The reference covers eight font/mode fix
 sizes (8–96 px), four styles, spaces, narrow/wide letters, descenders and accented glyphs.
 Liberation Sans and Serif exercise real family faces; Styled is intrinsically bold italic.
 Synthetic renames the Liberation Sans family to RasterTest so installed family styles cannot
-replace it. `FONT-LICENSE.txt` covers the supplied fonts. Hinted, Raster and OS use the same
+replace it; SyntheticHinted and SyntheticRaster are the same face imported as Hinted Smooth and
+Hinted Raster, so synthetic bold and italic are covered in every rendering mode. `FONT-LICENSE.txt` covers the supplied fonts. Hinted, Raster and OS use the same
 font bytes with different importer rendering modes.
 
 The built-in LegacyRuntime font holds no font data in the Editor: its ascent and line height
@@ -24,7 +25,11 @@ compatibility profile selects this fallback policy; TextCore's glyph-index and d
 paths keep their own face and renderer.
 
 `Font.HasCharacter` of a dynamic font answers true for every character above U+001F, whether a
-face has it (`fallback/*/has/*`, including a private-use character no face holds).
+face has it or not (`fallback/*/has/*`; U+FFFE is in no installed face).
+
+The reference depends on the OS fonts of the recording host (Debian/Ubuntu packages
+fonts-freefont-ttf, fonts-dejavu-core, fonts-liberation, fonts-noto-cjk). `run.py record` and
+`run.py gate` refuse to run, naming the missing faces, when one of them is not installed.
 
 | Observation | Matching configuration |
 | --- | --- |

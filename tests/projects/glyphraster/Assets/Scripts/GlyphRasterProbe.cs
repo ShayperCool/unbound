@@ -77,7 +77,7 @@ public sealed class GlyphRasterProbe : MonoBehaviour
         yield return null;
         Value("request/after", requested.GetCharacterInfo('Ω', out var requestedInfo, 37, FontStyle.Normal));
         Value("request/advance", requestedInfo.advance);
-        foreach (string name in new[] { "Legacy", "Sans", "Serif", "Styled", "Hinted", "Raster", "OS", "Synthetic" })
+        foreach (string name in new[] { "Legacy", "Sans", "Serif", "Styled", "Hinted", "Raster", "OS", "Synthetic", "SyntheticHinted", "SyntheticRaster" })
         {
             Font font = name == "Legacy" ? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") : Resources.Load<Font>(name);
             Value(name + "/present", font != null);
@@ -103,7 +103,7 @@ public sealed class GlyphRasterProbe : MonoBehaviour
         foreach (string name in new[] { "Legacy", "Synthetic", "Hinted" })
         {
             Font font = name == "Legacy" ? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") : Resources.Load<Font>(name);
-            foreach (int c in new[] { 0x1f, 0x20, 'A', 0x2200, 0x2318, 0x76f4, 0xe000 }) Value("fallback/" + name + "/has/" + c, font.HasCharacter((char)c));
+            foreach (int c in new[] { 0x1f, 0x20, 'A', 0x2200, 0x2318, 0x76f4, 0xe000, 0xfffe }) Value("fallback/" + name + "/has/" + c, font.HasCharacter((char)c));
             foreach (int size in new[] { 13, 32 }) foreach (FontStyle style in new[] { FontStyle.Normal, FontStyle.Bold })
             {
                 font.RequestCharactersInTexture(FallbackCharacters, size, style);
