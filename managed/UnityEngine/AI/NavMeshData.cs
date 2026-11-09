@@ -74,17 +74,28 @@ namespace UnityEngine.AI
                 }
             }
             m_Links.Clear();
+            bool warned = false;
             foreach (var link in body.Get("m_OffMeshLinks")?.Seq() ?? Array.Empty<YNode>())
+            {
+                // 0: one way, from start to end. The bake writes it for its drop-down and
+                // jump-across links alike (a gap is crossed both ways by two links, one from each
+                // side; measured: tests/projects/navbaked `paths` and `jump`). Other values are
+                // not written by the bake: read as both ways, unmeasured.
+                int direction = link.Int("m_LinkDirection", 0);
+                if (direction != 0 && !warned)
+                {
+                    warned = true;
+                    Debug.LogWarning($"Unbound: NavMeshData '{m_Name}' has a generated link with direction {direction}, which the bake does not write; it is taken as going both ways (unmeasured).");
+                }
                 m_Links.Add(new BakedLink
                 {
                     Start = link.Vector3("m_Start"),
                     End = link.Vector3("m_End"),
                     Type = (OffMeshLinkType)link.Int("m_LinkType", 0),
                     Area = link.Int("m_Area", 0),
-                    // 0: one way (the bake's drop-down links, measured: tests/projects/navbaked);
-                    // otherwise both ways (jump-across links; inferred, not measured).
-                    Bidirectional = link.Int("m_LinkDirection", 0) != 0,
+                    Bidirectional = direction != 0,
                 });
+            }
             if (body.Get("m_HeightMeshes")?.Seq() is IEnumerable<YNode> heights && heights.GetEnumerator().MoveNext())
                 Debug.LogWarning($"Unbound: NavMeshData '{m_Name}' has a baked height mesh, which is not supported yet: agents stand on the NavMesh's polygons instead.");
             m_Version++;

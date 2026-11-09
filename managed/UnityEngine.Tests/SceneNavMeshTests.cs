@@ -51,6 +51,45 @@ namespace UnityEngine.Tests
             return data;
         }
 
+        sealed class WarningCapture : ILogHandler
+        {
+            internal readonly List<string> Warnings = new List<string>();
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Warning) Warnings.Add(args.Length > 0 ? string.Format(format, args) : format);
+            }
+            public void LogException(System.Exception exception, Object context) { }
+        }
+
+        [Fact]
+        public void BakedLinksGoOneWayAndAnUnwrittenDirectionWarnsOnce()
+        {
+            const string yaml = "--- !u!238 &1\nNavMeshData:\n  m_Name: Links\n  m_OffMeshLinks:\n" +
+                "  - m_Start: {x: 0, y: 0, z: 0}\n    m_End: {x: 2, y: 0, z: 0}\n    m_Radius: 0.5\n    m_LinkType: 2\n    m_Area: 2\n    m_LinkDirection: 0\n" +
+                "  - m_Start: {x: 0, y: 0, z: 1}\n    m_End: {x: 2, y: 0, z: 1}\n    m_Radius: 0.5\n    m_LinkType: 2\n    m_Area: 2\n    m_LinkDirection: 1\n" +
+                "  - m_Start: {x: 0, y: 0, z: 2}\n    m_End: {x: 2, y: 0, z: 2}\n    m_Radius: 0.5\n    m_LinkType: 2\n    m_Area: 2\n    m_LinkDirection: 2\n";
+            var logger = Debug.unityLogger;
+            var previous = logger.logHandler;
+            var capture = new WarningCapture();
+            logger.logHandler = capture;
+            try
+            {
+                var data = new NavMeshData();
+                ((ISerializedAsset)data).ReadSerialized(UnityYaml.Parse(yaml)[0].Body, new Resolver());
+                Assert.Equal(3, data.m_Links.Count);
+                Assert.False(data.m_Links[0].Bidirectional);
+                Assert.Equal(OffMeshLinkType.LinkTypeJumpAcross, data.m_Links[0].Type);
+                Assert.True(data.m_Links[1].Bidirectional);
+                Assert.True(data.m_Links[2].Bidirectional);
+                var warning = Assert.Single(capture.Warnings);
+                Assert.Contains("direction 1", warning);
+            }
+            finally
+            {
+                logger.logHandler = previous;
+            }
+        }
+
         [Fact]
         public void TheBakedNavMeshAndItsLinksComeAndGoWithTheScene()
         {
