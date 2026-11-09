@@ -204,22 +204,23 @@ namespace UnityEngine
         /// laid out as a render pipeline's draws get it (<see cref="ApplySrp"/>).</summary>
         internal static Dictionary<int, object> Apply(Renderer renderer, Dictionary<int, object> properties, bool srp = false) =>
             renderer == null ? properties
-                : Apply(renderer.bounds, renderer.reflectionProbeUsage, properties, srp, renderer.m_ReflectionBoxes ??= new BoxedVectors(2 * SlotVectors));
+                : Apply(renderer.bounds, renderer.reflectionProbeUsage, properties, srp, renderer);
 
         /// <summary>The vectors of a slot: decode values, box min and max, position.</summary>
         const int SlotVectors = 4;
 
         /// <summary>The same for bounds and a probe usage (a Graphics.DrawMesh draw's).
-        /// <paramref name="boxes"/>: the renderer's boxed vectors (both slots), kept while they
-        /// stay the same.</summary>
+        /// <paramref name="owner"/>: the renderer, which keeps the vectors (both slots) boxed while
+        /// they stay the same.</summary>
         internal static Dictionary<int, object> Apply(Bounds bounds, ReflectionProbeUsage usage, Dictionary<int, object> properties, bool srp = false,
-            BoxedVectors boxes = null)
+            Renderer owner = null)
         {
             if (s_Enabled.Count == 0) return properties;
             // A render pipeline blends by its own setting: Simple samples two probes as well.
             Closest(bounds, srp && usage == ReflectionProbeUsage.Simple ? ReflectionProbeUsage.BlendProbes : usage, s_Blend);
             if (s_Blend.Count == 0) return properties;
             properties = DrawPropertyPool.Copy(properties);
+            var boxes = owner != null ? owner.m_ReflectionBoxes ??= new BoxedVectors(2 * SlotVectors) : null;
             if (srp) return ApplySrp(properties, boxes);
             var first = s_Blend[0].probe;
             var second = s_Blend.Count > 1 ? s_Blend[1].probe : null;

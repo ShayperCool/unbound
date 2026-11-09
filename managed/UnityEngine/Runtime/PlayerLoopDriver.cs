@@ -527,8 +527,6 @@ namespace Unbound.Runtime
         static readonly System.Diagnostics.Stopwatch s_FrameClock = System.Diagnostics.Stopwatch.StartNew();
         static double s_NextFrameAt;
 
-        /// <summary>Unity's frame rate cap: without vertical sync (<c>vSyncCount</c> 0) a frame
-        /// lasts at least <c>1 / targetFrameRate</c>; the wait is at the end of the frame.</summary>
         /// <summary>The vertical sync last asked of the window: 0 off, 1 on, -1 not yet.</summary>
         static int s_PresentedVSync = -1;
 
@@ -544,6 +542,8 @@ namespace Unbound.Runtime
             return vsync == 1 ? "1" : "0";
         }
 
+        /// <summary>Unity's frame rate cap: without vertical sync (<c>vSyncCount</c> 0) a frame
+        /// lasts at least <c>1 / targetFrameRate</c>; the wait is at the end of the frame.</summary>
         static void Pace()
         {
             if (VSyncRequest(ref s_PresentedVSync, QualitySettings.vSyncCount) is string vsync)
