@@ -35,7 +35,11 @@ public sealed class GameConfig
     public List<string> RenderingLayers { get; set; } = new();
     public List<string> Layers { get; set; } = new();
     public List<AxisConfig> InputAxes { get; set; } = new();
-    public float FixedDeltaTime { get; set; } = 0.02f;
+    /// <summary>TimeManager's fixed timestep, not rounded to float.</summary>
+    public double FixedDeltaTime { get; set; } = 0.02;
+    /// <summary>Whether TimeManager stored the step as ticks over a rate (kept as it is) rather
+    /// than as a plain number (converted like the fixedDeltaTime setter).</summary>
+    public bool FixedDeltaTimeTicks { get; set; }
     public float MaximumDeltaTime { get; set; } = 0.3333333f;
     public float MaximumParticleDeltaTime { get; set; } = 0.03f;
     public float TimeScale { get; set; } = 1f;
@@ -313,7 +317,8 @@ public static unsafe class Game
         foreach (var s in c.BuildScenes) ProjectInfo.BuildScenes.Add((s.Path, s.Guid));
         TagManager.SetProjectTags(c.Tags);
         for (int i = 0; i < c.Layers.Count && i < 32; i++) TagManager.Layers[i] = c.Layers[i];
-        Time.SetFixedDeltaTime(c.FixedDeltaTime);
+        if (c.FixedDeltaTimeTicks) Time.SetFixedClock(c.FixedDeltaTime);
+        else Time.SetFixedDeltaTime((float)c.FixedDeltaTime);
         Time.s_MaximumDeltaTime = c.MaximumDeltaTime;
         Time.s_MaximumParticleDeltaTime = c.MaximumParticleDeltaTime;
         Time.s_TimeScale = c.TimeScale;

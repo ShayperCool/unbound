@@ -263,7 +263,7 @@ namespace Unbound.Runtime
                 // A rational: m_Count ticks at m_Rate (numerator / denominator) ticks a second.
                 var rate = step.Get("m_Rate");
                 double ticks = rate == null ? 0 : rate.Long("m_Numerator") / (double)Math.Max(1, rate.Long("m_Denominator"));
-                if (ticks > 0) Time.SetFixedDeltaTime((float)(step.Long("m_Count") / ticks));
+                if (ticks > 0) Time.SetFixedClock(step.Long("m_Count") / ticks);
             }
             else if (step != null) Time.SetFixedDeltaTime(step.AsFloat(Time.s_FixedDeltaTime));
             Time.s_MaximumDeltaTime = body.Float("Maximum Allowed Timestep", Time.s_MaximumDeltaTime);

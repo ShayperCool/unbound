@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Unbound.Runtime;
 using Xunit;
 
@@ -609,6 +610,50 @@ namespace UnityEngine.Tests
                 Assert.Equal((float)Time.FixedClockDuration, Time.fixedDeltaTime);
             }
             finally { Time.fixedDeltaTime = previous; }
+        }
+
+        [Fact]
+        public void SettingsTicksAndSetterStepsSurviveEnteringPlayMode()
+        {
+            // TimeManager stores the step as ticks: 2822399 at 141120000 reads back as 0.0199999921
+            // in the Editor (tests/projects/destroycontract), with no truncating round trip of that
+            // float (which would give 2822398 ticks, 0.0199999865). The setter truncates once
+            // (0.0232199468 -> 0.0232199412, tests/projects/audioreverb). Entering Play mode,
+            // again or not, replays the request without converting its result once more.
+            var saved = new Dictionary<FieldInfo, object>();
+            foreach (var field in typeof(Time).GetFields(BindingFlags.Static | BindingFlags.NonPublic))
+                if (!field.IsInitOnly && field.FieldType.IsPrimitive) saved[field] = field.GetValue(null);
+            try
+            {
+                Time.SetFixedClock(2822399 / 141120000.0);
+                for (int i = 0; i < 3; i++)
+                {
+                    Assert.Equal(0.0199999921f, Time.fixedDeltaTime);
+                    Assert.Equal(2822399 / 141120000.0, Time.FixedClockDuration);
+                    Time.ResetForPlayMode();
+                }
+
+                Time.fixedDeltaTime = 0.0232199468f;
+                for (int i = 0; i < 3; i++)
+                {
+                    Assert.Equal(0.0232199412f, Time.fixedDeltaTime);
+                    Assert.Equal((float)Time.FixedClockDuration, Time.fixedDeltaTime);
+                    Time.ResetForPlayMode();
+                }
+
+                // A plain-number step (older TimeManager format, or no asset: 0.02) converts like
+                // the setter, which gives the stored default's 2822399 ticks.
+                Time.SetFixedDeltaTime(0.02f);
+                Time.ResetForPlayMode();
+                Assert.Equal(0.0199999921f, Time.fixedDeltaTime);
+                Assert.Equal(2822399 / 141120000.0, Time.FixedClockDuration);
+
+                // A direct write of the step before Play mode starts is what Play mode uses.
+                Time.s_FixedDeltaTime = 0.0232199468f;
+                Time.ResetForPlayMode();
+                Assert.Equal(0.0232199412f, Time.fixedDeltaTime);
+            }
+            finally { foreach (var pair in saved) pair.Key.SetValue(null, pair.Value); }
         }
 
         [Theory]

@@ -21,6 +21,11 @@ namespace UnityEngine
         internal static float s_FixedDeltaTime = 0.02f;
         static double s_FixedClockDuration = 0.02f;
         static float s_FixedClockSource = 0.02f;
+        // The last request, replayed when Play mode starts: a float step from the setter, or,
+        // when s_FixedRequestDuration is not NaN, a stored duration (the TimeManager asset).
+        // Replaying the converted float instead would truncate it a tick shorter.
+        static float s_FixedRequestStep = 0.02f;
+        static double s_FixedRequestDuration = double.NaN;
         internal static double FixedClockDuration
         {
             get
@@ -94,6 +99,31 @@ namespace UnityEngine
         }
 
         internal static void SetFixedDeltaTime(float value)
+        {
+            s_FixedRequestStep = value;
+            s_FixedRequestDuration = double.NaN;
+            ApplyFixedStep(value);
+        }
+
+        /// <summary>A stored step duration: TimeManager's Fixed Timestep, count ticks over a rate.
+        /// The clock takes it as it is and the public step is its float, without the setter's
+        /// truncating round trip: 2822399 ticks at 141120000 read back as 0.0199999921 in the
+        /// Unity 6000.0.71f1 Editor (tests/projects/destroycontract).</summary>
+        internal static void SetFixedClock(double duration)
+        {
+            s_FixedRequestStep = (float)duration;
+            s_FixedRequestDuration = duration;
+            if (!Compat.FixedClockTicksMeasured || !(duration >= 0.0001))
+            {
+                ApplyFixedStep((float)duration);
+                return;
+            }
+            s_FixedClockDuration = duration;
+            s_FixedDeltaTime = (float)duration;
+            s_FixedClockSource = s_FixedDeltaTime;
+        }
+
+        static void ApplyFixedStep(float value)
         {
             s_FixedDeltaTime = Math.Max(value, 0.0001f);
             s_FixedClockSource = s_FixedDeltaTime;
@@ -229,7 +259,9 @@ namespace UnityEngine
 
         internal static void ResetForPlayMode()
         {
-            SetFixedDeltaTime(s_FixedDeltaTime);
+            if (s_FixedClockSource != s_FixedDeltaTime) SetFixedDeltaTime(s_FixedDeltaTime);
+            else if (double.IsNaN(s_FixedRequestDuration)) SetFixedDeltaTime(s_FixedRequestStep);
+            else SetFixedClock(s_FixedRequestDuration);
             s_FixedStarted = false;
             s_Time = s_UnscaledTime = s_FixedTime = s_FixedUnscaledTime = 0;
             s_CaptureClockTicks = 0;

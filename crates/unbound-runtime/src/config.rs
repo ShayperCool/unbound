@@ -528,10 +528,11 @@ fn execution_orders(graph: &unbound_project::Graph) -> BTreeMap<String, i64> {
 
 /// TimeManager's fixed timestep: a plain number in older releases, a count of ticks at a rate
 /// (`m_Count` over `m_Rate`, 141120000 ticks a second) since Unity 2022; the default 0.02 is
-/// stored as 2822399 ticks, a little under 0.02.
-fn fixed_timestep(value: &Value) -> Option<f64> {
+/// stored as 2822399 ticks, a little under 0.02. The flag says whether it was stored as ticks:
+/// the managed side keeps that duration as it is and converts a plain number like the setter.
+fn fixed_timestep(value: &Value) -> Option<(f64, bool)> {
     if let Some(v) = value.as_f64() {
-        return Some(v);
+        return Some((v, false));
     }
     let count = value.get("m_Count")?.as_f64()?;
     let rate = value.get("m_Rate")?;
@@ -540,13 +541,19 @@ fn fixed_timestep(value: &Value) -> Option<f64> {
         .get("m_Denominator")
         .and_then(Value::as_f64)
         .unwrap_or(1.0);
-    (numerator > 0.0).then(|| count * denominator / numerator)
+    (numerator > 0.0).then(|| (count * denominator / numerator, true))
 }
 
 fn time_and_color(project: &Project) -> Json {
     let time = read_settings(project, "TimeManager.asset");
+    let (fixed_step, fixed_step_ticks) = time
+        .as_ref()
+        .and_then(|t| t.get("Fixed Timestep"))
+        .and_then(fixed_timestep)
+        .unwrap_or((0.02, false));
     json!({
-        "fixedDeltaTime": time.as_ref().and_then(|t| t.get("Fixed Timestep")).and_then(fixed_timestep).unwrap_or(0.02),
+        "fixedDeltaTime": fixed_step,
+        "fixedDeltaTimeTicks": fixed_step_ticks,
         "maximumParticleDeltaTime": time.as_ref().and_then(|t| t.get("Maximum Particle Timestep")).and_then(Value::as_f64).unwrap_or(0.03),
         "maximumDeltaTime": time.as_ref().and_then(|t| t.get("Maximum Allowed Timestep")).and_then(Value::as_f64).unwrap_or(1.0 / 3.0),
         "timeScale": time.as_ref().and_then(|t| t.get("m_TimeScale")).and_then(Value::as_f64).unwrap_or(1.0),
