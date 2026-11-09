@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &1197198430
+--- !u!1 &1883933262
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1197198432}
-  - component: {fileID: 1197198431}
+  - component: {fileID: 1883933264}
+  - component: {fileID: 1883933263}
   m_Layer: 0
   m_Name: TextureCompressionProbe
   m_TagString: Untagged
@@ -136,13 +136,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1197198431
+--- !u!114 &1883933263
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1197198430}
+  m_GameObject: {fileID: 1883933262}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 50b3960969ba1ce99ba6e03ca7d533a2, type: 3}
@@ -150,6 +150,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   textures:
   - {fileID: 2800000, guid: 7e6f27c47aebaf788b3ced3bc80ef157, type: 3}
+  - {fileID: 2800000, guid: 230449025c3d8000c96215e44a9a8dae, type: 3}
   - {fileID: 2800000, guid: 605e10ea7e97c5cf796aad9b0ea2b433, type: 3}
   - {fileID: 2800000, guid: a50d3c294a01f4d8483ffc1e739d9bb8, type: 3}
   - {fileID: 2800000, guid: a19847700637b42febfe48c68f3f1b92, type: 3}
@@ -178,6 +179,8 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 7678eba1eaaa48211ba8f734307e360f, type: 3}
   - {fileID: 2800000, guid: 7d3c80e126bcee92ca6eb769fd05fc97, type: 3}
   - {fileID: 2800000, guid: a42318123c85b6e74ad9e673efa74243, type: 3}
+  - {fileID: 2800000, guid: d11ffc86a319f1e23a339b9e9323306c, type: 3}
+  - {fileID: 2800000, guid: df47351dca9b7130682b713276eda5cf, type: 3}
   - {fileID: 2800000, guid: 25d0f1c1253e698399cd05b778aa4bc6, type: 3}
   - {fileID: 2800000, guid: 7590a6133e0422287b82443ad68135ca, type: 3}
   - {fileID: 2800000, guid: edf45288bf1a62702910f6afacc66433, type: 3}
@@ -212,13 +215,13 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 5b6ce9e0f6f8870afa4c48dadc17a09a, type: 3}
   - {fileID: 2800000, guid: bb23c5350f98a4369bbb784610d6bd2a, type: 3}
   - {fileID: 2800000, guid: b0a50a016e452972e9b739e7822a9570, type: 3}
---- !u!4 &1197198432
+--- !u!4 &1883933264
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1197198430}
+  m_GameObject: {fileID: 1883933262}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -231,4 +234,4 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1197198432}
+  - {fileID: 1883933264}

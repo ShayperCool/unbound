@@ -15,7 +15,9 @@ textureimport probe's images); `ProbeRunner.Create` applies them in the Editor.
   import's blocks (whole chain, too short, too long, top level only), `Texture2D.Compress(false)`
   and `(true)` of RGBA32, RGB24, R8, RG16, a 30x18 RGBA32 and a compressed texture, and
   `Graphics.CopyTexture` between compressed textures (whole, a block-aligned region, an unaligned
-  region, one mip, from an unreadable texture, DXT1 to DXT5, DXT5 to BC7, DXT1 to RGBA32).
+  region, one mip, from an unreadable texture, into an unreadable texture, into a readable
+  import, DXT1 to DXT5, DXT5 to BC7, DXT1 to RGBA32), `Reinitialize` of a compressed texture,
+  writes to a compressed import, and explicit RGB24/R8 imports of a coloured, transparent source.
 
 Each control records what it threw and the errors it logged.
 

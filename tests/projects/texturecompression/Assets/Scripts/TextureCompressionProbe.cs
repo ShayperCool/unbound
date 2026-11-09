@@ -335,6 +335,33 @@ public class TextureCompressionProbe : MonoBehaviour
             Add("write.view1.copy", Bytes(copy.GetRawTextureData().Skip(2048).Take(16).ToArray()));
             Destroy(copy);
         });
+        // Copies into a readable import and into an unreadable texture.
+        Section("copy.intoimport", () =>
+        {
+            var dst = Find("FlatCopyDst");
+            Run("copy.intoimport", () => Graphics.CopyTexture(smooth, dst));
+            Describe("copy.intoimport", dst);
+        });
+        Section("copy.unreadabledst", () =>
+        {
+            var dst = new Texture2D(64, 64, TextureFormat.DXT1, true);
+            dst.Apply(false, true);
+            Run("copy.unreadabledst", () => Graphics.CopyTexture(smooth, dst));
+            Run("copy.unreadabledst.raw", () => Add("copy.unreadabledst.raw", Bytes(dst.GetRawTextureData())));
+            Run("copy.unreadabledst.gpu", () => Add("copy.unreadabledst.gpu", Gpu(dst)));
+            Destroy(dst);
+        });
+        // Reinitialize of a compressed texture: the same format, then a size that is not
+        // block-sized.
+        Section("reinit", () =>
+        {
+            var t = new Texture2D(64, 64, TextureFormat.DXT1, true);
+            Run("reinit.same", () => t.Reinitialize(32, 32));
+            Add("reinit.same.info", t.width + "x" + t.height + " mips " + t.mipmapCount + " " + t.format);
+            Run("reinit.odd", () => t.Reinitialize(30, 18, TextureFormat.DXT1, false));
+            Add("reinit.odd.info", t.width + "x" + t.height + " mips " + t.mipmapCount + " " + t.format);
+            Destroy(t);
+        });
         Section("load.rgba32", () =>
         {
             var t = Copy(Find("NoiseRGBA32"), false);

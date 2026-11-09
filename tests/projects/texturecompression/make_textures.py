@@ -138,6 +138,10 @@ CASES = {
     'NpotNoMips': ('Npot', 'compression=normal npot=none mips=0'),
     'SmoothSprite': ('Smooth', 'type=sprite compression=normal'),
     'NoiseGui': ('Noise', 'type=gui compression=normal'),
+    # Explicit byte formats of a coloured, transparent source; a compressed copy destination.
+    'NoiseRGB24': ('Noise', 'format=RGB24'),
+    'NoiseR8': ('Noise', 'format=R8 srgb=0'),
+    'FlatCopyDst': ('Flat', 'compression=normal alpha=none'),
     'SmoothRGB24': ('Smooth', 'format=RGB24'),
     'HeightR8': ('Height', 'format=R8 srgb=0'),
     'NormalsRG16': ('Normals', 'format=RG16 srgb=0'),
