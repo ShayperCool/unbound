@@ -207,8 +207,10 @@ AnimatorStateMachine:
         const long EmptyState = 1102000001, WalkState = 1102000002, RunState = 1102000003;
 
         /// <summary>One layer with Empty, Walk and Run, starting in <paramref name="first"/>, with
-        /// a transition from it to <paramref name="second"/> when <paramref name="exitTime"/> is set.</summary>
-        RuntimeAnimatorController Controller(long first, long second = 0, float exitTime = float.NaN, float duration = 0f)
+        /// a transition from it to <paramref name="second"/> when <paramref name="exitTime"/> is set;
+        /// Empty writes defaults unless <paramref name="emptyWriteDefaults"/> is false.</summary>
+        RuntimeAnimatorController Controller(long first, long second = 0, float exitTime = float.NaN, float duration = 0f,
+            bool emptyWriteDefaults = true)
         {
             bool transition = !float.IsNaN(exitTime);
             long[] From(long state) => transition && state == first ? new long[] { 1101000001 } : System.Array.Empty<long>();
@@ -216,6 +218,7 @@ AnimatorStateMachine:
                 + "  serializedVersion: 5\n  m_AnimatorParameters: []\n  m_AnimatorLayers:\n" + Layer("Base Layer", 1107000001, 0)
                 + Machine(1107000001, first, EmptyState, WalkState, RunState)
                 + State(EmptyState, "Empty", 0, false, From(EmptyState))
+                    .Replace("m_WriteDefaultValues: 1", emptyWriteDefaults ? "m_WriteDefaultValues: 1" : "m_WriteDefaultValues: 0")
                 + State(WalkState, "Walk", Walk, false, From(WalkState))
                 + State(RunState, "Run", Run, false, From(RunState))
                 + (transition ? Transition(1101000001, second, exitTime, duration) : "")
@@ -300,6 +303,34 @@ AnimatorStateMachine:
                 if (!control.IsInTransition(0) && control.GetCurrentAnimatorStateInfo(0).IsName("Run")) break;
             }
             Near.Equal(0.1f, control.deltaPosition.x, 1e-5f);
+        }
+
+        /// <summary>A state without a motion and without write defaults keeps the layer's last root
+        /// motion: once Walk has left for it, each update moves the root by Walk's last step again,
+        /// in the root's frame and whatever the delta time (6000.0.71f1, tests/projects/humanoid
+        /// generic.noWD, noWDAlone). Controls: with write defaults it moves nothing (above), and as
+        /// the first state it has no step to keep.</summary>
+        [Fact]
+        public void AnEmptyStateWithoutWriteDefaultsRepeatsTheLayersLastStep()
+        {
+            var animator = Rig(Controller(WalkState, EmptyState, 0.2f, 0f, emptyWriteDefaults: false));
+            animator.Update(0f);
+            for (int step = 0; step < 12 && !animator.GetCurrentAnimatorStateInfo(0).IsName("Empty"); step++)
+                animator.Update(0.05f);
+            Assert.True(animator.GetCurrentAnimatorStateInfo(0).IsName("Empty"));
+            animator.Update(0.05f);
+            Near.Equal(0.05f, animator.deltaPosition.x, 1e-5f);
+            animator.Update(0.2f);
+            Near.Equal(0.05f, animator.deltaPosition.x, 1e-5f);
+            animator.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+            animator.Update(0.05f);
+            Near.Equal(0f, animator.deltaPosition.x, 1e-5f);
+            Near.Equal(-0.05f, animator.deltaPosition.z, 1e-5f);
+
+            var first = Rig(Controller(EmptyState, emptyWriteDefaults: false));
+            first.Update(0f);
+            first.Update(0.05f);
+            Near.Equal(0f, first.deltaPosition.magnitude, 1e-6f);
         }
 
         /// <summary>A state driven by a motion time parameter takes the parameter in the update Play

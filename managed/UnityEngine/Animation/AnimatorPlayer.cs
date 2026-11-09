@@ -70,6 +70,10 @@ namespace Unbound.Runtime
         /// without a motion and without write defaults keep. Held marks the channels it has.</summary>
         internal float[] Last = Array.Empty<float>();
         internal bool[] Held = Array.Empty<bool>();
+        /// <summary>The layer's own root motion of its last evaluation, which its holding states
+        /// keep (<see cref="Kept"/>, see <see cref="AnimatorPlayer.HoldWeight"/>), and of this
+        /// evaluation (<see cref="Own"/>, kept when the next evaluation starts).</summary>
+        internal HeldMotion Kept, Own;
         /// <summary>The source of a transition that completed in this update (see
         /// <see cref="AnimatorPlayer.BuildLayerPoses"/>); null otherwise.</summary>
         internal StateRun Completed;
@@ -77,6 +81,17 @@ namespace Unbound.Runtime
         /// update's OnStateMove and OnStateIK still reach after they exit, and the order of its
         /// state callbacks (see <see cref="AnimatorPlayer.OrderCallbacks"/>).</summary>
         internal StateRun PreviousCurrent, PreviousNext;
+    }
+
+    /// <summary>A layer's own root motion of an evaluation: its generic step in the root's frame
+    /// and its blended humanoid sample.</summary>
+    internal struct HeldMotion
+    {
+        internal Vector3 Delta;
+        internal Quaternion Turn;
+        internal bool HasStep;
+        internal Unbound.Runtime.Humanoid.HumanRootMotionSample Human;
+        internal bool HasHuman;
     }
 
     /// <summary>Play / CrossFade requests: they take effect at the layer's next update, as in Unity.</summary>
@@ -1190,6 +1205,8 @@ namespace Unbound.Runtime
                 m_LayerPoses = new LayerPose[count];
             }
             m_Contributions.Clear();
+            // Holding states keep the root motion of the layer's last evaluation.
+            for (int i = 0; i < count; i++) Layers[i].Kept = Layers[i].Own;
             for (int i = 0; i < count; i++)
             {
                 var layer = Layers[i];

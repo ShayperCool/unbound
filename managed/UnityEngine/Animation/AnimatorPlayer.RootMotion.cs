@@ -15,6 +15,7 @@ namespace Unbound.Runtime
         bool m_HasMonoMove, m_HasStateMove;
         Quaternion[] m_RootTurns = Array.Empty<Quaternion>();
         float[] m_RootTurnWeights = Array.Empty<float>();
+        Vector3[] m_RootDeltas = Array.Empty<Vector3>();
         static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, bool> s_StateMove =
             new System.Collections.Concurrent.ConcurrentDictionary<Type, bool>();
 
@@ -180,7 +181,9 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The root's movement over the step from the layers' contributions, in the root's
-        /// own frame: positions summed by weight, rotations blended per layer and composed.</summary>
+        /// own frame: each layer's states sum their positions and blend their rotations by weight
+        /// (a holding state takes the layer's last step, see <see cref="HoldWeight"/>), then the
+        /// layers add their positions by layer weight and compose their rotations.</summary>
         (Vector3 Delta, Quaternion Turn) ContributionMotion(int pos, int rot)
         {
             var delta = Vector3.zero;
@@ -189,35 +192,81 @@ namespace Unbound.Runtime
             {
                 m_RootTurns = new Quaternion[Layers.Length];
                 m_RootTurnWeights = new float[Layers.Length];
+                m_RootDeltas = new Vector3[Layers.Length];
             }
             Array.Clear(m_RootTurns);
             Array.Clear(m_RootTurnWeights);
+            Array.Clear(m_RootDeltas);
             foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions)
             {
-                float w = weight * (layerIndex == 0 ? 1f : layer.Evaluated);
-                if (w <= 0f) continue;
+                if (weight <= 0f) continue;
                 var bound = Bindings.Bind(clip);
                 double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
                 var (d, q) = MotionDelta(bound, clip, ClipSampling.StateClipNormalized(run.MotionPrevious ?? run.Previous, clip.length) + offset,
                     ClipSampling.StateClipNormalized(run.Normalized, clip.length) + offset, pos, rot);
-                delta += d * w;
-                // States blend their rotation deltas in a layer; they do not compose them.
-                var sum = m_RootTurns[layerIndex];
-                if (Quaternion.Dot(sum, q) < 0) q = new Quaternion(-q.x, -q.y, -q.z, -q.w);
-                m_RootTurns[layerIndex] = new Quaternion(sum.x + q.x * weight, sum.y + q.y * weight,
-                    sum.z + q.z * weight, sum.w + q.w * weight);
-                m_RootTurnWeights[layerIndex] += weight;
+                AddRootStep(layerIndex, d, q, weight);
             }
             for (int i = 0; i < Layers.Length; i++)
             {
+                var layer = Layers[i];
+                float hold = HoldWeight(i, out bool frozen);
+                if (hold > 0f && layer.Kept.HasStep) AddRootStep(i, layer.Kept.Delta, layer.Kept.Turn, hold);
                 float weight = m_RootTurnWeights[i];
+                if (!frozen) layer.Own.HasStep = weight > 0f;
                 if (weight <= 0) continue;
                 var sum = m_RootTurns[i];
                 // An empty state's remaining weight contributes no rotation.
                 if (weight < 1) sum.w += sum.w < 0 ? weight - 1 : 1 - weight;
-                turn *= Quaternion.Slerp(Quaternion.identity, sum.normalized, i == 0 ? 1 : Layers[i].Evaluated);
+                var own = sum.normalized;
+                if (!frozen)
+                {
+                    layer.Own.Delta = m_RootDeltas[i];
+                    layer.Own.Turn = own;
+                }
+                float layerWeight = i == 0 ? 1f : layer.Evaluated;
+                if (layerWeight <= 0f) continue;
+                delta += m_RootDeltas[i] * layerWeight;
+                turn *= Quaternion.Slerp(Quaternion.identity, own, i == 0 ? 1 : layerWeight);
             }
             return (delta, turn);
+        }
+
+        /// <summary>A state's step in its layer: its position by weight, its rotation into the
+        /// layer's weighted sum (the same hemisphere).</summary>
+        void AddRootStep(int layerIndex, Vector3 d, Quaternion q, float weight)
+        {
+            m_RootDeltas[layerIndex] += d * weight;
+            var sum = m_RootTurns[layerIndex];
+            if (Quaternion.Dot(sum, q) < 0) q = new Quaternion(-q.x, -q.y, -q.z, -q.w);
+            m_RootTurns[layerIndex] = new Quaternion(sum.x + q.x * weight, sum.y + q.y * weight,
+                sum.z + q.z * weight, sum.w + q.w * weight);
+            m_RootTurnWeights[layerIndex] += weight;
+        }
+
+        /// <summary>
+        /// The weight of a layer's states that hold (without a motion and without write defaults):
+        /// 1 alone, their share of a transition. Such a state keeps the layer's last root motion as
+        /// it keeps the layer's last values (see <see cref="SampleState"/>): the layer's own step of
+        /// its last update with clips, generic or humanoid, takes the holding state's weight, so
+        /// alone it moves the root by the same step in the root's frame every update, whatever the
+        /// delta time (6000.0.71f1, tests/projects/humanoid generic.noWD, noWDAlone, noWDFade,
+        /// noRootNoWD; a humanoid's feet pivot correction runs again on the kept step). The layer's
+        /// step becomes its last one, except while a transition leaves a holding state
+        /// (<paramref name="frozen"/>), which keeps what it held when the transition began, as for
+        /// its values; an update without clips in the layer forgets it.
+        /// </summary>
+        float HoldWeight(int i, out bool frozen)
+        {
+            var layer = Layers[i];
+            int synced = layer.Def.SyncedLayerIndex;
+            var source = synced >= 0 && synced < Layers.Length ? Layers[synced] : layer;
+            bool transitioning = source.Next != null && source.Transition != null;
+            float p = transitioning ? source.Transition.Progress : 0f;
+            float hold = 0f;
+            if (Holds(layer, source.Current)) hold += 1f - p;
+            if (transitioning && Holds(layer, source.Next)) hold += p;
+            frozen = transitioning && Holds(layer, source.Current);
+            return hold;
         }
 
         /// <summary>A controller playable's root motion as an animation stream reports it
@@ -513,6 +562,25 @@ namespace Unbound.Runtime
         readonly List<float> m_HumanWeights = new List<float>();
         readonly List<Unbound.Runtime.Humanoid.Trs> m_HumanBodyDifferences = new List<Unbound.Runtime.Humanoid.Trs>();
 
+        /// <summary>A layer's holding states keep its last humanoid root motion (see
+        /// <see cref="HoldWeight"/>): the layer's own blended sample.</summary>
+        void HoldHumanMotion(int i)
+        {
+            var layer = Layers[i];
+            float hold = HoldWeight(i, out bool frozen);
+            if (hold > 0f && layer.Kept.HasHuman)
+            {
+                m_HumanSamples.Add(layer.Kept.Human);
+                m_HumanWeights.Add(hold);
+            }
+            if (frozen) return;
+            layer.Own.HasHuman = m_HumanSamples.Count > 0;
+            if (layer.Own.HasHuman)
+                layer.Own.Human = Unbound.Runtime.Humanoid.HumanRootMotion.Blend(
+                    System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanSamples),
+                    System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanWeights));
+        }
+
         /// <summary>A humanoid Animator's root motion: each humanoid clip's body motion between its
         /// state's previous and current times as the clip reads them
         /// (<see cref="ClipSampling.StateClipNormalized"/>), blended by the clips' weights in each
@@ -558,6 +626,7 @@ namespace Unbound.Runtime
                     m_HumanSamples.Add(sample);
                     m_HumanWeights.Add(weight);
                 }
+                if (!additive) HoldHumanMotion(i);
                 float layerWeight = i == 0 ? 1f : Layers[i].Evaluated;
                 var mask = Layers[i].Def.Mask;
                 Unbound.Runtime.Humanoid.HumanRootMotion.CombineLayer(ref blended, ref any,
