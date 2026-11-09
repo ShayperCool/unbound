@@ -286,12 +286,20 @@ namespace Unbound.Runtime
                 return;
             }
             bool replaced = false;
+            // Each changed hole's bounds, per agent radius (usually one).
+            var bounds = new Dictionary<float, (float MinX, float MaxX, float MinZ, float MaxZ)[]>();
             foreach (var surface in s_Surfaces.Values)
             {
                 foreach (var placed in surface.Tiles)
                 {
                     var settings = placed.Instance.Data.m_Settings;
-                    if (!Reaches(placed, changed, settings.agentRadius)) continue;
+                    if (!bounds.TryGetValue(settings.agentRadius, out var holes))
+                    {
+                        holes = new (float, float, float, float)[changed.Count];
+                        for (int i = 0; i < holes.Length; i++) holes[i] = NavMeshCarving.HoleBounds(changed[i], settings.agentRadius);
+                        bounds[settings.agentRadius] = holes;
+                    }
+                    if (!Reaches(placed, holes)) continue;
                     var old = surface.Mesh.GetTileByRef(placed.Ref);
                     if (old?.data == null) continue;
                     var tile = NavMeshCarving.Carve(Place(placed.Instance.Data.m_Tiles[placed.Index], placed.Instance.Position, placed.Instance.Rotation),
@@ -322,10 +330,10 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A changed hole, grown by the agent radius as it is cut, reaches the tile.</summary>
-        static bool Reaches(PlacedTile tile, IReadOnlyList<NavMeshCarving.Footprint> holes, float radius)
+        static bool Reaches(PlacedTile tile, (float MinX, float MaxX, float MinZ, float MaxZ)[] holes)
         {
             foreach (var hole in holes)
-                if (NavMeshCarving.Reaches(hole, radius, tile.MinX, tile.MaxX, tile.MinZ, tile.MaxZ)) return true;
+                if (hole.MaxX >= tile.MinX && hole.MinX <= tile.MaxX && hole.MaxZ >= tile.MinZ && hole.MinZ <= tile.MaxZ) return true;
             return false;
         }
 

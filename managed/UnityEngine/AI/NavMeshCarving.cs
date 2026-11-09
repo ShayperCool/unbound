@@ -110,12 +110,11 @@ namespace Unbound.Runtime
             return hole;
         }
 
-        /// <summary>Whether the footprint's hole for agents of <paramref name="radius"/> can reach
-        /// the area (x, z bounds, edges included).</summary>
-        internal static bool Reaches(Footprint f, float radius, float minX, float maxX, float minZ, float maxZ)
+        /// <summary>The bounds (x, z) of the footprint's hole for agents of <paramref name="radius"/>.</summary>
+        internal static (float MinX, float MaxX, float MinZ, float MaxZ) HoleBounds(Footprint f, float radius)
         {
             var hole = HoleOf(f, radius);
-            return hole.MaxX >= minX && hole.MinX <= maxX && hole.MaxZ >= minZ && hole.MinZ <= maxZ;
+            return (hole.MinX, hole.MaxX, hole.MinZ, hole.MaxZ);
         }
 
         sealed class Hole
