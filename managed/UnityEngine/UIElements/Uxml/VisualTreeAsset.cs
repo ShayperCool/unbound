@@ -286,6 +286,30 @@ namespace Unbound.UIElements
             return found;
         }
 
+        static readonly Dictionary<string, Type> s_ObjectTypes = new Dictionary<string, Type>(StringComparer.Ordinal);
+
+        /// <summary>The UXML object type a tag names (a class with UXML serialized data, or marked
+        /// [UxmlObject], that is not an element), else null.</summary>
+        static Type UxmlObjectType(UxmlNode node)
+        {
+            string full = FullName(node);
+            if (s_ObjectTypes.TryGetValue(full, out var cached)) return cached;
+            var type = FindType(full);
+            bool isObject = type != null && !typeof(VisualElement).IsAssignableFrom(type)
+                && (type.GetNestedType("UxmlSerializedData", BindingFlags.Public | BindingFlags.NonPublic) != null
+                    || HasAttributeNamed(type, "UxmlObjectAttribute"));
+            var result = isObject ? type : null;
+            s_ObjectTypes[full] = result;
+            return result;
+        }
+
+        static bool HasAttributeNamed(Type type, string name)
+        {
+            foreach (var data in type.CustomAttributes)
+                if (data.AttributeType.Name == name) return true;
+            return false;
+        }
+
         // A type by its full name, in the engine or any loaded assembly.
         static Type FindType(string full)
         {
@@ -376,11 +400,11 @@ namespace Unbound.UIElements
             else
             {
                 source = Resolve(node, out type, out var factories, out var hint);
-                if (source == ElementSource.Unknown && FindType(FullName(node)) is Type objectType && !typeof(VisualElement).IsAssignableFrom(objectType))
+                if (source == ElementSource.Unknown && UxmlObjectType(node) is Type objectType)
                 {
                     // UXML objects (a multi-column view's <Columns> and <SortColumnDescriptions>,
                     // <Bindings>) describe their parent's data, not elements: not read yet.
-                    Unbound.Runtime.Stubs.NotImplemented($"UXML object <{node.Type}> ({objectType.FullName}): its parent is created without it");
+                    Unbound.Runtime.Stubs.Ignored($"UXML object <{node.Type}> ({objectType.FullName})", "is not read yet: its parent is created without it");
                     return null;
                 }
                 if (source == ElementSource.Unknown)

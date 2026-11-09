@@ -653,7 +653,8 @@ namespace UnityEngine.UIElements
                 foreach (var column in m_SizedStretchable)
                 {
                     float current = GetDesiredWidth(column);
-                    // Columns all laid out at zero width share what remains equally.
+                    // Columns all laid out at zero width share what remains equally (Unbound's choice for
+                    // this degenerate case; not measured).
                     float share = sizedStretchableWidth > 0f ? remaining * (current / sizedStretchableWidth) : remaining / count;
                     column.desiredWidth = Mathf.Clamp(share, column.GetMinWidth(m_LayoutWidth), column.GetMaxWidth(m_LayoutWidth));
                     remaining = Math.Max(0f, remaining - column.desiredWidth);

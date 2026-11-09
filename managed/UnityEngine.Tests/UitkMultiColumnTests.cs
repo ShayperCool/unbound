@@ -222,6 +222,15 @@ namespace UnityEngine.Tests
             Assert.NotNull(view);
             Assert.Equal(0, view.columns.Count);
             Assert.Contains(Unbound.Runtime.Stubs.HitReport(), h => h.Key.StartsWith("UXML object <Columns>", StringComparison.Ordinal));
+            // A type that is neither an element nor a UXML object stays an unknown tag.
+            var other = ScriptableObject.CreateInstance<VisualTreeAsset>();
+            other.name = "UitkMultiColumnProbeOther";
+            UxmlImporter.Import("Assets/UI/UitkMultiColumnProbeOther.uxml",
+                "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\"><ui:VisualElement name=\"box\"><ui:Cursor /></ui:VisualElement></ui:UXML>", other);
+            var otherRoot = new VisualElement();
+            other.CloneTree(otherRoot);
+            var unknown = Assert.IsType<Label>(otherRoot.Q("box")[0]);
+            Assert.StartsWith("Unknown type", unknown.text);
         }
 
         [Fact]
