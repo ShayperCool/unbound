@@ -47,6 +47,8 @@ UNSUPPORTED = ('room-sky', 'room-spot')
 def gated(case):
     """Whether the realtime lightmap of `case` is gated."""
     return not case.startswith(UNSUPPORTED)
+
+
 STATE_KEYS = ('converged', 'indirectScale', 'updateThreshold', 'size', 'lightmapsMode')
 
 

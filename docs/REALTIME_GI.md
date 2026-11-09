@@ -85,11 +85,13 @@ Room cases of tests/projects/realtimegi in its tests):
 
 So converged output depends on the state it converged from: with `DynamicGI.indirectScale` 2
 after the brighter `room-bounce` case the Editor's texels are 2.00 to 2.07 times those of
-`room-intensity`, as Unbound's are; from the same brighter state with `updateThreshold` 0
-(`roomscaled-threshold0` against `roomscaled-indirectscale` at 1, and the same in
-RoomDirectional) every texel reaches the fixed point. The update is converged (`DynamicGI.isConverged`) once an update of
-every system leaves its drawn texels unchanged: the bounce reads them, so nothing changes until
-the inputs do.
+`room-intensity`, as Unbound's are (the probe gates this default-threshold behaviour). With
+`updateThreshold` 0 every texel reaches the fixed point (`roomscaled-threshold0`,
+`roomdirectional-threshold0`; there the Editor's output differs from the default threshold's,
+`-indirectscale`, by at most about 4%, so those cases record the behaviour without separating
+the two). The update is converged (`DynamicGI.isConverged`) once an update of every system
+leaves its drawn texels unchanged: the bounce reads them, so nothing changes until the inputs
+do.
 
 Measured in the probe: the update runs over several frames on worker threads (bounces converge
 frame by frame), so the first frames after a change are not reproducible between runs even with
@@ -185,8 +187,9 @@ Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
   converges again from there (unmeasured in the Editor).
 - Isolated texels: since a segment is solved again only when its inputs change by the update
   threshold, input differences well below it decide which update last solved a segment, and so
-  move a few texels (2 to 11 values of about 5000 per Room case in the engine, up to about 8%;
-  one chart-edge texel by 8% also with a threshold of 0). The comparator gates the point-light
+  move a few texels (2 to 11 values of about 5000 per case in the engine, up to about 8%; 6
+  values also in `roomscaled-threshold0`, where no part keeps earlier lighting, so the direct
+  light residual alone moves some chart-edge texels). The comparator gates the point-light
   cases' lightmaps with at most 0.5% of their values outside the tolerance, each within 0.02 +
   10%.
 
