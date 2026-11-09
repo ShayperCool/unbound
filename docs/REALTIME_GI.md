@@ -74,7 +74,8 @@ Room cases of tests/projects/realtimegi in its tests):
    from the outer one to 1 and read at the step at or below the point's cosine, without
    interpolation. Point and spot lights are not shadowed in this input (the probe's lights have
    shadows enabled; `room-spot-behind` lights the wall behind the block). A directional light
-   lights a cluster's first n points in their stored order, the others are in its shadow: n is the
+   lights a cluster's first n points in their stored order, the others are in its shadow (also
+   for a light without shadows, `room-directional-noshadows`): n is the
    cluster's point count times its precomputed visibility toward the light, rounded down, read at
    the four stored directions around the light's (latitude t = acos(y) * (rings - 1) / pi between
    two rings, longitude atan2(z, -x) / 2 pi + 1/2 times each ring's count between two of its

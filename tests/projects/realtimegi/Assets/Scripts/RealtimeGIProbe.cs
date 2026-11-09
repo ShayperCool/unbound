@@ -152,20 +152,17 @@ public class RealtimeGIProbe : MonoBehaviour
         // A realtime directional light through the open front, with shadows, at two directions
         // between those the precomputed visibility holds: the block and the ceiling shade parts
         // of the room.
-        var sun = new GameObject("Sun").AddComponent<Light>();
-        sun.type = LightType.Directional;
-#if UNITY_EDITOR
-        sun.lightmapBakeType = LightmapBakeType.Realtime;
-#endif
-        sun.shadows = LightShadows.Hard;
-        sun.color = new Color(1f, 0.95f, 0.8f);
-        sun.intensity = 1.2f;
-        sun.transform.rotation = Quaternion.Euler(40f, 25f, 0f);
+        var sun = Sun(LightShadows.Hard, 40f, 25f);
         yield return Converge();
         Capture("room-directional", s);
         sun.transform.rotation = Quaternion.Euler(57f, -33f, 0f);
         yield return Converge();
         Capture("room-directional-turned", s);
+        // A new directional light without shadows, at the first direction.
+        Destroy(sun.gameObject);
+        sun = Sun(LightShadows.None, 40f, 25f);
+        yield return Converge();
+        Capture("room-directional-noshadows", s);
         Destroy(sun.gameObject);
 
         foreach (var name in new[] { "RoomScaled", "RoomDirectional" })
@@ -200,6 +197,20 @@ public class RealtimeGIProbe : MonoBehaviour
             DynamicGI.indirectScale = sceneScale;
         }
         Finish();
+    }
+
+    static Light Sun(LightShadows shadows, float x, float y)
+    {
+        var sun = new GameObject("Sun").AddComponent<Light>();
+        sun.type = LightType.Directional;
+#if UNITY_EDITOR
+        sun.lightmapBakeType = LightmapBakeType.Realtime;
+#endif
+        sun.shadows = shadows;
+        sun.color = new Color(1f, 0.95f, 0.8f);
+        sun.intensity = 1.2f;
+        sun.transform.rotation = Quaternion.Euler(x, y, 0f);
+        return sun;
     }
 
     IEnumerator Load(string name)

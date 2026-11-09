@@ -521,6 +521,9 @@ fn replays_the_probes_cases() {
         2 * ISOLATED,
         0.006,
     );
+    // A new directional light without shadows (Light.shadows None) at the first direction: its
+    // realtime GI is shadowed all the same.
+    r.check(sun, "room-directional-noshadows", 2 * ISOLATED, 0.006);
 }
 
 #[test]
