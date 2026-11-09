@@ -5,12 +5,14 @@
 
 Every line of collections.jsonl is keyed by its kind, section and step. A step matches when its
 callback/event log is equal and its state (rows with their element, text, layout and selection,
-scroll values, items order, element trees) is equal, numbers within 1e-3. Sections listed in OPEN
+scroll values, items order, element trees) is equal, numbers within 1e-3 (infinite and NaN
+layout values match themselves). Sections listed in OPEN
 are reported but do not fail the run (each names its follow-up); every other section must match
 line for line, with no missing or extra lines. Images are measured and printed.
 """
 import argparse
 import json
+import math
 from pathlib import Path
 import sys
 
@@ -41,6 +43,9 @@ def load(path):
 
 def same(a, b):
     if isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool) and not isinstance(b, bool):
+        # Infinite and NaN layout values (a justify offset divided by zero items) match themselves.
+        if a == b or (math.isnan(a) and math.isnan(b)):
+            return True
         return abs(a - b) <= TOLERANCE
     if isinstance(a, list) and isinstance(b, list):
         return len(a) == len(b) and all(same(x, y) for x, y in zip(a, b))

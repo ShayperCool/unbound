@@ -20,6 +20,9 @@ Stages the `uitk` fixture in a fresh cache directory and replaces its interactio
   visibility and width, a click, columns added and removed;
 - `tabs`: a TabView of three tabs (the last closeable): header presses, selectedTabIndex, the
   close button, a tab added later, activeTab, removing the active tab.
+- `absolute`: one absolutely positioned child per case in a padded, bordered parent (a tab
+  header's underline is such a child): insets, percentage width/height/offsets/margins/min/max,
+  no offsets under each justify-content, align-items and direction.
 
 Every step records the item callbacks it caused (makeItem/bindItem/unbindItem/destroyItem, with
 the element: elements are numbered per control), the events the controls raised, and the state:

@@ -249,6 +249,7 @@ public static class CollectionsProbe
         Section("columns-steps", () => ColumnsSteps(columns));
         Section("column-tree-steps", () => ColumnTreeSteps(columnTree));
         Section("tabs-steps", () => TabsSteps(tabs));
+        Section("absolute", () => AbsoluteChildren(root));
 
         // The animated list's rows move in real time; hidden for the final image.
         if (animated != null) { animated.style.visibility = Visibility.Hidden; Update(); }
@@ -621,6 +622,63 @@ public static class CollectionsProbe
         Step("column-tree", "expand-all", () => view.ExpandAll(), State);
         Step("column-tree", "click-row-1", () => Click(RowCenter(view, 1)), State);
         Step("column-tree", "collapse-all", () => view.CollapseAll(), State);
+    }
+
+    // ---- absolute children in a padded, bordered parent ----
+
+    // One absolutely positioned child per case (a tab header's underline is one), in a parent with
+    // borders and padding: its layout rect for insets, percentage sizes, offsets, margins, min/max,
+    // no offsets under each justify/align/direction. Each parent is removed after its line.
+    static void AbsoluteChildren(VisualElement root)
+    {
+        var cases = new (string name, Action<VisualElement, VisualElement> setup)[] {
+            ("insets", (h, c) => { c.style.left = 0; c.style.right = 0; }),
+            ("width-100p", (h, c) => c.style.width = Length.Percent(100)),
+            ("insets-width-100p", (h, c) => { c.style.left = 0; c.style.right = 0; c.style.width = Length.Percent(100); }),
+            ("static", (h, c) => c.style.width = 10),
+            ("justify-center", (h, c) => { c.style.width = 10; h.style.justifyContent = Justify.Center; }),
+            ("justify-end", (h, c) => { c.style.width = 10; h.style.justifyContent = Justify.FlexEnd; }),
+            ("justify-space-between", (h, c) => { c.style.width = 10; h.style.justifyContent = Justify.SpaceBetween; }),
+            ("justify-space-around", (h, c) => { c.style.width = 10; h.style.justifyContent = Justify.SpaceAround; }),
+            ("justify-space-evenly", (h, c) => { c.style.width = 10; h.style.justifyContent = Justify.SpaceEvenly; }),
+            ("align-center", (h, c) => { c.style.width = 10; h.style.alignItems = Align.Center; }),
+            ("align-end", (h, c) => { c.style.width = 10; h.style.alignItems = Align.FlexEnd; }),
+            ("left-10p", (h, c) => { c.style.width = 10; c.style.left = Length.Percent(10); }),
+            ("top-10p", (h, c) => { c.style.width = 10; c.style.top = Length.Percent(10); }),
+            ("right-10p", (h, c) => { c.style.width = 10; c.style.right = Length.Percent(10); }),
+            ("margin-left-10p", (h, c) => { c.style.width = 10; c.style.marginLeft = Length.Percent(10); }),
+            ("margin-top-10p", (h, c) => { c.style.width = 10; c.style.marginTop = Length.Percent(10); }),
+            ("height-50p", (h, c) => { c.style.width = 10; c.style.height = Length.Percent(50); }),
+            ("min-width-50p", (h, c) => { c.style.width = 10; c.style.minWidth = Length.Percent(50); }),
+            ("max-width-10p", (h, c) => { c.style.width = 40; c.style.maxWidth = Length.Percent(10); }),
+            ("row-static", (h, c) => { c.style.width = 10; h.style.flexDirection = FlexDirection.Row; }),
+            ("row-justify-center", (h, c) => { c.style.width = 10; h.style.flexDirection = FlexDirection.Row; h.style.justifyContent = Justify.Center; }),
+            ("row-align-end", (h, c) => { c.style.width = 10; h.style.flexDirection = FlexDirection.Row; h.style.alignItems = Align.FlexEnd; }),
+            ("column-reverse", (h, c) => { c.style.width = 10; h.style.flexDirection = FlexDirection.ColumnReverse; }),
+            ("row-reverse", (h, c) => { c.style.width = 10; h.style.flexDirection = FlexDirection.RowReverse; }),
+        };
+        foreach (var (name, setup) in cases)
+        {
+            Step("absolute", name, () =>
+            {
+                var host = new VisualElement { name = "absolute-host" };
+                Place(host, 10, 300, 79, 40);
+                host.style.paddingLeft = 20; host.style.paddingRight = 20; host.style.paddingTop = 4; host.style.paddingBottom = 6;
+                host.style.borderLeftWidth = 3; host.style.borderTopWidth = 2;
+                var child = new VisualElement { name = "absolute-child" };
+                child.style.position = Position.Absolute;
+                child.style.height = 2;
+                setup(host, child);
+                host.Add(child);
+                root.Add(host);
+            }, () =>
+            {
+                var host = root.Q("absolute-host");
+                var rect = Rect(host.Q("absolute-child").layout);
+                host.RemoveFromHierarchy();
+                return rect;
+            });
+        }
     }
 
     // ---- TabView ----
