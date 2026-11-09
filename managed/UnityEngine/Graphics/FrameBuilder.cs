@@ -377,6 +377,7 @@ namespace Unbound.Runtime
             // canvas or OnGUI. The cameras that render into textures still render, with their
             // callbacks (measured: tests/projects/coreapis).
             bool screen = UnityEngine.Rendering.OnDemandRendering.RendersThisFrame;
+            Screen.BeginRendering();
             if (screen) GfxStream.BeginFrame(Screen.width, Screen.height, QualitySettings.activeColorSpace);
             else GfxStream.BeginOffscreenFrame(QualitySettings.activeColorSpace);
             EmitLightingGlobals();

@@ -18064,11 +18064,8 @@ namespace UnityEditor
             PlayUnfocused = 2,
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class PlayModeWindow
+    unsafe partial class PlayModeWindow
     {
-        [global::Unbound.Stub] public static void GetRenderingResolution(out uint width, out uint height) { width = default; height = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeWindow.GetRenderingResolution"); }
-        [global::Unbound.Stub] public static void SetCustomRenderingResolution(uint width, uint height, string baseName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeWindow.SetCustomRenderingResolution"); }
         [global::Unbound.Stub] public static void SetPlayModeFocused(bool focused) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeWindow.SetPlayModeFocused"); }
         [global::Unbound.Stub] public static bool GetPlayModeFocused() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeWindow.GetPlayModeFocused"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.PlayModeWindow.PlayModeViewTypes GetViewType() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PlayModeWindow.GetViewType"); return default; }

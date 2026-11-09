@@ -10,14 +10,70 @@ namespace UnityEngine
         static int s_Width = 1080;
         static int s_Height = 1920;
         static bool s_SizeChanged;
+        static int s_WindowWidth, s_WindowHeight;
+        /// <summary>The Game view's custom rendering resolution
+        /// (UnityEditor.PlayModeWindow.SetCustomRenderingResolution), 0 while it follows the window.
+        /// The window shows it scaled, and mouse positions are scaled to it.</summary>
+        static int s_RenderingWidth, s_RenderingHeight;
+        static bool s_RenderingPending;
 
         internal static void Update(int width, int height)
         {
             s_DisplayFrame++;
             if (width <= 0 || height <= 0) return;
+            s_WindowWidth = width;
+            s_WindowHeight = height;
+            if (s_RenderingWidth > 0)
+            {
+                width = s_RenderingWidth;
+                height = s_RenderingHeight;
+                s_RenderingPending = false;
+            }
+            Resize(width, height);
+        }
+
+        static void Resize(int width, int height)
+        {
             if (width != s_Width || height != s_Height) s_SizeChanged = true;
             s_Width = width;
             s_Height = height;
+        }
+
+        /// <summary>Sets the Game view's rendering resolution. Scripts still see the old size for
+        /// the rest of the frame's update; the frame's rendering already has the new one (matches
+        /// the Unity 6000.0.71f1 Editor, tests/projects/screenread).</summary>
+        internal static void SetRenderingResolution(int width, int height)
+        {
+            s_RenderingWidth = Math.Max(1, width);
+            s_RenderingHeight = Math.Max(1, height);
+            s_RenderingPending = true;
+        }
+
+        /// <summary>When the frame's rendering begins: a rendering resolution set during the frame
+        /// takes effect.</summary>
+        internal static void BeginRendering()
+        {
+            if (!s_RenderingPending) return;
+            s_RenderingPending = false;
+            Resize(s_RenderingWidth, s_RenderingHeight);
+        }
+
+        internal static void ResetRenderingResolutionForTests()
+        {
+            s_RenderingWidth = s_RenderingHeight = 0;
+            s_RenderingPending = false;
+        }
+
+        /// <summary>The Game view's rendering resolution: the one last set, else the window's.</summary>
+        internal static Vector2Int RenderingResolution => s_RenderingWidth > 0 ? new Vector2Int(s_RenderingWidth, s_RenderingHeight) : new Vector2Int(s_Width, s_Height);
+
+        /// <summary>A window position in rendering pixels (the same point when the view follows
+        /// the window).</summary>
+        internal static void WindowToRendering(ref float x, ref float y)
+        {
+            if (s_RenderingWidth <= 0 || s_WindowWidth <= 0 || s_WindowHeight <= 0) return;
+            x *= (float)s_RenderingWidth / s_WindowWidth;
+            y *= (float)s_RenderingHeight / s_WindowHeight;
         }
 
         internal static bool ConsumeSizeChanged()

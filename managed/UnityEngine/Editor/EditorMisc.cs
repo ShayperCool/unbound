@@ -10,6 +10,23 @@ using Object = UnityEngine.Object;
 
 namespace UnityEditor
 {
+    public partial class PlayModeWindow
+    {
+        /// <summary>Renders the Game view at a fixed size, shown scaled to the window (sizes below 1
+        /// are taken as 1, unmeasured; <paramref name="baseName"/> names the Editor's size preset).</summary>
+        public static void SetCustomRenderingResolution(uint width, uint height, string baseName) =>
+            Screen.SetRenderingResolution((int)Math.Min(width, int.MaxValue), (int)Math.Min(height, int.MaxValue));
+
+        /// <summary>The size last set, else the window's (unmeasured between the call and the
+        /// next rendering).</summary>
+        public static void GetRenderingResolution(out uint width, out uint height)
+        {
+            var size = Screen.RenderingResolution;
+            width = (uint)size.x;
+            height = (uint)size.y;
+        }
+    }
+
     public sealed partial class PlayerSettings
     {
         /// <summary>The scripting runtime: .NET 4.x equivalent, the only one Unity 6 has.</summary>

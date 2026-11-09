@@ -639,6 +639,7 @@ namespace Unbound.Runtime
         {
             if (s_Input == null) return;
             Screen.Update(s_Input->ScreenWidth, s_Input->ScreenHeight);
+            Screen.WindowToRendering(ref s_Input->MouseX, ref s_Input->MouseY);
             Screen.UpdateDisplayVersion(s_Input->DisplayVersion);
             Input.UpdateImeVersion(s_Input->ImeVersion);
             Gamepads.Poll();
