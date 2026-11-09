@@ -81,7 +81,7 @@ namespace UnityEngine.Tests
                 Assert.Equal(OffMeshLinkType.LinkTypeJumpAcross, data.m_Links[0].Type);
                 Assert.True(data.m_Links[1].Bidirectional);
                 Assert.True(data.m_Links[2].Bidirectional);
-                var warning = Assert.Single(capture.Warnings, w => w.Contains("NavMeshData 'Links'"));
+                var warning = Assert.Single(capture.Warnings, w => w.Contains("generated link with direction"));
                 Assert.Contains("direction 1", warning);
             }
             finally
