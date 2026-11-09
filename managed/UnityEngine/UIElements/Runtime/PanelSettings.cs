@@ -200,6 +200,10 @@ namespace UnityEngine.UIElements
             p.uaClear = new UaPanelClear { clearColor = m_ClearColor, clearDepthStencil = m_ClearDepthStencil, color = m_ColorClearValue };
             p.referenceSpritePixelsPerUnit = referenceSpritePixelsPerUnit;
             p.uaForceGamma = targetTexture != null && forceGammaRendering;
+            // Applied on every panel update, so it overrides Binding.SetPanelLogLevel and
+            // ResetPanelLogLevel on runtime panels (Unity 6000.0.71f1 Editor, tests/projects/uitkbindings
+            // loglevel: no warnings with the asset's None after either call).
+            p.uaDataBinding.logLevel = m_BindingLogLevel;
         }
 
         internal float ResolveScale(Rect targetRect, float screenDpi)
