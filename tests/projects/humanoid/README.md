@@ -142,10 +142,13 @@ imported without keyframe reduction.
   HumanB's alone (`mixer.clipB`), a layer mixer with HumanA's clip alone (`mixer.one`), HumanB's clip
   above it on an override layer of weight 0, 1 and 0.5 (`mixer.weight0`, `mixer.weight1`,
   `mixer.noneMotion`; without root motion `mixer.none`; without Foot IK `mixer.noIK`), both in an
-  AnimationMixerPlayable at 0.5 (`mixer.plain`), B through the masks Upper, NoRoot and NoFootIK (0.5,
-  `mixer.upper`, `mixer.noRoot`, `mixer.noFootIK`) and additive (0.6) through Upper and NoRoot
-  (`mixer.additiveUpper`, `mixer.additiveNoRoot`). Measured: see docs/COMPATIBILITY_GAPS.md (humanoid
-  row, layer mixers and Foot IK).
+  AnimationMixerPlayable at 0.5 (`mixer.plain`; with Foot IK on HumanA's clip only,
+  `mixer.plainFootIKA`), B through the masks Upper, NoRoot and NoFootIK (0.5, `mixer.upper`,
+  `mixer.noRoot`, `mixer.noFootIK`; NoRoot with layersAffectMassCenter, `mixer.noRootMassCenter`),
+  additive (0.6) through Upper and NoRoot (`mixer.additiveUpper`, `mixer.additiveNoRoot`) and the
+  FeetNoGoals clip alone (`mixer.feetNoGoals`); and a state with Foot IK leaving for HumanB's clip
+  without it over 0.3 s (`footIKTransition`, HumanFootIKTransition). Measured: see
+  docs/COMPATIBILITY_GAPS.md (humanoid row, layer mixers and Foot IK).
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:

@@ -881,6 +881,24 @@ public static class ProbeRunner
             state.iKOnFeet = true;
             EditorUtility.SetDirty(footIK);
         }
+        // A state with Foot IK leaving for HumanB's clip without it after an exit time of 0.3 over 0.3 s.
+        var footIKOff = Make("HumanFootIKTransition");
+        if (footIKOff != null)
+        {
+            var machine = footIKOff.layers[0].stateMachine;
+            var on = machine.AddState("A");
+            on.motion = a;
+            on.iKOnFeet = true;
+            var off = machine.AddState("B");
+            off.motion = b;
+            machine.defaultState = on;
+            var go = on.AddTransition(off);
+            go.hasExitTime = true;
+            go.exitTime = 0.3f;
+            go.hasFixedDuration = true;
+            go.duration = 0.3f;
+            EditorUtility.SetDirty(footIKOff);
+        }
         var ik2 = Make("HumanAIK2");
         if (ik2 != null)
         {

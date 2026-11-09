@@ -14,11 +14,12 @@ public partial class HumanoidProbe
     /// <summary>A PlayableGraph (manual updates) on a fresh instance of a rig, its output's source
     /// built by <paramref name="build"/>: Evaluate(0), then the steps of <see cref="Play"/>, each
     /// with the body, the human pose and the root motion.</summary>
-    static void PlayGraph(string key, Func<PlayableGraph, Playable> build, bool rootMotion, string rig = "HumanA")
+    static void PlayGraph(string key, Func<PlayableGraph, Playable> build, bool rootMotion, string rig = "HumanA", Action<Animator> setup = null)
     {
         var instance = Instantiate(Resources.Load<GameObject>(rig));
         var animator = instance.GetComponent<Animator>();
         animator.applyRootMotion = rootMotion;
+        setup?.Invoke(animator);
         var graph = PlayableGraph.Create(key);
         graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
         AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(build(graph));
@@ -78,15 +79,23 @@ public partial class HumanoidProbe
             for (int i = 0; i < 2; i++) ((AnimationClipPlayable)m.GetInput(i)).SetApplyFootIK(false);
             return m;
         }, true));
-        Guarded("mixer.plain", () => PlayGraph("mixer.plain", g =>
-        {
-            var m = AnimationMixerPlayable.Create(g, 2);
-            g.Connect(AnimationClipPlayable.Create(g, ControllerClip("HumanA")), 0, m, 0);
-            g.Connect(AnimationClipPlayable.Create(g, ControllerClip("HumanB")), 0, m, 1);
-            m.SetInputWeight(0, 0.5f);
-            m.SetInputWeight(1, 0.5f);
-            return m;
-        }, true));
+        foreach (var (name, footB) in new[] { ("mixer.plain", true), ("mixer.plainFootIKA", false) })
+            Guarded(name, () => PlayGraph(name, g =>
+            {
+                var m = AnimationMixerPlayable.Create(g, 2);
+                g.Connect(AnimationClipPlayable.Create(g, ControllerClip("HumanA")), 0, m, 0);
+                var clipB = AnimationClipPlayable.Create(g, ControllerClip("HumanB"));
+                clipB.SetApplyFootIK(footB);
+                g.Connect(clipB, 0, m, 1);
+                m.SetInputWeight(0, 0.5f);
+                m.SetInputWeight(1, 0.5f);
+                return m;
+            }, true));
+        Guarded("footIKTransition", () => Play("footIKTransition", "HumanA", "HumanFootIKTransition", animator => animator.applyRootMotion = true,
+            motion: true, locals: false, velocities: false));
+        Guarded("mixer.feetNoGoals", () => PlayGraph("mixer.feetNoGoals", g => AnimationClipPlayable.Create(g, Resources.Load<AnimationClip>("FeetNoGoals")), true));
+        Guarded("mixer.noRootMassCenter", () => PlayGraph("mixer.noRootMassCenter", g => LayerMixer(g, true, "NoRoot"), true,
+            setup: animator => animator.layersAffectMassCenter = true));
         Guarded("mixer.noneMotion", () => PlayGraph("mixer.noneMotion", g => LayerMixer(g, true), true));
         Guarded("mixer.none", () => PlayGraph("mixer.none", g => LayerMixer(g, true), false));
         foreach (var mask in new[] { "Upper", "NoRoot", "NoFootIK" })
