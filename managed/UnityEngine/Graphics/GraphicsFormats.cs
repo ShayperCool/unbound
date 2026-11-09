@@ -260,6 +260,18 @@ namespace UnityEngine.Experimental.Rendering
             (TextureFormat.RG32, GraphicsFormat.R16G16_UNorm, GraphicsFormat.R16G16_UNorm),
             (TextureFormat.RGB48, GraphicsFormat.R16G16B16_UNorm, GraphicsFormat.R16G16B16_UNorm),
             (TextureFormat.RGBA64, GraphicsFormat.R16G16B16A16_UNorm, GraphicsFormat.R16G16B16A16_UNorm),
+            (TextureFormat.EAC_R, GraphicsFormat.R_EAC_UNorm, GraphicsFormat.R_EAC_UNorm),
+            (TextureFormat.EAC_R_SIGNED, GraphicsFormat.R_EAC_SNorm, GraphicsFormat.R_EAC_SNorm),
+            (TextureFormat.EAC_RG, GraphicsFormat.RG_EAC_UNorm, GraphicsFormat.RG_EAC_UNorm),
+            (TextureFormat.EAC_RG_SIGNED, GraphicsFormat.RG_EAC_SNorm, GraphicsFormat.RG_EAC_SNorm),
+            (TextureFormat.R8_SIGNED, GraphicsFormat.R8_SNorm, GraphicsFormat.R8_SNorm),
+            (TextureFormat.RG16_SIGNED, GraphicsFormat.R8G8_SNorm, GraphicsFormat.R8G8_SNorm),
+            (TextureFormat.RGB24_SIGNED, GraphicsFormat.R8G8B8_SNorm, GraphicsFormat.R8G8B8_SNorm),
+            (TextureFormat.RGBA32_SIGNED, GraphicsFormat.R8G8B8A8_SNorm, GraphicsFormat.R8G8B8A8_SNorm),
+            (TextureFormat.R16_SIGNED, GraphicsFormat.R16_SNorm, GraphicsFormat.R16_SNorm),
+            (TextureFormat.RG32_SIGNED, GraphicsFormat.R16G16_SNorm, GraphicsFormat.R16G16_SNorm),
+            (TextureFormat.RGB48_SIGNED, GraphicsFormat.R16G16B16_SNorm, GraphicsFormat.R16G16B16_SNorm),
+            (TextureFormat.RGBA64_SIGNED, GraphicsFormat.R16G16B16A16_SNorm, GraphicsFormat.R16G16B16A16_SNorm),
         };
 
         public static GraphicsFormat GetGraphicsFormat(TextureFormat format, bool isSRGB)

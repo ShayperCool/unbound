@@ -209,7 +209,16 @@ namespace UnityEngine
                 TextureFormat.ETC2_RGBA8Crunched => TextureFormat.ETC2_RGBA8,
                 _ => format,
             };
-            return IsFormatSupported(GraphicsFormatUtility.GetGraphicsFormat(format, false), GraphicsFormatUsage.Sample);
+            // Uncompressed integer and normalized formats count as supported where the device
+            // samples them after a CPU conversion; float and compressed formats need the device's
+            // own (the Unity 6000.0.71f1 Editor answers true for ARGB4444, EAC and the signed
+            // 8- and 16-bit formats, false for ASTC, PVRTC and YUY2: tests/projects/texturecompression
+            // sys.tf.*).
+            var graphics = GraphicsFormatUtility.GetGraphicsFormat(format, false);
+            if (graphics != GraphicsFormat.None && !GraphicsFormatUtility.IsIEEE754Format(graphics)
+                && !GraphicsFormatUtility.IsCompressedFormat(graphics))
+                return true;
+            return IsFormatSupported(graphics, GraphicsFormatUsage.Sample);
         }
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device renders every RenderTextureFormat)")]
         public static bool SupportsRenderTextureFormat(RenderTextureFormat format) => true;

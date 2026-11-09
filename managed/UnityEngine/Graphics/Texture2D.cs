@@ -673,6 +673,13 @@ namespace UnityEngine
             m_IsReadable = info.Readable != 0;
             m_Linear = info.Srgb == 0 || info.Format == 2;
             m_Format = PixelFormats.ImportedFormat(info);
+            // A block-compressed import reports its format and keeps its blocks; its pixels are
+            // what the blocks decode to.
+            if (BlockFormats.BlockBytes((TextureFormat)info.TextureFormat) > 0)
+            {
+                m_SourceFormat = (TextureFormat)info.TextureFormat;
+                m_SourceMips = info.MipCount;
+            }
             m_WrapModeW = (TextureWrapMode)info.WrapW;
             filterMode = (FilterMode)info.FilterMode;
             wrapModeU = (TextureWrapMode)info.WrapU;

@@ -49,26 +49,26 @@ namespace UnityEngine
         Color32 Cell(int mip, int i)
         {
             CheckStoreRead();
-            return m_Store != null ? Texture2DTexels.DecodeCell(m_Format, StoreTexel(mip, i)) : ByteLevel(mip)[i];
+            return CellStore ? Texture2DTexels.DecodeCell(m_Format, StoreTexel(mip, i)) : ByteLevel(mip)[i];
         }
         /// <summary>A texel's cell (R16 and float formats).</summary>
         Color FloatCell(int mip, int i)
         {
             CheckStoreRead();
-            return m_Store != null ? Texture2DTexels.DecodeFloatCell(m_Format, StoreTexel(mip, i)) : FloatLevel(mip)[i];
+            return CellStore ? Texture2DTexels.DecodeFloatCell(m_Format, StoreTexel(mip, i)) : FloatLevel(mip)[i];
         }
 
         void SetCell(int mip, int i, Color32 cell)
         {
             CheckStoreWrite();
-            if (m_Store != null) Texture2DTexels.EncodeCell(m_Format, cell, StoreTexel(mip, i));
+            if (CellStore) Texture2DTexels.EncodeCell(m_Format, cell, StoreTexel(mip, i));
             else ByteLevel(mip)[i] = cell;
         }
 
         void SetFloatCell(int mip, int i, Color cell)
         {
             CheckStoreWrite();
-            if (m_Store != null) Texture2DTexels.EncodeFloatCell(m_Format, cell, StoreTexel(mip, i));
+            if (CellStore) Texture2DTexels.EncodeFloatCell(m_Format, cell, StoreTexel(mip, i));
             else FloatLevel(mip)[i] = cell;
         }
 
@@ -183,10 +183,12 @@ namespace UnityEngine
         public Color[] GetPixels() => GetPixels(0);
         public Color[] GetPixels(int miplevel)
         {
-            if (m_Width == 0) throw LayeredTextures.NotReadable("Texture2D.GetPixels", name);
+            // An unreadable texture has no data to read (the Unity 6000.0.71f1 Editor's message,
+            // tests/projects/texturecompression SmoothUnreadable, NoiseUnreadable).
+            if (m_Width == 0 || !m_IsReadable) throw LayeredTextures.NotReadable("Texture2D.GetPixels", name);
             RequireReadable(true);
             CheckMip(miplevel);
-            return GetPixels(0, 0, MipWidth(miplevel), MipHeight(miplevel), miplevel);
+            return BlockTiled(GetPixels(0, 0, MipWidth(miplevel), MipHeight(miplevel), miplevel), miplevel);
         }
         /// <summary>Level zero with each stored byte as b / 255 (the Color32 conversion), for engine
         /// paths that are not GetPixels.</summary>
@@ -224,7 +226,7 @@ namespace UnityEngine
             var result = new Color32[MipWidth(miplevel) * MipHeight(miplevel)];
             for (int i = 0; i < result.Length; i++)
                 result[i] = m_Hdr != null ? Texture2DTexels.Pixel32(m_Format, FloatCell(miplevel, i)) : Texture2DTexels.Pixel32(m_Format, Cell(miplevel, i));
-            return result;
+            return BlockTiled(result, miplevel);
         }
 
         public void SetPixels(Color[] colors) => SetPixels(colors, 0);
@@ -279,7 +281,7 @@ namespace UnityEngine
         void DecodeLevel(ReadOnlySpan<byte> data, int mip)
         {
             int size = RawMipSize(mip);
-            if (m_Store != null)
+            if (CellStore)
             {
                 CheckStoreWrite();
                 data.Slice(0, size).CopyTo(new Span<byte>(m_Store, m_StoreOffsets[mip], size));
@@ -311,7 +313,7 @@ namespace UnityEngine
         {
             CheckStoreRead();
             int size = RawMipSize(mip);
-            if (m_Store != null) return new ReadOnlySpan<byte>(m_Store, m_StoreOffsets[mip], size).ToArray();
+            if (CellStore) return new ReadOnlySpan<byte>(m_Store, m_StoreOffsets[mip], size).ToArray();
             int n = TexelBytes, texels = MipWidth(mip) * MipHeight(mip);
             if (m_Hdr != null && !Texture2DTexels.Norm16(m_Format)) return PixelFormats.EncodeFloat(m_Format, FloatLevel(mip));
             if (m_Hdr == null && !Texture2DTexels.Coded(m_Format)) return PixelFormats.Encode(m_Format, ByteLevel(mip));
@@ -372,6 +374,10 @@ namespace UnityEngine
         }
         public byte[] GetRawTextureData()
         {
+            // The blocks of a compressed texture, readable or not (the Unity 6000.0.71f1 Editor
+            // answers an unreadable compressed import's too: tests/projects/texturecompression
+            // SmoothUnreadable.raw).
+            if (m_Store == null && SourceBlocks) return (byte[])SourceRawData().Clone();
             if (m_SourceRaw != null) return (byte[])m_SourceRaw.Clone();
             if (!m_IsReadable)
             {
@@ -443,7 +449,7 @@ namespace UnityEngine
 
         Color32[] UploadByteChain()
         {
-            if (m_MipCount == 1 && m_Store == null) return m_Pixels;
+            if (m_MipCount == 1 && !CellStore) return m_Pixels;
             int count = 0;
             for (int mip = 0; mip < m_MipCount; mip++) count += ByteLevel(mip).Length;
             var result = new Color32[count];
@@ -451,7 +457,7 @@ namespace UnityEngine
             for (int mip = 0; mip < m_MipCount; mip++)
             {
                 var level = ByteLevel(mip);
-                if (m_Store != null)
+                if (CellStore)
                     for (int i = 0; i < level.Length; i++) result[at + i] = Cell(mip, i);
                 else level.CopyTo(result, at);
                 at += level.Length;

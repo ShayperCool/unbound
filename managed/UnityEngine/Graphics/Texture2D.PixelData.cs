@@ -41,6 +41,18 @@ namespace UnityEngine
         void EnterStore()
         {
             if (m_Store != null) return;
+            if (SourceBlocks)
+            {
+                // The views of a compressed texture are its blocks.
+                var raw = (byte[])SourceRawData().Clone();
+                var levels = new int[m_SourceMips + 1];
+                for (int mip = 0; mip < m_SourceMips; mip++) levels[mip + 1] = checked(levels[mip] + SourceLevelSize(mip));
+                m_Store = raw;
+                m_StoreOffsets = levels;
+                m_StorePin = GCHandle.Alloc(raw, GCHandleType.Pinned);
+                m_StoreSafety = AtomicSafetyHandle.Create();
+                return;
+            }
             if (m_SourceFormat != null || !Texture2DTexels.Coded(m_Format))
                 throw new UnityException($"Unbound: Texture2D.GetPixelData of a {format} texture is not supported.");
             var offsets = new int[m_MipCount + 1];
@@ -56,7 +68,8 @@ namespace UnityEngine
         /// <summary>The cells take the store's texels; the store stays the texture's pixels.</summary>
         void SyncFromStore()
         {
-            if (m_Store == null) return;
+            // Blocks are not cells: the pixels stay what the import's blocks decode to.
+            if (m_Store == null || SourceBlocks) return;
             CheckStoreRead();
             var store = m_Store;
             m_Store = null;
