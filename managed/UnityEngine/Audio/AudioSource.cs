@@ -430,11 +430,7 @@ namespace UnityEngine
             }
             if (m_Clip != null && (m_Clip.channels == 0 || m_Clip.samples == 0)) return;
             m_Paused = false;
-            if (m_Handle == 0 || AudioBackend.Current.State(m_Handle).OneShots == 0)
-            {
-                m_HasAudioFrame = false;
-                m_PlaybackDspTime = AudioSettings.dspTime;
-            }
+            ResetPlaybackHistoryIfIdle();
             m_Clip?.EnsureLoaded();
             PreparePlaybackMotion();
             // Play can start a clipless OnAudioFilterRead generator before the first
@@ -445,6 +441,24 @@ namespace UnityEngine
             if (Command(new AudioSourceCommand { Kind = AudioCommandKind.Play, Time = time }))
                 m_Clip?.ClaimStreamBuffer(this, main: true);
             if (Trace.AudioOn) Trace.Audio($"{api} '{m_Clip?.m_Name}' ({m_Clip?.length:F2}s) on '{m_GameObject.m_Name}' at {time:F3}, loop {m_Loop}, volume {m_Volume}, group '{m_OutputGroup?.m_Name}'");
+        }
+
+        internal bool HasRetainedVoices
+        {
+            get
+            {
+                if (m_Handle == 0) return false;
+                var state = AudioBackend.Current.State(m_Handle);
+                return state.Main != AudioVoiceState.None || state.OneShots > 0;
+            }
+        }
+
+        bool ResetPlaybackHistoryIfIdle()
+        {
+            if (HasRetainedVoices) return false;
+            m_HasAudioFrame = false;
+            m_PlaybackDspTime = AudioSettings.dspTime;
+            return true;
         }
 
         void PreparePlaybackMotion()
@@ -481,12 +495,7 @@ namespace UnityEngine
                 return;
             }
             clip.EnsureLoaded();
-            if (!isPlaying)
-            {
-                m_HasAudioFrame = false;
-                m_PlaybackDspTime = AudioSettings.dspTime;
-                PreparePlaybackMotion();
-            }
+            if (ResetPlaybackHistoryIfIdle()) PreparePlaybackMotion();
             Flush();
             if (Command(new AudioSourceCommand { Kind = AudioCommandKind.PlayOneShot, Clip = clip.m_Handle, VolumeScale = volumeScale }))
                 clip.ClaimStreamBuffer(this, main: false);

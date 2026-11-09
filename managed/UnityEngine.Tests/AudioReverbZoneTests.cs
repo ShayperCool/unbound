@@ -142,6 +142,50 @@ namespace UnityEngine.Tests
             }
         }
 
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public void PlayCallsAfterPausePreserveRetainedVoiceHistory(bool initialOneShot, bool addOneShot)
+        {
+            var errors = new Errors();
+            var previous = Debug.unityLogger.logHandler;
+            double delta = Time.s_RealDeltaTime;
+            var clip = AudioClip.Create("retained-play", 32768, 1, 48000, false);
+            try
+            {
+                Debug.unityLogger.logHandler = errors;
+                var host = new GameObject("retained-source"); m_Objects.Add(host);
+                var source = host.AddComponent<AudioSource>(); source.clip = clip;
+                if (initialOneShot) source.PlayOneShot(clip); else source.Play();
+                Time.s_RealDeltaTime = 0.04;
+                AudioSystem.Update();
+                var before = m_Backend.State(source.Handle);
+                if (!initialOneShot) Assert.True(before.Position > 0);
+                double started = source.m_PlaybackDspTime;
+                source.Pause();
+                Assert.False(source.isPlaying);
+                Assert.True(source.HasRetainedVoices);
+                if (addOneShot) source.PlayOneShot(clip); else source.Play();
+                // No intervening frame or rendered buffer can restore a cleared marker here.
+                Assert.True(source.m_HasAudioFrame);
+                Assert.Equal(started, source.m_PlaybackDspTime);
+                if (!initialOneShot) Assert.Equal(before.Position, m_Backend.State(source.Handle).Position);
+                Zone(0);
+                Assert.Single(errors.Messages);
+                Assert.Contains("activating zones during playback is not supported", errors.Messages[0]);
+                AudioSystem.Update();
+                Assert.Equal(0, m_Backend.LastFrame.Zone.Kind);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                Time.s_RealDeltaTime = delta;
+                Object.DestroyImmediate(clip);
+            }
+        }
+
         [Fact]
         public void ANewOneShotAfterStopCanStartAlongsideANewZone()
         {
