@@ -339,7 +339,8 @@ AnimatorStateMachine:
         }
 
         /// <summary>The kept step is the layer's last one also when root motion was off while the
-        /// motion played: turned on during the hold, the root moves by Walk's last step.</summary>
+        /// motion played: turned on during the hold, the root moves by Walk's last step (Unbound's
+        /// choice, as for humanoid samples; unmeasured in the Editor).</summary>
         [Fact]
         public void AHoldKeepsTheLastStepWhileRootMotionIsOff()
         {

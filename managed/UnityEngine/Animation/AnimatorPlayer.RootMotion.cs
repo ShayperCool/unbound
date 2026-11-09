@@ -270,7 +270,8 @@ namespace Unbound.Runtime
         /// correction runs again on the kept step). The layer's step becomes its last one, except
         /// while a transition leaves a holding state (<paramref name="frozen"/>), which keeps what it
         /// held when the transition began, as for its values; an update without clips in the layer
-        /// forgets it. The step is kept also while no root motion is requested.
+        /// forgets it. The step is kept also while no root motion is requested (Unbound's choice,
+        /// as for humanoid samples; root motion turned on during a hold is unmeasured).
         /// </summary>
         float HoldWeight(int i, out bool frozen)
         {
