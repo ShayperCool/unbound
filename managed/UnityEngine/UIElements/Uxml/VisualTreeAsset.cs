@@ -601,30 +601,15 @@ namespace Unbound.UIElements
                 object value;
                 if (typeof(Object).IsAssignableFrom(member.ValueType) && UxmlTypeIndex.ConverterFor(member.ValueType) == null)
                 {
-                    // Measured: an unresolved url warns and gives null; an object of another type
-                    // fails on assignment below.
-                    var found = UxmlAttributeValues.ResolveReference(a.Value, member.ValueType, asset, out var referenced, out var failure);
-                    if (found == UxmlAttributeValues.Reference.Unreadable)
-                    {
-                        Debug.LogError($"{Describe(asset, node)} attribute '{a.Key}': {failure}; '{member.Info.Name}' keeps its value.");
-                        continue;
-                    }
-                    if (found == UxmlAttributeValues.Reference.Empty || found == UxmlAttributeValues.Reference.Missing)
-                        UxmlAttributeValues.ReportUrl(node, a.Key, a.Value, asset);
-                    if (found == UxmlAttributeValues.Reference.OtherType)
-                    {
-                        Debug.LogException(new ArgumentException($"Object of type '{referenced.GetType().FullName}' cannot be converted to type '{member.ValueType.FullName}'."));
-                        continue;
-                    }
+                    if (!TryReadObjectReference(element, a.Key, a.Value, member.ValueType, member.Info.Name, asset, node, out var referenced)) continue;
                     value = referenced;
                 }
-                else if (member.ValueType == typeof(Background) && UxmlTypeIndex.ConverterFor(member.ValueType) == null
-                    && UxmlAttributeValues.ResolveReference(a.Value, typeof(Object), asset, out _) is var image
-                    && (image == UxmlAttributeValues.Reference.Empty || image == UxmlAttributeValues.Reference.Missing))
+                else if (member.ValueType == typeof(Background) && UxmlTypeIndex.ConverterFor(member.ValueType) == null)
                 {
-                    // As for object members: the importer's warnings and no image.
-                    UxmlAttributeValues.ReportUrl(node, a.Key, a.Value, asset);
-                    value = default(Background);
+                    // Measured (Unity 6000.0.71f1, tests/projects/uxmlattributes): a Background
+                    // member is not read from UXML without a game converter (a texture or sprite
+                    // reference leaves it empty), and its url is not checked (no warnings).
+                    continue;
                 }
                 else if (member.ValueType == typeof(Type))
                 {
@@ -814,24 +799,25 @@ namespace Unbound.UIElements
         // will represent an icon within a Button element" / "Sets the icon for the Tab's header",
         // written as icon-image="/path/to/image-file.png"). Measured (Unity 6000.0.71f1,
         // tests/projects/uxmlattributes): textures and sprites by project url or path; an empty or
-        // unresolved url logs the importer's warnings and keeps the value. Unbound's choices
-        // (unmeasured): the value is converted as UxmlImageReferences reads it, and an asset of a class
-        // a Background cannot take logs ONE error naming the document, the element and the attribute,
-        // the property keeping its value. Other attributes Unbound cannot convert stay silent as before.
+        // unresolved url logs the importer's warnings and keeps the value; an asset of a class a
+        // Background cannot take (a style sheet, a UXML document) is ignored silently. Unbound's
+        // choices (unmeasured): the value is converted as UxmlImageReferences reads it; an ambiguous or
+        // unloadable reference logs ONE error naming the document, the element and the attribute.
         static void ApplyImageAttribute(VisualElement element, PropertyInfo property, string name, string value, VisualTreeAsset asset, UxmlNode node)
         {
             // An empty or unresolved url warns as Unity's importer does and leaves the image as it
             // is (measured, tests/projects/uxmlattributes).
-            var found = UxmlAttributeValues.ResolveReference(value, typeof(Object), asset, out _);
+            var found = UxmlAttributeValues.ResolveReference(value, typeof(Object), asset, out var referenced);
             if (found == UxmlAttributeValues.Reference.Empty || found == UxmlAttributeValues.Reference.Missing)
             {
                 UxmlAttributeValues.ReportUrl(node, name, value, asset);
                 return;
             }
+            // An asset no Background can show is ignored without a message (measured).
+            if (referenced != null && !(referenced is Texture || referenced is Sprite || referenced is VectorImage)) return;
             if (!UxmlImageReferences.TryRead(value, typeof(Background), asset, out var image, out var error))
             {
-                var where = node != null ? Describe(asset, node) : $"{(string.IsNullOrEmpty(asset?.m_UaAssetPath) ? asset?.name : asset.m_UaAssetPath)}: <{element.GetType().FullName}>";
-                Debug.LogError($"{where} attribute '{name}': {error}; '{property.Name}' keeps its value.");
+                Debug.LogError($"{Where(element, asset, node)} attribute '{name}': {error}; '{property.Name}' keeps its value.");
                 return;
             }
             try
@@ -846,30 +832,18 @@ namespace Unbound.UIElements
 
         // ListView and TreeView `item-template`, a UXML template (VisualTreeAsset) reference. Documented
         // (6000.0 Manual "ListView" and "TreeView", UXML attribute `item-template` of type
-        // UIElements.VisualTreeAsset, and
-        // Scripting API ListView.itemTemplate: "A UXML template that constructs each recycled and
-        // rebound element within the list. This template is designed to replace the ListView.makeItem
-        // definition", TreeView.itemTemplate: the same text for "the tree"; Manual "Reference other
-        // files from UXML": absolute paths begin with `/` or `project://database/`, relative paths start
-        // from the current file). Unbound's choices (unmeasured; the pages do not describe them): the
-        // reference is resolved, checked and reported as the `icon-image` references are
-        // (UxmlAttributeValues.TryReadTemplate), and one that does not resolve to a VisualTreeAsset
-        // logs ONE error naming the document, the element and the attribute, itemTemplate keeping its
-        // value; only the attribute's documented name is read, on the property ListView or TreeView
-        // declares (other elements' VisualTreeAsset properties are not mapped here). The itemTemplate
-        // setters make the rows from the template.
+        // UIElements.VisualTreeAsset; Scripting API ListView.itemTemplate and TreeView.itemTemplate:
+        // "A UXML template that constructs each recycled and rebound element"). Measured (Unity
+        // 6000.0.71f1, tests/projects/uxmlattributes): read as a [UxmlAttribute] VisualTreeAsset member
+        // is (TryReadObjectReference). Only the attribute's documented name is read, on the property
+        // ListView or TreeView declares. The itemTemplate setters make the rows from the template.
         static bool IsItemTemplate(PropertyInfo property, string name) =>
             name == "item-template" && property.PropertyType == typeof(VisualTreeAsset)
             && (property.DeclaringType == typeof(ListView) || property.DeclaringType == typeof(TreeView));
 
         static void ApplyItemTemplateAttribute(VisualElement element, PropertyInfo property, string name, string value, VisualTreeAsset asset, UxmlNode node)
         {
-            if (!UxmlAttributeValues.TryReadTemplate(value, asset, out var template, out var error))
-            {
-                var where = node != null ? Describe(asset, node) : $"{(string.IsNullOrEmpty(asset?.m_UaAssetPath) ? asset?.name : asset.m_UaAssetPath)}: <{element.GetType().FullName}>";
-                Debug.LogError($"{where} attribute '{name}': {error}; '{property.Name}' keeps its value.");
-                return;
-            }
+            if (!TryReadObjectReference(element, name, value, typeof(VisualTreeAsset), property.Name, asset, node, out var template)) return;
             try
             {
                 property.SetValue(element, template);
@@ -879,6 +853,34 @@ namespace Unbound.UIElements
                 Debug.LogException(e.InnerException ?? e);
             }
         }
+
+        // An asset url read into an object member of `type`. Measured (Unity 6000.0.71f1,
+        // tests/projects/uxmlattributes, [UxmlAttribute] object members and `item-template`): an empty
+        // or unresolved url logs the importer's warnings and gives null; an object of another type
+        // fails on assignment (the ArgumentException is logged) and the member keeps its value.
+        // Unbound's choice: a file the asset database cannot load logs ONE error, value kept.
+        static bool TryReadObjectReference(VisualElement element, string attribute, string text, Type type, string memberName, VisualTreeAsset asset, UxmlNode node, out Object result)
+        {
+            switch (UxmlAttributeValues.ResolveReference(text, type, asset, out result, out var failure))
+            {
+                case UxmlAttributeValues.Reference.Unreadable:
+                    Debug.LogError($"{Where(element, asset, node)} attribute '{attribute}': {failure}; '{memberName}' keeps its value.");
+                    return false;
+                case UxmlAttributeValues.Reference.Empty:
+                case UxmlAttributeValues.Reference.Missing:
+                    UxmlAttributeValues.ReportUrl(node, attribute, text, asset);
+                    result = null;
+                    return true;
+                case UxmlAttributeValues.Reference.OtherType:
+                    Debug.LogException(new ArgumentException($"Object of type '{result.GetType().FullName}' cannot be converted to type '{type.FullName}'."));
+                    return false;
+                default:
+                    return true;
+            }
+        }
+
+        static string Where(VisualElement element, VisualTreeAsset asset, UxmlNode node) =>
+            node != null ? Describe(asset, node) : $"{(string.IsNullOrEmpty(asset?.m_UaAssetPath) ? asset?.name : asset.m_UaAssetPath)}: <{element.GetType().FullName}>";
 
         static readonly Dictionary<(Type, string, bool), PropertyInfo> s_Properties = new Dictionary<(Type, string, bool), PropertyInfo>();
 
@@ -1017,10 +1019,13 @@ namespace Unbound.UIElements
     //   - an empty value is no image (an empty Background);
     //   - each of these is an error the caller reports once, the value kept: no asset at the
     //     reference, an asset of another class, a texture type a Background cannot show, and a #name
-    //     (without a fileID that resolves) naming more than one asset the value could take.
-    /// <summary>UXML asset references read as images: Background values (Button and Tab `icon-image`, a
-    /// [UxmlAttribute] of type Background); also ListView/TreeView templates. Texture members resolve
-    /// as other object members do.</summary>
+    //     (without a fileID that resolves) naming more than one asset the value could take. For
+    //     `icon-image` the caller first handles what is measured (tests/projects/uxmlattributes):
+    //     missing and empty urls warn as the importer does, an asset no Background can show is
+    //     ignored silently.
+    /// <summary>UXML asset references read as images: Background values (Button and Tab `icon-image`,
+    /// Background list items and legacy attribute descriptions). A [UxmlAttribute] Background member
+    /// is not read from UXML (measured); Texture members resolve as other object members do.</summary>
     internal static class UxmlImageReferences
     {
         const string BackgroundTypes = "Texture2D, RenderTexture, Sprite or VectorImage";

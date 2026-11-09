@@ -247,11 +247,10 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "Warning:  (1,57): Semantic - The specified URI does not exist in the current project : Assets/UI/Screens/Icons/Missing.png" }, logs);
         }
 
-        // [choice] An asset of another class is not an image: ONE error names its class; the icon is
-        // kept.
-        // Red at 7718c50e: nothing is logged; Assert.Single(logs) fails (empty).
+        // [measured] tests/projects/uxmlattributes iconWrongType, iconTemplate: an icon-image naming an
+        // asset of another class (a style sheet) is ignored without a log; the icon is kept.
         [Fact]
-        public void WrongClassLogsOneErrorAndKeepsTheIcon()
+        public void WrongClassIsIgnoredAndKeepsTheIcon()
         {
             var sheet = ScriptableObject.CreateInstance<StyleSheet>();
             sheet.name = "Theme";
@@ -261,9 +260,7 @@ namespace UnityEngine.Tests
             logs = Logged(() => root = Clone(
                 $"<UxmlImageProbes.PresetIconButton icon-image=\"{Ref("Assets/UI/Theme.uss", SheetGuid, 7433441132597879392, "Theme")}\" />").Root);
             Assert.Same(PresetIconButton.Preset, Assert.IsType<PresetIconButton>(root[0]).iconImage.texture);
-            var error = Assert.Single(logs);
-            Assert.Contains("'icon-image'", error);
-            Assert.Contains("is a StyleSheet, not a Texture2D, RenderTexture, Sprite or VectorImage", error);
+            Assert.Empty(logs);
         }
 
         // [doc] A Background holds a Texture2D (texture), RenderTexture, Sprite or VectorImage.
@@ -301,14 +298,11 @@ namespace UnityEngine.Tests
 
         // ------------------------------------------------------------------ [UxmlAttribute] members
 
-        // [doc] UxmlAttributeAttribute: Unity objects are attributes referencing the asset file.
-        // [choice] A [UxmlAttribute] of type Background (no game converter) reads an asset reference
-        // as Button and Tab icon-image do: the texture or sprite its fileID names.
-        // Red at 7718c50e: the member is reported as an unknown type needing a
-        // UxmlAttributeConverter<Background> and skipped; Assert.Same(icon.Texture,
-        // probe.badge.texture) fails (null).
+        // [measured] tests/projects/uxmlattributes bgTexture, bgSprite: a [UxmlAttribute] of type
+        // Background (no game converter) is not read from UXML: a texture or sprite reference leaves
+        // the member as it was (empty in the probe, the initializer here), without a log.
         [Fact]
-        public void DeclaredBackgroundAttributesResolveTexturesAndSprites()
+        public void DeclaredBackgroundAttributesAreNotRead()
         {
             using var icon = new IconFile();
             List<string> logs = null;
@@ -316,26 +310,21 @@ namespace UnityEngine.Tests
             logs = Logged(() => root = Clone(
                 $"<UxmlImageProbes.BadgeProbe badge=\"{Ref("Assets/UI/Icons/Icon.png", IconGuid, TextureId, "Icon")}\" />"
                 + $"<UxmlImageProbes.BadgeProbe badge=\"../Icons/Icon.png?fileID={SpriteId}&amp;guid={IconGuid}&amp;type=3#Icon\" />").Root);
-            Assert.Same(icon.Texture, Assert.IsType<BadgeProbe>(root[0]).badge.texture);
-            Assert.Same(icon.Sprite, Assert.IsType<BadgeProbe>(root[1]).badge.sprite);
+            Assert.Same(PresetIconButton.Preset, Assert.IsType<BadgeProbe>(root[0]).badge.texture);
+            Assert.Same(PresetIconButton.Preset, Assert.IsType<BadgeProbe>(root[1]).badge.texture);
             Assert.Empty(logs);
         }
 
-        // Measured for object members (tests/projects/uxmlattributes), applied to a declared
-        // Background: an unresolved reference logs the importer's two warnings (the guid's path hint
-        // and the url) and gives no image.
+        // [measured] tests/projects/uxmlattributes bgMissing, bgEmpty: a declared Background's url is
+        // not checked: a missing reference logs nothing.
         [Fact]
-        public void DeclaredBackgroundAttributeWithAMissingReferenceWarnsAndHasNoImage()
+        public void DeclaredBackgroundAttributeUrlsAreNotChecked()
         {
             var url = Ref("Assets/UI/Icons/Missing.png", MissingGuid, TextureId, "Missing");
             VisualElement root = null;
             var logs = LoggedAll(() => root = Clone($"<UxmlImageProbes.BadgeProbe badge=\"{url}\" />").Root);
-            Assert.True(Assert.IsType<BadgeProbe>(root[0]).badge.IsEmpty());
-            Assert.Equal(new[]
-            {
-                $"Warning:  (1,45): Semantic - The specified URI does not exist in the current project : Invalid asset path hint \"Assets/UI/Icons/Missing.png\" for referenced asset GUID \"{MissingGuid}\"",
-                $"Warning:  (1,45): Semantic - The specified URI does not exist in the current project : {url.Replace("&amp;", "&")}",
-            }, logs);
+            Assert.Same(PresetIconButton.Preset, Assert.IsType<BadgeProbe>(root[0]).badge.texture);
+            Assert.Empty(logs);
         }
 
         // [doc] The Manual's [UxmlAttribute] Texture2D written as a project reference. Measured

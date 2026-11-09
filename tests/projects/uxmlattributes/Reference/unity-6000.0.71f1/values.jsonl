@@ -1,5 +1,5 @@
 {"k":"asset","v":"UxmlAttributesProbe"}
-{"k":"rootChildren","v":"45"}
+{"k":"rootChildren","v":"58"}
 {"k":"element/defaults/class","v":"UxmlAttributesProbes.TypedProbe"}
 {"k":"element/defaults/aliased","v":"\"initial\""}
 {"k":"element/defaults/myBool","v":"False"}
@@ -903,5 +903,37 @@
 {"k":"element/iconPath/iconImage","v":"texture=Texture2D:Probe sprite=null renderTexture=null vectorImage=null"}
 {"k":"element/iconMissing/class","v":"UnityEngine.UIElements.Button"}
 {"k":"element/iconMissing/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
-{"k":"logs","v":["Error: Type: Invalid type \"System.String\". Type must derive from UnityEngine.UIElements.VisualElement.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.Sprite'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.StyleSheet'.","Exception: ArgumentException: Object of type 'UnityEngine.UIElements.StyleSheet' cannot be converted to type 'UnityEngine.Texture2D'.","Exception: TypeLoadException: Could not load type 'No.Such.Type' from assembly 'Nowhere'.","Warning:  (30,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (46,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uss","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : Invalid asset path hint \"Assets/UI/Missing.png\" for referenced asset GUID \"0123456789abcdef0123456789abcdef\"","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : project://database/Assets/UI/Missing.png?fileID=2800000&guid=0123456789abcdef0123456789abcdef&type=3#Missing"]}
+{"k":"element/bgTexture/class","v":"UxmlAttributesProbes.AssetRefProbe"}
+{"k":"element/bgTexture/myBackground","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"element/bgTexture/myFont","v":"Font:LegacyRuntime"}
+{"k":"element/bgSprite/class","v":"UxmlAttributesProbes.AssetRefProbe"}
+{"k":"element/bgSprite/myBackground","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"element/bgSprite/myFont","v":"null"}
+{"k":"element/bgPath/class","v":"UxmlAttributesProbes.AssetRefProbe"}
+{"k":"element/bgPath/myBackground","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"element/bgPath/myFont","v":"null"}
+{"k":"element/bgWrongType/class","v":"UxmlAttributesProbes.AssetRefProbe"}
+{"k":"element/bgWrongType/myBackground","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"element/bgWrongType/myFont","v":"null"}
+{"k":"element/bgMissing/class","v":"UxmlAttributesProbes.AssetRefProbe"}
+{"k":"element/bgMissing/myBackground","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"element/bgMissing/myFont","v":"null"}
+{"k":"element/bgEmpty/class","v":"UxmlAttributesProbes.AssetRefProbe"}
+{"k":"element/bgEmpty/myBackground","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"element/bgEmpty/myFont","v":"null"}
+{"k":"element/iconWrongType/class","v":"UnityEngine.UIElements.Button"}
+{"k":"element/iconWrongType/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"element/iconTemplate/class","v":"UnityEngine.UIElements.Button"}
+{"k":"element/iconTemplate/iconImage","v":"texture=null sprite=null renderTexture=null vectorImage=null"}
+{"k":"element/listTemplate/class","v":"UnityEngine.UIElements.ListView"}
+{"k":"element/listTemplate/itemTemplate","v":"VisualTreeAsset:Child"}
+{"k":"element/listTemplatePath/class","v":"UnityEngine.UIElements.ListView"}
+{"k":"element/listTemplatePath/itemTemplate","v":"VisualTreeAsset:Child"}
+{"k":"element/listTemplateMissing/class","v":"UnityEngine.UIElements.ListView"}
+{"k":"element/listTemplateMissing/itemTemplate","v":"null"}
+{"k":"element/listTemplateWrongType/class","v":"UnityEngine.UIElements.ListView"}
+{"k":"element/listTemplateWrongType/itemTemplate","v":"null"}
+{"k":"element/treeTemplate/class","v":"UnityEngine.UIElements.TreeView"}
+{"k":"element/treeTemplate/itemTemplate","v":"VisualTreeAsset:Child"}
+{"k":"logs","v":["Error: Type: Invalid type \"System.String\". Type must derive from UnityEngine.UIElements.VisualElement.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.Font'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.Sprite'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.StyleSheet'.","Exception: ArgumentException: Object of type 'UnityEngine.Texture2D' cannot be converted to type 'UnityEngine.UIElements.VisualTreeAsset'.","Exception: ArgumentException: Object of type 'UnityEngine.UIElements.StyleSheet' cannot be converted to type 'UnityEngine.Texture2D'.","Exception: TypeLoadException: Could not load type 'No.Such.Type' from assembly 'Nowhere'.","Warning:  (30,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (46,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.png","Warning:  (51,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.ttf","Warning:  (52,6): Semantic - The specified URL is empty or invalid : ''","Warning:  (57,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uxml","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : Assets/UI/Missing.uss","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : Invalid asset path hint \"Assets/UI/Missing.png\" for referenced asset GUID \"0123456789abcdef0123456789abcdef\"","Warning:  (9,6): Semantic - The specified URI does not exist in the current project : project://database/Assets/UI/Missing.png?fileID=2800000&guid=0123456789abcdef0123456789abcdef&type=3#Missing"]}
 {"k":"complete","v":true}

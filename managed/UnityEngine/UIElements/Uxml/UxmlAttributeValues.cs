@@ -42,9 +42,8 @@ using Object = UnityEngine.Object;
 // Unbound's choices: the text forms of vectors, rects and bounds (comma-separated components),
 // arrays read like lists, items not trimmed. Length, Gradient, AnimationCurve and
 // ToggleButtonGroupState values are not read yet and fail loudly; a game converter's failure is
-// reported. Background values (without a game converter) are asset urls read as
-// UxmlImageReferences reads them; their empty or unresolved urls warn as object members' do
-// (unmeasured for Background).
+// reported. Measured: Background members (without a game converter) are not read from UXML at
+// all, their urls not checked.
 
 namespace Unbound.UIElements
 {
@@ -547,8 +546,8 @@ namespace Unbound.UIElements
         internal static bool TryReadLenient(string text, Type type, MemberInfo member, VisualTreeAsset document, out object result, out string error)
         {
             error = null;
-            // Game converters and image references (unmeasured failures) report what they cannot read.
-            if (UxmlTypeIndex.ConverterFor(type) != null || type == typeof(Background)) return TryRead(text, type, member, document, out result, out error);
+            // Game converters (unmeasured failures) report what they cannot read.
+            if (UxmlTypeIndex.ConverterFor(type) != null) return TryRead(text, type, member, document, out result, out error);
             if (IsList(type, out var element) && !IsList(element, out _) && UxmlTypeIndex.ConverterFor(element) == null && DefaultsWhenUnreadable(element))
             {
                 var items = new List<object>();
@@ -842,19 +841,6 @@ namespace Unbound.UIElements
                 return false;
             }
             result = found;
-            return true;
-        }
-
-        /// <summary>A UXML template (VisualTreeAsset) reference of <paramref name="document"/>, such as
-        /// ListView or TreeView `item-template`: resolved, checked and reported exactly as UxmlImageReferences reads
-        /// the asset references of `icon-image` (the same url forms, the same handling of a #name naming
-        /// several candidates, an error text for a missing asset or one of another class). An empty
-        /// value is no template (null).</summary>
-        internal static bool TryReadTemplate(string text, VisualTreeAsset document, out VisualTreeAsset template, out string error)
-        {
-            template = null;
-            if (!UxmlImageReferences.TryRead(text, typeof(VisualTreeAsset), document, out var value, out error)) return false;
-            template = value as VisualTreeAsset;
             return true;
         }
 

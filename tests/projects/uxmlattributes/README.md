@@ -10,7 +10,8 @@ Controls (`Assets/Scripts/UxmlAttributesControls.cs`): a `[UxmlElement]` with on
 of each type (int, float, bool, long, double, enum, Color, Vector2/3, Vector2Int, Rect, string,
 char, UxmlTypeReference Type, List<int>, List<string>, Texture2D, Sprite, StyleSheet,
 VisualTreeAsset, Object), custom and obsolete names, a derived control, a custom element name, a
-control with only the legacy UxmlFactory/UxmlTraits, one with both, and Button `icon-image`.
+control with only the legacy UxmlFactory/UxmlTraits, one with both, a control with Background and
+Font members, Button `icon-image` and ListView/TreeView `item-template`.
 Values: valid ones, project urls with guid and fileID, absolute, relative and guid-less paths,
 references to another sub-asset or another type, missing assets, empty values, malformed numbers,
 booleans, enums, colours (short hex, names, rgb()), vectors and list items, unknown types.
@@ -21,8 +22,10 @@ attribute names, `[UxmlAttribute]` custom/obsolete names, the built-in value typ
 Observed in this capture only (the rules `managed/UnityEngine/UIElements/Uxml/UxmlAttributeValues.cs`
 lists): values that do not convert silently take the type's default (white for a colour);
 references to an object of another type resolve to the same file's object of the member's type,
-else throw on assignment; missing or empty urls log the importer's warnings; legacy traits still
-create their elements, and a `[UxmlElement]` wins over its legacy factory.
+else throw on assignment; missing or empty urls log the importer's warnings; `item-template` is read
+as a VisualTreeAsset member is; a Background member (without a game converter) is not read at all,
+without warnings; an `icon-image` naming an asset no Background can show is ignored silently;
+legacy traits still create their elements, and a `[UxmlElement]` wins over its legacy factory.
 
 ```sh
 python3 tests/projects/uxmlattributes/run.py record --label native-a
@@ -31,5 +34,5 @@ python3 tests/projects/uxmlattributes/run.py publish native-a native-b
 python3 tests/projects/uxmlattributes/run.py gate
 ```
 
-Values compare exactly. VectorImage and Font references are not covered (they need an SVG
-importer package or a font file in the probe).
+Values compare exactly. Font references use the built-in legacy font. VectorImage references are
+not covered (they need an SVG importer package).

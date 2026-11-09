@@ -44,4 +44,17 @@
     <ui:Button name="iconSprite" icon-image="project://database/Assets/UI/ProbeSprite.png?fileID=21300000&amp;guid=6b2d3f4a5c6e4f708192a3b4c5d6e7f8&amp;type=3#ProbeSprite" />
     <ui:Button name="iconPath" icon-image="/Assets/UI/Probe.png" />
     <ui:Button name="iconMissing" icon-image="/Assets/UI/Missing.png" />
+    <probe:AssetRefProbe name="bgTexture" my-background="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" my-font="project://database/Library/unity%20default%20resources?fileID=10102&amp;guid=0000000000000000e000000000000000&amp;type=0#LegacyRuntime" />
+    <probe:AssetRefProbe name="bgSprite" my-background="project://database/Assets/UI/ProbeSprite.png?fileID=21300000&amp;guid=6b2d3f4a5c6e4f708192a3b4c5d6e7f8&amp;type=3#ProbeSprite" />
+    <probe:AssetRefProbe name="bgPath" my-background="/Assets/UI/Probe.png" />
+    <probe:AssetRefProbe name="bgWrongType" my-background="project://database/Assets/UI/Probe.uss?fileID=7433441132597879392&amp;guid=7c3e4a5b6d7f4a8192a3b4c5d6e7f809&amp;type=3#Probe" my-font="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" />
+    <probe:AssetRefProbe name="bgMissing" my-background="/Assets/UI/Missing.png" my-font="/Assets/UI/Missing.ttf" />
+    <probe:AssetRefProbe name="bgEmpty" my-background="" my-font="" />
+    <ui:Button name="iconWrongType" icon-image="project://database/Assets/UI/Probe.uss?fileID=7433441132597879392&amp;guid=7c3e4a5b6d7f4a8192a3b4c5d6e7f809&amp;type=3#Probe" />
+    <ui:Button name="iconTemplate" icon-image="project://database/Assets/UI/Child.uxml?fileID=9197481963319205126&amp;guid=8d4f5b6c7e804b9203b4c5d6e7f8091a&amp;type=3#Child" />
+    <ui:ListView name="listTemplate" item-template="project://database/Assets/UI/Child.uxml?fileID=9197481963319205126&amp;guid=8d4f5b6c7e804b9203b4c5d6e7f8091a&amp;type=3#Child" />
+    <ui:ListView name="listTemplatePath" item-template="/Assets/UI/Child.uxml" />
+    <ui:ListView name="listTemplateMissing" item-template="/Assets/UI/Missing.uxml" />
+    <ui:ListView name="listTemplateWrongType" item-template="project://database/Assets/UI/Probe.png?fileID=2800000&amp;guid=5a1c2e3f4b5d4e6f8091a2b3c4d5e6f7&amp;type=3#Probe" />
+    <ui:TreeView name="treeTemplate" item-template="project://database/Assets/UI/Child.uxml?fileID=9197481963319205126&amp;guid=8d4f5b6c7e804b9203b4c5d6e7f8091a&amp;type=3#Child" />
 </ui:UXML>

@@ -43,8 +43,19 @@ public static class UxmlAttributesProbe
         foreach (var element in root.Query<VisualElement>().ToList())
         {
             if (string.IsNullOrEmpty(element.name) || element == root) continue;
+            if (element.GetFirstAncestorOfType<BaseVerticalCollectionView>() != null) continue;
             var key = "element/" + element.name + "/";
             Put(key + "class", element.GetType().FullName);
+            if (element is ListView list)
+            {
+                Put(key + "itemTemplate", Format(list.itemTemplate));
+                continue;
+            }
+            if (element is TreeView tree)
+            {
+                Put(key + "itemTemplate", Format(tree.itemTemplate));
+                continue;
+            }
             if (element is Button button)
             {
                 var image = button.iconImage;
@@ -85,6 +96,7 @@ public static class UxmlAttributesProbe
             case Vector3 v: return v.x.ToString("R", Inv) + "," + v.y.ToString("R", Inv) + "," + v.z.ToString("R", Inv);
             case Rect r: return string.Join(",", new[] { r.x, r.y, r.width, r.height }.Select(x => x.ToString("R", Inv)));
             case Type t: return t.FullName;
+            case Background b: return $"texture={Name(b.texture)} sprite={Name(b.sprite)} renderTexture={Name(b.renderTexture)} vectorImage={Name(b.vectorImage)}";
             case string s: return "\"" + s + "\"";
             case System.Collections.IList list:
                 return "[" + string.Join("|", list.Cast<object>().Select(Format)) + "]";

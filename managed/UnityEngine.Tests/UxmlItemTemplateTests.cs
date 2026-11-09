@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using ItemTemplateProbes;
 using Unbound.Runtime;
 using Unbound.UIElements;
@@ -20,26 +19,16 @@ using Object = UnityEngine.Object;
 //            definition."), the Scripting API ListView.itemTemplate (same text), and the Manual
 //            "Reference other files from UXML" (absolute paths begin with `/` or
 //            `project://database/`; relative paths start from the current file);
-//   [choice] Unbound's choice where the pages say nothing: how a reference that does not resolve to
-//            a VisualTreeAsset is reported (ONE error naming the document, the element and the
-//            attribute; itemTemplate keeps its value), and that only the documented attribute name
-//            is read. These check Unbound's implementation, not Unity behaviour.
-// No reference capture covers UXML item templates; nothing here is a measured Unity value.
+//   [measured] the uxmlattributes probe (tests/projects/uxmlattributes, listTemplate*, treeTemplate,
+//            Unity 6000.0.71f1): the attribute is read as a [UxmlAttribute] VisualTreeAsset member
+//            is: an unresolved url logs the importer's warning and gives no template, an asset of
+//            another class logs an ArgumentException and the list keeps no template;
+//   [choice] Unbound's choice where neither says anything: only the documented attribute name is
+//            read.
 //
-// Red base: 4a0c27ea (this file overlaid; it compiles there, every member it uses exists there).
-// Each red is the named runtime assertion, not a compile failure. The "rows without bindItem" cases
-// have their red at 437bd059 instead (the attribute resolves there, but a template list without
-// bindItem is not valid, so it shows no rows); they name no member added after 437bd059.
-//
-// Rows without bindItem: the Scripting API ListView.itemTemplate remarks that the template can be
-// used "along with BaseListView.bindingSourceSelectionMode and bindings to have a completely
-// codeless workflow", and BaseListView.bindingSourceSelectionMode says that with AutoAssign "the
-// bind callbacks don't need to be specified". Neither page gives the default mode or what Manual
-// mode without bindItem shows. Unbound has no runtime data binding yet, so the [interim] cases
-// check an explicitly labelled Unbound interim, not Unity behaviour: the template rows are shown
-// unbound (no data, no data source) and the missing binding is reported through Stubs.Ignored.
-// Only an exact case is exempt (a template, makeItem still the template's factory, no bindItem);
-// every other makeItem/bindItem pairing is unchanged.
+// Rows without bindItem follow the Scripting API ListView.itemTemplate and
+// BaseListView.bindingSourceSelectionMode (AutoAssign: "the bind callbacks don't need to be
+// specified").
 //
 // Assets are registered with AssetDatabaseRuntime.AddLoaded and found by the reference's guid and
 // fileID: without the native side, the resolver cannot look a path up (AssetDatabaseRuntime.InfoByPath
@@ -88,6 +77,21 @@ namespace UnityEngine.Tests
             return logs;
         }
 
+        /// <summary>Warnings, errors and exceptions logged while <paramref name="action"/> runs whose
+        /// text contains <paramref name="part"/>, as "Type message".</summary>
+        static List<string> LoggedMatching(string part, Action action)
+        {
+            var logs = new List<string>();
+            Application.LogCallback capture = (message, stack, type) =>
+            {
+                if (type != LogType.Log && message != null && message.Contains(part)) lock (logs) logs.Add(type + " " + message);
+            };
+            Application.logMessageReceived += capture;
+            try { action(); }
+            finally { Application.logMessageReceived -= capture; }
+            return logs;
+        }
+
         /// <summary>A row template file, as Unity's UXML importer makes it: a VisualTreeAsset main
         /// asset holding one Label named "row-label".</summary>
         sealed class RowFile : IDisposable
@@ -118,68 +122,6 @@ namespace UnityEngine.Tests
         {
             list.virtualizationController.Resize(new Vector2(100f, 100f));
             return list.activeItems.OrderBy(r => r.index).Select(r => r.bindableElement).ToList();
-        }
-
-        /// <summary>The Stubs member key under which unbound template rows are reported.</summary>
-        const string UnboundTemplateMember = "ListView.itemTemplate";
-
-        /// <summary>The once-per-process warning Stubs.Ignored logs for that member (a stack trace
-        /// follows it when stub tracing is on).</summary>
-        const string UnboundTemplateNotice =
-            "Unbound: ListView.itemTemplate rows are shown unbound: runtime data binding (bindItem omitted with an item template) not implemented";
-
-        /// <summary>How often the member has been reported in this process (every call counts).</summary>
-        static int Hits(string member) => Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
-
-        /// <summary>Forwards everything to the original handler, keeping the warnings that name the
-        /// unbound-template member and counting exceptions.</summary>
-        sealed class NoticeCapture : ILogHandler
-        {
-            readonly ILogHandler m_Inner;
-            internal readonly List<string> Notices = new List<string>();
-            internal int Exceptions;
-            internal NoticeCapture(ILogHandler inner) { m_Inner = inner; }
-
-            public void LogFormat(LogType type, Object context, string format, params object[] args)
-            {
-                string message = args == null || args.Length == 0
-                    ? format
-                    : string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args);
-                if (type == LogType.Warning && message != null && message.Contains("Unbound: " + UnboundTemplateMember + " "))
-                    lock (Notices) Notices.Add(message);
-                m_Inner.LogFormat(type, context, format, args);
-            }
-
-            public void LogException(Exception exception, Object context)
-            {
-                Interlocked.Increment(ref Exceptions);
-                m_Inner.LogException(exception, context);
-            }
-        }
-
-        /// <summary>Runs <paramref name="body"/> with the capture installed at the logger Stubs writes
-        /// to; the logger's handler, enabled flag and filter are restored after.</summary>
-        static NoticeCapture Captured(Action body)
-        {
-            var logger = Debug.unityLogger;
-            var handler = logger.logHandler;
-            bool enabled = logger.logEnabled;
-            var filter = logger.filterLogType;
-            var capture = new NoticeCapture(handler);
-            logger.logHandler = capture;
-            logger.logEnabled = true;
-            logger.filterLogType = LogType.Log;
-            try
-            {
-                body();
-            }
-            finally
-            {
-                logger.logHandler = handler;
-                logger.logEnabled = enabled;
-                logger.filterLogType = filter;
-            }
-            return capture;
         }
 
         /// <summary>A ListView cloned from UXML with the row template, 20-pixel rows and three
@@ -267,11 +209,8 @@ namespace UnityEngine.Tests
             }
         }
 
-        // [interim] Control: a game makeItem without bindItem is still rejected, also on a list that
-        // had a template: replacing the template's makeItem ends the exemption, and binding a row
-        // throws as before, with no unbound-template report.
-        // Passes at 437bd059 and at head. Red under a mutation dropping the "makeItem is the
-        // template's factory" term: the list is valid and the row is reported instead of rejected.
+        // [doc] Control: a game makeItem without bindItem is still rejected, also on a list that had
+        // a template: replacing the template's makeItem ends the exemption, and binding a row throws.
         [Fact]
         public void AGameMakeItemWithoutBindItemIsStillRejected()
         {
@@ -282,16 +221,11 @@ namespace UnityEngine.Tests
             Assert.Null(list.bindItem);
             Assert.False(list.HasValidDataAndBindings());
 
-            int before = Hits(UnboundTemplateMember);
             var error = Assert.Throws<NotImplementedException>(() => Rows(list));
             Assert.Equal("You must specify bindItem if makeItem is specified.", error.Message);
-            Assert.Equal(before, Hits(UnboundTemplateMember));
         }
 
-        // [doc] Control: a template list with a bindItem binds every row through it, as before; no
-        // unbound-template report.
-        // Passes at 437bd059 and at head. Red under a mutation that exempts template rows whatever
-        // bindItem is: bindItem is not called and the member is reported.
+        // [doc] Control: a template list with a bindItem binds every row through it.
         [Fact]
         public void ATemplateWithBindItemBindsAsBefore()
         {
@@ -301,24 +235,17 @@ namespace UnityEngine.Tests
             list.bindItem = (e, i) => bound.Add(i);
             Assert.True(list.HasValidDataAndBindings());
 
-            int before = Hits(UnboundTemplateMember);
             var rows = Rows(list);
             Assert.Equal(3, rows.Count);
             Assert.All(rows, r => Assert.IsType<TemplateContainer>(r));
             Assert.Equal(new[] { 0, 1, 2 }, bound.OrderBy(i => i));
-            Assert.Equal(before, Hits(UnboundTemplateMember));
         }
 
         // Control: without a template the callback pairing is unchanged. No callbacks: valid, rows
         // are labels showing ToString(). A makeItem without bindItem: not valid, and binding throws.
-        // Neither is reported as an unbound template.
-        // Passes at 437bd059 and at head. Red under a general relaxation of the pairing (e.g. any
-        // null bindItem accepted): the second list is valid.
         [Fact]
         public void WithoutATemplateThePairingIsUnchanged()
         {
-            int before = Hits(UnboundTemplateMember);
-
             var plain = new ListView { fixedItemHeight = 20f, itemsSource = new List<string> { "a", "b", "c" } };
             Assert.Null(plain.itemTemplate);
             Assert.True(plain.HasValidDataAndBindings());
@@ -330,7 +257,6 @@ namespace UnityEngine.Tests
             Assert.False(unpaired.HasValidDataAndBindings());
             Assert.Throws<NotImplementedException>(() => Rows(unpaired));
 
-            Assert.Equal(before, Hits(UnboundTemplateMember));
         }
 
         // [doc] Control: the automatic sources depend on makeItem, not on the template: a cleared
@@ -351,29 +277,25 @@ namespace UnityEngine.Tests
 
         // ------------------------------------------------------------------ diagnostics
 
-        // [choice] A relative reference that resolves to nothing logs ONE error naming the
-        // document, the element and the attribute; the list keeps no template and no makeItem.
-        // Red at 4a0c27ea: nothing is logged; Assert.Single(logs) fails (empty).
+        // [measured] listTemplateMissing: a reference that resolves to nothing logs the importer's
+        // warning for the url; the list has no template and no makeItem.
         [Fact]
-        public void UnresolvedReferenceLogsOneErrorAndLeavesNoTemplate()
+        public void UnresolvedReferenceWarnsAndLeavesNoTemplate()
         {
             VisualElement root = null;
-            var logs = Logged(() => root = Clone("<ui:ListView item-template=\"Rows/Missing.uxml\" />").Root);
+            var logs = LoggedMatching("Missing.uxml", () => root = Clone("<ui:ListView item-template=\"Rows/Missing.uxml\" />").Root);
             var list = Assert.IsType<ListView>(root[0]);
-            var error = Assert.Single(logs);
-            Assert.Contains("<UnityEngine.UIElements.ListView>", error);
-            Assert.Contains("'item-template'", error);
-            Assert.Contains("no VisualTreeAsset asset at 'Rows/Missing.uxml'", error);
-            Assert.Contains("keeps its value", error);
+            var warning = Assert.Single(logs);
+            Assert.StartsWith("Warning ", warning);
+            Assert.Contains("Semantic - The specified URI does not exist in the current project", warning);
             Assert.Null(list.itemTemplate);
             Assert.Null(list.makeItem);
         }
 
-        // [choice] A reference that resolves to an asset of another class (here a StyleSheet) is
-        // reported the same way, naming the class; the list keeps no template.
-        // Red at 4a0c27ea: nothing is logged; Assert.Single(logs) fails (empty).
+        // [measured] listTemplateWrongType: an asset of another class (here a StyleSheet) cannot be
+        // assigned; the ArgumentException is logged and the list keeps no template.
         [Fact]
-        public void ReferenceToAnotherAssetClassLogsOneError()
+        public void ReferenceToAnotherAssetClassLogsTheAssignmentFailure()
         {
             var sheet = ScriptableObject.CreateInstance<StyleSheet>();
             sheet.name = "Row";
@@ -384,12 +306,12 @@ namespace UnityEngine.Tests
             try
             {
                 VisualElement root = null;
-                var logs = Logged(() => root = Clone($"<ui:ListView item-template=\"{Ref("Assets/UI/Rows/Row.uss", SheetGuid, SheetId, "Row")}\" />").Root);
+                var logs = LoggedMatching("VisualTreeAsset", () => root = Clone($"<ui:ListView item-template=\"{Ref("Assets/UI/Rows/Row.uss", SheetGuid, SheetId, "Row")}\" />").Root);
                 var list = Assert.IsType<ListView>(root[0]);
                 var error = Assert.Single(logs);
-                Assert.Contains("'item-template'", error);
-                Assert.Contains("is a StyleSheet, not a VisualTreeAsset", error);
+                Assert.Equal("Exception ArgumentException: Object of type 'UnityEngine.UIElements.StyleSheet' cannot be converted to type 'UnityEngine.UIElements.VisualTreeAsset'.", error);
                 Assert.Null(list.itemTemplate);
+                Assert.Null(list.makeItem);
             }
             finally
             {
@@ -403,7 +325,7 @@ namespace UnityEngine.Tests
         // [doc] TreeView.itemTemplate: "A UXML template that constructs each recycled and rebound
         // element within the tree. This template is designed to replace the makeItem definition."
         // [doc] 6000.0 Manual "TreeView": UXML attribute `item-template` of type UIElements.VisualTreeAsset.
-        // [choice] It is read as on <ListView> (the same reader and diagnostics), on the property
+        // [measured] treeTemplate: it is read as on <ListView> (the same reader and diagnostics), on the property
         // TreeView declares.
         // Red at 7e4d5b9c (this file overlaid; every member it uses exists there): the builder cannot
         // convert the text to a VisualTreeAsset and drops it silently; Assert.Same(row.Template,
@@ -441,20 +363,16 @@ namespace UnityEngine.Tests
             Assert.All(bound, b => Assert.Contains(b.Element, rows));
         }
 
-        // [choice] A relative reference on <TreeView> that resolves to nothing logs ONE error naming
-        // the document, the element and the attribute; the tree keeps no template and no makeItem.
-        // Red at 7e4d5b9c: nothing is logged; Assert.Single(logs) fails (empty).
+        // [measured] treeTemplate with listTemplateMissing: on <TreeView> an unresolved reference also
+        // logs the importer's warning; the tree has no template and no makeItem.
         [Fact]
-        public void TreeViewUnresolvedReferenceLogsOneErrorAndLeavesNoTemplate()
+        public void TreeViewUnresolvedReferenceWarnsAndLeavesNoTemplate()
         {
             VisualElement root = null;
-            var logs = Logged(() => root = Clone("<ui:TreeView item-template=\"Rows/Missing.uxml\" />").Root);
+            var logs = LoggedMatching("Missing.uxml", () => root = Clone("<ui:TreeView item-template=\"Rows/Missing.uxml\" />").Root);
             var view = Assert.IsType<TreeView>(root[0]);
-            var error = Assert.Single(logs);
-            Assert.Contains("<UnityEngine.UIElements.TreeView>", error);
-            Assert.Contains("'item-template'", error);
-            Assert.Contains("no VisualTreeAsset asset at 'Rows/Missing.uxml'", error);
-            Assert.Contains("keeps its value", error);
+            var warning = Assert.Single(logs);
+            Assert.Contains("Semantic - The specified URI does not exist in the current project", warning);
             Assert.Null(view.itemTemplate);
             Assert.Null(view.makeItem);
         }

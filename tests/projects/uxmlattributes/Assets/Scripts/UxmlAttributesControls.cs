@@ -97,4 +97,13 @@ namespace UxmlAttributesProbes
         [UxmlAttribute] public int value { get; set; } = -1;
         public bool traitsInit { get; set; }
     }
+
+    /// <summary>Asset reference members of other types: a Background (a texture, sprite, render
+    /// texture or vector image) and a Font.</summary>
+    [UxmlElement]
+    public partial class AssetRefProbe : VisualElement
+    {
+        [UxmlAttribute] public Background myBackground { get; set; }
+        [UxmlAttribute] public Font myFont { get; set; }
+    }
 }
