@@ -835,6 +835,30 @@ public class MeshShapeProbe : MonoBehaviour
             Run("sprite/renderer/" + (flip ? "flipx" : "plain"), ps);
             Destroy(holder);
         }
+        // Normal offset, the Loop spawn mode, no sprite, and Use Mesh Colors with a tinted
+        // SpriteRenderer.
+        var offset = Shaped(ParticleSystemShapeType.Sprite, ParticleSystemMeshShapeType.Triangle, null);
+        var so = offset.shape; so.normalOffset = 0.5f;
+        Run("sprite/normaloffset", offset);
+        foreach (var t in new[] { ParticleSystemMeshShapeType.Vertex, ParticleSystemMeshShapeType.Edge })
+        {
+            var loop = Shaped(ParticleSystemShapeType.Sprite, t, null);
+            var sl = loop.shape; sl.meshSpawnMode = ParticleSystemShapeMultiModeValue.Loop;
+            Run("sprite/loop/" + T(t), loop);
+        }
+        foreach (var t in new[] { ParticleSystemMeshShapeType.Vertex, ParticleSystemMeshShapeType.Triangle })
+        {
+            var none = Make("sprite", ParticleSystemShapeType.Sprite, t, null);
+            Run("sprite/none/" + T(t), none);
+        }
+        var tinted = new GameObject("tinted sprite renderer");
+        var tr = tinted.AddComponent<SpriteRenderer>();
+        tr.sprite = sprite;
+        tr.color = new Color(1f, 0.5f, 0.25f, 0.5f);
+        var tps = Shaped(ParticleSystemShapeType.SpriteRenderer, ParticleSystemMeshShapeType.Triangle, null);
+        var ts = tps.shape; ts.spriteRenderer = tr; ts.useMeshColors = true;
+        Run("sprite/renderer/tinted", tps);
+        Destroy(tinted);
     }
 
     System.Collections.IEnumerator Probe()

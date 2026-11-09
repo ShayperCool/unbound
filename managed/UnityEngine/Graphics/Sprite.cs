@@ -307,27 +307,28 @@ namespace UnityEngine
         internal Mesh RenderMesh()
         {
             if (m_Mesh != null) return m_Mesh;
-            var mesh = new Mesh { name = "Sprite " + m_Name };
-            var positions = new Vector3[m_Vertices.Length];
-            for (int i = 0; i < positions.Length; i++) positions[i] = m_Vertices[i];
-            mesh.vertices = positions;
-            mesh.uv = m_UV;
-            SpriteVertexFrames(mesh, positions.Length);
-            var tris = new int[m_Triangles.Length];
-            for (int i = 0; i < tris.Length; i++) tris[i] = m_Triangles[i];
-            mesh.triangles = tris;
+            var mesh = GeometryMesh("Sprite " + m_Name);
+            SpriteVertexFrames(mesh, mesh.m_Vertices.Length);
             m_Mesh = mesh;
             return mesh;
         }
 
         /// <summary>The sprite's geometry as the particle Shape module's Sprite and SpriteRenderer
-        /// shapes sample it: its vertices in units from the pivot, its UVs as channel 0, no normals
-        /// (particles leave along +z) and no colours (6000.0.71f1,
-        /// tests/projects/particlemeshshape sprite/*).</summary>
+        /// shapes sample it: no normals (particles leave along +z) and no colours (6000.0.71f1,
+        /// tests/projects/particlemeshshape sprite/*). It is never drawn, so it is marked as sent:
+        /// the shape's sampling tables stay built.</summary>
         internal Mesh ParticleShapeMesh()
         {
             if (m_ShapeMesh != null) return m_ShapeMesh;
-            var mesh = new Mesh { name = "Sprite shape " + m_Name };
+            m_ShapeMesh = GeometryMesh("Sprite shape " + m_Name);
+            m_ShapeMesh.m_Dirty = false;
+            return m_ShapeMesh;
+        }
+
+        /// <summary>A mesh of the sprite's vertices (units from the pivot), UVs (channel 0) and triangles.</summary>
+        Mesh GeometryMesh(string name)
+        {
+            var mesh = new Mesh { name = name };
             var positions = new Vector3[m_Vertices.Length];
             for (int i = 0; i < positions.Length; i++) positions[i] = m_Vertices[i];
             mesh.vertices = positions;
@@ -335,7 +336,6 @@ namespace UnityEngine
             var tris = new int[m_Triangles.Length];
             for (int i = 0; i < tris.Length; i++) tris[i] = m_Triangles[i];
             mesh.triangles = tris;
-            m_ShapeMesh = mesh;
             return mesh;
         }
     }

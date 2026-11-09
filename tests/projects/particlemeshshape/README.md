@@ -33,7 +33,8 @@ whose indices would make triangles with area, a line strip, quads, and a triangl
 a lines submesh (also its lines submesh alone, and its triangle submesh alone). `sprite/*` emits
 from a full-rect sprite cut from the coordinate texture (rect 64, 32, 128 × 96, pivot 0.25, 0.75,
 32 pixels per unit) by each mesh type, with and without the coordinate texture as the shape
-texture, with UV channel 1, and through a SpriteRenderer moved, turned, scaled and flipped. `spread/*` snaps Loop and Burst Spread to arc,
+texture, with UV channel 1, through a SpriteRenderer moved, turned, scaled and flipped, with a
+normal offset, in Loop mode, without a sprite, and a tinted SpriteRenderer with Use Mesh Colors. `spread/*` snaps Loop and Burst Spread to arc,
 radius and mesh spawn spreads at rates that hit steps exactly (20) and never (7). `obsolete/*`
 sets the obsolete shell shape types from script.
 
@@ -77,7 +78,7 @@ Everything below is measured in this release, not documented.
 | `texture/clip/*`, `texture/affects/*`, `texture/startcolor` | A channel byte below threshold·256 (truncated) clips: alpha 0. Otherwise colour and alpha left out read as 255. The texel multiplies the start colour bytes, rounded; with a threshold above 0 a particle whose alpha is then 0 is born and removed with the step's deaths. A step's births and an `Emit(count)` call (without EmitParams) start as one batch of four-slot lanes after the next multiple of four, unused lanes included; the discarded lanes leave in ascending order, the last lane taking each place, and every one of them (unused lanes too) lowers the count started; the batch's last particles then fill the slots before its aligned start (`texture/clip/rate`: 0 and 1 of ten a step stay; `texture/clip/emit5then10`). While the count is above zero each lane that dies at its start (discarded, expired or killed by a first-step collision) fires the Death sub-emitters (`texture/clip/deathsub`, `deathcap`: ten of twelve, `deathexpire`, `deathcollide`). `Emit` with EmitParams keeps discarded particles until the next update (`texture/clip/emitparams`). Threshold within [0, 1], UV channel ≥ 0. |
 | `texture/uv/boxshell`, `boxedge` | Seven shape draws a point: the unit point (three), an axis from the next whole draw word modulo 3, three more. Shell moves the point onto the face of that axis on its own side, Edge onto the edge along it. |
 | `topology/*`, `lines/*` | Line and line-strip segments emit, weighed by length (triangles by area). Triangle takes a segment as (a, b, b); a mesh with line submeshes samples every entry as a segment in Edge (the area draw's place along a→b) and Vertex (a or b, a whole draw word modulo 2). Mixed primitive types assert ("can only spawn from mesh if all submeshes use the same primitive type") when the mesh is set and emit from all; quads and points emit at the origin as not valid. A triangle submesh picked alone (Single Material) keeps the triangle rules beside a lines submesh (`topology/mixed0`). |
-| `sprite/*` | The Sprite and SpriteRenderer shapes emit from the sprite's geometry as from a mesh (vertices in units from the pivot, its triangles, by the mesh type), leaving along +Z (no normals) and untinted by Use Mesh Colors; the shape texture reads the sprite's UVs as a mesh's channel 0 (channel 1 is missing: every particle discarded). A SpriteRenderer's transform and flip do not apply: its particles are where the Sprite shape's are. |
+| `sprite/*` | The Sprite and SpriteRenderer shapes emit from the sprite's geometry as from a mesh (vertices in units from the pivot, its triangles, by the mesh type), leaving along +Z (no normals, so the normal offset moves nothing), Vertex Loop walking its vertices, a tinted SpriteRenderer not tinting them through Use Mesh Colors, and no sprite emitting at the origin as a mesh without surface does (with its warnings); the shape texture reads the sprite's UVs as a mesh's channel 0 (channel 1 is missing: every particle discarded). A SpriteRenderer's transform and flip do not apply: its particles are where the Sprite shape's are. |
 | `obsolete/*` | The obsolete shell types set from script emit at the origin facing +Z, untinted, and assert "Shape not implemented" once. |
 | `random/*/color`, `material/*/color` | Vertex colours: each colour times its weight (255ths, truncated) rounded to a byte, the three added with saturation. |
 
@@ -89,8 +90,11 @@ Everything below is measured in this release, not documented.
   0.25 s, 0.5 s, 1.25 s; the last of ten Burst Spread lanes) snap to the neighbouring step.
 - `warning-timing` (6): Unity logs the invalid-mesh warning and the mixed-primitive assertion when
   the mesh is set, which the probe counts for the scenario before; Unbound logs them while emitting.
+- `sprite-loop-edge` (1): Edge Loop on a Sprite shape: every particle of the burst lies at the top
+  edge's start in both, except the first, which Unity puts 0.12 of the way along it. Open.
 - `subemitter-batch` (2): sub-emitter emissions start as their own four-slot batches in both, but of
   the clipped Death children (`subbirths`) Unity keeps 22 and Unbound 24. Open.
 
 Unmeasured: Tight sprite meshes (sampled as their geometry, as Unity's tight mesh generation gives
-it), a Sprite shape without a sprite, imported non-readable meshes, other releases.
+it), a SpriteRenderer in Sliced or Tiled draw mode (the sprite's own geometry is sampled), a
+SpriteRenderer material's `_Color`, imported non-readable meshes, other releases.

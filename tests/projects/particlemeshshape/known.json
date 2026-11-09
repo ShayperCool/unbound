@@ -48,5 +48,11 @@
    "texture/clip/subbirths/1/child",
    "texture/clip/subbirths/1/child/color"
   ]
+ },
+ "sprite-loop-edge": {
+  "reason": "Edge Loop on a Sprite shape (sprite/loop/edge): every particle of the burst lies at the top edge's start in both, except the first, which Unity puts 0.12 of the way along that edge. Random Edge, Vertex Loop and the mesh Loop controls match; unresolved.",
+  "keys": [
+   "sprite/loop/edge"
+  ]
  }
 }
