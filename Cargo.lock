@@ -6458,6 +6458,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "unbound-assets",
+ "unbound-compat",
  "unbound-remote",
  "unbound-runtime",
  "unbound-shaders",
@@ -6619,6 +6620,7 @@ dependencies = [
  "serde_json",
  "shaderc",
  "tracing",
+ "unbound-compat",
 ]
 
 [[package]]

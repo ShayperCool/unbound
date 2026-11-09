@@ -157,6 +157,12 @@ struct RunSettings {
     remote_capture: remote::CaptureState,
 }
 
+/// Whether the graphics device's GPU backend has an adapter on this machine (the device can
+/// start).
+pub fn device_starts(device: unbound_compat::GraphicsDevice) -> bool {
+    render::device::starts(device)
+}
+
 /// Runs the windowed app until the game quits or the window closes. `backend` must be the
 /// backend the driver's frames submit to.
 pub fn run(
@@ -184,6 +190,10 @@ pub fn run(
                 // (`Performance`): the test game held 812 MB of VRAM, half of it unused block space.
                 render_creation: bevy::render::settings::WgpuSettings {
                     memory_hints: bevy::render::settings::MemoryHints::MemoryUsage,
+                    // The backend that draws the run's graphics device.
+                    backends: Some(render::device::backends(
+                        unbound_runtime::graphics_device::get(),
+                    )),
                     ..default()
                 }
                 .into(),

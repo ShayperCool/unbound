@@ -2,6 +2,7 @@
 //! (`executor`, on the game's thread, through `GpuBackend`); the window's render schedule
 //! (`UnityFrameGraph`) only shows the latest complete frame.
 pub mod compiled;
+pub mod device;
 pub mod executor;
 pub mod gl_interop;
 pub mod pipelines;
@@ -102,6 +103,7 @@ impl Plugin for UnityRenderPlugin {
             compiled::CompiledPrograms::new(self.shader_compiler.clone()),
             latest.clone(),
             center_anisotropic_lod,
+            device::DeviceConventions::of(unbound_runtime::graphics_device::get()),
         ));
         let sampler = device
             .wgpu_device()
@@ -159,7 +161,7 @@ fn prepare_present(presenter: Option<ResMut<Presenter>>, views: Query<&ViewTarge
     let mode: [f32; 4] = [
         if frame.color_space == 0 { 1.0 } else { 0.0 },
         if srgb { 1.0 } else { 0.0 },
-        0.0,
+        if frame.top_down { 1.0 } else { 0.0 },
         0.0,
     ];
     presenter

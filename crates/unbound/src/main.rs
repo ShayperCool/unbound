@@ -155,6 +155,14 @@ enum Command {
         /// `websocket` (one TCP port; the page needs localhost or HTTPS).
         #[arg(long, value_name = "TRANSPORT", default_value = "webrtc")]
         remote_transport: String,
+        /// Run on the Vulkan graphics device, as the Editor's `-force-vulkan` does. By default
+        /// the device is chosen as the Editor of this OS chooses it (the project's graphics API
+        /// list, else the platform's default: OpenGL Core on Linux).
+        #[arg(long, conflicts_with = "force_glcore")]
+        force_vulkan: bool,
+        /// Run on the OpenGL Core graphics device, as the Editor's `-force-glcore` does.
+        #[arg(long)]
+        force_glcore: bool,
     },
     /// Compile the project's script assemblies.
     Compile {
@@ -328,6 +336,8 @@ fn main() -> anyhow::Result<()> {
             focus,
             remote,
             remote_transport,
+            force_vulkan,
+            force_glcore,
         } => exit_after(commands::run(
             &project,
             commands::RunArgs {
@@ -357,6 +367,13 @@ fn main() -> anyhow::Result<()> {
                 focus,
                 remote,
                 remote_transport,
+                forced_device: if force_vulkan {
+                    Some(unbound_compat::GraphicsDevice::Vulkan)
+                } else if force_glcore {
+                    Some(unbound_compat::GraphicsDevice::OpenGLCore)
+                } else {
+                    None
+                },
             },
         )),
         Command::Facades { project } => commands::facades(&project),

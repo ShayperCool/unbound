@@ -204,6 +204,8 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         // The game sees the project through its view (its working directory, see view.rs).
         "projectPath": crate::view::dir(project),
         "unityVersion": project.version.to_string(),
+        // SystemInfo.graphicsDeviceType and everything that follows the device.
+        "graphicsDevice": crate::graphics_device::get().name(),
         // The compatibility profile's behaviour switches the release has.
         "features": unbound_compat::Feature::ALL
             .iter()

@@ -2,8 +2,8 @@
 //! (`IUnityInterfaces`) and the interfaces it finds there, laid out as Unity's public plugin
 //! headers declare them (`IUnityInterface.h`, `IUnityGraphics.h`, `IUnityLog.h`,
 //! `IUnityProfiler.h`). Behaviour matches the Unity 6000.0.71f1 Editor on OpenGL Core
-//! (tests/projects/nativegfx): the renderer is OpenGL Core, as `SystemInfo.graphicsDeviceType`
-//! reports; the first reserved event ID is 12; registering a null interface keeps the one
+//! (tests/projects/nativegfx): the renderer is the run's graphics device, as
+//! `SystemInfo.graphicsDeviceType` reports; the first reserved event ID is 12; registering a null interface keeps the one
 //! registered before; `IUnityLog` messages are script log messages. `IUnityMemoryManager`
 //! allocates from the process heap; the profiler interfaces behave as with no profiler
 //! recording.
@@ -42,8 +42,7 @@ pub mod device_event {
     pub const AFTER_RESET: i32 = 3;
 }
 
-/// `UnityGfxRenderer` of the device Unbound reports: OpenGL Core, as
-/// `SystemInfo.graphicsDeviceType` (the Linux Editor's device).
+/// `kUnityGfxRendererOpenGLCore`.
 pub const RENDERER_OPENGL_CORE: i32 = 17;
 
 /// The first ID `ReserveEventIDRange` returns: the Unity 6000.0.71f1 Editor's first range for a
@@ -413,8 +412,9 @@ extern "C" fn register_interface_split(high: u64, low: u64, interface: *mut c_vo
     register(Guid { high, low }, interface);
 }
 
+/// The run's graphics device (`SystemInfo.graphicsDeviceType`).
 extern "C" fn get_renderer() -> i32 {
-    RENDERER_OPENGL_CORE
+    crate::graphics_device::get().plugin_renderer()
 }
 
 extern "C" fn register_device_event_callback(callback: Option<DeviceEventCallback>) {

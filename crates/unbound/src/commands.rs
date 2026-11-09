@@ -99,7 +99,31 @@ fn shader_settings(
             .into_iter()
             .map(String::from)
             .collect(),
+        device: unbound_runtime::graphics_device::get(),
     }
+}
+
+/// Chooses the run's graphics device once, before anything compiles shaders or draws (see
+/// `unbound_compat::graphics`): the forced one, the project's list, the Editor's default. A
+/// windowed run tries each device's GPU backend; a headless one draws nothing and takes the
+/// first candidate.
+fn choose_graphics_device(
+    project: &Project,
+    forced: Option<unbound_compat::GraphicsDevice>,
+    windowed: bool,
+) -> Result<unbound_compat::GraphicsDevice> {
+    let request = project.settings.device_request(forced);
+    let device = unbound_compat::select_device(&request, unbound_compat::HostOs::current(), |d| {
+        let starts = !windowed || unbound_app::device_starts(d);
+        if !starts {
+            tracing::warn!("the {d} graphics device did not start; trying the next one");
+        }
+        starts
+    })
+    .map_err(anyhow::Error::msg)?;
+    unbound_runtime::graphics_device::set(device);
+    tracing::info!("graphics device: {device}");
+    Ok(device)
 }
 
 /// Installs the provider of what shaders declare (`Shader.subshaderCount`, keyword spaces), with
@@ -1088,6 +1112,8 @@ pub struct RunArgs {
     pub remote: Option<String>,
     /// `webrtc` or `websocket`.
     pub remote_transport: String,
+    /// The graphics device `--force-vulkan` / `--force-glcore` asks for.
+    pub forced_device: Option<unbound_compat::GraphicsDevice>,
 }
 
 fn parse_taps(taps: &[String]) -> Result<Vec<(u64, f32, f32)>> {
@@ -1218,6 +1244,13 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
         persistent_data_path: None,
     };
     let (width, height) = project.settings.default_screen_for(&args.target);
+    // The Editor's own `-force-vulkan` / `-force-glcore` among the test arguments.
+    let forced = options
+        .command_line
+        .iter()
+        .rev()
+        .find_map(|a| unbound_compat::forced_by_option(a));
+    choose_graphics_device(&project, forced, false)?;
     install_shader_declarations(&project, &args.target);
     let mut game = unbound_runtime::Game::start(&project, &options)?;
     game.run_headless(u32::MAX, width, height);
@@ -1283,6 +1316,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         player_prefs: run.player_prefs.clone(),
         persistent_data_path: run.persistent_data_path.clone(),
     };
+    choose_graphics_device(&project, run.forced_device, run.headless.is_none())?;
     install_shader_declarations(&project, &args.target);
     unbound_app::initialize_display();
     if let Some(frames) = run.headless {

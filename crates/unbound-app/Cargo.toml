@@ -10,6 +10,7 @@ serde_json.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
 unbound-runtime.workspace = true
+unbound-compat.workspace = true
 unbound-shaders.workspace = true
 unbound-remote.workspace = true
 bevy = { version = "0.20", default-features = false, features = [

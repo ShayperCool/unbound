@@ -45,6 +45,9 @@ pub struct Settings {
     pub default_screen_web: (i32, i32),
     /// `PlayerSettings.activeInputHandler`: which input handling the player runs.
     pub input_handling: InputHandling,
+    /// `m_BuildTargetGraphicsAPIs`: the graphics API ids (`GraphicsDeviceType` values) a platform
+    /// (`LinuxStandaloneSupport`, ...) lists by hand; a platform left automatic has no entry.
+    pub graphics_apis: BTreeMap<String, Vec<i32>>,
     /// `GraphicsSettings.m_TierSettings` the project sets by hand, by (BuildTargetGroup, tier).
     pub tier_settings: BTreeMap<(i64, i64), TierSettings>,
 }
@@ -59,6 +62,22 @@ pub struct TierSettings {
     pub detail_normal_map: bool,
     pub cascaded_shadow_maps: bool,
     pub dither_alpha_shadows: bool,
+}
+
+impl Settings {
+    /// What the Editor of this OS starts its graphics device from: a device the command line
+    /// forces and the project's graphics API list for the OS's standalone platform (see
+    /// [`unbound_compat::candidates`]).
+    pub fn device_request(
+        &self,
+        forced: Option<unbound_compat::GraphicsDevice>,
+    ) -> unbound_compat::DeviceRequest {
+        let os = unbound_compat::HostOs::current();
+        unbound_compat::DeviceRequest {
+            forced,
+            project_list: self.graphics_apis.get(os.standalone_platform()).cloned(),
+        }
+    }
 }
 
 impl TierSettings {
@@ -183,6 +202,22 @@ impl Settings {
             let flag = |key: &str| body.get(key).and_then(Value::as_i64).unwrap_or(1) != 0;
             settings.default_orientation = int("defaultScreenOrientation", 4);
             settings.input_handling = InputHandling::from_setting(int("activeInputHandler", 0));
+            for entry in body
+                .get("m_BuildTargetGraphicsAPIs")
+                .and_then(Value::as_seq)
+                .into_iter()
+                .flatten()
+            {
+                let automatic = entry.get("m_Automatic").and_then(Value::as_i64) != Some(0);
+                let platform = entry.get("m_BuildTarget").and_then(Value::as_str);
+                let apis = entry
+                    .get("m_APIs")
+                    .and_then(Value::as_str)
+                    .and_then(unbound_compat::parse_api_list);
+                if let (false, Some(platform), Some(apis)) = (automatic, platform, apis) {
+                    settings.graphics_apis.insert(platform.to_string(), apis);
+                }
+            }
             settings.autorotate = [
                 flag("allowedAutorotateToPortrait"),
                 flag("allowedAutorotateToPortraitUpsideDown"),
@@ -401,6 +436,38 @@ mod tests {
             (540, 960)
         );
         assert_eq!(landscape.default_screen_for("Standalone"), (1024, 768));
+    }
+
+    #[test]
+    fn graphics_api_lists_read_by_hand_set_platforms_only() {
+        let dir = std::env::temp_dir().join(format!("unbound-gfxapis-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("ProjectSettings")).unwrap();
+        std::fs::write(
+            dir.join("ProjectSettings/ProjectSettings.asset"),
+            "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!129 &1\nPlayerSettings:\n  \
+             productName: P\n  m_BuildTargetGraphicsAPIs:\n  - m_BuildTarget: LinuxStandaloneSupport\n    \
+             m_APIs: 1500000011000000\n    m_Automatic: 0\n  - m_BuildTarget: AndroidPlayer\n    \
+             m_APIs: 0b000000\n    m_Automatic: 1\n",
+        )
+        .unwrap();
+        let settings = Settings::read(&dir).unwrap();
+        std::fs::remove_dir_all(&dir).ok();
+        assert_eq!(
+            settings.graphics_apis.get("LinuxStandaloneSupport"),
+            Some(&vec![21, 17])
+        );
+        // An automatic platform uses its defaults, whatever its list says.
+        assert!(!settings.graphics_apis.contains_key("AndroidPlayer"));
+        if cfg!(target_os = "linux") {
+            let request = settings.device_request(None);
+            assert_eq!(
+                unbound_compat::candidates(&request, unbound_compat::HostOs::Linux),
+                [
+                    unbound_compat::GraphicsDevice::Vulkan,
+                    unbound_compat::GraphicsDevice::OpenGLCore
+                ]
+            );
+        }
     }
 
     #[test]
