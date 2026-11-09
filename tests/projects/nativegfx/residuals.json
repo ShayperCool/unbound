@@ -13,6 +13,7 @@
   "plugin.rendertexture.observe",
   "plugin.renderbuffer",
   "plugin.msaa.buffer",
-  "plugin.msaa.resolve"
+  "plugin.msaa.resolve",
+  "plugin.srgb.rendertexture"
  ]
 }

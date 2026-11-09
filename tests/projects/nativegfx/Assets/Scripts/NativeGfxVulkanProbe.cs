@@ -27,7 +27,7 @@ public class NativeGfxVulkanProbe : MonoBehaviour
     [DllImport(Plugin)] static extern int NativeGfxVk_Record(byte[] buffer, int capacity);
 
     // The plugin's events after its reserved base (render pass precondition).
-    const int DontCare = 0, Outside = 1, Inside = 2, OutsideState = 3, AccessInside = 4;
+    const int DontCare = 0, Outside = 1, Inside = 2, OutsideState = 3, AccessInside = 4, LeaveInside = 5;
 
     readonly StringBuilder records = new StringBuilder();
     readonly List<string> logs = new List<string>();
@@ -35,8 +35,8 @@ public class NativeGfxVulkanProbe : MonoBehaviour
     string output;
     IntPtr callback;
     int eventBase;
-    Texture2D texture, mipped;
-    RenderTexture renderTexture, multisampled, inner, cameraTarget;
+    Texture2D texture, mipped, srgbTexture;
+    RenderTexture renderTexture, multisampled, inner, outer, srgbTarget, cameraTarget;
     ComputeBuffer buffer;
     Camera probeCamera;
 
@@ -123,13 +123,25 @@ public class NativeGfxVulkanProbe : MonoBehaviour
         multisampled.Create();
         inner = Keep(new RenderTexture(8, 8, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { name = "inner" });
         inner.Create();
-        RenderTexture.active = inner;
-        GL.Clear(true, true, Color.black);
+        outer = Keep(new RenderTexture(8, 8, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { name = "outer" });
+        outer.Create();
+        foreach (var cleared in new[] { inner, outer })
+        {
+            RenderTexture.active = cleared;
+            GL.Clear(true, true, Color.black);
+        }
         RenderTexture.active = previous;
+        srgbTexture = Keep(new Texture2D(4, 4, TextureFormat.RGBA32, false, false) { name = "srgb" });
+        srgbTexture.Apply();
+        srgbTarget = Keep(new RenderTexture(4, 4, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default) { name = "srgbtarget" });
+        srgbTarget.Create();
         NativeGfxVk_SetTexture(0, texture.GetNativeTexturePtr());
         NativeGfxVk_SetTexture(1, renderTexture.GetNativeTexturePtr());
         NativeGfxVk_SetTexture(2, mipped.GetNativeTexturePtr());
         NativeGfxVk_SetTexture(3, inner.GetNativeTexturePtr());
+        NativeGfxVk_SetTexture(4, outer.GetNativeTexturePtr());
+        NativeGfxVk_SetTexture(5, srgbTexture.GetNativeTexturePtr());
+        NativeGfxVk_SetTexture(6, srgbTarget.GetNativeTexturePtr());
         NativeGfxVk_SetRenderBuffer(0, renderTexture.colorBuffer.GetNativeRenderBufferPtr());
         NativeGfxVk_SetRenderBuffer(1, multisampled.colorBuffer.GetNativeRenderBufferPtr());
         NativeGfxVk_SetBuffer(buffer.GetNativeBufferPtr());
@@ -147,6 +159,10 @@ public class NativeGfxVulkanProbe : MonoBehaviour
         cmd.IssuePluginEvent(callback, eventBase + Inside);
         cmd.IssuePluginEvent(callback, eventBase + DontCare);
         cmd.IssuePluginEvent(callback, eventBase + AccessInside);
+        cmd.IssuePluginEvent(callback, eventBase + LeaveInside);
+        // An event that ends the pass, then one that does not care: is the pass resumed?
+        cmd.IssuePluginEvent(callback, eventBase + OutsideState);
+        cmd.IssuePluginEvent(callback, eventBase + DontCare);
         probeCamera.AddCommandBuffer(CameraEvent.AfterForwardOpaque, cmd);
     }
 
@@ -175,6 +191,11 @@ public class NativeGfxVulkanProbe : MonoBehaviour
                     Graphics.ExecuteCommandBuffer(cmd);
                 }
                 break;
+            case 5:
+                // The camera again: its render pass is the same object.
+                NativeGfxVk_Step("camera2");
+                probeCamera.Render();
+                break;
         }
     }
 
@@ -189,6 +210,7 @@ public class NativeGfxVulkanProbe : MonoBehaviour
         Graphics.CopyTexture(mipped, 0, 1, mip1, 0, 0);
         Value("mips.mip1.pixels", Pixels(mip1, 4, 4));
         Value("inner.pixels", Pixels(inner, 8, 8));
+        Value("outer.pixels", Pixels(outer, 8, 8));
         var words = new uint[4];
         buffer.GetData(words);
         Value("buffer.words", "[" + string.Join(",", words.Select(w => "\"" + w.ToString("x8") + "\"")) + "]");
@@ -222,7 +244,7 @@ public class NativeGfxVulkanProbe : MonoBehaviour
         int code = 0;
         try { Setup(); }
         catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
-        for (int frame = 1; frame <= 4 && code == 0; frame++)
+        for (int frame = 1; frame <= 5 && code == 0; frame++)
         {
             try { Frame(frame); }
             catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }

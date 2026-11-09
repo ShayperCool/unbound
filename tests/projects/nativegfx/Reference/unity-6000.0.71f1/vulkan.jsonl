@@ -1,10 +1,11 @@
 {"k":"device","v":"Vulkan"}
 {"k":"texture.pixels","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
 {"k":"rendertexture.pixels","v":["0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8"]}
-{"k":"camera.pixels","v":["ffffffff*2 000000ff*6","ffffffff*2 000000ff*6","000000ff*2 ffff00ff*4 000000ff*2","000000ff*2 ffff00ff*4 000000ff*2","000000ff*2 ffff00ff*4 000000ff*2","000000ff*2 ffff00ff*4 000000ff*2","000000ff*8","000000ff*8"]}
+{"k":"camera.pixels","v":["ffffffff*2 000000ff*6","ffffffff*2 000000ff*6","000000ff*2 ffff00ff*4 000000ff*2","000000ff*2 ffff00ff*4 000000ff*2","000000ff*2 ffff00ff*4 000000ff*2","000000ff*2 ffff00ff*4 000000ff*2","000000ff*6 ff0000ff*2","000000ff*6 ff0000ff*2"]}
 {"k":"mips.pixels","v":["ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8"]}
 {"k":"mips.mip1.pixels","v":["00ffffff*4","00ffffff*4","00ffffff*4","00ffffff*4"]}
 {"k":"inner.pixels","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
+{"k":"outer.pixels","v":["0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8"]}
 {"k":"buffer.words","v":["01020304","01020304","01020304","01020304"]}
 {"k":"plugin.load","v":"load renderer=21 vulkan=1 vulkanV2=1"}
 {"k":"plugin.intercept.late","v":"intercept.late=0"}
@@ -20,6 +21,8 @@
 {"k":"plugin.msaa.buffer","v":"msaa.buffer ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=37 extent=8x8x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
 {"k":"plugin.msaa.resolve","v":"msaa.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
 {"k":"plugin.msaa.distinct","v":"msaa.distinct images=1"}
+{"k":"plugin.srgb.texture","v":"srgb.texture ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=7 format=43 extent=4x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.srgb.rendertexture","v":"srgb.rendertexture ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=43 extent=4x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
 {"k":"plugin.dontcare.update","v":"dontcare step=update ok=1 thread=main cb=0 level=1 renderPass=0 framebuffer=0 subpass=0 frame=0 safe.before=1"}
 {"k":"plugin.outside.state.frame2","v":"outside.state step=frame2 ok=1 thread=main cb=1 level=1 renderPass=0 framebuffer=0 subpass=0 frame=1 safe.before=1"}
 {"k":"plugin.outside.state.frame3","v":"outside.state step=frame3 ok=1 thread=main cb=1 level=1 renderPass=0 framebuffer=0 subpass=0 frame=2 safe.before=1"}
@@ -29,6 +32,25 @@
 {"k":"plugin.access.inside","v":"access.inside ok=1"}
 {"k":"plugin.access.after.camera","v":"access.after step=camera ok=1 thread=main cb=1 level=1 renderPass=1 framebuffer=1 subpass=0 frame=3 safe.before=1"}
 {"k":"plugin.access.resumed.camera","v":"access.resumed step=camera ok=1 thread=main cb=1 level=1 renderPass=1 framebuffer=1 subpass=0 frame=3 safe.before=1"}
+{"k":"plugin.leave.before.camera","v":"leave.before step=camera ok=1 thread=main cb=1 level=1 renderPass=1 framebuffer=1 subpass=0 frame=3 safe.before=1"}
+{"k":"plugin.leave.outside.camera","v":"leave.outside step=camera ok=1 thread=main cb=1 level=1 renderPass=0 framebuffer=0 subpass=0 frame=3 safe.before=1"}
+{"k":"plugin.leave.access.camera","v":"leave.access step=camera ok=1 thread=main cb=1 level=1 renderPass=0 framebuffer=0 subpass=0 frame=3 safe.before=1"}
+{"k":"plugin.leave.resumed.camera","v":"leave.resumed step=camera ok=1 thread=main cb=1 level=1 renderPass=1 framebuffer=1 subpass=0 frame=3 safe.before=1"}
+{"k":"plugin.outside.state.camera","v":"outside.state step=camera ok=1 thread=main cb=1 level=1 renderPass=0 framebuffer=0 subpass=0 frame=3 safe.before=1"}
+{"k":"plugin.dontcare.camera.2","v":"dontcare step=camera ok=1 thread=main cb=1 level=1 renderPass=0 framebuffer=0 subpass=0 frame=3 safe.before=1"}
 {"k":"plugin.outside.state.execute","v":"outside.state step=execute ok=1 thread=main cb=1 level=1 renderPass=0 framebuffer=0 subpass=0 frame=3 safe.before=1"}
 {"k":"plugin.dontcare.execute","v":"dontcare step=execute ok=1 thread=main cb=1 level=1 renderPass=0 framebuffer=0 subpass=0 frame=3 safe.before=1"}
+{"k":"plugin.inside.camera2","v":"inside step=camera2 ok=1 thread=main cb=1 level=1 renderPass=1 framebuffer=1 subpass=0 frame=4 safe.before=1"}
+{"k":"plugin.inside.samepass.camera2","v":"inside.samepass step=camera2 same=1"}
+{"k":"plugin.dontcare.camera2","v":"dontcare step=camera2 ok=1 thread=main cb=1 level=1 renderPass=1 framebuffer=1 subpass=0 frame=4 safe.before=1"}
+{"k":"plugin.access.before.camera2","v":"access.before step=camera2 ok=1 thread=main cb=1 level=1 renderPass=1 framebuffer=1 subpass=0 frame=4 safe.before=1"}
+{"k":"plugin.access.inside.2","v":"access.inside ok=1"}
+{"k":"plugin.access.after.camera2","v":"access.after step=camera2 ok=1 thread=main cb=1 level=1 renderPass=1 framebuffer=1 subpass=0 frame=4 safe.before=1"}
+{"k":"plugin.access.resumed.camera2","v":"access.resumed step=camera2 ok=1 thread=main cb=1 level=1 renderPass=1 framebuffer=1 subpass=0 frame=4 safe.before=1"}
+{"k":"plugin.leave.before.camera2","v":"leave.before step=camera2 ok=1 thread=main cb=1 level=1 renderPass=1 framebuffer=1 subpass=0 frame=4 safe.before=1"}
+{"k":"plugin.leave.outside.camera2","v":"leave.outside step=camera2 ok=1 thread=main cb=1 level=1 renderPass=0 framebuffer=0 subpass=0 frame=4 safe.before=1"}
+{"k":"plugin.leave.access.camera2","v":"leave.access step=camera2 ok=1 thread=main cb=1 level=1 renderPass=0 framebuffer=0 subpass=0 frame=4 safe.before=1"}
+{"k":"plugin.leave.resumed.camera2","v":"leave.resumed step=camera2 ok=1 thread=main cb=1 level=1 renderPass=1 framebuffer=1 subpass=0 frame=4 safe.before=1"}
+{"k":"plugin.outside.state.camera2","v":"outside.state step=camera2 ok=1 thread=main cb=1 level=1 renderPass=0 framebuffer=0 subpass=0 frame=4 safe.before=1"}
+{"k":"plugin.dontcare.camera2.2","v":"dontcare step=camera2 ok=1 thread=main cb=1 level=1 renderPass=0 framebuffer=0 subpass=0 frame=4 safe.before=1"}
 {"k":"complete","v":true}
