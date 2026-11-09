@@ -37,7 +37,7 @@ namespace Unbound.Runtime.Playables
         readonly bool[] m_GoalSet = new bool[GoalCount], m_HintSet = new bool[GoalCount];
         readonly F4[] m_GoalT = new F4[GoalCount], m_GoalQ = new F4[GoalCount];
         F4[] m_TDoFBase;
-        Trs m_LoadedBody;
+        Trs m_LoadedBody, m_CurveRoot;
         readonly Trs[] m_LoadedGoals = new Trs[GoalCount];
         bool m_HumanValid, m_SkeletonValid, m_Changed;
         AnimStream m_Stream;
@@ -88,7 +88,11 @@ namespace Unbound.Runtime.Playables
                 m_Values[c] = ch >= 0 && ch < stream.FloatCount ? stream.Values[ch] : AnimatorHuman.DefaultValue(c);
             }
             HumanClipImport.PoseFromCurves(m_Values, s_AllPresent, Pose);
+            m_CurveRoot = Pose.RootX;
             var sample = stream.BodyMotion;
+            if (!sample.HasMotion)
+                Stubs.Ignored("AnimationHumanStream without humanoid body motion",
+                    "takes the body and goals of a stream without clip body motion below it (a controller playable, the previous outputs' pose) as its curves hold them (not measured)");
             if (sample.HasMotion)
             {
                 if (stream.GoalsInMotion)
@@ -132,18 +136,30 @@ namespace Unbound.Runtime.Playables
             for (int g = 0; g < GoalCount && !placed; g++) placed = !Same(Pose.Goals[g].X, m_LoadedGoals[g]);
             if (placed)
             {
-                // The body curves the Animator's placement (ApplyToPose) turns into this body, and
-                // the goals relative to it.
-                var sample = s.BodyMotion;
                 var body = Pose.RootX;
-                var curve = body;
+                var sample = s.BodyMotion;
                 if (sample.HasMotion)
-                    curve = new Trs(M.QRotate(sample.Motion.q, body.t - sample.Body.t) + sample.Root.t,
-                        M.QMul(sample.Root.q, M.QMul(M.QConj(sample.Body.q), body.q)), F4.One3);
-                Write(s, b, HumanClipImport.RootFirst, curve);
-                for (int g = 0; g < GoalCount; g++)
-                    Write(s, b, HumanClipImport.GoalFirst + 7 * g, sample.HasMotion ? M.InvMul(body, Pose.Goals[g].X) : Pose.Goals[g].X);
-                s.GoalsInMotion = false;
+                {
+                    // The body relative to the motion takes the change, so the Animator's placement
+                    // (ApplyToPose: the sample's body plus what the root curves hold beyond the
+                    // clips') gives this body, and mixers above blend it as a clip's; the goals stay
+                    // in the stream's frame (the motion's, or relative to the body).
+                    var root = m_CurveRoot;
+                    var extra = M.QRotate(M.QConj(sample.Motion.q), root.t - sample.Root.t);
+                    var turn = M.QMul(M.QConj(sample.Root.q), root.q);
+                    bool curvesBeyond = !Same(root, sample.Root);
+                    sample.Body = curvesBeyond
+                        ? new Trs(body.t - extra, M.QNormalize(M.QMul(body.q, M.QConj(turn))), F4.One3)
+                        : new Trs(body.t, body.q, F4.One3);
+                    s.BodyMotion = sample;
+                    for (int g = 0; g < GoalCount; g++)
+                        Write(s, b, HumanClipImport.GoalFirst + 7 * g, s.GoalsInMotion ? Pose.Goals[g].X : M.InvMul(body, Pose.Goals[g].X));
+                }
+                else
+                {
+                    Write(s, b, HumanClipImport.RootFirst, body);
+                    for (int g = 0; g < GoalCount; g++) Write(s, b, HumanClipImport.GoalFirst + 7 * g, Pose.Goals[g].X);
+                }
             }
             for (int i = 0; i < Pose.DoF.Length; i++) Write(s, b, HumanClipImport.MuscleFirst + i, Pose.DoF[i]);
             for (int i = 0; i < Pose.LeftHand.DoF.Length; i++)
@@ -161,7 +177,7 @@ namespace Unbound.Runtime.Playables
         }
 
         static bool Same(in Trs a, in Trs b) =>
-            a.t.x == b.t.x && a.t.y == b.t.y && a.t.z == b.t.z && a.q.x == b.q.x && a.q.y == b.q.y && a.q.z == b.q.z && a.q.w == b.q.w;
+            a.t.x == b.t.x && a.t.y == b.t.y && a.t.z == b.t.z && a.t.w == b.t.w && a.q.x == b.q.x && a.q.y == b.q.y && a.q.z == b.q.z && a.q.w == b.q.w;
 
         static void Write(AnimStream s, AnimationBindings b, int curve, in Trs x)
         {

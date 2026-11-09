@@ -855,6 +855,7 @@ namespace Unbound.Runtime.Playables
                     s = AnimStream.Rent(bindings);
                     s.DeltaTime = e.DeltaTime;
                     s.CopyFrom(result);
+                    s.Owner = o.Source.Kind as AnimationKind;
                     e.PreviousInputs = result;
                     e.EvaluateInto(o.Source, o.SourcePort, o.Weight, s);
                     e.PreviousInputs = null;
@@ -961,7 +962,7 @@ namespace Unbound.Runtime.Playables
                     "is not applied: one full-weight output of a nonmirrored humanoid clip, or on measured 6000.0.71f1 of a mixer or layer mixer tree of such clips "
                     + "with complete RootQ curves and input weights that are not infinite, or of clips without humanoid curves, mixers and layer mixers, "
                     + "is supported, without a playing controller, shared nodes or loop overrides; "
-                    + "controller playables, animation jobs, fractional or multiple outputs remain unsupported");
+                    + "controller playables, animation jobs other than ones passing such a source on whole, fractional or multiple outputs remain unsupported");
             return RootMotionMode.Unsupported;
         }
 
