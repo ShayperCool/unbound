@@ -260,12 +260,12 @@ def _symlink_targets(base, checkouts, index):
     return found
 
 
-def symlink_targets(base, checkouts=()):
+def symlink_targets(base, checkouts=(), *, seconds=120):
     from run_cache_index import DirectoryIndex
     import sqlite3
     index = None
     try:
-        index = DirectoryIndex(base.absolute())
+        index = DirectoryIndex(base.absolute(), seconds=seconds)
         result = _symlink_targets(base, checkouts, index)
         index.finish()
         return result
@@ -278,6 +278,14 @@ def symlink_targets(base, checkouts=()):
 
 def run_cache(env=os.environ):
     return Path(env.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound'
+
+
+def cmd_index(args, repo):
+    started = time.monotonic()
+    print(f'index run-cache references: budget {args.seconds}s', flush=True)
+    found = symlink_targets(run_cache(), [entry[0] for entry in worktrees(repo)], seconds=args.seconds)
+    print(f'{len(found)} reference paths indexed in {time.monotonic()-started:.1f}s; no worktrees removed')
+    return 0
 
 
 def cmd_reap(args, repo):
@@ -352,6 +360,8 @@ def main(argv=None):
     create = sub.add_parser('create', help='make missing slots')
     create.add_argument('--count', type=int, default=DEFAULT_COUNT)
     sub.add_parser('list', help='show every slot')
+    index = sub.add_parser('index', help='warm the run-reference index without reaping')
+    index.add_argument('--seconds', type=int, default=300, choices=range(1, 301), metavar='1..300')
     prepare = sub.add_parser('prepare', help='put a slot on a fresh task branch')
     prepare.add_argument('slot', help='slot name (slot-03) or path')
     prepare.add_argument('branch')
@@ -363,7 +373,8 @@ def main(argv=None):
     reap.add_argument('--verbose', action='store_true')
     args = parser.parse_args(argv)
     repo = main_checkout(Path.cwd())
-    return {'create': cmd_create, 'list': cmd_list, 'prepare': cmd_prepare, 'reap': cmd_reap}[args.command](args, repo)
+    return {'create': cmd_create, 'list': cmd_list, 'prepare': cmd_prepare, 'reap': cmd_reap,
+            'index': cmd_index}[args.command](args, repo)
 
 
 if __name__ == '__main__':

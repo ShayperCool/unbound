@@ -196,6 +196,25 @@ class PushTests(unittest.TestCase):
         self.assertEqual(subprocess.check_output(['git', '--git-dir', str(self.remote), 'rev-parse', 'main'], text=True).strip(), added[0])
         self.assertTrue(all(row['push']['status'] == 'pushed' for row in self.rows()))
 
+    def test_three_coalesced_targets_continue_in_a_new_background_batch(self):
+        land_push.enqueue(self.repo, self.state, launch=False)
+        original = land_push.git
+        added = []
+        def concurrent(repo, *args, **kwargs):
+            result = original(repo, *args, **kwargs)
+            if args[0] == 'push' and len(added) < 3:
+                added.append(self.add('train-'+str(len(added))))
+                land_push.enqueue(self.repo, self.state, launch=False)
+            return result
+        with mock.patch.object(land_push, 'git', side_effect=concurrent):
+            land_push.deliver(self.repo)
+        deadline = time.monotonic()+10
+        while time.monotonic() < deadline and not all(row['push']['status'] == 'pushed' for row in self.rows()):
+            time.sleep(.02)
+        self.assertEqual(len(added), 3)
+        self.assertTrue(all(row['push']['status'] == 'pushed' for row in self.rows()))
+        self.assertEqual(subprocess.check_output(['git', '--git-dir', str(self.remote), 'rev-parse', 'main'], text=True).strip(), added[-1])
+
 
 if __name__ == '__main__':
     unittest.main()

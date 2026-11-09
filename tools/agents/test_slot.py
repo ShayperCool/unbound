@@ -109,6 +109,16 @@ class SlotTests(unittest.TestCase):
         self.assertFalse(reference.is_symlink())
         self.assertFalse(snapshot.exists())
 
+    def test_index_warms_references_without_reaping_a_clean_idle_checkout(self):
+        path = Path(self.temp.name).resolve()/'idle'
+        self.git('worktree', 'add', '-q', '-b', 't3/idle', str(path), 'main')
+        self.make_old(path)
+        target = self.make_target(path)
+        code, out = self.run_slot('index', '--seconds', '3')
+        self.assertEqual(code, 0)
+        self.assertIn('no worktrees removed', out)
+        self.assertTrue(path.exists() and target.exists())
+
     def test_prepare_refuses_leftover_work_unless_discarded(self):
         self.run_slot('create', '--count', '1')
         path = self.slot_path(1)

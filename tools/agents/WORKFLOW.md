@@ -63,7 +63,8 @@ tools/validation/README.md for why that is unsafe).
   only after preserving any work. Reaping prints the count kept with unmerged commits. Link discovery uses an incremental index of
   directory listings, revalidating directory identity and change times on every walk. The walk
   has a 120 s limit; an incomplete scan saves progress and refuses to delete worktrees. Retry
-  reap to finish indexing a large historical cache. Completed task runtime links are retired
+  reap to finish indexing a large historical cache, or run `slot.py index` for a read-only
+  backfill with a printed 300 s limit. Completed task runtime links are retired
   when landing, reassigning a slot, or reaping its checkout.
 
 ## Worker
