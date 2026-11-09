@@ -24,7 +24,7 @@ namespace UnityEngine
                     m_PreparedMesh = new Mesh { name = "CanvasRenderer prepared colors", hideFlags = HideFlags.HideAndDontSave };
             if (geometryChanged)
             {
-                m_PreparedMesh.CopyGeometryFrom(m_Mesh);
+                m_PreparedMesh.CopyGeometryFrom(m_Mesh, reuseArrays: true);
                 // Native batches into root Canvas coordinates, even across overrideSorting.
                 // Transform the private snapshot, never the SetMesh source or retained geometry.
                 var vertices = m_PreparedMesh.m_Vertices;

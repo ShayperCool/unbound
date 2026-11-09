@@ -501,7 +501,8 @@ namespace UnityEngine
                 using (ObjectRegistry.AsAssets())
                     m_Own = new Mesh { name = "CanvasRenderer", hideFlags = HideFlags.HideAndDontSave };
             }
-            m_Own.CopyGeometryFrom(mesh);
+            // The renderer's own copy, which nothing else holds: refilled in place.
+            m_Own.CopyGeometryFrom(mesh, reuseArrays: true);
             m_Mesh = m_Own;
         }
 

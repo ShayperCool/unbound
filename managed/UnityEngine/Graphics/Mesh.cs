@@ -96,20 +96,40 @@ namespace UnityEngine
         }
 
         /// <summary>Takes a copy of another mesh's data (what CanvasRenderer.SetMesh keeps).</summary>
-        internal void CopyGeometryFrom(Mesh source)
+        internal void CopyGeometryFrom(Mesh source) => CopyGeometryFrom(source, reuseArrays: false);
+
+        /// <summary>The source's geometry as this mesh's own copy. With <paramref name="reuseArrays"/>
+        /// (a mesh no one else holds arrays or submeshes of), an array or submesh list the size of
+        /// the source's is copied into instead of made anew.</summary>
+        internal void CopyGeometryFrom(Mesh source, bool reuseArrays)
         {
-            m_Vertices = (Vector3[])source.m_Vertices.Clone();
-            m_Normals = (Vector3[])source.m_Normals?.Clone();
-            m_Tangents = (Vector4[])source.m_Tangents?.Clone();
-            m_Colors = (Color32[])source.m_Colors?.Clone();
+            m_Vertices = CopyOf(source.m_Vertices, m_Vertices, reuseArrays);
+            m_Normals = CopyOf(source.m_Normals, m_Normals, reuseArrays);
+            m_Tangents = CopyOf(source.m_Tangents, m_Tangents, reuseArrays);
+            m_Colors = CopyOf(source.m_Colors, m_Colors, reuseArrays);
+            m_PositionsVersion++;
             for (int i = 0; i < 8; i++)
             {
-                m_UVs[i] = (Vector4[])source.m_UVs[i]?.Clone();
+                m_UVs[i] = CopyOf(source.m_UVs[i], m_UVs[i], reuseArrays);
                 m_UVDimensions[i] = source.m_UVDimensions[i];
             }
-            m_SubMeshes.Clear();
-            foreach (var s in source.m_SubMeshes)
-                m_SubMeshes.Add(new SubMesh { Indices = (int[])s.Indices.Clone(), Topology = s.Topology, BaseVertex = s.BaseVertex, IndexStart = s.IndexStart, Bounds = s.Bounds, FirstVertex = s.FirstVertex, VertexCount = s.VertexCount });
+            if (reuseArrays && m_SubMeshes.Count == source.m_SubMeshes.Count)
+            {
+                for (int i = 0; i < m_SubMeshes.Count; i++)
+                {
+                    var s = source.m_SubMeshes[i];
+                    var d = m_SubMeshes[i];
+                    d.Indices = CopyOf(s.Indices, d.Indices, reuse: true);
+                    (d.Topology, d.BaseVertex, d.IndexStart, d.Bounds, d.FirstVertex, d.VertexCount) =
+                        (s.Topology, s.BaseVertex, s.IndexStart, s.Bounds, s.FirstVertex, s.VertexCount);
+                }
+            }
+            else
+            {
+                m_SubMeshes.Clear();
+                foreach (var s in source.m_SubMeshes)
+                    m_SubMeshes.Add(new SubMesh { Indices = (int[])s.Indices.Clone(), Topology = s.Topology, BaseVertex = s.BaseVertex, IndexStart = s.IndexStart, Bounds = s.Bounds, FirstVertex = s.FirstVertex, VertexCount = s.VertexCount });
+            }
             m_UnmeasuredSkinBoundsMutation = source.m_UnmeasuredSkinBoundsMutation;
             m_Layout = (VertexAttributeDescriptor[])source.m_Layout?.Clone();
             m_IndexBuffer = (int[])source.m_IndexBuffer?.Clone();
@@ -120,6 +140,17 @@ namespace UnityEngine
             CopyPackedChannels(source);
             CopyBlendShapesFrom(source);
             Changed();
+        }
+
+        static T[] CopyOf<T>(T[] source, T[] into, bool reuse)
+        {
+            if (source == null) return null;
+            if (reuse && into != null && into.Length == source.Length && !ReferenceEquals(into, source))
+            {
+                Array.Copy(source, into, source.Length);
+                return into;
+            }
+            return (T[])source.Clone();
         }
 
         /// <summary>Resources.UnloadAsset of a mesh asset (UnloadUnusedAssets keeps meshes: it
