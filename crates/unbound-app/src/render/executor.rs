@@ -8,6 +8,7 @@ mod mesh_buffers;
 #[path = "mipmaps.rs"]
 mod mipmaps;
 mod msaa;
+mod plugins;
 mod readback;
 mod warmup;
 
@@ -387,6 +388,8 @@ struct State {
 }
 
 pub struct UnityRenderer {
+    /// Native plugins' shared textures and callbacks (`plugins`).
+    plugins: plugins::PluginState,
     fence_issued: u64,
     fence_completed: Arc<std::sync::atomic::AtomicU64>,
     device: wgpu::Device,
@@ -498,6 +501,7 @@ impl UnityRenderer {
         let pipelines = Pipelines::new(&device);
         let defaults = resources::default_textures(&device, &queue);
         UnityRenderer {
+            plugins: Default::default(),
             device,
             queue,
             resolver,
@@ -600,6 +604,41 @@ impl UnityRenderer {
         });
         self.zero_extra = Some(buffer.clone());
         buffer
+    }
+
+    /// Puts a texture's new storage in place of `previous` (its texture and sampler): what
+    /// referred to the previous texture is released, the new one's mips and resolve history
+    /// prepared. `packet` describes it.
+    fn install_texture(
+        &mut self,
+        handle: u64,
+        gpu: GpuTexture,
+        previous: Option<(wgpu::Texture, SamplerKey)>,
+        packet: &owned::Texture,
+    ) {
+        let device = self.device.clone();
+        if let Some((previous, sampler)) = &previous {
+            if *sampler != gpu.sampler_key {
+                self.compute_bindings.release_sampler(&gpu.texture);
+            }
+            if *previous != gpu.texture {
+                self.compute_bindings.release_texture(previous);
+                self.mipmaps.release(previous);
+                self.pending_mips.remove(previous);
+                self.release_resolve_history(previous);
+                self.plugin_texture_replaced(handle, &gpu.texture);
+            }
+        }
+        if gpu.render_target && !resources::is_integer(gpu.texture.format()) {
+            self.mipmaps
+                .prepare(&device, &gpu.texture, gpu.target_format(0));
+            if gpu.srgb_view.is_some() {
+                self.mipmaps
+                    .prepare(&device, &gpu.texture, gpu.target_format(1));
+            }
+        }
+        self.prepare_resolve_history(&gpu, packet.retain_resolve, packet.dimension);
+        self.textures.insert(handle, gpu);
     }
 
     fn warn_once(&mut self, key: String, message: impl FnOnce() -> String) {
@@ -723,31 +762,13 @@ impl UnityRenderer {
             Upload::UploadTexture(handle, texture) => {
                 self.generation += 1;
                 let old = self.textures.remove(&handle);
-                let previous = old.as_ref().map(|gpu| gpu.texture.clone());
-                let previous_sampler = old.as_ref().map(|gpu| gpu.sampler_key);
+                let previous = old.as_ref().map(|gpu| (gpu.texture.clone(), gpu.sampler_key));
                 let gpu =
                     resources::upload_texture(&device, &self.queue, old, &texture, self.generation);
-                if previous_sampler.is_some_and(|sampler| sampler != gpu.sampler_key) {
-                    self.compute_bindings.release_sampler(&gpu.texture);
-                }
-                if let Some(previous) = previous.filter(|previous| *previous != gpu.texture) {
-                    self.compute_bindings.release_texture(&previous);
-                    self.mipmaps.release(&previous);
-                    self.pending_mips.remove(&previous);
-                    self.release_resolve_history(&previous);
-                }
-                if gpu.render_target && !resources::is_integer(gpu.texture.format()) {
-                    self.mipmaps
-                        .prepare(&device, &gpu.texture, gpu.target_format(0));
-                    if gpu.srgb_view.is_some() {
-                        self.mipmaps
-                            .prepare(&device, &gpu.texture, gpu.target_format(1));
-                    }
-                }
-                self.prepare_resolve_history(&gpu, texture.retain_resolve, texture.dimension);
-                self.textures.insert(handle, gpu);
+                self.install_texture(handle, gpu, previous, &texture);
             }
             Upload::ReleaseTexture(handle) => {
+                self.release_plugin_texture(handle);
                 self.generation += 1;
                 if let Some(texture) = self.textures.remove(&handle) {
                     self.compute_bindings.release_texture(&texture.texture);
@@ -2363,6 +2384,14 @@ impl UnityRenderer {
                     }
                     open = false;
                 }
+                Command::Plugin(call) => {
+                    // The plugin sees everything before it drawn, and draws before what follows.
+                    self.copy_depth(&mut passes, depth_mark);
+                    self.encode(std::mem::take(&mut passes));
+                    depth_mark = 0;
+                    self.run_plugin(&call);
+                    open = false;
+                }
                 Command::EndFrame => {
                     self.process_mips(&mut passes);
                     self.copy_depth(&mut passes, depth_mark);
@@ -2396,6 +2425,7 @@ impl UnityRenderer {
                     let changed = !self.same_target(color, depth, mip, slice, &extra);
                     self.framebuffer_dirty |= changed;
                     self.target_handles = (color, depth);
+                    self.plugins.target = (mip, slice);
                     self.state.target = self.resolve_target(color, depth, mip, slice);
                     let size = self
                         .state

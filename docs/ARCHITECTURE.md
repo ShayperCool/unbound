@@ -146,6 +146,25 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   rendering commands. `AsyncGPUReadback` reads the source when requested and completes the
   request at the next frame's `UpdateAsyncReadbackManager`, as the Editor does at the earliest
   (tests/projects/gpubuffers).
+* **Native rendering plugins**: Unbound reports OpenGL Core (`SystemInfo.graphicsDeviceType`,
+  `IUnityGraphics::GetRenderer`), the Linux Editor's device, while the renderer draws with Vulkan
+  (Metal on macOS). Plugins written for that device call OpenGL on the main thread with a context
+  current and use OpenGL texture names, so they get a real OpenGL 4.5 core context on the
+  renderer's GPU (EGL without a surface, `render/gl_interop.rs`), current on the game thread: in
+  `UnityPluginLoad` and in every rendering callback, as in the Editor, whose callbacks run on its
+  main thread (tests/projects/nativegfx). A texture whose native pointer is asked for moves once
+  into exported Vulkan memory (`VK_KHR_external_memory_fd`), which OpenGL imports
+  (`GL_EXT_memory_object_fd`): both see the same texels, without copies. A callback runs when the
+  renderer's work before it is done (`Plugin` commands, render protocol 15); OpenGL finishes the
+  plugin's before the renderer goes on. The current target is bound for the callback (its color
+  level, its depth texture, the viewport); the screen is not shared. A texture made with
+  `CreateExternalTexture` from another texture's pointer is that texture; from a plugin's own
+  texture it is a copy made again after every callback. Chosen over drawing everything with
+  wgpu's OpenGL backend (a different renderer for every project) and over copying textures through
+  the CPU around every callback. Synchronization is by waiting (no semaphores): rendering callbacks
+  are rare, and image layouts are not handed over, which the measured NVIDIA driver does not need.
+  macOS has no such interop: plugin callbacks are skipped with an error there, texture updates
+  still run, and native pointers are not OpenGL names.
 * **Shaders**: every shader draws with its own code; there are no hand-written ports. A material's
   shader is the project's `.shader` (Assets, packages), else Unity's built-in one, compiled from
   the release's `builtin_shaders` sources (MIT; downloaded once into the global cache,

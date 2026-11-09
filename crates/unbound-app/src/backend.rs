@@ -75,7 +75,11 @@ impl GpuBackend {
     }
 
     /// Hands the backend its renderer and runs what waited for it.
-    pub fn install(&self, mut renderer: UnityRenderer) {
+    pub fn install(&self, renderer: UnityRenderer) {
+        unbound_runtime::plugin_api::while_rendering(|| self.install_holding(renderer));
+    }
+
+    fn install_holding(&self, mut renderer: UnityRenderer) {
         let mut inner = self.inner.lock().unwrap();
         for pending in std::mem::take(&mut inner.pending) {
             match pending {
@@ -134,11 +138,14 @@ impl RenderBackend for GpuBackend {
     }
 
     fn submit_commands(&self, commands: Vec<Command>) {
-        let mut inner = self.inner.lock().unwrap();
-        match &mut inner.renderer {
-            Some(r) => r.execute(commands),
-            None => inner.pending.push(Pending::Commands(commands)),
-        }
+        // Plugin callbacks among the commands may log; scripts see that once the renderer is free.
+        unbound_runtime::plugin_api::while_rendering(|| {
+            let mut inner = self.inner.lock().unwrap();
+            match &mut inner.renderer {
+                Some(r) => r.execute(commands),
+                None => inner.pending.push(Pending::Commands(commands)),
+            }
+        })
     }
 
     fn read_buffer(&self, buffer: u64, offset: u64, size: u64) -> Option<Vec<u8>> {
@@ -209,6 +216,35 @@ impl RenderBackend for GpuBackend {
     ) -> Result<[u32; 3], String> {
         match self.inner.lock().unwrap().renderer.as_mut() {
             Some(r) => r.kernel_threads(file, kernel, keywords),
+            None => Err("the renderer is not up yet".into()),
+        }
+    }
+
+    fn plugin_context(&self) -> bool {
+        match self.inner.lock().unwrap().renderer.as_mut() {
+            Some(r) => r.plugin_context(),
+            // Before the GPU is up: the first one that can share textures.
+            None => crate::render::gl_interop::with(None, |_| ()).is_ok(),
+        }
+    }
+
+    fn native_texture(&self, texture: u64, depth: bool) -> u64 {
+        match self.inner.lock().unwrap().renderer.as_mut() {
+            Some(r) => r.native_texture(texture, depth),
+            None => 0,
+        }
+    }
+
+    fn external_texture(
+        &self,
+        texture: u64,
+        native: u64,
+        width: u32,
+        height: u32,
+        srgb: bool,
+    ) -> Result<(), String> {
+        match self.inner.lock().unwrap().renderer.as_mut() {
+            Some(r) => r.external_texture(texture, native, width, height, srgb),
             None => Err("the renderer is not up yet".into()),
         }
     }

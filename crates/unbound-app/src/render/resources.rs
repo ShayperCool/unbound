@@ -979,6 +979,22 @@ pub fn upload_texture(
     t: &owned::Texture,
     generation: u64,
 ) -> GpuTexture {
+    upload_texture_with(device, queue, existing, t, generation, &mut |desc| {
+        device.create_texture(desc)
+    })
+}
+
+/// [`upload_texture`] whose texture and depth texture come from `allocate` (one whose memory
+/// native plugins share, `executor::plugins`). Multisampled colors and depth copies are the
+/// device's own.
+pub fn upload_texture_with(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    existing: Option<GpuTexture>,
+    t: &owned::Texture,
+    generation: u64,
+    allocate: &mut dyn FnMut(&wgpu::TextureDescriptor) -> wgpu::Texture,
+) -> GpuTexture {
     // A packet without pixels only changes the sampler state: a block-compressed import (whose
     // managed side knows it by its pixels' format) keeps its format and blocks.
     let keep_compressed;
@@ -1096,7 +1112,7 @@ pub fn upload_texture(
             }
             let srgb_formats = [srgb_format];
             let view_formats: &[wgpu::TextureFormat] = if color { &srgb_formats } else { &[] };
-            let texture = device.create_texture(&wgpu::TextureDescriptor {
+            let texture = allocate(&wgpu::TextureDescriptor {
                 label: Some("unbound texture"),
                 size: wgpu::Extent3d {
                     width,
@@ -1172,7 +1188,7 @@ pub fn upload_texture(
                 Vec::new()
             };
             let depth_texture = (render_target && t.depth_bits > 0).then(|| {
-                device.create_texture(&wgpu::TextureDescriptor {
+                allocate(&wgpu::TextureDescriptor {
                     label: Some("unbound render texture depth"),
                     size: wgpu::Extent3d {
                         width,

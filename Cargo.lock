@@ -6422,11 +6422,13 @@ name = "unbound-app"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "ash",
  "bevy",
  "bevy_window",
  "bevy_winit",
  "bytemuck",
  "image",
+ "libloading",
  "naga",
  "rustc-hash 2.1.3",
  "serde_json",

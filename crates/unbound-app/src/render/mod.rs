@@ -3,6 +3,7 @@
 //! (`UnityFrameGraph`) only shows the latest complete frame.
 pub mod compiled;
 pub mod executor;
+pub mod gl_interop;
 pub mod pipelines;
 pub mod resources;
 
