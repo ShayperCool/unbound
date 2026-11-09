@@ -44,8 +44,8 @@ binary in its `bin/` works from any location.
   locations. If you don't have it:
   `curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0 --runtime dotnet`
 - **A GPU with Vulkan** (Linux) or **Metal** (macOS).
-- Linux: Wayland or X11. SDL2 is optional (needed for gamepads), and libopus is optional (needed
-  for `--remote` sound).
+- Linux: Wayland or X11 for a window (`--headless` needs neither). SDL2 is optional (needed for
+  gamepads), and libopus is optional (needed for `--remote` sound).
 - **Unity's own files** (reference assemblies, built-in resources, built-in packages and shader
   sources) for the project's release. Unbound only reads these files and never runs the Editor. It
   takes them from a Unity Hub installation of that release, or `--unity <path>` /
@@ -104,7 +104,8 @@ own license:
   License), libvorbis/libogg (BSD-3-Clause), libtess2 and the GLU tessellator (SGI Free Software
   License B);
 - the patched wgpu in `vendor/` (MIT/Apache-2.0);
-- ports in `managed/`: Box2D and Box2DSharp (MIT), DotRecast (zlib), Yoga (MIT).
+- ports in `managed/`: Box2D and Box2DSharp (MIT), DotRecast (zlib), Yoga (MIT), Clipper
+  (Boost Software License).
 
 The license files sit next to that code. Release archives include `THIRD_PARTY_NOTICES.md` with
 the licenses of everything they ship.
