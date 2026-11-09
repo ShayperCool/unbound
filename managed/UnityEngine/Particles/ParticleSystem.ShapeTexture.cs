@@ -137,15 +137,15 @@ namespace UnityEngine
         }
 
         /// <summary>A particle the shape texture discarded outside a start batch (see
-        /// FlushRateBatch): in a ring buffer, an older release, Emit with EmitParams, a sub-emitter's
-        /// births, or emission over distance alone. The batch's rule (each discarded lane, padding lanes too, lowers
+        /// FlushRateBatch): in a ring buffer, another release, a sub-emitter's births, or emission
+        /// over distance alone (Emit with EmitParams keeps it until the next update). The batch's rule (each discarded lane, padding lanes too, lowers
         /// the count started) is measured only for batches; here only the discarded particle
         /// leaves, which can keep more particles than Unity.</summary>
         void ReportUnbatchedTextureClip()
         {
             if (m_ShapeTextureUnbatchedClipReported) return;
             m_ShapeTextureUnbatchedClipReported = true;
-            Debug.LogWarning("Unbound: particle shape texture clipping outside a start batch (ring buffer, Emit with EmitParams, sub-emitter births or emission over distance alone) is not measured; Unity may keep fewer particles");
+            Debug.LogWarning("Unbound: particle shape texture clipping outside a start batch (ring buffer, sub-emitter births, emission over distance alone or a release other than 6000.0.71f1) is not matched; Unity may keep fewer particles");
         }
 
         void SetShapeUv(float u, float v)

@@ -330,6 +330,55 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void EmitWithEmitParamsKeepsDiscardedParticlesUntilTheNextUpdate()
+        {
+            var ps = Make(ParticleSystemShapeType.Rectangle, Coords(4));
+            try
+            {
+                var shape = ps.shape; shape.textureClipThreshold = 0.5f;
+                ps.Emit(new ParticleSystem.EmitParams(), 40);
+                var all = Read(ps);
+                Assert.Equal(40, all.Length);
+                int clipped = Array.FindAll(all, p => p.startColor.a == 0).Length;
+                Assert.InRange(clipped, 5, 35);
+                Assert.Empty(m_Logs);
+                ps.Simulate(0.02f, true, false, false);
+                var kept = Read(ps);
+                Assert.Equal(40 - clipped, kept.Length);
+                foreach (var p in kept) Assert.True(p.startColor.a >= 128);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void DiscardedLanesFireDeathSubEmittersWhileTheCountLasts()
+        {
+            // Every discarded lane of a burst fires the Death sub-emitter while the burst's count is
+            // above zero; with nothing clipped none fires.
+            int Children(float threshold)
+            {
+                var parent = Make(ParticleSystemShapeType.Rectangle, Coords(4));
+                var child = Make(ParticleSystemShapeType.Rectangle, null);
+                try
+                {
+                    child.transform.SetParent(parent.transform, false);
+                    var cm = child.main; cm.startLifetime = 5f;
+                    child.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+                    var subs = parent.subEmitters; subs.enabled = true;
+                    subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+                    var shape = parent.shape; shape.textureClipThreshold = threshold;
+                    var e = parent.emission; e.enabled = true; e.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)10) });
+                    parent.Simulate(0.02f, true, true, true);
+                    Assert.Equal(10 - Math.Min(10, child.particleCount), parent.particleCount);
+                    return child.particleCount;
+                }
+                finally { Object.DestroyImmediate(parent.gameObject); }
+            }
+            Assert.Equal(0, Children(0f));
+            Assert.InRange(Children(0.5f), 1, 10);
+        }
+
+        [Fact]
         public void AnEmitAfterAnUnalignedCountFillsTheGapWithItsLastParticles()
         {
             // The batch starts at the next multiple of four; its last particles move down into the

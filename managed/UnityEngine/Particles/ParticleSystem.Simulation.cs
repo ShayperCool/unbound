@@ -453,6 +453,10 @@ namespace UnityEngine
         /// burst births, an Emit call); measured for 6000.0.71f1 without a ring buffer.</summary>
         bool StartsInBatches => Compat.ParticleRateBatchesMeasured && m_Main.ringBufferMode == ParticleSystemRingBufferMode.Disabled;
 
+        /// <summary>The age percent of a particle the shape texture discards: just past its life,
+        /// so the next update removes it (6000.0.71f1).</summary>
+        const float DiscardedAgePercent = 100.00001f;
+
         // Count with the established float arithmetic, sharing the step's emission draw
         // across loops. Start curves use the final playback time of the whole batch.
         bool PlanRate(float t0, float dt, float duration, float rateRandom)
@@ -757,10 +761,22 @@ namespace UnityEngine
             // tests/projects/particlemeshshape texture/clip/*: of ten births a step half
             // the texture discards, none or one stays). Lanes that expire at their start are
             // removed by the same rule (inferred: they leave with the discarded ones).
+            // While the count is above zero each such lane also fires the system's Death
+            // sub-emitters (6000.0.71f1, tests/projects/particlemeshshape texture/clip/deathsub:
+            // six discarded lanes of a ten-particle burst emit six Death bursts).
+            bool deathSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Death);
             for (int i = aligned; i < m_Count;)
             {
                 if ((MarkOf(i) & SlotMark.Dead) == 0) { i++; continue; }
-                if (count > 0) count--;
+                if (count > 0)
+                {
+                    if (deathSubs)
+                    {
+                        var dying = m_Particles[i];
+                        TriggerSubEmitters(ParticleSystemSubEmitterType.Death, ref dying);
+                    }
+                    count--;
+                }
                 RemoveSlot(i);
             }
             int prefix = Math.Min(count, aligned - start);
@@ -972,6 +988,16 @@ namespace UnityEngine
                 int sn = spreadIndex >= 0 ? spreadCount : count;
                 if (!InitParticle(ref m_Particles[index], emitter, nt, hasOverrides, ref overrides, si, sn, null, si, sn))
                 {
+                    if (m_ShapeTextureDiscarded && hasOverrides && StartsInBatches)
+                    {
+                        // Emit with EmitParams keeps a discarded particle until the next update,
+                        // which removes it as it ends its life (6000.0.71f1,
+                        // tests/projects/particlemeshshape texture/clip/emitparams).
+                        m_Particles[index].m_AgePercent = DiscardedAgePercent;
+                        m_Particles[index].ExportLifetime();
+                        StartTrail(ref m_Particles[index]);
+                        continue;
+                    }
                     if (m_ShapeTextureDiscarded)
                     {
                         ReportUnbatchedTextureClip();

@@ -41,5 +41,23 @@
       "messages/topology/quads/triangle",
       "messages/topology/strip/triangle"
     ]
+  },
+  "subemitter-batch": {
+    "reason": "Sub-emitter births with the shape texture: Unity starts each sub-emitter emission as its own four-slot batch (the order after an unaligned count, and the count lowered by every discarded lane, padding included); Unbound starts them one by one, so the children's order (deathsub, from the second burst on; counts match) and the clipped count (subbirths: 22 kept in Unity, 32 in Unbound) differ. Open follow-up.",
+    "keys": [
+      "texture/clip/deathsub/0/child",
+      "texture/clip/deathsub/0/child/color",
+      "texture/clip/deathsub/1/child",
+      "texture/clip/deathsub/1/child/color",
+      "texture/clip/subbirths/1/child",
+      "texture/clip/subbirths/1/child/color"
+    ]
+  },
+  "ring-batch": {
+    "reason": "A ring buffer (maxParticles 12, LoopUntilReplaced) emitting ten clipped particles after ten: Unity holds 13 particles afterwards, Unbound 9; its start batch in a ring buffer is not modelled (warned once). Open follow-up.",
+    "keys": [
+      "texture/clip/ring",
+      "texture/clip/ring/color"
+    ]
   }
 }
