@@ -288,7 +288,7 @@ namespace UnityEngine.AI
         }
 
         /// <summary>The target is mapped onto the NavMesh at once, within the agent's
-        /// destination search box (<see cref="NavMesh.DestinationExtents"/>), to the nearest point;
+        /// search box (<see cref="NavMesh.AgentReach"/>), to the nearest point;
         /// a target that maps nowhere is refused (false) and changes nothing. The path is then given
         /// in the call when it needs no search (see <see cref="AgentSystem.PlanAtOnce"/>), else
         /// at the next agent update, while the agent goes on following and reporting its current
@@ -301,7 +301,7 @@ namespace UnityEngine.AI
                 Debug.LogError("\"SetDestination\" can only be called on an active agent that has been placed on a NavMesh.", this);
                 return false;
             }
-            if (!NavMesh.Nearest(m_Surface, target, NavMesh.DestinationExtents(m_Radius), Filter, out _, out var mapped))
+            if (!NavMesh.Nearest(m_Surface, target, NavMesh.AgentReach(m_Radius), Filter, out _, out var mapped))
                 return false;
             m_Destination = mapped;
             m_ReportedDestination = mapped;
@@ -1147,7 +1147,7 @@ namespace Unbound.Runtime
             Detach(agent);
             agent.WorldVersion = NavWorld.Version;
             var surface = NavWorld.Get(agent.agentTypeID);
-            if (!NavMesh.Nearest(surface, position, NavMesh.AgentExtents(agent.agentTypeID), agent.Filter, out var polyRef, out var point))
+            if (!NavMesh.Nearest(surface, position, NavMesh.AgentReach(agent.radius), agent.Filter, out var polyRef, out var point))
             {
                 agent.m_NextPosition = position;
                 Debug.LogWarning("Failed to create agent because it is not close enough to the NavMesh", agent);

@@ -81,6 +81,23 @@ namespace UnityEngine.Tests
             Assert.Equal(m_Height, agent.transform.position.y, 4);
         }
 
+        /// <summary>Measured (tests/projects/navpath snap.reach, snap.reachtype): an agent is placed
+        /// within 20 of its own radii across and 15 up and down from the NavMesh, whatever its
+        /// type's settings. 7.5 m beside the 12 m ground: placed with radius 0.5 (10 m reach), not
+        /// with radius 0.3 (6 m); 9 m above it: placed with radius 0.75 (11.25 m), not with 0.5
+        /// (7.5 m).</summary>
+        [Theory]
+        [InlineData(0.5f, 13.5f, 0f, true)]
+        [InlineData(0.3f, 13.5f, 0f, false)]
+        [InlineData(0.75f, 0f, 9f, true)]
+        [InlineData(0.5f, 0f, 9f, false)]
+        public void AnAgentIsPlacedWithinItsRadiusReach(float radius, float x, float y, bool placed)
+        {
+            var agent = Agent(new Vector3(x, y, 0f), active: false, before: a => a.radius = radius);
+            agent.gameObject.SetActive(true);
+            Assert.Equal(placed, agent.isOnNavMesh);
+        }
+
         [Fact]
         public void ActivationKeepsTheTransformUntilTheEarlyUpdate()
         {
