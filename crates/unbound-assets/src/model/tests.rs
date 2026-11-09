@@ -174,6 +174,7 @@ fn bind_pose_conversion_mirrors_and_scales() {
         model: ImportedModel {
             name: String::new(),
             nodes: Vec::new(),
+            file_order: Vec::new(),
             meshes: Vec::new(),
             materials: Vec::new(),
             animator: None,

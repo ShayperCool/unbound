@@ -166,6 +166,15 @@ pub struct ModelSettings {
     /// `meshes.generateSecondaryUV` with its unwrap settings; `None` when off.
     #[serde(default)]
     pub secondary_uv: Option<SecondaryUvSettings>,
+    /// `animations.optimizeGameObjects` (Optimize Game Objects): the model's prefab keeps only
+    /// the transforms the Animator's optimization keeps (applied when the prefab is loaded, as
+    /// `AnimatorUtility.OptimizeTransformHierarchy` does).
+    #[serde(default)]
+    pub optimize_game_objects: bool,
+    /// `animations.extraExposedTransformPaths` (Extra Transforms to Expose): paths below the root
+    /// whose transforms an optimized hierarchy keeps.
+    #[serde(default)]
+    pub extra_exposed_transform_paths: Vec<String>,
 }
 
 /// `meshes.secondaryUV*`: the lightmap UV unwrap settings (`ModelImporter.secondaryUV*`).
@@ -278,6 +287,14 @@ impl ModelSettings {
             keep_unused_vertices: int(imp, "meshes.meshOptimizationFlags")
                 .is_some_and(|flags| flags & MESH_OPTIMIZATION_VERTEX_ORDER == 0),
             secondary_uv: SecondaryUvSettings::read(imp),
+            optimize_game_objects: boolean(imp, "animations.optimizeGameObjects").unwrap_or(false),
+            extra_exposed_transform_paths: imp
+                .path("animations.extraExposedTransformPaths")
+                .and_then(Value::as_seq)
+                .unwrap_or_default()
+                .iter()
+                .filter_map(|v| v.as_str().map(str::to_string))
+                .collect(),
         }
     }
 }
@@ -611,6 +628,11 @@ pub struct ImportedModel {
     pub name: String,
     /// Depth-first, parents before children; `nodes[0]` is the root.
     pub nodes: Vec<ModelNode>,
+    /// The nodes depth first in the file's child order (before `sortHierarchyByName`): the
+    /// order of the avatar the importer builds from the model (measured: deoptimizing a
+    /// hierarchy recreates bones in this order, tests/projects/animoptimize).
+    #[serde(default)]
+    pub file_order: Vec<u32>,
     pub meshes: Vec<ModelMesh>,
     pub materials: Vec<ModelMaterial>,
     pub clips: Vec<ModelClip>,
@@ -677,7 +699,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 31;
+    const VERSION: u32 = 32;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -841,6 +863,7 @@ pub fn import_model(
         model: ImportedModel {
             name: asset_name(source),
             nodes: Vec::new(),
+            file_order: Vec::new(),
             meshes: Vec::new(),
             materials: Vec::new(),
             clips: Vec::new(),
@@ -888,6 +911,7 @@ pub fn import_model(
     };
     builder.assign_unique_names(root);
     builder.add_node(root, None, &mut ids);
+    builder.model.file_order = builder.file_order(root);
     builder.add_renderers(&mut ids)?;
     if let Some(conversion) = conversion {
         for (node, source) in builder.model.nodes.iter_mut().zip(&builder.sources) {
@@ -1166,6 +1190,20 @@ impl<'a> Builder<'a> {
         for child in children {
             self.add_node(child, Some(index), ids);
         }
+    }
+
+    /// The imported nodes depth first in the file's child order.
+    fn file_order(&self, root: &ufbx::Node) -> Vec<u32> {
+        let mut order = Vec::with_capacity(self.model.nodes.len());
+        let mut stack = vec![root];
+        while let Some(node) = stack.pop() {
+            let Some(&index) = self.node_index.get(&node.element.element_id) else {
+                continue;
+            };
+            order.push(index);
+            stack.extend(node.children.iter().rev().map(|c| c.as_ref()));
+        }
+        order
     }
 
     /// The path a clip binds a node by: the names below the root, joined by `/`.

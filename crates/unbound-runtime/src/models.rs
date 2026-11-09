@@ -145,16 +145,27 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
     };
 
     for (index, mesh) in model.meshes.iter().enumerate() {
-        docs.push(doc(
-            MESH,
-            mesh.file_id.id,
-            "Mesh",
-            map(vec![
-                ("m_Name", scalar(&mesh.name)),
-                ("m_UnboundModel", scalar(&guid_text)),
-                ("m_UnboundMesh", scalar(index)),
-            ]),
-        ));
+        let mut body = vec![
+            ("m_Name", scalar(&mesh.name)),
+            ("m_UnboundModel", scalar(&guid_text)),
+            ("m_UnboundMesh", scalar(index)),
+        ];
+        // A skinned mesh names its bones by their paths below the model's root (Unity's
+        // bone name hashes): what skins it from an Animator's skeleton once the bones are gone.
+        if let Some(skin) = model.nodes.iter().find_map(|n| {
+            n.renderer
+                .as_ref()
+                .filter(|r| r.kind == RendererKind::SkinnedMesh && r.mesh as usize == index)
+        }) {
+            body.push((
+                "m_UnboundBonePaths",
+                Value::Seq(skin.bones.iter().map(|&b| scalar(node_path(model, b))).collect()),
+            ));
+            if let Some(root) = skin.root_bone {
+                body.push(("m_UnboundRootBonePath", scalar(node_path(model, root))));
+            }
+        }
+        docs.push(doc(MESH, mesh.file_id.id, "Mesh", map(body)));
     }
 
     // A Humanoid model's clips are muscle clips of its avatar (or the one it copies): they carry
@@ -184,17 +195,31 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
         docs.push(document);
     }
 
-    // The Animator's avatar: the model's own, or another model's. A humanoid one carries the
-    // meta's human description and its model's root, from which the managed side builds the
-    // human as the importer does (AvatarBuilder over the imported hierarchy).
+    // The Animator's avatar: the model's own, or another model's. It carries its model's root
+    // and the model's transforms in the file's order, from which the managed side builds the
+    // avatar's skeleton as the importer does; a humanoid one also the meta's human description
+    // (AvatarBuilder over the imported hierarchy).
     let avatar = if let Some(own) = model.avatar {
-        let mut body = vec![("m_Name", scalar(format!("{}Avatar", model.name)))];
-        if let Some(human) = &model.human_description {
-            body.push(("m_UnboundHumanDescription", human.clone()));
-            body.push((
+        let mut body = vec![
+            ("m_Name", scalar(format!("{}Avatar", model.name))),
+            (
                 "m_UnboundRoot",
                 local(model.nodes.first().map_or(0, |n| n.game_object.id)),
-            ));
+            ),
+            (
+                "m_UnboundSkeletonOrder",
+                Value::Seq(
+                    model
+                        .file_order
+                        .iter()
+                        .filter_map(|&i| model.nodes.get(i as usize))
+                        .map(|n| local(n.transform.id))
+                        .collect(),
+                ),
+            ),
+        ];
+        if let Some(human) = &model.human_description {
+            body.push(("m_UnboundHumanDescription", human.clone()));
         }
         docs.push(doc(AVATAR, own.id, "Avatar", map(body)));
         local(own.id)
@@ -325,23 +350,35 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
                     ]),
                 )
             } else {
-                doc(
-                    ANIMATOR,
-                    animator.id,
-                    "Animator",
-                    map(vec![
-                        ("m_GameObject", local(go)),
-                        ("m_Enabled", scalar(1)),
-                        ("m_Avatar", avatar.clone()),
-                        ("m_Controller", local(0)),
-                        // The importer applies root motion for humanoid avatars (measured:
-                        // tests/projects/humanoid, the model moves with its clip).
-                        (
-                            "m_ApplyRootMotion",
-                            scalar(model.human_description.is_some() as i32),
+                let mut body = vec![
+                    ("m_GameObject", local(go)),
+                    ("m_Enabled", scalar(1)),
+                    ("m_Avatar", avatar.clone()),
+                    ("m_Controller", local(0)),
+                    // The importer applies root motion for humanoid avatars (measured:
+                    // tests/projects/humanoid, the model moves with its clip).
+                    (
+                        "m_ApplyRootMotion",
+                        scalar(model.human_description.is_some() as i32),
+                    ),
+                ];
+                // Optimize Game Objects: the importer optimizes the hierarchy with the extra
+                // exposed paths; the managed side does it when the prefab is loaded.
+                if model.settings.optimize_game_objects {
+                    body.push(("m_UnboundOptimizeGameObjects", scalar(1)));
+                    body.push((
+                        "m_UnboundExtraExposedTransformPaths",
+                        Value::Seq(
+                            model
+                                .settings
+                                .extra_exposed_transform_paths
+                                .iter()
+                                .map(scalar)
+                                .collect(),
                         ),
-                    ]),
-                )
+                    ));
+                }
+                doc(ANIMATOR, animator.id, "Animator", map(body))
             });
         }
         if index == 0
@@ -434,6 +471,19 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
         ));
     }
     docs
+}
+
+/// A node's path below the model's root: its ancestors' names joined by `/` (empty for the root).
+fn node_path(model: &ImportedModel, node: u32) -> String {
+    let mut names = Vec::new();
+    let mut at = model.nodes.get(node as usize);
+    while let Some(n) = at {
+        let Some(parent) = n.parent else { break };
+        names.push(n.name.as_str());
+        at = model.nodes.get(parent as usize);
+    }
+    names.reverse();
+    names.join("/")
 }
 
 /// What the managed side needs to make a model's material: the importer (`legacy` or
