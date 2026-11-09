@@ -842,6 +842,20 @@ class AutomaticProbeTests(unittest.TestCase):
         self.assertEqual(set(catalog), {name for name, _ in requested})
         self.assertTrue(all(row['builtin'] and row['error'] is None for row in catalog.values()))
 
+    def test_raw_explicit_checks_cover_only_the_same_release(self):
+        self.probe('short', {'commands': ['prepare', 'compare'], 'fast_commands': ['doctor-check']})
+        version = self.root/'tests/projects/short/ProjectSettings/ProjectVersion.txt'
+        version.parent.mkdir()
+        version.write_text('m_EditorVersion: 2022.3.10f1\n')
+        with mock.patch.dict(os.environ, {land.RELEASE_VARIABLE: ''}):
+            self.assertEqual(self.select(['crates/core/src/lib.rs'], ['doctor-check']),
+                             [('short', 'doctor-check', 'fast check')])
+            selected = self.select(['tests/projects/short/run.py'], ['prepare', 'compare'])
+            self.assertTrue(any('tools/agents/suite.py' in row[1] for row in selected))
+        with mock.patch.dict(os.environ, {land.RELEASE_VARIABLE: '2022.3.10f1'}):
+            self.assertEqual(self.select(['crates/core/src/lib.rs'], ['doctor-check']), [])
+            self.assertEqual(self.select(['tests/projects/short/run.py'], ['prepare', 'compare', 'doctor-check']), [])
+
     def test_invalid_metadata_fails_instead_of_omitting_checks(self):
         for spec in [{'commands': ['true'], 'engine_paths': 'crates/'},
                      {'commands': ['true'], 'engine_paths': ['/crates/']},

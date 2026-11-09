@@ -225,7 +225,8 @@ def automatic_probes(worktree, changed, explicit, environment=None):
     """Select touched recipes and short checks, validating recipes in the candidate interpreter."""
     from suite import gate_spec, NoRecipe
     projects = worktree/'tests/projects'
-    selected, seen, records = [], set(explicit), []
+    selected, records = [], []
+    seen = {(command, probe_release(command, worktree, environment)) for command in explicit}
     explicit_suites = {pair for command in explicit
                        for pair in suite_coverage(command, probe_release(command, worktree, environment))}
     for project in sorted(projects.iterdir()) if projects.is_dir() else []:
@@ -251,6 +252,7 @@ def automatic_probes(worktree, changed, explicit, environment=None):
                  for name, prefix, _, affected, _ in records if affected]
     catalog = candidate_recipes(worktree, requested)
     for name, prefix, touched, affected, spec in records:
+        release = probe_release(prefix, worktree, environment)
         commands = [(None, 'changed files' if touched else 'engine paths')] if affected else []
         commands.extend((command, 'fast check') for command in spec.get('fast_commands', []))
         for command, reason in commands:
@@ -261,16 +263,16 @@ def automatic_probes(worktree, changed, explicit, environment=None):
                 recipe = catalog[name]
                 if recipe.get('error'):
                     die(2, f'{name}: {recipe["error"]}')
-                if (name, release) in explicit_suites or (not recipe['builtin'] and declared and all(c in seen for c in declared)):
+                if (name, release) in explicit_suites or (not recipe['builtin'] and declared and all((c, release) in seen for c in declared)):
                     continue
                 if not recipe['builtin']:
-                    seen.update(declared)
+                    seen.update((command, release) for command in declared)
                 command = shlex.join([sys.executable, 'tools/agents/suite.py', '--only', name,
                                       '--jobs', '1', '--label',
                                       f'land-{os.getpid()}-{time.time_ns()}-{name}'])
-            if command not in seen:
+            if (command, release) not in seen:
                 selected.append((name, command, reason))
-                seen.add(command)
+                seen.add((command, release))
     return selected
 
 
