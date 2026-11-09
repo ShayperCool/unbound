@@ -12,6 +12,9 @@ using UnityEngine.AI;
 /// NavMeshSettings. Baked: a ground with a Mud strip (area 4), a 0.3 m step, a 1.5 m platform
 /// reached by a one-way OffMeshLink and left by the bake's generated drop links, an agent and the
 /// probe. Second (loaded additively by the probe): a ground 2 m beyond the first one's, an agent.
+/// <c>-executeMethod ProbeSetup.CreateJump</c> makes only the third scene, Jump (loaded additively
+/// last): grounds 2 m apart, level and with the far one 0.5 m higher, baked with a 3 m jump
+/// distance so the bake generates jump-across links.
 /// </summary>
 public static class ProbeSetup
 {
@@ -23,6 +26,30 @@ public static class ProbeSetup
         {
             new EditorBuildSettingsScene("Assets/Scenes/Baked.unity", true),
             new EditorBuildSettingsScene("Assets/Scenes/Second.unity", true),
+        };
+        AssetDatabase.SaveAssets();
+    }
+
+    public static void CreateJump()
+    {
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        var settings = new SerializedObject(UnityEditor.AI.NavMeshBuilder.navMeshSettingsObject);
+        settings.FindProperty("m_BuildSettings.ledgeDropHeight").floatValue = 2f;
+        settings.FindProperty("m_BuildSettings.maxJumpAcrossDistance").floatValue = 3f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        Box("LevelA", new Vector3(-4f, -0.5f, 30f), new Vector3(6f, 1f, 6f), 0, true);
+        Box("LevelB", new Vector3(4f, -0.5f, 30f), new Vector3(6f, 1f, 6f), 0, true);
+        Box("LowC", new Vector3(-4f, -0.5f, 40f), new Vector3(6f, 1f, 6f), 0, true);
+        Box("HighD", new Vector3(4f, 0f, 40f), new Vector3(6f, 1f, 6f), 0, true);
+        const string path = "Assets/Scenes/Jump.unity";
+        EditorSceneManager.SaveScene(scene, path);
+        UnityEditor.AI.NavMeshBuilder.BuildNavMesh();
+        EditorSceneManager.SaveScene(scene, path);
+        EditorBuildSettings.scenes = new[]
+        {
+            new EditorBuildSettingsScene("Assets/Scenes/Baked.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Second.unity", true),
+            new EditorBuildSettingsScene(path, true),
         };
         AssetDatabase.SaveAssets();
     }

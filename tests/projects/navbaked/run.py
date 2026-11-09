@@ -62,7 +62,9 @@ def setup(work):
     before = {p.relative_to(project) for p in (project/'Assets').rglob('*')}
     name, server = display()
     try:
-        code = run_editor(project, work/'setup.log', ['-quit', '-executeMethod', 'ProbeSetup.Create'],
+        # NAVBAKED_SETUP=ProbeSetup.CreateJump makes only the jump-across scene.
+        method = os.environ.get('NAVBAKED_SETUP', 'ProbeSetup.Create')
+        code = run_editor(project, work/'setup.log', ['-quit', '-executeMethod', method],
                           dict(os.environ, DISPLAY=name)).wait()
     finally:
         server.terminate()
@@ -127,10 +129,10 @@ def unbound(work):
 # The scenarios of the scene's NavMesh itself: loaded with the scene, its triangulation, paths
 # over its links, additive scenes and unloading; the second scene's agent when the coroutine waiting
 # for its load resumes; and where asynchronous operations complete and their waiting coroutines
-# resume, and the samples. The others (raycasts, the walking agent, the first additive load's frame:
+# resume, the samples and the jump-across links. The others (raycasts, the walking agent, the first additive load's frame:
 # `resume.load`) measure the general queries, the agent model and scene loading time, whose
 # residuals are recorded in docs/COMPATIBILITY_GAPS.md: they are compared and listed, not gated.
-GATED = ('awake', 'areas', 'baked', 'paths', 'additive', 'agent2', 'unloaded', 'sample',
+GATED = ('awake', 'areas', 'baked', 'paths', 'additive', 'agent2', 'unloaded', 'sample', 'jump',
          'resume.unload', 'resume.held', 'resume.resources', 'resume.instantiate')
 
 

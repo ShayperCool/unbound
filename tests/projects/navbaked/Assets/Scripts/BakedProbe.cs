@@ -118,6 +118,19 @@ public class BakedProbe : MonoBehaviour
 
         yield return ResumeTiming.Controls(this);
 
+        // The jump-across links the bake generated: paths across a 2 m gap each way, level and
+        // up or down 0.5 m.
+        var jump = SceneManager.LoadSceneAsync("Jump", LoadSceneMode.Additive);
+        while (!jump.isDone) yield return null;
+        yield return null;
+        Scenario("jump", () =>
+        {
+            Path("level.ab", new Vector3(-5f, 0f, 30f), new Vector3(5f, 0f, 30f), NavMesh.AllAreas);
+            Path("level.ba", new Vector3(5f, 0f, 30f), new Vector3(-5f, 0f, 30f), NavMesh.AllAreas);
+            Path("up", new Vector3(-5f, 0f, 40f), new Vector3(5f, 0.5f, 40f), NavMesh.AllAreas);
+            Path("down", new Vector3(5f, 0.5f, 40f), new Vector3(-5f, 0f, 40f), NavMesh.AllAreas);
+        });
+
         File.WriteAllText(Out, ProbeLog.Json());
         Debug.Log("NavMesh baked probe written");
 #if UNITY_EDITOR
