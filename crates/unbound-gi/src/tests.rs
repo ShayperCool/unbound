@@ -569,8 +569,9 @@ fn the_update_threshold_keeps_parts_that_changed_less() {
         }
         texels.push(outputs);
     }
-    // Texels more than one 9-bit mantissa step apart (the RGB9E5 quantization of the drawn
-    // texels, which the bounce reads, leaves fixed points that close to each other).
+    // Texels more than 1/256 of their largest channel apart (one or two RGB9E5 mantissa steps:
+    // the quantization of the drawn texels, which the bounce reads, leaves fixed points that
+    // close to each other).
     let apart = |a: &[u32], b: &[u32]| {
         a.iter()
             .zip(b)

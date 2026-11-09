@@ -43,7 +43,8 @@ pub struct Light {
 /// Steps of a spot light's angular table between the cosine of half its angle and 1.
 const SPOT_STEPS: usize = 31;
 /// The inner cone a spot light's angular falloff starts at: half its angle's tangent times this
-/// (as `Light.innerSpotAngle` defaults to; the light's own inner angle is not used).
+/// (46/64, the inner cone `LightmapperUtils.ExtractInnerCone` and `Light.innerSpotAngle`'s
+/// default use; the light's own inner angle is not used).
 const SPOT_INNER_TANGENT: f32 = 0.71875;
 /// Keeps a degenerate cone's divisions finite.
 const SPOT_MIN_STEP: f32 = 1e-6;
