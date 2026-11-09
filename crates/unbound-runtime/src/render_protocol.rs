@@ -647,6 +647,9 @@ pub mod owned {
 /// One explicit shader warm-up request, shared by immediate and queued startup execution.
 #[derive(Clone, Debug, Default, serde::Deserialize)]
 pub struct ShaderWarmupRequest {
+    /// Enumerate every available source variant, using the same preparation as explicit sets.
+    #[serde(default)]
+    pub all_variants: bool,
     #[serde(default)]
     pub stats: bool,
     #[serde(default)]

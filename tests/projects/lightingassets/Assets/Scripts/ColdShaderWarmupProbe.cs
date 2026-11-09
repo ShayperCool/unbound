@@ -34,13 +34,15 @@ public partial class LightingAssetsProbe
     [Serializable]
     sealed class WarmupStats { public int programs; public int pipelines; }
 
-    static WarmupStats GpuWarmupStats(Shader shader)
+    static WarmupStats GpuWarmupStats(Shader shader) => GpuWarmupStats(shader.name);
+
+    static WarmupStats GpuWarmupStats(string shaderName)
     {
         var native = typeof(Shader).Assembly.GetType("Unbound.Runtime.Native");
         if (native == null) return null;
         var call = native.GetMethod("Call", BindingFlags.Static | BindingFlags.NonPublic,
             null, new[] { typeof(string), typeof(string) }, null);
-        return JsonUtility.FromJson<WarmupStats>((string)call.Invoke(null, new object[] { "shader-warmup", "{\"stats\":true,\"shader\":" + S(shader.name) + "}" }));
+        return JsonUtility.FromJson<WarmupStats>((string)call.Invoke(null, new object[] { "shader-warmup", "{\"stats\":true,\"shader\":" + S(shaderName) + "}" }));
     }
 
     static Mesh WarmupMesh()
@@ -65,6 +67,8 @@ public partial class LightingAssetsProbe
     IEnumerator RecordColdShaderWarmup(string mode)
     {
         var shader = Resources.Load<Shader>("WarmupFresh");
+        var globalRoot = mode == "all" ? Resources.Load<Shader>("WarmupFallbackRoot") : null;
+        var fallbackBefore = mode == "all" ? GpuWarmupStats("Probe/WarmupFallback/Base") : null;
         var material = new Material(shader);
         var target = mode == "startup" ? s_StartupWarmupTarget : new RenderTexture(4, 4, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
         target.Create();
@@ -90,6 +94,7 @@ public partial class LightingAssetsProbe
         else Record("warmup-cold", "\"step\":\"all call\",\"result\":" + Try(() => { Shader.WarmupAllShaders(); return "\"ok\""; }));
         State("after");
         var warm = GpuWarmupStats(shader);
+        var fallbackWarm = mode == "all" ? GpuWarmupStats("Probe/WarmupFallback/Base") : null;
         void Proof(string step)
         {
             Record("warmup-cold", "\"step\":" + S(step) + ",\"pixels\":" + S(WarmupPixels(target)));
@@ -140,6 +145,57 @@ public partial class LightingAssetsProbe
         camera.Render();
         Proof("draw standalone instanced");
         DestroyImmediate(cameraObject);
+        if (mode == "all")
+        {
+            // This instancing combination is absent from the explicit collection.
+            material.shaderKeywords = new[] { "WARM_RED", "WARM_BLUE" };
+            using (var cmd = new CommandBuffer())
+            {
+                cmd.SetRenderTarget(target);
+                cmd.SetViewport(new Rect(0, 0, 4, 4));
+                cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
+                cmd.DrawMeshInstanced(mesh, 0, material, 0, new[] { Matrix4x4.identity, Matrix4x4.identity });
+                Graphics.ExecuteCommandBuffer(cmd);
+            }
+            Proof("draw unlisted instancing combination");
+            material.enableInstancing = false; material.shaderKeywords = new string[0];
+            shader.maximumLOD = 100;
+            using (var cmd = new CommandBuffer())
+            {
+                cmd.SetRenderTarget(target);
+                cmd.SetViewport(new Rect(0, 0, 4, 4));
+                cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
+                cmd.DrawMesh(mesh, Matrix4x4.identity, material, 0, 0);
+                Graphics.ExecuteCommandBuffer(cmd);
+            }
+            Proof("draw lower LOD");
+            var fallbackShader = Shader.Find("Probe/WarmupFallback/Base");
+            var fallbackMaterial = new Material(fallbackShader);
+            for (int i = 0; i < 2; i++)
+            {
+                fallbackMaterial.shaderKeywords = i == 0 ? new string[0] : new[] { "FALLBACK_ON" };
+                using (var cmd = new CommandBuffer())
+                {
+                    cmd.SetRenderTarget(target);
+                    cmd.SetViewport(new Rect(0, 0, 4, 4));
+                    cmd.ClearRenderTarget(false, true, Color.clear);
+                    cmd.DrawMesh(mesh, Matrix4x4.identity, fallbackMaterial, 0, 0);
+                    Graphics.ExecuteCommandBuffer(cmd);
+                }
+                Record("warmup-cold", "\"step\":" + S("draw global fallback " + i) + ",\"pixels\":" + S(WarmupPixels(target)));
+                var fallbackAfter = GpuWarmupStats(fallbackShader);
+                if (fallbackBefore != null && fallbackWarm != null && fallbackAfter != null)
+                    Debug.Log("WARMUP_GLOBAL_FALLBACK " + fallbackBefore.programs + " " + fallbackBefore.pipelines + " "
+                        + fallbackWarm.programs + " " + fallbackWarm.pipelines + " " + fallbackAfter.programs + " " + fallbackAfter.pipelines);
+            }
+            DestroyImmediate(fallbackMaterial);
+            var repeatedBefore = GpuWarmupStats(shader);
+            Record("warmup-cold", "\"step\":\"all repeat call\",\"result\":" + Try(() => { Shader.WarmupAllShaders(); return "\"ok\""; }));
+            State("global repeat");
+            var repeatedAfter = GpuWarmupStats(shader);
+            if (repeatedBefore != null && repeatedAfter != null)
+                Debug.Log("WARMUP_GLOBAL_REPEAT " + repeatedBefore.programs + " " + repeatedBefore.pipelines + " " + repeatedAfter.programs + " " + repeatedAfter.pipelines);
+        }
         if (mode != "all")
         {
             collection.WarmUp();

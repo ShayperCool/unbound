@@ -129,14 +129,17 @@ const PREPASSFINAL: [&str; 7] = [
 
 const SHADOWCOLLECTOR: [&str; 2] = ["SHADOWS_SPLIT_SPHERES", "SHADOWS_SINGLE_CASCADE"];
 
-/// A program's keyword declarations, in source order, without the keywords its `skip_variants`
-/// lines name.
-fn declarations(pragmas: &[Pragma]) -> Result<Vec<Declaration>> {
-    let skipped: Vec<&String> = pragmas
+pub(crate) fn skipped_keywords(pragmas: &[Pragma]) -> impl Iterator<Item = &String> {
+    pragmas
         .iter()
         .filter(|p| p.words.first().is_some_and(|w| w == "skip_variants"))
         .flat_map(|p| p.words.iter().skip(1))
-        .collect();
+}
+
+/// A program's keyword declarations, in source order, without the keywords its `skip_variants`
+/// lines name.
+fn declarations(pragmas: &[Pragma]) -> Result<Vec<Declaration>> {
+    let skipped: Vec<&String> = skipped_keywords(pragmas).collect();
     let mut out = declared(pragmas, false)?;
     for d in &mut out {
         d.keywords.retain(|k| !skipped.contains(&k));
@@ -239,11 +242,7 @@ fn declared(pragmas: &[Pragma], placeholders: bool) -> Result<Vec<Declaration>> 
 /// omits them. Light-pass shorthand lists describe keyword membership, not exclusive choices:
 /// e.g. DIRECTIONAL and LIGHTMAP_ON can coexist in a forward-base variant.
 pub fn variant_sets(pragmas: &[Pragma]) -> Result<Vec<Vec<String>>> {
-    let skipped: Vec<&String> = pragmas
-        .iter()
-        .filter(|p| p.words.first().is_some_and(|w| w == "skip_variants"))
-        .flat_map(|p| p.words.iter().skip(1))
-        .collect();
+    let skipped: Vec<&String> = skipped_keywords(pragmas).collect();
     let mut sets = Vec::new();
     for mut d in declared(pragmas, true)? {
         d.keywords.retain(|k| !skipped.contains(&k));

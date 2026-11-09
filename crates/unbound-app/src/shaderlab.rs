@@ -1602,6 +1602,24 @@ impl ShaderIndex {
         self.parsed.get(name).and_then(Option::as_ref)
     }
 
+    /// All source SubShaders, independent of the current pipeline and maximum LOD.
+    /// This cold path is used by global shader preparation; ordinary draws keep their selection.
+    pub fn warmup_sources(&mut self, name: &str) -> Option<(Vec<ShaderLab>, Option<String>)> {
+        let mut lab = self.get(name)?.clone();
+        let fallback = lab.fallback.clone();
+        let subs = std::mem::take(&mut lab.subshaders);
+        let mut sources = Vec::with_capacity(subs.len());
+        for sub in subs {
+            let mut selected = lab.clone();
+            selected.passes = sub.passes;
+            selected.tags = sub.tags;
+            selected.has_subshader = true;
+            self.resolve_use_passes(&mut selected, 0);
+            sources.push(selected);
+        }
+        Some((sources, fallback))
+    }
+
     /// The shader a name stands for, its SubShader picked under the active pipeline and the
     /// name's [`Selection`].
     fn load(&self, name: &str) -> Option<ShaderLab> {

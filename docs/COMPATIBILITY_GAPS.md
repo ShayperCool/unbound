@@ -170,9 +170,11 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       (`lightingassets` cold GPU checks), with no extra program/pipeline creation on the covered
       first draws. Empty full warm-up and saturating progressive counts match the Editor. Inherited pass
       preparation follows the same fallback traversal as shadow drawing (`lightingassets fallback`).
-      Open: Shader.WarmupAllShaders explicitly rejects complete loaded-variant enumeration until
-      built-in and generated pass spaces are supported; later attachment/layout/state changes
-      can still require driver work, as documented for Vulkan/Metal/DX12.
+      Global Shader.WarmupAllShaders uses the same GPU preparation for every loaded shader's
+      source variants, across SubShaders and fallbacks, without changing collection progress
+      (`lightingassets all`, Q219). Source groups are enumerated lazily with excluded variants
+      omitted; later attachment/layout/state changes can still require driver work, as documented
+      for Vulkan/Metal/DX12. Unreadable source programs fail explicitly.
 - [ ] `SystemInfo` answers follow what the renderer does.
 - [ ] `api-gaps` noise: trivial attributes (`JetBrains.Annotations.*`, `ResourcePathAttribute`,
       `CategoryInfoAttribute`, `ShaderKeywordFilter.*`) implemented, so the coverage line counts

@@ -33,6 +33,7 @@ namespace Unbound.Tests
         public void Dispose()
         {
             ShaderWarmup.s_PrepareForTests = null;
+            ShaderWarmup.s_SendForTests = null;
             ShaderPassInfo.ResetForTests();
             ShaderDeclarations.s_CallForTests = null;
             ShaderDeclarations.s_FrameForTests = null;
@@ -74,6 +75,35 @@ namespace Unbound.Tests
             var asset = new T();
             ((ISerializedAsset)asset).ReadSerialized(UnityYaml.Parse(yaml)[0].Body, resolver ?? new Resolver());
             return asset;
+        }
+
+        [Fact]
+        public void GlobalWarmupRequestsEveryLoadedShaderWithoutChangingCollectionProgress()
+        {
+            var first = Declared(new string[] { null }, new[] { "A" });
+            var second = Declared(new string[] { null }, Array.Empty<string>());
+            first.maximumLOD = 1;
+            var collection = new ShaderVariantCollection();
+            collection.Add(new ShaderVariantCollection.ShaderVariant(first, PassType.Normal, "A"));
+            var sent = new Dictionary<string, int>();
+            ShaderWarmup.s_SendForTests = json =>
+            {
+                using var document = JsonDocument.Parse(json);
+                var root = document.RootElement;
+                Assert.True(root.GetProperty("all_variants").GetBoolean());
+                Assert.Empty(root.GetProperty("passes").EnumerateArray());
+                Assert.Empty(root.GetProperty("keywords").EnumerateArray());
+                var name = root.GetProperty("shader").GetString();
+                sent[name] = sent.TryGetValue(name, out var count) ? count + 1 : 1;
+            };
+            Shader.WarmupAllShaders();
+            Assert.Equal(1, sent[first.name]);
+            Assert.Equal(1, sent[second.name]);
+            Assert.False(collection.isWarmedUp);
+            Assert.Equal(0, collection.warmedUpVariantCount);
+            Object.DestroyImmediate(collection);
+            Object.DestroyImmediate(first);
+            Object.DestroyImmediate(second);
         }
 
         // ---------------------------------------------------------------- LightingSettings

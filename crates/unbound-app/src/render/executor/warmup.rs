@@ -19,102 +19,123 @@ impl UnityRenderer {
             keywords: request.keywords,
             ..Default::default()
         };
-        let resolved = self.resolver.resolve(&material);
+        let sources = if request.all_variants {
+            self.resolver.warmup_sources(&material)?
+        } else {
+            vec![self.resolver.resolve(&material)]
+        };
         let target = match self.state.target.clone() {
             Some(target) => target,
             None => self.screen_target(self.color_space),
         };
         let layout = self.pipelines.texture_layout.clone();
-        for index in request.passes {
-            let pass = match resolved
-                .all
-                .get(index)
-                .ok_or("warm-up pass is out of range")?
-            {
-                Ok(pass) => pass,
-                Err(why) => {
-                    tracing::warn!(
-                        "shader `{}` pass {index} cannot draw during warm-up: {why}",
-                        resolved.shader
-                    );
-                    continue;
-                }
+        for resolved in sources {
+            let passes: Vec<usize> = if request.all_variants {
+                (0..resolved.all.len()).collect()
+            } else {
+                request.passes.clone()
             };
-            if pass.grab.is_some() {
-                continue;
-            }
-            // Mesh calls use replay; raw procedural shaders can also use the literal keyword.
-            // A raw Unity instance buffer is not needed by replay, so its unavailable form
-            // must not make preparation of a supported mesh variant fail or log a warning.
-            let instancing = material.keywords.iter().any(|k| k == "INSTANCING_ON");
-            for replay in [false, true] {
-                if replay && !instancing {
+            for index in passes {
+                let pass = match resolved
+                    .all
+                    .get(index)
+                    .ok_or("warm-up pass is out of range")?
+                {
+                    Ok(pass) => pass,
+                    Err(why) => {
+                        tracing::warn!(
+                            "shader `{}` pass {index} cannot draw during warm-up: {why}",
+                            resolved.shader
+                        );
+                        continue;
+                    }
+                };
+                if pass.grab.is_some() {
                     continue;
                 }
-                let mut keywords = material.keywords.clone();
-                if replay {
-                    keywords.push(unbound_shaders::MESH_INSTANCE_REPLAY.into());
-                }
-                let (id, errored) = if instancing && !replay {
-                    let Some(id) = self.compiled.variant(
-                        &self.device,
-                        &resolved.shader,
-                        &pass.program,
-                        &keywords,
-                        self.color_space == 1,
-                        &layout,
-                        compiled::VariantUse::OptionalWarmup,
-                    ) else {
-                        continue;
-                    };
-                    (id, false)
-                } else {
-                    let (id, errored) = self.variant_or_error(
-                        &resolved.shader,
-                        &pass.program,
-                        &keywords,
-                        self.color_space == 1,
-                        &layout,
-                    );
-                    (
-                        id.ok_or_else(|| {
-                            format!(
-                                "shader `{}` pass {index} could not be warmed up",
-                                resolved.shader
-                            )
-                        })?,
-                        errored,
+                let variants: Box<dyn Iterator<Item = Vec<String>>> = if request.all_variants {
+                    Box::new(
+                        self.compiled
+                            .warmup_variants(&pass.program, self.color_space == 1)?,
                     )
+                } else {
+                    Box::new(std::iter::once(material.keywords.clone()))
                 };
-                for topology in [
-                    resources::Topology::Triangles,
-                    resources::Topology::Lines,
-                    resources::Topology::LineStrip,
-                    resources::Topology::Points,
-                ] {
-                    for mirrored in [false, true] {
-                        let (state, _) = self.draw_state(
-                            if errored {
-                                Default::default()
-                            } else {
-                                pass.state
-                            },
-                            pass.stencil_ref,
-                            mirrored,
-                        );
-                        self.compiled.pipeline(
-                            &self.device,
-                            id,
-                            PipelineKey {
-                                state,
-                                topology,
-                                format: target.format,
-                                depth: target.depth.is_some(),
-                                samples: target.samples,
-                                depth_bias: self.state.depth_bias.map(f32::to_bits),
-                                extra: target.extra_formats(),
-                            },
-                        )?;
+                for variant in variants {
+                    // Mesh calls use replay; raw procedural shaders can also use the literal keyword.
+                    // A raw Unity instance buffer is not needed by replay, so its unavailable form
+                    // must not make preparation of a supported mesh variant fail or log a warning.
+                    let instancing = variant.iter().any(|k| k == "INSTANCING_ON");
+                    for replay in [false, true] {
+                        if replay && !instancing {
+                            continue;
+                        }
+                        let mut keywords = variant.clone();
+                        if replay {
+                            keywords.push(unbound_shaders::MESH_INSTANCE_REPLAY.into());
+                        }
+                        let (id, errored) = if instancing && !replay {
+                            let Some(id) = self.compiled.variant(
+                                &self.device,
+                                &resolved.shader,
+                                &pass.program,
+                                &keywords,
+                                self.color_space == 1,
+                                &layout,
+                                compiled::VariantUse::OptionalWarmup,
+                            ) else {
+                                continue;
+                            };
+                            (id, false)
+                        } else {
+                            let (id, errored) = self.variant_or_error(
+                                &resolved.shader,
+                                &pass.program,
+                                &keywords,
+                                self.color_space == 1,
+                                &layout,
+                            );
+                            (
+                                id.ok_or_else(|| {
+                                    format!(
+                                        "shader `{}` pass {index} could not be warmed up",
+                                        resolved.shader
+                                    )
+                                })?,
+                                errored,
+                            )
+                        };
+                        for topology in [
+                            resources::Topology::Triangles,
+                            resources::Topology::Lines,
+                            resources::Topology::LineStrip,
+                            resources::Topology::Points,
+                        ] {
+                            for mirrored in [false, true] {
+                                let (state, _) = self.draw_state(
+                                    if errored {
+                                        Default::default()
+                                    } else {
+                                        pass.state
+                                    },
+                                    pass.stencil_ref,
+                                    mirrored,
+                                );
+                                self.compiled.pipeline(
+                                    &self.device,
+                                    id,
+                                    PipelineKey {
+                                        state,
+                                        topology,
+                                        format: target.format,
+                                        depth: target.depth.is_some(),
+                                        samples: target.samples,
+                                        depth_bias: self.state.depth_bias.map(f32::to_bits),
+                                        extra: target.extra_formats(),
+                                    },
+                                )?;
+                            }
+                        }
                     }
                 }
             }

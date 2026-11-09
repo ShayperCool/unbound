@@ -227,6 +227,29 @@ impl Resolver {
                 self.error_shader()
             }
         };
+        self.resolve_lab(material, lab)
+    }
+
+    /// Resolve all source SubShaders and their fallback chain for global preparation.
+    /// A visited set also terminates malformed cyclic fallback chains.
+    pub fn warmup_sources(&mut self, material: &Material) -> Result<Vec<ResolvedMaterial>, String> {
+        let mut current = material.shader.clone();
+        let mut seen = HashSet::new();
+        let mut sources = Vec::new();
+        while seen.insert(current.clone()) {
+            let (labs, fallback) = self.index.warmup_sources(&current).ok_or_else(|| {
+                format!("shader `{current}` has no readable source for global warm-up")
+            })?;
+            sources.extend(labs.into_iter().map(|lab| self.resolve_lab(material, lab)));
+            let Some(fallback) = fallback else {
+                break;
+            };
+            current = fallback;
+        }
+        Ok(sources)
+    }
+
+    fn resolve_lab(&mut self, material: &Material, lab: ShaderLab) -> ResolvedMaterial {
         let props = Props {
             material,
             lab: &lab,
@@ -544,6 +567,49 @@ fn render_state(props: &Props, pass: &PassInfo) -> (RenderState, u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn global_warmup_resolves_all_subshaders_use_passes_and_fallbacks() {
+        let first = r#"Shader "Warm/First" {
+            SubShader { LOD 300 Pass { Name "HIGH" ColorMask R } }
+            SubShader { LOD 100 UsePass "Warm/Source/SOURCE" }
+            Fallback "Warm/Fallback"
+        }"#;
+        let source = r#"Shader "Warm/Source" { SubShader { Pass { Name "SOURCE" ColorMask G
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            float4 vert(float4 p : POSITION) : SV_POSITION { return p; }
+            float4 frag() : SV_Target { return 1; }
+            ENDHLSL
+        } } }"#;
+        let fallback = r#"Shader "Warm/Fallback" {
+            SubShader { Tags { "RenderPipeline"="Other" } Pass { ColorMask B } }
+            Fallback "Warm/First"
+        }"#;
+        let unused = r#"Shader "Warm/Unused" { SubShader { Pass { } } }"#;
+        let mut resolver = Resolver::new(index(&[first, source, fallback, unused]));
+        let input = material("Warm/First", vec![]);
+        let ordinary = resolver.resolve(&input);
+        assert_eq!(ordinary.all.len(), 1);
+        assert_eq!(ordinary.all[0].as_ref().unwrap().state.color_mask, 8);
+        let sources = resolver.warmup_sources(&input).unwrap();
+        assert_eq!(
+            sources.len(),
+            3,
+            "a cyclic fallback visits each source once"
+        );
+        let masks: Vec<_> = sources
+            .iter()
+            .map(|s| s.all[0].as_ref().unwrap().state.color_mask)
+            .collect();
+        assert_eq!(masks, vec![8, 4, 2]);
+        assert!(
+            resolver
+                .warmup_sources(&material("Warm/Absent", vec![]))
+                .is_err()
+        );
+    }
 
     fn material(shader: &str, props: Vec<(&str, PropertyValue)>) -> Material {
         Material {

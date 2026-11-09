@@ -7,4 +7,10 @@
 {"case":"warmup-cold","step":"draw 3","pixels":"ff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffffff66ffff"}
 {"case":"warmup-cold","step":"draw instanced","pixels":"9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff"}
 {"case":"warmup-cold","step":"draw standalone instanced","pixels":"9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff9966ccff"}
+{"case":"warmup-cold","step":"draw unlisted instancing combination","pixels":"9966ffff9966ffff9966ffff9966ffff9966ffff9966ffff9966ffff9966ffff9966ffff9966ffff9966ffff9966ffff9966ffff9966ffff9966ffff9966ffff"}
+{"case":"warmup-cold","step":"draw lower LOD","pixels":"4060bfff4060bfff4060bfff4060bfff4060bfff4060bfff4060bfff4060bfff4060bfff4060bfff4060bfff4060bfff4060bfff4060bfff4060bfff4060bfff"}
+{"case":"warmup-cold","step":"draw global fallback 0","pixels":"33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff33cc66ff"}
+{"case":"warmup-cold","step":"draw global fallback 1","pixels":"cccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ffcccc66ff"}
+{"case":"warmup-cold","step":"all repeat call","result":"ok"}
+{"case":"warmup-cold","step":"global repeat","mode":"all","result":null,"state":{"name":"","shaders":1,"variants":5,"warmed":0,"isWarmedUp":false}}
 {"case":"end"}

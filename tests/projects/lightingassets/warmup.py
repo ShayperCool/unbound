@@ -9,8 +9,6 @@ import sys
 import editor_runner
 
 MODES = ('collection', 'progressive', 'startup', 'fallback', 'all')
-GLOBAL_ERROR = {'exception': 'System.NotSupportedException', 'message':
-                'Unbound: warming all loaded shader variants is not supported; use ShaderVariantCollection warm-up for explicit variants.'}
 
 
 def project(run, target, mode):
@@ -38,8 +36,22 @@ def publish(run, labels, mode):
         shutil.copy2(first/run.OUT, path)
     if mode == 'state':
         return publish_state(run, labels)
-    return editor_runner.publish([run.work(label) for label in labels], run.reference_root(run.PROBE)/f'warmup-{mode}.jsonl',
+    target = run.reference_root(run.PROBE)/f'warmup-{mode}.jsonl'
+    appending = mode == 'all' and target.exists()
+    candidate = run.work('publish-'+labels[0])/run.OUT if appending else target
+    code = editor_runner.publish([run.work(label) for label in labels], candidate,
         lambda d: [run.OUT], write, complete=[editor_runner.jsonl_complete(run.OUT, run.END)], gpu=True)
+    if code or not appending: return code
+    old, new = target.read_text().splitlines(), candidate.read_text().splitlines()
+    if json.loads(old[-1]) != run.END or new[:len(old)-1] != old[:-1]:
+        raise SystemExit('global warmup capture changed an existing reference row')
+    extra = [json.loads(line) for line in new[len(old)-1:-1]]
+    if {row.get('step') for row in extra} != {
+            'draw unlisted instancing combination', 'draw lower LOD', 'draw global fallback 0', 'draw global fallback 1', 'all repeat call', 'global repeat'} or len(extra) != 6:
+        raise SystemExit('global warmup append must contain exactly the six new controls')
+    target.write_text('\n'.join(new)+'\n')
+    print('appended six global warmup controls; every old row preserved')
+    return 0
 
 
 def publish_state(run, labels):
@@ -73,18 +85,15 @@ def compare(reference, candidate, log, mode):
         if a != b:
             print('warmup difference', json.dumps({'row': i, 'expected': a, 'actual': b}, sort_keys=True))
             failures.append((a, b))
-    if mode == 'all':
-        reference_call = {'case': 'warmup-cold', 'step': 'all call', 'result': 'ok'}
-        unsupported_call = {**reference_call, 'result': GLOBAL_ERROR}
-        if failures != [(reference_call, unsupported_call)]:
-            print('warmup all: expected exactly the documented unsupported call')
-            return 1
-        print('warmup all: explicit unsupported call verified; strict difference retained')
-        return 0
     if failures:
         return 1
     proofs = re.findall(r'WARMUP_GPU_PROOF ' + mode + r' (\d+) (\d+) (\d+) (\d+) (\d+) (\d+)', log)
-    valid = len(proofs) == (2 if mode == 'fallback' else 6)
+    valid = len(proofs) == (2 if mode == 'fallback' else 8 if mode == 'all' else 6)
+    if mode == 'all':
+        repeated = re.findall(r'WARMUP_GLOBAL_REPEAT (\d+) (\d+) (\d+) (\d+)', log)
+        valid &= len(repeated) == 1
+        for first_programs, first_pipelines, last_programs, last_pipelines in repeated:
+            valid &= (first_programs == last_programs and first_pipelines == last_pipelines)
     for proof in proofs:
         before_programs, before_pipelines, warm_programs, warm_pipelines, after_programs, after_pipelines = map(int, proof)
         if mode == 'startup':
@@ -93,6 +102,12 @@ def compare(reference, candidate, log, mode):
         else:
             valid &= warm_programs > before_programs and warm_pipelines > before_pipelines
         valid &= warm_programs == after_programs and warm_pipelines == after_pipelines
+    if mode == 'all':
+        inherited = re.findall(r'WARMUP_GLOBAL_FALLBACK (\d+) (\d+) (\d+) (\d+) (\d+) (\d+)', log)
+        valid &= len(inherited) == 2
+        for proof in inherited:
+            first_p, first_l, warm_p, warm_l, last_p, last_l = map(int, proof)
+            valid &= warm_p > first_p and warm_l > first_l and (warm_p, warm_l) == (last_p, last_l)
     if mode == 'fallback':
         own = re.findall(r'WARMUP_FALLBACK_OWN (\d+) (\d+) (\d+) (\d+)', log)
         valid &= len(own) == 1

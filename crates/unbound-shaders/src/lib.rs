@@ -282,6 +282,8 @@ pub struct Pragmas {
     pub fragment: Option<String>,
     /// `multi_compile` / `shader_feature` sets: (keywords, whether "none" is an option).
     pub keyword_sets: Vec<(Vec<String>, bool)>,
+    /// Keywords excluded from global preparation by `skip_variants`.
+    pub skipped_keywords: Vec<String>,
     /// `#pragma target`, as `SHADER_TARGET` (25 by default).
     pub target: u32,
     /// A surface shader's `#pragma surface` words after `surface` (its function, lighting model
@@ -295,6 +297,7 @@ impl Pragmas {
     fn read(pragmas: &[preprocess::Pragma]) -> Pragmas {
         let mut p = Pragmas {
             target: DEFAULT_SHADER_TARGET,
+            skipped_keywords: keywords::skipped_keywords(pragmas).cloned().collect(),
             ..Default::default()
         };
         for pragma in pragmas {
@@ -409,6 +412,35 @@ impl Pragmas {
         p
     }
 
+    /// Lazily enumerate the compiler's source choices, rather than a keyword-space powerset.
+    pub fn variants(&self) -> KeywordVariants {
+        let mut seen = std::collections::HashSet::new();
+        let groups: Vec<Vec<Option<String>>> = self
+            .keyword_sets
+            .iter()
+            .filter(|group| seen.insert(*group))
+            .map(|(keys, none)| {
+                let mut choices = Vec::new();
+                if *none {
+                    choices.push(None);
+                }
+                choices.extend(
+                    keys.iter()
+                        .filter(|k| !self.skipped_keywords.contains(k))
+                        .cloned()
+                        .map(Some),
+                );
+                choices
+            })
+            .collect();
+        let finished = groups.iter().any(Vec::is_empty);
+        KeywordVariants {
+            positions: vec![0; groups.len()],
+            groups,
+            finished,
+        }
+    }
+
     /// The keywords a material with `enabled` keywords draws with: per set, the first enabled
     /// one, else none when that is an option, else the set's first.
     pub fn select(&self, enabled: &[String]) -> Vec<String> {
@@ -423,6 +455,40 @@ impl Pragmas {
         selected.sort();
         selected.dedup();
         selected
+    }
+}
+
+/// Cold preparation iterator. Its storage grows with source groups, not variant count.
+pub struct KeywordVariants {
+    groups: Vec<Vec<Option<String>>>,
+    positions: Vec<usize>,
+    finished: bool,
+}
+
+impl Iterator for KeywordVariants {
+    type Item = Vec<String>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.finished {
+            return None;
+        }
+        let mut keys: Vec<String> = self
+            .groups
+            .iter()
+            .zip(&self.positions)
+            .filter_map(|(group, &position)| group[position].clone())
+            .collect();
+        keys.sort();
+        keys.dedup();
+        self.finished = true;
+        for (group, position) in self.groups.iter().zip(&mut self.positions).rev() {
+            *position += 1;
+            if *position < group.len() {
+                self.finished = false;
+                break;
+            }
+            *position = 0;
+        }
+        Some(keys)
     }
 }
 
@@ -1484,6 +1550,47 @@ fn resolve_include(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn global_variants_use_source_groups_and_skips() {
+        let lines: Vec<preprocess::Pragma> = [
+            "multi_compile A B",
+            "shader_feature _ C",
+            "multi_compile A B",
+            "skip_variants B",
+        ]
+        .into_iter()
+        .map(|line| preprocess::Pragma {
+            words: line.split_whitespace().map(String::from).collect(),
+        })
+        .collect();
+        let p = Pragmas::read(&lines);
+        let variants: std::collections::BTreeSet<_> = p.variants().collect();
+        assert_eq!(variants, [words(&["A"]), words(&["A", "C"])].into());
+        assert_eq!(
+            p.variants().count(),
+            2,
+            "identical declarations do not multiply work"
+        );
+        assert_eq!(
+            Pragmas::default().variants().collect::<Vec<_>>(),
+            vec![Vec::<String>::new()]
+        );
+        let excluded = Pragmas {
+            keyword_sets: vec![(words(&["A"]), false)],
+            skipped_keywords: words(&["A"]),
+            ..Default::default()
+        };
+        assert_eq!(excluded.variants().count(), 0);
+        let optional = Pragmas {
+            keyword_sets: vec![(words(&["A"]), true)],
+            ..excluded
+        };
+        assert_eq!(
+            optional.variants().collect::<Vec<_>>(),
+            vec![Vec::<String>::new()]
+        );
+    }
 
     /// The desktop Editor's defines (what `unbound_project::Settings::shader_defines` gives
     /// Standalone).
@@ -2763,7 +2870,10 @@ void surf (Input IN, inout SurfaceOutput o) { o.Albedo = tex2D(_MainTex, IN.uv_M
         let mut o = shaderc::CompileOptions::new().unwrap();
         o.set_source_language(shaderc::SourceLanguage::HLSL);
         o.set_auto_bind_uniforms(true);
-        o.set_target_env(shaderc::TargetEnv::Vulkan, shaderc::EnvVersion::Vulkan1_1 as u32);
+        o.set_target_env(
+            shaderc::TargetEnv::Vulkan,
+            shaderc::EnvVersion::Vulkan1_1 as u32,
+        );
         let spv = compiler
             .compile_into_spirv(source, shaderc::ShaderKind::Compute, "t", "main", Some(&o))
             .unwrap();
@@ -2772,7 +2882,13 @@ void surf (Input IN, inout SurfaceOutput o) { o.Albedo = tex2D(_MainTex, IN.uv_M
             .global_expressions
             .iter()
             .map(|(_, e)| e)
-            .chain(module.entry_points[0].function.expressions.iter().map(|(_, e)| e))
+            .chain(
+                module.entry_points[0]
+                    .function
+                    .expressions
+                    .iter()
+                    .map(|(_, e)| e),
+            )
             .filter_map(|e| match e {
                 naga::Expression::Literal(naga::Literal::F32(v)) => Some(*v),
                 _ => None,

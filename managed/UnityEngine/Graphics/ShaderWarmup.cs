@@ -9,13 +9,35 @@ namespace Unbound.Runtime
     internal static class ShaderWarmup
     {
         internal static Action<Shader, PassType, string[]> s_PrepareForTests;
+        internal static Action<string> s_SendForTests;
+
+        internal static void PrepareAll()
+        {
+            var shaders = Resources.FindObjectsOfTypeAll<Shader>();
+            Flush();
+            foreach (var shader in shaders)
+                Send(shader.name, Array.Empty<int>(), Array.Empty<string>(), true);
+        }
+
+        static void Flush()
+        {
+            if (s_SendForTests != null) return;
+            GfxStream.SetColorSpace(QualitySettings.activeColorSpace);
+            GfxStream.Flush();
+        }
+
+        static void Send(string shader, IEnumerable<int> passes, string[] keywords, bool allVariants)
+        {
+            var request = JsonSerializer.Serialize(new { shader, passes, keywords, all_variants = allVariants });
+            if (s_SendForTests != null) s_SendForTests(request);
+            else Native.Call("shader-warmup", request);
+        }
 
         internal static void Prepare(Shader shader, PassType type, string keywords)
         {
             var keys = keywords.Length == 0 ? Array.Empty<string>() : keywords.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (s_PrepareForTests != null) { s_PrepareForTests(shader, type, keys); return; }
-            GfxStream.SetColorSpace(QualitySettings.activeColorSpace);
-            GfxStream.Flush();
+            Flush();
             var info = ShaderPassInfo.Of(shader);
             if (info == null || !info.Found)
                 throw new NotSupportedException("Unbound: shader warm-up requires readable passes and an active renderer.");
@@ -30,7 +52,7 @@ namespace Unbound.Runtime
                 return passes.Count > 0;
             }, out _);
             if (source == null) return;
-            Native.Call("shader-warmup", JsonSerializer.Serialize(new { shader = source.DrawnName, passes, keywords = keys }));
+            Send(source.DrawnName, passes, keys, false);
         }
     }
 }

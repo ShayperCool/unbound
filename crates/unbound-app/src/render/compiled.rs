@@ -170,6 +170,22 @@ impl CompiledPrograms {
         }
     }
 
+    /// Enumerate source keyword choices through the same compiler used for ordinary draws.
+    pub fn warmup_variants(
+        &mut self,
+        program: &Program,
+        linear: bool,
+    ) -> Result<unbound_shaders::KeywordVariants, String> {
+        let compiler = self
+            .compiler
+            .as_mut()
+            .ok_or("shader compiler is unavailable")?;
+        compiler
+            .pragmas(program, linear)
+            .map(|p| p.variants())
+            .map_err(|e| format!("{e:#}"))
+    }
+
     /// Diagnostic counts, queried explicitly by the cold shader warm-up probe.
     pub fn prepared_counts(&self, shader: &str) -> (usize, usize) {
         let programs = self
