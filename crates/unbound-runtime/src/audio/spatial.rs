@@ -216,6 +216,8 @@ impl MonoGains {
         let flat = 1.0 - blend;
         let [l2, r2] = balance(pan);
         let pan = pan.clamp(-1.0, 1.0);
+        // The 3D level lands on the first speaker level whatever the pan or direction, so a
+        // panned mono clip mixes down asymmetrically (`context_mono_3d_half_right`).
         let left = flat * ((1.0 - pan) * 0.5).sqrt() + blend;
         let right = flat * ((1.0 + pan) * 0.5).sqrt();
         Self {
@@ -711,5 +713,15 @@ mod tests {
             "{}",
             half.mono
         );
+        // Pan +0.5 is not the mirror image (`context_mono_3d_half_right`): (0.75, 0.433).
+        let right = MonoGains::new(0.5, 0.5, volume);
+        assert!(
+            (right.mono - 0.866_025_4 * volume).abs() < 1e-6,
+            "{}",
+            right.mono
+        );
+        // A stereo clip blends its 2D channel levels with unity (`context_mono_3d_stereo_half`).
+        let [l, r] = half.stereo;
+        assert!((l - 0.8535 * volume).abs() < 1e-6 && (r - 0.676_75 * volume).abs() < 1e-6);
     }
 }

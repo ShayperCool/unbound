@@ -594,8 +594,8 @@ pub struct Source {
 }
 
 impl Source {
-    /// Sizes the scripts' layout buffer on the control thread, so the first script call on
-    /// the audio thread does not allocate.
+    /// Sizes the scripts' layout buffer on the control thread, so passing a script the layout's
+    /// channels does not allocate on the audio thread.
     fn reserve_layout_scratch(&mut self, config: &MixerConfig) {
         let samples = config.buffer_size.max(BLOCK as u32) as usize * config.output_channels();
         self.layout_scratch
@@ -1393,10 +1393,9 @@ impl Mixer {
         }
     }
 
-    /// Reports admission before a later render can change the source's voice counts.
     /// Layouts wider than stereo carry only their front pair: Unity 6000.0.71f1 also feeds a mono
-    /// 2D clip to LFE in 5.1 and 7.1 (tests/projects/audiopitch `context_mode5point1_clip`), pans
-    /// 3D sources across every speaker, and keeps the other channels source scripts write.
+    /// 2D clip to LFE in 5.1 and 7.1 (tests/projects/audiopitch `context_mode5point1_clip`) and
+    /// keeps the other channels source scripts write; 3D sources in surround are unmeasured.
     /// Says so once.
     fn warn_surround_approximation(&mut self, handle: u64, cmd: &AudioSourceCommand) {
         if self.warned_surround || self.config.output_channels() <= 2 {
@@ -1423,6 +1422,7 @@ impl Mixer {
         }
     }
 
+    /// Reports admission before a later render can change the source's voice counts.
     pub fn command(&mut self, handle: u64, cmd: &AudioSourceCommand) -> bool {
         self.prepare_source(handle);
         self.warn_surround_approximation(handle, cmd);
