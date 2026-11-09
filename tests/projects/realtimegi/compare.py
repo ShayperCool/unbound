@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 """Compares a realtimegi capture (engine) with the Unity reference.
 
-    compare.py REFERENCE CAPTURE [--log ENGINE_LOG] [--strict]
+    compare.py REFERENCE CAPTURE [--strict]
 
-Per case of values.jsonl: the renderers' realtime lightmap index and scale/offset and the
-lightmaps mode must be equal; light probe SH (each sample point, 27 coefficients) and the ambient
-probe within ABS + REL * |reference|. Per atlas (.atlas/.dir): the covered texels must be the
-same, and each covered texel's RGB within ABS + REL * |reference|. Frames (.png) report the shared image
-measure (mean, worst and pixels over 8 of the per-pixel max-channel difference) only. Every failing value is listed (no truncation of the counts).
+Two classes of values:
 
-Without --strict the comparison is a report (exit 0): Unbound does not draw precomputed realtime
-GI yet, so the atlases and probes are expected to differ. With --strict any failure exits 1.
+- State, always gated (exit 1 on any difference): every reference case present, no extra case,
+  each renderer's realtime lightmap index and scale/offset, the lightmaps mode, the light probe
+  count and baked coefficients, DynamicGI.isConverged and the recorded API defaults.
+- Lighting, a report until Unbound draws precomputed realtime GI (gated with --strict): light
+  probe SH (each sample point, 27 coefficients) and the ambient probe within ABS + REL *
+  |reference|; per atlas (.atlas/.dir) the covered texels must be the same and each covered
+  texel's RGB within ABS + REL * |reference|; frames (.png) report the shared image measure (mean,
+  worst and pixels over 8 of the per-pixel max-channel difference).
+
+Every failing value is written to CAPTURE/compare-details.txt; the output lists one line per
+failing case, atlas or frame.
 """
 import argparse
 import json
@@ -23,6 +28,7 @@ from value_probe import image_difference  # noqa: E402
 
 ABS = 0.02
 REL = 0.05
+STATE_KEYS = ('converged', 'indirectScale', 'updateThreshold', 'size', 'lightmapsMode')
 
 
 def records(path):
@@ -46,22 +52,45 @@ def close(a, b):
     return abs(a - b) <= ABS + REL * abs(b)
 
 
-def compare_values(ref, cap, failures):
+class Result:
+    def __init__(self):
+        self.state, self.lighting, self.details, self.lines = [], [], [], []
+
+    def fail(self, kind, summary, details=()):
+        (self.state if kind == 'state' else self.lighting).append(summary)
+        self.details.append(summary)
+        self.details.extend('  ' + d for d in details)
+
+
+def compare_values(ref, cap, result):
+    for name in sorted(set(cap) - set(ref)):
+        # `<case>-noatlas`: the capture found no realtime lightmap to read (a lighting difference).
+        kind = 'lighting' if name.endswith('-noatlas') else 'state'
+        result.fail(kind, f'{name}: extra case', [json.dumps(cap[name])[:2000]])
     for name, r in ref.items():
         c = cap.get(name)
         if c is None:
-            failures.append(f'{name}: missing')
+            result.fail('state', f'{name}: missing')
             continue
-        for key in ('lightmapsMode',):
-            if r.get(key) != c.get(key):
-                failures.append(f'{name}: {key} {c.get(key)} != {r.get(key)}')
+        for key in STATE_KEYS:
+            if key in r and r[key] != c.get(key):
+                result.fail('state', f'{name}: {key} {c.get(key)} != {r[key]}')
         if 'renderers' in r:
             if [(x['name'], x['index']) for x in r['renderers']] != [(x['name'], x['index']) for x in c.get('renderers', [])]:
-                failures.append(f'{name}: renderers/indices {c.get("renderers")} != {r["renderers"]}')
+                result.fail('state', f'{name}: renderers/indices {c.get("renderers")} != {r["renderers"]}')
             else:
                 for x, y in zip(r['renderers'], c['renderers']):
                     if any(abs(a - b) > 1e-6 for a, b in zip(x['st'], y['st'])):
-                        failures.append(f'{name}: {x["name"]} st {y["st"]} != {x["st"]}')
+                        result.fail('state', f'{name}: {x["name"]} st {y["st"]} != {x["st"]}')
+        if 'baked' in r:
+            if r.get('count') != c.get('count') or len(r['baked']) != len(c.get('baked', [])):
+                result.fail('state', f'{name}: {c.get("count")} probes with {len(c.get("baked", []))} baked '
+                                     f'values != {r.get("count")} with {len(r["baked"])}')
+            else:
+                bad = [f'[{k}] {a!r} vs {b!r}' for k, (a, b) in enumerate(zip(c['baked'], r['baked']))
+                       if not close(a, b)]
+                if bad:
+                    result.fail('state', f'{name}: {len(bad)} baked coefficients off', bad)
         for key in ('probes', 'ambientProbe'):
             if key not in r:
                 continue
@@ -69,42 +98,32 @@ def compare_values(ref, cap, failures):
             if key == 'ambientProbe':
                 rv, cv = [rv], [cv] if cv is not None else None
             if cv is None or len(cv) != len(rv):
-                failures.append(f'{name}: {key} missing or of another length')
+                result.fail('lighting', f'{name}: {key} missing or of another length')
                 continue
             for i, (rs, cs) in enumerate(zip(rv, cv)):
                 bad = [k for k, (a, b) in enumerate(zip(cs, rs)) if not close(a, b)]
                 if bad:
                     worst = max(bad, key=lambda k: abs(cs[k] - rs[k]))
-                    failures.append(f'{name}: {key}[{i}] {len(bad)} coefficients off, worst [{worst}] '
-                                    f'{cs[worst]:.5g} vs {rs[worst]:.5g}')
-        if 'baked' in r:
-            if r.get('count') != c.get('count') or len(r['baked']) != len(c.get('baked', [])):
-                failures.append(f'{name}: {c.get("count")} probes with {len(c.get("baked", []))} baked values '
-                                f'!= {r.get("count")} with {len(r["baked"])}')
-            else:
-                bad = sum(not close(a, b) for a, b in zip(c['baked'], r['baked']))
-                if bad:
-                    failures.append(f'{name}: {bad} baked coefficients off')
-        for key in ('converged', 'indirectScale', 'updateThreshold', 'size'):
-            if key in r and r[key] != c.get(key):
-                failures.append(f'{name}: {key} {c.get(key)} != {r[key]}')
+                    result.fail('lighting', f'{name}: {key}[{i}] {len(bad)} coefficients off, worst [{worst}] '
+                                            f'{cs[worst]:.5g} vs {rs[worst]:.5g}',
+                                [f'[{k}] {cs[k]!r} vs {rs[k]!r}' for k in bad])
 
 
-def compare_atlas(name, ref_path, cap_path, failures, lines):
+def compare_atlas(name, ref_path, cap_path, result):
     if not cap_path.is_file():
-        failures.append(f'{name}: missing')
+        result.fail('lighting', f'{name}: missing')
         return
     rw, rh, rv = atlas(ref_path)
     cw, ch, cv = atlas(cap_path)
     if (rw, rh) != (cw, ch):
-        failures.append(f'{name}: size {cw}x{ch} != {rw}x{rh}')
+        result.fail('lighting', f'{name}: size {cw}x{ch} != {rw}x{rh}')
         return
-    coverage = bad = 0
+    coverage, bad = [], []
     total = worst = 0.0
     for t in range(rw * rh):
         ra, ca = rv[4 * t + 3] > 0, cv[4 * t + 3] > 0
         if ra != ca:
-            coverage += 1
+            coverage.append(f'texel ({t % rw},{t // rw}) covered: {ca} vs {ra}')
             continue
         if not ra:
             continue
@@ -114,44 +133,50 @@ def compare_atlas(name, ref_path, cap_path, failures, lines):
             total += d
             worst = max(worst, d)
             if not close(a, b):
-                bad += 1
-    lines.append(f'{name}: coverage differs at {coverage} texels, {bad} values off, '
-                 f'mean |d| {total / max(1, rw * rh):.5f}, max |d| {worst:.5f}')
+                bad.append(f'texel ({t % rw},{t // rw}) channel {k}: {a!r} vs {b!r}')
+    result.lines.append(f'{name}: coverage differs at {len(coverage)} texels, {len(bad)} values off, '
+                        f'mean |d| {total / max(1, rw * rh):.5f}, max |d| {worst:.5f}')
     if coverage:
-        failures.append(f'{name}: coverage differs at {coverage} texels')
+        result.fail('lighting', f'{name}: coverage differs at {len(coverage)} texels', coverage)
     if bad:
-        failures.append(f'{name}: {bad} texel values off (max |d| {worst:.5f})')
+        result.fail('lighting', f'{name}: {len(bad)} texel values off (max |d| {worst:.5f})', bad)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('reference')
     parser.add_argument('capture')
-    parser.add_argument('--log')
     parser.add_argument('--strict', action='store_true')
     args = parser.parse_args()
     ref, cap = Path(args.reference), Path(args.capture)
-    failures, lines = [], []
+    result = Result()
     if not (cap/'values.jsonl').is_file():
         print(f'realtimegi: no values.jsonl in {cap}')
         return 1
-    compare_values(records(ref/'values.jsonl'), records(cap/'values.jsonl'), failures)
+    compare_values(records(ref/'values.jsonl'), records(cap/'values.jsonl'), result)
     for path in sorted(ref.iterdir()):
         if path.suffix in ('.atlas', '.dir'):
-            compare_atlas(path.name, path, cap/path.name, failures, lines)
+            compare_atlas(path.name, path, cap/path.name, result)
         elif path.suffix == '.png':
             if not (cap/path.name).is_file():
-                failures.append(f'{path.name}: missing')
+                result.fail('lighting', f'{path.name}: missing')
                 continue
             diff = image_difference(path, cap/path.name)
-            lines.append(f'{path.name}: images mean {diff[0]:.2f} worst {diff[1]} over8 {diff[2]}'
-                         if diff is not None else f'{path.name}: size differs')
-    for line in lines:
+            result.lines.append(f'{path.name}: images mean {diff[0]:.2f} worst {diff[1]} over8 {diff[2]}'
+                                if diff is not None else f'{path.name}: size differs')
+    for extra in sorted(p.name for p in cap.iterdir() if p.suffix in ('.atlas', '.dir', '.png')
+                        and not (ref/p.name).exists()):
+        result.fail('state', f'{extra}: extra output')
+    (cap/'compare-details.txt').write_text('\n'.join(result.details) + '\n')
+    for line in result.lines:
         print(line)
-    for failure in failures:
-        print('FAIL', failure)
-    print(f'realtimegi: {len(failures)} failing' + ('' if args.strict else ' (report)'))
-    return 1 if failures and args.strict else 0
+    for failure in result.state:
+        print('FAIL state', failure)
+    for failure in result.lighting:
+        print('FAIL lighting', failure)
+    print(f'realtimegi: {len(result.state)} failing state values, {len(result.lighting)} failing lighting '
+          f'values' + ('' if args.strict else ' (lighting reported)') + f'; details {cap}/compare-details.txt')
+    return 1 if result.state or (result.lighting and args.strict) else 0
 
 
 if __name__ == '__main__':

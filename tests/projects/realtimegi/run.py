@@ -119,13 +119,13 @@ def gate(label, frames):
     project = copy_project(out/'project')
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     env = {**os.environ, 'REALTIME_GI_OUT': str(out/'engine')}
-    command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '900', cli, 'run', '-p', str(project),
+    command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '1500', cli, 'run', '-p', str(project),
                '--no-watch', '--frames', str(frames), '--size', '320x180']
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     print(f'engine exit {code}; log {out}/engine.log')
-    return subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference_root(PROBE)), str(out/'engine'),
-                           '--log', str(out/'engine.log')]).returncode
+    return subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference_root(PROBE)),
+                           str(out/'engine')]).returncode
 
 
 def main():
@@ -133,7 +133,7 @@ def main():
     parser.add_argument('mode', choices=['setup', 'record', 'publish', 'gate'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label', default='current')
-    parser.add_argument('--frames', type=int, default=4000)
+    parser.add_argument('--frames', type=int, default=12000)
     args = parser.parse_args()
     if args.mode == 'setup':
         return setup(args.label)

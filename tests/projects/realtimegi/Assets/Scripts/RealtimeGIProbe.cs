@@ -23,9 +23,9 @@ public class RealtimeGIProbe : MonoBehaviour
 {
     const int Width = 192, Height = 108;
     // Unity updates realtime GI over several frames on worker threads, so the frame at which a
-    // change shows is not reproducible; captures wait for DynamicGI.isConverged and then a fixed
-    // number of frames, so they record the converged lighting.
-    const int BeforeConverged = 30, MaxFrames = 3000, AfterConverged = 60;
+    // change shows is not reproducible; captures wait a fixed number of frames, then for
+    // DynamicGI.isConverged, then a few more frames, so they record the converged lighting.
+    const int BeforeConverged = 300, MaxFrames = 3000, AfterConverged = 60;
     readonly StringBuilder m_Out = new StringBuilder();
     string m_Dir;
     Material m_Dump;
@@ -77,16 +77,20 @@ public class RealtimeGIProbe : MonoBehaviour
         DynamicGI.indirectScale = indirect;
         yield return Converge();
 
-        // Emission: DynamicGI.SetEmissive, then a material change before and after UpdateGIMaterials.
+        // Emission: a material change with UpdateGIMaterials, then DynamicGI.SetEmissive and another
+        // material change with UpdateGIMaterials after it. (Without the call the Editor picks the
+        // material change up or not depending on timing, so there is no reference for that.)
+        s.panel.sharedMaterial.SetColor("_EmissionColor", new Color(0.2f, 1f, 0.2f) * 2f);
+        s.panel.UpdateGIMaterials();
+        yield return Converge();
+        Capture("room-emission-call", s);
         DynamicGI.SetEmissive(s.panel, new Color(0f, 1f, 1f) * 3f);
         yield return Converge();
         Capture("room-setemissive", s);
         s.panel.sharedMaterial.SetColor("_EmissionColor", new Color(1f, 0f, 1f) * 3f);
-        yield return Converge();
-        Capture("room-emission-nocall", s);
         s.panel.UpdateGIMaterials();
         yield return Converge();
-        Capture("room-emission-call", s);
+        Capture("room-setemissive-then-call", s);
 
         // Albedo: the red wall turns blue, before and after UpdateGIMaterials.
         s.leftWall.sharedMaterial.color = new Color(0.1f, 0.1f, 0.8f);
@@ -96,26 +100,34 @@ public class RealtimeGIProbe : MonoBehaviour
         yield return Converge();
         Capture("room-albedo-call", s);
 
-        // Environment: the ambient color, before and after DynamicGI.UpdateEnvironment.
+        // Environment: the ambient color, before and after DynamicGI.UpdateEnvironment; then a
+        // procedural skybox as the ambient source, its exposure changed before and after the call.
         RenderSettings.ambientLight = new Color(0.6f, 0.5f, 0.2f);
         yield return Converge();
         Capture("room-env-nocall", s);
         DynamicGI.UpdateEnvironment();
         yield return Converge();
         Capture("room-env-call", s);
+        var sky = new Material(Shader.Find("Skybox/Procedural"));
+        sky.SetFloat("_Exposure", 1f);
+        RenderSettings.skybox = sky;
+        RenderSettings.ambientMode = AmbientMode.Skybox;
+        DynamicGI.UpdateEnvironment();
+        yield return Converge();
+        Capture("room-sky", s);
+        sky.SetFloat("_Exposure", 3f);
+        yield return Converge();
+        Capture("room-sky-nocall", s);
+        DynamicGI.UpdateEnvironment();
+        yield return Converge();
+        Capture("room-sky-call", s);
+        RenderSettings.ambientMode = AmbientMode.Flat;
+        RenderSettings.skybox = null;
+        DynamicGI.UpdateEnvironment();
 
-        // updateThreshold: a 5% intensity change under a 50% threshold, then a 100% one.
-        float threshold = DynamicGI.updateThreshold;
-        Record("room-threshold-default", "\"updateThreshold\":" + F(threshold));
-        DynamicGI.updateThreshold = 50f;
-        s.point.intensity = 4.2f;
-        yield return Converge();
-        Capture("room-threshold-small", s);
-        s.point.intensity = 8f;
-        yield return Converge();
-        Capture("room-threshold-big", s);
-        DynamicGI.updateThreshold = threshold;
-        s.point.intensity = 2f;
+        // updateThreshold leaves output that depends on update timing (changes below it wait for
+        // later ones); only its default is recorded.
+        Record("room-threshold-default", "\"updateThreshold\":" + F(DynamicGI.updateThreshold));
 
         // The point light off and the spot light on.
         s.point.enabled = false;
@@ -130,6 +142,7 @@ public class RealtimeGIProbe : MonoBehaviour
             yield return Load(name);
             s = Scene();
             var label = name.ToLowerInvariant();
+            Record(label + "-indirectscale-default", "\"indirectScale\":" + F(DynamicGI.indirectScale));
             yield return Converge();
             Capture(label + "-base", s);
             s.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);

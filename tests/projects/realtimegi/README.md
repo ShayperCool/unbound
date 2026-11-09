@@ -34,44 +34,54 @@ records, per case:
   the probe positions, the sphere and one more point, and `RenderSettings.ambientProbe`.
 - `<case>.png`: the main camera at 192x108.
 
-Cases: `room-base`; `room-moved` (the point light moved); `room-intensity` (intensity 2 to 4);
-`room-bounce` (`Light.bounceIntensity` 3); `room-indirectscale` (`DynamicGI.indirectScale` 2,
-then restored); `room-setemissive` (`DynamicGI.SetEmissive` on the panel); `room-emission-nocall`
-and `room-emission-call` (the panel material's emission changed, before and after
-`Renderer.UpdateGIMaterials`); `room-albedo-nocall` and `room-albedo-call` (the red wall turned
+Cases: `room-base` (plus `room-lightprobes`: the baked probe count and coefficients);
+`room-moved` (the point light moved); `room-intensity` (intensity 2 to 4); `room-bounce`
+(`Light.bounceIntensity` 3); `room-indirectscale` (`DynamicGI.indirectScale` 2, then restored;
+its default is recorded per scene); `room-emission-call` (the panel material's emission changed
+and `Renderer.UpdateGIMaterials` called); `room-setemissive` (`DynamicGI.SetEmissive` on the
+panel); `room-setemissive-then-call` (another material emission change and
+`UpdateGIMaterials` after it); `room-albedo-nocall` and `room-albedo-call` (the red wall turned
 blue, before and after `UpdateGIMaterials`); `room-env-nocall` and `room-env-call` (the ambient
-color changed, before and after `DynamicGI.UpdateEnvironment`); `room-threshold-small` and
-`room-threshold-big` (`DynamicGI.updateThreshold` 50, intensity +5% then +90%);
-`room-pointoff`; `room-spot`; `roomscaled-base`, `roomscaled-moved`; `roomdirectional-base`,
-`roomdirectional-moved`.
+color changed, before and after `DynamicGI.UpdateEnvironment`); `room-sky` (a procedural skybox
+as the ambient source, with `UpdateEnvironment`), `room-sky-nocall` and `room-sky-call` (its
+exposure changed, before and after the call); `room-pointoff`; `room-spot`; `roomscaled-base`,
+`roomscaled-moved`; `roomdirectional-base`, `roomdirectional-moved`. The default of
+`DynamicGI.updateThreshold` is recorded.
 
 ## What the Editor does (this capture)
 
 Unity updates realtime GI over several frames on worker threads; even with
 `DynamicGI.synchronousMode` the first frames after a change differ between runs. Each case
-therefore waits 30 frames, then until `DynamicGI.isConverged`, then 60 frames: the references are
-the converged lighting, and two independent captures are byte-identical.
+therefore waits 300 frames, then until `DynamicGI.isConverged`, then 60 frames: the references
+are the converged lighting, and two independent captures are byte-identical. Cases that depend
+on update timing are not recorded: a material emission change without `UpdateGIMaterials` (the
+Editor picks it up in some runs and not in others) and `updateThreshold` above its default
+(changes below the threshold wait for later ones, so the converged output depends on timing).
 
 Observations (not documented guarantees):
 
+- Light probes precomputed for realtime GI only: `LightProbes.count` is the number of probes and
+  `bakedProbes` is empty.
+- `DynamicGI.indirectScale` starts as the scene's Lighting Settings Indirect Intensity (1, and 1.5
+  in `RoomScaled`); 2 doubles the realtime lightmap texels. `updateThreshold` defaults to 1.
 - Doubling the light intensity raises the texels about fourfold and `Light.bounceIntensity` 3
   about tenfold: more than proportionally, as when the light's color is scaled before its
   conversion to linear (the project does not use linear light intensity).
-- `DynamicGI.indirectScale` 2 doubles the realtime lightmap texels.
-- `DynamicGI.SetEmissive` changes the panel's bounced light at once; a later material emission
-  change is not picked up, not even after `Renderer.UpdateGIMaterials` (the color set with
-  `SetEmissive` stays).
+- After `DynamicGI.SetEmissive`, a material emission change is ignored even with
+  `Renderer.UpdateGIMaterials` (the color set with `SetEmissive` stays). Without `SetEmissive`,
+  the change shows after `UpdateGIMaterials`.
 - An albedo change is ignored until `Renderer.UpdateGIMaterials`, as documented.
-- The ambient color change is picked up without `DynamicGI.UpdateEnvironment`; the call changes
-  nothing more.
-- With `DynamicGI.updateThreshold` 50, a 5% intensity change still updates the lighting under
-  `synchronousMode`.
+- `DynamicGI.UpdateEnvironment` changed nothing measurable: an ambient color change and a
+  skybox exposure change are both picked up without it.
 
 ## Unbound
 
 Unbound reads none of the precomputed realtime GI yet: it warns once per scene and draws no
-realtime lightmaps, so the atlases, probes and frames differ. The gate compares without a
-verdict (`realtimegi: N failing (report)`); `compare.py --strict` fails on every difference.
+realtime lightmaps, so the atlases, probes and frames differ. The gate fails on state values
+(cases, realtime lightmap indices and scale/offset, lightmaps mode, probe count and baked
+coefficients, `isConverged`, API defaults), which match, and reports lighting values
+(`realtimegi: 0 failing state values, N failing lighting values`); `compare.py --strict` gates
+those too. Every failing value is written to `compare-details.txt` in the run directory.
 See [docs/REALTIME_GI.md](../../../docs/REALTIME_GI.md) for the data and the planned solver.
 
 ## Running
