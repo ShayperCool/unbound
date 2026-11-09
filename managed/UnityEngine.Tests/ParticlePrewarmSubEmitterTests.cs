@@ -212,19 +212,26 @@ namespace UnityEngine.Tests
                 var m = p.main; m.startLifetime = 1.5f; m.startSpeed = 2f; m.gravityModifier = 0.5f;
                 var e = p.emission; e.rateOverTime = 4f; e.SetBursts(new ParticleSystem.Burst[0]);
             }
-            var local = Parent(Configure);
-            var world = Parent(p => { Configure(p); var m = p.main; m.simulationSpace = ParticleSystemSimulationSpace.World; });
-            local.Play();
-            world.Play();
-            float g = 0.5f * -Physics.gravity.y;
-            foreach (var p in Particles(local))
+            // Set here: physics tests running in parallel earlier may leave another gravity behind.
+            var gravity = Physics.gravity;
+            Physics.gravity = new Vector3(0f, -9.81f, 0f);
+            try
             {
-                float age = p.startLifetime - p.remainingLifetime;
-                Assert.Equal(-0.5f * g * age * age, p.position.y, 3);
+                var local = Parent(Configure);
+                var world = Parent(p => { Configure(p); var m = p.main; m.simulationSpace = ParticleSystemSimulationSpace.World; });
+                local.Play();
+                world.Play();
+                float g = 0.5f * 9.81f;
+                foreach (var p in Particles(local))
+                {
+                    float age = p.startLifetime - p.remainingLifetime;
+                    Assert.Equal(-0.5f * g * age * age, p.position.y, 3);
+                }
+                var stepped = Particles(world).OrderBy(p => p.startLifetime - p.remainingLifetime).First(p => p.startLifetime - p.remainingLifetime > 0.2f);
+                float a = stepped.startLifetime - stepped.remainingLifetime;
+                Assert.True(Mathf.Abs(stepped.position.y + 0.5f * g * a * a) > 1e-2f);
             }
-            var stepped = Particles(world).OrderBy(p => p.startLifetime - p.remainingLifetime).First(p => p.startLifetime - p.remainingLifetime > 0.2f);
-            float a = stepped.startLifetime - stepped.remainingLifetime;
-            Assert.True(Mathf.Abs(stepped.position.y + 0.5f * g * a * a) > 1e-2f);
+            finally { Physics.gravity = gravity; }
         }
 
         [Theory]
