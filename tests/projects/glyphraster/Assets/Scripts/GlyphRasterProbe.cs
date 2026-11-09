@@ -10,6 +10,8 @@ public sealed class GlyphRasterProbe : MonoBehaviour
     readonly StringBuilder rows = new StringBuilder();
     string output;
     const string Characters = " AHilWgjéñ0@";
+    // Missing from Liberation Sans; FreeSans, DejaVu Sans and CJK faces hold them.
+    const string FallbackCharacters = "\u2200\u2318\u76f4";
     static readonly int[] Sizes = { 8, 11, 12, 13, 16, 24, 32, 48, 64, 96 };
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot()
@@ -51,6 +53,20 @@ public sealed class GlyphRasterProbe : MonoBehaviour
         }
         return result;
     }
+    void Glyph(string key, Font font, char ch, int size, FontStyle style, Texture2D atlas, Color32[] pixels)
+    {
+        bool found = font.GetCharacterInfo(ch, out var info, size, style);
+        Value(key + "/found", found);
+        if (!found) return;
+        Value(key + "/metrics", Metrics(info));
+#pragma warning disable 618
+        Value(key + "/raw", string.Join(",", info.vert.x.ToString("R", System.Globalization.CultureInfo.InvariantCulture), info.vert.y.ToString("R", System.Globalization.CultureInfo.InvariantCulture), info.vert.width.ToString("R", System.Globalization.CultureInfo.InvariantCulture), info.vert.height.ToString("R", System.Globalization.CultureInfo.InvariantCulture), info.width.ToString("R", System.Globalization.CultureInfo.InvariantCulture)));
+#pragma warning restore 618
+        Value(key + "/alpha", Convert.ToBase64String(GlyphPixels(info, atlas, pixels)));
+        CharacterInfo? entry = null;
+        foreach (var item in font.characterInfo) if (item.index == ch && item.size == size && item.style == style) { entry = item; break; }
+        Value(key + "/array", entry.HasValue ? Metrics(entry.Value) : "absent");
+    }
     IEnumerator Start()
     {
         Directory.CreateDirectory(output);
@@ -73,26 +89,27 @@ public sealed class GlyphRasterProbe : MonoBehaviour
                 // Finish the texture update before its GPU readback.
                 yield return null;
                 var atlas = ReadAtlas(font.material.mainTexture); var pixels = atlas.GetPixels32();
-                foreach (char ch in Characters)
-                {
-                    string key = name + "/" + size + "/" + (int)style + "/" + (int)ch;
-                    bool found = font.GetCharacterInfo(ch, out var info, size, style);
-                    Value(key + "/found", found);
-                    if (!found) continue;
-                    Value(key + "/metrics", Metrics(info));
-#pragma warning disable 618
-                    Value(key + "/raw", string.Join(",", info.vert.x.ToString("R", System.Globalization.CultureInfo.InvariantCulture), info.vert.y.ToString("R", System.Globalization.CultureInfo.InvariantCulture), info.vert.width.ToString("R", System.Globalization.CultureInfo.InvariantCulture), info.vert.height.ToString("R", System.Globalization.CultureInfo.InvariantCulture), info.width.ToString("R", System.Globalization.CultureInfo.InvariantCulture)));
-#pragma warning restore 618
-                    Value(key + "/alpha", Convert.ToBase64String(GlyphPixels(info, atlas, pixels)));
-                    CharacterInfo? entry = null;
-                    foreach (var item in font.characterInfo) if (item.index == ch && item.size == size && item.style == style) { entry = item; break; }
-                    Value(key + "/array", entry.HasValue ? Metrics(entry.Value) : "absent");
-                }
+                foreach (char ch in Characters) Glyph(name + "/" + size + "/" + (int)style + "/" + (int)ch, font, ch, size, style, atlas, pixels);
                 if (size == 96 && style == FontStyle.BoldAndItalic)
                 {
                     string raw = Path.Combine(output, "../raw-atlases"); Directory.CreateDirectory(raw);
                     File.WriteAllBytes(Path.Combine(raw, name + "-atlas.png"), atlas.EncodeToPNG());
                 }
+                Destroy(atlas);
+            }
+        }
+        // Characters the faces lack: per-character fallback through the font's names and the
+        // OS fallback families, in the requesting font's rendering mode and style.
+        foreach (string name in new[] { "Legacy", "Synthetic", "Hinted" })
+        {
+            Font font = name == "Legacy" ? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") : Resources.Load<Font>(name);
+            foreach (int c in new[] { 0x1f, 0x20, 'A', 0x2200, 0x2318, 0x76f4, 0xe000 }) Value("fallback/" + name + "/has/" + c, font.HasCharacter((char)c));
+            foreach (int size in new[] { 13, 32 }) foreach (FontStyle style in new[] { FontStyle.Normal, FontStyle.Bold })
+            {
+                font.RequestCharactersInTexture(FallbackCharacters, size, style);
+                yield return null;
+                var atlas = ReadAtlas(font.material.mainTexture); var pixels = atlas.GetPixels32();
+                foreach (char ch in FallbackCharacters) Glyph("fallback/" + name + "/" + size + "/" + (int)style + "/" + (int)ch, font, ch, size, style, atlas, pixels);
                 Destroy(atlas);
             }
         }

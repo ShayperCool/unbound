@@ -8,10 +8,23 @@ Synthetic renames the Liberation Sans family to RasterTest so installed family s
 replace it. `FONT-LICENSE.txt` covers the supplied fonts. Hinted, Raster and OS use the same
 font bytes with different importer rendering modes.
 
-The existing default-font case measures system-backed glyphs while retaining the resource
-face's ascent and line-height metrics. The release compatibility profile selects that fallback
-policy. Font face selection is cached; existing TextCore glyph-index and distance-field paths
-keep their original face and renderer.
+The built-in LegacyRuntime font holds no font data in the Editor: its ascent and line height
+come from the resource face, its glyphs from OS faces. A character a font's own face lacks
+(and every LegacyRuntime character) is looked up per character in the font's fallback fonts,
+the OS faces of its font names, then the OS fallback families in order: Arial, Arial Unicode
+MS, Helvetica Neue, Microsoft Sans Serif, Microsoft YaHei, Malgun Gothic, Gulim, MS Gothic,
+Nirmala UI, the Linux families (FreeSans, Droid Sans, DejaVu Sans, Liberation Sans, WenQuanYi
+Micro Hei, HYSong, NanumGothic, TakaoGothic, Noto Sans CJK JP/KR/SC/TC, Droid Sans Fallback,
+Noto Color Emoji) and LastResort. A fallback face renders in the requesting font's rendering
+mode. A bold or italic request uses the installed face of the same family with that style when
+there is one (an intrinsic style is never synthesized again). The `fallback/*` keys cover
+characters missing from Liberation Sans (∀ in FreeSans, ⌘ in DejaVu Sans, 直 in Noto Sans CJK
+JP) for LegacyRuntime, a smooth and a hinted project font, normal and bold. The release
+compatibility profile selects this fallback policy; TextCore's glyph-index and distance-field
+paths keep their own face and renderer.
+
+`Font.HasCharacter` of a dynamic font answers true for every character above U+001F, whether a
+face has it (`fallback/*/has/*`, including a private-use character no face holds).
 
 | Observation | Matching configuration |
 | --- | --- |
@@ -22,9 +35,10 @@ keep their original face and renderer.
 | Italic synthesis | Horizontal shear 0.25, only without an intrinsic italic face |
 | Bold synthesis | Bitmap emboldening by max(size / 55, 1), unchanged advance; logical top moves by that strength |
 | Metrics | Bitmap bearings and dimensions, original horizontal advance; existing CharacterInfo rounding and one-pixel padding |
+| Other bitmap layouts | Converted to 8 bits per pixel; fewer than 256 gray levels stretched to 0..255 |
 
-The implementation uses the bundled FreeType 2.13.2 in freetype-sys 0.23.0. These are measured
-settings for this release and fixture set. Other releases, colour glyphs and atlas packing
+The implementation uses the bundled FreeType 2.13.2 in freetype-sys 0.23.0 with the settings
+above; all measured glyphs match byte for byte. Other releases, colour glyphs and atlas packing
 parity remain unmeasured. The reference compares glyph coverage after applying the public UV
 corners, independently of packing position and rotation. Full raw atlas PNGs stay in the run
 cache outside the canonical capture. No alpha adjustments or per-character corrections apply.
