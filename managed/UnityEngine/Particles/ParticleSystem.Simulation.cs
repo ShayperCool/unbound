@@ -69,6 +69,7 @@ namespace UnityEngine
             if (dt <= 0f) return false;
             m_CollisionEvents.Clear();
             ClearTriggerEvents();
+            m_Rays = m_AssignedRays;
             m_CollectTriggers = true;
             try
             {
@@ -713,6 +714,7 @@ namespace UnityEngine
             float duration = Mathf.Max(m_Main.duration, 0.0001f);
             int requestIndex = 0, requestStart = 0;
             m_Newborn = true;
+            BeginRayPass(aligned, aligned + lanes);
             for (int j = 0; j < lanes; j++)
             {
                 while (requestIndex + 1 < m_EmissionRequests.Count && j >= requestStart + m_EmissionRequests[requestIndex].count)
@@ -1662,12 +1664,9 @@ namespace UnityEngine
             c.BirthsInFinalStep = !Compat.ParticleBirthStepsMeasured;
             if (m_Collision.enabled)
             {
-                if (m_Collision.type == ParticleSystemCollisionType.World && m_Collision.mode == ParticleSystemCollisionMode.Collision3D
-                    && m_Collision.quality != ParticleSystemCollisionQuality.High)
-                    ReportUnsupported("Medium and Low collision quality (collided at High)");
                 c.SimToWorld = SimulationToWorld();
                 c.WorldToSimMatrix = c.SimToWorld.inverse;
-                if (m_Collision.type == ParticleSystemCollisionType.Planes) PrepareCollisionPlanes(c.SimToWorld, c.WorldToSimMatrix);
+                if (m_Collision.type == ParticleSystemCollisionType.Planes) PrepareCollisionPlanes(c.WorldToSimMatrix, simWorld);
             }
             return c;
         }
@@ -1691,6 +1690,7 @@ namespace UnityEngine
             int count = m_Count;
             var marks = SlotMarks(count);
             bool anyDead = false;
+            BeginRayPass(0, count);
             for (int i = 0; i < count; i++)
             {
                 BeginModuleSample(i, m_Particles[i].m_RandomSeed);

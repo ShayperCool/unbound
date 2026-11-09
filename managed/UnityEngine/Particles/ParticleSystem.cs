@@ -430,6 +430,8 @@ namespace UnityEngine
                     }
                     float total = Mathf.Max(0f, t) * ps.m_Main.simulationSpeed;
                     ps.m_BirthCallRemaining = total;
+                    // A Simulate call queries as much as the system's last frame allowed.
+                    ps.m_Rays = ps.m_AssignedRays;
                     if (fixedTimeStep)
                     {
                         float step = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
@@ -1724,6 +1726,7 @@ namespace Unbound.Runtime
             int n = s_Systems.Count;
             if (s_Snapshot.Length < n) s_Snapshot = new ParticleSystem[Math.Max(n, s_Snapshot.Length * 2)];
             s_Systems.CopyTo(s_Snapshot);
+            ParticleSystem.AssignRayBudgets(s_Snapshot, n);
             s_Deferring = true;
             try
             {

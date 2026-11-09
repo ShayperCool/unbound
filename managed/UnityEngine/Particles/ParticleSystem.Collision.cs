@@ -39,9 +39,6 @@ namespace UnityEngine
         /// <summary>A plane is not hit by a particle whose direction of travel makes a cosine below
         /// this with its normal (moving along it).</summary>
         const float PlaneParallelCosine = 1e-4f;
-        /// <summary>Squared axis scales of a simulation space further apart than this fraction
-        /// count as a non-uniform scale.</summary>
-        const float NonUniformScale = 1e-4f;
         /// <summary>A speed modifier closer to zero than this leaves a bounced particle at rest.</summary>
         const float MinSpeedModifier = 1e-6f;
 
@@ -51,28 +48,29 @@ namespace UnityEngine
         readonly List<GameObject> m_CollisionPlaneObjects = new List<GameObject>();
         int m_CollisionPlaneCount;
 
-        /// <summary>Puts the module's planes into simulation space for a step.</summary>
-        void PrepareCollisionPlanes(in Matrix4x4 simToWorld, in Matrix4x4 toSim)
+        /// <summary>Puts the module's planes into simulation space for a step: each plane's up,
+        /// carried in like a direction and normalized, through its point nearest the world's
+        /// origin, carried in like a point. Under a non-uniform scale that is not the carried
+        /// plane (6000.0.71f1, tests/projects/particlerender collide/planes/scaled_y: the planes
+        /// lie where this rule puts them).</summary>
+        void PrepareCollisionPlanes(in Matrix4x4 toSim, bool worldSpace)
         {
             m_CollisionPlaneCount = 0;
             m_CollisionPlaneObjects.Clear();
             var planes = m_Collision.planes;
             if (m_CollisionPlanes.Length < planes.Count) m_CollisionPlanes = new Vector4[planes.Count];
-            // Under a non-uniform scale the Editor places the planes elsewhere, unresolved
-            // (tests/projects/particlerender collide/planes/scaled_y): say so.
-            float sx = simToWorld.GetColumn(0).sqrMagnitude, sy = simToWorld.GetColumn(1).sqrMagnitude, sz = simToWorld.GetColumn(2).sqrMagnitude;
-            if (planes.Count > 0 && (Mathf.Abs(sx - sy) > NonUniformScale * sx || Mathf.Abs(sx - sz) > NonUniformScale * sx))
-                ReportUnsupported("collision planes in a non-uniformly scaled simulation space (planes placed differently)");
             foreach (var plane in planes)
             {
                 if (plane == null) continue;
-                // A plane's normal is its transform's up, carried into simulation space like a
-                // direction and normalized (under a non-uniform scale no longer perpendicular to
-                // the carried plane: 6000.0.71f1, tests/projects/particlerender
-                // collide/planes/scaled_y).
-                var n = toSim.MultiplyVector(plane.up).normalized;
-                var origin = toSim.MultiplyPoint3x4(plane.position);
-                m_CollisionPlanes[m_CollisionPlaneCount++] = new Vector4(n.x, n.y, n.z, -Vector3.Dot(n, origin));
+                var n = plane.up;
+                float d = -Vector3.Dot(n, plane.position);
+                if (!worldSpace)
+                {
+                    var nearest = toSim.MultiplyPoint3x4(n * -d);
+                    n = toSim.MultiplyVector(n).normalized;
+                    d = -Vector3.Dot(n, nearest);
+                }
+                m_CollisionPlanes[m_CollisionPlaneCount++] = new Vector4(n.x, n.y, n.z, d);
                 m_CollisionPlaneObjects.Add(plane.gameObject);
             }
         }
@@ -87,6 +85,9 @@ namespace UnityEngine
             internal int colliderId;
             internal float dt, speedModifier, ageBefore;
             internal bool existing, birthSubs, birthsInFinalStep;
+            /// <summary>A cache lookup waiting for the end of the pass (see DefersCacheLookup), and
+            /// whether it then met nothing.</summary>
+            internal bool lookup, missed;
         }
 
         PendingCollision[] m_PendingCollisions = new PendingCollision[8];
@@ -134,7 +135,11 @@ namespace UnityEngine
                     ReportUnsupported("2D world collision");
                     return false;
                 }
-                if (!WorldContact(end, velocity, radius, dt, c, out contact, out normal, out var hit)) return false;
+                Collider hit;
+                bool found = UsesCollisionCache
+                    ? CachedWorldContact(end, velocity, radius, dt, c, out contact, out normal, out hit)
+                    : WorldContact(end, velocity, radius, dt, c, out contact, out normal, out hit);
+                if (!found) return false;
                 other = hit != null ? hit.gameObject : null;
                 colliderId = hit != null ? hit.GetInstanceID() : 0;
                 if (C.colliderForce != 0f && hit != null) ReportColliderForce(hit.attachedRigidbody);
@@ -157,6 +162,17 @@ namespace UnityEngine
         bool Collide(ref Particle p, Vector3 size, Vector3 velocity, float dt, float speedModifier, in StepContext c, out bool deferred)
         {
             deferred = false;
+            if (dt >= MinCollisionStep && DefersCacheLookup(m_IntegrateSlot) && System.Runtime.CompilerServices.Unsafe.AreSame(ref p, ref m_Particles[m_IntegrateSlot])
+                && (m_PendingCollisionCount == 0 || m_PendingCollisions[m_PendingCollisionCount - 1].slot != m_IntegrateSlot))
+            {
+                if (m_PendingCollisionCount == m_PendingCollisions.Length) System.Array.Resize(ref m_PendingCollisions, m_PendingCollisionCount * 2);
+                m_PendingCollisions[m_PendingCollisionCount++] = new PendingCollision
+                {
+                    slot = m_IntegrateSlot, lookup = true, velocity = velocity, end = p.m_Position, dt = dt, speedModifier = speedModifier,
+                };
+                deferred = true;
+                return true;
+            }
             if (!DetectCollision(ref p, size, velocity, dt, c, out var h)) return true;
             h.speedModifier = speedModifier;
             var C = m_Collision;
@@ -225,16 +241,34 @@ namespace UnityEngine
             m_CollisionHits = 0;
             int pending = m_PendingCollisionCount;
             m_PendingCollisionCount = 0;
-            if (hits == 0) return;
-            int span = DrawCollisionValues(hits) * 4;
-            var C = m_Collision;
+            // Lookups the pass's window could serve come now (Unbound's choice: their random
+            // draws follow the hits in slot order, unmeasured with random curves).
             for (int k = 0; k < pending; k++)
+            {
+                ref var entry = ref m_PendingCollisions[k];
+                if (!entry.lookup) continue;
+                entry.lookup = false;
+                entry.missed = !ResolveCacheLookup(ref entry, c);
+                if (!entry.missed) hits++;
+            }
+            if (hits == 0 && pending == 0) return;
+            int span = hits > 0 ? DrawCollisionValues(hits) * 4 : 0;
+            bool random = CollisionDrawsRandom;
+            var C = m_Collision;
+            for (int k = 0, hit = 0; k < pending; k++)
             {
                 var h = m_PendingCollisions[k];
                 m_PendingCollisions[k].other = null;
                 ref var p = ref m_Particles[h.slot];
-                bool alive = RespondToCollision(ref p, h, c, CurveAtStart(C.bounce, m_CollisionDraws[k]),
-                    CurveAtStart(C.dampen, m_CollisionDraws[2 * span + k]), CurveAtStart(C.lifetimeLoss, m_CollisionDraws[span + k]));
+                bool alive = true;
+                if (!h.missed)
+                {
+                    alive = random
+                        ? RespondToCollision(ref p, h, c, CurveAtStart(C.bounce, m_CollisionDraws[hit]),
+                            CurveAtStart(C.dampen, m_CollisionDraws[2 * span + hit]), CurveAtStart(C.lifetimeLoss, m_CollisionDraws[span + hit]))
+                        : RespondToCollision(ref p, h, c, CurveAtStart(C.bounce, 0f), CurveAtStart(C.dampen, 0f), CurveAtStart(C.lifetimeLoss, 0f));
+                    hit++;
+                }
                 if (alive && m_Trigger.enabled) alive = Trigger(ref p, h.eventSize);
                 if (!alive)
                 {
@@ -317,40 +351,48 @@ namespace UnityEngine
         }
 
         /// <summary>World collisions sweep from where the step's movement started to where it
-        /// ended (see <see cref="WorldSweepShrink"/>), in world space; the closest hit is the
-        /// contact. A sphere that starts inside a collider meets it where it started, and bounces
-        /// straight back.</summary>
+        /// ended (see <see cref="SweepContact"/>), in world space; the closest hit is the contact.</summary>
         bool WorldContact(Vector3 end, Vector3 velocity, float radius, float dt, in StepContext c, out Vector3 contact, out Vector3 normal, out Collider hit)
         {
             contact = normal = default;
-            hit = null;
             var w1 = c.SimToWorld.MultiplyPoint3x4(end);
             var w0 = c.SimToWorld.MultiplyPoint3x4(end - velocity * dt);
             var move = w1 - w0;
             float length = move.magnitude;
+            hit = null;
             if (!(length > MinSweepLength)) return false;
-            var direction = move / length;
+            if (!SweepContact(w0, move / length, length, radius, out var worldContact, out var worldNormal, out hit)) return false;
+            contact = c.WorldToSimMatrix.MultiplyPoint3x4(worldContact);
+            normal = c.WorldToSimMatrix.MultiplyVector(worldNormal).normalized;
+            return true;
+        }
+
+        /// <summary>Sweeps a particle's sphere from <paramref name="from"/> along
+        /// <paramref name="direction"/> for <paramref name="length"/> (world space; see
+        /// <see cref="WorldSweepShrink"/>) to the closest collider: its contact and normal. A
+        /// sphere that starts inside a collider meets it where it touches the collider from
+        /// outside, and bounces straight back.</summary>
+        bool SweepContact(Vector3 from, Vector3 direction, float length, float radius, out Vector3 contact, out Vector3 normal, out Collider hit)
+        {
+            contact = normal = default;
             float shrink = radius * WorldSweepShrink;
             float sweepRadius = radius - shrink;
             if (!(sweepRadius > MinSweepRadius)) sweepRadius = MinSweepRadius;
-            if (!PhysicsQueries.ParticleSweep(w0, sweepRadius, direction, length + shrink, m_Collision.collidesWith, out float distance, out var hitNormal, out hit))
+            if (!PhysicsQueries.ParticleSweep(from, sweepRadius, direction, length + shrink, m_Collision.collidesWith, out float distance, out var hitNormal, out hit))
                 return false;
-            Vector3 worldContact, worldNormal;
             if (distance > 0f)
             {
-                worldContact = w0 + direction * (distance - shrink);
-                worldNormal = hitNormal;
+                contact = from + direction * (distance - shrink);
+                normal = hitNormal;
             }
             else
             {
                 // Pushed out by the penetration depth to where it touches the collider from
                 // outside; the normal (as the collision event reports it) points into the
                 // collider (6000.0.71f1, tests/projects/particlerender collide/events/inside).
-                worldContact = w0 - hitNormal * (distance - shrink);
-                worldNormal = -hitNormal;
+                contact = from - hitNormal * (distance - shrink);
+                normal = -hitNormal;
             }
-            contact = c.WorldToSimMatrix.MultiplyPoint3x4(worldContact);
-            normal = c.WorldToSimMatrix.MultiplyVector(worldNormal).normalized;
             return true;
         }
 
