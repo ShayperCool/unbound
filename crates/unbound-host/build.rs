@@ -122,7 +122,9 @@ fn sources(dir: &Path, extension: &str, into: &mut Vec<PathBuf>) {
 
 /// Compiles PhysX 4.1 and NvCloth 1.1 (`native/physx`, `native/nvcloth`: the releases Unity runs)
 /// into static archives and links them with the flat C shims (`native/unbound_physx.cpp`,
-/// `native/unbound_cloth.cpp`) into the `unbound_physx` library next to the managed engine.
+/// `native/unbound_cloth.cpp`) into the `unbound_physx` library next to the managed engine, with
+/// libtess2 (`native/libtess2`) and its shim for UI Toolkit's Painter2D fills
+/// (`native/unbound_tess.c`).
 fn build_physx(root: &Path, out_dir: &Path) -> bool {
     let native = root.join("native");
     let physx = native.join("physx");
@@ -222,6 +224,41 @@ fn build_physx(root: &Path, out_dir: &Path) -> bool {
         nvcloth_flags,
     );
     let cloth_compiler = cloth_build.get_compiler();
+    // libtess2 is C; the Editor's build keeps every product rounded (no fused multiply-adds), and
+    // only the shim's ua_tess_ functions are exported.
+    let tess = native.join("libtess2");
+    let mut tess_sources = Vec::new();
+    sources(&tess.join("Source"), "c", &mut tess_sources);
+    tess_sources.sort();
+    tess_sources.push(native.join("unbound_tess.c"));
+    let mut tess_build = cc::Build::new();
+    tess_build
+        .includes([tess.join("Include"), tess.join("Source")])
+        .define("NDEBUG", None)
+        .opt_level(2)
+        .debug(false)
+        .pic(true)
+        .warnings(false)
+        .cargo_metadata(true);
+    if !tess_build.get_compiler().is_like_msvc() {
+        tess_build
+            .flag("-ffp-contract=off")
+            .flag("-fvisibility=hidden");
+    }
+    let tess_compiler = tess_build.get_compiler();
+    let mut link_sources = vec![
+        (&compiler, native.join("unbound_physx.cpp")),
+        (&cloth_compiler, native.join("unbound_cloth.cpp")),
+    ];
+    link_sources.extend(
+        tess_sources
+            .iter()
+            .map(|file| (&tess_compiler, file.clone())),
+    );
+    let link_inputs: Vec<(&cc::Tool, &Path)> = link_sources
+        .iter()
+        .map(|(tool, file)| (*tool, file.as_path()))
+        .collect();
     let name = match target_os.as_str() {
         "windows" => "unbound_physx.dll",
         "macos" | "ios" => "libunbound_physx.dylib",
@@ -235,15 +272,8 @@ fn build_physx(root: &Path, out_dir: &Path) -> bool {
     let key = if std::env::var("UNBOUND_NATIVE_CACHE").as_deref() == Ok("0") {
         None
     } else {
-        native_cache::key(
-            &[
-                (&compiler, &native.join("unbound_physx.cpp")),
-                (&cloth_compiler, &native.join("unbound_cloth.cpp")),
-            ],
-            &[&physx_archive, &nvcloth_archive],
-            &library,
-        )
-        .unwrap_or_else(|error| panic!("fingerprinting native link inputs: {error}"))
+        native_cache::key(&link_inputs, &[&physx_archive, &nvcloth_archive], &library)
+            .unwrap_or_else(|error| panic!("fingerprinting native link inputs: {error}"))
     };
     let reused = key
         .as_ref()
@@ -277,6 +307,7 @@ fn build_physx(root: &Path, out_dir: &Path) -> bool {
             .file(native.join("unbound_cloth.cpp"))
             .compile_intermediates(),
     );
+    objects.extend(tess_build.files(&tess_sources).compile_intermediates());
     phase("shim-compile", started, "built");
 
     std::fs::create_dir_all(out_dir)
@@ -310,15 +341,8 @@ fn build_physx(root: &Path, out_dir: &Path) -> bool {
     assert!(status.success(), "linking {} failed", library.display());
     phase("native-link", started, "built");
     if let Some(key) = key {
-        let after = native_cache::key(
-            &[
-                (&compiler, &native.join("unbound_physx.cpp")),
-                (&cloth_compiler, &native.join("unbound_cloth.cpp")),
-            ],
-            &[&physx_archive, &nvcloth_archive],
-            &library,
-        )
-        .unwrap_or_else(|error| panic!("rechecking native link inputs: {error}"));
+        let after = native_cache::key(&link_inputs, &[&physx_archive, &nvcloth_archive], &library)
+            .unwrap_or_else(|error| panic!("rechecking native link inputs: {error}"));
         assert_eq!(
             Some(key),
             after,
