@@ -643,9 +643,29 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let texture = s
                 .imports
                 .get_or_import(&texture_importer(s), &asset.file, &meta)?;
-            let blocks = texture.blocks.as_ref().context("the texture is not block-compressed")?;
+            let blocks = texture
+                .blocks
+                .as_ref()
+                .context("the texture is not block-compressed")?;
             let raw = crate::models::base64(&concat(&blocks.mips));
             Ok(json!({ "format": blocks.format.unity_format(), "raw": raw }).to_string())
+        }
+        "texture-decode-blocks" => {
+            // One level of BC blocks (Unity's TextureFormat `format`) as RGBA8, as GetPixels32
+            // reads it.
+            #[derive(Deserialize)]
+            struct Request {
+                format: i32,
+                width: u32,
+                height: u32,
+                data: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let format = unbound_assets::texture::BlockFormat::from_unity_format(r.format)
+                .with_context(|| format!("texture format {} is not a block format", r.format))?;
+            let blocks = crate::fonts::decode_base64(&r.data).context("data is not base64")?;
+            let rgba = unbound_assets::texture::decode_blocks(format, &blocks, r.width, r.height);
+            Ok(json!({ "rgba": crate::models::base64(&rgba) }).to_string())
         }
         "texture-layers" => {
             // An imported texture's images: slices of an array, depth of a volume, cube faces.
@@ -1243,6 +1263,17 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         },
     );
     let sprite_count = s.textures.read().unwrap()[&guid].sprites.len();
+    if let Some(why) = &texture.approximation {
+        static WARNED: std::sync::Mutex<std::collections::BTreeSet<String>> =
+            std::sync::Mutex::new(std::collections::BTreeSet::new());
+        if WARNED
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(why.clone())
+        {
+            tracing::warn!("Unbound: {why} (first: {})", asset.file.display());
+        }
+    }
     let texture_format = texture.reported_format().unwrap_or(0);
     let format = match texture.format {
         unbound_assets::texture::TextureFormat::Rgba8 => i32::from(!texture.srgb),
@@ -1277,7 +1308,10 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     // The import's blocks always go up (the renderer decodes them where the device has no BC
     // formats; textures may import before the device exists).
     let (gpu_format, data) = match (texture.blocks.take(), texture.bc7.take()) {
-        (Some(blocks), _) => (block_code(blocks.format, texture.srgb), concat(&blocks.mips)),
+        (Some(blocks), _) => (
+            block_code(blocks.format, texture.srgb),
+            concat(&blocks.mips),
+        ),
         (None, Some(blocks)) if gpu_bc => (format + texture_format::BC7_COLOR, concat(&blocks)),
         _ => {
             // Mip 0 keeps its buffer; the smaller levels are appended to it.

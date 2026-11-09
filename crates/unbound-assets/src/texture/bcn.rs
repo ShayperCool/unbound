@@ -31,6 +31,19 @@ pub enum BlockFormat {
 }
 
 impl BlockFormat {
+    /// The format of Unity's `TextureFormat` value, if it is one of these.
+    pub fn from_unity_format(format: i32) -> Option<Self> {
+        Some(match format {
+            10 => Self::Bc1,
+            12 => Self::Bc3,
+            26 => Self::Bc4,
+            27 => Self::Bc5,
+            24 => Self::Bc6h,
+            25 => Self::Bc7,
+            _ => return None,
+        })
+    }
+
     /// Unity's `TextureFormat` value.
     pub fn unity_format(self) -> i32 {
         match self {
@@ -228,7 +241,8 @@ fn f32_to_f16(v: f32) -> u16 {
 /// Decodes one level to RGBA8 (rows as stored) the way the Editor's `GetPixels32` reads it:
 /// colours interpolate with truncating integer thirds (a half in BC1's three-colour mode, whose
 /// fourth entry is transparent black), alpha, red and green steps round to nearest; BC4 reads
-/// (r, 0, 0, 1) and BC5 (r, g, 0, 1). BC6H has no 8-bit form here.
+/// (r, 0, 0, 1) and BC5 (r, g, 0, 1). BC6H is clamped to 0..1 (Unbound has no float decoding of
+/// its blocks). `blocks` shorter than the level leaves the missing blocks' texels zero.
 pub fn decode_level(format: BlockFormat, blocks: &[u8], width: u32, height: u32) -> Vec<u8> {
     let (w, h) = (width.max(1) as usize, height.max(1) as usize);
     let bw = w.div_ceil(4);
@@ -252,15 +266,18 @@ pub fn decode_level(format: BlockFormat, blocks: &[u8], width: u32, height: u32)
                 decode_steps(&block[..8], &mut texels, 0);
                 decode_steps(&block[8..], &mut texels, 1);
             }
-            BlockFormat::Bc7 => {
+            BlockFormat::Bc7 | BlockFormat::Bc6h => {
                 let mut image = [0u32; 16];
-                texture2ddecoder::decode_bc7_block(block, &mut image);
+                if format == BlockFormat::Bc7 {
+                    texture2ddecoder::decode_bc7_block(block, &mut image);
+                } else {
+                    texture2ddecoder::decode_bc6_block(block, &mut image, false);
+                }
                 for (t, p) in texels.iter_mut().zip(image) {
                     let [b, g, r, a] = p.to_le_bytes();
                     *t = [r, g, b, a];
                 }
             }
-            BlockFormat::Bc6h => panic!("BC6H levels are not decoded to bytes"),
         }
         for (t, texel) in texels.iter().enumerate() {
             let (x, y) = (bx * 4 + t % 4, by * 4 + t / 4);
@@ -273,8 +290,16 @@ pub fn decode_level(format: BlockFormat, blocks: &[u8], width: u32, height: u32)
 }
 
 fn expand565(c: u16) -> [u32; 3] {
-    let (r, g, b) = (u32::from(c >> 11), u32::from((c >> 5) & 63), u32::from(c & 31));
-    [(r << 3) | (r >> 2), (g << 2) | (g >> 4), (b << 3) | (b >> 2)]
+    let (r, g, b) = (
+        u32::from(c >> 11),
+        u32::from((c >> 5) & 63),
+        u32::from(c & 31),
+    );
+    [
+        (r << 3) | (r >> 2),
+        (g << 2) | (g >> 4),
+        (b << 3) | (b >> 2),
+    ]
 }
 
 /// A colour block; `four` forces four colours (a BC3 block's colour half).
@@ -511,8 +536,7 @@ fn encode_bc1(block: &Block, bc3: bool) -> [u8; 8] {
     if block.iter().all(|t| &t[..3] == first) {
         return encode_solid([first[0], first[1], first[2]], bc3);
     }
-    let texels: [[f32; 3]; 16] =
-        std::array::from_fn(|k| [0, 1, 2].map(|p| f32::from(block[k][p])));
+    let texels: [[f32; 3]; 16] = std::array::from_fn(|k| [0, 1, 2].map(|p| f32::from(block[k][p])));
     // Mean and covariance.
     let mut dc = [0.0f32; 3];
     for (p, d) in dc.iter_mut().enumerate() {
@@ -645,7 +669,10 @@ mod tests {
         let decoded = decode_level(BlockFormat::Bc1, &grey, 4, 4);
         assert!(decoded.chunks(4).all(|t| t == &decoded[..4]));
         let d = &decoded[..4];
-        assert!(d.iter().take(3).all(|&v| (v as i32 - 128).abs() <= 2), "{d:?}");
+        assert!(
+            d.iter().take(3).all(|&v| (v as i32 - 128).abs() <= 2),
+            "{d:?}"
+        );
         // A BC3 colour half never uses three-colour mode.
         let bc3 = encode_solid([239, 72, 42], true);
         assert!(u16::from_le_bytes([bc3[0], bc3[1]]) >= u16::from_le_bytes([bc3[2], bc3[3]]));
@@ -656,7 +683,11 @@ mod tests {
     fn bc1_round_trips_two_colour_blocks() {
         let mut block = [[0u8, 0, 0, 255]; 16];
         for (i, t) in block.iter_mut().enumerate() {
-            *t = if i % 2 == 0 { [255, 0, 0, 255] } else { [0, 0, 255, 255] };
+            *t = if i % 2 == 0 {
+                [255, 0, 0, 255]
+            } else {
+                [0, 0, 255, 255]
+            };
         }
         let encoded = encode_bc1(&block, false);
         let mut rgba = Vec::new();

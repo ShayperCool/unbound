@@ -507,6 +507,11 @@ pub struct ImportedTexture {
     /// The build target stores the pixels uncompressed ([`Storage::Uncompressed`]).
     #[serde(default)]
     pub uncompressed: bool,
+    /// Why the texture is not stored the way the build target stores it (a compressed format
+    /// Unbound does not produce, [`Storage::Unsupported`]; blocks of Unbound's own encoder), for
+    /// the warning given when it is loaded.
+    #[serde(default)]
+    pub approximation: Option<String>,
     /// The mips block-compressed to BC7 for the GPU alone (4x smaller than RGBA8), where the
     /// build target compresses in a format Unbound does not produce (ETC, ASTC, crunch,
     /// unmeasured cases) and the GPU samples BC7; a 2D RGBA8 texture of a size divisible by 4.
@@ -534,15 +539,16 @@ pub enum Storage {
 }
 
 /// How the Standalone target of the Unity 6000.0.71f1 Editor stores an import
-/// (tests/projects/texturecompression): only 2D textures whose sides are powers of two and
-/// multiples of 4 are compressed (20x12, 30x18 and 2x2 ones stay uncompressed, automatic or an
-/// explicit DXT5; 64x16 is compressed). An explicit
+/// (tests/projects/texturecompression): only 2D textures whose sides are multiples of 4 are
+/// compressed, and with mipmaps only when they are also powers of two (20x12 and 30x18 with mips
+/// and 2x2 stay uncompressed, automatic or an explicit DXT5; 64x16, and 20x12 without mips, are
+/// compressed). An explicit
 /// DXT1, DXT5, BC4, BC5, BC6H or BC7 is taken as it is. An automatic format with compression
 /// on is BC6H for HDR data, BC4 for a Single Channel texture's red (its alpha stays Alpha8),
 /// BC7 at High Quality and otherwise DXT1, or DXT5 when a texel is not opaque (a normal map:
-/// DXT5 at Normal and Low Quality, BC7 at High). Compressor quality does not change the DXT and
-/// BC4 blocks. Other targets, crunch, cubemaps, arrays, volumes and the other texture types are
-/// unmeasured.
+/// DXT5 at Normal and Low Quality, BC7 at High; Sprite and GUI textures as Default ones).
+/// Compressor quality does not change the DXT and BC4 blocks. Other targets, crunch, cubemaps,
+/// arrays, volumes and the other texture types are unmeasured.
 pub fn storage(texture: &ImportedTexture, build_target: &str) -> Storage {
     let s = &texture.settings;
     let unsupported = |why: &str| Storage::Unsupported(why.to_string());
@@ -570,8 +576,7 @@ pub fn storage(texture: &ImportedTexture, build_target: &str) -> Storage {
             TextureType::Default
             | TextureType::NormalMap
             | TextureType::Sprite
-            | TextureType::Gui
-            | TextureType::Cursor => {
+            | TextureType::Gui => {
                 if s.compression == 2 {
                     BlockFormat::Bc7
                 } else if texture.has_alpha || s.texture_type == TextureType::NormalMap {
@@ -592,7 +597,8 @@ pub fn storage(texture: &ImportedTexture, build_target: &str) -> Storage {
     if (format == BlockFormat::Bc6h) != hdr {
         return unsupported(&format!("{format:?} from {:?} data", texture.format));
     }
-    let compressible = |side: u32| side.is_power_of_two() && side % 4 == 0;
+    let mipmapped = texture.mip_count() > 1;
+    let compressible = |side: u32| side % 4 == 0 && (side.is_power_of_two() || !mipmapped);
     if !compressible(texture.width) || !compressible(texture.height) {
         return Storage::Uncompressed;
     }
@@ -625,25 +631,12 @@ fn compress_blocks(texture: &mut ImportedTexture, format: BlockFormat) {
         }
     }
     if format.approximates_editor() {
-        warn_once(
-            format!("{format:?} blocks"),
-            format!(
-                "Unbound: {format:?} textures are compressed by Unbound's own encoder: their \
-                 format and sizes are the Editor's, their texels differ slightly from the Editor's \
-                 blocks"
-            ),
-        );
+        texture.approximation = Some(format!(
+            "{format:?} textures are compressed by Unbound's own encoder: their format and sizes \
+             are the Editor's, their texels differ slightly from the Editor's blocks"
+        ));
     }
     texture.blocks = Some(Blocks { format, mips });
-}
-
-/// Logs `message` the first time `key` is seen.
-fn warn_once(key: String, message: String) {
-    static SEEN: std::sync::Mutex<std::collections::BTreeSet<String>> =
-        std::sync::Mutex::new(std::collections::BTreeSet::new());
-    if SEEN.lock().unwrap_or_else(|e| e.into_inner()).insert(key) {
-        tracing::warn!("{message}");
-    }
 }
 
 /// Unity's `TextureFormat` values an import reports ([`ImportedTexture::reported_format`]).
@@ -802,7 +795,9 @@ impl Importer for TextureImporter {
     //     gamma-encoded bytes.
     // 19: Standalone imports are block-compressed in the Editor's format (`blocks`); BC7 for the
     //     GPU only where the target's format is not produced.
-    const VERSION: u32 = 19;
+    // 20: mipless textures of multiple-of-4 sizes are compressed; Cursor textures keep their
+    //     pixels; the import records why it is not stored as the target stores it.
+    const VERSION: u32 = 20;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -813,13 +808,10 @@ impl Importer for TextureImporter {
             Storage::Uncompressed => texture.uncompressed = true,
             Storage::Blocks(format) => compress_blocks(&mut texture, format),
             Storage::Unsupported(why) => {
-                warn_once(
-                    why.clone(),
-                    format!(
-                        "Unbound: {why} are not produced: such textures keep their pixels \
-                         uncompressed (their format reads RGBA32 or RGB24)"
-                    ),
-                );
+                texture.approximation = Some(format!(
+                    "{why} are not produced: such textures keep their pixels uncompressed (their \
+                     format reads RGBA32 or RGB24)"
+                ));
                 if self.compress {
                     texture.bc7 = compress_bc7(&texture);
                 }
@@ -1025,6 +1017,7 @@ pub fn import_texture(
         layers: 1,
         blocks: None,
         uncompressed: false,
+        approximation: None,
         bc7: None,
     })
 }
@@ -1186,6 +1179,7 @@ fn import_flipbook(
         layers,
         blocks: None,
         uncompressed: false,
+        approximation: None,
         bc7: None,
     })
 }
@@ -1450,6 +1444,7 @@ fn import_cubemap(
         layers: 6,
         blocks: None,
         uncompressed: false,
+        approximation: None,
         bc7: None,
     })
 }
@@ -2024,7 +2019,7 @@ fn srgb_to_linear_table() -> &'static [f32; 256] {
 }
 
 mod bcn;
-pub use bcn::BlockFormat;
+pub use bcn::{BlockFormat, decode_level as decode_blocks};
 mod cubemap;
 mod mipmaps;
 mod resize;

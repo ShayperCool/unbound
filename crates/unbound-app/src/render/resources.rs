@@ -799,46 +799,38 @@ pub fn texture_storage(
     }
 }
 
-/// A block-compressed packet as RGBA8 (colour codes sampled through an sRGB view in linear
-/// projects, the others linear; BC6H clamped to 0..1, with a warning).
+/// A block-compressed packet as RGBA8, decoded as the Editor's CPU reads do (colour codes
+/// sampled through an sRGB view in linear projects, the others linear; BC6H clamped to 0..1).
 fn decode_blocks(t: &owned::Texture) -> owned::Texture {
-    use texture2ddecoder as d;
-    let decode: fn(&[u8], usize, usize, &mut [u32]) -> Result<(), &'static str> = match t.format {
-        texture_format::BC1_COLOR | texture_format::BC1_DATA => d::decode_bc1,
-        texture_format::BC3_COLOR | texture_format::BC3_DATA => d::decode_bc3,
-        texture_format::BC4 => d::decode_bc4,
-        texture_format::BC5 => d::decode_bc5,
-        texture_format::BC6H => d::decode_bc6_unsigned,
-        _ => d::decode_bc7,
+    use unbound_assets::texture::{BlockFormat, decode_blocks};
+    let format = match t.format {
+        texture_format::BC1_COLOR | texture_format::BC1_DATA => BlockFormat::Bc1,
+        texture_format::BC3_COLOR | texture_format::BC3_DATA => BlockFormat::Bc3,
+        texture_format::BC4 => BlockFormat::Bc4,
+        texture_format::BC5 => BlockFormat::Bc5,
+        texture_format::BC6H => BlockFormat::Bc6h,
+        _ => BlockFormat::Bc7,
     };
     report_fallback(
         t.format,
-        &FormatFallback::Unsupported(
-            "the device has no BC formats: the blocks are decoded".to_string(),
-        ),
+        &FormatFallback::Unsupported(if format == BlockFormat::Bc6h {
+            "the device has no BC formats: the blocks are decoded, HDR colour clamped to 0..1"
+                .to_string()
+        } else {
+            "the device has no BC formats: the blocks are decoded".to_string()
+        }),
     );
-    let block_bytes = block_format(t.format)
-        .and_then(|f| f.block_copy_size(None))
-        .unwrap_or(16) as usize;
-    let (width, height) = (t.width.max(1) as usize, t.height.max(1) as usize);
+    let (width, height) = (t.width.max(1) as u32, t.height.max(1) as u32);
     let mut data = Vec::new();
     let mut offset = 0;
     for level in 0..t.mip_count.max(1) as u32 {
         let (w, h) = ((width >> level).max(1), (height >> level).max(1));
-        let len = w.div_ceil(4) * h.div_ceil(4) * block_bytes;
+        let len = format.level_size(w, h);
         let Some(blocks) = t.data.get(offset..offset + len) else {
             break;
         };
         offset += len;
-        let mut image = vec![0u32; w * h];
-        if decode(blocks, w, h, &mut image).is_err() {
-            break;
-        }
-        // The decoder's texels are B, G, R, A in memory.
-        for p in image {
-            let [b, g, r, a] = p.to_le_bytes();
-            data.extend_from_slice(&[r, g, b, a]);
-        }
+        data.extend(decode_blocks(format, blocks, w, h));
     }
     owned::Texture {
         format: if texture_format::block_color(t.format) {

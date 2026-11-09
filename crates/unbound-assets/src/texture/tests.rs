@@ -181,10 +181,9 @@ fn imports_bottom_up_with_mips() {
             [0, 0, 255, 255]
         }
     });
-    let meta = unbound_yaml::parse_value(
-        "TextureImporter:\n  nPOTScale: 0\n  textureCompression: 0\n",
-    )
-    .unwrap();
+    let meta =
+        unbound_yaml::parse_value("TextureImporter:\n  nPOTScale: 0\n  textureCompression: 0\n")
+            .unwrap();
     let tex = TextureImporter::default()
         .import(Path::new("Assets/a.png"), &bytes, &meta)
         .unwrap();
@@ -668,7 +667,11 @@ fn import_with(meta: &str, bytes: &[u8], xyz: bool) -> ImportedTexture {
     let meta = if meta.contains("textureCompression") {
         meta.to_string()
     } else {
-        meta.replacen("TextureImporter:\n", "TextureImporter:\n  textureCompression: 0\n", 1)
+        meta.replacen(
+            "TextureImporter:\n",
+            "TextureImporter:\n  textureCompression: 0\n",
+            1,
+        )
     };
     let meta = meta.as_str();
     TextureImporter {

@@ -33,6 +33,7 @@ struct Stats {
     sprites: usize,
     resized: usize,
     texture_bytes: u64,
+    gpu_bytes: u64,
     audio: usize,
     audio_seconds: f64,
     models: usize,
@@ -109,6 +110,10 @@ fn main() -> Result<()> {
         let elapsed = start.elapsed();
         println!("\n== {pass}: {:.2?}", elapsed);
         println!(
+            "  GPU texture data {:.1} MiB (block-compressed where stored so, else pixels)",
+            stats.gpu_bytes as f64 / (1 << 20) as f64
+        );
+        println!(
             "  textures {} ({} sprites, {} resized, {:.1} MiB of pixels incl. mips), audio {} ({:.1} s), models {} ({} meshes, {} clips animating {} nodes with {} keys)",
             stats.textures,
             stats.sprites,
@@ -165,7 +170,23 @@ fn run(cache: &AssetCache, files: &[(AssetKind, PathBuf)], target: &str) -> Stat
                     s.resized += usize::from(
                         (tex.width, tex.height) != (tex.original_width, tex.original_height),
                     );
-                    s.texture_bytes += tex.mips.iter().map(|m| m.data.len() as u64).sum::<u64>();
+                    let pixels = tex.mips.iter().map(|m| m.data.len() as u64).sum::<u64>();
+                    s.texture_bytes += pixels;
+                    // What the GPU holds: the import's blocks, else BC7 made for the GPU, else
+                    // the pixels (8-bit RGBA, or float RGBA kept as half floats).
+                    s.gpu_bytes += tex
+                        .blocks
+                        .as_ref()
+                        .map(|b| b.mips.iter().map(|m| m.len() as u64).sum::<u64>())
+                        .or_else(|| {
+                            tex.bc7
+                                .as_ref()
+                                .map(|b| b.iter().map(|m| m.len() as u64).sum::<u64>())
+                        })
+                        .unwrap_or(match tex.format {
+                            unbound_assets::texture::TextureFormat::Rgba32F => pixels / 2,
+                            _ => pixels,
+                        });
                     outcome
                 }
                 AssetKind::Audio => {
