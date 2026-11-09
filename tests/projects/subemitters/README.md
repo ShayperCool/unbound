@@ -68,6 +68,8 @@ this release, beyond that:
 - InheritLifetime multiplies the child's start lifetime by the parent's remaining lifetime in seconds
   (2.013 × 3.863 = 7.776); a dying parent leaves none, so its Death children are not emitted.
   InheritColor/Size use the parent's current color and size (with its over-lifetime modules).
+- A parent whose `Emit`ted particles all died is stopped, not reset: its time keeps running with
+  each `Simulate` step (also within the step its last particle dies in).
 - Played frames: Death children start where the dying particle's internal step ends, with their full
   lifetime at the end of the frame (not aged in it), and the child starts playing. A parent whose last
   particle died is no longer playing but stays alive, and its `OnParticleSystemStopped` comes in the
@@ -89,8 +91,6 @@ Known differences (the comparator lists each one and keeps it out of the verdict
   frame. Unrotated children match.
 - `death/many`: once the child is full, Unity takes the particles dying in one step in another
   order (the first four in order, then from the end), so other parents get the last children.
-- The time of a `Simulate`-stepped parent whose `Emit`ted particles all died: Unity's clock keeps
-  running, Unbound's stops.
 
 All 58 `random/*` count records compare exactly. Selection uses a stable roll from the parent
 particle seed; burst probability and count use the parent particle seed plus the parent system

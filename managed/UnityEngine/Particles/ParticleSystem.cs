@@ -493,7 +493,9 @@ namespace UnityEngine
         void AdvanceStoppedClock(float dt, float distance)
         {
             // Native keeps a stopped system inside an unfinished start delay at time zero.
-            if (m_DelayRemaining <= 0f) Advance(dt, distance, false, clockOnly: true);
+            // Stopped systems still simulate particles supplied by SetParticles, and their step
+            // advances the clock without restarting automatic emission.
+            if (m_DelayRemaining <= 0f) Advance(dt, distance, false);
         }
 
         /// <summary>Emits now; a system not playing starts playing (measured).</summary>

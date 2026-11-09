@@ -203,7 +203,7 @@ namespace UnityEngine
         /// <summary>Advances by <paramref name="dt"/> (simulation speed applied) in equal steps no
         /// longer than Time.maximumParticleDeltaTime: Unity splits 0.05 s into two 0.025 s steps at the
         /// default 0.03 (measured: the system's time accumulates exactly those steps).</summary>
-        internal void Advance(float dt, float distance, bool stopWhenPaused, float from = 0f, float to = 1f, bool clockOnly = false)
+        internal void Advance(float dt, float distance, bool stopWhenPaused, float from = 0f, float to = 1f)
         {
             float max = Time.maximumParticleDeltaTime;
             int steps = max > 0f ? (int)Math.Ceiling(dt / max) : 1;
@@ -222,9 +222,6 @@ namespace UnityEngine
                     float used = Mathf.Min(step, remaining);
                     m_StepDt = used;
                     Step(used, i < steps ? share : 0f);
-                    // Stopped systems still simulate particles supplied by SetParticles,
-                    // and advance their clock without restarting automatic emission.
-                    if (clockOnly) AdvanceEmission(used, i < steps ? share : 0f);
                     if (m_SimulatingBirths || m_Prewarming) m_BirthCallRemaining -= used;
                     remaining -= used;
                     if (stopWhenPaused && (m_IsPaused || !m_Registered)) break;
@@ -265,7 +262,10 @@ namespace UnityEngine
             try
             {
                 UpdateParticles(dt);
-                if (m_IsPlaying && !m_BirthDelayClock)
+                // A stopped system (one that played, then stopped or ran out of particles) keeps
+                // its clock running without emitting (6000.0.71f1, tests/projects/subemitters
+                // death/*/parent: Simulate after the emitted particles died).
+                if ((m_IsPlaying || m_StopEmitting) && !m_BirthDelayClock)
                     AdvanceEmission(dt, distance);
                 if (m_TrailList.Count > 0) UpdateTrails();
             }
@@ -273,8 +273,9 @@ namespace UnityEngine
             // A sub-emitter its parent started this frame stays playing until the frame ends.
             if (m_IsPlaying && m_StopEmitting && m_Count == 0 && !m_StartedByParent)
             {
+                // Stopped, not reset: its clock runs on (see above) and a non-restarting Simulate
+                // advances it rather than starting a new playback.
                 m_IsPlaying = false;
-                m_StopEmitting = false;
                 // In the frame's update a system with sub-emitters reports itself stopped only once
                 // their particles are gone too (6000.0.71f1 subemitters played/finish: isPlaying
                 // false at once, IsAlive true, OnParticleSystemStopped in the frame the Death

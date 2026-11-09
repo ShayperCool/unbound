@@ -30,9 +30,6 @@ KNOWN = [
     (r'^direction/\d+/[12]$', VELOCITY,
      'a child rotated against its parent: Unity combines that rotation with the emission frame differently'),
 ]
-# A parent record [count, time] whose count is zero on both sides: Unbound's Simulate stops the
-# clock of a system whose particles all died, Unity's keeps it running.
-EMPTY_PARENT = r'^(death|manual)/[^/]+/parent/\d+$'
 
 
 def read(path):
@@ -73,8 +70,6 @@ def known(key, a, b):
     to differ only along the velocity by the age difference."""
     if a is None or b is None:
         return None
-    if re.search(EMPTY_PARENT, key) and len(a) == 2 and a[0] == 0 and b[:1] == [0]:
-        return 'the clock of a Simulate-stepped system whose particles all died', {1}
     for pattern, fields, reason in KNOWN:
         if re.search(pattern, key) and len(a) == len(b) and len(a) == 1 + int(a[0]) * FIELDS:
             if fields == POSITION | LIFE and not aged_along_velocity(a, b):
