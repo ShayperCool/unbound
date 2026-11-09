@@ -131,6 +131,8 @@ def register(snapshot, destination, cache, *, retained=False):
 
 def active_snapshots(cache):
     """Also protect manual engine runs whose short-lived capture process exited."""
+    if not Path('/proc/self/stat').is_file():
+        raise OSError('cannot inspect live runtime processes; snapshot collection requires /proc')
     found = set()
     snapshots = (cache/'snapshots').resolve()
     for process in Path('/proc').glob('[0-9]*'):

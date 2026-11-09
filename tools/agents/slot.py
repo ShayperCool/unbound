@@ -263,7 +263,9 @@ def symlink_targets(base, checkouts=()):
     index = None
     try:
         index = DirectoryIndex(base.absolute())
-        return _symlink_targets(base, checkouts, index)
+        result = _symlink_targets(base, checkouts, index)
+        index.finish()
+        return result
     except (OSError, sqlite3.Error, ValueError) as error:
         raise SystemExit(f'cannot inspect run-cache links: {error}; refusing to reap worktrees')
     finally:

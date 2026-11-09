@@ -23,7 +23,7 @@ class Entry:
 
 
 class DirectoryIndex:
-    def __init__(self, base, *, seconds=60):
+    def __init__(self, base, *, seconds=120):
         key = hashlib.sha256(os.fsencode(base)).hexdigest()
         path = base.parent/'.unbound-link-index'/key
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -35,6 +35,7 @@ class DirectoryIndex:
         self.cached = {path: (stamp, values) for path, stamp, values in
                        self.db.execute('SELECT path, stamp, entries FROM directories')}
         self.reused = self.scanned = 0
+        self.seen = set()
 
     @staticmethod
     def stamp(info):
@@ -44,6 +45,7 @@ class DirectoryIndex:
         if time.monotonic() > self.deadline:
             raise TimeoutError(f'run-cache index exceeded {self.seconds}s; progress saved, retry reap')
         stamp = self.stamp(info)
+        self.seen.add(str(path))
         row = self.cached.get(str(path))
         if row and row[0] == stamp:
             values = json.loads(row[1])
@@ -58,6 +60,10 @@ class DirectoryIndex:
                             (str(path), stamp, json.dumps(values)))
             self.scanned += 1
         return [Entry(path, name, kind) for name, kind in values]
+
+    def finish(self):
+        self.db.executemany('DELETE FROM directories WHERE path=?',
+                            ((path,) for path in self.cached.keys()-self.seen))
 
     def close(self):
         self.db.commit()
