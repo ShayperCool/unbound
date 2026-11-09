@@ -418,7 +418,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId showAlternatingRowBackgroundsProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId virtualizationMethodProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId fixedItemHeightProperty;
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.SerializedVirtualizationData serializedVirtualizationData;
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.OnViewDataReady"); }
         [global::Unbound.Stub] void global::UnityEngine.ISerializationCallbackReceiver.OnBeforeSerialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.OnBeforeSerialize"); }
         [global::Unbound.Stub] void global::UnityEngine.ISerializationCallbackReceiver.OnAfterDeserialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.OnAfterDeserialize"); }
@@ -842,11 +841,6 @@ namespace UnityEngine.UIElements
     unsafe partial class CollectionViewController
     {
         [global::Unbound.Stub] private protected void SetHierarchyViewModelWithoutNotify(global::Unity.Hierarchy.HierarchyViewModel source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.SetHierarchyViewModelWithoutNotify"); }
-    }
-    unsafe partial class CollectionVirtualizationController
-    {
-        [global::Unbound.Stub] internal virtual void StartDragItem(global::UnityEngine.UIElements.ReusableCollectionItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionVirtualizationController.StartDragItem"); }
-        [global::Unbound.Stub] internal virtual void EndDrag(int dropIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionVirtualizationController.EndDrag"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct ColorPage
@@ -1846,25 +1840,6 @@ namespace UnityEngine.UIElements
         public static global::UnityEngine.UIElements.DynamicAtlasFilters defaultFilters { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicAtlasSettings.defaultFilters"); return default; } }
         public global::UnityEngine.UIElements.DynamicAtlasCustomFilter customFilter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicAtlasSettings.customFilter"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicAtlasSettings.customFilter"); } }
         public static global::UnityEngine.UIElements.DynamicAtlasSettings defaults { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicAtlasSettings.defaults"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class DynamicHeightVirtualizationController<T> : global::UnityEngine.UIElements.VerticalVirtualizationController<T> where T : global::UnityEngine.UIElements.ReusableCollectionItem, new()
-    {
-        [global::Unbound.Stub] public DynamicHeightVirtualizationController(global::UnityEngine.UIElements.BaseVerticalCollectionView collectionView) : base(default(global::UnityEngine.UIElements.BaseVerticalCollectionView)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.ctor"); }
-        [global::Unbound.Stub] public override void Refresh(bool rebuild) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.Refresh"); }
-        [global::Unbound.Stub] public override void ScrollToItem(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.ScrollToItem"); }
-        [global::Unbound.Stub] public override void Resize(global::UnityEngine.Vector2 size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.Resize"); }
-        [global::Unbound.Stub] public override void OnScroll(global::UnityEngine.Vector2 scrollOffset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.OnScroll"); }
-        [global::Unbound.Stub] protected override void OnScrollUpdate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.OnScrollUpdate"); }
-        [global::Unbound.Stub] public override int GetIndexFromPosition(global::UnityEngine.Vector2 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.GetIndexFromPosition"); return default; }
-        [global::Unbound.Stub] public override float GetExpectedItemHeight(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.GetExpectedItemHeight"); return default; }
-        [global::Unbound.Stub] public override float GetExpectedContentHeight() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.GetExpectedContentHeight"); return default; }
-        [global::Unbound.Stub] internal override T GetOrMakeItemAtIndex(int activeItemIndex = -1, int scrollViewIndex = -1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.GetOrMakeItemAtIndex"); return default; }
-        [global::Unbound.Stub] internal override void ReleaseItem(int activeItemsIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.ReleaseItem"); }
-        [global::Unbound.Stub] internal override void StartDragItem(global::UnityEngine.UIElements.ReusableCollectionItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.StartDragItem"); }
-        [global::Unbound.Stub] internal override void EndDrag(int dropIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.EndDrag"); }
-        internal global::System.Collections.Generic.IReadOnlyDictionary<int, float> itemHeightCache { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.itemHeightCache"); return new global::System.Collections.Generic.Dictionary<int, float>(); } }
-        protected override bool alwaysRebindOnRefresh { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DynamicHeightVirtualizationController<T>.alwaysRebindOnRefresh"); return default; } }
     }
     unsafe partial struct EasingFunction
     {
@@ -4203,14 +4178,7 @@ namespace UnityEngine.UIElements
     }
     unsafe partial class ReusableCollectionItem
     {
-        [global::Unbound.Stub] protected global::UnityEngine.UIElements.EventCallback<global::UnityEngine.UIElements.GeometryChangedEvent> m_GeometryChangedEventCallback;
-        [global::Unbound.Stub] protected virtual void OnGeometryChanged(global::UnityEngine.UIElements.GeometryChangedEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.OnGeometryChanged"); }
         public global::UnityEngine.UIElements.Experimental.ValueAnimation<global::UnityEngine.UIElements.Experimental.StyleValues> animator { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.animator"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.animator"); } }
-        public event global::System.Action<global::UnityEngine.UIElements.ReusableCollectionItem> onGeometryChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableCollectionItem.onGeometryChanged"); } [global::Unbound.Stub] remove { } }
-    }
-    unsafe partial class ReusableListViewItem
-    {
-        [global::Unbound.Stub] protected override void OnGeometryChanged(global::UnityEngine.UIElements.GeometryChangedEvent evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReusableListViewItem.OnGeometryChanged"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ReusableMultiColumnListViewItem : global::UnityEngine.UIElements.ReusableListViewItem
@@ -4383,18 +4351,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.UxmlTraits.ctor"); }
             public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
         }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class SerializedVirtualizationData
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 scrollOffset;
-        [global::Unbound.Stub] public int firstVisibleIndex;
-        [global::Unbound.Stub] public float contentPadding;
-        [global::Unbound.Stub] public float contentHeight;
-        [global::Unbound.Stub] public int anchoredItemIndex;
-        [global::Unbound.Stub] public float anchorOffset;
-        [global::Unbound.Stub] public SerializedVirtualizationData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SerializedVirtualizationData.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class SetValueVisitor<TSrcValue> : global::Unity.Properties.PathVisitor
@@ -6569,13 +6525,7 @@ namespace UnityEngine.UIElements
     internal unsafe delegate void VersionChangedDelegate(global::UnityEngine.UIElements.VisualManager manager, in global::UnityEngine.UIElements.VisualNodeHandle handle, global::UnityEngine.UIElements.VersionChangeType type);
     unsafe partial class VerticalVirtualizationController<T>
     {
-        [global::Unbound.Stub] protected T m_DraggedItem;
         [global::Unbound.Stub] protected readonly global::System.Func<T, bool> m_VisibleItemPredicateDelegate;
-        [global::Unbound.Stub] internal override void StartDragItem(global::UnityEngine.UIElements.ReusableCollectionItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.StartDragItem"); }
-        [global::Unbound.Stub] internal override void EndDrag(int dropIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.EndDrag"); }
-        [global::Unbound.Stub] protected int GetDraggedIndex() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.GetDraggedIndex"); return default; }
-        internal T firstVisibleItem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.firstVisibleItem"); return default; } }
-        protected global::UnityEngine.UIElements.SerializedVirtualizationData serializedData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VerticalVirtualizationController<T>.serializedData"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct VisualData : global::UnityEngine.UIElements.IStyleDataGroup<global::UnityEngine.UIElements.VisualData>, global::System.IEquatable<global::UnityEngine.UIElements.VisualData>

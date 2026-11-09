@@ -117,6 +117,10 @@ namespace UnityEngine.UIElements
         AlternatingRowBackground m_ShowAlternatingRowBackgrounds = AlternatingRowBackground.None;
         internal float m_FixedItemHeight = s_DefaultItemHeight;
         internal bool m_ItemHeightIsInline;
+
+        /// <summary>The virtualization's scroll state (first visible index, content padding and height,
+        /// anchor), kept by the view so a new controller continues from it.</summary>
+        internal SerializedVirtualizationData serializedVirtualizationData = new SerializedVirtualizationData();
         CollectionVirtualizationMethod m_VirtualizationMethod;
         readonly ScrollView m_ScrollView;
         CollectionViewController m_ViewController;
@@ -394,8 +398,7 @@ namespace UnityEngine.UIElements
                     m_VirtualizationController = new FixedHeightVirtualizationController<T>(this);
                     break;
                 case CollectionVirtualizationMethod.DynamicHeight:
-                    Debug.LogError("Unbound: dynamic height list virtualization is not supported yet; items are laid out with the fixed item height");
-                    m_VirtualizationController = new FixedHeightVirtualizationController<T>(this);
+                    m_VirtualizationController = new DynamicHeightVirtualizationController<T>(this);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(virtualizationMethod), virtualizationMethod, "Unsupported virtualizationMethod virtualization");
@@ -1870,18 +1873,32 @@ namespace UnityEngine.UIElements
 
         internal event Action<ReusableCollectionItem> onDestroy;
 
+        /// <summary>Sent when the attached element's geometry changes (dynamic height rows measure
+        /// themselves with it).</summary>
+        public event Action<ReusableCollectionItem> onGeometryChanged;
+
+        protected EventCallback<GeometryChangedEvent> m_GeometryChangedEventCallback;
+
         public ReusableCollectionItem()
         {
             index = id = UndefinedIndex;
+            m_GeometryChangedEventCallback = OnGeometryChanged;
         }
+
+        protected virtual void OnGeometryChanged(GeometryChangedEvent evt) => onGeometryChanged?.Invoke(this);
 
         public virtual void Init(VisualElement item) => bindableElement = item;
 
-        public virtual void PreAttachElement() => rootElement.AddToClassList(BaseVerticalCollectionView.itemUssClassName);
+        public virtual void PreAttachElement()
+        {
+            rootElement.AddToClassList(BaseVerticalCollectionView.itemUssClassName);
+            rootElement.RegisterCallback(m_GeometryChangedEventCallback);
+        }
 
         public virtual void DetachElement()
         {
             rootElement.RemoveFromClassList(BaseVerticalCollectionView.itemUssClassName);
+            rootElement.UnregisterCallback(m_GeometryChangedEventCallback);
             rootElement?.RemoveFromHierarchy();
             SetSelected(false);
             SetDragGhost(false);
@@ -1997,6 +2014,9 @@ namespace UnityEngine.UIElements
             base.SetDragGhost(dragGhost);
             m_DragHandle?.EnableInClassList("unity-hidden", isDragGhost);
         }
+
+        // The item container's world transform follows from layout here; only the notification is needed.
+        protected override void OnGeometryChanged(GeometryChangedEvent evt) => base.OnGeometryChanged(evt);
     }
 
     internal abstract partial class CollectionVirtualizationController
@@ -2035,6 +2055,22 @@ namespace UnityEngine.UIElements
         public abstract void UpdateBackground();
 
         public abstract void UnbindAll();
+
+        /// <summary>Animated reordering: the dragged item leaves the active items (a ghost takes its
+        /// place) and returns at the drop index.</summary>
+        internal abstract void StartDragItem(ReusableCollectionItem item);
+
+        internal abstract void EndDrag(int dropIndex);
+    }
+
+    internal partial class SerializedVirtualizationData
+    {
+        public Vector2 scrollOffset;
+        public int firstVisibleIndex;
+        public float contentPadding;
+        public float contentHeight;
+        public int anchoredItemIndex;
+        public float anchorOffset;
     }
 
     /// <summary>Items recycled as the list scrolls: the active items show consecutive indices from the
@@ -2054,11 +2090,24 @@ namespace UnityEngine.UIElements
         readonly List<int> m_LastFocusedElementTreeChildIndexes = new List<int>();
         protected List<T> m_ScrollInsertionList = new List<T>();
         VisualElement m_EmptyRows;
-        int m_FirstVisibleIndex;
+        protected T m_DraggedItem;
 
         public override IEnumerable<ReusableCollectionItem> activeItems => m_ActiveItems;
 
         internal int itemsCount => m_CollectionView.viewController?.GetItemsCount() ?? m_CollectionView.itemsSource.Count;
+
+        protected SerializedVirtualizationData serializedData => m_CollectionView.serializedVirtualizationData;
+
+        /// <summary>The first active item that is shown.</summary>
+        internal T firstVisibleItem
+        {
+            get
+            {
+                foreach (var item in m_ActiveItems)
+                    if (VisibleItemPredicate(item)) return item;
+                return null;
+            }
+        }
 
         internal T lastVisibleItem
         {
@@ -2083,8 +2132,8 @@ namespace UnityEngine.UIElements
 
         public override int firstVisibleIndex
         {
-            get => Mathf.Min(m_FirstVisibleIndex, m_CollectionView.viewController != null ? m_CollectionView.viewController.GetItemsCount() - 1 : m_FirstVisibleIndex);
-            protected set => m_FirstVisibleIndex = value;
+            get => Mathf.Min(serializedData.firstVisibleIndex, m_CollectionView.viewController != null ? m_CollectionView.viewController.GetItemsCount() - 1 : serializedData.firstVisibleIndex);
+            protected set => serializedData.firstVisibleIndex = value;
         }
 
         protected float lastHeight => m_CollectionView.lastHeight;
@@ -2302,6 +2351,52 @@ namespace UnityEngine.UIElements
             m_CollectionView.viewController.InvokeDestroyItem(item);
             item.onDestroy -= OnDestroyItem;
         }
+
+        internal override void StartDragItem(ReusableCollectionItem item)
+        {
+            m_DraggedItem = item as T;
+            int at = m_ActiveItems.IndexOf(m_DraggedItem);
+            m_ActiveItems.RemoveAt(at);
+            var ghost = GetOrMakeItemAtIndex(at, at);
+            Setup(ghost, m_DraggedItem.index);
+        }
+
+        /// <summary>Puts the dragged item back at the drop index; ghosts are released, and the item
+        /// that leaves the window is unbound.</summary>
+        internal override void EndDrag(int dropIndex)
+        {
+            var atDrop = m_CollectionView.GetRecycledItemFromIndex(dropIndex);
+            int at = atDrop != null ? m_ScrollView.IndexOf(atDrop.rootElement) : m_ActiveItems.Count;
+            m_ScrollView.Insert(at, m_DraggedItem.rootElement);
+            m_ActiveItems.Insert(at, m_DraggedItem);
+            for (int i = 0; i < m_ActiveItems.Count; i++)
+            {
+                var item = m_ActiveItems[i];
+                if (!item.isDragGhost) continue;
+                item.index = -1;
+                ReleaseItem(i);
+                i--;
+            }
+            if (Math.Min(dropIndex, itemsCount - 1) != m_DraggedItem.index)
+            {
+                if (lastVisibleItem != null) lastVisibleItem.rootElement.style.display = DisplayStyle.None;
+                if (m_DraggedItem.index < dropIndex)
+                {
+                    m_CollectionView.viewController.InvokeUnbindItem(m_DraggedItem, m_DraggedItem.index);
+                    m_DraggedItem.index = -1;
+                }
+                else if (atDrop != null)
+                {
+                    m_CollectionView.viewController.InvokeUnbindItem(atDrop, atDrop.index);
+                    atDrop.index = -1;
+                }
+            }
+            m_DraggedItem = null;
+        }
+
+        /// <summary>The index of the item an animated drag holds, -1 without one (animated reordering
+        /// is not implemented: there is never one).</summary>
+        protected int GetDraggedIndex() => m_DraggedItem?.index ?? -1;
 
         [Unbound.EditorFaithful("Unity's base implementation")]
         protected virtual void OnScrollUpdate() { }

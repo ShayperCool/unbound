@@ -314,6 +314,30 @@ namespace UnityEngine.Tests
             Assert.IsType<Label>(row.hierarchy[1].hierarchy[0]);
         }
 
+        // ------------------------------------------------------------------ dynamic height
+
+        // [measured] dynamic/attach: each laid-out row registers its height; the smallest one becomes
+        // the default for rows not laid out yet, which brings in more rows.
+        [Fact]
+        public void DynamicHeightRowsRegisterTheirHeights()
+        {
+            using var panel = NewPanel(400, 400);
+            var items = Enumerable.Range(0, 60).ToList();
+            var list = new ListView { virtualizationMethod = CollectionVirtualizationMethod.DynamicHeight };
+            list.style.position = Position.Absolute;
+            list.style.width = 180;
+            list.style.height = 150;
+            list.makeItem = () => new Label();
+            list.bindItem = (e, i) => { e.style.height = 16 + (items[i] % 5) * 8; };
+            list.itemsSource = items;
+            panel.visualTree.Add(list);
+            for (int i = 0; i < 6; i++) Layout(panel);
+            var controller = (DynamicHeightVirtualizationController<ReusableListViewItem>)list.virtualizationController;
+            Assert.Equal(16f, controller.itemHeightCache[0]);
+            Assert.Equal(24f, controller.itemHeightCache[1]);
+            Assert.Equal(12, list.activeItems.Count());
+        }
+
         // ------------------------------------------------------------------ layout events
 
         // [measured] fixed/new-makeitem, footer/no-footer: a parent's GeometryChangedEvent follows

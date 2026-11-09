@@ -22,8 +22,6 @@ TOLERANCE = 1e-3
 OPEN = {
     'animated': 'animated reordering (ListViewReorderMode.Animated)',
     'animated-steps': 'animated reordering (ListViewReorderMode.Animated)',
-    'dynamic': 'dynamic height virtualization',
-    'dynamic-steps': 'dynamic height virtualization',
     'tree': 'TreeView controller, navigation and toggles',
     'tree-steps': 'TreeView controller, navigation and toggles',
     'columns': 'MultiColumnListView',
