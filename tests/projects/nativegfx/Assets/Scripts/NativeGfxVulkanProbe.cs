@@ -21,13 +21,13 @@ public class NativeGfxVulkanProbe : MonoBehaviour
     [DllImport(Plugin)] static extern IntPtr NativeGfxVk_Event();
     [DllImport(Plugin)] static extern int NativeGfxVk_EventBase();
     [DllImport(Plugin)] static extern void NativeGfxVk_SetTexture(int index, IntPtr pointer);
-    [DllImport(Plugin)] static extern void NativeGfxVk_SetRenderBuffer(IntPtr pointer);
+    [DllImport(Plugin)] static extern void NativeGfxVk_SetRenderBuffer(int index, IntPtr pointer);
     [DllImport(Plugin)] static extern void NativeGfxVk_SetBuffer(IntPtr pointer);
     [DllImport(Plugin)] static extern void NativeGfxVk_Step(string step);
     [DllImport(Plugin)] static extern int NativeGfxVk_Record(byte[] buffer, int capacity);
 
     // The plugin's events after its reserved base (render pass precondition).
-    const int DontCare = 0, Outside = 1, Inside = 2, OutsideState = 3;
+    const int DontCare = 0, Outside = 1, Inside = 2, OutsideState = 3, AccessInside = 4;
 
     readonly StringBuilder records = new StringBuilder();
     readonly List<string> logs = new List<string>();
@@ -35,8 +35,8 @@ public class NativeGfxVulkanProbe : MonoBehaviour
     string output;
     IntPtr callback;
     int eventBase;
-    Texture2D texture;
-    RenderTexture renderTexture, cameraTarget, readback;
+    Texture2D texture, mipped;
+    RenderTexture renderTexture, multisampled, inner, cameraTarget;
     ComputeBuffer buffer;
     Camera probeCamera;
 
@@ -66,16 +66,13 @@ public class NativeGfxVulkanProbe : MonoBehaviour
     string Pixels(Texture source, int width, int height)
     {
         var previous = RenderTexture.active;
-        if (readback == null)
-        {
-            readback = Keep(new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear));
-            readback.Create();
-        }
+        var readback = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
         Graphics.Blit(source, readback);
         var cpu = new Texture2D(width, height, TextureFormat.RGBA32, false, true);
         RenderTexture.active = readback;
         cpu.ReadPixels(new Rect(0, 0, width, height), 0, 0);
         RenderTexture.active = previous;
+        RenderTexture.ReleaseTemporary(readback);
         var pixels = cpu.GetPixels32();
         DestroyImmediate(cpu);
         var rows = new List<string>();
@@ -119,9 +116,22 @@ public class NativeGfxVulkanProbe : MonoBehaviour
         RenderTexture.active = previous;
         buffer = new ComputeBuffer(4, 4);
         buffer.SetData(new uint[4]);
+        mipped = Keep(new Texture2D(8, 8, TextureFormat.RGBA32, true, true) { name = "mipped", filterMode = FilterMode.Point });
+        mipped.SetPixels32(Enumerable.Repeat(new Color32(0, 0, 0, 255), 64).ToArray());
+        mipped.Apply(true);
+        multisampled = Keep(new RenderTexture(8, 8, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { name = "multisampled", antiAliasing = 2 });
+        multisampled.Create();
+        inner = Keep(new RenderTexture(8, 8, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { name = "inner" });
+        inner.Create();
+        RenderTexture.active = inner;
+        GL.Clear(true, true, Color.black);
+        RenderTexture.active = previous;
         NativeGfxVk_SetTexture(0, texture.GetNativeTexturePtr());
         NativeGfxVk_SetTexture(1, renderTexture.GetNativeTexturePtr());
-        NativeGfxVk_SetRenderBuffer(renderTexture.colorBuffer.GetNativeRenderBufferPtr());
+        NativeGfxVk_SetTexture(2, mipped.GetNativeTexturePtr());
+        NativeGfxVk_SetTexture(3, inner.GetNativeTexturePtr());
+        NativeGfxVk_SetRenderBuffer(0, renderTexture.colorBuffer.GetNativeRenderBufferPtr());
+        NativeGfxVk_SetRenderBuffer(1, multisampled.colorBuffer.GetNativeRenderBufferPtr());
         NativeGfxVk_SetBuffer(buffer.GetNativeBufferPtr());
 
         cameraTarget = Keep(new RenderTexture(8, 8, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { name = "camera" });
@@ -136,6 +146,7 @@ public class NativeGfxVulkanProbe : MonoBehaviour
         var cmd = new CommandBuffer { name = "nativegfx vulkan" };
         cmd.IssuePluginEvent(callback, eventBase + Inside);
         cmd.IssuePluginEvent(callback, eventBase + DontCare);
+        cmd.IssuePluginEvent(callback, eventBase + AccessInside);
         probeCamera.AddCommandBuffer(CameraEvent.AfterForwardOpaque, cmd);
     }
 
@@ -172,6 +183,12 @@ public class NativeGfxVulkanProbe : MonoBehaviour
         Value("texture.pixels", Pixels(texture, 8, 8));
         Value("rendertexture.pixels", Pixels(renderTexture, 8, 8));
         Value("camera.pixels", Pixels(cameraTarget, 8, 8));
+        Value("mips.pixels", Pixels(mipped, 8, 8));
+        var mip1 = Keep(new RenderTexture(4, 4, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { name = "mip1" });
+        mip1.Create();
+        Graphics.CopyTexture(mipped, 0, 1, mip1, 0, 0);
+        Value("mips.mip1.pixels", Pixels(mip1, 4, 4));
+        Value("inner.pixels", Pixels(inner, 8, 8));
         var words = new uint[4];
         buffer.GetData(words);
         Value("buffer.words", "[" + string.Join(",", words.Select(w => "\"" + w.ToString("x8") + "\"")) + "]");

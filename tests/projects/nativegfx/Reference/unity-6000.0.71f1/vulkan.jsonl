@@ -1,7 +1,10 @@
 {"k":"device","v":"Vulkan"}
 {"k":"texture.pixels","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
 {"k":"rendertexture.pixels","v":["0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8"]}
-{"k":"camera.pixels","v":["000000ff*8","000000ff*8","000000ff*2 ffff00ff*4 000000ff*2","000000ff*2 ffff00ff*4 000000ff*2","000000ff*2 ffff00ff*4 000000ff*2","000000ff*2 ffff00ff*4 000000ff*2","000000ff*8","000000ff*8"]}
+{"k":"camera.pixels","v":["ffffffff*2 000000ff*6","ffffffff*2 000000ff*6","000000ff*2 ffff00ff*4 000000ff*2","000000ff*2 ffff00ff*4 000000ff*2","000000ff*2 ffff00ff*4 000000ff*2","000000ff*2 ffff00ff*4 000000ff*2","000000ff*8","000000ff*8"]}
+{"k":"mips.pixels","v":["ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8"]}
+{"k":"mips.mip1.pixels","v":["00ffffff*4","00ffffff*4","00ffffff*4","00ffffff*4"]}
+{"k":"inner.pixels","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
 {"k":"buffer.words","v":["01020304","01020304","01020304","01020304"]}
 {"k":"plugin.load","v":"load renderer=21 vulkan=1 vulkanV2=1"}
 {"k":"plugin.intercept.late","v":"intercept.late=0"}
@@ -12,11 +15,20 @@
 {"k":"plugin.rendertexture.observe","v":"rendertexture.observe ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
 {"k":"plugin.renderbuffer","v":"renderbuffer ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
 {"k":"plugin.buffer","v":"buffer ok=1 buffer=1 size=16 usage.transferdst=1"}
+{"k":"plugin.mips.whole","v":"mips.whole ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=7 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=4"}
+{"k":"plugin.mips.one","v":"mips.one ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=7 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=4"}
+{"k":"plugin.msaa.buffer","v":"msaa.buffer ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=37 extent=8x8x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.msaa.resolve","v":"msaa.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.msaa.distinct","v":"msaa.distinct images=1"}
 {"k":"plugin.dontcare.update","v":"dontcare step=update ok=1 thread=main cb=0 level=1 renderPass=0 framebuffer=0 subpass=0 frame=0 safe.before=1"}
 {"k":"plugin.outside.state.frame2","v":"outside.state step=frame2 ok=1 thread=main cb=1 level=1 renderPass=0 framebuffer=0 subpass=0 frame=1 safe.before=1"}
 {"k":"plugin.outside.state.frame3","v":"outside.state step=frame3 ok=1 thread=main cb=1 level=1 renderPass=0 framebuffer=0 subpass=0 frame=2 safe.before=1"}
 {"k":"plugin.inside.camera","v":"inside step=camera ok=1 thread=main cb=1 level=1 renderPass=1 framebuffer=1 subpass=0 frame=3 safe.before=1"}
 {"k":"plugin.dontcare.camera","v":"dontcare step=camera ok=1 thread=main cb=1 level=1 renderPass=1 framebuffer=1 subpass=0 frame=3 safe.before=1"}
+{"k":"plugin.access.before.camera","v":"access.before step=camera ok=1 thread=main cb=1 level=1 renderPass=1 framebuffer=1 subpass=0 frame=3 safe.before=1"}
+{"k":"plugin.access.inside","v":"access.inside ok=1"}
+{"k":"plugin.access.after.camera","v":"access.after step=camera ok=1 thread=main cb=1 level=1 renderPass=1 framebuffer=1 subpass=0 frame=3 safe.before=1"}
+{"k":"plugin.access.resumed.camera","v":"access.resumed step=camera ok=1 thread=main cb=1 level=1 renderPass=1 framebuffer=1 subpass=0 frame=3 safe.before=1"}
 {"k":"plugin.outside.state.execute","v":"outside.state step=execute ok=1 thread=main cb=1 level=1 renderPass=0 framebuffer=0 subpass=0 frame=3 safe.before=1"}
 {"k":"plugin.dontcare.execute","v":"dontcare step=execute ok=1 thread=main cb=1 level=1 renderPass=0 framebuffer=0 subpass=0 frame=3 safe.before=1"}
 {"k":"complete","v":true}

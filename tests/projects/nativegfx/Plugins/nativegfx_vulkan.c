@@ -115,7 +115,7 @@ static const Guid kVulkanV2 = {0x329334C09DCA4787ULL, 0xB347DD92A0097FFCULL};
 enum { DontCare = 0, EnsureInside = 1, EnsureOutside = 2 };
 enum { ObserveOnly = 0, PipelineBarrier = 1 };
 // The probe's events, after the reserved base: their render pass preconditions.
-enum { EventDontCare = 0, EventOutside = 1, EventInside = 2, EventOutsideState = 3, EventCount = 4 };
+enum { EventDontCare = 0, EventOutside = 1, EventInside = 2, EventOutsideState = 3, EventAccessInside = 4, EventCount = 5 };
 
 // ------------------------------------------------------------------ record
 
@@ -151,8 +151,10 @@ static IUnityGraphics* s_graphics;
 static IUnityGraphicsVulkan* s_vulkan;
 static UnityVulkanInstance s_instance;
 static int s_event_base = -1;
-static void* s_textures[2];      // native texture pointers: a Texture2D, a render texture
-static void* s_render_buffer;    // a render texture's color buffer
+// Native texture pointers: a Texture2D, a render texture, a Texture2D with mipmaps, a render
+// texture cleared from inside a camera's render pass.
+static void* s_textures[4];
+static void* s_render_buffers[2]; // color buffers: the render texture's, a multisampled one's
 static void* s_buffer;           // a ComputeBuffer's native pointer
 static char s_step[64] = "none";
 static unsigned long long s_first_frame;
@@ -275,8 +277,56 @@ static void record_image(const char* name, int ok, const UnityVulkanImage* image
 
 static const VkImageSubresourceRange kColorRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
+/// Two accesses of one texture with mipmaps: the whole image for transfers (mip 0 cleared
+/// magenta), then mip 1 alone in the general layout (cleared cyan), so the second barrier starts
+/// from the layout the first left.
+static void mips(void)
+{
+    UnityVulkanRecordingState state;
+    UnityVulkanImage image;
+    memset(&image, 0, sizeof image);
+    int ok = s_textures[2] && s_vulkan->AccessTexture(s_textures[2], NULL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                                      VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+                                                      PipelineBarrier, &image);
+    record_image("mips.whole", ok, &image, s_textures[2]);
+    if (ok && s_vulkan->CommandRecordingState(&state, 0) && vk.CmdClearColorImage) {
+        VkClearColorValue magenta = {{1.0f, 0.0f, 1.0f, 1.0f}};
+        vk.CmdClearColorImage(state.commandBuffer, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &magenta, 1, &kColorRange);
+    }
+    const VkImageSubresource mip1 = {VK_IMAGE_ASPECT_COLOR_BIT, 1, 0};
+    memset(&image, 0, sizeof image);
+    ok = s_textures[2] && s_vulkan->AccessTexture(s_textures[2], &mip1, VK_IMAGE_LAYOUT_GENERAL,
+                                                  VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+                                                  PipelineBarrier, &image);
+    record_image("mips.one", ok, &image, s_textures[2]);
+    if (ok && s_vulkan->CommandRecordingState(&state, 0) && vk.CmdClearColorImage) {
+        VkClearColorValue cyan = {{0.0f, 1.0f, 1.0f, 1.0f}};
+        const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 1, 1, 0, 1};
+        vk.CmdClearColorImage(state.commandBuffer, image.image, VK_IMAGE_LAYOUT_GENERAL, &cyan, 1, &range);
+    }
+}
+
+/// A multisampled render texture's color buffer and its resolve texture (observed only).
+static void resolve(void)
+{
+    UnityVulkanImage image;
+    memset(&image, 0, sizeof image);
+    int ok = s_render_buffers[1] && s_vulkan->AccessRenderBufferTexture(s_render_buffers[1], NULL, VK_IMAGE_LAYOUT_GENERAL,
+                                                                         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+                                                                         ObserveOnly, &image);
+    record_image("msaa.buffer", ok, &image, NULL);
+    VkImage multisampled = image.image;
+    memset(&image, 0, sizeof image);
+    ok = s_render_buffers[1] && s_vulkan->AccessRenderBufferResolveTexture(s_render_buffers[1], NULL, VK_IMAGE_LAYOUT_GENERAL,
+                                                                          VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+                                                                          ObserveOnly, &image);
+    record_image("msaa.resolve", ok, &image, NULL);
+    record("msaa.distinct images=%d", ok && image.image != multisampled);
+    // A single-sample render buffer's resolve texture is not asked for: the Editor crashes there.
+}
+
 /// Outside a render pass: a Texture2D cleared red and a render buffer cleared blue through their
-/// images, a buffer filled with a pattern.
+/// images, a buffer filled with a pattern; then the mipmap and resolve controls.
 static void outside(void)
 {
     UnityVulkanRecordingState state;
@@ -298,7 +348,7 @@ static void outside(void)
                                                   ObserveOnly, &image);
     record_image("rendertexture.observe", ok, &image, s_textures[1]);
     memset(&image, 0, sizeof image);
-    ok = s_render_buffer && s_vulkan->AccessRenderBufferTexture(s_render_buffer, NULL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    ok = s_render_buffers[0] && s_vulkan->AccessRenderBufferTexture(s_render_buffers[0], NULL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                                                 VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
                                                                 PipelineBarrier, &image);
     record_image("renderbuffer", ok, &image, NULL);
@@ -316,6 +366,8 @@ static void outside(void)
            buffer.sizeInBytes, (buffer.usage & VK_BUFFER_USAGE_TRANSFER_DST_BIT) != 0);
     if (ok && s_vulkan->CommandRecordingState(&state, 0) && vk.CmdFillBuffer)
         vk.CmdFillBuffer(state.commandBuffer, buffer.buffer, 0, VK_WHOLE_SIZE, 0x01020304u);
+    mips();
+    resolve();
 }
 
 /// Inside the render pass of the camera's target: a 4x4 square at (2, 2) of its first color
@@ -329,6 +381,31 @@ static void inside(void)
     vk.CmdClearAttachments(state.commandBuffer, 1, &attachment, 1, &rect);
 }
 
+/// A DontCare event inside a camera's render pass that accesses a texture (cleared green: the
+/// access ends the pass if it must), then asks for the pass again and clears a 2x2 square at
+/// (0, 0) of its first color attachment white.
+static void access_inside(void)
+{
+    UnityVulkanRecordingState state;
+    if (!recording_state("access.before", &state)) return;
+    UnityVulkanImage image;
+    memset(&image, 0, sizeof image);
+    int ok = s_textures[3] && s_vulkan->AccessTexture(s_textures[3], NULL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                                      VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+                                                      PipelineBarrier, &image);
+    record("access.inside ok=%d", ok);
+    if (recording_state("access.after", &state) && ok && state.renderPass == VK_NULL_HANDLE && vk.CmdClearColorImage) {
+        VkClearColorValue green = {{0.0f, 1.0f, 0.0f, 1.0f}};
+        vk.CmdClearColorImage(state.commandBuffer, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &green, 1, &kColorRange);
+    }
+    s_vulkan->EnsureInsideRenderPass();
+    if (recording_state("access.resumed", &state) && state.renderPass != VK_NULL_HANDLE && vk.CmdClearAttachments) {
+        VkClearAttachment attachment = {VK_IMAGE_ASPECT_COLOR_BIT, 0, {.color = {{1.0f, 1.0f, 1.0f, 1.0f}}}};
+        VkClearRect rect = {{{0, 0}, {2, 2}}, 0, 1};
+        vk.CmdClearAttachments(state.commandBuffer, 1, &attachment, 1, &rect);
+    }
+}
+
 static void on_event(int id)
 {
     switch (id - s_event_base) {
@@ -336,6 +413,7 @@ static void on_event(int id)
     case EventOutside: outside(); break;
     case EventInside: inside(); break;
     case EventOutsideState: { UnityVulkanRecordingState s; recording_state("outside.state", &s); break; }
+    case EventAccessInside: access_inside(); break;
     default: record("event unknown=%d", id); break;
     }
 }
@@ -344,8 +422,8 @@ static void on_event(int id)
 
 EXPORT void* NativeGfxVk_Event(void) { return (void*)on_event; }
 EXPORT int NativeGfxVk_EventBase(void) { return s_event_base; }
-EXPORT void NativeGfxVk_SetTexture(int index, void* pointer) { if (index >= 0 && index < 2) s_textures[index] = pointer; }
-EXPORT void NativeGfxVk_SetRenderBuffer(void* pointer) { s_render_buffer = pointer; }
+EXPORT void NativeGfxVk_SetTexture(int index, void* pointer) { if (index >= 0 && index < 4) s_textures[index] = pointer; }
+EXPORT void NativeGfxVk_SetRenderBuffer(int index, void* pointer) { if (index >= 0 && index < 2) s_render_buffers[index] = pointer; }
 EXPORT void NativeGfxVk_SetBuffer(void* pointer) { s_buffer = pointer; }
 EXPORT void NativeGfxVk_Step(const char* step) { snprintf(s_step, sizeof s_step, "%s", step ? step : "none"); }
 

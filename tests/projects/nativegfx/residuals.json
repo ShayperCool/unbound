@@ -6,11 +6,13 @@
   "interface.IUnityGraphicsVulkan",
   "interface.IUnityGraphicsVulkanV2"
  ],
- "Vulkan: the Editor's render textures are also input attachments (usage bit 128); Unbound's images have the usage they are made with (wgpu allocates them): accepted, plugins see the real image": [
-  "plugin.rendertexture.observe",
-  "plugin.renderbuffer"
- ],
  "Vulkan: a DontCare event from a script outside rendering gets the Editor's command buffer only while it has one recording (after resource access it has none); Unbound gives its own: unspecified by the interface (DontCare), accepted": [
   "plugin.dontcare.update"
+ ],
+ "Vulkan: the Editor's render textures are also input attachments (usage bit 128) and its multisampled colors also transfer sources and destinations; Unbound's images have the usage they are made with (wgpu allocates them, a multisampled color as a render attachment only): accepted, plugins see the real image": [
+  "plugin.rendertexture.observe",
+  "plugin.renderbuffer",
+  "plugin.msaa.buffer",
+  "plugin.msaa.resolve"
  ]
 }
