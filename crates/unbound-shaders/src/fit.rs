@@ -1,7 +1,9 @@
 //! A compiled program's SPIR-V fitted to the renderer's interface (see [`crate::Compiled`]):
 //! vertex inputs moved to the renderer's locations by HLSL semantic, resources rebound by name,
-//! the vertex color multiplied by the per-draw color, and OpenGL clip space turned into the
-//! renderer's (naga negates y; depth is remapped here from [-w, w] to [0, w]).
+//! the vertex color multiplied by the per-draw color, and the device's clip space turned into the
+//! renderer's (wgpu's: y up, depth from 0 to w). OpenGL Core's is turned (naga negates y, so
+//! targets are stored bottom-up; depth is remapped here from [-w, w] to [0, w]); Vulkan's is the
+//! renderer's already (Unity's projection puts render textures' rows bottom-up itself).
 use crate::{
     BufferSlot, Compiled, InlineSampler, SampleKind, Scalar, TextureDim, TextureSlot, Uniform,
 };
@@ -883,11 +885,30 @@ fn pack_storage_vectors(words: &[u32]) -> Result<Vec<u32>> {
     Ok(out)
 }
 
-pub(crate) fn parse(words: &[u32]) -> Result<Module> {
+/// How the device's clip space becomes the renderer's.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ClipSpace {
+    /// OpenGL's: y negated (targets stored bottom-up) and depth remapped from [-w, w].
+    OpenGl,
+    /// The renderer's own (y up, depth from 0 to w): Vulkan's as Unity's projection uses it.
+    Renderer,
+}
+
+impl ClipSpace {
+    pub(crate) fn of(conventions: unbound_compat::Conventions) -> Self {
+        if conventions.clip_depth_zero_to_one {
+            ClipSpace::Renderer
+        } else {
+            ClipSpace::OpenGl
+        }
+    }
+}
+
+pub(crate) fn parse(words: &[u32], clip: ClipSpace) -> Result<Module> {
     let words = pack_storage_vectors(words)?;
     let bytes: Vec<u8> = words.iter().flat_map(|w| w.to_le_bytes()).collect();
     let options = naga::front::spv::Options {
-        adjust_coordinate_space: true,
+        adjust_coordinate_space: clip == ClipSpace::OpenGl,
         strict_capabilities: false,
         block_ctx_dump_prefix: None,
     };
@@ -986,10 +1007,11 @@ fn texture_property(name: &str, sampler: bool) -> Option<String> {
 }
 
 /// `uav_registers`: the UAV registers the fragment source declares, by buffer name.
-pub fn fit(
+pub(crate) fn fit(
     vertex: &[u32],
     fragment: &[u32],
     uav_registers: &HashMap<String, u32>,
+    clip: ClipSpace,
 ) -> Result<Compiled> {
     let vertex = unify_int_signedness(&pad_array_elements(&align_uniform_members(
         &strip_relaxed_precision(&crate::samplers::own_samplers(vertex)?),
@@ -1001,8 +1023,8 @@ pub fn fit(
     )?)?)?;
     let vertex_scan = scan(&vertex, Stage::Vertex)?;
     let fragment_scan = scan(&fragment, Stage::Fragment)?;
-    let mut vertex = parse(&vertex_scan.words).context("vertex program")?;
-    let mut fragment = parse(&fragment_scan.words).context("fragment program")?;
+    let mut vertex = parse(&vertex_scan.words, clip).context("vertex program")?;
+    let mut fragment = parse(&fragment_scan.words, clip).context("fragment program")?;
     pad_fragment_outputs(&mut fragment);
     flat_integer_varyings(&mut vertex, naga::ShaderStage::Vertex);
     flat_integer_varyings(&mut fragment, naga::ShaderStage::Fragment);
@@ -1144,7 +1166,7 @@ pub fn fit(
 
     let vertex_uniforms = rebind(&mut vertex, &textures, &buffers)?;
     let fragment_uniforms = rebind(&mut fragment, &textures, &buffers)?;
-    fit_vertex(&mut vertex, &vertex_scan.input_semantics)?;
+    fit_vertex(&mut vertex, &vertex_scan.input_semantics, clip)?;
     let extra_vertex_inputs = vertex.entry_points.iter().any(|e| {
         e.function.arguments.iter().any(|a| {
             matches!(a.binding, Some(Binding::Location { location, .. }) if location >= FIRST_EXTRA_LOCATION)
@@ -1747,8 +1769,13 @@ pub(crate) fn uniform(
     }
 }
 
-/// Vertex inputs at the renderer's locations, the per-draw color applied, depth remapped.
-fn fit_vertex(module: &mut Module, semantics: &HashMap<u32, String>) -> Result<()> {
+/// Vertex inputs at the renderer's locations, the per-draw color applied, OpenGL's depth
+/// remapped.
+fn fit_vertex(
+    module: &mut Module,
+    semantics: &HashMap<u32, String>,
+    clip: ClipSpace,
+) -> Result<()> {
     let span = Span::UNDEFINED;
     let vec4 = module.types.insert(
         Type {
@@ -1901,6 +1928,9 @@ fn fit_vertex(module: &mut Module, semantics: &HashMap<u32, String>) -> Result<(
         }
     }
 
+    if clip == ClipSpace::Renderer {
+        return Ok(());
+    }
     // Depth from OpenGL's [-w, w] to [0, w], right after naga's y flip (`p.y = -p.y`).
     let flip = function.body.iter().position(|s| {
         let Statement::Store { value, .. } = s else {

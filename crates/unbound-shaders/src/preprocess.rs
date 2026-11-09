@@ -93,6 +93,9 @@ pub struct Preprocessor<'a> {
     in_condition: bool,
     /// `#error` does not fail the run ([`Preprocessor::defer_errors`]).
     defer_errors: bool,
+    /// Macros the compiler provides ([`Preprocessor::provide`]): the program's own `#define`
+    /// and `#undef` of them are ignored.
+    provided: HashSet<String>,
 }
 
 const MAX_INCLUDE_DEPTH: usize = 64;
@@ -110,7 +113,18 @@ impl<'a> Preprocessor<'a> {
             depth: 0,
             in_condition: false,
             defer_errors: false,
+            provided: HashSet::new(),
         }
+    }
+
+    /// Defines a macro as the compiler provides it (a `#define` line's text, function-like
+    /// macros too): the program's own definitions of the name do not replace it.
+    pub fn provide(&mut self, definition: &str) -> Result<()> {
+        self.define_line(definition)?;
+        if let Some(name) = tokenize(definition).first() {
+            self.provided.insert(name.text.to_string());
+        }
+        Ok(())
     }
 
     /// Skips active `#error` lines instead of failing: for reading a program's pragmas, whose
@@ -209,7 +223,10 @@ impl<'a> Preprocessor<'a> {
                         .define_line(rest)
                         .map_err(|e| anyhow!("{}: {e}", context()))?,
                     "undef" => {
-                        self.macros.remove(split_word(rest).0);
+                        let name = split_word(rest).0;
+                        if !self.provided.contains(name) {
+                            self.macros.remove(name);
+                        }
                     }
                     "include" | "include_with_pragmas" => {
                         let include = self
@@ -317,6 +334,9 @@ impl<'a> Preprocessor<'a> {
             bail!("#define without a name");
         };
         let name = name.text.to_string();
+        if self.provided.contains(&name) {
+            return Ok(());
+        }
         i += 1;
         let mut params = None;
         let mut variadic = false;
@@ -1126,6 +1146,20 @@ mod tests {
 
     fn words(text: &str) -> String {
         text.split_whitespace().collect::<Vec<_>>().join(" ")
+    }
+
+    #[test]
+    fn provided_macros_outlast_the_programs_definitions() {
+        let resolve = |_: Option<&Path>, _: &str| None;
+        let mut pp = Preprocessor::new(&resolve);
+        pp.provide("LOAD(idx, v) _In##idx.Load(v)").unwrap();
+        let out = pp
+            .run(
+                "#define LOAD(idx, v) hlslcc_fbinput_##idx\n#define OTHER 1\nLOAD(2, p)\n#undef LOAD\nLOAD(3, q) OTHER\n",
+                None,
+            )
+            .unwrap();
+        assert_eq!(words(&out.text), "_In2.Load(p) _In3.Load(q) 1");
     }
 
     #[test]

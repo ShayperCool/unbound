@@ -329,7 +329,8 @@ fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<Compi
         Stage::Compute,
     )?
     .words;
-    let mut module = parse(&words).context("compute program")?;
+    // Compute programs have no clip space.
+    let mut module = parse(&words, crate::fit::ClipSpace::Renderer).context("compute program")?;
     let entry = module
         .entry_points
         .iter()

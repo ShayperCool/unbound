@@ -65,6 +65,8 @@ pub struct Settings {
     /// The build target's and its graphics tier's built-in defines (`SHADER_API_MOBILE`,
     /// `UNITY_PBS_USE_BRDF2`, ...).
     pub platform_defines: Vec<String>,
+    /// The graphics device programs compile for: its `SHADER_API_*` define and clip space.
+    pub device: unbound_compat::GraphicsDevice,
 }
 
 /// The scalar type of a uniform member.
@@ -722,6 +724,11 @@ impl ShaderCompiler {
             let mut h = blake3::Hasher::new();
             h.update(&FORMAT_VERSION.to_le_bytes());
             h.update(b"native-sampler-lod-bias-v1");
+            // The device's clip space is fitted after compiling; OpenGL Core's keys stay as
+            // they were before devices were told apart.
+            if self.settings.device != unbound_compat::GraphicsDevice::OpenGLCore {
+                h.update(self.settings.device.name().as_bytes());
+            }
             for part in [
                 &vertex_source,
                 &fragment_source,
@@ -762,7 +769,12 @@ impl ShaderCompiler {
             &fragment_entry,
             &program.file,
         )?;
-        let mut compiled = fit::fit(&vertex_spv, &fragment_spv, &uav_registers(&fragment_source))?;
+        let mut compiled = fit::fit(
+            &vertex_spv,
+            &fragment_spv,
+            &uav_registers(&fragment_source),
+            fit::ClipSpace::of(self.settings.device.conventions()),
+        )?;
         compiled.keywords = selected;
         compiled.instanced_properties = instanced_properties;
         compiled.mesh_instance_stride = mesh_instance_stride;
@@ -791,7 +803,7 @@ impl ShaderCompiler {
         stage: &str,
     ) -> Vec<(String, String)> {
         let mut d: Vec<(String, String)> = [
-            ("SHADER_API_GLCORE", "1"),
+            (self.settings.device.shader_api(), "1"),
             ("UNITY_COMPILER_HLSL", "1"),
             ("UNITY_COMPILER_HLSLCC", "1"),
             ("UNITY_ENABLE_REFLECTION_BUFFERS", "1"),
@@ -876,6 +888,11 @@ impl ShaderCompiler {
         let mut pp = preprocess::Preprocessor::new(&resolve);
         if defer_errors {
             pp.defer_errors();
+        }
+        if self.settings.device.subpass_inputs() {
+            for definition in FRAMEBUFFER_INPUT_MACROS {
+                pp.provide(definition)?;
+            }
         }
         for (k, v) in defines {
             pp.define(k, v);
@@ -991,10 +1008,29 @@ fn dump_failed(source: &str, name: &str, kind: shaderc::ShaderKind) {
     }
 }
 
+/// Framebuffer inputs on devices where the render pipelines read them as subpass inputs
+/// (`GraphicsDevice::subpass_inputs`): Unbound reads each as its input attachment's texture,
+/// `_UnityFBInput<idx>` at the fragment's pixel, as the Core RP library declares them where
+/// there are no subpass inputs. The render pass binds input `idx` of a subpass there
+/// (`RenderPasses` on the managed side).
+const FRAMEBUFFER_INPUT_MACROS: &[&str] = &[
+    "FRAMEBUFFER_INPUT_FLOAT(idx) TEXTURE2D_FLOAT(_UnityFBInput##idx); float4 _UnityFBInput##idx##_TexelSize",
+    "FRAMEBUFFER_INPUT_HALF(idx) TEXTURE2D_HALF(_UnityFBInput##idx); float4 _UnityFBInput##idx##_TexelSize",
+    "FRAMEBUFFER_INPUT_INT(idx) TEXTURE2D_INT(_UnityFBInput##idx); float4 _UnityFBInput##idx##_TexelSize",
+    "FRAMEBUFFER_INPUT_UINT(idx) TEXTURE2D_UINT(_UnityFBInput##idx); float4 _UnityFBInput##idx##_TexelSize",
+    "LOAD_FRAMEBUFFER_INPUT(idx, v2fvertexname) _UnityFBInput##idx.Load(uint3(v2fvertexname.xy, 0))",
+    "FRAMEBUFFER_INPUT_FLOAT_MS(idx) Texture2DMS<float4> _UnityFBInput##idx; float4 _UnityFBInput##idx##_TexelSize",
+    "FRAMEBUFFER_INPUT_HALF_MS(idx) Texture2DMS<float4> _UnityFBInput##idx; float4 _UnityFBInput##idx##_TexelSize",
+    "FRAMEBUFFER_INPUT_INT_MS(idx) Texture2DMS<int4> _UnityFBInput##idx; float4 _UnityFBInput##idx##_TexelSize",
+    "FRAMEBUFFER_INPUT_UINT_MS(idx) Texture2DMS<uint4> _UnityFBInput##idx; float4 _UnityFBInput##idx##_TexelSize",
+    "LOAD_FRAMEBUFFER_INPUT_MS(idx, sampleIdx, v2fvertexname) _UnityFBInput##idx.Load(uint2(v2fvertexname.xy), sampleIdx)",
+];
+
 /// Expanded HLSL rewritten where FXC is more lenient than glslang: overloads that differ only in
 /// `half`/minimum precision types (one stays), empty member declarations (`;;` in a struct or
 /// cbuffer, left by macros), namespaces and member functions defined outside their struct
-/// ([`scopes`]).
+/// ([`scopes`]), half literals (`1.0h`, which glslang types as 16-bit floats that mix with no
+/// integer; `half` is `float` on desktop).
 fn fxc_compatible(source: &str) -> String {
     writable_globals(&constructor_statements(&flat_bool_varyings(
         &rename_type_semantics(&drop_empty_declarations(&drop_duplicate_overloads(
@@ -2656,6 +2692,7 @@ fixed4 frag(v2f IN) : SV_Target
             unity_version: 6000071,
             platform_defines: DESKTOP_DEFINES.iter().map(|d| d.to_string()).collect(),
             cache_dir: None,
+            device: Default::default(),
         })
         .unwrap();
         let c = compiler
@@ -2802,6 +2839,7 @@ fixed4 frag(v2f IN) : SV_Target
             unity_version: 6000071,
             platform_defines: DESKTOP_DEFINES.iter().map(|d| d.to_string()).collect(),
             cache_dir: None,
+            device: Default::default(),
         })
         .unwrap();
         let mut failures = Vec::new();
@@ -2961,7 +2999,7 @@ void surf (Input IN, inout SurfaceOutput o) { o.Albedo = tex2D(_MainTex, IN.uv_M
         let spv = compiler
             .compile_into_spirv(source, shaderc::ShaderKind::Compute, "t", "main", Some(&o))
             .unwrap();
-        let module = fit::parse(spv.as_binary()).unwrap();
+        let module = fit::parse(spv.as_binary(), fit::ClipSpace::OpenGl).unwrap();
         let literals = module
             .global_expressions
             .iter()

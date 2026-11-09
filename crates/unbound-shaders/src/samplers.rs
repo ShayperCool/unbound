@@ -325,7 +325,7 @@ mod tests {
     /// For every sample of the module: the texture and the sampler (their names). The module
     /// validates but for glslang's bindings (the renderer rebinds by name).
     fn sampled(words: &[u32]) -> Vec<(String, String)> {
-        let module = crate::fit::parse(words).unwrap();
+        let module = crate::fit::parse(words, crate::fit::ClipSpace::OpenGl).unwrap();
         naga::valid::Validator::new(
             naga::valid::ValidationFlags::all() - naga::valid::ValidationFlags::BINDINGS,
             naga::valid::Capabilities::all(),
