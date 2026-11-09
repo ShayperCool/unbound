@@ -150,10 +150,15 @@ namespace Unbound.Runtime.Playables
                     bool curvesBeyond = !Same(root, sample.Root);
                     sample.Body = curvesBeyond
                         ? new Trs(body.t - extra, M.QNormalize(M.QMul(body.q, M.QConj(turn))), F4.One3)
-                        : new Trs(body.t, body.q, F4.One3);
+                        : new Trs(body.t, M.QNormalize(body.q), F4.One3);
                     s.BodyMotion = sample;
+                    // Goals relative to the body; in the motion's frame through the stream's body
+                    // (the output takes them back relative to it, then places them on the body).
                     for (int g = 0; g < GoalCount; g++)
-                        Write(s, b, HumanClipImport.GoalFirst + 7 * g, s.GoalsInMotion ? Pose.Goals[g].X : M.InvMul(body, Pose.Goals[g].X));
+                    {
+                        var relative = M.InvMul(body, Pose.Goals[g].X);
+                        Write(s, b, HumanClipImport.GoalFirst + 7 * g, s.GoalsInMotion ? M.Mul(sample.Body, relative) : relative);
+                    }
                 }
                 else
                 {
