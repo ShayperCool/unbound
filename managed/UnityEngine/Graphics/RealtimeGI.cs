@@ -135,7 +135,7 @@ namespace UnityEngine
             }
             catch (Exception e)
             {
-                Warn("load:" + file.Path, $"{file.Path}: its precomputed realtime GI could not be read, so its realtime lightmaps stay black: {e.Message}");
+                Warn("load:" + file.Path, $"{file.Path}: its precomputed realtime GI could not be read, so it is not drawn: {e.Message}");
                 return;
             }
             if (root.ValueKind != JsonValueKind.Object) return;

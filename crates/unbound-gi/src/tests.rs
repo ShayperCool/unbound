@@ -753,6 +753,20 @@ fn realtime_uvs_of_irregular_meshes() {
         })
         .is_err()
     );
+    // A sliver of UV area on a large face would need a chart larger than the largest UV space:
+    // it fails before any mask is made.
+    let sliver = [[0.0, 0.0, 0.0], [100.0, 0.0, 0.0], [0.0, 0.0, 100.0]];
+    let thin = [[0.0, 0.0], [1.0, 0.0], [0.0, 1e-6]];
+    let error = realtime_uvs(&Input {
+        positions: &sliver,
+        uvs: &thin,
+        triangles: &[[0, 1, 2]],
+        pixel_size: 0.5,
+        min_chart_texels: 4,
+    })
+    .unwrap_err()
+    .to_string();
+    assert!(error.contains("more than 512"), "{error}");
 }
 
 /// Unity's built-in Plane: 10 x 10 m on XZ in 10 x 10 cells, UVs 0..1 (no UV2).

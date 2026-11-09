@@ -12,7 +12,8 @@ same inputs; unmeasured there). For tests/projects/realtimegi every renderer cov
 realtime lightmap texels as in the Editor and most texels match within the comparator's
 tolerance (see [Residuals](#residuals)); `unbound doctor` lists scenes with realtime GI, which is
 drawn only in part. Not supported yet, each with a warning: Preserve UVs off (automatic charts),
-spot and directional lights (the system stops updating), skybox and gradient environments (no
+spot and directional lights (the scene's realtime GI is then not drawn: its renderers take light
+probes again), skybox and gradient environments (no
 environment light), light probes lit by realtime GI, directional realtime lightmaps, systems
 that reference other systems, gamma-space projects and linear light intensity.
 

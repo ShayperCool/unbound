@@ -688,7 +688,17 @@ namespace UnityEngine
         {
             var streams = additionalVertexStreams;
             var realtime = enlightenVertexStream;
-            if (streams == null && realtime == null) return mesh;
+            if (streams == null && realtime == null)
+            {
+                // The merged mesh of streams that are gone is freed.
+                if (m_StreamedMesh != null)
+                {
+                    Object.DestroyImmediate(m_StreamedMesh);
+                    m_StreamedMesh = null;
+                    m_StreamedKey = default;
+                }
+                return mesh;
+            }
             mesh.Sync();
             streams?.Sync();
             realtime?.Sync();
