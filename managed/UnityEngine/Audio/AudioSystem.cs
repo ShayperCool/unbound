@@ -526,6 +526,7 @@ namespace Unbound.Runtime
             {
                 frame.Zone.Kind = AudioFilterKind.Reverb;
                 frame.Zone.Id = s_ZoneGeneration;
+                if (Compat.AudioZoneStartupMeasured) frame.Flags |= AudioFrameFlags.ZoneStartup;
                 AudioReverbZone.Blend(s_Zones, frame.ListenerPosition, frame.Zone.Reverb);
                 if (Compat.AudioZoneStartupMeasured && s_ZoneGeneration == 1)
                 {

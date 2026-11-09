@@ -285,10 +285,11 @@ fn sfx_spec(r: &[f32; 14]) -> SfxReverbSpec {
 
 /// The reverb zones' SFX Reverb (`AudioReverbZone`; tests/projects/audioreverb). Every source
 /// sends its output at its `reverbZoneMix` level; the reverb's output joins the final mix and
-/// outlives the sources. It exists while a zone is enabled and starts empty when zones appear
-/// after none were enabled, as measured between the probe's cases.
+/// outlives the sources. The frame's identity retains its histories until the managed zone
+/// lifetime ends, as measured by the lifecycle controls.
 struct ZoneReverb {
     id: u64,
+    measured_startup: bool,
     spec: SfxReverbSpec,
     reverb: SfxReverb,
 }
@@ -1058,7 +1059,7 @@ impl Mixer {
 
     /// The reverb zones from the frame packet: none (kind 0) removes the zone reverb; the same
     /// `id` keeps its histories and retunes it when its parameters changed.
-    pub fn update_zone(&mut self, d: &AudioFilterDescriptor) {
+    pub fn update_zone(&mut self, d: &AudioFilterDescriptor, measured_startup: bool) {
         if d.kind != filter_kind::REVERB {
             self.zone = None;
             return;
@@ -1078,20 +1079,28 @@ impl Mixer {
         let rate = self.config.sample_rate;
         if let Some(zone) = &mut self.zone
             && zone.id == d.id
+            && zone.measured_startup == measured_startup
             && zone.reverb.configuration() == (rate, self.config.buffer_size.max(1))
         {
             if zone.spec != spec {
-                zone.reverb.tune(&spec);
+                if measured_startup {
+                    zone.reverb.tune(&spec);
+                } else {
+                    zone.reverb.tune_immediate(&spec);
+                }
                 zone.spec = spec;
             }
             return;
         }
         self.zone = match SfxReverb::new(rate, self.config.buffer_size) {
             Ok(mut reverb) => {
-                reverb.initialize_zone_return();
+                if measured_startup {
+                    reverb.initialize_zone_return();
+                }
                 reverb.tune(&spec);
                 Some(ZoneReverb {
                     id: d.id,
+                    measured_startup,
                     spec,
                     reverb,
                 })
@@ -5301,7 +5310,7 @@ mod tests {
                         let mut zone = component(100, filter_kind::REVERB, 0);
                         zone.reverb[0] = -10000.0;
                         zone.reverb[8] = 0.0;
-                        m.update_zone(&zone);
+                        m.update_zone(&zone, true);
                         source_with(&mut m, 7, 1, |p| {
                             p.flags = source_flags::ZONE_VOICE_SEND | source_flags::SPATIAL_STEREO;
                             if filtered {
@@ -5393,6 +5402,25 @@ mod tests {
     }
 
     #[test]
+    fn zone_startup_compatibility_changes_the_first_audible_reflection() {
+        let mut descriptor = component(1, filter_kind::REVERB, 0);
+        descriptor.reverb = [
+            -10000.0, 0.0, 0.0, 1.0, 0.5, 0.0, 0.0, -10000.0, 0.0, 100.0, 100.0, 5000.0, 0.0, 250.0,
+        ];
+        let first = |measured| {
+            let mut mixer = Mixer::new(MixerConfig::default());
+            mixer.update_zone(&descriptor, measured);
+            let mut input = [0.25, 0.25];
+            mixer.zone.as_mut().unwrap().reverb.process(&mut input);
+            input
+        };
+        let legacy = first(false);
+        let measured = first(true);
+        assert!(legacy[0] > measured[0] + 0.01);
+        assert!(measured.iter().all(|value| value.abs() < 1e-5));
+    }
+
+    #[test]
     fn reverb_zones_take_each_sources_send_and_restart_empty_with_a_new_id() {
         let zone = |id: u64| AudioFilterDescriptor {
             reverb: [
@@ -5404,7 +5432,7 @@ mod tests {
         let listen = |send: f32| {
             let mut m = Mixer::new(MixerConfig::default());
             m.add_clip(1, impulse_clip(300));
-            m.update_zone(&zone(1));
+            m.update_zone(&zone(1), true);
             source_with(&mut m, 7, 1, |p| p.reverb_zone_mix = send);
             play(&mut m, 7, command::PLAY, 0.0);
             m.update_suspension();
@@ -5418,14 +5446,14 @@ mod tests {
         assert!(out[2 * 2048..].iter().any(|v| v.abs() > 1e-6));
         assert!(listen(0.0).1[2 * 201..].iter().all(|v| *v == 0.0));
         // The same id keeps the tail, a new one starts empty, kind 0 removes the reverb.
-        m.update_zone(&zone(1));
+        m.update_zone(&zone(1), true);
         let mut tail = vec![0.0; 2 * 1024];
         m.render(&mut tail, 2);
         assert!(tail.iter().any(|v| v.abs() > 1e-6));
-        m.update_zone(&zone(2));
+        m.update_zone(&zone(2), true);
         m.render(&mut tail, 2);
         assert!(tail.iter().all(|v| *v == 0.0));
-        m.update_zone(&AudioFilterDescriptor::default());
+        m.update_zone(&AudioFilterDescriptor::default(), true);
         assert!(m.zone.is_none());
     }
 

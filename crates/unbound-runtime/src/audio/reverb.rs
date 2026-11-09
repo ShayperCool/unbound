@@ -299,6 +299,13 @@ impl SfxReverb {
         }
     }
 
+    /// Keeps the unmeasured compatibility path's immediate parameter application.
+    pub fn tune_immediate(&mut self, p: &SfxReverbSpec) {
+        self.tune(p);
+        self.c = self.pending;
+        self.previous = self.c;
+    }
+
     fn input_at(&self, delay: usize) -> f32 {
         let n = self.input.len();
         self.input[(self.pos + n - delay % n) % n]
@@ -578,6 +585,28 @@ mod tests {
                 "{rate} {reflect} {delay}"
             );
         }
+    }
+
+    #[test]
+    fn immediate_parameter_application_changes_a_running_early_return_without_a_ramp() {
+        let mut parameters = spec(&[]);
+        parameters.dry_level = -10000.0;
+        parameters.room = 0.0;
+        parameters.room_hf = 0.0;
+        parameters.room_lf = 0.0;
+        parameters.reflections = 0.0;
+        parameters.reflect_delay = 0.0;
+        parameters.reverb = -10000.0;
+        let mut reverb = SfxReverb::new(48000, 32).unwrap();
+        reverb.tune(&parameters);
+        let mut before = [0.25, 0.25];
+        reverb.process(&mut before);
+        parameters.room = -600.0;
+        reverb.tune_immediate(&parameters);
+        let mut after = [0.25, 0.25];
+        reverb.process(&mut after);
+        let dry = 0.25 * level(parameters.dry_level);
+        assert!(((after[0] - dry) / (before[0] - dry) - level(-600.0)).abs() < 1e-6);
     }
 
     #[test]

@@ -61,6 +61,20 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
+        [InlineData("6000.0.71f1", true)]
+        [InlineData("2022.3.0f1", false)]
+        public void TheFrameSelectsZoneStartupThroughTheCompatibilityProfile(string release, bool measured)
+        {
+            ProjectInfo.UnityVersion = release;
+            var zone = Zone(0);
+            AudioSystem.Update();
+            Assert.Equal(measured, (m_Backend.LastFrame.Flags & AudioFrameFlags.ZoneStartup) != 0);
+            zone.enabled = false;
+            AudioSystem.Update();
+            Assert.Equal(measured ? AudioFilterKind.Reverb : 0, m_Backend.LastFrame.Zone.Kind);
+        }
+
+        [Theory]
         [InlineData(false)]
         [InlineData(true)]
         public void MidPlaybackZoneActivationUsesTheCurrentReturn(bool reactivate)

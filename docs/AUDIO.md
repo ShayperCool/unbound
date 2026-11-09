@@ -213,7 +213,9 @@ The [live zone controls](../tests/projects/audioreverb/LIVE_MEASUREMENT.md) reta
 sample of enable/disable, GameObject activation, source bypass and destroy/recreate
 at both rates. Disabled zones keep their return histories while parameters crossfade
 over a DSP buffer. Destroying the last initialized zone releases the return. A new
-return fades its send from each already playing voice over 64 frames. All 141 original
+return fades its send from each already playing voice over 64 frames. The frame packet
+selects this initialization and transition mechanism through `Compat.AudioZoneStartupMeasured`
+(NativeApi 40); other profiles keep immediate parameter application. All 141 original
 cases, including the five formerly rejected activation controls, are required.
 
 ## Measured spatial playback

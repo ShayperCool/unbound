@@ -46,7 +46,8 @@ use std::ffi::c_void;
 /// 41: native rendering plugins (render protocol 15's `Plugin` command, opcode 34; the plugin
 /// interface, native texture pointers and external textures).
 /// 42: legacy glyph floating-point bearings and explicit rendering modes.
-pub const NATIVE_API_VERSION: u32 = 42;
+/// 43: compatibility-selected zone initialization and parameter transitions.
+pub const NATIVE_API_VERSION: u32 = 43;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

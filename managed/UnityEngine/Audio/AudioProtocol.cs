@@ -175,6 +175,7 @@ namespace Unbound.Runtime
         internal const int HasListener = 1;
         internal const int Paused = 1 << 1;
         internal const int ListenerFilter = 1 << 2;
+        internal const int ZoneStartup = 1 << 3;
     }
 
     [StructLayout(LayoutKind.Sequential)]
