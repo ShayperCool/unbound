@@ -422,13 +422,28 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>A stepped segment: constant at the first key's value when the first key's
+        /// out-tangent or the second key's in-tangent is +∞, else at the second key's value when
+        /// either is −∞ (Unity 6000.0.71f1 Editor, tests/projects/animedges: the curve, a clip
+        /// playable and an Animator's controller agree).</summary>
+        internal static bool Stepped(in Keyframe k0, in Keyframe k1, out float value)
+        {
+            if (float.IsPositiveInfinity(k0.outTangent) || float.IsPositiveInfinity(k1.inTangent))
+            {
+                value = k0.value;
+                return true;
+            }
+            value = k1.value;
+            return float.IsNegativeInfinity(k0.outTangent) || float.IsNegativeInfinity(k1.inTangent);
+        }
+
         internal static float EvaluateSegment(Keyframe k0, Keyframe k1, float time)
         {
             float dx = k1.time - k0.time;
             if (dx <= 0.0f)
                 return k0.value;
-            if (float.IsInfinity(k0.outTangent) || float.IsInfinity(k1.inTangent))
-                return k0.value; // stepped
+            if (Stepped(k0, k1, out float held))
+                return held;
 
             float s = (time - k0.time) / dx;
             bool outWeighted = (k0.weightedMode & WeightedMode.Out) != 0;

@@ -359,7 +359,7 @@ namespace UnityEngine
                 for (int i = below; i < at; i++) list.Add(keys[i]);
                 split = keys[at];
                 split.weightedMode &= ~WeightedMode.Out;
-                stepped = below > 0 && (float.IsInfinity(keys[below - 1].outTangent) || float.IsInfinity(keys[below].inTangent));
+                stepped = below > 0 && AnimationCurve.Stepped(keys[below - 1], keys[below], out _);
             }
             else if (below == 0)
             {
@@ -380,9 +380,9 @@ namespace UnityEngine
                 // The window's end cuts the segment from k0 to k1: split it there, keeping its shape.
                 var k0 = keys[below - 1];
                 var k1 = keys[below];
-                stepped = float.IsInfinity(k0.outTangent) || float.IsInfinity(k1.inTangent);
+                stepped = AnimationCurve.Stepped(k0, k1, out float held);
                 if (stepped)
-                    split = new Keyframe(end, k0.value, float.PositiveInfinity, 0f);
+                    split = new Keyframe(end, held, float.PositiveInfinity, 0f);
                 else if ((k0.weightedMode & WeightedMode.Out) != 0 || (k1.weightedMode & WeightedMode.In) != 0)
                     return "the window's end cuts a weighted segment, which is not split yet";
                 else

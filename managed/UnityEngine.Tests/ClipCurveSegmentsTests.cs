@@ -97,6 +97,32 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A +∞ tangent at either end holds the first key's value over the segment, a −∞
+        /// one the second key's, its start included (tests/projects/animedges); clip sampling
+        /// agrees with the curve.</summary>
+        [Fact]
+        public void InfiniteTangentsHoldTheFirstOrTheSecondKeyBySign()
+        {
+            float inf = float.PositiveInfinity;
+            foreach (var (curve, held) in new[]
+            {
+                (new AnimationCurve(new Keyframe(0f, 1f, 0f, inf), new Keyframe(1f, 3f, 0f, 0f)), 1f),
+                (new AnimationCurve(new Keyframe(0f, 1f, 0f, 0f), new Keyframe(1f, 3f, inf, 0f)), 1f),
+                (new AnimationCurve(new Keyframe(0f, 1f, 0f, -inf), new Keyframe(1f, 3f, 0f, 0f)), 3f),
+                (new AnimationCurve(new Keyframe(0f, 1f, 0f, 0f), new Keyframe(1f, 3f, -inf, 0f)), 3f),
+                (new AnimationCurve(new Keyframe(0f, 1f, 0f, inf), new Keyframe(1f, 3f, -inf, 0f)), 1f),
+            })
+            {
+                var clipCurve = Of(curve);
+                foreach (float time in new[] { 0f, 0.25f, 0.99f })
+                {
+                    Assert.Equal(held, curve.Evaluate(time));
+                    Assert.Equal(held, clipCurve.Evaluate(time));
+                }
+                Assert.Equal(3f, curve.Evaluate(1f));
+            }
+        }
+
         [Fact]
         public void CoincidentKeysAndSingleKeysStayFinite()
         {
