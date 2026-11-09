@@ -54,6 +54,13 @@ public sealed class GlyphRasterProbe : MonoBehaviour
     IEnumerator Start()
     {
         Directory.CreateDirectory(output);
+        // A fresh size/character pair changes from absent to present after the documented request.
+        var requested = Resources.Load<Font>("Synthetic");
+        Value("request/before", requested.GetCharacterInfo('Ω', out var unused, 37, FontStyle.Normal));
+        requested.RequestCharactersInTexture("Ω", 37, FontStyle.Normal);
+        yield return null;
+        Value("request/after", requested.GetCharacterInfo('Ω', out var requestedInfo, 37, FontStyle.Normal));
+        Value("request/advance", requestedInfo.advance);
         foreach (string name in new[] { "Legacy", "Sans", "Serif", "Styled", "Hinted", "Raster", "OS", "Synthetic" })
         {
             Font font = name == "Legacy" ? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") : Resources.Load<Font>(name);
