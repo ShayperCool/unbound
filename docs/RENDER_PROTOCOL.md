@@ -16,6 +16,20 @@ Meshes, textures and materials are identified by `u64` handles the managed side 
 is destroyed. Imported textures are uploaded by the native side itself (`import_texture`), which
 knows the asset pipeline and its cache.
 
+### Render protocol 15: native plugin calls (NativeApi 41)
+
+`Plugin` (opcode 34: `u8 kind`, `u64 callback`, then the kind's fields) runs a native plugin's
+rendering callback when everything before it has run on the GPU, before what follows it, on the
+caller's thread, with the current target bound in the plugins' OpenGL context
+(`crates/unbound-app/src/render/gl_interop.rs`). Kinds: 0 `UnityRenderingEvent` (`i32 id`); 1
+`UnityRenderingEventAndData` (`i32 id`, `u64 data`); 2 and 3 a V1 and a V2 texture update (`u64
+texture`, `u32 user_data`, `u32 format` as `UnityRenderingExtTextureFormat`, `u32
+bytes_per_pixel`: the begin event, the upload of the data the plugin gives into level 0, the end
+event); 4 a custom blit (`u32 command`, `u32 source` texture ID, `u64 destination` render buffer
+pointer, `u32 param`, `u32 flags`). The managed side hands the stream over right after the
+command, so the callback has run when the call that issued it returns, as in the Editor
+(tests/projects/nativegfx). A 40 side and a 41 side refuse each other at startup.
+
 ### Render protocol 14: instance multiplier (NativeApi 33)
 
 Opcode 32 carries one `u32` multiplier. It persists across submissions and frames, starts
@@ -168,6 +182,9 @@ before anything renders, in both directions.
 | `read_buffer(buffer, offset, size, *mut NativeBuffer) -> i32` | A buffer's bytes after everything submitted (version 10). |
 | `read_texture(texture, mip, layer, x, y, w, h, float, *mut NativeBuffer) -> i32` | As `read_pixels`, from a mip level of a layer; 0 when the texture has no such level or layer (version 15). |
 | `font_glyph(font, codepoint, size, style, *mut GlyphInfo, *mut NativeBuffer) -> i32` | Rasterizes a glyph of a font opened with the `font-open` call (version 3); 1 when the font has it. The buffer holds `width * height` coverage bytes, top row first. |
+| `plugin_load(load)`, `plugin_set_log(sink)`, `plugin_shutdown()` | A native plugin's `UnityPluginLoad` with the plugin interfaces; where plugin messages go; the device's Shutdown events at the end (version 41, `plugin_api.rs`). |
+| `native_texture(texture, depth) -> u64` | The OpenGL texture name plugins see for a texture (its depth buffer's), sharing its memory; 0 when it cannot be shared (version 41). |
+| `external_texture(texture, native, w, h, srgb, *mut NativeBuffer) -> i32` | Makes a texture show a native OpenGL texture (`CreateExternalTexture`); 0 on success, else the reason (version 41). |
 
 ## Conventions
 
@@ -293,6 +310,7 @@ before and after it, as on Unity's render thread) and a read back.
 28 DrawIndices  u64 buffer, u8 index_size (2; 4 from protocol 10), u32 first, u32 count   // next Draw's indices, base vertex 0 or the indirect arguments' (protocol 8)
 29 CopyDepth    u64 source, u64 destination       // protocol 9
 30 MeshInstance u32 index                         // next Draw is this instance of a mesh-instancing call (protocols 11, 12)
+34 Plugin       u8 kind, u64 callback, fields    // a native plugin's callback (protocol 15)
 property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 (element bits in Draw and Global
             only, see render protocol 6) + f32x4 st, 3 int i32, 4 matrix,
             5 buffer u64, 6 array u32 components (0: consecutive values) u32 n f32[n], 7 image u64 texture i32 mip,

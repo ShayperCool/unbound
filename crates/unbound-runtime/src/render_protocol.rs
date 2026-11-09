@@ -730,6 +730,27 @@ pub trait RenderBackend: Send + Sync {
     fn shader_warmup(&self, _request: ShaderWarmupRequest) -> Result<String, String> {
         Err("no renderer".into())
     }
+    /// Makes the native plugins' OpenGL context current on this thread (the game's: it runs
+    /// the rendering callbacks); false when there is none.
+    fn plugin_context(&self) -> bool {
+        false
+    }
+    /// The OpenGL texture name native plugins see for a texture (`depth`: its depth buffer),
+    /// sharing its memory with the renderer; 0 when it cannot be shared.
+    fn native_texture(&self, _texture: u64, _depth: bool) -> u64 {
+        0
+    }
+    /// Makes `texture` show the native texture `native` (`Texture2D.CreateExternalTexture`).
+    fn external_texture(
+        &self,
+        _texture: u64,
+        _native: u64,
+        _width: u32,
+        _height: u32,
+        _srgb: bool,
+    ) -> Result<(), String> {
+        Err("native textures need the renderer".into())
+    }
     /// A compute kernel's thread group size: (file, kernel, keywords).
     fn kernel_threads(
         &self,

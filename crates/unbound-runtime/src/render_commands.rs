@@ -295,6 +295,48 @@ pub enum Command {
         source: u64,
         destination: u64,
     },
+    /// A native plugin's rendering callback (NativeApi 41): it runs when the work before it is
+    /// done, with the current target bound for the plugin, before the work after it.
+    Plugin(PluginCall),
+}
+
+/// The callbacks of [`Command::Plugin`]: `callback` is the plugin's function.
+#[derive(Debug, Clone, PartialEq)]
+pub enum PluginCall {
+    /// `UnityRenderingEvent(id)` (`GL.IssuePluginEvent`, `CommandBuffer.IssuePluginEvent`).
+    Event { callback: u64, id: i32 },
+    /// `UnityRenderingEventAndData(id, data)` (`CommandBuffer.IssuePluginEventAndData`).
+    EventAndData { callback: u64, id: i32, data: u64 },
+    /// `CommandBuffer.IssuePluginCustomTextureUpdateV1`/`V2` of a texture: the update's begin
+    /// and end events around the upload of the data the plugin gives, with the texture's
+    /// `UnityRenderingExtTextureFormat` and bytes per pixel.
+    TextureUpdate {
+        callback: u64,
+        texture: u64,
+        user_data: u32,
+        v2: bool,
+        format: u32,
+        bytes_per_pixel: u32,
+    },
+    /// `CommandBuffer.IssuePluginCustomBlit`: the source's texture ID (0: none) and the
+    /// destination's render buffer pointer, as the plugin receives them.
+    CustomBlit {
+        callback: u64,
+        command: u32,
+        source: u32,
+        destination: u64,
+        param: u32,
+        flags: u32,
+    },
+}
+
+/// [`Command::Plugin`]'s kinds on the wire.
+mod plugin_kind {
+    pub const EVENT: u8 = 0;
+    pub const EVENT_AND_DATA: u8 = 1;
+    pub const TEXTURE_UPDATE_V1: u8 = 2;
+    pub const TEXTURE_UPDATE_V2: u8 = 3;
+    pub const CUSTOM_BLIT: u8 = 4;
 }
 
 mod op {
@@ -334,6 +376,8 @@ mod op {
     pub const INSTANCE_MULTIPLIER: u8 = 32;
     // NativeApi 39.
     pub const RESOLVE_TEXTURE: u8 = 33;
+    // NativeApi 41.
+    pub const PLUGIN: u8 = 34;
     pub const MESH_BUFFERS: u8 = 31;
 }
 
@@ -784,6 +828,40 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 texture: r.texture("ResolveTexture")?,
                 destination: r.texture("ResolveTexture destination")?,
             },
+            op::PLUGIN => {
+                let kind = r.u8()?;
+                let callback = r.u64()?;
+                Command::Plugin(match kind {
+                    plugin_kind::EVENT => PluginCall::Event {
+                        callback,
+                        id: r.i32()?,
+                    },
+                    plugin_kind::EVENT_AND_DATA => PluginCall::EventAndData {
+                        callback,
+                        id: r.i32()?,
+                        data: r.u64()?,
+                    },
+                    plugin_kind::TEXTURE_UPDATE_V1 | plugin_kind::TEXTURE_UPDATE_V2 => {
+                        PluginCall::TextureUpdate {
+                            callback,
+                            texture: r.texture("plugin texture update")?,
+                            user_data: r.u32()?,
+                            v2: kind == plugin_kind::TEXTURE_UPDATE_V2,
+                            format: r.u32()?,
+                            bytes_per_pixel: r.u32()?,
+                        }
+                    }
+                    plugin_kind::CUSTOM_BLIT => PluginCall::CustomBlit {
+                        callback,
+                        command: r.u32()?,
+                        source: r.u32()?,
+                        destination: r.u64()?,
+                        param: r.u32()?,
+                        flags: r.u32()?,
+                    },
+                    k => return Err(format!("unknown plugin call kind {k}")),
+                })
+            }
             op::GENERATE_MIPS => Command::GenerateMips {
                 texture: r.texture("GenerateMips")?,
             },
@@ -1135,6 +1213,57 @@ impl Writer {
                 self.bytes.push(op::GENERATE_MIPS);
                 self.u64(*texture);
             }
+            Command::Plugin(call) => {
+                self.bytes.push(op::PLUGIN);
+                match call {
+                    PluginCall::Event { callback, id } => {
+                        self.bytes.push(plugin_kind::EVENT);
+                        self.u64(*callback);
+                        self.u32(*id as u32);
+                    }
+                    PluginCall::EventAndData { callback, id, data } => {
+                        self.bytes.push(plugin_kind::EVENT_AND_DATA);
+                        self.u64(*callback);
+                        self.u32(*id as u32);
+                        self.u64(*data);
+                    }
+                    PluginCall::TextureUpdate {
+                        callback,
+                        texture,
+                        user_data,
+                        v2,
+                        format,
+                        bytes_per_pixel,
+                    } => {
+                        self.bytes.push(if *v2 {
+                            plugin_kind::TEXTURE_UPDATE_V2
+                        } else {
+                            plugin_kind::TEXTURE_UPDATE_V1
+                        });
+                        self.u64(*callback);
+                        self.u64(*texture);
+                        for v in [*user_data, *format, *bytes_per_pixel] {
+                            self.u32(v);
+                        }
+                    }
+                    PluginCall::CustomBlit {
+                        callback,
+                        command,
+                        source,
+                        destination,
+                        param,
+                        flags,
+                    } => {
+                        self.bytes.push(plugin_kind::CUSTOM_BLIT);
+                        self.u64(*callback);
+                        self.u32(*command);
+                        self.u32(*source);
+                        self.u64(*destination);
+                        self.u32(*param);
+                        self.u32(*flags);
+                    }
+                }
+            }
             Command::CopyTexture {
                 source,
                 source_slice,
@@ -1194,6 +1323,39 @@ mod tests {
     #[test]
     fn round_trip() {
         let commands = vec![
+            Command::Plugin(PluginCall::Event {
+                callback: 0x7f00_0000_1000,
+                id: 12,
+            }),
+            Command::Plugin(PluginCall::EventAndData {
+                callback: 0x7f00_0000_1000,
+                id: -3,
+                data: 0x55aa,
+            }),
+            Command::Plugin(PluginCall::TextureUpdate {
+                callback: 1,
+                texture: 7,
+                user_data: 13,
+                v2: true,
+                format: 8,
+                bytes_per_pixel: 4,
+            }),
+            Command::Plugin(PluginCall::TextureUpdate {
+                callback: 1,
+                texture: 7,
+                user_data: 12,
+                v2: false,
+                format: 4,
+                bytes_per_pixel: 4,
+            }),
+            Command::Plugin(PluginCall::CustomBlit {
+                callback: 2,
+                command: 3,
+                source: 9,
+                destination: 0x5500_0000_0000_0011,
+                param: 77,
+                flags: 5,
+            }),
             Command::ResolveTexture {
                 texture: 42,
                 destination: 42,
@@ -1584,10 +1746,11 @@ mod tests {
     /// 19 adds render protocol 9's `CopyDepth`, 20 the AudioReverbFilter descriptors, 21 the reverb
     /// zone, 22 render protocols 10/11's 32-bit indices and logical instance IDs, 23 the
     /// Distortion filter kind, 28 render protocol 12's shared arrays and 31 the imported texture's
-    /// reported format; 35 adds deferred render-target mips, 36 listener pose snapshots and 37 the downloaded audio decoder.
+    /// reported format; 35 adds deferred render-target mips, 36 listener pose snapshots and 37 the downloaded audio decoder;
+    /// 41 the native plugin calls.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 40);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 41);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

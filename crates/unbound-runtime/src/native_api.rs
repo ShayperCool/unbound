@@ -8,11 +8,13 @@ use crate::{
             AudioSourceState, AudioStatus, Callback,
         },
     },
+    plugin_api,
     render_protocol::{
         ImportedTextureInfo, MaterialPacket, MeshPacket, TexturePacket, commands, handle, owned,
     },
     state,
 };
+use std::ffi::c_void;
 
 /// 13: render protocol 6, texture handle element bits (`render_protocol::handle`).
 /// 14: `wrap_w` at the end of `TexturePacket` and `ImportedTextureInfo`.
@@ -41,7 +43,9 @@ use crate::{
 /// 38: prepared callback buffers for closing captured audio output.
 /// 39: retained MSAA resolve images, explicit resolves and current-attachment read flags.
 /// 40: parameterised mixer Pitch Shifter FFT size.
-pub const NATIVE_API_VERSION: u32 = 40;
+/// 41: native rendering plugins (render protocol 15's `Plugin` command, opcode 34; the plugin
+/// interface, native texture pointers and external textures).
+pub const NATIVE_API_VERSION: u32 = 41;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]
@@ -175,6 +179,23 @@ pub struct NativeApi {
     /// compression format being the file's coding, or, header only, when a partial WAV
     /// announces its format and length (no clip is made); else 1.
     pub audio_decode_clip: extern "C" fn(u64, *const u8, i32, i32, i32, *mut AudioClipInfo) -> i32,
+    // Version 41: native rendering plugins (`plugin_api`).
+    /// (a library's `UnityPluginLoad`): calls it with the plugin interfaces, with the plugins'
+    /// OpenGL context current when there is one.
+    pub plugin_load: extern "C" fn(*const c_void),
+    /// (sink: LogType, UTF-8 text, length): where plugin log messages go (`IUnityLog`, the
+    /// renderer's checks after plugin callbacks).
+    pub plugin_set_log: extern "C" fn(Option<extern "C" fn(i32, *const u8, i32)>),
+    /// The application's end: the plugins' device Shutdown events.
+    pub plugin_shutdown: extern "C" fn(),
+    /// (texture handle, depth buffer): the OpenGL texture name that native plugins see for the
+    /// texture (or its depth buffer), sharing its memory with the renderer; 0 when there is no
+    /// plugin OpenGL interop or the texture cannot be shared.
+    pub native_texture: extern "C" fn(u64, i32) -> u64,
+    /// (texture handle, OpenGL texture name, width, height, sRGB, out error): makes the texture
+    /// show the named native texture (`Texture2D.CreateExternalTexture`,
+    /// `UpdateExternalTexture`); 0 on success, else the buffer holds the reason.
+    pub external_texture: extern "C" fn(u64, u64, i32, i32, i32, *mut NativeBuffer) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -216,6 +237,11 @@ pub fn api() -> NativeApi {
         video_frame,
         read_texture,
         audio_decode_clip,
+        plugin_load,
+        plugin_set_log,
+        plugin_shutdown,
+        native_texture,
+        external_texture,
     }
 }
 
@@ -803,6 +829,61 @@ extern "C" fn audio_output_data(
         .audio
         .mixer()
         .output_data(handle, channel.max(0) as usize, out, window) as i32
+}
+
+extern "C" fn plugin_load(load: *const c_void) {
+    if load.is_null() {
+        return;
+    }
+    // SAFETY: the managed side passes a library's `UnityPluginLoad` export, whose signature the
+    // plugin headers fix: `void UnityPluginLoad(IUnityInterfaces*)`.
+    let load: extern "C" fn(*const plugin_api::IUnityInterfaces) =
+        unsafe { std::mem::transmute(load) };
+    state::backend().plugin_context();
+    load(plugin_api::interfaces());
+}
+
+extern "C" fn plugin_set_log(sink: Option<extern "C" fn(i32, *const u8, i32)>) {
+    plugin_api::set_log_sink(sink);
+}
+
+extern "C" fn plugin_shutdown() {
+    state::backend().plugin_context();
+    plugin_api::shutdown();
+}
+
+extern "C" fn native_texture(texture: u64, depth: i32) -> u64 {
+    if let Err(error) = handle::plain(texture, "native_texture") {
+        tracing::error!("{error}");
+        return 0;
+    }
+    state::backend().native_texture(texture, depth != 0)
+}
+
+extern "C" fn external_texture(
+    texture: u64,
+    native: u64,
+    width: i32,
+    height: i32,
+    srgb: i32,
+    out: *mut NativeBuffer,
+) -> i32 {
+    let result = handle::plain(texture, "external_texture").and_then(|texture| {
+        state::backend().external_texture(
+            texture,
+            native,
+            width.max(1) as u32,
+            height.max(1) as u32,
+            srgb != 0,
+        )
+    });
+    match result {
+        Ok(()) => 0,
+        Err(error) => {
+            unsafe { *out = NativeBuffer::from_vec(error.into_bytes()) };
+            1
+        }
+    }
 }
 
 extern "C" fn audio_set_callback(callback: Option<Callback>) {

@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 40;
+        internal const uint CurrentVersion = 41;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -102,5 +102,29 @@ namespace Unbound.Runtime
         /// announces its format and length (no clip is made); else 1.
         /// </summary>
         internal delegate* unmanaged<ulong, byte*, int, int, int, AudioClipInfo*, int> AudioDecodeClip;
+        /// <summary>
+        /// (a library's `UnityPluginLoad`): calls it with the plugin interfaces, with the plugins'
+        /// OpenGL context current when there is one.
+        /// </summary>
+        internal delegate* unmanaged<void*, void> PluginLoad;
+        /// <summary>
+        /// (sink: LogType, UTF-8 text, length): where plugin log messages go (`IUnityLog`, the
+        /// renderer's checks after plugin callbacks).
+        /// </summary>
+        internal delegate* unmanaged<delegate* unmanaged<int, byte*, int, void>, void> PluginSetLog;
+        /// <summary>The application's end: the plugins' device Shutdown events.</summary>
+        internal delegate* unmanaged<void> PluginShutdown;
+        /// <summary>
+        /// (texture handle, depth buffer): the OpenGL texture name that native plugins see for the
+        /// texture (or its depth buffer), sharing its memory with the renderer; 0 when there is no
+        /// plugin OpenGL interop or the texture cannot be shared.
+        /// </summary>
+        internal delegate* unmanaged<ulong, int, ulong> NativeTexture;
+        /// <summary>
+        /// (texture handle, OpenGL texture name, width, height, sRGB, out error): makes the texture
+        /// show the named native texture (`Texture2D.CreateExternalTexture`,
+        /// `UpdateExternalTexture`); 0 on success, else the buffer holds the reason.
+        /// </summary>
+        internal delegate* unmanaged<ulong, ulong, int, int, int, NativeBuffer*, int> ExternalTexture;
     }
 }
