@@ -135,6 +135,8 @@ pub struct AudioConfiguration {
 /// An open output device; dropping it closes it.
 pub trait AudioDevice: Send {
     fn sample_rate(&self) -> u32;
+    /// The interleaved channels the device plays.
+    fn channels(&self) -> usize;
     fn name(&self) -> String;
 }
 
@@ -286,6 +288,24 @@ pub struct Engine {
     reset_worker: Mutex<Option<ResetWorker>>,
 }
 
+/// `AudioSpeakerMode.Stereo`.
+const STEREO_SPEAKER_MODE: i32 = 2;
+
+/// The layout the mixer runs for a requested speaker mode. A device with fewer channels than the
+/// layout runs stereo DSP while `AudioSettings.GetConfiguration` keeps the request (Unity
+/// 6000.0.71f1 with Quad, Surround, 5.1 and 7.1 requests on a two-channel device,
+/// tests/projects/audiopitch capture notes); the Manual only says the device may override it.
+fn active_speaker_mode(requested: i32, device_channels: Option<usize>) -> i32 {
+    let layout = MixerConfig {
+        speaker_mode: requested,
+        ..MixerConfig::default()
+    };
+    match device_channels {
+        Some(channels) if layout.output_channels() > channels => STEREO_SPEAKER_MODE,
+        _ => requested,
+    }
+}
+
 /// The virtual device's rate when the project leaves it to the device.
 const VIRTUAL_SAMPLE_RATE: u32 = 48000;
 
@@ -324,11 +344,18 @@ impl Engine {
         self.mixer.lock().unwrap_or_else(|e| e.into_inner())
     }
 
-    fn mixer_config(&self, requested: AudioConfiguration, rate: u32) -> MixerConfig {
+    /// The mixer configuration for `requested` on a device of `device_channels` (None: the
+    /// virtual device, which plays every layout).
+    fn mixer_config(
+        &self,
+        requested: AudioConfiguration,
+        rate: u32,
+        device_channels: Option<usize>,
+    ) -> MixerConfig {
         MixerConfig {
             sample_rate: rate,
             buffer_size: requested.dsp_buffer_size.max(64),
-            speaker_mode: requested.speaker_mode,
+            speaker_mode: active_speaker_mode(requested.speaker_mode, device_channels),
             real_voices: requested.num_real_voices.max(1) as usize,
             virtual_voices: requested.num_virtual_voices.max(1) as usize,
             rolloff_scale: self.settings.rolloff_scale,
@@ -381,7 +408,8 @@ impl Engine {
         }
         {
             let mut mixer = self.mixer();
-            mixer.reconfigure(self.mixer_config(requested, rate))?;
+            let device_channels = device.as_ref().map(|d| d.channels());
+            mixer.reconfigure(self.mixer_config(requested, rate, device_channels))?;
             mixer.discard_output = device.is_none();
             self.clock.store(&mixer);
         }
@@ -417,7 +445,8 @@ impl Engine {
         } else {
             VIRTUAL_SAMPLE_RATE
         };
-        let config = self.mixer_config(configuration, rate);
+        let device_channels = self.device.lock().unwrap().as_ref().map(|d| d.channels());
+        let config = self.mixer_config(configuration, rate, device_channels);
         if let Err(error) = self.mixer().validate_configuration(&config) {
             tracing::warn!("audio reset rejected: {error:#}");
             return false;
@@ -898,6 +927,24 @@ mod tests {
         }
         assert!(engine.capture_stop());
         assert!(!engine.capture_stop());
+    }
+
+    #[test]
+    fn layouts_wider_than_the_device_run_stereo() {
+        // (requested AudioSpeakerMode, device channels) -> mode the mixer runs.
+        for (requested, device, active) in [
+            (5, Some(2), 2),
+            (6, Some(2), 2),
+            (3, Some(2), 2),
+            (1, Some(2), 1),
+            (2, Some(2), 2),
+            (6, Some(8), 6),
+            (5, Some(8), 5),
+            (6, None, 6),
+            (1, None, 1),
+        ] {
+            assert_eq!(active_speaker_mode(requested, device), active);
+        }
     }
 
     #[test]

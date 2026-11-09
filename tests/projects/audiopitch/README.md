@@ -30,12 +30,14 @@ step of 1/32768 and no added Master-float slack. RESIDUALS is empty. Reports
 preserve every missing, extra and failing value; no sample limits apply.
 All captures, diagnostic candidates and reports remain under the cache.
 
-Certification: both independent Editor repeats agree exactly across 11,403,885
-stereo values per rate. Engine strict and separate gate comparisons each pass all
-11,403,885 at 48000 and 44100 Hz, with zero raw float/PCM failures. There are no
-added residuals. The separately recorded mono/fallback-layout pairs agree exactly
-across 589,876 values per rate. `regressions.py --release 6000.0.71f1` runs the
-unchanged prior DSP and ClearFloat comparators with one runtime snapshot.
+Certification: independent Editor repeats agree exactly across 12,845,768 stereo values
+and 5,636,281 layout values per rate. At 48000 Hz one repeat differed from the other and
+from the published reference only in the existing `reset_noise` control (up to 0.77); a
+third repeat agreed exactly with the first, which matches the published values. Engine
+strict comparisons pass every stereo value and every layout value except the 18 LFE values
+of the three `common.UNSUPPORTED` controls; the gate compares those controls with only
+their LFE channel expected silent. There are no added residuals. `regressions.py --release
+6000.0.71f1` runs the unchanged prior DSP and ClearFloat comparators with one runtime snapshot.
 
 Static effect-slot Wet is now covered by the additional `slot_wet_*` cases. See the
 [shared contract, measured equation, controls and limits](../../../docs/AUDIO.md#static-effect-slot-wet-mixing).
@@ -43,8 +45,10 @@ These additive captures retain all earlier oracle values and comparator toleranc
 
 ## FFT and output context controls
 
-The additional controls use Unity 6000.0.71f1 at both 44100 and 48000 Hz.
-Existing reference metadata, PCM and comparison tolerances are unchanged.
+The additional controls use Unity 6000.0.71f1 at both 44100 and 48000 Hz. Stereo reference
+metadata, PCM and comparison tolerances are unchanged. The quad, 5.0, 5.1 and 7.1 layout
+controls were re-recorded with those layouts active (the earlier capture ran stereo on a
+two-channel device); mono values are unchanged.
 
 | Basis | Contract or observation |
 | --- | --- |
@@ -58,7 +62,7 @@ Existing reference metadata, PCM and comparison tolerances are unchanged.
 | Measured Max channels | `maxch_*` (stereo) and `context_*_max*` controls: the effect processes when the group's channel count is at most the limit, where the limit is the clamped whole value of Max channels (0..16), or the layout's channel count when it is 0. Otherwise the input passes through unchanged, without the FFT delay: 1 and 1.5 in stereo, 2 in 5.1 and 6 in 7.1. 2, 2.5, 16, 17 and -1 process like the default. A live change that keeps the processed count (0 to 2 in stereo) keeps every history; one that changes it (0 to 4, 0 to 1 and back, 0 to 2 in mono) restarts them. GetFloat keeps the raw value. |
 | Measured mono output | `context_mono_*`: a stereo clip enters the mono graph as `0.707·L + 0.707·R` of its panned stereo pair (pan -0.5 gives 0.707 and 0.3535); 0.707 is exact, not 1/sqrt(2). A mono clip keeps the length of its stereo pan gains, independent of 2D pan. Group effects then process that single channel: mono Pitch Shifter output equals the one-channel kernel applied to that mix (`context_mono`, `context_mono_clip_shift`, `context_mono_max1`, `context_mono_live`). |
 | Measured quad, 5.0, 5.1 and 7.1 | For stereo clips FL/FR are bit-identical to the stereo controls and every other channel is silent, with and without the Pitch Shifter. A mono 2D clip uses the stereo pan law on FL/FR; in 5.1 and 7.1 it also feeds LFE (channel 3) at unity gain, independent of pan. Quad and 5.0 have no such send. |
-| Follow-up: LFE lane | The engine graph carries the front pair of every layout, so the three mono-clip 5.1/7.1 controls lack their LFE channel. `common.UNSUPPORTED` names them: the strict report keeps comparing them; only the gate leaves them out. |
+| Follow-up: LFE lane | The engine graph carries the front pair of every layout, so the three mono-clip 5.1/7.1 controls lack their LFE channel. `common.UNSUPPORTED` names them with that channel: the strict report compares them as recorded; the gate expects exactly that channel to be silent and compares everything else. The engine warns once when a mono clip plays in 5.1/7.1. |
 | Capture device | A requested layout runs only when the default output device has enough channels; on a two-channel device the configuration getter keeps the request while the DSP runs stereo. `native.py` therefore records the layout controls in their own Editor session against a private PulseAudio server whose default sink has eight 7.1 channels (`PULSE_SERVER`; the session's own audio server is untouched). Each control records the actual rate, buffer, mode and the active channel count from a listener callback. |
 
 `native.py` captures the stereo set in `WORK/capture` and the layout set in `WORK/contexts`.

@@ -697,6 +697,10 @@ pub struct MixerConfig {
 }
 
 impl MixerConfig {
+    /// Whether the layout has an LFE channel (`Mode5point1`, `Mode7point1`).
+    fn has_lfe(&self) -> bool {
+        matches!(self.speaker_mode, 5 | 6)
+    }
     /// Output channels of `speaker_mode` (`AudioSpeakerMode`), in AudioRenderer and
     /// `OnAudioFilterRead` order: Mono 1, Quad 4, Surround 5, Mode5point1 6, Mode7point1 8;
     /// Stereo and Prologic (an encoded stereo pair) 2.
@@ -763,6 +767,8 @@ pub struct Mixer {
     listener_output: Ring,
     callback: Option<Callback>,
     capture_listener_batch: bool,
+    /// The LFE gap was reported once (see [`Mixer::warn_missing_lfe`]).
+    warned_lfe: bool,
     /// Nothing listens (the virtual device): voices only advance, unless their samples are
     /// asked for (filters, output data).
     pub discard_output: bool,
@@ -895,6 +901,7 @@ impl Mixer {
             listener_output: Ring::new(),
             callback: None,
             capture_listener_batch: false,
+            warned_lfe: false,
             discard_output: false,
             listener_output_wanted: false,
             mix: vec![0.0; BLOCK * 2],
@@ -1346,8 +1353,28 @@ impl Mixer {
     }
 
     /// Reports admission before a later render can change the source's voice counts.
+    /// Unity 6000.0.71f1 also feeds a mono 2D clip to LFE in 5.1 and 7.1 (tests/projects/audiopitch
+    /// `context_mode5point1_clip`); the graph carries the front pair only. Says so once.
+    fn warn_missing_lfe(&mut self, handle: u64, cmd: &AudioSourceCommand) {
+        if self.warned_lfe || !self.config.has_lfe() {
+            return;
+        }
+        let clip = match cmd.kind {
+            command::PLAY => self.sources.get(&handle).map_or(0, |s| s.params.clip),
+            command::PLAY_ONE_SHOT => cmd.clip,
+            _ => return,
+        };
+        if self.clips.get(&clip).is_some_and(|c| c.channels == 1) {
+            self.warned_lfe = true;
+            tracing::warn!(
+                "audio: mono clips play without their LFE channel in 5.1/7.1 output (unsupported)"
+            );
+        }
+    }
+
     pub fn command(&mut self, handle: u64, cmd: &AudioSourceCommand) -> bool {
         self.prepare_source(handle);
+        self.warn_missing_lfe(handle, cmd);
         let now = self.frames;
         let rate = self.config.sample_rate;
         let callback = self.callback;

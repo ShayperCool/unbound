@@ -159,6 +159,8 @@ fn rgba(image: &Image) -> Option<(u32, u32, Vec<u8>)> {
 pub struct RemoteAudio(pub Arc<Session>);
 
 const RATE: u32 = 48_000;
+/// The viewers receive a stereo stream.
+const CHANNELS: usize = 2;
 
 struct Device {
     stop: Arc<AtomicBool>,
@@ -167,6 +169,10 @@ struct Device {
 impl AudioDevice for Device {
     fn sample_rate(&self) -> u32 {
         RATE
+    }
+
+    fn channels(&self) -> usize {
+        CHANNELS
     }
 
     fn name(&self) -> String {
@@ -194,12 +200,12 @@ impl DeviceOpener for RemoteAudio {
             .name("unbound-remote-audio".into())
             .spawn(move || {
                 const CHUNK: usize = (RATE / 100) as usize;
-                let mut buffer = vec![0f32; CHUNK * 2];
+                let mut buffer = vec![0f32; CHUNK * CHANNELS];
                 let mut next = Instant::now();
                 while !stopped.load(Ordering::Acquire) {
                     buffer.fill(0.0);
-                    render(&mut buffer, 2);
-                    session.push_audio(RATE, 2, &buffer);
+                    render(&mut buffer, CHANNELS);
+                    session.push_audio(RATE, CHANNELS, &buffer);
                     next += Duration::from_millis(10);
                     let now = Instant::now();
                     if next > now {

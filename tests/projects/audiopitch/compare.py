@@ -30,10 +30,9 @@ def safe(value):
     return repr(value) if isinstance(value, float) and not math.isfinite(value) else value
 
 
-def compare(reference, candidate, report, keys, exact=False, before=None, pcm_steps=0, residuals=False, skipped=()):
+def compare(reference, candidate, report, keys, exact=False, before=None, pcm_steps=0, residuals=False, unsupported=()):
     roots = [reference, candidate] if before is None else [reference, before, candidate]
-    manifests = [{k: v for k, v in header(root).items() if k.split('.')[0] not in skipped} for root in roots]
-    keys = {k: v for k, v in keys.items() if k not in skipped}
+    manifests = [header(root) for root in roots]
     limits = {k+s: frames for k, frames in keys.items() for s in SUFFIXES}
     fields = ['release', 'rate'] + list(limits)
     fields += sorted({f for m in manifests for f in m if f not in fields})
@@ -67,6 +66,10 @@ def compare(reference, candidate, report, keys, exact=False, before=None, pcm_st
             data = [samples(root, meta) for root, meta in zip(roots, values)]
             frames = limits.get(key)
             channels = values[0].get('channels', 2) if isinstance(values[0], dict) else 2
+            if key.split('.')[0] in unsupported and channels > UNSUPPORTED[key.split('.')[0]][0]:
+                # The known gap: the channel is expected to be absent; nothing else is relaxed.
+                data[0] = data[0][:]
+                for i in range(UNSUPPORTED[key.split('.')[0]][0], len(data[0]), channels): data[0][i] = 0.0
             count = max(map(len, data)) if frames is None else min(max(map(len, data)), channels*frames)
             indices = range(count)
             if np is not None and before is None and all(len(v) >= count for v in data):
@@ -88,7 +91,8 @@ def compare(reference, candidate, report, keys, exact=False, before=None, pcm_st
         result = dict(tested=tested, failed=failed, exact=exact, atol=0 if exact else ATOL,
                       rtol=0 if exact else RTOL, pcm_steps=pcm_steps,
                       residual_atol=RESIDUALS if residuals else {},
-                      unsupported={case: UNSUPPORTED[case] for case in sorted(skipped)},
+                      unsupported={case: dict(channel=UNSUPPORTED[case][0], expected=0.0, reason=UNSUPPORTED[case][1])
+                                   for case in sorted(unsupported)},
                       frame_limits={k: v for k, v in keys.items() if v is not None},
                       failing_values_by_case=by_case,
                       roots=list(map(str, roots)), counts=counts)
@@ -111,7 +115,7 @@ if __name__ == '__main__':
     p.add_argument('--pcm-steps', type=int, choices=(0, 1), default=0,
                    help='Admit one 1/32768 step of device PCM (never master floats)')
     p.add_argument('--residuals', action='store_true',
-                   help='Admit the recorded RESIDUALS bounds and leave out the named UNSUPPORTED controls of common.py (gate only)')
+                   help='Admit the recorded RESIDUALS bounds and expect the named UNSUPPORTED channels of common.py to be silent (gate only)')
     a = p.parse_args()
     if not a.report.name.endswith('.jsonl.gz'): p.error('report must end in .jsonl.gz')
     published = FIXTURE/'Reference'/('unity-'+a.release)
