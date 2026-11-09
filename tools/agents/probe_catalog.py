@@ -3,6 +3,7 @@
 import importlib.util
 import contextlib
 import json
+import inspect
 from pathlib import Path
 import sys
 
@@ -21,7 +22,11 @@ def main():
             if release not in tables:
                 tables[release] = suite.recipes(release)
             table = tables[release]
-            recipe = suite.recipe_for(name, table, release, projects=projects)
+            if 'projects' in inspect.signature(suite.recipe_for).parameters:
+                recipe = suite.recipe_for(name, table, release, projects=projects)
+            else:
+                suite.PROJECTS = projects
+                recipe = suite.recipe_for(name, table, release)
             error = (str(recipe.reason) if isinstance(recipe, suite.NoRecipe) else
                      'candidate recipe has no steps' if not recipe else None)
             results[name] = {'builtin': name in table, 'error': error}

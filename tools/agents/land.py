@@ -75,6 +75,7 @@ GENERATED = 'managed/UnityEngine/Generated'
 STUB_INPUTS = re.compile(r'^(managed/|crates/unbound-compat/)')
 STUB_PROJECT = 'tests/projects/packages'
 HERE = Path(__file__).resolve().parent
+CATALOG_SOURCE = (HERE/'probe_catalog.py').read_text()
 from probe_runtime import (RELEASE_VARIABLE, default_release, probe_release, NO_EDITOR,
                            EDITOR_WATCH, EDITOR_MARK, EDITOR_EXIT, require_process_watch, stop_tree)
 from runtime_snapshot import snapshot_runtime, pin_main, atomic_json
@@ -168,8 +169,8 @@ def candidate_recipes(worktree, requested):
     if not source.is_file():  # Partial repositories used by the metadata unit controls.
         source = HERE/'suite.py'
     helper = worktree/'tools/agents/probe_catalog.py'
-    if not helper.is_file():
-        helper = HERE/'probe_catalog.py'
+    helper_command = ([sys.executable, str(helper)] if helper.is_file() else
+                      [sys.executable, '-c', CATALOG_SOURCE])
     require_process_watch()
     print(f'land: recipe selection: {len(requested)} probes, '
           f'budget {AUTO_SELECTION_TIMEOUT_SECONDS}s', flush=True)
@@ -183,8 +184,7 @@ def candidate_recipes(worktree, requested):
             die(2, 'candidate recipe selection exhausted its planning budget')
         environment = dict(os.environ, **{NO_EDITOR: '1', RELEASE_VARIABLE: release})
         environment.pop('UNBOUND_LAND_GATE', None)  # Planning never claims a heavy-job gate lease.
-        process = subprocess.Popen([sys.executable, str(helper), str(source),
-                                    str(worktree/'tests/projects')], stdin=subprocess.PIPE,
+        process = subprocess.Popen([*helper_command, str(source), str(worktree/'tests/projects')], stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                    env=environment, start_new_session=True)
         EDITOR_WATCH.add(process.pid)

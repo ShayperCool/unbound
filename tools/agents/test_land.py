@@ -815,6 +815,8 @@ class AutomaticProbeTests(unittest.TestCase):
         paths = ['tests/projects/candidate/run.py']
         with mock.patch.dict(sys.modules, {'candidate_helper': mock.Mock(marker='leader-wrong')}):
             self.assertEqual([row[0] for row in self.select(paths)], ['candidate'])
+        path.write_text(body.replace(', projects=None', ''))
+        self.assertEqual([row[0] for row in self.select(paths)], ['candidate'])
         path.write_text(body.replace('{candidate_helper.marker: [Step()]}', '{}'))
         with self.assertRaises(SystemExit):
             self.select(paths)
