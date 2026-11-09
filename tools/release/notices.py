@@ -24,8 +24,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-LICENSE_NAME = re.compile(r'^(licen[cs]e|copying|notice|unlicense|copyright|third-party-notices)', re.I)
-NOT_TEXT = {'.rtf', '.html', '.htm', '.rs', '.py', '.c', '.h', '.cpp', '.json', '.toml', '.yml', '.sh', '.cmake'}
+LICENSE_NAME = re.compile(r'^(licen[cs]e|copying|notice|unlicense|copyright|third-?party-?notices)', re.I)
+NOT_TEXT = {'.html', '.htm', '.rs', '.py', '.c', '.h', '.cpp', '.json', '.toml', '.yml', '.sh', '.cmake'}
 SKIP_DIRS = {'test', 'tests', 'testdata', 'examples', 'docs', 'doc', 'benches', '.git'}
 
 
@@ -46,7 +46,52 @@ def license_files(directory, depth):
 
 
 def read_text(path):
-    return path.read_text(encoding='utf-8', errors='replace').strip()
+    text = path.read_text(encoding='utf-8', errors='replace')
+    return rtf_to_text(text) if path.suffix.lower() == '.rtf' else text.strip()
+
+
+def rtf_to_text(rtf):
+    """The text of a simple RTF document (NuGet packages' ThirdPartyNotices.rtf)."""
+    # Drop destination groups ({\*...}, font and colour tables) by brace matching.
+    out, i = [], 0
+    while i < len(rtf):
+        if rtf[i] == '{' and re.match(r'\{\\(\*|fonttbl|colortbl)', rtf[i:]):
+            depth = 0
+            while i < len(rtf):
+                depth += {'{': 1, '}': -1}.get(rtf[i], 0)
+                i += 1
+                if depth == 0:
+                    break
+            continue
+        out.append(rtf[i])
+        i += 1
+    text = ''.join(out)
+    text = re.sub(r'\\par\b ?\r?\n?', '\n', text)
+    text = re.sub(r"\\'([0-9a-fA-F]{2})", lambda m: bytes([int(m.group(1), 16)]).decode('cp1252'), text)
+    text = re.sub(r'\\[a-zA-Z]+-?\d* ?', '', text)
+    text = text.replace('{', '').replace('}', '')
+    return '\n'.join(line.rstrip() for line in text.splitlines()).strip()
+
+
+# Standard license texts for components that ship no license file, by SPDX identifier.
+STANDARD = {'MIT': 'MIT.txt', 'MIT-0': 'MIT-0.txt', 'Apache-2.0': 'Apache-2.0.txt'}
+# Of alternatives (`A OR B`), the one whose text is printed.
+PREFERENCE = ['MIT', 'MIT-0', 'Apache-2.0']
+
+
+def standard_texts(name, expression, copyright):
+    """The license texts for an SPDX-like expression (`MIT OR Apache-2.0`, `MIT/Apache-2.0`,
+    `A AND B`), choosing one of alternatives; fails on a license without a standard text."""
+    texts = []
+    for conjunct in re.split(r'\s+AND\s+', expression.strip().strip('()')):
+        choices = [c.strip().strip('()') for c in re.split(r'\s+OR\s+|/', conjunct)]
+        chosen = next((c for c in PREFERENCE if c in choices), None)
+        if chosen is None:
+            sys.exit(f'notices: {name} ships no license file and its license "{expression}" has '
+                     'no standard text in tools/release/licenses/; add one')
+        text = read_text(ROOT / 'tools/release/licenses' / STANDARD[chosen])
+        texts.append(text.replace('{copyright}', copyright))
+    return texts
 
 
 class Section:
@@ -60,7 +105,9 @@ class Section:
         self.components.append((name, detail))
         for text in texts:
             key = hashlib.sha256(text.encode()).hexdigest()
-            self.texts.setdefault(key, (text, []))[1].append(name)
+            users = self.texts.setdefault(key, (text, []))[1]
+            if name not in users:
+                users.append(name)
 
     def render(self):
         out = [f'## {self.title}', '', self.intro, '']
@@ -79,7 +126,8 @@ class Section:
 
 def native_section():
     section = Section('Vendored native libraries',
-                      'Compiled from `native/` into the `unbound_physx` library in `managed/`.')
+                      'Compiled from `native/`: PhysX and NvCloth into the `unbound_physx` library '
+                      'in `managed/`, the others into `bin/unbound`.')
     for directory in sorted((ROOT / 'native').iterdir()):
         if not directory.is_dir():
             continue
@@ -90,26 +138,35 @@ def native_section():
     return section
 
 
-# Third-party code translated into Unbound's own sources whose notice is a comment in the file:
-# (component, file, the comment's first line, MIT copyright holder or None). The comment paragraph
-# starting there is quoted; for MIT-licensed code the MIT License text follows with that holder.
+# Third-party code in Unbound's own sources whose notice is a comment in the file:
+# (component, file, a text on the notice's first line, a text on its last line, MIT copyright
+# holder or None). Those lines are quoted; for MIT-licensed code without the license text in the
+# file, the MIT License follows with that holder.
 IN_FILE_NOTICES = [
     ('Yoga 1.9.0 (C# port)', 'managed/UnityEngine/UIElements/Layout/Yoga.cs',
-     '// Yoga is Copyright', 'Facebook, Inc. and its affiliates (2014-present)'),
+     'Yoga is Copyright', 'yoga/blob/1.9.0/LICENSE', 'Facebook, Inc. and its affiliates (2014-present)'),
+    ('Clipper 6.4.2 (C#)', 'managed/UnityEngine/Physics2D/Clipper/clipper.cs',
+     'Author    :  Angus Johnson', 'LICENSE_1_0.txt', None),
     ('Ooura FFT (fft4g, Rust port)', 'crates/unbound-runtime/src/audio/pitch.rs',
-     '// Copyright Takuya OOURA', None),
+     'Copyright Takuya OOURA', 'Permission: use, copy', None),
+    ('NVIDIA Video Codec SDK header (nvEncodeAPI.h)', 'crates/unbound-remote/native/nvenc/nvEncodeAPI.h',
+     'This copyright notice applies', 'OTHER DEALINGS IN THE SOFTWARE', None),
 ]
 
 
-def mit_license(holder):
-    text = read_text(ROOT / 'LICENSE')
-    return re.sub(r'^Copyright \(c\) .*$', f'Copyright (c) {holder}', text, count=1, flags=re.M)
+def quoted_notice(name, path, first, last):
+    lines = (ROOT / path).read_text().splitlines()
+    start = next((i for i, line in enumerate(lines) if first in line), None)
+    end = next((i for i in range(start or 0, len(lines)) if last in lines[i]), None)
+    if start is None or end is None:
+        sys.exit(f'notices: the {name} notice ("{first}" ... "{last}") is no longer in {path}')
+    return '\n'.join(line.rstrip() for line in lines[start:end + 1])
 
 
 def ported_section():
     section = Section('Ported source code',
-                      'Third-party code translated into `managed/` (compiled into '
-                      '`UnityEngine.CoreModule.dll`) or `crates/` (linked into `bin/unbound`).')
+                      'Third-party code in `managed/` (compiled into `UnityEngine.CoreModule.dll`) '
+                      'or `crates/` (linked into `bin/unbound`).')
     tracked = subprocess.run(['git', 'ls-files', 'managed', 'crates'], check=True,
                              capture_output=True, text=True, cwd=ROOT).stdout.splitlines()
     by_directory = {}
@@ -118,17 +175,11 @@ def ported_section():
             by_directory.setdefault(str(Path(path).parent), []).append(ROOT / path)
     for directory, files in sorted(by_directory.items()):
         section.add(directory, None, [read_text(f) for f in sorted(files)])
-    for name, path, first, mit_holder in IN_FILE_NOTICES:
-        lines = (ROOT / path).read_text().splitlines()
-        start = next((i for i, line in enumerate(lines) if line.startswith(first)), None)
-        if start is None:
-            sys.exit(f'notices: the {name} notice ("{first}") is no longer in {path}')
-        end = start
-        while end < len(lines) and lines[end].startswith('//') and lines[end].strip() != '//':
-            end += 1
-        notice = '\n'.join(lines[start:end])
+    for name, path, first, last, mit_holder in IN_FILE_NOTICES:
+        notice = quoted_notice(name, path, first, last)
         if mit_holder is not None:
-            notice += '\n\n' + mit_license(mit_holder)
+            notice += '\n\n' + read_text(ROOT / 'tools/release/licenses/MIT.txt').replace(
+                '{copyright}', mit_holder)
         section.add(name, path, [notice])
     return section
 
@@ -167,8 +218,8 @@ def rust_section(triple):
         texts = [read_text(f) for f in license_files(directory, depth)]
         license = package.get('license') or 'see license file'
         if not texts:
-            authors = ', '.join(package.get('authors') or []) or 'the authors'
-            texts = [f'{package["name"]} is licensed under {license}. Copyright {authors}.']
+            authors = ', '.join(package.get('authors') or []) or f'the {package["name"]} authors'
+            texts = standard_texts(package['name'], package.get('license') or '', authors)
         section.add(f'{package["name"]} {package["version"]}', license, texts)
     return section
 
@@ -189,7 +240,7 @@ def nuget_section():
                           if (Path(f) / library['path']).is_dir()), None)
         if directory is None:
             sys.exit(f'notices: NuGet package {key} is not in {folders}')
-        license, copyright = 'see license file', ''
+        license, copyright, authors = 'see license file', '', ''
         nuspec = next(directory.glob('*.nuspec'), None)
         if nuspec is not None:
             tree = ET.parse(nuspec)
@@ -199,9 +250,13 @@ def nuget_section():
                     license = element.text.strip()
                 elif tag == 'copyright' and element.text:
                     copyright = element.text.strip()
+                elif tag == 'authors' and element.text:
+                    authors = element.text.strip()
         texts = [read_text(f) for f in license_files(directory, 0)]
         if not texts:
-            texts = [f'{key.split("/")[0]} is licensed under {license}. {copyright}'.strip()]
+            holder = re.sub(r'^(Copyright\s*)?(\(c\)|©)?\s*', '', copyright) or authors \
+                or f'the {key.split("/")[0]} authors'
+            texts = standard_texts(key, license, holder)
         section.add(key.replace('/', ' '), license, texts)
     return section
 
