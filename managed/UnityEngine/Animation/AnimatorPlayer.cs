@@ -197,6 +197,7 @@ namespace Unbound.Runtime
             for (int i = 0; i < Layers.Length; i++)
                 Layers[i] = new LayerRun { Def = graph.Layers[i], Weight = graph.Layers[i].DefaultWeight };
             m_TimingLayers = TimingLayers(controller, graph);
+            m_MayHold = AnyHoldingState();
             foreach (var layer in Layers)
             {
                 if (layer.Def.Root == null) continue;
@@ -1278,6 +1279,22 @@ namespace Unbound.Runtime
             layerIndex == 0 && EmptyWithDefaults(layer, other) && run != null && MotionOf(layer.Def, run.Def) != null;
 
         bool Holds(LayerRun layer, StateRun run) => run != null && !run.Def.WriteDefaults && MotionOf(layer.Def, run.Def) == null;
+
+        /// <summary>Whether a layer has a state that holds (<see cref="Holds"/>): only then does a
+        /// layer's own root step need keeping in every evaluation.</summary>
+        bool m_MayHold;
+
+        bool AnyHoldingState()
+        {
+            foreach (var layer in Layers)
+            {
+                int synced = layer.Def.SyncedLayerIndex;
+                var states = synced >= 0 && synced < Layers.Length ? Layers[synced].Def.States : layer.Def.States;
+                foreach (var state in states)
+                    if (!state.WriteDefaults && MotionOf(layer.Def, state) == null) return true;
+            }
+            return false;
+        }
 
         /// <summary>The base layer's transitions between a state without a motion and with write
         /// defaults and a motion state: the former adds nothing, the motion state's values apply in

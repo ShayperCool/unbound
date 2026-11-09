@@ -128,9 +128,13 @@ namespace Unbound.Runtime
             // Humanoid clips move the root through their body (muscle) curves.
             var human = animator.Human;
             if (human != null && HumanRootMotion(animator, human)) return;
-            if (!animator.m_ApplyRootMotion && !m_HasMonoMove && !m_HasStateMove) return;
             var t = animator.transform;
             int pos = Bindings.ChannelOf(t, "position"), rot = Bindings.ChannelOf(t, "rotation");
+            if (!animator.m_ApplyRootMotion && !m_HasMonoMove && !m_HasStateMove)
+            {
+                KeepRootSteps(pos, rot);
+                return;
+            }
             for (int l = 0; l < count; l++)
             {
                 var p = m_LayerPoses[l].AnimationPose;
@@ -139,7 +143,11 @@ namespace Unbound.Runtime
                 ClearRootWeights(p.Fill, pos, rot);
                 ClearRootWeights(p.Rest, pos, rot);
             }
-            if (!animator.m_ApplyRootMotion && !m_HasMonoMove) return;
+            if (!animator.m_ApplyRootMotion && !m_HasMonoMove)
+            {
+                KeepRootSteps(pos, rot);
+                return;
+            }
             var (delta, turn) = ContributionMotion(pos, rot);
             // Root motion scales in its own frame before applying the current world rotation.
             // TransformVector would apply a nonuniform parent's scale after the root's rotation.
@@ -199,7 +207,8 @@ namespace Unbound.Runtime
             Array.Clear(m_RootDeltas);
             foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions)
             {
-                if (weight <= 0f) continue;
+                // A layer of weight 0 moves nothing; its step only matters to a state that may hold it.
+                if (weight <= 0f || (!m_MayHold && layerIndex > 0 && layer.Evaluated <= 0f)) continue;
                 var bound = Bindings.Bind(clip);
                 double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
                 var (d, q) = MotionDelta(bound, clip, ClipSampling.StateClipNormalized(run.MotionPrevious ?? run.Previous, clip.length) + offset,
@@ -231,6 +240,13 @@ namespace Unbound.Runtime
             return (delta, turn);
         }
 
+        /// <summary>An evaluation that requests no root motion still keeps the layers' own steps
+        /// for their holding states (see <see cref="HoldWeight"/>).</summary>
+        void KeepRootSteps(int pos, int rot)
+        {
+            if (m_MayHold) ContributionMotion(pos, rot);
+        }
+
         /// <summary>A state's step in its layer: its position by weight, its rotation into the
         /// layer's weighted sum (the same hemisphere).</summary>
         void AddRootStep(int layerIndex, Vector3 d, Quaternion q, float weight)
@@ -249,11 +265,12 @@ namespace Unbound.Runtime
         /// it keeps the layer's last values (see <see cref="SampleState"/>): the layer's own step of
         /// its last update with clips, generic or humanoid, takes the holding state's weight, so
         /// alone it moves the root by the same step in the root's frame every update, whatever the
-        /// delta time (6000.0.71f1, tests/projects/humanoid generic.noWD, noWDAlone, noWDFade,
-        /// noRootNoWD; a humanoid's feet pivot correction runs again on the kept step). The layer's
-        /// step becomes its last one, except while a transition leaves a holding state
-        /// (<paramref name="frozen"/>), which keeps what it held when the transition began, as for
-        /// its values; an update without clips in the layer forgets it.
+        /// delta time, an Update(0) included (6000.0.71f1, tests/projects/humanoid generic.noWD,
+        /// generic.noWDBack, noWDAlone, noWDFade, noWDBack, noRootNoWD; a humanoid's feet pivot
+        /// correction runs again on the kept step). The layer's step becomes its last one, except
+        /// while a transition leaves a holding state (<paramref name="frozen"/>), which keeps what it
+        /// held when the transition began, as for its values; an update without clips in the layer
+        /// forgets it. The step is kept also while no root motion is requested.
         /// </summary>
         float HoldWeight(int i, out bool frozen)
         {
@@ -291,8 +308,12 @@ namespace Unbound.Runtime
             startRotation = parent == null ? t.localRotation : parent.rotation * t.localRotation;
             foreach (var (_, _, _, clip, _) in m_Contributions)
                 if (clip.HasHumanCurves && !clip.BodyMovesRoot(animator)) return false;
-            if (!animator.m_ApplyRootMotion && !MoveCallbacks.Any(animator)) return true;
             int pos = Bindings.ChannelOf(t, "position"), rot = Bindings.ChannelOf(t, "rotation");
+            if (!animator.m_ApplyRootMotion && !MoveCallbacks.Any(animator))
+            {
+                KeepRootSteps(pos, rot);
+                return true;
+            }
             var (delta, turn) = ContributionMotion(pos, rot);
             RootVelocities(startRotation * Vector3.Scale(RootMotionScale(t), delta), turn, startRotation, deltaTime,
                 out velocity, out angularVelocity);

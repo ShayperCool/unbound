@@ -327,10 +327,31 @@ AnimatorStateMachine:
             Near.Equal(0f, animator.deltaPosition.x, 1e-5f);
             Near.Equal(-0.05f, animator.deltaPosition.z, 1e-5f);
 
+            // An explicit Update(0) moves it again too (humanoid generic.noWD, step 12).
+            var before = animator.transform.position;
+            animator.Update(0f);
+            Near.Equal(-0.05f, animator.transform.position.z - before.z, 1e-5f);
+
             var first = Rig(Controller(EmptyState, emptyWriteDefaults: false));
             first.Update(0f);
             first.Update(0.05f);
             Near.Equal(0f, first.deltaPosition.magnitude, 1e-6f);
+        }
+
+        /// <summary>The kept step is the layer's last one also when root motion was off while the
+        /// motion played: turned on during the hold, the root moves by Walk's last step.</summary>
+        [Fact]
+        public void AHoldKeepsTheLastStepWhileRootMotionIsOff()
+        {
+            var animator = Rig(Controller(WalkState, EmptyState, 0.2f, 0f, emptyWriteDefaults: false));
+            animator.applyRootMotion = false;
+            animator.Update(0f);
+            for (int step = 0; step < 12 && !animator.GetCurrentAnimatorStateInfo(0).IsName("Empty"); step++)
+                animator.Update(0.05f);
+            Assert.True(animator.GetCurrentAnimatorStateInfo(0).IsName("Empty"));
+            animator.applyRootMotion = true;
+            animator.Update(0.05f);
+            Near.Equal(0.05f, animator.deltaPosition.x, 1e-5f);
         }
 
         /// <summary>A state driven by a motion time parameter takes the parameter in the update Play
