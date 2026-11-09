@@ -171,6 +171,9 @@ namespace UnityEngine
             set { MainThreadCheck.Check("SetStaticLightmapST"); m_LightmapScaleOffset = value; }
         }
         Vector4 m_RealtimeLightmapScaleOffset = new Vector4(1, 1, 0, 0);
+        /// <summary>The realtime lightmap atlas precomputed realtime GI updates for this renderer
+        /// (<see cref="RealtimeGI"/>), null without one.</summary>
+        internal Texture2D m_RealtimeLightmap;
         public Vector4 realtimeLightmapScaleOffset
         {
             get { MainThreadCheck.Check("GetLightmapST"); return m_RealtimeLightmapScaleOffset; }
@@ -675,31 +678,47 @@ namespace UnityEngine
         [Unbound.EditorFaithful("static batches draw the renderers' own meshes in Unbound; their first submesh is 0")]
         public int subMeshStartIndex => 0;
         Mesh m_StreamedMesh;
-        (Mesh, int, Mesh, int) m_StreamedKey;
+        (Mesh, int, Mesh, int, Mesh, int) m_StreamedKey;
 
-        /// <summary>The mesh with the additional vertex streams' channels over its own.</summary>
+        /// <summary>The mesh with the additional vertex streams' channels over its own, and the
+        /// realtime lightmap UVs of <see cref="enlightenVertexStream"/> over those.</summary>
         Mesh Streamed(Mesh mesh)
         {
             var streams = additionalVertexStreams;
-            if (streams == null) return mesh;
+            var realtime = enlightenVertexStream;
+            if (streams == null && realtime == null) return mesh;
             mesh.Sync();
-            streams.Sync();
-            var key = (mesh, mesh.m_SyncVersion, streams, streams.m_SyncVersion);
+            streams?.Sync();
+            realtime?.Sync();
+            var key = (mesh, mesh.m_SyncVersion, streams, streams?.m_SyncVersion ?? 0, realtime, realtime?.m_SyncVersion ?? 0);
             if (m_StreamedMesh != null && m_StreamedKey == key) return m_StreamedMesh;
             if (m_StreamedMesh == null)
                 using (Unbound.Runtime.ObjectRegistry.AsAssets())
                     m_StreamedMesh = new Mesh { hideFlags = HideFlags.HideAndDontSave };
             m_StreamedMesh.CopyGeometryFrom(mesh);
             m_StreamedMesh.name = mesh.name;
-            uint overridden = m_StreamedMesh.OverrideVertexChannels(streams);
+            uint overridden = 0;
+            if (streams != null) overridden |= m_StreamedMesh.OverrideVertexChannels(streams);
+            // The realtime lightmap UVs are CPU channels (RealtimeGI makes them).
+            if (realtime != null) overridden |= m_StreamedMesh.OverrideVertexChannels(realtime);
             m_StreamedMesh.ShareDrawIndices(mesh);
-            m_StreamedMesh.ShareVertexSources(mesh,streams,overridden);
+            m_StreamedMesh.ShareVertexSources(mesh, streams ?? realtime, overridden);
             m_StreamedMesh.m_Dirty = true;
             m_StreamedKey = key;
             return m_StreamedMesh;
         }
         public float scaleInLightmap { get; set; } = 1f;
         public ReceiveGI receiveGI { get; set; } = ReceiveGI.Lightmaps;
+        /// <summary>Lighting settings of the renderer that realtime lightmap UVs depend on
+        /// (Preserve UVs, Min Chart Size, its own Lightmap Parameters).</summary>
+        internal bool m_PreserveUVs;
+        internal int m_MinimumChartSize = 4;
+        internal Unbound.Runtime.ObjectRef m_LightmapParameters;
+
+        /// <summary>The mesh this renderer draws its realtime lightmap with: its mesh with the
+        /// vertex streams over it (null without a mesh).</summary>
+        internal Mesh RealtimeGIMesh() =>
+            m_GameObject.GetComponent<MeshFilter>()?.m_Mesh is Mesh mesh ? Streamed(mesh) : null;
         public bool stitchLightmapSeams { get; set; }
 
         internal override Bounds GetLocalBounds()
@@ -726,9 +745,24 @@ namespace UnityEngine
             return mesh != null ? Streamed(mesh) : null;
         }
 
-        internal override void ReadSerialized(YNode body, IReferenceResolver resolver) => ReadRendererData(body, resolver);
+        internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
+        {
+            ReadRendererData(body, resolver);
+            scaleInLightmap = body.Float("m_ScaleInLightmap", 1f);
+            m_PreserveUVs = body.Bool("m_PreserveUVs");
+            m_MinimumChartSize = body.Int("m_MinimumChartSize", 4);
+            m_LightmapParameters = body.Ref("m_LightmapParameters");
+        }
 
-        internal override void CopyFrom(Component source, Func<Object, Object> remap) => CopyRendererData((Renderer)source);
+        internal override void CopyFrom(Component source, Func<Object, Object> remap)
+        {
+            CopyRendererData((Renderer)source);
+            var s = (MeshRenderer)source;
+            scaleInLightmap = s.scaleInLightmap;
+            m_PreserveUVs = s.m_PreserveUVs;
+            m_MinimumChartSize = s.m_MinimumChartSize;
+            m_LightmapParameters = s.m_LightmapParameters;
+        }
     }
 
     [ClassId(212)]

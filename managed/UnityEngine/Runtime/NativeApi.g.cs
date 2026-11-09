@@ -126,5 +126,29 @@ namespace Unbound.Runtime
         /// `UpdateExternalTexture`); 0 on success, else the buffer holds the reason.
         /// </summary>
         internal delegate* unmanaged<ulong, ulong, int, int, int, NativeBuffer*, int> ExternalTexture;
+        /// <summary>
+        /// (scene, frame, lights, count, out error): one frame's update; `realtime_gi::UPDATE_*`
+        /// bits, or -1 with the reason in the buffer.
+        /// </summary>
+        internal delegate* unmanaged<ulong, GiFrame*, GiLight*, int, NativeBuffer*, int> GiUpdate;
+        /// <summary>(scene, atlas, out RGBA half floats, capacity in halves): the atlas's texels written, or -1.</summary>
+        internal delegate* unmanaged<ulong, int, ushort*, int, int> GiReadAtlas;
+        /// <summary>
+        /// (scene, system, kind: 0 albedo RGBA8, 1 emission RGBA float; texels, length in bytes,
+        /// out error): a system's material texture as its meta passes render it; 0 on success.
+        /// </summary>
+        internal delegate* unmanaged<ulong, int, int, byte*, long, NativeBuffer*, int> GiSetMaterial;
+        /// <summary>
+        /// (scene, system, renderer within the system, linear RGB, out error):
+        /// DynamicGI.SetEmissive; 0 on success.
+        /// </summary>
+        internal delegate* unmanaged<ulong, int, int, float*, NativeBuffer*, int> GiSetEmissive;
+        /// <summary>
+        /// (scene, system, renderer within the system, world positions (3 floats each), lightmap UVs
+        /// (2 floats each), vertex count, triangle indices, index count, world units per texel,
+        /// minimum chart size in texels, out UVs (2 floats per vertex), out error): the renderer's
+        /// realtime lightmap UVs (`realtime_gi::realtime_uvs`); 0 on success.
+        /// </summary>
+        internal delegate* unmanaged<ulong, int, int, float*, float*, int, uint*, int, float, int, float*, NativeBuffer*, int> GiRealtimeUvs;
     }
 }

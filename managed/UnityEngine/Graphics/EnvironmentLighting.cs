@@ -19,20 +19,38 @@ namespace UnityEngine
         static float s_IndirectScale = 1f, s_SceneIndirectScale = 1f;
 
         /// <summary>Starts as the loaded scene's Lighting Settings Indirect Intensity (1 without
-        /// settings): measured, tests/projects/realtimegi (1 and 1.5). In the Editor it scales the
-        /// realtime lightmaps (2 doubles them; its effect on baked lightmaps is unmeasured), which
-        /// Unbound does not draw yet.</summary>
+        /// settings): measured, tests/projects/realtimegi (1 and 1.5). It scales the realtime
+        /// lightmaps of precomputed realtime GI (<see cref="RealtimeGI"/>; 2 doubles them); its
+        /// effect on baked lightmaps is unmeasured and Unbound gives it none.</summary>
         public static float indirectScale
         {
             get => s_IndirectScale;
             set
             {
                 s_IndirectScale = value;
-                if (value != s_SceneIndirectScale)
+                if (value != s_SceneIndirectScale && GraphicsSettings.currentRenderPipeline == null && LightmapSettings.Count > 0)
                     Unbound.Runtime.Stubs.Ignored("DynamicGI.indirectScale",
-                        "is stored but does not scale lightmaps yet");
+                        "scales realtime lightmaps only; baked lightmaps keep their intensity (unmeasured)");
             }
         }
+
+        /// <summary>Whether precomputed realtime GI has settled after the last change of its
+        /// inputs (true without any).</summary>
+        public static bool isConverged => RealtimeGI.IsConverged;
+
+        /// <summary>Every system updates in each frame, so the frame shows the new output. Off,
+        /// Unbound updates the systems within a frame budget.</summary>
+        public static bool synchronousMode
+        {
+            get => RealtimeGI.Synchronous;
+            set => RealtimeGI.Synchronous = value;
+        }
+
+        /// <summary>The renderer emits <paramref name="color"/> for precomputed realtime GI,
+        /// without its system's emission being rendered again. Measured
+        /// (tests/projects/realtimegi room-setemissive-then-call): a later material emission
+        /// change does not replace it, even with UpdateGIMaterials.</summary>
+        public static void SetEmissive(Renderer renderer, Color color) => RealtimeGI.SetEmissive(renderer, color);
 
         /// <summary>A scene loaded alone (not additively) with <paramref name="settings"/>; additive
         /// loads keep the value, and a scene without Lighting Settings gives 1 (both unmeasured).</summary>

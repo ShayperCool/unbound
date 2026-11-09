@@ -203,7 +203,11 @@ namespace UnityEngine
         /// <summary>A scriptable pipeline's light color: color times intensity, in linear space
         /// with GraphicsSettings.lightsUseLinearIntensity, else in gamma space (converted to
         /// linear in linear projects).</summary>
-        internal Color SrpFinalColor(bool linear)
+        internal Color SrpFinalColor(bool linear) => ScaledColor(m_Intensity, linear);
+
+        /// <summary>The light's color (and color temperature) times <paramref name="scale"/> as
+        /// <see cref="SrpFinalColor"/> scales it by the intensity.</summary>
+        internal Color ScaledColor(float scale, bool linear)
         {
             var c = m_Color;
             if (m_UseColorTemperature && UnityEngine.Rendering.GraphicsSettings.lightsUseColorTemperature)
@@ -215,12 +219,12 @@ namespace UnityEngine
             if (UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity)
             {
                 var l = c.linear;
-                result = new Color(l.r * m_Intensity, l.g * m_Intensity, l.b * m_Intensity, 1f);
+                result = new Color(l.r * scale, l.g * scale, l.b * scale, 1f);
                 if (!linear) result = result.gamma;
             }
             else
             {
-                result = new Color(c.r * m_Intensity, c.g * m_Intensity, c.b * m_Intensity, 1f);
+                result = new Color(c.r * scale, c.g * scale, c.b * scale, 1f);
                 if (linear) result = result.linear;
             }
             result.a = 1f;

@@ -58,6 +58,8 @@ namespace UnityEngine
             internal int MaxBounces;
             internal int MinBounces;
             internal bool EnvironmentImportanceSampling;
+            /// <summary>The scene's default Lightmap Parameters (m_LightmapParameters).</summary>
+            internal Unbound.Runtime.ObjectRef LightmapParameters;
             internal FilterMode FilteringMode;
             internal DenoiserType DenoiserTypeDirect;
             internal DenoiserType DenoiserTypeIndirect;
@@ -310,6 +312,7 @@ namespace UnityEngine
             m_State.ExportTrainingData = body.Bool("m_ExportTrainingData", m_State.ExportTrainingData);
             m_State.TrainingDataDestination = body.Str("m_TrainingDataDestination", m_State.TrainingDataDestination);
             m_State.IndirectResolution = body.Float("m_RealtimeResolution", m_State.IndirectResolution);
+            if (body.Get("m_LightmapParameters") != null) m_State.LightmapParameters = body.Ref("m_LightmapParameters");
             m_State.ForceWhiteAlbedo = body.Bool("m_ForceWhiteAlbedo", m_State.ForceWhiteAlbedo);
             m_State.ForceUpdates = body.Bool("m_ForceUpdates", m_State.ForceUpdates);
             m_State.PrioritizeView = body.Bool("m_PVRCulling", m_State.PrioritizeView);
@@ -340,6 +343,9 @@ namespace UnityEngine
         }
 
         Object Instantiation.ICloneable.CloneObject() => new LightingSettings { m_State = m_State };
+
+        /// <summary>The scene's default Lightmap Parameters asset reference (null without one).</summary>
+        internal Unbound.Runtime.ObjectRef LightmapParametersRef => m_State.LightmapParameters;
 
         public enum Lightmapper
         {

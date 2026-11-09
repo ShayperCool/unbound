@@ -786,6 +786,7 @@ namespace UnityEngine.SceneManagement
             {
                 objectsDestroyed?.Invoke();
                 LightProbes.SceneUnloaded(data.Handle.Value);
+                RealtimeGI.SceneUnloaded(data.Handle.Value);
                 // sceneUnloaded sees the scene with its name (measured: tests/projects/editorcallbacks);
                 // it is forgotten after.
                 SceneManager.Internal_SceneUnloaded(new Scene(data.Handle));

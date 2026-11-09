@@ -299,6 +299,29 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                     .to_string(),
             )
         }
+        "realtime-gi-load" => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                guid: String,
+                file_id: i64,
+                linear: bool,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(
+                crate::realtime_gi::load(&s.db, &s.unity_data, &r.guid, r.file_id, r.linear)?
+                    .to_string(),
+            )
+        }
+        "realtime-gi-release" => {
+            #[derive(serde::Deserialize)]
+            struct Request {
+                handle: u64,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            crate::realtime_gi::release(r.handle);
+            Ok("null".into())
+        }
         "mesh-object" => {
             #[derive(serde::Deserialize)]
             #[serde(rename_all = "camelCase")]

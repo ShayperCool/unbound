@@ -1072,7 +1072,6 @@ namespace UnityEngine
     }
     unsafe partial class DynamicGI
     {
-        [global::Unbound.Stub] public static void SetEmissive(global::UnityEngine.Renderer renderer, global::UnityEngine.Color color) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.SetEmissive"); }
         [global::Unbound.Stub] public static void SetEnvironmentData(float[] input) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.SetEnvironmentData"); }
         [global::System.Obsolete("DynamicGI.UpdateMaterials(Renderer) is deprecated; instead, use extension method from RendererExtensions: 'renderer.UpdateGIMaterials()' (UnityUpgradable).")] [global::Unbound.Stub] public static void UpdateMaterials(global::UnityEngine.Renderer renderer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.UpdateMaterials"); }
         [global::System.Obsolete("DynamicGI.UpdateMaterials(Terrain) is deprecated; instead, use extension method from TerrainExtensions: 'terrain.UpdateGIMaterials()' (UnityUpgradable).")] [global::Unbound.Stub] public static void UpdateMaterials(global::UnityEngine.Object renderer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.UpdateMaterials"); }
@@ -1081,8 +1080,6 @@ namespace UnityEngine
         public static float updateThreshold { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.updateThreshold"); return __unboundStub_updateThreshold; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.updateThreshold"); __unboundStub_updateThreshold = value; } }
         private static int __unboundStub_materialUpdateTimeSlice = 8;
         public static int materialUpdateTimeSlice { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.materialUpdateTimeSlice"); return __unboundStub_materialUpdateTimeSlice; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.materialUpdateTimeSlice"); __unboundStub_materialUpdateTimeSlice = global::System.Math.Max(0, value); } }
-        public static bool synchronousMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.synchronousMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.synchronousMode"); } }
-        public static bool isConverged { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.isConverged"); return true; } }
         internal static int scheduledMaterialUpdatesCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.scheduledMaterialUpdatesCount"); return default; } }
         internal static bool asyncMaterialUpdates { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.asyncMaterialUpdates"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.DynamicGI.asyncMaterialUpdates"); } }
     }
@@ -2058,10 +2055,8 @@ namespace UnityEngine
         internal int staticBatchIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.staticBatchIndex"); return default; } }
         public global::UnityEngine.LODGroup LODGroup { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Renderer.LODGroup"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class RendererExtensions
+    unsafe static partial class RendererExtensions
     {
-        [global::Unbound.Stub] public static void UpdateGIMaterials(this global::UnityEngine.Renderer renderer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RendererExtensions.UpdateGIMaterials"); }
         [global::Unbound.Stub] internal static void UpdateGIMaterialsForRenderer(global::UnityEngine.Renderer renderer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RendererExtensions.UpdateGIMaterialsForRenderer"); }
     }
     unsafe partial class ResourceRequest

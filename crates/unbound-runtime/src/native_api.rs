@@ -9,6 +9,7 @@ use crate::{
         },
     },
     plugin_api,
+    realtime_gi::{GiFrame, GiLight},
     render_protocol::{
         ImportedTextureInfo, MaterialPacket, MeshPacket, TexturePacket, commands, handle, owned,
     },
@@ -48,7 +49,9 @@ use std::ffi::c_void;
 /// 42: legacy glyph floating-point bearings and explicit rendering modes.
 /// 43: compatibility-selected zone initialization and parameter transitions.
 /// 44: mixer Pitch Shifter Max channels.
-pub const NATIVE_API_VERSION: u32 = 44;
+/// 45: precomputed realtime GI (`gi_update`, `gi_read_atlas`, `gi_set_material`,
+/// `gi_set_emissive`, `gi_realtime_uvs`).
+pub const NATIVE_API_VERSION: u32 = 45;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -199,6 +202,38 @@ pub struct NativeApi {
     /// show the named native texture (`Texture2D.CreateExternalTexture`,
     /// `UpdateExternalTexture`); 0 on success, else the buffer holds the reason.
     pub external_texture: extern "C" fn(u64, u64, i32, i32, i32, *mut NativeBuffer) -> i32,
+    // Version 42: precomputed realtime GI (`realtime_gi`; loaded with the `realtime-gi-load`
+    // control call).
+    /// (scene, frame, lights, count, out error): one frame's update; `realtime_gi::UPDATE_*`
+    /// bits, or -1 with the reason in the buffer.
+    pub gi_update:
+        extern "C" fn(u64, *const GiFrame, *const GiLight, i32, *mut NativeBuffer) -> i32,
+    /// (scene, atlas, out RGBA half floats, capacity in halves): the atlas's texels written, or -1.
+    pub gi_read_atlas: extern "C" fn(u64, i32, *mut u16, i32) -> i32,
+    /// (scene, system, kind: 0 albedo RGBA8, 1 emission RGBA float; texels, length in bytes,
+    /// out error): a system's material texture as its meta passes render it; 0 on success.
+    pub gi_set_material: extern "C" fn(u64, i32, i32, *const u8, i64, *mut NativeBuffer) -> i32,
+    /// (scene, system, renderer within the system, linear RGB, out error):
+    /// DynamicGI.SetEmissive; 0 on success.
+    pub gi_set_emissive: extern "C" fn(u64, i32, i32, *const f32, *mut NativeBuffer) -> i32,
+    /// (scene, system, renderer within the system, world positions (3 floats each), lightmap UVs
+    /// (2 floats each), vertex count, triangle indices, index count, world units per texel,
+    /// minimum chart size in texels, out UVs (2 floats per vertex), out error): the renderer's
+    /// realtime lightmap UVs (`realtime_gi::realtime_uvs`); 0 on success.
+    pub gi_realtime_uvs: extern "C" fn(
+        u64,
+        i32,
+        i32,
+        *const f32,
+        *const f32,
+        i32,
+        *const u32,
+        i32,
+        f32,
+        i32,
+        *mut f32,
+        *mut NativeBuffer,
+    ) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -245,7 +280,141 @@ pub fn api() -> NativeApi {
         plugin_shutdown,
         native_texture,
         external_texture,
+        gi_update,
+        gi_read_atlas,
+        gi_set_material,
+        gi_set_emissive,
+        gi_realtime_uvs,
     }
+}
+
+/// Runs a fallible call, writing its error (or panic) into `error`: 0 or the call's value on
+/// success, -1 on failure.
+fn reported(error: *mut NativeBuffer, f: impl FnOnce() -> anyhow::Result<i32>) -> i32 {
+    let message = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
+        Ok(Ok(value)) => return value,
+        Ok(Err(e)) => format!("{e:#}"),
+        Err(_) => "the realtime GI update panicked".to_string(),
+    };
+    if !error.is_null() {
+        unsafe { *error = NativeBuffer::from_vec(message.into_bytes()) };
+    }
+    -1
+}
+
+extern "C" fn gi_update(
+    scene: u64,
+    frame: *const GiFrame,
+    lights: *const GiLight,
+    count: i32,
+    error: *mut NativeBuffer,
+) -> i32 {
+    reported(error, || {
+        let frame = unsafe { &*frame };
+        let lights = if lights.is_null() || count <= 0 {
+            &[][..]
+        } else {
+            unsafe { std::slice::from_raw_parts(lights, count as usize) }
+        };
+        crate::realtime_gi::update(scene, frame, lights)
+    })
+}
+
+extern "C" fn gi_read_atlas(scene: u64, atlas: i32, out: *mut u16, capacity: i32) -> i32 {
+    if out.is_null() || capacity <= 0 || atlas < 0 {
+        return -1;
+    }
+    let out = unsafe { std::slice::from_raw_parts_mut(out, capacity as usize) };
+    reported(std::ptr::null_mut(), || {
+        Ok(crate::realtime_gi::read_atlas(scene, atlas as usize, out)? as i32)
+    })
+}
+
+extern "C" fn gi_set_material(
+    scene: u64,
+    system: i32,
+    kind: i32,
+    bytes: *const u8,
+    length: i64,
+    error: *mut NativeBuffer,
+) -> i32 {
+    reported(error, || {
+        anyhow::ensure!(
+            system >= 0 && !bytes.is_null() && length >= 0,
+            "a bad material texture"
+        );
+        let bytes = unsafe { std::slice::from_raw_parts(bytes, length as usize) };
+        crate::realtime_gi::set_material(scene, system as usize, kind, bytes)?;
+        Ok(0)
+    })
+}
+
+extern "C" fn gi_set_emissive(
+    scene: u64,
+    system: i32,
+    renderer: i32,
+    rgb: *const f32,
+    error: *mut NativeBuffer,
+) -> i32 {
+    reported(error, || {
+        anyhow::ensure!(
+            system >= 0 && renderer >= 0 && !rgb.is_null(),
+            "a bad renderer or color"
+        );
+        let color = unsafe { [*rgb, *rgb.add(1), *rgb.add(2)] };
+        crate::realtime_gi::set_emissive(scene, system as usize, renderer as usize, color)?;
+        Ok(0)
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+extern "C" fn gi_realtime_uvs(
+    scene: u64,
+    system: i32,
+    renderer: i32,
+    positions: *const f32,
+    uvs: *const f32,
+    vertices: i32,
+    indices: *const u32,
+    index_count: i32,
+    pixel_size: f32,
+    min_chart_texels: i32,
+    out: *mut f32,
+    error: *mut NativeBuffer,
+) -> i32 {
+    reported(error, || {
+        anyhow::ensure!(
+            system >= 0
+                && renderer >= 0
+                && vertices >= 0
+                && index_count >= 0
+                && index_count % 3 == 0
+                && min_chart_texels >= 0
+                && !positions.is_null()
+                && !uvs.is_null()
+                && !indices.is_null()
+                && !out.is_null(),
+            "bad realtime lightmap UV arguments"
+        );
+        let n = vertices as usize;
+        let (positions, uvs, triangles, out) = unsafe {
+            (
+                std::slice::from_raw_parts(positions as *const [f32; 3], n),
+                std::slice::from_raw_parts(uvs as *const [f32; 2], n),
+                std::slice::from_raw_parts(indices as *const [u32; 3], index_count as usize / 3),
+                std::slice::from_raw_parts_mut(out, 2 * n),
+            )
+        };
+        let input = crate::realtime_gi::UvInput {
+            positions,
+            uvs,
+            triangles,
+            pixel_size,
+            min_chart_texels: min_chart_texels as u32,
+        };
+        crate::realtime_gi::realtime_uvs(scene, system as usize, renderer as usize, &input, out)?;
+        Ok(0)
+    })
 }
 
 extern "C" fn gamepads_state(family: *const u8, length: i32, out: *mut u8, capacity: i32) -> i32 {

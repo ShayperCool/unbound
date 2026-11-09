@@ -26,11 +26,10 @@ public static class StubDefaults
     // Unity 6000.0 (measured on 6000.0.71f1, Linux Editor, Play mode).
     static readonly Dictionary<string, StubDefault> Unity6000_0 = new(StringComparer.Ordinal)
     {
-        // Measured in a scene without realtime GI (nothing to converge); indirectScale is the
-        // scene's Indirect Intensity, not a constant.
+        // Measured in a scene without realtime GI; indirectScale is the scene's Indirect
+        // Intensity, not a constant.
         ["UnityEngine.DynamicGI.updateThreshold"] = new("1f", "value"),
         ["UnityEngine.DynamicGI.materialUpdateTimeSlice"] = new("8", "global::System.Math.Max(0, value)"),
-        ["UnityEngine.DynamicGI.isConverged"] = "true",
         // The Editor rejects modes other than Enabled, including undefined enum values.
         ["UnityEngine.Scripting.GarbageCollector.GCMode"] = new("global::UnityEngine.Scripting.GarbageCollector.Mode.Enabled",
             "value == global::UnityEngine.Scripting.GarbageCollector.Mode.Enabled ? value : throw new global::System.InvalidOperationException(\"Garbage collector mode cannot be changed in the Editor\")"),

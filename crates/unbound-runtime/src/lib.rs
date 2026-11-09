@@ -17,6 +17,7 @@ mod models;
 pub mod native_api;
 pub mod plugin_api;
 pub mod presentation;
+pub mod realtime_gi;
 pub mod render_commands;
 pub mod render_protocol;
 pub mod scripted;

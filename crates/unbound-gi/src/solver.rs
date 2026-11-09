@@ -93,6 +93,7 @@ pub struct SystemSolver {
     encoded: Vec<u32>,
     output: Vec<[f32; 3]>,
     indirect_scale: f32,
+    largest_bounce: f32,
 }
 
 fn mul_add(acc: &mut [f32; 3], w: f32, v: [f32; 3]) {
@@ -171,6 +172,7 @@ impl SystemSolver {
             encoded: vec![0; texels],
             output: vec![[0.0; 3]; texels],
             indirect_scale: 1.0,
+            largest_bounce: 0.0,
             system,
         })
     }
@@ -402,6 +404,7 @@ impl SystemSolver {
 
         let transport = &system.transport;
         let mut change = 0.0f32;
+        let mut largest = 0.0f32;
         for c in 0..clusters {
             let mut sum = [0.0f32; 3];
             let samples = &transport.bounce
@@ -411,10 +414,18 @@ impl SystemSolver {
             }
             for k in 0..3 {
                 change = change.max((sum[k] - self.bounce[c][k]).abs());
+                largest = largest.max(sum[k]);
             }
             self.bounce[c] = sum;
         }
+        self.largest_bounce = largest;
         change
+    }
+
+    /// The largest bounce value after the last update: the bounce reads the drawn format's
+    /// quantized texels, so updates can keep changing values by about one step of that format.
+    pub fn largest_bounce(&self) -> f32 {
+        self.largest_bounce
     }
 
     /// Per cluster, the albedo it is lit with (the square of its 8-bit albedo) and its emission.

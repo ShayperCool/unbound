@@ -421,19 +421,48 @@ LightingSettings:
         static string Renderer(long id, int indexDynamic) =>
             "{\"object\":" + id + ",\"prefab\":0,\"index\":65535,\"st\":[1,1,0,0],\"indexDynamic\":" + indexDynamic + ",\"stDynamic\":[1,1,0,0]}";
 
+        /// <summary>A renderer with a realtime lightmap (precomputed realtime GI) draws with it:
+        /// unity_DynamicLightmap and its realtime scale and offset, DYNAMICLIGHTMAP_ON, and no
+        /// light probes; with a baked lightmap too it draws with both. Without a realtime
+        /// lightmap index nothing is bound.</summary>
         [Fact]
-        public void PrecomputedRealtimeGIWarnsOncePerScene()
+        public void RealtimeLightmappedRenderersDrawWithTheirRealtimeLightmap()
         {
-            using var capture = new WarningCapture();
-            var file = new LoadedFile { Path = "Assets/Scenes/LightingTestsRealtime.unity" };
-            BakedLighting.Read(LightingData(Renderer(1, 65535) + "," + Renderer(2, 0) + "," + Renderer(3, 0)), file);
-            BakedLighting.Read(LightingData(Renderer(2, 0)), file);
-            var warning = Assert.Single(capture.Warnings, w => w.Contains("LightingTestsRealtime"));
-            Assert.Contains("Enlighten Realtime Global Illumination precomputed for 2 renderers", warning);
-            Assert.Contains("unbound doctor", warning);
-            // Without realtime lightmaps (none precomputed) nothing is said.
-            BakedLighting.Read(LightingData(Renderer(1, 65535) + "," + Renderer(2, 65534)), new LoadedFile { Path = "Assets/Scenes/LightingTestsBaked.unity" });
-            Assert.DoesNotContain(capture.Warnings, w => w.Contains("LightingTestsBaked"));
+            var previous = LightmapSettings.lightmaps;
+            var go = new GameObject("Realtime");
+            var atlas = new Texture2D(8, 8, TextureFormat.RGBAHalf, false, true);
+            try
+            {
+                var renderer = go.AddComponent<MeshRenderer>();
+                renderer.m_RealtimeLightmap = atlas;
+                renderer.realtimeLightmapIndex = 0;
+                renderer.realtimeLightmapScaleOffset = new Vector4(0.25f, 0.5f, 0.125f, 0f);
+                var keywords = new List<string>();
+                var properties = BakedLighting.Apply(renderer, null, keywords);
+                Assert.Equal(new[] { "DYNAMICLIGHTMAP_ON" }, keywords);
+                Assert.Same(atlas, properties[Shader.PropertyToID("unity_DynamicLightmap")]);
+                Assert.Equal(new Vector4(0.25f, 0.5f, 0.125f, 0f), (Vector4)properties[Shader.PropertyToID("unity_DynamicLightmapST")]);
+                Assert.False(properties.ContainsKey(Shader.PropertyToID("unity_SHAr")));
+
+                LightmapSettings.lightmaps = new[] { new LightmapData { lightmapColor = new Texture2D(4, 4, TextureFormat.RGBAHalf, false) } };
+                renderer.lightmapIndex = 0;
+                keywords.Clear();
+                properties = BakedLighting.Apply(renderer, null, keywords);
+                Assert.Equal(new[] { "DYNAMICLIGHTMAP_ON", "LIGHTMAP_ON" }, keywords);
+                Assert.Same(atlas, properties[Shader.PropertyToID("unity_DynamicLightmap")]);
+
+                renderer.lightmapIndex = -1;
+                renderer.realtimeLightmapIndex = -1;
+                keywords.Clear();
+                BakedLighting.Apply(renderer, null, keywords, probes: false);
+                Assert.Empty(keywords);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+                UnityEngine.Object.DestroyImmediate(atlas);
+                LightmapSettings.lightmaps = previous;
+            }
         }
 
         [Fact]

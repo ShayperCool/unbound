@@ -137,7 +137,6 @@ namespace UnityEngine
             }
             if (file != null && root.TryGetProperty("renderers", out var renderers))
             {
-                int realtime = RealtimeContributors(root);
                 foreach (var r in renderers.EnumerateArray())
                 {
                     var target = Find(file, r);
@@ -158,7 +157,6 @@ namespace UnityEngine
                     renderer.realtimeLightmapIndex = dynamic >= 0xFFFE ? -1 : dynamic;
                     renderer.realtimeLightmapScaleOffset = Vector(r.GetProperty("stDynamic"));
                 }
-                if (realtime > 0) RealtimeGINotDrawn(file.Path, realtime);
             }
             if (file != null && root.TryGetProperty("lights", out var lights))
             {
@@ -203,27 +201,10 @@ namespace UnityEngine
             return count;
         }
 
-        static readonly HashSet<string> s_RealtimeWarned = new HashSet<string>(StringComparer.Ordinal);
-
-        /// <summary>Enlighten Realtime Global Illumination precomputed into a scene's lighting
-        /// data lights it in Play mode (its realtime lightmaps take the realtime lights' bounced
-        /// light and the environment's; measured: tests/projects/lightingassets, the same scene
-        /// with and without it). Unbound does not draw it: said once per scene file.</summary>
-        static void RealtimeGINotDrawn(string scene, int renderers)
-        {
-            lock (s_RealtimeWarned)
-            {
-                if (!s_RealtimeWarned.Add(scene ?? "")) return;
-            }
-            Debug.LogWarning($"Unbound: {scene} has Enlighten Realtime Global Illumination precomputed for {renderers} renderers " +
-                "(LightingSettings.realtimeGI): its realtime lightmaps are not drawn, so realtime lights add no bounced light and the " +
-                "environment no realtime indirect light. `unbound doctor` lists affected scenes and their Lighting Settings.");
-        }
-
         /// <summary>The scene object an entry is of: by its file id, or (in a prefab instance) by
         /// the id Unity gives a prefab instance's object, its prefab file id XOR the instance's
         /// (assumed, not measured).</summary>
-        static Object Find(LoadedFile file, JsonElement entry)
+        internal static Object Find(LoadedFile file, JsonElement entry)
         {
             long id = entry.GetProperty("object").GetInt64();
             long prefab = entry.GetProperty("prefab").GetInt64();
@@ -249,6 +230,8 @@ namespace UnityEngine
         static readonly int s_LightmapInd = Shader.PropertyToID("unity_LightmapInd");
         static readonly int s_ShadowMask = Shader.PropertyToID("unity_ShadowMask");
         static readonly int s_LightmapST = Shader.PropertyToID("unity_LightmapST");
+        static readonly int s_DynamicLightmap = Shader.PropertyToID("unity_DynamicLightmap");
+        static readonly int s_DynamicLightmapST = Shader.PropertyToID("unity_DynamicLightmapST");
         static readonly int[] s_ShIds =
         {
             Shader.PropertyToID("unity_SHAr"), Shader.PropertyToID("unity_SHAg"), Shader.PropertyToID("unity_SHAb"),
@@ -267,6 +250,16 @@ namespace UnityEngine
         internal static Dictionary<int, object> Apply(Renderer renderer, Dictionary<int, object> properties, List<string> keywords, bool lightmaps = true, bool probes = true)
         {
             if (renderer == null) return properties;
+            // Precomputed realtime GI's lightmap (unity_DynamicLightmap with the renderer's realtime
+            // scale and offset, DYNAMICLIGHTMAP_ON); a renderer with one takes no light probes.
+            bool realtime = lightmaps && renderer.m_RealtimeLightmap != null && IsLightmapIndex(renderer.realtimeLightmapIndex);
+            if (realtime)
+            {
+                properties = DrawPropertyPool.Copy(properties);
+                properties[s_DynamicLightmap] = renderer.m_RealtimeLightmap;
+                properties[s_DynamicLightmapST] = renderer.realtimeLightmapScaleOffset;
+                keywords.Add("DYNAMICLIGHTMAP_ON");
+            }
             var map = lightmaps ? LightmapSettings.Of(renderer.lightmapIndex) : null;
             // Terrain selects the lightmapped variant from its index, even for a missing
             // texture or an index beyond the current array. Native binds black for an empty
@@ -275,7 +268,7 @@ namespace UnityEngine
                 && renderer.lightmapIndex >= 0 && renderer.lightmapIndex < 0xFFFE;
             if ((map != null && map.m_Light != null) || terrainLightmapped)
             {
-                properties = DrawPropertyPool.Copy(properties);
+                if (!realtime) properties = DrawPropertyPool.Copy(properties);
                 properties[s_Lightmap] = map?.m_Light ?? (map != null ? DefaultTextures.Black : DefaultTextures.Gray);
                 properties[s_LightmapST] = renderer.lightmapScaleOffset;
                 keywords.Add("LIGHTMAP_ON");
@@ -301,6 +294,7 @@ namespace UnityEngine
                 // probes in the scene).
                 return GraphicsSettings.currentRenderPipeline != null ? WithProbe(default, properties, copy: false, renderer) : properties;
             }
+            if (realtime) return GraphicsSettings.currentRenderPipeline != null ? WithProbe(default, properties, copy: false, renderer) : properties;
             if (probes && renderer.lightProbeUsage == LightProbeUsage.CustomProvided) return ProvidedProbes(properties, renderer.m_PropertyBlock);
             var lightProbes = LightmapSettings.lightProbes;
             if (!probes || lightProbes == null || lightProbes.count == 0

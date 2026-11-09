@@ -93,7 +93,7 @@ impl Inventory {
             let (reading, contributors, detail) = match count {
                 Ok(count) if count > 0 => (
                     "Unsupported", count,
-                    "Enlighten realtime GI unsupported: precomputed realtime lightmaps would contribute bounced light at runtime".into(),
+                    "precomputed realtime GI is drawn only in part: renderers with Preserve UVs lit by point lights and a flat ambient color (other lights, environments, light probes and directional output are not; docs/REALTIME_GI.md)".into(),
                 ),
                 Err(error) => ("Incomplete", 0, format!("cannot determine realtime GI impact: {error}")),
                 Ok(_) if settings.is_some_and(|(_, enabled)| *enabled) => (
