@@ -705,11 +705,9 @@ pub fn read_precomputed(lighting_data: &Value) -> Result<Option<Precomputed>> {
         {
             bail!("a system outside the scene mapping");
         }
-        // A system's files are named by its hash; when the precompute shares an input
-        // workspace's hash (a scene of one system), that one too (tests/projects/realtimegi
-        // RoomSystems names them by the system's hash alone).
-        let system_file =
-            |ext: &str| file(&hash, ext).or_else(|e| file(&input_hash, ext).map_err(|_| e));
+        // A system's files are named by its hash (not its input hash: tests/projects/realtimegi
+        // RoomSystems).
+        let system_file = |ext: &str| file(&hash, ext);
         let input = read_input_samples(system_file("iws.ref")?)?;
         let transport = read_transport(file(&hash, "rsc.ref")?)?;
         let materials =

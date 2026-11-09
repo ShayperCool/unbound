@@ -1337,3 +1337,49 @@ fn a_scene_of_two_systems_converges_as_the_editors() {
     assert!(total > 4000, "{total} values");
     assert!(fails <= ISOLATED, "{fails} values outside the tolerance");
 }
+
+#[test]
+fn references_to_systems_outside_the_scene_fail() {
+    // RoomSystems' first system alone: its transport, and the probe set, read the second.
+    let file = probe().join("Assets/Scenes/RoomSystems/LightingData.asset");
+    let bytes = std::fs::read(file).unwrap();
+    let serialized = unbound_assets::serialized::SerializedFile::parse(&bytes).unwrap();
+    let data = read_precomputed(&serialized.read(112000000).unwrap())
+        .unwrap()
+        .unwrap();
+    let scene: Vec<Arc<System>> = data.systems.iter().cloned().map(Arc::new).collect();
+    let alone = std::slice::from_ref(&scene[0]);
+    let error = SystemSolver::new_in_scene(scene[0].clone(), true, alone)
+        .err()
+        .unwrap()
+        .to_string();
+    assert!(error.contains("another scene"), "{error}");
+    let error = SystemSolver::new(scene[0].clone(), true)
+        .err()
+        .unwrap()
+        .to_string();
+    assert!(error.contains("another scene"), "{error}");
+    // With both systems the probe set resolves; with one, it fails.
+    let solvers: Vec<SystemSolver> = scene
+        .iter()
+        .map(|s| SystemSolver::new_in_scene(s.clone(), true, &scene).unwrap())
+        .collect();
+    let set = Arc::new(data.probe_sets[0].clone());
+    assert!(ProbeSetSolver::new(set.clone(), &solvers).is_ok());
+    let error = ProbeSetSolver::new(set, &solvers[..1])
+        .err()
+        .unwrap()
+        .to_string();
+    assert!(error.contains("another scene"), "{error}");
+    // A reference past the other system's values fails.
+    let mut short = (*scene[1]).clone();
+    short.input.tree_children.clear();
+    short.input.tree_weights.clear();
+    short.input.cluster_points.truncate(2);
+    let shortened = vec![scene[0].clone(), Arc::new(short)];
+    let error = SystemSolver::new_in_scene(scene[0].clone(), true, &shortened)
+        .err()
+        .unwrap()
+        .to_string();
+    assert!(error.contains("a transport reference to value"), "{error}");
+}

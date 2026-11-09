@@ -497,6 +497,14 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>The built-in Lightmap Parameters asset scenes use by default ("Default-Medium",
+        /// unity_builtin_extra).</summary>
+        const long DefaultParametersFileId = 15204;
+        const string BuiltinExtraGuid = "0000000000000000f000000000000000";
+
+        static bool OwnParameters(ObjectRef parameters) =>
+            !parameters.IsNull && !(parameters.FileId == DefaultParametersFileId && parameters.Guid == BuiltinExtraGuid);
+
         /// <summary>Each renderer of the system gets its realtime lightmap UVs as its
         /// <see cref="MeshRenderer.enlightenVertexStream"/> (made natively, checked against the
         /// system's precomputed layout: Lightmap Parameters that change the charts, such as their
@@ -543,6 +551,9 @@ namespace UnityEngine
                     string message;
                     try { message = error.Length > 0 ? System.Text.Encoding.UTF8.GetString(error.Data, (int)error.Length) : "unknown error"; }
                     finally { Native.Free(error); }
+                    // Lightmap Parameters of its own may change its charts (their resolution, say).
+                    if (OwnParameters(renderer.m_LightmapParameters))
+                        message += " (the renderer has Lightmap Parameters of its own)";
                     return $"'{renderer.name}': {message}";
                 }
                 var realtime = new List<Vector2>(vertices.Length);

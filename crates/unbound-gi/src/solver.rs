@@ -353,6 +353,20 @@ pub fn update_in(systems: &mut [SystemSolver], index: usize) -> usize {
     let (system, after) = rest
         .split_first_mut()
         .expect("a system index within the scene");
+    // `systems` must be the scene the system was made in, in the same order.
+    for (d, source) in system.sources.iter().enumerate() {
+        if let Source::System(other) = *source {
+            let other = if other < index {
+                &before[other]
+            } else {
+                &after[other - index - 1]
+            };
+            assert!(
+                other.system.input_hash == system.system.transport.dependencies[d],
+                "update_in with systems of another scene or order"
+            );
+        }
+    }
     let others = |other: usize| -> (&[[f32; 3]], &[f32]) {
         let s = if other < index {
             &before[other]
@@ -618,9 +632,9 @@ impl SystemSolver {
     /// whose inputs changed enough, and the next bounce. Returns the number of segments solved:
     /// 0 when the output is converged.
     pub fn update(&mut self) -> usize {
-        debug_assert!(
+        assert!(
             !self.sources.iter().any(|s| matches!(s, Source::System(_))),
-            "a system that references others updates with update_in"
+            "a system that reads other systems updates with update_in"
         );
         self.update_with(&|_| (&[], &[]))
     }
