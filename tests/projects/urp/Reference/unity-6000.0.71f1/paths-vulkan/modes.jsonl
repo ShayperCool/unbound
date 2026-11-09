@@ -1,0 +1,640 @@
+{"key":"opaque_forward device","value":"Vulkan"}
+{"key":"opaque_forward renderingModeActual","value":"Forward"}
+{"key":"opaque_forward keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"opaque_forward keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"opaque_forward keyword _RENDER_PASS_ENABLED","value":false}
+{"key":"opaque_forward keyword _LIGHT_LAYERS","value":false}
+{"key":"opaque_forward keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"opaque_forward keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"opaque_forward keyword _DBUFFER_MRT1","value":false}
+{"key":"opaque_forward keyword _DBUFFER_MRT2","value":false}
+{"key":"opaque_forward keyword _DBUFFER_MRT3","value":false}
+{"key":"opaque_forward keyword _DECAL_LAYERS","value":false}
+{"key":"opaque_forward keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"opaque_forward keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"opaque_forward keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"opaque_forward keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"opaque_forward keyword _SHADOWS_SOFT","value":false}
+{"key":"opaque_forward keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"opaque_forward keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"opaque_forward keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"opaque_deferred device","value":"Vulkan"}
+{"key":"opaque_deferred renderingModeActual","value":"Deferred"}
+{"key":"opaque_deferred keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"opaque_deferred keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"opaque_deferred keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"opaque_deferred keyword _LIGHT_LAYERS","value":false}
+{"key":"opaque_deferred keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"opaque_deferred keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"opaque_deferred keyword _DBUFFER_MRT1","value":false}
+{"key":"opaque_deferred keyword _DBUFFER_MRT2","value":false}
+{"key":"opaque_deferred keyword _DBUFFER_MRT3","value":false}
+{"key":"opaque_deferred keyword _DECAL_LAYERS","value":false}
+{"key":"opaque_deferred keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"opaque_deferred keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"opaque_deferred keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"opaque_deferred keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"opaque_deferred keyword _SHADOWS_SOFT","value":false}
+{"key":"opaque_deferred keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"opaque_deferred keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"opaque_deferred keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"lights_forward device","value":"Vulkan"}
+{"key":"lights_forward renderingModeActual","value":"Forward"}
+{"key":"lights_forward keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"lights_forward keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"lights_forward keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"lights_forward keyword _LIGHT_LAYERS","value":false}
+{"key":"lights_forward keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"lights_forward keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"lights_forward keyword _DBUFFER_MRT1","value":false}
+{"key":"lights_forward keyword _DBUFFER_MRT2","value":false}
+{"key":"lights_forward keyword _DBUFFER_MRT3","value":false}
+{"key":"lights_forward keyword _DECAL_LAYERS","value":false}
+{"key":"lights_forward keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"lights_forward keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"lights_forward keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"lights_forward keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"lights_forward keyword _SHADOWS_SOFT","value":false}
+{"key":"lights_forward keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"lights_forward keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"lights_forward keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"lights_deferred device","value":"Vulkan"}
+{"key":"lights_deferred renderingModeActual","value":"Deferred"}
+{"key":"lights_deferred keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"lights_deferred keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"lights_deferred keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"lights_deferred keyword _LIGHT_LAYERS","value":false}
+{"key":"lights_deferred keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"lights_deferred keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"lights_deferred keyword _DBUFFER_MRT1","value":false}
+{"key":"lights_deferred keyword _DBUFFER_MRT2","value":false}
+{"key":"lights_deferred keyword _DBUFFER_MRT3","value":false}
+{"key":"lights_deferred keyword _DECAL_LAYERS","value":false}
+{"key":"lights_deferred keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"lights_deferred keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"lights_deferred keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"lights_deferred keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"lights_deferred keyword _SHADOWS_SOFT","value":false}
+{"key":"lights_deferred keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"lights_deferred keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"lights_deferred keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"shadows_forward device","value":"Vulkan"}
+{"key":"shadows_forward renderingModeActual","value":"Forward"}
+{"key":"shadows_forward keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"shadows_forward keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"shadows_forward keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"shadows_forward keyword _LIGHT_LAYERS","value":false}
+{"key":"shadows_forward keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"shadows_forward keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"shadows_forward keyword _DBUFFER_MRT1","value":false}
+{"key":"shadows_forward keyword _DBUFFER_MRT2","value":false}
+{"key":"shadows_forward keyword _DBUFFER_MRT3","value":false}
+{"key":"shadows_forward keyword _DECAL_LAYERS","value":false}
+{"key":"shadows_forward keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"shadows_forward keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"shadows_forward keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"shadows_forward keyword _ADDITIONAL_LIGHT_SHADOWS","value":true}
+{"key":"shadows_forward keyword _SHADOWS_SOFT","value":false}
+{"key":"shadows_forward keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"shadows_forward keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"shadows_forward keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"shadows_deferred device","value":"Vulkan"}
+{"key":"shadows_deferred renderingModeActual","value":"Deferred"}
+{"key":"shadows_deferred keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"shadows_deferred keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"shadows_deferred keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"shadows_deferred keyword _LIGHT_LAYERS","value":false}
+{"key":"shadows_deferred keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"shadows_deferred keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"shadows_deferred keyword _DBUFFER_MRT1","value":false}
+{"key":"shadows_deferred keyword _DBUFFER_MRT2","value":false}
+{"key":"shadows_deferred keyword _DBUFFER_MRT3","value":false}
+{"key":"shadows_deferred keyword _DECAL_LAYERS","value":false}
+{"key":"shadows_deferred keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"shadows_deferred keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"shadows_deferred keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"shadows_deferred keyword _ADDITIONAL_LIGHT_SHADOWS","value":true}
+{"key":"shadows_deferred keyword _SHADOWS_SOFT","value":false}
+{"key":"shadows_deferred keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"shadows_deferred keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"shadows_deferred keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"many_lights_forward device","value":"Vulkan"}
+{"key":"many_lights_forward renderingModeActual","value":"Forward"}
+{"key":"many_lights_forward keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"many_lights_forward keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"many_lights_forward keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"many_lights_forward keyword _LIGHT_LAYERS","value":false}
+{"key":"many_lights_forward keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"many_lights_forward keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"many_lights_forward keyword _DBUFFER_MRT1","value":false}
+{"key":"many_lights_forward keyword _DBUFFER_MRT2","value":false}
+{"key":"many_lights_forward keyword _DBUFFER_MRT3","value":false}
+{"key":"many_lights_forward keyword _DECAL_LAYERS","value":false}
+{"key":"many_lights_forward keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"many_lights_forward keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"many_lights_forward keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"many_lights_forward keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"many_lights_forward keyword _SHADOWS_SOFT","value":false}
+{"key":"many_lights_forward keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"many_lights_forward keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"many_lights_forward keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"many_lights_deferred device","value":"Vulkan"}
+{"key":"many_lights_deferred renderingModeActual","value":"Deferred"}
+{"key":"many_lights_deferred keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"many_lights_deferred keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"many_lights_deferred keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"many_lights_deferred keyword _LIGHT_LAYERS","value":false}
+{"key":"many_lights_deferred keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"many_lights_deferred keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"many_lights_deferred keyword _DBUFFER_MRT1","value":false}
+{"key":"many_lights_deferred keyword _DBUFFER_MRT2","value":false}
+{"key":"many_lights_deferred keyword _DBUFFER_MRT3","value":false}
+{"key":"many_lights_deferred keyword _DECAL_LAYERS","value":false}
+{"key":"many_lights_deferred keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"many_lights_deferred keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"many_lights_deferred keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"many_lights_deferred keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"many_lights_deferred keyword _SHADOWS_SOFT","value":false}
+{"key":"many_lights_deferred keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"many_lights_deferred keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"many_lights_deferred keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"light_layers_forward device","value":"Vulkan"}
+{"key":"light_layers_forward renderingModeActual","value":"Forward"}
+{"key":"light_layers_forward keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"light_layers_forward keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"light_layers_forward keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"light_layers_forward keyword _LIGHT_LAYERS","value":true}
+{"key":"light_layers_forward keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"light_layers_forward keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"light_layers_forward keyword _DBUFFER_MRT1","value":false}
+{"key":"light_layers_forward keyword _DBUFFER_MRT2","value":false}
+{"key":"light_layers_forward keyword _DBUFFER_MRT3","value":false}
+{"key":"light_layers_forward keyword _DECAL_LAYERS","value":false}
+{"key":"light_layers_forward keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"light_layers_forward keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"light_layers_forward keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"light_layers_forward keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"light_layers_forward keyword _SHADOWS_SOFT","value":false}
+{"key":"light_layers_forward keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"light_layers_forward keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"light_layers_forward keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"light_layers_deferred device","value":"Vulkan"}
+{"key":"light_layers_deferred renderingModeActual","value":"Deferred"}
+{"key":"light_layers_deferred keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"light_layers_deferred keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"light_layers_deferred keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"light_layers_deferred keyword _LIGHT_LAYERS","value":true}
+{"key":"light_layers_deferred keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"light_layers_deferred keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"light_layers_deferred keyword _DBUFFER_MRT1","value":false}
+{"key":"light_layers_deferred keyword _DBUFFER_MRT2","value":false}
+{"key":"light_layers_deferred keyword _DBUFFER_MRT3","value":false}
+{"key":"light_layers_deferred keyword _DECAL_LAYERS","value":false}
+{"key":"light_layers_deferred keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"light_layers_deferred keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"light_layers_deferred keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"light_layers_deferred keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"light_layers_deferred keyword _SHADOWS_SOFT","value":false}
+{"key":"light_layers_deferred keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"light_layers_deferred keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"light_layers_deferred keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"accurate_normals_forward device","value":"Vulkan"}
+{"key":"accurate_normals_forward renderingModeActual","value":"Forward"}
+{"key":"accurate_normals_forward keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"accurate_normals_forward keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"accurate_normals_forward keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"accurate_normals_forward keyword _LIGHT_LAYERS","value":false}
+{"key":"accurate_normals_forward keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"accurate_normals_forward keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"accurate_normals_forward keyword _DBUFFER_MRT1","value":false}
+{"key":"accurate_normals_forward keyword _DBUFFER_MRT2","value":false}
+{"key":"accurate_normals_forward keyword _DBUFFER_MRT3","value":false}
+{"key":"accurate_normals_forward keyword _DECAL_LAYERS","value":false}
+{"key":"accurate_normals_forward keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"accurate_normals_forward keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"accurate_normals_forward keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"accurate_normals_forward keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"accurate_normals_forward keyword _SHADOWS_SOFT","value":false}
+{"key":"accurate_normals_forward keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"accurate_normals_forward keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"accurate_normals_forward keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"accurate_normals_deferred device","value":"Vulkan"}
+{"key":"accurate_normals_deferred renderingModeActual","value":"Deferred"}
+{"key":"accurate_normals_deferred keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"accurate_normals_deferred keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"accurate_normals_deferred keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"accurate_normals_deferred keyword _LIGHT_LAYERS","value":false}
+{"key":"accurate_normals_deferred keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"accurate_normals_deferred keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"accurate_normals_deferred keyword _DBUFFER_MRT1","value":false}
+{"key":"accurate_normals_deferred keyword _DBUFFER_MRT2","value":false}
+{"key":"accurate_normals_deferred keyword _DBUFFER_MRT3","value":false}
+{"key":"accurate_normals_deferred keyword _DECAL_LAYERS","value":false}
+{"key":"accurate_normals_deferred keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"accurate_normals_deferred keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"accurate_normals_deferred keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"accurate_normals_deferred keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"accurate_normals_deferred keyword _SHADOWS_SOFT","value":false}
+{"key":"accurate_normals_deferred keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"accurate_normals_deferred keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"accurate_normals_deferred keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"transparent_forward device","value":"Vulkan"}
+{"key":"transparent_forward renderingModeActual","value":"Forward"}
+{"key":"transparent_forward keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"transparent_forward keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"transparent_forward keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"transparent_forward keyword _LIGHT_LAYERS","value":false}
+{"key":"transparent_forward keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"transparent_forward keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"transparent_forward keyword _DBUFFER_MRT1","value":false}
+{"key":"transparent_forward keyword _DBUFFER_MRT2","value":false}
+{"key":"transparent_forward keyword _DBUFFER_MRT3","value":false}
+{"key":"transparent_forward keyword _DECAL_LAYERS","value":false}
+{"key":"transparent_forward keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"transparent_forward keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"transparent_forward keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"transparent_forward keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"transparent_forward keyword _SHADOWS_SOFT","value":false}
+{"key":"transparent_forward keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"transparent_forward keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"transparent_forward keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"transparent_deferred device","value":"Vulkan"}
+{"key":"transparent_deferred renderingModeActual","value":"Deferred"}
+{"key":"transparent_deferred keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"transparent_deferred keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"transparent_deferred keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"transparent_deferred keyword _LIGHT_LAYERS","value":false}
+{"key":"transparent_deferred keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"transparent_deferred keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"transparent_deferred keyword _DBUFFER_MRT1","value":false}
+{"key":"transparent_deferred keyword _DBUFFER_MRT2","value":false}
+{"key":"transparent_deferred keyword _DBUFFER_MRT3","value":false}
+{"key":"transparent_deferred keyword _DECAL_LAYERS","value":false}
+{"key":"transparent_deferred keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"transparent_deferred keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"transparent_deferred keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"transparent_deferred keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"transparent_deferred keyword _SHADOWS_SOFT","value":false}
+{"key":"transparent_deferred keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"transparent_deferred keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"transparent_deferred keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"msaa_forward device","value":"Vulkan"}
+{"key":"msaa_forward renderingModeActual","value":"Forward"}
+{"key":"msaa_forward keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"msaa_forward keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"msaa_forward keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"msaa_forward keyword _LIGHT_LAYERS","value":false}
+{"key":"msaa_forward keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"msaa_forward keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"msaa_forward keyword _DBUFFER_MRT1","value":false}
+{"key":"msaa_forward keyword _DBUFFER_MRT2","value":false}
+{"key":"msaa_forward keyword _DBUFFER_MRT3","value":false}
+{"key":"msaa_forward keyword _DECAL_LAYERS","value":false}
+{"key":"msaa_forward keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"msaa_forward keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"msaa_forward keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"msaa_forward keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"msaa_forward keyword _SHADOWS_SOFT","value":false}
+{"key":"msaa_forward keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"msaa_forward keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"msaa_forward keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"msaa_deferred device","value":"Vulkan"}
+{"key":"msaa_deferred renderingModeActual","value":"Deferred"}
+{"key":"msaa_deferred keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"msaa_deferred keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"msaa_deferred keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"msaa_deferred keyword _LIGHT_LAYERS","value":false}
+{"key":"msaa_deferred keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"msaa_deferred keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"msaa_deferred keyword _DBUFFER_MRT1","value":false}
+{"key":"msaa_deferred keyword _DBUFFER_MRT2","value":false}
+{"key":"msaa_deferred keyword _DBUFFER_MRT3","value":false}
+{"key":"msaa_deferred keyword _DECAL_LAYERS","value":false}
+{"key":"msaa_deferred keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"msaa_deferred keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"msaa_deferred keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"msaa_deferred keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"msaa_deferred keyword _SHADOWS_SOFT","value":false}
+{"key":"msaa_deferred keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"msaa_deferred keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"msaa_deferred keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"ssao_forward device","value":"Vulkan"}
+{"key":"ssao_forward renderingModeActual","value":"Forward"}
+{"key":"ssao_forward keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"ssao_forward keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"ssao_forward keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"ssao_forward keyword _LIGHT_LAYERS","value":false}
+{"key":"ssao_forward keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"ssao_forward keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"ssao_forward keyword _DBUFFER_MRT1","value":false}
+{"key":"ssao_forward keyword _DBUFFER_MRT2","value":false}
+{"key":"ssao_forward keyword _DBUFFER_MRT3","value":false}
+{"key":"ssao_forward keyword _DECAL_LAYERS","value":false}
+{"key":"ssao_forward keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"ssao_forward keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"ssao_forward keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"ssao_forward keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"ssao_forward keyword _SHADOWS_SOFT","value":false}
+{"key":"ssao_forward keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"ssao_forward keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"ssao_forward keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"ssao_deferred device","value":"Vulkan"}
+{"key":"ssao_deferred renderingModeActual","value":"Deferred"}
+{"key":"ssao_deferred keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"ssao_deferred keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"ssao_deferred keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"ssao_deferred keyword _LIGHT_LAYERS","value":false}
+{"key":"ssao_deferred keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"ssao_deferred keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"ssao_deferred keyword _DBUFFER_MRT1","value":false}
+{"key":"ssao_deferred keyword _DBUFFER_MRT2","value":false}
+{"key":"ssao_deferred keyword _DBUFFER_MRT3","value":false}
+{"key":"ssao_deferred keyword _DECAL_LAYERS","value":false}
+{"key":"ssao_deferred keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"ssao_deferred keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"ssao_deferred keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"ssao_deferred keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"ssao_deferred keyword _SHADOWS_SOFT","value":false}
+{"key":"ssao_deferred keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"ssao_deferred keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"ssao_deferred keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"decal_screen_space_forward device","value":"Vulkan"}
+{"key":"decal_screen_space_forward renderingModeActual","value":"Forward"}
+{"key":"decal_screen_space_forward keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"decal_screen_space_forward keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"decal_screen_space_forward keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"decal_screen_space_forward keyword _LIGHT_LAYERS","value":false}
+{"key":"decal_screen_space_forward keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"decal_screen_space_forward keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"decal_screen_space_forward keyword _DBUFFER_MRT1","value":false}
+{"key":"decal_screen_space_forward keyword _DBUFFER_MRT2","value":false}
+{"key":"decal_screen_space_forward keyword _DBUFFER_MRT3","value":false}
+{"key":"decal_screen_space_forward keyword _DECAL_LAYERS","value":false}
+{"key":"decal_screen_space_forward keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"decal_screen_space_forward keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"decal_screen_space_forward keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"decal_screen_space_forward keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"decal_screen_space_forward keyword _SHADOWS_SOFT","value":false}
+{"key":"decal_screen_space_forward keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"decal_screen_space_forward keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"decal_screen_space_forward keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"decal_screen_space_deferred device","value":"Vulkan"}
+{"key":"decal_screen_space_deferred renderingModeActual","value":"Deferred"}
+{"key":"decal_screen_space_deferred keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"decal_screen_space_deferred keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"decal_screen_space_deferred keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"decal_screen_space_deferred keyword _LIGHT_LAYERS","value":false}
+{"key":"decal_screen_space_deferred keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"decal_screen_space_deferred keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"decal_screen_space_deferred keyword _DBUFFER_MRT1","value":false}
+{"key":"decal_screen_space_deferred keyword _DBUFFER_MRT2","value":false}
+{"key":"decal_screen_space_deferred keyword _DBUFFER_MRT3","value":false}
+{"key":"decal_screen_space_deferred keyword _DECAL_LAYERS","value":false}
+{"key":"decal_screen_space_deferred keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"decal_screen_space_deferred keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"decal_screen_space_deferred keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"decal_screen_space_deferred keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"decal_screen_space_deferred keyword _SHADOWS_SOFT","value":false}
+{"key":"decal_screen_space_deferred keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"decal_screen_space_deferred keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"decal_screen_space_deferred keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"decal_dbuffer_forward device","value":"Vulkan"}
+{"key":"decal_dbuffer_forward renderingModeActual","value":"Forward"}
+{"key":"decal_dbuffer_forward keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"decal_dbuffer_forward keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"decal_dbuffer_forward keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"decal_dbuffer_forward keyword _LIGHT_LAYERS","value":false}
+{"key":"decal_dbuffer_forward keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"decal_dbuffer_forward keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"decal_dbuffer_forward keyword _DBUFFER_MRT1","value":false}
+{"key":"decal_dbuffer_forward keyword _DBUFFER_MRT2","value":false}
+{"key":"decal_dbuffer_forward keyword _DBUFFER_MRT3","value":false}
+{"key":"decal_dbuffer_forward keyword _DECAL_LAYERS","value":false}
+{"key":"decal_dbuffer_forward keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"decal_dbuffer_forward keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"decal_dbuffer_forward keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"decal_dbuffer_forward keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"decal_dbuffer_forward keyword _SHADOWS_SOFT","value":false}
+{"key":"decal_dbuffer_forward keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"decal_dbuffer_forward keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"decal_dbuffer_forward keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"decal_dbuffer_deferred device","value":"Vulkan"}
+{"key":"decal_dbuffer_deferred renderingModeActual","value":"Deferred"}
+{"key":"decal_dbuffer_deferred keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"decal_dbuffer_deferred keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"decal_dbuffer_deferred keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"decal_dbuffer_deferred keyword _LIGHT_LAYERS","value":false}
+{"key":"decal_dbuffer_deferred keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"decal_dbuffer_deferred keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"decal_dbuffer_deferred keyword _DBUFFER_MRT1","value":false}
+{"key":"decal_dbuffer_deferred keyword _DBUFFER_MRT2","value":false}
+{"key":"decal_dbuffer_deferred keyword _DBUFFER_MRT3","value":false}
+{"key":"decal_dbuffer_deferred keyword _DECAL_LAYERS","value":false}
+{"key":"decal_dbuffer_deferred keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"decal_dbuffer_deferred keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"decal_dbuffer_deferred keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"decal_dbuffer_deferred keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"decal_dbuffer_deferred keyword _SHADOWS_SOFT","value":false}
+{"key":"decal_dbuffer_deferred keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"decal_dbuffer_deferred keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"decal_dbuffer_deferred keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"decal_layers_forward device","value":"Vulkan"}
+{"key":"decal_layers_forward renderingModeActual","value":"Forward"}
+{"key":"decal_layers_forward keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"decal_layers_forward keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"decal_layers_forward keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"decal_layers_forward keyword _LIGHT_LAYERS","value":false}
+{"key":"decal_layers_forward keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"decal_layers_forward keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"decal_layers_forward keyword _DBUFFER_MRT1","value":false}
+{"key":"decal_layers_forward keyword _DBUFFER_MRT2","value":false}
+{"key":"decal_layers_forward keyword _DBUFFER_MRT3","value":false}
+{"key":"decal_layers_forward keyword _DECAL_LAYERS","value":false}
+{"key":"decal_layers_forward keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"decal_layers_forward keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"decal_layers_forward keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"decal_layers_forward keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"decal_layers_forward keyword _SHADOWS_SOFT","value":false}
+{"key":"decal_layers_forward keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"decal_layers_forward keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"decal_layers_forward keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"decal_layers_deferred device","value":"Vulkan"}
+{"key":"decal_layers_deferred renderingModeActual","value":"Deferred"}
+{"key":"decal_layers_deferred keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"decal_layers_deferred keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"decal_layers_deferred keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"decal_layers_deferred keyword _LIGHT_LAYERS","value":false}
+{"key":"decal_layers_deferred keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"decal_layers_deferred keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"decal_layers_deferred keyword _DBUFFER_MRT1","value":false}
+{"key":"decal_layers_deferred keyword _DBUFFER_MRT2","value":false}
+{"key":"decal_layers_deferred keyword _DBUFFER_MRT3","value":false}
+{"key":"decal_layers_deferred keyword _DECAL_LAYERS","value":false}
+{"key":"decal_layers_deferred keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"decal_layers_deferred keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"decal_layers_deferred keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"decal_layers_deferred keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"decal_layers_deferred keyword _SHADOWS_SOFT","value":false}
+{"key":"decal_layers_deferred keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"decal_layers_deferred keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"decal_layers_deferred keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"decal_dbuffer_layers_forward device","value":"Vulkan"}
+{"key":"decal_dbuffer_layers_forward renderingModeActual","value":"Forward"}
+{"key":"decal_dbuffer_layers_forward keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"decal_dbuffer_layers_forward keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"decal_dbuffer_layers_forward keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"decal_dbuffer_layers_forward keyword _LIGHT_LAYERS","value":false}
+{"key":"decal_dbuffer_layers_forward keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"decal_dbuffer_layers_forward keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"decal_dbuffer_layers_forward keyword _DBUFFER_MRT1","value":false}
+{"key":"decal_dbuffer_layers_forward keyword _DBUFFER_MRT2","value":false}
+{"key":"decal_dbuffer_layers_forward keyword _DBUFFER_MRT3","value":false}
+{"key":"decal_dbuffer_layers_forward keyword _DECAL_LAYERS","value":false}
+{"key":"decal_dbuffer_layers_forward keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"decal_dbuffer_layers_forward keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"decal_dbuffer_layers_forward keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"decal_dbuffer_layers_forward keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"decal_dbuffer_layers_forward keyword _SHADOWS_SOFT","value":false}
+{"key":"decal_dbuffer_layers_forward keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"decal_dbuffer_layers_forward keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"decal_dbuffer_layers_forward keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"decal_dbuffer_layers_deferred device","value":"Vulkan"}
+{"key":"decal_dbuffer_layers_deferred renderingModeActual","value":"Deferred"}
+{"key":"decal_dbuffer_layers_deferred keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"decal_dbuffer_layers_deferred keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"decal_dbuffer_layers_deferred keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"decal_dbuffer_layers_deferred keyword _LIGHT_LAYERS","value":false}
+{"key":"decal_dbuffer_layers_deferred keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"decal_dbuffer_layers_deferred keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"decal_dbuffer_layers_deferred keyword _DBUFFER_MRT1","value":false}
+{"key":"decal_dbuffer_layers_deferred keyword _DBUFFER_MRT2","value":false}
+{"key":"decal_dbuffer_layers_deferred keyword _DBUFFER_MRT3","value":false}
+{"key":"decal_dbuffer_layers_deferred keyword _DECAL_LAYERS","value":false}
+{"key":"decal_dbuffer_layers_deferred keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"decal_dbuffer_layers_deferred keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"decal_dbuffer_layers_deferred keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"decal_dbuffer_layers_deferred keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"decal_dbuffer_layers_deferred keyword _SHADOWS_SOFT","value":false}
+{"key":"decal_dbuffer_layers_deferred keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"decal_dbuffer_layers_deferred keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"decal_dbuffer_layers_deferred keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"lightmap_shadowmask_forward device","value":"Vulkan"}
+{"key":"lightmap_shadowmask_forward renderingModeActual","value":"Forward"}
+{"key":"lightmap_shadowmask_forward keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"lightmap_shadowmask_forward keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"lightmap_shadowmask_forward keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"lightmap_shadowmask_forward keyword _LIGHT_LAYERS","value":false}
+{"key":"lightmap_shadowmask_forward keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"lightmap_shadowmask_forward keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"lightmap_shadowmask_forward keyword _DBUFFER_MRT1","value":false}
+{"key":"lightmap_shadowmask_forward keyword _DBUFFER_MRT2","value":false}
+{"key":"lightmap_shadowmask_forward keyword _DBUFFER_MRT3","value":false}
+{"key":"lightmap_shadowmask_forward keyword _DECAL_LAYERS","value":false}
+{"key":"lightmap_shadowmask_forward keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"lightmap_shadowmask_forward keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"lightmap_shadowmask_forward keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"lightmap_shadowmask_forward keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"lightmap_shadowmask_forward keyword _SHADOWS_SOFT","value":false}
+{"key":"lightmap_shadowmask_forward keyword LIGHTMAP_SHADOW_MIXING","value":true}
+{"key":"lightmap_shadowmask_forward keyword SHADOWS_SHADOWMASK","value":true}
+{"key":"lightmap_shadowmask_forward keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"lightmap_shadowmask_deferred device","value":"Vulkan"}
+{"key":"lightmap_shadowmask_deferred renderingModeActual","value":"Deferred"}
+{"key":"lightmap_shadowmask_deferred keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"lightmap_shadowmask_deferred keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"lightmap_shadowmask_deferred keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"lightmap_shadowmask_deferred keyword _LIGHT_LAYERS","value":false}
+{"key":"lightmap_shadowmask_deferred keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"lightmap_shadowmask_deferred keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"lightmap_shadowmask_deferred keyword _DBUFFER_MRT1","value":false}
+{"key":"lightmap_shadowmask_deferred keyword _DBUFFER_MRT2","value":false}
+{"key":"lightmap_shadowmask_deferred keyword _DBUFFER_MRT3","value":false}
+{"key":"lightmap_shadowmask_deferred keyword _DECAL_LAYERS","value":false}
+{"key":"lightmap_shadowmask_deferred keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"lightmap_shadowmask_deferred keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"lightmap_shadowmask_deferred keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"lightmap_shadowmask_deferred keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"lightmap_shadowmask_deferred keyword _SHADOWS_SOFT","value":false}
+{"key":"lightmap_shadowmask_deferred keyword LIGHTMAP_SHADOW_MIXING","value":true}
+{"key":"lightmap_shadowmask_deferred keyword SHADOWS_SHADOWMASK","value":true}
+{"key":"lightmap_shadowmask_deferred keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"lightmap_distance_shadowmask_forward device","value":"Vulkan"}
+{"key":"lightmap_distance_shadowmask_forward renderingModeActual","value":"Forward"}
+{"key":"lightmap_distance_shadowmask_forward keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"lightmap_distance_shadowmask_forward keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"lightmap_distance_shadowmask_forward keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"lightmap_distance_shadowmask_forward keyword _LIGHT_LAYERS","value":false}
+{"key":"lightmap_distance_shadowmask_forward keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"lightmap_distance_shadowmask_forward keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"lightmap_distance_shadowmask_forward keyword _DBUFFER_MRT1","value":false}
+{"key":"lightmap_distance_shadowmask_forward keyword _DBUFFER_MRT2","value":false}
+{"key":"lightmap_distance_shadowmask_forward keyword _DBUFFER_MRT3","value":false}
+{"key":"lightmap_distance_shadowmask_forward keyword _DECAL_LAYERS","value":false}
+{"key":"lightmap_distance_shadowmask_forward keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"lightmap_distance_shadowmask_forward keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"lightmap_distance_shadowmask_forward keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"lightmap_distance_shadowmask_forward keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"lightmap_distance_shadowmask_forward keyword _SHADOWS_SOFT","value":false}
+{"key":"lightmap_distance_shadowmask_forward keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"lightmap_distance_shadowmask_forward keyword SHADOWS_SHADOWMASK","value":true}
+{"key":"lightmap_distance_shadowmask_forward keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"lightmap_distance_shadowmask_deferred device","value":"Vulkan"}
+{"key":"lightmap_distance_shadowmask_deferred renderingModeActual","value":"Deferred"}
+{"key":"lightmap_distance_shadowmask_deferred keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"lightmap_distance_shadowmask_deferred keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"lightmap_distance_shadowmask_deferred keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"lightmap_distance_shadowmask_deferred keyword _LIGHT_LAYERS","value":false}
+{"key":"lightmap_distance_shadowmask_deferred keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"lightmap_distance_shadowmask_deferred keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"lightmap_distance_shadowmask_deferred keyword _DBUFFER_MRT1","value":false}
+{"key":"lightmap_distance_shadowmask_deferred keyword _DBUFFER_MRT2","value":false}
+{"key":"lightmap_distance_shadowmask_deferred keyword _DBUFFER_MRT3","value":false}
+{"key":"lightmap_distance_shadowmask_deferred keyword _DECAL_LAYERS","value":false}
+{"key":"lightmap_distance_shadowmask_deferred keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"lightmap_distance_shadowmask_deferred keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"lightmap_distance_shadowmask_deferred keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"lightmap_distance_shadowmask_deferred keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"lightmap_distance_shadowmask_deferred keyword _SHADOWS_SOFT","value":false}
+{"key":"lightmap_distance_shadowmask_deferred keyword LIGHTMAP_SHADOW_MIXING","value":false}
+{"key":"lightmap_distance_shadowmask_deferred keyword SHADOWS_SHADOWMASK","value":true}
+{"key":"lightmap_distance_shadowmask_deferred keyword _MIXED_LIGHTING_SUBTRACTIVE","value":false}
+{"key":"lightmap_subtractive_forward device","value":"Vulkan"}
+{"key":"lightmap_subtractive_forward renderingModeActual","value":"Forward"}
+{"key":"lightmap_subtractive_forward keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"lightmap_subtractive_forward keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"lightmap_subtractive_forward keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"lightmap_subtractive_forward keyword _LIGHT_LAYERS","value":false}
+{"key":"lightmap_subtractive_forward keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"lightmap_subtractive_forward keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"lightmap_subtractive_forward keyword _DBUFFER_MRT1","value":false}
+{"key":"lightmap_subtractive_forward keyword _DBUFFER_MRT2","value":false}
+{"key":"lightmap_subtractive_forward keyword _DBUFFER_MRT3","value":false}
+{"key":"lightmap_subtractive_forward keyword _DECAL_LAYERS","value":false}
+{"key":"lightmap_subtractive_forward keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"lightmap_subtractive_forward keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"lightmap_subtractive_forward keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"lightmap_subtractive_forward keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"lightmap_subtractive_forward keyword _SHADOWS_SOFT","value":false}
+{"key":"lightmap_subtractive_forward keyword LIGHTMAP_SHADOW_MIXING","value":true}
+{"key":"lightmap_subtractive_forward keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"lightmap_subtractive_forward keyword _MIXED_LIGHTING_SUBTRACTIVE","value":true}
+{"key":"lightmap_subtractive_deferred device","value":"Vulkan"}
+{"key":"lightmap_subtractive_deferred renderingModeActual","value":"Deferred"}
+{"key":"lightmap_subtractive_deferred keyword _GBUFFER_NORMALS_OCT","value":false}
+{"key":"lightmap_subtractive_deferred keyword _DEFERRED_MIXED_LIGHTING","value":false}
+{"key":"lightmap_subtractive_deferred keyword _RENDER_PASS_ENABLED","value":true}
+{"key":"lightmap_subtractive_deferred keyword _LIGHT_LAYERS","value":false}
+{"key":"lightmap_subtractive_deferred keyword _WRITE_RENDERING_LAYERS","value":false}
+{"key":"lightmap_subtractive_deferred keyword _SCREEN_SPACE_OCCLUSION","value":false}
+{"key":"lightmap_subtractive_deferred keyword _DBUFFER_MRT1","value":false}
+{"key":"lightmap_subtractive_deferred keyword _DBUFFER_MRT2","value":false}
+{"key":"lightmap_subtractive_deferred keyword _DBUFFER_MRT3","value":false}
+{"key":"lightmap_subtractive_deferred keyword _DECAL_LAYERS","value":false}
+{"key":"lightmap_subtractive_deferred keyword _MAIN_LIGHT_SHADOWS","value":true}
+{"key":"lightmap_subtractive_deferred keyword _MAIN_LIGHT_SHADOWS_CASCADE","value":false}
+{"key":"lightmap_subtractive_deferred keyword _ADDITIONAL_LIGHTS","value":true}
+{"key":"lightmap_subtractive_deferred keyword _ADDITIONAL_LIGHT_SHADOWS","value":false}
+{"key":"lightmap_subtractive_deferred keyword _SHADOWS_SOFT","value":false}
+{"key":"lightmap_subtractive_deferred keyword LIGHTMAP_SHADOW_MIXING","value":true}
+{"key":"lightmap_subtractive_deferred keyword SHADOWS_SHADOWMASK","value":false}
+{"key":"lightmap_subtractive_deferred keyword _MIXED_LIGHTING_SUBTRACTIVE","value":true}
