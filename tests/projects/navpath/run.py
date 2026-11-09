@@ -35,14 +35,14 @@ Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
                           ends (z 6): Unity's reaches it 6 cm further from that end and crosses from
                           5.98 to 5.82, Unbound's straight across from where it reaches it, 5.80
                           (docs/COMPATIBILITY_GAPS.md, the link rows).
-  replan.topo again.f120.remaining
-                          after a shortcut, the walker's corridor ends with other polygons for a few
-                          frames (its position and corners match; remainingDistance 5.23 against
-                          5.32, equal again by frame 130);
   replan.topofar a.given, mask.given
                           NavMesh.CalculatePath over a floor cut by thin water strips: Unity's path
                           has one more corner, at a strip's end (7 against 6; the agents then walk
-                          alike) (docs/COMPATIBILITY_GAPS.md, the path-cost row).
+                          alike) (docs/COMPATIBILITY_GAPS.md, the path-cost row);
+  replan.none avoider.f100 to f150
+                          an agent with avoidance passing a NavMeshObstacle capsule: Unity's runs
+                          1.4 to 4.7 cm off Unbound's from frame 100, as it passes the obstacle
+                          (docs/COMPATIBILITY_GAPS.md, the NavMeshObstacle row).
 """
 import argparse
 import json
@@ -67,8 +67,8 @@ LISTED = {
     'link.wide': ('gb1.2.cur.start.z', 'gb1.2.cur.end.z', 'gb1.2.cur.at.z'),
     'carve.rules': ('poly.p47', 'poly.p51'),
     'place.links': tuple(f'{path}.{part}' for path in ('m.p.ab', 'r30.p.ab', 'r30.w.ab', 'm.w.ba') for part in ('n', 'c')),
-    'replan.topo': ('again.f120.remaining',),
     'replan.topofar': ('a.given', 'mask.given'),
+    'replan.none': tuple(f'avoider.f{frame}.' for frame in range(100, 151, 10)),
 }
 
 

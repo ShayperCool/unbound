@@ -935,10 +935,12 @@ namespace DotRecast.Detour.Crowd
                 }
 
                 // Unbound: an agent without avoidance gathers neither edges nor neighbours, so other
-                // agents do not push it out of overlaps either (Unity's; agents that avoid still
-                // gather it). Matches the Unity 6000.0.71f1 Editor, tests/projects/navpath `replan.*`:
-                // agents without avoidance started at one point walk on together, never pushed
-                // apart (the AI Navigation 2.0 manual's Quality None says collisions resolve).
+                // agents and obstacles do not push it out of overlaps either (agents that avoid
+                // still gather it). Matches the Unity 6000.0.71f1 Editor, tests/projects/navpath
+                // `replan.*`: agents without avoidance started at one point walk on together, one
+                // walks through a NavMeshObstacle, and of two overlapping agents only the one with
+                // avoidance is pushed out (the AI Navigation 2.0 manual's Quality None says
+                // collisions resolve).
                 if (!Avoids(ag))
                 {
                     ag.boundary.Reset();

@@ -222,6 +222,8 @@ public class PathProbe : MonoBehaviour
             ("replan.vis", ReplanVisibility),
             ("replan.topo", () => ReplanTopology(false)),
             ("replan.topofar", () => ReplanTopology(true)),
+            ("replan.budget", () => ReplanTopology(false, 1)),
+            ("replan.none", ReplanNone),
         })
         {
             if (!name.StartsWith(Only)) continue;
@@ -1345,6 +1347,7 @@ public class PathProbe : MonoBehaviour
                 ProbeLog.Value(key + ".at", agent.nextPosition);
                 ProbeLog.Value(key + ".corners", agent.path.corners.Length);
                 ProbeLog.Value(key + ".remaining", agent.remainingDistance);
+                ProbeLog.Value(key + ".pending", agent.pathPending);
             }
         }
         foreach (var agent in agents) Destroy(agent.gameObject);
@@ -1375,11 +1378,13 @@ public class PathProbe : MonoBehaviour
     /// north end, searched without mud. `a` and `b` (both walking it) may go back through the mud,
     /// `mask` may not cross mud, `again` is given the path round again at frame 20. With
     /// <paramref name="strips"/>, water strips (cost 1) across the floor west of the wall cut it into
-    /// many more polygons.</summary>
-    IEnumerator ReplanTopology(bool strips)
+    /// many more polygons. With <paramref name="budget"/>, NavMesh.pathfindingIterationsPerFrame is
+    /// that while `far` waits for a long path (SetDestination).</summary>
+    IEnumerator ReplanTopology(bool strips, int budget = 0)
     {
         ClearAgents();
         yield return null;
+        int iterations = NavMesh.pathfindingIterationsPerFrame;
         NavMesh.SetAreaCost(Water, 1f);
         NavMesh.SetAreaCost(Mud, 1f);
         var parts = new List<Part> { new Part(0f, -1f, 0.6f, 8f, Blocked), new Part(0f, -6.5f, 2f, 3f, Mud) };
@@ -1392,7 +1397,58 @@ public class PathProbe : MonoBehaviour
         var mask = Walker("mask", new Vector3(-4.2f, 0f, -6f), to, Mud);
         mask.areaMask = NavMesh.AllAreas & ~(1 << Mud);
         var again = Walker("again", new Vector3(-4.2f, 0f, -2f), to, Mud);
-        yield return Follow(new[] { a, b, mask, again }, 50, 250, 20, Mud);
+        var walkers = new List<NavMeshAgent> { a, b, mask, again };
+        if (budget > 0)
+        {
+            NavMesh.pathfindingIterationsPerFrame = budget;
+            var go = new GameObject("far");
+            go.transform.position = new Vector3(-7f, 0f, 7f);
+            var far = go.AddComponent<NavMeshAgent>();
+            far.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            far.SetDestination(new Vector3(7f, 0f, -7f));
+            walkers.Insert(0, far);
+        }
+        yield return Follow(walkers.ToArray(), 50, 250, 20, Mud);
+        NavMesh.pathfindingIterationsPerFrame = iterations;
+    }
+
+    /// <summary>Agents without avoidance and NavMesh obstacles (not carving, capsules of radius
+    /// 0.5): `through` (no avoidance) and `avoider` (default avoidance) walk at a post on their line;
+    /// `standing` (default avoidance, no destination) and `plain` (no avoidance) start 0.3 m
+    /// apart.</summary>
+    IEnumerator ReplanNone()
+    {
+        ClearAgents();
+        yield return null;
+        Level(8f);
+        var posts = new List<GameObject>();
+        foreach (float z in new[] { -4f, 0f })
+        {
+            var post = new GameObject("post");
+            post.transform.position = new Vector3(0.02f, 0f, z + 0.03f);
+            var obstacle = post.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Capsule;
+            obstacle.radius = 0.5f;
+            obstacle.height = 2f;
+            obstacle.carving = false;
+            posts.Add(post);
+        }
+        NavMeshAgent Make(string name, Vector3 at, Vector3? to, bool avoid)
+        {
+            var go = new GameObject(name);
+            go.transform.position = at;
+            var agent = go.AddComponent<NavMeshAgent>();
+            if (!avoid) agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            if (to.HasValue) agent.SetDestination(to.Value);
+            return agent;
+        }
+        var through = Make("through", new Vector3(-6f, 0f, -4f), new Vector3(6f, 0f, -4f), false);
+        var avoider = Make("avoider", new Vector3(-6f, 0f, 0f), new Vector3(6f, 0f, 0f), true);
+        var standing = Make("standing", new Vector3(-3f, 0f, 4f), null, true);
+        var plain = Make("plain", new Vector3(-2.7f, 0f, 4f), null, false);
+        yield return Follow(new[] { through, avoider, standing, plain }, 10, 150);
+        foreach (var post in posts) Destroy(post);
+        yield return null;
     }
 
     /// <summary>One floor built as two NavMeshes whose bounds meet at x = 0 (a tile edge), so each

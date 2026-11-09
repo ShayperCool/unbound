@@ -156,7 +156,7 @@ namespace UnityEngine.Tests
 
         /// <summary>An agent without avoidance gathers no neighbours: it avoids nobody and is not
         /// pushed out of overlaps, while an agent with avoidance still meets it and is pushed
-        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/navpath `replan.*`); a stopped agent
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/navpath `replan.*`, `replan.none`); a stopped agent
         /// still sees its neighbours.</summary>
         [Fact]
         public void AgentsWithoutAvoidanceMeetNobodyAndStoppedAgentsStillDo()

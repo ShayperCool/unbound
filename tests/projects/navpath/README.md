@@ -17,7 +17,8 @@ agree on the mesh (`meshN.vertices` is logged for every level to show it).
 | `link.wideoff` | a 4 m wide link whose ends lie 0.2 m off the NavMesh across the gap: a wide end does not attach (no snap across it) |
 | `link.widetile` | a 4 m wide link whose ends cross the tile edge at z = 0: paths and an agent across it on both sides of the edge |
 | `carve.shortcut` | 5.33 m tiles; an agent going round a wall's end while a carved gap opens in tiles its path does not cross: whether it turns back to take the gap (Unity: no) |
-| `replan.vis`, `replan.topo`, `replan.topofar` | agents without avoidance given a path (SetPath) searched without an area, the long way round: across a water strip (cost 1) when it costs the agent 1, 10, or its mask excludes it; back through mud closing a wall's end, one agent per update in Unity's slot order, one given the path again after 0.4 s, on a floor cut into many polygons (where, how many corners, remainingDistance each frame) |
+| `replan.vis`, `replan.topo`, `replan.topofar`, `replan.budget` | agents without avoidance given a path (SetPath) searched without an area, the long way round: across a water strip (cost 1) when it costs the agent 1, 10, or its mask excludes it; back through mud closing a wall's end, one agent per update in Unity's slot order, one given the path again after 0.4 s, on a floor cut into many polygons, with pathfindingIterationsPerFrame 1 while another agent waits for a long path (where, how many corners, remainingDistance, pathPending each frame) |
+| `replan.none` | NavMeshObstacle capsules (not carving) on the line of an agent without avoidance and of one with avoidance; an agent with avoidance and one without started 0.3 m apart |
 | `link.repath` | three agents on partial paths over inactive links that open at frame 30: autoRepath on near the gap, autoRepath off, autoRepath on far away (status and isPathStale every frame) |
 | `place.moved` | a NavMesh of 4 x 4 tiles of 5.33 m added where it was built, moved off the tile grid, moved and turned 30 and 90 degrees: SamplePosition over a grid of points, rays and paths across tiles and round two walls, an agent walking across tiles, each in the NavMesh's own frame |
 | `place.links` | a 9 m link and a 2 m wide link from a NavMesh of 5.33 m tiles to a copy of it 5 m away, moved, or moved and turned 30 degrees: paths both ways, SamplePosition at the end, an agent crossing |
@@ -71,11 +72,14 @@ Measured (Unity 6000.0.71f1, `Reference/unity-6000.0.71f1.json`):
   ray crosses, up to the last the corridor holds; and once per update, the agent of all of them that
   has waited longest (more than 0.5 s walking with more than two corridor polygons; the first in
   slot order of equals; the wait goes on through a new path) has its corridor searched again for 8
-  iterations, used only if the search ends within them. Agents without avoidance are never pushed
-  apart (they gather no neighbours).
+  iterations, used only if the search ends within them, outside pathfindingIterationsPerFrame (at 1
+  the same agents turn at the same frames). remainingDistance follows the corners from where the
+  agent stands after its step. Agents without avoidance gather no neighbours: they are never pushed
+  apart and walk through NavMeshObstacles; an agent with avoidance overlapping one is pushed out
+  alone.
 
 Listed, not gated (`run.py` header): `two.p1`, a line grazing a vertex: the builders place that vertex
 about 2e-6 apart, on either side of the line; where an agent reaching a wide link at the edge of the NavMesh under its start
 crosses it (gb1.2.cur.*); the route past a link's landing (`place.links` m.p.ab, r30.p.ab, r30.w.ab,
-m.w.ba); one remainingDistance after a shortcut (`replan.topo`); a path over thin strips with one
-corner more in Unity (`replan.topofar` given).
+m.w.ba); a path over thin strips with one corner more in Unity (`replan.topofar` given); an agent
+with avoidance passing an obstacle from frame 100 (`replan.none` avoider).
