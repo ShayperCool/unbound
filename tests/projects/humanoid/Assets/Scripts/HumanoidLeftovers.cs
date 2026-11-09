@@ -159,11 +159,18 @@ public partial class HumanoidProbe
         return avatar;
     }
 
-    /// <summary>Translation DoF curves: TDoFMuscles.anim (muscles and translation DoF curves) and
+    /// <summary>Translation DoF: clips imported with it (HumanT), TDoFMuscles.anim (muscles and translation DoF curves) and
     /// TDoFMirror.anim (the same, mirrored) on HumanA with an avatar with translation DoF (built at
     /// run time) and with its own (without).</summary>
     static void TranslationDoFCurves()
     {
+        // HumanT: imported with translation DoF from a rig whose take translates bones; its clips
+        // played on HumanA (no translation DoF) and HumanA's clip on HumanT.
+        Guarded("tdof.avatarT", () => Avatar("tdof.avatarT", Resources.Load<GameObject>("HumanT").GetComponent<Animator>().avatar));
+        foreach (var clip in Resources.LoadAll<AnimationClip>("HumanT")) Guarded("HumanT.clip." + clip.name, () => Clip("HumanT.clip." + clip.name, clip));
+        Guarded("tdof.playTOnA", () => Play("tdof.playTOnA", "HumanA", "HumanT", localsEvery: 4));
+        Guarded("tdof.playTMirrorOnA", () => Play("tdof.playTMirrorOnA", "HumanA", "HumanTMirror", localsEvery: 4));
+        Guarded("tdof.playAOnT", () => Play("tdof.playAOnT", "HumanT", "HumanA", localsEvery: 4));
         foreach (var name in new[] { "TDoFMuscles", "TDoFMirror" })
         {
             Guarded("anim." + name, () => Clip("anim." + name, Resources.Load<AnimationClip>(name)));

@@ -114,14 +114,16 @@ imported without keyframe reduction.
   layer of `HumanAIK2`, `boneRotLayers`; called outside the IK pass, `boneRotOutside`), with the
   transforms' locals every fourth step; `TDoFMuscles.anim` (translation DoF curves) and its mirrored
   copy `TDoFMirror.anim` on HumanA with an avatar with translation DoF built at run time and with its
-  own (`tdof.TDoFMuscles`, `tdof.TDoFMirror`); clips based upon the feet without foot goal curves and
+  own (`tdof.TDoFMuscles`, `tdof.TDoFMirror`); HumanT's avatar and clips (`tdof.avatarT`,
+  `HumanT.clip.*`), its clip and the clip mirrored on HumanA and HumanA's clip on HumanT
+  (`tdof.playTOnA`, `tdof.playTMirrorOnA`, `tdof.playAOnT`); clips based upon the feet without foot goal curves and
   with the left foot's only (`feetNoGoals`, `feetLeftGoal`); B under `MaskNoRoot` over an empty base
   state and over `GenericMove` (`noRootOverEmpty`, `noRootOverGeneric`); loop pose on an additive
   layer's clip (`LoopMuscles` and HumanA's `LoopPose` clip over A, `additiveLoopPose`,
   `additiveLoopPoseModel`); and `layersAffectMassCenter` (`massCenter.api`, and on with layers
   without Root, `massCenter.*`).
-  HumanT (`make_models.py`: HumanA with bone translations, imported with translation DoF) and the
-  other assets `Leftovers` makes are not played yet.
+  HumanT is `make_models.py`'s HumanA with bone translations, imported with translation DoF; the
+  other assets `Leftovers` makes and HumanT playing its own clips are not recorded yet.
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:
