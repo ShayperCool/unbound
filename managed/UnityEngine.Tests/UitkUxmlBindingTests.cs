@@ -164,6 +164,27 @@ namespace UnityEngine.Tests
             Assert.Empty(Logged(() => Update(panel)));
         }
 
+        // [choice] a binding set by a log handler while the update reports a request waits for the
+        // next update instead of breaking the one running.
+        [Fact]
+        public void BindingsSetWhileRequestsAreProcessedWaitForTheNextUpdate()
+        {
+            var root = Clone("<ui:Label name=\"no-property\"><Bindings><ui:DataBinding data-source-path=\"message\" /></Bindings></ui:Label>");
+            var label = root.Q("no-property");
+            var panel = NewPanel();
+            panel.visualTree.Add(root);
+            var other = new Label();
+            panel.visualTree.Add(other);
+            Application.LogCallback setBinding = (message, stack, type) => other.SetBinding("text", new DataBinding());
+            Application.logMessageReceived += setBinding;
+            try { Update(panel); }
+            finally { Application.logMessageReceived -= setBinding; }
+            Assert.Empty(label.GetBindingInfos());
+            Assert.Equal("text", Ids(other));
+            Update(panel);
+            Assert.Equal("text", Ids(other));
+        }
+
         // [measured] describe/styled vs initial/styled and requests/*: bindings not processed yet are
         // listed newest first, processed ones in the order they were processed (one set again moves to
         // the end); a removed element's bindings are requests again, listed in their processed order
