@@ -17,16 +17,10 @@ import sys
 
 TOLERANCE = 2e-4
 FIELDS = 18
-POSITION, VELOCITY, LIFE = {0, 1, 2}, {3, 4, 5}, {6}
-ALL = set(range(FIELDS))
+POSITION, VELOCITY = {0, 1, 2}, {3, 4, 5}
 KNOWN = [
-    (r'^death/many/child/\d+$', ALL,
-     'which parents emit once the child is full: Unity takes the particles dying in one step in another order'),
-    (r'^death/child_rotated/child/\d+$', POSITION | VELOCITY | LIFE,
-     'a child rotated against its parent: Unity combines that rotation with the emission frame differently; '
-     'and the first-step age of Death children in Simulate'),
-    (r'^(death|timing)/[^/]+/(child|second)/\d+$', POSITION | LIFE,
-     'first-step age of Death children in Simulate: Unity ages them by multiples of 0.02 s per internal step'),
+    (r'^death/child_rotated/child/\d+$', POSITION | VELOCITY,
+     'a child rotated against its parent: Unity combines that rotation with the emission frame differently'),
     (r'^direction/\d+/[12]$', VELOCITY,
      'a child rotated against its parent: Unity combines that rotation with the emission frame differently'),
 ]
@@ -53,27 +47,12 @@ def close(a, b, skip=frozenset()):
         i in skip or near(x, y) for i, (x, y) in enumerate(zip(a, b)))
 
 
-def aged_along_velocity(a, b):
-    """Whether every particle's position differs from the reference's only by its velocity times
-    the difference of their remaining lifetimes (the same origin, an other age)."""
-    for i in range(int(a[0])):
-        pa, pb = a[1 + i * FIELDS:1 + (i + 1) * FIELDS], b[1 + i * FIELDS:1 + (i + 1) * FIELDS]
-        age = pa[6] - pb[6]
-        if any(abs(pb[k] - pa[k] - pa[3 + k] * age) > 1e-3 for k in range(3)):
-            return False
-    return True
-
-
 def known(key, a, b):
-    """The reason and the value indices a KNOWN rule leaves out of the comparison, if any applies.
-    A rule that leaves out position and remaining lifetime but not velocity requires the positions
-    to differ only along the velocity by the age difference."""
+    """The reason and the value indices a KNOWN rule leaves out of the comparison, if any applies."""
     if a is None or b is None:
         return None
     for pattern, fields, reason in KNOWN:
         if re.search(pattern, key) and len(a) == len(b) and len(a) == 1 + int(a[0]) * FIELDS:
-            if fields == POSITION | LIFE and not aged_along_velocity(a, b):
-                return None
             return reason, {1 + i * FIELDS + f for i in range(int(a[0])) for f in fields}
     return None
 

@@ -468,7 +468,7 @@ namespace UnityEngine
                         {
                             child = child, parentSystem = this, parent = at, properties = e.properties, count = count, ownFrame = true,
                         });
-                    else child.EmitFromParent(this, ref at, e.properties, count, 0f);
+                    else child.EmitFromParent(this, ref at, e.properties, count, 0f, eventCatchup: EventCatchup);
                 }
             }
             finally { s_EventSubEmitting.RemoveAt(s_EventSubEmitting.Count - 1); }

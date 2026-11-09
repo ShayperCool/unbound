@@ -68,6 +68,11 @@ this release, beyond that:
 - InheritLifetime multiplies the child's start lifetime by the parent's remaining lifetime in seconds
   (2.013 × 3.863 = 7.776); a dying parent leaves none, so its Death children are not emitted.
   InheritColor/Size use the parent's current color and size (with its over-lifetime modules).
+- In `Simulate`, a Death child is born where its parent's internal step ends and has lived the call
+  time left at the start of that step in whole steps of `Time.fixedDeltaTime` (four steps of
+  0.025 s: 0.1, 0.06, 0.04, 0.02 s; with a fixed timestep of 0.01: 0.1, 0.07, 0.05, 0.02 s), not
+  depending on the frame delta; the child advances its own particles before the parent's call
+  (with that order `death/many`, 40 parents dying into a full child, matches too).
 - A parent whose `Emit`ted particles all died is stopped, not reset: its time keeps running with
   each `Simulate` step (also within the step its last particle dies in).
 - Played frames: Death children start where the dying particle's internal step ends, with their full
@@ -80,17 +85,10 @@ this release, beyond that:
 
 Known differences (the comparator lists each one and keeps it out of the verdict):
 
-- First-step age of Death children in `Simulate`: Unity's newborns have lived a multiple of 0.02 s
-  that depends on the internal step they were born in and on `Time.fixedDeltaTime` (four steps of
-  0.025 s: 0.1, 0.06, 0.04, 0.02 s; with a fixed timestep of 0.01: 0.1, 0.07, 0.05, 0.02 s), not on the
-  frame delta. Unbound ages them by the rest of the call's child update. Positions differ by that age
-  along the velocity; counts and every other value match. Played frames match.
 - A child rotated against its parent (`direction/*/1`, `/2`, `death/child_rotated`): Unity combines
   that rotation with the emission frame in a way that is not a rotation of the child's direction
   (two orthogonal child directions give non-orthogonal velocities); Unbound applies it inside the
   frame. Unrotated children match.
-- `death/many`: once the child is full, Unity takes the particles dying in one step in another
-  order (the first four in order, then from the end), so other parents get the last children.
 
 All 58 `random/*` count records compare exactly. Selection uses a stable roll from the parent
 particle seed; burst probability and count use the parent particle seed plus the parent system

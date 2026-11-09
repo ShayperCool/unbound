@@ -477,9 +477,11 @@ namespace UnityEngine
                 if (visited[index]) return;
                 visited[index] = true;
                 var ps = systems[index];
+                // Children a step emits into (Birth, Death, Collision, Trigger) advance their own
+                // particles first; the newborns then get their own catch-up.
                 if (ps.m_SimulatingBirths && ps.m_SubEmitters.enabled)
                     foreach (var sub in ps.m_SubEmitters.emitters)
-                        if (sub.type == ParticleSystemSubEmitterType.Birth)
+                        if (sub.type != ParticleSystemSubEmitterType.Manual)
                         {
                             int child = systems.IndexOf(sub.system);
                             if (child >= 0) Visit(child);

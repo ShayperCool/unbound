@@ -2091,8 +2091,18 @@ namespace UnityEngine
                 {
                     child = child, parentSystem = this, parent = parent, properties = sub.properties, count = count,
                 });
-            else child.EmitFromParent(this, ref parent, sub.properties, count, 0f, eventEmission: true, keepSpent: fromScript);
+            else child.EmitFromParent(this, ref parent, sub.properties, count, 0f, eventEmission: true, keepSpent: fromScript,
+                eventCatchup: fromScript ? -1f : EventCatchup);
         }
+
+        /// <summary>The catch-up of a Death, Collision or Trigger child a Simulate step emits: the
+        /// call time left at the start of the step, in steps of Time.fixedDeltaTime as a Birth
+        /// child's (see <see cref="CatchUp"/>), the child having advanced its own particles before
+        /// (6000.0.71f1, tests/projects/subemitters death/*, timing/*: ages 0.1, 0.06, 0.04 and
+        /// 0.02 s for deaths in the four 0.025 s steps of a 0.1 s call, 0.1, 0.07, 0.05 and 0.02 s
+        /// with a fixed timestep of 0.01; Collision and Trigger children follow it, unmeasured).
+        /// None outside Simulate.</summary>
+        float EventCatchup => m_SimulatingBirths ? m_BirthCallRemaining : -1f;
 
         /// <summary>A Death, Collision or Trigger emission the frame's update held (see
         /// ParticleSystemManager): emitted now, after the update pass, and the child plays the
@@ -2318,7 +2328,7 @@ namespace UnityEngine
         /// emissions after the frame's update: particlerender inherit/death/lifetime). Emissions
         /// inside a Simulate meet that removal at once, so their spent children never show
         /// (subemitters probe).</param>
-        void EmitFromParent(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count, float preAge, bool eventEmission = false, float birthCatchup = -1f, float birthSpacing = 0f, Vector3 birthVelocity = default, System.Collections.Generic.List<BirthEmission> birthRequests = null, bool keepSpent = false)
+        void EmitFromParent(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count, float preAge, bool eventEmission = false, float birthCatchup = -1f, float birthSpacing = 0f, Vector3 birthVelocity = default, System.Collections.Generic.List<BirthEmission> birthRequests = null, bool keepSpent = false, float eventCatchup = -1f)
         {
             // A Simulate Birth emission whose remaining call time reaches the child's own
             // start-lifetime bound is skipped before it consumes start samples (measured
@@ -2466,7 +2476,7 @@ namespace UnityEngine
                 {
                     if (!alive) marks[index] |= SlotMark.Dead;
                 }
-                else if (alive && CatchUp(ref p, birthCatchup, prewarm, ref context)) StartTrail(ref p);
+                else if (alive && CatchUp(ref p, birthCatchup >= 0f ? birthCatchup : eventCatchup, prewarm, ref context)) StartTrail(ref p);
                 else RemoveAt(index);
             }
             if (!batched) return;
@@ -2480,7 +2490,7 @@ namespace UnityEngine
             for (int i = start; i < m_Count;)
             {
                 BeginModuleSample(i - start, m_Particles[i].m_RandomSeed);
-                if (CatchUp(ref m_Particles[i], birthCatchup, prewarm, ref context)) StartTrail(ref m_Particles[i++]);
+                if (CatchUp(ref m_Particles[i], birthCatchup >= 0f ? birthCatchup : eventCatchup, prewarm, ref context)) StartTrail(ref m_Particles[i++]);
                 else RemoveAt(i);
             }
             NoteMostParticles();

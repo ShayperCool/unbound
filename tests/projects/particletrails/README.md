@@ -71,7 +71,7 @@ any other difference. Two concern dead particles, `world-trail-death-head` and t
 - `newborn-trail-quad`: a newborn trail whose points still coincide gets its first quad across
   another direction in Unity (images `die1_9`, `world_9`; every `mvd/*` trail, whose two points
   coincide or lie along the view each time it restarts).
-- `death-child-age`: the separate Death sub-emitter child age residual (also after a speed kill).
+- `death-child-age`: Death sub-emitter children of particles dying with their trails kept (`pp/deathsub/die0`): Unity's child keeps fewer particles in some steps.
 - `ribbon-order`: particles of one burst (equal ages) are joined in an order Unbound does not
   reproduce.
 - `rate-at-capacity`: short trails of rate births sample other points (`die0` and `die1`); with
