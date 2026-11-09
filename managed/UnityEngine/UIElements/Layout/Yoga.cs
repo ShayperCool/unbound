@@ -1485,10 +1485,17 @@ namespace Unbound.UIElements.Layout
 
             float marginRow = Unwrap(child.GetMarginForAxis(YogaFlexDirection.Row, width));
             float marginColumn = Unwrap(child.GetMarginForAxis(YogaFlexDirection.Column, width));
+            // Percentage sizes and offsets of an absolute child resolve against the parent's padding
+            // box; its margins against the parent's content width (Unity 6000.0.71f1 Editor,
+            // tests/projects/uitkcollections: a tab header's underline spans its padded header).
+            float containingWidth = node.layout.MeasuredDimensions[DimWidth]
+                - node.GetLeadingBorder(YogaFlexDirection.Row) - node.GetTrailingBorder(YogaFlexDirection.Row);
+            float containingHeight = node.layout.MeasuredDimensions[DimHeight]
+                - node.GetLeadingBorder(YogaFlexDirection.Column) - node.GetTrailingBorder(YogaFlexDirection.Column);
 
             if (IsStyleDimDefined(child, YogaFlexDirection.Row, width))
             {
-                childWidth = Unwrap(ResolveValue(child.resolvedDimensions[DimWidth], width)) + marginRow;
+                childWidth = Unwrap(ResolveValue(child.resolvedDimensions[DimWidth], containingWidth)) + marginRow;
             }
             else
             {
@@ -1497,15 +1504,15 @@ namespace Unbound.UIElements.Layout
                 {
                     childWidth = node.layout.MeasuredDimensions[DimWidth]
                         - (node.GetLeadingBorder(YogaFlexDirection.Row) + node.GetTrailingBorder(YogaFlexDirection.Row))
-                        - Unwrap(child.GetLeadingPosition(YogaFlexDirection.Row, width)
-                            + child.GetTrailingPosition(YogaFlexDirection.Row, width));
-                    childWidth = BoundAxis(child, YogaFlexDirection.Row, childWidth, width, width);
+                        - Unwrap(child.GetLeadingPosition(YogaFlexDirection.Row, containingWidth)
+                            + child.GetTrailingPosition(YogaFlexDirection.Row, containingWidth));
+                    childWidth = BoundAxis(child, YogaFlexDirection.Row, childWidth, containingWidth, containingWidth);
                 }
             }
 
             if (IsStyleDimDefined(child, YogaFlexDirection.Column, height))
             {
-                childHeight = Unwrap(ResolveValue(child.resolvedDimensions[DimHeight], height)) + marginColumn;
+                childHeight = Unwrap(ResolveValue(child.resolvedDimensions[DimHeight], containingHeight)) + marginColumn;
             }
             else
             {
@@ -1514,9 +1521,9 @@ namespace Unbound.UIElements.Layout
                 {
                     childHeight = node.layout.MeasuredDimensions[DimHeight]
                         - (node.GetLeadingBorder(YogaFlexDirection.Column) + node.GetTrailingBorder(YogaFlexDirection.Column))
-                        - Unwrap(child.GetLeadingPosition(YogaFlexDirection.Column, height)
-                            + child.GetTrailingPosition(YogaFlexDirection.Column, height));
-                    childHeight = BoundAxis(child, YogaFlexDirection.Column, childHeight, height, width);
+                        - Unwrap(child.GetLeadingPosition(YogaFlexDirection.Column, containingHeight)
+                            + child.GetTrailingPosition(YogaFlexDirection.Column, containingHeight));
+                    childHeight = BoundAxis(child, YogaFlexDirection.Column, childHeight, containingHeight, containingWidth);
                 }
             }
 
@@ -1547,15 +1554,22 @@ namespace Unbound.UIElements.Layout
                 }
 
                 LayoutNodeInternal(child, childWidth, childHeight, direction, childWidthMeasureMode,
-                    childHeightMeasureMode, childWidth, childHeight, false, config);
+                    childHeightMeasureMode, width, height, false, config);
                 childWidth = child.layout.MeasuredDimensions[DimWidth]
                     + Unwrap(child.GetMarginForAxis(YogaFlexDirection.Row, width));
                 childHeight = child.layout.MeasuredDimensions[DimHeight]
                     + Unwrap(child.GetMarginForAxis(YogaFlexDirection.Column, width));
             }
 
+            // The child's own margins resolve against the parent's content width here too.
             LayoutNodeInternal(child, childWidth, childHeight, direction, YogaMeasureMode.Exactly,
-                YogaMeasureMode.Exactly, childWidth, childHeight, true, config);
+                YogaMeasureMode.Exactly, width, height, true, config);
+
+            // Offsets place the child from the parent's border edge (percentages of its padding box).
+            if (child.IsLeadingPositionDefined(mainAxis))
+                child.layout.Position[(int)Leading[(int)mainAxis]] = OffsetPosition(node, child, mainAxis, isMainAxisRow ? containingWidth : containingHeight, width);
+            if (child.IsLeadingPositionDefined(crossAxis))
+                child.layout.Position[(int)Leading[(int)crossAxis]] = OffsetPosition(node, child, crossAxis, isMainAxisRow ? containingHeight : containingWidth, width);
 
             if (child.IsTrailingPosDefined(mainAxis) && !child.IsLeadingPositionDefined(mainAxis))
             {
@@ -1564,7 +1578,7 @@ namespace Unbound.UIElements.Layout
                     - child.layout.MeasuredDimensions[Dim[(int)mainAxis]]
                     - node.GetTrailingBorder(mainAxis)
                     - Unwrap(child.GetTrailingMargin(mainAxis, width))
-                    - Unwrap(child.GetTrailingPosition(mainAxis, isMainAxisRow ? width : height));
+                    - Unwrap(child.GetTrailingPosition(mainAxis, isMainAxisRow ? containingWidth : containingHeight));
             }
             else if (!child.IsLeadingPositionDefined(mainAxis) && node.style.JustifyContent == YogaJustify.Center)
             {
@@ -1578,6 +1592,11 @@ namespace Unbound.UIElements.Layout
                     node.layout.MeasuredDimensions[Dim[(int)mainAxis]]
                     - child.layout.MeasuredDimensions[Dim[(int)mainAxis]];
             }
+            else if (!child.IsLeadingPositionDefined(mainAxis))
+            {
+                // Without offsets the child starts at the parent's content edge (border and padding).
+                child.layout.Position[(int)Leading[(int)mainAxis]] = StaticPosition(node, child, mainAxis, width);
+            }
 
             if (child.IsTrailingPosDefined(crossAxis) && !child.IsLeadingPositionDefined(crossAxis))
             {
@@ -1586,7 +1605,7 @@ namespace Unbound.UIElements.Layout
                     - child.layout.MeasuredDimensions[Dim[(int)crossAxis]]
                     - node.GetTrailingBorder(crossAxis)
                     - Unwrap(child.GetTrailingMargin(crossAxis, width))
-                    - Unwrap(child.GetTrailingPosition(crossAxis, isMainAxisRow ? height : width));
+                    - Unwrap(child.GetTrailingPosition(crossAxis, isMainAxisRow ? containingHeight : containingWidth));
             }
             else if (!child.IsLeadingPositionDefined(crossAxis) && AlignItem(node, child) == YogaAlign.Center)
             {
@@ -1601,7 +1620,20 @@ namespace Unbound.UIElements.Layout
                     node.layout.MeasuredDimensions[Dim[(int)crossAxis]]
                     - child.layout.MeasuredDimensions[Dim[(int)crossAxis]];
             }
+            else if (!child.IsLeadingPositionDefined(crossAxis))
+            {
+                child.layout.Position[(int)Leading[(int)crossAxis]] = StaticPosition(node, child, crossAxis, width);
+            }
         }
+
+        static float OffsetPosition(YogaNode node, YogaNode child, YogaFlexDirection axis, float containingSize, float width) =>
+            Unwrap(child.GetLeadingPosition(axis, containingSize)) + node.GetLeadingBorder(axis) + Unwrap(child.GetLeadingMargin(axis, width));
+
+        /// <summary>Where an absolute child without offsets starts on an axis: the parent's leading
+        /// border and padding plus the child's leading margin (on a reversed axis, its trailing edge,
+        /// which the trailing-position step mirrors).</summary>
+        static float StaticPosition(YogaNode node, YogaNode child, YogaFlexDirection axis, float width) =>
+            node.GetLeadingBorder(axis) + Unwrap(node.GetLeadingPadding(axis, width)) + Unwrap(child.GetLeadingMargin(axis, width));
 
         static void WithMeasureFuncSetMeasuredDimensions(YogaNode node, float availableWidth, float availableHeight,
             YogaMeasureMode widthMeasureMode, YogaMeasureMode heightMeasureMode, float ownerWidth, float ownerHeight)
