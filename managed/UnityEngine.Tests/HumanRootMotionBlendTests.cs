@@ -295,8 +295,9 @@ namespace UnityEngine.Tests
             Assert.Equal(0f, below.Body.t.z);
         }
 
+        // Native controls: tests/projects/humanoid noRootOverEmpty and noRootOverGeneric.
         [Fact]
-        public void ALayerMaskWithoutRootOverNoHumanoidClipWarns()
+        public void ALayerMaskWithoutRootAddsNoMotionOverNoHumanoidClip()
         {
             const string member = "Animator humanoid layer mask without Root over no humanoid clip";
             int Hits() => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
@@ -307,13 +308,7 @@ namespace UnityEngine.Tests
                 Parts(AvatarMaskBodyPart.Root));
             Assert.False(any);
             Assert.False(below.HasMotion);
-            Assert.Equal(before + 1, Hits());
-            // Over a humanoid clip below it is measured: no warning.
-            below = Sample(1f, 0f, 0f);
-            any = true;
-            HumanRootMotion.CombineLayer(ref below, ref any, new[] { Sample(3f, 0f, 0f) }, ReadOnlySpan<Trs>.Empty, new[] { 1f }, false, 1f,
-                Parts(AvatarMaskBodyPart.Root));
-            Assert.Equal(before + 1, Hits());
+            Assert.Equal(before, Hits());
         }
 
         [Fact]
