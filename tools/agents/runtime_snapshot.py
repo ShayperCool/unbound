@@ -140,6 +140,11 @@ def active_snapshots(cache):
             if process.stat().st_uid != os.getuid():
                 continue
             paths = [os.readlink(process/'exe')]
+            # Admission wrappers can be alive before the engine executable starts.
+            for argument in (process/'cmdline').read_bytes().split(b'\0'):
+                value = os.fsdecode(argument).split('=', 1)[-1]
+                if value.startswith('/'):
+                    paths.append(value)
             for variable in (process/'environ').read_bytes().split(b'\0'):
                 if variable.startswith((b'UNBOUND_RUNTIME=', b'UNBOUND_CLI=', b'UNBOUND=')):
                     paths.append(os.fsdecode(variable.split(b'=', 1)[1]))
@@ -193,6 +198,8 @@ def retain(runtime, destination, *, cache=None, replace=False):
     if snapshot.parent != (cache/'snapshots').resolve():
         raise ValueError(f'not a shared snapshot: {snapshot}')
     with cache_lock(cache):
+        if not snapshot.is_dir() or not (snapshot/MANIFEST).is_file():
+            raise ValueError(f'runtime snapshot was collected before promotion: {snapshot}')
         if replace and Path(destination).is_symlink():
             Path(destination).unlink()
         return register(snapshot, destination, cache, retained=True)

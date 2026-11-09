@@ -1,5 +1,6 @@
 """Real local remotes exercise push success, rejection, retry and train coalescing."""
 import json
+import contextlib
 import fcntl
 import os
 from pathlib import Path
@@ -143,6 +144,56 @@ class PushTests(unittest.TestCase):
                 worker.join(timeout=10)
         self.assertFalse(worker.is_alive())
         self.assertEqual(len(self.rows()), 2)
+        self.assertTrue(all(row['push']['status'] == 'pushed' for row in self.rows()))
+
+    def test_external_enqueue_waits_for_legacy_journal_writer(self):
+        with (self.state/'land.lock').open('a') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            worker = threading.Thread(target=land_push.enqueue, args=(self.repo, self.state), kwargs={'launch': False})
+            worker.start()
+            try:
+                path, _ = land_push.paths(self.repo)
+                deadline = time.monotonic()+5
+                while not path.exists() and time.monotonic() < deadline:
+                    time.sleep(.01)
+                self.assertTrue(path.exists())
+                worker.join(timeout=.1)
+                self.assertTrue(worker.is_alive())
+                with (self.state/'landed.jsonl').open('a') as stream:
+                    stream.write(json.dumps({'new': self.git('rev-parse', 'main'), 'request_id': 'legacy'})+'\n')
+            finally:
+                fcntl.flock(lock, fcntl.LOCK_UN)
+                worker.join(timeout=10)
+        self.assertEqual(len(self.rows()), 2)
+        self.assertTrue(all(row['push']['status'] == 'pending' for row in self.rows()))
+
+    def test_enqueue_during_worker_shutdown_has_a_surviving_waiter(self):
+        land_push.enqueue(self.repo, self.state, launch=False)
+        path, worker_lock = land_push.paths(self.repo)
+        added, followers = [], []
+        @contextlib.contextmanager
+        def closing_worker(*args, **kwargs):
+            with worker_lock.open(*args, **kwargs) as handle:
+                try:
+                    yield handle
+                finally:
+                    if not added:
+                        added.append(self.add('late train'))
+                        land_push.enqueue(self.repo, self.state, launch=False)
+                        follower = threading.Thread(target=land_push.deliver, args=(self.repo,))
+                        followers.append(follower)
+                        follower.start()
+                        follower.join(timeout=.1)
+        class WorkerPath:
+            open = staticmethod(closing_worker)
+        with mock.patch.object(land_push, 'paths', return_value=(path, WorkerPath())):
+            try:
+                land_push.deliver(self.repo)
+            finally:
+                for follower in followers:
+                    follower.join(timeout=10)
+        self.assertTrue(all(not follower.is_alive() for follower in followers))
+        self.assertEqual(subprocess.check_output(['git', '--git-dir', str(self.remote), 'rev-parse', 'main'], text=True).strip(), added[0])
         self.assertTrue(all(row['push']['status'] == 'pushed' for row in self.rows()))
 
 

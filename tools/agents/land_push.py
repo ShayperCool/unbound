@@ -52,7 +52,7 @@ def paths(repo):
     return common/'land-push.json', common/'land-push.lock'
 
 
-def enqueue(repo, state, *, launch=True):
+def enqueue(repo, state, *, launch=True, land_locked=False):
     path, lock_path = paths(repo)
     remote = 'origin' if git(repo, 'remote', 'get-url', 'origin', check=False).returncode == 0 else ''
     status = 'pending' if remote and not os.environ.get('UNBOUND_LAND_NO_PUSH') else 'disabled'
@@ -67,67 +67,76 @@ def enqueue(repo, state, *, launch=True):
         for row in rows:
             if row.get('push', {}).get('status') != 'pushed' and git(repo, 'merge-base', '--is-ancestor', row['new'], head, check=False).returncode == 0:
                 row['push'] = {'status': status, 'target': head, 'remote': remote}
-    receipts(state, pending)
+    receipts(state, pending, serialize_land=not land_locked)
     if launch and status == 'pending':
-        try:
-            with (path.parent/'auto-push.log').open('a') as out:
-                subprocess.Popen([sys.executable, str(Path(__file__).resolve()), '--repo', str(repo)],
-                                 stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                                 start_new_session=True, close_fds=True)
-        except OSError as error:
-            # Intent is already durable. A later landing or explicit retry can deliver it.
-            value['launch_error'] = str(error)
-            print(f'land: push worker could not start; queued for retry: {error}', file=sys.stderr)
+        error = launch_worker(repo)
+        if error:
+            value['launch_error'] = error
     return value
+
+
+def launch_worker(repo):
+    path, _ = paths(repo)
+    try:
+        with (path.parent/'auto-push.log').open('a') as out:
+            subprocess.Popen([sys.executable, str(Path(__file__).resolve()), '--repo', str(repo)],
+                             stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                             start_new_session=True, close_fds=True)
+    except OSError as error:
+        print(f'land: push worker could not start; queued for retry: {error}', file=sys.stderr)
+        return str(error)
+    return None
 
 
 def deliver(repo, *, attempts=3, delay=time.sleep):
     path, lock_path = paths(repo)
-    restart = None
+    restart, updates = False, []
     with lock_path.open('a') as worker:
-        try:
-            fcntl.flock(worker, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            return
+        # Every enqueue launches a waiter. A waiter must survive the previous
+        # worker's final queue check, so it acquires this lock in blocking mode.
+        fcntl.flock(worker, fcntl.LOCK_EX)
         for attempt in range(attempts):
-            restart = None
+            restart = False
             with path.with_suffix('.queue.lock').open('a') as lock:
                 fcntl.flock(lock, fcntl.LOCK_EX)
                 value = json.loads(path.read_text())
             if value['status'] in ('pushed', 'disabled'):
-                return
+                break
             target = value['target']
             try:
                 result = git(repo, 'push', '--porcelain', value['remote'], target+':refs/heads/main', check=False)
                 success, error = result.returncode == 0, (result.stderr+result.stdout)[-2000:]
             except (OSError, subprocess.TimeoutExpired) as failure:
                 success, error = False, str(failure)
-            state = Path(value['state'])
-            def update(rows):
-                for row in rows:
-                    if row.get('push', {}).get('status') == 'pushed':
-                        continue
-                    if git(repo, 'merge-base', '--is-ancestor', row['new'], target, check=False).returncode == 0:
-                        row['push'] = {'status': 'pushed' if success else 'failed', 'target': target,
-                                       'remote': value['remote'], 'attempts': attempt+1,
-                                       'error': None if success else error}
-            receipts(state, update, serialize_land=True)
+            updates.append((value, target, success, error, attempt+1))
             with path.with_suffix('.queue.lock').open('a') as lock:
                 fcntl.flock(lock, fcntl.LOCK_EX)
                 latest = json.loads(path.read_text())
                 if latest['target'] != target:
-                    restart = Path(latest['state'])
-                    continue  # A newer train coalesced while this attempt ran.
+                    restart = True
+                    continue
                 latest.update(status='pushed' if success else 'failed', attempts=attempt+1,
                               error=None if success else error)
                 atomic_json(path, latest)
             if success:
-                return
+                break
             print(f'land: push failed, local main retained: {error}', flush=True)
             if attempt+1 < attempts:
                 delay(min(2**attempt, 10))
-    if restart is not None:
-        enqueue(repo, restart)
+    # Release admission before potentially waiting on an older coordinator's
+    # receipt append. New trains can deliver while those receipts wait.
+    if restart:
+        launch_worker(repo)
+    for value, target, success, error, attempt in updates:
+        def update(rows):
+            for row in rows:
+                if row.get('push', {}).get('status') == 'pushed':
+                    continue
+                if git(repo, 'merge-base', '--is-ancestor', row['new'], target, check=False).returncode == 0:
+                    row['push'] = {'status': 'pushed' if success else 'failed', 'target': target,
+                                   'remote': value['remote'], 'attempts': attempt,
+                                   'error': None if success else error}
+        receipts(Path(value['state']), update, serialize_land=True)
 
 
 if __name__ == '__main__':

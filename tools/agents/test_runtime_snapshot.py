@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Content identity, concurrent publication, permissions, and collection of probe runtimes."""
 import concurrent.futures
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -390,6 +391,51 @@ class RuntimeSnapshotTests(unittest.TestCase):
         self.assertTrue(snapshot.exists())
         self.assertTrue((summary.parent/'runtime').exists())
         self.assertEqual((agents/'baseline/runtime').resolve(), (next_summary.parent/'runtime').resolve())
+
+    def test_queued_command_argument_keeps_a_released_snapshot(self):
+        first = self.snapshot()
+        snapshot = first.resolve()
+        child = subprocess.Popen(['python3', '-c', 'import time;time.sleep(60)', str(first/'unbound')])
+        try:
+            runtime.release_reference(first, cache=self.cache)
+            self.assertIn(snapshot.name, runtime.active_snapshots(self.cache))
+            self.assertEqual(runtime.cleanup(cache=self.cache, days=0), [])
+        finally:
+            child.terminate()
+            child.wait(timeout=5)
+        self.assertIn(snapshot.name, runtime.cleanup(cache=self.cache, days=0))
+
+    def test_collection_racing_promotion_preserves_the_existing_baseline(self):
+        import suite
+        first = self.snapshot()
+        candidate = first.resolve()
+        self.cli.write_bytes(b'previous baseline')
+        old = self.snapshot('old')
+        agents = self.root/'agents'
+        baseline = agents/'baseline'
+        runtime.retain(old, baseline/'runtime', cache=self.cache)
+        (baseline/'summary.json').write_text('{"previous":true}\n')
+        summary = agents/'suite/candidate/summary.json'
+        summary.parent.mkdir(parents=True)
+        summary.write_text(json.dumps({'work': str(first.parent), 'runtime_snapshot': str(candidate)}))
+        runtime.release_reference(first, cache=self.cache)
+        runtime.cleanup(cache=self.cache, days=14)
+        self.assertFalse(first.is_symlink())
+        original = runtime.cache_lock
+        @contextlib.contextmanager
+        def collect_before_acquiring(cache):
+            with mock.patch.object(runtime, 'cache_lock', original):
+                runtime.cleanup(cache=self.cache, days=0)
+            with original(cache):
+                yield
+        with mock.patch.object(suite, 'AGENTS', agents), \
+             mock.patch.dict(os.environ, UNBOUND_RUNTIME_CACHE=str(self.cache)), \
+             mock.patch.object(runtime, 'cache_lock', collect_before_acquiring):
+            with self.assertRaisesRegex(ValueError, 'collected before promotion'):
+                suite.promote(summary)
+        self.assertFalse(candidate.exists())
+        self.assertEqual((baseline/'runtime').resolve(), old.resolve())
+        self.assertEqual(json.loads((baseline/'summary.json').read_text()), {'previous': True})
 
 
 if __name__ == '__main__':

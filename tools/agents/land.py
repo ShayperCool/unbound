@@ -688,7 +688,7 @@ def land_lock(branch):
 def push_main(main_checkout):
     from land_push import enqueue
     try:
-        return enqueue(Path(main_checkout), STATE)
+        return enqueue(Path(main_checkout), STATE, land_locked=True)
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         # The publication outbox remains intact for a later caller to retry.
         print(f'land: push could not be queued; local main retained: {error}', file=sys.stderr)
