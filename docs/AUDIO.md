@@ -215,7 +215,7 @@ at both rates. Disabled zones keep their return histories while parameters cross
 over a DSP buffer. Destroying the last initialized zone releases the return. A new
 return fades its send from each already playing voice over 64 frames. The frame packet
 selects this initialization and transition mechanism through `Compat.AudioZoneStartupMeasured`
-(NativeApi 42); other profiles keep immediate parameter application. Mixer SFX Reverb
+(NativeApi 43); other profiles keep immediate parameter application. Mixer SFX Reverb
 and `AudioReverbFilter` live parameter changes also stay immediate: their transition is
 unmeasured. All 141 original cases, including the five formerly rejected activation
 controls, are required.
