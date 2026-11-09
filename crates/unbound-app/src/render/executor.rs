@@ -2472,8 +2472,8 @@ impl UnityRenderer {
                 // The frame's screen starts as the previous frame left it, color and depth (the
                 // depth buffer is the ring's): the Editor's Game view keeps them, so a first camera
                 // that clears only depth, or nothing, draws over the last frame (Manual, Camera:
-                // Don't Clear; measured: tests/projects/camerastack *.first.*). A new size starts
-                // black.
+                // Don't Clear; measured: tests/projects/camerastack *.first.*). The first frame and
+                // a new size start transparent black (tests/projects/screenread).
                 pass.seed = self.previous_screen();
                 if pass.seed.is_none() {
                     pass.color_load = wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT);
@@ -4385,6 +4385,9 @@ impl UnityRenderer {
                 // starts it (tests/projects/screenread).
                 match self.previous_screen() {
                     Some(previous) => previous,
+                    // Before any frame has begun there is no screen to read.
+                    None if self.frame_number == 0 => return None,
+                    None if mip != 0 || layer != 0 => return None,
                     None => return Some(Self::unstarted_screen(self.screen_size, rect, float)),
                 }
             }

@@ -145,6 +145,7 @@ namespace Unbound.Runtime
             if (s_Api.ReadPixels(texture, x, y, width, height, asFloat ? 1 : 0, &buffer) == 0) return null;
             try
             {
+                if (texture == 0 && !ScreenReadFits(buffer.Length, width, height, asFloat)) return null;
                 var bytes = new byte[buffer.Length];
                 new ReadOnlySpan<byte>(buffer.Data, (int)buffer.Length).CopyTo(bytes);
                 return bytes;
@@ -154,6 +155,11 @@ namespace Unbound.Runtime
                 Free(buffer);
             }
         }
+
+        /// <summary>Whether a screen read has the size asked for: a screen of another size (the
+        /// window changed size since the frame began, or no frame has begun) is not read.</summary>
+        static bool ScreenReadFits(long length, int width, int height, bool asFloat) =>
+            length >= (long)Math.Max(0, width) * Math.Max(0, height) * (asFloat ? 16 : 4);
 
         /// <summary>A rectangle of a mip level of a texture's layer (an array slice, a cube face, a
         /// volume's depth slice) after every command so far; currentAttachment selects ReadPixels'
@@ -167,6 +173,7 @@ namespace Unbound.Runtime
             if (s_Api.ReadTexture(texture, mip, layer, x, y, width, height, (asFloat ? 1 : 0) | (currentAttachment ? 2 : 0), &buffer) == 0) return null;
             try
             {
+                if (texture == 0 && !ScreenReadFits(buffer.Length, width, height, asFloat)) return null;
                 var bytes = new byte[buffer.Length];
                 new ReadOnlySpan<byte>(buffer.Data, (int)buffer.Length).CopyTo(bytes);
                 return bytes;
