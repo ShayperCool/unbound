@@ -1188,7 +1188,7 @@ fn main() {
                         {
                             (
                                 Some(texture.texture.clone()),
-                                self.compute_texture_view(texture, space),
+                                self.sampled_texture_view(texture, space),
                             )
                         } else {
                             if handle != 0 && (wanted.is_some() || has.is_some()) {

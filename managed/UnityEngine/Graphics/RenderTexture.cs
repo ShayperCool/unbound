@@ -360,7 +360,7 @@ namespace UnityEngine
                 RenderTarget = 1 | (Compat.RenderingMeasured ? DeferredMipUpdates | RetainedMsaaResolve : 0) | (m_Descriptor.enableRandomWrite ? 2 : 0) | (m_Descriptor.useMipMap && m_Descriptor.autoGenerateMips ? 4 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),
                 DepthBits = depthBits,
                 Layers = layers,
-                Dimension = dimension == TextureDimension.Tex3D || layers > 1 ? (int)dimension : 0,
+                Dimension = dimension != TextureDimension.Tex2D || layers > 1 ? (int)dimension : 0,
             };
             UploadTexture(&packet);
             m_AllocatedMipCount = Compat.RenderingMeasured ? mipCount : null;

@@ -9,13 +9,21 @@ pub(super) type ResolveTargets = [Option<wgpu::Texture>; MAX_COLOR_ATTACHMENTS];
 pub(super) struct ResolveHistory {
     pub(super) texture: wgpu::Texture,
     views: [wgpu::TextureView; 2],
+    array_views: Option<[wgpu::TextureView; 2]>,
     dirty: bool,
+    automatic: bool,
 }
 
 pub(super) struct ResolveCopies {
     source: wgpu::Texture,
     destination: wgpu::Texture,
     next: u32,
+}
+
+impl ResolveHistory {
+    pub(super) fn view_for(&self, space: i32) -> &wgpu::TextureView {
+        &self.views[space.clamp(0, 1) as usize]
+    }
 }
 
 impl Iterator for ResolveCopies {
@@ -44,12 +52,18 @@ impl Iterator for ResolveCopies {
 
 impl UnityRenderer {
     /// Called only when a texture is uploaded. A stable target keeps its retained image and views.
-    pub(super) fn prepare_resolve_history(&mut self, gpu: &GpuTexture, enabled: bool) {
+    pub(super) fn prepare_resolve_history(
+        &mut self,
+        gpu: &GpuTexture,
+        enabled: bool,
+        automatic: bool,
+    ) {
         if !enabled || gpu.samples == 1 || gpu.format == 5 {
             self.release_resolve_history(&gpu.texture);
             return;
         }
-        self.resolve_history
+        let history = self
+            .resolve_history
             .entry(gpu.texture.clone())
             .or_insert_with(|| {
                 let format = gpu.texture.format();
@@ -85,12 +99,30 @@ impl UnityRenderer {
                     }),
                     None => raw.clone(),
                 };
+                let array_views = (!gpu.cube && !gpu.cube_array).then(|| {
+                    let raw = texture.create_view(&wgpu::TextureViewDescriptor {
+                        dimension: Some(wgpu::TextureViewDimension::D2Array),
+                        ..Default::default()
+                    });
+                    let linear = match srgb {
+                        Some(format) => texture.create_view(&wgpu::TextureViewDescriptor {
+                            format: Some(format),
+                            dimension: Some(wgpu::TextureViewDimension::D2Array),
+                            ..Default::default()
+                        }),
+                        None => raw.clone(),
+                    };
+                    [raw, linear]
+                });
                 ResolveHistory {
                     texture,
                     views: [raw, linear],
+                    array_views,
                     dirty: false,
+                    automatic,
                 }
             });
+        history.automatic = automatic;
     }
 
     pub(super) fn release_resolve_history(&mut self, texture: &wgpu::Texture) {
@@ -98,6 +130,20 @@ impl UnityRenderer {
         for bound in &mut self.resolve_targets {
             if bound.as_ref().is_some_and(|source| source == texture) {
                 *bound = None;
+            }
+        }
+    }
+
+    pub(super) fn mark_resolve_copied(&mut self, destination: &wgpu::Texture) {
+        // Leaving a bound attachment publishes its samples again after a texture copy.
+        if self
+            .resolve_targets
+            .iter()
+            .flatten()
+            .any(|bound| bound == destination)
+        {
+            if let Some(history) = self.resolve_history.get_mut(destination) {
+                history.dirty = true;
             }
         }
     }
@@ -154,6 +200,9 @@ impl UnityRenderer {
         force: bool,
     ) -> Option<ResolveCopies> {
         let history = self.resolve_history.get_mut(source)?;
+        if !force && !history.automatic {
+            return None;
+        }
         if !std::mem::take(&mut history.dirty) && !force {
             return None;
         }
@@ -173,14 +222,26 @@ impl UnityRenderer {
         self.resolve_msaa_source(&source, true)
     }
 
-    pub(super) fn compute_texture_view(
+    pub(super) fn resolved_array_view(
+        &self,
+        texture: &GpuTexture,
+        space: i32,
+    ) -> Option<wgpu::TextureView> {
+        self.resolve_history
+            .get(&texture.texture)?
+            .array_views
+            .as_ref()
+            .map(|views| views[space.clamp(0, 1) as usize].clone())
+    }
+
+    pub(super) fn sampled_texture_view(
         &self,
         texture: &GpuTexture,
         space: i32,
     ) -> wgpu::TextureView {
         self.resolve_history.get(&texture.texture).map_or_else(
             || texture.view_for(space).clone(),
-            |history| history.views[space.clamp(0, 1) as usize].clone(),
+            |history| history.view_for(space).clone(),
         )
     }
 }

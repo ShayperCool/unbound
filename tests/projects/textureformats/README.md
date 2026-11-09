@@ -70,7 +70,7 @@ key. `residuals.json` lists the differences recorded as open: each still has to 
 ## Retained resolves and deferred differences
 
 Q55 closes the eight earlier MSAA readback differences. The 6000.0.71f1 OpenGL Core
-reference has 730 values, with every previous value preserved. The two
+reference has 750 values, with every previous value preserved. The two
 `rt.ARGB64.msaa.history.{targetBound,targetCleared}.asyncfloat` rows retain a one-ULP blue
 component difference, Editor `0x3c808080` versus backend `0x3c808081`, about 1.86e-9.
 These are Deferred; raw values remain in the strict report and `residuals.json`.
@@ -101,3 +101,14 @@ and formats. These resolved-image details are measured on this OpenGL Core devic
 The `rt.msaaLayers.*` controls retain green resolves while changing each of two array layers
 to red. [ReadPixels](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.ReadPixels.html)
 reads the current render target in both layers; async readback still sees green.
+
+Sampling and readback see the same copied resolve when the destination is unbound
+(`sampleUnboundDestination`). A copy into a still-bound destination is replaced by its samples
+on the next target switch, even if a prior explicit resolve was already completed
+(`sampleBeforeReadPixels`, `afterFirstSample`). All ordinary shader bindings, including legacy
+main-texture bindings, share the compute sampler's retained views.
+The multi-layer array controls retain their resolved green images after the target switch and
+ordinary sampling on this device. Explicit resolves publish both distinct blue/magenta layers.
+The one-layer array control resolves automatically like a 2D target. These are measurements of
+6000.0.71f1 OpenGL Core; the shared Compat rendering profile selects them. Array resolve views
+are cached when the target is uploaded.

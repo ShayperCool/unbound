@@ -485,7 +485,11 @@ public static class TexFormatsProbe
         ReadBack("rt.msaaCopies.destinationInitial", destination);
         Graphics.CopyTexture(source, destination);
         ReadBack("rt.msaaCopies.beforeResolve", destination);
+        Try("rt.msaaCopies.sampleBeforeReadPixels", () => Sampled(destination, false));
+        ReadBack("rt.msaaCopies.afterFirstSample", destination);
         ReadPixels("rt.msaaCopies.beforeResolveCurrent", destination);
+        Try("rt.msaaCopies.sampleCopied", () => Sampled(destination, false));
+        Graphics.SetRenderTarget(destination);
         destination.ResolveAntiAliasedSurface();
         ReadBack("rt.msaaCopies.afterResolve", destination);
         // Copying a newer attachment distinguishes current pixels from the source's last resolve.
@@ -500,6 +504,10 @@ public static class TexFormatsProbe
         ReadBack("rt.msaaCopies.dirtyDestination", destination);
         Graphics.SetRenderTarget(source);
         ReadBack("rt.msaaCopies.dirtyDestinationSwitched", destination);
+        Graphics.CopyTexture(source, destination);
+        ReadBack("rt.msaaCopies.unboundDestination", destination);
+        Try("rt.msaaCopies.sampleUnboundDestination", () => Sampled(destination, false));
+        ReadBack("rt.msaaCopies.afterUnboundSample", destination);
         d.dimension = TextureDimension.Tex2DArray; d.volumeDepth = 2;
         var array = Target(d);
         Value("rt.msaaLayers.create", B2(array.Create()));
@@ -519,6 +527,32 @@ public static class TexFormatsProbe
             Value("rt.msaaLayers." + layer + ".current", Texels(pixels));
             Try("rt.msaaLayers." + layer + ".retained", () => Readback(AsyncGPUReadback.Request(array, 0, 0, 2, 0, 1, layer, 1, TextureFormat.RGBAFloat)));
         }
+        s_Sample.SetTexture("_ArrayTex", array);
+        for (int layer = 0; layer < 2; layer++)
+        {
+            s_Sample.SetFloat("_Layer", layer);
+            Graphics.Blit(null, s_Out2, s_Sample, 14);
+            Try("rt.msaaLayers." + layer + ".sample", () => Floats(s_Out2));
+        }
+        ReadBack("rt.msaaLayers.afterSwitch", array);
+        Graphics.SetRenderTarget(array, 0, CubemapFace.Unknown, 1);
+        array.ResolveAntiAliasedSurface();
+        ReadBack("rt.msaaLayers.explicit", array);
+        Graphics.SetRenderTarget(array, 0, CubemapFace.Unknown, 0); GL.Clear(false, true, Color.blue);
+        Graphics.SetRenderTarget(array, 0, CubemapFace.Unknown, 1); GL.Clear(false, true, Color.magenta);
+        array.ResolveAntiAliasedSurface();
+        for (int layer = 0; layer < 2; layer++)
+            Try("rt.msaaLayers.distinct." + layer, () => Readback(AsyncGPUReadback.Request(array, 0, 0, 2, 0, 1, layer, 1, TextureFormat.RGBAFloat)));
+        d.volumeDepth = 1;
+        var singleLayer = Target(d); singleLayer.Create();
+        Graphics.SetRenderTarget(singleLayer, 0, CubemapFace.Unknown, 0); GL.Clear(false, true, Color.green);
+        singleLayer.ResolveAntiAliasedSurface();
+        GL.Clear(false, true, Color.red);
+        Graphics.SetRenderTarget(destination);
+        ReadBack("rt.msaaLayers.singleLayerSwitched", singleLayer);
+        s_Sample.SetTexture("_ArrayTex", singleLayer); s_Sample.SetFloat("_Layer", 0);
+        Graphics.Blit(null, s_Out2, s_Sample, 14);
+        Try("rt.msaaLayers.singleLayerSample", () => Floats(s_Out2));
     }
 
     static void MsaaMips()

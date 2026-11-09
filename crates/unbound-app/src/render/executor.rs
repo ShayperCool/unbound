@@ -744,7 +744,11 @@ impl UnityRenderer {
                             .prepare(&device, &gpu.texture, gpu.target_format(1));
                     }
                 }
-                self.prepare_resolve_history(&gpu, texture.retain_resolve);
+                self.prepare_resolve_history(
+                    &gpu,
+                    texture.retain_resolve,
+                    texture.dimension != 5 || gpu.layers == 1,
+                );
                 self.textures.insert(handle, gpu);
             }
             Upload::ReleaseTexture(handle) => {
@@ -1053,13 +1057,17 @@ impl UnityRenderer {
         } else {
             self.textures.get_mut(&handle).unwrap()
         };
+        let view = self
+            .resolve_history
+            .get(&t.texture)
+            .map_or(t.view_for(space), |history| history.view_for(space));
         let bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("unbound main texture"),
             layout: &layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::TextureView(t.view_for(space)),
+                    resource: wgpu::BindingResource::TextureView(view),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
@@ -1393,7 +1401,7 @@ impl UnityRenderer {
                 integer_views.push(view);
                 continue;
             }
-            let (width, height, source) = (t.width, t.height, t.view_for(space).clone());
+            let (width, height, source) = (t.width, t.height, self.sampled_texture_view(t, space));
             let fits = self
                 .bit_views
                 .get(&(*h, signed))
@@ -1535,7 +1543,7 @@ impl UnityRenderer {
                 views.push(view);
             } else if is_2d(*dim) {
                 samplers.push(self.sampler(key));
-                views.push(self.texture_or_default(*h, d).view_for(space).clone());
+                views.push(self.sampled_texture_view(self.texture_or_default(*h, d), space));
             } else if self.drawn_into(*h) {
                 samplers.push(self.sampler(key));
                 let (name, h) = (program.textures[k].clone(), *h);
@@ -1549,10 +1557,15 @@ impl UnityRenderer {
                 // any layers) to an array slot; anything else reads the slot's default.
                 use unbound_shaders::TextureDim;
                 let bound = self.textures.get(h).and_then(|t| match dim {
-                    TextureDim::Cube if t.cube => Some(t.view_for(space).clone()),
-                    TextureDim::CubeArray if t.cube_array => Some(t.view_for(space).clone()),
-                    TextureDim::D3 if t.volume => Some(t.view_for(space).clone()),
-                    TextureDim::D2Array if !t.cube && !t.volume && t.samples == 1 => {
+                    TextureDim::Cube if t.cube => Some(self.sampled_texture_view(t, space)),
+                    TextureDim::CubeArray if t.cube_array => {
+                        Some(self.sampled_texture_view(t, space))
+                    }
+                    TextureDim::D3 if t.volume => Some(self.sampled_texture_view(t, space)),
+                    TextureDim::D2Array if !t.cube && !t.volume => {
+                        if let Some(view) = self.resolved_array_view(t, space) {
+                            return Some(view);
+                        }
                         let srgb = space == 1 && t.srgb_view.is_some();
                         let format = srgb.then_some(wgpu::TextureFormat::Rgba8UnormSrgb);
                         Some(t.texture.create_view(&wgpu::TextureViewDescriptor {
@@ -3580,6 +3593,7 @@ impl UnityRenderer {
         } else {
             src
         };
+        let destination_attachment = dst.clone();
         let dst = if let Some(history) = self.resolve_history.get(&dst) {
             history.texture.clone()
         } else {
@@ -3620,6 +3634,7 @@ impl UnityRenderer {
         if w <= 0 || h <= 0 || x < 0 || y < 0 || dx < 0 || dy < 0 {
             return None;
         }
+        self.mark_resolve_copied(&destination_attachment);
         Some(Copy {
             source: src,
             source_mip: smip,
