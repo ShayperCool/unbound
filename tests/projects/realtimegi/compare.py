@@ -7,11 +7,11 @@ Two classes of values:
 
 - State, always gated (exit 1 on any difference): every reference case present, no extra case,
   each renderer's realtime lightmap index and scale/offset, the lightmaps mode, the light probe
-  count and baked coefficients, DynamicGI.isConverged and the recorded API defaults.
+  count and baked coefficients, DynamicGI.isConverged, the recorded API defaults and which atlas
+  texels renderers cover (their realtime lightmap UVs).
 - Lighting, a report until Unbound draws precomputed realtime GI (gated with --strict): light
   probe SH (each sample point, 27 coefficients) and the ambient probe within ABS + REL *
-  |reference|; per atlas (.atlas/.dir) the covered texels must be the same and each covered
-  texel's RGB within ABS + REL * |reference|; frames (.png) report the shared image measure (mean,
+  |reference|; per atlas (.atlas/.dir) each covered texel's RGB within ABS + REL * |reference|; frames (.png) report the shared image measure (mean,
   worst and pixels over 8 of the per-pixel max-channel difference).
 
 Every failing value is written to CAPTURE/compare-details.txt; the output lists one line per
@@ -137,7 +137,8 @@ def compare_atlas(name, ref_path, cap_path, result):
     result.lines.append(f'{name}: coverage differs at {len(coverage)} texels, {len(bad)} values off, '
                         f'mean |d| {total / max(1, rw * rh):.5f}, max |d| {worst:.5f}')
     if coverage:
-        result.fail('lighting', f'{name}: coverage differs at {len(coverage)} texels', coverage)
+        # Which texels renderers cover (their realtime lightmap UVs) matches: gated.
+        result.fail('state', f'{name}: coverage differs at {len(coverage)} texels', coverage)
     if bad:
         result.fail('lighting', f'{name}: {len(bad)} texel values off (max |d| {worst:.5f})', bad)
 

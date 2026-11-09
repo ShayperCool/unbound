@@ -6,13 +6,15 @@ lights static geometry with bounced light from realtime lights, emissive materia
 environment, updated at runtime from data precomputed in the Editor. This page records what the
 data holds, how the runtime update behaves (documented, then measured against the Unity
 6000.0.71f1 Editor in [tests/projects/realtimegi](../tests/projects/realtimegi)), and how Unbound
-implements it. Status: the data is described and the probe is recorded. `crates/unbound-gi` reads the data
-and runs the update below; for the probe's Room scene with point lights, flat ambient and given
-renderer albedo/emission it reproduces the Editor's converged realtime lightmaps (median
-relative error under 0.6%; the engine does not run it yet). The engine still draws no realtime
-GI: it warns once per scene (`Graphics/Lightmapping.cs`), and `unbound doctor` lists the affected
-scenes. Drawing needs each renderer's realtime lightmap UVs, which the project does not hold
-(see [Realtime lightmap UVs](#realtime-lightmap-uvs)).
+implements it. Status: the engine draws precomputed realtime GI for scenes whose renderers have
+Preserve UVs, lit by point lights and a flat ambient color, in the built-in pipeline (URP binds the
+same inputs; unmeasured there). For tests/projects/realtimegi every renderer covers the same
+realtime lightmap texels as in the Editor and most texels match within the comparator's
+tolerance (see [Residuals](#residuals)); `unbound doctor` lists scenes with realtime GI, which is
+drawn only in part. Not supported yet, each with a warning: Preserve UVs off (automatic charts),
+spot and directional lights (the system stops updating), skybox and gradient environments (no
+environment light), light probes lit by realtime GI, directional realtime lightmaps, systems
+that reference other systems, gamma-space projects and linear light intensity.
 
 ## Documented contract (6000.0)
 
@@ -110,28 +112,70 @@ confirmed by a capture, since the engine cannot draw at realtime lightmap UVs ye
 ## Realtime lightmap UVs
 
 Renderers draw realtime GI at their own realtime lightmap UVs, which are not the mesh's UV2 scaled
-by `realtimeLightmapScaleOffset`: the precompute repacks each mesh's charts. In the probe's Room,
-the floor's 6 m faces cover 13x13 texels of 14x14 chart rectangles and its 0.1 m thin faces 3x3
-of 4x4 ones, although all faces of the cube's UV2 are the same size: each chart is scaled to
-its own world area at the realtime resolution, kept at least the minimum chart size, padded and
-packed; with Preserve UVs off the charts themselves are generated. The Editor keeps these UVs in
-its GI cache, not in the project (a player build stores them in
-`MeshRenderer.enlightenVertexStream`). The LightingData asset holds only where each renderer's UV
-space lies in its system and the system's chart mask, so Unbound must compute the realtime
-lightmap UVs itself before it can render the meta passes or draw the realtime lightmaps: that is
-the first part of phase 3.
+by `realtimeLightmapScaleOffset`: the precompute repacks each mesh's charts. The Editor keeps the
+result in its GI cache, not in the project (a player build stores it in
+`MeshRenderer.enlightenVertexStream`); the LightingData asset holds only where each renderer's UV
+space lies in its system and the system's chart mask. Unbound makes them itself
+(`crates/unbound-gi/src/realtime_uv.rs`, cached in `Library/Unbound/RealtimeUVs` by a hash of
+the inputs and a format version), for renderers with Preserve UVs, the scene's default Lightmap
+Parameters and triangle meshes:
+
+- Charts: the triangles of the lightmap UVs (UV2, else UV1) that share a vertex, or a vertex
+  position and UV; in the order of their first triangle.
+- Each chart keeps its UV shape, scaled uniformly so its area is its world area at the realtime
+  resolution (Lighting Settings' resolution times the renderer's Scale In Lightmap), in blocks of
+  2x2 texels. Its width and height become whole blocks separately: `max(ceil(size + 0.5 +
+  1e-4), minimum chart size / 2)`, the chart filling it less half a texel on each side.
+- Charts are rasterized into block masks (every block a chart triangle, grown by a quarter block,
+  touches) and packed largest first (ties in chart order), each where it wastes the least area
+  below and to the left of it, resting on the columns or against the rows already used (ties: the
+  lowest, then the leftmost). The space starts at one block and, when a chart does not fit, grows
+  along its shorter side (the height when square) by that chart's size; it ends cropped to what
+  is used.
+
+In the Room scenes of tests/projects/realtimegi and the Realtime scene of
+tests/projects/lightingassets this gives the Editor's layouts: the size of each renderer's UV space
+and every chart's rectangle in the precomputed chart mask, which Unbound checks for every renderer
+(a difference keeps the system from being drawn, with a warning). A chart that only a hole between
+other charts would hold, which the precompute fills with another heuristic, fails loudly. With
+Preserve UVs off the precompute generates the charts themselves (not supported yet).
+
+## Engine
+
+`Graphics/RealtimeGI.cs` loads a scene's systems (`realtime-gi-load`), makes the renderers'
+realtime lightmap UVs and renders their meta passes into each system's material textures at load
+and after `Renderer.UpdateGIMaterials`. In PostLateUpdate.EnlightenRuntimeUpdate it passes the
+frame's lights (realtime, and mixed ones without baked GI, with bounce intensity) and environment
+to the native update (`crates/unbound-runtime/src/realtime_gi.rs`): one update of every system in
+synchronous mode, else of as many as fit in 2 ms (at least one), without allocating; a system is
+converged after two updates of all systems whose drawn texels did not change (or whose bounce
+changed by less than one RGB9E5 step of its largest value). Changed atlases are uploaded as RGBA
+half floats; renderers draw them as `unity_DynamicLightmap` with their realtime scale and offset
+and `DYNAMICLIGHTMAP_ON`, and take no light probes. `DynamicGI.isConverged`, `synchronousMode`,
+`SetEmissive` and `indirectScale` act on it.
+
+## Residuals
+
+Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
+
+- Texels at chart corners and edges where geometry meets (6 to 56 of about 5000 values per Room
+  case, up to about 20%): the transport and the cluster inputs match the Editor's (albedo exactly,
+  direct light within 2.3%), but the Editor's bounce for clusters on slab edges, which also sample
+  texels of thin faces that only see the environment, is larger than the weighted sum of the
+  output texels the precomputed bounce samples give (5 to 30% for some clusters). The rule is not
+  found yet.
+- `DynamicGI.indirectScale` 2: the Editor's texels are 2.00 to 2.07 times those at 1, Unbound's
+  exactly 2 (94 values off). Letting the bounce read the scaled texels gives too much (2.2 times):
+  only part of the scale reaches the bounce.
+- Direct light: the point light falloff within 2.3% of the Editor's per cluster.
 
 ## Unbound plan
 
-- Phase 2, runtime over Unity's precomputed data: read the payload and scene mapping into a
-  content-keyed cache entry (`Library/Unbound/`), run the update above in Rust on a worker with a
-  per-frame budget and no per-frame allocations, upload the atlas (RGB9E5) and bind
-  `unity_DynamicLightmap`/`unity_DynamicLightmapST`/`DYNAMICLIGHTMAP_ON` for the built-in
-  pipeline and URP; light probes get the probe transport's SH. Material albedo and emission come
-  from the material's own meta pass rendered at the realtime lightmap UVs. Unmeasured inputs
-  (directional output, spot/area/directional light details, skybox/gradient environments,
-  transparency) fail loudly until a probe case covers them.
-- Phase 3, Unbound's own precompute from scene geometry (realtime lightmap UVs, charts, clusters,
-  transport, bounce resampling, probe transport) for projects without precomputed data or with
+- Phase 2, runtime over Unity's precomputed data (above): next, light probes from the probe
+  transport's SH, spot and directional lights (with the precomputed visibility), skybox and
+  gradient environments, directional output, several systems; unmeasured inputs fail loudly
+  until a probe case covers them.
+- Phase 3, Unbound's own precompute from scene geometry (automatic charts for Preserve UVs off,
+  system packing, clusters, transport, bounce resampling, probe transport) for projects without precomputed data or with
   changed scenes, cached under `Library/Unbound/` by content hash and format version, compared with the Editor's
   precompute through the same probe.

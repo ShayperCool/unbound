@@ -77,13 +77,15 @@ Observations (not documented guarantees):
 
 ## Unbound
 
-Unbound reads none of the precomputed realtime GI yet: it warns once per scene and draws no
-realtime lightmaps, so the atlases, probes and frames differ. The gate fails on state values
-(cases, realtime lightmap indices and scale/offset, lightmaps mode, probe count and baked
-coefficients, `isConverged`, API defaults), which match, and reports lighting values
-(`realtimegi: 0 failing state values, N failing lighting values`); `compare.py --strict` gates
-those too. Every failing value is written to `compare-details.txt` in the run directory.
-See [docs/REALTIME_GI.md](../../../docs/REALTIME_GI.md) for the data and the planned solver.
+Unbound draws precomputed realtime GI for these scenes (docs/REALTIME_GI.md): it makes the
+renderers' realtime lightmap UVs, renders their meta passes and updates the systems each frame.
+The gate fails on state values (cases, realtime lightmap indices and scale/offset, lightmaps mode,
+probe count and baked coefficients, `isConverged`, API defaults, and which atlas texels the
+renderers cover), which match, and reports lighting values (`realtimegi: 0 failing state values,
+N failing lighting values`); `compare.py --strict` gates those too. Every failing value is written
+to `compare-details.txt` in the run directory. The atlases of the point-light cases match but for
+the residuals listed in docs/REALTIME_GI.md; light probes, the spot light case and the skybox
+cases are not supported yet (the lighting values of those differ).
 
 ## Running
 

@@ -7,8 +7,9 @@ values.jsonl: every record must equal the reference's, except the RESIDUALS belo
 reported (with both values) and must still differ as recorded: one that starts to match is
 reported too, so the list is kept current. Images: the mean over pixels of the largest channel
 difference (tests/projects/particles/compare_images.py) at most MEAN_LIMIT for the frames
-Unbound draws as Unity does; the frames lit by Enlighten Realtime GI are reported only, and the
-engine log must hold the warning that says Realtime GI is not drawn.
+Unbound draws as Unity does; the frames lit by precomputed realtime GI are reported only (their
+residuals are listed in docs/REALTIME_GI.md). The engine log is not checked: --log is accepted
+for compatibility with the runner.
 """
 import argparse
 import json
@@ -20,12 +21,11 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 # Every measured constructor check is required to match.
 RESIDUALS = set()
-# Frames Unbound draws as Unity does; the realtime ones carry Enlighten's bounced light, which
-# Unbound does not draw (it warns instead).
+# Frames Unbound draws as Unity does; the realtime ones carry precomputed realtime GI's bounced
+# light, which Unbound draws with residuals (reported).
 GATED_IMAGES = ['lit-authored', 'lit-edited', 'lit-assigned', 'realtimeoff-red']
 REPORTED_IMAGES = ['realtime-red', 'realtime-blue']
 MEAN_LIMIT = 0.5
-REALTIME_WARNING = re.compile(r'Enlighten Realtime Global Illumination precomputed for \d+ renderers')
 
 
 def values(reference, candidate):
@@ -77,7 +77,7 @@ def images(reference, candidate):
         gated = name in GATED_IMAGES
         bad = gated and not mean <= MEAN_LIMIT
         failures += bad
-        print(f'image {name}: mean {mean:.2f}{" FAIL" if bad else "" if gated else " (reported: Realtime GI is not drawn)"}')
+        print(f'image {name}: mean {mean:.2f}{" FAIL" if bad else "" if gated else " (reported: precomputed realtime GI)"}')
     return failures
 
 
@@ -88,11 +88,6 @@ def main():
     parser.add_argument('--log', type=Path)
     args = parser.parse_args()
     failures = values(args.reference, args.candidate) + images(args.reference, args.candidate)
-    if args.log is not None:
-        text = args.log.read_text(errors='replace') if args.log.is_file() else ''
-        if not REALTIME_WARNING.search(text):
-            print('engine log: no warning that Realtime GI is not drawn')
-            failures += 1
     print(f'lightingassets: {failures} failing')
     return 1 if failures else 0
 
