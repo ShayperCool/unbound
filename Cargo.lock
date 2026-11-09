@@ -6496,6 +6496,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "unbound-gi"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "unbound-assets",
+ "unbound-yaml",
+]
+
+[[package]]
 name = "unbound-host"
 version = "0.1.0"
 dependencies = [

@@ -32,6 +32,7 @@ unbound-scene = { path = "crates/unbound-scene" }
 unbound-app = { path = "crates/unbound-app" }
 unbound-shaders = { path = "crates/unbound-shaders" }
 unbound-remote = { path = "crates/unbound-remote" }
+unbound-gi = { path = "crates/unbound-gi" }
 
 [profile.dev]
 opt-level = 1

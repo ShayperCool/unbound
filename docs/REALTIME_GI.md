@@ -6,9 +6,12 @@ lights static geometry with bounced light from realtime lights, emissive materia
 environment, updated at runtime from data precomputed in the Editor. This page records what the
 data holds, how the runtime update behaves (documented, then measured against the Unity
 6000.0.71f1 Editor in [tests/projects/realtimegi](../tests/projects/realtimegi)), and how Unbound
-implements it. Status: the data is described and the probe is recorded; Unbound reads none of
-it yet and warns once per scene (`Graphics/Lightmapping.cs`), and `unbound doctor` lists the
-affected scenes.
+implements it. Status: the data is described and the probe is recorded. `crates/unbound-gi` reads the data
+and runs the update below; for the probe's Room scene with point lights, flat ambient and given
+renderer albedo/emission it reproduces the Editor's converged realtime lightmaps (median
+relative error under 0.6%; the engine does not run it yet). The engine still draws no realtime
+GI: it warns once per scene (`Graphics/Lightmapping.cs`), and `unbound doctor` lists the affected
+scenes.
 
 ## Documented contract (6000.0)
 
@@ -46,20 +49,22 @@ a payload: a Unity bundle of per-system files named by the system's hash.
 
 ## Runtime update
 
-Unbound's model of one update of a system; not yet checked against the reference (phase 2
-implements it and compares its converged output with tests/projects/realtimegi):
+Unbound's model of one update of a system (`crates/unbound-gi`, compared with the converged
+Room cases of tests/projects/realtimegi in its tests):
 
 1. **Direct light per cluster**: the mean over the cluster's points of `max(0, n.l)` times the
    light's distance falloff (the built-in pipeline's legacy curve over distance/range) times the
    light's color, scaled by intensity and `Light.bounceIntensity` before its conversion to linear
-   (in projects without linear light intensity). In this model point lights are not shadowed
-   in this input (the probe's point light has shadows enabled).
+   (in projects without linear light intensity). Point lights are not shadowed in this input
+   (the probe's point light has shadows enabled). The falloff is the curve itself; the
+   Editor's matches it within about 1%.
 2. **Cluster radiance**: `albedo^2 * (direct + bounce) + emission`, with albedo the cluster's
    8-bit gamma-space albedo (the material's meta pass output) and emission linear.
 3. **Cluster tree**: each parent value is the 8-bit-weighted (/255) sum of its children.
 4. **Output texel** irradiance: the weighted sum over the referenced cluster, tree and
    environment values, clamped at 0, stored as RGB9E5 in the atlas; `DynamicGI.indirectScale`
-   scales it.
+   scales the drawn texels (the Editor's come out 2.00 to 2.07 times brighter with 2, Unbound's
+   exactly 2: the extra is unexplained).
 5. **Bounce**: each cluster's next bounce input is a weighted sum of output texels.
 6. **Environment**: six 8x8 faces and their coarser levels (510 values); a flat ambient color
    gives its linear value everywhere.

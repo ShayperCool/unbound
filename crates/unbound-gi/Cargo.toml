@@ -1,0 +1,10 @@
+[package]
+name = "unbound-gi"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+unbound-assets.workspace = true
+unbound-yaml.workspace = true
