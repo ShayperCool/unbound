@@ -897,6 +897,29 @@ namespace Unbound.Runtime
         internal static bool IsMeshLike(Renderer renderer) => renderer is MeshRenderer || renderer is SkinnedMeshRenderer || renderer is TerrainRenderer || renderer is BillboardRenderer;
 
         static readonly List<string> s_DrawKeywords = new List<string>();
+        static readonly int s_RenderingLayerId = Shader.PropertyToID("unity_RenderingLayer");
+        /// <summary>The renderingLayerMask the renderer's draws get without one of their own: the
+        /// native draw's unity_RenderingLayer default.</summary>
+        const uint DefaultRenderingLayerMask = 1u;
+        /// <summary>The boxed unity_RenderingLayer of each mask drawn (a box is never changed).</summary>
+        static readonly Dictionary<uint, object> s_RenderingLayerValues = new Dictionary<uint, object>();
+
+        /// <summary>A renderer's draw properties with its rendering layer mask
+        /// (unity_RenderingLayer.x, the mask's bits as a float, as URP's shaders read it with
+        /// asuint): URP's light layers light a renderer by it (Unity 6000.0.71f1,
+        /// tests/projects/urp paths-opengl light_layers). The draw's own block wins; a renderer on
+        /// the default layer keeps the draw's properties as they are.</summary>
+        internal static Dictionary<int, object> WithRenderingLayer(Renderer renderer, Dictionary<int, object> properties)
+        {
+            if (renderer == null) return properties;
+            uint mask = renderer.renderingLayerMask;
+            if (mask == DefaultRenderingLayerMask || (properties != null && properties.ContainsKey(s_RenderingLayerId))) return properties;
+            if (!s_RenderingLayerValues.TryGetValue(mask, out var value))
+                s_RenderingLayerValues[mask] = value = new Vector4(BitConverter.Int32BitsToSingle((int)mask), 0f, 0f, 0f);
+            var merged = DrawPropertyPool.Copy(properties);
+            merged[s_RenderingLayerId] = value;
+            return merged;
+        }
 
         /// <summary>A draw, with what the baked lighting gives its renderer (lightmap or light
         /// probes, <see cref="BakedLighting.Apply"/>): its keywords are on for the draw alone.</summary>
@@ -921,6 +944,7 @@ namespace Unbound.Runtime
                     properties = BakedLighting.ApplyProbes(lighting.Anchor != null ? lighting.Anchor.position : lighting.ProbePosition ?? item.Bounds.center, properties);
                 properties = ReflectionProbe.Apply(item.Bounds, lighting.Reflections, properties, srp);
             }
+            properties = WithRenderingLayer(item.Renderer, properties);
             if (extra != null)
             {
                 var merged = DrawPropertyPool.Copy(properties);
