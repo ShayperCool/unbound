@@ -330,6 +330,21 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ListenerBypassAndEnableChangesLeaveActivationUnchanged()
+        {
+            var source = Source("unmeasured triggers");
+            var echo = source.gameObject.AddComponent<AudioEchoFilter>();
+            source.gameObject.AddComponent<AudioLowPassFilter>();
+            source.clip = AudioClip.Create("input", 48000, 1, 48000, false);
+            source.Play();
+            Assert.Equal(0u, Flags(source) & (Inactive | LastActive));
+            source.bypassListenerEffects = true;
+            echo.enabled = false;
+            Assert.Equal(0u, Flags(source) & (Inactive | LastActive));
+            Assert.Equal(0, m_Backend.ComponentResets);
+        }
+
+        [Fact]
         public void StaticBypassKeepsComponentsActiveUntilStopAndPlay()
         {
             var source = Source("static bypass");

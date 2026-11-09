@@ -309,9 +309,8 @@ impl SfxReverb {
         }
     }
 
-    /// Applies parameters at once. Mixer and AudioReverbFilter SFX Reverb live changes and
-    /// unmeasured zone profiles keep this path: the DSP-buffer crossfade of [`Self::tune`] is
-    /// measured only on the zone return (tests/projects/audioreverb live controls).
+    /// Applies parameters at once: the path of releases whose DSP-buffer crossfade
+    /// ([`Self::tune`]) is unmeasured, for zones, mixer effects and components alike.
     pub fn tune_immediate(&mut self, p: &SfxReverbSpec) {
         self.tune(p);
         self.c = self.pending;

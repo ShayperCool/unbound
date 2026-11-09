@@ -374,10 +374,6 @@ impl FilterChain {
         }
     }
 
-    fn has_stage(&self, stage: i32) -> bool {
-        self.filters.iter().any(|filter| filter.stage == stage)
-    }
-
     /// Runs only the last component of `stage` (every one with `None`) on `samples`.
     fn process_last(&mut self, samples: &mut [f32], stage: Option<i32>) {
         if let Some(filter) = self
@@ -653,7 +649,13 @@ impl Source {
     /// Active components of a bypassed source process silence; their output (tails of earlier
     /// input) joins the dry route.
     fn run_bypassed_components(&mut self, samples: &mut [f32], stage: Option<i32>, last: bool) {
-        let silence = &mut self.bypass_dry[..samples.len()];
+        // A source without components has nothing to run (and no scratch buffer).
+        if self.chain.filters.is_empty() {
+            return;
+        }
+        let Some(silence) = self.bypass_dry.get_mut(..samples.len()) else {
+            return;
+        };
         silence.fill(0.0);
         if last {
             self.chain.process_last(silence, stage);
@@ -6268,6 +6270,26 @@ mod tests {
         let generated = through(&vec![0.03125; output.len()], &filters, 48000);
         for ((actual, dry), generated) in output.iter().zip(&dry).zip(generated) {
             assert_eq!(*actual, dry + generated);
+        }
+    }
+
+    #[test]
+    fn a_bypassed_source_without_components_renders_its_dry_voice() {
+        let dry = render_source(&[], 0, stereo_tone(8192), 2048);
+        for extra in [
+            0,
+            source_flags::COMPONENTS_INACTIVE,
+            source_flags::COMPONENTS_INACTIVE | source_flags::LAST_COMPONENT_ACTIVE,
+        ] {
+            let mut mixer = Mixer::new(MixerConfig::default());
+            mixer.add_clip(1, stereo_tone(8192));
+            source_with(&mut mixer, 7, 1, |p| {
+                p.flags = source_flags::BYPASS_EFFECTS | source_flags::SPATIAL_STEREO | extra;
+            });
+            play(&mut mixer, 7, command::PLAY, 0.0);
+            let mut output = vec![0.0; dry.len()];
+            mixer.render(&mut output, 2);
+            assert_eq!(output, dry, "{extra}");
         }
     }
 

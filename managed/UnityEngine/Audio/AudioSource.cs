@@ -67,7 +67,6 @@ namespace UnityEngine
         internal bool m_ResetComponents;
         internal bool m_ReconnectionPending;
         internal ulong m_FilterIdentity;
-        internal ulong m_FilterEnabled;
         internal bool m_HasAudioFrame;
         internal double m_PlaybackDspTime;
         internal Vector3 m_LastPosition;
@@ -291,7 +290,6 @@ namespace UnityEngine
             set
             {
                 MainThreadCheck.Check("set_bypassListenerEffects");
-                if (value != m_BypassListenerEffects) m_ActivationPending = true;
                 m_BypassListenerEffects = value; m_Dirty = true;
             }
         }

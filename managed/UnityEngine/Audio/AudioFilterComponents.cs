@@ -440,13 +440,14 @@ namespace Unbound.Runtime
         // Unity 6000.0.71f1, tests/projects/audiodistortion live bypass controls: a changed list
         // of filter components and scripts reconnects the chain; the reconnection completes at
         // the next audio update and activates every component, overriding bypass changes made
-        // before it. A bypassEffects/bypassListenerEffects or component enable change sets the
-        // components' activation from bypassEffects. The first such change after a clip starts
-        // playing also reconnects the chain: every component restarts empty and the last unit
-        // in Inspector order stays active, processing silence while the source is bypassed.
-        static void UpdateActivation(AudioSource source, ulong identity, ulong enabled)
+        // before it. A bypassEffects change sets the components' activation from it. The first
+        // such change after a clip starts playing also reconnects the chain: every component
+        // restarts empty and the last unit in Inspector order stays active, processing silence
+        // while the source is bypassed. bypassListenerEffects and component enable changes
+        // during playback are unmeasured and leave the activation as it is.
+        static void UpdateActivation(AudioSource source, ulong identity)
         {
-            bool change = source.m_ActivationPending || enabled != source.m_FilterEnabled;
+            bool change = source.m_ActivationPending;
             if (identity != source.m_FilterIdentity)
             {
                 source.m_FilterIdentity = identity;
@@ -468,7 +469,6 @@ namespace Unbound.Runtime
                     source.m_ResetComponents = true;
                 }
             }
-            source.m_FilterEnabled = enabled;
             source.m_ActivationPending = false;
         }
 
@@ -537,7 +537,7 @@ namespace Unbound.Runtime
             bool scripts = false, below = false;
             bool spatial = !source.bypassEffects && source.UsesSpatialBlend;
             string error = null;
-            ulong identity = 0, enabled = 0;
+            ulong identity = 0;
             foreach (var c in go.m_Components)
             {
                 if (AudioFilters.IsFilterScript(c))
@@ -551,7 +551,6 @@ namespace Unbound.Runtime
                 var behaviour = (Behaviour)c;
                 if (behaviour.m_Destroyed) continue;
                 identity = unchecked(identity * 1000003 + (ulong)(long)c.GetInstanceID());
-                enabled = unchecked(enabled * 2 + (behaviour.isActiveAndEnabled ? 1ul : 0ul));
                 if (!behaviour.isActiveAndEnabled) continue;
                 bool ok = Describe(c, out var d);
                 if (!ok) continue;
@@ -573,7 +572,7 @@ namespace Unbound.Runtime
                 if (table == null || table.Length == count) Array.Resize(ref table, Math.Max(4, count * 2));
                 table[count++] = d;
             }
-            UpdateActivation(source, identity, enabled);
+            UpdateActivation(source, identity);
             source.ReportFilterChain(error);
             return error == null ? count : 0;
         }
