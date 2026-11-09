@@ -159,6 +159,34 @@ namespace UnityEngine.Tests
             Assert.True(passed >= 2, $"{passed} corners passed");
         }
 
+        /// <summary>Reading remainingDistance takes in no NavMesh change: after NavMesh data is added
+        /// the agent keeps its crowd agent until its update, and after the data it walks on is
+        /// removed the read does not fail.</summary>
+        [Fact]
+        public void ReadingTheRemainingDistanceChangesNothing()
+        {
+            var agent = Walker(new Vector3(-4f, 0f, -5f), new Vector3(4f, 0f, -5f));
+            for (int i = 0; i < 5; i++) AgentSystem.Step();
+            float before = agent.remainingDistance;
+            var crowdAgent = agent.m_Crowd;
+            var other = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(0),
+                new List<NavMeshBuildSource> { Box(new Vector3(40f, -0.05f, 0f), new Vector3(4f, 0.1f, 4f), 0) },
+                new Bounds(new Vector3(40f, 0f, 0f), new Vector3(6f, 4f, 6f)), Vector3.zero, Quaternion.identity);
+            var added = NavMesh.AddNavMeshData(other);
+            try
+            {
+                Assert.Equal(before, agent.remainingDistance, 5);
+                Assert.Same(crowdAgent, agent.m_Crowd);
+                NavMesh.RemoveNavMeshData(m_Data);
+                float after = agent.remainingDistance;
+                Assert.False(float.IsNaN(after));
+            }
+            finally
+            {
+                NavMesh.RemoveNavMeshData(added);
+            }
+        }
+
         /// <summary>Slots: an agent takes the slot freed last; of agents that waited as long for a
         /// corridor search, the one in the lower slot is searched in one update, the other in the
         /// next.</summary>

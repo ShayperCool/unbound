@@ -446,11 +446,11 @@ namespace UnityEngine.AI
                 // On a link the path's end is beyond the corners the agent sees (measured:
                 // tests/projects/navlinks, every frame on a link).
                 if (isOnOffMeshLink) return float.PositiveInfinity;
+                // Found on the NavMesh the corridor belongs to (no NavMesh change is taken in here).
                 var corners = s_RemainingCorners;
                 int count = m_Crowd.ncorners;
-                var crowd = AgentSystem.CrowdOf(m_Surface);
-                if (crowd != null && m_Crowd.state == DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING)
-                    count = m_Crowd.corridor.FindCorners(corners, corners.Length, crowd.GetNavMeshQuery(), crowd.GetFilter(0));
+                if (m_Surface != null && m_Crowd.state == DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING)
+                    count = m_Crowd.corridor.FindCorners(corners, corners.Length, m_Surface.Query, CrowdFilter);
                 else
                     Array.Copy(m_Crowd.corners, corners, count);
                 if (count == 0) return 0f;
