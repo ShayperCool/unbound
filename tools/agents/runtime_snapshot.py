@@ -341,14 +341,15 @@ def cleanup(*, days=14, cache=None, now=None, repo=None):
                     storage = (cache/'snapshots').resolve()
                     if storage in target.parents:
                         protected.add(target.relative_to(storage).parts[0])
-        landed_links = set()
+        landed_links = {}
         for root in agents:
             landed = root/'landed.jsonl'
             if landed.is_file():
                 for line in landed.read_text().splitlines():
-                    log = json.loads(line).get('log')
-                    if log:
-                        landed_links.add(str(Path(log).with_suffix('.runtime')))
+                    row = json.loads(line)
+                    log = row.get('log')
+                    if log and row.get('new'):
+                        landed_links[str(Path(log).with_suffix('.runtime'))] = row['new']
         # A killed writer can leave a private JSON temporary behind. No writer holds
         # this lock now, so these are never live reference records.
         for directory in ('references', 'pins'):
@@ -360,16 +361,12 @@ def cleanup(*, days=14, cache=None, now=None, repo=None):
             owner = record.get('owner', {})
             pid = owner.get('pid')
             live = pid != os.getpid() and owner.get('start') is not None and process_start(pid) == owner['start']
-            if str(reference) in landed_links:
+            if repo and str(reference) in landed_links and subprocess.run(
+                    ['git', '-C', str(repo), 'merge-base', '--is-ancestor', landed_links[str(reference)], 'main'],
+                    capture_output=True, timeout=2).returncode == 0:
                 record['release_requested'] = True
-            if repo and reference.name == 'runtime' and reference.parent.parent.name == 'suite':
-                for root in agents:
-                    summary = root/'suite'/reference.parent.name/'summary.json'
-                    if summary.is_file():
-                        commit = json.loads(summary.read_text()).get('commit')
-                        if commit and subprocess.run(['git', '-C', str(repo), 'merge-base', '--is-ancestor', commit, 'main'],
-                                                     capture_output=True, timeout=2).returncode == 0:
-                            record['release_requested'] = True
+            # Legacy suite links have no promotion history. Keep them until an
+            # explicit retirement request; a completed summary alone proves nothing.
             if owner.get('start') and owner.get('branch') in ('', 'main') and not live:
                 record['release_requested'] = True
             if record.get('release_requested') and not record.get('retained') and not live and record['snapshot'] not in protected:

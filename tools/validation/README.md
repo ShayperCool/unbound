@@ -379,3 +379,4 @@ python3 tools/agents/runtime_snapshot.py cleanup --days 0.041667
 ```
 
 Release requests preserve promoted references and defer removal while a run is live.
+Legacy suite references without recorded promotion history require explicit retirement.

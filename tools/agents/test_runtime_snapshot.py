@@ -437,6 +437,21 @@ class RuntimeSnapshotTests(unittest.TestCase):
         self.assertEqual((baseline/'runtime').resolve(), old.resolve())
         self.assertEqual(json.loads((baseline/'summary.json').read_text()), {'previous': True})
 
+    def test_legacy_suite_reference_without_promotion_history_is_preserved(self):
+        reference = runtime.snapshot_runtime(self.cli, self.managed,
+                                             self.root/'validation/suite/legacy/runtime', cache=self.cache)
+        for path in (self.cache/'references').iterdir():
+            record = json.loads(path.read_text())
+            record.pop('owner', None)
+            record.pop('retained', None)
+            runtime.atomic_json(path, record)
+        summary = self.root/'agents/suite/legacy/summary.json'
+        summary.parent.mkdir(parents=True)
+        summary.write_text(json.dumps({'commit': 'completed-commit', 'work': str(reference.parent)}))
+        with mock.patch.object(runtime.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)):
+            self.assertEqual(runtime.cleanup(cache=self.cache, days=0, repo=self.root), [])
+        self.assertTrue(reference.exists())
+
 
 if __name__ == '__main__':
     unittest.main()
