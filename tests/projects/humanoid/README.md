@@ -155,6 +155,21 @@ imported without keyframe reduction.
   Measured: the root moves by the curves times the human scale either way, and the avatar takes the
   pose with every muscle 0 and the body on the root.
 
+- animation jobs on the human stream (`HumanoidPlayables.cs`, `HumanStreamJob`): an
+  AnimationScriptPlayable above HumanA's clip in a PlayableGraph, root motion applied, records what it
+  reads (`JobRecord`: the human scale, feet heights, body local and in the world, five muscles, the
+  stream's and the feet's velocities, every goal's position, rotation, local position and rotation,
+  pose position and rotation and weights, every hint) before and after one change per mode: none
+  (`stream.read`, also without root motion in `stream.readNoMotion` and above a mixer of HumanA's and
+  HumanB's clips in `stream.mixer`), the body (`stream.body`), the local body (`stream.bodyLocal`),
+  muscles (`stream.muscles`), hand and foot goals, weights and a knee hint with `SolveIK`
+  (`stream.ik`) and without (`stream.ikNoSolve`), the knee hint alone (`stream.hintNoSolve`), the
+  weights alone (`stream.weightsNoSolve`), local goals (`stream.localGoals`), look-at
+  (`stream.lookAt`), `ResetToStancePose` (`stream.stance`); two chained jobs, muscles then IK
+  (`stream.chained`); the IK job with an `OnAnimatorIK` script (`stream.ikPass`); and the
+  `MuscleHandle` list (`stream.muscleHandles`). Measured: see docs/COMPATIBILITY_GAPS.md (humanoid
+  row, AnimationHumanStream).
+
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:
 

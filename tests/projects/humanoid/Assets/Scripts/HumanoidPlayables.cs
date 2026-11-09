@@ -5,9 +5,13 @@ using UnityEngine.Animations;
 using UnityEngine.Playables;
 
 /// <summary>The probe's controls of humanoid PlayableGraphs (clips and layer mixers with humanoid
-/// avatar masks, override and additive, Foot IK) and of empty states without write defaults.</summary>
+/// avatar masks, override and additive, Foot IK, animation jobs reading and writing the human
+/// stream) and of empty states without write defaults.</summary>
 public partial class HumanoidProbe
 {
+    /// <summary>The key a job records under (the current step).</summary>
+    internal static string s_JobKey;
+
     static AnimationClip ControllerClip(string controller) =>
         Resources.Load<RuntimeAnimatorController>(controller).animationClips[0];
 
@@ -27,11 +31,13 @@ public partial class HumanoidProbe
         var handler = new HumanPoseHandler(animator.avatar, instance.transform);
         for (int step = 0; step <= 28; step++)
         {
+            s_JobKey = s_IKKey = key + ".step" + step;
             graph.Evaluate(step == 0 ? 0f : step <= 24 ? 1f / 30f : 0.1f);
             Step(key + ".step" + step, animator, handler, false);
             Put(key + ".step" + step + ".motion", "{\"deltaPosition\":" + V(animator.deltaPosition) + ",\"deltaRotation\":" + Q(animator.deltaRotation)
                 + ",\"velocity\":" + V(animator.velocity) + ",\"angularVelocity\":" + V(animator.angularVelocity) + "}");
         }
+        s_JobKey = s_IKKey = null;
         handler.Dispose();
         graph.Destroy();
         Destroy(instance);
@@ -139,10 +145,172 @@ public partial class HumanoidProbe
         Guarded("generic.noWDBack", () => PlayGeneric("generic.noWDBack", "GenericNoWDBack"));
     }
 
+    static readonly MuscleHandle[] s_JobMuscles =
+    {
+        new MuscleHandle(BodyDof.SpineFrontBack), new MuscleHandle(HeadDof.HeadLeftRight),
+        new MuscleHandle(HumanPartDof.LeftLeg, LegDof.UpperLegFrontBack), new MuscleHandle(HumanPartDof.RightArm, ArmDof.ArmDownUp),
+        new MuscleHandle(HumanPartDof.LeftIndex, FingerDof.ProximalDownUp),
+    };
+
+    /// <summary>What a job reads from the human stream: validity, the human scale, the feet heights,
+    /// the body (local and in the stream's space), some muscles, the root motion and the feet's
+    /// velocities, each goal (position, rotation, local position and rotation, from the pose,
+    /// weights) and each hint (position, weight).</summary>
+    internal static void JobRecord(string tag, AnimationStream stream)
+    {
+        string key = (s_JobKey ?? "job") + ".job." + tag;
+        if (!stream.isValid || !stream.isHumanStream)
+        {
+            Put(key, "[" + B(stream.isValid) + "," + B(stream.isValid && stream.isHumanStream) + "]");
+            return;
+        }
+        var h = stream.AsHuman();
+        var muscles = new List<string>();
+        foreach (var m in s_JobMuscles) muscles.Add(F(h.GetMuscle(m)));
+        var json = "{\"valid\":" + B(h.isValid) + ",\"scale\":" + F(h.humanScale) + ",\"feet\":[" + F(h.leftFootHeight) + "," + F(h.rightFootHeight) + "]"
+            + ",\"bodyLocal\":[" + V(h.bodyLocalPosition) + "," + Q(h.bodyLocalRotation) + "]"
+            + ",\"body\":[" + V(h.bodyPosition) + "," + Q(h.bodyRotation) + "]"
+            + ",\"muscles\":[" + string.Join(",", muscles) + "]"
+            + ",\"velocity\":[" + V(stream.velocity) + "," + V(stream.angularVelocity) + "]"
+            + ",\"footVelocity\":[" + V(h.leftFootVelocity) + "," + V(h.rightFootVelocity) + "]";
+        for (var goal = AvatarIKGoal.LeftFoot; goal <= AvatarIKGoal.RightHand; goal++)
+            json += ",\"" + goal + "\":[" + V(h.GetGoalPosition(goal)) + "," + Q(h.GetGoalRotation(goal)) + "," + V(h.GetGoalLocalPosition(goal)) + ","
+                + Q(h.GetGoalLocalRotation(goal)) + "," + V(h.GetGoalPositionFromPose(goal)) + "," + Q(h.GetGoalRotationFromPose(goal)) + ","
+                + F(h.GetGoalWeightPosition(goal)) + "," + F(h.GetGoalWeightRotation(goal)) + "]";
+        for (var hint = AvatarIKHint.LeftKnee; hint <= AvatarIKHint.RightElbow; hint++)
+            json += ",\"" + hint + "\":[" + V(h.GetHintPosition(hint)) + "," + F(h.GetHintWeightPosition(hint)) + "]";
+        Put(key, json + "}");
+    }
+
+    /// <summary>Human stream jobs (an AnimationScriptPlayable, root motion applied) above HumanA's
+    /// clip, one per <see cref="HumanStreamJob.Mode"/>; the read job without root motion; two
+    /// chained jobs (muscles, then IK); the IK job with an IK pass script (HumanoidIK, OnAnimatorIK
+    /// after the job); the read job above a mixer of HumanA's and HumanB's clips (0.5 each); and the
+    /// muscle handles (count, each one's part, dof and name).</summary>
+    static void Streams()
+    {
+        Playable Job(PlayableGraph g, Playable input, HumanStreamJob.Mode mode, string tag)
+        {
+            var job = AnimationScriptPlayable.Create(g, new HumanStreamJob { mode = mode, tag = tag == "job" ? 0 : 1 }, 1);
+            g.Connect(input, 0, job, 0);
+            job.SetInputWeight(0, 1f);
+            return job;
+        }
+        foreach (HumanStreamJob.Mode mode in Enum.GetValues(typeof(HumanStreamJob.Mode)))
+        {
+            var key = "stream." + char.ToLowerInvariant(mode.ToString()[0]) + mode.ToString().Substring(1);
+            Guarded(key, () => PlayGraph(key, g => Job(g, AnimationClipPlayable.Create(g, ControllerClip("HumanA")), mode, "job"), true));
+        }
+        Guarded("stream.readNoMotion", () => PlayGraph("stream.readNoMotion",
+            g => Job(g, AnimationClipPlayable.Create(g, ControllerClip("HumanA")), HumanStreamJob.Mode.Read, "job"), false));
+        Guarded("stream.muscleHandles", () =>
+        {
+            var handles = new MuscleHandle[MuscleHandle.muscleHandleCount];
+            MuscleHandle.GetMuscleHandles(handles);
+            var list = new List<string>();
+            foreach (var m in handles) list.Add("[" + (int)m.humanPartDof + "," + m.dof + "," + S(m.name) + "]");
+            Put("stream.muscleHandles", "{\"count\":" + MuscleHandle.muscleHandleCount + ",\"handles\":[" + string.Join(",", list) + "]}");
+        });
+        Guarded("stream.chained", () => PlayGraph("stream.chained",
+            g => Job(g, Job(g, AnimationClipPlayable.Create(g, ControllerClip("HumanA")), HumanStreamJob.Mode.Muscles, "job"),
+                HumanStreamJob.Mode.Ik, "job2"), true));
+        Guarded("stream.ikPass", () => PlayGraph("stream.ikPass",
+            g => Job(g, AnimationClipPlayable.Create(g, ControllerClip("HumanA")), HumanStreamJob.Mode.Ik, "job"), true,
+            setup: animator => animator.gameObject.AddComponent<HumanoidIK>()));
+        Guarded("stream.mixer", () => PlayGraph("stream.mixer", g =>
+        {
+            var m = AnimationMixerPlayable.Create(g, 2);
+            g.Connect(AnimationClipPlayable.Create(g, ControllerClip("HumanA")), 0, m, 0);
+            g.Connect(AnimationClipPlayable.Create(g, ControllerClip("HumanB")), 0, m, 1);
+            m.SetInputWeight(0, 0.5f);
+            m.SetInputWeight(1, 0.5f);
+            return Job(g, m, HumanStreamJob.Mode.Read, "job");
+        }, true));
+    }
+
     static void PlayableControls()
     {
         NoWriteDefaults();
         Mixers();
         GenericOnHuman();
+        Streams();
     }
 }
+
+/// <summary>An animation job on the human stream: records what it reads before and after its
+/// change (<see cref="HumanoidProbe.JobRecord"/>).</summary>
+public struct HumanStreamJob : IAnimationJob
+{
+    public enum Mode { Read, Body, BodyLocal, Muscles, Ik, IkNoSolve, LocalGoals, LookAt, Stance, HintNoSolve, WeightsNoSolve }
+
+    public Mode mode;
+    public int tag;
+
+    public void ProcessRootMotion(AnimationStream stream) { }
+
+    public void ProcessAnimation(AnimationStream stream)
+    {
+        string name = tag == 0 ? "before" : "before2";
+        HumanoidProbe.JobRecord(name, stream);
+        if (!stream.isHumanStream) return;
+        var h = stream.AsHuman();
+        switch (mode)
+        {
+            case Mode.Body:
+                h.bodyPosition += new Vector3(0.1f, -0.05f, 0.2f);
+                h.bodyRotation = h.bodyRotation * Quaternion.Euler(0f, 20f, 0f);
+                break;
+            case Mode.BodyLocal:
+                h.bodyLocalPosition += new Vector3(0.05f, 0.02f, 0.1f);
+                h.bodyLocalRotation = Quaternion.Euler(0f, 0f, 15f) * h.bodyLocalRotation;
+                break;
+            case Mode.Muscles:
+                h.SetMuscle(new MuscleHandle(BodyDof.SpineFrontBack), 0.5f);
+                h.SetMuscle(new MuscleHandle(HumanPartDof.LeftLeg, LegDof.UpperLegFrontBack), -0.4f);
+                h.SetMuscle(new MuscleHandle(HumanPartDof.RightArm, ArmDof.ArmDownUp), 0.7f);
+                h.SetMuscle(new MuscleHandle(HumanPartDof.LeftIndex, FingerDof.ProximalDownUp), -0.6f);
+                break;
+            case Mode.Ik:
+            case Mode.IkNoSolve:
+                h.SetGoalPosition(AvatarIKGoal.LeftHand, h.GetGoalPosition(AvatarIKGoal.LeftHand) + new Vector3(0.1f, 0.2f, 0f));
+                h.SetGoalRotation(AvatarIKGoal.LeftHand, Quaternion.Euler(10f, 40f, -20f));
+                h.SetGoalWeightPosition(AvatarIKGoal.LeftHand, 1f);
+                h.SetGoalWeightRotation(AvatarIKGoal.LeftHand, 0.75f);
+                h.SetGoalPosition(AvatarIKGoal.RightFoot, h.GetGoalPosition(AvatarIKGoal.RightFoot) + new Vector3(0f, 0.15f, 0.1f));
+                h.SetGoalWeightPosition(AvatarIKGoal.RightFoot, 1f);
+                h.SetHintPosition(AvatarIKHint.RightKnee, h.bodyPosition + new Vector3(-0.2f, -0.4f, 1f));
+                h.SetHintWeightPosition(AvatarIKHint.RightKnee, 1f);
+                if (mode == Mode.Ik) h.SolveIK();
+                break;
+            case Mode.LocalGoals:
+                h.SetGoalLocalPosition(AvatarIKGoal.LeftFoot, h.GetGoalLocalPosition(AvatarIKGoal.LeftFoot) + new Vector3(0.05f, 0.1f, 0f));
+                h.SetGoalLocalRotation(AvatarIKGoal.RightHand, Quaternion.Euler(0f, 30f, 0f) * h.GetGoalLocalRotation(AvatarIKGoal.RightHand));
+                h.SetGoalWeightPosition(AvatarIKGoal.LeftFoot, 1f);
+                h.SetGoalWeightRotation(AvatarIKGoal.RightHand, 1f);
+                h.SolveIK();
+                break;
+            case Mode.LookAt:
+                h.SetLookAtPosition(h.bodyPosition + new Vector3(1f, 0.8f, 2f));
+                h.SetLookAtClampWeight(0.5f);
+                h.SetLookAtBodyWeight(0.3f);
+                h.SetLookAtHeadWeight(0.8f);
+                h.SetLookAtEyesWeight(1f);
+                h.SolveIK();
+                break;
+            case Mode.Stance:
+                h.ResetToStancePose();
+                break;
+            case Mode.HintNoSolve:
+                h.SetHintPosition(AvatarIKHint.RightKnee, h.bodyPosition + new Vector3(-0.2f, -0.4f, 1f));
+                h.SetHintWeightPosition(AvatarIKHint.RightKnee, 1f);
+                break;
+            case Mode.WeightsNoSolve:
+                h.SetGoalWeightPosition(AvatarIKGoal.LeftHand, 1f);
+                h.SetGoalWeightRotation(AvatarIKGoal.LeftHand, 0.75f);
+                h.SetGoalWeightPosition(AvatarIKGoal.RightFoot, 1f);
+                break;
+        }
+        HumanoidProbe.JobRecord(tag == 0 ? "after" : "after2", stream);
+    }
+}
+
