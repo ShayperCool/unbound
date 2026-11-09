@@ -756,9 +756,6 @@ public static class CollectionsProbe
 
     // ---- absolute children in a padded, bordered parent ----
 
-    // One absolutely positioned child per case (a tab header's underline is one), in a parent with
-    // borders and padding: its layout rect for insets, percentage sizes, offsets, margins, min/max,
-    // no offsets under each justify/align/direction. Each parent is removed after its line.
     // ---- transition animations (experimental.animation) ----
 
     // Animations of 1 ms with a pause before the panel update, so each completes on its first tick:
@@ -817,9 +814,38 @@ public static class CollectionsProbe
             Wait();
         }, () => Str("running=" + outside.isRunning));
         Step("animations", "outside-added", () => { box.Add(detached); Wait(); }, () => Str("running=" + outside.isRunning));
+        // The easing curves over a grid of progress values, and an animation's defaults: OutQuad
+        // easing, unclamped interpolation, the duration given.
+        Step("animations", "easing-curves", () =>
+        {
+            var curves = new (string, Func<float, float>)[] {
+                ("Step", Easing.Step), ("Linear", Easing.Linear), ("InSine", Easing.InSine), ("OutSine", Easing.OutSine), ("InOutSine", Easing.InOutSine),
+                ("InQuad", Easing.InQuad), ("OutQuad", Easing.OutQuad), ("InOutQuad", Easing.InOutQuad), ("InCubic", Easing.InCubic), ("OutCubic", Easing.OutCubic),
+                ("InOutCubic", Easing.InOutCubic), ("InBounce", Easing.InBounce), ("OutBounce", Easing.OutBounce), ("InOutBounce", Easing.InOutBounce),
+                ("InElastic", Easing.InElastic), ("OutElastic", Easing.OutElastic), ("InOutElastic", Easing.InOutElastic), ("InBack", Easing.InBack),
+                ("OutBack", Easing.OutBack), ("InOutBack", Easing.InOutBack), ("InCirc", Easing.InCirc), ("OutCirc", Easing.OutCirc), ("InOutCirc", Easing.InOutCirc),
+                ("InPower4", t => Easing.InPower(t, 4)), ("OutPower4", t => Easing.OutPower(t, 4)), ("InOutPower4", t => Easing.InOutPower(t, 4)),
+                ("InBack3", t => Easing.InBack(t, 3f)), ("OutBack3", t => Easing.OutBack(t, 3f)), ("InOutBack3", t => Easing.InOutBack(t, 3f)) };
+            float[] grid = { 0f, 0.1f, 0.25f, 0.4f, 0.5f, 0.6f, 0.75f, 0.9f, 1f };
+            foreach (var (name, curve) in curves)
+            {
+                var line = new StringBuilder(name);
+                foreach (float t in grid) line.Append(' ').Append(F(curve(t)));
+                Log.Add(line.ToString());
+            }
+        }, () => "null");
+        Step("animations", "defaults", () =>
+        {
+            var anim = box.experimental.animation.Start(0f, 10f, 1000, (e, v) => { });
+            Log.Add("duration=" + anim.durationMs + " ease(0.5)=" + F(anim.easingCurve(0.5f)) + " lerp(1.5)=" + F(((ValueAnimation<float>)anim).interpolator(0f, 10f, 1.5f)) + " auto=" + anim.autoRecycle);
+            anim.Stop();
+        }, () => "null");
         Step("animations", "cleanup", () => box.RemoveFromHierarchy(), () => "null");
     }
 
+    // One absolutely positioned child per case (a tab header's underline is one), in a parent with
+    // borders and padding: its layout rect for insets, percentage sizes, offsets, margins, min/max,
+    // no offsets under each justify/align/direction. Each parent is removed after its line.
     static void AbsoluteChildren(VisualElement root)
     {
         var cases = new (string name, Action<VisualElement, VisualElement> setup)[] {

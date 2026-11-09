@@ -3075,11 +3075,13 @@ namespace Unbound.UIElements.Layout
         }
 
 
-        // The size between two rounded edges; with an edge undefined or infinite (an absolute child
-        // placed at an infinite offset) the size is undefined, which rounding again keeps (the Editor
-        // reports NaN: Unity 6000.0.71f1, tests/projects/uitkcollections absolute section).
-        static float EdgeDistance(float far, float near) =>
-            float.IsNaN(far) || float.IsNaN(near) || IsUndefined(far) || IsUndefined(near) ? Undefined : far - near;
+        // The size between two rounded edges. A node placed at an infinite or undefined position, or
+        // whose size is undefined, has an undefined size, which rounding again keeps (an absolute child
+        // at an infinite offset: the Editor reports NaN, Unity 6000.0.71f1,
+        // tests/projects/uitkcollections absolute section).
+        static float EdgeDistance(float far, float near, float nearUnrounded, double size) =>
+            float.IsNaN(nearUnrounded) || float.IsInfinity(nearUnrounded) || double.IsNaN(size) || IsUndefined((float)size)
+                ? Undefined : far - near;
 
         static void RoundToPixelGrid(YogaNode node, float pointScaleFactor, float absoluteLeft, float absoluteTop)
         {
@@ -3123,12 +3125,12 @@ namespace Unbound.UIElements.Layout
             node.layout.Dimensions[DimWidth] = EdgeDistance(
                 RoundValueToPixelGrid(absoluteNodeRight, pointScaleFactor, textRounding && hasFractionalWidth,
                     textRounding && !hasFractionalWidth),
-                RoundValueToPixelGrid(absoluteNodeLeft, pointScaleFactor, false, textRounding));
+                RoundValueToPixelGrid(absoluteNodeLeft, pointScaleFactor, false, textRounding), absoluteNodeLeft, nodeWidth);
 
             node.layout.Dimensions[DimHeight] = EdgeDistance(
                 RoundValueToPixelGrid(absoluteNodeBottom, pointScaleFactor, textRounding && hasFractionalHeight,
                     textRounding && !hasFractionalHeight),
-                RoundValueToPixelGrid(absoluteNodeTop, pointScaleFactor, false, textRounding));
+                RoundValueToPixelGrid(absoluteNodeTop, pointScaleFactor, false, textRounding), absoluteNodeTop, nodeHeight);
 
             foreach (var child in node.Children)
                 RoundToPixelGrid(child, pointScaleFactor, absoluteNodeLeft, absoluteNodeTop);

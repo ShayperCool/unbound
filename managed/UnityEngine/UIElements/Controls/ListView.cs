@@ -2407,8 +2407,10 @@ namespace UnityEngine.UIElements
             m_DraggedItem = null;
         }
 
-        /// <summary>The index of the item an animated drag holds, -1 without one.</summary>
-        protected int GetDraggedIndex() => m_DraggedItem?.index ?? -1;
+        /// <summary>The index of the item an animated drag holds while the drag lasts, else -1 (the
+        /// drop puts the item back as an ordinary row).</summary>
+        protected int GetDraggedIndex() =>
+            m_CollectionView.dragger is ListViewDraggerAnimated animated && animated.isDragging ? animated.draggedItem.index : -1;
 
         [Unbound.EditorFaithful("Unity's base implementation")]
         protected virtual void OnScrollUpdate() { }

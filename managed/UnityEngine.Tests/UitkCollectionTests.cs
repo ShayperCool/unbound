@@ -30,6 +30,7 @@ namespace UnityEngine.Tests
         {
             for (int i = 0; i < 3; i++)
             {
+                panel.uaValueAnimations.Update();
                 panel.ApplyStyles();
                 panel.ValidateLayout();
             }
@@ -313,6 +314,56 @@ namespace UnityEngine.Tests
                 row.hierarchy.Children().Select(c => c.name).ToArray());
             Assert.Equal(2, row.hierarchy[0].hierarchy.childCount);
             Assert.IsType<Label>(row.hierarchy[1].hierarchy[0]);
+        }
+
+        // [rule] Animated reordering (tests/projects/uitkcollections animated section records the
+        // fixed-height, unscrolled case): a drag of the last row (no row after it to open a gap) and a
+        // drop in a dynamic-height list keep the rows and their heights.
+        static ListView AnimatedList(Recorder r, List<string> items, Action<ListView> setup = null) =>
+            r.List(items, l => { l.reorderable = true; l.reorderMode = ListViewReorderMode.Animated; setup?.Invoke(l); });
+
+        [Fact]
+        public void AnimatedDragOfTheLastRowMovesItUp()
+        {
+            using var panel = NewPanel();
+            var items = Items(5);
+            var r = new Recorder();
+            var list = AnimatedList(r, items);
+            panel.visualTree.Add(list);
+            Layout(panel);
+            Drag(panel, RowCenter(list, 4), RowCenter(list, 1) + new Vector2(0, -6), 6);
+            Assert.Equal(new[] { "Row 0", "Row 4", "Row 1", "Row 2", "Row 3" }, items);
+            Assert.Equal(new[] { 1 }, list.selectedIndices);
+            // Once the gaps have closed (500 ms) the rows stand at their places again.
+            System.Threading.Thread.Sleep(600);
+            Settle(panel);
+            Assert.All(Enumerable.Range(0, 5), i => Assert.Equal(i * RowHeight, list.GetRootElementForIndex(i).layout.y));
+        }
+
+        [Fact]
+        public void AnimatedDropInADynamicHeightListKeepsTheRowHeights()
+        {
+            using var panel = NewPanel();
+            var items = Items(6);
+            var heights = new Dictionary<string, float> { ["Row 0"] = 16, ["Row 1"] = 24, ["Row 2"] = 32, ["Row 3"] = 16, ["Row 4"] = 24, ["Row 5"] = 32 };
+            var r = new Recorder();
+            var list = AnimatedList(r, items, l => l.virtualizationMethod = CollectionVirtualizationMethod.DynamicHeight);
+            list.bindItem = (e, i) => { ((Label)e).text = items[i]; e.style.height = heights[items[i]]; };
+            panel.visualTree.Add(list);
+            Layout(panel);
+            Layout(panel);
+            Drag(panel, RowCenter(list, 0), RowCenter(list, 3) + new Vector2(0, 4), 6);
+            // The gaps close over 500 ms; their rows report their heights again as they do.
+            System.Threading.Thread.Sleep(600);
+            Settle(panel);
+            // Row 0 moved down past rows 1 and 2 (where exactly depends on how far the gaps opened
+            // while dragging); the other rows keep their order.
+            Assert.True(items.IndexOf("Row 0") >= 2);
+            Assert.Equal(new[] { "Row 1", "Row 2", "Row 3", "Row 4", "Row 5" }, items.Where(i => i != "Row 0"));
+            float expected = 0f;
+            foreach (var item in items) expected += heights[item];
+            Assert.Equal(expected, list.virtualizationController.GetExpectedContentHeight());
+            for (int i = 0; i < items.Count; i++) Assert.Equal(heights[items[i]], list.virtualizationController.GetExpectedItemHeight(i));
         }
 
         // ------------------------------------------------------------------ dynamic height

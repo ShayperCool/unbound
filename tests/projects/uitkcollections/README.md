@@ -32,7 +32,8 @@ Stages the `uitk` fixture in a fresh cache directory and replaces its interactio
 - `animations`: transition animations (`experimental.animation`) of 1 ms with a pause before the
   panel update, so each completes on its first tick: values, completion callbacks, recycling,
   KeepAlive, StyleValues read from the element, the flexShrink setter, an animation started on an
-  element outside a panel.
+  element outside a panel; every Easing curve over a grid of progress values and an animation's
+  defaults.
 
 Every step records the item callbacks it caused (makeItem/bindItem/unbindItem/destroyItem, with
 the element: elements are numbered per control), the events the controls raised, and the state:

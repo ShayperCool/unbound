@@ -78,7 +78,8 @@ namespace UnityEngine.UIElements.Experimental
     /// <summary>One running transition of an element's value.</summary>
     public sealed partial class ValueAnimation<T> : IValueAnimationUpdate, IValueAnimation
     {
-        // Duration and pool size of Unity's ValueAnimation.
+        // Unity's default duration and pool size (the pool itself is UnityEngine.Pool's, so which
+        // recycled instance comes back may differ; nothing observable depends on it).
         const int k_DefaultDurationMs = 400;
         const int k_DefaultMaxPoolSize = 100;
 
@@ -249,34 +250,50 @@ namespace UnityEngine.UIElements.Experimental
     }
 
     /// <summary>The easing curves of transition animations (Robert Penner's equations): progress in
-    /// [0, 1] to eased progress.</summary>
+    /// [0, 1] to eased progress. Intermediate values are kept in double precision and rounded to float
+    /// only where a value is stored, passed as a float argument or returned, as Unity's Mono evaluates
+    /// float expressions (tests/projects/uitkcollections animations/easing-curves).</summary>
     public static partial class Easing
     {
         const float HalfPi = Mathf.PI / 2f;
+        const float TwoPi = Mathf.PI * 2f;
         // The overshoot of the Back curves.
         const float k_BackOvershoot = 1.70158f;
-        // The period of the Elastic curves.
+        // The period of the Elastic curves, and its quarter (the phase shift).
         const float k_ElasticPeriod = 0.3f;
+        const float k_ElasticShift = k_ElasticPeriod / 4f;
+        // The bounce segment ends and middles of OutBounce, in elevenths.
+        const float k_Bounce1 = 4f / 11f, k_Bounce2 = 8f / 11f, k_Bounce3 = 10f / 11f;
+        const float k_BounceMid2 = 6f / 11f, k_BounceMid3 = 9f / 11f, k_BounceMid4 = 21f / 22f;
+        const double k_BounceScale = 7.5625;
+
+        static float F(double value) => (float)value;
+
+        static float Sin(double x) => (float)Math.Sin(F(x));
+
+        static float Pow(double x, double p) => (float)Math.Pow(F(x), F(p));
+
+        static float Sqrt(double x) => (float)Math.Sqrt(F(x));
 
         public static float Step(float t) => t < 0.5f ? 0f : 1f;
 
         public static float Linear(float t) => t;
 
-        public static float InSine(float t) => Mathf.Sin(HalfPi * (t - 1f)) + 1f;
+        public static float InSine(float t) => F(Sin((double)HalfPi * ((double)t - 1.0)) + 1.0);
 
-        public static float OutSine(float t) => Mathf.Sin(t * HalfPi);
+        public static float OutSine(float t) => Sin((double)t * HalfPi);
 
-        public static float InOutSine(float t) => (Mathf.Sin(Mathf.PI * (t - 0.5f)) + 1f) * 0.5f;
+        public static float InOutSine(float t) => F((Sin((double)Mathf.PI * ((double)t - 0.5)) + 1.0) * 0.5);
 
-        public static float InQuad(float t) => t * t;
+        public static float InQuad(float t) => F((double)t * t);
 
-        public static float OutQuad(float t) => t * (2f - t);
+        public static float OutQuad(float t) => F((double)t * (2.0 - t));
 
         public static float InOutQuad(float t)
         {
-            t *= 2f;
-            if (t < 1f) return t * t * 0.5f;
-            return -0.5f * ((t - 1f) * (t - 3f) - 1f);
+            t = F(t * 2.0);
+            if (t < 1f) return F((double)t * t * 0.5);
+            return F(-0.5 * (((double)t - 1.0) * ((double)t - 3.0) - 1.0));
         }
 
         public static float InCubic(float t) => InPower(t, 3);
@@ -285,93 +302,91 @@ namespace UnityEngine.UIElements.Experimental
 
         public static float InOutCubic(float t) => InOutPower(t, 3);
 
-        public static float InPower(float t, int power) => Mathf.Pow(t, power);
+        public static float InPower(float t, int power) => Pow(t, power);
 
         public static float OutPower(float t, int power)
         {
             int sign = power % 2 != 0 ? 1 : -1;
-            return sign * (Mathf.Pow(t - 1f, power) + sign);
+            return F(sign * ((double)Pow((double)t - 1.0, power) + sign));
         }
 
         public static float InOutPower(float t, int power)
         {
-            t *= 2f;
-            if (t < 1f) return InPower(t, power) * 0.5f;
+            t = F(t * 2.0);
+            if (t < 1f) return F(InPower(t, power) * 0.5);
             int sign = power % 2 != 0 ? 1 : -1;
-            return sign * 0.5f * (Mathf.Pow(t - 2f, power) + sign * 2);
+            return F(sign * 0.5 * ((double)Pow((double)t - 2.0, power) + sign * 2));
         }
 
-        public static float InBounce(float t) => 1f - OutBounce(1f - t);
+        public static float InBounce(float t) => F(1.0 - OutBounce(F(1.0 - t)));
 
         public static float OutBounce(float t)
         {
-            if (t < 4f / 11f) return 7.5625f * t * t;
-            if (t < 8f / 11f)
+            if (t < k_Bounce1) return F(k_BounceScale * t * t);
+            if (t < k_Bounce2)
             {
-                t -= 6f / 11f;
-                return 7.5625f * t * t + 0.75f;
+                t = F((double)t - k_BounceMid2);
+                return F(k_BounceScale * t * t + 0.75);
             }
-            if (t < 10f / 11f)
+            if (t < k_Bounce3)
             {
-                t -= 9f / 11f;
-                return 7.5625f * t * t + 0.9375f;
+                t = F((double)t - k_BounceMid3);
+                return F(k_BounceScale * t * t + 0.9375);
             }
-            t -= 21f / 22f;
-            return 7.5625f * t * t + 63f / 64f;
+            t = F((double)t - k_BounceMid4);
+            return F(k_BounceScale * t * t + 63.0 / 64.0);
         }
 
         public static float InOutBounce(float t) =>
-            t < 0.5f ? InBounce(t * 2f) * 0.5f : OutBounce((t - 0.5f) * 2f) * 0.5f + 0.5f;
+            t < 0.5f ? F(InBounce(F(t * 2.0)) * 0.5) : F(OutBounce(F(((double)t - 0.5) * 2.0)) * 0.5 + 0.5);
 
         public static float InElastic(float t)
         {
             if (t == 0f) return 0f;
             if (t == 1f) return 1f;
-            float shift = k_ElasticPeriod / 4f;
-            t -= 1f;
-            float amplitude = Mathf.Pow(2f, 10f * t);
-            return -(amplitude * Mathf.Sin((t - shift) * (Mathf.PI * 2f) / k_ElasticPeriod));
+            t = F(t - 1.0);
+            float amplitude = Pow(2.0, 10.0 * t);
+            return F(-(amplitude * (double)Sin(((double)t - k_ElasticShift) * TwoPi / k_ElasticPeriod)));
         }
 
         public static float OutElastic(float t)
         {
             if (t == 0f) return 0f;
             if (t == 1f) return 1f;
-            float shift = k_ElasticPeriod / 4f;
-            return Mathf.Pow(2f, -10f * t) * Mathf.Sin((t - shift) * (Mathf.PI * 2f) / k_ElasticPeriod) + 1f;
+            return F((double)Pow(2.0, -10.0 * t) * Sin(((double)t - k_ElasticShift) * TwoPi / k_ElasticPeriod) + 1.0);
         }
 
         public static float InOutElastic(float t) =>
-            t < 0.5f ? InElastic(t * 2f) * 0.5f : OutElastic((t - 0.5f) * 2f) * 0.5f + 0.5f;
+            t < 0.5f ? F(InElastic(F(t * 2.0)) * 0.5) : F(OutElastic(F(((double)t - 0.5) * 2.0)) * 0.5 + 0.5);
 
         public static float InBack(float t) => InBack(t, k_BackOvershoot);
 
-        public static float OutBack(float t) => 1f - InBack(1f - t);
+        public static float OutBack(float t) => F(1.0 - InBack(F(1.0 - t)));
 
         public static float InOutBack(float t) =>
-            t < 0.5f ? InBack(t * 2f) * 0.5f : OutBack((t - 0.5f) * 2f) * 0.5f + 0.5f;
+            t < 0.5f ? F(InBack(F(t * 2.0)) * 0.5) : F(OutBack(F(((double)t - 0.5) * 2.0)) * 0.5 + 0.5);
 
-        public static float InBack(float t, float s) => t * t * ((s + 1f) * t - s);
+        public static float InBack(float t, float s) => F((double)t * t * (((double)s + 1.0) * t - s));
 
-        public static float OutBack(float t, float s) => 1f - InBack(1f - t, s);
+        public static float OutBack(float t, float s) => F(1.0 - InBack(F(1.0 - t), s));
 
         public static float InOutBack(float t, float s) =>
-            t < 0.5f ? InBack(t * 2f, s) * 0.5f : OutBack((t - 0.5f) * 2f, s) * 0.5f + 0.5f;
+            t < 0.5f ? F(InBack(F(t * 2.0), s) * 0.5) : F(OutBack(F(((double)t - 0.5) * 2.0), s) * 0.5 + 0.5);
 
-        public static float InCirc(float t) => -(Mathf.Sqrt(1f - t * t) - 1f);
+        public static float InCirc(float t) => F(-((double)Sqrt(1.0 - (double)t * t) - 1.0));
 
         public static float OutCirc(float t)
         {
-            t -= 1f;
-            return Mathf.Sqrt(1f - t * t);
+            t = F(t - 1.0);
+            return Sqrt(1.0 - (double)t * t);
         }
 
         public static float InOutCirc(float t)
         {
-            t *= 2f;
-            if (t < 1f) return -0.5f * (Mathf.Sqrt(1f - t * t) - 1f);
-            t -= 2f;
-            return 0.5f * (Mathf.Sqrt(1f - t * t) + 1f);
+            t = F(t * 2.0);
+            if (t < 1f) return F(-0.5 * ((double)Sqrt(1.0 - (double)t * t) - 1.0));
+            t = F(t - 2.0);
+            return F(0.5 * ((double)Sqrt(1.0 - (double)t * t) + 1.0));
         }
     }
 
