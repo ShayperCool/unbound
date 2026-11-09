@@ -389,6 +389,7 @@ namespace UnityEngine.UIElements
         void WillChangePanel(BaseVisualElementPanel destination)
         {
             if (elementPanel == null) return;
+            UaUnregisterRunningAnimations();
             uaTransitions?.CancelAll();
             elementPanel.OnElementLeavingPanel(this);
             if (!m_NeedsAttach)
@@ -406,6 +407,7 @@ namespace UnityEngine.UIElements
             if (elementPanel != null)
             {
                 yogaNode.Config = elementPanel.uaLayoutConfig;
+                UaRegisterRunningAnimations();
                 pseudoStatesNoNotify &= ~(PseudoStates.Active | PseudoStates.Hover | PseudoStates.Focus);
                 if (m_NeedsAttach)
                 {

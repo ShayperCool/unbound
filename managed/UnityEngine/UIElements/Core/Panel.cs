@@ -40,6 +40,8 @@ namespace UnityEngine.UIElements
 
     internal abstract partial class BaseVisualElementPanel : IPanel, IDisposable
     {
+        internal readonly UaValueAnimationSystem uaValueAnimations = new UaValueAnimationSystem();
+
         float m_Scale = 1f;
         float m_PixelsPerPoint = 1f;
         internal readonly YogaConfig uaLayoutConfig = new YogaConfig { RoundEdgesToPixelGrid = true, PercentFlexBasisNeedsExactContainer = true, ScrollKeepsMainAxisContent = true, RoundPositionsFromAbsolute = true, MeasuredNodesRoundAsOthers = true };
@@ -554,6 +556,7 @@ namespace UnityEngine.UIElements
         internal virtual void Update()
         {
             uaScheduler.UpdateScheduledEvents();
+            uaValueAnimations.Update();
             ApplyStyles();
             UpdateAnimations();
             ValidateLayout();
