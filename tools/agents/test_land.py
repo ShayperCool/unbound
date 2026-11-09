@@ -758,16 +758,21 @@ class AutomaticProbeTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 5)
 
     def test_automatic_checks_are_guarded_released_and_budgeted(self):
-        self.gate.automatic = [('a', 'echo check', 'fast check')]
+        self.gate.automatic = [('a', 'echo check', 'fast check', '2022.3.10f1')]
         with mock.patch.object(self.gate, 'step', return_value=0) as step, contextlib.redirect_stdout(io.StringIO()) as out:
             self.gate.run_automatic_probes()
         self.assertIn(f'budget {land.AUTO_PROBE_BUDGET_SECONDS}s total', out.getvalue())
         kwargs = step.call_args.kwargs
         self.assertTrue(kwargs['guard_editor'])
         self.assertEqual(kwargs['env'][land.NO_EDITOR], '1')
-        self.assertEqual(kwargs['env'][land.RELEASE_VARIABLE], land.default_release())
+        self.assertEqual(kwargs['env'][land.RELEASE_VARIABLE], '2022.3.10f1')
         self.assertGreater(kwargs['timeout'], 0)
         self.assertLessEqual(kwargs['timeout'], land.AUTO_PROBE_TIMEOUT_SECONDS)
+
+        self.gate.automatic = [('a', 'echo check', 'fast check')]
+        with mock.patch.object(self.gate, 'step', return_value=0) as step:
+            self.gate.run_automatic_probes()
+        self.assertEqual(step.call_args.kwargs['env'][land.RELEASE_VARIABLE], land.default_release())
 
     def test_total_budget_exhaustion_fails_before_starting_another_check(self):
         self.gate.automatic = [('a', 'first', 'fast check'), ('b', 'second', 'fast check')]
