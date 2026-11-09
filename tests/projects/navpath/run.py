@@ -36,6 +36,11 @@ Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
                           first path between frames 150 and 200 (it re-plans the start of its path while
                           walking), Unbound's keeps its path; the same for every pose of the
                           NavMesh (docs/COMPATIBILITY_GAPS.md, the placed NavMesh data row);
+  place.links m.p.ab, r30.p.ab, r30.w.ab, m.w.ba
+                          the route past a link's landing on the second NavMesh: Unity's bends at a
+                          tile corner there (moved or turned alike), Unbound's runs straight; over a
+                          wide end lying over two tiles, Unity's crosses the part over the other tile
+                          (docs/COMPATIBILITY_GAPS.md, the placed NavMesh data row);
   link.wide gb1.2.cur.*   an agent reaching a wide link where the NavMesh under the link's start
                           ends (z 6): Unity's reaches it 6 cm further from that end and crosses from
                           5.98 to 5.82, Unbound's straight across from where it reaches it, 5.80
@@ -65,6 +70,7 @@ LISTED = {
     'carve.shortcut': ('',),
     'carve.rules': ('poly.p47', 'poly.p51'),
     'place.moved': tuple(f'{pose}.walk.f{frame}' for pose in ('o', 'm', 'r30', 'r90') for frame in (200, 250, 300)),
+    'place.links': ('m.p.ab.', 'r30.p.ab.', 'r30.w.ab.', 'm.w.ba.'),
 }
 
 

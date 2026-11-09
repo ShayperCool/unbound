@@ -19,6 +19,7 @@ agree on the mesh (`meshN.vertices` is logged for every level to show it).
 | `carve.shortcut` | 5.33 m tiles; an agent going round a wall's end while a carved gap opens in tiles its path does not cross: whether it turns back to take the gap (Unity: no) |
 | `link.repath` | three agents on partial paths over inactive links that open at frame 30: autoRepath on near the gap, autoRepath off, autoRepath on far away (status and isPathStale every frame) |
 | `place.moved` | a NavMesh of 4 x 4 tiles of 5.33 m added where it was built, moved off the tile grid, moved and turned 30 and 90 degrees: SamplePosition over a grid of points, rays and paths across tiles and round two walls, an agent walking across tiles, each in the NavMesh's own frame |
+| `place.links` | a 9 m link and a 2 m wide link from a NavMesh of 5.33 m tiles to a copy of it 5 m away, moved, or moved and turned 30 degrees: paths both ways, SamplePosition at the end, an agent crossing |
 | `place.adjacent` | one floor built as two NavMeshes whose bounds meet at a tile edge: whether paths, rays and an agent cross from one to the other, and where each ends past its bounds |
 | `sync.updatePosition` | `updatePosition` turned off while the transform (in Update or LateUpdate), `nextPosition` or a walking agent moves, then on again (and a move right after); transforms moved by script with it on, in Update and LateUpdate: the transform and `nextPosition` right after, in LateUpdate and in the next frames |
 
@@ -59,7 +60,7 @@ Measured (Unity 6000.0.71f1, `Reference/unity-6000.0.71f1.json`):
   their offset, held to the part of each end over the NavMesh; an agent's next link is reported from
   where its path reaches the link.
 - A NavMesh added at a position and rotation answers queries on all its tiles as where it was built (in
-  its own frame); NavMeshes built and added separately do not connect where their edges meet; a
+  its own frame), and links land on it wherever their starts are; NavMeshes built and added separately do not connect where their edges meet; a
   runtime build ends within one voxel past its bounds.
 - A NavMesh change does not replan a path: a stale partial path is searched again (autoRepath) once
   its end is the agent's next corner within its radius; with autoRepath off it stays partial and stale.
@@ -67,4 +68,5 @@ Measured (Unity 6000.0.71f1, `Reference/unity-6000.0.71f1.json`):
 Listed, not gated (`run.py` header): `two.p1`, a line grazing a vertex: the builders place that vertex
 about 2e-6 apart, on either side of the line; where an agent reaching a wide link at the edge of the NavMesh under its start
 crosses it (gb1.2.cur.*); where an agent walking round a wall's end goes from frame 200
-(`place.moved` *.walk.f200 to f300: Unity's re-plans a shorter way, the same for every pose); `carve.shortcut` (Unbound's search takes another staircase of small tiles).
+(`place.moved` *.walk.f200 to f300: Unity's re-plans a shorter way, the same for every pose); the route past a
+link's landing (`place.links` m.p.ab, r30.p.ab, r30.w.ab, m.w.ba); `carve.shortcut` (Unbound's search takes another staircase of small tiles).

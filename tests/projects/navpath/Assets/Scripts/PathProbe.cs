@@ -218,6 +218,7 @@ public class PathProbe : MonoBehaviour
             ("nearest.sides", NearestSides),
             ("place.moved", PlaceMoved),
             ("place.adjacent", PlaceAdjacent),
+            ("place.links", PlaceLinks),
         })
         {
             if (!name.StartsWith(Only)) continue;
@@ -1328,5 +1329,55 @@ public class PathProbe : MonoBehaviour
         ProbeLog.Value("walk.at", agent.nextPosition);
         ProbeLog.Value("walk.status", agent.pathStatus.ToString());
         Destroy(go);
+    }
+
+    /// <summary>Links between two copies of a NavMesh of 5.33 m tiles: one where it was built, one
+    /// moved (`m`), or moved and turned 30 degrees (`r30`), 5 m away. A 9 m link and a 2 m wide link
+    /// from the first to the second (their ends lie on the second's tiles, their starts and ends
+    /// further apart than a tile): paths both ways, SamplePosition at the end, and an agent
+    /// crossing.</summary>
+    IEnumerator PlaceLinks()
+    {
+        ClearAgents();
+        yield return null;
+        var settings = NavMesh.GetSettingsByID(0);
+        settings.overrideTileSize = true;
+        settings.tileSize = 32;
+        var sources = new List<NavMeshBuildSource> { Source(new Vector3(Off.x, -0.05f, Off.y), new Vector3(16f, 0.1f, 16f), 0, 0f) };
+        var data = NavMeshBuilder.BuildNavMeshData(settings, sources, new Bounds(Vector3.zero, new Vector3(20f, 10f, 20f)), Vector3.zero, Quaternion.identity);
+        foreach (var (name, pos, rot) in new[]
+        {
+            ("m", new Vector3(30f, 0f, 2f), Quaternion.identity),
+            ("r30", new Vector3(24f, 0f, 6f), Quaternion.Euler(0f, 30f, 0f)),
+        })
+        {
+            Vector3 B(float x, float z) => pos + rot * new Vector3(x, 0f, z);
+            var first = NavMesh.AddNavMeshData(data);
+            var second = NavMesh.AddNavMeshData(data, pos, rot);
+            var point = Link(new Vector3(7.3f, 0f, 2f), B(-7.3f, -1.5f));
+            var wide = Link(new Vector3(7.3f, 0f, -5f), B(-7.3f, -6f), 0, 2f);
+            yield return Frames(2);
+            ProbeLog.Value(name + ".end.point", NavMesh.SamplePosition(B(-7.3f, -1.5f), out var hit, 1f, NavMesh.AllAreas) ? P(hit.position) : "none");
+            Path(name + ".p.ab", new Vector3(-6f, 0f, 2f), B(5f, 1f));
+            Path(name + ".p.ba", B(5f, 1f), new Vector3(-6f, 0f, 2f));
+            Path(name + ".w.ab", new Vector3(-6f, 0f, -6f), B(5f, -6.5f));
+            Path(name + ".w.ba", B(5f, -6.5f), new Vector3(-6f, 0f, -6.5f));
+            var go = new GameObject("walker");
+            go.transform.position = new Vector3(-6f, 0f, 2f);
+            var agent = go.AddComponent<NavMeshAgent>();
+            agent.SetDestination(B(5f, 1f));
+            yield return Frames(2);
+            ProbeLog.Value(name + ".walk.status", agent.pathStatus.ToString());
+            ProbeLog.Value(name + ".walk.next.start", agent.nextOffMeshLinkData.startPos);
+            ProbeLog.Value(name + ".walk.next.end", agent.nextOffMeshLinkData.endPos);
+            for (int f = 0; f < 600 && agent.remainingDistance > 0.05f; f++) yield return null;
+            ProbeLog.Value(name + ".walk.at", agent.nextPosition);
+            Destroy(go);
+            NavMesh.RemoveLink(point);
+            NavMesh.RemoveLink(wide);
+            NavMesh.RemoveNavMeshData(first);
+            NavMesh.RemoveNavMeshData(second);
+            yield return null;
+        }
     }
 }
