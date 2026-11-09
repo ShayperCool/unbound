@@ -16,7 +16,7 @@ namespace UnityEngine
     {
         const int EnvironmentSize = 64;
 
-        static float s_IndirectScale = 1f;
+        static float s_IndirectScale = 1f, s_SceneIndirectScale = 1f;
 
         /// <summary>Starts as the loaded scene's Lighting Settings Indirect Intensity (1 without
         /// settings): measured, tests/projects/realtimegi (1 and 1.5). In the Editor it scales the
@@ -25,11 +25,19 @@ namespace UnityEngine
         public static float indirectScale
         {
             get => s_IndirectScale;
-            set => s_IndirectScale = value;
+            set
+            {
+                s_IndirectScale = value;
+                if (value != s_SceneIndirectScale)
+                    Unbound.Runtime.Stubs.Ignored("DynamicGI.indirectScale",
+                        "is stored but does not scale lightmaps yet");
+            }
         }
 
-        /// <summary>A scene loaded alone (not additively) with <paramref name="settings"/>.</summary>
-        internal static void SceneLoaded(LightingSettings settings) => s_IndirectScale = settings != null ? settings.indirectScale : 1f;
+        /// <summary>A scene loaded alone (not additively) with <paramref name="settings"/>; additive
+        /// loads keep the value, and a scene without Lighting Settings gives 1 (both unmeasured).</summary>
+        internal static void SceneLoaded(LightingSettings settings) =>
+            s_IndirectScale = s_SceneIndirectScale = settings != null ? settings.indirectScale : 1f;
 
         public static void UpdateEnvironment()
         {

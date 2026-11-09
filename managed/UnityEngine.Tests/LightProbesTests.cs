@@ -47,6 +47,21 @@ namespace Unbound.Tests
         });
 
         [Fact]
+        public void DynamicGIIndirectScaleStartsAsTheScenesIndirectIntensity()
+        {
+            // tests/projects/realtimegi: 1 and 1.5 per scene; the value set by script stays until
+            // the next scene loaded alone.
+            var settings = new LightingSettings { indirectScale = 1.5f };
+            DynamicGI.SceneLoaded(settings);
+            Assert.Equal(1.5f, DynamicGI.indirectScale);
+            DynamicGI.indirectScale = 2f;
+            Assert.Equal(2f, DynamicGI.indirectScale);
+            DynamicGI.SceneLoaded(null);
+            Assert.Equal(1f, DynamicGI.indirectScale);
+            UnityEngine.Object.DestroyImmediate(settings);
+        }
+
+        [Fact]
         public void RealtimeOnlyProbesHaveNoBakedProbes()
         {
             // Precomputed for realtime GI only, the lighting data has positions and cells but no

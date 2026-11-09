@@ -69,10 +69,10 @@ frame by frame), so the first frames after a change are not reproducible between
 `synchronousMode`; the probe compares converged output. Also measured, beyond the documented
 contract: `indirectScale` starts as the scene's Indirect Intensity; an albedo change waits for
 `UpdateGIMaterials`; after `SetEmissive` a material emission change is ignored even after
-`UpdateGIMaterials`; `UpdateEnvironment` changed nothing measurable (ambient color and skybox
-exposure changes are picked up without it). Not measurable as a reference, since the result
-depends on update timing: a material emission change without `UpdateGIMaterials`, and
-`updateThreshold` above its default of 1.
+`UpdateGIMaterials`; realtime GI picks up ambient color and skybox exposure changes without
+`UpdateEnvironment`, while the call is what updates `RenderSettings.ambientProbe` for the
+skybox. Not measurable as a reference, since the result depends on update timing: a material
+emission change without `UpdateGIMaterials`, and `updateThreshold` above its default of 1.
 
 ## Unbound plan
 
