@@ -68,6 +68,13 @@ Altered (marked `Unbound:` in the sources):
   (`DtCrowd.tryEnterConnection`) plans to stand, without avoidance, until it is free;
 - `DtOffMeshConnection.costModifier` holds a link's cost modifier, which the engine's query filter
   uses per metre in place of the link's area cost when it is zero or more (navlinks `costhigh`);
+- `FindStraightPath` uses Unity's funnel (`tests/projects/navpath`, navcost route sweeps): the portal
+  ends are offsets from the apex with components within 1e-4 counted as zero, put in funnel order;
+  a corner is made only where the portal lies strictly beyond a side (a path through a portal end
+  exactly has none), both sides are tested before either narrows, and a side narrows to an end on
+  it or within it; off-mesh connection ends are added where the segment to the next corner
+  crosses onto or off a connection (`AppendLinkCrossings`), so they stay corners also in line; a
+  start within 2 mm of the first portal begins past it;
 - `DtNavMeshQuery.GetPathToNode` is visible to the engine (partial paths end at the reachable
   polygon nearest to the target);
 - `DtNavMeshQuery.Raycast` (`DotRecast.Detour/DtNavMeshQuery.cs`) computes the hit wall edge's z

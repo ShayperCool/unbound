@@ -158,6 +158,17 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>The funnel makes a corner only where the path must turn: a straight line through
+        /// the strip's corner (4, -0.5) exactly has none there (tests/projects/navpath cost.*, hole.*:
+        /// paths through a mesh vertex), one passing a little inside it turns there.</summary>
+        [Fact]
+        public void APathThroughAPortalEndExactlyHasNoCornerThere()
+        {
+            var query = StripQuery();
+            Assert.Equal("direct", Route(query, (2f, -4.5f), (5f, 1.5f), 20f));
+            Assert.Equal("4,-0.5", Route(query, (2f, -4.5f), (4.9f, 1.5f), 20f));
+        }
+
         /// <summary>FindPath runs the same search as the sliced one (a start and end in one polygon
         /// is that polygon).</summary>
         [Fact]

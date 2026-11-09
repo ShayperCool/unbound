@@ -1407,6 +1407,73 @@ namespace DotRecast.Detour
             return DtStatus.DT_IN_PROGRESS;
         }
 
+        /// Unbound: a start nearer than this to the first portal (in the xz plane) is on it, and the
+        /// funnel begins past it (Unity's distance; Detour's is 1 mm).
+        const float StartOnPortal = 0.002f;
+
+        /// Unbound: how near zero a component of a funnel offset counts as zero (Unity's funnel), so
+        /// a portal end within float rounding of a funnel side is on it.
+        const float FunnelSnap = 1e-4f;
+
+        /// Unbound: a point of the funnel as an offset from the apex in the xz plane, each component
+        /// within <see cref="FunnelSnap"/> of zero taken as zero.
+        static RcVec3f FunnelOffset(RcVec3f apex, RcVec3f point)
+        {
+            float x = point.X - apex.X, z = point.Z - apex.Z;
+            return new RcVec3f(MathF.Abs(x) <= FunnelSnap ? 0f : x, 0f, MathF.Abs(z) <= FunnelSnap ? 0f : z);
+        }
+
+        /// Unbound: which side of the offset <paramref name="a"/> the offset <paramref name="b"/> lies
+        /// on (<see cref="DtUtils.TriArea2D"/> of the apex and the two points): negative to the left
+        /// of a funnel's left side, positive to the right of its right side, zero on it or for an
+        /// unset (zero) side.
+        static float FunnelCross(RcVec3f a, RcVec3f b) => a.Z * b.X - a.X * b.Z;
+
+        /// Unbound: the points where the straight segment from the last point of the straight path
+        /// to <paramref name="endPos"/> crosses from the ground onto an off-mesh connection or back,
+        /// over the portals from path[startIdx] up to path[endIdx]: the connection's ends are corners
+        /// wherever the funnel goes (Unity's: also when the path runs on in line with them).
+        DtStatus AppendLinkCrossings(int startIdx, int endIdx, RcVec3f endPos, Span<long> path,
+            Span<DtStraightPath> straightPath, ref int straightPathCount, int maxStraightPath)
+        {
+            var startPos = straightPath[straightPathCount - 1].pos;
+            for (int i = startIdx; i < endIdx; i++)
+            {
+                if (m_nav.GetTileAndPolyByRef(path[i], out var fromTile, out var fromPoly).Failed()
+                    || m_nav.GetTileAndPolyByRef(path[i + 1], out var toTile, out var toPoly).Failed())
+                {
+                    return DtStatus.DT_FAILURE;
+                }
+
+                int toType = toPoly.GetPolyType();
+                if (fromPoly.GetPolyType() == toType)
+                {
+                    continue;
+                }
+
+                if (GetPortalPoints(path[i], fromPoly, fromTile, path[i + 1], toPoly, toTile, out var left, out var right).Failed())
+                {
+                    break;
+                }
+
+                // A connection's end is one point; a wider portal is crossed where the segment meets it.
+                float t = 0f;
+                if (DtUtils.IntersectSegSeg2D(startPos, endPos, left, right, out _, out var u))
+                {
+                    t = Math.Clamp(u, 0f, 1f);
+                }
+
+                byte flags = toType == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION ? DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION : (byte)0;
+                var stat = AppendVertex(RcVec3f.Lerp(left, right, t), flags, path[i + 1], straightPath, ref straightPathCount, maxStraightPath);
+                if (!stat.InProgress())
+                {
+                    return stat;
+                }
+            }
+
+            return DtStatus.DT_IN_PROGRESS;
+        }
+
         protected DtStatus AppendPortals(int startIdx, int endIdx, RcVec3f endPos, Span<long> path,
             Span<DtStraightPath> straightPath, ref int straightPathCount, int maxStraightPath, int options)
         {
@@ -1528,9 +1595,14 @@ namespace DotRecast.Detour
                 RcVec3f portalApex = closestStartPos;
                 RcVec3f portalLeft = portalApex;
                 RcVec3f portalRight = portalApex;
+                // Unbound: the funnel's sides as offsets from the apex (zero until a portal sets them).
+                RcVec3f leftSide = default;
+                RcVec3f rightSide = default;
                 int apexIndex = 0;
                 int leftIndex = 0;
                 int rightIndex = 0;
+                // Unbound: the first portal after the apex (the apex lies in path[apexPoly]).
+                int apexPoly = 0;
 
                 int leftPolyType = 0;
                 int rightPolyType = 0;
@@ -1568,6 +1640,7 @@ namespace DotRecast.Detour
                             }
 
                             // Ignore status return value as we're just about to return anyway.
+                            AppendLinkCrossings(apexPoly, i, closestEndPos, path, straightPath, ref straightPathCount, maxStraightPath);
                             AppendVertex(closestEndPos, 0, path[i], straightPath, ref straightPathCount, maxStraightPath);
 
                             return DtStatus.DT_FAILURE | DtStatus.DT_INVALID_PARAM | (straightPathCount >= maxStraightPath ? DtStatus.DT_BUFFER_TOO_SMALL : DtStatus.DT_STATUS_NOTHING);
@@ -1577,7 +1650,7 @@ namespace DotRecast.Detour
                         if (i == 0)
                         {
                             var distSqr = DtUtils.DistancePtSegSqr2D(portalApex, left, right, out var t);
-                            if (distSqr < RcMath.Sqr(0.001f))
+                            if (distSqr < RcMath.Sqr(StartOnPortal))
                             {
                                 // Unbound: a start at an off-mesh connection's start is that
                                 // connection's corner, so an agent standing there takes it (Unity's;
@@ -1585,6 +1658,8 @@ namespace DotRecast.Detour
                                 if (toType == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION && straightPathCount > 0)
                                     straightPath[straightPathCount - 1] = new DtStraightPath(straightPath[straightPathCount - 1].pos,
                                         DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION, path[i + 1]);
+                                // Unbound: the start stands for this portal's crossing.
+                                apexPoly = 1;
                                 continue;
                             }
                         }
@@ -1597,116 +1672,91 @@ namespace DotRecast.Detour
                         toType = DtPolyTypes.DT_POLYTYPE_GROUND;
                     }
 
-                    // Right vertex.
-                    if (DtUtils.TriArea2D(portalApex, portalRight, right) <= 0.0f)
+                    // Unbound: Unity's funnel. The portal's ends as offsets from the apex (see
+                    // FunnelOffset), in funnel order; a corner where the portal lies strictly beyond
+                    // a side (a path through a side's end exactly has none), tested on both sides
+                    // before either narrows; a side narrows to a portal end on it or within it.
+                    var l = FunnelOffset(portalApex, left);
+                    var r = FunnelOffset(portalApex, right);
+                    if (FunnelCross(l, r) < 0f)
                     {
-                        if (RcVec.Equal(portalApex, portalRight) || DtUtils.TriArea2D(portalApex, portalLeft, right) > 0.0f)
-                        {
-                            portalRight = right;
-                            rightPolyRef = (i + 1 < pathSize) ? path[i + 1] : 0;
-                            rightPolyType = toType;
-                            rightIndex = i;
-                        }
-                        else
-                        {
-                            // Append portals along the current straight path segment.
-                            if ((options & (DtStraightPathOptions.DT_STRAIGHTPATH_AREA_CROSSINGS | DtStraightPathOptions.DT_STRAIGHTPATH_ALL_CROSSINGS)) != 0)
-                            {
-                                stat = AppendPortals(apexIndex, leftIndex, portalLeft, path, straightPath, ref straightPathCount, maxStraightPath, options);
-                                if (!stat.InProgress())
-                                {
-                                    return stat;
-                                }
-                            }
-
-                            portalApex = portalLeft;
-                            apexIndex = leftIndex;
-
-                            byte flags = 0;
-                            if (leftPolyRef == 0)
-                            {
-                                flags = DtStraightPathFlags.DT_STRAIGHTPATH_END;
-                            }
-                            else if (leftPolyType == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION)
-                            {
-                                flags = DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION;
-                            }
-
-                            long refs = leftPolyRef;
-
-                            // Append or update vertex
-                            stat = AppendVertex(portalApex, flags, refs, straightPath, ref straightPathCount, maxStraightPath);
-                            if (!stat.InProgress())
-                            {
-                                return stat;
-                            }
-
-                            portalLeft = portalApex;
-                            portalRight = portalApex;
-                            leftIndex = apexIndex;
-                            rightIndex = apexIndex;
-
-                            // Restart
-                            i = apexIndex;
-
-                            continue;
-                        }
+                        (l, r) = (r, l);
+                        (left, right) = (right, left);
                     }
 
-                    // Left vertex.
-                    if (DtUtils.TriArea2D(portalApex, portalLeft, left) >= 0.0f)
+                    bool beyondLeft = FunnelCross(leftSide, r) < 0f;
+                    if (beyondLeft || FunnelCross(rightSide, l) > 0f)
                     {
-                        if (RcVec.Equal(portalApex, portalLeft) || DtUtils.TriArea2D(portalApex, portalRight, left) < 0.0f)
+                        RcVec3f corner = beyondLeft ? portalLeft : portalRight;
+                        int cornerIndex = beyondLeft ? leftIndex : rightIndex;
+                        long cornerRef = beyondLeft ? leftPolyRef : rightPolyRef;
+                        int cornerType = beyondLeft ? leftPolyType : rightPolyType;
+
+                        // Append portals along the current straight path segment.
+                        if ((options & (DtStraightPathOptions.DT_STRAIGHTPATH_AREA_CROSSINGS | DtStraightPathOptions.DT_STRAIGHTPATH_ALL_CROSSINGS)) != 0)
                         {
-                            portalLeft = left;
-                            leftPolyRef = (i + 1 < pathSize) ? path[i + 1] : 0;
-                            leftPolyType = toType;
-                            leftIndex = i;
-                        }
-                        else
-                        {
-                            // Append portals along the current straight path segment.
-                            if ((options & (DtStraightPathOptions.DT_STRAIGHTPATH_AREA_CROSSINGS | DtStraightPathOptions.DT_STRAIGHTPATH_ALL_CROSSINGS)) != 0)
-                            {
-                                stat = AppendPortals(apexIndex, rightIndex, portalRight, path, straightPath, ref straightPathCount, maxStraightPath, options);
-                                if (!stat.InProgress())
-                                {
-                                    return stat;
-                                }
-                            }
-
-                            portalApex = portalRight;
-                            apexIndex = rightIndex;
-
-                            byte flags = 0;
-                            if (rightPolyRef == 0)
-                            {
-                                flags = DtStraightPathFlags.DT_STRAIGHTPATH_END;
-                            }
-                            else if (rightPolyType == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION)
-                            {
-                                flags = DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION;
-                            }
-
-                            long refs = rightPolyRef;
-
-                            // Append or update vertex
-                            stat = AppendVertex(portalApex, flags, refs, straightPath, ref straightPathCount, maxStraightPath);
+                            stat = AppendPortals(apexIndex, cornerIndex, corner, path, straightPath, ref straightPathCount, maxStraightPath, options);
                             if (!stat.InProgress())
                             {
                                 return stat;
                             }
-
-                            portalLeft = portalApex;
-                            portalRight = portalApex;
-                            leftIndex = apexIndex;
-                            rightIndex = apexIndex;
-
-                            // Restart
-                            i = apexIndex;
-
-                            continue;
                         }
+
+                        stat = AppendLinkCrossings(apexPoly, cornerIndex, corner, path, straightPath, ref straightPathCount, maxStraightPath);
+                        if (!stat.InProgress())
+                        {
+                            return stat;
+                        }
+
+                        byte flags = 0;
+                        if (cornerRef == 0)
+                        {
+                            flags = DtStraightPathFlags.DT_STRAIGHTPATH_END;
+                        }
+                        else if (cornerType == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION)
+                        {
+                            flags = DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION;
+                        }
+
+                        // Append or update vertex
+                        stat = AppendVertex(corner, flags, cornerRef, straightPath, ref straightPathCount, maxStraightPath);
+                        if (!stat.InProgress())
+                        {
+                            return stat;
+                        }
+
+                        portalApex = corner;
+                        portalLeft = portalApex;
+                        portalRight = portalApex;
+                        leftSide = default;
+                        rightSide = default;
+                        apexIndex = cornerIndex;
+                        leftIndex = apexIndex;
+                        rightIndex = apexIndex;
+                        apexPoly = cornerIndex + 1;
+
+                        // Restart
+                        i = apexIndex;
+
+                        continue;
+                    }
+
+                    if (FunnelCross(leftSide, l) >= 0f)
+                    {
+                        leftSide = l;
+                        portalLeft = left;
+                        leftPolyRef = (i + 1 < pathSize) ? path[i + 1] : 0;
+                        leftPolyType = toType;
+                        leftIndex = i;
+                    }
+
+                    if (FunnelCross(rightSide, r) <= 0f)
+                    {
+                        rightSide = r;
+                        portalRight = right;
+                        rightPolyRef = (i + 1 < pathSize) ? path[i + 1] : 0;
+                        rightPolyType = toType;
+                        rightIndex = i;
                     }
                 }
 
@@ -1718,6 +1768,12 @@ namespace DotRecast.Detour
                     {
                         return stat;
                     }
+                }
+
+                stat = AppendLinkCrossings(apexPoly, pathSize - 1, closestEndPos, path, straightPath, ref straightPathCount, maxStraightPath);
+                if (!stat.InProgress())
+                {
+                    return stat;
                 }
             }
 

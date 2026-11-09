@@ -82,5 +82,20 @@ namespace UnityEngine.Tests
 
         [Fact]
         public void AZeroCostModifierReplacesTheAreaCost() => Assert.False(PathTakesTheBridge(0f, area: 2));
+
+        /// <summary>The link's ends are corners of the path also when the path runs on exactly in
+        /// line with them (start, link start, link end, end all at z = 0; tests/projects/navlinks,
+        /// whose link ends are path corners).</summary>
+        [Fact]
+        public void ALinkInLineKeepsItsEndsAsCorners()
+        {
+            Assert.False(PathTakesTheBridge(0f));
+            var path = new NavMeshPath();
+            Assert.True(NavMesh.CalculatePath(new Vector3(-4.5f, 0f, 0f), new Vector3(4.5f, 0f, 0f), NavMesh.AllAreas, path));
+            var corners = path.corners;
+            Assert.Equal(4, corners.Length);
+            Assert.Equal(-3f, corners[1].x, 3);
+            Assert.Equal(3f, corners[2].x, 3);
+        }
     }
 }
