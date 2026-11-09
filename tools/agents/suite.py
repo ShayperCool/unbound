@@ -322,6 +322,12 @@ def recipes(release):
                       py('compare_images.py', ref('images'), '{work}/images', verdict='none')]
     R['lighting'] = [run('--frames', '10', '--size', '320x180', '--no-watch', env={'LIGHTING_PROBE_OUT': '{work}/out'}),
                      py('particles/compare_images.py', ref('images'), '{work}/out', verdict='none')]
+    # On the Vulkan device too, against the Vulkan Editor's capture (shadow biases differ).
+    if (PROJECTS/'lighting/Reference'/f'unity-{release}'/'vulkan').is_dir():
+        R['lighting'] += [run('--frames', '10', '--size', '320x180', '--no-watch', '--force-vulkan',
+                              env={'LIGHTING_PROBE_OUT': '{work}/out-vulkan'}),
+                          py('particles/compare_images.py', ref('unity-{release}/vulkan'), '{work}/out-vulkan',
+                             verdict='none')]
     R['materials'] = classic('MATERIALS_PROBE_OUT', 'out.json', ['--no-watch', '--frames', '10'],
                              [single_ref('json'), '{work}/out.json'], verdict='exit')
     R['builtinrp'] = classic('BUILTIN_PROBE_OUT', 'out', ['--frames', '30', '--size', '640x480', '--no-watch'],

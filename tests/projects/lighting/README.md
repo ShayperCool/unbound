@@ -14,6 +14,12 @@ Record Unity's reference (the Editor needs a display):
         ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -projectPath tests/projects/lighting \
         -executeMethod ProbeRunner.Record -logFile ~/.cache/lighting.log
 
+The Vulkan Editor's capture (`Reference/unity-6000.0.71f1/vulkan`, two identical captures) is
+recorded the same way with `-force-vulkan` on the GPU-backed display :0. Its images match the
+OpenGL Core ones (mean difference at most 0.01); its shadow globals differ: the directional
+`unity_LightShadowBias.x` is half the OpenGL Core one, negated (clip depth from 0 to 1, reversed),
+a point light's half of it, a spot light's the same, and the shadow matrices map depth reversed.
+
 Run Unbound (in a window: the images need a GPU) and compare:
 
     LIGHTING_PROBE_OUT=/tmp/lighting unbound run -p tests/projects/lighting --frames 10 --size 320x180 --no-watch
