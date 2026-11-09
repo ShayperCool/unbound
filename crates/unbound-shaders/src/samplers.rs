@@ -1,4 +1,4 @@
-//! Inline sampler states on the OpenGL Core device, the one Unbound reports
+//! Inline sampler states in graphics programs on the OpenGL Core device, the one Unbound reports
 //! (`SystemInfo.graphicsDeviceType`): the Unity 6000.0 Manual (Using sampler states) says "Inline
 //! samplers don't work if you target the OpenGL ES or OpenGL Core graphics APIs", and the Editor
 //! on OpenGL Core samples a texture through its own sampler state whatever inline sampler the
@@ -6,7 +6,9 @@
 //! A texture sampled through another texture's sampler (`_Detail.Sample(sampler_MainTex, uv)`)
 //! keeps that sampler: unmeasured.
 //!
-//! [`own_samplers`] rewrites a program's SPIR-V so that every sample of a texture through an
+//! Compute kernels retain predefined sampler states (tests/projects/renderapi computeSamplers).
+//!
+//! [`own_samplers`] rewrites a graphics program's SPIR-V so that every sample of a texture through an
 //! inline sampler (`sampler_PointClamp`, `s_linear_clamp_sampler`: a sampler named like no
 //! texture's, whose name spells a state) uses the texture's own sampler (`sampler<texture>`,
 //! declared when the program does not). glslang passes textures and samplers to functions

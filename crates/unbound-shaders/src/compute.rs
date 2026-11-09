@@ -323,7 +323,7 @@ fn integer_samplers(module: &Module) -> HashSet<naga::Handle<naga::GlobalVariabl
 fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<CompiledKernel> {
     let words = scan(
         &unify_int_signedness(&pad_array_elements(&align_uniform_members(
-            &strip_relaxed_precision(&crate::samplers::own_samplers(spv)?),
+            &strip_relaxed_precision(spv),
         )?)?)?,
         Stage::Compute,
     )?
@@ -797,13 +797,61 @@ RWStructuredBuffer<uint> _Out;
         let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
         let k = compiler.compile_kernel(&program, "Main", &[], &[]).unwrap();
         let unfiltered = |n: &str| {
-            k.resources.iter().find(|r| r.name == n).map(|r| match r.kind {
-                ResourceKind::Sampler { unfiltered, .. } => unfiltered,
-                _ => panic!("{n} is not a sampler"),
-            })
+            k.resources
+                .iter()
+                .find(|r| r.name == n)
+                .map(|r| match r.kind {
+                    ResourceKind::Sampler { unfiltered, .. } => unfiltered,
+                    _ => panic!("{n} is not a sampler"),
+                })
         };
         assert_eq!(unfiltered("s_point_clamp_sampler"), Some(true));
-        // The float texture now samples through its own sampler (`sampler_Color`).
-        assert_eq!(unfiltered("sampler_Color"), Some(false));
+        assert_eq!(unfiltered("s_linear_clamp_sampler"), Some(false));
+    }
+    #[test]
+    fn named_and_predefined_compute_samplers_keep_distinct_bindings() {
+        let program = ComputeProgram {
+            file: PathBuf::from("SamplerBindings.compute"),
+            source: r#"#pragma kernel Main
+Texture2D<float4> _Source;
+SamplerState sampler_Source;
+SamplerState s_linear_clamp_sampler;
+SamplerState s_point_repeat_sampler;
+RWStructuredBuffer<float4> _Out;
+[numthreads(1,1,1)] void Main(uint3 id : SV_DispatchThreadID) {
+    _Out[0] = _Source.SampleLevel(sampler_Source, float2(.5,.5), 0);
+    _Out[1] = _Source.SampleLevel(s_linear_clamp_sampler, float2(.5,.5), 0);
+    _Out[2] = _Source.SampleLevel(s_point_repeat_sampler, float2(.5,.5), 0);
+}"#
+            .into(),
+        };
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let compiled = compiler.compile_kernel(&program, "Main", &[], &[]).unwrap();
+        let samplers: Vec<_> = compiled
+            .resources
+            .iter()
+            .filter_map(|resource| {
+                if let ResourceKind::Sampler {
+                    texture,
+                    comparison,
+                    unfiltered,
+                } = &resource.kind
+                {
+                    assert!(!comparison && !unfiltered);
+                    Some((resource.name.as_str(), texture.as_deref()))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(samplers.len(), 3);
+        assert!(
+            samplers
+                .iter()
+                .any(|&(name, texture)| name == "sampler_Source"
+                    && matches!(texture, Some("Source" | "_Source")))
+        );
+        assert!(samplers.contains(&("s_linear_clamp_sampler", None)));
+        assert!(samplers.contains(&("s_point_repeat_sampler", None)));
     }
 }

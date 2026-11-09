@@ -164,3 +164,30 @@ float formats, using both 2D and 3D targets. Missing color components become 1 i
 while shader sampling keeps its own component defaults. Full RGBA targets retain their alpha.
 Compat.RenderingMeasured selects this conversion for the measured release; other releases
 retain the older R16/RG32-only padding rule. Alpha-only input keeps its alpha mapping.
+
+
+### Compute sampler states (Q274)
+
+The Unity 6000.0.71f1 Editor on Linux OpenGL Core distinguishes a texture-named compute
+sampler from a predefined sampler. `computeSamplers.*` samples the same 2D and 3D render
+textures through `sampler_Sampler2D`/`sampler_Sampler3D` and `s_linear_clamp_sampler`.
+With Point/Repeat textures, named samplers use point filtering and repeat outside 0..1;
+the predefined sampler still interpolates and clamps. Changing the textures to Bilinear/Clamp
+makes both results equal. The earlier `volumeCompute.*.point` controls use texture-named
+samplers and remain unchanged.
+
+The [Unity 6000.0 compute sampler rules](https://docs.unity.com/en-us/engine/6000.0/manual/materials-and-shaders/shaders/writing-custom/class-compute-shader/hlsl-shaderlab)
+describe texture-named samplers and predefined sampler names separately. The controls use
+different filter and wrap settings so those guarantees change the recorded results. The
+[general graphics sampler documentation](https://docs.unity3d.com/6000.0/Documentation/Manual/SL-SamplerStates.html)
+limits inline samplers on OpenGL; the compute result above is measured separately from
+ordinary vertex/fragment programs. Compute compilation preserves the sampler bindings;
+ordinary graphics programs retain their measured texture-owned sampler behavior. Shader
+cache format 27 prevents reusing the earlier compute output.
+
+The STP integration check preserves the existing URP scenario sequence and compares only
+`upscale_stp`, retaining the image and the original comparator's full measurements:
+
+```sh
+python3 tests/projects/renderapi/stp.py --release 6000.0.71f1 --cli /path/to/unbound --label stp-check
+```

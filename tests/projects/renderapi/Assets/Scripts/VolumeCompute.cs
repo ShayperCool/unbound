@@ -93,6 +93,34 @@ public sealed partial class RenderApiProbe
         }
         RenderTexture.active = saved;
         DestroyImmediate(odd); DestroyImmediate(flat); DestroyImmediate(unsigned);
+        ComputeSamplerCases(compute);
         VolumeReadbackCases();
     }
+    void ComputeSamplerCases(ComputeShader compute)
+    {
+        foreach (bool volume in new[] { false, true })
+        {
+            var descriptor = new RenderTextureDescriptor(2, 2, RenderTextureFormat.ARGBFloat, 0)
+            { dimension = volume ? TextureDimension.Tex3D : TextureDimension.Tex2D,
+              volumeDepth = volume ? 2 : 1, enableRandomWrite = true };
+            var texture = new RenderTexture(descriptor) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Repeat };
+            texture.Create();
+            compute.SetInts("_Size", 2, 2, volume ? 2 : 1); compute.SetFloat("_Bias", 0);
+            int fill = compute.FindKernel(volume ? "FillVolume" : "Fill2D");
+            compute.SetTexture(fill, volume ? "_Target" : "_Control", texture); compute.Dispatch(fill, 1, 1, 1);
+            int sample = compute.FindKernel(volume ? "CompareSampler3D" : "CompareSampler2D");
+            compute.SetTexture(sample, volume ? "_Sampler3D" : "_Sampler2D", texture);
+            using (var read = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 4, 16))
+            {
+                compute.SetBuffer(sample, "_Read", read);
+                compute.Dispatch(sample, 1, 1, 1);
+                ComputeColors("computeSamplers." + (volume ? "3D" : "2D") + ".pointRepeat", read);
+                texture.filterMode = FilterMode.Bilinear; texture.wrapMode = TextureWrapMode.Clamp;
+                compute.Dispatch(sample, 1, 1, 1);
+                ComputeColors("computeSamplers." + (volume ? "3D" : "2D") + ".linearClamp", read);
+            }
+            DestroyImmediate(texture);
+        }
+    }
+
 }

@@ -54,3 +54,27 @@ void LoadUint(uint3 id : SV_DispatchThreadID)
 RWStructuredBuffer<uint> _Group;
 [numthreads(512,2,1)]
 void WideGroup(uint3 id : SV_DispatchThreadID) { InterlockedAdd(_Group[0], 1); }
+
+#pragma kernel CompareSampler2D
+#pragma kernel CompareSampler3D
+Texture2D<float4> _Sampler2D;
+Texture3D<float4> _Sampler3D;
+SamplerState sampler_Sampler2D;
+SamplerState sampler_Sampler3D;
+SamplerState s_linear_clamp_sampler;
+[numthreads(1,1,1)]
+void CompareSampler2D(uint3 id : SV_DispatchThreadID)
+{
+    _Read[0] = _Sampler2D.SampleLevel(sampler_Sampler2D, float2(.5,.5), 0);
+    _Read[1] = _Sampler2D.SampleLevel(s_linear_clamp_sampler, float2(.5,.5), 0);
+    _Read[2] = _Sampler2D.SampleLevel(sampler_Sampler2D, float2(-.125,1.125), 0);
+    _Read[3] = _Sampler2D.SampleLevel(s_linear_clamp_sampler, float2(-.125,1.125), 0);
+}
+[numthreads(1,1,1)]
+void CompareSampler3D(uint3 id : SV_DispatchThreadID)
+{
+    _Read[0] = _Sampler3D.SampleLevel(sampler_Sampler3D, float3(.5,.5,.5), 0);
+    _Read[1] = _Sampler3D.SampleLevel(s_linear_clamp_sampler, float3(.5,.5,.5), 0);
+    _Read[2] = _Sampler3D.SampleLevel(sampler_Sampler3D, float3(-.125,1.125,.5), 0);
+    _Read[3] = _Sampler3D.SampleLevel(s_linear_clamp_sampler, float3(-.125,1.125,.5), 0);
+}
