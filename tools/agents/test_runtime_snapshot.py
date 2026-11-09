@@ -476,6 +476,28 @@ class RuntimeSnapshotTests(unittest.TestCase):
         self.assertEqual(runtime.cleanup(cache=self.cache, days=0), [])
         self.assertTrue(promoted.exists())
 
+    def test_promoting_an_already_collected_runtime_preserves_the_baseline(self):
+        import suite
+        first = self.snapshot()
+        candidate = first.resolve()
+        runtime.release_reference(first, cache=self.cache)
+        runtime.cleanup(cache=self.cache, days=0)
+        self.assertFalse(candidate.exists())
+        self.cli.write_bytes(b'previous baseline')
+        old = self.snapshot('old')
+        agents = self.root/'agents'
+        baseline = agents/'baseline'
+        runtime.retain(old, baseline/'runtime', cache=self.cache)
+        (baseline/'summary.json').write_text('{"previous":true}\n')
+        summary = agents/'suite/missing/summary.json'
+        summary.parent.mkdir(parents=True)
+        summary.write_text(json.dumps({'work': str(first.parent), 'runtime_snapshot': str(candidate)}))
+        with mock.patch.object(suite, 'AGENTS', agents), mock.patch.dict(os.environ, UNBOUND_RUNTIME_CACHE=str(self.cache)):
+            with self.assertRaisesRegex(ValueError, 'recorded runtime is no longer available'):
+                suite.promote(summary)
+        self.assertEqual((baseline/'runtime').resolve(), old.resolve())
+        self.assertEqual(json.loads((baseline/'summary.json').read_text()), {'previous': True})
+
 
 if __name__ == '__main__':
     unittest.main()

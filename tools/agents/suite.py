@@ -1106,14 +1106,16 @@ def default_cli():
 
 def promote(summary):
     baseline = AGENTS/'baseline'
-    baseline.mkdir(parents=True, exist_ok=True)
     value = json.loads(summary.read_text())
     reference = Path(value['work'])/'runtime' if value.get('work') else None
     if (reference is None or not reference.exists()) and value.get('runtime_snapshot'):
         reference = Path(value['runtime_snapshot'])
-    if reference is not None and reference.exists():
+    if reference is not None:
+        if not reference.exists():
+            raise ValueError(f'cannot promote: recorded runtime is no longer available: {reference}')
         retain(reference, summary.parent/'runtime')
         retain(reference, baseline/'runtime', replace=True)
+    baseline.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(summary, baseline/'summary.json')
     print(f'suite: baseline is now {summary}')
 
