@@ -437,16 +437,17 @@ namespace Unbound.Runtime
         internal static NotSupportedException CustomCutoffCurve() =>
             new NotSupportedException("AudioLowPassFilter.customCutoffCurve is not supported by Unbound: the cutoff does not follow a distance curve");
 
-        // Static scripted spatial chains are measured. Reconnecting one during playback also
-        // changes callback input ownership and effect histories, which remains unsupported.
+        // Static bypass of a scripted clip source is measured: the voice stays dry and the
+        // scripts receive silence. Reconnecting the voice to its scripts during playback also
+        // changes callback input ownership and effect histories, which remains unsupported for
+        // every scripted clip chain, whatever its spatial blend or components.
         internal static void ValidateLiveBypass(AudioSource source)
         {
-            if (!Compat.AudioSpatialStereoMeasured || source.clip == null || !source.m_HasFilter
-                || !source.UsesSpatialBlend || (!source.m_Paused && !source.isPlaying)) return;
+            if (!Compat.AudioSpatialStereoMeasured || source.clip == null || source.m_GameObject == null
+                || (!source.m_Paused && !source.isPlaying)) return;
             foreach (var component in source.m_GameObject.m_Components)
-                if ((component is AudioDistortionFilter || component is AudioChorusFilter)
-                    && component is Behaviour effect && effect.isActiveAndEnabled)
-                    throw new NotSupportedException("Unbound: changing bypassEffects during playback of a scripted 3D Distortion/Chorus chain is not supported; stop the source before reconnecting its filters");
+                if (AudioFilters.IsFilterScript(component))
+                    throw new NotSupportedException("Unbound: changing bypassEffects during playback of an AudioSource clip with OnAudioFilterRead scripts is not supported; stop the source before reconnecting its filters");
         }
 
         static bool IsFilterComponent(Component c) => c is AudioLowPassFilter || c is AudioHighPassFilter || c is AudioEchoFilter || c is AudioReverbFilter || c is AudioDistortionFilter || c is AudioChorusFilter;

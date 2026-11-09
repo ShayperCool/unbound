@@ -284,14 +284,16 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public void LiveScriptedSpatialBypassRefusesReconnectionAndKeepsTheCurrentRoute(bool initiallyBypassed)
+        [InlineData(false, true, true)]
+        [InlineData(true, true, true)]
+        [InlineData(false, false, false)]
+        [InlineData(true, false, false)]
+        public void LiveScriptedBypassRefusesReconnectionAndKeepsTheCurrentRoute(bool initiallyBypassed, bool spatial, bool chorus)
         {
             var source = Source("scripted reconnect");
-            source.spatialBlend = 1;
+            if (spatial) source.spatialBlend = 1;
             source.gameObject.AddComponent<FilterScript>();
-            source.gameObject.AddComponent<AudioChorusFilter>();
+            if (chorus) source.gameObject.AddComponent<AudioChorusFilter>();
             source.clip = AudioClip.Create("input", 8192, 1, 48000, false);
             source.bypassEffects = initiallyBypassed;
             source.Play();
@@ -307,6 +309,19 @@ namespace UnityEngine.Tests
             source.Play(); // A clipless generator keeps its measured live bypass path.
             source.bypassEffects = initiallyBypassed;
             Assert.Equal(initiallyBypassed, source.bypassEffects);
+        }
+
+        [Fact]
+        public void LiveBypassWithoutScriptsKeepsChangingTheRoute()
+        {
+            var source = Source("component reconnect");
+            source.gameObject.AddComponent<AudioLowPassFilter>();
+            source.clip = AudioClip.Create("input", 8192, 1, 48000, false);
+            source.Play();
+            source.bypassEffects = true;
+            Assert.True(source.bypassEffects);
+            source.bypassEffects = false;
+            Assert.False(source.bypassEffects);
         }
 
         [Fact]

@@ -24,7 +24,8 @@ const RENDERING_LIMITATIONS: &[&str] = &[
 
 const AUDIO_LIMITATIONS: &[&str] = &[
     "3D AudioDistortionFilter and AudioChorusFilter are measured only on Unity 6000.0.71f1; other releases reject these placements.",
-    "Changing bypassEffects while a scripted 3D Distortion/Chorus clip chain is playing is not supported; stop the source before reconnecting its filters.",
+    "Changing bypassEffects while an AudioSource clip with OnAudioFilterRead scripts is playing is not supported; stop the source before reconnecting its filters.",
+    "Changing bypassEffects while a 3D AudioDistortionFilter/AudioChorusFilter clip chain without scripts is playing differs from the Editor's live reconnection.",
     "AudioListener filter components interleaved with OnAudioFilterRead scripts, or sharing their GameObject with an AudioSource, are not supported.",
 ];
 

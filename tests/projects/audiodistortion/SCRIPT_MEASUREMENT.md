@@ -31,7 +31,10 @@ the existing one-step device PCM allowance. It also writes a full 49-control str
 comparison. Five live reconnection controls retain their complete mismatching PCM.
 Four scripted clip controls require explicit `NotSupportedException` diagnostics
 for both attempted bypass changes, leaving the current route intact; Stop permits
-reconfiguration. Changing bypass while a clipless generator plays remains supported.
+reconfiguration. The same refusal covers every clip source with an `OnAudioFilterRead`
+script, 2D or 3D, whatever its components. Changing bypass while a clipless generator
+plays remains supported. The component-only 3D control is not refused and is listed by
+`unbound doctor`.
 
 Follow-up: live bypass reconnection of clipped source chains. The Editor changes
 callback input ownership, processing activity and retained effect history according
