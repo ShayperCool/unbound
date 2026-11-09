@@ -579,6 +579,12 @@ namespace DotRecast.Detour
         ///  @param[out]	isOverPoly 	Set to true if the point's X/Z coordinate lies inside the polygon, false otherwise. Unchanged if no polygon is found. [opt]
         /// @returns The status flags for the query.
         public DtStatus FindNearestPoly(RcVec3f center, RcVec3f halfExtents, IDtQueryFilter filter,
+            out long nearestRef, out RcVec3f nearestPt, out bool isOverPoly) =>
+            FindNearestPoly(center, halfExtents, filter, false, out nearestRef, out nearestPt, out isOverPoly);
+
+        /// Unbound: <paramref name="preferOver"/> picks a polygon under or over the point before
+        /// any beside it (see DtFindNearestPolyQuery.Pick).
+        public DtStatus FindNearestPoly(RcVec3f center, RcVec3f halfExtents, IDtQueryFilter filter, bool preferOver,
             out long nearestRef, out RcVec3f nearestPt, out bool isOverPoly)
         {
             nearestRef = 0;
@@ -586,13 +592,14 @@ namespace DotRecast.Detour
             isOverPoly = false;
 
             // Get nearby polygons from proximity grid.
-            DtFindNearestPolyQuery query = new DtFindNearestPolyQuery(this, center);
+            DtFindNearestPolyQuery query = new DtFindNearestPolyQuery(this, m_nav, center);
             DtStatus status = QueryPolygons(center, halfExtents, filter, ref query);
             if (status.Failed())
             {
                 return status;
             }
 
+            query.Pick(halfExtents, preferOver);
             nearestRef = query.NearestRef();
             nearestPt = query.NearestPt();
             isOverPoly = query.OverPoly();

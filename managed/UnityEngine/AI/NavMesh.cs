@@ -62,12 +62,16 @@ namespace UnityEngine.AI
         internal static RcVec3f AgentReach(float radius) =>
             new RcVec3f(radius * AgentReachAcross, radius * AgentReachUpDown, radius * AgentReachAcross);
 
-        internal static bool Nearest(NavWorld.Surface surface, Vector3 position, RcVec3f extents, IDtQueryFilter filter, out long polyRef, out Vector3 point)
+        /// <summary>The nearest polygon to the position within the extents, and its nearest point.
+        /// <paramref name="preferOver"/>: a polygon under or over the position is taken before any
+        /// beside it, as Unity's SamplePosition, Raycast and FindClosestEdge do (its paths and agents
+        /// take the nearer).</summary>
+        internal static bool Nearest(NavWorld.Surface surface, Vector3 position, RcVec3f extents, IDtQueryFilter filter, out long polyRef, out Vector3 point, bool preferOver = false)
         {
             polyRef = 0;
             point = position;
             if (surface?.Query == null) return false;
-            surface.Query.FindNearestPoly(V(position), extents, filter, out polyRef, out var nearest, out _);
+            surface.Query.FindNearestPoly(V(position), extents, filter, preferOver, out polyRef, out var nearest, out _);
             point = V(nearest);
             return polyRef != 0;
         }
@@ -97,8 +101,9 @@ namespace UnityEngine.AI
             foreach (var surface in NavWorld.Surfaces)
             {
                 if (agentTypeID >= 0 && surface.AgentTypeID != agentTypeID) continue;
-                if (!Nearest(surface, sourcePosition, new RcVec3f(maxDistance, maxDistance, maxDistance), filter, out var polyRef, out var point)) continue;
-                float d = Vector3.Distance(sourcePosition, point);
+                if (!Nearest(surface, sourcePosition, new RcVec3f(maxDistance, maxDistance, maxDistance), filter, out var polyRef, out var point, preferOver: true)) continue;
+                float dx = point.x - sourcePosition.x, dy = point.y - sourcePosition.y, dz = point.z - sourcePosition.z;
+                float d = Mathf.Sqrt(dz * dz + dy * dy + dx * dx);
                 if (d > maxDistance || d >= hit.distance) continue;
                 hit.position = point;
                 hit.distance = d;
@@ -122,7 +127,7 @@ namespace UnityEngine.AI
         {
             hit = default;
             var surface = NavWorld.Get(agentTypeID);
-            if (!Nearest(surface, sourcePosition, AgentExtents(agentTypeID), filter, out var startRef, out var start))
+            if (!Nearest(surface, sourcePosition, AgentExtents(agentTypeID), filter, out var startRef, out var start, preferOver: true))
             {
                 // No polygon the filter allows near the source: no hit, at no position and distance
                 // (measured, tests/projects/navpath ray.area: a start off the NavMesh and one on an
@@ -164,7 +169,7 @@ namespace UnityEngine.AI
         {
             hit = default;
             var surface = NavWorld.Get(agentTypeID);
-            if (!Nearest(surface, sourcePosition, AgentExtents(agentTypeID), filter, out var startRef, out var start)) return false;
+            if (!Nearest(surface, sourcePosition, AgentExtents(agentTypeID), filter, out var startRef, out var start, preferOver: true)) return false;
             var status = surface.Query.FindDistanceToWall(startRef, V(start), 1e5f, filter, out float distance, out var position, out var normal);
             if (status.Failed()) return false;
             hit.position = V(position);

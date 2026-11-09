@@ -10,9 +10,16 @@ Altered (marked `Unbound:` in the sources):
 - every top-level type is `internal` (it is not Unity API);
 - A* nodes compare by total cost alone and a modified node only bubbles up, as in Detour;
 - a point on a polygon edge belongs to the polygon whose maximum the edge is (Unity's choice);
-- the nearest polygon to a point is ranked by distance, a polygon under or over the point by its
-  height minus the climb (negative within it: the nearest in height wins), as Unity's queries choose;
-- of equally near polygons the last one found is the nearest (Unity's: ties on shared edges);
+- the nearest polygon to a point (`DtFindNearestPolyQuery`): a polygon the point is over seen from
+  above (inside it by a half-open crossing count, or within a float epsilon of its edge) ranks by
+  the height between them, any other by the straight distance to its nearest point; of equally
+  near polygons the first the query visits stays. SamplePosition, Raycast and FindClosestEdge take
+  the best polygon under or over the point when its point lies in the query box, else the best
+  beside it; paths and agents take the one beside unless the other is nearer in height than it is
+  in a straight line (Unity 6000.0.71f1: tests/projects/navbaked and navmesh `sample`; the paths'
+  and agents' choice is not separately measured);
+- placed tiles keep their bounding volume tree (moved with the tile), and queries walk it: its
+  node order decides which of equally near polygons is visited first, as in Unity;
 - A* as Unity's (`tests/projects/navcost`): a polygon's node is placed once, when the search first
   reaches the polygon, at the point of the portal from the polygon it is reached from nearest that
   polygon's node (in 3D, kept 5% of the portal's length from its ends; a portal shorter than 1 cm

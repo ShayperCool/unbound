@@ -127,10 +127,10 @@ def unbound(work):
 # The scenarios of the scene's NavMesh itself: loaded with the scene, its triangulation, paths
 # over its links, additive scenes and unloading; the second scene's agent when the coroutine waiting
 # for its load resumes; and where asynchronous operations complete and their waiting coroutines
-# resume. The others (samples, raycasts, the walking agent, the first additive load's frame:
+# resume, and the samples. The others (raycasts, the walking agent, the first additive load's frame:
 # `resume.load`) measure the general queries, the agent model and scene loading time, whose
 # residuals are recorded in docs/COMPATIBILITY_GAPS.md: they are compared and listed, not gated.
-GATED = ('awake', 'areas', 'baked', 'paths', 'additive', 'agent2', 'unloaded',
+GATED = ('awake', 'areas', 'baked', 'paths', 'additive', 'agent2', 'unloaded', 'sample',
          'resume.unload', 'resume.held', 'resume.resources', 'resume.instantiate')
 
 

@@ -362,9 +362,17 @@ namespace Unbound.Runtime
                 poly.areaAndtype = src.areaAndtype;
                 copy.polys[i] = poly;
             }
-            copy.header.bvNodeCount = 0;
+            // Queries walk the tile's bounding volume tree (its node order decides which of equally
+            // near polygons a query finds first, as in Unity: tests/projects/navmesh and navbaked
+            // `sample` on area boundaries).
+            bool hasTree = tile.bvTree != null && tile.header.bvNodeCount > 0;
+            copy.header.bvNodeCount = hasTree ? tile.header.bvNodeCount : 0;
             bool identity = position == Vector3.zero && rotation == Quaternion.identity;
-            if (identity) return copy;
+            if (identity)
+            {
+                if (hasTree) copy.bvTree = tile.bvTree;
+                return copy;
+            }
             void Move(float[] v)
             {
                 for (int i = 0; i + 2 < v.Length; i += 3)
@@ -389,7 +397,42 @@ namespace Unbound.Runtime
             }
             copy.header.bmin = new RcVec3f(min.x, min.y, min.z);
             copy.header.bmax = new RcVec3f(max.x, max.y, max.z);
+            if (hasTree) copy.bvTree = MoveTree(tile, copy.header, position, rotation);
             return copy;
+        }
+
+        /// <summary>The tile's bounding volume tree moved with it: each node, in the same order, bounds
+        /// its box moved into the world (in the moved tile's quantized coordinates).</summary>
+        static DtBVNode[] MoveTree(DtMeshData tile, DtMeshHeader moved, Vector3 position, Quaternion rotation)
+        {
+            var h = tile.header;
+            float q = h.bvQuantFactor;
+            var nodes = new DtBVNode[h.bvNodeCount];
+            for (int n = 0; n < nodes.Length; n++)
+            {
+                var src = tile.bvTree[n];
+                var min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+                var max = -min;
+                for (int c = 0; c < 8; c++)
+                {
+                    var local = new Vector3(
+                        h.bmin.X + ((c & 1) != 0 ? src.bmax.X : src.bmin.X) / q,
+                        h.bmin.Y + ((c & 2) != 0 ? src.bmax.Y : src.bmin.Y) / q,
+                        h.bmin.Z + ((c & 4) != 0 ? src.bmax.Z : src.bmin.Z) / q);
+                    var p = position + rotation * local;
+                    min = Vector3.Min(min, p);
+                    max = Vector3.Max(max, p);
+                }
+                int Low(float v, float origin) => Math.Clamp((int)MathF.Floor((v - origin) * q), 0, 0xffff);
+                int High(float v, float origin) => Math.Clamp((int)MathF.Ceiling((v - origin) * q), 0, 0xffff);
+                nodes[n] = new DtBVNode
+                {
+                    bmin = new RcVec3i(Low(min.x, moved.bmin.X), Low(min.y, moved.bmin.Y), Low(min.z, moved.bmin.Z)),
+                    bmax = new RcVec3i(High(max.x, moved.bmin.X), High(max.y, moved.bmin.Y), High(max.z, moved.bmin.Z)),
+                    i = src.i,
+                };
+            }
+            return nodes;
         }
 
         static DtMeshHeader Copy(DtMeshHeader h) => new DtMeshHeader

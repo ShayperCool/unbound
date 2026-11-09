@@ -1308,6 +1308,16 @@ namespace DotRecast.Detour
                 return false;
             }
 
+            height = PolyHeight(tile, poly, pos);
+            return true;
+        }
+
+        /// <summary>The height of the polygon's detail surface at (x, z) of <paramref name="pos"/>,
+        /// which lies over the polygon or on its edge: the detail triangle's there, else the nearest
+        /// detail edge's.</summary>
+        public float PolyHeight(DtMeshTile tile, DtPoly poly, RcVec3f pos)
+        {
+            int ip = poly.index;
             // Find height at the location.
             Span<RcVec3f> tempV = stackalloc RcVec3f[3];
             if (tile.data.detailMeshes != null)
@@ -1343,8 +1353,7 @@ namespace DotRecast.Detour
 
                     if (DtUtils.ClosestHeightPointTriangle(pos, v[0], v[1], v[2], out var h))
                     {
-                        height = h;
-                        return true;
+                        return h;
                     }
                 }
             }
@@ -1365,8 +1374,7 @@ namespace DotRecast.Detour
 
                     if (DtUtils.ClosestHeightPointTriangle(pos, v[0], v[1], v[2], out var h))
                     {
-                        height = h;
-                        return true;
+                        return h;
                     }
                 }
             }
@@ -1375,9 +1383,7 @@ namespace DotRecast.Detour
             // or larger floating point values) the point is on an edge, so just select
             // closest. This should almost never happen so the extra iteration here is
             // ok.
-            var closest = ClosestPointOnDetailEdges(tile, poly, pos, false);
-            height = closest.Y;
-            return true;
+            return ClosestPointOnDetailEdges(tile, poly, pos, false).Y;
         }
 
         public void ClosestPointOnPoly(long refs, RcVec3f pos, out RcVec3f closest, out bool posOverPoly)
