@@ -873,7 +873,6 @@ namespace Unbound.Runtime.Playables
         {
             if (result.BodyMotion.HasMotion) animator.Human?.SetPoseMotion(result.BodyMotion);
             if (result.FootIK && animator.Human is { } footHuman) footHuman.FootIK = true;
-            if (!culled) animator.Human?.DefaultPoseUnlessWritten();
             if (result.HasMassCenter && animator.Human is { } massHuman)
             {
                 var b = result.Bindings;
@@ -889,6 +888,9 @@ namespace Unbound.Runtime.Playables
             if (!(culled && rootWritten))
                 PoseWriter.WriteStream(result, onlyRoot: culled ? animator.transform : null,
                     skipRoot: preserveRoot || rootWritten ? animator.transform : null);
+            // Without a controller taking part, an output that wrote no humanoid curve poses the
+            // avatar by default; a controller's own pose stays otherwise.
+            if (!culled && animator.m_Player == null) animator.Human?.DefaultPoseUnlessWritten();
             if (!culled) animator.ApplyPlayableHumanPose(playableIK);
         }
 
@@ -900,8 +902,9 @@ namespace Unbound.Runtime.Playables
         /// (<see cref="MixerKind.HumanMotionTree"/>), through a single full-weight default-values
         /// output without an attached controller, uses the humanoid sampler. Mixer composition is
         /// measured on 6000.0.71f1 only (<see cref="Compat.HumanPlayableMixerMotionMeasured"/>).
-        /// Other humanoid graph shapes warn and carry no motion. Generic output motion and the
-        /// attached-controller combination are unchanged.</summary>
+        /// Such an output of clips without humanoid curves, mixers and layer mixers moves a
+        /// humanoid by generic root motion (<see cref="GenericClipTree"/>). Other humanoid graph
+        /// shapes warn and carry no motion.</summary>
         static RootMotionMode MotionModeOf(Animator animator, List<(PlayableOutputData Output, double Dt, bool Seek)> outputs)
         {
             bool requested = animator.m_ApplyRootMotion || MoveCallbacks.Any(animator);
@@ -926,7 +929,8 @@ namespace Unbound.Runtime.Playables
                     ? "Animator root motion of unsupported humanoid mixer output"
                     : "Animator root motion of composed playable graph outputs on humanoid avatars",
                     "is not applied: one full-weight output of a nonmirrored humanoid clip, or on measured 6000.0.71f1 of a mixer or layer mixer tree of such clips "
-                    + "with complete RootQ curves and input weights that are not infinite, is supported, without a playing controller, shared nodes or loop overrides; "
+                    + "with complete RootQ curves and input weights that are not infinite, or of clips without humanoid curves, mixers and layer mixers, "
+                    + "is supported, without a playing controller, shared nodes or loop overrides; "
                     + "controller playables, animation jobs, fractional or multiple outputs remain unsupported");
             return RootMotionMode.Unsupported;
         }

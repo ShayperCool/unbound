@@ -60,6 +60,7 @@ namespace Unbound.Runtime.Humanoid
         internal void DefaultPoseUnlessWritten()
         {
             if (m_Dirty) return;
+            ClearMotion();
             for (int i = 0; i < m_Values.Length; i++) m_Values[i] = DefaultValue(i);
             Array.Clear(m_Present);
             m_Dirty = true;
