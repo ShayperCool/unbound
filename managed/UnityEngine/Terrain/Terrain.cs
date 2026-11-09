@@ -54,12 +54,15 @@ namespace UnityEngine
         }
 
         TerrainRenderer m_Renderer;
+        /// <summary>The renderer drawing the terrain (null until it is first enabled).</summary>
+        internal TerrainRenderer Renderer => m_Renderer;
 
         internal override void OnEngineEnable()
         {
             if (!s_Active.Contains(this)) s_Active.Add(this);
             s_TilesChanged = true;
             m_Renderer ??= TerrainRenderer.For(this);
+            m_Renderer.renderingLayerMask = m_RenderingLayerMask;
             m_Renderer.OnEngineEnable();
         }
 
@@ -161,7 +164,17 @@ namespace UnityEngine
         public bool deringLightProbesForTrees { get => m_DeringLightProbesForTrees; set => m_DeringLightProbesForTrees = value; }
         public TreeMotionVectorModeOverride treeMotionVectorModeOverride { get => m_TreeMotionVectorModeOverride; set => m_TreeMotionVectorModeOverride = value; }
         public bool preserveTreePrototypeLayers { get => m_PreserveTreePrototypeLayers; set => m_PreserveTreePrototypeLayers = value; }
-        public uint renderingLayerMask { get => m_RenderingLayerMask; set => m_RenderingLayerMask = value; }
+        /// <summary>The rendering layers the terrain's renderer is on: renderer lists filter it and
+        /// light layers light it by this mask (tests/projects/urp terrain_light_layers).</summary>
+        public uint renderingLayerMask
+        {
+            get => m_RenderingLayerMask;
+            set
+            {
+                m_RenderingLayerMask = value;
+                if (m_Renderer != null) m_Renderer.renderingLayerMask = value;
+            }
+        }
 
         public static GraphicsFormat heightmapFormat => GraphicsFormat.R16_UNorm;
         public static TextureFormat heightmapTextureFormat => TextureFormat.R16;
