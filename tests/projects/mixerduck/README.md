@@ -162,3 +162,6 @@ interleaved stereo sample indices, including all startup frames.
 complete independent Send, Threshold and dry-volume captures with public frame
 clock logs at half speed and zero scale. Their PCM does not repeat exactly, so no
 unscaled reference is published and the existing timed sidechain restriction stays.
+
+Timed UnscaledTime transitions have a separate complete PCM profile, including paused
+clock selection and exposed ownership. See [UNSCALED_MEASUREMENT.md](UNSCALED_MEASUREMENT.md).

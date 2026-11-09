@@ -47,6 +47,26 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SnapshotStartsAtTheSubmittedOverrideAndClearRevealsItsProgress()
+        {
+            var (mixer, _, _) = Fixture();
+            mixer.m_Exposed["Volume"] = "volume";
+            mixer.updateMode = AudioMixerUpdateMode.UnscaledTime;
+            Assert.True(mixer.SetFloat("Volume", -3f));
+            mixer.Tick(0f, 0f);
+            var target = new AudioMixerSnapshot { m_Mixer = mixer };
+            target.m_Values["volume"] = -12f;
+            target.TransitionTo(1f);
+            mixer.Tick(0f, 0.5f);
+            Assert.True(mixer.GetFloat("Volume", out float value));
+            Assert.Equal(-3f, value);
+            Assert.True(mixer.ClearFloat("Volume"));
+            mixer.Tick(0f, 0.125f);
+            Assert.True(mixer.GetFloat("Volume", out value));
+            Assert.Equal(-8.625f, value);
+        }
+
+        [Fact]
         public void SnapshotProgressAccumulatesNormalizedFrameDurationsForEveryParameter()
         {
             var (mixer, _, _) = Fixture();
@@ -65,6 +85,7 @@ namespace UnityEngine.Tests
             }
             // A different duration and changing steps exercise the shared scheduler outside
             // the audio-buffer fixture; pausing and interrupted targets keep their meanings.
+            target = new AudioMixerSnapshot { m_Mixer = mixer };
             target.m_Values["control"] = 3f;
             target.TransitionTo(.7f);
             float progress = 0f;
@@ -398,37 +419,38 @@ namespace UnityEngine.Tests
         [InlineData("Duck Volume", "Make-up Gain")]
         [InlineData("Duck Volume", "Knee")]
         [InlineData("Duck Volume", "Sidechain Mix")]
-        public void TimedSnapshotsRejectOnlyChangingUnmeasuredSidechainParameters(string kind, string parameter)
+        public void UnscaledSidechainSnapshotsAdvanceWhileScaledTimeIsPaused(string kind, string parameter)
         {
-            var (mixer, group, effect) = Fixture();
+            var (mixer, _, effect) = Fixture();
             mixer.updateMode = AudioMixerUpdateMode.UnscaledTime;
             UseEffect(mixer, effect, kind, kind == "Send" ? Array.Empty<string>() : AudioMixerEffectController.DuckParameters);
             if (kind == "Send") { effect.m_MixLevelGuid = parameter; mixer.m_Exposed[parameter] = parameter; }
             mixer.Build();
-            float original = mixer.Value(parameter);
+            float initial = mixer.Value(parameter);
             float change = parameter == "Sidechain Mix" ? -0.25f : 1f;
             var target = new AudioMixerSnapshot { m_Mixer = mixer };
-            target.m_Values[parameter] = original + change;
-            Assert.Contains("timed snapshot", Assert.Throws<NotSupportedException>(() => target.TransitionTo(0.1f)).Message);
-            Assert.Throws<NotSupportedException>(() => mixer.TransitionToSnapshots(new[] { target }, new[] { 1f }, 0.2f));
-            Assert.Equal(original, mixer.Value(parameter));
-            // Immediate changes retain detector history; the mixerduck captures measure them.
-            target.TransitionTo(0f); mixer.Tick(0f, 0f);
-            Assert.Equal(original + change, mixer.Value(parameter));
-            // Changing only a group fader on this mixer remains supported.
-            target.m_Values["volume"] = -12f;
-            target.TransitionTo(0.2f); mixer.Tick(0.2f, 0.2f);
-            Assert.Equal(-12f, mixer.Value("volume"));
-            target.m_Values[parameter] = original;
-            Assert.True(mixer.SetFloat(parameter, original + 2f * change));
-            target.TransitionTo(0.2f);
-            Assert.Throws<NotSupportedException>(() => mixer.ClearFloat(parameter));
-            Assert.Equal(original + 2f * change, mixer.Value(parameter));
-            mixer.Tick(0.2f, 0.2f);
-            Assert.Equal(original + 2f * change, mixer.Value(parameter));
+            target.m_Values[parameter] = initial + change;
+            target.TransitionTo(1f);
+            mixer.Tick(0f, 0.25f);
+            Assert.Equal(initial + change * 0.25f, mixer.Value(parameter), 6);
+            // Re-selecting the same target keeps the original start and accumulated progress.
+            target.TransitionTo(2f);
+            mixer.Tick(0f, 0.5f);
+            Assert.Equal(initial + change * 0.5f, mixer.Value(parameter), 6);
+            mixer.updateMode = AudioMixerUpdateMode.Normal;
+            mixer.Tick(0f, 0.75f);
+            Assert.Equal(initial + change * 0.5f, mixer.Value(parameter), 6);
+            mixer.updateMode = AudioMixerUpdateMode.UnscaledTime;
+            Assert.True(mixer.SetFloat(parameter, initial));
+            mixer.Tick(0f, 0.25f);
+            Assert.Equal(initial, mixer.Value(parameter));
             Assert.True(mixer.ClearFloat(parameter));
-            target.m_Values[parameter] = original + change;
-            Assert.Throws<NotSupportedException>(() => target.TransitionTo(0.2f));
+            mixer.Tick(0f, 0.25f);
+            Assert.Equal(initial + change * 0.75f, mixer.Value(parameter), 6);
+            // Weighted calls select a fresh mix even when it contains the same snapshot.
+            mixer.TransitionToSnapshots(new[] { target }, new[] { 1f }, 1f);
+            mixer.Tick(0f, 0.5f);
+            Assert.Equal(initial + change * 0.875f, mixer.Value(parameter), 6);
         }
 
         [Theory]
@@ -457,8 +479,8 @@ namespace UnityEngine.Tests
             Assert.Equal(initial, mixer.Value(parameter));
             mixer.Tick(0.5f, 0.5f);
             Assert.Equal(initial + change * 0.375f, mixer.Value(parameter), 6);
-            Assert.Throws<NotSupportedException>(() => mixer.updateMode = AudioMixerUpdateMode.UnscaledTime);
-            Assert.Equal(AudioMixerUpdateMode.Normal, mixer.updateMode);
+            mixer.updateMode = AudioMixerUpdateMode.UnscaledTime;
+            Assert.Equal(AudioMixerUpdateMode.UnscaledTime, mixer.updateMode);
             Assert.True(mixer.SetFloat(parameter, initial));
             mixer.Tick(0f, 0f);
             Assert.Equal(initial, mixer.Value(parameter));
@@ -584,6 +606,7 @@ namespace UnityEngine.Tests
                 Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
                 mixer.Tick(0f, 0f);
                 Assert.NotNull(group.DspConfiguration());
+                target = new AudioMixerSnapshot { m_Mixer = mixer };
                 target.m_Values[parameter] = 0.1999f;
                 target.TransitionTo(0f);
                 mixer.Tick(0f, 0f);

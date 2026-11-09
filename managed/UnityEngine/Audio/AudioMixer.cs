@@ -45,6 +45,7 @@ namespace UnityEngine.Audio
         float m_Duration;
         float m_Elapsed;
         float m_Progress;
+        AudioMixerSnapshot m_SelectedSnapshot;
 
         internal const float MinVolume = -80f;
         internal const float MaxVolume = 20f;
@@ -111,7 +112,7 @@ namespace UnityEngine.Audio
         internal void TransitionToSnapshot(AudioMixerSnapshot snapshot, float timeToReach)
         {
             if (snapshot == null) throw new ArgumentException("null Snapshot passed to AudioMixerSnapshot.TransitionTo of AudioMixer '" + m_Name + "'");
-            ScheduleTransition(new[] { snapshot }, new[] { 1f }, timeToReach, true);
+            ScheduleTransition(new[] { snapshot }, new[] { 1f }, timeToReach, true, snapshot);
         }
 
         public void TransitionToSnapshots(AudioMixerSnapshot[] snapshots, float[] weights, float timeToReach)
@@ -119,11 +120,18 @@ namespace UnityEngine.Audio
             // Snapshot.TransitionTo applies overrides (tests/projects/mixerduck).
             => ScheduleTransition(snapshots, weights, timeToReach, !Compat.MixerSnapshotCurvesMeasured);
 
-        void ScheduleTransition(AudioMixerSnapshot[] snapshots, float[] weights, float timeToReach, bool useOverrides)
+        void ScheduleTransition(AudioMixerSnapshot[] snapshots, float[] weights, float timeToReach, bool useOverrides, AudioMixerSnapshot selectedSnapshot = null)
         {
             if (snapshots == null || weights == null) throw new ArgumentNullException(snapshots == null ? nameof(snapshots) : nameof(weights));
             if (snapshots.Length != weights.Length) throw new ArgumentException("Snapshots and weights arrays must be of the same length");
             Build();
+            // Re-selecting the same snapshot changes the duration without restarting progress.
+            // Unity 6000.0.71f1, tests/projects/mixerduck. Weighted mixes always start anew.
+            if (Compat.MixerSnapshotProgressMeasured && selectedSnapshot != null && selectedSnapshot == m_SelectedSnapshot)
+            {
+                m_Duration = timeToReach;
+                return;
+            }
             var target = new Dictionary<string, float>(m_Defaults);
             var types = new Dictionary<string, int>();
             float total = 0f;
@@ -150,6 +158,7 @@ namespace UnityEngine.Audio
             }
             if (timeToReach <= 0f)
             {
+                m_SelectedSnapshot = selectedSnapshot;
                 m_InstantTarget = target;
                 m_To = null;
                 return;
@@ -162,10 +171,13 @@ namespace UnityEngine.Audio
                     effect.CollectTimedSidechainChanges(this, target, snapshots, weights, changingSidechains);
             foreach (var guid in changingSidechains)
                 if (!HasOverride(guid) && !SupportsTimedSidechain(guid, types, m_UpdateMode))
-                    throw new NotSupportedException("AudioMixer timed snapshot changes to Send levels or Duck Volume parameters require measured scaled-time transitions");
+                    throw new NotSupportedException("AudioMixer timed snapshot changes to Send levels or Duck Volume parameters require measured timed transitions");
+            m_SelectedSnapshot = selectedSnapshot;
             m_TimedSidechainParameters = changingSidechains;
             m_InstantTarget = null;
             m_From = new Dictionary<string, float>(m_Values);
+            if (Compat.MixerSnapshotProgressMeasured)
+                foreach (var pair in m_SubmittedOverrides) m_From[pair.Key] = pair.Value;
             m_To = target;
             m_TransitionTypes = types;
             m_Duration = timeToReach;
@@ -200,7 +212,7 @@ namespace UnityEngine.Audio
         }
 
         static bool SupportsTimedSidechain(string guid, Dictionary<string, int> types, AudioMixerUpdateMode mode)
-            => Compat.MixerTimedSidechainMeasured && mode == AudioMixerUpdateMode.Normal
+            => Compat.MixerTimedSidechainMeasured && (mode == AudioMixerUpdateMode.Normal || mode == AudioMixerUpdateMode.UnscaledTime)
                 && (types == null || !types.TryGetValue(guid, out var type) || type == 0
                     || (Compat.MixerSnapshotCurvesMeasured && type >= 1 && type <= 5));
 
@@ -369,6 +381,7 @@ namespace UnityEngine.Audio
             // The Editor resumes its saved snapshot selection when entering Play mode.
             // tests/projects/mixersuspend distinguishes that selection from the start snapshot.
             var initial = Compat.MixerSnapshotSelectionMeasured ? m_TargetSnapshot ?? m_StartSnapshot : m_StartSnapshot;
+            m_SelectedSnapshot = initial;
             if (initial != null)
                 foreach (var pair in initial.m_Values) m_Values[pair.Key] = pair.Value;
         }

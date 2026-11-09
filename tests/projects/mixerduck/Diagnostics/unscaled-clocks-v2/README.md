@@ -22,10 +22,10 @@ unscaledDeltaTime 0.0018816893; its block 8 parameter is -0.2258027 dB after the
 update between those coroutine observations. Using the new frame's public delta
 would also assign the transition to the wrong update.
 
-Follow-up: capture and replay the actual unscaled audio-update input clock, then
+Historical proposed follow-up: capture and replay the actual unscaled audio-update input clock, then
 certify complete PCM for both independent input histories. A fixed offline DSP
 step does not represent this input. Until a repeatable certification method exists,
-timed unscaled sidechain transitions retain their explicit rejection; existing
+timed unscaled sidechain transitions at the time retained their explicit rejection; existing
 scaled-time references, tolerances and supported ordinary fader behavior are
 unchanged. No canonical unscaled PCM reference is published. Both raw runs and
 the complete exact comparison remain outside Git.
@@ -38,3 +38,7 @@ python3 tests/projects/mixersuspend/compare.py --release 6000.0.71f1 --rate 4800
 
 The existing comparator preserves every failing sample. No clock trace is used to
 shift, align or omit PCM, and no comparison tolerance is relaxed.
+
+The repeatable relative-interval profile in [UNSCALED_MEASUREMENT.md](../../UNSCALED_MEASUREMENT.md)
+now certifies unscaled snapshot PCM separately. This historical burst experiment
+and its differing records remain unclaimed.

@@ -50,5 +50,7 @@ for rate in a.rate or (48000, 44100):
     run('compare.py', '--profile', 'all', '--candidate', candidate, '--report', work/f'strict-{rate}.jsonl.gz')
     failed |= bool(run('compare.py', '--profile', 'all', '--pcm-steps', '1', '--candidate', candidate,
                        '--report', work/f'gate-{rate}.jsonl.gz'))
+failed |= bool(subprocess.run([sys.executable, str(fixture/'unscaled.py'), 'gate', '--release', a.release,
+                               '--runtime', str(runtime), '--work', str(work/'unscaled')]).returncode)
 print('reports:', work)
 raise SystemExit(failed)

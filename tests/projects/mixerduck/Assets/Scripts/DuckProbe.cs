@@ -178,18 +178,35 @@ public class DuckProbe : MonoBehaviour
         new[] { "cross_receive", "cross=Music", "music=dc0", "voice=imp0", "Music:Receive,Att", "Voice:Send>Music,Att" },
         new[] { "cross_duck", "cross=Music", "music=dc0", "voice=step0:0.5" },
     };
+    public static readonly string[][] UnscaledCases = {
+        new[] { "norm_send_pause", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "scale=0", "unscaled=1", "clocksteps=8" },
+        new[] { "norm_send_half", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "scale=0.5", "unscaled=1", "clocksteps=8" },
+        new[] { "norm_send_double", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "scale=2", "unscaled=1", "clocksteps=8" },
+        new[] { "norm_threshold_pause", "voice=step0:0.5", "change=Threshold", "to=-25", "snapshot=1", "duration=0.1", "scale=0", "unscaled=1", "clocksteps=8" },
+        new[] { "norm_threshold_half", "voice=step0:0.5", "change=Threshold", "to=-25", "snapshot=1", "duration=0.1", "scale=0.5", "unscaled=1", "clocksteps=8" },
+        new[] { "norm_threshold_double", "voice=step0:0.5", "change=Threshold", "to=-25", "snapshot=1", "duration=0.1", "scale=2", "unscaled=1", "clocksteps=8" },
+        new[] { "norm_volume_pause", "Music:Att", "Voice:Att", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "scale=0", "unscaled=1", "clocksteps=8", "finalmix=1" },
+        new[] { "norm_volume_half", "Music:Att", "Voice:Att", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "scale=0.5", "unscaled=1", "clocksteps=8", "finalmix=1" },
+        new[] { "norm_volume_double", "Music:Att", "Voice:Att", "voice=step0:0.5", "change=Volume", "to=-18", "snapshot=1", "duration=0.1", "scale=2", "unscaled=1", "clocksteps=8", "finalmix=1" },
+        new[] { "norm_normal_pause", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "scale=0", "clocksteps=8", "unscaled=0" },
+        new[] { "norm_mode_switch", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "scale=0", "clocksteps=8", "unscaled=0", "modeswitch=12" },
+        new[] { "norm_smooth", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "scale=0", "clocksteps=8", "unscaled=1", "curve=1" },
+        new[] { "norm_weighted", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "scale=0", "clocksteps=8", "unscaled=1", "single=1" },
+        new[] { "norm_duration", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "scale=0", "clocksteps=8", "unscaled=1", "durationsteps=1" },
+        new[] { "norm_override_clear", "voice=step0:0.5", "change=Send Level", "to=-12", "snapshot=1", "duration=0.1", "scale=0", "clocksteps=8", "unscaled=1", "overrideclear=1" },
+    };
     public const int BlockCount = 32;
     public const int ClipFrames = BlockCount * 1024;
     public static string[] Selected()
     {
         var only = Environment.GetEnvironmentVariable("DUCK_PROBE_CASES");
         var keys = new List<string>();
-        foreach (var c in Cases) if (string.IsNullOrEmpty(only) || Array.IndexOf(only.Split(','), c[0]) >= 0) keys.Add(c[0]);
+        foreach (var c in Environment.GetEnvironmentVariable("DUCK_PROBE_PROFILE") == "unscaled" ? UnscaledCases : Cases) if (string.IsNullOrEmpty(only) || Array.IndexOf(only.Split(','), c[0]) >= 0) keys.Add(c[0]);
         if (!string.IsNullOrEmpty(only))
             foreach (var c in DiagnosticCases) if (Array.IndexOf(only.Split(','), c[0]) >= 0) keys.Add(c[0]);
         return keys.ToArray();
     }
-    public static string[] Tokens(string key) => Array.Find(Cases, c => c[0] == key) ?? Array.Find(DiagnosticCases, c => c[0] == key);
+    public static string[] Tokens(string key) => Array.Find(Cases, c => c[0] == key) ?? Array.Find(DiagnosticCases, c => c[0] == key) ?? Array.Find(UnscaledCases, c => c[0] == key);
     public static string Option(string key, string name, string fallback)
     {
         foreach (var token in Tokens(key)) if (token.StartsWith(name)) return token.Substring(name.Length);
@@ -322,23 +339,35 @@ public class DuckProbe : MonoBehaviour
                 if (Engine) FlushEngine();
                 for (int block = 0; block < BlockCount; block++) {
                     if (block == int.Parse(Option(key, "late=", "-1"))) { createDelayed?.Invoke(); delayed.Play(); if (Engine) FlushEngine(); }
-                    if ((block == 8 || block == 20) && Option(key, "change=", "") != "") {
+                    bool normalized = Option(key, "clocksteps=", "") != "";
+                    if (Option(key, "overrideclear=", "") != "" && (block == 4 || block == 12)) {
+                        bool ok = block == 4 ? mixer.SetFloat("Change", -3f) : mixer.ClearFloat("Change");
+                        records.Add("\"" + key + ".ownership." + block + "\":" + (ok ? "true" : "false"));
+                        if (Engine) FlushEngine();
+                    }
+                    if (block == int.Parse(Option(key, "modeswitch=", "-1"))) mixer.updateMode = AudioMixerUpdateMode.UnscaledTime;
+                    if ((block == 8 || block == 20 || (normalized && block > 8 && block < 20)) && Option(key, "change=", "") != "") {
                         if (Option(key, "snapshot=", "0") == "1") {
-                            float duration = float.Parse(Option(key, "duration=", "0"), System.Globalization.CultureInfo.InvariantCulture);
+                            // A power-of-two multiple of the current public update clock gives an exact
+                            // fractional step despite varying wall frame durations during offline capture.
+                            float duration = normalized ? (Engine ? 1f / 64 : Time.unscaledDeltaTime)
+                                * (block == 20 ? 1 : Option(key, "durationsteps=", "") != "" && block >= 12 ? 16 : 8)
+                                : float.Parse(Option(key, "duration=", "0"), System.Globalization.CultureInfo.InvariantCulture);
                             if (Option(key, "single=", "0") == "1")
-                                mixer.TransitionToSnapshots(new[] { mixer.FindSnapshot(block == 8 ? "Other" : "Base") }, new[] { 1f }, duration);
+                                mixer.TransitionToSnapshots(new[] { mixer.FindSnapshot(block < 20 ? "Other" : "Base") }, new[] { 1f }, duration);
                             else if (Option(key, "weight=", "") != "") {
                                 float weight = float.Parse(Option(key, block == 8 ? "weight=" : "returnweight=", block == 8 ? "1" : "0"), System.Globalization.CultureInfo.InvariantCulture);
                                 mixer.TransitionToSnapshots(new[] { mixer.FindSnapshot("Base"), mixer.FindSnapshot("Other") }, new[] { 1f - weight, weight }, duration);
-                            } else mixer.FindSnapshot(block == 8 ? "Other" : "Base").TransitionTo(duration);
+                            } else mixer.FindSnapshot(block < 20 ? "Other" : "Base").TransitionTo(duration);
                         }
                         else if (block == 8) { if (!mixer.SetFloat("Change", float.Parse(Option(key, "to=", "0"), System.Globalization.CultureInfo.InvariantCulture))) throw new Exception("SetFloat failed"); }
                         else if (!mixer.ClearFloat("Change")) throw new Exception("ClearFloat failed");
                         if (Engine) FlushEngine();
                     }
                     if (!Engine) yield return null;
-                    else if (timed) FlushEngine(Time.captureDeltaTime);
+                    else if (timed) FlushEngine(normalized ? 1f / 64 : Time.captureDeltaTime);
                     if (timed && mixer.GetFloat("Change", out float parameter)) {
+                        if (normalized) records.Add("\"" + key + ".parameterBits." + block + "\":" + BitConverter.SingleToInt32Bits(parameter));
                         Debug.Log(key + " block=" + block + " parameter=" + parameter.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
                         if (key == "timed_ratio_min" && block == 15)
                             records.Add("\"" + key + ".endParameterBits\":" + BitConverter.SingleToInt32Bits(parameter));
