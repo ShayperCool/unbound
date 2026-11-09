@@ -1526,7 +1526,7 @@ namespace UnityEngine
             {
                 bool identity = transform == Matrix4x4.identity;
                 int n = VertexCount;
-                int length = streaming ? Capacity(mesh.m_Vertices.Length, n) : n;
+                int length = streaming ? Mesh.StreamCapacity(mesh.m_Vertices.Length, n) : n;
                 var positions = mesh.m_Vertices.Length == length ? mesh.m_Vertices : new Vector3[length];
                 for (int i = 0; i < n; i++)
                     positions[i] = identity ? Positions[i] : transform.MultiplyPoint3x4(Positions[i]);
@@ -1549,31 +1549,11 @@ namespace UnityEngine
                 }
                 else mesh.m_Colors = null;
                 WriteStreamAttributes(mesh, transform, identity, length, streaming);
-                // Before the indices: a format change resets the submeshes and clears the index
-                // buffer (Mesh.indexFormat, 6000.0).
-                mesh.indexFormat = Index32 ? IndexFormat.UInt32 : IndexFormat.UInt16;
-                if (mesh.m_SubMeshes.Count != 1)
-                {
-                    mesh.m_SubMeshes.Clear();
-                    mesh.m_SubMeshes.Add(new Mesh.SubMesh());
-                }
-                var sub = mesh.m_SubMeshes[0];
-                int indexLength = streaming ? Capacity(sub.Indices.Length, IndexCount) : IndexCount;
-                if (sub.Indices.Length != indexLength) sub.Indices = new int[indexLength];
-                Array.Copy(Indices, sub.Indices, IndexCount);
-                sub.Topology = MeshTopology.Triangles;
-                sub.BaseVertex = 0;
+                mesh.WriteStreamedTriangles(Indices, IndexCount, Index32, streaming);
                 // A draw mesh's bounds are not used (its draw is culled by the particles').
                 if (!streaming) mesh.RecalculateBounds();
-                // Last: the setters above reset the streamed counts.
-                mesh.m_StreamVertexCount = streaming ? n : -1;
-                mesh.m_StreamIndexCount = streaming ? IndexCount : -1;
-                mesh.m_Dirty = true;
+                mesh.FinishStreamedWrite(n, IndexCount, streaming);
             }
-
-            /// <summary>The array length a streaming mesh keeps for <paramref name="needed"/>
-            /// elements: its current length while that suffices, else doubled.</summary>
-            static int Capacity(int current, int needed) => needed <= current ? current : Math.Max(needed, Math.Max(64, current * 2));
         }
     }
 }

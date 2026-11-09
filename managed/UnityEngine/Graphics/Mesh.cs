@@ -887,6 +887,39 @@ namespace UnityEngine
         /// single submesh, m_StreamIndexCount indices; -1 uploads whole arrays.</summary>
         internal int m_StreamVertexCount = -1, m_StreamIndexCount = -1;
 
+        /// <summary>The array length a streamed mesh keeps for <paramref name="needed"/>
+        /// elements: its current length while that suffices, else doubled.</summary>
+        internal static int StreamCapacity(int current, int needed) => needed <= current ? current : Math.Max(needed, Math.Max(64, current * 2));
+
+        /// <summary>The first <paramref name="count"/> of <paramref name="indices"/> as the
+        /// mesh's only submesh, of triangles (a streamed mesh keeps the array at a capacity).
+        /// The index format is set first: a format change resets the submeshes and clears the
+        /// index buffer (Mesh.indexFormat, 6000.0).</summary>
+        internal void WriteStreamedTriangles(int[] indices, int count, bool index32, bool streaming)
+        {
+            indexFormat = index32 ? IndexFormat.UInt32 : IndexFormat.UInt16;
+            if (m_SubMeshes.Count != 1)
+            {
+                m_SubMeshes.Clear();
+                m_SubMeshes.Add(new SubMesh());
+            }
+            var sub = m_SubMeshes[0];
+            int length = streaming ? StreamCapacity(sub.Indices.Length, count) : count;
+            if (sub.Indices.Length != length) sub.Indices = new int[length];
+            Array.Copy(indices, sub.Indices, count);
+            sub.Topology = MeshTopology.Triangles;
+            sub.BaseVertex = 0;
+        }
+
+        /// <summary>Ends a direct write of the channel arrays: a streamed mesh uploads only its
+        /// first counts. Last, as the setters reset the streamed counts.</summary>
+        internal void FinishStreamedWrite(int vertexCount, int indexCount, bool streaming)
+        {
+            m_StreamVertexCount = streaming ? vertexCount : -1;
+            m_StreamIndexCount = streaming ? indexCount : -1;
+            m_Dirty = true;
+        }
+
         // Index and submesh packets reused by every upload (main thread; ThreadStatic for safety).
         [ThreadStatic] static uint[] s_UploadIndices;
         [ThreadStatic] static SubMeshPacket[] s_UploadSubmeshes;
