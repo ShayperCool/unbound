@@ -905,8 +905,11 @@ namespace Unbound.Runtime
             Renderer.SendWillRenderObject(camera != null ? camera.projectionMatrix * camera.worldToCameraMatrix : Matrix4x4.zero, (int)mask);
             foreach (var renderer in RenderRegistry.Renderers)
             {
-                if (!renderer || renderer.forceRenderingOff || !renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
-                if ((mask & (1u << renderer.gameObject.layer)) == 0) continue;
+                // A live renderer's state read directly (the culling runs on the main thread).
+                if (!renderer || renderer.forceRenderingOff || !renderer.m_Enabled) continue;
+                var go = renderer.m_GameObject;
+                if (!go.ActiveInHierarchyNoThrow) continue;
+                if ((mask & (1u << go.m_Layer)) == 0) continue;
                 // The camera's position (read anew, scripts may move it meanwhile) only for a
                 // renderer in an LOD group.
                 if (camera != null && renderer.m_LODGroup is not null && !LODGroup.Drawn(renderer, camera, camera.transform.position)) continue;
