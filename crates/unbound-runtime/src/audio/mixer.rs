@@ -935,6 +935,11 @@ impl Mixer {
             source.pending_position = 0.0;
             source.generator = GeneratorState::default();
             source.generator_gain = None;
+            if !source.bypass_dry.is_empty() {
+                source
+                    .bypass_dry
+                    .resize(config.buffer_size.max(BLOCK as u32) as usize * 2, 0.0);
+            }
             source.chain_tail = None;
             source.filtered.clear();
             source.filtered_offset = 0;
@@ -5648,6 +5653,17 @@ mod tests {
         for ((actual, dry), generated) in output.iter().zip(dry).zip(generated) {
             assert_eq!(*actual, dry + generated);
         }
+        // A larger device buffer after reconfiguration keeps room for the bypassed dry route.
+        mixer
+            .reconfigure(MixerConfig {
+                buffer_size: 4096,
+                ..MixerConfig::default()
+            })
+            .unwrap();
+        play(&mut mixer, 7, command::PLAY, 0.0);
+        let mut larger = vec![0.0; 2 * 8192];
+        mixer.render(&mut larger, 2);
+        assert!(larger.iter().any(|sample| *sample != 0.0));
     }
 
     #[test]

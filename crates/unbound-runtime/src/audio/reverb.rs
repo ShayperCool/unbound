@@ -209,6 +209,8 @@ impl SfxReverb {
         self.previous = self.c;
     }
 
+    /// The first parameters apply at once; later ones take effect at the next DSP-buffer
+    /// boundary and crossfade through that buffer, as measured on the zone return.
     pub fn tune(&mut self, p: &SfxReverbSpec) {
         let rate = self.rate as f32;
         let mut c = Coefficients {
@@ -299,7 +301,9 @@ impl SfxReverb {
         }
     }
 
-    /// Keeps the unmeasured compatibility path's immediate parameter application.
+    /// Applies parameters at once. Mixer and AudioReverbFilter SFX Reverb live changes and
+    /// unmeasured zone profiles keep this path: the DSP-buffer crossfade of [`Self::tune`] is
+    /// measured only on the zone return (tests/projects/audioreverb live controls).
     pub fn tune_immediate(&mut self, p: &SfxReverbSpec) {
         self.tune(p);
         self.c = self.pending;

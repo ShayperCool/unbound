@@ -807,7 +807,7 @@ impl Effect {
                 Some(reverb) if reverb.configuration() == (rate, buffer.max(1)) => reverb,
                 slot => slot.insert(Box::new(SfxReverb::new(rate, buffer)?)),
             };
-            reverb.tune(sfx);
+            reverb.tune_immediate(sfx);
         }
         if kind == Some(EffectKind::Send) && spec.send_level != self.spec.send_level {
             self.send_from = self.gain;
@@ -1179,6 +1179,35 @@ mod tests {
             }
             assert_eq!(a, b, "wet {target}");
         }
+    }
+
+    #[test]
+    fn group_sfx_reverb_live_changes_apply_at_once_inside_a_dsp_buffer() {
+        // The DSP-buffer crossfade is measured only on the zone return; mixer and filter
+        // SFX Reverb live changes keep immediate application.
+        let spec = |dry: f32| {
+            serde_json::from_value::<EffectSpec>(serde_json::json!({
+                "id": "reverb", "kind": "SFX Reverb",
+                "sfx": {
+                    "dryLevel": dry, "room": -10000.0, "roomHf": 0.0, "decayTime": 1.0,
+                    "decayHfRatio": 0.5, "reflections": -10000.0, "reflectDelay": 0.02,
+                    "reverb": 0.0, "reverbDelay": 0.04, "diffusion": 100.0, "density": 100.0,
+                    "hfReference": 5000.0, "roomLf": 0.0, "lfReference": 250.0
+                }
+            }))
+            .unwrap()
+        };
+        let mut effect = Effect::new(spec(0.0), 48000, 1024).unwrap();
+        let mut before = vec![0.25; 2 * 100];
+        effect.process(&mut before, false);
+        effect.update(spec(-600.0), 48000, 1024).unwrap();
+        let mut after = vec![0.25; 2];
+        effect.process(&mut after, false);
+        let ratio = after[0] / before[199];
+        assert!(
+            (ratio - 10f32.powf(-600.0 / 2000.0)).abs() < 1e-6,
+            "{ratio}"
+        );
     }
 
     #[test]
