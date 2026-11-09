@@ -69,22 +69,25 @@ Altered (marked `Unbound:` in the sources):
 - `DtOffMeshConnection.costModifier` holds a link's cost modifier, which the engine's query filter
   uses per metre in place of the link's area cost when it is zero or more (navlinks `costhigh`);
 - `FindStraightPath` uses Unity's funnel (`tests/projects/navpath`, navcost route sweeps): the portal
-  ends are offsets from the apex with components within 1e-4 counted as zero, put in funnel order;
+  ends are offsets from the apex with components within 1e-4 counted as zero, put in funnel order
+  (a portal seen reversed has its offsets swapped, not its points: navpath `link.wide` a3);
   a corner is made only where the portal lies strictly beyond a side (a path through a portal end
   exactly has none), both sides are tested before either narrows, and a side narrows to an end on
   it or within it; off-mesh connection ends are added where the segment to the next corner
-  crosses onto or off a connection (`AppendLinkCrossings`), so they stay corners also in line; a
+  crosses onto or off a connection (`AppendLinkCrossings`: the portal's point nearest the
+  segment's line in 3D, its middle for parallel lines), so they stay corners also in line; a
   start within 2 mm of the first portal begins past it;
 - `DtNavMeshQuery.GetPathToNode` is visible to the engine (partial paths end at the reachable
   ground polygon nearest to the target, never on an off-mesh connection: navlinks `snapnear`);
 - off-mesh connection ends attach within the agent type's radius across (the engine sets `rad`)
   and its climb in height (`BaseOffMeshLinks`, `ConnectExtOffMeshLinks`; navpath `link.snap`);
 - wide connections (`DtOffMeshConnection.halfWidth`, NavMeshLinkData.width): each end is a segment
-  attached to every polygon of the tile it crosses, the overlap kept as the link's bmin/bmax
-  (`ConnectWideEnd`); its portal is that part of the segment (`WidePortal`), and it is crossed
-  straight across from where the agent is along the end it enters by, held to the parts over the
-  polygons before and after (`GetOffMeshConnectionPolyEndPoints`; navpath `link.wide`, navlinks
-  `wide`); a tile's links grow when they run out (`AllocLink`);
+  attached to every polygon it crosses in every tile it reaches (`ConnectWideEnd`,
+  `ConnectExtOffMeshLinks`; navpath `link.widetile`), the overlap kept as the link's bmin/bmax;
+  its portal is that part of the segment (`WidePortal`), and it is crossed straight across from
+  where the agent is along the end it enters by, held to the parts over the polygons before
+  and after (`GetOffMeshConnectionPolyEndPoints`; navpath `link.wide`, navlinks `wide`); a tile's
+  links grow when they run out (`AllocLink`);
 - `DtNavMeshQuery.Raycast` (`DotRecast.Detour/DtNavMeshQuery.cs`) computes the hit wall edge's z
   extent as its end's z minus its start's z (the port subtracted the start's x), so the hit normal
   is perpendicular to the wall that stops the ray (`NavMesh.Raycast`'s and `NavMeshAgent.Raycast`'s

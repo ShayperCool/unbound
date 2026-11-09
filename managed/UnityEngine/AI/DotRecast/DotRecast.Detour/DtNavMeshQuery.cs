@@ -1459,22 +1459,44 @@ namespace DotRecast.Detour
                     break;
                 }
 
-                // A connection's end is one point; a wider portal is crossed where the segment meets it.
-                float t = 0f;
-                if (DtUtils.IntersectSegSeg2D(startPos, endPos, left, right, out _, out var u))
-                {
-                    t = Math.Clamp(u, 0f, 1f);
-                }
+                // A connection's end is one point; a wider portal is crossed where the segment's
+                // line comes nearest the portal's line (in 3D), held to the portal; the portal's
+                // middle when they run in parallel (Unity's: navpath link.wide).
+                var crossing = NearestOnPortal(startPos, endPos, left, right);
 
                 byte flags = toType == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION ? DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION : (byte)0;
-                var stat = AppendVertex(RcVec3f.Lerp(left, right, t), flags, path[i + 1], straightPath, ref straightPathCount, maxStraightPath);
+                var stat = AppendVertex(crossing, flags, path[i + 1], straightPath, ref straightPathCount, maxStraightPath);
                 if (!stat.InProgress())
                 {
                     return stat;
                 }
+
+                // The next crossing is measured from this one.
+                startPos = crossing;
             }
 
             return DtStatus.DT_IN_PROGRESS;
+        }
+
+        /// Unbound: the point of the portal left-right nearest the line through start and end
+        /// (closest approach of the two lines in 3D, held to the portal); its middle when the lines
+        /// are parallel.
+        const float ParallelPortal = 1e-6f;
+
+        static RcVec3f NearestOnPortal(RcVec3f start, RcVec3f end, RcVec3f left, RcVec3f right)
+        {
+            var portal = right - left;
+            var segment = end - start;
+            var w = left - start;
+            float b = RcVec3f.Dot(segment, portal);
+            float a = RcVec3f.Dot(segment, segment);
+            float c = RcVec3f.Dot(portal, portal);
+            float d = a * c - b * b;
+            // Parallel (or a point portal): relative to the lines' lengths, rounding noise counts as zero.
+            if (d <= ParallelPortal * a * c)
+                return RcVec3f.Lerp(left, right, 0.5f);
+            float t = (b * RcVec3f.Dot(w, segment) - a * RcVec3f.Dot(w, portal)) / d;
+            return RcVec3f.Lerp(left, right, Math.Clamp(t, 0f, 1f));
         }
 
         protected DtStatus AppendPortals(int startIdx, int endIdx, RcVec3f endPos, Span<long> path,
@@ -1676,17 +1698,19 @@ namespace DotRecast.Detour
                     }
 
                     // Unbound: Unity's funnel. The portal's ends as offsets from the apex (see
-                    // FunnelOffset), in funnel order (a portal seen reversed from the apex is swapped;
-                    // Unity's differs where a path leaves a wide link beyond its width, navpath
-                    // link.wide a3, listed); a corner where the portal lies strictly beyond
-                    // a side (a path through a side's end exactly has none), tested on both sides
-                    // before either narrows; a side narrows to a portal end on it or within it.
+                    // FunnelOffset), in funnel order: a portal seen reversed from the apex has its
+                    // offsets swapped but not its points, so a side that narrows to it, and a corner
+                    // made there, take the point the portal gives on that side (navpath link.wide
+                    // a3: a path leaving a wide link beyond its width turns at the far end of the
+                    // link's end; a ground portal seen reversed, behind the apex, is unmeasured);
+                    // a corner where the portal lies strictly beyond a side (a path
+                    // through a side's end exactly has none), tested on both sides before either
+                    // narrows; a side narrows to a portal end on it or within it.
                     var l = FunnelOffset(portalApex, left);
                     var r = FunnelOffset(portalApex, right);
                     if (FunnelCross(l, r) < 0f)
                     {
                         (l, r) = (r, l);
-                        (left, right) = (right, left);
                     }
 
                     bool beyondLeft = FunnelCross(leftSide, r) < 0f;
@@ -2033,7 +2057,8 @@ namespace DotRecast.Detour
         // Returns portal points between two polygons.
         /// Unbound: the portal between a wide connection and a polygon its end <c>link.edge</c> is
         /// linked to: the part of that end's segment over the polygon (link.bmin..bmax), from its
-        /// bmin end to its bmax end (the funnel puts them in order). False for a connection
+        /// bmin end to its bmax end (the funnel keeps these points: entering, they are the left and
+        /// right of the way through; leaving, the other way round). False for a connection
         /// between two points.
         bool WidePortal(DtMeshTile conTile, DtPoly conPoly, DtLink link, out RcVec3f left, out RcVec3f right)
         {

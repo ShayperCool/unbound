@@ -801,6 +801,19 @@ namespace DotRecast.Detour
             for (int i = 0; i < target.data.header.offMeshConCount; ++i)
             {
                 DtOffMeshConnection targetCon = target.data.offMeshCons[i];
+
+                // Unbound: a wide connection's ends attach to the polygons they cross in every tile
+                // they reach, whichever tile their middles lie over (its start in its own tile is
+                // attached by BaseOffMeshLinks).
+                if (targetCon.IsWide)
+                {
+                    if (EdgeOverTile(targetCon, 1, tile))
+                        ConnectWideEnd(target, targetCon, 1, tile, oppositeSide, (targetCon.flags & DT_OFFMESH_CON_BIDIR) != 0);
+                    if (tile != target && EdgeOverTile(targetCon, 0, tile))
+                        ConnectWideEnd(target, targetCon, 0, tile, oppositeSide, true);
+                    continue;
+                }
+
                 if (targetCon.side != oppositeSide)
                 {
                     continue;
@@ -811,12 +824,6 @@ namespace DotRecast.Detour
                 // connected at all.
                 if (targetPoly.firstLink == DT_NULL_LINK)
                 {
-                    continue;
-                }
-
-                if (targetCon.IsWide)
-                {
-                    ConnectWideEnd(target, targetCon, 1, tile, oppositeSide, (targetCon.flags & DT_OFFMESH_CON_BIDIR) != 0);
                     continue;
                 }
 
@@ -983,6 +990,15 @@ namespace DotRecast.Detour
             }
 
             return false;
+        }
+
+        /// Unbound: whether end <paramref name="end"/> of a wide connection reaches over the tile (x, z).
+        static bool EdgeOverTile(DtOffMeshConnection con, int end, DtMeshTile tile)
+        {
+            con.Edge(end, out var a, out var b);
+            var h = tile.data.header;
+            return MathF.Max(a.X, b.X) >= h.bmin.X && MathF.Min(a.X, b.X) <= h.bmax.X
+                && MathF.Max(a.Z, b.Z) >= h.bmin.Z && MathF.Min(a.Z, b.Z) <= h.bmax.Z;
         }
 
         /// Unbound: the most polygons one end of a wide connection attaches to in a tile (as many as
