@@ -285,10 +285,26 @@ class RuntimeSnapshotTests(unittest.TestCase):
         a, b = first/'managed/Unbound.Host.dll', second/'managed/Unbound.Host.dll'
         self.assertEqual(a.stat().st_ino, b.stat().st_ino)
         self.assertNotEqual(a.stat().st_ino, (self.managed/'Unbound.Host.dll').stat().st_ino)
+        (self.managed/'Unbound.Host.dll').chmod(0o755)
+        executable = self.snapshot('executable')/'managed/Unbound.Host.dll'
+        self.assertNotEqual(a.stat().st_ino, executable.stat().st_ino)
+        self.assertEqual(executable.stat().st_mode & 0o777, 0o555)
         (self.managed/'Unbound.Host.dll').write_bytes(b'new managed')
         third = self.snapshot('third')
         self.assertNotEqual(a.stat().st_ino, (third/'managed/Unbound.Host.dll').stat().st_ino)
         self.assertEqual(a.read_bytes(), b'host')
+
+    def test_managed_blob_alias_is_rejected_before_publication(self):
+        self.snapshot()
+        blob = next(p for p in (self.cache/'snapshots/.managed-blobs').iterdir() if p.read_bytes() == b'host')
+        blob.unlink()
+        source = self.managed/'Unbound.Host.dll'
+        source.chmod(0o444)
+        blob.symlink_to(source)
+        self.cli.write_bytes(b'next cli')
+        with self.assertRaisesRegex(ValueError, 'invalid managed blob'):
+            self.snapshot('corrupt-blob')
+        self.assertFalse((self.root/'corrupt-blob/runtime').exists())
 
     def test_task_release_keeps_other_tasks_and_promoted_runs(self):
         with mock.patch.object(runtime, 'task_owner', return_value={'worktree': str(self.root), 'branch': 'task'}):

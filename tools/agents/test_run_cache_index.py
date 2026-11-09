@@ -26,7 +26,9 @@ class IndexTests(unittest.TestCase):
         self.assertNotIn(self.target, slot.symlink_targets(self.base))
         with mock.patch('run_cache_index.os.scandir', side_effect=AssertionError('rescanned history')):
             self.assertNotIn(self.target, slot.symlink_targets(self.base))
+        before = self.deep.stat()
         (self.deep/'Assets').symlink_to(self.target)
+        os.utime(self.deep, ns=(before.st_atime_ns, before.st_mtime_ns))
         self.assertIn(self.target, slot.symlink_targets(self.base))
         (self.deep/'Assets').unlink()
         self.assertNotIn(self.target, slot.symlink_targets(self.base))
