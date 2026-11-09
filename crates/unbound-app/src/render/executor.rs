@@ -3936,16 +3936,8 @@ impl UnityRenderer {
         // Regions are bottom-up (Unity's); a screen stored top-down (or its stand-in) counts its
         // rows from the top. The texels are copied as stored, as the device copies its screen.
         let top_down = self.conventions.top_down(true);
-        let y = if top_down && self.stored_as_screen(source) {
-            sh - y - h
-        } else {
-            y
-        };
-        let dy = if top_down && self.stored_as_screen(destination) {
-            dh - dy - h
-        } else {
-            dy
-        };
+        let y = if top_down && self.stored_as_screen(source) { sh - y - h } else { y };
+        let dy = if top_down && self.stored_as_screen(destination) { dh - dy - h } else { dy };
         self.mark_resolve_copied(&destination_attachment);
         let channels = channel_kind.map(|kind| ChannelCopy {
             source: src.create_view(&wgpu::TextureViewDescriptor {
@@ -4613,6 +4605,7 @@ fn depth_owner(color: u64, depth: u64) -> Option<u64> {
     }
 }
 
+
 /// Copies a float texture's values into an integer texture of its size as their bits, texel for
 /// texel (`SCALAR`: `u32` or `i32`).
 /// Copies 8-bit normalized texels into a texture of their level's size in another channel count
@@ -4896,10 +4889,7 @@ mod tests {
         let read = UnityRenderer::unstarted_screen((64, 32), [0, 0, 64, 32], false);
         assert_eq!(read.len(), 64 * 32 * 4);
         assert!(read.iter().all(|&b| b == 0));
-        assert_eq!(
-            UnityRenderer::unstarted_screen((64, 32), [60, 30, 10, 10], true).len(),
-            4 * 2 * 16
-        );
+        assert_eq!(UnityRenderer::unstarted_screen((64, 32), [60, 30, 10, 10], true).len(), 4 * 2 * 16);
         assert!(UnityRenderer::unstarted_screen((64, 32), [70, 0, 4, 4], false).is_empty());
     }
 
