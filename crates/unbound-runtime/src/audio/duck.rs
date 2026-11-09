@@ -85,6 +85,21 @@ impl Duck {
         spec: &DuckSpec,
         rate: u32,
     ) {
+        self.process_linked(samples, &mut [], sidechain, &[], spec, rate);
+    }
+
+    /// [`Duck::process`] over a layout wider than stereo: the louder of every channel drives
+    /// the gain of all of them, as within a stereo pair. `extra` are the other channel pairs
+    /// and `extra_sidechains` their sidechain blocks (empty: silence).
+    pub fn process_linked(
+        &mut self,
+        samples: &mut [f32],
+        extra: &mut [&mut [f32]],
+        sidechain: Option<&[f32]>,
+        extra_sidechains: &[&[f32]],
+        spec: &DuckSpec,
+        rate: u32,
+    ) {
         let attack = Self::coefficient(spec.attack_time, rate);
         let release = Self::coefficient(spec.release_time, rate);
         let makeup = 10_f32.powf(spec.makeup_gain / 20.0);
@@ -96,7 +111,20 @@ impl Duck {
                 mix * side[1] + (1.0 - mix) * stereo[1],
             ];
             // Linked stereo: the louder channel drives both.
-            let s = (x[0] * x[0]).max(x[1] * x[1]).clamp(1e-11, 100.0);
+            let mut s = (x[0] * x[0]).max(x[1] * x[1]);
+            for (pair, lane) in extra.iter().enumerate() {
+                for channel in 0..2 {
+                    let i = frame * 2 + channel;
+                    let side = extra_sidechains
+                        .get(pair)
+                        .and_then(|s| s.get(i))
+                        .copied()
+                        .unwrap_or(0.0);
+                    let x = mix * side + (1.0 - mix) * lane[i];
+                    s = s.max(x * x);
+                }
+            }
+            let s = s.clamp(1e-11, 100.0);
             let k = if s > self.env { attack } else { release };
             self.env += (s - self.env) * k + 1e-16;
             let phase = self.frames % CHUNK;
@@ -107,6 +135,10 @@ impl Duck {
             let gain = self.from + (self.gain - self.from) * ((phase + 1) as f32 / CHUNK as f32);
             for x in stereo {
                 *x *= gain;
+            }
+            for lane in extra.iter_mut() {
+                lane[frame * 2] *= gain;
+                lane[frame * 2 + 1] *= gain;
             }
             self.frames += 1;
         }

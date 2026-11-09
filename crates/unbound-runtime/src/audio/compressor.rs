@@ -60,14 +60,31 @@ impl Compressor {
     /// envelope exceeds the threshold, times Make up gain. The envelope uses the attack time
     /// while the peak is above the threshold and the release time otherwise.
     pub fn process(&mut self, samples: &mut [f32], spec: &CompressorSpec, rate: u32) {
+        self.process_linked(samples, &mut [], spec, rate);
+    }
+
+    /// [`Compressor::process`] over a layout wider than stereo: the louder of every channel
+    /// drives the gain of all of them, as within a stereo pair; `extra` are the other pairs.
+    pub fn process_linked(
+        &mut self,
+        samples: &mut [f32],
+        extra: &mut [&mut [f32]],
+        spec: &CompressorSpec,
+        rate: u32,
+    ) {
         let threshold = 10_f64.powf(spec.threshold as f64 / 20.0) as f32;
         let makeup = 10_f64.powf(spec.makeup_gain as f64 / 20.0) as f32;
         let attack = Self::pole(spec.attack, rate);
         let release = Self::pole(spec.release, rate);
         let decay = (PEAK_DECAY / rate as f64) as f32;
         let mut env = self.env.unwrap_or(threshold);
-        for stereo in samples.chunks_exact_mut(2) {
-            let level = stereo[0].abs().max(stereo[1].abs());
+        for (frame, stereo) in samples.chunks_exact_mut(2).enumerate() {
+            let mut level = stereo[0].abs().max(stereo[1].abs());
+            for lane in extra.iter() {
+                level = level
+                    .max(lane[frame * 2].abs())
+                    .max(lane[frame * 2 + 1].abs());
+            }
             self.peak = level.max(self.peak - decay);
             let (pole, step) = if self.peak > threshold {
                 attack
@@ -78,6 +95,10 @@ impl Compressor {
             let gain = (threshold / env).min(1.0) * makeup;
             for x in stereo {
                 *x *= gain;
+            }
+            for lane in extra.iter_mut() {
+                lane[frame * 2] *= gain;
+                lane[frame * 2 + 1] *= gain;
             }
         }
         self.env = Some(env);

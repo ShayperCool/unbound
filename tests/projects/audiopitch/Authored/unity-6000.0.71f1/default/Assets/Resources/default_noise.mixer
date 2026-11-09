@@ -1,20 +1,20 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!244 &-7523483179366633158
+--- !u!244 &-5556848953575211120
 AudioMixerEffectController:
   m_ObjectHideFlags: 3
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: 
-  m_EffectID: 75833fd9964a9754e8ce6c44e737a830
+  m_EffectID: a62aaf49e8b3dcd48bb771fe06f58317
   m_EffectName: Attenuation
-  m_MixLevel: 8d2cfb70aa47d6f859d5abcfff0dbfca
+  m_MixLevel: fda4090380615a41f97693047e3f943f
   m_Parameters: []
   m_SendTarget: {fileID: 0}
   m_EnableWetMix: 0
   m_Bypass: 0
---- !u!243 &-6728295102442635060
+--- !u!243 &-2639405533427752526
 AudioMixerGroupController:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -22,14 +22,14 @@ AudioMixerGroupController:
   m_PrefabAsset: {fileID: 0}
   m_Name: Music
   m_AudioMixer: {fileID: 24100000}
-  m_GroupID: f18a6d70d450f39238119f56e54b44f4
+  m_GroupID: a228c92499c2e641e9c2111973c95ee5
   m_Children: []
-  m_Volume: 9fb706df57c14ac2ba76e718e15d2fbe
-  m_Pitch: a24c3b51d5538f916be4dcb643c3ae61
+  m_Volume: 318cec8f77931ad91818ec58b61b8b7f
+  m_Pitch: fd178b97e15964deeb1c77c12f8167e2
   m_Send: 00000000000000000000000000000000
   m_Effects:
-  - {fileID: -7523483179366633158}
-  - {fileID: 5734573256968356403}
+  - {fileID: -5556848953575211120}
+  - {fileID: 4678800933758306855}
   m_UserColorIndex: 0
   m_Mute: 0
   m_Solo: 0
@@ -50,13 +50,13 @@ AudioMixerController:
   m_EnableSuspend: 0
   m_UpdateMode: 0
   m_ExposedParameters:
-  - guid: 05d68a58babb2119f84b94e5ddd9a93f
+  - guid: 01c99ae510560c7d7b8a8a35a75ac3af
     name: Pitch
-  - guid: 31cae9538e685513181aba22c74a8f50
+  - guid: 13fe768e1577b5c3dbb86aa26eceea53
     name: FFT size
-  - guid: 4ee66c5c272d9385d97d1e7299c4af7e
+  - guid: 5039762e7e191650599048b1fdf1f095
     name: Overlap
-  - guid: ccfadb11bc54187899133feaa9e385b9
+  - guid: 0405e278be709ce868f7a35b99f7ae49
     name: Max channels
   m_AudioMixerGroupViews: []
   m_CurrentViewIndex: 0
@@ -69,11 +69,11 @@ AudioMixerGroupController:
   m_PrefabAsset: {fileID: 0}
   m_Name: Master
   m_AudioMixer: {fileID: 24100000}
-  m_GroupID: 2a10fcec802b3b692be1733295a74cbf
+  m_GroupID: 1efd5053d81705d399e77653fca70c44
   m_Children:
-  - {fileID: -6728295102442635060}
-  m_Volume: 296b0bd4ede689641ba21cdd2659f050
-  m_Pitch: 777b3cdcf8ed8a84985ecec9377d135e
+  - {fileID: -2639405533427752526}
+  m_Volume: 16f512f51119341e698aedfe021af88a
+  m_Pitch: 709300dffa4f63007a272ba107651efc
   m_Send: 00000000000000000000000000000000
   m_Effects:
   - {fileID: 24400004}
@@ -88,9 +88,9 @@ AudioMixerEffectController:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: 
-  m_EffectID: dacb99537304bcb3aae24f0c8c3f51ba
+  m_EffectID: a8685d333df91f480a2ef5d0da768c8c
   m_EffectName: Attenuation
-  m_MixLevel: 3de41935e667a323dbd88d35dbfb7575
+  m_MixLevel: 8e946b75acb41bf5eb8e90dad7707762
   m_Parameters: []
   m_SendTarget: {fileID: 0}
   m_EnableWetMix: 0
@@ -103,28 +103,28 @@ AudioMixerSnapshotController:
   m_PrefabAsset: {fileID: 0}
   m_Name: Snapshot
   m_AudioMixer: {fileID: 24100000}
-  m_SnapshotID: 254896e87fa110f6f87c328f12523621
+  m_SnapshotID: 253fb63ceef1156128f49f4ff42fb2a6
   m_FloatValues: {}
   m_TransitionOverrides: {}
---- !u!244 &5734573256968356403
+--- !u!244 &4678800933758306855
 AudioMixerEffectController:
   m_ObjectHideFlags: 3
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: 
-  m_EffectID: abe6ba551888781b19d3fff99fa71fde
+  m_EffectID: 3e99d314a92d41d78b54896f78642fa4
   m_EffectName: Pitch Shifter
-  m_MixLevel: 3470123e6285f6e6f81f81807c4685e6
+  m_MixLevel: bbc3da7e6d2a6fc35b39178024a2f60d
   m_Parameters:
   - m_ParameterName: Pitch
-    m_GUID: 05d68a58babb2119f84b94e5ddd9a93f
+    m_GUID: 01c99ae510560c7d7b8a8a35a75ac3af
   - m_ParameterName: FFT size
-    m_GUID: 31cae9538e685513181aba22c74a8f50
+    m_GUID: 13fe768e1577b5c3dbb86aa26eceea53
   - m_ParameterName: Overlap
-    m_GUID: 4ee66c5c272d9385d97d1e7299c4af7e
+    m_GUID: 5039762e7e191650599048b1fdf1f095
   - m_ParameterName: Max channels
-    m_GUID: ccfadb11bc54187899133feaa9e385b9
+    m_GUID: 0405e278be709ce868f7a35b99f7ae49
   m_SendTarget: {fileID: 0}
   m_EnableWetMix: 0
   m_Bypass: 0

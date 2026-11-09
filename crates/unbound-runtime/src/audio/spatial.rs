@@ -386,18 +386,19 @@ fn spatialize_impl(
             None => 1.0,
         }
     };
+    // The forward component of the unit offset in listener space.
+    let forward_length = length(listener.forward);
+    let forward = direction.map_or(0.0, |d| {
+        if forward_length > 1e-6 {
+            dot(d, listener.forward) / forward_length
+        } else {
+            0.0
+        }
+    });
     let matrix;
     let mono_matrix;
     if measured {
         // Two virtual input directions are rotated by half the spread in listener space.
-        let forward_length = length(listener.forward);
-        let forward = direction.map_or(0.0, |d| {
-            if forward_length > 1e-6 {
-                dot(d, listener.forward) / forward_length
-            } else {
-                0.0
-            }
-        });
         let angle = spread.clamp(0.0, 360.0).to_radians() * 0.5;
         let (sin, cos) = angle.sin_cos();
         let left = pan_measured(pan * cos - forward * sin);
@@ -432,21 +433,7 @@ fn spatialize_impl(
     }
     let volume = flat + blend * gain;
     // Listener-space direction: lateral and forward components of the unit offset, as clamped.
-    let surround_direction = direction.map(|d| {
-        let right = cross(listener.up, listener.forward);
-        let (right_length, forward_length) = (length(right), length(listener.forward));
-        let side = if right_length > 1e-6 {
-            dot(d, right) / right_length
-        } else {
-            0.0
-        };
-        let ahead = if forward_length > 1e-6 {
-            dot(d, listener.forward) / forward_length
-        } else {
-            0.0
-        };
-        (side.clamp(-1.0, 1.0), ahead.clamp(-1.0, 1.0))
-    });
+    let surround_direction = direction.map(|_| (pan.clamp(-1.0, 1.0), forward.clamp(-1.0, 1.0)));
     Spatialized {
         matrix,
         mono_matrix,

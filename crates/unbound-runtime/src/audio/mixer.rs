@@ -795,14 +795,13 @@ impl Source {
         let gain = self
             .generator_gain
             .get_or_insert_with(|| ParameterRamp::new(0.0));
-        let pairs = self.lanes.len();
         for (frame, stereo) in samples.chunks_exact_mut(2).enumerate() {
             let value = gain.gain(target, VOICE_GAIN_RAMP_FRAMES);
             if value != 1.0 {
                 stereo[0] *= value;
                 stereo[1] *= value;
                 if let Some(lanes) = extra.as_deref_mut() {
-                    for channel in 0..pairs * 2 {
+                    for channel in 0..lanes.channels {
                         let i = lanes.index(channel, frame);
                         lanes.samples[i] *= value;
                     }
@@ -1031,6 +1030,8 @@ pub struct Mixer {
     sidechain_lanes: Vec<HashMap<String, Vec<f32>>>,
     /// The listener's components on each extra pair.
     listener_lanes: Vec<FilterChain>,
+    /// SFX Reverb on a surround layout was reported once.
+    warned_surround_reverb: bool,
     listener_output: Ring,
     callback: Option<Callback>,
     capture_listener_batch: bool,
@@ -1168,6 +1169,7 @@ impl Mixer {
             source_extra: vec![0.0; MAX_EXTRA_PAIRS * BLOCK * 2],
             sidechain_lanes: (0..MAX_EXTRA_PAIRS).map(|_| HashMap::new()).collect(),
             listener_lanes: Vec::new(),
+            warned_surround_reverb: false,
             listener_output: Ring::new(),
             callback: None,
             capture_listener_batch: false,
@@ -1210,6 +1212,14 @@ impl Mixer {
         let seconds = self.dsp_time();
         self.config = config;
         self.speakers = SpeakerLayout::of(config.output_channels());
+        // Channels of the previous layout must not reach the new one.
+        for buffer in [
+            &mut self.mix_extra,
+            &mut self.listener_bypass_extra,
+            &mut self.source_extra,
+        ] {
+            buffer.fill(0.0);
+        }
         self.frames = frame_of(seconds, config.sample_rate);
         for node in self.group_nodes.values_mut() {
             node.rendered = 0;
@@ -1354,19 +1364,19 @@ impl Mixer {
                 tracing::error!("AudioSource {handle}: filter components dropped: {error:#}");
                 params.filters = Vec::new();
             } else {
-                // The extra channel pairs take the same components, each keeping its state.
-                for lane in &mut source.lanes {
-                    if lane
-                        .apply(
-                            &params.filters,
-                            rate,
-                            self.config.buffer_size,
-                            params.has(source_flags::EFFECT_TRANSITIONS),
-                        )
-                        .is_err()
-                    {
-                        *lane = FilterChain::default();
-                    }
+                // The extra channel pairs take the same components, each keeping its state;
+                // a pair that cannot rebuilds every pair from the front chain.
+                let failed = source.lanes.iter_mut().any(|lane| {
+                    lane.apply(
+                        &params.filters,
+                        rate,
+                        self.config.buffer_size,
+                        params.has(source_flags::EFFECT_TRANSITIONS),
+                    )
+                    .is_err()
+                });
+                if failed {
+                    source.lanes.clear();
                 }
             }
         }
@@ -1416,13 +1426,12 @@ impl Mixer {
             tracing::error!("AudioListener filter components dropped: {error:#}");
             self.listener_chain = FilterChain::default();
         }
-        for lane in &mut self.listener_lanes {
-            if lane
-                .apply(&filters, rate, self.config.buffer_size, transitions)
+        let failed = self.listener_lanes.iter_mut().any(|lane| {
+            lane.apply(&filters, rate, self.config.buffer_size, transitions)
                 .is_err()
-            {
-                *lane = FilterChain::default();
-            }
+        });
+        if failed {
+            self.listener_lanes.clear();
         }
         if sync_lanes(
             &mut self.listener_lanes,
@@ -1605,6 +1614,19 @@ impl Mixer {
             energy: 0.0,
         });
         node.update(spec, &self.config)?;
+        if self.config.extra_pairs() > 0
+            && !self.warned_surround_reverb
+            && node
+                .effects
+                .iter()
+                .any(|e| e.kind() == Some(EffectKind::SfxReverb))
+        {
+            self.warned_surround_reverb = true;
+            tracing::warn!(
+                "audio: SFX Reverb in surround output reverberates each channel pair on its own \
+                 (unmeasured)"
+            );
+        }
         for target in targets {
             for lane in &mut self.sidechain_lanes {
                 lane.entry(target.clone())
@@ -2170,6 +2192,7 @@ impl Mixer {
             let extra = (self.config.extra_pairs() > 0).then_some(Extra {
                 samples: &self.mix_extra,
                 stride: BLOCK * 2,
+                channels: self.config.output_channels() - 2,
             });
             spread(
                 &self.mix[..n * 2],
@@ -2350,6 +2373,7 @@ impl Mixer {
                 samples: &mut source_extra[..],
                 stride: BLOCK * 2,
                 offset: 0,
+                channels: config.output_channels().saturating_sub(2),
             });
             let looping = flags & source_flags::LOOP != 0;
             let layout = config.output_channels();
@@ -2497,6 +2521,7 @@ impl Mixer {
                                     samples: &mut queue[..],
                                     stride: length,
                                     offset: block * BLOCK * 2,
+                                    channels: layout - 2,
                                 });
                                 let _ = render_source_voices(
                                     source,
@@ -2519,6 +2544,7 @@ impl Mixer {
                                 samples: &mut queue[..],
                                 stride: length,
                                 offset: 0,
+                                channels: layout - 2,
                             });
                             // Bypass keeps the voice on its dry route and supplies silence to
                             // the separate script return. A clipless script remains a generator.
@@ -2742,21 +2768,7 @@ impl Mixer {
                 }
             }
             node.rendered += n;
-            for effect in &mut node.effects {
-                let samples = &mut node.buffer[..n * 2];
-                if !effect.process_routed(samples, &mut self.sidechains, muted) {
-                    effect.process(samples, node.spec.bypass);
-                }
-            }
-            // Each extra channel pair through its own instances of the group's effects.
-            for (lane, sidechains) in node.lanes.iter_mut().zip(&mut self.sidechain_lanes) {
-                for effect in &mut lane.effects {
-                    let samples = &mut lane.buffer[..n * 2];
-                    if !effect.process_routed(samples, sidechains, muted) {
-                        effect.process(samples, node.spec.bypass);
-                    }
-                }
-            }
+            node.process_effects(n, &mut self.sidechains, &mut self.sidechain_lanes, muted);
             if node.spec.muted {
                 node.buffer[..n * 2].fill(0.0);
                 for lane in &mut node.lanes {
@@ -2780,7 +2792,12 @@ impl Mixer {
                     }
                     let end = frame + count as u64;
                     if end % window == 0 {
-                        let channels = 2 + 2 * node.lanes.len() as u64;
+                        // The front pair's two lanes, else every layout channel.
+                        let channels = if node.lanes.is_empty() {
+                            2
+                        } else {
+                            config.output_channels() as u64
+                        };
                         if node.energy / (window * channels) as f64
                             >= (node.spec.suspend_threshold as f64).powi(2)
                         {
@@ -2891,6 +2908,7 @@ impl Mixer {
                 samples: &mut self.mix_extra[..],
                 stride: BLOCK * 2,
                 offset: 0,
+                channels: config.output_channels() - 2,
             });
             call_in_layout(
                 cb,
@@ -3201,10 +3219,15 @@ fn spread(stereo: &[f32], extra: Option<Extra<'_>>, out: &mut [f32], mono: bool)
 struct Extra<'a> {
     samples: &'a [f32],
     stride: usize,
+    /// The layout's channels beyond the front pair: wider outputs get silence.
+    channels: usize,
 }
 
 impl Extra<'_> {
     fn get(&self, channel: usize, frame: usize) -> f32 {
+        if channel >= self.channels {
+            return 0.0;
+        }
         self.samples[(channel / 2) * self.stride + frame * 2 + channel % 2]
     }
 }
@@ -3220,6 +3243,8 @@ struct Lanes<'a> {
     samples: &'a mut [f32],
     stride: usize,
     offset: usize,
+    /// The layout's channels beyond the front pair (pairs may hold one unused slot).
+    channels: usize,
 }
 
 impl Lanes<'_> {
@@ -3239,6 +3264,7 @@ impl Lanes<'_> {
         Extra {
             samples: &self.samples[self.offset..],
             stride: self.stride,
+            channels: self.channels,
         }
     }
     /// The same lanes `frames` frames later.
@@ -3247,6 +3273,7 @@ impl Lanes<'_> {
             samples: self.samples,
             stride: self.stride,
             offset: self.offset + frames * 2,
+            channels: self.channels,
         }
     }
     /// Pair `pair`'s `frames` frames.
@@ -4559,6 +4586,77 @@ mod tests {
                 play(&mut m, 8, command::STOP, 0.0);
             }
         }
+    }
+
+    #[test]
+    fn narrower_layouts_leave_the_other_device_channels_silent() {
+        let mut m = Mixer::new(MixerConfig {
+            speaker_mode: speaker_mode::MODE_7POINT1,
+            ..MixerConfig::default()
+        });
+        m.add_clip(1, Clip::new(1, 48000, vec![0.5; 48000]));
+        source_with(&mut m, 7, 1, |p| {
+            p.flags |= source_flags::SPATIAL_STEREO | source_flags::LOOP;
+            p.spatial_blend = 1.0;
+            p.position = Vector3 {
+                x: -2.0,
+                y: 0.0,
+                z: 0.0,
+            };
+        });
+        play(&mut m, 7, command::PLAY, 0.0);
+        let mut out = vec![0.0; 1024 * 8];
+        m.render(&mut out, 8);
+        assert!(
+            out[out.len() - 8..][6] != 0.0,
+            "{:?}",
+            &out[out.len() - 8..]
+        );
+        m.reconfigure(MixerConfig {
+            speaker_mode: speaker_mode::QUAD,
+            ..m.config
+        })
+        .unwrap();
+        // An eight-channel device playing quad: channels 4..8 stay silent.
+        m.render(&mut out, 8);
+        assert!(
+            out.chunks_exact(8)
+                .all(|frame| frame[4..].iter().all(|v| *v == 0.0))
+        );
+    }
+
+    #[test]
+    fn linked_effects_apply_one_gain_to_every_channel() {
+        // A mono 2D clip in 5.1: front pair at sqrt(1/2), LFE at unity. A compressor over
+        // the group keeps that ratio because one gain serves every channel.
+        let mut m = Mixer::new(MixerConfig {
+            speaker_mode: speaker_mode::MODE_5POINT1,
+            ..MixerConfig::default()
+        });
+        let mut group = filter_group(3, 0, "Compressor");
+        group.mixer = 3;
+        group.effects[0].compressor = Some(super::super::compressor::CompressorSpec {
+            threshold: -30.0,
+            attack: 1.0,
+            release: 50.0,
+            makeup_gain: 0.0,
+        });
+        m.configure_group(group).unwrap();
+        m.add_clip(1, Clip::new(1, 48000, vec![0.5; 48000]));
+        source_with(&mut m, 7, 1, |p| {
+            p.group = 3;
+            p.flags |= source_flags::SPATIAL_STEREO;
+        });
+        play(&mut m, 7, command::PLAY, 0.0);
+        m.update_suspension();
+        let mut out = vec![0.0; 4096 * 6];
+        m.render(&mut out, 6);
+        let frame = &out[out.len() - 6..];
+        assert!(frame[3] < 0.25, "compressed: {frame:?}");
+        assert!(
+            (frame[0] / frame[3] - 0.5f32.sqrt()).abs() < 1e-5,
+            "{frame:?}"
+        );
     }
 
     #[test]

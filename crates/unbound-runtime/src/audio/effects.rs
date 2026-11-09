@@ -5,7 +5,7 @@ use super::chorus::{Chorus, ChorusSpec};
 use super::compressor::{Compressor, CompressorSpec};
 use super::duck::{Duck, DuckSpec};
 use super::flange::{Flange, FlangeSpec};
-use super::mixer::{MixerConfig, speaker_mode};
+use super::mixer::{MAX_EXTRA_PAIRS, MixerConfig, speaker_mode};
 use super::modulated_delay::MAX_HISTORY_BYTES;
 use super::normalize::{Normalize, NormalizeSpec};
 use super::pitch::{PitchShifter, PitchSpec};
@@ -1000,6 +1000,54 @@ impl Effect {
         self.frames = self.frames.saturating_add((samples.len() / 2) as u32);
         true
     }
+    /// Compressor and Duck Volume link their channels: the louder one drives the gain of all.
+    pub fn links_channels(&self) -> bool {
+        matches!(
+            self.kind,
+            Some(EffectKind::Compressor | EffectKind::DuckVolume)
+        )
+    }
+    /// A linked effect ([`Effect::links_channels`]) on every channel of a layout wider than
+    /// stereo: `front` and the `extra` pairs, with each pair's sidechain blocks. One detector
+    /// and one gain serve all channels, as within a stereo pair (beyond stereo unmeasured).
+    pub fn process_linked(
+        &mut self,
+        front: &mut [f32],
+        extra: &mut [&mut [f32]],
+        sidechains: &HashMap<String, Vec<f32>>,
+        sidechain_lanes: &[HashMap<String, Vec<f32>>],
+        bypass: bool,
+    ) {
+        let frames = front.len() / 2;
+        match self.kind {
+            Some(EffectKind::Compressor) => {
+                if bypass || self.spec.bypass {
+                    return;
+                }
+                if let Some(spec) = &self.spec.compressor {
+                    self.compressor
+                        .process_linked(front, extra, spec, self.rate);
+                }
+            }
+            Some(EffectKind::DuckVolume) => {
+                if let Some(duck) = &self.spec.duck {
+                    let length = front.len();
+                    let side = sidechains.get(&self.spec.id).map(|s| &s[..length]);
+                    let sides: [&[f32]; MAX_EXTRA_PAIRS] = std::array::from_fn(|pair| {
+                        sidechain_lanes
+                            .get(pair)
+                            .and_then(|lane| lane.get(&self.spec.id))
+                            .map_or(&[][..], |s| &s[..length])
+                    });
+                    let count = extra.len().min(MAX_EXTRA_PAIRS);
+                    self.duck
+                        .process_linked(front, extra, side, &sides[..count], duck, self.rate);
+                }
+            }
+            _ => return,
+        }
+        self.frames = self.frames.saturating_add(frames as u32);
+    }
     fn send_gain_at(&self, position: u32, channel: usize) -> f32 {
         if position >= self.buffer {
             self.spec.send_level
@@ -1207,6 +1255,58 @@ impl GroupNode {
         });
         self.spec = spec;
         Ok(())
+    }
+}
+
+impl GroupNode {
+    /// The group's effects on its front pair and its extra pairs for `n` frames. Linked
+    /// effects run once over every channel; every other effect runs on each pair with that
+    /// pair's own instance. `sidechain_lanes` are the extra pairs' sidechain blocks.
+    pub fn process_effects(
+        &mut self,
+        n: usize,
+        sidechains: &mut HashMap<String, Vec<f32>>,
+        sidechain_lanes: &mut [HashMap<String, Vec<f32>>],
+        muted: usize,
+    ) {
+        let Self {
+            spec,
+            effects,
+            buffer,
+            lanes,
+            ..
+        } = self;
+        let bypass = spec.bypass;
+        let pairs = lanes.len().min(MAX_EXTRA_PAIRS);
+        for (index, effect) in effects.iter_mut().enumerate() {
+            let front = &mut buffer[..n * 2];
+            if pairs > 0 && effect.links_channels() {
+                let mut lane_buffers = lanes.iter_mut();
+                let mut extra: [&mut [f32]; MAX_EXTRA_PAIRS] = std::array::from_fn(|_| {
+                    lane_buffers
+                        .next()
+                        .map_or(&mut [][..], |lane| &mut lane.buffer[..n * 2])
+                });
+                effect.process_linked(
+                    front,
+                    &mut extra[..pairs],
+                    sidechains,
+                    sidechain_lanes,
+                    bypass,
+                );
+                continue;
+            }
+            if !effect.process_routed(front, sidechains, muted) {
+                effect.process(front, bypass);
+            }
+            for (lane, sidechains) in lanes.iter_mut().zip(sidechain_lanes.iter_mut()) {
+                let samples = &mut lane.buffer[..n * 2];
+                let effect = &mut lane.effects[index];
+                if !effect.process_routed(samples, sidechains, muted) {
+                    effect.process(samples, bypass);
+                }
+            }
+        }
     }
 }
 
