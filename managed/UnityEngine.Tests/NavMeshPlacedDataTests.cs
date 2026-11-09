@@ -210,6 +210,40 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A link whose end lies a little below the NavMesh (within the climb), and below
+        /// the lowest point of the NavMesh's tiles, still lands (moved or not).</summary>
+        [Theory]
+        [InlineData(0f, 0f)]
+        [InlineData(0.25f, 0.4f)]
+        public void ALinkEndingBelowTheNavMeshWithinTheClimbLands(float dx, float dz)
+        {
+            var data = NavMeshBuilder.BuildNavMeshData(SmallTiles(), new List<NavMeshBuildSource>
+            {
+                Box(new Vector3(-4.5f, -0.05f, 0.053f), new Vector3(7f, 0.1f, 8f), 0),
+                Box(new Vector3(4.5f, -0.05f, 0.053f), new Vector3(7f, 0.1f, 8f), 0),
+            }, new Bounds(Vector3.zero, new Vector3(20f, 10f, 20f)), Vector3.zero, Quaternion.identity);
+            var pos = new Vector3(dx, 0f, dz);
+            m_Data.Add(NavMesh.AddNavMeshData(data, pos, Quaternion.identity));
+            foreach (float y in new[] { -0.05f, -0.3f })
+            {
+                var link = NavMesh.AddLink(new NavMeshLinkData
+                {
+                    startPosition = pos + new Vector3(-1.5f, 0f, 0f), endPosition = pos + new Vector3(1.5f, y, 0f),
+                    bidirectional = true, costModifier = -1f,
+                });
+                try
+                {
+                    var path = new NavMeshPath();
+                    Assert.True(NavMesh.CalculatePath(pos + new Vector3(-5f, 0f, 0f), pos + new Vector3(5f, 0f, 0f), NavMesh.AllAreas, path));
+                    Assert.Equal(NavMeshPathStatus.PathComplete, path.status);
+                }
+                finally
+                {
+                    NavMesh.RemoveLink(link);
+                }
+            }
+        }
+
         /// <summary>Two NavMeshes built from one floor with bounds meeting at a tile edge (x = 0) are
         /// not connected: a path from one to the other is partial, ending on the first. Each ends
         /// within a voxel (1/6 m) past its bounds.</summary>

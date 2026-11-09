@@ -70,7 +70,7 @@ LISTED = {
     'carve.shortcut': ('',),
     'carve.rules': ('poly.p47', 'poly.p51'),
     'place.moved': tuple(f'{pose}.walk.f{frame}' for pose in ('o', 'm', 'r30', 'r90') for frame in (200, 250, 300)),
-    'place.links': ('m.p.ab.', 'r30.p.ab.', 'r30.w.ab.', 'm.w.ba.'),
+    'place.links': tuple(f'{path}.{part}' for path in ('m.p.ab', 'r30.p.ab', 'r30.w.ab', 'm.w.ba') for part in ('n', 'c')),
 }
 
 

@@ -109,6 +109,23 @@ namespace DotRecast.Detour
         public int CellX(float x) => (int)MathF.Floor(x / tileWidth);
         public int CellY(float z) => (int)MathF.Floor(z / tileHeight);
 
+        /// <summary>The world bounds (along x and z) of a place of the surface's grid.</summary>
+        public void CellBounds(int x, int y, out RcVec3f min, out RcVec3f max)
+        {
+            min = new RcVec3f(float.MaxValue, bmin.Y, float.MaxValue);
+            max = new RcVec3f(float.MinValue, bmax.Y, float.MinValue);
+            for (int i = 0; i < 4; i++)
+            {
+                var local = new UnityEngine.Vector3((x + (i & 1)) * tileWidth, 0f, (y + (i >> 1)) * tileHeight);
+                var p = moved ? rotation * local : local;
+                float wx = p.x + position.X, wz = p.z + position.Z;
+                min.X = MathF.Min(min.X, wx);
+                min.Z = MathF.Min(min.Z, wz);
+                max.X = MathF.Max(max.X, wx);
+                max.Z = MathF.Max(max.Z, wz);
+            }
+        }
+
         static long Key(int x, int y) => ((long)x << 32) | (uint)y;
 
         /// <summary>The first of the surface's tiles at a place of its grid (the others follow

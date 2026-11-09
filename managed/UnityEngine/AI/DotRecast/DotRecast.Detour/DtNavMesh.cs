@@ -988,13 +988,19 @@ namespace DotRecast.Detour
         static long CellKey(int x, int y) => ((long)x << 32) | (uint)y;
 
         /// Unbound: the other tiles holding connections whose ends reach the cells of the mesh's
-        /// grid that the tile's bounds cover, each once.
+        /// grid that the tile's place covers (its surface's grid cell, which may reach past the
+        /// tile's bounds: every end that lands on it lies in it), each once.
         void HoldersOver(DtMeshTile tile, List<DtMeshTile> result)
         {
             result.Clear();
             int visit = ++m_visit;
-            CalcTileLoc(tile.data.header.bmin, out int x0, out int y0);
-            CalcTileLoc(tile.data.header.bmax, out int x1, out int y1);
+            var data = tile.data;
+            var min = data.header.bmin;
+            var max = data.header.bmax;
+            if (data.surface != null)
+                data.surface.CellBounds(data.surfaceX, data.surfaceY, out min, out max);
+            CalcTileLoc(min, out int x0, out int y0);
+            CalcTileLoc(max, out int x1, out int y1);
             for (int x = x0; x <= x1; ++x)
             {
                 for (int y = y0; y <= y1; ++y)
@@ -1026,11 +1032,14 @@ namespace DotRecast.Detour
         }
 
         /// Unbound: the range of a surface's grid an end of a connection lies over (in the surface's
-        /// frame); false when it misses the surface's tiles.
+        /// frame, along x and z: how far above or below the end may lie is the landing's own test,
+        /// within the climb); false when it misses the surface's tiles.
         static bool EndCells(DtSurface surface, DtOffMeshConnection con, int end, out int x0, out int y0, out int x1, out int y1)
         {
             x0 = y0 = x1 = y1 = 0;
             EndBounds(con, end, out var min, out var max);
+            min.Y = surface.bmin.Y;
+            max.Y = surface.bmax.Y;
             if (!surface.QueryBox(min, max, out var lmin, out var lmax))
                 return false;
             x0 = surface.CellX(lmin.X);
