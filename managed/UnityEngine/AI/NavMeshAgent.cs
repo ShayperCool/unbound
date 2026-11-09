@@ -105,18 +105,22 @@ namespace UnityEngine.AI
 
         public ObstacleAvoidanceType obstacleAvoidanceType { get => m_ObstacleAvoidanceType; set { m_ObstacleAvoidanceType = value; ApplyParams(); } }
         public int avoidancePriority { get => m_AvoidancePriority; set { m_AvoidancePriority = value; ApplyParams(); } }
-        /// <summary>Turned back on, the transform moves to nextPosition at once (documented,
-        /// NavMeshAgent.nextPosition, Scripting API 6000.0).</summary>
+        /// <summary>Turned back on, the transform is moved to the simulated position (documented,
+        /// NavMeshAgent.updatePosition and nextPosition, Scripting API 6000.0): at the next agent
+        /// update, not in the setter, and a transform moved while it was off does not move the
+        /// agent; turned off, a transform moved by script before then still moves the agent (measured,
+        /// tests/projects/navpath sync.updatePosition).</summary>
         public bool updatePosition
         {
             get => m_UpdatePosition;
             set
             {
-                bool turnedOn = value && !m_UpdatePosition;
-                m_UpdatePosition = value;
-                if (!turnedOn) return;
+                if (value == m_UpdatePosition) return;
+                // Turning it off takes in a script move made while it was on; turning it on, the
+                // simulation is brought up to date while the transform is still detached.
                 AgentSystem.Sync(this);
-                if (m_Crowd != null) AgentSystem.WriteTransform(this);
+                m_UpdatePosition = value;
+                if (value) AgentSystem.DeferTransform(this);
             }
         }
         public bool updateRotation { get => m_UpdateRotation; set => m_UpdateRotation = value; }

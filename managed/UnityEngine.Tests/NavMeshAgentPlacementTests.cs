@@ -15,7 +15,8 @@ namespace UnityEngine.Tests
     /// at once; AddComponent and setting baseOffset write the transform at once; a transform moved
     /// by script is followed by nextPosition at once and written back at the next early update; the
     /// update after the scripts changes no agent. Turning updatePosition back
-    /// on writes it at once (documented). The level is one runtime-built 12 m ground (top at
+    /// on moves the transform to the agent at the next early update (documented that it moves;
+    /// when: tests/projects/navpath sync.updatePosition). The level is one runtime-built 12 m ground (top at
     /// y = 0) away from other tests' levels.</summary>
     [Collection("Frames")]
     public sealed class NavMeshAgentPlacementTests : IDisposable
@@ -157,17 +158,58 @@ namespace UnityEngine.Tests
             Assert.Equal(m_Height + 1f, agent.nextPosition.y, 4);
         }
 
-        /// <summary>Documented (NavMeshAgent.nextPosition): turned back on, the transform moves to
-        /// nextPosition at once.</summary>
+        /// <summary>Documented (NavMeshAgent.updatePosition): turned back on, the transform is moved
+        /// to the simulated position. Measured (tests/projects/navpath sync.updatePosition): at the
+        /// next early update, not in the setter; a transform moved while it was off does not move
+        /// the agent.</summary>
         [Fact]
-        public void TurningUpdatePositionOnWritesAtOnce()
+        public void TurningUpdatePositionOnMovesTheTransformToTheAgentAtTheEarlyUpdate()
         {
-            var agent = Agent(new Vector3(3f, 0.3f, 2f), active: false, before: a => a.updatePosition = false);
-            agent.gameObject.SetActive(true);
+            var agent = Agent(new Vector3(3f, 0f, 2f));
+            var standing = agent.nextPosition;
+            agent.updatePosition = false;
+            var moved = Center + new Vector3(0f, 0f, 2f);
+            agent.transform.position = moved;
             Frame();
-            Assert.Equal(0.3f, agent.transform.position.y, 4);
+            Assert.Equal(standing, agent.nextPosition);
             agent.updatePosition = true;
-            Assert.Equal(m_Height, agent.transform.position.y, 4);
+            Assert.Equal(moved, agent.transform.position);
+            Assert.Equal(standing, agent.nextPosition);
+            Frame();
+            Assert.Equal(standing, agent.transform.position);
+            Assert.Equal(standing, agent.nextPosition);
+        }
+
+        /// <summary>Measured (tests/projects/navpath sync.updatePosition): a transform moved again
+        /// after updatePosition is turned on is a script move, followed at once.</summary>
+        [Fact]
+        public void AMoveAfterTurningUpdatePositionOnIsFollowed()
+        {
+            var agent = Agent(new Vector3(3f, 0f, -2f));
+            agent.updatePosition = false;
+            agent.transform.position = Center + new Vector3(0f, 0f, -2f);
+            agent.updatePosition = true;
+            var again = Center + new Vector3(1f, 0f, -2f);
+            agent.transform.position = again;
+            Assert.Equal(again.x, agent.nextPosition.x, 4);
+            Frame();
+            Assert.Equal(again.x, agent.transform.position.x, 4);
+        }
+
+        /// <summary>Measured (tests/projects/navpath sync.updatePosition): turning updatePosition off
+        /// takes in a script move made just before; one made after it does not move the agent.</summary>
+        [Fact]
+        public void TurningUpdatePositionOffKeepsTheMoveMadeBefore()
+        {
+            var agent = Agent(new Vector3(-3f, 0f, 4f));
+            var before = Center + new Vector3(0f, 0f, 4f);
+            agent.transform.position = before;
+            agent.updatePosition = false;
+            agent.transform.position = Center + new Vector3(2f, 0f, 4f);
+            Assert.Equal(before.x, agent.nextPosition.x, 4);
+            agent.updatePosition = true;
+            Frame();
+            Assert.Equal(before.x, agent.transform.position.x, 4);
         }
 
         /// <summary>Documented (NavMeshAgent.nextPosition): the transform matches the simulated
