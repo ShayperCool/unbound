@@ -1434,7 +1434,13 @@ namespace Unbound.Runtime
             if (from.HasValue) start = from.Value;
             else if (agent.m_LandAfterReset && LandingPoint(agent, out _, out var landing)) start = landing;
             else if (agent.WaitingOnLink && path.m_Corners.Length > 0) start = NavMesh.V(path.m_Corners[0]);
-            else start = ag.npos;
+            else
+            {
+                start = ag.npos;
+                // Its place on the NavMesh: over a height mesh the agent stands at the mesh's
+                // height, its path starts on the NavMesh (PathStart).
+                if (NavWorld.HasHeightMeshes && agent.m_Surface.Query.GetPolyHeight(polys[0], start, out float h).Succeeded()) start.Y = h;
+            }
             ag.corridor.Reset(polys[0], start);
             Follow(agent, polys, polys.Length, NavMesh.V(target), path.status);
         }

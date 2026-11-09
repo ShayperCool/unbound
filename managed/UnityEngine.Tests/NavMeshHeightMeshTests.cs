@@ -19,10 +19,20 @@ namespace UnityEngine.Tests
     public sealed class NavMeshHeightMeshTests : IDisposable
     {
         readonly List<NavMeshDataInstance> m_Data = new List<NavMeshDataInstance>();
+        readonly float m_DeltaTime = Time.s_DeltaTime;
+        readonly bool m_InFixedTimeStep = Time.s_InFixedTimeStep;
+
+        public NavMeshHeightMeshTests()
+        {
+            Time.s_DeltaTime = 0.02f;
+            Time.s_InFixedTimeStep = false;
+        }
 
         public void Dispose()
         {
             foreach (var data in m_Data) NavMesh.RemoveNavMeshData(data);
+            Time.s_DeltaTime = m_DeltaTime;
+            Time.s_InFixedTimeStep = m_InFixedTimeStep;
         }
 
         static readonly Vector3[] Vertices =
@@ -173,6 +183,25 @@ namespace UnityEngine.Tests
                 Assert.Equal(W(-2f, 0f, -1f).y, agent.nextPosition.y, 3);
                 agent.Warp(W(1.2f, 0f, -2f));
                 Assert.Equal(W(1.2f, 0.3f, -2f).y, agent.nextPosition.y, 3);
+
+                // Walking off the step and back onto it: after every step it stands at the height
+                // mesh's height; its path starts at its place on the NavMesh.
+                agent.Warp(W(-2f, 0f, -2f));
+                agent.SetDestination(W(1.8f, 0f, -2f));
+                bool onStep = false;
+                for (int f = 0; f < 200 && !onStep; f++)
+                {
+                    AgentSystem.Step();
+                    var local = Quaternion.Inverse(rot) * (agent.nextPosition - pos);
+                    if (local.x < 1.2f) continue;
+                    onStep = true;
+                    Assert.Equal(0.3f, local.y, 3);
+                    var start = agent.path.corners[0];
+                    Assert.True(Quaternion.Inverse(rot) * (start - pos) is var s && s.y < 0.2f, $"path starts at {start}");
+                    Assert.Equal(agent.nextPosition.x, start.x, 3);
+                    Assert.Equal(agent.nextPosition.z, start.z, 3);
+                }
+                Assert.True(onStep);
             }
             finally
             {
