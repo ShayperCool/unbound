@@ -605,7 +605,9 @@ namespace Unbound.Runtime.Playables
             Span<Unbound.Runtime.Humanoid.HumanRootMotionSample> layerBody = stackalloc Unbound.Runtime.Humanoid.HumanRootMotionSample[1];
             Span<float> layerBodyWeight = stackalloc float[] { 1f };
             // The pose that places the body: the layers whose mask keeps Root, as an Animator
-            // controller's layers (6000.0.71f1, tests/projects/humanoid mixer.upper, mixer.noRoot).
+            // controller's layers (6000.0.71f1, tests/projects/humanoid mixer.upper, mixer.noRoot);
+            // Animator.layersAffectMassCenter, a controller layers' setting, does not change it
+            // (mixer.noRootMassCenter).
             AnimStream mass = null;
             for (int l = 0; l < node.Inputs.Count; l++)
             {
@@ -616,11 +618,19 @@ namespace Unbound.Runtime.Playables
                 e.Combining++;
                 try { e.EvaluateInto(input.Node, input.SourcePort, weight * input.Weight, s); }
                 finally { e.Combining--; }
+                bool firstLayer = !any;
                 any = true;
                 if (input.Weight > 0f && s.FootIK) into.FootIK = true;
-                if (s.GoalsInMotion) into.GoalsInMotion = true;
                 bool additive = l < Additive.Count && Additive[l];
                 var parts = HumanParts(l);
+                // Goals blend in one frame: the motion's when both sides have it there (the body
+                // below is the one the lower layers' goals were placed with).
+                if (firstLayer) into.GoalsInMotion = s.GoalsInMotion;
+                else if (into.GoalsInMotion != s.GoalsInMotion)
+                {
+                    if (into.GoalsInMotion) AnimationEvaluation.GoalsToBody(into, anyBody ? body : default);
+                    else AnimationEvaluation.GoalsToBody(s, s.BodyMotion);
+                }
                 if (!additive && s.BodyMotion.HasMotion)
                 {
                     layerBody[0] = s.BodyMotion;

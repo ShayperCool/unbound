@@ -557,6 +557,31 @@ namespace Unbound.Runtime.Playables
             }
         }
 
+        /// <summary>A stream whose goals are in the motion's frame takes them back relative to its
+        /// body (<paramref name="body"/>'s; without one they stay as they are) before it is blended
+        /// with a stream whose goals are relative to its body (a controller playable's, a clip's
+        /// without body motion), so both blend in one frame.</summary>
+        internal static void GoalsToBody(AnimStream s, in HumanRootMotionSample body)
+        {
+            if (!s.GoalsInMotion) return;
+            if (body.HasMotion) GoalsToMotion(s, body.Body, inverse: true);
+            s.GoalsInMotion = false;
+        }
+
+        /// <summary>Mixer inputs blend their goals in the motion's frame only when every input has
+        /// them there (<see cref="GoalsToBody"/>).</summary>
+        static void AlignGoalFrames(List<(AnimStream Stream, float Weight)> inputs)
+        {
+            bool inMotion = false, relative = false;
+            foreach (var (stream, _) in inputs)
+            {
+                if (stream.GoalsInMotion) inMotion = true;
+                else relative = true;
+            }
+            if (!inMotion || !relative) return;
+            foreach (var (stream, _) in inputs) GoalsToBody(stream, stream.BodyMotion);
+        }
+
         static bool AnyBodyMotion(List<(AnimStream Stream, float Weight)> inputs)
         {
             foreach (var (stream, _) in inputs)
@@ -568,6 +593,7 @@ namespace Unbound.Runtime.Playables
         /// that animate it, completed to weight one with the default value.</summary>
         internal static void MixInto(AnimStream into, List<(AnimStream Stream, float Weight)> inputs)
         {
+            AlignGoalFrames(inputs);
             foreach (var (stream, weight) in inputs)
             {
                 if (weight > 0f && stream.FootIK) into.FootIK = true;
@@ -811,6 +837,11 @@ namespace Unbound.Runtime.Playables
                     else if (source != AnimationStreamSource.PreviousInputs && o.Weight > 0f) motion = RootMotionStep.Unknown;
                 }
                 KeepBound(o, s);
+                if (result.GoalsInMotion != s.GoalsInMotion)
+                {
+                    GoalsToBody(result, result.BodyMotion);
+                    GoalsToBody(s, s.BodyMotion);
+                }
                 BlendOver(result, s, o.Weight);
                 result.BodyMotion = HumanRootMotion.Override(result.BodyMotion, s.BodyMotion, o.Weight);
                 if (o.Weight > 0f && s.FootIK) result.FootIK = true;

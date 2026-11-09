@@ -121,8 +121,9 @@ namespace UnityEngine.Tests
                 Near.Equal(-alone, Step(g => Layers(g, forward, back, 1f, null), created), 1e-4f);
                 Near.Equal(0f, Step(g => Layers(g, forward, back, 0.5f, null), created), 1e-4f);
 
-                // A mask without Root: the layer moves nothing. The mask is copied: changing the
-                // source afterwards does not change the layer.
+                // A mask without Root: the layer moves nothing. The mask is copied (Unbound's choice:
+                // the Scripting API only says the call sets the layer's mask), so changing the source
+                // afterwards does not change the layer.
                 var noRoot = new AvatarMask();
                 created.Add(noRoot);
                 noRoot.SetHumanoidBodyPartActive(AvatarMaskBodyPart.Root, false);
