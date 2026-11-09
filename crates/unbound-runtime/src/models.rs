@@ -7,7 +7,7 @@ use unbound_assets::{
     ImportedModel,
     model::{
         ClipMask, CurveKey, Key, MaterialDescription, MaterialImportMode, MaterialLocation,
-        ModelClip, ModelMaterial, ModelMesh, RendererKind, mask_keeps,
+        ModelClip, ModelMaterial, ModelMesh, RendererKind, curves, mask_keeps,
     },
 };
 use unbound_project::AssetDb;
@@ -297,6 +297,10 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
                                 ("m_Mesh", local(mesh_id)),
                                 ("m_Bones", Value::Seq(bones)),
                                 ("m_RootBone", local(root)),
+                                (
+                                    "m_UpdateWhenOffscreen",
+                                    scalar(i32::from(renderer.update_when_offscreen)),
+                                ),
                                 (
                                     "m_BlendShapeWeights",
                                     Value::Seq(
@@ -746,39 +750,11 @@ fn clip_document(clip: &ModelClip, mask: Option<&[(String, f32)]>) -> Document {
         names: &[&'static str; N],
         smooth: bool,
     ) -> Value {
-        let slope = |a: &Key<N>, b: &Key<N>| {
-            let dt = b.time - a.time;
-            let mut out = [0f32; N];
-            if dt > 0.0 {
-                for i in 0..N {
-                    out[i] = (b.value[i] - a.value[i]) / dt;
-                }
-            }
-            out
-        };
         let third = [1.0 / 3.0; N];
         let frames = keys
             .iter()
-            .enumerate()
-            .map(|(i, key)| {
-                let incoming = if i > 0 {
-                    slope(&keys[i - 1], key)
-                } else {
-                    [0.0; N]
-                };
-                let outgoing = if i + 1 < keys.len() {
-                    slope(key, &keys[i + 1])
-                } else {
-                    incoming
-                };
-                let incoming = if i > 0 { incoming } else { outgoing };
-                // Smooth: both sides take the slope between the neighbouring keys.
-                let (incoming, outgoing) = if smooth && i > 0 && i + 1 < keys.len() {
-                    let both = slope(&keys[i - 1], &keys[i + 1]);
-                    (both, both)
-                } else {
-                    (incoming, outgoing)
-                };
+            .zip(curves::key_slopes(keys, smooth))
+            .map(|(key, (incoming, outgoing))| {
                 map(vec![
                     ("serializedVersion", scalar(3)),
                     ("time", scalar(key.time)),
@@ -819,18 +795,7 @@ fn clip_document(clip: &ModelClip, mask: Option<&[(String, f32)]>) -> Document {
             positions.push(curve(&node.path, &node.positions, &XYZ, false));
         }
         if !node.rotations.is_empty() {
-            // Keep each key in the hemisphere of the previous one, so slopes do not jump.
-            let mut keys = node.rotations.clone();
-            for i in 1..keys.len() {
-                let dot: f32 = (0..4)
-                    .map(|c| keys[i].value[c] * keys[i - 1].value[c])
-                    .sum();
-                if dot < 0.0 {
-                    for c in 0..4 {
-                        keys[i].value[c] = -keys[i].value[c];
-                    }
-                }
-            }
+            let keys = curves::continuous_rotations(&node.rotations);
             rotations.push(curve(&node.path, &keys, &XYZW, clip.smooth));
         }
         if !node.scales.is_empty() {

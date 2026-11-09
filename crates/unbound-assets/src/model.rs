@@ -357,6 +357,9 @@ pub struct ModelRenderer {
     /// Skinned with a root bone: `localBounds` (centre, extents) in the root bone's space.
     #[serde(default)]
     pub local_bounds: Option<([f32; 3], [f32; 3])>,
+    /// Skinned: `updateWhenOffscreen`, set when a sampled pose's root bone has no inverse.
+    #[serde(default)]
+    pub update_when_offscreen: bool,
 }
 
 /// A blend shape channel of a mesh: its frames by increasing weight.
@@ -699,7 +702,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 32;
+    const VERSION: u32 = 33;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -991,16 +994,7 @@ pub fn import_model(
     }
     let mut model = builder.model;
     model.clips = clips;
-    // Unity bounds a skinned mesh over the poses of the model's animations (documented:
-    // Renderer.localBounds). Measured where every pose is the import pose: no clip, or clips
-    // whose transform curves hold the nodes' import transforms.
-    if pivots::poses_are_import_pose(
-        &model.nodes,
-        &paths,
-        model.clips.iter().flat_map(|c| &c.curves),
-    ) {
-        pivots::set_skinned_local_bounds(&mut model);
-    }
+    skinned_bounds::set_skinned_local_bounds(&mut model, &paths);
     model.warnings.extend(clip_warnings);
     model.animator = animator;
     if matches!(settings.animation_type, 2 | 3) && settings.avatar_setup == 1 {
@@ -1156,11 +1150,6 @@ impl<'a> Builder<'a> {
         self.sources.push(node);
         let placement = pivots::Placement::of(node);
         self.pivots.push(placement);
-        if let Some(what) = placement.unmeasured(node) {
-            self.model.warnings.push(format!(
-                "skinned mesh node '{name}' is placed without its pivots; {what} (unmeasured)"
-            ));
-        }
         let parent_offset = parent.map_or(pivots::ZERO, |p| self.pivots[p as usize].offset());
         self.model.nodes.push(ModelNode {
             name,
@@ -1742,10 +1731,12 @@ impl<'a> Builder<'a> {
             } else {
                 self.model.nodes[index].name.clone()
             };
+            // Rig type None imports no skinning: the mesh keeps its file vertices under a
+            // MeshRenderer (measured: tests/projects/modelaxis Rigged NoneSwing).
             let skin = mesh
                 .skin_deformers
                 .iter()
-                .find(|s| !s.clusters.is_empty())
+                .find(|s| !s.clusters.is_empty() && self.settings.animation_type != 0)
                 .map(|s| s.as_ref());
             let pivot = self.pivots[index].offset();
             let offset = self
@@ -1843,6 +1834,7 @@ impl<'a> Builder<'a> {
                     root_bone,
                     blend_shape_weights: weights,
                     local_bounds: None,
+                    update_when_offscreen: false,
                 }
             } else {
                 ModelRenderer {
@@ -1872,6 +1864,7 @@ impl<'a> Builder<'a> {
                     root_bone: None,
                     blend_shape_weights: Vec::new(),
                     local_bounds: None,
+                    update_when_offscreen: false,
                 }
             };
             self.model.nodes[index].renderer = Some(renderer);
@@ -2540,10 +2533,15 @@ impl<'a> Builder<'a> {
             );
         }
         if let Some(skin) = skin {
+            // A bone whose import pose is singular (a zero scale on it or an ancestor) gets an
+            // all-zero bind pose (measured: tests/projects/modelaxis Rigged GenericZeroRoot).
             out.bind_poses = skin
                 .clusters
                 .iter()
-                .map(|c| self.matrix(&offset.bind(&c.geometry_to_bone)))
+                .map(|c| match &c.bone_node {
+                    Some(bone) if skinned_bounds::is_singular(&bone.node_to_world) => [0.0; 16],
+                    _ => self.matrix(&offset.bind(&c.geometry_to_bone)),
+                })
                 .collect();
         }
         // The bounds hold every blend shape frame's positions too (measured,
@@ -3404,12 +3402,14 @@ fn bone_weight(skin: &ufbx::SkinDeformer, vertex: usize) -> BoneWeight {
 }
 
 mod axes;
+pub mod curves;
 mod fbx_smoothing;
 mod lightmap_uv;
 mod materials;
 mod normals;
 mod obj_smoothing;
 mod pivots;
+mod skinned_bounds;
 mod tangent_space;
 mod triangulation;
 
