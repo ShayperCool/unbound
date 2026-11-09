@@ -70,6 +70,8 @@ Systems built in code; each record is one JSON line `{"key", "value": [numbers]}
   Local systems, kill speeds with a speed modifier. Planes: particles starting behind a plane moving
   towards or away from it, two planes reached in one step, a sloped plane, scaled Local systems.
   `collide/trigger/size`: a Trigger module killing fast-shrinking particles on Enter.
+- `catchup/*` (`ParticleRenderProbe.Catchup.cs`): one restarting Simulate call of 4.5, 5.5, 7, 10.5
+  or 13 s on a parent carrying a long-lived Birth child: every child's age, position and seed.
 
     python3 tests/projects/particlerender/run.py native --label native1   # Editor capture (GPU, job pool)
     python3 tests/projects/particlerender/run.py publish native1 native2  # two identical captures
@@ -77,7 +79,7 @@ Systems built in code; each record is one JSON line `{"key", "value": [numbers]}
 
 The reference is `Reference/unity-6000.0.71f1/` (`values.jsonl`, 12 images); both captures were
 identical (re-recorded with the `birthstart`, `freenorm`, `meshscale` and `meshindex` controls, then
-with `prewarm`, `birthend` and `inherit`, then with `collide`: every earlier record and image
+with `prewarm`, `birthend` and `inherit`, then with `collide` and `catchup`: every earlier record and image
 unchanged). Values compare with particletrails' comparator (0.0002 absolute plus 0.0002 relative);
 images go through `particles/compare_images.py` (report only). Run output stays under
 `$XDG_CACHE_HOME/unbound/validation/runs/particlerender/`.
@@ -130,7 +132,8 @@ Everything below is measured in this release, not documented.
 - `prewarm-procedural`: a system in procedural mode is prewarmed without the stepped simulation
   (exact burst ages; mid-loop bursts 0.01 s older); unmodelled.
 - `prewarm-long-child-catchup`: children emitted more than about four seconds before the prewarm's
-  end (a 6 s child): the longer catch-up steps of long calls are not modelled.
+  end (a 6 s child), prewarm only: long Simulate calls catch their children up as Unity does
+  (`catchup/*`).
 - `prewarm-end-tie`, `prewarm-equal-age-order`: float ties at the prewarm's loop end and in the
   age order of equal-age children.
 - `collision-quality-cache`: Low-quality world collisions, which the Editor resolves against planes

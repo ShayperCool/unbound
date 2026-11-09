@@ -159,7 +159,7 @@
   ]
  },
  "prewarm-long-child-catchup": {
-  "reason": "A prewarmed parent whose Birth child lives 6 s (prewarm/birth_child6): children emitted more than about four seconds before the prewarm's end come with other ages and positions in the Editor (33 children against Unbound's 36); with child lifetimes up to 4 s every child matches. Open: the children's catch-up in long simulation calls takes longer steps past 5 and 10 s of catch-up, which Unbound does not model.",
+  "reason": "A prewarmed parent whose Birth child lives 6 s (prewarm/birth_child6): children emitted more than about four seconds before the prewarm's end come with other ages and positions in the Editor (33 children against Unbound's 36); with child lifetimes up to 4 s every child matches. Open, prewarm only: the catch-up of children in long Simulate calls (catchup/*, 4.5 to 13 s) matches.",
   "keys": [
    "prewarm/birth_child6/child/0",
    "prewarm/birth_child6/child/1",
