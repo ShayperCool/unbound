@@ -24,6 +24,7 @@ import argparse
 import json
 import os
 import platform
+import shlex
 import shutil
 import subprocess
 import sys
@@ -59,10 +60,11 @@ def copy_project(target):
     (target/'ProjectSettings/ProjectVersion.txt').write_text(f'm_EditorVersion: {unity_version()}\n')
     plugins = target/'Assets/Plugins/x86_64'
     plugins.mkdir(parents=True)
-    compiler = os.environ.get('CC', 'cc')
+    # $CC may be a command with arguments (a compiler cache before the compiler).
+    compiler = shlex.split(os.environ.get('CC') or 'cc')
     for library, prefix in LIBRARIES:
         defines = [f'-DNATIVEGFX_PRELOAD="{prefix} "'] if prefix else []
-        subprocess.run([compiler, *defines, '-shared', '-fPIC', '-O2', '-fvisibility=hidden', '-o', str(plugins/library),
+        subprocess.run([*compiler, *defines, '-shared', '-fPIC', '-O2', '-fvisibility=hidden', '-o', str(plugins/library),
                         str(ROOT/'Plugins/nativegfx_probe.c'), '-ldl', '-lpthread'], check=True)
         shutil.copyfile(ROOT/'Plugins'/(library + '.meta'), plugins/(library + '.meta'))
 
