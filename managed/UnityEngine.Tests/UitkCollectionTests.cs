@@ -319,12 +319,33 @@ namespace UnityEngine.Tests
         // [rule] Animated reordering (tests/projects/uitkcollections animated section records the
         // fixed-height, unscrolled case): a drag of the last row (no row after it to open a gap) and a
         // drop in a dynamic-height list keep the rows and their heights.
+        // Drives the global panel clock for a test (restored on Dispose).
+        sealed class PanelClock : IDisposable
+        {
+            static readonly System.Reflection.PropertyInfo s_Clock = typeof(Panel).GetProperty("TimeSinceStartup",
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+            readonly object m_Saved;
+            public long now = 1000;
+
+            public PanelClock()
+            {
+                m_Saved = s_Clock.GetValue(null);
+                s_Clock.SetValue(null, Delegate.CreateDelegate(s_Clock.PropertyType, this,
+                    typeof(PanelClock).GetMethod(nameof(Clock), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)));
+            }
+
+            long Clock() => now;
+
+            public void Dispose() => s_Clock.SetValue(null, m_Saved);
+        }
+
         static ListView AnimatedList(Recorder r, List<string> items, Action<ListView> setup = null) =>
             r.List(items, l => { l.reorderable = true; l.reorderMode = ListViewReorderMode.Animated; setup?.Invoke(l); });
 
         [Fact]
         public void AnimatedDragOfTheLastRowMovesItUp()
         {
+            using var clock = new PanelClock();
             using var panel = NewPanel();
             var items = Items(5);
             var r = new Recorder();
@@ -335,7 +356,7 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "Row 0", "Row 4", "Row 1", "Row 2", "Row 3" }, items);
             Assert.Equal(new[] { 1 }, list.selectedIndices);
             // Once the gaps have closed (500 ms) the rows stand at their places again.
-            System.Threading.Thread.Sleep(600);
+            clock.now += 600;
             Settle(panel);
             Assert.All(Enumerable.Range(0, 5), i => Assert.Equal(i * RowHeight, list.GetRootElementForIndex(i).layout.y));
         }
@@ -343,6 +364,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnimatedDropInADynamicHeightListKeepsTheRowHeights()
         {
+            using var clock = new PanelClock();
             using var panel = NewPanel();
             var items = Items(6);
             var heights = new Dictionary<string, float> { ["Row 0"] = 16, ["Row 1"] = 24, ["Row 2"] = 32, ["Row 3"] = 16, ["Row 4"] = 24, ["Row 5"] = 32 };
@@ -352,14 +374,21 @@ namespace UnityEngine.Tests
             panel.visualTree.Add(list);
             Layout(panel);
             Layout(panel);
-            Drag(panel, RowCenter(list, 0), RowCenter(list, 3) + new Vector2(0, 4), 6);
+            // The clock stands still while dragging, so the drop index does not depend on how far the
+            // gaps opened. (Right after the drop the rows still carry their gaps' padding, in Unity too:
+            // heights are checked once the gaps have closed.)
+            var from = RowCenter(list, 0);
+            var to = RowCenter(list, 3) + new Vector2(0, 4);
+            Pointer(panel, EventType.MouseMove, from);
+            Pointer(panel, EventType.MouseDown, from);
+            for (int step = 1; step <= 6; step++) Pointer(panel, EventType.MouseMove, Vector2.Lerp(from, to, step / 6f));
+            using (var up = PointerUpEvent.GetPooled(new Event { type = EventType.MouseUp, mousePosition = to, button = 0, clickCount = 1 }))
+                panel.visualTree.SendEvent(up);
+            // Over the top half of row 3 (the ghost's height is not counted): before it.
+            Assert.Equal(new[] { "Row 1", "Row 2", "Row 0", "Row 3", "Row 4", "Row 5" }, items);
             // The gaps close over 500 ms; their rows report their heights again as they do.
-            System.Threading.Thread.Sleep(600);
+            clock.now += 600;
             Settle(panel);
-            // Row 0 moved down past rows 1 and 2 (where exactly depends on how far the gaps opened
-            // while dragging); the other rows keep their order.
-            Assert.True(items.IndexOf("Row 0") >= 2);
-            Assert.Equal(new[] { "Row 1", "Row 2", "Row 3", "Row 4", "Row 5" }, items.Where(i => i != "Row 0"));
             float expected = 0f;
             foreach (var item in items) expected += heights[item];
             Assert.Equal(expected, list.virtualizationController.GetExpectedContentHeight());

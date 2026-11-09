@@ -3075,8 +3075,8 @@ namespace Unbound.UIElements.Layout
         }
 
 
-        // The size between two rounded edges. A node placed at an infinite or undefined position, or
-        // whose size is undefined, has an undefined size, which rounding again keeps (an absolute child
+        // The size between two rounded edges. A node placed at an infinite or NaN position, or whose
+        // size is undefined, has an undefined size, which rounding again keeps (an absolute child
         // at an infinite offset: the Editor reports NaN, Unity 6000.0.71f1,
         // tests/projects/uitkcollections absolute section).
         static float EdgeDistance(float far, float near, float nearUnrounded, double size) =>

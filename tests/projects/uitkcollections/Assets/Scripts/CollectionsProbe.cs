@@ -754,7 +754,6 @@ public static class CollectionsProbe
         return sb.Append(']').ToString();
     }
 
-    // ---- absolute children in a padded, bordered parent ----
 
     // ---- transition animations (experimental.animation) ----
 
@@ -842,6 +841,8 @@ public static class CollectionsProbe
         }, () => "null");
         Step("animations", "cleanup", () => box.RemoveFromHierarchy(), () => "null");
     }
+
+    // ---- absolute children in a padded, bordered parent ----
 
     // One absolutely positioned child per case (a tab header's underline is one), in a parent with
     // borders and padding: its layout rect for insets, percentage sizes, offsets, margins, min/max,

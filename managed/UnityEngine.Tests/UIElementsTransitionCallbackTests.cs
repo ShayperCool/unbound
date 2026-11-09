@@ -9,6 +9,8 @@ namespace UnityEngine.Tests
 {
     // Expected sequences and callback-visible values come from the clock-driven 6000.0.71f1
     // oracle in tests/projects/uitransitioncallbacks, not an assumed internal Unity mechanism.
+    // The panel clock is global: tests that drive it share one collection.
+    [Collection("UXML custom controls")]
     public class UIElementsTransitionCallbackTests
     {
         sealed class ClockPanel : IDisposable
