@@ -51,5 +51,8 @@ namespace DotRecast.Detour
 
         /// Unbound: the polygon beyond the hit edge that the filter excluded (0 at a border).
         public long blockedRef;
+
+        /// Unbound: the last polygon the ray crossed (also when the path array is full).
+        public long lastRef;
     }
 }

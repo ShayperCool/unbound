@@ -151,8 +151,7 @@ namespace UnityEngine.AI
             surface.Query.Raycast(startRef, V(start), V(targetPosition), filter, 0, ref ray, 0);
             float t = ray.t;
             var normal = ray.hitNormal;
-            int count = ray.pathCount;
-            long lastRef = count > 0 ? ray.path[count - 1] : startRef;
+            long lastRef = ray.lastRef != 0 ? ray.lastRef : startRef;
             bool blocked = t < 1f;
             var end = blocked ? start + (targetPosition - start) * t : targetPosition;
             // The hit is on the NavMesh: its height there (an edge point may fall outside the

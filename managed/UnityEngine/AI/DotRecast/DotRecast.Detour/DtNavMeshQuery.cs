@@ -2444,6 +2444,7 @@ namespace DotRecast.Detour
             hit.pathCount = 0;
             hit.pathCost = 0;
             hit.blockedRef = 0;
+            hit.lastRef = 0;
 
             RcVec3f curPos = RcVec3f.Zero;
             RcVec3f lastPos = RcVec3f.Zero;
@@ -2475,6 +2476,7 @@ namespace DotRecast.Detour
             curPos = startPos;
             RcVec3f dir = RcVec3f.Subtract(endPos, startPos);
             hit.hitNormal = RcVec3f.Zero;
+            float tStraight = 0f;
 
             DtStatus status = DtStatus.DT_SUCCESS;
             nextTile = prevTile = tile;
@@ -2514,6 +2516,7 @@ namespace DotRecast.Detour
                 }
 
                 // Store visited polygons.
+                hit.lastRef = curRef;
                 if (n < hit.maxPath)
                 {
                     hit.path[n++] = curRef;
@@ -2521,6 +2524,18 @@ namespace DotRecast.Detour
                 else
                 {
                     status |= DtStatus.DT_BUFFER_TOO_SMALL;
+                }
+
+                // Unbound: the polygon's part of the straight ray, to its exit or the ray's end.
+                if ((options & DtRaycastOptions.UNBOUND_RAYCAST_STRAIGHT_COSTS) != 0)
+                {
+                    float tEnd = Math.Min(hit.t, 1f);
+                    if (tEnd > tStraight)
+                    {
+                        hit.pathCost += filter.GetCost(RcVec.Mad(startPos, dir, tStraight), RcVec.Mad(startPos, dir, tEnd),
+                            curRef, tile, poly, curRef, tile, poly, curRef, tile, poly);
+                        tStraight = tEnd;
+                    }
                 }
 
                 // Ray end is completely inside the polygon.
@@ -2628,11 +2643,8 @@ namespace DotRecast.Detour
                 poly = nextPoly;
 
 
-                if (status.Has(DtStatus.DT_BUFFER_TOO_SMALL))
-                {
-                    status |= DtStatus.DT_PARTIAL_RESULT;
-                    break;
-                }
+                // Unbound: a full path buffer is reported (DT_BUFFER_TOO_SMALL) and the ray goes on
+                // (Unity's: its hit and cost do not depend on how many polygons are recorded).
             }
 
             hit.pathCount = n;
