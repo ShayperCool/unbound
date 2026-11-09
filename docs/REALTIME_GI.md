@@ -46,13 +46,14 @@ a payload: a Unity bundle of per-system files named by the system's hash.
 
 ## Runtime update
 
-Unbound's model of one update of a system (phase 2 implements it and compares its converged
-output with tests/projects/realtimegi):
+Unbound's model of one update of a system; not yet checked against the reference (phase 2
+implements it and compares its converged output with tests/projects/realtimegi):
 
 1. **Direct light per cluster**: the mean over the cluster's points of `max(0, n.l)` times the
    light's distance falloff (the built-in pipeline's legacy curve over distance/range) times the
    light's color, scaled by intensity and `Light.bounceIntensity` before its conversion to linear
-   (in projects without linear light intensity). Point lights are not shadowed in this input.
+   (in projects without linear light intensity). In this model point lights are not shadowed
+   in this input (the probe's point light has shadows enabled).
 2. **Cluster radiance**: `albedo^2 * (direct + bounce) + emission`, with albedo the cluster's
    8-bit gamma-space albedo (the material's meta pass output) and emission linear.
 3. **Cluster tree**: each parent value is the 8-bit-weighted (/255) sum of its children.
@@ -66,10 +67,12 @@ output with tests/projects/realtimegi):
 Measured in the probe: the update runs over several frames on worker threads (bounces converge
 frame by frame), so the first frames after a change are not reproducible between runs even with
 `synchronousMode`; the probe compares converged output. Also measured, beyond the documented
-contract: an ambient color
-change is picked up without `UpdateEnvironment`; after `SetEmissive` a material emission change is
-ignored even after `UpdateGIMaterials`; an albedo change waits for `UpdateGIMaterials`;
-`updateThreshold` delays updates but converged output does not depend on it.
+contract: `indirectScale` starts as the scene's Indirect Intensity; an albedo change waits for
+`UpdateGIMaterials`; after `SetEmissive` a material emission change is ignored even after
+`UpdateGIMaterials`; `UpdateEnvironment` changed nothing measurable (ambient color and skybox
+exposure changes are picked up without it). Not measurable as a reference, since the result
+depends on update timing: a material emission change without `UpdateGIMaterials`, and
+`updateThreshold` above its default of 1.
 
 ## Unbound plan
 
