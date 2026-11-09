@@ -1152,10 +1152,19 @@ impl Effect {
     }
 }
 
+/// An extra channel pair of a group in a layout wider than stereo: its block and its own
+/// instances of the group's effects, with the same parameters.
+pub struct GroupLane {
+    pub buffer: Vec<f32>,
+    pub effects: Vec<Effect>,
+}
+
 pub struct GroupNode {
     pub spec: GroupSpec,
     pub effects: Vec<Effect>,
     pub buffer: Vec<f32>,
+    /// One per extra channel pair of the output layout (see `MixerConfig::extra_pairs`).
+    pub lanes: Vec<GroupLane>,
     pub rendered: usize,
     pub input_fade: bool,
     pub suspended: bool,
@@ -1168,25 +1177,18 @@ impl GroupNode {
         for effect in &spec.effects {
             effect.validate(rate, buffer)?;
         }
-        let mut old = std::mem::take(&mut self.effects);
-        self.effects = spec
-            .effects
-            .iter()
-            .map(|s| {
-                if let Some(index) = old
-                    .iter()
-                    .position(|e| e.spec.id == s.id && e.spec.kind == s.kind)
-                {
-                    let mut effect = old.remove(index);
-                    effect.update(s.clone(), rate, buffer)?;
-                    Ok(effect)
-                } else {
-                    let mut effect = Effect::new(s.clone(), rate, buffer)?;
-                    effect.set_layout(config.output_channels());
-                    Ok(effect)
-                }
-            })
-            .collect::<anyhow::Result<_>>()?;
+        self.effects = sync_effects(std::mem::take(&mut self.effects), &spec.effects, config)?;
+        let block = self.buffer.len();
+        self.lanes.truncate(config.extra_pairs());
+        while self.lanes.len() < config.extra_pairs() {
+            self.lanes.push(GroupLane {
+                buffer: vec![0.0; block],
+                effects: Vec::new(),
+            });
+        }
+        for lane in &mut self.lanes {
+            lane.effects = sync_effects(std::mem::take(&mut lane.effects), &spec.effects, config)?;
+        }
         let mut after_attenuation = false;
         self.input_fade = self.effects.iter().any(|effect| {
             let Some(kind) = effect.kind() else {
@@ -1206,6 +1208,33 @@ impl GroupNode {
         self.spec = spec;
         Ok(())
     }
+}
+
+/// The effects of `specs` in order: one matching an `old` effect by identity and kind keeps
+/// its state and takes the new parameters; a new one starts empty in the output layout.
+fn sync_effects(
+    mut old: Vec<Effect>,
+    specs: &[EffectSpec],
+    config: &MixerConfig,
+) -> anyhow::Result<Vec<Effect>> {
+    let (rate, buffer) = (config.sample_rate, config.buffer_size);
+    specs
+        .iter()
+        .map(|s| {
+            if let Some(index) = old
+                .iter()
+                .position(|e| e.spec.id == s.id && e.spec.kind == s.kind)
+            {
+                let mut effect = old.remove(index);
+                effect.update(s.clone(), rate, buffer)?;
+                Ok(effect)
+            } else {
+                let mut effect = Effect::new(s.clone(), rate, buffer)?;
+                effect.set_layout(config.output_channels());
+                Ok(effect)
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]

@@ -189,6 +189,8 @@ pub struct Spatialized {
     pub mono_matrix: Option<[f32; 4]>,
     /// The gains into a mono output (`AudioSpeakerMode.Mono`), see [`MonoGains`].
     pub mono_output: MonoGains,
+    /// The gains into a layout wider than stereo, when one was asked for (see [`surround`]).
+    pub surround: Option<SurroundGains>,
     pub pitch: f32,
     pub audibility: f32,
 }
@@ -236,6 +238,7 @@ impl Default for Spatialized {
             matrix: [1.0, 0.0, 0.0, 1.0],
             mono_matrix: None,
             mono_output: MonoGains::new(0.0, 0.0, 1.0),
+            surround: None,
             pitch: 1.0,
             audibility: 1.0,
         }
@@ -250,7 +253,7 @@ pub fn spatialize(
     rolloff_scale: f32,
     doppler_factor: f32,
 ) -> Spatialized {
-    spatialize_impl(s, listener, rolloff_scale, doppler_factor, false)
+    spatialize_impl(s, listener, rolloff_scale, doppler_factor, false, None)
 }
 
 /// Stereo output matrix measured by tests/projects/audiodistortion on 6000.0.71f1.
@@ -260,7 +263,19 @@ pub fn spatialize_measured(
     rolloff_scale: f32,
     doppler_factor: f32,
 ) -> Spatialized {
-    spatialize_impl(s, listener, rolloff_scale, doppler_factor, true)
+    spatialize_impl(s, listener, rolloff_scale, doppler_factor, true, None)
+}
+
+/// [`spatialize`] or [`spatialize_measured`] with the gains into a surround `layout` as well.
+pub fn spatialize_in(
+    s: &SourceSpatial,
+    listener: &Listener,
+    rolloff_scale: f32,
+    doppler_factor: f32,
+    measured: bool,
+    layout: Option<&SpeakerLayout>,
+) -> Spatialized {
+    spatialize_impl(s, listener, rolloff_scale, doppler_factor, measured, layout)
 }
 
 fn spatialize_impl(
@@ -269,6 +284,7 @@ fn spatialize_impl(
     rolloff_scale: f32,
     doppler_factor: f32,
     measured: bool,
+    layout: Option<&SpeakerLayout>,
 ) -> Spatialized {
     let offset = sub(s.position, listener.position);
     let pan_distance = length(offset);
@@ -294,6 +310,7 @@ fn spatialize_impl(
         return Spatialized {
             matrix: [l2, 0.0, 0.0, r2],
             mono_output: MonoGains::new(s.pan_stereo, 0.0, 1.0),
+            surround: layout.map(|layout| surround(layout, s.pan_stereo, 0.0, 1.0, None, 0.0)),
             mono_matrix: measured.then(|| {
                 let pan = s.pan_stereo.clamp(-1.0, 1.0);
                 [
@@ -414,13 +431,257 @@ fn spatialize_impl(
         mono_matrix = None;
     }
     let volume = flat + blend * gain;
+    // Listener-space direction: lateral and forward components of the unit offset, as clamped.
+    let surround_direction = direction.map(|d| {
+        let right = cross(listener.up, listener.forward);
+        let (right_length, forward_length) = (length(right), length(listener.forward));
+        let side = if right_length > 1e-6 {
+            dot(d, right) / right_length
+        } else {
+            0.0
+        };
+        let ahead = if forward_length > 1e-6 {
+            dot(d, listener.forward) / forward_length
+        } else {
+            0.0
+        };
+        (side.clamp(-1.0, 1.0), ahead.clamp(-1.0, 1.0))
+    });
     Spatialized {
         matrix,
         mono_matrix,
         mono_output: MonoGains::new(s.pan_stereo, blend, volume),
+        surround: layout.map(|layout| {
+            surround(
+                layout,
+                s.pan_stereo,
+                blend,
+                volume,
+                surround_direction,
+                spread,
+            )
+        }),
         pitch,
         audibility: volume,
     }
+}
+
+/// Gain entries per output channel and clip channel: `[output * 2 + input]` for up to eight
+/// output channels (the first four are the stereo `matrix`).
+pub const MATRIX_ENTRIES: usize = 16;
+
+/// The gains of a source into a layout wider than stereo: a stereo clip's (`stereo`) and a mono
+/// clip's (`mono`, input 0) entry per output channel, both `[output * 2 + input]`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SurroundGains {
+    pub stereo: [f32; MATRIX_ENTRIES],
+    pub mono: [f32; MATRIX_ENTRIES],
+}
+
+/// A speaker of a surround layout: its output channel and its direction in listener space
+/// (`x` right, `z` forward), normalized, with its position around the listener (see
+/// [`pseudo_angle`]).
+#[derive(Debug, Clone, Copy)]
+struct Speaker {
+    channel: usize,
+    x: f32,
+    z: f32,
+    angle: f64,
+}
+
+/// The speakers of quad, 5.0, 5.1 and 7.1 output in Unity 6000.0.71f1 (tests/projects/audiopitch
+/// `context_*_3d_*`), sorted around the listener; the LFE channel takes no direction.
+#[derive(Debug, Clone, Copy)]
+pub struct SpeakerLayout {
+    speakers: [Speaker; 7],
+    count: usize,
+    lfe: Option<usize>,
+}
+
+impl SpeakerLayout {
+    /// The layout of `channels` output channels (4: quad, 5: 5.0, 6: 5.1, 8: 7.1).
+    pub fn of(channels: usize) -> Option<Self> {
+        // (output channel, x, z) as placed for each layout.
+        const QUAD: [(usize, f32, f32); 4] = [
+            (0, -1.0, 1.0),
+            (1, 1.0, 1.0),
+            (2, -1.0, -1.0),
+            (3, 1.0, -1.0),
+        ];
+        const SURROUND: [(usize, f32, f32); 5] = [
+            (0, -1.0, 1.0),
+            (1, 1.0, 1.0),
+            (2, 0.0, 1.0),
+            (3, -1.0, -1.0),
+            (4, 1.0, -1.0),
+        ];
+        const FIVE_ONE: [(usize, f32, f32); 5] = [
+            (0, -1.0, 1.0),
+            (1, 1.0, 1.0),
+            (2, 0.0, 1.0),
+            (4, -1.0, -1.0),
+            (5, 1.0, -1.0),
+        ];
+        const SEVEN_ONE: [(usize, f32, f32); 7] = [
+            (0, -0.5, 0.866),
+            (1, 0.5, 0.866),
+            (2, 0.0, 1.0),
+            (4, -0.707, -0.707),
+            (5, 0.707, -0.707),
+            (6, -1.0, 0.0),
+            (7, 1.0, 0.0),
+        ];
+        let (placed, lfe): (&[(usize, f32, f32)], _) = match channels {
+            4 => (&QUAD, None),
+            5 => (&SURROUND, None),
+            6 => (&FIVE_ONE, Some(3)),
+            8 => (&SEVEN_ONE, Some(3)),
+            _ => return None,
+        };
+        let mut speakers = [Speaker {
+            channel: 0,
+            x: 0.0,
+            z: 0.0,
+            angle: 0.0,
+        }; 7];
+        for (speaker, &(channel, x, z)) in speakers.iter_mut().zip(placed) {
+            let length = (x * x + z * z).sqrt();
+            let (x, z) = (x / length, z / length);
+            *speaker = Speaker {
+                channel,
+                x,
+                z,
+                angle: pseudo_angle(x, z) as f64,
+            };
+        }
+        speakers[..placed.len()].sort_by(|a, b| a.angle.total_cmp(&b.angle));
+        Some(Self {
+            speakers,
+            count: placed.len(),
+            lfe,
+        })
+    }
+
+    /// Unit levels of one direction: between the two speakers whose positions enclose it,
+    /// power-normalized vector-base gains. A direction at the listener reaches every speaker at
+    /// `sqrt(2) / count`.
+    fn pan(&self, x: f32, z: f32, levels: &mut [f32; 8]) {
+        let speakers = &self.speakers[..self.count];
+        if x == 0.0 && z == 0.0 {
+            let level = std::f32::consts::SQRT_2 / self.count as f32;
+            for speaker in speakers {
+                levels[speaker.channel] += level;
+            }
+            return;
+        }
+        let angle = pseudo_angle(x, z) as f64;
+        for (index, a) in speakers.iter().enumerate() {
+            let b = &speakers[(index + 1) % speakers.len()];
+            let end = if b.angle <= a.angle {
+                b.angle + PSEUDO_TURN
+            } else {
+                b.angle
+            };
+            let at = if angle < a.angle {
+                angle + PSEUDO_TURN
+            } else {
+                angle
+            };
+            if a.angle <= at && at < end {
+                let to_a = b.z * x - b.x * z;
+                let to_b = z * a.x - x * a.z;
+                let sign = if a.x * b.z - b.x * a.z > 0.0 {
+                    1.0
+                } else {
+                    -1.0
+                };
+                let scale = sign / (to_b * to_b + to_a * to_a).sqrt();
+                levels[a.channel] += to_a * scale;
+                levels[b.channel] += to_b * scale;
+                return;
+            }
+        }
+    }
+}
+
+/// One full turn of [`pseudo_angle`].
+const PSEUDO_TURN: f64 = 8.0;
+
+/// A position around the listener in `[0, 8)` from the direction `(x, z)`: 0 at front-left
+/// (-1, 1), 2 at front-right, 4 at back-right, 6 at back-left, linear in the ratio of the
+/// components along each side of that square.
+fn pseudo_angle(x: f32, z: f32) -> f32 {
+    if x == 0.0 && z == 0.0 {
+        return 0.0;
+    }
+    if x.abs() <= z.abs() {
+        let along = x / z.abs() + 1.0;
+        if z < 0.0 { 6.0 - along } else { along }
+    } else {
+        let along = 3.0 - z / x.abs();
+        if x < 0.0 { 10.0 - along } else { along }
+    }
+}
+
+/// Gains into a surround layout (Unity 6000.0.71f1, tests/projects/audiopitch `context_*_3d_*`).
+/// The 2D part puts a stereo clip's channels on the front pair at their balance gains and a mono
+/// clip on the front pair at `sqrt((1 -/+ pan) / 2)` and on LFE at unity. The 3D part pans each
+/// clip channel's direction (rotated by half the spread either way) across the speakers and puts
+/// it on LFE at unity; a mono clip averages its two spread directions. Spatial blend mixes the
+/// speaker levels of both parts; attenuation blends apart.
+pub fn surround(
+    layout: &SpeakerLayout,
+    pan_stereo: f32,
+    blend: f32,
+    volume: f32,
+    direction: Option<(f32, f32)>,
+    spread: f32,
+) -> SurroundGains {
+    let flat = 1.0 - blend;
+    let [l2, r2] = balance(pan_stereo);
+    let pan = pan_stereo.clamp(-1.0, 1.0);
+    let mono_2d = [((1.0 - pan) * 0.5).sqrt(), ((1.0 + pan) * 0.5).sqrt()];
+    // Unit 3D levels of the two clip channels' directions.
+    let mut levels = [[0.0f32; 8]; 2];
+    if blend > 0.0 {
+        let (x, z) = direction.unwrap_or((0.0, 0.0));
+        let angle = spread.clamp(0.0, 360.0).to_radians() * 0.5;
+        let (sin, cos) = angle.sin_cos();
+        for (channel, sign) in [(0, 1.0f32), (1, -1.0)] {
+            let (sin, cos) = (sin * sign, cos);
+            layout.pan(x * cos - z * sin, x * sin + z * cos, &mut levels[channel]);
+        }
+    }
+    let mut gains = SurroundGains {
+        stereo: [0.0; MATRIX_ENTRIES],
+        mono: [0.0; MATRIX_ENTRIES],
+    };
+    for output in 0..8 {
+        let lfe = layout.lfe == Some(output);
+        let three_d = |channel: usize| if lfe { 1.0 } else { levels[channel][output] };
+        let front = |values: [f32; 2]| match output {
+            0 => values[0],
+            1 => values[1],
+            _ => 0.0,
+        };
+        // Stereo clips: channel `input` reaches only its own front speaker in 2D.
+        for input in 0..2 {
+            let two_d = if output == input {
+                [l2, r2][input]
+            } else {
+                0.0
+            };
+            gains.stereo[output * 2 + input] = (flat * two_d + blend * three_d(input)) * volume;
+        }
+        let two_d = if lfe { 1.0 } else { front(mono_2d) };
+        let spread_average = if lfe {
+            1.0
+        } else {
+            (levels[0][output] + levels[1][output]) * 0.5
+        };
+        gains.mono[output * 2] = (flat * two_d + blend * spread_average) * volume;
+    }
+    gains
 }
 
 /// Constant-power stereo gains with the difference between gains equal to lateral direction.
@@ -723,5 +984,42 @@ mod tests {
         // A stereo clip blends its 2D channel levels with unity (`context_mono_3d_stereo_half`).
         let [l, r] = half.stereo;
         assert!((l - 0.8535 * volume).abs() < 1e-6 && (r - 0.676_75 * volume).abs() < 1e-6);
+    }
+
+    #[test]
+    fn surround_gains_pan_between_neighbouring_speakers() {
+        // Recorded per-channel gains at attenuation 0.5 (tests/projects/audiopitch).
+        let direction = |x: f32, z: f32| {
+            let length = (x * x + z * z).sqrt();
+            Some((x / length, z / length))
+        };
+        let quad = SpeakerLayout::of(4).unwrap();
+        let gains = surround(&quad, 0.0, 1.0, 0.5, direction(1.97, -0.347), 0.0);
+        let mono: Vec<f32> = (0..4).map(|c| gains.mono[c * 2]).collect();
+        for (got, want) in mono.iter().zip([0.0, 0.28681, 0.0, 0.40946]) {
+            assert!((got - want).abs() < 2e-4, "{mono:?}");
+        }
+        let five_one = SpeakerLayout::of(6).unwrap();
+        let gains = surround(&five_one, 0.0, 1.0, 0.5, direction(1.0, 1.732), 0.0);
+        let mono: Vec<f32> = (0..6).map(|c| gains.mono[c * 2]).collect();
+        for (got, want) in mono.iter().zip([0.0, 0.44405, 0.22984, 0.5, 0.0, 0.0]) {
+            assert!((got - want).abs() < 2e-4, "{mono:?}");
+        }
+        // 2D: a mono clip on the front pair and on LFE at unity; a stereo clip on its own
+        // front speaker only.
+        let flat = surround(&five_one, 0.0, 0.0, 1.0, None, 0.0);
+        assert_eq!(flat.mono[0], 0.5f32.sqrt());
+        assert_eq!(flat.mono[3 * 2], 1.0);
+        assert_eq!(&flat.stereo[..4], &[1.0, 0.0, 0.0, 1.0]);
+        assert!(flat.stereo[4..].iter().all(|g| *g == 0.0));
+        // At the listener every speaker gets sqrt(2) / count.
+        let centre = surround(&quad, 0.0, 1.0, 1.0, None, 0.0);
+        assert_eq!(centre.mono[0], std::f32::consts::SQRT_2 / 4.0);
+        // Spread averages the two directions of a mono clip; LFE stays at unity.
+        let spread = surround(&five_one, 0.0, 1.0, 0.5, direction(1.97, -0.347), 90.0);
+        let mono: Vec<f32> = (0..6).map(|c| spread.mono[c * 2]).collect();
+        for (got, want) in mono.iter().zip([0.0, 0.24617, 0.0, 0.5, 0.04336, 0.28953]) {
+            assert!((got - want).abs() < 2e-4, "{mono:?}");
+        }
     }
 }

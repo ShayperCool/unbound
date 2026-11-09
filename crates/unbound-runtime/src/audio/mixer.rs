@@ -17,7 +17,7 @@ use super::{
     },
     ramp::ParameterRamp,
     reverb::{SfxReverb, SfxReverbSpec},
-    spatial::{self, Listener, SourceSpatial},
+    spatial::{self, Listener, MATRIX_ENTRIES, SourceSpatial, SpeakerLayout},
 };
 use crate::render_protocol::Vector3;
 use std::collections::{HashMap, HashSet};
@@ -387,6 +387,27 @@ impl FilterChain {
         }
     }
 
+    /// A chain of the same components with the same parameters, each starting empty: the
+    /// chain of another channel pair.
+    fn mirrored(&self, rate: u32, buffer: u32) -> anyhow::Result<Self> {
+        let filters = self
+            .filters
+            .iter()
+            .map(|f| {
+                Ok(SourceFilter {
+                    id: f.id,
+                    kind: f.kind,
+                    stage: f.stage,
+                    effect: Effect::new(f.effect.spec.clone(), rate, buffer)?,
+                })
+            })
+            .collect::<anyhow::Result<_>>()?;
+        Ok(Self {
+            filters,
+            primed: false,
+        })
+    }
+
     /// The chain reconnected: each component restarts empty (see [`Effect::restart`]).
     fn restart(&mut self) {
         self.filters.iter_mut().for_each(|f| f.effect.restart());
@@ -410,6 +431,22 @@ impl FilterChain {
         self.primed = false;
         Ok(())
     }
+}
+
+/// One chain per extra channel pair, mirroring `main`: kept when the count is unchanged.
+fn sync_lanes(
+    lanes: &mut Vec<FilterChain>,
+    main: &FilterChain,
+    pairs: usize,
+    config: &MixerConfig,
+) -> anyhow::Result<()> {
+    if lanes.len() != pairs {
+        lanes.clear();
+        for _ in 0..pairs {
+            lanes.push(main.mirrored(config.sample_rate, config.buffer_size)?);
+        }
+    }
+    Ok(())
 }
 
 impl SourceParams {
@@ -499,15 +536,15 @@ struct Voice {
     paused: bool,
     submitted: bool,
     volume_scale: f32,
-    /// The gain matrix of the last block (ramped from).
-    matrix: [f32; 4],
+    /// The gain matrix of the last block (ramped from), `[output * 2 + input]`.
+    matrix: Matrix,
     fresh: bool,
     /// Startup and measured parameter changes use the same 64-sample gain ramp.
     fade_frames: u32,
     /// Target minus the gain at the start of the current ramp.
-    fade_delta: [f32; 4],
+    fade_delta: Matrix,
     /// Accumulated gain for the next sample.
-    fade_matrix: [f32; 4],
+    fade_matrix: Matrix,
     stream: Option<StreamState>,
     zone_send: ZoneSendState,
     /// Set after the first rendered frame; gain changes do not make a voice new again.
@@ -524,20 +561,21 @@ impl Voice {
             paused: false,
             submitted: true,
             volume_scale,
-            matrix: [0.0; 4],
+            matrix: [0.0; MATRIX_ENTRIES],
             fresh: true,
             fade_frames: 0,
-            fade_delta: [0.0; 4],
-            fade_matrix: [0.0; 4],
+            fade_delta: [0.0; MATRIX_ENTRIES],
+            fade_matrix: [0.0; MATRIX_ENTRIES],
             stream: None,
             zone_send: ZoneSendState::default(),
             rendered: false,
         }
     }
 
-    fn advance_fade(&mut self, measured: bool) {
+    /// Advances the gain ramp of the first `entries` matrix entries.
+    fn advance_fade(&mut self, measured: bool, entries: usize) {
         if self.fade_frames < VOICE_GAIN_RAMP_FRAMES {
-            for i in 0..4 {
+            for i in 0..entries {
                 self.fade_matrix[i] += self.fade_delta[i] / VOICE_GAIN_RAMP_FRAMES as f32;
             }
             self.fade_frames += 1;
@@ -611,6 +649,11 @@ pub struct Source {
     completion_frontier: u64,
     /// Its filter components (`params.filters`), with this source's own state.
     chain: FilterChain,
+    /// The same components on each extra channel pair of the output layout.
+    lanes: Vec<FilterChain>,
+    /// The extra channel pairs of `filtered` and `bypass_dry`, one buffer length per pair.
+    filtered_extra: Vec<f32>,
+    bypass_extra: Vec<f32>,
     /// The mixer frame up to which the components still run after the last voice ended.
     chain_tail: Option<u64>,
 }
@@ -624,6 +667,105 @@ impl Source {
             .reserve(samples.saturating_sub(self.layout_scratch.len()));
     }
 
+    /// Sizes the extra pairs' script and bypass buffers for `config` on the control thread.
+    fn reserve_lanes(&mut self, config: &MixerConfig) {
+        let pairs = config.extra_pairs();
+        let length = config.buffer_size.max(1) as usize * 2;
+        self.filtered_extra.resize(pairs * length, 0.0);
+        self.bypass_extra.resize(
+            pairs * config.buffer_size.max(BLOCK as u32) as usize * 2,
+            0.0,
+        );
+    }
+
+    /// Runs each extra pair's `frames` frames through its own components, as
+    /// `chain.process` does for the front pair.
+    fn process_lanes(
+        &mut self,
+        extra: Option<&mut Lanes<'_>>,
+        frames: usize,
+        stage: Option<i32>,
+        bypass: bool,
+        last: bool,
+    ) {
+        let Some(extra) = extra else {
+            return;
+        };
+        for (pair, chain) in self.lanes.iter_mut().enumerate() {
+            let samples = extra.pair(pair, frames);
+            if last {
+                chain.process_last(samples, stage);
+            } else {
+                chain.process(samples, stage, bypass);
+            }
+        }
+    }
+
+    /// [`Source::run_bypassed_components`] on each extra pair.
+    fn run_bypassed_lanes(
+        &mut self,
+        extra: Option<&mut Lanes<'_>>,
+        frames: usize,
+        stage: Option<i32>,
+        last: bool,
+    ) {
+        let Some(extra) = extra else {
+            return;
+        };
+        if self.chain.filters.is_empty() {
+            return;
+        }
+        let length = self.bypass_extra.len() / self.lanes.len().max(1);
+        for (pair, chain) in self.lanes.iter_mut().enumerate() {
+            let Some(silence) = self
+                .bypass_extra
+                .get_mut(pair * length..pair * length + frames * 2)
+            else {
+                return;
+            };
+            silence.fill(0.0);
+            if last {
+                chain.process_last(silence, stage);
+            } else {
+                chain.process(silence, stage, false);
+            }
+            for (sample, wet) in extra.pair(pair, frames).iter_mut().zip(silence.iter()) {
+                *sample += *wet;
+            }
+        }
+    }
+
+    /// `begin`: the extra pairs' dry signal moves aside and the pairs carry silence, as
+    /// [`Source::begin_bypass`] does for the front pair; otherwise it joins them again.
+    fn bypass_lanes(&mut self, extra: Option<&mut Lanes<'_>>, frames: usize, begin: bool) {
+        let Some(extra) = extra else {
+            return;
+        };
+        let length = self.bypass_extra.len() / self.lanes.len().max(1);
+        for pair in 0..self.lanes.len() {
+            let Some(dry) = self
+                .bypass_extra
+                .get_mut(pair * length..pair * length + frames * 2)
+            else {
+                return;
+            };
+            let samples = extra.pair(pair, frames);
+            if begin {
+                dry.copy_from_slice(samples);
+                samples.fill(0.0);
+            } else {
+                for (sample, dry) in samples.iter_mut().zip(dry.iter()) {
+                    *sample += *dry;
+                }
+            }
+        }
+    }
+
+    fn reset_chains(&mut self) {
+        self.chain.reset();
+        self.lanes.iter_mut().for_each(FilterChain::reset);
+    }
+
     fn filter_only(&self) -> bool {
         self.params.clip == 0 && self.params.has(source_flags::FILTER) && self.main.is_some()
     }
@@ -633,15 +775,27 @@ impl Source {
         samples.fill(0.0);
     }
 
-    fn scale_generator(&mut self, samples: &mut [f32], target: f32) {
+    fn scale_generator(
+        &mut self,
+        samples: &mut [f32],
+        mut extra: Option<&mut Lanes<'_>>,
+        target: f32,
+    ) {
         let gain = self
             .generator_gain
             .get_or_insert_with(|| ParameterRamp::new(0.0));
-        for stereo in samples.chunks_exact_mut(2) {
+        let pairs = self.lanes.len();
+        for (frame, stereo) in samples.chunks_exact_mut(2).enumerate() {
             let value = gain.gain(target, VOICE_GAIN_RAMP_FRAMES);
             if value != 1.0 {
                 stereo[0] *= value;
                 stereo[1] *= value;
+                if let Some(lanes) = extra.as_deref_mut() {
+                    for channel in 0..pairs * 2 {
+                        let i = lanes.index(channel, frame);
+                        lanes.samples[i] *= value;
+                    }
+                }
             }
         }
     }
@@ -696,6 +850,7 @@ impl GeneratorState {
         &mut self,
         handle: u64,
         out: &mut [f32],
+        mut extra: Option<&mut Lanes<'_>>,
         frames: usize,
         channels: usize,
         callback: Option<Callback>,
@@ -730,6 +885,10 @@ impl GeneratorState {
             fold(
                 &self.current[self.offset..self.offset + count * channels],
                 &mut out[written..written + count * 2],
+                extra
+                    .as_deref_mut()
+                    .map(|lanes| lanes.advanced(written / 2))
+                    .as_mut(),
             );
             written += count * 2;
             self.offset += count * channels;
@@ -773,12 +932,9 @@ pub mod speaker_mode {
 }
 
 impl MixerConfig {
-    /// Whether the layout has an LFE channel (`Mode5point1`, `Mode7point1`).
-    fn has_lfe(&self) -> bool {
-        matches!(
-            self.speaker_mode,
-            speaker_mode::MODE_5POINT1 | speaker_mode::MODE_7POINT1
-        )
+    /// Channel pairs beyond the front pair: 1 in quad, 2 in 5.0 and 5.1, 3 in 7.1.
+    pub fn extra_pairs(&self) -> usize {
+        self.output_channels().saturating_sub(1) / 2
     }
     /// Output channels of `speaker_mode` (`AudioSpeakerMode`), in AudioRenderer and
     /// `OnAudioFilterRead` order: Mono 1, Quad 4, Surround 5, Mode5point1 6, Mode7point1 8;
@@ -845,11 +1001,20 @@ pub struct Mixer {
     listener_bypass: Vec<f32>,
     /// The listener scripts' block in the output layout's channel count.
     listener_layout: Vec<f32>,
+    /// The speakers of a layout wider than stereo (see [`spatial::surround`]).
+    speakers: Option<SpeakerLayout>,
+    /// Extra channel pairs of the final mix, the listener-bypass route and the source being
+    /// mixed: `MAX_EXTRA_PAIRS` blocks each (see [`Lanes`]).
+    mix_extra: Vec<f32>,
+    listener_bypass_extra: Vec<f32>,
+    source_extra: Vec<f32>,
+    /// Per extra pair, the sidechain blocks that sends write and receives and ducks read.
+    sidechain_lanes: Vec<HashMap<String, Vec<f32>>>,
+    /// The listener's components on each extra pair.
+    listener_lanes: Vec<FilterChain>,
     listener_output: Ring,
     callback: Option<Callback>,
     capture_listener_batch: bool,
-    /// The surround gap was reported once (see [`Mixer::warn_surround_approximation`]).
-    warned_surround: bool,
     /// Nothing listens (the virtual device): voices only advance, unless their samples are
     /// asked for (filters, output data).
     pub discard_output: bool,
@@ -919,16 +1084,12 @@ fn source_spatial(
     p: &SourceParams,
     listener: &Listener,
     config: MixerConfig,
+    speakers: Option<&SpeakerLayout>,
 ) -> spatial::Spatialized {
     let (sampled_listener, doppler_listener_position) = p
         .listener_snapshot
         .map_or((*listener, None), |(pose, doppler)| (pose, Some(doppler)));
-    let spatialize = if p.has(source_flags::SPATIAL_STEREO) {
-        spatial::spatialize_measured
-    } else {
-        spatial::spatialize
-    };
-    spatialize(
+    spatial::spatialize_in(
         &SourceSpatial {
             position: p.position,
             velocity: p.velocity,
@@ -948,6 +1109,8 @@ fn source_spatial(
         &sampled_listener,
         config.rolloff_scale,
         config.doppler_factor,
+        p.has(source_flags::SPATIAL_STEREO),
+        speakers,
     )
 }
 
@@ -980,10 +1143,15 @@ impl Mixer {
             zone_input: vec![0.0; BLOCK * 2],
             listener_bypass: vec![0.0; BLOCK * 2],
             listener_layout: Vec::with_capacity(BLOCK * MAX_OUTPUT_CHANNELS),
+            speakers: SpeakerLayout::of(config.output_channels()),
+            mix_extra: vec![0.0; MAX_EXTRA_PAIRS * BLOCK * 2],
+            listener_bypass_extra: vec![0.0; MAX_EXTRA_PAIRS * BLOCK * 2],
+            source_extra: vec![0.0; MAX_EXTRA_PAIRS * BLOCK * 2],
+            sidechain_lanes: (0..MAX_EXTRA_PAIRS).map(|_| HashMap::new()).collect(),
+            listener_lanes: Vec::new(),
             listener_output: Ring::new(),
             callback: None,
             capture_listener_batch: false,
-            warned_surround: false,
             discard_output: false,
             listener_output_wanted: false,
             mix: vec![0.0; BLOCK * 2],
@@ -1022,6 +1190,7 @@ impl Mixer {
         self.validate_configuration(&config)?;
         let seconds = self.dsp_time();
         self.config = config;
+        self.speakers = SpeakerLayout::of(config.output_channels());
         self.frames = frame_of(seconds, config.sample_rate);
         for node in self.group_nodes.values_mut() {
             node.rendered = 0;
@@ -1033,6 +1202,13 @@ impl Mixer {
         }
         self.listener_chain
             .reconfigure(config.sample_rate, config.buffer_size)?;
+        self.listener_lanes.clear();
+        sync_lanes(
+            &mut self.listener_lanes,
+            &self.listener_chain,
+            config.extra_pairs(),
+            &config,
+        )?;
         // The next frame packet sets the zone up again at the new rate.
         self.zone = None;
         for source in self.sources.values_mut() {
@@ -1057,6 +1233,16 @@ impl Mixer {
             source
                 .chain
                 .reconfigure(config.sample_rate, config.buffer_size)?;
+            source.lanes.clear();
+            sync_lanes(
+                &mut source.lanes,
+                &source.chain,
+                config.extra_pairs(),
+                &config,
+            )?;
+            if !source.bypass_dry.is_empty() {
+                source.reserve_lanes(&config);
+            }
         }
         Ok(())
     }
@@ -1128,6 +1314,7 @@ impl Mixer {
                 .bypass_dry
                 .resize(self.config.buffer_size.max(BLOCK as u32) as usize * 2, 0.0);
             source.reserve_layout_scratch(&self.config);
+            source.reserve_lanes(&self.config);
         }
         if params.has(source_flags::KEEP_OUTPUT) && source.output.is_none() {
             source.output = Some(Ring::new());
@@ -1151,7 +1338,31 @@ impl Mixer {
             ) {
                 tracing::error!("AudioSource {handle}: filter components dropped: {error:#}");
                 params.filters = Vec::new();
+            } else {
+                // The extra channel pairs take the same components, each keeping its state.
+                for lane in &mut source.lanes {
+                    if lane
+                        .apply(
+                            &params.filters,
+                            rate,
+                            self.config.buffer_size,
+                            params.has(source_flags::EFFECT_TRANSITIONS),
+                        )
+                        .is_err()
+                    {
+                        *lane = FilterChain::default();
+                    }
+                }
             }
+        }
+        if let Err(error) = sync_lanes(
+            &mut source.lanes,
+            &source.chain,
+            self.config.extra_pairs(),
+            &self.config,
+        ) {
+            tracing::error!("AudioSource {handle}: surround components dropped: {error:#}");
+            source.lanes.clear();
         }
         source.params = params;
     }
@@ -1172,6 +1383,7 @@ impl Mixer {
                 self.listener_rejected = true;
                 self.listener_filters.clear();
                 self.listener_chain = FilterChain::default();
+                self.listener_lanes.clear();
                 return;
             }
         };
@@ -1188,6 +1400,24 @@ impl Mixer {
         {
             tracing::error!("AudioListener filter components dropped: {error:#}");
             self.listener_chain = FilterChain::default();
+        }
+        for lane in &mut self.listener_lanes {
+            if lane
+                .apply(&filters, rate, self.config.buffer_size, transitions)
+                .is_err()
+            {
+                *lane = FilterChain::default();
+            }
+        }
+        if sync_lanes(
+            &mut self.listener_lanes,
+            &self.listener_chain,
+            self.config.extra_pairs(),
+            &self.config,
+        )
+        .is_err()
+        {
+            self.listener_lanes.clear();
         }
         self.listener_filters = filters;
     }
@@ -1354,12 +1584,17 @@ impl Mixer {
             input_fade: false,
             effects: Vec::new(),
             buffer: vec![0.0; BLOCK * 2],
+            lanes: Vec::new(),
             suspended: false,
             last_active: self.frames,
             energy: 0.0,
         });
         node.update(spec, &self.config)?;
         for target in targets {
+            for lane in &mut self.sidechain_lanes {
+                lane.entry(target.clone())
+                    .or_insert_with(|| vec![0.0; BLOCK * 2]);
+            }
             self.sidechains
                 .entry(target)
                 .or_insert_with(|| vec![0.0; BLOCK * 2]);
@@ -1441,39 +1676,9 @@ impl Mixer {
         }
     }
 
-    /// Layouts wider than stereo carry only their front pair: Unity 6000.0.71f1 also feeds a mono
-    /// 2D clip to LFE in 5.1 and 7.1 (tests/projects/audiopitch `context_mode5point1_clip`) and
-    /// keeps the other channels source scripts write; 3D sources in surround are unmeasured.
-    /// Says so once.
-    fn warn_surround_approximation(&mut self, handle: u64, cmd: &AudioSourceCommand) {
-        if self.warned_surround || self.config.output_channels() <= 2 {
-            return;
-        }
-        let Some(source) = self.sources.get(&handle) else {
-            return;
-        };
-        let clip = match cmd.kind {
-            command::PLAY => source.params.clip,
-            command::PLAY_ONE_SHOT => cmd.clip,
-            _ => return,
-        };
-        let mono_lfe =
-            self.config.has_lfe() && self.clips.get(&clip).is_some_and(|c| c.channels == 1);
-        let spatial = source.params.spatial_blend > 0.0
-            || source.params.spatial_blend_curve.iter().any(|v| *v > 0.0);
-        if mono_lfe || spatial || source.params.has(source_flags::FILTER) {
-            self.warned_surround = true;
-            tracing::warn!(
-                "audio: surround output carries only the front pair; LFE sends of mono clips, 3D \
-                 panning to the other speakers and scripts' other channels are not reproduced"
-            );
-        }
-    }
-
     /// Reports admission before a later render can change the source's voice counts.
     pub fn command(&mut self, handle: u64, cmd: &AudioSourceCommand) -> bool {
         self.prepare_source(handle);
-        self.warn_surround_approximation(handle, cmd);
         let now = self.frames;
         let rate = self.config.sample_rate;
         let callback = self.callback;
@@ -1572,7 +1777,10 @@ impl Mixer {
                 // tests/projects/audiodistortion script3d_live_bypass_restart.
                 source.chain_tail = None;
             }
-            command::RESET_COMPONENTS => source.chain.restart(),
+            command::RESET_COMPONENTS => {
+                source.chain.restart();
+                source.lanes.iter_mut().for_each(FilterChain::restart);
+            }
             command::STOP_MAIN => {
                 source.completed_main = None;
                 source.main = None;
@@ -1754,7 +1962,7 @@ impl Mixer {
                 request.handle,
                 capture::Sink {
                     request,
-                    samples: Vec::with_capacity(frames * 2),
+                    samples: Vec::with_capacity(frames * channels),
                 },
             );
         }
@@ -1770,17 +1978,15 @@ impl Mixer {
             self.render_capture_block(block);
         }
         self.discard_output = discarded;
-        let mono = self.config.speaker_mode == speaker_mode::MONO;
         for value in &mut samples {
             *value = capture::pcm16(*value);
         }
         let mut sinks: Vec<_> = self
             .capture_sinks
             .drain()
-            .map(|(handle, sink)| {
-                let mut samples = vec![0.0; sink.samples.len() / 2 * channels];
-                spread(&sink.samples, &mut samples, mono);
-                capture::SinkOutput { handle, samples }
+            .map(|(handle, sink)| capture::SinkOutput {
+                handle,
+                samples: sink.samples,
             })
             .collect();
         sinks.sort_by_key(|s| s.handle);
@@ -1852,7 +2058,7 @@ impl Mixer {
                     .groups
                     .get(&source.params.group)
                     .map_or(1.0, |group| group.pitch),
-                doppler: source_spatial(&source.params, &self.listener, self.config).pitch,
+                doppler: source_spatial(&source.params, &self.listener, self.config, None).pitch,
             };
             for voice in source.main.iter_mut().chain(&mut source.one_shots) {
                 if let (Some(stream), Some(clip)) = (&mut voice.stream, self.clips.get(&voice.clip))
@@ -1930,7 +2136,7 @@ impl Mixer {
         // The output ring keeps the stereo lanes; the mixing buffer is free between blocks.
         for chunk in block.chunks(BLOCK * channels) {
             let frames = chunk.len() / channels;
-            fold(chunk, &mut self.mix[..frames * 2]);
+            fold(chunk, &mut self.mix[..frames * 2], None);
             self.listener_output.push(&self.mix[..frames * 2]);
         }
         self.capture_listener_batch = false;
@@ -1945,8 +2151,13 @@ impl Mixer {
             let n = (frames - done).min(BLOCK);
             self.render_block(n);
             let mono = self.config.speaker_mode == speaker_mode::MONO;
+            let extra = (self.config.extra_pairs() > 0).then_some(Extra {
+                samples: &self.mix_extra,
+                stride: BLOCK * 2,
+            });
             spread(
                 &self.mix[..n * 2],
+                extra,
                 &mut out[done * channels..(done + n) * channels],
                 mono,
             );
@@ -1973,6 +2184,7 @@ impl Mixer {
         let listener_paused = self.listener_paused;
         let has_listener = self.has_listener;
         let config = self.config;
+        let speakers = self.speakers;
         // A graph first participates when a routed source starts, including a pending
         // voice. Merely loading it or registering a sink does not process its DSP.
         for source in self.sources.values().filter(|s| s.active()) {
@@ -2006,9 +2218,18 @@ impl Mixer {
         self.mix[..n * 2].fill(0.0);
         for node in self.group_nodes.values_mut() {
             node.buffer[..n * 2].fill(0.0);
+            for lane in &mut node.lanes {
+                lane.buffer[..n * 2].fill(0.0);
+            }
         }
         for sidechain in self.sidechains.values_mut() {
             sidechain[..n * 2].fill(0.0);
+        }
+        let pairs = config.extra_pairs();
+        for (pair, sidechains) in self.sidechain_lanes.iter_mut().enumerate().take(pairs) {
+            sidechains.values_mut().for_each(|s| s[..n * 2].fill(0.0));
+            self.mix_extra[pair * BLOCK * 2..pair * BLOCK * 2 + n * 2].fill(0.0);
+            self.listener_bypass_extra[pair * BLOCK * 2..pair * BLOCK * 2 + n * 2].fill(0.0);
         }
 
         // Spatialize, then decide which voices are real: the most important `real_voices`.
@@ -2016,7 +2237,7 @@ impl Mixer {
         playing.clear();
         for (&handle, source) in &mut self.sources {
             let p = &source.params;
-            let s = source_spatial(p, &listener, config);
+            let s = source_spatial(p, &listener, config, speakers.as_ref());
             if source.active() {
                 playing.push((handle, p.priority, s.audibility * p.volume));
             }
@@ -2052,6 +2273,9 @@ impl Mixer {
             source_buffer,
             listener_bypass,
             zone_input,
+            mix_extra,
+            listener_bypass_extra,
+            source_extra,
             ..
         } = self;
         for (&handle, source) in sources.iter_mut() {
@@ -2065,7 +2289,7 @@ impl Mixer {
             let tail = !has_voices && source.chain_tail.is_some_and(|end| t0 < end);
             if !has_voices && !tail && !(filter && source.filter_started) {
                 source.chain_tail = None;
-                source.chain.reset();
+                source.reset_chains();
                 continue;
             }
             if listener_paused && flags & source_flags::IGNORE_LISTENER_PAUSE == 0 {
@@ -2102,22 +2326,33 @@ impl Mixer {
             let audible = wants_samples && !source.is_virtual;
             let buffer = &mut source_buffer[..n * 2];
             buffer.fill(0.0);
+            // The layout's channels beyond the front pair, beside `buffer`.
+            for pair in 0..pairs {
+                source_extra[pair * BLOCK * 2..pair * BLOCK * 2 + n * 2].fill(0.0);
+            }
+            let mut lanes = (pairs > 0).then(|| Lanes {
+                samples: &mut source_extra[..],
+                stride: BLOCK * 2,
+                offset: 0,
+            });
             let looping = flags & source_flags::LOOP != 0;
             let layout = config.output_channels();
             let gains = if config.speaker_mode == speaker_mode::MONO {
                 VoiceGains::mono_output(&s.mono_output, volume)
+            } else if let Some(surround) = &s.surround {
+                VoiceGains::surround(surround, volume, layout)
             } else {
-                VoiceGains {
-                    target: s.matrix.map(|g| g * volume),
-                    mono_target: s.mono_matrix.map(|m| m.map(|g| g * volume)),
-                    mono_pan: (source.params.spatial_blend <= 0.0
+                VoiceGains::stereo(
+                    s.matrix.map(|g| g * volume),
+                    s.mono_matrix.map(|m| m.map(|g| g * volume)),
+                    (source.params.spatial_blend <= 0.0
                         && source
                             .params
                             .spatial_blend_curve
                             .iter()
                             .all(|value| *value <= 0.0))
                     .then_some(source.params.pan_stereo),
-                }
+                )
             };
             let dsp_frames = config.buffer_size.max(1) as u64;
             source.completion_frontier = (t0 + n as u64).div_ceil(dsp_frames) * dsp_frames;
@@ -2146,6 +2381,7 @@ impl Mixer {
                     source.generator.render(
                         handle,
                         buffer,
+                        lanes.as_mut(),
                         config.buffer_size.max(1) as usize,
                         layout,
                         callback,
@@ -2153,7 +2389,7 @@ impl Mixer {
                     if flags & source_flags::SPATIAL_STEREO != 0 {
                         // Generated channels retain their channel positions; source volume and
                         // distance gain precede the downstream components.
-                        source.scale_generator(buffer, volume * s.audibility);
+                        source.scale_generator(buffer, lanes.as_mut(), volume * s.audibility);
                     }
                 }
                 let mut dry = if separate_return {
@@ -2181,6 +2417,8 @@ impl Mixer {
                     audible,
                     callback,
                     None,
+                    // The extra pairs' voices join the generated audio on either route.
+                    lanes.as_mut(),
                 );
                 // Components below the generating script (none may sit above it). Unbound's
                 // choice (unmeasured): they also process the source's one-shots.
@@ -2196,11 +2434,24 @@ impl Mixer {
                             Some(filter_stage::AFTER_SCRIPTS),
                             last_active,
                         );
+                        source.run_bypassed_lanes(
+                            lanes.as_mut(),
+                            n,
+                            Some(filter_stage::AFTER_SCRIPTS),
+                            last_active,
+                        );
                     }
                 } else if voices_running {
                     source
                         .chain
                         .process(buffer, Some(filter_stage::AFTER_SCRIPTS), bypass);
+                    source.process_lanes(
+                        lanes.as_mut(),
+                        n,
+                        Some(filter_stage::AFTER_SCRIPTS),
+                        bypass,
+                        false,
+                    );
                 }
             } else if filter {
                 if source
@@ -2219,9 +2470,18 @@ impl Mixer {
                             let mut input = std::mem::take(&mut source.filtered);
                             input.resize(length, 0.0);
                             input.fill(0.0);
+                            // The extra channel pairs' queue: one buffer length per pair.
+                            let mut queue = std::mem::take(&mut source.filtered_extra);
+                            queue.resize(pairs * length, 0.0);
+                            queue.fill(0.0);
                             source.completion_frontier = t0 + (written + length) as u64 / 2;
                             // Keep voice ramps and interpolation in their existing DSP chunks.
                             for (block, chunk) in input.chunks_mut(BLOCK * 2).enumerate() {
+                                let mut chunk_lanes = (pairs > 0).then(|| Lanes {
+                                    samples: &mut queue[..],
+                                    stride: length,
+                                    offset: block * BLOCK * 2,
+                                });
                                 let _ = render_source_voices(
                                     source,
                                     clips,
@@ -2235,13 +2495,21 @@ impl Mixer {
                                     audible,
                                     callback,
                                     None,
+                                    chunk_lanes.as_mut(),
                                 );
                             }
+                            let frames = length / 2;
+                            let mut queued = (pairs > 0).then(|| Lanes {
+                                samples: &mut queue[..],
+                                stride: length,
+                                offset: 0,
+                            });
                             // Bypass keeps the voice on its dry route and supplies silence to
                             // the separate script return. A clipless script remains a generator.
                             // Unity 6000.0.71f1, tests/projects/audiodistortion scripted controls.
                             if separate_return {
                                 source.begin_bypass(&mut input);
+                                source.bypass_lanes(queued.as_mut(), frames, true);
                             }
                             // The Inspector order is the processing order: components above
                             // the scripts, the scripts, then the components below them. With
@@ -2257,11 +2525,10 @@ impl Mixer {
                             let below_inactive =
                                 inactive && after_count > 0 && !(last_active && after_count == 1);
                             if !inactive {
-                                source.chain.process(
-                                    &mut input,
-                                    Some(filter_stage::BEFORE_SCRIPTS),
-                                    bypass && !separate_return,
-                                );
+                                let bypass = bypass && !separate_return;
+                                let stage = Some(filter_stage::BEFORE_SCRIPTS);
+                                source.chain.process(&mut input, stage, bypass);
+                                source.process_lanes(queued.as_mut(), frames, stage, bypass, false);
                             }
                             if let Some(cb) = callback.filter(|_| !below_inactive) {
                                 call_in_layout(
@@ -2269,28 +2536,32 @@ impl Mixer {
                                     callback::SOURCE_FILTER,
                                     handle,
                                     &mut input,
+                                    queued.as_mut(),
                                     layout,
                                     &mut source.layout_scratch,
                                 );
                             }
+                            let stage = Some(filter_stage::AFTER_SCRIPTS);
                             if !inactive {
-                                source.chain.process(
-                                    &mut input,
-                                    Some(filter_stage::AFTER_SCRIPTS),
-                                    bypass && !separate_return,
-                                );
+                                let bypass = bypass && !separate_return;
+                                source.chain.process(&mut input, stage, bypass);
+                                source.process_lanes(queued.as_mut(), frames, stage, bypass, false);
                             } else if last_active && after_count > 0 {
                                 if after_count > 1 {
                                     input.fill(0.0);
+                                    if let Some(queued) = queued.as_mut() {
+                                        queued.samples.fill(0.0);
+                                    }
                                 }
-                                source
-                                    .chain
-                                    .process_last(&mut input, Some(filter_stage::AFTER_SCRIPTS));
+                                source.chain.process_last(&mut input, stage);
+                                source.process_lanes(queued.as_mut(), frames, stage, false, true);
                             }
                             if separate_return {
                                 source.end_bypass(&mut input);
+                                source.bypass_lanes(queued.as_mut(), frames, false);
                             }
                             source.filtered = input;
+                            source.filtered_extra = queue;
                             source.filtered_offset = 0;
                         }
                         let count = (buffer.len() - written).min(length - source.filtered_offset);
@@ -2298,6 +2569,14 @@ impl Mixer {
                             &source.filtered
                                 [source.filtered_offset..source.filtered_offset + count],
                         );
+                        if let Some(lanes) = lanes.as_mut() {
+                            for pair in 0..pairs {
+                                let from = pair * length + source.filtered_offset;
+                                let to = pair * BLOCK * 2 + written;
+                                lanes.samples[to..to + count]
+                                    .copy_from_slice(&source.filtered_extra[from..from + count]);
+                            }
+                        }
                         source.filtered_offset += count;
                         written += count;
                     }
@@ -2323,6 +2602,7 @@ impl Mixer {
                     audible,
                     callback,
                     measured_send.then_some(&mut zone_send),
+                    lanes.as_mut(),
                 );
                 if voices_running
                     && source.main.is_none()
@@ -2343,15 +2623,22 @@ impl Mixer {
                 if voices_running || tail {
                     if !separate_return {
                         source.chain.process(buffer, None, bypass);
+                        source.process_lanes(lanes.as_mut(), n, None, bypass, false);
                     } else if !inactive || last_active {
                         source.run_bypassed_components(buffer, None, last_active);
+                        source.run_bypassed_lanes(lanes.as_mut(), n, None, last_active);
                     }
                 }
                 if let Some(end) = source.chain_tail.filter(|_| tail) {
                     let keep = (end.saturating_sub(t0) as usize).min(n);
                     buffer[keep * 2..].fill(0.0);
+                    if let Some(lanes) = lanes.as_mut() {
+                        for pair in 0..pairs {
+                            lanes.pair(pair, n)[keep * 2..].fill(0.0);
+                        }
+                    }
                     if flags & source_flags::COMPONENT_FILTER_TAIL != 0 && t0 + n as u64 >= end {
-                        source.chain.reset();
+                        source.reset_chains();
                         source.chain_tail = None;
                     }
                 }
@@ -2377,9 +2664,23 @@ impl Mixer {
                 } else {
                     &mut mix[..n * 2]
                 };
-                let target = group_nodes
-                    .get_mut(&source.params.group)
-                    .map_or(unrouted, |node| &mut node.buffer[..n * 2]);
+                let mut node = group_nodes.get_mut(&source.params.group);
+                if let Some(lanes) = lanes.as_mut() {
+                    for pair in 0..pairs {
+                        let range = pair * BLOCK * 2..pair * BLOCK * 2 + n * 2;
+                        let to = if let Some(node) = node.as_deref_mut() {
+                            &mut node.lanes[pair].buffer[..n * 2]
+                        } else if bypass_listener {
+                            &mut listener_bypass_extra[range]
+                        } else {
+                            &mut mix_extra[range]
+                        };
+                        for (m, b) in to.iter_mut().zip(lanes.pair(pair, n).iter()) {
+                            *m += *b;
+                        }
+                    }
+                }
+                let target = node.map_or(unrouted, |node| &mut node.buffer[..n * 2]);
                 for (m, b) in target.iter_mut().zip(buffer.iter()) {
                     *m += *b;
                 }
@@ -2413,11 +2714,14 @@ impl Mixer {
                 } else {
                     node.rendered
                 };
-                for (frame, stereo) in node.buffer[..n * 2].chunks_exact_mut(2).enumerate() {
-                    let gain =
-                        ((fade_start + frame) as f32 / config.buffer_size.max(1) as f32).min(1.0);
-                    for sample in stereo {
-                        *sample *= gain;
+                let lanes = node.lanes.iter_mut().map(|lane| &mut lane.buffer);
+                for buffer in std::iter::once(&mut node.buffer).chain(lanes) {
+                    for (frame, stereo) in buffer[..n * 2].chunks_exact_mut(2).enumerate() {
+                        let gain = ((fade_start + frame) as f32 / config.buffer_size.max(1) as f32)
+                            .min(1.0);
+                        for sample in stereo {
+                            *sample *= gain;
+                        }
                     }
                 }
             }
@@ -2428,8 +2732,20 @@ impl Mixer {
                     effect.process(samples, node.spec.bypass);
                 }
             }
+            // Each extra channel pair through its own instances of the group's effects.
+            for (lane, sidechains) in node.lanes.iter_mut().zip(&mut self.sidechain_lanes) {
+                for effect in &mut lane.effects {
+                    let samples = &mut lane.buffer[..n * 2];
+                    if !effect.process_routed(samples, sidechains, muted) {
+                        effect.process(samples, node.spec.bypass);
+                    }
+                }
+            }
             if node.spec.muted {
                 node.buffer[..n * 2].fill(0.0);
+                for lane in &mut node.lanes {
+                    lane.buffer[..n * 2].fill(0.0);
+                }
             }
             if root == handle {
                 let window = config.buffer_size.max(1) as u64;
@@ -2440,9 +2756,16 @@ impl Mixer {
                     for &sample in &node.buffer[start * 2..(start + count) * 2] {
                         node.energy += sample as f64 * sample as f64;
                     }
+                    // Every channel of the layout counts (unmeasured beyond stereo).
+                    for lane in &node.lanes {
+                        for &sample in &lane.buffer[start * 2..(start + count) * 2] {
+                            node.energy += sample as f64 * sample as f64;
+                        }
+                    }
                     let end = frame + count as u64;
                     if end % window == 0 {
-                        if node.energy / (window * 2) as f64
+                        let channels = 2 + 2 * node.lanes.len() as u64;
+                        if node.energy / (window * channels) as f64
                             >= (node.spec.suspend_threshold as f64).powi(2)
                         {
                             node.last_active = end - window;
@@ -2466,21 +2789,49 @@ impl Mixer {
             }
             let parent = node.spec.parent;
             if let Some(sink) = self.capture_sinks.get_mut(&handle) {
-                sink.samples.extend_from_slice(&node.buffer[..n * 2]);
+                // The sink holds the output layout's channels, as the device stream does.
+                let channels = config.output_channels();
+                let mono = config.speaker_mode == speaker_mode::MONO;
+                for frame in 0..n {
+                    let (l, r) = (node.buffer[frame * 2], node.buffer[frame * 2 + 1]);
+                    if channels == 1 || mono {
+                        sink.samples.push((l + r) * 0.5);
+                        continue;
+                    }
+                    sink.samples.extend_from_slice(&[l, r]);
+                    for channel in 0..channels - 2 {
+                        sink.samples.push(
+                            node.lanes
+                                .get(channel / 2)
+                                .map_or(0.0, |lane| lane.buffer[frame * 2 + channel % 2]),
+                        );
+                    }
+                }
                 if sink.request.exclude_from_mix {
                     continue;
                 }
             }
             // Remove the buffer temporarily to borrow the parent without copying or allocating.
             let buffer = std::mem::take(&mut node.buffer);
-            let target = self
-                .group_nodes
-                .get_mut(&parent)
-                .map_or(&mut self.mix[..n * 2], |node| &mut node.buffer[..n * 2]);
+            let lanes = std::mem::take(&mut node.lanes);
+            let mut parent_node = self.group_nodes.get_mut(&parent);
+            for (pair, lane) in lanes.iter().enumerate() {
+                let to = match parent_node.as_deref_mut() {
+                    Some(parent) => &mut parent.lanes[pair].buffer[..n * 2],
+                    None => &mut self.mix_extra[pair * BLOCK * 2..pair * BLOCK * 2 + n * 2],
+                };
+                for (m, b) in to.iter_mut().zip(lane.buffer.iter()) {
+                    *m += *b;
+                }
+            }
+            let target =
+                parent_node.map_or(&mut self.mix[..n * 2], |node| &mut node.buffer[..n * 2]);
             for (m, b) in target.iter_mut().zip(buffer.iter()) {
                 *m += *b;
             }
-            self.group_nodes.get_mut(&handle).unwrap().buffer = buffer;
+            let node = self.group_nodes.get_mut(&handle).unwrap();
+            node.buffer = buffer;
+            node.lanes = lanes;
         }
         // Before the listener's components, which process it too (unmeasured).
         if zone_on && let Some(zone) = &mut self.zone {
@@ -2494,6 +2845,10 @@ impl Mixer {
             if has_listener {
                 self.listener_chain
                     .process(&mut self.mix[..n * 2], None, false);
+                for (pair, chain) in self.listener_lanes.iter_mut().enumerate().take(pairs) {
+                    let range = pair * BLOCK * 2..pair * BLOCK * 2 + n * 2;
+                    chain.process(&mut self.mix_extra[range], None, false);
+                }
             }
             for (m, b) in self.mix[..n * 2]
                 .iter_mut()
@@ -2501,17 +2856,32 @@ impl Mixer {
             {
                 *m += *b;
             }
+            for pair in 0..pairs {
+                let range = pair * BLOCK * 2..pair * BLOCK * 2 + n * 2;
+                for (m, b) in self.mix_extra[range.clone()]
+                    .iter_mut()
+                    .zip(&self.listener_bypass_extra[range])
+                {
+                    *m += *b;
+                }
+            }
         }
         if self.listener_filter
             && !self.capture_listener_batch
             && has_listener
             && let Some(cb) = callback
         {
+            let mut extra = (pairs > 0).then(|| Lanes {
+                samples: &mut self.mix_extra[..],
+                stride: BLOCK * 2,
+                offset: 0,
+            });
             call_in_layout(
                 cb,
                 callback::LISTENER_FILTER,
                 0,
                 &mut self.mix[..n * 2],
+                extra.as_mut(),
                 config.output_channels(),
                 &mut self.listener_layout,
             );
@@ -2708,9 +3078,11 @@ fn render_source_voices(
     audible: bool,
     callback: Option<Callback>,
     mut zone_send: Option<&mut ZoneSend<'_>>,
+    mut extra: Option<&mut Lanes<'_>>,
 ) -> Option<u64> {
     let mut finished_at: Option<u64> = None;
     let target_for = |clip: Option<&Clip>| gains.matrix(clip.map_or(2, |c| c.channels));
+    let entries = gains.entries;
     let measured_resampling = source.params.has(source_flags::DECODED_RESAMPLING);
     let measured_matrix = source.params.has(source_flags::SPATIAL_STEREO);
     if let Some(main) = &mut source.main
@@ -2724,12 +3096,14 @@ fn render_source_voices(
             pitch,
             rate,
             target_for(clips.get(&main.clip)),
+            entries,
             looping,
             measured_resampling,
             measured_matrix,
             audible.then_some(&mut *out),
             callback,
             zone_send.as_deref_mut(),
+            extra.as_deref_mut().filter(|_| audible),
         ) {
             finished_at = Some(end);
             source.pending_position = if source.component_playback {
@@ -2752,12 +3126,14 @@ fn render_source_voices(
             pitch,
             rate,
             target_for(clips.get(&voice.clip)),
+            entries,
             false,
             measured_resampling,
             measured_matrix,
             audible.then_some(&mut *out),
             callback,
             zone_send.as_deref_mut(),
+            extra.as_deref_mut().filter(|_| audible),
         );
         if let Some(end) = finished {
             finished_at = Some(finished_at.map_or(end, |previous| previous.max(end)));
@@ -2774,13 +3150,17 @@ fn render_source_voices(
 /// channels: the front pair, then silent channels; a mono output (or a one-channel buffer)
 /// takes the average of the pair. Unity 6000.0.71f1 leaves every other channel silent for
 /// stereo clips in Quad, Surround, 5.1 and 7.1 (tests/projects/audiopitch layout controls).
-fn spread(stereo: &[f32], out: &mut [f32], mono: bool) {
+fn spread(stereo: &[f32], extra: Option<Extra<'_>>, out: &mut [f32], mono: bool) {
     let frames = stereo.len() / 2;
     if frames == 0 {
         return;
     }
     let channels = out.len() / frames;
-    for (pair, frame) in stereo.chunks_exact(2).zip(out.chunks_exact_mut(channels)) {
+    for (f, (pair, frame)) in stereo
+        .chunks_exact(2)
+        .zip(out.chunks_exact_mut(channels))
+        .enumerate()
+    {
         let (l, r) = (pair[0], pair[1]);
         if channels == 1 || mono {
             let m = (l + r) * 0.5;
@@ -2792,28 +3172,95 @@ fn spread(stereo: &[f32], out: &mut [f32], mono: bool) {
         } else {
             frame[0] = l;
             frame[1] = r;
-            frame[2..].fill(0.0);
+            for (c, value) in frame.iter_mut().enumerate().skip(2) {
+                *value = extra.map_or(0.0, |e| e.get(c - 2, f));
+            }
         }
+    }
+}
+
+/// Extra channel pairs beside a stereo block, read-only: pair `k`'s frames start at
+/// `k * stride` (see [`Lanes`]).
+#[derive(Clone, Copy)]
+struct Extra<'a> {
+    samples: &'a [f32],
+    stride: usize,
+}
+
+impl Extra<'_> {
+    fn get(&self, channel: usize, frame: usize) -> f32 {
+        self.samples[(channel / 2) * self.stride + frame * 2 + channel % 2]
     }
 }
 /// The most channels of any output layout (`Mode7point1`).
 pub(crate) const MAX_OUTPUT_CHANNELS: usize = 8;
+/// Pairs of channels beyond the front pair in the widest layout.
+pub(crate) const MAX_EXTRA_PAIRS: usize = (MAX_OUTPUT_CHANNELS - 1) / 2;
+
+/// The output channels beyond the front pair, as stereo pairs in layout order: channel
+/// `2 + 2k` and `3 + 2k` interleaved in pair `k`, whose frames start at `k * stride + offset`.
+/// The graph carries them beside the front pair through every stage.
+struct Lanes<'a> {
+    samples: &'a mut [f32],
+    stride: usize,
+    offset: usize,
+}
+
+impl Lanes<'_> {
+    fn index(&self, channel: usize, frame: usize) -> usize {
+        (channel / 2) * self.stride + self.offset + frame * 2 + channel % 2
+    }
+    /// Adds `value` to extra channel `channel` (layout channel `2 + channel`) at `frame`.
+    fn add(&mut self, channel: usize, frame: usize, value: f32) {
+        let i = self.index(channel, frame);
+        self.samples[i] += value;
+    }
+    fn set(&mut self, channel: usize, frame: usize, value: f32) {
+        let i = self.index(channel, frame);
+        self.samples[i] = value;
+    }
+    fn view(&self) -> Extra<'_> {
+        Extra {
+            samples: &self.samples[self.offset..],
+            stride: self.stride,
+        }
+    }
+    /// The same lanes `frames` frames later.
+    fn advanced(&mut self, frames: usize) -> Lanes<'_> {
+        Lanes {
+            samples: self.samples,
+            stride: self.stride,
+            offset: self.offset + frames * 2,
+        }
+    }
+    /// Pair `pair`'s `frames` frames.
+    fn pair(&mut self, pair: usize, frames: usize) -> &mut [f32] {
+        let start = pair * self.stride + self.offset;
+        &mut self.samples[start..start + frames * 2]
+    }
+}
 
 /// The inverse of [`spread`]: frames of `layout.len() / (stereo.len() / 2)` channels back onto
 /// the two graph lanes. A mono layout feeds both lanes; wider layouts keep the front pair (the
 /// graph carries no other channel).
-fn fold(layout: &[f32], stereo: &mut [f32]) {
+fn fold(layout: &[f32], stereo: &mut [f32], mut extra: Option<&mut Lanes<'_>>) {
     let frames = stereo.len() / 2;
     if frames == 0 {
         return;
     }
     let channels = layout.len() / frames;
-    for (frame, pair) in layout
+    for (f, (frame, pair)) in layout
         .chunks_exact(channels)
         .zip(stereo.chunks_exact_mut(2))
+        .enumerate()
     {
         pair[0] = frame[0];
         pair[1] = if channels == 1 { frame[0] } else { frame[1] };
+        if let Some(lanes) = extra.as_deref_mut() {
+            for (c, value) in frame.iter().enumerate().skip(2) {
+                lanes.set(c - 2, f, *value);
+            }
+        }
     }
 }
 
@@ -2825,6 +3272,7 @@ fn call_in_layout(
     kind: i32,
     handle: u64,
     stereo: &mut [f32],
+    mut extra: Option<&mut Lanes<'_>>,
     channels: usize,
     scratch: &mut Vec<f32>,
 ) {
@@ -2834,7 +3282,12 @@ fn call_in_layout(
         return;
     }
     scratch.resize(frames * channels, 0.0);
-    spread(stereo, scratch, channels == 1);
+    spread(
+        stereo,
+        extra.as_deref().map(Lanes::view),
+        scratch,
+        channels == 1,
+    );
     cb(
         kind,
         handle,
@@ -2843,35 +3296,66 @@ fn call_in_layout(
         channels as i32,
         0,
     );
-    fold(scratch, stereo);
+    fold(scratch, stereo, extra.as_deref_mut());
+}
+
+/// Gains `[output * 2 + input]` from a clip's (left, right) to up to eight output channels; the
+/// first four are the front pair's `[ll, lr, rl, rr]`.
+type Matrix = [f32; MATRIX_ENTRIES];
+
+/// A stereo `[ll, lr, rl, rr]` matrix with no other output channel.
+fn front_matrix(stereo: [f32; 4]) -> Matrix {
+    let mut matrix = [0.0; MATRIX_ENTRIES];
+    matrix[..4].copy_from_slice(&stereo);
+    matrix
 }
 
 /// A source's output gains for this block, before each voice picks its clip's matrix.
 #[derive(Clone, Copy)]
 struct VoiceGains {
-    /// Stereo clips: `[ll, lr, rl, rr]` from the clip's (left, right) to the output's.
-    target: [f32; 4],
+    /// Stereo clips.
+    target: Matrix,
     /// Mono clips, when the release's spatial profile measured them separately.
-    mono_target: Option<[f32; 4]>,
+    mono_target: Option<Matrix>,
     /// A 2D source's pan, applied with the equal-power law to mono clips without `mono_target`.
     mono_pan: Option<f32>,
+    /// The matrix entries in use: the front pair's four, then two per extra output channel.
+    entries: usize,
 }
 
 impl VoiceGains {
+    /// Front-pair gains (stereo, Prologic).
+    fn stereo(target: [f32; 4], mono_target: Option<[f32; 4]>, mono_pan: Option<f32>) -> Self {
+        Self {
+            target: front_matrix(target),
+            mono_target: mono_target.map(front_matrix),
+            mono_pan,
+            entries: 4,
+        }
+    }
+    /// Every output channel of a surround layout of `channels` channels.
+    fn surround(gains: &spatial::SurroundGains, volume: f32, channels: usize) -> Self {
+        Self {
+            target: gains.stereo.map(|g| g * volume),
+            mono_target: Some(gains.mono.map(|g| g * volume)),
+            mono_pan: None,
+            entries: channels * 2,
+        }
+    }
     /// A mono output: every voice enters the graph already mono, on both lanes, so
     /// channel-symmetric effects (such as the Pitch Shifter) process it as Unity processes its
     /// single channel and the final `(left + right) / 2` returns it unchanged.
     fn mono_output(gains: &spatial::MonoGains, volume: f32) -> Self {
         let [left, right] = gains.stereo.map(|g| g * volume);
         let mono = gains.mono * volume;
-        Self {
-            target: [left, right, left, right],
-            mono_target: Some([mono, 0.0, mono, 0.0]),
-            mono_pan: None,
-        }
+        Self::stereo(
+            [left, right, left, right],
+            Some([mono, 0.0, mono, 0.0]),
+            None,
+        )
     }
     /// The matrix of a clip with `channels` channels (a mono clip feeds both inputs).
-    fn matrix(&self, channels: usize) -> [f32; 4] {
+    fn matrix(&self, channels: usize) -> Matrix {
         let mono = channels == 1;
         let mut target = match self.mono_target {
             Some(matrix) if mono => matrix,
@@ -2909,13 +3393,15 @@ fn render_voice(
     t0: u64,
     pitch: PlaybackPitch,
     out_rate: u32,
-    target: [f32; 4],
+    target: Matrix,
+    entries: usize,
     looping: bool,
     measured_resampling: bool,
     measured_matrix: bool,
     mut out: Option<&mut [f32]>,
     callback: Option<Callback>,
     mut zone_send: Option<&mut ZoneSend<'_>>,
+    mut extra: Option<&mut Lanes<'_>>,
 ) -> Option<u64> {
     let Some(clip) = clip else {
         return Some(t0);
@@ -2932,7 +3418,7 @@ fn render_voice(
         voice.fresh = false;
     }
     if measured_matrix && voice.matrix != target {
-        for i in 0..4 {
+        for i in 0..entries {
             voice.fade_delta[i] = target[i] - voice.fade_matrix[i];
         }
         voice.fade_frames = 0;
@@ -2961,7 +3447,7 @@ fn render_voice(
         if dsp < voice.start_at {
             // The scheduled route has already started processing silence. Its
             // startup matrix ramp elapses before the decoded clip becomes audible.
-            voice.advance_fade(measured_matrix);
+            voice.advance_fade(measured_matrix, entries);
             continue;
         }
         if dsp >= voice.end_at {
@@ -3015,15 +3501,14 @@ fn render_voice(
             let mut m = if measured_matrix {
                 voice.fade_matrix
             } else {
-                [
-                    from[0] + (target[0] - from[0]) * t,
-                    from[1] + (target[1] - from[1]) * t,
-                    from[2] + (target[2] - from[2]) * t,
-                    from[3] + (target[3] - from[3]) * t,
-                ]
+                let mut m = [0.0; MATRIX_ENTRIES];
+                for i in 0..entries {
+                    m[i] = from[i] + (target[i] - from[i]) * t;
+                }
+                m
             };
             if !measured_matrix && voice.fade_frames < VOICE_GAIN_RAMP_FRAMES {
-                for (i, gain) in m.iter_mut().enumerate() {
+                for (i, gain) in m[..entries].iter_mut().enumerate() {
                     *gain = if *gain == voice.fade_delta[i] {
                         voice.fade_matrix[i]
                     } else if voice.fade_delta[i] != 0.0 {
@@ -3038,6 +3523,12 @@ fn render_voice(
             let right = (m[2] * l + m[3] * r) * v;
             out[f * 2] += left;
             out[f * 2 + 1] += right;
+            if let Some(lanes) = extra.as_deref_mut() {
+                for channel in 0..(entries - 4) / 2 {
+                    let i = 4 + channel * 2;
+                    lanes.add(channel, f, (m[i] * l + m[i + 1] * r) * v);
+                }
+            }
             if let Some(send) = zone_send.as_deref_mut() {
                 // Zone send changes use the same 64-frame connection ramp as voice gains.
                 // Unity 6000.0.71f1, tests/projects/audioreverb live bypass controls.
@@ -3051,7 +3542,7 @@ fn render_voice(
                 }
             }
         }
-        voice.advance_fade(measured_matrix);
+        voice.advance_fade(measured_matrix, entries);
         voice.rendered = true;
         if let Some(stream) = &mut voice.stream {
             voice.position += step.abs();
@@ -3965,11 +4456,59 @@ mod tests {
     }
 
     #[test]
+    fn extra_channels_run_through_their_groups() {
+        // A mono 2D clip in 5.1 reaches LFE at unity; the group's attenuation applies to it
+        // through the lane's own effect instance, and the group sink holds all six channels.
+        let config = MixerConfig {
+            speaker_mode: speaker_mode::MODE_5POINT1,
+            ..MixerConfig::default()
+        };
+        let mut m = Mixer::new(config);
+        let mut group = filter_group(3, 0, "Attenuation");
+        group.mixer = 3;
+        group.effects[0].gain = 0.5;
+        m.configure_group(group).unwrap();
+        assert_eq!(m.group_nodes[&3].lanes.len(), 2);
+        m.add_clip(1, Clip::new(1, 48000, vec![0.5; 8192]));
+        source_with(&mut m, 7, 1, |p| {
+            p.group = 3;
+            p.flags |= source_flags::SPATIAL_STEREO;
+        });
+        play(&mut m, 7, command::PLAY, 0.0);
+        m.update_suspension();
+        let length = 2048 * 6;
+        let output = m
+            .capture(
+                length,
+                vec![capture::SinkRequest {
+                    handle: 3,
+                    length,
+                    exclude_from_mix: false,
+                }],
+            )
+            .unwrap();
+        let sink = &output.sinks[0].samples[length - 6..];
+        let front = 0.5f32.sqrt() * 0.5 * 0.5;
+        assert!(
+            (sink[0] - front).abs() < 1e-6 && (sink[1] - front).abs() < 1e-6,
+            "{sink:?}"
+        );
+        assert_eq!(sink[3], 0.25, "{sink:?}");
+        assert_eq!([sink[2], sink[4], sink[5]], [0.0; 3]);
+        let device = &output.samples[length - 6..];
+        assert_eq!(device[3], capture::pcm16(0.25));
+    }
+
+    #[test]
     fn fold_returns_layout_frames_to_the_two_lanes() {
         let mut stereo = [0.0; 4];
-        fold(&[0.5, -0.25], &mut stereo);
+        fold(&[0.5, -0.25], &mut stereo, None);
         assert_eq!(stereo, [0.5, 0.5, -0.25, -0.25]);
-        fold(&[0.5, -0.25, 1.0, 1.0, 0.125, 0.25, 1.0, 1.0], &mut stereo);
+        fold(
+            &[0.5, -0.25, 1.0, 1.0, 0.125, 0.25, 1.0, 1.0],
+            &mut stereo,
+            None,
+        );
         assert_eq!(stereo, [0.5, -0.25, 0.125, 0.25]);
     }
 

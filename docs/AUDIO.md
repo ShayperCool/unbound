@@ -868,18 +868,20 @@ Distortion, Chorus, Flange, Normalize and ClearFloat probes with one private run
 [AudioSpeakerMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSpeakerMode.html)
 page says the device may override a request ("Always check the actual mode at runtime") and
 [AudioSettings.Reset](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSettings.Reset.html)
-that it uses "the closest match that it supports". The engine mixes every layout in a two-lane
-graph and writes the front pair, other channels silent (`spread` in `mixer.rs`); scripts and
-AudioRenderer buffers see the layout's channels. Measured in Unity 6000.0.71f1 by
+that it uses "the closest match that it supports". The engine mixes every layout channel: the
+front pair in the stereo graph and the other channels as extra stereo pairs in layout order
+(`Lanes` in `mixer.rs`). Voices, source components, scripts, group effects, sends, receives, the
+listener's components and its script all carry them; every extra pair runs through its own
+instances of each component or effect with the same parameters. Measured in Unity 6000.0.71f1 by
 tests/projects/audiopitch layout and device controls:
 
 | Basis | Behavior |
 | --- | --- |
 | Measured mono | Each voice enters the graph already mono, before source components and group effects. The 2D part mixes the panned speaker levels down: a stereo clip's channels at 0.707 (exactly) times their pan gains, a mono clip at the length of its two pan gains (pan-independent). The 3D part puts every direction on the one speaker at unity, so spread has no effect; spatial blend mixes the two parts' speaker levels and attenuation blends apart (`context_mono_3d_*`, including half blend with pan). Both lanes carry the mono signal, so channel-symmetric effects behave as Unity's one-channel graph. Engine: `MonoGains` in `spatial.rs`. |
 | Measured scripts | `OnAudioFilterRead` on a clipless source and on the listener receives the layout's channel count: 1 in mono, 6 in 5.1. A listener script's writes reach every output channel in AudioRenderer captures (`context_*_listener`, `context_*_generator`). Engine: `call_in_layout`, generators in `GeneratorState`. |
-| Measured quad/5.0/5.1/7.1 | Stereo 2D clips reach FL/FR exactly as in stereo; every other channel is silent. |
+| Measured quad/5.0/5.1/7.1 | Stereo 2D clips reach FL/FR exactly as in stereo; a mono 2D clip uses the stereo pan law on FL/FR and, in 5.1 and 7.1, feeds LFE at unity gain whatever the pan. 3D directions (listener-space lateral and forward components) pan between the two neighbouring speakers with power-normalized vector-base gains; speakers sit at (∓1, 1) and (∓1, −1), the centre at (0, 1), and in 7.1 at (∓0.5, 0.866), (0, 1), (∓0.707, −0.707) and (∓1, 0). Each 3D channel also feeds LFE at unity; a source at the listener reaches every speaker at √2/n. Spread rotates each clip channel's direction by half the spread either way, and a mono clip averages its two directions. Spatial blend mixes the 2D and 3D speaker levels; attenuation blends apart. Group effects on extra pairs, generators writing every channel and clip-source scripts writing beyond the front pair match. Engine: `spatial::surround`, `SpeakerLayout`. |
 | Measured devices | `driverCapabilities` follows the device's channel count: 4 report Quad, 6 report 5.1, 8 report 7.1, and 1, 2, 3, 5 and 7 report Stereo. A request above the capabilities runs at them (5.0/5.1/7.1 on four channels run quad, 7.1 on six runs 5.1); Prologic always runs as two channels; `GetConfiguration` keeps the request (`device_1`..`device_8`). Engine: `driver_capabilities` and `active_speaker_mode` in `audio/mod.rs`. Without an output device the virtual device stands for a stereo device; `UNBOUND_AUDIO_DEVICE_CHANNELS` sets its channel count (the probe uses the capture device's). Normalize, static Wet and Pitch Shifter check the layout the mixer runs. |
-| Gap | The graph carries the front pair only. In 5.1 and 7.1 a mono 2D clip also feeds LFE at unity gain (measured); 3D sources in quad/5.0/5.1/7.1 (unmeasured, expected to pan across the surround speakers) and source scripts' writes to channels beyond the front pair are not reproduced. The engine warns once when any of these plays. All need per-speaker lanes through voices, components, groups and the listener (follow-up). Channel-asymmetric effects in mono (Chorus/Flange modulation, reverbs) are unmeasured. The mono rule applies to every release; only 6000.0.71f1 is measured. |
+| Unmeasured | Channel-coupled effects (Compressor, Duck Volume, Normalize, SFX Reverb) on surround layouts run one instance per channel pair, each detecting on its own pair; reverb zones send and return the front pair only; channel-asymmetric effects in mono (Chorus/Flange modulation, reverbs). The mono rule applies to every release; only 6000.0.71f1 is measured. |
 
 AudioRenderer buffers and group sinks hold the layout's channel count in every layout.
 
