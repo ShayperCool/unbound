@@ -355,15 +355,18 @@ namespace UnityEngine.Tests
         }
     }
 
-    // [measured] tabs/attach (the header underline) and the absolute-position controls: an absolute
-    // child's percentage size and offsets resolve against its parent's padding box, its margins
-    // against the content width, and without offsets it starts at the parent's border and padding.
+    // [measured] tests/projects/uitkcollections absolute section (a 79x40 parent with padding
+    // 20/20/4/6 and borders 3/2) and tabs/attach (the header underline): an absolute child's
+    // percentage size, min/max and offsets resolve against its parent's padding box; its position
+    // adds margins of the content width; without offsets it starts at the parent's border and
+    // padding plus the line's justify offset (centered and end-justified children excepted).
     public class YogaAbsoluteChildRulesTests
     {
-        static (YogaNode Root, YogaNode Child) Padded(Action<YogaNode> setupChild, YogaFlexDirection direction = YogaFlexDirection.Column)
+        static (YogaNode Root, YogaNode Child) Padded(Action<YogaNode> setupChild, YogaFlexDirection direction = YogaFlexDirection.Column,
+            YogaJustify justify = YogaJustify.FlexStart)
         {
             var config = new YogaConfig();
-            var root = new YogaNode(config) { Width = YogaValue.Point(79), Height = YogaValue.Point(40), FlexDirection = direction };
+            var root = new YogaNode(config) { Width = YogaValue.Point(79), Height = YogaValue.Point(40), FlexDirection = direction, JustifyContent = justify };
             root.SetPadding(YogaEdge.Left, YogaValue.Point(20));
             root.SetPadding(YogaEdge.Right, YogaValue.Point(20));
             root.SetPadding(YogaEdge.Top, YogaValue.Point(4));
@@ -407,11 +410,40 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void MinMaxAndTrailingOffsetsUseThePaddingBox()
+        {
+            var (_, min) = Padded(n => { n.Width = YogaValue.Point(10); n.MinWidth = YogaValue.Percent(50); });
+            Assert.Equal(38f, min.LayoutWidth);
+            var (_, max) = Padded(n => { n.Width = YogaValue.Point(40); n.MaxWidth = YogaValue.Percent(10); });
+            Assert.Equal(8f, max.LayoutWidth);
+            var (_, right) = Padded(n => { n.Width = YogaValue.Point(10); n.SetPosition(YogaEdge.Right, YogaValue.Percent(10)); });
+            Assert.Equal(61f, right.LayoutX);
+        }
+
+        [Fact]
+        public void StaticPositionAddsTheJustifyOffset()
+        {
+            var (_, evenly) = Padded(n => n.Width = YogaValue.Point(10), justify: YogaJustify.SpaceEvenly);
+            Assert.Equal(34f, evenly.LayoutY);
+            var (_, center) = Padded(n => n.Width = YogaValue.Point(10), justify: YogaJustify.Center);
+            Assert.Equal(19f, center.LayoutY);
+            var (_, end) = Padded(n => n.Width = YogaValue.Point(10), justify: YogaJustify.FlexEnd);
+            Assert.Equal(38f, end.LayoutY);
+            // No relative items: the space-around offset divides by zero, as in the Editor.
+            var (_, around) = Padded(n => n.Width = YogaValue.Point(10), justify: YogaJustify.SpaceAround);
+            Assert.Equal(float.PositiveInfinity, around.LayoutY);
+            Assert.True(float.IsNaN(around.LayoutHeight));
+        }
+
+        [Fact]
         public void StaticPositionFollowsTheAxisDirection()
         {
             var (_, rev) = Padded(n => n.Width = YogaValue.Point(10), YogaFlexDirection.ColumnReverse);
             Assert.Equal(32f, rev.LayoutY);
             Assert.Equal(23f, rev.LayoutX);
+            var (_, rowRev) = Padded(n => n.Width = YogaValue.Point(10), YogaFlexDirection.RowReverse);
+            Assert.Equal(49f, rowRev.LayoutX);
+            Assert.Equal(6f, rowRev.LayoutY);
         }
     }
 }

@@ -26,9 +26,10 @@ namespace UnityEngine.Pool
         void IDisposable.Dispose() => m_Pool.Release(m_ToReturn);
     }
 
-    /// <summary>A stack-based pool with create/get/release/destroy callbacks. The most recently
-    /// released object waits in its own slot: the next Get returns it first, a further Release
-    /// pushes onto the stack behind it, and Clear destroys the stack bottom to top, then that slot.
+    /// <summary>A stack-based pool with create/get/release/destroy callbacks and one extra slot: an
+    /// object released while the slot is empty waits there, further releases push onto the stack;
+    /// Get takes the slot first, then the stack top; Clear destroys the stack bottom to top, then
+    /// the slot.
     /// The order matches the Unity 6000.0.71f1 Editor (tests/projects/uitkcollections, the order
     /// in which a list view's rebuild destroys its rows).</summary>
     public partial class ObjectPool<T> : IDisposable, IObjectPool<T> where T : class

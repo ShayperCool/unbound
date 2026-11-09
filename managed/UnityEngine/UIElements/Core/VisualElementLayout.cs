@@ -316,6 +316,9 @@ namespace UnityEngine.UIElements
         /// boxes (hierarchy, size, transform, ...) since the last layout pass visited it.</summary>
         internal bool boundingBoxDirtiedSinceLastLayoutPass { get; set; }
 
+        /// <summary>The panel's layout generation when the flag above was last set.</summary>
+        internal uint uaBoundingBoxDirtyGeneration { get; set; }
+
         internal bool ShouldClip() => computedValues.overflow != OverflowInternal.Visible && !disableClipping;
 
         /// <summary>The element's rect grown to the bounding boxes of its displayed children (unless it

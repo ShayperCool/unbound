@@ -160,8 +160,14 @@ namespace UnityEngine.UIElements
             if ((change & k_PickingChanges) != 0)
             {
                 m_UaHierarchyFlagsVersion++;
-                for (var e = ve; e != null && !e.boundingBoxDirtiedSinceLastLayoutPass; e = e.hierarchy.parent)
+                // Mark the element and its ancestors; stop at one already marked since the last layout
+                // update (a mark left on an element that update did not visit is renewed).
+                for (var e = ve; e != null; e = e.hierarchy.parent)
+                {
+                    if (e.boundingBoxDirtiedSinceLastLayoutPass && e.uaBoundingBoxDirtyGeneration == m_LayoutGeneration) break;
                     e.boundingBoxDirtiedSinceLastLayoutPass = true;
+                    e.uaBoundingBoxDirtyGeneration = m_LayoutGeneration;
+                }
             }
             if ((change & (VersionChangeType.Transform | VersionChangeType.Hierarchy)) != 0) ve.UaDirtyWorldTransform();
             // UIR regenerates an element's geometry on repaints and color changes (without dynamic
@@ -290,12 +296,14 @@ namespace UnityEngine.UIElements
         // empty rect) after the layout settles, as in the Unity 6000.0.71f1 Editor
         // (tests/projects/uitkcollections: a rebuilt list's scroll view updates its scrollers).
         readonly List<VisualElement> m_MissedHierarchyChangeEvents = new List<VisualElement>();
+        uint m_LayoutGeneration;
 
         void UpdateLayout()
         {
             var root = visualTree;
             int pass = 0;
             if (root.yogaNode.IsDirty) m_MissedHierarchyChangeEvents.Clear();
+            m_LayoutGeneration++;
             while (root.yogaNode.IsDirty)
             {
                 m_ChangeEvents.Clear();
