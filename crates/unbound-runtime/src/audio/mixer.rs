@@ -1238,6 +1238,7 @@ impl Mixer {
             config.extra_pairs(),
             &config,
         )?;
+        self.warn_surround_reverb();
         // The next frame packet sets the zone up again at the new rate.
         self.zone = None;
         for source in self.sources.values_mut() {
@@ -1614,19 +1615,7 @@ impl Mixer {
             energy: 0.0,
         });
         node.update(spec, &self.config)?;
-        if self.config.extra_pairs() > 0
-            && !self.warned_surround_reverb
-            && node
-                .effects
-                .iter()
-                .any(|e| e.kind() == Some(EffectKind::SfxReverb))
-        {
-            self.warned_surround_reverb = true;
-            tracing::warn!(
-                "audio: SFX Reverb in surround output reverberates each channel pair on its own \
-                 (unmeasured)"
-            );
-        }
+        self.warn_surround_reverb();
         for target in targets {
             for lane in &mut self.sidechain_lanes {
                 lane.entry(target.clone())
@@ -1710,6 +1699,25 @@ impl Mixer {
                 }
                 handle = group.spec.parent;
             }
+        }
+    }
+
+    /// SFX Reverb in a layout wider than stereo runs one instance per channel pair
+    /// (unmeasured). Says so once.
+    fn warn_surround_reverb(&mut self) {
+        if self.config.extra_pairs() > 0
+            && !self.warned_surround_reverb
+            && self.group_nodes.values().any(|node| {
+                node.effects
+                    .iter()
+                    .any(|e| e.kind() == Some(EffectKind::SfxReverb))
+            })
+        {
+            self.warned_surround_reverb = true;
+            tracing::warn!(
+                "audio: SFX Reverb in surround output reverberates each channel pair on its own \
+                 (unmeasured)"
+            );
         }
     }
 
@@ -2189,7 +2197,7 @@ impl Mixer {
             let n = (frames - done).min(BLOCK);
             self.render_block(n);
             let mono = self.config.speaker_mode == speaker_mode::MONO;
-            let extra = (self.config.extra_pairs() > 0).then_some(Extra {
+            let extra = (self.config.extra_pairs() > 0).then(|| Extra {
                 samples: &self.mix_extra,
                 stride: BLOCK * 2,
                 channels: self.config.output_channels() - 2,
@@ -4657,6 +4665,68 @@ mod tests {
             (frame[0] / frame[3] - 0.5f32.sqrt()).abs() < 1e-5,
             "{frame:?}"
         );
+    }
+
+    #[test]
+    fn duck_volume_detects_a_sidechain_on_any_channel() {
+        // Quad: the music (a mono 2D clip) is on the front pair only; the voice (a 3D source
+        // behind the listener) reaches the rear pair only and feeds the duck through a send.
+        fn group(handle: u64, parent: u64, muted: bool, effects: serde_json::Value) -> GroupSpec {
+            serde_json::from_value(serde_json::json!({ "handle": handle, "parent": parent,
+                "mixer": 1, "muted": muted, "bypass": false, "effects": effects }))
+            .unwrap()
+        }
+        let render = |voice: bool| {
+            let mut m = Mixer::new(MixerConfig {
+                speaker_mode: speaker_mode::QUAD,
+                ..MixerConfig::default()
+            });
+            m.configure_group(group(
+                1,
+                0,
+                false,
+                serde_json::json!([
+                { "id": "duck", "kind": "Duck Volume", "duck": { "threshold": -40.0,
+                  "ratio": 4.0, "attackTime": 0.0, "releaseTime": 0.0, "makeupGain": 0.0,
+                  "knee": 0.0, "sidechainMix": 1.0 } }]),
+            ))
+            .unwrap();
+            m.configure_group(group(
+                2,
+                1,
+                true,
+                serde_json::json!([
+                { "id": "send", "kind": "Send", "sendTarget": "duck", "sendLevel": 1.0 }]),
+            ))
+            .unwrap();
+            m.add_clip(1, Clip::new(1, 48000, vec![0.25; 48000]));
+            source_with(&mut m, 7, 1, |p| {
+                p.group = 1;
+                p.flags |= source_flags::SPATIAL_STEREO;
+            });
+            play(&mut m, 7, command::PLAY, 0.0);
+            if voice {
+                source_with(&mut m, 8, 1, |p| {
+                    p.group = 2;
+                    p.flags |= source_flags::SPATIAL_STEREO;
+                    p.spatial_blend = 1.0;
+                    p.position = Vector3 {
+                        x: 0.0,
+                        y: 0.0,
+                        z: -2.0,
+                    };
+                });
+                play(&mut m, 8, command::PLAY, 0.0);
+            }
+            m.update_suspension();
+            let mut out = vec![0.0; 8192 * 4];
+            m.render(&mut out, 4);
+            out[out.len() - 4..].to_vec()
+        };
+        let (quiet, ducked) = (render(false), render(true));
+        assert!(ducked[0] < quiet[0] * 0.5, "{quiet:?} {ducked:?}");
+        assert_eq!(ducked[0], ducked[1]);
+        assert_eq!(&ducked[2..], &[0.0, 0.0]);
     }
 
     #[test]
