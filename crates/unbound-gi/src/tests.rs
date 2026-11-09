@@ -436,6 +436,11 @@ fn set_emissive_keeps_a_renderers_color_over_later_textures() {
     solver.set_emission(&uniform([0.1, 1e9, -1.0])).unwrap();
     let e = solver.cluster_materials().1[block_clusters[0]];
     assert_eq!(e, [half::f16::from_f32(0.1).to_f32(), 65504.0, 0.0]);
+    solver.set_emission(&uniform([f32::NAN, 1.0, 1.0])).unwrap();
+    assert_eq!(
+        solver.cluster_materials().1[block_clusters[0]],
+        [0.0, 1.0, 1.0]
+    );
     assert!(solver.set_renderer_emission(99, [0.0; 3]).is_err());
 }
 

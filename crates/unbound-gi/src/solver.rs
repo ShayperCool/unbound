@@ -305,8 +305,14 @@ impl SystemSolver {
                     );
                 }
             }
+            // A NaN texel (a meta pass dividing by zero) emits nothing rather than spreading
+            // NaN through the cluster tree.
             self.emission[c] = sum.map(|v| {
-                let mean = if points > 0 { v / points as f32 } else { 0.0 };
+                let mean = if points > 0 && !v.is_nan() {
+                    v / points as f32
+                } else {
+                    0.0
+                };
                 half::f16::from_f32(mean.clamp(0.0, half::f16::MAX.to_f32())).to_f32()
             });
         }

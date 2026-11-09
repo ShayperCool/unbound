@@ -132,6 +132,6 @@ the first part of phase 3.
   (directional output, spot/area/directional light details, skybox/gradient environments,
   transparency) fail loudly until a probe case covers them.
 - Phase 3, Unbound's own precompute from scene geometry (realtime lightmap UVs, charts, clusters,
-  transport, bounce resampling, probe transport) for projects without precomputed data or with changed scenes,
-  cached under `Library/Unbound/` by content hash and format version, compared with the Editor's
+  transport, bounce resampling, probe transport) for projects without precomputed data or with
+  changed scenes, cached under `Library/Unbound/` by content hash and format version, compared with the Editor's
   precompute through the same probe.
